@@ -1,0 +1,29 @@
+# Binaries
+ralphglasses
+ralphglasses-mcp
+*.exe
+
+# Ralph runtime state (not code)
+.ralph/status.json
+.ralph/progress.json
+.ralph/.circuit_breaker_state
+.ralph/.circuit_breaker_history
+.ralph/.response_analysis
+.ralph/.exit_signals
+.ralph/.claude_session_id
+.ralph/.ralph_session
+.ralph/.ralph_session_history
+.ralph/.call_count
+.ralph/.last_reset
+.ralph/live.log
+.ralph/logs/
+.ralph/docs/generated/
+
+# Secrets
+.env
+.env.*
+*.key
+*.pem
+
+# OS
+.DS_Store
