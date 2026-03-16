@@ -11,7 +11,17 @@ MARATHON_CHECKPOINT_INTERVAL=3
 CB_NO_PROGRESS_THRESHOLD=4
 CB_SAME_ERROR_THRESHOLD=5
 CB_PERMISSION_DENIAL_THRESHOLD=2
-CB_COOLDOWN_MINUTES=30
+CB_COOLDOWN_MINUTES=15
+CB_AUTO_RESET=true
 LOG_RETENTION_DAYS=7
+# Model strategy (from mesmer/hg-mcp patterns)
+PRIMARY_MODEL="sonnet"
+BATCH_SIMILAR_TASKS=true
+MAX_TASKS_PER_BATCH=3
+MAX_LINES_PER_BATCH=600
+# Quality gates (Go)
+QG_GO_BUILD=true
+QG_GO_VET=true
+QG_GO_TEST=true
 ALLOWED_TOOLS="Write,Read,Edit,Grep,Glob,Bash(go build *),Bash(go test *),Bash(go vet *),Bash(go run *),Bash(go mod *),Bash(git add *),Bash(git commit *),Bash(git diff *),Bash(git log *),Bash(git status),Bash(git status *),Bash(git push *)"
 RALPH_SESSION_BUDGET=100
