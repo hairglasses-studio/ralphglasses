@@ -1,191 +1,106 @@
-# ralphglasses distro — Bootable Linux ISO
+# ralphglasses distro — Claude Code Agent Thin Client
 
-Build a minimal bootable Linux ISO that boots straight into the ralphglasses TUI on i3, with full NVIDIA dual-GPU support for 7 monitors.
+Minimal bootable Linux that starts into the ralphglasses TUI for autonomous Claude Code agent marathons.
 
-## Quick start
+## Philosophy
 
-```bash
-cd distro/
+- **In-kernel drivers preferred** — the ASUS ProArt X870E-CREATOR WIFI is fully supported by mainline Linux 6.8+
+- **NVIDIA via apt** — `nvidia-driver-550` installed at build time, not vendored `.run` files
+- **No binary blobs in this repo** — Windows driver archives live on Google Drive, NVIDIA `.run` files go as GitHub Release artifacts if offline install is needed
+- **No Windows drivers** — the 12GB Windows archive is irrelevant to Linux builds
+- **Wired network only for marathons** — Intel I226-V 2.5GbE (`igc` module) is reliable for 12+ hour sessions
+- **Display: i3 + RTX 4090** — NVIDIA proprietary driver for display output only (no CUDA/compute needed)
+- **AMD iGPU fallback** — Ryzen 7950X RDNA2 iGPU via `amdgpu`, zero config, no conflict with NVIDIA
 
-# Build the ISO (requires Docker + xorriso + squashfs-tools)
-make iso
+## Target Hardware
 
-# Test in QEMU
-make test-vm
+**ASUS ProArt X870E-CREATOR WIFI** motherboard:
+- AMD Ryzen 9 7950X (16C/32T, RDNA2 iGPU)
+- NVIDIA RTX 4090 (display) + GTX 1060 (disabled on Linux — driver conflict)
+- 128GB DDR5-6000
+- Intel I226-V 2.5GbE (primary network)
+- MediaTek MT7927 WiFi 7 / Bluetooth (WiFi optional, BT hardware-broken)
+- Marvell AQtion 10GbE (optional, known stability issues)
 
-# Write to USB drive
-make usb DEVICE=/dev/sdX
-```
+See `distro/hardware/proart-x870e.md` for the full hardware manifest with PCI IDs, kernel modules, and known issues.
 
-## Prerequisites
+## What Claude Code Needs
 
-On the build machine:
+Claude Code is a CLI tool making Anthropic API calls. The thin client needs:
 
-```bash
-# Ubuntu/Debian
-sudo apt install docker.io xorriso squashfs-tools mtools ovmf qemu-system-x86
+| Requirement | Solution |
+|-------------|----------|
+| Network | Intel I226-V wired ethernet (in-kernel `igc`) |
+| Display | RTX 4090 via `nvidia-driver-550` for monitors |
+| Terminal | i3 + alacritty, ralphglasses TUI fullscreen |
+| Storage | Local NVMe for OS, `/workspace` for repos |
+| Audio | Not needed (thin client) |
+| GPU compute | Not needed (API calls, not local inference) |
 
-# Arch
-sudo pacman -S docker xorriso squashfs-tools mtools edk2-ovmf qemu-system-x86
-```
+## Dual-GPU Constraint
 
-## Build targets
+Only one `nvidia.ko` version loads at a time:
+- **RTX 4090** (Ada Lovelace) needs driver 550+
+- **GTX 1060** (Pascal) needs driver 560.x, which is dropped from 590+
 
-| Target | Description |
-|--------|-------------|
-| `make docker` | Build Docker image only (for testing/iterating) |
-| `make iso` | Build bootable UEFI ISO from Docker image |
-| `make test-vm` | Launch ISO in QEMU with UEFI firmware |
-| `make usb DEVICE=/dev/sdX` | Write ISO to USB drive (destructive!) |
-| `make clean` | Remove build artifacts and Docker image |
+Solution: `hw-detect.sh` blacklists the GTX 1060's PCI slot at first boot. If more monitors are needed, use the AMD iGPU via `amdgpu` (no conflict with NVIDIA).
 
-## What's in the ISO
+## First-Boot Hardware Detection
 
-- **Ubuntu 24.04** base with systemd
-- **i3** window manager with 7-monitor workspace assignments
-- **alacritty** terminal
-- **NVIDIA driver 550** (proprietary, for dual GPU)
-- **autorandr** for multi-monitor persistence
-- **Go runtime** (to rebuild ralphglasses)
-- **Node.js + Claude Code CLI**
-- **ralphglasses** binary (built from source)
-- **User `ralph`** with passwordless sudo, autologin to i3
-- Boots to graphical target, auto-starts ralphglasses TUI on workspace 1
+The `distro/scripts/hw-detect.sh` script runs once at first boot via `distro/systemd/hw-detect.service`:
 
-## NVIDIA dual GPU / 7 monitors
+1. Enumerates PCI devices via `lspci -nn`
+2. Identifies NVIDIA GPUs by device ID (Ada vs Pascal)
+3. Generates `/etc/X11/xorg.conf.d/20-gpu.conf` with RTX 4090 BusID
+4. Blacklists GTX 1060 PCI slot if both GPUs present
+5. Blacklists `btmtk` module (MT7927 Bluetooth — hardware HCI errors)
+6. Enables AMD iGPU as optional secondary display
+7. Logs everything to `/var/log/hw-detect.log`
 
-The ISO includes NVIDIA driver 550 and a baseline Xorg config at `/etc/X11/xorg.conf.d/20-nvidia.conf` that defines two GPU devices. After first boot:
-
-1. Run `lspci | grep -i nvidia` to find actual PCI bus IDs
-2. Run `nvidia-xconfig --enable-all-gpus` to regenerate the config
-3. Run `xrandr --listmonitors` to find output names
-4. Edit `~/.config/i3/config` to update `$mon1`-`$mon7` variables
-5. Save the layout: `autorandr --save default`
-
-The i3 config maps workspaces 1-7 to monitors and overflow workspaces 8-10 cycle back.
-
-### Driver version
-
-The Dockerfile uses `nvidia-driver-550`. To change:
+Test on WSL without making changes:
 
 ```bash
-docker build --build-arg NVIDIA_DRIVER_VERSION=555 -t ralphglasses-os distro/
+distro/scripts/hw-detect.sh --dry-run
 ```
 
-Check available versions: `apt list nvidia-driver-*`
-
-## Triple-boot: Windows 11 + Ubuntu Desktop + ralphglasses
-
-This ISO is designed for a dedicated partition alongside existing Windows 11 and Ubuntu Desktop installations.
-
-### Partition layout (example for 2TB NVMe)
-
-| Partition | Size | Type | Content |
-|-----------|------|------|---------|
-| EFI System | 512MB | FAT32 | Shared EFI partition (all three OSes) |
-| Windows C: | 500GB | NTFS | Windows 11 |
-| Ubuntu root | 500GB | ext4 | Ubuntu Desktop |
-| ralphglasses | 200GB | ext4 | This distro |
-| Shared data | remaining | ext4/NTFS | `/workspace` mount point |
-
-### Installation steps
-
-1. **Boot the ISO** from USB (F12 / boot menu on your BIOS)
-2. **From the live environment**, partition the target disk:
-   ```bash
-   # Identify free space or shrink an existing partition
-   sudo parted /dev/nvme0n1 print
-
-   # Create partition for ralphglasses
-   sudo parted /dev/nvme0n1 mkpart primary ext4 1000GB 1200GB
-
-   # Format
-   sudo mkfs.ext4 -L ralphglasses /dev/nvme0n1pN
-   ```
-3. **Copy the live rootfs to disk**:
-   ```bash
-   sudo mount /dev/nvme0n1pN /mnt
-   sudo unsquashfs -d /mnt /live/filesystem.squashfs
-   ```
-4. **Install GRUB to the shared EFI partition**:
-   ```bash
-   sudo mount /dev/nvme0n1p1 /mnt/boot/efi  # existing EFI partition
-   sudo chroot /mnt
-   grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ralphglasses
-   update-grub
-   exit
-   ```
-5. **Reboot** — the UEFI boot menu will show ralphglasses alongside Windows and Ubuntu
-
-### Boot manager
-
-After installation, all three OSes appear in the UEFI firmware boot menu. You can also use:
-- `efibootmgr` to reorder boot entries
-- `sudo update-grub` from Ubuntu to detect all installed OSes
-- Hold F12 (or your board's key) at POST to pick an OS
-
-## Customization
-
-### Add packages
-
-Edit `distro/Dockerfile` and add to the `apt-get install` line, then rebuild:
-
-```bash
-make clean && make iso
-```
-
-### Change i3 config
-
-Edit `distro/i3/config` directly. The Dockerfile copies it into the image at build time.
-
-### Change monitor layout
-
-After booting, configure monitors with `arandr` (GUI) or `xrandr` (CLI), then:
-
-```bash
-autorandr --save default
-```
-
-The saved profile persists across reboots via `autorandr --change` in the i3 config.
-
-## Architecture
+## Directory Structure
 
 ```
 distro/
-  Dockerfile           # OS definition (Ubuntu 24.04 + i3 + NVIDIA + ralphglasses)
-  Makefile             # Build targets (iso, docker, test-vm, usb, clean)
-  README.md            # This file
-  grub/
-    grub.cfg           # UEFI boot menu
-  i3/
-    config             # i3 window manager config (7 monitors)
+  README.md              # This file
+  hardware/
+    proart-x870e.md      # Full hardware manifest (PCI IDs, modules, issues)
+  scripts/
+    hw-detect.sh         # First-boot hardware detection (testable with --dry-run)
   systemd/
-    ralphglasses.service  # systemd unit for TUI autostart
-  autorandr/           # Saved monitor profiles (populated after first setup)
-  dietpi/              # Legacy DietPi config (deprecated, kept for reference)
-  pxe/                 # PXE network boot docs (alternative to ISO)
+    hw-detect.service    # Oneshot unit for first-boot detection
+    ralphglasses.service # TUI autostart after display-manager
+  Dockerfile             # OS build (Ubuntu 24.04 + i3 + NVIDIA) [future]
+  Makefile               # Build targets (iso, docker, test-vm) [future]
+  grub/                  # UEFI boot menu config [future]
+  i3/                    # i3 window manager config [future]
+  dietpi/                # Legacy DietPi config (deprecated)
+  pxe/                   # PXE network boot docs
+  autorandr/             # Monitor profiles (populated after first setup)
 ```
 
-## Kairos (optional)
+## Future Phases
 
-The Dockerfile produces a standard rootfs. For immutable OS features (A/B updates, reset), you can layer Kairos on top:
+**Phase 2 — Dockerfile + Build System:**
+- Ubuntu 24.04 base, kernel 6.12+ HWE
+- nvidia-driver-550 via apt
+- Go + Node.js + Claude Code CLI
+- Autologin to i3
+- `docker build` -> squashfs -> ISO pipeline
 
-```bash
-# Install AuroraBoot
-docker pull quay.io/kairos/auroraboot
+**Phase 3 — Integration:**
+- Connects with Go app roadmap (tests, MCP hardening, TUI polish)
+- Distro work is independent and can proceed in parallel with app development
 
-# Convert the Docker image to a Kairos-compatible ISO
-docker run --rm -v "$PWD":/output \
-    quay.io/kairos/auroraboot \
-    --set container_image=ralphglasses-os:latest \
-    --set "disable_netboot=true" \
-    --set "output_type=iso"
-```
+## What Does NOT Belong in This Repo
 
-This gives you Kairos features like:
-- Immutable rootfs with overlay
-- A/B partition upgrades
-- Cloud-config based provisioning
-- Factory reset capability
-
-See https://kairos.io/docs/ for details.
+- Windows driver archives (Google Drive)
+- NVIDIA `.run` installer files (GitHub Release artifacts)
+- DKMS source tarballs
+- Firmware blobs
+- The 12GB ProArt driver archive
