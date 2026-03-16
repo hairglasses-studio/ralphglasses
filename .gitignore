@@ -27,4 +27,9 @@ ralphglasses-mcp
 
 # OS
 .DS_Store
+
+# direnv
 .envrc
+
+# Test artifacts
+cover.out
