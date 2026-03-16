@@ -236,13 +236,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.Repos = msg.repos
-		m.updateTable()
-		m.LastRefresh = time.Now()
-		// Start watching status files
+		// Recover any orphaned processes from PID files
 		paths := make([]string, len(m.Repos))
 		for i, r := range m.Repos {
 			paths[i] = r.Path
 		}
+		if n := m.ProcMgr.Recover(paths); n > 0 {
+			m.Notify.Show(fmt.Sprintf("Recovered %d orphaned loop(s)", n), 5*time.Second)
+		}
+		m.updateTable()
+		m.LastRefresh = time.Now()
+		// Start watching status files
 		return m, process.WatchStatusFiles(paths)
 
 	case process.WatcherErrorMsg:
