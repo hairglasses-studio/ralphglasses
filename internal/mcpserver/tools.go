@@ -497,6 +497,9 @@ func (s *Server) handleStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.
 		"managed": s.ProcMgr.IsRunning(r.Path),
 		"paused":  s.ProcMgr.IsPaused(r.Path),
 	}
+	if pid := s.ProcMgr.PidForRepo(r.Path); pid != 0 {
+		detail["pid"] = pid
+	}
 	if r.Status != nil {
 		detail["status"] = r.Status
 	}
