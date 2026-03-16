@@ -27,6 +27,9 @@ MARATHON_LOG=""
 RALPH_PID=""
 START_EPOCH=""
 CHECKPOINT_COUNT=0
+RESTART_COUNT=0
+MAX_RESTARTS="${MAX_RESTARTS:-5}"
+RESTART_BACKOFF=30
 
 usage() {
     cat <<EOF
@@ -284,6 +287,26 @@ read_loop_count() {
     read_status_field "loop_count" "0"
 }
 
+# --- Cost ledger (inspired by hg-mcp pattern) ---
+# Appends per-poll cost snapshot to .ralph/logs/cost_ledger.jsonl
+LAST_LEDGER_LOOPS=0
+write_cost_ledger() {
+    local loops="$1" spend="$2" elapsed="$3"
+    local ledger="$PROJECT_DIR/.ralph/logs/cost_ledger.jsonl"
+    # Only write when loop count changes (new work done)
+    if [[ "$loops" == "$LAST_LEDGER_LOOPS" ]]; then
+        return
+    fi
+    LAST_LEDGER_LOOPS="$loops"
+    local ts
+    ts="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+    local status
+    status=$(read_status_field "status" "unknown")
+    local model
+    model=$(read_status_field "model" "sonnet")
+    echo "{\"ts\":\"${ts}\",\"loop\":${loops},\"spend_usd\":${spend},\"elapsed_s\":${elapsed},\"model\":\"${model}\",\"status\":\"${status}\"}" >> "$ledger"
+}
+
 # --- Checkpoint logic ---
 create_checkpoint() {
     CHECKPOINT_COUNT=$((CHECKPOINT_COUNT + 1))
@@ -329,7 +352,24 @@ while true; do
         wait "$RALPH_PID" 2>/dev/null || ralph_exit=$?
         log "INFO" "Ralph exited with code $ralph_exit"
         RALPH_PID=""
-        cleanup "$ralph_exit"
+
+        # Auto-restart with exponential backoff (inspired by hg-mcp/mesmer patterns)
+        if (( ralph_exit != 0 && RESTART_COUNT < MAX_RESTARTS )); then
+            RESTART_COUNT=$((RESTART_COUNT + 1))
+            backoff=$((RESTART_BACKOFF * RESTART_COUNT))
+            log "RESTART" "Ralph failed (exit $ralph_exit). Restart #${RESTART_COUNT}/${MAX_RESTARTS} in ${backoff}s..."
+            sleep "$backoff" || true
+            log "RESTART" "Relaunching ralph..."
+            "${CMD[@]}" &
+            RALPH_PID=$!
+            log "RESTART" "Ralph restarted with PID $RALPH_PID"
+        elif (( ralph_exit == 0 )); then
+            log "INFO" "Ralph exited cleanly."
+            cleanup 0
+        else
+            log "ERROR" "Ralph failed $MAX_RESTARTS times. Giving up."
+            cleanup "$ralph_exit"
+        fi
     fi
 
     now=$(date +%s)
@@ -337,6 +377,9 @@ while true; do
     elapsed_hours=$(echo "scale=1; $elapsed / 3600" | bc)
     spend=$(read_spend)
     loops=$(read_loop_count)
+
+    # --- Cost ledger ---
+    write_cost_ledger "$loops" "$spend" "$elapsed"
 
     # --- Duration check ---
     if (( elapsed >= duration_seconds )); then
@@ -354,6 +397,12 @@ while true; do
     if (( now - last_checkpoint_epoch >= checkpoint_seconds )); then
         create_checkpoint
         last_checkpoint_epoch=$now
+    fi
+
+    # Reset restart counter on successful progress
+    if (( RESTART_COUNT > 0 )) && [[ "$loops" != "0" ]]; then
+        log "INFO" "Ralph recovered after restart. Resetting restart counter."
+        RESTART_COUNT=0
     fi
 
     # Periodic status (every 5 minutes = every 10 polls)
