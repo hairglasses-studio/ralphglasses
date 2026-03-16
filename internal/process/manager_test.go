@@ -2,6 +2,9 @@ package process
 
 import (
 	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -177,5 +180,236 @@ func TestManager_TogglePause(t *testing.T) {
 	}
 	if m.IsPaused(repoPath) {
 		t.Error("IsPaused should return false after resume")
+	}
+}
+
+// setupRepoWithRalphDir creates a temp repo with a .ralph/ directory and a test script.
+func setupRepoWithRalphDir(t *testing.T) string {
+	t.Helper()
+	repoPath := t.TempDir()
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"), "sleep 60")
+	return repoPath
+}
+
+func TestPIDFile_WrittenOnStart(t *testing.T) {
+	m := NewManager()
+	repoPath := setupRepoWithRalphDir(t)
+	defer m.StopAll()
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	pidPath := filepath.Join(repoPath, ".ralph", pidFileName)
+	data, err := os.ReadFile(pidPath)
+	if err != nil {
+		t.Fatalf("PID file not created: %v", err)
+	}
+
+	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil || pid <= 0 {
+		t.Fatalf("PID file has invalid content: %q", string(data))
+	}
+}
+
+func TestPIDFile_RemovedOnStop(t *testing.T) {
+	m := NewManager()
+	repoPath := setupRepoWithRalphDir(t)
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	if err := m.Stop(repoPath); err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
+
+	// Give background reaper time to clean up
+	time.Sleep(300 * time.Millisecond)
+
+	pidPath := filepath.Join(repoPath, ".ralph", pidFileName)
+	if _, err := os.Stat(pidPath); !os.IsNotExist(err) {
+		t.Error("PID file should be removed after Stop")
+	}
+}
+
+func TestPIDFile_RemovedOnStopAll(t *testing.T) {
+	m := NewManager()
+	repoPath := setupRepoWithRalphDir(t)
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	m.StopAll()
+
+	pidPath := filepath.Join(repoPath, ".ralph", pidFileName)
+	if _, err := os.Stat(pidPath); !os.IsNotExist(err) {
+		t.Error("PID file should be removed after StopAll")
+	}
+}
+
+func TestPidForRepo_ReturnsZeroForUnknown(t *testing.T) {
+	m := NewManager()
+	if pid := m.PidForRepo("/unknown"); pid != 0 {
+		t.Errorf("expected 0, got %d", pid)
+	}
+}
+
+func TestPidForRepo_ReturnsPIDForRunning(t *testing.T) {
+	m := NewManager()
+	repoPath := setupRepoWithRalphDir(t)
+	defer m.StopAll()
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	pid := m.PidForRepo(repoPath)
+	if pid <= 0 {
+		t.Errorf("expected positive PID, got %d", pid)
+	}
+}
+
+func TestReadPIDFile_InvalidContent(t *testing.T) {
+	repoPath := t.TempDir()
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	os.MkdirAll(ralphDir, 0755)
+
+	// Write garbage content
+	os.WriteFile(filepath.Join(ralphDir, pidFileName), []byte("not-a-number\n"), 0644)
+	if pid := readPIDFile(repoPath); pid != 0 {
+		t.Errorf("expected 0 for invalid PID, got %d", pid)
+	}
+
+	// Write negative PID
+	os.WriteFile(filepath.Join(ralphDir, pidFileName), []byte("-5\n"), 0644)
+	if pid := readPIDFile(repoPath); pid != 0 {
+		t.Errorf("expected 0 for negative PID, got %d", pid)
+	}
+}
+
+func TestReadPIDFile_NoPIDFile(t *testing.T) {
+	repoPath := t.TempDir()
+	if pid := readPIDFile(repoPath); pid != 0 {
+		t.Errorf("expected 0 for missing PID file, got %d", pid)
+	}
+}
+
+func TestIsProcessAlive_Self(t *testing.T) {
+	// Our own process should be alive
+	if !isProcessAlive(os.Getpid()) {
+		t.Error("expected our own process to be alive")
+	}
+}
+
+func TestIsProcessAlive_Dead(t *testing.T) {
+	// PID 1 billion is almost certainly not alive
+	if isProcessAlive(1000000000) {
+		t.Error("expected non-existent PID to be dead")
+	}
+}
+
+func TestRecover_NoFiles(t *testing.T) {
+	m := NewManager()
+	repoPath := t.TempDir()
+	n := m.Recover([]string{repoPath})
+	if n != 0 {
+		t.Errorf("expected 0 recovered, got %d", n)
+	}
+}
+
+func TestRecover_StalePID(t *testing.T) {
+	m := NewManager()
+	repoPath := t.TempDir()
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	os.MkdirAll(ralphDir, 0755)
+
+	// Write a PID file for a dead process
+	os.WriteFile(filepath.Join(ralphDir, pidFileName), []byte("1000000000\n"), 0644)
+
+	n := m.Recover([]string{repoPath})
+	if n != 0 {
+		t.Errorf("expected 0 recovered (dead process), got %d", n)
+	}
+
+	// PID file should be cleaned up
+	if _, err := os.Stat(filepath.Join(ralphDir, pidFileName)); !os.IsNotExist(err) {
+		t.Error("stale PID file should be removed")
+	}
+}
+
+func TestRecover_LiveProcess(t *testing.T) {
+	m := NewManager()
+	repoPath := t.TempDir()
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	os.MkdirAll(ralphDir, 0755)
+
+	// Write a PID file for our own process (known alive)
+	os.WriteFile(filepath.Join(ralphDir, pidFileName), []byte(strconv.Itoa(os.Getpid())+"\n"), 0644)
+
+	n := m.Recover([]string{repoPath})
+	if n != 1 {
+		t.Errorf("expected 1 recovered, got %d", n)
+	}
+
+	if !m.IsRunning(repoPath) {
+		t.Error("expected recovered process to be tracked as running")
+	}
+
+	pid := m.PidForRepo(repoPath)
+	if pid != os.Getpid() {
+		t.Errorf("expected PID %d, got %d", os.Getpid(), pid)
+	}
+}
+
+func TestRecover_SkipsAlreadyManaged(t *testing.T) {
+	m := NewManager()
+	repoPath := setupRepoWithRalphDir(t)
+	defer m.StopAll()
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// Recover should skip this since it's already managed
+	n := m.Recover([]string{repoPath})
+	if n != 0 {
+		t.Errorf("expected 0 recovered (already managed), got %d", n)
+	}
+}
+
+func TestCleanStalePIDFiles(t *testing.T) {
+	repo1 := t.TempDir()
+	repo2 := t.TempDir()
+	repo3 := t.TempDir()
+
+	for _, r := range []string{repo1, repo2, repo3} {
+		os.MkdirAll(filepath.Join(r, ".ralph"), 0755)
+	}
+
+	// repo1: stale PID
+	os.WriteFile(filepath.Join(repo1, ".ralph", pidFileName), []byte("1000000000\n"), 0644)
+	// repo2: live PID (our process)
+	os.WriteFile(filepath.Join(repo2, ".ralph", pidFileName), []byte(strconv.Itoa(os.Getpid())+"\n"), 0644)
+	// repo3: no PID file
+
+	cleaned := CleanStalePIDFiles([]string{repo1, repo2, repo3})
+	if cleaned != 1 {
+		t.Errorf("expected 1 cleaned, got %d", cleaned)
+	}
+
+	// repo1 PID file should be removed
+	if _, err := os.Stat(filepath.Join(repo1, ".ralph", pidFileName)); !os.IsNotExist(err) {
+		t.Error("stale PID file in repo1 should be removed")
+	}
+
+	// repo2 PID file should still exist
+	if _, err := os.Stat(filepath.Join(repo2, ".ralph", pidFileName)); err != nil {
+		t.Error("live PID file in repo2 should still exist")
 	}
 }
