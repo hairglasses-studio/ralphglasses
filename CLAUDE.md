@@ -103,13 +103,47 @@ Uses direnv (`.envrc` → `dotenv` → `.env`). The `.env` holds `ANTHROPIC_API_
 - `.ralph/progress.json`: Progress (iteration, completed_ids, log entries, status)
 - `.ralphrc`: Shell-style KEY="value" config (PROJECT_NAME, MAX_CALLS_PER_HOUR, CB thresholds, etc.)
 
-## Thin Client Layout
+## Distro / Thin Client
 
-- **distro/dietpi/**: DietPi automation config + post-install script
-- **distro/i3/**: i3 config for 7-monitor workspace assignment
-- **distro/pxe/**: PXE boot server configs (LTSP/ThinStation)
-- **distro/systemd/**: Auto-login + TUI autostart services
-- **distro/autorandr/**: Multi-monitor xrandr profiles
+The `distro/` directory contains configs for a bootable Linux thin client that starts into the ralphglasses TUI for autonomous Claude Code agent marathons.
+
+### Strategy
+
+- **In-kernel drivers preferred** — no vendored blobs, no Windows drivers in this repo
+- **NVIDIA via apt** — `nvidia-driver-550` at build time, not `.run` files
+- **Target hardware**: ASUS ProArt X870E-CREATOR WIFI (Ryzen 9 7950X, RTX 4090, 128GB DDR5)
+- **Dual-GPU constraint**: RTX 4090 only on Linux. GTX 1060 (Pascal) is blacklisted — driver conflict (one `nvidia.ko` loads at a time)
+- **Display**: i3 + RTX 4090 (nvidia), AMD iGPU fallback (amdgpu, zero config)
+- **Network**: Wired Intel I226-V 2.5GbE (`igc` module) — reliable for 12h+ marathons
+
+### Key Files
+
+- `distro/hardware/proart-x870e.md` — Full hardware manifest: PCI IDs, kernel modules, known issues, driver cross-reference
+- `distro/scripts/hw-detect.sh` — First-boot hardware detection. Configures Xorg for RTX 4090, blacklists GTX 1060 and broken MT7927 Bluetooth. **Testable on WSL**: `distro/scripts/hw-detect.sh --dry-run`
+- `distro/systemd/hw-detect.service` — Oneshot systemd unit, runs hw-detect.sh once at first boot (before display-manager)
+- `distro/systemd/ralphglasses.service` — TUI autostart after graphical target
+
+### What Doesn't Belong Here
+
+- Windows driver archives (Google Drive)
+- NVIDIA `.run` files (GitHub Release artifacts if needed)
+- Firmware blobs, DKMS tarballs
+
+### Future Phases (not yet created)
+
+- `distro/Dockerfile` — Ubuntu 24.04 + kernel 6.12+ HWE + nvidia-driver-550 + Go + Claude Code
+- `distro/Makefile` — ISO build pipeline (docker build -> squashfs -> ISO)
+- `distro/i3/config` — Multi-monitor workspace assignment (depends on monitor strategy)
+- `distro/grub/grub.cfg` — UEFI boot menu
+
+### Layout
+
+- **distro/hardware/**: Hardware manifests (PCI IDs, modules, issues)
+- **distro/scripts/**: Build and detection scripts
+- **distro/systemd/**: Systemd service units
+- **distro/dietpi/**: Legacy DietPi config (deprecated)
+- **distro/pxe/**: PXE network boot docs
+- **distro/autorandr/**: Monitor profiles (populated after setup)
 
 ## Related Repos (same org)
 

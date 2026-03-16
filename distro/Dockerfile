@@ -56,10 +56,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     network-manager \
     iproute2 \
     openssh-server \
+    ethtool \
+    # ── ProArt X870E hardware drivers ──────────────────────────────────
+    # Firmware blobs (Intel I226-V igc, Marvell AQC113 atlantic, MediaTek, etc.)
+    linux-firmware \
+    # Extra kernel modules not in linux-image-generic (atlantic 10GbE, etc.)
+    linux-modules-extra-generic \
+    # USB4 / Thunderbolt (ASMedia ASM4242) — userspace authorization daemon
+    bolt \
+    # Audio (Realtek ALC1220P via snd-hda-intel — not critical for agent fleet)
+    alsa-utils \
+    # Bluetooth stack (for TP-Link UB400 CSR8510 dongle via btusb)
+    bluez \
+    bluez-tools \
+    # Firmware updates (UEFI, NVMe, NIC firmware via LVFS)
+    fwupd \
     # Filesystem
     squashfs-tools \
     dosfstools \
     parted \
+    # Live boot (required for boot=live toram kernel params)
+    live-boot \
+    live-boot-initramfs-tools \
     # Misc
     locales \
     console-setup \
@@ -85,7 +103,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - \
 RUN npm install -g @anthropic-ai/claude-code
 
 # ── Non-root user ────────────────────────────────────────────────────
-RUN useradd -m -s /bin/bash -G sudo,video,render,input ralph \
+RUN useradd -m -s /bin/bash -G sudo,video,render,input,bluetooth,plugdev ralph \
     && echo "ralph ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ralph
 
 # ── Build ralphglasses from source ───────────────────────────────────
@@ -108,6 +126,16 @@ RUN mkdir -p /home/ralph/.config/autorandr \
 # ── systemd: ralphglasses service ────────────────────────────────────
 COPY distro/systemd/ralphglasses.service /etc/systemd/system/ralphglasses.service
 RUN systemctl enable ralphglasses.service 2>/dev/null || true
+
+# ── hw-detect: first-boot hardware detection ────────────────────────
+COPY distro/scripts/hw-detect.sh /usr/local/bin/hw-detect.sh
+RUN chmod 755 /usr/local/bin/hw-detect.sh
+COPY distro/systemd/hw-detect.service /etc/systemd/system/hw-detect.service
+RUN systemctl enable hw-detect.service 2>/dev/null || true
+
+# ── install-to-disk script ──────────────────────────────────────────
+COPY distro/scripts/install-to-disk.sh /usr/local/bin/install-to-disk.sh
+RUN chmod 755 /usr/local/bin/install-to-disk.sh
 
 # ── Autologin to i3 via getty ─────────────────────────────────────────
 RUN mkdir -p /etc/systemd/system/getty@tty1.service.d \
@@ -166,9 +194,48 @@ XEOF
 # ── Hostname ──────────────────────────────────────────────────────────
 RUN echo "ralphglasses" > /etc/hostname
 
+# ── ProArt X870E: kernel module config ──────────────────────────────
+# Blacklist problematic modules; hw-detect.sh regenerates this at first boot
+RUN mkdir -p /etc/modprobe.d && cat > /etc/modprobe.d/ralphglasses-blacklist.conf <<'EOF'
+# MediaTek MT7927 Bluetooth — btmtk causes kernel panics on this board
+blacklist btmtk
+# Prevent nouveau from conflicting with nvidia
+blacklist nouveau
+options nouveau modeset=0
+EOF
+
+# ── ProArt X870E: NetworkManager wired connection priority ──────────
+# User is connected to the Marvell 10GbE port — make it primary
+RUN mkdir -p /etc/NetworkManager/conf.d && cat > /etc/NetworkManager/conf.d/10-proart.conf <<'EOF'
+[device-atlantic]
+# Marvell AQC113CS 10GbE — primary (user's active connection)
+match-device=driver:atlantic
+managed=1
+
+[device-igc]
+# Intel I226-V 2.5GbE — fallback
+match-device=driver:igc
+managed=1
+EOF
+
+# ── TP-Link UB400 (CSR8510 A10) Bluetooth dongle ───────────────────
+# Many CSR8510 dongles are clones that need HCI mode forced via udev
+RUN mkdir -p /etc/udev/rules.d && cat > /etc/udev/rules.d/97-csr8510-bluetooth.rules <<'EOF'
+# CSR8510 A10 clone — force HCI mode (TP-Link UB400/UB500)
+ATTR{idVendor}=="0a12", ATTR{idProduct}=="0001", RUN+="/lib/udev/hid2hci --mode=hci --method=csr2 --devpath=%p"
+EOF
+
+# ── USB4 / Thunderbolt: auto-authorize devices ─────────────────────
+RUN mkdir -p /etc/bolt && cat > /etc/bolt/boltd.conf <<'EOF'
+[policy]
+# Auto-authorize Thunderbolt/USB4 devices (ASMedia ASM4242)
+default-policy=auto
+EOF
+
 # ── Enable essential services ─────────────────────────────────────────
 RUN systemctl enable NetworkManager 2>/dev/null || true \
-    && systemctl enable systemd-networkd 2>/dev/null || true \
+    && systemctl enable bolt 2>/dev/null || true \
+    && systemctl enable bluetooth 2>/dev/null || true \
     && systemctl set-default graphical.target 2>/dev/null || true
 
 # ── Workspace directory ──────────────────────────────────────────────
