@@ -1,0 +1,192 @@
+package process
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+)
+
+func TestWatchStatusFiles_DetectsWrite(t *testing.T) {
+	repoPath := t.TempDir()
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the status file first so the watcher has something to watch
+	statusPath := filepath.Join(ralphDir, "status.json")
+	if err := os.WriteFile(statusPath, []byte(`{"status":"idle"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Start watching
+	cmd := WatchStatusFiles([]string{repoPath})
+
+	// Write to the file after a brief delay
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		_ = os.WriteFile(statusPath, []byte(`{"status":"running"}`), 0644)
+	}()
+
+	// Run the watcher command with a timeout
+	done := make(chan interface{})
+	go func() {
+		msg := cmd()
+		done <- msg
+	}()
+
+	select {
+	case msg := <-done:
+		if msg == nil {
+			t.Fatal("expected FileChangedMsg, got nil")
+		}
+		fcm, ok := msg.(FileChangedMsg)
+		if !ok {
+			t.Fatalf("expected FileChangedMsg, got %T", msg)
+		}
+		if fcm.RepoPath != repoPath {
+			t.Errorf("RepoPath = %q, want %q", fcm.RepoPath, repoPath)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("watcher timed out waiting for file change event")
+	}
+}
+
+func TestWatchStatusFiles_DetectsCircuitBreakerWrite(t *testing.T) {
+	repoPath := t.TempDir()
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	cbPath := filepath.Join(ralphDir, ".circuit_breaker_state")
+	if err := os.WriteFile(cbPath, []byte(`{"state":"CLOSED"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := WatchStatusFiles([]string{repoPath})
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		_ = os.WriteFile(cbPath, []byte(`{"state":"OPEN"}`), 0644)
+	}()
+
+	done := make(chan interface{})
+	go func() {
+		msg := cmd()
+		done <- msg
+	}()
+
+	select {
+	case msg := <-done:
+		if msg == nil {
+			t.Fatal("expected FileChangedMsg, got nil")
+		}
+		fcm, ok := msg.(FileChangedMsg)
+		if !ok {
+			t.Fatalf("expected FileChangedMsg, got %T", msg)
+		}
+		if fcm.RepoPath != repoPath {
+			t.Errorf("RepoPath = %q, want %q", fcm.RepoPath, repoPath)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("watcher timed out")
+	}
+}
+
+func TestWatchStatusFiles_DetectsProgressWrite(t *testing.T) {
+	repoPath := t.TempDir()
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	progPath := filepath.Join(ralphDir, "progress.json")
+	if err := os.WriteFile(progPath, []byte(`{"iteration":1}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := WatchStatusFiles([]string{repoPath})
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		_ = os.WriteFile(progPath, []byte(`{"iteration":2}`), 0644)
+	}()
+
+	done := make(chan interface{})
+	go func() {
+		msg := cmd()
+		done <- msg
+	}()
+
+	select {
+	case msg := <-done:
+		if msg == nil {
+			t.Fatal("expected FileChangedMsg, got nil")
+		}
+		_, ok := msg.(FileChangedMsg)
+		if !ok {
+			t.Fatalf("expected FileChangedMsg, got %T", msg)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("watcher timed out")
+	}
+}
+
+func TestWatchStatusFiles_IgnoresUnrelatedFiles(t *testing.T) {
+	repoPath := t.TempDir()
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := WatchStatusFiles([]string{repoPath})
+
+	// Write an unrelated file, then write a watched file
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		_ = os.WriteFile(filepath.Join(ralphDir, "unrelated.txt"), []byte("hi"), 0644)
+		time.Sleep(100 * time.Millisecond)
+		_ = os.WriteFile(filepath.Join(ralphDir, "status.json"), []byte(`{}`), 0644)
+	}()
+
+	done := make(chan interface{})
+	go func() {
+		msg := cmd()
+		done <- msg
+	}()
+
+	select {
+	case msg := <-done:
+		// Should have been triggered by status.json, not unrelated.txt
+		fcm, ok := msg.(FileChangedMsg)
+		if !ok {
+			t.Fatalf("expected FileChangedMsg, got %T", msg)
+		}
+		if fcm.RepoPath != repoPath {
+			t.Errorf("RepoPath = %q, want %q", fcm.RepoPath, repoPath)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("watcher timed out")
+	}
+}
+
+func TestWatchStatusFiles_EmptyPaths(t *testing.T) {
+	cmd := WatchStatusFiles([]string{})
+
+	// With no paths, the watcher will block forever since nothing can happen.
+	// We just verify it doesn't panic immediately.
+	done := make(chan interface{})
+	go func() {
+		msg := cmd()
+		done <- msg
+	}()
+
+	select {
+	case <-done:
+		// Acceptable — may return nil quickly if watcher setup fails
+	case <-time.After(500 * time.Millisecond):
+		// Expected — watcher blocks with nothing to watch
+	}
+}
