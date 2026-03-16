@@ -5,7 +5,7 @@ Wants=graphical.target
 
 [Service]
 Type=simple
-User=dietpi
+User=ralph
 Environment=DISPLAY=:0
 Environment=RALPHGLASSES_SCAN_PATH=/workspace
 ExecStart=/usr/local/bin/ralphglasses --scan-path /workspace
