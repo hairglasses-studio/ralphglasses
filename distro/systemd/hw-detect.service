@@ -1,0 +1,16 @@
+[Unit]
+Description=Ralphglasses Hardware Detection (first boot)
+DefaultDependencies=no
+After=local-fs.target
+Before=display-manager.service
+ConditionPathExists=!/var/lib/hw-detect/configured
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/ralphglasses/scripts/hw-detect.sh
+ExecStartPost=/usr/bin/mkdir -p /var/lib/hw-detect
+ExecStartPost=/usr/bin/touch /var/lib/hw-detect/configured
+
+[Install]
+WantedBy=multi-user.target
