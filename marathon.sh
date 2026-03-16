@@ -48,7 +48,6 @@ Options:
   -h, --help                Show this help
 
 Environment:
-  ANTHROPIC_API_KEY         Required. Your Anthropic API key.
   RALPH_CMD                 Path to ralph binary/script (auto-detected).
   BUDGET                    Override budget (same as -b).
   CALLS_PER_HOUR            Override calls/hour (same as -c).
@@ -107,10 +106,12 @@ for dep in jq bc; do
 done
 
 # --- Validate ---
-if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
-    echo "Error: ANTHROPIC_API_KEY is not set." >&2
-    echo "  export ANTHROPIC_API_KEY=sk-ant-..." >&2
-    exit 1
+# Note: Claude Code uses its own OAuth session, not ANTHROPIC_API_KEY.
+# If ANTHROPIC_API_KEY is set, it overrides Claude's auth and may cause "Invalid API key" errors.
+# Unset it to let Claude use its own authentication.
+if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+    echo "WARNING: Unsetting ANTHROPIC_API_KEY — Claude Code uses its own OAuth session." >&2
+    unset ANTHROPIC_API_KEY
 fi
 
 if [[ ! -d "$PROJECT_DIR" ]]; then
@@ -213,6 +214,9 @@ if [[ -f "$RALPHRC" ]]; then
 fi
 
 # --- Setup ---
+# Unset CLAUDECODE to avoid "nested session" detection when launched from Claude Code
+unset CLAUDECODE 2>/dev/null || true
+
 cd "$PROJECT_DIR"
 mkdir -p .ralph/logs
 MARATHON_LOG=".ralph/logs/marathon-$(date '+%Y%m%d-%H%M%S').log"
