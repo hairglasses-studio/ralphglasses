@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Ralphglasses 12-Hour Marathon Loop Launcher
-# Wraps ralph_loop.sh with marathon defaults and budget guardrails.
+# Supervises ralph_loop.sh with budget guardrails, duration limits, and checkpoints.
 
 # --- Defaults (override with flags or env vars) ---
 BUDGET="${BUDGET:-100}"
@@ -16,6 +16,17 @@ MONITOR=false
 VERBOSE=false
 LIVE=false
 DRY_RUN=false
+
+# Cost estimation: conservative avg cost per Claude call in USD.
+# Sonnet ~$0.10-0.50/call, Opus ~$0.50-2.00/call. Default assumes Sonnet.
+COST_PER_CALL="${COST_PER_CALL:-0.15}"
+# Budget headroom: stop at this fraction to avoid overshoot (e.g. 0.90 = stop at 90%)
+BUDGET_HEADROOM="${BUDGET_HEADROOM:-0.90}"
+
+MARATHON_LOG=""
+RALPH_PID=""
+START_EPOCH=""
+CHECKPOINT_COUNT=0
 
 usage() {
     cat <<EOF
@@ -41,6 +52,8 @@ Environment:
   RALPH_CMD                 Path to ralph binary/script (auto-detected).
   BUDGET                    Override budget (same as -b).
   CALLS_PER_HOUR            Override calls/hour (same as -c).
+  COST_PER_CALL             Estimated USD per API call for fallback tracking (default: 0.15).
+  BUDGET_HEADROOM           Stop at this fraction of budget to avoid overshoot (default: 0.90).
 
 Examples:
   $(basename "$0")                              # Default 12h / \$100 marathon
@@ -73,6 +86,26 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# --- Logging ---
+log() {
+    local level="$1"; shift
+    local ts
+    ts="$(date '+%Y-%m-%d %H:%M:%S')"
+    local msg="[$ts] [$level] $*"
+    echo "$msg"
+    if [[ -n "$MARATHON_LOG" ]]; then
+        echo "$msg" >> "$MARATHON_LOG"
+    fi
+}
+
+# --- Validate dependencies ---
+for dep in jq bc; do
+    if ! command -v "$dep" &>/dev/null; then
+        echo "Error: Required command '$dep' not found. Install it first." >&2
+        exit 1
+    fi
+done
+
 # --- Validate ---
 if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
     echo "Error: ANTHROPIC_API_KEY is not set." >&2
@@ -94,28 +127,27 @@ fi
 if [[ -z "$RALPH_CMD" ]]; then
     if command -v ralph &>/dev/null; then
         RALPH_CMD="ralph"
-    elif [[ -x "$HOME/hairglasses-studio/ralph-claude-code/ralph_loop.sh" ]]; then
-        RALPH_CMD="$HOME/hairglasses-studio/ralph-claude-code/ralph_loop.sh"
     else
-        echo "Error: Cannot find ralph. Set RALPH_CMD or install ralph-claude-code." >&2
+        echo "Error: Cannot find ralph. Set RALPH_CMD or install ralph." >&2
         exit 1
     fi
 fi
 
 # --- Update .ralphrc with marathon settings ---
-RALPHRC="$PROJECT_DIR/.ralphrc"
-if [[ -f "$RALPHRC" ]]; then
-    # Update values in-place
-    sed -i '' "s/^MAX_CALLS_PER_HOUR=.*/MAX_CALLS_PER_HOUR=$CALLS_PER_HOUR/" "$RALPHRC" 2>/dev/null || true
-    sed -i '' "s/^CLAUDE_TIMEOUT_MINUTES=.*/CLAUDE_TIMEOUT_MINUTES=$TIMEOUT_MINUTES/" "$RALPHRC" 2>/dev/null || true
-    sed -i '' "s/^MARATHON_DURATION_HOURS=.*/MARATHON_DURATION_HOURS=$DURATION_HOURS/" "$RALPHRC" 2>/dev/null || true
-    sed -i '' "s/^MARATHON_CHECKPOINT_INTERVAL=.*/MARATHON_CHECKPOINT_INTERVAL=$CHECKPOINT_HOURS/" "$RALPHRC" 2>/dev/null || true
-    sed -i '' "s/^RALPH_SESSION_BUDGET=.*/RALPH_SESSION_BUDGET=$BUDGET/" "$RALPHRC" 2>/dev/null || true
-    # Add budget if not present
-    if ! grep -q "^RALPH_SESSION_BUDGET=" "$RALPHRC"; then
-        echo "RALPH_SESSION_BUDGET=$BUDGET" >> "$RALPHRC"
+# Uses portable sed -i (GNU/Linux). Adds keys if missing.
+update_ralphrc_key() {
+    local file="$1" key="$2" value="$3"
+    if [[ ! -f "$file" ]]; then
+        return
     fi
-fi
+    if grep -q "^${key}=" "$file"; then
+        sed -i "s|^${key}=.*|${key}=${value}|" "$file"
+    else
+        echo "${key}=${value}" >> "$file"
+    fi
+}
+
+RALPHRC="$PROJECT_DIR/.ralphrc"
 
 # --- Build command ---
 CMD=("$RALPH_CMD")
@@ -124,7 +156,9 @@ CMD+=("--timeout" "$TIMEOUT_MINUTES")
 CMD+=("--auto-reset-circuit")
 
 if $MONITOR; then
-    CMD+=("--monitor")
+    echo "WARNING: --monitor is incompatible with marathon supervisor (tmux fork breaks PID tracking)." >&2
+    echo "         Use --verbose or --live instead, or run ralph --monitor directly." >&2
+    exit 1
 fi
 if $VERBOSE; then
     CMD+=("--verbose")
@@ -133,19 +167,24 @@ if $LIVE; then
     CMD+=("--live")
 fi
 
-# --- Estimate ---
-est_per_hour=$(echo "scale=0; $CALLS_PER_HOUR * 12 / 100" | bc)
-est_total=$(echo "scale=0; $est_per_hour * $DURATION_HOURS" | bc)
+# --- Compute estimates ---
+# Budget ceiling with headroom
+budget_ceiling=$(echo "$BUDGET * $BUDGET_HEADROOM" | bc)
+est_per_hour=$(echo "scale=2; $CALLS_PER_HOUR * $COST_PER_CALL" | bc)
+est_total=$(echo "scale=2; $est_per_hour * $DURATION_HOURS" | bc)
+duration_seconds=$((DURATION_HOURS * 3600))
+checkpoint_seconds=$((CHECKPOINT_HOURS * 3600))
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Ralphglasses Marathon Loop"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Project:     $(basename "$PROJECT_DIR")"
-echo "  Duration:    ${DURATION_HOURS}h"
-echo "  Budget:      \$$BUDGET"
+echo "  Duration:    ${DURATION_HOURS}h (hard limit)"
+echo "  Budget:      \$$BUDGET (stop at \$$budget_ceiling)"
 echo "  Calls/hour:  $CALLS_PER_HOUR"
 echo "  Timeout:     ${TIMEOUT_MINUTES}m per call"
 echo "  Checkpoint:  every ${CHECKPOINT_HOURS}h"
+echo "  Cost/call:   ~\$$COST_PER_CALL"
 echo "  Estimate:    ~\$${est_per_hour}/hr → ~\$${est_total} total"
 echo "  Ralph:       $RALPH_CMD"
 echo "  Monitor:     $MONITOR"
@@ -154,15 +193,169 @@ echo ""
 echo "  Command: ${CMD[*]}"
 echo ""
 
+# Warn if estimate exceeds budget
+if (( $(echo "$est_total > $BUDGET" | bc -l) )); then
+    echo "  WARNING: Estimated cost (\$$est_total) exceeds budget (\$$BUDGET)."
+    echo "           The supervisor will enforce the budget limit at runtime."
+    echo ""
+fi
+
 if $DRY_RUN; then
     echo "[dry-run] Would execute in: $PROJECT_DIR"
     echo "[dry-run] ${CMD[*]}"
     exit 0
 fi
 
-# --- Launch ---
+# --- Update .ralphrc with marathon settings (after dry-run gate) ---
+if [[ -f "$RALPHRC" ]]; then
+    update_ralphrc_key "$RALPHRC" "MAX_CALLS_PER_HOUR" "$CALLS_PER_HOUR"
+    update_ralphrc_key "$RALPHRC" "CLAUDE_TIMEOUT_MINUTES" "$TIMEOUT_MINUTES"
+fi
+
+# --- Setup ---
+cd "$PROJECT_DIR"
+mkdir -p .ralph/logs
+MARATHON_LOG=".ralph/logs/marathon-$(date '+%Y%m%d-%H%M%S').log"
+START_EPOCH=$(date +%s)
+
+log "INFO" "Marathon starting: ${DURATION_HOURS}h, \$$BUDGET budget, ${CALLS_PER_HOUR} calls/hr"
+log "INFO" "Command: ${CMD[*]}"
+
+# --- Signal handling ---
+cleanup() {
+    local exit_code="${1:-0}"
+    log "INFO" "Marathon cleanup (exit_code=$exit_code)"
+    if [[ -n "$RALPH_PID" ]] && kill -0 "$RALPH_PID" 2>/dev/null; then
+        log "INFO" "Sending SIGTERM to ralph (PID $RALPH_PID)"
+        kill -TERM "$RALPH_PID" 2>/dev/null || true
+        # Wait up to 30s for graceful shutdown
+        local waited=0
+        while kill -0 "$RALPH_PID" 2>/dev/null && (( waited < 30 )); do
+            sleep 1
+            ((waited++))
+        done
+        if kill -0 "$RALPH_PID" 2>/dev/null; then
+            log "WARN" "Ralph did not exit after 30s, sending SIGKILL"
+            kill -KILL "$RALPH_PID" 2>/dev/null || true
+        fi
+    fi
+    local elapsed=$(( $(date +%s) - START_EPOCH ))
+    local hours=$(( elapsed / 3600 ))
+    local mins=$(( (elapsed % 3600) / 60 ))
+    local spend
+    spend=$(read_spend)
+    log "INFO" "Marathon finished: ran ${hours}h${mins}m, spent ~\$${spend}"
+    exit "$exit_code"
+}
+
+trap 'log "INFO" "Caught SIGINT"; cleanup 130' INT
+trap 'log "INFO" "Caught SIGTERM"; cleanup 143' TERM
+
+# --- Status file readers (using jq) ---
+read_status_field() {
+    local field="$1" default="${2:-0}"
+    local status_file="$PROJECT_DIR/.ralph/status.json"
+    if [[ -f "$status_file" ]]; then
+        jq -r ".${field} // ${default}" "$status_file" 2>/dev/null || echo "$default"
+    else
+        echo "$default"
+    fi
+}
+
+# Reads session_spend_usd from .ralph/status.json, falls back to call-count estimate
+read_spend() {
+    local spend
+    spend=$(read_status_field "session_spend_usd" "0")
+    if [[ "$spend" != "0" ]] && [[ "$spend" != "null" ]] && [[ -n "$spend" ]]; then
+        echo "$spend"
+        return
+    fi
+    # Fallback: estimate from loop_count × cost_per_call
+    local loops
+    loops=$(read_status_field "loop_count" "0")
+    echo "scale=2; $loops * $COST_PER_CALL" | bc 2>/dev/null || echo "0"
+}
+
+read_loop_count() {
+    read_status_field "loop_count" "0"
+}
+
+# --- Checkpoint logic ---
+create_checkpoint() {
+    CHECKPOINT_COUNT=$((CHECKPOINT_COUNT + 1))
+    local tag="marathon-checkpoint-${CHECKPOINT_COUNT}-$(date '+%Y%m%d-%H%M%S')"
+    local elapsed=$(( $(date +%s) - START_EPOCH ))
+    local hours=$(( elapsed / 3600 ))
+    local spend
+    spend=$(read_spend)
+    local loops
+    loops=$(read_loop_count)
+
+    if git rev-parse --is-inside-work-tree &>/dev/null; then
+        # Stage and commit any ralph working changes
+        if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+            git add -A && git commit -m "marathon checkpoint #${CHECKPOINT_COUNT} (${hours}h, \$${spend}, ${loops} loops)" --no-verify 2>/dev/null || true
+        fi
+        git tag "$tag" 2>/dev/null || true
+        log "CHECKPOINT" "#${CHECKPOINT_COUNT}: tag=$tag, elapsed=${hours}h, spend=\$${spend}, loops=${loops}"
+    else
+        log "CHECKPOINT" "#${CHECKPOINT_COUNT}: elapsed=${hours}h, spend=\$${spend}, loops=${loops} (not a git repo, skipped tag)"
+    fi
+}
+
+# --- Launch ralph ---
 echo "Starting in 3 seconds... (Ctrl+C to cancel)"
 sleep 3
 
-cd "$PROJECT_DIR"
-exec "${CMD[@]}"
+log "INFO" "Launching ralph..."
+"${CMD[@]}" &
+RALPH_PID=$!
+log "INFO" "Ralph started with PID $RALPH_PID"
+
+# --- Supervisor loop ---
+POLL_INTERVAL=30
+last_checkpoint_epoch=$START_EPOCH
+
+while true; do
+    sleep "$POLL_INTERVAL" || true
+
+    # Check if ralph is still running
+    if ! kill -0 "$RALPH_PID" 2>/dev/null; then
+        ralph_exit=0
+        wait "$RALPH_PID" 2>/dev/null || ralph_exit=$?
+        log "INFO" "Ralph exited with code $ralph_exit"
+        RALPH_PID=""
+        cleanup "$ralph_exit"
+    fi
+
+    now=$(date +%s)
+    elapsed=$(( now - START_EPOCH ))
+    elapsed_hours=$(echo "scale=1; $elapsed / 3600" | bc)
+    spend=$(read_spend)
+    loops=$(read_loop_count)
+
+    # --- Duration check ---
+    if (( elapsed >= duration_seconds )); then
+        log "BUDGET" "Duration limit reached (${elapsed_hours}h >= ${DURATION_HOURS}h). Stopping."
+        cleanup 0
+    fi
+
+    # --- Budget check ---
+    if (( $(echo "$spend >= $budget_ceiling" | bc -l 2>/dev/null || echo 0) )); then
+        log "BUDGET" "Budget limit reached (\$${spend} >= \$${budget_ceiling}). Stopping."
+        cleanup 0
+    fi
+
+    # --- Checkpoint check ---
+    if (( now - last_checkpoint_epoch >= checkpoint_seconds )); then
+        create_checkpoint
+        last_checkpoint_epoch=$now
+    fi
+
+    # Periodic status (every 5 minutes = every 10 polls)
+    if (( (elapsed / POLL_INTERVAL) % 10 == 0 )); then
+        remaining_hours=$(echo "scale=1; ($duration_seconds - $elapsed) / 3600" | bc)
+        remaining_budget=$(echo "scale=2; $budget_ceiling - $spend" | bc)
+        log "STATUS" "elapsed=${elapsed_hours}h, remaining=${remaining_hours}h, spend=\$${spend}/\$${budget_ceiling}, loops=${loops}"
+    fi
+done
