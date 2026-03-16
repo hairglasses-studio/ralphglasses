@@ -1,0 +1,16 @@
+[Unit]
+Description=Ralphglasses TUI Agent Fleet Manager
+After=graphical.target
+Wants=graphical.target
+
+[Service]
+Type=simple
+User=dietpi
+Environment=DISPLAY=:0
+Environment=RALPHGLASSES_SCAN_PATH=/workspace
+ExecStart=/usr/local/bin/ralphglasses --scan-path /workspace
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target

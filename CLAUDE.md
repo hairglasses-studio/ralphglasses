@@ -1,6 +1,13 @@
 # Ralphglasses
 
-Command-and-control TUI for parallel ralph loops across the hairglasses-studio ecosystem.
+Command-and-control TUI + bootable thin client for parallel Claude Code agent fleets.
+
+## Two Deliverables
+
+1. **`ralphglasses` Go binary** — Cross-platform Unix TUI (k9s-style, Charmbracelet). Manages multi-session Claude Code / ralph loops.
+2. **Bootable Linux thin client** — DietPi + i3, boots into ralphglasses TUI. 7-monitor, dual-NVIDIA-GPU.
+
+See ROADMAP.md for full plan. See docs/ for research.
 
 ## Build & Run
 
@@ -68,3 +75,19 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 - `.ralph/.circuit_breaker_state`: CircuitBreakerState (state: CLOSED/HALF_OPEN/OPEN, counters, reason)
 - `.ralph/progress.json`: Progress (iteration, completed_ids, log entries, status)
 - `.ralphrc`: Shell-style KEY="value" config (PROJECT_NAME, MAX_CALLS_PER_HOUR, CB thresholds, etc.)
+
+## Thin Client Layout
+
+- **distro/dietpi/**: DietPi automation config + post-install script
+- **distro/i3/**: i3 config for 7-monitor workspace assignment
+- **distro/pxe/**: PXE boot server configs (LTSP/ThinStation)
+- **distro/systemd/**: Auto-login + TUI autostart services
+- **distro/autorandr/**: Multi-monitor xrandr profiles
+
+## Related Repos (same org)
+
+- **mcpkit**: Go MCP framework — ralph loop engine, finops, sampling, workflow, gateway
+- **hg-mcp**: Go MCP server with modular tool pattern (500+ tools)
+- **claudekit**: Go MCP with rdcycle perpetual loop, budget profiles
+- **shielddd**: Go + pure SQLite (modernc.org/sqlite) + MCP, audit logs
+- **mesmer**: Go MCP server with ralph integration
