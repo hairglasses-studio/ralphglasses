@@ -27,3 +27,4 @@ ralphglasses-mcp
 
 # OS
 .DS_Store
+.envrc
