@@ -134,6 +134,54 @@ func TestVisibleLines(t *testing.T) {
 	}
 }
 
+func TestLogView_SearchFilter(t *testing.T) {
+	lv := NewLogView()
+	lv.Width = 80
+	lv.Height = 10
+	lv.SetLines([]string{"ERROR something broke", "INFO all good", "ERROR another issue", "DEBUG trace"})
+
+	lv.Search = "error"
+	filtered := lv.filteredLines()
+	if len(filtered) != 2 {
+		t.Errorf("expected 2 filtered lines, got %d", len(filtered))
+	}
+
+	view := lv.View()
+	if !strings.Contains(view, "ERROR something broke") {
+		t.Error("view should contain matching error line")
+	}
+	if strings.Contains(view, "INFO all good") {
+		t.Error("view should not contain non-matching line")
+	}
+	if !strings.Contains(view, `Search:`) {
+		t.Error("view should show search indicator")
+	}
+}
+
+func TestLogView_SearchFilterEmpty(t *testing.T) {
+	lv := NewLogView()
+	lv.Height = 10
+	lv.SetLines([]string{"line1", "line2", "line3"})
+
+	lv.Search = ""
+	filtered := lv.filteredLines()
+	if len(filtered) != 3 {
+		t.Errorf("expected all 3 lines with empty search, got %d", len(filtered))
+	}
+}
+
+func TestLogView_SearchFilterCaseInsensitive(t *testing.T) {
+	lv := NewLogView()
+	lv.Height = 10
+	lv.SetLines([]string{"Error Message", "info message", "WARNING"})
+
+	lv.Search = "ERROR"
+	filtered := lv.filteredLines()
+	if len(filtered) != 1 {
+		t.Errorf("expected 1 case-insensitive match, got %d", len(filtered))
+	}
+}
+
 func TestLogViewView(t *testing.T) {
 	lv := NewLogView()
 	lv.Width = 80

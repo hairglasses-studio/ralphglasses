@@ -1,28 +1,18 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver"
+	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
 
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
 	Short: "Run as an MCP server on stdio",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		sp := scanPath
-		if len(sp) >= 2 && sp[:2] == "~/" {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return fmt.Errorf("expand home: %w", err)
-			}
-			sp = filepath.Join(home, sp[2:])
-		}
+		sp := util.ExpandHome(scanPath)
 
 		srv := server.NewMCPServer(
 			"ralphglasses",

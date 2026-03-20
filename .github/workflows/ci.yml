@@ -21,6 +21,14 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+      - name: shellcheck
+        run: shellcheck marathon.sh distro/scripts/*.sh
+
       - name: Vet
         run: go vet ./...
 

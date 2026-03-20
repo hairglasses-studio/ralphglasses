@@ -378,6 +378,42 @@ func TestHandlePause_MissingRepo(t *testing.T) {
 	}
 }
 
+func TestHandleStatus_ScanError(t *testing.T) {
+	srv := NewServer("/nonexistent/path/that/does/not/exist")
+
+	result, err := srv.handleStatus(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleStatus: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error when scan fails")
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "scan failed") {
+		t.Errorf("expected 'scan failed' in error, got: %s", text)
+	}
+}
+
+func TestHandleLogs_ScanError(t *testing.T) {
+	srv := NewServer("/nonexistent/path/that/does/not/exist")
+
+	result, err := srv.handleLogs(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleLogs: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error when scan fails")
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "scan failed") {
+		t.Errorf("expected 'scan failed' in error, got: %s", text)
+	}
+}
+
 func TestFindRepo(t *testing.T) {
 	srv := NewServer("/tmp")
 	srv.Repos = []*model.Repo{
