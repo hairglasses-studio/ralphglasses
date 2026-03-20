@@ -38,6 +38,12 @@ const (
 
 type tickMsg time.Time
 
+// RefreshErrorMsg is sent when RefreshRepo encounters parse errors.
+type RefreshErrorMsg struct {
+	RepoPath string
+	Errors   []error
+}
+
 // Model is the root Bubble Tea model.
 type Model struct {
 	// Config
@@ -138,6 +144,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(cmds...)
 
+	case RefreshErrorMsg:
+		m.Notify.Show(fmt.Sprintf("⚠ %s: parse errors", filepath.Base(msg.RepoPath)), 5*time.Second)
+		return m, nil
+
 	case scanResultMsg:
 		if msg.err != nil {
 			m.Notify.Show(fmt.Sprintf("Scan error: %v", msg.err), 5*time.Second)
@@ -155,9 +165,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case process.FileChangedMsg:
 		// Reactive update for a single repo
+		var cmds []tea.Cmd
 		for _, r := range m.Repos {
 			if r.Path == msg.RepoPath {
-				model.RefreshRepo(r)
+				if errs := model.RefreshRepo(r); len(errs) > 0 {
+					repoPath := r.Path
+					errs := errs
+					cmds = append(cmds, func() tea.Msg {
+						return RefreshErrorMsg{RepoPath: repoPath, Errors: errs}
+					})
+				}
 				break
 			}
 		}
@@ -167,7 +184,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for i, r := range m.Repos {
 			paths[i] = r.Path
 		}
-		return m, process.WatchStatusFiles(paths)
+		cmds = append(cmds, process.WatchStatusFiles(paths))
+		return m, tea.Batch(cmds...)
 
 	case process.LogLinesMsg:
 		if len(msg.Lines) > 0 {

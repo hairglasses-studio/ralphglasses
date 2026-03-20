@@ -93,7 +93,17 @@ func RenderRepoDetail(r *model.Repo, width int) string {
 		b.WriteString("\n")
 	}
 
-	b.WriteString("\n")
+	// Parse error warnings
+	if len(r.RefreshErrors) > 0 {
+		b.WriteString(styles.WarningStyle.Render("Warnings"))
+		b.WriteString("\n")
+		for _, e := range r.RefreshErrors {
+			b.WriteString(styles.WarningStyle.Render(fmt.Sprintf("  ⚠ %s", e.Error())))
+			b.WriteString("\n")
+		}
+		b.WriteString("\n")
+	}
+
 	b.WriteString(styles.HelpStyle.Render("  Enter: logs  S: start  X: stop  P: pause  e: edit config  Esc: back"))
 
 	return b.String()

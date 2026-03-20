@@ -61,6 +61,9 @@ var (
 			Background(lipgloss.Color("55")).
 			Padding(0, 2).
 			Bold(true)
+
+	WarningStyle = lipgloss.NewStyle().
+			Foreground(ColorYellow)
 )
 
 // StatusStyle returns the appropriate style for a status string.
