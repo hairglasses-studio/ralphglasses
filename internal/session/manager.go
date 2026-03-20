@@ -115,12 +115,13 @@ func (m *Manager) StopAll() {
 	}
 }
 
-// Resume resumes a previous session by its Claude session ID.
-func (m *Manager) Resume(ctx context.Context, repoPath, claudeSessionID, prompt string) (*Session, error) {
+// Resume resumes a previous session by its provider session ID.
+func (m *Manager) Resume(ctx context.Context, repoPath string, provider Provider, sessionID, prompt string) (*Session, error) {
 	opts := LaunchOptions{
+		Provider: provider,
 		RepoPath: repoPath,
 		Prompt:   prompt,
-		Resume:   claudeSessionID,
+		Resume:   sessionID,
 	}
 	return m.Launch(ctx, opts)
 }
@@ -182,6 +183,7 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 	)
 
 	opts := LaunchOptions{
+		Provider:     config.Provider,
 		RepoPath:     config.RepoPath,
 		Prompt:       leadPrompt,
 		Model:        config.Model,

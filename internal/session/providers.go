@@ -1,0 +1,259 @@
+package session
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os/exec"
+	"strings"
+	"syscall"
+)
+
+// ValidateProvider checks that a provider's CLI binary is available on PATH.
+func ValidateProvider(p Provider) error {
+	bin := providerBinary(p)
+	if bin == "" {
+		return fmt.Errorf("unknown provider: %q (valid: claude, gemini, codex)", p)
+	}
+	if _, err := exec.LookPath(bin); err != nil {
+		return fmt.Errorf("%s binary not found on PATH: %w", bin, err)
+	}
+	return nil
+}
+
+// ProviderDefaults returns the default model for a given provider.
+func ProviderDefaults(p Provider) (model string) {
+	switch p {
+	case ProviderGemini:
+		return "gemini-2.5-pro"
+	case ProviderCodex:
+		return "o4-mini"
+	default:
+		return "sonnet"
+	}
+}
+
+func providerBinary(p Provider) string {
+	switch p {
+	case ProviderClaude, "":
+		return "claude"
+	case ProviderGemini:
+		return "gemini"
+	case ProviderCodex:
+		return "codex"
+	default:
+		return ""
+	}
+}
+
+// buildCmdForProvider dispatches to the correct per-provider command builder.
+func buildCmdForProvider(ctx context.Context, opts LaunchOptions) (*exec.Cmd, error) {
+	p := opts.Provider
+	if p == "" {
+		p = ProviderClaude
+	}
+	if err := ValidateProvider(p); err != nil {
+		return nil, err
+	}
+
+	switch p {
+	case ProviderGemini:
+		return buildGeminiCmd(ctx, opts), nil
+	case ProviderCodex:
+		return buildCodexCmd(ctx, opts), nil
+	default:
+		return buildClaudeCmd(ctx, opts), nil
+	}
+}
+
+// buildClaudeCmd constructs the claude CLI command from LaunchOptions.
+// Extracted from the original buildCmd.
+func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
+	args := []string{"-p", "--output-format", "stream-json"}
+
+	if opts.Model != "" {
+		args = append(args, "--model", opts.Model)
+	}
+	if opts.MaxBudgetUSD > 0 {
+		args = append(args, "--max-budget-usd", fmt.Sprintf("%.2f", opts.MaxBudgetUSD))
+	}
+	if opts.MaxTurns > 0 {
+		args = append(args, "--max-turns", fmt.Sprintf("%d", opts.MaxTurns))
+	}
+	if opts.Agent != "" {
+		args = append(args, "--agent", opts.Agent)
+	}
+	if len(opts.AllowedTools) > 0 {
+		args = append(args, "--allowedTools", strings.Join(opts.AllowedTools, ","))
+	}
+	if opts.SystemPrompt != "" {
+		args = append(args, "--append-system-prompt", opts.SystemPrompt)
+	}
+	if opts.Resume != "" {
+		args = append(args, "--resume", opts.Resume)
+	} else if opts.Continue {
+		args = append(args, "--continue")
+	}
+	if opts.Worktree != "" {
+		if opts.Worktree == "true" {
+			args = append(args, "-w")
+		} else {
+			args = append(args, "-w", opts.Worktree)
+		}
+	}
+	if opts.SessionName != "" {
+		args = append(args, "-n", opts.SessionName)
+	}
+
+	cmd := exec.CommandContext(ctx, "claude", args...)
+	cmd.Dir = opts.RepoPath
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	return cmd
+}
+
+// buildGeminiCmd constructs the gemini CLI command.
+func buildGeminiCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
+	args := []string{"--output-format", "stream-json"}
+
+	if opts.Model != "" {
+		args = append(args, "--model", opts.Model)
+	}
+	if opts.Resume != "" {
+		args = append(args, "--resume", opts.Resume)
+	}
+
+	cmd := exec.CommandContext(ctx, "gemini", args...)
+	cmd.Dir = opts.RepoPath
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	return cmd
+}
+
+// buildCodexCmd constructs the codex CLI command.
+func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
+	args := []string{"--quiet"}
+
+	if opts.Model != "" {
+		args = append(args, "--model", opts.Model)
+	}
+
+	cmd := exec.CommandContext(ctx, "codex", args...)
+	cmd.Dir = opts.RepoPath
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	return cmd
+}
+
+// normalizeEvent parses a line of streaming output into a StreamEvent,
+// dispatching to provider-specific normalizers.
+func normalizeEvent(provider Provider, line []byte) (StreamEvent, error) {
+	if len(line) == 0 {
+		return StreamEvent{}, fmt.Errorf("empty line")
+	}
+	switch provider {
+	case ProviderGemini:
+		return normalizeGeminiEvent(line)
+	case ProviderCodex:
+		return normalizeCodexEvent(line)
+	default:
+		return normalizeClaudeEvent(line)
+	}
+}
+
+// normalizeClaudeEvent parses Claude stream-json output.
+func normalizeClaudeEvent(line []byte) (StreamEvent, error) {
+	var event StreamEvent
+	if err := json.Unmarshal(line, &event); err != nil {
+		return StreamEvent{}, err
+	}
+	event.Raw = json.RawMessage(append([]byte(nil), line...))
+	return event, nil
+}
+
+// normalizeGeminiEvent parses Gemini NDJSON output into StreamEvent.
+// Gemini stream-json emits objects with "type", "content", "model", etc.
+// We map them to our unified StreamEvent schema.
+func normalizeGeminiEvent(line []byte) (StreamEvent, error) {
+	var raw map[string]any
+	if err := json.Unmarshal(line, &raw); err != nil {
+		return StreamEvent{}, err
+	}
+
+	event := StreamEvent{
+		Raw: json.RawMessage(append([]byte(nil), line...)),
+	}
+
+	if t, ok := raw["type"].(string); ok {
+		event.Type = t
+	}
+	if sid, ok := raw["session_id"].(string); ok {
+		event.SessionID = sid
+	}
+	if m, ok := raw["model"].(string); ok {
+		event.Model = m
+	}
+	if c, ok := raw["content"].(string); ok {
+		event.Content = c
+	}
+	if r, ok := raw["result"].(string); ok {
+		event.Result = r
+	}
+	if cost, ok := raw["cost_usd"].(float64); ok {
+		event.CostUSD = cost
+	}
+	if turns, ok := raw["num_turns"].(float64); ok {
+		event.NumTurns = int(turns)
+	}
+	if dur, ok := raw["duration_seconds"].(float64); ok {
+		event.Duration = dur
+	}
+	if isErr, ok := raw["is_error"].(bool); ok {
+		event.IsError = isErr
+	}
+	if errStr, ok := raw["error"].(string); ok {
+		event.Error = errStr
+	}
+
+	return event, nil
+}
+
+// normalizeCodexEvent parses Codex quiet-mode output into StreamEvent.
+// Codex in quiet mode outputs JSON lines with action results.
+func normalizeCodexEvent(line []byte) (StreamEvent, error) {
+	var raw map[string]any
+	if err := json.Unmarshal(line, &raw); err != nil {
+		return StreamEvent{}, err
+	}
+
+	event := StreamEvent{
+		Raw: json.RawMessage(append([]byte(nil), line...)),
+	}
+
+	if t, ok := raw["type"].(string); ok {
+		event.Type = t
+	}
+	if sid, ok := raw["session_id"].(string); ok {
+		event.SessionID = sid
+	}
+	if m, ok := raw["model"].(string); ok {
+		event.Model = m
+	}
+	if c, ok := raw["content"].(string); ok {
+		event.Content = c
+	}
+	if r, ok := raw["result"].(string); ok {
+		event.Result = r
+	}
+	if cost, ok := raw["cost_usd"].(float64); ok {
+		event.CostUSD = cost
+	}
+	if turns, ok := raw["num_turns"].(float64); ok {
+		event.NumTurns = int(turns)
+	}
+	if isErr, ok := raw["is_error"].(bool); ok {
+		event.IsError = isErr
+	}
+	if errStr, ok := raw["error"].(string); ok {
+		event.Error = errStr
+	}
+
+	return event, nil
+}

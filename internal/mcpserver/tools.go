@@ -143,10 +143,11 @@ func (s *Server) Register(srv *server.MCPServer) {
 	// Claude Code session management tools
 
 	srv.AddTool(mcp.NewTool("ralphglasses_session_launch",
-		mcp.WithDescription("Launch a Claude Code headless session (claude -p) for a repo"),
+		mcp.WithDescription("Launch a headless LLM CLI session (claude/gemini/codex) for a repo"),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
-		mcp.WithString("prompt", mcp.Required(), mcp.Description("Prompt/task to send to Claude")),
-		mcp.WithString("model", mcp.Description("Model to use (sonnet, opus, haiku)")),
+		mcp.WithString("prompt", mcp.Required(), mcp.Description("Prompt/task to send")),
+		mcp.WithString("provider", mcp.Description("LLM provider: claude (default), gemini, codex")),
+		mcp.WithString("model", mcp.Description("Model to use")),
 		mcp.WithNumber("max_budget_usd", mcp.Description("Maximum spend in USD")),
 		mcp.WithNumber("max_turns", mcp.Description("Maximum conversation turns")),
 		mcp.WithString("agent", mcp.Description("Agent name (from .claude/agents/)")),
@@ -157,8 +158,9 @@ func (s *Server) Register(srv *server.MCPServer) {
 	), s.handleSessionLaunch)
 
 	srv.AddTool(mcp.NewTool("ralphglasses_session_list",
-		mcp.WithDescription("List all tracked Claude Code sessions with status, cost, and turns"),
+		mcp.WithDescription("List all tracked LLM sessions with status, cost, and turns"),
 		mcp.WithString("repo", mcp.Description("Filter by repo name (omit for all)")),
+		mcp.WithString("provider", mcp.Description("Filter by provider: claude, gemini, codex (omit for all)")),
 		mcp.WithString("status", mcp.Description("Filter by status: running, completed, errored, stopped")),
 	), s.handleSessionList)
 
@@ -168,9 +170,10 @@ func (s *Server) Register(srv *server.MCPServer) {
 	), s.handleSessionStatus)
 
 	srv.AddTool(mcp.NewTool("ralphglasses_session_resume",
-		mcp.WithDescription("Resume a previous Claude Code session"),
+		mcp.WithDescription("Resume a previous LLM CLI session"),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
-		mcp.WithString("session_id", mcp.Required(), mcp.Description("Claude session ID to resume (from session status)")),
+		mcp.WithString("session_id", mcp.Required(), mcp.Description("Provider session ID to resume (from session status)")),
+		mcp.WithString("provider", mcp.Description("LLM provider: claude (default), gemini, codex")),
 		mcp.WithString("prompt", mcp.Description("Follow-up prompt (optional)")),
 	), s.handleSessionResume)
 
@@ -192,6 +195,7 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
 		mcp.WithString("name", mcp.Required(), mcp.Description("Team name")),
 		mcp.WithString("tasks", mcp.Required(), mcp.Description("Newline-separated task descriptions")),
+		mcp.WithString("provider", mcp.Description("LLM provider for lead: claude (default), gemini, codex")),
 		mcp.WithString("lead_agent", mcp.Description("Agent definition for the lead (from .claude/agents/)")),
 		mcp.WithString("model", mcp.Description("Model for lead session")),
 		mcp.WithNumber("max_budget_usd", mcp.Description("Total budget for the team")),
@@ -703,7 +707,13 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
+	provider := session.Provider(getStringArg(req, "provider"))
+	if provider == "" {
+		provider = session.ProviderClaude
+	}
+
 	opts := session.LaunchOptions{
+		Provider:     provider,
 		RepoPath:     r.Path,
 		Prompt:       prompt,
 		Model:        getStringArg(req, "model"),
@@ -725,6 +735,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 
 	return jsonResult(map[string]any{
 		"session_id": sess.ID,
+		"provider":   sess.Provider,
 		"repo":       sess.RepoName,
 		"status":     sess.Status,
 		"model":      sess.Model,
@@ -734,6 +745,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 
 func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoFilter := getStringArg(req, "repo")
+	providerFilter := getStringArg(req, "provider")
 	statusFilter := getStringArg(req, "status")
 
 	var repoPath string
@@ -753,6 +765,7 @@ func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (
 
 	type sessionSummary struct {
 		ID       string  `json:"id"`
+		Provider string  `json:"provider"`
 		Repo     string  `json:"repo"`
 		Status   string  `json:"status"`
 		Model    string  `json:"model,omitempty"`
@@ -766,6 +779,7 @@ func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (
 	for _, sess := range sessions {
 		sess.Lock()
 		status := string(sess.Status)
+		provider := string(sess.Provider)
 		spent := sess.SpentUSD
 		turns := sess.TurnCount
 		sess.Unlock()
@@ -773,9 +787,13 @@ func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (
 		if statusFilter != "" && status != statusFilter {
 			continue
 		}
+		if providerFilter != "" && provider != providerFilter {
+			continue
+		}
 
 		summaries = append(summaries, sessionSummary{
 			ID:       sess.ID,
+			Provider: provider,
 			Repo:     sess.RepoName,
 			Status:   status,
 			Model:    sess.Model,
@@ -805,24 +823,25 @@ func (s *Server) handleSessionStatus(_ context.Context, req mcp.CallToolRequest)
 
 	sess.Lock()
 	detail := map[string]any{
-		"id":               sess.ID,
-		"claude_session_id": sess.ClaudeID,
-		"repo":             sess.RepoName,
-		"repo_path":        sess.RepoPath,
-		"status":           sess.Status,
-		"prompt":           sess.Prompt,
-		"model":            sess.Model,
-		"agent":            sess.AgentName,
-		"team":             sess.TeamName,
-		"budget_usd":       sess.BudgetUSD,
-		"spent_usd":        sess.SpentUSD,
-		"turns":            sess.TurnCount,
-		"max_turns":        sess.MaxTurns,
-		"launched_at":      sess.LaunchedAt,
-		"last_activity":    sess.LastActivity,
-		"exit_reason":      sess.ExitReason,
-		"last_output":      sess.LastOutput,
-		"error":            sess.Error,
+		"id":                  sess.ID,
+		"provider":            sess.Provider,
+		"provider_session_id": sess.ProviderSessionID,
+		"repo":                sess.RepoName,
+		"repo_path":           sess.RepoPath,
+		"status":              sess.Status,
+		"prompt":              sess.Prompt,
+		"model":               sess.Model,
+		"agent":               sess.AgentName,
+		"team":                sess.TeamName,
+		"budget_usd":          sess.BudgetUSD,
+		"spent_usd":           sess.SpentUSD,
+		"turns":               sess.TurnCount,
+		"max_turns":           sess.MaxTurns,
+		"launched_at":         sess.LaunchedAt,
+		"last_activity":       sess.LastActivity,
+		"exit_reason":         sess.ExitReason,
+		"last_output":         sess.LastOutput,
+		"error":               sess.Error,
 	}
 	if sess.EndedAt != nil {
 		detail["ended_at"] = sess.EndedAt
@@ -851,8 +870,12 @@ func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolReques
 		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
+	provider := session.Provider(getStringArg(req, "provider"))
+	if provider == "" {
+		provider = session.ProviderClaude
+	}
 	prompt := getStringArg(req, "prompt")
-	sess, err := s.SessMgr.Resume(ctx, r.Path, sessionID, prompt)
+	sess, err := s.SessMgr.Resume(ctx, r.Path, provider, sessionID, prompt)
 	if err != nil {
 		return errResult(fmt.Sprintf("resume failed: %v", err)), nil
 	}
@@ -942,8 +965,14 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		}
 	}
 
+	teamProvider := session.Provider(getStringArg(req, "provider"))
+	if teamProvider == "" {
+		teamProvider = session.ProviderClaude
+	}
+
 	config := session.TeamConfig{
 		Name:         teamName,
+		Provider:     teamProvider,
 		RepoPath:     r.Path,
 		LeadAgent:    getStringArg(req, "lead_agent"),
 		Tasks:        tasks,
