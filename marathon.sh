@@ -176,8 +176,8 @@ fi
 budget_ceiling=$(echo "$BUDGET * $BUDGET_HEADROOM" | bc)
 est_per_hour=$(echo "scale=2; $CALLS_PER_HOUR * $COST_PER_CALL" | bc)
 est_total=$(echo "scale=2; $est_per_hour * $DURATION_HOURS" | bc)
-duration_seconds=$((DURATION_HOURS * 3600))
-checkpoint_seconds=$((CHECKPOINT_HOURS * 3600))
+duration_seconds=$(echo "$DURATION_HOURS * 3600 / 1" | bc)
+checkpoint_seconds=$(echo "$CHECKPOINT_HOURS * 3600 / 1" | bc)
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Ralphglasses Marathon Loop"
