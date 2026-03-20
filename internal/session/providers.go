@@ -148,7 +148,7 @@ func buildCmdForProvider(ctx context.Context, opts LaunchOptions) (*exec.Cmd, er
 // buildClaudeCmd constructs the claude CLI command from LaunchOptions.
 // Extracted from the original buildCmd.
 func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
-	args := []string{"-p", "--output-format", "stream-json"}
+	args := []string{"-p", "--verbose", "--output-format", "stream-json"}
 
 	if opts.Model != "" {
 		args = append(args, "--model", opts.Model)
