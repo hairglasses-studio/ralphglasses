@@ -11,7 +11,7 @@ import (
 
 // TeamColumns defines the teams table structure.
 var TeamColumns = []components.Column{
-	{Title: "Name", Width: 16, Sortable: true},
+	{Title: "Name", Width: 16, Sortable: true, Grow: true},
 	{Title: "Repo", Width: 16, Sortable: true},
 	{Title: "Status", Width: 10, Sortable: true},
 	{Title: "Lead", Width: 10, Sortable: false},
@@ -20,7 +20,9 @@ var TeamColumns = []components.Column{
 
 // NewTeamsTable creates a table pre-configured for teams.
 func NewTeamsTable() *components.Table {
-	return components.NewTable(TeamColumns)
+	t := components.NewTable(TeamColumns)
+	t.EmptyMessage = "No teams — create via MCP"
+	return t
 }
 
 // TeamsToRows converts team statuses to table rows with styled cells.

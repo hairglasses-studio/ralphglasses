@@ -14,6 +14,7 @@ type Column struct {
 	Title    string
 	Width    int
 	Sortable bool
+	Grow     bool // if true, this column expands to fill remaining width
 }
 
 // Row is a slice of styled cell strings.
@@ -21,23 +22,28 @@ type Row []string
 
 // Table is a sortable, navigable table component.
 type Table struct {
-	Columns   []Column
-	Rows      []Row
-	Cursor    int
-	SortCol   int
-	SortAsc   bool
-	Width     int
-	Height    int
-	Offset    int // scroll offset
-	Filter    string
-	filtered  []int // indices into Rows matching filter
+	Columns      []Column
+	Rows         []Row
+	Cursor       int
+	SortCol      int
+	SortAsc      bool
+	Width        int
+	Height       int
+	Offset       int    // scroll offset
+	Filter       string
+	filtered     []int  // indices into Rows matching filter
+	EmptyMessage string // shown when no rows match
+	StatusColumn int    // column index for status-prefix filtering (-1 = disabled)
+	MultiSelect  bool           // enable multi-select mode
+	Selected     map[int]bool   // selected row indices (into Rows)
 }
 
 // NewTable creates a table with the given columns.
 func NewTable(cols []Column) *Table {
 	return &Table{
-		Columns: cols,
-		SortAsc: true,
+		Columns:      cols,
+		SortAsc:      true,
+		StatusColumn: -1,
 	}
 }
 
@@ -61,11 +67,25 @@ func (t *Table) SetFilter(f string) {
 func (t *Table) applyFilter() {
 	t.filtered = nil
 	f := strings.ToLower(t.Filter)
+	prefix, remainder := parseStatusFilter(f)
+
 	for i, row := range t.Rows {
 		if f == "" {
 			t.filtered = append(t.filtered, i)
 			continue
 		}
+
+		// Status-prefix filtering
+		if prefix != "" && t.StatusColumn >= 0 && t.StatusColumn < len(row) {
+			cell := strings.ToLower(row[t.StatusColumn])
+			if !strings.Contains(cell, remainder) {
+				continue
+			}
+			t.filtered = append(t.filtered, i)
+			continue
+		}
+
+		// Standard text matching
 		for _, cell := range row {
 			if strings.Contains(strings.ToLower(cell), f) {
 				t.filtered = append(t.filtered, i)
@@ -73,6 +93,69 @@ func (t *Table) applyFilter() {
 			}
 		}
 	}
+}
+
+// parseStatusFilter extracts a prefix operator from filter text.
+// Prefixes: ! = status, @ = provider, # = circuit state
+func parseStatusFilter(text string) (prefix, remainder string) {
+	if len(text) < 2 {
+		return "", text
+	}
+	switch text[0] {
+	case '!', '@', '#':
+		return string(text[0]), text[1:]
+	}
+	return "", text
+}
+
+// ToggleSelect toggles the selection state of the current row.
+func (t *Table) ToggleSelect() {
+	if len(t.filtered) == 0 || t.Cursor >= len(t.filtered) {
+		return
+	}
+	if t.Selected == nil {
+		t.Selected = make(map[int]bool)
+	}
+	idx := t.filtered[t.Cursor]
+	if t.Selected[idx] {
+		delete(t.Selected, idx)
+	} else {
+		t.Selected[idx] = true
+	}
+}
+
+// SelectAll selects all visible (filtered) rows.
+func (t *Table) SelectAll() {
+	if t.Selected == nil {
+		t.Selected = make(map[int]bool)
+	}
+	for _, idx := range t.filtered {
+		t.Selected[idx] = true
+	}
+}
+
+// ClearSelection clears all selections.
+func (t *Table) ClearSelection() {
+	t.Selected = nil
+}
+
+// SelectedRows returns all currently selected rows.
+func (t *Table) SelectedRows() []Row {
+	if len(t.Selected) == 0 {
+		return nil
+	}
+	var rows []Row
+	for idx := range t.Selected {
+		if idx < len(t.Rows) {
+			rows = append(rows, t.Rows[idx])
+		}
+	}
+	return rows
+}
+
+// HasSelection returns true if any rows are selected.
+func (t *Table) HasSelection() bool {
+	return len(t.Selected) > 0
 }
 
 // SelectedRow returns the currently selected row, or nil.
@@ -141,15 +224,45 @@ func (t *Table) sortRows() {
 	t.applyFilter()
 }
 
+// effectiveColumns returns columns with Grow widths resolved.
+func (t *Table) effectiveColumns() []Column {
+	cols := make([]Column, len(t.Columns))
+	copy(cols, t.Columns)
+
+	if t.Width <= 0 {
+		return cols
+	}
+
+	growIdx := -1
+	fixedWidth := 0
+	for i, col := range cols {
+		if col.Grow {
+			growIdx = i
+		} else {
+			fixedWidth += col.Width
+		}
+	}
+	if growIdx >= 0 {
+		gaps := len(cols) - 1 // spaces between columns
+		growWidth := t.Width - fixedWidth - gaps
+		if growWidth < cols[growIdx].Width {
+			growWidth = cols[growIdx].Width
+		}
+		cols[growIdx].Width = growWidth
+	}
+	return cols
+}
+
 // View renders the table.
 func (t *Table) View() string {
 	var b strings.Builder
+	cols := t.effectiveColumns()
 
 	// Header
 	var hdr []string
-	for i, col := range t.Columns {
+	for i, col := range cols {
 		title := col.Title
-		if i == t.SortCol && col.Sortable {
+		if i == t.SortCol && t.Columns[i].Sortable {
 			if t.SortAsc {
 				title += " ▲"
 			} else {
@@ -162,7 +275,7 @@ func (t *Table) View() string {
 	b.WriteRune('\n')
 
 	// Separator
-	for i, col := range t.Columns {
+	for i, col := range cols {
 		if i > 0 {
 			b.WriteRune(' ')
 		}
@@ -180,8 +293,18 @@ func (t *Table) View() string {
 	for vi := t.Offset; vi < end; vi++ {
 		idx := t.filtered[vi]
 		row := t.Rows[idx]
+
+		// Multi-select indicator
+		if t.MultiSelect {
+			if t.Selected != nil && t.Selected[idx] {
+				b.WriteString(styles.StatusRunning.Render("[x]"))
+			} else {
+				b.WriteString(styles.InfoStyle.Render("[ ]"))
+			}
+		}
+
 		var cells []string
-		for ci, col := range t.Columns {
+		for ci, col := range cols {
 			cell := ""
 			if ci < len(row) {
 				cell = row[ci]
@@ -197,7 +320,11 @@ func (t *Table) View() string {
 	}
 
 	if len(t.filtered) == 0 {
-		b.WriteString(styles.InfoStyle.Render("  No repos found"))
+		msg := t.EmptyMessage
+		if msg == "" {
+			msg = "No items"
+		}
+		b.WriteString(styles.InfoStyle.Render("  " + msg))
 		b.WriteRune('\n')
 	}
 

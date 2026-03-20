@@ -60,7 +60,7 @@ func (lv *LogView) rebuildContent() {
 		if lv.Width > 0 && len([]rune(line)) > lv.Width {
 			line = string([]rune(line)[:lv.Width])
 		}
-		b.WriteString(line)
+		b.WriteString(colorizeLine(line))
 		if i < len(lines)-1 {
 			b.WriteRune('\n')
 		}
@@ -68,6 +68,23 @@ func (lv *LogView) rebuildContent() {
 	lv.vp.SetContent(b.String())
 	if lv.Follow {
 		lv.vp.GotoBottom()
+	}
+}
+
+// colorizeLine applies color based on log level keywords.
+func colorizeLine(line string) string {
+	upper := strings.ToUpper(line)
+	switch {
+	case strings.Contains(upper, "ERROR") || strings.Contains(upper, "FATAL"):
+		return styles.StatusFailed.Render(line)
+	case strings.Contains(upper, "WARN"):
+		return styles.WarningStyle.Render(line)
+	case strings.Contains(upper, "INFO"):
+		return styles.StatusCompleted.Render(line)
+	case strings.Contains(upper, "DEBUG"):
+		return styles.InfoStyle.Render(line)
+	default:
+		return line
 	}
 }
 

@@ -43,6 +43,16 @@ type KeyMap struct {
 	// Config editor
 	EditConfig  key.Binding
 	WriteConfig key.Binding
+
+	// Diff view
+	DiffView key.Binding
+
+	// New capabilities
+	Space        key.Binding
+	ActionsMenu  key.Binding
+	LaunchSession key.Binding
+	OutputView   key.Binding
+	TimelineView key.Binding
 }
 
 // DefaultKeyMap returns the default key bindings.
@@ -144,8 +154,140 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("w"),
 			key.WithHelp("w", "Save config"),
 		),
+		DiffView: key.NewBinding(
+			key.WithKeys("d"),
+			key.WithHelp("d", "View git diff"),
+		),
+		Space: key.NewBinding(
+			key.WithKeys(" "),
+			key.WithHelp("Space", "Toggle selection"),
+		),
+		ActionsMenu: key.NewBinding(
+			key.WithKeys("a"),
+			key.WithHelp("a", "Actions menu"),
+		),
+		LaunchSession: key.NewBinding(
+			key.WithKeys("L"),
+			key.WithHelp("L", "Launch session"),
+		),
+		OutputView: key.NewBinding(
+			key.WithKeys("o"),
+			key.WithHelp("o", "Session output"),
+		),
+		TimelineView: key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", "Session timeline"),
+		),
 	}
 }
+
+// SetViewContext enables/disables bindings based on the current view.
+func (k *KeyMap) SetViewContext(view ViewMode) {
+	// Reset all view-specific bindings to enabled
+	k.StartLoop.SetEnabled(true)
+	k.StopAction.SetEnabled(true)
+	k.PauseLoop.SetEnabled(true)
+	k.EditConfig.SetEnabled(true)
+	k.WriteConfig.SetEnabled(true)
+	k.DiffView.SetEnabled(true)
+	k.GotoEnd.SetEnabled(true)
+	k.GotoStart.SetEnabled(true)
+	k.FollowToggle.SetEnabled(true)
+	k.PageUp.SetEnabled(true)
+	k.PageDown.SetEnabled(true)
+	k.Space.SetEnabled(true)
+	k.ActionsMenu.SetEnabled(true)
+	k.LaunchSession.SetEnabled(true)
+	k.OutputView.SetEnabled(true)
+	k.TimelineView.SetEnabled(true)
+
+	switch view {
+	case ViewOverview:
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.DiffView.SetEnabled(false)
+		k.GotoEnd.SetEnabled(false)
+		k.GotoStart.SetEnabled(false)
+		k.FollowToggle.SetEnabled(false)
+		k.PageUp.SetEnabled(false)
+		k.PageDown.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+		k.TimelineView.SetEnabled(false)
+	case ViewRepoDetail:
+		k.Space.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+	case ViewSessions:
+		k.StartLoop.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.DiffView.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+	case ViewSessionDetail:
+		k.StartLoop.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.Space.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+	case ViewTeams, ViewTeamDetail:
+		k.StartLoop.SetEnabled(false)
+		k.StopAction.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.DiffView.SetEnabled(false)
+		k.Space.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+		k.TimelineView.SetEnabled(false)
+	case ViewFleet:
+		k.StartLoop.SetEnabled(false)
+		k.StopAction.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.DiffView.SetEnabled(false)
+		k.Space.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+		k.TimelineView.SetEnabled(false)
+	case ViewLogs:
+		k.StartLoop.SetEnabled(false)
+		k.StopAction.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.DiffView.SetEnabled(false)
+		k.Space.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+		k.TimelineView.SetEnabled(false)
+	case ViewConfigEditor:
+		k.StartLoop.SetEnabled(false)
+		k.StopAction.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.DiffView.SetEnabled(false)
+		k.Space.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+		k.TimelineView.SetEnabled(false)
+	case ViewTimeline:
+		k.StartLoop.SetEnabled(false)
+		k.StopAction.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.DiffView.SetEnabled(false)
+		k.Space.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+		k.TimelineView.SetEnabled(false)
+	}
+}
+
 
 // ShortHelp returns bindings for the short help view.
 func (k KeyMap) ShortHelp() []key.Binding {
@@ -160,7 +302,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.Down, k.Up, k.Enter, k.Sort},
 		{k.StartLoop, k.StopAction, k.PauseLoop},
 		{k.GotoEnd, k.GotoStart, k.FollowToggle, k.PageUp, k.PageDown},
-		{k.EditConfig, k.WriteConfig},
+		{k.EditConfig, k.WriteConfig, k.DiffView},
 	}
 }
 
@@ -172,7 +314,7 @@ func (k KeyMap) HelpGroups() []views.HelpGroup {
 		{Name: "Repos Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StartLoop, k.StopAction, k.PauseLoop}},
 		{Name: "Sessions Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StopAction}},
 		{Name: "Teams Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort}},
-		{Name: "Repo Detail", Bindings: []key.Binding{k.Enter, k.EditConfig, k.StartLoop, k.StopAction, k.PauseLoop}},
+		{Name: "Repo Detail", Bindings: []key.Binding{k.Enter, k.EditConfig, k.StartLoop, k.StopAction, k.PauseLoop, k.DiffView}},
 		{Name: "Log Viewer", Bindings: []key.Binding{k.Down, k.GotoEnd, k.GotoStart, k.FollowToggle, k.PageUp, k.PageDown}},
 		{Name: "Config Editor", Bindings: []key.Binding{k.Down, k.Enter, k.WriteConfig}},
 	}
