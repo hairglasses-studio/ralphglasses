@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -12,13 +13,16 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
+	"github.com/hairglasses-studio/ralphglasses/internal/repofiles"
+	"github.com/hairglasses-studio/ralphglasses/internal/roadmap"
 )
 
 // Server holds state for the MCP server.
 type Server struct {
-	ScanPath string
-	Repos    []*model.Repo
-	ProcMgr  *process.Manager
+	ScanPath   string
+	Repos      []*model.Repo
+	ProcMgr    *process.Manager
+	HTTPClient *http.Client
 }
 
 // NewServer creates a new MCP server instance.
@@ -75,6 +79,63 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithString("key", mcp.Description("Config key to get/set (omit to list all)")),
 		mcp.WithString("value", mcp.Description("Value to set (omit to get current value)")),
 	), s.handleConfig)
+
+	// Roadmap automation tools
+
+	srv.AddTool(mcp.NewTool("ralphglasses_roadmap_parse",
+		mcp.WithDescription("Parse ROADMAP.md into structured JSON (phases, sections, tasks, deps, completion stats)"),
+		mcp.WithString("path", mcp.Required(), mcp.Description("Repo root or direct .md path")),
+		mcp.WithString("file", mcp.Description("Override filename (default: ROADMAP.md)")),
+	), s.handleRoadmapParse)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_roadmap_analyze",
+		mcp.WithDescription("Compare roadmap vs codebase — find gaps, stale checkboxes, ready tasks, orphaned code"),
+		mcp.WithString("path", mcp.Required(), mcp.Description("Repo root path")),
+		mcp.WithString("file", mcp.Description("Override filename (default: ROADMAP.md)")),
+	), s.handleRoadmapAnalyze)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_roadmap_research",
+		mcp.WithDescription("Search GitHub for relevant repos and tools that unlock new capabilities"),
+		mcp.WithString("path", mcp.Required(), mcp.Description("Repo root path")),
+		mcp.WithString("topics", mcp.Description("Search topics (inferred from go.mod/README if omitted)")),
+		mcp.WithNumber("limit", mcp.Description("Max results (default 10)")),
+	), s.handleRoadmapResearch)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_roadmap_expand",
+		mcp.WithDescription("Generate proposed roadmap expansions from analysis gaps and research findings"),
+		mcp.WithString("path", mcp.Required(), mcp.Description("Repo root path")),
+		mcp.WithString("file", mcp.Description("Override filename (default: ROADMAP.md)")),
+		mcp.WithString("research", mcp.Description("Research topics to include (runs research internally)")),
+		mcp.WithString("style", mcp.Description("Expansion style: conservative, balanced, aggressive (default: balanced)")),
+	), s.handleRoadmapExpand)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_roadmap_export",
+		mcp.WithDescription("Export roadmap items as structured task specs for ralph loop consumption"),
+		mcp.WithString("path", mcp.Required(), mcp.Description("Repo root path")),
+		mcp.WithString("file", mcp.Description("Override filename (default: ROADMAP.md)")),
+		mcp.WithString("format", mcp.Description("Output format: rdcycle, fix_plan, progress (default: rdcycle)")),
+		mcp.WithString("phase", mcp.Description("Filter by phase name (default: all)")),
+		mcp.WithString("section", mcp.Description("Filter by section name (default: all)")),
+		mcp.WithNumber("max_tasks", mcp.Description("Max tasks to export (default 20)")),
+		mcp.WithString("respect_deps", mcp.Description("Skip tasks with unmet deps (default: true)")),
+	), s.handleRoadmapExport)
+
+	// Repo file management tools
+
+	srv.AddTool(mcp.NewTool("ralphglasses_repo_scaffold",
+		mcp.WithDescription("Create/initialize ralph config files (.ralph/, .ralphrc, PROMPT.md, AGENT.md, fix_plan.md) for a repo"),
+		mcp.WithString("path", mcp.Required(), mcp.Description("Repo root path")),
+		mcp.WithString("project_type", mcp.Description("Project type override (auto-detected from go.mod, package.json, etc.)")),
+		mcp.WithString("project_name", mcp.Description("Project name override (defaults to directory name)")),
+		mcp.WithString("force", mcp.Description("Overwrite existing files: true/false (default: false)")),
+	), s.handleRepoScaffold)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_repo_optimize",
+		mcp.WithDescription("Analyze and optimize ralph config files — detect misconfigs, missing settings, stale plans"),
+		mcp.WithString("path", mcp.Required(), mcp.Description("Repo root path")),
+		mcp.WithString("focus", mcp.Description("Focus area: config, prompt, plan, all (default: all)")),
+		mcp.WithString("dry_run", mcp.Description("Report only, don't modify: true/false (default: true)")),
+	), s.handleRepoOptimize)
 }
 
 func (s *Server) scan() error {
@@ -382,4 +443,152 @@ func (s *Server) handleConfig(_ context.Context, req mcp.CallToolRequest) (*mcp.
 		return errResult(fmt.Sprintf("key not found: %s", key)), nil
 	}
 	return textResult(fmt.Sprintf("%s=%s", key, v)), nil
+}
+
+// Roadmap handlers
+
+func (s *Server) handleRoadmapParse(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	path := getStringArg(req, "path")
+	if path == "" {
+		return errResult("path required"), nil
+	}
+	file := getStringArg(req, "file")
+	rmPath := roadmap.ResolvePath(path, file)
+
+	rm, err := roadmap.Parse(rmPath)
+	if err != nil {
+		return errResult(fmt.Sprintf("parse roadmap: %v", err)), nil
+	}
+	return jsonResult(rm), nil
+}
+
+func (s *Server) handleRoadmapAnalyze(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	path := getStringArg(req, "path")
+	if path == "" {
+		return errResult("path required"), nil
+	}
+	file := getStringArg(req, "file")
+	rmPath := roadmap.ResolvePath(path, file)
+
+	rm, err := roadmap.Parse(rmPath)
+	if err != nil {
+		return errResult(fmt.Sprintf("parse roadmap: %v", err)), nil
+	}
+
+	analysis, err := roadmap.Analyze(rm, path)
+	if err != nil {
+		return errResult(fmt.Sprintf("analyze: %v", err)), nil
+	}
+	return jsonResult(analysis), nil
+}
+
+func (s *Server) handleRoadmapResearch(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	path := getStringArg(req, "path")
+	if path == "" {
+		return errResult("path required"), nil
+	}
+	topics := getStringArg(req, "topics")
+	limit := int(getNumberArg(req, "limit", 10))
+
+	results, err := roadmap.Research(ctx, s.HTTPClient, path, topics, limit)
+	if err != nil {
+		return errResult(fmt.Sprintf("research: %v", err)), nil
+	}
+	return jsonResult(results), nil
+}
+
+func (s *Server) handleRoadmapExpand(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	path := getStringArg(req, "path")
+	if path == "" {
+		return errResult("path required"), nil
+	}
+	file := getStringArg(req, "file")
+	style := getStringArg(req, "style")
+	researchTopics := getStringArg(req, "research")
+
+	rmPath := roadmap.ResolvePath(path, file)
+	rm, err := roadmap.Parse(rmPath)
+	if err != nil {
+		return errResult(fmt.Sprintf("parse roadmap: %v", err)), nil
+	}
+
+	analysis, err := roadmap.Analyze(rm, path)
+	if err != nil {
+		return errResult(fmt.Sprintf("analyze: %v", err)), nil
+	}
+
+	var research *roadmap.ResearchResults
+	if researchTopics != "" {
+		research, _ = roadmap.Research(ctx, s.HTTPClient, path, researchTopics, 10)
+	}
+
+	expansion, err := roadmap.Expand(rm, analysis, research, style)
+	if err != nil {
+		return errResult(fmt.Sprintf("expand: %v", err)), nil
+	}
+	return jsonResult(expansion), nil
+}
+
+func (s *Server) handleRoadmapExport(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	path := getStringArg(req, "path")
+	if path == "" {
+		return errResult("path required"), nil
+	}
+	file := getStringArg(req, "file")
+	format := getStringArg(req, "format")
+	phase := getStringArg(req, "phase")
+	section := getStringArg(req, "section")
+	maxTasks := int(getNumberArg(req, "max_tasks", 20))
+	respectDeps := getStringArg(req, "respect_deps") != "false"
+
+	rmPath := roadmap.ResolvePath(path, file)
+	rm, err := roadmap.Parse(rmPath)
+	if err != nil {
+		return errResult(fmt.Sprintf("parse roadmap: %v", err)), nil
+	}
+
+	output, err := roadmap.Export(rm, format, phase, section, maxTasks, respectDeps)
+	if err != nil {
+		return errResult(fmt.Sprintf("export: %v", err)), nil
+	}
+	return textResult(output), nil
+}
+
+// Repo file handlers
+
+func (s *Server) handleRepoScaffold(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	path := getStringArg(req, "path")
+	if path == "" {
+		return errResult("path required"), nil
+	}
+
+	opts := repofiles.ScaffoldOptions{
+		ProjectType: getStringArg(req, "project_type"),
+		ProjectName: getStringArg(req, "project_name"),
+		Force:       getStringArg(req, "force") == "true",
+	}
+
+	result, err := repofiles.Scaffold(path, opts)
+	if err != nil {
+		return errResult(fmt.Sprintf("scaffold: %v", err)), nil
+	}
+	return jsonResult(result), nil
+}
+
+func (s *Server) handleRepoOptimize(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	path := getStringArg(req, "path")
+	if path == "" {
+		return errResult("path required"), nil
+	}
+
+	opts := repofiles.OptimizeOptions{
+		DryRun: getStringArg(req, "dry_run") != "false",
+		Focus:  getStringArg(req, "focus"),
+	}
+
+	result, err := repofiles.Optimize(path, opts)
+	if err != nil {
+		return errResult(fmt.Sprintf("optimize: %v", err)), nil
+	}
+	return jsonResult(result), nil
 }
