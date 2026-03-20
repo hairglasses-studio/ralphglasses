@@ -15,6 +15,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/repofiles"
 	"github.com/hairglasses-studio/ralphglasses/internal/roadmap"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 // Server holds state for the MCP server.
@@ -22,6 +23,7 @@ type Server struct {
 	ScanPath   string
 	Repos      []*model.Repo
 	ProcMgr    *process.Manager
+	SessMgr    *session.Manager
 	HTTPClient *http.Client
 }
 
@@ -30,6 +32,7 @@ func NewServer(scanPath string) *Server {
 	return &Server{
 		ScanPath: scanPath,
 		ProcMgr:  process.NewManager(),
+		SessMgr:  session.NewManager(),
 	}
 }
 
@@ -136,6 +139,92 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithString("focus", mcp.Description("Focus area: config, prompt, plan, all (default: all)")),
 		mcp.WithString("dry_run", mcp.Description("Report only, don't modify: true/false (default: true)")),
 	), s.handleRepoOptimize)
+
+	// Claude Code session management tools
+
+	srv.AddTool(mcp.NewTool("ralphglasses_session_launch",
+		mcp.WithDescription("Launch a Claude Code headless session (claude -p) for a repo"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithString("prompt", mcp.Required(), mcp.Description("Prompt/task to send to Claude")),
+		mcp.WithString("model", mcp.Description("Model to use (sonnet, opus, haiku)")),
+		mcp.WithNumber("max_budget_usd", mcp.Description("Maximum spend in USD")),
+		mcp.WithNumber("max_turns", mcp.Description("Maximum conversation turns")),
+		mcp.WithString("agent", mcp.Description("Agent name (from .claude/agents/)")),
+		mcp.WithString("allowed_tools", mcp.Description("Comma-separated allowed tools (e.g. Bash,Read,Edit)")),
+		mcp.WithString("system_prompt", mcp.Description("Additional system prompt to append")),
+		mcp.WithString("session_name", mcp.Description("Human-readable session name")),
+		mcp.WithString("worktree", mcp.Description("Git worktree isolation (true for auto, or branch name)")),
+	), s.handleSessionLaunch)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_session_list",
+		mcp.WithDescription("List all tracked Claude Code sessions with status, cost, and turns"),
+		mcp.WithString("repo", mcp.Description("Filter by repo name (omit for all)")),
+		mcp.WithString("status", mcp.Description("Filter by status: running, completed, errored, stopped")),
+	), s.handleSessionList)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_session_status",
+		mcp.WithDescription("Get detailed status for a Claude Code session including output, cost, and turns"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Session ID")),
+	), s.handleSessionStatus)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_session_resume",
+		mcp.WithDescription("Resume a previous Claude Code session"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithString("session_id", mcp.Required(), mcp.Description("Claude session ID to resume (from session status)")),
+		mcp.WithString("prompt", mcp.Description("Follow-up prompt (optional)")),
+	), s.handleSessionResume)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_session_stop",
+		mcp.WithDescription("Stop a running Claude Code session"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Session ID to stop")),
+	), s.handleSessionStop)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_session_budget",
+		mcp.WithDescription("Get cost/budget info for a session, or update budget"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Session ID")),
+		mcp.WithNumber("budget", mcp.Description("New budget in USD (omit to just query)")),
+	), s.handleSessionBudget)
+
+	// Agent team tools
+
+	srv.AddTool(mcp.NewTool("ralphglasses_team_create",
+		mcp.WithDescription("Create an agent team with a lead session that delegates tasks to teammates"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Team name")),
+		mcp.WithString("tasks", mcp.Required(), mcp.Description("Newline-separated task descriptions")),
+		mcp.WithString("lead_agent", mcp.Description("Agent definition for the lead (from .claude/agents/)")),
+		mcp.WithString("model", mcp.Description("Model for lead session")),
+		mcp.WithNumber("max_budget_usd", mcp.Description("Total budget for the team")),
+	), s.handleTeamCreate)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_team_status",
+		mcp.WithDescription("Get team status including lead session, tasks, and progress"),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Team name")),
+	), s.handleTeamStatus)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_team_delegate",
+		mcp.WithDescription("Add a new task to an existing team"),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Team name")),
+		mcp.WithString("task", mcp.Required(), mcp.Description("Task description to delegate")),
+	), s.handleTeamDelegate)
+
+	// Agent definition tools
+
+	srv.AddTool(mcp.NewTool("ralphglasses_agent_define",
+		mcp.WithDescription("Create or update a .claude/agents/*.md agent definition for a repo"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Agent name")),
+		mcp.WithString("prompt", mcp.Required(), mcp.Description("Agent system prompt / instructions (markdown)")),
+		mcp.WithString("description", mcp.Description("Agent description")),
+		mcp.WithString("model", mcp.Description("Model override (sonnet, opus, haiku)")),
+		mcp.WithString("tools", mcp.Description("Comma-separated allowed tools")),
+		mcp.WithNumber("max_turns", mcp.Description("Max turns for this agent")),
+	), s.handleAgentDefine)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_agent_list",
+		mcp.WithDescription("List available agent definitions (.claude/agents/*.md) for a repo"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+	), s.handleAgentList)
 }
 
 func (s *Server) scan() error {
@@ -591,4 +680,405 @@ func (s *Server) handleRepoOptimize(_ context.Context, req mcp.CallToolRequest) 
 		return errResult(fmt.Sprintf("optimize: %v", err)), nil
 	}
 	return jsonResult(result), nil
+}
+
+// Session handlers
+
+func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "repo")
+	if name == "" {
+		return errResult("repo name required"), nil
+	}
+	prompt := getStringArg(req, "prompt")
+	if prompt == "" {
+		return errResult("prompt required"), nil
+	}
+	if s.Repos == nil {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(name)
+	if r == nil {
+		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+	}
+
+	opts := session.LaunchOptions{
+		RepoPath:     r.Path,
+		Prompt:       prompt,
+		Model:        getStringArg(req, "model"),
+		MaxBudgetUSD: getNumberArg(req, "max_budget_usd", 0),
+		MaxTurns:     int(getNumberArg(req, "max_turns", 0)),
+		Agent:        getStringArg(req, "agent"),
+		SystemPrompt: getStringArg(req, "system_prompt"),
+		SessionName:  getStringArg(req, "session_name"),
+		Worktree:     getStringArg(req, "worktree"),
+	}
+	if tools := getStringArg(req, "allowed_tools"); tools != "" {
+		opts.AllowedTools = strings.Split(tools, ",")
+	}
+
+	sess, err := s.SessMgr.Launch(ctx, opts)
+	if err != nil {
+		return errResult(fmt.Sprintf("launch failed: %v", err)), nil
+	}
+
+	return jsonResult(map[string]any{
+		"session_id": sess.ID,
+		"repo":       sess.RepoName,
+		"status":     sess.Status,
+		"model":      sess.Model,
+		"budget_usd": sess.BudgetUSD,
+	}), nil
+}
+
+func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoFilter := getStringArg(req, "repo")
+	statusFilter := getStringArg(req, "status")
+
+	var repoPath string
+	if repoFilter != "" {
+		if s.Repos == nil {
+			if err := s.scan(); err != nil {
+				return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			}
+		}
+		r := s.findRepo(repoFilter)
+		if r != nil {
+			repoPath = r.Path
+		}
+	}
+
+	sessions := s.SessMgr.List(repoPath)
+
+	type sessionSummary struct {
+		ID       string  `json:"id"`
+		Repo     string  `json:"repo"`
+		Status   string  `json:"status"`
+		Model    string  `json:"model,omitempty"`
+		SpentUSD float64 `json:"spent_usd"`
+		Turns    int     `json:"turns"`
+		Agent    string  `json:"agent,omitempty"`
+		Team     string  `json:"team,omitempty"`
+	}
+
+	var summaries []sessionSummary
+	for _, sess := range sessions {
+		sess.Lock()
+		status := string(sess.Status)
+		spent := sess.SpentUSD
+		turns := sess.TurnCount
+		sess.Unlock()
+
+		if statusFilter != "" && status != statusFilter {
+			continue
+		}
+
+		summaries = append(summaries, sessionSummary{
+			ID:       sess.ID,
+			Repo:     sess.RepoName,
+			Status:   status,
+			Model:    sess.Model,
+			SpentUSD: spent,
+			Turns:    turns,
+			Agent:    sess.AgentName,
+			Team:     sess.TeamName,
+		})
+	}
+
+	if summaries == nil {
+		summaries = []sessionSummary{}
+	}
+	return jsonResult(summaries), nil
+}
+
+func (s *Server) handleSessionStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	id := getStringArg(req, "id")
+	if id == "" {
+		return errResult("session id required"), nil
+	}
+
+	sess, ok := s.SessMgr.Get(id)
+	if !ok {
+		return errResult(fmt.Sprintf("session not found: %s", id)), nil
+	}
+
+	sess.Lock()
+	detail := map[string]any{
+		"id":               sess.ID,
+		"claude_session_id": sess.ClaudeID,
+		"repo":             sess.RepoName,
+		"repo_path":        sess.RepoPath,
+		"status":           sess.Status,
+		"prompt":           sess.Prompt,
+		"model":            sess.Model,
+		"agent":            sess.AgentName,
+		"team":             sess.TeamName,
+		"budget_usd":       sess.BudgetUSD,
+		"spent_usd":        sess.SpentUSD,
+		"turns":            sess.TurnCount,
+		"max_turns":        sess.MaxTurns,
+		"launched_at":      sess.LaunchedAt,
+		"last_activity":    sess.LastActivity,
+		"exit_reason":      sess.ExitReason,
+		"last_output":      sess.LastOutput,
+		"error":            sess.Error,
+	}
+	if sess.EndedAt != nil {
+		detail["ended_at"] = sess.EndedAt
+	}
+	sess.Unlock()
+
+	return jsonResult(detail), nil
+}
+
+func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "repo")
+	if name == "" {
+		return errResult("repo name required"), nil
+	}
+	sessionID := getStringArg(req, "session_id")
+	if sessionID == "" {
+		return errResult("session_id required"), nil
+	}
+	if s.Repos == nil {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(name)
+	if r == nil {
+		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+	}
+
+	prompt := getStringArg(req, "prompt")
+	sess, err := s.SessMgr.Resume(ctx, r.Path, sessionID, prompt)
+	if err != nil {
+		return errResult(fmt.Sprintf("resume failed: %v", err)), nil
+	}
+
+	return jsonResult(map[string]any{
+		"session_id":        sess.ID,
+		"resumed_from":      sessionID,
+		"repo":              sess.RepoName,
+		"status":            sess.Status,
+	}), nil
+}
+
+func (s *Server) handleSessionStop(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	id := getStringArg(req, "id")
+	if id == "" {
+		return errResult("session id required"), nil
+	}
+
+	if err := s.SessMgr.Stop(id); err != nil {
+		return errResult(fmt.Sprintf("stop failed: %v", err)), nil
+	}
+	return textResult(fmt.Sprintf("Stopped session %s", id)), nil
+}
+
+func (s *Server) handleSessionBudget(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	id := getStringArg(req, "id")
+	if id == "" {
+		return errResult("session id required"), nil
+	}
+
+	sess, ok := s.SessMgr.Get(id)
+	if !ok {
+		return errResult(fmt.Sprintf("session not found: %s", id)), nil
+	}
+
+	newBudget := getNumberArg(req, "budget", 0)
+	if newBudget > 0 {
+		sess.Lock()
+		sess.BudgetUSD = newBudget
+		sess.Unlock()
+	}
+
+	sess.Lock()
+	info := map[string]any{
+		"session_id": sess.ID,
+		"budget_usd": sess.BudgetUSD,
+		"spent_usd":  sess.SpentUSD,
+		"remaining":  sess.BudgetUSD - sess.SpentUSD,
+		"turns":      sess.TurnCount,
+		"status":     sess.Status,
+	}
+	sess.Unlock()
+
+	return jsonResult(info), nil
+}
+
+// Team handlers
+
+func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoName := getStringArg(req, "repo")
+	if repoName == "" {
+		return errResult("repo name required"), nil
+	}
+	teamName := getStringArg(req, "name")
+	if teamName == "" {
+		return errResult("team name required"), nil
+	}
+	tasksStr := getStringArg(req, "tasks")
+	if tasksStr == "" {
+		return errResult("tasks required (newline-separated)"), nil
+	}
+	if s.Repos == nil {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(repoName)
+	if r == nil {
+		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+	}
+
+	var tasks []string
+	for _, line := range strings.Split(tasksStr, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			tasks = append(tasks, line)
+		}
+	}
+
+	config := session.TeamConfig{
+		Name:         teamName,
+		RepoPath:     r.Path,
+		LeadAgent:    getStringArg(req, "lead_agent"),
+		Tasks:        tasks,
+		Model:        getStringArg(req, "model"),
+		MaxBudgetUSD: getNumberArg(req, "max_budget_usd", 0),
+	}
+
+	team, err := s.SessMgr.LaunchTeam(ctx, config)
+	if err != nil {
+		return errResult(fmt.Sprintf("create team failed: %v", err)), nil
+	}
+	return jsonResult(team), nil
+}
+
+func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "name")
+	if name == "" {
+		return errResult("team name required"), nil
+	}
+
+	team, ok := s.SessMgr.GetTeam(name)
+	if !ok {
+		return errResult(fmt.Sprintf("team not found: %s", name)), nil
+	}
+
+	// Enrich with lead session info
+	result := map[string]any{
+		"name":     team.Name,
+		"repo":     team.RepoPath,
+		"status":   team.Status,
+		"tasks":    team.Tasks,
+		"created":  team.CreatedAt,
+	}
+
+	if lead, ok := s.SessMgr.Get(team.LeadID); ok {
+		lead.Lock()
+		result["lead_session"] = map[string]any{
+			"id":        lead.ID,
+			"status":    lead.Status,
+			"spent_usd": lead.SpentUSD,
+			"turns":     lead.TurnCount,
+			"output":    lead.LastOutput,
+		}
+		lead.Unlock()
+	}
+
+	return jsonResult(result), nil
+}
+
+func (s *Server) handleTeamDelegate(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "name")
+	if name == "" {
+		return errResult("team name required"), nil
+	}
+	task := getStringArg(req, "task")
+	if task == "" {
+		return errResult("task description required"), nil
+	}
+
+	team, ok := s.SessMgr.GetTeam(name)
+	if !ok {
+		return errResult(fmt.Sprintf("team not found: %s", name)), nil
+	}
+
+	team.Tasks = append(team.Tasks, session.TeamTask{
+		Description: task,
+		Status:      "pending",
+	})
+
+	return textResult(fmt.Sprintf("Added task to team %s (%d total tasks)", name, len(team.Tasks))), nil
+}
+
+// Agent handlers
+
+func (s *Server) handleAgentDefine(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoName := getStringArg(req, "repo")
+	if repoName == "" {
+		return errResult("repo name required"), nil
+	}
+	agentName := getStringArg(req, "name")
+	if agentName == "" {
+		return errResult("agent name required"), nil
+	}
+	prompt := getStringArg(req, "prompt")
+	if prompt == "" {
+		return errResult("prompt required"), nil
+	}
+	if s.Repos == nil {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(repoName)
+	if r == nil {
+		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+	}
+
+	def := session.AgentDef{
+		Name:        agentName,
+		Description: getStringArg(req, "description"),
+		Model:       getStringArg(req, "model"),
+		Prompt:      prompt,
+		MaxTurns:    int(getNumberArg(req, "max_turns", 0)),
+	}
+	if tools := getStringArg(req, "tools"); tools != "" {
+		def.Tools = strings.Split(tools, ",")
+	}
+
+	if err := session.WriteAgent(r.Path, def); err != nil {
+		return errResult(fmt.Sprintf("write agent: %v", err)), nil
+	}
+	return textResult(fmt.Sprintf("Created agent definition: %s/.claude/agents/%s.md", r.Path, agentName)), nil
+}
+
+func (s *Server) handleAgentList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoName := getStringArg(req, "repo")
+	if repoName == "" {
+		return errResult("repo name required"), nil
+	}
+	if s.Repos == nil {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(repoName)
+	if r == nil {
+		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+	}
+
+	agents, err := session.ListAgents(r.Path)
+	if err != nil {
+		return errResult(fmt.Sprintf("list agents: %v", err)), nil
+	}
+	if agents == nil {
+		agents = []session.AgentDef{}
+	}
+	return jsonResult(agents), nil
 }

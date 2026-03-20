@@ -18,7 +18,7 @@ go run . --scan-path ~/hairglasses-studio
 
 ## MCP Server
 
-Ralphglasses is also an installable MCP server exposing 9 tools for managing ralph loops programmatically.
+Ralphglasses is also an installable MCP server exposing 27 tools for managing ralph loops and Claude Code sessions programmatically.
 
 ### Install
 
@@ -55,6 +55,17 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 | `ralphglasses_roadmap_export` | Export tasks as rdcycle/fix_plan/progress specs |
 | `ralphglasses_repo_scaffold` | Create/init ralph config files for a repo |
 | `ralphglasses_repo_optimize` | Analyze and optimize ralph config files |
+| `ralphglasses_session_launch` | Launch a Claude Code headless session (claude -p) for a repo |
+| `ralphglasses_session_list` | List all tracked sessions with status, cost, turns |
+| `ralphglasses_session_status` | Detailed session info (output, cost, turns, model) |
+| `ralphglasses_session_resume` | Resume a previous Claude Code session |
+| `ralphglasses_session_stop` | Stop a running session |
+| `ralphglasses_session_budget` | Get/update budget for a session |
+| `ralphglasses_team_create` | Create an agent team with lead + task delegation |
+| `ralphglasses_team_status` | Get team status (tasks, lead session, progress) |
+| `ralphglasses_team_delegate` | Add a task to an existing team |
+| `ralphglasses_agent_define` | Create/update .claude/agents/*.md agent definitions |
+| `ralphglasses_agent_list` | List available agent definitions for a repo |
 
 ## Architecture
 
@@ -62,7 +73,8 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 - **internal/discovery/**: Scans directories for `.ralph/` and `.ralphrc`
 - **internal/model/**: Data types and parsers for status.json, progress.json, circuit breaker state, .ralphrc
 - **internal/process/**: Process management (launch/stop/pause via os/exec), fsnotify file watcher, log tailing
-- **internal/mcpserver/**: MCP tool handlers (16 tools, stdio transport via mcp-go)
+- **internal/session/**: Claude Code headless SDK session management (claude -p), agent teams, budget enforcement, checkpoints
+- **internal/mcpserver/**: MCP tool handlers (27 tools, stdio transport via mcp-go)
 - **internal/roadmap/**: Roadmap parsing, analysis, research, expansion, export
 - **internal/repofiles/**: Ralph config file scaffolding and optimization
 - **cmd/ralphglasses-mcp/**: Standalone MCP server binary entry point
