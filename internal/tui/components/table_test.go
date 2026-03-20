@@ -112,8 +112,8 @@ func TestViewEmpty(t *testing.T) {
 	tbl.Width = 40
 	tbl.Height = 20
 	view := tbl.View()
-	if !strings.Contains(view, "No repos found") {
-		t.Error("empty view should show 'No repos found'")
+	if !strings.Contains(view, "No items") {
+		t.Error("empty view should show 'No items'")
 	}
 }
 
