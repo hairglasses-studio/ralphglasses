@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
 
 // buildCmd constructs the claude CLI command from LaunchOptions.
@@ -21,7 +23,7 @@ func buildCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 
 // launch starts a new LLM CLI session and returns immediately.
 // The session runs in a background goroutine that parses streaming output.
-func launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
+func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Session, error) {
 	if opts.RepoPath == "" {
 		return nil, fmt.Errorf("repo path required")
 	}
@@ -60,6 +62,11 @@ func launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
 		return nil, fmt.Errorf("stderr pipe: %w", err)
 	}
 
+	var sessionBus *events.Bus
+	if len(bus) > 0 {
+		sessionBus = bus[0]
+	}
+
 	now := time.Now()
 	s := &Session{
 		ID:           uuid.New().String(),
@@ -77,6 +84,8 @@ func launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
 		LastActivity: now,
 		cmd:          cmd,
 		cancel:       cancel,
+		OutputCh:     make(chan string, 100),
+		bus:          sessionBus,
 	}
 
 	if err := cmd.Start(); err != nil {
@@ -99,6 +108,7 @@ func launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
 	// Background goroutine: parse streaming JSON output
 	go func() {
 		defer cancel()
+		defer close(s.OutputCh)
 		runSession(s, stdout, stderr)
 	}()
 
@@ -146,6 +156,23 @@ func runSession(s *Session, stdout, stderr io.Reader) {
 			s.ExitReason = "completed normally"
 		}
 	}
+
+	// Publish session ended event
+	if s.bus != nil {
+		s.bus.Publish(events.Event{
+			Type:      events.SessionEnded,
+			SessionID: s.ID,
+			RepoPath:  s.RepoPath,
+			RepoName:  s.RepoName,
+			Provider:  string(s.Provider),
+			Data: map[string]any{
+				"status":      string(s.Status),
+				"exit_reason": s.ExitReason,
+				"spent_usd":   s.SpentUSD,
+				"turns":       s.TurnCount,
+			},
+		})
+	}
 }
 
 // runSessionOutput parses streaming JSON lines from stdout and updates session state.
@@ -175,13 +202,45 @@ func runSessionOutput(s *Session, stdout io.Reader) {
 		case "assistant":
 			if event.Content != "" {
 				s.LastOutput = truncateStr(event.Content, 4000)
+				// Append to output history (capped at 100)
+				s.OutputHistory = append(s.OutputHistory, event.Content)
+				if len(s.OutputHistory) > 100 {
+					s.OutputHistory = s.OutputHistory[len(s.OutputHistory)-100:]
+				}
+				// Non-blocking send to output channel
+				select {
+				case s.OutputCh <- event.Content:
+				default:
+				}
 			}
 		case "result":
 			s.LastOutput = truncateStr(event.Result, 4000)
 			if event.CostUSD > 0 {
-				// Assignment (not +=) because Claude emits cumulative cost in result events.
-				// If Gemini/Codex emit per-event deltas instead, this needs to change to +=.
+				prevSpent := s.SpentUSD
 				s.SpentUSD = event.CostUSD
+				s.CostHistory = append(s.CostHistory, event.CostUSD)
+				// Publish cost update event
+				if s.bus != nil && event.CostUSD != prevSpent {
+					s.bus.Publish(events.Event{
+						Type:      events.CostUpdate,
+						SessionID: s.ID,
+						RepoPath:  s.RepoPath,
+						RepoName:  s.RepoName,
+						Provider:  string(s.Provider),
+						Data:      map[string]any{"spent_usd": event.CostUSD, "turns": s.TurnCount},
+					})
+				}
+				// Check budget exceeded
+				if s.bus != nil && s.BudgetUSD > 0 && s.SpentUSD >= s.BudgetUSD {
+					s.bus.Publish(events.Event{
+						Type:      events.BudgetExceeded,
+						SessionID: s.ID,
+						RepoPath:  s.RepoPath,
+						RepoName:  s.RepoName,
+						Provider:  string(s.Provider),
+						Data:      map[string]any{"spent_usd": s.SpentUSD, "budget_usd": s.BudgetUSD},
+					})
+				}
 			}
 			if event.NumTurns > 0 {
 				s.TurnCount = event.NumTurns

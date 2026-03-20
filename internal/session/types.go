@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"sync"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
 
 // Provider identifies which LLM CLI backend to use.
@@ -49,10 +51,14 @@ type Session struct {
 	ExitReason   string        `json:"exit_reason,omitempty"`
 	LastOutput   string        `json:"last_output,omitempty"`
 	Error        string        `json:"error,omitempty"`
+	CostHistory   []float64     `json:"cost_history,omitempty"`
+	OutputHistory []string      `json:"output_history,omitempty"` // last N output lines
 
-	cmd    *exec.Cmd
-	cancel func()
-	mu     sync.Mutex
+	cmd      *exec.Cmd
+	cancel   func()
+	mu       sync.Mutex
+	OutputCh chan string `json:"-"` // real-time output channel
+	bus      *events.Bus `json:"-"` // event bus for publishing lifecycle events
 }
 
 // Lock locks the session mutex for external callers.
