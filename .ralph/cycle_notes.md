@@ -47,3 +47,25 @@ Machine-readable companion: `improvement_notes.jsonl`
 
 ### Next
 - Task group 0.5.2 (Watcher error handling)
+
+## Cycle 2 — 2026-03-20
+
+**Tasks:** 0.5.2 (0.5.2.1–0.5.2.4)
+**Files modified:** internal/process/watcher.go, internal/process/watcher_test.go, internal/tui/app.go
+**`make ci`:** PASS
+
+### What worked
+- Clean error propagation: all watcher failure paths now return `WatcherErrorMsg` instead of `nil`
+- Exponential backoff (1s→2s→4s→8s→16s→30s cap) prevents hammering on persistent failures
+- After 5 consecutive failures, `WatcherDisabled` flag stops re-watch attempts; TUI continues with 2s tick polling
+
+### Unexpected issues
+- None
+
+### Decisions made
+- `watcher.Add()` errors for individual paths are tolerated (partial watch); only fails if ALL paths fail to watch
+- Backoff counter resets on successful `FileChangedMsg`, so transient errors self-heal
+- `WatcherDisabled` is one-way per session — requires TUI restart to re-enable watcher (polling is reliable enough)
+
+### Next
+- Task group 0.5.3 (Process reaper exit status)

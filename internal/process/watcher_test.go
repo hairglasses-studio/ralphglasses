@@ -1,6 +1,7 @@
 package process
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -214,5 +215,42 @@ func TestWatchStatusFiles_EmptyPaths(t *testing.T) {
 		// Acceptable — may return nil quickly if watcher setup fails
 	case <-time.After(500 * time.Millisecond):
 		// Expected — watcher blocks with nothing to watch
+	}
+}
+
+func TestWatchStatusFiles_NonexistentPathReturnsError(t *testing.T) {
+	// Watch a path that doesn't exist — all watches fail, should return WatcherErrorMsg
+	cmd := WatchStatusFiles([]string{"/nonexistent/path/that/does/not/exist"})
+
+	done := make(chan interface{})
+	go func() {
+		msg := cmd()
+		done <- msg
+	}()
+
+	select {
+	case msg := <-done:
+		if msg == nil {
+			t.Fatal("expected WatcherErrorMsg, got nil")
+		}
+		wem, ok := msg.(WatcherErrorMsg)
+		if !ok {
+			t.Fatalf("expected WatcherErrorMsg, got %T", msg)
+		}
+		if wem.Err == nil {
+			t.Fatal("expected non-nil error in WatcherErrorMsg")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("watcher did not return within 5s")
+	}
+}
+
+func TestWatcherErrorMsg_HasError(t *testing.T) {
+	msg := WatcherErrorMsg{Err: fmt.Errorf("test error")}
+	if msg.Err == nil {
+		t.Fatal("expected non-nil error")
+	}
+	if msg.Err.Error() != "test error" {
+		t.Errorf("error = %q, want %q", msg.Err.Error(), "test error")
 	}
 }

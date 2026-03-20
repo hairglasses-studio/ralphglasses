@@ -1,6 +1,7 @@
 package process
 
 import (
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -13,28 +14,40 @@ type FileChangedMsg struct {
 	RepoPath string
 }
 
+// WatcherErrorMsg is sent when the fsnotify watcher encounters an error.
+type WatcherErrorMsg struct {
+	Err error
+}
+
 // WatchStatusFiles watches .ralph/ directories for status file changes
-// and emits Bubble Tea messages.
+// and emits Bubble Tea messages. On watcher creation or runtime errors,
+// returns WatcherErrorMsg so the TUI can fall back to polling.
 func WatchStatusFiles(repoPaths []string) tea.Cmd {
 	return func() tea.Msg {
 		watcher, err := fsnotify.NewWatcher()
 		if err != nil {
-			return nil
+			return WatcherErrorMsg{Err: fmt.Errorf("create watcher: %w", err)}
 		}
 
+		var addErrors []error
 		for _, rp := range repoPaths {
 			ralphDir := filepath.Join(rp, ".ralph")
-			_ = watcher.Add(ralphDir)
+			if err := watcher.Add(ralphDir); err != nil {
+				addErrors = append(addErrors, fmt.Errorf("watch %s: %w", ralphDir, err))
+			}
+		}
+		// If ALL watches failed, report error and let TUI fall back to polling
+		if len(addErrors) == len(repoPaths) && len(repoPaths) > 0 {
+			_ = watcher.Close()
+			return WatcherErrorMsg{Err: fmt.Errorf("all watches failed: %v", addErrors[0])}
 		}
 
 		// Block until an event arrives or timeout.
-		// Timeout ensures the TUI event loop isn't blocked indefinitely;
-		// the TUI's 2s tick polling picks up from there.
 		for {
 			select {
 			case event, ok := <-watcher.Events:
 				if !ok {
-					return nil
+					return WatcherErrorMsg{Err: fmt.Errorf("watcher events channel closed")}
 				}
 				if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) {
 					base := filepath.Base(event.Name)
@@ -44,10 +57,12 @@ func WatchStatusFiles(repoPaths []string) tea.Cmd {
 						return FileChangedMsg{RepoPath: repoPath}
 					}
 				}
-			case _, ok := <-watcher.Errors:
+			case watchErr, ok := <-watcher.Errors:
+				_ = watcher.Close()
 				if !ok {
-					return nil
+					return WatcherErrorMsg{Err: fmt.Errorf("watcher errors channel closed")}
 				}
+				return WatcherErrorMsg{Err: fmt.Errorf("fsnotify: %w", watchErr)}
 			case <-time.After(2 * time.Second):
 				_ = watcher.Close()
 				return nil
