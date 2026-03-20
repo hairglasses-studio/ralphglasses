@@ -15,6 +15,7 @@ type Repo struct {
 	Circuit       *CircuitBreakerState
 	Progress      *Progress
 	Config        *RalphConfig
+	SessionID     string  // active Claude Code session ID (if any)
 	RefreshErrors []error // errors from last RefreshRepo call
 }
 
