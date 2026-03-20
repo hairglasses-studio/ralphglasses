@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 )
@@ -42,7 +43,7 @@ func TestBuildGeminiCmd(t *testing.T) {
 	})
 
 	cmdStr := strings.Join(cmd.Args, " ")
-	for _, want := range []string{"--output-format", "stream-json", "--model", "gemini-2.5-pro", "--resume", "sess-123"} {
+	for _, want := range []string{"-p", "--output-format", "stream-json", "--model", "gemini-2.5-pro", "--resume", "sess-123", "--yolo"} {
 		if !strings.Contains(cmdStr, want) {
 			t.Errorf("gemini cmd %q missing %q", cmdStr, want)
 		}
@@ -57,14 +58,35 @@ func TestBuildCodexCmd(t *testing.T) {
 	cmd := buildCodexCmd(ctx, LaunchOptions{
 		RepoPath: "/tmp/repo",
 		Model:    "o4-mini",
+		Prompt:   "Fix the bug",
 	})
 
 	cmdStr := strings.Join(cmd.Args, " ")
-	if !strings.Contains(cmdStr, "--quiet") {
-		t.Errorf("codex cmd %q missing --quiet", cmdStr)
+	for _, want := range []string{"exec", "--model", "o4-mini", "--json", "--full-auto", "Fix the bug"} {
+		if !strings.Contains(cmdStr, want) {
+			t.Errorf("codex cmd %q missing %q", cmdStr, want)
+		}
 	}
-	if !strings.Contains(cmdStr, "--model o4-mini") {
-		t.Errorf("codex cmd %q missing --model o4-mini", cmdStr)
+	if strings.Contains(cmdStr, "--quiet") {
+		t.Errorf("codex cmd %q should not contain --quiet", cmdStr)
+	}
+	if cmd.Dir != "/tmp/repo" {
+		t.Errorf("cmd.Dir = %q, want /tmp/repo", cmd.Dir)
+	}
+}
+
+func TestBuildCodexCmdResume(t *testing.T) {
+	ctx := context.Background()
+	cmd := buildCodexCmd(ctx, LaunchOptions{
+		RepoPath: "/tmp/repo",
+		Resume:   "sess-456",
+	})
+
+	cmdStr := strings.Join(cmd.Args, " ")
+	for _, want := range []string{"exec", "--json", "--full-auto", "resume", "sess-456"} {
+		if !strings.Contains(cmdStr, want) {
+			t.Errorf("codex resume cmd %q missing %q", cmdStr, want)
+		}
 	}
 }
 
@@ -169,5 +191,49 @@ func TestRunSessionOutputWithProvider(t *testing.T) {
 	}
 	if s.TurnCount != 2 {
 		t.Errorf("TurnCount = %d, want 2", s.TurnCount)
+	}
+}
+
+func TestValidateProviderEnvMissing(t *testing.T) {
+	os.Unsetenv("GOOGLE_API_KEY")
+	err := ValidateProviderEnv(ProviderGemini)
+	if err == nil {
+		t.Fatal("expected error when GOOGLE_API_KEY is unset")
+	}
+	if !strings.Contains(err.Error(), "GOOGLE_API_KEY not set") {
+		t.Errorf("error = %q, want mention of GOOGLE_API_KEY", err)
+	}
+}
+
+func TestValidateProviderEnvPresent(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "sk-test-key")
+	err := ValidateProviderEnv(ProviderCodex)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestUnsupportedOptionsWarnings(t *testing.T) {
+	opts := LaunchOptions{
+		SystemPrompt: "be helpful",
+		MaxBudgetUSD: 5.0,
+		Agent:        "reviewer",
+	}
+
+	// Claude supports everything — no warnings
+	if w := UnsupportedOptionsWarnings(ProviderClaude, opts); len(w) != 0 {
+		t.Errorf("claude warnings = %v, want none", w)
+	}
+
+	// Gemini ignores system_prompt, max_budget_usd, agent
+	gw := UnsupportedOptionsWarnings(ProviderGemini, opts)
+	if len(gw) != 3 {
+		t.Errorf("gemini warnings count = %d, want 3: %v", len(gw), gw)
+	}
+
+	// Codex ignores system_prompt, max_budget_usd, agent
+	cw := UnsupportedOptionsWarnings(ProviderCodex, opts)
+	if len(cw) != 3 {
+		t.Errorf("codex warnings count = %d, want 3: %v", len(cw), cw)
 	}
 }

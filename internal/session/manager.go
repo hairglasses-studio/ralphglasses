@@ -169,17 +169,56 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 		return nil, fmt.Errorf("at least one task required")
 	}
 
-	// Build a lead prompt that instructs Claude to use agent teams
+	// Build a lead prompt that instructs the lead to use agent teams
 	var taskList string
 	for i, t := range config.Tasks {
 		taskList += fmt.Sprintf("%d. %s\n", i+1, t)
 	}
 
+	workerProvider := config.WorkerProvider
+	if workerProvider == "" {
+		workerProvider = config.Provider
+	}
+	if workerProvider == "" {
+		workerProvider = ProviderClaude
+	}
+
 	leadPrompt := fmt.Sprintf(
-		"You are a team lead coordinating work on this project. "+
-			"Use the Agent tool to create teammates and delegate these tasks:\n\n%s\n"+
-			"Coordinate all work, verify results, and report final status.",
-		taskList,
+		`You are a team lead coordinating work on this project.
+
+## Tasks to delegate
+
+%s
+## MCP Tools available
+
+- ralphglasses_session_launch — Launch a worker session (required: repo, prompt; optional: provider, model, max_budget_usd, agent, system_prompt)
+- ralphglasses_session_status — Check a worker's progress (required: session_id)
+- ralphglasses_session_list — List all sessions (optional: repo, provider, status filters)
+- ralphglasses_session_stop — Stop a stuck/completed worker (required: session_id)
+
+## Provider capabilities
+
+| Parameter       | claude (all) | gemini         | codex          |
+|-----------------|-------------|----------------|----------------|
+| prompt          | yes         | yes            | yes            |
+| model           | yes         | yes            | yes            |
+| resume          | yes         | yes            | no             |
+| system_prompt   | yes         | no (ignored)   | no (ignored)   |
+| max_budget_usd  | yes         | no (ignored)   | no (ignored)   |
+| agent           | yes         | no (ignored)   | no (ignored)   |
+| allowed_tools   | yes         | no (ignored)   | no (ignored)   |
+
+## Workflow
+
+1. Launch worker sessions with ralphglasses_session_launch (provider=%q)
+2. Poll status with ralphglasses_session_status every 30-60 seconds
+3. Stop stuck workers with ralphglasses_session_stop if no progress
+4. Verify completed work by reading output from session_status
+5. Report final status summarizing all task outcomes
+
+Default worker provider: %s.
+Provider strengths: claude (complex architecture), gemini (fast bulk generation), codex (focused refactoring).`,
+		taskList, workerProvider, workerProvider,
 	)
 
 	opts := LaunchOptions{

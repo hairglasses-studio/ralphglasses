@@ -7,10 +7,36 @@ import (
 	"strings"
 )
 
-// ListAgents reads .claude/agents/*.md from a repo and returns agent definitions.
+// agentDir returns the agent definition directory for a given provider.
+func agentDir(repoPath string, provider Provider) string {
+	switch provider {
+	case ProviderGemini:
+		return filepath.Join(repoPath, ".gemini", "agents")
+	default:
+		return filepath.Join(repoPath, ".claude", "agents")
+	}
+}
+
+// ListAgents reads agent definitions from a repo for a given provider.
+// Claude: .claude/agents/*.md, Gemini: .gemini/agents/*.md, Codex: AGENTS.md sections.
+// If provider is empty, defaults to claude.
 func ListAgents(repoPath string) ([]AgentDef, error) {
-	agentsDir := filepath.Join(repoPath, ".claude", "agents")
-	entries, err := os.ReadDir(agentsDir)
+	return DiscoverAgents(repoPath, ProviderClaude)
+}
+
+// DiscoverAgents returns agent definitions for the specified provider.
+func DiscoverAgents(repoPath string, provider Provider) ([]AgentDef, error) {
+	if provider == "" {
+		provider = ProviderClaude
+	}
+
+	if provider == ProviderCodex {
+		return discoverCodexAgents(repoPath)
+	}
+
+	// Claude and Gemini both use .{provider}/agents/*.md
+	dir := agentDir(repoPath, provider)
+	entries, err := os.ReadDir(dir)
 	if os.IsNotExist(err) {
 		return nil, nil
 	}
@@ -24,30 +50,119 @@ func ListAgents(repoPath string) ([]AgentDef, error) {
 			continue
 		}
 
-		data, err := os.ReadFile(filepath.Join(agentsDir, e.Name()))
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
 		if err != nil {
 			continue
 		}
 
 		def := parseAgentMd(e.Name(), string(data))
+		def.Provider = provider
 		agents = append(agents, def)
 	}
 	return agents, nil
 }
 
-// WriteAgent writes a .claude/agents/<name>.md file.
+// discoverCodexAgents parses AGENTS.md in the repo root.
+// Each ## heading becomes an agent name; content until next ## is the prompt.
+func discoverCodexAgents(repoPath string) ([]AgentDef, error) {
+	data, err := os.ReadFile(filepath.Join(repoPath, "AGENTS.md"))
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read AGENTS.md: %w", err)
+	}
+
+	return parseAgentsMd(string(data)), nil
+}
+
+// parseAgentsMd parses a Codex AGENTS.md file where each ## section is an agent.
+func parseAgentsMd(content string) []AgentDef {
+	var agents []AgentDef
+	var current *AgentDef
+	var body strings.Builder
+
+	for _, line := range strings.Split(content, "\n") {
+		if strings.HasPrefix(line, "## ") {
+			// Flush previous agent
+			if current != nil {
+				current.Prompt = strings.TrimSpace(body.String())
+				agents = append(agents, *current)
+			}
+			name := strings.TrimSpace(strings.TrimPrefix(line, "## "))
+			current = &AgentDef{
+				Name:     name,
+				Provider: ProviderCodex,
+			}
+			body.Reset()
+		} else if current != nil {
+			body.WriteString(line)
+			body.WriteString("\n")
+		}
+	}
+	// Flush last agent
+	if current != nil {
+		current.Prompt = strings.TrimSpace(body.String())
+		agents = append(agents, *current)
+	}
+	return agents
+}
+
+// WriteAgent writes an agent definition to the correct location for its provider.
 func WriteAgent(repoPath string, def AgentDef) error {
-	agentsDir := filepath.Join(repoPath, ".claude", "agents")
-	if err := os.MkdirAll(agentsDir, 0755); err != nil {
+	if def.Provider == ProviderCodex {
+		return writeCodexAgent(repoPath, def)
+	}
+
+	dir := agentDir(repoPath, def.Provider)
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("create agents dir: %w", err)
 	}
 
 	content := renderAgentMd(def)
 	filename := def.Name + ".md"
-	return os.WriteFile(filepath.Join(agentsDir, filename), []byte(content), 0644)
+	return os.WriteFile(filepath.Join(dir, filename), []byte(content), 0644)
 }
 
-// parseAgentMd parses a .claude/agents/*.md file into an AgentDef.
+// writeCodexAgent appends or updates an agent section in AGENTS.md.
+func writeCodexAgent(repoPath string, def AgentDef) error {
+	agentsFile := filepath.Join(repoPath, "AGENTS.md")
+
+	var existing string
+	data, err := os.ReadFile(agentsFile)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("read AGENTS.md: %w", err)
+	}
+	if err == nil {
+		existing = string(data)
+	}
+
+	// Build the new section
+	section := fmt.Sprintf("## %s\n\n%s\n", def.Name, def.Prompt)
+
+	// Check if agent already exists — replace its section
+	header := fmt.Sprintf("## %s", def.Name)
+	if idx := strings.Index(existing, header); idx >= 0 {
+		// Find the next ## or end of file
+		rest := existing[idx+len(header):]
+		nextIdx := strings.Index(rest, "\n## ")
+		if nextIdx >= 0 {
+			existing = existing[:idx] + section + rest[nextIdx+1:]
+		} else {
+			existing = existing[:idx] + section
+		}
+	} else {
+		// Append
+		if existing != "" && !strings.HasSuffix(existing, "\n") {
+			existing += "\n"
+		}
+		existing += section
+	}
+
+	return os.WriteFile(agentsFile, []byte(existing), 0644)
+}
+
+// parseAgentMd parses a .claude/agents/*.md or .gemini/agents/*.md file into an AgentDef.
 // Format: YAML frontmatter between --- fences, then markdown body.
 func parseAgentMd(filename, content string) AgentDef {
 	name := strings.TrimSuffix(filename, ".md")
@@ -108,7 +223,7 @@ func parseYAMLList(value string) []string {
 	return result
 }
 
-// renderAgentMd produces a .claude/agents/*.md file content.
+// renderAgentMd produces a .claude/agents/*.md or .gemini/agents/*.md file content.
 func renderAgentMd(def AgentDef) string {
 	var b strings.Builder
 	b.WriteString("---\n")

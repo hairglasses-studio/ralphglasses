@@ -34,7 +34,7 @@ Launch sessions against any supported provider:
 | Provider | CLI | Default Model | Install |
 |----------|-----|---------------|---------|
 | `claude` (default) | [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) | `sonnet` | Pre-installed |
-| `gemini` | [Gemini CLI](https://ai.google.dev/gemini-api/docs) | `gemini-2.5-pro` | `npm i -g @anthropic-ai/gemini-cli` |
+| `gemini` | [Gemini CLI](https://ai.google.dev/gemini-api/docs) | `gemini-2.5-pro` | `npm i -g @google/gemini-cli` |
 | `codex` | [Codex CLI](https://platform.openai.com/docs/guides/codex) | `o4-mini` | `npm i -g @openai/codex-cli` |
 
 ### Usage via MCP
