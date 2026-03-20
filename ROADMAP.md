@@ -396,6 +396,54 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 2.14.5 — SSH key management: `~/.ralphglasses/ssh/` with per-host key configuration
 - **Acceptance:** fleet view shows sessions from multiple physical machines
 
+## Phase 2.5: Multi-LLM Agent Orchestration
+
+> **Depends on:** Phase 2.1 (session model)
+>
+> **Parallel workstreams:** 2.5.1 (provider fixes) is foundation. 2.5.2-2.5.5 depend on it. 2.5.6 is independent.
+
+### 2.5.1 — Fix provider CLI command builders
+- [x] 2.5.1.1 — Fix buildCodexCmd: `codex exec PROMPT --json --full-auto` (not `--quiet`)
+- [x] 2.5.1.2 — Fix buildGeminiCmd: add `-p` flag and `--yolo` for headless mode
+- [x] 2.5.1.3 — Fix Codex prompt delivery (positional arg, not stdin)
+- [x] 2.5.1.4 — Fix npm package name in docs (`@google/gemini-cli`)
+- [x] 2.5.1.5 — Update provider test suite for correct CLI flags
+- **Acceptance:** codex and gemini sessions launchable via MCP tools
+
+### 2.5.2 — Per-provider agent discovery `[BLOCKED BY 2.5.1]`
+- [x] 2.5.2.1 — Discover `.gemini/agents/*.md` for Gemini provider
+- [x] 2.5.2.2 — Parse `AGENTS.md` sections for Codex provider
+- [x] 2.5.2.3 — Add `Provider` field to `AgentDef` type
+- [x] 2.5.2.4 — Wire provider param into `agent_list` and `agent_define` MCP tools
+- **Acceptance:** `agent_list` returns provider-specific agent definitions
+
+### 2.5.3 — Cross-provider team delegation `[BLOCKED BY 2.5.1]`
+- [x] 2.5.3.1 — Add per-task provider override in `TeamTask`
+- [x] 2.5.3.2 — Generate provider-aware delegation prompts for lead sessions
+- [x] 2.5.3.3 — Update `team_create` with `worker_provider` default param
+- [x] 2.5.3.4 — Update `team_delegate` with optional `provider` param
+- **Acceptance:** Claude lead delegates tasks to Gemini/Codex workers
+
+### 2.5.4 — Provider-specific resume support `[BLOCKED BY 2.5.1]`
+- [x] 2.5.4.1 — Implement Codex resume: `codex exec resume SESSION_ID`
+- [x] 2.5.4.2 — Verify Gemini `--resume` flag works with `stream-json`
+- [x] 2.5.4.3 — Add resume tests per provider
+- **Acceptance:** `session_resume` works for all three providers
+
+### 2.5.5 — Unified cost normalization `[BLOCKED BY 2.5.1]`
+- [x] 2.5.5.1 — Verify Codex `--json` cost output fields, update normalizer
+- [x] 2.5.5.2 — Verify Gemini `stream-json` cost output fields, update normalizer
+- [ ] 2.5.5.3 — Add provider-specific cost fallback (parse stderr for cost if not in JSON)
+- **Acceptance:** `cost_usd` tracked accurately for all providers
+
+### 2.5.6 — Batch API integration `[PARALLEL — independent]`
+- [ ] 2.5.6.1 — Research: map batch API endpoints for Claude, Gemini, OpenAI (~50% cost)
+- [ ] 2.5.6.2 — Add `BatchOptions` to `LaunchOptions` (batch mode flag, callback URL)
+- [ ] 2.5.6.3 — Implement batch submission for Claude (Messages Batches API)
+- [ ] 2.5.6.4 — Implement batch submission for Gemini (Batch Prediction API)
+- [ ] 2.5.6.5 — Implement batch polling/webhook for result collection
+- **Acceptance:** batch tasks submitted and results collected for at least one provider
+
 ## Phase 3: i3 Multi-Monitor Integration
 
 > **Depends on:** Phase 2 (session model, fleet dashboard)

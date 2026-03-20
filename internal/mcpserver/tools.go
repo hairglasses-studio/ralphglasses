@@ -196,6 +196,7 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithString("name", mcp.Required(), mcp.Description("Team name")),
 		mcp.WithString("tasks", mcp.Required(), mcp.Description("Newline-separated task descriptions")),
 		mcp.WithString("provider", mcp.Description("LLM provider for lead: claude (default), gemini, codex")),
+		mcp.WithString("worker_provider", mcp.Description("Default LLM provider for worker tasks: claude, gemini, codex")),
 		mcp.WithString("lead_agent", mcp.Description("Agent definition for the lead (from .claude/agents/)")),
 		mcp.WithString("model", mcp.Description("Model for lead session")),
 		mcp.WithNumber("max_budget_usd", mcp.Description("Total budget for the team")),
@@ -210,15 +211,17 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithDescription("Add a new task to an existing team"),
 		mcp.WithString("name", mcp.Required(), mcp.Description("Team name")),
 		mcp.WithString("task", mcp.Required(), mcp.Description("Task description to delegate")),
+		mcp.WithString("provider", mcp.Description("LLM provider override for this task: claude, gemini, codex")),
 	), s.handleTeamDelegate)
 
 	// Agent definition tools
 
 	srv.AddTool(mcp.NewTool("ralphglasses_agent_define",
-		mcp.WithDescription("Create or update a .claude/agents/*.md agent definition for a repo"),
+		mcp.WithDescription("Create or update an agent definition for a repo (supports all providers)"),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
 		mcp.WithString("name", mcp.Required(), mcp.Description("Agent name")),
 		mcp.WithString("prompt", mcp.Required(), mcp.Description("Agent system prompt / instructions (markdown)")),
+		mcp.WithString("provider", mcp.Description("Target provider: claude (default, .claude/agents/), gemini (.gemini/agents/), codex (AGENTS.md)")),
 		mcp.WithString("description", mcp.Description("Agent description")),
 		mcp.WithString("model", mcp.Description("Model override (sonnet, opus, haiku)")),
 		mcp.WithString("tools", mcp.Description("Comma-separated allowed tools")),
@@ -226,8 +229,9 @@ func (s *Server) Register(srv *server.MCPServer) {
 	), s.handleAgentDefine)
 
 	srv.AddTool(mcp.NewTool("ralphglasses_agent_list",
-		mcp.WithDescription("List available agent definitions (.claude/agents/*.md) for a repo"),
+		mcp.WithDescription("List available agent definitions for a repo (supports all providers)"),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithString("provider", mcp.Description("Filter by provider: claude (default), gemini, codex, or 'all'")),
 	), s.handleAgentList)
 }
 
@@ -733,14 +737,19 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		return errResult(fmt.Sprintf("launch failed: %v", err)), nil
 	}
 
-	return jsonResult(map[string]any{
+	result := map[string]any{
 		"session_id": sess.ID,
 		"provider":   sess.Provider,
 		"repo":       sess.RepoName,
 		"status":     sess.Status,
 		"model":      sess.Model,
 		"budget_usd": sess.BudgetUSD,
-	}), nil
+	}
+	if warnings := session.UnsupportedOptionsWarnings(provider, opts); len(warnings) > 0 {
+		result["warnings"] = warnings
+	}
+
+	return jsonResult(result), nil
 }
 
 func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -970,14 +979,17 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		teamProvider = session.ProviderClaude
 	}
 
+	workerProvider := session.Provider(getStringArg(req, "worker_provider"))
+
 	config := session.TeamConfig{
-		Name:         teamName,
-		Provider:     teamProvider,
-		RepoPath:     r.Path,
-		LeadAgent:    getStringArg(req, "lead_agent"),
-		Tasks:        tasks,
-		Model:        getStringArg(req, "model"),
-		MaxBudgetUSD: getNumberArg(req, "max_budget_usd", 0),
+		Name:           teamName,
+		Provider:       teamProvider,
+		WorkerProvider: workerProvider,
+		RepoPath:       r.Path,
+		LeadAgent:      getStringArg(req, "lead_agent"),
+		Tasks:          tasks,
+		Model:          getStringArg(req, "model"),
+		MaxBudgetUSD:   getNumberArg(req, "max_budget_usd", 0),
 	}
 
 	team, err := s.SessMgr.LaunchTeam(ctx, config)
@@ -1037,8 +1049,10 @@ func (s *Server) handleTeamDelegate(_ context.Context, req mcp.CallToolRequest) 
 		return errResult(fmt.Sprintf("team not found: %s", name)), nil
 	}
 
+	taskProvider := session.Provider(getStringArg(req, "provider"))
 	team.Tasks = append(team.Tasks, session.TeamTask{
 		Description: task,
+		Provider:    taskProvider,
 		Status:      "pending",
 	})
 
@@ -1070,8 +1084,14 @@ func (s *Server) handleAgentDefine(_ context.Context, req mcp.CallToolRequest) (
 		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
+	provider := session.Provider(getStringArg(req, "provider"))
+	if provider == "" {
+		provider = session.ProviderClaude
+	}
+
 	def := session.AgentDef{
 		Name:        agentName,
+		Provider:    provider,
 		Description: getStringArg(req, "description"),
 		Model:       getStringArg(req, "model"),
 		Prompt:      prompt,
@@ -1084,7 +1104,17 @@ func (s *Server) handleAgentDefine(_ context.Context, req mcp.CallToolRequest) (
 	if err := session.WriteAgent(r.Path, def); err != nil {
 		return errResult(fmt.Sprintf("write agent: %v", err)), nil
 	}
-	return textResult(fmt.Sprintf("Created agent definition: %s/.claude/agents/%s.md", r.Path, agentName)), nil
+
+	var location string
+	switch provider {
+	case session.ProviderGemini:
+		location = fmt.Sprintf("%s/.gemini/agents/%s.md", r.Path, agentName)
+	case session.ProviderCodex:
+		location = fmt.Sprintf("%s/AGENTS.md (## %s)", r.Path, agentName)
+	default:
+		location = fmt.Sprintf("%s/.claude/agents/%s.md", r.Path, agentName)
+	}
+	return textResult(fmt.Sprintf("Created agent definition: %s", location)), nil
 }
 
 func (s *Server) handleAgentList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -1102,10 +1132,30 @@ func (s *Server) handleAgentList(_ context.Context, req mcp.CallToolRequest) (*m
 		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
-	agents, err := session.ListAgents(r.Path)
-	if err != nil {
-		return errResult(fmt.Sprintf("list agents: %v", err)), nil
+	providerStr := getStringArg(req, "provider")
+
+	var agents []session.AgentDef
+	if providerStr == "all" {
+		// Discover agents for all providers
+		for _, p := range []session.Provider{session.ProviderClaude, session.ProviderGemini, session.ProviderCodex} {
+			found, err := session.DiscoverAgents(r.Path, p)
+			if err != nil {
+				continue
+			}
+			agents = append(agents, found...)
+		}
+	} else {
+		provider := session.Provider(providerStr)
+		if provider == "" {
+			provider = session.ProviderClaude
+		}
+		var err error
+		agents, err = session.DiscoverAgents(r.Path, provider)
+		if err != nil {
+			return errResult(fmt.Sprintf("list agents: %v", err)), nil
+		}
 	}
+
 	if agents == nil {
 		agents = []session.AgentDef{}
 	}

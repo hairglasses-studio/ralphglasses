@@ -35,7 +35,7 @@ Sessions can target any of three providers via the `provider` parameter:
 # https://docs.anthropic.com/en/docs/claude-code/overview
 
 # Gemini CLI
-npm install -g @anthropic-ai/gemini-cli
+npm install -g @google/gemini-cli
 # https://ai.google.dev/gemini-api/docs
 
 # OpenAI Codex CLI

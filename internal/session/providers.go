@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"syscall"
@@ -19,6 +20,81 @@ func ValidateProvider(p Provider) error {
 		return fmt.Errorf("%s binary not found on PATH: %w", bin, err)
 	}
 	return nil
+}
+
+// providerEnvVar returns the environment variable name required for a provider.
+func providerEnvVar(p Provider) string {
+	switch p {
+	case ProviderGemini:
+		return "GOOGLE_API_KEY"
+	case ProviderCodex:
+		return "OPENAI_API_KEY"
+	default:
+		return "ANTHROPIC_API_KEY"
+	}
+}
+
+// ValidateProviderEnv checks that the required API key environment variable is set.
+func ValidateProviderEnv(p Provider) error {
+	envVar := providerEnvVar(p)
+	if os.Getenv(envVar) == "" {
+		return fmt.Errorf("%s not set (required for provider %q)", envVar, p)
+	}
+	return nil
+}
+
+// UnsupportedOptionsWarnings returns warnings for LaunchOptions fields that are
+// set but ignored by the given provider. Returns nil for Claude (supports all).
+func UnsupportedOptionsWarnings(p Provider, opts LaunchOptions) []string {
+	if p == ProviderClaude || p == "" {
+		return nil
+	}
+
+	var warnings []string
+	switch p {
+	case ProviderGemini:
+		if opts.SystemPrompt != "" {
+			warnings = append(warnings, "system_prompt is ignored by gemini provider")
+		}
+		if opts.MaxBudgetUSD > 0 {
+			warnings = append(warnings, "max_budget_usd is ignored by gemini provider")
+		}
+		if opts.Agent != "" {
+			warnings = append(warnings, "agent is ignored by gemini provider (use .gemini/agents/ instead)")
+		}
+		if opts.MaxTurns > 0 {
+			warnings = append(warnings, "max_turns is ignored by gemini provider")
+		}
+		if len(opts.AllowedTools) > 0 {
+			warnings = append(warnings, "allowed_tools is ignored by gemini provider")
+		}
+		if opts.Worktree != "" {
+			warnings = append(warnings, "worktree is ignored by gemini provider")
+		}
+	case ProviderCodex:
+		if opts.SystemPrompt != "" {
+			warnings = append(warnings, "system_prompt is ignored by codex provider")
+		}
+		if opts.MaxBudgetUSD > 0 {
+			warnings = append(warnings, "max_budget_usd is ignored by codex provider")
+		}
+		if opts.Agent != "" {
+			warnings = append(warnings, "agent is ignored by codex provider")
+		}
+		if opts.MaxTurns > 0 {
+			warnings = append(warnings, "max_turns is ignored by codex provider")
+		}
+		if len(opts.AllowedTools) > 0 {
+			warnings = append(warnings, "allowed_tools is ignored by codex provider")
+		}
+		if opts.Worktree != "" {
+			warnings = append(warnings, "worktree is ignored by codex provider")
+		}
+		if opts.Resume != "" {
+			warnings = append(warnings, "resume may not be fully supported by codex provider")
+		}
+	}
+	return warnings
 }
 
 // ProviderDefaults returns the default model for a given provider.
@@ -53,6 +129,9 @@ func buildCmdForProvider(ctx context.Context, opts LaunchOptions) (*exec.Cmd, er
 		p = ProviderClaude
 	}
 	if err := ValidateProvider(p); err != nil {
+		return nil, err
+	}
+	if err := ValidateProviderEnv(p); err != nil {
 		return nil, err
 	}
 
@@ -112,8 +191,9 @@ func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 }
 
 // buildGeminiCmd constructs the gemini CLI command.
+// Gemini CLI (@google/gemini-cli): -p for headless/pipe mode, --yolo auto-approves tool use.
 func buildGeminiCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
-	args := []string{"--output-format", "stream-json"}
+	args := []string{"-p", "--output-format", "stream-json"}
 
 	if opts.Model != "" {
 		args = append(args, "--model", opts.Model)
@@ -121,6 +201,7 @@ func buildGeminiCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	if opts.Resume != "" {
 		args = append(args, "--resume", opts.Resume)
 	}
+	args = append(args, "--yolo")
 
 	cmd := exec.CommandContext(ctx, "gemini", args...)
 	cmd.Dir = opts.RepoPath
@@ -129,11 +210,22 @@ func buildGeminiCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 }
 
 // buildCodexCmd constructs the codex CLI command.
+// Codex CLI: codex exec PROMPT --json --full-auto for headless mode.
+// Resume: codex exec resume SESSION_ID. Prompt is a positional arg (not stdin).
 func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
-	args := []string{"--quiet"}
+	args := []string{"exec"}
 
 	if opts.Model != "" {
 		args = append(args, "--model", opts.Model)
+	}
+	args = append(args, "--json", "--full-auto")
+
+	if opts.Resume != "" {
+		// codex exec resume SESSION_ID
+		args = append(args, "resume", opts.Resume)
+	} else if opts.Prompt != "" {
+		// Prompt is a positional argument after flags
+		args = append(args, opts.Prompt)
 	}
 
 	cmd := exec.CommandContext(ctx, "codex", args...)
