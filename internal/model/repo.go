@@ -7,14 +7,15 @@ import (
 
 // Repo represents a discovered ralph-enabled repository.
 type Repo struct {
-	Name     string
-	Path     string
-	HasRalph bool // .ralph/ directory exists
-	HasRC    bool // .ralphrc exists
-	Status   *LoopStatus
-	Circuit  *CircuitBreakerState
-	Progress *Progress
-	Config   *RalphConfig
+	Name          string
+	Path          string
+	HasRalph      bool // .ralph/ directory exists
+	HasRC         bool // .ralphrc exists
+	Status        *LoopStatus
+	Circuit       *CircuitBreakerState
+	Progress      *Progress
+	Config        *RalphConfig
+	RefreshErrors []error // errors from last RefreshRepo call
 }
 
 // LoopStatus represents the parsed .ralph/status.json.

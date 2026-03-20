@@ -253,12 +253,45 @@ func TestRefreshRepo_AllFiles(t *testing.T) {
 	}
 }
 
+func TestRefreshRepo_CorruptStatus_ReturnsError(t *testing.T) {
+	dir := setupRalphDir(t)
+
+	// Write corrupt status.json
+	if err := os.WriteFile(filepath.Join(dir, ".ralph", "status.json"), []byte("{bad json"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// Write corrupt progress.json
+	if err := os.WriteFile(filepath.Join(dir, ".ralph", "progress.json"), []byte("nope"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Repo{Path: dir}
+	errs := RefreshRepo(r)
+
+	if len(errs) == 0 {
+		t.Fatal("expected errors for corrupt files, got none")
+	}
+	if r.Status != nil {
+		t.Error("Status should be nil when status.json is corrupt")
+	}
+	if r.Progress != nil {
+		t.Error("Progress should be nil when progress.json is corrupt")
+	}
+	// RefreshErrors should be stored on the repo
+	if len(r.RefreshErrors) != len(errs) {
+		t.Errorf("RefreshErrors len = %d, want %d", len(r.RefreshErrors), len(errs))
+	}
+}
+
 func TestRefreshRepo_NoFiles(t *testing.T) {
 	dir := t.TempDir()
 	r := &Repo{Path: dir}
-	RefreshRepo(r)
+	errs := RefreshRepo(r)
 
-	// Should not panic; all fields remain nil
+	// Missing files are not errors — should not panic, all fields remain nil
+	if len(errs) != 0 {
+		t.Errorf("expected no errors for missing files, got %d: %v", len(errs), errs)
+	}
 	if r.Status != nil {
 		t.Error("Status should be nil when no files exist")
 	}

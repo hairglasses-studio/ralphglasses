@@ -13,10 +13,10 @@ Source: `ROADMAP.md` Phase 0.5. All task groups are independent and can be worke
 ## Task Groups
 
 ### 0.5.1 — Silent error suppression in RefreshRepo
-- [ ] 0.5.1.1 — Return `[]error` from `RefreshRepo()` in `internal/model/status.go:49-54` instead of discarding with `_ =`
-- [ ] 0.5.1.2 — Propagate errors to TUI layer: emit `RefreshErrorMsg` with repo path and error details
-- [ ] 0.5.1.3 — Display parse errors in repo detail view status bar (non-blocking, yellow warning)
-- [ ] 0.5.1.4 — Add unit test: corrupt status.json → RefreshRepo returns error, not silent zero-value
+- [x] 0.5.1.1 — Return `[]error` from `RefreshRepo()` in `internal/model/status.go:49-54` instead of discarding with `_ =`
+- [x] 0.5.1.2 — Propagate errors to TUI layer: emit `RefreshErrorMsg` with repo path and error details
+- [x] 0.5.1.3 — Display parse errors in repo detail view status bar (non-blocking, yellow warning)
+- [x] 0.5.1.4 — Add unit test: corrupt status.json → RefreshRepo returns error, not silent zero-value
 - **Acceptance:** parse errors in `.ralph/` files visible to user, not silently dropped
 
 ### 0.5.2 — Watcher error handling

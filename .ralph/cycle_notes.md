@@ -27,3 +27,23 @@ Machine-readable companion: `improvement_notes.jsonl`
 - Task group to work on next cycle
 
 -->
+
+## Cycle 1 — 2026-03-20
+
+**Tasks:** 0.5.1 (0.5.1.1–0.5.1.4)
+**Files modified:** internal/model/status.go, internal/model/repo.go, internal/model/status_test.go, internal/tui/app.go, internal/tui/styles/styles.go, internal/tui/views/repodetail.go
+**`make ci`:** PASS
+
+### What worked
+- Clean separation: `RefreshRepo` returns `[]error`, stores on `Repo.RefreshErrors`, TUI reads from there
+- Missing files (os.ErrNotExist) excluded from errors — only parse failures surface
+
+### Unexpected issues
+- None
+
+### Decisions made
+- Polling path (`tickMsg`) stores errors on repo but doesn't emit notifications (would spam every 2s). Reactive path (`FileChangedMsg`) emits `RefreshErrorMsg` for one-time notifications.
+- Added `WarningStyle` (yellow) to styles package for parse error display
+
+### Next
+- Task group 0.5.2 (Watcher error handling)
