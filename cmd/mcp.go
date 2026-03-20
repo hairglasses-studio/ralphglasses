@@ -4,6 +4,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
@@ -20,7 +21,8 @@ var mcpCmd = &cobra.Command{
 			server.WithToolCapabilities(true),
 		)
 
-		rg := mcpserver.NewServer(sp)
+		bus := events.NewBus(1000)
+		rg := mcpserver.NewServerWithBus(sp, bus)
 		rg.Register(srv)
 
 		return server.ServeStdio(srv)

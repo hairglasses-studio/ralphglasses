@@ -5,15 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/repofiles"
@@ -23,10 +26,12 @@ import (
 
 // Server holds state for the MCP server.
 type Server struct {
+	mu         sync.RWMutex
 	ScanPath   string
 	Repos      []*model.Repo
 	ProcMgr    *process.Manager
 	SessMgr    *session.Manager
+	EventBus   *events.Bus
 	HTTPClient *http.Client
 }
 
@@ -36,6 +41,16 @@ func NewServer(scanPath string) *Server {
 		ScanPath: scanPath,
 		ProcMgr:  process.NewManager(),
 		SessMgr:  session.NewManager(),
+	}
+}
+
+// NewServerWithBus creates a new MCP server instance with an event bus.
+func NewServerWithBus(scanPath string, bus *events.Bus) *Server {
+	return &Server{
+		ScanPath: scanPath,
+		ProcMgr:  process.NewManagerWithBus(bus),
+		SessMgr:  session.NewManagerWithBus(bus),
+		EventBus: bus,
 	}
 }
 
@@ -240,6 +255,74 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
 		mcp.WithString("provider", mcp.Description("Filter by provider: claude (default), gemini, codex, or 'all'")),
 	), s.handleAgentList)
+
+	// Event bus tools
+
+	srv.AddTool(mcp.NewTool("ralphglasses_event_list",
+		mcp.WithDescription("Query recent fleet events from the event bus"),
+		mcp.WithString("type", mcp.Description("Filter by event type (e.g. session.started, cost.update)")),
+		mcp.WithString("repo", mcp.Description("Filter by repo name")),
+		mcp.WithNumber("limit", mcp.Description("Max events to return (default 50)")),
+		mcp.WithString("since", mcp.Description("ISO timestamp filter")),
+	), s.handleEventList)
+
+	// Fleet analytics tools
+
+	srv.AddTool(mcp.NewTool("ralphglasses_fleet_analytics",
+		mcp.WithDescription("Cost breakdown by provider/repo/time-period with trend analysis"),
+		mcp.WithString("repo", mcp.Description("Filter by repo name")),
+		mcp.WithString("provider", mcp.Description("Filter by provider")),
+	), s.handleFleetAnalytics)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_session_compare",
+		mcp.WithDescription("Compare two sessions by ID: cost, turns, duration, provider efficiency"),
+		mcp.WithString("id1", mcp.Required(), mcp.Description("First session ID")),
+		mcp.WithString("id2", mcp.Required(), mcp.Description("Second session ID")),
+	), s.handleSessionCompare)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_session_output",
+		mcp.WithDescription("Get recent output from a session's output history"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Session ID")),
+		mcp.WithNumber("lines", mcp.Description("Number of output lines (default 20, max 100)")),
+	), s.handleSessionOutput)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_repo_health",
+		mcp.WithDescription("Composite health check: circuit breaker, budget, staleness, errors, active sessions"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+	), s.handleRepoHealth)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_session_retry",
+		mcp.WithDescription("Re-launch a failed session with same params, optional overrides"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Session ID to retry")),
+		mcp.WithString("model", mcp.Description("Override model")),
+		mcp.WithNumber("max_budget_usd", mcp.Description("Override budget")),
+	), s.handleSessionRetry)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_config_bulk",
+		mcp.WithDescription("Get/set .ralphrc values across multiple repos"),
+		mcp.WithString("key", mcp.Required(), mcp.Description("Config key to get/set")),
+		mcp.WithString("value", mcp.Description("Value to set (omit to query)")),
+		mcp.WithString("repos", mcp.Description("Comma-separated repo names (default: all)")),
+	), s.handleConfigBulk)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_workflow_define",
+		mcp.WithDescription("Define a multi-step workflow as YAML"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Workflow name")),
+		mcp.WithString("yaml", mcp.Required(), mcp.Description("Workflow YAML definition")),
+	), s.handleWorkflowDefine)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_workflow_run",
+		mcp.WithDescription("Execute a defined workflow, launching sessions per step"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Workflow name")),
+	), s.handleWorkflowRun)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_snapshot",
+		mcp.WithDescription("Save or list fleet state snapshots"),
+		mcp.WithString("action", mcp.Description("Action: save (default) or list")),
+		mcp.WithString("name", mcp.Description("Snapshot name (auto-generated if omitted)")),
+	), s.handleSnapshot)
 }
 
 func (s *Server) scan() error {
@@ -247,17 +330,35 @@ func (s *Server) scan() error {
 	if err != nil {
 		return err
 	}
+	s.mu.Lock()
 	s.Repos = repos
+	s.mu.Unlock()
 	return nil
 }
 
 func (s *Server) findRepo(name string) *model.Repo {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	for _, r := range s.Repos {
 		if r.Name == name {
 			return r
 		}
 	}
 	return nil
+}
+
+func (s *Server) reposCopy() []*model.Repo {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	cp := make([]*model.Repo, len(s.Repos))
+	copy(cp, s.Repos)
+	return cp
+}
+
+func (s *Server) reposNil() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.Repos == nil
 }
 
 func textResult(text string) *mcp.CallToolResult {
@@ -326,17 +427,24 @@ func (s *Server) handleScan(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	if err := s.scan(); err != nil {
 		return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 	}
-	return textResult(fmt.Sprintf("Found %d ralph-enabled repos", len(s.Repos))), nil
+	repos := s.reposCopy()
+	if s.EventBus != nil {
+		s.EventBus.Publish(events.Event{
+			Type: events.ScanComplete,
+			Data: map[string]any{"repo_count": len(repos)},
+		})
+	}
+	return textResult(fmt.Sprintf("Found %d ralph-enabled repos", len(repos))), nil
 }
 
 func (s *Server) handleList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if s.Repos == nil {
+	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
-	// Refresh all
-	for _, r := range s.Repos {
+	repos := s.reposCopy()
+	for _, r := range repos {
 		model.RefreshRepo(r)
 	}
 
@@ -349,8 +457,8 @@ func (s *Server) handleList(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		Running bool   `json:"managed"`
 	}
 
-	summaries := make([]repoSummary, len(s.Repos))
-	for i, r := range s.Repos {
+	summaries := make([]repoSummary, len(repos))
+	for i, r := range repos {
 		loop := 0
 		if r.Status != nil {
 			loop = r.Status.LoopCount
@@ -372,7 +480,7 @@ func (s *Server) handleStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.
 	if name == "" {
 		return errResult("repo name required"), nil
 	}
-	if s.Repos == nil {
+	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
@@ -409,7 +517,7 @@ func (s *Server) handleStart(_ context.Context, req mcp.CallToolRequest) (*mcp.C
 	if name == "" {
 		return errResult("repo name required"), nil
 	}
-	if s.Repos == nil {
+	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
@@ -429,7 +537,7 @@ func (s *Server) handleStop(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	if name == "" {
 		return errResult("repo name required"), nil
 	}
-	if s.Repos == nil {
+	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
@@ -454,7 +562,7 @@ func (s *Server) handlePause(_ context.Context, req mcp.CallToolRequest) (*mcp.C
 	if name == "" {
 		return errResult("repo name required"), nil
 	}
-	if s.Repos == nil {
+	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
@@ -478,7 +586,7 @@ func (s *Server) handleLogs(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	if name == "" {
 		return errResult("repo name required"), nil
 	}
-	if s.Repos == nil {
+	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
@@ -510,7 +618,7 @@ func (s *Server) handleConfig(_ context.Context, req mcp.CallToolRequest) (*mcp.
 	if name == "" {
 		return errResult("repo name required"), nil
 	}
-	if s.Repos == nil {
+	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
@@ -708,7 +816,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 	if prompt == "" {
 		return errResult("prompt required"), nil
 	}
-	if s.Repos == nil {
+	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
@@ -766,7 +874,7 @@ func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (
 
 	var repoPath string
 	if repoFilter != "" {
-		if s.Repos == nil {
+		if s.reposNil() {
 			if err := s.scan(); err != nil {
 				return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 			}
@@ -876,7 +984,7 @@ func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolReques
 	if sessionID == "" {
 		return errResult("session_id required"), nil
 	}
-	if s.Repos == nil {
+	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
@@ -963,7 +1071,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 	if tasksStr == "" {
 		return errResult("tasks required (newline-separated)"), nil
 	}
-	if s.Repos == nil {
+	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
@@ -1081,7 +1189,7 @@ func (s *Server) handleAgentDefine(_ context.Context, req mcp.CallToolRequest) (
 	if prompt == "" {
 		return errResult("prompt required"), nil
 	}
-	if s.Repos == nil {
+	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
@@ -1129,7 +1237,7 @@ func (s *Server) handleAgentList(_ context.Context, req mcp.CallToolRequest) (*m
 	if repoName == "" {
 		return errResult("repo name required"), nil
 	}
-	if s.Repos == nil {
+	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
@@ -1178,7 +1286,7 @@ const (
 
 func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Auto-scan if needed
-	if s.Repos == nil {
+	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
@@ -1489,4 +1597,559 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 	}
 
 	return jsonResult(result), nil
+}
+
+// --- Event Bus & New Tool Handlers ---
+
+func (s *Server) handleEventList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if s.EventBus == nil {
+		return errResult("event bus not initialized"), nil
+	}
+
+	typeFilter := events.EventType(getStringArg(req, "type"))
+	repoFilter := getStringArg(req, "repo")
+	limit := int(getNumberArg(req, "limit", 50))
+	sinceStr := getStringArg(req, "since")
+
+	var evts []events.Event
+	if sinceStr != "" {
+		t, err := time.Parse(time.RFC3339, sinceStr)
+		if err != nil {
+			return errResult(fmt.Sprintf("invalid since timestamp: %v", err)), nil
+		}
+		evts = s.EventBus.HistorySince(t)
+	} else {
+		evts = s.EventBus.History(typeFilter, limit)
+	}
+
+	// Apply filters
+	var filtered []events.Event
+	for _, e := range evts {
+		if typeFilter != "" && e.Type != typeFilter {
+			continue
+		}
+		if repoFilter != "" && e.RepoName != repoFilter {
+			continue
+		}
+		filtered = append(filtered, e)
+	}
+	if len(filtered) > limit {
+		filtered = filtered[len(filtered)-limit:]
+	}
+
+	type eventOut struct {
+		Type      string         `json:"type"`
+		Timestamp string         `json:"timestamp"`
+		RepoName  string         `json:"repo_name,omitempty"`
+		SessionID string         `json:"session_id,omitempty"`
+		Provider  string         `json:"provider,omitempty"`
+		Data      map[string]any `json:"data,omitempty"`
+	}
+	out := make([]eventOut, len(filtered))
+	for i, e := range filtered {
+		out[i] = eventOut{
+			Type:      string(e.Type),
+			Timestamp: e.Timestamp.Format(time.RFC3339),
+			RepoName:  e.RepoName,
+			SessionID: e.SessionID,
+			Provider:  e.Provider,
+			Data:      e.Data,
+		}
+	}
+	return jsonResult(out), nil
+}
+
+func (s *Server) handleFleetAnalytics(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoFilter := getStringArg(req, "repo")
+	providerFilter := getStringArg(req, "provider")
+
+	sessions := s.SessMgr.List("")
+
+	type providerStats struct {
+		Sessions    int     `json:"sessions"`
+		Running     int     `json:"running"`
+		TotalSpend  float64 `json:"total_spend_usd"`
+		AvgCostTurn float64 `json:"avg_cost_per_turn"`
+		TotalTurns  int     `json:"total_turns"`
+	}
+
+	providers := make(map[string]*providerStats)
+	repos := make(map[string]float64)
+
+	for _, sess := range sessions {
+		sess.Lock()
+		provider := string(sess.Provider)
+		repoName := sess.RepoName
+		spent := sess.SpentUSD
+		turns := sess.TurnCount
+		status := sess.Status
+		sess.Unlock()
+
+		if repoFilter != "" && repoName != repoFilter {
+			continue
+		}
+		if providerFilter != "" && provider != providerFilter {
+			continue
+		}
+
+		ps, ok := providers[provider]
+		if !ok {
+			ps = &providerStats{}
+			providers[provider] = ps
+		}
+		ps.Sessions++
+		ps.TotalSpend += spent
+		ps.TotalTurns += turns
+		if status == session.StatusRunning || status == session.StatusLaunching {
+			ps.Running++
+		}
+		repos[repoName] += spent
+	}
+
+	for _, ps := range providers {
+		if ps.TotalTurns > 0 {
+			ps.AvgCostTurn = ps.TotalSpend / float64(ps.TotalTurns)
+		}
+	}
+
+	result := map[string]any{
+		"providers":      providers,
+		"repos":          repos,
+		"total_sessions": len(sessions),
+	}
+	return jsonResult(result), nil
+}
+
+func (s *Server) handleSessionCompare(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	id1 := getStringArg(req, "id1")
+	id2 := getStringArg(req, "id2")
+	if id1 == "" || id2 == "" {
+		return errResult("both id1 and id2 are required"), nil
+	}
+
+	s1, ok1 := s.SessMgr.Get(id1)
+	s2, ok2 := s.SessMgr.Get(id2)
+	if !ok1 {
+		return errResult(fmt.Sprintf("session not found: %s", id1)), nil
+	}
+	if !ok2 {
+		return errResult(fmt.Sprintf("session not found: %s", id2)), nil
+	}
+
+	extract := func(sess *session.Session) map[string]any {
+		sess.Lock()
+		defer sess.Unlock()
+		dur := time.Since(sess.LaunchedAt)
+		if sess.EndedAt != nil {
+			dur = sess.EndedAt.Sub(sess.LaunchedAt)
+		}
+		costPerTurn := 0.0
+		if sess.TurnCount > 0 {
+			costPerTurn = sess.SpentUSD / float64(sess.TurnCount)
+		}
+		turnsPerMin := 0.0
+		if dur.Minutes() > 0 {
+			turnsPerMin = float64(sess.TurnCount) / dur.Minutes()
+		}
+		return map[string]any{
+			"id":            sess.ID,
+			"provider":      string(sess.Provider),
+			"status":        string(sess.Status),
+			"model":         sess.Model,
+			"spent_usd":     sess.SpentUSD,
+			"turns":         sess.TurnCount,
+			"duration":      dur.String(),
+			"cost_per_turn": costPerTurn,
+			"turns_per_min": turnsPerMin,
+		}
+	}
+
+	return jsonResult(map[string]any{
+		"session_1": extract(s1),
+		"session_2": extract(s2),
+	}), nil
+}
+
+func (s *Server) handleSessionOutput(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	id := getStringArg(req, "id")
+	if id == "" {
+		return errResult("session id required"), nil
+	}
+	lines := int(getNumberArg(req, "lines", 20))
+	if lines > 100 {
+		lines = 100
+	}
+
+	sess, ok := s.SessMgr.Get(id)
+	if !ok {
+		return errResult(fmt.Sprintf("session not found: %s", id)), nil
+	}
+
+	sess.Lock()
+	history := make([]string, len(sess.OutputHistory))
+	copy(history, sess.OutputHistory)
+	sess.Unlock()
+
+	if len(history) > lines {
+		history = history[len(history)-lines:]
+	}
+
+	return jsonResult(map[string]any{
+		"session_id": id,
+		"lines":      len(history),
+		"output":     history,
+	}), nil
+}
+
+func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "repo")
+	if name == "" {
+		return errResult("repo name required"), nil
+	}
+	if s.reposNil() {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(name)
+	if r == nil {
+		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+	}
+	model.RefreshRepo(r)
+
+	score := 100
+	var issues []string
+
+	// Circuit breaker
+	cbState := "CLOSED"
+	if r.Circuit != nil {
+		cbState = r.Circuit.State
+		if cbState == "OPEN" {
+			score -= 30
+			issues = append(issues, fmt.Sprintf("circuit breaker OPEN: %s", r.Circuit.Reason))
+		} else if cbState == "HALF_OPEN" {
+			score -= 10
+			issues = append(issues, "circuit breaker HALF_OPEN")
+		}
+	}
+
+	// Staleness
+	if r.Status != nil && !r.Status.Timestamp.IsZero() {
+		age := time.Since(r.Status.Timestamp)
+		if age > time.Hour {
+			score -= 15
+			issues = append(issues, fmt.Sprintf("status stale (%.0f min)", age.Minutes()))
+		}
+	}
+
+	// Budget
+	if r.Status != nil && r.Status.BudgetStatus == "exceeded" {
+		score -= 20
+		issues = append(issues, "budget exceeded")
+	}
+
+	// Active sessions
+	activeSessions := 0
+	erroredSessions := 0
+	totalSpend := 0.0
+	for _, sess := range s.SessMgr.List("") {
+		sess.Lock()
+		if sess.RepoName == name || filepath.Base(sess.RepoPath) == name {
+			if sess.Status == session.StatusRunning {
+				activeSessions++
+			}
+			if sess.Status == session.StatusErrored {
+				erroredSessions++
+				score -= 5
+			}
+			totalSpend += sess.SpentUSD
+		}
+		sess.Unlock()
+	}
+
+	if erroredSessions > 0 {
+		issues = append(issues, fmt.Sprintf("%d errored sessions", erroredSessions))
+	}
+
+	if score < 0 {
+		score = 0
+	}
+
+	return jsonResult(map[string]any{
+		"repo":             name,
+		"health_score":     score,
+		"circuit_breaker":  cbState,
+		"active_sessions":  activeSessions,
+		"errored_sessions": erroredSessions,
+		"total_spend_usd":  totalSpend,
+		"loop_running":     s.ProcMgr.IsRunning(r.Path),
+		"issues":           issues,
+	}), nil
+}
+
+func (s *Server) handleSessionRetry(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	id := getStringArg(req, "id")
+	if id == "" {
+		return errResult("session id required"), nil
+	}
+
+	sess, ok := s.SessMgr.Get(id)
+	if !ok {
+		return errResult(fmt.Sprintf("session not found: %s", id)), nil
+	}
+
+	sess.Lock()
+	opts := session.LaunchOptions{
+		Provider:     sess.Provider,
+		RepoPath:     sess.RepoPath,
+		Prompt:       sess.Prompt,
+		Model:        sess.Model,
+		MaxBudgetUSD: sess.BudgetUSD,
+		MaxTurns:     sess.MaxTurns,
+		Agent:        sess.AgentName,
+		TeamName:     sess.TeamName,
+	}
+	sess.Unlock()
+
+	// Apply overrides
+	if m := getStringArg(req, "model"); m != "" {
+		opts.Model = m
+	}
+	if b := getNumberArg(req, "max_budget_usd", 0); b > 0 {
+		opts.MaxBudgetUSD = b
+	}
+
+	newSess, err := s.SessMgr.Launch(ctx, opts)
+	if err != nil {
+		return errResult(fmt.Sprintf("retry failed: %v", err)), nil
+	}
+
+	return jsonResult(map[string]any{
+		"original_id": id,
+		"new_id":      newSess.ID,
+		"provider":    string(newSess.Provider),
+		"status":      "launched",
+	}), nil
+}
+
+func (s *Server) handleConfigBulk(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	key := getStringArg(req, "key")
+	if key == "" {
+		return errResult("key required"), nil
+	}
+	value := getStringArg(req, "value")
+	reposStr := getStringArg(req, "repos")
+
+	if s.reposNil() {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+
+	allRepos := s.reposCopy()
+	var targetNames map[string]bool
+	if reposStr != "" {
+		targetNames = make(map[string]bool)
+		for _, name := range strings.Split(reposStr, ",") {
+			targetNames[strings.TrimSpace(name)] = true
+		}
+	}
+
+	results := make(map[string]any)
+	for _, r := range allRepos {
+		if targetNames != nil && !targetNames[r.Name] {
+			continue
+		}
+		model.RefreshRepo(r)
+		if r.Config == nil {
+			results[r.Name] = "no .ralphrc"
+			continue
+		}
+		if value == "" {
+			results[r.Name] = r.Config.Values[key]
+		} else {
+			r.Config.Values[key] = value
+			if err := r.Config.Save(); err != nil {
+				results[r.Name] = fmt.Sprintf("save error: %v", err)
+			} else {
+				results[r.Name] = "updated"
+				if s.EventBus != nil {
+					s.EventBus.Publish(events.Event{
+						Type:     events.ConfigChanged,
+						RepoPath: r.Path,
+						RepoName: r.Name,
+						Data:     map[string]any{"key": key, "value": value},
+					})
+				}
+			}
+		}
+	}
+	return jsonResult(results), nil
+}
+
+func (s *Server) handleWorkflowDefine(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoName := getStringArg(req, "repo")
+	name := getStringArg(req, "name")
+	yamlStr := getStringArg(req, "yaml")
+	if repoName == "" || name == "" || yamlStr == "" {
+		return errResult("repo, name, and yaml are required"), nil
+	}
+
+	if s.reposNil() {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(repoName)
+	if r == nil {
+		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+	}
+
+	wf, err := session.ParseWorkflow(name, []byte(yamlStr))
+	if err != nil {
+		return errResult(fmt.Sprintf("invalid workflow YAML: %v", err)), nil
+	}
+
+	if err := session.SaveWorkflow(r.Path, wf); err != nil {
+		return errResult(fmt.Sprintf("save failed: %v", err)), nil
+	}
+
+	return jsonResult(map[string]any{
+		"name":  wf.Name,
+		"steps": len(wf.Steps),
+		"saved": true,
+	}), nil
+}
+
+func (s *Server) handleWorkflowRun(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoName := getStringArg(req, "repo")
+	name := getStringArg(req, "name")
+	if repoName == "" || name == "" {
+		return errResult("repo and name are required"), nil
+	}
+
+	if s.reposNil() {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(repoName)
+	if r == nil {
+		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+	}
+
+	wf, err := session.LoadWorkflow(r.Path, name)
+	if err != nil {
+		return errResult(fmt.Sprintf("load workflow: %v", err)), nil
+	}
+
+	// Launch sessions for each step sequentially
+	var launched []map[string]any
+	for _, step := range wf.Steps {
+		provider := session.Provider(step.Provider)
+		if provider == "" {
+			provider = session.ProviderClaude
+		}
+		opts := session.LaunchOptions{
+			Provider: provider,
+			RepoPath: r.Path,
+			Prompt:   step.Prompt,
+			Model:    step.Model,
+			Agent:    step.Agent,
+		}
+		sess, err := s.SessMgr.Launch(ctx, opts)
+		if err != nil {
+			launched = append(launched, map[string]any{
+				"step":  step.Name,
+				"error": err.Error(),
+			})
+			continue
+		}
+		launched = append(launched, map[string]any{
+			"step":       step.Name,
+			"session_id": sess.ID,
+			"provider":   string(provider),
+		})
+	}
+
+	return jsonResult(map[string]any{
+		"workflow": name,
+		"steps":    launched,
+	}), nil
+}
+
+func (s *Server) handleSnapshot(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	action := getStringArg(req, "action")
+	if action == "" {
+		action = "save"
+	}
+	name := getStringArg(req, "name")
+
+	if action == "list" {
+		if s.reposNil() {
+			if err := s.scan(); err != nil {
+				return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			}
+		}
+		allRepos := s.reposCopy()
+		var snapshots []string
+		for _, r := range allRepos {
+			snaps, _ := filepath.Glob(filepath.Join(r.Path, ".ralph", "snapshots", "*.json"))
+			for _, snap := range snaps {
+				snapshots = append(snapshots, filepath.Base(snap))
+			}
+		}
+		return jsonResult(map[string]any{"snapshots": snapshots}), nil
+	}
+
+	// Save snapshot
+	if name == "" {
+		name = fmt.Sprintf("snapshot-%s", time.Now().Format("20060102-150405"))
+	}
+
+	allSessions := s.SessMgr.List("")
+	type sessionSnap struct {
+		ID       string  `json:"id"`
+		Provider string  `json:"provider"`
+		Repo     string  `json:"repo"`
+		Status   string  `json:"status"`
+		SpentUSD float64 `json:"spent_usd"`
+		Turns    int     `json:"turns"`
+	}
+	var sessSnaps []sessionSnap
+	for _, sess := range allSessions {
+		sess.Lock()
+		sessSnaps = append(sessSnaps, sessionSnap{
+			ID:       sess.ID,
+			Provider: string(sess.Provider),
+			Repo:     sess.RepoName,
+			Status:   string(sess.Status),
+			SpentUSD: sess.SpentUSD,
+			Turns:    sess.TurnCount,
+		})
+		sess.Unlock()
+	}
+
+	teams := s.SessMgr.ListTeams()
+	snapshot := map[string]any{
+		"name":      name,
+		"timestamp": time.Now().Format(time.RFC3339),
+		"sessions":  sessSnaps,
+		"teams":     teams,
+	}
+
+	data, _ := json.MarshalIndent(snapshot, "", "  ")
+
+	// Save to first repo's .ralph/snapshots/
+	if s.reposNil() {
+		_ = s.scan()
+	}
+	allRepos := s.reposCopy()
+	if len(allRepos) > 0 {
+		dir := filepath.Join(allRepos[0].Path, ".ralph", "snapshots")
+		_ = os.MkdirAll(dir, 0o755)
+		_ = os.WriteFile(filepath.Join(dir, name+".json"), data, 0o644)
+	}
+
+	return jsonResult(snapshot), nil
 }
