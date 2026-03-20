@@ -44,6 +44,9 @@ type RefreshErrorMsg struct {
 	Errors   []error
 }
 
+// watcherBackoffMsg triggers a delayed re-watch after watcher failure.
+type watcherBackoffMsg struct{}
+
 // Model is the root Bubble Tea model.
 type Model struct {
 	// Config
@@ -76,6 +79,10 @@ type Model struct {
 
 	// Process management
 	ProcMgr *process.Manager
+
+	// Watcher state
+	WatcherFails     int  // consecutive watcher failure count for backoff
+	WatcherDisabled  bool // true when fallen back to polling-only mode
 }
 
 // NewModel creates the root model.
@@ -163,7 +170,37 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, process.WatchStatusFiles(paths)
 
+	case process.WatcherErrorMsg:
+		m.WatcherFails++
+		if m.WatcherFails >= 5 && !m.WatcherDisabled {
+			// Too many consecutive failures — fall back to polling only
+			m.WatcherDisabled = true
+			m.Notify.Show("⚠ Watcher failed repeatedly, using polling mode", 5*time.Second)
+			return m, nil
+		}
+		m.Notify.Show(fmt.Sprintf("⚠ Watcher error: %v", msg.Err), 4*time.Second)
+		// Exponential backoff: 1s, 2s, 4s, 8s, 16s, capped at 30s
+		delay := time.Duration(1<<uint(m.WatcherFails-1)) * time.Second
+		if delay > 30*time.Second {
+			delay = 30 * time.Second
+		}
+		return m, tea.Tick(delay, func(time.Time) tea.Msg {
+			return watcherBackoffMsg{}
+		})
+
+	case watcherBackoffMsg:
+		if m.WatcherDisabled {
+			return m, nil
+		}
+		paths := make([]string, len(m.Repos))
+		for i, r := range m.Repos {
+			paths[i] = r.Path
+		}
+		return m, process.WatchStatusFiles(paths)
+
 	case process.FileChangedMsg:
+		// Successful watch — reset failure counter
+		m.WatcherFails = 0
 		// Reactive update for a single repo
 		var cmds []tea.Cmd
 		for _, r := range m.Repos {

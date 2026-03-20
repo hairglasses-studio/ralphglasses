@@ -20,10 +20,10 @@ Source: `ROADMAP.md` Phase 0.5. All task groups are independent and can be worke
 - **Acceptance:** parse errors in `.ralph/` files visible to user, not silently dropped
 
 ### 0.5.2 — Watcher error handling
-- [ ] 0.5.2.1 — Replace `return nil` on watcher error (`process/watcher.go:47-48`) with error propagation
-- [ ] 0.5.2.2 — Emit `WatcherErrorMsg` to TUI when fsnotify errors occur
-- [ ] 0.5.2.3 — Auto-fallback: on watcher error, switch to polling mode and notify user
-- [ ] 0.5.2.4 — Add exponential backoff on repeated watcher failures (max 30s)
+- [x] 0.5.2.1 — Replace `return nil` on watcher error (`process/watcher.go:47-48`) with error propagation
+- [x] 0.5.2.2 — Emit `WatcherErrorMsg` to TUI when fsnotify errors occur
+- [x] 0.5.2.3 — Auto-fallback: on watcher error, switch to polling mode and notify user
+- [x] 0.5.2.4 — Add exponential backoff on repeated watcher failures (max 30s)
 - **Acceptance:** watcher failures visible in TUI, automatic fallback to polling
 
 ### 0.5.3 — Process reaper exit status
