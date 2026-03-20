@@ -33,6 +33,8 @@ const (
 	ViewTeams
 	ViewTeamDetail
 	ViewFleet
+	ViewDiff
+	ViewTimeline
 )
 
 // InputMode tracks the current input capture mode.
@@ -42,6 +44,7 @@ const (
 	ModeNormal InputMode = iota
 	ModeCommand
 	ModeFilter
+	ModeLauncher
 )
 
 type tickMsg time.Time
@@ -54,6 +57,17 @@ type RefreshErrorMsg struct {
 
 // watcherBackoffMsg triggers a delayed re-watch after watcher failure.
 type watcherBackoffMsg struct{}
+
+// SessionOutputMsg carries a line of streamed session output.
+type SessionOutputMsg struct {
+	SessionID string
+	Line      string
+}
+
+// SessionOutputDoneMsg signals streaming has ended.
+type SessionOutputDoneMsg struct {
+	SessionID string
+}
 
 // Model is the root Bubble Tea model.
 type Model struct {
@@ -73,6 +87,7 @@ type Model struct {
 	Table        *components.Table
 	SessionTable *components.Table
 	TeamTable    *components.Table
+	TabBar       components.TabBar
 	StatusBar    components.StatusBar
 	Notify       components.NotificationManager
 	LogView      *views.LogView
@@ -86,6 +101,16 @@ type Model struct {
 	SessMgr         *session.Manager
 	SelectedSession string // session ID for detail view
 	SelectedTeam    string // team name for detail view
+
+	// Modal overlays
+	ConfirmDialog *components.ConfirmDialog
+	ActionMenu    *components.ActionMenu
+	Launcher      *components.SessionLauncher
+
+	// Session output streaming
+	StreamingSessionID string
+	StreamingOutput    bool
+	SessionOutputView  *views.LogView
 
 	// State
 	Width       int
@@ -103,6 +128,9 @@ type Model struct {
 	// Watcher state
 	WatcherFails    int  // consecutive watcher failure count for backoff
 	WatcherDisabled bool // true when fallen back to polling-only mode
+
+	// Desktop notifications
+	NotifyEnabled bool
 }
 
 // NewModel creates the root model.
@@ -115,12 +143,16 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 	s.Spinner = spinner.Dot
 	s.Style = styles.StatusRunning
 
+	table.MultiSelect = true
+	sessionTable.MultiSelect = true
+
 	return Model{
 		ScanPath:     scanPath,
 		CurrentView:  ViewOverview,
 		Table:        table,
 		SessionTable: sessionTable,
 		TeamTable:    teamTable,
+		TabBar:       components.TabBar{Tabs: tabNames},
 		LogView:      views.NewLogView(),
 		ProcMgr:      process.NewManager(),
 		SessMgr:      sessMgr,
@@ -273,6 +305,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case components.ConfirmResultMsg:
+		return m.handleConfirmResult(msg)
+
+	case components.ActionResultMsg:
+		return m.handleActionResult(msg)
+
+	case components.LaunchResultMsg:
+		return m.handleLaunchResult(msg)
+
+	case SessionOutputMsg:
+		if msg.SessionID == m.StreamingSessionID && m.SessionOutputView != nil {
+			m.SessionOutputView.AppendLines([]string{msg.Line})
+		}
+		return m, m.streamSessionOutput(msg.SessionID)
+
+	case SessionOutputDoneMsg:
+		m.StreamingOutput = false
+		m.Notify.Show("Session output stream ended", 3*time.Second)
+		return m, nil
+
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 	}
@@ -281,6 +333,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Modal overlays take priority
+	if m.ConfirmDialog != nil && m.ConfirmDialog.Active {
+		return m.handleConfirmKey(msg)
+	}
+	if m.ActionMenu != nil && m.ActionMenu.Active {
+		return m.handleActionMenuKey(msg)
+	}
+	if m.Launcher != nil && m.Launcher.Active {
+		return m.handleLauncherKey(msg)
+	}
+
 	// Command mode input
 	if m.InputMode == ModeCommand {
 		return m.handleCommandInput(msg)
@@ -320,6 +383,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.pushView(ViewHelp, "Help")
 		return m, nil
 	case key.Matches(msg, m.Keys.Escape):
+		// If multi-select active, clear selection first
+		tbl := m.activeTable()
+		if tbl != nil && tbl.HasSelection() {
+			tbl.ClearSelection()
+			return m, nil
+		}
 		return m.popView()
 	case key.Matches(msg, m.Keys.Refresh):
 		return m, m.scanRepos()
@@ -361,293 +430,13 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleOverviewKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		m.Table.MoveDown()
-	case key.Matches(msg, m.Keys.Up):
-		m.Table.MoveUp()
-	case key.Matches(msg, m.Keys.Sort):
-		m.Table.CycleSort()
-	case key.Matches(msg, m.Keys.Enter):
-		row := m.Table.SelectedRow()
-		if row != nil {
-			m.SelectedIdx = m.findRepoByName(row[0])
-			if m.SelectedIdx >= 0 {
-				m.pushView(ViewRepoDetail, m.Repos[m.SelectedIdx].Name)
-			}
-		}
-	case key.Matches(msg, m.Keys.StartLoop):
-		return m.startSelectedLoop()
-	case key.Matches(msg, m.Keys.StopAction):
-		return m.stopSelectedLoop()
-	case key.Matches(msg, m.Keys.PauseLoop):
-		return m.togglePauseSelected()
-	}
-	return m, nil
-}
-
-func (m Model) handleDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.SelectedIdx < 0 || m.SelectedIdx >= len(m.Repos) {
-		return m, nil
-	}
-	switch {
-	case key.Matches(msg, m.Keys.Enter):
-		m.LogOffset = 0
-		m.LogView = views.NewLogView()
-		m.LogView.SetDimensions(m.Width, m.Height)
-		lines, _ := process.ReadFullLog(m.Repos[m.SelectedIdx].Path)
-		m.LogView.SetLines(lines)
-		m.pushView(ViewLogs, "Logs")
-		return m, nil
-	case key.Matches(msg, m.Keys.EditConfig):
-		repo := m.Repos[m.SelectedIdx]
-		if repo.Config != nil {
-			m.ConfigEdit = views.NewConfigEditor(repo.Config)
-			m.ConfigEdit.Height = m.Height
-			m.pushView(ViewConfigEditor, "Config")
-		} else {
-			m.Notify.Show("No .ralphrc found", 3*time.Second)
-		}
-		return m, nil
-	case key.Matches(msg, m.Keys.StartLoop):
-		return m.startLoop(m.SelectedIdx)
-	case key.Matches(msg, m.Keys.StopAction):
-		return m.stopLoop(m.SelectedIdx)
-	case key.Matches(msg, m.Keys.PauseLoop):
-		return m.togglePause(m.SelectedIdx)
-	}
-	return m, nil
-}
-
-func (m Model) handleLogKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		m.LogView.ScrollDown()
-	case key.Matches(msg, m.Keys.Up):
-		m.LogView.ScrollUp()
-	case key.Matches(msg, m.Keys.GotoEnd):
-		m.LogView.ScrollToEnd()
-	case key.Matches(msg, m.Keys.GotoStart):
-		m.LogView.ScrollToStart()
-	case key.Matches(msg, m.Keys.FollowToggle):
-		m.LogView.ToggleFollow()
-	case key.Matches(msg, m.Keys.PageUp):
-		m.LogView.PageUp()
-	case key.Matches(msg, m.Keys.PageDown):
-		m.LogView.PageDown()
-	}
-	return m, nil
-}
-
-func (m Model) handleConfigKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.ConfigEdit == nil {
-		return m, nil
-	}
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		m.ConfigEdit.MoveDown()
-	case key.Matches(msg, m.Keys.Up):
-		m.ConfigEdit.MoveUp()
-	case key.Matches(msg, m.Keys.Enter):
-		m.ConfigEdit.StartEdit()
-	case key.Matches(msg, m.Keys.WriteConfig):
-		if err := m.ConfigEdit.Save(); err != nil {
-			m.Notify.Show(fmt.Sprintf("Save error: %v", err), 3*time.Second)
-		} else {
-			m.Notify.Show("Config saved", 2*time.Second)
-		}
-	}
-	return m, nil
-}
-
-func (m Model) handleConfigEditInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Enter):
-		m.ConfigEdit.ConfirmEdit()
-	case key.Matches(msg, m.Keys.Escape):
-		m.ConfigEdit.CancelEdit()
-	case msg.Type == tea.KeyBackspace:
-		m.ConfigEdit.Backspace()
-	default:
-		if len(msg.Runes) == 1 {
-			m.ConfigEdit.TypeChar(msg.Runes[0])
-		}
-	}
-	return m, nil
-}
-
-func (m Model) handleCommandInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Enter):
-		cmd := ParseCommand(m.CommandBuf)
-		m.InputMode = ModeNormal
-		m.CommandBuf = ""
-		return m.execCommand(cmd)
-	case key.Matches(msg, m.Keys.Escape):
-		m.InputMode = ModeNormal
-		m.CommandBuf = ""
-		return m, nil
-	case msg.Type == tea.KeyBackspace:
-		if len(m.CommandBuf) > 0 {
-			m.CommandBuf = m.CommandBuf[:len(m.CommandBuf)-1]
-		}
-		return m, nil
-	default:
-		if len(msg.Runes) == 1 {
-			m.CommandBuf += string(msg.Runes[0])
-		}
-		return m, nil
-	}
-}
-
-func (m Model) handleFilterInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	tbl := m.activeTable()
-	switch {
-	case key.Matches(msg, m.Keys.Enter):
-		m.InputMode = ModeNormal
-		return m, nil
-	case key.Matches(msg, m.Keys.Escape):
-		m.InputMode = ModeNormal
-		m.Filter.Clear()
-		if tbl != nil {
-			tbl.SetFilter("")
-		}
-		return m, nil
-	case msg.Type == tea.KeyBackspace:
-		m.Filter.Backspace()
-		if tbl != nil {
-			tbl.SetFilter(m.Filter.Text)
-		}
-		return m, nil
-	default:
-		if len(msg.Runes) == 1 {
-			m.Filter.Type(msg.Runes[0])
-			if tbl != nil {
-				tbl.SetFilter(m.Filter.Text)
-			}
-		}
-		return m, nil
-	}
-}
-
-func (m Model) execCommand(cmd Command) (tea.Model, tea.Cmd) {
-	switch cmd.Name {
-	case "quit", "q":
-		m.ProcMgr.StopAll()
-		return m, tea.Quit
-	case "scan":
-		return m, m.scanRepos()
-	case "start":
-		if len(cmd.Args) > 0 {
-			idx := m.findRepoByName(cmd.Args[0])
-			if idx >= 0 {
-				return m.startLoop(idx)
-			}
-			m.Notify.Show(fmt.Sprintf("Repo not found: %s", cmd.Args[0]), 3*time.Second)
-		}
-	case "stop":
-		if len(cmd.Args) > 0 {
-			idx := m.findRepoByName(cmd.Args[0])
-			if idx >= 0 {
-				return m.stopLoop(idx)
-			}
-			m.Notify.Show(fmt.Sprintf("Repo not found: %s", cmd.Args[0]), 3*time.Second)
-		}
-	case "stopall":
-		m.ProcMgr.StopAll()
-		m.Notify.Show("All loops stopped", 3*time.Second)
-	case "sessions":
-		m.switchTab(1, ViewSessions, "Sessions")
-	case "teams":
-		m.switchTab(2, ViewTeams, "Teams")
-	case "fleet":
-		m.switchTab(3, ViewFleet, "Fleet")
-	case "repos":
-		m.switchTab(0, ViewOverview, "Repos")
-	default:
-		m.Notify.Show(fmt.Sprintf("Unknown command: %s", cmd.Name), 3*time.Second)
-	}
-	return m, nil
-}
-
-// Process management helpers
-
-func (m Model) startSelectedLoop() (tea.Model, tea.Cmd) {
-	row := m.Table.SelectedRow()
-	if row == nil {
-		return m, nil
-	}
-	idx := m.findRepoByName(row[0])
-	if idx >= 0 {
-		return m.startLoop(idx)
-	}
-	return m, nil
-}
-
-func (m Model) stopSelectedLoop() (tea.Model, tea.Cmd) {
-	row := m.Table.SelectedRow()
-	if row == nil {
-		return m, nil
-	}
-	idx := m.findRepoByName(row[0])
-	if idx >= 0 {
-		return m.stopLoop(idx)
-	}
-	return m, nil
-}
-
-func (m Model) togglePauseSelected() (tea.Model, tea.Cmd) {
-	row := m.Table.SelectedRow()
-	if row == nil {
-		return m, nil
-	}
-	idx := m.findRepoByName(row[0])
-	if idx >= 0 {
-		return m.togglePause(idx)
-	}
-	return m, nil
-}
-
-func (m Model) startLoop(idx int) (tea.Model, tea.Cmd) {
-	repo := m.Repos[idx]
-	if err := m.ProcMgr.Start(repo.Path); err != nil {
-		m.Notify.Show(fmt.Sprintf("Start error: %v", err), 3*time.Second)
-	} else {
-		m.Notify.Show(fmt.Sprintf("Started loop: %s", repo.Name), 3*time.Second)
-	}
-	return m, nil
-}
-
-func (m Model) stopLoop(idx int) (tea.Model, tea.Cmd) {
-	repo := m.Repos[idx]
-	if err := m.ProcMgr.Stop(repo.Path); err != nil {
-		m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
-	} else {
-		m.Notify.Show(fmt.Sprintf("Stopped loop: %s", repo.Name), 3*time.Second)
-	}
-	return m, nil
-}
-
-func (m Model) togglePause(idx int) (tea.Model, tea.Cmd) {
-	repo := m.Repos[idx]
-	paused, err := m.ProcMgr.TogglePause(repo.Path)
-	if err != nil {
-		m.Notify.Show(fmt.Sprintf("Pause error: %v", err), 3*time.Second)
-	} else if paused {
-		m.Notify.Show(fmt.Sprintf("Paused: %s", repo.Name), 3*time.Second)
-	} else {
-		m.Notify.Show(fmt.Sprintf("Resumed: %s", repo.Name), 3*time.Second)
-	}
-	return m, nil
-}
-
 // Navigation helpers
 
 func (m *Model) pushView(v ViewMode, name string) {
 	m.ViewStack = append(m.ViewStack, m.CurrentView)
 	m.CurrentView = v
 	m.Breadcrumb.Push(name)
+	m.Keys.SetViewContext(v)
 }
 
 func (m Model) popView() (tea.Model, tea.Cmd) {
@@ -707,25 +496,6 @@ func (m *Model) updateTeamTable() {
 	m.TeamTable.SetRows(rows)
 }
 
-func (m *Model) countAlerts() int {
-	count := 0
-	for _, r := range m.Repos {
-		if r.Circuit != nil && r.Circuit.State == "OPEN" {
-			count++
-		}
-	}
-	if m.SessMgr != nil {
-		for _, s := range m.SessMgr.List("") {
-			s.Lock()
-			if s.Status == session.StatusErrored {
-				count++
-			}
-			s.Unlock()
-		}
-	}
-	return count
-}
-
 // activeTable returns the table for the current view.
 func (m *Model) activeTable() *components.Table {
 	switch m.CurrentView {
@@ -743,211 +513,26 @@ func (m *Model) activeTable() *components.Table {
 // switchTab changes the active tab, clearing the view stack.
 func (m *Model) switchTab(tab int, view ViewMode, name string) {
 	m.ActiveTab = tab
+	m.TabBar.Active = tab
 	m.CurrentView = view
 	m.ViewStack = nil
 	m.Breadcrumb = components.Breadcrumb{Parts: []string{name}}
 	m.Filter.Clear()
-}
-
-// handleSessionsKey handles keys in the sessions table view.
-func (m Model) handleSessionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		m.SessionTable.MoveDown()
-	case key.Matches(msg, m.Keys.Up):
-		m.SessionTable.MoveUp()
-	case key.Matches(msg, m.Keys.Sort):
-		m.SessionTable.CycleSort()
-	case key.Matches(msg, m.Keys.Enter):
-		row := m.SessionTable.SelectedRow()
-		if row != nil {
-			m.SelectedSession = m.findFullSessionID(row[0])
-			if m.SelectedSession != "" {
-				m.pushView(ViewSessionDetail, row[0])
-			}
-		}
-	case key.Matches(msg, m.Keys.StopAction):
-		row := m.SessionTable.SelectedRow()
-		if row != nil {
-			fullID := m.findFullSessionID(row[0])
-			if fullID != "" && m.SessMgr != nil {
-				if err := m.SessMgr.Stop(fullID); err != nil {
-					m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
-				} else {
-					m.Notify.Show(fmt.Sprintf("Stopped session %s", row[0]), 3*time.Second)
-				}
-			}
-		}
-	}
-	return m, nil
-}
-
-// handleSessionDetailKey handles keys in the session detail view.
-func (m Model) handleSessionDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.StopAction):
-		if m.SelectedSession != "" && m.SessMgr != nil {
-			if err := m.SessMgr.Stop(m.SelectedSession); err != nil {
-				m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
-			} else {
-				id := m.SelectedSession
-				if len(id) > 8 {
-					id = id[:8]
-				}
-				m.Notify.Show(fmt.Sprintf("Stopped session %s", id), 3*time.Second)
-			}
-		}
-	}
-	return m, nil
-}
-
-// handleTeamsKey handles keys in the teams table view.
-func (m Model) handleTeamsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		m.TeamTable.MoveDown()
-	case key.Matches(msg, m.Keys.Up):
-		m.TeamTable.MoveUp()
-	case key.Matches(msg, m.Keys.Sort):
-		m.TeamTable.CycleSort()
-	case key.Matches(msg, m.Keys.Enter):
-		row := m.TeamTable.SelectedRow()
-		if row != nil {
-			m.SelectedTeam = row[0]
-			m.pushView(ViewTeamDetail, row[0])
-		}
-	}
-	return m, nil
-}
-
-// handleTeamDetailKey handles keys in the team detail view.
-func (m Model) handleTeamDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// No actions besides Esc (handled globally)
-	return m, nil
-}
-
-// findFullSessionID finds the full session ID from a truncated prefix.
-func (m *Model) findFullSessionID(prefix string) string {
-	if m.SessMgr == nil {
-		return ""
-	}
-	for _, s := range m.SessMgr.List("") {
-		s.Lock()
-		id := s.ID
-		s.Unlock()
-		if strings.HasPrefix(id, prefix) {
-			return id
-		}
-	}
-	return ""
-}
-
-// buildFleetData aggregates data for the fleet dashboard.
-func (m *Model) buildFleetData() views.FleetData {
-	data := views.FleetData{
-		TotalRepos: len(m.Repos),
-		Providers:  make(map[string]views.ProviderStat),
-	}
-
-	// Repo stats
-	for _, r := range m.Repos {
-		status := r.StatusDisplay()
-		switch status {
-		case "running":
-			data.RunningLoops++
-		case "paused":
-			data.PausedLoops++
-		}
-		if r.Circuit != nil && r.Circuit.State == "OPEN" {
-			data.OpenCircuits++
-			data.Alerts = append(data.Alerts, views.FleetAlert{
-				Severity: "critical",
-				Message:  fmt.Sprintf("Circuit breaker OPEN: %s — %s", r.Name, r.Circuit.Reason),
-			})
-		}
-		if r.Status != nil {
-			// Stale check (>1h since update)
-			if !r.Status.Timestamp.IsZero() && time.Since(r.Status.Timestamp) > time.Hour && r.StatusDisplay() == "running" {
-				data.Alerts = append(data.Alerts, views.FleetAlert{
-					Severity: "warning",
-					Message:  fmt.Sprintf("Stale status (>1h): %s", r.Name),
-				})
-			}
-			// Budget check (>=90%)
-			if r.Status.BudgetStatus == "exceeded" || (r.Status.SessionSpendUSD > 0 && r.Status.BudgetStatus != "" && r.Status.BudgetStatus != "ok") {
-				data.Alerts = append(data.Alerts, views.FleetAlert{
-					Severity: "warning",
-					Message:  fmt.Sprintf("Budget concern: %s — %s", r.Name, r.Status.BudgetStatus),
-				})
-			}
-		}
-		if r.Circuit != nil && r.Circuit.ConsecutiveNoProgress >= 3 {
-			data.Alerts = append(data.Alerts, views.FleetAlert{
-				Severity: "warning",
-				Message:  fmt.Sprintf("No progress (%dx): %s", r.Circuit.ConsecutiveNoProgress, r.Name),
-			})
-		}
-	}
-	data.Repos = m.Repos
-
-	// Session stats
-	if m.SessMgr != nil {
-		sessions := m.SessMgr.List("")
-		data.Sessions = sessions
-		data.TotalSessions = len(sessions)
-		for _, s := range sessions {
-			s.Lock()
-			provider := string(s.Provider)
-			status := s.Status
-			spent := s.SpentUSD
-			budget := s.BudgetUSD
-			repoName := s.RepoName
-			id := s.ID
-			s.Unlock()
-
-			if status == session.StatusRunning || status == session.StatusLaunching {
-				data.RunningSessions++
-			}
-			data.TotalSpendUSD += spent
-
-			ps := data.Providers[provider]
-			ps.Sessions++
-			if status == session.StatusRunning || status == session.StatusLaunching {
-				ps.Running++
-			}
-			ps.SpendUSD += spent
-			data.Providers[provider] = ps
-
-			// Session alerts
-			if status == session.StatusErrored {
-				shortID := id
-				if len(shortID) > 8 {
-					shortID = shortID[:8]
-				}
-				data.Alerts = append(data.Alerts, views.FleetAlert{
-					Severity: "info",
-					Message:  fmt.Sprintf("Session errored: %s (%s)", shortID, repoName),
-				})
-			}
-			if budget > 0 && spent/budget >= 0.90 {
-				shortID := id
-				if len(shortID) > 8 {
-					shortID = shortID[:8]
-				}
-				data.Alerts = append(data.Alerts, views.FleetAlert{
-					Severity: "warning",
-					Message:  fmt.Sprintf("Session budget ≥90%%: %s ($%.2f/$%.2f)", shortID, spent, budget),
-				})
-			}
-		}
-	}
-
-	return data
+	m.Keys.SetViewContext(view)
 }
 
 func (m Model) findRepoByName(name string) int {
 	for i, r := range m.Repos {
 		if r.Name == name || filepath.Base(r.Path) == name {
+			return i
+		}
+	}
+	return -1
+}
+
+func (m Model) findRepoByPath(path string) int {
+	for i, r := range m.Repos {
+		if r.Path == path {
 			return i
 		}
 	}
@@ -968,15 +553,7 @@ func (m Model) View() string {
 	b.WriteString("\n")
 
 	// Tab bar
-	var tabs []string
-	for i, name := range tabNames {
-		if i == m.ActiveTab {
-			tabs = append(tabs, styles.TabActive.Render(name))
-		} else {
-			tabs = append(tabs, styles.TabInactive.Render(name))
-		}
-	}
-	b.WriteString(strings.Join(tabs, " "))
+	b.WriteString(m.TabBar.View())
 	b.WriteString("\n\n")
 
 	// Main content
@@ -1019,12 +596,45 @@ func (m Model) View() string {
 	case ViewFleet:
 		data := m.buildFleetData()
 		b.WriteString(views.RenderFleetDashboard(data, m.Width, m.Height))
+	case ViewDiff:
+		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
+			b.WriteString(views.RenderDiffView(m.Repos[m.SelectedIdx].Path, "", m.Width, m.Height))
+		}
+	case ViewTimeline:
+		entries := m.buildTimelineEntries()
+		repoName := "All Sessions"
+		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
+			repoName = m.Repos[m.SelectedIdx].Name
+		}
+		b.WriteString(views.RenderTimeline(entries, repoName, m.Width, m.Height))
+	}
+
+	// Modal overlays
+	if m.ConfirmDialog != nil && m.ConfirmDialog.Active {
+		b.WriteString("\n")
+		b.WriteString(m.ConfirmDialog.View())
+	}
+	if m.ActionMenu != nil && m.ActionMenu.Active {
+		b.WriteString("\n")
+		b.WriteString(m.ActionMenu.View())
+	}
+	if m.Launcher != nil && m.Launcher.Active {
+		b.WriteString("\n")
+		b.WriteString(m.Launcher.View())
 	}
 
 	// Notification overlay
 	if notif := m.Notify.View(); notif != "" {
 		b.WriteString("\n")
 		b.WriteString(notif)
+	}
+
+	// Session output streaming view (split pane)
+	if m.StreamingOutput && m.SessionOutputView != nil {
+		b.WriteString("\n")
+		b.WriteString(styles.TitleStyle.Render(" Live Output "))
+		b.WriteString("\n")
+		b.WriteString(m.SessionOutputView.View())
 	}
 
 	b.WriteString("\n")
