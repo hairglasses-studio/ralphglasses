@@ -179,8 +179,8 @@ func TestRunSessionStreamParsing(t *testing.T) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.ClaudeID != "sess-abc" {
-		t.Errorf("ClaudeID = %q, want sess-abc", s.ClaudeID)
+	if s.ProviderSessionID != "sess-abc" {
+		t.Errorf("ProviderSessionID = %q, want sess-abc", s.ProviderSessionID)
 	}
 	if s.SpentUSD != 0.05 {
 		t.Errorf("SpentUSD = %f, want 0.05", s.SpentUSD)

@@ -1,11 +1,13 @@
 # Ralphglasses
 
-Command-and-control TUI + bootable thin client for parallel Claude Code agent fleets.
+Command-and-control TUI + bootable thin client for parallel multi-LLM agent fleets.
+
+Supports **Claude Code**, **Gemini CLI**, and **OpenAI Codex CLI** as session providers. Claude serves as the primary orchestrator; Gemini and Codex are available as worker providers for cost optimization and task specialization.
 
 ## Two Deliverables
 
-1. **`ralphglasses` Go binary** — Cross-platform Unix TUI (k9s-style, Charmbracelet). Manages multi-session Claude Code / ralph loops.
-2. **Bootable Linux thin client** — DietPi + i3, boots into ralphglasses TUI. 7-monitor, dual-NVIDIA-GPU.
+1. **`ralphglasses` Go binary** — Cross-platform Unix TUI (k9s-style, Charmbracelet). Manages multi-session, multi-provider LLM loops from any terminal.
+2. **Bootable Linux thin client** — Ubuntu 24.04 + i3, boots into ralphglasses TUI. 7-monitor, dual-NVIDIA-GPU.
 
 See ROADMAP.md for full plan. See docs/ for research.
 
@@ -16,9 +18,60 @@ go build ./...
 go run . --scan-path ~/hairglasses-studio
 ```
 
+## Multi-LLM Provider Support
+
+Sessions can target any of three providers via the `provider` parameter:
+
+| Provider | CLI Binary | Default Model | Stream Format | Resume Support |
+|----------|-----------|---------------|---------------|----------------|
+| `claude` (default) | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
+| `gemini` | `gemini` | `gemini-2.5-pro` | `stream-json` | Yes (`--resume`) |
+| `codex` | `codex` | `o4-mini` | quiet mode | No |
+
+### Prerequisites
+
+```bash
+# Claude Code (primary — already installed)
+# https://docs.anthropic.com/en/docs/claude-code/overview
+
+# Gemini CLI
+npm install -g @anthropic-ai/gemini-cli
+# https://ai.google.dev/gemini-api/docs
+
+# OpenAI Codex CLI
+npm install -g @openai/codex-cli
+# https://platform.openai.com/docs/guides/codex
+```
+
+### Environment Variables
+
+Each provider requires its own API key in the environment:
+
+```bash
+# .env (loaded via direnv)
+ANTHROPIC_API_KEY=sk-ant-...    # Claude
+GOOGLE_API_KEY=AIza...          # Gemini
+OPENAI_API_KEY=sk-...           # Codex
+```
+
+### Orchestration Pattern
+
+Claude leads, delegates subtasks to cheaper/specialized providers:
+
+```
+┌──────────────────────────────────────────────┐
+│  Claude (lead)                                │
+│  ├── Gemini worker: bulk code generation      │
+│  ├── Codex worker: focused refactoring        │
+│  └── Claude worker: complex architecture      │
+└──────────────────────────────────────────────┘
+```
+
+Use `ralphglasses_team_create` with `provider` to set the lead's provider, then delegate tasks via `ralphglasses_team_delegate`. Each session tracks costs per-provider in the cost ledger.
+
 ## MCP Server
 
-Ralphglasses is also an installable MCP server exposing 27 tools for managing ralph loops and Claude Code sessions programmatically.
+Ralphglasses is also an installable MCP server exposing 27 tools for managing ralph loops and multi-provider LLM sessions programmatically.
 
 ### Install
 
@@ -55,13 +108,13 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 | `ralphglasses_roadmap_export` | Export tasks as rdcycle/fix_plan/progress specs |
 | `ralphglasses_repo_scaffold` | Create/init ralph config files for a repo |
 | `ralphglasses_repo_optimize` | Analyze and optimize ralph config files |
-| `ralphglasses_session_launch` | Launch a Claude Code headless session (claude -p) for a repo |
-| `ralphglasses_session_list` | List all tracked sessions with status, cost, turns |
-| `ralphglasses_session_status` | Detailed session info (output, cost, turns, model) |
-| `ralphglasses_session_resume` | Resume a previous Claude Code session |
+| `ralphglasses_session_launch` | Launch a headless LLM session (`provider`: claude/gemini/codex) |
+| `ralphglasses_session_list` | List sessions (filterable by `provider`, repo, status) |
+| `ralphglasses_session_status` | Detailed session info (provider, output, cost, turns, model) |
+| `ralphglasses_session_resume` | Resume a previous session (with `provider` param) |
 | `ralphglasses_session_stop` | Stop a running session |
 | `ralphglasses_session_budget` | Get/update budget for a session |
-| `ralphglasses_team_create` | Create an agent team with lead + task delegation |
+| `ralphglasses_team_create` | Create agent team with `provider` for lead session |
 | `ralphglasses_team_status` | Get team status (tasks, lead session, progress) |
 | `ralphglasses_team_delegate` | Add a task to an existing team |
 | `ralphglasses_agent_define` | Create/update .claude/agents/*.md agent definitions |
@@ -73,7 +126,7 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 - **internal/discovery/**: Scans directories for `.ralph/` and `.ralphrc`
 - **internal/model/**: Data types and parsers for status.json, progress.json, circuit breaker state, .ralphrc
 - **internal/process/**: Process management (launch/stop/pause via os/exec), fsnotify file watcher, log tailing
-- **internal/session/**: Claude Code headless SDK session management (claude -p), agent teams, budget enforcement, checkpoints
+- **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch
 - **internal/mcpserver/**: MCP tool handlers (27 tools, stdio transport via mcp-go)
 - **internal/roadmap/**: Roadmap parsing, analysis, research, expansion, export
 - **internal/repofiles/**: Ralph config file scaffolding and optimization
@@ -105,10 +158,42 @@ bash marathon.sh -b 50 -d 6 -c 60                  # Custom budget/duration
 Only `MAX_CALLS_PER_HOUR` and `CLAUDE_TIMEOUT_MINUTES` are used by ralph_loop.sh. Other marathon-specific keys (MARATHON_DURATION_HOURS, RALPH_SESSION_BUDGET, etc.) are only for documentation/reference — the supervisor enforces them externally.
 
 ### Environment setup
-Uses direnv (`.envrc` → `dotenv` → `.env`). The `.env` holds `ANTHROPIC_API_KEY`. Both `.env` and `.envrc` are gitignored.
+Uses direnv (`.envrc` → `dotenv` → `.env`). The `.env` holds API keys for all providers:
+- `ANTHROPIC_API_KEY` — Claude Code
+- `GOOGLE_API_KEY` — Gemini CLI
+- `OPENAI_API_KEY` — Codex CLI
+
+Both `.env` and `.envrc` are gitignored.
 
 ### Incompatibilities
 `--monitor` is incompatible with the supervisor (tmux fork breaks PID tracking). Use `--verbose` or `--live` instead.
+
+## Provider Architecture
+
+The `internal/session/` package uses a provider dispatch pattern:
+
+- **`providers.go`**: Contains `buildCmdForProvider()` which dispatches to `buildClaudeCmd()`, `buildGeminiCmd()`, or `buildCodexCmd()`. Also contains `normalizeEvent()` which dispatches to per-provider event normalizers. `ValidateProvider()` checks CLI binary availability.
+- **`runner.go`**: Provider-agnostic session lifecycle. Calls `buildCmdForProvider()` for command construction and `normalizeEvent()` for stream parsing.
+- **`types.go`**: `Provider` type (`claude`|`gemini`|`codex`) used in `Session`, `LaunchOptions`, `TeamConfig`.
+- **`budget.go`**: `LedgerEntry` and `CostSummary` include `Provider` field for per-provider cost tracking.
+
+### Adding a New Provider
+
+1. Add constant to `Provider` in `types.go`
+2. Add binary name in `providerBinary()` in `providers.go`
+3. Add `buildXxxCmd()` function in `providers.go`
+4. Add `normalizeXxxEvent()` function in `providers.go`
+5. Add default model in `ProviderDefaults()` in `providers.go`
+6. Add cases in `buildCmdForProvider()` and `normalizeEvent()` switch statements
+7. Add tests in `providers_test.go`
+
+### Developer References
+
+- **Claude Code**: [Overview](https://docs.anthropic.com/en/docs/claude-code/overview) | [CLI Reference](https://docs.anthropic.com/en/docs/claude-code/cli-reference) | [SDK](https://docs.anthropic.com/en/docs/claude-code/sdk)
+- **Anthropic API**: [API Reference](https://docs.anthropic.com/en/api) | [Tool Use](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
+- **Gemini**: [API Overview](https://ai.google.dev/gemini-api/docs) | [Gemini CLI](https://github.com/google-gemini/gemini-cli)
+- **OpenAI**: [API Reference](https://platform.openai.com/docs/api-reference) | [Codex CLI](https://github.com/openai/codex)
+- **MCP**: [Specification](https://modelcontextprotocol.io/) | [Go SDK (mcp-go)](https://github.com/mark3labs/mcp-go)
 
 ## Key Patterns
 

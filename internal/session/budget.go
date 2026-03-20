@@ -41,6 +41,7 @@ func (b *BudgetEnforcer) Check(s *Session) (exceeded bool, reason string) {
 type LedgerEntry struct {
 	Timestamp  time.Time `json:"ts"`
 	SessionID  string    `json:"session_id"`
+	Provider   string    `json:"provider"`
 	SpendUSD   float64   `json:"spend_usd"`
 	TurnCount  int       `json:"turn_count"`
 	ElapsedSec float64   `json:"elapsed_s"`
@@ -59,6 +60,7 @@ func (b *BudgetEnforcer) WriteLedgerEntry(s *Session, repoPath string) error {
 	entry := LedgerEntry{
 		Timestamp:  time.Now(),
 		SessionID:  s.ID,
+		Provider:   string(s.Provider),
 		SpendUSD:   s.SpentUSD,
 		TurnCount:  s.TurnCount,
 		ElapsedSec: time.Since(s.LaunchedAt).Seconds(),
@@ -87,6 +89,7 @@ func (b *BudgetEnforcer) WriteLedgerEntry(s *Session, repoPath string) error {
 // CostSummary holds aggregated cost data for a session.
 type CostSummary struct {
 	SessionID    string    `json:"session_id"`
+	Provider     string    `json:"provider"`
 	RepoName     string    `json:"repo_name"`
 	TotalSpend   float64   `json:"total_spend_usd"`
 	BudgetUSD    float64   `json:"budget_usd"`
@@ -107,6 +110,7 @@ func (b *BudgetEnforcer) WriteCostSummary(s *Session, repoPath string) error {
 	s.mu.Lock()
 	summary := CostSummary{
 		SessionID:   s.ID,
+		Provider:    string(s.Provider),
 		RepoName:    s.RepoName,
 		TotalSpend:  s.SpentUSD,
 		BudgetUSD:   s.BudgetUSD,
