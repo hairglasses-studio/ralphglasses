@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewModel(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	if m.ScanPath != "/tmp/test" {
 		t.Errorf("ScanPath = %q", m.ScanPath)
 	}
@@ -28,7 +28,7 @@ func TestNewModel(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	cmd := m.Init()
 	if cmd == nil {
 		t.Error("Init should return a command")
@@ -36,7 +36,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestViewStackPushPop(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.pushView(ViewRepoDetail, "my-repo")
 	if m.CurrentView != ViewRepoDetail {
 		t.Error("should be at repo detail")
@@ -58,7 +58,7 @@ func TestViewStackPushPop(t *testing.T) {
 }
 
 func TestWindowSizeMsg(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m2, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	m = m2.(Model)
 	if m.Width != 120 || m.Height != 40 {
@@ -67,7 +67,7 @@ func TestWindowSizeMsg(t *testing.T) {
 }
 
 func TestScanResultMsg(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	repos := []*model.Repo{{Name: "repo1", Path: "/tmp/repo1"}, {Name: "repo2", Path: "/tmp/repo2"}}
 	m2, _ := m.Update(scanResultMsg{repos: repos})
 	m = m2.(Model)
@@ -77,13 +77,13 @@ func TestScanResultMsg(t *testing.T) {
 }
 
 func TestScanResultMsgError(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.Update(scanResultMsg{err: fmt.Errorf("scan failed")})
 	// Should not crash
 }
 
 func TestLogLinesMsg(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m2, _ := m.Update(process.LogLinesMsg{Lines: []string{"hello", "world"}})
 	m = m2.(Model)
 	if len(m.LogView.Lines) != 2 {
@@ -92,7 +92,7 @@ func TestLogLinesMsg(t *testing.T) {
 }
 
 func TestHandleKeyQuit(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
 	if cmd == nil {
 		t.Error("q should produce quit command")
@@ -100,7 +100,7 @@ func TestHandleKeyQuit(t *testing.T) {
 }
 
 func TestHandleKeyCommandMode(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(":")})
 	m = m2.(Model)
 	if m.InputMode != ModeCommand {
@@ -109,7 +109,7 @@ func TestHandleKeyCommandMode(t *testing.T) {
 }
 
 func TestHandleKeyFilterMode(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
 	m = m2.(Model)
 	if m.InputMode != ModeFilter {
@@ -118,7 +118,7 @@ func TestHandleKeyFilterMode(t *testing.T) {
 }
 
 func TestHandleKeyHelpToggle(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
 	m = m2.(Model)
 	if m.CurrentView != ViewHelp {
@@ -132,7 +132,7 @@ func TestHandleKeyHelpToggle(t *testing.T) {
 }
 
 func TestFindRepoByName(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.Repos = []*model.Repo{{Name: "alpha", Path: "/tmp/alpha"}, {Name: "beta", Path: "/tmp/beta"}}
 	if idx := m.findRepoByName("beta"); idx != 1 {
 		t.Errorf("findRepoByName(beta) = %d", idx)
@@ -143,7 +143,7 @@ func TestFindRepoByName(t *testing.T) {
 }
 
 func TestView(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
 	m.Table.Width = 120
@@ -156,7 +156,7 @@ func TestView(t *testing.T) {
 }
 
 func TestHandleKeyCtrlC(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
 	if cmd == nil {
 		t.Error("ctrl+c should produce quit command")
@@ -164,7 +164,7 @@ func TestHandleKeyCtrlC(t *testing.T) {
 }
 
 func TestHandleKeyRefresh(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
 	if cmd == nil {
 		t.Error("r should produce scan command")
@@ -172,7 +172,7 @@ func TestHandleKeyRefresh(t *testing.T) {
 }
 
 func TestHandleKeyEscAtRoot(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
 	m = m2.(Model)
 	// At root, Esc does nothing (no crash)
@@ -182,7 +182,7 @@ func TestHandleKeyEscAtRoot(t *testing.T) {
 }
 
 func TestHandleKeyEscPopsView(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.pushView(ViewHelp, "Help")
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
 	m = m2.(Model)
@@ -192,7 +192,7 @@ func TestHandleKeyEscPopsView(t *testing.T) {
 }
 
 func TestCommandModeInput(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	// Enter command mode
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(":")})
 	m = m2.(Model)
@@ -223,7 +223,7 @@ func TestCommandModeInput(t *testing.T) {
 }
 
 func TestCommandModeExec(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	// Enter command mode and type "quit"
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(":")})
 	m = m2.(Model)
@@ -238,7 +238,7 @@ func TestCommandModeExec(t *testing.T) {
 }
 
 func TestFilterModeInput(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	// Enter filter mode
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
 	m = m2.(Model)
@@ -265,7 +265,7 @@ func TestFilterModeInput(t *testing.T) {
 }
 
 func TestFilterModeEscClears(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
 	m = m2.(Model)
 	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
@@ -281,7 +281,7 @@ func TestFilterModeEscClears(t *testing.T) {
 }
 
 func TestViewRepoDetail(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.Repos = []*model.Repo{{Name: "test", Path: "/tmp/test"}}
 	m.Width = 120
 	m.Height = 40
@@ -294,7 +294,7 @@ func TestViewRepoDetail(t *testing.T) {
 }
 
 func TestViewLogs(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
 	m.LogView.Width = 120
@@ -307,7 +307,7 @@ func TestViewLogs(t *testing.T) {
 }
 
 func TestViewHelp(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
 	m.pushView(ViewHelp, "Help")
@@ -318,7 +318,7 @@ func TestViewHelp(t *testing.T) {
 }
 
 func TestViewCommandMode(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
 	m.InputMode = ModeCommand
@@ -330,7 +330,7 @@ func TestViewCommandMode(t *testing.T) {
 }
 
 func TestViewFilterMode(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
 	m.InputMode = ModeFilter
@@ -342,7 +342,7 @@ func TestViewFilterMode(t *testing.T) {
 }
 
 func TestExecUnknownCommand(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
 	m2, _ := m.execCommand(Command{Name: "bogus"})
@@ -350,7 +350,7 @@ func TestExecUnknownCommand(t *testing.T) {
 }
 
 func TestExecScanCommand(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	_, cmd := m.execCommand(Command{Name: "scan"})
 	if cmd == nil {
 		t.Error(":scan should produce a command")
@@ -358,13 +358,13 @@ func TestExecScanCommand(t *testing.T) {
 }
 
 func TestExecStopAllCommand(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m2, _ := m.execCommand(Command{Name: "stopall"})
 	_ = m2 // should not panic
 }
 
 func TestTickMsg(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.Repos = []*model.Repo{{Name: "test", Path: "/tmp/test"}}
 	m2, cmd := m.Update(tickMsg(time.Now()))
 	m = m2.(Model)
@@ -377,7 +377,7 @@ func TestTickMsg(t *testing.T) {
 }
 
 func TestOverviewKeyJK(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.Repos = []*model.Repo{{Name: "a", Path: "/tmp/a"}, {Name: "b", Path: "/tmp/b"}}
 	m.updateTable()
 
@@ -389,7 +389,7 @@ func TestOverviewKeyJK(t *testing.T) {
 }
 
 func TestLogViewKeys(t *testing.T) {
-	m := NewModel("/tmp/test")
+	m := NewModel("/tmp/test", nil)
 	m.LogView.SetLines([]string{"line1", "line2", "line3"})
 	m.LogView.Height = 10
 	m.pushView(ViewLogs, "Logs")

@@ -64,7 +64,59 @@ var (
 
 	WarningStyle = lipgloss.NewStyle().
 			Foreground(ColorYellow)
+
+	// Provider styles
+	ProviderClaudeStyle = lipgloss.NewStyle().Foreground(ColorPrimary)  // cyan
+	ProviderGeminiStyle = lipgloss.NewStyle().Foreground(ColorAccent)   // magenta
+	ProviderCodexStyle  = lipgloss.NewStyle().Foreground(ColorYellow)   // yellow
+
+	// Tab bar
+	TabActive = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(ColorBrightWhite).
+			Background(ColorDarkBg).
+			Padding(0, 1)
+	TabInactive = lipgloss.NewStyle().
+			Foreground(ColorGray).
+			Padding(0, 1)
+
+	// Alert severity
+	AlertCritical = lipgloss.NewStyle().Foreground(ColorRed).Bold(true)
+	AlertWarning  = lipgloss.NewStyle().Foreground(ColorYellow)
+	AlertInfo     = lipgloss.NewStyle().Foreground(ColorGray)
+
+	// Fleet dashboard stat boxes
+	StatBox = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(ColorDarkGray).
+		Padding(0, 1)
 )
+
+// ProviderStyle returns the appropriate style for a provider string.
+func ProviderStyle(provider string) lipgloss.Style {
+	switch provider {
+	case "claude":
+		return ProviderClaudeStyle
+	case "gemini":
+		return ProviderGeminiStyle
+	case "codex":
+		return ProviderCodexStyle
+	default:
+		return InfoStyle
+	}
+}
+
+// AlertStyle returns the appropriate style for an alert severity.
+func AlertStyle(severity string) lipgloss.Style {
+	switch severity {
+	case "critical":
+		return AlertCritical
+	case "warning":
+		return AlertWarning
+	default:
+		return AlertInfo
+	}
+}
 
 // StatusStyle returns the appropriate style for a status string.
 func StatusStyle(status string) lipgloss.Style {

@@ -4,109 +4,114 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
-// LogView is a scrollable log viewer with follow mode.
+// LogView is a scrollable log viewer with follow mode, backed by bubbles/viewport.
 type LogView struct {
-	Lines    []string
-	Offset   int
-	Height   int
-	Width    int
-	Follow   bool
-	Search   string
+	vp     viewport.Model
+	Lines  []string
+	Follow bool
+	Search string
+	Width  int
+	Height int
 }
 
 // NewLogView creates a log view.
 func NewLogView() *LogView {
-	return &LogView{Follow: true}
+	vp := viewport.New(0, 0)
+	// Disable built-in key bindings — we handle keys ourselves.
+	vp.KeyMap = viewport.KeyMap{}
+	return &LogView{
+		vp:     vp,
+		Follow: true,
+	}
+}
+
+// SetDimensions updates the viewport dimensions.
+func (lv *LogView) SetDimensions(width, height int) {
+	lv.Width = width
+	lv.Height = height
+	vpHeight := height - 3
+	if vpHeight < 1 {
+		vpHeight = 1
+	}
+	lv.vp.Width = width
+	lv.vp.Height = vpHeight
 }
 
 // AppendLines adds new log lines and auto-scrolls if following.
 func (lv *LogView) AppendLines(lines []string) {
 	lv.Lines = append(lv.Lines, lines...)
-	if lv.Follow {
-		lv.ScrollToEnd()
-	}
+	lv.rebuildContent()
 }
 
-// SetLines replaces all lines and scrolls to end.
+// SetLines replaces all lines.
 func (lv *LogView) SetLines(lines []string) {
 	lv.Lines = lines
+	lv.rebuildContent()
+}
+
+func (lv *LogView) rebuildContent() {
+	lines := lv.filteredLines()
+	var b strings.Builder
+	for i, line := range lines {
+		if lv.Width > 0 && len([]rune(line)) > lv.Width {
+			line = string([]rune(line)[:lv.Width])
+		}
+		b.WriteString(line)
+		if i < len(lines)-1 {
+			b.WriteRune('\n')
+		}
+	}
+	lv.vp.SetContent(b.String())
 	if lv.Follow {
-		lv.ScrollToEnd()
+		lv.vp.GotoBottom()
 	}
 }
 
 // ScrollUp moves up one line.
 func (lv *LogView) ScrollUp() {
 	lv.Follow = false
-	if lv.Offset > 0 {
-		lv.Offset--
-	}
+	lv.vp.LineUp(1)
 }
 
 // ScrollDown moves down one line.
 func (lv *LogView) ScrollDown() {
-	if lv.Offset < len(lv.Lines)-lv.visibleLines() {
-		lv.Offset++
-	}
-	if lv.Offset >= len(lv.Lines)-lv.visibleLines() {
-		lv.Follow = true
-	}
+	lv.vp.LineDown(1)
+	lv.Follow = lv.vp.AtBottom()
 }
 
 // ScrollToEnd jumps to the end.
 func (lv *LogView) ScrollToEnd() {
-	vis := lv.visibleLines()
-	if len(lv.Lines) > vis {
-		lv.Offset = len(lv.Lines) - vis
-	} else {
-		lv.Offset = 0
-	}
+	lv.vp.GotoBottom()
 	lv.Follow = true
 }
 
 // ScrollToStart jumps to the beginning.
 func (lv *LogView) ScrollToStart() {
-	lv.Offset = 0
+	lv.vp.GotoTop()
 	lv.Follow = false
 }
 
 // PageUp scrolls up by half a page.
 func (lv *LogView) PageUp() {
 	lv.Follow = false
-	lv.Offset -= lv.visibleLines() / 2
-	if lv.Offset < 0 {
-		lv.Offset = 0
-	}
+	lv.vp.HalfViewUp()
 }
 
 // PageDown scrolls down by half a page.
 func (lv *LogView) PageDown() {
-	lv.Offset += lv.visibleLines() / 2
-	max := len(lv.Lines) - lv.visibleLines()
-	if max < 0 {
-		max = 0
-	}
-	if lv.Offset >= max {
-		lv.Offset = max
-		lv.Follow = true
-	}
-}
-
-func (lv *LogView) visibleLines() int {
-	if lv.Height <= 3 {
-		return 20
-	}
-	return lv.Height - 3
+	lv.vp.HalfViewDown()
+	lv.Follow = lv.vp.AtBottom()
 }
 
 // ToggleFollow toggles follow mode.
 func (lv *LogView) ToggleFollow() {
 	lv.Follow = !lv.Follow
 	if lv.Follow {
-		lv.ScrollToEnd()
+		lv.vp.GotoBottom()
 	}
 }
 
@@ -127,6 +132,14 @@ func (lv *LogView) filteredLines() []string {
 
 // View renders the log view.
 func (lv *LogView) View() string {
+	// Sync viewport dimensions from Width/Height fields.
+	vpHeight := lv.Height - 3
+	if vpHeight < 1 {
+		vpHeight = 1
+	}
+	lv.vp.Width = lv.Width
+	lv.vp.Height = vpHeight
+
 	var b strings.Builder
 
 	lines := lv.filteredLines()
@@ -136,7 +149,8 @@ func (lv *LogView) View() string {
 	if lv.Follow {
 		followIndicator = styles.StatusRunning.Render("follow: on")
 	}
-	header := fmt.Sprintf("  Lines: %d  Offset: %d  %s", len(lines), lv.Offset, followIndicator)
+	header := fmt.Sprintf("  Lines: %d  Scroll: %.0f%%  %s",
+		len(lines), lv.vp.ScrollPercent()*100, followIndicator)
 	if lv.Search != "" {
 		header += fmt.Sprintf("  Search: %q", lv.Search)
 	}
@@ -145,28 +159,11 @@ func (lv *LogView) View() string {
 	b.WriteString(styles.InfoStyle.Render(strings.Repeat("─", lv.Width)))
 	b.WriteRune('\n')
 
-	vis := lv.visibleLines()
-	end := lv.Offset + vis
-	if end > len(lines) {
-		end = len(lines)
-	}
+	// Viewport content
+	b.WriteString(lv.vp.View())
 
-	for i := lv.Offset; i < end; i++ {
-		line := lines[i]
-		if lv.Width > 0 && len([]rune(line)) > lv.Width {
-			line = string([]rune(line)[:lv.Width])
-		}
-		b.WriteString(line)
-		b.WriteRune('\n')
-	}
-
-	// Pad remaining lines
-	rendered := end - lv.Offset
-	for i := rendered; i < vis; i++ {
-		b.WriteRune('\n')
-	}
-
-	b.WriteString(styles.HelpStyle.Render("  j/k: scroll  G/g: end/start  f: follow  Esc: back"))
+	b.WriteRune('\n')
+	b.WriteString(styles.HelpStyle.Render("  j/k: scroll  G/g: end/start  f: follow  ctrl+u/d: page  Esc: back"))
 
 	return b.String()
 }
