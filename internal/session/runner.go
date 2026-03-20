@@ -3,67 +3,23 @@ package session
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 // buildCmd constructs the claude CLI command from LaunchOptions.
+// Kept for backward compatibility with tests; delegates to buildClaudeCmd.
 func buildCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
-	args := []string{"-p"}
-
-	// Prompt is passed via stdin, not as an argument
-	args = append(args, "--output-format", "stream-json")
-
-	if opts.Model != "" {
-		args = append(args, "--model", opts.Model)
-	}
-	if opts.MaxBudgetUSD > 0 {
-		args = append(args, "--max-budget-usd", fmt.Sprintf("%.2f", opts.MaxBudgetUSD))
-	}
-	if opts.MaxTurns > 0 {
-		args = append(args, "--max-turns", fmt.Sprintf("%d", opts.MaxTurns))
-	}
-	if opts.Agent != "" {
-		args = append(args, "--agent", opts.Agent)
-	}
-	if len(opts.AllowedTools) > 0 {
-		args = append(args, "--allowedTools", strings.Join(opts.AllowedTools, ","))
-	}
-	if opts.SystemPrompt != "" {
-		args = append(args, "--append-system-prompt", opts.SystemPrompt)
-	}
-	if opts.Resume != "" {
-		args = append(args, "--resume", opts.Resume)
-	} else if opts.Continue {
-		args = append(args, "--continue")
-	}
-	if opts.Worktree != "" {
-		if opts.Worktree == "true" {
-			args = append(args, "-w")
-		} else {
-			args = append(args, "-w", opts.Worktree)
-		}
-	}
-	if opts.SessionName != "" {
-		args = append(args, "-n", opts.SessionName)
-	}
-
-	cmd := exec.CommandContext(ctx, "claude", args...)
-	cmd.Dir = opts.RepoPath
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-	return cmd
+	return buildClaudeCmd(ctx, opts)
 }
 
-// launch starts a new Claude Code session and returns immediately.
+// launch starts a new LLM CLI session and returns immediately.
 // The session runs in a background goroutine that parses streaming output.
 func launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
 	if opts.RepoPath == "" {
@@ -73,13 +29,17 @@ func launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
 		return nil, fmt.Errorf("prompt required (unless resuming)")
 	}
 
-	// Verify claude binary exists
-	if _, err := exec.LookPath("claude"); err != nil {
-		return nil, fmt.Errorf("claude binary not found on PATH: %w", err)
+	provider := opts.Provider
+	if provider == "" {
+		provider = ProviderClaude
 	}
 
 	sessionCtx, cancel := context.WithCancel(ctx)
-	cmd := buildCmd(sessionCtx, opts)
+	cmd, err := buildCmdForProvider(sessionCtx, opts)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
 
 	// Pipe prompt via stdin
 	stdin, err := cmd.StdinPipe()
@@ -103,6 +63,7 @@ func launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
 	now := time.Now()
 	s := &Session{
 		ID:           uuid.New().String(),
+		Provider:     provider,
 		RepoPath:     opts.RepoPath,
 		RepoName:     filepath.Base(opts.RepoPath),
 		Status:       StatusLaunching,
@@ -120,7 +81,7 @@ func launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
 
 	if err := cmd.Start(); err != nil {
 		cancel()
-		return nil, fmt.Errorf("start claude: %w", err)
+		return nil, fmt.Errorf("start %s: %w", provider, err)
 	}
 
 	s.mu.Lock()
@@ -144,7 +105,7 @@ func launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
 	return s, nil
 }
 
-// runSession reads streaming JSON from claude stdout/stderr and updates session state.
+// runSession reads streaming JSON from stdout/stderr and updates session state.
 func runSession(s *Session, stdout, stderr io.Reader) {
 	// Read stderr in background for error capture
 	var stderrBuf strings.Builder
@@ -198,11 +159,10 @@ func runSessionOutput(s *Session, stdout io.Reader) {
 			continue
 		}
 
-		var event StreamEvent
-		if err := json.Unmarshal(line, &event); err != nil {
+		event, err := normalizeEvent(s.Provider, line)
+		if err != nil {
 			continue
 		}
-		event.Raw = json.RawMessage(append([]byte(nil), line...))
 
 		s.mu.Lock()
 		s.LastActivity = time.Now()
@@ -210,7 +170,7 @@ func runSessionOutput(s *Session, stdout io.Reader) {
 		switch event.Type {
 		case "system":
 			if event.SessionID != "" {
-				s.ClaudeID = event.SessionID
+				s.ProviderSessionID = event.SessionID
 			}
 		case "assistant":
 			if event.Content != "" {
@@ -225,7 +185,7 @@ func runSessionOutput(s *Session, stdout io.Reader) {
 				s.TurnCount = event.NumTurns
 			}
 			if event.SessionID != "" {
-				s.ClaudeID = event.SessionID
+				s.ProviderSessionID = event.SessionID
 			}
 			if event.IsError {
 				s.Error = event.Result

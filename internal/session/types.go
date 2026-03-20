@@ -7,6 +7,15 @@ import (
 	"time"
 )
 
+// Provider identifies which LLM CLI backend to use.
+type Provider string
+
+const (
+	ProviderClaude Provider = "claude"
+	ProviderGemini Provider = "gemini"
+	ProviderCodex  Provider = "codex"
+)
+
 // SessionStatus represents the lifecycle state of a Claude Code session.
 type SessionStatus string
 
@@ -18,11 +27,12 @@ const (
 	StatusErrored   SessionStatus = "errored"
 )
 
-// Session represents a managed Claude Code headless session (claude -p).
+// Session represents a managed headless LLM CLI session.
 type Session struct {
-	ID           string        `json:"id"`
-	ClaudeID     string        `json:"claude_session_id,omitempty"`
-	RepoPath     string        `json:"repo_path"`
+	ID                string        `json:"id"`
+	Provider          Provider      `json:"provider"`
+	ProviderSessionID string        `json:"provider_session_id,omitempty"`
+	RepoPath          string        `json:"repo_path"`
 	RepoName     string        `json:"repo_name"`
 	Status       SessionStatus `json:"status"`
 	Prompt       string        `json:"prompt"`
@@ -68,6 +78,7 @@ type StreamEvent struct {
 
 // LaunchOptions configures a session launch.
 type LaunchOptions struct {
+	Provider     Provider
 	RepoPath     string
 	Prompt       string
 	Model        string   // --model
@@ -86,6 +97,7 @@ type LaunchOptions struct {
 // TeamConfig holds agent team configuration.
 type TeamConfig struct {
 	Name         string   `json:"name"`
+	Provider     Provider `json:"provider,omitempty"`
 	RepoPath     string   `json:"repo_path"`
 	LeadAgent    string   `json:"lead_agent,omitempty"`
 	Tasks        []string `json:"tasks"`
