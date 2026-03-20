@@ -88,9 +88,9 @@ func launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
 	s.Status = StatusRunning
 	s.mu.Unlock()
 
-	// Write prompt to stdin and close
+	// Write prompt to stdin and close (Codex takes prompt as positional arg, skip stdin)
 	go func() {
-		if opts.Prompt != "" {
+		if provider != ProviderCodex && opts.Prompt != "" {
 			_, _ = io.WriteString(stdin, opts.Prompt)
 		}
 		stdin.Close()
@@ -179,6 +179,8 @@ func runSessionOutput(s *Session, stdout io.Reader) {
 		case "result":
 			s.LastOutput = truncateStr(event.Result, 4000)
 			if event.CostUSD > 0 {
+				// Assignment (not +=) because Claude emits cumulative cost in result events.
+				// If Gemini/Codex emit per-event deltas instead, this needs to change to +=.
 				s.SpentUSD = event.CostUSD
 			}
 			if event.NumTurns > 0 {

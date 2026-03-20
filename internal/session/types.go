@@ -96,13 +96,14 @@ type LaunchOptions struct {
 
 // TeamConfig holds agent team configuration.
 type TeamConfig struct {
-	Name         string   `json:"name"`
-	Provider     Provider `json:"provider,omitempty"`
-	RepoPath     string   `json:"repo_path"`
-	LeadAgent    string   `json:"lead_agent,omitempty"`
-	Tasks        []string `json:"tasks"`
-	Model        string   `json:"model,omitempty"`
-	MaxBudgetUSD float64  `json:"max_budget_usd,omitempty"`
+	Name           string   `json:"name"`
+	Provider       Provider `json:"provider,omitempty"`        // lead session provider
+	WorkerProvider Provider `json:"worker_provider,omitempty"` // default provider for worker tasks
+	RepoPath       string   `json:"repo_path"`
+	LeadAgent      string   `json:"lead_agent,omitempty"`
+	Tasks          []string `json:"tasks"`
+	Model          string   `json:"model,omitempty"`
+	MaxBudgetUSD   float64  `json:"max_budget_usd,omitempty"`
 }
 
 // TeamStatus holds team state information.
@@ -117,13 +118,16 @@ type TeamStatus struct {
 
 // TeamTask represents a task assigned to a team.
 type TeamTask struct {
-	Description string `json:"description"`
-	Status      string `json:"status"` // pending, in-progress, completed
+	Description string   `json:"description"`
+	Provider    Provider `json:"provider,omitempty"` // override team default for this task
+	Status      string   `json:"status"`             // pending, in-progress, completed
 }
 
-// AgentDef represents a .claude/agents/*.md agent definition.
+// AgentDef represents an agent definition file.
+// Claude: .claude/agents/*.md, Gemini: .gemini/agents/*.md, Codex: AGENTS.md sections.
 type AgentDef struct {
 	Name        string   `json:"name"`
+	Provider    Provider `json:"provider,omitempty"` // which provider this agent targets
 	Description string   `json:"description,omitempty"`
 	Model       string   `json:"model,omitempty"`
 	Tools       []string `json:"tools,omitempty"`
