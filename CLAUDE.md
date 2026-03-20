@@ -48,6 +48,13 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 | `ralphglasses_pause` | Pause/resume a loop |
 | `ralphglasses_logs` | Get recent log lines |
 | `ralphglasses_config` | Get/set .ralphrc values |
+| `ralphglasses_roadmap_parse` | Parse ROADMAP.md into structured JSON |
+| `ralphglasses_roadmap_analyze` | Compare roadmap vs codebase (gaps, stale, ready) |
+| `ralphglasses_roadmap_research` | Search GitHub for relevant repos/tools |
+| `ralphglasses_roadmap_expand` | Generate proposed roadmap expansions |
+| `ralphglasses_roadmap_export` | Export tasks as rdcycle/fix_plan/progress specs |
+| `ralphglasses_repo_scaffold` | Create/init ralph config files for a repo |
+| `ralphglasses_repo_optimize` | Analyze and optimize ralph config files |
 
 ## Architecture
 
@@ -55,7 +62,9 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 - **internal/discovery/**: Scans directories for `.ralph/` and `.ralphrc`
 - **internal/model/**: Data types and parsers for status.json, progress.json, circuit breaker state, .ralphrc
 - **internal/process/**: Process management (launch/stop/pause via os/exec), fsnotify file watcher, log tailing
-- **internal/mcpserver/**: MCP tool handlers (9 tools, stdio transport via mcp-go)
+- **internal/mcpserver/**: MCP tool handlers (16 tools, stdio transport via mcp-go)
+- **internal/roadmap/**: Roadmap parsing, analysis, research, expansion, export
+- **internal/repofiles/**: Ralph config file scaffolding and optimization
 - **cmd/ralphglasses-mcp/**: Standalone MCP server binary entry point
 - **internal/tui/**: Bubble Tea app model, keymap, command/filter modes
 - **internal/tui/styles/**: Lipgloss theme (k9s-inspired, no other package imports this)
