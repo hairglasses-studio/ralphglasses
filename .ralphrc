@@ -23,7 +23,7 @@ MAX_LINES_PER_BATCH=600
 QG_GO_BUILD=true
 QG_GO_VET=true
 QG_GO_TEST=true
-ALLOWED_TOOLS="Write,Read,Edit,Grep,Glob,Bash(go build *),Bash(go test *),Bash(go vet *),Bash(go run *),Bash(go mod *),Bash(git add *),Bash(git commit *),Bash(git diff *),Bash(git log *),Bash(git status),Bash(git status *),Bash(git push *)"
+ALLOWED_TOOLS="Write,Read,Edit,Grep,Glob,Bash(go build *),Bash(go test *),Bash(go vet *),Bash(go run *),Bash(go mod *),Bash(git add *),Bash(git commit *),Bash(git diff *),Bash(git log *),Bash(git status),Bash(git status *),Bash(git push *),Bash(make *)"
 RALPH_SESSION_BUDGET=100
 
 # =============================================================================
