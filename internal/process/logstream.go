@@ -21,13 +21,13 @@ func TailLog(repoPath string, offset *int64) tea.Cmd {
 		logPath := filepath.Join(repoPath, ".ralph", "logs", "ralph.log")
 		f, err := os.Open(logPath)
 		if err != nil {
-			return LogLinesMsg{}
+			return LogLinesMsg{Lines: []string{"[error] Cannot read log: " + err.Error()}}
 		}
 		defer f.Close()
 
 		if *offset > 0 {
 			if _, err := f.Seek(*offset, io.SeekStart); err != nil {
-				return LogLinesMsg{}
+				return LogLinesMsg{Lines: []string{"[error] Cannot read log: " + err.Error()}}
 			}
 		}
 

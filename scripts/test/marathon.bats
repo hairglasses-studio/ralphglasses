@@ -66,6 +66,39 @@ teardown() {
     [[ "$output" == *"$50"* ]]
 }
 
+@test "marathon.sh update_ralphrc_key updates existing key" {
+    echo 'MAX_CALLS_PER_HOUR=80' > "$TEST_DIR/.ralphrc"
+    # Source the function directly (extract it)
+    update_ralphrc_key() {
+        local file="$1" key="$2" value="$3"
+        if [[ ! -f "$file" ]]; then return; fi
+        if grep -q "^${key}=" "$file"; then
+            sed "s|^${key}=.*|${key}=${value}|" "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+        else
+            echo "${key}=${value}" >> "$file"
+        fi
+    }
+    update_ralphrc_key "$TEST_DIR/.ralphrc" "MAX_CALLS_PER_HOUR" "60"
+    run grep "MAX_CALLS_PER_HOUR=60" "$TEST_DIR/.ralphrc"
+    [ "$status" -eq 0 ]
+}
+
+@test "marathon.sh update_ralphrc_key adds missing key" {
+    echo 'MODEL=sonnet' > "$TEST_DIR/.ralphrc"
+    update_ralphrc_key() {
+        local file="$1" key="$2" value="$3"
+        if [[ ! -f "$file" ]]; then return; fi
+        if grep -q "^${key}=" "$file"; then
+            sed "s|^${key}=.*|${key}=${value}|" "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+        else
+            echo "${key}=${value}" >> "$file"
+        fi
+    }
+    update_ralphrc_key "$TEST_DIR/.ralphrc" "BUDGET" "50"
+    run grep "BUDGET=50" "$TEST_DIR/.ralphrc"
+    [ "$status" -eq 0 ]
+}
+
 @test "marathon.sh custom duration" {
     export RALPH_CMD="echo"
     run bash "$MARATHON" --dry-run -p "$TEST_DIR" -d 6

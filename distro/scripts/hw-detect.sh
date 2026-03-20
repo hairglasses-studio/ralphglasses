@@ -177,10 +177,7 @@ fi
 log "--- Xorg Configuration ---"
 
 if [[ -n "$RTX4090_BUS" ]]; then
-    # Convert PCI bus ID format: "01:00.0" -> "PCI:1:0:0"
-    xorg_bus_id=$(echo "$RTX4090_BUS" | sed 's/\([0-9a-f]\+\):\([0-9a-f]\+\)\.\([0-9]\+\)/PCI:\1:\2:\3/' | \
-        sed 's/PCI:0*/PCI:/' | sed 's/:0\([0-9]\)/:\1/g')
-    # Fix: ensure proper decimal conversion from hex
+    # Convert PCI bus ID format: "01:00.0" -> "PCI:1:0:0" (hex to decimal)
     IFS=':.' read -r domain bus dev func <<< "$RTX4090_BUS"
     xorg_bus_id="PCI:$((16#$bus)):$((16#$dev)):$func"
 
@@ -228,13 +225,13 @@ if [[ -n "$GTX1060_BUS" ]]; then
 # Prevent nvidia driver from binding to GTX 1060 (Pascal) at PCI ${GTX1060_BUS}
 # RTX 4090 (Ada) uses nvidia-driver-550; GTX 1060 needs legacy 560.x which conflicts
 #
-# This uses nouveau blacklist + nvidia PCI slot exclusion
+# This uses nouveau blacklist + nvidia GPU exclusion by PCI bus ID
 softdep nouveau pre: blacklist-gtx1060
 blacklist nouveau
 
-# Tell nvidia to skip this PCI slot
+# Tell nvidia to skip this GPU by PCI address
 # The nvidia driver will only bind to the RTX 4090
-options nvidia NVreg_EnablePCIeGen3=${GTX1060_BUS}"
+options nvidia NVreg_ExcludedGpus=0000:${GTX1060_BUS}"
 
     write_file "$BLACKLIST_GTX1060" "$BLACKLIST_CONTENT"
     log "GTX 1060 at PCI $GTX1060_BUS will be excluded from nvidia driver"

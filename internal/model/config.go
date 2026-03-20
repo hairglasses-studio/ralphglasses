@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
+
+var validKey = regexp.MustCompile(`^[A-Z_][A-Z0-9_]*$`)
 
 // RalphConfig represents parsed .ralphrc key-value pairs.
 type RalphConfig struct {
@@ -56,6 +59,12 @@ func (c *RalphConfig) Get(key, defaultVal string) string {
 
 // Save writes the config back to disk.
 func (c *RalphConfig) Save() error {
+	for key := range c.Values {
+		if !validKey.MatchString(key) {
+			return fmt.Errorf("invalid config key %q: must match [A-Z_][A-Z0-9_]*", key)
+		}
+	}
+
 	f, err := os.Create(c.Path)
 	if err != nil {
 		return err

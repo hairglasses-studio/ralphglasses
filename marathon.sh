@@ -138,14 +138,14 @@ if [[ -z "$RALPH_CMD" ]]; then
 fi
 
 # --- Update .ralphrc with marathon settings ---
-# Uses portable sed -i (GNU/Linux). Adds keys if missing.
+# Uses temp file pattern for portability across GNU/BSD sed.
 update_ralphrc_key() {
     local file="$1" key="$2" value="$3"
     if [[ ! -f "$file" ]]; then
         return
     fi
     if grep -q "^${key}=" "$file"; then
-        sed -i "s|^${key}=.*|${key}=${value}|" "$file"
+        sed "s|^${key}=.*|${key}=${value}|" "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
     else
         echo "${key}=${value}" >> "$file"
     fi
@@ -388,7 +388,7 @@ while true; do
     fi
 
     # --- Budget check ---
-    if (( $(echo "$spend >= $budget_ceiling" | bc -l 2>/dev/null || echo 0) )); then
+    if (( $(echo "$spend >= $budget_ceiling" | bc -l 2>/dev/null || echo 1) )); then
         log "BUDGET" "Budget limit reached (\$${spend} >= \$${budget_ceiling}). Stopping."
         cleanup 0
     fi

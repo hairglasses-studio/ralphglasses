@@ -208,7 +208,9 @@ func (s *Server) handleStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.
 		return errResult("repo name required"), nil
 	}
 	if s.Repos == nil {
-		_ = s.scan()
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
@@ -243,7 +245,9 @@ func (s *Server) handleStart(_ context.Context, req mcp.CallToolRequest) (*mcp.C
 		return errResult("repo name required"), nil
 	}
 	if s.Repos == nil {
-		_ = s.scan()
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
@@ -261,7 +265,9 @@ func (s *Server) handleStop(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		return errResult("repo name required"), nil
 	}
 	if s.Repos == nil {
-		_ = s.scan()
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
@@ -284,7 +290,9 @@ func (s *Server) handlePause(_ context.Context, req mcp.CallToolRequest) (*mcp.C
 		return errResult("repo name required"), nil
 	}
 	if s.Repos == nil {
-		_ = s.scan()
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
@@ -306,7 +314,9 @@ func (s *Server) handleLogs(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		return errResult("repo name required"), nil
 	}
 	if s.Repos == nil {
-		_ = s.scan()
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
@@ -336,7 +346,9 @@ func (s *Server) handleConfig(_ context.Context, req mcp.CallToolRequest) (*mcp.
 		return errResult("repo name required"), nil
 	}
 	if s.Repos == nil {
-		_ = s.scan()
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
