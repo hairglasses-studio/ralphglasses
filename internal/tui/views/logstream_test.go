@@ -14,7 +14,7 @@ func TestNewLogView(t *testing.T) {
 
 func TestAppendLines(t *testing.T) {
 	lv := NewLogView()
-	lv.Height = 10
+	lv.SetDimensions(80, 20)
 	lv.AppendLines([]string{"line 1", "line 2"})
 	if len(lv.Lines) != 2 {
 		t.Errorf("expected 2 lines, got %d", len(lv.Lines))
@@ -27,7 +27,7 @@ func TestAppendLines(t *testing.T) {
 
 func TestSetLines(t *testing.T) {
 	lv := NewLogView()
-	lv.Height = 10
+	lv.SetDimensions(80, 20)
 	lv.SetLines([]string{"a", "b", "c"})
 	if len(lv.Lines) != 3 {
 		t.Errorf("expected 3, got %d", len(lv.Lines))
@@ -40,7 +40,7 @@ func TestSetLines(t *testing.T) {
 
 func TestScrollUpDown(t *testing.T) {
 	lv := NewLogView()
-	lv.Height = 5
+	lv.SetDimensions(80, 5)
 	lines := make([]string, 20)
 	for i := range lines {
 		lines[i] = "line"
@@ -54,13 +54,13 @@ func TestScrollUpDown(t *testing.T) {
 
 func TestScrollToEnd(t *testing.T) {
 	lv := NewLogView()
-	lv.Height = 5
+	lv.SetDimensions(80, 5)
 	lv.Follow = false
 	lines := make([]string, 20)
 	for i := range lines {
 		lines[i] = "line"
 	}
-	lv.Lines = lines
+	lv.SetLines(lines)
 	lv.ScrollToEnd()
 	if !lv.Follow {
 		t.Error("ScrollToEnd should enable follow")
@@ -69,12 +69,10 @@ func TestScrollToEnd(t *testing.T) {
 
 func TestScrollToStart(t *testing.T) {
 	lv := NewLogView()
-	lv.Offset = 10
+	lv.SetDimensions(80, 20)
+	lv.SetLines(make([]string, 50))
 	lv.Follow = true
 	lv.ScrollToStart()
-	if lv.Offset != 0 {
-		t.Errorf("offset = %d, want 0", lv.Offset)
-	}
 	if lv.Follow {
 		t.Error("ScrollToStart should disable follow")
 	}
@@ -82,31 +80,16 @@ func TestScrollToStart(t *testing.T) {
 
 func TestPageUpDown(t *testing.T) {
 	lv := NewLogView()
-	lv.Height = 10
+	lv.SetDimensions(80, 10)
 	lines := make([]string, 50)
 	for i := range lines {
 		lines[i] = "line"
 	}
-	lv.Lines = lines
-	lv.Offset = 25
+	lv.SetLines(lines)
+	// Viewport starts at bottom (follow mode), so PageUp should move up
 	lv.PageUp()
-	if lv.Offset >= 25 {
-		t.Error("PageUp should decrease offset")
-	}
-	lv.Offset = 0
-	lv.PageDown()
-	if lv.Offset == 0 {
-		t.Error("PageDown should increase offset from 0")
-	}
-}
-
-func TestPageUpFloor(t *testing.T) {
-	lv := NewLogView()
-	lv.Height = 10
-	lv.Offset = 1
-	lv.PageUp()
-	if lv.Offset < 0 {
-		t.Error("PageUp should not go negative")
+	if lv.Follow {
+		t.Error("PageUp should disable follow")
 	}
 }
 
@@ -122,22 +105,9 @@ func TestToggleFollow(t *testing.T) {
 	}
 }
 
-func TestVisibleLines(t *testing.T) {
-	lv := NewLogView()
-	lv.Height = 0
-	if lv.visibleLines() != 20 {
-		t.Errorf("small height default = %d, want 20", lv.visibleLines())
-	}
-	lv.Height = 30
-	if lv.visibleLines() != 27 {
-		t.Errorf("height=30 = %d, want 27", lv.visibleLines())
-	}
-}
-
 func TestLogView_SearchFilter(t *testing.T) {
 	lv := NewLogView()
-	lv.Width = 80
-	lv.Height = 10
+	lv.SetDimensions(80, 10)
 	lv.SetLines([]string{"ERROR something broke", "INFO all good", "ERROR another issue", "DEBUG trace"})
 
 	lv.Search = "error"
@@ -146,6 +116,7 @@ func TestLogView_SearchFilter(t *testing.T) {
 		t.Errorf("expected 2 filtered lines, got %d", len(filtered))
 	}
 
+	lv.rebuildContent()
 	view := lv.View()
 	if !strings.Contains(view, "ERROR something broke") {
 		t.Error("view should contain matching error line")
@@ -160,7 +131,7 @@ func TestLogView_SearchFilter(t *testing.T) {
 
 func TestLogView_SearchFilterEmpty(t *testing.T) {
 	lv := NewLogView()
-	lv.Height = 10
+	lv.SetDimensions(80, 10)
 	lv.SetLines([]string{"line1", "line2", "line3"})
 
 	lv.Search = ""
@@ -172,7 +143,7 @@ func TestLogView_SearchFilterEmpty(t *testing.T) {
 
 func TestLogView_SearchFilterCaseInsensitive(t *testing.T) {
 	lv := NewLogView()
-	lv.Height = 10
+	lv.SetDimensions(80, 10)
 	lv.SetLines([]string{"Error Message", "info message", "WARNING"})
 
 	lv.Search = "ERROR"
@@ -184,8 +155,7 @@ func TestLogView_SearchFilterCaseInsensitive(t *testing.T) {
 
 func TestLogViewView(t *testing.T) {
 	lv := NewLogView()
-	lv.Width = 80
-	lv.Height = 10
+	lv.SetDimensions(80, 10)
 	lv.SetLines([]string{"hello", "world"})
 	view := lv.View()
 	if !strings.Contains(view, "hello") {

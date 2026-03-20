@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
@@ -18,7 +19,8 @@ var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		scanPath = util.ExpandHome(scanPath)
 
-		m := tui.NewModel(scanPath)
+		sessMgr := session.NewManager()
+		m := tui.NewModel(scanPath, sessMgr)
 		p := tea.NewProgram(m, tea.WithAltScreen())
 		_, err := p.Run()
 		return err
