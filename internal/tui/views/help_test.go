@@ -3,11 +3,33 @@ package views
 import (
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/bubbles/key"
 )
 
+func testHelpGroups() []HelpGroup {
+	return []HelpGroup{
+		{
+			Name: "Navigation",
+			Bindings: []key.Binding{
+				key.NewBinding(key.WithKeys("1"), key.WithHelp("1", "repos tab")),
+				key.NewBinding(key.WithKeys("2"), key.WithHelp("2", "sessions tab")),
+			},
+		},
+		{
+			Name: "Global",
+			Bindings: []key.Binding{
+				key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
+				key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "quit")),
+			},
+		},
+	}
+}
+
 func TestRenderHelp(t *testing.T) {
-	output := RenderHelp(120, 40)
-	sections := []string{"Global", "Overview Table", "Repo Detail", "Log Viewer", "Commands"}
+	groups := testHelpGroups()
+	output := RenderHelp(groups, 120, 40)
+	sections := []string{"Navigation", "Global", "Commands"}
 	for _, sec := range sections {
 		if !strings.Contains(output, sec) {
 			t.Errorf("help output missing section %q", sec)
@@ -16,9 +38,17 @@ func TestRenderHelp(t *testing.T) {
 }
 
 func TestRenderHelpNonEmpty(t *testing.T) {
-	output := RenderHelp(0, 0)
+	output := RenderHelp(nil, 0, 0)
 	if output == "" {
 		t.Error("help should render even with zero dimensions")
+	}
+}
+
+func TestRenderHelpShowsBindings(t *testing.T) {
+	groups := testHelpGroups()
+	output := RenderHelp(groups, 120, 40)
+	if !strings.Contains(output, "repos tab") {
+		t.Error("help should show binding descriptions")
 	}
 }
 
