@@ -7,24 +7,48 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
 
 // Manager tracks running ralph loop processes.
 type Manager struct {
 	mu    sync.Mutex
 	procs map[string]*ManagedProcess // keyed by repo path
+	bus   *events.Bus
 }
 
 // ManagedProcess wraps an os/exec.Cmd for a ralph loop.
 type ManagedProcess struct {
-	Cmd    *exec.Cmd
-	Paused bool
+	Cmd       *exec.Cmd
+	Paused    bool
+	ExitCode  int
+	ExitError string
+}
+
+// lastExits tracks exit status after reaping (keyed by repo path).
+var lastExits = struct {
+	sync.Mutex
+	m map[string]exitStatus
+}{m: make(map[string]exitStatus)}
+
+type exitStatus struct {
+	Code  int
+	Error string
 }
 
 // NewManager creates a new process manager.
 func NewManager() *Manager {
 	return &Manager{
 		procs: make(map[string]*ManagedProcess),
+	}
+}
+
+// NewManagerWithBus creates a process manager wired to an event bus.
+func NewManagerWithBus(bus *events.Bus) *Manager {
+	return &Manager{
+		procs: make(map[string]*ManagedProcess),
+		bus:   bus,
 	}
 }
 
@@ -54,12 +78,44 @@ func (m *Manager) Start(repoPath string) error {
 
 	m.procs[repoPath] = &ManagedProcess{Cmd: cmd}
 
+	// Publish loop started event
+	if m.bus != nil {
+		m.bus.Publish(events.Event{
+			Type:     events.LoopStarted,
+			RepoPath: repoPath,
+			RepoName: filepath.Base(repoPath),
+		})
+	}
+
 	// Reap the process in the background.
+	rp := repoPath
 	go func() {
-		_ = cmd.Wait()
+		err := cmd.Wait()
+		exitCode := 0
+		exitErr := ""
+		if err != nil {
+			exitErr = err.Error()
+		}
+		if cmd.ProcessState != nil {
+			exitCode = cmd.ProcessState.ExitCode()
+		}
+		lastExits.Lock()
+		lastExits.m[rp] = exitStatus{Code: exitCode, Error: exitErr}
+		lastExits.Unlock()
+
 		m.mu.Lock()
-		delete(m.procs, repoPath)
+		delete(m.procs, rp)
 		m.mu.Unlock()
+
+		// Publish loop stopped event
+		if m.bus != nil {
+			m.bus.Publish(events.Event{
+				Type:     events.LoopStopped,
+				RepoPath: rp,
+				RepoName: filepath.Base(rp),
+				Data:     map[string]any{"exit_code": exitCode, "error": exitErr},
+			})
+		}
 	}()
 
 	return nil
@@ -137,6 +193,17 @@ func (m *Manager) StopAll() {
 		}
 		delete(m.procs, path)
 	}
+}
+
+// LastExitStatus returns the exit code and error for a previously reaped process.
+func (m *Manager) LastExitStatus(repoPath string) (int, string, bool) {
+	lastExits.Lock()
+	defer lastExits.Unlock()
+	es, ok := lastExits.m[repoPath]
+	if !ok {
+		return 0, "", false
+	}
+	return es.Code, es.Error, true
 }
 
 // RunningPaths returns the paths of all running loops.

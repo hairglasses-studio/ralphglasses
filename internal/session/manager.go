@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
 
 // Manager tracks all active Claude Code sessions and teams.
@@ -13,6 +15,7 @@ type Manager struct {
 	mu       sync.Mutex
 	sessions map[string]*Session    // keyed by session ID
 	teams    map[string]*TeamStatus // keyed by team name
+	bus      *events.Bus
 }
 
 // NewManager creates a new session manager.
@@ -23,9 +26,18 @@ func NewManager() *Manager {
 	}
 }
 
+// NewManagerWithBus creates a session manager wired to an event bus.
+func NewManagerWithBus(bus *events.Bus) *Manager {
+	return &Manager{
+		sessions: make(map[string]*Session),
+		teams:    make(map[string]*TeamStatus),
+		bus:      bus,
+	}
+}
+
 // Launch starts a new Claude Code session via claude -p.
 func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
-	s, err := launch(ctx, opts)
+	s, err := launch(ctx, opts, m.bus)
 	if err != nil {
 		return nil, err
 	}
@@ -33,6 +45,17 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	m.mu.Lock()
 	m.sessions[s.ID] = s
 	m.mu.Unlock()
+
+	if m.bus != nil {
+		m.bus.Publish(events.Event{
+			Type:      events.SessionStarted,
+			SessionID: s.ID,
+			RepoPath:  s.RepoPath,
+			RepoName:  filepath.Base(s.RepoPath),
+			Provider:  string(s.Provider),
+			Data:      map[string]any{"model": s.Model, "prompt_len": len(opts.Prompt)},
+		})
+	}
 
 	return s, nil
 }
@@ -255,6 +278,17 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 	m.mu.Lock()
 	m.teams[config.Name] = team
 	m.mu.Unlock()
+
+	if m.bus != nil {
+		m.bus.Publish(events.Event{
+			Type:      events.TeamCreated,
+			SessionID: s.ID,
+			RepoPath:  config.RepoPath,
+			RepoName:  filepath.Base(config.RepoPath),
+			Provider:  string(config.Provider),
+			Data:      map[string]any{"team": config.Name, "tasks": len(config.Tasks)},
+		})
+	}
 
 	return team, nil
 }
