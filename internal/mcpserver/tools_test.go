@@ -25,6 +25,33 @@ func setupTestServer(t *testing.T) (*Server, string) {
 		t.Fatal(err)
 	}
 
+	// Write go.mod for project type detection
+	if err := os.WriteFile(filepath.Join(repoPath, "go.mod"), []byte("module example.com/test\n\ngo 1.22\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Write ROADMAP.md
+	roadmapContent := `# Test Repo Roadmap
+
+## Phase 0: Setup (COMPLETE)
+
+- [x] Initialize project
+- [x] Add core module
+
+## Phase 1: Features
+
+### 1.1 — Parser
+- [ ] 1.1.1 — Build parser
+- [ ] 1.1.2 — Add tests [BLOCKED BY 1.1.1]
+- **Acceptance:** parser works
+
+### 1.2 — Export
+- [ ] 1.2.1 — Export to JSON
+`
+	if err := os.WriteFile(filepath.Join(repoPath, "ROADMAP.md"), []byte(roadmapContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
 	// Write .ralphrc
 	if err := os.WriteFile(filepath.Join(repoPath, ".ralphrc"), []byte("MODEL=sonnet\nBUDGET=5\n"), 0644); err != nil {
 		t.Fatal(err)
@@ -520,6 +547,207 @@ func TestJsonResult(t *testing.T) {
 	text := getResultText(r)
 	if !strings.Contains(text, "key") || !strings.Contains(text, "value") {
 		t.Errorf("json result missing expected content: %s", text)
+	}
+}
+
+// Roadmap tool tests
+
+func TestHandleRoadmapParse(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	result, err := srv.handleRoadmapParse(context.Background(), makeRequest(map[string]any{
+		"path": repoPath,
+	}))
+	if err != nil {
+		t.Fatalf("handleRoadmapParse: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleRoadmapParse returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "Test Repo Roadmap") {
+		t.Errorf("expected title in output, got: %s", text)
+	}
+	if !strings.Contains(text, "phases") {
+		t.Errorf("expected phases in output, got: %s", text)
+	}
+}
+
+func TestHandleRoadmapParse_MissingPath(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleRoadmapParse(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleRoadmapParse: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing path")
+	}
+}
+
+func TestHandleRoadmapAnalyze(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	result, err := srv.handleRoadmapAnalyze(context.Background(), makeRequest(map[string]any{
+		"path": repoPath,
+	}))
+	if err != nil {
+		t.Fatalf("handleRoadmapAnalyze: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleRoadmapAnalyze returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "gaps") {
+		t.Errorf("expected gaps in output, got: %s", text)
+	}
+	if !strings.Contains(text, "summary") {
+		t.Errorf("expected summary in output, got: %s", text)
+	}
+}
+
+func TestHandleRoadmapExport_RDCycle(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	result, err := srv.handleRoadmapExport(context.Background(), makeRequest(map[string]any{
+		"path":   repoPath,
+		"format": "rdcycle",
+	}))
+	if err != nil {
+		t.Fatalf("handleRoadmapExport: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleRoadmapExport returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "tasks") {
+		t.Errorf("expected tasks in rdcycle output, got: %s", text)
+	}
+}
+
+func TestHandleRoadmapExport_FixPlan(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	result, err := srv.handleRoadmapExport(context.Background(), makeRequest(map[string]any{
+		"path":   repoPath,
+		"format": "fix_plan",
+	}))
+	if err != nil {
+		t.Fatalf("handleRoadmapExport fix_plan: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleRoadmapExport returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "- [ ]") {
+		t.Errorf("expected checkbox items in fix_plan output, got: %s", text)
+	}
+}
+
+func TestHandleRoadmapExpand(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	result, err := srv.handleRoadmapExpand(context.Background(), makeRequest(map[string]any{
+		"path":  repoPath,
+		"style": "conservative",
+	}))
+	if err != nil {
+		t.Fatalf("handleRoadmapExpand: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleRoadmapExpand returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "proposals") {
+		t.Errorf("expected proposals in output, got: %s", text)
+	}
+}
+
+// Repo file tool tests
+
+func TestHandleRepoScaffold(t *testing.T) {
+	_, root := setupTestServer(t)
+	newRepoPath := filepath.Join(root, "new-repo")
+	os.MkdirAll(newRepoPath, 0755)
+	os.WriteFile(filepath.Join(newRepoPath, "go.mod"), []byte("module test\n\ngo 1.22\n"), 0644)
+
+	srv := NewServer(root)
+	result, err := srv.handleRepoScaffold(context.Background(), makeRequest(map[string]any{
+		"path": newRepoPath,
+	}))
+	if err != nil {
+		t.Fatalf("handleRepoScaffold: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleRepoScaffold returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "created") {
+		t.Errorf("expected created files in output, got: %s", text)
+	}
+
+	// Verify files were actually created
+	if _, err := os.Stat(filepath.Join(newRepoPath, ".ralphrc")); err != nil {
+		t.Error("expected .ralphrc to be created")
+	}
+	if _, err := os.Stat(filepath.Join(newRepoPath, ".ralph", "PROMPT.md")); err != nil {
+		t.Error("expected .ralph/PROMPT.md to be created")
+	}
+}
+
+func TestHandleRepoOptimize(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	result, err := srv.handleRepoOptimize(context.Background(), makeRequest(map[string]any{
+		"path": repoPath,
+	}))
+	if err != nil {
+		t.Fatalf("handleRepoOptimize: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleRepoOptimize returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "issues") {
+		t.Errorf("expected issues in output, got: %s", text)
+	}
+	_ = srv
+}
+
+func TestHandleRepoScaffold_MissingPath(t *testing.T) {
+	srv := NewServer("/tmp")
+
+	result, err := srv.handleRepoScaffold(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleRepoScaffold: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing path")
+	}
+}
+
+func TestHandleRepoOptimize_MissingPath(t *testing.T) {
+	srv := NewServer("/tmp")
+
+	result, err := srv.handleRepoOptimize(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleRepoOptimize: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing path")
 	}
 }
 
