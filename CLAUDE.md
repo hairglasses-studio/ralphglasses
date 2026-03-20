@@ -92,6 +92,7 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 
 | Tool | Description |
 |------|-------------|
+| `ralphglasses_fleet_status` | Fleet dashboard: repos, sessions, teams, costs, alerts |
 | `ralphglasses_scan` | Scan for ralph-enabled repos |
 | `ralphglasses_list` | List all repos with status summary |
 | `ralphglasses_status` | Detailed status for a repo (loop, circuit breaker, progress, config) |
