@@ -25,3 +25,19 @@ QG_GO_VET=true
 QG_GO_TEST=true
 ALLOWED_TOOLS="Write,Read,Edit,Grep,Glob,Bash(go build *),Bash(go test *),Bash(go vet *),Bash(go run *),Bash(go mod *),Bash(git add *),Bash(git commit *),Bash(git diff *),Bash(git log *),Bash(git status),Bash(git status *),Bash(git push *)"
 RALPH_SESSION_BUDGET=100
+
+# =============================================================================
+# FAST MODE STRATEGY
+# =============================================================================
+
+# Enable phase-aware fast mode switching
+FAST_MODE_ENABLED=true
+
+# Which phases use fast mode (comma-separated)
+# "execution" phases: code gen, mechanical fixes, test expansion, docs
+# "analysis" phases: architecture review, debugging, planning, refactoring
+FAST_MODE_PHASES="execution,test,docs,mechanical"
+STANDARD_MODE_PHASES="analysis,planning,debug,refactor,architecture"
+
+# Default when phase is unknown
+FAST_MODE_DEFAULT=false
