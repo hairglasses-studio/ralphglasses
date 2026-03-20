@@ -1,4 +1,7 @@
-.PHONY: test test-verbose test-cover test-integration test-scripts fuzz build vet lint ci clean
+VERSION := $(shell git describe --tags --always --dirty)
+LDFLAGS := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSION)
+
+.PHONY: test test-verbose test-cover test-integration test-scripts fuzz build build-release install vet lint ci clean release snapshot
 
 # Run all tests with race detector
 test:
@@ -43,6 +46,14 @@ test-scripts:
 build:
 	go build ./...
 
+# Build release binary with version injection
+build-release:
+	go build -ldflags "$(LDFLAGS)" -o ralphglasses .
+
+# Install with version injection
+install:
+	go install -ldflags "$(LDFLAGS)" .
+
 # Run go vet
 vet:
 	go vet ./...
@@ -59,3 +70,11 @@ clean:
 	rm -f coverage.out
 	rm -f ralphglasses
 	go clean ./...
+
+# Goreleaser release
+release:
+	goreleaser release --clean
+
+# Goreleaser snapshot (local testing)
+snapshot:
+	goreleaser release --snapshot --clean

@@ -444,6 +444,53 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 2.5.6.5 — Implement batch polling/webhook for result collection
 - **Acceptance:** batch tasks submitted and results collected for at least one provider
 
+## Phase 2.75: Architecture & Capability Extensions (COMPLETE)
+
+Built across multiple implementation sessions. Extends the TUI, MCP server, and internal architecture with event-driven patterns, new tools, and interactive components.
+
+### 2.75.1 — TUI Polish & Distribution
+- [x] 4-tab layout with bubbles tab bar (Repos, Sessions, Teams, Fleet)
+- [x] Sparkline charts via ntcharts for cost trends
+- [x] 4 themes: k9s (default), dracula, nord, solarized (`internal/tui/styles/theme.go`)
+- [x] Desktop notifications — macOS `osascript`, Linux `notify-send` (`internal/notify/`)
+- [x] GoReleaser config (`.goreleaser.yaml`)
+- [x] Diff view for repo git changes (`internal/tui/views/diffview.go`)
+
+### 2.75.2 — Event Bus & Hook System
+- [x] Internal pub/sub event bus (`internal/events/bus.go`) with ring buffer history (1000 events)
+- [x] Event types: session lifecycle, cost updates, budget exceeded, loop started/stopped, scan complete, config changed
+- [x] Bus wired into session manager, process manager, MCP server
+- [x] Hook executor (`internal/hooks/hooks.go`) with sync/async hook dispatch
+- [x] Hook config via `.ralph/hooks.yaml` per repo
+- [x] `ralphglasses_event_list` MCP tool for querying recent events
+
+### 2.75.3 — MCP Tool Extensions (38 total, +11 new)
+- [x] `ralphglasses_event_list` — Query recent fleet events
+- [x] `ralphglasses_fleet_analytics` — Cost breakdown by provider/repo/time-period
+- [x] `ralphglasses_session_compare` — Compare two sessions (cost, turns, duration)
+- [x] `ralphglasses_session_output` — Get recent output from running session
+- [x] `ralphglasses_repo_health` — Composite health score (0-100)
+- [x] `ralphglasses_session_retry` — Re-launch failed session with same params
+- [x] `ralphglasses_config_bulk` — Get/set `.ralphrc` values across multiple repos
+- [x] `ralphglasses_agent_compose` — Create composite agent by layering existing agents
+- [x] `ralphglasses_workflow_define` — Define multi-step YAML workflows
+- [x] `ralphglasses_workflow_run` — Execute workflows with dependency ordering
+- [x] `ralphglasses_snapshot` — Save/list fleet state snapshots
+
+### 2.75.4 — TUI Capability Extensions
+- [x] Confirm dialog component — modal overlay for destructive actions (`internal/tui/components/confirm.go`)
+- [x] Multi-select in tables — space to toggle, batch stop (`internal/tui/components/table.go`)
+- [x] Actions menu — context-dependent quick actions via `a` key (`internal/tui/components/actionmenu.go`)
+- [x] Session launcher — inline form to launch sessions via `L` key (`internal/tui/components/launcher.go`)
+- [x] Session output streaming — real-time output view via `o` key
+- [x] Timeline view — horizontal bar chart of session lifetimes via `t` key (`internal/tui/views/timeline.go`)
+- [x] Enhanced fleet dashboard — provider bar charts, cost-per-turn, budget gauges, top 5 expensive sessions
+
+### 2.75.5 — Code Organization
+- [x] Extracted key handlers to `internal/tui/handlers.go` (~770 lines)
+- [x] Extracted fleet data builder to `internal/tui/fleet_builder.go` (~200 lines)
+- [x] `app.go` focused on Model/Init/Update/View (~500 lines)
+
 ## Phase 3: i3 Multi-Monitor Integration
 
 > **Depends on:** Phase 2 (session model, fleet dashboard)
@@ -656,7 +703,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 
 ## Phase 6: Advanced Fleet Intelligence
 
-> **Depends on:** Phase 2 (sessions) + Phase 5 (sandboxing)
+> **Depends on:** Phase 2 (sessions) + Phase 5 (sandboxing). Phase 2.75 event bus provides the foundation for 6.4 (analytics), 6.5 (notifications), and 6.7 (replay).
 >
 > **Parallel workstreams:** 6.1 (native loop) and 6.6 (model routing) can proceed in parallel. 6.3 (coordination) depends on 6.1. 6.4 (analytics) and 6.5 (notifications) are independent. 6.7 (replay) depends on 6.4. 6.8-6.10 are independent.
 
@@ -850,12 +897,16 @@ Phase 0.5 (Critical Fixes) ──→ Phase 1 (Harden) ──→ Phase 1.5 (DX)
                                       ↓                     ↓
                                Phase 2 (Multi-Session) ←────┘
                                       │
+                               Phase 2.5 (Multi-LLM)
+                                      │
+                               Phase 2.75 (Event Bus + MCP + TUI) ✅
+                                      │
                                ┌──────┴──────┐
                                ↓              ↓
                           Phase 3 (i3)   Phase 5 (Sandbox)
                                │              │
                                ↓              ↓
-                          Phase 4 (Thin)  Phase 6 (Intel)
+                          Phase 4 (Thin)  Phase 6 (Intel) ←── 2.75 event bus
                                │              │
                                └──────┬───────┘
                                       ↓
@@ -890,6 +941,10 @@ Phase 0.5 (Critical Fixes) ──→ Phase 1 (Harden) ──→ Phase 1.5 (DX)
 6.4 ──→ 6.7 (analytics infrastructure needed for replay)
 
 7.1 ──→ 7.2, 7.4 (K8s operator needed for autoscaling + cost mgmt)
+
+2.75.2 (event bus) ──→ 6.4 (analytics builds on event history)
+2.75.2 (event bus) ──→ 6.5 (external notifications consume events)
+2.75.3 (workflow tools) ──→ 8.3 (workflow engine extends MCP workflows)
 ```
 
 ---
