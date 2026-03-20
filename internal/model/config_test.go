@@ -210,6 +210,35 @@ func TestRalphConfig_Get(t *testing.T) {
 	}
 }
 
+func TestSave_InvalidKey(t *testing.T) {
+	dir := t.TempDir()
+	rcPath := filepath.Join(dir, ".ralphrc")
+
+	tests := []struct {
+		name string
+		key  string
+	}{
+		{"spaces", "BAD KEY"},
+		{"lowercase", "lowercase"},
+		{"special chars", "KEY!@#"},
+		{"starts with number", "1KEY"},
+		{"mixed case", "myKey"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &RalphConfig{
+				Path:   rcPath,
+				Values: map[string]string{tt.key: "value"},
+			}
+			err := cfg.Save()
+			if err == nil {
+				t.Errorf("expected error for key %q, got nil", tt.key)
+			}
+		})
+	}
+}
+
 func TestRalphConfig_Save(t *testing.T) {
 	dir := t.TempDir()
 	rcPath := filepath.Join(dir, ".ralphrc")

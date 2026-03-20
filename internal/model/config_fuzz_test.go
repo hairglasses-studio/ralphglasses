@@ -34,3 +34,23 @@ func FuzzLoadConfig(f *testing.F) {
 		cfg.Get("nonexistent", "fallback")
 	})
 }
+
+func FuzzConfigKey(f *testing.F) {
+	f.Add("VALID_KEY")
+	f.Add("bad key")
+	f.Add("123")
+	f.Add("")
+	f.Add("KEY!")
+	f.Add("lowercase")
+
+	f.Fuzz(func(t *testing.T, key string) {
+		dir := t.TempDir()
+		rcPath := filepath.Join(dir, ".ralphrc")
+		cfg := &RalphConfig{
+			Path:   rcPath,
+			Values: map[string]string{key: "value"},
+		}
+		// Should not panic regardless of key
+		_ = cfg.Save()
+	})
+}

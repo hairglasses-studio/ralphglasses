@@ -560,9 +560,6 @@ func (m Model) View() string {
 	b.WriteString("\n\n")
 
 	// Main content
-	contentHeight := m.Height - 5 // title + status bar + padding
-	_ = contentHeight
-
 	switch m.CurrentView {
 	case ViewOverview:
 		b.WriteString(m.Table.View())

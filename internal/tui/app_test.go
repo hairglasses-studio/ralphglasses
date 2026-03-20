@@ -154,3 +154,250 @@ func TestView(t *testing.T) {
 		t.Error("view should not be empty")
 	}
 }
+
+func TestHandleKeyCtrlC(t *testing.T) {
+	m := NewModel("/tmp/test")
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	if cmd == nil {
+		t.Error("ctrl+c should produce quit command")
+	}
+}
+
+func TestHandleKeyRefresh(t *testing.T) {
+	m := NewModel("/tmp/test")
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
+	if cmd == nil {
+		t.Error("r should produce scan command")
+	}
+}
+
+func TestHandleKeyEscAtRoot(t *testing.T) {
+	m := NewModel("/tmp/test")
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	m = m2.(Model)
+	// At root, Esc does nothing (no crash)
+	if m.CurrentView != ViewOverview {
+		t.Error("Esc at root should stay at overview")
+	}
+}
+
+func TestHandleKeyEscPopsView(t *testing.T) {
+	m := NewModel("/tmp/test")
+	m.pushView(ViewHelp, "Help")
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	m = m2.(Model)
+	if m.CurrentView != ViewOverview {
+		t.Error("Esc should pop back to overview")
+	}
+}
+
+func TestCommandModeInput(t *testing.T) {
+	m := NewModel("/tmp/test")
+	// Enter command mode
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(":")})
+	m = m2.(Model)
+	if m.InputMode != ModeCommand {
+		t.Fatal("should be in command mode")
+	}
+
+	// Type characters
+	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	m = m2.(Model)
+	if m.CommandBuf != "q" {
+		t.Errorf("CommandBuf = %q, want 'q'", m.CommandBuf)
+	}
+
+	// Backspace
+	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	m = m2.(Model)
+	if m.CommandBuf != "" {
+		t.Errorf("after backspace, CommandBuf = %q", m.CommandBuf)
+	}
+
+	// Escape exits command mode
+	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	m = m2.(Model)
+	if m.InputMode != ModeNormal {
+		t.Error("Esc should exit command mode")
+	}
+}
+
+func TestCommandModeExec(t *testing.T) {
+	m := NewModel("/tmp/test")
+	// Enter command mode and type "quit"
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(":")})
+	m = m2.(Model)
+	for _, ch := range "quit" {
+		m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		m = m2.(Model)
+	}
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Error(":quit should produce quit command")
+	}
+}
+
+func TestFilterModeInput(t *testing.T) {
+	m := NewModel("/tmp/test")
+	// Enter filter mode
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	m = m2.(Model)
+	if m.InputMode != ModeFilter {
+		t.Fatal("should be in filter mode")
+	}
+	if !m.Filter.Active {
+		t.Error("filter should be active")
+	}
+
+	// Type characters
+	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m = m2.(Model)
+	if m.Filter.Text != "a" {
+		t.Errorf("Filter.Text = %q, want 'a'", m.Filter.Text)
+	}
+
+	// Enter confirms filter
+	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = m2.(Model)
+	if m.InputMode != ModeNormal {
+		t.Error("Enter should exit filter mode")
+	}
+}
+
+func TestFilterModeEscClears(t *testing.T) {
+	m := NewModel("/tmp/test")
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	m = m2.(Model)
+	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	m = m2.(Model)
+	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	m = m2.(Model)
+	if m.Filter.Text != "" {
+		t.Error("Esc should clear filter text")
+	}
+	if m.Filter.Active {
+		t.Error("Esc should deactivate filter")
+	}
+}
+
+func TestViewRepoDetail(t *testing.T) {
+	m := NewModel("/tmp/test")
+	m.Repos = []*model.Repo{{Name: "test", Path: "/tmp/test"}}
+	m.Width = 120
+	m.Height = 40
+	m.SelectedIdx = 0
+	m.pushView(ViewRepoDetail, "test")
+	view := m.View()
+	if view == "" {
+		t.Error("detail view should not be empty")
+	}
+}
+
+func TestViewLogs(t *testing.T) {
+	m := NewModel("/tmp/test")
+	m.Width = 120
+	m.Height = 40
+	m.LogView.Width = 120
+	m.LogView.Height = 40
+	m.pushView(ViewLogs, "Logs")
+	view := m.View()
+	if view == "" {
+		t.Error("log view should not be empty")
+	}
+}
+
+func TestViewHelp(t *testing.T) {
+	m := NewModel("/tmp/test")
+	m.Width = 120
+	m.Height = 40
+	m.pushView(ViewHelp, "Help")
+	view := m.View()
+	if view == "" {
+		t.Error("help view should not be empty")
+	}
+}
+
+func TestViewCommandMode(t *testing.T) {
+	m := NewModel("/tmp/test")
+	m.Width = 120
+	m.Height = 40
+	m.InputMode = ModeCommand
+	m.CommandBuf = "scan"
+	view := m.View()
+	if view == "" {
+		t.Error("command mode view should not be empty")
+	}
+}
+
+func TestViewFilterMode(t *testing.T) {
+	m := NewModel("/tmp/test")
+	m.Width = 120
+	m.Height = 40
+	m.InputMode = ModeFilter
+	m.Filter.Text = "test"
+	view := m.View()
+	if view == "" {
+		t.Error("filter mode view should not be empty")
+	}
+}
+
+func TestExecUnknownCommand(t *testing.T) {
+	m := NewModel("/tmp/test")
+	m.Width = 120
+	m.Height = 40
+	m2, _ := m.execCommand(Command{Name: "bogus"})
+	_ = m2 // should not panic
+}
+
+func TestExecScanCommand(t *testing.T) {
+	m := NewModel("/tmp/test")
+	_, cmd := m.execCommand(Command{Name: "scan"})
+	if cmd == nil {
+		t.Error(":scan should produce a command")
+	}
+}
+
+func TestExecStopAllCommand(t *testing.T) {
+	m := NewModel("/tmp/test")
+	m2, _ := m.execCommand(Command{Name: "stopall"})
+	_ = m2 // should not panic
+}
+
+func TestTickMsg(t *testing.T) {
+	m := NewModel("/tmp/test")
+	m.Repos = []*model.Repo{{Name: "test", Path: "/tmp/test"}}
+	m2, cmd := m.Update(tickMsg(time.Now()))
+	m = m2.(Model)
+	if cmd == nil {
+		t.Error("tick should produce next tick command")
+	}
+	if m.LastRefresh.IsZero() {
+		t.Error("LastRefresh should be set after tick")
+	}
+}
+
+func TestOverviewKeyJK(t *testing.T) {
+	m := NewModel("/tmp/test")
+	m.Repos = []*model.Repo{{Name: "a", Path: "/tmp/a"}, {Name: "b", Path: "/tmp/b"}}
+	m.updateTable()
+
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	_ = m2 // should not panic
+
+	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	_ = m2 // should not panic
+}
+
+func TestLogViewKeys(t *testing.T) {
+	m := NewModel("/tmp/test")
+	m.LogView.SetLines([]string{"line1", "line2", "line3"})
+	m.LogView.Height = 10
+	m.pushView(ViewLogs, "Logs")
+
+	keys := []string{"j", "k", "G", "g", "f"}
+	for _, k := range keys {
+		m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)})
+		m = m2.(Model)
+	}
+	// Should not panic
+}

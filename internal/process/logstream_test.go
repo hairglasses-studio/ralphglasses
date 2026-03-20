@@ -3,6 +3,7 @@ package process
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -154,7 +155,10 @@ func TestTailLog_MissingFile(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected LogLinesMsg, got %T", msg)
 	}
-	if len(logMsg.Lines) != 0 {
-		t.Errorf("expected 0 lines for missing file, got %d", len(logMsg.Lines))
+	if len(logMsg.Lines) != 1 {
+		t.Fatalf("expected 1 error line for missing file, got %d", len(logMsg.Lines))
+	}
+	if !strings.Contains(logMsg.Lines[0], "[error]") {
+		t.Errorf("expected error indicator, got: %s", logMsg.Lines[0])
 	}
 }

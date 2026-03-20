@@ -2,6 +2,7 @@ package process
 
 import (
 	"path/filepath"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/fsnotify/fsnotify"
@@ -26,7 +27,9 @@ func WatchStatusFiles(repoPaths []string) tea.Cmd {
 			_ = watcher.Add(ralphDir)
 		}
 
-		// Block until an event arrives.
+		// Block until an event arrives or timeout.
+		// Timeout ensures the TUI event loop isn't blocked indefinitely;
+		// the TUI's 2s tick polling picks up from there.
 		for {
 			select {
 			case event, ok := <-watcher.Events:
@@ -45,6 +48,9 @@ func WatchStatusFiles(repoPaths []string) tea.Cmd {
 				if !ok {
 					return nil
 				}
+			case <-time.After(2 * time.Second):
+				_ = watcher.Close()
+				return nil
 			}
 		}
 	}

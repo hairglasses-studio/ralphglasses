@@ -172,6 +172,32 @@ func TestWatchStatusFiles_IgnoresUnrelatedFiles(t *testing.T) {
 	}
 }
 
+func TestWatchStatusFiles_TimeoutReturnsNil(t *testing.T) {
+	repoPath := t.TempDir()
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := WatchStatusFiles([]string{repoPath})
+
+	// No writes — should return nil after timeout (~2s)
+	done := make(chan interface{})
+	go func() {
+		msg := cmd()
+		done <- msg
+	}()
+
+	select {
+	case msg := <-done:
+		if msg != nil {
+			t.Fatalf("expected nil on timeout, got %T", msg)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("watcher did not return within 5s — timeout not working")
+	}
+}
+
 func TestWatchStatusFiles_EmptyPaths(t *testing.T) {
 	cmd := WatchStatusFiles([]string{})
 

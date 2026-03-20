@@ -110,28 +110,49 @@ func (lv *LogView) ToggleFollow() {
 	}
 }
 
+// filteredLines returns lines matching the search filter, or all lines if no search is set.
+func (lv *LogView) filteredLines() []string {
+	if lv.Search == "" {
+		return lv.Lines
+	}
+	needle := strings.ToLower(lv.Search)
+	var filtered []string
+	for _, line := range lv.Lines {
+		if strings.Contains(strings.ToLower(line), needle) {
+			filtered = append(filtered, line)
+		}
+	}
+	return filtered
+}
+
 // View renders the log view.
 func (lv *LogView) View() string {
 	var b strings.Builder
+
+	lines := lv.filteredLines()
 
 	// Header
 	followIndicator := styles.InfoStyle.Render("follow: off")
 	if lv.Follow {
 		followIndicator = styles.StatusRunning.Render("follow: on")
 	}
-	b.WriteString(fmt.Sprintf("  Lines: %d  Offset: %d  %s\n",
-		len(lv.Lines), lv.Offset, followIndicator))
+	header := fmt.Sprintf("  Lines: %d  Offset: %d  %s", len(lines), lv.Offset, followIndicator)
+	if lv.Search != "" {
+		header += fmt.Sprintf("  Search: %q", lv.Search)
+	}
+	b.WriteString(header)
+	b.WriteRune('\n')
 	b.WriteString(styles.InfoStyle.Render(strings.Repeat("─", lv.Width)))
 	b.WriteRune('\n')
 
 	vis := lv.visibleLines()
 	end := lv.Offset + vis
-	if end > len(lv.Lines) {
-		end = len(lv.Lines)
+	if end > len(lines) {
+		end = len(lines)
 	}
 
 	for i := lv.Offset; i < end; i++ {
-		line := lv.Lines[i]
+		line := lines[i]
 		if lv.Width > 0 && len([]rune(line)) > lv.Width {
 			line = string([]rune(line)[:lv.Width])
 		}
