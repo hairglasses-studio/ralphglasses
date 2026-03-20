@@ -10,7 +10,7 @@ import (
 
 // OverviewColumns defines the overview table structure.
 var OverviewColumns = []components.Column{
-	{Title: "Name", Width: 20, Sortable: true},
+	{Title: "Name", Width: 20, Sortable: true, Grow: true},
 	{Title: "Status", Width: 12, Sortable: true},
 	{Title: "Loop #", Width: 8, Sortable: true},
 	{Title: "Calls", Width: 10, Sortable: true},
@@ -21,7 +21,10 @@ var OverviewColumns = []components.Column{
 
 // NewOverviewTable creates a table pre-configured for the overview.
 func NewOverviewTable() *components.Table {
-	return components.NewTable(OverviewColumns)
+	t := components.NewTable(OverviewColumns)
+	t.EmptyMessage = "No repos found — press r to scan"
+	t.StatusColumn = 1
+	return t
 }
 
 // ReposToRows converts repo models to table rows with styled cells.

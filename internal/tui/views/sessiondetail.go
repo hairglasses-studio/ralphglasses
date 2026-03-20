@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/NimbleMarkets/ntcharts/sparkline"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
@@ -33,6 +34,8 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 	exitReason := s.ExitReason
 	lastOutput := s.LastOutput
 	errMsg := s.Error
+	costHistory := make([]float64, len(s.CostHistory))
+	copy(costHistory, s.CostHistory)
 	s.Unlock()
 
 	var b strings.Builder
@@ -80,6 +83,23 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 		turnStr = fmt.Sprintf("%d/%d", turns, maxTurns)
 	}
 	b.WriteString(fmt.Sprintf("  Turns:         %s\n", turnStr))
+
+	// Cost sparkline
+	if len(costHistory) > 1 {
+		sparkWidth := 30
+		if width > 0 && width-4 < sparkWidth {
+			sparkWidth = width - 4
+		}
+		points := costHistory
+		if len(points) > sparkWidth {
+			points = points[len(points)-sparkWidth:]
+		}
+		sl := sparkline.New(sparkWidth, 2)
+		for _, v := range points {
+			sl.Push(v)
+		}
+		b.WriteString(fmt.Sprintf("  Cost trend:    %s\n", sl.View()))
+	}
 	b.WriteString("\n")
 
 	// Error
@@ -111,7 +131,7 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 		b.WriteString("\n")
 	}
 
-	b.WriteString(styles.HelpStyle.Render("  X: stop session  Esc: back"))
+	b.WriteString(styles.HelpStyle.Render("  X: stop session  d: git diff  Esc: back"))
 
 	return b.String()
 }

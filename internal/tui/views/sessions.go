@@ -13,7 +13,7 @@ import (
 var SessionColumns = []components.Column{
 	{Title: "ID", Width: 10, Sortable: true},
 	{Title: "Provider", Width: 8, Sortable: true},
-	{Title: "Repo", Width: 16, Sortable: true},
+	{Title: "Repo", Width: 16, Sortable: true, Grow: true},
 	{Title: "Status", Width: 10, Sortable: true},
 	{Title: "Model", Width: 14, Sortable: true},
 	{Title: "Spent", Width: 8, Sortable: true},
@@ -25,7 +25,10 @@ var SessionColumns = []components.Column{
 
 // NewSessionsTable creates a table pre-configured for sessions.
 func NewSessionsTable() *components.Table {
-	return components.NewTable(SessionColumns)
+	t := components.NewTable(SessionColumns)
+	t.EmptyMessage = "No sessions — launch via MCP"
+	t.StatusColumn = 3
+	return t
 }
 
 // SessionsToRows converts sessions to table rows with styled cells.

@@ -90,6 +90,38 @@ var (
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(ColorDarkGray).
 		Padding(0, 1)
+
+	// Modal/Menu styles
+	ModalBoxStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(ColorAccent).
+		Padding(1, 2)
+
+	ModalButtonStyle = lipgloss.NewStyle().
+		Foreground(ColorGray).
+		Padding(0, 2)
+
+	ModalButtonActiveStyle = lipgloss.NewStyle().
+		Foreground(ColorBrightWhite).
+		Background(ColorDarkBg).
+		Bold(true).
+		Padding(0, 2)
+
+	MenuStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(ColorPrimary).
+		Padding(0, 1)
+
+	MenuItemStyle = lipgloss.NewStyle().
+		Foreground(ColorGray)
+
+	MenuItemActiveStyle = lipgloss.NewStyle().
+		Foreground(ColorBrightWhite).
+		Background(ColorDarkBg).
+		Bold(true)
+
+	MenuItemDestructiveStyle = lipgloss.NewStyle().
+		Foreground(ColorRed)
 )
 
 // ProviderStyle returns the appropriate style for a provider string.
