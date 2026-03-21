@@ -11,16 +11,16 @@ import (
 
 // SessionColumns defines the sessions table structure.
 var SessionColumns = []components.Column{
-	{Title: "ID", Width: 10, Sortable: true},
-	{Title: "Provider", Width: 10, Sortable: true},
-	{Title: "Repo", Width: 16, Sortable: true, Grow: true},
-	{Title: "Status", Width: 14, Sortable: true},
-	{Title: "Budget", Width: 16, Sortable: true},
-	{Title: "Trend", Width: 10, Sortable: false},
-	{Title: "Turns", Width: 12, Sortable: true},
-	{Title: "Agent", Width: 10, Sortable: false},
-	{Title: "Team", Width: 10, Sortable: false},
-	{Title: "Duration", Width: 10, Sortable: true},
+	{Title: "ID", Width: 9, Sortable: true},
+	{Title: "Prov", Width: 8, Sortable: true},
+	{Title: "Repo", Width: 14, Sortable: true, Grow: true},
+	{Title: "Status", Width: 10, Sortable: true},
+	{Title: "Budget", Width: 12, Sortable: true},
+	{Title: "Trend", Width: 8, Sortable: false},
+	{Title: "Turns", Width: 8, Sortable: true},
+	{Title: "Agent", Width: 8, Sortable: false},
+	{Title: "Team", Width: 8, Sortable: false},
+	{Title: "Dur", Width: 8, Sortable: true},
 }
 
 // NewSessionsTable creates a table pre-configured for sessions.
@@ -55,33 +55,32 @@ func SessionsToRows(sessions []*session.Session, tickFrame int) []components.Row
 		s.Unlock()
 
 		// Provider with icon
-		providerCell := fmt.Sprintf("%s %s",
-			styles.ProviderIcon(provider),
-			styles.ProviderStyle(provider).Render(provider))
+		providerCell := fmt.Sprintf("%s%s",
+			styles.ProviderIcon(provider), provider)
 
 		// Status with activity dot + icon
 		isActive := status == "running" || status == "launching"
-		statusCell := fmt.Sprintf("%s %s %s",
+		statusCell := fmt.Sprintf("%s%s %s",
 			components.ActivityDot(isActive, tickFrame),
 			styles.StatusIcon(status),
-			styles.StatusStyle(status).Render(status))
+			status)
 
 		// Budget gauge
 		budgetCell := fmt.Sprintf("$%.2f", spent)
 		if budget > 0 {
-			budgetCell = components.GaugeWithLabel(spent, budget, 8, fmt.Sprintf("$%.2f", spent))
+			budgetCell = components.GaugeWithLabel(spent, budget, 5, fmt.Sprintf("$%.0f", spent))
 		}
 
 		// Cost trend sparkline
 		trendCell := ""
 		if len(costHistory) > 1 {
-			trendCell = components.InlineSparkline(costHistory, 8)
+			trendCell = components.InlineSparkline(costHistory, 6)
 		}
 
 		// Turns gauge
 		turnsCell := fmt.Sprintf("%d", turns)
 		if maxTurns > 0 {
-			turnsCell = components.GaugeWithLabel(float64(turns), float64(maxTurns), 6, fmt.Sprintf("%d/%d", turns, maxTurns))
+			turnsCell = fmt.Sprintf("%d/%d", turns, maxTurns)
 		}
 
 		rows = append(rows, components.Row{
