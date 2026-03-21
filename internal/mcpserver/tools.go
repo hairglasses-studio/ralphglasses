@@ -1213,19 +1213,17 @@ func (s *Server) handleTeamDelegate(_ context.Context, req mcp.CallToolRequest) 
 		return errResult("task description required"), nil
 	}
 
-	team, ok := s.SessMgr.GetTeam(name)
-	if !ok {
-		return errResult(fmt.Sprintf("team not found: %s", name)), nil
-	}
-
 	taskProvider := session.Provider(getStringArg(req, "provider"))
-	team.Tasks = append(team.Tasks, session.TeamTask{
+	count, err := s.SessMgr.DelegateTask(name, session.TeamTask{
 		Description: task,
 		Provider:    taskProvider,
 		Status:      "pending",
 	})
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
 
-	return textResult(fmt.Sprintf("Added task to team %s (%d total tasks)", name, len(team.Tasks))), nil
+	return textResult(fmt.Sprintf("Added task to team %s (%d total tasks)", name, count)), nil
 }
 
 // Agent handlers
