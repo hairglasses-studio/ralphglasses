@@ -180,9 +180,7 @@ func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 			args = append(args, "-w", opts.Worktree)
 		}
 	}
-	if opts.SessionName != "" {
-		args = append(args, "-n", opts.SessionName)
-	}
+	// SessionName is tracked internally; Claude CLI has no --name flag.
 
 	cmd := exec.CommandContext(ctx, "claude", args...)
 	cmd.Dir = opts.RepoPath
