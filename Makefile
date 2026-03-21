@@ -1,7 +1,8 @@
 VERSION := $(shell git describe --tags --always --dirty)
-LDFLAGS := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSION)
+COMMIT  := $(shell git rev-parse --short HEAD)
+LDFLAGS := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSION) -X github.com/hairglasses-studio/ralphglasses/cmd.commit=$(COMMIT)
 
-.PHONY: test test-verbose test-cover test-integration test-scripts fuzz build build-release install vet lint ci clean release snapshot
+.PHONY: test test-verbose test-cover test-integration test-scripts fuzz build build-release install vet lint ci clean release snapshot mcp dev-mcp
 
 # Run all tests with race detector
 test:
@@ -78,3 +79,11 @@ release:
 # Goreleaser snapshot (local testing)
 snapshot:
 	goreleaser release --snapshot --clean
+
+# Rebuild binary then confirm ready for MCP
+mcp: build-release
+	@echo "Binary rebuilt: ./ralphglasses ($(VERSION) $(COMMIT))"
+
+# Run MCP server with live compilation (always fresh code)
+dev-mcp:
+	go run -ldflags "$(LDFLAGS)" . mcp --scan-path ~/hairglasses-studio
