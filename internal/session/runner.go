@@ -97,9 +97,10 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 	s.Status = StatusRunning
 	s.mu.Unlock()
 
-	// Write prompt to stdin and close (Codex takes prompt as positional arg, skip stdin)
+	// Write prompt to stdin and close.
+	// Gemini and Codex take prompt as a CLI argument, not stdin.
 	go func() {
-		if provider != ProviderCodex && opts.Prompt != "" {
+		if provider == ProviderClaude && opts.Prompt != "" {
 			_, _ = io.WriteString(stdin, opts.Prompt)
 		}
 		stdin.Close()
