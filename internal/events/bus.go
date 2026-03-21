@@ -25,6 +25,9 @@ const (
 	// Team
 	TeamCreated EventType = "team.created"
 
+	// Journal
+	JournalWritten EventType = "journal.written"
+
 	// Config and scan
 	ConfigChanged EventType = "config.changed"
 	ScanComplete  EventType = "scan.complete"

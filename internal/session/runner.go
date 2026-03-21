@@ -173,6 +173,19 @@ func runSession(s *Session, stdout, stderr io.Reader) {
 			},
 		})
 	}
+
+	// Write improvement journal entry (fire-and-forget)
+	go func() {
+		if err := WriteJournalEntry(s); err == nil && s.bus != nil {
+			s.bus.Publish(events.Event{
+				Type:      events.JournalWritten,
+				SessionID: s.ID,
+				RepoPath:  s.RepoPath,
+				RepoName:  s.RepoName,
+				Provider:  string(s.Provider),
+			})
+		}
+	}()
 }
 
 // runSessionOutput parses streaming JSON lines from stdout and updates session state.
