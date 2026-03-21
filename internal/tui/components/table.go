@@ -1,7 +1,6 @@
 package components
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
@@ -269,7 +268,7 @@ func (t *Table) View() string {
 				title += " ▼"
 			}
 		}
-		hdr = append(hdr, styles.HeaderStyle.Render(fmt.Sprintf("%-*s", col.Width, title)))
+		hdr = append(hdr, styles.HeaderStyle.Render(visualPad(title, col.Width)))
 	}
 	b.WriteString(strings.Join(hdr, " "))
 	b.WriteRune('\n')
@@ -309,7 +308,7 @@ func (t *Table) View() string {
 			if ci < len(row) {
 				cell = row[ci]
 			}
-			padded := fmt.Sprintf("%-*s", col.Width, truncate(cell, col.Width))
+			padded := visualPad(cell, col.Width)
 			if vi == t.Cursor {
 				padded = styles.SelectedStyle.Render(padded)
 			}
@@ -345,6 +344,19 @@ func truncate(s string, maxW int) string {
 		return string(r[:maxW])
 	}
 	return string(r[:maxW-1]) + "…"
+}
+
+// visualPad truncates (ANSI-aware) then pads to the given visual width.
+func visualPad(s string, width int) string {
+	vw := VisualWidth(s)
+	if vw > width {
+		s = VisualTruncate(s, width)
+		vw = VisualWidth(s)
+	}
+	if vw < width {
+		s += strings.Repeat(" ", width-vw)
+	}
+	return s
 }
 
 func max(a, b int) int {

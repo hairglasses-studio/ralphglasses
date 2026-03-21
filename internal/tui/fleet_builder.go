@@ -78,6 +78,11 @@ func (m *Model) buildFleetData() views.FleetData {
 	}
 	data.Repos = m.Repos
 
+	// Event history
+	if m.EventBus != nil {
+		data.Events = m.EventBus.History("", 10)
+	}
+
 	// Session stats
 	if m.SessMgr != nil {
 		sessions := m.SessMgr.List("")
@@ -106,6 +111,7 @@ func (m *Model) buildFleetData() views.FleetData {
 				data.RunningSessions++
 			}
 			data.TotalSpendUSD += spent
+			data.TotalTurns += turns
 			// Aggregate cost histories for fleet sparkline
 			if len(s.CostHistory) > 0 {
 				data.CostHistory = append(data.CostHistory, s.CostHistory...)

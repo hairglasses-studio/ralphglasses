@@ -96,21 +96,18 @@ func RenderTimeline(entries []TimelineEntry, repoName string, width, height int)
 			endCol = barWidth
 		}
 
-		// Build bar
-		bar := make([]byte, barWidth)
-		for i := range bar {
-			bar[i] = ' '
+		// Build bar using runes for proper Unicode block chars
+		barRunes := make([]rune, barWidth)
+		for i := range barRunes {
+			barRunes[i] = ' '
 		}
-		fillChar := byte('#') // ASCII fallback
 		for i := startCol; i < endCol; i++ {
-			bar[i] = fillChar
+			barRunes[i] = '█'
 		}
 
-		barStr := string(bar)
-		// Color the filled portion
-		pre := barStr[:startCol]
-		filled := barStr[startCol:endCol]
-		post := barStr[endCol:]
+		pre := string(barRunes[:startCol])
+		filled := string(barRunes[startCol:endCol])
+		post := string(barRunes[endCol:])
 
 		style := statusTimelineStyle(e.Status)
 		b.WriteString(pre)

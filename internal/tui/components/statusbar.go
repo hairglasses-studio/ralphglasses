@@ -10,40 +10,69 @@ import (
 
 // StatusBar renders the bottom status bar.
 type StatusBar struct {
-	Width         int
-	Mode          string // "NORMAL", "COMMAND", "FILTER"
-	Filter        string
-	RepoCount     int
-	RunningCount  int
-	SessionCount  int
-	TotalSpendUSD float64
-	AlertCount    int
-	LastRefresh   time.Time
-	SpinnerFrame  string
+	Width                int
+	Mode                 string // "NORMAL", "COMMAND", "FILTER"
+	Filter               string
+	RepoCount            int
+	RunningCount         int
+	SessionCount         int
+	TotalSpendUSD        float64
+	AlertCount           int
+	LastRefresh          time.Time
+	SpinnerFrame         string
+	ProviderCounts       map[string]int // running sessions per provider
+	FleetBudgetPct       float64        // aggregate budget utilization (0-1)
+	TickFrame            int
+	HighestAlertSeverity string // "critical", "warning", "info", ""
 }
 
 // View renders the status bar.
 func (s *StatusBar) View() string {
-	left := fmt.Sprintf(" %s  repos:%d  running:%d  sessions:%d  spend:$%.2f",
-		styles.CommandStyle.Render(s.Mode), s.RepoCount, s.RunningCount,
-		s.SessionCount, s.TotalSpendUSD)
+	// Mode indicator with icon
+	modeStr := styles.CommandStyle.Render(s.Mode)
 
-	if s.RunningCount > 0 && s.SpinnerFrame != "" {
-		left += " " + s.SpinnerFrame
+	// Build left sections
+	var parts []string
+	parts = append(parts, fmt.Sprintf(" %s", modeStr))
+	parts = append(parts, fmt.Sprintf("%s %d", styles.IconRepo, s.RepoCount))
+	parts = append(parts, fmt.Sprintf("%s %d", styles.IconRunning, s.RunningCount))
+	parts = append(parts, fmt.Sprintf("%s %d", styles.IconSession, s.SessionCount))
+	parts = append(parts, fmt.Sprintf("%s $%.2f", styles.IconBudget, s.TotalSpendUSD))
+
+	// Per-provider running counts
+	for _, p := range []string{"claude", "gemini", "codex"} {
+		if count, ok := s.ProviderCounts[p]; ok && count > 0 {
+			parts = append(parts, fmt.Sprintf("%s %d", styles.ProviderIcon(p), count))
+		}
 	}
 
+	// Fleet budget gauge (compact)
+	if s.FleetBudgetPct > 0 {
+		pctStr := fmt.Sprintf("%.0f%%", s.FleetBudgetPct*100)
+		gauge := InlineGauge(s.FleetBudgetPct, 1.0, 5)
+		parts = append(parts, fmt.Sprintf("%s %s", gauge, pctStr))
+	}
+
+	// Alerts
 	if s.AlertCount > 0 {
-		left += fmt.Sprintf("  %s",
-			styles.StatusFailed.Render(fmt.Sprintf("alerts:%d", s.AlertCount)))
+		icon := styles.AlertIcon(s.HighestAlertSeverity)
+		parts = append(parts, fmt.Sprintf("%s %d", icon, s.AlertCount))
 	}
 
-	right := fmt.Sprintf("refreshed %s ", formatAgo(s.LastRefresh))
+	// Spinner for running
+	if s.RunningCount > 0 && s.SpinnerFrame != "" {
+		parts = append(parts, s.SpinnerFrame)
+	}
+
+	left := strings.Join(parts, "  ")
 
 	if s.Filter != "" {
 		left += fmt.Sprintf("  /%s", s.Filter)
 	}
 
-	padding := s.Width - lipglossWidth(left) - lipglossWidth(right)
+	right := fmt.Sprintf("%s %s ", styles.IconClock, formatAgo(s.LastRefresh))
+
+	padding := s.Width - VisualWidth(left) - VisualWidth(right)
 	if padding < 1 {
 		padding = 1
 	}
@@ -59,28 +88,7 @@ func formatAgo(t time.Time) string {
 	}
 	d := time.Since(t)
 	if d < time.Minute {
-		return fmt.Sprintf("%ds ago", int(d.Seconds()))
+		return fmt.Sprintf("%ds", int(d.Seconds()))
 	}
-	return fmt.Sprintf("%dm ago", int(d.Minutes()))
-}
-
-func lipglossWidth(s string) int {
-	// Rough width — count runes, ignoring ANSI.
-	// Good enough for padding calculations.
-	n := 0
-	inEsc := false
-	for _, r := range s {
-		if r == '\x1b' {
-			inEsc = true
-			continue
-		}
-		if inEsc {
-			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
-				inEsc = false
-			}
-			continue
-		}
-		n++
-	}
-	return n
+	return fmt.Sprintf("%dm", int(d.Minutes()))
 }
