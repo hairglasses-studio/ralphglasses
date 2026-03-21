@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"syscall"
 )
@@ -329,6 +330,65 @@ func filterEnv(env []string, key string) []string {
 		}
 	}
 	return out
+}
+
+// sanitizeStderr cleans provider-specific noise from stderr output.
+// For Gemini, strips JS stack traces and extracts the actionable error message.
+// For other providers, returns the input unchanged.
+func sanitizeStderr(provider Provider, raw string) string {
+	if raw == "" {
+		return raw
+	}
+	switch provider {
+	case ProviderGemini:
+		return sanitizeGeminiStderr(raw)
+	default:
+		return raw
+	}
+}
+
+// sanitizeGeminiStderr extracts actionable error lines from Gemini CLI's
+// Node.js stack traces. Keeps lines matching known error patterns and
+// drops "    at " stack frames.
+func sanitizeGeminiStderr(raw string) string {
+	var kept []string
+	for _, line := range strings.Split(raw, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		// Skip JS stack trace frames
+		if strings.HasPrefix(trimmed, "at ") {
+			continue
+		}
+		kept = append(kept, trimmed)
+	}
+	if len(kept) == 0 {
+		return raw
+	}
+	return strings.Join(kept, "\n")
+}
+
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+
+// cleanProviderOutput extracts human-readable output from stderr for
+// providers whose stdout JSON stream may not capture all output.
+// For Codex, strips ANSI codes and returns the last non-empty line
+// (typically the summary). For other providers, returns empty string.
+func cleanProviderOutput(provider Provider, raw string) string {
+	if provider != ProviderCodex || raw == "" {
+		return ""
+	}
+	cleaned := ansiRe.ReplaceAllString(raw, "")
+	lines := strings.Split(cleaned, "\n")
+	// Walk backwards to find the last non-empty line
+	for i := len(lines) - 1; i >= 0; i-- {
+		trimmed := strings.TrimSpace(lines[i])
+		if trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 // normalizeCodexEvent parses Codex quiet-mode output into StreamEvent.
