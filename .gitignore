@@ -31,5 +31,13 @@ ralphglasses-mcp
 # direnv
 .envrc
 
+# Gemini CLI (keep .gemini/settings.json tracked)
+.gemini/history/
+.gemini/tmp/
+
+# Codex CLI (keep .codex/config.toml tracked)
+.codex/sessions/
+.codex/cache/
+
 # Test artifacts
 cover.out

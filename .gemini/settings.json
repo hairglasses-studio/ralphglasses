@@ -1,0 +1,16 @@
+{
+  "model": "gemini-3-pro",
+  "generationConfig": {
+    "thinkingConfig": {
+      "thinkingBudget": -1
+    },
+    "temperature": 0.0
+  },
+  "mcpServers": {
+    "ralphglasses": {
+      "command": "go",
+      "args": ["run", ".", "mcp", "--scan-path", "~/hairglasses-studio"],
+      "cwd": "/home/hairglasses/Docs/hairglasses-studio/ralphglasses"
+    }
+  }
+}
