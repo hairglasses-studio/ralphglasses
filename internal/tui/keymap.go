@@ -285,6 +285,27 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
+	case ViewDiff:
+		k.StartLoop.SetEnabled(false)
+		k.StopAction.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.Space.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+		k.TimelineView.SetEnabled(false)
+	case ViewHelp:
+		k.StartLoop.SetEnabled(false)
+		k.StopAction.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.DiffView.SetEnabled(false)
+		k.Space.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+		k.TimelineView.SetEnabled(false)
 	}
 }
 

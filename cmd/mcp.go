@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
 	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
@@ -22,6 +23,9 @@ var mcpCmd = &cobra.Command{
 		)
 
 		bus := events.NewBus(1000)
+		hookExec := hooks.NewExecutor(bus)
+		hookExec.Start()
+		defer hookExec.Stop()
 		rg := mcpserver.NewServerWithBus(sp, bus)
 		rg.Register(srv)
 

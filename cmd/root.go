@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
@@ -39,6 +40,9 @@ var rootCmd = &cobra.Command{
 		}
 
 		bus := events.NewBus(1000)
+		hookExec := hooks.NewExecutor(bus)
+		hookExec.Start()
+		defer hookExec.Stop()
 		sessMgr := session.NewManagerWithBus(bus)
 		m := tui.NewModel(scanPath, sessMgr)
 		m.NotifyEnabled = notifyFlag
