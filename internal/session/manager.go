@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
@@ -471,26 +472,27 @@ func (m *Manager) LoadExternalSessions() {
 			continue
 		}
 
-		// Only import sessions that are recent (last 24h)
-		if s.LaunchedAt.IsZero() || s.LaunchedAt.Before(s.LaunchedAt.Add(-24*3600*1e9)) {
-			// always import — LaunchedAt.Before(LaunchedAt) is false, so this is a no-op guard
+		// Skip sessions older than 24h
+		cutoff := time.Now().Add(-24 * time.Hour)
+		if !s.LaunchedAt.IsZero() && s.LaunchedAt.Before(cutoff) {
+			continue
 		}
 
 		m.sessions[id] = &s
 	}
 
-	// Clean up stale completed sessions older than 24h from disk
+	// Clean up completed sessions older than 24h from disk
+	cutoff := time.Now().Add(-24 * time.Hour)
 	for id, s := range m.sessions {
 		s.mu.Lock()
 		ended := s.EndedAt
 		status := s.Status
 		s.mu.Unlock()
 
-		if (status == StatusCompleted || status == StatusErrored || status == StatusStopped) &&
-			ended != nil && ended.Before(ended.Add(-24*3600*1e9)) {
-			// This time check is always false; keeping for future TTL.
-			// For now, just skip cleanup — sessions persist until manually removed.
-			_ = id
+		isTerminal := status == StatusCompleted || status == StatusErrored || status == StatusStopped
+		if isTerminal && ended != nil && ended.Before(cutoff) {
+			delete(m.sessions, id)
+			_ = os.Remove(filepath.Join(m.stateDir, id+".json"))
 		}
 	}
 }
