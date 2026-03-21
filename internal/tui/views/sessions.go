@@ -12,14 +12,14 @@ import (
 // SessionColumns defines the sessions table structure.
 var SessionColumns = []components.Column{
 	{Title: "ID", Width: 10, Sortable: true},
-	{Title: "Provider", Width: 8, Sortable: true},
+	{Title: "Provider", Width: 10, Sortable: true},
 	{Title: "Repo", Width: 16, Sortable: true, Grow: true},
-	{Title: "Status", Width: 10, Sortable: true},
-	{Title: "Model", Width: 14, Sortable: true},
-	{Title: "Spent", Width: 8, Sortable: true},
-	{Title: "Turns", Width: 6, Sortable: true},
-	{Title: "Agent", Width: 12, Sortable: false},
-	{Title: "Team", Width: 12, Sortable: false},
+	{Title: "Status", Width: 14, Sortable: true},
+	{Title: "Budget", Width: 16, Sortable: true},
+	{Title: "Trend", Width: 10, Sortable: false},
+	{Title: "Turns", Width: 12, Sortable: true},
+	{Title: "Agent", Width: 10, Sortable: false},
+	{Title: "Team", Width: 10, Sortable: false},
 	{Title: "Duration", Width: 10, Sortable: true},
 }
 
@@ -32,7 +32,7 @@ func NewSessionsTable() *components.Table {
 }
 
 // SessionsToRows converts sessions to table rows with styled cells.
-func SessionsToRows(sessions []*session.Session) []components.Row {
+func SessionsToRows(sessions []*session.Session, tickFrame int) []components.Row {
 	rows := make([]components.Row, 0, len(sessions))
 	for _, s := range sessions {
 		s.Lock()
@@ -43,22 +43,55 @@ func SessionsToRows(sessions []*session.Session) []components.Row {
 		provider := string(s.Provider)
 		repo := s.RepoName
 		status := string(s.Status)
-		model := s.Model
-		spent := fmt.Sprintf("$%.2f", s.SpentUSD)
-		turns := fmt.Sprintf("%d", s.TurnCount)
+		spent := s.SpentUSD
+		budget := s.BudgetUSD
+		turns := s.TurnCount
+		maxTurns := s.MaxTurns
 		agent := s.AgentName
 		team := s.TeamName
 		dur := formatDuration(s.LaunchedAt)
+		costHistory := make([]float64, len(s.CostHistory))
+		copy(costHistory, s.CostHistory)
 		s.Unlock()
+
+		// Provider with icon
+		providerCell := fmt.Sprintf("%s %s",
+			styles.ProviderIcon(provider),
+			styles.ProviderStyle(provider).Render(provider))
+
+		// Status with activity dot + icon
+		isActive := status == "running" || status == "launching"
+		statusCell := fmt.Sprintf("%s %s %s",
+			components.ActivityDot(isActive, tickFrame),
+			styles.StatusIcon(status),
+			styles.StatusStyle(status).Render(status))
+
+		// Budget gauge
+		budgetCell := fmt.Sprintf("$%.2f", spent)
+		if budget > 0 {
+			budgetCell = components.GaugeWithLabel(spent, budget, 8, fmt.Sprintf("$%.2f", spent))
+		}
+
+		// Cost trend sparkline
+		trendCell := ""
+		if len(costHistory) > 1 {
+			trendCell = components.InlineSparkline(costHistory, 8)
+		}
+
+		// Turns gauge
+		turnsCell := fmt.Sprintf("%d", turns)
+		if maxTurns > 0 {
+			turnsCell = components.GaugeWithLabel(float64(turns), float64(maxTurns), 6, fmt.Sprintf("%d/%d", turns, maxTurns))
+		}
 
 		rows = append(rows, components.Row{
 			id,
-			components.StyledCell(styles.ProviderStyle(provider), provider),
+			providerCell,
 			repo,
-			components.StyledCell(styles.StatusStyle(status), status),
-			model,
-			spent,
-			turns,
+			statusCell,
+			budgetCell,
+			trendCell,
+			turnsCell,
 			agent,
 			team,
 			dur,

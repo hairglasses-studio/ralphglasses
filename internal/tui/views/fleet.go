@@ -3,11 +3,14 @@ package views
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/NimbleMarkets/ntcharts/sparkline"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
+	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
@@ -48,12 +51,14 @@ type FleetData struct {
 	TotalSessions   int
 	RunningSessions int
 	TotalSpendUSD   float64
+	TotalTurns      int
 	OpenCircuits    int
 	Providers       map[string]ProviderStat
 	Alerts          []FleetAlert
 	Repos           []*model.Repo
 	Sessions        []*session.Session
-	CostHistory     []float64 // aggregate cost-over-time data points
+	Events          []events.Event  // recent events from bus
+	CostHistory     []float64       // aggregate cost-over-time data points
 	CostPerTurn     map[string]float64  // provider → avg cost/turn
 	TopExpensive    []ExpensiveSession  // top 5 by spend
 	RepoBudgets     []RepoBudget        // per-repo utilization
@@ -63,20 +68,21 @@ type FleetData struct {
 func RenderFleetDashboard(data FleetData, width, height int) string {
 	var b strings.Builder
 
-	b.WriteString(styles.TitleStyle.Render("Fleet Dashboard"))
+	b.WriteString(styles.TitleStyle.Render(fmt.Sprintf("%s Fleet Dashboard", styles.IconFleet)))
 	b.WriteString("\n\n")
 
-	// Stats bar — horizontal row of boxed stats
+	// Stats bar — horizontal row of boxed stats with icons
 	statBoxes := []string{
-		styles.StatBox.Render(fmt.Sprintf("REPOS\n  %d", data.TotalRepos)),
-		styles.StatBox.Render(fmt.Sprintf("LOOPS\n  %d run / %d pause", data.RunningLoops, data.PausedLoops)),
-		styles.StatBox.Render(fmt.Sprintf("SESSIONS\n  %d / %d run", data.TotalSessions, data.RunningSessions)),
-		styles.StatBox.Render(fmt.Sprintf("SPEND\n  $%.2f", data.TotalSpendUSD)),
+		styles.StatBox.Render(fmt.Sprintf("%s REPOS\n  %d", styles.IconRepo, data.TotalRepos)),
+		styles.StatBox.Render(fmt.Sprintf("%s LOOPS\n  %d run / %d pause", styles.IconRunning, data.RunningLoops, data.PausedLoops)),
+		styles.StatBox.Render(fmt.Sprintf("%s SESSIONS\n  %d / %d run", styles.IconSession, data.TotalSessions, data.RunningSessions)),
+		styles.StatBox.Render(fmt.Sprintf("%s SPEND\n  $%.2f", styles.IconBudget, data.TotalSpendUSD)),
+		styles.StatBox.Render(fmt.Sprintf("%s TURNS\n  %d", styles.IconTurns, data.TotalTurns)),
 	}
 
-	circuitBox := fmt.Sprintf("CIRCUITS\n  %d open", data.OpenCircuits)
+	circuitBox := fmt.Sprintf("%s CIRCUITS\n  %d open", styles.IconCBClosed, data.OpenCircuits)
 	if data.OpenCircuits > 0 {
-		circuitBox = styles.StatusFailed.Render(circuitBox)
+		circuitBox = fmt.Sprintf("%s CIRCUITS\n  %s", styles.IconCBOpen, styles.StatusFailed.Render(fmt.Sprintf("%d open", data.OpenCircuits)))
 	}
 	statBoxes = append(statBoxes, styles.StatBox.Render(circuitBox))
 
@@ -100,108 +106,60 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 		for _, v := range points {
 			sl.Push(v)
 		}
-		b.WriteString(styles.HeaderStyle.Render("Cost Trend"))
+		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Cost Trend", styles.IconCost)))
 		b.WriteString("\n")
 		b.WriteString(sl.View())
 		b.WriteString("\n\n")
 	}
 
-	// Provider breakdown
+	// Provider breakdown with mini gauges
 	if len(data.Providers) > 0 {
-		b.WriteString(styles.HeaderStyle.Render("Provider Breakdown"))
+		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Provider Breakdown", styles.IconSession)))
 		b.WriteString("\n")
-		b.WriteString(fmt.Sprintf("  %-10s %-10s %-10s %-10s\n",
-			styles.HeaderStyle.Render("Provider"),
-			styles.HeaderStyle.Render("Sessions"),
-			styles.HeaderStyle.Render("Running"),
-			styles.HeaderStyle.Render("Spend")))
-		for provider, stat := range data.Providers {
-			b.WriteString(fmt.Sprintf("  %-10s %-10d %-10d $%-9.2f\n",
+		for _, provider := range []string{"claude", "gemini", "codex"} {
+			stat, ok := data.Providers[provider]
+			if !ok {
+				continue
+			}
+			gauge := ""
+			if data.TotalSessions > 0 {
+				gauge = components.InlineGauge(float64(stat.Running), float64(stat.Sessions), 6)
+			}
+			b.WriteString(fmt.Sprintf("  %s %-8s %s %d/%d sess  $%.2f",
+				styles.ProviderIcon(provider),
 				styles.ProviderStyle(provider).Render(provider),
-				stat.Sessions, stat.Running, stat.SpendUSD))
-		}
-		b.WriteString("\n")
-	}
-
-	// Provider spend bar chart
-	if len(data.Providers) > 0 {
-		maxSpend := 0.0
-		for _, stat := range data.Providers {
-			if stat.SpendUSD > maxSpend {
-				maxSpend = stat.SpendUSD
-			}
-		}
-		if maxSpend > 0 {
-			barMaxWidth := width/2 - 25
-			if barMaxWidth < 10 {
-				barMaxWidth = 10
-			}
-			b.WriteString(styles.HeaderStyle.Render("Provider Spend"))
-			b.WriteString("\n")
-			for provider, stat := range data.Providers {
-				barLen := int(stat.SpendUSD / maxSpend * float64(barMaxWidth))
-				if barLen < 1 && stat.SpendUSD > 0 {
-					barLen = 1
-				}
-				bar := strings.Repeat("█", barLen)
-				b.WriteString(fmt.Sprintf("  %-8s %s $%.2f\n",
-					styles.ProviderStyle(provider).Render(provider),
-					styles.ProviderStyle(provider).Render(bar),
-					stat.SpendUSD))
+				gauge,
+				stat.Running, stat.Sessions,
+				stat.SpendUSD))
+			if cpt, ok := data.CostPerTurn[provider]; ok && cpt > 0 {
+				b.WriteString(fmt.Sprintf("  $%.4f/turn", cpt))
 			}
 			b.WriteString("\n")
-		}
-	}
-
-	// Cost-per-turn metrics
-	if len(data.CostPerTurn) > 0 {
-		b.WriteString(styles.HeaderStyle.Render("Cost Efficiency ($/turn)"))
-		b.WriteString("\n")
-		for provider, cpt := range data.CostPerTurn {
-			b.WriteString(fmt.Sprintf("  %-8s $%.4f/turn\n",
-				styles.ProviderStyle(provider).Render(provider), cpt))
 		}
 		b.WriteString("\n")
 	}
 
 	// Budget utilization gauges
 	if len(data.RepoBudgets) > 0 {
-		b.WriteString(styles.HeaderStyle.Render("Budget Utilization"))
+		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Budget Utilization", styles.IconBudget)))
 		b.WriteString("\n")
-		gaugeWidth := 20
 		for _, rb := range data.RepoBudgets {
+			label := fmt.Sprintf("$%.2f/$%.2f", rb.SpendUSD, rb.BudgetUSD)
 			pct := 0.0
 			if rb.BudgetUSD > 0 {
-				pct = rb.SpendUSD / rb.BudgetUSD
+				pct = rb.SpendUSD / rb.BudgetUSD * 100
 			}
-			filled := int(pct * float64(gaugeWidth))
-			if filled > gaugeWidth {
-				filled = gaugeWidth
-			}
-			bar := strings.Repeat("█", filled) + strings.Repeat("░", gaugeWidth-filled)
-			pctStr := fmt.Sprintf("%.0f%%", pct*100)
-			style := styles.StatusRunning
-			if pct >= 0.9 {
-				style = styles.StatusFailed
-			} else if pct >= 0.7 {
-				style = styles.WarningStyle
-			}
-			b.WriteString(fmt.Sprintf("  %-16s %s %s ($%.2f/$%.2f)\n",
-				rb.Name, style.Render(bar), pctStr, rb.SpendUSD, rb.BudgetUSD))
+			gauge := components.InlineGauge(rb.SpendUSD, rb.BudgetUSD, 20)
+			b.WriteString(fmt.Sprintf("  %-16s %s %.0f%% %s\n",
+				rb.Name, gauge, pct, label))
 		}
 		b.WriteString("\n")
 	}
 
 	// Top expensive sessions
 	if len(data.TopExpensive) > 0 {
-		b.WriteString(styles.HeaderStyle.Render("Top Sessions by Spend"))
+		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Top Sessions by Spend", styles.IconCost)))
 		b.WriteString("\n")
-		b.WriteString(fmt.Sprintf("  %-10s %-8s %-14s %-10s %-8s\n",
-			styles.HeaderStyle.Render("ID"),
-			styles.HeaderStyle.Render("Provider"),
-			styles.HeaderStyle.Render("Repo"),
-			styles.HeaderStyle.Render("Spend"),
-			styles.HeaderStyle.Render("Status")))
 		for _, es := range data.TopExpensive {
 			id := es.ID
 			if len(id) > 8 {
@@ -211,51 +169,86 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 			if len(repo) > 12 {
 				repo = repo[:12] + "…"
 			}
-			b.WriteString(fmt.Sprintf("  %-10s %-8s %-14s $%-9.2f %s\n",
+			b.WriteString(fmt.Sprintf("  %-10s %s %-8s %-14s $%-9.2f %s %s\n",
 				id,
+				styles.ProviderIcon(es.Provider),
 				styles.ProviderStyle(es.Provider).Render(es.Provider),
 				repo,
 				es.SpendUSD,
+				styles.StatusIcon(es.Status),
 				styles.StatusStyle(es.Status).Render(es.Status)))
 		}
 		b.WriteString("\n")
 	}
 
+	// Event Feed
+	if len(data.Events) > 0 {
+		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Recent Events", styles.IconAlert)))
+		b.WriteString("\n")
+		shown := data.Events
+		if len(shown) > 10 {
+			shown = shown[len(shown)-10:]
+		}
+		for _, ev := range shown {
+			ts := ev.Timestamp.Format("15:04:05")
+			icon := eventTypeIcon(ev.Type)
+			detail := ""
+			if ev.RepoName != "" {
+				detail = ev.RepoName
+			}
+			if ev.SessionID != "" {
+				sid := ev.SessionID
+				if len(sid) > 8 {
+					sid = sid[:8]
+				}
+				if detail != "" {
+					detail += " "
+				}
+				detail += sid
+			}
+			b.WriteString(fmt.Sprintf("  %s %s %s %s\n",
+				styles.InfoStyle.Render(ts),
+				icon,
+				eventTypeLabel(ev.Type),
+				detail))
+		}
+		b.WriteString("\n")
+	}
+
 	// Alerts
-	b.WriteString(styles.HeaderStyle.Render("Alerts"))
+	b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Alerts", styles.IconAlert)))
 	b.WriteString("\n")
 	if len(data.Alerts) == 0 {
-		b.WriteString(styles.StatusRunning.Render("  No alerts"))
+		b.WriteString(styles.StatusRunning.Render(fmt.Sprintf("  %s No alerts", styles.IconCompleted)))
 		b.WriteString("\n")
 	} else {
 		for _, alert := range data.Alerts {
-			prefix := "  "
-			switch alert.Severity {
-			case "critical":
-				prefix += styles.AlertCritical.Render("CRIT")
-			case "warning":
-				prefix += styles.AlertWarning.Render("WARN")
-			default:
-				prefix += styles.AlertInfo.Render("INFO")
-			}
-			b.WriteString(fmt.Sprintf("%s  %s\n", prefix, alert.Message))
+			b.WriteString(fmt.Sprintf("  %s  %s\n",
+				styles.AlertIcon(alert.Severity),
+				alert.Message))
 		}
 	}
 	b.WriteString("\n")
 
-	// Compact lists side-by-side
+	// Compact repo + session lists side-by-side
 	var repoList, sessionList strings.Builder
 
-	repoList.WriteString(styles.HeaderStyle.Render("Repos"))
+	repoList.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Repos", styles.IconRepo)))
 	repoList.WriteString("\n")
 	for _, r := range data.Repos {
 		status := r.StatusDisplay()
-		repoList.WriteString(fmt.Sprintf("  %-16s %s\n",
+		budgetStr := ""
+		if r.Status != nil && r.Status.SessionSpendUSD > 0 {
+			budgetStr = fmt.Sprintf(" $%.2f", r.Status.SessionSpendUSD)
+		}
+		repoList.WriteString(fmt.Sprintf("  %s %-16s %s%s\n",
+			styles.StatusIcon(status),
 			r.Name,
-			styles.StatusStyle(status).Render(status)))
+			styles.StatusStyle(status).Render(status),
+			budgetStr))
 	}
 
-	sessionList.WriteString(styles.HeaderStyle.Render("Running Sessions"))
+	sessionList.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Running Sessions", styles.IconSession)))
 	sessionList.WriteString("\n")
 	hasRunning := false
 	for _, s := range data.Sessions {
@@ -268,11 +261,14 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 			}
 			provider := string(s.Provider)
 			repo := s.RepoName
+			spent := s.SpentUSD
 			s.Unlock()
-			sessionList.WriteString(fmt.Sprintf("  %-8s  %s  %s\n",
+			sessionList.WriteString(fmt.Sprintf("  %-8s  %s %s  %s  $%.2f\n",
 				id,
+				styles.ProviderIcon(provider),
 				styles.ProviderStyle(provider).Render(fmt.Sprintf("%-7s", provider)),
-				repo))
+				repo,
+				spent))
 			hasRunning = true
 		} else {
 			s.Unlock()
@@ -292,4 +288,47 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel))
 
 	return b.String()
+}
+
+// eventTypeIcon returns an icon for an event type.
+func eventTypeIcon(t events.EventType) string {
+	switch t {
+	case events.SessionStarted:
+		return styles.StatusRunning.Render(styles.IconRunning)
+	case events.SessionEnded, events.SessionStopped:
+		return styles.StatusIdle.Render(styles.IconStopped)
+	case events.CostUpdate:
+		return styles.WarningStyle.Render(styles.IconBudget)
+	case events.BudgetExceeded:
+		return styles.StatusFailed.Render(styles.IconCritical)
+	case events.LoopStarted:
+		return styles.StatusRunning.Render(styles.IconRunning)
+	case events.LoopStopped:
+		return styles.StatusIdle.Render(styles.IconStopped)
+	case events.TeamCreated:
+		return styles.StatusCompleted.Render(styles.IconTeam)
+	default:
+		return styles.InfoStyle.Render(styles.IconInfo)
+	}
+}
+
+// eventTypeLabel returns a short colored label for an event type.
+func eventTypeLabel(t events.EventType) string {
+	parts := strings.SplitN(string(t), ".", 2)
+	if len(parts) < 2 {
+		return styles.InfoStyle.Render(string(t))
+	}
+	return styles.HeaderStyle.Render(parts[0]) + "." + parts[1]
+}
+
+// formatTimeAgo is used for event timestamps relative display.
+func formatTimeAgo(t time.Time) string {
+	d := time.Since(t)
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	}
+	return fmt.Sprintf("%dh", int(d.Hours()))
 }
