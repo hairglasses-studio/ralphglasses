@@ -95,13 +95,13 @@ func TestBuildCmd(t *testing.T) {
 			wantArgs: []string{"--append-system-prompt", "Be concise"},
 		},
 		{
-			name: "with session name",
+			name: "with session name (internal only, no CLI flag)",
 			opts: LaunchOptions{
 				RepoPath:    "/tmp/repo",
 				Prompt:      "hello",
 				SessionName: "my-session",
 			},
-			wantArgs: []string{"-n", "my-session"},
+			wantArgs: []string{}, // SessionName is tracked internally; Claude CLI has no --name flag
 		},
 	}
 
