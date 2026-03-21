@@ -71,7 +71,7 @@ Use `ralphglasses_team_create` with `provider` to set the lead's provider, then 
 
 ## MCP Server
 
-Ralphglasses is also an installable MCP server exposing 27 tools for managing ralph loops and multi-provider LLM sessions programmatically.
+Ralphglasses is also an installable MCP server exposing 38 tools for managing ralph loops and multi-provider LLM sessions programmatically.
 
 ### Install
 
@@ -120,6 +120,17 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 | `ralphglasses_team_delegate` | Add a task to an existing team |
 | `ralphglasses_agent_define` | Create/update .claude/agents/*.md agent definitions |
 | `ralphglasses_agent_list` | List available agent definitions for a repo |
+| `ralphglasses_event_list` | Query recent fleet events (by type, repo, time range) |
+| `ralphglasses_fleet_analytics` | Cost breakdown by provider/repo/time-period |
+| `ralphglasses_session_compare` | Compare two sessions (cost, turns, duration, efficiency) |
+| `ralphglasses_session_output` | Get recent output from a running session |
+| `ralphglasses_repo_health` | Composite health score (0-100) for a repo |
+| `ralphglasses_session_retry` | Re-launch a failed session with same params |
+| `ralphglasses_config_bulk` | Get/set .ralphrc values across multiple repos |
+| `ralphglasses_agent_compose` | Create composite agent by layering existing agents |
+| `ralphglasses_workflow_define` | Define multi-step YAML workflows |
+| `ralphglasses_workflow_run` | Execute workflows with dependency ordering |
+| `ralphglasses_snapshot` | Save/list fleet state snapshots |
 
 ## Architecture
 
@@ -128,7 +139,7 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 - **internal/model/**: Data types and parsers for status.json, progress.json, circuit breaker state, .ralphrc
 - **internal/process/**: Process management (launch/stop/pause via os/exec), fsnotify file watcher, log tailing
 - **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch
-- **internal/mcpserver/**: MCP tool handlers (27 tools, stdio transport via mcp-go)
+- **internal/mcpserver/**: MCP tool handlers (38 tools, stdio transport via mcp-go)
 - **internal/roadmap/**: Roadmap parsing, analysis, research, expansion, export
 - **internal/repofiles/**: Ralph config file scaffolding and optimization
 - **cmd/ralphglasses-mcp/**: Standalone MCP server binary entry point

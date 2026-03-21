@@ -429,6 +429,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleTeamsKey(msg)
 	case ViewTeamDetail:
 		return m.handleTeamDetailKey(msg)
+	case ViewHelp, ViewFleet, ViewDiff, ViewTimeline:
+		// Read-only views — Esc handled globally, no view-specific keys
+		return m, nil
 	}
 
 	return m, nil
