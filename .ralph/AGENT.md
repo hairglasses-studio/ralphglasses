@@ -32,6 +32,20 @@ make clean           # remove build artifacts
 3. `make test-cover` — to check coverage after adding tests
 4. `make fuzz` — after modifying parsers in `internal/model/` or `internal/mcpserver/`
 
+## Multi-Provider Notes
+
+`make ci` works regardless of which LLM provider runs it — it's pure Go toolchain.
+
+Provider-specific headless launch commands:
+```bash
+# Claude
+claude -p "task" --output-format stream-json
+# Gemini
+gemini -p "task" --output-format stream-json --yolo
+# Codex
+codex exec --full-auto "task"
+```
+
 ## Notes
 - Race detector is enabled by default in all test targets
 - Integration tests require the `integration` build tag
