@@ -148,13 +148,20 @@ func runSession(s *Session, stdout, stderr io.Reader) {
 			s.Status = StatusErrored
 			s.ExitReason = err.Error()
 			if errStr := stderrBuf.String(); errStr != "" && s.Error == "" {
-				s.Error = truncateStr(errStr, 2000)
+				s.Error = truncateStr(sanitizeStderr(s.Provider, errStr), 2000)
 			}
 		}
 	} else {
 		if s.Status == StatusRunning {
 			s.Status = StatusCompleted
 			s.ExitReason = "completed normally"
+		}
+	}
+
+	// Fallback: if no output was captured from stdout events, use cleaned stderr
+	if s.LastOutput == "" && s.Error == "" {
+		if cleaned := cleanProviderOutput(s.Provider, stderrBuf.String()); cleaned != "" {
+			s.LastOutput = truncateStr(cleaned, 4000)
 		}
 	}
 
@@ -173,6 +180,11 @@ func runSession(s *Session, stdout, stderr io.Reader) {
 				"turns":       s.TurnCount,
 			},
 		})
+	}
+
+	// Persist final state to disk
+	if s.onComplete != nil {
+		s.onComplete(s)
 	}
 
 	// Write improvement journal entry (fire-and-forget)
@@ -233,6 +245,10 @@ func runSessionOutput(s *Session, stdout io.Reader) {
 				prevSpent := s.SpentUSD
 				s.SpentUSD = event.CostUSD
 				s.CostHistory = append(s.CostHistory, event.CostUSD)
+				// Persist updated state to disk
+				if s.onComplete != nil {
+					go s.onComplete(s)
+				}
 				// Publish cost update event
 				if s.bus != nil && event.CostUSD != prevSpent {
 					s.bus.Publish(events.Event{

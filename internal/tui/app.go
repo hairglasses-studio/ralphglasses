@@ -222,6 +222,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		m.TickFrame++
 		m.refreshAllRepos()
+		// Load sessions persisted by other processes (e.g. MCP server)
+		if m.SessMgr != nil {
+			m.SessMgr.LoadExternalSessions()
+		}
 		m.updateTable()
 		m.updateSessionTable()
 		m.updateTeamTable()
