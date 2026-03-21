@@ -185,6 +185,10 @@ func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "claude", args...)
 	cmd.Dir = opts.RepoPath
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+	// Strip CLAUDECODE env var so child sessions don't detect nesting and refuse to start.
+	cmd.Env = filterEnv(os.Environ(), "CLAUDECODE")
+
 	return cmd
 }
 
@@ -303,6 +307,18 @@ func normalizeGeminiEvent(line []byte) (StreamEvent, error) {
 	}
 
 	return event, nil
+}
+
+// filterEnv returns a copy of env with any variable whose name matches key removed.
+func filterEnv(env []string, key string) []string {
+	prefix := key + "="
+	out := make([]string, 0, len(env))
+	for _, e := range env {
+		if !strings.HasPrefix(e, prefix) {
+			out = append(out, e)
+		}
+	}
+	return out
 }
 
 // normalizeCodexEvent parses Codex quiet-mode output into StreamEvent.
