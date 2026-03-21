@@ -74,9 +74,9 @@ func (t *Table) applyFilter() {
 			continue
 		}
 
-		// Status-prefix filtering
+		// Status-prefix filtering (strip ANSI for matching)
 		if prefix != "" && t.StatusColumn >= 0 && t.StatusColumn < len(row) {
-			cell := strings.ToLower(row[t.StatusColumn])
+			cell := strings.ToLower(StripAnsi(row[t.StatusColumn]))
 			if !strings.Contains(cell, remainder) {
 				continue
 			}
@@ -84,9 +84,9 @@ func (t *Table) applyFilter() {
 			continue
 		}
 
-		// Standard text matching
+		// Standard text matching (strip ANSI for matching)
 		for _, cell := range row {
-			if strings.Contains(strings.ToLower(cell), f) {
+			if strings.Contains(strings.ToLower(StripAnsi(cell)), f) {
 				t.filtered = append(t.filtered, i)
 				break
 			}
@@ -214,7 +214,7 @@ func (t *Table) sortRows() {
 	col := t.SortCol
 	asc := t.SortAsc
 	sort.SliceStable(t.Rows, func(i, j int) bool {
-		a, b := t.Rows[i][col], t.Rows[j][col]
+		a, b := StripAnsi(t.Rows[i][col]), StripAnsi(t.Rows[j][col])
 		if asc {
 			return a < b
 		}

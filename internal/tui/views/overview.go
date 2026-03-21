@@ -10,14 +10,14 @@ import (
 
 // OverviewColumns defines the overview table structure.
 var OverviewColumns = []components.Column{
-	{Title: "Name", Width: 20, Sortable: true, Grow: true},
-	{Title: "Status", Width: 14, Sortable: true},
-	{Title: "Loop#", Width: 8, Sortable: true},
-	{Title: "Calls", Width: 16, Sortable: true},
-	{Title: "Budget", Width: 16, Sortable: true},
-	{Title: "Progress", Width: 14, Sortable: true},
-	{Title: "Circuit", Width: 12, Sortable: true},
-	{Title: "Updated", Width: 10, Sortable: true},
+	{Title: "Name", Width: 18, Sortable: true, Grow: true},
+	{Title: "Status", Width: 10, Sortable: true},
+	{Title: "Loop", Width: 6, Sortable: true},
+	{Title: "Calls", Width: 12, Sortable: true},
+	{Title: "Budget", Width: 12, Sortable: true},
+	{Title: "Progress", Width: 10, Sortable: true},
+	{Title: "CB", Width: 10, Sortable: true},
+	{Title: "Updated", Width: 8, Sortable: true},
 }
 
 // NewOverviewTable creates a table pre-configured for the overview.
@@ -40,10 +40,10 @@ func ReposToRows(repos []*model.Repo, tickFrame int) []components.Row {
 
 		// Status cell with activity dot + icon
 		isActive := status == "running"
-		statusCell := fmt.Sprintf("%s %s %s",
+		statusCell := fmt.Sprintf("%s%s %s",
 			components.ActivityDot(isActive, tickFrame),
 			styles.StatusIcon(status),
-			styles.StatusStyle(status).Render(status))
+			status)
 
 		// Calls gauge
 		callsCell := "-"
@@ -52,7 +52,7 @@ func ReposToRows(repos []*model.Repo, tickFrame int) []components.Row {
 			max := float64(r.Status.MaxCallsPerHour)
 			label := fmt.Sprintf("%d/%d", r.Status.CallsMadeThisHr, r.Status.MaxCallsPerHour)
 			if max > 0 {
-				callsCell = components.GaugeWithLabel(made, max, 8, label)
+				callsCell = components.GaugeWithLabel(made, max, 5, label)
 			} else {
 				callsCell = label
 			}
@@ -63,8 +63,7 @@ func ReposToRows(repos []*model.Repo, tickFrame int) []components.Row {
 		budgetCell := "-"
 		if r.Status != nil && r.Status.SessionSpendUSD > 0 {
 			spend := r.Status.SessionSpendUSD
-			label := fmt.Sprintf("$%.2f", spend)
-			// Try to derive budget from config
+			label := fmt.Sprintf("$%.0f", spend)
 			budgetMax := 0.0
 			if r.Config != nil {
 				if v, ok := r.Config.Values["RALPH_SESSION_BUDGET"]; ok {
@@ -72,7 +71,7 @@ func ReposToRows(repos []*model.Repo, tickFrame int) []components.Row {
 				}
 			}
 			if budgetMax > 0 {
-				budgetCell = components.GaugeWithLabel(spend, budgetMax, 8, label)
+				budgetCell = components.GaugeWithLabel(spend, budgetMax, 5, label)
 			} else {
 				budgetCell = label
 			}
@@ -82,19 +81,18 @@ func ReposToRows(repos []*model.Repo, tickFrame int) []components.Row {
 		progressCell := "-"
 		if r.Progress != nil && len(r.Progress.CompletedIDs) > 0 {
 			completed := float64(len(r.Progress.CompletedIDs))
-			// Estimate total from iteration count (or just show completed)
-			total := completed + 1 // at minimum
+			total := completed + 1
 			if r.Progress.Iteration > int(completed) {
 				total = float64(r.Progress.Iteration)
 			}
 			label := fmt.Sprintf("%d", len(r.Progress.CompletedIDs))
-			progressCell = components.GaugeWithLabel(completed, total, 8, label)
+			progressCell = components.GaugeWithLabel(completed, total, 5, label)
 		}
 
 		// Circuit with icon
 		circuitCell := "-"
 		if circuit != "-" {
-			circuitCell = fmt.Sprintf("%s %s", styles.CBIcon(circuit), styles.CBStyle(circuit).Render(circuit))
+			circuitCell = fmt.Sprintf("%s %s", styles.CBIcon(circuit), circuit)
 		}
 
 		rows = append(rows, components.Row{

@@ -18,7 +18,7 @@ func TestNewOverviewTable(t *testing.T) {
 }
 
 func TestOverviewColumns(t *testing.T) {
-	expected := []string{"Name", "Status", "Loop#", "Calls", "Budget", "Progress", "Circuit", "Updated"}
+	expected := []string{"Name", "Status", "Loop", "Calls", "Budget", "Progress", "CB", "Updated"}
 	if len(OverviewColumns) != len(expected) {
 		t.Fatalf("expected %d columns, got %d", len(expected), len(OverviewColumns))
 	}
