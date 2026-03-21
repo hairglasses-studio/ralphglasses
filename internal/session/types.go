@@ -54,11 +54,12 @@ type Session struct {
 	CostHistory   []float64     `json:"cost_history,omitempty"`
 	OutputHistory []string      `json:"output_history,omitempty"` // last N output lines
 
-	cmd      *exec.Cmd
-	cancel   func()
-	mu       sync.Mutex
-	OutputCh chan string `json:"-"` // real-time output channel
-	bus      *events.Bus `json:"-"` // event bus for publishing lifecycle events
+	cmd        *exec.Cmd
+	cancel     func()
+	mu         sync.Mutex
+	OutputCh   chan string  `json:"-"` // real-time output channel
+	bus        *events.Bus  `json:"-"` // event bus for publishing lifecycle events
+	onComplete func(*Session) `json:"-"` // called when session ends (for persistence)
 }
 
 // Lock locks the session mutex for external callers.
