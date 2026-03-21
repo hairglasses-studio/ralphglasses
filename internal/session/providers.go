@@ -38,6 +38,10 @@ func providerEnvVar(p Provider) string {
 func ValidateProviderEnv(p Provider) error {
 	envVar := providerEnvVar(p)
 	if os.Getenv(envVar) == "" {
+		// Gemini also accepts GEMINI_API_KEY
+		if p == ProviderGemini && os.Getenv("GEMINI_API_KEY") != "" {
+			return nil
+		}
 		return fmt.Errorf("%s not set (required for provider %q)", envVar, p)
 	}
 	return nil
@@ -193,9 +197,10 @@ func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 }
 
 // buildGeminiCmd constructs the gemini CLI command.
-// Gemini CLI (@google/gemini-cli): -p for headless/pipe mode, --yolo auto-approves tool use.
+// Gemini CLI (@google/gemini-cli): -p/--prompt PROMPT for headless mode,
+// --yolo auto-approves tool use.
 func buildGeminiCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
-	args := []string{"-p", "--output-format", "stream-json"}
+	args := []string{"--output-format", "stream-json"}
 
 	if opts.Model != "" {
 		args = append(args, "--model", opts.Model)
@@ -203,7 +208,12 @@ func buildGeminiCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	if opts.Resume != "" {
 		args = append(args, "--resume", opts.Resume)
 	}
-	args = append(args, "--yolo")
+	args = append(args, "--approval-mode", "yolo")
+
+	// -p/--prompt requires a string value; Gemini appends stdin to it.
+	if opts.Prompt != "" {
+		args = append(args, "-p", opts.Prompt)
+	}
 
 	cmd := exec.CommandContext(ctx, "gemini", args...)
 	cmd.Dir = opts.RepoPath
