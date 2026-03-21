@@ -214,6 +214,93 @@ func TestValidateProviderEnvPresent(t *testing.T) {
 	}
 }
 
+func TestSanitizeStderr(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider Provider
+		input    string
+		want     string
+	}{
+		{
+			name:     "gemini strips stack traces",
+			provider: ProviderGemini,
+			input: `Error when talking to Gemini API: got status INTERNAL
+    at Object.handleError (/usr/lib/node_modules/@google/gemini-cli/dist/index.js:123:45)
+    at async Session.run (/usr/lib/node_modules/@google/gemini-cli/dist/index.js:456:78)
+ApiError: got status: INTERNAL`,
+			want: "Error when talking to Gemini API: got status INTERNAL\nApiError: got status: INTERNAL",
+		},
+		{
+			name:     "gemini empty input",
+			provider: ProviderGemini,
+			input:    "",
+			want:     "",
+		},
+		{
+			name:     "claude passes through unchanged",
+			provider: ProviderClaude,
+			input:    "some error\n    at something",
+			want:     "some error\n    at something",
+		},
+		{
+			name:     "gemini only stack frames returns raw",
+			provider: ProviderGemini,
+			input:    "    at foo()\n    at bar()",
+			want:     "    at foo()\n    at bar()",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sanitizeStderr(tt.provider, tt.input)
+			if got != tt.want {
+				t.Errorf("sanitizeStderr(%q, ...) =\n%q\nwant\n%q", tt.provider, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCleanProviderOutput(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider Provider
+		input    string
+		want     string
+	}{
+		{
+			name:     "codex strips ansi and returns last line",
+			provider: ProviderCodex,
+			input:    "\x1b[32mProcessing...\x1b[0m\n\x1b[1mRefactored 3 files successfully\x1b[0m\n",
+			want:     "Refactored 3 files successfully",
+		},
+		{
+			name:     "codex empty input",
+			provider: ProviderCodex,
+			input:    "",
+			want:     "",
+		},
+		{
+			name:     "claude returns empty",
+			provider: ProviderClaude,
+			input:    "some output",
+			want:     "",
+		},
+		{
+			name:     "codex all blank lines",
+			provider: ProviderCodex,
+			input:    "\n\n  \n",
+			want:     "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := cleanProviderOutput(tt.provider, tt.input)
+			if got != tt.want {
+				t.Errorf("cleanProviderOutput(%q, ...) = %q, want %q", tt.provider, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestUnsupportedOptionsWarnings(t *testing.T) {
 	opts := LaunchOptions{
 		SystemPrompt: "be helpful",

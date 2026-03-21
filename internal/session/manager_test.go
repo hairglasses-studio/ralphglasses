@@ -296,6 +296,100 @@ func TestManagerTeamLifecycle(t *testing.T) {
 	}
 }
 
+func TestManagerDelegateTask(t *testing.T) {
+	m := NewManager()
+
+	// Set up a team
+	m.mu.Lock()
+	m.teams["test-team"] = &TeamStatus{
+		Name:     "test-team",
+		RepoPath: "/tmp/repo",
+		LeadID:   "lead",
+		Status:   StatusRunning,
+		Tasks:    []TeamTask{{Description: "task 1", Status: "pending"}},
+	}
+	m.sessions["lead"] = &Session{ID: "lead", Status: StatusRunning}
+	m.mu.Unlock()
+
+	// Delegate a new task
+	count, err := m.DelegateTask("test-team", TeamTask{
+		Description: "task 2",
+		Status:      "pending",
+	})
+	if err != nil {
+		t.Fatalf("DelegateTask: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("count = %d, want 2", count)
+	}
+
+	// Verify task was added
+	team, ok := m.GetTeam("test-team")
+	if !ok {
+		t.Fatal("team not found")
+	}
+	if len(team.Tasks) != 2 {
+		t.Errorf("tasks = %d, want 2", len(team.Tasks))
+	}
+
+	// Delegate to non-existent team
+	_, err = m.DelegateTask("nonexistent", TeamTask{Description: "x", Status: "pending"})
+	if err == nil {
+		t.Error("expected error for nonexistent team")
+	}
+}
+
+func TestManagerTaskStatusCorrelation(t *testing.T) {
+	m := NewManager()
+
+	// Set up a team with tasks
+	m.mu.Lock()
+	m.teams["corr-team"] = &TeamStatus{
+		Name:     "corr-team",
+		RepoPath: "/tmp/repo",
+		LeadID:   "lead",
+		Status:   StatusRunning,
+		Tasks: []TeamTask{
+			{Description: "implement auth", Status: "pending"},
+			{Description: "write tests", Status: "pending"},
+			{Description: "update docs", Status: "pending"},
+		},
+	}
+	m.sessions["lead"] = &Session{ID: "lead", Status: StatusRunning, TeamName: "corr-team"}
+	// Worker sessions: one running, one completed
+	m.sessions["w1"] = &Session{
+		ID:       "w1",
+		Status:   StatusRunning,
+		TeamName: "corr-team",
+		Prompt:   "Please implement auth for the API",
+	}
+	m.sessions["w2"] = &Session{
+		ID:       "w2",
+		Status:   StatusCompleted,
+		TeamName: "corr-team",
+		Prompt:   "Please write tests for the auth module",
+	}
+	m.mu.Unlock()
+
+	team, ok := m.GetTeam("corr-team")
+	if !ok {
+		t.Fatal("team not found")
+	}
+
+	// Task "implement auth" should be in-progress (w1 is running, prompt contains "implement auth")
+	if team.Tasks[0].Status != "in-progress" {
+		t.Errorf("task 0 status = %q, want in-progress", team.Tasks[0].Status)
+	}
+	// Task "write tests" should be completed (w2 is completed, prompt contains "write tests")
+	if team.Tasks[1].Status != "completed" {
+		t.Errorf("task 1 status = %q, want completed", team.Tasks[1].Status)
+	}
+	// Task "update docs" has no matching worker — should remain pending
+	if team.Tasks[2].Status != "pending" {
+		t.Errorf("task 2 status = %q, want pending", team.Tasks[2].Status)
+	}
+}
+
 func TestSessionBudgetTracking(t *testing.T) {
 	s := &Session{
 		ID:        "budget-test",
