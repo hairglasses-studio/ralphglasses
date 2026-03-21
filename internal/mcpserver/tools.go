@@ -38,19 +38,21 @@ type Server struct {
 // NewServer creates a new MCP server instance.
 func NewServer(scanPath string) *Server {
 	return &Server{
-		ScanPath: scanPath,
-		ProcMgr:  process.NewManager(),
-		SessMgr:  session.NewManager(),
+		ScanPath:   scanPath,
+		ProcMgr:    process.NewManager(),
+		SessMgr:    session.NewManager(),
+		HTTPClient: &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
 // NewServerWithBus creates a new MCP server instance with an event bus.
 func NewServerWithBus(scanPath string, bus *events.Bus) *Server {
 	return &Server{
-		ScanPath: scanPath,
-		ProcMgr:  process.NewManagerWithBus(bus),
-		SessMgr:  session.NewManagerWithBus(bus),
-		EventBus: bus,
+		ScanPath:   scanPath,
+		ProcMgr:    process.NewManagerWithBus(bus),
+		SessMgr:    session.NewManagerWithBus(bus),
+		EventBus:   bus,
+		HTTPClient: &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
