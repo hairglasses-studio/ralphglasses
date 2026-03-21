@@ -179,6 +179,7 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithString("system_prompt", mcp.Description("Additional system prompt to append")),
 		mcp.WithString("session_name", mcp.Description("Human-readable session name")),
 		mcp.WithString("worktree", mcp.Description("Git worktree isolation (true for auto, or branch name)")),
+		mcp.WithString("no_journal", mcp.Description("Skip improvement journal injection: true/false (default: false)")),
 	), s.handleSessionLaunch)
 
 	srv.AddTool(mcp.NewTool("ralphglasses_session_list",
@@ -258,6 +259,30 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithString("provider", mcp.Description("Filter by provider: claude (default), gemini, codex, or 'all'")),
 	), s.handleAgentList)
 
+	// Improvement journal tools
+
+	srv.AddTool(mcp.NewTool("ralphglasses_journal_read",
+		mcp.WithDescription("Read improvement journal entries for a repo with synthesized context"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithNumber("limit", mcp.Description("Max entries to return (default 10)")),
+	), s.handleJournalRead)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_journal_write",
+		mcp.WithDescription("Manually write an improvement note to a repo's journal"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithString("worked", mcp.Description("Comma-separated items that worked")),
+		mcp.WithString("failed", mcp.Description("Comma-separated items that failed")),
+		mcp.WithString("suggest", mcp.Description("Comma-separated suggestions")),
+		mcp.WithString("session_id", mcp.Description("Associated session ID (optional)")),
+	), s.handleJournalWrite)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_journal_prune",
+		mcp.WithDescription("Compact improvement journal to prevent unbounded growth"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithNumber("keep", mcp.Description("Number of entries to keep (default 100)")),
+		mcp.WithString("dry_run", mcp.Description("Preview only, don't modify: true/false (default: true)")),
+	), s.handleJournalPrune)
+
 	// Event bus tools
 
 	srv.AddTool(mcp.NewTool("ralphglasses_event_list",
@@ -325,6 +350,19 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithString("action", mcp.Description("Action: save (default) or list")),
 		mcp.WithString("name", mcp.Description("Snapshot name (auto-generated if omitted)")),
 	), s.handleSnapshot)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_agent_compose",
+		mcp.WithDescription("Create a composite agent by layering multiple existing agent definitions"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Name for the composite agent")),
+		mcp.WithString("agents", mcp.Required(), mcp.Description("Comma-separated agent names to compose")),
+		mcp.WithString("provider", mcp.Description("Provider: claude (default), gemini, codex")),
+		mcp.WithString("model", mcp.Description("Override model for composite agent")),
+	), s.handleAgentCompose)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_session_stop_all",
+		mcp.WithDescription("Stop all running LLM sessions — emergency cost cutoff"),
+	), s.handleSessionStopAll)
 }
 
 func (s *Server) scan() error {
@@ -850,6 +888,17 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 	}
 	if tools := getStringArg(req, "allowed_tools"); tools != "" {
 		opts.AllowedTools = strings.Split(tools, ",")
+	}
+
+	// Inject improvement context from journal
+	if getStringArg(req, "no_journal") != "true" {
+		journal, _ := session.ReadRecentJournal(r.Path, 5)
+		if len(journal) > 0 {
+			journalCtx := session.SynthesizeContext(journal)
+			if journalCtx != "" {
+				opts.Prompt = journalCtx + "\n\n---\n\n" + opts.Prompt
+			}
+		}
 	}
 
 	sess, err := s.SessMgr.Launch(ctx, opts)
@@ -2048,9 +2097,51 @@ func (s *Server) handleWorkflowRun(ctx context.Context, req mcp.CallToolRequest)
 		return errResult(fmt.Sprintf("load workflow: %v", err)), nil
 	}
 
-	// Launch sessions for each step sequentially
+	// Build step index and track completion for dependency resolution
+	stepIndex := make(map[string]*session.WorkflowStep, len(wf.Steps))
+	for i := range wf.Steps {
+		stepIndex[wf.Steps[i].Name] = &wf.Steps[i]
+	}
+
+	// Topological sort: group steps into waves by dependency resolution
+	completed := make(map[string]bool)
+	var waves [][]session.WorkflowStep
+	remaining := make([]session.WorkflowStep, len(wf.Steps))
+	copy(remaining, wf.Steps)
+
+	for len(remaining) > 0 {
+		var ready, blocked []session.WorkflowStep
+		for _, step := range remaining {
+			depsOK := true
+			for _, dep := range step.DependsOn {
+				if !completed[dep] {
+					depsOK = false
+					break
+				}
+			}
+			if depsOK {
+				ready = append(ready, step)
+			} else {
+				blocked = append(blocked, step)
+			}
+		}
+		if len(ready) == 0 {
+			// Circular dependency or unresolvable — force remaining through
+			ready = blocked
+			blocked = nil
+		}
+		waves = append(waves, ready)
+		for _, step := range ready {
+			completed[step.Name] = true
+		}
+		remaining = blocked
+	}
+
+	// Launch each wave; parallel steps in a wave launch concurrently
+	var mu sync.Mutex
 	var launched []map[string]any
-	for _, step := range wf.Steps {
+
+	launchStep := func(step session.WorkflowStep) map[string]any {
 		provider := session.Provider(step.Provider)
 		if provider == "" {
 			provider = session.ProviderClaude
@@ -2064,17 +2155,46 @@ func (s *Server) handleWorkflowRun(ctx context.Context, req mcp.CallToolRequest)
 		}
 		sess, err := s.SessMgr.Launch(ctx, opts)
 		if err != nil {
-			launched = append(launched, map[string]any{
+			return map[string]any{
 				"step":  step.Name,
 				"error": err.Error(),
-			})
-			continue
+			}
 		}
-		launched = append(launched, map[string]any{
+		return map[string]any{
 			"step":       step.Name,
 			"session_id": sess.ID,
 			"provider":   string(provider),
-		})
+		}
+	}
+
+	for _, wave := range waves {
+		// Check if any steps in this wave are parallel
+		hasParallel := false
+		for _, step := range wave {
+			if step.Parallel {
+				hasParallel = true
+				break
+			}
+		}
+
+		if hasParallel && len(wave) > 1 {
+			var wg sync.WaitGroup
+			for _, step := range wave {
+				wg.Add(1)
+				go func(s session.WorkflowStep) {
+					defer wg.Done()
+					result := launchStep(s)
+					mu.Lock()
+					launched = append(launched, result)
+					mu.Unlock()
+				}(step)
+			}
+			wg.Wait()
+		} else {
+			for _, step := range wave {
+				launched = append(launched, launchStep(step))
+			}
+		}
 	}
 
 	return jsonResult(map[string]any{
@@ -2157,4 +2277,226 @@ func (s *Server) handleSnapshot(_ context.Context, req mcp.CallToolRequest) (*mc
 	}
 
 	return jsonResult(snapshot), nil
+}
+
+func (s *Server) handleAgentCompose(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoName := getStringArg(req, "repo")
+	if repoName == "" {
+		return errResult("repo name required"), nil
+	}
+	name := getStringArg(req, "name")
+	if name == "" {
+		return errResult("composite agent name required"), nil
+	}
+	agentsStr := getStringArg(req, "agents")
+	if agentsStr == "" {
+		return errResult("agents list required (comma-separated)"), nil
+	}
+
+	if s.reposNil() {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(repoName)
+	if r == nil {
+		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+	}
+
+	provider := session.Provider(getStringArg(req, "provider"))
+	if provider == "" {
+		provider = session.ProviderClaude
+	}
+
+	var agentNames []string
+	for _, n := range strings.Split(agentsStr, ",") {
+		n = strings.TrimSpace(n)
+		if n != "" {
+			agentNames = append(agentNames, n)
+		}
+	}
+
+	composite, err := session.ComposeAgents(r.Path, agentNames, provider, name)
+	if err != nil {
+		return errResult(fmt.Sprintf("compose agents: %v", err)), nil
+	}
+
+	// Apply model override
+	if m := getStringArg(req, "model"); m != "" {
+		composite.Model = m
+	}
+
+	if err := session.WriteAgent(r.Path, composite); err != nil {
+		return errResult(fmt.Sprintf("write composite agent: %v", err)), nil
+	}
+
+	return jsonResult(map[string]any{
+		"name":     composite.Name,
+		"provider": string(composite.Provider),
+		"composed": agentNames,
+		"tools":    composite.Tools,
+		"model":    composite.Model,
+	}), nil
+}
+
+func (s *Server) handleSessionStopAll(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Count running sessions before stopping
+	sessions := s.SessMgr.List("")
+	running := 0
+	for _, sess := range sessions {
+		sess.Lock()
+		if sess.Status == session.StatusRunning || sess.Status == session.StatusLaunching {
+			running++
+		}
+		sess.Unlock()
+	}
+
+	s.SessMgr.StopAll()
+
+	return textResult(fmt.Sprintf("Stopped %d running session(s)", running)), nil
+}
+
+// --- Journal handlers ---
+
+func (s *Server) handleJournalRead(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "repo")
+	if name == "" {
+		return errResult("repo name required"), nil
+	}
+	if s.reposNil() {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(name)
+	if r == nil {
+		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+	}
+
+	limit := int(getNumberArg(req, "limit", 10))
+	entries, err := session.ReadRecentJournal(r.Path, limit)
+	if err != nil {
+		return errResult(fmt.Sprintf("read journal: %v", err)), nil
+	}
+
+	synthesis := session.SynthesizeContext(entries)
+
+	return jsonResult(map[string]any{
+		"entries":   entries,
+		"count":     len(entries),
+		"synthesis": synthesis,
+	}), nil
+}
+
+func (s *Server) handleJournalWrite(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "repo")
+	if name == "" {
+		return errResult("repo name required"), nil
+	}
+	if s.reposNil() {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(name)
+	if r == nil {
+		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+	}
+
+	entry := session.JournalEntry{
+		Timestamp: time.Now(),
+		SessionID: getStringArg(req, "session_id"),
+		RepoName:  r.Name,
+	}
+	if w := getStringArg(req, "worked"); w != "" {
+		entry.Worked = splitCSV(w)
+	}
+	if f := getStringArg(req, "failed"); f != "" {
+		entry.Failed = splitCSV(f)
+	}
+	if sg := getStringArg(req, "suggest"); sg != "" {
+		entry.Suggest = splitCSV(sg)
+	}
+
+	if err := session.WriteJournalEntryManual(r.Path, entry); err != nil {
+		return errResult(fmt.Sprintf("write journal: %v", err)), nil
+	}
+
+	if s.EventBus != nil {
+		s.EventBus.Publish(events.Event{
+			Type:      events.JournalWritten,
+			RepoName:  r.Name,
+			RepoPath:  r.Path,
+			SessionID: entry.SessionID,
+		})
+	}
+
+	return jsonResult(map[string]any{
+		"status":  "written",
+		"repo":    r.Name,
+		"worked":  len(entry.Worked),
+		"failed":  len(entry.Failed),
+		"suggest": len(entry.Suggest),
+	}), nil
+}
+
+func (s *Server) handleJournalPrune(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "repo")
+	if name == "" {
+		return errResult("repo name required"), nil
+	}
+	if s.reposNil() {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(name)
+	if r == nil {
+		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+	}
+
+	keep := int(getNumberArg(req, "keep", 100))
+	dryRun := getStringArg(req, "dry_run") != "false"
+
+	// Read current count
+	entries, err := session.ReadRecentJournal(r.Path, 100000)
+	if err != nil {
+		return errResult(fmt.Sprintf("read journal: %v", err)), nil
+	}
+
+	wouldPrune := len(entries) - keep
+	if wouldPrune < 0 {
+		wouldPrune = 0
+	}
+
+	if dryRun {
+		return jsonResult(map[string]any{
+			"dry_run":      true,
+			"total":        len(entries),
+			"keep":         keep,
+			"would_prune":  wouldPrune,
+		}), nil
+	}
+
+	pruned, err := session.PruneJournal(r.Path, keep)
+	if err != nil {
+		return errResult(fmt.Sprintf("prune journal: %v", err)), nil
+	}
+
+	return jsonResult(map[string]any{
+		"dry_run":  false,
+		"pruned":   pruned,
+		"remaining": len(entries) - pruned,
+	}), nil
+}
+
+func splitCSV(s string) []string {
+	var result []string
+	for _, item := range strings.Split(s, ",") {
+		item = strings.TrimSpace(item)
+		if item != "" {
+			result = append(result, item)
+		}
+	}
+	return result
 }
