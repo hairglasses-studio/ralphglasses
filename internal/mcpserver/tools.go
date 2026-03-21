@@ -345,6 +345,33 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithString("name", mcp.Required(), mcp.Description("Workflow name")),
 	), s.handleWorkflowRun)
 
+	srv.AddTool(mcp.NewTool("ralphglasses_loop_start",
+		mcp.WithDescription("Create a Codex-only planner/worker perpetual development loop for a repo"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithString("planner_model", mcp.Description("Planner model (default: o1-pro)")),
+		mcp.WithString("worker_model", mcp.Description("Worker model (default: gpt-5.4-xhigh)")),
+		mcp.WithString("verifier_model", mcp.Description("Verifier model metadata (default: gpt-5.4-xhigh)")),
+		mcp.WithString("verify_commands", mcp.Description("Newline-separated verification commands (default: ./scripts/dev/ci.sh)")),
+		mcp.WithNumber("retry_limit", mcp.Description("Maximum consecutive failed iterations before step is refused")),
+		mcp.WithNumber("max_concurrent_workers", mcp.Description("Maximum concurrent workers (currently only 1 supported)")),
+		mcp.WithString("worktree_policy", mcp.Description("Worktree isolation policy (default: git)")),
+	), s.handleLoopStart)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_loop_status",
+		mcp.WithDescription("Get status for a perpetual development loop"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Loop run ID")),
+	), s.handleLoopStatus)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_loop_step",
+		mcp.WithDescription("Execute one planner/worker/verifier iteration for a loop"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Loop run ID")),
+	), s.handleLoopStep)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_loop_stop",
+		mcp.WithDescription("Stop a perpetual development loop"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Loop run ID")),
+	), s.handleLoopStop)
+
 	srv.AddTool(mcp.NewTool("ralphglasses_snapshot",
 		mcp.WithDescription("Save or list fleet state snapshots"),
 		mcp.WithString("action", mcp.Description("Action: save (default) or list")),
@@ -433,6 +460,17 @@ func argsMap(req mcp.CallToolRequest) map[string]any {
 		return m
 	}
 	return nil
+}
+
+func splitLines(s string) []string {
+	var out []string
+	for _, line := range strings.Split(s, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			out = append(out, line)
+		}
+	}
+	return out
 }
 
 func getStringArg(req mcp.CallToolRequest, key string) string {
@@ -1059,10 +1097,10 @@ func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolReques
 	}
 
 	return jsonResult(map[string]any{
-		"session_id":        sess.ID,
-		"resumed_from":      sessionID,
-		"repo":              sess.RepoName,
-		"status":            sess.Status,
+		"session_id":   sess.ID,
+		"resumed_from": sessionID,
+		"repo":         sess.RepoName,
+		"status":       sess.Status,
 	}), nil
 }
 
@@ -1181,11 +1219,11 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 
 	// Enrich with lead session info
 	result := map[string]any{
-		"name":     team.Name,
-		"repo":     team.RepoPath,
-		"status":   team.Status,
-		"tasks":    team.Tasks,
-		"created":  team.CreatedAt,
+		"name":    team.Name,
+		"repo":    team.RepoPath,
+		"status":  team.Status,
+		"tasks":   team.Tasks,
+		"created": team.CreatedAt,
 	}
 
 	if lead, ok := s.SessMgr.Get(team.LeadID); ok {
@@ -1628,23 +1666,58 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 
 	// --- Assemble response ---
 	totalSpend := totalLoopSpend + totalSessionSpend
+	loopRuns := s.SessMgr.ListLoops()
+
+	type loopSummary struct {
+		ID             string `json:"id"`
+		Repo           string `json:"repo"`
+		Status         string `json:"status"`
+		Iterations     int    `json:"iterations"`
+		LastError      string `json:"last_error,omitempty"`
+		PlannerModel   string `json:"planner_model"`
+		WorkerModel    string `json:"worker_model"`
+		WorktreePolicy string `json:"worktree_policy,omitempty"`
+	}
+
+	loops := make([]loopSummary, 0, len(loopRuns))
+	runningLoopRuns := 0
+	for _, run := range loopRuns {
+		run.Lock()
+		if run.Status == "running" {
+			runningLoopRuns++
+		}
+		loops = append(loops, loopSummary{
+			ID:             run.ID,
+			Repo:           run.RepoName,
+			Status:         run.Status,
+			Iterations:     len(run.Iterations),
+			LastError:      run.LastError,
+			PlannerModel:   run.Profile.PlannerModel,
+			WorkerModel:    run.Profile.WorkerModel,
+			WorktreePolicy: run.Profile.WorktreePolicy,
+		})
+		run.Unlock()
+	}
 
 	result := map[string]any{
 		"summary": map[string]any{
-			"total_repos":          len(s.Repos),
-			"running_loops":        runningLoops,
-			"paused_loops":         pausedLoops,
-			"total_sessions":       len(allSessions),
-			"running_sessions":     runningSessions,
-			"total_loop_spend_usd": totalLoopSpend,
+			"total_repos":             len(s.Repos),
+			"running_loops":           runningLoops,
+			"paused_loops":            pausedLoops,
+			"total_sessions":          len(allSessions),
+			"running_sessions":        runningSessions,
+			"total_loop_runs":         len(loopRuns),
+			"running_loop_runs":       runningLoopRuns,
+			"total_loop_spend_usd":    totalLoopSpend,
 			"total_session_spend_usd": totalSessionSpend,
-			"total_spend_usd":      totalSpend,
-			"open_circuits":        openCircuits,
-			"providers":            providerMap,
+			"total_spend_usd":         totalSpend,
+			"open_circuits":           openCircuits,
+			"providers":               providerMap,
 		},
 		"repos":    repos,
 		"sessions": sessions,
 		"teams":    teams,
+		"loops":    loops,
 		"alerts":   alerts,
 	}
 
@@ -2095,110 +2168,130 @@ func (s *Server) handleWorkflowRun(ctx context.Context, req mcp.CallToolRequest)
 		return errResult(fmt.Sprintf("load workflow: %v", err)), nil
 	}
 
-	// Build step index and track completion for dependency resolution
-	stepIndex := make(map[string]*session.WorkflowStep, len(wf.Steps))
-	for i := range wf.Steps {
-		stepIndex[wf.Steps[i].Name] = &wf.Steps[i]
+	run, err := s.SessMgr.RunWorkflow(ctx, r.Path, *wf)
+	if err != nil {
+		return errResult(fmt.Sprintf("run workflow: %v", err)), nil
 	}
 
-	// Topological sort: group steps into waves by dependency resolution
-	completed := make(map[string]bool)
-	var waves [][]session.WorkflowStep
-	remaining := make([]session.WorkflowStep, len(wf.Steps))
-	copy(remaining, wf.Steps)
+	run.Lock()
+	result := map[string]any{
+		"run_id":     run.ID,
+		"workflow":   run.Name,
+		"repo_path":  run.RepoPath,
+		"status":     run.Status,
+		"created_at": run.CreatedAt,
+		"updated_at": run.UpdatedAt,
+		"steps":      append([]session.WorkflowStepResult(nil), run.Steps...),
+	}
+	run.Unlock()
 
-	for len(remaining) > 0 {
-		var ready, blocked []session.WorkflowStep
-		for _, step := range remaining {
-			depsOK := true
-			for _, dep := range step.DependsOn {
-				if !completed[dep] {
-					depsOK = false
-					break
-				}
-			}
-			if depsOK {
-				ready = append(ready, step)
-			} else {
-				blocked = append(blocked, step)
-			}
-		}
-		if len(ready) == 0 {
-			// Circular dependency or unresolvable — force remaining through
-			ready = blocked
-			blocked = nil
-		}
-		waves = append(waves, ready)
-		for _, step := range ready {
-			completed[step.Name] = true
-		}
-		remaining = blocked
+	return jsonResult(result), nil
+}
+
+func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoName := getStringArg(req, "repo")
+	if repoName == "" {
+		return errResult("repo name required"), nil
 	}
 
-	// Launch each wave; parallel steps in a wave launch concurrently
-	var mu sync.Mutex
-	var launched []map[string]any
-
-	launchStep := func(step session.WorkflowStep) map[string]any {
-		provider := session.Provider(step.Provider)
-		if provider == "" {
-			provider = session.ProviderClaude
-		}
-		opts := session.LaunchOptions{
-			Provider: provider,
-			RepoPath: r.Path,
-			Prompt:   step.Prompt,
-			Model:    step.Model,
-			Agent:    step.Agent,
-		}
-		sess, err := s.SessMgr.Launch(ctx, opts)
-		if err != nil {
-			return map[string]any{
-				"step":  step.Name,
-				"error": err.Error(),
-			}
-		}
-		return map[string]any{
-			"step":       step.Name,
-			"session_id": sess.ID,
-			"provider":   string(provider),
+	if s.reposNil() {
+		if err := s.scan(); err != nil {
+			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
-
-	for _, wave := range waves {
-		// Check if any steps in this wave are parallel
-		hasParallel := false
-		for _, step := range wave {
-			if step.Parallel {
-				hasParallel = true
-				break
-			}
-		}
-
-		if hasParallel && len(wave) > 1 {
-			var wg sync.WaitGroup
-			for _, step := range wave {
-				wg.Add(1)
-				go func(s session.WorkflowStep) {
-					defer wg.Done()
-					result := launchStep(s)
-					mu.Lock()
-					launched = append(launched, result)
-					mu.Unlock()
-				}(step)
-			}
-			wg.Wait()
-		} else {
-			for _, step := range wave {
-				launched = append(launched, launchStep(step))
-			}
-		}
+	r := s.findRepo(repoName)
+	if r == nil {
+		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
-	return jsonResult(map[string]any{
-		"workflow": name,
-		"steps":    launched,
-	}), nil
+	profile := session.DefaultLoopProfile()
+	if value := getStringArg(req, "planner_model"); value != "" {
+		profile.PlannerModel = value
+	}
+	if value := getStringArg(req, "worker_model"); value != "" {
+		profile.WorkerModel = value
+	}
+	if value := getStringArg(req, "verifier_model"); value != "" {
+		profile.VerifierModel = value
+	}
+	if value := getStringArg(req, "worktree_policy"); value != "" {
+		profile.WorktreePolicy = value
+	}
+	if value := int(getNumberArg(req, "retry_limit", float64(profile.RetryLimit))); value != profile.RetryLimit {
+		profile.RetryLimit = value
+	}
+	if value := int(getNumberArg(req, "max_concurrent_workers", float64(profile.MaxConcurrentWorkers))); value != profile.MaxConcurrentWorkers {
+		profile.MaxConcurrentWorkers = value
+	}
+	if commands := splitLines(getStringArg(req, "verify_commands")); len(commands) > 0 {
+		profile.VerifyCommands = commands
+	}
+
+	run, err := s.SessMgr.StartLoop(ctx, r.Path, profile)
+	if err != nil {
+		return errResult(fmt.Sprintf("start loop: %v", err)), nil
+	}
+	return jsonResult(loopResult(run)), nil
+}
+
+func (s *Server) handleLoopStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	id := getStringArg(req, "id")
+	if id == "" {
+		return errResult("loop id required"), nil
+	}
+
+	run, ok := s.SessMgr.GetLoop(id)
+	if !ok {
+		return errResult(fmt.Sprintf("loop not found: %s", id)), nil
+	}
+	return jsonResult(loopResult(run)), nil
+}
+
+func (s *Server) handleLoopStep(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	id := getStringArg(req, "id")
+	if id == "" {
+		return errResult("loop id required"), nil
+	}
+
+	if err := s.SessMgr.StepLoop(ctx, id); err != nil {
+		return errResult(fmt.Sprintf("step loop: %v", err)), nil
+	}
+
+	run, ok := s.SessMgr.GetLoop(id)
+	if !ok {
+		return errResult(fmt.Sprintf("loop not found after step: %s", id)), nil
+	}
+	return jsonResult(loopResult(run)), nil
+}
+
+func (s *Server) handleLoopStop(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	id := getStringArg(req, "id")
+	if id == "" {
+		return errResult("loop id required"), nil
+	}
+
+	if err := s.SessMgr.StopLoop(id); err != nil {
+		return errResult(fmt.Sprintf("stop loop: %v", err)), nil
+	}
+	return textResult(fmt.Sprintf("Stopped loop %s", id)), nil
+}
+
+func loopResult(run *session.LoopRun) map[string]any {
+	run.Lock()
+	defer run.Unlock()
+
+	iterations := append([]session.LoopIteration(nil), run.Iterations...)
+	return map[string]any{
+		"id":         run.ID,
+		"repo":       run.RepoName,
+		"repo_path":  run.RepoPath,
+		"status":     run.Status,
+		"last_error": run.LastError,
+		"profile":    run.Profile,
+		"iterations": iterations,
+		"created_at": run.CreatedAt,
+		"updated_at": run.UpdatedAt,
+	}
 }
 
 func (s *Server) handleSnapshot(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -2469,10 +2562,10 @@ func (s *Server) handleJournalPrune(_ context.Context, req mcp.CallToolRequest) 
 
 	if dryRun {
 		return jsonResult(map[string]any{
-			"dry_run":      true,
-			"total":        len(entries),
-			"keep":         keep,
-			"would_prune":  wouldPrune,
+			"dry_run":     true,
+			"total":       len(entries),
+			"keep":        keep,
+			"would_prune": wouldPrune,
 		}), nil
 	}
 
@@ -2482,8 +2575,8 @@ func (s *Server) handleJournalPrune(_ context.Context, req mcp.CallToolRequest) 
 	}
 
 	return jsonResult(map[string]any{
-		"dry_run":  false,
-		"pruned":   pruned,
+		"dry_run":   false,
+		"pruned":    pruned,
 		"remaining": len(entries) - pruned,
 	}), nil
 }

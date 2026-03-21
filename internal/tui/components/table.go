@@ -28,13 +28,13 @@ type Table struct {
 	SortAsc      bool
 	Width        int
 	Height       int
-	Offset       int    // scroll offset
+	Offset       int // scroll offset
 	Filter       string
-	filtered     []int  // indices into Rows matching filter
-	EmptyMessage string // shown when no rows match
-	StatusColumn int    // column index for status-prefix filtering (-1 = disabled)
-	MultiSelect  bool           // enable multi-select mode
-	Selected     map[int]bool   // selected row indices (into Rows)
+	filtered     []int        // indices into Rows matching filter
+	EmptyMessage string       // shown when no rows match
+	StatusColumn int          // column index for status-prefix filtering (-1 = disabled)
+	MultiSelect  bool         // enable multi-select mode
+	Selected     map[int]bool // selected row indices (into Rows)
 }
 
 // NewTable creates a table with the given columns.

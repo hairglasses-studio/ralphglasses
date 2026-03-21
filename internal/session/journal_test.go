@@ -15,14 +15,14 @@ func TestWriteJournalEntry(t *testing.T) {
 
 	now := time.Now()
 	s := &Session{
-		ID:        "sess-001",
-		Provider:  ProviderClaude,
-		RepoPath:  dir,
-		RepoName:  "test-repo",
-		Model:     "sonnet",
-		SpentUSD:  1.23,
-		TurnCount: 10,
-		Prompt:    "Fix the parser bug",
+		ID:         "sess-001",
+		Provider:   ProviderClaude,
+		RepoPath:   dir,
+		RepoName:   "test-repo",
+		Model:      "sonnet",
+		SpentUSD:   1.23,
+		TurnCount:  10,
+		Prompt:     "Fix the parser bug",
 		ExitReason: "completed normally",
 		LaunchedAt: now.Add(-5 * time.Minute),
 	}

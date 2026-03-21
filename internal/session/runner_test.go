@@ -192,3 +192,30 @@ func TestRunSessionStreamParsing(t *testing.T) {
 		t.Errorf("LastOutput = %q, want 'Done!'", s.LastOutput)
 	}
 }
+
+func TestRunSessionOutputRecordsParseErrors(t *testing.T) {
+	s := &Session{
+		ID:       "parse-test",
+		Provider: ProviderClaude,
+		Status:   StatusRunning,
+		OutputCh: make(chan string, 10),
+	}
+
+	runSessionOutput(s, strings.NewReader("not-json\n"))
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.StreamParseErrors != 1 {
+		t.Fatalf("StreamParseErrors = %d, want 1", s.StreamParseErrors)
+	}
+	if s.LastEventType != "parse_error" {
+		t.Errorf("LastEventType = %q", s.LastEventType)
+	}
+	if s.LastOutput != "not-json" {
+		t.Errorf("LastOutput = %q", s.LastOutput)
+	}
+	if len(s.OutputHistory) != 1 {
+		t.Errorf("OutputHistory len = %d, want 1", len(s.OutputHistory))
+	}
+}

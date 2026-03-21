@@ -163,14 +163,13 @@ func TestMcpJsonFormat(t *testing.T) {
 		t.Fatal("ralphglasses server not found in .mcp.json")
 	}
 
-	// Must use go run (not a prebuilt binary) for dev freshness
-	if srv.Command != "go" {
-		t.Errorf("command = %q, want go (use go run to avoid stale binaries)", srv.Command)
+	if srv.Command != "bash" {
+		t.Errorf("command = %q, want bash (wrapper-based startup)", srv.Command)
 	}
-	if len(srv.Args) < 2 || srv.Args[0] != "run" || srv.Args[1] != "." {
-		t.Errorf("args = %v, want [run . mcp ...]", srv.Args)
+	if len(srv.Args) < 1 || srv.Args[0] != "./scripts/dev/run-mcp.sh" {
+		t.Errorf("args = %v, want wrapper startup script", srv.Args)
 	}
 	if srv.CWD == "" {
-		t.Error("cwd must be set when using go run")
+		t.Error("cwd must be set when using wrapper startup")
 	}
 }

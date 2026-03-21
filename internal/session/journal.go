@@ -52,15 +52,15 @@ const (
 func WriteJournalEntry(s *Session) error {
 	s.mu.Lock()
 	entry := JournalEntry{
-		Timestamp:   time.Now(),
-		SessionID:   s.ID,
-		Provider:    string(s.Provider),
-		RepoName:    s.RepoName,
-		Model:       s.Model,
-		SpentUSD:    s.SpentUSD,
-		TurnCount:   s.TurnCount,
-		ExitReason:  s.ExitReason,
-		TaskFocus:   extractTaskFocus(s.Prompt),
+		Timestamp:  time.Now(),
+		SessionID:  s.ID,
+		Provider:   string(s.Provider),
+		RepoName:   s.RepoName,
+		Model:      s.Model,
+		SpentUSD:   s.SpentUSD,
+		TurnCount:  s.TurnCount,
+		ExitReason: s.ExitReason,
+		TaskFocus:  extractTaskFocus(s.Prompt),
 	}
 	if s.EndedAt != nil {
 		entry.DurationSec = s.EndedAt.Sub(s.LaunchedAt).Seconds()

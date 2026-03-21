@@ -18,12 +18,12 @@ func TestValidateProviderUnknown(t *testing.T) {
 
 func TestProviderDefaults(t *testing.T) {
 	tests := []struct {
-		provider Provider
+		provider  Provider
 		wantModel string
 	}{
 		{ProviderClaude, "sonnet"},
-		{ProviderGemini, "gemini-2.5-pro"},
-		{ProviderCodex, "o4-mini"},
+		{ProviderGemini, "gemini-3-pro"},
+		{ProviderCodex, "gpt-5.4-xhigh"},
 	}
 	for _, tt := range tests {
 		got := ProviderDefaults(tt.provider)
@@ -75,21 +75,6 @@ func TestBuildCodexCmd(t *testing.T) {
 	}
 }
 
-func TestBuildCodexCmdResume(t *testing.T) {
-	ctx := context.Background()
-	cmd := buildCodexCmd(ctx, LaunchOptions{
-		RepoPath: "/tmp/repo",
-		Resume:   "sess-456",
-	})
-
-	cmdStr := strings.Join(cmd.Args, " ")
-	for _, want := range []string{"exec", "--json", "--full-auto", "resume", "sess-456"} {
-		if !strings.Contains(cmdStr, want) {
-			t.Errorf("codex resume cmd %q missing %q", cmdStr, want)
-		}
-	}
-}
-
 func TestNormalizeClaudeEvent(t *testing.T) {
 	line := []byte(`{"type":"result","result":"Done","cost_usd":0.05,"num_turns":3,"session_id":"abc"}`)
 	event, err := normalizeEvent(ProviderClaude, line)
@@ -130,6 +115,29 @@ func TestNormalizeGeminiEvent(t *testing.T) {
 	}
 }
 
+func TestNormalizeGeminiEventNested(t *testing.T) {
+	line := []byte(`{"event":"message","message":{"parts":[{"text":"Working tree ready"}]},"usage":{"total_cost_usd":0.4,"turns":3},"session":{"id":"gem-456"},"metadata":{"model":"gemini-3-pro"}}`)
+	event, err := normalizeEvent(ProviderGemini, line)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event.Type != "assistant" {
+		t.Errorf("Type = %q, want assistant", event.Type)
+	}
+	if event.Content != "Working tree ready" {
+		t.Errorf("Content = %q", event.Content)
+	}
+	if event.CostUSD != 0.4 {
+		t.Errorf("CostUSD = %f, want 0.4", event.CostUSD)
+	}
+	if event.NumTurns != 3 {
+		t.Errorf("NumTurns = %d, want 3", event.NumTurns)
+	}
+	if event.SessionID != "gem-456" {
+		t.Errorf("SessionID = %q, want gem-456", event.SessionID)
+	}
+}
+
 func TestNormalizeCodexEvent(t *testing.T) {
 	line := []byte(`{"type":"result","result":"Refactored module","cost_usd":0.01,"num_turns":1,"is_error":false}`)
 	event, err := normalizeEvent(ProviderCodex, line)
@@ -147,6 +155,36 @@ func TestNormalizeCodexEvent(t *testing.T) {
 	}
 }
 
+func TestNormalizeCodexEventNested(t *testing.T) {
+	line := []byte(`{"event":"message","message":{"content":"Refactor complete"},"usage":{"total_cost_usd":0.12,"turns":2},"session":{"id":"cx-123"},"metadata":{"model":"gpt-5.4-xhigh"}}`)
+	event, err := normalizeEvent(ProviderCodex, line)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event.Type != "assistant" {
+		t.Errorf("Type = %q, want assistant", event.Type)
+	}
+	if event.Content != "Refactor complete" {
+		t.Errorf("Content = %q", event.Content)
+	}
+	if event.CostUSD != 0.12 {
+		t.Errorf("CostUSD = %f, want 0.12", event.CostUSD)
+	}
+	if event.NumTurns != 2 {
+		t.Errorf("NumTurns = %d, want 2", event.NumTurns)
+	}
+}
+
+func TestNormalizeCodexTextFallback(t *testing.T) {
+	event, err := normalizeEvent(ProviderCodex, []byte("\x1b[32mRefactored 3 files successfully\x1b[0m"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event.Text != "Refactored 3 files successfully" {
+		t.Errorf("Text = %q", event.Text)
+	}
+}
+
 func TestNormalizeEventEmptyLine(t *testing.T) {
 	_, err := normalizeEvent(ProviderClaude, []byte{})
 	if err == nil {
@@ -156,8 +194,33 @@ func TestNormalizeEventEmptyLine(t *testing.T) {
 
 func TestNormalizeEventInvalidJSON(t *testing.T) {
 	_, err := normalizeEvent(ProviderGemini, []byte("not json"))
+	if err != nil {
+		t.Errorf("expected fallback event, got error: %v", err)
+	}
+}
+
+func TestValidateLaunchOptionsCodexResume(t *testing.T) {
+	err := validateLaunchOptions(LaunchOptions{
+		Provider: ProviderCodex,
+		Resume:   "sess-123",
+	})
 	if err == nil {
-		t.Error("expected error for invalid JSON")
+		t.Fatal("expected error for codex resume")
+	}
+	if !strings.Contains(err.Error(), "does not support resume") {
+		t.Errorf("error = %q", err)
+	}
+}
+
+func TestUnsupportedOptionsWarningsCodexResume(t *testing.T) {
+	warnings := UnsupportedOptionsWarnings(ProviderCodex, LaunchOptions{
+		Resume: "sess-123",
+	})
+	if len(warnings) == 0 {
+		t.Fatal("expected warning")
+	}
+	if !strings.Contains(warnings[0], "unsupported") {
+		t.Fatalf("warning = %q", warnings[0])
 	}
 }
 

@@ -4,16 +4,16 @@ import "github.com/charmbracelet/lipgloss"
 
 // k9s-inspired color palette.
 var (
-	ColorPrimary    = lipgloss.Color("39")  // Cyan
-	ColorSecondary  = lipgloss.Color("62")  // Blue
-	ColorAccent     = lipgloss.Color("205") // Magenta
-	ColorGreen      = lipgloss.Color("42")
-	ColorYellow     = lipgloss.Color("214")
-	ColorRed        = lipgloss.Color("196")
-	ColorGray       = lipgloss.Color("244")
-	ColorDarkGray   = lipgloss.Color("241")
+	ColorPrimary     = lipgloss.Color("39")  // Cyan
+	ColorSecondary   = lipgloss.Color("62")  // Blue
+	ColorAccent      = lipgloss.Color("205") // Magenta
+	ColorGreen       = lipgloss.Color("42")
+	ColorYellow      = lipgloss.Color("214")
+	ColorRed         = lipgloss.Color("196")
+	ColorGray        = lipgloss.Color("244")
+	ColorDarkGray    = lipgloss.Color("241")
 	ColorBrightWhite = lipgloss.Color("255")
-	ColorDarkBg     = lipgloss.Color("236")
+	ColorDarkBg      = lipgloss.Color("236")
 
 	TitleStyle = lipgloss.NewStyle().
 			Bold(true).
@@ -57,18 +57,18 @@ var (
 			Bold(true)
 
 	NotificationStyle = lipgloss.NewStyle().
-			Foreground(ColorBrightWhite).
-			Background(lipgloss.Color("55")).
-			Padding(0, 2).
-			Bold(true)
+				Foreground(ColorBrightWhite).
+				Background(lipgloss.Color("55")).
+				Padding(0, 2).
+				Bold(true)
 
 	WarningStyle = lipgloss.NewStyle().
 			Foreground(ColorYellow)
 
 	// Provider styles
-	ProviderClaudeStyle = lipgloss.NewStyle().Foreground(ColorPrimary)  // cyan
-	ProviderGeminiStyle = lipgloss.NewStyle().Foreground(ColorAccent)   // magenta
-	ProviderCodexStyle  = lipgloss.NewStyle().Foreground(ColorYellow)   // yellow
+	ProviderClaudeStyle = lipgloss.NewStyle().Foreground(ColorPrimary) // cyan
+	ProviderGeminiStyle = lipgloss.NewStyle().Foreground(ColorAccent)  // magenta
+	ProviderCodexStyle  = lipgloss.NewStyle().Foreground(ColorYellow)  // yellow
 
 	// Tab bar
 	TabActive = lipgloss.NewStyle().
@@ -93,35 +93,35 @@ var (
 
 	// Modal/Menu styles
 	ModalBoxStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ColorAccent).
-		Padding(1, 2)
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(ColorAccent).
+			Padding(1, 2)
 
 	ModalButtonStyle = lipgloss.NewStyle().
-		Foreground(ColorGray).
-		Padding(0, 2)
+				Foreground(ColorGray).
+				Padding(0, 2)
 
 	ModalButtonActiveStyle = lipgloss.NewStyle().
-		Foreground(ColorBrightWhite).
-		Background(ColorDarkBg).
-		Bold(true).
-		Padding(0, 2)
+				Foreground(ColorBrightWhite).
+				Background(ColorDarkBg).
+				Bold(true).
+				Padding(0, 2)
 
 	MenuStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ColorPrimary).
-		Padding(0, 1)
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(ColorPrimary).
+			Padding(0, 1)
 
 	MenuItemStyle = lipgloss.NewStyle().
-		Foreground(ColorGray)
+			Foreground(ColorGray)
 
 	MenuItemActiveStyle = lipgloss.NewStyle().
-		Foreground(ColorBrightWhite).
-		Background(ColorDarkBg).
-		Bold(true)
+				Foreground(ColorBrightWhite).
+				Background(ColorDarkBg).
+				Bold(true)
 
 	MenuItemDestructiveStyle = lipgloss.NewStyle().
-		Foreground(ColorRed)
+					Foreground(ColorRed)
 )
 
 // ProviderStyle returns the appropriate style for a provider string.

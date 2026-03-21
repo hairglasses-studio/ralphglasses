@@ -1,0 +1,34 @@
+{
+  "generated_at": "2026-03-20",
+  "scope": "repo blockers plus open roadmap program",
+  "issues": [
+    {
+      "id": "toolchain.macos-bootstrap-validation",
+      "category": "toolchain",
+      "severity": "medium",
+      "summary": "Bootstrap and doctor scripts support macOS paths, but the repo has not yet added automated validation for that host class.",
+      "sources": ["scripts/bootstrap-toolchain.sh", "scripts/dev/doctor.sh", ".github/workflows/ci.yml"]
+    },
+    {
+      "id": "loop.tui-surface",
+      "category": "open_roadmap",
+      "severity": "medium",
+      "summary": "Perpetual loop control is exposed through MCP and fleet summaries, but there is not yet a dedicated TUI loop interaction surface.",
+      "sources": ["internal/tui", "internal/mcpserver/tools.go", "internal/session/loop.go"]
+    },
+    {
+      "id": "loop.auto-advance",
+      "category": "open_roadmap",
+      "severity": "medium",
+      "summary": "Loop runs execute deterministic single iterations, but automatic planner retry/requeue and background scheduling remain future work.",
+      "sources": ["internal/session/loop.go", "ROADMAP.md"]
+    },
+    {
+      "id": "provider.cost-fallbacks",
+      "category": "open_roadmap",
+      "severity": "medium",
+      "summary": "Provider normalizers are hardened, but roadmap item 2.5.5.3 for stderr-derived cost fallback remains open.",
+      "sources": ["internal/session/providers.go", "ROADMAP.md"]
+    }
+  ]
+}
