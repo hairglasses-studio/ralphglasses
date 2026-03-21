@@ -46,6 +46,7 @@ var rootCmd = &cobra.Command{
 		defer hookExec.Stop()
 		sessMgr := session.NewManagerWithBus(bus)
 		m := tui.NewModel(scanPath, sessMgr)
+		m.EventBus = bus
 		m.NotifyEnabled = notifyFlag
 		p := tea.NewProgram(m, tea.WithAltScreen())
 		_, err := p.Run()

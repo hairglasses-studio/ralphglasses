@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -111,6 +112,12 @@ type Model struct {
 	StreamingSessionID string
 	StreamingOutput    bool
 	SessionOutputView  *views.LogView
+
+	// Animation
+	TickFrame int
+
+	// Event bus
+	EventBus *events.Bus
 
 	// State
 	Width       int
@@ -213,6 +220,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case tickMsg:
+		m.TickFrame++
 		m.refreshAllRepos()
 		m.updateTable()
 		m.updateSessionTable()
@@ -464,24 +472,48 @@ func (m *Model) refreshAllRepos() {
 }
 
 func (m *Model) updateTable() {
-	rows := views.ReposToRows(m.Repos)
+	rows := views.ReposToRows(m.Repos, m.TickFrame)
 	m.Table.SetRows(rows)
 	m.StatusBar.RepoCount = len(m.Repos)
 	m.StatusBar.RunningCount = len(m.ProcMgr.RunningPaths())
 	m.StatusBar.LastRefresh = m.LastRefresh
+	m.StatusBar.TickFrame = m.TickFrame
 
 	// Update extended status bar fields
 	if m.SessMgr != nil {
 		sessions := m.SessMgr.List("")
 		m.StatusBar.SessionCount = len(sessions)
 		var totalSpend float64
+		var totalBudget float64
+		providerCounts := make(map[string]int)
 		for _, s := range sessions {
 			s.Lock()
 			totalSpend += s.SpentUSD
+			totalBudget += s.BudgetUSD
+			if s.Status == session.StatusRunning || s.Status == session.StatusLaunching {
+				providerCounts[string(s.Provider)]++
+			}
 			s.Unlock()
 		}
 		m.StatusBar.TotalSpendUSD = totalSpend
+		m.StatusBar.ProviderCounts = providerCounts
+		if totalBudget > 0 {
+			m.StatusBar.FleetBudgetPct = totalSpend / totalBudget
+		} else {
+			m.StatusBar.FleetBudgetPct = 0
+		}
 		m.StatusBar.AlertCount = m.countAlerts()
+		// Determine highest alert severity
+		m.StatusBar.HighestAlertSeverity = ""
+		if m.StatusBar.AlertCount > 0 {
+			m.StatusBar.HighestAlertSeverity = "info"
+			for _, r := range m.Repos {
+				if r.Circuit != nil && r.Circuit.State == "OPEN" {
+					m.StatusBar.HighestAlertSeverity = "critical"
+					break
+				}
+			}
+		}
 	}
 }
 
@@ -490,7 +522,7 @@ func (m *Model) updateSessionTable() {
 		return
 	}
 	sessions := m.SessMgr.List("")
-	rows := views.SessionsToRows(sessions)
+	rows := views.SessionsToRows(sessions, m.TickFrame)
 	m.SessionTable.SetRows(rows)
 }
 
@@ -547,14 +579,19 @@ func (m Model) findRepoByPath(path string) int {
 }
 
 // tabNames for the tab bar.
-var tabNames = []string{"1:Repos", "2:Sessions", "3:Teams", "4:Fleet"}
+var tabNames = []string{
+	fmt.Sprintf("1:%s Repos", styles.IconRepo),
+	fmt.Sprintf("2:%s Sessions", styles.IconSession),
+	fmt.Sprintf("3:%s Teams", styles.IconTeam),
+	fmt.Sprintf("4:%s Fleet", styles.IconFleet),
+}
 
 // View renders the TUI.
 func (m Model) View() string {
 	var b strings.Builder
 
 	// Title bar
-	b.WriteString(styles.TitleStyle.Render(" 👓 ralphglasses "))
+	b.WriteString(styles.TitleStyle.Render(fmt.Sprintf(" %s ralphglasses ", styles.IconGlasses)))
 	b.WriteString("  ")
 	b.WriteString(m.Breadcrumb.View())
 	b.WriteString("\n")
