@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
@@ -17,7 +18,7 @@ type HelpGroup struct {
 func RenderHelp(groups []HelpGroup, width, height int) string {
 	var b strings.Builder
 
-	b.WriteString(styles.TitleStyle.Render("  Ralphglasses Help"))
+	b.WriteString(styles.TitleStyle.Render("  " + styles.IconGlasses + " Ralphglasses Help"))
 	b.WriteString("\n\n")
 
 	for _, g := range groups {
@@ -37,7 +38,7 @@ func RenderHelp(groups []HelpGroup, width, height int) string {
 	}
 
 	// Commands section (not key bindings — always rendered)
-	b.WriteString(styles.HeaderStyle.Render("  Commands"))
+	b.WriteString(styles.HeaderStyle.Render("  " + styles.IconConfig + " Commands"))
 	b.WriteString("\n")
 	commands := [][2]string{
 		{":repos", "Switch to repos tab"},
@@ -62,8 +63,9 @@ func RenderHelp(groups []HelpGroup, width, height int) string {
 }
 
 func padRight(s string, n int) string {
-	if len(s) >= n {
+	w := ansi.StringWidth(s)
+	if w >= n {
 		return s
 	}
-	return s + strings.Repeat(" ", n-len(s))
+	return s + strings.Repeat(" ", n-w)
 }
