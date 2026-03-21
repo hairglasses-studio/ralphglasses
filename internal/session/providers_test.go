@@ -38,12 +38,13 @@ func TestBuildGeminiCmd(t *testing.T) {
 	ctx := context.Background()
 	cmd := buildGeminiCmd(ctx, LaunchOptions{
 		RepoPath: "/tmp/repo",
+		Prompt:   "do something",
 		Model:    "gemini-2.5-pro",
 		Resume:   "sess-123",
 	})
 
 	cmdStr := strings.Join(cmd.Args, " ")
-	for _, want := range []string{"-p", "--output-format", "stream-json", "--model", "gemini-2.5-pro", "--resume", "sess-123", "--yolo"} {
+	for _, want := range []string{"--output-format", "stream-json", "--model", "gemini-2.5-pro", "--resume", "sess-123", "--approval-mode", "yolo", "-p", "do something"} {
 		if !strings.Contains(cmdStr, want) {
 			t.Errorf("gemini cmd %q missing %q", cmdStr, want)
 		}
