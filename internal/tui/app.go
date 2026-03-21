@@ -102,6 +102,9 @@ type Model struct {
 	SessMgr         *session.Manager
 	SelectedSession string // session ID for detail view
 	SelectedTeam    string // team name for detail view
+	FleetWindow     int
+	FleetSection    int
+	FleetCursor     int
 
 	// Modal overlays
 	ConfirmDialog *components.ConfirmDialog
@@ -166,6 +169,7 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 		Breadcrumb:   components.Breadcrumb{Parts: []string{"Repos"}},
 		Keys:         DefaultKeyMap(),
 		Spinner:      s,
+		FleetWindow:  1,
 	}
 }
 
@@ -441,7 +445,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleTeamsKey(msg)
 	case ViewTeamDetail:
 		return m.handleTeamDetailKey(msg)
-	case ViewHelp, ViewFleet, ViewDiff, ViewTimeline:
+	case ViewFleet:
+		return m.handleFleetKey(msg)
+	case ViewHelp, ViewDiff, ViewTimeline:
 		// Read-only views — Esc handled globally, no view-specific keys
 		return m, nil
 	}
@@ -466,6 +472,7 @@ func (m Model) popView() (tea.Model, tea.Cmd) {
 	m.CurrentView = m.ViewStack[len(m.ViewStack)-1]
 	m.ViewStack = m.ViewStack[:len(m.ViewStack)-1]
 	m.Breadcrumb.Pop()
+	m.Keys.SetViewContext(m.CurrentView)
 	return m, nil
 }
 

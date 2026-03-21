@@ -41,10 +41,10 @@ func Scaffold(repoPath string, opts ScaffoldOptions) (*ScaffoldResult, error) {
 
 	// Files to create
 	files := map[string]func(string, ScaffoldOptions) string{
-		filepath.Join(repoPath, ".ralphrc"):          generateRalphRC,
-		filepath.Join(ralphDir, "PROMPT.md"):         generatePrompt,
-		filepath.Join(ralphDir, "AGENT.md"):          generateAgent,
-		filepath.Join(ralphDir, "fix_plan.md"):       generateFixPlan,
+		filepath.Join(repoPath, ".ralphrc"):    generateRalphRC,
+		filepath.Join(ralphDir, "PROMPT.md"):   generatePrompt,
+		filepath.Join(ralphDir, "AGENT.md"):    generateAgent,
+		filepath.Join(ralphDir, "fix_plan.md"): generateFixPlan,
 	}
 
 	for path, generator := range files {
@@ -67,13 +67,13 @@ func Scaffold(repoPath string, opts ScaffoldOptions) (*ScaffoldResult, error) {
 
 func detectProjectType(repoPath string) string {
 	indicators := map[string]string{
-		"go.mod":         "go",
-		"package.json":   "node",
-		"Cargo.toml":     "rust",
-		"pyproject.toml": "python",
+		"go.mod":           "go",
+		"package.json":     "node",
+		"Cargo.toml":       "rust",
+		"pyproject.toml":   "python",
 		"requirements.txt": "python",
-		"pom.xml":        "java",
-		"build.gradle":   "java",
+		"pom.xml":          "java",
+		"build.gradle":     "java",
 	}
 	for file, lang := range indicators {
 		if _, err := os.Stat(filepath.Join(repoPath, file)); err == nil {

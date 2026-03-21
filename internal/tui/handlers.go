@@ -439,6 +439,64 @@ func (m Model) handleTeamsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleTeamDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.Keys.Enter):
+		if m.SelectedTeam != "" && m.SessMgr != nil {
+			team, ok := m.SessMgr.GetTeam(m.SelectedTeam)
+			if ok && team.LeadID != "" {
+				m.SelectedSession = team.LeadID
+				m.pushView(ViewSessionDetail, "Lead Session")
+			}
+		}
+	case key.Matches(msg, m.Keys.TimelineView):
+		if m.SelectedTeam != "" && m.SessMgr != nil {
+			if team, ok := m.SessMgr.GetTeam(m.SelectedTeam); ok {
+				if idx := m.findRepoByPath(team.RepoPath); idx >= 0 {
+					m.SelectedIdx = idx
+				}
+				m.pushView(ViewTimeline, "Timeline")
+			}
+		}
+	case key.Matches(msg, m.Keys.DiffView):
+		if m.SelectedTeam != "" && m.SessMgr != nil {
+			if team, ok := m.SessMgr.GetTeam(m.SelectedTeam); ok {
+				if idx := m.findRepoByPath(team.RepoPath); idx >= 0 {
+					m.SelectedIdx = idx
+					m.pushView(ViewDiff, "Diff")
+				}
+			}
+		}
+	}
+	return m, nil
+}
+
+func (m Model) handleFleetKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	data := m.buildFleetData()
+	switch {
+	case key.Matches(msg, m.Keys.Down):
+		m.moveFleetCursor(data, 1)
+	case key.Matches(msg, m.Keys.Up):
+		m.moveFleetCursor(data, -1)
+	case key.Matches(msg, m.Keys.Enter):
+		return m.openFleetSelection(data)
+	case key.Matches(msg, m.Keys.StopAction):
+		return m.stopFleetSelection(data)
+	case key.Matches(msg, m.Keys.DiffView):
+		return m.diffFleetSelection(data)
+	case key.Matches(msg, m.Keys.TimelineView):
+		return m.timelineFleetSelection(data)
+	case msg.Type == tea.KeyTab || msg.Type == tea.KeyRight:
+		m.cycleFleetSection(data, 1)
+	case msg.Type == tea.KeyLeft:
+		m.cycleFleetSection(data, -1)
+	case len(msg.Runes) == 1 && msg.Runes[0] == ']':
+		m.FleetWindow = (m.FleetWindow + 1) % len(fleetWindows)
+	case len(msg.Runes) == 1 && msg.Runes[0] == '[':
+		m.FleetWindow--
+		if m.FleetWindow < 0 {
+			m.FleetWindow = len(fleetWindows) - 1
+		}
+	}
 	return m, nil
 }
 

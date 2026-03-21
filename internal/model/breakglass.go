@@ -91,13 +91,13 @@ func (bg *BreakglassConfig) Check(metrics *LoopMetrics) string {
 
 // LoopMetrics holds current metrics for breakglass evaluation.
 type LoopMetrics struct {
-	LoopTokens             int
-	LoopCost               float64
-	SessionTokens          int
-	SessionCost            float64
-	SessionDuration        time.Duration
-	HourlyCalls            int
-	ConsecutiveNoProgress  int
+	LoopTokens            int
+	LoopCost              float64
+	SessionTokens         int
+	SessionCost           float64
+	SessionDuration       time.Duration
+	HourlyCalls           int
+	ConsecutiveNoProgress int
 }
 
 // SaveBreakglass writes the breakglass config to .ralph/breakglass.json.

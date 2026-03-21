@@ -7,8 +7,9 @@ Supports **Claude Code**, **Gemini CLI**, and **OpenAI Codex CLI** as session pr
 ## Build & Run
 
 ```bash
-go build ./...
-go run . --scan-path ~/hairglasses-studio
+./scripts/bootstrap-toolchain.sh
+./scripts/dev/go.sh build ./...
+./scripts/dev/go.sh run . --scan-path ~/hairglasses-studio
 
 # Quality gate (REQUIRED before every commit)
 make ci
@@ -27,7 +28,7 @@ main.go → cmd/root.go (Cobra CLI)
 │   ├── manager.go         Session/team registry
 │   ├── budget.go          Per-provider cost tracking + enforcement
 │   └── types.go           Provider enum, Session, LaunchOptions, TeamConfig
-├── internal/mcpserver/    MCP tool handlers (43 tools, stdio)
+├── internal/mcpserver/    MCP tool handlers (47 tools, stdio)
 ├── internal/roadmap/      Roadmap parsing, analysis, research, export
 ├── internal/repofiles/    Ralph config scaffolding and optimization
 ├── internal/tui/          BubbleTea app, keymap, commands, filter
@@ -69,7 +70,7 @@ The `internal/session/` package uses a provider dispatch pattern:
 |----------|-----------|---------------|---------------|----------------|
 | `claude` (default) | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
 | `gemini` | `gemini` | `gemini-3-pro` | `stream-json` | Yes (`--resume`) |
-| `codex` | `codex` | `gpt-5.4-xhigh` | quiet mode | No |
+| `codex` | `codex` | `gpt-5.4-xhigh` | `--json` (NDJSON) | No |
 
 ## Codex-Specific Notes
 
@@ -87,7 +88,7 @@ The `internal/session/` package uses a provider dispatch pattern:
 
 ## MCP Server
 
-Ralphglasses exposes 43 MCP tools. Codex accesses them via `.codex/config.toml` (already configured in this repo).
+Ralphglasses exposes 47 MCP tools. Codex accesses them via `.codex/config.toml` (already configured in this repo).
 
 Key tools for Codex-led development:
 
@@ -99,6 +100,9 @@ ralphglasses_session_list      List sessions (filter by provider)
 ralphglasses_session_status    Get session info (cost, turns, model)
 ralphglasses_fleet_status      Fleet dashboard: repos, sessions, teams, costs
 ralphglasses_fleet_analytics   Cost breakdown by provider/repo/time-period
+ralphglasses_loop_start        Start a Codex planner/worker loop
+ralphglasses_loop_step         Execute one planner/worker/verifier iteration
+ralphglasses_loop_status       Inspect persisted loop state
 ```
 
 ## Environment Variables

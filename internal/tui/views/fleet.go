@@ -57,11 +57,15 @@ type FleetData struct {
 	Alerts          []FleetAlert
 	Repos           []*model.Repo
 	Sessions        []*session.Session
-	Events          []events.Event  // recent events from bus
-	CostHistory     []float64       // aggregate cost-over-time data points
-	CostPerTurn     map[string]float64  // provider → avg cost/turn
-	TopExpensive    []ExpensiveSession  // top 5 by spend
-	RepoBudgets     []RepoBudget        // per-repo utilization
+	Teams           []*session.TeamStatus
+	Events          []events.Event
+	CostHistory     []float64
+	CostPerTurn     map[string]float64
+	TopExpensive    []ExpensiveSession
+	RepoBudgets     []RepoBudget
+	SelectedSection string
+	SelectedCursor  int
+	CostWindowLabel string
 }
 
 // RenderFleetDashboard renders the fleet-wide monitoring dashboard.
@@ -106,7 +110,11 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 		for _, v := range points {
 			sl.Push(v)
 		}
-		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Cost Trend", styles.IconCost)))
+		title := fmt.Sprintf("%s Cost Trend", styles.IconCost)
+		if data.CostWindowLabel != "" {
+			title += " (" + data.CostWindowLabel + ")"
+		}
+		b.WriteString(styles.HeaderStyle.Render(title))
 		b.WriteString("\n")
 		b.WriteString(sl.View())
 		b.WriteString("\n\n")
@@ -230,64 +238,95 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 	}
 	b.WriteString("\n")
 
-	// Compact repo + session lists side-by-side
-	var repoList, sessionList strings.Builder
+	// Repo + session + team lists with selection markers
+	var repoList, sessionList, teamList strings.Builder
 
 	repoList.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Repos", styles.IconRepo)))
 	repoList.WriteString("\n")
-	for _, r := range data.Repos {
+	for i, r := range data.Repos {
 		status := r.StatusDisplay()
 		budgetStr := ""
 		if r.Status != nil && r.Status.SessionSpendUSD > 0 {
 			budgetStr = fmt.Sprintf(" $%.2f", r.Status.SessionSpendUSD)
 		}
-		repoList.WriteString(fmt.Sprintf("  %s %-16s %s%s\n",
+		repoList.WriteString(fmt.Sprintf("%s %s %-14s %s%s\n",
+			fleetMarker(data.SelectedSection == "repos" && data.SelectedCursor == i),
 			styles.StatusIcon(status),
 			r.Name,
 			styles.StatusStyle(status).Render(status),
 			budgetStr))
 	}
 
-	sessionList.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Running Sessions", styles.IconSession)))
+	sessionList.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Sessions", styles.IconSession)))
 	sessionList.WriteString("\n")
-	hasRunning := false
-	for _, s := range data.Sessions {
+	hasSessions := false
+	for i, s := range data.Sessions {
 		s.Lock()
-		st := s.Status
-		if st == session.StatusRunning || st == session.StatusLaunching {
-			id := s.ID
-			if len(id) > 8 {
-				id = id[:8]
-			}
-			provider := string(s.Provider)
-			repo := s.RepoName
-			spent := s.SpentUSD
-			s.Unlock()
-			sessionList.WriteString(fmt.Sprintf("  %-8s  %s %s  %s  $%.2f\n",
-				id,
-				styles.ProviderIcon(provider),
-				styles.ProviderStyle(provider).Render(fmt.Sprintf("%-7s", provider)),
-				repo,
-				spent))
-			hasRunning = true
-		} else {
-			s.Unlock()
+		id := s.ID
+		if len(id) > 8 {
+			id = id[:8]
 		}
+		provider := string(s.Provider)
+		repo := s.RepoName
+		spent := s.SpentUSD
+		status := string(s.Status)
+		s.Unlock()
+		sessionList.WriteString(fmt.Sprintf("%s %-8s %s %-7s %-10s $%.2f %s\n",
+			fleetMarker(data.SelectedSection == "sessions" && data.SelectedCursor == i),
+			id,
+			styles.ProviderIcon(provider),
+			provider,
+			truncateLabel(repo, 10),
+			spent,
+			styles.StatusStyle(status).Render(status)))
+		hasSessions = true
 	}
-	if !hasRunning {
+	if !hasSessions {
 		sessionList.WriteString(styles.InfoStyle.Render("  None"))
 		sessionList.WriteString("\n")
 	}
 
-	halfWidth := width/2 - 2
-	if halfWidth < 20 {
-		halfWidth = 30
+	teamList.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Teams", styles.IconTeam)))
+	teamList.WriteString("\n")
+	if len(data.Teams) == 0 {
+		teamList.WriteString(styles.InfoStyle.Render("  None"))
+		teamList.WriteString("\n")
+	} else {
+		for i, team := range data.Teams {
+			teamList.WriteString(fmt.Sprintf("%s %-12s %s %d tasks\n",
+				fleetMarker(data.SelectedSection == "teams" && data.SelectedCursor == i),
+				truncateLabel(team.Name, 12),
+				styles.StatusStyle(string(team.Status)).Render(string(team.Status)),
+				len(team.Tasks)))
+		}
 	}
-	leftPanel := lipgloss.NewStyle().Width(halfWidth).Render(repoList.String())
-	rightPanel := lipgloss.NewStyle().Width(halfWidth).Render(sessionList.String())
-	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel))
+
+	panelWidth := width/3 - 2
+	if panelWidth < 24 {
+		panelWidth = 24
+	}
+	leftPanel := lipgloss.NewStyle().Width(panelWidth).Render(repoList.String())
+	midPanel := lipgloss.NewStyle().Width(panelWidth).Render(sessionList.String())
+	rightPanel := lipgloss.NewStyle().Width(panelWidth).Render(teamList.String())
+	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, midPanel, rightPanel))
+	b.WriteString("\n\n")
+	b.WriteString(styles.HelpStyle.Render("  Tab/←/→: section  j/k: move  Enter: open  X: stop  d: diff  t: timeline  [ ]: time window"))
 
 	return b.String()
+}
+
+func fleetMarker(selected bool) string {
+	if selected {
+		return styles.SelectedStyle.Render(">")
+	}
+	return " "
+}
+
+func truncateLabel(label string, width int) string {
+	if width <= 0 || len([]rune(label)) <= width {
+		return label
+	}
+	return string([]rune(label)[:width-1]) + "…"
 }
 
 // eventTypeIcon returns an icon for an event type.

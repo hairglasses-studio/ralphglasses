@@ -27,6 +27,7 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 	model := s.Model
 	agent := s.AgentName
 	team := s.TeamName
+	providerSessionID := s.ProviderSessionID
 	spent := s.SpentUSD
 	budget := s.BudgetUSD
 	turns := s.TurnCount
@@ -36,8 +37,12 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 	exitReason := s.ExitReason
 	lastOutput := s.LastOutput
 	errMsg := s.Error
+	lastEventType := s.LastEventType
+	parseErrors := s.StreamParseErrors
 	costHistory := make([]float64, len(s.CostHistory))
 	copy(costHistory, s.CostHistory)
+	outputHistory := make([]string, len(s.OutputHistory))
+	copy(outputHistory, s.OutputHistory)
 	s.Unlock()
 
 	var b strings.Builder
@@ -52,6 +57,9 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 	b.WriteString(fmt.Sprintf("  Provider:      %s %s\n",
 		styles.ProviderIcon(provider),
 		styles.ProviderStyle(provider).Render(provider)))
+	if providerSessionID != "" {
+		b.WriteString(fmt.Sprintf("  Provider ID:   %s\n", providerSessionID))
+	}
 	b.WriteString(fmt.Sprintf("  Repo:          %s\n", repo))
 	b.WriteString(fmt.Sprintf("  Path:          %s\n", repoPath))
 	b.WriteString(fmt.Sprintf("  Status:        %s %s\n",
@@ -76,6 +84,12 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 	b.WriteString(fmt.Sprintf("  Duration:      %s\n", formatDuration(launched)))
 	if exitReason != "" {
 		b.WriteString(fmt.Sprintf("  Exit Reason:   %s\n", exitReason))
+	}
+	if lastEventType != "" {
+		b.WriteString(fmt.Sprintf("  Last Event:    %s\n", lastEventType))
+	}
+	if parseErrors > 0 {
+		b.WriteString(fmt.Sprintf("  Parse Errors:  %d\n", parseErrors))
 	}
 	b.WriteString("\n")
 
@@ -130,12 +144,15 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 		b.WriteString("\n\n")
 	}
 
-	// Output (last N lines)
-	if lastOutput != "" {
-		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Last Output", styles.IconLog)))
+	// Output history
+	if len(outputHistory) > 0 || lastOutput != "" {
+		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Output History", styles.IconLog)))
 		b.WriteString("\n")
-		lines := strings.Split(lastOutput, "\n")
-		maxLines := height - 30 // leave room for header sections
+		lines := outputHistory
+		if len(lines) == 0 && lastOutput != "" {
+			lines = strings.Split(lastOutput, "\n")
+		}
+		maxLines := height - 32
 		if maxLines < 5 {
 			maxLines = 5
 		}
@@ -151,7 +168,7 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 		b.WriteString("\n")
 	}
 
-	b.WriteString(styles.HelpStyle.Render("  X: stop session  d: git diff  Esc: back"))
+	b.WriteString(styles.HelpStyle.Render("  Enter: output  o: live output  d: git diff  t: timeline  X: stop  Esc: back"))
 
 	return b.String()
 }
