@@ -16,10 +16,11 @@ import (
 )
 
 var (
-	scanPath    string
-	themeName   string
-	notifyFlag  bool
-	version     = "dev"
+	scanPath   string
+	themeName  string
+	notifyFlag bool
+	version    = "dev"
+	commit     = "unknown"
 )
 
 var rootCmd = &cobra.Command{
@@ -71,7 +72,7 @@ var completionCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().StringVar(&scanPath, "scan-path", "~/hairglasses-studio",
+	rootCmd.PersistentFlags().StringVar(&scanPath, "scan-path", "~/hairglasses-studio",
 		"Root directory to scan for ralph-enabled repos")
 	rootCmd.Flags().StringVar(&themeName, "theme", "k9s",
 		"Color theme (k9s, dracula, gruvbox, nord, or path to YAML)")
