@@ -101,7 +101,7 @@ func RenderTeamDetail(team *session.TeamStatus, leadSession *session.Session, wi
 	}
 	b.WriteString("\n")
 
-	b.WriteString(styles.HelpStyle.Render("  Esc: back"))
+	b.WriteString(styles.HelpStyle.Render("  Enter: lead session  d: diff  t: timeline  Esc: back"))
 
 	return b.String()
 }

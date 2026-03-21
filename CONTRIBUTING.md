@@ -5,6 +5,7 @@ Ralphglasses supports development with **Claude Code**, **Gemini CLI**, and **Op
 ## Prerequisites
 
 - **Go 1.26+**
+- **Recommended**: `./scripts/bootstrap-toolchain.sh`
 - **direnv** (loads `.env` automatically)
 - At least one LLM provider CLI installed:
 
@@ -62,6 +63,10 @@ Project instructions: [AGENTS.md](AGENTS.md)
 ## Build & Test
 
 ```bash
+# Bootstrap local tooling and check prerequisites
+./scripts/bootstrap-toolchain.sh
+./scripts/dev/doctor.sh
+
 # Quality gate (REQUIRED before every commit)
 make ci                    # vet + test + build
 
@@ -75,7 +80,7 @@ make vet                   # go vet ./...
 make lint                  # golangci-lint (if installed)
 ```
 
-`make ci` works regardless of which LLM provider runs it — it's pure Go toolchain.
+If your host is missing `make`, `gcc`, `shellcheck`, or `bats`, use the repo devcontainer or run `./scripts/dev/ci.sh` directly.
 
 ## MCP Server Setup
 
@@ -84,7 +89,7 @@ Each provider has its own MCP configuration:
 ### Claude Code
 
 ```bash
-claude mcp add ralphglasses -- go run . mcp --scan-path ~/hairglasses-studio
+claude mcp add ralphglasses -- ./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio
 ```
 
 Or use the `.mcp.json` in the repo root (auto-discovered).
@@ -135,6 +140,11 @@ codex exec --full-auto "Read AGENTS.md, then fix the failing test in internal/se
 | Streaming output | `stream-json` | `stream-json` | `--json` (NDJSON) |
 | Project instructions | `CLAUDE.md` | `GEMINI.md` | `AGENTS.md` |
 
+Codex loops:
+- Planner default: `o1-pro`
+- Worker/verifier default: `gpt-5.4-xhigh`
+- Session resume remains unsupported; use `ralphglasses_session_retry` instead.
+
 ## Cost Optimization
 
 | Task Type | Recommended Provider | Why |
@@ -171,5 +181,5 @@ codex exec --full-auto "Read AGENTS.md, then fix the failing test in internal/se
 ### All Providers
 
 - **`make ci` fails**: Run `make test-verbose` to see detailed failures.
-- **MCP server won't start**: Run `go run . mcp` directly to see startup errors.
+- **MCP server won't start**: Run `./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio` directly to see startup errors.
 - **direnv not loading**: Run `direnv allow` in the repo root.

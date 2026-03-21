@@ -35,6 +35,10 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 	if provider == "" {
 		provider = ProviderClaude
 	}
+	opts.Provider = provider
+	if opts.Model == "" {
+		opts.Model = ProviderDefaults(provider)
+	}
 
 	sessionCtx, cancel := context.WithCancel(ctx)
 	cmd, err := buildCmdForProvider(sessionCtx, opts)
@@ -214,33 +218,43 @@ func runSessionOutput(s *Session, stdout io.Reader) {
 
 		event, err := normalizeEvent(s.Provider, line)
 		if err != nil {
+			s.mu.Lock()
+			s.StreamParseErrors++
+			s.LastEventType = "parse_error"
+			if msg := strings.TrimSpace(string(line)); msg != "" {
+				appendSessionOutput(s, msg)
+			}
+			if s.Error == "" {
+				s.Error = truncateStr(err.Error(), 2000)
+			}
+			if s.onComplete != nil {
+				go s.onComplete(s)
+			}
+			s.mu.Unlock()
 			continue
 		}
 
 		s.mu.Lock()
 		s.LastActivity = time.Now()
+		s.LastEventType = event.Type
+		eventText := firstNonEmpty(event.Content, event.Text, event.Result)
 
 		switch event.Type {
 		case "system":
 			if event.SessionID != "" {
 				s.ProviderSessionID = event.SessionID
 			}
+			if eventText != "" {
+				appendSessionOutput(s, eventText)
+			}
 		case "assistant":
-			if event.Content != "" {
-				s.LastOutput = truncateStr(event.Content, 4000)
-				// Append to output history (capped at 100)
-				s.OutputHistory = append(s.OutputHistory, event.Content)
-				if len(s.OutputHistory) > 100 {
-					s.OutputHistory = s.OutputHistory[len(s.OutputHistory)-100:]
-				}
-				// Non-blocking send to output channel
-				select {
-				case s.OutputCh <- event.Content:
-				default:
-				}
+			if eventText != "" {
+				appendSessionOutput(s, eventText)
 			}
 		case "result":
-			s.LastOutput = truncateStr(event.Result, 4000)
+			if eventText != "" {
+				s.LastOutput = truncateStr(eventText, 4000)
+			}
 			if event.CostUSD > 0 {
 				prevSpent := s.SpentUSD
 				s.SpentUSD = event.CostUSD
@@ -279,11 +293,30 @@ func runSessionOutput(s *Session, stdout io.Reader) {
 				s.ProviderSessionID = event.SessionID
 			}
 			if event.IsError {
-				s.Error = event.Result
+				s.Error = truncateStr(firstNonEmpty(event.Error, event.Result, event.Text), 2000)
+			}
+		default:
+			if eventText != "" {
+				appendSessionOutput(s, eventText)
+			}
+			if event.IsError {
+				s.Error = truncateStr(firstNonEmpty(event.Error, eventText), 2000)
 			}
 		}
 
 		s.mu.Unlock()
+	}
+}
+
+func appendSessionOutput(s *Session, text string) {
+	s.LastOutput = truncateStr(text, 4000)
+	s.OutputHistory = append(s.OutputHistory, text)
+	if len(s.OutputHistory) > 100 {
+		s.OutputHistory = s.OutputHistory[len(s.OutputHistory)-100:]
+	}
+	select {
+	case s.OutputCh <- text:
+	default:
 	}
 }
 

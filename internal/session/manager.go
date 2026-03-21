@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,30 +20,57 @@ const DefaultStateDir = "~/.ralphglasses/sessions"
 
 // Manager tracks all active Claude Code sessions and teams.
 type Manager struct {
-	mu       sync.Mutex
-	sessions map[string]*Session    // keyed by session ID
-	teams    map[string]*TeamStatus // keyed by team name
-	bus      *events.Bus
-	stateDir string // directory for persisted session JSON files
+	mu            sync.Mutex
+	sessions      map[string]*Session     // keyed by session ID
+	teams         map[string]*TeamStatus  // keyed by team name
+	workflowRuns  map[string]*WorkflowRun // keyed by workflow run ID
+	loops         map[string]*LoopRun     // keyed by loop run ID
+	bus           *events.Bus
+	stateDir      string // directory for persisted session JSON files
+	launchSession func(context.Context, LaunchOptions) (*Session, error)
+	waitSession   func(context.Context, *Session) error
 }
 
 // NewManager creates a new session manager.
 func NewManager() *Manager {
 	return &Manager{
-		sessions: make(map[string]*Session),
-		teams:    make(map[string]*TeamStatus),
-		stateDir: expandHome(DefaultStateDir),
+		sessions:     make(map[string]*Session),
+		teams:        make(map[string]*TeamStatus),
+		workflowRuns: make(map[string]*WorkflowRun),
+		loops:        make(map[string]*LoopRun),
+		stateDir:     expandHome(DefaultStateDir),
 	}
 }
 
 // NewManagerWithBus creates a session manager wired to an event bus.
 func NewManagerWithBus(bus *events.Bus) *Manager {
 	return &Manager{
-		sessions: make(map[string]*Session),
-		teams:    make(map[string]*TeamStatus),
-		bus:      bus,
-		stateDir: expandHome(DefaultStateDir),
+		sessions:     make(map[string]*Session),
+		teams:        make(map[string]*TeamStatus),
+		workflowRuns: make(map[string]*WorkflowRun),
+		loops:        make(map[string]*LoopRun),
+		bus:          bus,
+		stateDir:     expandHome(DefaultStateDir),
 	}
+}
+
+// SetStateDir overrides the persistence directory. Intended for tests and
+// alternate embedding environments that want to isolate on-disk state.
+func (m *Manager) SetStateDir(dir string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.stateDir = dir
+}
+
+// SetHooksForTesting overrides session launch/wait behavior. Intended for tests.
+func (m *Manager) SetHooksForTesting(
+	launch func(context.Context, LaunchOptions) (*Session, error),
+	wait func(context.Context, *Session) error,
+) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.launchSession = launch
+	m.waitSession = wait
 }
 
 // expandHome replaces a leading ~ with the user's home directory.
@@ -57,6 +85,12 @@ func expandHome(path string) string {
 
 // Launch starts a new Claude Code session via claude -p.
 func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
+	if opts.Provider == "" {
+		opts.Provider = ProviderClaude
+	}
+	if opts.Model == "" {
+		opts.Model = ProviderDefaults(opts.Provider)
+	}
 	s, err := launch(ctx, opts, m.bus)
 	if err != nil {
 		return nil, err
@@ -171,6 +205,9 @@ func (m *Manager) StopAll() {
 
 // Resume resumes a previous session by its provider session ID.
 func (m *Manager) Resume(ctx context.Context, repoPath string, provider Provider, sessionID, prompt string) (*Session, error) {
+	if provider == "" {
+		provider = ProviderClaude
+	}
 	opts := LaunchOptions{
 		Provider: provider,
 		RepoPath: repoPath,
@@ -411,6 +448,244 @@ func (m *Manager) ListTeams() []*TeamStatus {
 		result = append(result, t)
 	}
 	return result
+}
+
+// GetWorkflowRun returns a workflow run by ID.
+func (m *Manager) GetWorkflowRun(id string) (*WorkflowRun, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	run, ok := m.workflowRuns[id]
+	return run, ok
+}
+
+// RunWorkflow validates and starts a workflow asynchronously.
+func (m *Manager) RunWorkflow(ctx context.Context, repoPath string, wf WorkflowDef) (*WorkflowRun, error) {
+	if err := ValidateWorkflow(wf); err != nil {
+		return nil, err
+	}
+
+	run := newWorkflowRun(repoPath, wf)
+
+	m.mu.Lock()
+	m.workflowRuns[run.ID] = run
+	m.mu.Unlock()
+
+	go m.executeWorkflow(detachContext(ctx), run, repoPath, wf)
+	return run, nil
+}
+
+func (m *Manager) launchWorkflowSession(ctx context.Context, opts LaunchOptions) (*Session, error) {
+	if m.launchSession != nil {
+		return m.launchSession(ctx, opts)
+	}
+	return m.Launch(ctx, opts)
+}
+
+func (m *Manager) waitForSession(ctx context.Context, s *Session) error {
+	if m.waitSession != nil {
+		return m.waitSession(ctx, s)
+	}
+
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			s.Lock()
+			status := s.Status
+			errMsg := s.Error
+			exitReason := s.ExitReason
+			s.Unlock()
+
+			switch status {
+			case StatusCompleted:
+				return nil
+			case StatusErrored:
+				if errMsg != "" {
+					return errors.New(errMsg)
+				}
+				if exitReason != "" {
+					return errors.New(exitReason)
+				}
+				return fmt.Errorf("session %s errored", s.ID)
+			case StatusStopped:
+				if exitReason != "" {
+					return errors.New(exitReason)
+				}
+				return fmt.Errorf("session %s stopped", s.ID)
+			}
+		}
+	}
+}
+
+func (m *Manager) executeWorkflow(ctx context.Context, run *WorkflowRun, repoPath string, wf WorkflowDef) {
+	run.setStatus("running")
+
+	remaining := make([]WorkflowStep, len(wf.Steps))
+	copy(remaining, wf.Steps)
+	completed := make(map[string]bool, len(wf.Steps))
+	terminal := make(map[string]string, len(wf.Steps))
+	runFailed := false
+
+	for len(remaining) > 0 {
+		var ready []WorkflowStep
+		var pending []WorkflowStep
+
+		for _, step := range remaining {
+			blocked := false
+			depsReady := true
+			for _, dep := range step.DependsOn {
+				if status := terminal[dep]; status == "failed" || status == "blocked" {
+					blocked = true
+					break
+				}
+				if !completed[dep] {
+					depsReady = false
+				}
+			}
+			if blocked {
+				run.updateStep(step.Name, "blocked", func(result *WorkflowStepResult) {
+					result.Error = "blocked by failed dependency"
+					now := time.Now()
+					result.EndedAt = &now
+				})
+				terminal[step.Name] = "blocked"
+				runFailed = true
+				continue
+			}
+			if depsReady {
+				ready = append(ready, step)
+				continue
+			}
+			pending = append(pending, step)
+		}
+
+		if len(ready) == 0 {
+			run.setStatus("failed")
+			return
+		}
+
+		for i := 0; i < len(ready); {
+			if ready[i].Parallel {
+				j := i
+				for j < len(ready) && ready[j].Parallel {
+					j++
+				}
+				outcomes := m.runWorkflowParallelGroup(ctx, run, repoPath, ready[i:j])
+				for _, outcome := range outcomes {
+					terminal[outcome.Name] = outcome.Status
+					if outcome.Status == "completed" {
+						completed[outcome.Name] = true
+					} else {
+						runFailed = true
+					}
+				}
+				i = j
+				continue
+			}
+			outcome := m.runWorkflowStep(ctx, run, repoPath, ready[i])
+			terminal[outcome.Name] = outcome.Status
+			if outcome.Status == "completed" {
+				completed[outcome.Name] = true
+			} else {
+				runFailed = true
+			}
+			i++
+		}
+
+		remaining = pending
+	}
+
+	if runFailed {
+		run.setStatus("failed")
+		return
+	}
+	run.setStatus("completed")
+}
+
+type workflowStepOutcome struct {
+	Name   string
+	Status string
+}
+
+func (m *Manager) runWorkflowParallelGroup(ctx context.Context, run *WorkflowRun, repoPath string, steps []WorkflowStep) []workflowStepOutcome {
+	var wg sync.WaitGroup
+	outcomes := make(chan workflowStepOutcome, len(steps))
+
+	for _, step := range steps {
+		wg.Add(1)
+		go func(step WorkflowStep) {
+			defer wg.Done()
+			outcomes <- m.runWorkflowStep(ctx, run, repoPath, step)
+		}(step)
+	}
+	wg.Wait()
+	close(outcomes)
+
+	var result []workflowStepOutcome
+	for outcome := range outcomes {
+		result = append(result, outcome)
+	}
+	return result
+}
+
+func (m *Manager) runWorkflowStep(ctx context.Context, run *WorkflowRun, repoPath string, step WorkflowStep) workflowStepOutcome {
+	provider := Provider(step.Provider)
+	if provider == "" {
+		provider = ProviderClaude
+	}
+
+	started := time.Now()
+	run.updateStep(step.Name, "running", func(result *WorkflowStepResult) {
+		result.Provider = provider
+		result.StartedAt = &started
+	})
+
+	opts := LaunchOptions{
+		Provider: provider,
+		RepoPath: repoPath,
+		Prompt:   step.Prompt,
+		Model:    step.Model,
+		Agent:    step.Agent,
+	}
+
+	sess, err := m.launchWorkflowSession(ctx, opts)
+	if err != nil {
+		run.updateStep(step.Name, "failed", func(result *WorkflowStepResult) {
+			result.Provider = provider
+			result.Error = err.Error()
+			now := time.Now()
+			result.EndedAt = &now
+		})
+		return workflowStepOutcome{Name: step.Name, Status: "failed"}
+	}
+
+	run.updateStep(step.Name, "running", func(result *WorkflowStepResult) {
+		result.SessionID = sess.ID
+		result.Provider = sess.Provider
+	})
+
+	if err := m.waitForSession(ctx, sess); err != nil {
+		run.updateStep(step.Name, "failed", func(result *WorkflowStepResult) {
+			result.SessionID = sess.ID
+			result.Provider = sess.Provider
+			result.Error = err.Error()
+			now := time.Now()
+			result.EndedAt = &now
+		})
+		return workflowStepOutcome{Name: step.Name, Status: "failed"}
+	}
+
+	run.updateStep(step.Name, "completed", func(result *WorkflowStepResult) {
+		result.SessionID = sess.ID
+		result.Provider = sess.Provider
+		now := time.Now()
+		result.EndedAt = &now
+	})
+	return workflowStepOutcome{Name: step.Name, Status: "completed"}
 }
 
 // PersistSession writes session state to the shared state directory.

@@ -9,13 +9,13 @@ const (
 	IconCodex  = "\ue795" // nf-dev-terminal
 
 	// Status
-	IconRunning    = "\uf144" // nf-fa-play_circle
-	IconCompleted  = "\uf058" // nf-fa-check_circle
-	IconErrored    = "\uf071" // nf-fa-exclamation_triangle
-	IconStopped    = "\uf28d" // nf-fa-stop_circle
-	IconPaused     = "\uf28b" // nf-fa-pause_circle
-	IconLaunching  = "\uf135" // nf-fa-rocket
-	IconIdle       = "\uf192" // nf-fa-dot_circle_o
+	IconRunning   = "\uf144" // nf-fa-play_circle
+	IconCompleted = "\uf058" // nf-fa-check_circle
+	IconErrored   = "\uf071" // nf-fa-exclamation_triangle
+	IconStopped   = "\uf28d" // nf-fa-stop_circle
+	IconPaused    = "\uf28b" // nf-fa-pause_circle
+	IconLaunching = "\uf135" // nf-fa-rocket
+	IconIdle      = "\uf192" // nf-fa-dot_circle_o
 
 	// Circuit breaker
 	IconCBClosed   = "\uf132" // nf-fa-shield
@@ -23,18 +23,18 @@ const (
 	IconCBOpen     = "\uf0e7" // nf-fa-bolt
 
 	// Navigation / labels
-	IconRepo       = "\ue725" // nf-dev-git_branch
-	IconSession    = "\uf489" // nf-oct-terminal
-	IconTeam       = "\uf0c0" // nf-fa-users
-	IconFleet      = "\uf00a" // nf-fa-th
-	IconBudget     = "\uf155" // nf-fa-dollar
-	IconCost       = "\uf201" // nf-fa-line_chart
-	IconTurns      = "\uf021" // nf-fa-refresh
-	IconClock      = "\uf017" // nf-fa-clock_o
-	IconAlert      = "\uf0f3" // nf-fa-bell
-	IconAgent      = "\uf544" // nf-md-robot (same as claude)
-	IconConfig     = "\uf013" // nf-fa-cog
-	IconLog        = "\uf15c" // nf-fa-file_text_o
+	IconRepo    = "\ue725" // nf-dev-git_branch
+	IconSession = "\uf489" // nf-oct-terminal
+	IconTeam    = "\uf0c0" // nf-fa-users
+	IconFleet   = "\uf00a" // nf-fa-th
+	IconBudget  = "\uf155" // nf-fa-dollar
+	IconCost    = "\uf201" // nf-fa-line_chart
+	IconTurns   = "\uf021" // nf-fa-refresh
+	IconClock   = "\uf017" // nf-fa-clock_o
+	IconAlert   = "\uf0f3" // nf-fa-bell
+	IconAgent   = "\uf544" // nf-md-robot (same as claude)
+	IconConfig  = "\uf013" // nf-fa-cog
+	IconLog     = "\uf15c" // nf-fa-file_text_o
 
 	// Severity
 	IconCritical = "\uf7ba" // nf-md-radioactive

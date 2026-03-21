@@ -425,10 +425,10 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** Claude lead delegates tasks to Gemini/Codex workers
 
 ### 2.5.4 — Provider-specific resume support `[BLOCKED BY 2.5.1]`
-- [x] 2.5.4.1 — Implement Codex resume: `codex exec resume SESSION_ID`
+- [x] 2.5.4.1 — Document Codex resume as unsupported and route retries through `session_retry`
 - [x] 2.5.4.2 — Verify Gemini `--resume` flag works with `stream-json`
-- [x] 2.5.4.3 — Add resume tests per provider
-- **Acceptance:** `session_resume` works for all three providers
+- [x] 2.5.4.3 — Add resume tests per provider, including explicit Codex rejection
+- **Acceptance:** `session_resume` works for Claude/Gemini and returns an explicit validation error for Codex
 
 ### 2.5.5 — Unified cost normalization `[BLOCKED BY 2.5.1]`
 - [x] 2.5.5.1 — Verify Codex `--json` cost output fields, update normalizer
