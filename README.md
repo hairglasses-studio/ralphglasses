@@ -34,8 +34,8 @@ Launch sessions against any supported provider:
 | Provider | CLI | Default Model | Install |
 |----------|-----|---------------|---------|
 | `claude` (default) | [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) | `sonnet` | Pre-installed |
-| `gemini` | [Gemini CLI](https://ai.google.dev/gemini-api/docs) | `gemini-2.5-pro` | `npm i -g @google/gemini-cli` |
-| `codex` | [Codex CLI](https://platform.openai.com/docs/guides/codex) | `o4-mini` | `npm i -g @openai/codex-cli` |
+| `gemini` | [Gemini CLI](https://ai.google.dev/gemini-api/docs) | `gemini-3-pro` | `npm i -g @google/gemini-cli` |
+| `codex` | [Codex CLI](https://platform.openai.com/docs/guides/codex) | `gpt-5.4-xhigh` | `npm i -g @openai/codex-cli` |
 
 ### Usage via MCP
 
@@ -75,7 +75,7 @@ See [ROADMAP.md](ROADMAP.md) for the full plan.
 
 ## MCP Server
 
-27 tools for programmatic control across all providers:
+43 tools for programmatic control across all providers:
 
 ### Core Loop Management
 | Tool | Description |
@@ -137,7 +137,7 @@ main.go → cmd/root.go (Cobra CLI)
 │   ├── manager.go         Session/team registry
 │   ├── budget.go          Per-provider cost tracking + enforcement
 │   └── types.go           Provider enum, Session, LaunchOptions, TeamConfig
-├── internal/mcpserver/    MCP tool handlers (27 tools, stdio)
+├── internal/mcpserver/    MCP tool handlers (43 tools, stdio)
 ├── internal/roadmap/      Roadmap parsing, analysis, research, export
 ├── internal/repofiles/    Ralph config scaffolding and optimization
 ├── internal/tui/          BubbleTea app, keymap, commands, filter
@@ -170,4 +170,7 @@ main.go → cmd/root.go (Cobra CLI)
 - [ROADMAP.md](ROADMAP.md) — Full development roadmap
 - [docs/RESEARCH.md](docs/RESEARCH.md) — Agent OS & sandboxing research
 - [docs/MULTI-SESSION.md](docs/MULTI-SESSION.md) — Multi-session tool comparison
-- [CLAUDE.md](CLAUDE.md) — Architecture conventions for AI agents
+- [CLAUDE.md](CLAUDE.md) — Claude Code project instructions
+- [GEMINI.md](GEMINI.md) — Gemini CLI project instructions
+- [AGENTS.md](AGENTS.md) — Codex CLI project instructions
+- [CONTRIBUTING.md](CONTRIBUTING.md) — Multi-provider contribution guide

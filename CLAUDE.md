@@ -25,8 +25,8 @@ Sessions can target any of three providers via the `provider` parameter:
 | Provider | CLI Binary | Default Model | Stream Format | Resume Support |
 |----------|-----------|---------------|---------------|----------------|
 | `claude` (default) | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
-| `gemini` | `gemini` | `gemini-2.5-pro` | `stream-json` | Yes (`--resume`) |
-| `codex` | `codex` | `o4-mini` | quiet mode | No |
+| `gemini` | `gemini` | `gemini-3-pro` | `stream-json` | Yes (`--resume`) |
+| `codex` | `codex` | `gpt-5.4-xhigh` | quiet mode | No |
 
 ### Prerequisites
 
@@ -268,6 +268,14 @@ The `distro/` directory contains configs for a bootable Linux thin client that s
 - **distro/dietpi/**: Legacy DietPi config (deprecated)
 - **distro/pxe/**: PXE network boot docs
 - **distro/autorandr/**: Monitor profiles (populated after setup)
+
+## Per-Provider Config
+
+- `.gemini/settings.json` — Gemini CLI MCP server registration
+- `.codex/config.toml` — Codex CLI project config + MCP server registration
+- See [GEMINI.md](GEMINI.md) for Gemini-specific instructions
+- See [AGENTS.md](AGENTS.md) for Codex-specific instructions
+- See [CONTRIBUTING.md](CONTRIBUTING.md) for multi-provider contribution guide
 
 ## Related Repos (same org)
 

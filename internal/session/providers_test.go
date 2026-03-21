@@ -2,7 +2,6 @@ package session
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 )
@@ -196,7 +195,8 @@ func TestRunSessionOutputWithProvider(t *testing.T) {
 }
 
 func TestValidateProviderEnvMissing(t *testing.T) {
-	os.Unsetenv("GOOGLE_API_KEY")
+	t.Setenv("GOOGLE_API_KEY", "")
+	t.Setenv("GEMINI_API_KEY", "")
 	err := ValidateProviderEnv(ProviderGemini)
 	if err == nil {
 		t.Fatal("expected error when GOOGLE_API_KEY is unset")
