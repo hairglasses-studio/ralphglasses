@@ -67,6 +67,17 @@ func DefaultThemes() map[string]*Theme {
 			DarkBg:   "236",
 			BrightFg: "189",
 		},
+		"snazzy": {
+			Name:     "snazzy",
+			Primary:  "#57c7ff",
+			Accent:   "#ff6ac1",
+			Green:    "#5af78e",
+			Yellow:   "#f3f99d",
+			Red:      "#ff5c57",
+			Gray:     "#686868",
+			DarkBg:   "#1a1a1a",
+			BrightFg: "#f1f1f0",
+		},
 	}
 }
 

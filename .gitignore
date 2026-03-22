@@ -1,6 +1,7 @@
 # Binaries
-ralphglasses
-ralphglasses-mcp
+/ralphglasses
+/ralphglasses-mcp
+/prompt-improver
 *.exe
 
 # Ralph runtime state (not code)

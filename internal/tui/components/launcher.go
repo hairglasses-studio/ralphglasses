@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
@@ -32,15 +33,16 @@ type LaunchResultMsg struct {
 
 // SessionLauncher is a modal form for launching a new session.
 type SessionLauncher struct {
-	Active   bool
-	RepoPath string
-	RepoName string
-	Cursor   LaunchField
-	Fields   [launchFieldCount]string
-	Labels   [launchFieldCount]string
-	Editing  bool
-	EditBuf  string
-	Width    int
+	Active    bool
+	RepoPath  string
+	RepoName  string
+	Cursor    LaunchField
+	Fields    [launchFieldCount]string
+	Labels    [launchFieldCount]string
+	Editing   bool
+	EditBuf   string
+	Width     int
+	ScoreLine string
 }
 
 // NewSessionLauncher creates a launcher pre-configured with defaults.
@@ -76,6 +78,11 @@ func (l *SessionLauncher) HandleKey(keyType string, r rune) (LaunchResultMsg, bo
 		case "enter":
 			l.Fields[l.Cursor] = l.EditBuf
 			l.Editing = false
+			if l.Cursor == FieldPrompt && l.EditBuf != "" {
+				analysis := enhancer.Analyze(l.EditBuf)
+				l.ScoreLine = fmt.Sprintf("Score: %d/100 (%s) — %d suggestions",
+					analysis.ScoreReport.Overall, analysis.ScoreReport.Grade, len(analysis.Suggestions))
+			}
 			return LaunchResultMsg{}, false
 		case "esc":
 			l.Editing = false
@@ -184,6 +191,10 @@ func (l *SessionLauncher) View() string {
 			b.WriteString(line)
 		}
 		b.WriteString("\n")
+		if i == FieldPrompt && l.ScoreLine != "" {
+			b.WriteString("  " + styles.InfoStyle.Render("  "+l.ScoreLine))
+			b.WriteString("\n")
+		}
 	}
 
 	b.WriteString("\n")
