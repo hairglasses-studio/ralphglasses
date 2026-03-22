@@ -35,6 +35,10 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 	if provider == "" {
 		provider = ProviderClaude
 	}
+	opts.Provider = provider
+	if opts.Model == "" {
+		opts.Model = ProviderDefaults(provider)
+	}
 
 	sessionCtx, cancel := context.WithCancel(ctx)
 	cmd, err := buildCmdForProvider(sessionCtx, opts)
@@ -97,9 +101,10 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 	s.Status = StatusRunning
 	s.mu.Unlock()
 
-	// Write prompt to stdin and close (Codex takes prompt as positional arg, skip stdin)
+	// Write prompt to stdin and close.
+	// Gemini and Codex take prompt as a CLI argument, not stdin.
 	go func() {
-		if provider != ProviderCodex && opts.Prompt != "" {
+		if provider == ProviderClaude && opts.Prompt != "" {
 			_, _ = io.WriteString(stdin, opts.Prompt)
 		}
 		stdin.Close()
@@ -147,13 +152,20 @@ func runSession(s *Session, stdout, stderr io.Reader) {
 			s.Status = StatusErrored
 			s.ExitReason = err.Error()
 			if errStr := stderrBuf.String(); errStr != "" && s.Error == "" {
-				s.Error = truncateStr(errStr, 2000)
+				s.Error = truncateStr(sanitizeStderr(s.Provider, errStr), 2000)
 			}
 		}
 	} else {
 		if s.Status == StatusRunning {
 			s.Status = StatusCompleted
 			s.ExitReason = "completed normally"
+		}
+	}
+
+	// Fallback: if no output was captured from stdout events, use cleaned stderr
+	if s.LastOutput == "" && s.Error == "" {
+		if cleaned := cleanProviderOutput(s.Provider, stderrBuf.String()); cleaned != "" {
+			s.LastOutput = truncateStr(cleaned, 4000)
 		}
 	}
 
@@ -173,6 +185,24 @@ func runSession(s *Session, stdout, stderr io.Reader) {
 			},
 		})
 	}
+
+	// Persist final state to disk
+	if s.onComplete != nil {
+		s.onComplete(s)
+	}
+
+	// Write improvement journal entry (fire-and-forget)
+	go func() {
+		if err := WriteJournalEntry(s); err == nil && s.bus != nil {
+			s.bus.Publish(events.Event{
+				Type:      events.JournalWritten,
+				SessionID: s.ID,
+				RepoPath:  s.RepoPath,
+				RepoName:  s.RepoName,
+				Provider:  string(s.Provider),
+			})
+		}
+	}()
 }
 
 // runSessionOutput parses streaming JSON lines from stdout and updates session state.
@@ -188,37 +218,51 @@ func runSessionOutput(s *Session, stdout io.Reader) {
 
 		event, err := normalizeEvent(s.Provider, line)
 		if err != nil {
+			s.mu.Lock()
+			s.StreamParseErrors++
+			s.LastEventType = "parse_error"
+			if msg := strings.TrimSpace(string(line)); msg != "" {
+				appendSessionOutput(s, msg)
+			}
+			if s.Error == "" {
+				s.Error = truncateStr(err.Error(), 2000)
+			}
+			if s.onComplete != nil {
+				go s.onComplete(s)
+			}
+			s.mu.Unlock()
 			continue
 		}
 
 		s.mu.Lock()
 		s.LastActivity = time.Now()
+		s.LastEventType = event.Type
+		eventText := firstNonEmpty(event.Content, event.Text, event.Result)
 
 		switch event.Type {
 		case "system":
 			if event.SessionID != "" {
 				s.ProviderSessionID = event.SessionID
 			}
+			if eventText != "" {
+				appendSessionOutput(s, eventText)
+			}
 		case "assistant":
-			if event.Content != "" {
-				s.LastOutput = truncateStr(event.Content, 4000)
-				// Append to output history (capped at 100)
-				s.OutputHistory = append(s.OutputHistory, event.Content)
-				if len(s.OutputHistory) > 100 {
-					s.OutputHistory = s.OutputHistory[len(s.OutputHistory)-100:]
-				}
-				// Non-blocking send to output channel
-				select {
-				case s.OutputCh <- event.Content:
-				default:
-				}
+			if eventText != "" {
+				appendSessionOutput(s, eventText)
 			}
 		case "result":
-			s.LastOutput = truncateStr(event.Result, 4000)
+			if eventText != "" {
+				s.LastOutput = truncateStr(eventText, 4000)
+			}
 			if event.CostUSD > 0 {
 				prevSpent := s.SpentUSD
 				s.SpentUSD = event.CostUSD
 				s.CostHistory = append(s.CostHistory, event.CostUSD)
+				// Persist updated state to disk
+				if s.onComplete != nil {
+					go s.onComplete(s)
+				}
 				// Publish cost update event
 				if s.bus != nil && event.CostUSD != prevSpent {
 					s.bus.Publish(events.Event{
@@ -249,11 +293,30 @@ func runSessionOutput(s *Session, stdout io.Reader) {
 				s.ProviderSessionID = event.SessionID
 			}
 			if event.IsError {
-				s.Error = event.Result
+				s.Error = truncateStr(firstNonEmpty(event.Error, event.Result, event.Text), 2000)
+			}
+		default:
+			if eventText != "" {
+				appendSessionOutput(s, eventText)
+			}
+			if event.IsError {
+				s.Error = truncateStr(firstNonEmpty(event.Error, eventText), 2000)
 			}
 		}
 
 		s.mu.Unlock()
+	}
+}
+
+func appendSessionOutput(s *Session, text string) {
+	s.LastOutput = truncateStr(text, 4000)
+	s.OutputHistory = append(s.OutputHistory, text)
+	if len(s.OutputHistory) > 100 {
+		s.OutputHistory = s.OutputHistory[len(s.OutputHistory)-100:]
+	}
+	select {
+	case s.OutputCh <- text:
+	default:
 	}
 }
 

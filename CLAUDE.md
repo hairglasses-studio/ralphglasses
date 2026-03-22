@@ -25,8 +25,8 @@ Sessions can target any of three providers via the `provider` parameter:
 | Provider | CLI Binary | Default Model | Stream Format | Resume Support |
 |----------|-----------|---------------|---------------|----------------|
 | `claude` (default) | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
-| `gemini` | `gemini` | `gemini-2.5-pro` | `stream-json` | Yes (`--resume`) |
-| `codex` | `codex` | `o4-mini` | quiet mode | No |
+| `gemini` | `gemini` | `gemini-3-pro` | `stream-json` | Yes (`--resume`) |
+| `codex` | `codex` | `gpt-5.4-xhigh` | quiet mode | No |
 
 ### Prerequisites
 
@@ -71,16 +71,16 @@ Use `ralphglasses_team_create` with `provider` to set the lead's provider, then 
 
 ## MCP Server
 
-Ralphglasses is also an installable MCP server exposing 47 tools for managing ralph loops and multi-provider LLM sessions programmatically.
+Ralphglasses is also an installable MCP server exposing 52 tools for managing ralph loops and multi-provider LLM sessions programmatically.
 
 ### Install
 
 ```bash
 # Via claude CLI (recommended)
-claude mcp add ralphglasses -- go run ./cmd/ralphglasses-mcp
+claude mcp add ralphglasses -- go run . mcp
 
 # Or with custom scan path
-claude mcp add ralphglasses -e RALPHGLASSES_SCAN_PATH=~/hairglasses-studio -- go run ./cmd/ralphglasses-mcp
+claude mcp add ralphglasses -e RALPHGLASSES_SCAN_PATH=~/hairglasses-studio -- go run . mcp
 
 # Or via the Cobra subcommand
 go run . mcp --scan-path ~/hairglasses-studio
@@ -120,6 +120,9 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 | `ralphglasses_team_delegate` | Add a task to an existing team |
 | `ralphglasses_agent_define` | Create/update .claude/agents/*.md agent definitions |
 | `ralphglasses_agent_list` | List available agent definitions for a repo |
+| `ralphglasses_journal_read` | Read improvement journal entries with synthesized context |
+| `ralphglasses_journal_write` | Manually write an improvement note to a repo's journal |
+| `ralphglasses_journal_prune` | Compact improvement journal to prevent unbounded growth |
 | `ralphglasses_event_list` | Query recent fleet events (by type, repo, time range) |
 | `ralphglasses_fleet_analytics` | Cost breakdown by provider/repo/time-period |
 | `ralphglasses_session_compare` | Compare two sessions (cost, turns, duration, efficiency) |
@@ -131,6 +134,7 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 | `ralphglasses_workflow_define` | Define multi-step YAML workflows |
 | `ralphglasses_workflow_run` | Execute workflows with dependency ordering |
 | `ralphglasses_snapshot` | Save/list fleet state snapshots |
+| `ralphglasses_session_stop_all` | Stop all running LLM sessions (emergency cost cutoff) |
 | `ralphglasses_prompt_analyze` | Score a prompt across 10 quality dimensions with letter grades and suggestions |
 | `ralphglasses_prompt_enhance` | Run the 13-stage deterministic prompt enhancement pipeline |
 | `ralphglasses_prompt_lint` | Deep-lint a prompt for anti-patterns (unmotivated rules, injection risks, etc.) |
@@ -160,19 +164,12 @@ The `ralphglasses_session_launch` tool supports an `enhance_prompt` parameter to
 - **internal/model/**: Data types and parsers for status.json, progress.json, circuit breaker state, .ralphrc
 - **internal/process/**: Process management (launch/stop/pause via os/exec), fsnotify file watcher, log tailing
 - **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch
-- **internal/mcpserver/**: MCP tool handlers (47 tools, stdio transport via mcp-go)
-  - `tools.go` — Server struct, constructors, Register(), helpers (getStringArg, errResult, jsonResult, etc.)
-  - `handler_loop.go` — Core loop handlers: scan, list, status, start, stop, pause, logs, config
-  - `handler_session.go` — Session lifecycle: launch, list, status, resume, stop, budget, retry, compare, output
-  - `handler_team.go` — Team and agent handlers: team create/status/delegate, agent define/list
-  - `handler_fleet.go` — Fleet-wide: fleet status, fleet analytics, event list
-  - `handler_repo.go` — Repo management: scaffold, optimize, health, config bulk
-  - `handler_roadmap.go` — Roadmap automation: parse, analyze, research, expand, export
-  - `handler_workflow.go` — Workflow and snapshot: workflow define/run, snapshot
-  - `handler_prompt.go` — Prompt enhancement: analyze, enhance, lint, improve, templates, classify, should_enhance, claudemd_check
+- **internal/mcpserver/**: MCP tool handlers (52 tools, stdio transport via mcp-go)
+  - `tools.go` — Server struct, constructors, Register(), all handler implementations, helpers
+  - `handler_prompt.go` — Prompt enhancement handlers: analyze, enhance, lint, improve, templates, classify, should_enhance, claudemd_check
 - **internal/roadmap/**: Roadmap parsing, analysis, research, expansion, export
 - **internal/repofiles/**: Ralph config file scaffolding and optimization
-- **cmd/ralphglasses-mcp/**: Standalone MCP server binary entry point
+- **cmd/mcp.go**: MCP server subcommand (`go run . mcp`)
 - **internal/tui/**: Bubble Tea app model, keymap, command/filter modes
 - **internal/tui/styles/**: Lipgloss theme (k9s-inspired, no other package imports this)
 - **internal/tui/components/**: Reusable widgets (sortable table, breadcrumb, status bar, notifications)
@@ -250,6 +247,8 @@ The `internal/session/` package uses a provider dispatch pattern:
 - `.ralph/.circuit_breaker_state`: CircuitBreakerState (state: CLOSED/HALF_OPEN/OPEN, counters, reason)
 - `.ralph/progress.json`: Progress (iteration, completed_ids, log entries, status)
 - `.ralphrc`: Shell-style KEY="value" config (PROJECT_NAME, MAX_CALLS_PER_HOUR, CB thresholds, etc.)
+- `.ralph/improvement_journal.jsonl`: Append-only JSONL, one entry per session (worked/failed/suggest)
+- `.ralph/improvement_patterns.json`: Consolidated durable patterns from journal (survives pruning)
 
 ## Distro / Thin Client
 
@@ -292,6 +291,14 @@ The `distro/` directory contains configs for a bootable Linux thin client that s
 - **distro/dietpi/**: Legacy DietPi config (deprecated)
 - **distro/pxe/**: PXE network boot docs
 - **distro/autorandr/**: Monitor profiles (populated after setup)
+
+## Per-Provider Config
+
+- `.gemini/settings.json` — Gemini CLI MCP server registration
+- `.codex/config.toml` — Codex CLI project config + MCP server registration
+- See [GEMINI.md](GEMINI.md) for Gemini-specific instructions
+- See [AGENTS.md](AGENTS.md) for Codex-specific instructions
+- See [CONTRIBUTING.md](CONTRIBUTING.md) for multi-provider contribution guide
 
 ## Related Repos (same org)
 

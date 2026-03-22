@@ -24,15 +24,15 @@ func TestFormatAgo(t *testing.T) {
 	}
 }
 
-func TestLipglossWidth(t *testing.T) {
-	if got := lipglossWidth("hello"); got != 5 {
+func TestVisualWidth(t *testing.T) {
+	if got := VisualWidth("hello"); got != 5 {
 		t.Errorf("plain text = %d, want 5", got)
 	}
-	if got := lipglossWidth(""); got != 0 {
+	if got := VisualWidth(""); got != 0 {
 		t.Errorf("empty = %d, want 0", got)
 	}
 	ansi := "\x1b[31mred\x1b[0m"
-	if got := lipglossWidth(ansi); got != 3 {
+	if got := VisualWidth(ansi); got != 3 {
 		t.Errorf("ansi = %d, want 3", got)
 	}
 }

@@ -9,10 +9,10 @@ import (
 
 // Analysis is the result of comparing a roadmap against a codebase.
 type Analysis struct {
-	Gaps     []GapItem     `json:"gaps"`
-	Stale    []StaleItem   `json:"stale"`
-	Orphaned []OrphanedItem `json:"orphaned"`
-	Ready    []ReadyItem   `json:"ready"`
+	Gaps     []GapItem       `json:"gaps"`
+	Stale    []StaleItem     `json:"stale"`
+	Orphaned []OrphanedItem  `json:"orphaned"`
+	Ready    []ReadyItem     `json:"ready"`
 	Summary  AnalysisSummary `json:"summary"`
 }
 
@@ -49,11 +49,11 @@ type ReadyItem struct {
 
 // AnalysisSummary provides counts.
 type AnalysisSummary struct {
-	TotalTasks   int `json:"total_tasks"`
-	GapCount     int `json:"gap_count"`
-	StaleCount   int `json:"stale_count"`
-	OrphanCount  int `json:"orphan_count"`
-	ReadyCount   int `json:"ready_count"`
+	TotalTasks  int `json:"total_tasks"`
+	GapCount    int `json:"gap_count"`
+	StaleCount  int `json:"stale_count"`
+	OrphanCount int `json:"orphan_count"`
+	ReadyCount  int `json:"ready_count"`
 }
 
 // Analyze compares a roadmap against the repo filesystem.

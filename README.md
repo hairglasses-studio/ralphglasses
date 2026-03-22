@@ -9,7 +9,7 @@ Orchestrates [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overvi
 - **Orchestrate** multiple LLM providers (Claude, Gemini, Codex) with unified session management
 - **Discover** ralph-enabled repos across your workspace (`--scan-path`)
 - **Monitor** live status: loop iteration, circuit breaker state, per-provider costs, model selection
-- **Control** ralph loops and headless sessions: start, stop, pause, resume — from TUI or MCP tools
+- **Control** ralph loops, headless sessions, and Codex planner/worker loops from TUI or MCP tools
 - **Track** costs across all providers in a unified cost ledger
 - **Stream** logs in real-time with reactive file watching (fsnotify)
 - **Configure** `.ralphrc` settings per repo from an in-TUI editor
@@ -17,14 +17,17 @@ Orchestrates [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overvi
 ## Quick Start
 
 ```bash
+# Bootstrap local tooling if needed
+./scripts/bootstrap-toolchain.sh
+
 # Build
-go build ./...
+./scripts/dev/go.sh build ./...
 
 # Launch TUI
-go run . --scan-path ~/hairglasses-studio
+./scripts/dev/go.sh run . --scan-path ~/hairglasses-studio
 
 # Or install the MCP server for Claude Code
-claude mcp add ralphglasses -- go run ./cmd/ralphglasses-mcp
+claude mcp add ralphglasses -- ./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio
 ```
 
 ## Multi-LLM Provider Support
@@ -34,8 +37,8 @@ Launch sessions against any supported provider:
 | Provider | CLI | Default Model | Install |
 |----------|-----|---------------|---------|
 | `claude` (default) | [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) | `sonnet` | Pre-installed |
-| `gemini` | [Gemini CLI](https://ai.google.dev/gemini-api/docs) | `gemini-2.5-pro` | `npm i -g @google/gemini-cli` |
-| `codex` | [Codex CLI](https://platform.openai.com/docs/guides/codex) | `o4-mini` | `npm i -g @openai/codex-cli` |
+| `gemini` | [Gemini CLI](https://ai.google.dev/gemini-api/docs) | `gemini-3-pro` | `npm i -g @google/gemini-cli` |
+| `codex` | [Codex CLI](https://platform.openai.com/docs/guides/codex) | `gpt-5.4-xhigh` | `npm i -g @openai/codex-cli` |
 
 ### Usage via MCP
 
@@ -75,7 +78,7 @@ See [ROADMAP.md](ROADMAP.md) for the full plan.
 
 ## MCP Server
 
-27 tools for programmatic control across all providers:
+47 tools for programmatic control across all providers:
 
 ### Core Loop Management
 | Tool | Description |
@@ -96,9 +99,13 @@ See [ROADMAP.md](ROADMAP.md) for the full plan.
 | `ralphglasses_session_launch` | Launch a headless session (`provider`: claude/gemini/codex) |
 | `ralphglasses_session_list` | List sessions (filter by `provider`, repo, status) |
 | `ralphglasses_session_status` | Detailed session info (provider, cost, turns, model) |
-| `ralphglasses_session_resume` | Resume a previous session (with `provider`) |
+| `ralphglasses_session_resume` | Resume a previous session (`claude`/`gemini`; Codex unsupported) |
 | `ralphglasses_session_stop` | Stop a running session |
 | `ralphglasses_session_budget` | Get/update budget for a session |
+| `ralphglasses_loop_start` | Create a Codex `o1-pro` planner + `gpt-5.4-xhigh` worker loop |
+| `ralphglasses_loop_status` | Inspect persisted loop status and iteration history |
+| `ralphglasses_loop_step` | Run one planner/worker/verifier iteration in a git worktree |
+| `ralphglasses_loop_stop` | Stop a loop and block future iterations |
 
 ### Agent Teams
 | Tool | Description |
@@ -137,7 +144,7 @@ main.go → cmd/root.go (Cobra CLI)
 │   ├── manager.go         Session/team registry
 │   ├── budget.go          Per-provider cost tracking + enforcement
 │   └── types.go           Provider enum, Session, LaunchOptions, TeamConfig
-├── internal/mcpserver/    MCP tool handlers (27 tools, stdio)
+├── internal/mcpserver/    MCP tool handlers (47 tools, stdio)
 ├── internal/roadmap/      Roadmap parsing, analysis, research, export
 ├── internal/repofiles/    Ralph config scaffolding and optimization
 ├── internal/tui/          BubbleTea app, keymap, commands, filter
@@ -170,4 +177,8 @@ main.go → cmd/root.go (Cobra CLI)
 - [ROADMAP.md](ROADMAP.md) — Full development roadmap
 - [docs/RESEARCH.md](docs/RESEARCH.md) — Agent OS & sandboxing research
 - [docs/MULTI-SESSION.md](docs/MULTI-SESSION.md) — Multi-session tool comparison
-- [CLAUDE.md](CLAUDE.md) — Architecture conventions for AI agents
+- [CLAUDE.md](CLAUDE.md) — Claude Code project instructions
+- [GEMINI.md](GEMINI.md) — Gemini CLI project instructions
+- [AGENTS.md](AGENTS.md) — Codex CLI project instructions
+- [CONTRIBUTING.md](CONTRIBUTING.md) — Multi-provider contribution guide
+- [docs/issue-ledger.json](docs/issue-ledger.json) — Current repo issue ledger

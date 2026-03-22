@@ -18,7 +18,7 @@ var mcpCmd = &cobra.Command{
 
 		srv := server.NewMCPServer(
 			"ralphglasses",
-			"0.1.0",
+			version+" ("+commit+")",
 			server.WithToolCapabilities(true),
 		)
 

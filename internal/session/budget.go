@@ -88,16 +88,16 @@ func (b *BudgetEnforcer) WriteLedgerEntry(s *Session, repoPath string) error {
 
 // CostSummary holds aggregated cost data for a session.
 type CostSummary struct {
-	SessionID    string    `json:"session_id"`
-	Provider     string    `json:"provider"`
-	RepoName     string    `json:"repo_name"`
-	TotalSpend   float64   `json:"total_spend_usd"`
-	BudgetUSD    float64   `json:"budget_usd"`
-	TurnCount    int       `json:"turn_count"`
-	DurationSec  float64   `json:"duration_seconds"`
-	Model        string    `json:"model"`
-	Status       string    `json:"status"`
-	GeneratedAt  time.Time `json:"generated_at"`
+	SessionID   string    `json:"session_id"`
+	Provider    string    `json:"provider"`
+	RepoName    string    `json:"repo_name"`
+	TotalSpend  float64   `json:"total_spend_usd"`
+	BudgetUSD   float64   `json:"budget_usd"`
+	TurnCount   int       `json:"turn_count"`
+	DurationSec float64   `json:"duration_seconds"`
+	Model       string    `json:"model"`
+	Status      string    `json:"status"`
+	GeneratedAt time.Time `json:"generated_at"`
 }
 
 // WriteCostSummary writes a cost summary JSON file to .ralph/.

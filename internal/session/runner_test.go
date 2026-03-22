@@ -95,13 +95,13 @@ func TestBuildCmd(t *testing.T) {
 			wantArgs: []string{"--append-system-prompt", "Be concise"},
 		},
 		{
-			name: "with session name",
+			name: "with session name (internal only, no CLI flag)",
 			opts: LaunchOptions{
 				RepoPath:    "/tmp/repo",
 				Prompt:      "hello",
 				SessionName: "my-session",
 			},
-			wantArgs: []string{"-n", "my-session"},
+			wantArgs: []string{}, // SessionName is tracked internally; Claude CLI has no --name flag
 		},
 	}
 
@@ -190,5 +190,32 @@ func TestRunSessionStreamParsing(t *testing.T) {
 	}
 	if s.LastOutput != "Done!" {
 		t.Errorf("LastOutput = %q, want 'Done!'", s.LastOutput)
+	}
+}
+
+func TestRunSessionOutputRecordsParseErrors(t *testing.T) {
+	s := &Session{
+		ID:       "parse-test",
+		Provider: ProviderClaude,
+		Status:   StatusRunning,
+		OutputCh: make(chan string, 10),
+	}
+
+	runSessionOutput(s, strings.NewReader("not-json\n"))
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.StreamParseErrors != 1 {
+		t.Fatalf("StreamParseErrors = %d, want 1", s.StreamParseErrors)
+	}
+	if s.LastEventType != "parse_error" {
+		t.Errorf("LastEventType = %q", s.LastEventType)
+	}
+	if s.LastOutput != "not-json" {
+		t.Errorf("LastOutput = %q", s.LastOutput)
+	}
+	if len(s.OutputHistory) != 1 {
+		t.Errorf("OutputHistory len = %d, want 1", len(s.OutputHistory))
 	}
 }
