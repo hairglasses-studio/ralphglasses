@@ -1,7 +1,6 @@
 package components
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
@@ -29,13 +28,13 @@ type Table struct {
 	SortAsc      bool
 	Width        int
 	Height       int
-	Offset       int    // scroll offset
+	Offset       int // scroll offset
 	Filter       string
-	filtered     []int  // indices into Rows matching filter
-	EmptyMessage string // shown when no rows match
-	StatusColumn int    // column index for status-prefix filtering (-1 = disabled)
-	MultiSelect  bool           // enable multi-select mode
-	Selected     map[int]bool   // selected row indices (into Rows)
+	filtered     []int        // indices into Rows matching filter
+	EmptyMessage string       // shown when no rows match
+	StatusColumn int          // column index for status-prefix filtering (-1 = disabled)
+	MultiSelect  bool         // enable multi-select mode
+	Selected     map[int]bool // selected row indices (into Rows)
 }
 
 // NewTable creates a table with the given columns.
@@ -75,9 +74,9 @@ func (t *Table) applyFilter() {
 			continue
 		}
 
-		// Status-prefix filtering
+		// Status-prefix filtering (strip ANSI for matching)
 		if prefix != "" && t.StatusColumn >= 0 && t.StatusColumn < len(row) {
-			cell := strings.ToLower(row[t.StatusColumn])
+			cell := strings.ToLower(StripAnsi(row[t.StatusColumn]))
 			if !strings.Contains(cell, remainder) {
 				continue
 			}
@@ -85,9 +84,9 @@ func (t *Table) applyFilter() {
 			continue
 		}
 
-		// Standard text matching
+		// Standard text matching (strip ANSI for matching)
 		for _, cell := range row {
-			if strings.Contains(strings.ToLower(cell), f) {
+			if strings.Contains(strings.ToLower(StripAnsi(cell)), f) {
 				t.filtered = append(t.filtered, i)
 				break
 			}
@@ -215,7 +214,7 @@ func (t *Table) sortRows() {
 	col := t.SortCol
 	asc := t.SortAsc
 	sort.SliceStable(t.Rows, func(i, j int) bool {
-		a, b := t.Rows[i][col], t.Rows[j][col]
+		a, b := StripAnsi(t.Rows[i][col]), StripAnsi(t.Rows[j][col])
 		if asc {
 			return a < b
 		}
@@ -269,7 +268,7 @@ func (t *Table) View() string {
 				title += " ▼"
 			}
 		}
-		hdr = append(hdr, styles.HeaderStyle.Render(fmt.Sprintf("%-*s", col.Width, title)))
+		hdr = append(hdr, styles.HeaderStyle.Render(visualPad(title, col.Width)))
 	}
 	b.WriteString(strings.Join(hdr, " "))
 	b.WriteRune('\n')
@@ -309,7 +308,7 @@ func (t *Table) View() string {
 			if ci < len(row) {
 				cell = row[ci]
 			}
-			padded := fmt.Sprintf("%-*s", col.Width, truncate(cell, col.Width))
+			padded := visualPad(cell, col.Width)
 			if vi == t.Cursor {
 				padded = styles.SelectedStyle.Render(padded)
 			}
@@ -345,6 +344,19 @@ func truncate(s string, maxW int) string {
 		return string(r[:maxW])
 	}
 	return string(r[:maxW-1]) + "…"
+}
+
+// visualPad truncates (ANSI-aware) then pads to the given visual width.
+func visualPad(s string, width int) string {
+	vw := VisualWidth(s)
+	if vw > width {
+		s = VisualTruncate(s, width)
+		vw = VisualWidth(s)
+	}
+	if vw < width {
+		s += strings.Repeat(" ", width-vw)
+	}
+	return s
 }
 
 func max(a, b int) int {

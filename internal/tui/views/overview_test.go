@@ -12,20 +12,20 @@ func TestNewOverviewTable(t *testing.T) {
 	if tbl == nil {
 		t.Fatal("nil table")
 	}
-	if len(tbl.Columns) != 7 {
-		t.Errorf("expected 7 columns, got %d", len(tbl.Columns))
+	if len(tbl.Columns) != len(OverviewColumns) {
+		t.Errorf("expected %d columns, got %d", len(OverviewColumns), len(tbl.Columns))
 	}
 }
 
 func TestOverviewColumns(t *testing.T) {
-	expected := []string{"Name", "Status", "Loop #", "Calls", "Circuit", "Last Action", "Updated"}
+	expected := []string{"Name", "Status", "Loop", "Calls", "Budget", "Progress", "CB", "Updated"}
+	if len(OverviewColumns) != len(expected) {
+		t.Fatalf("expected %d columns, got %d", len(expected), len(OverviewColumns))
+	}
 	for i, col := range OverviewColumns {
 		if col.Title != expected[i] {
 			t.Errorf("column %d title = %q, want %q", i, col.Title, expected[i])
 		}
-	}
-	if OverviewColumns[5].Sortable {
-		t.Error("Last Action should not be sortable")
 	}
 }
 
@@ -48,7 +48,7 @@ func TestReposToRows(t *testing.T) {
 		},
 	}
 
-	rows := ReposToRows(repos)
+	rows := ReposToRows(repos, 0)
 	if len(rows) != 2 {
 		t.Fatalf("expected 2 rows, got %d", len(rows))
 	}
@@ -65,7 +65,7 @@ func TestReposToRows(t *testing.T) {
 }
 
 func TestReposToRowsEmpty(t *testing.T) {
-	rows := ReposToRows(nil)
+	rows := ReposToRows(nil, 0)
 	if len(rows) != 0 {
 		t.Errorf("expected 0 rows, got %d", len(rows))
 	}

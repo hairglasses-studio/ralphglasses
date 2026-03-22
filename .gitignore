@@ -16,9 +16,14 @@
 .ralph/.ralph_session_history
 .ralph/.call_count
 .ralph/.last_reset
+.ralph/.loop_start_sha
 .ralph/live.log
 .ralph/logs/
 .ralph/docs/generated/
+.ralph/cross-repo-learnings.md
+.ralph/improvement_journal.jsonl
+.ralph/improvement_notes.jsonl
+.ralph/cycle_notes.md
 
 # Secrets
 .env
@@ -32,5 +37,19 @@
 # direnv
 .envrc
 
+# Gemini CLI (keep .gemini/settings.json tracked)
+.gemini/history/
+.gemini/tmp/
+
+# Codex CLI (keep .codex/config.toml tracked)
+.codex/sessions/
+.codex/cache/
+
+# Claude local settings
+.claude/settings.local.json
+
 # Test artifacts
 cover.out
+
+# Repo-managed toolchain cache
+.tools/

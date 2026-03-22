@@ -26,22 +26,22 @@ type BenchmarkEntry struct {
 
 // BenchmarkSummary is a per-session summary for benchmarks.md.
 type BenchmarkSummary struct {
-	SessionID          string    `json:"session_id"`
-	StartedAt          time.Time `json:"started_at"`
-	LoopCount          int       `json:"loop_count"`
-	TotalTokens        int       `json:"total_tokens"`
-	InputTokens        int       `json:"input_tokens"`
-	OutputTokens       int       `json:"output_tokens"`
-	WallTime           string    `json:"wall_time"`
-	TasksCompleted     int       `json:"tasks_completed"`
-	TasksTotal         int       `json:"tasks_total"`
-	CostEstimate       float64   `json:"cost_estimate"`
-	CostPerTask        float64   `json:"cost_per_task"`
-	ExitReason         string    `json:"exit_reason"`
-	CircuitBreakerOpens int      `json:"circuit_breaker_opens"`
-	MaxNoProgress      int       `json:"max_consecutive_no_progress"`
-	SpinEvents         int       `json:"spin_events"`
-	Model              string    `json:"model"`
+	SessionID           string    `json:"session_id"`
+	StartedAt           time.Time `json:"started_at"`
+	LoopCount           int       `json:"loop_count"`
+	TotalTokens         int       `json:"total_tokens"`
+	InputTokens         int       `json:"input_tokens"`
+	OutputTokens        int       `json:"output_tokens"`
+	WallTime            string    `json:"wall_time"`
+	TasksCompleted      int       `json:"tasks_completed"`
+	TasksTotal          int       `json:"tasks_total"`
+	CostEstimate        float64   `json:"cost_estimate"`
+	CostPerTask         float64   `json:"cost_per_task"`
+	ExitReason          string    `json:"exit_reason"`
+	CircuitBreakerOpens int       `json:"circuit_breaker_opens"`
+	MaxNoProgress       int       `json:"max_consecutive_no_progress"`
+	SpinEvents          int       `json:"spin_events"`
+	Model               string    `json:"model"`
 }
 
 // AppendBenchmarkEntry appends a JSONL entry to .ralph/benchmarks.jsonl.

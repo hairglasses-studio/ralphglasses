@@ -10,19 +10,19 @@ import (
 
 // OptimizeResult describes what was analyzed and proposed.
 type OptimizeResult struct {
-	RepoPath      string              `json:"repo_path"`
-	ProjectType   string              `json:"project_type"`
-	Issues        []OptimizeIssue     `json:"issues"`
-	Optimizations []OptimizeAction    `json:"optimizations"`
-	Applied       int                 `json:"applied"`
+	RepoPath      string           `json:"repo_path"`
+	ProjectType   string           `json:"project_type"`
+	Issues        []OptimizeIssue  `json:"issues"`
+	Optimizations []OptimizeAction `json:"optimizations"`
+	Applied       int              `json:"applied"`
 }
 
 // OptimizeIssue is a detected configuration problem.
 type OptimizeIssue struct {
-	File        string `json:"file"`
-	Issue       string `json:"issue"`
-	Severity    string `json:"severity"` // info, warning, error
-	Suggestion  string `json:"suggestion"`
+	File       string `json:"file"`
+	Issue      string `json:"issue"`
+	Severity   string `json:"severity"` // info, warning, error
+	Suggestion string `json:"suggestion"`
 }
 
 // OptimizeAction is an optimization that was applied.
@@ -34,7 +34,7 @@ type OptimizeAction struct {
 
 // OptimizeOptions controls optimization behavior.
 type OptimizeOptions struct {
-	DryRun bool // Report issues but don't modify files
+	DryRun bool   // Report issues but don't modify files
 	Focus  string // "config", "prompt", "plan", "all"
 }
 

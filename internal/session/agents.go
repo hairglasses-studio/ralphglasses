@@ -223,6 +223,78 @@ func parseYAMLList(value string) []string {
 	return result
 }
 
+// ComposeAgents creates a composite agent by merging multiple existing agent definitions.
+// It concatenates prompts with section headers, uses the first agent's model/tools as defaults
+// (overridable via the output AgentDef fields), and writes the result.
+func ComposeAgents(repoPath string, agentNames []string, provider Provider, name string) (AgentDef, error) {
+	if len(agentNames) == 0 {
+		return AgentDef{}, fmt.Errorf("at least one agent name required")
+	}
+	if name == "" {
+		return AgentDef{}, fmt.Errorf("composite agent name required")
+	}
+	if provider == "" {
+		provider = ProviderClaude
+	}
+
+	agents, err := DiscoverAgents(repoPath, provider)
+	if err != nil {
+		return AgentDef{}, fmt.Errorf("discover agents: %w", err)
+	}
+
+	// Index by name
+	byName := make(map[string]AgentDef, len(agents))
+	for _, a := range agents {
+		byName[a.Name] = a
+	}
+
+	// Resolve each requested agent
+	var resolved []AgentDef
+	for _, n := range agentNames {
+		a, ok := byName[n]
+		if !ok {
+			return AgentDef{}, fmt.Errorf("agent not found: %s", n)
+		}
+		resolved = append(resolved, a)
+	}
+
+	// Build composite: first agent provides defaults
+	composite := AgentDef{
+		Name:        name,
+		Provider:    provider,
+		Description: fmt.Sprintf("Composite agent from: %s", strings.Join(agentNames, ", ")),
+		Model:       resolved[0].Model,
+		MaxTurns:    resolved[0].MaxTurns,
+	}
+
+	// Merge tools (deduplicated, order preserved)
+	seen := make(map[string]bool)
+	for _, a := range resolved {
+		for _, t := range a.Tools {
+			if !seen[t] {
+				seen[t] = true
+				composite.Tools = append(composite.Tools, t)
+			}
+		}
+	}
+
+	// Concatenate prompts with section headers
+	var b strings.Builder
+	for i, a := range resolved {
+		if i > 0 {
+			b.WriteString("\n\n---\n\n")
+		}
+		b.WriteString(fmt.Sprintf("## %s\n\n", a.Name))
+		if a.Description != "" {
+			b.WriteString(fmt.Sprintf("*%s*\n\n", a.Description))
+		}
+		b.WriteString(a.Prompt)
+	}
+	composite.Prompt = b.String()
+
+	return composite, nil
+}
+
 // renderAgentMd produces a .claude/agents/*.md or .gemini/agents/*.md file content.
 func renderAgentMd(def AgentDef) string {
 	var b strings.Builder

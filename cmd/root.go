@@ -16,10 +16,11 @@ import (
 )
 
 var (
-	scanPath    string
-	themeName   string
-	notifyFlag  bool
-	version     = "dev"
+	scanPath   string
+	themeName  string
+	notifyFlag bool
+	version    = "dev"
+	commit     = "unknown"
 )
 
 var rootCmd = &cobra.Command{
@@ -45,6 +46,7 @@ var rootCmd = &cobra.Command{
 		defer hookExec.Stop()
 		sessMgr := session.NewManagerWithBus(bus)
 		m := tui.NewModel(scanPath, sessMgr)
+		m.EventBus = bus
 		m.NotifyEnabled = notifyFlag
 		p := tea.NewProgram(m, tea.WithAltScreen())
 		_, err := p.Run()
@@ -71,7 +73,7 @@ var completionCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().StringVar(&scanPath, "scan-path", "~/hairglasses-studio",
+	rootCmd.PersistentFlags().StringVar(&scanPath, "scan-path", "~/hairglasses-studio",
 		"Root directory to scan for ralph-enabled repos")
 	rootCmd.Flags().StringVar(&themeName, "theme", "k9s",
 		"Color theme (k9s, dracula, gruvbox, nord, or path to YAML)")

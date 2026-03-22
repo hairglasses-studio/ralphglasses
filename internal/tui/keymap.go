@@ -48,11 +48,11 @@ type KeyMap struct {
 	DiffView key.Binding
 
 	// New capabilities
-	Space        key.Binding
-	ActionsMenu  key.Binding
+	Space         key.Binding
+	ActionsMenu   key.Binding
 	LaunchSession key.Binding
-	OutputView   key.Binding
-	TimelineView key.Binding
+	OutputView    key.Binding
+	TimelineView  key.Binding
 }
 
 // DefaultKeyMap returns the default key bindings.
@@ -232,7 +232,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.WriteConfig.SetEnabled(false)
 		k.Space.SetEnabled(false)
 		k.LaunchSession.SetEnabled(false)
-	case ViewTeams, ViewTeamDetail:
+	case ViewTeams:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
 		k.PauseLoop.SetEnabled(false)
@@ -243,17 +243,23 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
+	case ViewTeamDetail:
+		k.StartLoop.SetEnabled(false)
+		k.StopAction.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.Space.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
 	case ViewFleet:
 		k.StartLoop.SetEnabled(false)
-		k.StopAction.SetEnabled(false)
 		k.PauseLoop.SetEnabled(false)
 		k.EditConfig.SetEnabled(false)
 		k.WriteConfig.SetEnabled(false)
-		k.DiffView.SetEnabled(false)
 		k.Space.SetEnabled(false)
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
-		k.TimelineView.SetEnabled(false)
 	case ViewLogs:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -309,7 +315,6 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 	}
 }
 
-
 // ShortHelp returns bindings for the short help view.
 func (k KeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Down, k.Up, k.Enter, k.Help, k.Quit}
@@ -336,6 +341,9 @@ func (k KeyMap) HelpGroups() []views.HelpGroup {
 		{Name: "Sessions Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StopAction}},
 		{Name: "Teams Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort}},
 		{Name: "Repo Detail", Bindings: []key.Binding{k.Enter, k.EditConfig, k.StartLoop, k.StopAction, k.PauseLoop, k.DiffView}},
+		{Name: "Session Detail", Bindings: []key.Binding{k.Enter, k.OutputView, k.DiffView, k.TimelineView, k.StopAction}},
+		{Name: "Team Detail", Bindings: []key.Binding{k.Enter, k.DiffView, k.TimelineView}},
+		{Name: "Fleet", Bindings: []key.Binding{k.Down, k.Enter, k.StopAction, k.DiffView, k.TimelineView}},
 		{Name: "Log Viewer", Bindings: []key.Binding{k.Down, k.GotoEnd, k.GotoStart, k.FollowToggle, k.PageUp, k.PageDown}},
 		{Name: "Config Editor", Bindings: []key.Binding{k.Down, k.Enter, k.WriteConfig}},
 	}
