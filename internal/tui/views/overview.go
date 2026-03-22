@@ -10,13 +10,14 @@ import (
 
 // OverviewColumns defines the overview table structure.
 var OverviewColumns = []components.Column{
-	{Title: "Name", Width: 20, Sortable: true, Grow: true},
-	{Title: "Status", Width: 12, Sortable: true},
-	{Title: "Loop #", Width: 8, Sortable: true},
-	{Title: "Calls", Width: 10, Sortable: true},
-	{Title: "Circuit", Width: 12, Sortable: true},
-	{Title: "Last Action", Width: 16, Sortable: false},
-	{Title: "Updated", Width: 12, Sortable: true},
+	{Title: "Name", Width: 18, Sortable: true, Grow: true},
+	{Title: "Status", Width: 10, Sortable: true},
+	{Title: "Loop", Width: 6, Sortable: true},
+	{Title: "Calls", Width: 12, Sortable: true},
+	{Title: "Budget", Width: 12, Sortable: true},
+	{Title: "Progress", Width: 10, Sortable: true},
+	{Title: "CB", Width: 10, Sortable: true},
+	{Title: "Updated", Width: 8, Sortable: true},
 }
 
 // NewOverviewTable creates a table pre-configured for the overview.
@@ -28,31 +29,80 @@ func NewOverviewTable() *components.Table {
 }
 
 // ReposToRows converts repo models to table rows with styled cells.
-func ReposToRows(repos []*model.Repo) []components.Row {
+func ReposToRows(repos []*model.Repo, tickFrame int) []components.Row {
 	rows := make([]components.Row, 0, len(repos))
 	for _, r := range repos {
 		status := r.StatusDisplay()
 		circuit := r.CircuitDisplay()
 
 		loopCount := "-"
-		calls := r.CallsDisplay()
-		lastAction := "-"
 		updated := r.UpdatedDisplay()
 
+		// Status cell with activity dot + icon
+		isActive := status == "running"
+		statusCell := fmt.Sprintf("%s%s %s",
+			components.ActivityDot(isActive, tickFrame),
+			styles.StatusIcon(status),
+			status)
+
+		// Calls gauge
+		callsCell := "-"
 		if r.Status != nil {
-			loopCount = fmt.Sprintf("%d", r.Status.LoopCount)
-			if r.Status.LastAction != "" {
-				lastAction = r.Status.LastAction
+			made := float64(r.Status.CallsMadeThisHr)
+			max := float64(r.Status.MaxCallsPerHour)
+			label := fmt.Sprintf("%d/%d", r.Status.CallsMadeThisHr, r.Status.MaxCallsPerHour)
+			if max > 0 {
+				callsCell = components.GaugeWithLabel(made, max, 5, label)
+			} else {
+				callsCell = label
 			}
+			loopCount = fmt.Sprintf("%d", r.Status.LoopCount)
+		}
+
+		// Budget gauge
+		budgetCell := "-"
+		if r.Status != nil && r.Status.SessionSpendUSD > 0 {
+			spend := r.Status.SessionSpendUSD
+			label := fmt.Sprintf("$%.0f", spend)
+			budgetMax := 0.0
+			if r.Config != nil {
+				if v, ok := r.Config.Values["RALPH_SESSION_BUDGET"]; ok {
+					fmt.Sscanf(v, "%f", &budgetMax)
+				}
+			}
+			if budgetMax > 0 {
+				budgetCell = components.GaugeWithLabel(spend, budgetMax, 5, label)
+			} else {
+				budgetCell = label
+			}
+		}
+
+		// Progress gauge
+		progressCell := "-"
+		if r.Progress != nil && len(r.Progress.CompletedIDs) > 0 {
+			completed := float64(len(r.Progress.CompletedIDs))
+			total := completed + 1
+			if r.Progress.Iteration > int(completed) {
+				total = float64(r.Progress.Iteration)
+			}
+			label := fmt.Sprintf("%d", len(r.Progress.CompletedIDs))
+			progressCell = components.GaugeWithLabel(completed, total, 5, label)
+		}
+
+		// Circuit with icon
+		circuitCell := "-"
+		if circuit != "-" {
+			circuitCell = fmt.Sprintf("%s %s", styles.CBIcon(circuit), circuit)
 		}
 
 		rows = append(rows, components.Row{
 			r.Name,
-			components.StyledCell(styles.StatusStyle(status), status),
+			statusCell,
 			loopCount,
-			calls,
-			components.StyledCell(styles.CBStyle(circuit), circuit),
-			lastAction,
+			callsCell,
+			budgetCell,
+			progressCell,
+			circuitCell,
 			updated,
 		})
 	}

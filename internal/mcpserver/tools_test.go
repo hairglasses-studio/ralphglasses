@@ -4,13 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 func setupTestServer(t *testing.T) (*Server, string) {
@@ -97,7 +101,29 @@ func setupTestServer(t *testing.T) (*Server, string) {
 	}
 
 	srv := NewServer(root)
+	srv.SessMgr.SetStateDir(filepath.Join(root, ".session-state"))
+	initGitRepo(t, repoPath)
 	return srv, root
+}
+
+func initGitRepo(t *testing.T, repoPath string) {
+	t.Helper()
+	runGit(t, repoPath, "init")
+	runGit(t, repoPath, "config", "user.email", "test@example.com")
+	runGit(t, repoPath, "config", "user.name", "Test User")
+	runGit(t, repoPath, "add", ".")
+	runGit(t, repoPath, "commit", "-m", "initial")
+}
+
+func runGit(t *testing.T, repoPath string, args ...string) {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	cmd := exec.Command("git", append([]string{"-C", repoPath}, args...)...)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, output)
+	}
 }
 
 func makeRequest(args map[string]any) mcp.CallToolRequest {
@@ -759,4 +785,934 @@ func getResultText(r *mcp.CallToolResult) string {
 		}
 	}
 	return ""
+}
+
+// --- Session & Team handler tests ---
+
+func TestHandleSessionList_Empty(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleSessionList(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleSessionList: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleSessionList returned error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "[]") {
+		t.Errorf("expected empty array, got: %s", text)
+	}
+}
+
+func TestHandleSessionStatus_Missing(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleSessionStatus(context.Background(), makeRequest(map[string]any{
+		"id": "nonexistent",
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionStatus: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent session")
+	}
+}
+
+func TestHandleSessionStatus_MissingID(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleSessionStatus(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleSessionStatus: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing id")
+	}
+}
+
+func TestHandleSessionOutput_Missing(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleSessionOutput(context.Background(), makeRequest(map[string]any{
+		"id": "nonexistent",
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionOutput: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent session")
+	}
+}
+
+func TestHandleSessionCompare_MissingArgs(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleSessionCompare(context.Background(), makeRequest(map[string]any{
+		"id1": "a",
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionCompare: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing id2")
+	}
+}
+
+func TestHandleSessionCompare_NotFound(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleSessionCompare(context.Background(), makeRequest(map[string]any{
+		"id1": "a",
+		"id2": "b",
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionCompare: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent session")
+	}
+}
+
+func TestHandleSessionRetry_NotFound(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleSessionRetry(context.Background(), makeRequest(map[string]any{
+		"id": "nonexistent",
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionRetry: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent session")
+	}
+}
+
+func TestHandleSessionRetry_MissingID(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleSessionRetry(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleSessionRetry: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing id")
+	}
+}
+
+func TestHandleSessionBudget_NotFound(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleSessionBudget(context.Background(), makeRequest(map[string]any{
+		"id": "nonexistent",
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionBudget: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent session")
+	}
+}
+
+func TestHandleSessionStop_NotFound(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleSessionStop(context.Background(), makeRequest(map[string]any{
+		"id": "nonexistent",
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionStop: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent session")
+	}
+}
+
+// --- Team handler tests ---
+
+func TestHandleTeamStatus_NotFound(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleTeamStatus(context.Background(), makeRequest(map[string]any{
+		"name": "nonexistent",
+	}))
+	if err != nil {
+		t.Fatalf("handleTeamStatus: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent team")
+	}
+}
+
+func TestHandleTeamStatus_MissingName(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleTeamStatus(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleTeamStatus: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing name")
+	}
+}
+
+func TestHandleTeamDelegate_NotFound(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleTeamDelegate(context.Background(), makeRequest(map[string]any{
+		"name": "nonexistent",
+		"task": "do stuff",
+	}))
+	if err != nil {
+		t.Fatalf("handleTeamDelegate: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent team")
+	}
+}
+
+func TestHandleTeamDelegate_MissingArgs(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleTeamDelegate(context.Background(), makeRequest(map[string]any{
+		"name": "team1",
+	}))
+	if err != nil {
+		t.Fatalf("handleTeamDelegate: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing task")
+	}
+}
+
+// --- Agent handler tests ---
+
+func TestHandleAgentDefine_And_List(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	// Define an agent
+	result, err := srv.handleAgentDefine(context.Background(), makeRequest(map[string]any{
+		"repo":        "test-repo",
+		"name":        "test-agent",
+		"prompt":      "You are a test agent",
+		"description": "Test agent for unit tests",
+		"model":       "sonnet",
+	}))
+	if err != nil {
+		t.Fatalf("handleAgentDefine: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleAgentDefine returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "test-agent") {
+		t.Errorf("expected agent name in output, got: %s", text)
+	}
+
+	// List agents
+	result, err = srv.handleAgentList(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleAgentList: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleAgentList returned error: %s", getResultText(result))
+	}
+
+	text = getResultText(result)
+	if !strings.Contains(text, "test-agent") {
+		t.Errorf("expected agent in list, got: %s", text)
+	}
+}
+
+func TestHandleAgentList_AllProviders(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleAgentList(context.Background(), makeRequest(map[string]any{
+		"repo":     "test-repo",
+		"provider": "all",
+	}))
+	if err != nil {
+		t.Fatalf("handleAgentList all: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleAgentList returned error: %s", getResultText(result))
+	}
+}
+
+func TestHandleAgentDefine_MissingArgs(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleAgentDefine(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleAgentDefine: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing agent name")
+	}
+}
+
+// --- Event Bus handler tests ---
+
+func TestHandleEventList_NoBus(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	// Default setupTestServer creates srv without event bus
+
+	result, err := srv.handleEventList(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleEventList: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error when event bus not initialized")
+	}
+}
+
+func TestHandleEventList_WithBus(t *testing.T) {
+	root := t.TempDir()
+	repoPath := filepath.Join(root, "test-repo")
+	os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
+
+	bus := events.NewBus(100)
+	srv := NewServerWithBus(root, bus)
+
+	// Publish a test event
+	bus.Publish(events.Event{
+		Type:     events.ScanComplete,
+		RepoName: "test-repo",
+		Data:     map[string]any{"repo_count": 1},
+	})
+
+	result, err := srv.handleEventList(context.Background(), makeRequest(map[string]any{
+		"limit": float64(10),
+	}))
+	if err != nil {
+		t.Fatalf("handleEventList: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleEventList returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "scan.complete") {
+		t.Errorf("expected scan.complete event, got: %s", text)
+	}
+}
+
+// --- Fleet Analytics handler tests ---
+
+func TestHandleFleetAnalytics_Empty(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleFleetAnalytics(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleFleetAnalytics: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleFleetAnalytics returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "total_sessions") {
+		t.Errorf("expected total_sessions in output, got: %s", text)
+	}
+}
+
+// --- Config Bulk handler tests ---
+
+func TestHandleConfigBulk_Query(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleConfigBulk(context.Background(), makeRequest(map[string]any{
+		"key": "MODEL",
+	}))
+	if err != nil {
+		t.Fatalf("handleConfigBulk: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleConfigBulk returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "sonnet") {
+		t.Errorf("expected sonnet value, got: %s", text)
+	}
+}
+
+func TestHandleConfigBulk_Set(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleConfigBulk(context.Background(), makeRequest(map[string]any{
+		"key":   "MODEL",
+		"value": "opus",
+	}))
+	if err != nil {
+		t.Fatalf("handleConfigBulk: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleConfigBulk returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "updated") {
+		t.Errorf("expected updated confirmation, got: %s", text)
+	}
+}
+
+func TestHandleConfigBulk_MissingKey(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleConfigBulk(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleConfigBulk: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing key")
+	}
+}
+
+// --- Repo Health handler tests ---
+
+func TestHandleRepoHealth(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleRepoHealth(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleRepoHealth: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleRepoHealth returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "health_score") {
+		t.Errorf("expected health_score in output, got: %s", text)
+	}
+}
+
+func TestHandleRepoHealth_NotFound(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleRepoHealth(context.Background(), makeRequest(map[string]any{
+		"repo": "nonexistent",
+	}))
+	if err != nil {
+		t.Fatalf("handleRepoHealth: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent repo")
+	}
+}
+
+// --- Workflow handler tests ---
+
+func TestHandleWorkflowDefine(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	yamlStr := `name: test-workflow
+steps:
+  - name: step1
+    prompt: "do thing 1"
+  - name: step2
+    prompt: "do thing 2"
+    depends_on: [step1]
+`
+	result, err := srv.handleWorkflowDefine(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+		"name": "test-workflow",
+		"yaml": yamlStr,
+	}))
+	if err != nil {
+		t.Fatalf("handleWorkflowDefine: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleWorkflowDefine returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "test-workflow") {
+		t.Errorf("expected workflow name in output, got: %s", text)
+	}
+	if !strings.Contains(text, `"steps": 2`) {
+		t.Errorf("expected 2 steps, got: %s", text)
+	}
+}
+
+func TestHandleWorkflowDefine_MissingArgs(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleWorkflowDefine(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleWorkflowDefine: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing yaml")
+	}
+}
+
+func TestHandleWorkflowRun_NotFound(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleWorkflowRun(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+		"name": "nonexistent",
+	}))
+	if err != nil {
+		t.Fatalf("handleWorkflowRun: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent workflow")
+	}
+}
+
+func TestHandleWorkflowRun_MissingArgs(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleWorkflowRun(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleWorkflowRun: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing name")
+	}
+}
+
+// --- Snapshot handler tests ---
+
+func TestHandleSnapshot_Save(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleSnapshot(context.Background(), makeRequest(map[string]any{
+		"name": "test-snap",
+	}))
+	if err != nil {
+		t.Fatalf("handleSnapshot: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleSnapshot returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "test-snap") {
+		t.Errorf("expected snapshot name, got: %s", text)
+	}
+}
+
+func TestHandleSnapshot_List(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	// Save one first
+	srv.handleSnapshot(context.Background(), makeRequest(map[string]any{
+		"name": "test-snap-list",
+	}))
+
+	result, err := srv.handleSnapshot(context.Background(), makeRequest(map[string]any{
+		"action": "list",
+	}))
+	if err != nil {
+		t.Fatalf("handleSnapshot list: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleSnapshot list returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "snapshots") {
+		t.Errorf("expected snapshots key, got: %s", text)
+	}
+}
+
+// --- Agent Compose handler tests ---
+
+func TestHandleAgentCompose(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	// Create two agents first
+	srv.handleAgentDefine(context.Background(), makeRequest(map[string]any{
+		"repo":        "test-repo",
+		"name":        "agent-a",
+		"prompt":      "You handle testing",
+		"description": "Test runner",
+		"tools":       "Bash,Read",
+	}))
+	srv.handleAgentDefine(context.Background(), makeRequest(map[string]any{
+		"repo":        "test-repo",
+		"name":        "agent-b",
+		"prompt":      "You handle documentation",
+		"description": "Doc writer",
+		"tools":       "Read,Write",
+	}))
+
+	// Compose them
+	result, err := srv.handleAgentCompose(context.Background(), makeRequest(map[string]any{
+		"repo":   "test-repo",
+		"name":   "composite-agent",
+		"agents": "agent-a,agent-b",
+	}))
+	if err != nil {
+		t.Fatalf("handleAgentCompose: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleAgentCompose returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "composite-agent") {
+		t.Errorf("expected composite-agent name, got: %s", text)
+	}
+	if !strings.Contains(text, "agent-a") {
+		t.Errorf("expected agent-a in composed list, got: %s", text)
+	}
+
+	// Verify the composite agent can be listed
+	result, err = srv.handleAgentList(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleAgentList: %v", err)
+	}
+	text = getResultText(result)
+	if !strings.Contains(text, "composite-agent") {
+		t.Errorf("expected composite-agent in agent list, got: %s", text)
+	}
+}
+
+func TestHandleAgentCompose_MissingArgs(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleAgentCompose(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+		"name": "composite",
+	}))
+	if err != nil {
+		t.Fatalf("handleAgentCompose: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing agents")
+	}
+}
+
+func TestHandleAgentCompose_AgentNotFound(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleAgentCompose(context.Background(), makeRequest(map[string]any{
+		"repo":   "test-repo",
+		"name":   "composite",
+		"agents": "nonexistent-agent",
+	}))
+	if err != nil {
+		t.Fatalf("handleAgentCompose: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent agent")
+	}
+}
+
+// --- Session Stop All handler tests ---
+
+func TestHandleSessionStopAll_Empty(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleSessionStopAll(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleSessionStopAll: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleSessionStopAll returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "Stopped 0") {
+		t.Errorf("expected 0 sessions stopped, got: %s", text)
+	}
+}
+
+// --- Fleet Status handler tests ---
+
+func TestHandleFleetStatus(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleFleetStatus(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleFleetStatus: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleFleetStatus returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "summary") {
+		t.Errorf("expected summary in output, got: %s", text)
+	}
+	if !strings.Contains(text, "repos") {
+		t.Errorf("expected repos in output, got: %s", text)
+	}
+}
+
+// --- Journal handler tests ---
+
+func TestHandleJournalRead(t *testing.T) {
+	srv, root := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+	repoPath := filepath.Join(root, "test-repo")
+
+	// Write fixture entries
+	for i := 0; i < 3; i++ {
+		entry := session.JournalEntry{
+			SessionID: "test-sess",
+			RepoName:  "test-repo",
+			Worked:    []string{"Good pattern"},
+			Failed:    []string{"Bad pattern"},
+			Suggest:   []string{"Try this"},
+		}
+		session.WriteJournalEntryManual(repoPath, entry)
+	}
+
+	result, err := srv.handleJournalRead(context.Background(), makeRequest(map[string]any{
+		"repo":  "test-repo",
+		"limit": float64(10),
+	}))
+	if err != nil {
+		t.Fatalf("handleJournalRead: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleJournalRead returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "synthesis") {
+		t.Errorf("expected synthesis in output, got: %s", text)
+	}
+	if !strings.Contains(text, `"count": 3`) {
+		t.Errorf("expected count 3, got: %s", text)
+	}
+}
+
+func TestHandleJournalRead_Empty(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleJournalRead(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleJournalRead: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleJournalRead returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, `"count": 0`) {
+		t.Errorf("expected count 0, got: %s", text)
+	}
+}
+
+func TestHandleJournalWrite(t *testing.T) {
+	srv, root := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleJournalWrite(context.Background(), makeRequest(map[string]any{
+		"repo":    "test-repo",
+		"worked":  "Fast builds, Clean tests",
+		"failed":  "Forgot vet",
+		"suggest": "Run vet first",
+	}))
+	if err != nil {
+		t.Fatalf("handleJournalWrite: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleJournalWrite returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, `"status": "written"`) {
+		t.Errorf("expected written status, got: %s", text)
+	}
+
+	// Read back
+	repoPath := filepath.Join(root, "test-repo")
+	entries, err := session.ReadRecentJournal(repoPath, 10)
+	if err != nil {
+		t.Fatalf("ReadRecentJournal: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if len(entries[0].Worked) != 2 {
+		t.Errorf("expected 2 worked items, got %d", len(entries[0].Worked))
+	}
+}
+
+func TestHandleJournalPrune_DryRun(t *testing.T) {
+	srv, root := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+	repoPath := filepath.Join(root, "test-repo")
+
+	// Write some entries
+	for i := 0; i < 5; i++ {
+		session.WriteJournalEntryManual(repoPath, session.JournalEntry{
+			SessionID: "s",
+			RepoName:  "test-repo",
+		})
+	}
+
+	result, err := srv.handleJournalPrune(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+		"keep": float64(3),
+	}))
+	if err != nil {
+		t.Fatalf("handleJournalPrune: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleJournalPrune returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, `"dry_run": true`) {
+		t.Errorf("expected dry_run true, got: %s", text)
+	}
+	if !strings.Contains(text, `"would_prune": 2`) {
+		t.Errorf("expected would_prune 2, got: %s", text)
+	}
+
+	// Verify no entries were actually removed
+	entries, _ := session.ReadRecentJournal(repoPath, 100)
+	if len(entries) != 5 {
+		t.Errorf("dry run should not modify, got %d entries", len(entries))
+	}
+}
+
+func TestHandleLoopLifecycle(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+
+	srv.SessMgr.SetHooksForTesting(
+		func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
+			sess := &session.Session{
+				ID:         strings.ReplaceAll(opts.SessionName, " ", "-"),
+				Provider:   opts.Provider,
+				RepoPath:   opts.RepoPath,
+				RepoName:   filepath.Base(opts.RepoPath),
+				Prompt:     opts.Prompt,
+				Model:      opts.Model,
+				Status:     session.StatusCompleted,
+				OutputCh:   make(chan string, 1),
+				LaunchedAt: time.Now(),
+			}
+			if opts.Model == "o1-pro" {
+				sess.LastOutput = `{"title":"Tighten provider docs","prompt":"Update provider docs and tests to match actual codex resume behavior."}`
+				sess.OutputHistory = []string{sess.LastOutput}
+			} else {
+				sess.LastOutput = "worker done"
+				sess.OutputHistory = []string{"worker done"}
+			}
+			return sess, nil
+		},
+		func(_ context.Context, sess *session.Session) error {
+			sess.Lock()
+			sess.Status = session.StatusCompleted
+			now := time.Now()
+			sess.EndedAt = &now
+			sess.Unlock()
+			return nil
+		},
+	)
+
+	startResult, err := srv.handleLoopStart(context.Background(), makeRequest(map[string]any{
+		"repo":            "test-repo",
+		"verify_commands": "test -f go.mod",
+	}))
+	if err != nil {
+		t.Fatalf("handleLoopStart: %v", err)
+	}
+	if startResult.IsError {
+		t.Fatalf("handleLoopStart returned error: %s", getResultText(startResult))
+	}
+
+	var started map[string]any
+	if err := json.Unmarshal([]byte(getResultText(startResult)), &started); err != nil {
+		t.Fatalf("unmarshal loop start: %v", err)
+	}
+	id, _ := started["id"].(string)
+	if id == "" {
+		t.Fatal("expected loop id")
+	}
+
+	stepResult, err := srv.handleLoopStep(context.Background(), makeRequest(map[string]any{
+		"id": id,
+	}))
+	if err != nil {
+		t.Fatalf("handleLoopStep: %v", err)
+	}
+	if stepResult.IsError {
+		t.Fatalf("handleLoopStep returned error: %s", getResultText(stepResult))
+	}
+
+	var stepped map[string]any
+	if err := json.Unmarshal([]byte(getResultText(stepResult)), &stepped); err != nil {
+		t.Fatalf("unmarshal loop step: %v", err)
+	}
+	if stepped["status"] != "idle" {
+		t.Fatalf("loop status = %v, want idle", stepped["status"])
+	}
+
+	iterations, _ := stepped["iterations"].([]any)
+	if len(iterations) != 1 {
+		t.Fatalf("iterations = %d, want 1", len(iterations))
+	}
+
+	iter, _ := iterations[0].(map[string]any)
+	if iter["status"] != "idle" {
+		t.Fatalf("iteration status = %v, want idle", iter["status"])
+	}
+	if iter["worktree_path"] == "" {
+		t.Fatal("expected worktree path")
+	}
+	task, _ := iter["task"].(map[string]any)
+	if task["title"] != "Tighten provider docs" {
+		t.Fatalf("task title = %v", task["title"])
+	}
+
+	statusResult, err := srv.handleLoopStatus(context.Background(), makeRequest(map[string]any{
+		"id": id,
+	}))
+	if err != nil {
+		t.Fatalf("handleLoopStatus: %v", err)
+	}
+	if statusResult.IsError {
+		t.Fatalf("handleLoopStatus returned error: %s", getResultText(statusResult))
+	}
+
+	stopResult, err := srv.handleLoopStop(context.Background(), makeRequest(map[string]any{
+		"id": id,
+	}))
+	if err != nil {
+		t.Fatalf("handleLoopStop: %v", err)
+	}
+	if stopResult.IsError {
+		t.Fatalf("handleLoopStop returned error: %s", getResultText(stopResult))
+	}
 }

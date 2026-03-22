@@ -1,11 +1,15 @@
 package session
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
+	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,6 +30,36 @@ type WorkflowStep struct {
 	Parallel  bool     `json:"parallel,omitempty" yaml:"parallel,omitempty"`
 }
 
+// WorkflowRun represents a single workflow execution.
+type WorkflowRun struct {
+	ID        string               `json:"id"`
+	Name      string               `json:"name"`
+	RepoPath  string               `json:"repo_path"`
+	Status    string               `json:"status"`
+	CreatedAt time.Time            `json:"created_at"`
+	UpdatedAt time.Time            `json:"updated_at"`
+	Steps     []WorkflowStepResult `json:"steps"`
+
+	mu sync.Mutex
+}
+
+// WorkflowStepResult tracks execution state for one workflow step.
+type WorkflowStepResult struct {
+	Name      string     `json:"name"`
+	Status    string     `json:"status"`
+	SessionID string     `json:"session_id,omitempty"`
+	Provider  Provider   `json:"provider,omitempty"`
+	Error     string     `json:"error,omitempty"`
+	StartedAt *time.Time `json:"started_at,omitempty"`
+	EndedAt   *time.Time `json:"ended_at,omitempty"`
+}
+
+// Lock locks the workflow run mutex for external callers.
+func (r *WorkflowRun) Lock() { r.mu.Lock() }
+
+// Unlock unlocks the workflow run mutex.
+func (r *WorkflowRun) Unlock() { r.mu.Unlock() }
+
 // ParseWorkflow parses a workflow definition from YAML bytes.
 func ParseWorkflow(name string, data []byte) (WorkflowDef, error) {
 	var wf WorkflowDef
@@ -34,6 +68,9 @@ func ParseWorkflow(name string, data []byte) (WorkflowDef, error) {
 	}
 	if wf.Name == "" {
 		wf.Name = name
+	}
+	if err := ValidateWorkflow(wf); err != nil {
+		return wf, err
 	}
 	return wf, nil
 }
@@ -68,6 +105,9 @@ func LoadWorkflow(repoPath, name string) (*WorkflowDef, error) {
 	if err := yaml.Unmarshal(data, &wf); err != nil {
 		return nil, fmt.Errorf("parse workflow: %w", err)
 	}
+	if err := ValidateWorkflow(wf); err != nil {
+		return nil, err
+	}
 	return &wf, nil
 }
 
@@ -98,4 +138,128 @@ func ListWorkflows(repoPath string) ([]WorkflowDef, error) {
 		workflows = append(workflows, wf)
 	}
 	return workflows, nil
+}
+
+// ValidateWorkflow validates workflow structure and dependency graph.
+func ValidateWorkflow(wf WorkflowDef) error {
+	if strings.TrimSpace(wf.Name) == "" {
+		return fmt.Errorf("workflow name required")
+	}
+	if len(wf.Steps) == 0 {
+		return fmt.Errorf("workflow must contain at least one step")
+	}
+
+	seen := make(map[string]struct{}, len(wf.Steps))
+	for _, step := range wf.Steps {
+		if strings.TrimSpace(step.Name) == "" {
+			return fmt.Errorf("workflow step name required")
+		}
+		if strings.TrimSpace(step.Prompt) == "" {
+			return fmt.Errorf("workflow step %q prompt required", step.Name)
+		}
+		if _, ok := seen[step.Name]; ok {
+			return fmt.Errorf("workflow step names must be unique: %s", step.Name)
+		}
+		seen[step.Name] = struct{}{}
+		if step.Provider != "" && providerBinary(Provider(step.Provider)) == "" {
+			return fmt.Errorf("workflow step %q has unknown provider %q", step.Name, step.Provider)
+		}
+	}
+
+	for _, step := range wf.Steps {
+		for _, dep := range step.DependsOn {
+			if _, ok := seen[dep]; !ok {
+				return fmt.Errorf("workflow step %q depends on unknown step %q", step.Name, dep)
+			}
+		}
+	}
+
+	visiting := make(map[string]bool, len(wf.Steps))
+	visited := make(map[string]bool, len(wf.Steps))
+	stepIndex := make(map[string]WorkflowStep, len(wf.Steps))
+	for _, step := range wf.Steps {
+		stepIndex[step.Name] = step
+	}
+
+	var visit func(string) error
+	visit = func(name string) error {
+		if visiting[name] {
+			return fmt.Errorf("workflow contains dependency cycle at step %q", name)
+		}
+		if visited[name] {
+			return nil
+		}
+		visiting[name] = true
+		for _, dep := range stepIndex[name].DependsOn {
+			if err := visit(dep); err != nil {
+				return err
+			}
+		}
+		visiting[name] = false
+		visited[name] = true
+		return nil
+	}
+
+	for _, step := range wf.Steps {
+		if err := visit(step.Name); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func newWorkflowRun(repoPath string, wf WorkflowDef) *WorkflowRun {
+	now := time.Now()
+	steps := make([]WorkflowStepResult, len(wf.Steps))
+	for i, step := range wf.Steps {
+		steps[i] = WorkflowStepResult{
+			Name:   step.Name,
+			Status: "pending",
+		}
+	}
+	return &WorkflowRun{
+		ID:        uuid.NewString(),
+		Name:      wf.Name,
+		RepoPath:  repoPath,
+		Status:    "pending",
+		CreatedAt: now,
+		UpdatedAt: now,
+		Steps:     steps,
+	}
+}
+
+func (r *WorkflowRun) stepByName(name string) *WorkflowStepResult {
+	for i := range r.Steps {
+		if r.Steps[i].Name == name {
+			return &r.Steps[i]
+		}
+	}
+	return nil
+}
+
+func (r *WorkflowRun) updateStep(name, status string, mutate func(*WorkflowStepResult)) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	step := r.stepByName(name)
+	if step == nil {
+		return
+	}
+	step.Status = status
+	if mutate != nil {
+		mutate(step)
+	}
+	r.UpdatedAt = time.Now()
+}
+
+func (r *WorkflowRun) setStatus(status string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.Status = status
+	r.UpdatedAt = time.Now()
+}
+
+func detachContext(ctx context.Context) context.Context {
+	return context.WithoutCancel(ctx)
 }

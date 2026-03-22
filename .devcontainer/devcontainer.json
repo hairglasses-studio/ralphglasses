@@ -1,0 +1,19 @@
+{
+  "name": "ralphglasses",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "workspaceFolder": "/workspaces/ralphglasses",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "go.useLanguageServer": true
+      },
+      "extensions": [
+        "golang.Go",
+        "timonwong.shellcheck"
+      ]
+    }
+  },
+  "postCreateCommand": "./scripts/bootstrap-toolchain.sh"
+}

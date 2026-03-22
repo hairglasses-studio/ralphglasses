@@ -1,0 +1,5 @@
+model = "gpt-5.4-xhigh"
+
+[mcp_servers.ralphglasses]
+command = "bash"
+args = ["./scripts/dev/run-mcp.sh", "--scan-path", "~/hairglasses-studio"]

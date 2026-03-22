@@ -35,34 +35,37 @@ type Session struct {
 	Provider          Provider      `json:"provider"`
 	ProviderSessionID string        `json:"provider_session_id,omitempty"`
 	RepoPath          string        `json:"repo_path"`
-	RepoName     string        `json:"repo_name"`
-	Status       SessionStatus `json:"status"`
-	Prompt       string        `json:"prompt"`
-	Model        string        `json:"model,omitempty"`
-	AgentName    string        `json:"agent,omitempty"`
-	TeamName     string        `json:"team_name,omitempty"`
-	BudgetUSD    float64       `json:"max_budget_usd,omitempty"`
-	SpentUSD     float64       `json:"spent_usd"`
-	TurnCount    int           `json:"turn_count"`
-	MaxTurns     int           `json:"max_turns,omitempty"`
-	LaunchedAt   time.Time     `json:"launched_at"`
-	LastActivity time.Time     `json:"last_activity"`
-	EndedAt      *time.Time    `json:"ended_at,omitempty"`
-	ExitReason   string        `json:"exit_reason,omitempty"`
-	LastOutput   string        `json:"last_output,omitempty"`
-	Error        string        `json:"error,omitempty"`
-	CostHistory   []float64     `json:"cost_history,omitempty"`
-	OutputHistory []string      `json:"output_history,omitempty"` // last N output lines
+	RepoName          string        `json:"repo_name"`
+	Status            SessionStatus `json:"status"`
+	Prompt            string        `json:"prompt"`
+	Model             string        `json:"model,omitempty"`
+	AgentName         string        `json:"agent,omitempty"`
+	TeamName          string        `json:"team_name,omitempty"`
+	BudgetUSD         float64       `json:"max_budget_usd,omitempty"`
+	SpentUSD          float64       `json:"spent_usd"`
+	TurnCount         int           `json:"turn_count"`
+	MaxTurns          int           `json:"max_turns,omitempty"`
+	LaunchedAt        time.Time     `json:"launched_at"`
+	LastActivity      time.Time     `json:"last_activity"`
+	EndedAt           *time.Time    `json:"ended_at,omitempty"`
+	ExitReason        string        `json:"exit_reason,omitempty"`
+	LastOutput        string        `json:"last_output,omitempty"`
+	Error             string        `json:"error,omitempty"`
+	LastEventType     string        `json:"last_event_type,omitempty"`
+	StreamParseErrors int           `json:"stream_parse_errors,omitempty"`
+	CostHistory       []float64     `json:"cost_history,omitempty"`
+	OutputHistory     []string      `json:"output_history,omitempty"` // last N output lines
 
-	cmd      *exec.Cmd
-	cancel   func()
-	mu       sync.Mutex
-	OutputCh chan string `json:"-"` // real-time output channel
-	bus      *events.Bus `json:"-"` // event bus for publishing lifecycle events
+	cmd        *exec.Cmd
+	cancel     func()
+	mu         sync.Mutex
+	OutputCh   chan string    `json:"-"` // real-time output channel
+	bus        *events.Bus    `json:"-"` // event bus for publishing lifecycle events
+	onComplete func(*Session) `json:"-"` // called when session ends (for persistence)
 }
 
 // Lock locks the session mutex for external callers.
-func (s *Session) Lock()   { s.mu.Lock() }
+func (s *Session) Lock() { s.mu.Lock() }
 
 // Unlock unlocks the session mutex.
 func (s *Session) Unlock() { s.mu.Unlock() }
@@ -74,6 +77,7 @@ type StreamEvent struct {
 	Model     string          `json:"model,omitempty"`
 	CostUSD   float64         `json:"cost_usd,omitempty"`
 	Content   string          `json:"content,omitempty"`
+	Text      string          `json:"text,omitempty"`
 	Error     string          `json:"error,omitempty"`
 	NumTurns  int             `json:"num_turns,omitempty"`
 	Duration  float64         `json:"duration_seconds,omitempty"`

@@ -3,10 +3,12 @@ package views
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/NimbleMarkets/ntcharts/sparkline"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
+	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
@@ -25,6 +27,7 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 	model := s.Model
 	agent := s.AgentName
 	team := s.TeamName
+	providerSessionID := s.ProviderSessionID
 	spent := s.SpentUSD
 	budget := s.BudgetUSD
 	turns := s.TurnCount
@@ -34,55 +37,86 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 	exitReason := s.ExitReason
 	lastOutput := s.LastOutput
 	errMsg := s.Error
+	lastEventType := s.LastEventType
+	parseErrors := s.StreamParseErrors
 	costHistory := make([]float64, len(s.CostHistory))
 	copy(costHistory, s.CostHistory)
+	outputHistory := make([]string, len(s.OutputHistory))
+	copy(outputHistory, s.OutputHistory)
 	s.Unlock()
 
 	var b strings.Builder
 
 	// Session Info
-	b.WriteString(styles.TitleStyle.Render(fmt.Sprintf("Session %s", id)))
+	b.WriteString(styles.TitleStyle.Render(fmt.Sprintf("%s Session %s", styles.IconSession, id)))
 	b.WriteString("\n\n")
 
-	b.WriteString(styles.HeaderStyle.Render("Session Info"))
+	b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Session Info", styles.IconSession)))
 	b.WriteString("\n")
 	b.WriteString(fmt.Sprintf("  ID:            %s\n", id))
-	b.WriteString(fmt.Sprintf("  Provider:      %s\n", styles.ProviderStyle(provider).Render(provider)))
+	b.WriteString(fmt.Sprintf("  Provider:      %s %s\n",
+		styles.ProviderIcon(provider),
+		styles.ProviderStyle(provider).Render(provider)))
+	if providerSessionID != "" {
+		b.WriteString(fmt.Sprintf("  Provider ID:   %s\n", providerSessionID))
+	}
 	b.WriteString(fmt.Sprintf("  Repo:          %s\n", repo))
 	b.WriteString(fmt.Sprintf("  Path:          %s\n", repoPath))
-	b.WriteString(fmt.Sprintf("  Status:        %s\n", styles.StatusStyle(status).Render(status)))
+	b.WriteString(fmt.Sprintf("  Status:        %s %s\n",
+		styles.StatusIcon(status),
+		styles.StatusStyle(status).Render(status)))
 	b.WriteString(fmt.Sprintf("  Model:         %s\n", model))
 	if agent != "" {
-		b.WriteString(fmt.Sprintf("  Agent:         %s\n", agent))
+		b.WriteString(fmt.Sprintf("  Agent:         %s %s\n", styles.IconAgent, agent))
 	}
 	if team != "" {
-		b.WriteString(fmt.Sprintf("  Team:          %s\n", team))
+		b.WriteString(fmt.Sprintf("  Team:          %s %s\n", styles.IconTeam, team))
 	}
-	b.WriteString(fmt.Sprintf("  Launched:      %s\n", launched.Format("15:04:05")))
+	b.WriteString(fmt.Sprintf("  Launched:      %s %s\n", styles.IconClock, launched.Format("15:04:05")))
 	if !lastActivity.IsZero() {
-		b.WriteString(fmt.Sprintf("  Last Activity: %s\n", lastActivity.Format("15:04:05")))
+		staleness := time.Since(lastActivity)
+		stalenessStr := lastActivity.Format("15:04:05")
+		if staleness > 5*time.Minute && status == "running" {
+			stalenessStr += styles.StatusFailed.Render(fmt.Sprintf(" (stale: %s)", formatStaleness(staleness)))
+		}
+		b.WriteString(fmt.Sprintf("  Last Activity: %s %s\n", styles.IconClock, stalenessStr))
 	}
 	b.WriteString(fmt.Sprintf("  Duration:      %s\n", formatDuration(launched)))
 	if exitReason != "" {
 		b.WriteString(fmt.Sprintf("  Exit Reason:   %s\n", exitReason))
 	}
+	if lastEventType != "" {
+		b.WriteString(fmt.Sprintf("  Last Event:    %s\n", lastEventType))
+	}
+	if parseErrors > 0 {
+		b.WriteString(fmt.Sprintf("  Parse Errors:  %d\n", parseErrors))
+	}
 	b.WriteString("\n")
 
 	// Cost
-	b.WriteString(styles.HeaderStyle.Render("Cost"))
+	b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Cost", styles.IconBudget)))
 	b.WriteString("\n")
 	b.WriteString(fmt.Sprintf("  Spent:         $%.2f\n", spent))
 	if budget > 0 {
 		pct := (spent / budget) * 100
-		b.WriteString(fmt.Sprintf("  Budget:        $%.2f\n", budget))
 		bar := renderBudgetBar(pct, 30)
+		b.WriteString(fmt.Sprintf("  Budget:        $%.2f\n", budget))
 		b.WriteString(fmt.Sprintf("  Utilization:   %s %.0f%%\n", bar, pct))
 	}
+
+	// Turns with gauge
 	turnStr := fmt.Sprintf("%d", turns)
 	if maxTurns > 0 {
-		turnStr = fmt.Sprintf("%d/%d", turns, maxTurns)
+		gauge := components.InlineGauge(float64(turns), float64(maxTurns), 30)
+		turnStr = fmt.Sprintf("%s %d/%d", gauge, turns, maxTurns)
 	}
 	b.WriteString(fmt.Sprintf("  Turns:         %s\n", turnStr))
+
+	// Cost-per-turn
+	if turns > 0 && spent > 0 {
+		cpt := spent / float64(turns)
+		b.WriteString(fmt.Sprintf("  $/turn:        $%.4f\n", cpt))
+	}
 
 	// Cost sparkline
 	if len(costHistory) > 1 {
@@ -104,18 +138,21 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 
 	// Error
 	if errMsg != "" {
-		b.WriteString(styles.StatusFailed.Render("Error"))
+		b.WriteString(styles.StatusFailed.Render(fmt.Sprintf("%s Error", styles.IconErrored)))
 		b.WriteString("\n")
 		b.WriteString(styles.StatusFailed.Render(fmt.Sprintf("  %s", errMsg)))
 		b.WriteString("\n\n")
 	}
 
-	// Output (last N lines)
-	if lastOutput != "" {
-		b.WriteString(styles.HeaderStyle.Render("Last Output"))
+	// Output history
+	if len(outputHistory) > 0 || lastOutput != "" {
+		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Output History", styles.IconLog)))
 		b.WriteString("\n")
-		lines := strings.Split(lastOutput, "\n")
-		maxLines := height - 30 // leave room for header sections
+		lines := outputHistory
+		if len(lines) == 0 && lastOutput != "" {
+			lines = strings.Split(lastOutput, "\n")
+		}
+		maxLines := height - 32
 		if maxLines < 5 {
 			maxLines = 5
 		}
@@ -131,9 +168,16 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 		b.WriteString("\n")
 	}
 
-	b.WriteString(styles.HelpStyle.Render("  X: stop session  d: git diff  Esc: back"))
+	b.WriteString(styles.HelpStyle.Render("  Enter: output  o: live output  d: git diff  t: timeline  X: stop  Esc: back"))
 
 	return b.String()
+}
+
+func formatStaleness(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	return fmt.Sprintf("%dm%ds", int(d.Minutes()), int(d.Seconds())%60)
 }
 
 // renderBudgetBar renders a progress bar using bubbles/progress.

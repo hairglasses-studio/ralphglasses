@@ -13,9 +13,10 @@ import (
 var TeamColumns = []components.Column{
 	{Title: "Name", Width: 16, Sortable: true, Grow: true},
 	{Title: "Repo", Width: 16, Sortable: true},
-	{Title: "Status", Width: 10, Sortable: true},
+	{Title: "Status", Width: 14, Sortable: true},
 	{Title: "Lead", Width: 10, Sortable: false},
-	{Title: "Tasks", Width: 12, Sortable: true},
+	{Title: "Progress", Width: 16, Sortable: true},
+	{Title: "Tasks", Width: 8, Sortable: true},
 }
 
 // NewTeamsTable creates a table pre-configured for teams.
@@ -43,13 +44,28 @@ func TeamsToRows(teams []*session.TeamStatus) []components.Row {
 				completed++
 			}
 		}
-		taskStr := fmt.Sprintf("%d/%d", completed, len(t.Tasks))
+		total := len(t.Tasks)
+
+		// Status with icon
+		statusCell := fmt.Sprintf("%s %s",
+			styles.StatusIcon(status),
+			styles.StatusStyle(status).Render(status))
+
+		// Progress gauge
+		progressCell := "-"
+		if total > 0 {
+			label := fmt.Sprintf("%d/%d", completed, total)
+			progressCell = components.GaugeWithLabel(float64(completed), float64(total), 8, label)
+		}
+
+		taskStr := fmt.Sprintf("%d", total)
 
 		rows = append(rows, components.Row{
 			t.Name,
 			repo,
-			components.StyledCell(styles.StatusStyle(status), status),
+			statusCell,
 			leadID,
+			progressCell,
 			taskStr,
 		})
 	}

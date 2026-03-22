@@ -1,11 +1,9 @@
 {
   "mcpServers": {
     "ralphglasses": {
-      "command": "go",
-      "args": ["run", "./cmd/ralphglasses-mcp"],
-      "env": {
-        "RALPHGLASSES_SCAN_PATH": "~/hairglasses-studio"
-      }
+      "command": "bash",
+      "args": ["./scripts/dev/run-mcp.sh", "--scan-path", "~/hairglasses-studio"],
+      "cwd": "/home/hairglasses/Docs/hairglasses-studio/ralphglasses"
     }
   }
 }

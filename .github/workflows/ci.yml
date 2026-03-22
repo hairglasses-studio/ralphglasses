@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   go-tests:
-    name: Go Tests
+    name: Bootstrap-Aware CI
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,25 +21,23 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
+      - name: Install system prerequisites
+        run: sudo apt-get update && sudo apt-get install -y make build-essential shellcheck bats
 
-      - name: shellcheck
-        run: shellcheck marathon.sh distro/scripts/*.sh
+      - name: Bootstrap toolchain
+        run: ./scripts/bootstrap-toolchain.sh
 
-      - name: Vet
-        run: go vet ./...
+      - name: Doctor
+        run: ./scripts/dev/doctor.sh --strict
 
-      - name: Test with race detector
-        run: go test -race -coverprofile=coverage.out ./...
+      - name: CI
+        run: ./scripts/dev/ci.sh
 
       - name: Coverage report
-        run: go tool cover -func=coverage.out | tail -1
+        run: ./scripts/dev/go.sh tool cover -func=coverage.out | tail -1 || true
 
       - name: Build binary
-        run: go build -o ralphglasses ./...
+        run: ./scripts/dev/go.sh build -o ralphglasses ./...
 
       - name: Check binary size
         run: |
@@ -65,23 +63,26 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install system prerequisites
+        run: sudo apt-get update && sudo apt-get install -y make build-essential
+
       - name: Fuzz config parser
-        run: go test -fuzz=FuzzLoadConfig -fuzztime=30s ./internal/model/
+        run: ./scripts/dev/go.sh test -fuzz=FuzzLoadConfig -fuzztime=30s ./internal/model/
 
       - name: Fuzz status parser
-        run: go test -fuzz=FuzzLoadStatus -fuzztime=30s ./internal/model/
+        run: ./scripts/dev/go.sh test -fuzz=FuzzLoadStatus -fuzztime=30s ./internal/model/
 
       - name: Fuzz circuit breaker parser
-        run: go test -fuzz=FuzzLoadCircuitBreaker -fuzztime=30s ./internal/model/
+        run: ./scripts/dev/go.sh test -fuzz=FuzzLoadCircuitBreaker -fuzztime=30s ./internal/model/
 
       - name: Fuzz progress parser
-        run: go test -fuzz=FuzzLoadProgress -fuzztime=30s ./internal/model/
+        run: ./scripts/dev/go.sh test -fuzz=FuzzLoadProgress -fuzztime=30s ./internal/model/
 
       - name: Fuzz MCP string args
-        run: go test -fuzz=FuzzGetStringArg -fuzztime=30s ./internal/mcpserver/
+        run: ./scripts/dev/go.sh test -fuzz=FuzzGetStringArg -fuzztime=30s ./internal/mcpserver/
 
       - name: Fuzz MCP number args
-        run: go test -fuzz=FuzzGetNumberArg -fuzztime=30s ./internal/mcpserver/
+        run: ./scripts/dev/go.sh test -fuzz=FuzzGetNumberArg -fuzztime=30s ./internal/mcpserver/
 
   go-benchmarks:
     name: Benchmarks
@@ -94,8 +95,11 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install system prerequisites
+        run: sudo apt-get update && sudo apt-get install -y make build-essential
+
       - name: Run benchmarks
-        run: go test -bench=. -benchmem -count=3 ./... | tee bench.txt
+        run: ./scripts/dev/go.sh test -bench=. -benchmem -count=3 ./... | tee bench.txt
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
@@ -109,8 +113,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install bats
-        run: sudo apt-get install -y bats
+      - name: Install prerequisites
+        run: sudo apt-get update && sudo apt-get install -y bats shellcheck
 
       - name: Run BATS tests
         run: bats scripts/test/
