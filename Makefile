@@ -1,7 +1,9 @@
 VERSION := $(shell git describe --tags --always --dirty)
 LDFLAGS := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSION)
 
-.PHONY: test test-verbose test-cover test-integration test-scripts fuzz build build-release install vet lint ci clean release snapshot
+PI_LDFLAGS := -X main.version=$(VERSION)
+
+.PHONY: test test-verbose test-cover test-integration test-scripts fuzz build build-release install build-prompt-improver install-prompt-improver vet lint ci clean release snapshot
 
 # Run all tests with race detector
 test:
@@ -54,6 +56,16 @@ build-release:
 install:
 	go install -ldflags "$(LDFLAGS)" .
 
+# Build prompt-improver binary
+build-prompt-improver:
+	go build -ldflags "$(PI_LDFLAGS)" -o prompt-improver ./cmd/prompt-improver
+
+# Install prompt-improver binary
+install-prompt-improver: build-prompt-improver
+	sudo cp prompt-improver /usr/local/bin/prompt-improver
+	@if [ "$$(uname)" = "Darwin" ]; then sudo codesign -f -s - /usr/local/bin/prompt-improver; fi
+	@echo "prompt-improver installed to /usr/local/bin/prompt-improver"
+
 # Run go vet
 vet:
 	go vet ./...
@@ -69,6 +81,7 @@ ci: vet test build
 clean:
 	rm -f coverage.out
 	rm -f ralphglasses
+	rm -f prompt-improver
 	go clean ./...
 
 # Goreleaser release

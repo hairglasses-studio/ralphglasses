@@ -1,7 +1,8 @@
 version: 2
 
 builds:
-  - main: .
+  - id: ralphglasses
+    main: .
     binary: ralphglasses
     env:
       - CGO_ENABLED=0
@@ -13,6 +14,19 @@ builds:
       - arm64
     ldflags:
       - -s -w -X github.com/hairglasses-studio/ralphglasses/cmd.version={{.Version}}
+  - id: prompt-improver
+    main: ./cmd/prompt-improver
+    binary: prompt-improver
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
 
 archives:
   - format: tar.gz

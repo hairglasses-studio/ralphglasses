@@ -28,6 +28,9 @@ const (
 	// Config and scan
 	ConfigChanged EventType = "config.changed"
 	ScanComplete  EventType = "scan.complete"
+
+	// Prompt enhancement
+	PromptEnhanced EventType = "prompt.enhanced"
 )
 
 // Event represents something that happened in the system.
