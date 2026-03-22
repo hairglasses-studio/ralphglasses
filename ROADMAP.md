@@ -1014,3 +1014,50 @@ Phase 0.5 (Critical Fixes) ──→ Phase 1 (Harden) ──→ Phase 1.5 (DX)
 - `hg-mcp/` — Modular tool registration pattern
 - `shielddd/` — Pure-Go SQLite (modernc.org/sqlite), audit logs
 - `claudekit/` — rdcycle perpetual loop, budget profiles
+
+---
+
+## Phase 3.5: Theme & Plugin Ecosystem
+
+> Inspired by k9s skins + plugins system, Ghostty shader architecture,
+> Starship module design, and Claude Code skills framework.
+
+### 3.5.1 — Theme ecosystem (like k9s skins + Ghostty themes)
+- [ ] 3.5.1.1 — Switch theme colors from ANSI-256 integers to hex strings (lipgloss supports both; hex enables Snazzy/Catppuccin-accurate matching with terminal palette)
+- [ ] 3.5.1.2 — Add `snazzy` theme: `#57c7ff` primary, `#ff6ac1` accent, `#5af78e` green, `#f3f99d` yellow, `#ff5c57` red, `#686868` gray, `#1a1a1a` dark, `#f1f1f0` bright — matches Ghostty/k9s/Starship palette ✅ (added to DefaultThemes)
+- [ ] 3.5.1.3 — Add `catppuccin-macchiato` and `catppuccin-mocha` themes (popular in k9s/Ghostty/bat/delta ecosystem)
+- [ ] 3.5.1.4 — Add `tokyo-night` theme (popular across k9s community)
+- [ ] 3.5.1.5 — Support `~/.config/ralphglasses/themes/` external theme directory (YAML files, same schema as LoadTheme)
+- [ ] 3.5.1.6 — Add `--theme` CLI flag and `RALPH_THEME` .ralphrc key for theme selection
+- [ ] 3.5.1.7 — Add `:theme <name>` TUI command for live theme switching (like k9s skin hotswap)
+- **Acceptance:** `ralphglasses --theme snazzy` renders TUI with hex-accurate Snazzy palette; user themes from ~/.config/ralphglasses/themes/ load correctly
+
+### 3.5.2 — Plugin system v2 (like k9s plugins.yml)
+Evolve the Phase 2.13 Go `.so` plugin approach into a more accessible YAML-defined command plugin system (like k9s):
+- [ ] 3.5.2.1 — Define `~/.config/ralphglasses/plugins.yml` schema: shortcut, description, scopes (repos/sessions/teams/fleet), command, args with variable substitution ($NAME, $REPO, $SESSION_ID, $PROVIDER, $STATUS)
+- [ ] 3.5.2.2 — Plugin loader: parse YAML at startup, register keybinds per scope
+- [ ] 3.5.2.3 — Variable resolver: substitute runtime context ($NAME, $REPO, etc.) in command args
+- [ ] 3.5.2.4 — Built-in plugins: `stern-logs` (tail pod logs via stern for active session's K8s namespace), `gh-pr` (open GitHub PR for session's worktree), `session-cost-report` (pipe session cost data to jq)
+- [ ] 3.5.2.5 — Plugin shortcut display in help view (like k9s shows plugin hotkeys)
+- [ ] 3.5.2.6 — MCP tool for plugin management: `ralphglasses_plugin_list`, `ralphglasses_plugin_toggle`
+- **Acceptance:** user-defined YAML plugins execute commands with variable substitution from TUI
+
+### 3.5.3 — Resource aliases (like k9s aliases.yml)
+- [ ] 3.5.3.1 — Define `~/.config/ralphglasses/aliases.yml` schema for TUI command shortcuts
+- [ ] 3.5.3.2 — Built-in aliases: `:rp` → repos tab, `:ss` → sessions tab, `:tm` → teams tab, `:fl` → fleet tab
+- [ ] 3.5.3.3 — User-defined command aliases: `:deploy <repo>` → custom workflow sequence
+- **Acceptance:** `:alias-name` in command mode executes mapped command
+
+### 3.5.4 — MCP skill export (like Claude Code skills)
+Export ralphglasses capabilities as Claude Code skills for autonomous agent consumption:
+- [ ] 3.5.4.1 — Generate `.claude/skills/ralphglasses/SKILL.md` from MCP tool descriptions
+- [ ] 3.5.4.2 — Include YAML frontmatter: `name: ralphglasses`, `description: "Fleet management for multi-LLM agent sessions"`, `allowed-tools: "Bash(ralphglasses *), mcp__ralphglasses__*"`
+- [ ] 3.5.4.3 — Auto-update skill on `ralphglasses mcp` server start (regenerate if tool list changed)
+- **Acceptance:** Claude Code auto-discovers ralphglasses skill when MCP server is connected
+
+### 3.5.5 — Theme export to terminal (like claudekit themekit)
+- [ ] 3.5.5.1 — `ralphglasses theme export ghostty` → generate Ghostty palette config from active theme
+- [ ] 3.5.5.2 — `ralphglasses theme export starship` → generate Starship color overrides
+- [ ] 3.5.5.3 — `ralphglasses theme export k9s` → generate k9s skin.yml
+- [ ] 3.5.5.4 — `ralphglasses theme sync` → export active theme to all supported tools simultaneously
+- **Acceptance:** `ralphglasses theme sync` updates Ghostty, Starship, and k9s to match TUI theme

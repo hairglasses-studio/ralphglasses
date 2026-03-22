@@ -71,7 +71,7 @@ Use `ralphglasses_team_create` with `provider` to set the lead's provider, then 
 
 ## MCP Server
 
-Ralphglasses is also an installable MCP server exposing 38 tools for managing ralph loops and multi-provider LLM sessions programmatically.
+Ralphglasses is also an installable MCP server exposing 47 tools for managing ralph loops and multi-provider LLM sessions programmatically.
 
 ### Install
 
@@ -131,6 +131,27 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 | `ralphglasses_workflow_define` | Define multi-step YAML workflows |
 | `ralphglasses_workflow_run` | Execute workflows with dependency ordering |
 | `ralphglasses_snapshot` | Save/list fleet state snapshots |
+| `ralphglasses_prompt_analyze` | Score a prompt across 10 quality dimensions with letter grades and suggestions |
+| `ralphglasses_prompt_enhance` | Run the 13-stage deterministic prompt enhancement pipeline |
+| `ralphglasses_prompt_lint` | Deep-lint a prompt for anti-patterns (unmotivated rules, injection risks, etc.) |
+| `ralphglasses_prompt_improve` | LLM-powered prompt improvement using Claude (requires ANTHROPIC_API_KEY) |
+| `ralphglasses_prompt_templates` | List available prompt templates with descriptions and required variables |
+| `ralphglasses_prompt_template_fill` | Fill a prompt template with variable values |
+| `ralphglasses_claudemd_check` | Health-check a repo's CLAUDE.md for common issues |
+| `ralphglasses_prompt_classify` | Classify a prompt's task type (code, troubleshooting, analysis, etc.) |
+| `ralphglasses_prompt_should_enhance` | Check whether a prompt would benefit from enhancement |
+
+## Prompt Enhancement
+
+The `internal/enhancer/` package (migrated from the archived `prompt-improver` repo) provides:
+
+- **13-stage deterministic pipeline**: specificity, positive reframing, tone downgrade, XML structure, context reorder, format enforcement, self-check injection, and more
+- **10-dimensional quality scoring**: clarity, specificity, structure, examples, tone, etc. with letter grades (A-F)
+- **11+ lint rules**: unmotivated rules, negative framing, aggressive caps, vague quantifiers, injection risks, cache-unfriendly ordering
+- **LLM-backed hybrid mode**: Claude API meta-prompt improvement with circuit breaker and caching (requires `ANTHROPIC_API_KEY`)
+- **CLAUDE.md health checks**: length, inline code, overtrigger language, style guide content detection
+
+The `ralphglasses_session_launch` tool supports an `enhance_prompt` parameter to auto-enhance prompts before launch. The TUI launcher shows a real-time prompt quality score after editing.
 
 ## Architecture
 
@@ -139,7 +160,16 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 - **internal/model/**: Data types and parsers for status.json, progress.json, circuit breaker state, .ralphrc
 - **internal/process/**: Process management (launch/stop/pause via os/exec), fsnotify file watcher, log tailing
 - **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch
-- **internal/mcpserver/**: MCP tool handlers (38 tools, stdio transport via mcp-go)
+- **internal/mcpserver/**: MCP tool handlers (47 tools, stdio transport via mcp-go)
+  - `tools.go` — Server struct, constructors, Register(), helpers (getStringArg, errResult, jsonResult, etc.)
+  - `handler_loop.go` — Core loop handlers: scan, list, status, start, stop, pause, logs, config
+  - `handler_session.go` — Session lifecycle: launch, list, status, resume, stop, budget, retry, compare, output
+  - `handler_team.go` — Team and agent handlers: team create/status/delegate, agent define/list
+  - `handler_fleet.go` — Fleet-wide: fleet status, fleet analytics, event list
+  - `handler_repo.go` — Repo management: scaffold, optimize, health, config bulk
+  - `handler_roadmap.go` — Roadmap automation: parse, analyze, research, expand, export
+  - `handler_workflow.go` — Workflow and snapshot: workflow define/run, snapshot
+  - `handler_prompt.go` — Prompt enhancement: analyze, enhance, lint, improve, templates, classify, should_enhance, claudemd_check
 - **internal/roadmap/**: Roadmap parsing, analysis, research, expansion, export
 - **internal/repofiles/**: Ralph config file scaffolding and optimization
 - **cmd/ralphglasses-mcp/**: Standalone MCP server binary entry point
