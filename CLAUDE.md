@@ -71,7 +71,7 @@ Use `ralphglasses_team_create` with `provider` to set the lead's provider, then 
 
 ## MCP Server
 
-Ralphglasses is also an installable MCP server exposing 52 tools for managing ralph loops and multi-provider LLM sessions programmatically.
+Ralphglasses is also an installable MCP server exposing 57 tools for managing ralph loops and multi-provider LLM sessions programmatically.
 
 ### Install
 
@@ -135,6 +135,11 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 | `ralphglasses_workflow_run` | Execute workflows with dependency ordering |
 | `ralphglasses_snapshot` | Save/list fleet state snapshots |
 | `ralphglasses_session_stop_all` | Stop all running LLM sessions (emergency cost cutoff) |
+| `ralphglasses_awesome_fetch` | Fetch + parse awesome-list README into structured entries |
+| `ralphglasses_awesome_analyze` | Deep-analyze repos: fetch READMEs, score value/complexity vs ralph capabilities |
+| `ralphglasses_awesome_diff` | Compare current list against previous fetch (new/removed entries) |
+| `ralphglasses_awesome_report` | Generate formatted report from analysis results (json/markdown) |
+| `ralphglasses_awesome_sync` | Full pipeline: fetch → diff → analyze new → report → save |
 | `ralphglasses_prompt_analyze` | Score a prompt across 10 quality dimensions with letter grades and suggestions |
 | `ralphglasses_prompt_enhance` | Run the 13-stage deterministic prompt enhancement pipeline |
 | `ralphglasses_prompt_lint` | Deep-lint a prompt for anti-patterns (unmotivated rules, injection risks, etc.) |
