@@ -15,6 +15,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/awesome"
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
@@ -394,6 +395,39 @@ func (s *Server) Register(srv *server.MCPServer) {
 	srv.AddTool(mcp.NewTool("ralphglasses_session_stop_all",
 		mcp.WithDescription("Stop all running LLM sessions — emergency cost cutoff"),
 	), s.handleSessionStopAll)
+
+	// Awesome-list research tools
+
+	srv.AddTool(mcp.NewTool("ralphglasses_awesome_fetch",
+		mcp.WithDescription("Fetch and parse an awesome-list README into structured entries with categories"),
+		mcp.WithString("repo", mcp.Description("GitHub repo (default: hesreallyhim/awesome-claude-code)")),
+	), s.handleAwesomeFetch)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_awesome_analyze",
+		mcp.WithDescription("Deep-analyze repos: fetch READMEs, score value/complexity vs ralph capabilities"),
+		mcp.WithString("repo", mcp.Description("GitHub repo (default: hesreallyhim/awesome-claude-code)")),
+		mcp.WithNumber("max_workers", mcp.Description("Concurrent README fetches (default 5)")),
+	), s.handleAwesomeAnalyze)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_awesome_diff",
+		mcp.WithDescription("Compare current awesome-list against previous fetch (new/removed entries)"),
+		mcp.WithString("save_to", mcp.Required(), mcp.Description("Repo path where previous index is saved")),
+		mcp.WithString("repo", mcp.Description("GitHub repo (default: hesreallyhim/awesome-claude-code)")),
+	), s.handleAwesomeDiff)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_awesome_report",
+		mcp.WithDescription("Generate formatted report from saved analysis results"),
+		mcp.WithString("save_to", mcp.Required(), mcp.Description("Repo path where analysis is saved")),
+		mcp.WithString("format", mcp.Description("Output format: json or markdown (default: markdown)")),
+	), s.handleAwesomeReport)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_awesome_sync",
+		mcp.WithDescription("Full pipeline: fetch awesome-list → diff → analyze new entries → report → save"),
+		mcp.WithString("save_to", mcp.Required(), mcp.Description("Repo path to save results")),
+		mcp.WithString("repo", mcp.Description("GitHub repo (default: hesreallyhim/awesome-claude-code)")),
+		mcp.WithString("full_rescan", mcp.Description("Re-analyze all entries, not just new: true/false (default: false)")),
+		mcp.WithNumber("max_workers", mcp.Description("Concurrent README fetches (default 5)")),
+	), s.handleAwesomeSync)
 
 	// Prompt enhancement tools
 
@@ -2706,4 +2740,89 @@ func splitCSV(s string) []string {
 		}
 	}
 	return result
+}
+
+// Awesome-list handlers
+
+func (s *Server) handleAwesomeFetch(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repo := getStringArg(req, "repo")
+	idx, err := awesome.Fetch(ctx, s.HTTPClient, repo)
+	if err != nil {
+		return errResult(fmt.Sprintf("fetch: %v", err)), nil
+	}
+	return jsonResult(idx), nil
+}
+
+func (s *Server) handleAwesomeAnalyze(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repo := getStringArg(req, "repo")
+	idx, err := awesome.Fetch(ctx, s.HTTPClient, repo)
+	if err != nil {
+		return errResult(fmt.Sprintf("fetch: %v", err)), nil
+	}
+
+	maxWorkers := int(getNumberArg(req, "max_workers", 5))
+	analysis, err := awesome.Analyze(ctx, s.HTTPClient, idx.Entries, awesome.AnalyzeOptions{
+		MaxWorkers: maxWorkers,
+	})
+	if err != nil {
+		return errResult(fmt.Sprintf("analyze: %v", err)), nil
+	}
+	analysis.Source = idx.Source
+	return jsonResult(analysis), nil
+}
+
+func (s *Server) handleAwesomeDiff(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	saveTo := getStringArg(req, "save_to")
+	if saveTo == "" {
+		return errResult("save_to required"), nil
+	}
+	repo := getStringArg(req, "repo")
+
+	idx, err := awesome.Fetch(ctx, s.HTTPClient, repo)
+	if err != nil {
+		return errResult(fmt.Sprintf("fetch: %v", err)), nil
+	}
+
+	prev, _ := awesome.LoadIndex(saveTo)
+	diff := awesome.Diff(prev, idx)
+	return jsonResult(diff), nil
+}
+
+func (s *Server) handleAwesomeReport(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	saveTo := getStringArg(req, "save_to")
+	if saveTo == "" {
+		return errResult("save_to required"), nil
+	}
+
+	analysis, err := awesome.LoadAnalysis(saveTo)
+	if err != nil {
+		return errResult(fmt.Sprintf("load analysis: %v", err)), nil
+	}
+
+	report := awesome.GenerateReport(analysis)
+	format := getStringArg(req, "format")
+	if format == "json" {
+		return jsonResult(report), nil
+	}
+	return textResult(awesome.FormatMarkdown(report)), nil
+}
+
+func (s *Server) handleAwesomeSync(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	saveTo := getStringArg(req, "save_to")
+	if saveTo == "" {
+		return errResult("save_to required"), nil
+	}
+
+	opts := awesome.SyncOptions{
+		Repo:       getStringArg(req, "repo"),
+		SaveTo:     saveTo,
+		FullRescan: getStringArg(req, "full_rescan") == "true",
+		MaxWorkers: int(getNumberArg(req, "max_workers", 5)),
+	}
+
+	result, err := awesome.Sync(ctx, s.HTTPClient, opts)
+	if err != nil {
+		return errResult(fmt.Sprintf("sync: %v", err)), nil
+	}
+	return jsonResult(result), nil
 }
