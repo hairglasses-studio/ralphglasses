@@ -151,8 +151,37 @@
 | **lazydocker** | Go (gocui) | Container/image/volume panels, log streaming with follow, resource graphs, custom commands, bulk operations | Log streaming with follow is already implemented. lazydocker's container lifecycle maps well to session lifecycle. |
 | **btop++** | C++ | Responsive layout (adapts to terminal size), GPU monitoring, mouse support, multiple themes, process tree view | Responsive layout is the key lesson -- btop++ gracefully degrades sections when width/height shrinks. ralphglasses does not do this. |
 | **Ratatui** (Rust) | Rust | Constraint-based layout, flex layout, widget trait system, built-in scrollbar widget, responsive breakpoints | Ratatui's constraint layout system is more sophisticated than BubbleTea's string-concat approach. The scrollbar widget pattern would benefit LogView. |
+| **phiat/claude-esp** | Go (BubbleTea) | Real-time Claude Code session monitoring via JSONL parsing, tree-view session hierarchy, event streaming with follow, terminal-native session inspector | Directly comparable architecture -- Go + BubbleTea for Claude Code monitoring. claude-esp's JSONL parsing approach for live session output is more robust than ralphglasses' line-based tail. Tree view for session hierarchy is a pattern worth evaluating for team detail views. |
+| **NimbleMarkets/ntcharts** | Go | Sparkline, bar chart, heatmap, line chart, streaming line, time series, candlestick, waveline, scatter. All implement `bubbletea.Model` with `Update()`/`View()`. Canvas-based rendering with braille/block character sets. | Already used in ralphglasses (`views/sessiondetail.go`, `views/fleet.go` for cost sparkline). Additional chart types (heatmap for session activity, time series for cost over time, bar chart for provider comparison) could enrich the fleet dashboard. |
+| **Ghostty** | Zig | Theme system: `ghostty +list-themes` command, `~/.config/ghostty/themes/` directory for custom themes, system light/dark auto-switching, theme preview in terminal | Ghostty's theme discovery pattern (CLI command to list available themes + directory for user themes) maps directly to a `ralphglasses themes list` subcommand and `~/.ralphglasses/themes/` directory. System light/dark switching is relevant for the thin client auto-boot scenario. |
 
-### 4.2 Patterns Worth Adopting
+### 4.2 Theme Ecosystem Analysis
+
+The research identified three mature theme specification systems relevant to ralphglasses:
+
+**Catppuccin**: 4 flavors (Mocha, Frappe, Macchiato, Latte), 26 named colors per flavor, 300+ application ports. The specification defines semantic color roles (base, surface, overlay, text, subtext, rosewater, flamingo, pink, mauve, red, maroon, peach, yellow, green, teal, sapphire, blue, lavender) that map well to ralphglasses' 8-color Theme struct. Adding Catppuccin support would require expanding Theme to ~14 colors or mapping Catppuccin's 26 to the existing 8 semantically.
+
+**Tokyo Night**: 3 variants (Storm, Night, Day) with specific hex palettes. Simpler than Catppuccin -- maps almost 1:1 to the existing Theme struct (primary, accent, green, yellow, red, gray, dark_bg, bright_fg).
+
+**k9s skins**: Hierarchical YAML with per-resource-type style overrides (e.g., `k9s.body.fgColor`, `k9s.frame.title.fgColor`, `k9s.views.table.header.fgColor`). More granular than ralphglasses' flat 8-color model. k9s supports env-specific themes (different colors per Kubernetes context) and live file watching for hot-reload. The hierarchical approach is overkill for ralphglasses Phase 1 but worth considering for Phase 3.5.
+
+**Current ralphglasses theme gaps**: The existing 5 built-in themes (k9s, dracula, gruvbox, nord, snazzy) use a mix of ANSI-256 color numbers and hex strings. The `snazzy` theme uses hex (`#57c7ff`) while others use ANSI numbers (`"39"`). Lipgloss handles both, but consistency would improve maintainability. Adding Catppuccin Mocha and Tokyo Night Storm as built-in themes requires only new entries in `DefaultThemes()`.
+
+### 4.3 Charmbracelet Ecosystem Findings
+
+**Lipgloss v2 compositing API**: Lipgloss v2 introduces a compositing/layering system with X, Y, Z positioning for rendering overlays. This would simplify modal rendering in `app.go` -- instead of concatenating the confirm dialog or action menu as a string override, use `lipgloss.Place()` with Z-layering. However, lipgloss v2 also changes `lipgloss.Color` to `color.Color` (standard library type), which would require updating all color constants in `styles/styles.go`. This is a breaking migration that should be deferred until Phase 3.5.
+
+**Bubbles display components**: The `charmbracelet/bubbles` library provides several components not yet used by ralphglasses:
+- `table` -- official table widget with header/row styling, but ralphglasses' custom `components/table.go` is more feature-rich (sorting, filtering, multi-select, ANSI-aware padding). No migration recommended.
+- `list` -- filterable list with fuzzy matching. Could replace the fleet dashboard's session/repo/team panels for more consistent filtering UX.
+- `viewport` -- already used in `views/logstream.go`. Could be applied to DiffView and Timeline to make them scrollable.
+- `progress` -- already used in `views/sessiondetail.go` for budget progress bar.
+- `spinner` -- could replace the custom `ActivityDot` braille spinner in `components/gauge.go` for more animation options.
+- `textinput` -- could replace the manual `EditBuf` + cursor rendering in `components/launcher.go` for proper cursor movement, selection, and clipboard support.
+
+**BubbleTea high-performance rendering**: For views with heavy ANSI content (fleet dashboard sparklines, colored tables), BubbleTea supports `tea.WithAltScreen()` and `tea.WithMouseCellMotion()`. The key optimization is to use `viewport` for any content that exceeds the terminal height, avoiding full-screen re-renders. The `logstream.go` already does this correctly; `fleet.go` does not and re-renders the entire dashboard string on every tick.
+
+### 4.4 Patterns Worth Adopting
 
 1. **Minimum terminal size guard** (btop++, lazygit): Display a centered "Terminal too small (need 80x24, have WxH)" message. Prevents layout corruption and panics. Directly addresses ROADMAP 1.10.5.
 
@@ -166,7 +195,15 @@
 
 6. **Scrollbar indicator** (Ratatui, VS Code terminal): A visual scrollbar on the right edge of scrollable views (LogView, DiffView). Provides spatial awareness in long content.
 
-### 4.3 Anti-Patterns to Avoid
+7. **Theme discovery CLI** (Ghostty): A `ralphglasses themes list` subcommand that prints available themes with color previews. Combined with `~/.ralphglasses/themes/` directory for user-defined YAML themes and `--theme` flag for startup selection.
+
+8. **JSONL session streaming** (claude-esp): Parse Claude Code's JSONL output directly rather than line-based log tailing. Provides structured access to tool calls, costs, model switches, and errors. This would improve the accuracy of session detail views.
+
+9. **Heatmap visualization** (ntcharts): Use ntcharts heatmap for session activity over time (x-axis = hours, y-axis = repos, color = cost or API call density). Would add a high-information-density view to the fleet dashboard.
+
+10. **bubbles/textinput for form fields** (Bubbles): Replace the manual `EditBuf` + cursor rendering in `components/launcher.go` with `bubbles/textinput` for proper cursor movement (Home/End/arrow keys), clipboard support (Ctrl+V), and word-level operations (Ctrl+W, Alt+Backspace).
+
+### 4.5 Anti-Patterns to Avoid
 
 1. **Mouse-first design in TUI**: Some TUIs prioritize mouse interaction over keyboard. For a marathon-mode fleet controller, keyboard-first is correct. Mouse support can be added later but should never be required.
 
@@ -178,7 +215,18 @@
 
 5. **Global mutable style variables**: `styles/styles.go` uses package-level `var` for all styles. While `ApplyTheme()` is thread-safe during init, applying a theme at runtime while `View()` is rendering could produce inconsistent styling. Should be atomic or applied between frames.
 
-### 4.4 Academic & Industry References
+6. **Compiled Go plugins (.so)**: ROADMAP 2.13.2 plans scanning for Go plugin `.so` files. Go's `plugin` package is notoriously brittle -- plugins must be compiled with the exact same Go version, toolchain, and dependency set as the host binary. k9s abandoned compiled plugins for YAML-driven command plugins. HashiCorp's `go-plugin` (RPC over stdin/stdout) is more robust but heavier. For ralphglasses, a YAML command plugin system (like k9s) is recommended for Phase 3.5, with compiled plugins deferred or dropped.
+
+### 4.6 Accessibility Considerations
+
+Terminal accessibility is an emerging concern for production TUIs:
+
+- **Screen reader support**: BubbleTea does not currently emit ARIA-like attributes. The Charmbracelet team has an [open discussion](https://github.com/charmbracelet/bubbletea/issues/780) about accessibility. For now, ensure all views have text-only representations (no information conveyed solely by color).
+- **High contrast mode**: The existing theme system can support a "high-contrast" theme (bright foreground on black, no dim/gray text). This is a trivial addition to `DefaultThemes()`.
+- **Keyboard-only navigation**: ralphglasses is already keyboard-first. Ensure all interactive elements are reachable via tab/arrow keys without mouse -- currently satisfied.
+- **Color-blind safety**: Avoid red/green as the sole distinguisher. ralphglasses uses both color AND text/icons for status (e.g., `StatusIcon()` returns distinct Unicode characters per state), which is correct.
+
+### 4.7 Academic & Industry References
 
 1. **The Elm Architecture (TEA)**: BubbleTea's foundation. Key principle: Update is the only place state changes, View is a pure function of state. ralphglasses follows this correctly.
 
@@ -187,6 +235,8 @@
 3. **Synchronized Output (Mode 2027)**: BubbleTea v2 supports Mode 2027 (DEC private mode for synchronized rendering). Reduces flicker on terminals like Ghostty, iTerm2, and Windows Terminal. Already handled by the framework.
 
 4. **Nielsen's 10 Usability Heuristics**: Relevant heuristics: Visibility of system status (status bar covers this), Error prevention (confirm dialogs cover this), Recognition over recall (help overlay covers this).
+
+5. **Lazygit: 5 Years Retrospective** (Jesse Duffield, 2025): Key takeaways -- (a) spatial consistency matters more than feature density, (b) the undo stack is the most underrated feature, (c) keyboard shortcuts should be discoverable in-context not in a separate help page. ralphglasses already follows (c) via help footers in each view.
 
 ---
 
@@ -224,12 +274,17 @@
 |---|--------|----------------|--------|--------|---------|
 | 17 | Responsive layout: collapse fleet sections on narrow terminals | `views/fleet.go` | L | Medium -- multi-monitor UX | 3.1-3.2 |
 | 18 | Add scrollbar indicators to all scrollable views | `components/` (new scrollbar component) | M | Low -- visual polish | 3.5.1 |
-| 19 | Add `--theme` CLI flag and `:theme` command for live switching | `cmd/root.go`, `tui/command.go`, `styles/theme.go` | M | Medium -- personalization | 3.5.1.6-7 |
-| 20 | YAML plugin system (k9s-style `plugins.yml`) | `internal/plugins/` (new pkg) | XL | Medium -- extensibility | 3.5.2 |
-| 21 | Resource aliases (`:rp`, `:ss`, `:tm`, `:fl`) | `tui/command.go` | S | Low -- convenience | 3.5.3 |
-| 22 | Height budgeting in `View()`: allocate terminal rows to sections | `tui/app.go:601-716` | L | Medium -- prevents overflow | 1.3.4 |
-| 23 | Raise tui package test coverage from 23% to 70% | `tui/app_test.go`, new test files | XL | High -- ROADMAP target | 1.6.1 |
-| 24 | Mouse support for clickable tabs and table rows | `tui/app.go`, `components/table.go` | L | Low -- secondary input | - |
+| 19 | Add `--theme` CLI flag, `:theme` command, `~/.ralphglasses/themes/` discovery | `cmd/root.go`, `tui/command.go`, `styles/theme.go` | M | Medium -- personalization | 3.5.1.6-7 |
+| 20 | Add Catppuccin Mocha and Tokyo Night Storm as built-in themes | `styles/theme.go` (new entries in `DefaultThemes()`) | S | Low -- community themes | 3.5.1 |
+| 21 | YAML command plugin system (not compiled .so -- see anti-patterns) | `internal/plugins/` (new pkg) | L | Medium -- extensibility | 2.13 |
+| 22 | Resource aliases (`:rp`, `:ss`, `:tm`, `:fl`) | `tui/command.go` | S | Low -- convenience | 3.5.3 |
+| 23 | Height budgeting in `View()`: allocate terminal rows to sections | `tui/app.go:601-716` | L | Medium -- prevents overflow | 1.3.4 |
+| 24 | Raise tui package test coverage from 23% to 70% | `tui/app_test.go`, new test files | XL | High -- ROADMAP target | 1.6.1 |
+| 25 | Replace `launcher.go` EditBuf with `bubbles/textinput` | `components/launcher.go` | M | Medium -- proper cursor/clipboard | 1.3 |
+| 26 | Add high-contrast accessibility theme to `DefaultThemes()` | `styles/theme.go` | S | Low -- accessibility | 3.5.1 |
+| 27 | Add ntcharts heatmap for session activity in fleet dashboard | `views/fleet.go` | M | Medium -- information density | 2.4 |
+| 28 | Wrap fleet dashboard in viewport for scroll on small terminals | `views/fleet.go`, `tui/app.go` | M | Medium -- prevents clipping | 1.3.4 |
+| 29 | Mouse support for clickable tabs and table rows | `tui/app.go`, `components/table.go` | L | Low -- secondary input | - |
 
 ---
 
@@ -245,6 +300,8 @@
 | Fleet dashboard performance with 50+ sessions | Medium | Medium -- slow render, high CPU | Profile and cache `buildFleetData()` result; skip rebuild if no tick changes |
 | Nerd Font icons render as boxes on non-patched terminals | Medium | Low -- functional but ugly | Add `--ascii` flag to fall back to ASCII icons |
 | Config key flicker in repo detail | High | Low -- visual annoyance | Fix item 6 (sort keys) |
+| Lipgloss v2 migration breaks all color constants | Medium | Medium -- significant refactor | Defer to Phase 3.5; all colors in `styles/styles.go` need `lipgloss.Color` -> `color.Color` |
+| Compiled Go plugins (.so) fragile across versions | High | Medium -- broken plugin ecosystem | Use YAML command plugins (k9s pattern) instead per recommendation #21 |
 
 ---
 
@@ -319,11 +376,20 @@ All three streams are independent -- they touch different files and different co
 ---
 
 *Sources consulted:*
-- [Charmbracelet BubbleTea](https://github.com/charmbracelet/bubbletea)
-- [Charmbracelet Bubbles](https://github.com/charmbracelet/bubbles)
-- [BubbleTea accessibility discussion](https://github.com/charmbracelet/bubbletea/issues/780)
-- [k9s TUI patterns](https://github.com/rothgar/awesome-tuis)
-- [Lazygit 5 Years Retrospective](https://jesseduffield.com/Lazygit-5-Years-On/)
+- [Charmbracelet BubbleTea](https://github.com/charmbracelet/bubbletea) -- Elm-architecture TUI framework
+- [Charmbracelet Bubbles](https://github.com/charmbracelet/bubbles) -- Display/input component library (table, list, viewport, progress, spinner, textinput)
+- [Charmbracelet Lipgloss](https://github.com/charmbracelet/lipgloss) -- Terminal styling; v2 compositing API analysis
+- [NimbleMarkets/ntcharts](https://github.com/NimbleMarkets/ntcharts) -- Terminal charts (sparkline, bar, heatmap, line, streaming, time series, candlestick, waveline, scatter)
+- [phiat/claude-esp](https://github.com/phiat/claude-esp) -- Go BubbleTea TUI for Claude Code session monitoring via JSONL
+- [k9s skins documentation](https://k9scli.io/topics/skins/) -- YAML theme system with hierarchical style structure, env/context/global priority, live file watching
+- [lazygit themes](https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md) -- Config-based theme with `selectedLineBgColor`, file merging
+- [Lazygit: 5 Years Retrospective](https://jesseduffield.com/Lazygit-5-Years-On/) -- Spatial consistency, undo stack, discoverability
+- [Ghostty theme system](https://ghostty.org/docs/config) -- `ghostty +list-themes`, `~/.config/ghostty/themes/`, system light/dark switching
+- [Catppuccin theme specification](https://github.com/catppuccin/catppuccin) -- 4 flavors, 26 colors, 300+ ports
+- [Tokyo Night theme](https://github.com/enkia/tokyo-night-vscode-theme) -- Storm/Night/Day variants
+- [HashiCorp go-plugin](https://github.com/hashicorp/go-plugin) -- RPC-based plugin system (alternative to Go .so plugins)
+- [BubbleTea accessibility discussion](https://github.com/charmbracelet/bubbletea/issues/780) -- Screen reader support, ARIA-like attributes
 - [BubbleTea State Machine Pattern](https://zackproser.com/blog/bubbletea-state-machine)
 - [TUI Frameworks: BubbleTea vs Ratatui](https://www.glukhov.org/post/2026/02/tui-frameworks-bubbletea-go-vs-ratatui-rust/)
 - [Build TUI Apps with Go and BubbleTea (2026)](https://dasroot.net/posts/2026/03/build-tui-apps-go-bubbletea/)
+- [awesome-tuis](https://github.com/rothgar/awesome-tuis) -- TUI project catalog
