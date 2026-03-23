@@ -28,15 +28,16 @@ import (
 
 // Server holds state for the MCP server.
 type Server struct {
-	mu         sync.RWMutex
-	ScanPath   string
-	Repos      []*model.Repo
-	ProcMgr    *process.Manager
-	SessMgr    *session.Manager
-	EventBus   *events.Bus
-	HTTPClient *http.Client
-	Engine     *enhancer.HybridEngine
-	engineOnce sync.Once
+	mu           sync.RWMutex
+	ScanPath     string
+	Repos        []*model.Repo
+	ProcMgr      *process.Manager
+	SessMgr      *session.Manager
+	EventBus     *events.Bus
+	HTTPClient   *http.Client
+	Engine       *enhancer.HybridEngine
+	engineOnce   sync.Once
+	ToolRecorder *ToolCallRecorder
 }
 
 // NewServer creates a new MCP server instance.
@@ -615,6 +616,15 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithDescription("Recommend best provider + model + budget for a task based on feedback profiles and cost normalization"),
 		mcp.WithString("task", mcp.Required(), mcp.Description("Task description (e.g. 'fix lint errors', 'add search feature')")),
 	), s.handleProviderRecommend)
+
+	// Tool benchmarking
+
+	srv.AddTool(mcp.NewTool("ralphglasses_tool_benchmark",
+		mcp.WithDescription("Per-tool performance benchmarks: latency percentiles, success rates, and regression detection"),
+		mcp.WithString("tool", mcp.Description("Filter to a specific tool name")),
+		mcp.WithString("compare", mcp.Description("Include regression analysis vs previous baseline: true/false (default: false)")),
+		mcp.WithNumber("hours", mcp.Description("Time window in hours (default 24)")),
+	), s.handleToolBenchmark)
 }
 
 func (s *Server) scan() error {
@@ -4048,4 +4058,64 @@ func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	default:
 		return invalidParams(fmt.Sprintf("unknown action: %s (expected: stop, stop_all, pause, resume, retry)", action)), nil
 	}
+}
+
+func (s *Server) handleToolBenchmark(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if s.ToolRecorder == nil {
+		return errResult("tool benchmarking not configured"), nil
+	}
+
+	hours := getNumberArg(req, "hours", 24)
+	since := time.Now().Add(-time.Duration(hours) * time.Hour)
+
+	entries, err := s.ToolRecorder.LoadEntries(since)
+	if err != nil {
+		return internalErr(fmt.Sprintf("loading benchmark data: %v", err)), nil
+	}
+
+	toolFilter := getStringArg(req, "tool")
+	if toolFilter != "" {
+		filtered := entries[:0]
+		for _, e := range entries {
+			if e.ToolName == toolFilter {
+				filtered = append(filtered, e)
+			}
+		}
+		entries = filtered
+	}
+
+	summaries := Summarize(entries)
+
+	// Build sorted list for stable output.
+	summaryList := make([]*ToolBenchmarkSummary, 0, len(summaries))
+	for _, s := range summaries {
+		summaryList = append(summaryList, s)
+	}
+
+	result := map[string]any{
+		"summaries":    summaryList,
+		"window_hours": hours,
+		"total_calls":  len(entries),
+	}
+
+	compare := getStringArg(req, "compare")
+	if compare == "true" {
+		// Baseline: previous window of same duration.
+		baselineSince := since.Add(-time.Duration(hours) * time.Hour)
+		baselineEntries, err := s.ToolRecorder.LoadEntries(baselineSince)
+		if err == nil {
+			// Filter baseline to only entries before 'since'.
+			baselineFiltered := baselineEntries[:0]
+			for _, e := range baselineEntries {
+				if e.Timestamp.Before(since) {
+					baselineFiltered = append(baselineFiltered, e)
+				}
+			}
+			baselineSummaries := Summarize(baselineFiltered)
+			regressions := CompareRuns(baselineSummaries, summaries)
+			result["regressions"] = regressions
+		}
+	}
+
+	return jsonResult(result), nil
 }
