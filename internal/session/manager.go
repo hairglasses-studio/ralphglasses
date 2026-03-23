@@ -28,6 +28,7 @@ type Manager struct {
 	loops         map[string]*LoopRun     // keyed by loop run ID
 	bus           *events.Bus
 	stateDir      string // directory for persisted session JSON files
+	optimizer     *AutoOptimizer          // Level 2+ self-improvement engine
 	launchSession func(context.Context, LaunchOptions) (*Session, error)
 	waitSession   func(context.Context, *Session) error
 	Enhancer      *enhancer.HybridEngine // optional prompt enhancement for loop integration
@@ -62,6 +63,15 @@ func (m *Manager) SetStateDir(dir string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.stateDir = dir
+}
+
+// SetAutoOptimizer attaches the self-improvement engine (Level 2+).
+// When set, Launch will consult FeedbackAnalyzer for provider and budget
+// suggestions, and session completion will feed back into profiles.
+func (m *Manager) SetAutoOptimizer(opt *AutoOptimizer) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.optimizer = opt
 }
 
 // SetHooksForTesting overrides session launch/wait behavior. Intended for tests.
@@ -100,14 +110,28 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	if opts.Model == "" {
 		opts.Model = ProviderDefaults(opts.Provider)
 	}
+
+	// Level 2+ auto-optimization: consult FeedbackAnalyzer for provider/budget
+	m.mu.Lock()
+	optimizer := m.optimizer
+	m.mu.Unlock()
+	if optimizer != nil {
+		opts, _ = optimizer.OptimizedLaunchOptions(opts)
+	}
+
 	s, err := launch(ctx, opts, m.bus)
 	if err != nil {
 		return nil, err
 	}
 
-	// Set persistence callback so runner can persist on completion
+	// Set persistence and feedback callbacks so runner can persist and learn on completion
 	s.onComplete = func(sess *Session) {
 		m.PersistSession(sess)
+		// Feed session results back into the self-improvement loop
+		if optimizer != nil {
+			optimizer.IngestSessionJournal(sess)
+			optimizer.HandleSessionComplete(ctx, sess)
+		}
 	}
 
 	m.mu.Lock()

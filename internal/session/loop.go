@@ -62,14 +62,18 @@ type LoopIteration struct {
 	Number            int                `json:"number"`
 	Status            string             `json:"status"`
 	Task              LoopTask           `json:"task"`
+	Tasks             []LoopTask         `json:"tasks,omitempty"` // multiple tasks for concurrent execution
 	PlannerSessionID  string             `json:"planner_session_id,omitempty"`
-	WorkerSessionID   string             `json:"worker_session_id,omitempty"`
+	WorkerSessionID   string             `json:"worker_session_id,omitempty"`    // first/only worker (backwards compat)
+	WorkerSessionIDs  []string           `json:"worker_session_ids,omitempty"`   // all workers for concurrent execution
 	VerifierSessionID string             `json:"verifier_session_id,omitempty"`
 	WorktreePath      string             `json:"worktree_path,omitempty"`
+	WorktreePaths     []string           `json:"worktree_paths,omitempty"` // per-worker worktrees
 	Branch            string             `json:"branch,omitempty"`
 	PlannerOutput     string             `json:"planner_output,omitempty"`
 	WorkerOutput      string             `json:"worker_output,omitempty"`
 	HasQuestions      bool               `json:"has_questions,omitempty"`
+	WorkerOutputs     []string           `json:"worker_outputs,omitempty"` // per-worker outputs
 	Verification      []LoopVerification `json:"verification,omitempty"`
 	Error             string             `json:"error,omitempty"`
 	StartedAt         time.Time          `json:"started_at"`
@@ -188,6 +192,8 @@ func (m *Manager) StopLoop(id string) error {
 }
 
 // StepLoop executes one planner/worker/verify iteration.
+// When MaxConcurrentWorkers > 1, the planner is asked for multiple tasks
+// and workers execute in parallel, each in their own git worktree.
 func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	run, ok := m.GetLoop(id)
 	if !ok {
@@ -234,7 +240,12 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		return m.failLoopIteration(run, index, fmt.Errorf("integrity check: %w", err))
 	}
 
-	plannerPrompt, err := buildLoopPlannerPrompt(repoPath, run.iterationsSnapshot())
+	numWorkers := profile.MaxConcurrentWorkers
+	if numWorkers <= 0 {
+		numWorkers = 1
+	}
+
+	plannerPrompt, err := buildLoopPlannerPromptN(repoPath, numWorkers)
 	if err != nil {
 		return m.failLoopIteration(run, index, fmt.Errorf("build planner prompt: %w", err))
 	}
@@ -264,74 +275,137 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		return m.failLoopIteration(run, index, fmt.Errorf("planner session failed: %w", err))
 	}
 
-	task, plannerOutput, err := plannerTaskFromSession(plannerSession)
+	tasks, plannerOutput, err := plannerTasksFromSession(plannerSession, numWorkers)
 	if err != nil {
 		return m.failLoopIteration(run, index, fmt.Errorf("parse planner output: %w", err))
 	}
 
 	m.updateLoopIteration(run, index, "executing", func(iter *LoopIteration, loop *LoopRun) {
-		iter.Task = task
+		iter.Task = tasks[0] // backwards compat: first task
+		iter.Tasks = tasks
 		iter.PlannerOutput = plannerOutput
 	})
 
-	worktreePath, branch, err := createLoopWorktree(ctx, repoPath, run.ID, iteration.Number)
-	if err != nil {
-		return m.failLoopIteration(run, index, fmt.Errorf("create worktree: %w", err))
+	// Fan out workers in parallel, each in their own worktree
+	type workerResult struct {
+		idx       int
+		session   *Session
+		worktree  string
+		branch    string
+		output    string
+		err       error
 	}
 
-	// Enhance worker prompt for the worker's target provider
-	workerPrompt := task.Prompt
-	if m.Enhancer != nil {
-		workerPrompt = m.enhanceForProvider(ctx, workerPrompt, profile.WorkerProvider)
+	resultCh := make(chan workerResult, len(tasks))
+	for i, task := range tasks {
+		go func(workerIdx int, t LoopTask) {
+			wt, br, wtErr := createLoopWorktree(ctx, repoPath, run.ID, iteration.Number*100+workerIdx)
+			if wtErr != nil {
+				resultCh <- workerResult{idx: workerIdx, err: fmt.Errorf("create worktree: %w", wtErr)}
+				return
+			}
+
+			// Enhance worker prompt for the worker's target provider
+			workerPrompt := t.Prompt
+			if m.Enhancer != nil {
+				workerPrompt = m.enhanceForProvider(ctx, workerPrompt, profile.WorkerProvider)
+			}
+
+			ws, launchErr := m.launchWorkflowSession(ctx, LaunchOptions{
+				Provider:     profile.WorkerProvider,
+				RepoPath:     wt,
+				Prompt:       workerPrompt,
+				Model:        profile.WorkerModel,
+				MaxBudgetUSD: profile.WorkerBudgetUSD,
+				SessionName:  fmt.Sprintf("loop-work-%s-%03d-%d", run.RepoName, iteration.Number, workerIdx),
+			})
+			if launchErr != nil {
+				resultCh <- workerResult{idx: workerIdx, worktree: wt, err: fmt.Errorf("launch worker: %w", launchErr)}
+				return
+			}
+
+			waitErr := m.waitForSession(ctx, ws)
+			// Check if productive work happened despite timeout
+			if waitErr != nil && errors.Is(waitErr, context.DeadlineExceeded) && hasGitChanges(wt) {
+				waitErr = nil // Worker made progress; treat as success
+			}
+			out := sessionOutputSummary(ws)
+			resultCh <- workerResult{idx: workerIdx, session: ws, worktree: wt, branch: br, output: out, err: waitErr}
+		}(i, task)
 	}
 
-	workerSession, err := m.launchWorkflowSession(ctx, LaunchOptions{
-		Provider:     profile.WorkerProvider,
-		RepoPath:     worktreePath,
-		Prompt:       workerPrompt,
-		Model:        profile.WorkerModel,
-		MaxBudgetUSD: profile.WorkerBudgetUSD,
-		SessionName:  fmt.Sprintf("loop-work-%s-%03d", run.RepoName, iteration.Number),
-	})
-	if err != nil {
-		return m.failLoopIteration(run, index, fmt.Errorf("launch worker session: %w", err))
-	}
+	// Collect results
+	workerSessionIDs := make([]string, len(tasks))
+	workerWorktrees := make([]string, len(tasks))
+	workerOutputs := make([]string, len(tasks))
+	var workerErrs []string
+	var firstWorktree, firstBranch string
 
-	m.updateLoopIteration(run, index, "executing", func(iter *LoopIteration, loop *LoopRun) {
-		iter.WorkerSessionID = workerSession.ID
-		iter.WorktreePath = worktreePath
-		iter.Branch = branch
-	})
-
-	if err := m.waitForSession(ctx, workerSession); err != nil {
-		// Check if productive work happened despite timeout — don't waste
-		// budget retrying when the worker already committed real changes.
-		if errors.Is(err, context.DeadlineExceeded) && hasGitChanges(worktreePath) {
-			// Worker made progress; treat as success and proceed to verification.
-		} else {
-			return m.failLoopIteration(run, index, fmt.Errorf("worker session failed: %w", err))
+	for range tasks {
+		res := <-resultCh
+		if res.session != nil {
+			workerSessionIDs[res.idx] = res.session.ID
+		}
+		workerWorktrees[res.idx] = res.worktree
+		workerOutputs[res.idx] = res.output
+		if res.err != nil {
+			workerErrs = append(workerErrs, fmt.Sprintf("worker %d: %s", res.idx, res.err))
+		}
+		if res.idx == 0 {
+			firstWorktree = res.worktree
+			firstBranch = res.branch
 		}
 	}
 
-	workerOutput := sessionOutputSummary(workerSession)
+	m.updateLoopIteration(run, index, "executing", func(iter *LoopIteration, loop *LoopRun) {
+		if len(workerSessionIDs) > 0 {
+			iter.WorkerSessionID = workerSessionIDs[0]
+		}
+		iter.WorkerSessionIDs = workerSessionIDs
+		iter.WorktreePath = firstWorktree
+		iter.WorktreePaths = workerWorktrees
+		iter.Branch = firstBranch
+		iter.WorkerOutputs = workerOutputs
+		if len(workerOutputs) > 0 {
+			iter.WorkerOutput = workerOutputs[0]
+		}
+	})
 
-	// Detect if the worker asked questions instead of acting autonomously.
-	hasQ, _ := DetectQuestions(workerOutput)
+	if len(workerErrs) > 0 {
+		errMsg := strings.Join(workerErrs, "; ")
+		return m.failLoopIteration(run, index, fmt.Errorf("worker(s) failed: %s", errMsg))
+	}
 
+	// Detect if any worker asked questions instead of acting autonomously.
+	hasQ := false
+	for _, wo := range workerOutputs {
+		if q, _ := DetectQuestions(wo); q {
+			hasQ = true
+			break
+		}
+	}
+
+	// Verify: run verification on each worktree
 	m.updateLoopIteration(run, index, "verifying", func(iter *LoopIteration, loop *LoopRun) {
-		iter.WorkerOutput = workerOutput
 		iter.HasQuestions = hasQ
 	})
 
-	verification, err := runLoopVerification(ctx, worktreePath, profile.VerifyCommands)
-	if err != nil {
-		run.updateLoopAfterVerification(index, verification, "failed", err.Error())
-		m.PersistLoop(run)
-		_ = writeLoopJournal(run, run.Iterations[index])
-		return err
+	var allVerification []LoopVerification
+	for _, wt := range workerWorktrees {
+		if wt == "" {
+			continue
+		}
+		verification, verErr := runLoopVerification(ctx, wt, profile.VerifyCommands)
+		allVerification = append(allVerification, verification...)
+		if verErr != nil {
+			run.updateLoopAfterVerification(index, allVerification, "failed", verErr.Error())
+			m.PersistLoop(run)
+			_ = writeLoopJournal(run, run.Iterations[index])
+			return verErr
+		}
 	}
 
-	run.updateLoopAfterVerification(index, verification, "idle", "")
+	run.updateLoopAfterVerification(index, allVerification, "idle", "")
 	m.PersistLoop(run)
 	_ = writeLoopJournal(run, run.Iterations[index])
 	return nil
@@ -370,8 +444,8 @@ func normalizeLoopProfile(profile LoopProfile) (LoopProfile, error) {
 	if profile.WorktreePolicy == "" {
 		profile.WorktreePolicy = def.WorktreePolicy
 	}
-	if profile.MaxConcurrentWorkers != 1 {
-		return profile, fmt.Errorf("max concurrent workers > 1 not implemented yet")
+	if profile.MaxConcurrentWorkers > 8 {
+		return profile, fmt.Errorf("max concurrent workers capped at 8, got %d", profile.MaxConcurrentWorkers)
 	}
 	if profile.WorktreePolicy != "git" {
 		return profile, fmt.Errorf("unsupported worktree policy %q", profile.WorktreePolicy)
@@ -388,6 +462,28 @@ func normalizeLoopProfile(profile LoopProfile) (LoopProfile, error) {
 	}
 
 	return profile, nil
+}
+
+// buildLoopPlannerPromptN builds a planner prompt requesting N parallel tasks.
+func buildLoopPlannerPromptN(repoPath string, numTasks int) (string, error) {
+	if numTasks <= 1 {
+		return buildLoopPlannerPrompt(repoPath, nil)
+	}
+	prompt, err := buildLoopPlannerPrompt(repoPath, nil)
+	if err != nil {
+		return "", err
+	}
+	// Replace the single-task instruction with multi-task
+	prompt = strings.Replace(prompt,
+		`Choose exactly one bounded next task for the repo and respond with JSON only:
+{"title":"short task title","prompt":"implementation prompt for the worker"}`,
+		fmt.Sprintf(`Choose up to %d independent tasks that can run in parallel (no file conflicts).
+Respond with a JSON array only:
+[{"title":"task 1","prompt":"implementation prompt"},{"title":"task 2","prompt":"implementation prompt"}]
+
+Each task runs in its own git worktree, so they must not modify the same files.`, numTasks),
+		1)
+	return prompt, nil
 }
 
 func buildLoopPlannerPrompt(repoPath string, prevIterations []LoopIteration) (string, error) {
@@ -449,6 +545,90 @@ In headless mode, no human will answer. Re-task with explicit instructions to ma
 	}
 
 	return strings.Join(sections, "\n\n"), nil
+}
+
+// plannerTasksFromSession extracts up to maxTasks from the planner output.
+// It tries to parse a JSON array first; if that fails, falls back to single task.
+func plannerTasksFromSession(s *Session, maxTasks int) ([]LoopTask, string, error) {
+	output := sessionOutputSummary(s)
+
+	// Try multi-task parse first (JSON array)
+	if maxTasks > 1 {
+		tasks, err := parsePlannerTasks(output)
+		if err == nil && len(tasks) > 0 {
+			if len(tasks) > maxTasks {
+				tasks = tasks[:maxTasks]
+			}
+			return tasks, output, nil
+		}
+
+		// Try from session fields
+		s.mu.Lock()
+		for _, candidate := range []string{s.LastOutput, strings.Join(s.OutputHistory, "\n")} {
+			tasks, parseErr := parsePlannerTasks(candidate)
+			if parseErr == nil && len(tasks) > 0 {
+				s.mu.Unlock()
+				if len(tasks) > maxTasks {
+					tasks = tasks[:maxTasks]
+				}
+				return tasks, candidate, nil
+			}
+		}
+		s.mu.Unlock()
+	}
+
+	// Fall back to single task
+	task, out, err := plannerTaskFromSession(s)
+	if err != nil {
+		return nil, out, err
+	}
+	return []LoopTask{task}, out, nil
+}
+
+// parsePlannerTasks tries to parse a JSON array of tasks from planner output.
+func parsePlannerTasks(text string) ([]LoopTask, error) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return nil, errors.New("empty output")
+	}
+
+	// Try direct parse
+	var tasks []LoopTask
+	for _, candidate := range plannerJSONArrayCandidates(text) {
+		if err := json.Unmarshal([]byte(candidate), &tasks); err == nil && len(tasks) > 0 {
+			valid := make([]LoopTask, 0, len(tasks))
+			for _, t := range tasks {
+				t.Title = strings.TrimSpace(t.Title)
+				t.Prompt = strings.TrimSpace(t.Prompt)
+				if t.Title != "" && t.Prompt != "" {
+					valid = append(valid, t)
+				}
+			}
+			if len(valid) > 0 {
+				return valid, nil
+			}
+		}
+	}
+
+	return nil, errors.New("no task array found in planner output")
+}
+
+func plannerJSONArrayCandidates(text string) []string {
+	var out []string
+	out = append(out, text)
+
+	reFence := regexp.MustCompile("(?s)```json\\s*(\\[.*?\\])\\s*```")
+	if matches := reFence.FindStringSubmatch(text); len(matches) == 2 {
+		out = append(out, matches[1])
+	}
+
+	start := strings.IndexByte(text, '[')
+	end := strings.LastIndexByte(text, ']')
+	if start >= 0 && end > start {
+		out = append(out, text[start:end+1])
+	}
+
+	return dedupeStrings(out)
 }
 
 func plannerTaskFromSession(s *Session) (LoopTask, string, error) {

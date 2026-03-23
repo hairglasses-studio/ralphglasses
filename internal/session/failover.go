@@ -48,3 +48,21 @@ func (m *Manager) LaunchWithFailover(ctx context.Context, opts LaunchOptions, ch
 
 	return nil, "", fmt.Errorf("all providers failed: %s", strings.Join(errs, "; "))
 }
+
+// LaunchWithSmartFailover uses FeedbackAnalyzer profiles to build an optimized
+// failover chain, then falls back to the default static chain. This replaces
+// the static [claude→gemini→codex] ordering with data-driven provider selection.
+func (m *Manager) LaunchWithSmartFailover(ctx context.Context, opts LaunchOptions) (*Session, Provider, error) {
+	m.mu.Lock()
+	optimizer := m.optimizer
+	m.mu.Unlock()
+
+	var chain FailoverChain
+	if optimizer != nil {
+		chain = optimizer.BuildSmartFailoverChain(opts.Prompt)
+	} else {
+		chain = DefaultFailoverChain()
+	}
+
+	return m.LaunchWithFailover(ctx, opts, chain)
+}
