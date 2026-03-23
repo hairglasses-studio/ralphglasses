@@ -57,6 +57,8 @@ func main() {
 		taskType := ""
 		mode := ""
 		quiet := false
+		provider := ""
+		targetProvider := ""
 		prompt := ""
 		for i := 1; i < len(args); i++ {
 			switch args[i] {
@@ -68,6 +70,16 @@ func main() {
 			case "--mode":
 				if i+1 < len(args) {
 					mode = args[i+1]
+					i++
+				}
+			case "--provider":
+				if i+1 < len(args) {
+					provider = args[i+1]
+					i++
+				}
+			case "--target-provider":
+				if i+1 < len(args) {
+					targetProvider = args[i+1]
 					i++
 				}
 			case "--quiet", "-q":
@@ -84,11 +96,14 @@ func main() {
 			prompt = readStdin()
 		}
 		if prompt == "" {
-			fmt.Fprintln(os.Stderr, "usage: prompt-improver enhance <prompt> [--type T] [--mode local|llm|auto] [--quiet]")
+			fmt.Fprintln(os.Stderr, "usage: prompt-improver enhance <prompt> [--type T] [--mode local|llm|auto] [--provider P] [--target-provider P] [--quiet]")
 			os.Exit(1)
 		}
-		if mode != "" {
-			runEnhanceWithMode(prompt, taskType, mode, quiet)
+		if mode != "" || provider != "" || targetProvider != "" {
+			if mode == "" {
+				mode = "local"
+			}
+			runEnhanceWithMode(prompt, taskType, mode, quiet, provider, targetProvider)
 		} else {
 			runEnhanceQuiet(prompt, taskType, quiet)
 		}
@@ -98,6 +113,7 @@ func main() {
 		thinking := false
 		feedback := ""
 		quiet := false
+		provider := ""
 		prompt := ""
 		for i := 1; i < len(args); i++ {
 			switch args[i] {
@@ -113,6 +129,11 @@ func main() {
 					feedback = args[i+1]
 					i++
 				}
+			case "--provider":
+				if i+1 < len(args) {
+					provider = args[i+1]
+					i++
+				}
 			case "--quiet", "-q":
 				quiet = true
 			default:
@@ -127,10 +148,10 @@ func main() {
 			prompt = readStdin()
 		}
 		if prompt == "" {
-			fmt.Fprintln(os.Stderr, "usage: prompt-improver improve <prompt> [--thinking] [--feedback hint] [--type T] [--quiet]")
+			fmt.Fprintln(os.Stderr, "usage: prompt-improver improve <prompt> [--thinking] [--feedback hint] [--type T] [--provider P] [--quiet]")
 			os.Exit(1)
 		}
-		runImprove(prompt, taskType, thinking, feedback, quiet)
+		runImprove(prompt, taskType, thinking, feedback, quiet, provider)
 
 	case "diff":
 		prompt := strings.Join(args[1:], " ")
@@ -144,15 +165,31 @@ func main() {
 		runDiff(prompt)
 
 	case "analyze":
-		prompt := strings.Join(args[1:], " ")
+		targetProvider := ""
+		prompt := ""
+		for i := 1; i < len(args); i++ {
+			switch args[i] {
+			case "--target-provider":
+				if i+1 < len(args) {
+					targetProvider = args[i+1]
+					i++
+				}
+			default:
+				if prompt == "" {
+					prompt = args[i]
+				} else {
+					prompt += " " + args[i]
+				}
+			}
+		}
 		if prompt == "" {
 			prompt = readStdin()
 		}
 		if prompt == "" {
-			fmt.Fprintln(os.Stderr, "usage: prompt-improver analyze <prompt>")
+			fmt.Fprintln(os.Stderr, "usage: prompt-improver analyze <prompt> [--target-provider P]")
 			os.Exit(1)
 		}
-		runAnalyze(prompt)
+		runAnalyze(prompt, targetProvider)
 
 	case "template":
 		if len(args) < 2 {
@@ -232,7 +269,7 @@ func runEnhanceQuiet(prompt, taskType string, quiet bool) {
 	fmt.Println(string(data))
 }
 
-func runEnhanceWithMode(prompt, taskType, mode string, quiet bool) {
+func runEnhanceWithMode(prompt, taskType, mode string, quiet bool, provider, targetProvider string) {
 	tt := enhancer.ValidTaskType(taskType)
 	m := enhancer.ValidMode(mode)
 	if m == "" {
@@ -242,6 +279,12 @@ func runEnhanceWithMode(prompt, taskType, mode string, quiet bool) {
 
 	cfg := enhancer.ResolveConfig(".")
 	cfg.LLM.Enabled = true // --mode flag implies LLM should be available
+	if provider != "" {
+		cfg.LLM.Provider = provider
+	}
+	if targetProvider != "" {
+		cfg.TargetProvider = enhancer.ProviderName(targetProvider)
+	}
 	engine := getOrCreateEngine(cfg.LLM)
 
 	result := enhancer.EnhanceHybrid(context.Background(), prompt, tt, cfg, engine, m, cfg.TargetProvider)
@@ -254,7 +297,7 @@ func runEnhanceWithMode(prompt, taskType, mode string, quiet bool) {
 	fmt.Println(string(data))
 }
 
-func runImprove(prompt, taskType string, thinking bool, feedback string, quiet bool) {
+func runImprove(prompt, taskType string, thinking bool, feedback string, quiet bool, provider string) {
 	tt := enhancer.ValidTaskType(taskType)
 
 	cfg := enhancer.ResolveConfig(".")
@@ -262,9 +305,19 @@ func runImprove(prompt, taskType string, thinking bool, feedback string, quiet b
 	if thinking {
 		cfg.LLM.ThinkingEnabled = true
 	}
+	if provider != "" {
+		cfg.LLM.Provider = provider
+	}
 	engine := getOrCreateEngine(cfg.LLM)
 	if engine == nil {
-		fmt.Fprintln(os.Stderr, "error: ANTHROPIC_API_KEY not set — cannot use LLM improvement")
+		apiHint := "ANTHROPIC_API_KEY"
+		switch cfg.LLM.Provider {
+		case "gemini":
+			apiHint = "GOOGLE_API_KEY"
+		case "openai":
+			apiHint = "OPENAI_API_KEY"
+		}
+		fmt.Fprintf(os.Stderr, "error: %s not set — cannot use LLM improvement\n", apiHint)
 		os.Exit(1)
 	}
 
@@ -272,6 +325,7 @@ func runImprove(prompt, taskType string, thinking bool, feedback string, quiet b
 		ThinkingEnabled: thinking,
 		TaskType:        tt,
 		Feedback:        feedback,
+		Provider:        engine.Client.Provider(),
 	}
 
 	result, err := engine.Client.Improve(context.Background(), prompt, opts)
@@ -321,8 +375,22 @@ func getOrCreateEngine(cfg enhancer.LLMConfig) *enhancer.HybridEngine {
 	return hybridEngine
 }
 
-func runAnalyze(prompt string) {
+func runAnalyze(prompt string, targetProvider string) {
 	result := enhancer.Analyze(prompt)
+	if targetProvider != "" {
+		tp := enhancer.ProviderName(targetProvider)
+		lints := enhancer.Lint(prompt)
+		report := enhancer.Score(prompt, result.TaskType, lints, &result, tp)
+		result.ScoreReport = report
+		legacyScore := report.Overall / 10
+		if legacyScore < 1 {
+			legacyScore = 1
+		}
+		if legacyScore > 10 {
+			legacyScore = 10
+		}
+		result.Score = legacyScore
+	}
 	data, _ := json.MarshalIndent(result, "", "  ")
 	fmt.Println(string(data))
 }

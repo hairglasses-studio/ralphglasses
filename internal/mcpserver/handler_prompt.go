@@ -11,6 +11,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 func (s *Server) getEngine() *enhancer.HybridEngine {
@@ -293,4 +294,16 @@ func hasXMLStructure(s string) bool {
 		}
 	}
 	return false
+}
+
+// mapSessionProvider maps a session provider to an enhancer provider name.
+func mapSessionProvider(p session.Provider) enhancer.ProviderName {
+	switch p {
+	case session.ProviderGemini:
+		return enhancer.ProviderGemini
+	case session.ProviderCodex:
+		return enhancer.ProviderOpenAI
+	default:
+		return enhancer.ProviderClaude
+	}
 }

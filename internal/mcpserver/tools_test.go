@@ -112,6 +112,7 @@ func initGitRepo(t *testing.T, repoPath string) {
 	runGit(t, repoPath, "init")
 	runGit(t, repoPath, "config", "user.email", "test@example.com")
 	runGit(t, repoPath, "config", "user.name", "Test User")
+	runGit(t, repoPath, "config", "commit.gpgsign", "false")
 	runGit(t, repoPath, "add", ".")
 	runGit(t, repoPath, "commit", "-m", "initial")
 }
