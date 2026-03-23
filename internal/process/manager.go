@@ -15,11 +15,19 @@ import (
 
 const pidFileName = "ralphglasses.pid"
 
+// ProcessErrorMsg is a tea.Msg delivered when a managed process exits with a
+// non-zero status. The TUI can wrap ErrorChan in a tea.Cmd to receive it.
+type ProcessErrorMsg struct {
+	RepoPath string
+	Err      error
+}
+
 // Manager tracks running ralph loop processes.
 type Manager struct {
 	mu    sync.Mutex
 	procs map[string]*ManagedProcess // keyed by repo path
 	bus   *events.Bus
+	errCh chan ProcessErrorMsg
 }
 
 // ManagedProcess wraps an os/exec.Cmd for a ralph loop.
@@ -47,6 +55,7 @@ type exitStatus struct {
 func NewManager() *Manager {
 	return &Manager{
 		procs: make(map[string]*ManagedProcess),
+		errCh: make(chan ProcessErrorMsg, 16),
 	}
 }
 
@@ -55,7 +64,14 @@ func NewManagerWithBus(bus *events.Bus) *Manager {
 	return &Manager{
 		procs: make(map[string]*ManagedProcess),
 		bus:   bus,
+		errCh: make(chan ProcessErrorMsg, 16),
 	}
+}
+
+// ErrorChan returns a channel that receives ProcessErrorMsg when a managed
+// process exits with a non-zero status. Wrap with a tea.Cmd to handle in the TUI.
+func (m *Manager) ErrorChan() <-chan ProcessErrorMsg {
+	return m.errCh
 }
 
 // pidFilePath returns the path to the PID file for a repo.
@@ -169,17 +185,17 @@ func (m *Manager) Start(repoPath string) error {
 	// Reap the process in the background and clean up PID file.
 	rp := repoPath
 	go func() {
-		err := cmd.Wait()
+		waitErr := cmd.Wait()
 		exitCode := 0
-		exitErr := ""
-		if err != nil {
-			exitErr = err.Error()
+		exitErrStr := ""
+		if waitErr != nil {
+			exitErrStr = waitErr.Error()
 		}
 		if cmd.ProcessState != nil {
 			exitCode = cmd.ProcessState.ExitCode()
 		}
 		lastExits.Lock()
-		lastExits.m[rp] = exitStatus{Code: exitCode, Error: exitErr}
+		lastExits.m[rp] = exitStatus{Code: exitCode, Error: exitErrStr}
 		lastExits.Unlock()
 
 		m.mu.Lock()
@@ -187,13 +203,21 @@ func (m *Manager) Start(repoPath string) error {
 		m.mu.Unlock()
 		removePIDFile(rp)
 
+		// Notify TUI of unexpected failures (exit code > 0; signal kills yield -1).
+		if exitCode > 0 {
+			select {
+			case m.errCh <- ProcessErrorMsg{RepoPath: rp, Err: fmt.Errorf("process exited %d: %s", exitCode, exitErrStr)}:
+			default: // drop if channel is full
+			}
+		}
+
 		// Publish loop stopped event.
 		if m.bus != nil {
 			m.bus.Publish(events.Event{
 				Type:     events.LoopStopped,
 				RepoPath: rp,
 				RepoName: filepath.Base(rp),
-				Data:     map[string]any{"exit_code": exitCode, "error": exitErr},
+				Data:     map[string]any{"exit_code": exitCode, "error": exitErrStr},
 			})
 		}
 	}()
