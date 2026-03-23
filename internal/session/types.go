@@ -103,6 +103,8 @@ type LaunchOptions struct {
 	Worktree     string   // --worktree (branch name or "true" for auto)
 	SessionName  string   // --name
 	TeamName     string   // team membership (internal tracking)
+	Sandbox      bool     // run session in Docker container
+	SandboxImage string   // Docker image override (default: ubuntu:24.04)
 }
 
 // TeamConfig holds agent team configuration.

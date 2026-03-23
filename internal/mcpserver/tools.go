@@ -556,6 +556,65 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithString("action", mcp.Required(), mcp.Description("Action: stop, stop_all, pause, resume, retry")),
 		mcp.WithString("target", mcp.Description("Session ID or repo name (required except stop_all)")),
 	), s.handleRCAct)
+
+	// Distributed fleet tools
+
+	srv.AddTool(mcp.NewTool("ralphglasses_fleet_submit",
+		mcp.WithDescription("Submit work to the distributed fleet queue for execution on any worker"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithString("prompt", mcp.Required(), mcp.Description("Task prompt")),
+		mcp.WithString("provider", mcp.Description("claude (default), gemini, codex")),
+		mcp.WithNumber("budget", mcp.Description("Max budget USD (default: 5)")),
+		mcp.WithNumber("priority", mcp.Description("Priority 0-10 (default: 5, higher = first)")),
+	), s.handleFleetSubmit)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_fleet_budget",
+		mcp.WithDescription("View or set the fleet-wide budget. Shows spent, remaining, and active work."),
+		mcp.WithNumber("limit", mcp.Description("New budget limit in USD (omit to just view)")),
+	), s.handleFleetBudget)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_fleet_workers",
+		mcp.WithDescription("List registered fleet workers with status, capacity, and spend"),
+	), s.handleFleetWorkers)
+
+	// Self-improvement / HITL tools
+
+	srv.AddTool(mcp.NewTool("ralphglasses_hitl_score",
+		mcp.WithDescription("Current human-in-the-loop score: manual interventions vs autonomous actions, with trend"),
+		mcp.WithNumber("hours", mcp.Description("Time window in hours (default: 24)")),
+	), s.handleHITLScore)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_hitl_history",
+		mcp.WithDescription("Recent HITL events: manual stops, auto-recoveries, config changes, etc."),
+		mcp.WithNumber("hours", mcp.Description("Time window in hours (default: 24)")),
+		mcp.WithNumber("limit", mcp.Description("Max events (default: 50)")),
+	), s.handleHITLHistory)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_autonomy_level",
+		mcp.WithDescription("View or set the autonomy level (0=observe, 1=auto-recover, 2=auto-optimize, 3=full-autonomy)"),
+		mcp.WithString("level", mcp.Description("New level: 0-3 or name (omit to view current)")),
+	), s.handleAutonomyLevel)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_autonomy_decisions",
+		mcp.WithDescription("Recent autonomous decisions with rationale, inputs, and outcomes"),
+		mcp.WithNumber("limit", mcp.Description("Max decisions (default: 20)")),
+	), s.handleAutonomyDecisions)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_autonomy_override",
+		mcp.WithDescription("Override/reverse an autonomous decision and record human intervention"),
+		mcp.WithString("decision_id", mcp.Required(), mcp.Description("Decision ID to override")),
+		mcp.WithString("details", mcp.Description("Why this was overridden")),
+	), s.handleAutonomyOverride)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_feedback_profiles",
+		mcp.WithDescription("View feedback profiles: per-task-type and per-provider performance data from journal analysis"),
+		mcp.WithString("type", mcp.Description("Filter: prompt, provider, or omit for both")),
+	), s.handleFeedbackProfiles)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_provider_recommend",
+		mcp.WithDescription("Recommend best provider + model + budget for a task based on feedback profiles and cost normalization"),
+		mcp.WithString("task", mcp.Required(), mcp.Description("Task description (e.g. 'fix lint errors', 'add search feature')")),
+	), s.handleProviderRecommend)
 }
 
 func (s *Server) scan() error {
