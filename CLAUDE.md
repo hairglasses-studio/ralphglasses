@@ -71,7 +71,7 @@ Use `ralphglasses_team_create` with `provider` to set the lead's provider, then 
 
 ## MCP Server
 
-Ralphglasses is also an installable MCP server exposing 57 tools for managing ralph loops and multi-provider LLM sessions programmatically.
+Ralphglasses is also an installable MCP server exposing 81 tools for managing ralph loops, multi-provider LLM sessions, fleet orchestration, and self-improvement subsystems programmatically.
 
 ### Install
 
@@ -158,6 +158,17 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 | `ralphglasses_rc_read` | Read recent output from most active session with cursor |
 | `ralphglasses_event_poll` | Cursor-based event polling for efficient mobile updates |
 | `ralphglasses_rc_act` | Quick fleet actions: stop, stop_all, pause, resume, retry |
+| `ralphglasses_fleet_submit` | Submit work to the distributed fleet queue for execution on any worker |
+| `ralphglasses_fleet_budget` | View or set the fleet-wide budget (spent, remaining, active work) |
+| `ralphglasses_fleet_workers` | List registered fleet workers with status, capacity, and spend |
+| `ralphglasses_hitl_score` | Current human-in-the-loop score: manual interventions vs autonomous actions, with trend |
+| `ralphglasses_hitl_history` | Recent HITL events: manual stops, auto-recoveries, config changes |
+| `ralphglasses_autonomy_level` | View or set the autonomy level (0=observe, 1=auto-recover, 2=auto-optimize, 3=full-autonomy) |
+| `ralphglasses_autonomy_decisions` | Recent autonomous decisions with rationale, inputs, and outcomes |
+| `ralphglasses_autonomy_override` | Override/reverse an autonomous decision and record human intervention |
+| `ralphglasses_feedback_profiles` | Per-task-type and per-provider performance data from journal analysis |
+| `ralphglasses_provider_recommend` | Recommend best provider + model + budget for a task based on feedback profiles |
+| `ralphglasses_tool_benchmark` | Per-tool performance benchmarks: latency percentiles, success rates, regression detection |
 
 ## Prompt Enhancement
 
@@ -197,13 +208,23 @@ The `ralphglasses_session_launch` tool supports an `enhance_prompt` parameter to
 - **internal/discovery/**: Scans directories for `.ralph/` and `.ralphrc`
 - **internal/model/**: Data types and parsers for status.json, progress.json, circuit breaker state, .ralphrc
 - **internal/process/**: Process management (launch/stop/pause via os/exec), fsnotify file watcher, log tailing
-- **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch
-- **internal/mcpserver/**: MCP tool handlers (52 tools, stdio transport via mcp-go)
+- **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch, concurrent worker fan-out, autonomy levels, auto-optimization, auto-recovery, context store, HITL metrics, feedback profiling, prompt caching
+- **internal/mcpserver/**: MCP tool handlers (81 tools, stdio transport via mcp-go)
   - `tools.go` — Server struct, constructors, Register(), all handler implementations, helpers
   - `handler_prompt.go` — Multi-provider prompt enhancement handlers: analyze, enhance, lint, improve (with provider param), templates, classify, should_enhance, claudemd_check
+  - `handler_fleet.go` — Distributed fleet, HITL, autonomy, and feedback profile handlers
+  - `middleware.go` — Composable middleware: InstrumentationMiddleware (timing/size), EventBusMiddleware, ValidationMiddleware
+  - `toolbench.go` — Auto-benchmarking with JSONL logging, P50/P95 latencies, regression detection
 - **internal/roadmap/**: Roadmap parsing, analysis, research, expansion, export
 - **internal/repofiles/**: Ralph config file scaffolding and optimization
+- **internal/fleet/**: Distributed fleet coordination — HTTP coordinator/worker nodes, priority queue, cost optimizer, Tailscale-based discovery
+- **internal/sandbox/**: Docker container isolation for sessions (create, start, exec, stop, cleanup)
+- **internal/tracing/**: OpenTelemetry GenAI semantic tracing + Prometheus metrics recorder
+- **internal/plugin/**: Plugin system — registry, file-based loader, builtin logger plugin
 - **cmd/mcp.go**: MCP server subcommand (`go run . mcp`)
+- **cmd/doctor.go**: Environment verification (required binaries, API keys, scan-path accessibility)
+- **cmd/serve.go**: Fleet node (`--coordinator` for leader, `--coordinator-url` for worker, HTTP server with budget enforcement)
+- **cmd/validate.go**: Validate all `.ralphrc` configs across scan-path repos
 - **internal/tui/**: Bubble Tea app model, keymap, command/filter modes
 - **internal/tui/styles/**: Lipgloss theme (k9s-inspired, no other package imports this)
 - **internal/tui/components/**: Reusable widgets (sortable table, breadcrumb, status bar, notifications)
@@ -282,6 +303,59 @@ The `internal/session/` package uses a provider dispatch pattern:
 - **OpenAI**: [API Reference](https://platform.openai.com/docs/api-reference) | [Codex CLI](https://github.com/openai/codex)
 - **MCP**: [Specification](https://modelcontextprotocol.io/) | [Go SDK (mcp-go)](https://github.com/mark3labs/mcp-go)
 
+## Autonomy Levels
+
+The session manager supports graduated autonomous decision-making via `internal/session/autonomy.go`:
+
+| Level | Name | Behavior |
+|-------|------|----------|
+| 0 | Observe | Log decisions only ("would have done X") |
+| 1 | AutoRecover | Auto-restart on transient errors, provider failover |
+| 2 | AutoOptimize | Auto-adjust budgets, providers, and rate limits from feedback profiles |
+| 3 | FullAutonomy | Auto-launch from roadmap, scale teams, apply config changes |
+
+All decisions are recorded in a JSONL decision log with rationale, inputs, and outcomes. Human overrides are tracked by the HITL subsystem.
+
+### Self-Improvement Subsystems
+
+- **`autonomy.go`**: DecisionLog with 4-level gating — decisions below current level are logged but not executed
+- **`autooptimize.go`**: Feedback-driven provider/budget selection using journal-derived performance profiles
+- **`autorecovery.go`**: Transient error retry with exponential backoff (connection reset, timeout, rate limit, 429/503), provider failover on persistent failures
+- **`contextstore.go`**: Cross-session file conflict detection — prevents concurrent workers from editing the same files
+- **`feedback.go`**: Provider/task performance profiling (avg cost, turns, duration, completion rate per task type)
+- **`hitl.go`**: Human-in-the-loop metric tracking — manual interventions vs autonomous actions, trend scoring (improving/stable/degrading)
+- **`promptcache.go`**: Prompt prefix caching — identifies stable preamble (CLAUDE.md, system prompts) for cost savings across sessions
+
+## Middleware & Instrumentation
+
+The MCP server supports composable middleware (`internal/mcpserver/middleware.go`):
+
+- **InstrumentationMiddleware**: Records timing, success/fail, input/output size for every tool call
+- **EventBusMiddleware**: Emits `tool.call` events to the fleet event bus for real-time monitoring
+- **ValidationMiddleware**: Pre-validates required parameters (repo path, session ID) before handler execution
+
+### Tool Benchmarking
+
+`internal/mcpserver/toolbench.go` provides auto-benchmarking applied to all 81 tools:
+
+- **JSONL recording**: All tool calls logged with latency, success, error, sizes
+- **Percentile summaries**: P50, P95, max latency per tool
+- **Regression detection**: Compares current metrics against baseline, flags degradations by severity
+- **MCP tool**: `ralphglasses_tool_benchmark` exposes metrics and regression analysis
+
+## Distributed Fleet
+
+The `internal/fleet/` package enables multi-machine workload distribution:
+
+- **`server.go`**: HTTP coordinator — accepts work submissions, tracks workers via heartbeats, enforces fleet-wide budget
+- **`worker.go`**: Polls coordinator for work, executes sessions locally, reports results
+- **`queue.go`**: Priority queue with cost-aware scheduling and provider affinity
+- **`optimizer.go`**: Cost optimizer — routes tasks to cheapest capable provider/worker
+- **`discovery.go`**: Tailscale-based fleet discovery (automatic peer detection)
+- **`client.go`**: HTTP client for worker-to-coordinator communication
+
+Start with `ralphglasses serve --coordinator` (one node) and `ralphglasses serve --coordinator-url <url>` (worker nodes).
+
 ## Key Patterns
 
 - **Styles are in their own package** (`internal/tui/styles/`) to avoid import cycles. Components and views import styles, not the tui package.
@@ -297,6 +371,9 @@ The `internal/session/` package uses a provider dispatch pattern:
 - `.ralphrc`: Shell-style KEY="value" config (PROJECT_NAME, MAX_CALLS_PER_HOUR, CB thresholds, etc.)
 - `.ralph/improvement_journal.jsonl`: Append-only JSONL, one entry per session (worked/failed/suggest)
 - `.ralph/improvement_patterns.json`: Consolidated durable patterns from journal (survives pruning)
+- `.ralph/decisions.jsonl`: Autonomous decision log (level, category, rationale, inputs, outcome)
+- `.ralph/hitl_events.jsonl`: Human-in-the-loop events (metric type, trigger, session/repo)
+- `.ralph/context_store.json`: Active session context entries for file conflict detection
 
 ## Distro / Thin Client
 
