@@ -18,7 +18,7 @@ func TestNewOverviewTable(t *testing.T) {
 }
 
 func TestOverviewColumns(t *testing.T) {
-	expected := []string{"Name", "Status", "Loop", "Calls", "Budget", "Progress", "CB", "Updated"}
+	expected := []string{"Name", "Status", "Loop", "Calls", "Budget", "Progress", "CB", "Health", "Updated"}
 	if len(OverviewColumns) != len(expected) {
 		t.Fatalf("expected %d columns, got %d", len(expected), len(OverviewColumns))
 	}
@@ -48,7 +48,7 @@ func TestReposToRows(t *testing.T) {
 		},
 	}
 
-	rows := ReposToRows(repos, 0)
+	rows := ReposToRows(repos, 0, nil, 120)
 	if len(rows) != 2 {
 		t.Fatalf("expected 2 rows, got %d", len(rows))
 	}
@@ -65,7 +65,7 @@ func TestReposToRows(t *testing.T) {
 }
 
 func TestReposToRowsEmpty(t *testing.T) {
-	rows := ReposToRows(nil, 0)
+	rows := ReposToRows(nil, 0, nil, 120)
 	if len(rows) != 0 {
 		t.Errorf("expected 0 rows, got %d", len(rows))
 	}

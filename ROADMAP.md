@@ -143,6 +143,13 @@ Pre-requisite fixes for existing bugs and silent failures. No new features. All 
 - [ ] 1.2.4 — Define MCP error codes (not-found, invalid-input, internal) and return structured errors
 - **Acceptance:** no data races under `go test -race`, structured JSON log output
 
+### 1.2.5 — MCP Handler Framework
+- [ ] 1.2.5.1 — Extract ParamParser helper: type-safe parameter extraction with validation, replacing manual `getStringArg`/`getNumberArg` calls across 81 handlers
+- [ ] 1.2.5.2 — Standardize error codes across all handlers: migrate from `errResult()` to `errCode()` with consistent error_code values (invalid_params, not_found, internal_error)
+- [ ] 1.2.5.3 — Handler test harness: mock Server with mock providers for table-driven tests, reducing per-handler test boilerplate
+- [ ] 1.2.5.4 — Handler generator: codegen tool for new MCP tool scaffolding (registration + handler + test stub) `[BLOCKED BY 1.2.5.1, 1.2.5.2]`
+- **Acceptance:** new handler scaffolding requires <10 LOC, all 81 handlers use ParamParser, zero raw `errResult()` calls remain
+
 ### 1.3 — TUI polish
 - [ ] 1.3.1 — Build `ConfirmDialog` component (y/n prompt overlay, reusable across views)
 - [ ] 1.3.2 — Wire confirm dialog to destructive actions: stop, stop_all, config delete

@@ -7,6 +7,7 @@ import (
 )
 
 func TestAnalyze(t *testing.T) {
+	t.Parallel()
 	// Create a temp repo with some dirs matching roadmap keywords
 	dir := t.TempDir()
 
@@ -44,6 +45,7 @@ func TestAnalyze(t *testing.T) {
 }
 
 func TestAnalyze_EmptyRepo(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	rmPath := filepath.Join(dir, "ROADMAP.md")
 	os.WriteFile(rmPath, []byte(testRoadmap), 0644)
@@ -65,6 +67,7 @@ func TestAnalyze_EmptyRepo(t *testing.T) {
 }
 
 func TestExtractKeywords(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		desc string
 		want int // minimum number of keywords

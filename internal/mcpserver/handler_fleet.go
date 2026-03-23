@@ -12,56 +12,44 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
-// Fleet and HITL infrastructure on the Server.
-// These fields are set when running in fleet mode.
-var (
-	fleetCoordinator *fleet.Coordinator
-	fleetClient      *fleet.Client
-	hitlTracker      *session.HITLTracker
-	decisionLog      *session.DecisionLog
-	feedbackAnalyzer *session.FeedbackAnalyzer
-	autoOptimizer    *session.AutoOptimizer
-)
-
-// InitFleetTools initializes fleet infrastructure for MCP tools.
-func InitFleetTools(coord *fleet.Coordinator, client *fleet.Client, hitl *session.HITLTracker, decisions *session.DecisionLog, feedback *session.FeedbackAnalyzer) {
-	fleetCoordinator = coord
-	fleetClient = client
-	hitlTracker = hitl
-	decisionLog = decisions
-	feedbackAnalyzer = feedback
+// InitFleetTools initializes fleet infrastructure on the Server.
+func (s *Server) InitFleetTools(coord *fleet.Coordinator, client *fleet.Client, hitl *session.HITLTracker, decisions *session.DecisionLog, feedback *session.FeedbackAnalyzer) {
+	s.FleetCoordinator = coord
+	s.FleetClient = client
+	s.HITLTracker = hitl
+	s.DecisionLog = decisions
+	s.FeedbackAnalyzer = feedback
 }
 
 // InitSelfImprovement initializes HITL and feedback infrastructure (works without fleet).
-// When called with a Server, also wires the AutoOptimizer into the session manager.
-func InitSelfImprovement(stateDir string, autonomyLevel int) {
-	if hitlTracker == nil {
-		hitlTracker = session.NewHITLTracker(stateDir)
+func (s *Server) InitSelfImprovement(stateDir string, autonomyLevel int) {
+	if s.HITLTracker == nil {
+		s.HITLTracker = session.NewHITLTracker(stateDir)
 	}
-	if decisionLog == nil {
-		decisionLog = session.NewDecisionLog(stateDir, session.AutonomyLevel(autonomyLevel))
+	if s.DecisionLog == nil {
+		s.DecisionLog = session.NewDecisionLog(stateDir, session.AutonomyLevel(autonomyLevel))
 	}
-	if feedbackAnalyzer == nil {
-		feedbackAnalyzer = session.NewFeedbackAnalyzer(stateDir, 5)
+	if s.FeedbackAnalyzer == nil {
+		s.FeedbackAnalyzer = session.NewFeedbackAnalyzer(stateDir, 5)
 	}
-	if autoOptimizer == nil {
-		autoOptimizer = session.NewAutoOptimizer(feedbackAnalyzer, decisionLog, hitlTracker, nil)
+	if s.AutoOptimizer == nil {
+		s.AutoOptimizer = session.NewAutoOptimizer(s.FeedbackAnalyzer, s.DecisionLog, s.HITLTracker, nil)
 	}
 }
 
 // WireAutoOptimizer attaches the auto-optimizer to a session manager and creates
 // the AutoRecovery handler. Call after InitSelfImprovement.
-func WireAutoOptimizer(mgr *session.Manager) {
-	if autoOptimizer == nil || mgr == nil {
+func (s *Server) WireAutoOptimizer(mgr *session.Manager) {
+	if s.AutoOptimizer == nil || mgr == nil {
 		return
 	}
-	recovery := session.NewAutoRecovery(mgr, decisionLog, hitlTracker, session.DefaultAutoRecoveryConfig())
-	autoOptimizer = session.NewAutoOptimizer(feedbackAnalyzer, decisionLog, hitlTracker, recovery)
-	mgr.SetAutoOptimizer(autoOptimizer)
+	recovery := session.NewAutoRecovery(mgr, s.DecisionLog, s.HITLTracker, session.DefaultAutoRecoveryConfig())
+	s.AutoOptimizer = session.NewAutoOptimizer(s.FeedbackAnalyzer, s.DecisionLog, s.HITLTracker, recovery)
+	mgr.SetAutoOptimizer(s.AutoOptimizer)
 }
 
 func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if fleetCoordinator == nil && fleetClient == nil {
+	if s.FleetCoordinator == nil && s.FleetClient == nil {
 		return errResult("fleet not active — start with 'ralphglasses serve'"), nil
 	}
 
@@ -85,8 +73,8 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 		MaxRetries:   2,
 	}
 
-	if fleetCoordinator != nil {
-		if err := fleetCoordinator.SubmitWork(item); err != nil {
+	if s.FleetCoordinator != nil {
+		if err := s.FleetCoordinator.SubmitWork(item); err != nil {
 			return errResult(err.Error()), nil
 		}
 		return fleetJSON(map[string]any{
@@ -96,7 +84,7 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 		})
 	}
 
-	id, err := fleetClient.SubmitWork(context.Background(), *item)
+	id, err := s.FleetClient.SubmitWork(context.Background(), *item)
 	if err != nil {
 		return errResult(err.Error()), nil
 	}
@@ -108,17 +96,17 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 }
 
 func (s *Server) handleFleetBudget(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if fleetCoordinator == nil && fleetClient == nil {
+	if s.FleetCoordinator == nil && s.FleetClient == nil {
 		return errResult("fleet not active"), nil
 	}
 
 	newLimit := getNumberArg(req, "limit", 0)
 
-	if fleetCoordinator != nil {
+	if s.FleetCoordinator != nil {
 		if newLimit > 0 {
-			fleetCoordinator.SetBudgetLimit(newLimit)
+			s.FleetCoordinator.SetBudgetLimit(newLimit)
 		}
-		state := fleetCoordinator.GetFleetState()
+		state := s.FleetCoordinator.GetFleetState()
 		return fleetJSON(map[string]any{
 			"budget_usd":  state.BudgetUSD,
 			"spent_usd":   state.TotalSpentUSD,
@@ -128,7 +116,7 @@ func (s *Server) handleFleetBudget(_ context.Context, req mcp.CallToolRequest) (
 		})
 	}
 
-	state, err := fleetClient.FleetState(context.Background())
+	state, err := s.FleetClient.FleetState(context.Background())
 	if err != nil {
 		return errResult(err.Error()), nil
 	}
@@ -142,12 +130,12 @@ func (s *Server) handleFleetBudget(_ context.Context, req mcp.CallToolRequest) (
 }
 
 func (s *Server) handleFleetWorkers(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if fleetCoordinator == nil && fleetClient == nil {
+	if s.FleetCoordinator == nil && s.FleetClient == nil {
 		return errResult("fleet not active"), nil
 	}
 
-	if fleetCoordinator != nil {
-		state := fleetCoordinator.GetFleetState()
+	if s.FleetCoordinator != nil {
+		state := s.FleetCoordinator.GetFleetState()
 		return fleetJSON(map[string]any{
 			"workers":     state.Workers,
 			"total":       len(state.Workers),
@@ -155,7 +143,7 @@ func (s *Server) handleFleetWorkers(_ context.Context, req mcp.CallToolRequest) 
 		})
 	}
 
-	state, err := fleetClient.FleetState(context.Background())
+	state, err := s.FleetClient.FleetState(context.Background())
 	if err != nil {
 		return errResult(err.Error()), nil
 	}
@@ -167,19 +155,19 @@ func (s *Server) handleFleetWorkers(_ context.Context, req mcp.CallToolRequest) 
 }
 
 func (s *Server) handleHITLScore(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if hitlTracker == nil {
+	if s.HITLTracker == nil {
 		return errResult("HITL tracking not initialized — run InitSelfImprovement first"), nil
 	}
 
 	hours := getNumberArg(req, "hours", 24)
 	window := time.Duration(hours * float64(time.Hour))
 
-	snap := hitlTracker.CurrentScore(window)
+	snap := s.HITLTracker.CurrentScore(window)
 	return fleetJSON(snap)
 }
 
 func (s *Server) handleHITLHistory(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if hitlTracker == nil {
+	if s.HITLTracker == nil {
 		return errResult("HITL tracking not initialized"), nil
 	}
 
@@ -187,7 +175,7 @@ func (s *Server) handleHITLHistory(_ context.Context, req mcp.CallToolRequest) (
 	limit := int(getNumberArg(req, "limit", 50))
 	window := time.Duration(hours * float64(time.Hour))
 
-	events := hitlTracker.History(window, limit)
+	events := s.HITLTracker.History(window, limit)
 	return fleetJSON(map[string]any{
 		"events": events,
 		"count":  len(events),
@@ -195,7 +183,7 @@ func (s *Server) handleHITLHistory(_ context.Context, req mcp.CallToolRequest) (
 }
 
 func (s *Server) handleAutonomyLevel(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if decisionLog == nil {
+	if s.DecisionLog == nil {
 		return errResult("autonomy system not initialized"), nil
 	}
 
@@ -214,34 +202,34 @@ func (s *Server) handleAutonomyLevel(_ context.Context, req mcp.CallToolRequest)
 		default:
 			return errResult(fmt.Sprintf("invalid level: %s (use 0-3 or name)", levelStr)), nil
 		}
-		decisionLog.SetLevel(level)
+		s.DecisionLog.SetLevel(level)
 	}
 
-	current := decisionLog.Level()
+	current := s.DecisionLog.Level()
 	return fleetJSON(map[string]any{
 		"level":      int(current),
 		"level_name": current.String(),
-		"stats":      decisionLog.Stats(),
+		"stats":      s.DecisionLog.Stats(),
 	})
 }
 
 func (s *Server) handleAutonomyDecisions(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if decisionLog == nil {
+	if s.DecisionLog == nil {
 		return errResult("autonomy system not initialized"), nil
 	}
 
 	limit := int(getNumberArg(req, "limit", 20))
 
-	decisions := decisionLog.Recent(limit)
+	decisions := s.DecisionLog.Recent(limit)
 	return fleetJSON(map[string]any{
 		"decisions": decisions,
 		"count":     len(decisions),
-		"stats":     decisionLog.Stats(),
+		"stats":     s.DecisionLog.Stats(),
 	})
 }
 
 func (s *Server) handleAutonomyOverride(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if decisionLog == nil {
+	if s.DecisionLog == nil {
 		return errResult("autonomy system not initialized"), nil
 	}
 
@@ -255,21 +243,21 @@ func (s *Server) handleAutonomyOverride(_ context.Context, req mcp.CallToolReque
 		details = "manually overridden by user"
 	}
 
-	decisionLog.RecordOutcome(decisionID, session.DecisionOutcome{
+	s.DecisionLog.RecordOutcome(decisionID, session.DecisionOutcome{
 		EvaluatedAt: time.Now(),
 		Overridden:  true,
 		Details:     details,
 	})
 
-	if hitlTracker != nil {
-		hitlTracker.RecordManual(session.MetricAutoDecisionOverride, "", "", "overrode decision "+decisionID)
+	if s.HITLTracker != nil {
+		s.HITLTracker.RecordManual(session.MetricAutoDecisionOverride, "", "", "overrode decision "+decisionID)
 	}
 
 	return fleetJSON(map[string]string{"status": "overridden", "decision_id": decisionID})
 }
 
 func (s *Server) handleFeedbackProfiles(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if feedbackAnalyzer == nil {
+	if s.FeedbackAnalyzer == nil {
 		return errResult("feedback analyzer not initialized"), nil
 	}
 
@@ -278,17 +266,17 @@ func (s *Server) handleFeedbackProfiles(_ context.Context, req mcp.CallToolReque
 	result := map[string]any{}
 
 	if profileType == "" || profileType == "prompt" {
-		result["prompt_profiles"] = feedbackAnalyzer.AllPromptProfiles()
+		result["prompt_profiles"] = s.FeedbackAnalyzer.AllPromptProfiles()
 	}
 	if profileType == "" || profileType == "provider" {
-		result["provider_profiles"] = feedbackAnalyzer.AllProviderProfiles()
+		result["provider_profiles"] = s.FeedbackAnalyzer.AllProviderProfiles()
 	}
 
 	return fleetJSON(result)
 }
 
 func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if autoOptimizer == nil {
+	if s.AutoOptimizer == nil {
 		return errResult("auto-optimizer not initialized — run InitSelfImprovement first"), nil
 	}
 
@@ -297,7 +285,7 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 		return errResult("task description required"), nil
 	}
 
-	rec := autoOptimizer.RecommendProvider(task)
+	rec := s.AutoOptimizer.RecommendProvider(task)
 	return fleetJSON(rec)
 }
 

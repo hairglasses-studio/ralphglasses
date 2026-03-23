@@ -10,6 +10,7 @@ import (
 )
 
 func TestGeminiClient_Improve(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			t.Errorf("expected POST, got %s", r.Method)
@@ -56,6 +57,7 @@ func TestGeminiClient_Improve(t *testing.T) {
 }
 
 func TestGeminiClient_Provider(t *testing.T) {
+	t.Parallel()
 	c := &GeminiClient{}
 	if c.Provider() != ProviderGemini {
 		t.Errorf("expected provider %q, got %q", ProviderGemini, c.Provider())
@@ -63,6 +65,7 @@ func TestGeminiClient_Provider(t *testing.T) {
 }
 
 func TestGeminiClient_ImproveWithFeedback(t *testing.T) {
+	t.Parallel()
 	var receivedContent string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req geminiRequest
@@ -97,6 +100,7 @@ func TestGeminiClient_ImproveWithFeedback(t *testing.T) {
 }
 
 func TestGeminiClient_APIError(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
 		w.Write([]byte(`{"error":{"code":429,"message":"rate limited","status":"RESOURCE_EXHAUSTED"}}`))
@@ -129,6 +133,7 @@ func TestNewGeminiClient_NoAPIKey(t *testing.T) {
 }
 
 func TestGeminiClient_MultipleParts(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := geminiResponse{
 			Candidates: []geminiCandidate{

@@ -17,6 +17,7 @@ var OverviewColumns = []components.Column{
 	{Title: "Budget", Width: 12, Sortable: true},
 	{Title: "Progress", Width: 10, Sortable: true},
 	{Title: "CB", Width: 10, Sortable: true},
+	{Title: "Health", Width: 12, Sortable: true},
 	{Title: "Updated", Width: 8, Sortable: true},
 }
 
@@ -28,8 +29,16 @@ func NewOverviewTable() *components.Table {
 	return t
 }
 
+// RepoHealthData holds per-repo health info for the overview table.
+type RepoHealthData struct {
+	Verdict      string  // "pass", "warn", "fail", or ""
+	CostHistory  []float64
+	CostThreshold float64
+}
+
 // ReposToRows converts repo models to table rows with styled cells.
-func ReposToRows(repos []*model.Repo, tickFrame int) []components.Row {
+// healthData is keyed by repo path; nil entries or missing keys show "—".
+func ReposToRows(repos []*model.Repo, tickFrame int, healthData map[string]RepoHealthData, termWidth int) []components.Row {
 	rows := make([]components.Row, 0, len(repos))
 	for _, r := range repos {
 		status := r.StatusDisplay()
@@ -95,6 +104,20 @@ func ReposToRows(repos []*model.Repo, tickFrame int) []components.Row {
 			circuitCell = fmt.Sprintf("%s %s", styles.CBIcon(circuit), circuit)
 		}
 
+		// Health cell: badge + optional sparkline when wide
+		healthCell := styles.InfoStyle.Render("—")
+		if healthData != nil {
+			if hd, ok := healthData[r.Path]; ok && hd.Verdict != "" {
+				badge := components.GateVerdictBadge(hd.Verdict)
+				if termWidth > 100 && len(hd.CostHistory) > 0 {
+					spark := components.HealthSparkline(hd.CostHistory, hd.CostThreshold, 8)
+					healthCell = badge + " " + spark
+				} else {
+					healthCell = badge
+				}
+			}
+		}
+
 		rows = append(rows, components.Row{
 			r.Name,
 			statusCell,
@@ -103,6 +126,7 @@ func ReposToRows(repos []*model.Repo, tickFrame int) []components.Row {
 			budgetCell,
 			progressCell,
 			circuitCell,
+			healthCell,
 			updated,
 		})
 	}

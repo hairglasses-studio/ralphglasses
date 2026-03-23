@@ -7,6 +7,7 @@ import (
 )
 
 func TestGolden_Enhance(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    string
@@ -36,9 +37,10 @@ func TestGolden_Enhance(t *testing.T) {
 	update := os.Getenv("GOLDEN_UPDATE") == "1"
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := Enhance(tt.input, tt.taskType)
-			goldenPath := filepath.Join("testdata", tt.file)
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			result := Enhance(tc.input, tc.taskType)
+			goldenPath := filepath.Join("testdata", tc.file)
 
 			if update {
 				if err := os.WriteFile(goldenPath, []byte(result.Enhanced), 0644); err != nil {

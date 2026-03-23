@@ -4,13 +4,23 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
+// RepoDetailHealth holds optional loop performance data for the repo detail view.
+type RepoDetailHealth struct {
+	Observations     []session.LoopObservation
+	GateReport       *e2e.GateReport
+	ProviderProfiles []session.ProviderProfile
+}
+
 // RenderRepoDetail renders a detailed view of a single repo.
-func RenderRepoDetail(r *model.Repo, width int) string {
+// health may be nil if no observation data is available.
+func RenderRepoDetail(r *model.Repo, width int, health *RepoDetailHealth) string {
 	var b strings.Builder
 
 	b.WriteString(styles.TitleStyle.Render(fmt.Sprintf("%s %s", styles.IconRepo, r.Name)))
@@ -138,6 +148,77 @@ func RenderRepoDetail(r *model.Repo, width int) string {
 		b.WriteString("\n")
 	}
 
+	// Loop performance section (from observation data)
+	if health != nil && len(health.Observations) > 0 {
+		b.WriteString("\n")
+		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Loop Performance (last 24h)", styles.IconTurns)))
+		b.WriteString("\n")
+
+		obs := health.Observations
+		b.WriteString(fmt.Sprintf("  Iterations:  %d\n", len(obs)))
+
+		// Avg cost + P95
+		var totalCost, totalLatency float64
+		var verifyPass, completions int
+		costs := make([]float64, 0, len(obs))
+		latencies := make([]float64, 0, len(obs))
+		for _, o := range obs {
+			totalCost += o.TotalCostUSD
+			costs = append(costs, o.TotalCostUSD)
+			ms := float64(o.TotalLatencyMs) / 1000.0
+			totalLatency += ms
+			latencies = append(latencies, ms)
+			if o.VerifyPassed {
+				verifyPass++
+			}
+			if o.Status == "idle" || o.Status == "completed" {
+				completions++
+			}
+		}
+		avgCost := totalCost / float64(len(obs))
+		avgLatency := totalLatency / float64(len(obs))
+		p95Cost := percentile(costs, 0.95)
+		p95Latency := percentile(latencies, 0.95)
+
+		b.WriteString(fmt.Sprintf("  Avg Cost:    $%.2f  (P95: $%.2f)\n", avgCost, p95Cost))
+		b.WriteString(fmt.Sprintf("  Avg Latency: %.1fs   (P95: %.1fs)\n", avgLatency, p95Latency))
+		if len(obs) > 0 {
+			compRate := float64(completions) / float64(len(obs)) * 100
+			verifyRate := float64(verifyPass) / float64(len(obs)) * 100
+			b.WriteString(fmt.Sprintf("  Completion:  %.0f%%\n", compRate))
+			b.WriteString(fmt.Sprintf("  Verify Rate: %.0f%%\n", verifyRate))
+		}
+
+		// Gate verdict
+		if health.GateReport != nil {
+			badge := components.GateVerdictBadge(string(health.GateReport.Overall))
+			summary := components.GateReportSummary(health.GateReport.Results)
+			b.WriteString(fmt.Sprintf("  Gate:        %s  %s\n", badge, summary))
+		}
+
+		// Cost trend sparkline
+		if len(costs) > 2 {
+			spark := components.InlineSparkline(costs, 20)
+			b.WriteString(fmt.Sprintf("  Cost Trend:  %s\n", spark))
+		}
+	}
+
+	// Provider performance section
+	if health != nil && len(health.ProviderProfiles) > 0 {
+		b.WriteString("\n")
+		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Provider Performance", styles.IconSession)))
+		b.WriteString("\n")
+		for _, pp := range health.ProviderProfiles {
+			b.WriteString(fmt.Sprintf("  %s %-8s $%.2f/task  %d turns  %.0f%% complete\n",
+				styles.ProviderIcon(pp.Provider),
+				styles.ProviderStyle(pp.Provider).Render(pp.Provider),
+				pp.AvgCostUSD,
+				pp.AvgTurns,
+				pp.CompletionRate*100))
+		}
+	}
+	b.WriteString("\n")
+
 	// Parse error warnings
 	if len(r.RefreshErrors) > 0 {
 		b.WriteString(styles.WarningStyle.Render(fmt.Sprintf("%s Warnings", styles.IconWarning)))
@@ -152,4 +233,25 @@ func RenderRepoDetail(r *model.Repo, width int) string {
 	b.WriteString(styles.HelpStyle.Render("  Enter: logs  S: start  X: stop  P: pause  e: edit config  Esc: back"))
 
 	return b.String()
+}
+
+// percentile computes p-th percentile (0.0–1.0) of a sorted copy of vals.
+func percentile(vals []float64, p float64) float64 {
+	if len(vals) == 0 {
+		return 0
+	}
+	sorted := make([]float64, len(vals))
+	copy(sorted, vals)
+	// Simple insertion sort — N is small (≤ hundreds)
+	for i := 1; i < len(sorted); i++ {
+		key := sorted[i]
+		j := i - 1
+		for j >= 0 && sorted[j] > key {
+			sorted[j+1] = sorted[j]
+			j--
+		}
+		sorted[j+1] = key
+	}
+	idx := int(float64(len(sorted)-1) * p)
+	return sorted[idx]
 }

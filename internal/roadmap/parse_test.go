@@ -44,6 +44,7 @@ func writeTestRoadmap(t *testing.T) string {
 }
 
 func TestParse(t *testing.T) {
+	t.Parallel()
 	path := writeTestRoadmap(t)
 	rm, err := Parse(path)
 	if err != nil {
@@ -111,6 +112,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestParse_FileNotFound(t *testing.T) {
+	t.Parallel()
 	_, err := Parse("/nonexistent/ROADMAP.md")
 	if err == nil {
 		t.Fatal("expected error for missing file")
@@ -118,6 +120,7 @@ func TestParse_FileNotFound(t *testing.T) {
 }
 
 func TestParse_EmptyFile(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ROADMAP.md")
 	os.WriteFile(path, []byte(""), 0644)
@@ -132,6 +135,7 @@ func TestParse_EmptyFile(t *testing.T) {
 }
 
 func TestResolvePath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		repo, file, want string
 	}{

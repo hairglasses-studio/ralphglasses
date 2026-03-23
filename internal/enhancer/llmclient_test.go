@@ -10,6 +10,7 @@ import (
 )
 
 func TestLLMClient_Improve(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Verify request
 		if r.Method != "POST" {
@@ -68,6 +69,7 @@ func TestLLMClient_Improve(t *testing.T) {
 }
 
 func TestLLMClient_ImproveWithThinking(t *testing.T) {
+	t.Parallel()
 	var receivedSystem string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req messagesRequest
@@ -102,6 +104,7 @@ func TestLLMClient_ImproveWithThinking(t *testing.T) {
 }
 
 func TestLLMClient_ImproveWithFeedback(t *testing.T) {
+	t.Parallel()
 	var receivedContent string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req messagesRequest
@@ -136,6 +139,7 @@ func TestLLMClient_ImproveWithFeedback(t *testing.T) {
 }
 
 func TestLLMClient_APIError(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
 		w.Write([]byte(`{"error":{"type":"rate_limit_error","message":"rate limited"}}`))
@@ -157,6 +161,7 @@ func TestLLMClient_APIError(t *testing.T) {
 }
 
 func TestLLMClient_ContextCancellation(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(100 * time.Millisecond) // simulate slow response
 		resp := messagesResponse{

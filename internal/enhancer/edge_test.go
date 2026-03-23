@@ -7,6 +7,7 @@ import (
 )
 
 func TestEdge_EmptyInputs(t *testing.T) {
+	t.Parallel()
 	t.Run("Enhance_empty", func(t *testing.T) {
 		result := Enhance("", TaskTypeGeneral)
 		if result.TaskType != TaskTypeGeneral {
@@ -54,6 +55,7 @@ func TestEdge_EmptyInputs(t *testing.T) {
 }
 
 func TestEdge_Unicode(t *testing.T) {
+	t.Parallel()
 	t.Run("CJK_Enhance", func(t *testing.T) {
 		input := "请编写一个函数来排序用户列表，处理所有边界情况并返回结果。这个函数需要高效且可靠。"
 		result := Enhance(input, TaskTypeCode)
@@ -107,6 +109,7 @@ func TestEdge_Unicode(t *testing.T) {
 }
 
 func TestEdge_LargeInputs(t *testing.T) {
+	t.Parallel()
 	large := strings.Repeat("The quick brown fox jumps over the lazy dog. ", 2500) // ~100K chars
 
 	t.Run("Enhance_large", func(t *testing.T) {
@@ -133,6 +136,7 @@ func TestEdge_LargeInputs(t *testing.T) {
 }
 
 func TestEdge_ZeroValueConfig(t *testing.T) {
+	t.Parallel()
 	t.Run("empty_config", func(t *testing.T) {
 		cfg := Config{}
 		result := EnhanceWithConfig("write a function to sort users by name with error handling and edge cases", "", cfg)

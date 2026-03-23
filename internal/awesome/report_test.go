@@ -7,6 +7,7 @@ import (
 )
 
 func TestGenerateReport(t *testing.T) {
+	t.Parallel()
 	analysis := &Analysis{
 		Source:   "test/repo",
 		Analyzed: time.Now().UTC(),
@@ -32,6 +33,7 @@ func TestGenerateReport(t *testing.T) {
 }
 
 func TestFormatMarkdown(t *testing.T) {
+	t.Parallel()
 	report := &Report{
 		GeneratedAt: time.Now().UTC(),
 		Source:      "test/repo",

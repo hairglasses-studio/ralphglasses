@@ -53,6 +53,7 @@ type KeyMap struct {
 	LaunchSession key.Binding
 	OutputView    key.Binding
 	TimelineView  key.Binding
+	LoopHealth    key.Binding
 }
 
 // DefaultKeyMap returns the default key bindings.
@@ -178,6 +179,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("t"),
 			key.WithHelp("t", "Session timeline"),
 		),
+		LoopHealth: key.NewBinding(
+			key.WithKeys("h"),
+			key.WithHelp("h", "Loop health"),
+		),
 	}
 }
 
@@ -200,6 +205,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 	k.LaunchSession.SetEnabled(true)
 	k.OutputView.SetEnabled(true)
 	k.TimelineView.SetEnabled(true)
+	k.LoopHealth.SetEnabled(true)
 
 	switch view {
 	case ViewOverview:
@@ -214,6 +220,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
 	case ViewRepoDetail:
 		k.Space.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
@@ -225,6 +232,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.DiffView.SetEnabled(false)
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
 	case ViewSessionDetail:
 		k.StartLoop.SetEnabled(false)
 		k.PauseLoop.SetEnabled(false)
@@ -232,6 +240,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.WriteConfig.SetEnabled(false)
 		k.Space.SetEnabled(false)
 		k.LaunchSession.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
 	case ViewTeams:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -243,6 +252,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
 	case ViewTeamDetail:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -252,6 +262,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.Space.SetEnabled(false)
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
 	case ViewFleet:
 		k.StartLoop.SetEnabled(false)
 		k.PauseLoop.SetEnabled(false)
@@ -260,6 +271,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.Space.SetEnabled(false)
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
 	case ViewLogs:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -271,6 +283,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
 	case ViewConfigEditor:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -280,6 +293,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
 	case ViewTimeline:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -291,6 +305,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
 	case ViewDiff:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -301,6 +316,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
 	case ViewHelp:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -312,6 +328,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
 	}
 }
 
@@ -340,7 +357,7 @@ func (k KeyMap) HelpGroups() []views.HelpGroup {
 		{Name: "Repos Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StartLoop, k.StopAction, k.PauseLoop}},
 		{Name: "Sessions Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StopAction}},
 		{Name: "Teams Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort}},
-		{Name: "Repo Detail", Bindings: []key.Binding{k.Enter, k.EditConfig, k.StartLoop, k.StopAction, k.PauseLoop, k.DiffView}},
+		{Name: "Repo Detail", Bindings: []key.Binding{k.Enter, k.EditConfig, k.StartLoop, k.StopAction, k.PauseLoop, k.DiffView, k.LoopHealth}},
 		{Name: "Session Detail", Bindings: []key.Binding{k.Enter, k.OutputView, k.DiffView, k.TimelineView, k.StopAction}},
 		{Name: "Team Detail", Bindings: []key.Binding{k.Enter, k.DiffView, k.TimelineView}},
 		{Name: "Fleet", Bindings: []key.Binding{k.Down, k.Enter, k.StopAction, k.DiffView, k.TimelineView}},
