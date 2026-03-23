@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/tracing"
 )
 
 // buildCmd constructs the claude CLI command from LaunchOptions.
@@ -101,6 +102,10 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 	s.Status = StatusRunning
 	s.mu.Unlock()
 
+	// Start tracing span
+	rec := tracing.Get()
+	_, span := rec.StartSessionSpan(sessionCtx, s.ID, string(provider), opts.Model, s.RepoName)
+
 	// Write prompt to stdin and close.
 	// Gemini and Codex take prompt as a CLI argument, not stdin.
 	go func() {
@@ -114,14 +119,14 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 	go func() {
 		defer cancel()
 		defer close(s.OutputCh)
-		runSession(sessionCtx, s, stdout, stderr)
+		runSession(sessionCtx, s, stdout, stderr, span)
 	}()
 
 	return s, nil
 }
 
 // runSession reads streaming JSON from stdout/stderr and updates session state.
-func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader) {
+func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span *tracing.SessionSpan) {
 	// Read stderr in background for error capture
 	var stderrBuf strings.Builder
 	stderrDone := make(chan struct{})
@@ -193,6 +198,16 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader) {
 				"turns":       s.TurnCount,
 			},
 		})
+	}
+
+	// Record tracing
+	rec := tracing.Get()
+	if span != nil {
+		if s.Status == StatusErrored {
+			rec.RecordError(span, s.Error)
+		}
+		rec.EndSessionSpan(span, s.SpentUSD, s.TurnCount, s.ExitReason)
+		rec.RecordCostMetric(context.Background(), string(s.Provider), s.RepoName, s.SpentUSD)
 	}
 
 	// Capture onComplete before releasing the lock.
@@ -295,6 +310,10 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader) {
 					prevSpent := s.SpentUSD
 					s.SpentUSD = event.CostUSD
 					s.CostHistory = append(s.CostHistory, event.CostUSD)
+					// Record turn metric for tracing
+					if delta := event.CostUSD - prevSpent; delta > 0 {
+						tracing.Get().RecordTurnMetric(ctx, string(s.Provider), s.Model, s.ID, 0, 0, delta, 0)
+					}
 					// Publish cost update event
 					if s.bus != nil && event.CostUSD != prevSpent {
 						s.bus.Publish(events.Event{

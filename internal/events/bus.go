@@ -34,12 +34,19 @@ const (
 
 	// Prompt enhancement
 	PromptEnhanced EventType = "prompt.enhanced"
+
+	// Self-improvement
+	AutoOptimized    EventType = "auto.optimized"     // Level 2+ decision executed
+	ProviderSelected EventType = "provider.selected"   // Smart provider selection
+	SessionRecovered EventType = "session.recovered"   // Auto-recovery restart
+	ContextConflict  EventType = "context.conflict"    // Cross-session file conflict
 )
 
 // Event represents something that happened in the system.
 type Event struct {
 	Type      EventType      `json:"type"`
 	Timestamp time.Time      `json:"timestamp"`
+	NodeID    string         `json:"node_id,omitempty"`
 	RepoName  string         `json:"repo_name,omitempty"`
 	RepoPath  string         `json:"repo_path,omitempty"`
 	SessionID string         `json:"session_id,omitempty"`
