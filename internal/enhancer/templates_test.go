@@ -6,6 +6,7 @@ import (
 )
 
 func TestListTemplates(t *testing.T) {
+	t.Parallel()
 	templates := ListTemplates()
 	if len(templates) != 5 {
 		t.Errorf("expected 5 templates, got %d", len(templates))
@@ -33,6 +34,7 @@ func TestListTemplates(t *testing.T) {
 }
 
 func TestTemplateListSummary(t *testing.T) {
+	t.Parallel()
 	summary := TemplateListSummary()
 	expectedNames := []string{"troubleshoot", "code_review", "workflow_create", "data_analysis", "creative_brief"}
 	for _, name := range expectedNames {
@@ -42,8 +44,11 @@ func TestTemplateListSummary(t *testing.T) {
 }
 
 func TestFillTemplate_AllTemplates(t *testing.T) {
+	t.Parallel()
 	for _, tmpl := range ListTemplates() {
+		tmpl := tmpl
 		t.Run(tmpl.Name, func(t *testing.T) {
+			t.Parallel()
 			filled := FillTemplate(&tmpl, map[string]string{})
 			for _, v := range tmpl.Variables {
 				assertNotContains(t, filled, "{{"+v+"}}")
@@ -54,6 +59,7 @@ func TestFillTemplate_AllTemplates(t *testing.T) {
 }
 
 func TestFillTemplate_NilVars(t *testing.T) {
+	t.Parallel()
 	tmpl := GetTemplate("troubleshoot")
 	if tmpl == nil {
 		t.Fatal("troubleshoot template should exist")
@@ -67,9 +73,12 @@ func TestFillTemplate_NilVars(t *testing.T) {
 }
 
 func TestGetTemplate_AllNames(t *testing.T) {
+	t.Parallel()
 	names := []string{"troubleshoot", "code_review", "workflow_create", "data_analysis", "creative_brief"}
 	for _, name := range names {
+		name := name
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			tmpl := GetTemplate(name)
 			if tmpl == nil {
 				t.Errorf("GetTemplate(%q) returned nil", name)
@@ -79,6 +88,7 @@ func TestGetTemplate_AllNames(t *testing.T) {
 }
 
 func TestFillTemplate_WithVars(t *testing.T) {
+	t.Parallel()
 	tmpl := GetTemplate("code_review")
 	filled := FillTemplate(tmpl, map[string]string{
 		"language": "Go",
@@ -92,6 +102,7 @@ func TestFillTemplate_WithVars(t *testing.T) {
 }
 
 func TestGetTemplate_Nonexistent(t *testing.T) {
+	t.Parallel()
 	tmpl := GetTemplate("nonexistent")
 	if tmpl != nil {
 		t.Error("should return nil for nonexistent template")
@@ -99,6 +110,7 @@ func TestGetTemplate_Nonexistent(t *testing.T) {
 }
 
 func TestTemplateListSummary_Format(t *testing.T) {
+	t.Parallel()
 	summary := TemplateListSummary()
 	// Should have markdown formatting
 	if !strings.HasPrefix(summary, "#") {

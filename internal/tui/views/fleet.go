@@ -5,8 +5,11 @@ import (
 	"strings"
 	"time"
 
+	"sort"
+
 	"github.com/NimbleMarkets/ntcharts/sparkline"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -66,6 +69,11 @@ type FleetData struct {
 	SelectedSection string
 	SelectedCursor  int
 	CostWindowLabel string
+
+	// Loop health data
+	HITLSnapshot  *session.HITLSnapshot
+	AutonomyLevel session.AutonomyLevel
+	GateReports   map[string]*e2e.GateReport // keyed by repo name
 }
 
 // RenderFleetDashboard renders the fleet-wide monitoring dashboard.
@@ -89,6 +97,24 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 		circuitBox = fmt.Sprintf("%s CIRCUITS\n  %s", styles.IconCBOpen, styles.StatusFailed.Render(fmt.Sprintf("%d open", data.OpenCircuits)))
 	}
 	statBoxes = append(statBoxes, styles.StatBox.Render(circuitBox))
+
+	// HITL score stat box
+	if data.HITLSnapshot != nil && data.HITLSnapshot.TotalActions > 0 {
+		autoRate := 1 - (float64(data.HITLSnapshot.ManualInterventions) / float64(data.HITLSnapshot.TotalActions))
+		hitlLabel := fmt.Sprintf("%.0f%% auto", autoRate*100)
+		hitlStyle := styles.StatusRunning
+		if autoRate < 0.6 {
+			hitlStyle = styles.StatusFailed
+		} else if autoRate < 0.8 {
+			hitlStyle = styles.WarningStyle
+		}
+		statBoxes = append(statBoxes, styles.StatBox.Render(
+			fmt.Sprintf("%s HITL\n  %s", styles.IconSession, hitlStyle.Render(hitlLabel))))
+	}
+
+	// Autonomy level stat box
+	statBoxes = append(statBoxes, styles.StatBox.Render(
+		fmt.Sprintf("%s AUTONOMY\n  L%d %s", styles.IconConfig, data.AutonomyLevel, data.AutonomyLevel.String())))
 
 	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, statBoxes...))
 	b.WriteString("\n\n")
@@ -143,6 +169,25 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 				b.WriteString(fmt.Sprintf("  $%.4f/turn", cpt))
 			}
 			b.WriteString("\n")
+		}
+		b.WriteString("\n")
+	}
+
+	// Gate status per repo
+	if len(data.GateReports) > 0 {
+		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Gate Status", styles.IconCBClosed)))
+		b.WriteString("\n")
+		// Sort repo names for determinism
+		names := make([]string, 0, len(data.GateReports))
+		for name := range data.GateReports {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			report := data.GateReports[name]
+			badge := components.GateVerdictBadge(string(report.Overall))
+			summary := components.GateReportSummary(report.Results)
+			b.WriteString(fmt.Sprintf("  %-16s %s  %s\n", name, badge, summary))
 		}
 		b.WriteString("\n")
 	}

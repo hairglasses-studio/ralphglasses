@@ -3,6 +3,7 @@ package enhancer
 import "testing"
 
 func TestShouldEnhance(t *testing.T) {
+	t.Parallel()
 	defaultCfg := Config{}
 
 	tests := []struct {
@@ -41,10 +42,11 @@ func TestShouldEnhance(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := ShouldEnhance(tt.prompt, tt.cfg)
-			if got != tt.want {
-				t.Errorf("ShouldEnhance(%q) = %v, want %v", tt.prompt, got, tt.want)
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			got := ShouldEnhance(tc.prompt, tc.cfg)
+			if got != tc.want {
+				t.Errorf("ShouldEnhance(%q) = %v, want %v", tc.prompt, got, tc.want)
 			}
 		})
 	}

@@ -868,3 +868,64 @@ func (m *Manager) LoadExternalSessions() {
 		}
 	}
 }
+
+// HITLSnapshot returns the current HITL score over a 24h window.
+// Returns nil if no AutoOptimizer is configured.
+func (m *Manager) HITLSnapshot() *HITLSnapshot {
+	m.mu.Lock()
+	opt := m.optimizer
+	m.mu.Unlock()
+	if opt == nil || opt.hitl == nil {
+		return nil
+	}
+	snap := opt.hitl.CurrentScore(24 * time.Hour)
+	return &snap
+}
+
+// FeedbackProfiles returns all prompt profiles from the feedback analyzer.
+// Returns nil if no AutoOptimizer is configured.
+func (m *Manager) FeedbackProfiles() []PromptProfile {
+	m.mu.Lock()
+	opt := m.optimizer
+	m.mu.Unlock()
+	if opt == nil || opt.feedback == nil {
+		return nil
+	}
+	return opt.feedback.AllPromptProfiles()
+}
+
+// ProviderProfiles returns all provider profiles from the feedback analyzer.
+// Returns nil if no AutoOptimizer is configured.
+func (m *Manager) ProviderProfiles() []ProviderProfile {
+	m.mu.Lock()
+	opt := m.optimizer
+	m.mu.Unlock()
+	if opt == nil || opt.feedback == nil {
+		return nil
+	}
+	return opt.feedback.AllProviderProfiles()
+}
+
+// RecentDecisions returns the last n autonomous decisions.
+// Returns nil if no AutoOptimizer is configured.
+func (m *Manager) RecentDecisions(n int) []AutonomousDecision {
+	m.mu.Lock()
+	opt := m.optimizer
+	m.mu.Unlock()
+	if opt == nil || opt.decisions == nil {
+		return nil
+	}
+	return opt.decisions.Recent(n)
+}
+
+// GetAutonomyLevel returns the current autonomy level.
+// Returns LevelObserve if no AutoOptimizer is configured.
+func (m *Manager) GetAutonomyLevel() AutonomyLevel {
+	m.mu.Lock()
+	opt := m.optimizer
+	m.mu.Unlock()
+	if opt == nil || opt.decisions == nil {
+		return LevelObserve
+	}
+	return opt.decisions.Level()
+}

@@ -71,7 +71,7 @@ Use `ralphglasses_team_create` with `provider` to set the lead's provider, then 
 
 ## MCP Server
 
-Ralphglasses is also an installable MCP server exposing 81 tools for managing ralph loops, multi-provider LLM sessions, fleet orchestration, and self-improvement subsystems programmatically.
+Ralphglasses is also an installable MCP server exposing 84 tools for managing ralph loops, multi-provider LLM sessions, fleet orchestration, and self-improvement subsystems programmatically.
 
 ### Install
 
@@ -169,6 +169,9 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 | `ralphglasses_feedback_profiles` | Per-task-type and per-provider performance data from journal analysis |
 | `ralphglasses_provider_recommend` | Recommend best provider + model + budget for a task based on feedback profiles |
 | `ralphglasses_tool_benchmark` | Per-tool performance benchmarks: latency percentiles, success rates, regression detection |
+| `ralphglasses_loop_benchmark` | P50/P95 metrics from recent loop observations for a repo |
+| `ralphglasses_loop_baseline` | Generate, view, or pin loop performance baseline for a repo |
+| `ralphglasses_loop_gates` | Evaluate regression gates — returns pass/warn/fail report |
 
 ## Prompt Enhancement
 
@@ -209,7 +212,7 @@ The `ralphglasses_session_launch` tool supports an `enhance_prompt` parameter to
 - **internal/model/**: Data types and parsers for status.json, progress.json, circuit breaker state, .ralphrc
 - **internal/process/**: Process management (launch/stop/pause via os/exec), fsnotify file watcher, log tailing
 - **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch, concurrent worker fan-out, autonomy levels, auto-optimization, auto-recovery, context store, HITL metrics, feedback profiling, prompt caching
-- **internal/mcpserver/**: MCP tool handlers (81 tools, stdio transport via mcp-go)
+- **internal/mcpserver/**: MCP tool handlers (84 tools, stdio transport via mcp-go)
   - `tools.go` — Server struct, constructors, Register(), all handler implementations, helpers
   - `handler_prompt.go` — Multi-provider prompt enhancement handlers: analyze, enhance, lint, improve (with provider param), templates, classify, should_enhance, claudemd_check
   - `handler_fleet.go` — Distributed fleet, HITL, autonomy, and feedback profile handlers
@@ -336,7 +339,7 @@ The MCP server supports composable middleware (`internal/mcpserver/middleware.go
 
 ### Tool Benchmarking
 
-`internal/mcpserver/toolbench.go` provides auto-benchmarking applied to all 81 tools:
+`internal/mcpserver/toolbench.go` provides auto-benchmarking applied to all 84 tools:
 
 - **JSONL recording**: All tool calls logged with latency, success, error, sizes
 - **Percentile summaries**: P50, P95, max latency per tool

@@ -19,8 +19,12 @@ const (
 	BudgetExceeded EventType = "budget.exceeded"
 
 	// Loop lifecycle
-	LoopStarted EventType = "loop.started"
-	LoopStopped EventType = "loop.stopped"
+	LoopStarted  EventType = "loop.started"
+	LoopStopped  EventType = "loop.stopped"
+	LoopIterated EventType = "loop.iterated"
+
+	// Loop benchmarking
+	LoopRegression EventType = "loop.regression"
 
 	// Team
 	TeamCreated EventType = "team.created"

@@ -6,6 +6,7 @@ import (
 )
 
 func TestLint_UnmotivatedRule(t *testing.T) {
+	t.Parallel()
 	text := "Always use structured error responses.\nHandle all edge cases."
 	results := Lint(text)
 	assertLintCategory(t, results, "unmotivated-rule")
@@ -20,6 +21,7 @@ func TestLint_UnmotivatedRule(t *testing.T) {
 }
 
 func TestLint_MotivatedRule(t *testing.T) {
+	t.Parallel()
 	text := "Always use structured error responses because the AI assistant uses the error type to decide whether to retry."
 	results := Lint(text)
 	for _, r := range results {
@@ -30,6 +32,7 @@ func TestLint_MotivatedRule(t *testing.T) {
 }
 
 func TestLint_AggressiveEmphasis(t *testing.T) {
+	t.Parallel()
 	text := "CRITICAL: You MUST follow this rule."
 	results := Lint(text)
 	assertLintCategory(t, results, "aggressive-emphasis")
@@ -45,6 +48,7 @@ func TestLint_AggressiveEmphasis(t *testing.T) {
 }
 
 func TestLint_VagueQuantifiers(t *testing.T) {
+	t.Parallel()
 	text := "Return several items from the list with appropriate formatting."
 	results := Lint(text)
 	assertLintCategory(t, results, "vague-quantifier")
@@ -58,6 +62,7 @@ func TestLint_VagueQuantifiers(t *testing.T) {
 }
 
 func TestLint_CleanPrompt(t *testing.T) {
+	t.Parallel()
 	text := "Return exactly 5 user records as JSON, sorted by creation date."
 	results := Lint(text)
 
@@ -69,6 +74,7 @@ func TestLint_CleanPrompt(t *testing.T) {
 }
 
 func TestLint_NegativeFraming(t *testing.T) {
+	t.Parallel()
 	text := "NEVER include personal information in the output headers."
 	results := Lint(text)
 
@@ -87,6 +93,7 @@ func TestLint_NegativeFraming(t *testing.T) {
 // --- Overtrigger phrase lint (subtests) ---
 
 func TestLint_OvertriggerPhrase(t *testing.T) {
+	t.Parallel()
 	t.Run("detects_phrase", func(t *testing.T) {
 		results := Lint("CRITICAL: You MUST use this tool when processing data.")
 		assertLintCategory(t, results, "overtrigger-phrase")
@@ -109,6 +116,7 @@ func TestLint_OvertriggerPhrase(t *testing.T) {
 // --- Over-specification lint (subtests) ---
 
 func TestLint_OverSpecification(t *testing.T) {
+	t.Parallel()
 	t.Run("many_steps", func(t *testing.T) {
 		text := "Follow these steps:\n1. Read the file\n2. Parse the JSON\n3. Validate the schema\n4. Extract the fields\n5. Transform the data\n6. Write the output\n7. Verify the result"
 		results := Lint(text)
@@ -135,6 +143,7 @@ func TestLint_OverSpecification(t *testing.T) {
 // --- Decomposition suggestion lint (subtests) ---
 
 func TestLint_Decomposition(t *testing.T) {
+	t.Parallel()
 	t.Run("multi_task", func(t *testing.T) {
 		results := Lint("Create the API endpoint, fix the database migration, and deploy the service to production.")
 		assertLintCategory(t, results, "decomposition-needed")
@@ -154,6 +163,7 @@ func TestLint_Decomposition(t *testing.T) {
 // --- Injection vulnerability lint (subtests) ---
 
 func TestLint_InjectionVulnerability(t *testing.T) {
+	t.Parallel()
 	t.Run("dollar_brace", func(t *testing.T) {
 		results := Lint("Process this request: ${user_input}")
 		assertLintCategory(t, results, "injection-risk")
@@ -186,6 +196,7 @@ func TestLint_InjectionVulnerability(t *testing.T) {
 // --- Thinking mode detection lint (subtests) ---
 
 func TestLint_ThinkingMode(t *testing.T) {
+	t.Parallel()
 	t.Run("detects_phrase", func(t *testing.T) {
 		results := Lint("Think step by step about how to solve this problem.")
 		assertLintCategory(t, results, "thinking-mode-redundant")
@@ -200,6 +211,7 @@ func TestLint_ThinkingMode(t *testing.T) {
 // --- Example quality lint (subtests) ---
 
 func TestLint_ExampleQuality(t *testing.T) {
+	t.Parallel()
 	t.Run("too_few", func(t *testing.T) {
 		results := Lint("<example>one</example>")
 		assertLintCategory(t, results, "example-quality")
@@ -228,6 +240,7 @@ func TestLint_ExampleQuality(t *testing.T) {
 // --- Compaction readiness lint (subtests) ---
 
 func TestLint_CompactionReadiness(t *testing.T) {
+	t.Parallel()
 	t.Run("long_prompt", func(t *testing.T) {
 		text := strings.Repeat("The quick brown fox jumps over the lazy dog. ", 6000)
 		results := Lint(text)

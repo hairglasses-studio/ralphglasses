@@ -100,6 +100,9 @@ func (m Model) handleDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.Keys.TimelineView):
 		m.pushView(ViewTimeline, "Timeline")
 		return m, nil
+	case key.Matches(msg, m.Keys.LoopHealth):
+		m.pushView(ViewLoopHealth, "Loop Health")
+		return m, nil
 	}
 	return m, nil
 }

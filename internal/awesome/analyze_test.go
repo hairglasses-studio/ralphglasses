@@ -3,6 +3,7 @@ package awesome
 import "testing"
 
 func TestRateValue(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		stars   int
@@ -19,16 +20,18 @@ func TestRateValue(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := rateValue(tt.stars, tt.lang, tt.matches)
-			if got != tt.want {
-				t.Errorf("rateValue(%d, %q, %d) = %q, want %q", tt.stars, tt.lang, tt.matches, got, tt.want)
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			got := rateValue(tc.stars, tc.lang, tc.matches)
+			if got != tc.want {
+				t.Errorf("rateValue(%d, %q, %d) = %q, want %q", tc.stars, tc.lang, tc.matches, got, tc.want)
 			}
 		})
 	}
 }
 
 func TestRateComplexity(t *testing.T) {
+	t.Parallel()
 	got := rateComplexity("Go", "this is an mcp server with hooks")
 	if got != "drop-in" {
 		t.Errorf("expected drop-in for Go MCP server, got %q", got)
@@ -41,6 +44,7 @@ func TestRateComplexity(t *testing.T) {
 }
 
 func TestBuildRationale(t *testing.T) {
+	t.Parallel()
 	ae := AnalysisEntry{
 		Stars:             100,
 		Language:          "Go",

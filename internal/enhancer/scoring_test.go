@@ -5,6 +5,7 @@ import (
 )
 
 func TestGradeForScore(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		score int
@@ -22,16 +23,18 @@ func TestGradeForScore(t *testing.T) {
 		{"F_zero", 0, "F"},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := gradeForScore(tt.score)
-			if got != tt.want {
-				t.Errorf("gradeForScore(%d) = %q, want %q", tt.score, got, tt.want)
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			got := gradeForScore(tc.score)
+			if got != tc.want {
+				t.Errorf("gradeForScore(%d) = %q, want %q", tc.score, got, tc.want)
 			}
 		})
 	}
 }
 
 func TestScore_PerfectPrompt(t *testing.T) {
+	t.Parallel()
 	prompt := `<role>You are an expert Go developer with 10 years of experience.</role>
 
 <context>
@@ -90,6 +93,7 @@ Return a numbered list of exactly 5 issues. Each issue should include:
 }
 
 func TestScore_BadPrompt(t *testing.T) {
+	t.Parallel()
 	ar := Analyze("fix this")
 	report := ar.ScoreReport
 
@@ -105,6 +109,7 @@ func TestScore_BadPrompt(t *testing.T) {
 }
 
 func TestScore_DecentPrompt(t *testing.T) {
+	t.Parallel()
 	prompt := "You are an expert software engineer. Review this Go function for error handling. Focus on nil checks and unchecked returns. Format output as a numbered list."
 	ar := Analyze(prompt)
 	report := ar.ScoreReport
@@ -119,6 +124,7 @@ func TestScore_DecentPrompt(t *testing.T) {
 }
 
 func TestScore_LegacyDerivation(t *testing.T) {
+	t.Parallel()
 	// A prompt scoring ~75 overall should give legacy 7-8
 	prompt := `<role>You are an expert Go developer.</role>
 <instructions>Review this function for error handling issues.
@@ -146,6 +152,7 @@ Focus on nil pointer dereferences and unchecked errors.</instructions>
 }
 
 func TestScore_DimensionWeightsSum(t *testing.T) {
+	t.Parallel()
 	ar := Analyze("test prompt for weight verification purposes with enough words")
 	report := ar.ScoreReport
 	if report == nil {
@@ -163,6 +170,7 @@ func TestScore_DimensionWeightsSum(t *testing.T) {
 }
 
 func TestScore_DimensionNames(t *testing.T) {
+	t.Parallel()
 	ar := Analyze("write a function to sort users by name")
 	report := ar.ScoreReport
 	if report == nil {
@@ -185,6 +193,7 @@ func TestScore_DimensionNames(t *testing.T) {
 }
 
 func TestScore_DimensionScoresInRange(t *testing.T) {
+	t.Parallel()
 	prompts := []string{
 		"fix this",
 		"write a function to sort users by name with error handling",
@@ -208,6 +217,7 @@ func TestScore_DimensionScoresInRange(t *testing.T) {
 // --- Per-dimension tests ---
 
 func TestScoreClarity(t *testing.T) {
+	t.Parallel()
 	t.Run("high_clarity", func(t *testing.T) {
 		ar := Analyze("Write exactly 5 unit tests covering edge cases for the parseJSON function. Each test should be under 20 lines.")
 		d := findDimension(ar.ScoreReport, "Clarity")
@@ -225,6 +235,7 @@ func TestScoreClarity(t *testing.T) {
 }
 
 func TestScoreStructure(t *testing.T) {
+	t.Parallel()
 	t.Run("with_xml", func(t *testing.T) {
 		ar := Analyze("<role>Expert</role>\n\n<instructions>Do the thing.</instructions>\n\n<constraints>Be careful.</constraints>")
 		d := findDimension(ar.ScoreReport, "Structure")
@@ -242,6 +253,7 @@ func TestScoreStructure(t *testing.T) {
 }
 
 func TestScoreExamples(t *testing.T) {
+	t.Parallel()
 	t.Run("with_examples", func(t *testing.T) {
 		ar := Analyze(`Do the task.
 <example index="1">First</example>
@@ -262,6 +274,7 @@ func TestScoreExamples(t *testing.T) {
 }
 
 func TestScoreTone(t *testing.T) {
+	t.Parallel()
 	t.Run("clean_tone", func(t *testing.T) {
 		ar := Analyze("Please review this code for bugs and suggest improvements.")
 		d := findDimension(ar.ScoreReport, "Tone")
@@ -279,6 +292,7 @@ func TestScoreTone(t *testing.T) {
 }
 
 func TestScoreRoleDefinition(t *testing.T) {
+	t.Parallel()
 	t.Run("with_role", func(t *testing.T) {
 		ar := Analyze("<role>You are an expert security auditor.</role>\nReview this code.")
 		d := findDimension(ar.ScoreReport, "Role Definition")
@@ -296,6 +310,7 @@ func TestScoreRoleDefinition(t *testing.T) {
 }
 
 func TestScoreContextMotivation(t *testing.T) {
+	t.Parallel()
 	t.Run("motivated", func(t *testing.T) {
 		ar := Analyze("<context>Building a payment API</context>\nValidate all inputs because unvalidated input caused a production incident last week.")
 		d := findDimension(ar.ScoreReport, "Context & Motivation")
@@ -316,6 +331,7 @@ func TestScoreContextMotivation(t *testing.T) {
 // (The test in enhancer_test.go covers this — we just verify ScoreReport is populated)
 
 func TestScore_AnalyzeIntegration(t *testing.T) {
+	t.Parallel()
 	t.Run("bad_prompt_has_report", func(t *testing.T) {
 		ar := Analyze("fix this")
 		if ar.ScoreReport == nil {
@@ -342,6 +358,7 @@ Focus on nil pointer dereferences and unchecked errors.</instructions>
 }
 
 func TestScoringCalibration(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		prompt   string
@@ -354,10 +371,11 @@ func TestScoringCalibration(t *testing.T) {
 		{"medium effort", "Analyze the authentication middleware in this codebase. Look for security vulnerabilities, especially around token validation and session management. Provide a severity rating for each finding.", 60, 85},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := Analyze(tt.prompt)
-			if result.ScoreReport.Overall < tt.minScore || result.ScoreReport.Overall > tt.maxScore {
-				t.Errorf("score %d outside expected range [%d, %d]", result.ScoreReport.Overall, tt.minScore, tt.maxScore)
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			result := Analyze(tc.prompt)
+			if result.ScoreReport.Overall < tc.minScore || result.ScoreReport.Overall > tc.maxScore {
+				t.Errorf("score %d outside expected range [%d, %d]", result.ScoreReport.Overall, tc.minScore, tc.maxScore)
 			}
 		})
 	}

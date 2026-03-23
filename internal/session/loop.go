@@ -399,6 +399,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		allVerification = append(allVerification, verification...)
 		if verErr != nil {
 			run.updateLoopAfterVerification(index, allVerification, "failed", verErr.Error())
+			emitLoopObservation(run, index, m)
 			m.PersistLoop(run)
 			_ = writeLoopJournal(run, run.Iterations[index])
 			return verErr
@@ -406,6 +407,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	}
 
 	run.updateLoopAfterVerification(index, allVerification, "idle", "")
+	emitLoopObservation(run, index, m)
 	m.PersistLoop(run)
 	_ = writeLoopJournal(run, run.Iterations[index])
 	return nil

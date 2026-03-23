@@ -36,6 +36,7 @@ const (
 	ViewFleet
 	ViewDiff
 	ViewTimeline
+	ViewLoopHealth
 )
 
 // InputMode tracks the current input capture mode.
@@ -141,6 +142,13 @@ type Model struct {
 
 	// Desktop notifications
 	NotifyEnabled bool
+
+	// Loop observation cache (refreshed less often than 2s tick)
+	ObsCache     map[string][]session.LoopObservation // keyed by repo path
+	ObsCacheTime time.Time
+	GateCache    map[string]*GateCacheEntry // keyed by repo path
+	GateCacheExp time.Time
+	PrevGateVerdicts map[string]string // keyed by repo path, for change detection
 }
 
 // NewModel creates the root model.
@@ -230,6 +238,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.SessMgr != nil {
 			m.SessMgr.LoadExternalSessions()
 		}
+		// Refresh loop observation and gate caches (TTL-gated, not every tick)
+		m.refreshObsCache()
+		m.refreshGateCache()
+		m.drainRegressionEvents()
 		m.updateTable()
 		m.updateSessionTable()
 		m.updateTeamTable()
@@ -447,7 +459,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleTeamDetailKey(msg)
 	case ViewFleet:
 		return m.handleFleetKey(msg)
-	case ViewHelp, ViewDiff, ViewTimeline:
+	case ViewHelp, ViewDiff, ViewTimeline, ViewLoopHealth:
 		// Read-only views — Esc handled globally, no view-specific keys
 		return m, nil
 	}
@@ -483,7 +495,8 @@ func (m *Model) refreshAllRepos() {
 }
 
 func (m *Model) updateTable() {
-	rows := views.ReposToRows(m.Repos, m.TickFrame)
+	healthData := m.buildHealthData()
+	rows := views.ReposToRows(m.Repos, m.TickFrame, healthData, m.Width)
 	m.Table.SetRows(rows)
 	m.StatusBar.RepoCount = len(m.Repos)
 	m.StatusBar.RunningCount = len(m.ProcMgr.RunningPaths())
@@ -617,7 +630,18 @@ func (m Model) View() string {
 		b.WriteString(m.Table.View())
 	case ViewRepoDetail:
 		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-			b.WriteString(views.RenderRepoDetail(m.Repos[m.SelectedIdx], m.Width))
+			repo := m.Repos[m.SelectedIdx]
+			var detailHealth *views.RepoDetailHealth
+			if entry := m.getGateEntry(repo.Path); entry != nil {
+				detailHealth = &views.RepoDetailHealth{
+					Observations: m.getObservations(repo.Path),
+					GateReport:   entry.Report,
+				}
+				if m.SessMgr != nil {
+					detailHealth.ProviderProfiles = m.SessMgr.ProviderProfiles()
+				}
+			}
+			b.WriteString(views.RenderRepoDetail(repo, m.Width, detailHealth))
 		}
 	case ViewLogs:
 		b.WriteString(m.LogView.View())
@@ -662,6 +686,19 @@ func (m Model) View() string {
 			repoName = m.Repos[m.SelectedIdx].Name
 		}
 		b.WriteString(views.RenderTimeline(entries, repoName, m.Width, m.Height))
+	case ViewLoopHealth:
+		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
+			repo := m.Repos[m.SelectedIdx]
+			healthData := views.LoopHealthData{
+				RepoName:     repo.Name,
+				Observations: m.getObservations(repo.Path),
+			}
+			if entry := m.getGateEntry(repo.Path); entry != nil {
+				healthData.GateReport = entry.Report
+				healthData.Summary = entry.Summary
+			}
+			b.WriteString(views.RenderLoopHealth(healthData, m.Width, m.Height))
+		}
 	}
 
 	// Modal overlays

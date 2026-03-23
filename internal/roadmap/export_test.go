@@ -9,6 +9,7 @@ import (
 )
 
 func TestExport_RDCycle(t *testing.T) {
+	t.Parallel()
 	path := writeTestRoadmap(t)
 	rm, err := Parse(path)
 	if err != nil {
@@ -40,6 +41,7 @@ func TestExport_RDCycle(t *testing.T) {
 }
 
 func TestExport_FixPlan(t *testing.T) {
+	t.Parallel()
 	path := writeTestRoadmap(t)
 	rm, err := Parse(path)
 	if err != nil {
@@ -63,6 +65,7 @@ func TestExport_FixPlan(t *testing.T) {
 }
 
 func TestExport_Progress(t *testing.T) {
+	t.Parallel()
 	path := writeTestRoadmap(t)
 	rm, err := Parse(path)
 	if err != nil {
@@ -83,6 +86,7 @@ func TestExport_Progress(t *testing.T) {
 }
 
 func TestExport_PhaseFilter(t *testing.T) {
+	t.Parallel()
 	path := writeTestRoadmap(t)
 	rm, err := Parse(path)
 	if err != nil {
@@ -106,6 +110,7 @@ func TestExport_PhaseFilter(t *testing.T) {
 }
 
 func TestExport_MaxTasks(t *testing.T) {
+	t.Parallel()
 	path := writeTestRoadmap(t)
 	rm, err := Parse(path)
 	if err != nil {
@@ -126,6 +131,7 @@ func TestExport_MaxTasks(t *testing.T) {
 }
 
 func TestExport_UnknownFormat(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ROADMAP.md")
 	os.WriteFile(path, []byte(testRoadmap), 0644)

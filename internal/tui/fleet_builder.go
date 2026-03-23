@@ -2,10 +2,12 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/notify"
@@ -230,6 +232,22 @@ func (m *Model) buildFleetData() views.FleetData {
 	sort.Slice(data.Repos, func(i, j int) bool {
 		return data.Repos[i].Name < data.Repos[j].Name
 	})
+
+	// HITL and autonomy data from session manager
+	if m.SessMgr != nil {
+		data.HITLSnapshot = m.SessMgr.HITLSnapshot()
+		data.AutonomyLevel = m.SessMgr.GetAutonomyLevel()
+	}
+
+	// Gate reports from cache
+	if m.GateCache != nil {
+		data.GateReports = make(map[string]*e2e.GateReport)
+		for repoPath, entry := range m.GateCache {
+			// Use repo name instead of full path
+			name := filepath.Base(repoPath)
+			data.GateReports[name] = entry.Report
+		}
+	}
 
 	// Send desktop notifications for critical alerts
 	if m.NotifyEnabled {

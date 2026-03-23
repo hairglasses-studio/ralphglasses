@@ -1,0 +1,60 @@
+{
+  "generated_at": "2026-03-23T00:00:00Z",
+  "window_hours": 0,
+  "entries": {
+    "trivial-fix:claude": {
+      "cost_p50": 0.30,
+      "cost_p95": 0.40,
+      "latency_p50_ms": 500,
+      "latency_p95_ms": 1000,
+      "sample_count": 6
+    },
+    "multi-file-refactor:claude": {
+      "cost_p50": 0.70,
+      "cost_p95": 0.90,
+      "latency_p50_ms": 600,
+      "latency_p95_ms": 1200,
+      "sample_count": 6
+    },
+    "test-addition:claude": {
+      "cost_p50": 0.40,
+      "cost_p95": 0.55,
+      "latency_p50_ms": 500,
+      "latency_p95_ms": 1000,
+      "sample_count": 6
+    },
+    "docs-update:claude": {
+      "cost_p50": 0.20,
+      "cost_p95": 0.30,
+      "latency_p50_ms": 400,
+      "latency_p95_ms": 800,
+      "sample_count": 6
+    },
+    "feature-addition:claude": {
+      "cost_p50": 0.80,
+      "cost_p95": 1.00,
+      "latency_p50_ms": 600,
+      "latency_p95_ms": 1200,
+      "sample_count": 6
+    },
+    "verify-failure:claude": {
+      "cost_p50": 0.50,
+      "cost_p95": 0.65,
+      "latency_p50_ms": 500,
+      "latency_p95_ms": 1000,
+      "sample_count": 6
+    }
+  },
+  "aggregate": {
+    "cost_p50": 0.50,
+    "cost_p95": 0.90,
+    "latency_p50_ms": 500,
+    "latency_p95_ms": 1100,
+    "sample_count": 36
+  },
+  "rates": {
+    "completion_rate": 0.833,
+    "verify_pass_rate": 0.833,
+    "error_rate": 0.167
+  }
+}

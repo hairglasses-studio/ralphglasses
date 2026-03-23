@@ -10,6 +10,7 @@ import (
 )
 
 func TestOpenAIClient_Improve(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			t.Errorf("expected POST, got %s", r.Method)
@@ -62,6 +63,7 @@ func TestOpenAIClient_Improve(t *testing.T) {
 }
 
 func TestOpenAIClient_Provider(t *testing.T) {
+	t.Parallel()
 	c := &OpenAIClient{}
 	if c.Provider() != ProviderOpenAI {
 		t.Errorf("expected provider %q, got %q", ProviderOpenAI, c.Provider())
@@ -69,6 +71,7 @@ func TestOpenAIClient_Provider(t *testing.T) {
 }
 
 func TestOpenAIClient_ImproveWithFeedback(t *testing.T) {
+	t.Parallel()
 	var receivedUserContent string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req openaiRequest
@@ -105,6 +108,7 @@ func TestOpenAIClient_ImproveWithFeedback(t *testing.T) {
 }
 
 func TestOpenAIClient_APIError(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
 		w.Write([]byte(`{"error":{"type":"rate_limit_error","message":"rate limited"}}`))
