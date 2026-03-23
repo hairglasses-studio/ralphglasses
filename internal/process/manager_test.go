@@ -383,6 +383,90 @@ func TestRecover_SkipsAlreadyManaged(t *testing.T) {
 	}
 }
 
+func TestManager_Start_InvalidBinary(t *testing.T) {
+	m := NewManager()
+	repoPath := t.TempDir()
+
+	// Inject a fake proc directly to simulate a repo with no ralph_loop.sh
+	// and point Start at a binary that doesn't exist.
+	// We do this by writing a ralph_loop.sh that calls a nonexistent binary.
+	writeTestScript(t, repoPath+"/ralph_loop.sh", "exec /nonexistent-binary-xyz-12345")
+
+	// The shell will start fine (bash exists), but the script will fail immediately.
+	// For a direct invalid binary test, we manipulate the manager internals.
+	// Instead: create a manager with no ralph_loop.sh so it falls back to "ralph",
+	// and rename it so the PATH lookup fails.
+	m2 := NewManager()
+	repoPath2 := t.TempDir()
+	// No ralph_loop.sh → falls back to exec.Command("ralph")
+	// Override by writing a script that references a bad binary is not quite right;
+	// instead just test that Start returns an error when the binary isn't found.
+	// We achieve this by hijacking PATH.
+	t.Setenv("PATH", t.TempDir()) // empty dir — no ralph binary
+	err := m2.Start(repoPath2)
+	if err == nil {
+		m2.StopAll()
+		t.Fatal("expected error starting process with missing binary")
+	}
+	_ = m
+}
+
+func TestManager_ShortLivedProcess_NoZombie(t *testing.T) {
+	m := NewManager()
+	repoPath := t.TempDir()
+	// A script that exits immediately with status 0.
+	writeTestScript(t, repoPath+"/ralph_loop.sh", "exit 0")
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// Wait for reaper goroutine to call cmd.Wait() and clean up.
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if !m.IsRunning(repoPath) {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	if m.IsRunning(repoPath) {
+		m.StopAll()
+		t.Fatal("process still marked as running after clean exit — possible zombie")
+	}
+
+	code, _, ok := m.LastExitStatus(repoPath)
+	if !ok {
+		t.Fatal("expected LastExitStatus to be recorded")
+	}
+	if code != 0 {
+		t.Errorf("expected exit code 0, got %d", code)
+	}
+}
+
+func TestManager_FailingProcess_ErrorChan(t *testing.T) {
+	m := NewManager()
+	repoPath := t.TempDir()
+	// A script that exits with non-zero status.
+	writeTestScript(t, repoPath+"/ralph_loop.sh", "exit 42")
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	select {
+	case msg := <-m.ErrorChan():
+		if msg.RepoPath != repoPath {
+			t.Errorf("unexpected RepoPath: %s", msg.RepoPath)
+		}
+		if msg.Err == nil {
+			t.Error("expected non-nil error in ProcessErrorMsg")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for ProcessErrorMsg")
+	}
+}
+
 func TestCleanStalePIDFiles(t *testing.T) {
 	repo1 := t.TempDir()
 	repo2 := t.TempDir()

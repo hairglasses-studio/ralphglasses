@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/fsnotify/fsnotify"
 )
 
 func TestWatchStatusFiles_DetectsWrite(t *testing.T) {
@@ -173,7 +176,7 @@ func TestWatchStatusFiles_IgnoresUnrelatedFiles(t *testing.T) {
 	}
 }
 
-func TestWatchStatusFiles_TimeoutReturnsNil(t *testing.T) {
+func TestWatchStatusFiles_TimeoutReturnsWatcherErrorMsg(t *testing.T) {
 	repoPath := t.TempDir()
 	ralphDir := filepath.Join(repoPath, ".ralph")
 	if err := os.MkdirAll(ralphDir, 0755); err != nil {
@@ -182,7 +185,8 @@ func TestWatchStatusFiles_TimeoutReturnsNil(t *testing.T) {
 
 	cmd := WatchStatusFiles([]string{repoPath})
 
-	// No writes — should return nil after timeout (~2s)
+	// No writes — should return WatcherErrorMsg (idle timeout) after ~2s,
+	// signalling the TUI to fall back to polling.
 	done := make(chan interface{})
 	go func() {
 		msg := cmd()
@@ -191,11 +195,54 @@ func TestWatchStatusFiles_TimeoutReturnsNil(t *testing.T) {
 
 	select {
 	case msg := <-done:
-		if msg != nil {
-			t.Fatalf("expected nil on timeout, got %T", msg)
+		wem, ok := msg.(WatcherErrorMsg)
+		if !ok {
+			t.Fatalf("expected WatcherErrorMsg on timeout, got %T", msg)
+		}
+		if wem.Err == nil {
+			t.Fatal("expected non-nil Err in WatcherErrorMsg")
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("watcher did not return within 5s — timeout not working")
+	}
+}
+
+func TestWatchWithWatcher_ClosedWatcherEmitsWatcherErrorMsg(t *testing.T) {
+	repoPath := t.TempDir()
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	done := make(chan tea.Msg, 1)
+	go func() {
+		done <- watchWithWatcher([]string{repoPath}, watcher)
+	}()
+
+	// Wait briefly then close the watcher mid-operation; this closes the
+	// internal channels, which the event loop detects as ok=false.
+	time.Sleep(50 * time.Millisecond)
+	_ = watcher.Close()
+
+	select {
+	case msg := <-done:
+		wem, ok := msg.(WatcherErrorMsg)
+		if !ok {
+			t.Fatalf("expected WatcherErrorMsg after watcher closed, got %T", msg)
+		}
+		if wem.Err == nil {
+			t.Fatal("expected non-nil Err in WatcherErrorMsg")
+		}
+		// Verify the TUI would fall back to polling by checking the message type
+		// (the TUI handles WatcherErrorMsg by activating tea.Tick polling).
+		_ = wem
+	case <-time.After(5 * time.Second):
+		t.Fatal("watcher did not return WatcherErrorMsg within 5s after being closed")
 	}
 }
 
