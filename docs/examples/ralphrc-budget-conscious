@@ -1,0 +1,61 @@
+# .ralphrc — conservative / budget-conscious settings
+# Use this when you want to minimize API spend:
+# low call rate, tight circuit breaker, small batches, short timeout.
+
+PROJECT_NAME="my-project"
+PROJECT_TYPE="go"
+
+# ── Rate Limiting ────────────────────────────────────────────────────────────
+# Low call rate — 20 calls/hour ≈ one call every 3 minutes.
+MAX_CALLS_PER_HOUR="20"
+
+# Short timeout reduces billable tokens from stuck sessions.
+CLAUDE_TIMEOUT_MINUTES="10"
+
+CLAUDE_OUTPUT_FORMAT="json"
+
+# ── Session Continuity ───────────────────────────────────────────────────────
+# Disable continuity to avoid growing context windows (context = more tokens = more cost).
+SESSION_CONTINUITY="false"
+SESSION_EXPIRY_HOURS="4"
+
+# ── Marathon ─────────────────────────────────────────────────────────────────
+MARATHON_MODE="true"
+MARATHON_DURATION_HOURS="4"         # Short run — reassess after 4 hours
+MARATHON_CHECKPOINT_INTERVAL="1"    # Checkpoint every hour
+
+# ── Circuit Breaker (tight thresholds) ──────────────────────────────────────
+# Open the circuit sooner — fewer wasted calls before stopping.
+CB_NO_PROGRESS_THRESHOLD="2"        # Stop after 2 loops with no progress
+CB_SAME_ERROR_THRESHOLD="3"         # Stop after 3 identical errors
+CB_PERMISSION_DENIAL_THRESHOLD="1"  # Stop on first permission denial
+CB_COOLDOWN_MINUTES="30"            # Long cooldown — don't auto-retry quickly
+CB_AUTO_RESET="false"               # Require manual intervention to re-open
+
+# ── Task Batching (conservative) ─────────────────────────────────────────────
+# Smaller batches = fewer tokens per call = lower cost.
+BATCH_SIMILAR_TASKS="true"
+MAX_TASKS_PER_BATCH="1"
+MAX_LINES_PER_BATCH="200"
+
+# ── Quality Gates ─────────────────────────────────────────────────────────────
+QG_BUILD_CMD="go build ./..."
+QG_TEST_CMD="go test ./..."
+QG_VET_CMD="go vet ./..."
+
+# ── Model Selection ───────────────────────────────────────────────────────────
+# Use haiku for low-cost tasks; switch to sonnet only when needed.
+PRIMARY_MODEL="haiku"
+
+# ── Budget ────────────────────────────────────────────────────────────────────
+# Tight budget — marathon.sh will stop at 90% of this ($9).
+RALPH_SESSION_BUDGET="10"
+
+# ── Fast Mode ─────────────────────────────────────────────────────────────────
+# Use fast mode by default — cheaper, faster, acceptable for most tasks.
+FAST_MODE_ENABLED="true"
+FAST_MODE_DEFAULT="true"
+FAST_MODE_PHASES="execution,test,docs,mechanical,analysis,planning"
+STANDARD_MODE_PHASES="debug,architecture"
+
+LOG_RETENTION_DAYS="3"

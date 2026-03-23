@@ -149,6 +149,15 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 | `ralphglasses_claudemd_check` | Health-check a repo's CLAUDE.md for common issues |
 | `ralphglasses_prompt_classify` | Classify a prompt's task type (code, troubleshooting, analysis, etc.) |
 | `ralphglasses_prompt_should_enhance` | Check whether a prompt would benefit from enhancement |
+| `ralphglasses_session_tail` | Tail session output with cursor — returns only new lines since last call |
+| `ralphglasses_session_diff` | Git changes made during a session's execution window |
+| `ralphglasses_marathon_dashboard` | Compact marathon status: burn rate, stale sessions, team progress, alerts |
+| `ralphglasses_session_errors` | Aggregated error view: parse failures, API errors, budget warnings |
+| `ralphglasses_rc_status` | Compact fleet overview for mobile remote control (text output) |
+| `ralphglasses_rc_send` | Send prompt to repo — auto-stops existing session, launches new |
+| `ralphglasses_rc_read` | Read recent output from most active session with cursor |
+| `ralphglasses_event_poll` | Cursor-based event polling for efficient mobile updates |
+| `ralphglasses_rc_act` | Quick fleet actions: stop, stop_all, pause, resume, retry |
 
 ## Prompt Enhancement
 
@@ -211,6 +220,20 @@ Both `.env` and `.envrc` are gitignored.
 
 ### Incompatibilities
 `--monitor` is incompatible with the supervisor (tmux fork breaks PID tracking). Use `--verbose` or `--live` instead.
+
+## Remote Control (RC) Tools
+
+Tools prefixed `rc_` are optimized for mobile remote-control via Claude Android/iOS app (`/rc` in terminal → QR code → phone connects). Design principles:
+
+- **Text responses** (`textResult`), not JSON — reads naturally in mobile chat bubbles
+- **Minimal params** — most tools need 0-1 required parameters
+- **One call per action** — `rc_send` does find-repo + stop-existing + launch in one call
+- **Cursor-based polling** — `rc_read` and `event_poll` return cursors for incremental updates
+- **Default budget $5** — prevents runaway spending from mobile
+
+Key constraint: stdin closes after initial write (`runner.go:110`), so `rc_send` handles follow-up by stop-and-relaunch (or `resume=true` for session continuity).
+
+See `docs/remote-control-research.md` for full architecture details.
 
 ## Provider Architecture
 

@@ -1,6 +1,7 @@
 package events
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -105,6 +106,97 @@ func TestOverflow(t *testing.T) {
 		bus.Publish(Event{Type: SessionStarted})
 	}
 	// Should not panic — overflow events are dropped
+}
+
+func TestHistoryAfterCursor(t *testing.T) {
+	bus := NewBus(100)
+	for i := 0; i < 5; i++ {
+		bus.Publish(Event{Type: SessionStarted, RepoName: fmt.Sprintf("r%d", i)})
+	}
+
+	// Cursor 0 = get everything
+	evts, cursor := bus.HistoryAfterCursor(0, 100)
+	if len(evts) != 5 {
+		t.Fatalf("len = %d, want 5", len(evts))
+	}
+	if cursor != 5 {
+		t.Fatalf("cursor = %d, want 5", cursor)
+	}
+
+	// Publish 3 more
+	for i := 5; i < 8; i++ {
+		bus.Publish(Event{Type: SessionEnded, RepoName: fmt.Sprintf("r%d", i)})
+	}
+
+	// Cursor 5 = get only new events
+	evts, cursor = bus.HistoryAfterCursor(5, 100)
+	if len(evts) != 3 {
+		t.Fatalf("new events = %d, want 3", len(evts))
+	}
+	if cursor != 8 {
+		t.Fatalf("cursor = %d, want 8", cursor)
+	}
+	if evts[0].RepoName != "r5" {
+		t.Errorf("first new event = %q, want r5", evts[0].RepoName)
+	}
+
+	// Cursor at current = no new events
+	evts, cursor = bus.HistoryAfterCursor(8, 100)
+	if len(evts) != 0 {
+		t.Fatalf("no new events expected, got %d", len(evts))
+	}
+	if cursor != 8 {
+		t.Fatalf("cursor = %d, want 8", cursor)
+	}
+}
+
+func TestHistoryAfterCursor_RingOverflow(t *testing.T) {
+	bus := NewBus(5)
+	// Publish 10 events, ring buffer keeps last 5
+	for i := 0; i < 10; i++ {
+		bus.Publish(Event{Type: SessionStarted, RepoName: fmt.Sprintf("r%d", i)})
+	}
+
+	// Cursor 0 = some events dropped, get what's available
+	evts, cursor := bus.HistoryAfterCursor(0, 100)
+	if len(evts) != 5 {
+		t.Fatalf("len = %d, want 5 (ring buffer size)", len(evts))
+	}
+	if cursor != 10 {
+		t.Fatalf("cursor = %d, want 10", cursor)
+	}
+	// Should get events r5-r9 (oldest 5 dropped)
+	if evts[0].RepoName != "r5" {
+		t.Errorf("first event = %q, want r5", evts[0].RepoName)
+	}
+
+	// Cursor 7 = get events after position 7
+	evts, cursor = bus.HistoryAfterCursor(7, 100)
+	if len(evts) != 3 {
+		t.Fatalf("len = %d, want 3", len(evts))
+	}
+	if evts[0].RepoName != "r7" {
+		t.Errorf("first event = %q, want r7", evts[0].RepoName)
+	}
+}
+
+func TestHistoryAfterCursor_WithLimit(t *testing.T) {
+	bus := NewBus(100)
+	for i := 0; i < 10; i++ {
+		bus.Publish(Event{Type: SessionStarted, RepoName: fmt.Sprintf("r%d", i)})
+	}
+
+	evts, _ := bus.HistoryAfterCursor(0, 3)
+	if len(evts) != 3 {
+		t.Fatalf("len = %d, want 3 (limited)", len(evts))
+	}
+	// Should get first 3 events (r0, r1, r2)
+	if evts[0].RepoName != "r0" {
+		t.Errorf("first = %q, want r0", evts[0].RepoName)
+	}
+	if evts[2].RepoName != "r2" {
+		t.Errorf("third = %q, want r2", evts[2].RepoName)
+	}
 }
 
 func TestMultipleSubscribers(t *testing.T) {

@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -1714,5 +1715,548 @@ func TestHandleLoopLifecycle(t *testing.T) {
 	}
 	if stopResult.IsError {
 		t.Fatalf("handleLoopStop returned error: %s", getResultText(stopResult))
+	}
+}
+
+// --- Marathon monitoring tests ---
+
+// injectTestSession creates a fake session and inserts it directly into the manager.
+func injectTestSession(t *testing.T, srv *Server, repoPath string, mods func(*session.Session)) string {
+	t.Helper()
+	now := time.Now()
+	id := fmt.Sprintf("test-%d", now.UnixNano())
+	sess := &session.Session{
+		ID:           id,
+		Provider:     session.ProviderClaude,
+		RepoPath:     repoPath,
+		RepoName:     filepath.Base(repoPath),
+		Prompt:       "test prompt",
+		Model:        "sonnet",
+		Status:       session.StatusRunning,
+		LaunchedAt:   now,
+		LastActivity: now,
+		OutputCh:     make(chan string, 1),
+	}
+	if mods != nil {
+		mods(sess)
+	}
+	srv.SessMgr.AddSessionForTesting(sess)
+	return sess.ID
+}
+
+func TestHandleSessionTail(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	id := injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.OutputHistory = []string{"line1", "line2", "line3", "line4", "line5"}
+		s.TotalOutputCount = 15 // 15 total ever, but only last 5 in history
+	})
+
+	// Test: no cursor, default lines
+	result, err := srv.handleSessionTail(context.Background(), makeRequest(map[string]any{
+		"id": id,
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionTail: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleSessionTail returned error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "line1") || !strings.Contains(text, "line5") {
+		t.Errorf("expected all lines, got: %s", text)
+	}
+	if !strings.Contains(text, `"next_cursor": "15"`) {
+		t.Errorf("expected next_cursor 15, got: %s", text)
+	}
+}
+
+func TestHandleSessionTailNoCursor(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	id := injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.OutputHistory = []string{"a", "b", "c", "d", "e", "f", "g"}
+		s.TotalOutputCount = 7
+	})
+
+	// Request only last 3 lines
+	result, err := srv.handleSessionTail(context.Background(), makeRequest(map[string]any{
+		"id":    id,
+		"lines": float64(3),
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionTail: %v", err)
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, `"lines_returned": 3`) {
+		t.Errorf("expected 3 lines returned, got: %s", text)
+	}
+	// Should contain e, f, g but not a, b
+	if strings.Contains(text, `"a"`) {
+		t.Errorf("should not contain early lines, got: %s", text)
+	}
+}
+
+func TestHandleSessionTailWithCursor(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	id := injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.OutputHistory = []string{"line1", "line2", "line3", "line4", "line5"}
+		s.TotalOutputCount = 5
+	})
+
+	// Cursor at 3 means "give me everything since output #3"
+	result, err := srv.handleSessionTail(context.Background(), makeRequest(map[string]any{
+		"id":     id,
+		"cursor": "3",
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionTail: %v", err)
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, `"lines_returned": 2`) {
+		t.Errorf("expected 2 new lines, got: %s", text)
+	}
+	if !strings.Contains(text, "line4") || !strings.Contains(text, "line5") {
+		t.Errorf("expected line4 and line5, got: %s", text)
+	}
+}
+
+func TestHandleSessionTail_NotFound(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleSessionTail(context.Background(), makeRequest(map[string]any{
+		"id": "nonexistent",
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionTail: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent session")
+	}
+}
+
+func TestHandleSessionDiffNoRepo(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	id := injectTestSession(t, srv, "/nonexistent/path", func(s *session.Session) {
+		s.RepoPath = "/nonexistent/path"
+	})
+
+	result, err := srv.handleSessionDiff(context.Background(), makeRequest(map[string]any{
+		"id": id,
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionDiff: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for non-existent repo path")
+	}
+}
+
+func TestHandleSessionDiff(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	id := injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.LaunchedAt = time.Now().Add(-1 * time.Hour)
+	})
+
+	result, err := srv.handleSessionDiff(context.Background(), makeRequest(map[string]any{
+		"id": id,
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionDiff: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleSessionDiff returned error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "window") {
+		t.Errorf("expected window in response, got: %s", text)
+	}
+	if !strings.Contains(text, "stat") {
+		t.Errorf("expected stat in response, got: %s", text)
+	}
+}
+
+func TestHandleMarathonDashboardEmpty(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleMarathonDashboard(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleMarathonDashboard: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleMarathonDashboard returned error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, `"total": 0`) {
+		t.Errorf("expected 0 total sessions, got: %s", text)
+	}
+	if !strings.Contains(text, `"total_usd": 0`) {
+		t.Errorf("expected 0 total cost, got: %s", text)
+	}
+}
+
+func TestHandleMarathonDashboardStale(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.LastActivity = time.Now().Add(-10 * time.Minute) // 10 min idle
+		s.Status = session.StatusRunning
+		s.SpentUSD = 1.50
+	})
+
+	result, err := srv.handleMarathonDashboard(context.Background(), makeRequest(map[string]any{
+		"stale_threshold_min": float64(5),
+	}))
+	if err != nil {
+		t.Fatalf("handleMarathonDashboard: %v", err)
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, `"stale": 1`) {
+		t.Errorf("expected 1 stale session, got: %s", text)
+	}
+	if !strings.Contains(text, "stale_session") {
+		t.Errorf("expected stale_session alert, got: %s", text)
+	}
+}
+
+func TestHandleSessionErrorsClassification(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	// Errored session (critical)
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.Status = session.StatusErrored
+		s.Error = "API rate limit exceeded"
+	})
+
+	// Session with parse errors (warning)
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.Status = session.StatusRunning
+		s.StreamParseErrors = 3
+	})
+
+	// Stopped session (info)
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.Status = session.StatusStopped
+		s.ExitReason = "stopped by user"
+	})
+
+	result, err := srv.handleSessionErrors(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleSessionErrors: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleSessionErrors returned error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+
+	if !strings.Contains(text, "session_error") {
+		t.Errorf("expected session_error type, got: %s", text)
+	}
+	if !strings.Contains(text, "stream_parse") {
+		t.Errorf("expected stream_parse type, got: %s", text)
+	}
+	if !strings.Contains(text, "session_stopped") {
+		t.Errorf("expected session_stopped type, got: %s", text)
+	}
+	if !strings.Contains(text, `"critical"`) {
+		t.Errorf("expected critical severity, got: %s", text)
+	}
+}
+
+func TestHandleSessionErrors_SeverityFilter(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.Status = session.StatusErrored
+		s.Error = "critical error"
+	})
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.Status = session.StatusStopped
+		s.ExitReason = "stopped"
+	})
+
+	result, err := srv.handleSessionErrors(context.Background(), makeRequest(map[string]any{
+		"severity": "critical",
+	}))
+	if err != nil {
+		t.Fatalf("handleSessionErrors: %v", err)
+	}
+	text := getResultText(result)
+	// The errors array should only contain critical entries
+	if !strings.Contains(text, `"total_errors": 1`) {
+		t.Errorf("expected 1 error after filter, got: %s", text)
+	}
+	// The filtered errors should all be critical
+	if !strings.Contains(text, `"session_error"`) {
+		t.Errorf("expected session_error in filtered results, got: %s", text)
+	}
+}
+
+// --- Remote Control (RC) handler tests ---
+
+func TestRCStatus_Empty(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	result, err := srv.handleRCStatus(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "0 running") {
+		t.Errorf("expected 0 running, got: %s", text)
+	}
+	if !strings.Contains(text, "No active or recent sessions") {
+		t.Errorf("expected no sessions message, got: %s", text)
+	}
+}
+
+func TestRCStatus_WithSessions(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.SpentUSD = 1.23
+		s.TurnCount = 15
+	})
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.Provider = session.ProviderGemini
+		s.SpentUSD = 2.22
+		s.TurnCount = 8
+	})
+
+	result, err := srv.handleRCStatus(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "2 running") {
+		t.Errorf("expected 2 running, got: %s", text)
+	}
+	if !strings.Contains(text, "$3.45") {
+		t.Errorf("expected total $3.45, got: %s", text)
+	}
+}
+
+func TestRCSend_MissingRepo(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	result, err := srv.handleRCSend(context.Background(), makeRequest(map[string]any{
+		"prompt": "test",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Error("expected error for missing repo")
+	}
+}
+
+func TestRCSend_MissingPrompt(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	result, err := srv.handleRCSend(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Error("expected error for missing prompt")
+	}
+}
+
+func TestRCSend_RepoNotFound(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	srv.handleScan(context.Background(), makeRequest(nil))
+	result, err := srv.handleRCSend(context.Background(), makeRequest(map[string]any{
+		"repo":   "nonexistent",
+		"prompt": "test",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Error("expected error for nonexistent repo")
+	}
+	if !strings.Contains(getResultText(result), "not found") {
+		t.Errorf("expected not found message, got: %s", getResultText(result))
+	}
+}
+
+func TestRCRead_NoSessions(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	result, err := srv.handleRCRead(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "No sessions") {
+		t.Errorf("expected no sessions, got: %s", text)
+	}
+}
+
+func TestRCRead_MostActive(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.OutputHistory = []string{"line1", "line2", "line3"}
+		s.TotalOutputCount = 3
+		s.SpentUSD = 1.50
+		s.TurnCount = 10
+	})
+
+	result, err := srv.handleRCRead(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "line1") {
+		t.Errorf("expected output lines, got: %s", text)
+	}
+	if !strings.Contains(text, "$1.50") {
+		t.Errorf("expected cost, got: %s", text)
+	}
+	if !strings.Contains(text, "cursor:3") {
+		t.Errorf("expected cursor, got: %s", text)
+	}
+}
+
+func TestRCRead_WithCursor(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.OutputHistory = []string{"old1", "old2", "new1", "new2"}
+		s.TotalOutputCount = 10
+	})
+
+	result, err := srv.handleRCRead(context.Background(), makeRequest(map[string]any{
+		"cursor": "8", // 10 - 8 = 2 new lines
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "new1") {
+		t.Errorf("expected new1, got: %s", text)
+	}
+	if !strings.Contains(text, "new2") {
+		t.Errorf("expected new2, got: %s", text)
+	}
+	if strings.Contains(text, "old1") {
+		t.Errorf("should not contain old lines, got: %s", text)
+	}
+}
+
+func TestEventPoll_NoBus(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	result, err := srv.handleEventPoll(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Error("expected error when bus is nil")
+	}
+}
+
+func TestEventPoll_WithEvents(t *testing.T) {
+	bus := events.NewBus(100)
+	srv, _ := setupTestServer(t)
+	srv.EventBus = bus
+
+	bus.Publish(events.Event{Type: events.SessionStarted, RepoName: "repo1", SessionID: "abc123"})
+	bus.Publish(events.Event{Type: events.CostUpdate, RepoName: "repo1", Data: map[string]any{"cost_usd": 1.5}})
+
+	result, err := srv.handleEventPoll(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, `"count": 2`) {
+		t.Errorf("expected 2 events, got: %s", text)
+	}
+	if !strings.Contains(text, "cursor") {
+		t.Errorf("expected cursor in response, got: %s", text)
+	}
+}
+
+func TestEventPoll_CursorAdvance(t *testing.T) {
+	bus := events.NewBus(100)
+	srv, _ := setupTestServer(t)
+	srv.EventBus = bus
+
+	bus.Publish(events.Event{Type: events.SessionStarted, RepoName: "r1"})
+
+	result, _ := srv.handleEventPoll(context.Background(), makeRequest(nil))
+	text := getResultText(result)
+	// Extract cursor value
+	if !strings.Contains(text, `"cursor": "1"`) {
+		t.Errorf("expected cursor 1, got: %s", text)
+	}
+
+	// Publish more events
+	bus.Publish(events.Event{Type: events.SessionEnded, RepoName: "r2"})
+
+	// Poll with cursor
+	result, _ = srv.handleEventPoll(context.Background(), makeRequest(map[string]any{
+		"cursor": "1",
+	}))
+	text = getResultText(result)
+	if !strings.Contains(text, `"count": 1`) {
+		t.Errorf("expected 1 new event, got: %s", text)
+	}
+}
+
+func TestRCAct_UnknownAction(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	result, err := srv.handleRCAct(context.Background(), makeRequest(map[string]any{
+		"action": "explode",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Error("expected error for unknown action")
+	}
+}
+
+func TestRCAct_StopAll(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	injectTestSession(t, srv, repoPath, nil)
+	injectTestSession(t, srv, repoPath, nil)
+
+	result, err := srv.handleRCAct(context.Background(), makeRequest(map[string]any{
+		"action": "stop_all",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "Stopped 2 session(s)") {
+		t.Errorf("expected stopped 2, got: %s", text)
+	}
+}
+
+func TestRCAct_StopMissing(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	result, err := srv.handleRCAct(context.Background(), makeRequest(map[string]any{
+		"action": "stop",
+		"target": "nonexistent",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Error("expected error for missing target")
 	}
 }

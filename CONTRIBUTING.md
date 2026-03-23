@@ -2,6 +2,43 @@
 
 Ralphglasses supports development with **Claude Code**, **Gemini CLI**, and **OpenAI Codex CLI**. Any provider can lead development — pick whichever has available quota.
 
+## Development Setup
+
+### 1. Clone and bootstrap
+
+```bash
+git clone https://github.com/hairglasses-studio/ralphglasses
+cd ralphglasses
+./scripts/bootstrap-toolchain.sh   # installs optional tools, checks prereqs
+./scripts/dev/doctor.sh            # verify environment
+```
+
+### 2. Configure environment
+
+Create `.env` with your API keys:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-...    # Claude (skip if using OAuth)
+GOOGLE_API_KEY=AIza...          # Gemini
+OPENAI_API_KEY=sk-...           # Codex
+```
+
+> **Claude OAuth users:** Do NOT set `ANTHROPIC_API_KEY` — it conflicts with OAuth.
+
+If using direnv:
+
+```bash
+echo "dotenv" > .envrc
+direnv allow
+```
+
+### 3. Build and verify
+
+```bash
+go build ./...          # must succeed before working
+make ci                 # vet + test + build (required before every commit)
+```
+
 ## Prerequisites
 
 - **Go 1.26+**
@@ -60,27 +97,86 @@ codex --json                    # NDJSON output
 
 Project instructions: [AGENTS.md](AGENTS.md)
 
-## Build & Test
+## Running Tests
 
 ```bash
-# Bootstrap local tooling and check prerequisites
-./scripts/bootstrap-toolchain.sh
-./scripts/dev/doctor.sh
-
 # Quality gate (REQUIRED before every commit)
 make ci                    # vet + test + build
 
 # Individual targets
 make test                  # go test -race ./...
 make test-verbose          # go test -race -v ./...
-make test-cover            # coverage report
-make fuzz                  # fuzz parsers (30s each)
+make test-cover            # coverage report (opens HTML in browser)
+make fuzz                  # fuzz parsers (30s each target)
 make build                 # go build ./...
 make vet                   # go vet ./...
 make lint                  # golangci-lint (if installed)
 ```
 
 If your host is missing `make`, `gcc`, `shellcheck`, or `bats`, use the repo devcontainer or run `./scripts/dev/ci.sh` directly.
+
+Fuzz targets live in `internal/model/` (status and config parsers). Run them for longer during suspected edge-case fixes:
+
+```bash
+go test -fuzz=FuzzParseConfig -fuzztime=60s ./internal/model/
+go test -fuzz=FuzzParseStatus -fuzztime=60s ./internal/model/
+```
+
+## Adding a New Provider
+
+Follow these 7 steps, all within `internal/session/`:
+
+1. **`types.go`** — Add a `Provider` constant (e.g., `ProviderMyLLM Provider = "myllm"`)
+2. **`providers.go`** — Add binary name in `providerBinary()` switch
+3. **`providers.go`** — Add `buildMyLLMCmd()` function that constructs the `*exec.Cmd`
+4. **`providers.go`** — Add `normalizeMyLLMEvent()` function that maps raw output to `SessionEvent`
+5. **`providers.go`** — Add default model in `ProviderDefaults()` switch
+6. **`providers.go`** — Add cases in `buildCmdForProvider()` and `normalizeEvent()` switches
+7. **`providers_test.go`** — Add tests: command construction, event normalization, binary validation
+
+The `runner.go` file is provider-agnostic; it calls the dispatch functions above.
+
+## Code Style
+
+- **Format:** `gofmt` (enforced by `make vet`)
+- **Lint:** `golangci-lint run` — fix all warnings before submitting
+- **Tests:** use standard `testing` package only; no external test frameworks
+- **No global state** in new code — pass dependencies via constructors
+- **Styles are isolated** — `internal/tui/styles/` is the only package that may define Lip Gloss styles; components and views import it, not each other
+- **Import cycles forbidden** — `styles` → no other internal package; `components` → `styles` only
+
+## Submitting PRs
+
+### Branch naming
+
+```
+feat/short-description        # new feature
+fix/issue-or-symptom          # bug fix
+chore/what-you-did            # dependency update, tooling, etc.
+docs/what-you-documented      # documentation only
+```
+
+### Commit messages
+
+Use the imperative mood, present tense. Reference issue numbers where relevant:
+
+```
+feat: add Anthropic Haiku provider support
+
+Adds buildHaikuCmd() and normalizeHaikuEvent() to providers.go.
+Haiku maps to claude --model haiku-4-5 with the same stream-json
+output format as the existing Claude provider.
+
+Closes #42
+```
+
+### What to include in a PR
+
+- **Tests** for any new functionality (`make test` must pass with `-race`)
+- **Update CONTRIBUTING.md** if you change development setup or tooling
+- **Update CLAUDE.md** if you add a new provider, MCP tool, or architectural pattern
+- **No generated files** — don't commit `go.sum` hunks you didn't cause
+- `make ci` must pass locally before opening the PR
 
 ## MCP Server Setup
 

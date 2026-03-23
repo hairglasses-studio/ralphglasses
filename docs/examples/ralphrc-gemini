@@ -1,0 +1,40 @@
+# .ralphrc tuned for Gemini provider
+# Use when launching sessions with provider=gemini via ralphglasses_session_launch.
+# Gemini has a larger context window but does not support session resume.
+
+PROJECT_NAME="my-project"
+PROJECT_TYPE="go"
+
+# Gemini can handle higher call rates; its API is generally faster.
+MAX_CALLS_PER_HOUR="120"
+
+# Gemini sessions have no resume support, so continuity is irrelevant.
+# Each loop iteration starts a fresh context.
+SESSION_CONTINUITY="false"
+
+# Gemini's default model is gemini-3-pro (set by ralphglasses providers.go).
+# Override here if needed:
+# PRIMARY_MODEL="gemini-3-pro"
+
+# Circuit breaker thresholds — be a bit more lenient since Gemini
+# can handle large context without degradation.
+CB_NO_PROGRESS_THRESHOLD="5"
+CB_SAME_ERROR_THRESHOLD="6"
+CB_PERMISSION_DENIAL_THRESHOLD="3"
+CB_COOLDOWN_MINUTES="10"
+CB_AUTO_RESET="true"
+
+# Gemini excels at bulk generation; allow larger batches.
+BATCH_SIMILAR_TASKS="true"
+MAX_TASKS_PER_BATCH="5"
+MAX_LINES_PER_BATCH="1200"
+
+# Quality gates — same as any other project type.
+QG_BUILD_CMD="go build ./..."
+QG_TEST_CMD="go test ./..."
+QG_VET_CMD="go vet ./..."
+
+# Budget — Gemini is cheaper per token; higher budget ceiling may be appropriate.
+RALPH_SESSION_BUDGET="50"
+
+LOG_RETENTION_DAYS="7"
