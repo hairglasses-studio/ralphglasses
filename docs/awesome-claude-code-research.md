@@ -18,12 +18,10 @@ Three-wave analysis: fetch README + metadata for all 181 repos, extract features
 | `eyaltoledano/claude-task-master` | Node | 15K+ | Task dependency graphs, main/research/fallback model concept | moderate |
 | `sudocode-ai/sudocode` | Node | 500+ | Git-native agent memory, topological workflow execution | moderate |
 | `ryoppippi/ccusage` | Node | 300+ | Cost tracking standard — parse JSONL for token/cost data. Port into budget system | drop-in |
-| `frankbria/ralph-claude-code` | Bash | 200+ | Canonical ralph with 566 tests, dual-condition exit gate. Parity reference | drop-in |
 
 **Integration notes:**
 - `claude-squad`: Study worktree isolation pattern for `session_launch --worktree`. Their profile system maps to our agent definitions.
 - `ccusage`: JSONL parsing logic directly ports to `session/budget.go` for real Claude Code cost data.
-- `ralph-claude-code`: Reference for exit gate patterns in `marathon.sh` improvements.
 
 ### Skills, Workflows & Hooks
 
