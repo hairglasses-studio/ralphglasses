@@ -39,7 +39,7 @@ func TestRenderRepoDetailFull(t *testing.T) {
 		},
 	}
 
-	output := RenderRepoDetail(r, 120)
+	output := RenderRepoDetail(r, 120, nil)
 
 	checks := []string{"test-repo", "Status", "Circuit Breaker", "Configuration", "Progress", "sonnet", "task-1", "PROJECT_NAME"}
 	for _, check := range checks {
@@ -51,7 +51,7 @@ func TestRenderRepoDetailFull(t *testing.T) {
 
 func TestRenderRepoDetailEmpty(t *testing.T) {
 	r := &model.Repo{Name: "empty-repo", Path: "/path"}
-	output := RenderRepoDetail(r, 80)
+	output := RenderRepoDetail(r, 80, nil)
 
 	if !strings.Contains(output, "No status data") {
 		t.Error("should show 'No status data'")
@@ -66,7 +66,7 @@ func TestRenderRepoDetailEmpty(t *testing.T) {
 
 func TestRenderRepoDetailWithRC(t *testing.T) {
 	r := &model.Repo{Name: "rc-repo", Path: "/path", HasRC: true}
-	output := RenderRepoDetail(r, 80)
+	output := RenderRepoDetail(r, 80, nil)
 	if !strings.Contains(output, "failed to parse") {
 		t.Error("should show parse failure for HasRC without loaded config")
 	}
@@ -82,7 +82,7 @@ func TestRenderRepoDetailExitReason(t *testing.T) {
 			Timestamp:  time.Now(),
 		},
 	}
-	output := RenderRepoDetail(r, 80)
+	output := RenderRepoDetail(r, 80, nil)
 	if !strings.Contains(output, "budget exceeded") {
 		t.Error("should show exit reason")
 	}

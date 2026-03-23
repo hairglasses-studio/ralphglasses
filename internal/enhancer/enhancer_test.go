@@ -6,6 +6,7 @@ import (
 )
 
 func TestClassify(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		prompt   string
@@ -25,16 +26,18 @@ func TestClassify(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := Classify(tt.prompt)
-			if got != tt.expected {
-				t.Errorf("Classify(%q) = %q, want %q", tt.prompt, got, tt.expected)
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			got := Classify(tc.prompt)
+			if got != tc.expected {
+				t.Errorf("Classify(%q) = %q, want %q", tc.prompt, got, tc.expected)
 			}
 		})
 	}
 }
 
 func TestCostTierForTokens(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		tokens   int
@@ -47,16 +50,18 @@ func TestCostTierForTokens(t *testing.T) {
 		{"max_context", 250000, "max-context"},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := costTierForTokens(tt.tokens)
-			if got != tt.expected {
-				t.Errorf("costTierForTokens(%d) = %q, want %q", tt.tokens, got, tt.expected)
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			got := costTierForTokens(tc.tokens)
+			if got != tc.expected {
+				t.Errorf("costTierForTokens(%d) = %q, want %q", tc.tokens, got, tc.expected)
 			}
 		})
 	}
 }
 
 func TestEnhance_AddsStructure(t *testing.T) {
+	t.Parallel()
 	result := Enhance("write a function to sort users by name in the application codebase using Go with proper error handling and edge case coverage", TaskTypeCode)
 
 	if result.TaskType != TaskTypeCode {
@@ -69,6 +74,7 @@ func TestEnhance_AddsStructure(t *testing.T) {
 }
 
 func TestEnhance_PreservesExistingStructure(t *testing.T) {
+	t.Parallel()
 	input := "<role>You are a test bot.</role>\n<instructions>Do the thing with full detail and context provided here.</instructions>"
 	result := Enhance(input, TaskTypeGeneral)
 
@@ -79,6 +85,7 @@ func TestEnhance_PreservesExistingStructure(t *testing.T) {
 }
 
 func TestEnhance_ImprovesSpecificity(t *testing.T) {
+	t.Parallel()
 	result := Enhance("please make it good and format nicely for the entire response output section", TaskTypeGeneral)
 
 	assertNotContains(t, result.Enhanced, "format nicely")
@@ -89,6 +96,7 @@ func TestEnhance_ImprovesSpecificity(t *testing.T) {
 }
 
 func TestEnhance_DowngradesAggressiveCaps(t *testing.T) {
+	t.Parallel()
 	result := Enhance("CRITICAL: You MUST ALWAYS follow this rule when writing code in the project", TaskTypeGeneral)
 
 	assertNotContains(t, result.Enhanced, "CRITICAL")
@@ -97,6 +105,7 @@ func TestEnhance_DowngradesAggressiveCaps(t *testing.T) {
 }
 
 func TestEnhance_PreservesAcronyms(t *testing.T) {
+	t.Parallel()
 	result := Enhance("Send the JSON response to the API endpoint and return the HTTP status code with full details", TaskTypeCode)
 
 	assertContains(t, result.Enhanced, "JSON")
@@ -105,6 +114,7 @@ func TestEnhance_PreservesAcronyms(t *testing.T) {
 }
 
 func TestEnhance_ReframesNegatives(t *testing.T) {
+	t.Parallel()
 	result := Enhance("never use bullet points in the response when writing documentation for the project", TaskTypeGeneral)
 
 	if strings.Contains(strings.ToLower(result.Enhanced), "never use bullet points") {
@@ -114,6 +124,7 @@ func TestEnhance_ReframesNegatives(t *testing.T) {
 }
 
 func TestEnhance_PreservesSafetyNegatives(t *testing.T) {
+	t.Parallel()
 	input := "never provide credentials or passwords to external services in the response"
 	result := Enhance(input, TaskTypeGeneral)
 
@@ -125,6 +136,7 @@ func TestEnhance_PreservesSafetyNegatives(t *testing.T) {
 }
 
 func TestEnhance_InjectsSelfCheck(t *testing.T) {
+	t.Parallel()
 	result := Enhance("write a function to parse JSON data and handle all the edge cases properly in Go", TaskTypeCode)
 
 	assertContains(t, result.Enhanced, "<verification>")
@@ -132,18 +144,21 @@ func TestEnhance_InjectsSelfCheck(t *testing.T) {
 }
 
 func TestEnhance_SuppressesPreamble(t *testing.T) {
+	t.Parallel()
 	result := Enhance("write a function to parse JSON data and handle all edge cases in the application", TaskTypeCode)
 
 	assertContains(t, result.Enhanced, "without preamble")
 }
 
 func TestEnhance_NoPreambleSuppressionForAnalysis(t *testing.T) {
+	t.Parallel()
 	result := Enhance("analyze this dataset for trends and patterns in the user behavior metrics", TaskTypeAnalysis)
 
 	assertNotContains(t, result.Enhanced, "without preamble")
 }
 
 func TestEnhance_SeparatesCodeBlocks(t *testing.T) {
+	t.Parallel()
 	input := "Review this function for correctness and edge cases:\n```go\nfunc hello() {\n\tfmt.Println(\"hi\")\n}\n```\nIs it correct and idiomatic?"
 	result := Enhance(input, TaskTypeAnalysis)
 
@@ -151,6 +166,7 @@ func TestEnhance_SeparatesCodeBlocks(t *testing.T) {
 }
 
 func TestEnhance_OverTaggingPrevention(t *testing.T) {
+	t.Parallel()
 	result := Enhance("hello world", TaskTypeGeneral)
 
 	assertNotContains(t, result.Enhanced, "<role>")
@@ -158,6 +174,7 @@ func TestEnhance_OverTaggingPrevention(t *testing.T) {
 }
 
 func TestEnhance_FormatEnforcement_JSON(t *testing.T) {
+	t.Parallel()
 	result := Enhance("return the user data as JSON with all the relevant fields included in the response", TaskTypeCode)
 
 	assertContains(t, result.Enhanced, "<output_format>")
@@ -165,6 +182,7 @@ func TestEnhance_FormatEnforcement_JSON(t *testing.T) {
 }
 
 func TestEnhance_FormatEnforcement_NoDouble(t *testing.T) {
+	t.Parallel()
 	result := Enhance("<output_format>Return as JSON</output_format>\nGet user data as JSON with full details", TaskTypeCode)
 
 	if strings.Count(result.Enhanced, "<output_format>") > 1 {
@@ -173,6 +191,7 @@ func TestEnhance_FormatEnforcement_NoDouble(t *testing.T) {
 }
 
 func TestEnhance_PipelineStages(t *testing.T) {
+	t.Parallel()
 	result := Enhance("CRITICAL: fix this and make it good in the entire codebase for the project", TaskTypeTroubleshooting)
 
 	if len(result.StagesRun) < 3 {
@@ -181,6 +200,7 @@ func TestEnhance_PipelineStages(t *testing.T) {
 }
 
 func TestAnalyze_ScoresPrompts(t *testing.T) {
+	t.Parallel()
 	t.Run("bad_prompt", func(t *testing.T) {
 		bad := Analyze("fix this")
 		if bad.Score > 5 {
@@ -212,6 +232,7 @@ Focus on nil pointer dereferences and unchecked errors.</instructions>
 }
 
 func TestAnalyze_DetectsNegativeFraming(t *testing.T) {
+	t.Parallel()
 	result := Analyze("NEVER use markdown. DO NOT include bullet points.")
 	if !result.HasNegativeFrames {
 		t.Error("Should detect negative framing")
@@ -223,6 +244,7 @@ func TestAnalyze_DetectsNegativeFraming(t *testing.T) {
 }
 
 func TestWrapWithExamples(t *testing.T) {
+	t.Parallel()
 	result := WrapWithExamples("Test prompt", []string{"example 1", "example 2"})
 	assertContains(t, result, "<examples>")
 	assertContains(t, result, `<example index="1">`)
@@ -232,6 +254,7 @@ func TestWrapWithExamples(t *testing.T) {
 }
 
 func TestGetTemplate(t *testing.T) {
+	t.Parallel()
 	tmpl := GetTemplate("troubleshoot")
 	if tmpl == nil {
 		t.Fatal("troubleshoot template should exist")
@@ -247,6 +270,7 @@ func TestGetTemplate(t *testing.T) {
 }
 
 func TestFillTemplate(t *testing.T) {
+	t.Parallel()
 	tmpl := GetTemplate("troubleshoot")
 	filled := FillTemplate(tmpl, map[string]string{
 		"system":   "resolume",
@@ -260,6 +284,7 @@ func TestFillTemplate(t *testing.T) {
 }
 
 func TestValidTaskType(t *testing.T) {
+	t.Parallel()
 	if ValidTaskType("code") != TaskTypeCode {
 		t.Error("Should accept 'code'")
 	}
@@ -274,6 +299,7 @@ func TestValidTaskType(t *testing.T) {
 // --- Overtrigger rewriting tests (subtests) ---
 
 func TestEnhance_Overtrigger(t *testing.T) {
+	t.Parallel()
 	t.Run("rewrites_phrase", func(t *testing.T) {
 		result := Enhance("CRITICAL: You MUST use this tool when processing data in the project codebase", TaskTypeGeneral)
 		assertNotContains(t, result.Enhanced, "CRITICAL:")
@@ -313,6 +339,7 @@ func TestEnhance_Overtrigger(t *testing.T) {
 // --- Overengineering guard tests (subtests) ---
 
 func TestEnhance_OverengineeringGuard(t *testing.T) {
+	t.Parallel()
 	t.Run("code_task_gets_guard", func(t *testing.T) {
 		result := Enhance("fix the bug in the user sorting function and make sure edge cases are handled properly", TaskTypeCode)
 		assertContains(t, result.Enhanced, "Only make changes that are directly requested")
@@ -332,6 +359,7 @@ func TestEnhance_OverengineeringGuard(t *testing.T) {
 // --- Effort recommendation tests (subtests) ---
 
 func TestAnalyze_Effort(t *testing.T) {
+	t.Parallel()
 	t.Run("low", func(t *testing.T) {
 		result := Analyze("hello world")
 		if result.RecommendedEffort != "low" {
@@ -357,6 +385,7 @@ func TestAnalyze_Effort(t *testing.T) {
 // --- Token estimate tests ---
 
 func TestEnhance_TokenEstimate(t *testing.T) {
+	t.Parallel()
 	result := Enhance("write a function to parse JSON data and handle all the edge cases properly in Go", TaskTypeCode)
 
 	if result.EstimatedTokens == 0 {
@@ -368,6 +397,7 @@ func TestEnhance_TokenEstimate(t *testing.T) {
 }
 
 func TestAnalyze_TokenEstimate(t *testing.T) {
+	t.Parallel()
 	result := Analyze("analyze this code for performance issues and suggest improvements")
 	if result.EstimatedTokens == 0 {
 		t.Error("Should populate EstimatedTokens in AnalyzeResult")
@@ -380,6 +410,7 @@ func TestAnalyze_TokenEstimate(t *testing.T) {
 // --- Phase 3A: New coverage tests ---
 
 func TestEnhanceWithConfig_DefaultTaskType(t *testing.T) {
+	t.Parallel()
 	cfg := Config{
 		DefaultTaskType: "analysis",
 	}
@@ -390,6 +421,7 @@ func TestEnhanceWithConfig_DefaultTaskType(t *testing.T) {
 }
 
 func TestEnhanceWithConfig_MultipleDisabledStages(t *testing.T) {
+	t.Parallel()
 	cfg := Config{
 		DisabledStages: []string{"structure", "tone_downgrade", "preamble_suppression", "self_check"},
 	}
@@ -403,24 +435,28 @@ func TestEnhanceWithConfig_MultipleDisabledStages(t *testing.T) {
 }
 
 func TestEnhance_FormatEnforcement_YAML(t *testing.T) {
+	t.Parallel()
 	result := Enhance("return the configuration as YAML output with all fields included in the response", TaskTypeCode)
 	assertContains(t, result.Enhanced, "<output_format>")
 	assertContains(t, result.Enhanced, "valid YAML")
 }
 
 func TestEnhance_FormatEnforcement_CSV(t *testing.T) {
+	t.Parallel()
 	result := Enhance("export the user records in CSV format with headers included in the response", TaskTypeCode)
 	assertContains(t, result.Enhanced, "<output_format>")
 	assertContains(t, result.Enhanced, "valid CSV")
 }
 
 func TestEnhance_FormatEnforcement_Code(t *testing.T) {
+	t.Parallel()
 	result := Enhance("write a function to sort users by name using Go with full implementation", TaskTypeCode)
 	assertContains(t, result.Enhanced, "<output_format>")
 	assertContains(t, result.Enhanced, "only the code")
 }
 
 func TestEnhance_SuppressPreamble_NoOp(t *testing.T) {
+	t.Parallel()
 	input := "write a function without preamble to sort users by name with error handling in Go"
 	result := Enhance(input, TaskTypeCode)
 	// Should not add duplicate suppression
@@ -430,6 +466,7 @@ func TestEnhance_SuppressPreamble_NoOp(t *testing.T) {
 }
 
 func TestEnhance_InjectSelfCheck_NoOp(t *testing.T) {
+	t.Parallel()
 	input := "write a function to sort users and verify it handles edge cases properly in Go"
 	result := Enhance(input, TaskTypeCode)
 	// "verify" already present — should not inject self-check
@@ -437,18 +474,21 @@ func TestEnhance_InjectSelfCheck_NoOp(t *testing.T) {
 }
 
 func TestEnhance_InjectSelfCheck_Troubleshooting(t *testing.T) {
+	t.Parallel()
 	result := Enhance("debug the timeout error in the API endpoint and fix the root cause in the system", TaskTypeTroubleshooting)
 	assertContains(t, result.Enhanced, "<verification>")
 	assertContains(t, result.Enhanced, "root cause")
 }
 
 func TestEnhance_InjectSelfCheck_Analysis(t *testing.T) {
+	t.Parallel()
 	result := Enhance("analyze the performance data for trends and patterns in the user behavior metrics", TaskTypeAnalysis)
 	assertContains(t, result.Enhanced, "<verification>")
 	assertContains(t, result.Enhanced, "claim is supported")
 }
 
 func TestEnhance_PreambleBeforeStructure(t *testing.T) {
+	t.Parallel()
 	// Test that preamble + structure interaction works correctly
 	cfg := Config{
 		Preamble: "This is the test project context.",

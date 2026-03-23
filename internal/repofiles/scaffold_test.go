@@ -8,6 +8,7 @@ import (
 )
 
 func TestScaffold(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create a go.mod to trigger Go detection
@@ -47,6 +48,7 @@ func TestScaffold(t *testing.T) {
 }
 
 func TestScaffold_SkipsExisting(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create existing .ralphrc
@@ -78,6 +80,7 @@ func TestScaffold_SkipsExisting(t *testing.T) {
 }
 
 func TestScaffold_Force(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create existing files
@@ -101,6 +104,7 @@ func TestScaffold_Force(t *testing.T) {
 }
 
 func TestDetectProjectType(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		file string
 		want string

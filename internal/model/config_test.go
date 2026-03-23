@@ -239,6 +239,105 @@ func TestSave_InvalidKey(t *testing.T) {
 	}
 }
 
+func TestValidateConfig_UnknownKeys(t *testing.T) {
+	cfg := &RalphConfig{
+		Values: map[string]string{
+			"MODEL":       "sonnet",
+			"UNKNOWN_KEY": "value",
+		},
+	}
+	warnings, errs := ValidateConfig(cfg)
+	if len(errs) != 0 {
+		t.Errorf("expected no errors for unknown key, got %v", errs)
+	}
+	if len(warnings) != 1 {
+		t.Fatalf("expected 1 warning, got %d", len(warnings))
+	}
+	if warnings[0].Key != "UNKNOWN_KEY" {
+		t.Errorf("warning key = %q, want UNKNOWN_KEY", warnings[0].Key)
+	}
+}
+
+func TestValidateConfig_TypeMismatch(t *testing.T) {
+	tests := []struct {
+		name string
+		key  string
+		val  string
+	}{
+		{"int as string", "MAX_CALLS_PER_HOUR", "abc"},
+		{"float as string", "BUDGET", "not-a-number"},
+		{"bool as string", "AUTO_ENHANCE", "maybe"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &RalphConfig{Values: map[string]string{tt.key: tt.val}}
+			_, errs := ValidateConfig(cfg)
+			if len(errs) == 0 {
+				t.Errorf("expected error for %s=%q", tt.key, tt.val)
+			}
+		})
+	}
+}
+
+func TestValidateConfig_RangeViolation(t *testing.T) {
+	tests := []struct {
+		name string
+		key  string
+		val  string
+	}{
+		{"int below min", "MAX_CALLS_PER_HOUR", "0"},
+		{"int above max", "MAX_CALLS_PER_HOUR", "9999"},
+		{"float below min", "BUDGET", "0"},
+		{"float above max", "BUDGET", "5000"},
+		{"autonomy too high", "AUTONOMY_LEVEL", "5"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &RalphConfig{Values: map[string]string{tt.key: tt.val}}
+			_, errs := ValidateConfig(cfg)
+			if len(errs) == 0 {
+				t.Errorf("expected range error for %s=%q", tt.key, tt.val)
+			}
+		})
+	}
+}
+
+func TestValidateConfig_ValidValues(t *testing.T) {
+	cfg := &RalphConfig{
+		Values: map[string]string{
+			"MODEL":              "sonnet",
+			"MAX_CALLS_PER_HOUR": "120",
+			"BUDGET":             "5.00",
+			"AUTO_ENHANCE":       "true",
+			"AUTONOMY_LEVEL":     "2",
+		},
+	}
+	warnings, errs := ValidateConfig(cfg)
+	if len(warnings) != 0 {
+		t.Errorf("expected no warnings, got %v", warnings)
+	}
+	if len(errs) != 0 {
+		t.Errorf("expected no errors, got %v", errs)
+	}
+}
+
+func TestValidateConfig_BoolVariants(t *testing.T) {
+	for _, v := range []string{"true", "false", "1", "0", "yes", "no"} {
+		cfg := &RalphConfig{Values: map[string]string{"AUTO_ENHANCE": v}}
+		_, errs := ValidateConfig(cfg)
+		if len(errs) != 0 {
+			t.Errorf("AUTO_ENHANCE=%q should be valid, got %v", v, errs)
+		}
+	}
+}
+
+func TestValidateConfig_Nil(t *testing.T) {
+	warnings, errs := ValidateConfig(nil)
+	if warnings != nil || errs != nil {
+		t.Errorf("nil config should return nil, nil")
+	}
+}
+
 func TestRalphConfig_Save(t *testing.T) {
 	dir := t.TempDir()
 	rcPath := filepath.Join(dir, ".ralphrc")

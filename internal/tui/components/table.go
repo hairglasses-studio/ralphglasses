@@ -35,6 +35,7 @@ type Table struct {
 	StatusColumn int          // column index for status-prefix filtering (-1 = disabled)
 	MultiSelect  bool         // enable multi-select mode
 	Selected     map[int]bool // selected row indices (into Rows)
+	RowStyleFunc func(row Row, selected bool) lipgloss.Style // optional per-row styling
 }
 
 // NewTable creates a table with the given columns.
@@ -302,6 +303,14 @@ func (t *Table) View() string {
 			}
 		}
 
+		isSelected := vi == t.Cursor
+		var rowStyle lipgloss.Style
+		hasRowStyle := false
+		if t.RowStyleFunc != nil && !isSelected {
+			rowStyle = t.RowStyleFunc(row, isSelected)
+			hasRowStyle = true
+		}
+
 		var cells []string
 		for ci, col := range cols {
 			cell := ""
@@ -309,8 +318,10 @@ func (t *Table) View() string {
 				cell = row[ci]
 			}
 			padded := visualPad(cell, col.Width)
-			if vi == t.Cursor {
+			if isSelected {
 				padded = styles.SelectedStyle.Render(padded)
+			} else if hasRowStyle {
+				padded = rowStyle.Render(padded)
 			}
 			cells = append(cells, padded)
 		}

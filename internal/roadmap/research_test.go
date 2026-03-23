@@ -11,6 +11,7 @@ import (
 )
 
 func TestResearch(t *testing.T) {
+	t.Parallel()
 	// Mock GitHub API
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := githubSearchResponse{
@@ -60,6 +61,7 @@ func TestResearch(t *testing.T) {
 }
 
 func TestBuildSearchQueries(t *testing.T) {
+	t.Parallel()
 	queries := buildSearchQueries("mcp tui agent")
 	if len(queries) < 2 {
 		t.Errorf("expected at least 2 queries, got %d", len(queries))
@@ -70,6 +72,7 @@ func TestBuildSearchQueries(t *testing.T) {
 }
 
 func TestResearch_WithMockServer(t *testing.T) {
+	t.Parallel()
 	// This tests the full Research flow with a mock GitHub server
 	mockResp := githubSearchResponse{
 		Items: []struct {
@@ -102,6 +105,7 @@ func TestResearch_WithMockServer(t *testing.T) {
 }
 
 func TestDedupStrings(t *testing.T) {
+	t.Parallel()
 	input := []string{"a", "b", "a", "c", "b"}
 	result := dedupStrings(input)
 	if len(result) != 3 {

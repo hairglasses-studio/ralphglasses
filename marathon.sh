@@ -397,6 +397,18 @@ while true; do
         cleanup 0
     fi
 
+    # --- Regression gate check ---
+    if command -v ralphglasses &>/dev/null; then
+        gate_result=$(ralphglasses gate-check --json --hours 1 2>/dev/null || echo '{"overall":"skip"}')
+        gate_verdict=$(echo "$gate_result" | jq -r '.overall' 2>/dev/null || echo "skip")
+        if [ "$gate_verdict" = "fail" ]; then
+            log "REGRESSION" "Regression gate FAILED. Stopping marathon."
+            cleanup 2
+        elif [ "$gate_verdict" = "warn" ]; then
+            log "WARN" "Regression gate warning detected."
+        fi
+    fi
+
     # --- Checkpoint check ---
     if (( now - last_checkpoint_epoch >= checkpoint_seconds )); then
         create_checkpoint

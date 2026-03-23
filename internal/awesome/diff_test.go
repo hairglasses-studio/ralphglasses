@@ -3,6 +3,7 @@ package awesome
 import "testing"
 
 func TestDiff_NilPrev(t *testing.T) {
+	t.Parallel()
 	current := &Index{
 		Entries: []AwesomeEntry{
 			{Name: "a", URL: "https://github.com/org/a"},
@@ -20,6 +21,7 @@ func TestDiff_NilPrev(t *testing.T) {
 }
 
 func TestDiff_NoChanges(t *testing.T) {
+	t.Parallel()
 	entries := []AwesomeEntry{
 		{Name: "a", URL: "https://github.com/org/a"},
 		{Name: "b", URL: "https://github.com/org/b"},
@@ -37,6 +39,7 @@ func TestDiff_NoChanges(t *testing.T) {
 }
 
 func TestDiff_NewAndRemoved(t *testing.T) {
+	t.Parallel()
 	prev := &Index{
 		Entries: []AwesomeEntry{
 			{Name: "a", URL: "https://github.com/org/a"},

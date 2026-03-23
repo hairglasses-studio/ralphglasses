@@ -34,6 +34,7 @@ func newTestEngine(serverURL string) *HybridEngine {
 }
 
 func TestEnhanceHybrid_LocalMode(t *testing.T) {
+	t.Parallel()
 	result := EnhanceHybrid(context.Background(), "fix the bug in the authentication module", "", Config{}, nil, ModeLocal, "")
 	if result.Source != "local" {
 		t.Errorf("expected source 'local', got %q", result.Source)
@@ -44,6 +45,7 @@ func TestEnhanceHybrid_LocalMode(t *testing.T) {
 }
 
 func TestEnhanceHybrid_NilEngineFallsBackToLocal(t *testing.T) {
+	t.Parallel()
 	result := EnhanceHybrid(context.Background(), "fix the bug in the authentication module", "", Config{}, nil, ModeAuto, "")
 	if result.Source != "local" {
 		t.Errorf("expected source 'local' when engine is nil, got %q", result.Source)
@@ -51,6 +53,7 @@ func TestEnhanceHybrid_NilEngineFallsBackToLocal(t *testing.T) {
 }
 
 func TestEnhanceHybrid_AutoModeLLMSuccess(t *testing.T) {
+	t.Parallel()
 	server := newTestLLMServer("You are an expert. Improved prompt here.")
 	defer server.Close()
 
@@ -66,6 +69,7 @@ func TestEnhanceHybrid_AutoModeLLMSuccess(t *testing.T) {
 }
 
 func TestEnhanceHybrid_LLMModeLLMSuccess(t *testing.T) {
+	t.Parallel()
 	server := newTestLLMServer("LLM improved prompt")
 	defer server.Close()
 
@@ -81,6 +85,7 @@ func TestEnhanceHybrid_LLMModeLLMSuccess(t *testing.T) {
 }
 
 func TestEnhanceHybrid_CacheHit(t *testing.T) {
+	t.Parallel()
 	server := newTestLLMServer("first call result")
 	defer server.Close()
 
@@ -103,6 +108,7 @@ func TestEnhanceHybrid_CacheHit(t *testing.T) {
 }
 
 func TestEnhanceHybrid_CircuitBreakerOpenAutoFallback(t *testing.T) {
+	t.Parallel()
 	engine := &HybridEngine{
 		Client: &LLMClient{
 			APIKey:     "test-key",
@@ -128,6 +134,7 @@ func TestEnhanceHybrid_CircuitBreakerOpenAutoFallback(t *testing.T) {
 }
 
 func TestEnhanceHybrid_CircuitBreakerOpenLLMMode(t *testing.T) {
+	t.Parallel()
 	engine := &HybridEngine{
 		Client: &LLMClient{APIKey: "test-key"},
 		CB:     NewCircuitBreaker(),
@@ -147,6 +154,7 @@ func TestEnhanceHybrid_CircuitBreakerOpenLLMMode(t *testing.T) {
 }
 
 func TestEnhanceHybrid_LLMFailureAutoFallback(t *testing.T) {
+	t.Parallel()
 	// Server returns 500
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -164,6 +172,7 @@ func TestEnhanceHybrid_LLMFailureAutoFallback(t *testing.T) {
 }
 
 func TestEnhanceHybrid_LLMFailureLLMMode(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`{"error":{"type":"server_error","message":"internal error"}}`))
@@ -182,6 +191,7 @@ func TestEnhanceHybrid_LLMFailureLLMMode(t *testing.T) {
 }
 
 func TestEnhanceHybrid_DefaultModeIsAuto(t *testing.T) {
+	t.Parallel()
 	server := newTestLLMServer("improved")
 	defer server.Close()
 
@@ -194,6 +204,7 @@ func TestEnhanceHybrid_DefaultModeIsAuto(t *testing.T) {
 }
 
 func TestEnhanceHybrid_RecordsSuccessOnCircuitBreaker(t *testing.T) {
+	t.Parallel()
 	server := newTestLLMServer("improved")
 	defer server.Close()
 
@@ -211,6 +222,7 @@ func TestEnhanceHybrid_RecordsSuccessOnCircuitBreaker(t *testing.T) {
 }
 
 func TestEnhanceHybrid_RecordsFailureOnCircuitBreaker(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`{"error":{"type":"server_error","message":"fail"}}`))
@@ -228,6 +240,7 @@ func TestEnhanceHybrid_RecordsFailureOnCircuitBreaker(t *testing.T) {
 }
 
 func TestValidMode(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  EnhanceMode

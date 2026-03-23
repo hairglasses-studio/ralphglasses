@@ -8,6 +8,7 @@ import (
 )
 
 func TestParseAwesomeList(t *testing.T) {
+	t.Parallel()
 	md := `# Awesome Claude Code
 
 ## Orchestrators
@@ -54,6 +55,7 @@ Guidelines here.
 }
 
 func TestParseAwesomeList_Empty(t *testing.T) {
+	t.Parallel()
 	entries := parseAwesomeList("# Empty list\n\nNo links here.")
 	if len(entries) != 0 {
 		t.Errorf("expected 0 entries, got %d", len(entries))
@@ -61,6 +63,7 @@ func TestParseAwesomeList_Empty(t *testing.T) {
 }
 
 func TestExtractRepoFromURL(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		url  string
 		want string
@@ -80,6 +83,7 @@ func TestExtractRepoFromURL(t *testing.T) {
 }
 
 func TestFetch_MockServer(t *testing.T) {
+	t.Parallel()
 	md := `# Awesome List
 ## Tools
 - [tool-a](https://github.com/org/tool-a) - A great tool

@@ -6,6 +6,7 @@ import (
 )
 
 func TestStoreRoundTrip_Index(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	idx := &Index{
 		Source:    "test/repo",
@@ -36,6 +37,7 @@ func TestStoreRoundTrip_Index(t *testing.T) {
 }
 
 func TestStoreRoundTrip_Analysis(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	a := &Analysis{
 		Source:   "test/repo",
@@ -70,6 +72,7 @@ func TestStoreRoundTrip_Analysis(t *testing.T) {
 }
 
 func TestStoreRotation(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	idx1 := &Index{Source: "v1", FetchedAt: time.Now().UTC(), Entries: []AwesomeEntry{{Name: "a", URL: "u1"}}}
 	idx2 := &Index{Source: "v2", FetchedAt: time.Now().UTC(), Entries: []AwesomeEntry{{Name: "b", URL: "u2"}}}

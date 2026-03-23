@@ -6,6 +6,7 @@ import (
 )
 
 func TestDetectAndWrapExamples_InputOutputPairs(t *testing.T) {
+	t.Parallel()
 	input := "Convert these dates to ISO format:\n\nInput: January 5, 2024\nOutput: 2024-01-05\n\nInput: March 15, 2023\nOutput: 2023-03-15\n\nInput: December 31, 2025\nOutput: 2025-12-31\n\nNow convert: February 28, 2026"
 
 	result, imps := DetectAndWrapExamples(input)
@@ -21,6 +22,7 @@ func TestDetectAndWrapExamples_InputOutputPairs(t *testing.T) {
 }
 
 func TestDetectAndWrapExamples_ExampleHeaders(t *testing.T) {
+	t.Parallel()
 	input := "Format user data as follows:\n\nExample 1: Simple user\nName: John, Age: 30 -> {\"name\": \"John\", \"age\": 30}\n\nExample 2: With email\nName: Jane, Email: jane@test.com -> {\"name\": \"Jane\", \"email\": \"jane@test.com\"}\n\nNow format this data."
 
 	result, imps := DetectAndWrapExamples(input)
@@ -32,6 +34,7 @@ func TestDetectAndWrapExamples_ExampleHeaders(t *testing.T) {
 }
 
 func TestDetectAndWrapExamples_ArrowTransformations(t *testing.T) {
+	t.Parallel()
 	input := "Convert snake_case to camelCase:\n\nuser_name -> userName\nfirst_name -> firstName\nlast_updated_at -> lastUpdatedAt\n\nConvert: my_variable_name"
 
 	result, imps := DetectAndWrapExamples(input)
@@ -43,6 +46,7 @@ func TestDetectAndWrapExamples_ArrowTransformations(t *testing.T) {
 }
 
 func TestDetectAndWrapExamples_AlreadyTagged(t *testing.T) {
+	t.Parallel()
 	input := `<examples><example>Already tagged</example></examples>`
 	result, imps := DetectAndWrapExamples(input)
 
@@ -55,6 +59,7 @@ func TestDetectAndWrapExamples_AlreadyTagged(t *testing.T) {
 }
 
 func TestDetectAndWrapExamples_NoExamples(t *testing.T) {
+	t.Parallel()
 	input := "Write a function to sort an array of integers."
 	_, imps := DetectAndWrapExamples(input)
 
@@ -66,6 +71,7 @@ func TestDetectAndWrapExamples_NoExamples(t *testing.T) {
 // --- Phase 3E: New coverage tests ---
 
 func TestDetectAndWrapExamples_SinglePair(t *testing.T) {
+	t.Parallel()
 	// Single pair is not enough to wrap (need >= 2)
 	input := "Convert:\n\nInput: hello\nOutput: HELLO\n\nNow convert: world"
 	_, imps := DetectAndWrapExamples(input)
@@ -75,6 +81,7 @@ func TestDetectAndWrapExamples_SinglePair(t *testing.T) {
 }
 
 func TestDetectAndWrapExamples_SingleHeader(t *testing.T) {
+	t.Parallel()
 	// Single example header is not enough
 	input := "Example 1: Simple case\nhello -> HELLO\n\nNow do this."
 	_, imps := DetectAndWrapExamples(input)
@@ -87,6 +94,7 @@ func TestDetectAndWrapExamples_SingleHeader(t *testing.T) {
 }
 
 func TestDetectAndWrapExamples_ShortArrows(t *testing.T) {
+	t.Parallel()
 	// Arrows with < 5 chars on each side should not match
 	input := "a -> b\nc -> d\ne -> f"
 	_, imps := DetectAndWrapExamples(input)

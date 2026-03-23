@@ -115,6 +115,56 @@ func GaugeWithLabel(current, max float64, barWidth int, label string) string {
 	return fmt.Sprintf("%s %s", InlineGauge(current, max, barWidth), label)
 }
 
+// HealthSparkline renders a sparkline where each point is colored green or red
+// based on whether it falls below or above the threshold.
+// Values below threshold are "good" (green); above are "bad" (red).
+func HealthSparkline(data []float64, threshold float64, width int) string {
+	if len(data) == 0 || width <= 0 {
+		return ""
+	}
+
+	// Use the last `width` data points
+	if len(data) > width {
+		data = data[len(data)-width:]
+	}
+
+	// Find range
+	minV, maxV := data[0], data[0]
+	for _, v := range data {
+		if v < minV {
+			minV = v
+		}
+		if v > maxV {
+			maxV = v
+		}
+	}
+
+	rng := maxV - minV
+	if rng == 0 {
+		rng = 1
+	}
+
+	var result string
+	for _, v := range data {
+		normalized := (v - minV) / rng
+		idx := int(normalized * float64(len(sparkBlocks)-1))
+		if idx < 0 {
+			idx = 0
+		}
+		if idx >= len(sparkBlocks) {
+			idx = len(sparkBlocks) - 1
+		}
+		ch := string(sparkBlocks[idx])
+		if v > threshold {
+			result += styles.StatusFailed.Render(ch)
+		} else {
+			result += styles.StatusRunning.Render(ch)
+		}
+	}
+
+	return result
+}
+
 func repeatRune(r rune, n int) []rune {
 	if n <= 0 {
 		return nil

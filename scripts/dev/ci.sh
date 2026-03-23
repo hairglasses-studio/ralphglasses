@@ -18,6 +18,16 @@ fi
 
 "${go_cmd}" build ./...
 
+# E2E mock scenarios
+"${go_cmd}" test -run TestE2EAllScenarios ./internal/e2e/ -v -count=1
+
+# Regression gates (uses golden baseline from testdata/)
+if "${go_cmd}" run . gate-check --baseline internal/e2e/testdata/mock_baseline.json --hours 0 2>/dev/null; then
+  echo "gate-check: passed"
+else
+  echo "warning: gate-check failed or no data" >&2
+fi
+
 if command -v shellcheck >/dev/null 2>&1; then
   shellcheck distro/scripts/*.sh distro/dietpi/Automation_Custom_Script.sh scripts/*.sh scripts/dev/*.sh
 else

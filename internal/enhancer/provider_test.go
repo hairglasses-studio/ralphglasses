@@ -52,6 +52,7 @@ func TestNewPromptImprover_NilWhenNoKey(t *testing.T) {
 }
 
 func TestCacheKeyDiffersAcrossProviders(t *testing.T) {
+	t.Parallel()
 	cache := NewPromptCache()
 
 	opts1 := ImproveOptions{Provider: ProviderClaude}
