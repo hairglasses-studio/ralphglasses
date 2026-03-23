@@ -244,7 +244,7 @@ func runEnhanceWithMode(prompt, taskType, mode string, quiet bool) {
 	cfg.LLM.Enabled = true // --mode flag implies LLM should be available
 	engine := getOrCreateEngine(cfg.LLM)
 
-	result := enhancer.EnhanceHybrid(context.Background(), prompt, tt, cfg, engine, m)
+	result := enhancer.EnhanceHybrid(context.Background(), prompt, tt, cfg, engine, m, cfg.TargetProvider)
 
 	if quiet {
 		fmt.Println(result.Enhanced)
@@ -485,7 +485,7 @@ func runHook() {
 		fmt.Fprintf(os.Stderr, "prompt-improver: enhancing via LLM...\n")
 		start := time.Now()
 		engine := getOrCreateEngine(cfg.LLM)
-		result = enhancer.EnhanceHybrid(context.Background(), hi.Prompt, "", cfg, engine, enhancer.ModeAuto)
+		result = enhancer.EnhanceHybrid(context.Background(), hi.Prompt, "", cfg, engine, enhancer.ModeAuto, cfg.TargetProvider)
 		fmt.Fprintf(os.Stderr, "prompt-improver: enhanced via %s (%.1fs)\n", result.Source, time.Since(start).Seconds())
 	} else {
 		result = enhancer.EnhanceWithConfig(hi.Prompt, "", cfg)

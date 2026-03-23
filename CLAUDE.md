@@ -140,10 +140,10 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 | `ralphglasses_awesome_diff` | Compare current list against previous fetch (new/removed entries) |
 | `ralphglasses_awesome_report` | Generate formatted report from analysis results (json/markdown) |
 | `ralphglasses_awesome_sync` | Full pipeline: fetch → diff → analyze new → report → save |
-| `ralphglasses_prompt_analyze` | Score a prompt across 10 quality dimensions with letter grades and suggestions |
-| `ralphglasses_prompt_enhance` | Run the 13-stage deterministic prompt enhancement pipeline |
+| `ralphglasses_prompt_analyze` | Score a prompt across 10 quality dimensions with letter grades and suggestions (`target_provider`: claude/gemini/openai) |
+| `ralphglasses_prompt_enhance` | Run the 13-stage prompt enhancement pipeline (`target_provider`: claude/gemini/openai) |
 | `ralphglasses_prompt_lint` | Deep-lint a prompt for anti-patterns (unmotivated rules, injection risks, etc.) |
-| `ralphglasses_prompt_improve` | LLM-powered prompt improvement using Claude (requires ANTHROPIC_API_KEY) |
+| `ralphglasses_prompt_improve` | LLM-powered prompt improvement via Claude, Gemini, or OpenAI (`provider` param) |
 | `ralphglasses_prompt_templates` | List available prompt templates with descriptions and required variables |
 | `ralphglasses_prompt_template_fill` | Fill a prompt template with variable values |
 | `ralphglasses_claudemd_check` | Health-check a repo's CLAUDE.md for common issues |
@@ -161,13 +161,33 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 
 ## Prompt Enhancement
 
-The `internal/enhancer/` package (migrated from the archived `prompt-improver` repo) provides:
+The `internal/enhancer/` package (migrated from the archived `prompt-improver` repo) provides multi-provider prompt improvement and scoring:
 
-- **13-stage deterministic pipeline**: specificity, positive reframing, tone downgrade, XML structure, context reorder, format enforcement, self-check injection, and more
-- **10-dimensional quality scoring**: clarity, specificity, structure, examples, tone, etc. with letter grades (A-F)
+- **13-stage deterministic pipeline**: specificity, positive reframing, tone downgrade (Claude-only), XML/markdown structure (provider-aware), context reorder, format enforcement, self-check injection, and more
+- **10-dimensional quality scoring**: clarity, specificity, structure, examples, tone, etc. with letter grades (A-F) and provider-specific suggestions
 - **11+ lint rules**: unmotivated rules, negative framing, aggressive caps, vague quantifiers, injection risks, cache-unfriendly ordering
-- **LLM-backed hybrid mode**: Claude API meta-prompt improvement with circuit breaker and caching (requires `ANTHROPIC_API_KEY`)
+- **Multi-provider LLM improvement**: Claude, Gemini, and OpenAI API clients with provider-specific meta-prompts, circuit breaker, and caching
 - **CLAUDE.md health checks**: length, inline code, overtrigger language, style guide content detection
+- **Ralph loop auto-enhancement**: Planner and worker prompts are automatically enhanced for their target provider before session launch
+
+### Provider-Aware Behavior
+
+| Concept | `LLM.Provider` / `provider` | `TargetProvider` / `target_provider` |
+|---------|----------------------------|--------------------------------------|
+| Controls | Which API to call for improvement | Which model family the enhanced prompt targets |
+| Example | Use Claude API to improve a prompt | That will be sent to Gemini |
+| Env var | `PROMPT_IMPROVER_PROVIDER` | `PROMPT_IMPROVER_TARGET` |
+
+Pipeline stages that adapt per target provider:
+- **tone_downgrade**: Skipped for non-Claude targets (Claude 4.x overtrigger-specific)
+- **overtrigger_rewrite**: Skipped for non-Claude targets
+- **structure**: XML tags for Claude, markdown headers (`## Role`, `## Instructions`) for Gemini/OpenAI
+
+Scoring dimensions with provider-specific suggestions: Structure, Role Definition, Task Focus, Tone.
+
+### Enhancement in the Ralph Loop
+
+The `Manager.Enhancer` field on the session manager enables automatic prompt enhancement in `StepLoop`. Before launching planner and worker sessions, prompts are enhanced for the target provider (`ProviderCodex` maps to `ProviderOpenAI` for enhancement). Uses `ModeAuto` so LLM failures fall back to the local pipeline without blocking the loop.
 
 The `ralphglasses_session_launch` tool supports an `enhance_prompt` parameter to auto-enhance prompts before launch. The TUI launcher shows a real-time prompt quality score after editing.
 
@@ -180,7 +200,7 @@ The `ralphglasses_session_launch` tool supports an `enhance_prompt` parameter to
 - **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch
 - **internal/mcpserver/**: MCP tool handlers (52 tools, stdio transport via mcp-go)
   - `tools.go` — Server struct, constructors, Register(), all handler implementations, helpers
-  - `handler_prompt.go` — Prompt enhancement handlers: analyze, enhance, lint, improve, templates, classify, should_enhance, claudemd_check
+  - `handler_prompt.go` — Multi-provider prompt enhancement handlers: analyze, enhance, lint, improve (with provider param), templates, classify, should_enhance, claudemd_check
 - **internal/roadmap/**: Roadmap parsing, analysis, research, expansion, export
 - **internal/repofiles/**: Ralph config file scaffolding and optimization
 - **cmd/mcp.go**: MCP server subcommand (`go run . mcp`)

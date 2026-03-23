@@ -70,6 +70,9 @@ func (c *PromptCache) Put(prompt string, opts ImproveOptions, result *ImproveRes
 
 func (c *PromptCache) key(prompt string, opts ImproveOptions) string {
 	h := sha256.New()
+	if opts.Provider != "" {
+		h.Write([]byte(string(opts.Provider) + ":"))
+	}
 	h.Write([]byte(prompt))
 	if opts.ThinkingEnabled {
 		h.Write([]byte(":thinking"))
