@@ -89,10 +89,14 @@ func ValidatePath(p, scanRoot string) error {
 
 	// Resolve symlinks to prevent symlink-based traversal (best-effort: ignore
 	// errors for paths that don't exist yet).
+	realRoot, err := filepath.EvalSymlinks(absRoot)
+	if err != nil {
+		realRoot = absRoot // fall back to unresolved root
+	}
 	realP, err := filepath.EvalSymlinks(absP)
 	if err == nil {
-		if !strings.HasPrefix(realP+string(filepath.Separator), absRoot+string(filepath.Separator)) &&
-			realP != absRoot {
+		if !strings.HasPrefix(realP+string(filepath.Separator), realRoot+string(filepath.Separator)) &&
+			realP != realRoot {
 			return fmt.Errorf("symlink target escapes scan root")
 		}
 	} else if !os.IsNotExist(err) {
