@@ -153,14 +153,12 @@ func (m *Manager) Start(repoPath string) error {
 		return fmt.Errorf("loop already running for %s", filepath.Base(repoPath))
 	}
 
-	// Look for ralph_loop.sh in the repo, then fall back to `ralph` on PATH.
-	var cmd *exec.Cmd
+	// Look for ralph_loop.sh in the repo directory.
 	loopScript := filepath.Join(repoPath, "ralph_loop.sh")
-	if _, err := os.Stat(loopScript); err == nil {
-		cmd = exec.Command("bash", loopScript)
-	} else {
-		cmd = exec.Command("ralph")
+	if _, err := os.Stat(loopScript); err != nil {
+		return fmt.Errorf("no ralph_loop.sh found in %s — use the native Go loop via session manager instead", filepath.Base(repoPath))
 	}
+	cmd := exec.Command("bash", loopScript)
 	cmd.Dir = repoPath
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
