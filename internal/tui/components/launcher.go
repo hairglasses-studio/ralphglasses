@@ -80,8 +80,18 @@ func (l *SessionLauncher) HandleKey(keyType string, r rune) (LaunchResultMsg, bo
 			l.Editing = false
 			if l.Cursor == FieldPrompt && l.EditBuf != "" {
 				analysis := enhancer.Analyze(l.EditBuf)
-				l.ScoreLine = fmt.Sprintf("Score: %d/100 (%s) — %d suggestions",
-					analysis.ScoreReport.Overall, analysis.ScoreReport.Grade, len(analysis.Suggestions))
+				// Re-score for the selected provider
+				provider := enhancer.ProviderName(l.Fields[FieldProvider])
+				if provider == "codex" {
+					provider = enhancer.ProviderOpenAI
+				}
+				if provider != "" && provider != enhancer.ProviderClaude {
+					lints := enhancer.Lint(l.EditBuf)
+					report := enhancer.Score(l.EditBuf, analysis.TaskType, lints, &analysis, provider)
+					analysis.ScoreReport = report
+				}
+				l.ScoreLine = fmt.Sprintf("Score: %d/100 (%s) — %d suggestions [%s]",
+					analysis.ScoreReport.Overall, analysis.ScoreReport.Grade, len(analysis.Suggestions), provider)
 			}
 			return LaunchResultMsg{}, false
 		case "esc":
