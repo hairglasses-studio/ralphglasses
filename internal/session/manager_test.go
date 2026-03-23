@@ -1,6 +1,10 @@
 package session
 
 import (
+	"context"
+	"fmt"
+	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -425,5 +429,262 @@ func TestSessionOutputHistory(t *testing.T) {
 	}
 	if s.TurnCount != 3 {
 		t.Errorf("TurnCount = %d, want 3", s.TurnCount)
+	}
+}
+
+// makeTestSession creates a Session and registers it in the manager without
+// spawning a real process. Used by concurrent race tests.
+func makeTestSession(m *Manager, id, repoPath string, status SessionStatus) *Session {
+	s := &Session{
+		ID:           id,
+		Provider:     ProviderClaude,
+		RepoPath:     repoPath,
+		RepoName:     "test-repo",
+		Status:       status,
+		Model:        "sonnet",
+		LaunchedAt:   time.Now(),
+		LastActivity: time.Now(),
+		OutputCh:     make(chan string, 100),
+	}
+	m.mu.Lock()
+	m.sessions[id] = s
+	m.mu.Unlock()
+	return s
+}
+
+// TestManagerConcurrentSessionInsert exercises Manager under concurrent session
+// insertions and reads. Run with -race to detect data races.
+//
+// We inject sessions directly (without spawning real processes) to keep the
+// test hermetic while still exercising all map and status-read code paths.
+func TestManagerConcurrentSessionInsert(t *testing.T) {
+	const numSessions = 20
+
+	m := NewManager()
+
+	var wg sync.WaitGroup
+
+	// Concurrently insert sessions.
+	for i := 0; i < numSessions; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			makeTestSession(m, fmt.Sprintf("conc-sess-%d", i),
+				fmt.Sprintf("/tmp/repo-%d", i), StatusRunning)
+		}(i)
+	}
+
+	// Concurrently read session state while inserts are happening.
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = m.List("")
+			_ = m.ListTeams()
+			_ = m.IsRunning("/tmp/repo-0")
+			_ = m.FindByRepo("test-repo")
+		}()
+	}
+
+	wg.Wait()
+
+	sessions := m.List("")
+	if len(sessions) != numSessions {
+		t.Errorf("got %d sessions, want %d", len(sessions), numSessions)
+	}
+}
+
+// TestManagerConcurrentStopAll verifies StopAll races no other operations.
+func TestManagerConcurrentStopAll(t *testing.T) {
+	m := NewManager()
+	m.SetStateDir("")
+
+	// Inject 15 running sessions.
+	for i := 0; i < 15; i++ {
+		makeTestSession(m, fmt.Sprintf("stop-sess-%d", i), "/tmp/repo", StatusRunning)
+	}
+
+	var wg sync.WaitGroup
+
+	// Concurrent StopAll + List + Get.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		m.StopAll()
+	}()
+
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			_ = m.List("")
+			_, _ = m.Get(fmt.Sprintf("stop-sess-%d", i))
+		}(i)
+	}
+
+	wg.Wait()
+}
+
+// TestManagerConcurrentSessionWrite verifies concurrent writes to a single
+// Session's mutable fields are race-free.
+func TestManagerConcurrentSessionWrite(t *testing.T) {
+	s := &Session{
+		ID:        "race-sess",
+		BudgetUSD: 100.0,
+		OutputCh:  make(chan string, 256),
+	}
+
+	const workers = 20
+	var wg sync.WaitGroup
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			s.mu.Lock()
+			s.SpentUSD += 0.01
+			s.TurnCount++
+			s.CostHistory = append(s.CostHistory, float64(i)*0.001)
+			appendSessionOutput(s, fmt.Sprintf("output from worker %d", i))
+			s.mu.Unlock()
+		}(i)
+	}
+
+	// Concurrent readers.
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			s.mu.Lock()
+			_ = s.SpentUSD
+			_ = s.TurnCount
+			_ = len(s.OutputHistory)
+			s.mu.Unlock()
+		}()
+	}
+
+	wg.Wait()
+
+	s.mu.Lock()
+	turns := s.TurnCount
+	s.mu.Unlock()
+	if turns != workers {
+		t.Errorf("TurnCount = %d, want %d", turns, workers)
+	}
+}
+
+// TestGoroutineCleanupOnStop verifies that goroutines started for a session are
+// cancelled and exit after Stop() is called. No real process is spawned; sessions
+// are injected directly with a cancel func and a lifecycle goroutine that waits on
+// the session context — matching the pattern used by the real runner.
+func TestGoroutineCleanupOnStop(t *testing.T) {
+	m := NewManager()
+	m.SetStateDir("") // no disk I/O
+
+	// Capture baseline before creating any sessions.
+	runtime.Gosched()
+	baseline := runtime.NumGoroutine()
+
+	for i := 0; i < 5; i++ {
+		sCtx, cancel := context.WithCancel(context.Background())
+		id := fmt.Sprintf("gc-test-%d", i)
+		s := &Session{
+			ID:           id,
+			Provider:     ProviderClaude,
+			Status:       StatusRunning,
+			RepoPath:     "/tmp/test-goroutine-cleanup",
+			RepoName:     "test-repo",
+			LaunchedAt:   time.Now(),
+			LastActivity: time.Now(),
+			OutputCh:     make(chan string, 10),
+			cancel:       cancel,
+		}
+		m.mu.Lock()
+		m.sessions[id] = s
+		m.mu.Unlock()
+
+		// One goroutine representing the session lifecycle — exits on cancel.
+		go func(ctx context.Context, sess *Session) {
+			defer close(sess.OutputCh)
+			<-ctx.Done()
+			sess.mu.Lock()
+			if sess.Status == StatusRunning {
+				sess.Status = StatusStopped
+			}
+			sess.mu.Unlock()
+		}(sCtx, s)
+
+		if err := m.Stop(id); err != nil {
+			t.Fatalf("stop %d: %v", i, err)
+		}
+	}
+
+	// Allow goroutines to observe ctx.Done() and exit.
+	time.Sleep(50 * time.Millisecond)
+	runtime.Gosched()
+
+	after := runtime.NumGoroutine()
+	if after > baseline+2 {
+		t.Errorf("goroutine leak: baseline=%d after 5 start/stop cycles=%d (delta=%d, want ≤2)",
+			baseline, after, after-baseline)
+	}
+}
+
+// TestManagerConcurrentDelegateTask verifies concurrent DelegateTask calls
+// do not race on the team's Tasks slice.
+func TestManagerConcurrentDelegateTask(t *testing.T) {
+	m := NewManager()
+
+	m.mu.Lock()
+	m.teams["race-team"] = &TeamStatus{
+		Name:     "race-team",
+		RepoPath: "/tmp/repo",
+		LeadID:   "lead",
+		Status:   StatusRunning,
+	}
+	m.sessions["lead"] = &Session{ID: "lead", Status: StatusRunning}
+	m.mu.Unlock()
+
+	const n = 30
+	var wg sync.WaitGroup
+	errs := make(chan error, n)
+
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			_, err := m.DelegateTask("race-team", TeamTask{
+				Description: fmt.Sprintf("task-%d", i),
+				Status:      "pending",
+			})
+			if err != nil {
+				errs <- err
+			}
+		}(i)
+	}
+
+	// Concurrent reads while tasks are being delegated.
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = m.GetTeam("race-team")
+			_ = m.ListTeams()
+		}()
+	}
+
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Errorf("concurrent delegate error: %v", err)
+	}
+
+	team, ok := m.GetTeam("race-team")
+	if !ok {
+		t.Fatal("team not found")
+	}
+	if len(team.Tasks) != n {
+		t.Errorf("Tasks = %d, want %d", len(team.Tasks), n)
 	}
 }
