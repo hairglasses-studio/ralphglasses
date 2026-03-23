@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Ralphglasses 12-Hour Marathon Loop Launcher
-# Supervises ralph_loop.sh with budget guardrails, duration limits, and checkpoints.
+# Supervises a ralph loop with budget guardrails, duration limits, and checkpoints.
 
 # --- Defaults (override with flags or env vars) ---
 BUDGET="${BUDGET:-100}"
@@ -129,10 +129,14 @@ fi
 
 # --- Find ralph ---
 if [[ -z "$RALPH_CMD" ]]; then
-    if command -v ralph &>/dev/null; then
-        RALPH_CMD="ralph"
+    # Default to the ralphglasses binary itself with the loop subcommand
+    if command -v ralphglasses &>/dev/null; then
+        RALPH_CMD="ralphglasses"
+    elif [[ -f "$PROJECT_DIR/ralph_loop.sh" ]]; then
+        RALPH_CMD="bash $PROJECT_DIR/ralph_loop.sh"
     else
-        echo "Error: Cannot find ralph. Set RALPH_CMD or install ralph." >&2
+        echo "Error: Cannot find ralphglasses binary or ralph_loop.sh in project dir." >&2
+        echo "       Build with: go build -o ralphglasses . && sudo mv ralphglasses /usr/local/bin/" >&2
         exit 1
     fi
 fi

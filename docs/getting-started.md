@@ -219,7 +219,7 @@ Aggregate view: total cost by provider, active loops, circuit breaker summary, a
 2. Select a ralph-enabled repo with `j`/`k`.
 3. Press `S` to start the loop.
 
-Ralphglasses looks for `ralph_loop.sh` in the repo directory first, then falls back to the `ralph` binary on `$PATH`. The loop runs as a background process. Its PID is written to `.ralph/ralphglasses.pid`.
+Ralphglasses launches the loop as a background process. If a `ralph_loop.sh` exists in the repo directory, it runs that; otherwise, it uses the native Go loop. The PID is written to `.ralph/ralphglasses.pid`.
 
 To watch live logs: press `Enter` on the repo to open repo detail, then `Enter` again on the log entry to open the log viewer. Press `f` to follow new output.
 
@@ -290,11 +290,11 @@ ralphglasses_fleet_status {}
 - Check that `--scan-path` points to the right directory.
 - Use `ralphglasses_scan` (MCP) or run `ralphglasses_repo_scaffold` to initialize a repo.
 
-### Loop won't start: "ralph: command not found"
+### Loop won't start
 
-- Install the `ralph` binary or ensure `ralph_loop.sh` exists in the repo.
-- The `ralph` CLI lives at `~/.local/bin/ralph` if installed via the standard script.
-- Add `~/.local/bin` to your `$PATH`.
+- Ensure the repo has a `.ralph/` directory and `.ralphrc` config.
+- If using a custom `ralph_loop.sh`, verify it exists in the repo root.
+- For the native Go loop, no external binary is needed.
 
 ### Circuit breaker is OPEN
 

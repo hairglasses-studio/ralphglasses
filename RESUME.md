@@ -19,11 +19,7 @@ go vet ./...
 #    Or: op read "op://Personal/Anthropic API Key (Work - 10K credits)/credential" --account my.1password.com
 export ANTHROPIC_API_KEY="$(op read 'op://Personal/Anthropic API Key (Work - 10K credits)/credential' --account my.1password.com)"
 
-# 5. Install ralph-claude-code (if not present)
-git clone <ralph-claude-code-repo-url> ~/hairglasses-studio/ralph-claude-code
-# Ensure `ralph` is on PATH or set RALPH_CMD
-
-# 6. Launch the marathon
+# 5. Launch the marathon
 ./marathon.sh -b 100 -d 12 -c 80 -v -m
 ```
 
