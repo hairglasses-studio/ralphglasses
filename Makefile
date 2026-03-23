@@ -1,10 +1,13 @@
-VERSION := $(shell git describe --tags --always --dirty)
-COMMIT  := $(shell git rev-parse --short HEAD)
-LDFLAGS := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSION) -X github.com/hairglasses-studio/ralphglasses/cmd.commit=$(COMMIT)
+VERSION    := $(shell git describe --tags --always --dirty)
+COMMIT     := $(shell git rev-parse --short HEAD)
+BUILD_DATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSION) \
+              -X github.com/hairglasses-studio/ralphglasses/cmd.commit=$(COMMIT) \
+              -X github.com/hairglasses-studio/ralphglasses/cmd.buildDate=$(BUILD_DATE)
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-integration test-scripts fuzz build build-release install build-prompt-improver install-prompt-improver vet lint ci clean release snapshot mcp dev-mcp
+.PHONY: bootstrap doctor test test-verbose test-cover test-integration test-scripts fuzz build build-release install build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example
 
 bootstrap:
 	./scripts/bootstrap-toolchain.sh
@@ -93,6 +96,27 @@ clean:
 	rm -f prompt-improver
 	$(GO) clean ./...
 
+# Generate CHANGELOG.md from git log grouped by version tags
+changelog:
+	@echo "# Changelog\n" > CHANGELOG.md
+	@echo "All notable changes to this project will be documented in this file.\n" >> CHANGELOG.md
+	@TAGS=$$(git tag --sort=-version:refname); \
+	if [ -z "$$TAGS" ]; then \
+		echo "## Unreleased\n" >> CHANGELOG.md; \
+		git log --oneline --no-merges --format="- %s ([%h](../../commit/%H))" >> CHANGELOG.md; \
+	else \
+		PREV="HEAD"; \
+		for TAG in $$TAGS; do \
+			echo "## $$TAG\n" >> CHANGELOG.md; \
+			git log --oneline --no-merges --format="- %s ([%h](../../commit/%H))" "$$TAG..$$PREV" >> CHANGELOG.md; \
+			echo "" >> CHANGELOG.md; \
+			PREV="$$TAG"; \
+		done; \
+		echo "## Initial Release\n" >> CHANGELOG.md; \
+		git log --oneline --no-merges --format="- %s ([%h](../../commit/%H))" "$$PREV" >> CHANGELOG.md; \
+	fi
+	@echo "Generated CHANGELOG.md"
+
 # Goreleaser release
 release:
 	goreleaser release --clean
@@ -108,3 +132,14 @@ mcp: build-release
 # Run MCP server with live compilation (always fresh code)
 dev-mcp:
 	./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio
+
+# Plugin example target (placeholder — see internal/plugin/loader.go TODO)
+# Actual .so plugin compilation requires: go build -buildmode=plugin -o my-plugin.so ./my-plugin/
+# For production use, hashicorp/go-plugin is recommended over Go's native plugin package.
+# See: https://github.com/hashicorp/go-plugin
+plugin-example:
+	@echo "Plugin system scaffolded. To build a plugin as a .so:"
+	@echo "  $(GO) build -buildmode=plugin -o my-plugin.so ./path/to/plugin/"
+	@echo ""
+	@echo "Built-in logger plugin: internal/plugin/builtin/logger.go"
+	@echo "For production plugins, see the TODO in internal/plugin/loader.go"

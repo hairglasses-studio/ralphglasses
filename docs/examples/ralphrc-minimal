@@ -1,0 +1,4 @@
+# Minimal .ralphrc
+# Only the required fields. Everything else uses defaults.
+
+PROJECT_NAME="my-project"
