@@ -112,6 +112,14 @@ func (p *PrometheusRecorder) Handler() http.HandlerFunc {
 	}
 }
 
+// RecordToolCall records a single MCP tool invocation for Prometheus.
+func (p *PrometheusRecorder) RecordToolCall(toolName string, latencyMs int64, status string) {
+	labels := map[string]string{"tool": toolName, "status": status}
+	p.incCounter("mcp_tool_calls_total", "Total MCP tool calls", labels)
+	p.addCounter("mcp_tool_latency_ms_sum", map[string]string{"tool": toolName}, float64(latencyMs))
+	p.addCounter("mcp_tool_latency_ms_count", map[string]string{"tool": toolName}, 1)
+}
+
 func (p *PrometheusRecorder) incCounter(name, help string, labels map[string]string) {
 	p.addCounter(name, labels, 1)
 	p.mu.Lock()

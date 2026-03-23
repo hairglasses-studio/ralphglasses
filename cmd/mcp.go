@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"path/filepath"
+
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 
@@ -15,7 +17,7 @@ var mcpCmd = &cobra.Command{
 	Short: "Run as an MCP server on stdio",
 	Long: `Start ralphglasses as a Model Context Protocol (MCP) server on stdio.
 
-This exposes 48 tools for managing ralph loops and multi-provider LLM sessions
+This exposes 80+ tools for managing ralph loops and multi-provider LLM sessions
 programmatically from any MCP-capable client (e.g., Claude Code).
 
 Install via claude CLI:
@@ -26,17 +28,29 @@ Or with a custom scan path:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
 
+		// Tool call recorder: writes to <scanPath>/.ralph/tool_benchmarks.jsonl
+		benchPath := filepath.Join(sp, ".ralph", "tool_benchmarks.jsonl")
+		toolRec := mcpserver.NewToolCallRecorder(benchPath, nil, 50)
+		defer toolRec.Close()
+
+		bus := events.NewBus(1000)
+
 		srv := server.NewMCPServer(
 			"ralphglasses",
 			version+" ("+commit+")",
 			server.WithToolCapabilities(true),
+			server.WithRecovery(),
+			// Outermost → innermost: instrumentation → event bus → validation → handler
+			server.WithToolHandlerMiddleware(mcpserver.InstrumentationMiddleware(toolRec)),
+			server.WithToolHandlerMiddleware(mcpserver.EventBusMiddleware(bus)),
+			server.WithToolHandlerMiddleware(mcpserver.ValidationMiddleware(sp)),
 		)
 
-		bus := events.NewBus(1000)
 		hookExec := hooks.NewExecutor(bus)
 		hookExec.Start()
 		defer hookExec.Stop()
 		rg := mcpserver.NewServerWithBus(sp, bus)
+		rg.ToolRecorder = toolRec
 		rg.Register(srv)
 
 		return server.ServeStdio(srv)
