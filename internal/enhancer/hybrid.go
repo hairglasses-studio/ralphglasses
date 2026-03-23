@@ -12,7 +12,7 @@ type EnhanceMode string
 
 const (
 	ModeLocal EnhanceMode = "local" // deterministic 13-stage pipeline
-	ModeLLM   EnhanceMode = "llm"   // Claude Messages API + meta-prompt
+	ModeLLM   EnhanceMode = "llm"   // LLM API + meta-prompt
 	ModeAuto  EnhanceMode = "auto"  // try LLM, fall back to local
 )
 
@@ -28,10 +28,10 @@ func ValidMode(s string) EnhanceMode {
 
 // HybridEngine manages the LLM client, circuit breaker, and cache.
 type HybridEngine struct {
-	Client  *LLMClient
-	CB      *CircuitBreaker
-	Cache   *PromptCache
-	Cfg     LLMConfig
+	Client PromptImprover
+	CB     *CircuitBreaker
+	Cache  *PromptCache
+	Cfg    LLMConfig
 }
 
 // NewHybridEngine creates a hybrid engine from config.
@@ -41,7 +41,7 @@ func NewHybridEngine(cfg LLMConfig) *HybridEngine {
 		return nil
 	}
 
-	client := NewLLMClient(cfg)
+	client := NewPromptImprover(cfg)
 	if client == nil {
 		return nil
 	}
@@ -56,10 +56,17 @@ func NewHybridEngine(cfg LLMConfig) *HybridEngine {
 
 // EnhanceHybrid runs the enhancement using the specified mode.
 // For "auto" mode: tries LLM first, falls back to local pipeline on failure.
-func EnhanceHybrid(ctx context.Context, prompt string, taskType TaskType, cfg Config, engine *HybridEngine, mode EnhanceMode) EnhanceResult {
+// The targetProvider controls pipeline stage behavior (XML vs markdown structure)
+// and scoring suggestions. Empty defaults to the engine's provider.
+func EnhanceHybrid(ctx context.Context, prompt string, taskType TaskType, cfg Config, engine *HybridEngine, mode EnhanceMode, targetProvider ProviderName) EnhanceResult {
 	// Determine effective mode
 	if mode == "" {
 		mode = ModeAuto
+	}
+
+	// Apply target provider to config for pipeline stage behavior
+	if targetProvider != "" {
+		cfg.TargetProvider = targetProvider
 	}
 
 	// Local mode or no engine available
@@ -73,6 +80,7 @@ func EnhanceHybrid(ctx context.Context, prompt string, taskType TaskType, cfg Co
 	opts := ImproveOptions{
 		ThinkingEnabled: engine.Cfg.ThinkingEnabled,
 		TaskType:        taskType,
+		Provider:        engine.Client.Provider(),
 	}
 
 	// Check cache first

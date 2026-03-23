@@ -39,18 +39,19 @@ func gradeForScore(score int) string {
 
 // Score produces a multi-dimensional ScoreReport for a prompt.
 // It reuses existing AnalyzeResult booleans and lint findings to avoid duplicating detection.
-func Score(text string, taskType TaskType, lints []LintResult, ar *AnalyzeResult) *ScoreReport {
+// The targetProvider parameter adjusts suggestions for the target model family.
+func Score(text string, taskType TaskType, lints []LintResult, ar *AnalyzeResult, targetProvider ProviderName) *ScoreReport {
 	dims := []DimensionScore{
 		scoreClarity(text, taskType, lints, ar),
 		scoreSpecificity(text, taskType, lints, ar),
 		scoreContextMotivation(text, taskType, lints, ar),
-		scoreStructure(text, taskType, lints, ar),
+		scoreStructure(text, taskType, lints, ar, targetProvider),
 		scoreExamples(text, taskType, lints, ar),
 		scoreDocumentPlacement(text, taskType, lints, ar),
-		scoreRoleDefinition(text, taskType, lints, ar),
-		scoreTaskFocus(text, taskType, lints, ar),
+		scoreRoleDefinition(text, taskType, lints, ar, targetProvider),
+		scoreTaskFocus(text, taskType, lints, ar, targetProvider),
 		scoreFormatSpec(text, taskType, lints, ar),
-		scoreTone(text, taskType, lints, ar),
+		scoreTone(text, taskType, lints, ar, targetProvider),
 	}
 
 	// Compute weighted overall
@@ -88,6 +89,17 @@ func Score(text string, taskType TaskType, lints []LintResult, ar *AnalyzeResult
 }
 
 // --- helpers ---
+
+// hasMarkdownStructure checks if a prompt uses markdown header sections for structure.
+func hasMarkdownStructure(text string) bool {
+	headers := 0
+	for _, line := range strings.Split(text, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "## ") {
+			headers++
+		}
+	}
+	return headers >= 2
+}
 
 func countLintCategory(lints []LintResult, category string) int {
 	n := 0
@@ -247,14 +259,20 @@ func scoreContextMotivation(text string, _ TaskType, lints []LintResult, ar *Ana
 	}
 }
 
-func scoreStructure(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult) DimensionScore {
+func scoreStructure(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult, targetProvider ProviderName) DimensionScore {
 	score := 40
 	var suggestions []string
 
 	if ar.HasXML {
 		score += 40
+	} else if hasMarkdownStructure(text) {
+		score += 35 // markdown structure is nearly as good for non-Claude
 	} else {
-		suggestions = append(suggestions, "Add XML structure tags — Claude is specifically trained to recognize them")
+		if targetProvider == ProviderGemini || targetProvider == ProviderOpenAI {
+			suggestions = append(suggestions, "Add structured markdown sections (## Role, ## Instructions, ## Constraints)")
+		} else {
+			suggestions = append(suggestions, "Add XML structure tags — Claude is specifically trained to recognize them")
+		}
 	}
 
 	// Count distinct XML tags
@@ -367,7 +385,7 @@ func scoreDocumentPlacement(text string, _ TaskType, lints []LintResult, ar *Ana
 	}
 }
 
-func scoreRoleDefinition(text string, _ TaskType, _ []LintResult, _ *AnalyzeResult) DimensionScore {
+func scoreRoleDefinition(text string, _ TaskType, _ []LintResult, _ *AnalyzeResult, _ ProviderName) DimensionScore {
 	score := 35
 	var suggestions []string
 
@@ -388,7 +406,7 @@ func scoreRoleDefinition(text string, _ TaskType, _ []LintResult, _ *AnalyzeResu
 	}
 
 	if score <= 35 {
-		suggestions = append(suggestions, "Add a role definition — 'You are an expert...' sets Claude's expertise level")
+		suggestions = append(suggestions, "Add a role definition — 'You are an expert...' sets the model's expertise level")
 	}
 
 	score = clamp(score, 0, 100)
@@ -401,7 +419,7 @@ func scoreRoleDefinition(text string, _ TaskType, _ []LintResult, _ *AnalyzeResu
 	}
 }
 
-func scoreTaskFocus(text string, _ TaskType, lints []LintResult, _ *AnalyzeResult) DimensionScore {
+func scoreTaskFocus(text string, _ TaskType, lints []LintResult, _ *AnalyzeResult, _ ProviderName) DimensionScore {
 	score := 60
 	var suggestions []string
 
@@ -422,7 +440,7 @@ func scoreTaskFocus(text string, _ TaskType, lints []LintResult, _ *AnalyzeResul
 	switch {
 	case len(verbs) == 0:
 		score -= 10
-		suggestions = append(suggestions, "Add clear action verbs — tell Claude exactly what to do")
+		suggestions = append(suggestions, "Add clear action verbs — tell the model exactly what to do")
 	case len(verbs) >= 1 && len(verbs) <= 3:
 		score += 20 // focused
 	case len(verbs) > 3:
@@ -472,18 +490,28 @@ func scoreFormatSpec(text string, _ TaskType, _ []LintResult, ar *AnalyzeResult)
 	}
 }
 
-func scoreTone(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult) DimensionScore {
+func scoreTone(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult, targetProvider ProviderName) DimensionScore {
 	score := 80 // default good tone
 	var suggestions []string
 
 	if ar.HasAggressiveCaps {
-		score -= 25
-		suggestions = append(suggestions, "Downgrade ALL-CAPS emphasis — Claude 4.x overtriggers on aggressive language")
+		if targetProvider == "" || targetProvider == ProviderClaude {
+			score -= 25
+			suggestions = append(suggestions, "Downgrade ALL-CAPS emphasis — Claude 4.x overtriggers on aggressive language")
+		} else {
+			score -= 10 // mild penalty for non-Claude
+			suggestions = append(suggestions, "Consider reducing ALL-CAPS emphasis for cleaner tone")
+		}
 	}
 
 	if ar.HasNegativeFrames {
-		score -= 20
-		suggestions = append(suggestions, "Reframe negative instructions as positive — Claude 4.x can reverse-psychology on negatives")
+		if targetProvider == "" || targetProvider == ProviderClaude {
+			score -= 20
+			suggestions = append(suggestions, "Reframe negative instructions as positive — Claude 4.x can reverse-psychology on negatives")
+		} else {
+			score -= 10 // mild penalty for non-Claude
+			suggestions = append(suggestions, "Consider reframing negative instructions as positive for clarity")
+		}
 	}
 
 	// Overtrigger phrases

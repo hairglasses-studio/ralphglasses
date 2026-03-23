@@ -163,7 +163,7 @@ func mcpHandleImprove(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		return mcpErrResult("ANTHROPIC_API_KEY not set — cannot use LLM improvement. Use mode=local for deterministic enhancement."), nil
 	}
 
-	result := enhancer.EnhanceHybrid(ctx, prompt, tt, cfg, engine, mode)
+	result := enhancer.EnhanceHybrid(ctx, prompt, tt, cfg, engine, mode, cfg.TargetProvider)
 	return mcpJSONResult(result), nil
 }
 

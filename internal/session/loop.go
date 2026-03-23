@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/roadmap"
 )
 
@@ -229,6 +230,11 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		return m.failLoopIteration(run, index, fmt.Errorf("build planner prompt: %w", err))
 	}
 
+	// Enhance planner prompt for the planner's target provider
+	if m.Enhancer != nil {
+		plannerPrompt = m.enhanceForProvider(ctx, plannerPrompt, profile.PlannerProvider)
+	}
+
 	plannerSession, err := m.launchWorkflowSession(ctx, LaunchOptions{
 		Provider:     profile.PlannerProvider,
 		RepoPath:     repoPath,
@@ -264,10 +270,16 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		return m.failLoopIteration(run, index, fmt.Errorf("create worktree: %w", err))
 	}
 
+	// Enhance worker prompt for the worker's target provider
+	workerPrompt := task.Prompt
+	if m.Enhancer != nil {
+		workerPrompt = m.enhanceForProvider(ctx, workerPrompt, profile.WorkerProvider)
+	}
+
 	workerSession, err := m.launchWorkflowSession(ctx, LaunchOptions{
 		Provider:     profile.WorkerProvider,
 		RepoPath:     worktreePath,
-		Prompt:       task.Prompt,
+		Prompt:       workerPrompt,
 		Model:        profile.WorkerModel,
 		MaxBudgetUSD: profile.WorkerBudgetUSD,
 		SessionName:  fmt.Sprintf("loop-work-%s-%03d", run.RepoName, iteration.Number),
@@ -719,6 +731,27 @@ func firstNonBlank(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// enhanceForProvider runs hybrid prompt enhancement targeting the given session provider.
+// Uses ModeAuto so LLM failures fall back to the local pipeline — never blocks the loop.
+func (m *Manager) enhanceForProvider(ctx context.Context, prompt string, provider Provider) string {
+	target := mapProvider(provider)
+	cfg := enhancer.Config{TargetProvider: target}
+	result := enhancer.EnhanceHybrid(ctx, prompt, "", cfg, m.Enhancer, enhancer.ModeAuto, target)
+	return result.Enhanced
+}
+
+// mapProvider converts a session Provider to the enhancer's ProviderName.
+func mapProvider(p Provider) enhancer.ProviderName {
+	switch p {
+	case ProviderGemini:
+		return enhancer.ProviderGemini
+	case ProviderCodex:
+		return enhancer.ProviderOpenAI
+	default:
+		return enhancer.ProviderClaude
+	}
 }
 
 func (m *Manager) loopStateDir() string {

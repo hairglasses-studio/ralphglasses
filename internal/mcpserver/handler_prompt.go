@@ -15,12 +15,29 @@ import (
 
 func (s *Server) getEngine() *enhancer.HybridEngine {
 	s.engineOnce.Do(func() {
+		provider := os.Getenv("PROMPT_IMPROVER_PROVIDER")
+		if provider == "" {
+			provider = "claude"
+		}
 		s.Engine = enhancer.NewHybridEngine(enhancer.LLMConfig{
-			Enabled: os.Getenv("ANTHROPIC_API_KEY") != "",
-			Model:   os.Getenv("PROMPT_IMPROVER_MODEL"),
+			Enabled:  hasAPIKeyForProvider(provider),
+			Model:    os.Getenv("PROMPT_IMPROVER_MODEL"),
+			Provider: provider,
 		})
 	})
 	return s.Engine
+}
+
+// hasAPIKeyForProvider checks whether the environment has an API key for the given provider.
+func hasAPIKeyForProvider(provider string) bool {
+	switch provider {
+	case "gemini":
+		return os.Getenv("GOOGLE_API_KEY") != "" || os.Getenv("GEMINI_API_KEY") != ""
+	case "openai":
+		return os.Getenv("OPENAI_API_KEY") != ""
+	default:
+		return os.Getenv("ANTHROPIC_API_KEY") != ""
+	}
 }
 
 func (s *Server) handlePromptAnalyze(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -31,6 +48,21 @@ func (s *Server) handlePromptAnalyze(_ context.Context, req mcp.CallToolRequest)
 	result := enhancer.Analyze(prompt)
 	if tt := enhancer.ValidTaskType(getStringArg(req, "task_type")); tt != "" {
 		result.TaskType = tt
+	}
+	// Re-score with target provider if specified
+	if tp := getStringArg(req, "target_provider"); tp != "" {
+		targetProvider := enhancer.ProviderName(tp)
+		lints := enhancer.Lint(prompt)
+		report := enhancer.Score(prompt, result.TaskType, lints, &result, targetProvider)
+		result.ScoreReport = report
+		legacyScore := report.Overall / 10
+		if legacyScore < 1 {
+			legacyScore = 1
+		}
+		if legacyScore > 10 {
+			legacyScore = 10
+		}
+		result.Score = legacyScore
 	}
 	return jsonResult(result), nil
 }
@@ -51,13 +83,18 @@ func (s *Server) handlePromptEnhance(ctx context.Context, req mcp.CallToolReques
 		}
 	}
 
+	// Apply target provider if specified
+	if tp := getStringArg(req, "target_provider"); tp != "" {
+		cfg.TargetProvider = enhancer.ProviderName(tp)
+	}
+
 	mode := enhancer.ValidMode(modeStr)
 	if mode == "" || mode == enhancer.ModeLocal {
 		result := enhancer.EnhanceWithConfig(prompt, taskType, cfg)
 		return jsonResult(result), nil
 	}
 
-	result := enhancer.EnhanceHybrid(ctx, prompt, taskType, cfg, s.getEngine(), mode)
+	result := enhancer.EnhanceHybrid(ctx, prompt, taskType, cfg, s.getEngine(), mode, cfg.TargetProvider)
 	return jsonResult(result), nil
 }
 
@@ -80,18 +117,42 @@ func (s *Server) handlePromptImprove(ctx context.Context, req mcp.CallToolReques
 	if prompt == "" {
 		return errResult("prompt required"), nil
 	}
-	engine := s.getEngine()
-	if engine == nil || engine.Client == nil {
-		return errResult("LLM not available: set ANTHROPIC_API_KEY"), nil
+
+	// If a specific provider is requested, create a one-off client for it
+	providerStr := getStringArg(req, "provider")
+	var client enhancer.PromptImprover
+	if providerStr != "" && providerStr != "claude" {
+		client = enhancer.NewPromptImprover(enhancer.LLMConfig{
+			Enabled:  true,
+			Provider: providerStr,
+		})
+	} else {
+		engine := s.getEngine()
+		if engine != nil {
+			client = engine.Client
+		}
 	}
+
+	if client == nil {
+		apiHint := "ANTHROPIC_API_KEY"
+		switch providerStr {
+		case "gemini":
+			apiHint = "GOOGLE_API_KEY"
+		case "openai":
+			apiHint = "OPENAI_API_KEY"
+		}
+		return errResult(fmt.Sprintf("LLM not available: set %s", apiHint)), nil
+	}
+
 	taskType := enhancer.ValidTaskType(getStringArg(req, "task_type"))
 	thinking := getBoolArg(req, "thinking_enabled")
 	feedback := getStringArg(req, "feedback")
 
-	result, err := engine.Client.Improve(ctx, prompt, enhancer.ImproveOptions{
+	result, err := client.Improve(ctx, prompt, enhancer.ImproveOptions{
 		ThinkingEnabled: thinking,
 		TaskType:        taskType,
 		Feedback:        feedback,
+		Provider:        client.Provider(),
 	})
 	if err != nil {
 		return errResult(fmt.Sprintf("improve failed: %v", err)), nil

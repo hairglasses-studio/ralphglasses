@@ -435,14 +435,16 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithDescription("Score a prompt across 10 quality dimensions (clarity, specificity, structure, examples, etc.) with letter grades and actionable suggestions"),
 		mcp.WithString("prompt", mcp.Required(), mcp.Description("The prompt text to analyze")),
 		mcp.WithString("task_type", mcp.Description("Override auto-detection: code, troubleshooting, analysis, creative, workflow, general")),
+		mcp.WithString("target_provider", mcp.Description("Target model provider for scoring suggestions: claude (default), gemini, openai")),
 	), s.handlePromptAnalyze)
 
 	srv.AddTool(mcp.NewTool("ralphglasses_prompt_enhance",
 		mcp.WithDescription("Run the 13-stage prompt enhancement pipeline (specificity, positive reframing, XML structure, context reorder, format enforcement, etc.)"),
 		mcp.WithString("prompt", mcp.Required(), mcp.Description("The prompt text to enhance")),
 		mcp.WithString("task_type", mcp.Description("Override auto-detection: code, troubleshooting, analysis, creative, workflow, general")),
-		mcp.WithString("mode", mcp.Description("Enhancement mode: local (default, deterministic), llm (Claude API), auto (try LLM, fallback to local)")),
+		mcp.WithString("mode", mcp.Description("Enhancement mode: local (default, deterministic), llm (Claude/Gemini/OpenAI API), auto (try LLM, fallback to local)")),
 		mcp.WithString("repo", mcp.Description("Repo name to load .prompt-improver.yaml config from")),
+		mcp.WithString("target_provider", mcp.Description("Target model provider — controls structure style and scoring: claude (default), gemini, openai")),
 	), s.handlePromptEnhance)
 
 	srv.AddTool(mcp.NewTool("ralphglasses_prompt_lint",
@@ -451,11 +453,12 @@ func (s *Server) Register(srv *server.MCPServer) {
 	), s.handlePromptLint)
 
 	srv.AddTool(mcp.NewTool("ralphglasses_prompt_improve",
-		mcp.WithDescription("LLM-powered prompt improvement using Claude with domain-specific meta-prompts (requires ANTHROPIC_API_KEY)"),
+		mcp.WithDescription("LLM-powered prompt improvement using Claude, Gemini, or OpenAI with domain-specific meta-prompts"),
 		mcp.WithString("prompt", mcp.Required(), mcp.Description("The prompt text to improve")),
 		mcp.WithString("task_type", mcp.Description("Override auto-detection: code, troubleshooting, analysis, creative, workflow, general")),
 		mcp.WithBoolean("thinking_enabled", mcp.Description("Include thinking scaffolding in the improved prompt")),
 		mcp.WithString("feedback", mcp.Description("Optional feedback to guide the improvement direction")),
+		mcp.WithString("provider", mcp.Description("LLM provider for improvement: claude (default, requires ANTHROPIC_API_KEY), gemini (requires GOOGLE_API_KEY), openai (requires OPENAI_API_KEY)")),
 	), s.handlePromptImprove)
 
 	// Prompt utility tools
@@ -1185,7 +1188,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 			if mode == "" {
 				mode = enhancer.ModeLocal
 			}
-			eResult := enhancer.EnhanceHybrid(ctx, prompt, "", cfg, s.getEngine(), mode)
+			eResult := enhancer.EnhanceHybrid(ctx, prompt, "", cfg, s.getEngine(), mode, "")
 			opts.Prompt = eResult.Enhanced
 		}
 	}
@@ -2528,6 +2531,11 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 	}
 	if commands := splitLines(getStringArg(req, "verify_commands")); len(commands) > 0 {
 		profile.VerifyCommands = commands
+	}
+
+	// Wire prompt enhancer into session manager for loop integration
+	if s.SessMgr.Enhancer == nil {
+		s.SessMgr.Enhancer = s.getEngine()
 	}
 
 	run, err := s.SessMgr.StartLoop(ctx, r.Path, profile)
