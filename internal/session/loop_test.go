@@ -202,6 +202,9 @@ func setupLoopRepo(t *testing.T) string {
 	if err := os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(repoPath, ".ralphrc"), []byte("PROJECT_NAME=\"test\"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(repoPath, "ROADMAP.md"), []byte("# Loop Roadmap\n\n## Phase 1\n\n### 1.1\n- [ ] 1.1.1 — Add README note\n"), 0644); err != nil {
 		t.Fatal(err)
 	}

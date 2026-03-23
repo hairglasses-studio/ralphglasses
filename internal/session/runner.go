@@ -161,6 +161,16 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader) {
 		}
 	}
 
+	// Detect Extra Usage quota exhaustion (Claude-specific).
+	// CLI may exit 0 but the session is useless — stop retrying.
+	if s.Provider == ProviderClaude && isExtraUsageExhausted(s) {
+		s.Status = StatusErrored
+		s.ExitReason = "extra_usage_exhausted"
+		if s.Error == "" {
+			s.Error = "Claude Extra Usage quota exhausted"
+		}
+	}
+
 	// Fallback: if no output was captured from stdout events, use cleaned stderr
 	if s.LastOutput == "" && s.Error == "" {
 		if cleaned := cleanProviderOutput(s.Provider, stderrBuf.String()); cleaned != "" {
@@ -311,11 +321,12 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader) {
 				if event.NumTurns > 0 {
 					s.TurnCount = event.NumTurns
 				}
-				if event.SessionID != "" {
-					s.ProviderSessionID = event.SessionID
-				}
 				if event.IsError {
 					s.Error = truncateStr(firstNonEmpty(event.Error, event.Result, event.Text), 2000)
+					// Do NOT persist session ID from error responses — using a
+					// bad ID on resume causes infinite retry loops.
+				} else if event.SessionID != "" {
+					s.ProviderSessionID = event.SessionID
 				}
 			default:
 				if eventText != "" {
@@ -342,6 +353,23 @@ func appendSessionOutput(s *Session, text string) {
 	case s.OutputCh <- text:
 	default:
 	}
+}
+
+// isExtraUsageExhausted checks session output for Claude's secondary quota
+// exhaustion message. When detected, the session should not be retried.
+func isExtraUsageExhausted(s *Session) bool {
+	for _, line := range s.OutputHistory {
+		if strings.Contains(strings.ToLower(line), "out of extra usage") {
+			return true
+		}
+	}
+	if strings.Contains(strings.ToLower(s.Error), "out of extra usage") {
+		return true
+	}
+	if strings.Contains(strings.ToLower(s.LastOutput), "out of extra usage") {
+		return true
+	}
+	return false
 }
 
 func truncateStr(s string, max int) string {
