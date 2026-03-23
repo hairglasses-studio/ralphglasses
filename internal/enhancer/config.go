@@ -36,6 +36,11 @@ type Config struct {
 
 	// LLM holds configuration for LLM-backed prompt improvement
 	LLM LLMConfig `yaml:"llm"`
+
+	// TargetProvider controls which model family the enhanced prompt targets.
+	// Affects pipeline stage behavior (XML vs markdown structure) and scoring suggestions.
+	// Empty defaults to "claude".
+	TargetProvider ProviderName `yaml:"target_provider"`
 }
 
 // LLMConfig holds settings for the LLM-backed enhancement mode.
@@ -43,19 +48,22 @@ type LLMConfig struct {
 	// Enabled activates LLM-backed improvement (default false — opt-in)
 	Enabled bool `yaml:"enabled"`
 
+	// Provider selects the LLM API backend: "claude" (default), "gemini", "openai"
+	Provider string `yaml:"provider"`
+
 	// ThinkingEnabled adds thinking scaffolding to the meta-prompt
 	ThinkingEnabled bool `yaml:"thinking_enabled"`
 
-	// Model is the Claude model to use (default "claude-sonnet-4-6")
+	// Model is the model to use (default depends on provider)
 	Model string `yaml:"model"`
 
-	// BaseURL is the API base URL (default "https://api.anthropic.com")
+	// BaseURL is the API base URL (default depends on provider)
 	BaseURL string `yaml:"base_url"`
 
-	// Timeout is the API call timeout (default 15s)
+	// Timeout is the API call timeout (default 30s)
 	Timeout time.Duration `yaml:"timeout"`
 
-	// APIKeyEnv is the environment variable holding the API key (default "ANTHROPIC_API_KEY")
+	// APIKeyEnv is the environment variable holding the API key (default depends on provider)
 	APIKeyEnv string `yaml:"api_key_env"`
 }
 
@@ -117,11 +125,13 @@ func configFound(cfg Config) bool {
 		cfg.Hook.MinWordCount != 0 ||
 		len(cfg.Hook.SkipPatterns) > 0 ||
 		cfg.LLM.Enabled ||
+		cfg.LLM.Provider != "" ||
 		cfg.LLM.Model != "" ||
 		cfg.LLM.BaseURL != "" ||
 		cfg.LLM.Timeout != 0 ||
 		cfg.LLM.APIKeyEnv != "" ||
-		cfg.LLM.ThinkingEnabled
+		cfg.LLM.ThinkingEnabled ||
+		cfg.TargetProvider != ""
 }
 
 // LoadConfigWithFallback loads config from the project directory first,
@@ -163,6 +173,14 @@ func ResolveConfig(projectDir string) Config {
 		}
 	}
 
+	if p := os.Getenv("PROMPT_IMPROVER_PROVIDER"); p != "" {
+		cfg.LLM.Provider = p
+	}
+
+	if tp := os.Getenv("PROMPT_IMPROVER_TARGET"); tp != "" {
+		cfg.TargetProvider = ProviderName(tp)
+	}
+
 	return cfg
 }
 
@@ -188,6 +206,14 @@ func ValidateConfig(cfg Config) []string {
 
 	if cfg.LLM.Enabled && cfg.LLM.Model == "" {
 		warnings = append(warnings, "LLM is enabled but model name is empty — will use default")
+	}
+
+	validProviders := map[string]bool{"claude": true, "gemini": true, "openai": true, "": true}
+	if !validProviders[cfg.LLM.Provider] {
+		warnings = append(warnings, fmt.Sprintf("unknown LLM provider %q (valid: claude, gemini, openai)", cfg.LLM.Provider))
+	}
+	if cfg.TargetProvider != "" && !validProviders[string(cfg.TargetProvider)] {
+		warnings = append(warnings, fmt.Sprintf("unknown target provider %q (valid: claude, gemini, openai)", cfg.TargetProvider))
 	}
 
 	return warnings

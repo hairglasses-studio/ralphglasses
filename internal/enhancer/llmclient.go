@@ -55,11 +55,15 @@ func NewLLMClient(cfg LLMConfig) *LLMClient {
 	}
 }
 
+// Provider returns the provider name.
+func (c *LLMClient) Provider() ProviderName { return ProviderClaude }
+
 // ImproveOptions configures the LLM improvement request.
 type ImproveOptions struct {
 	ThinkingEnabled bool
 	TaskType        TaskType
-	Feedback        string // optional targeted hints
+	Feedback        string       // optional targeted hints
+	Provider        ProviderName // for cache key disambiguation
 }
 
 // ImproveResult holds the LLM-improved prompt and metadata.
@@ -101,10 +105,7 @@ type apiError struct {
 
 // Improve sends the prompt to Claude with the meta-prompt and returns the improved version.
 func (c *LLMClient) Improve(ctx context.Context, prompt string, opts ImproveOptions) (*ImproveResult, error) {
-	systemPrompt := MetaPrompt
-	if opts.ThinkingEnabled {
-		systemPrompt = MetaPromptWithThinking
-	}
+	systemPrompt := MetaPromptFor(ProviderClaude, opts.ThinkingEnabled)
 
 	userContent := prompt
 	if opts.Feedback != "" {

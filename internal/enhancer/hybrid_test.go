@@ -34,7 +34,7 @@ func newTestEngine(serverURL string) *HybridEngine {
 }
 
 func TestEnhanceHybrid_LocalMode(t *testing.T) {
-	result := EnhanceHybrid(context.Background(), "fix the bug in the authentication module", "", Config{}, nil, ModeLocal)
+	result := EnhanceHybrid(context.Background(), "fix the bug in the authentication module", "", Config{}, nil, ModeLocal, "")
 	if result.Source != "local" {
 		t.Errorf("expected source 'local', got %q", result.Source)
 	}
@@ -44,7 +44,7 @@ func TestEnhanceHybrid_LocalMode(t *testing.T) {
 }
 
 func TestEnhanceHybrid_NilEngineFallsBackToLocal(t *testing.T) {
-	result := EnhanceHybrid(context.Background(), "fix the bug in the authentication module", "", Config{}, nil, ModeAuto)
+	result := EnhanceHybrid(context.Background(), "fix the bug in the authentication module", "", Config{}, nil, ModeAuto, "")
 	if result.Source != "local" {
 		t.Errorf("expected source 'local' when engine is nil, got %q", result.Source)
 	}
@@ -55,7 +55,7 @@ func TestEnhanceHybrid_AutoModeLLMSuccess(t *testing.T) {
 	defer server.Close()
 
 	engine := newTestEngine(server.URL)
-	result := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeAuto)
+	result := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeAuto, "")
 
 	if result.Source != "llm" {
 		t.Errorf("expected source 'llm', got %q", result.Source)
@@ -70,7 +70,7 @@ func TestEnhanceHybrid_LLMModeLLMSuccess(t *testing.T) {
 	defer server.Close()
 
 	engine := newTestEngine(server.URL)
-	result := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeLLM)
+	result := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeLLM, "")
 
 	if result.Source != "llm" {
 		t.Errorf("expected source 'llm', got %q", result.Source)
@@ -87,13 +87,13 @@ func TestEnhanceHybrid_CacheHit(t *testing.T) {
 	engine := newTestEngine(server.URL)
 
 	// First call — populates cache
-	result1 := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeAuto)
+	result1 := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeAuto, "")
 	if result1.Source != "llm" {
 		t.Fatalf("expected first call source 'llm', got %q", result1.Source)
 	}
 
 	// Second call — should hit cache
-	result2 := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeAuto)
+	result2 := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeAuto, "")
 	if result2.Source != "llm_cached" {
 		t.Errorf("expected source 'llm_cached', got %q", result2.Source)
 	}
@@ -120,7 +120,7 @@ func TestEnhanceHybrid_CircuitBreakerOpenAutoFallback(t *testing.T) {
 	engine.CB.RecordFailure()
 	engine.CB.RecordFailure()
 
-	result := EnhanceHybrid(context.Background(), "fix the bug in the authentication module", "", Config{}, engine, ModeAuto)
+	result := EnhanceHybrid(context.Background(), "fix the bug in the authentication module", "", Config{}, engine, ModeAuto, "")
 	if result.Source != "local_fallback" {
 		t.Errorf("expected source 'local_fallback', got %q", result.Source)
 	}
@@ -139,7 +139,7 @@ func TestEnhanceHybrid_CircuitBreakerOpenLLMMode(t *testing.T) {
 	engine.CB.RecordFailure()
 	engine.CB.RecordFailure()
 
-	result := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeLLM)
+	result := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeLLM, "")
 	if result.Source != "error" {
 		t.Errorf("expected source 'error', got %q", result.Source)
 	}
@@ -155,7 +155,7 @@ func TestEnhanceHybrid_LLMFailureAutoFallback(t *testing.T) {
 	defer server.Close()
 
 	engine := newTestEngine(server.URL)
-	result := EnhanceHybrid(context.Background(), "fix the bug in the authentication module", "", Config{}, engine, ModeAuto)
+	result := EnhanceHybrid(context.Background(), "fix the bug in the authentication module", "", Config{}, engine, ModeAuto, "")
 
 	if result.Source != "local_fallback" {
 		t.Errorf("expected source 'local_fallback', got %q", result.Source)
@@ -171,7 +171,7 @@ func TestEnhanceHybrid_LLMFailureLLMMode(t *testing.T) {
 	defer server.Close()
 
 	engine := newTestEngine(server.URL)
-	result := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeLLM)
+	result := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeLLM, "")
 
 	if result.Source != "error" {
 		t.Errorf("expected source 'error', got %q", result.Source)
@@ -186,7 +186,7 @@ func TestEnhanceHybrid_DefaultModeIsAuto(t *testing.T) {
 	defer server.Close()
 
 	engine := newTestEngine(server.URL)
-	result := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, "")
+	result := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, "", "")
 
 	if result.Source != "llm" {
 		t.Errorf("expected source 'llm' for default (auto) mode, got %q", result.Source)
@@ -202,7 +202,7 @@ func TestEnhanceHybrid_RecordsSuccessOnCircuitBreaker(t *testing.T) {
 	engine.CB.RecordFailure()
 	engine.CB.RecordFailure()
 
-	EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeAuto)
+	EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeAuto, "")
 
 	// After success, circuit breaker should be closed with 0 failures
 	if engine.CB.State() != "closed" {
@@ -218,9 +218,9 @@ func TestEnhanceHybrid_RecordsFailureOnCircuitBreaker(t *testing.T) {
 	defer server.Close()
 
 	engine := newTestEngine(server.URL)
-	EnhanceHybrid(context.Background(), "fix the bug in the authentication module", "", Config{}, engine, ModeAuto)
-	EnhanceHybrid(context.Background(), "another prompt for the thing", "", Config{}, engine, ModeAuto)
-	EnhanceHybrid(context.Background(), "third prompt to trigger breaker", "", Config{}, engine, ModeAuto)
+	EnhanceHybrid(context.Background(), "fix the bug in the authentication module", "", Config{}, engine, ModeAuto, "")
+	EnhanceHybrid(context.Background(), "another prompt for the thing", "", Config{}, engine, ModeAuto, "")
+	EnhanceHybrid(context.Background(), "third prompt to trigger breaker", "", Config{}, engine, ModeAuto, "")
 
 	if engine.CB.State() != "open" {
 		t.Errorf("expected circuit breaker open after 3 failures, got %s", engine.CB.State())

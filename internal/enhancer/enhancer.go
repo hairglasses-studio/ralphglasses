@@ -97,7 +97,8 @@ func EnhanceWithConfig(raw string, taskType TaskType, cfg Config) EnhanceResult 
 	}
 
 	// Stage 3: Tone — downgrade remaining aggressive ALL-CAPS for Claude 4.x
-	if !cfg.IsStageDisabled("tone_downgrade") {
+	// Skip for non-Claude targets — other models don't overtrigger on aggressive language
+	if !cfg.IsStageDisabled("tone_downgrade") && (cfg.TargetProvider == "" || cfg.TargetProvider == ProviderClaude) {
 		text, imps = downgradeTone(text)
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "tone_downgrade")
@@ -106,7 +107,8 @@ func EnhanceWithConfig(raw string, taskType TaskType, cfg Config) EnhanceResult 
 	}
 
 	// Stage 4: Overtrigger rewrite — soften aggressive anti-laziness phrases for Claude 4.x
-	if !cfg.IsStageDisabled("overtrigger_rewrite") {
+	// Skip for non-Claude targets — aggressive prefixes may be useful for other models
+	if !cfg.IsStageDisabled("overtrigger_rewrite") && (cfg.TargetProvider == "" || cfg.TargetProvider == ProviderClaude) {
 		text, imps = rewriteOvertriggerPhrases(text)
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "overtrigger_rewrite")
@@ -123,9 +125,13 @@ func EnhanceWithConfig(raw string, taskType TaskType, cfg Config) EnhanceResult 
 		}
 	}
 
-	// Stage 6: Structure — wrap in XML tags based on task type
+	// Stage 6: Structure — wrap in XML tags (Claude) or markdown sections (Gemini/OpenAI)
 	if !cfg.IsStageDisabled("structure") {
-		text, imps = addStructure(text, taskType)
+		if cfg.TargetProvider != "" && cfg.TargetProvider != ProviderClaude {
+			text, imps = addMarkdownStructure(text, taskType)
+		} else {
+			text, imps = addStructure(text, taskType)
+		}
 		result.StagesRun = append(result.StagesRun, "structure")
 		result.Improvements = append(result.Improvements, imps...)
 	}
@@ -267,7 +273,7 @@ func Analyze(prompt string) AnalyzeResult {
 	// Multi-dimensional scoring
 	allLints := Lint(prompt)
 	allLints = append(allLints, VerifyCacheFriendlyOrder(prompt)...)
-	report := Score(prompt, taskType, allLints, &result)
+	report := Score(prompt, taskType, allLints, &result, "")
 	result.ScoreReport = report
 
 	// Derive legacy score from overall
@@ -566,6 +572,44 @@ func addStructure(text string, taskType TaskType) (string, []string) {
 	b.WriteString(constraintsForTaskType(taskType))
 	b.WriteString("\n</constraints>\n")
 	improvements = append(improvements, "Added task-type-specific <constraints>")
+
+	return b.String(), improvements
+}
+
+// addMarkdownStructure wraps the prompt in markdown sections instead of XML tags.
+// Used for Gemini and OpenAI targets, which respond better to markdown structure.
+func addMarkdownStructure(text string, taskType TaskType) (string, []string) {
+	if !shouldAddStructure(text) {
+		return text, []string{"Prompt is short/simple — skipped structural wrapping (over-tagging prevention)"}
+	}
+
+	var b strings.Builder
+	var improvements []string
+
+	b.WriteString("## Role\n")
+	b.WriteString(roleForTaskType(taskType))
+	b.WriteString("\n\n")
+	improvements = append(improvements, "Added ## Role section with task-appropriate persona")
+
+	if codeBlock, query := extractCodeBlock(text); codeBlock != "" {
+		b.WriteString("## Context\n")
+		b.WriteString(codeBlock)
+		b.WriteString("\n\n")
+		b.WriteString("## Instructions\n")
+		b.WriteString(strings.TrimSpace(query))
+		b.WriteString("\n\n")
+		improvements = append(improvements, "Separated code/context block from instructions")
+	} else {
+		b.WriteString("## Instructions\n")
+		b.WriteString(strings.TrimSpace(text))
+		b.WriteString("\n\n")
+	}
+	improvements = append(improvements, "Wrapped prompt in structured markdown sections")
+
+	b.WriteString("## Constraints\n")
+	b.WriteString(constraintsForTaskType(taskType))
+	b.WriteString("\n")
+	improvements = append(improvements, "Added task-type-specific constraints section")
 
 	return b.String(), improvements
 }

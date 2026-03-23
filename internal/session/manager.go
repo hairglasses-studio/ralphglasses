@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
 
@@ -29,6 +30,7 @@ type Manager struct {
 	stateDir      string // directory for persisted session JSON files
 	launchSession func(context.Context, LaunchOptions) (*Session, error)
 	waitSession   func(context.Context, *Session) error
+	Enhancer      *enhancer.HybridEngine // optional prompt enhancement for loop integration
 }
 
 // NewManager creates a new session manager.
