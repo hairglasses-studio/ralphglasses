@@ -17,6 +17,7 @@ import (
 
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/repofiles"
 	"github.com/hairglasses-studio/ralphglasses/internal/roadmap"
 )
 
@@ -68,6 +69,7 @@ type LoopIteration struct {
 	Branch            string             `json:"branch,omitempty"`
 	PlannerOutput     string             `json:"planner_output,omitempty"`
 	WorkerOutput      string             `json:"worker_output,omitempty"`
+	HasQuestions      bool               `json:"has_questions,omitempty"`
 	Verification      []LoopVerification `json:"verification,omitempty"`
 	Error             string             `json:"error,omitempty"`
 	StartedAt         time.Time          `json:"started_at"`
@@ -226,7 +228,13 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 
 	m.PersistLoop(run)
 
-	plannerPrompt, err := buildLoopPlannerPrompt(repoPath)
+	// Validate that critical ralph files still exist before proceeding.
+	// Claude can accidentally delete .ralph/ during cleanup tasks.
+	if err := repofiles.ValidateIntegrity(repoPath); err != nil {
+		return m.failLoopIteration(run, index, fmt.Errorf("integrity check: %w", err))
+	}
+
+	plannerPrompt, err := buildLoopPlannerPrompt(repoPath, run.iterationsSnapshot())
 	if err != nil {
 		return m.failLoopIteration(run, index, fmt.Errorf("build planner prompt: %w", err))
 	}
@@ -296,12 +304,23 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	})
 
 	if err := m.waitForSession(ctx, workerSession); err != nil {
-		return m.failLoopIteration(run, index, fmt.Errorf("worker session failed: %w", err))
+		// Check if productive work happened despite timeout — don't waste
+		// budget retrying when the worker already committed real changes.
+		if errors.Is(err, context.DeadlineExceeded) && hasGitChanges(worktreePath) {
+			// Worker made progress; treat as success and proceed to verification.
+		} else {
+			return m.failLoopIteration(run, index, fmt.Errorf("worker session failed: %w", err))
+		}
 	}
 
 	workerOutput := sessionOutputSummary(workerSession)
+
+	// Detect if the worker asked questions instead of acting autonomously.
+	hasQ, _ := DetectQuestions(workerOutput)
+
 	m.updateLoopIteration(run, index, "verifying", func(iter *LoopIteration, loop *LoopRun) {
 		iter.WorkerOutput = workerOutput
+		iter.HasQuestions = hasQ
 	})
 
 	verification, err := runLoopVerification(ctx, worktreePath, profile.VerifyCommands)
@@ -371,7 +390,7 @@ func normalizeLoopProfile(profile LoopProfile) (LoopProfile, error) {
 	return profile, nil
 }
 
-func buildLoopPlannerPrompt(repoPath string) (string, error) {
+func buildLoopPlannerPrompt(repoPath string, prevIterations []LoopIteration) (string, error) {
 	var sections []string
 	sections = append(sections, `You are the planner for a perpetual development loop.
 
@@ -415,6 +434,18 @@ Constraints:
 	journal, err := ReadRecentJournal(repoPath, 5)
 	if err == nil && len(journal) > 0 {
 		sections = append(sections, "Recent journal context:\n"+SynthesizeContext(journal))
+	}
+
+	// Inject corrective guidance from previous iterations.
+	if len(prevIterations) > 0 {
+		last := prevIterations[len(prevIterations)-1]
+		sections = append(sections, fmt.Sprintf(
+			"Previous iteration: task=%q status=%s", last.Task.Title, last.Status))
+		if last.HasQuestions {
+			sections = append(sections,
+				`IMPORTANT: The previous worker asked questions instead of acting autonomously.
+In headless mode, no human will answer. Re-task with explicit instructions to make autonomous decisions using conservative defaults.`)
+		}
 	}
 
 	return strings.Join(sections, "\n\n"), nil
@@ -825,4 +856,15 @@ func (m *Manager) LoadExternalLoops() {
 		}
 		m.loops[id] = &run
 	}
+}
+
+// hasGitChanges checks whether the given repo path has uncommitted or new
+// changes relative to HEAD, indicating productive work despite a timeout.
+func hasGitChanges(repoPath string) bool {
+	cmd := exec.Command("git", "-C", repoPath, "diff", "--stat", "HEAD")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return false
+	}
+	return len(strings.TrimSpace(string(output))) > 0
 }
