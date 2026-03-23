@@ -239,7 +239,7 @@ func TestRunSessionOutputWithProvider(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		runSessionOutput(s, stdout)
+		runSessionOutput(context.Background(), s, stdout)
 	}()
 	<-done
 
