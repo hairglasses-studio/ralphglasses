@@ -1,0 +1,92 @@
+# Full .ralphrc — all options with comments
+# Format: KEY="value"  (keys must be uppercase letters, digits, and underscores)
+# Lines starting with # are ignored.
+
+# ── Project Identity ────────────────────────────────────────────────────────
+PROJECT_NAME="my-project"
+PROJECT_TYPE="go"           # go | node | rust | python | unknown
+
+# ── Rate Limiting ───────────────────────────────────────────────────────────
+# Maximum Claude API calls per hour. Prevents runaway spend.
+# Ralphglasses enforces this; the loop also enforces it internally.
+MAX_CALLS_PER_HOUR="80"
+
+# Timeout per Claude invocation in minutes.
+CLAUDE_TIMEOUT_MINUTES="20"
+
+# Output format for Claude Code (used by headless sessions).
+CLAUDE_OUTPUT_FORMAT="json"
+
+# ── Session Continuity ──────────────────────────────────────────────────────
+# When true, ralphglasses resumes the previous session ID between loop iterations.
+# Keeps context window history alive across restarts. Claude only (not Codex).
+SESSION_CONTINUITY="true"
+
+# After this many hours, the session ID is considered stale and a new one starts.
+SESSION_EXPIRY_HOURS="24"
+
+# ── Marathon Mode ───────────────────────────────────────────────────────────
+# These keys document marathon.sh supervisor settings.
+# NOTE: ralph itself does NOT read these — marathon.sh enforces them externally.
+MARATHON_MODE="true"
+MARATHON_DURATION_HOURS="12"           # Hard wallclock kill after N hours
+MARATHON_CHECKPOINT_INTERVAL="3"       # Git checkpoint every N hours
+
+# ── Circuit Breaker ─────────────────────────────────────────────────────────
+# The circuit breaker OPENS when the agent repeatedly fails without progress,
+# preventing runaway API spend. States: CLOSED (normal), HALF_OPEN (testing),
+# OPEN (stopped). State is stored in .ralph/.circuit_breaker_state.
+
+# Open circuit after N consecutive loops with no task progress.
+CB_NO_PROGRESS_THRESHOLD="4"
+
+# Open circuit after N consecutive loops with the same error message.
+CB_SAME_ERROR_THRESHOLD="5"
+
+# Open circuit after N consecutive permission denials from the LLM.
+CB_PERMISSION_DENIAL_THRESHOLD="2"
+
+# Minutes to wait before attempting to reset an OPEN circuit.
+CB_COOLDOWN_MINUTES="15"
+
+# Automatically attempt to close the circuit after the cooldown period.
+CB_AUTO_RESET="true"
+
+# ── Logging ─────────────────────────────────────────────────────────────────
+# Rotate logs older than N days from .ralph/logs/.
+LOG_RETENTION_DAYS="7"
+
+# ── Model Selection ─────────────────────────────────────────────────────────
+# Default Claude model. Maps to claude --model flag.
+# Options: sonnet (default), opus, haiku
+PRIMARY_MODEL="sonnet"
+
+# ── Task Batching ───────────────────────────────────────────────────────────
+# When true, the agent may bundle similar small tasks into one loop iteration.
+BATCH_SIMILAR_TASKS="true"
+
+# Maximum tasks per batched iteration.
+MAX_TASKS_PER_BATCH="3"
+
+# Maximum total lines of code changes per batched iteration.
+MAX_LINES_PER_BATCH="600"
+
+# ── Quality Gates ───────────────────────────────────────────────────────────
+# Commands the agent runs to validate its work before committing.
+# Customize for your project's build system.
+QG_BUILD_CMD="go build ./..."
+QG_TEST_CMD="go test ./..."
+QG_VET_CMD="go vet ./..."
+
+# ── Budget ──────────────────────────────────────────────────────────────────
+# Session budget in USD. marathon.sh stops the loop at 90% of this value.
+# Ralph itself does NOT enforce this — it is for marathon.sh use only.
+RALPH_SESSION_BUDGET="100"
+
+# ── Fast Mode ───────────────────────────────────────────────────────────────
+# Fast mode uses claude --fast flag for lower-latency responses at reduced quality.
+# Useful for mechanical tasks (formatting, renaming, boilerplate).
+FAST_MODE_ENABLED="true"
+FAST_MODE_PHASES="execution,test,docs,mechanical"
+STANDARD_MODE_PHASES="analysis,planning,debug,refactor,architecture"
+FAST_MODE_DEFAULT="false"

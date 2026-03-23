@@ -1,0 +1,346 @@
+.\" Ralphglasses manual page
+.\" Format: troff/groff man page
+.\" Render with: man ./ralphglasses.1
+.TH RALPHGLASSES 1 "2026-03-22" "ralphglasses dev" "Ralphglasses Manual"
+.
+.SH NAME
+ralphglasses \- command-and-control TUI for parallel LLM agent loops
+.
+.SH SYNOPSIS
+.B ralphglasses
+[\fIOPTIONS\fR]
+.br
+.B ralphglasses mcp
+[\fIOPTIONS\fR]
+.br
+.B ralphglasses completion
+\fISHELL\fR
+.br
+.B ralphglasses version
+.
+.SH DESCRIPTION
+.B ralphglasses
+is a k9s-style terminal user interface for managing parallel LLM agent loops
+(ralph loops) across multiple repositories.
+It supports Claude Code, Gemini CLI, and OpenAI Codex CLI as session providers.
+.PP
+Ralphglasses scans a directory tree for ralph-enabled repositories
+(those containing a \fB.ralph/\fR directory or a \fB.ralphrc\fR file),
+then presents a live dashboard of their status.
+Loops can be started, stopped, and paused without leaving the TUI.
+.PP
+Ralphglasses is also an MCP server (see \fBmcp\fR subcommand) exposing 48 tools
+for programmatic orchestration by an LLM.
+.
+.SH OPTIONS
+.TP
+.BI \-\-scan\-path " DIR"
+Root directory to scan for ralph-enabled repos.
+Default: \fB~/hairglasses-studio\fR.
+Supports tilde expansion.
+.TP
+.BI \-\-theme " NAME"
+Color theme for the TUI.
+Built-in themes: \fBk9s\fR (default), \fBdracula\fR, \fBgruvbox\fR, \fBnord\fR.
+May also be a path to a YAML theme file.
+.TP
+.B \-\-notify
+Enable desktop notifications for critical alerts
+(e.g., circuit breaker opening, loop crash).
+.TP
+.B \-\-version
+Print version, commit, and build date, then exit.
+.TP
+.B \-h ", " \-\-help
+Show help text and exit.
+.
+.SH SUBCOMMANDS
+.SS mcp
+.B ralphglasses mcp
+[\fB\-\-scan\-path\fR \fIDIR\fR]
+.PP
+Run ralphglasses as an MCP (Model Context Protocol) server over stdio.
+The server exposes 48 tools for managing ralph loops and LLM sessions.
+Clients connect via JSON-RPC over stdin/stdout.
+.PP
+The \fB\-\-scan-path\fR flag is inherited from the root command.
+Alternatively, set the \fBRALPHGLASSES_SCAN_PATH\fR environment variable.
+.PP
+To install for Claude Code:
+.PP
+.RS 4
+.nf
+claude mcp add ralphglasses \\
+  -- go run . mcp --scan-path ~/projects
+.fi
+.RE
+.PP
+A \fB.mcp.json\fR in the repo root enables automatic local discovery
+when Claude Code is opened from the ralphglasses directory.
+.
+.SS completion
+.B ralphglasses completion
+\fISHELL\fR
+.PP
+Generate shell completion scripts.
+\fISHELL\fR must be one of: \fBbash\fR, \fBzsh\fR, \fBfish\fR.
+.PP
+Example (bash):
+.PP
+.RS 4
+.nf
+ralphglasses completion bash > /etc/bash_completion.d/ralphglasses
+.fi
+.RE
+.PP
+Example (zsh):
+.PP
+.RS 4
+.nf
+ralphglasses completion zsh > "${fpath[1]}/_ralphglasses"
+.fi
+.RE
+.
+.SS version
+.B ralphglasses version
+.PP
+Print the version string, git commit SHA, and build date, then exit.
+When built from source without ldflags, reports \fBdev\fR / \fBunknown\fR.
+.PP
+To embed version information at build time:
+.PP
+.RS 4
+.nf
+go build \\
+  -ldflags "-X main.version=$(git describe --tags) \\
+            -X main.commit=$(git rev-parse HEAD) \\
+            -X main.buildDate=$(date -u +%Y-%m-%d)" \\
+  -o ralphglasses .
+.fi
+.RE
+.
+.SH TUI KEYBINDINGS
+.SS Global
+.TS
+tab(@);
+l l.
+q / Ctrl+C@Quit
+?@Toggle help overlay
+Esc@Go back / cancel
+r@Refresh
+:@Command mode
+/@Filter mode
+1 2 3 4@Switch tabs (Repos / Sessions / Teams / Fleet)
+.TE
+.SS Table Navigation
+.TS
+tab(@);
+l l.
+j / ↓@Move cursor down
+k / ↑@Move cursor up
+Enter@Drill into selected item
+s@Cycle sort column
+Space@Toggle selection
+.TE
+.SS Repo Actions (Repos tab and Repo Detail)
+.TS
+tab(@);
+l l.
+S@Start loop
+X@Stop loop / session
+P@Pause / resume loop
+a@Actions menu
+e@Edit .ralphrc config
+w@Save .ralphrc config
+d@View git diff
+L@Launch LLM session
+.TE
+.SS Log Viewer
+.TS
+tab(@);
+l l.
+f@Toggle follow mode (tail)
+G@Jump to end
+g@Jump to start
+Ctrl+U@Page up
+Ctrl+D@Page down
+.TE
+.SS Session Detail
+.TS
+tab(@);
+l l.
+o@View session output
+t@View session timeline
+X@Stop session
+.TE
+.
+.SH FILES
+.TP
+.I .ralphrc
+Per-repository configuration file.
+Shell-style \fBKEY="value"\fR format.
+Keys must match \fB[A-Z_][A-Z0-9_]*\fR.
+See \fBCONFIGURATION\fR below.
+.TP
+.I .ralph/status.json
+Loop status written by the ralph loop on each iteration.
+Fields: \fBtimestamp\fR, \fBloop_count\fR, \fBcalls_made_this_hour\fR,
+\fBmax_calls_per_hour\fR, \fBlast_action\fR, \fBstatus\fR, \fBexit_reason\fR,
+\fBnext_reset\fR, \fBmodel\fR, \fBsession_spend_usd\fR, \fBbudget_status\fR.
+.TP
+.I .ralph/progress.json
+Task progress written by the ralph loop.
+Fields: \fBspec_file\fR, \fBiteration\fR, \fBcompleted_ids\fR,
+\fBlog\fR, \fBstatus\fR, \fBstarted_at\fR, \fBupdated_at\fR.
+.TP
+.I .ralph/.circuit_breaker_state
+Circuit breaker state (JSON).
+Fields: \fBstate\fR (CLOSED/HALF_OPEN/OPEN), \fBlast_change\fR,
+\fBconsecutive_no_progress\fR, \fBconsecutive_same_error\fR,
+\fBconsecutive_permission_denials\fR, \fBlast_progress_loop\fR,
+\fBtotal_opens\fR, \fBreason\fR, \fBcurrent_loop\fR, \fBopened_at\fR.
+.TP
+.I .ralph/ralphglasses.pid
+PID of the ralph loop process started by ralphglasses.
+Created on loop start, removed on clean exit.
+Used to re-adopt surviving processes after a ralphglasses restart.
+.TP
+.I .ralph/logs/
+Directory for loop log files.
+Rotated based on \fBLOG_RETENTION_DAYS\fR.
+.TP
+.I .ralph/improvement_journal.jsonl
+Append-only JSONL improvement journal.
+One entry per session, recording what worked, failed, and suggestions.
+.TP
+.I .ralph/PROMPT.md
+System prompt for the ralph agent.
+Created by \fBralphglasses_repo_scaffold\fR.
+.TP
+.I .ralph/fix_plan.md
+Markdown task list the agent works through.
+Created by \fBralphglasses_repo_scaffold\fR.
+.
+.SH CONFIGURATION
+The \fB.ralphrc\fR file uses shell-style \fBKEY="value"\fR syntax.
+Comments start with \fB#\fR.
+.PP
+Keys recognized by the ralph loop:
+.TP
+.B MAX_CALLS_PER_HOUR
+Maximum Claude API calls per hour (default: 80).
+.TP
+.B CLAUDE_TIMEOUT_MINUTES
+Timeout per Claude invocation in minutes (default: 20).
+.TP
+.B SESSION_CONTINUITY
+Resume previous session ID between iterations (default: true).
+.TP
+.B CB_NO_PROGRESS_THRESHOLD
+Open circuit after N no-progress loops (default: 4).
+.TP
+.B CB_SAME_ERROR_THRESHOLD
+Open circuit after N identical errors (default: 5).
+.TP
+.B CB_PERMISSION_DENIAL_THRESHOLD
+Open circuit after N permission denials (default: 2).
+.TP
+.B CB_COOLDOWN_MINUTES
+Minutes before auto-reset attempt (default: 15).
+.TP
+.B CB_AUTO_RESET
+Automatically attempt circuit reset after cooldown (default: true).
+.PP
+Keys used by \fBmarathon.sh\fR supervisor (not read by ralph itself):
+\fBMARATHON_DURATION_HOURS\fR,
+\fBMARATHON_CHECKPOINT_INTERVAL\fR,
+\fBRALPH_SESSION_BUDGET\fR.
+.PP
+See \fBdocs/examples/ralphrc-full\fR for a fully commented example.
+.
+.SH ENVIRONMENT
+.TP
+.B RALPHGLASSES_SCAN_PATH
+Default scan path, overrides the compiled-in default.
+Overridden by \fB\-\-scan\-path\fR flag.
+.TP
+.B ANTHROPIC_API_KEY
+API key for Claude Code.
+Omit if using Claude Code OAuth (\fBclaude login\fR).
+Setting this when OAuth is active causes auth conflicts.
+.TP
+.B GOOGLE_API_KEY
+API key for Gemini CLI.
+.TP
+.B OPENAI_API_KEY
+API key for OpenAI Codex CLI.
+.TP
+.B CLAUDECODE
+Set by Claude Code to prevent nested sessions.
+Unset before launching headless claude sessions from scripts.
+.
+.SH EXAMPLES
+.SS Start the TUI
+.nf
+ralphglasses --scan-path ~/projects
+.fi
+.SS Start with a custom theme
+.nf
+ralphglasses --scan-path ~/projects --theme dracula
+.fi
+.SS Run as MCP server with custom scan path
+.nf
+ralphglasses mcp --scan-path ~/projects
+.fi
+.SS Install MCP server for Claude Code
+.nf
+claude mcp add ralphglasses \\
+  -e RALPHGLASSES_SCAN_PATH=~/projects \\
+  -- go run /path/to/ralphglasses mcp
+.fi
+.SS Generate bash completions
+.nf
+ralphglasses completion bash > /etc/bash_completion.d/ralphglasses
+.fi
+.SS Scaffold a new repo for ralph
+.nf
+# Via MCP (in Claude Code):
+# ralphglasses_repo_scaffold {"repo_path": "/path/to/repo"}
+.fi
+.
+.SH SEE ALSO
+.BR claude (1),
+.BR gemini (1),
+.BR codex (1),
+.BR ralph (1),
+.BR marathon.sh (1)
+.PP
+Project documentation:
+.RS 4
+CLAUDE.md \(em Architecture, provider setup, key patterns
+.br
+ROADMAP.md \(em Full implementation plan
+.br
+CONTRIBUTING.md \(em Development setup and contribution guide
+.br
+docs/getting-started.md \(em Tutorial for new users
+.br
+docs/examples/ \(em Example configuration files
+.RE
+.PP
+Upstream references:
+.RS 4
+Claude Code: https://docs.anthropic.com/en/docs/claude-code/overview
+.br
+Gemini CLI: https://ai.google.dev/gemini-api/docs
+.br
+OpenAI Codex CLI: https://platform.openai.com/docs/guides/codex
+.br
+MCP specification: https://modelcontextprotocol.io/
+.RE
+.
+.SH BUGS
+Report bugs at: https://github.com/hairglasses-studio/ralphglasses/issues
+.
+.SH AUTHORS
+hairglasses-studio contributors.

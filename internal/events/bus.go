@@ -53,6 +53,7 @@ type Bus struct {
 	subscribers map[string]chan Event
 	history     []Event
 	maxHistory  int
+	totalCount  int // monotonic event counter (survives ring buffer drops)
 }
 
 // NewBus creates an event bus that retains up to maxHistory events.
@@ -78,6 +79,7 @@ func (b *Bus) Publish(event Event) {
 		b.history = b.history[1:]
 	}
 	b.history = append(b.history, event)
+	b.totalCount++
 
 	// Snapshot subscribers under lock
 	subs := make([]chan Event, 0, len(b.subscribers))
@@ -139,6 +141,40 @@ func (b *Bus) History(filter EventType, limit int) []Event {
 		result[i], result[j] = result[j], result[i]
 	}
 	return result
+}
+
+// HistoryAfterCursor returns events published after the given cursor position,
+// up to limit. It also returns the current totalCount for use as the next cursor.
+// This mirrors the TotalOutputCount/OutputHistory pattern from session/runner.go.
+func (b *Bus) HistoryAfterCursor(cursor, limit int) ([]Event, int) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if limit <= 0 {
+		limit = 50
+	}
+
+	// Events dropped from the ring buffer.
+	dropped := b.totalCount - len(b.history)
+
+	// Where in the history slice does the cursor land?
+	startIdx := cursor - dropped
+	if startIdx < 0 {
+		startIdx = 0
+	}
+	if startIdx >= len(b.history) {
+		return nil, b.totalCount
+	}
+
+	result := b.history[startIdx:]
+	if len(result) > limit {
+		result = result[:limit]
+	}
+
+	// Copy to avoid caller holding a reference to the internal slice.
+	out := make([]Event, len(result))
+	copy(out, result)
+	return out, b.totalCount
 }
 
 // HistorySince returns all events after the given time.
