@@ -281,7 +281,41 @@ func normalizeClaudeEvent(line []byte) (StreamEvent, error) {
 		return StreamEvent{}, err
 	}
 	event.Raw = json.RawMessage(append([]byte(nil), line...))
+
+	// Handle sub-agent events that Claude emits with type "agent" or
+	// "subagent". The structured fields (description, message) don't map
+	// to StreamEvent's Content/Text, so extract them from raw JSON.
+	if event.Type == "agent" || event.Type == "subagent" {
+		var raw map[string]any
+		if json.Unmarshal(line, &raw) == nil {
+			text := firstNonEmpty(
+				getString(raw, "description"),
+				getString(raw, "message"),
+				getString(raw, "content"),
+			)
+			if text != "" {
+				event.Content = text
+				event.Text = text
+			}
+		}
+		// Normalize subagent → agent for consistent downstream handling.
+		event.Type = "agent"
+	}
+
 	return event, nil
+}
+
+// getString safely extracts a string value from a map.
+func getString(m map[string]any, key string) string {
+	v, ok := m[key]
+	if !ok {
+		return ""
+	}
+	s, ok := v.(string)
+	if !ok {
+		return ""
+	}
+	return s
 }
 
 // normalizeGeminiEvent parses Gemini NDJSON output into StreamEvent.
