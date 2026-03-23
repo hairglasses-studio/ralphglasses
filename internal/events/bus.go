@@ -35,6 +35,9 @@ const (
 	// Prompt enhancement
 	PromptEnhanced EventType = "prompt.enhanced"
 
+	// Tool instrumentation
+	ToolCalled EventType = "tool.called"
+
 	// Self-improvement
 	AutoOptimized    EventType = "auto.optimized"     // Level 2+ decision executed
 	ProviderSelected EventType = "provider.selected"   // Smart provider selection
