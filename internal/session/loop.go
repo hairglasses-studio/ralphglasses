@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/roadmap"
 )
 
@@ -739,6 +740,16 @@ func (m *Manager) enhanceForProvider(ctx context.Context, prompt string, provide
 	target := mapProvider(provider)
 	cfg := enhancer.Config{TargetProvider: target}
 	result := enhancer.EnhanceHybrid(ctx, prompt, "", cfg, m.Enhancer, enhancer.ModeAuto, target)
+	if result.Enhanced != prompt && m.bus != nil {
+		m.bus.Publish(events.Event{
+			Type: events.PromptEnhanced,
+			Data: map[string]any{
+				"target_provider": string(target),
+				"source":          result.Source,
+				"stages_run":      result.StagesRun,
+			},
+		})
+	}
 	return result.Enhanced
 }
 

@@ -209,6 +209,7 @@ func setupLoopRepo(t *testing.T) string {
 	runGitLoop(t, repoPath, "init")
 	runGitLoop(t, repoPath, "config", "user.email", "test@example.com")
 	runGitLoop(t, repoPath, "config", "user.name", "Test User")
+	runGitLoop(t, repoPath, "config", "commit.gpgsign", "false")
 	runGitLoop(t, repoPath, "add", ".")
 	runGitLoop(t, repoPath, "commit", "-m", "initial")
 	return repoPath

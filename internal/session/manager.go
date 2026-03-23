@@ -323,6 +323,15 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 		taskList, workerProvider, workerProvider,
 	)
 
+	// Enhance team lead prompt for its target provider
+	if m.Enhancer != nil {
+		leadProvider := config.Provider
+		if leadProvider == "" {
+			leadProvider = ProviderClaude
+		}
+		leadPrompt = m.enhanceForProvider(ctx, leadPrompt, leadProvider)
+	}
+
 	opts := LaunchOptions{
 		Provider:     config.Provider,
 		RepoPath:     config.RepoPath,
@@ -655,10 +664,16 @@ func (m *Manager) runWorkflowStep(ctx context.Context, run *WorkflowRun, repoPat
 		result.StartedAt = &started
 	})
 
+	// Enhance workflow step prompt for its target provider
+	prompt := step.Prompt
+	if m.Enhancer != nil {
+		prompt = m.enhanceForProvider(ctx, prompt, provider)
+	}
+
 	opts := LaunchOptions{
 		Provider: provider,
 		RepoPath: repoPath,
-		Prompt:   step.Prompt,
+		Prompt:   prompt,
 		Model:    step.Model,
 		Agent:    step.Agent,
 	}

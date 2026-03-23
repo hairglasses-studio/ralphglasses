@@ -185,6 +185,7 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithString("worktree", mcp.Description("Git worktree isolation (true for auto, or branch name)")),
 		mcp.WithString("no_journal", mcp.Description("Skip improvement journal injection: true/false (default: false)")),
 		mcp.WithString("enhance_prompt", mcp.Description("Auto-enhance the prompt before launch: local (deterministic), llm (Claude API), auto (try LLM, fallback). Omit to skip enhancement")),
+		mcp.WithString("target_provider", mcp.Description("Target LLM provider for prompt enhancement: claude, gemini, openai (defaults to session provider)")),
 	), s.handleSessionLaunch)
 
 	srv.AddTool(mcp.NewTool("ralphglasses_session_list",
@@ -351,11 +352,14 @@ func (s *Server) Register(srv *server.MCPServer) {
 	), s.handleWorkflowRun)
 
 	srv.AddTool(mcp.NewTool("ralphglasses_loop_start",
-		mcp.WithDescription("Create a Codex-only planner/worker perpetual development loop for a repo"),
+		mcp.WithDescription("Create a multi-provider planner/worker perpetual development loop for a repo"),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
 		mcp.WithString("planner_model", mcp.Description("Planner model (default: o1-pro)")),
 		mcp.WithString("worker_model", mcp.Description("Worker model (default: gpt-5.4-xhigh)")),
 		mcp.WithString("verifier_model", mcp.Description("Verifier model metadata (default: gpt-5.4-xhigh)")),
+		mcp.WithString("planner_provider", mcp.Description("Planner provider: claude, gemini, codex (default: codex)")),
+		mcp.WithString("worker_provider", mcp.Description("Worker provider: claude, gemini, codex (default: codex)")),
+		mcp.WithString("verifier_provider", mcp.Description("Verifier provider: claude, gemini, codex (default: codex)")),
 		mcp.WithString("verify_commands", mcp.Description("Newline-separated verification commands (default: ./scripts/dev/ci.sh)")),
 		mcp.WithNumber("retry_limit", mcp.Description("Maximum consecutive failed iterations before step is refused")),
 		mcp.WithNumber("max_concurrent_workers", mcp.Description("Maximum concurrent workers (currently only 1 supported)")),
@@ -1188,7 +1192,11 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 			if mode == "" {
 				mode = enhancer.ModeLocal
 			}
-			eResult := enhancer.EnhanceHybrid(ctx, prompt, "", cfg, s.getEngine(), mode, "")
+			targetProvider := enhancer.ProviderName(getStringArg(req, "target_provider"))
+			if targetProvider == "" {
+				targetProvider = mapSessionProvider(provider)
+			}
+			eResult := enhancer.EnhanceHybrid(ctx, prompt, "", cfg, s.getEngine(), mode, targetProvider)
 			opts.Prompt = eResult.Enhanced
 		}
 	}
@@ -2531,6 +2539,15 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 	}
 	if commands := splitLines(getStringArg(req, "verify_commands")); len(commands) > 0 {
 		profile.VerifyCommands = commands
+	}
+	if pp := getStringArg(req, "planner_provider"); pp != "" {
+		profile.PlannerProvider = session.Provider(pp)
+	}
+	if wp := getStringArg(req, "worker_provider"); wp != "" {
+		profile.WorkerProvider = session.Provider(wp)
+	}
+	if vp := getStringArg(req, "verifier_provider"); vp != "" {
+		profile.VerifierProvider = session.Provider(vp)
 	}
 
 	// Wire prompt enhancer into session manager for loop integration
