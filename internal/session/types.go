@@ -54,7 +54,8 @@ type Session struct {
 	LastEventType     string        `json:"last_event_type,omitempty"`
 	StreamParseErrors int           `json:"stream_parse_errors,omitempty"`
 	CostHistory       []float64     `json:"cost_history,omitempty"`
-	OutputHistory     []string      `json:"output_history,omitempty"` // last N output lines
+	OutputHistory    []string `json:"output_history,omitempty"`    // last N output lines
+	TotalOutputCount int      `json:"total_output_count,omitempty"` // monotonic counter for cursor-based tailing
 
 	cmd        *exec.Cmd
 	cancel     func()

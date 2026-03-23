@@ -73,6 +73,13 @@ func (m *Manager) SetHooksForTesting(
 	m.waitSession = wait
 }
 
+// AddSessionForTesting inserts a pre-built session into the manager. Intended for tests.
+func (m *Manager) AddSessionForTesting(s *Session) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.sessions[s.ID] = s
+}
+
 // expandHome replaces a leading ~ with the user's home directory.
 func expandHome(path string) string {
 	if strings.HasPrefix(path, "~/") {
@@ -156,9 +163,9 @@ func (m *Manager) Stop(id string) error {
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	if s.Status != StatusRunning && s.Status != StatusLaunching {
+		s.mu.Unlock()
 		return fmt.Errorf("session %s is not running (status: %s)", id, s.Status)
 	}
 
@@ -179,8 +186,10 @@ func (m *Manager) Stop(id string) error {
 		}
 	}
 
-	// Persist stopped state
-	go m.PersistSession(s)
+	s.mu.Unlock()
+
+	// Persist stopped state (synchronous; s.mu is released above).
+	m.PersistSession(s)
 
 	return nil
 }
@@ -705,6 +714,53 @@ func (m *Manager) PersistSession(s *Session) {
 
 	path := filepath.Join(m.stateDir, s.ID+".json")
 	_ = os.WriteFile(path, data, 0644)
+}
+
+// MigrateSession stops a running session and relaunches it on a different provider.
+// The new session inherits the original prompt, remaining budget, max turns, and team.
+// Returns the new session on success; the old session is stopped regardless.
+func (m *Manager) MigrateSession(ctx context.Context, sessionID string, targetProvider Provider) (*Session, error) {
+	m.mu.Lock()
+	s, ok := m.sessions[sessionID]
+	m.mu.Unlock()
+	if !ok {
+		return nil, fmt.Errorf("session not found: %s", sessionID)
+	}
+
+	s.mu.Lock()
+	if s.Status != StatusRunning && s.Status != StatusLaunching {
+		s.mu.Unlock()
+		return nil, fmt.Errorf("session %s is not running (status: %s)", sessionID, s.Status)
+	}
+	if s.Provider == targetProvider {
+		s.mu.Unlock()
+		return nil, fmt.Errorf("session %s is already on provider %s", sessionID, targetProvider)
+	}
+	// Capture state before stopping.
+	remaining := s.BudgetUSD - s.SpentUSD
+	if remaining < 0 {
+		remaining = 0
+	}
+	opts := LaunchOptions{
+		Provider:     targetProvider,
+		RepoPath:     s.RepoPath,
+		Prompt:       s.Prompt,
+		Model:        ProviderDefaults(targetProvider),
+		MaxBudgetUSD: remaining,
+		MaxTurns:     s.MaxTurns,
+		TeamName:     s.TeamName,
+	}
+	s.mu.Unlock()
+
+	if err := m.Stop(sessionID); err != nil {
+		return nil, fmt.Errorf("stop source session: %w", err)
+	}
+
+	newSession, err := m.Launch(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("launch on %s: %w", targetProvider, err)
+	}
+	return newSession, nil
 }
 
 // LoadExternalSessions reads session JSON files from the shared state directory

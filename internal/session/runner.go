@@ -114,14 +114,14 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 	go func() {
 		defer cancel()
 		defer close(s.OutputCh)
-		runSession(s, stdout, stderr)
+		runSession(sessionCtx, s, stdout, stderr)
 	}()
 
 	return s, nil
 }
 
 // runSession reads streaming JSON from stdout/stderr and updates session state.
-func runSession(s *Session, stdout, stderr io.Reader) {
+func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader) {
 	// Read stderr in background for error capture
 	var stderrBuf strings.Builder
 	stderrDone := make(chan struct{})
@@ -130,7 +130,7 @@ func runSession(s *Session, stdout, stderr io.Reader) {
 		_, _ = io.Copy(&stderrBuf, stderr)
 	}()
 
-	runSessionOutput(s, stdout)
+	runSessionOutput(ctx, s, stdout)
 
 	// Wait for stderr collection
 	<-stderrDone
@@ -139,7 +139,6 @@ func runSession(s *Session, stdout, stderr io.Reader) {
 	err := s.cmd.Wait()
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	now := time.Now()
 	s.EndedAt = &now
@@ -186,12 +185,18 @@ func runSession(s *Session, stdout, stderr io.Reader) {
 		})
 	}
 
-	// Persist final state to disk
-	if s.onComplete != nil {
-		s.onComplete(s)
+	// Capture onComplete before releasing the lock.
+	// PersistSession and WriteJournalEntry both acquire s.mu, so they must
+	// not be called while we hold it (Go mutexes are not reentrant).
+	onComplete := s.onComplete
+	s.mu.Unlock()
+
+	// Persist final state to disk (acquires s.mu internally — safe now).
+	if onComplete != nil {
+		onComplete(s)
 	}
 
-	// Write improvement journal entry (fire-and-forget)
+	// Write improvement journal entry (fire-and-forget).
 	go func() {
 		if err := WriteJournalEntry(s); err == nil && s.bus != nil {
 			s.bus.Publish(events.Event{
@@ -206,109 +211,128 @@ func runSession(s *Session, stdout, stderr io.Reader) {
 }
 
 // runSessionOutput parses streaming JSON lines from stdout and updates session state.
-func runSessionOutput(s *Session, stdout io.Reader) {
+// It selects on ctx.Done() so it returns promptly when the session is cancelled,
+// without waiting for the next line from the provider process.
+func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader) {
 	scanner := bufio.NewScanner(stdout)
 	scanner.Buffer(make([]byte, 0, 1024*1024), 1024*1024)
 
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		if len(line) == 0 {
-			continue
+	// scanCh receives lines from the scanner goroutine. It is closed when the
+	// scanner reaches EOF or its own ctx.Done() check fires.
+	scanCh := make(chan []byte, 16)
+	go func() {
+		defer close(scanCh)
+		for scanner.Scan() {
+			b := make([]byte, len(scanner.Bytes()))
+			copy(b, scanner.Bytes())
+			select {
+			case scanCh <- b:
+			case <-ctx.Done():
+				return
+			}
 		}
+	}()
 
-		event, err := normalizeEvent(s.Provider, line)
-		if err != nil {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case line, ok := <-scanCh:
+			if !ok {
+				return
+			}
+			if len(line) == 0 {
+				continue
+			}
+
+			event, err := normalizeEvent(s.Provider, line)
+			if err != nil {
+				s.mu.Lock()
+				s.StreamParseErrors++
+				s.LastEventType = "parse_error"
+				if msg := strings.TrimSpace(string(line)); msg != "" {
+					appendSessionOutput(s, msg)
+				}
+				if s.Error == "" {
+					s.Error = truncateStr(err.Error(), 2000)
+				}
+				s.mu.Unlock()
+				continue
+			}
+
 			s.mu.Lock()
-			s.StreamParseErrors++
-			s.LastEventType = "parse_error"
-			if msg := strings.TrimSpace(string(line)); msg != "" {
-				appendSessionOutput(s, msg)
+			s.LastActivity = time.Now()
+			s.LastEventType = event.Type
+			eventText := firstNonEmpty(event.Content, event.Text, event.Result)
+
+			switch event.Type {
+			case "system":
+				if event.SessionID != "" {
+					s.ProviderSessionID = event.SessionID
+				}
+				if eventText != "" {
+					appendSessionOutput(s, eventText)
+				}
+			case "assistant":
+				if eventText != "" {
+					appendSessionOutput(s, eventText)
+				}
+			case "result":
+				if eventText != "" {
+					s.LastOutput = truncateStr(eventText, 4000)
+				}
+				if event.CostUSD > 0 {
+					prevSpent := s.SpentUSD
+					s.SpentUSD = event.CostUSD
+					s.CostHistory = append(s.CostHistory, event.CostUSD)
+					// Publish cost update event
+					if s.bus != nil && event.CostUSD != prevSpent {
+						s.bus.Publish(events.Event{
+							Type:      events.CostUpdate,
+							SessionID: s.ID,
+							RepoPath:  s.RepoPath,
+							RepoName:  s.RepoName,
+							Provider:  string(s.Provider),
+							Data:      map[string]any{"spent_usd": event.CostUSD, "turns": s.TurnCount},
+						})
+					}
+					// Check budget exceeded
+					if s.bus != nil && s.BudgetUSD > 0 && s.SpentUSD >= s.BudgetUSD {
+						s.bus.Publish(events.Event{
+							Type:      events.BudgetExceeded,
+							SessionID: s.ID,
+							RepoPath:  s.RepoPath,
+							RepoName:  s.RepoName,
+							Provider:  string(s.Provider),
+							Data:      map[string]any{"spent_usd": s.SpentUSD, "budget_usd": s.BudgetUSD},
+						})
+					}
+				}
+				if event.NumTurns > 0 {
+					s.TurnCount = event.NumTurns
+				}
+				if event.SessionID != "" {
+					s.ProviderSessionID = event.SessionID
+				}
+				if event.IsError {
+					s.Error = truncateStr(firstNonEmpty(event.Error, event.Result, event.Text), 2000)
+				}
+			default:
+				if eventText != "" {
+					appendSessionOutput(s, eventText)
+				}
+				if event.IsError {
+					s.Error = truncateStr(firstNonEmpty(event.Error, eventText), 2000)
+				}
 			}
-			if s.Error == "" {
-				s.Error = truncateStr(err.Error(), 2000)
-			}
-			if s.onComplete != nil {
-				go s.onComplete(s)
-			}
+
 			s.mu.Unlock()
-			continue
 		}
-
-		s.mu.Lock()
-		s.LastActivity = time.Now()
-		s.LastEventType = event.Type
-		eventText := firstNonEmpty(event.Content, event.Text, event.Result)
-
-		switch event.Type {
-		case "system":
-			if event.SessionID != "" {
-				s.ProviderSessionID = event.SessionID
-			}
-			if eventText != "" {
-				appendSessionOutput(s, eventText)
-			}
-		case "assistant":
-			if eventText != "" {
-				appendSessionOutput(s, eventText)
-			}
-		case "result":
-			if eventText != "" {
-				s.LastOutput = truncateStr(eventText, 4000)
-			}
-			if event.CostUSD > 0 {
-				prevSpent := s.SpentUSD
-				s.SpentUSD = event.CostUSD
-				s.CostHistory = append(s.CostHistory, event.CostUSD)
-				// Persist updated state to disk
-				if s.onComplete != nil {
-					go s.onComplete(s)
-				}
-				// Publish cost update event
-				if s.bus != nil && event.CostUSD != prevSpent {
-					s.bus.Publish(events.Event{
-						Type:      events.CostUpdate,
-						SessionID: s.ID,
-						RepoPath:  s.RepoPath,
-						RepoName:  s.RepoName,
-						Provider:  string(s.Provider),
-						Data:      map[string]any{"spent_usd": event.CostUSD, "turns": s.TurnCount},
-					})
-				}
-				// Check budget exceeded
-				if s.bus != nil && s.BudgetUSD > 0 && s.SpentUSD >= s.BudgetUSD {
-					s.bus.Publish(events.Event{
-						Type:      events.BudgetExceeded,
-						SessionID: s.ID,
-						RepoPath:  s.RepoPath,
-						RepoName:  s.RepoName,
-						Provider:  string(s.Provider),
-						Data:      map[string]any{"spent_usd": s.SpentUSD, "budget_usd": s.BudgetUSD},
-					})
-				}
-			}
-			if event.NumTurns > 0 {
-				s.TurnCount = event.NumTurns
-			}
-			if event.SessionID != "" {
-				s.ProviderSessionID = event.SessionID
-			}
-			if event.IsError {
-				s.Error = truncateStr(firstNonEmpty(event.Error, event.Result, event.Text), 2000)
-			}
-		default:
-			if eventText != "" {
-				appendSessionOutput(s, eventText)
-			}
-			if event.IsError {
-				s.Error = truncateStr(firstNonEmpty(event.Error, eventText), 2000)
-			}
-		}
-
-		s.mu.Unlock()
 	}
 }
 
 func appendSessionOutput(s *Session, text string) {
+	s.TotalOutputCount++
 	s.LastOutput = truncateStr(text, 4000)
 	s.OutputHistory = append(s.OutputHistory, text)
 	if len(s.OutputHistory) > 100 {
