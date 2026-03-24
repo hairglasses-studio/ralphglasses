@@ -29,6 +29,10 @@ type Manager struct {
 	bus           *events.Bus
 	stateDir      string // directory for persisted session JSON files
 	optimizer     *AutoOptimizer          // Level 2+ self-improvement engine
+	reflexion     *ReflexionStore         // WS1: failure reflection extraction
+	episodic      *EpisodicMemory         // WS2: successful trajectory memory
+	cascade       *CascadeRouter          // WS3: cheap-then-expensive provider routing
+	curriculum    *CurriculumSorter       // WS5: task difficulty scoring and ordering
 	launchSession func(context.Context, LaunchOptions) (*Session, error)
 	waitSession   func(context.Context, *Session) error
 	healthCheck   func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
@@ -73,6 +77,34 @@ func (m *Manager) SetAutoOptimizer(opt *AutoOptimizer) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.optimizer = opt
+}
+
+// SetReflexionStore attaches the reflexion loop subsystem.
+func (m *Manager) SetReflexionStore(rs *ReflexionStore) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.reflexion = rs
+}
+
+// SetEpisodicMemory attaches the episodic memory subsystem.
+func (m *Manager) SetEpisodicMemory(em *EpisodicMemory) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.episodic = em
+}
+
+// SetCascadeRouter attaches the cascade routing subsystem.
+func (m *Manager) SetCascadeRouter(cr *CascadeRouter) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.cascade = cr
+}
+
+// SetCurriculumSorter attaches the curriculum learning subsystem.
+func (m *Manager) SetCurriculumSorter(cs *CurriculumSorter) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.curriculum = cs
 }
 
 // SetHooksForTesting overrides session launch/wait behavior. Intended for tests.
