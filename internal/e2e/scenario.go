@@ -1,11 +1,17 @@
 package e2e
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
+)
 
 // Scenario defines a reproducible loop cycle test case.
 type Scenario struct {
 	Name            string                      // unique scenario identifier
-	Category        string                      // bug_fix, refactor, test, docs, feature
+	Category        string                      // bug_fix, refactor, test, docs, feature, multi_provider, stress, cost
+	Provider        session.Provider            // primary provider (empty = claude default)
+	Tags            []string                    // searchable tags (e.g. "multi-provider", "stress", "cost")
 	RepoSetup       func(t *testing.T) string   // creates temp repo, returns path
 	PlannerResponse string                      // JSON the mock planner returns
 	WorkerBehavior  func(worktree string) error // what mock worker writes to worktree
