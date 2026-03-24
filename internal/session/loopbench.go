@@ -196,6 +196,111 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager) {
 	}
 }
 
+// LoopVelocity returns useful iterations per hour within the given window.
+// An iteration is "useful" if verification passed and files were changed.
+func LoopVelocity(observations []LoopObservation, windowHours float64) float64 {
+	if windowHours <= 0 {
+		return 0
+	}
+	cutoff := time.Now().Add(-time.Duration(windowHours * float64(time.Hour)))
+	useful := 0
+	for _, obs := range observations {
+		if obs.Timestamp.After(cutoff) && obs.VerifyPassed && obs.FilesChanged > 0 {
+			useful++
+		}
+	}
+	return float64(useful) / windowHours
+}
+
+// ObservationSummary provides rolling statistics over a time window.
+type ObservationSummary struct {
+	WindowHours     float64            `json:"window_hours"`
+	TotalIterations int                `json:"total_iterations"`
+	CompletionRate  float64            `json:"completion_rate"`
+	AvgCostPerIter  float64            `json:"avg_cost_per_iter"`
+	CostTrend       string             `json:"cost_trend"`      // "decreasing", "stable", "increasing"
+	EfficiencyScore float64            `json:"efficiency_score"` // completions per dollar
+	CostByProvider  map[string]float64 `json:"cost_by_provider"`
+	Velocity        float64            `json:"velocity"` // useful iterations per hour
+}
+
+// AggregateObservations computes rolling statistics from loop observations.
+func AggregateObservations(observations []LoopObservation, windowHours float64) *ObservationSummary {
+	if windowHours <= 0 || len(observations) == 0 {
+		return &ObservationSummary{WindowHours: windowHours, CostByProvider: map[string]float64{}}
+	}
+
+	cutoff := time.Now().Add(-time.Duration(windowHours * float64(time.Hour)))
+	prevCutoff := cutoff.Add(-time.Duration(windowHours * float64(time.Hour)))
+
+	var current, previous []LoopObservation
+	for _, obs := range observations {
+		if obs.Timestamp.After(cutoff) {
+			current = append(current, obs)
+		} else if obs.Timestamp.After(prevCutoff) {
+			previous = append(previous, obs)
+		}
+	}
+
+	summary := &ObservationSummary{
+		WindowHours:     windowHours,
+		TotalIterations: len(current),
+		CostByProvider:  make(map[string]float64),
+	}
+
+	if len(current) == 0 {
+		return summary
+	}
+
+	var totalCost float64
+	completed := 0
+	for _, obs := range current {
+		totalCost += obs.TotalCostUSD
+		if obs.Status == "idle" {
+			completed++
+		}
+		if obs.PlannerProvider != "" {
+			summary.CostByProvider[obs.PlannerProvider] += obs.PlannerCostUSD
+		}
+		if obs.WorkerProvider != "" {
+			summary.CostByProvider[obs.WorkerProvider] += obs.WorkerCostUSD
+		}
+	}
+
+	summary.CompletionRate = float64(completed) / float64(len(current))
+	summary.AvgCostPerIter = totalCost / float64(len(current))
+
+	if totalCost > 0 {
+		summary.EfficiencyScore = float64(completed) / totalCost
+	}
+
+	summary.Velocity = LoopVelocity(current, windowHours)
+
+	// Compute cost trend by comparing current window to previous window
+	if len(previous) > 0 {
+		var prevCost float64
+		for _, obs := range previous {
+			prevCost += obs.TotalCostUSD
+		}
+		prevAvg := prevCost / float64(len(previous))
+		curAvg := summary.AvgCostPerIter
+
+		ratio := curAvg / prevAvg
+		switch {
+		case ratio < 0.85:
+			summary.CostTrend = "decreasing"
+		case ratio > 1.15:
+			summary.CostTrend = "increasing"
+		default:
+			summary.CostTrend = "stable"
+		}
+	} else {
+		summary.CostTrend = "stable"
+	}
+
+	return summary
+}
+
 // gitDiffStats runs git diff --stat on a worktree and parses the summary line.
 func gitDiffStats(worktreePath string) (files, added, removed int) {
 	cmd := exec.Command("git", "diff", "--stat", "HEAD")

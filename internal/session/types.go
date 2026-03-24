@@ -38,8 +38,10 @@ type Session struct {
 	RepoName          string        `json:"repo_name"`
 	Status            SessionStatus `json:"status"`
 	Prompt            string        `json:"prompt"`
-	Model             string        `json:"model,omitempty"`
-	AgentName         string        `json:"agent,omitempty"`
+	Model               string        `json:"model,omitempty"`
+	EnhancementSource   string        `json:"enhancement_source,omitempty"`    // "local", "llm", "none"
+	EnhancementPreScore int           `json:"enhancement_pre_score,omitempty"` // 0-100 quality score before enhancement
+	AgentName           string        `json:"agent,omitempty"`
 	TeamName          string        `json:"team_name,omitempty"`
 	BudgetUSD         float64       `json:"max_budget_usd,omitempty"`
 	SpentUSD          float64       `json:"spent_usd"`

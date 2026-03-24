@@ -158,3 +158,79 @@ func TestGitDiffStats_WithChanges(t *testing.T) {
 		t.Errorf("expected insertions and deletions, got added=%d removed=%d", added, removed)
 	}
 }
+
+func TestLoopVelocity(t *testing.T) {
+	now := time.Now()
+	observations := []LoopObservation{
+		{Timestamp: now.Add(-30 * time.Minute), VerifyPassed: true, FilesChanged: 3},
+		{Timestamp: now.Add(-45 * time.Minute), VerifyPassed: true, FilesChanged: 0}, // no files = not useful
+		{Timestamp: now.Add(-50 * time.Minute), VerifyPassed: false, FilesChanged: 2}, // failed = not useful
+		{Timestamp: now.Add(-55 * time.Minute), VerifyPassed: true, FilesChanged: 1},
+		{Timestamp: now.Add(-25 * time.Hour), VerifyPassed: true, FilesChanged: 5}, // outside window
+	}
+
+	v := LoopVelocity(observations, 1.0)
+	// 2 useful iterations in 1 hour = 2.0
+	if v != 2.0 {
+		t.Errorf("LoopVelocity = %f, want 2.0", v)
+	}
+}
+
+func TestLoopVelocityZeroWindow(t *testing.T) {
+	v := LoopVelocity(nil, 0)
+	if v != 0 {
+		t.Errorf("LoopVelocity(nil, 0) = %f, want 0", v)
+	}
+}
+
+func TestAggregateObservations(t *testing.T) {
+	now := time.Now()
+	observations := []LoopObservation{
+		// Current window (last 1 hour)
+		{Timestamp: now.Add(-10 * time.Minute), Status: "idle", TotalCostUSD: 0.20, VerifyPassed: true, FilesChanged: 3, PlannerProvider: "claude", WorkerProvider: "gemini", PlannerCostUSD: 0.05, WorkerCostUSD: 0.15},
+		{Timestamp: now.Add(-20 * time.Minute), Status: "idle", TotalCostUSD: 0.30, VerifyPassed: true, FilesChanged: 2, PlannerProvider: "claude", WorkerProvider: "claude", PlannerCostUSD: 0.10, WorkerCostUSD: 0.20},
+		{Timestamp: now.Add(-30 * time.Minute), Status: "failed", TotalCostUSD: 0.10, VerifyPassed: false, FilesChanged: 0, PlannerProvider: "claude", WorkerProvider: "codex", PlannerCostUSD: 0.05, WorkerCostUSD: 0.05},
+		// Previous window (1-2 hours ago)
+		{Timestamp: now.Add(-90 * time.Minute), Status: "idle", TotalCostUSD: 0.50, VerifyPassed: true, FilesChanged: 5, PlannerProvider: "claude", WorkerProvider: "claude", PlannerCostUSD: 0.15, WorkerCostUSD: 0.35},
+	}
+
+	summary := AggregateObservations(observations, 1.0)
+
+	if summary.TotalIterations != 3 {
+		t.Errorf("TotalIterations = %d, want 3", summary.TotalIterations)
+	}
+
+	// 2 out of 3 completed
+	wantRate := 2.0 / 3.0
+	if diff := summary.CompletionRate - wantRate; diff > 0.01 || diff < -0.01 {
+		t.Errorf("CompletionRate = %f, want ~%f", summary.CompletionRate, wantRate)
+	}
+
+	// Avg cost: (0.20 + 0.30 + 0.10) / 3 = 0.20
+	if diff := summary.AvgCostPerIter - 0.20; diff > 0.01 || diff < -0.01 {
+		t.Errorf("AvgCostPerIter = %f, want ~0.20", summary.AvgCostPerIter)
+	}
+
+	// Cost trend: current avg 0.20 vs previous avg 0.50 -> ratio 0.40 -> decreasing
+	if summary.CostTrend != "decreasing" {
+		t.Errorf("CostTrend = %q, want decreasing", summary.CostTrend)
+	}
+
+	// Cost by provider
+	if summary.CostByProvider["claude"] == 0 {
+		t.Error("expected non-zero claude cost")
+	}
+	if summary.CostByProvider["gemini"] == 0 {
+		t.Error("expected non-zero gemini cost")
+	}
+}
+
+func TestAggregateObservationsEmpty(t *testing.T) {
+	summary := AggregateObservations(nil, 1.0)
+	if summary.TotalIterations != 0 {
+		t.Errorf("TotalIterations = %d, want 0", summary.TotalIterations)
+	}
+	if summary.CostByProvider == nil {
+		t.Error("CostByProvider should not be nil")
+	}
+}
