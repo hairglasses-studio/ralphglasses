@@ -33,7 +33,13 @@ type ReflexionStore struct {
 }
 
 // filePathRe matches source file paths ending in common extensions.
-var filePathRe = regexp.MustCompile(`[a-zA-Z0-9_\-./]+\.(go|ts|py|js|tsx|jsx|rs|c|cpp|h|java|rb|sh)`)
+// Requires either a slash in the path (e.g. internal/session/loop.go) or a
+// word-boundary anchor so bare fragments like ".mcp.js" or "github.c" are
+// rejected.
+var filePathRe = regexp.MustCompile(`(?:\b[a-zA-Z0-9_][a-zA-Z0-9_\-./]*/)` +
+	`[a-zA-Z0-9_\-./]*\.(go|ts|py|js|tsx|jsx|rs|c|cpp|h|java|rb|sh)\b` +
+	`|` +
+	`\b[a-zA-Z][a-zA-Z0-9_\-]{2,}\.(go|ts|py|js|tsx|jsx|rs|c|cpp|h|java|rb|sh)\b`)
 
 // NewReflexionStore loads existing reflections from the state directory.
 func NewReflexionStore(stateDir string) *ReflexionStore {
@@ -138,9 +144,13 @@ func classifyFailureMode(iter LoopIteration) string {
 	return "planner_error"
 }
 
-func extractRootCause(iter LoopIteration) string {
-	errorPatterns := []string{"error:", "panic:", "FAIL", "failed to", "cannot", "undefined", "compilation error", "syntax error"}
+// testFailRe matches Go test failure lines like "--- FAIL: TestFoo (0.05s)".
+var testFailRe = regexp.MustCompile(`---\s+FAIL:\s+(\S+)\s+\(([^)]+)\)`)
 
+// compileErrorRe matches Go compile errors like "file.go:42:10: undefined: Foo".
+var compileErrorRe = regexp.MustCompile(`([a-zA-Z0-9_/.\-]+\.go):(\d+):(\d+):\s*(.+)`)
+
+func extractRootCause(iter LoopIteration) string {
 	// Gather all output lines to scan.
 	var lines []string
 	if iter.Error != "" {
@@ -158,6 +168,39 @@ func extractRootCause(iter LoopIteration) string {
 		}
 	}
 
+	// Pass 1: look for structured failure patterns (test failures, compile errors).
+	var testFailures []string
+	var compileErrors []string
+	for _, line := range lines {
+		if m := testFailRe.FindStringSubmatch(line); m != nil {
+			testFailures = append(testFailures, fmt.Sprintf("test %s failed (%s)", m[1], m[2]))
+		}
+		if m := compileErrorRe.FindStringSubmatch(line); m != nil {
+			msg := strings.TrimSpace(m[4])
+			if len(msg) > 120 {
+				msg = msg[:120]
+			}
+			compileErrors = append(compileErrors, fmt.Sprintf("%s:%s: %s", m[1], m[2], msg))
+		}
+	}
+
+	if len(testFailures) > 0 {
+		cause := strings.Join(testFailures, "; ")
+		if len(cause) > 200 {
+			cause = cause[:200]
+		}
+		return cause
+	}
+	if len(compileErrors) > 0 {
+		cause := strings.Join(compileErrors, "; ")
+		if len(cause) > 200 {
+			cause = cause[:200]
+		}
+		return cause
+	}
+
+	// Pass 2: fallback to generic error-pattern matching.
+	errorPatterns := []string{"error:", "panic:", "FAIL", "failed to", "cannot", "undefined", "compilation error", "syntax error"}
 	for _, line := range lines {
 		lower := strings.ToLower(line)
 		for _, pat := range errorPatterns {
@@ -184,6 +227,24 @@ func extractRootCause(iter LoopIteration) string {
 func generateCorrection(failureMode, rootCause string, iter LoopIteration) string {
 	switch failureMode {
 	case "verify_failed":
+		// Try to extract specific failing test names from verification output.
+		var failingTests []string
+		for _, v := range iter.Verification {
+			if (v.Status == "failed" || v.ExitCode != 0) && v.Output != "" {
+				for _, m := range testFailRe.FindAllStringSubmatch(v.Output, -1) {
+					failingTests = append(failingTests, fmt.Sprintf("%s (%s)", m[1], m[2]))
+				}
+			}
+		}
+		if len(failingTests) > 0 {
+			names := strings.Join(failingTests, ", ")
+			if len(names) > 150 {
+				names = names[:150]
+			}
+			return fmt.Sprintf("Fix failing test(s): %s. Ensure all verification commands pass before completing.", names)
+		}
+
+		// Fallback: include a snippet of verify output.
 		verifySnippet := ""
 		for _, v := range iter.Verification {
 			if (v.Status == "failed" || v.ExitCode != 0) && v.Output != "" {
@@ -195,10 +256,28 @@ func generateCorrection(failureMode, rootCause string, iter LoopIteration) strin
 			verifySnippet = verifySnippet[:200]
 		}
 		return fmt.Sprintf("Ensure all verification commands pass before completing. Previous verify output: %s", verifySnippet)
+
 	case "worker_error":
-		return fmt.Sprintf("The worker encountered: %s. Ensure error handling for this case.", rootCause)
+		// Include the actual error message from iter.Error if available.
+		errMsg := strings.TrimSpace(iter.Error)
+		if errMsg == "" {
+			errMsg = rootCause
+		}
+		if len(errMsg) > 200 {
+			errMsg = errMsg[:200]
+		}
+		return fmt.Sprintf("The worker encountered: %s. Ensure error handling for this case.", errMsg)
+
 	default:
-		return "The planner could not parse tasks. Ensure output follows the expected format."
+		// Include the parsing error details.
+		errDetail := strings.TrimSpace(iter.Error)
+		if errDetail == "" {
+			errDetail = rootCause
+		}
+		if len(errDetail) > 200 {
+			errDetail = errDetail[:200]
+		}
+		return fmt.Sprintf("The planner could not parse tasks: %s. Ensure output follows the expected format.", errDetail)
 	}
 }
 
@@ -220,6 +299,17 @@ func extractFilePaths(iter LoopIteration) []string {
 	seen := make(map[string]bool)
 	var unique []string
 	for _, m := range matches {
+		// Skip paths shorter than 4 chars (e.g. "a.go") — likely fragments.
+		if len(m) < 4 {
+			continue
+		}
+		// Skip domain-like fragments with no slash and very short base name.
+		if !strings.Contains(m, "/") {
+			base := m[:strings.LastIndex(m, ".")]
+			if len(base) < 3 {
+				continue
+			}
+		}
 		if !seen[m] {
 			seen[m] = true
 			unique = append(unique, m)

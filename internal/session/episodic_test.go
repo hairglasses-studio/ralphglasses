@@ -9,7 +9,7 @@ import (
 
 func TestRecordSuccess(t *testing.T) {
 	dir := t.TempDir()
-	em := NewEpisodicMemory(dir, 100)
+	em := NewEpisodicMemory(dir, 100, 0)
 
 	journal := JournalEntry{
 		TaskFocus:   "add user authentication",
@@ -66,7 +66,7 @@ func TestRecordSuccess(t *testing.T) {
 
 func TestRecordSuccess_SkipsFailures(t *testing.T) {
 	dir := t.TempDir()
-	em := NewEpisodicMemory(dir, 100)
+	em := NewEpisodicMemory(dir, 100, 0)
 
 	// Budget exceeded — should not record
 	em.RecordSuccess(JournalEntry{
@@ -99,7 +99,7 @@ func TestRecordSuccess_SkipsFailures(t *testing.T) {
 
 func TestFindSimilar(t *testing.T) {
 	dir := t.TempDir()
-	em := NewEpisodicMemory(dir, 100)
+	em := NewEpisodicMemory(dir, 100, 0)
 
 	now := time.Now()
 
@@ -138,7 +138,7 @@ func TestFindSimilar(t *testing.T) {
 
 func TestFindSimilar_RecencyBonus(t *testing.T) {
 	dir := t.TempDir()
-	em := NewEpisodicMemory(dir, 100)
+	em := NewEpisodicMemory(dir, 100, 0)
 
 	now := time.Now()
 	recent := now.Add(-24 * time.Hour)
@@ -162,7 +162,7 @@ func TestFindSimilar_RecencyBonus(t *testing.T) {
 }
 
 func TestFormatExamples(t *testing.T) {
-	em := NewEpisodicMemory("", 100)
+	em := NewEpisodicMemory("", 100, 0)
 
 	episodes := []Episode{
 		{
@@ -210,7 +210,7 @@ func TestFormatExamples(t *testing.T) {
 }
 
 func TestFormatExamples_Empty(t *testing.T) {
-	em := NewEpisodicMemory("", 100)
+	em := NewEpisodicMemory("", 100, 0)
 	if output := em.FormatExamples(nil); output != "" {
 		t.Errorf("expected empty string for nil episodes, got %q", output)
 	}
@@ -218,7 +218,7 @@ func TestFormatExamples_Empty(t *testing.T) {
 
 func TestPrune(t *testing.T) {
 	dir := t.TempDir()
-	em := NewEpisodicMemory(dir, 5)
+	em := NewEpisodicMemory(dir, 5, 0)
 
 	now := time.Now()
 
@@ -288,7 +288,7 @@ func TestEpisodicPersistence(t *testing.T) {
 	dir := t.TempDir()
 
 	// Store episodes
-	em1 := NewEpisodicMemory(dir, 100)
+	em1 := NewEpisodicMemory(dir, 100, 0)
 	em1.RecordSuccess(JournalEntry{
 		TaskFocus:   "implement feature X",
 		Provider:    "claude",
@@ -312,7 +312,7 @@ func TestEpisodicPersistence(t *testing.T) {
 	})
 
 	// Load from same directory
-	em2 := NewEpisodicMemory(dir, 100)
+	em2 := NewEpisodicMemory(dir, 100, 0)
 
 	em2.mu.Lock()
 	count := len(em2.episodes)

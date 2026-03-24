@@ -768,7 +768,7 @@ func EpisodicInjection() Scenario {
 		MockTurnCount:  3,
 		Constraints:    Constraints{MaxCostUSD: 1.0, MaxDurationSec: 30, MinCompletionRate: 0.9},
 		ManagerSetup: func(m *session.Manager) {
-			em := session.NewEpisodicMemory("", 100)
+			em := session.NewEpisodicMemory("", 100, 0)
 			// Pre-load a successful episode about logging
 			em.RecordSuccess(session.JournalEntry{
 				Provider:  "claude",
