@@ -21,6 +21,8 @@ type Scenario struct {
 	MockTurnCount   int                         // turns to set on mock sessions
 	MockFailure     string                      // if set, worker returns this as an error (simulates infrastructure failure)
 	Constraints     Constraints                 // regression limits
+	ProfilePatch    func(*session.LoopProfile)  // optional: modify profile before starting loop
+	ManagerSetup    func(*session.Manager)      // optional: configure subsystems on manager before run
 }
 
 // Constraints define acceptable bounds for a scenario.
