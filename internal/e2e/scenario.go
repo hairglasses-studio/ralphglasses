@@ -19,6 +19,7 @@ type Scenario struct {
 	ExpectedStatus  string                      // "idle" (success) or "failed"
 	MockCostUSD     float64                     // cost to set on mock sessions
 	MockTurnCount   int                         // turns to set on mock sessions
+	MockFailure     string                      // if set, worker returns this as an error (simulates infrastructure failure)
 	Constraints     Constraints                 // regression limits
 }
 
