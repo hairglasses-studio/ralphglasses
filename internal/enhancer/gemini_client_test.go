@@ -36,7 +36,7 @@ func TestGeminiClient_Improve(t *testing.T) {
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -69,7 +69,7 @@ func TestGeminiClient_ImproveWithFeedback(t *testing.T) {
 	var receivedContent string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req geminiRequest
-		json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewDecoder(r.Body).Decode(&req)
 		if len(req.Contents) > 0 && len(req.Contents[0].Parts) > 0 {
 			receivedContent = req.Contents[0].Parts[0].Text
 		}
@@ -78,7 +78,7 @@ func TestGeminiClient_ImproveWithFeedback(t *testing.T) {
 				{Content: geminiContent{Parts: []geminiPart{{Text: "improved"}}}},
 			},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -103,7 +103,7 @@ func TestGeminiClient_APIError(t *testing.T) {
 	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
-		w.Write([]byte(`{"error":{"code":429,"message":"rate limited","status":"RESOURCE_EXHAUSTED"}}`))
+		_, _ = w.Write([]byte(`{"error":{"code":429,"message":"rate limited","status":"RESOURCE_EXHAUSTED"}}`))
 	}))
 	defer server.Close()
 
@@ -143,7 +143,7 @@ func TestGeminiClient_MultipleParts(t *testing.T) {
 				}}},
 			},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 

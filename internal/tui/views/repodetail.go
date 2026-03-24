@@ -54,7 +54,7 @@ func RenderRepoDetail(r *model.Repo, width int, health *RepoDetailHealth) string
 			budgetMax := 0.0
 			if r.Config != nil {
 				if v, ok := r.Config.Values["RALPH_SESSION_BUDGET"]; ok {
-					fmt.Sscanf(v, "%f", &budgetMax)
+					_, _ = fmt.Sscanf(v, "%f", &budgetMax)
 				}
 			}
 			if budgetMax > 0 {

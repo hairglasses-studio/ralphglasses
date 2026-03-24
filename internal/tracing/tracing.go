@@ -35,13 +35,10 @@ const (
 // SessionSpan records a session lifecycle as a trace span.
 type SessionSpan struct {
 	mu          sync.Mutex
-	spanID      string
-	traceID     string
 	sessionID   string
 	provider    string
 	model       string
 	repoName    string
-	teamName    string
 	startTime   time.Time
 	attributes  map[string]any
 	events      []SpanEvent

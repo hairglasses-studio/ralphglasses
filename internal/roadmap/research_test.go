@@ -38,7 +38,7 @@ func TestResearch(t *testing.T) {
 				},
 			},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
@@ -47,7 +47,7 @@ func TestResearch(t *testing.T) {
 	// For now, test the helper functions directly
 
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.22\n\nrequire (\n\tgithub.com/existing/dep v1.0.0\n)\n"), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.22\n\nrequire (\n\tgithub.com/existing/dep v1.0.0\n)\n"), 0644)
 
 	deps := readGoModDeps(dir)
 	if !deps["github.com/existing/dep"] {
@@ -93,7 +93,7 @@ func TestResearch_WithMockServer(t *testing.T) {
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(mockResp)
+		_ = json.NewEncoder(w).Encode(mockResp)
 	}))
 	defer srv.Close()
 

@@ -9,7 +9,7 @@ import (
 func TestOptimize_MissingFiles(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0644)
 
 	result, err := Optimize(dir, OptimizeOptions{DryRun: true})
 	if err != nil {
@@ -48,7 +48,7 @@ func TestOptimize_MissingFiles(t *testing.T) {
 func TestOptimize_WithScaffoldedFiles(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0644)
 
 	// Scaffold first
 	_, err := Scaffold(dir, ScaffoldOptions{})
@@ -72,8 +72,8 @@ func TestOptimize_WithScaffoldedFiles(t *testing.T) {
 func TestOptimize_FocusConfig(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0644)
-	os.WriteFile(filepath.Join(dir, ".ralphrc"), []byte("PROJECT_NAME=\"test\"\n"), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0644)
+	_ = os.WriteFile(filepath.Join(dir, ".ralphrc"), []byte("PROJECT_NAME=\"test\"\n"), 0644)
 
 	result, err := Optimize(dir, OptimizeOptions{Focus: "config"})
 	if err != nil {
@@ -92,7 +92,7 @@ func TestReadKVFile(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.rc")
-	os.WriteFile(path, []byte("KEY1=\"value1\"\nKEY2=value2\n# comment\n\nKEY3=\"value 3\"\n"), 0644)
+	_ = os.WriteFile(path, []byte("KEY1=\"value1\"\nKEY2=value2\n# comment\n\nKEY3=\"value 3\"\n"), 0644)
 
 	values := readKVFile(path)
 	if values["KEY1"] != "value1" {

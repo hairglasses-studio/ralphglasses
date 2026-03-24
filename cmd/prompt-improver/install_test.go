@@ -136,7 +136,7 @@ func TestUninstall_EmptyIsNoop(t *testing.T) {
 func TestReadWriteSettings_PreservesUnknownKeys(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".claude", "settings.json")
-	os.MkdirAll(filepath.Dir(path), 0755)
+	_ = os.MkdirAll(filepath.Dir(path), 0755)
 
 	// Write settings with an unknown key
 	initial := map[string]any{
@@ -144,7 +144,7 @@ func TestReadWriteSettings_PreservesUnknownKeys(t *testing.T) {
 		"hooks":            map[string]any{},
 	}
 	data, _ := json.MarshalIndent(initial, "", "  ")
-	os.WriteFile(path, data, 0644)
+	_ = os.WriteFile(path, data, 0644)
 
 	s, raw, err := readSettings(path)
 	if err != nil {

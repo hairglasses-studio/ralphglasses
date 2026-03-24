@@ -21,7 +21,7 @@ func TestLoadConfigNotExist(t *testing.T) {
 func TestLoadConfigValid(t *testing.T) {
 	dir := t.TempDir()
 	ralphDir := filepath.Join(dir, ".ralph")
-	os.MkdirAll(ralphDir, 0755)
+	_ = os.MkdirAll(ralphDir, 0755)
 
 	hooksYaml := `hooks:
   session.started:
@@ -29,7 +29,7 @@ func TestLoadConfigValid(t *testing.T) {
       command: "echo started"
       sync: false
 `
-	os.WriteFile(filepath.Join(ralphDir, "hooks.yaml"), []byte(hooksYaml), 0644)
+	_ = os.WriteFile(filepath.Join(ralphDir, "hooks.yaml"), []byte(hooksYaml), 0644)
 
 	bus := events.NewBus(100)
 	e := NewExecutor(bus)
@@ -56,7 +56,7 @@ func TestDispatchHook(t *testing.T) {
 	dir := t.TempDir()
 	markerFile := filepath.Join(dir, "hook_ran")
 	ralphDir := filepath.Join(dir, ".ralph")
-	os.MkdirAll(ralphDir, 0755)
+	_ = os.MkdirAll(ralphDir, 0755)
 
 	hooksYaml := `hooks:
   session.started:
@@ -65,7 +65,7 @@ func TestDispatchHook(t *testing.T) {
       sync: true
       timeout: 5
 `
-	os.WriteFile(filepath.Join(ralphDir, "hooks.yaml"), []byte(hooksYaml), 0644)
+	_ = os.WriteFile(filepath.Join(ralphDir, "hooks.yaml"), []byte(hooksYaml), 0644)
 
 	bus := events.NewBus(100)
 	e := NewExecutor(bus)

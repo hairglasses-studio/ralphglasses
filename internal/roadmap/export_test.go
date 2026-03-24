@@ -99,7 +99,9 @@ func TestExport_PhaseFilter(t *testing.T) {
 	}
 
 	var spec TaskSpec
-	json.Unmarshal([]byte(output), &spec)
+	if err := json.Unmarshal([]byte(output), &spec); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
 
 	// Should only have Phase 1 tasks
 	for _, task := range spec.Tasks {
@@ -123,7 +125,9 @@ func TestExport_MaxTasks(t *testing.T) {
 	}
 
 	var spec TaskSpec
-	json.Unmarshal([]byte(output), &spec)
+	if err := json.Unmarshal([]byte(output), &spec); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
 
 	if len(spec.Tasks) > 2 {
 		t.Errorf("expected max 2 tasks, got %d", len(spec.Tasks))
@@ -134,7 +138,7 @@ func TestExport_UnknownFormat(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ROADMAP.md")
-	os.WriteFile(path, []byte(testRoadmap), 0644)
+	_ = os.WriteFile(path, []byte(testRoadmap), 0644)
 
 	rm, _ := Parse(path)
 	_, err := Export(rm, "xml", "", "", 20, true)

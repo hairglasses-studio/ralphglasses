@@ -15,9 +15,9 @@ func FuzzLoadStatus(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data string) {
 		dir := t.TempDir()
 		ralphDir := filepath.Join(dir, ".ralph")
-		os.MkdirAll(ralphDir, 0755)
-		os.WriteFile(filepath.Join(ralphDir, "status.json"), []byte(data), 0644)
-		LoadStatus(dir)
+		_ = os.MkdirAll(ralphDir, 0755)
+		_ = os.WriteFile(filepath.Join(ralphDir, "status.json"), []byte(data), 0644)
+		_, _ = LoadStatus(dir)
 	})
 }
 
@@ -30,9 +30,9 @@ func FuzzLoadCircuitBreaker(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data string) {
 		dir := t.TempDir()
 		ralphDir := filepath.Join(dir, ".ralph")
-		os.MkdirAll(ralphDir, 0755)
-		os.WriteFile(filepath.Join(ralphDir, ".circuit_breaker_state"), []byte(data), 0644)
-		LoadCircuitBreaker(dir)
+		_ = os.MkdirAll(ralphDir, 0755)
+		_ = os.WriteFile(filepath.Join(ralphDir, ".circuit_breaker_state"), []byte(data), 0644)
+		_, _ = LoadCircuitBreaker(dir)
 	})
 }
 
@@ -45,8 +45,8 @@ func FuzzLoadProgress(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data string) {
 		dir := t.TempDir()
 		ralphDir := filepath.Join(dir, ".ralph")
-		os.MkdirAll(ralphDir, 0755)
-		os.WriteFile(filepath.Join(ralphDir, "progress.json"), []byte(data), 0644)
-		LoadProgress(dir)
+		_ = os.MkdirAll(ralphDir, 0755)
+		_ = os.WriteFile(filepath.Join(ralphDir, "progress.json"), []byte(data), 0644)
+		_, _ = LoadProgress(dir)
 	})
 }

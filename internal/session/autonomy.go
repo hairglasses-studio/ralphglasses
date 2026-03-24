@@ -230,7 +230,9 @@ func (dl *DecisionLog) appendToFile(d AutonomousDecision) {
 		return
 	}
 	defer f.Close()
-	f.Write(data)
+	if _, err := f.Write(data); err != nil {
+		return
+	}
 }
 
 func (dl *DecisionLog) load() {
