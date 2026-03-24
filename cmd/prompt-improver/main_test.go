@@ -205,7 +205,7 @@ func TestCLI_CacheCheck_File(t *testing.T) {
 	path := filepath.Join(dir, "prompt.txt")
 	content := `<role>You are an expert.</role>
 <constraints>Be thorough.</constraints>`
-	os.WriteFile(path, []byte(content), 0644)
+	_ = os.WriteFile(path, []byte(content), 0644)
 
 	stdout, _, code := runCLI(t, "", "cache-check", path)
 	if code != 0 {
@@ -219,7 +219,7 @@ func TestCLI_CacheCheck_File(t *testing.T) {
 func TestCLI_CheckClaudeMD_Healthy(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "CLAUDE.md")
-	os.WriteFile(path, []byte("# Project\n\nSimple project.\n\n## Standards\n\nUse gofmt."), 0644)
+	_ = os.WriteFile(path, []byte("# Project\n\nSimple project.\n\n## Standards\n\nUse gofmt."), 0644)
 
 	stdout, _, code := runCLI(t, "", "check-claudemd", path)
 	if code != 0 {
@@ -234,7 +234,7 @@ func TestCLI_CheckClaudeMD_Bad(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "CLAUDE.md")
 	content := strings.Repeat("CRITICAL: You MUST follow this rule.\n", 50)
-	os.WriteFile(path, []byte(content), 0644)
+	_ = os.WriteFile(path, []byte(content), 0644)
 
 	stdout, _, code := runCLI(t, "", "check-claudemd", path)
 	if code != 0 {
@@ -263,7 +263,7 @@ func TestCLI_Hook_ValidJSON(t *testing.T) {
 	cmd.Stdout = &outBuf
 	// hook exits with 0
 	_ = hookJSON
-	cmd.Run()
+	_ = cmd.Run()
 	if !strings.Contains(outBuf.String(), "hookSpecificOutput") {
 		t.Error("hook with valid JSON should return hookSpecificOutput")
 	}
@@ -279,7 +279,7 @@ func TestCLI_Hook_EmptyPrompt(t *testing.T) {
 	var outBuf strings.Builder
 	cmd.Stdout = &outBuf
 	// Empty prompt exits 0 silently
-	cmd.Run()
+	_ = cmd.Run()
 	output := outBuf.String()
 	// Should exit cleanly without hookSpecificOutput
 	if strings.Contains(output, "hookSpecificOutput") {
@@ -294,7 +294,7 @@ func TestCLI_Hook_FilteredShortPrompt(t *testing.T) {
 	cmd.Stdin = strings.NewReader(hookJSON)
 	var outBuf strings.Builder
 	cmd.Stdout = &outBuf
-	cmd.Run()
+	_ = cmd.Run()
 	output := outBuf.String()
 	if strings.Contains(output, "hookSpecificOutput") {
 		t.Error("short conversational prompt 'yes' should be filtered out")
@@ -309,7 +309,7 @@ func TestCLI_Hook_FilteredConversational(t *testing.T) {
 			cmd.Stdin = strings.NewReader(hookJSON)
 			var outBuf strings.Builder
 			cmd.Stdout = &outBuf
-			cmd.Run()
+			_ = cmd.Run()
 			if strings.Contains(outBuf.String(), "hookSpecificOutput") {
 				t.Errorf("conversational prompt %q should be filtered out", prompt)
 			}
@@ -323,7 +323,7 @@ func TestCLI_Hook_RawText(t *testing.T) {
 	cmd.Stdin = strings.NewReader("fix this bug in the sorting function")
 	var outBuf strings.Builder
 	cmd.Stdout = &outBuf
-	cmd.Run()
+	_ = cmd.Run()
 	// Should produce the enhanced prompt as plain text
 	if outBuf.String() == "" {
 		t.Error("hook with raw text should produce output")
@@ -363,7 +363,7 @@ func TestCLI_MCP_Initialize(t *testing.T) {
 	stdinPipe.Close()
 
 	// Wait for process to exit (EOF causes exit)
-	cmd.Wait()
+	_ = cmd.Wait()
 
 	output := outBuf.String()
 	if !strings.Contains(output, "analyze_prompt") {

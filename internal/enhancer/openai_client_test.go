@@ -42,7 +42,7 @@ func TestOpenAIClient_Improve(t *testing.T) {
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -75,7 +75,7 @@ func TestOpenAIClient_ImproveWithFeedback(t *testing.T) {
 	var receivedUserContent string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req openaiRequest
-		json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewDecoder(r.Body).Decode(&req)
 		for _, msg := range req.Messages {
 			if msg.Role == "user" {
 				receivedUserContent = msg.Content
@@ -86,7 +86,7 @@ func TestOpenAIClient_ImproveWithFeedback(t *testing.T) {
 				{Message: openaiMessage{Role: "assistant", Content: "improved"}},
 			},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -111,7 +111,7 @@ func TestOpenAIClient_APIError(t *testing.T) {
 	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
-		w.Write([]byte(`{"error":{"type":"rate_limit_error","message":"rate limited"}}`))
+		_, _ = w.Write([]byte(`{"error":{"type":"rate_limit_error","message":"rate limited"}}`))
 	}))
 	defer server.Close()
 

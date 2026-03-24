@@ -253,7 +253,7 @@ func (m *Model) buildFleetData() views.FleetData {
 	if m.NotifyEnabled {
 		for _, alert := range data.Alerts {
 			if alert.Severity == "critical" {
-				go notify.Send("ralphglasses alert", alert.Message)
+				go func(msg string) { _ = notify.Send("ralphglasses alert", msg) }(alert.Message)
 			}
 		}
 	}

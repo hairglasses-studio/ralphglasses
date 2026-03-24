@@ -198,7 +198,7 @@ func parseAgentMd(filename, content string) AgentDef {
 		case "tools":
 			def.Tools = parseYAMLList(value)
 		case "maxTurns":
-			fmt.Sscanf(value, "%d", &def.MaxTurns)
+			_, _ = fmt.Sscanf(value, "%d", &def.MaxTurns)
 		}
 	}
 

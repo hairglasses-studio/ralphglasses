@@ -290,8 +290,12 @@ func PruneJournal(repoPath string, keepN int) (pruned int, err error) {
 		if err != nil {
 			continue
 		}
-		f.Write(data)
-		f.Write([]byte{'\n'})
+		if _, err := f.Write(data); err != nil {
+			continue
+		}
+		if _, err := f.Write([]byte{'\n'}); err != nil {
+			continue
+		}
 	}
 
 	return prunedCount, nil

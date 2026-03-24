@@ -76,7 +76,7 @@ func ReposToRows(repos []*model.Repo, tickFrame int, healthData map[string]RepoH
 			budgetMax := 0.0
 			if r.Config != nil {
 				if v, ok := r.Config.Values["RALPH_SESSION_BUDGET"]; ok {
-					fmt.Sscanf(v, "%f", &budgetMax)
+					_, _ = fmt.Sscanf(v, "%f", &budgetMax)
 				}
 			}
 			if budgetMax > 0 {

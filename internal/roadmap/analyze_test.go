@@ -13,10 +13,14 @@ func TestAnalyze(t *testing.T) {
 
 	// Write roadmap
 	rmPath := filepath.Join(dir, "ROADMAP.md")
-	os.WriteFile(rmPath, []byte(testRoadmap), 0644)
+	if err := os.WriteFile(rmPath, []byte(testRoadmap), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	// Create some evidence dirs
-	os.MkdirAll(filepath.Join(dir, "internal", "parser"), 0755)
+	if err := os.MkdirAll(filepath.Join(dir, "internal", "parser"), 0755); err != nil {
+		t.Fatal(err)
+	}
 
 	rm, err := Parse(rmPath)
 	if err != nil {
@@ -48,7 +52,9 @@ func TestAnalyze_EmptyRepo(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	rmPath := filepath.Join(dir, "ROADMAP.md")
-	os.WriteFile(rmPath, []byte(testRoadmap), 0644)
+	if err := os.WriteFile(rmPath, []byte(testRoadmap), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	rm, err := Parse(rmPath)
 	if err != nil {

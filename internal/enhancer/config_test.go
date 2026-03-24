@@ -147,7 +147,7 @@ func TestConfig_LoadConfig_AlternatePaths(t *testing.T) {
 	t.Run("yml_extension", func(t *testing.T) {
 		dir := t.TempDir()
 		content := []byte("preamble: yml test\n")
-		os.WriteFile(filepath.Join(dir, ".prompt-improver.yml"), content, 0644)
+		_ = os.WriteFile(filepath.Join(dir, ".prompt-improver.yml"), content, 0644)
 		cfg := LoadConfig(dir)
 		if cfg.Preamble != "yml test" {
 			t.Errorf("should load .yml file, got preamble %q", cfg.Preamble)
@@ -156,9 +156,9 @@ func TestConfig_LoadConfig_AlternatePaths(t *testing.T) {
 
 	t.Run("claude_subdir", func(t *testing.T) {
 		dir := t.TempDir()
-		os.MkdirAll(filepath.Join(dir, ".claude"), 0755)
+		_ = os.MkdirAll(filepath.Join(dir, ".claude"), 0755)
 		content := []byte("preamble: claude subdir test\n")
-		os.WriteFile(filepath.Join(dir, ".claude", "prompt-improver.yaml"), content, 0644)
+		_ = os.WriteFile(filepath.Join(dir, ".claude", "prompt-improver.yaml"), content, 0644)
 		cfg := LoadConfig(dir)
 		if cfg.Preamble != "claude subdir test" {
 			t.Errorf("should load from .claude/ subdir, got preamble %q", cfg.Preamble)

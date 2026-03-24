@@ -12,7 +12,7 @@ func TestScaffold(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create a go.mod to trigger Go detection
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n\ngo 1.22\n"), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n\ngo 1.22\n"), 0644)
 
 	result, err := Scaffold(dir, ScaffoldOptions{})
 	if err != nil {
@@ -52,8 +52,8 @@ func TestScaffold_SkipsExisting(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create existing .ralphrc
-	os.WriteFile(filepath.Join(dir, ".ralphrc"), []byte("EXISTING=true\n"), 0644)
-	os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
+	_ = os.WriteFile(filepath.Join(dir, ".ralphrc"), []byte("EXISTING=true\n"), 0644)
+	_ = os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
 
 	result, err := Scaffold(dir, ScaffoldOptions{})
 	if err != nil {
@@ -84,8 +84,8 @@ func TestScaffold_Force(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create existing files
-	os.WriteFile(filepath.Join(dir, ".ralphrc"), []byte("OLD=true\n"), 0644)
-	os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
+	_ = os.WriteFile(filepath.Join(dir, ".ralphrc"), []byte("OLD=true\n"), 0644)
+	_ = os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
 
 	result, err := Scaffold(dir, ScaffoldOptions{Force: true})
 	if err != nil {
@@ -117,7 +117,7 @@ func TestDetectProjectType(t *testing.T) {
 
 	for _, tt := range tests {
 		dir := t.TempDir()
-		os.WriteFile(filepath.Join(dir, tt.file), []byte(""), 0644)
+		_ = os.WriteFile(filepath.Join(dir, tt.file), []byte(""), 0644)
 
 		got := detectProjectType(dir)
 		if got != tt.want {

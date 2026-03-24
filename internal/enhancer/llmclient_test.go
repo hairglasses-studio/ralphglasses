@@ -45,7 +45,7 @@ func TestLLMClient_Improve(t *testing.T) {
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -73,13 +73,13 @@ func TestLLMClient_ImproveWithThinking(t *testing.T) {
 	var receivedSystem string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req messagesRequest
-		json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewDecoder(r.Body).Decode(&req)
 		receivedSystem = req.System
 
 		resp := messagesResponse{
 			Content: []contentBlock{{Type: "text", Text: "improved"}},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -108,7 +108,7 @@ func TestLLMClient_ImproveWithFeedback(t *testing.T) {
 	var receivedContent string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req messagesRequest
-		json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewDecoder(r.Body).Decode(&req)
 		if len(req.Messages) > 0 {
 			receivedContent = req.Messages[0].Content
 		}
@@ -116,7 +116,7 @@ func TestLLMClient_ImproveWithFeedback(t *testing.T) {
 		resp := messagesResponse{
 			Content: []contentBlock{{Type: "text", Text: "improved"}},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -142,7 +142,7 @@ func TestLLMClient_APIError(t *testing.T) {
 	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
-		w.Write([]byte(`{"error":{"type":"rate_limit_error","message":"rate limited"}}`))
+		_, _ = w.Write([]byte(`{"error":{"type":"rate_limit_error","message":"rate limited"}}`))
 	}))
 	defer server.Close()
 
@@ -167,7 +167,7 @@ func TestLLMClient_ContextCancellation(t *testing.T) {
 		resp := messagesResponse{
 			Content: []contentBlock{{Type: "text", Text: "too late"}},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 

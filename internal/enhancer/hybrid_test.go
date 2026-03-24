@@ -15,7 +15,7 @@ func newTestLLMServer(response string) *httptest.Server {
 			Content: []contentBlock{{Type: "text", Text: response}},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 }
 
@@ -158,7 +158,7 @@ func TestEnhanceHybrid_LLMFailureAutoFallback(t *testing.T) {
 	// Server returns 500
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":{"type":"server_error","message":"internal error"}}`))
+		_, _ = w.Write([]byte(`{"error":{"type":"server_error","message":"internal error"}}`))
 	}))
 	defer server.Close()
 
@@ -175,7 +175,7 @@ func TestEnhanceHybrid_LLMFailureLLMMode(t *testing.T) {
 	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":{"type":"server_error","message":"internal error"}}`))
+		_, _ = w.Write([]byte(`{"error":{"type":"server_error","message":"internal error"}}`))
 	}))
 	defer server.Close()
 
@@ -225,7 +225,7 @@ func TestEnhanceHybrid_RecordsFailureOnCircuitBreaker(t *testing.T) {
 	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":{"type":"server_error","message":"fail"}}`))
+		_, _ = w.Write([]byte(`{"error":{"type":"server_error","message":"fail"}}`))
 	}))
 	defer server.Close()
 

@@ -93,7 +93,7 @@ func TestConfigEditorBackspace(t *testing.T) {
 
 func TestConfigEditorSave(t *testing.T) {
 	cfg := makeTestConfig(t)
-	os.WriteFile(cfg.Path, []byte(""), 0644)
+	_ = os.WriteFile(cfg.Path, []byte(""), 0644)
 	ce := NewConfigEditor(cfg)
 	ce.StartEdit()
 	ce.EditBuf = "updated"

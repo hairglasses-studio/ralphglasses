@@ -11,7 +11,7 @@ import (
 
 func TestWriteJournalEntry(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
+	_ = os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
 
 	now := time.Now()
 	s := &Session{
@@ -63,7 +63,7 @@ func TestWriteJournalEntry(t *testing.T) {
 
 func TestReadRecentJournal(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
+	_ = os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
 
 	// Write 20 entries
 	for i := 0; i < 20; i++ {
@@ -170,7 +170,7 @@ func TestSynthesizeContext_Empty(t *testing.T) {
 
 func TestConsolidatePatterns(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
+	_ = os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
 
 	// Write entries with repeated items
 	for i := 0; i < 5; i++ {
@@ -185,7 +185,7 @@ func TestConsolidatePatterns(t *testing.T) {
 			// Only 2 occurrences of "rare item" — should not be consolidated
 			entry.Worked = append(entry.Worked, "Rare item")
 		}
-		WriteJournalEntryManual(dir, entry)
+		_ = WriteJournalEntryManual(dir, entry)
 	}
 
 	if err := ConsolidatePatterns(dir); err != nil {
@@ -218,7 +218,7 @@ func TestConsolidatePatterns(t *testing.T) {
 
 func TestPruneJournal(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
+	_ = os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
 
 	// Write 200 entries
 	for i := 0; i < 200; i++ {
@@ -228,7 +228,7 @@ func TestPruneJournal(t *testing.T) {
 			TurnCount: i + 1,
 			Worked:    []string{"Repeated item"},
 		}
-		WriteJournalEntryManual(dir, entry)
+		_ = WriteJournalEntryManual(dir, entry)
 	}
 
 	pruned, err := PruneJournal(dir, 50)
@@ -261,10 +261,10 @@ func TestPruneJournal(t *testing.T) {
 
 func TestPruneJournal_NoPruneNeeded(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
+	_ = os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
 
 	for i := 0; i < 10; i++ {
-		WriteJournalEntryManual(dir, JournalEntry{Timestamp: time.Now(), SessionID: "s"})
+		_ = WriteJournalEntryManual(dir, JournalEntry{Timestamp: time.Now(), SessionID: "s"})
 	}
 
 	pruned, err := PruneJournal(dir, 100)
