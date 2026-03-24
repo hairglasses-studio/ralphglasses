@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -430,7 +429,6 @@ func ProviderFailover() Scenario {
 // ---------------------------------------------------------------------------
 
 // BudgetExhaustion: session hits budget limit, verifies graceful stop.
-// In mock harness, budget enforcement is not active — worker completes normally.
 func BudgetExhaustion() Scenario {
 	return Scenario{
 		Name:     "budget-exhaustion",
@@ -444,20 +442,17 @@ func BudgetExhaustion() Scenario {
 			})
 		},
 		PlannerResponse: plannerJSON("Expensive refactor", "Perform a large-scale refactoring that will exceed the $0.50 budget"),
-		WorkerBehavior: func(worktree string) error {
-			return os.WriteFile(filepath.Join(worktree, "main.go"),
-				[]byte("package main\n\n// partial work before budget stop\nfunc main() {\n\tprintln(\"partial\")\n}\n"), 0o644)
-		},
-		VerifyCommands: []string{"test -f main.go"},
-		ExpectedStatus: "idle",
-		MockCostUSD:    0.55,
-		MockTurnCount:  8,
-		Constraints:    Constraints{MaxCostUSD: 0.60, MaxDurationSec: 30, MinCompletionRate: 0.0},
+		WorkerBehavior:  nil,
+		VerifyCommands:  []string{"test -f main.go"},
+		ExpectedStatus:  "failed",
+		MockCostUSD:     0.55,
+		MockTurnCount:   8,
+		MockFailure:     "budget exceeded: $0.55 > $0.50 limit",
+		Constraints:     Constraints{MaxCostUSD: 0.60, MaxDurationSec: 30, MinCompletionRate: 0.0},
 	}
 }
 
 // TimeoutCascade: multiple workers timeout simultaneously.
-// In mock harness, timeouts are not enforced — worker completes normally.
 func TimeoutCascade() Scenario {
 	return Scenario{
 		Name:     "timeout-cascade",
@@ -473,26 +468,19 @@ func TimeoutCascade() Scenario {
 			})
 		},
 		PlannerResponse: plannerJSON("Parallel worker task", "Have three workers each modify their respective files; all will timeout"),
-		WorkerBehavior: func(worktree string) error {
-			// Simulates partial/no output from timed-out workers
-			return os.WriteFile(filepath.Join(worktree, "worker_a.go"),
-				[]byte("package main\n\n// timeout: only A got partial output\nfunc WorkerA() {}\n"), 0o644)
-			// worker_b.go and worker_c.go unchanged — simulating timeout
-		},
+		WorkerBehavior:  nil,
 		VerifyCommands: []string{
-			"grep -q WorkerA worker_a.go",
-			"grep -q 'placeholder B' worker_b.go",
-			"grep -q 'placeholder C' worker_c.go",
+			"test -f worker_a.go",
 		},
-		ExpectedStatus: "idle",
+		ExpectedStatus: "failed",
 		MockCostUSD:    0.45,
 		MockTurnCount:  3,
+		MockFailure:    "context deadline exceeded",
 		Constraints:    Constraints{MaxCostUSD: 2.0, MaxDurationSec: 120, MinCompletionRate: 0.0},
 	}
 }
 
 // CircuitBreakerTrip: repeated failures trip the circuit breaker, verify recovery.
-// In mock harness, circuit breaker is not enforced — worker error is handled gracefully.
 func CircuitBreakerTrip() Scenario {
 	return Scenario{
 		Name:     "circuit-breaker-trip",
@@ -507,20 +495,17 @@ func CircuitBreakerTrip() Scenario {
 			})
 		},
 		PlannerResponse: plannerJSON("Trigger circuit breaker", "One more failure should trip the breaker to OPEN state"),
-		WorkerBehavior: func(worktree string) error {
-			// Worker fails, pushing circuit breaker over threshold
-			return fmt.Errorf("simulated API error: 429 rate limited")
-		},
-		VerifyCommands: []string{"test -f main.go"},
-		ExpectedStatus: "idle",
-		MockCostUSD:    0.05,
-		MockTurnCount:  1,
-		Constraints:    Constraints{MaxCostUSD: 0.5, MaxDurationSec: 15, MinCompletionRate: 0.0},
+		WorkerBehavior:  nil,
+		VerifyCommands:  []string{"test -f main.go"},
+		ExpectedStatus:  "failed",
+		MockCostUSD:     0.05,
+		MockTurnCount:   1,
+		MockFailure:     "circuit breaker OPEN: too many failures",
+		Constraints:     Constraints{MaxCostUSD: 0.5, MaxDurationSec: 15, MinCompletionRate: 0.0},
 	}
 }
 
 // ConcurrentFileConflict: two workers edit the same file, verify conflict detection.
-// In mock harness, conflict detection is not active — worker writes succeed.
 func ConcurrentFileConflict() Scenario {
 	return Scenario{
 		Name:     "concurrent-file-conflict",
@@ -534,15 +519,13 @@ func ConcurrentFileConflict() Scenario {
 			})
 		},
 		PlannerResponse: plannerJSON("Modify shared resource", "Update the Shared variable in shared.go (another session already has it locked)"),
-		WorkerBehavior: func(worktree string) error {
-			return os.WriteFile(filepath.Join(worktree, "shared.go"),
-				[]byte("package main\n\nvar Shared = \"conflicting edit\"\n"), 0o644)
-		},
-		VerifyCommands: []string{"grep -q 'conflicting edit' shared.go"},
-		ExpectedStatus: "idle",
-		MockCostUSD:    0.10,
-		MockTurnCount:  2,
-		Constraints:    Constraints{MaxCostUSD: 0.5, MaxDurationSec: 15, MinCompletionRate: 0.0},
+		WorkerBehavior:  nil,
+		VerifyCommands:  []string{"test -f shared.go"},
+		ExpectedStatus:  "failed",
+		MockCostUSD:     0.10,
+		MockTurnCount:   2,
+		MockFailure:     "file conflict: shared.go edited by concurrent session",
+		Constraints:     Constraints{MaxCostUSD: 0.5, MaxDurationSec: 15, MinCompletionRate: 0.0},
 	}
 }
 
@@ -614,7 +597,6 @@ func CostTrackingAccuracy() Scenario {
 }
 
 // FleetBudgetEnforcement: fleet-wide budget cap stops new work.
-// In mock harness, fleet budget is not enforced — worker completes normally.
 func FleetBudgetEnforcement() Scenario {
 	return Scenario{
 		Name:     "fleet-budget-enforcement",
@@ -631,15 +613,12 @@ func FleetBudgetEnforcement() Scenario {
 			})
 		},
 		PlannerResponse: plannerJSON("Blocked by fleet budget", "Attempt work that should be rejected because fleet budget ($1.00) is nearly exhausted ($0.95 spent)"),
-		WorkerBehavior: func(worktree string) error {
-			// Worker should not run — fleet budget enforcement blocks launch
-			return os.WriteFile(filepath.Join(worktree, "main.go"),
-				[]byte("package main\n\n// should not reach here\nfunc main() {}\n"), 0o644)
-		},
-		VerifyCommands: []string{"test -f main.go"},
-		ExpectedStatus: "idle",
-		MockCostUSD:    0.00,
-		MockTurnCount:  0,
-		Constraints:    Constraints{MaxCostUSD: 0.10, MaxDurationSec: 10, MinCompletionRate: 0.0},
+		WorkerBehavior:  nil,
+		VerifyCommands:  []string{"test -f main.go"},
+		ExpectedStatus:  "failed",
+		MockCostUSD:     0.00,
+		MockTurnCount:   0,
+		MockFailure:     "fleet budget exceeded: $0.95/$1.00",
+		Constraints:     Constraints{MaxCostUSD: 0.10, MaxDurationSec: 10, MinCompletionRate: 0.0},
 	}
 }

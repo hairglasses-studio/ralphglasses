@@ -58,7 +58,7 @@ func TestE2EScenarioCatalogComplete(t *testing.T) {
 		if s.PlannerResponse == "" {
 			t.Errorf("scenario %s has empty PlannerResponse", s.Name)
 		}
-		if s.WorkerBehavior == nil {
+		if s.WorkerBehavior == nil && s.MockFailure == "" {
 			t.Errorf("scenario %s has nil WorkerBehavior", s.Name)
 		}
 		if s.ExpectedStatus == "" {

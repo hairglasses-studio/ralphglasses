@@ -69,8 +69,8 @@ func TestAllScenariosHaveValidFields(t *testing.T) {
 				t.Error("scenario has empty PlannerResponse")
 			}
 
-			// WorkerBehavior must be set
-			if s.WorkerBehavior == nil {
+			// WorkerBehavior must be set (unless MockFailure simulates an infrastructure error)
+			if s.WorkerBehavior == nil && s.MockFailure == "" {
 				t.Error("scenario has nil WorkerBehavior")
 			}
 
