@@ -171,7 +171,7 @@ func TestHistoryAfterCursor_RingOverflow(t *testing.T) {
 	}
 
 	// Cursor 7 = get events after position 7
-	evts, cursor = bus.HistoryAfterCursor(7, 100)
+	evts, _ = bus.HistoryAfterCursor(7, 100)
 	if len(evts) != 3 {
 		t.Fatalf("len = %d, want 3", len(evts))
 	}

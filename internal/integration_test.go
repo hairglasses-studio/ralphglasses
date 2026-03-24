@@ -18,14 +18,14 @@ func TestScanRefreshCycle(t *testing.T) {
 	repoDir := filepath.Join(root, "integration-repo")
 	ralphDir := filepath.Join(repoDir, ".ralph")
 	logDir := filepath.Join(ralphDir, "logs")
-	os.MkdirAll(logDir, 0755)
+	_ = os.MkdirAll(logDir, 0755)
 
 	status := model.LoopStatus{Status: "running", LoopCount: 1, CallsMadeThisHr: 5, MaxCallsPerHour: 80}
 	writeJSON(t, filepath.Join(ralphDir, "status.json"), status)
 	writeJSON(t, filepath.Join(ralphDir, ".circuit_breaker_state"), model.CircuitBreakerState{State: "CLOSED"})
 	writeJSON(t, filepath.Join(ralphDir, "progress.json"), model.Progress{Iteration: 1, CompletedIDs: []string{"setup"}, Status: "in_progress"})
-	os.WriteFile(filepath.Join(repoDir, ".ralphrc"), []byte("PROJECT_NAME=\"integration\"\n"), 0644)
-	os.WriteFile(filepath.Join(logDir, "ralph.log"), []byte("Starting loop 1\nTask completed\n"), 0644)
+	_ = os.WriteFile(filepath.Join(repoDir, ".ralphrc"), []byte("PROJECT_NAME=\"integration\"\n"), 0644)
+	_ = os.WriteFile(filepath.Join(logDir, "ralph.log"), []byte("Starting loop 1\nTask completed\n"), 0644)
 
 	repos, err := discovery.Scan(root)
 	if err != nil {
@@ -81,5 +81,5 @@ func TestProcessManagerLifecycle(t *testing.T) {
 func writeJSON(t *testing.T, path string, v any) {
 	t.Helper()
 	data, _ := json.Marshal(v)
-	os.WriteFile(path, data, 0644)
+	_ = os.WriteFile(path, data, 0644)
 }

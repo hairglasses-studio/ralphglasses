@@ -586,7 +586,7 @@ func (c *Coordinator) GetFleetState() FleetState {
 
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 func mergeData(base, extra map[string]any) map[string]any {

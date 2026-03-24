@@ -91,12 +91,12 @@ func colorizeLine(line string) string {
 // ScrollUp moves up one line.
 func (lv *LogView) ScrollUp() {
 	lv.Follow = false
-	lv.vp.LineUp(1)
+	lv.vp.ScrollUp(1)
 }
 
 // ScrollDown moves down one line.
 func (lv *LogView) ScrollDown() {
-	lv.vp.LineDown(1)
+	lv.vp.ScrollDown(1)
 	lv.Follow = lv.vp.AtBottom()
 }
 
@@ -115,12 +115,12 @@ func (lv *LogView) ScrollToStart() {
 // PageUp scrolls up by half a page.
 func (lv *LogView) PageUp() {
 	lv.Follow = false
-	lv.vp.HalfViewUp()
+	lv.vp.HalfPageUp()
 }
 
 // PageDown scrolls down by half a page.
 func (lv *LogView) PageDown() {
-	lv.vp.HalfViewDown()
+	lv.vp.HalfPageDown()
 	lv.Follow = lv.vp.AtBottom()
 }
 

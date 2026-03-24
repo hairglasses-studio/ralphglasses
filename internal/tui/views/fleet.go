@@ -2,10 +2,8 @@ package views
 
 import (
 	"fmt"
-	"strings"
-	"time"
-
 	"sort"
+	"strings"
 
 	"github.com/NimbleMarkets/ntcharts/sparkline"
 	"github.com/charmbracelet/lipgloss"
@@ -405,14 +403,3 @@ func eventTypeLabel(t events.EventType) string {
 	return styles.HeaderStyle.Render(parts[0]) + "." + parts[1]
 }
 
-// formatTimeAgo is used for event timestamps relative display.
-func formatTimeAgo(t time.Time) string {
-	d := time.Since(t)
-	if d < time.Minute {
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	}
-	if d < time.Hour {
-		return fmt.Sprintf("%dm", int(d.Minutes()))
-	}
-	return fmt.Sprintf("%dh", int(d.Hours()))
-}

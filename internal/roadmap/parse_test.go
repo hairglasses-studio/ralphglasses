@@ -123,7 +123,7 @@ func TestParse_EmptyFile(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ROADMAP.md")
-	os.WriteFile(path, []byte(""), 0644)
+	_ = os.WriteFile(path, []byte(""), 0644)
 
 	rm, err := Parse(path)
 	if err != nil {

@@ -167,7 +167,7 @@ func TestHandleList(t *testing.T) {
 	srv, _ := setupTestServer(t)
 
 	// Scan first
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleList(context.Background(), makeRequest(nil))
 	if err != nil {
@@ -203,7 +203,7 @@ func TestHandleList_AutoScans(t *testing.T) {
 
 func TestHandleStatus(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleStatus(context.Background(), makeRequest(map[string]any{
 		"repo": "test-repo",
@@ -223,7 +223,7 @@ func TestHandleStatus(t *testing.T) {
 
 func TestHandleStatus_MissingRepoArg(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleStatus(context.Background(), makeRequest(nil))
 	if err != nil {
@@ -236,7 +236,7 @@ func TestHandleStatus_MissingRepoArg(t *testing.T) {
 
 func TestHandleStatus_UnknownRepo(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleStatus(context.Background(), makeRequest(map[string]any{
 		"repo": "nonexistent",
@@ -255,7 +255,7 @@ func TestHandleStatus_UnknownRepo(t *testing.T) {
 
 func TestHandleLogs(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleLogs(context.Background(), makeRequest(map[string]any{
 		"repo": "test-repo",
@@ -275,7 +275,7 @@ func TestHandleLogs(t *testing.T) {
 
 func TestHandleLogs_MaxLines(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleLogs(context.Background(), makeRequest(map[string]any{
 		"repo":  "test-repo",
@@ -294,7 +294,7 @@ func TestHandleLogs_MaxLines(t *testing.T) {
 
 func TestHandleConfig_ListAll(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleConfig(context.Background(), makeRequest(map[string]any{
 		"repo": "test-repo",
@@ -314,7 +314,7 @@ func TestHandleConfig_ListAll(t *testing.T) {
 
 func TestHandleConfig_GetKey(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleConfig(context.Background(), makeRequest(map[string]any{
 		"repo": "test-repo",
@@ -335,7 +335,7 @@ func TestHandleConfig_GetKey(t *testing.T) {
 
 func TestHandleConfig_SetKey(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleConfig(context.Background(), makeRequest(map[string]any{
 		"repo":  "test-repo",
@@ -363,7 +363,7 @@ func TestHandleConfig_SetKey(t *testing.T) {
 
 func TestHandleConfig_MissingKey(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleConfig(context.Background(), makeRequest(map[string]any{
 		"repo": "test-repo",
@@ -379,7 +379,7 @@ func TestHandleConfig_MissingKey(t *testing.T) {
 
 func TestHandleStart_MissingRepo(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleStart(context.Background(), makeRequest(nil))
 	if err != nil {
@@ -392,7 +392,7 @@ func TestHandleStart_MissingRepo(t *testing.T) {
 
 func TestHandleStop_MissingRepo(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleStop(context.Background(), makeRequest(nil))
 	if err != nil {
@@ -422,7 +422,7 @@ func TestHandleStopAll(t *testing.T) {
 
 func TestHandlePause_MissingRepo(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handlePause(context.Background(), makeRequest(nil))
 	if err != nil {
@@ -706,8 +706,8 @@ func TestHandleRoadmapExpand(t *testing.T) {
 func TestHandleRepoScaffold(t *testing.T) {
 	_, root := setupTestServer(t)
 	newRepoPath := filepath.Join(root, "new-repo")
-	os.MkdirAll(newRepoPath, 0755)
-	os.WriteFile(filepath.Join(newRepoPath, "go.mod"), []byte("module test\n\ngo 1.22\n"), 0644)
+	_ = os.MkdirAll(newRepoPath, 0755)
+	_ = os.WriteFile(filepath.Join(newRepoPath, "go.mod"), []byte("module test\n\ngo 1.22\n"), 0644)
 
 	srv := NewServer(root)
 	result, err := srv.handleRepoScaffold(context.Background(), makeRequest(map[string]any{
@@ -991,7 +991,7 @@ func TestHandleTeamDelegate_MissingArgs(t *testing.T) {
 
 func TestHandleAgentDefine_And_List(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	// Define an agent
 	result, err := srv.handleAgentDefine(context.Background(), makeRequest(map[string]any{
@@ -1032,7 +1032,7 @@ func TestHandleAgentDefine_And_List(t *testing.T) {
 
 func TestHandleAgentList_AllProviders(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleAgentList(context.Background(), makeRequest(map[string]any{
 		"repo":     "test-repo",
@@ -1078,7 +1078,7 @@ func TestHandleEventList_NoBus(t *testing.T) {
 func TestHandleEventList_WithBus(t *testing.T) {
 	root := t.TempDir()
 	repoPath := filepath.Join(root, "test-repo")
-	os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
+	_ = os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
 
 	bus := events.NewBus(100)
 	srv := NewServerWithBus(root, bus)
@@ -1129,7 +1129,7 @@ func TestHandleFleetAnalytics_Empty(t *testing.T) {
 
 func TestHandleConfigBulk_Query(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleConfigBulk(context.Background(), makeRequest(map[string]any{
 		"key": "MODEL",
@@ -1149,7 +1149,7 @@ func TestHandleConfigBulk_Query(t *testing.T) {
 
 func TestHandleConfigBulk_Set(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleConfigBulk(context.Background(), makeRequest(map[string]any{
 		"key":   "MODEL",
@@ -1184,7 +1184,7 @@ func TestHandleConfigBulk_MissingKey(t *testing.T) {
 
 func TestHandleRepoHealth(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleRepoHealth(context.Background(), makeRequest(map[string]any{
 		"repo": "test-repo",
@@ -1204,7 +1204,7 @@ func TestHandleRepoHealth(t *testing.T) {
 
 func TestHandleRepoHealth_NotFound(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleRepoHealth(context.Background(), makeRequest(map[string]any{
 		"repo": "nonexistent",
@@ -1221,7 +1221,7 @@ func TestHandleRepoHealth_NotFound(t *testing.T) {
 
 func TestHandleWorkflowDefine(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	yamlStr := `name: test-workflow
 steps:
@@ -1268,7 +1268,7 @@ func TestHandleWorkflowDefine_MissingArgs(t *testing.T) {
 
 func TestHandleWorkflowRun_NotFound(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleWorkflowRun(context.Background(), makeRequest(map[string]any{
 		"repo": "test-repo",
@@ -1300,7 +1300,7 @@ func TestHandleWorkflowRun_MissingArgs(t *testing.T) {
 
 func TestHandleSnapshot_Save(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleSnapshot(context.Background(), makeRequest(map[string]any{
 		"name": "test-snap",
@@ -1320,10 +1320,10 @@ func TestHandleSnapshot_Save(t *testing.T) {
 
 func TestHandleSnapshot_List(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	// Save one first
-	srv.handleSnapshot(context.Background(), makeRequest(map[string]any{
+	_, _ = srv.handleSnapshot(context.Background(), makeRequest(map[string]any{
 		"name": "test-snap-list",
 	}))
 
@@ -1347,17 +1347,17 @@ func TestHandleSnapshot_List(t *testing.T) {
 
 func TestHandleAgentCompose(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	// Create two agents first
-	srv.handleAgentDefine(context.Background(), makeRequest(map[string]any{
+	_, _ = srv.handleAgentDefine(context.Background(), makeRequest(map[string]any{
 		"repo":        "test-repo",
 		"name":        "agent-a",
 		"prompt":      "You handle testing",
 		"description": "Test runner",
 		"tools":       "Bash,Read",
 	}))
-	srv.handleAgentDefine(context.Background(), makeRequest(map[string]any{
+	_, _ = srv.handleAgentDefine(context.Background(), makeRequest(map[string]any{
 		"repo":        "test-repo",
 		"name":        "agent-b",
 		"prompt":      "You handle documentation",
@@ -1416,7 +1416,7 @@ func TestHandleAgentCompose_MissingArgs(t *testing.T) {
 
 func TestHandleAgentCompose_AgentNotFound(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleAgentCompose(context.Background(), makeRequest(map[string]any{
 		"repo":   "test-repo",
@@ -1454,7 +1454,7 @@ func TestHandleSessionStopAll_Empty(t *testing.T) {
 
 func TestHandleFleetStatus(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleFleetStatus(context.Background(), makeRequest(nil))
 	if err != nil {
@@ -1477,7 +1477,7 @@ func TestHandleFleetStatus(t *testing.T) {
 
 func TestHandleJournalRead(t *testing.T) {
 	srv, root := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 	repoPath := filepath.Join(root, "test-repo")
 
 	// Write fixture entries
@@ -1489,7 +1489,7 @@ func TestHandleJournalRead(t *testing.T) {
 			Failed:    []string{"Bad pattern"},
 			Suggest:   []string{"Try this"},
 		}
-		session.WriteJournalEntryManual(repoPath, entry)
+		_ = session.WriteJournalEntryManual(repoPath, entry)
 	}
 
 	result, err := srv.handleJournalRead(context.Background(), makeRequest(map[string]any{
@@ -1514,7 +1514,7 @@ func TestHandleJournalRead(t *testing.T) {
 
 func TestHandleJournalRead_Empty(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleJournalRead(context.Background(), makeRequest(map[string]any{
 		"repo": "test-repo",
@@ -1534,7 +1534,7 @@ func TestHandleJournalRead_Empty(t *testing.T) {
 
 func TestHandleJournalWrite(t *testing.T) {
 	srv, root := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleJournalWrite(context.Background(), makeRequest(map[string]any{
 		"repo":    "test-repo",
@@ -1570,12 +1570,12 @@ func TestHandleJournalWrite(t *testing.T) {
 
 func TestHandleJournalPrune_DryRun(t *testing.T) {
 	srv, root := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 	repoPath := filepath.Join(root, "test-repo")
 
 	// Write some entries
 	for i := 0; i < 5; i++ {
-		session.WriteJournalEntryManual(repoPath, session.JournalEntry{
+		_ = session.WriteJournalEntryManual(repoPath, session.JournalEntry{
 			SessionID: "s",
 			RepoName:  "test-repo",
 		})
@@ -1609,7 +1609,7 @@ func TestHandleJournalPrune_DryRun(t *testing.T) {
 
 func TestHandleLoopLifecycle(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	srv.SessMgr.SetHooksForTesting(
 		func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
@@ -2075,7 +2075,7 @@ func TestRCSend_MissingPrompt(t *testing.T) {
 
 func TestRCSend_RepoNotFound(t *testing.T) {
 	srv, _ := setupTestServer(t)
-	srv.handleScan(context.Background(), makeRequest(nil))
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 	result, err := srv.handleRCSend(context.Background(), makeRequest(map[string]any{
 		"repo":   "nonexistent",
 		"prompt": "test",

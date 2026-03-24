@@ -303,7 +303,7 @@ func (fa *FeedbackAnalyzer) save() {
 	if err != nil {
 		return
 	}
-	os.WriteFile(filepath.Join(fa.stateDir, "feedback_profiles.json"), data, 0644)
+	_ = os.WriteFile(filepath.Join(fa.stateDir, "feedback_profiles.json"), data, 0644)
 }
 
 func (fa *FeedbackAnalyzer) load() {

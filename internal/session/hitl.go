@@ -256,7 +256,9 @@ func (t *HITLTracker) appendToFile(event HITLEvent) {
 		return
 	}
 	defer f.Close()
-	f.Write(data)
+	if _, err := f.Write(data); err != nil {
+		return
+	}
 }
 
 func (t *HITLTracker) load() {

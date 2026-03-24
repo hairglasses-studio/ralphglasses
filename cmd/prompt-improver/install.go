@@ -143,10 +143,14 @@ func readSettings(path string) (*settingsJSON, map[string]json.RawMessage, error
 
 	// Parse known keys
 	if hooksRaw, ok := raw["hooks"]; ok {
-		json.Unmarshal(hooksRaw, &s.Hooks)
+		if err := json.Unmarshal(hooksRaw, &s.Hooks); err != nil {
+			return s, raw, fmt.Errorf("invalid hooks JSON: %w", err)
+		}
 	}
 	if mcpRaw, ok := raw["mcpServers"]; ok {
-		json.Unmarshal(mcpRaw, &s.McpServers)
+		if err := json.Unmarshal(mcpRaw, &s.McpServers); err != nil {
+			return s, raw, fmt.Errorf("invalid mcpServers JSON: %w", err)
+		}
 	}
 
 	return s, raw, nil

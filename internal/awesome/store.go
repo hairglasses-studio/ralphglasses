@@ -26,7 +26,9 @@ func SaveIndex(repoPath string, idx *Index) error {
 
 	// Rotate: current → prev
 	if _, err := os.Stat(indexPath); err == nil {
-		os.Rename(indexPath, prevPath)
+		if err := os.Rename(indexPath, prevPath); err != nil {
+			return fmt.Errorf("rotate index: %w", err)
+		}
 	}
 
 	return writeJSON(indexPath, idx)

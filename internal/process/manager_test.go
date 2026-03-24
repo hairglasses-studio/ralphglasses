@@ -278,16 +278,16 @@ func TestPidForRepo_ReturnsPIDForRunning(t *testing.T) {
 func TestReadPIDFile_InvalidContent(t *testing.T) {
 	repoPath := t.TempDir()
 	ralphDir := filepath.Join(repoPath, ".ralph")
-	os.MkdirAll(ralphDir, 0755)
+	_ = os.MkdirAll(ralphDir, 0755)
 
 	// Write garbage content
-	os.WriteFile(filepath.Join(ralphDir, pidFileName), []byte("not-a-number\n"), 0644)
+	_ = os.WriteFile(filepath.Join(ralphDir, pidFileName), []byte("not-a-number\n"), 0644)
 	if pid := readPIDFile(repoPath); pid != 0 {
 		t.Errorf("expected 0 for invalid PID, got %d", pid)
 	}
 
 	// Write negative PID
-	os.WriteFile(filepath.Join(ralphDir, pidFileName), []byte("-5\n"), 0644)
+	_ = os.WriteFile(filepath.Join(ralphDir, pidFileName), []byte("-5\n"), 0644)
 	if pid := readPIDFile(repoPath); pid != 0 {
 		t.Errorf("expected 0 for negative PID, got %d", pid)
 	}
@@ -327,10 +327,10 @@ func TestRecover_StalePID(t *testing.T) {
 	m := NewManager()
 	repoPath := t.TempDir()
 	ralphDir := filepath.Join(repoPath, ".ralph")
-	os.MkdirAll(ralphDir, 0755)
+	_ = os.MkdirAll(ralphDir, 0755)
 
 	// Write a PID file for a dead process
-	os.WriteFile(filepath.Join(ralphDir, pidFileName), []byte("1000000000\n"), 0644)
+	_ = os.WriteFile(filepath.Join(ralphDir, pidFileName), []byte("1000000000\n"), 0644)
 
 	n := m.Recover([]string{repoPath})
 	if n != 0 {
@@ -347,10 +347,10 @@ func TestRecover_LiveProcess(t *testing.T) {
 	m := NewManager()
 	repoPath := t.TempDir()
 	ralphDir := filepath.Join(repoPath, ".ralph")
-	os.MkdirAll(ralphDir, 0755)
+	_ = os.MkdirAll(ralphDir, 0755)
 
 	// Write a PID file for our own process (known alive)
-	os.WriteFile(filepath.Join(ralphDir, pidFileName), []byte(strconv.Itoa(os.Getpid())+"\n"), 0644)
+	_ = os.WriteFile(filepath.Join(ralphDir, pidFileName), []byte(strconv.Itoa(os.Getpid())+"\n"), 0644)
 
 	n := m.Recover([]string{repoPath})
 	if n != 1 {
@@ -473,13 +473,13 @@ func TestCleanStalePIDFiles(t *testing.T) {
 	repo3 := t.TempDir()
 
 	for _, r := range []string{repo1, repo2, repo3} {
-		os.MkdirAll(filepath.Join(r, ".ralph"), 0755)
+		_ = os.MkdirAll(filepath.Join(r, ".ralph"), 0755)
 	}
 
 	// repo1: stale PID
-	os.WriteFile(filepath.Join(repo1, ".ralph", pidFileName), []byte("1000000000\n"), 0644)
+	_ = os.WriteFile(filepath.Join(repo1, ".ralph", pidFileName), []byte("1000000000\n"), 0644)
 	// repo2: live PID (our process)
-	os.WriteFile(filepath.Join(repo2, ".ralph", pidFileName), []byte(strconv.Itoa(os.Getpid())+"\n"), 0644)
+	_ = os.WriteFile(filepath.Join(repo2, ".ralph", pidFileName), []byte(strconv.Itoa(os.Getpid())+"\n"), 0644)
 	// repo3: no PID file
 
 	cleaned := CleanStalePIDFiles([]string{repo1, repo2, repo3})

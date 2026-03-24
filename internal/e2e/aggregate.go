@@ -127,7 +127,7 @@ func FormatMarkdown(s Summary) string {
 
 	if s.CrossScenario != nil {
 		b.WriteString("## Cross-Scenario\n\n")
-		b.WriteString(fmt.Sprintf("| Metric | Value |\n|--------|-------|\n"))
+		b.WriteString("| Metric | Value |\n|--------|-------|\n")
 		b.WriteString(fmt.Sprintf("| Avg Cost | $%.3f |\n", s.CrossScenario.AvgCostUSD))
 		b.WriteString(fmt.Sprintf("| Avg Latency | %.0fms |\n", s.CrossScenario.AvgLatencyMs))
 		b.WriteString(fmt.Sprintf("| Completion Rate | %.1f%% |\n", s.CrossScenario.CompletionRate*100))

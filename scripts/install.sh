@@ -75,7 +75,47 @@ else
   install -m 755 "${TMPDIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
 fi
 
-echo "Installed ${BINARY} ${VERSION} to ${INSTALL_DIR}/${BINARY}"
-if ! echo "$PATH" | grep -q "${INSTALL_DIR}"; then
-  echo "Note: add ${INSTALL_DIR} to your PATH"
+# macOS: ad-hoc codesign to avoid Gatekeeper quarantine
+if [ "$(uname)" = "Darwin" ] && command -v codesign >/dev/null 2>&1; then
+  if [ "${USE_SUDO:-}" = "1" ]; then
+    sudo codesign -s - "${INSTALL_DIR}/${BINARY}" 2>/dev/null || true
+  else
+    codesign -s - "${INSTALL_DIR}/${BINARY}" 2>/dev/null || true
+  fi
 fi
+
+echo "Installed ${BINARY} ${VERSION} to ${INSTALL_DIR}/${BINARY}"
+
+# Check if INSTALL_DIR is on PATH and offer to fix it
+case ":$PATH:" in
+  *":$INSTALL_DIR:"*) ;;
+  *)
+    if [ -t 0 ]; then
+      echo ""
+      echo "WARNING: $INSTALL_DIR is not in your PATH."
+      printf "Add it now? [y/N] "
+      read -r reply
+      if [ "$reply" = "y" ] || [ "$reply" = "Y" ]; then
+        SHELL_NAME="$(basename "$SHELL")"
+        case "$SHELL_NAME" in
+          bash) RC="$HOME/.bashrc" ;;
+          zsh)  RC="$HOME/.zshrc" ;;
+          fish) RC="$HOME/.config/fish/config.fish" ;;
+          *)    RC="" ;;
+        esac
+        if [ -n "$RC" ]; then
+          if [ "$SHELL_NAME" = "fish" ]; then
+            echo "set -gx PATH $INSTALL_DIR \$PATH" >> "$RC"
+          else
+            echo "export PATH=\"$INSTALL_DIR:\$PATH\"" >> "$RC"
+          fi
+          echo "Added to $RC. Run: source $RC"
+        else
+          echo "Unknown shell ($SHELL_NAME). Add manually: export PATH=\"$INSTALL_DIR:\$PATH\""
+        fi
+      fi
+    else
+      echo "Note: $INSTALL_DIR is not on your PATH. Add it to your shell profile."
+    fi
+    ;;
+esac

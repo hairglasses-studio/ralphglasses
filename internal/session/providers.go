@@ -572,10 +572,10 @@ func asString(v any) string {
 	switch x := v.(type) {
 	case string:
 		return strings.TrimSpace(x)
-	case fmt.Stringer:
-		return strings.TrimSpace(x.String())
 	case json.Number:
 		return x.String()
+	case fmt.Stringer:
+		return strings.TrimSpace(x.String())
 	case float64:
 		return strconv.FormatFloat(x, 'f', -1, 64)
 	case int:

@@ -77,8 +77,12 @@ func TestStoreRotation(t *testing.T) {
 	idx1 := &Index{Source: "v1", FetchedAt: time.Now().UTC(), Entries: []AwesomeEntry{{Name: "a", URL: "u1"}}}
 	idx2 := &Index{Source: "v2", FetchedAt: time.Now().UTC(), Entries: []AwesomeEntry{{Name: "b", URL: "u2"}}}
 
-	SaveIndex(dir, idx1)
-	SaveIndex(dir, idx2)
+	if err := SaveIndex(dir, idx1); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveIndex(dir, idx2); err != nil {
+		t.Fatal(err)
+	}
 
 	// Current should be v2
 	current, err := LoadIndex(dir)

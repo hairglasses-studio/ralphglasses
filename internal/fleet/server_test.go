@@ -32,7 +32,7 @@ func TestCoordinator_RegisterAndHeartbeat(t *testing.T) {
 	}
 
 	var resp map[string]any
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	workerID, _ := resp["worker_id"].(string)
 	if workerID == "" {
 		t.Fatal("expected worker_id in response")
@@ -94,7 +94,7 @@ func TestCoordinator_SubmitAndPollWork(t *testing.T) {
 	}
 
 	var submitResp map[string]any
-	json.Unmarshal(w.Body.Bytes(), &submitResp)
+	_ = json.Unmarshal(w.Body.Bytes(), &submitResp)
 	workID, _ := submitResp["work_item_id"].(string)
 	if workID == "" {
 		t.Fatal("expected work_item_id")
@@ -111,7 +111,7 @@ func TestCoordinator_SubmitAndPollWork(t *testing.T) {
 	}
 
 	var pollResp WorkPollResponse
-	json.Unmarshal(w2.Body.Bytes(), &pollResp)
+	_ = json.Unmarshal(w2.Body.Bytes(), &pollResp)
 	if pollResp.Item == nil {
 		t.Fatal("expected work item from poll")
 	}
@@ -189,7 +189,9 @@ func TestCoordinator_Status(t *testing.T) {
 	}
 
 	var status NodeStatus
-	json.Unmarshal(w.Body.Bytes(), &status)
+	if err := json.Unmarshal(w.Body.Bytes(), &status); err != nil {
+		t.Fatalf("unmarshal status: %v", err)
+	}
 	if status.Role != "coordinator" {
 		t.Errorf("role: got %q, want coordinator", status.Role)
 	}
@@ -315,5 +317,5 @@ func TestCoordinator_StartStop(t *testing.T) {
 	cancel()
 	shutCtx, shutCancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer shutCancel()
-	coord.Stop(shutCtx)
+	_ = coord.Stop(shutCtx)
 }

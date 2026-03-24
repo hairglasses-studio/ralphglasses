@@ -7,7 +7,7 @@ LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSIO
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-integration test-scripts fuzz build build-release install build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example
+.PHONY: bootstrap doctor test test-verbose test-cover test-integration test-scripts fuzz build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example
 
 bootstrap:
 	./scripts/bootstrap-toolchain.sh
@@ -62,9 +62,31 @@ build:
 build-release:
 	$(GO) build -ldflags "$(LDFLAGS)" -o ralphglasses .
 
-# Install with version injection
+# Install to GOBIN (Go dev workflow — use install-local for system PATH)
 install:
 	$(GO) install -ldflags "$(LDFLAGS)" .
+
+# Build release binary and install to system PATH
+install-local: build-release
+ifeq ($(shell uname),Darwin)
+	@codesign -s - ralphglasses 2>/dev/null || true
+endif
+	@INSTALL_DIR=""; \
+	if [ -w /usr/local/bin ]; then \
+		INSTALL_DIR=/usr/local/bin; \
+	elif [ -d $(HOME)/.local/bin ]; then \
+		INSTALL_DIR=$(HOME)/.local/bin; \
+	else \
+		mkdir -p $(HOME)/.local/bin; \
+		INSTALL_DIR=$(HOME)/.local/bin; \
+	fi; \
+	cp ralphglasses "$$INSTALL_DIR/ralphglasses"; \
+	chmod 755 "$$INSTALL_DIR/ralphglasses"; \
+	echo "Installed ralphglasses $(VERSION) to $$INSTALL_DIR/ralphglasses"; \
+	case ":$$PATH:" in \
+		*":$$INSTALL_DIR:"*) ;; \
+		*) echo "WARNING: $$INSTALL_DIR is not on your PATH. Add it to your shell profile." ;; \
+	esac
 
 # Build prompt-improver binary
 build-prompt-improver:
@@ -83,7 +105,14 @@ vet:
 # Run golangci-lint (if installed)
 lint:
 	@./scripts/bootstrap-toolchain.sh >/dev/null
-	@./.tools/bin/golangci-lint run ./... || echo "golangci-lint unavailable; run ./scripts/bootstrap-toolchain.sh"
+	@if [ -x ./.tools/bin/golangci-lint ]; then \
+		./.tools/bin/golangci-lint run ./...; \
+	elif command -v golangci-lint >/dev/null 2>&1; then \
+		golangci-lint run ./...; \
+	else \
+		echo "golangci-lint unavailable; run ./scripts/bootstrap-toolchain.sh"; \
+		exit 1; \
+	fi
 
 # CI pipeline: bootstrap-aware vet + test + build
 ci:
