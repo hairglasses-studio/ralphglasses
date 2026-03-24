@@ -38,6 +38,12 @@ type LoopProfile struct {
 	PlannerBudgetUSD     float64  `json:"planner_budget_usd,omitempty"`
 	WorkerBudgetUSD      float64  `json:"worker_budget_usd,omitempty"`
 	VerifierBudgetUSD    float64  `json:"verifier_budget_usd,omitempty"`
+	EnableReflexion      bool     `json:"enable_reflexion,omitempty"`
+	EnableEpisodicMemory bool     `json:"enable_episodic_memory,omitempty"`
+	EnableCascade        bool           `json:"enable_cascade,omitempty"`
+	CascadeConfig        *CascadeConfig `json:"cascade_config,omitempty"`
+	EnableUncertainty    bool     `json:"enable_uncertainty,omitempty"`
+	EnableCurriculum     bool     `json:"enable_curriculum,omitempty"`
 }
 
 // LoopTask is the bounded implementation unit produced by the planner.
