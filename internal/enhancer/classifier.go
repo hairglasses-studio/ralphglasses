@@ -43,6 +43,27 @@ var taskTypePatterns = map[TaskType][]string{
 	},
 }
 
+// taskTypePhrases are multi-word patterns worth 2 points each (higher signal).
+var taskTypePhrases = map[TaskType][]string{
+	TaskTypeCode: {
+		"dependency injection", "design pattern", "use interfaces",
+		"extract method", "pull request", "unit test", "test coverage",
+		"type safety", "error handling", "add support",
+	},
+	TaskTypeWorkflow: {
+		"ci/cd", "github actions", "cron job", "build pipeline",
+	},
+	TaskTypeAnalysis: {
+		"root cause", "code review", "security audit",
+	},
+}
+
+// classifyPriority defines deterministic tie-breaking order.
+var classifyPriority = []TaskType{
+	TaskTypeCode, TaskTypeAnalysis, TaskTypeWorkflow,
+	TaskTypeTroubleshooting, TaskTypeCreative,
+}
+
 // Classify determines the most likely task type for a prompt
 func Classify(prompt string) TaskType {
 	lower := strings.ToLower(prompt)
@@ -56,10 +77,20 @@ func Classify(prompt string) TaskType {
 		}
 	}
 
+	// Phrase-level patterns worth 2 points each
+	for taskType, phrases := range taskTypePhrases {
+		for _, phrase := range phrases {
+			if strings.Contains(lower, phrase) {
+				scores[taskType] += 2
+			}
+		}
+	}
+
+	// Deterministic tie-breaking via priority order
 	bestType := TaskTypeGeneral
 	bestScore := 0
-	for taskType, score := range scores {
-		if score > bestScore {
+	for _, taskType := range classifyPriority {
+		if score := scores[taskType]; score > bestScore {
 			bestScore = score
 			bestType = taskType
 		}

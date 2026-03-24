@@ -23,6 +23,9 @@ func TestClassify(t *testing.T) {
 		{"workflow_automate", "automate the backup workflow", TaskTypeWorkflow},
 		{"workflow_startup", "automate the startup shutdown sequence", TaskTypeWorkflow},
 		{"general_fallback", "hello world", TaskTypeGeneral},
+		{"refactor_interfaces", "refactor this module to use interfaces", TaskTypeCode},
+		{"refactor_di", "refactor UserService to use dependency injection patterns", TaskTypeCode},
+		{"extract_method", "extract method from this large function", TaskTypeCode},
 	}
 
 	for _, tt := range tests {

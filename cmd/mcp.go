@@ -51,6 +51,7 @@ Or with a custom scan path:
 		defer hookExec.Stop()
 		rg := mcpserver.NewServerWithBus(sp, bus)
 		rg.ToolRecorder = toolRec
+		rg.InitSelfImprovement(filepath.Join(sp, ".ralph"), 0)
 		rg.Register(srv)
 
 		return server.ServeStdio(srv)

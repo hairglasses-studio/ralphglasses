@@ -153,6 +153,8 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 			optimizer.IngestSessionJournal(sess)
 			optimizer.HandleSessionComplete(ctx, sess)
 		}
+		// Transition team status when lead session completes
+		m.updateTeamOnSessionEnd(sess)
 	}
 
 	m.mu.Lock()
@@ -500,6 +502,32 @@ func (m *Manager) correlateTaskStatuses(team *TeamStatus) {
 			}
 			break // first match wins
 		}
+	}
+}
+
+// updateTeamOnSessionEnd checks if the completed session is a team lead
+// and transitions the team status accordingly.
+func (m *Manager) updateTeamOnSessionEnd(sess *Session) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for _, team := range m.teams {
+		if team.LeadID != sess.ID {
+			continue
+		}
+		sess.mu.Lock()
+		team.Status = sess.Status
+		sess.mu.Unlock()
+
+		// Mark pending tasks as cancelled if lead exited without delegating
+		if team.Status == StatusCompleted || team.Status == StatusErrored || team.Status == StatusStopped {
+			for i := range team.Tasks {
+				if team.Tasks[i].Status == "pending" {
+					team.Tasks[i].Status = "cancelled"
+				}
+			}
+		}
+		break
 	}
 }
 

@@ -282,12 +282,24 @@ func normalizeClaudeEvent(line []byte) (StreamEvent, error) {
 	}
 	event.Raw = json.RawMessage(append([]byte(nil), line...))
 
-	// Handle sub-agent events that Claude emits with type "agent" or
-	// "subagent". The structured fields (description, message) don't map
-	// to StreamEvent's Content/Text, so extract them from raw JSON.
-	if event.Type == "agent" || event.Type == "subagent" {
-		var raw map[string]any
-		if json.Unmarshal(line, &raw) == nil {
+	// Secondary raw parse: extract nested fields that don't map to
+	// StreamEvent's flat JSON tags. Claude may emit cost in usage.cost_usd,
+	// sub-agent events in description/message, etc.
+	var raw map[string]any
+	if json.Unmarshal(line, &raw) == nil {
+		// Cost may be nested under usage (e.g. {"usage":{"cost_usd":0.12}})
+		if event.CostUSD == 0 {
+			event.CostUSD = firstNonZeroFloat(raw, "cost_usd", "usage.cost_usd", "usage.total_cost_usd")
+		}
+		if event.NumTurns == 0 {
+			event.NumTurns = firstNonZeroInt(raw, "num_turns", "turns", "usage.turns")
+		}
+		if event.Duration == 0 {
+			event.Duration = firstNonZeroFloat(raw, "duration_seconds", "duration", "metadata.duration_seconds")
+		}
+
+		// Handle sub-agent events with non-standard field names
+		if event.Type == "agent" || event.Type == "subagent" {
 			text := firstNonEmpty(
 				getString(raw, "description"),
 				getString(raw, "message"),
@@ -297,9 +309,9 @@ func normalizeClaudeEvent(line []byte) (StreamEvent, error) {
 				event.Content = text
 				event.Text = text
 			}
+			// Normalize subagent → agent for consistent downstream handling.
+			event.Type = "agent"
 		}
-		// Normalize subagent → agent for consistent downstream handling.
-		event.Type = "agent"
 	}
 
 	return event, nil
