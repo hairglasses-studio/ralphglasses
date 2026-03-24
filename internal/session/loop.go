@@ -251,8 +251,12 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	}
 
 	// Enhance planner prompt for the planner's target provider
+	var plannerEnhance enhanceResult
 	if m.Enhancer != nil {
-		plannerPrompt = m.enhanceForProvider(ctx, plannerPrompt, profile.PlannerProvider)
+		plannerEnhance = m.enhanceForProvider(ctx, plannerPrompt, profile.PlannerProvider)
+		plannerPrompt = plannerEnhance.prompt
+	} else {
+		plannerEnhance = enhanceResult{prompt: plannerPrompt, source: "none", preScore: 0}
 	}
 
 	plannerSession, err := m.launchWorkflowSession(ctx, LaunchOptions{
@@ -266,6 +270,8 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	if err != nil {
 		return m.failLoopIteration(run, index, fmt.Errorf("launch planner session: %w", err))
 	}
+	plannerSession.EnhancementSource = plannerEnhance.source
+	plannerSession.EnhancementPreScore = plannerEnhance.preScore
 
 	m.updateLoopIteration(run, index, "planning", func(iter *LoopIteration, loop *LoopRun) {
 		iter.PlannerSessionID = plannerSession.ID
@@ -307,8 +313,12 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 
 			// Enhance worker prompt for the worker's target provider
 			workerPrompt := t.Prompt
+			var workerEnhance enhanceResult
 			if m.Enhancer != nil {
-				workerPrompt = m.enhanceForProvider(ctx, workerPrompt, profile.WorkerProvider)
+				workerEnhance = m.enhanceForProvider(ctx, workerPrompt, profile.WorkerProvider)
+				workerPrompt = workerEnhance.prompt
+			} else {
+				workerEnhance = enhanceResult{prompt: workerPrompt, source: "none", preScore: 0}
 			}
 
 			ws, launchErr := m.launchWorkflowSession(ctx, LaunchOptions{
@@ -323,6 +333,8 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 				resultCh <- workerResult{idx: workerIdx, worktree: wt, err: fmt.Errorf("launch worker: %w", launchErr)}
 				return
 			}
+			ws.EnhancementSource = workerEnhance.source
+			ws.EnhancementPreScore = workerEnhance.preScore
 
 			waitErr := m.waitForSession(ctx, ws)
 			// Check if productive work happened despite timeout
@@ -947,9 +959,24 @@ func firstNonBlank(values ...string) string {
 	return ""
 }
 
+// enhanceResult holds the enhanced prompt plus metadata for training loop capture.
+type enhanceResult struct {
+	prompt   string
+	source   string // "local", "llm", "none"
+	preScore int    // 0-100 quality score before enhancement
+}
+
 // enhanceForProvider runs hybrid prompt enhancement targeting the given session provider.
 // Uses ModeAuto so LLM failures fall back to the local pipeline — never blocks the loop.
-func (m *Manager) enhanceForProvider(ctx context.Context, prompt string, provider Provider) string {
+// Returns the enhanced prompt along with enhancement metadata (source, pre-score).
+func (m *Manager) enhanceForProvider(ctx context.Context, prompt string, provider Provider) enhanceResult {
+	// Score the raw prompt before enhancement
+	analysis := enhancer.Analyze(prompt)
+	preScore := 0
+	if analysis.ScoreReport != nil {
+		preScore = analysis.ScoreReport.Overall
+	}
+
 	target := mapProvider(provider)
 	cfg := enhancer.Config{TargetProvider: target}
 	result := enhancer.EnhanceHybrid(ctx, prompt, "", cfg, m.Enhancer, enhancer.ModeAuto, target)
@@ -960,10 +987,15 @@ func (m *Manager) enhanceForProvider(ctx context.Context, prompt string, provide
 				"target_provider": string(target),
 				"source":          result.Source,
 				"stages_run":      result.StagesRun,
+				"pre_score":       preScore,
 			},
 		})
 	}
-	return result.Enhanced
+	return enhanceResult{
+		prompt:   result.Enhanced,
+		source:   result.Source,
+		preScore: preScore,
+	}
 }
 
 // mapProvider converts a session Provider to the enhancer's ProviderName.

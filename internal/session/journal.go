@@ -20,11 +20,14 @@ type JournalEntry struct {
 	SpentUSD    float64   `json:"spent_usd"`
 	TurnCount   int       `json:"turn_count"`
 	DurationSec float64   `json:"duration_sec"`
-	Worked      []string  `json:"worked"`
-	Failed      []string  `json:"failed"`
-	Suggest     []string  `json:"suggest"`
-	ExitReason  string    `json:"exit_reason"`
-	TaskFocus   string    `json:"task_focus"`
+	Worked            []string `json:"worked"`
+	Failed            []string `json:"failed"`
+	Suggest           []string `json:"suggest"`
+	SignalSource      string   `json:"signal_source,omitempty"`
+	ExitReason        string   `json:"exit_reason"`
+	TaskFocus         string   `json:"task_focus"`
+	EnhancementSource string   `json:"enhancement_source,omitempty"`
+	EnhancementScore  int      `json:"enhancement_score,omitempty"`
 }
 
 // ConsolidatedPatterns holds durable patterns extracted from journal history.
@@ -59,8 +62,10 @@ func WriteJournalEntry(s *Session) error {
 		Model:      s.Model,
 		SpentUSD:   s.SpentUSD,
 		TurnCount:  s.TurnCount,
-		ExitReason: s.ExitReason,
-		TaskFocus:  extractTaskFocus(s.Prompt),
+		ExitReason:        s.ExitReason,
+		TaskFocus:         extractTaskFocus(s.Prompt),
+		EnhancementSource: s.EnhancementSource,
+		EnhancementScore:  s.EnhancementPreScore,
 	}
 	if s.EndedAt != nil {
 		entry.DurationSec = s.EndedAt.Sub(s.LaunchedAt).Seconds()
@@ -69,6 +74,9 @@ func WriteJournalEntry(s *Session) error {
 	}
 	// Parse output history for improvement markers
 	entry.Worked, entry.Failed, entry.Suggest = parseImprovementMarkers(s.OutputHistory)
+	if len(entry.Worked) > 0 || len(entry.Failed) > 0 || len(entry.Suggest) > 0 {
+		entry.SignalSource = "markers"
+	}
 
 	// Fallback: auto-populate from session status when markers aren't found
 	if len(entry.Worked) == 0 && len(entry.Failed) == 0 {
@@ -82,6 +90,20 @@ func WriteJournalEntry(s *Session) error {
 			if errMsg != "" {
 				entry.Failed = []string{errMsg}
 			}
+		}
+	}
+
+	// Third tier: heuristic signal extraction from output history
+	if entry.SignalSource == "" {
+		entry.SignalSource = "fallback"
+	}
+	if entry.SignalSource == "fallback" {
+		w, f, sg := extractSignalsFromOutput(s.OutputHistory, s.Status, s.SpentUSD, s.TurnCount)
+		if len(w) > 0 || len(f) > 0 || len(sg) > 0 {
+			entry.Worked = append(entry.Worked, w...)
+			entry.Failed = append(entry.Failed, f...)
+			entry.Suggest = append(entry.Suggest, sg...)
+			entry.SignalSource = "heuristic"
 		}
 	}
 
@@ -331,6 +353,82 @@ func parseImprovementMarkers(history []string) (worked, failed, suggest []string
 		worked = extractSection(block, "WORKED:")
 		failed = extractSection(block, "FAILED:")
 		suggest = extractSection(block, "SUGGEST:")
+	}
+
+	return worked, failed, suggest
+}
+
+// extractSignalsFromOutput scans session output history for improvement signals
+// using heuristic pattern matching. This is a third-tier fallback when explicit
+// markers and simple status-based fallbacks produce no data.
+func extractSignalsFromOutput(history []string, status SessionStatus, spentUSD float64, turnCount int) (worked, failed, suggest []string) {
+	errorPatterns := []string{"error:", "panic:", "FAIL", "failed to", "cannot ", "undefined:"}
+	successPatterns := []string{"PASS", "ok  \t", "created ", "implemented ", "fixed ", "added ", "updated "}
+
+	errorCounts := make(map[string]int) // track repeated errors
+
+	for _, line := range history {
+		lower := strings.ToLower(line)
+
+		// Error detection
+		for _, pat := range errorPatterns {
+			if strings.Contains(lower, strings.ToLower(pat)) {
+				// Deduplicate: use first 80 chars as key
+				key := line
+				if len(key) > 80 {
+					key = key[:80]
+				}
+				key = strings.TrimSpace(key)
+				if key == "" {
+					continue
+				}
+				errorCounts[key]++
+				if errorCounts[key] == 1 {
+					failed = append(failed, key)
+				}
+				break
+			}
+		}
+
+		// Success detection
+		for _, pat := range successPatterns {
+			if strings.Contains(line, pat) {
+				item := strings.TrimSpace(line)
+				if len(item) > 120 {
+					item = item[:120]
+				}
+				if item != "" {
+					worked = append(worked, item)
+				}
+				break
+			}
+		}
+	}
+
+	// Friction: repeated identical errors suggest systematic issues
+	for errLine, count := range errorCounts {
+		if count >= 3 {
+			suggest = append(suggest, fmt.Sprintf("investigate repeated error (%dx): %s", count, errLine))
+		}
+	}
+
+	// Cost anomaly: high cost per turn
+	if turnCount > 0 && spentUSD > 0 {
+		costPerTurn := spentUSD / float64(turnCount)
+		if costPerTurn > 0.10 { // >$0.10/turn is expensive
+			suggest = append(suggest, fmt.Sprintf("high cost per turn: $%.2f/turn (total $%.2f over %d turns)", costPerTurn, spentUSD, turnCount))
+		}
+	}
+
+	// Cap results to prevent journal bloat
+	if len(worked) > 5 {
+		worked = worked[:5]
+	}
+	if len(failed) > 5 {
+		failed = failed[:5]
+	}
+	if len(suggest) > 3 {
+		suggest = suggest[:3]
 	}
 
 	return worked, failed, suggest

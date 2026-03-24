@@ -371,12 +371,16 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 	)
 
 	// Enhance team lead prompt for its target provider
+	var leadEnhance enhanceResult
 	if m.Enhancer != nil {
 		leadProvider := config.Provider
 		if leadProvider == "" {
 			leadProvider = ProviderClaude
 		}
-		leadPrompt = m.enhanceForProvider(ctx, leadPrompt, leadProvider)
+		leadEnhance = m.enhanceForProvider(ctx, leadPrompt, leadProvider)
+		leadPrompt = leadEnhance.prompt
+	} else {
+		leadEnhance = enhanceResult{prompt: leadPrompt, source: "none", preScore: 0}
 	}
 
 	opts := LaunchOptions{
@@ -394,6 +398,8 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 	if err != nil {
 		return nil, fmt.Errorf("launch team lead: %w", err)
 	}
+	s.EnhancementSource = leadEnhance.source
+	s.EnhancementPreScore = leadEnhance.preScore
 
 	tasks := make([]TeamTask, len(config.Tasks))
 	for i, desc := range config.Tasks {
@@ -752,8 +758,12 @@ func (m *Manager) runWorkflowStep(ctx context.Context, run *WorkflowRun, repoPat
 
 	// Enhance workflow step prompt for its target provider
 	prompt := step.Prompt
+	var stepEnhance enhanceResult
 	if m.Enhancer != nil {
-		prompt = m.enhanceForProvider(ctx, prompt, provider)
+		stepEnhance = m.enhanceForProvider(ctx, prompt, provider)
+		prompt = stepEnhance.prompt
+	} else {
+		stepEnhance = enhanceResult{prompt: prompt, source: "none", preScore: 0}
 	}
 
 	opts := LaunchOptions{
@@ -774,6 +784,9 @@ func (m *Manager) runWorkflowStep(ctx context.Context, run *WorkflowRun, repoPat
 		})
 		return workflowStepOutcome{Name: step.Name, Status: "failed"}
 	}
+
+	sess.EnhancementSource = stepEnhance.source
+	sess.EnhancementPreScore = stepEnhance.preScore
 
 	run.updateStep(step.Name, "running", func(result *WorkflowStepResult) {
 		result.SessionID = sess.ID

@@ -36,13 +36,24 @@ type ProviderProfile struct {
 	LastUpdated      time.Time `json:"last_updated"`
 }
 
+// EnhancementProfile tracks enhancement mode effectiveness by source and task type.
+type EnhancementProfile struct {
+	Source         string  `json:"source"`          // "local", "llm"
+	TaskType       string  `json:"task_type"`
+	SampleCount    int     `json:"sample_count"`
+	CompletionRate float64 `json:"completion_rate"`
+	AvgCostUSD     float64 `json:"avg_cost_usd"`
+	Effectiveness  float64 `json:"effectiveness"` // completion_rate / normalized_cost
+}
+
 // FeedbackAnalyzer processes journal entries to build profiles for future decisions.
 type FeedbackAnalyzer struct {
-	mu               sync.Mutex
-	promptProfiles   map[string]*PromptProfile   // keyed by task type
-	providerProfiles map[string]*ProviderProfile // keyed by "provider:task_type"
-	minSessions      int                         // minimum sessions before profiles are trusted
-	stateDir         string
+	mu                    sync.Mutex
+	promptProfiles        map[string]*PromptProfile      // keyed by task type
+	providerProfiles      map[string]*ProviderProfile    // keyed by "provider:task_type"
+	enhancementProfiles   map[string]*EnhancementProfile // keyed by "source:task_type"
+	minSessions           int                            // minimum sessions before profiles are trusted
+	stateDir              string
 }
 
 // NewFeedbackAnalyzer creates a feedback analyzer.
@@ -51,10 +62,11 @@ func NewFeedbackAnalyzer(stateDir string, minSessions int) *FeedbackAnalyzer {
 		minSessions = 5
 	}
 	fa := &FeedbackAnalyzer{
-		promptProfiles:   make(map[string]*PromptProfile),
-		providerProfiles: make(map[string]*ProviderProfile),
-		minSessions:      minSessions,
-		stateDir:         stateDir,
+		promptProfiles:      make(map[string]*PromptProfile),
+		providerProfiles:    make(map[string]*ProviderProfile),
+		enhancementProfiles: make(map[string]*EnhancementProfile),
+		minSessions:         minSessions,
+		stateDir:            stateDir,
 	}
 	fa.load()
 	return fa
@@ -68,12 +80,19 @@ func (fa *FeedbackAnalyzer) Ingest(entries []JournalEntry) {
 	// Group by task type
 	byTask := make(map[string][]JournalEntry)
 	byProviderTask := make(map[string][]JournalEntry)
+	byEnhancement := make(map[string][]JournalEntry)
 
 	for _, e := range entries {
 		taskType := classifyTask(e.TaskFocus)
 		byTask[taskType] = append(byTask[taskType], e)
 		key := e.Provider + ":" + taskType
 		byProviderTask[key] = append(byProviderTask[key], e)
+
+		// Group by enhancement source + task type
+		if e.EnhancementSource != "" && e.EnhancementSource != "none" {
+			enhKey := e.EnhancementSource + ":" + taskType
+			byEnhancement[enhKey] = append(byEnhancement[enhKey], e)
+		}
 	}
 
 	// Build prompt profiles
@@ -85,6 +104,12 @@ func (fa *FeedbackAnalyzer) Ingest(entries []JournalEntry) {
 	for key, batch := range byProviderTask {
 		parts := strings.SplitN(key, ":", 2)
 		fa.providerProfiles[key] = buildProviderProfile(parts[0], parts[1], batch)
+	}
+
+	// Build enhancement profiles
+	for key, batch := range byEnhancement {
+		parts := strings.SplitN(key, ":", 2)
+		fa.enhancementProfiles[key] = buildEnhancementProfile(parts[0], parts[1], batch)
 	}
 
 	fa.save()
@@ -161,6 +186,83 @@ func (fa *FeedbackAnalyzer) AllProviderProfiles() []ProviderProfile {
 		result = append(result, *p)
 	}
 	return result
+}
+
+// SuggestEnhancementMode returns "local", "llm", or "auto" based on which
+// enhancement source has higher effectiveness for the given task type.
+// Requires at least minSessions samples for each source to make a recommendation.
+func (fa *FeedbackAnalyzer) SuggestEnhancementMode(taskType string) string {
+	fa.mu.Lock()
+	defer fa.mu.Unlock()
+
+	localKey := "local:" + taskType
+	llmKey := "llm:" + taskType
+
+	localP := fa.enhancementProfiles[localKey]
+	llmP := fa.enhancementProfiles[llmKey]
+
+	localReady := localP != nil && localP.SampleCount >= fa.minSessions
+	llmReady := llmP != nil && llmP.SampleCount >= fa.minSessions
+
+	if !localReady && !llmReady {
+		return "auto"
+	}
+	if localReady && !llmReady {
+		return "local"
+	}
+	if !localReady && llmReady {
+		return "llm"
+	}
+
+	// Both ready — compare effectiveness
+	if localP.Effectiveness > llmP.Effectiveness*1.1 {
+		return "local"
+	}
+	if llmP.Effectiveness > localP.Effectiveness*1.1 {
+		return "llm"
+	}
+	return "auto"
+}
+
+// AllEnhancementProfiles returns all enhancement profiles.
+func (fa *FeedbackAnalyzer) AllEnhancementProfiles() []EnhancementProfile {
+	fa.mu.Lock()
+	defer fa.mu.Unlock()
+
+	result := make([]EnhancementProfile, 0, len(fa.enhancementProfiles))
+	for _, p := range fa.enhancementProfiles {
+		result = append(result, *p)
+	}
+	return result
+}
+
+func buildEnhancementProfile(source, taskType string, entries []JournalEntry) *EnhancementProfile {
+	var totalCost float64
+	var completed, total int
+
+	for _, e := range entries {
+		total++
+		totalCost += e.SpentUSD
+		if e.ExitReason == "" || e.ExitReason == "completed" || e.ExitReason == "normal" {
+			completed++
+		}
+	}
+
+	p := &EnhancementProfile{
+		Source:      source,
+		TaskType:    taskType,
+		SampleCount: total,
+	}
+
+	if total > 0 {
+		p.CompletionRate = float64(completed) / float64(total) * 100
+		p.AvgCostUSD = totalCost / float64(total)
+		if totalCost > 0 {
+			p.Effectiveness = p.CompletionRate / (totalCost / float64(total))
+		}
+	}
+
+	return p
 }
 
 func buildPromptProfile(taskType string, entries []JournalEntry) *PromptProfile {
@@ -292,11 +394,13 @@ func (fa *FeedbackAnalyzer) save() {
 	_ = os.MkdirAll(fa.stateDir, 0755)
 
 	profiles := struct {
-		Prompt   map[string]*PromptProfile   `json:"prompt_profiles"`
-		Provider map[string]*ProviderProfile `json:"provider_profiles"`
+		Prompt      map[string]*PromptProfile      `json:"prompt_profiles"`
+		Provider    map[string]*ProviderProfile    `json:"provider_profiles"`
+		Enhancement map[string]*EnhancementProfile `json:"enhancement_profiles,omitempty"`
 	}{
-		Prompt:   fa.promptProfiles,
-		Provider: fa.providerProfiles,
+		Prompt:      fa.promptProfiles,
+		Provider:    fa.providerProfiles,
+		Enhancement: fa.enhancementProfiles,
 	}
 
 	data, err := json.MarshalIndent(profiles, "", "  ")
@@ -316,8 +420,9 @@ func (fa *FeedbackAnalyzer) load() {
 	}
 
 	var profiles struct {
-		Prompt   map[string]*PromptProfile   `json:"prompt_profiles"`
-		Provider map[string]*ProviderProfile `json:"provider_profiles"`
+		Prompt      map[string]*PromptProfile      `json:"prompt_profiles"`
+		Provider    map[string]*ProviderProfile    `json:"provider_profiles"`
+		Enhancement map[string]*EnhancementProfile `json:"enhancement_profiles"`
 	}
 	if json.Unmarshal(data, &profiles) == nil {
 		if profiles.Prompt != nil {
@@ -325,6 +430,9 @@ func (fa *FeedbackAnalyzer) load() {
 		}
 		if profiles.Provider != nil {
 			fa.providerProfiles = profiles.Provider
+		}
+		if profiles.Enhancement != nil {
+			fa.enhancementProfiles = profiles.Enhancement
 		}
 	}
 }
