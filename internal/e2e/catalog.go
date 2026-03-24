@@ -37,6 +37,13 @@ func AllScenarios() []Scenario {
 		// Cost scenarios
 		CostTrackingAccuracy(),
 		FleetBudgetEnforcement(),
+
+		// Self-learning scenarios
+		ReflexionRetry(),
+		CascadeEscalation(),
+		CascadeCheapSuccess(),
+		EpisodicInjection(),
+		CurriculumOrdering(),
 	}
 }
 
@@ -620,5 +627,193 @@ func FleetBudgetEnforcement() Scenario {
 		MockTurnCount:   0,
 		MockFailure:     "fleet budget exceeded: $0.95/$1.00",
 		Constraints:     Constraints{MaxCostUSD: 0.10, MaxDurationSec: 10, MinCompletionRate: 0.0},
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Self-learning scenarios
+// ---------------------------------------------------------------------------
+
+// ReflexionRetry: verification fails, reflexion extracts a reflection,
+// and the reflection store contains the failure analysis after the run.
+func ReflexionRetry() Scenario {
+	return Scenario{
+		Name:     "reflexion-retry",
+		Category: "self_learning",
+		Tags:     []string{"self-learning", "reflexion"},
+		RepoSetup: func(t *testing.T) string {
+			return setupRepo(t, map[string]string{
+				"main.go": "package main\n\nfunc main() {}\n",
+			})
+		},
+		PlannerResponse: plannerJSON("Fix validation bug", "Add input validation to main.go"),
+		WorkerBehavior: func(worktree string) error {
+			// Worker creates the wrong file — verification will fail
+			return os.WriteFile(filepath.Join(worktree, "wrong.go"),
+				[]byte("package main\n\n// wrong file created\n"), 0o644)
+		},
+		VerifyCommands: []string{"grep -q validation main.go"},
+		ExpectedStatus: "failed",
+		MockCostUSD:    0.20,
+		MockTurnCount:  4,
+		Constraints:    Constraints{MaxCostUSD: 1.0, MaxDurationSec: 30, MinCompletionRate: 0.0},
+		ManagerSetup: func(m *session.Manager) {
+			rs := session.NewReflexionStore("")
+			m.SetReflexionStore(rs)
+		},
+		ProfilePatch: func(p *session.LoopProfile) {
+			p.EnableReflexion = true
+		},
+	}
+}
+
+// CascadeEscalation: cheap provider's output fails verification,
+// cascade escalates to the expensive provider which succeeds.
+func CascadeEscalation() Scenario {
+	return Scenario{
+		Name:     "cascade-escalation",
+		Category: "self_learning",
+		Tags:     []string{"self-learning", "cascade"},
+		RepoSetup: func(t *testing.T) string {
+			return setupRepo(t, map[string]string{
+				"main.go": "package main\n\nfunc main() {}\n",
+			})
+		},
+		PlannerResponse: plannerJSON("Add simple test", "Create a test file for main.go"),
+		WorkerBehavior: func(worktree string) error {
+			// The expensive provider succeeds
+			return os.WriteFile(filepath.Join(worktree, "main_test.go"),
+				[]byte("package main\n\nimport \"testing\"\n\nfunc TestMain(t *testing.T) {}\n"), 0o644)
+		},
+		VerifyCommands: []string{"test -f main_test.go"},
+		ExpectedStatus: "idle",
+		MockCostUSD:    0.10,
+		MockTurnCount:  3,
+		Constraints:    Constraints{MaxCostUSD: 1.5, MaxDurationSec: 45, MinCompletionRate: 0.8},
+		ManagerSetup: func(m *session.Manager) {
+			cfg := session.CascadeConfig{
+				CheapProvider:       session.ProviderGemini,
+				ExpensiveProvider:   session.ProviderClaude,
+				ConfidenceThreshold: 0.99, // high threshold forces escalation
+				MaxCheapBudgetUSD:   0.50,
+				MaxCheapTurns:       5,
+			}
+			cr := session.NewCascadeRouter(cfg, nil, nil, "")
+			m.SetCascadeRouter(cr)
+		},
+		ProfilePatch: func(p *session.LoopProfile) {
+			p.EnableCascade = true
+		},
+	}
+}
+
+// CascadeCheapSuccess: cheap provider succeeds without escalation.
+func CascadeCheapSuccess() Scenario {
+	return Scenario{
+		Name:     "cascade-cheap-success",
+		Category: "self_learning",
+		Tags:     []string{"self-learning", "cascade"},
+		RepoSetup: func(t *testing.T) string {
+			return setupRepo(t, map[string]string{
+				"main.go": "package main\n\nfunc main() {}\n",
+			})
+		},
+		PlannerResponse: plannerJSON("Add comment", "Add a package comment to main.go"),
+		WorkerBehavior: func(worktree string) error {
+			return os.WriteFile(filepath.Join(worktree, "main.go"),
+				[]byte("// Package main is the entry point.\npackage main\n\nfunc main() {}\n"), 0o644)
+		},
+		VerifyCommands: []string{"grep -q 'Package main' main.go"},
+		ExpectedStatus: "idle",
+		MockCostUSD:    0.05,
+		MockTurnCount:  2,
+		Constraints:    Constraints{MaxCostUSD: 0.5, MaxDurationSec: 20, MinCompletionRate: 0.9},
+		ManagerSetup: func(m *session.Manager) {
+			cfg := session.CascadeConfig{
+				CheapProvider:       session.ProviderGemini,
+				ExpensiveProvider:   session.ProviderClaude,
+				ConfidenceThreshold: 0.1, // low threshold allows cheap to succeed
+				MaxCheapBudgetUSD:   0.50,
+				MaxCheapTurns:       5,
+			}
+			cr := session.NewCascadeRouter(cfg, nil, nil, "")
+			m.SetCascadeRouter(cr)
+		},
+		ProfilePatch: func(p *session.LoopProfile) {
+			p.EnableCascade = true
+		},
+	}
+}
+
+// EpisodicInjection: episodic memory is pre-loaded with a successful episode,
+// and StepLoop injects it into the planner/worker prompts.
+func EpisodicInjection() Scenario {
+	return Scenario{
+		Name:     "episodic-injection",
+		Category: "self_learning",
+		Tags:     []string{"self-learning", "episodic"},
+		RepoSetup: func(t *testing.T) string {
+			return setupRepo(t, map[string]string{
+				"main.go": "package main\n\nfunc main() {}\n",
+			})
+		},
+		PlannerResponse: plannerJSON("Add logging", "Add structured logging to main.go"),
+		WorkerBehavior: func(worktree string) error {
+			return os.WriteFile(filepath.Join(worktree, "main.go"),
+				[]byte("package main\n\nimport \"log\"\n\nfunc main() {\n\tlog.Println(\"started\")\n}\n"), 0o644)
+		},
+		VerifyCommands: []string{"grep -q 'log' main.go"},
+		ExpectedStatus: "idle",
+		MockCostUSD:    0.15,
+		MockTurnCount:  3,
+		Constraints:    Constraints{MaxCostUSD: 1.0, MaxDurationSec: 30, MinCompletionRate: 0.9},
+		ManagerSetup: func(m *session.Manager) {
+			em := session.NewEpisodicMemory("", 100)
+			// Pre-load a successful episode about logging
+			em.RecordSuccess(session.JournalEntry{
+				Provider:  "claude",
+				Model:     "mock",
+				TaskFocus: "Add structured logging",
+				Worked:    []string{"Added slog-based logging"},
+				Suggest:   []string{"Use log/slog for structured output"},
+			})
+			m.SetEpisodicMemory(em)
+		},
+		ProfilePatch: func(p *session.LoopProfile) {
+			p.EnableEpisodicMemory = true
+		},
+	}
+}
+
+// CurriculumOrdering: multi-task scenario where curriculum sorter
+// reorders tasks by difficulty (easy first).
+func CurriculumOrdering() Scenario {
+	return Scenario{
+		Name:     "curriculum-ordering",
+		Category: "self_learning",
+		Tags:     []string{"self-learning", "curriculum"},
+		RepoSetup: func(t *testing.T) string {
+			return setupRepo(t, map[string]string{
+				"main.go":  "package main\n\nfunc main() {}\n",
+				"utils.go": "package main\n\n// placeholder\n",
+			})
+		},
+		PlannerResponse: plannerJSON("Add simple test", "Create a basic test file"),
+		WorkerBehavior: func(worktree string) error {
+			return os.WriteFile(filepath.Join(worktree, "main_test.go"),
+				[]byte("package main\n\nimport \"testing\"\n\nfunc TestMain(t *testing.T) {}\n"), 0o644)
+		},
+		VerifyCommands: []string{"test -f main_test.go"},
+		ExpectedStatus: "idle",
+		MockCostUSD:    0.10,
+		MockTurnCount:  3,
+		Constraints:    Constraints{MaxCostUSD: 1.0, MaxDurationSec: 30, MinCompletionRate: 0.9},
+		ManagerSetup: func(m *session.Manager) {
+			cs := session.NewCurriculumSorter(nil, nil)
+			m.SetCurriculumSorter(cs)
+		},
+		ProfilePatch: func(p *session.LoopProfile) {
+			p.EnableCurriculum = true
+		},
 	}
 }

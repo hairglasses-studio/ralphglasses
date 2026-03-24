@@ -24,6 +24,7 @@ var validCategories = map[string]bool{
 	"multi_provider": true,
 	"stress":         true,
 	"cost":           true,
+	"self_learning":  true,
 }
 
 func TestAllScenariosHaveValidFields(t *testing.T) {
@@ -145,6 +146,11 @@ func TestScenariosByTag(t *testing.T) {
 		t.Errorf("expected at least 2 cost scenarios, got %d", len(cost))
 	}
 
+	selfLearning := ScenariosByTag("self-learning")
+	if len(selfLearning) < 5 {
+		t.Errorf("expected at least 5 self-learning scenarios, got %d", len(selfLearning))
+	}
+
 	// Empty tag returns nothing
 	empty := ScenariosByTag("nonexistent-tag")
 	if len(empty) != 0 {
@@ -154,9 +160,9 @@ func TestScenariosByTag(t *testing.T) {
 
 func TestAllScenariosCount(t *testing.T) {
 	scenarios := AllScenarios()
-	// 6 original + 4 multi-provider + 5 stress + 2 cost = 17
-	if len(scenarios) != 17 {
-		t.Errorf("expected 17 scenarios, got %d", len(scenarios))
+	// 6 original + 4 multi-provider + 5 stress + 2 cost + 5 self-learning = 22
+	if len(scenarios) != 22 {
+		t.Errorf("expected 22 scenarios, got %d", len(scenarios))
 	}
 }
 

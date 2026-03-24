@@ -97,6 +97,11 @@ func (h *Harness) RunScenario(ctx context.Context, s Scenario) (string, error) {
 		},
 	)
 
+	// Configure subsystems on manager if scenario specifies it.
+	if s.ManagerSetup != nil {
+		s.ManagerSetup(h.Manager)
+	}
+
 	// Configure profile with scenario's verify commands
 	profile := session.LoopProfile{
 		PlannerProvider:      session.ProviderClaude,
@@ -109,6 +114,9 @@ func (h *Harness) RunScenario(ctx context.Context, s Scenario) (string, error) {
 		RetryLimit:           1,
 		VerifyCommands:       s.VerifyCommands,
 		WorktreePolicy:       "git",
+	}
+	if s.ProfilePatch != nil {
+		s.ProfilePatch(&profile)
 	}
 
 	run, err := h.Manager.StartLoop(ctx, repoPath, profile)

@@ -480,3 +480,198 @@ func TestCascadeRouter_Persistence(t *testing.T) {
 		t.Errorf("expected 1 escalation, got %d", stats.Escalations)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Property / invariant tests
+// ---------------------------------------------------------------------------
+
+func TestProperty_JaccardSimilarity(t *testing.T) {
+	tests := []struct {
+		name string
+		a, b string
+		fn   func(float64) bool
+		desc string
+	}{
+		{"identical", "foo bar baz", "foo bar baz", func(v float64) bool { return v == 1.0 }, "identical strings must yield 1.0"},
+		{"empty_both", "", "", func(v float64) bool { return v == 0.0 }, "empty strings must yield 0.0"},
+		{"empty_one", "hello world", "", func(v float64) bool { return v == 0.0 }, "one empty must yield 0.0"},
+		{"disjoint", "alpha beta", "gamma delta", func(v float64) bool { return v == 0.0 }, "no overlap must yield 0.0"},
+		{"subset", "a b", "a b c d", func(v float64) bool { return v > 0.0 && v <= 1.0 }, "subset must yield (0, 1]"},
+		{"symmetric", "x y z", "y z w", func(v float64) bool {
+			return jaccardSimilarity("x y z", "y z w") == jaccardSimilarity("y z w", "x y z")
+		}, "must be symmetric"},
+		{"bounded", "the quick brown fox", "lazy dog jumps over", func(v float64) bool { return v >= 0.0 && v <= 1.0 }, "must be in [0, 1]"},
+		{"case_insensitive", "Hello World", "hello world", func(v float64) bool { return v == 1.0 }, "case should not matter"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := jaccardSimilarity(tc.a, tc.b)
+			if !tc.fn(result) {
+				t.Errorf("jaccardSimilarity(%q, %q) = %f: %s", tc.a, tc.b, result, tc.desc)
+			}
+		})
+	}
+}
+
+func TestProperty_ExtractConfidence(t *testing.T) {
+	// Invariant: Overall is always in [0.0, 1.0]
+	cases := []struct {
+		name   string
+		verify bool
+		output string
+		turns  int
+		errMsg string
+	}{
+		{"perfect", true, "Done. All tests pass.", 3, ""},
+		{"hedging", false, "I think maybe this might possibly work but I'm not sure", 20, ""},
+		{"error", false, "", 0, "segfault"},
+		{"empty", false, "", 0, ""},
+		{"questions", false, "Should I use slog? What about the interface?", 1, ""},
+		{"long_output", true, string(make([]byte, 10000)), 5, ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var verification []LoopVerification
+			if tc.verify {
+				verification = []LoopVerification{{ExitCode: 0}}
+			} else {
+				verification = []LoopVerification{{ExitCode: 1}}
+			}
+			signals := ExtractConfidence(&Session{
+				Status:    StatusCompleted,
+				TurnCount: tc.turns,
+				Error:     tc.errMsg,
+				LastOutput: tc.output,
+			}, 5, verification)
+
+			if signals.Overall < 0.0 || signals.Overall > 1.0 {
+				t.Errorf("Overall = %f, must be in [0, 1]", signals.Overall)
+			}
+			if signals.TurnEfficiency < 0.0 {
+				t.Errorf("TurnEfficiency = %f, must be >= 0", signals.TurnEfficiency)
+			}
+		})
+	}
+
+	// Invariant: verify_passed=true always scores higher than verify_passed=false
+	// for otherwise identical sessions.
+	sess := &Session{Status: StatusCompleted, TurnCount: 5, LastOutput: "done"}
+	passedSignals := ExtractConfidence(sess, 5, []LoopVerification{{ExitCode: 0}})
+	failedSignals := ExtractConfidence(sess, 5, []LoopVerification{{ExitCode: 1}})
+	if passedSignals.Overall <= failedSignals.Overall {
+		t.Errorf("verify_passed=true (%f) should score higher than false (%f)",
+			passedSignals.Overall, failedSignals.Overall)
+	}
+}
+
+func TestProperty_ScoreTaskDifficulty(t *testing.T) {
+	cs := NewCurriculumSorter(nil, nil)
+
+	cases := []struct {
+		name  string
+		title string
+		prompt string
+	}{
+		{"simple_test", "Add test for utils", "Write a unit test"},
+		{"complex_redesign", "Architecture redesign of the entire system", "Rewrite the complex core system with breaking changes across multiple files"},
+		{"fix_typo", "Fix simple typo in README", "rename"},
+		{"empty", "", ""},
+		{"long_prompt", "Feature", string(make([]byte, 2000))},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			td := cs.ScoreTask(LoopTask{Title: tc.title, Prompt: tc.prompt})
+
+			// Invariant: DifficultyScore in [0, 1]
+			if td.DifficultyScore < 0.0 || td.DifficultyScore > 1.0 {
+				t.Errorf("DifficultyScore = %f, must be in [0, 1]", td.DifficultyScore)
+			}
+
+			// Invariant: Recommendation is always set
+			switch td.Recommendation {
+			case "cheap_provider", "expensive_provider", "decompose":
+				// OK
+			default:
+				t.Errorf("unexpected recommendation: %q", td.Recommendation)
+			}
+		})
+	}
+
+	// Invariant: "simple typo rename" should score easier than "complex architecture redesign"
+	easy := cs.ScoreTask(LoopTask{Title: "Fix simple typo", Prompt: "rename a variable"})
+	hard := cs.ScoreTask(LoopTask{Title: "Architecture redesign", Prompt: "Rewrite the complex core with breaking changes across multiple files"})
+	if easy.DifficultyScore >= hard.DifficultyScore {
+		t.Errorf("easy (%f) should score lower than hard (%f)", easy.DifficultyScore, hard.DifficultyScore)
+	}
+}
+
+func TestProperty_SortTasksStability(t *testing.T) {
+	cs := NewCurriculumSorter(nil, nil)
+
+	// Tasks with identical difficulty should preserve original order (stable sort).
+	tasks := []LoopTask{
+		{Title: "Test A", Prompt: "write test"},
+		{Title: "Test B", Prompt: "write test"},
+		{Title: "Test C", Prompt: "write test"},
+	}
+
+	sorted := cs.SortTasks(tasks)
+	if len(sorted) != len(tasks) {
+		t.Fatalf("sorted length %d != input length %d", len(sorted), len(tasks))
+	}
+
+	// Same difficulty → order preserved
+	for i, s := range sorted {
+		if s.Title != tasks[i].Title {
+			t.Errorf("position %d: got %q, want %q (sort not stable)", i, s.Title, tasks[i].Title)
+		}
+	}
+}
+
+func TestProperty_ReflexionExtractNilOnSuccess(t *testing.T) {
+	rs := NewReflexionStore("")
+
+	// Invariant: ExtractReflection returns nil for non-failed iterations.
+	for _, status := range []string{"idle", "planning", "executing", "verifying"} {
+		iter := LoopIteration{Number: 1, Status: status, Task: LoopTask{Title: "test"}}
+		if ref := rs.ExtractReflection("loop-1", iter); ref != nil {
+			t.Errorf("status=%q: expected nil reflection, got %+v", status, ref)
+		}
+	}
+
+	// Invariant: ExtractReflection returns non-nil for failed iterations.
+	failedIter := LoopIteration{
+		Number: 1,
+		Status: "failed",
+		Error:  "verify command failed",
+		Task:   LoopTask{Title: "fix bug"},
+	}
+	if ref := rs.ExtractReflection("loop-1", failedIter); ref == nil {
+		t.Error("expected non-nil reflection for failed iteration")
+	}
+}
+
+func TestProperty_EpisodicPruneNeverExceedsMax(t *testing.T) {
+	maxSize := 5
+	em := NewEpisodicMemory("", maxSize)
+
+	// Add more episodes than maxSize
+	for i := 0; i < maxSize*3; i++ {
+		em.RecordSuccess(JournalEntry{
+			Provider:  "claude",
+			TaskFocus: "task",
+			Worked:    []string{"ok"},
+		})
+	}
+
+	em.mu.Lock()
+	count := len(em.episodes)
+	em.mu.Unlock()
+
+	if count > maxSize {
+		t.Errorf("episode count %d exceeds maxSize %d after pruning", count, maxSize)
+	}
+}
