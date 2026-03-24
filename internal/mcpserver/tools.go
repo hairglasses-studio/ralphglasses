@@ -370,6 +370,11 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithNumber("retry_limit", mcp.Description("Maximum consecutive failed iterations before step is refused")),
 		mcp.WithNumber("max_concurrent_workers", mcp.Description("Maximum concurrent workers (currently only 1 supported)")),
 		mcp.WithString("worktree_policy", mcp.Description("Worktree isolation policy (default: git)")),
+		mcp.WithBoolean("enable_reflexion", mcp.Description("Enable reflexion loop (failure correction injection)")),
+		mcp.WithBoolean("enable_episodic_memory", mcp.Description("Enable episodic memory (successful trajectory recall)")),
+		mcp.WithBoolean("enable_cascade", mcp.Description("Enable cascade routing (cheap-then-expensive provider)")),
+		mcp.WithBoolean("enable_uncertainty", mcp.Description("Enable uncertainty quantification (confidence scoring)")),
+		mcp.WithBoolean("enable_curriculum", mcp.Description("Enable curriculum learning (difficulty-based task sorting)")),
 	), s.handleLoopStart)
 
 	srv.AddTool(mcp.NewTool("ralphglasses_loop_status",

@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
@@ -58,6 +59,29 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 	}
 	if vp := getStringArg(req, "verifier_provider"); vp != "" {
 		profile.VerifierProvider = session.Provider(vp)
+	}
+
+	// Wire self-learning subsystems when requested.
+	ralphDir := filepath.Join(r.Path, ".ralph")
+	if getBoolArg(req, "enable_reflexion") {
+		profile.EnableReflexion = true
+		s.SessMgr.SetReflexionStore(session.NewReflexionStore(ralphDir))
+	}
+	if getBoolArg(req, "enable_episodic_memory") {
+		profile.EnableEpisodicMemory = true
+		s.SessMgr.SetEpisodicMemory(session.NewEpisodicMemory(ralphDir, 500))
+	}
+	if getBoolArg(req, "enable_cascade") {
+		profile.EnableCascade = true
+		cfg := session.DefaultCascadeConfig()
+		s.SessMgr.SetCascadeRouter(session.NewCascadeRouter(cfg, nil, nil, ralphDir))
+	}
+	if getBoolArg(req, "enable_uncertainty") {
+		profile.EnableUncertainty = true
+	}
+	if getBoolArg(req, "enable_curriculum") {
+		profile.EnableCurriculum = true
+		s.SessMgr.SetCurriculumSorter(session.NewCurriculumSorter(nil, nil))
 	}
 
 	// Wire prompt enhancer into session manager for loop integration
