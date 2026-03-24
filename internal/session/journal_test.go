@@ -2,6 +2,7 @@ package session
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -302,4 +303,100 @@ func TestParseImprovementMarkers(t *testing.T) {
 	if len(suggest) != 1 {
 		t.Errorf("suggest count = %d, want 1", len(suggest))
 	}
+}
+
+func TestExtractSignalsFromOutput(t *testing.T) {
+	t.Run("error_patterns", func(t *testing.T) {
+		history := []string{
+			"Starting build...",
+			"error: undefined variable foo",
+			"FAIL main_test.go",
+			"Build completed with errors",
+		}
+		worked, failed, suggest := extractSignalsFromOutput(history, StatusErrored, 0, 0)
+		if len(failed) < 2 {
+			t.Errorf("expected at least 2 failed items, got %d: %v", len(failed), failed)
+		}
+		if len(worked) > 0 {
+			t.Errorf("expected no worked items for error output, got %v", worked)
+		}
+		_ = suggest
+	})
+
+	t.Run("success_patterns", func(t *testing.T) {
+		history := []string{
+			"PASS",
+			"ok  \tgithub.com/example/pkg\t0.5s",
+			"created new file handler.go",
+			"fixed validation bug in parser",
+		}
+		worked, failed, _ := extractSignalsFromOutput(history, StatusCompleted, 0.05, 3)
+		if len(worked) < 3 {
+			t.Errorf("expected at least 3 worked items, got %d: %v", len(worked), worked)
+		}
+		if len(failed) != 0 {
+			t.Errorf("expected no failed items, got %v", failed)
+		}
+	})
+
+	t.Run("friction_repeated_errors", func(t *testing.T) {
+		history := []string{
+			"error: connection refused",
+			"error: connection refused",
+			"error: connection refused",
+			"error: connection refused",
+		}
+		_, _, suggest := extractSignalsFromOutput(history, StatusErrored, 0, 0)
+		if len(suggest) == 0 {
+			t.Fatal("expected friction suggestion for repeated errors")
+		}
+		found := false
+		for _, s := range suggest {
+			if strings.Contains(s, "repeated error") && strings.Contains(s, "4x") {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("expected suggestion mentioning repeated error count, got %v", suggest)
+		}
+	})
+
+	t.Run("cost_anomaly", func(t *testing.T) {
+		history := []string{"some output"}
+		_, _, suggest := extractSignalsFromOutput(history, StatusCompleted, 2.0, 5)
+		if len(suggest) == 0 {
+			t.Fatal("expected cost anomaly suggestion")
+		}
+		found := false
+		for _, s := range suggest {
+			if strings.Contains(s, "cost per turn") {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("expected cost per turn suggestion, got %v", suggest)
+		}
+	})
+
+	t.Run("empty_history", func(t *testing.T) {
+		worked, failed, suggest := extractSignalsFromOutput(nil, StatusCompleted, 0, 0)
+		if len(worked) != 0 || len(failed) != 0 || len(suggest) != 0 {
+			t.Errorf("expected empty results for nil history, got worked=%v failed=%v suggest=%v", worked, failed, suggest)
+		}
+	})
+
+	t.Run("caps_results", func(t *testing.T) {
+		var history []string
+		for i := 0; i < 20; i++ {
+			history = append(history, fmt.Sprintf("error: failure %d", i))
+			history = append(history, fmt.Sprintf("created file_%d.go", i))
+		}
+		worked, failed, _ := extractSignalsFromOutput(history, StatusErrored, 0, 0)
+		if len(worked) > 5 {
+			t.Errorf("worked should be capped at 5, got %d", len(worked))
+		}
+		if len(failed) > 5 {
+			t.Errorf("failed should be capped at 5, got %d", len(failed))
+		}
+	})
 }

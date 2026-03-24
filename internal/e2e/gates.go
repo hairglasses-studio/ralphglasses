@@ -1,6 +1,8 @@
 package e2e
 
 import (
+	"fmt"
+	"os/exec"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -197,6 +199,40 @@ func absoluteFloorGate(metric string, current, warnFloor, failFloor float64) Gat
 		CurrentVal: current,
 		DeltaPct:   0,
 	}
+}
+
+// RunE2EGate executes the E2E test suite and evaluates regression gates.
+// It runs tests, loads observations, builds a baseline, and returns a gate report.
+// This is the entry point for autonomous test gating after config changes.
+func RunE2EGate(repoRoot string) (*GateReport, error) {
+	// Run E2E tests
+	cmd := exec.Command("go", "test", "-run", "TestE2EAllScenarios", "./internal/e2e/")
+	cmd.Dir = repoRoot
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("E2E tests failed: %w\n%s", err, output)
+	}
+
+	// Load observations
+	obsPath := session.ObservationPath(repoRoot)
+	observations, err := session.LoadObservations(obsPath, time.Time{})
+	if err != nil {
+		return nil, fmt.Errorf("load observations: %w", err)
+	}
+
+	if len(observations) == 0 {
+		return &GateReport{
+			Timestamp: time.Now(),
+			Overall:   VerdictSkip,
+			Results:   []GateResult{{Metric: "observations", Verdict: VerdictSkip}},
+		}, nil
+	}
+
+	// Build baseline from all observations (0 = use all)
+	baseline := BuildBaseline(observations, 0)
+	thresholds := DefaultGateThresholds()
+
+	return EvaluateGates(observations, baseline, thresholds), nil
 }
 
 // absoluteCeilingGate evaluates a rate metric against absolute ceilings.
