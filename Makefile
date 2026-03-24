@@ -7,7 +7,7 @@ LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSIO
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-integration test-scripts fuzz build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example
+.PHONY: bootstrap doctor test test-verbose test-cover test-integration test-scripts fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example
 
 bootstrap:
 	./scripts/bootstrap-toolchain.sh
@@ -48,6 +48,18 @@ fuzz:
 	$(GO) test -fuzz=FuzzGetStringArg -fuzztime=30s ./internal/mcpserver/
 	@echo "Fuzzing MCP number args (30s)..."
 	$(GO) test -fuzz=FuzzGetNumberArg -fuzztime=30s ./internal/mcpserver/
+
+# Run benchmarks (count=3 for statistical significance)
+bench:
+	$(GO) test -bench=. -benchmem -count=3 -run=^$$ ./... | tee bench-new.txt
+
+# Compare benchmarks against previous run (requires bench-old.txt)
+bench-compare: bench
+	@if [ -f bench-old.txt ]; then \
+		benchstat bench-old.txt bench-new.txt; \
+	else \
+		echo "No bench-old.txt found. Run 'make bench' on the baseline first, then 'cp bench-new.txt bench-old.txt'."; \
+	fi
 
 # Run BATS tests for shell scripts
 test-scripts:
