@@ -60,28 +60,45 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 	if vp := getStringArg(req, "verifier_provider"); vp != "" {
 		profile.VerifierProvider = session.Provider(vp)
 	}
+	if budgetUSD := getNumberArg(req, "budget_usd", 0); budgetUSD > 0 {
+		profile.PlannerBudgetUSD = budgetUSD / 3
+		profile.WorkerBudgetUSD = budgetUSD * 2 / 3
+	}
 
-	// Wire self-learning subsystems when requested.
+	// Wire self-learning subsystems when requested (singleton: only create if not already set).
 	ralphDir := filepath.Join(r.Path, ".ralph")
 	if getBoolArg(req, "enable_reflexion") {
 		profile.EnableReflexion = true
-		s.SessMgr.SetReflexionStore(session.NewReflexionStore(ralphDir))
+		if !s.SessMgr.HasReflexion() {
+			s.SessMgr.SetReflexionStore(session.NewReflexionStore(ralphDir))
+		}
 	}
 	if getBoolArg(req, "enable_episodic_memory") {
 		profile.EnableEpisodicMemory = true
-		s.SessMgr.SetEpisodicMemory(session.NewEpisodicMemory(ralphDir, 500))
+		if !s.SessMgr.HasEpisodicMemory() {
+			s.SessMgr.SetEpisodicMemory(session.NewEpisodicMemory(ralphDir, 500, 0))
+		}
 	}
 	if getBoolArg(req, "enable_cascade") {
 		profile.EnableCascade = true
-		cfg := session.DefaultCascadeConfig()
-		s.SessMgr.SetCascadeRouter(session.NewCascadeRouter(cfg, nil, nil, ralphDir))
+		if !s.SessMgr.HasCascadeRouter() {
+			cfg := session.DefaultCascadeConfig()
+			s.SessMgr.SetCascadeRouter(session.NewCascadeRouter(cfg, nil, nil, ralphDir))
+		}
 	}
 	if getBoolArg(req, "enable_uncertainty") {
 		profile.EnableUncertainty = true
 	}
 	if getBoolArg(req, "enable_curriculum") {
 		profile.EnableCurriculum = true
-		s.SessMgr.SetCurriculumSorter(session.NewCurriculumSorter(nil, nil))
+		if !s.SessMgr.HasCurriculumSorter() {
+			// Wire to real episodic memory if available for richer difficulty scoring.
+			var episodic session.EpisodicSource
+			if em := s.SessMgr.GetEpisodicMemory(); em != nil {
+				episodic = em
+			}
+			s.SessMgr.SetCurriculumSorter(session.NewCurriculumSorter(nil, episodic))
+		}
 	}
 
 	// Wire prompt enhancer into session manager for loop integration

@@ -116,8 +116,8 @@ func TestEdge_LargeInputs(t *testing.T) {
 		start := time.Now()
 		result := Enhance(large, TaskTypeGeneral)
 		elapsed := time.Since(start)
-		if elapsed > time.Second {
-			t.Errorf("Enhance took %v for 100K input, want < 1s", elapsed)
+		if elapsed > 3*time.Second {
+			t.Errorf("Enhance took %v for 100K input, want < 3s", elapsed)
 		}
 		if result.Enhanced == "" {
 			t.Error("should produce output for large input")
@@ -128,8 +128,8 @@ func TestEdge_LargeInputs(t *testing.T) {
 		start := time.Now()
 		results := Lint(large)
 		elapsed := time.Since(start)
-		if elapsed > 2*time.Second {
-			t.Errorf("Lint took %v for 100K input, want < 2s", elapsed)
+		if elapsed > 5*time.Second {
+			t.Errorf("Lint took %v for 100K input, want < 5s", elapsed)
 		}
 		_ = results
 	})

@@ -200,6 +200,62 @@ func TestWordCount(t *testing.T) {
 	}
 }
 
+func TestSortTasks_MultiTaskDiverseTypes(t *testing.T) {
+	cs := NewCurriculumSorter(nil, nil)
+
+	tasks := []LoopTask{
+		{Title: "add unit test for config parser", Prompt: "Write a simple test for the config parser function"},
+		{Title: "update API docs for auth endpoints", Prompt: "Add docs comments to the authentication handlers"},
+		{Title: "fix null pointer crash on login", Prompt: "The login handler panics when email field is nil"},
+		{Title: "refactor database connection pooling", Prompt: "Extract connection pool logic into a separate module with breaking changes across multiple files"},
+		{Title: "implement real-time notification system", Prompt: "Design and build a complex WebSocket-based notification system with pub/sub, delivery guarantees, and backward compatibility considerations"},
+	}
+
+	sorted := cs.SortTasks(tasks)
+
+	// Verify length preserved
+	if len(sorted) != len(tasks) {
+		t.Fatalf("expected %d tasks, got %d", len(tasks), len(sorted))
+	}
+
+	// Verify ascending difficulty order
+	for i := 1; i < len(sorted); i++ {
+		prev := cs.ScoreTask(sorted[i-1]).DifficultyScore
+		curr := cs.ScoreTask(sorted[i]).DifficultyScore
+		if prev > curr {
+			t.Errorf("tasks not sorted ascending: index %d (%q, score %.3f) > index %d (%q, score %.3f)",
+				i-1, sorted[i-1].Title, prev, i, sorted[i].Title, curr)
+		}
+	}
+
+	// The test/docs tasks (easy) should appear before the feature/refactor tasks (hard)
+	firstScore := cs.ScoreTask(sorted[0]).DifficultyScore
+	lastScore := cs.ScoreTask(sorted[len(sorted)-1]).DifficultyScore
+	if firstScore >= lastScore {
+		t.Errorf("first task score (%.3f) should be less than last task score (%.3f)", firstScore, lastScore)
+	}
+
+	// Verify ShouldDecompose triggers for a task with difficulty > 0.8.
+	// We construct a TaskDifficulty directly since exceeding 0.8 via ScoreTask
+	// requires feedback analyzer data (historical failure rate). The scoring weights
+	// cap pure heuristic scoring around 0.75 without real history.
+	decomposeDiff := TaskDifficulty{
+		DifficultyScore:       0.85,
+		HistoricalSuccessRate: 0.3,
+		SampleCount:           2, // low sample count triggers decompose
+	}
+	if !cs.ShouldDecompose(decomposeDiff) {
+		t.Errorf("expected ShouldDecompose=true for task with difficulty %.3f and sample_count=%d",
+			decomposeDiff.DifficultyScore, decomposeDiff.SampleCount)
+	}
+
+	// Verify the hardest scored task from our diverse list is at least moderately hard
+	hardestScore := cs.ScoreTask(sorted[len(sorted)-1]).DifficultyScore
+	if hardestScore < 0.5 {
+		t.Errorf("expected hardest task score >= 0.5, got %.3f", hardestScore)
+	}
+}
+
 func TestScoreTask_WithEpisodicSource(t *testing.T) {
 	mock := &mockEpisodicSource{
 		episodes: []CurriculumEpisode{

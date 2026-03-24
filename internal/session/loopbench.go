@@ -42,12 +42,12 @@ type LoopObservation struct {
 	TaskType         string    `json:"task_type"`
 	TaskTitle        string    `json:"task_title"`
 	Mode             string    `json:"mode"`
-	Confidence       float64   `json:"confidence,omitempty"`
-	CascadeEscalated bool      `json:"cascade_escalated,omitempty"`
-	CascadeCheapCost float64   `json:"cascade_cheap_cost,omitempty"`
-	DifficultyScore  float64   `json:"difficulty_score,omitempty"`
-	ReflexionApplied bool      `json:"reflexion_applied,omitempty"`
-	EpisodesUsed     int       `json:"episodes_used,omitempty"`
+	Confidence       float64   `json:"confidence"`
+	CascadeEscalated bool      `json:"cascade_escalated"`
+	CascadeCheapCost float64   `json:"cascade_cheap_cost"`
+	DifficultyScore  float64   `json:"difficulty_score"`
+	ReflexionApplied bool      `json:"reflexion_applied"`
+	EpisodesUsed     int       `json:"episodes_used"`
 }
 
 // WriteObservation appends a single observation as a JSONL line.
@@ -132,9 +132,18 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 		Mode:            "live",
 	}
 
-	// Timing
+	// Timing — per-stage and total
+	if iter.PlannerEndedAt != nil {
+		obs.PlannerLatencyMs = iter.PlannerEndedAt.Sub(iter.StartedAt).Milliseconds()
+	}
+	if iter.WorkersEndedAt != nil && iter.PlannerEndedAt != nil {
+		obs.WorkerLatencyMs = iter.WorkersEndedAt.Sub(*iter.PlannerEndedAt).Milliseconds()
+	}
 	if iter.EndedAt != nil {
 		obs.TotalLatencyMs = iter.EndedAt.Sub(iter.StartedAt).Milliseconds()
+		if iter.WorkersEndedAt != nil {
+			obs.VerifyLatencyMs = iter.EndedAt.Sub(*iter.WorkersEndedAt).Milliseconds()
+		}
 	}
 
 	// Task classification

@@ -58,7 +58,7 @@ func TestCascadeUsesUncertainty(t *testing.T) {
 // EpisodicMemory data via the EpisodicSource interface when scoring tasks.
 func TestCurriculumWithEpisodicMemory(t *testing.T) {
 	dir := t.TempDir()
-	em := NewEpisodicMemory(dir, 100)
+	em := NewEpisodicMemory(dir, 100, 0)
 
 	// Record some episodes with high turn counts (suggesting difficulty)
 	for i := 0; i < 5; i++ {
@@ -126,7 +126,7 @@ func TestReflexionTriggeredByUncertainty(t *testing.T) {
 // EpisodicMemory.FindSimilarEpisodes implements EpisodicSource.
 func TestEpisodicAdapterSatisfiesCurriculumInterface(t *testing.T) {
 	dir := t.TempDir()
-	em := NewEpisodicMemory(dir, 100)
+	em := NewEpisodicMemory(dir, 100, 0)
 	em.RecordSuccess(JournalEntry{
 		TaskFocus:   "add validation",
 		Provider:    "claude",
@@ -156,7 +156,7 @@ func TestManagerSubsystemSetters(t *testing.T) {
 
 	dir := t.TempDir()
 	rs := NewReflexionStore(dir)
-	em := NewEpisodicMemory(dir, 100)
+	em := NewEpisodicMemory(dir, 100, 0)
 	cr := NewCascadeRouter(DefaultCascadeConfig(), nil, nil, dir)
 	cs := NewCurriculumSorter(nil, nil)
 
@@ -244,7 +244,7 @@ func TestReflexion_RecentForTaskNoMatch(t *testing.T) {
 
 func TestEpisodicMemory_MaxSizeOne(t *testing.T) {
 	dir := t.TempDir()
-	em := NewEpisodicMemory(dir, 1)
+	em := NewEpisodicMemory(dir, 1, 0)
 
 	em.RecordSuccess(JournalEntry{
 		TaskFocus: "task one", Provider: "claude", TurnCount: 3,
@@ -265,7 +265,7 @@ func TestEpisodicMemory_MaxSizeOne(t *testing.T) {
 }
 
 func TestEpisodicMemory_FindSimilarEmpty(t *testing.T) {
-	em := NewEpisodicMemory(t.TempDir(), 100)
+	em := NewEpisodicMemory(t.TempDir(), 100, 0)
 	results := em.FindSimilar("feature", "add something", 3)
 	if len(results) != 0 {
 		t.Errorf("expected empty results from empty store, got %d", len(results))
@@ -274,7 +274,7 @@ func TestEpisodicMemory_FindSimilarEmpty(t *testing.T) {
 
 func TestEpisodicMemory_AllSameType(t *testing.T) {
 	dir := t.TempDir()
-	em := NewEpisodicMemory(dir, 5)
+	em := NewEpisodicMemory(dir, 5, 0)
 
 	for i := 0; i < 10; i++ {
 		em.RecordSuccess(JournalEntry{
@@ -656,7 +656,7 @@ func TestProperty_ReflexionExtractNilOnSuccess(t *testing.T) {
 
 func TestProperty_EpisodicPruneNeverExceedsMax(t *testing.T) {
 	maxSize := 5
-	em := NewEpisodicMemory("", maxSize)
+	em := NewEpisodicMemory("", maxSize, 0)
 
 	// Add more episodes than maxSize
 	for i := 0; i < maxSize*3; i++ {

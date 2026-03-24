@@ -84,6 +84,8 @@ type LoopIteration struct {
 	Error             string             `json:"error,omitempty"`
 	StartedAt         time.Time          `json:"started_at"`
 	EndedAt           *time.Time         `json:"ended_at,omitempty"`
+	PlannerEndedAt    *time.Time         `json:"planner_ended_at,omitempty"`
+	WorkersEndedAt    *time.Time         `json:"workers_ended_at,omitempty"`
 }
 
 // LoopRun is persisted state for a perpetual development loop.
@@ -270,7 +272,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	// WS2: Inject episodic examples of successful approaches into planner prompt.
 	var episodesUsed int
 	if m.episodic != nil && profile.EnableEpisodicMemory {
-		episodes := m.episodic.FindSimilar("", "", 3)
+		episodes := m.episodic.FindSimilar("", "", 0)
 		if len(episodes) > 0 {
 			if formatted := m.episodic.FormatExamples(episodes); formatted != "" {
 				plannerPrompt += "\n\n" + formatted
@@ -309,6 +311,11 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	if err := m.waitForSession(ctx, plannerSession); err != nil {
 		return m.failLoopIteration(run, index, fmt.Errorf("planner session failed: %w", err))
 	}
+
+	plannerDone := time.Now()
+	m.updateLoopIteration(run, index, "planning", func(iter *LoopIteration, loop *LoopRun) {
+		iter.PlannerEndedAt = &plannerDone
+	})
 
 	tasks, plannerOutput, err := plannerTasksFromSession(plannerSession, numWorkers)
 	if err != nil {
@@ -359,7 +366,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			// WS2: Inject episodic examples into worker prompt for similar tasks.
 			workerPrompt := t.Prompt
 			if m.episodic != nil && profile.EnableEpisodicMemory {
-				eps := m.episodic.FindSimilar(taskType, t.Title, 2)
+				eps := m.episodic.FindSimilar(taskType, t.Title, 0)
 				if len(eps) > 0 {
 					if examples := m.episodic.FormatExamples(eps); examples != "" {
 						workerPrompt = examples + "\n\n" + workerPrompt
@@ -513,6 +520,11 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		return m.failLoopIteration(run, index, fmt.Errorf("worker(s) failed: %s", errMsg))
 	}
 
+	workersDone := time.Now()
+	m.updateLoopIteration(run, index, "executing", func(iter *LoopIteration, loop *LoopRun) {
+		iter.WorkersEndedAt = &workersDone
+	})
+
 	// Detect if any worker asked questions instead of acting autonomously.
 	hasQ := false
 	for _, wo := range workerOutputs {
@@ -664,7 +676,8 @@ Constraints:
 - Pick the highest-impact unfinished task that is safe to execute next.
 - Keep the worker task concrete and implementation-focused.
 - Assume verification will run after the worker finishes.
-- Do not include markdown fences or prose outside the JSON object.`)
+- Do not include markdown fences or prose outside the JSON object.
+- Prefer variety in task types. If recent iterations were all bug fixes, choose a test, docs, or refactor task instead.`)
 
 	roadmapPath := filepath.Join(repoPath, "ROADMAP.md")
 	if _, err := os.Stat(roadmapPath); err == nil {
@@ -709,6 +722,35 @@ Constraints:
 				`IMPORTANT: The previous worker asked questions instead of acting autonomously.
 In headless mode, no human will answer. Re-task with explicit instructions to make autonomous decisions using conservative defaults.`)
 		}
+
+		// Completed tasks dedup: list successful iterations so the planner avoids repeating them.
+		var completedTitles []string
+		for _, iter := range prevIterations {
+			if iter.Status != "failed" && iter.Task.Title != "" {
+				completedTitles = append(completedTitles, fmt.Sprintf("- %s", iter.Task.Title))
+			}
+		}
+		if len(completedTitles) > 0 {
+			sections = append(sections,
+				"Completed tasks (DO NOT repeat these):\n"+strings.Join(completedTitles, "\n"))
+		}
+
+		// Inject recent task types for diversity steering.
+		recentCount := 3
+		if recentCount > len(prevIterations) {
+			recentCount = len(prevIterations)
+		}
+		var recentTypes []string
+		for _, iter := range prevIterations[len(prevIterations)-recentCount:] {
+			recentTypes = append(recentTypes, fmt.Sprintf("- %s (status: %s)", iter.Task.Title, iter.Status))
+		}
+		sections = append(sections,
+			"Recent task types (prefer a different kind of task):\n"+strings.Join(recentTypes, "\n"))
+	}
+
+	// Include recent git log subjects so the planner knows what was recently committed.
+	if gitLog, err := recentGitLog(repoPath, 10); err == nil && gitLog != "" {
+		sections = append(sections, "Recent git commits:\n"+gitLog)
 	}
 
 	return strings.Join(sections, "\n\n"), nil
@@ -765,7 +807,7 @@ func parsePlannerTasks(text string) ([]LoopTask, error) {
 		if err := json.Unmarshal([]byte(candidate), &tasks); err == nil && len(tasks) > 0 {
 			valid := make([]LoopTask, 0, len(tasks))
 			for _, t := range tasks {
-				t.Title = strings.TrimSpace(t.Title)
+				t.Title = sanitizeTaskTitle(t.Title)
 				t.Prompt = strings.TrimSpace(t.Prompt)
 				if t.Title != "" && t.Prompt != "" {
 					valid = append(valid, t)
@@ -826,10 +868,10 @@ func parsePlannerTask(text string) (LoopTask, error) {
 	var task LoopTask
 	for _, candidate := range plannerJSONCandidates(text) {
 		if err := json.Unmarshal([]byte(candidate), &task); err == nil {
-			task.Title = strings.TrimSpace(task.Title)
+			task.Title = sanitizeTaskTitle(task.Title)
 			task.Prompt = strings.TrimSpace(task.Prompt)
 			if task.Title == "" && task.Prompt != "" {
-				task.Title = firstLine(task.Prompt)
+				task.Title = sanitizeTaskTitle(firstLine(task.Prompt))
 			}
 			if task.Prompt == "" && task.Title != "" {
 				task.Prompt = task.Title
@@ -845,7 +887,7 @@ func parsePlannerTask(text string) (LoopTask, error) {
 		return LoopTask{}, errors.New("planner output did not contain a task")
 	}
 	return LoopTask{
-		Title:  firstLine(lines[0]),
+		Title:  sanitizeTaskTitle(firstLine(lines[0])),
 		Prompt: strings.Join(lines, "\n"),
 		Source: "fallback",
 	}, nil
@@ -896,6 +938,18 @@ func gitTopLevel(ctx context.Context, repoPath string) (string, error) {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("resolve git repo: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// recentGitLog returns the last n commit subjects from the repo's git log.
+func recentGitLog(repoPath string, n int) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git", "-C", repoPath, "log", "--oneline", fmt.Sprintf("-%d", n))
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
 	}
 	return strings.TrimSpace(string(output)), nil
 }
@@ -1084,6 +1138,44 @@ func firstLine(text string) string {
 		return ""
 	}
 	return lines[0]
+}
+
+// sanitizeTaskTitle cleans up a planner-produced task title:
+// - extracts .title/.Title from raw JSON objects
+// - strips whitespace and newlines
+// - truncates to 120 characters
+func sanitizeTaskTitle(title string) string {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return title
+	}
+
+	// If the title looks like a JSON object, try to extract a title field.
+	if len(title) > 0 && (title[0] == '{' || title[0] == '[') {
+		var obj map[string]interface{}
+		if err := json.Unmarshal([]byte(title), &obj); err == nil {
+			for _, key := range []string{"title", "Title"} {
+				if v, ok := obj[key]; ok {
+					if s, ok := v.(string); ok && strings.TrimSpace(s) != "" {
+						title = strings.TrimSpace(s)
+						break
+					}
+				}
+			}
+		}
+	}
+
+	// Take only the first line if multiline.
+	if idx := strings.IndexAny(title, "\n\r"); idx >= 0 {
+		title = strings.TrimSpace(title[:idx])
+	}
+
+	// Truncate to 120 chars.
+	if len(title) > 120 {
+		title = title[:120]
+	}
+
+	return title
 }
 
 func dedupeStrings(items []string) []string {
