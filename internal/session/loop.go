@@ -256,6 +256,29 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		return m.failLoopIteration(run, index, fmt.Errorf("build planner prompt: %w", err))
 	}
 
+	// WS1: Inject reflexion context from previous failures into planner prompt.
+	var reflexionApplied bool
+	if m.reflexion != nil && profile.EnableReflexion {
+		if refs := m.reflexion.RecentForTask("", 5); len(refs) > 0 {
+			if formatted := m.reflexion.FormatForPrompt(refs); formatted != "" {
+				plannerPrompt += "\n\n" + formatted
+				reflexionApplied = true
+			}
+		}
+	}
+
+	// WS2: Inject episodic examples of successful approaches into planner prompt.
+	var episodesUsed int
+	if m.episodic != nil && profile.EnableEpisodicMemory {
+		episodes := m.episodic.FindSimilar("", "", 3)
+		if len(episodes) > 0 {
+			if formatted := m.episodic.FormatExamples(episodes); formatted != "" {
+				plannerPrompt += "\n\n" + formatted
+				episodesUsed = len(episodes)
+			}
+		}
+	}
+
 	// Enhance planner prompt for the planner's target provider
 	var plannerEnhance enhanceResult
 	if m.Enhancer != nil {
@@ -292,6 +315,16 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		return m.failLoopIteration(run, index, fmt.Errorf("parse planner output: %w", err))
 	}
 
+	// WS5: Sort tasks by estimated difficulty (easy first) and score them.
+	var taskDifficulties []TaskDifficulty
+	if m.curriculum != nil && profile.EnableCurriculum {
+		tasks = m.curriculum.SortTasks(tasks)
+		taskDifficulties = make([]TaskDifficulty, len(tasks))
+		for i, t := range tasks {
+			taskDifficulties[i] = m.curriculum.ScoreTask(t)
+		}
+	}
+
 	m.updateLoopIteration(run, index, "executing", func(iter *LoopIteration, loop *LoopRun) {
 		iter.Task = tasks[0] // backwards compat: first task
 		iter.Tasks = tasks
@@ -300,13 +333,17 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 
 	// Fan out workers in parallel, each in their own worktree
 	type workerResult struct {
-		idx       int
-		session   *Session
-		worktree  string
-		branch    string
-		output    string
-		err       error
+		idx             int
+		session         *Session
+		worktree        string
+		branch          string
+		output          string
+		err             error
+		cascadeResult   *CascadeResult // WS3: non-nil if cascade routing was attempted
 	}
+
+	// WS3: Determine which tasks should try cheap provider first.
+	useCascade := m.cascade != nil && profile.EnableCascade
 
 	resultCh := make(chan workerResult, len(tasks))
 	for i, task := range tasks {
@@ -317,8 +354,30 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 				return
 			}
 
-			// Enhance worker prompt for the worker's target provider
+			taskType := classifyTask(t.Title)
+
+			// WS2: Inject episodic examples into worker prompt for similar tasks.
 			workerPrompt := t.Prompt
+			if m.episodic != nil && profile.EnableEpisodicMemory {
+				eps := m.episodic.FindSimilar(taskType, t.Title, 2)
+				if len(eps) > 0 {
+					if examples := m.episodic.FormatExamples(eps); examples != "" {
+						workerPrompt = examples + "\n\n" + workerPrompt
+					}
+				}
+			}
+
+			// WS1: Inject reflexion corrections into worker prompt for similar tasks.
+			if m.reflexion != nil && profile.EnableReflexion {
+				refs := m.reflexion.RecentForTask(t.Title, 3)
+				if len(refs) > 0 {
+					if formatted := m.reflexion.FormatForPrompt(refs); formatted != "" {
+						workerPrompt = formatted + "\n\n" + workerPrompt
+					}
+				}
+			}
+
+			// Enhance worker prompt for the worker's target provider
 			var workerEnhance enhanceResult
 			if m.Enhancer != nil {
 				workerEnhance = m.enhanceForProvider(ctx, workerPrompt, profile.WorkerProvider)
@@ -327,16 +386,62 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 				workerEnhance = enhanceResult{prompt: workerPrompt, source: "none", preScore: 0}
 			}
 
-			ws, launchErr := m.launchWorkflowSession(ctx, LaunchOptions{
+			baseOpts := LaunchOptions{
 				Provider:     profile.WorkerProvider,
 				RepoPath:     wt,
 				Prompt:       workerPrompt,
 				Model:        profile.WorkerModel,
 				MaxBudgetUSD: profile.WorkerBudgetUSD,
 				SessionName:  fmt.Sprintf("loop-work-%s-%03d-%d", run.RepoName, iteration.Number, workerIdx),
-			})
+			}
+
+			// WS3: Try cheap provider first if cascade routing is enabled.
+			var cascadeRes *CascadeResult
+			if useCascade && m.cascade.ShouldCascade(taskType, t.Prompt) {
+				cheapOpts := m.cascade.CheapLaunchOpts(baseOpts)
+				cheapSess, cheapErr := m.launchWorkflowSession(ctx, cheapOpts)
+				if cheapErr == nil {
+					cheapSess.EnhancementSource = workerEnhance.source
+					cheapSess.EnhancementPreScore = workerEnhance.preScore
+					_ = m.waitForSession(ctx, cheapSess)
+
+					// Run quick verification to assess cheap result
+					cheapVerify, _ := runLoopVerification(ctx, wt, profile.VerifyCommands)
+					escalate, conf, reason := m.cascade.EvaluateCheapResult(cheapSess, 10, cheapVerify)
+
+					cheapSess.Lock()
+					cheapCost := cheapSess.SpentUSD
+					cheapSess.Unlock()
+
+					cr := CascadeResult{
+						UsedProvider:    cheapOpts.Provider,
+						CheapConfidence: conf,
+						CheapCostUSD:    cheapCost,
+						TotalCostUSD:    cheapCost,
+					}
+
+					if !escalate {
+						// Cheap provider succeeded — skip expensive launch
+						cr.Escalated = false
+						cascadeRes = &cr
+						m.cascade.RecordResult(cr)
+						out := sessionOutputSummary(cheapSess)
+						resultCh <- workerResult{
+							idx: workerIdx, session: cheapSess, worktree: wt,
+							branch: br, output: out, cascadeResult: &cr,
+						}
+						return
+					}
+					// Escalate: continue to expensive provider
+					cr.Escalated = true
+					cr.Reason = reason
+					cascadeRes = &cr
+				}
+			}
+
+			ws, launchErr := m.launchWorkflowSession(ctx, baseOpts)
 			if launchErr != nil {
-				resultCh <- workerResult{idx: workerIdx, worktree: wt, err: fmt.Errorf("launch worker: %w", launchErr)}
+				resultCh <- workerResult{idx: workerIdx, worktree: wt, err: fmt.Errorf("launch worker: %w", launchErr), cascadeResult: cascadeRes}
 				return
 			}
 			ws.EnhancementSource = workerEnhance.source
@@ -347,8 +452,18 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			if waitErr != nil && errors.Is(waitErr, context.DeadlineExceeded) && hasGitChanges(wt) {
 				waitErr = nil // Worker made progress; treat as success
 			}
+
+			// WS3: Record cascade outcome with total cost.
+			if cascadeRes != nil {
+				ws.Lock()
+				cascadeRes.TotalCostUSD = cascadeRes.CheapCostUSD + ws.SpentUSD
+				cascadeRes.UsedProvider = baseOpts.Provider
+				ws.Unlock()
+				m.cascade.RecordResult(*cascadeRes)
+			}
+
 			out := sessionOutputSummary(ws)
-			resultCh <- workerResult{idx: workerIdx, session: ws, worktree: wt, branch: br, output: out, err: waitErr}
+			resultCh <- workerResult{idx: workerIdx, session: ws, worktree: wt, branch: br, output: out, err: waitErr, cascadeResult: cascadeRes}
 		}(i, task)
 	}
 
@@ -358,6 +473,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	workerOutputs := make([]string, len(tasks))
 	var workerErrs []string
 	var firstWorktree, firstBranch string
+	var cascadeResults []*CascadeResult // WS3: cascade outcomes per worker
 
 	for range tasks {
 		res := <-resultCh
@@ -372,6 +488,9 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		if res.idx == 0 {
 			firstWorktree = res.worktree
 			firstBranch = res.branch
+		}
+		if res.cascadeResult != nil {
+			cascadeResults = append(cascadeResults, res.cascadeResult)
 		}
 	}
 
@@ -417,7 +536,18 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		allVerification = append(allVerification, verification...)
 		if verErr != nil {
 			run.updateLoopAfterVerification(index, allVerification, "failed", verErr.Error())
-			emitLoopObservation(run, index, m)
+
+			// WS1: Extract reflection from failed iteration for future retries.
+			if m.reflexion != nil && profile.EnableReflexion {
+				iterSnap := run.iterationsSnapshot()[index]
+				if ref := m.reflexion.ExtractReflection(run.ID, iterSnap); ref != nil {
+					ref.Applied = false
+					m.reflexion.Store(*ref)
+				}
+			}
+
+			emitLoopObservation(run, index, m,
+				reflexionApplied, episodesUsed, cascadeResults, taskDifficulties)
 			m.PersistLoop(run)
 			_ = writeLoopJournal(run, run.Iterations[index])
 			return verErr
@@ -425,7 +555,24 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	}
 
 	run.updateLoopAfterVerification(index, allVerification, "idle", "")
-	emitLoopObservation(run, index, m)
+
+	// WS2: Record successful iteration as episode for future retrieval.
+	if m.episodic != nil && profile.EnableEpisodicMemory {
+		iterSnap := run.iterationsSnapshot()[index]
+		journal := JournalEntry{
+			Timestamp: time.Now(),
+			SessionID: iterSnap.WorkerSessionID,
+			Provider:  string(profile.WorkerProvider),
+			RepoName:  run.RepoName,
+			Model:     profile.WorkerModel,
+			TaskFocus: iterSnap.Task.Title,
+			Worked:    []string{iterSnap.Task.Title},
+		}
+		m.episodic.RecordSuccess(journal)
+	}
+
+	emitLoopObservation(run, index, m,
+		reflexionApplied, episodesUsed, cascadeResults, taskDifficulties)
 	m.PersistLoop(run)
 	_ = writeLoopJournal(run, run.Iterations[index])
 	return nil
