@@ -42,6 +42,12 @@ type LoopObservation struct {
 	TaskType         string    `json:"task_type"`
 	TaskTitle        string    `json:"task_title"`
 	Mode             string    `json:"mode"`
+	Confidence       float64   `json:"confidence,omitempty"`
+	CascadeEscalated bool      `json:"cascade_escalated,omitempty"`
+	CascadeCheapCost float64   `json:"cascade_cheap_cost,omitempty"`
+	DifficultyScore  float64   `json:"difficulty_score,omitempty"`
+	ReflexionApplied bool      `json:"reflexion_applied,omitempty"`
+	EpisodesUsed     int       `json:"episodes_used,omitempty"`
 }
 
 // WriteObservation appends a single observation as a JSONL line.
