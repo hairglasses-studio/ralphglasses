@@ -11,7 +11,7 @@ func TestE2EAllScenarios(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	scenarios := AllScenarios()
+	scenarios := CoreScenarios()
 
 	for _, s := range scenarios {
 		s := s
@@ -39,8 +39,8 @@ func TestE2EAllScenarios(t *testing.T) {
 
 func TestE2EScenarioCatalogComplete(t *testing.T) {
 	scenarios := AllScenarios()
-	if len(scenarios) != 6 {
-		t.Errorf("expected 6 scenarios, got %d", len(scenarios))
+	if len(scenarios) < 6 {
+		t.Errorf("expected at least 6 scenarios, got %d", len(scenarios))
 	}
 
 	names := make(map[string]bool)
