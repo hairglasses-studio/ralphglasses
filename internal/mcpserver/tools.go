@@ -375,6 +375,7 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithBoolean("enable_cascade", mcp.Description("Enable cascade routing (cheap-then-expensive provider)")),
 		mcp.WithBoolean("enable_uncertainty", mcp.Description("Enable uncertainty quantification (confidence scoring)")),
 		mcp.WithBoolean("enable_curriculum", mcp.Description("Enable curriculum learning (difficulty-based task sorting)")),
+		mcp.WithNumber("budget_usd", mcp.Description("Total budget in USD (split 1/3 planner, 2/3 worker)")),
 	), s.handleLoopStart)
 
 	srv.AddTool(mcp.NewTool("ralphglasses_loop_status",

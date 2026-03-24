@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -225,3 +226,140 @@ func runGitLoop(t *testing.T, repoPath string, args ...string) {
 		t.Fatalf("git %v: %v\n%s", args, err, output)
 	}
 }
+
+func TestSanitizeTaskTitle(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"plain text", "Add README note", "Add README note"},
+		{"whitespace", "  trim me  ", "trim me"},
+		{"empty", "", ""},
+		{"json object with title", `{"title":"Real Title","other":"data"}`, "Real Title"},
+		{"json object with Title", `{"Title":"Cap Title","x":1}`, "Cap Title"},
+		{"json object no title field", `{"foo":"bar"}`, `{"foo":"bar"}`},
+		{"json array ignored", `[{"title":"x"}]`, `[{"title":"x"}]`},
+		{"multiline takes first", "first line\nsecond line", "first line"},
+		{"multiline carriage return", "first\r\nsecond", "first"},
+		{"truncate long", strings.Repeat("X", 200), strings.Repeat("X", 120)},
+		{"truncate exact boundary", strings.Repeat("Y", 120), strings.Repeat("Y", 120)},
+		{"no truncate short", strings.Repeat("Z", 50), strings.Repeat("Z", 50)},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := sanitizeTaskTitle(tc.input)
+			if got != tc.want {
+				t.Errorf("sanitizeTaskTitle(%q) = %q, want %q", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParsePlannerTask_SanitizesTitle(t *testing.T) {
+	// JSON with a raw JSON string as title
+	input := `{"title":"{\"nested\":\"json\",\"title\":\"Actual Title\"}","prompt":"do something"}`
+	task, err := parsePlannerTask(input)
+	if err != nil {
+		t.Fatalf("parsePlannerTask: %v", err)
+	}
+	if task.Title != "Actual Title" {
+		t.Errorf("title = %q, want %q", task.Title, "Actual Title")
+	}
+}
+
+func TestParsePlannerTask_TruncatesLongTitle(t *testing.T) {
+	longTitle := string(make([]byte, 200))
+	for i := range longTitle {
+		longTitle = longTitle[:i] + "A" + longTitle[i+1:]
+	}
+	// Build with a proper long title that will be over 120 chars.
+	input := `{"title":"` + longTitle + `","prompt":"do work"}`
+	task, err := parsePlannerTask(input)
+	if err != nil {
+		t.Fatalf("parsePlannerTask: %v", err)
+	}
+	if len(task.Title) > 120 {
+		t.Errorf("title length = %d, want <= 120", len(task.Title))
+	}
+}
+
+func TestBuildLoopPlannerPrompt_CompletedDedup(t *testing.T) {
+	repoPath := setupLoopRepo(t)
+
+	prevIterations := []LoopIteration{
+		{Number: 1, Status: "idle", Task: LoopTask{Title: "Add README note"}},
+		{Number: 2, Status: "failed", Task: LoopTask{Title: "Fix CI pipeline"}},
+		{Number: 3, Status: "idle", Task: LoopTask{Title: "Add unit tests"}},
+	}
+
+	prompt, err := buildLoopPlannerPrompt(repoPath, prevIterations)
+	if err != nil {
+		t.Fatalf("buildLoopPlannerPrompt: %v", err)
+	}
+
+	// Should contain completed tasks section with successful iterations only
+	if !contains(prompt, "Completed tasks (DO NOT repeat these):") {
+		t.Error("missing completed tasks section")
+	}
+	if !contains(prompt, "Add README note") {
+		t.Error("missing successful task 'Add README note'")
+	}
+	if !contains(prompt, "Add unit tests") {
+		t.Error("missing successful task 'Add unit tests'")
+	}
+	// Failed task should NOT be in completed list
+	// (it will appear in "Recent task types" though)
+
+	// Should contain diversity steering
+	if !contains(prompt, "Recent task types (prefer a different kind of task):") {
+		t.Error("missing recent task types section")
+	}
+
+	// Should contain variety constraint
+	if !contains(prompt, "Prefer variety in task types") {
+		t.Error("missing variety constraint")
+	}
+
+	// Should contain git commits section
+	if !contains(prompt, "Recent git commits:") {
+		t.Error("missing recent git commits section")
+	}
+}
+
+func TestBuildLoopPlannerPrompt_NoPrevIterations(t *testing.T) {
+	repoPath := setupLoopRepo(t)
+
+	prompt, err := buildLoopPlannerPrompt(repoPath, nil)
+	if err != nil {
+		t.Fatalf("buildLoopPlannerPrompt: %v", err)
+	}
+
+	// Should NOT have completed tasks or recent task types sections
+	if contains(prompt, "Completed tasks") {
+		t.Error("unexpected completed tasks section with no prev iterations")
+	}
+	if contains(prompt, "Recent task types") {
+		t.Error("unexpected recent task types section with no prev iterations")
+	}
+	// Should still have git commits (independent of iterations)
+	if !contains(prompt, "Recent git commits:") {
+		t.Error("missing recent git commits section")
+	}
+}
+
+func TestRecentGitLog(t *testing.T) {
+	repoPath := setupLoopRepo(t)
+
+	log, err := recentGitLog(repoPath, 5)
+	if err != nil {
+		t.Fatalf("recentGitLog: %v", err)
+	}
+	if log == "" {
+		t.Error("expected non-empty git log")
+	}
+	if !contains(log, "initial") {
+		t.Errorf("git log = %q, expected to contain 'initial'", log)
+	}
+}
+

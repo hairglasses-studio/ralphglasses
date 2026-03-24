@@ -32,17 +32,22 @@ type EpisodicMemory struct {
 	episodes []Episode
 	stateDir string
 	maxSize  int
+	DefaultK int // default retrieval limit for FindSimilar; 0 means 5
 }
 
 // NewEpisodicMemory creates an episodic memory store backed by a JSONL file.
-// If maxSize <= 0, defaults to 500.
-func NewEpisodicMemory(stateDir string, maxSize int) *EpisodicMemory {
+// If maxSize <= 0, defaults to 500. If defaultK <= 0, defaults to 5.
+func NewEpisodicMemory(stateDir string, maxSize int, defaultK int) *EpisodicMemory {
 	if maxSize <= 0 {
 		maxSize = 500
+	}
+	if defaultK <= 0 {
+		defaultK = 5
 	}
 	em := &EpisodicMemory{
 		stateDir: stateDir,
 		maxSize:  maxSize,
+		DefaultK: defaultK,
 	}
 	em.load()
 	return em
@@ -89,7 +94,7 @@ func (em *EpisodicMemory) RecordSuccess(journal JournalEntry) {
 // FindSimilar returns the top k episodes most similar to the given task.
 func (em *EpisodicMemory) FindSimilar(taskType string, prompt string, k int) []Episode {
 	if k <= 0 {
-		k = 3
+		k = em.DefaultK
 	}
 
 	em.mu.Lock()

@@ -26,7 +26,7 @@ func DefaultCascadeConfig() CascadeConfig {
 		CheapProvider:       ProviderGemini,
 		ExpensiveProvider:   ProviderClaude,
 		ConfidenceThreshold: 0.7,
-		MaxCheapBudgetUSD:   0.50,
+		MaxCheapBudgetUSD:   2.00,
 		MaxCheapTurns:       15,
 		TaskTypeOverrides:   make(map[string]Provider),
 	}

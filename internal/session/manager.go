@@ -107,6 +107,41 @@ func (m *Manager) SetCurriculumSorter(cs *CurriculumSorter) {
 	m.curriculum = cs
 }
 
+// HasReflexion returns true if a ReflexionStore is already attached.
+func (m *Manager) HasReflexion() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.reflexion != nil
+}
+
+// HasEpisodicMemory returns true if an EpisodicMemory is already attached.
+func (m *Manager) HasEpisodicMemory() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.episodic != nil
+}
+
+// GetEpisodicMemory returns the attached EpisodicMemory, or nil.
+func (m *Manager) GetEpisodicMemory() *EpisodicMemory {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.episodic
+}
+
+// HasCascadeRouter returns true if a CascadeRouter is already attached.
+func (m *Manager) HasCascadeRouter() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.cascade != nil
+}
+
+// HasCurriculumSorter returns true if a CurriculumSorter is already attached.
+func (m *Manager) HasCurriculumSorter() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.curriculum != nil
+}
+
 // SetHooksForTesting overrides session launch/wait behavior. Intended for tests.
 func (m *Manager) SetHooksForTesting(
 	launch func(context.Context, LaunchOptions) (*Session, error),
