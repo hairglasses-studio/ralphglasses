@@ -372,3 +372,17 @@ func truncate(s string, maxLen int) string {
 	}
 	return s[:maxLen]
 }
+
+// FindSimilarEpisodes satisfies the EpisodicSource interface used by CurriculumSorter.
+func (em *EpisodicMemory) FindSimilarEpisodes(taskType string, prompt string, k int) []CurriculumEpisode {
+	episodes := em.FindSimilar(taskType, prompt, k)
+	result := make([]CurriculumEpisode, len(episodes))
+	for i, ep := range episodes {
+		result[i] = CurriculumEpisode{
+			TurnCount: ep.TurnCount,
+			CostUSD:   ep.CostUSD,
+			Worked:    ep.Worked,
+		}
+	}
+	return result
+}
