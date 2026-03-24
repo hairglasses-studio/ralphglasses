@@ -31,6 +31,7 @@ type Manager struct {
 	optimizer     *AutoOptimizer          // Level 2+ self-improvement engine
 	launchSession func(context.Context, LaunchOptions) (*Session, error)
 	waitSession   func(context.Context, *Session) error
+	healthCheck   func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
 	Enhancer      *enhancer.HybridEngine // optional prompt enhancement for loop integration
 }
 
@@ -83,6 +84,26 @@ func (m *Manager) SetHooksForTesting(
 	defer m.mu.Unlock()
 	m.launchSession = launch
 	m.waitSession = wait
+}
+
+// SetHealthCheckForTesting overrides the provider health check function.
+// Intended for tests that need to control health check results.
+func (m *Manager) SetHealthCheckForTesting(fn func(Provider) ProviderHealth) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.healthCheck = fn
+}
+
+// checkHealth returns the health of a provider, using the injectable function
+// if set, otherwise falling back to CheckProviderHealth.
+func (m *Manager) checkHealth(p Provider) ProviderHealth {
+	m.mu.Lock()
+	fn := m.healthCheck
+	m.mu.Unlock()
+	if fn != nil {
+		return fn(p)
+	}
+	return CheckProviderHealth(p)
 }
 
 // AddSessionForTesting inserts a pre-built session into the manager. Intended for tests.
