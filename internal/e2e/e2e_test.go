@@ -11,7 +11,7 @@ func TestE2EAllScenarios(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	scenarios := CoreScenarios()
+	scenarios := AllScenarios()
 
 	for _, s := range scenarios {
 		s := s
