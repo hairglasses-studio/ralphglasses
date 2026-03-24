@@ -24,6 +24,15 @@
 .ralph/improvement_journal.jsonl
 .ralph/improvement_notes.jsonl
 .ralph/cycle_notes.md
+.ralph/.current_model
+.ralph/.last_output_length
+.ralph/.successful_loop_count
+.ralph/cost_ledger.jsonl
+.ralph/cost_summary.json
+.ralph/reflections.jsonl
+.ralph/episodes.jsonl
+.ralph/cascade_results.jsonl
+.ralph/feedback_profiles.json
 
 # Secrets
 .env
