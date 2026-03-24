@@ -50,7 +50,11 @@ const (
 	DecisionConfigChange  DecisionCategory = "config_change"
 	DecisionLaunch        DecisionCategory = "launch"
 	DecisionScale         DecisionCategory = "scale"
-	DecisionSelfTest      DecisionCategory = "self_test"
+	DecisionSelfTest       DecisionCategory = "self_test"
+	DecisionReflexion      DecisionCategory = "reflexion"
+	DecisionEpisodicReplay DecisionCategory = "episodic_replay"
+	DecisionCascadeRoute   DecisionCategory = "cascade_route"
+	DecisionCurriculum     DecisionCategory = "curriculum"
 )
 
 // AutonomousDecision records a decision made (or proposed) by the system.
