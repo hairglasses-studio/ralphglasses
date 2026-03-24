@@ -29,7 +29,7 @@ func (m *Manager) LaunchWithFailover(ctx context.Context, opts LaunchOptions, ch
 	for _, p := range chain.Providers {
 		// Quick health pre-check: skip binary-missing or env-missing providers
 		// without paying the cost of a failed launch attempt.
-		h := CheckProviderHealth(p)
+		h := m.checkHealth(p)
 		if !h.Healthy() {
 			errs = append(errs, fmt.Sprintf("%s: %s", p, h.Error))
 			continue
@@ -38,7 +38,7 @@ func (m *Manager) LaunchWithFailover(ctx context.Context, opts LaunchOptions, ch
 		attempt := opts
 		attempt.Provider = p
 
-		s, err := m.Launch(ctx, attempt)
+		s, err := m.launchWorkflowSession(ctx, attempt)
 		if err != nil {
 			errs = append(errs, fmt.Sprintf("%s: %s", p, err.Error()))
 			continue
