@@ -69,6 +69,22 @@ func WriteJournalEntry(s *Session) error {
 	}
 	// Parse output history for improvement markers
 	entry.Worked, entry.Failed, entry.Suggest = parseImprovementMarkers(s.OutputHistory)
+
+	// Fallback: auto-populate from session status when markers aren't found
+	if len(entry.Worked) == 0 && len(entry.Failed) == 0 {
+		if s.Status == StatusCompleted && entry.TaskFocus != "" {
+			entry.Worked = []string{entry.TaskFocus}
+		} else if s.Status == StatusErrored {
+			errMsg := s.Error
+			if errMsg == "" {
+				errMsg = s.ExitReason
+			}
+			if errMsg != "" {
+				entry.Failed = []string{errMsg}
+			}
+		}
+	}
+
 	repoPath := s.RepoPath
 	s.mu.Unlock()
 

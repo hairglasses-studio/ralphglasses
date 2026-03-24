@@ -95,6 +95,30 @@ func TestNormalizeClaudeEvent(t *testing.T) {
 	}
 }
 
+func TestNormalizeClaudeEventNestedCost(t *testing.T) {
+	// Claude CLI may emit cost nested under usage object
+	line := []byte(`{"type":"result","result":"Done","session_id":"abc","usage":{"cost_usd":0.12,"input_tokens":1500,"output_tokens":300}}`)
+	event, err := normalizeEvent(ProviderClaude, line)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event.CostUSD != 0.12 {
+		t.Errorf("CostUSD = %f, want 0.12", event.CostUSD)
+	}
+}
+
+func TestNormalizeClaudeEventTopLevelCostPreferred(t *testing.T) {
+	// When top-level cost_usd is present, it should be used (not overwritten)
+	line := []byte(`{"type":"result","cost_usd":0.05,"usage":{"cost_usd":0.12}}`)
+	event, err := normalizeEvent(ProviderClaude, line)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event.CostUSD != 0.05 {
+		t.Errorf("CostUSD = %f, want 0.05 (top-level should take precedence)", event.CostUSD)
+	}
+}
+
 func TestNormalizeGeminiEvent(t *testing.T) {
 	line := []byte(`{"type":"result","result":"Generated code","cost_usd":0.03,"num_turns":2,"model":"gemini-2.5-pro","session_id":"gem-123"}`)
 	event, err := normalizeEvent(ProviderGemini, line)
