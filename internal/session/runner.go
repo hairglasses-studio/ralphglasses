@@ -305,6 +305,7 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader) {
 			case "result":
 				if eventText != "" {
 					s.LastOutput = truncateStr(eventText, 4000)
+					appendSessionOutput(s, eventText)
 				}
 				if event.CostUSD > 0 {
 					prevSpent := s.SpentUSD
