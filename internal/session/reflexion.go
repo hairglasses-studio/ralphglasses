@@ -82,15 +82,15 @@ func (rs *ReflexionStore) Store(r Reflection) {
 
 // RecentForTask returns the most recent reflections whose TaskTitle has
 // keyword overlap with the given title, up to limit results (newest first).
+// When taskTitle is empty, returns the most recent reflections regardless
+// of keyword matching (useful at the planner stage before the task is known).
 func (rs *ReflexionStore) RecentForTask(taskTitle string, limit int) []Reflection {
 	if limit <= 0 {
 		limit = 5
 	}
 
 	queryWords := toWordSet(taskTitle)
-	if len(queryWords) == 0 {
-		return nil
-	}
+	matchAll := len(queryWords) == 0
 
 	rs.mu.Lock()
 	defer rs.mu.Unlock()
@@ -99,8 +99,7 @@ func (rs *ReflexionStore) RecentForTask(taskTitle string, limit int) []Reflectio
 	var results []Reflection
 	for i := len(rs.reflections) - 1; i >= 0 && len(results) < limit; i-- {
 		r := rs.reflections[i]
-		titleWords := toWordSet(r.TaskTitle)
-		if hasOverlap(queryWords, titleWords) {
+		if matchAll || hasOverlap(queryWords, toWordSet(r.TaskTitle)) {
 			results = append(results, r)
 		}
 	}
