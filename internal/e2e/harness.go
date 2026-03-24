@@ -66,6 +66,11 @@ func (h *Harness) RunScenario(ctx context.Context, s Scenario) (string, error) {
 			if !plannerDone {
 				// This is the planner session — set output to PlannerResponse
 				sess.LastOutput = s.PlannerResponse
+			} else if s.MockFailure != "" {
+				// Simulate infrastructure failure (budget, timeout, CB, etc.)
+				sess.Status = session.StatusErrored
+				sess.Error = s.MockFailure
+				sess.LastOutput = "error: " + s.MockFailure
 			} else {
 				// This is a worker session — execute WorkerBehavior on the worktree
 				if s.WorkerBehavior != nil {
@@ -81,9 +86,12 @@ func (h *Harness) RunScenario(ctx context.Context, s Scenario) (string, error) {
 			return sess, nil
 		},
 		// wait hook — sessions are already completed
-		func(_ context.Context, _ *session.Session) error {
+		func(_ context.Context, sess *session.Session) error {
 			if !plannerDone {
 				plannerDone = true
+			}
+			if sess.Status == session.StatusErrored {
+				return fmt.Errorf("%s", sess.Error)
 			}
 			return nil
 		},

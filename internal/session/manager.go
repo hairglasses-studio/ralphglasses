@@ -387,6 +387,7 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 		MaxBudgetUSD: config.MaxBudgetUSD,
 		Agent:        config.LeadAgent,
 		TeamName:     config.Name,
+		AllowedTools: teamLeadAllowedTools(),
 	}
 
 	s, err := m.Launch(ctx, opts)
@@ -426,6 +427,18 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 	}
 
 	return team, nil
+}
+
+// teamLeadAllowedTools returns the MCP tools a team lead session needs
+// to autonomously launch and monitor worker sessions.
+func teamLeadAllowedTools() []string {
+	return []string{
+		"mcp__ralphglasses__ralphglasses_session_launch",
+		"mcp__ralphglasses__ralphglasses_session_status",
+		"mcp__ralphglasses__ralphglasses_session_list",
+		"mcp__ralphglasses__ralphglasses_session_stop",
+		"mcp__ralphglasses__ralphglasses_session_output",
+	}
 }
 
 // DelegateTask appends a task to a team under the manager mutex.
