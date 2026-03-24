@@ -105,7 +105,10 @@ func ObservationPath(repoPath string) string {
 
 // emitLoopObservation gathers data from the completed iteration and writes an observation.
 // It also publishes a LoopIterated event to the bus if available.
-func emitLoopObservation(run *LoopRun, index int, m *Manager) {
+func emitLoopObservation(run *LoopRun, index int, m *Manager,
+	reflexionApplied bool, episodesUsed int,
+	cascadeResults []*CascadeResult, taskDifficulties []TaskDifficulty,
+) {
 	run.mu.Lock()
 	if index < 0 || index >= len(run.Iterations) {
 		run.mu.Unlock()
@@ -179,6 +182,36 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager) {
 		obs.FilesChanged += files
 		obs.LinesAdded += added
 		obs.LinesRemoved += removed
+	}
+
+	// Self-learning subsystem fields
+	obs.ReflexionApplied = reflexionApplied
+	obs.EpisodesUsed = episodesUsed
+
+	// WS3: Cascade routing metrics — aggregate across workers.
+	for _, cr := range cascadeResults {
+		if cr != nil && cr.Escalated {
+			obs.CascadeEscalated = true
+			obs.CascadeCheapCost += cr.CheapCostUSD
+		}
+	}
+
+	// WS5: Average difficulty score across tasks.
+	if len(taskDifficulties) > 0 {
+		var totalDiff float64
+		for _, td := range taskDifficulties {
+			totalDiff += td.DifficultyScore
+		}
+		obs.DifficultyScore = totalDiff / float64(len(taskDifficulties))
+	}
+
+	// WS4: Compute confidence from verification and worker signals.
+	if obs.VerifyPassed {
+		obs.Confidence = 1.0
+	} else if obs.Error != "" {
+		obs.Confidence = 0.0
+	} else {
+		obs.Confidence = 0.5
 	}
 
 	// Write to JSONL
