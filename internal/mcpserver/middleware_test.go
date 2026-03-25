@@ -25,6 +25,7 @@ func okHandler(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, e
 }
 
 func TestInstrumentationMiddleware(t *testing.T) {
+	t.Parallel()
 	rec := NewToolCallRecorder("", nil, 100)
 	mw := InstrumentationMiddleware(rec)
 	wrapped := mw(okHandler)
@@ -55,6 +56,7 @@ func TestInstrumentationMiddleware(t *testing.T) {
 }
 
 func TestInstrumentationMiddleware_Error(t *testing.T) {
+	t.Parallel()
 	rec := NewToolCallRecorder("", nil, 100)
 	mw := InstrumentationMiddleware(rec)
 
@@ -79,6 +81,7 @@ func TestInstrumentationMiddleware_Error(t *testing.T) {
 }
 
 func TestInstrumentationMiddleware_NilRecorder(t *testing.T) {
+	t.Parallel()
 	mw := InstrumentationMiddleware(nil)
 	wrapped := mw(okHandler)
 	result, err := wrapped(context.Background(), makeReq("x", nil))
@@ -88,6 +91,7 @@ func TestInstrumentationMiddleware_NilRecorder(t *testing.T) {
 }
 
 func TestEventBusMiddleware(t *testing.T) {
+	t.Parallel()
 	bus := events.NewBus(100)
 	ch := bus.Subscribe("test")
 
@@ -116,6 +120,7 @@ func TestEventBusMiddleware(t *testing.T) {
 }
 
 func TestEventBusMiddleware_NilBus(t *testing.T) {
+	t.Parallel()
 	mw := EventBusMiddleware(nil)
 	wrapped := mw(okHandler)
 	result, err := wrapped(context.Background(), makeReq("x", nil))
@@ -125,6 +130,7 @@ func TestEventBusMiddleware_NilBus(t *testing.T) {
 }
 
 func TestValidationMiddleware_ValidRepo(t *testing.T) {
+	t.Parallel()
 	mw := ValidationMiddleware("")
 	wrapped := mw(okHandler)
 
@@ -139,6 +145,7 @@ func TestValidationMiddleware_ValidRepo(t *testing.T) {
 }
 
 func TestValidationMiddleware_InvalidRepo(t *testing.T) {
+	t.Parallel()
 	mw := ValidationMiddleware("")
 	wrapped := mw(okHandler)
 
@@ -153,6 +160,7 @@ func TestValidationMiddleware_InvalidRepo(t *testing.T) {
 }
 
 func TestValidationMiddleware_InvalidPath(t *testing.T) {
+	t.Parallel()
 	mw := ValidationMiddleware("/tmp/scan")
 	wrapped := mw(okHandler)
 
@@ -167,6 +175,7 @@ func TestValidationMiddleware_InvalidPath(t *testing.T) {
 }
 
 func TestValidationMiddleware_NoArgs(t *testing.T) {
+	t.Parallel()
 	mw := ValidationMiddleware("")
 	wrapped := mw(okHandler)
 

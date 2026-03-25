@@ -11,6 +11,7 @@ import (
 )
 
 func TestHandleSelfTest_ValidRepo(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -53,6 +54,7 @@ func TestHandleSelfTest_ValidRepo(t *testing.T) {
 }
 
 func TestHandleSelfTest_MissingRepo(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	req := mcp.CallToolRequest{}
@@ -68,6 +70,7 @@ func TestHandleSelfTest_MissingRepo(t *testing.T) {
 }
 
 func TestHandleSelfTest_NonexistentRepo(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	req := mcp.CallToolRequest{}
@@ -85,6 +88,7 @@ func TestHandleSelfTest_NonexistentRepo(t *testing.T) {
 }
 
 func TestHandleSelfTest_RepoIsFile(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	// Create a file (not directory) to pass as repo
@@ -108,6 +112,7 @@ func TestHandleSelfTest_RepoIsFile(t *testing.T) {
 }
 
 func TestHandleSelfTest_CustomIterationsAndBudget(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -145,6 +150,7 @@ func TestHandleSelfTest_CustomIterationsAndBudget(t *testing.T) {
 }
 
 func TestHandleSelfTest_InvalidIterations(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -164,6 +170,7 @@ func TestHandleSelfTest_InvalidIterations(t *testing.T) {
 }
 
 func TestHandleSelfTest_InvalidBudget(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
