@@ -58,6 +58,15 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		SessionName:  getStringArg(req, "session_name"),
 		Worktree:     getStringArg(req, "worktree"),
 	}
+	if getBoolArg(req, "bare") {
+		opts.Bare = true
+	}
+	if effort := getStringArg(req, "effort"); effort != "" {
+		opts.Effort = effort
+	}
+	if fallback := getStringArg(req, "fallback_model"); fallback != "" {
+		opts.FallbackModel = fallback
+	}
 	if tools := getStringArg(req, "allowed_tools"); tools != "" {
 		opts.AllowedTools = strings.Split(tools, ",")
 	}
