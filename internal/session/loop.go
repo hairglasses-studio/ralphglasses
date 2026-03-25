@@ -504,6 +504,9 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	if err != nil {
 		return m.failLoopIteration(run, index, fmt.Errorf("parse planner output: %w", err))
 	}
+	if len(tasks) == 0 {
+		return m.failLoopIteration(run, index, errors.New("planner returned no valid tasks"))
+	}
 
 	// WS5: Sort tasks by estimated difficulty (easy first) and score them.
 	var taskDifficulties []TaskDifficulty
