@@ -48,6 +48,7 @@ type LoopProfile struct {
 	CompactionEnabled    bool     `json:"compaction_enabled"`
 	CompactionThreshold  int      `json:"compaction_threshold,omitempty"` // iterations before enabling compaction
 	AutoMergeAll         bool     `json:"auto_merge_all"`                // bypass path classification, auto-merge if verify passes
+	EnableEnhancement    bool     `json:"enable_enhancement"`            // run prompt enhancement before planner/worker calls
 	MaxIterations        int      `json:"max_iterations,omitempty"`
 	MaxDurationSecs      int      `json:"max_duration_secs,omitempty"`
 }
@@ -167,7 +168,8 @@ func SelfImprovementProfile() LoopProfile {
 		EnableCascade:        false,
 		SelfImprovement:      true,
 		CompactionEnabled:    true,
-		AutoMergeAll:         true, // unattended: auto-merge when ci.sh passes
+		AutoMergeAll:         true,  // unattended: auto-merge when ci.sh passes
+		EnableEnhancement:    false, // self-improvement prompts are already well-structured
 		MaxIterations:        10,
 		MaxDurationSecs:      14400, // 4 hours
 	}
@@ -453,7 +455,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	// Enhance planner prompt for the planner's target provider
 	var plannerEnhance enhanceResult
 	t3 := time.Now()
-	if m.Enhancer != nil {
+	if m.Enhancer != nil && profile.EnableEnhancement {
 		plannerEnhance = m.enhanceForProvider(ctx, plannerPrompt, profile.PlannerProvider)
 		plannerPrompt = plannerEnhance.prompt
 	} else {
@@ -565,7 +567,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 
 			// Enhance worker prompt for the worker's target provider
 			var workerEnhance enhanceResult
-			if m.Enhancer != nil {
+			if m.Enhancer != nil && profile.EnableEnhancement {
 				workerEnhance = m.enhanceForProvider(ctx, workerPrompt, profile.WorkerProvider)
 				workerPrompt = workerEnhance.prompt
 			} else {
