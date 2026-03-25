@@ -186,6 +186,7 @@ func (s *Server) buildSessionGroup() ToolGroup {
 				mcp.WithBoolean("bare", mcp.Description("Skip hooks/plugins for faster scripted startup")),
 				mcp.WithString("effort", mcp.Description("Thinking effort level: low, medium, high, max")),
 				mcp.WithString("fallback_model", mcp.Description("Auto-fallback model on overload")),
+				mcp.WithString("output_schema", mcp.Description("JSON schema for structured output validation (Claude: --json-schema, Codex: --output-schema)")),
 			), s.handleSessionLaunch},
 			{mcp.NewTool("ralphglasses_session_list",
 				mcp.WithDescription("List all tracked LLM sessions with status, cost, and turns"),

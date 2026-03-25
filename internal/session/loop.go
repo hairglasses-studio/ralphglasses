@@ -45,6 +45,8 @@ type LoopProfile struct {
 	EnableUncertainty    bool     `json:"enable_uncertainty,omitempty"`
 	EnableCurriculum     bool     `json:"enable_curriculum,omitempty"`
 	SelfImprovement      bool     `json:"self_improvement,omitempty"`
+	CompactionEnabled    bool     `json:"compaction_enabled,omitempty"`
+	CompactionThreshold  int      `json:"compaction_threshold,omitempty"` // iterations before enabling compaction
 	MaxIterations        int      `json:"max_iterations,omitempty"`
 	MaxDurationSecs      int      `json:"max_duration_secs,omitempty"`
 }
@@ -152,6 +154,7 @@ func SelfImprovementProfile() LoopProfile {
 		EnableCurriculum:     true,
 		EnableCascade:        false,
 		SelfImprovement:      true,
+		CompactionEnabled:    true,
 		MaxIterations:        5,
 		MaxDurationSecs:      14400, // 4 hours
 	}
@@ -468,6 +471,12 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 				Model:        profile.WorkerModel,
 				MaxBudgetUSD: profile.WorkerBudgetUSD,
 				SessionName:  fmt.Sprintf("loop-work-%s-%03d-%d", run.RepoName, iteration.Number, workerIdx),
+			}
+
+			// Enable compaction beta for long-running loops once iteration
+			// count exceeds the configured threshold.
+			if profile.CompactionEnabled && iteration.Number > profile.CompactionThreshold {
+				baseOpts.Betas = append(baseOpts.Betas, "compact-2026-01-12")
 			}
 
 			// WS3: Try cheap provider first if cascade routing is enabled.
@@ -822,6 +831,9 @@ func normalizeLoopProfile(profile LoopProfile) (LoopProfile, error) {
 	}
 	if profile.WorktreePolicy != "git" {
 		return profile, fmt.Errorf("unsupported worktree policy %q", profile.WorktreePolicy)
+	}
+	if profile.CompactionEnabled && profile.CompactionThreshold <= 0 {
+		profile.CompactionThreshold = 10
 	}
 
 	for _, provider := range []Provider{

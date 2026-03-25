@@ -2,10 +2,12 @@ package session
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -187,6 +189,160 @@ func TestStopLoopPreventsFurtherSteps(t *testing.T) {
 	}
 	if err := m.StepLoop(context.Background(), run.ID); err == nil {
 		t.Fatal("expected stopped loop to refuse stepping")
+	}
+}
+
+func TestCompactionBetaSetAfterThreshold(t *testing.T) {
+	repoPath := setupLoopRepo(t)
+
+	var capturedBetas [][]string
+	var mu sync.Mutex
+	var callCount int
+
+	m := NewManager()
+	m.SetStateDir(t.TempDir())
+	m.SetHooksForTesting(
+		func(_ context.Context, opts LaunchOptions) (*Session, error) {
+			mu.Lock()
+			capturedBetas = append(capturedBetas, opts.Betas)
+			callCount++
+			n := callCount
+			mu.Unlock()
+			sess := &Session{
+				ID:         sanitizeLoopName(opts.SessionName),
+				Provider:   opts.Provider,
+				RepoPath:   opts.RepoPath,
+				RepoName:   filepath.Base(opts.RepoPath),
+				Prompt:     opts.Prompt,
+				Model:      opts.Model,
+				Status:     StatusCompleted,
+				OutputCh:   make(chan string, 1),
+				LaunchedAt: time.Now(),
+			}
+			if opts.Model == "o1-pro" {
+				sess.LastOutput = fmt.Sprintf(`{"title":"Task %d","prompt":"Do work %d."}`, n, n)
+				sess.OutputHistory = []string{sess.LastOutput}
+			} else {
+				sess.LastOutput = fmt.Sprintf("worker complete %d", n)
+				sess.OutputHistory = []string{sess.LastOutput}
+			}
+			return sess, nil
+		},
+		func(_ context.Context, sess *Session) error {
+			sess.Lock()
+			sess.Status = StatusCompleted
+			now := time.Now()
+			sess.EndedAt = &now
+			sess.Unlock()
+			return nil
+		},
+	)
+
+	// CompactionThreshold=2 so after 2 iterations, compaction kicks in on iteration 3.
+	run, err := m.StartLoop(context.Background(), repoPath, LoopProfile{
+		CompactionEnabled:   true,
+		CompactionThreshold: 2,
+		VerifyCommands:      []string{"true"},
+		MaxIterations:       10,
+	})
+	if err != nil {
+		t.Fatalf("StartLoop: %v", err)
+	}
+
+	// Pre-populate 2 completed iterations with acceptance results to avoid
+	// convergence detection (which fires when 2 idle iterations have no changes).
+	run.Lock()
+	for i := 0; i < 2; i++ {
+		run.Iterations = append(run.Iterations, LoopIteration{
+			Number: i + 1,
+			Status: "idle",
+			Task:   LoopTask{Title: fmt.Sprintf("Prior task %d", i+1), Prompt: "done"},
+			Acceptance: &AcceptanceResult{
+				SafePaths: []string{fmt.Sprintf("file%d.go", i)},
+			},
+			StartedAt: time.Now(),
+		})
+	}
+	run.Unlock()
+
+	// Step once more — this will be iteration 3 (Number > threshold=2).
+	if err := m.StepLoop(context.Background(), run.ID); err != nil {
+		t.Fatalf("StepLoop: %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Each iteration launches planner + worker = 2 sessions + verifier(s).
+	// We need to find worker sessions that have Betas set.
+	// Iterations 1 and 2 (Number <= threshold=2): no compaction.
+	// Iteration 3 (Number=3 > threshold=2): compaction beta should be set.
+	var foundCompaction bool
+	for _, betas := range capturedBetas {
+		for _, b := range betas {
+			if b == "compact-2026-01-12" {
+				foundCompaction = true
+			}
+		}
+	}
+	if !foundCompaction {
+		t.Fatalf("expected compaction beta to be set after threshold; captured betas: %v", capturedBetas)
+	}
+
+	// Verify that not ALL captured calls have compaction — the planner
+	// session should not have it (only worker sessions do).
+	var withoutCompaction bool
+	for _, betas := range capturedBetas {
+		hasCompact := false
+		for _, b := range betas {
+			if b == "compact-2026-01-12" {
+				hasCompact = true
+			}
+		}
+		if !hasCompact {
+			withoutCompaction = true
+		}
+	}
+	if !withoutCompaction {
+		t.Fatal("expected at least one session (planner) without compaction beta")
+	}
+}
+
+func TestNormalizeLoopProfileCompactionDefault(t *testing.T) {
+	p := LoopProfile{CompactionEnabled: true}
+	normalized, err := normalizeLoopProfile(p)
+	if err != nil {
+		t.Fatalf("normalizeLoopProfile: %v", err)
+	}
+	if normalized.CompactionThreshold != 10 {
+		t.Fatalf("CompactionThreshold = %d, want 10", normalized.CompactionThreshold)
+	}
+
+	// Explicit threshold should be preserved.
+	p2 := LoopProfile{CompactionEnabled: true, CompactionThreshold: 5}
+	normalized2, err := normalizeLoopProfile(p2)
+	if err != nil {
+		t.Fatalf("normalizeLoopProfile: %v", err)
+	}
+	if normalized2.CompactionThreshold != 5 {
+		t.Fatalf("CompactionThreshold = %d, want 5", normalized2.CompactionThreshold)
+	}
+
+	// Disabled compaction should not set threshold.
+	p3 := LoopProfile{CompactionEnabled: false}
+	normalized3, err := normalizeLoopProfile(p3)
+	if err != nil {
+		t.Fatalf("normalizeLoopProfile: %v", err)
+	}
+	if normalized3.CompactionThreshold != 0 {
+		t.Fatalf("CompactionThreshold = %d, want 0 when disabled", normalized3.CompactionThreshold)
+	}
+}
+
+func TestSelfImprovementProfileCompactionEnabled(t *testing.T) {
+	p := SelfImprovementProfile()
+	if !p.CompactionEnabled {
+		t.Fatal("SelfImprovementProfile should have CompactionEnabled=true")
 	}
 }
 

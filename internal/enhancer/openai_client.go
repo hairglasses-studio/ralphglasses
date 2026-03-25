@@ -14,10 +14,11 @@ import (
 
 // OpenAIClient calls the OpenAI Responses API to improve prompts using a meta-prompt.
 type OpenAIClient struct {
-	APIKey     string
-	Model      string
-	BaseURL    string
-	HTTPClient *http.Client
+	APIKey       string
+	Model        string
+	BaseURL      string
+	HTTPClient   *http.Client
+	UseWebSocket bool // When true, prefer WebSocket transport for multi-turn tool chains.
 }
 
 // NewOpenAIClient creates an OpenAI client from config. Returns nil if no API key is available.

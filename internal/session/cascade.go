@@ -54,6 +54,42 @@ type CascadeStats struct {
 	AvgCheapCost   float64 `json:"avg_cheap_cost"`
 }
 
+// ModelTier represents a model with its cost and capability profile.
+type ModelTier struct {
+	Provider      Provider `json:"provider"`
+	Model         string   `json:"model"`
+	MaxComplexity int      `json:"max_complexity"` // 1-4 scale
+	CostPer1M     float64  `json:"cost_per_1m"`    // input cost per 1M tokens
+	Label         string   `json:"label"`           // e.g. "ultra-cheap", "worker", "coding", "reasoning"
+}
+
+// DefaultModelTiers returns the built-in tier list ordered by cost.
+func DefaultModelTiers() []ModelTier {
+	return []ModelTier{
+		{Provider: ProviderGemini, Model: "gemini-2.0-flash-lite", MaxComplexity: 1, CostPer1M: 0.10, Label: "ultra-cheap"},
+		{Provider: ProviderGemini, Model: "gemini-2.5-flash", MaxComplexity: 2, CostPer1M: 0.30, Label: "worker"},
+		{Provider: ProviderClaude, Model: "claude-sonnet", MaxComplexity: 3, CostPer1M: 3.00, Label: "coding"},
+		{Provider: ProviderClaude, Model: "claude-opus", MaxComplexity: 4, CostPer1M: 15.00, Label: "reasoning"},
+	}
+}
+
+// taskTypeComplexity maps well-known task types to their complexity level (1-4).
+var taskTypeComplexity = map[string]int{
+	"lint":         1,
+	"format":       1,
+	"classify":     1,
+	"codegen":      3,
+	"test":         3,
+	"architecture": 4,
+	"analysis":     4,
+	"planning":     4,
+}
+
+// TaskTypeComplexity returns the complexity for a known task type, or 0 if unknown.
+func TaskTypeComplexity(taskType string) int {
+	return taskTypeComplexity[taskType]
+}
+
 // CascadeRouter implements try-cheap-then-escalate provider routing.
 type CascadeRouter struct {
 	mu        sync.Mutex
@@ -62,6 +98,7 @@ type CascadeRouter struct {
 	decisions *DecisionLog
 	results   []CascadeResult
 	stateDir  string
+	tiers     []ModelTier
 }
 
 // NewCascadeRouter creates a cascade router, loading any persisted results.
@@ -71,6 +108,7 @@ func NewCascadeRouter(config CascadeConfig, feedback *FeedbackAnalyzer, decision
 		feedback:  feedback,
 		decisions: decisions,
 		stateDir:  stateDir,
+		tiers:     DefaultModelTiers(),
 	}
 	cr.loadResults()
 	return cr
@@ -115,6 +153,71 @@ func (cr *CascadeRouter) ResolveProvider(taskType string) Provider {
 
 	// Default to expensive — caller will use cascade logic to try cheap first
 	return cr.config.ExpensiveProvider
+}
+
+// SetTiers replaces the default model tiers with a custom list.
+func (cr *CascadeRouter) SetTiers(tiers []ModelTier) {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+	cr.tiers = tiers
+}
+
+// Tiers returns the current model tier list.
+func (cr *CascadeRouter) Tiers() []ModelTier {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+	out := make([]ModelTier, len(cr.tiers))
+	copy(out, cr.tiers)
+	return out
+}
+
+// SelectTier picks the cheapest model tier that can handle the given complexity.
+// If taskType is recognized, its mapped complexity is used (the complexity arg
+// is ignored). If taskType is unrecognized and complexity <= 0, the highest tier
+// is returned. Returns an empty ModelTier if no tiers are configured.
+func (cr *CascadeRouter) SelectTier(taskType string, complexity int) ModelTier {
+	cr.mu.Lock()
+	tiers := cr.tiers
+	cr.mu.Unlock()
+
+	if len(tiers) == 0 {
+		return ModelTier{}
+	}
+
+	// Use task-type mapping if available; otherwise use the provided complexity.
+	if mapped, ok := taskTypeComplexity[taskType]; ok {
+		complexity = mapped
+	}
+
+	// If complexity is still unknown, default to highest tier.
+	if complexity <= 0 {
+		return tiers[len(tiers)-1]
+	}
+
+	// Find cheapest tier that can handle the complexity.
+	// Tiers from DefaultModelTiers are sorted by cost ascending, but
+	// callers can set custom tiers, so we scan all and pick the cheapest match.
+	var best *ModelTier
+	for i := range tiers {
+		if tiers[i].MaxComplexity >= complexity {
+			if best == nil || tiers[i].CostPer1M < best.CostPer1M {
+				best = &tiers[i]
+			}
+		}
+	}
+
+	if best != nil {
+		return *best
+	}
+
+	// No tier can handle the complexity — return the most capable tier.
+	highest := tiers[0]
+	for _, t := range tiers[1:] {
+		if t.MaxComplexity > highest.MaxComplexity {
+			highest = t
+		}
+	}
+	return highest
 }
 
 // CheapLaunchOpts returns launch options modified for the cheap provider.
