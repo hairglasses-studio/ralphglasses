@@ -443,7 +443,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleTeamDetailKey(msg)
 	case ViewFleet:
 		return m.handleFleetKey(msg)
-	case ViewHelp, ViewDiff, ViewTimeline, ViewLoopHealth, ViewLoopList:
+	case ViewLoopList:
+		return m.handleLoopListKey(msg)
+	case ViewHelp, ViewDiff, ViewTimeline, ViewLoopHealth:
 		// Read-only views — Esc handled globally, no view-specific keys
 		return m, nil
 	}
@@ -738,6 +740,8 @@ func (m Model) View() string {
 		}
 	case ViewLoopList:
 		b.WriteString(m.LoopListTable.View())
+		b.WriteString("\n")
+		b.WriteString(styles.HelpStyle.Render("  s start loop  x/d stop loop  j/k navigate  Esc back"))
 	}
 
 	// Loop panel overlay
