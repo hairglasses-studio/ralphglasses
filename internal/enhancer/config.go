@@ -65,6 +65,40 @@ type LLMConfig struct {
 
 	// APIKeyEnv is the environment variable holding the API key (default depends on provider)
 	APIKeyEnv string `yaml:"api_key_env"`
+
+	// EffortLevel controls the output effort parameter: "low", "medium", "high", "max".
+	// Defaults to "medium".
+	EffortLevel string `yaml:"effort_level"`
+
+	// CacheControl enables prompt caching on system messages (default true).
+	// Set to false to disable caching.
+	CacheControl bool `yaml:"cache_control"`
+
+	// cacheControlSet tracks whether CacheControl was explicitly set in config.
+	// When false, the default (true) is used.
+	cacheControlSet bool
+
+	// DisplayThinking controls whether thinking tokens are shown in responses.
+	// Defaults to false (omitted) for fleet/non-interactive contexts.
+	DisplayThinking bool `yaml:"display_thinking"`
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler to track which fields were explicitly set.
+func (c *LLMConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// Use an alias to avoid infinite recursion
+	type plain LLMConfig
+	if err := unmarshal((*plain)(c)); err != nil {
+		return err
+	}
+
+	// Detect if cache_control was explicitly present by re-parsing as a map
+	var raw map[string]interface{}
+	if err := unmarshal(&raw); err == nil {
+		if _, ok := raw["cache_control"]; ok {
+			c.cacheControlSet = true
+		}
+	}
+	return nil
 }
 
 // HookConfig holds settings for the Claude Code UserPromptSubmit hook.
@@ -131,6 +165,9 @@ func configFound(cfg Config) bool {
 		cfg.LLM.Timeout != 0 ||
 		cfg.LLM.APIKeyEnv != "" ||
 		cfg.LLM.ThinkingEnabled ||
+		cfg.LLM.EffortLevel != "" ||
+		cfg.LLM.cacheControlSet ||
+		cfg.LLM.DisplayThinking ||
 		cfg.TargetProvider != ""
 }
 
@@ -181,6 +218,21 @@ func ResolveConfig(projectDir string) Config {
 		cfg.TargetProvider = ProviderName(tp)
 	}
 
+	if e := os.Getenv("PROMPT_IMPROVER_EFFORT"); e != "" {
+		cfg.LLM.EffortLevel = e
+	}
+
+	if cc := os.Getenv("PROMPT_IMPROVER_CACHE"); cc != "" {
+		switch strings.ToLower(cc) {
+		case "1", "true", "yes":
+			cfg.LLM.CacheControl = true
+			cfg.LLM.cacheControlSet = true
+		case "0", "false", "no":
+			cfg.LLM.CacheControl = false
+			cfg.LLM.cacheControlSet = true
+		}
+	}
+
 	return cfg
 }
 
@@ -214,6 +266,11 @@ func ValidateConfig(cfg Config) []string {
 	}
 	if cfg.TargetProvider != "" && !validProviders[string(cfg.TargetProvider)] {
 		warnings = append(warnings, fmt.Sprintf("unknown target provider %q (valid: claude, gemini, openai)", cfg.TargetProvider))
+	}
+
+	validEffort := map[string]bool{"low": true, "medium": true, "high": true, "max": true, "": true}
+	if !validEffort[cfg.LLM.EffortLevel] {
+		warnings = append(warnings, fmt.Sprintf("unknown effort level %q (valid: low, medium, high, max)", cfg.LLM.EffortLevel))
 	}
 
 	return warnings

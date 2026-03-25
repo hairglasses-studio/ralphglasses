@@ -18,6 +18,7 @@ type GeminiClient struct {
 	Model      string
 	BaseURL    string
 	HTTPClient *http.Client
+	CacheName  string // optional: cached content name from CreateCachedContent
 }
 
 // NewGeminiClient creates a Gemini client from config. Returns nil if no API key is available.
@@ -66,6 +67,7 @@ type geminiRequest struct {
 	Contents          []geminiContent        `json:"contents"`
 	SystemInstruction *geminiContent         `json:"systemInstruction,omitempty"`
 	GenerationConfig  geminiGenerationConfig `json:"generationConfig"`
+	CachedContent     string                 `json:"cachedContent,omitempty"`
 }
 
 type geminiContent struct {
@@ -77,7 +79,14 @@ type geminiPart struct {
 }
 
 type geminiGenerationConfig struct {
-	MaxOutputTokens int `json:"maxOutputTokens"`
+	MaxOutputTokens int             `json:"maxOutputTokens"`
+	ThinkingConfig  *geminiThinking `json:"thinkingConfig,omitempty"`
+}
+
+// geminiThinking controls the thinking budget for Gemini models.
+// ThinkingBudget: 0 = disabled (no thinking), -1 = dynamic (model decides), N>0 = token count.
+type geminiThinking struct {
+	ThinkingBudget int `json:"thinkingBudget"`
 }
 
 type geminiResponse struct {
@@ -104,14 +113,33 @@ func (c *GeminiClient) Improve(ctx context.Context, prompt string, opts ImproveO
 		userContent += "\n\n[Additional guidance: " + opts.Feedback + "]"
 	}
 
+	// Set thinking budget based on opts.ThinkingEnabled:
+	// enabled -> dynamic (-1, let model decide), disabled -> 0 (no thinking, saves tokens).
+	var thinking *geminiThinking
+	if opts.ThinkingEnabled {
+		thinking = &geminiThinking{ThinkingBudget: -1}
+	} else {
+		thinking = &geminiThinking{ThinkingBudget: 0}
+	}
+
 	reqBody := geminiRequest{
 		Contents: []geminiContent{
 			{Parts: []geminiPart{{Text: userContent}}},
 		},
-		SystemInstruction: &geminiContent{
-			Parts: []geminiPart{{Text: systemPrompt}},
+		GenerationConfig: geminiGenerationConfig{
+			MaxOutputTokens: 4096,
+			ThinkingConfig:  thinking,
 		},
-		GenerationConfig: geminiGenerationConfig{MaxOutputTokens: 4096},
+	}
+
+	// If we have a cached content reference, use it instead of sending the system prompt inline.
+	// The cached content already contains the system instruction.
+	if c.CacheName != "" {
+		reqBody.CachedContent = c.CacheName
+	} else {
+		reqBody.SystemInstruction = &geminiContent{
+			Parts: []geminiPart{{Text: systemPrompt}},
+		}
 	}
 
 	bodyBytes, err := json.Marshal(reqBody)
@@ -163,4 +191,74 @@ func (c *GeminiClient) Improve(ctx context.Context, prompt string, opts ImproveO
 		TaskType:     string(opts.TaskType),
 		Improvements: []string{"LLM-powered improvement via Gemini API"},
 	}, nil
+}
+
+// geminiCachedContentRequest is the request body for creating cached content.
+type geminiCachedContentRequest struct {
+	Model    string          `json:"model"`
+	Contents []geminiContent `json:"contents"`
+	TTL      string          `json:"ttl"`
+}
+
+// geminiCachedContentResponse is the response from the cached content API.
+type geminiCachedContentResponse struct {
+	Name  string       `json:"name"`
+	Error *geminiError `json:"error,omitempty"`
+}
+
+// CreateCachedContent creates a cached version of the system prompt via the Gemini
+// context caching API. Returns the cache name (e.g. "cachedContents/abc123") that
+// can be stored in c.CacheName for use in subsequent Improve calls.
+// The cache has a default TTL of 1 hour. Callers should call this once and reuse
+// the cache name across multiple requests to get the 90% read discount.
+func (c *GeminiClient) CreateCachedContent(ctx context.Context, systemPrompt string) (string, error) {
+	reqBody := geminiCachedContentRequest{
+		Model: "models/" + c.Model,
+		Contents: []geminiContent{
+			{Parts: []geminiPart{{Text: systemPrompt}}},
+		},
+		TTL: "3600s",
+	}
+
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", fmt.Errorf("marshal cache request: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/v1beta/cachedContents?key=%s", c.BaseURL, c.APIKey)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return "", fmt.Errorf("create cache request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("cache api call: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read cache response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("cache api error (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var cacheResp geminiCachedContentResponse
+	if err := json.Unmarshal(respBody, &cacheResp); err != nil {
+		return "", fmt.Errorf("unmarshal cache response: %w", err)
+	}
+
+	if cacheResp.Error != nil {
+		return "", fmt.Errorf("cache api error: %s: %s", cacheResp.Error.Status, cacheResp.Error.Message)
+	}
+
+	if cacheResp.Name == "" {
+		return "", fmt.Errorf("cache api returned empty name")
+	}
+
+	return cacheResp.Name, nil
 }
