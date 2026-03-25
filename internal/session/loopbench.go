@@ -50,6 +50,8 @@ type LoopObservation struct {
 	ReflexionApplied bool      `json:"reflexion_applied"`
 	EpisodesUsed     int       `json:"episodes_used"`
 
+	PlannerFallback  bool      `json:"planner_fallback,omitempty"`
+
 	// Sub-phase timing (ms) — surfaces where planner/worker time is actually spent.
 	PromptBuildMs     int64 `json:"prompt_build_ms,omitempty"`
 	ReflexionLookupMs int64 `json:"reflexion_lookup_ms,omitempty"`
@@ -167,6 +169,9 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 	if iter.Task.Title != "" {
 		obs.TaskTitle = iter.Task.Title
 		obs.TaskType = classifyTask(iter.Task.Title)
+	}
+	if iter.Task.Source == "fallback" || (len(iter.Tasks) > 0 && iter.Tasks[0].Source == "fallback") {
+		obs.PlannerFallback = true
 	}
 
 	// Status and verification
