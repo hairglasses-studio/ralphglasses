@@ -2,7 +2,7 @@
 
 ## Current Status (2026-03-25)
 
-Run 14 completed (4 iterations: 3 passed, 1 failed). Discovered 2 critical bugs: auto-drive stall (handleLoopStart never called RunLoop — FIXED) and repo working tree wipe (likely Claude Code agent worktree cleanup, not ralph code — hardened worktree.go as defense-in-depth). Title sanitization "Created" prefix added. All fixes deployed, 33/33 tests pass.
+**Run 15 completed — 5/5 passed, 100% completion rate, fully autonomous auto-drive.** First run with zero manual intervention since auto-drive fix. 2 auto-merges, 2 pending_review (production code changes), 1 no-op. Total duration: ~20 min. Planner title JSON parsing: 3/5 clean, 2/5 fallback (planner returned worker-style output).
 
 ---
 
@@ -101,6 +101,13 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 - **Symptom**: Run 14 iter 1 title "Created `.github/workflows/ci-macos.yml`" — past-tense worker output, not a task name.
 - **Fix**: Added `"i created"`, `"created "`, `"created."` to rejection prefix list in `sanitizeTaskTitle()`.
 - **File**: `internal/session/loop.go` (line 1553-1555)
+
+### NEW: Planner returns worker-style output instead of JSON (40% fallback rate)
+- **Symptom**: 2/5 iterations in Run 15 (and 2/4 in Run 14) had `source: "fallback"` — planner output was freeform completion text like "All session tests pass..." instead of `{"title":..., "prompt":...}` JSON.
+- **Impact**: Task title becomes the worker output text (caught by sanitization, but the real task prompt is lost). Worker gets confusing instructions.
+- **Root cause**: Planner sometimes ignores the JSON output format instruction in the system prompt, especially when it "completes" the task itself instead of delegating.
+- **Fix options**: (a) Add a JSON schema enforcement post-check + retry on parse failure, (b) Strengthen the planner system prompt with "CRITICAL: respond ONLY with JSON", (c) Use structured output / tool_use for planner response format
+- **Priority**: MEDIUM — sanitization catches the worst cases, but 40% fallback rate degrades task quality
 
 ### OBSERVATION: Planner task type diversity
 - Across 18 iterations (Runs 1-4), planner selected 16x from ROADMAP 0.5.1.x cluster (error propagation). Only 1x test, 0x refactor/feature.
@@ -308,6 +315,38 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 2. **Repo working tree wiped** (HARDENED): Likely Claude Code agent worktree cleanup, not ralph code. Hardened `CleanupLoopWorktrees` with sanitization + boundary checks.
 3. **Title sanitization gap** (FIXED): "Created" prefix not in rejection list. Added `"i created"`, `"created "`, `"created."`.
 
+### Run 15 (04b326e1) — Completed, 5 iterations (first fully autonomous auto-drive run)
+- **Status**: `completed` — max_iter reached, zero manual intervention
+- **Total duration**: ~20 min (16:17–16:37)
+- **All 5 iterations passed verification** (ci.sh + selftest gate)
+- **2 auto-merges**, 2 pending_review, 1 no-op
+- **Auto-drive fix validated**: handleLoopStart → RunLoop goroutine working perfectly
+
+| Iter | Task | Verify | Merge | Duration | Enhance | Title Source |
+|------|------|--------|-------|----------|---------|-------------|
+| 1 | Config schema validation for .ralphrc | passed | auto-merged | 4m00s | 19.9s | JSON ✓ |
+| 2 | TestSubPhaseTimingPopulated | passed | auto-merged | 3m20s | 6.5s | fallback |
+| 3 | ProcessExitMsg sets repo status | passed | no-op | 2m21s | 5.0s | fallback |
+| 4 | Auto-advance iteration scheduling | passed | pending_review | 6m01s | 30.0s | JSON ✓ |
+| 5 | Loop health summary in TUI status bar | passed | pending_review | 3m50s | 27.9s | JSON ✓ |
+
+#### Validation Results
+| Subsystem | Result |
+|-----------|--------|
+| Auto-drive (RunLoop) | **PASS** — 5 iterations, zero stalls, zero manual steps |
+| Title sanitization | **PARTIAL** — 3/5 clean JSON, 2/5 fallback (planner returned worker-style text) |
+| Acceptance gate | **PASS** — production code → pending_review, test-only → auto-merge |
+| Enhancement (planner) | **WORKING** — 5-30s per iter, prompt caching visible in early iters |
+| Idle between iters | **PASS** — 14-255ms, negligible overhead |
+| Selftest gate | **SKIP** — 0 observations (observation recording not wired in worktree context) |
+
+#### Observations
+- **Planner output format regression**: 2/5 iterations, the planner returned worker-style completion text instead of `{"title":..., "prompt":...}` JSON. The planner prompt may need stronger formatting enforcement or a retry on parse failure.
+- **Iter 4 added `AutoAdvance` to LoopProfile**: Worker added `AutoAdvance bool` field and auto-advance logic to `StepLoop`. This duplicates `RunLoop`'s purpose — needs review before merge. The planner doesn't know about `RunLoop`, so it planned a feature that already exists.
+- **Iter 5 added `LoopFleetSummary` to TUI**: Good feature — status bar shows `Loops: 3▶ 1⏸ 0✗`. Needs review for import cycle safety.
+- **Enhancement time bimodal**: Early iters benefit from prompt caching (5-7s), later iters with longer context hit 28-30s. Consider caching the base planner prompt separately.
+- **Task diversity excellent**: 5 unique tasks across config validation, testing, TUI, and loop engine categories. No repeats from prior runs.
+
 ### Run 5 Validation Targets
 
 | Subsystem | What to verify | How |
@@ -330,22 +369,22 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 <details>
 <summary>Run 1-4 metrics (click to expand)</summary>
 
-| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5c | Run 8 | Run 10 | Run 11 | Run 12 | Run 13 | Run 14 |
-|--------|-------|-------|-------|-------|--------|-------|--------|--------|--------|--------|--------|
-| Iterations | 6 | 3 | 6 | 3 | 3 | 4 | 1 | 2 | 5 | 5 | 4 |
-| Passed | 6 | 1 | 5 | 3 | 3 | 4 | 1 | 2 | 5 | 4 | 3 |
-| Failed/Hung | 0 | 2 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 (hung) | 1 (wipe) |
-| Completion rate | 100% | 33% | 83% | 100% | 100% | 100% | 100% | 100% | 100% | 80% | 75% |
-| Total latency (min) | 21.5 | 7.7 | 25.2 | 7.2 | 8.8 | 19.1 | ~7 | ~12 | 42 | ~45 | ~30 |
-| Avg latency/iter (s) | 215 | 154 | 252 | 144 | 176 | 287 | ~420 | ~360 | 504 | ~360 | ~450 |
-| Avg enhance (s) | — | — | — | — | — | — | — | — | 23.8 | 0 | — |
-| Cost tracked ($) | 0 | 0 | 0 | 0.248 | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
-| PRs created | 0 | 0 | 0 | 1 | 1 | 2 | 1 (#6) | 0 | 0 | 0 | 0 |
-| Auto-merges | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 3 | 1 | 2 |
-| ff-merge failures | — | — | — | — | — | — | — | — | — | 2 | 0 |
-| Bugs found | 0 | 0 | 0 | 0 | 0 | 1 (race) | 0 | 0 | 0 | 1 (dispatch) | 3 (stall, wipe, title) |
-| Planner model | sonnet | sonnet | sonnet | sonnet | sonnet | opus | opus | opus | opus | opus | opus |
-| Exit reason | max_iter | max_iter | max_iter | max_iter | converged | converged | orphaned | orphaned | max_iter | stopped | manual |
+| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5c | Run 8 | Run 10 | Run 11 | Run 12 | Run 13 | Run 14 | **Run 15** |
+|--------|-------|-------|-------|-------|--------|-------|--------|--------|--------|--------|--------|------------|
+| Iterations | 6 | 3 | 6 | 3 | 3 | 4 | 1 | 2 | 5 | 5 | 4 | **5** |
+| Passed | 6 | 1 | 5 | 3 | 3 | 4 | 1 | 2 | 5 | 4 | 3 | **5** |
+| Failed/Hung | 0 | 2 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 (hung) | 1 (wipe) | **0** |
+| Completion rate | 100% | 33% | 83% | 100% | 100% | 100% | 100% | 100% | 100% | 80% | 75% | **100%** |
+| Total latency (min) | 21.5 | 7.7 | 25.2 | 7.2 | 8.8 | 19.1 | ~7 | ~12 | 42 | ~45 | ~30 | **20** |
+| Avg latency/iter (s) | 215 | 154 | 252 | 144 | 176 | 287 | ~420 | ~360 | 504 | ~360 | ~450 | **236** |
+| Avg enhance (s) | — | — | — | — | — | — | — | — | 23.8 | 0 | — | **17.9** |
+| Cost tracked ($) | 0 | 0 | 0 | 0.248 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| PRs created | 0 | 0 | 0 | 1 | 1 | 2 | 1 (#6) | 0 | 0 | 0 | 0 | **0** |
+| Auto-merges | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 3 | 1 | 2 | **2** |
+| ff-merge failures | — | — | — | — | — | — | — | — | — | 2 | 0 | **0** |
+| Bugs found | 0 | 0 | 0 | 0 | 0 | 1 (race) | 0 | 0 | 0 | 1 (dispatch) | 3 (stall, wipe, title) | **0** |
+| Planner model | sonnet | sonnet | sonnet | sonnet | sonnet | opus | opus | opus | opus | opus | opus | **opus** |
+| Exit reason | max_iter | max_iter | max_iter | max_iter | converged | converged | orphaned | orphaned | max_iter | stopped | manual | **max_iter** |
 
 ### Key conclusions from Runs 1-4
 1. Episodic memory: end-to-end working, cross-run persistence confirmed
