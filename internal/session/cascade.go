@@ -16,8 +16,9 @@ type CascadeConfig struct {
 	ExpensiveProvider   Provider            `json:"expensive_provider"`
 	ConfidenceThreshold float64             `json:"confidence_threshold"` // 0.0-1.0, default 0.7
 	MaxCheapBudgetUSD   float64             `json:"max_cheap_budget_usd"`
-	MaxCheapTurns       int                 `json:"max_cheap_turns"`
-	TaskTypeOverrides   map[string]Provider `json:"task_type_overrides"`
+	MaxCheapTurns        int                 `json:"max_cheap_turns"`
+	TaskTypeOverrides    map[string]Provider `json:"task_type_overrides"`
+	SpeculativeExecution bool                `json:"speculative_execution"`
 }
 
 // DefaultCascadeConfig returns sensible defaults.
@@ -99,6 +100,21 @@ type CascadeRouter struct {
 	results   []CascadeResult
 	stateDir  string
 	tiers     []ModelTier
+
+	// banditSelect is an optional function that selects a provider using bandit policy.
+	// Set via SetBanditHooks. When configured and enough history exists, SelectTier
+	// will consult the bandit before falling through to static tier selection.
+	banditSelect func() (provider string, model string)
+	// banditUpdate is an optional function that records a reward for the bandit policy.
+	banditUpdate func(provider string, reward float64)
+
+	// decisionModel is an optional calibrated confidence model.
+	// When set and trained, EvaluateCheapResult uses it instead of computeConfidence.
+	decisionModel interface {
+		IsTrained() bool
+		PredictConfidence(turnCount, expectedTurns int, lastOutput string, verifyPassed bool) float64
+		Stats() map[string]any
+	}
 }
 
 // NewCascadeRouter creates a cascade router, loading any persisted results.
@@ -171,17 +187,76 @@ func (cr *CascadeRouter) Tiers() []ModelTier {
 	return out
 }
 
+// SetBanditHooks attaches bandit-based provider selection functions.
+// selectFn returns (provider, model) from the bandit policy.
+// updateFn records a reward (0.0-1.0) for a provider after a cascade decision.
+func (cr *CascadeRouter) SetBanditHooks(selectFn func() (string, string), updateFn func(string, float64)) {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+	cr.banditSelect = selectFn
+	cr.banditUpdate = updateFn
+}
+
+// SetDecisionModel attaches a calibrated confidence model for escalation decisions.
+// The model must implement IsTrained(), PredictConfidence(), and Stats().
+func (cr *CascadeRouter) SetDecisionModel(dm interface {
+	IsTrained() bool
+	PredictConfidence(turnCount, expectedTurns int, lastOutput string, verifyPassed bool) float64
+	Stats() map[string]any
+}) {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+	cr.decisionModel = dm
+}
+
+// DecisionModelStats returns the decision model stats, or nil if no model is set.
+func (cr *CascadeRouter) DecisionModelStats() map[string]any {
+	cr.mu.Lock()
+	dm := cr.decisionModel
+	cr.mu.Unlock()
+	if dm == nil {
+		return nil
+	}
+	return dm.Stats()
+}
+
+// BanditConfigured returns true if bandit hooks have been set.
+func (cr *CascadeRouter) BanditConfigured() bool {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+	return cr.banditSelect != nil
+}
+
 // SelectTier picks the cheapest model tier that can handle the given complexity.
 // If taskType is recognized, its mapped complexity is used (the complexity arg
 // is ignored). If taskType is unrecognized and complexity <= 0, the highest tier
 // is returned. Returns an empty ModelTier if no tiers are configured.
+//
+// When a bandit policy is configured and sufficient history exists (>= 10 results),
+// the bandit is consulted first. If the bandit-selected provider matches a known
+// tier, that tier is returned; otherwise static selection is used as fallback.
 func (cr *CascadeRouter) SelectTier(taskType string, complexity int) ModelTier {
 	cr.mu.Lock()
 	tiers := cr.tiers
+	selectFn := cr.banditSelect
+	historyLen := len(cr.results)
 	cr.mu.Unlock()
 
 	if len(tiers) == 0 {
 		return ModelTier{}
+	}
+
+	// Consult bandit policy if configured and we have enough history.
+	if selectFn != nil && historyLen >= 10 {
+		provider, model := selectFn()
+		if provider != "" {
+			for _, t := range tiers {
+				if string(t.Provider) == provider && (model == "" || t.Model == model) {
+					return t
+				}
+			}
+			// Bandit returned unknown provider/model — fall through to static selection.
+		}
 	}
 
 	// Use task-type mapping if available; otherwise use the provided complexity.
@@ -237,6 +312,19 @@ func (cr *CascadeRouter) CheapLaunchOpts(base LaunchOptions) LaunchOptions {
 	return opts
 }
 
+// SpeculativeLaunchOpts returns two sets of launch options for parallel
+// speculative execution: one cheap and one expensive. The cheap opts use
+// CheapLaunchOpts; the expensive opts keep the base provider but append
+// "-speculative" to the session name.
+func (cr *CascadeRouter) SpeculativeLaunchOpts(base LaunchOptions) (cheap LaunchOptions, expensive LaunchOptions) {
+	cheap = cr.CheapLaunchOpts(base)
+
+	expensive = base
+	expensive.SessionName = base.SessionName + "-speculative"
+
+	return cheap, expensive
+}
+
 // EvaluateCheapResult examines a completed cheap session and decides whether
 // to escalate to the expensive provider.
 func (cr *CascadeRouter) EvaluateCheapResult(s *Session, expectedTurns int, verification []LoopVerification) (escalate bool, confidence float64, reason string) {
@@ -265,8 +353,18 @@ func (cr *CascadeRouter) EvaluateCheapResult(s *Session, expectedTurns int, veri
 		}
 	}
 
-	// Compute confidence score
-	conf := computeConfidence(turnCount, expectedTurns, lastOutput, true)
+	// Compute confidence score — use calibrated decision model if available,
+	// otherwise fall back to the heuristic computeConfidence function.
+	cr.mu.Lock()
+	dm := cr.decisionModel
+	cr.mu.Unlock()
+
+	var conf float64
+	if dm != nil && dm.IsTrained() {
+		conf = dm.PredictConfidence(turnCount, expectedTurns, lastOutput, true)
+	} else {
+		conf = computeConfidence(turnCount, expectedTurns, lastOutput, true)
+	}
 	if conf < cr.config.ConfidenceThreshold {
 		return true, conf, "low_confidence"
 	}
@@ -336,13 +434,23 @@ func computeConfidence(turnCount, expectedTurns int, lastOutput string, verifyPa
 	return score / float64(components)
 }
 
-// RecordResult persists a cascade routing outcome.
+// RecordResult persists a cascade routing outcome and updates the bandit policy.
 func (cr *CascadeRouter) RecordResult(result CascadeResult) {
 	cr.mu.Lock()
 	cr.results = append(cr.results, result)
+	updateFn := cr.banditUpdate
 	cr.mu.Unlock()
 
 	cr.appendResult(result)
+
+	// Feed the outcome back to the bandit policy if configured.
+	if updateFn != nil {
+		reward := 0.2 // escalated — cheap provider failed, low reward
+		if !result.Escalated {
+			reward = 1.0 // cheap succeeded — full reward
+		}
+		updateFn(string(result.UsedProvider), reward)
+	}
 }
 
 // Stats computes summary statistics from all cascade results.

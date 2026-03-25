@@ -33,6 +33,7 @@ type EpisodicMemory struct {
 	stateDir string
 	maxSize  int
 	DefaultK int // default retrieval limit for FindSimilar; 0 means 5
+	embedder Embedder
 }
 
 // NewEpisodicMemory creates an episodic memory store backed by a JSONL file.
@@ -91,6 +92,14 @@ func (em *EpisodicMemory) RecordSuccess(journal JournalEntry) {
 	em.Prune()
 }
 
+// SetEmbedder attaches an optional embedding model for similarity search.
+// When set, FindSimilar uses cosine similarity on embeddings instead of Jaccard.
+func (em *EpisodicMemory) SetEmbedder(e Embedder) {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+	em.embedder = e
+}
+
 // FindSimilar returns the top k episodes most similar to the given task.
 func (em *EpisodicMemory) FindSimilar(taskType string, prompt string, k int) []Episode {
 	if k <= 0 {
@@ -105,6 +114,14 @@ func (em *EpisodicMemory) FindSimilar(taskType string, prompt string, k int) []E
 		score   float64
 	}
 
+	// Pre-compute query embedding if embedder is available
+	var queryVec []float64
+	if em.embedder != nil {
+		if v, err := em.embedder.Embed(prompt); err == nil {
+			queryVec = v
+		}
+	}
+
 	now := time.Now()
 	var results []scored
 
@@ -116,8 +133,14 @@ func (em *EpisodicMemory) FindSimilar(taskType string, prompt string, k int) []E
 			score += 2.0
 		}
 
-		// Keyword Jaccard similarity
-		score += jaccardSimilarity(prompt, ep.Prompt)
+		// Similarity: use embeddings if available, otherwise Jaccard
+		if queryVec != nil {
+			if epVec, err := em.embedder.Embed(ep.Prompt); err == nil {
+				score += CosineSimilarity(queryVec, epVec)
+			}
+		} else {
+			score += jaccardSimilarity(prompt, ep.Prompt)
+		}
 
 		// Recency bonus
 		age := now.Sub(ep.Timestamp)
