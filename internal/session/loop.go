@@ -1552,6 +1552,9 @@ func sanitizeTaskTitle(title string) string {
 		"i modified",
 		"i removed",
 		"i refactored",
+		"i created",
+		"created ",
+		"created.",
 		"no changes",
 	}
 	lower := strings.ToLower(title)

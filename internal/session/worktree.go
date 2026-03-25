@@ -5,17 +5,43 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 // CleanupLoopWorktrees removes worktree directories for a specific loop.
 func CleanupLoopWorktrees(repoPath, loopID string) error {
-	dir := filepath.Join(repoPath, ".ralph", "worktrees", "loops", loopID)
+	if strings.TrimSpace(repoPath) == "" {
+		return fmt.Errorf("cleanup: repo path is empty")
+	}
+
+	// Sanitize loopID the same way createLoopWorktree does to prevent path traversal.
+	sanitized := sanitizeLoopName(loopID)
+	if sanitized == "" || sanitized == "loop" && loopID != "loop" {
+		return fmt.Errorf("cleanup: invalid loop ID %q", loopID)
+	}
+
+	expectedBase := filepath.Join(repoPath, ".ralph", "worktrees", "loops")
+	dir := filepath.Join(expectedBase, sanitized)
+
+	// Safety: verify the resolved path is within the expected boundary.
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return fmt.Errorf("cleanup: resolve path: %w", err)
+	}
+	absBase, err := filepath.Abs(expectedBase)
+	if err != nil {
+		return fmt.Errorf("cleanup: resolve base: %w", err)
+	}
+	if !strings.HasPrefix(absDir, absBase+string(filepath.Separator)) {
+		return fmt.Errorf("cleanup: path %q escapes worktree boundary %q", absDir, absBase)
+	}
+
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return nil
 	}
 	if err := os.RemoveAll(dir); err != nil {
-		return fmt.Errorf("remove loop worktrees %s: %w", loopID, err)
+		return fmt.Errorf("remove loop worktrees %s: %w", sanitized, err)
 	}
 	// Prune stale git worktree references
 	cmd := exec.Command("git", "worktree", "prune")
