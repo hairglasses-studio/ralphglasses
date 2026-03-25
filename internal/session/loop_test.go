@@ -109,6 +109,69 @@ func TestLoopStepSuccess(t *testing.T) {
 	}
 }
 
+func TestStepLoop_EmptyPlannerTasks(t *testing.T) {
+	repoPath := setupLoopRepo(t)
+
+	m := NewManager()
+	m.SetStateDir(t.TempDir())
+	m.SetHooksForTesting(
+		func(_ context.Context, opts LaunchOptions) (*Session, error) {
+			sess := &Session{
+				ID:         sanitizeLoopName(opts.SessionName),
+				Provider:   opts.Provider,
+				RepoPath:   opts.RepoPath,
+				RepoName:   filepath.Base(opts.RepoPath),
+				Prompt:     opts.Prompt,
+				Model:      opts.Model,
+				Status:     StatusCompleted,
+				OutputCh:   make(chan string, 1),
+				LaunchedAt: time.Now(),
+			}
+			// Planner returns empty output, which should trigger an error
+			// rather than a panic on tasks[0].
+			if opts.Model == "o1-pro" {
+				sess.LastOutput = ""
+				sess.OutputHistory = []string{}
+			}
+			return sess, nil
+		},
+		func(_ context.Context, sess *Session) error {
+			sess.Lock()
+			sess.Status = StatusCompleted
+			now := time.Now()
+			sess.EndedAt = &now
+			sess.Unlock()
+			return nil
+		},
+	)
+
+	run, err := m.StartLoop(context.Background(), repoPath, LoopProfile{
+		VerifyCommands: []string{"true"},
+	})
+	if err != nil {
+		t.Fatalf("StartLoop: %v", err)
+	}
+
+	err = m.StepLoop(context.Background(), run.ID)
+	if err == nil {
+		t.Fatal("expected error from empty planner output, got nil")
+	}
+	if !strings.Contains(err.Error(), "planner output") && !strings.Contains(err.Error(), "no valid tasks") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestPlannerTasksFromSession_EmptyOutput(t *testing.T) {
+	sess := &Session{
+		Status:     StatusCompleted,
+		LastOutput: "",
+	}
+	tasks, _, err := plannerTasksFromSession(sess, 1)
+	if err == nil && len(tasks) == 0 {
+		t.Fatal("expected either error or non-empty tasks from empty session output")
+	}
+}
+
 func TestLoopStepVerificationFailure(t *testing.T) {
 	repoPath := setupLoopRepo(t)
 
