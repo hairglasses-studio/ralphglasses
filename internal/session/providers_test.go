@@ -77,6 +77,69 @@ func TestBuildCodexCmd(t *testing.T) {
 	}
 }
 
+func TestBuildClaudeCmdNewFlags(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("bare flag", func(t *testing.T) {
+		cmd := buildClaudeCmd(ctx, LaunchOptions{
+			RepoPath: "/tmp/repo",
+			Bare:     true,
+		})
+		cmdStr := strings.Join(cmd.Args, " ")
+		if !strings.Contains(cmdStr, "--bare") {
+			t.Errorf("cmd %q missing --bare", cmdStr)
+		}
+	})
+
+	t.Run("effort flag", func(t *testing.T) {
+		cmd := buildClaudeCmd(ctx, LaunchOptions{
+			RepoPath: "/tmp/repo",
+			Effort:   "high",
+		})
+		cmdStr := strings.Join(cmd.Args, " ")
+		if !strings.Contains(cmdStr, "--effort high") {
+			t.Errorf("cmd %q missing --effort high", cmdStr)
+		}
+	})
+
+	t.Run("betas flag", func(t *testing.T) {
+		cmd := buildClaudeCmd(ctx, LaunchOptions{
+			RepoPath: "/tmp/repo",
+			Betas:    []string{"interleaved-thinking", "prompt-caching"},
+		})
+		cmdStr := strings.Join(cmd.Args, " ")
+		if !strings.Contains(cmdStr, "--betas interleaved-thinking") {
+			t.Errorf("cmd %q missing --betas interleaved-thinking", cmdStr)
+		}
+		if !strings.Contains(cmdStr, "--betas prompt-caching") {
+			t.Errorf("cmd %q missing --betas prompt-caching", cmdStr)
+		}
+	})
+
+	t.Run("fallback-model flag", func(t *testing.T) {
+		cmd := buildClaudeCmd(ctx, LaunchOptions{
+			RepoPath:      "/tmp/repo",
+			FallbackModel: "haiku",
+		})
+		cmdStr := strings.Join(cmd.Args, " ")
+		if !strings.Contains(cmdStr, "--fallback-model haiku") {
+			t.Errorf("cmd %q missing --fallback-model haiku", cmdStr)
+		}
+	})
+
+	t.Run("no new flags when unset", func(t *testing.T) {
+		cmd := buildClaudeCmd(ctx, LaunchOptions{
+			RepoPath: "/tmp/repo",
+		})
+		cmdStr := strings.Join(cmd.Args, " ")
+		for _, flag := range []string{"--bare", "--effort", "--betas", "--fallback-model"} {
+			if strings.Contains(cmdStr, flag) {
+				t.Errorf("cmd %q should not contain %s when unset", cmdStr, flag)
+			}
+		}
+	})
+}
+
 func TestNormalizeClaudeEvent(t *testing.T) {
 	line := []byte(`{"type":"result","result":"Done","cost_usd":0.05,"num_turns":3,"session_id":"abc"}`)
 	event, err := normalizeEvent(ProviderClaude, line)
@@ -431,8 +494,8 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"candidates_token_count": float64(500),
 				},
 			},
-			// (1000/1M)*1.25 + (500/1M)*5.00 = 0.00125 + 0.0025 = 0.00375
-			wantCost: 0.00375,
+			// (1000/1M)*0.30 + (500/1M)*2.50 = 0.0003 + 0.00125 = 0.00155
+			wantCost: 0.00155,
 		},
 		{
 			name:     "codex with usage tokens",
@@ -443,8 +506,8 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"completion_tokens": float64(1000),
 				},
 			},
-			// (2000/1M)*2.50 + (1000/1M)*10.00 = 0.005 + 0.01 = 0.015
-			wantCost: 0.015,
+			// (2000/1M)*2.50 + (1000/1M)*15.00 = 0.005 + 0.015 = 0.02
+			wantCost: 0.02,
 		},
 		{
 			name:     "claude with usage input/output tokens",
@@ -485,7 +548,7 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"candidates_token_count": float64(1000),
 				},
 			},
-			wantCost: 0.005, // (1000/1M)*5.00
+			wantCost: 0.0025, // (1000/1M)*2.50
 		},
 		{
 			name:     "unknown provider returns zero",
@@ -529,8 +592,8 @@ func TestNormalizeGeminiEventWithTokenCost(t *testing.T) {
 		t.Fatalf("normalizeGeminiEvent() error: %v", err)
 	}
 
-	// (1000/1M)*1.25 + (500/1M)*5.00 = 0.00375
-	want := 0.00375
+	// (1000/1M)*0.30 + (500/1M)*2.50 = 0.00155
+	want := 0.00155
 	if math.Abs(event.CostUSD-want) > 1e-9 {
 		t.Errorf("CostUSD = %v, want %v", event.CostUSD, want)
 	}
@@ -580,8 +643,8 @@ func TestNormalizeCodexEventWithTokenCost(t *testing.T) {
 		t.Fatalf("normalizeCodexEvent() error: %v", err)
 	}
 
-	// (2000/1M)*2.50 + (1000/1M)*10.00 = 0.015
-	want := 0.015
+	// (2000/1M)*2.50 + (1000/1M)*15.00 = 0.02
+	want := 0.02
 	if math.Abs(event.CostUSD-want) > 1e-9 {
 		t.Errorf("CostUSD = %v, want %v", event.CostUSD, want)
 	}

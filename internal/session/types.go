@@ -108,6 +108,11 @@ type LaunchOptions struct {
 	TeamName     string   // team membership (internal tracking)
 	Sandbox      bool     // run session in Docker container
 	SandboxImage string   // Docker image override (default: ubuntu:24.04)
+
+	Bare          bool     // --bare (skip hooks/plugins for faster scripted calls)
+	Effort        string   // --effort low|medium|high|max
+	Betas         []string // --betas (beta feature headers)
+	FallbackModel string   // --fallback-model (auto-fallback on overload)
 }
 
 // TeamConfig holds agent team configuration.
