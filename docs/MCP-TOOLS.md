@@ -129,3 +129,13 @@ Use the meta-tools below to discover and load tool groups at runtime.
 | `ralphglasses_loop_gates` | Evaluate regression gates — returns pass/warn/fail report |
 | `ralphglasses_tool_groups` | List available tool namespaces with tool counts and loaded status |
 | `ralphglasses_load_tool_group` | Load a tool namespace on demand |
+
+## Restarting After Code Changes
+
+The MCP server is a long-lived process compiled and run via `go run . mcp`. After making code changes to ralphglasses, you must restart the server for them to take effect:
+
+```bash
+claude mcp remove ralphglasses && claude mcp add ralphglasses -- go run . mcp
+```
+
+If using a `.mcp.json`-based setup, simply restart your MCP client (e.g., re-open Claude Code) to pick up the changes.
