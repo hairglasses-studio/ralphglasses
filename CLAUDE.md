@@ -18,13 +18,15 @@ go build ./...
 go run . --scan-path ~/hairglasses-studio
 ```
 
-## MCP Server (84 tools)
+## MCP Server (86 tools, 10 namespaces)
 
 ```bash
 claude mcp add ralphglasses -- go run . mcp
 ```
 
 A `.mcp.json` is also included in the repo root for automatic local discovery. See [docs/MCP-TOOLS.md](docs/MCP-TOOLS.md) for the full tool table.
+
+Tools use **deferred loading** — only the `core` namespace (12 tools) is loaded at startup. Use the `ralphglasses_tool_groups` meta-tool to list namespaces and `ralphglasses_load_tool_group` to load them on demand.
 
 ## Prompt Enhancement
 
@@ -34,6 +36,7 @@ The `internal/enhancer/` package provides multi-provider prompt improvement and 
 - **10-dimensional quality scoring**: clarity, specificity, structure, examples, tone, etc. with letter grades (A-F) and provider-specific suggestions
 - **11+ lint rules**: unmotivated rules, negative framing, aggressive caps, vague quantifiers, injection risks, cache-unfriendly ordering
 - **Multi-provider LLM improvement**: Claude, Gemini, and OpenAI API clients with provider-specific meta-prompts, circuit breaker, and caching
+- **Prompt caching**: All 3 providers support 80-90% input cost savings on repeated prefixes (Claude cache_control, Gemini cachedContents, OpenAI prefix caching)
 
 ### Provider-Aware Behavior
 
@@ -68,7 +71,7 @@ The `distro/` directory contains configs for a bootable Linux thin client (Ubunt
 ## See Also
 
 - [docs/PROVIDER-SETUP.md](docs/PROVIDER-SETUP.md) — Multi-provider prerequisites, env vars, orchestration pattern
-- [docs/MCP-TOOLS.md](docs/MCP-TOOLS.md) — Full 84-tool table with descriptions
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Package layout, provider dispatch, middleware, fleet, file schemas
+- [docs/MCP-TOOLS.md](docs/MCP-TOOLS.md) — Full 86-tool table with descriptions, deferred loading
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Package layout, provider dispatch, middleware, fleet, tiered routing, prompt caching
 - [docs/MARATHON.md](docs/MARATHON.md) — Marathon supervisor, RC tools, environment setup
 - [docs/AUTONOMY.md](docs/AUTONOMY.md) — Autonomy levels, self-improvement subsystems

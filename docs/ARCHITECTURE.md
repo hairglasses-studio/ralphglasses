@@ -7,7 +7,9 @@
 - **internal/model/**: Data types and parsers for status.json, progress.json, circuit breaker state, .ralphrc
 - **internal/process/**: Process management (launch/stop/pause via os/exec), fsnotify file watcher, log tailing
 - **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch, concurrent worker fan-out, autonomy levels, auto-optimization, auto-recovery, context store, HITL metrics, feedback profiling, prompt caching
-- **internal/mcpserver/**: MCP tool handlers (84 tools, stdio transport via mcp-go)
+- **internal/batch/**: Batch API support for Claude, Gemini, and OpenAI — submit non-interactive workloads at 50% discount
+- **internal/wsclient/**: WebSocket transport client for OpenAI Responses API (40% faster for multi-turn tool chains)
+- **internal/mcpserver/**: MCP tool handlers (86 tools in 10 namespaces, deferred loading, stdio transport via mcp-go)
   - `tools.go` — Server struct, constructors, Register(), all handler implementations, helpers
   - `handler_prompt.go` — Multi-provider prompt enhancement handlers
   - `handler_fleet.go` — Distributed fleet, HITL, autonomy, and feedback profile handlers
@@ -59,7 +61,7 @@ The MCP server supports composable middleware (`internal/mcpserver/middleware.go
 
 ### Tool Benchmarking
 
-`internal/mcpserver/toolbench.go` provides auto-benchmarking applied to all 84 tools:
+`internal/mcpserver/toolbench.go` provides auto-benchmarking applied to all 86 tools:
 
 - **JSONL recording**: All tool calls logged with latency, success, error, sizes
 - **Percentile summaries**: P50, P95, max latency per tool
@@ -78,6 +80,29 @@ The `internal/fleet/` package enables multi-machine workload distribution:
 - **`client.go`**: HTTP client for worker-to-coordinator communication
 
 Start with `ralphglasses serve --coordinator` (one node) and `ralphglasses serve --coordinator-url <url>` (worker nodes).
+
+## Tiered Model Routing
+
+The cost optimizer uses 4-tier routing to balance cost and capability:
+
+| Tier | Model | Cost (input/1M) | Routed Tasks |
+|------|-------|-----------------|--------------|
+| Ultra-cheap | Gemini Flash-Lite | $0.10 | Classification, routing, simple extraction |
+| Worker | Gemini Flash | $0.30 | Bulk codegen, tests, docs |
+| Coding | Claude Sonnet | $3.00 | Architecture, complex refactoring |
+| Reasoning | Claude Opus | $15.00 | Planning, multi-step reasoning |
+
+The `--effort` CLI flag influences tier selection: `low` prefers ultra-cheap/worker tiers, `max` allows reasoning tier. The `ralphglasses_provider_recommend` tool uses feedback profiles to suggest the best tier for a given task.
+
+## Prompt Caching Strategy
+
+All three providers support prompt caching for 80-90% input cost savings:
+
+- **Claude (Anthropic SDK)**: Automatic `cache_control` breakpoints on system prompts and tool definitions. The SDK handles cache key generation and TTL.
+- **Gemini**: Explicit `cachedContents` API — the session manager creates cache entries with configurable TTL for system instructions and large context windows. Thinking budget control via `thinkingConfig`.
+- **OpenAI**: Automatic prefix caching on the Responses API. Structured output via `OutputSchema` for JSON schema validation.
+
+Cache hit rates are tracked in the cost ledger and surfaced via `ralphglasses_fleet_analytics`.
 
 ## File Schemas
 
