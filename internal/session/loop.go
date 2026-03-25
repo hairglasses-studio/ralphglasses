@@ -290,6 +290,10 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		return fmt.Errorf("loop %s converged: %s", id, reason)
 	}
 
+	// Snapshot previous iterations for planner dedup (while still under lock).
+	prevIterations := make([]LoopIteration, len(run.Iterations))
+	copy(prevIterations, run.Iterations)
+
 	iteration := LoopIteration{
 		Number:    len(run.Iterations) + 1,
 		Status:    "planning",
@@ -324,7 +328,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		numWorkers = 1
 	}
 
-	plannerPrompt, err := buildLoopPlannerPromptN(repoPath, numWorkers)
+	plannerPrompt, err := buildLoopPlannerPromptN(repoPath, numWorkers, prevIterations)
 	if err != nil {
 		return m.failLoopIteration(run, index, fmt.Errorf("build planner prompt: %w", err))
 	}
@@ -856,11 +860,11 @@ func normalizeLoopProfile(profile LoopProfile) (LoopProfile, error) {
 }
 
 // buildLoopPlannerPromptN builds a planner prompt requesting N parallel tasks.
-func buildLoopPlannerPromptN(repoPath string, numTasks int) (string, error) {
+func buildLoopPlannerPromptN(repoPath string, numTasks int, prev []LoopIteration) (string, error) {
 	if numTasks <= 1 {
-		return buildLoopPlannerPrompt(repoPath, nil)
+		return buildLoopPlannerPrompt(repoPath, prev)
 	}
-	prompt, err := buildLoopPlannerPrompt(repoPath, nil)
+	prompt, err := buildLoopPlannerPrompt(repoPath, prev)
 	if err != nil {
 		return "", err
 	}
@@ -1362,11 +1366,24 @@ func sanitizeTaskTitle(title string) string {
 		return title
 	}
 
+	// Strip markdown code fences (```json ... ```) before JSON parsing.
+	if strings.HasPrefix(title, "```") {
+		// Remove opening fence line
+		if idx := strings.Index(title, "\n"); idx >= 0 {
+			inner := title[idx+1:]
+			// Remove closing fence
+			if end := strings.LastIndex(inner, "```"); end >= 0 {
+				inner = inner[:end]
+			}
+			title = strings.TrimSpace(inner)
+		}
+	}
+
 	// If the title looks like a JSON object, try to extract a title field.
 	if len(title) > 0 && (title[0] == '{' || title[0] == '[') {
 		var obj map[string]interface{}
 		if err := json.Unmarshal([]byte(title), &obj); err == nil {
-			for _, key := range []string{"title", "Title"} {
+			for _, key := range []string{"title", "Title", "task", "name", "description"} {
 				if v, ok := obj[key]; ok {
 					if s, ok := v.(string); ok && strings.TrimSpace(s) != "" {
 						title = strings.TrimSpace(s)

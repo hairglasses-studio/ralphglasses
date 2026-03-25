@@ -282,3 +282,151 @@ error in pkg/util/helpers.py: syntax error`,
 		t.Errorf("expected .go or .py file paths, got: %v", r.FilesInvolved)
 	}
 }
+
+func TestExtractFilePathsFalsePositives(t *testing.T) {
+	// Bare words without slashes or recognized extensions should NOT match.
+	bareWords := []string{"main", "test", "error", "panic", "init", "config", "build"}
+
+	for _, word := range bareWords {
+		iter := LoopIteration{
+			Error: "something went wrong in " + word + " during execution",
+		}
+		paths := extractFilePaths(iter)
+		for _, p := range paths {
+			if p == word {
+				t.Errorf("bare word %q should not be extracted as a file path", word)
+			}
+		}
+	}
+}
+
+func TestExtractFilePathsTruePositives(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"error in internal/session/loop.go at line 42", "internal/session/loop.go"},
+		{"file cmd/main.go has issues", "cmd/main.go"},
+		{"check go.mod for dependencies", "go.mod"},
+		{"see config.yaml for settings", "config.yaml"},
+		{"update README.md please", "README.md"},
+		{"edit parser.go to fix bug", "parser.go"},
+	}
+
+	for _, tc := range cases {
+		iter := LoopIteration{Error: tc.input}
+		paths := extractFilePaths(iter)
+		found := false
+		for _, p := range paths {
+			if p == tc.expected {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected %q to be extracted from %q, got %v", tc.expected, tc.input, paths)
+		}
+	}
+}
+
+func TestGenerateCorrectionVariousFormats(t *testing.T) {
+	tests := []struct {
+		name       string
+		output     string
+		wantSubstr string
+	}{
+		{
+			name:       "go test FAIL line",
+			output:     "--- FAIL: TestParser (0.02s)\n    parser_test.go:42: expected 3, got 5",
+			wantSubstr: "TestParser",
+		},
+		{
+			name:       "panic output",
+			output:     "panic: runtime error: index out of range [3] with length 2",
+			wantSubstr: "panic: runtime error",
+		},
+		{
+			name:       "error colon format",
+			output:     "Error: connection refused to localhost:5432",
+			wantSubstr: "Error: connection refused",
+		},
+		{
+			name:       "bare FAIL with package",
+			output:     "FAIL github.com/example/pkg 0.015s",
+			wantSubstr: "FAIL github.com/example/pkg",
+		},
+		{
+			name:       "expected got pattern",
+			output:     "expected 42 got 0",
+			wantSubstr: "expected 42 got 0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			iter := LoopIteration{
+				Status: "failed",
+				Verification: []LoopVerification{
+					{Status: "failed", ExitCode: 1, Output: tt.output},
+				},
+			}
+			correction := generateCorrection("verify_failed", "some root cause", iter)
+			if !strings.Contains(correction, tt.wantSubstr) {
+				t.Errorf("correction %q should contain %q", correction, tt.wantSubstr)
+			}
+		})
+	}
+}
+
+func TestSanitizeTaskTitleWrappedJSON(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "markdown fenced JSON with title",
+			input: "```json\n{\"title\":\"Fix parser bug\",\"prompt\":\"fix it\"}\n```",
+			want:  "Fix parser bug",
+		},
+		{
+			name:  "plain JSON with title",
+			input: `{"title":"Add unit tests","prompt":"write tests"}`,
+			want:  "Add unit tests",
+		},
+		{
+			name:  "JSON with task key",
+			input: `{"task":"Refactor cache","prompt":"do it"}`,
+			want:  "Refactor cache",
+		},
+		{
+			name:  "JSON with name key",
+			input: `{"name":"Update docs","prompt":"update"}`,
+			want:  "Update docs",
+		},
+		{
+			name:  "JSON with description key",
+			input: `{"description":"Improve error handling","prompt":"handle errors"}`,
+			want:  "Improve error handling",
+		},
+		{
+			name:  "plain text unchanged",
+			input: "Fix the parser bug",
+			want:  "Fix the parser bug",
+		},
+		{
+			name:  "markdown fence with backticks only",
+			input: "```\n{\"title\":\"Hello world\"}\n```",
+			want:  "Hello world",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sanitizeTaskTitle(tt.input)
+			if got != tt.want {
+				t.Errorf("sanitizeTaskTitle(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
