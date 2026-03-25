@@ -203,8 +203,8 @@ func TestSelfImprovementProfileHasSelfLearningEnabled(t *testing.T) {
 	if p.EnableCascade {
 		t.Error("EnableCascade = true, want false (serial self-improvement)")
 	}
-	if p.MaxIterations != 5 {
-		t.Errorf("MaxIterations = %d, want 5", p.MaxIterations)
+	if p.MaxIterations != 10 {
+		t.Errorf("MaxIterations = %d, want 10", p.MaxIterations)
 	}
 	if p.MaxDurationSecs != 14400 {
 		t.Errorf("MaxDurationSecs = %d, want 14400", p.MaxDurationSecs)
