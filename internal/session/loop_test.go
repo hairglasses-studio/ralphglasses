@@ -545,8 +545,8 @@ func TestSelfImprovementProfile(t *testing.T) {
 	if p.MaxIterations != 10 {
 		t.Errorf("MaxIterations = %d, want 10", p.MaxIterations)
 	}
-	if p.PlannerModel != "claude-opus-4-6-max" {
-		t.Errorf("PlannerModel = %q, want claude-opus-4-6-max", p.PlannerModel)
+	if p.PlannerModel != "claude-opus-4-6" {
+		t.Errorf("PlannerModel = %q, want claude-opus-4-6", p.PlannerModel)
 	}
 	if p.WorkerModel != "claude-sonnet-4-6" {
 		t.Errorf("WorkerModel = %q, want claude-sonnet-4-6", p.WorkerModel)
