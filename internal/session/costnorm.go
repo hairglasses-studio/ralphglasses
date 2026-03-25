@@ -10,9 +10,9 @@ type CostRate struct {
 // These are reference rates for cross-provider cost normalization; update when
 // provider pricing changes.
 var ProviderCostRates = map[Provider]CostRate{
-	ProviderClaude: {InputPer1M: 3.00, OutputPer1M: 15.00}, // claude-sonnet-4.6
-	ProviderGemini: {InputPer1M: 0.30, OutputPer1M: 2.50},  // gemini-2.5-flash
-	ProviderCodex:  {InputPer1M: 2.50, OutputPer1M: 15.00}, // gpt-5.4
+	ProviderClaude: {InputPer1M: CostClaudeSonnetInput, OutputPer1M: CostClaudeSonnetOutput}, // claude-sonnet-4.6
+	ProviderGemini: {InputPer1M: CostGeminiFlashInput, OutputPer1M: CostGeminiFlashOutput},   // gemini-2.5-flash
+	ProviderCodex:  {InputPer1M: CostCodexInput, OutputPer1M: CostCodexOutput},               // gpt-5.4
 }
 
 // claudeBaseRate is the reference rate used for normalization.

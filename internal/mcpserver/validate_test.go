@@ -7,6 +7,7 @@ import (
 )
 
 func TestValidateRepoName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		input   string
@@ -68,6 +69,7 @@ func TestValidateRepoName(t *testing.T) {
 }
 
 func TestValidatePath(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 
 	// Create a subdirectory inside root for valid path tests.
@@ -150,6 +152,7 @@ func TestValidatePath(t *testing.T) {
 }
 
 func TestSanitizeString(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  string
