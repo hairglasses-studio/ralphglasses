@@ -233,7 +233,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tickMsg:
 		m.TickFrame++
-		m.refreshAllRepos()
+		var cmds []tea.Cmd
+		cmds = append(cmds, m.refreshAllRepos()...)
 		// Load sessions persisted by other processes (e.g. MCP server)
 		if m.SessMgr != nil {
 			m.SessMgr.LoadExternalSessions()
@@ -246,7 +247,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateSessionTable()
 		m.updateTeamTable()
 		m.LastRefresh = time.Now()
-		var cmds []tea.Cmd
 		cmds = append(cmds, m.tickCmd())
 		// If viewing logs, tail the log
 		if m.CurrentView == ViewLogs && m.SelectedIdx < len(m.Repos) {
@@ -488,10 +488,18 @@ func (m Model) popView() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) refreshAllRepos() {
+func (m *Model) refreshAllRepos() []tea.Cmd {
+	var cmds []tea.Cmd
 	for _, r := range m.Repos {
-		model.RefreshRepo(r)
+		if errs := model.RefreshRepo(r); len(errs) > 0 {
+			repoPath := r.Path
+			errs := errs
+			cmds = append(cmds, func() tea.Msg {
+				return RefreshErrorMsg{RepoPath: repoPath, Errors: errs}
+			})
+		}
 	}
+	return cmds
 }
 
 func (m *Model) updateTable() {
