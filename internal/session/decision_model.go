@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math"
+	"strings"
 	"sync"
 	"time"
 )
@@ -297,9 +298,17 @@ func (dm *DecisionModel) AdaptThreshold(observations []LoopObservation) float64 
 	return bestThreshold
 }
 
-// PredictConfidence adapts the cascade router's decision model interface to
-// the internal Predict method. It constructs ConfidenceFeatures from the
-// parameters the cascade router provides.
+// IsTrained reports whether the model has been fitted to data.
+func (dm *DecisionModel) IsTrained() bool {
+	dm.mu.Lock()
+	defer dm.mu.Unlock()
+	return dm.trained
+}
+
+// PredictConfidence adapts the DecisionModel to the CascadeRouter's expected
+// interface: (turnCount, expectedTurns, lastOutput, verifyPassed) → confidence.
+// It constructs ConfidenceFeatures from the available parameters and delegates
+// to Predict.
 func (dm *DecisionModel) PredictConfidence(turnCount, expectedTurns int, lastOutput string, verifyPassed bool) float64 {
 	var turnRatio float64
 	if expectedTurns > 0 {
@@ -308,30 +317,34 @@ func (dm *DecisionModel) PredictConfidence(turnCount, expectedTurns int, lastOut
 			turnRatio = 3
 		}
 	}
+
 	var vp float64
 	if verifyPassed {
 		vp = 1.0
 	}
-	outputLen := float64(len(lastOutput))
-	if outputLen > 0 {
-		outputLen = math.Log(1+outputLen) / 10
-		if outputLen > 1 {
-			outputLen = 1
-		}
+
+	// Estimate hedge count from output text (simple heuristic).
+	hedge := float64(countSubstrings(lastOutput, []string{
+		"maybe", "possibly", "might", "could be", "not sure",
+		"i think", "perhaps", "unclear", "uncertain", "roughly",
+	})) / 10.0
+	if hedge > 1 {
+		hedge = 1
 	}
-	f := ConfidenceFeatures{
+
+	outputLen := math.Log1p(float64(len(lastOutput))) / 10.0
+	if outputLen > 1 {
+		outputLen = 1
+	}
+
+	features := ConfidenceFeatures{
 		TurnRatio:    turnRatio,
+		HedgeCount:   hedge,
 		VerifyPassed: vp,
+		ErrorFree:    vp, // proxy: verify passed ≈ error free
 		OutputLength: outputLen,
 	}
-	return dm.Predict(f)
-}
-
-// IsTrained reports whether the model has been fitted to data.
-func (dm *DecisionModel) IsTrained() bool {
-	dm.mu.Lock()
-	defer dm.mu.Unlock()
-	return dm.trained
+	return dm.Predict(features)
 }
 
 // Stats returns model metadata suitable for JSON serialization.
@@ -458,4 +471,16 @@ func boolToFloat(b bool) float64 {
 		return 1.0
 	}
 	return 0.0
+}
+
+// countSubstrings counts how many of the given substrings appear in s (case-insensitive).
+func countSubstrings(s string, subs []string) int {
+	lower := strings.ToLower(s)
+	count := 0
+	for _, sub := range subs {
+		if strings.Contains(lower, sub) {
+			count++
+		}
+	}
+	return count
 }

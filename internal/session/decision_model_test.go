@@ -273,3 +273,110 @@ func TestDecisionModelStats(t *testing.T) {
 		t.Fatalf("expected 10 weights, got %d", len(w))
 	}
 }
+
+func TestDecisionModelTrainExactlyMinSamples(t *testing.T) {
+	dm := NewDecisionModel()
+
+	// Exactly 50 observations (the minimum).
+	obs := make([]LoopObservation, 50)
+	for i := 0; i < 25; i++ {
+		obs[i] = LoopObservation{
+			Timestamp:       time.Now(),
+			VerifyPassed:    true,
+			Confidence:      0.8,
+			WorkerProvider:  "claude",
+			TaskType:        "fix",
+			TotalLatencyMs:  1000,
+			WorkerLatencyMs: 500,
+		}
+	}
+	for i := 25; i < 50; i++ {
+		obs[i] = LoopObservation{
+			Timestamp:       time.Now(),
+			VerifyPassed:    false,
+			Confidence:      0.3,
+			Error:           "test failed",
+			WorkerProvider:  "gemini",
+			TaskType:        "refactor",
+			TotalLatencyMs:  3000,
+			WorkerLatencyMs: 1000,
+		}
+	}
+
+	err := dm.Train(obs)
+	if err != nil {
+		t.Fatalf("Train with exactly minSamples should succeed, got: %v", err)
+	}
+	if !dm.IsTrained() {
+		t.Fatal("model should be trained after Train()")
+	}
+}
+
+func TestDecisionModelPredictClamped(t *testing.T) {
+	dm := NewDecisionModel()
+	dm.mu.Lock()
+	dm.trained = true
+	// Extreme weights to try to push output beyond [0,1].
+	dm.weights = [10]float64{100, 100, 100, 100, 100, 100, 100, 100, 100, 100}
+	dm.bias = 500
+	dm.mu.Unlock()
+
+	// Extreme high features.
+	high := ConfidenceFeatures{
+		TaskTypeHash:      1.0,
+		ProviderID:        1.0,
+		TurnRatio:         3.0,
+		HedgeCount:        1.0,
+		VerifyPassed:      1.0,
+		ErrorFree:         1.0,
+		QuestionCount:     1.0,
+		OutputLength:      1.0,
+		DifficultyScore:   1.0,
+		EpisodesAvailable: 1.0,
+	}
+	score := dm.Predict(high)
+	if score < 0 || score > 1 {
+		t.Fatalf("prediction out of [0,1] range: %f", score)
+	}
+
+	// Extreme negative bias.
+	dm.mu.Lock()
+	dm.weights = [10]float64{-100, -100, -100, -100, -100, -100, -100, -100, -100, -100}
+	dm.bias = -500
+	dm.mu.Unlock()
+
+	score2 := dm.Predict(high)
+	if score2 < 0 || score2 > 1 {
+		t.Fatalf("prediction out of [0,1] range with negative weights: %f", score2)
+	}
+}
+
+func TestPredictConfidenceAdapter(t *testing.T) {
+	dm := NewDecisionModel()
+
+	// Basic call with reasonable inputs (untrained model uses heuristic).
+	score := dm.PredictConfidence(5, 10, "the implementation looks correct", true)
+	if score < 0 || score > 1 {
+		t.Fatalf("PredictConfidence out of [0,1]: %f", score)
+	}
+
+	// Verify passed => should contribute positively.
+	scorePassed := dm.PredictConfidence(5, 10, "done", true)
+	scoreFailed := dm.PredictConfidence(5, 10, "done", false)
+	if scorePassed <= scoreFailed {
+		t.Errorf("passed score (%f) should be > failed score (%f)", scorePassed, scoreFailed)
+	}
+
+	// Hedge words should reduce confidence.
+	scoreNoHedge := dm.PredictConfidence(5, 10, "completed successfully", true)
+	scoreHedge := dm.PredictConfidence(5, 10, "maybe possibly might not sure perhaps uncertain", true)
+	if scoreHedge >= scoreNoHedge {
+		t.Errorf("hedged score (%f) should be < non-hedged score (%f)", scoreHedge, scoreNoHedge)
+	}
+
+	// Zero expected turns (avoid division by zero).
+	scoreZeroExpected := dm.PredictConfidence(5, 0, "output", true)
+	if scoreZeroExpected < 0 || scoreZeroExpected > 1 {
+		t.Fatalf("PredictConfidence with 0 expectedTurns out of range: %f", scoreZeroExpected)
+	}
+}

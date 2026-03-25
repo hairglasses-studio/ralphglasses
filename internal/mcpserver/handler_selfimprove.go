@@ -60,6 +60,11 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 		return codedError(ErrLoopStart, fmt.Sprintf("start self-improvement loop: %v", err)), nil
 	}
 
+	// Drive the loop to completion in a background goroutine.
+	go func() {
+		_ = s.SessMgr.RunLoop(context.Background(), run.ID)
+	}()
+
 	return mcp.NewToolResultText(fmt.Sprintf(
 		"Self-improvement loop started: id=%s repo=%s budget=$%.0f max_iterations=%d",
 		run.ID, repoName,

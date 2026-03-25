@@ -226,3 +226,49 @@ func TestCompleteOffer(t *testing.T) {
 		t.Errorf("expected ErrOfferNotFound, got %v", err)
 	}
 }
+
+func TestAcceptPastDeadline(t *testing.T) {
+	a := NewA2AAdapter()
+
+	// Create an offer with a deadline in the past.
+	_ = a.Offer(TaskOffer{
+		ID:       "past-deadline",
+		TaskType: "test",
+		Prompt:   "expired before accept",
+		Deadline: time.Now().Add(-1 * time.Minute),
+	})
+
+	_, err := a.Accept("past-deadline", "worker-1")
+	if !errors.Is(err, ErrOfferExpired) {
+		t.Errorf("expected ErrOfferExpired for past-deadline accept, got %v", err)
+	}
+
+	// Verify the offer was marked as expired.
+	offer, ok := a.GetOffer("past-deadline")
+	if !ok {
+		t.Fatal("GetOffer returned false")
+	}
+	if offer.Status != "expired" {
+		t.Errorf("expected status 'expired', got %q", offer.Status)
+	}
+}
+
+func TestNegotiateCompleted(t *testing.T) {
+	a := NewA2AAdapter()
+
+	// Full lifecycle to completed state.
+	_ = a.Offer(TaskOffer{
+		ID:       "completed-neg",
+		TaskType: "test",
+		Prompt:   "will complete",
+		Deadline: time.Now().Add(10 * time.Minute),
+	})
+	_, _ = a.Accept("completed-neg", "worker-1")
+	_ = a.CompleteOffer("completed-neg")
+
+	// Negotiate on completed offer should fail.
+	err := a.Negotiate("completed-neg", DelegationConstraints{MaxBudgetUSD: 5.0})
+	if !errors.Is(err, ErrOfferNotOpen) {
+		t.Errorf("expected ErrOfferNotOpen for negotiate on completed offer, got %v", err)
+	}
+}
