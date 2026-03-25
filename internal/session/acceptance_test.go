@@ -1,0 +1,150 @@
+package session
+
+import (
+	"encoding/json"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestClassifySelfImprovePaths_AllSafe(t *testing.T) {
+	paths := []string{
+		"internal/session/loop_test.go",
+		"docs/README.md",
+		"scripts/ci.sh",
+		"internal/tui/app.go",
+		"distro/config.yaml",
+		"testdata/fixtures/sample.json",
+	}
+	safe, review := ClassifySelfImprovePaths(paths)
+	if len(review) != 0 {
+		t.Errorf("expected no review paths, got %v", review)
+	}
+	if len(safe) != len(paths) {
+		t.Errorf("expected %d safe paths, got %d", len(paths), len(safe))
+	}
+}
+
+func TestClassifySelfImprovePaths_AllReview(t *testing.T) {
+	paths := []string{
+		"internal/session/loop.go",
+		"internal/mcpserver/handler.go",
+		"cmd/root.go",
+		"go.mod",
+		"CLAUDE.md",
+	}
+	safe, review := ClassifySelfImprovePaths(paths)
+	if len(safe) != 0 {
+		t.Errorf("expected no safe paths, got %v", safe)
+	}
+	if len(review) != len(paths) {
+		t.Errorf("expected %d review paths, got %d", len(paths), len(review))
+	}
+}
+
+func TestClassifySelfImprovePaths_Mixed(t *testing.T) {
+	paths := []string{
+		"internal/session/loop_test.go",  // safe (test file)
+		"internal/session/loop.go",       // review
+		"docs/architecture.md",           // safe
+		"cmd/selftest.go",                // review
+		"scripts/test/marathon.bats",     // safe
+	}
+	safe, review := ClassifySelfImprovePaths(paths)
+	if len(safe) != 3 {
+		t.Errorf("expected 3 safe paths, got %d: %v", len(safe), safe)
+	}
+	if len(review) != 2 {
+		t.Errorf("expected 2 review paths, got %d: %v", len(review), review)
+	}
+}
+
+func TestClassifySelfImprovePaths_UnknownDefaultsToReview(t *testing.T) {
+	paths := []string{"unknown/path/file.go"}
+	safe, review := ClassifySelfImprovePaths(paths)
+	if len(safe) != 0 {
+		t.Errorf("unknown path should not be safe: %v", safe)
+	}
+	if len(review) != 1 {
+		t.Errorf("unknown path should be review: %v", review)
+	}
+}
+
+func TestAcceptanceResult_JSON(t *testing.T) {
+	r := AcceptanceResult{
+		SafePaths:   []string{"a_test.go"},
+		ReviewPaths: []string{"cmd/root.go"},
+		AutoMerged:  true,
+		PRURL:       "https://github.com/org/repo/pull/1",
+	}
+	data, err := json.Marshal(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded AcceptanceResult
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.PRURL != r.PRURL {
+		t.Errorf("PRURL = %q, want %q", decoded.PRURL, r.PRURL)
+	}
+}
+
+func TestAutoCommitAndMerge(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// Initialize git repo
+	gitInit := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+
+	gitInit("init")
+	gitInit("config", "user.email", "test@test.com")
+	gitInit("config", "user.name", "Test")
+	gitInit("config", "commit.gpgsign", "false")
+
+	// Create initial commit
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitInit("add", ".")
+	gitInit("commit", "-m", "initial")
+
+	// Detect default branch name
+	cmd := exec.Command("git", "branch", "--show-current")
+	cmd.Dir = dir
+	branchOut, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mainBranch := strings.TrimSpace(string(branchOut))
+
+	// Make a change
+	if err := os.WriteFile(filepath.Join(dir, "docs_test.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := AutoCommitAndMerge(dir, mainBranch, "self-improve: add test file"); err != nil {
+		t.Fatalf("AutoCommitAndMerge: %v", err)
+	}
+
+	// Verify the file is committed
+	logCmd := exec.Command("git", "log", "--oneline", "-1")
+	logCmd.Dir = dir
+	out, err := logCmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(out), "self-improve") {
+		t.Errorf("commit message should contain 'self-improve', got: %s", out)
+	}
+}
