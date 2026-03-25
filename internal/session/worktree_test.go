@@ -35,6 +35,32 @@ func TestCleanupLoopWorktrees_NonExistent(t *testing.T) {
 	}
 }
 
+func TestCleanupLoopWorktrees_PathTraversal(t *testing.T) {
+	tmp := t.TempDir()
+	// Create a sibling directory that should NOT be deleted.
+	sibling := filepath.Join(tmp, "important-data")
+	if err := os.MkdirAll(sibling, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Attempt traversal via ../ — sanitizeLoopName strips it to safe chars,
+	// so cleanup targets a non-existent subdir inside .ralph/ instead of the sibling.
+	if err := CleanupLoopWorktrees(tmp, "../../../important-data"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Sibling must survive — traversal was neutralized by sanitization.
+	if _, statErr := os.Stat(sibling); statErr != nil {
+		t.Fatalf("sibling directory was deleted by path traversal: %v", statErr)
+	}
+}
+
+func TestCleanupLoopWorktrees_EmptyRepoPath(t *testing.T) {
+	err := CleanupLoopWorktrees("", "some-loop")
+	if err == nil {
+		t.Fatal("expected error for empty repo path, got nil")
+	}
+}
+
 func TestCleanupStaleWorktrees(t *testing.T) {
 	tmp := t.TempDir()
 	base := filepath.Join(tmp, ".ralph", "worktrees", "loops")
