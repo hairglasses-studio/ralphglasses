@@ -116,19 +116,7 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 			profile.WorkerBudgetUSD = budgetUSD * 3 / 4
 		}
 		// Wire all self-learning subsystems (singleton creation).
-		if !s.SessMgr.HasReflexion() {
-			s.SessMgr.SetReflexionStore(session.NewReflexionStore(ralphDir))
-		}
-		if !s.SessMgr.HasEpisodicMemory() {
-			s.SessMgr.SetEpisodicMemory(session.NewEpisodicMemory(ralphDir, 500, 0))
-		}
-		if !s.SessMgr.HasCurriculumSorter() {
-			var episodic session.EpisodicSource
-			if em := s.SessMgr.GetEpisodicMemory(); em != nil {
-				episodic = em
-			}
-			s.SessMgr.SetCurriculumSorter(session.NewCurriculumSorter(nil, episodic))
-		}
+		wireSubsystems(s.SessMgr, ralphDir)
 	}
 
 	// Wire prompt enhancer into session manager for loop integration

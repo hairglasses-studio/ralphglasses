@@ -9,6 +9,7 @@ import (
 )
 
 func TestToolGroupNames(t *testing.T) {
+	t.Parallel()
 	expected := []string{
 		"core", "session", "loop", "prompt", "fleet",
 		"repo", "roadmap", "team", "awesome", "advanced",
@@ -24,6 +25,7 @@ func TestToolGroupNames(t *testing.T) {
 }
 
 func TestBuildToolGroups_AllGroupsPresent(t *testing.T) {
+	t.Parallel()
 	srv := NewServer("/tmp/test")
 	groups := srv.ToolGroups()
 
@@ -50,6 +52,7 @@ func TestBuildToolGroups_AllGroupsPresent(t *testing.T) {
 }
 
 func TestBuildToolGroups_ExpectedCounts(t *testing.T) {
+	t.Parallel()
 	srv := NewServer("/tmp/test")
 	groups := srv.ToolGroups()
 
@@ -100,6 +103,7 @@ func TestBuildToolGroups_ExpectedCounts(t *testing.T) {
 }
 
 func TestBuildToolGroups_NoDuplicateToolNames(t *testing.T) {
+	t.Parallel()
 	srv := NewServer("/tmp/test")
 	groups := srv.ToolGroups()
 
@@ -115,6 +119,7 @@ func TestBuildToolGroups_NoDuplicateToolNames(t *testing.T) {
 }
 
 func TestRegisterCoreTools(t *testing.T) {
+	t.Parallel()
 	s := NewServer("/tmp/test")
 	s.DeferredLoading = true
 	mcpSrv := server.NewMCPServer("test", "1.0")
@@ -137,6 +142,7 @@ func TestRegisterCoreTools(t *testing.T) {
 }
 
 func TestRegisterToolGroup(t *testing.T) {
+	t.Parallel()
 	s := NewServer("/tmp/test")
 	mcpSrv := server.NewMCPServer("test", "1.0")
 	s.loadedGroups = make(map[string]bool)
@@ -158,6 +164,7 @@ func TestRegisterToolGroup(t *testing.T) {
 }
 
 func TestRegisterAllTools(t *testing.T) {
+	t.Parallel()
 	s := NewServer("/tmp/test")
 	mcpSrv := server.NewMCPServer("test", "1.0")
 	s.RegisterAllTools(mcpSrv)
@@ -171,6 +178,7 @@ func TestRegisterAllTools(t *testing.T) {
 }
 
 func TestRegister_BackwardCompat_AllTools(t *testing.T) {
+	t.Parallel()
 	s := NewServer("/tmp/test")
 	// DeferredLoading defaults to false.
 	mcpSrv := server.NewMCPServer("test", "1.0")
@@ -184,6 +192,7 @@ func TestRegister_BackwardCompat_AllTools(t *testing.T) {
 }
 
 func TestRegister_DeferredLoading(t *testing.T) {
+	t.Parallel()
 	s := NewServer("/tmp/test")
 	s.DeferredLoading = true
 	mcpSrv := server.NewMCPServer("test", "1.0")
@@ -198,6 +207,7 @@ func TestRegister_DeferredLoading(t *testing.T) {
 }
 
 func TestHandleToolGroups(t *testing.T) {
+	t.Parallel()
 	s := NewServer("/tmp/test")
 	mcpSrv := server.NewMCPServer("test", "1.0")
 	s.RegisterCoreTools(mcpSrv)
@@ -220,6 +230,7 @@ func TestHandleToolGroups(t *testing.T) {
 }
 
 func TestHandleLoadToolGroup(t *testing.T) {
+	t.Parallel()
 	s := NewServer("/tmp/test")
 	mcpSrv := server.NewMCPServer("test", "1.0")
 	s.RegisterCoreTools(mcpSrv)

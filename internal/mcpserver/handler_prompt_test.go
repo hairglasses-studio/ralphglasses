@@ -13,6 +13,7 @@ import (
 // --- prompt_analyze ---
 
 func TestHandlePromptAnalyze(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	tests := []struct {
@@ -120,6 +121,7 @@ func TestHandlePromptAnalyze(t *testing.T) {
 // --- prompt_enhance ---
 
 func TestHandlePromptEnhance(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	tests := []struct {
@@ -218,6 +220,7 @@ func TestHandlePromptEnhance(t *testing.T) {
 // --- prompt_lint ---
 
 func TestHandlePromptLint(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	tests := []struct {
@@ -307,6 +310,7 @@ func TestHandlePromptLint(t *testing.T) {
 // --- prompt_improve ---
 
 func TestHandlePromptImprove_NoAPIKey(t *testing.T) {
+	// Cannot use t.Parallel() because t.Setenv is used below.
 	srv, _ := setupTestServer(t)
 
 	// Ensure no API keys are set for this test
@@ -394,6 +398,7 @@ func TestHandlePromptImprove_NoAPIKey(t *testing.T) {
 // --- prompt_templates ---
 
 func TestHandlePromptTemplates(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handlePromptTemplates(context.Background(), makeRequest(nil))
@@ -436,6 +441,7 @@ func TestHandlePromptTemplates(t *testing.T) {
 // --- prompt_classify ---
 
 func TestHandlePromptClassify(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	tests := []struct {
@@ -518,6 +524,7 @@ func TestHandlePromptClassify(t *testing.T) {
 // --- prompt_should_enhance ---
 
 func TestHandlePromptShouldEnhance(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	tests := []struct {
@@ -635,6 +642,7 @@ func TestHandlePromptShouldEnhance(t *testing.T) {
 // --- claudemd_check ---
 
 func TestHandleClaudeMDCheck(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	// Find the repo name from the test server
@@ -722,6 +730,7 @@ func TestHandleClaudeMDCheck(t *testing.T) {
 }
 
 func TestHandleClaudeMDCheck_WithIssues(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	if err := srv.scan(); err != nil {
@@ -766,6 +775,7 @@ func TestHandleClaudeMDCheck_WithIssues(t *testing.T) {
 // --- prompt_template_fill ---
 
 func TestHandlePromptTemplateFill(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	tests := []struct {
@@ -862,6 +872,7 @@ func TestHandlePromptTemplateFill(t *testing.T) {
 // --- helper unit tests ---
 
 func TestIsConversational(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  bool
@@ -885,6 +896,7 @@ func TestIsConversational(t *testing.T) {
 }
 
 func TestHasXMLStructure(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  bool

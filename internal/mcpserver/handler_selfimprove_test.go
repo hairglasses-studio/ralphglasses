@@ -9,6 +9,7 @@ import (
 )
 
 func TestHandleSelfImprove_MissingRepo(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	req := mcp.CallToolRequest{}
@@ -24,6 +25,7 @@ func TestHandleSelfImprove_MissingRepo(t *testing.T) {
 }
 
 func TestHandleSelfImprove_RepoNotFound(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	req := mcp.CallToolRequest{}
@@ -41,6 +43,7 @@ func TestHandleSelfImprove_RepoNotFound(t *testing.T) {
 }
 
 func TestHandleSelfImprove_ValidRepo(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	req := mcp.CallToolRequest{}
@@ -66,6 +69,7 @@ func TestHandleSelfImprove_ValidRepo(t *testing.T) {
 }
 
 func TestHandleSelfImprove_CustomBudget(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	req := mcp.CallToolRequest{}
@@ -89,6 +93,7 @@ func TestHandleSelfImprove_CustomBudget(t *testing.T) {
 }
 
 func TestHandleSelfImprove_CustomIterations(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	req := mcp.CallToolRequest{}
@@ -112,6 +117,7 @@ func TestHandleSelfImprove_CustomIterations(t *testing.T) {
 }
 
 func TestHandleSelfImprove_InvalidRepoName(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	req := mcp.CallToolRequest{}

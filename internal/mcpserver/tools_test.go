@@ -142,6 +142,7 @@ func makeRequest(args map[string]any) mcp.CallToolRequest {
 }
 
 func TestNewServer(t *testing.T) {
+	t.Parallel()
 	srv := NewServer("/tmp/test")
 	if srv.ScanPath != "/tmp/test" {
 		t.Errorf("ScanPath = %q, want %q", srv.ScanPath, "/tmp/test")
@@ -152,6 +153,7 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestHandleScan(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleScan(context.Background(), makeRequest(nil))
@@ -169,6 +171,7 @@ func TestHandleScan(t *testing.T) {
 }
 
 func TestHandleList(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	// Scan first
@@ -189,6 +192,7 @@ func TestHandleList(t *testing.T) {
 }
 
 func TestHandleList_AutoScans(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	// Don't scan first -- handleList should auto-scan
@@ -207,6 +211,7 @@ func TestHandleList_AutoScans(t *testing.T) {
 }
 
 func TestHandleStatus(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -227,6 +232,7 @@ func TestHandleStatus(t *testing.T) {
 }
 
 func TestHandleStatus_MissingRepoArg(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -240,6 +246,7 @@ func TestHandleStatus_MissingRepoArg(t *testing.T) {
 }
 
 func TestHandleStatus_UnknownRepo(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -259,6 +266,7 @@ func TestHandleStatus_UnknownRepo(t *testing.T) {
 }
 
 func TestHandleLogs(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -279,6 +287,7 @@ func TestHandleLogs(t *testing.T) {
 }
 
 func TestHandleLogs_MaxLines(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -298,6 +307,7 @@ func TestHandleLogs_MaxLines(t *testing.T) {
 }
 
 func TestHandleConfig_ListAll(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -318,6 +328,7 @@ func TestHandleConfig_ListAll(t *testing.T) {
 }
 
 func TestHandleConfig_GetKey(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -339,6 +350,7 @@ func TestHandleConfig_GetKey(t *testing.T) {
 }
 
 func TestHandleConfig_SetKey(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -367,6 +379,7 @@ func TestHandleConfig_SetKey(t *testing.T) {
 }
 
 func TestHandleConfig_MissingKey(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -383,6 +396,7 @@ func TestHandleConfig_MissingKey(t *testing.T) {
 }
 
 func TestHandleStart_MissingRepo(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -396,6 +410,7 @@ func TestHandleStart_MissingRepo(t *testing.T) {
 }
 
 func TestHandleStop_MissingRepo(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -409,6 +424,7 @@ func TestHandleStop_MissingRepo(t *testing.T) {
 }
 
 func TestHandleStopAll(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleStopAll(context.Background(), makeRequest(nil))
@@ -426,6 +442,7 @@ func TestHandleStopAll(t *testing.T) {
 }
 
 func TestHandlePause_MissingRepo(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -439,6 +456,7 @@ func TestHandlePause_MissingRepo(t *testing.T) {
 }
 
 func TestHandleStatus_ScanError(t *testing.T) {
+	t.Parallel()
 	srv := NewServer("/nonexistent/path/that/does/not/exist")
 
 	result, err := srv.handleStatus(context.Background(), makeRequest(map[string]any{
@@ -457,6 +475,7 @@ func TestHandleStatus_ScanError(t *testing.T) {
 }
 
 func TestHandleLogs_ScanError(t *testing.T) {
+	t.Parallel()
 	srv := NewServer("/nonexistent/path/that/does/not/exist")
 
 	result, err := srv.handleLogs(context.Background(), makeRequest(map[string]any{
@@ -475,6 +494,7 @@ func TestHandleLogs_ScanError(t *testing.T) {
 }
 
 func TestFindRepo(t *testing.T) {
+	t.Parallel()
 	srv := NewServer("/tmp")
 	srv.Repos = []*model.Repo{
 		{Name: "alpha", Path: "/tmp/alpha"},
@@ -493,6 +513,7 @@ func TestFindRepo(t *testing.T) {
 }
 
 func TestGetStringArg(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		args map[string]any
@@ -521,6 +542,7 @@ func TestGetStringArg(t *testing.T) {
 }
 
 func TestGetNumberArg(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		args       map[string]any
@@ -550,6 +572,7 @@ func TestGetNumberArg(t *testing.T) {
 }
 
 func TestTextResult(t *testing.T) {
+	t.Parallel()
 	r := textResult("hello")
 	if r.IsError {
 		t.Error("textResult should not be an error")
@@ -561,6 +584,7 @@ func TestTextResult(t *testing.T) {
 }
 
 func TestErrResult(t *testing.T) {
+	t.Parallel()
 	r := errResult("something failed")
 	if !r.IsError {
 		t.Error("errResult should be an error")
@@ -572,6 +596,7 @@ func TestErrResult(t *testing.T) {
 }
 
 func TestJsonResult(t *testing.T) {
+	t.Parallel()
 	data := map[string]string{"key": "value"}
 	r := jsonResult(data)
 	if r.IsError {
@@ -586,6 +611,7 @@ func TestJsonResult(t *testing.T) {
 // Roadmap tool tests
 
 func TestHandleRoadmapParse(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -609,6 +635,7 @@ func TestHandleRoadmapParse(t *testing.T) {
 }
 
 func TestHandleRoadmapParse_MissingPath(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleRoadmapParse(context.Background(), makeRequest(nil))
@@ -621,6 +648,7 @@ func TestHandleRoadmapParse_MissingPath(t *testing.T) {
 }
 
 func TestHandleRoadmapAnalyze(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -644,6 +672,7 @@ func TestHandleRoadmapAnalyze(t *testing.T) {
 }
 
 func TestHandleRoadmapExport_RDCycle(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -665,6 +694,7 @@ func TestHandleRoadmapExport_RDCycle(t *testing.T) {
 }
 
 func TestHandleRoadmapExport_FixPlan(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -686,6 +716,7 @@ func TestHandleRoadmapExport_FixPlan(t *testing.T) {
 }
 
 func TestHandleRoadmapExpand(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -709,6 +740,7 @@ func TestHandleRoadmapExpand(t *testing.T) {
 // Repo file tool tests
 
 func TestHandleRepoScaffold(t *testing.T) {
+	t.Parallel()
 	_, root := setupTestServer(t)
 	newRepoPath := filepath.Join(root, "new-repo")
 	_ = os.MkdirAll(newRepoPath, 0755)
@@ -740,6 +772,7 @@ func TestHandleRepoScaffold(t *testing.T) {
 }
 
 func TestHandleRepoOptimize(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -761,6 +794,7 @@ func TestHandleRepoOptimize(t *testing.T) {
 }
 
 func TestHandleRepoScaffold_MissingPath(t *testing.T) {
+	t.Parallel()
 	srv := NewServer("/tmp")
 
 	result, err := srv.handleRepoScaffold(context.Background(), makeRequest(nil))
@@ -773,6 +807,7 @@ func TestHandleRepoScaffold_MissingPath(t *testing.T) {
 }
 
 func TestHandleRepoOptimize_MissingPath(t *testing.T) {
+	t.Parallel()
 	srv := NewServer("/tmp")
 
 	result, err := srv.handleRepoOptimize(context.Background(), makeRequest(nil))
@@ -797,6 +832,7 @@ func getResultText(r *mcp.CallToolResult) string {
 // --- Session & Team handler tests ---
 
 func TestHandleSessionList_Empty(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleSessionList(context.Background(), makeRequest(nil))
@@ -813,6 +849,7 @@ func TestHandleSessionList_Empty(t *testing.T) {
 }
 
 func TestHandleSessionStatus_Missing(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleSessionStatus(context.Background(), makeRequest(map[string]any{
@@ -827,6 +864,7 @@ func TestHandleSessionStatus_Missing(t *testing.T) {
 }
 
 func TestHandleSessionStatus_MissingID(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleSessionStatus(context.Background(), makeRequest(nil))
@@ -839,6 +877,7 @@ func TestHandleSessionStatus_MissingID(t *testing.T) {
 }
 
 func TestHandleSessionOutput_Missing(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleSessionOutput(context.Background(), makeRequest(map[string]any{
@@ -853,6 +892,7 @@ func TestHandleSessionOutput_Missing(t *testing.T) {
 }
 
 func TestHandleSessionCompare_MissingArgs(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleSessionCompare(context.Background(), makeRequest(map[string]any{
@@ -867,6 +907,7 @@ func TestHandleSessionCompare_MissingArgs(t *testing.T) {
 }
 
 func TestHandleSessionCompare_NotFound(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleSessionCompare(context.Background(), makeRequest(map[string]any{
@@ -882,6 +923,7 @@ func TestHandleSessionCompare_NotFound(t *testing.T) {
 }
 
 func TestHandleSessionRetry_NotFound(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleSessionRetry(context.Background(), makeRequest(map[string]any{
@@ -896,6 +938,7 @@ func TestHandleSessionRetry_NotFound(t *testing.T) {
 }
 
 func TestHandleSessionRetry_MissingID(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleSessionRetry(context.Background(), makeRequest(nil))
@@ -908,6 +951,7 @@ func TestHandleSessionRetry_MissingID(t *testing.T) {
 }
 
 func TestHandleSessionBudget_NotFound(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleSessionBudget(context.Background(), makeRequest(map[string]any{
@@ -922,6 +966,7 @@ func TestHandleSessionBudget_NotFound(t *testing.T) {
 }
 
 func TestHandleSessionStop_NotFound(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleSessionStop(context.Background(), makeRequest(map[string]any{
@@ -938,6 +983,7 @@ func TestHandleSessionStop_NotFound(t *testing.T) {
 // --- Team handler tests ---
 
 func TestHandleTeamStatus_NotFound(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleTeamStatus(context.Background(), makeRequest(map[string]any{
@@ -952,6 +998,7 @@ func TestHandleTeamStatus_NotFound(t *testing.T) {
 }
 
 func TestHandleTeamStatus_MissingName(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleTeamStatus(context.Background(), makeRequest(nil))
@@ -964,6 +1011,7 @@ func TestHandleTeamStatus_MissingName(t *testing.T) {
 }
 
 func TestHandleTeamDelegate_NotFound(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleTeamDelegate(context.Background(), makeRequest(map[string]any{
@@ -979,6 +1027,7 @@ func TestHandleTeamDelegate_NotFound(t *testing.T) {
 }
 
 func TestHandleTeamDelegate_MissingArgs(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleTeamDelegate(context.Background(), makeRequest(map[string]any{
@@ -995,6 +1044,7 @@ func TestHandleTeamDelegate_MissingArgs(t *testing.T) {
 // --- Agent handler tests ---
 
 func TestHandleAgentDefine_And_List(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1036,6 +1086,7 @@ func TestHandleAgentDefine_And_List(t *testing.T) {
 }
 
 func TestHandleAgentList_AllProviders(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1052,6 +1103,7 @@ func TestHandleAgentList_AllProviders(t *testing.T) {
 }
 
 func TestHandleAgentDefine_MissingArgs(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleAgentDefine(context.Background(), makeRequest(map[string]any{
@@ -1068,6 +1120,7 @@ func TestHandleAgentDefine_MissingArgs(t *testing.T) {
 // --- Event Bus handler tests ---
 
 func TestHandleEventList_NoBus(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	// Default setupTestServer creates srv without event bus
 
@@ -1081,6 +1134,7 @@ func TestHandleEventList_NoBus(t *testing.T) {
 }
 
 func TestHandleEventList_WithBus(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	repoPath := filepath.Join(root, "test-repo")
 	_ = os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
@@ -1114,6 +1168,7 @@ func TestHandleEventList_WithBus(t *testing.T) {
 // --- Fleet Analytics handler tests ---
 
 func TestHandleFleetAnalytics_Empty(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleFleetAnalytics(context.Background(), makeRequest(nil))
@@ -1133,6 +1188,7 @@ func TestHandleFleetAnalytics_Empty(t *testing.T) {
 // --- Config Bulk handler tests ---
 
 func TestHandleConfigBulk_Query(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1153,6 +1209,7 @@ func TestHandleConfigBulk_Query(t *testing.T) {
 }
 
 func TestHandleConfigBulk_Set(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1174,6 +1231,7 @@ func TestHandleConfigBulk_Set(t *testing.T) {
 }
 
 func TestHandleConfigBulk_MissingKey(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleConfigBulk(context.Background(), makeRequest(nil))
@@ -1188,6 +1246,7 @@ func TestHandleConfigBulk_MissingKey(t *testing.T) {
 // --- Repo Health handler tests ---
 
 func TestHandleRepoHealth(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1208,6 +1267,7 @@ func TestHandleRepoHealth(t *testing.T) {
 }
 
 func TestHandleRepoHealth_NotFound(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1225,6 +1285,7 @@ func TestHandleRepoHealth_NotFound(t *testing.T) {
 // --- Workflow handler tests ---
 
 func TestHandleWorkflowDefine(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1258,6 +1319,7 @@ steps:
 }
 
 func TestHandleWorkflowDefine_MissingArgs(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleWorkflowDefine(context.Background(), makeRequest(map[string]any{
@@ -1272,6 +1334,7 @@ func TestHandleWorkflowDefine_MissingArgs(t *testing.T) {
 }
 
 func TestHandleWorkflowRun_NotFound(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1288,6 +1351,7 @@ func TestHandleWorkflowRun_NotFound(t *testing.T) {
 }
 
 func TestHandleWorkflowRun_MissingArgs(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleWorkflowRun(context.Background(), makeRequest(map[string]any{
@@ -1304,6 +1368,7 @@ func TestHandleWorkflowRun_MissingArgs(t *testing.T) {
 // --- Snapshot handler tests ---
 
 func TestHandleSnapshot_Save(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1324,6 +1389,7 @@ func TestHandleSnapshot_Save(t *testing.T) {
 }
 
 func TestHandleSnapshot_List(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1351,6 +1417,7 @@ func TestHandleSnapshot_List(t *testing.T) {
 // --- Agent Compose handler tests ---
 
 func TestHandleAgentCompose(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1405,6 +1472,7 @@ func TestHandleAgentCompose(t *testing.T) {
 }
 
 func TestHandleAgentCompose_MissingArgs(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleAgentCompose(context.Background(), makeRequest(map[string]any{
@@ -1420,6 +1488,7 @@ func TestHandleAgentCompose_MissingArgs(t *testing.T) {
 }
 
 func TestHandleAgentCompose_AgentNotFound(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1439,6 +1508,7 @@ func TestHandleAgentCompose_AgentNotFound(t *testing.T) {
 // --- Session Stop All handler tests ---
 
 func TestHandleSessionStopAll_Empty(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleSessionStopAll(context.Background(), makeRequest(nil))
@@ -1458,6 +1528,7 @@ func TestHandleSessionStopAll_Empty(t *testing.T) {
 // --- Fleet Status handler tests ---
 
 func TestHandleFleetStatus(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1481,6 +1552,7 @@ func TestHandleFleetStatus(t *testing.T) {
 // --- Journal handler tests ---
 
 func TestHandleJournalRead(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 	repoPath := filepath.Join(root, "test-repo")
@@ -1518,6 +1590,7 @@ func TestHandleJournalRead(t *testing.T) {
 }
 
 func TestHandleJournalRead_Empty(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1538,6 +1611,7 @@ func TestHandleJournalRead_Empty(t *testing.T) {
 }
 
 func TestHandleJournalWrite(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
@@ -1574,6 +1648,7 @@ func TestHandleJournalWrite(t *testing.T) {
 }
 
 func TestHandleJournalPrune_DryRun(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 	repoPath := filepath.Join(root, "test-repo")
@@ -1613,8 +1688,13 @@ func TestHandleJournalPrune_DryRun(t *testing.T) {
 }
 
 func TestHandleLoopLifecycle(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	// Pre-trigger engineOnce with nil engine so handleLoopStart won't create
+	// an LLM-enabled enhancer that makes real API calls (30s timeout each).
+	srv.engineOnce.Do(func() { srv.Engine = nil })
 
 	srv.SessMgr.SetHooksForTesting(
 		func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
@@ -1752,6 +1832,7 @@ func injectTestSession(t *testing.T, srv *Server, repoPath string, mods func(*se
 }
 
 func TestHandleSessionTail(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -1780,6 +1861,7 @@ func TestHandleSessionTail(t *testing.T) {
 }
 
 func TestHandleSessionTailNoCursor(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -1807,6 +1889,7 @@ func TestHandleSessionTailNoCursor(t *testing.T) {
 }
 
 func TestHandleSessionTailWithCursor(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -1833,6 +1916,7 @@ func TestHandleSessionTailWithCursor(t *testing.T) {
 }
 
 func TestHandleSessionTail_NotFound(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleSessionTail(context.Background(), makeRequest(map[string]any{
@@ -1847,6 +1931,7 @@ func TestHandleSessionTail_NotFound(t *testing.T) {
 }
 
 func TestHandleSessionDiffNoRepo(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	id := injectTestSession(t, srv, "/nonexistent/path", func(s *session.Session) {
@@ -1865,6 +1950,7 @@ func TestHandleSessionDiffNoRepo(t *testing.T) {
 }
 
 func TestHandleSessionDiff(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -1891,6 +1977,7 @@ func TestHandleSessionDiff(t *testing.T) {
 }
 
 func TestHandleMarathonDashboardEmpty(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleMarathonDashboard(context.Background(), makeRequest(nil))
@@ -1910,6 +1997,7 @@ func TestHandleMarathonDashboardEmpty(t *testing.T) {
 }
 
 func TestHandleMarathonDashboardStale(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -1935,6 +2023,7 @@ func TestHandleMarathonDashboardStale(t *testing.T) {
 }
 
 func TestHandleSessionErrorsClassification(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -1980,6 +2069,7 @@ func TestHandleSessionErrorsClassification(t *testing.T) {
 }
 
 func TestHandleSessionErrors_SeverityFilter(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -2012,6 +2102,7 @@ func TestHandleSessionErrors_SeverityFilter(t *testing.T) {
 // --- Remote Control (RC) handler tests ---
 
 func TestRCStatus_Empty(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	result, err := srv.handleRCStatus(context.Background(), makeRequest(nil))
 	if err != nil {
@@ -2027,6 +2118,7 @@ func TestRCStatus_Empty(t *testing.T) {
 }
 
 func TestRCStatus_WithSessions(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -2054,6 +2146,7 @@ func TestRCStatus_WithSessions(t *testing.T) {
 }
 
 func TestRCSend_MissingRepo(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	result, err := srv.handleRCSend(context.Background(), makeRequest(map[string]any{
 		"prompt": "test",
@@ -2067,6 +2160,7 @@ func TestRCSend_MissingRepo(t *testing.T) {
 }
 
 func TestRCSend_MissingPrompt(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	result, err := srv.handleRCSend(context.Background(), makeRequest(map[string]any{
 		"repo": "test-repo",
@@ -2080,6 +2174,7 @@ func TestRCSend_MissingPrompt(t *testing.T) {
 }
 
 func TestRCSend_RepoNotFound(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 	result, err := srv.handleRCSend(context.Background(), makeRequest(map[string]any{
@@ -2098,6 +2193,7 @@ func TestRCSend_RepoNotFound(t *testing.T) {
 }
 
 func TestRCRead_NoSessions(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	result, err := srv.handleRCRead(context.Background(), makeRequest(nil))
 	if err != nil {
@@ -2110,6 +2206,7 @@ func TestRCRead_NoSessions(t *testing.T) {
 }
 
 func TestRCRead_MostActive(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -2137,6 +2234,7 @@ func TestRCRead_MostActive(t *testing.T) {
 }
 
 func TestRCRead_WithCursor(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -2164,6 +2262,7 @@ func TestRCRead_WithCursor(t *testing.T) {
 }
 
 func TestEventPoll_NoBus(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	result, err := srv.handleEventPoll(context.Background(), makeRequest(nil))
 	if err != nil {
@@ -2175,6 +2274,7 @@ func TestEventPoll_NoBus(t *testing.T) {
 }
 
 func TestEventPoll_WithEvents(t *testing.T) {
+	t.Parallel()
 	bus := events.NewBus(100)
 	srv, _ := setupTestServer(t)
 	srv.EventBus = bus
@@ -2196,6 +2296,7 @@ func TestEventPoll_WithEvents(t *testing.T) {
 }
 
 func TestEventPoll_CursorAdvance(t *testing.T) {
+	t.Parallel()
 	bus := events.NewBus(100)
 	srv, _ := setupTestServer(t)
 	srv.EventBus = bus
@@ -2223,6 +2324,7 @@ func TestEventPoll_CursorAdvance(t *testing.T) {
 }
 
 func TestRCAct_UnknownAction(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	result, err := srv.handleRCAct(context.Background(), makeRequest(map[string]any{
 		"action": "explode",
@@ -2236,6 +2338,7 @@ func TestRCAct_UnknownAction(t *testing.T) {
 }
 
 func TestRCAct_StopAll(t *testing.T) {
+	t.Parallel()
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 
@@ -2255,6 +2358,7 @@ func TestRCAct_StopAll(t *testing.T) {
 }
 
 func TestRCAct_StopMissing(t *testing.T) {
+	t.Parallel()
 	srv, _ := setupTestServer(t)
 	result, err := srv.handleRCAct(context.Background(), makeRequest(map[string]any{
 		"action": "stop",

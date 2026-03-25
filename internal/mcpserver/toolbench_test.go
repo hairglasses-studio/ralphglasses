@@ -8,6 +8,7 @@ import (
 )
 
 func TestToolCallRecorder_InMemory(t *testing.T) {
+	t.Parallel()
 	rec := NewToolCallRecorder("", nil, 10)
 
 	rec.Record(ToolCallEntry{
@@ -28,6 +29,7 @@ func TestToolCallRecorder_InMemory(t *testing.T) {
 }
 
 func TestToolCallRecorder_NilSafe(t *testing.T) {
+	t.Parallel()
 	var rec *ToolCallRecorder
 	rec.Record(ToolCallEntry{ToolName: "x"}) // should not panic
 	rec.Close()                               // should not panic
@@ -38,6 +40,7 @@ func TestToolCallRecorder_NilSafe(t *testing.T) {
 }
 
 func TestToolCallRecorder_FlushToFile(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	fp := filepath.Join(dir, "bench.jsonl")
 	rec := NewToolCallRecorder(fp, nil, 2) // flush after 2
@@ -60,6 +63,7 @@ func TestToolCallRecorder_FlushToFile(t *testing.T) {
 }
 
 func TestToolCallRecorder_Close(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	fp := filepath.Join(dir, "bench.jsonl")
 	rec := NewToolCallRecorder(fp, nil, 100) // won't auto-flush
@@ -77,6 +81,7 @@ func TestToolCallRecorder_Close(t *testing.T) {
 }
 
 func TestToolCallRecorder_LoadEntriesSince(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	fp := filepath.Join(dir, "bench.jsonl")
 	rec := NewToolCallRecorder(fp, nil, 1)
@@ -100,6 +105,7 @@ func TestToolCallRecorder_LoadEntriesSince(t *testing.T) {
 }
 
 func TestSummarize(t *testing.T) {
+	t.Parallel()
 	entries := []ToolCallEntry{
 		{ToolName: "a", LatencyMs: 10, Success: true},
 		{ToolName: "a", LatencyMs: 20, Success: true},
@@ -137,6 +143,7 @@ func TestSummarize(t *testing.T) {
 }
 
 func TestCompareRuns(t *testing.T) {
+	t.Parallel()
 	baseline := map[string]*ToolBenchmarkSummary{
 		"a": {ToolName: "a", P95LatencyMs: 100, SuccessRate: 99},
 		"b": {ToolName: "b", P95LatencyMs: 50, SuccessRate: 100},
@@ -167,6 +174,7 @@ func TestCompareRuns(t *testing.T) {
 }
 
 func TestCompareRuns_NoBaseline(t *testing.T) {
+	t.Parallel()
 	current := map[string]*ToolBenchmarkSummary{
 		"new_tool": {ToolName: "new_tool", P95LatencyMs: 100, SuccessRate: 90},
 	}
@@ -177,6 +185,7 @@ func TestCompareRuns_NoBaseline(t *testing.T) {
 }
 
 func TestPercentile(t *testing.T) {
+	t.Parallel()
 	sorted := []int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	p50 := percentile(sorted, 50)
 	if p50 != 6 {

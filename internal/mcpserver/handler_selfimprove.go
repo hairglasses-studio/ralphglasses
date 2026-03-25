@@ -46,25 +46,9 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 		profile.MaxDurationSecs = int(durationHours * 3600)
 	}
 
-	// Wire self-learning subsystems (same pattern as handler_loop.go)
+	// Wire self-learning subsystems (shared helper).
 	ralphDir := filepath.Join(r.Path, ".ralph")
-	if !s.SessMgr.HasReflexion() {
-		s.SessMgr.SetReflexionStore(session.NewReflexionStore(ralphDir))
-	}
-	if !s.SessMgr.HasEpisodicMemory() {
-		s.SessMgr.SetEpisodicMemory(session.NewEpisodicMemory(ralphDir, 500, 0))
-	}
-	if !s.SessMgr.HasCascadeRouter() {
-		cfg := session.DefaultCascadeConfig()
-		s.SessMgr.SetCascadeRouter(session.NewCascadeRouter(cfg, nil, nil, ralphDir))
-	}
-	if !s.SessMgr.HasCurriculumSorter() {
-		var episodic session.EpisodicSource
-		if em := s.SessMgr.GetEpisodicMemory(); em != nil {
-			episodic = em
-		}
-		s.SessMgr.SetCurriculumSorter(session.NewCurriculumSorter(nil, episodic))
-	}
+	wireSubsystems(s.SessMgr, ralphDir)
 
 	// Wire prompt enhancer
 	if s.SessMgr.Enhancer == nil {
