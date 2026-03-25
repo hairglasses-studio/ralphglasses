@@ -12,6 +12,7 @@ fi
 
 repo_root="$(rg_repo_root)"
 failures=0
+warnings=0
 
 check() {
   local name status detail
@@ -21,6 +22,8 @@ check() {
   printf '%-18s %-7s %s\n' "${name}" "${status}" "${detail}"
   if [[ "${status}" == "fail" ]]; then
     failures=$((failures + 1))
+  elif [[ "${status}" == "warn" ]]; then
+    warnings=$((warnings + 1))
   fi
 }
 
@@ -33,7 +36,13 @@ else
   check "go" "fail" "run ./scripts/bootstrap-toolchain.sh"
 fi
 
-for tool in make shellcheck bats; do
+if command -v make >/dev/null 2>&1; then
+  check "make" "ok" "$(command -v make)"
+else
+  check "make" "fail" "make is required; install via system package manager"
+fi
+
+for tool in shellcheck bats; do
   if command -v "${tool}" >/dev/null 2>&1; then
     check "${tool}" "ok" "$(command -v "${tool}")"
   else
@@ -89,6 +98,10 @@ else
   check ".mcp.json" "warn" "file not found: .mcp.json"
 fi
 
-if [[ "${strict}" -eq 1 && "${failures}" -gt 0 ]]; then
+if [[ "${strict}" -eq 1 && "${warnings}" -gt 0 ]]; then
+  exit 1
+fi
+
+if [[ "${failures}" -gt 0 ]]; then
   exit 1
 fi

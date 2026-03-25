@@ -50,3 +50,5 @@ if command -v bats >/dev/null 2>&1; then
 else
   echo "warning: bats missing; skipping script tests" >&2
 fi
+
+bash "${script_dir}/test_doctor.sh"
