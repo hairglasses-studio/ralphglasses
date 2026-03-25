@@ -1,7 +1,10 @@
 package tui
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,6 +12,7 @@ import (
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 func TestNewModel(t *testing.T) {
@@ -400,4 +404,103 @@ func TestLogViewKeys(t *testing.T) {
 		m = m2.(Model)
 	}
 	// Should not panic
+}
+
+func TestLoopPanelToggle(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+
+	// l toggles panel on
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
+	m = m2.(Model)
+	if !m.ShowLoopPanel {
+		t.Error("l should show loop panel")
+	}
+
+	// l toggles panel off
+	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
+	m = m2.(Model)
+	if m.ShowLoopPanel {
+		t.Error("l again should hide loop panel")
+	}
+
+	// Show panel then Esc dismisses it
+	m.ShowLoopPanel = true
+	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	m = m2.(Model)
+	if m.ShowLoopPanel {
+		t.Error("Esc should dismiss loop panel")
+	}
+}
+
+func TestLoopPanelViewRender(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.StatusBar.Width = 120
+	m.ShowLoopPanel = true
+	m.LoopView = "  myrepo  running  iters:3  Fix the bug\n"
+
+	view := m.View()
+	if !strings.Contains(view, "Loop Status") {
+		t.Error("view should contain 'Loop Status'")
+	}
+	if !strings.Contains(view, "Fix the bug") {
+		t.Error("view should contain task title")
+	}
+	if !strings.Contains(view, "running") {
+		t.Error("view should contain state label")
+	}
+}
+
+func TestLoopPanelHidden(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.StatusBar.Width = 120
+	m.ShowLoopPanel = false
+	m.LoopView = "  myrepo  running  iters:3  Some task\n"
+
+	view := m.View()
+	if strings.Contains(view, "Loop Status") {
+		t.Error("loop panel should not appear when ShowLoopPanel=false")
+	}
+}
+
+func TestRefreshLoopViewWithManager(t *testing.T) {
+	// Nil SessMgr should show idle message
+	m := NewModel("/tmp/test", nil)
+	m.refreshLoopView()
+	if !strings.Contains(m.LoopView, "No active loops") {
+		t.Errorf("nil SessMgr: expected idle message, got: %q", m.LoopView)
+	}
+
+	// Real manager: start a loop and verify panel content
+	mgr := session.NewManager()
+	m2 := NewModel("/tmp/test", mgr)
+
+	dir, err := os.MkdirTemp("", "loop-test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	_, err = mgr.StartLoop(context.Background(), dir, session.DefaultLoopProfile())
+	if err != nil {
+		t.Fatalf("StartLoop: %v", err)
+	}
+
+	m2.refreshLoopView()
+	if !strings.Contains(m2.LoopView, "pending") {
+		t.Errorf("expected 'pending' in loop view, got: %q", m2.LoopView)
+	}
+
+	// ShowLoopPanel=true and View() renders "Loop Status"
+	m2.ShowLoopPanel = true
+	m2.Width = 120
+	m2.Height = 40
+	m2.StatusBar.Width = 120
+	view := m2.View()
+	if !strings.Contains(view, "Loop Status") {
+		t.Error("view should contain 'Loop Status' when ShowLoopPanel=true")
+	}
 }
