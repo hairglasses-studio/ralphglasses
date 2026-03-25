@@ -248,6 +248,13 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		return m.failLoopIteration(run, index, fmt.Errorf("integrity check: %w", err))
 	}
 
+	// Self-test recursion guard: prevent infinite self-test loops.
+	if IsSelfTestTarget(repoPath) {
+		if err := RecursionGuard(); err != nil {
+			return m.failLoopIteration(run, index, fmt.Errorf("self-test safety: %w", err))
+		}
+	}
+
 	numWorkers := profile.MaxConcurrentWorkers
 	if numWorkers <= 0 {
 		numWorkers = 1
@@ -566,7 +573,26 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		}
 	}
 
-	run.updateLoopAfterVerification(index, allVerification, "idle", "")
+	// Forbidden-path diff gate: if this is a self-test target, check for
+	// modifications to protected files and require human review.
+	postVerifyStatus := "idle"
+	if IsSelfTestTarget(repoPath) {
+		for _, wt := range workerWorktrees {
+			if wt == "" {
+				continue
+			}
+			diffPaths, diffErr := gitDiffPaths(wt)
+			if diffErr == nil && len(diffPaths) > 0 {
+				_, needsReview := ClassifyDiffPaths(diffPaths)
+				if len(needsReview) > 0 {
+					postVerifyStatus = "pending_review"
+					break
+				}
+			}
+		}
+	}
+
+	run.updateLoopAfterVerification(index, allVerification, postVerifyStatus, "")
 
 	// WS2: Record successful iteration as episode for future retrieval.
 	if m.episodic != nil && profile.EnableEpisodicMemory {

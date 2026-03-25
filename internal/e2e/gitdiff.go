@@ -6,6 +6,30 @@ import (
 	"strings"
 )
 
+// GitDiffPaths runs git diff --name-only HEAD in the given directory and
+// returns the list of changed file paths relative to the repo root.
+func GitDiffPaths(dir string) ([]string, error) {
+	cmd := exec.Command("git", "diff", "--name-only", "HEAD")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	trimmed := strings.TrimSpace(string(out))
+	if trimmed == "" {
+		return nil, nil
+	}
+
+	var paths []string
+	for _, line := range strings.Split(trimmed, "\n") {
+		if p := strings.TrimSpace(line); p != "" {
+			paths = append(paths, p)
+		}
+	}
+	return paths, nil
+}
+
 // GitDiffStats runs git diff --stat on a directory and returns file/line counts.
 func GitDiffStats(dir string) (files, added, removed int) {
 	cmd := exec.Command("git", "diff", "--stat", "HEAD")

@@ -2,6 +2,9 @@ package events
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 )
@@ -215,5 +218,179 @@ func TestMultipleSubscribers(t *testing.T) {
 		case <-time.After(time.Second):
 			t.Fatal("timeout")
 		}
+	}
+}
+
+func TestBusPersistTo(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "events.jsonl")
+
+	bus := NewBus(100)
+	if err := bus.PersistTo(path); err != nil {
+		t.Fatalf("PersistTo: %v", err)
+	}
+	defer bus.Close()
+
+	bus.Publish(Event{Type: SessionStarted, SessionID: "s1", Timestamp: time.Now()})
+	bus.Publish(Event{Type: CostUpdate, SessionID: "s2", Timestamp: time.Now()})
+
+	events, err := LoadEvents(path, 0)
+	if err != nil {
+		t.Fatalf("LoadEvents: %v", err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(events))
+	}
+	if events[0].Type != SessionStarted {
+		t.Errorf("event[0].Type = %q, want %q", events[0].Type, SessionStarted)
+	}
+	if events[1].SessionID != "s2" {
+		t.Errorf("event[1].SessionID = %q, want %q", events[1].SessionID, "s2")
+	}
+}
+
+func TestBusLoadEvents(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "events.jsonl")
+
+	bus := NewBus(100)
+	if err := bus.PersistTo(path); err != nil {
+		t.Fatalf("PersistTo: %v", err)
+	}
+
+	for i := 0; i < 10; i++ {
+		bus.Publish(Event{Type: LoopIterated, Timestamp: time.Now()})
+	}
+	bus.Close()
+
+	events, err := LoadEvents(path, 0)
+	if err != nil {
+		t.Fatalf("LoadEvents: %v", err)
+	}
+	if len(events) != 10 {
+		t.Fatalf("expected 10 events, got %d", len(events))
+	}
+}
+
+func TestBusLoadEventsLimit(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "events.jsonl")
+
+	bus := NewBus(100)
+	if err := bus.PersistTo(path); err != nil {
+		t.Fatalf("PersistTo: %v", err)
+	}
+
+	for i := 0; i < 20; i++ {
+		bus.Publish(Event{Type: LoopIterated, Timestamp: time.Now()})
+	}
+	bus.Close()
+
+	events, err := LoadEvents(path, 5)
+	if err != nil {
+		t.Fatalf("LoadEvents: %v", err)
+	}
+	if len(events) != 5 {
+		t.Fatalf("expected 5 events, got %d", len(events))
+	}
+}
+
+func TestBusPersistConcurrent(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "events.jsonl")
+
+	bus := NewBus(1000)
+	if err := bus.PersistTo(path); err != nil {
+		t.Fatalf("PersistTo: %v", err)
+	}
+	defer bus.Close()
+
+	const goroutines = 10
+	const eventsPerGoroutine = 50
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for g := 0; g < goroutines; g++ {
+		go func() {
+			defer wg.Done()
+			for i := 0; i < eventsPerGoroutine; i++ {
+				bus.Publish(Event{Type: LoopIterated, Timestamp: time.Now()})
+			}
+		}()
+	}
+	wg.Wait()
+
+	events, err := LoadEvents(path, 0)
+	if err != nil {
+		t.Fatalf("LoadEvents: %v", err)
+	}
+	expected := goroutines * eventsPerGoroutine
+	if len(events) != expected {
+		t.Fatalf("expected %d events, got %d", expected, len(events))
+	}
+}
+
+func TestBusRotation(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "events.jsonl")
+
+	bus := NewBus(10000)
+	if err := bus.PersistTo(path); err != nil {
+		t.Fatalf("PersistTo: %v", err)
+	}
+	defer bus.Close()
+
+	// Write a large payload to exceed 10MB quickly
+	bigData := make(map[string]any)
+	bigData["payload"] = string(make([]byte, 100*1024)) // 100KB per event
+
+	// Need >100 writes (rotation check interval) and >10MB total
+	for i := 0; i < 150; i++ {
+		bus.Publish(Event{
+			Type:      LoopIterated,
+			Timestamp: time.Now(),
+			Data:      bigData,
+		})
+	}
+
+	// After rotation, the .1 file should exist
+	rotatedPath := path + ".1"
+	if _, err := os.Stat(rotatedPath); os.IsNotExist(err) {
+		t.Fatal("expected rotated file to exist")
+	}
+
+	// The main file should still be writable (new events go here)
+	bus.Publish(Event{Type: SessionStarted, Timestamp: time.Now()})
+	events, err := LoadEvents(path, 0)
+	if err != nil {
+		t.Fatalf("LoadEvents on new file: %v", err)
+	}
+	if len(events) == 0 {
+		t.Fatal("expected events in new file after rotation")
+	}
+}
+
+func TestBusLoadEventsFileNotFound(t *testing.T) {
+	_, err := LoadEvents("/nonexistent/path/events.jsonl", 0)
+	if err == nil {
+		t.Fatal("expected error for nonexistent file")
+	}
+}
+
+func TestBusCloseWithoutPersist(t *testing.T) {
+	bus := NewBus(100)
+	if err := bus.Close(); err != nil {
+		t.Fatalf("Close without persist: %v", err)
+	}
+}
+
+func TestBusExistingBehaviorUnchanged(t *testing.T) {
+	bus := NewBus(10)
+	bus.Publish(Event{Type: SessionStarted, SessionID: "s1"})
+	bus.Publish(Event{Type: CostUpdate, SessionID: "s2"})
+
+	history := bus.History("", 10)
+	if len(history) != 2 {
+		t.Fatalf("expected 2 history events, got %d", len(history))
 	}
 }

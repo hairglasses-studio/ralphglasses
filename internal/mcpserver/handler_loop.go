@@ -13,20 +13,20 @@ import (
 func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoName := getStringArg(req, "repo")
 	if repoName == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
-		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
+		return codedError(ErrRepoNameInvalid, fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(repoName)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
 	profile := session.DefaultLoopProfile()
@@ -116,12 +116,12 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 func (s *Server) handleLoopStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := getStringArg(req, "id")
 	if id == "" {
-		return errResult("loop id required"), nil
+		return codedError(ErrInvalidParams, "loop id required"), nil
 	}
 
 	run, ok := s.SessMgr.GetLoop(id)
 	if !ok {
-		return errResult(fmt.Sprintf("loop not found: %s", id)), nil
+		return codedError(ErrLoopNotFound, fmt.Sprintf("loop not found: %s", id)), nil
 	}
 	return jsonResult(loopResult(run)), nil
 }
@@ -129,7 +129,7 @@ func (s *Server) handleLoopStatus(_ context.Context, req mcp.CallToolRequest) (*
 func (s *Server) handleLoopStep(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := getStringArg(req, "id")
 	if id == "" {
-		return errResult("loop id required"), nil
+		return codedError(ErrInvalidParams, "loop id required"), nil
 	}
 
 	if err := s.SessMgr.StepLoop(ctx, id); err != nil {
@@ -138,7 +138,7 @@ func (s *Server) handleLoopStep(ctx context.Context, req mcp.CallToolRequest) (*
 
 	run, ok := s.SessMgr.GetLoop(id)
 	if !ok {
-		return errResult(fmt.Sprintf("loop not found after step: %s", id)), nil
+		return codedError(ErrLoopNotFound, fmt.Sprintf("loop not found after step: %s", id)), nil
 	}
 	return jsonResult(loopResult(run)), nil
 }
@@ -146,11 +146,11 @@ func (s *Server) handleLoopStep(ctx context.Context, req mcp.CallToolRequest) (*
 func (s *Server) handleLoopStop(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := getStringArg(req, "id")
 	if id == "" {
-		return errResult("loop id required"), nil
+		return codedError(ErrInvalidParams, "loop id required"), nil
 	}
 
 	if err := s.SessMgr.StopLoop(id); err != nil {
-		return errResult(fmt.Sprintf("stop loop: %v", err)), nil
+		return codedError(ErrLoopNotFound, fmt.Sprintf("stop loop: %v", err)), nil
 	}
 	return textResult(fmt.Sprintf("Stopped loop %s", id)), nil
 }

@@ -413,6 +413,14 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithNumber("hours", mcp.Description("Look-back window in hours (default: 24)")),
 	), s.handleLoopGates)
 
+	srv.AddTool(mcp.NewTool("ralphglasses_self_test",
+		mcp.WithDescription("Run recursive self-test iterations against a repository using the ralphglasses loop engine"),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Absolute path to the repository to test")),
+		mcp.WithNumber("iterations", mcp.Description("Number of self-test iterations (default: 3)")),
+		mcp.WithNumber("budget_usd", mcp.Description("Budget cap in USD (default: 5.0)")),
+		mcp.WithBoolean("use_snapshot", mcp.Description("Restore repo snapshot between iterations (default: true)")),
+	), s.handleSelfTest)
+
 	srv.AddTool(mcp.NewTool("ralphglasses_snapshot",
 		mcp.WithDescription("Save or list fleet state snapshots"),
 		mcp.WithString("action", mcp.Description("Action: save (default) or list")),

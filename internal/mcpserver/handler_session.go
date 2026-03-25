@@ -19,23 +19,23 @@ import (
 func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
-		return invalidParams("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(name); err != nil {
-		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
+		return codedError(ErrRepoNameInvalid, fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	prompt := getStringArg(req, "prompt")
 	if prompt == "" {
-		return invalidParams("prompt required"), nil
+		return codedError(ErrInvalidParams, "prompt required"), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return internalErr(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
-		return notFound(fmt.Sprintf("repo not found: %s", name)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
 	provider := session.Provider(getStringArg(req, "provider"))
@@ -43,7 +43,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		provider = session.ProviderClaude
 	}
 	if err := session.ValidateProvider(provider); err != nil {
-		return invalidParams(fmt.Sprintf("invalid provider %q: %v", provider, err)), nil
+		return codedError(ErrProviderUnavailable, fmt.Sprintf("invalid provider %q: %v", provider, err)), nil
 	}
 
 	opts := session.LaunchOptions{
@@ -93,7 +93,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 
 	sess, err := s.SessMgr.Launch(ctx, opts)
 	if err != nil {
-		return internalErr(fmt.Sprintf("launch failed: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("launch failed: %v", err)), nil
 	}
 
 	result := map[string]any{
@@ -191,12 +191,12 @@ func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (
 func (s *Server) handleSessionStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := getStringArg(req, "id")
 	if id == "" {
-		return invalidParams("session id required"), nil
+		return codedError(ErrInvalidParams, "session id required"), nil
 	}
 
 	sess, ok := s.SessMgr.Get(id)
 	if !ok {
-		return notFound(fmt.Sprintf("session not found: %s", id)), nil
+		return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
 	}
 
 	sess.Lock()
