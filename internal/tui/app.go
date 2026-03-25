@@ -186,6 +186,7 @@ func (m Model) Init() tea.Cmd {
 		m.scanRepos(),
 		m.tickCmd(),
 		m.Spinner.Tick,
+		process.WaitForProcessExit(m.ProcMgr.ExitChan()),
 	)
 }
 
@@ -336,6 +337,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.LogView.AppendLines(msg.Lines)
 		}
 		return m, nil
+
+	case process.ProcessExitMsg:
+		// Process exited; re-arm the listener for the next exit.
+		return m, process.WaitForProcessExit(m.ProcMgr.ExitChan())
 
 	case components.ConfirmResultMsg:
 		return m.handleConfirmResult(msg)
