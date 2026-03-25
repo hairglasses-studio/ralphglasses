@@ -103,4 +103,9 @@ func wireSubsystems(s *Server, sessMgr *session.Manager, ralphDir string) {
 	if s.CostPredictor == nil {
 		s.CostPredictor = fleet.NewCostPredictor(2.0) // 2.0 = anomaly threshold std devs
 	}
+
+	// Wire session-level CostPredictor so loop.go can record costs.
+	if !sessMgr.HasCostPredictor() {
+		sessMgr.SetCostPredictor(session.NewCostPredictor(ralphDir))
+	}
 }

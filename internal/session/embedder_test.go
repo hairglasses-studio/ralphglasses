@@ -129,3 +129,84 @@ func TestEpisodicRecallWithEmbedder(t *testing.T) {
 		t.Errorf("expected API-related episodes in top results, got: %+v", results)
 	}
 }
+
+func TestTrigramEmbedShortInput(t *testing.T) {
+	e := NewTrigramEmbedder(128)
+
+	// 1-char input: fewer than 3 runes → no trigrams → zero vector.
+	v1, err := e.Embed("a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, x := range v1 {
+		if x != 0 {
+			t.Fatalf("expected zero vector for 1-char input, got non-zero at index %d: %f", i, x)
+		}
+	}
+
+	// 2-char input: still fewer than 3 runes → zero vector.
+	v2, err := e.Embed("ab")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, x := range v2 {
+		if x != 0 {
+			t.Fatalf("expected zero vector for 2-char input, got non-zero at index %d: %f", i, x)
+		}
+	}
+}
+
+func TestTrigramEmbedUnicode(t *testing.T) {
+	e := NewTrigramEmbedder(128)
+
+	// CJK characters (each is one rune, need at least 3).
+	v, err := e.Embed("\u4f60\u597d\u4e16\u754c") // 你好世界
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Should produce a non-zero vector since we have 4 runes (2 trigrams).
+	allZero := true
+	for _, x := range v {
+		if x != 0 {
+			allZero = false
+			break
+		}
+	}
+	if allZero {
+		t.Fatal("expected non-zero vector for CJK input")
+	}
+
+	// Should be normalized to unit length.
+	var sumSq float64
+	for _, x := range v {
+		sumSq += x * x
+	}
+	norm := math.Sqrt(sumSq)
+	if math.Abs(norm-1.0) > 1e-9 {
+		t.Fatalf("expected L2 norm ~1.0 for CJK input, got %f", norm)
+	}
+}
+
+func TestCosineSimilarityMismatchedLengths(t *testing.T) {
+	a := []float64{1.0, 0.0, 0.0}
+	b := []float64{1.0, 0.0, 0.0, 0.0, 0.0}
+
+	sim := CosineSimilarity(a, b)
+	// The implementation handles mismatched lengths by using minLen for dot
+	// product and accounting for extra elements in norms. With a=[1,0,0] and
+	// b=[1,0,0,0,0], dot=1, normA=1, normB=1 → sim=1.0.
+	// This tests that it doesn't panic.
+	if math.IsNaN(sim) {
+		t.Fatal("expected valid similarity, got NaN")
+	}
+
+	// Test with orthogonal mismatched vectors: extra dimensions only in b.
+	c := []float64{1.0}
+	d := []float64{0.0, 1.0}
+	sim2 := CosineSimilarity(c, d)
+	// dot = 1*0 = 0, so similarity should be 0.
+	if math.Abs(sim2) > 1e-9 {
+		t.Fatalf("expected 0.0 for orthogonal mismatched vectors, got %f", sim2)
+	}
+}

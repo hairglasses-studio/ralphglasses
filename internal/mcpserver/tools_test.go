@@ -109,6 +109,14 @@ func setupTestServer(t *testing.T) (*Server, string) {
 	srv := NewServer(root)
 	srv.SessMgr.SetStateDir(filepath.Join(root, ".session-state"))
 	initGitRepo(t, repoPath)
+
+	// Stop any background RunLoop goroutines before temp dir cleanup.
+	t.Cleanup(func() {
+		for _, run := range srv.SessMgr.ListLoops() {
+			_ = srv.SessMgr.StopLoop(run.ID)
+		}
+	})
+
 	return srv, root
 }
 

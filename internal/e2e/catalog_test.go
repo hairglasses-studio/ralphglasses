@@ -160,9 +160,9 @@ func TestScenariosByTag(t *testing.T) {
 
 func TestAllScenariosCount(t *testing.T) {
 	scenarios := AllScenarios()
-	// 6 original + 4 multi-provider + 5 stress + 2 cost + 5 self-learning = 22
-	if len(scenarios) != 22 {
-		t.Errorf("expected 22 scenarios, got %d", len(scenarios))
+	// 6 original + 4 multi-provider + 5 stress + 2 cost + 5 self-learning + 3 integration = 25
+	if len(scenarios) != 25 {
+		t.Errorf("expected 25 scenarios, got %d", len(scenarios))
 	}
 }
 
