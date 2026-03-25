@@ -110,6 +110,50 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 - **No observation data**: `selftest --gate` returned "skip (current=0.000)" — loop observations (difficulty_score, episodes_used, confidence, cost) were not populated in the status output. May need to check if `RecordObservation` is being called in StepLoop after each iteration.
 - **PR review**: PR #2 flagged `scanner.go` and `handler_repo.go` for review (non-safe paths), auto-merged `integration_test.go` and `app.go` (safe paths). Acceptance gate classification working correctly.
 
+### Run 6 (07ad881b) — Failed, 1 iteration (opus planner)
+- **Status**: `failed` — ci.sh caught stale e2e test assertion
+- **Total duration**: ~2 min (12:21–12:23)
+- **Opus planner quality**: Significantly more detailed prompt than sonnet — included step-by-step instructions, constraints, and explicit file paths. Good improvement.
+- **Worker succeeded**: Added `TestRefreshRepo_CorruptStatusJSON` to `internal/discovery/scanner_test.go` — correct package discovery, proper `[]error` handling
+- **Failure**: `TestSelfImprovementProfileHasSelfLearningEnabled` (platform_test.go:207) expected `MaxIterations=5` but profile was changed to `10` in previous session
+- **Root cause**: E2e test not updated when `SelfImprovementProfile().MaxIterations` was raised from 5→10
+- **Fix**: Updated platform_test.go assertion to expect 10
+
+| Iter | Task | Changes | Verify | Duration |
+|------|------|---------|--------|----------|
+| 1 | Unit test: corrupt status.json | Added test in discovery pkg | failed (stale e2e assertion) | 2m08s |
+
+#### Observations
+- **Opus planner prompt quality**: Much more structured and actionable than sonnet. Included explicit steps, constraints, and file targets. Worth the cost premium.
+- **Worker adapted to reality**: Prompt said `internal/scanner/` but worker correctly found the code in `internal/discovery/` and adapted. Good resilience.
+- **Pre-existing test debt**: The e2e platform_test.go is a regression trap — any profile change requires updating this test. Consider making the test assert relative properties (e.g., MaxIterations > 0) instead of exact values.
+
+### Run 7 (5baf985f) — Failed, 1 iteration (worktree stale)
+- **Status**: `failed` — same `platform_test.go` assertion; worktree branched before fix was committed
+- **Task**: "Add unit tests for RefreshRepo error propagation" — worker succeeded
+- **Lesson**: Must commit + push fixes to main before launching loops, since worktrees branch from HEAD
+
+### Run 8 (b3648706) — Converged, 4 iterations (opus planner, best run)
+- **Status**: `converged` — no changes in last 2 iterations
+- **Total duration**: ~19 min (12:33–12:52)
+- **All 4 iterations passed verification** (ci.sh + selftest gate)
+- **2 PRs created**: #3 (race tests + bugfix), #4 (RefreshRepo caller updates)
+- **First real bug found by loop**: `reposCopy` shallow pointer copy causing data races
+
+| Iter | Task | Changes | Verify | Duration |
+|------|------|---------|--------|----------|
+| 1 | Concurrent scan race test | 2 tests + `reposCopy` deep-copy fix | passed | 7m |
+| 2 | RefreshRepo caller error handling | Call-site logging updates | passed | 5m36s |
+| 3 | Unit test: corrupt status.json | no-op (test exists) | passed | 3m34s |
+| 4 | Display parse errors in repo detail | no-op (already wired) | passed | 2m53s |
+
+#### Observations
+- **Opus found a real concurrency bug**: `reposCopy` was doing shallow pointer copies, causing data races between concurrent scan/list. This is the highest-value fix from any loop run so far.
+- **Cross-run dedup still weak**: Iters 2-4 targeted tasks already completed in Run 5c. Planner needs access to merged PRs or a "completed tasks" registry that persists across loop instances.
+- **Worker resilience confirmed again**: Iter 2 worker found RefreshRepo already returns `[]error` and pivoted to improving caller-side error handling instead.
+- **Convergence working correctly**: 2x no-change iterations triggered clean exit.
+- **Selftest gate still skipping**: 0 observation samples across all runs. `RecordObservation` is not being called in StepLoop — needs investigation.
+
 ### Run 5 Validation Targets
 
 | Subsystem | What to verify | How |
@@ -132,18 +176,20 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 <details>
 <summary>Run 1-4 metrics (click to expand)</summary>
 
-| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5c |
-|--------|-------|-------|-------|-------|--------|
-| Iterations | 6 | 3 | 6 | 3 | 3 |
-| Passed | 6 | 1 | 5 | 3 | 3 |
-| Failed | 0 | 2 | 1 | 0 (1 acceptance) | 0 |
-| Completion rate | 100% | 33% | 83% | 100% verify | 100% |
-| Total latency (min) | 21.5 | 7.7 | 25.2 | 7.2 | 8.8 |
-| Avg latency/iter (s) | 215 | 154 | 252 | 144 | 176 |
-| Cost tracked ($) | 0 | 0 | 0 | 0.248 | N/A |
-| Episodes stored | 6 | +1=7 | +5=12 | +0=12 | +0=12 |
-| PRs created | 0 | 0 | 0 | 1 | 1 |
-| Exit reason | max_iter | max_iter | max_iter | max_iter | converged |
+| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5c | Run 8 |
+|--------|-------|-------|-------|-------|--------|-------|
+| Iterations | 6 | 3 | 6 | 3 | 3 | 4 |
+| Passed | 6 | 1 | 5 | 3 | 3 | 4 |
+| Failed | 0 | 2 | 1 | 0 (1 acceptance) | 0 | 0 |
+| Completion rate | 100% | 33% | 83% | 100% verify | 100% | 100% |
+| Total latency (min) | 21.5 | 7.7 | 25.2 | 7.2 | 8.8 | 19.1 |
+| Avg latency/iter (s) | 215 | 154 | 252 | 144 | 176 | 287 |
+| Cost tracked ($) | 0 | 0 | 0 | 0.248 | N/A | N/A |
+| Episodes stored | 6 | +1=7 | +5=12 | +0=12 | +0=12 | +0=12 |
+| PRs created | 0 | 0 | 0 | 1 | 1 | 2 |
+| Bugs found | 0 | 0 | 0 | 0 | 0 | 1 (reposCopy race) |
+| Planner model | sonnet | sonnet | sonnet | sonnet | sonnet | opus |
+| Exit reason | max_iter | max_iter | max_iter | max_iter | converged | converged |
 
 ### Key conclusions from Runs 1-4
 1. Episodic memory: end-to-end working, cross-run persistence confirmed
