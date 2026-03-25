@@ -565,6 +565,30 @@ func TestBuildLoopPlannerPrompt_NoPrevIterations(t *testing.T) {
 	}
 }
 
+func TestBuildLoopPlannerPrompt_JSONEnforcement(t *testing.T) {
+	repoPath := setupLoopRepo(t)
+
+	prompt, err := buildLoopPlannerPrompt(repoPath, nil)
+	if err != nil {
+		t.Fatalf("buildLoopPlannerPrompt: %v", err)
+	}
+	if !strings.Contains(prompt, "CRITICAL") {
+		t.Error("prompt should contain CRITICAL enforcement")
+	}
+	if !strings.Contains(prompt, "ENTIRE response must be a single JSON") {
+		t.Error("prompt should contain JSON enforcement language")
+	}
+	if !strings.Contains(prompt, "BAD (do NOT do this)") {
+		t.Error("prompt should contain BAD example")
+	}
+	if !strings.Contains(prompt, "GOOD (do this)") {
+		t.Error("prompt should contain GOOD example")
+	}
+	if !strings.Contains(prompt, "Output ONLY the JSON object") {
+		t.Error("prompt should contain output-only constraint")
+	}
+}
+
 func TestRecentGitLog(t *testing.T) {
 	repoPath := setupLoopRepo(t)
 
