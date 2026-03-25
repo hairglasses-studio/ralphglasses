@@ -212,6 +212,10 @@ func absoluteFloorGate(metric string, current, warnFloor, failFloor float64) Gat
 //
 // hours controls the time window for filtering observations (0 = use all).
 func EvaluateFromObservations(repoRoot string, thresholds GateThresholds, hours int) (*GateReport, error) {
+	// Resolve worktree to main repo so observations are always found.
+	if resolved, err := session.ResolveMainRepoPath(repoRoot); err == nil && resolved != "" {
+		repoRoot = resolved
+	}
 	obsPath := session.ObservationPath(repoRoot)
 	since := time.Time{}
 	if hours > 0 {
