@@ -14,6 +14,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/bandit"
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
@@ -66,6 +67,13 @@ type Server struct {
 	DecisionLog      *session.DecisionLog
 	FeedbackAnalyzer *session.FeedbackAnalyzer
 	AutoOptimizer    *session.AutoOptimizer
+
+	// Phase H: shared blackboard and cost predictor.
+	Blackboard    *session.Blackboard
+	CostPredictor *session.CostPredictor
+
+	// Bandit: provider selection independent of cascade routing.
+	Bandit *bandit.Selector
 }
 
 // NewServer creates a new MCP server instance.
