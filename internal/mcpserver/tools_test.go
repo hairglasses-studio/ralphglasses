@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -2378,4 +2379,52 @@ func TestRCAct_StopMissing(t *testing.T) {
 	if !result.IsError {
 		t.Error("expected error for missing target")
 	}
+}
+
+func TestHandleScan_ConcurrentRace(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	ready := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-ready
+			_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+		}()
+	}
+	close(ready)
+	wg.Wait()
+
+	if srv.Repos == nil {
+		t.Fatal("expected Repos to be non-nil after concurrent scans")
+	}
+}
+
+func TestHandleScan_ConcurrentReadWrite(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	ready := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-ready
+			_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+		}()
+	}
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-ready
+			_, _ = srv.handleList(context.Background(), makeRequest(nil))
+		}()
+	}
+	close(ready)
+	wg.Wait()
 }
