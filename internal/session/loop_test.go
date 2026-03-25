@@ -386,5 +386,136 @@ func TestSelfImprovementProfile(t *testing.T) {
 	if len(p.VerifyCommands) != 2 {
 		t.Errorf("expected 2 verify commands, got %d", len(p.VerifyCommands))
 	}
+	if p.MaxIterations != 5 {
+		t.Errorf("MaxIterations = %d, want 5", p.MaxIterations)
+	}
+	if p.MaxDurationSecs != 14400 {
+		t.Errorf("MaxDurationSecs = %d, want 14400", p.MaxDurationSecs)
+	}
+}
+
+func TestStepLoopMaxIterationsEnforced(t *testing.T) {
+	repoPath := setupLoopRepo(t)
+
+	m := NewManager()
+	m.SetStateDir(t.TempDir())
+	m.SetHooksForTesting(
+		func(_ context.Context, opts LaunchOptions) (*Session, error) {
+			return &Session{
+				ID:         sanitizeLoopName(opts.SessionName),
+				Provider:   opts.Provider,
+				RepoPath:   opts.RepoPath,
+				RepoName:   "test",
+				Prompt:     opts.Prompt,
+				Model:      opts.Model,
+				Status:     StatusCompleted,
+				OutputCh:   make(chan string, 1),
+				LaunchedAt: time.Now(),
+			}, nil
+		},
+		func(_ context.Context, sess *Session) error {
+			sess.Lock()
+			sess.Status = StatusCompleted
+			now := time.Now()
+			sess.EndedAt = &now
+			sess.Unlock()
+			return nil
+		},
+	)
+
+	run, err := m.StartLoop(context.Background(), repoPath, LoopProfile{
+		MaxIterations:  1,
+		VerifyCommands: []string{"true"},
+	})
+	if err != nil {
+		t.Fatalf("StartLoop: %v", err)
+	}
+
+	// Manually add a completed iteration so we're at the limit.
+	run.Lock()
+	run.Iterations = append(run.Iterations, LoopIteration{
+		Number: 1,
+		Status: "idle",
+	})
+	run.Unlock()
+
+	err = m.StepLoop(context.Background(), run.ID)
+	if err == nil {
+		t.Fatal("expected max iterations error")
+	}
+	if !strings.Contains(err.Error(), "max iterations") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	run, ok := m.GetLoop(run.ID)
+	if !ok {
+		t.Fatal("loop not found")
+	}
+	run.Lock()
+	defer run.Unlock()
+	if run.Status != "completed" {
+		t.Fatalf("status = %q, want completed", run.Status)
+	}
+}
+
+func TestStepLoopDeadlineEnforced(t *testing.T) {
+	repoPath := setupLoopRepo(t)
+
+	m := NewManager()
+	m.SetStateDir(t.TempDir())
+	m.SetHooksForTesting(
+		func(_ context.Context, opts LaunchOptions) (*Session, error) {
+			return &Session{
+				ID:         sanitizeLoopName(opts.SessionName),
+				Provider:   opts.Provider,
+				RepoPath:   opts.RepoPath,
+				RepoName:   "test",
+				Prompt:     opts.Prompt,
+				Model:      opts.Model,
+				Status:     StatusCompleted,
+				OutputCh:   make(chan string, 1),
+				LaunchedAt: time.Now(),
+			}, nil
+		},
+		func(_ context.Context, sess *Session) error {
+			sess.Lock()
+			sess.Status = StatusCompleted
+			now := time.Now()
+			sess.EndedAt = &now
+			sess.Unlock()
+			return nil
+		},
+	)
+
+	run, err := m.StartLoop(context.Background(), repoPath, LoopProfile{
+		VerifyCommands: []string{"true"},
+	})
+	if err != nil {
+		t.Fatalf("StartLoop: %v", err)
+	}
+
+	// Set deadline in the past.
+	past := time.Now().Add(-1 * time.Hour)
+	run.Lock()
+	run.Deadline = &past
+	run.Unlock()
+
+	err = m.StepLoop(context.Background(), run.ID)
+	if err == nil {
+		t.Fatal("expected duration limit error")
+	}
+	if !strings.Contains(err.Error(), "duration limit") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	run, ok := m.GetLoop(run.ID)
+	if !ok {
+		t.Fatal("loop not found")
+	}
+	run.Lock()
+	defer run.Unlock()
+	if run.Status != "completed" {
+		t.Fatalf("status = %q, want completed", run.Status)
+	}
 }
 

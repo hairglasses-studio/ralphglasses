@@ -45,6 +45,8 @@ type LoopProfile struct {
 	EnableUncertainty    bool     `json:"enable_uncertainty,omitempty"`
 	EnableCurriculum     bool     `json:"enable_curriculum,omitempty"`
 	SelfImprovement      bool     `json:"self_improvement,omitempty"`
+	MaxIterations        int      `json:"max_iterations,omitempty"`
+	MaxDurationSecs      int      `json:"max_duration_secs,omitempty"`
 }
 
 // LoopTask is the bounded implementation unit produced by the planner.
@@ -101,6 +103,7 @@ type LoopRun struct {
 	LastError  string          `json:"last_error,omitempty"`
 	CreatedAt  time.Time       `json:"created_at"`
 	UpdatedAt  time.Time       `json:"updated_at"`
+	Deadline   *time.Time      `json:"deadline,omitempty"`
 
 	mu sync.Mutex
 }
@@ -149,6 +152,8 @@ func SelfImprovementProfile() LoopProfile {
 		EnableCurriculum:     true,
 		EnableCascade:        false,
 		SelfImprovement:      true,
+		MaxIterations:        5,
+		MaxDurationSecs:      14400, // 4 hours
 	}
 }
 
@@ -176,6 +181,11 @@ func (m *Manager) StartLoop(_ context.Context, repoPath string, profile LoopProf
 		Iterations: []LoopIteration{},
 		CreatedAt:  now,
 		UpdatedAt:  now,
+	}
+
+	if profile.MaxDurationSecs > 0 {
+		d := time.Now().Add(time.Duration(profile.MaxDurationSecs) * time.Second)
+		run.Deadline = &d
 	}
 
 	m.mu.Lock()
@@ -251,6 +261,25 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	if consecutiveLoopFailures(run.Iterations) > run.Profile.RetryLimit {
 		run.mu.Unlock()
 		return fmt.Errorf("loop %s exceeded retry limit (%d)", id, run.Profile.RetryLimit)
+	}
+	if run.Profile.MaxIterations > 0 && len(run.Iterations) >= run.Profile.MaxIterations {
+		run.Status = "completed"
+		run.mu.Unlock()
+		m.PersistLoop(run)
+		return fmt.Errorf("loop %s reached max iterations (%d)", id, run.Profile.MaxIterations)
+	}
+	if run.Deadline != nil && time.Now().After(*run.Deadline) {
+		run.Status = "completed"
+		run.mu.Unlock()
+		m.PersistLoop(run)
+		return fmt.Errorf("loop %s exceeded duration limit", id)
+	}
+	if converged, reason := detectConvergence(run.Iterations); converged {
+		run.Status = "converged"
+		run.LastError = reason
+		run.mu.Unlock()
+		m.PersistLoop(run)
+		return fmt.Errorf("loop %s converged: %s", id, reason)
 	}
 
 	iteration := LoopIteration{
