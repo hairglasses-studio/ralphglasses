@@ -36,6 +36,8 @@ type Manager struct {
 	curriculum    *CurriculumSorter       // WS5: task difficulty scoring and ordering
 	banditSelect func() (string, string) // bandit-based provider selection hook
 	banditUpdate func(string, float64)   // bandit reward recording hook
+	blackboard   *Blackboard             // Phase H: shared inter-subsystem state
+	costPredictor *CostPredictor         // Phase H: task cost prediction
 	launchSession func(context.Context, LaunchOptions) (*Session, error)
 	waitSession   func(context.Context, *Session) error
 	healthCheck   func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
@@ -173,6 +175,55 @@ func (m *Manager) GetCascadeRouter() *CascadeRouter {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.cascade
+}
+
+// SetBlackboard attaches the shared blackboard subsystem.
+func (m *Manager) SetBlackboard(bb *Blackboard) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.blackboard = bb
+}
+
+// HasBlackboard returns true if a Blackboard is already attached.
+func (m *Manager) HasBlackboard() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.blackboard != nil
+}
+
+// GetBlackboard returns the attached Blackboard, or nil.
+func (m *Manager) GetBlackboard() *Blackboard {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.blackboard
+}
+
+// SetCostPredictor attaches the cost prediction subsystem.
+func (m *Manager) SetCostPredictor(cp *CostPredictor) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.costPredictor = cp
+}
+
+// HasCostPredictor returns true if a CostPredictor is already attached.
+func (m *Manager) HasCostPredictor() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.costPredictor != nil
+}
+
+// GetCostPredictor returns the attached CostPredictor, or nil.
+func (m *Manager) GetCostPredictor() *CostPredictor {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.costPredictor
+}
+
+// GetReflexionStore returns the attached ReflexionStore, or nil.
+func (m *Manager) GetReflexionStore() *ReflexionStore {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.reflexion
 }
 
 // SetHooksForTesting overrides session launch/wait behavior. Intended for tests.

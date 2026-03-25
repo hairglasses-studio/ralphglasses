@@ -297,6 +297,36 @@ func (dm *DecisionModel) AdaptThreshold(observations []LoopObservation) float64 
 	return bestThreshold
 }
 
+// PredictConfidence adapts the cascade router's decision model interface to
+// the internal Predict method. It constructs ConfidenceFeatures from the
+// parameters the cascade router provides.
+func (dm *DecisionModel) PredictConfidence(turnCount, expectedTurns int, lastOutput string, verifyPassed bool) float64 {
+	var turnRatio float64
+	if expectedTurns > 0 {
+		turnRatio = float64(turnCount) / float64(expectedTurns)
+		if turnRatio > 3 {
+			turnRatio = 3
+		}
+	}
+	var vp float64
+	if verifyPassed {
+		vp = 1.0
+	}
+	outputLen := float64(len(lastOutput))
+	if outputLen > 0 {
+		outputLen = math.Log(1+outputLen) / 10
+		if outputLen > 1 {
+			outputLen = 1
+		}
+	}
+	f := ConfidenceFeatures{
+		TurnRatio:    turnRatio,
+		VerifyPassed: vp,
+		OutputLength: outputLen,
+	}
+	return dm.Predict(f)
+}
+
 // IsTrained reports whether the model has been fitted to data.
 func (dm *DecisionModel) IsTrained() bool {
 	dm.mu.Lock()
