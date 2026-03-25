@@ -57,10 +57,10 @@ mkdir -p "$ROOT_DIR/.ralph/logs"
 # Start the self-improvement loop via MCP
 echo "Starting loop..."
 "$BINARY" mcp-call ralphglasses_self_improve \
-  --repo "$(basename "$REPO_PATH")" \
-  --budget_usd "$BUDGET_USD" \
-  --max_iterations "$MAX_ITERATIONS" \
-  --duration_hours "$DURATION_HOURS" \
+  -p "repo=$(basename "$REPO_PATH")" \
+  -p "budget_usd=$BUDGET_USD" \
+  -p "max_iterations=$MAX_ITERATIONS" \
+  -p "duration_hours=$DURATION_HOURS" \
   2>&1 | tee "$ROOT_DIR/.ralph/logs/self-improve-$(date +%Y%m%d-%H%M%S).log"
 
 echo ""
