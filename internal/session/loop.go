@@ -344,6 +344,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	// Snapshot previous iterations for planner dedup (while still under lock).
 	prevIterations := make([]LoopIteration, len(run.Iterations))
 	copy(prevIterations, run.Iterations)
+	currentRunID := run.ID
 
 	iteration := LoopIteration{
 		Number:    len(run.Iterations) + 1,
@@ -377,6 +378,22 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	numWorkers := profile.MaxConcurrentWorkers
 	if numWorkers <= 0 {
 		numWorkers = 1
+	}
+
+	// Cross-run dedup: inject completed task titles from prior loop runs so the
+	// planner avoids re-proposing tasks already done in previous loop instances.
+	for _, prior := range m.ListLoops() {
+		if prior.ID == currentRunID || prior.RepoPath != repoPath {
+			continue
+		}
+		for _, iter := range prior.Iterations {
+			if iter.Status != "failed" && iter.Task.Title != "" {
+				prevIterations = append(prevIterations, LoopIteration{
+					Status: iter.Status,
+					Task:   iter.Task,
+				})
+			}
+		}
 	}
 
 	plannerPrompt, err := buildLoopPlannerPromptN(repoPath, numWorkers, prevIterations)

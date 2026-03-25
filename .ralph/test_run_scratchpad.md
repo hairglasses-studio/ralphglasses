@@ -45,8 +45,19 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 - **Status**: Documented restart workflow. Actual fsnotify-based reload is a feature request, not a bug.
 - **Impact**: After code changes, MCP server must be restarted manually: `claude mcp remove ralphglasses && claude mcp add ralphglasses -- go run . mcp`
 
+### RESOLVED: Cross-run task dedup
+- **Was**: Planner only saw current-run iterations, repeated tasks from prior runs.
+- **Fix**: `StepLoop` now calls `m.ListLoops()` and injects completed task titles from all prior runs for the same repo into `prevIterations`. Flows through existing "Completed tasks (DO NOT repeat these)" dedup section.
+- **Commit**: (pending)
+
+### RESOLVED: Selftest gate skipping
+- **Was**: `selftest --gate` always returned "skip (current=0.000)".
+- **Root cause**: Baseline file didn't exist. First `--gate` call creates baseline and returns "skip". Second call compares against it.
+- **Status**: 28 observations exist. Baseline created. Gate now returns pass/warn/fail verdicts. Cost down 76.5%, latency down 48.7% vs baseline.
+
 ### OBSERVATION: Planner task type diversity
 - Across 18 iterations (Runs 1-4), planner selected 16x from ROADMAP 0.5.1.x cluster (error propagation). Only 1x test, 0x refactor/feature.
+- Run 8 (opus): 1x concurrency test, 1x error propagation, 2x test overlap — better but still clustered.
 - Not a code bug — planner follows ROADMAP priority ordering. Could be improved by injecting diversity hints or rotating ROADMAP sections.
 
 ### OBSERVATION: Type architecture duplication (Phase H)
@@ -152,7 +163,7 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 - **Cross-run dedup still weak**: Iters 2-4 targeted tasks already completed in Run 5c. Planner needs access to merged PRs or a "completed tasks" registry that persists across loop instances.
 - **Worker resilience confirmed again**: Iter 2 worker found RefreshRepo already returns `[]error` and pivoted to improving caller-side error handling instead.
 - **Convergence working correctly**: 2x no-change iterations triggered clean exit.
-- **Selftest gate still skipping**: 0 observation samples across all runs. `RecordObservation` is not being called in StepLoop — needs investigation.
+- **Selftest gate now working**: 28 observations on disk. Baseline was missing (first `--gate` call creates it). Second call: cost -76.5%, latency -48.7% vs baseline. Gate returns warn (78.6% completion rate due to early failed runs).
 
 ### Run 5 Validation Targets
 
