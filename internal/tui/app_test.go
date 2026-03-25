@@ -411,26 +411,18 @@ func TestLogViewKeys(t *testing.T) {
 func TestLoopPanelToggle(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 
-	// l toggles panel on
+	// l navigates to the loop list view
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
 	m = m2.(Model)
-	if !m.ShowLoopPanel {
-		t.Error("l should show loop panel")
+	if m.CurrentView != ViewLoopList {
+		t.Errorf("l should navigate to ViewLoopList, got %v", m.CurrentView)
 	}
 
-	// l toggles panel off
-	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
-	m = m2.(Model)
-	if m.ShowLoopPanel {
-		t.Error("l again should hide loop panel")
-	}
-
-	// Show panel then Esc dismisses it
-	m.ShowLoopPanel = true
+	// Esc from loop list pops back to overview
 	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyEscape})
 	m = m2.(Model)
-	if m.ShowLoopPanel {
-		t.Error("Esc should dismiss loop panel")
+	if m.CurrentView != ViewOverview {
+		t.Errorf("Esc should return to ViewOverview, got %v", m.CurrentView)
 	}
 }
 
