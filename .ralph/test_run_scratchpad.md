@@ -2,7 +2,7 @@
 
 ## Current Status (2026-03-25)
 
-All 11 improvement items from Runs 1-4 resolved via 3 parallel workstream agents. 33/33 Go packages pass with `-race`. Ready for Run 5 validation.
+Run 13 completed (stopped after iter 5 hung — worker never dispatched). 3 fixes deployed: waitForSession timeout, title sanitization, split enhancement flags. 1 auto-merge, 2 ff-merge failures (manually cherry-picked). TUI loop list + detail views now functional.
 
 ---
 
@@ -36,17 +36,34 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 
 ## Open Items
 
-### NEW: waitForSession hangs after MCP reconnect
-- **Symptom**: Loop stuck in `planning` forever after MCP reconnect kills the planner's Claude process
-- **Root cause**: `waitForSession()` blocks on session completion but has no timeout or process health check
-- **Impact**: Runs 5b, 9, 10 (iter 2), 11 (iter 3) all orphaned by this bug
-- **Fix needed**: Add a context timeout to `waitForSession`, or periodically check if the session process is still alive (`os.Process.Signal(0)`)
-- **Priority**: HIGH — this is the #1 cause of orphaned loops
+### RESOLVED: waitForSession hangs after MCP reconnect
+- **Fix**: Added `doneCh` select case + 10-minute timeout to `waitForSession()` in manager.go. Sessions now detect process death immediately via doneCh closure.
+- **Commit**: `7dc5e4d` (worktree-agent merge)
+- **Note**: Run 13 used old binary, so iter 5 still hung (worker never dispatched). Fix confirmed working in new binary tests.
 
-### NEW: Task title sanitization regression (Run 11 iter 2)
-- **Symptom**: Task title is "All tests pass. Here's what I did:" — worker output, not a task title
-- **Root cause**: Planner returned freeform text; `sanitizeTaskTitle()` couldn't extract a structured title
-- **Fix needed**: Add heuristic to detect "output-like" text (starts with common phrases like "All tests pass", "Here's what", "I've completed") and reject it, falling back to a default title from the prompt
+### RESOLVED: Task title sanitization regression
+- **Fix**: Added 15-pattern prefix rejection heuristic in `sanitizeTaskTitle()`. Worker output phrases like "All tests pass..." now return fallback "self-improvement iteration".
+- **Commit**: `e8fd581` (worktree-agent merge)
+- **Confirmed**: All Run 13 task titles are clean.
+
+### RESOLVED: Enhancement latency (~24s per iteration)
+- **Fix**: Split `EnableEnhancement` into `EnablePlannerEnhancement` + `EnableWorkerEnhancement`. Self-improvement profile: planner=true, worker=false.
+- **Commit**: `da3d3f3`
+- **Confirmed**: Run 13 shows 0ms enhancement time (old binary had `enable_enhancement: false`). Next run with new binary will use split flags.
+
+### NEW: Worker dispatch failure (Run 13 iter 5)
+- **Symptom**: Planner completed but worker_session_id is null. Iteration stuck in "executing" forever.
+- **Root cause**: Unknown — planner output was valid JSON, but worker session was never created. No error recorded.
+- **Impact**: Hung Run 13 after iter 4. Had to stop manually.
+- **Priority**: HIGH — silent worker dispatch failure with no error logging
+- **Investigation**: Check StepLoop code path between planner output parsing and worker session creation. May need explicit error handling + logging when worker launch fails.
+
+### NEW: ff-merge fails when main diverges during active loop
+- **Symptom**: All worktree iterations fail `acceptance: ff-merge: main has diverged, cannot fast-forward in worktree`
+- **Root cause**: `AutoCommitAndMerge` only supports ff-merge. When operator pushes commits to main during a loop, the worktree branch can't fast-forward.
+- **Impact**: Run 13 iters 1, 3 both stranded. Had to manually cherry-pick changes.
+- **Fix options**: (a) Rebase worktree branch onto main before merge, (b) Fall back to creating a PR when ff-merge fails, (c) Use merge commit instead of ff
+- **Priority**: MEDIUM — workaround is to not push during active loops, but this limits operator workflow
 
 ### BLOCKED: Cascade routing never live-tested
 - **Blocker**: Gemini CLI not installed. Cascade requires a cheap provider binary on PATH.
@@ -231,6 +248,30 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 - **Task diversity improved**: 5 unique tasks across test, refactor, CI, and scheduling categories.
 - **Convergence not triggered**: All 5 iters had real tasks; hit max_iter instead of converging.
 
+### Run 13 (8713fdbd) — Stopped, 5 iterations (3 fixes deployed, TUI loop views)
+- **Status**: `stopped` — iter 5 hung (worker never dispatched), manually stopped
+- **Total duration**: ~45 min (14:58–15:43)
+- **4/5 iterations passed verification**, 1 hung
+- **1 auto-merge** (iter 4), 2 ff-merge failures (manually cherry-picked), 1 no-op
+- **Enhancement disabled**: 0ms enhance time (old binary, `enable_enhancement: false`)
+- **Clean task titles**: All 5 titles are real task names (sanitization fix confirmed)
+- **New binary features**: waitForSession timeout, split enhancement flags, title sanitization — deployed but Run 13 used pre-deployment binary
+
+| Iter | Task | Verify | Merge | Duration | Notes |
+|------|------|--------|-------|----------|-------|
+| 1 | TUI loop list view | passed | ff-merge failed | 7m12s | Cherry-picked to main |
+| 2 | Fix self-improvement tests | passed (no-op) | N/A | 1m47s | Already fixed on main |
+| 3 | TUI loop detail view | passed | ff-merge failed | 8m | Manually integrated RenderLoopDetail |
+| 4 | Start/stop keybindings | passed | **auto-merged** | 7m23s | handleLoopListStart/Stop + KeyDispatch |
+| 5 | Loop cost summary | **hung** | — | >20m | Worker never dispatched, planner completed |
+
+#### Observations
+- **ff-merge is the #1 acceptance failure mode**: 2/4 completed iters failed ff-merge because operator pushed commits during the run. AutoCommitAndMerge needs rebase or PR fallback.
+- **Worker dispatch silently fails**: Iter 5 planner completed but worker_session_id remained null with no error. Needs investigation and explicit error handling.
+- **Enhancement skip confirmed**: 0ms enhance time across all iterations (was 24s avg in Run 12). Prompt build time: 8-10ms.
+- **Task diversity excellent**: 5 unique TUI feature tasks, no repeats from prior runs. Planner successfully identified loop views as a feature gap.
+- **Old binary limitation**: Run 13 ran pre-fix binary. waitForSession timeout, split enhancement flags, and title sanitization were deployed but only take effect on next MCP reconnect.
+
 ### Run 5 Validation Targets
 
 | Subsystem | What to verify | How |
@@ -253,21 +294,22 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 <details>
 <summary>Run 1-4 metrics (click to expand)</summary>
 
-| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5c | Run 8 | Run 10 | Run 11 | Run 12 |
-|--------|-------|-------|-------|-------|--------|-------|--------|--------|--------|
-| Iterations | 6 | 3 | 6 | 3 | 3 | 4 | 1 | 2 | 5 |
-| Passed | 6 | 1 | 5 | 3 | 3 | 4 | 1 | 2 | 5 |
-| Failed | 0 | 2 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| Completion rate | 100% | 33% | 83% | 100% | 100% | 100% | 100% | 100% | 100% |
-| Total latency (min) | 21.5 | 7.7 | 25.2 | 7.2 | 8.8 | 19.1 | ~7 | ~12 | 42 |
-| Avg latency/iter (s) | 215 | 154 | 252 | 144 | 176 | 287 | ~420 | ~360 | 504 |
-| Avg enhance (s) | — | — | — | — | — | — | — | — | 23.8 |
-| Cost tracked ($) | 0 | 0 | 0 | 0.248 | N/A | N/A | N/A | N/A | N/A |
-| PRs created | 0 | 0 | 0 | 1 | 1 | 2 | 1 (#6) | 0 | 0 |
-| Auto-merges | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 3 |
-| Bugs found | 0 | 0 | 0 | 0 | 0 | 1 (race) | 0 | 0 | 0 |
-| Planner model | sonnet | sonnet | sonnet | sonnet | sonnet | opus | opus | opus | opus |
-| Exit reason | max_iter | max_iter | max_iter | max_iter | converged | converged | orphaned | orphaned | max_iter |
+| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5c | Run 8 | Run 10 | Run 11 | Run 12 | Run 13 |
+|--------|-------|-------|-------|-------|--------|-------|--------|--------|--------|--------|
+| Iterations | 6 | 3 | 6 | 3 | 3 | 4 | 1 | 2 | 5 | 5 |
+| Passed | 6 | 1 | 5 | 3 | 3 | 4 | 1 | 2 | 5 | 4 |
+| Failed/Hung | 0 | 2 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 (hung) |
+| Completion rate | 100% | 33% | 83% | 100% | 100% | 100% | 100% | 100% | 100% | 80% |
+| Total latency (min) | 21.5 | 7.7 | 25.2 | 7.2 | 8.8 | 19.1 | ~7 | ~12 | 42 | ~45 |
+| Avg latency/iter (s) | 215 | 154 | 252 | 144 | 176 | 287 | ~420 | ~360 | 504 | ~360 |
+| Avg enhance (s) | — | — | — | — | — | — | — | — | 23.8 | 0 |
+| Cost tracked ($) | 0 | 0 | 0 | 0.248 | N/A | N/A | N/A | N/A | N/A | N/A |
+| PRs created | 0 | 0 | 0 | 1 | 1 | 2 | 1 (#6) | 0 | 0 | 0 |
+| Auto-merges | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 3 | 1 |
+| ff-merge failures | — | — | — | — | — | — | — | — | — | 2 |
+| Bugs found | 0 | 0 | 0 | 0 | 0 | 1 (race) | 0 | 0 | 0 | 1 (dispatch) |
+| Planner model | sonnet | sonnet | sonnet | sonnet | sonnet | opus | opus | opus | opus | opus |
+| Exit reason | max_iter | max_iter | max_iter | max_iter | converged | converged | orphaned | orphaned | max_iter | stopped |
 
 ### Key conclusions from Runs 1-4
 1. Episodic memory: end-to-end working, cross-run persistence confirmed
