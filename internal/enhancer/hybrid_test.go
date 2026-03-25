@@ -7,25 +7,35 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	anthropic "github.com/anthropics/anthropic-sdk-go"
+	"github.com/anthropics/anthropic-sdk-go/option"
 )
 
 func newTestLLMServer(response string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resp := messagesResponse{
-			Content: []contentBlock{{Type: "text", Text: response}},
-		}
+		resp := newMockResponse(response)
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 	}))
 }
 
 func newTestEngine(serverURL string) *HybridEngine {
+	httpClient := &http.Client{Timeout: 5 * time.Second}
+	sdkClient := anthropic.NewClient(
+		option.WithAPIKey("test-key"),
+		option.WithBaseURL(serverURL),
+		option.WithHTTPClient(httpClient),
+	)
 	return &HybridEngine{
 		Client: &LLMClient{
-			APIKey:     "test-key",
-			Model:      "claude-sonnet-4-6",
-			BaseURL:    serverURL,
-			HTTPClient: &http.Client{Timeout: 5 * time.Second},
+			APIKey:       "test-key",
+			Model:        "claude-sonnet-4-6",
+			BaseURL:      serverURL,
+			HTTPClient:   httpClient,
+			sdk:          &sdkClient,
+			effortLevel:  "medium",
+			cacheControl: true,
 		},
 		CB:    NewCircuitBreaker(),
 		Cache: NewPromptCache(),
