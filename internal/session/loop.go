@@ -107,7 +107,9 @@ type LoopRun struct {
 	UpdatedAt  time.Time       `json:"updated_at"`
 	Deadline   *time.Time      `json:"deadline,omitempty"`
 
-	mu sync.Mutex
+	mu     sync.Mutex
+	cancel context.CancelFunc // set by RunLoop; called by StopLoop
+	done   chan struct{}       // closed when RunLoop exits
 }
 
 // Lock locks the loop run mutex for external callers.
@@ -206,17 +208,30 @@ func (m *Manager) StartLoop(_ context.Context, repoPath string, profile LoopProf
 // max iterations, duration limit, retry limit, or stop signal is reached.
 // It runs synchronously — callers should launch it in a goroutine if needed.
 func (m *Manager) RunLoop(ctx context.Context, id string) error {
+	run, ok := m.GetLoop(id)
+	if !ok {
+		return fmt.Errorf("loop not found: %s", id)
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+
+	run.mu.Lock()
+	run.cancel = cancel
+	run.done = done
+	run.mu.Unlock()
+
+	defer func() {
+		cancel()
+		close(done)
+	}()
+
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 		err := m.StepLoop(ctx, id)
 		if err != nil {
-			// Check if this is a terminal condition (not a step failure).
-			run, ok := m.GetLoop(id)
-			if !ok {
-				return err
-			}
 			run.mu.Lock()
 			status := run.Status
 			run.mu.Unlock()
@@ -263,7 +278,17 @@ func (m *Manager) StopLoop(id string) error {
 	run.Status = "stopped"
 	run.UpdatedAt = time.Now()
 	repoPath := run.RepoPath
+	cancelFn := run.cancel
+	doneCh := run.done
 	run.mu.Unlock()
+
+	// Cancel the RunLoop context and wait for it to exit.
+	if cancelFn != nil {
+		cancelFn()
+	}
+	if doneCh != nil {
+		<-doneCh
+	}
 
 	m.PersistLoop(run)
 	_ = CleanupLoopWorktrees(repoPath, id)
