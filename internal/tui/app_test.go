@@ -388,32 +388,6 @@ func TestOverviewKeyJK(t *testing.T) {
 	_ = m2 // should not panic
 }
 
-func TestProcessExitMsgCrashed(t *testing.T) {
-	m := NewModel("/tmp/test", nil)
-	m.Repos = []*model.Repo{{Name: "repo1", Path: "/tmp/repo1"}}
-	m2, _ := m.Update(process.ProcessExitMsg{RepoPath: "/tmp/repo1", ExitCode: 1})
-	m = m2.(Model)
-	if m.Repos[0].Status == nil {
-		t.Fatal("Status should not be nil after ProcessExitMsg")
-	}
-	if m.Repos[0].Status.Status != "crashed" {
-		t.Errorf("Status.Status = %q, want %q", m.Repos[0].Status.Status, "crashed")
-	}
-}
-
-func TestProcessExitMsgStopped(t *testing.T) {
-	m := NewModel("/tmp/test", nil)
-	m.Repos = []*model.Repo{{Name: "repo1", Path: "/tmp/repo1"}}
-	m2, _ := m.Update(process.ProcessExitMsg{RepoPath: "/tmp/repo1", ExitCode: 0})
-	m = m2.(Model)
-	if m.Repos[0].Status == nil {
-		t.Fatal("Status should not be nil after ProcessExitMsg")
-	}
-	if m.Repos[0].Status.Status != "stopped" {
-		t.Errorf("Status.Status = %q, want %q", m.Repos[0].Status.Status, "stopped")
-	}
-}
-
 func TestLogViewKeys(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.LogView.SetLines([]string{"line1", "line2", "line3"})

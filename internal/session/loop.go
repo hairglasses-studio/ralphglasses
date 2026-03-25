@@ -93,6 +93,15 @@ type LoopIteration struct {
 	EndedAt           *time.Time         `json:"ended_at,omitempty"`
 	PlannerEndedAt    *time.Time         `json:"planner_ended_at,omitempty"`
 	WorkersEndedAt    *time.Time         `json:"workers_ended_at,omitempty"`
+
+	// Sub-phase timing (milliseconds) — surfaces where time is actually spent.
+	PromptBuildMs     int64 `json:"prompt_build_ms,omitempty"`
+	ReflexionLookupMs int64 `json:"reflexion_lookup_ms,omitempty"`
+	EpisodicLookupMs  int64 `json:"episodic_lookup_ms,omitempty"`
+	EnhancementMs     int64 `json:"enhancement_ms,omitempty"`
+	WorktreeSetupMs   int64 `json:"worktree_setup_ms,omitempty"`
+	AcceptanceMs      int64 `json:"acceptance_ms,omitempty"`
+	IdleBetweenMs     int64 `json:"idle_between_ms,omitempty"` // gap from previous iteration's EndedAt
 }
 
 // LoopRun is persisted state for a perpetual development loop.
@@ -348,10 +357,19 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	copy(prevIterations, run.Iterations)
 	currentRunID := run.ID
 
+	// Measure gap from previous iteration's end to this iteration's start.
+	var idleBetweenMs int64
+	if n := len(run.Iterations); n > 0 {
+		if prev := run.Iterations[n-1].EndedAt; prev != nil {
+			idleBetweenMs = time.Since(*prev).Milliseconds()
+		}
+	}
+
 	iteration := LoopIteration{
-		Number:    len(run.Iterations) + 1,
-		Status:    "planning",
-		StartedAt: time.Now(),
+		Number:        len(run.Iterations) + 1,
+		Status:        "planning",
+		StartedAt:     time.Now(),
+		IdleBetweenMs: idleBetweenMs,
 	}
 	run.Iterations = append(run.Iterations, iteration)
 	index := len(run.Iterations) - 1
@@ -398,13 +416,16 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		}
 	}
 
+	t0 := time.Now()
 	plannerPrompt, err := buildLoopPlannerPromptN(repoPath, numWorkers, prevIterations)
 	if err != nil {
 		return m.failLoopIteration(run, index, fmt.Errorf("build planner prompt: %w", err))
 	}
+	promptBuildMs := time.Since(t0).Milliseconds()
 
 	// WS1: Inject reflexion context from previous failures into planner prompt.
 	var reflexionApplied bool
+	t1 := time.Now()
 	if m.reflexion != nil && profile.EnableReflexion {
 		if refs := m.reflexion.RecentForTask("", 5); len(refs) > 0 {
 			if formatted := m.reflexion.FormatForPrompt(refs); formatted != "" {
@@ -413,9 +434,11 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			}
 		}
 	}
+	reflexionMs := time.Since(t1).Milliseconds()
 
 	// WS2: Inject episodic examples of successful approaches into planner prompt.
 	var episodesUsed int
+	t2 := time.Now()
 	if m.episodic != nil && profile.EnableEpisodicMemory {
 		episodes := m.episodic.FindSimilar("", "", 0)
 		if len(episodes) > 0 {
@@ -425,15 +448,26 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			}
 		}
 	}
+	episodicMs := time.Since(t2).Milliseconds()
 
 	// Enhance planner prompt for the planner's target provider
 	var plannerEnhance enhanceResult
+	t3 := time.Now()
 	if m.Enhancer != nil {
 		plannerEnhance = m.enhanceForProvider(ctx, plannerPrompt, profile.PlannerProvider)
 		plannerPrompt = plannerEnhance.prompt
 	} else {
 		plannerEnhance = enhanceResult{prompt: plannerPrompt, source: "none", preScore: 0}
 	}
+	enhancementMs := time.Since(t3).Milliseconds()
+
+	// Record sub-phase timing on the iteration.
+	m.updateLoopIteration(run, index, "planning", func(iter *LoopIteration, loop *LoopRun) {
+		iter.PromptBuildMs = promptBuildMs
+		iter.ReflexionLookupMs = reflexionMs
+		iter.EpisodicLookupMs = episodicMs
+		iter.EnhancementMs = enhancementMs
+	})
 
 	plannerSession, err := m.launchWorkflowSession(ctx, LaunchOptions{
 		Provider:     profile.PlannerProvider,
@@ -746,6 +780,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 
 	// Self-improvement acceptance gate: classify changes and route.
 	if profile.SelfImprovement && postVerifyStatus == "idle" {
+		accStart := time.Now()
 		result, accErr := m.handleSelfImprovementAcceptance(ctx, run, index, workerWorktrees)
 		if accErr != nil {
 			// Log but don't fail — changes stay in worktree for manual handling.
@@ -784,6 +819,9 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 				})
 			}
 		}
+		m.updateLoopIteration(run, index, "", func(iter *LoopIteration, loop *LoopRun) {
+			iter.AcceptanceMs = time.Since(accStart).Milliseconds()
+		})
 	}
 
 	// WS2: Record successful iteration as episode for future retrieval.

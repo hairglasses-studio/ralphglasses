@@ -49,6 +49,14 @@ type LoopObservation struct {
 	DifficultyScore  float64   `json:"difficulty_score"`
 	ReflexionApplied bool      `json:"reflexion_applied"`
 	EpisodesUsed     int       `json:"episodes_used"`
+
+	// Sub-phase timing (ms) — surfaces where planner/worker time is actually spent.
+	PromptBuildMs     int64 `json:"prompt_build_ms,omitempty"`
+	ReflexionLookupMs int64 `json:"reflexion_lookup_ms,omitempty"`
+	EpisodicLookupMs  int64 `json:"episodic_lookup_ms,omitempty"`
+	EnhancementMs     int64 `json:"enhancement_ms,omitempty"`
+	AcceptanceMs      int64 `json:"acceptance_ms,omitempty"`
+	IdleBetweenMs     int64 `json:"idle_between_ms,omitempty"`
 }
 
 // WriteObservation appends a single observation as a JSONL line.
@@ -146,6 +154,14 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 			obs.VerifyLatencyMs = iter.EndedAt.Sub(*iter.WorkersEndedAt).Milliseconds()
 		}
 	}
+
+	// Sub-phase timing
+	obs.PromptBuildMs = iter.PromptBuildMs
+	obs.ReflexionLookupMs = iter.ReflexionLookupMs
+	obs.EpisodicLookupMs = iter.EpisodicLookupMs
+	obs.EnhancementMs = iter.EnhancementMs
+	obs.AcceptanceMs = iter.AcceptanceMs
+	obs.IdleBetweenMs = iter.IdleBetweenMs
 
 	// Task classification
 	if iter.Task.Title != "" {
