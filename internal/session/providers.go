@@ -241,6 +241,9 @@ func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	if opts.FallbackModel != "" {
 		args = append(args, "--fallback-model", opts.FallbackModel)
 	}
+	if len(opts.OutputSchema) > 0 {
+		args = append(args, "--json-schema", string(opts.OutputSchema))
+	}
 
 	cmd := exec.CommandContext(ctx, "claude", args...)
 	cmd.Dir = opts.RepoPath
@@ -286,6 +289,9 @@ func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 		args = append(args, "--model", opts.Model)
 	}
 	args = append(args, "--json", "--full-auto")
+	if len(opts.OutputSchema) > 0 {
+		args = append(args, "--output-schema", string(opts.OutputSchema))
+	}
 
 	if opts.Prompt != "" {
 		// Prompt is a positional argument after flags
