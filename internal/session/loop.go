@@ -47,6 +47,7 @@ type LoopProfile struct {
 	SelfImprovement      bool     `json:"self_improvement"`
 	CompactionEnabled    bool     `json:"compaction_enabled"`
 	CompactionThreshold  int      `json:"compaction_threshold,omitempty"` // iterations before enabling compaction
+	AutoMergeAll         bool     `json:"auto_merge_all"`                // bypass path classification, auto-merge if verify passes
 	MaxIterations        int      `json:"max_iterations,omitempty"`
 	MaxDurationSecs      int      `json:"max_duration_secs,omitempty"`
 }
@@ -157,6 +158,7 @@ func SelfImprovementProfile() LoopProfile {
 		EnableCascade:        false,
 		SelfImprovement:      true,
 		CompactionEnabled:    true,
+		AutoMergeAll:         true, // unattended: auto-merge when ci.sh passes
 		MaxIterations:        10,
 		MaxDurationSecs:      14400, // 4 hours
 	}
@@ -866,8 +868,9 @@ func (m *Manager) handleSelfImprovementAcceptance(ctx context.Context, run *Loop
 	}
 
 	mainBranch := "main"
-	if len(review) == 0 {
-		// All safe — auto-commit and merge each worktree.
+	autoMerge := run.Profile.AutoMergeAll || len(review) == 0
+	if autoMerge {
+		// Auto-merge: either all paths are safe, or AutoMergeAll is set (verification passed).
 		for _, wt := range worktrees {
 			if wt == "" {
 				continue
