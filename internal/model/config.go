@@ -3,6 +3,7 @@ package model
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -150,7 +151,19 @@ func LoadConfig(repoPath string) (*RalphConfig, error) {
 		}
 		cfg.Values[strings.TrimSpace(k)] = strings.Trim(strings.TrimSpace(v), "\"")
 	}
-	return cfg, scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	warnings, errs := ValidateConfig(cfg)
+	for _, w := range warnings {
+		slog.Warn("ralphrc unknown key", "key", w.Key, "file", rcPath)
+	}
+	for _, e := range errs {
+		slog.Warn("ralphrc invalid value", "error", e.Error(), "file", rcPath)
+	}
+
+	return cfg, nil
 }
 
 // Get returns a config value or a default.
