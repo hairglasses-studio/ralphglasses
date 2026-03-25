@@ -482,6 +482,12 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			// WS3: Try cheap provider first if cascade routing is enabled.
 			var cascadeRes *CascadeResult
 			if useCascade && m.cascade.ShouldCascade(taskType, t.Prompt) {
+				// Use SelectTier to refine model choice based on task complexity.
+				tier := m.cascade.SelectTier(taskType, 0)
+				if tier.Model != "" {
+					baseOpts.Model = tier.Model
+					baseOpts.Provider = tier.Provider
+				}
 				cheapOpts := m.cascade.CheapLaunchOpts(baseOpts)
 				cheapSess, cheapErr := m.launchWorkflowSession(ctx, cheapOpts)
 				if cheapErr == nil {

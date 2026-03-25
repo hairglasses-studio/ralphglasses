@@ -14,11 +14,12 @@ import (
 
 // OpenAIClient calls the OpenAI Responses API to improve prompts using a meta-prompt.
 type OpenAIClient struct {
-	APIKey       string
-	Model        string
-	BaseURL      string
-	HTTPClient   *http.Client
-	UseWebSocket bool // When true, prefer WebSocket transport for multi-turn tool chains.
+	APIKey         string
+	Model          string
+	BaseURL        string
+	HTTPClient     *http.Client
+	UseWebSocket   bool   // When true, prefer WebSocket transport for multi-turn tool chains.
+	LastResponseID string // Tracks the most recent response ID for multi-turn chaining.
 }
 
 // NewOpenAIClient creates an OpenAI client from config. Returns nil if no API key is available.
@@ -61,11 +62,12 @@ func (c *OpenAIClient) Provider() ProviderName { return ProviderOpenAI }
 
 // responsesRequest is the OpenAI Responses API request body.
 type responsesRequest struct {
-	Model          string           `json:"model"`
-	Instructions   string           `json:"instructions"`
-	Input          string           `json:"input"`
-	MaxOutputTokens int             `json:"max_output_tokens,omitempty"`
-	Reasoning      *reasoningConfig `json:"reasoning,omitempty"`
+	Model              string           `json:"model"`
+	Instructions       string           `json:"instructions"`
+	Input              string           `json:"input"`
+	PreviousResponseID string           `json:"previous_response_id,omitempty"`
+	MaxOutputTokens    int              `json:"max_output_tokens,omitempty"`
+	Reasoning          *reasoningConfig `json:"reasoning,omitempty"`
 }
 
 // reasoningConfig controls the reasoning effort for the Responses API.
@@ -129,11 +131,12 @@ func (c *OpenAIClient) Improve(ctx context.Context, prompt string, opts ImproveO
 	effort := reasoningEffort(opts.TaskType)
 
 	reqBody := responsesRequest{
-		Model:          c.Model,
-		Instructions:   instructions,
-		Input:          userContent,
-		MaxOutputTokens: 4096,
-		Reasoning:      &reasoningConfig{Effort: effort},
+		Model:              c.Model,
+		Instructions:       instructions,
+		Input:              userContent,
+		PreviousResponseID: c.LastResponseID,
+		MaxOutputTokens:    4096,
+		Reasoning:          &reasoningConfig{Effort: effort},
 	}
 
 	bodyBytes, err := json.Marshal(reqBody)
@@ -171,6 +174,11 @@ func (c *OpenAIClient) Improve(ctx context.Context, prompt string, opts ImproveO
 
 	if apiResp.Error != nil {
 		return nil, fmt.Errorf("api error: %s: %s", apiResp.Error.Type, apiResp.Error.Message)
+	}
+
+	// Track the response ID for multi-turn chaining via previous_response_id.
+	if apiResp.ID != "" {
+		c.LastResponseID = apiResp.ID
 	}
 
 	enhanced := extractResponseText(apiResp.Output)

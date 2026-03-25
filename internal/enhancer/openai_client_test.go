@@ -212,6 +212,105 @@ func TestOpenAIClient_ReasoningEffortByTaskType(t *testing.T) {
 	}
 }
 
+func TestOpenAIClient_PreviousResponseID(t *testing.T) {
+	t.Parallel()
+
+	var firstReqPrevID, secondReqPrevID string
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req responsesRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+
+		callCount++
+		if callCount == 1 {
+			firstReqPrevID = req.PreviousResponseID
+		} else {
+			secondReqPrevID = req.PreviousResponseID
+		}
+
+		resp := responsesResponse{
+			ID: "resp_call_" + string(rune('0'+callCount)),
+			Output: []responseOutput{
+				{Type: "message", Content: []outputContent{{Type: "output_text", Text: "improved"}}},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := &OpenAIClient{
+		APIKey:     "test-key",
+		Model:      "o3",
+		BaseURL:    server.URL,
+		HTTPClient: &http.Client{Timeout: 5 * time.Second},
+	}
+
+	// First call: no previous response ID should be sent.
+	_, err := client.Improve(context.Background(), "first prompt", ImproveOptions{})
+	if err != nil {
+		t.Fatalf("first call: unexpected error: %v", err)
+	}
+	if firstReqPrevID != "" {
+		t.Errorf("first call: expected empty previous_response_id, got %q", firstReqPrevID)
+	}
+	if client.LastResponseID != "resp_call_1" {
+		t.Errorf("expected LastResponseID to be 'resp_call_1', got %q", client.LastResponseID)
+	}
+
+	// Second call: previous response ID should be included.
+	_, err = client.Improve(context.Background(), "second prompt", ImproveOptions{})
+	if err != nil {
+		t.Fatalf("second call: unexpected error: %v", err)
+	}
+	if secondReqPrevID != "resp_call_1" {
+		t.Errorf("second call: expected previous_response_id 'resp_call_1', got %q", secondReqPrevID)
+	}
+	if client.LastResponseID != "resp_call_2" {
+		t.Errorf("expected LastResponseID to be 'resp_call_2', got %q", client.LastResponseID)
+	}
+}
+
+func TestOpenAIClient_PreviousResponseID_Serialization(t *testing.T) {
+	t.Parallel()
+
+	// Verify the field serializes correctly to JSON.
+	req := responsesRequest{
+		Model:              "o3",
+		Instructions:       "test",
+		Input:              "test",
+		PreviousResponseID: "resp_abc123",
+	}
+	data, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+	if raw["previous_response_id"] != "resp_abc123" {
+		t.Errorf("expected previous_response_id in JSON, got %v", raw["previous_response_id"])
+	}
+
+	// Verify omitempty: empty string should not appear in JSON.
+	req.PreviousResponseID = ""
+	data, err = json.Marshal(req)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+	var raw2 map[string]interface{}
+	if err := json.Unmarshal(data, &raw2); err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+	if _, exists := raw2["previous_response_id"]; exists {
+		t.Error("expected previous_response_id to be omitted when empty")
+	}
+}
+
 func TestExtractResponseText(t *testing.T) {
 	t.Parallel()
 
