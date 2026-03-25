@@ -12,6 +12,9 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
 
+// mcpCmd runs as a long-lived MCP server on stdio. Code changes require
+// restarting the server:
+//   claude mcp remove ralphglasses && claude mcp add ralphglasses -- go run . mcp
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
 	Short: "Run as an MCP server on stdio",
