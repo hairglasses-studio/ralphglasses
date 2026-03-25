@@ -21,6 +21,15 @@ const (
 	ErrInvalidParams       ErrorCode = "INVALID_PARAMS"
 	ErrInternal            ErrorCode = "INTERNAL_ERROR"
 	ErrScanFailed          ErrorCode = "SCAN_FAILED"
+	ErrLoopStart           ErrorCode = "LOOP_START_FAILED"
+	ErrLaunchFailed        ErrorCode = "LAUNCH_FAILED"
+	ErrToolExec            ErrorCode = "TOOL_EXEC_FAILED"
+	ErrTeamNotFound        ErrorCode = "TEAM_NOT_FOUND"
+	ErrNotRunning          ErrorCode = "NOT_RUNNING"
+	ErrFilesystem          ErrorCode = "FILESYSTEM_ERROR"
+	ErrConfigInvalid       ErrorCode = "CONFIG_INVALID"
+	ErrWorkflow            ErrorCode = "WORKFLOW_ERROR"
+	ErrGateFailed          ErrorCode = "GATE_FAILED"
 )
 
 // codedError returns an MCP error result with both a machine-parseable code

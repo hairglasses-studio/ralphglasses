@@ -65,13 +65,6 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 		profile.WorkerBudgetUSD = budgetUSD * 2 / 3
 	}
 
-	if maxIter := int(getNumberArg(req, "max_iterations", 0)); maxIter > 0 {
-		profile.MaxIterations = maxIter
-	}
-	if durHours := getNumberArg(req, "duration_hours", 0); durHours > 0 {
-		profile.MaxDurationSecs = int(durHours * 3600)
-	}
-
 	// Wire self-learning subsystems when requested (singleton: only create if not already set).
 	ralphDir := filepath.Join(r.Path, ".ralph")
 	if getBoolArg(req, "enable_reflexion") {
@@ -143,9 +136,17 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 		s.SessMgr.Enhancer = s.getEngine()
 	}
 
+	// Iteration and duration limits
+	if maxIter := int(getNumberArg(req, "max_iterations", 0)); maxIter > 0 {
+		profile.MaxIterations = maxIter
+	}
+	if durationHours := getNumberArg(req, "duration_hours", 0); durationHours > 0 {
+		profile.MaxDurationSecs = int(durationHours * 3600)
+	}
+
 	run, err := s.SessMgr.StartLoop(ctx, r.Path, profile)
 	if err != nil {
-		return errResult(fmt.Sprintf("start loop: %v", err)), nil
+		return codedError(ErrLoopStart, fmt.Sprintf("start loop: %v", err)), nil
 	}
 	return jsonResult(loopResult(run)), nil
 }
@@ -170,7 +171,7 @@ func (s *Server) handleLoopStep(ctx context.Context, req mcp.CallToolRequest) (*
 	}
 
 	if err := s.SessMgr.StepLoop(ctx, id); err != nil {
-		return errResult(fmt.Sprintf("step loop: %v", err)), nil
+		return codedError(ErrLoopStart, fmt.Sprintf("step loop: %v", err)), nil
 	}
 
 	run, ok := s.SessMgr.GetLoop(id)

@@ -22,7 +22,7 @@ import (
 
 func (s *Server) handleScan(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if err := s.scan(); err != nil {
-		return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+		return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 	}
 	repos := s.reposCopy()
 	if s.EventBus != nil {
@@ -37,7 +37,7 @@ func (s *Server) handleScan(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 func (s *Server) handleList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	repos := s.reposCopy()
@@ -169,23 +169,23 @@ func (s *Server) handleStopAll(_ context.Context, req mcp.CallToolRequest) (*mcp
 func (s *Server) handlePause(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(name); err != nil {
 		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 	paused, err := s.ProcMgr.TogglePause(r.Path)
 	if err != nil {
-		return errResult(fmt.Sprintf("pause toggle failed: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("pause toggle failed: %v", err)), nil
 	}
 	if paused {
 		return textResult(fmt.Sprintf("Paused loop for %s", name)), nil
@@ -196,19 +196,19 @@ func (s *Server) handlePause(_ context.Context, req mcp.CallToolRequest) (*mcp.C
 func (s *Server) handleLogs(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(name); err != nil {
 		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
 	maxLines := int(getNumberArg(req, "lines", 50))
@@ -218,7 +218,7 @@ func (s *Server) handleLogs(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 
 	allLines, err := process.ReadFullLog(r.Path)
 	if err != nil {
-		return errResult(fmt.Sprintf("read log: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("read log: %v", err)), nil
 	}
 
 	start := 0
@@ -231,23 +231,23 @@ func (s *Server) handleLogs(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 func (s *Server) handleConfig(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(name); err != nil {
 		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
 	if r.Config == nil {
-		return errResult(fmt.Sprintf("no .ralphrc found for %s", name)), nil
+		return codedError(ErrConfigInvalid, fmt.Sprintf("no .ralphrc found for %s", name)), nil
 	}
 
 	key := getStringArg(req, "key")
@@ -262,7 +262,7 @@ func (s *Server) handleConfig(_ context.Context, req mcp.CallToolRequest) (*mcp.
 	if value != "" {
 		r.Config.Values[key] = value
 		if err := r.Config.Save(); err != nil {
-			return errResult(fmt.Sprintf("save config: %v", err)), nil
+			return codedError(ErrFilesystem, fmt.Sprintf("save config: %v", err)), nil
 		}
 		return textResult(fmt.Sprintf("Set %s=%s for %s", key, value, name)), nil
 	}
@@ -270,7 +270,7 @@ func (s *Server) handleConfig(_ context.Context, req mcp.CallToolRequest) (*mcp.
 	// Get value
 	v := r.Config.Get(key, "")
 	if v == "" {
-		return errResult(fmt.Sprintf("key not found: %s", key)), nil
+		return codedError(ErrConfigInvalid, fmt.Sprintf("key not found: %s", key)), nil
 	}
 	return textResult(fmt.Sprintf("%s=%s", key, v)), nil
 }
@@ -280,7 +280,7 @@ func (s *Server) handleConfig(_ context.Context, req mcp.CallToolRequest) (*mcp.
 func (s *Server) handleRepoScaffold(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	path := getStringArg(req, "path")
 	if path == "" {
-		return errResult("path required"), nil
+		return codedError(ErrInvalidParams, "path required"), nil
 	}
 	if err := ValidatePath(path, s.ScanPath); err != nil {
 		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
@@ -294,7 +294,7 @@ func (s *Server) handleRepoScaffold(_ context.Context, req mcp.CallToolRequest) 
 
 	result, err := repofiles.Scaffold(path, opts)
 	if err != nil {
-		return errResult(fmt.Sprintf("scaffold: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("scaffold: %v", err)), nil
 	}
 	return jsonResult(result), nil
 }
@@ -302,7 +302,7 @@ func (s *Server) handleRepoScaffold(_ context.Context, req mcp.CallToolRequest) 
 func (s *Server) handleRepoOptimize(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	path := getStringArg(req, "path")
 	if path == "" {
-		return errResult("path required"), nil
+		return codedError(ErrInvalidParams, "path required"), nil
 	}
 	if err := ValidatePath(path, s.ScanPath); err != nil {
 		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
@@ -315,7 +315,7 @@ func (s *Server) handleRepoOptimize(_ context.Context, req mcp.CallToolRequest) 
 
 	result, err := repofiles.Optimize(path, opts)
 	if err != nil {
-		return errResult(fmt.Sprintf("optimize: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("optimize: %v", err)), nil
 	}
 	return jsonResult(result), nil
 }
@@ -331,7 +331,7 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 	// Auto-scan if needed
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 
@@ -680,14 +680,14 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 func (s *Server) handleConfigBulk(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	key := getStringArg(req, "key")
 	if key == "" {
-		return errResult("key required"), nil
+		return codedError(ErrInvalidParams, "key required"), nil
 	}
 	value := getStringArg(req, "value")
 	reposStr := getStringArg(req, "repos")
 
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 
@@ -735,19 +735,19 @@ func (s *Server) handleConfigBulk(_ context.Context, req mcp.CallToolRequest) (*
 func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(name); err != nil {
 		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 	model.RefreshRepo(r)
 

@@ -44,7 +44,7 @@ func hasAPIKeyForProvider(provider string) bool {
 func (s *Server) handlePromptAnalyze(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	prompt := getStringArg(req, "prompt")
 	if prompt == "" {
-		return errResult("prompt required"), nil
+		return codedError(ErrInvalidParams, "prompt required"), nil
 	}
 	result := enhancer.Analyze(prompt)
 	if tt := enhancer.ValidTaskType(getStringArg(req, "task_type")); tt != "" {
@@ -71,7 +71,7 @@ func (s *Server) handlePromptAnalyze(_ context.Context, req mcp.CallToolRequest)
 func (s *Server) handlePromptEnhance(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	prompt := getStringArg(req, "prompt")
 	if prompt == "" {
-		return errResult("prompt required"), nil
+		return codedError(ErrInvalidParams, "prompt required"), nil
 	}
 	taskType := enhancer.ValidTaskType(getStringArg(req, "task_type"))
 	modeStr := getStringArg(req, "mode")
@@ -102,7 +102,7 @@ func (s *Server) handlePromptEnhance(ctx context.Context, req mcp.CallToolReques
 func (s *Server) handlePromptLint(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	prompt := getStringArg(req, "prompt")
 	if prompt == "" {
-		return errResult("prompt required"), nil
+		return codedError(ErrInvalidParams, "prompt required"), nil
 	}
 	results := enhancer.Lint(prompt)
 	cacheResults := enhancer.VerifyCacheFriendlyOrder(prompt)
@@ -116,7 +116,7 @@ func (s *Server) handlePromptLint(_ context.Context, req mcp.CallToolRequest) (*
 func (s *Server) handlePromptImprove(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	prompt := getStringArg(req, "prompt")
 	if prompt == "" {
-		return errResult("prompt required"), nil
+		return codedError(ErrInvalidParams, "prompt required"), nil
 	}
 
 	// If a specific provider is requested, create a one-off client for it
@@ -142,7 +142,7 @@ func (s *Server) handlePromptImprove(ctx context.Context, req mcp.CallToolReques
 		case "openai":
 			apiHint = "OPENAI_API_KEY"
 		}
-		return errResult(fmt.Sprintf("LLM not available: set %s", apiHint)), nil
+		return codedError(ErrProviderUnavailable, fmt.Sprintf("LLM not available: set %s", apiHint)), nil
 	}
 
 	taskType := enhancer.ValidTaskType(getStringArg(req, "task_type"))
@@ -156,7 +156,7 @@ func (s *Server) handlePromptImprove(ctx context.Context, req mcp.CallToolReques
 		Provider:        client.Provider(),
 	})
 	if err != nil {
-		return errResult(fmt.Sprintf("improve failed: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("improve failed: %v", err)), nil
 	}
 	return jsonResult(result), nil
 }
@@ -169,21 +169,21 @@ func (s *Server) handlePromptTemplates(_ context.Context, req mcp.CallToolReques
 func (s *Server) handlePromptTemplateFill(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "name")
 	if name == "" {
-		return errResult("name required"), nil
+		return codedError(ErrInvalidParams, "name required"), nil
 	}
 	varsJSON := getStringArg(req, "vars")
 	if varsJSON == "" {
-		return errResult("vars required"), nil
+		return codedError(ErrInvalidParams, "vars required"), nil
 	}
 
 	var parsedVars map[string]string
 	if err := json.Unmarshal([]byte(varsJSON), &parsedVars); err != nil {
-		return errResult(fmt.Sprintf("invalid vars JSON: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid vars JSON: %v", err)), nil
 	}
 
 	tmpl := enhancer.GetTemplate(name)
 	if tmpl == nil {
-		return errResult(fmt.Sprintf("template %q not found", name)), nil
+		return codedError(ErrInternal, fmt.Sprintf("template %q not found", name)), nil
 	}
 
 	filled := enhancer.FillTemplate(tmpl, parsedVars)
@@ -193,22 +193,22 @@ func (s *Server) handlePromptTemplateFill(_ context.Context, req mcp.CallToolReq
 func (s *Server) handleClaudeMDCheck(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoName := getStringArg(req, "repo")
 	if repoName == "" {
-		return errResult("repo required"), nil
+		return codedError(ErrInvalidParams, "repo required"), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(repoName)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo %q not found", repoName)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo %q not found", repoName)), nil
 	}
 
 	claudeMDPath := filepath.Join(r.Path, "CLAUDE.md")
 	findings, err := enhancer.CheckClaudeMD(claudeMDPath)
 	if err != nil {
-		return errResult(fmt.Sprintf("check failed: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("check failed: %v", err)), nil
 	}
 
 	return jsonResult(findings), nil
@@ -217,7 +217,7 @@ func (s *Server) handleClaudeMDCheck(_ context.Context, req mcp.CallToolRequest)
 func (s *Server) handlePromptClassify(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	prompt := getStringArg(req, "prompt")
 	if prompt == "" {
-		return errResult("prompt required"), nil
+		return codedError(ErrInvalidParams, "prompt required"), nil
 	}
 	taskType := enhancer.Classify(prompt)
 	return jsonResult(map[string]any{"task_type": string(taskType)}), nil
@@ -226,7 +226,7 @@ func (s *Server) handlePromptClassify(_ context.Context, req mcp.CallToolRequest
 func (s *Server) handlePromptShouldEnhance(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	prompt := getStringArg(req, "prompt")
 	if prompt == "" {
-		return errResult("prompt required"), nil
+		return codedError(ErrInvalidParams, "prompt required"), nil
 	}
 
 	var cfg enhancer.Config

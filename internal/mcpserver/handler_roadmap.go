@@ -14,7 +14,7 @@ import (
 func (s *Server) handleRoadmapParse(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	path := getStringArg(req, "path")
 	if path == "" {
-		return errResult("path required"), nil
+		return codedError(ErrInvalidParams, "path required"), nil
 	}
 	if err := ValidatePath(path, s.ScanPath); err != nil {
 		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
@@ -24,7 +24,7 @@ func (s *Server) handleRoadmapParse(_ context.Context, req mcp.CallToolRequest) 
 
 	rm, err := roadmap.Parse(rmPath)
 	if err != nil {
-		return errResult(fmt.Sprintf("parse roadmap: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("parse roadmap: %v", err)), nil
 	}
 	return jsonResult(rm), nil
 }
@@ -32,7 +32,7 @@ func (s *Server) handleRoadmapParse(_ context.Context, req mcp.CallToolRequest) 
 func (s *Server) handleRoadmapAnalyze(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	path := getStringArg(req, "path")
 	if path == "" {
-		return errResult("path required"), nil
+		return codedError(ErrInvalidParams, "path required"), nil
 	}
 	if err := ValidatePath(path, s.ScanPath); err != nil {
 		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
@@ -42,12 +42,12 @@ func (s *Server) handleRoadmapAnalyze(_ context.Context, req mcp.CallToolRequest
 
 	rm, err := roadmap.Parse(rmPath)
 	if err != nil {
-		return errResult(fmt.Sprintf("parse roadmap: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("parse roadmap: %v", err)), nil
 	}
 
 	analysis, err := roadmap.Analyze(rm, path)
 	if err != nil {
-		return errResult(fmt.Sprintf("analyze: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("analyze: %v", err)), nil
 	}
 	return jsonResult(analysis), nil
 }
@@ -55,7 +55,7 @@ func (s *Server) handleRoadmapAnalyze(_ context.Context, req mcp.CallToolRequest
 func (s *Server) handleRoadmapResearch(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	path := getStringArg(req, "path")
 	if path == "" {
-		return errResult("path required"), nil
+		return codedError(ErrInvalidParams, "path required"), nil
 	}
 	if err := ValidatePath(path, s.ScanPath); err != nil {
 		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
@@ -65,7 +65,7 @@ func (s *Server) handleRoadmapResearch(ctx context.Context, req mcp.CallToolRequ
 
 	results, err := roadmap.Research(ctx, s.HTTPClient, path, topics, limit)
 	if err != nil {
-		return errResult(fmt.Sprintf("research: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("research: %v", err)), nil
 	}
 	return jsonResult(results), nil
 }
@@ -73,7 +73,7 @@ func (s *Server) handleRoadmapResearch(ctx context.Context, req mcp.CallToolRequ
 func (s *Server) handleRoadmapExpand(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	path := getStringArg(req, "path")
 	if path == "" {
-		return errResult("path required"), nil
+		return codedError(ErrInvalidParams, "path required"), nil
 	}
 	if err := ValidatePath(path, s.ScanPath); err != nil {
 		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
@@ -85,12 +85,12 @@ func (s *Server) handleRoadmapExpand(ctx context.Context, req mcp.CallToolReques
 	rmPath := roadmap.ResolvePath(path, file)
 	rm, err := roadmap.Parse(rmPath)
 	if err != nil {
-		return errResult(fmt.Sprintf("parse roadmap: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("parse roadmap: %v", err)), nil
 	}
 
 	analysis, err := roadmap.Analyze(rm, path)
 	if err != nil {
-		return errResult(fmt.Sprintf("analyze: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("analyze: %v", err)), nil
 	}
 
 	var research *roadmap.ResearchResults
@@ -100,7 +100,7 @@ func (s *Server) handleRoadmapExpand(ctx context.Context, req mcp.CallToolReques
 
 	expansion, err := roadmap.Expand(rm, analysis, research, style)
 	if err != nil {
-		return errResult(fmt.Sprintf("expand: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("expand: %v", err)), nil
 	}
 	return jsonResult(expansion), nil
 }
@@ -108,7 +108,7 @@ func (s *Server) handleRoadmapExpand(ctx context.Context, req mcp.CallToolReques
 func (s *Server) handleRoadmapExport(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	path := getStringArg(req, "path")
 	if path == "" {
-		return errResult("path required"), nil
+		return codedError(ErrInvalidParams, "path required"), nil
 	}
 	if err := ValidatePath(path, s.ScanPath); err != nil {
 		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
@@ -123,12 +123,12 @@ func (s *Server) handleRoadmapExport(_ context.Context, req mcp.CallToolRequest)
 	rmPath := roadmap.ResolvePath(path, file)
 	rm, err := roadmap.Parse(rmPath)
 	if err != nil {
-		return errResult(fmt.Sprintf("parse roadmap: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("parse roadmap: %v", err)), nil
 	}
 
 	output, err := roadmap.Export(rm, format, phase, section, maxTasks, respectDeps)
 	if err != nil {
-		return errResult(fmt.Sprintf("export: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("export: %v", err)), nil
 	}
 	return textResult(output), nil
 }

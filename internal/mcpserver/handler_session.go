@@ -130,7 +130,7 @@ func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (
 	if repoFilter != "" {
 		if s.reposNil() {
 			if err := s.scan(); err != nil {
-				return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+				return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 			}
 		}
 		r := s.findRepo(repoFilter)
@@ -232,23 +232,23 @@ func (s *Server) handleSessionStatus(_ context.Context, req mcp.CallToolRequest)
 func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(name); err != nil {
 		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	sessionID := getStringArg(req, "session_id")
 	if sessionID == "" {
-		return errResult("session_id required"), nil
+		return codedError(ErrInvalidParams, "session_id required"), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
 	provider := session.Provider(getStringArg(req, "provider"))
@@ -258,7 +258,7 @@ func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolReques
 	prompt := getStringArg(req, "prompt")
 	sess, err := s.SessMgr.Resume(ctx, r.Path, provider, sessionID, prompt)
 	if err != nil {
-		return errResult(fmt.Sprintf("resume failed: %v", err)), nil
+		return codedError(ErrLaunchFailed, fmt.Sprintf("resume failed: %v", err)), nil
 	}
 
 	return jsonResult(map[string]any{
@@ -272,11 +272,11 @@ func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolReques
 func (s *Server) handleSessionStop(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := getStringArg(req, "id")
 	if id == "" {
-		return errResult("session id required"), nil
+		return codedError(ErrInvalidParams, "session id required"), nil
 	}
 
 	if err := s.SessMgr.Stop(id); err != nil {
-		return errResult(fmt.Sprintf("stop failed: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("stop failed: %v", err)), nil
 	}
 	return textResult(fmt.Sprintf("Stopped session %s", id)), nil
 }
@@ -284,12 +284,12 @@ func (s *Server) handleSessionStop(_ context.Context, req mcp.CallToolRequest) (
 func (s *Server) handleSessionBudget(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := getStringArg(req, "id")
 	if id == "" {
-		return errResult("session id required"), nil
+		return codedError(ErrInvalidParams, "session id required"), nil
 	}
 
 	sess, ok := s.SessMgr.Get(id)
 	if !ok {
-		return errResult(fmt.Sprintf("session not found: %s", id)), nil
+		return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
 	}
 
 	newBudget := getNumberArg(req, "budget", 0)
@@ -317,16 +317,16 @@ func (s *Server) handleSessionCompare(_ context.Context, req mcp.CallToolRequest
 	id1 := getStringArg(req, "id1")
 	id2 := getStringArg(req, "id2")
 	if id1 == "" || id2 == "" {
-		return errResult("both id1 and id2 are required"), nil
+		return codedError(ErrInvalidParams, "both id1 and id2 are required"), nil
 	}
 
 	s1, ok1 := s.SessMgr.Get(id1)
 	s2, ok2 := s.SessMgr.Get(id2)
 	if !ok1 {
-		return errResult(fmt.Sprintf("session not found: %s", id1)), nil
+		return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id1)), nil
 	}
 	if !ok2 {
-		return errResult(fmt.Sprintf("session not found: %s", id2)), nil
+		return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id2)), nil
 	}
 
 	extract := func(sess *session.Session) map[string]any {
@@ -366,7 +366,7 @@ func (s *Server) handleSessionCompare(_ context.Context, req mcp.CallToolRequest
 func (s *Server) handleSessionOutput(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := getStringArg(req, "id")
 	if id == "" {
-		return errResult("session id required"), nil
+		return codedError(ErrInvalidParams, "session id required"), nil
 	}
 	lines := int(getNumberArg(req, "lines", 20))
 	if lines > 100 {
@@ -375,7 +375,7 @@ func (s *Server) handleSessionOutput(_ context.Context, req mcp.CallToolRequest)
 
 	sess, ok := s.SessMgr.Get(id)
 	if !ok {
-		return errResult(fmt.Sprintf("session not found: %s", id)), nil
+		return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
 	}
 
 	sess.Lock()
@@ -397,12 +397,12 @@ func (s *Server) handleSessionOutput(_ context.Context, req mcp.CallToolRequest)
 func (s *Server) handleSessionRetry(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := getStringArg(req, "id")
 	if id == "" {
-		return errResult("session id required"), nil
+		return codedError(ErrInvalidParams, "session id required"), nil
 	}
 
 	sess, ok := s.SessMgr.Get(id)
 	if !ok {
-		return errResult(fmt.Sprintf("session not found: %s", id)), nil
+		return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
 	}
 
 	sess.Lock()
@@ -428,7 +428,7 @@ func (s *Server) handleSessionRetry(ctx context.Context, req mcp.CallToolRequest
 
 	newSess, err := s.SessMgr.Launch(ctx, opts)
 	if err != nil {
-		return errResult(fmt.Sprintf("retry failed: %v", err)), nil
+		return codedError(ErrLaunchFailed, fmt.Sprintf("retry failed: %v", err)), nil
 	}
 
 	return jsonResult(map[string]any{
@@ -459,7 +459,7 @@ func (s *Server) handleSessionStopAll(_ context.Context, req mcp.CallToolRequest
 func (s *Server) handleSessionTail(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := getStringArg(req, "id")
 	if id == "" {
-		return errResult("session id required"), nil
+		return codedError(ErrInvalidParams, "session id required"), nil
 	}
 	lines := int(getNumberArg(req, "lines", 30))
 	if lines > 100 {
@@ -471,7 +471,7 @@ func (s *Server) handleSessionTail(_ context.Context, req mcp.CallToolRequest) (
 
 	sess, ok := s.SessMgr.Get(id)
 	if !ok {
-		return errResult(fmt.Sprintf("session not found: %s", id)), nil
+		return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
 	}
 
 	sess.Lock()
@@ -488,7 +488,7 @@ func (s *Server) handleSessionTail(_ context.Context, req mcp.CallToolRequest) (
 	if cursorStr != "" {
 		cursor, err := strconv.Atoi(cursorStr)
 		if err != nil {
-			return errResult(fmt.Sprintf("invalid cursor: %s", cursorStr)), nil
+			return codedError(ErrInvalidParams, fmt.Sprintf("invalid cursor: %s", cursorStr)), nil
 		}
 		// cursor is the TotalOutputCount at the time of last call.
 		// New lines since cursor = totalCount - cursor.
@@ -530,12 +530,12 @@ func (s *Server) handleSessionTail(_ context.Context, req mcp.CallToolRequest) (
 func (s *Server) handleSessionDiff(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := getStringArg(req, "id")
 	if id == "" {
-		return errResult("session id required"), nil
+		return codedError(ErrInvalidParams, "session id required"), nil
 	}
 
 	sess, ok := s.SessMgr.Get(id)
 	if !ok {
-		return errResult(fmt.Sprintf("session not found: %s", id)), nil
+		return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
 	}
 
 	sess.Lock()
@@ -555,12 +555,12 @@ func (s *Server) handleSessionDiff(_ context.Context, req mcp.CallToolRequest) (
 
 	commits, err := session.GitLogSince(repoPath, launchedAt, until)
 	if err != nil {
-		return errResult(fmt.Sprintf("git log: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("git log: %v", err)), nil
 	}
 
 	diffText, stat, truncated, err := session.GitDiffWindow(repoPath, launchedAt, until, statOnly, maxLines)
 	if err != nil {
-		return errResult(fmt.Sprintf("git diff: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("git diff: %v", err)), nil
 	}
 
 	duration := until.Sub(launchedAt).Round(time.Second).String()
