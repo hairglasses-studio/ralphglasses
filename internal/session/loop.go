@@ -139,17 +139,17 @@ func DefaultLoopProfile() LoopProfile {
 func SelfImprovementProfile() LoopProfile {
 	return LoopProfile{
 		PlannerProvider:      ProviderClaude,
-		PlannerModel:         "claude-sonnet-4-6",
+		PlannerModel:         "claude-opus-4-6-max", // 1M context for deep research/planning
 		WorkerProvider:       ProviderClaude,
-		WorkerModel:          "claude-sonnet-4-6",
+		WorkerModel:          "claude-sonnet-4-6", // sonnet for execution (cost-effective)
 		VerifierProvider:     ProviderClaude,
 		VerifierModel:        "claude-sonnet-4-6",
 		MaxConcurrentWorkers: 1,
 		RetryLimit:           2,
 		VerifyCommands:       []string{"./scripts/dev/ci.sh", "go run . selftest --gate"},
 		WorktreePolicy:       "git",
-		PlannerBudgetUSD:     1.0,
-		WorkerBudgetUSD:      3.0,
+		PlannerBudgetUSD:     5.0,  // opus planner needs higher budget
+		WorkerBudgetUSD:      15.0, // sonnet worker budget
 		EnableReflexion:      true,
 		EnableEpisodicMemory: true,
 		EnableUncertainty:    true,
@@ -157,7 +157,7 @@ func SelfImprovementProfile() LoopProfile {
 		EnableCascade:        false,
 		SelfImprovement:      true,
 		CompactionEnabled:    true,
-		MaxIterations:        5,
+		MaxIterations:        10,
 		MaxDurationSecs:      14400, // 4 hours
 	}
 }
