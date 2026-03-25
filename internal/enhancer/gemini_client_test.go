@@ -254,6 +254,77 @@ func TestGeminiClient_CreateCachedContent(t *testing.T) {
 	}
 }
 
+func TestGeminiClient_CreateCachedContent_Full(t *testing.T) {
+	t.Parallel()
+
+	const testSystemPrompt = "You are a helpful prompt improvement assistant."
+	const mockCacheName = "cachedContents/full_test_xyz789"
+
+	var receivedMethod string
+	var receivedPath string
+	var receivedBody geminiCachedContentRequest
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedMethod = r.Method
+		receivedPath = r.URL.Path
+
+		if err := json.NewDecoder(r.Body).Decode(&receivedBody); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+
+		resp := geminiCachedContentResponse{Name: mockCacheName}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := &GeminiClient{
+		APIKey:     "test-key",
+		Model:      "gemini-2.5-pro",
+		BaseURL:    server.URL,
+		HTTPClient: &http.Client{Timeout: 5 * time.Second},
+	}
+
+	// Call CreateCachedContent
+	name, err := client.CreateCachedContent(context.Background(), testSystemPrompt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify correct HTTP method
+	if receivedMethod != "POST" {
+		t.Errorf("expected POST, got %s", receivedMethod)
+	}
+
+	// Verify correct endpoint path
+	if receivedPath != "/v1beta/cachedContents" {
+		t.Errorf("expected path /v1beta/cachedContents, got %s", receivedPath)
+	}
+
+	// Verify request body contains the system prompt
+	if len(receivedBody.Contents) != 1 {
+		t.Fatalf("expected 1 content block, got %d", len(receivedBody.Contents))
+	}
+	if len(receivedBody.Contents[0].Parts) != 1 {
+		t.Fatalf("expected 1 part, got %d", len(receivedBody.Contents[0].Parts))
+	}
+	if receivedBody.Contents[0].Parts[0].Text != testSystemPrompt {
+		t.Errorf("expected system prompt %q in request body, got %q",
+			testSystemPrompt, receivedBody.Contents[0].Parts[0].Text)
+	}
+
+	// Verify the returned cache name matches
+	if name != mockCacheName {
+		t.Errorf("expected cache name %q, got %q", mockCacheName, name)
+	}
+
+	// Verify the client can store and use the cache name
+	client.CacheName = name
+	if client.CacheName != mockCacheName {
+		t.Errorf("expected stored cache name %q, got %q", mockCacheName, client.CacheName)
+	}
+}
+
 func TestGeminiClient_CreateCachedContent_Error(t *testing.T) {
 	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
