@@ -42,7 +42,7 @@ func (s *Server) handleList(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 	repos := s.reposCopy()
 	for _, r := range repos {
-		model.RefreshRepo(r)
+		r.RefreshErrors = model.RefreshRepo(r)
 	}
 
 	type repoSummary struct {
@@ -89,7 +89,7 @@ func (s *Server) handleStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.
 	if r == nil {
 		return notFound(fmt.Sprintf("repo not found: %s", name)), nil
 	}
-	model.RefreshRepo(r)
+	r.RefreshErrors = model.RefreshRepo(r)
 
 	detail := map[string]any{
 		"name":    r.Name,
@@ -337,7 +337,7 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 
 	// Refresh all repos
 	for _, r := range s.Repos {
-		model.RefreshRepo(r)
+		r.RefreshErrors = model.RefreshRepo(r)
 	}
 
 	// Gather sessions and teams
@@ -705,7 +705,7 @@ func (s *Server) handleConfigBulk(_ context.Context, req mcp.CallToolRequest) (*
 		if targetNames != nil && !targetNames[r.Name] {
 			continue
 		}
-		model.RefreshRepo(r)
+		r.RefreshErrors = model.RefreshRepo(r)
 		if r.Config == nil {
 			results[r.Name] = "no .ralphrc"
 			continue
@@ -749,7 +749,7 @@ func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*
 	if r == nil {
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
-	model.RefreshRepo(r)
+	r.RefreshErrors = model.RefreshRepo(r)
 
 	score := 100
 	var issues []string

@@ -35,7 +35,7 @@ func Scan(root string) ([]*model.Repo, error) {
 			HasRalph: hasRalph,
 			HasRC:    hasRC,
 		}
-		model.RefreshRepo(r)
+		r.RefreshErrors = model.RefreshRepo(r)
 		repos = append(repos, r)
 	}
 

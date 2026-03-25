@@ -490,7 +490,7 @@ func (m Model) popView() (tea.Model, tea.Cmd) {
 
 func (m *Model) refreshAllRepos() {
 	for _, r := range m.Repos {
-		model.RefreshRepo(r)
+		r.RefreshErrors = model.RefreshRepo(r)
 	}
 }
 

@@ -46,7 +46,7 @@ func TestScanRefreshCycle(t *testing.T) {
 	status.LoopCount = 5
 	status.Status = "idle"
 	writeJSON(t, filepath.Join(ralphDir, "status.json"), status)
-	model.RefreshRepo(repo)
+	repo.RefreshErrors = model.RefreshRepo(repo)
 	if repo.Status.LoopCount != 5 {
 		t.Errorf("loop = %d, want 5", repo.Status.LoopCount)
 	}
