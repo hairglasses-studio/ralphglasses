@@ -2,6 +2,7 @@ package session
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -262,5 +263,129 @@ func TestAutoCommitAndMergeWorktreeDetection(t *testing.T) {
 	}
 	if !strings.Contains(string(out), "self-improve: worktree test") {
 		t.Errorf("main branch should have the commit, got: %s", out)
+	}
+}
+
+func TestAutoCommitAndMerge_RebaseOnDivergedMain(t *testing.T) {
+	t.Parallel()
+
+	// Create a main repo with initial commit.
+	mainDir := t.TempDir()
+	run := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	run(mainDir, "init")
+	run(mainDir, "config", "user.email", "test@test.com")
+	run(mainDir, "config", "user.name", "Test")
+	run(mainDir, "config", "commit.gpgsign", "false")
+	if err := os.WriteFile(filepath.Join(mainDir, "file.txt"), []byte("initial"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run(mainDir, "add", ".")
+	run(mainDir, "commit", "-m", "initial")
+
+	// Detect the default branch name.
+	cmd := exec.Command("git", "branch", "--show-current")
+	cmd.Dir = mainDir
+	branchOut, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mainBranch := strings.TrimSpace(string(branchOut))
+
+	// Create a worktree.
+	wtDir := filepath.Join(t.TempDir(), "wt")
+	run(mainDir, "worktree", "add", wtDir, "-b", "work")
+	run(wtDir, "config", "user.email", "test@test.com")
+	run(wtDir, "config", "user.name", "Test")
+
+	// Advance main in the main repo (simulate prior iteration merge).
+	run(mainDir, "checkout", mainBranch)
+	if err := os.WriteFile(filepath.Join(mainDir, "other.txt"), []byte("from main"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run(mainDir, "add", ".")
+	run(mainDir, "commit", "-m", "advance main")
+
+	// Make a non-conflicting change in worktree.
+	if err := os.WriteFile(filepath.Join(wtDir, "feature.txt"), []byte("new feature"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// AutoCommitAndMerge should succeed via rebase.
+	if err := AutoCommitAndMerge(wtDir, mainBranch, "test merge via rebase"); err != nil {
+		t.Fatalf("expected rebase to succeed, got: %v", err)
+	}
+
+	// Verify main branch has our commit.
+	logCmd := exec.Command("git", "log", mainBranch, "--oneline", "-1")
+	logCmd.Dir = wtDir
+	out, err := logCmd.Output()
+	if err != nil {
+		t.Fatalf("git log: %v", err)
+	}
+	if !strings.Contains(string(out), "test merge via rebase") {
+		t.Errorf("main branch should have the commit, got: %s", out)
+	}
+}
+
+func TestAutoCommitAndMerge_RebaseConflictFallback(t *testing.T) {
+	t.Parallel()
+
+	mainDir := t.TempDir()
+	run := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	run(mainDir, "init")
+	run(mainDir, "config", "user.email", "test@test.com")
+	run(mainDir, "config", "user.name", "Test")
+	run(mainDir, "config", "commit.gpgsign", "false")
+	if err := os.WriteFile(filepath.Join(mainDir, "conflict.txt"), []byte("line1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run(mainDir, "add", ".")
+	run(mainDir, "commit", "-m", "initial")
+
+	// Detect the default branch name.
+	cmd := exec.Command("git", "branch", "--show-current")
+	cmd.Dir = mainDir
+	branchOut, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mainBranch := strings.TrimSpace(string(branchOut))
+
+	// Create a worktree.
+	wtDir := filepath.Join(t.TempDir(), "wt")
+	run(mainDir, "worktree", "add", wtDir, "-b", "work")
+	run(wtDir, "config", "user.email", "test@test.com")
+	run(wtDir, "config", "user.name", "Test")
+
+	// Conflicting change on main.
+	run(mainDir, "checkout", mainBranch)
+	if err := os.WriteFile(filepath.Join(mainDir, "conflict.txt"), []byte("main version\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run(mainDir, "add", ".")
+	run(mainDir, "commit", "-m", "main change")
+
+	// Conflicting change in worktree.
+	if err := os.WriteFile(filepath.Join(wtDir, "conflict.txt"), []byte("worktree version\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	err = AutoCommitAndMerge(wtDir, mainBranch, "test merge with conflict")
+	if !errors.Is(err, ErrRebaseConflict) {
+		t.Fatalf("expected ErrRebaseConflict, got: %v", err)
 	}
 }

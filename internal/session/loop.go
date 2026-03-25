@@ -911,6 +911,7 @@ func (m *Manager) handleSelfImprovementAcceptance(ctx context.Context, run *Loop
 
 	mainBranch := "main"
 	autoMerge := run.Profile.AutoMergeAll || len(review) == 0
+	rebaseConflict := false
 	if autoMerge {
 		// Auto-merge: either all paths are safe, or AutoMergeAll is set (verification passed).
 		for _, wt := range worktrees {
@@ -919,12 +920,22 @@ func (m *Manager) handleSelfImprovementAcceptance(ctx context.Context, run *Loop
 			}
 			msg := fmt.Sprintf("self-improve: auto-merge (%s)", buildDiffSummary(safe))
 			if err := AutoCommitAndMerge(wt, mainBranch, msg); err != nil {
+				if errors.Is(err, ErrRebaseConflict) {
+					// Rebase had conflicts — fall through to PR creation.
+					review = append(review, safe...)
+					safe = nil
+					rebaseConflict = true
+					break
+				}
 				result.Error = err.Error()
 				return result, err
 			}
 		}
-		result.AutoMerged = true
-	} else {
+		if !rebaseConflict {
+			result.AutoMerged = true
+		}
+	}
+	if !autoMerge || rebaseConflict {
 		// Needs review — create PR from the first non-empty worktree.
 		for _, wt := range worktrees {
 			if wt == "" {
