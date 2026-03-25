@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 	"time"
@@ -490,7 +491,11 @@ func (m Model) popView() (tea.Model, tea.Cmd) {
 
 func (m *Model) refreshAllRepos() {
 	for _, r := range m.Repos {
-		model.RefreshRepo(r)
+		if errs := model.RefreshRepo(r); len(errs) > 0 {
+			for _, e := range errs {
+				log.Printf("RefreshRepo %s: %v", r.Path, e)
+			}
+		}
 	}
 }
 

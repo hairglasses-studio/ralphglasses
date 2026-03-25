@@ -47,6 +47,6 @@ func BenchmarkRefreshRepo(b *testing.B) {
 	r := &Repo{Path: dir}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		RefreshRepo(r)
+		_ = RefreshRepo(r)
 	}
 }

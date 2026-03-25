@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -35,7 +36,11 @@ func Scan(root string) ([]*model.Repo, error) {
 			HasRalph: hasRalph,
 			HasRC:    hasRC,
 		}
-		model.RefreshRepo(r)
+		if errs := model.RefreshRepo(r); len(errs) > 0 {
+			for _, e := range errs {
+				log.Printf("RefreshRepo %s: %v", r.Path, e)
+			}
+		}
 		repos = append(repos, r)
 	}
 
