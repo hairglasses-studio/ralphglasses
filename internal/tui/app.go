@@ -38,6 +38,7 @@ const (
 	ViewTimeline
 	ViewLoopHealth
 	ViewLoopList
+	ViewLoopDetail
 )
 
 // InputMode tracks the current input capture mode.
@@ -108,6 +109,7 @@ type Model struct {
 	SessMgr         *session.Manager
 	SelectedSession string // session ID for detail view
 	SelectedTeam    string // team name for detail view
+	SelectedLoop    string // loop ID for detail view
 	FleetWindow     int
 	FleetSection    int
 	FleetCursor     int
@@ -445,7 +447,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleFleetKey(msg)
 	case ViewLoopList:
 		return m.handleLoopListKey(msg)
-	case ViewHelp, ViewDiff, ViewTimeline, ViewLoopHealth:
+	case ViewHelp, ViewDiff, ViewTimeline, ViewLoopHealth, ViewLoopDetail:
 		// Read-only views — Esc handled globally, no view-specific keys
 		return m, nil
 	}
@@ -741,7 +743,15 @@ func (m Model) View() string {
 	case ViewLoopList:
 		b.WriteString(m.LoopListTable.View())
 		b.WriteString("\n")
-		b.WriteString(styles.HelpStyle.Render("  s start loop  x/d stop loop  j/k navigate  Esc back"))
+		b.WriteString(styles.HelpStyle.Render("  s start loop  x/d stop loop  Enter detail  j/k navigate  Esc back"))
+	case ViewLoopDetail:
+		if m.SessMgr != nil && m.SelectedLoop != "" {
+			if l, ok := m.SessMgr.GetLoop(m.SelectedLoop); ok {
+				b.WriteString(views.RenderLoopDetail(l, m.Width, m.Height))
+			} else {
+				b.WriteString(styles.InfoStyle.Render("  Loop not found"))
+			}
+		}
 	}
 
 	// Loop panel overlay

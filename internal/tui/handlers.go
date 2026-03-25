@@ -388,6 +388,30 @@ func (m Model) handleLoopListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.LoopListTable.MoveDown()
 	case key.Matches(msg, m.Keys.Up):
 		m.LoopListTable.MoveUp()
+	case key.Matches(msg, m.Keys.Enter):
+		if m.LoopListTable == nil {
+			return m, nil
+		}
+		row := m.LoopListTable.SelectedRow()
+		if row == nil {
+			return m, nil
+		}
+		prefix := row[0]
+		if m.SessMgr != nil {
+			for _, l := range m.SessMgr.ListLoops() {
+				l.Lock()
+				id := l.ID
+				l.Unlock()
+				if strings.HasPrefix(id, prefix) {
+					m.SelectedLoop = id
+					break
+				}
+			}
+		}
+		if m.SelectedLoop != "" {
+			m.pushView(ViewLoopDetail, "Loop Detail")
+		}
+		return m, nil
 	}
 	return m, nil
 }

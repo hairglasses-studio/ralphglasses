@@ -388,6 +388,21 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopHealth.SetEnabled(false)
 		k.LoopPanel.SetEnabled(false)
 		// LoopListStart and LoopListStop remain enabled
+	case ViewLoopDetail:
+		k.StartLoop.SetEnabled(false)
+		k.StopAction.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.DiffView.SetEnabled(false)
+		k.Space.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+		k.TimelineView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
+		k.LoopPanel.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
 	}
 }
 
