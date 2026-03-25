@@ -38,22 +38,22 @@ Pre-requisite fixes for existing bugs and silent failures. No new features. All 
 > **Parallel workstreams:** All 0.5.x items are independent. No blockers between them.
 
 ### 0.5.1 — Silent error suppression in RefreshRepo
-- [ ] 0.5.1.1 — Return `[]error` from `RefreshRepo()` in `internal/model/status.go:49-54` instead of discarding with `_ =`
-- [ ] 0.5.1.2 — Propagate errors to TUI layer: emit `RefreshErrorMsg` with repo path and error details
+- [x] 0.5.1.1 — Return `[]error` from `RefreshRepo()` in `internal/model/status.go:49-54` instead of discarding with `_ =`
+- [x] 0.5.1.2 — Propagate errors to TUI layer: emit `RefreshErrorMsg` with repo path and error details
 - [ ] 0.5.1.3 — Display parse errors in repo detail view status bar (non-blocking, yellow warning)
-- [ ] 0.5.1.4 — Add unit test: corrupt status.json → RefreshRepo returns error, not silent zero-value
+- [x] 0.5.1.4 — Add unit test: corrupt status.json → RefreshRepo returns error, not silent zero-value
 - **Acceptance:** parse errors in `.ralph/` files visible to user, not silently dropped
 
 ### 0.5.2 — Watcher error handling
-- [ ] 0.5.2.1 — Replace `return nil` on watcher error (`process/watcher.go:47-48`) with error propagation
-- [ ] 0.5.2.2 — Emit `WatcherErrorMsg` to TUI when fsnotify errors occur
-- [ ] 0.5.2.3 — Auto-fallback: on watcher error, switch to polling mode and notify user
-- [ ] 0.5.2.4 — Add exponential backoff on repeated watcher failures (max 30s)
+- [x] 0.5.2.1 — Replace `return nil` on watcher error (`process/watcher.go:47-48`) with error propagation
+- [x] 0.5.2.2 — Emit `WatcherErrorMsg` to TUI when fsnotify errors occur
+- [x] 0.5.2.3 — Auto-fallback: on watcher error, switch to polling mode and notify user
+- [x] 0.5.2.4 — Add exponential backoff on repeated watcher failures (max 30s)
 - **Acceptance:** watcher failures visible in TUI, automatic fallback to polling
 
 ### 0.5.3 — Process reaper exit status
-- [ ] 0.5.3.1 — Capture `cmd.Wait()` error in `process/manager.go:59` goroutine
-- [ ] 0.5.3.2 — Parse exit code: distinguish crash (non-zero) from clean exit (0)
+- [x] 0.5.3.1 — Capture `cmd.Wait()` error in `process/manager.go:59` goroutine
+- [x] 0.5.3.2 — Parse exit code: distinguish crash (non-zero) from clean exit (0)
 - [ ] 0.5.3.3 — Emit `ProcessExitMsg{RepoPath, ExitCode, Error}` to TUI
 - [ ] 0.5.3.4 — Update repo status to "crashed" or "stopped" based on exit code
 - [ ] 0.5.3.5 — Add unit test: simulate ralph crash, assert TUI receives crash notification
@@ -95,7 +95,7 @@ Pre-requisite fixes for existing bugs and silent failures. No new features. All 
 - **Acceptance:** CI passes regardless of test directory presence
 
 ### 0.5.9 — Race condition in MCP scan
-- [ ] 0.5.9.1 — Add `sync.RWMutex` to protect `repos` map in `internal/mcpserver/` during concurrent scans
+- [x] 0.5.9.1 — Add `sync.RWMutex` to protect `repos` map in `internal/mcpserver/` during concurrent scans
 - [ ] 0.5.9.2 — Add `go test -race` to CI pipeline for all packages
 - [ ] 0.5.9.3 — Write concurrent scan test: 10 goroutines scanning simultaneously
 - **Acceptance:** `go test -race ./...` passes clean
