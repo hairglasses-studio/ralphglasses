@@ -339,7 +339,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case process.ProcessExitMsg:
-		// Process exited; re-arm the listener for the next exit.
+		// Update in-memory repo status based on exit code.
+		for _, r := range m.Repos {
+			if r.Path == msg.RepoPath {
+				if r.Status == nil {
+					r.Status = &model.LoopStatus{}
+				}
+				if msg.ExitCode == 0 {
+					r.Status.Status = "stopped"
+				} else {
+					r.Status.Status = "crashed"
+				}
+				break
+			}
+		}
+		m.updateTable()
+		// Re-arm the listener for the next exit.
 		return m, process.WaitForProcessExit(m.ProcMgr.ExitChan())
 
 	case components.ConfirmResultMsg:
