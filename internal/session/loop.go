@@ -137,11 +137,11 @@ func DefaultLoopProfile() LoopProfile {
 func SelfImprovementProfile() LoopProfile {
 	return LoopProfile{
 		PlannerProvider:      ProviderClaude,
-		PlannerModel:         "sonnet-4",
+		PlannerModel:         "claude-sonnet-4-6",
 		WorkerProvider:       ProviderClaude,
-		WorkerModel:          "sonnet-4",
+		WorkerModel:          "claude-sonnet-4-6",
 		VerifierProvider:     ProviderClaude,
-		VerifierModel:        "sonnet-4",
+		VerifierModel:        "claude-sonnet-4-6",
 		MaxConcurrentWorkers: 1,
 		RetryLimit:           2,
 		VerifyCommands:       []string{"./scripts/dev/ci.sh", "go run . selftest --gate"},
@@ -200,6 +200,32 @@ func (m *Manager) StartLoop(_ context.Context, repoPath string, profile LoopProf
 
 	m.PersistLoop(run)
 	return run, nil
+}
+
+// RunLoop drives a loop to completion by calling StepLoop repeatedly until
+// max iterations, duration limit, retry limit, or stop signal is reached.
+// It runs synchronously — callers should launch it in a goroutine if needed.
+func (m *Manager) RunLoop(ctx context.Context, id string) error {
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		err := m.StepLoop(ctx, id)
+		if err != nil {
+			// Check if this is a terminal condition (not a step failure).
+			run, ok := m.GetLoop(id)
+			if !ok {
+				return err
+			}
+			run.mu.Lock()
+			status := run.Status
+			run.mu.Unlock()
+			if status == "completed" || status == "stopped" {
+				return nil
+			}
+			return err
+		}
+	}
 }
 
 // GetLoop returns a loop run by ID.
@@ -733,6 +759,35 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 
 	emitLoopObservation(run, index, m,
 		reflexionApplied, episodesUsed, cascadeResults, taskDifficulties)
+
+	// Feed cost sample to CostPredictor if wired.
+	if m.costPredictor != nil {
+		run.mu.Lock()
+		iter := run.Iterations[index]
+		provider := string(run.Profile.WorkerProvider)
+		taskType := classifyTask(iter.Task.Title)
+		run.mu.Unlock()
+		// Gather total cost from session objects.
+		var totalCost float64
+		if ps, ok := m.Get(iter.PlannerSessionID); ok {
+			ps.Lock()
+			totalCost += ps.SpentUSD
+			ps.Unlock()
+		}
+		for _, wid := range iter.WorkerSessionIDs {
+			if ws, ok := m.Get(wid); ok {
+				ws.Lock()
+				totalCost += ws.SpentUSD
+				ws.Unlock()
+			}
+		}
+		m.costPredictor.Record(CostObservation{
+			TaskType: taskType,
+			Provider: provider,
+			CostUSD:  totalCost,
+		})
+	}
+
 	m.PersistLoop(run)
 	_ = writeLoopJournal(run, run.Iterations[index])
 	return nil

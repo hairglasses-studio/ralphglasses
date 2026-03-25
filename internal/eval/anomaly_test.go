@@ -2,6 +2,7 @@ package eval
 
 import (
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -134,5 +135,45 @@ func TestDetectFromObservations(t *testing.T) {
 	_, err = DetectFromObservations(observations, "nonexistent")
 	if err == nil {
 		t.Fatal("expected error for unknown metric")
+	}
+}
+
+func TestAnomalyMismatchedLengths(t *testing.T) {
+	det := NewSlidingWindowAnomaly(5, 2.5)
+
+	values := make([]float64, 20)
+	timestamps := makeTimestamps(10) // different length
+
+	result := det.Detect(values, timestamps)
+	if result != nil {
+		t.Fatalf("expected nil for mismatched lengths, got %d anomalies", len(result))
+	}
+
+	// Also test the reverse: fewer values than timestamps.
+	result = det.Detect(values[:10], makeTimestamps(20))
+	if result != nil {
+		t.Fatalf("expected nil for mismatched lengths (reverse), got %d anomalies", len(result))
+	}
+}
+
+func TestDetectFromObservationsUnknownMetric(t *testing.T) {
+	observations := make([]session.LoopObservation, 5)
+
+	_, err := DetectFromObservations(observations, "bogus_metric")
+	if err == nil {
+		t.Fatal("expected error for unknown metric name")
+	}
+
+	errMsg := err.Error()
+	// Error message should mention the invalid metric name.
+	if !strings.Contains(errMsg, "bogus_metric") {
+		t.Errorf("error should mention the invalid metric name, got: %s", errMsg)
+	}
+
+	// Error message should list at least some valid metric names.
+	for _, valid := range []string{"total_cost_usd", "confidence", "files_changed"} {
+		if !strings.Contains(errMsg, valid) {
+			t.Errorf("error should list valid metric %q, got: %s", valid, errMsg)
+		}
 	}
 }

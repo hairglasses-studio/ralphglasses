@@ -240,3 +240,56 @@ func TestBanditArmCount(t *testing.T) {
 		t.Errorf("expected 3 arms, got %d", sel.ArmCount())
 	}
 }
+
+// --- Thompson boundary tests ---
+
+func TestThompsonSingleArm(t *testing.T) {
+	arms := []Arm{{ID: "only", Provider: "claude", Model: "opus"}}
+	ts := NewThompsonSampling(arms, 0)
+
+	// With a single arm, Select must always return it.
+	for i := 0; i < 50; i++ {
+		arm := ts.Select(nil)
+		if arm.ID != "only" {
+			t.Fatalf("expected arm 'only', got %q", arm.ID)
+		}
+	}
+
+	// Update and verify stats reflect the single arm.
+	ts.Update(Reward{ArmID: "only", Value: 1.0, Timestamp: time.Now()})
+	stats := ts.ArmStats()
+	if len(stats) != 1 {
+		t.Fatalf("expected 1 arm stat, got %d", len(stats))
+	}
+	if stats["only"].Pulls != 1 {
+		t.Fatalf("expected 1 pull, got %d", stats["only"].Pulls)
+	}
+}
+
+func TestThompsonWindowExactCapacity(t *testing.T) {
+	arms := []Arm{{ID: "x", Provider: "claude", Model: "opus"}}
+	ts := NewThompsonSampling(arms, 5)
+
+	// Add exactly 5 rewards (3 successes, 2 failures).
+	rewards := []float64{1.0, 0.0, 1.0, 1.0, 0.0}
+	for _, r := range rewards {
+		ts.Update(Reward{ArmID: "x", Value: r, Timestamp: time.Now()})
+	}
+
+	stats := ts.ArmStats()
+	s := stats["x"]
+
+	if s.Pulls != 5 {
+		t.Fatalf("expected 5 pulls, got %d", s.Pulls)
+	}
+
+	// With window=5 and exactly 5 rewards, no sliding should have occurred.
+	// 3 successes (>=0.5): alpha = 1 + 1.0 + 1.0 + 1.0 = 4.0
+	// 2 failures (<0.5): beta = 1 + 1.0 + 1.0 = 3.0
+	if s.Alpha != 4.0 {
+		t.Fatalf("expected alpha=4.0, got %f", s.Alpha)
+	}
+	if s.Beta != 3.0 {
+		t.Fatalf("expected beta=3.0, got %f", s.Beta)
+	}
+}

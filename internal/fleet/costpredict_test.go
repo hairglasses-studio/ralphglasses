@@ -155,3 +155,60 @@ func TestWindowEviction(t *testing.T) {
 		t.Errorf("sample count: got %d, want %d", p.Len(), defaultMaxSamples)
 	}
 }
+
+func TestCostPredictorZeroBurnRate(t *testing.T) {
+	p := NewCostPredictor(2.5)
+	base := time.Now()
+
+	// All zero-cost samples, 1 hour apart.
+	for i := 0; i < 10; i++ {
+		p.Record(CostSample{
+			Timestamp: base.Add(time.Duration(i) * time.Hour),
+			CostUSD:   0.0,
+			Provider:  "claude",
+			TaskType:  "session",
+		})
+	}
+
+	f := p.Forecast(100.0)
+	if f.BurnRatePerHour != 0 {
+		t.Errorf("expected zero burn rate for all-zero costs, got %f", f.BurnRatePerHour)
+	}
+	if f.ExhaustionETA != nil {
+		t.Error("expected nil exhaustion ETA when burn rate is 0")
+	}
+	if f.TrendDirection != "stable" {
+		t.Errorf("expected stable trend for zero costs, got %q", f.TrendDirection)
+	}
+}
+
+func TestCostPredictorSingleSample(t *testing.T) {
+	p := NewCostPredictor(2.5)
+	base := time.Now()
+
+	p.Record(CostSample{
+		Timestamp: base,
+		CostUSD:   5.0,
+		Provider:  "claude",
+		TaskType:  "session",
+	})
+
+	f := p.Forecast(100.0)
+
+	// With only 1 sample, Forecast returns early with defaults.
+	if f.SampleCount != 1 {
+		t.Errorf("expected sample count 1, got %d", f.SampleCount)
+	}
+	if f.BurnRatePerHour != 0 {
+		t.Errorf("expected zero burn rate for single sample, got %f", f.BurnRatePerHour)
+	}
+	if f.TrendDirection != "stable" {
+		t.Errorf("expected stable trend for single sample, got %q", f.TrendDirection)
+	}
+
+	// BurnRate() should also handle single sample.
+	br := p.BurnRate()
+	if br != 0 {
+		t.Errorf("BurnRate with 1 sample should be 0, got %f", br)
+	}
+}

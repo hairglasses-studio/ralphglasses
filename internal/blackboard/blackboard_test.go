@@ -214,6 +214,71 @@ func TestSnapshot(t *testing.T) {
 	}
 }
 
+func TestBlackboardCorruptedJSONL(t *testing.T) {
+	dir := t.TempDir()
+
+	// Write a mix of valid and corrupted lines to the JSONL file.
+	path := filepath.Join(dir, "blackboard.jsonl")
+	content := `{"key":"good1","namespace":"ns","value":{"x":1},"writer_id":"w1","version":1,"ttl":0,"created_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-01T00:00:00Z"}
+this is not json at all
+{"key":"good2","namespace":"ns","value":{"x":2},"writer_id":"w2","version":1,"ttl":0,"created_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-01T00:00:00Z"}
+{truncated json
+`
+	err := os.WriteFile(path, []byte(content), 0644)
+	if err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	// Should load without crashing, skipping bad lines.
+	bb := NewBlackboard(dir)
+
+	if bb.Len() != 2 {
+		t.Fatalf("expected 2 valid entries from corrupted file, got %d", bb.Len())
+	}
+
+	e1, ok := bb.Get("ns", "good1")
+	if !ok {
+		t.Fatal("expected good1 to be loaded")
+	}
+	if e1.Value["x"] != float64(1) {
+		t.Fatalf("expected good1 value x=1, got %v", e1.Value["x"])
+	}
+
+	e2, ok := bb.Get("ns", "good2")
+	if !ok {
+		t.Fatal("expected good2 to be loaded")
+	}
+	if e2.Value["x"] != float64(2) {
+		t.Fatalf("expected good2 value x=2, got %v", e2.Value["x"])
+	}
+}
+
+func TestBlackboardPutNilValue(t *testing.T) {
+	bb := NewBlackboard("")
+
+	// Put with nil Value map should not panic.
+	err := bb.Put(Entry{
+		Key:       "nil-val",
+		Namespace: "ns",
+		Value:     nil,
+		WriterID:  "w1",
+	})
+	if err != nil {
+		t.Fatalf("Put with nil Value: %v", err)
+	}
+
+	e, ok := bb.Get("ns", "nil-val")
+	if !ok {
+		t.Fatal("expected entry to exist")
+	}
+	if e.Value != nil {
+		t.Fatalf("expected nil Value, got %v", e.Value)
+	}
+	if e.Version != 1 {
+		t.Fatalf("expected version 1, got %d", e.Version)
+	}
+}
+
 func countLines(data []byte) int {
 	n := 0
 	for _, line := range bytes.Split(data, []byte("\n")) {

@@ -182,3 +182,53 @@ func TestCounterfactualWithSyntheticData(t *testing.T) {
 			lowThreshold.Confidence95[1], lowThreshold.EstimatedCompletionRate)
 	}
 }
+
+func TestEvaluatePolicyAllZeroWeights(t *testing.T) {
+	// A policy that returns 0 (or near-zero) for all observations.
+	// EvaluatePolicy clamps weights to 1e-10, so this still produces results.
+	observations := []session.LoopObservation{
+		{VerifyPassed: true, TotalCostUSD: 0.10},
+		{VerifyPassed: false, TotalCostUSD: 0.20},
+		{VerifyPassed: true, TotalCostUSD: 0.15},
+	}
+
+	result := EvaluatePolicy(observations, func(obs session.LoopObservation) float64 {
+		return 0.0 // all zero weights
+	})
+
+	if result.SampleSize != 3 {
+		t.Errorf("expected SampleSize=3, got %d", result.SampleSize)
+	}
+
+	// With all weights clamped to the same tiny value (1e-10), the result
+	// should be equivalent to uniform weighting.
+	expectedCompletion := 2.0 / 3.0
+	if math.Abs(result.EstimatedCompletionRate-expectedCompletion) > 1e-6 {
+		t.Errorf("expected completion rate ~%f with uniform-clamped weights, got %f",
+			expectedCompletion, result.EstimatedCompletionRate)
+	}
+
+	// ESS should equal n since all weights are identical after clamping.
+	if math.Abs(result.EffectiveSampleSize-3.0) > 1e-6 {
+		t.Errorf("expected ESS=3 with identical weights, got %f", result.EffectiveSampleSize)
+	}
+}
+
+func TestCounterfactualEmptyObservations(t *testing.T) {
+	result := EvaluatePolicy([]session.LoopObservation{}, func(obs session.LoopObservation) float64 {
+		return 1.0
+	})
+
+	if result.SampleSize != 0 {
+		t.Errorf("expected SampleSize=0 for empty observations, got %d", result.SampleSize)
+	}
+	if result.EstimatedCompletionRate != 0 {
+		t.Errorf("expected EstimatedCompletionRate=0, got %f", result.EstimatedCompletionRate)
+	}
+	if result.EstimatedAvgCost != 0 {
+		t.Errorf("expected EstimatedAvgCost=0, got %f", result.EstimatedAvgCost)
+	}
+	if result.EffectiveSampleSize != 0 {
+		t.Errorf("expected EffectiveSampleSize=0, got %f", result.EffectiveSampleSize)
+	}
+}
