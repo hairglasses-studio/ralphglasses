@@ -18,6 +18,8 @@ type AcceptanceResult struct {
 }
 
 // selfImproveSafePrefixes are path prefixes that can be auto-merged.
+// When AutoMergeAll is true (unattended mode), this list is bypassed —
+// all paths are auto-merged if verification passes.
 var selfImproveSafePrefixes = []string{
 	"docs/",
 	"scripts/",
