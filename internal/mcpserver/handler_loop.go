@@ -116,7 +116,7 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 			profile.WorkerBudgetUSD = budgetUSD * 3 / 4
 		}
 		// Wire all self-learning subsystems (singleton creation).
-		wireSubsystems(s.SessMgr, ralphDir)
+		wireSubsystems(s, s.SessMgr, ralphDir)
 	}
 
 	// Wire prompt enhancer into session manager for loop integration

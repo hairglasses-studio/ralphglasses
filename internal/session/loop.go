@@ -38,14 +38,14 @@ type LoopProfile struct {
 	PlannerBudgetUSD     float64  `json:"planner_budget_usd,omitempty"`
 	WorkerBudgetUSD      float64  `json:"worker_budget_usd,omitempty"`
 	VerifierBudgetUSD    float64  `json:"verifier_budget_usd,omitempty"`
-	EnableReflexion      bool     `json:"enable_reflexion,omitempty"`
-	EnableEpisodicMemory bool     `json:"enable_episodic_memory,omitempty"`
-	EnableCascade        bool           `json:"enable_cascade,omitempty"`
+	EnableReflexion      bool     `json:"enable_reflexion"`
+	EnableEpisodicMemory bool     `json:"enable_episodic_memory"`
+	EnableCascade        bool           `json:"enable_cascade"`
 	CascadeConfig        *CascadeConfig `json:"cascade_config,omitempty"`
-	EnableUncertainty    bool     `json:"enable_uncertainty,omitempty"`
-	EnableCurriculum     bool     `json:"enable_curriculum,omitempty"`
-	SelfImprovement      bool     `json:"self_improvement,omitempty"`
-	CompactionEnabled    bool     `json:"compaction_enabled,omitempty"`
+	EnableUncertainty    bool     `json:"enable_uncertainty"`
+	EnableCurriculum     bool     `json:"enable_curriculum"`
+	SelfImprovement      bool     `json:"self_improvement"`
+	CompactionEnabled    bool     `json:"compaction_enabled"`
 	CompactionThreshold  int      `json:"compaction_threshold,omitempty"` // iterations before enabling compaction
 	MaxIterations        int      `json:"max_iterations,omitempty"`
 	MaxDurationSecs      int      `json:"max_duration_secs,omitempty"`

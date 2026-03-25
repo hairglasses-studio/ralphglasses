@@ -48,7 +48,7 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 
 	// Wire self-learning subsystems (shared helper).
 	ralphDir := filepath.Join(r.Path, ".ralph")
-	wireSubsystems(s.SessMgr, ralphDir)
+	wireSubsystems(s, s.SessMgr, ralphDir)
 
 	// Wire prompt enhancer
 	if s.SessMgr.Enhancer == nil {
