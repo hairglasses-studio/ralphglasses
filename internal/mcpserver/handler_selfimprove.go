@@ -73,7 +73,7 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 
 	run, err := s.SessMgr.StartLoop(ctx, r.Path, profile)
 	if err != nil {
-		return codedError(ErrInternal, fmt.Sprintf("start self-improvement loop: %v", err)), nil
+		return codedError(ErrLoopStart, fmt.Sprintf("start self-improvement loop: %v", err)), nil
 	}
 
 	return mcp.NewToolResultText(fmt.Sprintf(

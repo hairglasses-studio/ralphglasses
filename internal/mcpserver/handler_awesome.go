@@ -15,7 +15,7 @@ func (s *Server) handleAwesomeFetch(ctx context.Context, req mcp.CallToolRequest
 	repo := getStringArg(req, "repo")
 	idx, err := awesome.Fetch(ctx, s.HTTPClient, repo)
 	if err != nil {
-		return errResult(fmt.Sprintf("fetch: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("fetch: %v", err)), nil
 	}
 	return jsonResult(idx), nil
 }
@@ -24,7 +24,7 @@ func (s *Server) handleAwesomeAnalyze(ctx context.Context, req mcp.CallToolReque
 	repo := getStringArg(req, "repo")
 	idx, err := awesome.Fetch(ctx, s.HTTPClient, repo)
 	if err != nil {
-		return errResult(fmt.Sprintf("fetch: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("fetch: %v", err)), nil
 	}
 
 	maxWorkers := int(getNumberArg(req, "max_workers", 5))
@@ -32,7 +32,7 @@ func (s *Server) handleAwesomeAnalyze(ctx context.Context, req mcp.CallToolReque
 		MaxWorkers: maxWorkers,
 	})
 	if err != nil {
-		return errResult(fmt.Sprintf("analyze: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("analyze: %v", err)), nil
 	}
 	analysis.Source = idx.Source
 	return jsonResult(analysis), nil
@@ -41,13 +41,13 @@ func (s *Server) handleAwesomeAnalyze(ctx context.Context, req mcp.CallToolReque
 func (s *Server) handleAwesomeDiff(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	saveTo := getStringArg(req, "save_to")
 	if saveTo == "" {
-		return errResult("save_to required"), nil
+		return codedError(ErrInvalidParams, "save_to required"), nil
 	}
 	repo := getStringArg(req, "repo")
 
 	idx, err := awesome.Fetch(ctx, s.HTTPClient, repo)
 	if err != nil {
-		return errResult(fmt.Sprintf("fetch: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("fetch: %v", err)), nil
 	}
 
 	prev, _ := awesome.LoadIndex(saveTo)
@@ -58,12 +58,12 @@ func (s *Server) handleAwesomeDiff(ctx context.Context, req mcp.CallToolRequest)
 func (s *Server) handleAwesomeReport(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	saveTo := getStringArg(req, "save_to")
 	if saveTo == "" {
-		return errResult("save_to required"), nil
+		return codedError(ErrInvalidParams, "save_to required"), nil
 	}
 
 	analysis, err := awesome.LoadAnalysis(saveTo)
 	if err != nil {
-		return errResult(fmt.Sprintf("load analysis: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("load analysis: %v", err)), nil
 	}
 
 	report := awesome.GenerateReport(analysis)
@@ -77,7 +77,7 @@ func (s *Server) handleAwesomeReport(_ context.Context, req mcp.CallToolRequest)
 func (s *Server) handleAwesomeSync(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	saveTo := getStringArg(req, "save_to")
 	if saveTo == "" {
-		return errResult("save_to required"), nil
+		return codedError(ErrInvalidParams, "save_to required"), nil
 	}
 
 	opts := awesome.SyncOptions{
@@ -89,7 +89,7 @@ func (s *Server) handleAwesomeSync(ctx context.Context, req mcp.CallToolRequest)
 
 	result, err := awesome.Sync(ctx, s.HTTPClient, opts)
 	if err != nil {
-		return errResult(fmt.Sprintf("sync: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("sync: %v", err)), nil
 	}
 	return jsonResult(result), nil
 }
