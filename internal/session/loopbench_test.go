@@ -1,9 +1,11 @@
 package session
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -232,5 +234,63 @@ func TestAggregateObservationsEmpty(t *testing.T) {
 	}
 	if summary.CostByProvider == nil {
 		t.Error("CostByProvider should not be nil")
+	}
+}
+
+func TestBuildDiffSummary(t *testing.T) {
+	tests := []struct {
+		name  string
+		paths []string
+		want  string
+	}{
+		{"empty", nil, ""},
+		{"one file", []string{"a.go"}, "1 files: a.go"},
+		{"three files", []string{"a.go", "b.go", "c.go"}, "3 files: a.go, b.go, c.go"},
+		{"five files", []string{"a.go", "b.go", "c.go", "d.go", "e.go"}, "5 files: a.go, b.go, c.go, +2 more"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildDiffSummary(tt.paths)
+			if got != tt.want {
+				t.Errorf("buildDiffSummary(%v) = %q, want %q", tt.paths, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoopObservationDiffPathsJSON(t *testing.T) {
+	// Verify omitempty works — empty DiffPaths should not appear in JSON.
+	obs := LoopObservation{LoopID: "test"}
+	data, err := json.Marshal(obs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "diff_paths") {
+		t.Error("empty DiffPaths should be omitted from JSON")
+	}
+	if strings.Contains(string(data), "diff_summary") {
+		t.Error("empty DiffSummary should be omitted from JSON")
+	}
+
+	// With data — should round-trip.
+	obs.DiffPaths = []string{"foo.go", "bar.go"}
+	obs.DiffSummary = "2 files: foo.go, bar.go"
+	data, err = json.Marshal(obs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"diff_paths"`) {
+		t.Error("populated DiffPaths should appear in JSON")
+	}
+
+	var decoded LoopObservation
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if len(decoded.DiffPaths) != 2 {
+		t.Errorf("got %d diff paths, want 2", len(decoded.DiffPaths))
+	}
+	if decoded.DiffSummary != obs.DiffSummary {
+		t.Errorf("DiffSummary = %q, want %q", decoded.DiffSummary, obs.DiffSummary)
 	}
 }
