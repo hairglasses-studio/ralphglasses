@@ -38,10 +38,11 @@ type Manager struct {
 	banditUpdate func(string, float64)   // bandit reward recording hook
 	blackboard   *Blackboard             // Phase H: shared inter-subsystem state
 	costPredictor *CostPredictor         // Phase H: task cost prediction
-	launchSession func(context.Context, LaunchOptions) (*Session, error)
-	waitSession   func(context.Context, *Session) error
-	healthCheck   func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
-	Enhancer      *enhancer.HybridEngine // optional prompt enhancement for loop integration
+	launchSession  func(context.Context, LaunchOptions) (*Session, error)
+	waitSession    func(context.Context, *Session) error
+	healthCheck    func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
+	SessionTimeout time.Duration                 // timeout for waitForSession; 0 uses default (10m)
+	Enhancer       *enhancer.HybridEngine        // optional prompt enhancement for loop integration
 }
 
 // NewManager creates a new session manager.
@@ -814,36 +815,70 @@ func (m *Manager) waitForSession(ctx context.Context, s *Session) error {
 		return m.waitSession(ctx, s)
 	}
 
+	// Capture doneCh under lock. A nil channel blocks forever in select,
+	// which effectively disables that case for test sessions without a process.
+	s.Lock()
+	doneCh := s.doneCh
+	s.Unlock()
+
+	timeout := m.SessionTimeout
+	if timeout <= 0 {
+		timeout = 10 * time.Minute
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
 	ticker := time.NewTicker(200 * time.Millisecond)
 	defer ticker.Stop()
+
+	// checkTerminal reads session status under lock and returns (done, error).
+	checkTerminal := func() (bool, error) {
+		s.Lock()
+		status := s.Status
+		errMsg := s.Error
+		exitReason := s.ExitReason
+		s.Unlock()
+
+		switch status {
+		case StatusCompleted:
+			return true, nil
+		case StatusErrored:
+			if errMsg != "" {
+				return true, errors.New(errMsg)
+			}
+			if exitReason != "" {
+				return true, errors.New(exitReason)
+			}
+			return true, fmt.Errorf("session %s errored", s.ID)
+		case StatusStopped:
+			if exitReason != "" {
+				return true, errors.New(exitReason)
+			}
+			return true, fmt.Errorf("session %s stopped", s.ID)
+		}
+		return false, nil
+	}
 
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-ticker.C:
+		case <-timer.C:
+			return fmt.Errorf("waitForSession: timed out after %s waiting for session %s", timeout, s.ID)
+		case <-doneCh:
+			// Process exited. Give the runner goroutine a moment to set status.
+			time.Sleep(50 * time.Millisecond)
+			if done, err := checkTerminal(); done {
+				return err
+			}
+			// Runner didn't set a terminal status — the process exited unexpectedly.
 			s.Lock()
 			status := s.Status
-			errMsg := s.Error
-			exitReason := s.ExitReason
 			s.Unlock()
-
-			switch status {
-			case StatusCompleted:
-				return nil
-			case StatusErrored:
-				if errMsg != "" {
-					return errors.New(errMsg)
-				}
-				if exitReason != "" {
-					return errors.New(exitReason)
-				}
-				return fmt.Errorf("session %s errored", s.ID)
-			case StatusStopped:
-				if exitReason != "" {
-					return errors.New(exitReason)
-				}
-				return fmt.Errorf("session %s stopped", s.ID)
+			return fmt.Errorf("session %s process exited unexpectedly with status %s", s.ID, status)
+		case <-ticker.C:
+			if done, err := checkTerminal(); done {
+				return err
 			}
 		}
 	}
