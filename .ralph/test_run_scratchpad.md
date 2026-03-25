@@ -36,6 +36,18 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 
 ## Open Items
 
+### NEW: waitForSession hangs after MCP reconnect
+- **Symptom**: Loop stuck in `planning` forever after MCP reconnect kills the planner's Claude process
+- **Root cause**: `waitForSession()` blocks on session completion but has no timeout or process health check
+- **Impact**: Runs 5b, 9, 10 (iter 2), 11 (iter 3) all orphaned by this bug
+- **Fix needed**: Add a context timeout to `waitForSession`, or periodically check if the session process is still alive (`os.Process.Signal(0)`)
+- **Priority**: HIGH — this is the #1 cause of orphaned loops
+
+### NEW: Task title sanitization regression (Run 11 iter 2)
+- **Symptom**: Task title is "All tests pass. Here's what I did:" — worker output, not a task title
+- **Root cause**: Planner returned freeform text; `sanitizeTaskTitle()` couldn't extract a structured title
+- **Fix needed**: Add heuristic to detect "output-like" text (starts with common phrases like "All tests pass", "Here's what", "I've completed") and reject it, falling back to a default title from the prompt
+
 ### BLOCKED: Cascade routing never live-tested
 - **Blocker**: Gemini CLI not installed. Cascade requires a cheap provider binary on PATH.
 - **Action required**: Install Gemini CLI (`npm install -g @anthropic-ai/gemini-cli` or equivalent), then run with `enable_cascade=true`.
@@ -165,6 +177,60 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 - **Convergence working correctly**: 2x no-change iterations triggered clean exit.
 - **Selftest gate now working**: 28 observations on disk. Baseline was missing (first `--gate` call creates it). Second call: cost -76.5%, latency -48.7% vs baseline. Gate returns warn (78.6% completion rate due to early failed runs).
 
+### Run 9 (3c24cd4c) — Orphaned by MCP reconnect (stopped, 1 iteration idle)
+- **Task**: "Wire TUI to consume process.Manager ErrorChan for crash notifications"
+- **Cross-run dedup confirmed**: Genuinely new task type (not from ROADMAP 0.5.1.x cluster)
+- **Stopped**: MCP reconnect killed planner session
+
+### Run 10 (7b928b36) — Partial, 1 iteration + orphaned (old binary, no auto-merge)
+- **Task**: "Emit ProcessExitMsg to TUI on process exit" — PR #6 created and merged
+- **Cross-run dedup**: Another unique task (TUI process monitoring theme)
+- **Note**: Profile lacked `auto_merge_all` — old binary pre-dates the feature
+
+### Run 11 (45148971) — Partial, 2 iterations + orphaned (auto-merge confirmed!)
+- **First auto-merge success**: Iter 1 auto-merged directly to main
+- **Iter 2**: Passed but no changes to merge (no-op)
+- **Iter 3**: Orphaned by MCP reconnect (stuck in `planning` forever)
+
+| Iter | Task | Changes | Verify | Auto-merged |
+|------|------|---------|--------|-------------|
+| 1 | Update repo status on process exit | process/manager.go | passed | **YES** |
+| 2 | (title sanitization issue) | no-op | passed | N/A |
+| 3 | (orphaned) | — | — | — |
+
+#### Observations
+- **AutoMergeAll working**: First successful auto-merge in iter 1. Changes to `internal/process/manager.go` (normally a review path) were auto-merged because `auto_merge_all=true` and ci.sh passed.
+- **Title sanitization regression**: Iter 2 title is "All tests pass. Here's what I did:" — worker output leaked into task title. The planner may have returned freeform text instead of structured JSON.
+- **MCP reconnect kills loops**: `waitForSession` blocks forever when the planner's Claude process is killed. Need a context timeout or health check on the session process.
+
+### Run 12 (9b0ed27d) — Completed, 5 iterations (first fully instrumented run)
+- **Status**: `completed` — max_iter reached
+- **Total duration**: 42 min (14:02–14:44)
+- **All 5 iterations passed verification**
+- **3 auto-merges**, 1 pending_review (diff gate), 1 no-op
+- **First run with sub-phase timing data**
+
+| Iter | Task | Status | Prompt | Enhance | Accept | Idle | Auto-merged |
+|------|------|--------|--------|---------|--------|------|-------------|
+| 1 | (title sanitization bug) | passed | 10ms | 12.9s | 95ms | — | YES |
+| 2 | Auto-advance iteration scheduling | pending_review | 9ms | 25.3s | — | 108ms | no |
+| 3 | Unit tests for stderr cost fallback | passed | 11ms | 28.2s | 7ms | 17ms | no (no-op) |
+| 4 | Refactor TUI key bindings | passed | 10ms | 22.7s | 103ms | 22ms | YES |
+| 5 | Make doctor.sh warnings non-fatal | passed | 9ms | 30.0s | 108ms | 117ms | YES |
+
+#### Timing Insights (from instrumentation)
+- **Enhancement dominates pre-planner time**: 13-30s per iteration (avg ~24s). This is the LLM call to improve the planner prompt. Single biggest optimization opportunity.
+- **Prompt build is negligible**: ~10ms (ROADMAP scan + dedup is fast)
+- **Acceptance is fast**: 7-108ms (git classify + merge)
+- **Zero scheduler overhead**: 17-117ms idle between iterations
+- **Reflexion/episodic not wired**: Both null — subsystems not initialized in this run's MCP server context
+
+#### Observations
+- **Title sanitization bug persists**: Iter 1 title is worker output, not a task name. Same issue as Run 11 iter 2.
+- **Diff gate correctly blocks self-modification**: Iter 2 changed `internal/session/loop.go` → `pending_review` despite `auto_merge_all=true`. The self-test diff gate is a separate check that takes priority.
+- **Task diversity improved**: 5 unique tasks across test, refactor, CI, and scheduling categories.
+- **Convergence not triggered**: All 5 iters had real tasks; hit max_iter instead of converging.
+
 ### Run 5 Validation Targets
 
 | Subsystem | What to verify | How |
@@ -187,20 +253,21 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 <details>
 <summary>Run 1-4 metrics (click to expand)</summary>
 
-| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5c | Run 8 |
-|--------|-------|-------|-------|-------|--------|-------|
-| Iterations | 6 | 3 | 6 | 3 | 3 | 4 |
-| Passed | 6 | 1 | 5 | 3 | 3 | 4 |
-| Failed | 0 | 2 | 1 | 0 (1 acceptance) | 0 | 0 |
-| Completion rate | 100% | 33% | 83% | 100% verify | 100% | 100% |
-| Total latency (min) | 21.5 | 7.7 | 25.2 | 7.2 | 8.8 | 19.1 |
-| Avg latency/iter (s) | 215 | 154 | 252 | 144 | 176 | 287 |
-| Cost tracked ($) | 0 | 0 | 0 | 0.248 | N/A | N/A |
-| Episodes stored | 6 | +1=7 | +5=12 | +0=12 | +0=12 | +0=12 |
-| PRs created | 0 | 0 | 0 | 1 | 1 | 2 |
-| Bugs found | 0 | 0 | 0 | 0 | 0 | 1 (reposCopy race) |
-| Planner model | sonnet | sonnet | sonnet | sonnet | sonnet | opus |
-| Exit reason | max_iter | max_iter | max_iter | max_iter | converged | converged |
+| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5c | Run 8 | Run 10 | Run 11 | Run 12 |
+|--------|-------|-------|-------|-------|--------|-------|--------|--------|--------|
+| Iterations | 6 | 3 | 6 | 3 | 3 | 4 | 1 | 2 | 5 |
+| Passed | 6 | 1 | 5 | 3 | 3 | 4 | 1 | 2 | 5 |
+| Failed | 0 | 2 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Completion rate | 100% | 33% | 83% | 100% | 100% | 100% | 100% | 100% | 100% |
+| Total latency (min) | 21.5 | 7.7 | 25.2 | 7.2 | 8.8 | 19.1 | ~7 | ~12 | 42 |
+| Avg latency/iter (s) | 215 | 154 | 252 | 144 | 176 | 287 | ~420 | ~360 | 504 |
+| Avg enhance (s) | — | — | — | — | — | — | — | — | 23.8 |
+| Cost tracked ($) | 0 | 0 | 0 | 0.248 | N/A | N/A | N/A | N/A | N/A |
+| PRs created | 0 | 0 | 0 | 1 | 1 | 2 | 1 (#6) | 0 | 0 |
+| Auto-merges | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 3 |
+| Bugs found | 0 | 0 | 0 | 0 | 0 | 1 (race) | 0 | 0 | 0 |
+| Planner model | sonnet | sonnet | sonnet | sonnet | sonnet | opus | opus | opus | opus |
+| Exit reason | max_iter | max_iter | max_iter | max_iter | converged | converged | orphaned | orphaned | max_iter |
 
 ### Key conclusions from Runs 1-4
 1. Episodic memory: end-to-end working, cross-run persistence confirmed
