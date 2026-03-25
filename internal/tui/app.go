@@ -143,6 +143,10 @@ type Model struct {
 	// Desktop notifications
 	NotifyEnabled bool
 
+	// Loop panel overlay
+	ShowLoopPanel bool
+	LoopView      string
+
 	// Loop observation cache (refreshed less often than 2s tick)
 	ObsCache     map[string][]session.LoopObservation // keyed by repo path
 	ObsCacheTime time.Time
@@ -244,6 +248,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.refreshObsCache()
 		m.refreshGateCache()
 		m.drainRegressionEvents()
+		m.refreshLoopView()
 		m.updateTable()
 		m.updateSessionTable()
 		m.updateTeamTable()
@@ -419,7 +424,18 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.pushView(ViewHelp, "Help")
 		return m, nil
+	case key.Matches(msg, m.Keys.LoopPanel):
+		m.ShowLoopPanel = !m.ShowLoopPanel
+		if m.ShowLoopPanel {
+			m.refreshLoopView()
+		}
+		return m, nil
 	case key.Matches(msg, m.Keys.Escape):
+		// Dismiss loop panel if showing
+		if m.ShowLoopPanel {
+			m.ShowLoopPanel = false
+			return m, nil
+		}
 		// If multi-select active, clear selection first
 		tbl := m.activeTable()
 		if tbl != nil && tbl.HasSelection() {
@@ -505,6 +521,40 @@ func (m *Model) refreshAllRepos() []tea.Cmd {
 		}
 	}
 	return cmds
+}
+
+func (m *Model) refreshLoopView() {
+	if m.SessMgr == nil {
+		m.LoopView = styles.InfoStyle.Render("  No active loops")
+		return
+	}
+	loops := m.SessMgr.ListLoops()
+	if len(loops) == 0 {
+		m.LoopView = styles.InfoStyle.Render("  No active loops")
+		return
+	}
+	var b strings.Builder
+	for _, l := range loops {
+		l.Lock()
+		repoName := l.RepoName
+		status := l.Status
+		iterCount := len(l.Iterations)
+		var lastTask string
+		if iterCount > 0 {
+			lastTask = l.Iterations[iterCount-1].Task.Title
+		}
+		l.Unlock()
+		b.WriteString(fmt.Sprintf("  %s  %s  iters:%d",
+			repoName,
+			styles.StatusStyle(status).Render(status),
+			iterCount,
+		))
+		if lastTask != "" {
+			b.WriteString(fmt.Sprintf("  %s", lastTask))
+		}
+		b.WriteString("\n")
+	}
+	m.LoopView = b.String()
 }
 
 func (m *Model) updateTable() {
@@ -712,6 +762,14 @@ func (m Model) View() string {
 			}
 			b.WriteString(views.RenderLoopHealth(healthData, m.Width, m.Height))
 		}
+	}
+
+	// Loop panel overlay
+	if m.ShowLoopPanel {
+		b.WriteString("\n")
+		b.WriteString(styles.TitleStyle.Render(" Loop Status "))
+		b.WriteString("\n")
+		b.WriteString(m.LoopView)
 	}
 
 	// Modal overlays
