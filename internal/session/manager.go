@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -214,7 +215,13 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 
 	// Set persistence and feedback callbacks so runner can persist and learn on completion
 	s.onComplete = func(sess *Session) {
-		m.PersistSession(sess)
+		if err := m.PersistSession(sess); err != nil && sess.bus != nil {
+			sess.bus.Publish(events.Event{
+				Type:      events.SessionError,
+				SessionID: sess.ID,
+				Data:      map[string]any{"error": err.Error(), "context": "persist_session"},
+			})
+		}
 		// Feed session results back into the self-improvement loop
 		if optimizer != nil {
 			optimizer.IngestSessionJournal(sess)
@@ -229,7 +236,13 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	m.mu.Unlock()
 
 	// Persist initial state to disk
-	m.PersistSession(s)
+	if err := m.PersistSession(s); err != nil && m.bus != nil {
+		m.bus.Publish(events.Event{
+			Type:      events.SessionError,
+			SessionID: s.ID,
+			Data:      map[string]any{"error": err.Error(), "context": "persist_session"},
+		})
+	}
 
 	if m.bus != nil {
 		m.bus.Publish(events.Event{
@@ -268,6 +281,50 @@ func (m *Manager) List(repoPath string) []*Session {
 	return result
 }
 
+// killWithEscalation sends SIGTERM, waits up to timeout, then sends SIGKILL if still alive.
+// Returns true if SIGKILL was needed.
+//
+// The done channel should be closed when the process has exited (typically by the
+// runner goroutine that calls cmd.Wait()). If done is nil, killWithEscalation
+// spawns its own Wait() goroutine internally.
+func killWithEscalation(cmd *exec.Cmd, timeout time.Duration, done <-chan struct{}) bool {
+	if cmd == nil || cmd.Process == nil {
+		return false
+	}
+
+	// If no external done channel, create one by calling Wait() ourselves.
+	if done == nil {
+		ch := make(chan struct{})
+		go func() {
+			_ = cmd.Wait()
+			close(ch)
+		}()
+		done = ch
+	}
+
+	// Send SIGTERM to process group.
+	pgid, err := syscall.Getpgid(cmd.Process.Pid)
+	if err != nil {
+		_ = cmd.Process.Signal(syscall.SIGTERM)
+	} else {
+		_ = syscall.Kill(-pgid, syscall.SIGTERM)
+	}
+
+	// Wait for the process to exit or timeout.
+	select {
+	case <-done:
+		return false
+	case <-time.After(timeout):
+		// Escalate to SIGKILL.
+		if pgid > 0 {
+			_ = syscall.Kill(-pgid, syscall.SIGKILL)
+		} else {
+			_ = cmd.Process.Kill()
+		}
+		return true
+	}
+}
+
 // Stop gracefully stops a running session.
 func (m *Manager) Stop(id string) error {
 	m.mu.Lock()
@@ -292,20 +349,29 @@ func (m *Manager) Stop(id string) error {
 		s.cancel()
 	}
 
-	// Then signal the process group
-	if s.cmd != nil && s.cmd.Process != nil {
-		pgid, err := syscall.Getpgid(s.cmd.Process.Pid)
-		if err != nil {
-			_ = s.cmd.Process.Signal(syscall.SIGTERM)
-		} else {
-			_ = syscall.Kill(-pgid, syscall.SIGTERM)
+	// Capture cmd, bus, and doneCh before releasing the lock — killWithEscalation
+	// may block for up to 5 seconds waiting for graceful exit.
+	cmd := s.cmd
+	bus := s.bus
+	doneCh := s.doneCh
+	s.mu.Unlock()
+
+	// Kill with escalation (SIGTERM -> wait -> SIGKILL) outside the lock.
+	if cmd != nil && cmd.Process != nil {
+		escalated := killWithEscalation(cmd, 5*time.Second, doneCh)
+		if escalated && bus != nil {
+			bus.Publish(events.Event{
+				Type:      events.SessionStopped,
+				SessionID: s.ID,
+				RepoPath:  s.RepoPath,
+				Data:      map[string]any{"escalated_to_sigkill": true},
+			})
 		}
 	}
 
-	s.mu.Unlock()
-
 	// Persist stopped state (synchronous; s.mu is released above).
-	m.PersistSession(s)
+	// Best-effort: stop succeeds even if persistence fails.
+	_ = m.PersistSession(s)
 
 	return nil
 }
@@ -882,21 +948,26 @@ func (m *Manager) runWorkflowStep(ctx context.Context, run *WorkflowRun, repoPat
 
 // PersistSession writes session state to the shared state directory.
 // Safe to call from any goroutine; acquires the session lock.
-func (m *Manager) PersistSession(s *Session) {
+func (m *Manager) PersistSession(s *Session) error {
 	if m.stateDir == "" {
-		return
+		return nil
 	}
-	_ = os.MkdirAll(m.stateDir, 0755)
+	if err := os.MkdirAll(m.stateDir, 0755); err != nil {
+		return fmt.Errorf("persist session: mkdir: %w", err)
+	}
 
 	s.mu.Lock()
 	data, err := json.Marshal(s)
 	s.mu.Unlock()
 	if err != nil {
-		return
+		return fmt.Errorf("persist session: marshal: %w", err)
 	}
 
 	path := filepath.Join(m.stateDir, s.ID+".json")
-	_ = os.WriteFile(path, data, 0644)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("persist session: write %s: %w", path, err)
+	}
+	return nil
 }
 
 // MigrateSession stops a running session and relaunches it on a different provider.
@@ -971,8 +1042,8 @@ func (m *Manager) LoadExternalSessions() {
 		// If we already own this session (launched in-process), update the file
 		// but don't overwrite in-memory state.
 		if existing, ok := m.sessions[id]; ok {
-			// Re-persist in-process sessions so disk stays current
-			go m.PersistSession(existing)
+			// Re-persist in-process sessions so disk stays current (best-effort).
+			go func(s *Session) { _ = m.PersistSession(s) }(existing)
 			continue
 		}
 

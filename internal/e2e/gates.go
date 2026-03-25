@@ -3,6 +3,7 @@ package e2e
 import (
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -201,21 +202,22 @@ func absoluteFloorGate(metric string, current, warnFloor, failFloor float64) Gat
 	}
 }
 
-// RunE2EGate executes the E2E test suite and evaluates regression gates.
-// It runs tests, loads observations, builds a baseline, and returns a gate report.
-// This is the entry point for autonomous test gating after config changes.
-func RunE2EGate(repoRoot string) (*GateReport, error) {
-	// Run E2E tests
-	cmd := exec.Command("go", "test", "-run", "TestE2EAllScenarios", "./internal/e2e/")
-	cmd.Dir = repoRoot
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("E2E tests failed: %w\n%s", err, output)
-	}
-
-	// Load observations
+// EvaluateFromObservations loads observations from the repo's observation file,
+// builds a baseline, and evaluates gates against it. This is the shared logic
+// used by both mock E2E gate checks and live self-test harness.
+//
+// If a saved baseline exists at .ralph/loop_baseline.json, it is loaded as
+// the comparison target. Otherwise, a fresh baseline is built from the
+// observations and persisted for future runs.
+//
+// hours controls the time window for filtering observations (0 = use all).
+func EvaluateFromObservations(repoRoot string, thresholds GateThresholds, hours int) (*GateReport, error) {
 	obsPath := session.ObservationPath(repoRoot)
-	observations, err := session.LoadObservations(obsPath, time.Time{})
+	since := time.Time{}
+	if hours > 0 {
+		since = time.Now().Add(-time.Duration(hours) * time.Hour)
+	}
+	observations, err := session.LoadObservations(obsPath, since)
 	if err != nil {
 		return nil, fmt.Errorf("load observations: %w", err)
 	}
@@ -228,11 +230,50 @@ func RunE2EGate(repoRoot string) (*GateReport, error) {
 		}, nil
 	}
 
-	// Build baseline from all observations (0 = use all)
-	baseline := BuildBaseline(observations, 0)
-	thresholds := DefaultGateThresholds()
+	// Try to load a persisted baseline for comparison
+	blPath := filepath.Join(repoRoot, ".ralph", "loop_baseline.json")
+	baseline, loadErr := LoadBaseline(blPath)
+	if loadErr != nil {
+		// No saved baseline — build one from current observations, persist it,
+		// and return skip since we have no prior reference point.
+		baseline = BuildBaseline(observations, float64(hours))
+		if saveErr := SaveBaseline(blPath, baseline); saveErr != nil {
+			return nil, fmt.Errorf("save initial baseline: %w", saveErr)
+		}
+		return &GateReport{
+			Timestamp:   time.Now(),
+			SampleCount: len(observations),
+			Overall:     VerdictSkip,
+			Results:     []GateResult{{Metric: "baseline", Verdict: VerdictSkip}},
+		}, nil
+	}
 
-	return EvaluateGates(observations, baseline, thresholds), nil
+	// Evaluate gates against the saved baseline
+	report := EvaluateGates(observations, baseline, thresholds)
+
+	// Rebuild and persist updated baseline for next run
+	freshBaseline := BuildBaseline(observations, float64(hours))
+	if saveErr := SaveBaseline(blPath, freshBaseline); saveErr != nil {
+		// Non-fatal — log but don't fail the gate
+		_ = saveErr
+	}
+
+	return report, nil
+}
+
+// RunE2EGate executes the E2E test suite and evaluates regression gates.
+// It runs tests, loads observations, builds a baseline, and returns a gate report.
+// This is the entry point for autonomous test gating after config changes.
+func RunE2EGate(repoRoot string) (*GateReport, error) {
+	// Run E2E tests
+	cmd := exec.Command("go", "test", "-run", "TestE2EAllScenarios", "./internal/e2e/")
+	cmd.Dir = repoRoot
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("E2E tests failed: %w\n%s", err, output)
+	}
+
+	return EvaluateFromObservations(repoRoot, DefaultGateThresholds(), 0)
 }
 
 // absoluteCeilingGate evaluates a rate metric against absolute ceilings.

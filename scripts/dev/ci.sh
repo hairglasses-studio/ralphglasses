@@ -29,7 +29,18 @@ else
 fi
 
 if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck distro/scripts/*.sh distro/dietpi/Automation_Custom_Script.sh scripts/*.sh scripts/dev/*.sh
+  shell_files=()
+  for pattern in distro/scripts/*.sh distro/dietpi/Automation_Custom_Script.sh scripts/*.sh scripts/dev/*.sh; do
+    # shellcheck disable=SC2206
+    for f in ${pattern}; do
+      [[ -f "$f" ]] && shell_files+=("$f")
+    done
+  done
+  if [[ ${#shell_files[@]} -gt 0 ]]; then
+    shellcheck "${shell_files[@]}"
+  else
+    echo "warning: no shell files found for shellcheck" >&2
+  fi
 else
   echo "warning: shellcheck missing; skipping shell lint" >&2
 fi

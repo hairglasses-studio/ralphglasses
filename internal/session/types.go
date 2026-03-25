@@ -62,6 +62,7 @@ type Session struct {
 	cmd        *exec.Cmd
 	cancel     func()
 	mu         sync.Mutex
+	doneCh     chan struct{}   // closed when cmd.Wait() returns in the runner goroutine
 	OutputCh   chan string    `json:"-"` // real-time output channel
 	bus        *events.Bus    `json:"-"` // event bus for publishing lifecycle events
 	onComplete func(*Session) `json:"-"` // called when session ends (for persistence)

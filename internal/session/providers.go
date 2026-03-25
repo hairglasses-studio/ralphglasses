@@ -12,6 +12,40 @@ import (
 	"syscall"
 )
 
+// estimateCostFromTokens computes a cost estimate from token counts in raw JSON
+// when the provider does not emit an explicit cost_usd field. Uses the rates
+// from ProviderCostRates (defined in costnorm.go). Returns 0 if no token data
+// is found or the provider is unknown.
+func estimateCostFromTokens(provider Provider, raw map[string]any) float64 {
+	rates, ok := ProviderCostRates[provider]
+	if !ok {
+		return 0
+	}
+
+	// Try provider-specific token count field paths
+	inputPaths := []string{"usage.input_tokens", "usage_metadata.prompt_token_count", "usage.prompt_tokens"}
+	outputPaths := []string{"usage.output_tokens", "usage_metadata.candidates_token_count", "usage.completion_tokens"}
+
+	var inputTokens, outputTokens float64
+	for _, p := range inputPaths {
+		if n, ok := asFloat(valueAtPath(raw, p)); ok && n > 0 {
+			inputTokens = n
+			break
+		}
+	}
+	for _, p := range outputPaths {
+		if n, ok := asFloat(valueAtPath(raw, p)); ok && n > 0 {
+			outputTokens = n
+			break
+		}
+	}
+
+	if inputTokens == 0 && outputTokens == 0 {
+		return 0
+	}
+	return (inputTokens/1_000_000)*rates.InputPer1M + (outputTokens/1_000_000)*rates.OutputPer1M
+}
+
 // ValidateProvider checks that a provider's CLI binary is available on PATH.
 func ValidateProvider(p Provider) error {
 	bin := providerBinary(p)
@@ -291,6 +325,9 @@ func normalizeClaudeEvent(line []byte) (StreamEvent, error) {
 		if event.CostUSD == 0 {
 			event.CostUSD = firstNonZeroFloat(raw, "cost_usd", "usage.cost_usd", "usage.total_cost_usd")
 		}
+		if event.CostUSD == 0 {
+			event.CostUSD = estimateCostFromTokens(ProviderClaude, raw)
+		}
 		if event.NumTurns == 0 {
 			event.NumTurns = firstNonZeroInt(raw, "num_turns", "turns", "usage.turns")
 		}
@@ -350,6 +387,9 @@ func normalizeGeminiEvent(line []byte) (StreamEvent, error) {
 	event.Result = firstText(raw, "result", "summary", "final", "response")
 	event.Error = firstText(raw, "error", "error.message", "details.error", "details.message")
 	event.CostUSD = firstNonZeroFloat(raw, "cost_usd", "usage.cost_usd", "usage.total_cost_usd")
+	if event.CostUSD == 0 {
+		event.CostUSD = estimateCostFromTokens(ProviderGemini, raw)
+	}
 	event.NumTurns = firstNonZeroInt(raw, "num_turns", "turns", "usage.turns")
 	event.Duration = firstNonZeroFloat(raw, "duration_seconds", "duration", "metadata.duration_seconds")
 	event.IsError = firstTrueBool(raw, "is_error", "error")
@@ -448,6 +488,9 @@ func normalizeCodexEvent(line []byte) (StreamEvent, error) {
 	event.Result = firstText(raw, "result", "summary", "final", "content", "message")
 	event.Error = firstText(raw, "error", "error.message", "message.error")
 	event.CostUSD = firstNonZeroFloat(raw, "cost_usd", "usage.cost_usd", "usage.total_cost_usd")
+	if event.CostUSD == 0 {
+		event.CostUSD = estimateCostFromTokens(ProviderCodex, raw)
+	}
 	event.NumTurns = firstNonZeroInt(raw, "num_turns", "turns", "usage.turns")
 	event.IsError = firstTrueBool(raw, "is_error", "error")
 	event.Text = firstNonEmpty(event.Content, event.Result, event.Error)

@@ -1,6 +1,12 @@
 package session
 
-import "testing"
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
+)
 
 func TestCheckProviderHealthUnknown(t *testing.T) {
 	h := CheckProviderHealth(Provider("unknown"))
@@ -59,6 +65,75 @@ func TestCheckAllProviderHealthReturnsAllProviders(t *testing.T) {
 	for _, p := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex} {
 		if _, ok := health[p]; !ok {
 			t.Errorf("missing health entry for provider %q", p)
+		}
+	}
+}
+
+func TestHealthChecker_DetectsUnavailable(t *testing.T) {
+	bus := events.NewBus(100)
+	// Use a provider whose binary is very unlikely to exist on PATH.
+	hc := NewHealthChecker(bus, time.Second, Provider("nonexistent_provider_xyz"))
+	result := hc.CheckAll()
+	if result[Provider("nonexistent_provider_xyz")] {
+		t.Error("expected nonexistent provider to be unhealthy")
+	}
+	if hc.IsHealthy(Provider("nonexistent_provider_xyz")) {
+		t.Error("IsHealthy should return false for nonexistent provider")
+	}
+}
+
+func TestHealthChecker_PublishesOnStateChange(t *testing.T) {
+	bus := events.NewBus(100)
+	sub := bus.Subscribe("test-health")
+
+	// Use a provider that won't be on PATH (guaranteed unhealthy).
+	hc := NewHealthChecker(bus, 50*time.Millisecond, Provider("fake_provider_abc"))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		hc.Start(ctx)
+		close(done)
+	}()
+
+	// Wait for the initial check event (transition from unknown → unhealthy).
+	select {
+	case ev := <-sub:
+		if ev.Type != events.ProviderHealthChanged {
+			t.Errorf("expected provider.health event, got %q", ev.Type)
+		}
+		if ev.Data["healthy"] != false {
+			t.Error("expected healthy=false for fake provider")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for first health event")
+	}
+
+	// Subsequent ticks should NOT publish (no state change: still unhealthy).
+	// Wait for at least 2 tick intervals and drain.
+	time.Sleep(150 * time.Millisecond)
+	select {
+	case ev := <-sub:
+		t.Errorf("unexpected second event (should only publish on state change): %+v", ev)
+	default:
+		// Good: no duplicate event.
+	}
+
+	cancel()
+	<-done
+}
+
+func TestHealthChecker_CheckAll(t *testing.T) {
+	bus := events.NewBus(100)
+	hc := NewHealthChecker(bus, time.Minute, ProviderClaude, ProviderGemini)
+	result := hc.CheckAll()
+	if len(result) != 2 {
+		t.Errorf("expected 2 providers in result, got %d", len(result))
+	}
+	// Verify IsHealthy reflects CheckAll results.
+	for p, healthy := range result {
+		if hc.IsHealthy(p) != healthy {
+			t.Errorf("IsHealthy(%s) = %v, want %v", p, hc.IsHealthy(p), healthy)
 		}
 	}
 }

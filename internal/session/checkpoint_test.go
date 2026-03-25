@@ -102,6 +102,72 @@ func TestCreateCheckpoint_DirtyWorktree(t *testing.T) {
 	}
 }
 
+func TestCreateCheckpoint_ExcludesSensitiveFiles(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	initGitRepo(t, dir)
+
+	// Create a mix of normal and sensitive files.
+	normalFiles := []string{"main.go", "lib/util.go"}
+	sensitiveFiles := []string{
+		".env",
+		".env.production",
+		"server.pem",
+		"private.key",
+		"credentials.json",
+		"app-secret.yaml",
+		"data.sqlite",
+		"local.db",
+		"cert.p12",
+	}
+
+	// Create subdirs as needed and write files.
+	for _, f := range append(normalFiles, sensitiveFiles...) {
+		full := filepath.Join(dir, f)
+		if err := os.MkdirAll(filepath.Dir(full), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte("content"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := CreateCheckpoint(dir, 1, 0.10, 2); err != nil {
+		t.Fatalf("CreateCheckpoint: %v", err)
+	}
+
+	// List files in the last commit.
+	out, err := exec.Command("git", "-C", dir, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD").Output()
+	if err != nil {
+		t.Fatalf("git diff-tree: %v", err)
+	}
+	committed := string(out)
+
+	// Normal files should be committed.
+	for _, f := range normalFiles {
+		if !strings.Contains(committed, f) {
+			t.Errorf("expected normal file %q to be committed, but it was not.\nCommitted:\n%s", f, committed)
+		}
+	}
+
+	// Sensitive files should NOT be committed.
+	for _, f := range sensitiveFiles {
+		if strings.Contains(committed, f) {
+			t.Errorf("sensitive file %q was committed but should have been excluded.\nCommitted:\n%s", f, committed)
+		}
+	}
+
+	// Sensitive files should still be untracked in the working tree.
+	statusOut, err := exec.Command("git", "-C", dir, "status", "--porcelain").Output()
+	if err != nil {
+		t.Fatalf("git status: %v", err)
+	}
+	status := string(statusOut)
+	if !strings.Contains(status, ".env") {
+		t.Errorf("expected .env to remain untracked, status:\n%s", status)
+	}
+}
+
 func TestCreateCheckpoint_InvalidPath(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir() // not a git repo

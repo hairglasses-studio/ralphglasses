@@ -87,10 +87,19 @@ rg_download_go() {
 
   mkdir -p "$(dirname "${go_root}")"
   echo "bootstrapping Go ${version} into ${go_root}" >&2
-  python3 - <<PY
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL -o "${tmp_dir}/${archive}" "${url}"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -q -O "${tmp_dir}/${archive}" "${url}"
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 - <<PY
 import urllib.request
 urllib.request.urlretrieve("${url}", "${tmp_dir}/${archive}")
 PY
+  else
+    echo "error: no download tool available (need curl, wget, or python3)" >&2
+    return 1
+  fi
   tar -xzf "${tmp_dir}/${archive}" -C "${tmp_dir}"
   rm -rf "${go_root}"
   mv "${tmp_dir}/go" "${go_root}"
