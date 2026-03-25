@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
 
@@ -43,7 +44,8 @@ Exits 0 on pass/warn/skip, exits 1 on fail.`,
 
 		if selftestGateOnly {
 			// Gate-only mode: evaluate observations against baseline, no iterations.
-			report, err := e2e.EvaluateFromObservations(repoPath, e2e.DefaultGateThresholds(), 0)
+			resolved, _ := session.ResolveMainRepoPath(repoPath)
+			report, err := e2e.EvaluateFromObservations(resolved, e2e.DefaultGateThresholds(), 0)
 			if err != nil {
 				return fmt.Errorf("gate evaluation: %w", err)
 			}
@@ -69,7 +71,8 @@ Exits 0 on pass/warn/skip, exits 1 on fail.`,
 		}
 
 		// After run, evaluate gates.
-		report, err := e2e.EvaluateFromObservations(repoPath, e2e.DefaultGateThresholds(), 0)
+		resolved, _ := session.ResolveMainRepoPath(repoPath)
+		report, err := e2e.EvaluateFromObservations(resolved, e2e.DefaultGateThresholds(), 0)
 		if err != nil {
 			// Non-fatal: we still have the run result.
 			report = nil

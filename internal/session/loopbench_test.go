@@ -258,6 +258,82 @@ func TestBuildDiffSummary(t *testing.T) {
 	}
 }
 
+func TestResolveMainRepoPath_NormalRepo(t *testing.T) {
+	tmp := t.TempDir()
+	// Init a normal git repo
+	cmd := exec.Command("git", "init")
+	cmd.Dir = tmp
+	if err := cmd.Run(); err != nil {
+		t.Fatal(err)
+	}
+
+	resolved, err := ResolveMainRepoPath(tmp)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should resolve to the same directory (EvalSymlinks for macOS /var -> /private/var)
+	absTmp, _ := filepath.EvalSymlinks(tmp)
+	absResolved, _ := filepath.EvalSymlinks(resolved)
+	if absTmp != absResolved {
+		t.Errorf("expected %s, got %s", absTmp, absResolved)
+	}
+}
+
+func TestResolveMainRepoPath_Worktree(t *testing.T) {
+	// Create main repo with initial commit
+	main := t.TempDir()
+	for _, args := range [][]string{
+		{"init"},
+		{"checkout", "-b", "main"},
+		{"config", "user.email", "test@test.com"},
+		{"config", "user.name", "Test"},
+	} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = main
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("git %v: %v", args, err)
+		}
+	}
+	// Need at least one commit for worktree
+	os.WriteFile(filepath.Join(main, "file.txt"), []byte("x"), 0o644)
+	cmd := exec.Command("git", "add", ".")
+	cmd.Dir = main
+	cmd.Run()
+	cmd = exec.Command("git", "commit", "-m", "init")
+	cmd.Dir = main
+	cmd.Run()
+
+	// Create worktree
+	wt := filepath.Join(t.TempDir(), "wt")
+	cmd = exec.Command("git", "worktree", "add", wt, "-b", "work")
+	cmd.Dir = main
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("worktree add: %v", err)
+	}
+
+	resolved, err := ResolveMainRepoPath(wt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	absMain, _ := filepath.EvalSymlinks(main)
+	absResolved, _ := filepath.EvalSymlinks(resolved)
+	if absMain != absResolved {
+		t.Errorf("expected main repo %s, got %s", absMain, absResolved)
+	}
+}
+
+func TestResolveMainRepoPath_NonGitDir(t *testing.T) {
+	tmp := t.TempDir()
+	resolved, err := ResolveMainRepoPath(tmp)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resolved != tmp {
+		t.Errorf("expected %s, got %s", tmp, resolved)
+	}
+}
+
 func TestLoopObservationDiffPathsJSON(t *testing.T) {
 	// Verify omitempty works — empty DiffPaths should not appear in JSON.
 	obs := LoopObservation{LoopID: "test"}
