@@ -87,9 +87,30 @@ func isReviewPath(p string) bool {
 	return false
 }
 
+// isGitWorktree returns true if dir is inside a git worktree (not the main
+// checkout). It checks whether git-common-dir differs from git-dir, which
+// indicates a linked worktree where `git checkout main` would fail because
+// main is already checked out by the parent repo.
+func isGitWorktree(dir string) bool {
+	cmd := exec.Command("git", "rev-parse", "--git-common-dir")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	commonDir := strings.TrimSpace(string(out))
+	// In a normal repo, --git-common-dir returns ".git".
+	// In a worktree, it returns an absolute path to the main repo's .git dir.
+	return commonDir != ".git"
+}
+
 // AutoCommitAndMerge stages, commits, and fast-forward merges changes from a
 // worktree back to the main branch. Uses the same secret exclusions as
 // checkpoint.go.
+//
+// When running inside a git worktree, it avoids `git checkout main` (which
+// would fail because main is locked by the parent repo) and instead updates
+// the main branch ref directly via `git update-ref`.
 func AutoCommitAndMerge(dir, mainBranch, message string) error {
 	ts := time.Now().Format("20060102-150405")
 	branch := fmt.Sprintf("self-improve-%s", ts)
@@ -123,17 +144,58 @@ func AutoCommitAndMerge(dir, mainBranch, message string) error {
 		return fmt.Errorf("git commit: %w", err)
 	}
 
-	// Switch to main and fast-forward merge
-	if err := gitRun(dir, "checkout", mainBranch); err != nil {
-		return fmt.Errorf("checkout main: %w", err)
-	}
-	if err := gitRun(dir, "merge", "--ff-only", branch); err != nil {
-		return fmt.Errorf("ff-merge: %w", err)
+	if isGitWorktree(dir) {
+		// Worktree mode: cannot checkout main (it's locked by the parent repo).
+		// Verify we can fast-forward, then update the ref directly.
+		mergeBase, err := gitOutput(dir, "merge-base", "HEAD", mainBranch)
+		if err != nil {
+			return fmt.Errorf("merge-base: %w", err)
+		}
+
+		mainRef, err := gitOutput(dir, "rev-parse", mainBranch)
+		if err != nil {
+			return fmt.Errorf("rev-parse %s: %w", mainBranch, err)
+		}
+
+		// Fast-forward is only valid if main is the merge-base (i.e., main
+		// hasn't diverged from our branch point).
+		if strings.TrimSpace(mergeBase) != strings.TrimSpace(mainRef) {
+			return fmt.Errorf("ff-merge: %s has diverged, cannot fast-forward in worktree", mainBranch)
+		}
+
+		headRef, err := gitOutput(dir, "rev-parse", "HEAD")
+		if err != nil {
+			return fmt.Errorf("rev-parse HEAD: %w", err)
+		}
+
+		// Update main branch ref to point to our commit.
+		if err := gitRun(dir, "update-ref", "refs/heads/"+mainBranch, strings.TrimSpace(headRef)); err != nil {
+			return fmt.Errorf("update-ref: %w", err)
+		}
+	} else {
+		// Normal repo: switch to main and fast-forward merge.
+		if err := gitRun(dir, "checkout", mainBranch); err != nil {
+			return fmt.Errorf("checkout main: %w", err)
+		}
+		if err := gitRun(dir, "merge", "--ff-only", branch); err != nil {
+			return fmt.Errorf("ff-merge: %w", err)
+		}
 	}
 
 	// Cleanup branch
 	_ = gitRun(dir, "branch", "-d", branch)
 	return nil
+}
+
+// gitOutput executes a git command and returns its trimmed stdout.
+func gitOutput(dir string, args ...string) (string, error) {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("git %s: %w", strings.Join(args, " "), err)
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 // CreateReviewPR creates a branch, commits changes, pushes, and creates a
