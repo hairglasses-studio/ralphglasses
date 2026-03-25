@@ -412,6 +412,66 @@ func TestSanitizeTaskTitle(t *testing.T) {
 	}
 }
 
+func TestSanitizeTaskTitle_WorkerOutput(t *testing.T) {
+	workerOutputs := []string{
+		"All tests pass. Here's what I did:",
+		"I've completed the requested changes",
+		"Successfully updated the test file",
+		"Done. The changes have been applied.",
+		"I added unit tests for the parser",
+	}
+	for _, input := range workerOutputs {
+		t.Run(input, func(t *testing.T) {
+			got := sanitizeTaskTitle(input)
+			if got != "self-improvement iteration" {
+				t.Errorf("sanitizeTaskTitle(%q) = %q, want %q", input, got, "self-improvement iteration")
+			}
+		})
+	}
+}
+
+func TestSanitizeTaskTitle_ValidTitles(t *testing.T) {
+	validTitles := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"imperative verb", "Add unit tests for RefreshRepo error propagation", "Add unit tests for RefreshRepo error propagation"},
+		{"wire TUI", "Wire TUI to consume process.Manager ErrorChan", "Wire TUI to consume process.Manager ErrorChan"},
+		{"refactor", "Refactor TUI key bindings for consistency", "Refactor TUI key bindings for consistency"},
+		{"markdown JSON", "```json\n{\"title\": \"Wrapped title\"}\n```", "Wrapped title"},
+	}
+	for _, tc := range validTitles {
+		t.Run(tc.name, func(t *testing.T) {
+			got := sanitizeTaskTitle(tc.input)
+			if got != tc.want {
+				t.Errorf("sanitizeTaskTitle(%q) = %q, want %q", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSanitizeTaskTitle_JSONExtraction(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"title key", `{"title": "Fix bug"}`, "Fix bug"},
+		{"task key", `{"task": "Add tests"}`, "Add tests"},
+		{"name key", `{"name": "Refactor module"}`, "Refactor module"},
+		{"markdown fenced JSON", "```json\n{\"title\": \"Wrapped title\"}\n```", "Wrapped title"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := sanitizeTaskTitle(tc.input)
+			if got != tc.want {
+				t.Errorf("sanitizeTaskTitle(%q) = %q, want %q", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestParsePlannerTask_SanitizesTitle(t *testing.T) {
 	// JSON with a raw JSON string as title
 	input := `{"title":"{\"nested\":\"json\",\"title\":\"Actual Title\"}","prompt":"do something"}`
