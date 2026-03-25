@@ -1,8 +1,9 @@
 package session
 
 import (
-	"os/exec"
 	"strings"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/gitutil"
 )
 
 // ForbiddenSelfTestPaths are file path patterns that require human review
@@ -19,25 +20,7 @@ var ForbiddenSelfTestPaths = []string{
 // gitDiffPaths runs git diff --name-only HEAD in the given directory and
 // returns the list of changed file paths relative to the repo root.
 func gitDiffPaths(dir string) ([]string, error) {
-	cmd := exec.Command("git", "diff", "--name-only", "HEAD")
-	cmd.Dir = dir
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, err
-	}
-
-	trimmed := strings.TrimSpace(string(out))
-	if trimmed == "" {
-		return nil, nil
-	}
-
-	var paths []string
-	for _, line := range strings.Split(trimmed, "\n") {
-		if p := strings.TrimSpace(line); p != "" {
-			paths = append(paths, p)
-		}
-	}
-	return paths, nil
+	return gitutil.GitDiffPaths(dir)
 }
 
 // ClassifyDiffPaths separates changed files into safe and needs-review categories.

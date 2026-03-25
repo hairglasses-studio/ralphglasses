@@ -188,6 +188,9 @@ func (m *Manager) StartLoop(_ context.Context, repoPath string, profile LoopProf
 		run.Deadline = &d
 	}
 
+	// Opportunistic cleanup of stale loop worktrees (best-effort).
+	_, _ = CleanupStaleWorktrees(repoPath, 24*time.Hour)
+
 	m.mu.Lock()
 	m.loops[run.ID] = run
 	m.mu.Unlock()
@@ -230,9 +233,11 @@ func (m *Manager) StopLoop(id string) error {
 	run.mu.Lock()
 	run.Status = "stopped"
 	run.UpdatedAt = time.Now()
+	repoPath := run.RepoPath
 	run.mu.Unlock()
 
 	m.PersistLoop(run)
+	_ = CleanupLoopWorktrees(repoPath, id)
 	return nil
 }
 
