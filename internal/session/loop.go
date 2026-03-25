@@ -139,7 +139,7 @@ func DefaultLoopProfile() LoopProfile {
 func SelfImprovementProfile() LoopProfile {
 	return LoopProfile{
 		PlannerProvider:      ProviderClaude,
-		PlannerModel:         "claude-opus-4-6-max", // 1M context for deep research/planning
+		PlannerModel:         "claude-opus-4-6", // opus for deep research/planning
 		WorkerProvider:       ProviderClaude,
 		WorkerModel:          "claude-sonnet-4-6", // sonnet for execution (cost-effective)
 		VerifierProvider:     ProviderClaude,
