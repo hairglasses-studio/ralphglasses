@@ -187,7 +187,7 @@ func DefaultKeyMap() KeyMap {
 		),
 		LoopPanel: key.NewBinding(
 			key.WithKeys("l"),
-			key.WithHelp("l", "Toggle loop panel"),
+			key.WithHelp("l", "Loop list"),
 		),
 	}
 }
@@ -336,6 +336,19 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
 		k.LoopHealth.SetEnabled(false)
+	case ViewLoopList:
+		k.StartLoop.SetEnabled(false)
+		k.StopAction.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.DiffView.SetEnabled(false)
+		k.Space.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+		k.TimelineView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
+		k.LoopPanel.SetEnabled(false)
 	}
 }
 
@@ -360,7 +373,8 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 func (k KeyMap) HelpGroups() []views.HelpGroup {
 	return []views.HelpGroup{
 		{Name: "Navigation", Bindings: []key.Binding{k.Tab1, k.Tab2, k.Tab3, k.Tab4}},
-		{Name: "Global", Bindings: []key.Binding{k.Quit, k.CmdMode, k.FilterMode, k.Help, k.Escape, k.Refresh, k.LoopPanel}},
+		{Name: "Global", Bindings: []key.Binding{k.Quit, k.CmdMode, k.FilterMode, k.Help, k.Escape, k.Refresh}},
+		{Name: "Loop List", Bindings: []key.Binding{k.LoopPanel}},
 		{Name: "Repos Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StartLoop, k.StopAction, k.PauseLoop}},
 		{Name: "Sessions Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StopAction}},
 		{Name: "Teams Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort}},
@@ -434,11 +448,8 @@ func handleHelp(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func handleLoopPanel(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-	m.ShowLoopPanel = !m.ShowLoopPanel
-	if m.ShowLoopPanel {
-		m.refreshLoopView()
-	}
-	return *m, nil
+	m.pushView(ViewLoopList, "Loops")
+	return *m, m.loopListCmd()
 }
 
 func handleEscape(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {

@@ -37,6 +37,7 @@ const (
 	ViewDiff
 	ViewTimeline
 	ViewLoopHealth
+	ViewLoopList
 )
 
 // InputMode tracks the current input capture mode.
@@ -50,6 +51,9 @@ const (
 )
 
 type tickMsg time.Time
+
+// LoopListMsg carries a refreshed snapshot of active loop runs for the loop list view.
+type LoopListMsg []*session.LoopRun
 
 // RefreshErrorMsg is sent when RefreshRepo encounters parse errors.
 type RefreshErrorMsg struct {
@@ -86,9 +90,10 @@ type Model struct {
 	ActiveTab   int // 0=repos, 1=sessions, 2=teams, 3=fleet
 
 	// Components
-	Table        *components.Table
-	SessionTable *components.Table
-	TeamTable    *components.Table
+	Table         *components.Table
+	SessionTable  *components.Table
+	TeamTable     *components.Table
+	LoopListTable *components.Table
 	TabBar       components.TabBar
 	StatusBar    components.StatusBar
 	Notify       components.NotificationManager
@@ -160,6 +165,7 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 	table := views.NewOverviewTable()
 	sessionTable := views.NewSessionsTable()
 	teamTable := views.NewTeamsTable()
+	loopListTable := views.NewLoopListTable()
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -169,11 +175,12 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 	sessionTable.MultiSelect = true
 
 	return Model{
-		ScanPath:     scanPath,
-		CurrentView:  ViewOverview,
-		Table:        table,
-		SessionTable: sessionTable,
-		TeamTable:    teamTable,
+		ScanPath:      scanPath,
+		CurrentView:   ViewOverview,
+		Table:         table,
+		SessionTable:  sessionTable,
+		TeamTable:     teamTable,
+		LoopListTable: loopListTable,
 		TabBar:       components.TabBar{Tabs: tabNames},
 		LogView:      views.NewLogView(),
 		ProcMgr:      process.NewManager(),
@@ -227,6 +234,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.SessionTable.Height = msg.Height
 		m.TeamTable.Width = msg.Width
 		m.TeamTable.Height = msg.Height
+		m.LoopListTable.Width = msg.Width
+		m.LoopListTable.Height = msg.Height
 		m.LogView.SetDimensions(msg.Width, msg.Height)
 		m.StatusBar.Width = msg.Width
 		return m, nil
@@ -249,6 +258,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.refreshGateCache()
 		m.drainRegressionEvents()
 		m.refreshLoopView()
+		cmds = append(cmds, m.loopListCmd())
 		m.updateTable()
 		m.updateSessionTable()
 		m.updateTeamTable()
@@ -259,6 +269,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, process.TailLog(m.Repos[m.SelectedIdx].Path, &m.LogOffset))
 		}
 		return m, tea.Batch(cmds...)
+
+	case LoopListMsg:
+		rows := views.LoopRunsToRows([]*session.LoopRun(msg), m.TickFrame)
+		m.LoopListTable.SetRows(rows)
+		return m, nil
 
 	case RefreshErrorMsg:
 		m.Notify.Show(fmt.Sprintf("⚠ %s: parse errors", filepath.Base(msg.RepoPath)), 5*time.Second)
@@ -428,7 +443,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleTeamDetailKey(msg)
 	case ViewFleet:
 		return m.handleFleetKey(msg)
-	case ViewHelp, ViewDiff, ViewTimeline, ViewLoopHealth:
+	case ViewHelp, ViewDiff, ViewTimeline, ViewLoopHealth, ViewLoopList:
 		// Read-only views — Esc handled globally, no view-specific keys
 		return m, nil
 	}
@@ -570,6 +585,15 @@ func (m *Model) updateTeamTable() {
 	m.TeamTable.SetRows(rows)
 }
 
+// loopListCmd fetches active loops and returns them as a LoopListMsg.
+func (m Model) loopListCmd() tea.Cmd {
+	if m.SessMgr == nil {
+		return func() tea.Msg { return LoopListMsg(nil) }
+	}
+	loops := m.SessMgr.ListLoops()
+	return func() tea.Msg { return LoopListMsg(loops) }
+}
+
 // activeTable returns the table for the current view.
 func (m *Model) activeTable() *components.Table {
 	switch m.CurrentView {
@@ -579,6 +603,8 @@ func (m *Model) activeTable() *components.Table {
 		return m.SessionTable
 	case ViewTeams:
 		return m.TeamTable
+	case ViewLoopList:
+		return m.LoopListTable
 	default:
 		return m.Table
 	}
@@ -710,6 +736,8 @@ func (m Model) View() string {
 			}
 			b.WriteString(views.RenderLoopHealth(healthData, m.Width, m.Height))
 		}
+	case ViewLoopList:
+		b.WriteString(m.LoopListTable.View())
 	}
 
 	// Loop panel overlay
