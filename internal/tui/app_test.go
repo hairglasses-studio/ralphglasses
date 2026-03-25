@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
@@ -463,6 +465,40 @@ func TestLoopPanelHidden(t *testing.T) {
 	view := m.View()
 	if strings.Contains(view, "Loop Status") {
 		t.Error("loop panel should not appear when ShowLoopPanel=false")
+	}
+}
+
+// TestKeyDispatchCoversGlobalBindings uses reflection to enumerate every exported
+// key.Binding field of KeyMap that belongs to the global dispatch set and asserts
+// that KeyDispatch contains a matching entry for each one.
+func TestKeyDispatchCoversGlobalBindings(t *testing.T) {
+	km := DefaultKeyMap()
+	rt := reflect.TypeOf(km)
+	rv := reflect.ValueOf(km)
+	bindingType := reflect.TypeOf(key.Binding{})
+
+	// globalFields are the KeyMap fields that were in the original switch/case
+	// block in handleKey and must therefore appear in KeyDispatch.
+	globalFields := map[string]bool{
+		"Quit": true, "CmdMode": true, "FilterMode": true, "Help": true,
+		"Escape": true, "Refresh": true, "LoopPanel": true,
+		"Tab1": true, "Tab2": true, "Tab3": true, "Tab4": true,
+	}
+
+	for i := 0; i < rt.NumField(); i++ {
+		field := rt.Field(i)
+		if !field.IsExported() || field.Type != bindingType || !globalFields[field.Name] {
+			continue
+		}
+		expected := rv.Field(i).Interface().(key.Binding)
+		t.Run(field.Name, func(t *testing.T) {
+			for _, entry := range KeyDispatch {
+				if reflect.DeepEqual(entry.Binding(&km), expected) {
+					return
+				}
+			}
+			t.Errorf("KeyDispatch has no entry for KeyMap.%s", field.Name)
+		})
 	}
 }
 

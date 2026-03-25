@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
 )
@@ -370,4 +371,109 @@ func (k KeyMap) HelpGroups() []views.HelpGroup {
 		{Name: "Log Viewer", Bindings: []key.Binding{k.Down, k.GotoEnd, k.GotoStart, k.FollowToggle, k.PageUp, k.PageDown}},
 		{Name: "Config Editor", Bindings: []key.Binding{k.Down, k.Enter, k.WriteConfig}},
 	}
+}
+
+// KeyHandler handles a key press for the given model.
+type KeyHandler func(m *Model, msg tea.KeyMsg) (tea.Model, tea.Cmd)
+
+// KeyDispatchEntry pairs a binding accessor with its handler.
+type KeyDispatchEntry struct {
+	Binding func(km *KeyMap) key.Binding
+	Handler KeyHandler
+}
+
+// KeyDispatch is the ordered global key dispatch table for handleKey.
+// A slice is used instead of a map to guarantee deterministic first-match
+// semantics, identical to the original switch/case block (Go map iteration
+// is non-deterministic and would silently break priority ordering).
+var KeyDispatch []KeyDispatchEntry
+
+func init() {
+	KeyDispatch = []KeyDispatchEntry{
+		{func(km *KeyMap) key.Binding { return km.Quit }, handleQuit},
+		{func(km *KeyMap) key.Binding { return km.CmdMode }, handleCmdMode},
+		{func(km *KeyMap) key.Binding { return km.FilterMode }, handleFilterMode},
+		{func(km *KeyMap) key.Binding { return km.Help }, handleHelp},
+		{func(km *KeyMap) key.Binding { return km.LoopPanel }, handleLoopPanel},
+		{func(km *KeyMap) key.Binding { return km.Escape }, handleEscape},
+		{func(km *KeyMap) key.Binding { return km.Refresh }, handleRefresh},
+		{func(km *KeyMap) key.Binding { return km.Tab1 }, handleTab1},
+		{func(km *KeyMap) key.Binding { return km.Tab2 }, handleTab2},
+		{func(km *KeyMap) key.Binding { return km.Tab3 }, handleTab3},
+		{func(km *KeyMap) key.Binding { return km.Tab4 }, handleTab4},
+	}
+}
+
+func handleQuit(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.ProcMgr.StopAll()
+	if m.SessMgr != nil {
+		m.SessMgr.StopAll()
+	}
+	return *m, tea.Quit
+}
+
+func handleCmdMode(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.InputMode = ModeCommand
+	m.CommandBuf = ""
+	return *m, nil
+}
+
+func handleFilterMode(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.InputMode = ModeFilter
+	m.Filter.Active = true
+	m.Filter.Text = ""
+	return *m, nil
+}
+
+func handleHelp(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.CurrentView == ViewHelp {
+		return m.popView()
+	}
+	m.pushView(ViewHelp, "Help")
+	return *m, nil
+}
+
+func handleLoopPanel(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.ShowLoopPanel = !m.ShowLoopPanel
+	if m.ShowLoopPanel {
+		m.refreshLoopView()
+	}
+	return *m, nil
+}
+
+func handleEscape(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.ShowLoopPanel {
+		m.ShowLoopPanel = false
+		return *m, nil
+	}
+	tbl := m.activeTable()
+	if tbl != nil && tbl.HasSelection() {
+		tbl.ClearSelection()
+		return *m, nil
+	}
+	return m.popView()
+}
+
+func handleRefresh(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	return *m, m.scanRepos()
+}
+
+func handleTab1(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.switchTab(0, ViewOverview, "Repos")
+	return *m, nil
+}
+
+func handleTab2(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.switchTab(1, ViewSessions, "Sessions")
+	return *m, nil
+}
+
+func handleTab3(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.switchTab(2, ViewTeams, "Teams")
+	return *m, nil
+}
+
+func handleTab4(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.switchTab(3, ViewFleet, "Fleet")
+	return *m, nil
 }

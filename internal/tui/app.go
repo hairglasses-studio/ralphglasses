@@ -401,63 +401,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleConfigEditInput(msg)
 	}
 
-	// Global keys
-	switch {
-	case key.Matches(msg, m.Keys.Quit):
-		m.ProcMgr.StopAll()
-		if m.SessMgr != nil {
-			m.SessMgr.StopAll()
+	// Global keys — iterate dispatch table; first match wins (preserves switch/case semantics).
+	for _, entry := range KeyDispatch {
+		if key.Matches(msg, entry.Binding(&m.Keys)) {
+			return entry.Handler(&m, msg)
 		}
-		return m, tea.Quit
-	case key.Matches(msg, m.Keys.CmdMode):
-		m.InputMode = ModeCommand
-		m.CommandBuf = ""
-		return m, nil
-	case key.Matches(msg, m.Keys.FilterMode):
-		m.InputMode = ModeFilter
-		m.Filter.Active = true
-		m.Filter.Text = ""
-		return m, nil
-	case key.Matches(msg, m.Keys.Help):
-		if m.CurrentView == ViewHelp {
-			return m.popView()
-		}
-		m.pushView(ViewHelp, "Help")
-		return m, nil
-	case key.Matches(msg, m.Keys.LoopPanel):
-		m.ShowLoopPanel = !m.ShowLoopPanel
-		if m.ShowLoopPanel {
-			m.refreshLoopView()
-		}
-		return m, nil
-	case key.Matches(msg, m.Keys.Escape):
-		// Dismiss loop panel if showing
-		if m.ShowLoopPanel {
-			m.ShowLoopPanel = false
-			return m, nil
-		}
-		// If multi-select active, clear selection first
-		tbl := m.activeTable()
-		if tbl != nil && tbl.HasSelection() {
-			tbl.ClearSelection()
-			return m, nil
-		}
-		return m.popView()
-	case key.Matches(msg, m.Keys.Refresh):
-		return m, m.scanRepos()
-	// Tab switching
-	case key.Matches(msg, m.Keys.Tab1):
-		m.switchTab(0, ViewOverview, "Repos")
-		return m, nil
-	case key.Matches(msg, m.Keys.Tab2):
-		m.switchTab(1, ViewSessions, "Sessions")
-		return m, nil
-	case key.Matches(msg, m.Keys.Tab3):
-		m.switchTab(2, ViewTeams, "Teams")
-		return m, nil
-	case key.Matches(msg, m.Keys.Tab4):
-		m.switchTab(3, ViewFleet, "Fleet")
-		return m, nil
 	}
 
 	// View-specific keys
