@@ -1,11 +1,26 @@
 package session
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
 	"time"
 )
+
+// ErrRebaseConflict is returned when a rebase onto the main branch encounters
+// conflicts that require manual resolution.
+var ErrRebaseConflict = errors.New("rebase conflict: manual resolution required")
+
+// tryRebaseOnto attempts to rebase the current branch onto the given base branch.
+// If the rebase encounters conflicts, it aborts and returns ErrRebaseConflict.
+func tryRebaseOnto(dir, baseBranch string) error {
+	if err := gitRun(dir, "rebase", baseBranch); err != nil {
+		_ = gitRun(dir, "rebase", "--abort")
+		return ErrRebaseConflict
+	}
+	return nil
+}
 
 // AcceptanceResult records the outcome of the self-improvement acceptance gate.
 type AcceptanceResult struct {
@@ -162,7 +177,11 @@ func AutoCommitAndMerge(dir, mainBranch, message string) error {
 		// Fast-forward is only valid if main is the merge-base (i.e., main
 		// hasn't diverged from our branch point).
 		if strings.TrimSpace(mergeBase) != strings.TrimSpace(mainRef) {
-			return fmt.Errorf("ff-merge: %s has diverged, cannot fast-forward in worktree", mainBranch)
+			// Main has diverged — try rebasing our branch onto main.
+			if err := tryRebaseOnto(dir, mainBranch); err != nil {
+				return err
+			}
+			// Rebase succeeded — fall through to update-ref with new HEAD.
 		}
 
 		headRef, err := gitOutput(dir, "rev-parse", "HEAD")
@@ -180,7 +199,19 @@ func AutoCommitAndMerge(dir, mainBranch, message string) error {
 			return fmt.Errorf("checkout main: %w", err)
 		}
 		if err := gitRun(dir, "merge", "--ff-only", branch); err != nil {
-			return fmt.Errorf("ff-merge: %w", err)
+			// ff-only failed — rebase the feature branch onto main and retry.
+			if err := gitRun(dir, "checkout", branch); err != nil {
+				return fmt.Errorf("checkout branch for rebase: %w", err)
+			}
+			if rebaseErr := tryRebaseOnto(dir, mainBranch); rebaseErr != nil {
+				return rebaseErr
+			}
+			if err := gitRun(dir, "checkout", mainBranch); err != nil {
+				return fmt.Errorf("checkout main after rebase: %w", err)
+			}
+			if err := gitRun(dir, "merge", "--ff-only", branch); err != nil {
+				return fmt.Errorf("ff-merge after rebase: %w", err)
+			}
 		}
 	}
 
