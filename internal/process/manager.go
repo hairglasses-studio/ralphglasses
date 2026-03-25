@@ -1,6 +1,7 @@
 package process
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,7 @@ import (
 	"sync"
 	"syscall"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
 
@@ -22,12 +24,29 @@ type ProcessErrorMsg struct {
 	Err      error
 }
 
+// ProcessExitMsg is a tea.Msg delivered when any managed process exits,
+// regardless of exit code. Use WaitForProcessExit to receive it in the TUI.
+type ProcessExitMsg struct {
+	RepoPath string
+	ExitCode int
+	Error    error
+}
+
+// WaitForProcessExit returns a tea.Cmd that blocks until the next ProcessExitMsg
+// is available on ch. Wire this in Init and re-issue it in the Update handler.
+func WaitForProcessExit(ch <-chan ProcessExitMsg) tea.Cmd {
+	return func() tea.Msg {
+		return <-ch
+	}
+}
+
 // Manager tracks running ralph loop processes.
 type Manager struct {
-	mu    sync.Mutex
-	procs map[string]*ManagedProcess // keyed by repo path
-	bus   *events.Bus
-	errCh chan ProcessErrorMsg
+	mu     sync.Mutex
+	procs  map[string]*ManagedProcess // keyed by repo path
+	bus    *events.Bus
+	errCh  chan ProcessErrorMsg
+	exitCh chan ProcessExitMsg
 }
 
 // ManagedProcess wraps an os/exec.Cmd for a ralph loop.
@@ -54,17 +73,19 @@ type exitStatus struct {
 // NewManager creates a new process manager.
 func NewManager() *Manager {
 	return &Manager{
-		procs: make(map[string]*ManagedProcess),
-		errCh: make(chan ProcessErrorMsg, 16),
+		procs:  make(map[string]*ManagedProcess),
+		errCh:  make(chan ProcessErrorMsg, 16),
+		exitCh: make(chan ProcessExitMsg, 16),
 	}
 }
 
 // NewManagerWithBus creates a process manager wired to an event bus.
 func NewManagerWithBus(bus *events.Bus) *Manager {
 	return &Manager{
-		procs: make(map[string]*ManagedProcess),
-		bus:   bus,
-		errCh: make(chan ProcessErrorMsg, 16),
+		procs:  make(map[string]*ManagedProcess),
+		bus:    bus,
+		errCh:  make(chan ProcessErrorMsg, 16),
+		exitCh: make(chan ProcessExitMsg, 16),
 	}
 }
 
@@ -72,6 +93,12 @@ func NewManagerWithBus(bus *events.Bus) *Manager {
 // process exits with a non-zero status. Wrap with a tea.Cmd to handle in the TUI.
 func (m *Manager) ErrorChan() <-chan ProcessErrorMsg {
 	return m.errCh
+}
+
+// ExitChan returns a channel that receives ProcessExitMsg on every managed
+// process exit. Use WaitForProcessExit to consume it as a tea.Cmd.
+func (m *Manager) ExitChan() <-chan ProcessExitMsg {
+	return m.exitCh
 }
 
 // pidFilePath returns the path to the PID file for a repo.
@@ -200,6 +227,21 @@ func (m *Manager) Start(repoPath string) error {
 		delete(m.procs, rp)
 		m.mu.Unlock()
 		removePIDFile(rp)
+
+		// Notify TUI of every exit via ProcessExitMsg.
+		exitCodeForMsg := 0
+		if waitErr != nil {
+			var exitErr *exec.ExitError
+			if errors.As(waitErr, &exitErr) {
+				exitCodeForMsg = exitErr.ExitCode()
+			} else {
+				exitCodeForMsg = -1
+			}
+		}
+		select {
+		case m.exitCh <- ProcessExitMsg{RepoPath: rp, ExitCode: exitCodeForMsg, Error: waitErr}:
+		default: // drop if channel is full
+		}
 
 		// Notify TUI of unexpected failures (exit code > 0; signal kills yield -1).
 		if exitCode > 0 {
