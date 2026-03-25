@@ -505,6 +505,28 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		return m.failLoopIteration(run, index, fmt.Errorf("parse planner output: %w", err))
 	}
 
+	// Retry if planner returned freeform text instead of JSON.
+	if len(tasks) > 0 && tasks[0].Source == "fallback" {
+		retryPrompt := fmt.Sprintf("Your previous response was not valid JSON. Here is what you said:\n\n%s\n\nRespond with ONLY a JSON object: {\"title\":\"...\",\"prompt\":\"...\"}", plannerOutput)
+		retryOpts := LaunchOptions{
+			SessionName:  fmt.Sprintf("loop-plan-%s-%03d-retry", run.RepoName, iteration.Number),
+			Provider:     profile.PlannerProvider,
+			RepoPath:     repoPath,
+			Prompt:       retryPrompt,
+			Model:        profile.PlannerModel,
+			MaxBudgetUSD: profile.PlannerBudgetUSD,
+		}
+		if retrySess, retryErr := m.launchWorkflowSession(ctx, retryOpts); retryErr == nil {
+			if waitErr := m.waitForSession(ctx, retrySess); waitErr == nil {
+				retryTasks, retryOutput, retryParseErr := plannerTasksFromSession(retrySess, numWorkers)
+				if retryParseErr == nil && len(retryTasks) > 0 && retryTasks[0].Source != "fallback" {
+					tasks = retryTasks
+					plannerOutput = retryOutput
+				}
+			}
+		}
+	}
+
 	// WS5: Sort tasks by estimated difficulty (easy first) and score them.
 	var taskDifficulties []TaskDifficulty
 	if m.curriculum != nil && profile.EnableCurriculum {
@@ -1023,13 +1045,33 @@ func buildLoopPlannerPromptN(repoPath string, numTasks int, prev []LoopIteration
 	}
 	// Replace the single-task instruction with multi-task
 	prompt = strings.Replace(prompt,
-		`Choose exactly one bounded next task for the repo and respond with JSON only:
-{"title":"short task title","prompt":"implementation prompt for the worker"}`,
-		fmt.Sprintf(`Choose up to %d independent tasks that can run in parallel (no file conflicts).
-Respond with a JSON array only:
+		`CRITICAL: Your ENTIRE response must be a single JSON object. No prose, no markdown fences, no explanation — just the JSON.
+
+{"title":"short task title","prompt":"detailed implementation prompt for the worker"}
+
+BAD (do NOT do this):
+  Here's what I suggest: {"title":"...","prompt":"..."}
+
+GOOD (do this):
+  {"title":"add unit tests for error handling","prompt":"Add tests in internal/session/..."}
+
+Constraints:
+- Output ONLY the JSON object. Nothing before it, nothing after it.`,
+		fmt.Sprintf(`CRITICAL: Your ENTIRE response must be a single JSON array. No prose, no markdown fences, no explanation — just the JSON.
+
+Choose up to %d independent tasks that can run in parallel (no file conflicts).
 [{"title":"task 1","prompt":"implementation prompt"},{"title":"task 2","prompt":"implementation prompt"}]
 
-Each task runs in its own git worktree, so they must not modify the same files.`, numTasks),
+Each task runs in its own git worktree, so they must not modify the same files.
+
+BAD (do NOT do this):
+  Here are the tasks: [{"title":"...","prompt":"..."}]
+
+GOOD (do this):
+  [{"title":"add unit tests","prompt":"Add tests in..."},{"title":"fix lint warnings","prompt":"Fix..."}]
+
+Constraints:
+- Output ONLY the JSON array. Nothing before it, nothing after it.`, numTasks),
 		1)
 	return prompt, nil
 }
@@ -1038,14 +1080,21 @@ func buildLoopPlannerPrompt(repoPath string, prevIterations []LoopIteration) (st
 	var sections []string
 	sections = append(sections, `You are the planner for a perpetual development loop.
 
-Choose exactly one bounded next task for the repo and respond with JSON only:
-{"title":"short task title","prompt":"implementation prompt for the worker"}
+CRITICAL: Your ENTIRE response must be a single JSON object. No prose, no markdown fences, no explanation — just the JSON.
+
+{"title":"short task title","prompt":"detailed implementation prompt for the worker"}
+
+BAD (do NOT do this):
+  Here's what I suggest: {"title":"...","prompt":"..."}
+
+GOOD (do this):
+  {"title":"add unit tests for error handling","prompt":"Add tests in internal/session/..."}
 
 Constraints:
+- Output ONLY the JSON object. Nothing before it, nothing after it.
 - Pick the highest-impact unfinished task that is safe to execute next.
 - Keep the worker task concrete and implementation-focused.
 - Assume verification will run after the worker finishes.
-- Do not include markdown fences or prose outside the JSON object.
 - Prefer variety in task types. If recent iterations were all bug fixes, choose a test, docs, or refactor task instead.`)
 
 	roadmapPath := filepath.Join(repoPath, "ROADMAP.md")
