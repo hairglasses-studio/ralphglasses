@@ -43,18 +43,130 @@
       "latency_p50_ms": 500,
       "latency_p95_ms": 1000,
       "sample_count": 6
+    },
+    "gemini-worker-basic:gemini": {
+      "cost_p50": 0.16,
+      "cost_p95": 0.22,
+      "latency_p50_ms": 450,
+      "latency_p95_ms": 900,
+      "sample_count": 6
+    },
+    "codex-worker-basic:codex": {
+      "cost_p50": 0.24,
+      "cost_p95": 0.32,
+      "latency_p50_ms": 500,
+      "latency_p95_ms": 1000,
+      "sample_count": 6
+    },
+    "multi-provider-team:claude": {
+      "cost_p50": 1.70,
+      "cost_p95": 2.20,
+      "latency_p50_ms": 800,
+      "latency_p95_ms": 1600,
+      "sample_count": 6
+    },
+    "provider-failover:gemini": {
+      "cost_p50": 0.60,
+      "cost_p95": 0.80,
+      "latency_p50_ms": 600,
+      "latency_p95_ms": 1200,
+      "sample_count": 6
+    },
+    "budget-exhaustion:claude": {
+      "cost_p50": 1.10,
+      "cost_p95": 1.40,
+      "latency_p50_ms": 500,
+      "latency_p95_ms": 1000,
+      "sample_count": 6
+    },
+    "timeout-cascade:claude": {
+      "cost_p50": 0.90,
+      "cost_p95": 1.15,
+      "latency_p50_ms": 700,
+      "latency_p95_ms": 1400,
+      "sample_count": 6
+    },
+    "circuit-breaker-trip:claude": {
+      "cost_p50": 0.10,
+      "cost_p95": 0.15,
+      "latency_p50_ms": 300,
+      "latency_p95_ms": 600,
+      "sample_count": 6
+    },
+    "concurrent-file-conflict:claude": {
+      "cost_p50": 0.20,
+      "cost_p95": 0.28,
+      "latency_p50_ms": 400,
+      "latency_p95_ms": 800,
+      "sample_count": 6
+    },
+    "checkpoint-recovery:claude": {
+      "cost_p50": 0.40,
+      "cost_p95": 0.55,
+      "latency_p50_ms": 500,
+      "latency_p95_ms": 1000,
+      "sample_count": 6
+    },
+    "cost-tracking-accuracy:claude": {
+      "cost_p50": 0.30,
+      "cost_p95": 0.40,
+      "latency_p50_ms": 450,
+      "latency_p95_ms": 900,
+      "sample_count": 6
+    },
+    "fleet-budget-enforcement:claude": {
+      "cost_p50": 0.00,
+      "cost_p95": 0.05,
+      "latency_p50_ms": 200,
+      "latency_p95_ms": 400,
+      "sample_count": 6
+    },
+    "reflexion-retry:claude": {
+      "cost_p50": 0.40,
+      "cost_p95": 0.55,
+      "latency_p50_ms": 550,
+      "latency_p95_ms": 1100,
+      "sample_count": 6
+    },
+    "cascade-escalation:claude": {
+      "cost_p50": 0.20,
+      "cost_p95": 0.28,
+      "latency_p50_ms": 500,
+      "latency_p95_ms": 1000,
+      "sample_count": 6
+    },
+    "cascade-cheap-success:claude": {
+      "cost_p50": 0.10,
+      "cost_p95": 0.15,
+      "latency_p50_ms": 350,
+      "latency_p95_ms": 700,
+      "sample_count": 6
+    },
+    "episodic-injection:claude": {
+      "cost_p50": 0.30,
+      "cost_p95": 0.40,
+      "latency_p50_ms": 450,
+      "latency_p95_ms": 900,
+      "sample_count": 6
+    },
+    "curriculum-ordering:claude": {
+      "cost_p50": 0.20,
+      "cost_p95": 0.28,
+      "latency_p50_ms": 450,
+      "latency_p95_ms": 900,
+      "sample_count": 6
     }
   },
   "aggregate": {
-    "cost_p50": 0.50,
-    "cost_p95": 0.90,
-    "latency_p50_ms": 500,
+    "cost_p50": 0.40,
+    "cost_p95": 1.00,
+    "latency_p50_ms": 480,
     "latency_p95_ms": 1100,
-    "sample_count": 36
+    "sample_count": 132
   },
   "rates": {
-    "completion_rate": 0.833,
-    "verify_pass_rate": 0.833,
-    "error_rate": 0.167
+    "completion_rate": 0.727,
+    "verify_pass_rate": 0.727,
+    "error_rate": 0.273
   }
 }

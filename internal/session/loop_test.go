@@ -675,3 +675,105 @@ func TestStepLoopDeadlineEnforced(t *testing.T) {
 	}
 }
 
+func TestStepLoopSelectTierSetsWorkerModel(t *testing.T) {
+	repoPath := setupLoopRepo(t)
+	stateDir := t.TempDir()
+
+	cr := NewCascadeRouter(CascadeConfig{
+		CheapProvider:       ProviderGemini,
+		ExpensiveProvider:   ProviderClaude,
+		ConfidenceThreshold: 0.7,
+		MaxCheapBudgetUSD:   2.00,
+		MaxCheapTurns:       15,
+	}, nil, nil, stateDir)
+
+	// Use default tiers: "test" task type maps to complexity 3 -> "coding" tier
+	// (claude-sonnet, provider claude).
+
+	var mu sync.Mutex
+	var workerOpts []LaunchOptions
+
+	m := NewManager()
+	m.SetStateDir(stateDir)
+	m.SetCascadeRouter(cr)
+	m.SetHooksForTesting(
+		func(_ context.Context, opts LaunchOptions) (*Session, error) {
+			mu.Lock()
+			workerOpts = append(workerOpts, opts)
+			mu.Unlock()
+
+			sess := &Session{
+				ID:         sanitizeLoopName(opts.SessionName),
+				Provider:   opts.Provider,
+				RepoPath:   opts.RepoPath,
+				RepoName:   filepath.Base(opts.RepoPath),
+				Prompt:     opts.Prompt,
+				Model:      opts.Model,
+				Status:     StatusCompleted,
+				OutputCh:   make(chan string, 1),
+				LaunchedAt: time.Now(),
+			}
+			// Planner returns a task with "test" in the title.
+			if opts.Model == "o1-pro" {
+				sess.LastOutput = `{"title":"Add test for parser","prompt":"Write unit tests for the parser module."}`
+				sess.OutputHistory = []string{sess.LastOutput}
+			} else {
+				sess.LastOutput = "worker complete"
+				sess.OutputHistory = []string{"worker complete"}
+			}
+			return sess, nil
+		},
+		func(_ context.Context, sess *Session) error {
+			sess.Lock()
+			sess.Status = StatusCompleted
+			now := time.Now()
+			sess.EndedAt = &now
+			sess.Unlock()
+			return nil
+		},
+	)
+
+	run, err := m.StartLoop(context.Background(), repoPath, LoopProfile{
+		EnableCascade:  true,
+		VerifyCommands: []string{"true"},
+	})
+	if err != nil {
+		t.Fatalf("StartLoop: %v", err)
+	}
+
+	if err := m.StepLoop(context.Background(), run.ID); err != nil {
+		t.Fatalf("StepLoop: %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Expect at least 2 launches: planner + cheap worker (cascade path).
+	// The cheap worker should have baseOpts.Model set by SelectTier before
+	// CheapLaunchOpts overrides the provider.
+	if len(workerOpts) < 2 {
+		t.Fatalf("expected at least 2 launches, got %d", len(workerOpts))
+	}
+
+	// Find the cheap worker launch (session name ends with "-cheap").
+	var found bool
+	for _, opts := range workerOpts {
+		if strings.HasSuffix(opts.SessionName, "-cheap") {
+			found = true
+			// SelectTier("test", 0) -> complexity 3 -> "coding" tier -> claude-sonnet.
+			// CheapLaunchOpts overrides provider to gemini, but model comes from SelectTier.
+			if opts.Model != "claude-sonnet" {
+				t.Errorf("cheap worker model = %q, want %q (set by SelectTier)", opts.Model, "claude-sonnet")
+			}
+			// CheapLaunchOpts should have overridden provider to gemini.
+			if opts.Provider != ProviderGemini {
+				t.Errorf("cheap worker provider = %q, want %q (set by CheapLaunchOpts)", opts.Provider, ProviderGemini)
+			}
+			break
+		}
+	}
+	if !found {
+		t.Error("no cheap worker launch found (expected session name ending in '-cheap')")
+	}
+}
+
