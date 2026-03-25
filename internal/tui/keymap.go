@@ -54,6 +54,7 @@ type KeyMap struct {
 	OutputView    key.Binding
 	TimelineView  key.Binding
 	LoopHealth    key.Binding
+	LoopPanel     key.Binding
 }
 
 // DefaultKeyMap returns the default key bindings.
@@ -183,6 +184,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("h"),
 			key.WithHelp("h", "Loop health"),
 		),
+		LoopPanel: key.NewBinding(
+			key.WithKeys("l"),
+			key.WithHelp("l", "Toggle loop panel"),
+		),
 	}
 }
 
@@ -206,6 +211,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 	k.OutputView.SetEnabled(true)
 	k.TimelineView.SetEnabled(true)
 	k.LoopHealth.SetEnabled(true)
+	k.LoopPanel.SetEnabled(true)
 
 	switch view {
 	case ViewOverview:
@@ -353,7 +359,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 func (k KeyMap) HelpGroups() []views.HelpGroup {
 	return []views.HelpGroup{
 		{Name: "Navigation", Bindings: []key.Binding{k.Tab1, k.Tab2, k.Tab3, k.Tab4}},
-		{Name: "Global", Bindings: []key.Binding{k.Quit, k.CmdMode, k.FilterMode, k.Help, k.Escape, k.Refresh}},
+		{Name: "Global", Bindings: []key.Binding{k.Quit, k.CmdMode, k.FilterMode, k.Help, k.Escape, k.Refresh, k.LoopPanel}},
 		{Name: "Repos Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StartLoop, k.StopAction, k.PauseLoop}},
 		{Name: "Sessions Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StopAction}},
 		{Name: "Teams Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort}},
