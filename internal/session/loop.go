@@ -48,7 +48,8 @@ type LoopProfile struct {
 	CompactionEnabled    bool     `json:"compaction_enabled"`
 	CompactionThreshold  int      `json:"compaction_threshold,omitempty"` // iterations before enabling compaction
 	AutoMergeAll         bool     `json:"auto_merge_all"`                // bypass path classification, auto-merge if verify passes
-	EnableEnhancement    bool     `json:"enable_enhancement"`            // run prompt enhancement before planner/worker calls
+	EnablePlannerEnhancement bool  `json:"enable_planner_enhancement"` // run prompt enhancement before planner calls
+	EnableWorkerEnhancement  bool  `json:"enable_worker_enhancement"`  // run prompt enhancement before worker calls
 	MaxIterations        int      `json:"max_iterations,omitempty"`
 	MaxDurationSecs      int      `json:"max_duration_secs,omitempty"`
 }
@@ -169,7 +170,8 @@ func SelfImprovementProfile() LoopProfile {
 		SelfImprovement:      true,
 		CompactionEnabled:    true,
 		AutoMergeAll:         true,  // unattended: auto-merge when ci.sh passes
-		EnableEnhancement:    false, // self-improvement prompts are already well-structured
+		EnablePlannerEnhancement: true,  // opus planner benefits from enhanced prompts
+		EnableWorkerEnhancement:  false, // worker prompts already well-structured by planner
 		MaxIterations:        10,
 		MaxDurationSecs:      14400, // 4 hours
 	}
@@ -455,7 +457,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	// Enhance planner prompt for the planner's target provider
 	var plannerEnhance enhanceResult
 	t3 := time.Now()
-	if m.Enhancer != nil && profile.EnableEnhancement {
+	if m.Enhancer != nil && profile.EnablePlannerEnhancement {
 		plannerEnhance = m.enhanceForProvider(ctx, plannerPrompt, profile.PlannerProvider)
 		plannerPrompt = plannerEnhance.prompt
 	} else {
@@ -567,7 +569,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 
 			// Enhance worker prompt for the worker's target provider
 			var workerEnhance enhanceResult
-			if m.Enhancer != nil && profile.EnableEnhancement {
+			if m.Enhancer != nil && profile.EnableWorkerEnhancement {
 				workerEnhance = m.enhanceForProvider(ctx, workerPrompt, profile.WorkerProvider)
 				workerPrompt = workerEnhance.prompt
 			} else {
