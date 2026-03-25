@@ -65,6 +65,13 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 		profile.WorkerBudgetUSD = budgetUSD * 2 / 3
 	}
 
+	if maxIter := int(getNumberArg(req, "max_iterations", 0)); maxIter > 0 {
+		profile.MaxIterations = maxIter
+	}
+	if durHours := getNumberArg(req, "duration_hours", 0); durHours > 0 {
+		profile.MaxDurationSecs = int(durHours * 3600)
+	}
+
 	// Wire self-learning subsystems when requested (singleton: only create if not already set).
 	ralphDir := filepath.Join(r.Path, ".ralph")
 	if getBoolArg(req, "enable_reflexion") {

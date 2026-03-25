@@ -37,9 +37,13 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 		profile.WorkerBudgetUSD = budgetUSD * 3 / 4
 	}
 
-	maxIter := int(getNumberArg(req, "max_iterations", 5))
-	if maxIter <= 0 {
-		maxIter = 5
+	profile.MaxIterations = int(getNumberArg(req, "max_iterations", 5))
+	if profile.MaxIterations <= 0 {
+		profile.MaxIterations = 5
+	}
+	durationHours := getNumberArg(req, "duration_hours", 4)
+	if durationHours > 0 {
+		profile.MaxDurationSecs = int(durationHours * 3600)
 	}
 
 	// Wire self-learning subsystems (same pattern as handler_loop.go)
@@ -69,12 +73,12 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 
 	run, err := s.SessMgr.StartLoop(ctx, r.Path, profile)
 	if err != nil {
-		return errResult(fmt.Sprintf("start self-improvement loop: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("start self-improvement loop: %v", err)), nil
 	}
 
 	return mcp.NewToolResultText(fmt.Sprintf(
 		"Self-improvement loop started: id=%s repo=%s budget=$%.0f max_iterations=%d",
 		run.ID, repoName,
-		profile.PlannerBudgetUSD+profile.WorkerBudgetUSD, maxIter,
+		profile.PlannerBudgetUSD+profile.WorkerBudgetUSD, profile.MaxIterations,
 	)), nil
 }

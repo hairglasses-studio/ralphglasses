@@ -376,6 +376,8 @@ func (s *Server) Register(srv *server.MCPServer) {
 		mcp.WithBoolean("enable_uncertainty", mcp.Description("Enable uncertainty quantification (confidence scoring)")),
 		mcp.WithBoolean("enable_curriculum", mcp.Description("Enable curriculum learning (difficulty-based task sorting)")),
 		mcp.WithBoolean("self_improvement", mcp.Description("Enable self-improvement mode with autonomous acceptance gate")),
+		mcp.WithNumber("max_iterations", mcp.Description("Maximum loop iterations (0 = unlimited)")),
+		mcp.WithNumber("duration_hours", mcp.Description("Maximum loop duration in hours (0 = unlimited)")),
 		mcp.WithNumber("budget_usd", mcp.Description("Total budget in USD (split 1/3 planner, 2/3 worker)")),
 	), s.handleLoopStart)
 
