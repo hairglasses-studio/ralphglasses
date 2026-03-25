@@ -7,6 +7,23 @@ import (
 	"time"
 )
 
+// checkpointExcludes lists pathspec patterns excluded from checkpoint staging
+// to prevent secrets, credentials, databases, and bulky dependency dirs from
+// being committed.
+var checkpointExcludes = []string{
+	".env",
+	".env.*",
+	"*.pem",
+	"*.key",
+	"*.p12",
+	"credentials*",
+	"*secret*",
+	"*.sqlite",
+	"*.db",
+	"node_modules/",
+	"vendor/",
+}
+
 // CreateCheckpoint creates a git checkpoint (commit + tag) for a session.
 // Only commits if the working tree is dirty.
 func CreateCheckpoint(repoPath string, count int, spendUSD float64, turnCount int) error {
@@ -22,8 +39,12 @@ func CreateCheckpoint(repoPath string, count int, spendUSD float64, turnCount in
 		return nil // nothing to commit
 	}
 
-	// Stage all changes
-	addCmd := exec.Command("git", "add", "-A")
+	// Stage all changes, excluding sensitive files and large artifacts.
+	addArgs := []string{"add", "-A", "--"}
+	for _, excl := range checkpointExcludes {
+		addArgs = append(addArgs, ":(exclude)"+excl)
+	}
+	addCmd := exec.Command("git", addArgs...)
 	addCmd.Dir = repoPath
 	if err := addCmd.Run(); err != nil {
 		return fmt.Errorf("git add: %w", err)

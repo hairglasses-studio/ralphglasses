@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
 
 // ProviderHealth holds the result of a health check for a single provider.
@@ -97,4 +100,101 @@ func HealthyProviders(health map[Provider]ProviderHealth) []Provider {
 		}
 	}
 	return out
+}
+
+// HealthChecker runs periodic provider health checks.
+// It publishes events.ProviderHealthChanged only on state transitions
+// (healthy→unhealthy or unhealthy→healthy).
+type HealthChecker struct {
+	providers []Provider
+	bus       *events.Bus
+	interval  time.Duration
+	lastState map[Provider]bool // true = healthy
+	mu        sync.Mutex
+}
+
+// NewHealthChecker creates a HealthChecker that periodically checks the given providers.
+func NewHealthChecker(bus *events.Bus, interval time.Duration, providers ...Provider) *HealthChecker {
+	if interval <= 0 {
+		interval = 30 * time.Second
+	}
+	return &HealthChecker{
+		providers: providers,
+		bus:       bus,
+		interval:  interval,
+		lastState: make(map[Provider]bool),
+	}
+}
+
+// Start begins the background health check loop. Stops when ctx is cancelled.
+func (h *HealthChecker) Start(ctx context.Context) {
+	// Run an initial check immediately.
+	h.tick()
+
+	ticker := time.NewTicker(h.interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			h.tick()
+		}
+	}
+}
+
+// tick performs one round of health checks and publishes events on state changes.
+func (h *HealthChecker) tick() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for _, p := range h.providers {
+		healthy := h.checkOne(p)
+		prev, known := h.lastState[p]
+		if !known || prev != healthy {
+			h.lastState[p] = healthy
+			if h.bus != nil {
+				h.bus.Publish(events.Event{
+					Type:     events.ProviderHealthChanged,
+					Provider: string(p),
+					Data: map[string]any{
+						"healthy":  healthy,
+						"provider": string(p),
+					},
+				})
+			}
+		}
+	}
+}
+
+// checkOne returns true if the provider binary is on PATH and env is set.
+func (h *HealthChecker) checkOne(p Provider) bool {
+	if err := ValidateProvider(p); err != nil {
+		return false
+	}
+	if err := ValidateProviderEnv(p); err != nil {
+		return false
+	}
+	return true
+}
+
+// CheckAll checks all providers and returns their current health status.
+func (h *HealthChecker) CheckAll() map[Provider]bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	result := make(map[Provider]bool, len(h.providers))
+	for _, p := range h.providers {
+		healthy := h.checkOne(p)
+		result[p] = healthy
+		h.lastState[p] = healthy
+	}
+	return result
+}
+
+// IsHealthy returns the last known health status for a provider.
+func (h *HealthChecker) IsHealthy(p Provider) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.lastState[p]
 }

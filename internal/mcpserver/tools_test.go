@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -17,6 +18,10 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
+
+// testSessionCounter ensures unique session IDs even when time.Now().UnixNano()
+// returns the same value for rapid successive calls (common under coverage).
+var testSessionCounter atomic.Int64
 
 func setupTestServer(t *testing.T) (*Server, string) {
 	t.Helper()
@@ -1725,7 +1730,8 @@ func TestHandleLoopLifecycle(t *testing.T) {
 func injectTestSession(t *testing.T, srv *Server, repoPath string, mods func(*session.Session)) string {
 	t.Helper()
 	now := time.Now()
-	id := fmt.Sprintf("test-%d", now.UnixNano())
+	seq := testSessionCounter.Add(1)
+	id := fmt.Sprintf("test-%d-%d", now.UnixNano(), seq)
 	sess := &session.Session{
 		ID:           id,
 		Provider:     session.ProviderClaude,

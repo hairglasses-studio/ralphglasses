@@ -69,16 +69,24 @@ for env_var in OPENAI_API_KEY GOOGLE_API_KEY ANTHROPIC_API_KEY; do
   fi
 done
 
-if grep -q 'command = "go"' "${repo_root}/.codex/config.toml"; then
-  check ".codex/config" "fail" "still uses raw go; expected wrapper script"
+if [[ -f "${repo_root}/.codex/config.toml" ]]; then
+  if grep -q 'command = "go"' "${repo_root}/.codex/config.toml"; then
+    check ".codex/config" "fail" "still uses raw go; expected wrapper script"
+  else
+    check ".codex/config" "ok" "wrapper-based startup configured"
+  fi
 else
-  check ".codex/config" "ok" "wrapper-based startup configured"
+  check ".codex/config" "warn" "file not found: .codex/config.toml"
 fi
 
-if grep -q '"command": "go"' "${repo_root}/.mcp.json"; then
-  check ".mcp.json" "fail" "still uses raw go; expected wrapper script"
+if [[ -f "${repo_root}/.mcp.json" ]]; then
+  if grep -q '"command": "go"' "${repo_root}/.mcp.json"; then
+    check ".mcp.json" "fail" "still uses raw go; expected wrapper script"
+  else
+    check ".mcp.json" "ok" "wrapper-based startup configured"
+  fi
 else
-  check ".mcp.json" "ok" "wrapper-based startup configured"
+  check ".mcp.json" "warn" "file not found: .mcp.json"
 fi
 
 if [[ "${strict}" -eq 1 && "${failures}" -gt 0 ]]; then

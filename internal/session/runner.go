@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -48,6 +49,16 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 		return nil, err
 	}
 
+	// When launching into a self-test target, propagate RALPH_SELF_TEST=1
+	// to prevent recursive self-test loops.
+	if IsSelfTestTarget(opts.RepoPath) {
+		env := cmd.Env
+		if env == nil {
+			env = os.Environ()
+		}
+		cmd.Env = SetSelfTestEnv(env)
+	}
+
 	// Pipe prompt via stdin
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -89,6 +100,7 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 		LastActivity: now,
 		cmd:          cmd,
 		cancel:       cancel,
+		doneCh:       make(chan struct{}),
 		OutputCh:     make(chan string, 100),
 		bus:          sessionBus,
 	}
@@ -142,6 +154,11 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span 
 
 	// Wait for process exit
 	err := s.cmd.Wait()
+
+	// Signal that the process has exited — killWithEscalation watches this.
+	if s.doneCh != nil {
+		close(s.doneCh)
+	}
 
 	s.mu.Lock()
 
@@ -309,21 +326,25 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader) {
 				}
 				if event.CostUSD > 0 {
 					prevSpent := s.SpentUSD
-					s.SpentUSD = event.CostUSD
-					s.CostHistory = append(s.CostHistory, event.CostUSD)
+					if s.Provider == ProviderClaude {
+						s.SpentUSD = event.CostUSD // Claude emits cumulative cost
+					} else {
+						s.SpentUSD += event.CostUSD // Gemini/Codex emit per-event cost
+					}
+					s.CostHistory = append(s.CostHistory, s.SpentUSD)
 					// Record turn metric for tracing
-					if delta := event.CostUSD - prevSpent; delta > 0 {
+					if delta := s.SpentUSD - prevSpent; delta > 0 {
 						tracing.Get().RecordTurnMetric(ctx, string(s.Provider), s.Model, s.ID, 0, 0, delta, 0)
 					}
 					// Publish cost update event
-					if s.bus != nil && event.CostUSD != prevSpent {
+					if s.bus != nil && s.SpentUSD != prevSpent {
 						s.bus.Publish(events.Event{
 							Type:      events.CostUpdate,
 							SessionID: s.ID,
 							RepoPath:  s.RepoPath,
 							RepoName:  s.RepoName,
 							Provider:  string(s.Provider),
-							Data:      map[string]any{"spent_usd": event.CostUSD, "turns": s.TurnCount},
+							Data:      map[string]any{"spent_usd": s.SpentUSD, "turns": s.TurnCount},
 						})
 					}
 					// Check budget exceeded

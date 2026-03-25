@@ -2,6 +2,8 @@ package session
 
 import (
 	"context"
+	"encoding/json"
+	"math"
 	"strings"
 	"testing"
 )
@@ -410,5 +412,233 @@ func TestUnsupportedOptionsWarnings(t *testing.T) {
 	cw := UnsupportedOptionsWarnings(ProviderCodex, opts)
 	if len(cw) != 3 {
 		t.Errorf("codex warnings count = %d, want 3: %v", len(cw), cw)
+	}
+}
+
+func TestEstimateCostFromTokens(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider Provider
+		raw      map[string]any
+		wantCost float64
+	}{
+		{
+			name:     "gemini with usage_metadata tokens",
+			provider: ProviderGemini,
+			raw: map[string]any{
+				"usage_metadata": map[string]any{
+					"prompt_token_count":     float64(1000),
+					"candidates_token_count": float64(500),
+				},
+			},
+			// (1000/1M)*1.25 + (500/1M)*5.00 = 0.00125 + 0.0025 = 0.00375
+			wantCost: 0.00375,
+		},
+		{
+			name:     "codex with usage tokens",
+			provider: ProviderCodex,
+			raw: map[string]any{
+				"usage": map[string]any{
+					"prompt_tokens":     float64(2000),
+					"completion_tokens": float64(1000),
+				},
+			},
+			// (2000/1M)*2.50 + (1000/1M)*10.00 = 0.005 + 0.01 = 0.015
+			wantCost: 0.015,
+		},
+		{
+			name:     "claude with usage input/output tokens",
+			provider: ProviderClaude,
+			raw: map[string]any{
+				"usage": map[string]any{
+					"input_tokens":  float64(5000),
+					"output_tokens": float64(2000),
+				},
+			},
+			// (5000/1M)*3.00 + (2000/1M)*15.00 = 0.015 + 0.03 = 0.045
+			wantCost: 0.045,
+		},
+		{
+			name:     "no token data returns zero",
+			provider: ProviderGemini,
+			raw: map[string]any{
+				"type":    "assistant",
+				"content": "hello",
+			},
+			wantCost: 0,
+		},
+		{
+			name:     "only input tokens",
+			provider: ProviderCodex,
+			raw: map[string]any{
+				"usage": map[string]any{
+					"prompt_tokens": float64(1000),
+				},
+			},
+			wantCost: 0.0025, // (1000/1M)*2.50
+		},
+		{
+			name:     "only output tokens",
+			provider: ProviderGemini,
+			raw: map[string]any{
+				"usage_metadata": map[string]any{
+					"candidates_token_count": float64(1000),
+				},
+			},
+			wantCost: 0.005, // (1000/1M)*5.00
+		},
+		{
+			name:     "unknown provider returns zero",
+			provider: Provider("unknown"),
+			raw: map[string]any{
+				"usage": map[string]any{
+					"input_tokens":  float64(1000),
+					"output_tokens": float64(1000),
+				},
+			},
+			wantCost: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := estimateCostFromTokens(tt.provider, tt.raw)
+			if math.Abs(got-tt.wantCost) > 1e-9 {
+				t.Errorf("estimateCostFromTokens(%s) = %v, want %v", tt.provider, got, tt.wantCost)
+			}
+		})
+	}
+}
+
+func TestNormalizeGeminiEventWithTokenCost(t *testing.T) {
+	raw := map[string]any{
+		"type":    "result",
+		"content": "done",
+		"usage_metadata": map[string]any{
+			"prompt_token_count":     float64(1000),
+			"candidates_token_count": float64(500),
+		},
+	}
+	line, err := json.Marshal(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	event, err := normalizeGeminiEvent(line)
+	if err != nil {
+		t.Fatalf("normalizeGeminiEvent() error: %v", err)
+	}
+
+	// (1000/1M)*1.25 + (500/1M)*5.00 = 0.00375
+	want := 0.00375
+	if math.Abs(event.CostUSD-want) > 1e-9 {
+		t.Errorf("CostUSD = %v, want %v", event.CostUSD, want)
+	}
+}
+
+func TestNormalizeGeminiEventExplicitCostTakesPrecedence(t *testing.T) {
+	raw := map[string]any{
+		"type":     "result",
+		"content":  "done",
+		"cost_usd": float64(0.05),
+		"usage_metadata": map[string]any{
+			"prompt_token_count":     float64(1000),
+			"candidates_token_count": float64(500),
+		},
+	}
+	line, err := json.Marshal(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	event, err := normalizeGeminiEvent(line)
+	if err != nil {
+		t.Fatalf("normalizeGeminiEvent() error: %v", err)
+	}
+
+	if math.Abs(event.CostUSD-0.05) > 1e-9 {
+		t.Errorf("CostUSD = %v, want 0.05 (explicit cost should take precedence)", event.CostUSD)
+	}
+}
+
+func TestNormalizeCodexEventWithTokenCost(t *testing.T) {
+	raw := map[string]any{
+		"type":    "result",
+		"content": "done",
+		"usage": map[string]any{
+			"prompt_tokens":     float64(2000),
+			"completion_tokens": float64(1000),
+		},
+	}
+	line, err := json.Marshal(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	event, err := normalizeCodexEvent(line)
+	if err != nil {
+		t.Fatalf("normalizeCodexEvent() error: %v", err)
+	}
+
+	// (2000/1M)*2.50 + (1000/1M)*10.00 = 0.015
+	want := 0.015
+	if math.Abs(event.CostUSD-want) > 1e-9 {
+		t.Errorf("CostUSD = %v, want %v", event.CostUSD, want)
+	}
+}
+
+func TestNormalizeClaudeEventTokenFallback(t *testing.T) {
+	raw := map[string]any{
+		"type": "result",
+		"usage": map[string]any{
+			"input_tokens":  float64(5000),
+			"output_tokens": float64(2000),
+		},
+		"result": "all done",
+	}
+	line, err := json.Marshal(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	event, err := normalizeClaudeEvent(line)
+	if err != nil {
+		t.Fatalf("normalizeClaudeEvent() error: %v", err)
+	}
+
+	// (5000/1M)*3.00 + (2000/1M)*15.00 = 0.015 + 0.03 = 0.045
+	want := 0.045
+	if math.Abs(event.CostUSD-want) > 1e-9 {
+		t.Errorf("CostUSD = %v, want %v", event.CostUSD, want)
+	}
+}
+
+func TestCostAccumulation(t *testing.T) {
+	// Simulate per-event cost accumulation for Gemini (non-Claude provider)
+	s := &Session{Provider: ProviderGemini}
+
+	costs := []float64{0.001, 0.002, 0.003}
+	var totalExpected float64
+	for _, cost := range costs {
+		totalExpected += cost
+		s.SpentUSD += cost // Gemini: accumulate
+	}
+
+	if math.Abs(s.SpentUSD-totalExpected) > 1e-9 {
+		t.Errorf("accumulated SpentUSD = %v, want %v", s.SpentUSD, totalExpected)
+	}
+	if math.Abs(s.SpentUSD-0.006) > 1e-9 {
+		t.Errorf("accumulated SpentUSD = %v, want 0.006", s.SpentUSD)
+	}
+
+	// Simulate cumulative cost for Claude (replacement, not accumulation)
+	sc := &Session{Provider: ProviderClaude}
+	cumulativeCosts := []float64{0.01, 0.03, 0.06}
+	for _, cost := range cumulativeCosts {
+		sc.SpentUSD = cost // Claude: replace
+	}
+
+	if math.Abs(sc.SpentUSD-0.06) > 1e-9 {
+		t.Errorf("Claude cumulative SpentUSD = %v, want 0.06", sc.SpentUSD)
 	}
 }

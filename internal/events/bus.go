@@ -1,6 +1,11 @@
 package events
 
 import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -42,11 +47,17 @@ const (
 	// Tool instrumentation
 	ToolCalled EventType = "tool.called"
 
+	// Errors
+	SessionError EventType = "session.error" // Non-fatal session-level error
+
 	// Self-improvement
 	AutoOptimized    EventType = "auto.optimized"     // Level 2+ decision executed
 	ProviderSelected EventType = "provider.selected"   // Smart provider selection
 	SessionRecovered EventType = "session.recovered"   // Auto-recovery restart
 	ContextConflict  EventType = "context.conflict"    // Cross-session file conflict
+
+	// Provider health
+	ProviderHealthChanged EventType = "provider.health" // Provider health state transition
 )
 
 // Event represents something that happened in the system.
@@ -68,6 +79,10 @@ type Bus struct {
 	history     []Event
 	maxHistory  int
 	totalCount  int // monotonic event counter (survives ring buffer drops)
+
+	persistFile   *os.File
+	persistPath   string
+	persistWrites int
 }
 
 // NewBus creates an event bus that retains up to maxHistory events.
@@ -94,6 +109,19 @@ func (b *Bus) Publish(event Event) {
 	}
 	b.history = append(b.history, event)
 	b.totalCount++
+
+	// Persist to JSONL file if configured
+	if b.persistFile != nil {
+		if data, err := json.Marshal(event); err == nil {
+			b.persistFile.Write(append(data, '\n'))
+		}
+		b.persistWrites++
+		if b.persistWrites%100 == 0 {
+			if info, err := b.persistFile.Stat(); err == nil && info.Size() > 10*1024*1024 {
+				b.rotateFile()
+			}
+		}
+	}
 
 	// Snapshot subscribers under lock
 	subs := make([]chan Event, 0, len(b.subscribers))
@@ -203,4 +231,84 @@ func (b *Bus) HistorySince(since time.Time) []Event {
 		}
 	}
 	return result
+}
+
+// PersistTo enables JSONL event persistence to the given file path.
+// Events are appended atomically. Safe for concurrent use.
+func (b *Bus) PersistTo(path string) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("persist events: mkdir: %w", err)
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("persist events: open: %w", err)
+	}
+	b.mu.Lock()
+	b.persistFile = f
+	b.persistPath = path
+	b.mu.Unlock()
+	return nil
+}
+
+// Close flushes and closes the persist file, if any.
+func (b *Bus) Close() error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.persistFile != nil {
+		err := b.persistFile.Close()
+		b.persistFile = nil
+		b.persistPath = ""
+		return err
+	}
+	return nil
+}
+
+// rotateFile renames the current persist file to .1 and opens a new one.
+// Must be called with b.mu held.
+func (b *Bus) rotateFile() {
+	if b.persistFile == nil {
+		return
+	}
+	b.persistFile.Close()
+	_ = os.Rename(b.persistPath, b.persistPath+".1")
+	f, err := os.OpenFile(b.persistPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err == nil {
+		b.persistFile = f
+	} else {
+		b.persistFile = nil
+	}
+}
+
+// LoadEvents reads events from a JSONL file and returns the last limit events.
+// If limit <= 0, all events are returned.
+func LoadEvents(path string, limit int) ([]Event, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("load events: %w", err)
+	}
+	defer f.Close()
+
+	var all []Event
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 0, 256*1024), 1024*1024)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var ev Event
+		if err := json.Unmarshal(line, &ev); err != nil {
+			continue // skip malformed lines
+		}
+		all = append(all, ev)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("load events: scan: %w", err)
+	}
+
+	if limit > 0 && len(all) > limit {
+		all = all[len(all)-limit:]
+	}
+	return all, nil
 }

@@ -2,8 +2,12 @@ package session
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -686,5 +690,80 @@ func TestManagerConcurrentDelegateTask(t *testing.T) {
 	}
 	if len(team.Tasks) != n {
 		t.Errorf("Tasks = %d, want %d", len(team.Tasks), n)
+	}
+}
+
+func TestPersistSessionError_ReadOnlyDir(t *testing.T) {
+	m := NewManager()
+
+	// Create a read-only directory so MkdirAll of a subdirectory fails.
+	tmpDir := t.TempDir()
+	readOnlyDir := filepath.Join(tmpDir, "readonly")
+	if err := os.Mkdir(readOnlyDir, 0555); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	// Point stateDir to a child of the read-only dir so MkdirAll will fail.
+	m.SetStateDir(filepath.Join(readOnlyDir, "sessions"))
+
+	s := &Session{
+		ID:       "err-test",
+		Provider: ProviderClaude,
+		Status:   StatusRunning,
+	}
+
+	err := m.PersistSession(s)
+	if err == nil {
+		t.Fatal("expected error from PersistSession with read-only parent, got nil")
+	}
+	if !strings.Contains(err.Error(), "persist session") {
+		t.Errorf("error should contain 'persist session', got: %v", err)
+	}
+}
+
+func TestPersistSession_Success(t *testing.T) {
+	m := NewManager()
+	tmpDir := t.TempDir()
+	m.SetStateDir(tmpDir)
+
+	s := &Session{
+		ID:       "success-test",
+		Provider: ProviderClaude,
+		RepoPath: "/tmp/repo",
+		RepoName: "repo",
+		Status:   StatusRunning,
+	}
+
+	err := m.PersistSession(s)
+	if err != nil {
+		t.Fatalf("PersistSession: %v", err)
+	}
+
+	// Verify the file was written and contains valid JSON.
+	path := filepath.Join(tmpDir, "success-test.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+
+	var loaded Session
+	if err := json.Unmarshal(data, &loaded); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if loaded.ID != "success-test" {
+		t.Errorf("loaded ID = %q, want success-test", loaded.ID)
+	}
+	if loaded.Provider != ProviderClaude {
+		t.Errorf("loaded Provider = %q, want claude", loaded.Provider)
+	}
+}
+
+func TestPersistSession_EmptyStateDir(t *testing.T) {
+	m := NewManager()
+	m.SetStateDir("")
+
+	s := &Session{ID: "no-dir"}
+	err := m.PersistSession(s)
+	if err != nil {
+		t.Errorf("expected nil error for empty stateDir, got: %v", err)
 	}
 }
