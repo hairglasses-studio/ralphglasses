@@ -1532,6 +1532,31 @@ func sanitizeTaskTitle(title string) string {
 		}
 	}
 
+	// Reject worker output text that leaked into the title.
+	outputPrefixes := []string{
+		"all tests pass",
+		"here's what",
+		"i've completed",
+		"i have completed",
+		"the changes",
+		"successfully",
+		"done.",
+		"completed.",
+		"i updated",
+		"i added",
+		"i fixed",
+		"i modified",
+		"i removed",
+		"i refactored",
+		"no changes",
+	}
+	lower := strings.ToLower(title)
+	for _, prefix := range outputPrefixes {
+		if strings.HasPrefix(lower, prefix) {
+			return "self-improvement iteration"
+		}
+	}
+
 	// Take only the first line if multiline.
 	if idx := strings.IndexAny(title, "\n\r"); idx >= 0 {
 		title = strings.TrimSpace(title[:idx])
