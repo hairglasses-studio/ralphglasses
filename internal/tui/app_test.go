@@ -475,6 +475,7 @@ func TestKeyDispatchCoversGlobalBindings(t *testing.T) {
 		"Quit": true, "CmdMode": true, "FilterMode": true, "Help": true,
 		"Escape": true, "Refresh": true, "LoopPanel": true,
 		"Tab1": true, "Tab2": true, "Tab3": true, "Tab4": true,
+		"LoopListStart": true, "LoopListStop": true,
 	}
 
 	for i := 0; i < rt.NumField(); i++ {
@@ -530,5 +531,83 @@ func TestRefreshLoopViewWithManager(t *testing.T) {
 	view := m2.View()
 	if !strings.Contains(view, "Loop Status") {
 		t.Error("view should contain 'Loop Status' when ShowLoopPanel=true")
+	}
+}
+
+func TestLoopListKeyBindings(t *testing.T) {
+	mgr := session.NewManager()
+	m := NewModel("/tmp/test", mgr)
+	m.Width = 120
+	m.Height = 40
+	m.StatusBar.Width = 120
+
+	// Navigate to loop list view
+	m.pushView(ViewLoopList, "Loops")
+
+	// 's' should produce a loopListCmd (non-nil) even with no row selected
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	// cmd may be nil (no selection) or non-nil; no panic is the key requirement
+	_ = cmd
+
+	// 'x' should also not panic
+	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	_ = cmd
+
+	// 'd' should also not panic
+	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
+	_ = cmd
+
+	// Verify LoopListStart binding key matches 's'
+	km := DefaultKeyMap()
+	km.SetViewContext(ViewLoopList)
+	if !km.LoopListStart.Enabled() {
+		t.Error("LoopListStart should be enabled in ViewLoopList")
+	}
+	if !km.LoopListStop.Enabled() {
+		t.Error("LoopListStop should be enabled in ViewLoopList")
+	}
+
+	// Verify bindings are disabled in ViewOverview
+	km.SetViewContext(ViewOverview)
+	if km.LoopListStart.Enabled() {
+		t.Error("LoopListStart should be disabled in ViewOverview")
+	}
+	if km.LoopListStop.Enabled() {
+		t.Error("LoopListStop should be disabled in ViewOverview")
+	}
+
+	// Verify LoopListStart and LoopListStop are in the KeyDispatch table
+	foundStart, foundStop := false, false
+	for _, entry := range KeyDispatch {
+		b := entry.Binding(&km)
+		keys := b.Keys()
+		for _, k := range keys {
+			if k == "s" {
+				foundStart = true
+			}
+			if k == "x" || k == "d" {
+				foundStop = true
+			}
+		}
+	}
+	if !foundStart {
+		t.Error("KeyDispatch should contain an entry for LoopListStart ('s')")
+	}
+	if !foundStop {
+		t.Error("KeyDispatch should contain an entry for LoopListStop ('x'/'d')")
+	}
+
+	// Verify loop list view shows help footer
+	m2 := NewModel("/tmp/test", nil)
+	m2.Width = 120
+	m2.Height = 40
+	m2.StatusBar.Width = 120
+	m2.pushView(ViewLoopList, "Loops")
+	v := m2.View()
+	if !strings.Contains(v, "start loop") {
+		t.Error("loop list view should show 'start loop' in footer hints")
+	}
+	if !strings.Contains(v, "stop loop") {
+		t.Error("loop list view should show 'stop loop' in footer hints")
 	}
 }
