@@ -39,6 +39,8 @@ type LoopObservation struct {
 	FilesChanged     int       `json:"files_changed"`
 	LinesAdded       int       `json:"lines_added"`
 	LinesRemoved     int       `json:"lines_removed"`
+	DiffPaths        []string  `json:"diff_paths,omitempty"`
+	DiffSummary      string    `json:"diff_summary,omitempty"`
 	TaskType         string    `json:"task_type"`
 	TaskTitle        string    `json:"task_title"`
 	Mode             string    `json:"mode"`
@@ -192,6 +194,27 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 		obs.LinesAdded += added
 		obs.LinesRemoved += removed
 	}
+
+	// Diff path correlation — collect file paths changed across worktrees.
+	var allDiffPaths []string
+	seen := make(map[string]bool)
+	for _, wt := range iter.WorktreePaths {
+		if wt == "" {
+			continue
+		}
+		paths, err := gitDiffPathsForWorktree(wt)
+		if err != nil {
+			continue
+		}
+		for _, p := range paths {
+			if !seen[p] {
+				seen[p] = true
+				allDiffPaths = append(allDiffPaths, p)
+			}
+		}
+	}
+	obs.DiffPaths = allDiffPaths
+	obs.DiffSummary = buildDiffSummary(allDiffPaths)
 
 	// Self-learning subsystem fields
 	obs.ReflexionApplied = reflexionApplied
@@ -384,4 +407,44 @@ func gitDiffStats(worktreePath string) (files, added, removed int) {
 		}
 	}
 	return files, added, removed
+}
+
+// gitDiffPathsForWorktree runs git diff --name-only HEAD in the given directory
+// and returns the list of changed file paths.
+func gitDiffPathsForWorktree(dir string) ([]string, error) {
+	cmd := exec.Command("git", "diff", "--name-only", "HEAD")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	trimmed := strings.TrimSpace(string(out))
+	if trimmed == "" {
+		return nil, nil
+	}
+	var paths []string
+	for _, line := range strings.Split(trimmed, "\n") {
+		if p := strings.TrimSpace(line); p != "" {
+			paths = append(paths, p)
+		}
+	}
+	return paths, nil
+}
+
+// buildDiffSummary formats a list of diff paths into a human-readable summary.
+// Format: "N files: path1, path2, +M more" (shows max 3 paths).
+func buildDiffSummary(paths []string) string {
+	if len(paths) == 0 {
+		return ""
+	}
+	const maxShow = 3
+	shown := paths
+	if len(shown) > maxShow {
+		shown = shown[:maxShow]
+	}
+	summary := fmt.Sprintf("%d files: %s", len(paths), strings.Join(shown, ", "))
+	if len(paths) > maxShow {
+		summary += fmt.Sprintf(", +%d more", len(paths)-maxShow)
+	}
+	return summary
 }

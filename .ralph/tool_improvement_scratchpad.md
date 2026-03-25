@@ -101,3 +101,17 @@ Observations from reliability & quality improvement workstreams + recursive self
 37. **Two-tier acceptance needs `gh` CLI** — `CreateReviewPR` shell-outs to `gh pr create`. Should add `gh` to the provider prerequisites check or make PR creation optional with a fallback (create branch but skip PR if `gh` unavailable).
 
 38. **No `selftest` event types** — Stage 3 plan proposes `SelfImproveMerged` and `SelfImprovePR` event types. These should be added to `events/bus.go` before building the acceptance gate or TUI dashboard.
+
+## Round 4: Stage 2 Implementation Observations
+
+39. **`SelfTestResult` field naming inconsistency** — WS-B agent discovered `SelfTestResult.Iterations` (actual) vs plan's `IterationsRun`. Plan docs drifted from implementation during Stage 1.2. Plans referencing struct fields should always be verified against code before implementation.
+
+40. **`gate-check` and `selftest --gate` overlap** — Both `cmd/gatecheck.go` and `cmd/selftest.go --gate` call `EvaluateFromObservations`. The gate-check command takes `--baseline` and `--hours` flags; selftest --gate passes hardcoded defaults (0 hours = all observations). Should consider whether gate-check can be deprecated in favor of `selftest --gate` or whether they serve different audiences (gate-check = manual, selftest --gate = CI).
+
+41. **`outputGateReport` duplicated** — `cmd/gatecheck.go:outputGateReport` and `cmd/selftest.go:outputSelftestGateReport` have nearly identical lipgloss rendering logic. Should extract to a shared `cmd/gate_output.go` helper. Low priority — cosmetic duplication.
+
+42. **CI self-test job can't run live iterations yet** — The `selftest` command's full mode calls `e2e.Prepare` which builds a snapshot binary and needs API credentials. CI would need `ANTHROPIC_API_KEY` secret + cost budget. Initially deploying as `--gate` only is correct, but should track when to enable full iterations.
+
+44. **Worktree agent replaced test file instead of appending** — WS-A agent was told to "append to loopbench_test.go or create if it doesn't exist" but replaced the entire file, deleting ~170 lines of existing tests. Root cause: the agent saw the file existed, decided to rewrite it with only the new tests. Workaround: manual merge in parent. Fix: agent prompts should explicitly say "do NOT delete existing test functions" when appending tests.
+
+43. **`selftest` exit code via `os.Exit(1)` bypasses cobra** — Both `gatecheck.go` and `selftest.go` call `os.Exit(1)` inside `RunE`, which skips defer cleanup and cobra's error handling. Should return a sentinel error and handle exit codes in `main()` or a `PersistentPostRunE`. Low priority — works fine in practice.
