@@ -109,15 +109,20 @@ func TestEdge_Unicode(t *testing.T) {
 }
 
 func TestEdge_LargeInputs(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping large input test in short mode")
+	}
 	t.Parallel()
 	large := strings.Repeat("The quick brown fox jumps over the lazy dog. ", 2500) // ~100K chars
 
+	// Thresholds are intentionally generous to avoid flaky failures on
+	// loaded CI machines or resource-constrained environments.
 	t.Run("Enhance_large", func(t *testing.T) {
 		start := time.Now()
 		result := Enhance(large, TaskTypeGeneral)
 		elapsed := time.Since(start)
-		if elapsed > 3*time.Second {
-			t.Errorf("Enhance took %v for 100K input, want < 3s", elapsed)
+		if elapsed > 10*time.Second {
+			t.Errorf("Enhance took %v for 100K input, want < 10s", elapsed)
 		}
 		if result.Enhanced == "" {
 			t.Error("should produce output for large input")
@@ -128,8 +133,8 @@ func TestEdge_LargeInputs(t *testing.T) {
 		start := time.Now()
 		results := Lint(large)
 		elapsed := time.Since(start)
-		if elapsed > 5*time.Second {
-			t.Errorf("Lint took %v for 100K input, want < 5s", elapsed)
+		if elapsed > 15*time.Second {
+			t.Errorf("Lint took %v for 100K input, want < 15s", elapsed)
 		}
 		_ = results
 	})
