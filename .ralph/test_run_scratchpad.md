@@ -2,7 +2,7 @@
 
 ## Current Status (2026-03-25)
 
-Run 13 completed (stopped after iter 5 hung — worker never dispatched). 3 fixes deployed: waitForSession timeout, title sanitization, split enhancement flags. 1 auto-merge, 2 ff-merge failures (manually cherry-picked). TUI loop list + detail views now functional.
+Run 14 completed (4 iterations: 3 passed, 1 failed). Discovered 2 critical bugs: auto-drive stall (handleLoopStart never called RunLoop — FIXED) and repo working tree wipe (likely Claude Code agent worktree cleanup, not ralph code — hardened worktree.go as defense-in-depth). Title sanitization "Created" prefix added. All fixes deployed, 33/33 tests pass.
 
 ---
 
@@ -83,6 +83,24 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 - **Was**: `selftest --gate` always returned "skip (current=0.000)".
 - **Root cause**: Baseline file didn't exist. First `--gate` call creates baseline and returns "skip". Second call compares against it.
 - **Status**: 28 observations exist. Baseline created. Gate now returns pass/warn/fail verdicts. Cost down 76.5%, latency down 48.7% vs baseline.
+
+### RESOLVED: Auto-drive stall (handleLoopStart never calls RunLoop)
+- **Symptom**: Loops started via `loop_start` with `self_improvement=true` stayed at "pending" — required manual `loop_step` between each iteration.
+- **Root cause**: `handleLoopStart` called `StartLoop` but never `RunLoop`. Only `handleSelfImprove` called `RunLoop`.
+- **Fix**: Added `go s.SessMgr.RunLoop(context.Background(), run.ID)` when `profile.SelfImprovement` is true in `handleLoopStart`.
+- **File**: `internal/mcpserver/handler_loop.go` (lines 140-143)
+
+### RESOLVED: Worktree cleanup path safety (defense-in-depth)
+- **Symptom**: Run 14 iter 4 failed, then entire repo source tree was wiped (only `.ralph/` survived).
+- **Investigation**: Ralph's `CleanupLoopWorktrees` only deletes inside `.ralph/worktrees/loops/`. The wipe was likely caused by Claude Code agent worktree cleanup (`.claude/worktrees/` entries), not ralph code.
+- **Fix**: Hardened `CleanupLoopWorktrees` with `sanitizeLoopName()` (matching `createLoopWorktree`), empty-path rejection, and `filepath.Abs` boundary check to prevent future traversal.
+- **File**: `internal/session/worktree.go`
+- **Tests**: Added `TestCleanupLoopWorktrees_PathTraversal` and `TestCleanupLoopWorktrees_EmptyRepoPath`
+
+### RESOLVED: Title sanitization "Created" prefix
+- **Symptom**: Run 14 iter 1 title "Created `.github/workflows/ci-macos.yml`" — past-tense worker output, not a task name.
+- **Fix**: Added `"i created"`, `"created "`, `"created."` to rejection prefix list in `sanitizeTaskTitle()`.
+- **File**: `internal/session/loop.go` (line 1553-1555)
 
 ### OBSERVATION: Planner task type diversity
 - Across 18 iterations (Runs 1-4), planner selected 16x from ROADMAP 0.5.1.x cluster (error propagation). Only 1x test, 0x refactor/feature.
@@ -272,6 +290,24 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 - **Task diversity excellent**: 5 unique TUI feature tasks, no repeats from prior runs. Planner successfully identified loop views as a feature gap.
 - **Old binary limitation**: Run 13 ran pre-fix binary. waitForSession timeout, split enhancement flags, and title sanitization were deployed but only take effect on next MCP reconnect.
 
+### Run 14 — Partial, 4 iterations (3 passed, 1 failed; auto-drive stalled)
+- **Status**: Manually stepped (auto-drive stall bug — `handleLoopStart` never called `RunLoop`)
+- **Total duration**: ~30 min (manually stepped)
+- **3/4 iterations passed verification**, 1 failed (worktree removed mid-execution)
+- **CRITICAL INCIDENT**: After iter 4 failed, entire repo source tree was wiped. Recovered via re-clone from remote. `.ralph/` data restored from backup.
+
+| Iter | Task | Verify | Merge | Notes |
+|------|------|--------|-------|-------|
+| 1 | Created `.github/workflows/ci-macos.yml` | passed | auto-merged | Title sanitization gap ("Created" prefix) |
+| 2 | Sub-phase timing tests | passed | auto-merged (local-only, lost in wipe) | loop_test.go + loopbench_test.go |
+| 3 | (fallback title) | passed | pending_review | Title source: "fallback" |
+| 4 | (fallback title) | **failed** | — | Worktree removed mid-execution |
+
+#### Bugs Found
+1. **Auto-drive stall** (FIXED): `handleLoopStart` → `StartLoop` but never `RunLoop`. Added `go RunLoop()` when `SelfImprovement=true`.
+2. **Repo working tree wiped** (HARDENED): Likely Claude Code agent worktree cleanup, not ralph code. Hardened `CleanupLoopWorktrees` with sanitization + boundary checks.
+3. **Title sanitization gap** (FIXED): "Created" prefix not in rejection list. Added `"i created"`, `"created "`, `"created."`.
+
 ### Run 5 Validation Targets
 
 | Subsystem | What to verify | How |
@@ -294,22 +330,22 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 <details>
 <summary>Run 1-4 metrics (click to expand)</summary>
 
-| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5c | Run 8 | Run 10 | Run 11 | Run 12 | Run 13 |
-|--------|-------|-------|-------|-------|--------|-------|--------|--------|--------|--------|
-| Iterations | 6 | 3 | 6 | 3 | 3 | 4 | 1 | 2 | 5 | 5 |
-| Passed | 6 | 1 | 5 | 3 | 3 | 4 | 1 | 2 | 5 | 4 |
-| Failed/Hung | 0 | 2 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 (hung) |
-| Completion rate | 100% | 33% | 83% | 100% | 100% | 100% | 100% | 100% | 100% | 80% |
-| Total latency (min) | 21.5 | 7.7 | 25.2 | 7.2 | 8.8 | 19.1 | ~7 | ~12 | 42 | ~45 |
-| Avg latency/iter (s) | 215 | 154 | 252 | 144 | 176 | 287 | ~420 | ~360 | 504 | ~360 |
-| Avg enhance (s) | — | — | — | — | — | — | — | — | 23.8 | 0 |
-| Cost tracked ($) | 0 | 0 | 0 | 0.248 | N/A | N/A | N/A | N/A | N/A | N/A |
-| PRs created | 0 | 0 | 0 | 1 | 1 | 2 | 1 (#6) | 0 | 0 | 0 |
-| Auto-merges | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 3 | 1 |
-| ff-merge failures | — | — | — | — | — | — | — | — | — | 2 |
-| Bugs found | 0 | 0 | 0 | 0 | 0 | 1 (race) | 0 | 0 | 0 | 1 (dispatch) |
-| Planner model | sonnet | sonnet | sonnet | sonnet | sonnet | opus | opus | opus | opus | opus |
-| Exit reason | max_iter | max_iter | max_iter | max_iter | converged | converged | orphaned | orphaned | max_iter | stopped |
+| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5c | Run 8 | Run 10 | Run 11 | Run 12 | Run 13 | Run 14 |
+|--------|-------|-------|-------|-------|--------|-------|--------|--------|--------|--------|--------|
+| Iterations | 6 | 3 | 6 | 3 | 3 | 4 | 1 | 2 | 5 | 5 | 4 |
+| Passed | 6 | 1 | 5 | 3 | 3 | 4 | 1 | 2 | 5 | 4 | 3 |
+| Failed/Hung | 0 | 2 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 (hung) | 1 (wipe) |
+| Completion rate | 100% | 33% | 83% | 100% | 100% | 100% | 100% | 100% | 100% | 80% | 75% |
+| Total latency (min) | 21.5 | 7.7 | 25.2 | 7.2 | 8.8 | 19.1 | ~7 | ~12 | 42 | ~45 | ~30 |
+| Avg latency/iter (s) | 215 | 154 | 252 | 144 | 176 | 287 | ~420 | ~360 | 504 | ~360 | ~450 |
+| Avg enhance (s) | — | — | — | — | — | — | — | — | 23.8 | 0 | — |
+| Cost tracked ($) | 0 | 0 | 0 | 0.248 | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| PRs created | 0 | 0 | 0 | 1 | 1 | 2 | 1 (#6) | 0 | 0 | 0 | 0 |
+| Auto-merges | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 3 | 1 | 2 |
+| ff-merge failures | — | — | — | — | — | — | — | — | — | 2 | 0 |
+| Bugs found | 0 | 0 | 0 | 0 | 0 | 1 (race) | 0 | 0 | 0 | 1 (dispatch) | 3 (stall, wipe, title) |
+| Planner model | sonnet | sonnet | sonnet | sonnet | sonnet | opus | opus | opus | opus | opus | opus |
+| Exit reason | max_iter | max_iter | max_iter | max_iter | converged | converged | orphaned | orphaned | max_iter | stopped | manual |
 
 ### Key conclusions from Runs 1-4
 1. Episodic memory: end-to-end working, cross-run persistence confirmed

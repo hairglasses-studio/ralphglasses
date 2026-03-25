@@ -136,6 +136,12 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 	if err != nil {
 		return codedError(ErrLoopStart, fmt.Sprintf("start loop: %v", err)), nil
 	}
+
+	// Auto-drive the loop when self-improvement is enabled.
+	if profile.SelfImprovement {
+		go s.SessMgr.RunLoop(context.Background(), run.ID)
+	}
+
 	return jsonResult(loopResult(run)), nil
 }
 
