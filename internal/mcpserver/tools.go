@@ -14,6 +14,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/blackboard"
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
@@ -66,6 +67,11 @@ type Server struct {
 	DecisionLog      *session.DecisionLog
 	FeedbackAnalyzer *session.FeedbackAnalyzer
 	AutoOptimizer    *session.AutoOptimizer
+
+	// Phase H subsystems (set via setter methods).
+	Blackboard    *blackboard.Blackboard
+	A2A           *fleet.A2AAdapter
+	CostPredictor *fleet.CostPredictor
 }
 
 // NewServer creates a new MCP server instance.
@@ -92,7 +98,7 @@ func NewServerWithBus(scanPath string, bus *events.Bus) *Server {
 // ToolGroupNames lists all valid tool group names in registration order.
 var ToolGroupNames = []string{
 	"core", "session", "loop", "prompt", "fleet",
-	"repo", "roadmap", "team", "awesome", "advanced",
+	"repo", "roadmap", "team", "awesome", "advanced", "eval", "fleet_h",
 }
 
 // buildToolGroups constructs all tool groups with their tool definitions and handlers.
@@ -108,6 +114,8 @@ func (s *Server) buildToolGroups() []ToolGroup {
 		s.buildTeamGroup(),
 		s.buildAwesomeGroup(),
 		s.buildAdvancedGroup(),
+		s.buildEvalGroup(),
+		s.buildFleetHGroup(),
 	}
 }
 
@@ -690,6 +698,12 @@ func (s *Server) buildAdvancedGroup() ToolGroup {
 				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
 				mcp.WithString("name", mcp.Required(), mcp.Description("Workflow name")),
 			), s.handleWorkflowRun},
+			{mcp.NewTool("ralphglasses_bandit_status",
+				mcp.WithDescription("View multi-armed bandit arm statistics for provider selection"),
+			), s.handleBanditStatus},
+			{mcp.NewTool("ralphglasses_confidence_calibration",
+				mcp.WithDescription("View calibrated confidence model weights, training status, and feature importances"),
+			), s.handleConfidenceCalibration},
 		},
 	}
 }
@@ -1592,4 +1606,71 @@ func (s *Server) handleToolBenchmark(_ context.Context, req mcp.CallToolRequest)
 	}
 
 	return jsonResult(result), nil
+}
+
+func (s *Server) buildEvalGroup() ToolGroup {
+	return ToolGroup{
+		Name:        "eval",
+		Description: "Offline evaluation: counterfactual analysis, Bayesian A/B testing, changepoint detection",
+		Tools: []ToolEntry{
+			{mcp.NewTool("ralphglasses_eval_counterfactual",
+				mcp.WithDescription("Estimate outcomes under hypothetical policy changes using inverse propensity scoring on loop observations"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithNumber("hours", mcp.Description("Observation window in hours (default: 168 = 7 days)")),
+				mcp.WithString("policy", mcp.Required(), mcp.Description("Policy type: cascade_threshold or provider_routing")),
+				mcp.WithNumber("threshold", mcp.Description("New cascade threshold for cascade_threshold policy (default: 0.6)")),
+				mcp.WithString("task_type", mcp.Description("Task type for provider_routing policy")),
+				mcp.WithString("provider", mcp.Description("Target provider for provider_routing policy")),
+			), s.handleEvalCounterfactual},
+			{mcp.NewTool("ralphglasses_eval_ab_test",
+				mcp.WithDescription("Bayesian A/B test comparing providers or time periods using Beta-Bernoulli model"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithNumber("hours", mcp.Description("Observation window in hours (default: 168)")),
+				mcp.WithString("mode", mcp.Required(), mcp.Description("Comparison mode: providers or periods")),
+				mcp.WithString("provider_a", mcp.Description("First provider (providers mode)")),
+				mcp.WithString("provider_b", mcp.Description("Second provider (providers mode)")),
+				mcp.WithNumber("split_hours_ago", mcp.Description("Hours ago to split time periods (periods mode)")),
+			), s.handleEvalABTest},
+			{mcp.NewTool("ralphglasses_eval_changepoints",
+				mcp.WithDescription("Detect performance shifts using CUSUM changepoint detection on loop observations"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithNumber("hours", mcp.Description("Observation window in hours (default: 168)")),
+				mcp.WithString("metric", mcp.Description("Specific metric to analyze (completion_rate, cost, latency, confidence, difficulty). Omit for all.")),
+			), s.handleEvalChangepoints},
+			{mcp.NewTool("ralphglasses_anomaly_detect",
+				mcp.WithDescription("Detect anomalies in metric streams using sliding-window z-score analysis"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithNumber("hours", mcp.Description("Observation window in hours (default: 168)")),
+				mcp.WithString("metric", mcp.Required(), mcp.Description("Metric to analyze (total_cost_usd, confidence, difficulty_score, etc)")),
+			), s.handleAnomalyDetect},
+		},
+	}
+}
+
+func (s *Server) buildFleetHGroup() ToolGroup {
+	return ToolGroup{
+		Name:        "fleet_h",
+		Description: "Fleet intelligence: blackboard coordination, A2A task delegation, cost forecasting",
+		Tools: []ToolEntry{
+			{mcp.NewTool("ralphglasses_blackboard_query",
+				mcp.WithDescription("Query blackboard entries by namespace for fleet worker coordination"),
+				mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace to query")),
+			), s.handleBlackboardQuery},
+			{mcp.NewTool("ralphglasses_blackboard_put",
+				mcp.WithDescription("Write an entry to the blackboard for fleet coordination"),
+				mcp.WithString("namespace", mcp.Required(), mcp.Description("Entry namespace")),
+				mcp.WithString("key", mcp.Required(), mcp.Description("Entry key")),
+				mcp.WithString("value", mcp.Required(), mcp.Description("JSON object value")),
+				mcp.WithString("writer_id", mcp.Description("Writer identifier")),
+				mcp.WithNumber("ttl_seconds", mcp.Description("Time-to-live in seconds (0 for no expiry)")),
+			), s.handleBlackboardPut},
+			{mcp.NewTool("ralphglasses_a2a_offers",
+				mcp.WithDescription("List open agent-to-agent task delegation offers"),
+			), s.handleA2AOffers},
+			{mcp.NewTool("ralphglasses_cost_forecast",
+				mcp.WithDescription("Cost burn rate, anomaly detection, and budget exhaustion ETA"),
+				mcp.WithNumber("budget_remaining", mcp.Description("Remaining budget in USD (default: 0)")),
+			), s.handleCostForecast},
+		},
+	}
 }

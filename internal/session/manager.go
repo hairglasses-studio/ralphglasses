@@ -34,6 +34,8 @@ type Manager struct {
 	episodic      *EpisodicMemory         // WS2: successful trajectory memory
 	cascade       *CascadeRouter          // WS3: cheap-then-expensive provider routing
 	curriculum    *CurriculumSorter       // WS5: task difficulty scoring and ordering
+	banditSelect func() (string, string) // bandit-based provider selection hook
+	banditUpdate func(string, float64)   // bandit reward recording hook
 	launchSession func(context.Context, LaunchOptions) (*Session, error)
 	waitSession   func(context.Context, *Session) error
 	healthCheck   func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
@@ -95,10 +97,14 @@ func (m *Manager) SetEpisodicMemory(em *EpisodicMemory) {
 }
 
 // SetCascadeRouter attaches the cascade routing subsystem.
+// If bandit hooks are already configured, they are forwarded to the new router.
 func (m *Manager) SetCascadeRouter(cr *CascadeRouter) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.cascade = cr
+	if cr != nil && m.banditSelect != nil {
+		cr.SetBanditHooks(m.banditSelect, m.banditUpdate)
+	}
 }
 
 // SetCurriculumSorter attaches the curriculum learning subsystem.
@@ -141,6 +147,32 @@ func (m *Manager) HasCurriculumSorter() bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.curriculum != nil
+}
+
+// SetBanditHooks attaches bandit-based provider selection functions to the manager
+// and forwards them to the cascade router if one is attached.
+func (m *Manager) SetBanditHooks(selectFn func() (string, string), updateFn func(string, float64)) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.banditSelect = selectFn
+	m.banditUpdate = updateFn
+	if m.cascade != nil {
+		m.cascade.SetBanditHooks(selectFn, updateFn)
+	}
+}
+
+// HasBandit returns true if bandit hooks have been configured.
+func (m *Manager) HasBandit() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.banditSelect != nil
+}
+
+// GetCascadeRouter returns the attached CascadeRouter, or nil.
+func (m *Manager) GetCascadeRouter() *CascadeRouter {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.cascade
 }
 
 // SetHooksForTesting overrides session launch/wait behavior. Intended for tests.
