@@ -329,6 +329,69 @@ func (m Model) togglePause(idx int) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// --- Loop list view key handlers ---
+
+func handleLoopListStart(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.SessMgr == nil {
+		m.Notify.Show("No session manager", 3*time.Second)
+		return *m, nil
+	}
+	row := m.LoopListTable.SelectedRow()
+	if row == nil {
+		m.Notify.Show("No loop selected", 3*time.Second)
+		return *m, nil
+	}
+	idPrefix := row[0]
+	for _, l := range m.SessMgr.ListLoops() {
+		if strings.HasPrefix(l.ID, idPrefix) {
+			_, err := m.SessMgr.StartLoop(context.Background(), l.RepoPath, session.DefaultLoopProfile())
+			if err != nil {
+				m.Notify.Show(fmt.Sprintf("Start error: %v", err), 3*time.Second)
+			} else {
+				m.Notify.Show(fmt.Sprintf("Started loop: %s", l.RepoName), 3*time.Second)
+			}
+			return *m, m.loopListCmd()
+		}
+	}
+	m.Notify.Show("Loop not found", 3*time.Second)
+	return *m, nil
+}
+
+func handleLoopListStop(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.SessMgr == nil {
+		m.Notify.Show("No session manager", 3*time.Second)
+		return *m, nil
+	}
+	row := m.LoopListTable.SelectedRow()
+	if row == nil {
+		m.Notify.Show("No loop selected", 3*time.Second)
+		return *m, nil
+	}
+	idPrefix := row[0]
+	for _, l := range m.SessMgr.ListLoops() {
+		if strings.HasPrefix(l.ID, idPrefix) {
+			if err := m.SessMgr.StopLoop(l.ID); err != nil {
+				m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
+			} else {
+				m.Notify.Show(fmt.Sprintf("Stopped: %s", l.RepoName), 3*time.Second)
+			}
+			return *m, m.loopListCmd()
+		}
+	}
+	m.Notify.Show("Loop not found", 3*time.Second)
+	return *m, nil
+}
+
+func (m Model) handleLoopListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.Keys.Down):
+		m.LoopListTable.MoveDown()
+	case key.Matches(msg, m.Keys.Up):
+		m.LoopListTable.MoveUp()
+	}
+	return m, nil
+}
+
 // --- Session view key handlers ---
 
 func (m Model) handleSessionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

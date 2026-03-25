@@ -56,6 +56,10 @@ type KeyMap struct {
 	TimelineView  key.Binding
 	LoopHealth    key.Binding
 	LoopPanel     key.Binding
+
+	// Loop list view actions
+	LoopListStart key.Binding
+	LoopListStop  key.Binding
 }
 
 // DefaultKeyMap returns the default key bindings.
@@ -189,6 +193,14 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("l"),
 			key.WithHelp("l", "Loop list"),
 		),
+		LoopListStart: key.NewBinding(
+			key.WithKeys("s"),
+			key.WithHelp("s", "Start loop for repo"),
+		),
+		LoopListStop: key.NewBinding(
+			key.WithKeys("x", "d"),
+			key.WithHelp("x / d", "Stop selected loop"),
+		),
 	}
 }
 
@@ -213,6 +225,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 	k.TimelineView.SetEnabled(true)
 	k.LoopHealth.SetEnabled(true)
 	k.LoopPanel.SetEnabled(true)
+	k.LoopListStart.SetEnabled(true)
+	k.LoopListStop.SetEnabled(true)
 
 	switch view {
 	case ViewOverview:
@@ -228,9 +242,13 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
 		k.LoopHealth.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
 	case ViewRepoDetail:
 		k.Space.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
 	case ViewSessions:
 		k.StartLoop.SetEnabled(false)
 		k.PauseLoop.SetEnabled(false)
@@ -240,6 +258,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
 		k.LoopHealth.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
 	case ViewSessionDetail:
 		k.StartLoop.SetEnabled(false)
 		k.PauseLoop.SetEnabled(false)
@@ -248,6 +268,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.Space.SetEnabled(false)
 		k.LaunchSession.SetEnabled(false)
 		k.LoopHealth.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
 	case ViewTeams:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -260,6 +282,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
 		k.LoopHealth.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
 	case ViewTeamDetail:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -270,6 +294,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
 		k.LoopHealth.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
 	case ViewFleet:
 		k.StartLoop.SetEnabled(false)
 		k.PauseLoop.SetEnabled(false)
@@ -279,6 +305,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LaunchSession.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
 		k.LoopHealth.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
 	case ViewLogs:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -291,6 +319,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
 		k.LoopHealth.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
 	case ViewConfigEditor:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -301,6 +331,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
 		k.LoopHealth.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
 	case ViewTimeline:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -313,6 +345,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
 		k.LoopHealth.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
 	case ViewDiff:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -324,6 +358,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
 		k.LoopHealth.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
 	case ViewHelp:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -336,6 +372,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.OutputView.SetEnabled(false)
 		k.TimelineView.SetEnabled(false)
 		k.LoopHealth.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
 	case ViewLoopList:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -349,6 +387,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.TimelineView.SetEnabled(false)
 		k.LoopHealth.SetEnabled(false)
 		k.LoopPanel.SetEnabled(false)
+		// LoopListStart and LoopListStop remain enabled
 	}
 }
 
@@ -374,7 +413,7 @@ func (k KeyMap) HelpGroups() []views.HelpGroup {
 	return []views.HelpGroup{
 		{Name: "Navigation", Bindings: []key.Binding{k.Tab1, k.Tab2, k.Tab3, k.Tab4}},
 		{Name: "Global", Bindings: []key.Binding{k.Quit, k.CmdMode, k.FilterMode, k.Help, k.Escape, k.Refresh}},
-		{Name: "Loop List", Bindings: []key.Binding{k.LoopPanel}},
+		{Name: "Loop List", Bindings: []key.Binding{k.LoopPanel, k.LoopListStart, k.LoopListStop}},
 		{Name: "Repos Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StartLoop, k.StopAction, k.PauseLoop}},
 		{Name: "Sessions Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StopAction}},
 		{Name: "Teams Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort}},
@@ -415,6 +454,8 @@ func init() {
 		{func(km *KeyMap) key.Binding { return km.Tab2 }, handleTab2},
 		{func(km *KeyMap) key.Binding { return km.Tab3 }, handleTab3},
 		{func(km *KeyMap) key.Binding { return km.Tab4 }, handleTab4},
+		{func(km *KeyMap) key.Binding { return km.LoopListStart }, handleLoopListStart},
+		{func(km *KeyMap) key.Binding { return km.LoopListStop }, handleLoopListStop},
 	}
 }
 
