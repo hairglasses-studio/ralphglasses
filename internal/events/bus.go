@@ -58,6 +58,10 @@ const (
 
 	// Provider health
 	ProviderHealthChanged EventType = "provider.health" // Provider health state transition
+
+	// Self-improvement acceptance
+	SelfImproveMerged EventType = "self_improve.merged"     // Safe changes auto-merged
+	SelfImprovePR     EventType = "self_improve.pr_created" // PR created for review-required changes
 )
 
 // Event represents something that happened in the system.

@@ -363,3 +363,28 @@ func TestRecentGitLog(t *testing.T) {
 	}
 }
 
+func TestSelfImprovementProfile(t *testing.T) {
+	p := SelfImprovementProfile()
+	if p.PlannerProvider != ProviderClaude {
+		t.Errorf("PlannerProvider = %q, want claude", p.PlannerProvider)
+	}
+	if p.MaxConcurrentWorkers != 1 {
+		t.Error("MaxConcurrentWorkers should be 1 for serial self-modification")
+	}
+	if p.RetryLimit != 2 {
+		t.Error("RetryLimit should be 2")
+	}
+	if !p.SelfImprovement {
+		t.Error("SelfImprovement should be true")
+	}
+	if !p.EnableReflexion || !p.EnableEpisodicMemory || !p.EnableUncertainty || !p.EnableCurriculum {
+		t.Error("all self-learning subsystems should be enabled")
+	}
+	if p.EnableCascade {
+		t.Error("cascade should be disabled for self-modification")
+	}
+	if len(p.VerifyCommands) != 2 {
+		t.Errorf("expected 2 verify commands, got %d", len(p.VerifyCommands))
+	}
+}
+
