@@ -300,6 +300,188 @@ func TestRecordResult_Persistence(t *testing.T) {
 	}
 }
 
+func TestDefaultModelTiers(t *testing.T) {
+	tiers := DefaultModelTiers()
+	if len(tiers) != 4 {
+		t.Fatalf("expected 4 default tiers, got %d", len(tiers))
+	}
+
+	// Verify sorted by cost ascending
+	for i := 1; i < len(tiers); i++ {
+		if tiers[i].CostPer1M < tiers[i-1].CostPer1M {
+			t.Errorf("tiers not sorted by cost: tier[%d]=%f < tier[%d]=%f",
+				i, tiers[i].CostPer1M, i-1, tiers[i-1].CostPer1M)
+		}
+	}
+
+	// Check labels
+	labels := []string{"ultra-cheap", "worker", "coding", "reasoning"}
+	for i, want := range labels {
+		if tiers[i].Label != want {
+			t.Errorf("tier[%d].Label = %q, want %q", i, tiers[i].Label, want)
+		}
+	}
+}
+
+func TestTaskTypeComplexity(t *testing.T) {
+	cases := []struct {
+		taskType   string
+		wantLevel  int
+	}{
+		{"lint", 1},
+		{"format", 1},
+		{"classify", 1},
+		{"codegen", 3},
+		{"test", 3},
+		{"architecture", 4},
+		{"analysis", 4},
+		{"planning", 4},
+		{"unknown", 0},
+	}
+
+	for _, tc := range cases {
+		if got := TaskTypeComplexity(tc.taskType); got != tc.wantLevel {
+			t.Errorf("TaskTypeComplexity(%q) = %d, want %d", tc.taskType, got, tc.wantLevel)
+		}
+	}
+}
+
+func TestSelectTier_ByTaskType(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	tests := []struct {
+		taskType  string
+		wantLabel string
+	}{
+		{"lint", "ultra-cheap"},
+		{"format", "ultra-cheap"},
+		{"classify", "ultra-cheap"},
+		{"codegen", "coding"},
+		{"test", "coding"},
+		{"architecture", "reasoning"},
+		{"analysis", "reasoning"},
+		{"planning", "reasoning"},
+	}
+
+	for _, tc := range tests {
+		tier := cr.SelectTier(tc.taskType, 0)
+		if tier.Label != tc.wantLabel {
+			t.Errorf("SelectTier(%q, 0): label = %q, want %q", tc.taskType, tier.Label, tc.wantLabel)
+		}
+	}
+}
+
+func TestSelectTier_ByComplexity(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	tests := []struct {
+		complexity int
+		wantLabel  string
+	}{
+		{1, "ultra-cheap"},
+		{2, "worker"},
+		{3, "coding"},
+		{4, "reasoning"},
+	}
+
+	for _, tc := range tests {
+		// Use empty task type so complexity arg is used directly
+		tier := cr.SelectTier("", tc.complexity)
+		if tier.Label != tc.wantLabel {
+			t.Errorf("SelectTier(\"\", %d): label = %q, want %q", tc.complexity, tier.Label, tc.wantLabel)
+		}
+	}
+}
+
+func TestSelectTier_UnknownTaskDefaultsToHighest(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	tier := cr.SelectTier("unknown_task", 0)
+	if tier.Label != "reasoning" {
+		t.Errorf("SelectTier for unknown task: label = %q, want %q", tier.Label, "reasoning")
+	}
+}
+
+func TestSelectTier_TaskTypeOverridesComplexityArg(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// "lint" maps to complexity 1, so even if we pass complexity=4 it should pick ultra-cheap
+	tier := cr.SelectTier("lint", 4)
+	if tier.Label != "ultra-cheap" {
+		t.Errorf("SelectTier(\"lint\", 4): label = %q, want %q", tier.Label, "ultra-cheap")
+	}
+}
+
+func TestSelectTier_CustomTiers(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	custom := []ModelTier{
+		{Provider: ProviderGemini, Model: "custom-small", MaxComplexity: 2, CostPer1M: 0.05, Label: "small"},
+		{Provider: ProviderClaude, Model: "custom-large", MaxComplexity: 4, CostPer1M: 5.00, Label: "large"},
+	}
+	cr.SetTiers(custom)
+
+	tier := cr.SelectTier("", 1)
+	if tier.Label != "small" {
+		t.Errorf("expected small tier for complexity 1, got %q", tier.Label)
+	}
+
+	tier = cr.SelectTier("", 3)
+	if tier.Label != "large" {
+		t.Errorf("expected large tier for complexity 3, got %q", tier.Label)
+	}
+}
+
+func TestSelectTier_EmptyTiers(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+	cr.SetTiers(nil)
+
+	tier := cr.SelectTier("lint", 1)
+	if tier.Label != "" {
+		t.Errorf("expected empty tier for nil tiers, got label=%q", tier.Label)
+	}
+}
+
+func TestSelectTier_ProviderAlignment(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// Ultra-cheap and worker should be Gemini
+	for _, tt := range []string{"lint", "format"} {
+		tier := cr.SelectTier(tt, 0)
+		if tier.Provider != ProviderGemini {
+			t.Errorf("SelectTier(%q): provider = %q, want gemini", tt, tier.Provider)
+		}
+	}
+
+	// Coding and reasoning should be Claude
+	for _, tt := range []string{"codegen", "architecture"} {
+		tier := cr.SelectTier(tt, 0)
+		if tier.Provider != ProviderClaude {
+			t.Errorf("SelectTier(%q): provider = %q, want claude", tt, tier.Provider)
+		}
+	}
+}
+
+func TestTiers_ReturnsCopy(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	tiers := cr.Tiers()
+	tiers[0].Label = "mutated"
+
+	original := cr.Tiers()
+	if original[0].Label == "mutated" {
+		t.Error("Tiers() should return a copy, not a reference")
+	}
+}
+
 func TestCascadeStats(t *testing.T) {
 	dir := t.TempDir()
 	config := DefaultCascadeConfig()

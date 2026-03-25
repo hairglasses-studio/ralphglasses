@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -69,6 +70,12 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 	}
 	if tools := getStringArg(req, "allowed_tools"); tools != "" {
 		opts.AllowedTools = strings.Split(tools, ",")
+	}
+	if schema := getStringArg(req, "output_schema"); schema != "" {
+		if !json.Valid([]byte(schema)) {
+			return codedError(ErrInvalidParams, "output_schema must be valid JSON"), nil
+		}
+		opts.OutputSchema = json.RawMessage(schema)
 	}
 
 	// Inject improvement context from journal
