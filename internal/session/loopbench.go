@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -12,6 +13,32 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/gitutil"
 )
+
+// ResolveMainRepoPath returns the top-level working directory of the main
+// repository. In a worktree, this resolves back to the main checkout.
+// In a normal repo or non-git directory, it returns the input path.
+func ResolveMainRepoPath(dir string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--git-common-dir")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		return dir, nil // not a git dir, return as-is
+	}
+	commonDir := strings.TrimSpace(string(out))
+	if commonDir == ".git" {
+		// Normal repo — return top-level
+		cmd2 := exec.Command("git", "rev-parse", "--show-toplevel")
+		cmd2.Dir = dir
+		out2, err2 := cmd2.Output()
+		if err2 != nil {
+			return dir, nil
+		}
+		return strings.TrimSpace(string(out2)), nil
+	}
+	// Worktree: commonDir is absolute path to main repo's .git dir.
+	// Main repo root is its parent.
+	return filepath.Dir(commonDir), nil
+}
 
 // LoopObservation is one JSONL record per completed loop iteration,
 // capturing timing, cost, outcome, and code impact for regression analysis.
