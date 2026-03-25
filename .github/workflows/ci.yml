@@ -52,6 +52,67 @@ jobs:
           path: coverage.out
           retention-days: 14
 
+  self-test-gate:
+    name: Self-Test Gate
+    runs-on: ubuntu-latest
+    needs: [go-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 15
+    env:
+      RALPH_SELF_TEST: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install system prerequisites
+        run: sudo apt-get update && sudo apt-get install -y make build-essential
+
+      - name: Build binary
+        run: go build -o ralphglasses ./...
+
+      - name: Download previous baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: selftest-baseline
+          path: .ralph/
+        continue-on-error: true
+
+      - name: Run gate check
+        run: |
+          ./ralphglasses selftest --gate --json > .ralph/gate_report.json || true
+          if [ -f .ralph/gate_report.json ]; then
+            VERDICT=$(jq -r '.overall // "skip"' .ralph/gate_report.json)
+          else
+            VERDICT="skip"
+          fi
+          echo "## Self-Test Gate: ${VERDICT}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$VERDICT" = "fail" ]; then
+            echo "::error::Self-test gate FAILED"
+            exit 1
+          fi
+
+      - name: Upload baseline
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selftest-baseline
+          path: .ralph/loop_baseline.json
+          overwrite: true
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selftest-results
+          path: .ralph/gate_report.json
+          retention-days: 14
+          if-no-files-found: ignore
+
   go-fuzz:
     name: Fuzz Tests
     runs-on: ubuntu-latest
