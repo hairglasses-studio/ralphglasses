@@ -32,14 +32,18 @@ type ReflexionStore struct {
 	stateDir    string
 }
 
-// filePathRe matches source file paths ending in common extensions.
-// Requires either a slash in the path (e.g. internal/session/loop.go) or a
-// word-boundary anchor so bare fragments like ".mcp.js" or "github.c" are
-// rejected.
-var filePathRe = regexp.MustCompile(`(?:\b[a-zA-Z0-9_][a-zA-Z0-9_\-./]*/)` +
-	`[a-zA-Z0-9_\-./]*\.(go|ts|py|js|tsx|jsx|rs|c|cpp|h|java|rb|sh)\b` +
-	`|` +
-	`\b[a-zA-Z][a-zA-Z0-9_\-]{2,}\.(go|ts|py|js|tsx|jsx|rs|c|cpp|h|java|rb|sh)\b`)
+// filePathRe matches source file paths. It requires EITHER:
+//   - a `/` separator in the path (e.g. internal/session/loop.go), OR
+//   - a recognized extension (.go, .mod, .sum, .toml, .yaml, .yml, .json, .md, .txt)
+//
+// Bare words like "main", "test", "error" do NOT match because neither
+// condition is met.
+var filePathRe = regexp.MustCompile(
+	// Paths containing a slash (e.g. internal/session/loop.go)
+	`\b[a-zA-Z0-9_][a-zA-Z0-9_\-./]*/[a-zA-Z0-9_\-./]*\.[a-zA-Z]{1,4}\b` +
+		`|` +
+		// Bare filenames with recognized extensions only (min 2-char basename)
+		`\b[a-zA-Z][a-zA-Z0-9_\-]+\.(go|mod|sum|toml|yaml|yml|json|md|txt|ts|py|js|tsx|jsx|rs|cpp|java|rb|sh)\b`)
 
 // NewReflexionStore loads existing reflections from the state directory.
 func NewReflexionStore(stateDir string) *ReflexionStore {
@@ -147,6 +151,9 @@ func classifyFailureMode(iter LoopIteration) string {
 // testFailRe matches Go test failure lines like "--- FAIL: TestFoo (0.05s)".
 var testFailRe = regexp.MustCompile(`---\s+FAIL:\s+(\S+)\s+\(([^)]+)\)`)
 
+// broadFailRe matches additional failure patterns: bare FAIL, Error:, panic:, expected/got.
+var broadFailRe = regexp.MustCompile(`(?i)(?:^|\s)(FAIL\s+\S+|Error:\s+.+|panic:\s+.+|expected\s+.+\s+got\s+.+)`)
+
 // compileErrorRe matches Go compile errors like "file.go:42:10: undefined: Foo".
 var compileErrorRe = regexp.MustCompile(`([a-zA-Z0-9_/.\-]+\.go):(\d+):(\d+):\s*(.+)`)
 
@@ -229,10 +236,19 @@ func generateCorrection(failureMode, rootCause string, iter LoopIteration) strin
 	case "verify_failed":
 		// Try to extract specific failing test names from verification output.
 		var failingTests []string
+		var broadMatches []string
 		for _, v := range iter.Verification {
 			if (v.Status == "failed" || v.ExitCode != 0) && v.Output != "" {
 				for _, m := range testFailRe.FindAllStringSubmatch(v.Output, -1) {
 					failingTests = append(failingTests, fmt.Sprintf("%s (%s)", m[1], m[2]))
+				}
+				// Broader patterns: FAIL pkg, Error:, panic:, expected/got
+				for _, m := range broadFailRe.FindAllStringSubmatch(v.Output, 5) {
+					line := strings.TrimSpace(m[1])
+					if len(line) > 120 {
+						line = line[:120]
+					}
+					broadMatches = append(broadMatches, line)
 				}
 			}
 		}
@@ -242,6 +258,13 @@ func generateCorrection(failureMode, rootCause string, iter LoopIteration) strin
 				names = names[:150]
 			}
 			return fmt.Sprintf("Fix failing test(s): %s. Ensure all verification commands pass before completing.", names)
+		}
+		if len(broadMatches) > 0 {
+			details := strings.Join(broadMatches, "; ")
+			if len(details) > 200 {
+				details = details[:200]
+			}
+			return fmt.Sprintf("Fix verification failure: %s. Ensure all verification commands pass before completing.", details)
 		}
 
 		// Fallback: include a snippet of verify output.
@@ -303,10 +326,10 @@ func extractFilePaths(iter LoopIteration) []string {
 		if len(m) < 4 {
 			continue
 		}
-		// Skip domain-like fragments with no slash and very short base name.
+		// Skip domain-like fragments with no slash and single-char base name.
 		if !strings.Contains(m, "/") {
 			base := m[:strings.LastIndex(m, ".")]
-			if len(base) < 3 {
+			if len(base) < 2 {
 				continue
 			}
 		}
