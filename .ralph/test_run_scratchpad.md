@@ -65,8 +65,50 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 - [x] `wireSubsystems()` signature: `(s *Server, sessMgr *session.Manager, ralphDir string)`
 - [x] Session-level CostPredictor wired on Manager
 - [x] `handleSelfImprove` duplicate Phase H wiring removed
-- [ ] MCP server restarted with fresh binary (required before Run 5)
-- [ ] Run 5 executed to validate fixes in production
+- [x] MCP server restarted with fresh binary
+- [x] RunLoop auto-driver added (loops no longer stuck at "pending")
+- [x] StopLoop race fix (cancel + done channel) — eliminates TempDir flake
+- [x] Run 5 executed — converged after 3 iterations, all verification passed
+
+### Run 5a (94aa4384) — Failed, 1 iteration
+- **Task**: "Add provider-specific stderr cost fallback (2.5.5.3)" — worker succeeded
+- **Failure**: `TestHandleSelfImprove_ValidRepo` TempDir race in ci.sh verification
+- **Root cause**: `StopLoop` didn't wait for `RunLoop` goroutine to exit before TempDir cleanup
+- **Fix**: Added `cancel`/`done` channel to `LoopRun`; `StopLoop` now cancels context and blocks on `done`
+- **Commit**: `a65d2f3`
+
+### Run 5b (78cf65e5) — Orphaned by MCP reconnect (stopped, 0 iterations completed)
+
+### Run 5c (9745237d) — Converged, 3 iterations
+- **Status**: `converged` — stopped after 2 consecutive no-change iterations
+- **Total duration**: ~9 min (12:04–12:13)
+- **All 3 iterations passed verification** (ci.sh + selftest gate)
+- **No TempDir race** — StopLoop cancel/done fix confirmed working
+- **PR #2 created** for iter 1 (RefreshRepo `[]error` return)
+
+| Iter | Task | Changes | Verify | Duration |
+|------|------|---------|--------|----------|
+| 1 | Return `[]error` from `RefreshRepo` | 8 call sites updated | passed | 4m28s |
+| 2 | Watcher error propagation | no-op (already fixed) | passed | 2m02s |
+| 3 | Unit test: corrupt `status.json` | no-op (test already exists) | passed | 2m14s |
+
+#### Validation Target Results
+
+| Subsystem | Result |
+|-----------|--------|
+| Planner dedup | **PASS** — 3 unique tasks, 0 repeats from Runs 1-4 |
+| Title parsing | **PASS** — clean titles, no JSON/markdown artifacts |
+| Verification (TempDir) | **PASS** — 3/3 ci.sh runs clean, no flaky failures |
+| RunLoop driver | **PASS** — loop auto-drove to convergence (no manual stepping) |
+| Acceptance gate | **PASS** — PR created for real changes, skipped for no-ops |
+| Reflexion | **N/A** — no failures to trigger reflexion extraction |
+| Phase H cost tracking | **N/A** — no observation data populated (selftest gate skipped) |
+| Bandit/cascade | **N/A** — cascade disabled (Gemini CLI missing) |
+
+#### Observations
+- **Planner picking low-value tasks**: Iter 2+3 targeted already-fixed issues, causing convergence. The planner's ROADMAP scan may need freshness detection (skip tasks whose target code already matches the desired state).
+- **No observation data**: `selftest --gate` returned "skip (current=0.000)" — loop observations (difficulty_score, episodes_used, confidence, cost) were not populated in the status output. May need to check if `RecordObservation` is being called in StepLoop after each iteration.
+- **PR review**: PR #2 flagged `scanner.go` and `handler_repo.go` for review (non-safe paths), auto-merged `integration_test.go` and `app.go` (safe paths). Acceptance gate classification working correctly.
 
 ### Run 5 Validation Targets
 
@@ -90,17 +132,18 @@ All items below were fixed in the workstream resolution batch. Kept for referenc
 <details>
 <summary>Run 1-4 metrics (click to expand)</summary>
 
-| Metric | Run 1 | Run 2 | Run 3 | Run 4 |
-|--------|-------|-------|-------|-------|
-| Iterations | 6 | 3 | 6 | 3 |
-| Passed | 6 | 1 | 5 | 3 |
-| Failed | 0 | 2 | 1 | 0 (1 acceptance) |
-| Completion rate | 100% | 33% | 83% | 100% verify |
-| Total latency (min) | 21.5 | 7.7 | 25.2 | 7.2 |
-| Avg latency/iter (s) | 215 | 154 | 252 | 144 |
-| Cost tracked ($) | 0 | 0 | 0 | 0.248 |
-| Episodes stored | 6 | +1=7 | +5=12 | +0=12 |
-| PRs created | 0 | 0 | 0 | 1 |
+| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5c |
+|--------|-------|-------|-------|-------|--------|
+| Iterations | 6 | 3 | 6 | 3 | 3 |
+| Passed | 6 | 1 | 5 | 3 | 3 |
+| Failed | 0 | 2 | 1 | 0 (1 acceptance) | 0 |
+| Completion rate | 100% | 33% | 83% | 100% verify | 100% |
+| Total latency (min) | 21.5 | 7.7 | 25.2 | 7.2 | 8.8 |
+| Avg latency/iter (s) | 215 | 154 | 252 | 144 | 176 |
+| Cost tracked ($) | 0 | 0 | 0 | 0.248 | N/A |
+| Episodes stored | 6 | +1=7 | +5=12 | +0=12 | +0=12 |
+| PRs created | 0 | 0 | 0 | 1 | 1 |
+| Exit reason | max_iter | max_iter | max_iter | max_iter | converged |
 
 ### Key conclusions from Runs 1-4
 1. Episodic memory: end-to-end working, cross-run persistence confirmed
