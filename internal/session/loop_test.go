@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -613,6 +614,50 @@ func TestSelfImprovementProfile(t *testing.T) {
 	}
 	if p.MaxDurationSecs != 14400 {
 		t.Errorf("MaxDurationSecs = %d, want 14400", p.MaxDurationSecs)
+	}
+	if p.EnableEnhancement {
+		t.Error("EnableEnhancement should be false for self-improvement")
+	}
+}
+
+func TestSelfImprovementProfileDefaults(t *testing.T) {
+	p := SelfImprovementProfile()
+	if p.EnableEnhancement {
+		t.Error("SelfImprovementProfile should have EnableEnhancement=false")
+	}
+	if !p.SelfImprovement {
+		t.Error("SelfImprovementProfile should have SelfImprovement=true")
+	}
+}
+
+func TestEnableEnhancementFlag(t *testing.T) {
+	enabled := LoopProfile{EnableEnhancement: true}
+	disabled := LoopProfile{EnableEnhancement: false}
+
+	eJSON, err := json.Marshal(enabled)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dJSON, err := json.Marshal(disabled)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Both should serialize the field (no omitempty)
+	if !strings.Contains(string(eJSON), `"enable_enhancement":true`) {
+		t.Errorf("enabled JSON missing field: %s", eJSON)
+	}
+	if !strings.Contains(string(dJSON), `"enable_enhancement":false`) {
+		t.Errorf("disabled JSON missing field: %s", dJSON)
+	}
+
+	// Round-trip
+	var rt LoopProfile
+	if err := json.Unmarshal(eJSON, &rt); err != nil {
+		t.Fatal(err)
+	}
+	if !rt.EnableEnhancement {
+		t.Error("round-trip lost EnableEnhancement=true")
 	}
 }
 
