@@ -44,6 +44,7 @@ type LoopProfile struct {
 	CascadeConfig        *CascadeConfig `json:"cascade_config,omitempty"`
 	EnableUncertainty    bool     `json:"enable_uncertainty,omitempty"`
 	EnableCurriculum     bool     `json:"enable_curriculum,omitempty"`
+	SelfImprovement      bool     `json:"self_improvement,omitempty"`
 }
 
 // LoopTask is the bounded implementation unit produced by the planner.
@@ -82,6 +83,7 @@ type LoopIteration struct {
 	WorkerOutputs     []string           `json:"worker_outputs,omitempty"` // per-worker outputs
 	Verification      []LoopVerification `json:"verification,omitempty"`
 	Error             string             `json:"error,omitempty"`
+	Acceptance        *AcceptanceResult  `json:"acceptance,omitempty"`
 	StartedAt         time.Time          `json:"started_at"`
 	EndedAt           *time.Time         `json:"ended_at,omitempty"`
 	PlannerEndedAt    *time.Time         `json:"planner_ended_at,omitempty"`
@@ -122,6 +124,31 @@ func DefaultLoopProfile() LoopProfile {
 		RetryLimit:           1,
 		VerifyCommands:       []string{defaultLoopVerifyCommand},
 		WorktreePolicy:       "git",
+	}
+}
+
+// SelfImprovementProfile returns a profile configured for autonomous self-improvement.
+// Serial execution (1 worker), all self-learning enabled, ci.sh + selftest --gate verify.
+func SelfImprovementProfile() LoopProfile {
+	return LoopProfile{
+		PlannerProvider:      ProviderClaude,
+		PlannerModel:         "sonnet-4",
+		WorkerProvider:       ProviderClaude,
+		WorkerModel:          "sonnet-4",
+		VerifierProvider:     ProviderClaude,
+		VerifierModel:        "sonnet-4",
+		MaxConcurrentWorkers: 1,
+		RetryLimit:           2,
+		VerifyCommands:       []string{"./scripts/dev/ci.sh", "go run . selftest --gate"},
+		WorktreePolicy:       "git",
+		PlannerBudgetUSD:     1.0,
+		WorkerBudgetUSD:      3.0,
+		EnableReflexion:      true,
+		EnableEpisodicMemory: true,
+		EnableUncertainty:    true,
+		EnableCurriculum:     true,
+		EnableCascade:        false,
+		SelfImprovement:      true,
 	}
 }
 
@@ -594,6 +621,48 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 
 	run.updateLoopAfterVerification(index, allVerification, postVerifyStatus, "")
 
+	// Self-improvement acceptance gate: classify changes and route.
+	if profile.SelfImprovement && postVerifyStatus == "idle" {
+		result, accErr := m.handleSelfImprovementAcceptance(ctx, run, index, workerWorktrees)
+		if accErr != nil {
+			// Log but don't fail — changes stay in worktree for manual handling.
+			run.mu.Lock()
+			if index < len(run.Iterations) {
+				run.Iterations[index].Error = "acceptance: " + accErr.Error()
+			}
+			run.mu.Unlock()
+		}
+		if result != nil {
+			run.mu.Lock()
+			if index < len(run.Iterations) {
+				run.Iterations[index].Acceptance = result
+			}
+			run.mu.Unlock()
+			if result.AutoMerged && m.bus != nil {
+				m.bus.Publish(events.Event{
+					Type:     events.SelfImproveMerged,
+					RepoName: run.RepoName,
+					Data: map[string]any{
+						"loop_id":    run.ID,
+						"iteration":  index,
+						"safe_paths": result.SafePaths,
+					},
+				})
+			} else if result.PRCreated && m.bus != nil {
+				m.bus.Publish(events.Event{
+					Type:     events.SelfImprovePR,
+					RepoName: run.RepoName,
+					Data: map[string]any{
+						"loop_id":      run.ID,
+						"iteration":    index,
+						"pr_url":       result.PRURL,
+						"review_paths": result.ReviewPaths,
+					},
+				})
+			}
+		}
+	}
+
 	// WS2: Record successful iteration as episode for future retrieval.
 	if m.episodic != nil && profile.EnableEpisodicMemory {
 		iterSnap := run.iterationsSnapshot()[index]
@@ -614,6 +683,71 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	m.PersistLoop(run)
 	_ = writeLoopJournal(run, run.Iterations[index])
 	return nil
+}
+
+func (m *Manager) handleSelfImprovementAcceptance(ctx context.Context, run *LoopRun, index int, worktrees []string) (*AcceptanceResult, error) {
+	// Collect all diff paths across worktrees.
+	var allPaths []string
+	seen := make(map[string]bool)
+	for _, wt := range worktrees {
+		if wt == "" {
+			continue
+		}
+		paths, err := gitDiffPathsForWorktree(wt)
+		if err != nil {
+			continue
+		}
+		for _, p := range paths {
+			if !seen[p] {
+				seen[p] = true
+				allPaths = append(allPaths, p)
+			}
+		}
+	}
+
+	if len(allPaths) == 0 {
+		return &AcceptanceResult{}, nil
+	}
+
+	safe, review := ClassifySelfImprovePaths(allPaths)
+	result := &AcceptanceResult{
+		SafePaths:   safe,
+		ReviewPaths: review,
+	}
+
+	mainBranch := "main"
+	if len(review) == 0 {
+		// All safe — auto-commit and merge each worktree.
+		for _, wt := range worktrees {
+			if wt == "" {
+				continue
+			}
+			msg := fmt.Sprintf("self-improve: auto-merge (%s)", buildDiffSummary(safe))
+			if err := AutoCommitAndMerge(wt, mainBranch, msg); err != nil {
+				result.Error = err.Error()
+				return result, err
+			}
+		}
+		result.AutoMerged = true
+	} else {
+		// Needs review — create PR from the first non-empty worktree.
+		for _, wt := range worktrees {
+			if wt == "" {
+				continue
+			}
+			title := fmt.Sprintf("self-improve: %s", buildDiffSummary(allPaths))
+			url, err := CreateReviewPR(wt, mainBranch, title, review)
+			if err != nil {
+				result.Error = err.Error()
+				return result, err
+			}
+			result.PRCreated = true
+			result.PRURL = url
+			break
+		}
+	}
+
+	return result, nil
 }
 
 func normalizeLoopProfile(profile LoopProfile) (LoopProfile, error) {

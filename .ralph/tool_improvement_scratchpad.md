@@ -115,3 +115,13 @@ Observations from reliability & quality improvement workstreams + recursive self
 44. **Worktree agent replaced test file instead of appending** — WS-A agent was told to "append to loopbench_test.go or create if it doesn't exist" but replaced the entire file, deleting ~170 lines of existing tests. Root cause: the agent saw the file existed, decided to rewrite it with only the new tests. Workaround: manual merge in parent. Fix: agent prompts should explicitly say "do NOT delete existing test functions" when appending tests.
 
 43. **`selftest` exit code via `os.Exit(1)` bypasses cobra** — Both `gatecheck.go` and `selftest.go` call `os.Exit(1)` inside `RunE`, which skips defer cleanup and cobra's error handling. Should return a sentinel error and handle exit codes in `main()` or a `PersistentPostRunE`. Low priority — works fine in practice.
+
+## Round 5: Stage 3 Phase B Observations
+
+45. **B2 agent created duplicate `SelfImprovementProfile()`** — Agent created `internal/session/selfimprove.go` with its own version of `SelfImprovementProfile()` despite A1 already adding it to `loop.go`. The two versions had different defaults (B2: $5/$15 budget, 2 workers, cascade enabled; A1: $1/$3 budget, 1 worker, cascade disabled per plan). Root cause: B2 didn't see A1's changes in its worktree. Fix: skip the duplicate file during merge, use A1's canonical version.
+
+46. **Self-improve handler uses `errResult` instead of `codedError`** — `handler_selfimprove.go:72` uses `errResult()` for the loop start error, while the surrounding code uses `codedError()`. Should use `codedError(ErrLoopStart, ...)` for consistency with the error code migration (scratchpad #31).
+
+47. **`maxIter` parameter unused in handler** — `handler_selfimprove.go` parses `max_iterations` param but doesn't pass it anywhere — `StartLoop` doesn't take a max iterations arg. The loop runs until stopped or budget exhausted. Either: (a) add `MaxIterations` to `LoopProfile`, or (b) remove the param and document that budget is the real limiter.
+
+48. **`self-improve.sh` references `mcp-call` subcommand** — The script calls `./ralphglasses mcp-call ralphglasses_self_improve` but no `mcp-call` cobra command exists. Should either: (a) implement `mcp-call` as a thin wrapper that starts MCP, calls the tool, and exits, or (b) change the script to use the MCP protocol directly via stdin/stdout.

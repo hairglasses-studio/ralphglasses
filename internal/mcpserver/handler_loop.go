@@ -101,6 +101,36 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 		}
 	}
 
+	// Self-improvement mode: override profile with SelfImprovementProfile defaults.
+	if getBoolArg(req, "self_improvement") {
+		profile = session.SelfImprovementProfile()
+		// Re-apply explicit overrides on top of self-improvement defaults.
+		if value := getStringArg(req, "planner_model"); value != "" {
+			profile.PlannerModel = value
+		}
+		if value := getStringArg(req, "worker_model"); value != "" {
+			profile.WorkerModel = value
+		}
+		if budgetUSD := getNumberArg(req, "budget_usd", 0); budgetUSD > 0 {
+			profile.PlannerBudgetUSD = budgetUSD / 4
+			profile.WorkerBudgetUSD = budgetUSD * 3 / 4
+		}
+		// Wire all self-learning subsystems (singleton creation).
+		if !s.SessMgr.HasReflexion() {
+			s.SessMgr.SetReflexionStore(session.NewReflexionStore(ralphDir))
+		}
+		if !s.SessMgr.HasEpisodicMemory() {
+			s.SessMgr.SetEpisodicMemory(session.NewEpisodicMemory(ralphDir, 500, 0))
+		}
+		if !s.SessMgr.HasCurriculumSorter() {
+			var episodic session.EpisodicSource
+			if em := s.SessMgr.GetEpisodicMemory(); em != nil {
+				episodic = em
+			}
+			s.SessMgr.SetCurriculumSorter(session.NewCurriculumSorter(nil, episodic))
+		}
+	}
+
 	// Wire prompt enhancer into session manager for loop integration
 	if s.SessMgr.Enhancer == nil {
 		s.SessMgr.Enhancer = s.getEngine()
