@@ -14,17 +14,17 @@ import (
 func (s *Server) handleLoopBenchmark(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoName := getStringArg(req, "repo")
 	if repoName == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(repoName)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
 	hours := getNumberArg(req, "hours", 48)
@@ -33,7 +33,7 @@ func (s *Server) handleLoopBenchmark(_ context.Context, req mcp.CallToolRequest)
 	obsPath := session.ObservationPath(r.Path)
 	observations, err := session.LoadObservations(obsPath, since)
 	if err != nil {
-		return errResult(fmt.Sprintf("load observations: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("load observations: %v", err)), nil
 	}
 
 	if len(observations) == 0 {
@@ -71,17 +71,17 @@ func (s *Server) handleLoopBenchmark(_ context.Context, req mcp.CallToolRequest)
 func (s *Server) handleLoopBaseline(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoName := getStringArg(req, "repo")
 	if repoName == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(repoName)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
 	action := getStringArg(req, "action")
@@ -95,7 +95,7 @@ func (s *Server) handleLoopBaseline(_ context.Context, req mcp.CallToolRequest) 
 	case "view":
 		bl, err := e2e.LoadBaseline(blPath)
 		if err != nil {
-			return errResult(fmt.Sprintf("load baseline: %v", err)), nil
+			return codedError(ErrFilesystem, fmt.Sprintf("load baseline: %v", err)), nil
 		}
 		return jsonResult(bl), nil
 
@@ -103,10 +103,10 @@ func (s *Server) handleLoopBaseline(_ context.Context, req mcp.CallToolRequest) 
 		hours := getNumberArg(req, "hours", 48)
 		bl, err := e2e.RefreshBaseline(r.Path, hours)
 		if err != nil {
-			return errResult(fmt.Sprintf("refresh baseline: %v", err)), nil
+			return codedError(ErrGateFailed, fmt.Sprintf("refresh baseline: %v", err)), nil
 		}
 		if err := e2e.SaveBaseline(blPath, bl); err != nil {
-			return errResult(fmt.Sprintf("save baseline: %v", err)), nil
+			return codedError(ErrFilesystem, fmt.Sprintf("save baseline: %v", err)), nil
 		}
 		return jsonResult(map[string]any{
 			"action":  "refresh",
@@ -118,10 +118,10 @@ func (s *Server) handleLoopBaseline(_ context.Context, req mcp.CallToolRequest) 
 		hours := getNumberArg(req, "hours", 48)
 		bl, err := e2e.RefreshBaseline(r.Path, hours)
 		if err != nil {
-			return errResult(fmt.Sprintf("refresh baseline: %v", err)), nil
+			return codedError(ErrGateFailed, fmt.Sprintf("refresh baseline: %v", err)), nil
 		}
 		if err := e2e.SaveBaseline(blPath, bl); err != nil {
-			return errResult(fmt.Sprintf("save baseline: %v", err)), nil
+			return codedError(ErrFilesystem, fmt.Sprintf("save baseline: %v", err)), nil
 		}
 		return jsonResult(map[string]any{
 			"action":  "pin",
@@ -131,24 +131,24 @@ func (s *Server) handleLoopBaseline(_ context.Context, req mcp.CallToolRequest) 
 		}), nil
 
 	default:
-		return errResult(fmt.Sprintf("unknown action: %s (use view, refresh, or pin)", action)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("unknown action: %s (use view, refresh, or pin)", action)), nil
 	}
 }
 
 func (s *Server) handleLoopGates(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoName := getStringArg(req, "repo")
 	if repoName == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(repoName)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
 	hours := getNumberArg(req, "hours", 24)
@@ -157,7 +157,7 @@ func (s *Server) handleLoopGates(_ context.Context, req mcp.CallToolRequest) (*m
 	obsPath := session.ObservationPath(r.Path)
 	observations, err := session.LoadObservations(obsPath, since)
 	if err != nil {
-		return errResult(fmt.Sprintf("load observations: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("load observations: %v", err)), nil
 	}
 
 	blPath := e2e.BaselinePath(r.Path)

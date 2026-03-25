@@ -15,27 +15,27 @@ import (
 func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoName := getStringArg(req, "repo")
 	if repoName == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
 		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	teamName := getStringArg(req, "name")
 	if teamName == "" {
-		return errResult("team name required"), nil
+		return codedError(ErrInvalidParams, "team name required"), nil
 	}
 	tasksStr := getStringArg(req, "tasks")
 	if tasksStr == "" {
-		return errResult("tasks required (newline-separated)"), nil
+		return codedError(ErrInvalidParams, "tasks required (newline-separated)"), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(repoName)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
 	var tasks []string
@@ -66,7 +66,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 
 	team, err := s.SessMgr.LaunchTeam(ctx, config)
 	if err != nil {
-		return errResult(fmt.Sprintf("create team failed: %v", err)), nil
+		return codedError(ErrLaunchFailed, fmt.Sprintf("create team failed: %v", err)), nil
 	}
 	return jsonResult(team), nil
 }
@@ -74,12 +74,12 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "name")
 	if name == "" {
-		return errResult("team name required"), nil
+		return codedError(ErrInvalidParams, "team name required"), nil
 	}
 
 	team, ok := s.SessMgr.GetTeam(name)
 	if !ok {
-		return errResult(fmt.Sprintf("team not found: %s", name)), nil
+		return codedError(ErrTeamNotFound, fmt.Sprintf("team not found: %s", name)), nil
 	}
 
 	// Enrich with lead session info
@@ -109,11 +109,11 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 func (s *Server) handleTeamDelegate(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "name")
 	if name == "" {
-		return errResult("team name required"), nil
+		return codedError(ErrInvalidParams, "team name required"), nil
 	}
 	task := getStringArg(req, "task")
 	if task == "" {
-		return errResult("task description required"), nil
+		return codedError(ErrInvalidParams, "task description required"), nil
 	}
 
 	taskProvider := session.Provider(getStringArg(req, "provider"))
@@ -123,7 +123,7 @@ func (s *Server) handleTeamDelegate(_ context.Context, req mcp.CallToolRequest) 
 		Status:      "pending",
 	})
 	if err != nil {
-		return errResult(err.Error()), nil
+		return codedError(ErrTeamNotFound, err.Error()), nil
 	}
 
 	return textResult(fmt.Sprintf("Added task to team %s (%d total tasks)", name, count)), nil
@@ -134,27 +134,27 @@ func (s *Server) handleTeamDelegate(_ context.Context, req mcp.CallToolRequest) 
 func (s *Server) handleAgentDefine(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoName := getStringArg(req, "repo")
 	if repoName == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
 		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	agentName := getStringArg(req, "name")
 	if agentName == "" {
-		return errResult("agent name required"), nil
+		return codedError(ErrInvalidParams, "agent name required"), nil
 	}
 	prompt := getStringArg(req, "prompt")
 	if prompt == "" {
-		return errResult("prompt required"), nil
+		return codedError(ErrInvalidParams, "prompt required"), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(repoName)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
 	provider := session.Provider(getStringArg(req, "provider"))
@@ -175,7 +175,7 @@ func (s *Server) handleAgentDefine(_ context.Context, req mcp.CallToolRequest) (
 	}
 
 	if err := session.WriteAgent(r.Path, def); err != nil {
-		return errResult(fmt.Sprintf("write agent: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("write agent: %v", err)), nil
 	}
 
 	var location string
@@ -193,19 +193,19 @@ func (s *Server) handleAgentDefine(_ context.Context, req mcp.CallToolRequest) (
 func (s *Server) handleAgentList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoName := getStringArg(req, "repo")
 	if repoName == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
 		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(repoName)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
 	providerStr := getStringArg(req, "provider")
@@ -228,7 +228,7 @@ func (s *Server) handleAgentList(_ context.Context, req mcp.CallToolRequest) (*m
 		var err error
 		agents, err = session.DiscoverAgents(r.Path, provider)
 		if err != nil {
-			return errResult(fmt.Sprintf("list agents: %v", err)), nil
+			return codedError(ErrInternal, fmt.Sprintf("list agents: %v", err)), nil
 		}
 	}
 
@@ -241,28 +241,28 @@ func (s *Server) handleAgentList(_ context.Context, req mcp.CallToolRequest) (*m
 func (s *Server) handleAgentCompose(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoName := getStringArg(req, "repo")
 	if repoName == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
 		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	name := getStringArg(req, "name")
 	if name == "" {
-		return errResult("composite agent name required"), nil
+		return codedError(ErrInvalidParams, "composite agent name required"), nil
 	}
 	agentsStr := getStringArg(req, "agents")
 	if agentsStr == "" {
-		return errResult("agents list required (comma-separated)"), nil
+		return codedError(ErrInvalidParams, "agents list required (comma-separated)"), nil
 	}
 
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(repoName)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
 	provider := session.Provider(getStringArg(req, "provider"))
@@ -280,7 +280,7 @@ func (s *Server) handleAgentCompose(_ context.Context, req mcp.CallToolRequest) 
 
 	composite, err := session.ComposeAgents(r.Path, agentNames, provider, name)
 	if err != nil {
-		return errResult(fmt.Sprintf("compose agents: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("compose agents: %v", err)), nil
 	}
 
 	// Apply model override
@@ -289,7 +289,7 @@ func (s *Server) handleAgentCompose(_ context.Context, req mcp.CallToolRequest) 
 	}
 
 	if err := session.WriteAgent(r.Path, composite); err != nil {
-		return errResult(fmt.Sprintf("write composite agent: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("write composite agent: %v", err)), nil
 	}
 
 	return jsonResult(map[string]any{

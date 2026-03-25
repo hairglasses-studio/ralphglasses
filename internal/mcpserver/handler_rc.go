@@ -393,7 +393,7 @@ func (s *Server) handleRCRead(_ context.Context, req mcp.CallToolRequest) (*mcp.
 
 func (s *Server) handleEventPoll(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.EventBus == nil {
-		return errResult("event bus not initialized"), nil
+		return codedError(ErrNotRunning, "event bus not initialized"), nil
 	}
 
 	cursorStr := getStringArg(req, "cursor")

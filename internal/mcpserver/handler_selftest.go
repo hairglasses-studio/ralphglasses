@@ -25,7 +25,7 @@ func (s *Server) handleSelfTest(_ context.Context, req mcp.CallToolRequest) (*mc
 		if os.IsNotExist(err) {
 			return invalidParams(fmt.Sprintf("repo path does not exist: %s", repo)), nil
 		}
-		return errResult(fmt.Sprintf("stat repo path: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("stat repo path: %v", err)), nil
 	}
 	if !info.IsDir() {
 		return invalidParams(fmt.Sprintf("repo path is not a directory: %s", repo)), nil

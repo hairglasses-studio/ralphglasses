@@ -50,7 +50,7 @@ func (s *Server) WireAutoOptimizer(mgr *session.Manager) {
 
 func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil && s.FleetClient == nil {
-		return errResult("fleet not active — start with 'ralphglasses serve'"), nil
+		return codedError(ErrNotRunning, "fleet not active — start with 'ralphglasses serve'"), nil
 	}
 
 	repo := getStringArg(req, "repo")
@@ -60,7 +60,7 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 	priority := int(getNumberArg(req, "priority", 5))
 
 	if repo == "" || prompt == "" {
-		return errResult("repo and prompt required"), nil
+		return codedError(ErrInvalidParams, "repo and prompt required"), nil
 	}
 
 	item := &fleet.WorkItem{
@@ -75,7 +75,7 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 
 	if s.FleetCoordinator != nil {
 		if err := s.FleetCoordinator.SubmitWork(item); err != nil {
-			return errResult(err.Error()), nil
+			return codedError(ErrInternal, err.Error()), nil
 		}
 		return fleetJSON(map[string]any{
 			"work_item_id": item.ID,
@@ -86,7 +86,7 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 
 	id, err := s.FleetClient.SubmitWork(context.Background(), *item)
 	if err != nil {
-		return errResult(err.Error()), nil
+		return codedError(ErrInternal, err.Error()), nil
 	}
 	return fleetJSON(map[string]any{
 		"work_item_id": id,
@@ -97,7 +97,7 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 
 func (s *Server) handleFleetBudget(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil && s.FleetClient == nil {
-		return errResult("fleet not active"), nil
+		return codedError(ErrNotRunning, "fleet not active"), nil
 	}
 
 	newLimit := getNumberArg(req, "limit", 0)
@@ -118,7 +118,7 @@ func (s *Server) handleFleetBudget(_ context.Context, req mcp.CallToolRequest) (
 
 	state, err := s.FleetClient.FleetState(context.Background())
 	if err != nil {
-		return errResult(err.Error()), nil
+		return codedError(ErrInternal, err.Error()), nil
 	}
 	return fleetJSON(map[string]any{
 		"budget_usd":  state.BudgetUSD,
@@ -131,7 +131,7 @@ func (s *Server) handleFleetBudget(_ context.Context, req mcp.CallToolRequest) (
 
 func (s *Server) handleFleetWorkers(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil && s.FleetClient == nil {
-		return errResult("fleet not active"), nil
+		return codedError(ErrNotRunning, "fleet not active"), nil
 	}
 
 	if s.FleetCoordinator != nil {
@@ -145,7 +145,7 @@ func (s *Server) handleFleetWorkers(_ context.Context, req mcp.CallToolRequest) 
 
 	state, err := s.FleetClient.FleetState(context.Background())
 	if err != nil {
-		return errResult(err.Error()), nil
+		return codedError(ErrInternal, err.Error()), nil
 	}
 	return fleetJSON(map[string]any{
 		"workers":     state.Workers,
@@ -156,7 +156,7 @@ func (s *Server) handleFleetWorkers(_ context.Context, req mcp.CallToolRequest) 
 
 func (s *Server) handleHITLScore(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.HITLTracker == nil {
-		return errResult("HITL tracking not initialized — run InitSelfImprovement first"), nil
+		return codedError(ErrNotRunning, "HITL tracking not initialized — run InitSelfImprovement first"), nil
 	}
 
 	hours := getNumberArg(req, "hours", 24)
@@ -168,7 +168,7 @@ func (s *Server) handleHITLScore(_ context.Context, req mcp.CallToolRequest) (*m
 
 func (s *Server) handleHITLHistory(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.HITLTracker == nil {
-		return errResult("HITL tracking not initialized"), nil
+		return codedError(ErrNotRunning, "HITL tracking not initialized"), nil
 	}
 
 	hours := getNumberArg(req, "hours", 24)
@@ -184,7 +184,7 @@ func (s *Server) handleHITLHistory(_ context.Context, req mcp.CallToolRequest) (
 
 func (s *Server) handleAutonomyLevel(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.DecisionLog == nil {
-		return errResult("autonomy system not initialized"), nil
+		return codedError(ErrNotRunning, "autonomy system not initialized"), nil
 	}
 
 	levelStr := getStringArg(req, "level")
@@ -200,7 +200,7 @@ func (s *Server) handleAutonomyLevel(_ context.Context, req mcp.CallToolRequest)
 		case "3", "full-autonomy":
 			level = session.LevelFullAutonomy
 		default:
-			return errResult(fmt.Sprintf("invalid level: %s (use 0-3 or name)", levelStr)), nil
+			return codedError(ErrInvalidParams, fmt.Sprintf("invalid level: %s (use 0-3 or name)", levelStr)), nil
 		}
 		s.DecisionLog.SetLevel(level)
 	}
@@ -215,7 +215,7 @@ func (s *Server) handleAutonomyLevel(_ context.Context, req mcp.CallToolRequest)
 
 func (s *Server) handleAutonomyDecisions(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.DecisionLog == nil {
-		return errResult("autonomy system not initialized"), nil
+		return codedError(ErrNotRunning, "autonomy system not initialized"), nil
 	}
 
 	limit := int(getNumberArg(req, "limit", 20))
@@ -230,12 +230,12 @@ func (s *Server) handleAutonomyDecisions(_ context.Context, req mcp.CallToolRequ
 
 func (s *Server) handleAutonomyOverride(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.DecisionLog == nil {
-		return errResult("autonomy system not initialized"), nil
+		return codedError(ErrNotRunning, "autonomy system not initialized"), nil
 	}
 
 	decisionID := getStringArg(req, "decision_id")
 	if decisionID == "" {
-		return errResult("decision_id required"), nil
+		return codedError(ErrInvalidParams, "decision_id required"), nil
 	}
 
 	details := getStringArg(req, "details")
@@ -258,7 +258,7 @@ func (s *Server) handleAutonomyOverride(_ context.Context, req mcp.CallToolReque
 
 func (s *Server) handleFeedbackProfiles(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FeedbackAnalyzer == nil {
-		return errResult("feedback analyzer not initialized"), nil
+		return codedError(ErrNotRunning, "feedback analyzer not initialized"), nil
 	}
 
 	profileType := getStringArg(req, "type")
@@ -277,12 +277,12 @@ func (s *Server) handleFeedbackProfiles(_ context.Context, req mcp.CallToolReque
 
 func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.AutoOptimizer == nil {
-		return errResult("auto-optimizer not initialized — run InitSelfImprovement first"), nil
+		return codedError(ErrNotRunning, "auto-optimizer not initialized — run InitSelfImprovement first"), nil
 	}
 
 	task := getStringArg(req, "task")
 	if task == "" {
-		return errResult("task description required"), nil
+		return codedError(ErrInvalidParams, "task description required"), nil
 	}
 
 	rec := s.AutoOptimizer.RecommendProvider(task)
@@ -293,7 +293,7 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 func fleetJSON(v any) (*mcp.CallToolResult, error) {
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		return errResult("marshal error: " + err.Error()), nil
+		return codedError(ErrInternal, "marshal error: " + err.Error()), nil
 	}
 	return textResult(string(data)), nil
 }
