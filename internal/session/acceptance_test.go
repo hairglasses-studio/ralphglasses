@@ -148,3 +148,119 @@ func TestAutoCommitAndMerge(t *testing.T) {
 		t.Errorf("commit message should contain 'self-improve', got: %s", out)
 	}
 }
+
+func TestIsGitWorktree(t *testing.T) {
+	t.Parallel()
+
+	t.Run("normal_repo_is_not_worktree", func(t *testing.T) {
+		dir := t.TempDir()
+		cmd := exec.Command("git", "init")
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git init: %v\n%s", err, out)
+		}
+		if isGitWorktree(dir) {
+			t.Error("normal git repo should not be detected as worktree")
+		}
+	})
+
+	t.Run("linked_worktree_is_worktree", func(t *testing.T) {
+		// Create a main repo with an initial commit so we can add a worktree.
+		mainDir := t.TempDir()
+		run := func(dir string, args ...string) {
+			t.Helper()
+			cmd := exec.Command("git", args...)
+			cmd.Dir = dir
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("git %v: %v\n%s", args, err, out)
+			}
+		}
+		run(mainDir, "init")
+		run(mainDir, "config", "user.email", "test@test.com")
+		run(mainDir, "config", "user.name", "Test")
+		run(mainDir, "config", "commit.gpgsign", "false")
+		if err := os.WriteFile(filepath.Join(mainDir, "f.txt"), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		run(mainDir, "add", ".")
+		run(mainDir, "commit", "-m", "init")
+
+		// Create a linked worktree
+		wtDir := filepath.Join(t.TempDir(), "wt")
+		run(mainDir, "worktree", "add", wtDir, "-b", "wt-branch")
+
+		if !isGitWorktree(wtDir) {
+			t.Error("linked worktree should be detected as worktree")
+		}
+	})
+
+	t.Run("non_git_dir_returns_false", func(t *testing.T) {
+		dir := t.TempDir()
+		if isGitWorktree(dir) {
+			t.Error("non-git directory should not be detected as worktree")
+		}
+	})
+}
+
+func TestAutoCommitAndMergeWorktreeDetection(t *testing.T) {
+	t.Parallel()
+
+	// Set up a main repo with an initial commit.
+	mainDir := t.TempDir()
+	run := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	run(mainDir, "init")
+	run(mainDir, "config", "user.email", "test@test.com")
+	run(mainDir, "config", "user.name", "Test")
+	run(mainDir, "config", "commit.gpgsign", "false")
+	if err := os.WriteFile(filepath.Join(mainDir, "README.md"), []byte("# Test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run(mainDir, "add", ".")
+	run(mainDir, "commit", "-m", "initial")
+
+	// Detect the default branch name from the main repo.
+	cmd := exec.Command("git", "branch", "--show-current")
+	cmd.Dir = mainDir
+	branchOut, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mainBranch := strings.TrimSpace(string(branchOut))
+
+	// Create a linked worktree on a new branch.
+	wtDir := filepath.Join(t.TempDir(), "wt")
+	run(mainDir, "worktree", "add", wtDir, "-b", "wt-work")
+
+	// Propagate git config to worktree (inherits from main, but be safe).
+	run(wtDir, "config", "user.email", "test@test.com")
+	run(wtDir, "config", "user.name", "Test")
+
+	// Make a change inside the worktree.
+	if err := os.WriteFile(filepath.Join(wtDir, "newfile.txt"), []byte("hello\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// AutoCommitAndMerge should succeed without running `git checkout main`
+	// (which would fail in a worktree because main is locked).
+	if err := AutoCommitAndMerge(wtDir, mainBranch, "self-improve: worktree test"); err != nil {
+		t.Fatalf("AutoCommitAndMerge in worktree: %v", err)
+	}
+
+	// Verify main branch was updated (via update-ref) by checking the log.
+	logCmd := exec.Command("git", "log", mainBranch, "--oneline", "-1")
+	logCmd.Dir = wtDir
+	out, err := logCmd.Output()
+	if err != nil {
+		t.Fatalf("git log: %v", err)
+	}
+	if !strings.Contains(string(out), "self-improve: worktree test") {
+		t.Errorf("main branch should have the commit, got: %s", out)
+	}
+}
