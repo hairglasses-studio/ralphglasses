@@ -467,6 +467,56 @@ func TestManager_FailingProcess_ErrorChan(t *testing.T) {
 	}
 }
 
+func TestManager_ProcessExitMsg_CleanExit(t *testing.T) {
+	m := NewManager()
+	repoPath := t.TempDir()
+	writeTestScript(t, repoPath+"/ralph_loop.sh", "exit 0")
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	select {
+	case msg := <-m.ExitChan():
+		if msg.RepoPath != repoPath {
+			t.Errorf("unexpected RepoPath: got %q, want %q", msg.RepoPath, repoPath)
+		}
+		if msg.ExitCode != 0 {
+			t.Errorf("expected exit code 0, got %d", msg.ExitCode)
+		}
+		if msg.Error != nil {
+			t.Errorf("expected nil error for clean exit, got %v", msg.Error)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for ProcessExitMsg")
+	}
+}
+
+func TestManager_ProcessExitMsg_NonZeroExit(t *testing.T) {
+	m := NewManager()
+	repoPath := t.TempDir()
+	writeTestScript(t, repoPath+"/ralph_loop.sh", "exit 7")
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	select {
+	case msg := <-m.ExitChan():
+		if msg.RepoPath != repoPath {
+			t.Errorf("unexpected RepoPath: got %q, want %q", msg.RepoPath, repoPath)
+		}
+		if msg.ExitCode != 7 {
+			t.Errorf("expected exit code 7, got %d", msg.ExitCode)
+		}
+		if msg.Error == nil {
+			t.Error("expected non-nil error for non-zero exit")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for ProcessExitMsg")
+	}
+}
+
 func TestCleanStalePIDFiles(t *testing.T) {
 	repo1 := t.TempDir()
 	repo2 := t.TempDir()
