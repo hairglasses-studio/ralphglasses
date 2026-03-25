@@ -229,6 +229,19 @@ func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	}
 	// SessionName is tracked internally; Claude CLI has no --name flag.
 
+	if opts.Bare {
+		args = append(args, "--bare")
+	}
+	if opts.Effort != "" {
+		args = append(args, "--effort", opts.Effort)
+	}
+	for _, beta := range opts.Betas {
+		args = append(args, "--betas", beta)
+	}
+	if opts.FallbackModel != "" {
+		args = append(args, "--fallback-model", opts.FallbackModel)
+	}
+
 	cmd := exec.CommandContext(ctx, "claude", args...)
 	cmd.Dir = opts.RepoPath
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
