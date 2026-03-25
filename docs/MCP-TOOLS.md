@@ -1,6 +1,6 @@
 # MCP Server & Tools
 
-Ralphglasses is an installable MCP server exposing 84 tools for managing ralph loops, multi-provider LLM sessions, fleet orchestration, and self-improvement subsystems programmatically.
+Ralphglasses is an installable MCP server exposing 86 tools in 10 namespaces for managing ralph loops, multi-provider LLM sessions, fleet orchestration, and self-improvement subsystems programmatically.
 
 ## Install
 
@@ -16,6 +16,32 @@ go run . mcp --scan-path ~/hairglasses-studio
 ```
 
 A `.mcp.json` is also included in the repo root for automatic local discovery.
+
+## Deferred Loading
+
+To minimize startup latency and memory usage, only core tools are loaded upfront. The remaining tools are organized into 10 namespaces and loaded on demand via meta-tools:
+
+| Namespace | Tools | Description |
+|-----------|-------|-------------|
+| `core` | 12 | Fleet status, scan, list, start/stop/pause (always loaded) |
+| `session` | 14 | Session lifecycle, budget, tail, diff, errors |
+| `team` | 6 | Team create/delegate/status, agent define/list/compose |
+| `roadmap` | 5 | Parse, analyze, research, expand, export |
+| `prompt` | 9 | Analyze, enhance, lint, improve, classify, templates |
+| `fleet` | 6 | Distributed fleet submit/budget/workers, HITL, autonomy |
+| `awesome` | 5 | Awesome-list fetch, analyze, diff, report, sync |
+| `rc` | 5 | Remote control: status, send, read, poll, act |
+| `workflow` | 4 | Workflow define/run, snapshot, config bulk |
+| `observability` | 8 | Analytics, benchmarks, baselines, gates, journal, events |
+
+Use the meta-tools below to discover and load tool groups at runtime.
+
+## Meta-Tools
+
+| Tool | Description |
+|------|-------------|
+| `ralphglasses_tool_groups` | List available tool namespaces with tool counts and loaded status |
+| `ralphglasses_load_tool_group` | Load a tool namespace on demand (e.g., `{"group": "session"}`) |
 
 ## Tools
 
@@ -101,3 +127,5 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 | `ralphglasses_loop_benchmark` | P50/P95 metrics from recent loop observations for a repo |
 | `ralphglasses_loop_baseline` | Generate, view, or pin loop performance baseline for a repo |
 | `ralphglasses_loop_gates` | Evaluate regression gates — returns pass/warn/fail report |
+| `ralphglasses_tool_groups` | List available tool namespaces with tool counts and loaded status |
+| `ralphglasses_load_tool_group` | Load a tool namespace on demand |

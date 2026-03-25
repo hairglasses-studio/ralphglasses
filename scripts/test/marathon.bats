@@ -105,3 +105,12 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"6h"* ]]
 }
+
+@test "self-improvement profile has all self-learning subsystems enabled" {
+    # Verify the Go self-improvement profile used by marathon-style loops
+    # has reflexion, episodic memory, uncertainty, and curriculum enabled.
+    REPO_ROOT="$BATS_TEST_DIRNAME/../.."
+    run go test -v -run TestSelfImprovementProfileHasSelfLearningEnabled "$REPO_ROOT/internal/e2e/..."
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"PASS"* ]]
+}
