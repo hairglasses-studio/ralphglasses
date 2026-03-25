@@ -884,7 +884,10 @@ func (s *Server) reposCopy() []*model.Repo {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	cp := make([]*model.Repo, len(s.Repos))
-	copy(cp, s.Repos)
+	for i, r := range s.Repos {
+		rc := *r
+		cp[i] = &rc
+	}
 	return cp
 }
 
