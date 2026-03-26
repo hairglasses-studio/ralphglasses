@@ -394,3 +394,205 @@ func TestBusExistingBehaviorUnchanged(t *testing.T) {
 		t.Fatalf("expected 2 history events, got %d", len(history))
 	}
 }
+
+func TestSubscribeFiltered_OnlyMatchingEvents(t *testing.T) {
+	bus := NewBus(100)
+	ch := bus.SubscribeFiltered("filtered", SessionStarted)
+
+	bus.Publish(Event{Type: SessionStarted, RepoName: "match"})
+	bus.Publish(Event{Type: CostUpdate, RepoName: "skip"})
+	bus.Publish(Event{Type: SessionStarted, RepoName: "match2"})
+
+	// Should receive exactly the two SessionStarted events
+	for _, want := range []string{"match", "match2"} {
+		select {
+		case e := <-ch:
+			if e.Type != SessionStarted {
+				t.Errorf("type = %q, want %q", e.Type, SessionStarted)
+			}
+			if e.RepoName != want {
+				t.Errorf("repo = %q, want %q", e.RepoName, want)
+			}
+		case <-time.After(time.Second):
+			t.Fatalf("timeout waiting for event %q", want)
+		}
+	}
+
+	// Channel should be empty — CostUpdate was filtered out
+	select {
+	case e := <-ch:
+		t.Errorf("unexpected event: %+v", e)
+	case <-time.After(50 * time.Millisecond):
+		// expected
+	}
+}
+
+func TestSubscribeFiltered_MultipleTypes(t *testing.T) {
+	bus := NewBus(100)
+	ch := bus.SubscribeFiltered("multi", SessionStarted, CostUpdate)
+
+	bus.Publish(Event{Type: SessionStarted, RepoName: "a"})
+	bus.Publish(Event{Type: LoopStarted, RepoName: "b"})
+	bus.Publish(Event{Type: CostUpdate, RepoName: "c"})
+
+	received := 0
+	for i := 0; i < 2; i++ {
+		select {
+		case e := <-ch:
+			if e.Type != SessionStarted && e.Type != CostUpdate {
+				t.Errorf("unexpected type %q", e.Type)
+			}
+			received++
+		case <-time.After(time.Second):
+			t.Fatal("timeout")
+		}
+	}
+	if received != 2 {
+		t.Errorf("received %d events, want 2", received)
+	}
+
+	// LoopStarted should not appear
+	select {
+	case e := <-ch:
+		t.Errorf("unexpected event: %+v", e)
+	case <-time.After(50 * time.Millisecond):
+	}
+}
+
+func TestSubscribeFiltered_Unsubscribe(t *testing.T) {
+	bus := NewBus(100)
+	ch := bus.SubscribeFiltered("f1", SessionStarted)
+	bus.Unsubscribe("f1")
+
+	// Channel should be closed
+	_, ok := <-ch
+	if ok {
+		t.Error("channel should be closed after unsubscribe")
+	}
+}
+
+func TestValidEventType_Known(t *testing.T) {
+	knownTypes := []EventType{
+		SessionStarted, SessionEnded, SessionStopped,
+		CostUpdate, BudgetExceeded,
+		LoopStarted, LoopStopped, LoopIterated, LoopRegression,
+		TeamCreated, JournalWritten, ConfigChanged, ScanComplete,
+		PromptEnhanced, ToolCalled, SessionError,
+		AutoOptimized, ProviderSelected, SessionRecovered, ContextConflict,
+		ProviderHealthChanged, SelfImproveMerged, SelfImprovePR,
+	}
+	for _, et := range knownTypes {
+		if !ValidEventType(et) {
+			t.Errorf("ValidEventType(%q) = false, want true", et)
+		}
+	}
+}
+
+func TestValidEventType_Unknown(t *testing.T) {
+	unknownTypes := []EventType{
+		"bogus.event",
+		"session.unknown",
+		"",
+	}
+	for _, et := range unknownTypes {
+		if ValidEventType(et) {
+			t.Errorf("ValidEventType(%q) = true, want false", et)
+		}
+	}
+}
+
+func TestPublishUnknownEventType_StillDelivers(t *testing.T) {
+	bus := NewBus(100)
+	ch := bus.Subscribe("test")
+
+	// Publishing an unknown type should still deliver the event
+	bus.Publish(Event{Type: "bogus.unknown", RepoName: "delivered"})
+
+	select {
+	case e := <-ch:
+		if e.RepoName != "delivered" {
+			t.Errorf("repo = %q, want delivered", e.RepoName)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout — unknown event type was not delivered")
+	}
+
+	// It should also appear in history
+	history := bus.History("", 10)
+	if len(history) != 1 {
+		t.Fatalf("history len = %d, want 1", len(history))
+	}
+	if history[0].Type != "bogus.unknown" {
+		t.Errorf("history type = %q, want bogus.unknown", history[0].Type)
+	}
+}
+
+func TestVersionFieldDefaulted(t *testing.T) {
+	bus := NewBus(100)
+	ch := bus.Subscribe("test")
+
+	// Version not set — should default to 1
+	bus.Publish(Event{Type: SessionStarted})
+
+	select {
+	case e := <-ch:
+		if e.Version != 1 {
+			t.Errorf("version = %d, want 1", e.Version)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+
+	history := bus.History("", 10)
+	if len(history) != 1 {
+		t.Fatalf("history len = %d, want 1", len(history))
+	}
+	if history[0].Version != 1 {
+		t.Errorf("history version = %d, want 1", history[0].Version)
+	}
+}
+
+func TestVersionFieldPreserved(t *testing.T) {
+	bus := NewBus(100)
+	ch := bus.Subscribe("test")
+
+	// Explicitly set Version to 2
+	bus.Publish(Event{Type: SessionStarted, Version: 2})
+
+	select {
+	case e := <-ch:
+		if e.Version != 2 {
+			t.Errorf("version = %d, want 2", e.Version)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestVersionFieldPersisted(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "events.jsonl")
+
+	bus := NewBus(100)
+	if err := bus.PersistTo(path); err != nil {
+		t.Fatalf("PersistTo: %v", err)
+	}
+	defer bus.Close()
+
+	bus.Publish(Event{Type: SessionStarted})
+	bus.Publish(Event{Type: CostUpdate, Version: 3})
+
+	events, err := LoadEvents(path, 0)
+	if err != nil {
+		t.Fatalf("LoadEvents: %v", err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(events))
+	}
+	if events[0].Version != 1 {
+		t.Errorf("event[0].Version = %d, want 1 (defaulted)", events[0].Version)
+	}
+	if events[1].Version != 3 {
+		t.Errorf("event[1].Version = %d, want 3 (preserved)", events[1].Version)
+	}
+}
