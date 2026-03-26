@@ -1,0 +1,9 @@
+# Minimal runtime image used by goreleaser docker builds.
+# The binary is pre-built by goreleaser and copied in via COPY.
+FROM alpine:3.21
+
+RUN apk --no-cache add ca-certificates git
+
+COPY ralphglasses /usr/local/bin/ralphglasses
+
+ENTRYPOINT ["ralphglasses"]

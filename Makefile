@@ -7,7 +7,7 @@ LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSIO
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-integration test-scripts fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks
+.PHONY: bootstrap doctor test test-verbose test-cover test-integration test-scripts fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run
 
 # Install pre-commit hook (idempotent)
 hooks:
@@ -178,6 +178,14 @@ mcp: build-release
 # Run MCP server with live compilation (always fresh code)
 dev-mcp:
 	./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio
+
+# Build Docker image
+docker:
+	docker build -t ralphglasses:latest .
+
+# Run ralphglasses in Docker (mounts current directory as /workspace)
+docker-run:
+	docker run --rm -it -v $(PWD):/workspace ralphglasses:latest --scan-path /workspace
 
 # Plugin example target (placeholder — see internal/plugin/loader.go TODO)
 # Actual .so plugin compilation requires: go build -buildmode=plugin -o my-plugin.so ./my-plugin/
