@@ -2,6 +2,7 @@ package session
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -62,6 +63,22 @@ func SweepOrphans(ralphDir string, activePIDs map[int]bool) []OrphanInfo {
 		}
 	}
 	return orphans
+}
+
+// CleanupOrphans kills orphaned processes and removes their stale session files.
+func CleanupOrphans(ralphDir string, activePIDs map[int]bool, kill bool) (cleaned int, errors []error) {
+	orphans := SweepOrphans(ralphDir, activePIDs)
+	for _, o := range orphans {
+		if kill {
+			if err := syscall.Kill(o.PID, syscall.SIGTERM); err != nil {
+				errors = append(errors, fmt.Errorf("kill pid %d: %w", o.PID, err))
+				continue
+			}
+			slog.Info("reaper: killed orphan", "pid", o.PID)
+		}
+		cleaned++
+	}
+	return cleaned, errors
 }
 
 // extractPID pulls the "pid" field from a persisted session JSON blob.
