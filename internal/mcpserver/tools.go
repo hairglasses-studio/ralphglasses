@@ -162,16 +162,6 @@ func textResult(text string) *mcp.CallToolResult {
 	}
 }
 
-func errResult(msg string) *mcp.CallToolResult {
-	return &mcp.CallToolResult{
-		IsError: true,
-		Content: []mcp.Content{mcp.TextContent{
-			Type: "text",
-			Text: msg,
-		}},
-	}
-}
-
 
 func jsonResult(v any) *mcp.CallToolResult {
 	data, err := json.MarshalIndent(v, "", "  ")
