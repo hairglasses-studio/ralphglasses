@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -455,7 +456,9 @@ func (m *Manager) Stop(id string) error {
 
 	// Persist stopped state (synchronous; s.mu is released above).
 	// Best-effort: stop succeeds even if persistence fails.
-	_ = m.PersistSession(s)
+	if err := m.PersistSession(s); err != nil {
+		slog.Warn("persist session after stop", "id", s.ID, "err", err)
+	}
 
 	return nil
 }
@@ -1161,7 +1164,11 @@ func (m *Manager) LoadExternalSessions() {
 		// but don't overwrite in-memory state.
 		if existing, ok := m.sessions[id]; ok {
 			// Re-persist in-process sessions so disk stays current (best-effort).
-			go func(s *Session) { _ = m.PersistSession(s) }(existing)
+			go func(s *Session) {
+			if err := m.PersistSession(s); err != nil {
+				slog.Warn("re-persist session", "id", s.ID, "err", err)
+			}
+		}(existing)
 			continue
 		}
 
