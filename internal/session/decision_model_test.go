@@ -380,3 +380,40 @@ func TestPredictConfidenceAdapter(t *testing.T) {
 		t.Fatalf("PredictConfidence with 0 expectedTurns out of range: %f", scoreZeroExpected)
 	}
 }
+
+func TestClamp01(t *testing.T) {
+	tests := []struct {
+		input, want float64
+	}{
+		{-1.0, 0.0},
+		{-0.5, 0.0},
+		{0.0, 0.0},
+		{0.5, 0.5},
+		{1.0, 1.0},
+		{1.5, 1.0},
+		{100.0, 1.0},
+	}
+	for _, tt := range tests {
+		if got := clamp01(tt.input); got != tt.want {
+			t.Errorf("clamp01(%f) = %f, want %f", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestProviderToFloat(t *testing.T) {
+	tests := []struct {
+		provider string
+		want     float64
+	}{
+		{"claude", 0.0},
+		{"gemini", 0.33},
+		{"codex", 0.66},
+		{"unknown", 0.0},
+		{"", 0.0},
+	}
+	for _, tt := range tests {
+		if got := providerToFloat(tt.provider); got != tt.want {
+			t.Errorf("providerToFloat(%q) = %f, want %f", tt.provider, got, tt.want)
+		}
+	}
+}

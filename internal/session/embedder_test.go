@@ -188,6 +188,28 @@ func TestTrigramEmbedUnicode(t *testing.T) {
 	}
 }
 
+func TestNewTrigramEmbedder_DefaultDimensions(t *testing.T) {
+	e := NewTrigramEmbedder(0)
+	if e.Dimensions != 128 {
+		t.Errorf("expected default 128, got %d", e.Dimensions)
+	}
+
+	e2 := NewTrigramEmbedder(-5)
+	if e2.Dimensions != 128 {
+		t.Errorf("expected default 128 for negative, got %d", e2.Dimensions)
+	}
+}
+
+func TestL2Normalize_ZeroVector(t *testing.T) {
+	vec := make([]float64, 5)
+	l2Normalize(vec) // should be no-op
+	for i, v := range vec {
+		if v != 0 {
+			t.Errorf("expected 0 at index %d, got %f", i, v)
+		}
+	}
+}
+
 func TestCosineSimilarityMismatchedLengths(t *testing.T) {
 	a := []float64{1.0, 0.0, 0.0}
 	b := []float64{1.0, 0.0, 0.0, 0.0, 0.0}

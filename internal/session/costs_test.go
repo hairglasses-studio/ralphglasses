@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/config"
 )
 
 func TestDefaultCostRatesNonEmpty(t *testing.T) {
@@ -119,6 +121,28 @@ func TestProviderCostRateFromMatchesDefaults(t *testing.T) {
 		if got.OutputPer1M != tc.wantOut {
 			t.Errorf("%s output = %v, want %v", tc.provider, got.OutputPer1M, tc.wantOut)
 		}
+	}
+}
+
+func TestCostRatesFromConfig_Nil(t *testing.T) {
+	rates := CostRatesFromConfig(nil)
+	defaults := DefaultCostRates()
+	if len(rates.InputPerMToken) != len(defaults.InputPerMToken) {
+		t.Errorf("nil config should return defaults, got %d keys", len(rates.InputPerMToken))
+	}
+}
+
+func TestCostRatesFromConfig_NonNil(t *testing.T) {
+	pc := &config.ProviderCosts{
+		InputPerMToken:  map[string]float64{"custom": 42.0},
+		OutputPerMToken: map[string]float64{"custom": 84.0},
+	}
+	rates := CostRatesFromConfig(pc)
+	if got := rates.InputPerMToken["custom"]; got != 42.0 {
+		t.Errorf("expected 42.0, got %f", got)
+	}
+	if got := rates.OutputPerMToken["custom"]; got != 84.0 {
+		t.Errorf("expected 84.0, got %f", got)
 	}
 }
 

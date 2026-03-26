@@ -179,6 +179,34 @@ func TestDecompositionPrompt(t *testing.T) {
 	}
 }
 
+func TestPromptComplexity(t *testing.T) {
+	tests := []struct {
+		name  string
+		words int
+		extra string
+		minScore float64
+		maxScore float64
+	}{
+		{"very short", 5, "", 0.0, 0.3},
+		{"short", 30, "", 0.3, 0.5},
+		{"medium", 75, "", 0.5, 0.7},
+		{"long", 150, "", 0.6, 0.8},
+		{"very long", 250, "", 0.7, 0.9},
+		{"multi files", 30, " across multiple files", 0.4, 0.6},
+		{"breaking change", 30, " breaking change and migration", 0.5, 0.7},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prompt := strings.Repeat("word ", tt.words) + tt.extra
+			score := promptComplexity(prompt)
+			if score < tt.minScore || score > tt.maxScore {
+				t.Errorf("promptComplexity(%d words + %q) = %f, want [%f, %f]",
+					tt.words, tt.extra, score, tt.minScore, tt.maxScore)
+			}
+		})
+	}
+}
+
 func TestWordCount(t *testing.T) {
 	tests := []struct {
 		input    string
