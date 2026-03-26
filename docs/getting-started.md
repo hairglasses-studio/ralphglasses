@@ -282,6 +282,40 @@ ralphglasses_fleet_status {}
 
 ---
 
+## Shell Completion
+
+Ralphglasses includes shell completion for all commands and flags.
+
+### Bash
+
+```bash
+# System-wide (requires root):
+ralphglasses completion bash > /etc/bash_completion.d/ralphglasses
+
+# Current user only:
+ralphglasses completion bash > ~/.bash_completion
+```
+
+### Zsh
+
+```bash
+# Install to fpath:
+ralphglasses completion zsh > "${fpath[1]}/_ralphglasses"
+
+# Or source directly in ~/.zshrc:
+echo 'source <(ralphglasses completion zsh)' >> ~/.zshrc
+```
+
+### Fish
+
+```bash
+ralphglasses completion fish > ~/.config/fish/completions/ralphglasses.fish
+```
+
+After installing, restart your shell or source the relevant config file.
+
+---
+
 ## Troubleshooting
 
 ### "no ralph-enabled repos found"
