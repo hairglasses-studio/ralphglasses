@@ -167,6 +167,9 @@ func (s *Server) handleStop(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 	if err := s.ProcMgr.Stop(ctx, r.Path); err != nil {
+		if strings.Contains(err.Error(), "no running loop") {
+			return codedError(ErrNotRunning, fmt.Sprintf("no running loop for %s", name)), nil
+		}
 		return codedError(ErrInternal, fmt.Sprintf("stop failed: %v", err)), nil
 	}
 	return textResult(fmt.Sprintf("Stopped ralph loop for %s", name)), nil
@@ -196,6 +199,9 @@ func (s *Server) handlePause(_ context.Context, req mcp.CallToolRequest) (*mcp.C
 	}
 	paused, err := s.ProcMgr.TogglePause(r.Path)
 	if err != nil {
+		if strings.Contains(err.Error(), "no running loop") {
+			return codedError(ErrNotRunning, fmt.Sprintf("no running loop for %s", name)), nil
+		}
 		return codedError(ErrInternal, fmt.Sprintf("pause toggle failed: %v", err)), nil
 	}
 	if paused {
