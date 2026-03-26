@@ -571,6 +571,21 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		}
 	}
 
+	// Near-duplicate task filtering: reject tasks whose titles are too similar
+	// to already-completed work (exact match or Jaccard similarity >= 0.8).
+	var completedForDedup []string
+	for _, iter := range prevIterations {
+		if iter.Status != "failed" && iter.Task.Title != "" {
+			completedForDedup = append(completedForDedup, iter.Task.Title)
+		}
+	}
+	if len(completedForDedup) > 0 {
+		tasks = filterDuplicateTasks(tasks, completedForDedup, DefaultSimilarityThreshold)
+		if len(tasks) == 0 {
+			return m.failLoopIteration(run, index, errors.New("all planner tasks were near-duplicates of completed work"))
+		}
+	}
+
 	// WS5: Sort tasks by estimated difficulty (easy first) and score them.
 	var taskDifficulties []TaskDifficulty
 	if m.curriculum != nil && profile.EnableCurriculum {
