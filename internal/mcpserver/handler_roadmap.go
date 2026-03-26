@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
@@ -60,6 +61,8 @@ func (s *Server) handleRoadmapResearch(ctx context.Context, req mcp.CallToolRequ
 	if err := ValidatePath(path, s.ScanPath); err != nil {
 		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
 	}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 	topics := getStringArg(req, "topics")
 	limit := int(getNumberArg(req, "limit", 10))
 
@@ -78,6 +81,8 @@ func (s *Server) handleRoadmapExpand(ctx context.Context, req mcp.CallToolReques
 	if err := ValidatePath(path, s.ScanPath); err != nil {
 		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
 	}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 	file := getStringArg(req, "file")
 	style := getStringArg(req, "style")
 	researchTopics := getStringArg(req, "research")
