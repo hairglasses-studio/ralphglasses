@@ -70,6 +70,26 @@ func NewManagerWithBus(bus *events.Bus) *Manager {
 	}
 }
 
+// Init performs one-time startup work after the Manager is constructed.
+// It sweeps for orphaned processes from previous runs and logs them without
+// killing them — the user should decide what to do.
+func (m *Manager) Init() {
+	m.mu.Lock()
+	activePIDs := make(map[int]bool)
+	for _, s := range m.sessions {
+		if s.Pid > 0 {
+			activePIDs[s.Pid] = true
+		}
+	}
+	ralphDir := filepath.Dir(m.stateDir)
+	m.mu.Unlock()
+
+	orphans := SweepOrphans(ralphDir, activePIDs)
+	if len(orphans) > 0 {
+		slog.Warn("found orphaned processes from previous run", "count", len(orphans))
+	}
+}
+
 // SetStateDir overrides the persistence directory. Intended for tests and
 // alternate embedding environments that want to isolate on-disk state.
 func (m *Manager) SetStateDir(dir string) {
