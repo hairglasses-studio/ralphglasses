@@ -68,9 +68,9 @@ sleep 30
 	// --- Step 2: Start ---
 	mgr := process.NewManager()
 	mgr.KillTimeout = 200 * time.Millisecond // fast kills for testing
-	defer mgr.StopAll()
+	defer mgr.StopAll(context.Background())
 
-	if err := mgr.Start(repoPath); err != nil {
+	if err := mgr.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
@@ -107,7 +107,7 @@ sleep 30
 	}
 
 	// --- Step 5: Stop ---
-	if err := mgr.Stop(repoPath); err != nil {
+	if err := mgr.Stop(context.Background(), repoPath); err != nil {
 		t.Fatalf("Stop: %v", err)
 	}
 
@@ -161,7 +161,7 @@ exit 0
 	mgr.MaxRestarts = 2
 	mgr.KillTimeout = 200 * time.Millisecond
 
-	if err := mgr.Start(repoPath); err != nil {
+	if err := mgr.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
@@ -207,7 +207,7 @@ func TestLifecycle_DoubleStop(t *testing.T) {
 	mgr := process.NewManager()
 	mgr.KillTimeout = 200 * time.Millisecond
 
-	if err := mgr.Start(repoPath); err != nil {
+	if err := mgr.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
@@ -216,7 +216,7 @@ func TestLifecycle_DoubleStop(t *testing.T) {
 	}
 
 	// First stop should succeed.
-	if err := mgr.Stop(repoPath); err != nil {
+	if err := mgr.Stop(context.Background(), repoPath); err != nil {
 		t.Fatalf("first Stop: %v", err)
 	}
 
@@ -226,7 +226,7 @@ func TestLifecycle_DoubleStop(t *testing.T) {
 	})
 
 	// Second stop should return ErrNotRunning.
-	err := mgr.Stop(repoPath)
+	err := mgr.Stop(context.Background(), repoPath)
 	if err == nil {
 		t.Fatal("expected error on second Stop")
 	}
@@ -242,7 +242,7 @@ func TestLifecycle_StopBeforeStart(t *testing.T) {
 
 	mgr := process.NewManager()
 
-	err := mgr.Stop(repoPath)
+	err := mgr.Stop(context.Background(), repoPath)
 	if err == nil {
 		t.Fatal("expected error when stopping unmanaged repo")
 	}
@@ -285,10 +285,10 @@ func TestLifecycle_ScanFindsMultipleRepos(t *testing.T) {
 	// Start all, verify running, stop all.
 	mgr := process.NewManager()
 	mgr.KillTimeout = 200 * time.Millisecond
-	defer mgr.StopAll()
+	defer mgr.StopAll(context.Background())
 
 	for _, r := range repos {
-		if err := mgr.Start(r.Path); err != nil {
+		if err := mgr.Start(context.Background(), r.Path); err != nil {
 			t.Fatalf("Start(%s): %v", r.Name, err)
 		}
 	}
@@ -298,7 +298,7 @@ func TestLifecycle_ScanFindsMultipleRepos(t *testing.T) {
 		t.Errorf("expected 3 running, got %d", len(paths))
 	}
 
-	mgr.StopAll()
+	mgr.StopAll(context.Background())
 
 	if len(mgr.RunningPaths()) != 0 {
 		t.Error("expected 0 running after StopAll")
@@ -312,7 +312,7 @@ func TestLifecycle_ProcessExitChannel(t *testing.T) {
 	mgr := process.NewManager()
 	mgr.KillTimeout = 200 * time.Millisecond
 
-	if err := mgr.Start(repoPath); err != nil {
+	if err := mgr.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 

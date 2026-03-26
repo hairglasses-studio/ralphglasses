@@ -75,8 +75,8 @@ func TestProcessManagerLifecycle(t *testing.T) {
 	if mgr.IsRunning("/any/path") {
 		t.Error("should not be running initially")
 	}
-	mgr.StopAll()
-	if err := mgr.Stop("/nonexistent"); err == nil {
+	mgr.StopAll(context.Background())
+	if err := mgr.Stop(context.Background(), "/nonexistent"); err == nil {
 		t.Error("expected error for non-running stop")
 	}
 }

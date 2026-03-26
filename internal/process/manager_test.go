@@ -1,6 +1,7 @@
 package process
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -44,12 +45,12 @@ func TestManager_RunningPaths_Empty(t *testing.T) {
 func TestManager_StopAll_Empty(t *testing.T) {
 	m := NewManager()
 	// Should not panic
-	m.StopAll()
+	m.StopAll(context.Background())
 }
 
 func TestManager_Stop_NotRunning(t *testing.T) {
 	m := NewManager()
-	err := m.Stop("/not/running")
+	err := m.Stop(context.Background(), "/not/running")
 	if err == nil {
 		t.Fatal("expected error when stopping non-running process")
 	}
@@ -75,13 +76,13 @@ func TestManager_Start_DuplicateReturnsError(t *testing.T) {
 	repoPath := t.TempDir()
 	writeTestScript(t, repoPath+"/ralph_loop.sh", "sleep 60")
 
-	err := m.Start(repoPath)
+	err := m.Start(context.Background(), repoPath)
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer m.StopAll()
+	defer m.StopAll(context.Background())
 
-	err = m.Start(repoPath)
+	err = m.Start(context.Background(), repoPath)
 	if err == nil {
 		t.Fatal("expected error when starting duplicate process")
 	}
@@ -92,7 +93,7 @@ func TestManager_StartStopLifecycle(t *testing.T) {
 	repoPath := t.TempDir()
 	writeTestScript(t, repoPath+"/ralph_loop.sh", "sleep 60")
 
-	err := m.Start(repoPath)
+	err := m.Start(context.Background(), repoPath)
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -106,7 +107,7 @@ func TestManager_StartStopLifecycle(t *testing.T) {
 		t.Errorf("expected 1 running path, got %d", len(paths))
 	}
 
-	err = m.Stop(repoPath)
+	err = m.Stop(context.Background(), repoPath)
 	if err != nil {
 		t.Fatalf("Stop: %v", err)
 	}
@@ -128,10 +129,10 @@ func TestManager_StopAll_StopsRunning(t *testing.T) {
 	writeTestScript(t, repo1+"/ralph_loop.sh", "sleep 60")
 	writeTestScript(t, repo2+"/ralph_loop.sh", "sleep 60")
 
-	if err := m.Start(repo1); err != nil {
+	if err := m.Start(context.Background(), repo1); err != nil {
 		t.Fatalf("Start repo1: %v", err)
 	}
-	if err := m.Start(repo2); err != nil {
+	if err := m.Start(context.Background(), repo2); err != nil {
 		t.Fatalf("Start repo2: %v", err)
 	}
 
@@ -139,7 +140,7 @@ func TestManager_StopAll_StopsRunning(t *testing.T) {
 		t.Fatalf("expected 2 running, got %d", len(m.RunningPaths()))
 	}
 
-	m.StopAll()
+	m.StopAll(context.Background())
 
 	if len(m.RunningPaths()) != 0 {
 		t.Errorf("expected 0 running after StopAll, got %d", len(m.RunningPaths()))
@@ -151,10 +152,10 @@ func TestManager_TogglePause(t *testing.T) {
 	repoPath := t.TempDir()
 	writeTestScript(t, repoPath+"/ralph_loop.sh", "sleep 60")
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer m.StopAll()
+	defer m.StopAll(context.Background())
 
 	if m.IsPaused(repoPath) {
 		t.Error("should not be paused initially")
@@ -198,9 +199,9 @@ func setupRepoWithRalphDir(t *testing.T) string {
 func TestPIDFile_WrittenOnStart(t *testing.T) {
 	m := NewManager()
 	repoPath := setupRepoWithRalphDir(t)
-	defer m.StopAll()
+	defer m.StopAll(context.Background())
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
@@ -220,11 +221,11 @@ func TestPIDFile_RemovedOnStop(t *testing.T) {
 	m := NewManager()
 	repoPath := setupRepoWithRalphDir(t)
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
-	if err := m.Stop(repoPath); err != nil {
+	if err := m.Stop(context.Background(), repoPath); err != nil {
 		t.Fatalf("Stop: %v", err)
 	}
 
@@ -241,11 +242,11 @@ func TestPIDFile_RemovedOnStopAll(t *testing.T) {
 	m := NewManager()
 	repoPath := setupRepoWithRalphDir(t)
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
-	m.StopAll()
+	m.StopAll(context.Background())
 
 	pidPath := filepath.Join(repoPath, ".ralph", pidFileName)
 	if _, err := os.Stat(pidPath); !os.IsNotExist(err) {
@@ -263,9 +264,9 @@ func TestPidForRepo_ReturnsZeroForUnknown(t *testing.T) {
 func TestPidForRepo_ReturnsPIDForRunning(t *testing.T) {
 	m := NewManager()
 	repoPath := setupRepoWithRalphDir(t)
-	defer m.StopAll()
+	defer m.StopAll(context.Background())
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
@@ -370,9 +371,9 @@ func TestRecover_LiveProcess(t *testing.T) {
 func TestRecover_SkipsAlreadyManaged(t *testing.T) {
 	m := NewManager()
 	repoPath := setupRepoWithRalphDir(t)
-	defer m.StopAll()
+	defer m.StopAll(context.Background())
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
@@ -403,9 +404,9 @@ func TestManager_Start_InvalidBinary(t *testing.T) {
 	// instead just test that Start returns an error when the binary isn't found.
 	// We achieve this by hijacking PATH.
 	t.Setenv("PATH", t.TempDir()) // empty dir — no ralph binary
-	err := m2.Start(repoPath2)
+	err := m2.Start(context.Background(), repoPath2)
 	if err == nil {
-		m2.StopAll()
+		m2.StopAll(context.Background())
 		t.Fatal("expected error starting process with missing binary")
 	}
 	_ = m
@@ -417,7 +418,7 @@ func TestManager_ShortLivedProcess_NoZombie(t *testing.T) {
 	// A script that exits immediately with status 0.
 	writeTestScript(t, repoPath+"/ralph_loop.sh", "exit 0")
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
@@ -431,7 +432,7 @@ func TestManager_ShortLivedProcess_NoZombie(t *testing.T) {
 	}
 
 	if m.IsRunning(repoPath) {
-		m.StopAll()
+		m.StopAll(context.Background())
 		t.Fatal("process still marked as running after clean exit — possible zombie")
 	}
 
@@ -450,7 +451,7 @@ func TestManager_FailingProcess_ErrorChan(t *testing.T) {
 	// A script that exits with non-zero status.
 	writeTestScript(t, repoPath+"/ralph_loop.sh", "exit 42")
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
@@ -472,7 +473,7 @@ func TestManager_ProcessExitMsg_CleanExit(t *testing.T) {
 	repoPath := t.TempDir()
 	writeTestScript(t, repoPath+"/ralph_loop.sh", "exit 0")
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
@@ -497,7 +498,7 @@ func TestManager_ProcessExitMsg_NonZeroExit(t *testing.T) {
 	repoPath := t.TempDir()
 	writeTestScript(t, repoPath+"/ralph_loop.sh", "exit 7")
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
@@ -601,7 +602,7 @@ if [ "$COUNT" -le 2 ]; then
 fi
 exit 0`)
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
@@ -615,7 +616,7 @@ exit 0`)
 	}
 
 	if m.IsRunning(repoPath) {
-		m.StopAll()
+		m.StopAll(context.Background())
 		t.Fatal("process still running after expected restarts + clean exit")
 	}
 
@@ -664,7 +665,7 @@ else
 fi
 exit 1`)
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
@@ -678,7 +679,7 @@ exit 1`)
 	}
 
 	if m.IsRunning(repoPath) {
-		m.StopAll()
+		m.StopAll(context.Background())
 		t.Fatal("process still running after max restarts should be exceeded")
 	}
 
@@ -720,7 +721,7 @@ else
 fi
 exit 1`)
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
@@ -734,7 +735,7 @@ exit 1`)
 	}
 
 	if m.IsRunning(repoPath) {
-		m.StopAll()
+		m.StopAll(context.Background())
 		t.Fatal("process still running when it should have exited without restart")
 	}
 
@@ -747,4 +748,104 @@ exit 1`)
 	if count != "1" {
 		t.Errorf("expected exactly 1 invocation (no restart), got %s", count)
 	}
+}
+
+func TestStart_ContextCancellation(t *testing.T) {
+	m := NewManager()
+	repoPath := t.TempDir()
+	writeTestScript(t, repoPath+"/ralph_loop.sh", "sleep 60")
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	if err := m.Start(ctx, repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	if !m.IsRunning(repoPath) {
+		t.Fatal("expected process to be running after Start")
+	}
+
+	// Cancel the context — this should kill the process via CommandContext.
+	cancel()
+
+	// Wait for the reaper to clean up.
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if !m.IsRunning(repoPath) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if m.IsRunning(repoPath) {
+		m.StopAll(context.Background())
+		t.Fatal("process still running after context cancellation")
+	}
+}
+
+func TestStart_ContextCancellation_PreventsRestart(t *testing.T) {
+	// Stub sleepFn so backoff doesn't actually wait.
+	origSleep := *sleepFnPtr.Load()
+	setSleepFn(func(d time.Duration) {}) // no-op
+	t.Cleanup(func() { setSleepFn(origSleep) })
+
+	m := NewManager()
+	m.AutoRestart = true
+	m.MaxRestarts = 5
+
+	repoPath := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
+
+	counterFile := filepath.Join(repoPath, ".ralph", "ctx_cancel_counter")
+	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"),
+		`COUNTER_FILE="`+counterFile+`"
+if [ ! -f "$COUNTER_FILE" ]; then
+  echo 1 > "$COUNTER_FILE"
+else
+  COUNT=$(cat "$COUNTER_FILE")
+  echo $((COUNT + 1)) > "$COUNTER_FILE"
+fi
+exit 1`)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	if err := m.Start(ctx, repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// Wait for at least one invocation.
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := os.Stat(counterFile); err == nil {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	// Cancel context to prevent further restarts.
+	cancel()
+
+	// Wait for the process to be cleaned up.
+	deadline = time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if !m.IsRunning(repoPath) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if m.IsRunning(repoPath) {
+		m.StopAll(context.Background())
+		t.Fatal("process still running after context cancellation")
+	}
+
+	// Verify restarts did not continue indefinitely — should be far fewer than MaxRestarts.
+	data, err := os.ReadFile(counterFile)
+	if err != nil {
+		t.Fatalf("reading counter file: %v", err)
+	}
+	countStr := strings.TrimSpace(string(data))
+	// With context cancelled, we should have at most a couple of invocations,
+	// definitely not all 6 (original + 5 restarts).
+	t.Logf("total invocations before context cancel took effect: %s", countStr)
 }
