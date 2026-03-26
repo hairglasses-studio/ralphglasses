@@ -1,6 +1,7 @@
 package process
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"syscall"
@@ -54,9 +55,9 @@ func TestCollectChildPIDsFromProc_OwnPID(t *testing.T) {
 func TestManager_Start_RecordsChildPids(t *testing.T) {
 	m := NewManager()
 	repoPath := setupRepoWithRalphDir(t)
-	defer m.StopAll()
+	defer m.StopAll(context.Background())
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
