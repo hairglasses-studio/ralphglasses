@@ -26,6 +26,34 @@ func TestHandleCoverageReportNoRepo(t *testing.T) {
 	}
 }
 
+func TestHandleCoverageReportInvalidRepoName(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleCoverageReport(context.Background(), makeRequest(map[string]any{
+		"repo": "../../etc/passwd",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertErrorCode(t, "handleCoverageReport", result, "INVALID_PARAMS")
+}
+
+func TestHandleCoverageReportRepoNotFound(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	// Scan so repos are loaded
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleCoverageReport(context.Background(), makeRequest(map[string]any{
+		"repo": "nonexistent-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertErrorCode(t, "handleCoverageReport", result, "REPO_NOT_FOUND")
+}
+
 func TestParseCoverFuncOutput(t *testing.T) {
 	input := `github.com/foo/bar/pkg.go:10:	FuncA		100.0%
 github.com/foo/bar/pkg.go:20:	FuncB		50.0%

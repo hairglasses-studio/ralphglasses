@@ -65,3 +65,40 @@ func TestHandleAnomalyDetect_InvalidMetric(t *testing.T) {
 		t.Errorf("expected valid metric names in error, got: %s", text)
 	}
 }
+
+func TestHandleAnomalyDetect_RepoNotFound(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleAnomalyDetect(context.Background(), makeRequest(map[string]any{
+		"repo":   "nonexistent",
+		"metric": "total_cost_usd",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertErrorCode(t, "handleAnomalyDetect", result, "REPO_NOT_FOUND")
+}
+
+func TestHandleAnomalyDetect_NoObservations(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleAnomalyDetect(context.Background(), makeRequest(map[string]any{
+		"repo":   "test-repo",
+		"metric": "total_cost_usd",
+		"hours":  float64(1),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "no observations") {
+		t.Errorf("expected 'no observations' message, got: %s", text)
+	}
+}
