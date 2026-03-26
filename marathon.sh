@@ -56,6 +56,10 @@ Environment:
   CALLS_PER_HOUR            Override calls/hour (same as -c).
   COST_PER_CALL             Estimated USD per API call for fallback tracking (default: 0.15).
   BUDGET_HEADROOM           Stop at this fraction of budget to avoid overshoot (default: 0.90).
+  MARATHON_MIN_DISK_GB      Warn when free disk drops below this (default: 5).
+  MARATHON_MIN_MEMORY_GB    Warn when free memory drops below this (default: 2).
+  MARATHON_MAX_LOG_MB       Rotate marathon log when it exceeds this size (default: 100).
+  MARATHON_LOG_KEEP         Number of rotated log files to keep (default: 3).
 
 Examples:
   $(basename "$0")                              # Default 12h / \$100 marathon
@@ -334,6 +338,57 @@ create_checkpoint() {
     fi
 }
 
+# --- Resource checks ---
+check_disk_space() {
+    local min_gb="${MARATHON_MIN_DISK_GB:-5}"
+    local avail_kb
+    avail_kb=$(df -k "$PROJECT_DIR" 2>/dev/null | awk 'NR==2{print $4}')
+    if [ -n "$avail_kb" ] && [ "$avail_kb" -lt $((min_gb * 1024 * 1024)) ]; then
+        log "WARN" "Low disk space: $((avail_kb / 1024 / 1024))GB available (minimum: ${min_gb}GB)"
+        return 1
+    fi
+    return 0
+}
+
+check_memory() {
+    local min_gb="${MARATHON_MIN_MEMORY_GB:-2}"
+    local avail_kb=0
+    if [ "$(uname)" = "Linux" ]; then
+        avail_kb=$(awk '/MemAvailable/{print $2}' /proc/meminfo 2>/dev/null)
+    elif [ "$(uname)" = "Darwin" ]; then
+        # macOS: use vm_stat page-free count * page size
+        local page_size pages_free
+        page_size=$(sysctl -n hw.pagesize 2>/dev/null || echo 4096)
+        pages_free=$(vm_stat 2>/dev/null | awk '/Pages free/{gsub(/\./,""); print $3}')
+        if [ -n "$pages_free" ]; then
+            avail_kb=$((pages_free * page_size / 1024))
+        fi
+    fi
+    if [ -n "$avail_kb" ] && [ "$avail_kb" -gt 0 ] && [ "$avail_kb" -lt $((min_gb * 1024 * 1024)) ]; then
+        log "WARN" "Low memory: $((avail_kb / 1024 / 1024))GB available (minimum: ${min_gb}GB)"
+        return 1
+    fi
+    return 0
+}
+
+# --- Log rotation ---
+rotate_logs() {
+    local log_file="$1"
+    local max_size="${MARATHON_MAX_LOG_MB:-100}"
+    local keep="${MARATHON_LOG_KEEP:-3}"
+
+    [ ! -f "$log_file" ] && return
+    local size_mb
+    size_mb=$(du -m "$log_file" 2>/dev/null | cut -f1)
+    if [ "${size_mb:-0}" -ge "$max_size" ]; then
+        for i in $(seq $((keep - 1)) -1 1); do
+            [ -f "${log_file}.$i" ] && mv "${log_file}.$i" "${log_file}.$((i + 1))"
+        done
+        mv "$log_file" "${log_file}.1"
+        log "INFO" "Log rotated: ${log_file}"
+    fi
+}
+
 # --- Launch ralph ---
 echo "Starting in 3 seconds... (Ctrl+C to cancel)"
 sleep 3
@@ -409,8 +464,13 @@ while true; do
         fi
     fi
 
-    # --- Checkpoint check ---
+    # --- Resource checks (at checkpoint interval) ---
     if (( now - last_checkpoint_epoch >= checkpoint_seconds )); then
+        check_disk_space || true
+        check_memory || true
+        rotate_logs "$MARATHON_LOG"
+
+        # --- Checkpoint ---
         create_checkpoint
         last_checkpoint_epoch=$now
     fi
