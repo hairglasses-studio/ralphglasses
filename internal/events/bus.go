@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -64,9 +65,43 @@ const (
 	SelfImprovePR     EventType = "self_improve.pr_created" // PR created for review-required changes
 )
 
+// knownEventTypes is the set of all declared EventType constants.
+var knownEventTypes = map[EventType]struct{}{
+	SessionStarted:        {},
+	SessionEnded:          {},
+	SessionStopped:        {},
+	CostUpdate:            {},
+	BudgetExceeded:        {},
+	LoopStarted:           {},
+	LoopStopped:           {},
+	LoopIterated:          {},
+	LoopRegression:        {},
+	TeamCreated:           {},
+	JournalWritten:        {},
+	ConfigChanged:         {},
+	ScanComplete:          {},
+	PromptEnhanced:        {},
+	ToolCalled:            {},
+	SessionError:          {},
+	AutoOptimized:         {},
+	ProviderSelected:      {},
+	SessionRecovered:      {},
+	ContextConflict:       {},
+	ProviderHealthChanged: {},
+	SelfImproveMerged:     {},
+	SelfImprovePR:         {},
+}
+
+// ValidEventType returns true if the given EventType is a known constant.
+func ValidEventType(t EventType) bool {
+	_, ok := knownEventTypes[t]
+	return ok
+}
+
 // Event represents something that happened in the system.
 type Event struct {
 	Type      EventType      `json:"type"`
+	Version   int            `json:"version"`
 	Timestamp time.Time      `json:"timestamp"`
 	NodeID    string         `json:"node_id,omitempty"`
 	RepoName  string         `json:"repo_name,omitempty"`
@@ -76,13 +111,20 @@ type Event struct {
 	Data      map[string]any `json:"data,omitempty"`
 }
 
+// filteredSub holds a subscriber channel and the set of event types it accepts.
+type filteredSub struct {
+	ch    chan Event
+	types map[EventType]struct{}
+}
+
 // Bus is a simple in-process pub/sub event bus with history.
 type Bus struct {
-	mu          sync.RWMutex
-	subscribers map[string]chan Event
-	history     []Event
-	maxHistory  int
-	totalCount  int // monotonic event counter (survives ring buffer drops)
+	mu           sync.RWMutex
+	subscribers  map[string]chan Event
+	filteredSubs map[string]filteredSub
+	history      []Event
+	maxHistory   int
+	totalCount   int // monotonic event counter (survives ring buffer drops)
 
 	persistFile   *os.File
 	persistPath   string
@@ -95,8 +137,9 @@ func NewBus(maxHistory int) *Bus {
 		maxHistory = 1000
 	}
 	return &Bus{
-		subscribers: make(map[string]chan Event),
-		maxHistory:  maxHistory,
+		subscribers:  make(map[string]chan Event),
+		filteredSubs: make(map[string]filteredSub),
+		maxHistory:   maxHistory,
 	}
 }
 
@@ -104,6 +147,13 @@ func NewBus(maxHistory int) *Bus {
 func (b *Bus) Publish(event Event) {
 	if event.Timestamp.IsZero() {
 		event.Timestamp = time.Now()
+	}
+	if event.Version == 0 {
+		event.Version = 1
+	}
+
+	if !ValidEventType(event.Type) {
+		log.Printf("[events] warning: unknown event type %q published", event.Type)
 	}
 
 	b.mu.Lock()
@@ -127,19 +177,35 @@ func (b *Bus) Publish(event Event) {
 		}
 	}
 
-	// Snapshot subscribers under lock
+	// Snapshot unfiltered subscribers under lock
 	subs := make([]chan Event, 0, len(b.subscribers))
 	for _, ch := range b.subscribers {
 		subs = append(subs, ch)
 	}
+
+	// Snapshot filtered subscribers that match this event type
+	var filteredChans []chan Event
+	for _, fs := range b.filteredSubs {
+		if _, ok := fs.types[event.Type]; ok {
+			filteredChans = append(filteredChans, fs.ch)
+		}
+	}
 	b.mu.Unlock()
 
-	// Non-blocking send to each subscriber
+	// Non-blocking send to each unfiltered subscriber
 	for _, ch := range subs {
 		select {
 		case ch <- event:
 		default:
 			// Drop on overflow — subscriber is too slow
+		}
+	}
+
+	// Non-blocking send to each matching filtered subscriber
+	for _, ch := range filteredChans {
+		select {
+		case ch <- event:
+		default:
 		}
 	}
 }
@@ -154,6 +220,21 @@ func (b *Bus) Subscribe(id string) <-chan Event {
 	return ch
 }
 
+// SubscribeFiltered returns a channel that receives only events of the specified types.
+func (b *Bus) SubscribeFiltered(id string, types ...EventType) <-chan Event {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	typeSet := make(map[EventType]struct{}, len(types))
+	for _, t := range types {
+		typeSet[t] = struct{}{}
+	}
+
+	ch := make(chan Event, 100)
+	b.filteredSubs[id] = filteredSub{ch: ch, types: typeSet}
+	return ch
+}
+
 // Unsubscribe removes a subscriber and closes its channel.
 func (b *Bus) Unsubscribe(id string) {
 	b.mu.Lock()
@@ -162,6 +243,10 @@ func (b *Bus) Unsubscribe(id string) {
 	if ch, ok := b.subscribers[id]; ok {
 		delete(b.subscribers, id)
 		close(ch)
+	}
+	if fs, ok := b.filteredSubs[id]; ok {
+		delete(b.filteredSubs, id)
+		close(fs.ch)
 	}
 }
 
