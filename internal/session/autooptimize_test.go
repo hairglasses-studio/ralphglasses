@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -207,4 +208,245 @@ func TestAutoOptimizer_HandleSessionComplete_Recovery(t *testing.T) {
 	if events[0].MetricType != MetricSessionCompleted {
 		t.Fatalf("expected session_completed metric, got %s", events[0].MetricType)
 	}
+}
+
+func TestAutoOptimizer_GateChange(t *testing.T) {
+	t.Run("gate_disabled", func(t *testing.T) {
+		ao := NewAutoOptimizer(nil, nil, nil, nil)
+		oldGate := GateEnabled
+		GateEnabled = false
+		defer func() { GateEnabled = oldGate }()
+
+		change := GatedChange{ChangeType: "config"}
+		result := ao.GateChange("/tmp", change)
+		if result.Verdict != "skip" {
+			t.Errorf("expected verdict=skip when disabled, got %s", result.Verdict)
+		}
+	})
+
+	t.Run("gate_pass", func(t *testing.T) {
+		ao := NewAutoOptimizer(nil, nil, nil, nil)
+		oldGate := GateEnabled
+		oldRunner := RunTestGate
+		GateEnabled = true
+		RunTestGate = func(string) (string, error) { return "pass", nil }
+		defer func() { GateEnabled = oldGate; RunTestGate = oldRunner }()
+
+		change := GatedChange{ChangeType: "config"}
+		result := ao.GateChange("/tmp", change)
+		if result.Verdict != "pass" {
+			t.Errorf("expected verdict=pass, got %s", result.Verdict)
+		}
+		if result.RolledBack {
+			t.Error("expected no rollback on pass")
+		}
+	})
+
+	t.Run("gate_fail_verdict", func(t *testing.T) {
+		ao := NewAutoOptimizer(nil, nil, nil, nil)
+		oldGate := GateEnabled
+		oldRunner := RunTestGate
+		GateEnabled = true
+		RunTestGate = func(string) (string, error) { return "fail", nil }
+		defer func() { GateEnabled = oldGate; RunTestGate = oldRunner }()
+
+		change := GatedChange{ChangeType: "config"}
+		result := ao.GateChange("/tmp", change)
+		if result.Verdict != "fail" {
+			t.Errorf("expected verdict=fail, got %s", result.Verdict)
+		}
+		if !result.RolledBack {
+			t.Error("expected rollback on fail verdict")
+		}
+	})
+
+	t.Run("gate_error", func(t *testing.T) {
+		dir := t.TempDir()
+		dl := NewDecisionLog(dir, LevelAutoOptimize)
+		ao := NewAutoOptimizer(nil, dl, nil, nil)
+		oldGate := GateEnabled
+		oldRunner := RunTestGate
+		GateEnabled = true
+		RunTestGate = func(string) (string, error) {
+			return "", fmt.Errorf("test gate error")
+		}
+		defer func() { GateEnabled = oldGate; RunTestGate = oldRunner }()
+
+		change := GatedChange{ChangeType: "config"}
+		result := ao.GateChange("/tmp", change)
+		if result.Verdict != "fail" {
+			t.Errorf("expected verdict=fail on error, got %s", result.Verdict)
+		}
+		if !result.RolledBack {
+			t.Error("expected rollback on gate error")
+		}
+	})
+}
+
+func TestAutoOptimizer_GenerateNotes(t *testing.T) {
+	ao := NewAutoOptimizer(nil, nil, nil, nil)
+
+	t.Run("nil_patterns", func(t *testing.T) {
+		notes := ao.GenerateNotes(nil)
+		if notes != nil {
+			t.Errorf("expected nil for nil patterns, got %v", notes)
+		}
+	})
+
+	t.Run("with_rules_and_negatives", func(t *testing.T) {
+		patterns := &ConsolidatedPatterns{
+			UpdatedAt: time.Now(),
+			Rules:     []string{"use gemini for lint tasks", "adjust budget limits"},
+			Negative: []ConsolidatedItem{
+				{Text: "timeout errors", Count: 5, Category: "error"},
+			},
+		}
+		notes := ao.GenerateNotes(patterns)
+		if len(notes) < 3 {
+			t.Errorf("expected at least 3 notes (2 rules + 1 negative), got %d", len(notes))
+		}
+	})
+
+	t.Run("rules_not_actionable", func(t *testing.T) {
+		patterns := &ConsolidatedPatterns{
+			Rules: []string{"some generic advice"},
+		}
+		notes := ao.GenerateNotes(patterns)
+		if len(notes) != 0 {
+			t.Errorf("expected 0 notes for non-actionable rules, got %d", len(notes))
+		}
+	})
+}
+
+func TestAutoOptimizer_RuleToNote(t *testing.T) {
+	ao := NewAutoOptimizer(nil, nil, nil, nil)
+
+	tests := []struct {
+		name   string
+		rule   string
+		wantOK bool
+	}{
+		{"provider_suggestion", "use gemini for lint tasks", true},
+		{"budget_suggestion", "increase budget for complex tasks", true},
+		{"generic_advice", "write better prompts", false},
+		{"empty_rule", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			note := ao.ruleToNote(tt.rule)
+			if (note != nil) != tt.wantOK {
+				t.Errorf("ruleToNote(%q) returned note=%v, wantOK=%v", tt.rule, note != nil, tt.wantOK)
+			}
+		})
+	}
+}
+
+func TestImprovementNotes_ReadWrite(t *testing.T) {
+	dir := t.TempDir()
+
+	note := ImprovementNote{
+		ID:        "test-note-1",
+		Timestamp: time.Now(),
+		Category:  "config",
+		Priority:  2,
+		Title:     "Use gemini for lint",
+		Status:    "pending",
+		AutoApply: true,
+	}
+
+	if err := WriteImprovementNote(dir, note); err != nil {
+		t.Fatalf("WriteImprovementNote: %v", err)
+	}
+
+	notes, err := ReadPendingNotes(dir)
+	if err != nil {
+		t.Fatalf("ReadPendingNotes: %v", err)
+	}
+	if len(notes) != 1 {
+		t.Fatalf("expected 1 note, got %d", len(notes))
+	}
+	if notes[0].ID != "test-note-1" {
+		t.Errorf("note ID = %q, want test-note-1", notes[0].ID)
+	}
+}
+
+func TestImprovementNotes_ReadMissing(t *testing.T) {
+	dir := t.TempDir()
+
+	notes, err := ReadPendingNotes(dir)
+	if err != nil {
+		t.Fatalf("ReadPendingNotes on missing file: %v", err)
+	}
+	if notes != nil {
+		t.Errorf("expected nil for missing file, got %v", notes)
+	}
+}
+
+func TestAutoOptimizer_ApplyPendingNotes(t *testing.T) {
+	dir := t.TempDir()
+
+	// Write a pending auto-apply note
+	note := ImprovementNote{
+		ID:        "apply-1",
+		Timestamp: time.Now(),
+		Category:  "config",
+		Priority:  2,
+		Title:     "Test note",
+		Status:    "pending",
+		AutoApply: true,
+	}
+	if err := WriteImprovementNote(dir, note); err != nil {
+		t.Fatalf("WriteImprovementNote: %v", err)
+	}
+
+	ao := NewAutoOptimizer(nil, nil, nil, nil)
+	// Gate disabled — notes should be applied
+	oldGate := GateEnabled
+	GateEnabled = false
+	defer func() { GateEnabled = oldGate }()
+
+	applied, rejected, err := ao.ApplyPendingNotes(dir)
+	if err != nil {
+		t.Fatalf("ApplyPendingNotes: %v", err)
+	}
+	if applied != 1 {
+		t.Errorf("expected 1 applied, got %d", applied)
+	}
+	if rejected != 0 {
+		t.Errorf("expected 0 rejected, got %d", rejected)
+	}
+
+	// Read back — status should be updated
+	notes, err := ReadPendingNotes(dir)
+	if err != nil {
+		t.Fatalf("ReadPendingNotes: %v", err)
+	}
+	if len(notes) != 1 || notes[0].Status != "applied" {
+		t.Errorf("expected status=applied, got %v", notes)
+	}
+}
+
+func TestAutoOptimizer_HandleSessionCompleteWithOutcome(t *testing.T) {
+	dir := t.TempDir()
+	dl := NewDecisionLog(dir, LevelAutoOptimize)
+	ao := NewAutoOptimizer(nil, dl, nil, nil)
+
+	s := &Session{
+		ID:       "outcome-sess",
+		Status:   StatusCompleted,
+		RepoName: "repo",
+	}
+	ao.HandleSessionCompleteWithOutcome(context.Background(), s)
+	// Should not panic; verification is that it completes
+}
+
+func TestAutoOptimizer_HandleSessionCompleteWithOutcome_NilDecisions(t *testing.T) {
+	ao := NewAutoOptimizer(nil, nil, nil, nil)
+	s := &Session{
+		ID:       "nil-sess",
+		Status:   StatusCompleted,
+		RepoName: "repo",
+	}
+	ao.HandleSessionCompleteWithOutcome(context.Background(), s)
+	// Should not panic
 }
