@@ -176,3 +176,109 @@ func TestStyledCell(t *testing.T) {
 		t.Error("StyledCell returned empty")
 	}
 }
+
+func TestToggleSelect(t *testing.T) {
+	tbl := makeTestTable()
+	tbl.MultiSelect = true
+
+	tbl.ToggleSelect()
+	if !tbl.Selected[0] {
+		t.Error("row 0 should be selected")
+	}
+
+	tbl.ToggleSelect() // deselect
+	if tbl.Selected[0] {
+		t.Error("row 0 should be deselected")
+	}
+}
+
+func TestToggleSelectEmpty(t *testing.T) {
+	tbl := NewTable([]Column{{Title: "A", Width: 5}})
+	tbl.ToggleSelect() // should not panic
+}
+
+func TestSelectAll(t *testing.T) {
+	tbl := makeTestTable()
+	tbl.SelectAll()
+	if len(tbl.Selected) != 3 {
+		t.Errorf("selected = %d, want 3", len(tbl.Selected))
+	}
+}
+
+func TestClearSelection(t *testing.T) {
+	tbl := makeTestTable()
+	tbl.SelectAll()
+	tbl.ClearSelection()
+	if tbl.HasSelection() {
+		t.Error("expected no selection after clear")
+	}
+}
+
+func TestSelectedRows(t *testing.T) {
+	tbl := makeTestTable()
+	// No selection
+	if rows := tbl.SelectedRows(); rows != nil {
+		t.Errorf("expected nil, got %d rows", len(rows))
+	}
+
+	tbl.SelectAll()
+	rows := tbl.SelectedRows()
+	if len(rows) != 3 {
+		t.Errorf("selected rows = %d, want 3", len(rows))
+	}
+}
+
+func TestHasSelection(t *testing.T) {
+	tbl := makeTestTable()
+	if tbl.HasSelection() {
+		t.Error("should have no selection initially")
+	}
+	tbl.ToggleSelect()
+	if !tbl.HasSelection() {
+		t.Error("should have selection after toggle")
+	}
+}
+
+func TestMaxFunc(t *testing.T) {
+	tests := []struct {
+		a, b, want int
+	}{
+		{1, 2, 2},
+		{5, 3, 5},
+		{0, 0, 0},
+		{-1, 1, 1},
+	}
+	for _, tt := range tests {
+		if got := max(tt.a, tt.b); got != tt.want {
+			t.Errorf("max(%d, %d) = %d, want %d", tt.a, tt.b, got, tt.want)
+		}
+	}
+}
+
+func TestViewWithGrowColumn(t *testing.T) {
+	cols := []Column{
+		{Title: "Name", Width: 10, Sortable: true},
+		{Title: "Desc", Width: 0, Grow: true},
+	}
+	tbl := NewTable(cols)
+	tbl.SetRows([]Row{{"alpha", "some description"}})
+	tbl.Width = 60
+	tbl.Height = 10
+	view := tbl.View()
+	if !strings.Contains(view, "alpha") {
+		t.Error("view should contain row data")
+	}
+}
+
+func TestViewWithRowStyleFunc(t *testing.T) {
+	tbl := makeTestTable()
+	tbl.Width = 40
+	tbl.Height = 20
+	tbl.RowStyleFunc = func(row Row, selected bool) lipgloss.Style {
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
+	}
+	view := tbl.View()
+	if !strings.Contains(view, "alpha") {
+		t.Error("view should contain row data with custom style")
+	}
+}
