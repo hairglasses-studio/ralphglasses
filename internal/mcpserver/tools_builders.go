@@ -19,6 +19,7 @@ func (s *Server) buildToolGroups() []ToolGroup {
 		s.buildAdvancedGroup(),
 		s.buildEvalGroup(),
 		s.buildFleetHGroup(),
+		s.buildObservabilityGroup(),
 	}
 }
 
@@ -674,6 +675,99 @@ func (s *Server) buildFleetHGroup() ToolGroup {
 				mcp.WithDescription("Cost burn rate, anomaly detection, and budget exhaustion ETA"),
 				mcp.WithNumber("budget_remaining", mcp.Description("Remaining budget in USD (default: 0)")),
 			), s.handleCostForecast},
+		},
+	}
+}
+
+func (s *Server) buildObservabilityGroup() ToolGroup {
+	return ToolGroup{
+		Name:        "observability",
+		Description: "Observation queries, scratchpad automation, loop wait/poll, coverage, cost estimation, merge verification",
+		Tools: []ToolEntry{
+			// Observation query tools
+			{mcp.NewTool("ralphglasses_observation_query",
+				mcp.WithDescription("Filter and paginate loop observations from .ralph/logs/loop_observations.jsonl"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithNumber("hours", mcp.Description("Hours of history to query (default 48)")),
+				mcp.WithString("loop_id", mcp.Description("Filter by loop ID")),
+				mcp.WithString("status", mcp.Description("Filter by status (pass, fail, error)")),
+				mcp.WithString("provider", mcp.Description("Filter by provider")),
+				mcp.WithNumber("limit", mcp.Description("Max results (default 50, max 500)")),
+			), s.handleObservationQuery},
+			{mcp.NewTool("ralphglasses_observation_summary",
+				mcp.WithDescription("Aggregate observation stats via SummarizeObservations"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithNumber("hours", mcp.Description("Hours of history (default 48)")),
+				mcp.WithString("loop_id", mcp.Description("Filter by loop ID")),
+			), s.handleObservationSummary},
+
+			// Scratchpad tools
+			{mcp.NewTool("ralphglasses_scratchpad_read",
+				mcp.WithDescription("Read a .ralph/{name}_scratchpad.md file"),
+				mcp.WithString("name", mcp.Required(), mcp.Description("Scratchpad name (e.g. 'tool_improvement')")),
+				mcp.WithString("repo", mcp.Description("Repo name (default: first discovered)")),
+			), s.handleScratchpadRead},
+			{mcp.NewTool("ralphglasses_scratchpad_append",
+				mcp.WithDescription("Append a markdown note to a scratchpad file"),
+				mcp.WithString("name", mcp.Required(), mcp.Description("Scratchpad name")),
+				mcp.WithString("content", mcp.Required(), mcp.Description("Markdown content to append")),
+				mcp.WithString("section", mcp.Description("Optional section header to add before content")),
+				mcp.WithString("repo", mcp.Description("Repo name (default: first discovered)")),
+			), s.handleScratchpadAppend},
+			{mcp.NewTool("ralphglasses_scratchpad_list",
+				mcp.WithDescription("List all scratchpad files in .ralph/"),
+				mcp.WithString("repo", mcp.Description("Repo name (default: first discovered)")),
+			), s.handleScratchpadList},
+			{mcp.NewTool("ralphglasses_scratchpad_resolve",
+				mcp.WithDescription("Mark a numbered scratchpad item as resolved"),
+				mcp.WithString("name", mcp.Required(), mcp.Description("Scratchpad name")),
+				mcp.WithNumber("item_number", mcp.Required(), mcp.Description("Item number to resolve")),
+				mcp.WithString("resolution", mcp.Required(), mcp.Description("Resolution description")),
+				mcp.WithString("repo", mcp.Description("Repo name (default: first discovered)")),
+			), s.handleScratchpadResolve},
+
+			// Loop wait/poll tools
+			{mcp.NewTool("ralphglasses_loop_await",
+				mcp.WithDescription("Block until a session or loop completes (replaces sleep anti-pattern)"),
+				mcp.WithString("id", mcp.Required(), mcp.Description("Session or loop ID to wait for")),
+				mcp.WithString("type", mcp.Required(), mcp.Description("'session' or 'loop'")),
+				mcp.WithNumber("timeout_seconds", mcp.Description("Max wait time in seconds (default 300)")),
+				mcp.WithNumber("poll_interval_seconds", mcp.Description("Poll interval in seconds (default 10, min 5)")),
+			), s.handleLoopAwait},
+			{mcp.NewTool("ralphglasses_loop_poll",
+				mcp.WithDescription("Non-blocking single status check for a session or loop"),
+				mcp.WithString("id", mcp.Required(), mcp.Description("Session or loop ID")),
+				mcp.WithString("type", mcp.Required(), mcp.Description("'session' or 'loop'")),
+			), s.handleLoopPoll},
+
+			// Coverage report
+			{mcp.NewTool("ralphglasses_coverage_report",
+				mcp.WithDescription("Run go test -coverprofile and report per-package coverage vs threshold"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name or absolute path")),
+				mcp.WithString("packages", mcp.Description("Package pattern (default ./...)")),
+				mcp.WithNumber("threshold", mcp.Description("Coverage threshold percentage (default 70)")),
+			), s.handleCoverageReport},
+
+			// Cost estimation
+			{mcp.NewTool("ralphglasses_cost_estimate",
+				mcp.WithDescription("Pre-launch cost estimate for a session or loop"),
+				mcp.WithString("provider", mcp.Required(), mcp.Description("Provider: claude, gemini, or codex")),
+				mcp.WithString("model", mcp.Description("Model name (uses provider default if omitted)")),
+				mcp.WithNumber("prompt_tokens", mcp.Description("Prompt length in tokens (default 5000)")),
+				mcp.WithNumber("turns", mcp.Description("Expected conversation turns (default 5)")),
+				mcp.WithNumber("output_tokens_per_turn", mcp.Description("Output tokens per turn (default 2000)")),
+				mcp.WithString("mode", mcp.Description("'session' or 'loop' (default session)")),
+				mcp.WithNumber("iterations", mcp.Description("Loop iterations for mode=loop (default 3)")),
+				mcp.WithString("repo", mcp.Description("Repo name for historical calibration")),
+			), s.handleCostEstimate},
+
+			// Merge verification
+			{mcp.NewTool("ralphglasses_merge_verify",
+				mcp.WithDescription("Run build+vet+test sequence to verify a merge"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo path (absolute)")),
+				mcp.WithBoolean("fast", mcp.Description("Use -short flag for faster tests")),
+				mcp.WithBoolean("coverage", mcp.Description("Include coverage profile")),
+			), s.handleMergeVerify},
 		},
 	}
 }
