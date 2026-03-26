@@ -1,6 +1,7 @@
 package process
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -200,7 +201,9 @@ func (m *Manager) Recover(repoPaths []string) int {
 }
 
 // Start launches a ralph loop in the given repo directory.
-func (m *Manager) Start(repoPath string) error {
+// The provided context is used with exec.CommandContext so that cancelling the
+// context will kill the launched process and prevent auto-restarts.
+func (m *Manager) Start(ctx context.Context, repoPath string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -213,7 +216,7 @@ func (m *Manager) Start(repoPath string) error {
 	if _, err := os.Stat(loopScript); err != nil {
 		return fmt.Errorf("%w: %s — use the native Go loop via session manager instead", ErrNoLoopScript, filepath.Base(repoPath))
 	}
-	cmd := exec.Command("bash", loopScript)
+	cmd := exec.CommandContext(ctx, "bash", loopScript)
 	cmd.Dir = repoPath
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
@@ -239,14 +242,15 @@ func (m *Manager) Start(repoPath string) error {
 
 	// Reap the process in the background and clean up PID file.
 	rp := repoPath
-	go m.reaperLoop(rp, cmd)
+	go m.reaperLoop(ctx, rp, cmd)
 
 	return nil
 }
 
 // reaperLoop waits for the process to exit and handles auto-restart with
-// exponential backoff when AutoRestart is enabled.
-func (m *Manager) reaperLoop(rp string, cmd *exec.Cmd) {
+// exponential backoff when AutoRestart is enabled. Context cancellation
+// prevents auto-restarts and triggers cleanup.
+func (m *Manager) reaperLoop(ctx context.Context, rp string, cmd *exec.Cmd) {
 	for {
 		waitErr := cmd.Wait()
 		exitCode := 0
@@ -262,7 +266,8 @@ func (m *Manager) reaperLoop(rp string, cmd *exec.Cmd) {
 		lastExits.Unlock()
 
 		// Auto-restart: only for non-zero exit codes (not signal kills which yield -1).
-		if exitCode > 0 && m.AutoRestart {
+		// Skip auto-restart if context is cancelled.
+		if exitCode > 0 && m.AutoRestart && ctx.Err() == nil {
 			m.mu.Lock()
 			mp, stillTracked := m.procs[rp]
 			if stillTracked && mp.RestartCount < m.maxRestartsLimit() {
@@ -279,9 +284,15 @@ func (m *Manager) reaperLoop(rp string, cmd *exec.Cmd) {
 				)
 				sleepFn(backoff)
 
-				// Re-launch the same command.
+				// Check context again after backoff sleep.
+				if ctx.Err() != nil {
+					// Context cancelled during backoff — skip restart, fall through to cleanup.
+					goto cleanup
+				}
+
+				// Re-launch the same command with context.
 				loopScript := filepath.Join(rp, "ralph_loop.sh")
-				newCmd := exec.Command("bash", loopScript)
+				newCmd := exec.CommandContext(ctx, "bash", loopScript)
 				newCmd.Dir = rp
 				newCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
@@ -329,6 +340,7 @@ func (m *Manager) reaperLoop(rp string, cmd *exec.Cmd) {
 			}
 		}
 
+	cleanup:
 		// Normal cleanup: remove from map and PID file.
 		m.mu.Lock()
 		delete(m.procs, rp)
@@ -411,8 +423,9 @@ func sendSignal(pid int, sig syscall.Signal) error {
 // Stop initiates a graceful shutdown of the ralph loop process using a
 // fallback kill sequence: SIGTERM primary → 5s wait → SIGTERM children →
 // 5s wait → SIGKILL any survivors. The sequence runs in a background
-// goroutine so Stop returns immediately.
-func (m *Manager) Stop(repoPath string) error {
+// goroutine so Stop returns immediately. The context can be used to set
+// a deadline on the overall shutdown.
+func (m *Manager) Stop(ctx context.Context, repoPath string) error {
 	m.mu.Lock()
 	mp, ok := m.procs[repoPath]
 	if !ok {
@@ -527,7 +540,7 @@ func (m *Manager) IsPaused(repoPath string) bool {
 }
 
 // StopAll sends SIGTERM to all managed processes.
-func (m *Manager) StopAll() {
+func (m *Manager) StopAll(ctx context.Context) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
