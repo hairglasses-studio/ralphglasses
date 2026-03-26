@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -40,6 +42,13 @@ fleet management from any MCP-capable client.`,
 	Version: version,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		util.Debug.Enabled = debugMode
+
+		// Load and validate runtime config (warnings only, non-fatal).
+		home, _ := os.UserHomeDir()
+		if home != "" {
+			cfgPath := filepath.Join(home, ".ralphglasses", "config.json")
+			_, _ = config.Load(cfgPath) // validation warnings logged inside Load
+		}
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
