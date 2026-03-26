@@ -3,7 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -45,7 +45,7 @@ func (s *Server) handleList(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	for _, r := range repos {
 		if errs := model.RefreshRepo(r); len(errs) > 0 {
 			for _, e := range errs {
-				log.Printf("handleList: refresh %s: %v", r.Path, e)
+				slog.Warn("handleList: refresh failed", "repo", r.Path, "err", e)
 			}
 		}
 	}
@@ -96,7 +96,7 @@ func (s *Server) handleStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.
 	}
 	if errs := model.RefreshRepo(r); len(errs) > 0 {
 		for _, e := range errs {
-			log.Printf("handleStatus: refresh %s: %v", r.Path, e)
+			slog.Warn("handleStatus: refresh failed", "repo", r.Path, "err", e)
 		}
 	}
 
@@ -348,7 +348,7 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 	for _, r := range s.Repos {
 		if errs := model.RefreshRepo(r); len(errs) > 0 {
 			for _, e := range errs {
-				log.Printf("handleFleetStatus: refresh %s: %v", r.Path, e)
+				slog.Warn("handleFleetStatus: refresh failed", "repo", r.Path, "err", e)
 			}
 		}
 	}
@@ -720,7 +720,7 @@ func (s *Server) handleConfigBulk(_ context.Context, req mcp.CallToolRequest) (*
 		}
 		if errs := model.RefreshRepo(r); len(errs) > 0 {
 			for _, e := range errs {
-				log.Printf("handleConfigBulk: refresh %s: %v", r.Path, e)
+				slog.Warn("handleConfigBulk: refresh failed", "repo", r.Path, "err", e)
 			}
 		}
 		if r.Config == nil {
@@ -768,7 +768,7 @@ func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*
 	}
 	if errs := model.RefreshRepo(r); len(errs) > 0 {
 		for _, e := range errs {
-			log.Printf("handleRepoHealth: refresh %s: %v", r.Path, e)
+			slog.Warn("handleRepoHealth: refresh failed", "repo", r.Path, "err", e)
 		}
 	}
 
