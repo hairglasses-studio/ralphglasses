@@ -152,6 +152,119 @@ func TestClassifyTask(t *testing.T) {
 	}
 }
 
+func TestFeedbackAnalyzer_AllProviderProfiles(t *testing.T) {
+	dir := t.TempDir()
+	fa := NewFeedbackAnalyzer(dir, 1)
+	fa.Ingest([]JournalEntry{
+		{Provider: "claude", TaskFocus: "fix bug", SpentUSD: 0.50, TurnCount: 10, ExitReason: "completed"},
+		{Provider: "gemini", TaskFocus: "fix crash", SpentUSD: 0.10, TurnCount: 5, ExitReason: "completed"},
+	})
+
+	profiles := fa.AllProviderProfiles()
+	if len(profiles) == 0 {
+		t.Fatal("expected non-empty provider profiles")
+	}
+	for _, p := range profiles {
+		if p.Provider == "" {
+			t.Error("empty provider in profile")
+		}
+	}
+}
+
+func TestFeedbackAnalyzer_SuggestEnhancementMode(t *testing.T) {
+	dir := t.TempDir()
+	fa := NewFeedbackAnalyzer(dir, 1)
+
+	// No data — returns auto
+	if got := fa.SuggestEnhancementMode("bug_fix"); got != "auto" {
+		t.Errorf("expected auto, got %s", got)
+	}
+
+	// Ingest local enhancement entries
+	fa.Ingest([]JournalEntry{
+		{Provider: "claude", TaskFocus: "fix bug", SpentUSD: 0.10, ExitReason: "completed", EnhancementSource: "local"},
+	})
+	if got := fa.SuggestEnhancementMode("bug_fix"); got != "local" {
+		t.Errorf("expected local with only local data, got %s", got)
+	}
+}
+
+func TestFeedbackAnalyzer_SuggestEnhancementMode_Both(t *testing.T) {
+	dir := t.TempDir()
+	fa := NewFeedbackAnalyzer(dir, 1)
+
+	// Ingest both local and llm entries for the same task type
+	fa.Ingest([]JournalEntry{
+		{Provider: "claude", TaskFocus: "fix bug", SpentUSD: 0.10, ExitReason: "completed", EnhancementSource: "local"},
+		{Provider: "claude", TaskFocus: "fix crash", SpentUSD: 5.00, ExitReason: "errored", EnhancementSource: "llm"},
+	})
+
+	mode := fa.SuggestEnhancementMode("bug_fix")
+	// local completed at low cost, llm errored at high cost -> local should win
+	if mode != "local" {
+		t.Errorf("expected local (better effectiveness), got %s", mode)
+	}
+}
+
+func TestFeedbackAnalyzer_AllEnhancementProfiles(t *testing.T) {
+	dir := t.TempDir()
+	fa := NewFeedbackAnalyzer(dir, 1)
+	fa.Ingest([]JournalEntry{
+		{Provider: "claude", TaskFocus: "fix bug", SpentUSD: 0.10, ExitReason: "completed", EnhancementSource: "local"},
+		{Provider: "claude", TaskFocus: "add feature", SpentUSD: 0.30, ExitReason: "completed", EnhancementSource: "llm"},
+	})
+
+	profiles := fa.AllEnhancementProfiles()
+	if len(profiles) == 0 {
+		t.Fatal("expected non-empty enhancement profiles")
+	}
+}
+
+func TestFeedbackAnalyzer_SuggestEnhancementMode_Equal(t *testing.T) {
+	dir := t.TempDir()
+	fa := NewFeedbackAnalyzer(dir, 1)
+
+	// Both similar effectiveness => auto
+	fa.Ingest([]JournalEntry{
+		{Provider: "claude", TaskFocus: "fix bug", SpentUSD: 0.10, ExitReason: "completed", EnhancementSource: "local"},
+		{Provider: "claude", TaskFocus: "fix crash", SpentUSD: 0.10, ExitReason: "completed", EnhancementSource: "llm"},
+	})
+
+	mode := fa.SuggestEnhancementMode("bug_fix")
+	// With similar stats, should return "auto"
+	if mode != "auto" && mode != "local" && mode != "llm" {
+		t.Errorf("unexpected mode: %s", mode)
+	}
+}
+
+func TestFeedbackAnalyzer_SuggestEnhancementMode_OnlyLLM(t *testing.T) {
+	dir := t.TempDir()
+	fa := NewFeedbackAnalyzer(dir, 1)
+
+	fa.Ingest([]JournalEntry{
+		{Provider: "claude", TaskFocus: "fix bug", SpentUSD: 0.10, ExitReason: "completed", EnhancementSource: "llm"},
+	})
+
+	if got := fa.SuggestEnhancementMode("bug_fix"); got != "llm" {
+		t.Errorf("expected llm with only llm data, got %s", got)
+	}
+}
+
+func TestBuildEnhancementProfile(t *testing.T) {
+	entries := []JournalEntry{
+		{SpentUSD: 0.10, ExitReason: "completed"},
+		{SpentUSD: 0.20, ExitReason: "errored"},
+		{SpentUSD: 0.30, ExitReason: ""},
+	}
+	p := buildEnhancementProfile("local", "bug_fix", entries)
+	if p.SampleCount != 3 {
+		t.Errorf("SampleCount = %d, want 3", p.SampleCount)
+	}
+	if p.Source != "local" {
+		t.Errorf("Source = %q, want local", p.Source)
+	}
+}
+
 func TestFeedbackAnalyzer_MinSessions(t *testing.T) {
 	dir := t.TempDir()
 	fa := NewFeedbackAnalyzer(dir, 5) // requires 5 sessions

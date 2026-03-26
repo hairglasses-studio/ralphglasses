@@ -106,6 +106,46 @@ func TestDecisionLog_RecordOutcome(t *testing.T) {
 	}
 }
 
+func TestDecisionLog_RecentDefaultLimit(t *testing.T) {
+	dir := t.TempDir()
+	dl := NewDecisionLog(dir, LevelFullAutonomy)
+
+	// Add a few decisions
+	for i := 0; i < 5; i++ {
+		dl.Propose(AutonomousDecision{Category: DecisionRestart, RequiredLevel: LevelAutoRecover, Action: "test"})
+	}
+
+	// limit=0 should default to 20, return all 5
+	recent := dl.Recent(0)
+	if len(recent) != 5 {
+		t.Errorf("Recent(0) = %d, want 5", len(recent))
+	}
+
+	// limit=-1 should also default
+	recent = dl.Recent(-1)
+	if len(recent) != 5 {
+		t.Errorf("Recent(-1) = %d, want 5", len(recent))
+	}
+}
+
+func TestDecisionLog_Stats_WithOutcomes(t *testing.T) {
+	dir := t.TempDir()
+	dl := NewDecisionLog(dir, LevelFullAutonomy)
+
+	dl.Propose(AutonomousDecision{ID: "d1", Category: DecisionRestart, RequiredLevel: LevelAutoRecover, Action: "a"})
+	dl.RecordOutcome("d1", DecisionOutcome{Success: true})
+	dl.Propose(AutonomousDecision{ID: "d2", Category: DecisionRestart, RequiredLevel: LevelAutoRecover, Action: "b"})
+	dl.RecordOutcome("d2", DecisionOutcome{Overridden: true})
+
+	stats := dl.Stats()
+	if stats["succeeded"].(int) != 1 {
+		t.Errorf("succeeded = %d, want 1", stats["succeeded"])
+	}
+	if stats["overridden"].(int) != 1 {
+		t.Errorf("overridden = %d, want 1", stats["overridden"])
+	}
+}
+
 func TestDecisionLog_Stats(t *testing.T) {
 	dir := t.TempDir()
 	dl := NewDecisionLog(dir, LevelAutoOptimize)

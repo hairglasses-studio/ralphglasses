@@ -123,6 +123,17 @@ func TestHealthChecker_PublishesOnStateChange(t *testing.T) {
 	<-done
 }
 
+func TestNewHealthChecker_DefaultInterval(t *testing.T) {
+	hc := NewHealthChecker(nil, 0)
+	if hc.interval != 30*time.Second {
+		t.Errorf("expected 30s default, got %v", hc.interval)
+	}
+	hc2 := NewHealthChecker(nil, -1)
+	if hc2.interval != 30*time.Second {
+		t.Errorf("expected 30s default for negative, got %v", hc2.interval)
+	}
+}
+
 func TestHealthChecker_CheckAll(t *testing.T) {
 	bus := events.NewBus(100)
 	hc := NewHealthChecker(bus, time.Minute, ProviderClaude, ProviderGemini)

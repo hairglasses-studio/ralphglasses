@@ -52,6 +52,25 @@ func TestApplyTemplateToOptionsModifiesPrompt(t *testing.T) {
 	}
 }
 
+func TestApplyTemplateToOptionsDefaultProvider(t *testing.T) {
+	opts := &LaunchOptions{Prompt: "write tests"}
+	ApplyTemplateToOptions(opts)
+	// Empty provider defaults to claude, which has no prefix/suffix
+	if opts.Prompt != "write tests" {
+		t.Errorf("default provider (claude) should not modify prompt, got %q", opts.Prompt)
+	}
+}
+
+func TestApplyTemplateToOptionsSystemPrompt(t *testing.T) {
+	opts := &LaunchOptions{Provider: ProviderGemini, Prompt: "do it"}
+	ApplyTemplateToOptions(opts)
+	// Gemini should set system prompt addition if template has one
+	// Just verify no panic and prompt was wrapped
+	if !strings.Contains(opts.Prompt, "do it") {
+		t.Error("prompt should contain original text")
+	}
+}
+
 func TestApplyTemplateToOptionsEmptyPromptNoOp(t *testing.T) {
 	opts := &LaunchOptions{Provider: ProviderCodex, Prompt: ""}
 	ApplyTemplateToOptions(opts)

@@ -218,6 +218,132 @@ func TestParseAgentMdNoFrontmatter(t *testing.T) {
 	}
 }
 
+func TestParseAgentsMd(t *testing.T) {
+	content := `## Reviewer
+Review all code changes.
+
+## Tester
+Run the test suite and report failures.
+`
+	agents := parseAgentsMd(content)
+	if len(agents) != 2 {
+		t.Fatalf("expected 2 agents, got %d", len(agents))
+	}
+	if agents[0].Name != "Reviewer" {
+		t.Errorf("agent[0].Name = %q", agents[0].Name)
+	}
+	if agents[0].Prompt != "Review all code changes." {
+		t.Errorf("agent[0].Prompt = %q", agents[0].Prompt)
+	}
+	if agents[0].Provider != ProviderCodex {
+		t.Errorf("agent[0].Provider = %q, want codex", agents[0].Provider)
+	}
+	if agents[1].Name != "Tester" {
+		t.Errorf("agent[1].Name = %q", agents[1].Name)
+	}
+}
+
+func TestParseAgentsMd_Empty(t *testing.T) {
+	agents := parseAgentsMd("")
+	if len(agents) != 0 {
+		t.Errorf("expected 0 agents, got %d", len(agents))
+	}
+}
+
+func TestDiscoverCodexAgents(t *testing.T) {
+	root := t.TempDir()
+
+	// No AGENTS.md — returns nil
+	agents, err := discoverCodexAgents(root)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if agents != nil {
+		t.Errorf("expected nil agents, got %v", agents)
+	}
+
+	// Create AGENTS.md
+	content := "## CodeReview\nReview all pull requests.\n"
+	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	agents, err = discoverCodexAgents(root)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(agents) != 1 {
+		t.Fatalf("expected 1 agent, got %d", len(agents))
+	}
+	if agents[0].Name != "CodeReview" {
+		t.Errorf("name = %q, want CodeReview", agents[0].Name)
+	}
+}
+
+func TestWriteCodexAgent(t *testing.T) {
+	root := t.TempDir()
+
+	def := AgentDef{
+		Name:     "TestAgent",
+		Provider: ProviderCodex,
+		Prompt:   "Do test things",
+	}
+
+	if err := writeCodexAgent(root, def); err != nil {
+		t.Fatalf("writeCodexAgent: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(root, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read AGENTS.md: %v", err)
+	}
+	if !contains(string(data), "## TestAgent") {
+		t.Error("AGENTS.md missing agent header")
+	}
+	if !contains(string(data), "Do test things") {
+		t.Error("AGENTS.md missing agent prompt")
+	}
+
+	// Update existing agent
+	def.Prompt = "Updated prompt"
+	if err := writeCodexAgent(root, def); err != nil {
+		t.Fatalf("writeCodexAgent update: %v", err)
+	}
+
+	data, err = os.ReadFile(filepath.Join(root, "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !contains(string(data), "Updated prompt") {
+		t.Error("AGENTS.md not updated with new prompt")
+	}
+}
+
+func TestDiscoverAgents_Gemini(t *testing.T) {
+	root := t.TempDir()
+
+	// Write a gemini agent
+	dir := filepath.Join(root, ".gemini", "agents")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	content := "---\ndescription: Gemini agent\n---\n\nDo gemini things."
+	if err := os.WriteFile(filepath.Join(dir, "gem-agent.md"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	agents, err := DiscoverAgents(root, ProviderGemini)
+	if err != nil {
+		t.Fatalf("DiscoverAgents: %v", err)
+	}
+	if len(agents) != 1 {
+		t.Fatalf("expected 1 agent, got %d", len(agents))
+	}
+	if agents[0].Provider != ProviderGemini {
+		t.Errorf("provider = %q, want gemini", agents[0].Provider)
+	}
+}
+
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && searchString(s, sub)
 }
