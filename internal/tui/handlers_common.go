@@ -108,7 +108,7 @@ func (m Model) handleFilterInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) execCommand(cmd Command) (tea.Model, tea.Cmd) {
 	switch cmd.Name {
 	case "quit", "q":
-		m.ProcMgr.StopAll(context.TODO())
+		m.ProcMgr.StopAll(m.Ctx)
 		return m, tea.Quit
 	case "scan":
 		return m, m.scanRepos()
@@ -240,7 +240,7 @@ func (m Model) handleConfirmResult(msg components.ConfirmResultMsg) (tea.Model, 
 	}
 	switch msg.Action {
 	case "stopAll":
-		m.ProcMgr.StopAll(context.TODO())
+		m.ProcMgr.StopAll(m.Ctx)
 		if m.SessMgr != nil {
 			m.SessMgr.StopAll()
 		}

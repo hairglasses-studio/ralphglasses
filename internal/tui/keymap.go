@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -710,7 +709,7 @@ func init() {
 }
 
 func handleQuit(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-	m.ProcMgr.StopAll(context.TODO())
+	m.ProcMgr.StopAll(m.Ctx)
 	if m.SessMgr != nil {
 		m.SessMgr.StopAll()
 	}
