@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -100,8 +101,14 @@ func ValidationMiddleware(scanRoot string) server.ToolHandlerMiddleware {
 
 			if repo, ok := args["repo"]; ok {
 				if s, ok := repo.(string); ok && s != "" {
-					if err := ValidateRepoName(s); err != nil {
-						return invalidParams(fmt.Sprintf("repo: %v", err)), nil
+					if filepath.IsAbs(s) {
+						if err := ValidatePath(s, scanRoot); err != nil {
+							return invalidParams(fmt.Sprintf("repo: %v", err)), nil
+						}
+					} else {
+						if err := ValidateRepoName(s); err != nil {
+							return invalidParams(fmt.Sprintf("repo: %v", err)), nil
+						}
 					}
 				}
 			}
