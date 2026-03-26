@@ -50,8 +50,9 @@ type LoopProfile struct {
 	AutoMergeAll         bool     `json:"auto_merge_all"`                // bypass path classification, auto-merge if verify passes
 	EnablePlannerEnhancement bool  `json:"enable_planner_enhancement"` // run prompt enhancement before planner calls
 	EnableWorkerEnhancement  bool  `json:"enable_worker_enhancement"`  // run prompt enhancement before worker calls
-	MaxIterations        int      `json:"max_iterations,omitempty"`
-	MaxDurationSecs      int      `json:"max_duration_secs,omitempty"`
+	MaxIterations        int           `json:"max_iterations,omitempty"`
+	MaxDurationSecs      int           `json:"max_duration_secs,omitempty"`
+	StallTimeout         time.Duration `json:"stall_timeout,omitempty"` // 0 = disabled, default 10min
 }
 
 // LoopTask is the bounded implementation unit produced by the planner.
