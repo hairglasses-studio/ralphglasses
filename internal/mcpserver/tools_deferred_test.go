@@ -73,10 +73,10 @@ func TestBuildToolGroups_ExpectedCounts(t *testing.T) {
 		"roadmap":  5,
 		"team":     6,
 		"awesome":  5,
-		"advanced": 22,
+		"advanced": 23,
 		"eval":     4,
 		"fleet_h":       4,
-		"observability": 11,
+		"observability": 12,
 	}
 
 	totalExpected := 0
