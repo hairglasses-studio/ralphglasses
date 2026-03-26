@@ -129,6 +129,46 @@ func TestTruncate(t *testing.T) {
 	}
 }
 
+func TestSortColOutOfBounds(t *testing.T) {
+	tbl := makeTestTable()
+	tbl.Width = 40
+	tbl.Height = 20
+	// Set SortCol beyond column count
+	tbl.SortCol = 99
+
+	// CycleSort should clamp and not panic
+	tbl.CycleSort()
+	if tbl.SortCol >= len(tbl.Columns) {
+		t.Errorf("CycleSort did not clamp SortCol: got %d, columns=%d", tbl.SortCol, len(tbl.Columns))
+	}
+
+	// Reset to out-of-bounds and verify View clamps
+	tbl.SortCol = 99
+	view := tbl.View()
+	if view == "" {
+		t.Error("View should not be empty with out-of-bounds SortCol")
+	}
+	if tbl.SortCol >= len(tbl.Columns) {
+		t.Errorf("View did not clamp SortCol: got %d", tbl.SortCol)
+	}
+
+	// sortRows should also clamp
+	tbl.SortCol = 50
+	tbl.sortRows()
+	if tbl.SortCol >= len(tbl.Columns) {
+		t.Errorf("sortRows did not clamp SortCol: got %d", tbl.SortCol)
+	}
+}
+
+func TestSortColOutOfBoundsEmptyColumns(t *testing.T) {
+	tbl := NewTable(nil)
+	tbl.SortCol = 5
+	// Should not panic
+	tbl.CycleSort()
+	tbl.sortRows()
+	_ = tbl.View()
+}
+
 func TestStyledCell(t *testing.T) {
 	style := lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
 	result := StyledCell(style, "test")
