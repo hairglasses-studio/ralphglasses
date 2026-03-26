@@ -494,7 +494,9 @@ func ReadPendingNotes(repoPath string) ([]ImprovementNote, error) {
 // WriteImprovementNote appends a single note to the improvement notes file.
 func WriteImprovementNote(repoPath string, note ImprovementNote) error {
 	path := filepath.Join(repoPath, improvementNotesFile)
-	_ = os.MkdirAll(filepath.Dir(path), 0755)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("create improvement notes dir: %w", err)
+	}
 
 	data, err := json.Marshal(note)
 	if err != nil {
@@ -512,7 +514,9 @@ func WriteImprovementNote(repoPath string, note ImprovementNote) error {
 
 func writeImprovementNotes(repoPath string, notes []ImprovementNote) error {
 	path := filepath.Join(repoPath, improvementNotesFile)
-	_ = os.MkdirAll(filepath.Dir(path), 0755)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("create improvement notes dir: %w", err)
+	}
 
 	f, err := os.Create(path)
 	if err != nil {

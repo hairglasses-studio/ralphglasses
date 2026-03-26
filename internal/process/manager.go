@@ -143,7 +143,9 @@ func writePIDFile(repoPath string, pid int) error {
 
 // removePIDFile removes the PID file for a repo.
 func removePIDFile(repoPath string) {
-	_ = os.Remove(pidFilePath(repoPath))
+	if err := os.Remove(pidFilePath(repoPath)); err != nil && !os.IsNotExist(err) {
+		slog.Warn("failed to remove PID file", "repo", repoPath, "error", err)
+	}
 }
 
 // readPIDFile reads the PID from a repo's PID file. Returns 0 if not found or invalid.
@@ -220,7 +222,9 @@ func (m *Manager) Start(repoPath string) error {
 	}
 
 	pid := cmd.Process.Pid
-	_ = writePIDFile(repoPath, pid)
+	if err := writePIDFile(repoPath, pid); err != nil {
+		slog.Warn("failed to write PID file", "repo", repoPath, "pid", pid, "error", err)
+	}
 
 	m.procs[repoPath] = &ManagedProcess{Cmd: cmd, PID: pid, ChildPids: collectChildPIDs(pid)}
 
@@ -286,7 +290,9 @@ func (m *Manager) reaperLoop(rp string, cmd *exec.Cmd) {
 					// Fall through to normal cleanup below.
 				} else {
 					newPID := newCmd.Process.Pid
-					_ = writePIDFile(rp, newPID)
+					if err := writePIDFile(rp, newPID); err != nil {
+						slog.Warn("failed to write PID file after restart", "repo", rp, "pid", newPID, "error", err)
+					}
 
 					m.mu.Lock()
 					// Check that the entry still exists (could have been stopped during backoff).
