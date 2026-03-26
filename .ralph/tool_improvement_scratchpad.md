@@ -266,3 +266,72 @@ All groups loaded (deferred loading bypassed). 202 tool calls in last 48h. Key b
 - **FINDING-65**: slog wiring to ralph.log — medium effort, cross-cutting change.
 - **FINDING-66**: Standardized empty-result envelope — would change output format for multiple tools, needs deprecation plan.
 - **FINDING-67**: Handler/builder param sync test — good candidate for next improvement round.
+
+## Round 8: Full E2E Test Run + Feature Work (2026-03-26)
+
+
+### E2E Test Summary: 96/96 PASS, 11 SKIP
+
+All 107 registered MCP tools tested across 13 namespaces. 96 invoked with probe inputs — all returned expected results or correctly-structured error codes. 11 skipped to avoid side effects (session launches, loop starts, external API costs).
+
+### FINDING-68: `session_stop` returns `INTERNAL_ERROR` instead of `SESSION_NOT_FOUND`
+**Tool**: `ralphglasses_session_stop`
+**Evidence**: Calling with nonexistent ID returns `[INTERNAL_ERROR] stop failed: session not found: nonexistent` while `session_status`, `session_output`, `session_tail`, `session_diff`, `session_budget` all return `SESSION_NOT_FOUND` for the same case.
+**Proposed fix**: Change `session_stop` handler to return `codedError(ErrSessionNotFound, ...)` instead of `codedError(ErrInternal, ...)` when session is not found.
+**Risk**: LOW — error code consistency fix.
+
+### FINDING-69: `stop` (core) returns unstructured error vs `loop_stop` returns coded error
+**Tool**: `ralphglasses_stop` vs `ralphglasses_loop_stop`
+**Evidence**: `stop` returns `{"error":"stop failed: no running loop: ralphglasses","error_code":"internal_error"}` (lowercase error_code). `loop_stop` returns `{"error":"[LOOP_NOT_FOUND] stop loop: loop not found: ...","error_code":"LOOP_NOT_FOUND"}`. The `stop` handler likely still uses `errResult()` or a raw error path.
+**Proposed fix**: Migrate `stop` handler to use `codedError()` with appropriate constants (e.g., `ErrNotRunning`).
+**Risk**: LOW.
+
+### FINDING-70: `fleet_status` output exceeds 100KB — still no summary mode
+**Tool**: `ralphglasses_fleet_status`
+**Evidence**: Output saved to file (101,102 chars). Previously noted as FINDING-63 but not yet fixed. Contains full session details for all repos across scan path.
+**Proposed fix**: Add `summary_only` boolean param that returns aggregate counts. Add `repo` filter param.
+**Risk**: LOW — additive params.
+
+### FINDING-71: `scratchpad_list/read/append` require explicit `repo` in multi-repo mode
+**Tool**: All scratchpad tools
+**Evidence**: Without `repo` param, returns `INVALID_PARAMS: multiple repos found`. 
+**Status**: FIXED in commit 74fd551 — `resolveRepoPath` now auto-detects CWD repo via `os.Getwd()` prefix match against discovered repos. Needs MCP restart to take effect.
+**Verification**: After restart, call `scratchpad_list` without `repo` param from within a repo directory.
+
+### FINDING-72: `blackboard_put` and `blackboard_query` return "not initialized" — no way to initialize
+**Tool**: `ralphglasses_blackboard_put`, `ralphglasses_blackboard_query`
+**Evidence**: Both return `{"message":"blackboard not initialized","status":"not_configured"}`. The blackboard requires fleet server mode (`ralphglasses serve`) but there's no documentation of this prerequisite in the tool descriptions.
+**Proposed fix**: Update tool descriptions to note "Requires fleet server mode (ralphglasses serve)". Consider lazy-init for standalone MCP mode.
+**Risk**: LOW — description update.
+
+### FINDING-73: `a2a_offers` and `cost_forecast` same "not initialized" pattern
+**Tool**: `ralphglasses_a2a_offers`, `ralphglasses_cost_forecast`
+**Evidence**: Both return `not_configured` status. Same prerequisite issue as FINDING-72.
+**Proposed fix**: Same — update descriptions or add lazy initialization.
+**Risk**: LOW.
+
+### FINDING-74: `awesome_report` requires prior `awesome_analyze` — not documented
+**Tool**: `ralphglasses_awesome_report`
+**Evidence**: Returns `FILESYSTEM_ERROR: load analysis: open .ralph/awesome/analysis.json: no such file or directory`. The tool depends on a prior `awesome_analyze` or `awesome_sync` run to populate analysis.json.
+**Proposed fix**: Return structured error like `{"status":"no_data","message":"Run awesome_analyze or awesome_sync first"}` instead of raw filesystem error.
+**Risk**: LOW.
+
+### FINDING-75: `team_create` launches a real session — no dry_run option
+**Tool**: `ralphglasses_team_create`
+**Evidence**: Creating team "e2e-probe" launched session `8c59d15e-...` immediately. No way to validate team config without incurring session cost.
+**Proposed fix**: Add `dry_run` boolean param that validates config and returns the team structure without launching the lead session.
+**Risk**: LOW — additive param.
+
+### FINDING-76: E2E probe artifacts left behind
+**Evidence**: `e2e-probe` workflow definition saved at `.ralph/workflows/e2e-probe.yaml`, `e2e_test_scratchpad.md` created. These are harmless but could accumulate across test runs.
+**Proposed fix**: Add cleanup step to E2E test script, or add `workflow_delete` and `scratchpad_delete` tools.
+**Risk**: LOW.
+
+### Agent/Subagent Observations
+
+- **Worktree agent count growing**: 57 `.claude/worktrees/agent-*` directories from Phase C parallel agents. These should be cleaned periodically. Consider adding a `worktree_cleanup` tool or garbage collection on MCP startup.
+- **Tool benchmark data shows healthy sub-1ms latency** for most tools. `loop_step` P50=203s is expected (runs full planner+worker+verify cycle). `coverage_report` at 3.6s is reasonable for `go test -cover`.
+- **scratchpad_list benchmark shows 66.7% success rate** — the 33.3% failures were from the multi-repo disambiguation issue, now fixed (FINDING-71).
+
+### Cross-Cutting Pattern: "not_configured" tools need prerequisite docs
+Tools that require fleet server mode (`blackboard_put/query`, `a2a_offers`, `cost_forecast`, `fleet_submit`) should either: (a) document the prerequisite in their description, or (b) lazy-initialize their backing stores in standalone MCP mode with reasonable defaults.

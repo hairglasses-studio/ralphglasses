@@ -18,7 +18,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
-		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	teamName := getStringArg(req, "name")
 	if teamName == "" {
@@ -137,7 +137,7 @@ func (s *Server) handleAgentDefine(_ context.Context, req mcp.CallToolRequest) (
 		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
-		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	agentName := getStringArg(req, "name")
 	if agentName == "" {
@@ -196,7 +196,7 @@ func (s *Server) handleAgentList(_ context.Context, req mcp.CallToolRequest) (*m
 		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
-		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
@@ -244,7 +244,7 @@ func (s *Server) handleAgentCompose(_ context.Context, req mcp.CallToolRequest) 
 		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
-		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	name := getStringArg(req, "name")
 	if name == "" {

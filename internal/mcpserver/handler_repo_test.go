@@ -113,7 +113,7 @@ func TestHandleRepoHealth_InvalidName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("handleRepoHealth: %v", err)
 	}
-	assertErrorCode(t, "handleRepoHealth", result, "invalid_params")
+	assertErrorCode(t, "handleRepoHealth", result, "INVALID_PARAMS")
 }
 
 // --- handleConfig (codedError paths) ---

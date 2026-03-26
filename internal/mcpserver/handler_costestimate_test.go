@@ -22,8 +22,8 @@ func TestHandleCostEstimateMissingProvider(t *testing.T) {
 		t.Fatal("expected error result for missing provider")
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "invalid_params") {
-		t.Errorf("expected invalid_params error code, got: %s", text)
+	if !strings.Contains(text, string(ErrInvalidParams)) {
+		t.Errorf("expected %s error code, got: %s", ErrInvalidParams, text)
 	}
 }
 

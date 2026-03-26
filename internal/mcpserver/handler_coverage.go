@@ -119,7 +119,7 @@ func (s *Server) handleCoverageReport(ctx context.Context, req mcp.CallToolReque
 		repoPath = repo
 	} else {
 		if err := ValidateRepoName(repo); err != nil {
-			return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
+			return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
 		}
 		if s.reposNil() {
 			if err := s.scan(); err != nil {
@@ -128,7 +128,7 @@ func (s *Server) handleCoverageReport(ctx context.Context, req mcp.CallToolReque
 		}
 		r := s.findRepo(repo)
 		if r == nil {
-			return notFound(fmt.Sprintf("repo not found: %s", repo)), nil
+			return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repo)), nil
 		}
 		repoPath = r.Path
 	}
@@ -136,7 +136,7 @@ func (s *Server) handleCoverageReport(ctx context.Context, req mcp.CallToolReque
 	// Create temp file for coverage profile.
 	tmpFile, err := os.CreateTemp("", "coverage-*.out")
 	if err != nil {
-		return internalErr(fmt.Sprintf("create temp file: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("create temp file: %v", err)), nil
 	}
 	coverProfile := tmpFile.Name()
 	tmpFile.Close()

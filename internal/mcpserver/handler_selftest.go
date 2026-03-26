@@ -16,30 +16,30 @@ func (s *Server) handleSelfTest(_ context.Context, req mcp.CallToolRequest) (*mc
 	// Extract required param: repo path
 	repo := getStringArg(req, "repo")
 	if repo == "" {
-		return invalidParams("repo is required"), nil
+		return codedError(ErrInvalidParams, "repo is required"), nil
 	}
 
 	// Validate repo path exists on disk
 	info, err := os.Stat(repo)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return invalidParams(fmt.Sprintf("repo path does not exist: %s", repo)), nil
+			return codedError(ErrInvalidParams, fmt.Sprintf("repo path does not exist: %s", repo)), nil
 		}
 		return codedError(ErrFilesystem, fmt.Sprintf("stat repo path: %v", err)), nil
 	}
 	if !info.IsDir() {
-		return invalidParams(fmt.Sprintf("repo path is not a directory: %s", repo)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("repo path is not a directory: %s", repo)), nil
 	}
 
 	// Extract optional params with defaults
 	iterations := int(getNumberArg(req, "iterations", 3))
 	if iterations < 1 {
-		return invalidParams("iterations must be >= 1"), nil
+		return codedError(ErrInvalidParams, "iterations must be >= 1"), nil
 	}
 
 	budgetUSD := getNumberArg(req, "budget_usd", 5.0)
 	if budgetUSD <= 0 {
-		return invalidParams("budget_usd must be > 0"), nil
+		return codedError(ErrInvalidParams, "budget_usd must be > 0"), nil
 	}
 
 	useSnapshot := true
