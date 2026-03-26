@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -69,7 +68,7 @@ var validateCmd = &cobra.Command{
 		}
 
 		if hasError {
-			os.Exit(1)
+			return ErrChecksFailed
 		}
 		return nil
 	},

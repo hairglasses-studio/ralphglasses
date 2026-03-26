@@ -105,7 +105,7 @@ var doctorCmd = &cobra.Command{
 		}
 
 		if anyFailed {
-			os.Exit(1)
+			return ErrChecksFailed
 		}
 		return nil
 	},
