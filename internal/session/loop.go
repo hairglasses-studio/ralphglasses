@@ -184,7 +184,7 @@ func SelfImprovementProfile() LoopProfile {
 // StartLoop registers a new loop run for a repo.
 func (m *Manager) StartLoop(_ context.Context, repoPath string, profile LoopProfile) (*LoopRun, error) {
 	if strings.TrimSpace(repoPath) == "" {
-		return nil, fmt.Errorf("repo path required")
+		return nil, ErrRepoPathRequired
 	}
 	if _, err := os.Stat(repoPath); err != nil {
 		return nil, fmt.Errorf("stat repo: %w", err)
