@@ -17,13 +17,49 @@ type Client struct {
 }
 
 // NewClient creates a fleet HTTP client for the given base URL.
+// It uses a pooled transport so that connections to the same host
+// are reused across requests instead of dialing fresh each time.
 func NewClient(baseURL string) *Client {
 	return &Client{
 		baseURL: baseURL,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout:   30 * time.Second,
+			Transport: DefaultTransport(),
 		},
 	}
+}
+
+// NewClientWithTransport creates a fleet HTTP client with a caller-supplied
+// transport, useful for testing or custom TLS configurations.
+func NewClientWithTransport(baseURL string, transport http.RoundTripper) *Client {
+	return &Client{
+		baseURL: baseURL,
+		httpClient: &http.Client{
+			Timeout:   30 * time.Second,
+			Transport: transport,
+		},
+	}
+}
+
+// PingCoordinator performs a lightweight health check against the
+// coordinator's /api/v1/status endpoint. It returns nil on success
+// or an error describing the failure.
+func (c *Client) PingCoordinator(ctx context.Context) error {
+	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+"/api/v1/status", nil)
+	if err != nil {
+		return fmt.Errorf("create health check request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("coordinator health check failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("coordinator returned HTTP %d", resp.StatusCode)
+	}
+	return nil
 }
 
 // Register sends a registration payload to the coordinator.
