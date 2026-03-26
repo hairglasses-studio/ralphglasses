@@ -79,11 +79,15 @@ type Container struct {
 	ExitCode  int             `json:"exit_code,omitempty"`
 }
 
+// execCommandContext is a variable for creating exec.Cmd instances.
+// Tests can override this to mock command execution.
+var execCommandContext = exec.CommandContext
+
 // DockerAvailable checks if docker is installed and the daemon is running.
 func DockerAvailable() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "docker", "info", "--format", "{{.ServerVersion}}").Output()
+	out, err := execCommandContext(ctx, "docker", "info", "--format", "{{.ServerVersion}}").Output()
 	if err != nil {
 		return fmt.Errorf("docker not available: %w", err)
 	}
@@ -168,7 +172,7 @@ func Create(ctx context.Context, name string, config ContainerConfig) (*Containe
 
 	args = append(args, config.Image)
 
-	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd := execCommandContext(ctx, "docker", args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("docker create: %w: %s", err, strings.TrimSpace(string(out)))
@@ -186,7 +190,7 @@ func Create(ctx context.Context, name string, config ContainerConfig) (*Containe
 
 // Start starts a created container.
 func Start(ctx context.Context, c *Container) error {
-	cmd := exec.CommandContext(ctx, "docker", "start", c.ID)
+	cmd := execCommandContext(ctx, "docker", "start", c.ID)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("docker start: %w: %s", err, strings.TrimSpace(string(out)))
 	}
@@ -199,7 +203,7 @@ func Start(ctx context.Context, c *Container) error {
 // Exec runs a command inside a running container and returns its output.
 func Exec(ctx context.Context, containerID string, command []string) (string, int, error) {
 	args := append([]string{"exec", containerID}, command...)
-	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd := execCommandContext(ctx, "docker", args...)
 	out, err := cmd.CombinedOutput()
 
 	exitCode := 0
@@ -218,7 +222,7 @@ func Exec(ctx context.Context, containerID string, command []string) (string, in
 // Stop gracefully stops a running container.
 func Stop(ctx context.Context, c *Container, timeout int) error {
 	args := []string{"stop", "-t", fmt.Sprintf("%d", timeout), c.ID}
-	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd := execCommandContext(ctx, "docker", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("docker stop: %w: %s", err, strings.TrimSpace(string(out)))
 	}
@@ -228,7 +232,7 @@ func Stop(ctx context.Context, c *Container, timeout int) error {
 
 // Remove removes a container (must be stopped first).
 func Remove(ctx context.Context, c *Container) error {
-	cmd := exec.CommandContext(ctx, "docker", "rm", "-f", c.ID)
+	cmd := execCommandContext(ctx, "docker", "rm", "-f", c.ID)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("docker rm: %w: %s", err, strings.TrimSpace(string(out)))
 	}
@@ -238,7 +242,7 @@ func Remove(ctx context.Context, c *Container) error {
 
 // Inspect returns container details.
 func Inspect(ctx context.Context, containerID string) (map[string]any, error) {
-	cmd := exec.CommandContext(ctx, "docker", "inspect", containerID)
+	cmd := execCommandContext(ctx, "docker", "inspect", containerID)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("docker inspect: %w", err)
