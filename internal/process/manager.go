@@ -54,10 +54,11 @@ type Manager struct {
 type ManagedProcess struct {
 	Cmd       *exec.Cmd
 	Paused    bool
-	PID       int  // stored at start time; safe to read under mu without racing Wait()
-	Recovered bool // true if re-adopted from PID file (no reaper goroutine)
+	PID       int    // stored at start time; safe to read under mu without racing Wait()
+	Recovered bool   // true if re-adopted from PID file (no reaper goroutine)
 	ExitCode  int
 	ExitError string
+	ChildPids []int  // PIDs of processes sharing the same process group; refreshed by ChildPidsForRepo
 }
 
 // lastExits tracks exit status after reaping (keyed by repo path).
@@ -363,6 +364,21 @@ func (m *Manager) PidForRepo(repoPath string) int {
 		return 0
 	}
 	return mp.PID
+}
+
+// ChildPidsForRepo collects the PIDs of all processes sharing the same process
+// group as the managed process for repoPath, stores them on the ManagedProcess,
+// and returns them. Returns nil if no process is tracked for the path.
+func (m *Manager) ChildPidsForRepo(repoPath string) []int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	mp, ok := m.procs[repoPath]
+	if !ok {
+		return nil
+	}
+	pids := CollectChildPIDs(mp.PID)
+	mp.ChildPids = pids
+	return pids
 }
 
 // LastExitStatus returns the exit code and error for a previously reaped process.
