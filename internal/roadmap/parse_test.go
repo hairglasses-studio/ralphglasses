@@ -134,6 +134,195 @@ func TestParse_EmptyFile(t *testing.T) {
 	}
 }
 
+func TestParse_MalformedMarkdown(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		content    string
+		wantPhases int
+		wantTasks  int
+	}{
+		{
+			name:       "no_headers_no_checkboxes",
+			content:    "This is just plain text.\nNo headers at all.\n",
+			wantPhases: 0,
+			wantTasks:  0,
+		},
+		{
+			name:       "headers_but_no_checkboxes",
+			content:    "# Title\n\n## Phase 1\n\nSome text but no tasks.\n\n## Phase 2\n\nMore text.\n",
+			wantPhases: 2,
+			wantTasks:  0,
+		},
+		{
+			name:       "checkboxes_but_no_phase_headers",
+			content:    "# My Roadmap\n\n- [x] Done thing\n- [ ] Undone thing\n",
+			wantPhases: 0,
+			wantTasks:  0, // tasks without a phase are dropped
+		},
+		{
+			name:       "single_item_phase",
+			content:    "# Plan\n\n## Phase 1\n\n- [ ] Only task\n",
+			wantPhases: 1,
+			wantTasks:  1,
+		},
+		{
+			name:       "uppercase_X_checkbox",
+			content:    "# Plan\n\n## Phase 1\n\n- [X] Done with uppercase X\n- [ ] Not done\n",
+			wantPhases: 1,
+			wantTasks:  2,
+		},
+		{
+			name:       "title_only",
+			content:    "# Just A Title\n",
+			wantPhases: 0,
+			wantTasks:  0,
+		},
+		{
+			name: "multiple_acceptance_criteria",
+			content: `# Plan
+
+## Phase 1
+
+### Section A
+- [ ] Task A
+- **Acceptance:** A works
+
+### Section B
+- [ ] Task B
+- **Acceptance:** B works
+`,
+			wantPhases: 1,
+			wantTasks:  2,
+		},
+		{
+			name: "section_without_phase",
+			content: `# Plan
+
+### Orphan Section
+- [ ] orphan task
+`,
+			wantPhases: 0,
+			wantTasks:  0, // section exists but no phase to attach to
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			path := filepath.Join(dir, "ROADMAP.md")
+			if err := os.WriteFile(path, []byte(tt.content), 0644); err != nil {
+				t.Fatal(err)
+			}
+
+			rm, err := Parse(path)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+
+			if len(rm.Phases) != tt.wantPhases {
+				t.Errorf("phases = %d, want %d", len(rm.Phases), tt.wantPhases)
+			}
+
+			if rm.Stats.Total != tt.wantTasks {
+				t.Errorf("total tasks = %d, want %d", rm.Stats.Total, tt.wantTasks)
+			}
+		})
+	}
+}
+
+func TestParse_TaskIDFormats(t *testing.T) {
+	t.Parallel()
+
+	content := `# Roadmap
+
+## Phase 1
+
+### Tasks
+- [ ] 1.0.1 — Simple dash separator
+- [ ] 2.0.1 – En-dash separator
+- [x] 3.0.1 - Hyphen separator
+- [ ] No ID just a description
+`
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "ROADMAP.md")
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	rm, err := Parse(path)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	tasks := rm.Phases[0].Sections[0].Tasks
+	if len(tasks) != 4 {
+		t.Fatalf("expected 4 tasks, got %d", len(tasks))
+	}
+
+	// Task with em-dash
+	if tasks[0].ID != "1.0.1" {
+		t.Errorf("task 0 ID = %q, want %q", tasks[0].ID, "1.0.1")
+	}
+
+	// Task with en-dash
+	if tasks[1].ID != "2.0.1" {
+		t.Errorf("task 1 ID = %q, want %q", tasks[1].ID, "2.0.1")
+	}
+
+	// Completed task with hyphen
+	if !tasks[2].Done {
+		t.Error("task 2 should be done")
+	}
+	if tasks[2].ID != "3.0.1" {
+		t.Errorf("task 2 ID = %q, want %q", tasks[2].ID, "3.0.1")
+	}
+
+	// Task without ID
+	if tasks[3].ID != "" {
+		t.Errorf("task 3 ID = %q, want empty", tasks[3].ID)
+	}
+}
+
+func TestParse_AcceptanceCriteria(t *testing.T) {
+	t.Parallel()
+
+	content := `# Plan
+
+## Phase 1
+
+### Section With Acceptance
+- [ ] A task
+- **Acceptance:** all tests pass
+
+### Section Without Acceptance
+- [ ] Another task
+`
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "ROADMAP.md")
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	rm, err := Parse(path)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	sec0 := rm.Phases[0].Sections[0]
+	if sec0.Acceptance != "all tests pass" {
+		t.Errorf("acceptance = %q, want %q", sec0.Acceptance, "all tests pass")
+	}
+
+	sec1 := rm.Phases[0].Sections[1]
+	if sec1.Acceptance != "" {
+		t.Errorf("expected empty acceptance, got %q", sec1.Acceptance)
+	}
+}
+
 func TestResolvePath(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
