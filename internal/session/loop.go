@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -212,7 +213,9 @@ func (m *Manager) StartLoop(_ context.Context, repoPath string, profile LoopProf
 	}
 
 	// Opportunistic cleanup of stale loop worktrees (best-effort).
-	_, _ = CleanupStaleWorktrees(repoPath, 24*time.Hour)
+	if _, err := CleanupStaleWorktrees(repoPath, 24*time.Hour); err != nil {
+		slog.Warn("failed to cleanup stale worktrees", "repo", repoPath, "error", err)
+	}
 
 	m.mu.Lock()
 	m.loops[run.ID] = run
@@ -320,7 +323,9 @@ func (m *Manager) StopLoop(id string) error {
 	}
 
 	m.PersistLoop(run)
-	_ = CleanupLoopWorktrees(repoPath, id)
+	if err := CleanupLoopWorktrees(repoPath, id); err != nil {
+		slog.Warn("failed to cleanup loop worktrees", "loop", id, "repo", repoPath, "error", err)
+	}
 	return nil
 }
 
@@ -710,7 +715,9 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 							}
 						}()
 					}
-					_ = m.waitForSession(ctx, cheapSess)
+					if waitErr := m.waitForSession(ctx, cheapSess); waitErr != nil {
+						slog.Warn("cheap cascade session wait failed", "session", cheapSess.ID, "error", waitErr)
+					}
 					if detector != nil {
 						detector.Stop()
 						detector.RecordActivity() // reset for next phase
@@ -900,7 +907,9 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			emitLoopObservation(run, index, m,
 				reflexionApplied, episodesUsed, cascadeResults, taskDifficulties, totalStallCount)
 			m.PersistLoop(run)
-			_ = writeLoopJournal(run, run.Iterations[index])
+			if err := writeLoopJournal(run, run.Iterations[index]); err != nil {
+		slog.Warn("failed to write loop journal", "loop", run.ID, "error", err)
+	}
 			return verErr
 		}
 	}
@@ -1019,7 +1028,9 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	}
 
 	m.PersistLoop(run)
-	_ = writeLoopJournal(run, run.Iterations[index])
+	if err := writeLoopJournal(run, run.Iterations[index]); err != nil {
+		slog.Warn("failed to write loop journal", "loop", run.ID, "error", err)
+	}
 	return nil
 }
 
@@ -1536,7 +1547,9 @@ func runLoopVerification(ctx context.Context, worktreePath string, commands []st
 func (m *Manager) failLoopIteration(run *LoopRun, index int, err error) error {
 	run.updateLoopAfterVerification(index, run.iterationVerification(index), "failed", err.Error())
 	m.PersistLoop(run)
-	_ = writeLoopJournal(run, run.iterationsSnapshot()[index])
+	if err := writeLoopJournal(run, run.iterationsSnapshot()[index]); err != nil {
+		slog.Warn("failed to write loop journal", "loop", run.ID, "error", err)
+	}
 	return err
 }
 
@@ -1862,7 +1875,9 @@ func (m *Manager) PersistLoop(run *LoopRun) {
 		return
 	}
 
-	_ = os.WriteFile(filepath.Join(dir, run.ID+".json"), data, 0644)
+	if err := os.WriteFile(filepath.Join(dir, run.ID+".json"), data, 0644); err != nil {
+		slog.Warn("failed to persist loop state", "loop", run.ID, "error", err)
+	}
 }
 
 // LoadExternalLoops merges loop runs persisted by other processes.

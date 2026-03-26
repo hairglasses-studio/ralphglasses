@@ -2,6 +2,7 @@ package session
 
 import (
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -98,11 +99,16 @@ func (bb *Blackboard) save() {
 	if bb.stateDir == "" {
 		return
 	}
-	_ = os.MkdirAll(bb.stateDir, 0755)
+	if err := os.MkdirAll(bb.stateDir, 0755); err != nil {
+		slog.Warn("failed to create blackboard state dir", "dir", bb.stateDir, "error", err)
+		return
+	}
 	data, err := json.Marshal(bb.entries)
 	if err != nil {
 		return
 	}
 	path := filepath.Join(bb.stateDir, "blackboard.json")
-	_ = os.WriteFile(path, data, 0644)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		slog.Warn("failed to write blackboard state", "path", path, "error", err)
+	}
 }

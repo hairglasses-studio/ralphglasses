@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"sort"
 	"time"
@@ -253,7 +254,11 @@ func (m *Model) buildFleetData() views.FleetData {
 	if m.NotifyEnabled {
 		for _, alert := range data.Alerts {
 			if alert.Severity == "critical" {
-				go func(msg string) { _ = notify.Send("ralphglasses alert", msg) }(alert.Message)
+				go func(msg string) {
+					if err := notify.Send("ralphglasses alert", msg); err != nil {
+						slog.Warn("failed to send desktop notification", "error", err)
+					}
+				}(alert.Message)
 			}
 		}
 	}

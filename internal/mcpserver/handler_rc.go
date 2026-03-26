@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -277,7 +278,9 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 		sid := sess.ID
 		sess.Unlock()
 		if st == session.StatusRunning || st == session.StatusLaunching {
-			_ = s.SessMgr.Stop(sid)
+			if err := s.SessMgr.Stop(sid); err != nil {
+				slog.Warn("failed to stop session during RC act", "session", sid, "error", err)
+			}
 		}
 	}
 

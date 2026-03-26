@@ -3,6 +3,7 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -508,7 +509,10 @@ func (cr *CascadeRouter) appendResult(r CascadeResult) {
 	if cr.stateDir == "" {
 		return
 	}
-	_ = os.MkdirAll(cr.stateDir, 0755)
+	if err := os.MkdirAll(cr.stateDir, 0755); err != nil {
+		slog.Warn("failed to create cascade state dir", "dir", cr.stateDir, "error", err)
+		return
+	}
 
 	data, err := json.Marshal(r)
 	if err != nil {
@@ -518,10 +522,13 @@ func (cr *CascadeRouter) appendResult(r CascadeResult) {
 
 	f, err := os.OpenFile(cr.resultsPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
+		slog.Warn("failed to open cascade results file", "error", err)
 		return
 	}
 	defer f.Close()
-	_, _ = f.Write(data)
+	if _, err := f.Write(data); err != nil {
+		slog.Warn("failed to write cascade result", "error", err)
+	}
 }
 
 func (cr *CascadeRouter) loadResults() {
