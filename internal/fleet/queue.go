@@ -2,6 +2,7 @@ package fleet
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"sort"
 	"sync"
@@ -12,12 +13,14 @@ import (
 type WorkQueue struct {
 	mu    sync.Mutex
 	items map[string]*WorkItem // keyed by ID
+	dlq   map[string]*WorkItem // dead letter queue for permanently failed items
 }
 
 // NewWorkQueue creates an empty work queue.
 func NewWorkQueue() *WorkQueue {
 	return &WorkQueue{
 		items: make(map[string]*WorkItem),
+		dlq:   make(map[string]*WorkItem),
 	}
 }
 
@@ -174,4 +177,74 @@ func (q *WorkQueue) LoadFrom(path string) error {
 		q.items[item.ID] = item
 	}
 	return nil
+}
+
+// MoveToDLQ moves a work item from the main queue to the dead letter queue.
+// Returns false if the item was not found in the main queue.
+func (q *WorkQueue) MoveToDLQ(itemID string) bool {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	item, ok := q.items[itemID]
+	if !ok {
+		return false
+	}
+	now := time.Now()
+	item.CompletedAt = &now
+	q.dlq[itemID] = item
+	delete(q.items, itemID)
+	return true
+}
+
+// ListDLQ returns all items in the dead letter queue.
+func (q *WorkQueue) ListDLQ() []*WorkItem {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	result := make([]*WorkItem, 0, len(q.dlq))
+	for _, item := range q.dlq {
+		result = append(result, item)
+	}
+	return result
+}
+
+// RetryFromDLQ moves an item from the dead letter queue back to the main queue
+// with its retry count and status reset for re-processing.
+func (q *WorkQueue) RetryFromDLQ(itemID string) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	item, ok := q.dlq[itemID]
+	if !ok {
+		return fmt.Errorf("item %s not found in DLQ", itemID)
+	}
+
+	item.Status = WorkPending
+	item.RetryCount = 0
+	item.AssignedTo = ""
+	item.AssignedAt = nil
+	item.CompletedAt = nil
+	item.Error = ""
+	item.RetryAfter = nil
+
+	q.items[itemID] = item
+	delete(q.dlq, itemID)
+	return nil
+}
+
+// PurgeDLQ removes all items from the dead letter queue.
+func (q *WorkQueue) PurgeDLQ() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	n := len(q.dlq)
+	q.dlq = make(map[string]*WorkItem)
+	return n
+}
+
+// DLQDepth returns the number of items in the dead letter queue.
+func (q *WorkQueue) DLQDepth() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return len(q.dlq)
 }

@@ -283,6 +283,11 @@ func (c *Coordinator) handleWorkComplete(w http.ResponseWriter, r *http.Request)
 
 	c.queue.Update(item)
 
+	// Move permanently failed items to the dead letter queue
+	if item.Status == WorkFailed {
+		c.queue.MoveToDLQ(item.ID)
+	}
+
 	if c.bus != nil {
 		c.bus.Publish(events.Event{
 			Type:      events.EventType("fleet.work_" + string(item.Status)),
@@ -449,6 +454,7 @@ func (c *Coordinator) handleFleetState(w http.ResponseWriter, r *http.Request) {
 		ActiveWork:    counts[WorkAssigned] + counts[WorkRunning],
 		CompletedWork: counts[WorkCompleted],
 		FailedWork:    counts[WorkFailed],
+		DLQDepth:      c.queue.DLQDepth(),
 		TotalSpentUSD: budget.SpentUSD,
 		BudgetUSD:     budget.LimitUSD,
 		UpdatedAt:     time.Now(),
@@ -737,6 +743,7 @@ func (c *Coordinator) GetFleetState() FleetState {
 		ActiveWork:    counts[WorkAssigned] + counts[WorkRunning],
 		CompletedWork: counts[WorkCompleted],
 		FailedWork:    counts[WorkFailed],
+		DLQDepth:      c.queue.DLQDepth(),
 		TotalSpentUSD: budget.SpentUSD,
 		BudgetUSD:     budget.LimitUSD,
 		UpdatedAt:     time.Now(),
@@ -835,6 +842,25 @@ func (c *Coordinator) IsWorkerDrained(workerID string) bool {
 	return true
 }
 
+// ListDLQ returns all items in the dead letter queue.
+func (c *Coordinator) ListDLQ() []*WorkItem {
+	return c.queue.ListDLQ()
+}
+
+// RetryFromDLQ moves an item from the dead letter queue back to the main queue.
+func (c *Coordinator) RetryFromDLQ(itemID string) error {
+	return c.queue.RetryFromDLQ(itemID)
+}
+
+// PurgeDLQ removes all items from the dead letter queue.
+func (c *Coordinator) PurgeDLQ() int {
+	return c.queue.PurgeDLQ()
+}
+
+// DLQDepth returns the number of items in the dead letter queue.
+func (c *Coordinator) DLQDepth() int {
+	return c.queue.DLQDepth()
+}
 // helper functions
 
 func timePtr(t time.Time) *time.Time {

@@ -297,7 +297,7 @@ func (s *Server) buildPromptGroup() ToolGroup {
 func (s *Server) buildFleetGroup() ToolGroup {
 	return ToolGroup{
 		Name:        "fleet",
-		Description: "Fleet operations: fleet_status, analytics, submit, budget, workers, marathon_dashboard",
+		Description: "Fleet operations: fleet_status, analytics, submit, budget, workers, dlq, marathon_dashboard",
 		Tools: []ToolEntry{
 			{mcp.NewTool("ralphglasses_fleet_status",
 				mcp.WithDescription("Fleet-wide dashboard: aggregate status, costs, health, and alerts across all repos and sessions in one call"),
@@ -326,6 +326,11 @@ func (s *Server) buildFleetGroup() ToolGroup {
 				mcp.WithString("action", mcp.Description("Worker action: pause, resume, or drain (omit to list)")),
 				mcp.WithString("worker_id", mcp.Description("Worker ID (required for pause/resume/drain actions)")),
 			), s.handleFleetWorkers},
+			{mcp.NewTool("ralphglasses_fleet_dlq",
+				mcp.WithDescription("Dead letter queue operations for permanently failed fleet work items. Actions: list, retry, purge, depth. Requires fleet coordinator mode."),
+				mcp.WithString("action", mcp.Description("Action: list (default), retry, purge, depth")),
+				mcp.WithString("item_id", mcp.Description("Work item ID (required for retry action)")),
+			), s.handleFleetDLQ},
 			{mcp.NewTool("ralphglasses_marathon_dashboard",
 				mcp.WithDescription("Compact marathon status: burn rate, stale sessions, team progress, alerts"),
 				mcp.WithNumber("stale_threshold_min", mcp.Description("Minutes idle before flagged stale (default 5)")),
