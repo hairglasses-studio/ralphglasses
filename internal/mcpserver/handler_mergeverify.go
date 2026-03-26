@@ -101,17 +101,17 @@ func parseCoverageTotal(profilePath string) (float64, error) {
 func (s *Server) handleMergeVerify(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repo := getStringArg(req, "repo")
 	if repo == "" {
-		return invalidParams("repo is required"), nil
+		return codedError(ErrInvalidParams, "repo is required"), nil
 	}
 
 	// Resolve and validate repo path.
 	repoPath, err := filepath.Abs(repo)
 	if err != nil {
-		return invalidParams(fmt.Sprintf("invalid repo path: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo path: %v", err)), nil
 	}
 	info, err := os.Stat(repoPath)
 	if err != nil || !info.IsDir() {
-		return invalidParams(fmt.Sprintf("repo path does not exist or is not a directory: %s", repoPath)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("repo path does not exist or is not a directory: %s", repoPath)), nil
 	}
 
 	// Read optional params.
@@ -215,7 +215,7 @@ func (s *Server) handleMergeVerify(ctx context.Context, req mcp.CallToolRequest)
 	// Return structured JSON.
 	data, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
-		return internalErr(fmt.Sprintf("json marshal: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("json marshal: %v", err)), nil
 	}
 	return textResult(string(data)), nil
 }

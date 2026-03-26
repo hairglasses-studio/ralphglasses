@@ -103,11 +103,11 @@ func ValidationMiddleware(scanRoot string) server.ToolHandlerMiddleware {
 				if s, ok := repo.(string); ok && s != "" {
 					if filepath.IsAbs(s) {
 						if err := ValidatePath(s, scanRoot); err != nil {
-							return invalidParams(fmt.Sprintf("repo: %v", err)), nil
+							return codedError(ErrInvalidParams, fmt.Sprintf("repo: %v", err)), nil
 						}
 					} else {
 						if err := ValidateRepoName(s); err != nil {
-							return invalidParams(fmt.Sprintf("repo: %v", err)), nil
+							return codedError(ErrInvalidParams, fmt.Sprintf("repo: %v", err)), nil
 						}
 					}
 				}
@@ -116,7 +116,7 @@ func ValidationMiddleware(scanRoot string) server.ToolHandlerMiddleware {
 			if p, ok := args["path"]; ok {
 				if s, ok := p.(string); ok && s != "" {
 					if err := ValidatePath(s, scanRoot); err != nil {
-						return invalidParams(fmt.Sprintf("path: %v", err)), nil
+						return codedError(ErrInvalidParams, fmt.Sprintf("path: %v", err)), nil
 					}
 				}
 			}
