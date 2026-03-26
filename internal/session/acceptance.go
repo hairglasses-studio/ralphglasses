@@ -1,12 +1,17 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
 )
+
+// gitCmdTimeout is the maximum time allowed for a single git command.
+var gitCmdTimeout = 60 * time.Second
 
 // ErrRebaseConflict is returned when a rebase onto the main branch encounters
 // conflicts that require manual resolution.
@@ -222,8 +227,11 @@ func AutoCommitAndMerge(dir, mainBranch, message string) error {
 
 // gitOutput executes a git command and returns its trimmed stdout.
 func gitOutput(dir string, args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
+	ctx, cancel := context.WithTimeout(context.Background(), gitCmdTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GIT_EDITOR=true")
 	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("git %s: %w", strings.Join(args, " "), err)
@@ -289,8 +297,11 @@ func CreateReviewPR(dir, mainBranch, title string, reviewPaths []string) (string
 
 // gitRun executes a git command in the given directory.
 func gitRun(dir string, args ...string) error {
-	cmd := exec.Command("git", args...)
+	ctx, cancel := context.WithTimeout(context.Background(), gitCmdTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GIT_EDITOR=true")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git %s: %w\n%s", strings.Join(args, " "), err, out)
