@@ -756,7 +756,7 @@ func TestIntegration_SessionErrorsFlow(t *testing.T) {
 	if !strings.Contains(errText2, "budget_warning") {
 		t.Fatalf("errors: expected budget_warning, got: %s", errText2)
 	}
-	if !strings.Contains(errText2, `"total_errors": 1`) {
-		t.Fatalf("errors: expected 1 total_errors for errored session, got: %s", errText2)
+	if !strings.Contains(errText2, `"total_errors": 2`) {
+		t.Fatalf("errors: expected 2 total_errors (budget_warning + session_error), got: %s", errText2)
 	}
 }
