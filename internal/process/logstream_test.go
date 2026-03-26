@@ -19,7 +19,7 @@ func setupLogDir(t *testing.T) string {
 
 func writeLogFile(t *testing.T, repoPath string, content string) {
 	t.Helper()
-	logPath := filepath.Join(repoPath, ".ralph", "logs", "ralph.log")
+	logPath := LogFilePath(repoPath)
 	if err := os.WriteFile(logPath, []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestTailLog_ReadsFromOffset(t *testing.T) {
 	}
 
 	// Append new data
-	logPath := filepath.Join(dir, ".ralph", "logs", "ralph.log")
+	logPath := LogFilePath(dir)
 	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		t.Fatal(err)
@@ -160,5 +160,60 @@ func TestTailLog_MissingFile(t *testing.T) {
 	}
 	if !strings.Contains(logMsg.Lines[0], "[error]") {
 		t.Errorf("expected error indicator, got: %s", logMsg.Lines[0])
+	}
+}
+
+// TestLogFilePath_Canonical verifies the canonical path structure.
+func TestLogFilePath_Canonical(t *testing.T) {
+	got := LogFilePath("/some/repo")
+	want := filepath.Join("/some/repo", ".ralph", "logs", "ralph.log")
+	if got != want {
+		t.Errorf("LogFilePath = %q, want %q", got, want)
+	}
+}
+
+// TestLogDirPath_Canonical verifies the log directory structure.
+func TestLogDirPath_Canonical(t *testing.T) {
+	got := LogDirPath("/some/repo")
+	want := filepath.Join("/some/repo", ".ralph", "logs")
+	if got != want {
+		t.Errorf("LogDirPath = %q, want %q", got, want)
+	}
+}
+
+// TestLogFilePath_ContainedInLogDir verifies LogFilePath is inside LogDirPath.
+func TestLogFilePath_ContainedInLogDir(t *testing.T) {
+	base := "/test/path"
+	filePath := LogFilePath(base)
+	dirPath := LogDirPath(base)
+
+	dir := filepath.Dir(filePath)
+	if dir != dirPath {
+		t.Errorf("LogFilePath dir = %q, LogDirPath = %q — mismatch", dir, dirPath)
+	}
+}
+
+// TestLogPath_WriteReadRoundTrip verifies that writing to LogFilePath and
+// reading via ReadFullLog uses the same path (the core of FINDING-79).
+func TestLogPath_WriteReadRoundTrip(t *testing.T) {
+	dir := setupLogDir(t)
+
+	// Simulate what cmd/root.go and cmd/mcp.go do: write to LogFilePath.
+	logPath := LogFilePath(dir)
+	content := "server log entry 1\nserver log entry 2\n"
+	if err := os.WriteFile(logPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Now read via ReadFullLog (which also uses LogFilePath internally).
+	lines, err := ReadFullLog(dir)
+	if err != nil {
+		t.Fatalf("ReadFullLog after writing to LogFilePath: %v", err)
+	}
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 lines, got %d", len(lines))
+	}
+	if lines[0] != "server log entry 1" {
+		t.Errorf("lines[0] = %q, want %q", lines[0], "server log entry 1")
 	}
 }

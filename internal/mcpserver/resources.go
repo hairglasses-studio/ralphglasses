@@ -12,6 +12,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/process"
 )
 
 // RegisterResources registers MCP resource templates for browsing .ralph state
@@ -140,7 +141,7 @@ func makeLogsHandler(appSrv *Server) server.ResourceTemplateHandlerFunc {
 			return nil, err
 		}
 
-		logPath := filepath.Join(repo.Path, ".ralph", "logs", "ralph.log")
+		logPath := process.LogFilePath(repo.Path)
 		text, err := tailFile(logPath, 100)
 		if err != nil {
 			if os.IsNotExist(err) {
