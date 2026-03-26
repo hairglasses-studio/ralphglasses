@@ -8,9 +8,37 @@ package tracing
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"sync"
 	"time"
 )
+
+// traceIDKey is the context key for propagating trace IDs across MCP tool calls.
+type traceIDKey struct{}
+
+// WithTraceID returns a new context with the given trace ID attached.
+func WithTraceID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, traceIDKey{}, id)
+}
+
+// TraceIDFromContext extracts the trace ID from context, or returns "" if none.
+func TraceIDFromContext(ctx context.Context) string {
+	if id, ok := ctx.Value(traceIDKey{}).(string); ok {
+		return id
+	}
+	return ""
+}
+
+// NewTraceID generates a 16-character hex trace ID using crypto/rand.
+func NewTraceID() string {
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback: should never happen with crypto/rand.
+		return "0000000000000000"
+	}
+	return hex.EncodeToString(b)
+}
 
 // GenAI semantic convention attribute keys (OpenTelemetry GenAI spec).
 const (
