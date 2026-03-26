@@ -164,6 +164,7 @@ type Model struct {
 	LastRefresh time.Time
 
 	// Process management
+	Ctx     context.Context
 	ProcMgr *process.Manager
 
 	// Watcher state
@@ -242,7 +243,7 @@ func (m Model) tickCmd() tea.Cmd {
 func (m Model) scanRepos() tea.Cmd {
 	path := m.ScanPath
 	return func() tea.Msg {
-		repos, err := discovery.Scan(context.TODO(), path)
+		repos, err := discovery.Scan(context.Background(), path)
 		if err != nil {
 			return scanResultMsg{err: err}
 		}
