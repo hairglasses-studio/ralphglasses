@@ -101,7 +101,7 @@ func ValidEventType(t EventType) bool {
 // Event represents something that happened in the system.
 type Event struct {
 	Type      EventType      `json:"type"`
-	Version   int            `json:"version"`
+	Version   int            `json:"v"`
 	Timestamp time.Time      `json:"timestamp"`
 	NodeID    string         `json:"node_id,omitempty"`
 	RepoName  string         `json:"repo_name,omitempty"`
@@ -444,8 +444,8 @@ func LoadEvents(path string, limit int) ([]Event, error) {
 		if len(line) == 0 {
 			continue
 		}
-		var ev Event
-		if err := json.Unmarshal(line, &ev); err != nil {
+		ev, err := MigrateEvent(json.RawMessage(line))
+		if err != nil {
 			continue // skip malformed lines
 		}
 		all = append(all, ev)
