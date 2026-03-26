@@ -138,3 +138,131 @@ Observations from reliability & quality improvement workstreams + recursive self
 52. **~~`scratchpad_read` can't find `tool_improvement` without `repo`~~** — RESOLVED: same fix as #51.
 
 53. **~~`scratchpad_append` without `repo` writes to wrong location~~** — RESOLVED: same fix as #51.
+
+## Round 7: Full Self-Improvement Audit (2026-03-25)
+
+
+### Discovery: 13 tool groups, 107 tools, all loaded
+
+All groups loaded (deferred loading bypassed). 202 tool calls in last 48h. Key benchmark findings below.
+
+---
+
+### FINDING-54: `loop_step` has 35.7% error rate (10/28 calls failed)
+**Tool**: `ralphglasses_loop_step`
+**Evidence**: Benchmark shows 64.3% success rate. P50 latency 203s, P95 352s, max 606s (10 min). Errors are likely timeout or verify-command failures.
+**Proposed fix**: (a) Increase per-step timeout beyond 30s default (loop_step is long-running by design — our new TimeoutMiddleware will kill it prematurely). Add loop_step to a timeout-exempt list or set per-tool timeout override. (b) Improve error messages returned on step failure to include verify command output.
+**Risk**: MEDIUM — timeout exemption changes routing logic.
+**Verification**: Run `loop_step` after fix, confirm it completes without premature timeout.
+
+### FINDING-55: `merge_verify` has 66.7% error rate (2/3 calls failed), P95 latency 16.2s
+**Tool**: `ralphglasses_merge_verify`
+**Evidence**: Benchmark shows 33.3% success rate. P95 latency 16191ms. Errors likely from test failures or repo state issues during verification.
+**Proposed fix**: (a) Add better error reporting — return the specific build/vet/test step that failed with its output. (b) Add `--fast` flag support that uses `-short` test flag for quicker feedback loops.
+**Risk**: LOW — output format improvement only.
+**Verification**: Run `merge_verify` with `fast: true` and confirm structured error output.
+
+### FINDING-56: `logs` tool fails with FILESYSTEM_ERROR when no ralph.log exists
+**Tool**: `ralphglasses_logs`
+**Evidence**: `open .ralph/logs/ralph.log: no such file or directory` — 33.3% error rate in benchmarks.
+**Proposed fix**: Return empty log array with informational message instead of error when log file doesn't exist. Pattern: `if os.IsNotExist(err) { return jsonResult([]string{"no log entries yet"}) }`.
+**Risk**: LOW — graceful degradation.
+**Verification**: Call `logs` on repo without ralph.log, confirm no error.
+
+### FINDING-57: `scratchpad_list` fails without `repo` param when multiple repos exist
+**Tool**: `ralphglasses_scratchpad_list`
+**Evidence**: 25% error rate. Error: `"multiple repos found, specify repo param"`. The error message is correct but the tool description doesn't mention `repo` is required in multi-repo setups.
+**Proposed fix**: Update tool description in `tools_builders.go` to say "repo param required when multiple repos are scanned". Already partly resolved (#51) but description is stale.
+**Risk**: LOW — description-only change.
+**Verification**: Read updated tool description.
+
+### FINDING-58: `scratchpad_read` same multi-repo issue as scratchpad_list
+**Tool**: `ralphglasses_scratchpad_read`
+**Evidence**: 25% error rate. Same root cause as FINDING-57.
+**Proposed fix**: Same description update.
+**Risk**: LOW.
+
+### FINDING-59: `fleet_analytics` returns empty when no active sessions
+**Tool**: `ralphglasses_fleet_analytics`
+**Evidence**: Returns `{"providers": {}, "repos": {}, "total_sessions": 0}` — no metrics section even though FleetAnalytics was wired in B3. Root cause: `FleetAnalytics` field is nil because it's not initialized during `NewServer()` or `NewServerWithBus()`.
+**Proposed fix**: Initialize `FleetAnalytics` in `NewServerWithBus()` with reasonable defaults (10k samples, 24h retention). Or lazy-init in handler when nil.
+**Risk**: LOW — initialization only.
+**Verification**: Call `fleet_analytics` and confirm `metrics` section appears (even if empty).
+
+### FINDING-60: `event_list` tool description doesn't document new query params
+**Tool**: `ralphglasses_event_list`
+**Evidence**: Tool schema only exposes `type`, `repo`, `since`, `limit` but the handler now supports `types` (comma-separated), `until`, `session_id`, `provider`, `offset`. The new params from B2 aren't in the tool definition.
+**Proposed fix**: Update `tools_builders.go` to add the new params to the tool definition.
+**Risk**: LOW — schema update only.
+**Verification**: Call `tool_groups` and confirm new params visible.
+
+### FINDING-61: TimeoutMiddleware (30s) will kill `loop_step` and `coverage_report`
+**Tool**: `ralphglasses_loop_step`, `ralphglasses_coverage_report`
+**Evidence**: `loop_step` P50 is 203s, `coverage_report` took 3594ms but can take much longer on large repos. The 30s global timeout added in B1 will prematurely kill these long-running tools.
+**Proposed fix**: Add a timeout-override map in the middleware that allows specific tools to have longer (or no) timeouts. Tools to exempt/extend: `loop_step` (10min), `coverage_report` (5min), `merge_verify` (5min), `self_test` (unlimited), `self_improve` (unlimited).
+**Risk**: MEDIUM — changes middleware behavior for specific tools.
+**Verification**: Run `loop_step` dry probe, confirm no timeout error.
+
+### FINDING-62: `claudemd_check` returns null instead of structured result
+**Tool**: `ralphglasses_claudemd_check`
+**Evidence**: Returns bare `null` when no issues found. Should return `{"issues": [], "status": "pass"}` for consistency with other health-check tools.
+**Proposed fix**: Return structured empty result instead of null.
+**Risk**: LOW.
+**Verification**: Call on healthy repo, confirm structured output.
+
+### FINDING-63: `fleet_status` output exceeds token limits (100k chars)
+**Tool**: `ralphglasses_fleet_status`
+**Evidence**: Output saved to file due to size. Contains full session details for all repos. Fleet-wide dashboard should be summary-level.
+**Proposed fix**: (a) Add `summary_only` param that returns aggregate counts without per-repo details. (b) Truncate inactive/completed sessions. (c) Add `repo` filter param.
+**Risk**: LOW — additive param.
+**Verification**: Call with `summary_only: true`, confirm compact output.
+
+### FINDING-64: Loop verify_pass_rate dropped from 100% (baseline) to 68.75% (current)
+**Tool**: Loop engine overall
+**Evidence**: Baseline has 100% completion and verify rates across 10 samples. Current 48h window shows 68.75% for both. 12.5% error rate (was 0%).
+**Root cause hypothesis**: Recent Phase C code changes may have broken some loop scenarios, OR the loop is now running more ambitious tasks that fail verification more often.
+**Proposed fix**: Investigate the 4 failed + 10 errored loop steps. Check observation_query for failure details.
+**Risk**: N/A — investigation item.
+
+### FINDING-65: No ralph.log file exists — logging not wired
+**Tool**: System-wide
+**Evidence**: `logs` tool fails because `.ralph/logs/ralph.log` doesn't exist. The `slog` logging we referenced in scratchpad (#16) was never fully wired.
+**Proposed fix**: Wire `slog` output to `.ralph/logs/ralph.log` in the MCP server startup path (cmd/mcp.go) and TUI startup path (cmd/root.go).
+**Risk**: LOW — additive logging.
+**Verification**: Start MCP server, call a tool, check ralph.log exists.
+
+### Cross-Cutting Improvements
+
+### FINDING-66: Standardize empty-result format across all read-only tools
+**Evidence**: `claudemd_check` returns null, `fleet_analytics` returns partial object, `logs` throws error. No consistent "nothing to report" envelope.
+**Proposed fix**: Adopt pattern: `{"status": "ok", "data": <result-or-empty-array>, "message": "<human summary>"}` for all read-only tools that can legitimately return empty. Apply to: `claudemd_check`, `logs`, `fleet_analytics`, `observation_query`, `event_list`.
+**Risk**: MEDIUM — changes output format for multiple tools, may break existing consumers.
+
+### FINDING-67: Tool builder descriptions drift from handler capabilities
+**Evidence**: B2 added `types`, `until`, `session_id`, `provider`, `offset` params to `event_list` handler but tool schema wasn't updated. B3 added `window` param to `fleet_analytics` but schema wasn't updated. This pattern recurs — handler code changes without corresponding schema updates.
+**Proposed fix**: Add a test that validates handler params against tool builder definitions. Pattern: extract param names from `mcp.WithString`/`mcp.WithNumber` calls in builders and compare against `getStringArg`/`getNumberArg` calls in handlers.
+**Risk**: LOW — test-only.
+**Verification**: Run the new test, confirm it catches the current drift.
+
+## Round 7 Fixes Applied (2026-03-25)
+
+
+**FINDING-54/61 FIXED**: TimeoutMiddleware now accepts per-tool override map. `loop_step` (10min), `coverage_report` (5min), `merge_verify` (5min) get extended timeouts. `self_test` and `self_improve` are fully exempt (timeout=0). 2 new tests: `TestTimeoutMiddleware_Override` and `TestTimeoutMiddleware_Exempt`.
+
+**FINDING-56 FIXED**: `handleLogs` returns `{"lines":[],"message":"no log file yet"}` on `os.ErrNotExist` instead of `FILESYSTEM_ERROR`.
+
+**FINDING-59 FIXED**: `FleetAnalytics` initialized in `NewServerWithBus()` with 10k sample cap and 24h retention. `fleet_analytics` now always includes `metrics` section.
+
+**FINDING-60 FIXED**: `event_list` tool builder now declares `types`, `until`, `session_id`, `provider`, `offset` params. `fleet_analytics` builder now declares `window` param.
+
+**FINDING-62 FIXED**: `claudemd_check` returns `{"issues":[],"status":"pass"}` instead of bare `null` when no issues found. Test updated to match.
+
+### Remaining (not fixed this round)
+
+- **FINDING-55**: `merge_verify` error reporting — needs investigation of what specific failures cause the 66.7% error rate.
+- **FINDING-57/58**: Scratchpad tool descriptions need "repo required in multi-repo mode" note — deferred (cosmetic).
+- **FINDING-63**: `fleet_status` output size (100k chars) — needs `summary_only` param. Medium effort.
+- **FINDING-64**: Loop verify_pass_rate regression (100% → 68.75%) — needs root cause investigation.
+- **FINDING-65**: slog wiring to ralph.log — medium effort, cross-cutting change.
+- **FINDING-66**: Standardized empty-result envelope — would change output format for multiple tools, needs deprecation plan.
+- **FINDING-67**: Handler/builder param sync test — good candidate for next improvement round.
