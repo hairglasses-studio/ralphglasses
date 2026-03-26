@@ -104,6 +104,143 @@ All three providers support prompt caching for 80-90% input cost savings:
 
 Cache hit rates are tracked in the cost ledger and surfaced via `ralphglasses_fleet_analytics`.
 
+## Provider Event Normalization & Cost Extraction
+
+The `internal/session/` package normalizes heterogeneous provider output into a single `StreamEvent` type and extracts cost through a three-tier cascade.
+
+### Event Normalizer Dispatch
+
+`normalizeEvent()` in `providers.go` is the entry point called by `runner.go`'s stream reader on each output line:
+
+```
+normalizeEvent(provider, line []byte) → StreamEvent
+  ├─ ProviderGemini  → normalizeGeminiEvent(line)
+  ├─ ProviderCodex   → normalizeCodexEvent(line)
+  └─ default/Claude  → normalizeClaudeEvent(line)
+```
+
+Each normalizer unmarshals the raw JSON into a `map[string]any`, extracts fields using dotted path helpers (`valueAtPath`, `firstNonZeroFloat`, etc.), and returns a unified `StreamEvent`. All three set `event.Raw` to the original bytes for downstream consumers.
+
+| Normalizer | Provider format | Notable behavior |
+|---|---|---|
+| `normalizeClaudeEvent` | Claude stream-json | Double-unmarshal: flat struct + raw map for nested fields; normalises `subagent` → `agent` type |
+| `normalizeGeminiEvent` | Gemini NDJSON | Path-based extraction; falls back to `fallbackTextEvent` on parse error |
+| `normalizeCodexEvent` | Codex quiet-mode JSON | Path-based extraction; similar fallback path |
+
+`applyEventDefaults()` is called by the Gemini and Codex normalizers to canonicalise type names (`message`/`delta`/`output` → `assistant`, `error` → `result`) and fill derived fields (`Text`, `Content`, `Result`).
+
+### Three-Tier Cost Extraction Cascade
+
+Within each normalizer, cost is extracted in priority order. The first tier to produce a non-zero value wins:
+
+**Tier 1 — Explicit cost field** (`firstNonZeroFloat`):
+```
+cost_usd  →  usage.cost_usd  →  usage.total_cost_usd
+```
+Resolves provider quirks where the cost field is top-level for some events and nested under `usage` for others.
+
+**Tier 2 — Token estimation** (`estimateCostFromTokens`):
+Activated only when Tier 1 returns zero. Walks multiple provider-specific token paths:
+- Input: `usage.input_tokens` → `usage_metadata.prompt_token_count` → `usage.prompt_tokens`
+- Output: `usage.output_tokens` → `usage_metadata.candidates_token_count` → `usage.completion_tokens`
+
+Cost is then computed using `ProviderCostRates` (USD per 1M tokens):
+```
+cost = (inputTokens / 1_000_000) × rates.InputPer1M
+     + (outputTokens / 1_000_000) × rates.OutputPer1M
+```
+
+**Tier 3 — Stderr fallback** (`ParseCostFromStderr`):
+An exported utility for callers that collect stderr separately (e.g. MCP tool handlers). Not called inline by the normalizers, but available as a last resort when structured stdout data is absent.
+
+### Stderr Cost Fallback (`ParseCostFromStderr`)
+
+`ParseCostFromStderr` parses human-readable cost lines emitted by LLM CLIs to their terminal:
+
+```go
+var stderrCostRe = regexp.MustCompile(
+    `(?i)(?:total\s+)?(?:session\s+)?cost(?:_usd)?:\s*\$?([\d]+\.[\d]+)`)
+```
+
+Matched patterns (case-insensitive):
+- `Cost: $0.0023`
+- `Total cost: 0.0023`
+- `cost_usd: $1.23`
+- `Session cost: $0.05`
+
+Processing steps:
+1. **ANSI strip** — removes terminal colour codes via `\x1b\[[0-9;]*[a-zA-Z]` before matching
+2. **Find all matches** — collects every match in the buffer
+3. **Last-match selection** — `matches[len(matches)-1]` picks the final printed cost, which is the cumulative total (CLIs often print intermediate costs as well)
+4. **Validation** — returns `0` if parse fails or `cost < 0`; negative costs are treated as absent
+
+### Cross-Provider Normalization (`NormalizeProviderCost`)
+
+`NormalizeProviderCost` in `costnorm.go` scales a raw provider cost to the Claude Sonnet baseline, enabling apples-to-apples comparisons in the fleet optimizer and auto-optimizer:
+
+```go
+func NormalizeProviderCost(p Provider, rawCostUSD float64,
+    inputTokens, outputTokens int) NormalizedCost
+```
+
+Two normalization paths:
+
+| Token counts known | Method |
+|---|---|
+| Yes | `NormalizedUSD = (inputTokens/1M × claudeRate.Input) + (outputTokens/1M × claudeRate.Output)` |
+| No | Blended-rate scaling: `NormalizedUSD = rawCostUSD × (claudeBlended / providerBlended)` where blended = (InputPer1M + OutputPer1M) / 2 |
+
+`EfficiencyPct = (RawCostUSD / NormalizedUSD) × 100`. Values below 100 indicate the provider is cheaper than Claude at equivalent work.
+
+`NormalizeSessionCost(s *Session)` is a convenience wrapper that reads `s.SpentUSD` under the session mutex and delegates to `NormalizeProviderCost` with zero token counts.
+
+Consumers: `internal/session/autooptimize.go` (provider scoring) and `internal/fleet/optimizer.go` (fleet task routing).
+
+### Data Flow Diagram
+
+```
+Provider CLI stdout (NDJSON stream)
+         │
+         ▼
+  normalizeEvent(provider, line)
+         │
+         ├─── normalizeClaudeEvent ──┐
+         ├─── normalizeGeminiEvent ──┤
+         └─── normalizeCodexEvent ───┘
+                                     │
+                     Three-tier cost cascade:
+                     1. Explicit cost_usd field
+                     2. Token estimation (ProviderCostRates)
+                     3. ParseCostFromStderr (caller-driven fallback)
+                                     │
+                                     ▼
+                            StreamEvent.CostUSD
+                                     │
+                    runner.go accumulates into Session:
+                    ┌─ Claude:  SpentUSD  = event.CostUSD  (cumulative)
+                    └─ Others:  SpentUSD += event.CostUSD  (additive)
+                                     │
+                                     ▼
+                            Session.SpentUSD
+                                     │
+              ┌──────────────────────┴──────────────────────┐
+              │                                             │
+    CostUpdate event bus                     NormalizeSessionCost()
+    (fleet monitoring,                                      │
+     budget enforcement)               NormalizeProviderCost(provider,
+                                         SpentUSD, 0, 0)
+                                                            │
+                                                            ▼
+                                                    NormalizedCost
+                                                  (NormalizedUSD,
+                                                   EfficiencyPct)
+                                                            │
+                                          ┌─────────────────┴──────────────┐
+                                          │                                │
+                                 autooptimize.go                  fleet/optimizer.go
+                                 (provider scoring)               (task routing)
+```
+
 ## File Schemas
 
 - `.ralph/status.json`: LoopStatus (timestamp, loop_count, calls_made_this_hour, status, model, etc.)
