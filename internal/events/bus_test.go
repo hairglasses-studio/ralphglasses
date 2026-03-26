@@ -1,9 +1,13 @@
 package events
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -594,5 +598,140 @@ func TestVersionFieldPersisted(t *testing.T) {
 	}
 	if events[1].Version != 3 {
 		t.Errorf("event[1].Version = %d, want 3 (preserved)", events[1].Version)
+	}
+}
+
+func TestPublishPersistWriteError(t *testing.T) {
+	dir := t.TempDir()
+	roDir := filepath.Join(dir, "readonly")
+	if err := os.MkdirAll(roDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	bus := NewBus(10)
+	persistPath := filepath.Join(roDir, "events.jsonl")
+	if err := bus.PersistTo(persistPath); err != nil {
+		t.Fatal(err)
+	}
+
+	// Replace the persist file with a read-only file descriptor to trigger write errors
+	bus.mu.Lock()
+	bus.persistFile.Close()
+	f, err := os.Open(persistPath)
+	if err != nil {
+		bus.mu.Unlock()
+		t.Fatal(err)
+	}
+	bus.persistFile = f
+	bus.mu.Unlock()
+
+	// Capture slog output
+	var buf bytes.Buffer
+	handler := slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})
+	oldLogger := slog.Default()
+	slog.SetDefault(slog.New(handler))
+	defer slog.SetDefault(oldLogger)
+
+	bus.Publish(Event{Type: SessionStarted})
+
+	_ = bus.Close()
+
+	logged := buf.String()
+	if !strings.Contains(logged, "event persist failed") {
+		t.Errorf("expected 'event persist failed' in log output, got: %s", logged)
+	}
+}
+
+func TestAsyncWriteMode(t *testing.T) {
+	dir := t.TempDir()
+	persistPath := filepath.Join(dir, "async_events.jsonl")
+
+	bus := NewBus(100)
+	bus.AsyncWrites = true
+	if err := bus.PersistTo(persistPath); err != nil {
+		t.Fatal(err)
+	}
+	bus.StartAsync()
+
+	numEvents := 20
+	for i := 0; i < numEvents; i++ {
+		bus.Publish(Event{Type: LoopIterated, Data: map[string]any{"i": i}})
+	}
+
+	if err := bus.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(persistPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) != numEvents {
+		t.Errorf("expected %d persisted events, got %d", numEvents, len(lines))
+	}
+
+	for i, line := range lines {
+		var ev Event
+		if err := json.Unmarshal([]byte(line), &ev); err != nil {
+			t.Errorf("line %d: invalid JSON: %v", i, err)
+		}
+		if ev.Type != LoopIterated {
+			t.Errorf("line %d: expected type %s, got %s", i, LoopIterated, ev.Type)
+		}
+	}
+}
+
+func TestAsyncWriteClose(t *testing.T) {
+	dir := t.TempDir()
+	persistPath := filepath.Join(dir, "drain_events.jsonl")
+
+	bus := NewBus(100)
+	bus.AsyncWrites = true
+	if err := bus.PersistTo(persistPath); err != nil {
+		t.Fatal(err)
+	}
+	bus.StartAsync()
+
+	bus.Publish(Event{Type: SessionStarted})
+
+	done := make(chan struct{})
+	go func() {
+		bus.Close()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Success
+	case <-time.After(5 * time.Second):
+		t.Fatal("Close() did not return within 5 seconds - possible deadlock")
+	}
+}
+
+func TestSyncWriteStillWorks(t *testing.T) {
+	dir := t.TempDir()
+	persistPath := filepath.Join(dir, "sync_events.jsonl")
+
+	bus := NewBus(100)
+	if err := bus.PersistTo(persistPath); err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Publish(Event{Type: SessionStarted})
+	bus.Publish(Event{Type: SessionEnded})
+
+	if err := bus.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(persistPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) != 2 {
+		t.Errorf("expected 2 persisted events, got %d", len(lines))
 	}
 }

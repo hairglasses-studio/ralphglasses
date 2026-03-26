@@ -129,6 +129,11 @@ type Bus struct {
 	persistFile   *os.File
 	persistPath   string
 	persistWrites int
+
+	// Async write support
+	AsyncWrites bool
+	writeCh     chan Event
+	writeDone   chan struct{}
 }
 
 // NewBus creates an event bus that retains up to maxHistory events.
@@ -166,14 +171,17 @@ func (b *Bus) Publish(event Event) {
 
 	// Persist to JSONL file if configured
 	if b.persistFile != nil {
-		if data, err := json.Marshal(event); err == nil {
-			b.persistFile.Write(append(data, '\n'))
-		}
-		b.persistWrites++
-		if b.persistWrites%100 == 0 {
-			if info, err := b.persistFile.Stat(); err == nil && info.Size() > 10*1024*1024 {
-				b.rotateFile()
+		if b.AsyncWrites && b.writeCh != nil {
+			// Unlock before sending to avoid holding the lock during channel send
+			b.mu.Unlock()
+			select {
+			case b.writeCh <- event:
+			default:
+				slog.Warn("event async write channel full, dropping persist", "type", event.Type)
 			}
+			b.mu.Lock()
+		} else {
+			b.appendEvent(event)
 		}
 	}
 
@@ -341,7 +349,15 @@ func (b *Bus) PersistTo(path string) error {
 }
 
 // Close flushes and closes the persist file, if any.
+// If async writes are active, drains the write channel first.
 func (b *Bus) Close() error {
+	// Drain async writer first (outside lock to avoid deadlock)
+	if b.writeCh != nil {
+		close(b.writeCh)
+		<-b.writeDone
+		b.writeCh = nil
+	}
+
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.persistFile != nil {
@@ -353,6 +369,45 @@ func (b *Bus) Close() error {
 	return nil
 }
 
+// appendEvent writes a single event to the persist file and handles rotation.
+// Must be called with b.mu held.
+func (b *Bus) appendEvent(e Event) {
+	data, err := json.Marshal(e)
+	if err != nil {
+		slog.Warn("event marshal failed", "type", e.Type, "err", err)
+		return
+	}
+	if _, err := b.persistFile.Write(append(data, '\n')); err != nil {
+		slog.Warn("event persist failed", "type", e.Type, "err", err)
+	}
+	b.persistWrites++
+	if b.persistWrites%100 == 0 {
+		if info, err := b.persistFile.Stat(); err == nil && info.Size() > 10*1024*1024 {
+			b.rotateFile()
+		}
+	}
+}
+
+// StartAsync launches the background writer goroutine for async persistence.
+// Only effective when AsyncWrites is true and PersistTo has been called.
+func (b *Bus) StartAsync() {
+	if !b.AsyncWrites {
+		return
+	}
+	b.writeCh = make(chan Event, 256)
+	b.writeDone = make(chan struct{})
+	go func() {
+		defer close(b.writeDone)
+		for e := range b.writeCh {
+			b.mu.Lock()
+			if b.persistFile != nil {
+				b.appendEvent(e)
+			}
+			b.mu.Unlock()
+		}
+	}()
+}
+
 // rotateFile renames the current persist file to .1 and opens a new one.
 // Must be called with b.mu held.
 func (b *Bus) rotateFile() {
@@ -360,11 +415,14 @@ func (b *Bus) rotateFile() {
 		return
 	}
 	b.persistFile.Close()
-	_ = os.Rename(b.persistPath, b.persistPath+".1")
+	if err := os.Rename(b.persistPath, b.persistPath+".1"); err != nil {
+		slog.Warn("event file rotation failed", "err", err)
+	}
 	f, err := os.OpenFile(b.persistPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err == nil {
 		b.persistFile = f
 	} else {
+		slog.Warn("event file rotation failed", "err", err)
 		b.persistFile = nil
 	}
 }
