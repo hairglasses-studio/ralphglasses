@@ -35,8 +35,15 @@ func TestE2ELiveFire(t *testing.T) {
 			// Live tests are inherently sequential — don't parallelize
 			_ = ctx
 			t.Logf("scenario %s: category=%s budget=%.2f", s.Name, s.Category, s.Constraints.MaxCostUSD)
-			// TODO: Wire up real Manager with real provider sessions
-			// For now this is a placeholder that validates the build tag works
+
+			// XL effort: Wire up real Manager with real provider sessions.
+			// Requires:
+			//   1. session.NewManager() with a real scan path and provider configs
+			//   2. Provider session launch (Claude CLI binary must be on PATH)
+			//   3. StepLoop execution with scenario PlannerResponse/WorkerBehavior
+			//   4. Cost tracking assertions against s.Constraints.MaxCostUSD
+			//   5. VerifyCommands execution in the worktree post-run
+			// See internal/session/ for Manager API and internal/e2e/catalog.go for scenarios.
 			t.Skip("live-fire not yet wired to real providers")
 		})
 	}
