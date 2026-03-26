@@ -549,3 +549,250 @@ func TestCoordinator_StartStop(t *testing.T) {
 	defer shutCancel()
 	_ = coord.Stop(shutCtx)
 }
+
+func TestDrainWorker_StopsNewAssignments(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Register worker
+	coord.mu.Lock()
+	coord.workers["w1"] = &WorkerInfo{
+		ID:            "w1",
+		Status:        WorkerOnline,
+		Providers:     []session.Provider{session.ProviderClaude},
+		Repos:         []string{"test-repo"},
+		MaxSessions:   4,
+		LastHeartbeat: time.Now(),
+	}
+	coord.mu.Unlock()
+	coord.health.RecordHeartbeat("w1")
+
+	// Submit work
+	err := coord.SubmitWork(&WorkItem{
+		RepoName: "test-repo",
+		Prompt:   "fix lint",
+		Priority: 5,
+	})
+	if err != nil {
+		t.Fatalf("submit: %v", err)
+	}
+
+	// Drain the worker
+	if err := coord.DrainWorker("w1"); err != nil {
+		t.Fatalf("drain: %v", err)
+	}
+
+	// Verify status is draining
+	coord.mu.RLock()
+	if coord.workers["w1"].Status != WorkerDraining {
+		t.Errorf("status after drain: got %q, want draining", coord.workers["w1"].Status)
+	}
+	coord.mu.RUnlock()
+
+	// Draining worker should not receive new work
+	coord.mu.RLock()
+	w := coord.workers["w1"]
+	coord.mu.RUnlock()
+	item := coord.assignWork("w1", w)
+	if item != nil {
+		t.Error("draining worker should not receive new work")
+	}
+
+	// Drain non-existent worker should error
+	if err := coord.DrainWorker("no-such"); err == nil {
+		t.Error("expected error draining non-existent worker")
+	}
+}
+
+func TestDrainWorker_ActiveWorkContinues(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Register worker
+	coord.mu.Lock()
+	coord.workers["w1"] = &WorkerInfo{
+		ID:            "w1",
+		Status:        WorkerOnline,
+		Providers:     []session.Provider{session.ProviderClaude},
+		Repos:         []string{"test-repo"},
+		MaxSessions:   4,
+		LastHeartbeat: time.Now(),
+	}
+	coord.mu.Unlock()
+	coord.health.RecordHeartbeat("w1")
+
+	// Submit and assign work
+	err := coord.SubmitWork(&WorkItem{
+		RepoName: "test-repo",
+		Prompt:   "fix lint",
+		Priority: 5,
+	})
+	if err != nil {
+		t.Fatalf("submit: %v", err)
+	}
+
+	coord.mu.RLock()
+	w := coord.workers["w1"]
+	coord.mu.RUnlock()
+	item := coord.assignWork("w1", w)
+	if item == nil {
+		t.Fatal("expected work to be assigned")
+	}
+
+	// Drain the worker while work is active
+	if err := coord.DrainWorker("w1"); err != nil {
+		t.Fatalf("drain: %v", err)
+	}
+
+	// Active work item should still be assigned (not reclaimed)
+	active, ok := coord.queue.Get(item.ID)
+	if !ok {
+		t.Fatal("work item should still exist")
+	}
+	if active.Status != WorkAssigned {
+		t.Errorf("active work status: got %q, want assigned", active.Status)
+	}
+	if active.AssignedTo != "w1" {
+		t.Errorf("active work assigned to: got %q, want w1", active.AssignedTo)
+	}
+
+	// Worker should not be drained yet (still has active work)
+	if coord.IsWorkerDrained("w1") {
+		t.Error("worker should not be drained while work is active")
+	}
+}
+
+func TestIsWorkerDrained_NoActiveWork(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Register worker
+	coord.mu.Lock()
+	coord.workers["w1"] = &WorkerInfo{
+		ID:            "w1",
+		Status:        WorkerOnline,
+		Providers:     []session.Provider{session.ProviderClaude},
+		Repos:         []string{"test-repo"},
+		MaxSessions:   4,
+		LastHeartbeat: time.Now(),
+	}
+	coord.mu.Unlock()
+	coord.health.RecordHeartbeat("w1")
+
+	// Submit and assign work
+	err := coord.SubmitWork(&WorkItem{
+		RepoName: "test-repo",
+		Prompt:   "fix lint",
+		Priority: 5,
+	})
+	if err != nil {
+		t.Fatalf("submit: %v", err)
+	}
+
+	coord.mu.RLock()
+	w := coord.workers["w1"]
+	coord.mu.RUnlock()
+	item := coord.assignWork("w1", w)
+	if item == nil {
+		t.Fatal("expected work to be assigned")
+	}
+
+	// Drain the worker
+	if err := coord.DrainWorker("w1"); err != nil {
+		t.Fatalf("drain: %v", err)
+	}
+
+	// Not drained yet — work still active
+	if coord.IsWorkerDrained("w1") {
+		t.Error("should not be drained with active work")
+	}
+
+	// Complete the work
+	completePayload := `{"work_item_id":"` + item.ID + `","status":"completed","result":{"session_id":"s1","spent_usd":1.00,"turn_count":5,"duration_seconds":60}}`
+	req := httptest.NewRequest("POST", "/api/v1/work/complete", strings.NewReader(completePayload))
+	rec := httptest.NewRecorder()
+	coord.handleWorkComplete(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("complete: got %d", rec.Code)
+	}
+
+	// Now worker should be drained
+	if !coord.IsWorkerDrained("w1") {
+		t.Error("worker should be drained after all work completed")
+	}
+
+	// IsWorkerDrained for non-existent worker returns false
+	if coord.IsWorkerDrained("no-such") {
+		t.Error("non-existent worker should not be considered drained")
+	}
+
+	// IsWorkerDrained for non-draining worker returns false
+	coord.mu.Lock()
+	coord.workers["w2"] = &WorkerInfo{
+		ID:     "w2",
+		Status: WorkerOnline,
+	}
+	coord.mu.Unlock()
+	if coord.IsWorkerDrained("w2") {
+		t.Error("online worker should not be considered drained")
+	}
+
+	// Draining worker can be resumed
+	if err := coord.ResumeWorker("w1"); err != nil {
+		t.Fatalf("resume draining worker: %v", err)
+	}
+	coord.mu.RLock()
+	if coord.workers["w1"].Status != WorkerOnline {
+		t.Errorf("status after resume: got %q, want online", coord.workers["w1"].Status)
+	}
+	coord.mu.RUnlock()
+}
+
+func TestDrainWorker_HeartbeatPreservesStatus(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Register worker via handler
+	payload := `{"hostname":"drain-test","tailscale_ip":"100.1.2.3","port":9473,"providers":["claude"],"repos":["test-repo"],"max_sessions":4}`
+	req := httptest.NewRequest("POST", "/api/v1/register", strings.NewReader(payload))
+	w := httptest.NewRecorder()
+	coord.handleRegister(w, req)
+
+	var resp map[string]any
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	workerID, _ := resp["worker_id"].(string)
+
+	// Drain the worker
+	if err := coord.DrainWorker(workerID); err != nil {
+		t.Fatalf("drain: %v", err)
+	}
+
+	// Send heartbeat — should not overwrite draining status
+	hb := HeartbeatPayload{
+		WorkerID:       workerID,
+		ActiveSessions: 0,
+		Providers:      []session.Provider{session.ProviderClaude},
+	}
+	hbData, _ := json.Marshal(hb)
+	req2 := httptest.NewRequest("POST", "/api/v1/heartbeat", strings.NewReader(string(hbData)))
+	w2 := httptest.NewRecorder()
+	coord.handleHeartbeat(w2, req2)
+
+	if w2.Code != 200 {
+		t.Fatalf("heartbeat: got %d", w2.Code)
+	}
+
+	// Status should still be draining
+	coord.mu.RLock()
+	status := coord.workers[workerID].Status
+	coord.mu.RUnlock()
+	if status != WorkerDraining {
+		t.Errorf("status after heartbeat: got %q, want draining", status)
+	}
+
+	// expireWorkers should also preserve draining status
+	coord.expireWorkers()
+
+	coord.mu.RLock()
+	status = coord.workers[workerID].Status
+	coord.mu.RUnlock()
+	if status != WorkerDraining {
+		t.Errorf("status after expireWorkers: got %q, want draining", status)
+	}
+}

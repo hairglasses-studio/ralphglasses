@@ -167,7 +167,10 @@ func (c *Coordinator) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 	c.mu.Lock()
 	worker, ok := c.workers[payload.WorkerID]
 	if ok {
-		worker.Status = WorkerOnline
+		// Preserve manually-set statuses (paused, draining)
+		if worker.Status != WorkerPaused && worker.Status != WorkerDraining {
+			worker.Status = WorkerOnline
+		}
 		worker.LastHeartbeat = time.Now()
 		worker.ActiveSessions = payload.ActiveSessions
 		worker.SpentUSD = payload.SpentUSD
@@ -469,8 +472,8 @@ func (c *Coordinator) buildCandidates() []WorkerCandidate {
 
 	candidates := make([]WorkerCandidate, 0, len(c.workers))
 	for _, w := range c.workers {
-		// Skip paused workers from routing candidates
-		if w.Status == WorkerPaused {
+		// Skip paused and draining workers from routing candidates
+		if w.Status == WorkerPaused || w.Status == WorkerDraining {
 			continue
 		}
 		candidates = append(candidates, WorkerCandidate{
@@ -512,9 +515,9 @@ func (c *Coordinator) assignWork(workerID string, worker *WorkerInfo) *WorkItem 
 		routerBoost = 15
 	}
 
-	// Skip if this worker is paused
+	// Skip if this worker is paused or draining
 	c.mu.RLock()
-	if w, ok := c.workers[workerID]; ok && w.Status == WorkerPaused {
+	if w, ok := c.workers[workerID]; ok && (w.Status == WorkerPaused || w.Status == WorkerDraining) {
 		c.mu.RUnlock()
 		return nil
 	}
@@ -605,6 +608,10 @@ func (c *Coordinator) expireWorkers() {
 
 	now := time.Now()
 	for _, w := range c.workers {
+		// Preserve manually-set statuses (paused, draining)
+		if w.Status == WorkerPaused || w.Status == WorkerDraining {
+			continue
+		}
 		since := now.Sub(w.LastHeartbeat)
 		switch {
 		case since > DisconnectThreshold:
@@ -721,7 +728,7 @@ func (c *Coordinator) PauseWorker(workerID string) error {
 	return nil
 }
 
-// ResumeWorker sets a paused worker's status back to online.
+// ResumeWorker sets a paused or draining worker's status back to online.
 func (c *Coordinator) ResumeWorker(workerID string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -730,11 +737,44 @@ func (c *Coordinator) ResumeWorker(workerID string) error {
 	if !ok {
 		return fmt.Errorf("worker %s not found", workerID)
 	}
-	if w.Status != WorkerPaused {
-		return fmt.Errorf("worker %s is not paused (status: %s)", workerID, w.Status)
+	if w.Status != WorkerPaused && w.Status != WorkerDraining {
+		return fmt.Errorf("worker %s is not paused or draining (status: %s)", workerID, w.Status)
 	}
 	w.Status = WorkerOnline
 	return nil
+}
+
+// DrainWorker sets a worker's status to draining: no new work will be assigned,
+// but existing active work continues to completion. Returns immediately (non-blocking).
+func (c *Coordinator) DrainWorker(workerID string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	w, ok := c.workers[workerID]
+	if !ok {
+		return fmt.Errorf("worker %s not found", workerID)
+	}
+	w.Status = WorkerDraining
+	return nil
+}
+
+// IsWorkerDrained returns true when a worker is in draining status and has no
+// active (assigned or running) work items remaining.
+func (c *Coordinator) IsWorkerDrained(workerID string) bool {
+	c.mu.RLock()
+	w, ok := c.workers[workerID]
+	c.mu.RUnlock()
+
+	if !ok || w.Status != WorkerDraining {
+		return false
+	}
+
+	for _, item := range c.queue.All() {
+		if item.AssignedTo == workerID && (item.Status == WorkAssigned || item.Status == WorkRunning) {
+			return false
+		}
+	}
+	return true
 }
 
 // helper functions
