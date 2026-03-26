@@ -72,6 +72,10 @@ type KeyMap struct {
 	LoopCtrlStep     key.Binding
 	LoopCtrlToggle   key.Binding
 	LoopCtrlPause    key.Binding
+
+	// Observation and event log views
+	ObservationView key.Binding
+	EventLogView    key.Binding
 }
 
 // DefaultKeyMap returns the default key bindings.
@@ -245,6 +249,14 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("p"),
 			key.WithHelp("p", "Pause / resume"),
 		),
+		ObservationView: key.NewBinding(
+			key.WithKeys("o"),
+			key.WithHelp("o", "Observation sparklines"),
+		),
+		EventLogView: key.NewBinding(
+			key.WithKeys("e"),
+			key.WithHelp("e", "Event log"),
+		),
 	}
 }
 
@@ -279,6 +291,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 	k.LoopCtrlStep.SetEnabled(true)
 	k.LoopCtrlToggle.SetEnabled(true)
 	k.LoopCtrlPause.SetEnabled(true)
+	k.ObservationView.SetEnabled(true)
+	k.EventLogView.SetEnabled(true)
 
 	switch view {
 	case ViewOverview:
@@ -303,6 +317,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopCtrlStep.SetEnabled(false)
 		k.LoopCtrlToggle.SetEnabled(false)
 		k.LoopCtrlPause.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
 	case ViewRepoDetail:
 		k.Space.SetEnabled(false)
 		k.OutputView.SetEnabled(false)
@@ -315,6 +330,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopCtrlStep.SetEnabled(false)
 		k.LoopCtrlToggle.SetEnabled(false)
 		k.LoopCtrlPause.SetEnabled(false)
+		k.EventLogView.SetEnabled(false) // 'e' is EditConfig here
 	case ViewSessions:
 		k.StartLoop.SetEnabled(false)
 		k.PauseLoop.SetEnabled(false)
@@ -333,6 +349,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopCtrlStep.SetEnabled(false)
 		k.LoopCtrlToggle.SetEnabled(false)
 		k.LoopCtrlPause.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
 	case ViewSessionDetail:
 		k.StartLoop.SetEnabled(false)
 		k.PauseLoop.SetEnabled(false)
@@ -350,6 +367,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopCtrlStep.SetEnabled(false)
 		k.LoopCtrlToggle.SetEnabled(false)
 		k.LoopCtrlPause.SetEnabled(false)
+		k.ObservationView.SetEnabled(false) // 'o' is OutputView here
 	case ViewTeams:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -371,6 +389,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopCtrlStep.SetEnabled(false)
 		k.LoopCtrlToggle.SetEnabled(false)
 		k.LoopCtrlPause.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
 	case ViewTeamDetail:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -390,6 +409,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopCtrlStep.SetEnabled(false)
 		k.LoopCtrlToggle.SetEnabled(false)
 		k.LoopCtrlPause.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
 	case ViewFleet:
 		k.StartLoop.SetEnabled(false)
 		k.PauseLoop.SetEnabled(false)
@@ -408,6 +428,7 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopCtrlStep.SetEnabled(false)
 		k.LoopCtrlToggle.SetEnabled(false)
 		k.LoopCtrlPause.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
 	case ViewLogs:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -429,6 +450,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopCtrlStep.SetEnabled(false)
 		k.LoopCtrlToggle.SetEnabled(false)
 		k.LoopCtrlPause.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
+		k.EventLogView.SetEnabled(false)
 	case ViewConfigEditor:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -448,6 +471,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopCtrlStep.SetEnabled(false)
 		k.LoopCtrlToggle.SetEnabled(false)
 		k.LoopCtrlPause.SetEnabled(false)
+		k.EventLogView.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
 	case ViewTimeline:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -469,6 +494,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopCtrlStep.SetEnabled(false)
 		k.LoopCtrlToggle.SetEnabled(false)
 		k.LoopCtrlPause.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
+		k.EventLogView.SetEnabled(false)
 	case ViewDiff:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -489,6 +516,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopCtrlStep.SetEnabled(false)
 		k.LoopCtrlToggle.SetEnabled(false)
 		k.LoopCtrlPause.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
+		k.EventLogView.SetEnabled(false)
 	case ViewHelp:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -506,6 +535,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopListPause.SetEnabled(false)
 		k.LoopDetailStep.SetEnabled(false)
 		k.LoopDetailToggle.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
+		k.EventLogView.SetEnabled(false)
 	case ViewLoopList:
 		k.StartLoop.SetEnabled(false)
 		k.StopAction.SetEnabled(false)
@@ -525,6 +556,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopCtrlStep.SetEnabled(false)
 		k.LoopCtrlToggle.SetEnabled(false)
 		k.LoopCtrlPause.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
+		k.EventLogView.SetEnabled(false)
 		// LoopListStart, LoopListStop, and LoopListPause remain enabled
 	case ViewLoopDetail:
 		k.StartLoop.SetEnabled(false)
@@ -546,6 +579,8 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopCtrlToggle.SetEnabled(false)
 		k.LoopCtrlPause.SetEnabled(false)
 		k.Refresh.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
+		k.EventLogView.SetEnabled(false)
 		// LoopDetailStep, LoopDetailToggle, and LoopDetailPause remain enabled
 	case ViewLoopControl:
 		k.StartLoop.SetEnabled(false)
@@ -567,7 +602,33 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopDetailStep.SetEnabled(false)
 		k.LoopDetailToggle.SetEnabled(false)
 		k.LoopDetailPause.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
+		k.EventLogView.SetEnabled(false)
 		// LoopCtrlStep, LoopCtrlToggle, and LoopCtrlPause remain enabled
+	case ViewObservation, ViewEventLog:
+		// Read-only views — disable all action keys
+		k.StartLoop.SetEnabled(false)
+		k.StopAction.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.DiffView.SetEnabled(false)
+		k.Space.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+		k.TimelineView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
+		k.LoopListPause.SetEnabled(false)
+		k.LoopDetailStep.SetEnabled(false)
+		k.LoopDetailToggle.SetEnabled(false)
+		k.LoopDetailPause.SetEnabled(false)
+		k.LoopCtrlStep.SetEnabled(false)
+		k.LoopCtrlToggle.SetEnabled(false)
+		k.LoopCtrlPause.SetEnabled(false)
+		k.ObservationView.SetEnabled(false)
+		k.EventLogView.SetEnabled(false)
 	}
 }
 
@@ -592,14 +653,14 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 func (k KeyMap) HelpGroups() []views.HelpGroup {
 	return []views.HelpGroup{
 		{Name: "Navigation", Bindings: []key.Binding{k.Tab1, k.Tab2, k.Tab3, k.Tab4}},
-		{Name: "Global", Bindings: []key.Binding{k.Quit, k.CmdMode, k.FilterMode, k.Help, k.Escape, k.Refresh}},
+		{Name: "Global", Bindings: []key.Binding{k.Quit, k.CmdMode, k.FilterMode, k.Help, k.Escape, k.Refresh, k.EventLogView}},
 		{Name: "Loop List", Bindings: []key.Binding{k.LoopPanel, k.LoopListStart, k.LoopListStop, k.LoopListPause}},
 		{Name: "Loop Detail", Bindings: []key.Binding{k.LoopDetailStep, k.LoopDetailToggle, k.LoopDetailPause}},
 		{Name: "Loop Control", Bindings: []key.Binding{k.LoopControlPanel, k.LoopCtrlStep, k.LoopCtrlToggle, k.LoopCtrlPause}},
 		{Name: "Repos Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StartLoop, k.StopAction, k.PauseLoop}},
 		{Name: "Sessions Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StopAction}},
 		{Name: "Teams Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort}},
-		{Name: "Repo Detail", Bindings: []key.Binding{k.Enter, k.EditConfig, k.StartLoop, k.StopAction, k.PauseLoop, k.DiffView, k.LoopHealth}},
+		{Name: "Repo Detail", Bindings: []key.Binding{k.Enter, k.EditConfig, k.StartLoop, k.StopAction, k.PauseLoop, k.DiffView, k.LoopHealth, k.ObservationView}},
 		{Name: "Session Detail", Bindings: []key.Binding{k.Enter, k.OutputView, k.DiffView, k.TimelineView, k.StopAction}},
 		{Name: "Team Detail", Bindings: []key.Binding{k.Enter, k.DiffView, k.TimelineView}},
 		{Name: "Fleet", Bindings: []key.Binding{k.Down, k.Enter, k.StopAction, k.DiffView, k.TimelineView}},
@@ -637,6 +698,8 @@ func init() {
 		{func(km *KeyMap) key.Binding { return km.Tab2 }, handleTab2},
 		{func(km *KeyMap) key.Binding { return km.Tab3 }, handleTab3},
 		{func(km *KeyMap) key.Binding { return km.Tab4 }, handleTab4},
+		{func(km *KeyMap) key.Binding { return km.ObservationView }, handleObservationView},
+		{func(km *KeyMap) key.Binding { return km.EventLogView }, handleEventLogView},
 		{func(km *KeyMap) key.Binding { return km.LoopListStart }, handleLoopListStart},
 		{func(km *KeyMap) key.Binding { return km.LoopListStop }, handleLoopListStop},
 		{func(km *KeyMap) key.Binding { return km.LoopListPause }, handleLoopListPause},
@@ -680,6 +743,28 @@ func handleLoopPanel(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 func handleLoopControlPanel(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	m.refreshLoopControlData()
 	m.pushView(ViewLoopControl, "Loop Control")
+	return *m, nil
+}
+
+func handleObservationView(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.SelectedIdx < 0 || m.SelectedIdx >= len(m.Repos) {
+		return *m, nil
+	}
+	m.pushView(ViewObservation, "Observations")
+	return *m, nil
+}
+
+func handleEventLogView(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.EventLog == nil {
+		m.EventLog = views.NewEventLogView()
+		m.EventLog.SetDimensions(m.Width, m.Height)
+	}
+	// Load recent history from event bus
+	if m.EventBus != nil {
+		history := m.EventBus.History("", 200)
+		m.EventLog.LoadHistory(history)
+	}
+	m.pushView(ViewEventLog, "Event Log")
 	return *m, nil
 }
 
