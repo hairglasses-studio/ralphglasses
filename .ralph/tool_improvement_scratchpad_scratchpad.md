@@ -26,3 +26,34 @@ Migrated all ~75 legacy error helper calls (`invalidParams()`, `notFound()`, `in
 - Investigate benchmark regressions (timeout middleware vs baseline)
 - Consider adding `ErrBudgetExceeded`, `ErrTimeout` error codes for budget/timeout-specific failures
 - Run full E2E tool probe to validate error code format consistency
+
+## Cycle 2 Results (2026-03-26)
+
+**Status**: Complete — 34/34 packages pass, 0 race conditions, pushed to main.
+
+### Coverage Gains
+| Package | Before | After |
+|---------|--------|-------|
+| sandbox | 8.7% | 95.1% |
+| roadmap | 63.1% | 97.5% |
+| tui | 29.5% | 52.5% |
+| fleet | 71.9% | 82.4% |
+| mcpserver | 65.4% | 71.7% |
+| session | 70.1% | 80.8% |
+
+### File Splits
+- `mcpserver/tools.go` (972 LOC) → `tools.go` + `tools_session.go` + `tools_fleet.go`
+- `fleet/server.go` (938 LOC) → `server.go` + `server_handlers.go` + `server_queue.go`
+- `session/providers.go` (785 LOC) → `providers.go` + `providers_normalize.go`
+- `session/loop.go` (732 LOC) → `loop.go` + `loop_steps.go`
+
+### Bugs Fixed
+- Git command timeout hangs in session + mcpserver tests (bare `exec.Command` without context timeout + GPG signing = infinite hang)
+- Data race in `util/debug_test.go` (parallel tests mutating global `Debug.Enabled` and `os.Stderr`)
+- WS4/WS5 merge conflict in `handler_fleet_test.go` (both agents added different tests to same file)
+
+### Remaining Gaps
+- tui/styles: 13.3% (low priority)
+- mcpserver: 71.7% (target 80% — needs more handler tests)
+- tui core: 52.5% (target 60% — close)
+- session/manager.go: 758 LOC (deferred split)
