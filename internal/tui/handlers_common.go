@@ -482,3 +482,24 @@ func (m *Model) findFullSessionID(prefix string) string {
 	}
 	return ""
 }
+
+// --- Event log view dispatch table ---
+
+var eventLogKeys = []ViewKeyEntry{
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		if m.EventLog != nil {
+			m.EventLog.ScrollDown()
+		}
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		if m.EventLog != nil {
+			m.EventLog.ScrollUp()
+		}
+		return *m, nil
+	}},
+}
+
+func (m Model) handleEventLogKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	return dispatchViewKeys(eventLogKeys, &m, msg)
+}
