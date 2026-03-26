@@ -155,6 +155,55 @@ func (s *Server) handleScratchpadList(_ context.Context, req mcp.CallToolRequest
 	return jsonResult(names), nil
 }
 
+func (s *Server) handleScratchpadDelete(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "scratchpad")
+	if name == "" {
+		return codedError(ErrInvalidParams, "scratchpad is required"), nil
+	}
+	findingID := getStringArg(req, "finding_id")
+	if findingID == "" {
+		return codedError(ErrInvalidParams, "finding_id is required"), nil
+	}
+
+	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
+	if err != nil {
+		return codedError(ErrInvalidParams, err.Error()), nil
+	}
+
+	path := filepath.Join(repoPath, ".ralph", name+"_scratchpad.md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return codedError(ErrFilesystem, fmt.Sprintf("scratchpad %q not found", name)), nil
+		}
+		return codedError(ErrFilesystem, fmt.Sprintf("read scratchpad: %v", err)), nil
+	}
+
+	prefix := findingID + ". "
+	lines := strings.Split(string(data), "\n")
+	found := false
+	deletedSummary := ""
+	var remaining []string
+	for _, line := range lines {
+		if strings.HasPrefix(line, prefix) {
+			found = true
+			deletedSummary = line
+			continue
+		}
+		remaining = append(remaining, line)
+	}
+
+	if !found {
+		return codedError(ErrInvalidParams, fmt.Sprintf("finding %s not found in scratchpad %s", findingID, name)), nil
+	}
+
+	if err := os.WriteFile(path, []byte(strings.Join(remaining, "\n")), 0o644); err != nil {
+		return codedError(ErrFilesystem, fmt.Sprintf("write scratchpad: %v", err)), nil
+	}
+
+	return textResult(fmt.Sprintf("Deleted finding %s from %s scratchpad: %s", findingID, name, deletedSummary)), nil
+}
+
 func (s *Server) handleScratchpadResolve(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "name")
 	if name == "" {
