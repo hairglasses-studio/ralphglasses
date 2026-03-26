@@ -203,7 +203,7 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 
 	// Status and verification
 	obs.Status = iter.Status
-	obs.VerifyPassed = iter.Status == "idle"
+	obs.VerifyPassed = iter.Status != "failed" && iter.Error == ""
 	obs.Error = iter.Error
 
 	// Eagerly capture cost from session objects via Manager.Get()

@@ -1485,7 +1485,9 @@ func (m *Manager) updateLoopIteration(run *LoopRun, index int, status string, mu
 	if index < 0 || index >= len(run.Iterations) {
 		return
 	}
-	run.Iterations[index].Status = status
+	if status != "" {
+		run.Iterations[index].Status = status
+	}
 	if mutate != nil {
 		mutate(&run.Iterations[index], run)
 	}
