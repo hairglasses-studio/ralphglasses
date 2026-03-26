@@ -31,11 +31,23 @@ func (s *Server) resolveRepoPath(repo string) (string, error) {
 		return r.Path, nil
 	}
 
-	// No repo specified — use single discovered repo or require explicit param.
+	// No repo specified — try CWD, then single discovered repo, then ScanPath.
 	if s.reposNil() {
 		_ = s.scan()
 	}
 	repos := s.reposCopy()
+
+	// If CWD is inside a discovered repo, use that repo automatically.
+	if len(repos) > 1 {
+		if cwd, err := os.Getwd(); err == nil {
+			for _, r := range repos {
+				if strings.HasPrefix(cwd, r.Path) {
+					return r.Path, nil
+				}
+			}
+		}
+	}
+
 	if len(repos) == 1 {
 		return repos[0].Path, nil
 	}
