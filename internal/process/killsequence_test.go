@@ -55,18 +55,18 @@ func (h *killSequenceHarness) sleepFn(_ time.Duration) {
 
 // install replaces the package-level stubs and returns a restore function.
 func (h *killSequenceHarness) install() func() {
-	origKill := killPid
+	origKill := *killPidPtr.Load()
 	origSleep := *sleepFnPtr.Load()
-	origAlive := aliveFn
+	origAlive := *aliveFnPtr.Load()
 
-	killPid = h.killFn
+	setKillPid(h.killFn)
 	setSleepFn(h.sleepFn)
-	aliveFn = h.aliveFn
+	setAliveFn(h.aliveFn)
 
 	return func() {
-		killPid = origKill
+		setKillPid(origKill)
 		setSleepFn(origSleep)
-		aliveFn = origAlive
+		setAliveFn(origAlive)
 	}
 }
 
@@ -112,7 +112,7 @@ func TestKillSequence_PrimaryExitsAfterSIGTERM(t *testing.T) {
 
 	// Override killFn to also mark primary as dead on SIGTERM.
 	origKill := h.killFn
-	killPid = func(pid int, sig syscall.Signal) error {
+	setKillPid(func(pid int, sig syscall.Signal) error {
 		err := origKill(pid, sig)
 		if pid == 100 && sig == syscall.SIGTERM {
 			h.mu.Lock()
@@ -120,7 +120,7 @@ func TestKillSequence_PrimaryExitsAfterSIGTERM(t *testing.T) {
 			h.mu.Unlock()
 		}
 		return err
-	}
+	})
 
 	runKillSequence(100, []int{200}, DefaultKillTimeout)
 
@@ -152,7 +152,7 @@ func TestKillSequence_AllExitBeforeSIGKILL(t *testing.T) {
 	defer h.install()()
 
 	origKill := h.killFn
-	killPid = func(pid int, sig syscall.Signal) error {
+	setKillPid(func(pid int, sig syscall.Signal) error {
 		err := origKill(pid, sig)
 		if sig == syscall.SIGTERM {
 			h.mu.Lock()
@@ -160,7 +160,7 @@ func TestKillSequence_AllExitBeforeSIGKILL(t *testing.T) {
 			h.mu.Unlock()
 		}
 		return err
-	}
+	})
 
 	runKillSequence(100, []int{200}, DefaultKillTimeout)
 
