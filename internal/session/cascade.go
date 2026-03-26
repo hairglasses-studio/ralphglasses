@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -20,7 +22,19 @@ type CascadeConfig struct {
 	MaxCheapTurns        int                 `json:"max_cheap_turns"`
 	TaskTypeOverrides    map[string]Provider `json:"task_type_overrides"`
 	SpeculativeExecution bool                `json:"speculative_execution"`
+	LatencyThresholdMs   int                 `json:"latency_threshold_ms"` // 0 = disabled; if cheap P95 exceeds this, skip to expensive
 }
+
+// ProviderLatency holds latency percentiles for a provider.
+type ProviderLatency struct {
+	P50         time.Duration `json:"p50"`
+	P95         time.Duration `json:"p95"`
+	Samples     int           `json:"samples"`
+	LastUpdated time.Time     `json:"last_updated"`
+}
+
+// latencyWindowSize is the maximum number of samples kept per provider.
+const latencyWindowSize = 100
 
 // DefaultCascadeConfig returns sensible defaults.
 func DefaultCascadeConfig() CascadeConfig {
@@ -101,6 +115,7 @@ type CascadeRouter struct {
 	results   []CascadeResult
 	stateDir  string
 	tiers     []ModelTier
+	latencies map[string][]time.Duration // provider -> sliding window of recent latencies
 
 	// banditSelect is an optional function that selects a provider using bandit policy.
 	// Set via SetBanditHooks. When configured and enough history exists, SelectTier
@@ -126,17 +141,31 @@ func NewCascadeRouter(config CascadeConfig, feedback *FeedbackAnalyzer, decision
 		decisions: decisions,
 		stateDir:  stateDir,
 		tiers:     DefaultModelTiers(),
+		latencies: make(map[string][]time.Duration),
 	}
 	cr.loadResults()
 	return cr
 }
 
 // ShouldCascade returns true if the task should attempt cheap-first routing.
-// Returns false if the task type has an override or if the cheap provider
-// is already proven reliable for this task type.
+// Returns false if the task type has an override, if the cheap provider
+// is already proven reliable for this task type, or if the cheap provider's
+// latency exceeds the configured threshold.
 func (cr *CascadeRouter) ShouldCascade(taskType string, prompt string) bool {
 	// If task type has an override, skip cascading — use the override directly
 	if _, ok := cr.config.TaskTypeOverrides[taskType]; ok {
+		return false
+	}
+
+	// If cheap provider is too slow, skip cascading and go to expensive directly.
+	cr.mu.Lock()
+	slow := cr.cheapProviderSlow()
+	cr.mu.Unlock()
+	if slow {
+		slog.Info("cascade: skipping cheap provider due to high latency",
+			"cheap_provider", cr.config.CheapProvider,
+			"threshold_ms", cr.config.LatencyThresholdMs,
+		)
 		return false
 	}
 
@@ -155,12 +184,21 @@ func (cr *CascadeRouter) ShouldCascade(taskType string, prompt string) bool {
 }
 
 // ResolveProvider returns the provider to use for a given task type.
-// If there is an override, returns the override. If cheap is reliable,
-// returns cheap. Otherwise returns expensive (caller should use cascade logic).
+// If there is an override, returns the override. If cheap is reliable and
+// not experiencing high latency, returns cheap. Otherwise returns expensive
+// (caller should use cascade logic).
 func (cr *CascadeRouter) ResolveProvider(taskType string) Provider {
 	// Check for task type override
 	if override, ok := cr.config.TaskTypeOverrides[taskType]; ok {
 		return override
+	}
+
+	// If cheap provider has high latency, go straight to expensive.
+	cr.mu.Lock()
+	slow := cr.cheapProviderSlow()
+	cr.mu.Unlock()
+	if slow {
+		return cr.config.ExpensiveProvider
 	}
 
 	// If cascading is not needed (cheap is reliable), use cheap directly
@@ -569,6 +607,74 @@ func (cr *CascadeRouter) logDecision(taskType, action, rationale string, inputs 
 		Action:        action,
 		Inputs:        inputs,
 	})
+}
+
+// RecordLatency records a response duration for a provider in the sliding window.
+func (cr *CascadeRouter) RecordLatency(provider string, d time.Duration) {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+
+	samples := cr.latencies[provider]
+	if len(samples) >= latencyWindowSize {
+		// Drop the oldest sample.
+		samples = samples[1:]
+	}
+	cr.latencies[provider] = append(samples, d)
+}
+
+// GetProviderLatency returns the current latency stats for a provider, or nil
+// if no samples have been recorded.
+func (cr *CascadeRouter) GetProviderLatency(provider string) *ProviderLatency {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+
+	samples := cr.latencies[provider]
+	if len(samples) == 0 {
+		return nil
+	}
+
+	return &ProviderLatency{
+		P50:         computePercentile(samples, 50),
+		P95:         computePercentile(samples, 95),
+		Samples:     len(samples),
+		LastUpdated: time.Now(),
+	}
+}
+
+// cheapProviderSlow returns true if the cheap provider's P95 latency exceeds
+// the configured LatencyThresholdMs. Returns false when the threshold is
+// disabled (0), when there are no samples, or when P95 is within bounds.
+func (cr *CascadeRouter) cheapProviderSlow() bool {
+	if cr.config.LatencyThresholdMs <= 0 {
+		return false
+	}
+	samples := cr.latencies[string(cr.config.CheapProvider)]
+	if len(samples) == 0 {
+		return false
+	}
+	p95 := computePercentile(samples, 95)
+	threshold := time.Duration(cr.config.LatencyThresholdMs) * time.Millisecond
+	return p95 > threshold
+}
+
+// computePercentile calculates the pth percentile of a duration slice using
+// nearest-rank. The input slice is not modified.
+func computePercentile(samples []time.Duration, p int) time.Duration {
+	if len(samples) == 0 {
+		return 0
+	}
+	sorted := make([]time.Duration, len(samples))
+	copy(sorted, samples)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+
+	rank := int(math.Ceil(float64(p)/100.0*float64(len(sorted)))) - 1
+	if rank < 0 {
+		rank = 0
+	}
+	if rank >= len(sorted) {
+		rank = len(sorted) - 1
+	}
+	return sorted[rank]
 }
 
 // cascadeResultsFile is the file name for persisted cascade results.
