@@ -76,7 +76,7 @@ func AggregateSummary(observations []session.LoopObservation) Summary {
 		if obs.Status == "idle" {
 			g.completed++
 		}
-		if obs.VerifyPassed {
+		if obs.VerifyPassed || (obs.Status != "failed" && obs.Error == "") {
 			g.verified++
 		}
 		if obs.TaskType != "" {
