@@ -871,6 +871,55 @@ func TestPublishSetsDefaultVersion(t *testing.T) {
 	}
 }
 
+func TestPublishWarnsUnknownType(t *testing.T) {
+	var buf bytes.Buffer
+	handler := slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})
+	oldLogger := slog.Default()
+	slog.SetDefault(slog.New(handler))
+	defer slog.SetDefault(oldLogger)
+
+	bus := NewBus(100)
+	bus.Publish(Event{Type: "totally.bogus"})
+
+	logged := buf.String()
+	if !strings.Contains(logged, "unknown event type published") {
+		t.Errorf("expected 'unknown event type published' in log output, got: %s", logged)
+	}
+	if !strings.Contains(logged, "totally.bogus") {
+		t.Errorf("expected event type in log output, got: %s", logged)
+	}
+}
+
+func TestCloseFlushes(t *testing.T) {
+	dir := t.TempDir()
+	persistPath := filepath.Join(dir, "flush_events.jsonl")
+
+	bus := NewBus(200)
+	bus.AsyncWrites = true
+	if err := bus.PersistTo(persistPath); err != nil {
+		t.Fatal(err)
+	}
+	bus.StartAsync()
+
+	const total = 50
+	for i := 0; i < total; i++ {
+		bus.Publish(Event{Type: LoopIterated, Data: map[string]any{"i": i}})
+	}
+
+	// Close must drain all pending async writes
+	if err := bus.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	events, err := LoadEvents(persistPath, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != total {
+		t.Fatalf("expected %d persisted events after close, got %d", total, len(events))
+	}
+}
+
 func TestSyncWriteStillWorks(t *testing.T) {
 	dir := t.TempDir()
 	persistPath := filepath.Join(dir, "sync_events.jsonl")
