@@ -266,16 +266,15 @@ func (m *Manager) Start(repoPath string) error {
 	return nil
 }
 
-// getpgidFunc is the syscall used to look up a process group ID.
-// It is a package-level variable so tests can inject a failing implementation.
-var getpgidFunc = syscall.Getpgid
+// getpgid is a package-level indirection for syscall.Getpgid, allowing tests
+// to inject failures without modifying production logic.
+var getpgid = syscall.Getpgid
 
 // sendSignal sends a signal to a process, trying process group first.
-// If getpgid fails, logs a warning and falls back to signalling the PID directly.
 func sendSignal(pid int, sig syscall.Signal) error {
-	pgid, err := getpgidFunc(pid)
+	pgid, err := getpgid(pid)
 	if err != nil {
-		log.Printf("process: getpgid(%d) failed: %v — signalling PID directly", pid, err)
+		log.Printf("WARNING: Getpgid(%d) failed: %v; falling back to direct PID signal", pid, err)
 		return syscall.Kill(pid, sig)
 	}
 	return syscall.Kill(-pgid, sig)

@@ -721,32 +721,35 @@ func TestProcessExitMsg_SetsRepoStatus(t *testing.T) {
 }
 
 func TestTUICrashNotification(t *testing.T) {
+	const repoPath = "/tmp/crash-repo"
 	crashErr := fmt.Errorf("signal: killed")
 	msg := process.ProcessExitMsg{
-		RepoPath: "/tmp/crashrepo",
+		RepoPath: repoPath,
 		ExitCode: 1,
 		Error:    crashErr,
 	}
 
-	// Assert all three message fields before feeding to the model.
-	if msg.RepoPath == "" {
-		t.Fatal("ProcessExitMsg.RepoPath must be non-empty")
+	// Assert message fields directly — Error being non-nil on the crash
+	// branch was a previous failure point.
+	if msg.RepoPath != repoPath {
+		t.Fatalf("RepoPath = %q, want %q", msg.RepoPath, repoPath)
 	}
 	if msg.ExitCode == 0 {
-		t.Fatal("ProcessExitMsg.ExitCode must be non-zero")
+		t.Fatal("ExitCode should be non-zero for a crash")
 	}
 	if msg.Error == nil {
-		t.Fatal("ProcessExitMsg.Error must be non-nil")
+		t.Fatal("Error must be non-nil on the crash branch")
 	}
 
+	// Feed the message into the TUI model and verify status transitions to "crashed".
 	m := NewModel("/tmp/test", nil)
-	m.Repos = []*model.Repo{{Name: "crashrepo", Path: "/tmp/crashrepo"}}
+	m.Repos = []*model.Repo{{Name: "crash-repo", Path: repoPath}}
 
 	m2, _ := m.Update(msg)
 	got := m2.(Model)
 
 	if got.Repos[0].Status == nil {
-		t.Fatal("expected Status to be set after ProcessExitMsg, got nil")
+		t.Fatal("expected Status to be set, got nil")
 	}
 	if got.Repos[0].Status.Status != "crashed" {
 		t.Errorf("Status = %q, want %q", got.Repos[0].Status.Status, "crashed")
