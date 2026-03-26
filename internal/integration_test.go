@@ -3,6 +3,7 @@
 package internal
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -27,7 +28,7 @@ func TestScanRefreshCycle(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(repoDir, ".ralphrc"), []byte("PROJECT_NAME=\"integration\"\n"), 0644)
 	_ = os.WriteFile(filepath.Join(logDir, "ralph.log"), []byte("Starting loop 1\nTask completed\n"), 0644)
 
-	repos, err := discovery.Scan(root)
+	repos, err := discovery.Scan(context.Background(), root)
 	if err != nil {
 		t.Fatalf("scan: %v", err)
 	}

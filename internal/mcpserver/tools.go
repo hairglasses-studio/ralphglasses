@@ -859,7 +859,7 @@ func (s *Server) handleLoadToolGroup(_ context.Context, req mcp.CallToolRequest)
 }
 
 func (s *Server) scan() error {
-	repos, err := discovery.Scan(s.ScanPath)
+	repos, err := discovery.Scan(context.Background(), s.ScanPath)
 	if err != nil {
 		return err
 	}
