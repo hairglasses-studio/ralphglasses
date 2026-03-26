@@ -226,3 +226,20 @@ func (v *EventLogView) scrollDown() {
 		v.scrollPos++
 	}
 }
+
+// ScrollDown is the exported version of scrollDown.
+func (v *EventLogView) ScrollDown() { v.scrollDown() }
+
+// ScrollUp moves the scroll position up by one line.
+func (v *EventLogView) ScrollUp() {
+	if v.scrollPos > 0 {
+		v.scrollPos--
+	}
+}
+
+// LoadHistory populates the event log from a slice of entries.
+func (v *EventLogView) LoadHistory(entries []EventLogEntry) {
+	for _, e := range entries {
+		v.AddEntry(e)
+	}
+}
