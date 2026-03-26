@@ -678,61 +678,61 @@ func TestNormalizeClaudeEventTokenFallback(t *testing.T) {
 
 func TestParseCostFromStderr(t *testing.T) {
 	tests := []struct {
-		name  string
-		input string
-		want  float64
+		name     string
+		stderr   string
+		wantCost float64
 	}{
 		{
-			name:  "cost with dollar sign",
-			input: "Cost: $0.0023",
-			want:  0.0023,
+			name:     "cost with dollar sign",
+			stderr:   "Processing complete.\nCost: $0.0023\nDone.",
+			wantCost: 0.0023,
 		},
 		{
-			name:  "total cost without dollar sign",
-			input: "Total cost: 0.0450",
-			want:  0.0450,
+			name:     "total cost without dollar sign",
+			stderr:   "Total cost: 0.0450",
+			wantCost: 0.0450,
 		},
 		{
-			name:  "cost_usd with dollar sign",
-			input: "cost_usd: $1.23",
-			want:  1.23,
+			name:     "cost_usd field",
+			stderr:   "cost_usd: $1.23",
+			wantCost: 1.23,
 		},
 		{
-			name:  "session cost",
-			input: "Session cost: $0.05",
-			want:  0.05,
+			name:     "session cost",
+			stderr:   "Session cost: $0.05",
+			wantCost: 0.05,
 		},
 		{
-			name:  "multiple matches returns last",
-			input: "Cost: $0.01\nTotal cost: $0.09",
-			want:  0.09,
+			name:     "multiple costs uses last",
+			stderr:   "Cost: $0.01\nMore output\nTotal cost: $0.05",
+			wantCost: 0.05,
 		},
 		{
-			name:  "ansi escape codes stripped",
-			input: "\x1b[32mCost: $0.0042\x1b[0m",
-			want:  0.0042,
+			name:     "with ANSI codes",
+			stderr:   "\x1b[32mCost: $0.0023\x1b[0m",
+			wantCost: 0.0023,
 		},
 		{
-			name:  "empty input returns zero",
-			input: "",
-			want:  0,
+			name:     "no cost returns zero",
+			stderr:   "Some random output\nNo cost info here",
+			wantCost: 0,
 		},
 		{
-			name:  "no cost pattern returns zero",
-			input: "Session completed successfully.",
-			want:  0,
+			name:     "empty string returns zero",
+			stderr:   "",
+			wantCost: 0,
 		},
 		{
-			name:  "case insensitive",
-			input: "TOTAL COST: $2.50",
-			want:  2.50,
+			name:     "case insensitive",
+			stderr:   "COST: $0.12",
+			wantCost: 0.12,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ParseCostFromStderr(tt.input)
-			if got != tt.want {
-				t.Errorf("ParseCostFromStderr(%q) = %v, want %v", tt.input, got, tt.want)
+			got := ParseCostFromStderr(tt.stderr)
+			if math.Abs(got-tt.wantCost) > 1e-9 {
+				t.Errorf("ParseCostFromStderr() = %v, want %v", got, tt.wantCost)
 			}
 		})
 	}

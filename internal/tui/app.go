@@ -177,7 +177,7 @@ type Model struct {
 
 	// Loop control panel
 	LoopControlIdx  int
-	LoopControlData views.LoopControlData
+	LoopControlData []views.LoopControlData
 
 	// Loop observation cache (refreshed less often than 2s tick)
 	ObsCache     map[string][]session.LoopObservation // keyed by repo path
@@ -597,12 +597,12 @@ func (m *Model) refreshLoopView() {
 
 func (m *Model) refreshLoopControlData() {
 	if m.SessMgr == nil {
-		m.LoopControlData = views.LoopControlData{}
+		m.LoopControlData = nil
 		return
 	}
-	m.LoopControlData = views.LoopControlData{
-		Loops:    m.SessMgr.ListLoops(),
-		Selected: m.LoopControlIdx,
+	m.LoopControlData = views.SnapshotLoopControl(m.SessMgr.ListLoops())
+	if m.LoopControlIdx >= len(m.LoopControlData) {
+		m.LoopControlIdx = max(0, len(m.LoopControlData)-1)
 	}
 }
 
@@ -826,8 +826,6 @@ func (m Model) View() string {
 		b.WriteString(m.LoopListTable.View())
 		b.WriteString("\n")
 		b.WriteString(styles.HelpStyle.Render("  s start loop  x/d stop loop  p pause/resume  Enter detail  j/k navigate  Esc back"))
-	case ViewLoopControl:
-		b.WriteString(views.RenderLoopControl(m.LoopControlData, m.Width, m.Height))
 	case ViewLoopDetail:
 		if m.SessMgr != nil && m.SelectedLoop != "" {
 			if l, ok := m.SessMgr.GetLoop(m.SelectedLoop); ok {
@@ -836,6 +834,8 @@ func (m Model) View() string {
 				b.WriteString(styles.InfoStyle.Render("  Loop not found"))
 			}
 		}
+	case ViewLoopControl:
+		b.WriteString(views.RenderLoopControlPanel(m.LoopControlData, m.LoopControlIdx, m.Width, m.Height))
 	}
 
 	// Loop panel overlay
