@@ -3,6 +3,7 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -290,7 +291,10 @@ func (em *EpisodicMemory) appendToFile(ep Episode) {
 	if em.stateDir == "" {
 		return
 	}
-	_ = os.MkdirAll(em.stateDir, 0755)
+	if err := os.MkdirAll(em.stateDir, 0755); err != nil {
+		slog.Warn("failed to create episodic state dir", "dir", em.stateDir, "error", err)
+		return
+	}
 
 	data, err := json.Marshal(ep)
 	if err != nil {
@@ -301,21 +305,28 @@ func (em *EpisodicMemory) appendToFile(ep Episode) {
 	path := filepath.Join(em.stateDir, "episodes.jsonl")
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
+		slog.Warn("failed to open episodes file", "path", path, "error", err)
 		return
 	}
 	defer f.Close()
-	_, _ = f.Write(data)
+	if _, err := f.Write(data); err != nil {
+		slog.Warn("failed to write episode", "path", path, "error", err)
+	}
 }
 
 func (em *EpisodicMemory) rewriteFile() {
 	if em.stateDir == "" {
 		return
 	}
-	_ = os.MkdirAll(em.stateDir, 0755)
+	if err := os.MkdirAll(em.stateDir, 0755); err != nil {
+		slog.Warn("failed to create episodic state dir", "dir", em.stateDir, "error", err)
+		return
+	}
 
 	path := filepath.Join(em.stateDir, "episodes.jsonl")
 	f, err := os.Create(path)
 	if err != nil {
+		slog.Warn("failed to create episodes file", "path", path, "error", err)
 		return
 	}
 	defer f.Close()
@@ -325,8 +336,14 @@ func (em *EpisodicMemory) rewriteFile() {
 		if err != nil {
 			continue
 		}
-		_, _ = f.Write(data)
-		_, _ = f.Write([]byte{'\n'})
+		if _, err := f.Write(data); err != nil {
+			slog.Warn("failed to rewrite episode", "path", path, "error", err)
+			return
+		}
+		if _, err := f.Write([]byte{'\n'}); err != nil {
+			slog.Warn("failed to write episode newline", "path", path, "error", err)
+			return
+		}
 	}
 }
 
