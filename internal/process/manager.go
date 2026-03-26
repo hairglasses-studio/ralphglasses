@@ -303,11 +303,13 @@ func (m *Manager) reaperLoop(ctx context.Context, rp string, cmd *exec.Cmd) {
 					goto cleanup
 				}
 
-				// Re-check stopping flag after backoff — Stop() may have been
-				// called while we were sleeping.
+				// Re-check stopping flag after backoff — Stop() or StopAll()
+				// may have been called while we were sleeping. If the entry
+				// was deleted (StopAll) or marked as stopping, bail out to
+				// avoid launching an orphaned process.
 				m.mu.Lock()
 				mp2, ok2 := m.procs[rp]
-				if ok2 && mp2.Stopping {
+				if !ok2 || mp2.Stopping {
 					m.mu.Unlock()
 					goto cleanup
 				}
@@ -330,6 +332,9 @@ func (m *Manager) reaperLoop(ctx context.Context, rp string, cmd *exec.Cmd) {
 
 					m.mu.Lock()
 					// Check that the entry still exists and Stop hasn't claimed it.
+					// If the entry was removed (StopAll) or marked stopping while
+					// we were launching, kill the newly started process to prevent
+					// an untracked orphan.
 					if existing, ok := m.procs[rp]; ok && !existing.Stopping {
 						m.procs[rp] = &ManagedProcess{
 							Cmd:          newCmd,
@@ -337,6 +342,11 @@ func (m *Manager) reaperLoop(ctx context.Context, rp string, cmd *exec.Cmd) {
 							ChildPids:    collectChildPIDs(newPID),
 							RestartCount: restartCount + 1,
 						}
+					} else {
+						// Entry gone or stopping — kill the orphan we just spawned.
+						m.mu.Unlock()
+						_ = killPid(newPID, syscall.SIGKILL)
+						goto cleanup
 					}
 					m.mu.Unlock()
 
@@ -599,11 +609,14 @@ func (m *Manager) IsPaused(repoPath string) bool {
 }
 
 // StopAll sends SIGTERM to all managed processes.
+// It marks each process as Stopping before signaling so that reaper
+// goroutines will not race to auto-restart processes being shut down.
 func (m *Manager) StopAll(ctx context.Context) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	for path, mp := range m.procs {
+		mp.Stopping = true
 		_ = sendSignal(mp.PID, syscall.SIGTERM)
 		removePIDFile(path)
 		delete(m.procs, path)
