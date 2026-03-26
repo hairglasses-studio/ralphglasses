@@ -6,15 +6,45 @@
 - **internal/discovery/**: Scans directories for `.ralph/` and `.ralphrc`
 - **internal/model/**: Data types and parsers for status.json, progress.json, circuit breaker state, .ralphrc
 - **internal/process/**: Process management (launch/stop/pause via os/exec), fsnotify file watcher, log tailing
-- **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch, concurrent worker fan-out, autonomy levels, auto-optimization, auto-recovery, context store, HITL metrics, feedback profiling, prompt caching
+- **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch, concurrent worker fan-out, autonomy levels, auto-optimization, auto-recovery, context store, HITL metrics, feedback profiling, prompt caching, self-improvement pipeline (reflexion, episodic memory, cascade routing, curriculum sorting, bandit-based provider selection), sentinel errors, acceptance testing
 - **internal/batch/**: Batch API support for Claude, Gemini, and OpenAI — submit non-interactive workloads at 50% discount
 - **internal/wsclient/**: WebSocket transport client for OpenAI Responses API (40% faster for multi-turn tool chains)
-- **internal/mcpserver/**: MCP tool handlers (86 tools in 10 namespaces, deferred loading, stdio transport via mcp-go)
-  - `tools.go` — Server struct, constructors, Register(), all handler implementations, helpers
+- **internal/mcpserver/**: MCP tool handlers (110 tools in 13 namespaces, deferred loading, stdio transport via mcp-go)
+  - `tools.go` — Server struct, constructors, Register()
+  - `tools_builders.go` — Tool definition builders for all namespaces
+  - `tools_dispatch.go` — Dispatch table routing tool names to handlers
   - `handler_prompt.go` — Multi-provider prompt enhancement handlers
   - `handler_fleet.go` — Distributed fleet, HITL, autonomy, and feedback profile handlers
+  - `handler_fleet_h.go` — Fleet intelligence: blackboard coordination, A2A offers, cost forecasting
+  - `handler_session.go` — Session lifecycle handlers (launch, list, status, stop, etc.)
+  - `handler_loop.go` — Loop lifecycle and control handlers
+  - `handler_loopbench.go` — Loop benchmarking and baseline handlers
+  - `handler_loopwait.go` — Loop await/poll handlers (replaces sleep anti-pattern)
+  - `handler_eval.go` — Offline evaluation: counterfactual, A/B test, changepoints
+  - `handler_anomaly.go` — Anomaly detection via sliding-window z-score analysis
+  - `handler_observation.go` — Observation query and summary handlers
+  - `handler_scratchpad.go` — Scratchpad read/append/list/resolve handlers
+  - `handler_selftest.go` — Recursive self-test handler
+  - `handler_selfimprove.go` — Self-improvement loop handler
+  - `handler_rc.go` — Remote control (mobile-friendly) handlers
+  - `handler_repo.go` — Repo health, optimize, scaffold, claudemd_check, snapshot
+  - `handler_roadmap.go` — Roadmap parse, analyze, research, expand, export
+  - `handler_team.go` — Agent team create, delegate, status, agent definitions
+  - `handler_awesome.go` — Awesome-list fetch, analyze, diff, report, sync
+  - `handler_circuit.go` — Circuit breaker reset handler
+  - `handler_costestimate.go` — Pre-launch cost estimation
+  - `handler_coverage.go` — Go test coverage reporting
+  - `handler_mergeverify.go` — Build+vet+test merge verification
   - `middleware.go` — Composable middleware: InstrumentationMiddleware, EventBusMiddleware, ValidationMiddleware
+  - `timeout.go` — TimeoutMiddleware with per-tool overrides and exemptions
   - `toolbench.go` — Auto-benchmarking with JSONL logging, P50/P95 latencies, regression detection
+  - `annotations.go` — MCP tool annotation helpers
+  - `errors.go` — Coded error helpers and error constants
+  - `validate.go` — Path and repo name validation
+  - `schemas.go` — Shared JSON schema definitions
+  - `helpers.go` — Common handler helper functions
+  - `mcplog.go` — MCP-aware structured logging
+- **internal/events/**: Typed publish-subscribe event bus with `PublishCtx(ctx, Event)`, filtered subscriptions, history ring buffer, event query, and schema migration
 - **internal/enhancer/**: Prompt enhancement pipeline (13-stage), scoring, lint, multi-provider LLM improvement
 - **internal/roadmap/**: Roadmap parsing, analysis, research, expansion, export
 - **internal/repofiles/**: Ralph config file scaffolding and optimization
@@ -53,15 +83,16 @@ The `internal/session/` package uses a provider dispatch pattern:
 
 ## Middleware & Instrumentation
 
-The MCP server supports composable middleware (`internal/mcpserver/middleware.go`):
+The MCP server supports composable middleware (`internal/mcpserver/middleware.go`, `internal/mcpserver/timeout.go`):
 
-- **InstrumentationMiddleware**: Records timing, success/fail, input/output size for every tool call
-- **EventBusMiddleware**: Emits `tool.call` events to the fleet event bus for real-time monitoring
-- **ValidationMiddleware**: Pre-validates required parameters (repo path, session ID) before handler execution
+- **InstrumentationMiddleware**: Records timing, success/fail, input/output size for every tool call. Emits structured `slog` logs (`mcp.tool.call`) with tool name, duration, success status, repo correlation, and error details. Pushes counters to Prometheus when a `PrometheusRecorder` is configured.
+- **TimeoutMiddleware**: Wraps each handler with a `context.WithTimeout` deadline. Supports per-tool overrides via a `map[string]time.Duration` — a positive duration sets a custom timeout, a zero duration exempts the tool entirely from timeout enforcement.
+- **EventBusMiddleware**: Publishes `tool.called` events to the fleet event bus via `bus.PublishCtx(ctx, ...)` for real-time monitoring, respecting context cancellation.
+- **ValidationMiddleware**: Pre-validates common parameters (`repo`, `path`) before handler execution. Validates absolute paths against the scan root and relative repo names against naming rules.
 
 ### Tool Benchmarking
 
-`internal/mcpserver/toolbench.go` provides auto-benchmarking applied to all 86 tools:
+`internal/mcpserver/toolbench.go` provides auto-benchmarking applied to all 110 tools:
 
 - **JSONL recording**: All tool calls logged with latency, success, error, sizes
 - **Percentile summaries**: P50, P95, max latency per tool
@@ -103,6 +134,66 @@ All three providers support prompt caching for 80-90% input cost savings:
 - **OpenAI**: Automatic prefix caching on the Responses API. Structured output via `OutputSchema` for JSON schema validation.
 
 Cache hit rates are tracked in the cost ledger and surfaced via `ralphglasses_fleet_analytics`.
+
+## Event Bus
+
+The `internal/events/` package provides a typed publish-subscribe event bus for system-wide coordination:
+
+- **`bus.go`**: `Bus` struct with `PublishCtx(ctx, Event)` (context-aware, returns error on cancellation) and backward-compatible `Publish(Event)` wrapper. Supports `Subscribe(id)` for all events and `SubscribeFiltered(id, ...EventType)` for selective subscription. Maintains a configurable history ring buffer with `History(filter, limit)` and optional retention TTL.
+- **`query.go`**: `EventQuery` struct for filtering events by type, time range, and other criteria.
+- **`migration.go`**: Event schema migration for backward compatibility.
+- **30+ event types**: Session lifecycle (`session.started`, `session.ended`), cost (`cost.update`, `budget.exceeded`), loop lifecycle (`loop.started`, `loop.iterated`, `loop.regression`), self-improvement (`auto.optimized`, `provider.selected`, `session.recovered`), tool instrumentation (`tool.called`), worker lifecycle (`worker.deregistered`, `worker.paused`, `worker.resumed`), and more.
+
+## Process Management
+
+The `internal/process/` package manages OS processes with full `context.Context` threading:
+
+- **`manager.go`**: `Manager.Start(ctx, repoPath)` uses `exec.CommandContext` so context cancellation kills the launched process and prevents auto-restarts. `Manager.Stop(ctx, repoPath)` and `Manager.StopAll(ctx)` also accept contexts for deadline-aware shutdown. The reaper goroutine (`reaperLoop(ctx, ...)`) handles process exit, exponential backoff auto-restart, and re-arm of the exit channel listener.
+- **`errors.go`**: Sentinel errors — `ErrAlreadyRunning`, `ErrNoLoopScript`, `ErrNotRunning`.
+- **`orphans.go`**: Orphan process detection and cleanup.
+- **`childpids.go`** / **`childpids_linux.go`**: Platform-specific child PID enumeration (Linux reads `/proc`, other platforms use `pgrep`).
+- **`logstream.go`**: Log file tailing with `fsnotify`.
+- **`watcher.go`**: File system watcher for `.ralph/` directories.
+
+## Session Sentinel Errors
+
+The `internal/session/errors.go` file defines sentinel errors for consistent error handling across the session package:
+
+`ErrSessionTimeout`, `ErrWorkerStalled`, `ErrInvalidProfile`, `ErrSessionNotFound`, `ErrSessionNotRunning`, `ErrSessionErrored`, `ErrSessionStopped`, `ErrTeamNotFound`, `ErrTeamNameRequired`, `ErrRepoPathRequired`, `ErrNoTasks`, `ErrAlreadyOnProvider`, `ErrWaitTimeout`, `ErrUnexpectedExit`.
+
+Additionally, `internal/session/acceptance.go` defines `ErrRebaseConflict` for merge conflict detection.
+
+## Self-Improvement Pipeline
+
+The `internal/session/` package implements a five-component self-improvement pipeline that learns from loop execution history:
+
+- **Reflexion** (`reflexion.go`): `ReflexionStore` classifies failed iterations and generates corrections. `ExtractReflection()` creates a `Reflection` from a failed `LoopIteration`. `RecentForTask()` retrieves relevant past reflections. `FormatForPrompt()` renders them as markdown for LLM injection — enabling the planner to avoid repeating mistakes.
+- **Episodic Memory** (`episodic.go`): `EpisodicMemory` stores successful session trajectories. `RecordSuccess()` captures journal entries with positive signals. `FindSimilar()` uses Jaccard similarity (or optional cosine similarity via `SetEmbedder()`) to find relevant past successes. `FormatExamples()` renders examples for in-context learning. `Prune()` prevents unbounded growth while preserving per-task-type diversity.
+- **Cascade Router** (`cascade.go`): `CascadeRouter` implements try-cheap-then-escalate provider routing. `ShouldCascade()` checks whether a task should use the cheap-first strategy. `EvaluateCheapResult()` decides whether to escalate based on session output, turn count, and an optional calibrated `DecisionModel`. `SelectTier()` integrates bandit policy for dynamic tier selection. Persists results as JSONL for offline analysis.
+- **Curriculum Sorter** (`curriculum.go`): `CurriculumSorter` scores tasks by estimated difficulty (0.0-1.0) using multi-signal analysis from feedback profiles and episodic memory. `SortTasks()` orders tasks easy-first. `ShouldDecompose()` flags overly complex tasks. `DecompositionPrompt()` generates an LLM prompt to break tasks into sub-tasks.
+- **Bandit-Based Provider Selection**: Integrated into `CascadeRouter` via `SetBanditHooks()` — a `selectFn` returns (provider, model) and `updateFn` records rewards (0.0-1.0). The `Manager.SetBanditHooks()` forwards to the cascade router. The `ralphglasses_bandit_status` tool exposes arm statistics.
+
+## MCP Namespaces
+
+The MCP server organizes 110 tools (108 namespace tools + 2 meta-tools) across 13 namespaces with deferred loading:
+
+| Namespace | Tools | Description |
+|-----------|-------|-------------|
+| `core` | 10 | Scan, list, status, start, stop, stop_all, pause, logs, config, config_bulk (always loaded) |
+| `session` | 13 | Session lifecycle: launch, list, status, resume, stop, stop_all, budget, retry, output, tail, diff, compare, errors |
+| `loop` | 9 | Perpetual dev loops: start, status, step, stop, benchmark, baseline, gates, self_test, self_improve |
+| `prompt` | 8 | Prompt enhancement: analyze, enhance, lint, improve, classify, should_enhance, templates, template_fill |
+| `fleet` | 6 | Fleet ops: fleet_status, analytics, submit, budget, workers, marathon_dashboard |
+| `repo` | 5 | Repo management: health, optimize, scaffold, claudemd_check, snapshot |
+| `roadmap` | 5 | Roadmap automation: parse, analyze, research, expand, export |
+| `team` | 6 | Agent teams: team_create, team_status, team_delegate, agent_define, agent_list, agent_compose |
+| `awesome` | 5 | Awesome-list research: fetch, analyze, diff, report, sync |
+| `advanced` | 22 | RC tools, events, HITL, autonomy, feedback, journals, workflows, bandit, circuit breaker |
+| `eval` | 4 | Offline evaluation: counterfactual, A/B test, changepoints, anomaly detection |
+| `fleet_h` | 4 | Fleet intelligence: blackboard coordination, A2A offers, cost forecasting |
+| `observability` | 11 | Observations, scratchpad, loop wait/poll, coverage, cost estimation, merge verification |
+
+See [docs/MCP-TOOLS.md](MCP-TOOLS.md) for the full tool table with descriptions.
 
 ## Provider Cost Normalization & Stderr Fallback
 
