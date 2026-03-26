@@ -456,18 +456,28 @@ func (s *Server) handleWorkflowRun(ctx context.Context, req mcp.CallToolRequest)
 	return jsonResult(result), nil
 }
 
-func (s *Server) handleSnapshot(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleSnapshot(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Apply a 30-second timeout for snapshot operations.
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
 	action := getStringArg(req, "action")
 	if action == "" {
 		action = "save"
+	}
+	if action != "save" && action != "list" {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid action %q: must be 'save' or 'list'", action)), nil
 	}
 	name := getStringArg(req, "name")
 
 	if action == "list" {
 		if s.reposNil() {
 			if err := s.scan(); err != nil {
-				return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+				return codedError(ErrInternal, fmt.Sprintf("scan failed: %v", err)), nil
 			}
+		}
+		if err := ctx.Err(); err != nil {
+			return codedError(ErrInternal, "snapshot list timed out"), nil
 		}
 		allRepos := s.reposCopy()
 		var snapshots []string
@@ -508,28 +518,52 @@ func (s *Server) handleSnapshot(_ context.Context, req mcp.CallToolRequest) (*mc
 		sess.Unlock()
 	}
 
+	if err := ctx.Err(); err != nil {
+		return codedError(ErrInternal, "snapshot save timed out"), nil
+	}
+
 	teams := s.SessMgr.ListTeams()
+	now := time.Now()
 	snapshot := map[string]any{
 		"name":      name,
-		"timestamp": time.Now().Format(time.RFC3339),
+		"timestamp": now.Format(time.RFC3339),
 		"sessions":  sessSnaps,
 		"teams":     teams,
 	}
 
-	data, _ := json.MarshalIndent(snapshot, "", "  ")
+	data, err := json.MarshalIndent(snapshot, "", "  ")
+	if err != nil {
+		return codedError(ErrInternal, fmt.Sprintf("json marshal: %v", err)), nil
+	}
 
 	// Save to first repo's .ralph/snapshots/
 	if s.reposNil() {
-		_ = s.scan()
+		if err := s.scan(); err != nil {
+			return codedError(ErrInternal, fmt.Sprintf("scan failed: %v", err)), nil
+		}
 	}
 	allRepos := s.reposCopy()
-	if len(allRepos) > 0 {
-		dir := filepath.Join(allRepos[0].Path, ".ralph", "snapshots")
-		_ = os.MkdirAll(dir, 0o755)
-		_ = os.WriteFile(filepath.Join(dir, name+".json"), data, 0o644)
+	if len(allRepos) == 0 {
+		return codedError(ErrFilesystem, "no repos found; cannot save snapshot"), nil
 	}
 
-	return jsonResult(snapshot), nil
+	dir := filepath.Join(allRepos[0].Path, ".ralph", "snapshots")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return codedError(ErrFilesystem, fmt.Sprintf("create snapshot dir: %v", err)), nil
+	}
+	snapshotPath := filepath.Join(dir, name+".json")
+	if err := os.WriteFile(snapshotPath, data, 0o644); err != nil {
+		return codedError(ErrFilesystem, fmt.Sprintf("write snapshot: %v", err)), nil
+	}
+
+	return jsonResult(map[string]any{
+		"name":          name,
+		"path":          snapshotPath,
+		"size_bytes":    len(data),
+		"timestamp":     now.Format(time.RFC3339),
+		"session_count": len(sessSnaps),
+		"team_count":    len(teams),
+	}), nil
 }
 
 func (s *Server) handleJournalRead(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

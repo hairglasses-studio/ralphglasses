@@ -629,6 +629,32 @@ func TestHandleSnapshot_Save(t *testing.T) {
 	if !strings.Contains(text, "test-snap") {
 		t.Errorf("expected snapshot name, got: %s", text)
 	}
+	// Verify structured JSON fields: path, size_bytes, timestamp
+	for _, key := range []string{"path", "size_bytes", "timestamp", "session_count", "team_count"} {
+		if !strings.Contains(text, key) {
+			t.Errorf("expected %q in structured response, got: %s", key, text)
+		}
+	}
+}
+
+func TestHandleSnapshot_InvalidAction(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleSnapshot(context.Background(), makeRequest(map[string]any{
+		"action": "delete",
+	}))
+	if err != nil {
+		t.Fatalf("handleSnapshot: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for invalid action")
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "INVALID_PARAMS") {
+		t.Errorf("expected INVALID_PARAMS error code, got: %s", text)
+	}
 }
 
 func TestHandleSnapshot_List(t *testing.T) {
