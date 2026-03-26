@@ -19,7 +19,8 @@ type Reflection struct {
 	LoopID        string    `json:"loop_id"`
 	IterationNum  int       `json:"iteration"`
 	TaskTitle     string    `json:"task_title"`
-	FailureMode   string    `json:"failure_mode"` // "verify_failed", "worker_error", "planner_error"
+	Category      string    `json:"category,omitempty"`     // "self-critique" for proactive, empty for failure
+	FailureMode   string    `json:"failure_mode"`           // "verify_failed", "worker_error", "planner_error"
 	RootCause     string    `json:"root_cause"`
 	Correction    string    `json:"correction"`
 	FilesInvolved []string  `json:"files_involved"`
@@ -82,6 +83,60 @@ func (rs *ReflexionStore) ExtractReflection(loopID string, iter LoopIteration) *
 	return &r
 }
 
+// ExtractSelfCritique generates a structured self-critique for any iteration,
+// not just failed ones. For failed iterations it delegates to ExtractReflection.
+// For successful iterations it examines verification output for warnings,
+// partial failures, or regressions. Returns nil if no meaningful critique
+// can be generated (clean success with no signals).
+func (rs *ReflexionStore) ExtractSelfCritique(loopID string, iter LoopIteration) *Reflection {
+	// Failed iterations: delegate to the existing failure-extraction path.
+	if iter.Status == "failed" {
+		return rs.ExtractReflection(loopID, iter)
+	}
+
+	// Collect warning signals from verification output of successful iterations.
+	var warnings []string
+	for _, v := range iter.Verification {
+		if v.Output == "" {
+			continue
+		}
+		for _, line := range strings.Split(v.Output, "\n") {
+			lower := strings.ToLower(line)
+			for _, signal := range []string{"warning:", "warn:", "deprecated", "skip", "regression", "flaky", "slow"} {
+				if strings.Contains(lower, signal) {
+					trimmed := strings.TrimSpace(line)
+					if len(trimmed) > 150 {
+						trimmed = trimmed[:150]
+					}
+					warnings = append(warnings, trimmed)
+					break // one match per line is enough
+				}
+			}
+		}
+	}
+
+	if len(warnings) == 0 {
+		return nil
+	}
+
+	// Cap warnings to avoid unbounded growth.
+	if len(warnings) > 5 {
+		warnings = warnings[:5]
+	}
+
+	return &Reflection{
+		Timestamp:     time.Now(),
+		LoopID:        loopID,
+		IterationNum:  iter.Number,
+		TaskTitle:     iter.Task.Title,
+		Category:      "self-critique",
+		FailureMode:   "warnings_detected",
+		RootCause:     strings.Join(warnings, "; "),
+		Correction:    "Address verification warnings: " + strings.Join(warnings, "; "),
+		FilesInvolved: extractFilePaths(iter),
+	}
+}
+
 // Store appends a reflection to the in-memory list and persists it to disk.
 func (rs *ReflexionStore) Store(r Reflection) {
 	rs.mu.Lock()
@@ -127,7 +182,11 @@ func (rs *ReflexionStore) FormatForPrompt(reflections []Reflection) string {
 	var sb strings.Builder
 	sb.WriteString("## Lessons from Previous Attempts\n\n")
 	for i, r := range reflections {
-		sb.WriteString(fmt.Sprintf("- **Attempt %d failed** (%s): %s\n", i+1, r.FailureMode, r.RootCause))
+		if r.Category == "self-critique" {
+			sb.WriteString(fmt.Sprintf("- **Attempt %d observations** (%s): %s\n", i+1, r.FailureMode, r.RootCause))
+		} else {
+			sb.WriteString(fmt.Sprintf("- **Attempt %d failed** (%s): %s\n", i+1, r.FailureMode, r.RootCause))
+		}
 		sb.WriteString(fmt.Sprintf("  **Correction**: %s\n", r.Correction))
 	}
 	sb.WriteString("\nApply these lessons to avoid repeating the same mistakes.\n")
