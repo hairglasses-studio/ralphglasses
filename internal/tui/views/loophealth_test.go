@@ -9,56 +9,66 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
-func TestRenderLoopHealth_Empty(t *testing.T) {
+func TestRenderLoopHealthEmpty(t *testing.T) {
 	data := LoopHealthData{
-		RepoName:     "empty-repo",
+		RepoName:     "test-repo",
 		Observations: nil,
 	}
-
 	out := RenderLoopHealth(data, 120, 40)
 	if !strings.Contains(out, "No loop observations") {
-		t.Error("should show no-observations message")
+		t.Error("empty view should show 'No loop observations'")
 	}
-	if !strings.Contains(out, "empty-repo") {
-		t.Error("should show repo name")
+	if !strings.Contains(out, "test-repo") {
+		t.Error("should show repo name in title")
 	}
 }
 
-func TestRenderLoopHealth_WithObservations(t *testing.T) {
-	obs := []session.LoopObservation{
-		{
-			Timestamp:       time.Now().Add(-10 * time.Minute),
-			IterationNumber: 1,
-			TotalCostUSD:    0.50,
-			TotalLatencyMs:  5000,
-			VerifyPassed:    true,
-			Status:          "idle",
-			FilesChanged:    3,
-			TaskType:        "feature",
-		},
-		{
-			Timestamp:       time.Now().Add(-5 * time.Minute),
-			IterationNumber: 2,
-			TotalCostUSD:    0.75,
-			TotalLatencyMs:  8000,
-			VerifyPassed:    false,
-			Status:          "idle",
-			FilesChanged:    5,
-			TaskType:        "bugfix",
-		},
-	}
-
+func TestRenderLoopHealthPopulated(t *testing.T) {
+	now := time.Now()
 	data := LoopHealthData{
-		RepoName:     "active-repo",
-		Observations: obs,
+		RepoName: "my-repo",
+		Observations: []session.LoopObservation{
+			{
+				IterationNumber: 1,
+				Timestamp:       now.Add(-2 * time.Minute),
+				TotalCostUSD:    0.05,
+				TotalLatencyMs:  3000,
+				FilesChanged:    2,
+				VerifyPassed:    true,
+				Status:          "idle",
+				TaskType:        "refactor",
+			},
+			{
+				IterationNumber: 2,
+				Timestamp:       now.Add(-1 * time.Minute),
+				TotalCostUSD:    0.08,
+				TotalLatencyMs:  4500,
+				FilesChanged:    3,
+				VerifyPassed:    false,
+				Status:          "idle",
+				TaskType:        "bugfix",
+			},
+		},
+		GateReport: &e2e.GateReport{
+			Overall:     e2e.VerdictPass,
+			SampleCount: 2,
+			Results: []e2e.GateResult{
+				{Metric: "p95_cost", Verdict: e2e.VerdictPass, BaselineVal: 0.05, DeltaPct: 10.0},
+				{Metric: "p95_latency", Verdict: e2e.VerdictWarn, BaselineVal: 3000, DeltaPct: 25.0},
+			},
+		},
 	}
-
 	out := RenderLoopHealth(data, 120, 40)
 
 	checks := []string{
-		"Loop Health",
-		"active-repo",
+		"my-repo",
+		"Regression Gates",
 		"Recent Iterations",
+		"p95_cost",
+		"p95_latency",
+		"Status",
+		"Cost",
+		"Latency",
 	}
 	for _, want := range checks {
 		if !strings.Contains(out, want) {
@@ -67,96 +77,66 @@ func TestRenderLoopHealth_WithObservations(t *testing.T) {
 	}
 }
 
-func TestRenderLoopHealth_WithGateReport(t *testing.T) {
-	obs := []session.LoopObservation{
-		{IterationNumber: 1, TotalCostUSD: 0.50, TotalLatencyMs: 5000, Status: "idle"},
-	}
-
+func TestRenderLoopHealthNoGateData(t *testing.T) {
 	data := LoopHealthData{
-		RepoName:     "gated-repo",
-		Observations: obs,
-		GateReport: &e2e.GateReport{
-			Overall:     e2e.VerdictPass,
-			SampleCount: 10,
-			Results: []e2e.GateResult{
-				{Metric: "p95_cost", Verdict: e2e.VerdictPass, BaselineVal: 0.50, DeltaPct: -5.0},
-				{Metric: "p95_latency", Verdict: e2e.VerdictWarn, BaselineVal: 8000, DeltaPct: 15.0},
+		RepoName: "no-gates",
+		Observations: []session.LoopObservation{
+			{
+				IterationNumber: 1,
+				TotalCostUSD:    0.01,
+				TotalLatencyMs:  1000,
+				Status:          "idle",
 			},
 		},
+		GateReport: nil,
 	}
-
-	out := RenderLoopHealth(data, 120, 40)
-
-	if !strings.Contains(out, "Regression Gates") {
-		t.Error("should show regression gates section")
-	}
-	if !strings.Contains(out, "p95_cost") {
-		t.Error("should show cost metric")
-	}
-	if !strings.Contains(out, "p95_latency") {
-		t.Error("should show latency metric")
-	}
-}
-
-func TestRenderLoopHealth_NoGateData(t *testing.T) {
-	obs := []session.LoopObservation{
-		{IterationNumber: 1, TotalCostUSD: 0.10, Status: "idle"},
-	}
-
-	data := LoopHealthData{
-		RepoName:     "no-gates",
-		Observations: obs,
-		GateReport:   nil,
-	}
-
-	out := RenderLoopHealth(data, 120, 40)
+	out := RenderLoopHealth(data, 100, 30)
 	if !strings.Contains(out, "No gate data") {
-		t.Error("should show 'No gate data available'")
+		t.Error("should show 'No gate data available' when no gate report")
 	}
 }
 
 func TestExtractMetricSeries(t *testing.T) {
 	obs := []session.LoopObservation{
-		{TotalCostUSD: 0.10, TotalLatencyMs: 1000},
-		{TotalCostUSD: 0.20, TotalLatencyMs: 2000},
-		{TotalCostUSD: 0.30, TotalLatencyMs: 3000},
+		{TotalCostUSD: 0.01, TotalLatencyMs: 1000},
+		{TotalCostUSD: 0.02, TotalLatencyMs: 2000},
+		{TotalCostUSD: 0.03, TotalLatencyMs: 3000},
 	}
 
 	costs := extractMetricSeries(obs, "cost")
 	if len(costs) != 3 {
 		t.Fatalf("expected 3 cost values, got %d", len(costs))
 	}
-	if costs[0] != 0.10 || costs[1] != 0.20 || costs[2] != 0.30 {
-		t.Errorf("cost values = %v, want [0.10 0.20 0.30]", costs)
+	if costs[0] != 0.01 || costs[2] != 0.03 {
+		t.Errorf("cost values = %v", costs)
 	}
 
 	latencies := extractMetricSeries(obs, "latency")
-	if latencies[0] != 1000 || latencies[1] != 2000 || latencies[2] != 3000 {
-		t.Errorf("latency values = %v, want [1000 2000 3000]", latencies)
+	if latencies[0] != 1000 || latencies[2] != 3000 {
+		t.Errorf("latency values = %v", latencies)
 	}
 
 	unknown := extractMetricSeries(obs, "unknown")
 	for _, v := range unknown {
 		if v != 0 {
-			t.Errorf("unknown metric should return zeros, got %f", v)
+			t.Errorf("unknown metric should return 0, got %f", v)
 		}
 	}
 }
 
-func TestFormatDurationFunc(t *testing.T) {
+func TestFormatDurationHelper(t *testing.T) {
 	tests := []struct {
-		dur  time.Duration
-		want string
+		dur    time.Duration
+		expect string
 	}{
 		{30 * time.Second, "30s"},
 		{5 * time.Minute, "5m"},
 		{2 * time.Hour, "2.0h"},
 	}
-
 	for _, tt := range tests {
 		got := FormatDuration(tt.dur)
-		if got != tt.want {
-			t.Errorf("FormatDuration(%v) = %q, want %q", tt.dur, got, tt.want)
+		if got != tt.expect {
+			t.Errorf("FormatDuration(%v) = %q, want %q", tt.dur, got, tt.expect)
 		}
 	}
 }

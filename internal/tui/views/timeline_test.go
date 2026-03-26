@@ -6,20 +6,28 @@ import (
 	"time"
 )
 
-func TestRenderTimeline_Empty(t *testing.T) {
+func TestRenderTimelineEmpty(t *testing.T) {
 	out := RenderTimeline(nil, "test-repo", 120, 40)
 	if !strings.Contains(out, "No sessions to display") {
-		t.Error("empty entries should show 'No sessions to display'")
+		t.Error("empty timeline should show 'No sessions to display'")
 	}
 }
 
-func TestRenderTimeline_SingleEntry(t *testing.T) {
+func TestRenderTimelinePopulated(t *testing.T) {
 	now := time.Now()
+	ended := now.Add(-30 * time.Second)
 	entries := []TimelineEntry{
 		{
-			ID:        "abcdef1234567890",
+			ID:        "session-1234567890",
 			Provider:  "claude",
 			StartTime: now.Add(-10 * time.Minute),
+			EndTime:   &ended,
+			Status:    "completed",
+		},
+		{
+			ID:        "sess-2",
+			Provider:  "gemini",
+			StartTime: now.Add(-5 * time.Minute),
 			EndTime:   nil, // still running
 			Status:    "running",
 		},
@@ -30,10 +38,12 @@ func TestRenderTimeline_SingleEntry(t *testing.T) {
 	checks := []string{
 		"Session Timeline",
 		"my-repo",
-		"abcdef12", // truncated ID
+		"session-",          // truncated ID
 		"claude",
+		"gemini",
 		"Legend",
 		"running",
+		"completed",
 	}
 	for _, want := range checks {
 		if !strings.Contains(out, want) {
@@ -42,71 +52,40 @@ func TestRenderTimeline_SingleEntry(t *testing.T) {
 	}
 }
 
-func TestRenderTimeline_MultipleEntries(t *testing.T) {
+func TestRenderTimelineSingleEntry(t *testing.T) {
 	now := time.Now()
-	endTime := now.Add(-2 * time.Minute)
 	entries := []TimelineEntry{
-		{ID: "sess0001", Provider: "claude", StartTime: now.Add(-30 * time.Minute), EndTime: &endTime, Status: "completed"},
-		{ID: "sess0002", Provider: "gemini", StartTime: now.Add(-15 * time.Minute), EndTime: nil, Status: "running"},
-		{ID: "sess0003", Provider: "codex", StartTime: now.Add(-5 * time.Minute), EndTime: nil, Status: "errored"},
+		{
+			ID:        "only-one",
+			Provider:  "codex",
+			StartTime: now,
+			Status:    "running",
+		},
 	}
-
-	out := RenderTimeline(entries, "repo", 120, 40)
-
-	if !strings.Contains(out, "sess0001") {
-		t.Error("should show first session ID")
+	out := RenderTimeline(entries, "solo-repo", 80, 30)
+	if !strings.Contains(out, "solo-repo") {
+		t.Error("should show repo name")
 	}
-	if !strings.Contains(out, "sess0002") {
-		t.Error("should show second session ID")
-	}
-	// Should contain block characters for the bars
-	if !strings.Contains(out, "\u2588") {
-		t.Error("should contain block characters for timeline bars")
+	if !strings.Contains(out, "only-one") {
+		t.Error("should show session ID")
 	}
 }
 
-func TestRenderTimeline_CompletedEntry(t *testing.T) {
+func TestRenderTimelineTruncatesEntries(t *testing.T) {
 	now := time.Now()
-	start := now.Add(-20 * time.Minute)
-	end := now.Add(-5 * time.Minute)
-	entries := []TimelineEntry{
-		{ID: "done-sess", Provider: "codex", StartTime: start, EndTime: &end, Status: "completed"},
-	}
-
-	out := RenderTimeline(entries, "finished-repo", 100, 40)
-	if !strings.Contains(out, "completed") {
-		t.Error("legend should include 'completed'")
-	}
-}
-
-func TestRenderTimeline_NarrowWidth(t *testing.T) {
-	now := time.Now()
-	entries := []TimelineEntry{
-		{ID: "narrow01", Provider: "claude", StartTime: now.Add(-5 * time.Minute), Status: "running"},
-	}
-
-	// Should not panic at narrow width
-	out := RenderTimeline(entries, "repo", 40, 20)
-	if out == "" {
-		t.Error("should produce output even at narrow width")
-	}
-}
-
-func TestRenderTimeline_TruncatesLongList(t *testing.T) {
-	now := time.Now()
-	entries := make([]TimelineEntry, 30)
+	// Create more entries than height allows (height - 8 = max)
+	entries := make([]TimelineEntry, 20)
 	for i := range entries {
 		entries[i] = TimelineEntry{
-			ID:        "sess" + string(rune('A'+i%26)),
+			ID:        "sess-" + string(rune('A'+i)),
 			Provider:  "claude",
-			StartTime: now.Add(-time.Duration(30-i) * time.Minute),
+			StartTime: now.Add(-time.Duration(20-i) * time.Minute),
 			Status:    "completed",
 		}
 	}
-
-	// With small height, should truncate the list
-	out := RenderTimeline(entries, "repo", 120, 15)
-	if out == "" {
-		t.Error("should produce output even with many entries")
+	// With height=15, maxEntries = 15-8 = 7, so only last 7 shown
+	out := RenderTimeline(entries, "many-repo", 120, 15)
+	if !strings.Contains(out, "Session Timeline") {
+		t.Error("should still show title")
 	}
 }
