@@ -46,6 +46,7 @@ type WorkItem struct {
 	RetryCount   int                `json:"retry_count"`
 	MaxRetries   int                `json:"max_retries"`
 	Error        string             `json:"error,omitempty"`
+	RetryAfter   *time.Time         `json:"retry_after,omitempty"`
 	SubmittedAt  time.Time          `json:"submitted_at"`
 	AssignedAt   *time.Time         `json:"assigned_at,omitempty"`
 	StartedAt    *time.Time         `json:"started_at,omitempty"`
@@ -94,6 +95,7 @@ const (
 	WorkerOnline       WorkerStatus = "online"
 	WorkerStale        WorkerStatus = "stale"        // no heartbeat for 90s
 	WorkerDisconnected WorkerStatus = "disconnected"  // no heartbeat for 5m
+	WorkerPaused       WorkerStatus = "paused"        // manually paused, skip for assignment
 )
 
 // HeartbeatPayload is sent by workers every 30s.

@@ -123,6 +123,13 @@ func (ht *HealthTracker) GetHealth(workerID string) (WorkerHealth, bool) {
 	return WorkerHealth{}, false
 }
 
+// Remove deletes the health record for a worker.
+func (ht *HealthTracker) Remove(workerID string) {
+	ht.mu.Lock()
+	defer ht.mu.Unlock()
+	delete(ht.workers, workerID)
+}
+
 // HealthyWorkers returns IDs of all healthy workers.
 func (ht *HealthTracker) HealthyWorkers() []string {
 	ht.mu.RLock()
