@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -123,7 +124,15 @@ func init() {
 
 // Execute runs the root command.
 func Execute() {
+	// Silence cobra's default error printing; we handle it below.
+	rootCmd.SilenceErrors = true
 	if err := rootCmd.Execute(); err != nil {
+		// ErrChecksFailed means doctor/validate already printed diagnostics;
+		// exit silently with code 1.
+		if errors.Is(err, ErrChecksFailed) {
+			os.Exit(1)
+		}
+		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
 	}
 }
