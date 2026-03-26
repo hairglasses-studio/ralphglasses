@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -348,7 +349,9 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 
 	// Write to JSONL
 	obsPath := ObservationPath(repoPath)
-	_ = WriteObservation(obsPath, obs)
+	if err := WriteObservation(obsPath, obs); err != nil {
+		slog.Warn("failed to write loop observation", "path", obsPath, "error", err)
+	}
 
 	// Publish event
 	if m.bus != nil {

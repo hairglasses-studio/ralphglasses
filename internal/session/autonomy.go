@@ -3,6 +3,7 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -221,7 +222,10 @@ func (dl *DecisionLog) appendToFile(d AutonomousDecision) {
 	if dl.stateDir == "" {
 		return
 	}
-	_ = os.MkdirAll(dl.stateDir, 0755)
+	if err := os.MkdirAll(dl.stateDir, 0755); err != nil {
+		slog.Warn("failed to create decision log state dir", "dir", dl.stateDir, "error", err)
+		return
+	}
 
 	data, err := json.Marshal(d)
 	if err != nil {
