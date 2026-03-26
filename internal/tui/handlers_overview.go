@@ -240,6 +240,9 @@ func (m Model) togglePauseSelected() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) startLoop(idx int) (tea.Model, tea.Cmd) {
+	if idx < 0 || idx >= len(m.Repos) {
+		return m, nil
+	}
 	repo := m.Repos[idx]
 	if err := m.ProcMgr.Start(repo.Path); err != nil {
 		m.Notify.Show(fmt.Sprintf("Start error: %v", err), 3*time.Second)
@@ -250,6 +253,9 @@ func (m Model) startLoop(idx int) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) stopLoop(idx int) (tea.Model, tea.Cmd) {
+	if idx < 0 || idx >= len(m.Repos) {
+		return m, nil
+	}
 	repo := m.Repos[idx]
 	if err := m.ProcMgr.Stop(repo.Path); err != nil {
 		m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
@@ -260,6 +266,9 @@ func (m Model) stopLoop(idx int) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) togglePause(idx int) (tea.Model, tea.Cmd) {
+	if idx < 0 || idx >= len(m.Repos) {
+		return m, nil
+	}
 	repo := m.Repos[idx]
 	paused, err := m.ProcMgr.TogglePause(repo.Path)
 	if err != nil {

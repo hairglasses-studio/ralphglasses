@@ -465,7 +465,7 @@ var tabNames = []string{
 // View renders the TUI.
 func (m Model) View() string {
 	if m.Width < 3 || m.Height < 3 {
-		return "Terminal too small"
+		return "Terminal too small. Please resize."
 	}
 
 	var b strings.Builder
