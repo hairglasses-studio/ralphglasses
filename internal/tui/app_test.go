@@ -162,6 +162,41 @@ func TestView(t *testing.T) {
 	}
 }
 
+func TestViewSmallTerminal(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	// Zero size
+	m.Width = 0
+	m.Height = 0
+	view := m.View()
+	if !strings.Contains(view, "Terminal too small") {
+		t.Errorf("zero size should show small terminal message, got: %q", view)
+	}
+
+	// Width too small
+	m.Width = 2
+	m.Height = 40
+	view = m.View()
+	if !strings.Contains(view, "Terminal too small") {
+		t.Errorf("narrow terminal should show small terminal message, got: %q", view)
+	}
+
+	// Height too small
+	m.Width = 120
+	m.Height = 2
+	view = m.View()
+	if !strings.Contains(view, "Terminal too small") {
+		t.Errorf("short terminal should show small terminal message, got: %q", view)
+	}
+
+	// Just large enough
+	m.Width = 3
+	m.Height = 3
+	view = m.View()
+	if strings.Contains(view, "Terminal too small") {
+		t.Error("3x3 terminal should render normally")
+	}
+}
+
 func TestHandleKeyCtrlC(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
