@@ -214,10 +214,10 @@ func TestCompleteOffer(t *testing.T) {
 		t.Errorf("expected status 'completed', got %q", offer.Status)
 	}
 
-	// Completing again should fail.
+	// Completing again should fail (terminal state).
 	err = a.CompleteOffer("lifecycle-1")
-	if !errors.Is(err, ErrOfferNotOpen) {
-		t.Errorf("expected ErrOfferNotOpen on double complete, got %v", err)
+	if !errors.Is(err, ErrOfferAlreadyTerminal) {
+		t.Errorf("expected ErrOfferAlreadyTerminal on double complete, got %v", err)
 	}
 
 	// Completing a non-existent offer should fail.
