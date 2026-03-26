@@ -229,6 +229,7 @@ func (s *Server) buildLoopGroup() ToolGroup {
 				mcp.WithNumber("iterations", mcp.Description("Number of self-test iterations (default: 3)")),
 				mcp.WithNumber("budget_usd", mcp.Description("Budget cap in USD (default: 5.0)")),
 				mcp.WithBoolean("use_snapshot", mcp.Description("Restore repo snapshot between iterations (default: true)")),
+				mcp.WithBoolean("dry_run", mcp.Description("Validate config without running iterations (default: false)")),
 			), s.handleSelfTest},
 			{mcp.NewTool("ralphglasses_self_improve",
 				mcp.WithDescription("Start a self-improvement loop that autonomously improves a repository — auto-merges safe changes, creates PRs for review-required changes"),

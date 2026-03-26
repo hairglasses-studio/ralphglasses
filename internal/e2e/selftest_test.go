@@ -250,6 +250,71 @@ func TestHashFileNotFound(t *testing.T) {
 	}
 }
 
+func TestDryRunReturnsZeroIterations(t *testing.T) {
+	tmpDir := t.TempDir()
+	initGitRepo(t, tmpDir)
+
+	// Create a fake binary so Prepare succeeds with UseSnapshot=false.
+	fakeBin := filepath.Join(tmpDir, "ralphglasses")
+	if err := os.WriteFile(fakeBin, []byte("fake"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := SelfTestConfig{
+		RepoPath:    tmpDir,
+		BinaryPath:  fakeBin,
+		UseSnapshot: false,
+		DryRun:      true,
+	}
+
+	ctx := context.Background()
+	runner, err := Prepare(ctx, cfg)
+	if err != nil {
+		t.Fatalf("Prepare() error: %v", err)
+	}
+
+	result, err := runner.Run(ctx)
+	if err != nil {
+		t.Fatalf("Run() error: %v", err)
+	}
+
+	if result.Iterations != 0 {
+		t.Errorf("Iterations = %d, want 0 for dry run", result.Iterations)
+	}
+	if len(result.Observations) != 1 {
+		t.Fatalf("Observations len = %d, want 1", len(result.Observations))
+	}
+	if result.Observations[0]["status"] != "dry_run" {
+		t.Errorf("status = %v, want dry_run", result.Observations[0]["status"])
+	}
+}
+
+func TestBudgetOverrideApplied(t *testing.T) {
+	cfg := SelfTestConfig{
+		RepoPath:       "/tmp/repo",
+		BudgetUSD:      5.0,
+		BudgetOverride: 1.5,
+	}
+	cfg.applyDefaults()
+
+	if cfg.BudgetUSD != 1.5 {
+		t.Errorf("BudgetUSD = %f, want 1.5 (from BudgetOverride)", cfg.BudgetUSD)
+	}
+}
+
+func TestBudgetOverrideZeroNoEffect(t *testing.T) {
+	cfg := SelfTestConfig{
+		RepoPath:       "/tmp/repo",
+		BudgetUSD:      10.0,
+		BudgetOverride: 0,
+	}
+	cfg.applyDefaults()
+
+	if cfg.BudgetUSD != 10.0 {
+		t.Errorf("BudgetUSD = %f, want 10.0 (BudgetOverride=0 should not change it)", cfg.BudgetUSD)
+	}
+}
+
 // initGitRepo creates a minimal git repo with one commit for tagging tests.
 func initGitRepo(t *testing.T, dir string) {
 	t.Helper()

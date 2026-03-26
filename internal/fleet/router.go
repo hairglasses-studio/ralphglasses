@@ -9,16 +9,6 @@ import (
 
 var ErrNoWorkers = errors.New("no eligible workers")
 
-// HealthState represents a worker's health status for routing decisions.
-// This is a local placeholder; Phase B will unify with health.go's HealthState.
-type HealthState int
-
-const (
-	HealthHealthy  HealthState = iota
-	HealthDegraded             // still routable, but not ideal
-	HealthUnhealthy            // excluded from routing
-)
-
 // Router selects a worker for a given task.
 type Router interface {
 	SelectWorker(workers []WorkerCandidate) (string, error) // returns worker ID

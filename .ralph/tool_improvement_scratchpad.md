@@ -125,3 +125,16 @@ Observations from reliability & quality improvement workstreams + recursive self
 47. **~~`maxIter` parameter unused in handler~~** — RESOLVED: `handler_selfimprove.go:40` sets `profile.MaxIterations` which is used by `StartLoop`.
 
 48. **~~`self-improve.sh` references `mcp-call` subcommand~~** — RESOLVED: mcpcall.go exists. ~~The script calls `./ralphglasses mcp-call ralphglasses_self_improve` but no `mcp-call` cobra command exists. Should either: (a) implement `mcp-call` as a thin wrapper that starts MCP, calls the tool, and exits, or (b) change the script to use the MCP protocol directly via stdin/stdout.~~
+
+## Round 6: Phase 0.8 MCP Smoke Test (2026-03-25)
+
+
+49. **~~`merge_verify` repo param blocked by middleware~~** — RESOLVED: `middleware.go` now routes absolute paths through `ValidatePath` instead of `ValidateRepoName`.
+
+50. **~~`coverage_report` same middleware conflict~~** — RESOLVED: same fix as #49.
+
+51. **~~`scratchpad_list` returns empty without `repo` param~~** — RESOLVED: `resolveRepoPath` now errors with available repo names when multiple repos exist, instead of silently picking the wrong one.
+
+52. **~~`scratchpad_read` can't find `tool_improvement` without `repo`~~** — RESOLVED: same fix as #51.
+
+53. **~~`scratchpad_append` without `repo` writes to wrong location~~** — RESOLVED: same fix as #51.

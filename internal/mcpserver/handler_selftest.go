@@ -51,16 +51,26 @@ func (s *Server) handleSelfTest(_ context.Context, req mcp.CallToolRequest) (*mc
 		}
 	}
 
+	dryRun := getBoolArg(req, "dry_run")
+
 	// Stub: return prepared configuration.
 	// Once Stage 1.2 binary isolation lands, this will invoke the
 	// self-test runner (internal/e2e/selftest.go) to execute iterations.
+	status := "prepared"
+	message := fmt.Sprintf("Self-test configured for %d iterations with $%.2f budget. Execution pending Stage 1.2 binary isolation.", iterations, budgetUSD)
+	if dryRun {
+		status = "validated"
+		message = fmt.Sprintf("Dry run: config validated for %d iterations with $%.2f budget. No iterations executed.", iterations, budgetUSD)
+	}
+
 	result := map[string]any{
 		"repo":         repo,
 		"iterations":   iterations,
 		"budget_usd":   budgetUSD,
 		"use_snapshot": useSnapshot,
-		"status":       "prepared",
-		"message":      fmt.Sprintf("Self-test configured for %d iterations with $%.2f budget. Execution pending Stage 1.2 binary isolation.", iterations, budgetUSD),
+		"dry_run":      dryRun,
+		"status":       status,
+		"message":      message,
 	}
 
 	return jsonResult(result), nil
