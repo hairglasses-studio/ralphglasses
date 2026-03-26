@@ -167,6 +167,13 @@ func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (
 		Turns    int     `json:"turns"`
 		Agent    string  `json:"agent,omitempty"`
 		Team     string  `json:"team,omitempty"`
+		Stalled  bool    `json:"stalled,omitempty"`
+	}
+
+	// Build a set of stalled session IDs using the default threshold.
+	stalledIDs := make(map[string]bool)
+	for _, id := range s.SessMgr.DetectStalls(session.DefaultStallThreshold) {
+		stalledIDs[id] = true
 	}
 
 	var summaries []sessionSummary
@@ -195,6 +202,7 @@ func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (
 			Turns:    turns,
 			Agent:    sess.AgentName,
 			Team:     sess.TeamName,
+			Stalled:  stalledIDs[sess.ID],
 		})
 	}
 
