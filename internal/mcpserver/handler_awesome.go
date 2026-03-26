@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
@@ -12,6 +13,8 @@ import (
 // Awesome-list handlers
 
 func (s *Server) handleAwesomeFetch(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
 	repo := getStringArg(req, "repo")
 	idx, err := awesome.Fetch(ctx, s.HTTPClient, repo)
 	if err != nil {
@@ -21,6 +24,8 @@ func (s *Server) handleAwesomeFetch(ctx context.Context, req mcp.CallToolRequest
 }
 
 func (s *Server) handleAwesomeAnalyze(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
 	repo := getStringArg(req, "repo")
 	idx, err := awesome.Fetch(ctx, s.HTTPClient, repo)
 	if err != nil {
@@ -43,6 +48,8 @@ func (s *Server) handleAwesomeDiff(ctx context.Context, req mcp.CallToolRequest)
 	if saveTo == "" {
 		return codedError(ErrInvalidParams, "save_to required"), nil
 	}
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
 	repo := getStringArg(req, "repo")
 
 	idx, err := awesome.Fetch(ctx, s.HTTPClient, repo)
@@ -79,6 +86,8 @@ func (s *Server) handleAwesomeSync(ctx context.Context, req mcp.CallToolRequest)
 	if saveTo == "" {
 		return codedError(ErrInvalidParams, "save_to required"), nil
 	}
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
 
 	opts := awesome.SyncOptions{
 		Repo:       getStringArg(req, "repo"),
