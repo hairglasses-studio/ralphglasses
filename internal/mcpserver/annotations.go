@@ -65,7 +65,7 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_fleet_analytics":    {Title: "Fleet Analytics", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_fleet_submit":       {Title: "Submit to Fleet", OpenWorldHint: boolPtr(true)},
 	"ralphglasses_fleet_budget":       {Title: "Fleet Budget", ReadOnlyHint: boolPtr(true)},
-	"ralphglasses_fleet_workers":      {Title: "Fleet Workers", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_fleet_workers":      {Title: "Fleet Workers"},
 	"ralphglasses_marathon_dashboard": {Title: "Marathon Dashboard", ReadOnlyHint: boolPtr(true)},
 
 	// ── repo ─────────────────────────────────────────────────────────────

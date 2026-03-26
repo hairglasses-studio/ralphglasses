@@ -134,6 +134,45 @@ func (s *Server) handleFleetWorkers(_ context.Context, req mcp.CallToolRequest) 
 		return codedError(ErrNotRunning, "fleet not active"), nil
 	}
 
+	action := getStringArg(req, "action")
+	workerID := getStringArg(req, "worker_id")
+
+	// Handle worker actions (coordinator-only)
+	if action != "" {
+		if s.FleetCoordinator == nil {
+			return codedError(ErrInvalidParams, "worker actions require local coordinator"), nil
+		}
+		if workerID == "" {
+			return codedError(ErrInvalidParams, "worker_id required for action"), nil
+		}
+
+		var err error
+		switch action {
+		case "pause":
+			err = s.FleetCoordinator.PauseWorker(workerID)
+		case "resume":
+			err = s.FleetCoordinator.ResumeWorker(workerID)
+		case "drain":
+			err = s.FleetCoordinator.DrainWorker(workerID)
+		default:
+			return codedError(ErrInvalidParams, fmt.Sprintf("unknown action %q (use pause, resume, or drain)", action)), nil
+		}
+		if err != nil {
+			return codedError(ErrInternal, err.Error()), nil
+		}
+
+		result := map[string]any{
+			"status":    "ok",
+			"action":    action,
+			"worker_id": workerID,
+		}
+		if action == "drain" {
+			result["drained"] = s.FleetCoordinator.IsWorkerDrained(workerID)
+		}
+		return fleetJSON(result)
+	}
+
+	// Default: list workers
 	if s.FleetCoordinator != nil {
 		state := s.FleetCoordinator.GetFleetState()
 		return fleetJSON(map[string]any{
