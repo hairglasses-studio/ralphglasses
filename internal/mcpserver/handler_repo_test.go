@@ -472,3 +472,39 @@ func TestHandleLogs_RepoNotFound(t *testing.T) {
 	}
 	assertErrorCode(t, "handleLogs", result, "REPO_NOT_FOUND")
 }
+
+func TestHandleLogs_NoLogFile(t *testing.T) {
+	t.Parallel()
+	// Create a repo without a log file to exercise the ErrNotExist path.
+	root := t.TempDir()
+	repoPath := filepath.Join(root, "no-log-repo")
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repoPath, ".ralphrc"), []byte("MODEL=sonnet\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// Write minimal status.json so the repo is recognized.
+	statusData, _ := json.Marshal(model.LoopStatus{Status: "idle"})
+	if err := os.WriteFile(filepath.Join(ralphDir, "status.json"), statusData, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := NewServer(root)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleLogs(context.Background(), makeRequest(map[string]any{
+		"repo": "no-log-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleLogs: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success (empty logs), got error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "no log file yet") {
+		t.Errorf("expected 'no log file yet' message, got: %s", text)
+	}
+}
