@@ -2,6 +2,7 @@ package session
 
 import (
 	"encoding/json"
+	"log/slog"
 	"math"
 	"os"
 	"path/filepath"
@@ -391,7 +392,10 @@ func (fa *FeedbackAnalyzer) save() {
 	if fa.stateDir == "" {
 		return
 	}
-	_ = os.MkdirAll(fa.stateDir, 0755)
+	if err := os.MkdirAll(fa.stateDir, 0755); err != nil {
+		slog.Warn("failed to create feedback state dir", "dir", fa.stateDir, "error", err)
+		return
+	}
 
 	profiles := struct {
 		Prompt      map[string]*PromptProfile      `json:"prompt_profiles"`
@@ -407,7 +411,9 @@ func (fa *FeedbackAnalyzer) save() {
 	if err != nil {
 		return
 	}
-	_ = os.WriteFile(filepath.Join(fa.stateDir, "feedback_profiles.json"), data, 0644)
+	if err := os.WriteFile(filepath.Join(fa.stateDir, "feedback_profiles.json"), data, 0644); err != nil {
+		slog.Warn("failed to write feedback profiles", "error", err)
+	}
 }
 
 func (fa *FeedbackAnalyzer) load() {
