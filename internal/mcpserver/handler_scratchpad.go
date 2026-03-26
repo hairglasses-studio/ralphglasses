@@ -95,6 +95,9 @@ func (s *Server) handleScratchpadAppend(_ context.Context, req mcp.CallToolReque
 	if content == "" {
 		return codedError(ErrInvalidParams, "content is required"), nil
 	}
+	if err := ValidateStringLength(content, MaxDescriptionLength, "content"); err != nil {
+		return codedError(ErrInvalidParams, err.Error()), nil
+	}
 	section := getStringArg(req, "section")
 
 	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))

@@ -29,6 +29,9 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 	if prompt == "" {
 		return codedError(ErrInvalidParams, "prompt required"), nil
 	}
+	if err := ValidateStringLength(prompt, MaxPromptLength, "prompt"); err != nil {
+		return codedError(ErrInvalidParams, err.Error()), nil
+	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
@@ -47,6 +50,11 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		return codedError(ErrProviderUnavailable, fmt.Sprintf("invalid provider %q: %v", provider, err)), nil
 	}
 
+	systemPrompt := getStringArg(req, "system_prompt")
+	if err := ValidateStringLength(systemPrompt, MaxPromptLength, "system_prompt"); err != nil {
+		return codedError(ErrInvalidParams, err.Error()), nil
+	}
+
 	opts := session.LaunchOptions{
 		Provider:     provider,
 		RepoPath:     r.Path,
@@ -55,7 +63,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		MaxBudgetUSD: getNumberArg(req, "max_budget_usd", 0),
 		MaxTurns:     int(getNumberArg(req, "max_turns", 0)),
 		Agent:        getStringArg(req, "agent"),
-		SystemPrompt: getStringArg(req, "system_prompt"),
+		SystemPrompt: systemPrompt,
 		SessionName:  getStringArg(req, "session_name"),
 		Worktree:     getStringArg(req, "worktree"),
 	}

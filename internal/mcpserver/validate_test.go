@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -148,6 +149,49 @@ func TestValidatePath(t *testing.T) {
 				t.Errorf("unexpected error for path %q (root %q): %v", tc.path, tc.scanRoot, err)
 			}
 		})
+	}
+}
+
+func TestValidateStringLength_Within(t *testing.T) {
+	t.Parallel()
+	err := ValidateStringLength("hello", 10, "test_field")
+	if err != nil {
+		t.Errorf("expected no error for string within limit, got: %v", err)
+	}
+}
+
+func TestValidateStringLength_Exceeds(t *testing.T) {
+	t.Parallel()
+	s := strings.Repeat("x", 101)
+	err := ValidateStringLength(s, 100, "test_field")
+	if err == nil {
+		t.Fatal("expected error for string exceeding limit, got nil")
+	}
+	if !strings.Contains(err.Error(), "test_field") {
+		t.Errorf("error should contain field name, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "101") {
+		t.Errorf("error should contain actual length, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "100") {
+		t.Errorf("error should contain max length, got: %v", err)
+	}
+}
+
+func TestValidateStringLength_Empty(t *testing.T) {
+	t.Parallel()
+	err := ValidateStringLength("", 100, "test_field")
+	if err != nil {
+		t.Errorf("expected no error for empty string, got: %v", err)
+	}
+}
+
+func TestValidateStringLength_ExactLimit(t *testing.T) {
+	t.Parallel()
+	s := strings.Repeat("a", 256)
+	err := ValidateStringLength(s, 256, "test_field")
+	if err != nil {
+		t.Errorf("expected no error for string at exact limit, got: %v", err)
 	}
 }
 
