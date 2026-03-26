@@ -188,6 +188,353 @@ var OutputSchemas = map[string]map[string]any{
 			},
 		},
 	},
+
+	"ralphglasses_session_status": {
+		"type": "object",
+		"properties": map[string]any{
+			"id":                  map[string]any{"type": "string"},
+			"provider":            map[string]any{"type": "string"},
+			"provider_session_id": map[string]any{"type": "string"},
+			"repo":                map[string]any{"type": "string"},
+			"repo_path":           map[string]any{"type": "string"},
+			"status":              map[string]any{"type": "string"},
+			"prompt":              map[string]any{"type": "string"},
+			"model":               map[string]any{"type": "string"},
+			"agent":               map[string]any{"type": "string"},
+			"team":                map[string]any{"type": "string"},
+			"budget_usd":          map[string]any{"type": "number"},
+			"spent_usd":           map[string]any{"type": "number"},
+			"turns":               map[string]any{"type": "integer"},
+			"max_turns":           map[string]any{"type": "integer"},
+			"launched_at":         map[string]any{"type": "string", "format": "date-time"},
+			"last_activity":       map[string]any{"type": "string", "format": "date-time"},
+			"ended_at":            map[string]any{"type": "string", "format": "date-time"},
+			"exit_reason":         map[string]any{"type": "string"},
+			"last_output":         map[string]any{"type": "string"},
+			"error":               map[string]any{"type": "string"},
+		},
+	},
+
+	"ralphglasses_session_list": {
+		"type": "array",
+		"items": map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"id":        map[string]any{"type": "string"},
+				"provider":  map[string]any{"type": "string"},
+				"repo":      map[string]any{"type": "string"},
+				"status":    map[string]any{"type": "string"},
+				"model":     map[string]any{"type": "string"},
+				"spent_usd": map[string]any{"type": "number"},
+				"turns":     map[string]any{"type": "integer"},
+				"agent":     map[string]any{"type": "string"},
+				"team":      map[string]any{"type": "string"},
+			},
+		},
+	},
+
+	"ralphglasses_session_errors": {
+		"type": "object",
+		"properties": map[string]any{
+			"total_errors": map[string]any{"type": "integer"},
+			"by_type": map[string]any{
+				"type":                 "object",
+				"additionalProperties": map[string]any{"type": "integer"},
+			},
+			"by_severity": map[string]any{
+				"type":                 "object",
+				"additionalProperties": map[string]any{"type": "integer"},
+			},
+			"errors": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"session_id": map[string]any{"type": "string"},
+						"repo":       map[string]any{"type": "string"},
+						"provider":   map[string]any{"type": "string"},
+						"severity": map[string]any{
+							"type": "string",
+							"enum": []any{"critical", "warning", "info"},
+						},
+						"type":      map[string]any{"type": "string"},
+						"message":   map[string]any{"type": "string"},
+						"timestamp": map[string]any{"type": "string", "format": "date-time"},
+					},
+				},
+			},
+			"sessions_with_errors": map[string]any{"type": "integer"},
+			"healthy_sessions":     map[string]any{"type": "integer"},
+		},
+	},
+
+	"ralphglasses_session_diff": {
+		"type": "object",
+		"properties": map[string]any{
+			"session_id": map[string]any{"type": "string"},
+			"repo":       map[string]any{"type": "string"},
+			"window": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"started":  map[string]any{"type": "string", "format": "date-time"},
+					"ended":    map[string]any{"type": "string", "format": "date-time"},
+					"duration": map[string]any{"type": "string"},
+				},
+			},
+			"commits": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"hash":    map[string]any{"type": "string"},
+						"message": map[string]any{"type": "string"},
+						"author":  map[string]any{"type": "string"},
+						"date":    map[string]any{"type": "string"},
+					},
+				},
+			},
+			"stat":      map[string]any{"type": "string"},
+			"diff":      map[string]any{"type": "string"},
+			"truncated": map[string]any{"type": "boolean"},
+		},
+	},
+
+	"ralphglasses_loop_status": {
+		"type": "object",
+		"properties": map[string]any{
+			"id":        map[string]any{"type": "string"},
+			"repo":      map[string]any{"type": "string"},
+			"repo_path": map[string]any{"type": "string"},
+			"status":    map[string]any{"type": "string"},
+			"last_error": map[string]any{"type": "string"},
+			"profile": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"planner_model":  map[string]any{"type": "string"},
+					"worker_model":   map[string]any{"type": "string"},
+					"verifier_model": map[string]any{"type": "string"},
+					"worktree_policy": map[string]any{"type": "string"},
+					"retry_limit":    map[string]any{"type": "integer"},
+				},
+			},
+			"iterations": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"index":      map[string]any{"type": "integer"},
+						"status":     map[string]any{"type": "string"},
+						"task":       map[string]any{"type": "string"},
+						"error":      map[string]any{"type": "string"},
+						"started_at": map[string]any{"type": "string", "format": "date-time"},
+						"ended_at":   map[string]any{"type": "string", "format": "date-time"},
+					},
+				},
+			},
+			"created_at": map[string]any{"type": "string", "format": "date-time"},
+			"updated_at": map[string]any{"type": "string", "format": "date-time"},
+		},
+	},
+
+	"ralphglasses_loop_gates": {
+		"type": "object",
+		"properties": map[string]any{
+			"ts":           map[string]any{"type": "string", "format": "date-time"},
+			"sample_count": map[string]any{"type": "integer"},
+			"overall": map[string]any{
+				"type": "string",
+				"enum": []any{"pass", "warn", "fail", "skip"},
+			},
+			"results": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"metric": map[string]any{"type": "string"},
+						"verdict": map[string]any{
+							"type": "string",
+							"enum": []any{"pass", "warn", "fail", "skip"},
+						},
+						"baseline":  map[string]any{"type": "number"},
+						"current":   map[string]any{"type": "number"},
+						"delta_pct": map[string]any{"type": "number"},
+					},
+				},
+			},
+		},
+	},
+
+	"ralphglasses_fleet_submit": {
+		"type": "object",
+		"properties": map[string]any{
+			"work_item_id": map[string]any{"type": "string"},
+			"status": map[string]any{
+				"type": "string",
+				"enum": []any{"pending"},
+			},
+			"queue": map[string]any{
+				"type": "string",
+				"enum": []any{"local_coordinator", "remote_coordinator"},
+			},
+		},
+	},
+
+	"ralphglasses_fleet_workers": {
+		"type": "object",
+		"properties": map[string]any{
+			"workers": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"id":       map[string]any{"type": "string"},
+						"status":   map[string]any{"type": "string"},
+						"provider": map[string]any{"type": "string"},
+						"capacity": map[string]any{"type": "integer"},
+					},
+				},
+			},
+			"total":       map[string]any{"type": "integer"},
+			"active_work": map[string]any{"type": "integer"},
+		},
+	},
+
+	"ralphglasses_fleet_analytics": {
+		"type": "object",
+		"properties": map[string]any{
+			"providers": map[string]any{
+				"type": "object",
+				"additionalProperties": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"sessions":           map[string]any{"type": "integer"},
+						"running":            map[string]any{"type": "integer"},
+						"total_spend_usd":    map[string]any{"type": "number"},
+						"avg_cost_per_turn":  map[string]any{"type": "number"},
+						"total_turns":        map[string]any{"type": "integer"},
+					},
+				},
+			},
+			"repos": map[string]any{
+				"type":                 "object",
+				"additionalProperties": map[string]any{"type": "number"},
+			},
+			"total_sessions": map[string]any{"type": "integer"},
+		},
+	},
+
+	"ralphglasses_merge_verify": {
+		"type": "object",
+		"properties": map[string]any{
+			"repo":    map[string]any{"type": "string"},
+			"overall": map[string]any{
+				"type": "string",
+				"enum": []any{"pass", "fail"},
+			},
+			"steps": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"name": map[string]any{"type": "string"},
+						"status": map[string]any{
+							"type": "string",
+							"enum": []any{"pass", "fail"},
+						},
+						"elapsed_seconds": map[string]any{"type": "number"},
+						"output":          map[string]any{"type": "string"},
+						"coverage":        map[string]any{"type": "number"},
+					},
+				},
+			},
+			"failed_at":             map[string]any{"type": "string"},
+			"total_elapsed_seconds": map[string]any{"type": "number"},
+		},
+	},
+
+	"ralphglasses_repo_health": {
+		"type": "object",
+		"properties": map[string]any{
+			"repo":             map[string]any{"type": "string"},
+			"health_score":     map[string]any{"type": "integer"},
+			"circuit_breaker":  map[string]any{"type": "string"},
+			"active_sessions":  map[string]any{"type": "integer"},
+			"errored_sessions": map[string]any{"type": "integer"},
+			"total_spend_usd":  map[string]any{"type": "number"},
+			"loop_running":     map[string]any{"type": "boolean"},
+			"issues": map[string]any{
+				"type":  "array",
+				"items": map[string]any{"type": "string"},
+			},
+			"claudemd_findings": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"severity": map[string]any{"type": "string"},
+						"message":  map[string]any{"type": "string"},
+					},
+				},
+			},
+		},
+	},
+
+	"ralphglasses_anomaly_detect": {
+		"type": "object",
+		"properties": map[string]any{
+			"repo":         map[string]any{"type": "string"},
+			"metric":       map[string]any{"type": "string"},
+			"hours":        map[string]any{"type": "number"},
+			"observations": map[string]any{"type": "integer"},
+			"anomalies": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"index":     map[string]any{"type": "integer"},
+						"timestamp": map[string]any{"type": "string", "format": "date-time"},
+						"value":     map[string]any{"type": "number"},
+						"expected":  map[string]any{"type": "number"},
+						"z_score":   map[string]any{"type": "number"},
+						"direction": map[string]any{
+							"type": "string",
+							"enum": []any{"high", "low"},
+						},
+					},
+				},
+			},
+			"count":   map[string]any{"type": "integer"},
+			"message": map[string]any{"type": "string"},
+		},
+	},
+
+	"ralphglasses_session_tail": {
+		"type": "object",
+		"properties": map[string]any{
+			"session_id":     map[string]any{"type": "string"},
+			"status":         map[string]any{"type": "string"},
+			"output": map[string]any{
+				"type":  "array",
+				"items": map[string]any{"type": "string"},
+			},
+			"lines_returned": map[string]any{"type": "integer"},
+			"next_cursor":    map[string]any{"type": "string"},
+			"is_active":      map[string]any{"type": "boolean"},
+			"idle_seconds":   map[string]any{"type": "integer"},
+		},
+	},
+
+	"ralphglasses_session_output": {
+		"type": "object",
+		"properties": map[string]any{
+			"session_id": map[string]any{"type": "string"},
+			"lines":      map[string]any{"type": "integer"},
+			"output": map[string]any{
+				"type":  "array",
+				"items": map[string]any{"type": "string"},
+			},
+		},
+	},
 }
 
 // SchemaForTool returns the output schema for a tool, or nil if not defined.
