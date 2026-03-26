@@ -468,6 +468,32 @@ func sanitizeGeminiStderr(raw string) string {
 
 var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 
+// costRe matches common CLI cost output patterns case-insensitively:
+//
+//	"Cost: $0.0023", "Total cost: 0.0450", "cost_usd: $1.23", "Session cost: $0.05"
+var costRe = regexp.MustCompile(`(?i)(?:total\s+cost|session\s+cost|cost_usd|cost)\s*:\s*\$?(\d+(?:\.\d+)?)`)
+
+// ParseCostFromStderr extracts a cost value (USD) from CLI stderr output.
+// It strips ANSI escape codes, then searches for common cost patterns.
+// When multiple matches are found, it returns the last one (most likely the
+// final/total). Returns 0 when no cost is found or input is empty.
+func ParseCostFromStderr(stderr string) float64 {
+	if stderr == "" {
+		return 0
+	}
+	cleaned := ansiRe.ReplaceAllString(stderr, "")
+	matches := costRe.FindAllStringSubmatch(cleaned, -1)
+	if len(matches) == 0 {
+		return 0
+	}
+	last := matches[len(matches)-1]
+	v, err := strconv.ParseFloat(last[1], 64)
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
 // cleanProviderOutput extracts human-readable output from stderr for
 // providers whose stdout JSON stream may not capture all output.
 // For Codex, strips ANSI codes and returns the last non-empty line
