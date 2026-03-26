@@ -77,6 +77,10 @@ Or with a custom scan path:
 		hookExec := hooks.NewExecutor(bus)
 		hookExec.Start()
 		defer hookExec.Stop()
+		// Enable MCP Sampling so the server can request LLM completions
+		// from the host client (e.g., Claude Code) without separate API keys.
+		srv.EnableSampling()
+
 		rg := mcpserver.NewServerWithBus(sp, bus)
 		rg.ToolRecorder = toolRec
 		rg.InitSelfImprovement(filepath.Join(sp, ".ralph"), 0)
