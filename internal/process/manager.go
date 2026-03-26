@@ -284,10 +284,9 @@ func sendSignal(pid int, sig syscall.Signal) error {
 // Stop sends SIGTERM to the ralph loop process group.
 func (m *Manager) Stop(repoPath string) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	mp, ok := m.procs[repoPath]
 	if !ok {
+		m.mu.Unlock()
 		return fmt.Errorf("no running loop for %s", filepath.Base(repoPath))
 	}
 
@@ -298,7 +297,9 @@ func (m *Manager) Stop(repoPath string) error {
 		removePIDFile(repoPath)
 		delete(m.procs, repoPath)
 	}
+	m.mu.Unlock()
 
+	m.auditOrphanedProcesses()
 	return err
 }
 
