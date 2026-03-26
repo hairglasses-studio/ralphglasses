@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
+	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 )
 
 // --- Loop list dispatch table ---
@@ -219,12 +220,15 @@ func handleLoopListStop(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	idPrefix := row[0]
 	for _, l := range m.SessMgr.ListLoops() {
 		if strings.HasPrefix(l.ID, idPrefix) {
-			if err := m.SessMgr.StopLoop(l.ID); err != nil {
-				m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
-			} else {
-				m.Notify.Show(fmt.Sprintf("Stopped: %s", l.RepoName), 3*time.Second)
+			m.ConfirmDialog = &components.ConfirmDialog{
+				Title:   "Confirm Stop Loop",
+				Message: fmt.Sprintf("Stop loop %s (%s)?", idPrefix, l.RepoName),
+				Action:  "stopManagedLoop",
+				Data:    l.ID,
+				Active:  true,
+				Width:   50,
 			}
-			return *m, m.loopListCmd()
+			return *m, nil
 		}
 	}
 	m.Notify.Show("Loop not found", 3*time.Second)
