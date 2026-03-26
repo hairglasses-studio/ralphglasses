@@ -612,6 +612,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		output          string
 		err             error
 		cascadeResult   *CascadeResult // WS3: non-nil if cascade routing was attempted
+		stallCount      int            // WS-B: stall events detected by StallDetector
 	}
 
 	// WS3: Determine which tasks should try cheap provider first.
@@ -625,6 +626,13 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 					resultCh <- workerResult{idx: workerIdx, err: fmt.Errorf("worker goroutine panicked: %v", r)}
 				}
 			}()
+
+			// WS-B: Create stall detector for this worker.
+			var detector *StallDetector
+			if profile.StallTimeout > 0 {
+				detector = NewStallDetector(profile.StallTimeout)
+			}
+
 			wt, br, wtErr := createLoopWorktree(ctx, repoPath, run.ID, iteration.Number*100+workerIdx)
 			if wtErr != nil {
 				resultCh <- workerResult{idx: workerIdx, err: fmt.Errorf("create worktree: %w", wtErr)}
@@ -692,7 +700,21 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 				if cheapErr == nil {
 					cheapSess.EnhancementSource = workerEnhance.source
 					cheapSess.EnhancementPreScore = workerEnhance.preScore
+					// WS-B: Monitor for stalls during cheap cascade session.
+					if detector != nil {
+						detector.RecordActivity()
+						stallCh := detector.Start()
+						go func() {
+							for range stallCh {
+								// Drain stall notifications; count is tracked in detector.
+							}
+						}()
+					}
 					_ = m.waitForSession(ctx, cheapSess)
+					if detector != nil {
+						detector.Stop()
+						detector.RecordActivity() // reset for next phase
+					}
 
 					// Run quick verification to assess cheap result
 					cheapVerify, _ := runLoopVerification(ctx, wt, profile.VerifyCommands)
@@ -715,9 +737,14 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 						cascadeRes = &cr
 						m.cascade.RecordResult(cr)
 						out := sessionOutputSummary(cheapSess)
+						workerStalls := 0
+						if detector != nil {
+							workerStalls = detector.StallCount()
+						}
 						resultCh <- workerResult{
 							idx: workerIdx, session: cheapSess, worktree: wt,
 							branch: br, output: out, cascadeResult: &cr,
+							stallCount: workerStalls,
 						}
 						return
 					}
@@ -736,7 +763,20 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			ws.EnhancementSource = workerEnhance.source
 			ws.EnhancementPreScore = workerEnhance.preScore
 
+			// WS-B: Monitor for stalls during main worker session.
+			if detector != nil {
+				detector.RecordActivity()
+				stallCh := detector.Start()
+				go func() {
+					for range stallCh {
+						// Drain stall notifications; count is tracked in detector.
+					}
+				}()
+			}
 			waitErr := m.waitForSession(ctx, ws)
+			if detector != nil {
+				detector.Stop()
+			}
 			// Check if productive work happened despite timeout
 			if waitErr != nil && errors.Is(waitErr, context.DeadlineExceeded) && hasGitChanges(wt) {
 				waitErr = nil // Worker made progress; treat as success
@@ -752,7 +792,11 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			}
 
 			out := sessionOutputSummary(ws)
-			resultCh <- workerResult{idx: workerIdx, session: ws, worktree: wt, branch: br, output: out, err: waitErr, cascadeResult: cascadeRes}
+			workerStalls := 0
+			if detector != nil {
+				workerStalls = detector.StallCount()
+			}
+			resultCh <- workerResult{idx: workerIdx, session: ws, worktree: wt, branch: br, output: out, err: waitErr, cascadeResult: cascadeRes, stallCount: workerStalls}
 		}(i, task)
 	}
 
@@ -763,6 +807,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	var workerErrs []string
 	var firstWorktree, firstBranch string
 	var cascadeResults []*CascadeResult // WS3: cascade outcomes per worker
+	var totalStallCount int             // WS-B: accumulated stall events across all workers
 
 	workerCollectTimeout := time.After(15 * time.Minute)
 	collected := 0
@@ -775,6 +820,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			}
 			workerWorktrees[res.idx] = res.worktree
 			workerOutputs[res.idx] = res.output
+			totalStallCount += res.stallCount // WS-B
 			if res.err != nil {
 				workerErrs = append(workerErrs, fmt.Sprintf("worker %d: %s", res.idx, res.err))
 			}
@@ -852,7 +898,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			}
 
 			emitLoopObservation(run, index, m,
-				reflexionApplied, episodesUsed, cascadeResults, taskDifficulties)
+				reflexionApplied, episodesUsed, cascadeResults, taskDifficulties, totalStallCount)
 			m.PersistLoop(run)
 			_ = writeLoopJournal(run, run.Iterations[index])
 			return verErr
@@ -942,7 +988,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	}
 
 	emitLoopObservation(run, index, m,
-		reflexionApplied, episodesUsed, cascadeResults, taskDifficulties)
+		reflexionApplied, episodesUsed, cascadeResults, taskDifficulties, totalStallCount)
 
 	// Feed cost sample to CostPredictor if wired.
 	if m.costPredictor != nil {
