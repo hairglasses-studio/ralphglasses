@@ -43,7 +43,7 @@ func TestParamSync(t *testing.T) {
 			if base == "tools_builders.go" {
 				extractBuilderParams(file, builderParams)
 			}
-			if strings.HasPrefix(base, "handler_") || base == "tools.go" {
+			if strings.HasPrefix(base, "handler_") || base == "tools.go" || base == "tools_session.go" || base == "tools_fleet.go" {
 				extractHandlerParams(file, handlerParams)
 			}
 		}
