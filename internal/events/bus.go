@@ -25,9 +25,10 @@ const (
 	BudgetExceeded EventType = "budget.exceeded"
 
 	// Loop lifecycle
-	LoopStarted  EventType = "loop.started"
-	LoopStopped  EventType = "loop.stopped"
-	LoopIterated EventType = "loop.iterated"
+	LoopStarted   EventType = "loop.started"
+	LoopStopped   EventType = "loop.stopped"
+	LoopRestarted EventType = "loop.restarted"
+	LoopIterated  EventType = "loop.iterated"
 
 	// Loop benchmarking
 	LoopRegression EventType = "loop.regression"
@@ -79,6 +80,7 @@ var knownEventTypes = map[EventType]struct{}{
 	BudgetExceeded:        {},
 	LoopStarted:           {},
 	LoopStopped:           {},
+	LoopRestarted:         {},
 	LoopIterated:          {},
 	LoopRegression:        {},
 	TeamCreated:           {},

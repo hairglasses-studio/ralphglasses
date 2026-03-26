@@ -570,3 +570,181 @@ func TestManager_KillTimeout_ZeroFallback(t *testing.T) {
 		t.Errorf("expected fallback to DefaultKillTimeout, got %v", m.killTimeout())
 	}
 }
+
+func TestAutoRestartOnCrash(t *testing.T) {
+	// Stub sleepFn so backoff doesn't actually wait.
+	origSleep := *sleepFnPtr.Load()
+	setSleepFn(func(d time.Duration) {}) // no-op
+	t.Cleanup(func() { setSleepFn(origSleep) })
+
+	m := NewManager()
+	m.AutoRestart = true
+	m.MaxRestarts = 2
+
+	repoPath := t.TempDir()
+
+	// Write a script that tracks invocations via a counter file and exits non-zero
+	// for the first 2 runs, then exits 0 on the 3rd (original + 2 restarts).
+	counterFile := filepath.Join(repoPath, ".ralph", "restart_counter")
+	_ = os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
+	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"),
+		`COUNTER_FILE="`+counterFile+`"
+if [ ! -f "$COUNTER_FILE" ]; then
+  echo 1 > "$COUNTER_FILE"
+  exit 1
+fi
+COUNT=$(cat "$COUNTER_FILE")
+COUNT=$((COUNT + 1))
+echo $COUNT > "$COUNTER_FILE"
+if [ "$COUNT" -le 2 ]; then
+  exit 1
+fi
+exit 0`)
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// Wait for the process to finish (all restarts should complete quickly with stubbed sleep).
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		if !m.IsRunning(repoPath) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if m.IsRunning(repoPath) {
+		m.StopAll()
+		t.Fatal("process still running after expected restarts + clean exit")
+	}
+
+	// Verify the counter file shows 3 invocations (original + 2 restarts).
+	data, err := os.ReadFile(counterFile)
+	if err != nil {
+		t.Fatalf("reading counter file: %v", err)
+	}
+	count := strings.TrimSpace(string(data))
+	if count != "3" {
+		t.Errorf("expected 3 invocations, got %s", count)
+	}
+
+	// Final exit should be clean (code 0).
+	code, _, ok := m.LastExitStatus(repoPath)
+	if !ok {
+		t.Fatal("expected LastExitStatus to be recorded")
+	}
+	if code != 0 {
+		t.Errorf("expected final exit code 0, got %d", code)
+	}
+}
+
+func TestAutoRestartMaxExceeded(t *testing.T) {
+	// Stub sleepFn so backoff doesn't actually wait.
+	origSleep := *sleepFnPtr.Load()
+	setSleepFn(func(d time.Duration) {}) // no-op
+	t.Cleanup(func() { setSleepFn(origSleep) })
+
+	m := NewManager()
+	m.AutoRestart = true
+	m.MaxRestarts = 2
+
+	repoPath := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
+
+	// Script always exits with code 1 — restarts should be exhausted.
+	counterFile := filepath.Join(repoPath, ".ralph", "max_counter")
+	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"),
+		`COUNTER_FILE="`+counterFile+`"
+if [ ! -f "$COUNTER_FILE" ]; then
+  echo 1 > "$COUNTER_FILE"
+else
+  COUNT=$(cat "$COUNTER_FILE")
+  echo $((COUNT + 1)) > "$COUNTER_FILE"
+fi
+exit 1`)
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// Wait for the process to be cleaned up after max restarts.
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		if !m.IsRunning(repoPath) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if m.IsRunning(repoPath) {
+		m.StopAll()
+		t.Fatal("process still running after max restarts should be exceeded")
+	}
+
+	// Should have run original + MaxRestarts = 3 times total.
+	data, err := os.ReadFile(counterFile)
+	if err != nil {
+		t.Fatalf("reading counter file: %v", err)
+	}
+	count := strings.TrimSpace(string(data))
+	if count != "3" {
+		t.Errorf("expected 3 total invocations (1 original + 2 restarts), got %s", count)
+	}
+
+	// Final exit should be non-zero.
+	code, _, ok := m.LastExitStatus(repoPath)
+	if !ok {
+		t.Fatal("expected LastExitStatus to be recorded")
+	}
+	if code != 1 {
+		t.Errorf("expected final exit code 1, got %d", code)
+	}
+}
+
+func TestAutoRestartDisabled(t *testing.T) {
+	m := NewManager()
+	m.AutoRestart = false // explicit, though this is the default
+
+	repoPath := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
+
+	counterFile := filepath.Join(repoPath, ".ralph", "no_restart_counter")
+	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"),
+		`COUNTER_FILE="`+counterFile+`"
+if [ ! -f "$COUNTER_FILE" ]; then
+  echo 1 > "$COUNTER_FILE"
+else
+  COUNT=$(cat "$COUNTER_FILE")
+  echo $((COUNT + 1)) > "$COUNTER_FILE"
+fi
+exit 1`)
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// Wait for the process to exit.
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if !m.IsRunning(repoPath) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if m.IsRunning(repoPath) {
+		m.StopAll()
+		t.Fatal("process still running when it should have exited without restart")
+	}
+
+	// Should have run exactly once — no restarts.
+	data, err := os.ReadFile(counterFile)
+	if err != nil {
+		t.Fatalf("reading counter file: %v", err)
+	}
+	count := strings.TrimSpace(string(data))
+	if count != "1" {
+		t.Errorf("expected exactly 1 invocation (no restart), got %s", count)
+	}
+}
