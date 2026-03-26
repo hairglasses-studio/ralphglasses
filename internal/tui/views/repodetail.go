@@ -23,11 +23,11 @@ type RepoDetailHealth struct {
 func RenderRepoDetail(r *model.Repo, width int, health *RepoDetailHealth) string {
 	var b strings.Builder
 
-	title := fmt.Sprintf("%s %s", styles.IconRepo, r.Name)
-	if n := len(r.RefreshErrors); n > 0 {
-		title += " " + styles.WarningStyle.Render(fmt.Sprintf("%s %d", styles.IconWarning, n))
+	titleLine := styles.TitleStyle.Render(fmt.Sprintf("%s %s", styles.IconRepo, r.Name))
+	if len(r.RefreshErrors) > 0 {
+		titleLine += "  " + styles.WarningStyle.Render(fmt.Sprintf("%s %d parse error(s)", styles.IconWarning, len(r.RefreshErrors)))
 	}
-	b.WriteString(styles.TitleStyle.Render(title))
+	b.WriteString(titleLine)
 	b.WriteString("\n")
 	b.WriteString(styles.InfoStyle.Render(r.Path))
 	b.WriteString("\n\n")
