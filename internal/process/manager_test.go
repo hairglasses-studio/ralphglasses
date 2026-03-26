@@ -547,3 +547,26 @@ func TestCleanStalePIDFiles(t *testing.T) {
 		t.Error("live PID file in repo2 should still exist")
 	}
 }
+
+func TestManager_KillTimeout_Default(t *testing.T) {
+	m := NewManager()
+	if m.KillTimeout != DefaultKillTimeout {
+		t.Errorf("expected default KillTimeout %v, got %v", DefaultKillTimeout, m.KillTimeout)
+	}
+}
+
+func TestManager_KillTimeout_Custom(t *testing.T) {
+	m := NewManager()
+	m.KillTimeout = 10 * time.Second
+	if m.killTimeout() != 10*time.Second {
+		t.Errorf("expected custom KillTimeout 10s, got %v", m.killTimeout())
+	}
+}
+
+func TestManager_KillTimeout_ZeroFallback(t *testing.T) {
+	m := NewManager()
+	m.KillTimeout = 0
+	if m.killTimeout() != DefaultKillTimeout {
+		t.Errorf("expected fallback to DefaultKillTimeout, got %v", m.killTimeout())
+	}
+}

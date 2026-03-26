@@ -3,7 +3,7 @@ package plugin
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 )
 
@@ -35,7 +35,7 @@ func (r *Registry) Dispatch(ctx context.Context, event Event) {
 
 	for _, p := range plugins {
 		if err := p.OnEvent(ctx, event); err != nil {
-			log.Printf("plugin %s (%s): OnEvent warning: %v", p.Name(), p.Version(), err)
+			slog.Warn("plugin OnEvent failed", "plugin", p.Name(), "version", p.Version(), "err", err)
 		}
 	}
 }

@@ -64,6 +64,21 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		MaxBudgetUSD:   getNumberArg(req, "max_budget_usd", 0),
 	}
 
+	if getBoolArg(req, "dry_run") {
+		return jsonResult(map[string]any{
+			"dry_run":         true,
+			"name":            config.Name,
+			"repo":            repoName,
+			"provider":        string(config.Provider),
+			"worker_provider": string(config.WorkerProvider),
+			"lead_agent":      config.LeadAgent,
+			"model":           config.Model,
+			"max_budget_usd":  config.MaxBudgetUSD,
+			"tasks":           config.Tasks,
+			"task_count":      len(config.Tasks),
+		}), nil
+	}
+
 	team, err := s.SessMgr.LaunchTeam(ctx, config)
 	if err != nil {
 		return codedError(ErrLaunchFailed, fmt.Sprintf("create team failed: %v", err)), nil

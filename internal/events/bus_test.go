@@ -805,6 +805,72 @@ func TestAsyncWriteClose(t *testing.T) {
 	}
 }
 
+func TestAsyncDrainOnClose(t *testing.T) {
+	dir := t.TempDir()
+	persistPath := filepath.Join(dir, "drain100_events.jsonl")
+
+	bus := NewBus(200)
+	bus.AsyncWrites = true
+	if err := bus.PersistTo(persistPath); err != nil {
+		t.Fatal(err)
+	}
+	bus.StartAsync()
+
+	const total = 100
+	for i := 0; i < total; i++ {
+		bus.Publish(Event{Type: LoopIterated, Data: map[string]any{"i": i}})
+	}
+
+	// Close must drain all pending writes before returning
+	if err := bus.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	events, err := LoadEvents(persistPath, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != total {
+		t.Fatalf("expected %d persisted events after drain, got %d", total, len(events))
+	}
+}
+
+func TestPublishSetsDefaultVersion(t *testing.T) {
+	dir := t.TempDir()
+	persistPath := filepath.Join(dir, "version_events.jsonl")
+
+	bus := NewBus(100)
+	if err := bus.PersistTo(persistPath); err != nil {
+		t.Fatal(err)
+	}
+
+	// Publish with Version=0 (zero value)
+	bus.Publish(Event{Type: SessionStarted})
+
+	// Verify in-memory history has Version=1
+	history := bus.History("", 10)
+	if len(history) != 1 {
+		t.Fatalf("history len = %d, want 1", len(history))
+	}
+	if history[0].Version != 1 {
+		t.Errorf("in-memory version = %d, want 1", history[0].Version)
+	}
+
+	bus.Close()
+
+	// Verify persisted event also has Version=1
+	events, err := LoadEvents(persistPath, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("expected 1 persisted event, got %d", len(events))
+	}
+	if events[0].Version != 1 {
+		t.Errorf("persisted version = %d, want 1", events[0].Version)
+	}
+}
+
 func TestSyncWriteStillWorks(t *testing.T) {
 	dir := t.TempDir()
 	persistPath := filepath.Join(dir, "sync_events.jsonl")

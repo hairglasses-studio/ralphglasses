@@ -137,3 +137,63 @@ func TestScan_ManyRepos(t *testing.T) {
 		}
 	}
 }
+
+func TestScan_UnreadableRepoDir(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("test requires non-root user")
+	}
+	t.Parallel()
+
+	dir := t.TempDir()
+
+	// Create a readable repo to verify the scan still works around the bad one.
+	goodRepo := filepath.Join(dir, "good-repo")
+	if err := os.MkdirAll(filepath.Join(goodRepo, ".ralph"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a repo dir, add .ralph inside it, then make the repo dir
+	// itself unreadable. The scanner should skip it gracefully.
+	badRepo := filepath.Join(dir, "bad-repo")
+	if err := os.MkdirAll(filepath.Join(badRepo, ".ralph"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(badRepo, 0000); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(badRepo, 0755) //nolint:errcheck
+
+	repos, err := Scan(context.Background(), dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// The unreadable repo can't be stat'd for .ralph/, so it should be skipped.
+	// Only the good repo should be found.
+	if len(repos) != 1 {
+		t.Errorf("expected 1 repo (good only), got %d", len(repos))
+	}
+	if len(repos) == 1 && repos[0].Name != "good-repo" {
+		t.Errorf("expected good-repo, got %q", repos[0].Name)
+	}
+}
+
+func TestScan_CancelledContext(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	// Create some repos.
+	for i := 0; i < 5; i++ {
+		name := filepath.Join(dir, fmt.Sprintf("repo-%d", i))
+		if err := os.MkdirAll(filepath.Join(name, ".ralph"), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	_, err := Scan(ctx, dir)
+	if err == nil {
+		t.Fatal("expected error for cancelled context")
+	}
+}
