@@ -650,10 +650,11 @@ func TestProcessExitMsg_SetsRepoStatus(t *testing.T) {
 	tests := []struct {
 		name       string
 		exitCode   int
+		err        error
 		wantStatus string
 	}{
-		{"non-zero exit sets crashed", 1, "crashed"},
-		{"zero exit sets stopped", 0, "stopped"},
+		{"non-zero exit sets crashed", 1, fmt.Errorf("signal: killed"), "crashed"},
+		{"zero exit sets stopped", 0, nil, "stopped"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -663,6 +664,7 @@ func TestProcessExitMsg_SetsRepoStatus(t *testing.T) {
 			m2, _ := m.Update(process.ProcessExitMsg{
 				RepoPath: "/tmp/myrepo",
 				ExitCode: tt.exitCode,
+				Error:    tt.err,
 			})
 			got := m2.(Model)
 
