@@ -40,6 +40,13 @@ func ResolveMainRepoPath(dir string) (string, error) {
 	return filepath.Dir(commonDir), nil
 }
 
+// DiffStat tracks the aggregate diff size for an iteration.
+type DiffStat struct {
+	FilesChanged int `json:"files_changed"`
+	Insertions   int `json:"insertions"`
+	Deletions    int `json:"deletions"`
+}
+
 // LoopObservation is one JSONL record per completed loop iteration,
 // capturing timing, cost, outcome, and code impact for regression analysis.
 type LoopObservation struct {
@@ -78,6 +85,22 @@ type LoopObservation struct {
 	EpisodesUsed     int       `json:"episodes_used"`
 
 	PlannerFallback  bool      `json:"planner_fallback,omitempty"`
+
+	// GitDiffStat tracks the diff size for this iteration.
+	GitDiffStat *DiffStat `json:"git_diff_stat,omitempty"`
+
+	// PlannerModelUsed is the model ID used by the planner (e.g., "claude-opus-4-6").
+	PlannerModelUsed string `json:"planner_model_used,omitempty"`
+
+	// WorkerModelUsed is the model ID used by the worker (e.g., "claude-sonnet-4-6").
+	WorkerModelUsed string `json:"worker_model_used,omitempty"`
+
+	// AcceptancePath records how the iteration's output was handled.
+	// Values: "auto_merge", "pr", "rejected", "no_change"
+	AcceptancePath string `json:"acceptance_path,omitempty"`
+
+	// StallCount is the number of stall events detected during this iteration.
+	StallCount int `json:"stall_count,omitempty"`
 
 	// Sub-phase timing (ms) — surfaces where planner/worker time is actually spent.
 	PromptBuildMs     int64 `json:"prompt_build_ms,omitempty"`
@@ -160,14 +183,16 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 	run.mu.Unlock()
 
 	obs := LoopObservation{
-		Timestamp:       time.Now(),
-		LoopID:          loopID,
-		RepoName:        repoName,
-		IterationNumber: iter.Number,
-		PlannerProvider: string(profile.PlannerProvider),
-		WorkerProvider:  string(profile.WorkerProvider),
-		WorkerCount:     len(iter.WorkerSessionIDs),
-		Mode:            "live",
+		Timestamp:        time.Now(),
+		LoopID:           loopID,
+		RepoName:         repoName,
+		IterationNumber:  iter.Number,
+		PlannerProvider:  string(profile.PlannerProvider),
+		WorkerProvider:   string(profile.WorkerProvider),
+		PlannerModelUsed: profile.PlannerModel,
+		WorkerModelUsed:  profile.WorkerModel,
+		WorkerCount:      len(iter.WorkerSessionIDs),
+		Mode:             "live",
 	}
 
 	// Timing — per-stage and total
@@ -241,6 +266,14 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 		obs.LinesAdded += added
 		obs.LinesRemoved += removed
 	}
+	// Populate structured DiffStat from the flat fields.
+	if obs.FilesChanged > 0 || obs.LinesAdded > 0 || obs.LinesRemoved > 0 {
+		obs.GitDiffStat = &DiffStat{
+			FilesChanged: obs.FilesChanged,
+			Insertions:   obs.LinesAdded,
+			Deletions:    obs.LinesRemoved,
+		}
+	}
 
 	// Diff path correlation — collect file paths changed across worktrees.
 	var allDiffPaths []string
@@ -291,6 +324,22 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 		obs.Confidence = 0.0
 	} else {
 		obs.Confidence = 0.5
+	}
+
+	// Derive acceptance path from the iteration's acceptance result.
+	if iter.Acceptance != nil {
+		switch {
+		case iter.Acceptance.AutoMerged:
+			obs.AcceptancePath = "auto_merge"
+		case iter.Acceptance.PRCreated:
+			obs.AcceptancePath = "pr"
+		case iter.Acceptance.Error != "":
+			obs.AcceptancePath = "rejected"
+		default:
+			obs.AcceptancePath = "no_change"
+		}
+	} else if obs.FilesChanged == 0 {
+		obs.AcceptancePath = "no_change"
 	}
 
 	// Write to JSONL
@@ -417,6 +466,76 @@ func AggregateObservations(observations []LoopObservation, windowHours float64) 
 	}
 
 	return summary
+}
+
+// IterationSummary aggregates statistics across multiple observations.
+type IterationSummary struct {
+	TotalIterations   int            `json:"total_iterations"`
+	CompletedCount    int            `json:"completed_count"`
+	FailedCount       int            `json:"failed_count"`
+	TotalStalls       int            `json:"total_stalls"`
+	AvgDurationSec    float64        `json:"avg_duration_sec"`
+	TotalFilesChanged int            `json:"total_files_changed"`
+	TotalInsertions   int            `json:"total_insertions"`
+	TotalDeletions    int            `json:"total_deletions"`
+	AcceptanceCounts  map[string]int `json:"acceptance_counts"` // "auto_merge" -> N, etc.
+	ModelUsage        map[string]int `json:"model_usage"`       // model ID -> count
+}
+
+// SummarizeObservations computes aggregate statistics from a slice of observations.
+func SummarizeObservations(obs []LoopObservation) IterationSummary {
+	s := IterationSummary{
+		AcceptanceCounts: make(map[string]int),
+		ModelUsage:       make(map[string]int),
+	}
+	if len(obs) == 0 {
+		return s
+	}
+
+	s.TotalIterations = len(obs)
+	var totalDurationMs int64
+	for _, o := range obs {
+		// Status accounting
+		switch o.Status {
+		case "idle":
+			s.CompletedCount++
+		case "failed":
+			s.FailedCount++
+		}
+
+		// Stall accounting
+		s.TotalStalls += o.StallCount
+
+		// Duration
+		totalDurationMs += o.TotalLatencyMs
+
+		// Diff stats from DiffStat if present, otherwise from flat fields
+		if o.GitDiffStat != nil {
+			s.TotalFilesChanged += o.GitDiffStat.FilesChanged
+			s.TotalInsertions += o.GitDiffStat.Insertions
+			s.TotalDeletions += o.GitDiffStat.Deletions
+		} else {
+			s.TotalFilesChanged += o.FilesChanged
+			s.TotalInsertions += o.LinesAdded
+			s.TotalDeletions += o.LinesRemoved
+		}
+
+		// Acceptance path
+		if o.AcceptancePath != "" {
+			s.AcceptanceCounts[o.AcceptancePath]++
+		}
+
+		// Model usage
+		if o.PlannerModelUsed != "" {
+			s.ModelUsage[o.PlannerModelUsed]++
+		}
+		if o.WorkerModelUsed != "" {
+			s.ModelUsage[o.WorkerModelUsed]++
+		}
+	}
+
+	s.AvgDurationSec = float64(totalDurationMs) / float64(len(obs)) / 1000.0
+	return s
 }
 
 // gitDiffStats runs git diff --stat on a worktree and parses the summary line.
