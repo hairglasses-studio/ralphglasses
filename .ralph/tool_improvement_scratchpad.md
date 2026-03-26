@@ -86,7 +86,7 @@ Observations from reliability & quality improvement workstreams + recursive self
 
 31. **~~Error code adoption is partial~~** — RESOLVED: migration complete (216 calls). ~~Q5 converted `handler_loop.go` and `handler_session.go` to use `codedError()`, but ~20+ other handlers still use `errResult()`. Should progressively migrate all handlers. The `errResult` → `codedError` pattern is mechanical and could be automated.~~
 
-32. **`EvaluateFromObservations` silently swallows baseline save errors** — Line `_ = saveErr` after rebuilding baseline. Should at minimum log when baseline persistence fails, since a missing baseline causes VerdictSkip on next run.
+32. **~~`EvaluateFromObservations` silently swallows baseline save errors~~** — RESOLVED: `e2e/gates.go:271` now logs via `slog.Warn("failed to save baseline", "err", saveErr)`.
 
 ## Round 3: Agent Completion & Research Observations
 
@@ -120,8 +120,8 @@ Observations from reliability & quality improvement workstreams + recursive self
 
 45. **B2 agent created duplicate `SelfImprovementProfile()`** — Agent created `internal/session/selfimprove.go` with its own version of `SelfImprovementProfile()` despite A1 already adding it to `loop.go`. The two versions had different defaults (B2: $5/$15 budget, 2 workers, cascade enabled; A1: $1/$3 budget, 1 worker, cascade disabled per plan). Root cause: B2 didn't see A1's changes in its worktree. Fix: skip the duplicate file during merge, use A1's canonical version.
 
-46. **Self-improve handler uses `errResult` instead of `codedError`** — `handler_selfimprove.go:72` uses `errResult()` for the loop start error, while the surrounding code uses `codedError()`. Should use `codedError(ErrLoopStart, ...)` for consistency with the error code migration (scratchpad #31).
+46. **~~Self-improve handler uses `errResult` instead of `codedError`~~** — RESOLVED: `handler_selfimprove.go:60` uses `codedError(ErrLoopStart, ...)`.
 
-47. **`maxIter` parameter unused in handler** — `handler_selfimprove.go` parses `max_iterations` param but doesn't pass it anywhere — `StartLoop` doesn't take a max iterations arg. The loop runs until stopped or budget exhausted. Either: (a) add `MaxIterations` to `LoopProfile`, or (b) remove the param and document that budget is the real limiter.
+47. **~~`maxIter` parameter unused in handler~~** — RESOLVED: `handler_selfimprove.go:40` sets `profile.MaxIterations` which is used by `StartLoop`.
 
 48. **~~`self-improve.sh` references `mcp-call` subcommand~~** — RESOLVED: mcpcall.go exists. ~~The script calls `./ralphglasses mcp-call ralphglasses_self_improve` but no `mcp-call` cobra command exists. Should either: (a) implement `mcp-call` as a thin wrapper that starts MCP, calls the tool, and exits, or (b) change the script to use the MCP protocol directly via stdin/stdout.~~
