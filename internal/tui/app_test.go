@@ -720,6 +720,39 @@ func TestProcessExitMsg_SetsRepoStatus(t *testing.T) {
 	}
 }
 
+func TestTUICrashNotification(t *testing.T) {
+	crashErr := fmt.Errorf("signal: killed")
+	msg := process.ProcessExitMsg{
+		RepoPath: "/tmp/crashrepo",
+		ExitCode: 1,
+		Error:    crashErr,
+	}
+
+	// Assert all three message fields before feeding to the model.
+	if msg.RepoPath == "" {
+		t.Fatal("ProcessExitMsg.RepoPath must be non-empty")
+	}
+	if msg.ExitCode == 0 {
+		t.Fatal("ProcessExitMsg.ExitCode must be non-zero")
+	}
+	if msg.Error == nil {
+		t.Fatal("ProcessExitMsg.Error must be non-nil")
+	}
+
+	m := NewModel("/tmp/test", nil)
+	m.Repos = []*model.Repo{{Name: "crashrepo", Path: "/tmp/crashrepo"}}
+
+	m2, _ := m.Update(msg)
+	got := m2.(Model)
+
+	if got.Repos[0].Status == nil {
+		t.Fatal("expected Status to be set after ProcessExitMsg, got nil")
+	}
+	if got.Repos[0].Status.Status != "crashed" {
+		t.Errorf("Status = %q, want %q", got.Repos[0].Status.Status, "crashed")
+	}
+}
+
 func TestLoopDetailKeyBindings(t *testing.T) {
 	mgr := session.NewManager()
 	m := NewModel("/tmp/test", mgr)
