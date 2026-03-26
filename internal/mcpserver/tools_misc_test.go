@@ -1085,8 +1085,8 @@ func TestRCRead_NoSessions(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "No sessions") {
-		t.Errorf("expected no sessions, got: %s", text)
+	if !strings.Contains(text, `"status": "empty"`) {
+		t.Errorf("expected empty status JSON, got: %s", text)
 	}
 }
 

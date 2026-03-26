@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"log/slog"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -31,6 +33,18 @@ Or with a custom scan path:
   claude mcp add ralphglasses -e RALPHGLASSES_SCAN_PATH=~/hairglasses-studio -- go run . mcp`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
+
+		// Wire structured logging to file.
+		logDir := filepath.Join(sp, ".ralph", "logs")
+		if err := os.MkdirAll(logDir, 0o755); err != nil {
+			return err
+		}
+		logFile, err := os.OpenFile(filepath.Join(logDir, "ralph.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		if err != nil {
+			return err
+		}
+		defer logFile.Close()
+		slog.SetDefault(slog.New(newLogHandler(logFile)))
 
 		// Tool call recorder: writes to <scanPath>/.ralph/tool_benchmarks.jsonl
 		benchPath := filepath.Join(sp, ".ralph", "tool_benchmarks.jsonl")

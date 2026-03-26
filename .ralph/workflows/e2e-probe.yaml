@@ -1,0 +1,4 @@
+name: e2e-probe
+steps:
+    - name: test
+      prompt: echo hello

@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -70,6 +71,9 @@ func (s *Server) handleAwesomeReport(_ context.Context, req mcp.CallToolRequest)
 
 	analysis, err := awesome.LoadAnalysis(saveTo)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return jsonResult(map[string]any{"status": "no_data", "message": "run awesome_analyze first"}), nil
+		}
 		return codedError(ErrFilesystem, fmt.Sprintf("load analysis: %v", err)), nil
 	}
 

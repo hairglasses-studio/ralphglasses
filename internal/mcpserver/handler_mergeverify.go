@@ -115,22 +115,11 @@ func (s *Server) handleMergeVerify(ctx context.Context, req mcp.CallToolRequest)
 	}
 
 	// Read optional params.
-	m := argsMap(req)
-	fast := false
-	if m != nil {
-		if v, ok := m["fast"].(bool); ok {
-			fast = v
-		}
-	}
-	coverage := false
-	if m != nil {
-		if v, ok := m["coverage"].(bool); ok {
-			coverage = v
-		}
-	}
+	fast := getBoolArg(req, "fast")
+	coverage := getBoolArg(req, "coverage")
 	// Race defaults to true.
 	race := true
-	if m != nil {
+	if m := argsMap(req); m != nil {
 		if v, ok := m["race"].(bool); ok {
 			race = v
 		}

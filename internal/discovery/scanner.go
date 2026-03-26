@@ -2,7 +2,7 @@ package discovery
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -46,7 +46,7 @@ func Scan(ctx context.Context, root string) ([]*model.Repo, error) {
 		}
 		if errs := model.RefreshRepo(r); len(errs) > 0 {
 			for _, e := range errs {
-				log.Printf("scan: refresh %s: %v", r.Path, e)
+				slog.Warn("scan: refresh failed", "repo", r.Path, "err", e)
 			}
 		}
 		repos = append(repos, r)

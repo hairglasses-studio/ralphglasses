@@ -3,8 +3,11 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -22,7 +25,9 @@ var (
 	scanPath   string
 	themeName  string
 	notifyFlag bool
-	debugMode bool
+	debugMode  bool
+	logLevel   string
+	logFormat  string
 	version    = "dev"
 	commit     = "unknown"
 	buildDate  = "unknown"
@@ -54,6 +59,18 @@ fleet management from any MCP-capable client.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		scanPath = util.ExpandHome(scanPath)
 
+		// Wire structured logging to file.
+		logDir := filepath.Join(scanPath, ".ralph", "logs")
+		if err := os.MkdirAll(logDir, 0o755); err != nil {
+			return err
+		}
+		logFile, err := os.OpenFile(filepath.Join(logDir, "ralph.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		if err != nil {
+			return err
+		}
+		defer logFile.Close()
+		slog.SetDefault(slog.New(newLogHandler(logFile)))
+
 		util.Debug.Debugf("scan-path: %s", scanPath)
 
 		// Apply theme
@@ -76,7 +93,7 @@ fleet management from any MCP-capable client.`,
 		m.EventBus = bus
 		m.NotifyEnabled = notifyFlag
 		p := tea.NewProgram(m, tea.WithAltScreen())
-		_, err := p.Run()
+		_, err = p.Run()
 		return err
 	},
 }
@@ -124,11 +141,39 @@ func init() {
 		"Root directory to scan for ralph-enabled repos")
 	rootCmd.PersistentFlags().BoolVar(&debugMode, "debug", false,
 		"Enable verbose debug logging to stderr")
+	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info",
+		"Log level (debug, info, warn, error)")
+	rootCmd.PersistentFlags().StringVar(&logFormat, "log-format", "json",
+		"Log format (json, text)")
 	rootCmd.Flags().StringVar(&themeName, "theme", "k9s",
 		"Color theme (k9s, dracula, gruvbox, nord, or path to YAML)")
 	rootCmd.Flags().BoolVar(&notifyFlag, "notify", false,
 		"Enable desktop notifications for critical alerts")
 	rootCmd.AddCommand(completionCmd)
+}
+
+// parseLogLevel converts a string level name to slog.Level.
+func parseLogLevel(s string) slog.Level {
+	switch strings.ToLower(s) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
+
+// newLogHandler creates a slog.Handler writing to w, respecting the
+// --log-level and --log-format flags.
+func newLogHandler(w io.Writer) slog.Handler {
+	opts := &slog.HandlerOptions{Level: parseLogLevel(logLevel)}
+	if strings.ToLower(logFormat) == "text" {
+		return slog.NewTextHandler(w, opts)
+	}
+	return slog.NewJSONHandler(w, opts)
 }
 
 // Execute runs the root command.

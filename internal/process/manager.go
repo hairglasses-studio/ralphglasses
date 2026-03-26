@@ -44,11 +44,12 @@ func WaitForProcessExit(ch <-chan ProcessExitMsg) tea.Cmd {
 
 // Manager tracks running ralph loop processes.
 type Manager struct {
-	mu     sync.Mutex
-	procs  map[string]*ManagedProcess // keyed by repo path
-	bus    *events.Bus
-	errCh  chan ProcessErrorMsg
-	exitCh chan ProcessExitMsg
+	mu          sync.Mutex
+	procs       map[string]*ManagedProcess // keyed by repo path
+	bus         *events.Bus
+	errCh       chan ProcessErrorMsg
+	exitCh      chan ProcessExitMsg
+	KillTimeout time.Duration // timeout between kill sequence stages; defaults to 5s
 }
 
 // ManagedProcess wraps an os/exec.Cmd for a ralph loop.
@@ -73,22 +74,27 @@ type exitStatus struct {
 	Error string
 }
 
+// DefaultKillTimeout is the default timeout between kill sequence stages.
+const DefaultKillTimeout = 5 * time.Second
+
 // NewManager creates a new process manager.
 func NewManager() *Manager {
 	return &Manager{
-		procs:  make(map[string]*ManagedProcess),
-		errCh:  make(chan ProcessErrorMsg, 16),
-		exitCh: make(chan ProcessExitMsg, 16),
+		procs:       make(map[string]*ManagedProcess),
+		errCh:       make(chan ProcessErrorMsg, 16),
+		exitCh:      make(chan ProcessExitMsg, 16),
+		KillTimeout: DefaultKillTimeout,
 	}
 }
 
 // NewManagerWithBus creates a process manager wired to an event bus.
 func NewManagerWithBus(bus *events.Bus) *Manager {
 	return &Manager{
-		procs:  make(map[string]*ManagedProcess),
-		bus:    bus,
-		errCh:  make(chan ProcessErrorMsg, 16),
-		exitCh: make(chan ProcessExitMsg, 16),
+		procs:       make(map[string]*ManagedProcess),
+		bus:         bus,
+		errCh:       make(chan ProcessErrorMsg, 16),
+		exitCh:      make(chan ProcessExitMsg, 16),
+		KillTimeout: DefaultKillTimeout,
 	}
 }
 
@@ -276,8 +282,6 @@ var (
 	aliveFn        = isProcessAlive
 )
 
-const killSequenceTimeout = 5 * time.Second
-
 // sendSignal sends a signal to a process, trying process group first.
 func sendSignal(pid int, sig syscall.Signal) error {
 	pgid, err := getpgid(pid)
@@ -310,28 +314,41 @@ func (m *Manager) Stop(repoPath string) error {
 	}
 	m.mu.Unlock()
 
+	timeout := m.killTimeout()
 	go func() {
-		runKillSequence(pid, childPids)
+		runKillSequence(pid, childPids, timeout)
 		// Post-stop orphan audit: detect lingering ralph_loop processes.
 		m.auditOrphanedProcesses()
 	}()
 	return nil
 }
 
+// killTimeout returns the configured kill timeout, defaulting to DefaultKillTimeout if zero.
+func (m *Manager) killTimeout() time.Duration {
+	if m.KillTimeout <= 0 {
+		return DefaultKillTimeout
+	}
+	return m.KillTimeout
+}
+
 // runKillSequence executes the escalating shutdown sequence:
 //  1. SIGTERM to the primary PID
-//  2. Wait 5 seconds
+//  2. Wait timeout
 //  3. SIGTERM to all known child PIDs
-//  4. Wait 5 seconds
+//  4. Wait timeout
 //  5. SIGKILL to any PIDs still alive
-func runKillSequence(pid int, childPids []int) {
+func runKillSequence(pid int, childPids []int, timeout time.Duration) {
+	if timeout <= 0 {
+		timeout = DefaultKillTimeout
+	}
+
 	// Step 1: SIGTERM to primary PID.
 	if aliveFn(pid) {
 		_ = killPid(pid, syscall.SIGTERM)
 	}
 
 	// Step 2: Wait for primary to exit.
-	sleepFn(killSequenceTimeout)
+	sleepFn(timeout)
 
 	// Step 3: SIGTERM to child PIDs.
 	for _, cpid := range childPids {
@@ -341,7 +358,7 @@ func runKillSequence(pid int, childPids []int) {
 	}
 
 	// Step 4: Wait for children to exit.
-	sleepFn(killSequenceTimeout)
+	sleepFn(timeout)
 
 	// Step 5: SIGKILL any survivors.
 	allPids := append([]int{pid}, childPids...)

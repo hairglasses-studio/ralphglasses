@@ -1,0 +1,88 @@
+{
+  "generated_at": "2026-03-25T20:04:58.359982-07:00",
+  "window_hours": 0,
+  "entries": {
+    "Child PID tracking for process/session packages:claude": {
+      "cost_p50": 0.28408500000000003,
+      "cost_p95": 0.28408500000000003,
+      "latency_p50_ms": 536399,
+      "latency_p95_ms": 536399,
+      "sample_count": 1
+    },
+    "Document TUI loop interaction surface in ARCHITECTURE.md:claude": {
+      "cost_p50": 0.11003399999999999,
+      "cost_p95": 0.11003399999999999,
+      "latency_p50_ms": 317339,
+      "latency_p95_ms": 317339,
+      "sample_count": 1
+    },
+    "Escalating kill sequence for process manager:claude": {
+      "cost_p50": 0.266505,
+      "cost_p95": 0.266505,
+      "latency_p50_ms": 366259,
+      "latency_p95_ms": 366259,
+      "sample_count": 1
+    },
+    "Fix ExecStart paths and add path consistency check:claude": {
+      "cost_p50": 0.064161,
+      "cost_p95": 0.064161,
+      "latency_p50_ms": 152806,
+      "latency_p95_ms": 152806,
+      "sample_count": 1
+    },
+    "Getpgid fallback test + warning logging:claude": {
+      "cost_p50": 0.108993,
+      "cost_p95": 0.108993,
+      "latency_p50_ms": 213471,
+      "latency_p95_ms": 213471,
+      "sample_count": 1
+    },
+    "Orphan process audit in kill sequence:claude": {
+      "cost_p50": 0.19096200000000002,
+      "cost_p95": 0.19096200000000002,
+      "latency_p50_ms": 294512,
+      "latency_p95_ms": 294512,
+      "sample_count": 1
+    },
+    "Verify repo status refactoring:claude": {
+      "cost_p50": 0.047715,
+      "cost_p95": 0.047715,
+      "latency_p50_ms": 137580,
+      "latency_p95_ms": 137580,
+      "sample_count": 1
+    },
+    "Verify roadmap task 0.5.3.5 implementation:claude": {
+      "cost_p50": 0.020249999999999997,
+      "cost_p95": 0.020249999999999997,
+      "latency_p50_ms": 99422,
+      "latency_p95_ms": 99422,
+      "sample_count": 1
+    },
+    "refactor: extract ProcessExitMsg handler into applyProcessExit helper:claude": {
+      "cost_p50": 0.052835999999999994,
+      "cost_p95": 0.052835999999999994,
+      "latency_p50_ms": 129525,
+      "latency_p95_ms": 129525,
+      "sample_count": 1
+    },
+    "test: add sub-phase timing assertions to loop iteration tests:claude": {
+      "cost_p50": 0.157047,
+      "cost_p95": 0.157047,
+      "latency_p50_ms": 240144,
+      "latency_p95_ms": 240144,
+      "sample_count": 1
+    }
+  },
+  "aggregate": {
+    "cost_p50": 0.108993,
+    "cost_p95": 0.28408500000000003,
+    "latency_p50_ms": 213471,
+    "latency_p95_ms": 536399,
+    "sample_count": 10
+  },
+  "rates": {
+    "completion_rate": 1,
+    "verify_pass_rate": 1,
+    "error_rate": 0
+  }
+}

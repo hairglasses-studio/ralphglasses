@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestStop_NonExistentRepo(t *testing.T) {
@@ -243,5 +244,73 @@ func TestCleanStalePIDFiles_DeadProcess(t *testing.T) {
 	// PID file should be removed.
 	if _, err := os.Stat(filepath.Join(repoPath, ".ralph", pidFileName)); !os.IsNotExist(err) {
 		t.Error("expected PID file to be removed after cleaning")
+	}
+}
+
+func TestStop_TwiceOnSameProcess(t *testing.T) {
+	m := NewManager()
+	repoPath := t.TempDir()
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"), "sleep 60")
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// First stop should succeed.
+	err := m.Stop(repoPath)
+	if err != nil {
+		t.Fatalf("first Stop: %v", err)
+	}
+
+	// Give the reaper goroutine time to clean up the process entry.
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		if !m.IsRunning(repoPath) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	// Second stop should return an error (not panic).
+	err = m.Stop(repoPath)
+	if err == nil {
+		t.Fatal("expected error on second Stop, got nil")
+	}
+}
+
+func TestStop_NeverStarted_ReturnsError(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+	err := m.Stop("/completely/fake/repo/path")
+	if err == nil {
+		t.Fatal("expected error stopping process that was never started, got nil")
+	}
+}
+
+func TestStopAll_ThenStop_DoesNotPanic(t *testing.T) {
+	m := NewManager()
+	repoPath := t.TempDir()
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"), "sleep 60")
+
+	if err := m.Start(repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// StopAll clears the map immediately.
+	m.StopAll()
+
+	// Stop after StopAll should return error, not panic.
+	err := m.Stop(repoPath)
+	if err == nil {
+		t.Fatal("expected error on Stop after StopAll, got nil")
 	}
 }

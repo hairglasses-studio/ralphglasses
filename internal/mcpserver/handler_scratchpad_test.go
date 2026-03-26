@@ -40,8 +40,8 @@ func TestHandleScratchpadReadMissing(t *testing.T) {
 	}
 
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, "No scratchpad found: nonexistent") {
-		t.Errorf("expected 'No scratchpad found' message, got: %s", text)
+	if !strings.Contains(text, `"status": "empty"`) {
+		t.Errorf("expected empty status JSON, got: %s", text)
 	}
 }
 

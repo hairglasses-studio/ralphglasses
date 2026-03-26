@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"time"
 
@@ -60,6 +61,22 @@ func InstrumentationMiddleware(rec *ToolCallRecorder) server.ToolHandlerMiddlewa
 			}
 
 			rec.Record(entry)
+
+			// Structured log for every tool invocation.
+			logAttrs := []any{
+				"tool", entry.ToolName,
+				"duration_ms", entry.LatencyMs,
+				"success", entry.Success,
+			}
+			if entry.ErrorMsg != "" {
+				logAttrs = append(logAttrs, "error", entry.ErrorMsg)
+			}
+			if entry.Success {
+				slog.InfoContext(ctx, "tool call completed", logAttrs...)
+			} else {
+				slog.WarnContext(ctx, "tool call failed", logAttrs...)
+			}
+
 			return result, err
 		}
 	}

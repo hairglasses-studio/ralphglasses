@@ -49,7 +49,7 @@ func (ce *ConfigEditor) MoveDown() {
 
 // StartEdit enters edit mode for the current key.
 func (ce *ConfigEditor) StartEdit() {
-	if len(ce.Keys) == 0 {
+	if len(ce.Keys) == 0 || ce.Cursor >= len(ce.Keys) {
 		return
 	}
 	ce.Editing = true
@@ -72,7 +72,7 @@ func (ce *ConfigEditor) Backspace() {
 
 // ConfirmEdit saves the edit.
 func (ce *ConfigEditor) ConfirmEdit() {
-	if !ce.Editing {
+	if !ce.Editing || len(ce.Keys) == 0 || ce.Cursor >= len(ce.Keys) {
 		return
 	}
 	key := ce.Keys[ce.Cursor]
