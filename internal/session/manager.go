@@ -43,6 +43,7 @@ type Manager struct {
 	waitSession    func(context.Context, *Session) error
 	healthCheck    func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
 	SessionTimeout time.Duration                 // timeout for waitForSession; 0 uses default (10m)
+	KillTimeout    time.Duration                 // SIGTERM→SIGKILL escalation timeout; 0 uses default (5s)
 	Enhancer       *enhancer.HybridEngine        // optional prompt enhancement for loop integration
 }
 
@@ -442,8 +443,12 @@ func (m *Manager) Stop(id string) error {
 	s.mu.Unlock()
 
 	// Kill with escalation (SIGTERM -> wait -> SIGKILL) outside the lock.
+	killTimeout := m.KillTimeout
+	if killTimeout <= 0 {
+		killTimeout = 5 * time.Second
+	}
 	if cmd != nil && cmd.Process != nil {
-		escalated := killWithEscalation(cmd, 5*time.Second, doneCh)
+		escalated := killWithEscalation(cmd, killTimeout, doneCh)
 		if escalated && bus != nil {
 			bus.Publish(events.Event{
 				Type:      events.SessionStopped,
