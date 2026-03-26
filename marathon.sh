@@ -28,8 +28,11 @@ RALPH_PID=""
 START_EPOCH=""
 CHECKPOINT_COUNT=0
 RESTART_COUNT=0
+CONSECUTIVE_RESTARTS=0
+MAX_CONSECUTIVE_RESTARTS="${MAX_CONSECUTIVE_RESTARTS:-10}"
 MAX_RESTARTS="${MAX_RESTARTS:-5}"
 RESTART_BACKOFF=30
+COOLDOWN_SECONDS=60
 
 usage() {
     cat <<EOF
@@ -103,6 +106,14 @@ log() {
         echo "$msg" >> "$MARATHON_LOG"
     fi
 }
+
+# --- Pre-launch disk space check ---
+MIN_DISK_MB=500
+AVAIL_MB=$(df -m . | awk 'NR==2{print $4}')
+if [ "$AVAIL_MB" -lt "$MIN_DISK_MB" ]; then
+    echo "ERROR: Only ${AVAIL_MB}MB free, need ${MIN_DISK_MB}MB minimum" >&2
+    exit 1
+fi
 
 # --- Validate dependencies ---
 for dep in jq bc; do
@@ -372,20 +383,42 @@ check_memory() {
 }
 
 # --- Log rotation ---
+MAX_LOG_SIZE=$((10 * 1024 * 1024))  # 10MB
 rotate_logs() {
     local log_file="$1"
     local max_size="${MARATHON_MAX_LOG_MB:-100}"
     local keep="${MARATHON_LOG_KEEP:-3}"
 
     [ ! -f "$log_file" ] && return
+
+    # Fast check using stat (cross-platform: macOS -f%z, Linux -c%s)
+    local file_size
+    file_size=$(stat -f%z "$log_file" 2>/dev/null || stat -c%s "$log_file" 2>/dev/null || echo "0")
+    if [ "$file_size" -gt "$MAX_LOG_SIZE" ]; then
+        # Gzip compress the current log with timestamp
+        gzip -c "$log_file" > "${log_file}.$(date +%Y%m%d%H%M%S).gz"
+        : > "$log_file"
+        log "INFO" "Log rotated (gzip): ${log_file}"
+
+        # Prune old compressed logs beyond $keep
+        local gz_count
+        gz_count=$(ls -1 "${log_file}".*.gz 2>/dev/null | wc -l)
+        if [ "$gz_count" -gt "$keep" ]; then
+            ls -1t "${log_file}".*.gz 2>/dev/null | tail -n +$((keep + 1)) | while read -r old; do
+                rm -f "$old"
+            done
+            log "INFO" "Pruned old log archives (keeping ${keep})"
+        fi
+        return
+    fi
+
+    # Legacy rotation fallback using du (for larger threshold from env var)
     local size_mb
     size_mb=$(du -m "$log_file" 2>/dev/null | cut -f1)
     if [ "${size_mb:-0}" -ge "$max_size" ]; then
-        for i in $(seq $((keep - 1)) -1 1); do
-            [ -f "${log_file}.$i" ] && mv "${log_file}.$i" "${log_file}.$((i + 1))"
-        done
-        mv "$log_file" "${log_file}.1"
-        log "INFO" "Log rotated: ${log_file}"
+        gzip -c "$log_file" > "${log_file}.$(date +%Y%m%d%H%M%S).gz"
+        : > "$log_file"
+        log "INFO" "Log rotated (size threshold): ${log_file}"
     fi
 }
 
@@ -405,6 +438,9 @@ last_checkpoint_epoch=$START_EPOCH
 while true; do
     sleep "$POLL_INTERVAL" || true
 
+    # --- Log rotation check each iteration ---
+    rotate_logs "$MARATHON_LOG"
+
     # Check if ralph is still running
     if ! kill -0 "$RALPH_PID" 2>/dev/null; then
         ralph_exit=0
@@ -415,9 +451,21 @@ while true; do
         # Auto-restart with exponential backoff (inspired by hg-mcp/mesmer patterns)
         if (( ralph_exit != 0 && RESTART_COUNT < MAX_RESTARTS )); then
             RESTART_COUNT=$((RESTART_COUNT + 1))
-            backoff=$((RESTART_BACKOFF * RESTART_COUNT))
-            log "RESTART" "Ralph failed (exit $ralph_exit). Restart #${RESTART_COUNT}/${MAX_RESTARTS} in ${backoff}s..."
-            sleep "$backoff" || true
+            CONSECUTIVE_RESTARTS=$((CONSECUTIVE_RESTARTS + 1))
+            log "RESTART" "[$(date '+%Y-%m-%d %H:%M:%S')] Ralph failed (exit $ralph_exit). Restart #${RESTART_COUNT}/${MAX_RESTARTS}, consecutive=${CONSECUTIVE_RESTARTS}/${MAX_CONSECUTIVE_RESTARTS}"
+
+            # Cooldown: if consecutive restarts hit the cap, sleep longer and reset
+            if (( CONSECUTIVE_RESTARTS >= MAX_CONSECUTIVE_RESTARTS )); then
+                log "RESTART" "Hit ${MAX_CONSECUTIVE_RESTARTS} consecutive restarts. Cooling down for ${COOLDOWN_SECONDS}s..."
+                sleep "$COOLDOWN_SECONDS" || true
+                CONSECUTIVE_RESTARTS=0
+                log "RESTART" "Cooldown complete. Consecutive restart counter reset."
+            else
+                backoff=$((RESTART_BACKOFF * RESTART_COUNT))
+                log "RESTART" "Backing off for ${backoff}s before restart..."
+                sleep "$backoff" || true
+            fi
+
             log "RESTART" "Relaunching ralph..."
             "${CMD[@]}" &
             RALPH_PID=$!
@@ -475,10 +523,11 @@ while true; do
         last_checkpoint_epoch=$now
     fi
 
-    # Reset restart counter on successful progress
+    # Reset restart counters on successful progress
     if (( RESTART_COUNT > 0 )) && [[ "$loops" != "0" ]]; then
-        log "INFO" "Ralph recovered after restart. Resetting restart counter."
+        log "INFO" "Ralph recovered after restart. Resetting restart counters."
         RESTART_COUNT=0
+        CONSECUTIVE_RESTARTS=0
     fi
 
     # Periodic status (every 5 minutes = every 10 polls)
