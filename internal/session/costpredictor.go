@@ -2,6 +2,7 @@ package session
 
 import (
 	"encoding/json"
+	"log/slog"
 	"math"
 	"os"
 	"path/filepath"
@@ -105,11 +106,16 @@ func (cp *CostPredictor) save() {
 	if cp.stateDir == "" {
 		return
 	}
-	_ = os.MkdirAll(cp.stateDir, 0755)
+	if err := os.MkdirAll(cp.stateDir, 0755); err != nil {
+		slog.Warn("failed to create cost predictor state dir", "dir", cp.stateDir, "error", err)
+		return
+	}
 	data, err := json.Marshal(cp.observations)
 	if err != nil {
 		return
 	}
 	path := filepath.Join(cp.stateDir, "cost_observations.json")
-	_ = os.WriteFile(path, data, 0644)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		slog.Warn("failed to write cost observations", "path", path, "error", err)
+	}
 }

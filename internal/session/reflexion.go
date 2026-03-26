@@ -3,6 +3,7 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -345,7 +346,10 @@ func (rs *ReflexionStore) appendToFile(r Reflection) {
 	if rs.stateDir == "" {
 		return
 	}
-	_ = os.MkdirAll(rs.stateDir, 0755)
+	if err := os.MkdirAll(rs.stateDir, 0755); err != nil {
+		slog.Warn("failed to create reflexion state dir", "dir", rs.stateDir, "error", err)
+		return
+	}
 
 	data, err := json.Marshal(r)
 	if err != nil {
@@ -356,10 +360,13 @@ func (rs *ReflexionStore) appendToFile(r Reflection) {
 	path := filepath.Join(rs.stateDir, "reflections.jsonl")
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
+		slog.Warn("failed to open reflections file", "path", path, "error", err)
 		return
 	}
 	defer f.Close()
-	_, _ = f.Write(data)
+	if _, err := f.Write(data); err != nil {
+		slog.Warn("failed to write reflection", "path", path, "error", err)
+	}
 }
 
 func (rs *ReflexionStore) load() {

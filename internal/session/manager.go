@@ -311,7 +311,11 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	optimizer := m.optimizer
 	m.mu.Unlock()
 	if optimizer != nil {
-		opts, _ = optimizer.OptimizedLaunchOptions(opts)
+		var changed bool
+		opts, changed = optimizer.OptimizedLaunchOptions(opts)
+		if changed {
+			slog.Info("auto-optimizer adjusted launch options", "provider", opts.Provider, "model", opts.Model)
+		}
 	}
 
 	s, err := launch(ctx, opts, m.bus)
@@ -485,7 +489,9 @@ func (m *Manager) StopAll() {
 	m.mu.Unlock()
 
 	for _, id := range ids {
-		_ = m.Stop(id)
+		if err := m.Stop(id); err != nil {
+			slog.Warn("failed to stop session during StopAll", "session", id, "error", err)
+		}
 	}
 }
 
@@ -1232,7 +1238,9 @@ func (m *Manager) LoadExternalSessions() {
 		isTerminal := status == StatusCompleted || status == StatusErrored || status == StatusStopped
 		if isTerminal && ended != nil && ended.Before(cutoff) {
 			delete(m.sessions, id)
-			_ = os.Remove(filepath.Join(m.stateDir, id+".json"))
+			if err := os.Remove(filepath.Join(m.stateDir, id+".json")); err != nil && !os.IsNotExist(err) {
+				slog.Warn("failed to remove session state file", "session", id, "error", err)
+			}
 		}
 	}
 }
