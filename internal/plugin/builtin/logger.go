@@ -26,7 +26,10 @@ func NewLoggerPlugin() *LoggerPlugin {
 	}
 }
 
-func (l *LoggerPlugin) Name() string    { return "builtin.logger" }
+// Name returns the plugin identifier "builtin.logger".
+func (l *LoggerPlugin) Name() string { return "builtin.logger" }
+
+// Version returns the plugin version.
 func (l *LoggerPlugin) Version() string { return "0.1.0" }
 
 // OnEvent appends a line to LogPath with the event timestamp, type, and repo.

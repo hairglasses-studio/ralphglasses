@@ -38,6 +38,7 @@ func NewPrometheusRecorder(inner Recorder) *PrometheusRecorder {
 	}
 }
 
+// StartSessionSpan creates a session span and increments the active sessions counter.
 func (p *PrometheusRecorder) StartSessionSpan(ctx context.Context, sessionID, provider, model, repoName string) (context.Context, *SessionSpan) {
 	p.incCounter("gen_ai_sessions_total", "Total sessions launched", map[string]string{
 		"provider": provider, "model": model, "repo_name": repoName,
@@ -46,6 +47,7 @@ func (p *PrometheusRecorder) StartSessionSpan(ctx context.Context, sessionID, pr
 	return p.inner.StartSessionSpan(ctx, sessionID, provider, model, repoName)
 }
 
+// EndSessionSpan records session cost and turn totals, then decrements the active sessions gauge.
 func (p *PrometheusRecorder) EndSessionSpan(span *SessionSpan, costUSD float64, turnCount int, exitReason string) {
 	if span != nil {
 		p.addCounter("gen_ai_cost_usd_total", map[string]string{
@@ -59,6 +61,7 @@ func (p *PrometheusRecorder) EndSessionSpan(span *SessionSpan, costUSD float64, 
 	p.inner.EndSessionSpan(span, costUSD, turnCount, exitReason)
 }
 
+// RecordTurnMetric increments token, cost, and latency counters for a single turn.
 func (p *PrometheusRecorder) RecordTurnMetric(ctx context.Context, provider, model, sessionID string, inputTokens, outputTokens int, costUSD float64, latencyMs int64) {
 	labels := map[string]string{"provider": provider, "model": model}
 	p.addCounter("gen_ai_input_tokens_total", labels, float64(inputTokens))
@@ -68,6 +71,7 @@ func (p *PrometheusRecorder) RecordTurnMetric(ctx context.Context, provider, mod
 	p.inner.RecordTurnMetric(ctx, provider, model, sessionID, inputTokens, outputTokens, costUSD, latencyMs)
 }
 
+// RecordError increments the error counter for the span's provider.
 func (p *PrometheusRecorder) RecordError(span *SessionSpan, errMsg string) {
 	if span != nil {
 		p.incCounter("gen_ai_errors_total", "Total session errors", map[string]string{
@@ -77,6 +81,7 @@ func (p *PrometheusRecorder) RecordError(span *SessionSpan, errMsg string) {
 	p.inner.RecordError(span, errMsg)
 }
 
+// RecordCostMetric sets the current session cost gauge for a provider and repo.
 func (p *PrometheusRecorder) RecordCostMetric(ctx context.Context, provider, repoName string, costUSD float64) {
 	p.setGauge("gen_ai_session_cost_usd", "Current session cost", map[string]string{
 		"provider": provider, "repo_name": repoName,

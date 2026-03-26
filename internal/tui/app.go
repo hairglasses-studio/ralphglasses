@@ -225,6 +225,7 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 	}
 }
 
+// Init returns the initial set of commands: repo scan, tick timer, spinner, and process exit watcher.
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.scanRepos(),
