@@ -34,7 +34,7 @@ Observations from reliability & quality improvement workstreams + recursive self
 
 11. **Kill escalation timeout is hardcoded** — R2 uses 5s timeout. For long-running operations (large git operations, big compilations), the process may need more time for graceful shutdown. Should be configurable per-session or per-provider.
 
-12. **No orphan detection** — if ralphglasses crashes, spawned CLI processes continue running. A startup sweep checking for orphaned process groups (matching known session PIDs) would prevent cost leaks.
+12. **~~No orphan detection~~** — RESOLVED: orphans.go implemented. ~~if ralphglasses crashes, spawned CLI processes continue running. A startup sweep checking for orphaned process groups (matching known session PIDs) would prevent cost leaks.~~
 
 ## Event Bus
 
@@ -78,13 +78,13 @@ Observations from reliability & quality improvement workstreams + recursive self
 
 27. **`cp -f` alias interference** — macOS aliases `cp` to `cp -i` (interactive) in some shells. Worktree merges need `/bin/cp -f` to bypass. Should document this or use Go file copy in merge tooling.
 
-28. **Duplicate utility functions across packages** — `gitDiffPaths()` exists as both `session.gitDiffPaths` (unexported, in protection.go) and `e2e.GitDiffPaths` (exported, in gitdiff.go). Same implementation. Should consolidate to one location — probably `e2e.GitDiffPaths` since it's the utility package — and have session import it.
+28. **~~Duplicate utility functions across packages~~** — RESOLVED: centralized in gitutil. ~~`gitDiffPaths()` exists as both `session.gitDiffPaths` (unexported, in protection.go) and `e2e.GitDiffPaths` (exported, in gitdiff.go). Same implementation. Should consolidate to one location — probably `e2e.GitDiffPaths` since it's the utility package — and have session import it.~~
 
 29. **Worktree agents don't create new files in `git diff`** — new files (selftest.go, protection.go, errors.go) appear only as untracked files in worktrees, not in `git diff HEAD`. Need `git diff HEAD` + `git ls-files --others --exclude-standard` to capture full worktree output. Current merge workflow only uses `git diff --name-only HEAD` which misses new files.
 
 30. **Health checker has two validation layers** — `CheckProviderHealth()` does full health (binary + env + version latency) while `HealthChecker.checkOne()` only does `ValidateProvider + ValidateProviderEnv`. The lightweight `checkOne` is fine for periodic heartbeat but could drift from the full check semantics.
 
-31. **Error code adoption is partial** — Q5 converted `handler_loop.go` and `handler_session.go` to use `codedError()`, but ~20+ other handlers still use `errResult()`. Should progressively migrate all handlers. The `errResult` → `codedError` pattern is mechanical and could be automated.
+31. **~~Error code adoption is partial~~** — RESOLVED: migration complete (216 calls). ~~Q5 converted `handler_loop.go` and `handler_session.go` to use `codedError()`, but ~20+ other handlers still use `errResult()`. Should progressively migrate all handlers. The `errResult` → `codedError` pattern is mechanical and could be automated.~~
 
 32. **`EvaluateFromObservations` silently swallows baseline save errors** — Line `_ = saveErr` after rebuilding baseline. Should at minimum log when baseline persistence fails, since a missing baseline causes VerdictSkip on next run.
 
@@ -94,7 +94,7 @@ Observations from reliability & quality improvement workstreams + recursive self
 
 34. **`selftest` CLI subcommand missing** — Stage 2 CI plan identifies that `cmd/selftest.go` doesn't exist yet. The `SelfTestRunner.Run()` invokes the binary but there's no `selftest` cobra command to receive the invocation. Needs to be created before CI integration works end-to-end.
 
-35. **`gitDiffPaths` triplicated** — Now exists in 3 places: `e2e.GitDiffPaths` (exported), `session.gitDiffPaths` (unexported, in protection.go), and planned for `session.gitDiffPathsForWorktree` (Stage 2.3 loopbench). Should converge on one source. Since session can't import e2e (circular), either: (a) move to a shared `internal/gitutil` package, or (b) accept the duplication as import-cycle avoidance.
+35. **~~`gitDiffPaths` triplicated~~** — RESOLVED: gitutil package. ~~Now exists in 3 places: `e2e.GitDiffPaths` (exported), `session.gitDiffPaths` (unexported, in protection.go), and planned for `session.gitDiffPathsForWorktree` (Stage 2.3 loopbench). Should converge on one source. Since session can't import e2e (circular), either: (a) move to a shared `internal/gitutil` package, or (b) accept the duplication as import-cycle avoidance.~~
 
 36. **Self-improvement profile needs `selftest --gate` subcommand** — `SelfImprovementProfile()` plans to use `go run . selftest --gate` as a verify command, but this subcommand doesn't exist. The `gate-check` command in `cmd/gatecheck.go` partially covers this but lacks the self-test iteration step.
 
@@ -124,4 +124,4 @@ Observations from reliability & quality improvement workstreams + recursive self
 
 47. **`maxIter` parameter unused in handler** — `handler_selfimprove.go` parses `max_iterations` param but doesn't pass it anywhere — `StartLoop` doesn't take a max iterations arg. The loop runs until stopped or budget exhausted. Either: (a) add `MaxIterations` to `LoopProfile`, or (b) remove the param and document that budget is the real limiter.
 
-48. **`self-improve.sh` references `mcp-call` subcommand** — The script calls `./ralphglasses mcp-call ralphglasses_self_improve` but no `mcp-call` cobra command exists. Should either: (a) implement `mcp-call` as a thin wrapper that starts MCP, calls the tool, and exits, or (b) change the script to use the MCP protocol directly via stdin/stdout.
+48. **~~`self-improve.sh` references `mcp-call` subcommand~~** — RESOLVED: mcpcall.go exists. ~~The script calls `./ralphglasses mcp-call ralphglasses_self_improve` but no `mcp-call` cobra command exists. Should either: (a) implement `mcp-call` as a thin wrapper that starts MCP, calls the tool, and exits, or (b) change the script to use the MCP protocol directly via stdin/stdout.~~
