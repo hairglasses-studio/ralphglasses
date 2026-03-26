@@ -54,6 +54,25 @@ func TestResolveSpeculative_NeitherVerified(t *testing.T) {
 	}
 }
 
+func TestCheapCost_Nil(t *testing.T) {
+	if got := cheapCost(nil); got != 0 {
+		t.Errorf("cheapCost(nil) = %f, want 0", got)
+	}
+}
+
+func TestExpensiveCost_Nil(t *testing.T) {
+	if got := expensiveCost(nil); got != 0 {
+		t.Errorf("expensiveCost(nil) = %f, want 0", got)
+	}
+}
+
+func TestCheapCost_WithSession(t *testing.T) {
+	s := makeSession(StatusCompleted, 5, 1.50)
+	if got := cheapCost(s); got != 1.50 {
+		t.Errorf("cheapCost = %f, want 1.50", got)
+	}
+}
+
 func TestResolveSpeculative_OnlyCheapDone(t *testing.T) {
 	cheap := makeSession(StatusCompleted, 5, 0.50)
 	expensive := makeSession(StatusRunning, 2, 1.00)

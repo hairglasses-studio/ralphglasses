@@ -32,6 +32,35 @@ func TestIsTransientError(t *testing.T) {
 	}
 }
 
+func TestNewAutoRecovery(t *testing.T) {
+	dir := t.TempDir()
+	dl := NewDecisionLog(dir, LevelAutoRecover)
+	hitl := NewHITLTracker(dir)
+	config := DefaultAutoRecoveryConfig()
+
+	ar := NewAutoRecovery(nil, dl, hitl, config)
+	if ar == nil {
+		t.Fatal("expected non-nil AutoRecovery")
+	}
+}
+
+func TestAutoRecovery_ClearRetryState(t *testing.T) {
+	dir := t.TempDir()
+	dl := NewDecisionLog(dir, LevelAutoRecover)
+	ar := NewAutoRecovery(nil, dl, nil, DefaultAutoRecoveryConfig())
+
+	// Simulate retry state
+	ar.retryState["session-1"] = &retryInfo{count: 2}
+
+	ar.ClearRetryState("session-1")
+	if _, exists := ar.retryState["session-1"]; exists {
+		t.Error("expected retry state to be cleared")
+	}
+
+	// Clear nonexistent is a no-op
+	ar.ClearRetryState("nonexistent")
+}
+
 func TestAutoRecoveryConfig_Defaults(t *testing.T) {
 	config := DefaultAutoRecoveryConfig()
 	if config.MaxRetries != 3 {

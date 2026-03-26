@@ -100,6 +100,29 @@ func TestContextStore_Cleanup(t *testing.T) {
 	}
 }
 
+func TestContextStore_UpdateFiles(t *testing.T) {
+	cs := NewContextStore(t.TempDir())
+
+	cs.Register(ContextEntry{
+		SessionID:   "s1",
+		RepoPath:    "/repo/a",
+		ActiveFiles: []string{"main.go"},
+	})
+
+	cs.UpdateFiles("s1", []string{"main.go", "handler.go", "types.go"})
+
+	entries := cs.ActiveForRepo("/repo/a")
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if len(entries[0].ActiveFiles) != 3 {
+		t.Errorf("expected 3 active files, got %d", len(entries[0].ActiveFiles))
+	}
+
+	// UpdateFiles on nonexistent session is a no-op
+	cs.UpdateFiles("nonexistent", []string{"foo.go"})
+}
+
 func TestContextStore_Persistence(t *testing.T) {
 	dir := t.TempDir()
 
