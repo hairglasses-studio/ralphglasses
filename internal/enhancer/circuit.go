@@ -73,6 +73,17 @@ func (cb *CircuitBreaker) RecordFailure() {
 	}
 }
 
+// Reset forces the circuit breaker back to the closed (healthy) state,
+// clearing failure counts. Use this to manually re-enable a tripped circuit.
+func (cb *CircuitBreaker) Reset() {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+
+	cb.failures = 0
+	cb.state = circuitClosed
+	cb.openUntil = time.Time{}
+}
+
 // State returns the current circuit breaker state as a string.
 func (cb *CircuitBreaker) State() string {
 	cb.mu.Lock()
