@@ -111,6 +111,8 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 	}
 
 	s.mu.Lock()
+	s.Pid = cmd.Process.Pid
+	s.ChildPids = collectSessionChildPIDs(cmd.Process.Pid)
 	s.Status = StatusRunning
 	s.mu.Unlock()
 

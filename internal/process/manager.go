@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
@@ -55,10 +56,10 @@ type ManagedProcess struct {
 	Cmd       *exec.Cmd
 	Paused    bool
 	PID       int    // stored at start time; safe to read under mu without racing Wait()
+	ChildPids []int  // child PIDs collected at launch (best-effort, never nil)
 	Recovered bool   // true if re-adopted from PID file (no reaper goroutine)
 	ExitCode  int
 	ExitError string
-	ChildPids []int  // PIDs of processes sharing the same process group; refreshed by ChildPidsForRepo
 }
 
 // lastExits tracks exit status after reaping (keyed by repo path).
@@ -198,7 +199,7 @@ func (m *Manager) Start(repoPath string) error {
 	pid := cmd.Process.Pid
 	_ = writePIDFile(repoPath, pid)
 
-	m.procs[repoPath] = &ManagedProcess{Cmd: cmd, PID: pid}
+	m.procs[repoPath] = &ManagedProcess{Cmd: cmd, PID: pid, ChildPids: collectChildPIDs(pid)}
 
 	// Publish loop started event.
 	if m.bus != nil {
@@ -267,9 +268,15 @@ func (m *Manager) Start(repoPath string) error {
 	return nil
 }
 
-// getpgid is a package-level indirection for syscall.Getpgid, allowing tests
-// to inject failures without modifying production logic.
-var getpgid = syscall.Getpgid
+// Package-level indirections for testing.
+var (
+	getpgid        = syscall.Getpgid
+	killPid        = syscall.Kill       // direct PID signal; tests can stub this
+	sleepFn        = time.Sleep         // tests can replace to avoid real waits
+	aliveFn        = isProcessAlive
+)
+
+const killSequenceTimeout = 5 * time.Second
 
 // sendSignal sends a signal to a process, trying process group first.
 func sendSignal(pid int, sig syscall.Signal) error {
@@ -281,7 +288,10 @@ func sendSignal(pid int, sig syscall.Signal) error {
 	return syscall.Kill(-pgid, sig)
 }
 
-// Stop sends SIGTERM to the ralph loop process group.
+// Stop initiates a graceful shutdown of the ralph loop process using a
+// fallback kill sequence: SIGTERM primary → 5s wait → SIGTERM children →
+// 5s wait → SIGKILL any survivors. The sequence runs in a background
+// goroutine so Stop returns immediately.
 func (m *Manager) Stop(repoPath string) error {
 	m.mu.Lock()
 	mp, ok := m.procs[repoPath]
@@ -289,18 +299,57 @@ func (m *Manager) Stop(repoPath string) error {
 		m.mu.Unlock()
 		return fmt.Errorf("no running loop for %s", filepath.Base(repoPath))
 	}
-
-	err := sendSignal(mp.PID, syscall.SIGTERM)
+	pid := mp.PID
+	childPids := append([]int(nil), mp.ChildPids...)
+	recovered := mp.Recovered
 
 	// For recovered processes, clean up immediately (no reaper goroutine).
-	if mp.Recovered {
+	if recovered {
 		removePIDFile(repoPath)
 		delete(m.procs, repoPath)
 	}
 	m.mu.Unlock()
 
-	m.auditOrphanedProcesses()
-	return err
+	go func() {
+		runKillSequence(pid, childPids)
+		// Post-stop orphan audit: detect lingering ralph_loop processes.
+		m.auditOrphanedProcesses()
+	}()
+	return nil
+}
+
+// runKillSequence executes the escalating shutdown sequence:
+//  1. SIGTERM to the primary PID
+//  2. Wait 5 seconds
+//  3. SIGTERM to all known child PIDs
+//  4. Wait 5 seconds
+//  5. SIGKILL to any PIDs still alive
+func runKillSequence(pid int, childPids []int) {
+	// Step 1: SIGTERM to primary PID.
+	if aliveFn(pid) {
+		_ = killPid(pid, syscall.SIGTERM)
+	}
+
+	// Step 2: Wait for primary to exit.
+	sleepFn(killSequenceTimeout)
+
+	// Step 3: SIGTERM to child PIDs.
+	for _, cpid := range childPids {
+		if aliveFn(cpid) {
+			_ = killPid(cpid, syscall.SIGTERM)
+		}
+	}
+
+	// Step 4: Wait for children to exit.
+	sleepFn(killSequenceTimeout)
+
+	// Step 5: SIGKILL any survivors.
+	allPids := append([]int{pid}, childPids...)
+	for _, p := range allPids {
+		if aliveFn(p) {
+			_ = killPid(p, syscall.SIGKILL)
+		}
+	}
 }
 
 // TogglePause sends SIGSTOP or SIGCONT to pause/resume a loop.
@@ -367,21 +416,6 @@ func (m *Manager) PidForRepo(repoPath string) int {
 	return mp.PID
 }
 
-// ChildPidsForRepo collects the PIDs of all processes sharing the same process
-// group as the managed process for repoPath, stores them on the ManagedProcess,
-// and returns them. Returns nil if no process is tracked for the path.
-func (m *Manager) ChildPidsForRepo(repoPath string) []int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	mp, ok := m.procs[repoPath]
-	if !ok {
-		return nil
-	}
-	pids := CollectChildPIDs(mp.PID)
-	mp.ChildPids = pids
-	return pids
-}
-
 // LastExitStatus returns the exit code and error for a previously reaped process.
 func (m *Manager) LastExitStatus(repoPath string) (int, string, bool) {
 	lastExits.Lock()
@@ -419,3 +453,4 @@ func (m *Manager) RunningPaths() []string {
 	}
 	return paths
 }
+
