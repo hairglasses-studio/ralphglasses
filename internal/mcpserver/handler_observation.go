@@ -11,6 +11,34 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
+// parseTimeBound parses an RFC3339 string into a time.Time.
+// Returns zero time and nil error for empty input.
+func parseTimeBound(s string, label string) (time.Time, error) {
+	if s == "" {
+		return time.Time{}, nil
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid %s timestamp: %w", label, err)
+	}
+	return t, nil
+}
+
+// filterByUntil removes observations with timestamps after until.
+// If until is zero-value, all observations are returned.
+func filterByUntil(obs []session.LoopObservation, until time.Time) []session.LoopObservation {
+	if until.IsZero() {
+		return obs
+	}
+	var out []session.LoopObservation
+	for _, o := range obs {
+		if !o.Timestamp.After(until) {
+			out = append(out, o)
+		}
+	}
+	return out
+}
+
 func (s *Server) handleObservationQuery(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoName := getStringArg(req, "repo")
 	if repoName == "" {
@@ -27,14 +55,33 @@ func (s *Server) handleObservationQuery(_ context.Context, req mcp.CallToolReque
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
+	// Parse time-range params.
+	sinceStr := getStringArg(req, "since")
+	untilStr := getStringArg(req, "until")
 	hours := getNumberArg(req, "hours", 48)
-	since := time.Now().Add(-time.Duration(hours) * time.Hour)
+
+	var since time.Time
+	if sinceStr != "" {
+		var err error
+		since, err = parseTimeBound(sinceStr, "since")
+		if err != nil {
+			return codedError(ErrInvalidParams, err.Error()), nil
+		}
+	} else {
+		since = time.Now().Add(-time.Duration(hours) * time.Hour)
+	}
+	until, err := parseTimeBound(untilStr, "until")
+	if err != nil {
+		return codedError(ErrInvalidParams, err.Error()), nil
+	}
 
 	obsPath := session.ObservationPath(r.Path)
 	observations, err := session.LoadObservations(obsPath, since)
 	if err != nil {
 		return codedError(ErrFilesystem, fmt.Sprintf("load observations: %v", err)), nil
 	}
+
+	observations = filterByUntil(observations, until)
 
 	// Apply optional filters.
 	loopID := getStringArg(req, "loop_id")
@@ -90,14 +137,33 @@ func (s *Server) handleObservationSummary(_ context.Context, req mcp.CallToolReq
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
+	// Parse time-range params.
+	sinceStr := getStringArg(req, "since")
+	untilStr := getStringArg(req, "until")
 	hours := getNumberArg(req, "hours", 48)
-	since := time.Now().Add(-time.Duration(hours) * time.Hour)
+
+	var since time.Time
+	if sinceStr != "" {
+		var err error
+		since, err = parseTimeBound(sinceStr, "since")
+		if err != nil {
+			return codedError(ErrInvalidParams, err.Error()), nil
+		}
+	} else {
+		since = time.Now().Add(-time.Duration(hours) * time.Hour)
+	}
+	until, err := parseTimeBound(untilStr, "until")
+	if err != nil {
+		return codedError(ErrInvalidParams, err.Error()), nil
+	}
 
 	obsPath := session.ObservationPath(r.Path)
 	observations, err := session.LoadObservations(obsPath, since)
 	if err != nil {
 		return codedError(ErrFilesystem, fmt.Sprintf("load observations: %v", err)), nil
 	}
+
+	observations = filterByUntil(observations, until)
 
 	// Apply optional loop_id filter.
 	loopID := getStringArg(req, "loop_id")
