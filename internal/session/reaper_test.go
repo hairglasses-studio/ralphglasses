@@ -151,6 +151,51 @@ func TestOrphanInfo_Fields(t *testing.T) {
 	}
 }
 
+func TestCleanupOrphans_NoOrphans(t *testing.T) {
+	dir := t.TempDir()
+	sessDir := filepath.Join(dir, "sessions")
+	if err := os.MkdirAll(sessDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	cleaned, errs := CleanupOrphans(dir, nil, false)
+	if cleaned != 0 {
+		t.Errorf("expected 0 cleaned, got %d", cleaned)
+	}
+	if len(errs) != 0 {
+		t.Errorf("expected no errors, got %v", errs)
+	}
+}
+
+func TestCleanupOrphans_DryRun(t *testing.T) {
+	// Use our own PID (running, not in activePIDs) to create an orphan.
+	dir := t.TempDir()
+	sessDir := filepath.Join(dir, "sessions")
+	if err := os.MkdirAll(sessDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	myPID := os.Getpid()
+	sess := map[string]any{
+		"id":     "dry-run-test",
+		"pid":    myPID,
+		"status": "running",
+	}
+	data, _ := json.Marshal(sess)
+	if err := os.WriteFile(filepath.Join(sessDir, "dry-run-test.json"), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// kill=false: should count orphan but not send any signal
+	cleaned, errs := CleanupOrphans(dir, nil, false)
+	if len(errs) != 0 {
+		t.Errorf("expected no errors in dry run, got %v", errs)
+	}
+	if cleaned != 1 {
+		t.Errorf("expected 1 cleaned, got %d", cleaned)
+	}
+}
+
 func TestExtractPID(t *testing.T) {
 	cases := []struct {
 		name string
