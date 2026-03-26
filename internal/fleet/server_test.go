@@ -3,6 +3,7 @@ package fleet
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -818,6 +819,595 @@ func TestIsWorkerDrained_NoActiveWork(t *testing.T) {
 		t.Errorf("status after resume: got %q, want online", coord.workers["w1"].Status)
 	}
 	coord.mu.RUnlock()
+}
+
+func TestCoordinator_HandleFleetState(t *testing.T) {
+	coord := newTestCoordinator()
+	coord.SetBudgetLimit(200)
+
+	// Register a worker
+	coord.mu.Lock()
+	coord.workers["w1"] = &WorkerInfo{
+		ID:       "w1",
+		Status:   WorkerOnline,
+		Hostname: "host1",
+	}
+	coord.mu.Unlock()
+
+	coord.queue.Push(&WorkItem{ID: "1", Status: WorkPending})
+	coord.queue.Push(&WorkItem{ID: "2", Status: WorkRunning})
+
+	req := httptest.NewRequest("GET", "/api/v1/fleet", nil)
+	w := httptest.NewRecorder()
+	coord.handleFleetState(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("fleet state: got %d, want 200", w.Code)
+	}
+
+	var state FleetState
+	if err := json.Unmarshal(w.Body.Bytes(), &state); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(state.Workers) != 1 {
+		t.Errorf("workers: got %d, want 1", len(state.Workers))
+	}
+	if state.QueueDepth != 1 {
+		t.Errorf("queue depth: got %d, want 1", state.QueueDepth)
+	}
+	if state.BudgetUSD != 200 {
+		t.Errorf("budget: got $%.2f, want $200", state.BudgetUSD)
+	}
+}
+
+func TestCoordinator_HandleSessions(t *testing.T) {
+	coord := newTestCoordinator()
+
+	req := httptest.NewRequest("GET", "/api/v1/sessions", nil)
+	w := httptest.NewRecorder()
+	coord.handleSessions(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("sessions: got %d, want 200", w.Code)
+	}
+}
+
+func TestCoordinator_HandleSessionsNilManager(t *testing.T) {
+	coord := NewCoordinator("test", "localhost", 0, "test", nil, nil)
+
+	req := httptest.NewRequest("GET", "/api/v1/sessions", nil)
+	w := httptest.NewRecorder()
+	coord.handleSessions(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("sessions nil mgr: got %d, want 200", w.Code)
+	}
+}
+
+func TestCoordinator_HandleA2ATaskStatus(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Submit a work item
+	item := &WorkItem{
+		ID:       "task-123",
+		Status:   WorkAssigned,
+		RepoName: "test-repo",
+		Prompt:   "fix tests",
+		Type:     WorkTypeSession,
+	}
+	coord.queue.Push(item)
+
+	// Test found
+	req := httptest.NewRequest("GET", "/api/v1/a2a/task/task-123", nil)
+	req.SetPathValue("taskID", "task-123")
+	w := httptest.NewRecorder()
+	coord.handleA2ATaskStatus(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("a2a task status: got %d, want 200", w.Code)
+	}
+
+	var offer TaskOffer
+	if err := json.Unmarshal(w.Body.Bytes(), &offer); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if offer.ID != "task-123" {
+		t.Errorf("offer ID: got %q, want task-123", offer.ID)
+	}
+
+	// Test not found
+	req2 := httptest.NewRequest("GET", "/api/v1/a2a/task/no-such", nil)
+	req2.SetPathValue("taskID", "no-such")
+	w2 := httptest.NewRecorder()
+	coord.handleA2ATaskStatus(w2, req2)
+
+	if w2.Code != http.StatusNotFound {
+		t.Errorf("a2a task not found: got %d, want 404", w2.Code)
+	}
+
+	// Test missing taskID
+	req3 := httptest.NewRequest("GET", "/api/v1/a2a/task/", nil)
+	w3 := httptest.NewRecorder()
+	coord.handleA2ATaskStatus(w3, req3)
+
+	if w3.Code != http.StatusBadRequest {
+		t.Errorf("a2a task missing id: got %d, want 400", w3.Code)
+	}
+}
+
+func TestCoordinator_HandleA2ATaskStatus_WithCompletedAt(t *testing.T) {
+	coord := newTestCoordinator()
+
+	now := time.Now()
+	item := &WorkItem{
+		ID:          "task-done",
+		Status:      WorkCompleted,
+		CompletedAt: &now,
+	}
+	coord.queue.Push(item)
+
+	req := httptest.NewRequest("GET", "/api/v1/a2a/task/task-done", nil)
+	req.SetPathValue("taskID", "task-done")
+	w := httptest.NewRecorder()
+	coord.handleA2ATaskStatus(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("a2a completed task: got %d", w.Code)
+	}
+}
+
+func TestCoordinator_HandleA2ATaskStatus_WithAssignedAt(t *testing.T) {
+	coord := newTestCoordinator()
+
+	now := time.Now()
+	item := &WorkItem{
+		ID:         "task-assigned",
+		Status:     WorkAssigned,
+		AssignedTo: "w1",
+		AssignedAt: &now,
+	}
+	coord.queue.Push(item)
+
+	req := httptest.NewRequest("GET", "/api/v1/a2a/task/task-assigned", nil)
+	req.SetPathValue("taskID", "task-assigned")
+	w := httptest.NewRecorder()
+	coord.handleA2ATaskStatus(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("a2a assigned task: got %d", w.Code)
+	}
+
+	var offer TaskOffer
+	_ = json.Unmarshal(w.Body.Bytes(), &offer)
+	if offer.AcceptedBy != "w1" {
+		t.Errorf("accepted_by: got %q, want w1", offer.AcceptedBy)
+	}
+}
+
+func TestCoordinator_DLQOperations(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Initially empty DLQ
+	if depth := coord.DLQDepth(); depth != 0 {
+		t.Errorf("initial DLQ depth: got %d, want 0", depth)
+	}
+	if items := coord.ListDLQ(); len(items) != 0 {
+		t.Errorf("initial DLQ list: got %d items, want 0", len(items))
+	}
+
+	// Add an item and move it to DLQ
+	item := &WorkItem{
+		ID:         "dlq-test",
+		Status:     WorkFailed,
+		MaxRetries: 0,
+	}
+	coord.queue.Push(item)
+	coord.queue.MoveToDLQ("dlq-test")
+
+	if depth := coord.DLQDepth(); depth != 1 {
+		t.Errorf("DLQ depth after move: got %d, want 1", depth)
+	}
+
+	items := coord.ListDLQ()
+	if len(items) != 1 {
+		t.Fatalf("DLQ list: got %d items, want 1", len(items))
+	}
+	if items[0].ID != "dlq-test" {
+		t.Errorf("DLQ item ID: got %q, want dlq-test", items[0].ID)
+	}
+
+	// Retry from DLQ
+	if err := coord.RetryFromDLQ("dlq-test"); err != nil {
+		t.Fatalf("retry from DLQ: %v", err)
+	}
+	if depth := coord.DLQDepth(); depth != 0 {
+		t.Errorf("DLQ depth after retry: got %d, want 0", depth)
+	}
+
+	// Retry non-existent
+	if err := coord.RetryFromDLQ("no-such"); err == nil {
+		t.Error("expected error retrying non-existent DLQ item")
+	}
+}
+
+func TestCoordinator_PurgeDLQ(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Add items to DLQ
+	for i := 0; i < 3; i++ {
+		item := &WorkItem{
+			ID:     fmt.Sprintf("dlq-%d", i),
+			Status: WorkFailed,
+		}
+		coord.queue.Push(item)
+		coord.queue.MoveToDLQ(item.ID)
+	}
+
+	if depth := coord.DLQDepth(); depth != 3 {
+		t.Fatalf("DLQ depth before purge: got %d, want 3", depth)
+	}
+
+	purged := coord.PurgeDLQ()
+	if purged != 3 {
+		t.Errorf("purged count: got %d, want 3", purged)
+	}
+	if depth := coord.DLQDepth(); depth != 0 {
+		t.Errorf("DLQ depth after purge: got %d, want 0", depth)
+	}
+}
+
+func TestCoordinator_ReclaimTimedOut(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Add a work item that's been assigned for a long time
+	assignedAt := time.Now().Add(-10 * time.Minute)
+	item := &WorkItem{
+		ID:         "stale-work",
+		Status:     WorkAssigned,
+		AssignedTo: "w1",
+		AssignedAt: &assignedAt,
+	}
+	coord.queue.Push(item)
+
+	// Reclaim timed-out work
+	coord.reclaimTimedOut()
+
+	reclaimed, ok := coord.queue.Get("stale-work")
+	if !ok {
+		t.Fatal("work item should still exist")
+	}
+	if reclaimed.Status != WorkPending {
+		t.Errorf("status: got %q, want pending", reclaimed.Status)
+	}
+	if reclaimed.AssignedTo != "" {
+		t.Errorf("assigned_to: got %q, want empty", reclaimed.AssignedTo)
+	}
+}
+
+func TestCoordinator_WorkPollUnknownWorker(t *testing.T) {
+	coord := newTestCoordinator()
+
+	pollPayload := `{"worker_id":"no-such"}`
+	req := httptest.NewRequest("POST", "/api/v1/work/poll", strings.NewReader(pollPayload))
+	w := httptest.NewRecorder()
+	coord.handleWorkPoll(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("poll unknown worker: got %d, want 404", w.Code)
+	}
+}
+
+func TestCoordinator_WorkPollAtCapacity(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Register worker at capacity
+	coord.mu.Lock()
+	coord.workers["w1"] = &WorkerInfo{
+		ID:             "w1",
+		Status:         WorkerOnline,
+		MaxSessions:    2,
+		ActiveSessions: 2,
+		LastHeartbeat:  time.Now(),
+	}
+	coord.mu.Unlock()
+
+	pollPayload := `{"worker_id":"w1"}`
+	req := httptest.NewRequest("POST", "/api/v1/work/poll", strings.NewReader(pollPayload))
+	w := httptest.NewRecorder()
+	coord.handleWorkPoll(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("poll at capacity: got %d, want 200", w.Code)
+	}
+
+	var resp WorkPollResponse
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp.Item != nil {
+		t.Error("worker at capacity should not receive work")
+	}
+}
+
+func TestCoordinator_WorkPollBadPayload(t *testing.T) {
+	coord := newTestCoordinator()
+
+	req := httptest.NewRequest("POST", "/api/v1/work/poll", strings.NewReader("invalid json"))
+	w := httptest.NewRecorder()
+	coord.handleWorkPoll(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("poll bad payload: got %d, want 400", w.Code)
+	}
+}
+
+func TestCoordinator_RegisterBadPayload(t *testing.T) {
+	coord := newTestCoordinator()
+
+	req := httptest.NewRequest("POST", "/api/v1/register", strings.NewReader("not json"))
+	w := httptest.NewRecorder()
+	coord.handleRegister(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("register bad payload: got %d, want 400", w.Code)
+	}
+}
+
+func TestCoordinator_HeartbeatBadPayload(t *testing.T) {
+	coord := newTestCoordinator()
+
+	req := httptest.NewRequest("POST", "/api/v1/heartbeat", strings.NewReader("not json"))
+	w := httptest.NewRecorder()
+	coord.handleHeartbeat(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("heartbeat bad payload: got %d, want 400", w.Code)
+	}
+}
+
+func TestCoordinator_HeartbeatUnknownWorker(t *testing.T) {
+	coord := newTestCoordinator()
+
+	hb := HeartbeatPayload{WorkerID: "no-such"}
+	data, _ := json.Marshal(hb)
+	req := httptest.NewRequest("POST", "/api/v1/heartbeat", strings.NewReader(string(data)))
+	w := httptest.NewRecorder()
+	coord.handleHeartbeat(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("heartbeat unknown: got %d, want 404", w.Code)
+	}
+}
+
+func TestCoordinator_WorkCompleteBadPayload(t *testing.T) {
+	coord := newTestCoordinator()
+
+	req := httptest.NewRequest("POST", "/api/v1/work/complete", strings.NewReader("bad"))
+	w := httptest.NewRecorder()
+	coord.handleWorkComplete(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("complete bad payload: got %d, want 400", w.Code)
+	}
+}
+
+func TestCoordinator_WorkCompleteNotFound(t *testing.T) {
+	coord := newTestCoordinator()
+
+	payload := `{"work_item_id":"no-such","status":"completed"}`
+	req := httptest.NewRequest("POST", "/api/v1/work/complete", strings.NewReader(payload))
+	w := httptest.NewRecorder()
+	coord.handleWorkComplete(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("complete not found: got %d, want 404", w.Code)
+	}
+}
+
+func TestCoordinator_WorkSubmitBadPayload(t *testing.T) {
+	coord := newTestCoordinator()
+
+	req := httptest.NewRequest("POST", "/api/v1/work/submit", strings.NewReader("bad"))
+	w := httptest.NewRecorder()
+	coord.handleWorkSubmit(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("submit bad payload: got %d, want 400", w.Code)
+	}
+}
+
+func TestCoordinator_EventBatchBadPayload(t *testing.T) {
+	coord := newTestCoordinator()
+
+	req := httptest.NewRequest("POST", "/api/v1/events/batch", strings.NewReader("bad"))
+	w := httptest.NewRecorder()
+	coord.handleEventBatch(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("event batch bad payload: got %d, want 400", w.Code)
+	}
+}
+
+func TestCoordinator_WorkCompleteFailedExhausted(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Add item with no retries left
+	item := &WorkItem{
+		ID:           "fail-final",
+		Status:       WorkAssigned,
+		MaxRetries:   0,
+		RetryCount:   0,
+		MaxBudgetUSD: 5.0,
+		AssignedTo:   "w1",
+	}
+	coord.queue.Push(item)
+	coord.mu.Lock()
+	coord.budget.ReservedUSD = 5.0
+	coord.mu.Unlock()
+
+	payload := `{"work_item_id":"fail-final","status":"failed","error":"permanent failure"}`
+	req := httptest.NewRequest("POST", "/api/v1/work/complete", strings.NewReader(payload))
+	w := httptest.NewRecorder()
+	coord.handleWorkComplete(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("complete failed: got %d", w.Code)
+	}
+
+	// Item should be in DLQ
+	if coord.DLQDepth() != 1 {
+		t.Errorf("DLQ depth: got %d, want 1", coord.DLQDepth())
+	}
+
+	// Reserved budget should be released
+	coord.mu.RLock()
+	reserved := coord.budget.ReservedUSD
+	coord.mu.RUnlock()
+	if reserved != 0 {
+		t.Errorf("reserved: got $%.2f, want $0", reserved)
+	}
+}
+
+func TestCoordinator_SubmitWorkBudgetExceeded(t *testing.T) {
+	coord := newTestCoordinator()
+	coord.SetBudgetLimit(10)
+
+	err := coord.SubmitWork(&WorkItem{
+		RepoName:     "test",
+		Prompt:       "big task",
+		MaxBudgetUSD: 15,
+	})
+	if err == nil {
+		t.Error("expected error for budget exceeded")
+	}
+}
+
+func TestCoordinator_EventBatchNoBus(t *testing.T) {
+	coord := NewCoordinator("test", "localhost", 0, "test", nil, nil)
+
+	batch := EventBatch{
+		WorkerID: "w1",
+		Events:   []FleetEvent{{Type: "test"}},
+	}
+	data, _ := json.Marshal(batch)
+	req := httptest.NewRequest("POST", "/api/v1/events/batch", strings.NewReader(string(data)))
+	w := httptest.NewRecorder()
+	coord.handleEventBatch(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("event batch no bus: got %d", w.Code)
+	}
+}
+
+func TestCoordinator_StopNilServer(t *testing.T) {
+	coord := newTestCoordinator()
+	err := coord.Stop(context.Background())
+	if err != nil {
+		t.Fatalf("stop nil server: %v", err)
+	}
+}
+
+func TestCoordinator_ExpireWorkersPreservesPaused(t *testing.T) {
+	coord := newTestCoordinator()
+
+	coord.mu.Lock()
+	coord.workers["paused"] = &WorkerInfo{
+		ID:            "paused",
+		Status:        WorkerPaused,
+		LastHeartbeat: time.Now().Add(-10 * time.Minute),
+	}
+	coord.mu.Unlock()
+
+	coord.expireWorkers()
+
+	coord.mu.RLock()
+	defer coord.mu.RUnlock()
+	if coord.workers["paused"].Status != WorkerPaused {
+		t.Errorf("paused worker should stay paused, got %q", coord.workers["paused"].Status)
+	}
+}
+
+func TestCoordinator_HandleStatusNilSessMgr(t *testing.T) {
+	coord := NewCoordinator("test", "localhost", 0, "test", nil, nil)
+
+	req := httptest.NewRequest("GET", "/api/v1/status", nil)
+	w := httptest.NewRecorder()
+	coord.handleStatus(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("status nil sessmgr: got %d", w.Code)
+	}
+}
+
+func TestCoordinator_WorkCompleteNoResult(t *testing.T) {
+	coord := newTestCoordinator()
+
+	item := &WorkItem{
+		ID:         "no-result",
+		Status:     WorkAssigned,
+		AssignedTo: "w1",
+	}
+	coord.queue.Push(item)
+
+	payload := `{"work_item_id":"no-result","status":"completed"}`
+	req := httptest.NewRequest("POST", "/api/v1/work/complete", strings.NewReader(payload))
+	w := httptest.NewRecorder()
+	coord.handleWorkComplete(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("complete no result: got %d", w.Code)
+	}
+}
+
+func TestCoordinator_SubmitWorkWithBudgetReservation(t *testing.T) {
+	coord := newTestCoordinator()
+
+	err := coord.SubmitWork(&WorkItem{
+		RepoName:     "test",
+		Prompt:       "task",
+		MaxBudgetUSD: 10,
+	})
+	if err != nil {
+		t.Fatalf("submit: %v", err)
+	}
+
+	coord.mu.RLock()
+	reserved := coord.budget.ReservedUSD
+	coord.mu.RUnlock()
+
+	if reserved != 10 {
+		t.Errorf("reserved: got $%.2f, want $10", reserved)
+	}
+}
+
+func TestCoordinator_HandleWorkSubmitDefaults(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Submit with no ID, no status, no max_retries
+	payload := `{"repo_name":"test","prompt":"do stuff"}`
+	req := httptest.NewRequest("POST", "/api/v1/work/submit", strings.NewReader(payload))
+	w := httptest.NewRecorder()
+	coord.handleWorkSubmit(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("submit defaults: got %d, body: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]any
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	workID, _ := resp["work_item_id"].(string)
+	if workID == "" {
+		t.Fatal("expected non-empty work_item_id")
+	}
+
+	item, ok := coord.queue.Get(workID)
+	if !ok {
+		t.Fatal("item should exist in queue")
+	}
+	if item.MaxRetries != 2 {
+		t.Errorf("max_retries default: got %d, want 2", item.MaxRetries)
+	}
+	if item.Status != WorkPending {
+		t.Errorf("status default: got %q, want pending", item.Status)
+	}
 }
 
 func TestDrainWorker_HeartbeatPreservesStatus(t *testing.T) {
