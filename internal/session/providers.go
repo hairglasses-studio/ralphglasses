@@ -466,33 +466,36 @@ func sanitizeGeminiStderr(raw string) string {
 	return strings.Join(kept, "\n")
 }
 
-var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+// stderrCostRe matches common LLM CLI cost output patterns like:
+//   - "Cost: $0.0023"
+//   - "Total cost: 0.0023"
+//   - "cost_usd: $1.23"
+//   - "Session cost: $0.05"
+var stderrCostRe = regexp.MustCompile(`(?i)(?:total\s+)?(?:session\s+)?cost(?:_usd)?:\s*\$?([\d]+\.[\d]+)`)
 
-// costRe matches common CLI cost output patterns case-insensitively:
-//
-//	"Cost: $0.0023", "Total cost: 0.0450", "cost_usd: $1.23", "Session cost: $0.05"
-var costRe = regexp.MustCompile(`(?i)(?:total\s+cost|session\s+cost|cost_usd|cost)\s*:\s*\$?(\d+(?:\.\d+)?)`)
-
-// ParseCostFromStderr extracts a cost value (USD) from CLI stderr output.
-// It strips ANSI escape codes, then searches for common cost patterns.
-// When multiple matches are found, it returns the last one (most likely the
-// final/total). Returns 0 when no cost is found or input is empty.
+// ParseCostFromStderr attempts to extract a cost value from stderr output using
+// regex patterns that match common LLM CLI formats. Returns 0 if no cost found.
+// This serves as a fallback when structured cost/usage fields are absent.
 func ParseCostFromStderr(stderr string) float64 {
 	if stderr == "" {
 		return 0
 	}
+	// Strip ANSI codes before matching
 	cleaned := ansiRe.ReplaceAllString(stderr, "")
-	matches := costRe.FindAllStringSubmatch(cleaned, -1)
+	matches := stderrCostRe.FindAllStringSubmatch(cleaned, -1)
 	if len(matches) == 0 {
 		return 0
 	}
+	// Use the last match (most likely the final/total cost)
 	last := matches[len(matches)-1]
-	v, err := strconv.ParseFloat(last[1], 64)
-	if err != nil {
+	cost, err := strconv.ParseFloat(last[1], 64)
+	if err != nil || cost < 0 {
 		return 0
 	}
-	return v
+	return cost
 }
+
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 
 // cleanProviderOutput extracts human-readable output from stderr for
 // providers whose stdout JSON stream may not capture all output.

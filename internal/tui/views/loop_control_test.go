@@ -8,160 +8,113 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
-func TestRenderLoopControl_Empty(t *testing.T) {
-	data := LoopControlData{Loops: nil, Selected: 0}
-	out := RenderLoopControl(data, 120, 40)
+func TestRenderLoopControlPanelEmpty(t *testing.T) {
+	out := RenderLoopControlPanel(nil, 0, 120, 40)
 	if !strings.Contains(out, "No active loops") {
-		t.Errorf("empty panel should show 'No active loops', got: %q", out)
+		t.Error("empty panel should show 'No active loops'")
 	}
 	if !strings.Contains(out, "Loop Control Panel") {
-		t.Errorf("should show panel title, got: %q", out)
-	}
-	if !strings.Contains(out, "Esc back") {
-		t.Errorf("should show help footer, got: %q", out)
+		t.Error("should contain title")
 	}
 }
 
-func TestRenderLoopControl_Populated(t *testing.T) {
+func TestRenderLoopControlPanelWithLoops(t *testing.T) {
 	now := time.Now()
+	ended := now.Add(-10 * time.Second)
+	loops := []*session.LoopRun{
+		func() *session.LoopRun {
+			l := &session.LoopRun{
+				ID:        "aaaa-bbbb-cccc-dddd",
+				RepoName:  "testrepo",
+				Status:    "running",
+				CreatedAt: now.Add(-5 * time.Minute),
+				Iterations: []session.LoopIteration{
+					{
+						Number:    1,
+						Status:    "completed",
+						Task:      session.LoopTask{Title: "Fix widget"},
+						StartedAt: now.Add(-60 * time.Second),
+						EndedAt:   &ended,
+					},
+				},
+			}
+			return l
+		}(),
+		func() *session.LoopRun {
+			l := &session.LoopRun{
+				ID:        "eeee-ffff-0000-1111",
+				RepoName:  "otherrepo",
+				Status:    "running",
+				Paused:    true,
+				CreatedAt: now.Add(-10 * time.Minute),
+			}
+			return l
+		}(),
+	}
 
-	running := &session.LoopRun{
-		ID:        "aaaa1111bbbb2222",
-		RepoName:  "my-running-repo",
-		Status:    "running",
-		CreatedAt: now.Add(-10 * time.Minute),
-	}
-	running.Iterations = []session.LoopIteration{
-		{
-			Number:    1,
-			Status:    "done",
-			StartedAt: now.Add(-5 * time.Minute),
-			EndedAt:   func() *time.Time { t := now.Add(-3 * time.Minute); return &t }(),
-			Task:      session.LoopTask{Title: "Fix the tests"},
-		},
+	data := SnapshotLoopControl(loops)
+	if len(data) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(data))
 	}
 
-	paused := &session.LoopRun{
-		ID:        "cccc3333dddd4444",
-		RepoName:  "my-paused-repo",
-		Status:    "running",
-		Paused:    true,
-		CreatedAt: now.Add(-20 * time.Minute),
+	// First loop should have iteration data
+	if data[0].LastIterTask != "Fix widget" {
+		t.Errorf("expected task 'Fix widget', got %q", data[0].LastIterTask)
 	}
-	paused.Iterations = []session.LoopIteration{
-		{
-			Number:    1,
-			Status:    "done",
-			StartedAt: now.Add(-15 * time.Minute),
-			EndedAt:   func() *time.Time { t := now.Add(-12 * time.Minute); return &t }(),
-		},
+	if data[0].NextEstimate == "—" {
+		t.Error("running loop should not have '—' estimate")
 	}
 
-	data := LoopControlData{
-		Loops:    []*session.LoopRun{running, paused},
-		Selected: 0,
+	// Second loop should be paused
+	if data[1].NextEstimate != "paused" {
+		t.Errorf("paused loop estimate = %q, want 'paused'", data[1].NextEstimate)
 	}
-	out := RenderLoopControl(data, 120, 40)
 
-	if !strings.Contains(out, "aaaa1111") {
-		t.Errorf("should show running loop ID prefix, got: %q", out)
+	// Render with first selected
+	out := RenderLoopControlPanel(data, 0, 120, 40)
+	if !strings.Contains(out, "Loop Control Panel") {
+		t.Error("should contain title")
 	}
-	if !strings.Contains(out, "my-running-repo") {
-		t.Errorf("should show running repo name, got: %q", out)
+	if !strings.Contains(out, "testrepo") {
+		t.Error("should contain repo name")
+	}
+	if !strings.Contains(out, "otherrepo") {
+		t.Error("should contain second repo")
+	}
+	if !strings.Contains(out, "Fix widget") {
+		t.Error("selected loop should show task detail")
+	}
+	if !strings.Contains(out, "running") {
+		t.Error("should contain running status")
 	}
 	if !strings.Contains(out, "paused") {
-		t.Errorf("should show paused status for paused loop, got: %q", out)
+		t.Error("should contain paused status")
 	}
-	if !strings.Contains(out, "cccc3333") {
-		t.Errorf("should show paused loop ID prefix, got: %q", out)
+	if !strings.Contains(out, "force-step") {
+		t.Error("help text should mention force-step")
 	}
-	// Selected loop (index 0) should have inline detail
-	if !strings.Contains(out, "iterations:") {
-		t.Errorf("selected loop should show inline detail with iterations, got: %q", out)
-	}
-	// Average duration should appear (2 minutes for the running loop)
-	if !strings.Contains(out, "avg:") {
-		t.Errorf("should show average iteration duration, got: %q", out)
-	}
-	if !strings.Contains(out, "j/k navigate") {
-		t.Errorf("should show navigation help, got: %q", out)
+
+	// Render with second selected — should NOT show "Fix widget" as inline detail
+	out2 := RenderLoopControlPanel(data, 1, 120, 40)
+	if !strings.Contains(out2, "otherrepo") {
+		t.Error("should contain second repo")
 	}
 }
 
-func TestRenderLoopControl_StoppedEstimate(t *testing.T) {
-	now := time.Now()
-	ended := now.Add(-30 * time.Second)
-
-	stopped := &session.LoopRun{
-		ID:        "eeee5555ffff6666",
-		RepoName:  "stopped-repo",
-		Status:    "stopped",
-		CreatedAt: now.Add(-5 * time.Minute),
-	}
-	stopped.Iterations = []session.LoopIteration{
+func TestSnapshotLoopControlStoppedLoop(t *testing.T) {
+	loops := []*session.LoopRun{
 		{
-			Number:    1,
-			Status:    "done",
-			StartedAt: now.Add(-4 * time.Minute),
-			EndedAt:   &ended,
+			ID:        "stop-1234",
+			RepoName:  "stopped-repo",
+			Status:    "stopped",
+			CreatedAt: time.Now().Add(-1 * time.Hour),
 		},
 	}
-
-	data := LoopControlData{
-		Loops:    []*session.LoopRun{stopped},
-		Selected: 0,
+	data := SnapshotLoopControl(loops)
+	if len(data) != 1 {
+		t.Fatalf("expected 1, got %d", len(data))
 	}
-	out := RenderLoopControl(data, 120, 40)
-
-	// Stopped loop should not show a "next" estimate
-	if strings.Contains(out, "next:") {
-		t.Errorf("stopped loop should not show next iteration estimate, got: %q", out)
-	}
-	// Should still show avg duration
-	if !strings.Contains(out, "avg:") {
-		t.Errorf("should show average iteration duration for stopped loop, got: %q", out)
-	}
-}
-
-func TestAvgLoopIterDuration_NoCompleted(t *testing.T) {
-	iters := []session.LoopIteration{
-		{Number: 1, StartedAt: time.Now()}, // no EndedAt
-	}
-	if d := avgLoopIterDuration(iters); d != 0 {
-		t.Errorf("expected 0 when no iterations have EndedAt, got %v", d)
-	}
-}
-
-func TestAvgLoopIterDuration_Multiple(t *testing.T) {
-	now := time.Now()
-	e1 := now.Add(-8 * time.Minute)
-	e2 := now.Add(-3 * time.Minute)
-	iters := []session.LoopIteration{
-		{Number: 1, StartedAt: now.Add(-10 * time.Minute), EndedAt: &e1}, // 2m
-		{Number: 2, StartedAt: now.Add(-5 * time.Minute), EndedAt: &e2},  // 2m
-	}
-	d := avgLoopIterDuration(iters)
-	if d < time.Minute*1 || d > time.Minute*3 {
-		t.Errorf("expected ~2m average, got %v", d)
-	}
-}
-
-func TestLoopControlTruncate(t *testing.T) {
-	tests := []struct {
-		input  string
-		max    int
-		expect string
-	}{
-		{"hello", 10, "hello"},
-		{"hello world", 8, "hello w…"},
-		{"hi", 2, "h…"},
-		{"x", 1, "…"},
-		{"", 5, ""},
-	}
-	for _, tt := range tests {
-		got := loopControlTruncate(tt.input, tt.max)
-		if got != tt.expect {
-			t.Errorf("loopControlTruncate(%q, %d) = %q, want %q", tt.input, tt.max, got, tt.expect)
-		}
+	if data[0].NextEstimate != "—" {
+		t.Errorf("stopped loop should have '—', got %q", data[0].NextEstimate)
 	}
 }
