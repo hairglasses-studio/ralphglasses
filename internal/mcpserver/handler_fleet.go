@@ -366,7 +366,7 @@ func (s *Server) handleFleetDLQ(_ context.Context, req mcp.CallToolRequest) (*mc
 
 // fleetJSON marshals v and returns it as a text content result.
 func fleetJSON(v any) (*mcp.CallToolResult, error) {
-	data, err := json.MarshalIndent(v, "", "  ")
+	data, err := json.Marshal(v)
 	if err != nil {
 		return codedError(ErrInternal, "marshal error: " + err.Error()), nil
 	}
