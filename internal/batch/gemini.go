@@ -94,8 +94,10 @@ type geminiError struct {
 	Message string `json:"message"`
 }
 
+// Provider returns ProviderGemini.
 func (g *geminiClient) Provider() Provider { return ProviderGemini }
 
+// Submit sends a batch of requests to the Gemini API using inline batch prediction.
 func (g *geminiClient) Submit(ctx context.Context, requests []Request) (*BatchStatus, error) {
 	if len(requests) == 0 {
 		return nil, fmt.Errorf("batch: no requests provided")
@@ -186,6 +188,8 @@ func (g *geminiClient) Submit(ctx context.Context, requests []Request) (*BatchSt
 	}, nil
 }
 
+// Poll returns the status of a Gemini batch. Since Gemini inline batches complete synchronously,
+// this always returns completed if the batch ID is known.
 func (g *geminiClient) Poll(_ context.Context, batchID string) (*BatchStatus, error) {
 	// Gemini batch results are returned inline, so polling always returns completed
 	// if we have the results, or not found otherwise.
@@ -207,6 +211,7 @@ func (g *geminiClient) Poll(_ context.Context, batchID string) (*BatchStatus, er
 	}, nil
 }
 
+// Results retrieves the stored results for a completed Gemini batch.
 func (g *geminiClient) Results(_ context.Context, batchID string) ([]Result, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -218,6 +223,8 @@ func (g *geminiClient) Results(_ context.Context, batchID string) ([]Result, err
 	return stored, nil
 }
 
+// Cancel removes stored results for a Gemini batch. Since inline batches complete immediately,
+// this is effectively a cleanup operation.
 func (g *geminiClient) Cancel(_ context.Context, batchID string) error {
 	// Gemini inline batches complete immediately; cancel is a no-op.
 	g.mu.Lock()

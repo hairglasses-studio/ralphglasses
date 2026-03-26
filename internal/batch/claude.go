@@ -114,8 +114,10 @@ type claudeResultError struct {
 	Message string `json:"message"`
 }
 
+// Provider returns ProviderClaude.
 func (c *claudeClient) Provider() Provider { return ProviderClaude }
 
+// Submit sends a batch of requests to the Claude Messages Batches API.
 func (c *claudeClient) Submit(ctx context.Context, requests []Request) (*BatchStatus, error) {
 	if len(requests) == 0 {
 		return nil, fmt.Errorf("batch: no requests provided")
@@ -178,6 +180,7 @@ func (c *claudeClient) Submit(ctx context.Context, requests []Request) (*BatchSt
 	return c.toBatchStatus(&batchResp, len(requests)), nil
 }
 
+// Poll checks the current status of a Claude batch by ID.
 func (c *claudeClient) Poll(ctx context.Context, batchID string) (*BatchStatus, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+"/v1/messages/batches/"+batchID, nil)
 	if err != nil {
@@ -209,6 +212,7 @@ func (c *claudeClient) Poll(ctx context.Context, batchID string) (*BatchStatus, 
 	return c.toBatchStatus(&batchResp, total), nil
 }
 
+// Results retrieves the completed results for a Claude batch.
 func (c *claudeClient) Results(ctx context.Context, batchID string) ([]Result, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+"/v1/messages/batches/"+batchID+"/results", nil)
 	if err != nil {
@@ -261,6 +265,7 @@ func (c *claudeClient) Results(ctx context.Context, batchID string) ([]Result, e
 	return results, nil
 }
 
+// Cancel requests cancellation of a running Claude batch.
 func (c *claudeClient) Cancel(ctx context.Context, batchID string) error {
 	req, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/v1/messages/batches/"+batchID+"/cancel", nil)
 	if err != nil {
