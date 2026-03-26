@@ -211,3 +211,103 @@ func TestAllKnownProviders(t *testing.T) {
 		}
 	}
 }
+
+func TestLoad_UnknownKeysPreserved(t *testing.T) {
+	// JSON with unknown fields should not error (Go's json.Unmarshal
+	// ignores unknown fields by default), but validation should still pass
+	// for the known fields.
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+
+	data := `{"default_provider":"claude","unknown_field":"surprise","max_workers":2}`
+	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+	if cfg.DefaultProvider != "claude" {
+		t.Errorf("DefaultProvider = %q, want %q", cfg.DefaultProvider, "claude")
+	}
+	if cfg.MaxWorkers != 2 {
+		t.Errorf("MaxWorkers = %d, want 2", cfg.MaxWorkers)
+	}
+}
+
+func TestValidateConfig_ZeroBudgetAllowed(t *testing.T) {
+	// Zero budget means "use default", should not error.
+	cfg := &Config{DefaultBudgetUSD: 0}
+	errs := ValidateConfig(cfg)
+	if len(errs) != 0 {
+		t.Errorf("expected no errors for zero budget, got %v", errs)
+	}
+}
+
+func TestValidateConfig_ZeroCostRateAllowed(t *testing.T) {
+	cfg := &Config{CostRateMultiplier: 0}
+	errs := ValidateConfig(cfg)
+	if len(errs) != 0 {
+		t.Errorf("expected no errors for zero cost rate, got %v", errs)
+	}
+}
+
+func TestValidateConfig_BoundaryWorkerCount(t *testing.T) {
+	// MaxWorkers exactly at 50 should be valid.
+	cfg := &Config{MaxWorkers: 50}
+	errs := ValidateConfig(cfg)
+	if len(errs) != 0 {
+		t.Errorf("expected no errors for MaxWorkers=50, got %v", errs)
+	}
+
+	// MaxWorkers at 51 should error.
+	cfg = &Config{MaxWorkers: 51}
+	errs = ValidateConfig(cfg)
+	if len(errs) != 1 {
+		t.Errorf("expected 1 error for MaxWorkers=51, got %d: %v", len(errs), errs)
+	}
+}
+
+func TestValidateConfig_BothProvidersUnknown(t *testing.T) {
+	cfg := &Config{
+		DefaultProvider: "gpt5",
+		WorkerProvider:  "llama9000",
+	}
+	errs := ValidateConfig(cfg)
+	if len(errs) != 2 {
+		t.Errorf("expected 2 errors for two unknown providers, got %d: %v", len(errs), errs)
+	}
+}
+
+func TestLoad_EmptyJSON(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+
+	if err := os.WriteFile(path, []byte(`{}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+	errs := ValidateConfig(cfg)
+	if len(errs) != 0 {
+		t.Errorf("expected no errors for empty JSON object, got %v", errs)
+	}
+}
+
+func TestLoad_ZeroByteFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+
+	if err := os.WriteFile(path, []byte{}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("expected error for zero-byte config file")
+	}
+}

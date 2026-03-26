@@ -196,6 +196,12 @@ func (t *Table) visibleRows() int {
 
 // CycleSort advances the sort column among sortable columns.
 func (t *Table) CycleSort() {
+	if len(t.Columns) == 0 {
+		return
+	}
+	if t.SortCol >= len(t.Columns) {
+		t.SortCol = len(t.Columns) - 1
+	}
 	start := t.SortCol
 	for {
 		t.SortCol = (t.SortCol + 1) % len(t.Columns)
@@ -212,10 +218,24 @@ func (t *Table) CycleSort() {
 }
 
 func (t *Table) sortRows() {
+	if len(t.Columns) == 0 || len(t.Rows) == 0 {
+		return
+	}
 	col := t.SortCol
+	if col >= len(t.Columns) {
+		col = len(t.Columns) - 1
+		t.SortCol = col
+	}
 	asc := t.SortAsc
 	sort.SliceStable(t.Rows, func(i, j int) bool {
-		a, b := StripAnsi(t.Rows[i][col]), StripAnsi(t.Rows[j][col])
+		// Guard against rows with fewer cells than expected.
+		var a, b string
+		if col < len(t.Rows[i]) {
+			a = StripAnsi(t.Rows[i][col])
+		}
+		if col < len(t.Rows[j]) {
+			b = StripAnsi(t.Rows[j][col])
+		}
 		if asc {
 			return a < b
 		}
@@ -262,7 +282,7 @@ func (t *Table) View() string {
 	var hdr []string
 	for i, col := range cols {
 		title := col.Title
-		if i == t.SortCol && t.Columns[i].Sortable {
+		if i == t.SortCol && i < len(t.Columns) && t.Columns[i].Sortable {
 			if t.SortAsc {
 				title += " ▲"
 			} else {

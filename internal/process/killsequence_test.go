@@ -75,7 +75,7 @@ func TestKillSequence_FullEscalation(t *testing.T) {
 	h := newHarness(100, 200, 201)
 	defer h.install()()
 
-	runKillSequence(100, []int{200, 201})
+	runKillSequence(100, []int{200, 201}, DefaultKillTimeout)
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -122,7 +122,7 @@ func TestKillSequence_PrimaryExitsAfterSIGTERM(t *testing.T) {
 		return err
 	}
 
-	runKillSequence(100, []int{200})
+	runKillSequence(100, []int{200}, DefaultKillTimeout)
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -162,7 +162,7 @@ func TestKillSequence_AllExitBeforeSIGKILL(t *testing.T) {
 		return err
 	}
 
-	runKillSequence(100, []int{200})
+	runKillSequence(100, []int{200}, DefaultKillTimeout)
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -188,7 +188,7 @@ func TestKillSequence_NoChildren(t *testing.T) {
 	h := newHarness(100)
 	defer h.install()()
 
-	runKillSequence(100, nil)
+	runKillSequence(100, nil, DefaultKillTimeout)
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -214,7 +214,7 @@ func TestKillSequence_AlreadyDead(t *testing.T) {
 	h := newHarness() // nothing alive
 	defer h.install()()
 
-	runKillSequence(100, []int{200})
+	runKillSequence(100, []int{200}, DefaultKillTimeout)
 
 	h.mu.Lock()
 	defer h.mu.Unlock()

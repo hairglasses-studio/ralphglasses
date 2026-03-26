@@ -305,3 +305,125 @@ func TestRefreshRepo_NoFiles(t *testing.T) {
 		t.Error("Config should be nil when no files exist")
 	}
 }
+
+// --- Error path tests for JSON parsing ---
+
+func TestLoadStatus_TruncatedJSON(t *testing.T) {
+	dir := setupRalphDir(t)
+	// Truncated JSON — opening brace with partial key, no closing brace.
+	if err := os.WriteFile(filepath.Join(dir, ".ralph", "status.json"), []byte(`{"status":"runn`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadStatus(dir)
+	if err == nil {
+		t.Fatal("expected error for truncated JSON, got nil")
+	}
+}
+
+func TestLoadStatus_ZeroByteFile(t *testing.T) {
+	dir := setupRalphDir(t)
+	if err := os.WriteFile(filepath.Join(dir, ".ralph", "status.json"), []byte{}, 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadStatus(dir)
+	if err == nil {
+		t.Fatal("expected error for zero-byte file, got nil")
+	}
+}
+
+func TestLoadStatus_InvalidUTF8(t *testing.T) {
+	dir := setupRalphDir(t)
+	// Invalid UTF-8 bytes embedded in otherwise valid-looking JSON structure.
+	data := []byte(`{"status":"\xff\xfe"}`)
+	if err := os.WriteFile(filepath.Join(dir, ".ralph", "status.json"), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+	// json.Unmarshal may or may not error on invalid UTF-8 depending on Go version,
+	// but it must not panic.
+	_, _ = LoadStatus(dir)
+}
+
+func TestLoadCircuitBreaker_TruncatedJSON(t *testing.T) {
+	dir := setupRalphDir(t)
+	if err := os.WriteFile(filepath.Join(dir, ".ralph", ".circuit_breaker_state"), []byte(`{"state":"CLO`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadCircuitBreaker(dir)
+	if err == nil {
+		t.Fatal("expected error for truncated JSON, got nil")
+	}
+}
+
+func TestLoadCircuitBreaker_ZeroByteFile(t *testing.T) {
+	dir := setupRalphDir(t)
+	if err := os.WriteFile(filepath.Join(dir, ".ralph", ".circuit_breaker_state"), []byte{}, 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadCircuitBreaker(dir)
+	if err == nil {
+		t.Fatal("expected error for zero-byte file, got nil")
+	}
+}
+
+func TestLoadProgress_TruncatedJSON(t *testing.T) {
+	dir := setupRalphDir(t)
+	if err := os.WriteFile(filepath.Join(dir, ".ralph", "progress.json"), []byte(`{"iteration":5,`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadProgress(dir)
+	if err == nil {
+		t.Fatal("expected error for truncated JSON, got nil")
+	}
+}
+
+func TestLoadProgress_ZeroByteFile(t *testing.T) {
+	dir := setupRalphDir(t)
+	if err := os.WriteFile(filepath.Join(dir, ".ralph", "progress.json"), []byte{}, 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadProgress(dir)
+	if err == nil {
+		t.Fatal("expected error for zero-byte file, got nil")
+	}
+}
+
+func TestLoadProgress_InvalidUTF8(t *testing.T) {
+	dir := setupRalphDir(t)
+	data := []byte(`{"status":"\xff\xfe"}`)
+	if err := os.WriteFile(filepath.Join(dir, ".ralph", "progress.json"), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+	// Must not panic regardless of whether it returns an error.
+	_, _ = LoadProgress(dir)
+}
+
+func TestRefreshRepo_MixedCorruptFiles(t *testing.T) {
+	dir := setupRalphDir(t)
+
+	// status.json: truncated
+	if err := os.WriteFile(filepath.Join(dir, ".ralph", "status.json"), []byte(`{"loop_count`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// circuit_breaker_state: zero bytes
+	if err := os.WriteFile(filepath.Join(dir, ".ralph", ".circuit_breaker_state"), []byte{}, 0644); err != nil {
+		t.Fatal(err)
+	}
+	// progress.json: valid
+	writeJSON(t, filepath.Join(dir, ".ralph", "progress.json"), Progress{Iteration: 1, Status: "running"})
+
+	r := &Repo{Path: dir}
+	errs := RefreshRepo(r)
+
+	if len(errs) != 2 {
+		t.Errorf("expected 2 errors (status + circuit), got %d: %v", len(errs), errs)
+	}
+	if r.Status != nil {
+		t.Error("Status should be nil for truncated JSON")
+	}
+	if r.Circuit != nil {
+		t.Error("Circuit should be nil for zero-byte file")
+	}
+	if r.Progress == nil {
+		t.Error("Progress should be non-nil for valid JSON")
+	}
+}

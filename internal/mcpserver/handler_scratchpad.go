@@ -79,7 +79,7 @@ func (s *Server) handleScratchpadRead(_ context.Context, req mcp.CallToolRequest
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return textResult("No scratchpad found: " + name), nil
+			return jsonResult(map[string]any{"status": "empty", "items": []any{}}), nil
 		}
 		return codedError(ErrFilesystem, fmt.Sprintf("read scratchpad: %v", err)), nil
 	}
@@ -172,7 +172,7 @@ func (s *Server) handleScratchpadResolve(_ context.Context, req mcp.CallToolRequ
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return textResult("No scratchpad found: " + name), nil
+			return jsonResult(map[string]any{"status": "empty", "items": []any{}}), nil
 		}
 		return codedError(ErrFilesystem, fmt.Sprintf("read scratchpad: %v", err)), nil
 	}

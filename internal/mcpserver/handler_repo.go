@@ -358,6 +358,34 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 		}
 	}
 
+	// Summary-only: compact JSON with repo names, session counts, and total spend.
+	if getBoolArg(req, "summary_only") {
+		allSessions := s.SessMgr.List("")
+		var totalSpend float64
+		var runningSessions int
+		repoSessionCounts := make(map[string]int)
+		for _, sess := range allSessions {
+			sess.Lock()
+			totalSpend += sess.SpentUSD
+			repoSessionCounts[sess.RepoName]++
+			if sess.Status == session.StatusRunning || sess.Status == session.StatusLaunching {
+				runningSessions++
+			}
+			sess.Unlock()
+		}
+		repoNames := make([]string, 0, len(s.Repos))
+		for _, r := range s.Repos {
+			repoNames = append(repoNames, r.Name)
+		}
+		return jsonResult(map[string]any{
+			"repos":            repoNames,
+			"repo_sessions":    repoSessionCounts,
+			"total_sessions":   len(allSessions),
+			"running_sessions": runningSessions,
+			"total_spend_usd":  totalSpend,
+		}), nil
+	}
+
 	// Gather sessions and teams
 	allSessions := s.SessMgr.List("")
 	allTeams := s.SessMgr.ListTeams()
