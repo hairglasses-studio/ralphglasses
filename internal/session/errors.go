@@ -11,4 +11,37 @@ var (
 
 	// ErrInvalidProfile indicates a loop profile failed validation.
 	ErrInvalidProfile = errors.New("invalid loop profile")
+
+	// ErrSessionNotFound indicates the requested session ID does not exist.
+	ErrSessionNotFound = errors.New("session not found")
+
+	// ErrSessionNotRunning indicates the session is not in a running state.
+	ErrSessionNotRunning = errors.New("session not running")
+
+	// ErrSessionErrored indicates the session ended in an error state.
+	ErrSessionErrored = errors.New("session errored")
+
+	// ErrSessionStopped indicates the session was stopped.
+	ErrSessionStopped = errors.New("session stopped")
+
+	// ErrTeamNotFound indicates the requested team name does not exist.
+	ErrTeamNotFound = errors.New("team not found")
+
+	// ErrTeamNameRequired indicates a team name was not provided.
+	ErrTeamNameRequired = errors.New("team name required")
+
+	// ErrRepoPathRequired indicates a repo path was not provided.
+	ErrRepoPathRequired = errors.New("repo path required")
+
+	// ErrNoTasks indicates no tasks were provided for a team.
+	ErrNoTasks = errors.New("at least one task required")
+
+	// ErrAlreadyOnProvider indicates the session is already using the target provider.
+	ErrAlreadyOnProvider = errors.New("already on provider")
+
+	// ErrWaitTimeout indicates waitForSession timed out.
+	ErrWaitTimeout = errors.New("wait timed out")
+
+	// ErrUnexpectedExit indicates the session process exited unexpectedly.
+	ErrUnexpectedExit = errors.New("process exited unexpectedly")
 )
