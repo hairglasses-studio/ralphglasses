@@ -57,6 +57,7 @@ Or with a custom scan path:
 			"ralphglasses",
 			version+" ("+commit+")",
 			server.WithToolCapabilities(true),
+			server.WithResourceCapabilities(false, false),
 			server.WithRecovery(),
 			// Outermost → innermost: trace → timeout → instrumentation → event bus → validation → handler
 			server.WithToolHandlerMiddleware(mcpserver.TraceMiddleware()),
@@ -79,6 +80,7 @@ Or with a custom scan path:
 		rg.ToolRecorder = toolRec
 		rg.InitSelfImprovement(filepath.Join(sp, ".ralph"), 0)
 		rg.Register(srv)
+		mcpserver.RegisterResources(srv, rg)
 
 		return server.ServeStdio(srv)
 	},
