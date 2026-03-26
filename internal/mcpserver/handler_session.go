@@ -2,148 +2,16 @@ package mcpserver
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
-	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
-// Session handlers
-
-func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "repo")
-	if name == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
-	}
-	if err := ValidateRepoName(name); err != nil {
-		return codedError(ErrRepoNameInvalid, fmt.Sprintf("invalid repo name: %v", err)), nil
-	}
-	prompt := getStringArg(req, "prompt")
-	if prompt == "" {
-		return codedError(ErrInvalidParams, "prompt required"), nil
-	}
-	if err := ValidateStringLength(prompt, MaxPromptLength, "prompt"); err != nil {
-		return codedError(ErrInvalidParams, err.Error()), nil
-	}
-	if s.reposNil() {
-		if err := s.scan(); err != nil {
-			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
-		}
-	}
-	r := s.findRepo(name)
-	if r == nil {
-		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
-	}
-
-	provider := session.Provider(getStringArg(req, "provider"))
-	if provider == "" {
-		provider = session.ProviderClaude
-	}
-	if err := session.ValidateProvider(provider); err != nil {
-		return codedError(ErrProviderUnavailable, fmt.Sprintf("invalid provider %q: %v", provider, err)), nil
-	}
-
-	systemPrompt := getStringArg(req, "system_prompt")
-	if err := ValidateStringLength(systemPrompt, MaxPromptLength, "system_prompt"); err != nil {
-		return codedError(ErrInvalidParams, err.Error()), nil
-	}
-
-	opts := session.LaunchOptions{
-		Provider:     provider,
-		RepoPath:     r.Path,
-		Prompt:       prompt,
-		Model:        getStringArg(req, "model"),
-		MaxBudgetUSD: getNumberArg(req, "max_budget_usd", 0),
-		MaxTurns:     int(getNumberArg(req, "max_turns", 0)),
-		Agent:        getStringArg(req, "agent"),
-		SystemPrompt: systemPrompt,
-		SessionName:  getStringArg(req, "session_name"),
-		Worktree:     getStringArg(req, "worktree"),
-	}
-	if getBoolArg(req, "bare") {
-		opts.Bare = true
-	}
-	if effort := getStringArg(req, "effort"); effort != "" {
-		opts.Effort = effort
-	}
-	if fallback := getStringArg(req, "fallback_model"); fallback != "" {
-		opts.FallbackModel = fallback
-	}
-	if tools := getStringArg(req, "allowed_tools"); tools != "" {
-		opts.AllowedTools = strings.Split(tools, ",")
-	}
-	if schema := getStringArg(req, "output_schema"); schema != "" {
-		if !json.Valid([]byte(schema)) {
-			return codedError(ErrInvalidParams, "output_schema must be valid JSON"), nil
-		}
-		opts.OutputSchema = json.RawMessage(schema)
-	}
-
-	// Inject improvement context from journal
-	if getStringArg(req, "no_journal") != "true" {
-		journal, _ := session.ReadRecentJournal(r.Path, 5)
-		if len(journal) > 0 {
-			journalCtx := session.SynthesizeContext(journal)
-			if journalCtx != "" {
-				opts.Prompt = journalCtx + "\n\n---\n\n" + opts.Prompt
-			}
-		}
-	}
-
-	// Auto-enhance prompt if requested
-	enhanceMode := getStringArg(req, "enhance_prompt")
-	if enhanceMode != "" {
-		cfg := enhancer.LoadConfig(r.Path)
-		if enhancer.ShouldEnhance(prompt, cfg) {
-			mode := enhancer.ValidMode(enhanceMode)
-			if mode == "" {
-				mode = enhancer.ModeLocal
-			}
-			targetProvider := enhancer.ProviderName(getStringArg(req, "target_provider"))
-			if targetProvider == "" {
-				targetProvider = mapSessionProvider(provider)
-			}
-			eResult := enhancer.EnhanceHybrid(ctx, prompt, "", cfg, s.getEngine(), mode, targetProvider)
-			opts.Prompt = eResult.Enhanced
-		}
-	}
-
-	sess, err := s.SessMgr.Launch(ctx, opts)
-	if err != nil {
-		return codedError(ErrInternal, fmt.Sprintf("launch failed: %v", err)), nil
-	}
-
-	result := map[string]any{
-		"session_id": sess.ID,
-		"provider":   sess.Provider,
-		"repo":       sess.RepoName,
-		"status":     sess.Status,
-		"model":      sess.Model,
-		"budget_usd": sess.BudgetUSD,
-	}
-	if warnings := session.UnsupportedOptionsWarnings(provider, opts); len(warnings) > 0 {
-		result["warnings"] = warnings
-	}
-	if enhanceMode != "" && opts.Prompt != prompt {
-		result["prompt_enhanced"] = true
-		result["original_prompt"] = prompt
-		if s.EventBus != nil {
-			s.EventBus.Publish(events.Event{
-				Type: events.PromptEnhanced,
-				Data: map[string]any{"session_id": sess.ID, "repo": name},
-			})
-		}
-	}
-
-	return jsonResult(result), nil
-}
+// Session CRUD and status handlers
 
 func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoFilter := getStringArg(req, "repo")
@@ -261,59 +129,35 @@ func (s *Server) handleSessionStatus(_ context.Context, req mcp.CallToolRequest)
 	return jsonResult(detail), nil
 }
 
-func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "repo")
-	if name == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
-	}
-	if err := ValidateRepoName(name); err != nil {
-		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
-	}
-	sessionID := getStringArg(req, "session_id")
-	if sessionID == "" {
-		return codedError(ErrInvalidParams, "session_id required"), nil
-	}
-	if s.reposNil() {
-		if err := s.scan(); err != nil {
-			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
-		}
-	}
-	r := s.findRepo(name)
-	if r == nil {
-		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
-	}
-
-	provider := session.Provider(getStringArg(req, "provider"))
-	if provider == "" {
-		provider = session.ProviderClaude
-	}
-	prompt := getStringArg(req, "prompt")
-	sess, err := s.SessMgr.Resume(ctx, r.Path, provider, sessionID, prompt)
-	if err != nil {
-		return codedError(ErrLaunchFailed, fmt.Sprintf("resume failed: %v", err)), nil
-	}
-
-	return jsonResult(map[string]any{
-		"session_id":   sess.ID,
-		"resumed_from": sessionID,
-		"repo":         sess.RepoName,
-		"status":       sess.Status,
-	}), nil
-}
-
-func (s *Server) handleSessionStop(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleSessionOutput(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := getStringArg(req, "id")
 	if id == "" {
 		return codedError(ErrInvalidParams, "session id required"), nil
 	}
-
-	if err := s.SessMgr.Stop(id); err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
-		}
-		return codedError(ErrInternal, fmt.Sprintf("stop failed: %v", err)), nil
+	lines := int(getNumberArg(req, "lines", 20))
+	if lines > 100 {
+		lines = 100
 	}
-	return textResult(fmt.Sprintf("Stopped session %s", id)), nil
+
+	sess, ok := s.SessMgr.Get(id)
+	if !ok {
+		return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
+	}
+
+	sess.Lock()
+	history := make([]string, len(sess.OutputHistory))
+	copy(history, sess.OutputHistory)
+	sess.Unlock()
+
+	if len(history) > lines {
+		history = history[len(history)-lines:]
+	}
+
+	return jsonResult(map[string]any{
+		"session_id": id,
+		"lines":      len(history),
+		"output":     history,
+	}), nil
 }
 
 func (s *Server) handleSessionBudget(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -396,99 +240,6 @@ func (s *Server) handleSessionCompare(_ context.Context, req mcp.CallToolRequest
 		"session_1": extract(s1),
 		"session_2": extract(s2),
 	}), nil
-}
-
-func (s *Server) handleSessionOutput(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	id := getStringArg(req, "id")
-	if id == "" {
-		return codedError(ErrInvalidParams, "session id required"), nil
-	}
-	lines := int(getNumberArg(req, "lines", 20))
-	if lines > 100 {
-		lines = 100
-	}
-
-	sess, ok := s.SessMgr.Get(id)
-	if !ok {
-		return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
-	}
-
-	sess.Lock()
-	history := make([]string, len(sess.OutputHistory))
-	copy(history, sess.OutputHistory)
-	sess.Unlock()
-
-	if len(history) > lines {
-		history = history[len(history)-lines:]
-	}
-
-	return jsonResult(map[string]any{
-		"session_id": id,
-		"lines":      len(history),
-		"output":     history,
-	}), nil
-}
-
-func (s *Server) handleSessionRetry(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	id := getStringArg(req, "id")
-	if id == "" {
-		return codedError(ErrInvalidParams, "session id required"), nil
-	}
-
-	sess, ok := s.SessMgr.Get(id)
-	if !ok {
-		return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
-	}
-
-	sess.Lock()
-	opts := session.LaunchOptions{
-		Provider:     sess.Provider,
-		RepoPath:     sess.RepoPath,
-		Prompt:       sess.Prompt,
-		Model:        sess.Model,
-		MaxBudgetUSD: sess.BudgetUSD,
-		MaxTurns:     sess.MaxTurns,
-		Agent:        sess.AgentName,
-		TeamName:     sess.TeamName,
-	}
-	sess.Unlock()
-
-	// Apply overrides
-	if m := getStringArg(req, "model"); m != "" {
-		opts.Model = m
-	}
-	if b := getNumberArg(req, "max_budget_usd", 0); b > 0 {
-		opts.MaxBudgetUSD = b
-	}
-
-	newSess, err := s.SessMgr.Launch(ctx, opts)
-	if err != nil {
-		return codedError(ErrLaunchFailed, fmt.Sprintf("retry failed: %v", err)), nil
-	}
-
-	return jsonResult(map[string]any{
-		"original_id": id,
-		"new_id":      newSess.ID,
-		"provider":    string(newSess.Provider),
-		"status":      "launched",
-	}), nil
-}
-
-func (s *Server) handleSessionStopAll(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Count running sessions before stopping
-	sessions := s.SessMgr.List("")
-	running := 0
-	for _, sess := range sessions {
-		sess.Lock()
-		if sess.Status == session.StatusRunning || sess.Status == session.StatusLaunching {
-			running++
-		}
-		sess.Unlock()
-	}
-
-	s.SessMgr.StopAll()
-
-	return textResult(fmt.Sprintf("Stopped %d running session(s)", running)), nil
 }
 
 func (s *Server) handleSessionTail(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
