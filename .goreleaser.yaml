@@ -75,6 +75,50 @@ changelog:
       - "Merge pull request"
       - "Merge branch"
 
+dockers:
+  - id: ralphglasses-amd64
+    ids:
+      - ralphglasses
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "ghcr.io/hairglasses-studio/ralphglasses:{{ .Version }}-amd64"
+      - "ghcr.io/hairglasses-studio/ralphglasses:latest-amd64"
+    dockerfile: Dockerfile.goreleaser
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.source=https://github.com/hairglasses-studio/ralphglasses"
+  - id: ralphglasses-arm64
+    ids:
+      - ralphglasses
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "ghcr.io/hairglasses-studio/ralphglasses:{{ .Version }}-arm64"
+      - "ghcr.io/hairglasses-studio/ralphglasses:latest-arm64"
+    dockerfile: Dockerfile.goreleaser
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.source=https://github.com/hairglasses-studio/ralphglasses"
+
+docker_manifests:
+  - name_template: "ghcr.io/hairglasses-studio/ralphglasses:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/hairglasses-studio/ralphglasses:{{ .Version }}-amd64"
+      - "ghcr.io/hairglasses-studio/ralphglasses:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/hairglasses-studio/ralphglasses:latest"
+    image_templates:
+      - "ghcr.io/hairglasses-studio/ralphglasses:latest-amd64"
+      - "ghcr.io/hairglasses-studio/ralphglasses:latest-arm64"
+
 release:
   github:
     owner: hairglasses-studio
