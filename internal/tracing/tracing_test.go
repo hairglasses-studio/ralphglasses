@@ -49,6 +49,41 @@ func TestGlobalRecorder(t *testing.T) {
 	}
 }
 
+func TestTraceIDGeneration(t *testing.T) {
+	t.Parallel()
+	id := NewTraceID()
+	if len(id) != 16 {
+		t.Fatalf("expected 16-char trace ID, got %d: %q", len(id), id)
+	}
+	// Verify it's valid hex.
+	for _, c := range id {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+			t.Fatalf("trace ID contains non-hex char %q: %s", c, id)
+		}
+	}
+	// Two IDs should be unique.
+	id2 := NewTraceID()
+	if id == id2 {
+		t.Fatal("two consecutive trace IDs should differ")
+	}
+}
+
+func TestTraceIDContext(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	// No trace ID in empty context.
+	if got := TraceIDFromContext(ctx); got != "" {
+		t.Fatalf("expected empty trace ID from fresh context, got %q", got)
+	}
+
+	// Round-trip.
+	ctx = WithTraceID(ctx, "abc123def456abcd")
+	if got := TraceIDFromContext(ctx); got != "abc123def456abcd" {
+		t.Fatalf("expected abc123def456abcd, got %q", got)
+	}
+}
+
 func TestPrometheusRecorder(t *testing.T) {
 	inner := NewInMemoryRecorder()
 	prom := NewPrometheusRecorder(inner)
