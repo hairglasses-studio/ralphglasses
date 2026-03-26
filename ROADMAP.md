@@ -40,7 +40,7 @@ Pre-requisite fixes for existing bugs and silent failures. No new features. All 
 ### 0.5.1 — Silent error suppression in RefreshRepo
 - [x] 0.5.1.1 — Return `[]error` from `RefreshRepo()` in `internal/model/status.go:49-54` instead of discarding with `_ =`
 - [x] 0.5.1.2 — Propagate errors to TUI layer: emit `RefreshErrorMsg` with repo path and error details
-- [ ] 0.5.1.3 — Display parse errors in repo detail view status bar (non-blocking, yellow warning)
+- [x] 0.5.1.3 — Display parse errors in repo detail view status bar (non-blocking, yellow warning)
 - [x] 0.5.1.4 — Add unit test: corrupt status.json → RefreshRepo returns error, not silent zero-value
 - **Acceptance:** parse errors in `.ralph/` files visible to user, not silently dropped
 
@@ -54,13 +54,13 @@ Pre-requisite fixes for existing bugs and silent failures. No new features. All 
 ### 0.5.3 — Process reaper exit status
 - [x] 0.5.3.1 — Capture `cmd.Wait()` error in `process/manager.go:59` goroutine
 - [x] 0.5.3.2 — Parse exit code: distinguish crash (non-zero) from clean exit (0)
-- [ ] 0.5.3.3 — Emit `ProcessExitMsg{RepoPath, ExitCode, Error}` to TUI
-- [ ] 0.5.3.4 — Update repo status to "crashed" or "stopped" based on exit code
-- [ ] 0.5.3.5 — Add unit test: simulate ralph crash, assert TUI receives crash notification
+- [x] 0.5.3.3 — Emit `ProcessExitMsg{RepoPath, ExitCode, Error}` to TUI
+- [x] 0.5.3.4 — Update repo status to "crashed" or "stopped" based on exit code
+- [x] 0.5.3.5 — Add unit test: simulate ralph crash, assert TUI receives crash notification
 - **Acceptance:** TUI correctly reports ralph crash vs clean stop
 
 ### 0.5.4 — Getpgid fallback safety
-- [ ] 0.5.4.1 — Log warning when `Getpgid` fails in `manager.go:78-82` (currently silent fallback to PID-only signal)
+- [x] 0.5.4.1 — Log warning when `Getpgid` fails in `manager.go:78-82` (currently silent fallback to PID-only signal)
 - [ ] 0.5.4.2 — Track child PIDs: on process launch, record PID + all child PIDs if available
 - [ ] 0.5.4.3 — Fallback kill sequence: SIGTERM to PID → wait 5s → SIGTERM to known children → wait 5s → SIGKILL
 - [ ] 0.5.4.4 — Post-stop audit: check for orphaned processes matching `ralph_loop` pattern
@@ -80,24 +80,24 @@ Pre-requisite fixes for existing bugs and silent failures. No new features. All 
 - **Acceptance:** system boots on AMD iGPU when NVIDIA unavailable
 
 ### 0.5.7 — Hardcoded version string
-- [ ] 0.5.7.1 — Define `var Version = "dev"` in `internal/version/version.go`
-- [ ] 0.5.7.2 — Replace hardcoded `"0.1.0"` in `cmd/mcp.go:19` and `cmd/ralphglasses-mcp/main.go:22`
-- [ ] 0.5.7.3 — Add `-ldflags "-X internal/version.Version=$(git describe)"` to build commands
-- [ ] 0.5.7.4 — Add `ralphglasses version` subcommand: print version, go version, build date, commit SHA
-- [ ] 0.5.7.5 — Display version in TUI help view and MCP server info
+- [x] 0.5.7.1 — Define `var Version = "dev"` in `internal/version/version.go`
+- [x] 0.5.7.2 — Replace hardcoded `"0.1.0"` in `cmd/mcp.go:19` and `cmd/ralphglasses-mcp/main.go:22`
+- [x] 0.5.7.3 — Add `-ldflags "-X internal/version.Version=$(git describe)"` to build commands
+- [x] 0.5.7.4 — Add `ralphglasses version` subcommand: print version, go version, build date, commit SHA
+- [x] 0.5.7.5 — Display version in TUI help view and MCP server info
 - **Acceptance:** `ralphglasses version` outputs correct git-derived version
 
 ### 0.5.8 — CI BATS guard
-- [ ] 0.5.8.1 — Guard BATS step in CI: check `scripts/test/` exists and contains `.bats` files before running
-- [ ] 0.5.8.2 — Add BATS install step to CI (install `bats-core` if not present)
-- [ ] 0.5.8.3 — Run `marathon.bats` in CI with mock ANTHROPIC_API_KEY
-- [ ] 0.5.8.4 — Add CI matrix: test on ubuntu-latest and macos-latest
+- [x] 0.5.8.1 — Guard BATS step in CI: check `scripts/test/` exists and contains `.bats` files before running
+- [x] 0.5.8.2 — Add BATS install step to CI (install `bats-core` if not present)
+- [x] 0.5.8.3 — Run `marathon.bats` in CI with mock ANTHROPIC_API_KEY
+- [x] 0.5.8.4 — Add CI matrix: test on ubuntu-latest and macos-latest
 - **Acceptance:** CI passes regardless of test directory presence
 
 ### 0.5.9 — Race condition in MCP scan
 - [x] 0.5.9.1 — Add `sync.RWMutex` to protect `repos` map in `internal/mcpserver/` during concurrent scans
-- [ ] 0.5.9.2 — Add `go test -race` to CI pipeline for all packages
-- [ ] 0.5.9.3 — Write concurrent scan test: 10 goroutines scanning simultaneously
+- [x] 0.5.9.2 — Add `go test -race` to CI pipeline for all packages
+- [x] 0.5.9.3 — Write concurrent scan test: 10 goroutines scanning simultaneously
 - **Acceptance:** `go test -race ./...` passes clean
 
 ### 0.5.10 — Marathon.sh edge cases
@@ -114,6 +114,61 @@ Pre-requisite fixes for existing bugs and silent failures. No new features. All 
 - [ ] 0.5.11.3 — Validate numeric ranges: `MAX_CALLS_PER_HOUR` must be 1-1000, `CB_COOLDOWN_MINUTES` must be 1-60
 - [ ] 0.5.11.4 — Validate boolean values: only "true"/"false", reject "yes"/"1"/"on"
 - **Acceptance:** invalid `.ralphrc` values produce clear error messages
+
+## Phase 0.6: Code Quality & Observability
+
+Post-gate-pass improvements. All items are independent, parallel, and sized for single-iteration self-improvement loop completion.
+
+> **Parallel workstreams:** All 0.6.x items are independent. No blockers between them.
+
+### 0.6.1 — Test coverage for uncovered error paths
+- [ ] 0.6.1.1 — Add tests for `internal/discovery/` error paths: unreadable dirs, symlink cycles, permission denied
+- [ ] 0.6.1.2 — Add tests for `internal/model/` corrupt file handling: truncated JSON, invalid UTF-8, zero-byte files
+- [ ] 0.6.1.3 — Add tests for `internal/process/` edge cases: double-stop, stop-before-start, signal delivery to exited process
+- [ ] 0.6.1.4 — Add tests for `internal/enhancer/` pipeline stages: empty input, extremely long input, unicode-heavy prompts
+- **Acceptance:** each new test exercises an error path that previously had no coverage
+
+### 0.6.2 — Observation enrichment
+- [ ] 0.6.2.1 — Add `GitDiffStat` field to `LoopObservation`: files changed, insertions, deletions from worker output
+- [ ] 0.6.2.2 — Add `PlannerModelUsed` and `WorkerModelUsed` fields to `LoopObservation` for provider tracking
+- [ ] 0.6.2.3 — Add `AcceptancePath` field to `LoopObservation`: "auto_merge", "pr", "rejected" for merge outcome tracking
+- [ ] 0.6.2.4 — Add observation summary helper: `SummarizeObservations([]LoopObservation) ObservationSummary` with aggregate stats
+- **Acceptance:** new fields populated in observations, summary helper has tests
+
+### 0.6.3 — Loop configuration validation
+- [ ] 0.6.3.1 — Add `ValidateLoopConfig(LoopConfig) []error` — validate all loop config fields before loop start
+- [ ] 0.6.3.2 — Validate model names against known provider models (claude-opus-4-6, claude-sonnet-4-6, gemini-2.5-pro, etc.)
+- [ ] 0.6.3.3 — Validate enhancement flags: warn if `enable_worker_enhancement=true` with non-Claude worker (no effect)
+- [ ] 0.6.3.4 — Add config validation call at loop start, return clear error before spawning any sessions
+- **Acceptance:** invalid loop configs rejected with descriptive errors before work begins
+
+### 0.6.4 — Gate report formatting
+- [ ] 0.6.4.1 — Add `FormatGateReport(*GateReport) string` — human-readable gate summary with pass/warn/fail coloring hints
+- [ ] 0.6.4.2 — Add `FormatGateReportMarkdown(*GateReport) string` — markdown table for scratchpad/PR descriptions
+- [ ] 0.6.4.3 — Add gate trend helper: `CompareGateReports(prev, current *GateReport) []GateTrend` showing improvement/regression per metric
+- [ ] 0.6.4.4 — Wire `FormatGateReport` into loop status output and MCP `loop_gates` tool response
+- **Acceptance:** gate reports render as readable tables, trend comparison shows metric direction
+
+### 0.6.5 — Session timeout and stall detection
+- [ ] 0.6.5.1 — Add `StallTimeout` field to `LoopConfig` (default: 10 minutes) — max time for a single iteration with no output
+- [ ] 0.6.5.2 — Implement stall detector in `StepLoop`: monitor worker session output timestamp, kill and retry on timeout
+- [ ] 0.6.5.3 — Add `StallCount` field to `LoopObservation` for tracking stall frequency
+- [ ] 0.6.5.4 — Add stall detection tests: mock session that produces no output, assert timeout triggers
+- **Acceptance:** stalled iterations detected and retried, stall count tracked in observations
+
+### 0.6.6 — Worktree cleanup robustness
+- [ ] 0.6.6.1 — Add `CleanupStaleWorktrees(repoRoot string, maxAge time.Duration) (int, error)` — remove worktrees older than maxAge
+- [ ] 0.6.6.2 — Add worktree lock file detection: skip cleanup if `.lock` file present (active worktree)
+- [ ] 0.6.6.3 — Call `CleanupStaleWorktrees` at loop start with 24h maxAge
+- [ ] 0.6.6.4 — Add `ralphglasses_worktree_cleanup` MCP tool for manual cleanup
+- **Acceptance:** stale worktrees cleaned up automatically, active worktrees preserved
+
+### 0.6.7 — Planner task deduplication improvement
+- [ ] 0.6.7.1 — Add Levenshtein/Jaccard similarity check to `isDuplicateTask`: catch near-duplicate titles (threshold 0.8)
+- [ ] 0.6.7.2 — Track completed task titles in observation history, reject re-proposals of already-completed work
+- [ ] 0.6.7.3 — Add `DedupReason` field to skipped tasks for debugging planner behavior
+- [ ] 0.6.7.4 — Add dedup tests: exact match, near-match, and distinct task pairs
+- **Acceptance:** planner doesn't re-propose completed or near-duplicate tasks
 
 ## Phase 1: Harden & Test
 
