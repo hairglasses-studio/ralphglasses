@@ -1,0 +1,404 @@
+package mcpserver
+
+import (
+	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
+)
+
+// writeObservationsJSONL writes LoopObservation records as JSONL to the canonical path.
+func writeObservationsJSONL(t *testing.T, repoPath string, observations []session.LoopObservation) {
+	t.Helper()
+	obsPath := session.ObservationPath(repoPath)
+	if err := os.MkdirAll(filepath.Dir(obsPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	var lines []byte
+	for _, obs := range observations {
+		data, err := json.Marshal(obs)
+		if err != nil {
+			t.Fatal(err)
+		}
+		lines = append(lines, data...)
+		lines = append(lines, '\n')
+	}
+	if err := os.WriteFile(obsPath, lines, 0644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// writeBaselineFile writes a LoopBaseline to the canonical path.
+func writeBaselineFile(t *testing.T, repoPath string, bl *e2e.LoopBaseline) {
+	t.Helper()
+	blPath := e2e.BaselinePath(repoPath)
+	if err := os.MkdirAll(filepath.Dir(blPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(bl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(blPath, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// --- handleLoopBenchmark tests ---
+
+func TestHandleLoopBenchmark_NoRepo(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleLoopBenchmark(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error result for missing repo")
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, string(ErrInvalidParams)) {
+		t.Fatalf("expected INVALID_PARAMS error code, got: %s", text)
+	}
+}
+
+func TestHandleLoopBenchmark_NoObservations(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleLoopBenchmark(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected non-error result, got: %s", getResultText(result))
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &data); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if data["message"] != "no observations in window" {
+		t.Fatalf("expected 'no observations in window', got: %v", data["message"])
+	}
+	if data["observations"] != float64(0) {
+		t.Fatalf("expected observations=0, got: %v", data["observations"])
+	}
+}
+
+func TestHandleLoopBenchmark_InvalidRepo(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleLoopBenchmark(context.Background(), makeRequest(map[string]any{
+		"repo": "nonexistent-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error result for nonexistent repo")
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, string(ErrRepoNotFound)) {
+		t.Fatalf("expected REPO_NOT_FOUND error code, got: %s", text)
+	}
+}
+
+func TestHandleLoopBenchmark_WithObservations(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	repo := srv.findRepo("test-repo")
+	if repo == nil {
+		t.Fatal("test-repo not found after scan")
+	}
+
+	// Write JSONL observation file with valid observations.
+	writeObservationsJSONL(t, repo.Path, []session.LoopObservation{
+		{
+			Timestamp:      time.Now(),
+			LoopID:         "loop-1",
+			RepoName:       "test-repo",
+			TotalLatencyMs: 1500,
+			TotalCostUSD:   0.05,
+			Status:         "completed",
+			VerifyPassed:   true,
+			TaskType:       "build",
+		},
+	})
+
+	result, err := srv.handleLoopBenchmark(context.Background(), makeRequest(map[string]any{
+		"repo":  "test-repo",
+		"hours": float64(48),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected non-error result, got: %s", getResultText(result))
+	}
+
+	var out map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &out); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if out["observations"] == float64(0) {
+		t.Fatal("expected observations > 0")
+	}
+}
+
+// --- handleLoopBaseline tests ---
+
+func TestHandleLoopBaseline_NoRepo(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleLoopBaseline(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error result for missing repo")
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, string(ErrInvalidParams)) {
+		t.Fatalf("expected INVALID_PARAMS error code, got: %s", text)
+	}
+}
+
+func TestHandleLoopBaseline_ViewAction(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	// Default action is "view", which calls LoadBaseline.
+	// No baseline file exists, so it should return a filesystem error.
+	result, err := srv.handleLoopBaseline(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// LoadBaseline on a non-existent file returns an error,
+	// which the handler wraps with ErrFilesystem.
+	if !result.IsError {
+		// If the implementation returns an empty baseline for missing files,
+		// that is also acceptable.
+		text := getResultText(result)
+		if text == "" {
+			t.Fatal("expected non-empty response")
+		}
+	} else {
+		text := getResultText(result)
+		if !strings.Contains(text, string(ErrFilesystem)) {
+			t.Fatalf("expected FILESYSTEM error code, got: %s", text)
+		}
+	}
+}
+
+func TestHandleLoopBaseline_ViewWithBaseline(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	repo := srv.findRepo("test-repo")
+	if repo == nil {
+		t.Fatal("test-repo not found after scan")
+	}
+
+	writeBaselineFile(t, repo.Path, &e2e.LoopBaseline{
+		Aggregate: &e2e.BaselineStats{
+			SampleCount: 5,
+			CostP50:     0.03,
+			CostP95:     0.10,
+			LatencyP50:  1200,
+			LatencyP95:  3500,
+		},
+	})
+
+	result, err := srv.handleLoopBaseline(context.Background(), makeRequest(map[string]any{
+		"repo":   "test-repo",
+		"action": "view",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success, got error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if text == "" {
+		t.Fatal("expected non-empty baseline response")
+	}
+}
+
+func TestHandleLoopBaseline_InvalidAction(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleLoopBaseline(context.Background(), makeRequest(map[string]any{
+		"repo":   "test-repo",
+		"action": "invalid-action",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error result for invalid action")
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, string(ErrInvalidParams)) {
+		t.Fatalf("expected INVALID_PARAMS error code, got: %s", text)
+	}
+	if !strings.Contains(text, "invalid-action") {
+		t.Fatalf("expected error to mention the invalid action, got: %s", text)
+	}
+}
+
+func TestHandleLoopBaseline_InvalidRepo(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleLoopBaseline(context.Background(), makeRequest(map[string]any{
+		"repo": "nonexistent-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error result for nonexistent repo")
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, string(ErrRepoNotFound)) {
+		t.Fatalf("expected REPO_NOT_FOUND error code, got: %s", text)
+	}
+}
+
+// --- handleLoopGates tests ---
+
+func TestHandleLoopGates_NoRepo(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleLoopGates(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error result for missing repo")
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, string(ErrInvalidParams)) {
+		t.Fatalf("expected INVALID_PARAMS error code, got: %s", text)
+	}
+}
+
+func TestHandleLoopGates_NoBaseline(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	// No baseline and no observations — gates still evaluate with nil baseline.
+	result, err := srv.handleLoopGates(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected non-error result (gates evaluate even without baseline), got: %s", getResultText(result))
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &data); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if data == nil {
+		t.Fatal("expected non-nil gate report")
+	}
+}
+
+func TestHandleLoopGates_InvalidRepo(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleLoopGates(context.Background(), makeRequest(map[string]any{
+		"repo": "nonexistent-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error result for nonexistent repo")
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, string(ErrRepoNotFound)) {
+		t.Fatalf("expected REPO_NOT_FOUND error code, got: %s", text)
+	}
+}
+
+func TestHandleLoopGates_EvaluatesGates(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	repo := srv.findRepo("test-repo")
+	if repo == nil {
+		t.Fatal("test-repo not found after scan")
+	}
+
+	// Write JSONL observations.
+	writeObservationsJSONL(t, repo.Path, []session.LoopObservation{
+		{Timestamp: time.Now(), LoopID: "loop-1", RepoName: "test-repo", TotalLatencyMs: 1000, TotalCostUSD: 0.03, Status: "completed", VerifyPassed: true, TaskType: "build"},
+		{Timestamp: time.Now(), LoopID: "loop-2", RepoName: "test-repo", TotalLatencyMs: 2000, TotalCostUSD: 0.05, Status: "completed", VerifyPassed: true, TaskType: "build"},
+		{Timestamp: time.Now(), LoopID: "loop-3", RepoName: "test-repo", TotalLatencyMs: 1500, TotalCostUSD: 0.04, Status: "completed", VerifyPassed: false, TaskType: "test"},
+	})
+
+	// Write a baseline.
+	writeBaselineFile(t, repo.Path, &e2e.LoopBaseline{
+		Aggregate: &e2e.BaselineStats{
+			SampleCount: 10,
+			CostP50:     0.04,
+			CostP95:     0.08,
+			LatencyP50:  1500,
+			LatencyP95:  3000,
+		},
+	})
+
+	result, err := srv.handleLoopGates(context.Background(), makeRequest(map[string]any{
+		"repo":  "test-repo",
+		"hours": float64(24),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected non-error result, got: %s", getResultText(result))
+	}
+
+	var report map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &report); err != nil {
+		t.Fatalf("unmarshal gate report: %v", err)
+	}
+	if report == nil {
+		t.Fatal("expected non-nil gate report")
+	}
+}
