@@ -1,6 +1,7 @@
 package process
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +12,7 @@ func TestStop_NonExistentRepo(t *testing.T) {
 	t.Parallel()
 
 	m := NewManager()
-	err := m.Stop("/nonexistent/repo/path")
+	err := m.Stop(context.Background(), "/nonexistent/repo/path")
 	if err == nil {
 		t.Fatal("expected error stopping non-existent repo, got nil")
 	}
@@ -22,7 +23,7 @@ func TestStop_AlreadyStopped(t *testing.T) {
 
 	m := NewManager()
 	// Stop on a repo that was never started.
-	err := m.Stop("/some/repo/that/was/never/started")
+	err := m.Stop(context.Background(), "/some/repo/that/was/never/started")
 	if err == nil {
 		t.Fatal("expected error on double-stop, got nil")
 	}
@@ -184,7 +185,7 @@ func TestStopAll_Empty(t *testing.T) {
 
 	m := NewManager()
 	// StopAll on empty manager should not panic.
-	m.StopAll()
+	m.StopAll(context.Background())
 }
 
 func TestLastExitStatus_Unknown(t *testing.T) {
@@ -256,12 +257,12 @@ func TestStop_TwiceOnSameProcess(t *testing.T) {
 	}
 	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"), "sleep 60")
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
 	// First stop should succeed.
-	err := m.Stop(repoPath)
+	err := m.Stop(context.Background(), repoPath)
 	if err != nil {
 		t.Fatalf("first Stop: %v", err)
 	}
@@ -276,7 +277,7 @@ func TestStop_TwiceOnSameProcess(t *testing.T) {
 	}
 
 	// Second stop should return an error (not panic).
-	err = m.Stop(repoPath)
+	err = m.Stop(context.Background(), repoPath)
 	if err == nil {
 		t.Fatal("expected error on second Stop, got nil")
 	}
@@ -286,7 +287,7 @@ func TestStop_NeverStarted_ReturnsError(t *testing.T) {
 	t.Parallel()
 
 	m := NewManager()
-	err := m.Stop("/completely/fake/repo/path")
+	err := m.Stop(context.Background(), "/completely/fake/repo/path")
 	if err == nil {
 		t.Fatal("expected error stopping process that was never started, got nil")
 	}
@@ -301,15 +302,15 @@ func TestStopAll_ThenStop_DoesNotPanic(t *testing.T) {
 	}
 	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"), "sleep 60")
 
-	if err := m.Start(repoPath); err != nil {
+	if err := m.Start(context.Background(), repoPath); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 
 	// StopAll clears the map immediately.
-	m.StopAll()
+	m.StopAll(context.Background())
 
 	// Stop after StopAll should return error, not panic.
-	err := m.Stop(repoPath)
+	err := m.Stop(context.Background(), repoPath)
 	if err == nil {
 		t.Fatal("expected error on Stop after StopAll, got nil")
 	}
