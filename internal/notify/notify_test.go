@@ -76,3 +76,100 @@ func TestEscapeOSA_UnicodeEmoji(t *testing.T) {
 		t.Errorf("escapeOSA(%q) = %q; want emoji preserved unchanged", input, got)
 	}
 }
+
+func TestEscapeOSA_EmptyString(t *testing.T) {
+	t.Parallel()
+	got := escapeOSA("")
+	if got != "" {
+		t.Errorf("escapeOSA(%q) = %q; want empty string", "", got)
+	}
+}
+
+func TestEscapeOSA_Backslashes(t *testing.T) {
+	t.Parallel()
+	input := `a\b\\c`
+	got := escapeOSA(input)
+	want := `a\\b\\\\c`
+	if got != want {
+		t.Errorf("escapeOSA(%q) = %q; want %q", input, got, want)
+	}
+}
+
+func TestEscapeOSA_DoubleQuotes(t *testing.T) {
+	t.Parallel()
+	input := `say "hello" now`
+	got := escapeOSA(input)
+	want := `say \"hello\" now`
+	if got != want {
+		t.Errorf("escapeOSA(%q) = %q; want %q", input, got, want)
+	}
+}
+
+func TestEscapeOSA_MixedSpecialChars(t *testing.T) {
+	t.Parallel()
+	input := `path \"C:\Users\test"`
+	got := escapeOSA(input)
+	// \ -> \\, " -> \"
+	want := `path \\\"C:\\Users\\test\"`
+	if got != want {
+		t.Errorf("escapeOSA(%q) = %q; want %q", input, got, want)
+	}
+}
+
+func TestEscapeOSA_OnlySpecialChars(t *testing.T) {
+	t.Parallel()
+	input := `""\`
+	got := escapeOSA(input)
+	want := `\"\"\\`
+	if got != want {
+		t.Errorf("escapeOSA(%q) = %q; want %q", input, got, want)
+	}
+}
+
+func TestSendForOS_DefaultNoop(t *testing.T) {
+	t.Parallel()
+	err := sendForOS("freebsd", "title", "body")
+	if err != nil {
+		t.Errorf("sendForOS(freebsd) returned error: %v", err)
+	}
+}
+
+func TestSendForOS_LinuxNoNotifySend(t *testing.T) {
+	t.Parallel()
+	// On macOS, notify-send won't be found, so this exercises the LookPath failure path.
+	// On Linux without notify-send installed, same.
+	err := sendForOS("linux", "title", "body")
+	// Either nil (notify-send not found) or an error from running it
+	_ = err
+}
+
+func TestSendForOS_UnknownOS(t *testing.T) {
+	t.Parallel()
+	err := sendForOS("plan9", "title", "body")
+	if err != nil {
+		t.Errorf("sendForOS(plan9) should be no-op, got error: %v", err)
+	}
+}
+
+func TestSend_NoPanic(t *testing.T) {
+	t.Parallel()
+	// Verify Send never panics, even with unusual input
+	inputs := []struct{ title, body string }{
+		{"", ""},
+		{"title", ""},
+		{"", "body"},
+		{`say "hi"`, `path\to\file`},
+		{strings.Repeat("x", 10000), strings.Repeat("y", 10000)},
+	}
+	for _, in := range inputs {
+		// We don't check err since the notification command may not be available in CI
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("Send(%q, %q) panicked: %v", in.title, in.body, r)
+				}
+			}()
+			_ = Send(in.title, in.body)
+		}()
+	}
+}
