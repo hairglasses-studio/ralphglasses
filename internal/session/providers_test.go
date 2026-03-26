@@ -767,3 +767,538 @@ func TestCostAccumulation(t *testing.T) {
 		t.Errorf("Claude cumulative SpentUSD = %v, want 0.06", sc.SpentUSD)
 	}
 }
+
+func TestAsString(t *testing.T) {
+	tests := []struct {
+		name string
+		val  any
+		want string
+	}{
+		{"string", "hello", "hello"},
+		{"string_with_spaces", "  hello  ", "hello"},
+		{"float64", float64(3.14), "3.14"},
+		{"int", int(42), "42"},
+		{"json_number", json.Number("99"), "99"},
+		{"nil", nil, ""},
+		{"bool", true, ""},
+		{"stringer", testStringer{"world"}, "world"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := asString(tt.val)
+			if got != tt.want {
+				t.Errorf("asString(%v) = %q, want %q", tt.val, got, tt.want)
+			}
+		})
+	}
+}
+
+type testStringer struct{ s string }
+
+func (ts testStringer) String() string { return ts.s }
+
+func TestAsFloat(t *testing.T) {
+	tests := []struct {
+		name   string
+		val    any
+		want   float64
+		wantOK bool
+	}{
+		{"float64", float64(3.14), 3.14, true},
+		{"float32", float32(2.5), 2.5, true},
+		{"int", int(42), 42.0, true},
+		{"int64", int64(100), 100.0, true},
+		{"json_number", json.Number("1.5"), 1.5, true},
+		{"string_number", "3.14", 3.14, true},
+		{"string_invalid", "not-a-number", 0, false},
+		{"nil", nil, 0, false},
+		{"bool", true, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := asFloat(tt.val)
+			if ok != tt.wantOK {
+				t.Errorf("asFloat(%v) ok = %v, want %v", tt.val, ok, tt.wantOK)
+			}
+			if ok && math.Abs(got-tt.want) > 1e-6 {
+				t.Errorf("asFloat(%v) = %v, want %v", tt.val, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAsInt(t *testing.T) {
+	tests := []struct {
+		name   string
+		val    any
+		want   int
+		wantOK bool
+	}{
+		{"int", int(42), 42, true},
+		{"int64", int64(100), 100, true},
+		{"float64", float64(3.0), 3, true},
+		{"json_number", json.Number("99"), 99, true},
+		{"string_number", "123", 123, true},
+		{"string_invalid", "abc", 0, false},
+		{"nil", nil, 0, false},
+		{"bool", true, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := asInt(tt.val)
+			if ok != tt.wantOK {
+				t.Errorf("asInt(%v) ok = %v, want %v", tt.val, ok, tt.wantOK)
+			}
+			if ok && got != tt.want {
+				t.Errorf("asInt(%v) = %v, want %v", tt.val, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAsBool(t *testing.T) {
+	tests := []struct {
+		name   string
+		val    any
+		want   bool
+		wantOK bool
+	}{
+		{"true_bool", true, true, true},
+		{"false_bool", false, false, true},
+		{"string_true", "true", true, true},
+		{"string_false", "false", false, true},
+		{"string_1", "1", true, true},
+		{"non_empty_text", "hello", false, false},
+		{"nil", nil, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := asBool(tt.val)
+			if ok != tt.wantOK {
+				t.Errorf("asBool(%v) ok = %v, want %v", tt.val, ok, tt.wantOK)
+			}
+			if ok && got != tt.want {
+				t.Errorf("asBool(%v) = %v, want %v", tt.val, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTextValue(t *testing.T) {
+	tests := []struct {
+		name string
+		val  any
+		want string
+	}{
+		{"nil", nil, ""},
+		{"string", "hello", "hello"},
+		{"array", []any{"line1", "line2"}, "line1\nline2"},
+		{"map_with_text", map[string]any{"text": "foo"}, "foo"},
+		{"map_with_content", map[string]any{"content": "bar"}, "bar"},
+		{"map_with_parts", map[string]any{"parts": []any{"p1", "p2"}}, "p1\np2"},
+		{"map_with_error", map[string]any{"error": "oops"}, "oops"},
+		{"map_empty", map[string]any{}, ""},
+		{"number", float64(42), "42"},
+		{"nested_array", []any{map[string]any{"text": "nested"}}, "nested"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := textValue(tt.val)
+			if got != tt.want {
+				t.Errorf("textValue(%v) = %q, want %q", tt.val, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestApplyEventDefaults(t *testing.T) {
+	tests := []struct {
+		name      string
+		event     StreamEvent
+		wantType  string
+		wantError bool
+	}{
+		{
+			name:     "message_becomes_assistant",
+			event:    StreamEvent{Type: "message", Content: "hello"},
+			wantType: "assistant",
+		},
+		{
+			name:     "delta_becomes_assistant",
+			event:    StreamEvent{Type: "delta", Content: "chunk"},
+			wantType: "assistant",
+		},
+		{
+			name:      "error_becomes_result",
+			event:     StreamEvent{Type: "error", Error: "something broke"},
+			wantType:  "result",
+			wantError: true,
+		},
+		{
+			name:     "empty_type_with_result",
+			event:    StreamEvent{Result: "done"},
+			wantType: "result",
+		},
+		{
+			name:     "empty_type_with_content",
+			event:    StreamEvent{Content: "working"},
+			wantType: "assistant",
+		},
+		{
+			name:     "empty_type_with_session_id",
+			event:    StreamEvent{SessionID: "abc"},
+			wantType: "system",
+		},
+		{
+			name:      "empty_type_with_error_flag",
+			event:     StreamEvent{IsError: true, Text: "err"},
+			wantType:  "result",
+			wantError: true,
+		},
+		{
+			name:      "error_string_sets_is_error",
+			event:     StreamEvent{Type: "result", Error: "fail"},
+			wantType:  "result",
+			wantError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := tt.event
+			applyEventDefaults(&e)
+			if e.Type != tt.wantType {
+				t.Errorf("Type = %q, want %q", e.Type, tt.wantType)
+			}
+			if e.IsError != tt.wantError {
+				t.Errorf("IsError = %v, want %v", e.IsError, tt.wantError)
+			}
+		})
+	}
+}
+
+func TestFallbackTextEvent(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider Provider
+		input    string
+		wantType string
+		wantErr  bool
+	}{
+		{
+			name:     "gemini_plain_text",
+			provider: ProviderGemini,
+			input:    "Working on the task...",
+			wantType: "assistant",
+		},
+		{
+			name:     "codex_ansi_text",
+			provider: ProviderCodex,
+			input:    "\x1b[32mDone with refactoring\x1b[0m",
+			wantType: "assistant",
+		},
+		{
+			name:     "error_text",
+			provider: ProviderGemini,
+			input:    "Error: connection refused",
+			wantType: "result",
+		},
+		{
+			name:     "failed_text",
+			provider: ProviderCodex,
+			input:    "\x1b[31mBuild failed with 3 errors\x1b[0m",
+			wantType: "result",
+		},
+		{
+			name:     "empty_after_clean",
+			provider: ProviderCodex,
+			input:    "\n\n  \n",
+			wantErr:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			event, err := fallbackTextEvent(tt.provider, []byte(tt.input))
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if event.Type != tt.wantType {
+				t.Errorf("Type = %q, want %q", event.Type, tt.wantType)
+			}
+		})
+	}
+}
+
+func TestGetString(t *testing.T) {
+	m := map[string]any{
+		"name":   "test",
+		"count":  42,
+		"nested": map[string]any{"key": "val"},
+	}
+
+	if got := getString(m, "name"); got != "test" {
+		t.Errorf("getString(name) = %q, want test", got)
+	}
+	if got := getString(m, "count"); got != "" {
+		t.Errorf("getString(count) = %q, want empty (not a string)", got)
+	}
+	if got := getString(m, "missing"); got != "" {
+		t.Errorf("getString(missing) = %q, want empty", got)
+	}
+}
+
+func TestFilterEnv(t *testing.T) {
+	env := []string{"HOME=/home/user", "CLAUDECODE=1", "PATH=/usr/bin", "CLAUDECODED=yes"}
+	filtered := filterEnv(env, "CLAUDECODE")
+
+	if len(filtered) != 3 {
+		t.Errorf("expected 3 remaining env vars, got %d: %v", len(filtered), filtered)
+	}
+	for _, e := range filtered {
+		if strings.HasPrefix(e, "CLAUDECODE=") {
+			t.Errorf("CLAUDECODE should have been filtered: %s", e)
+		}
+	}
+}
+
+func TestValidateLaunchOptions(t *testing.T) {
+	tests := []struct {
+		name    string
+		opts    LaunchOptions
+		wantErr bool
+	}{
+		{
+			name:    "codex_with_resume",
+			opts:    LaunchOptions{Provider: ProviderCodex, Resume: "sess-1"},
+			wantErr: true,
+		},
+		{
+			name:    "claude_with_resume",
+			opts:    LaunchOptions{Provider: ProviderClaude, Resume: "sess-1"},
+			wantErr: false,
+		},
+		{
+			name:    "gemini_with_resume",
+			opts:    LaunchOptions{Provider: ProviderGemini, Resume: "sess-1"},
+			wantErr: false,
+		},
+		{
+			name:    "codex_no_resume",
+			opts:    LaunchOptions{Provider: ProviderCodex},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateLaunchOptions(tt.opts)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateLaunchOptions() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestUnsupportedOptionsWarnings_AllFields(t *testing.T) {
+	opts := LaunchOptions{
+		SystemPrompt: "prompt",
+		MaxBudgetUSD: 5.0,
+		Agent:        "reviewer",
+		MaxTurns:     10,
+		AllowedTools: []string{"tool1"},
+		Worktree:     "feature-branch",
+		Resume:       "sess-123",
+	}
+
+	// Gemini: system_prompt, max_budget, agent, max_turns, allowed_tools, worktree
+	gw := UnsupportedOptionsWarnings(ProviderGemini, opts)
+	if len(gw) != 6 {
+		t.Errorf("gemini warnings count = %d, want 6: %v", len(gw), gw)
+	}
+
+	// Codex: system_prompt, max_budget, agent, max_turns, allowed_tools, worktree, resume
+	cw := UnsupportedOptionsWarnings(ProviderCodex, opts)
+	if len(cw) != 7 {
+		t.Errorf("codex warnings count = %d, want 7: %v", len(cw), cw)
+	}
+
+	// Empty provider treated as Claude
+	ew := UnsupportedOptionsWarnings("", opts)
+	if len(ew) != 0 {
+		t.Errorf("empty provider warnings = %v, want none", ew)
+	}
+}
+
+func TestNormalizeClaudeEvent_SubAgent(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		wantType string
+		wantText string
+	}{
+		{
+			name:     "agent_event_with_description",
+			line:     `{"type":"agent","description":"Working on subtask"}`,
+			wantType: "agent",
+			wantText: "Working on subtask",
+		},
+		{
+			name:     "subagent_normalized_to_agent",
+			line:     `{"type":"subagent","message":"Delegating to sub-agent"}`,
+			wantType: "agent",
+			wantText: "Delegating to sub-agent",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			event, err := normalizeClaudeEvent([]byte(tt.line))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if event.Type != tt.wantType {
+				t.Errorf("Type = %q, want %q", event.Type, tt.wantType)
+			}
+			if event.Content != tt.wantText {
+				t.Errorf("Content = %q, want %q", event.Content, tt.wantText)
+			}
+		})
+	}
+}
+
+func TestNormalizeClaudeEvent_DurationAndTurns(t *testing.T) {
+	line := []byte(`{"type":"result","result":"done","duration_seconds":12.5,"num_turns":7}`)
+	event, err := normalizeClaudeEvent(line)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event.Duration != 12.5 {
+		t.Errorf("Duration = %f, want 12.5", event.Duration)
+	}
+	if event.NumTurns != 7 {
+		t.Errorf("NumTurns = %d, want 7", event.NumTurns)
+	}
+}
+
+func TestNormalizeGeminiEvent_ErrorField(t *testing.T) {
+	line := []byte(`{"type":"result","error":"API rate limit exceeded","is_error":true}`)
+	event, err := normalizeGeminiEvent(line)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !event.IsError {
+		t.Error("expected IsError=true")
+	}
+	if event.Error != "API rate limit exceeded" {
+		t.Errorf("Error = %q, want 'API rate limit exceeded'", event.Error)
+	}
+}
+
+func TestNormalizeCodexEvent_OutputSchema(t *testing.T) {
+	ctx := context.Background()
+	cmd := buildCodexCmd(ctx, LaunchOptions{
+		RepoPath:     "/tmp/repo",
+		Prompt:       "analyze",
+		OutputSchema: json.RawMessage(`{"type":"object"}`),
+	})
+	cmdStr := strings.Join(cmd.Args, " ")
+	if !strings.Contains(cmdStr, "--output-schema") {
+		t.Errorf("codex cmd %q missing --output-schema", cmdStr)
+	}
+}
+
+func TestBuildClaudeCmd_AllOptions(t *testing.T) {
+	ctx := context.Background()
+	cmd := buildClaudeCmd(ctx, LaunchOptions{
+		RepoPath:     "/tmp/repo",
+		Model:        "opus",
+		MaxBudgetUSD: 5.0,
+		MaxTurns:     20,
+		Agent:        "reviewer",
+		AllowedTools: []string{"bash", "read"},
+		SystemPrompt: "be helpful",
+		Continue:     true,
+		Worktree:     "true",
+		SessionName:  "test-sess",
+		OutputSchema: json.RawMessage(`{"type":"object"}`),
+	})
+	cmdStr := strings.Join(cmd.Args, " ")
+
+	for _, want := range []string{
+		"--model opus",
+		"--max-budget-usd 5.00",
+		"--max-turns 20",
+		"--agent reviewer",
+		"--allowedTools bash,read",
+		"--append-system-prompt",
+		"--continue",
+		"-w",
+		"--json-schema",
+	} {
+		if !strings.Contains(cmdStr, want) {
+			t.Errorf("cmd %q missing %q", cmdStr, want)
+		}
+	}
+
+	// Continue should not appear when Resume is set
+	cmd2 := buildClaudeCmd(ctx, LaunchOptions{
+		RepoPath: "/tmp/repo",
+		Resume:   "sess-123",
+		Continue: true,
+	})
+	cmdStr2 := strings.Join(cmd2.Args, " ")
+	if strings.Contains(cmdStr2, "--continue") {
+		t.Error("--continue should not be set when --resume is used")
+	}
+	if !strings.Contains(cmdStr2, "--resume sess-123") {
+		t.Error("missing --resume flag")
+	}
+}
+
+func TestBuildClaudeCmd_WorktreeBranch(t *testing.T) {
+	ctx := context.Background()
+	cmd := buildClaudeCmd(ctx, LaunchOptions{
+		RepoPath: "/tmp/repo",
+		Worktree: "feature-branch",
+	})
+	cmdStr := strings.Join(cmd.Args, " ")
+	if !strings.Contains(cmdStr, "-w feature-branch") {
+		t.Errorf("cmd %q missing '-w feature-branch'", cmdStr)
+	}
+}
+
+func TestValidateProviderEnv_GeminiAlternateKey(t *testing.T) {
+	t.Setenv("GOOGLE_API_KEY", "")
+	t.Setenv("GEMINI_API_KEY", "test-key")
+	err := ValidateProviderEnv(ProviderGemini)
+	if err != nil {
+		t.Fatalf("expected no error with GEMINI_API_KEY set: %v", err)
+	}
+}
+
+func TestValueAtPath(t *testing.T) {
+	raw := map[string]any{
+		"level1": map[string]any{
+			"level2": map[string]any{
+				"value": "deep",
+			},
+		},
+		"flat": "top",
+	}
+
+	if got := asString(valueAtPath(raw, "flat")); got != "top" {
+		t.Errorf("flat path = %q, want top", got)
+	}
+	if got := asString(valueAtPath(raw, "level1.level2.value")); got != "deep" {
+		t.Errorf("nested path = %q, want deep", got)
+	}
+	if got := valueAtPath(raw, "missing.path"); got != nil {
+		t.Errorf("missing path = %v, want nil", got)
+	}
+	if got := valueAtPath(raw, "flat.invalid"); got != nil {
+		t.Errorf("invalid nested on string = %v, want nil", got)
+	}
+}

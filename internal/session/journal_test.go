@@ -400,3 +400,371 @@ func TestExtractSignalsFromOutput(t *testing.T) {
 		}
 	})
 }
+
+func TestWriteJournalEntryManual_Timestamp(t *testing.T) {
+	dir := t.TempDir()
+
+	// Zero timestamp gets auto-populated
+	entry := JournalEntry{
+		SessionID: "manual-001",
+		Provider:  "claude",
+	}
+	if err := WriteJournalEntryManual(dir, entry); err != nil {
+		t.Fatalf("WriteJournalEntryManual: %v", err)
+	}
+
+	entries, err := ReadRecentJournal(dir, 10)
+	if err != nil {
+		t.Fatalf("ReadRecentJournal: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Timestamp.IsZero() {
+		t.Error("expected timestamp to be auto-populated")
+	}
+}
+
+func TestWriteJournalEntryManual_MultipleEntries(t *testing.T) {
+	dir := t.TempDir()
+
+	for i := 0; i < 10; i++ {
+		entry := JournalEntry{
+			Timestamp: time.Now(),
+			SessionID: fmt.Sprintf("sess-%d", i),
+			Provider:  "claude",
+			TurnCount: i + 1,
+		}
+		if err := WriteJournalEntryManual(dir, entry); err != nil {
+			t.Fatalf("write entry %d: %v", i, err)
+		}
+	}
+
+	entries, err := ReadRecentJournal(dir, 10000)
+	if err != nil {
+		t.Fatalf("ReadRecentJournal: %v", err)
+	}
+	if len(entries) != 10 {
+		t.Errorf("expected 10 entries, got %d", len(entries))
+	}
+}
+
+func TestReadRecentJournal_DefaultLimit(t *testing.T) {
+	dir := t.TempDir()
+
+	for i := 0; i < 10; i++ {
+		_ = WriteJournalEntryManual(dir, JournalEntry{
+			Timestamp: time.Now(),
+			SessionID: fmt.Sprintf("s%d", i),
+			TurnCount: i + 1,
+		})
+	}
+
+	// limit <= 0 defaults to 5
+	entries, err := ReadRecentJournal(dir, 0)
+	if err != nil {
+		t.Fatalf("ReadRecentJournal: %v", err)
+	}
+	if len(entries) != 5 {
+		t.Errorf("expected 5 entries (default limit), got %d", len(entries))
+	}
+	// Should be the last 5
+	if entries[0].TurnCount != 6 {
+		t.Errorf("first entry turn_count = %d, want 6", entries[0].TurnCount)
+	}
+}
+
+func TestExtractTaskFocus(t *testing.T) {
+	tests := []struct {
+		name   string
+		prompt string
+		want   string
+	}{
+		{
+			name:   "single_line",
+			prompt: "Fix the parser bug",
+			want:   "Fix the parser bug",
+		},
+		{
+			name:   "multi_line",
+			prompt: "Fix the bug\nMore details here\nExtra context",
+			want:   "Fix the bug",
+		},
+		{
+			name:   "long_prompt",
+			prompt: strings.Repeat("a", 300),
+			want:   strings.Repeat("a", 200),
+		},
+		{
+			name:   "empty",
+			prompt: "",
+			want:   "",
+		},
+		{
+			name:   "whitespace_only",
+			prompt: "   ",
+			want:   "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractTaskFocus(tt.prompt)
+			if got != tt.want {
+				t.Errorf("extractTaskFocus() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWriteJournalEntry_StatusFallbacks(t *testing.T) {
+	dir := t.TempDir()
+
+	// Completed session with task focus should auto-populate Worked
+	now := time.Now()
+	ended := now
+	s := &Session{
+		ID:         "complete-001",
+		Provider:   ProviderClaude,
+		RepoPath:   dir,
+		RepoName:   "test-repo",
+		Status:     StatusCompleted,
+		Prompt:     "Implement feature X",
+		LaunchedAt: now.Add(-1 * time.Minute),
+		EndedAt:    &ended,
+	}
+
+	if err := WriteJournalEntry(s); err != nil {
+		t.Fatalf("WriteJournalEntry: %v", err)
+	}
+
+	entries, err := ReadRecentJournal(dir, 10)
+	if err != nil {
+		t.Fatalf("ReadRecentJournal: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if len(entries[0].Worked) == 0 {
+		t.Error("expected Worked to be auto-populated for completed session")
+	}
+}
+
+func TestWriteJournalEntry_ErroredSession(t *testing.T) {
+	dir := t.TempDir()
+
+	now := time.Now()
+	s := &Session{
+		ID:         "error-001",
+		Provider:   ProviderGemini,
+		RepoPath:   dir,
+		RepoName:   "test-repo",
+		Status:     StatusErrored,
+		Prompt:     "Build the module",
+		Error:      "API timeout after 30s",
+		LaunchedAt: now.Add(-2 * time.Minute),
+	}
+
+	if err := WriteJournalEntry(s); err != nil {
+		t.Fatalf("WriteJournalEntry: %v", err)
+	}
+
+	entries, err := ReadRecentJournal(dir, 10)
+	if err != nil {
+		t.Fatalf("ReadRecentJournal: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if len(entries[0].Failed) == 0 {
+		t.Error("expected Failed to be auto-populated for errored session")
+	}
+}
+
+func TestWriteJournalEntry_WithMarkers(t *testing.T) {
+	dir := t.TempDir()
+
+	now := time.Now()
+	ended := now
+	s := &Session{
+		ID:         "markers-001",
+		Provider:   ProviderClaude,
+		RepoPath:   dir,
+		RepoName:   "test-repo",
+		Status:     StatusCompleted,
+		Prompt:     "Fix stuff",
+		LaunchedAt: now.Add(-30 * time.Second),
+		EndedAt:    &ended,
+		OutputHistory: []string{
+			"Working on it...",
+			"---RALPH_STATUS---",
+			"WORKED:",
+			"- Fast iteration",
+			"FAILED:",
+			"- Missed edge case",
+			"SUGGEST:",
+			"- Add more tests",
+			"---END_STATUS---",
+		},
+	}
+
+	if err := WriteJournalEntry(s); err != nil {
+		t.Fatalf("WriteJournalEntry: %v", err)
+	}
+
+	entries, err := ReadRecentJournal(dir, 10)
+	if err != nil {
+		t.Fatalf("ReadRecentJournal: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].SignalSource != "markers" {
+		t.Errorf("signal_source = %q, want markers", entries[0].SignalSource)
+	}
+	if len(entries[0].Worked) != 1 || entries[0].Worked[0] != "Fast iteration" {
+		t.Errorf("Worked = %v, want [Fast iteration]", entries[0].Worked)
+	}
+}
+
+func TestPruneJournal_DefaultKeepN(t *testing.T) {
+	dir := t.TempDir()
+
+	// Write 150 entries
+	for i := 0; i < 150; i++ {
+		_ = WriteJournalEntryManual(dir, JournalEntry{
+			Timestamp: time.Now(),
+			SessionID: "s",
+			TurnCount: i + 1,
+			Worked:    []string{"item"},
+		})
+	}
+
+	// keepN <= 0 defaults to 100
+	pruned, err := PruneJournal(dir, 0)
+	if err != nil {
+		t.Fatalf("PruneJournal: %v", err)
+	}
+	if pruned != 50 {
+		t.Errorf("pruned = %d, want 50", pruned)
+	}
+
+	entries, err := ReadRecentJournal(dir, 10000)
+	if err != nil {
+		t.Fatalf("ReadRecentJournal: %v", err)
+	}
+	if len(entries) != 100 {
+		t.Errorf("remaining = %d, want 100", len(entries))
+	}
+}
+
+func TestConsolidatePatterns_Empty(t *testing.T) {
+	dir := t.TempDir()
+
+	// No journal — should return nil
+	err := ConsolidatePatterns(dir)
+	if err != nil {
+		t.Fatalf("ConsolidatePatterns on empty: %v", err)
+	}
+
+	// Patterns file should not be created
+	_, err = os.Stat(filepath.Join(dir, patternsFile))
+	if err == nil {
+		t.Error("patterns file should not exist for empty journal")
+	}
+}
+
+func TestConcurrentJournalWrites(t *testing.T) {
+	dir := t.TempDir()
+
+	done := make(chan struct{})
+	for i := 0; i < 10; i++ {
+		go func(idx int) {
+			defer func() { done <- struct{}{} }()
+			entry := JournalEntry{
+				Timestamp: time.Now(),
+				SessionID: fmt.Sprintf("concurrent-%d", idx),
+				Provider:  "claude",
+				TurnCount: idx,
+			}
+			_ = WriteJournalEntryManual(dir, entry)
+		}(i)
+	}
+
+	for i := 0; i < 10; i++ {
+		<-done
+	}
+
+	entries, err := ReadRecentJournal(dir, 10000)
+	if err != nil {
+		t.Fatalf("ReadRecentJournal: %v", err)
+	}
+	if len(entries) != 10 {
+		t.Errorf("expected 10 entries from concurrent writes, got %d", len(entries))
+	}
+}
+
+func TestSynthesizeContext_LongOutput(t *testing.T) {
+	// Create entries that would generate > 2000 chars
+	var entries []JournalEntry
+	for i := 0; i < 50; i++ {
+		entries = append(entries, JournalEntry{
+			Worked:  []string{fmt.Sprintf("Very long worked item number %d with extra text to make it verbose", i)},
+			Failed:  []string{fmt.Sprintf("Very long failed item number %d with extra text to make it verbose", i)},
+			Suggest: []string{fmt.Sprintf("Very long suggestion number %d with extra text to make it verbose", i)},
+		})
+	}
+
+	ctx := SynthesizeContext(entries)
+	if len(ctx) > 2000 {
+		t.Errorf("context length %d exceeds 2000 cap", len(ctx))
+	}
+	if !strings.HasSuffix(ctx, "...") {
+		t.Error("expected truncated output to end with ...")
+	}
+}
+
+func TestExtractSection_NoMatch(t *testing.T) {
+	block := "WORKED:\n- item1\nSUGGEST:\n- suggestion"
+	failed := extractSection(block, "FAILED:")
+	if failed != nil {
+		t.Errorf("expected nil for missing section, got %v", failed)
+	}
+}
+
+func TestFindLastSeen(t *testing.T) {
+	ts1 := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	ts2 := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
+	entries := []JournalEntry{
+		{Timestamp: ts1, Worked: []string{"pattern A"}},
+		{Timestamp: ts2, Worked: []string{"pattern A", "pattern B"}},
+	}
+
+	got := findLastSeen(entries, "pattern A", func(e JournalEntry) []string { return e.Worked })
+	if !got.Equal(ts2) {
+		t.Errorf("findLastSeen = %v, want %v", got, ts2)
+	}
+
+	got = findLastSeen(entries, "nonexistent", func(e JournalEntry) []string { return e.Worked })
+	if !got.IsZero() {
+		t.Errorf("findLastSeen for missing = %v, want zero", got)
+	}
+}
+
+func TestDedup(t *testing.T) {
+	items := []string{"Hello", "hello", "HELLO", "world", "World", "", "  "}
+	result := dedup(items)
+	if len(result) != 2 {
+		t.Errorf("dedup result = %v, want 2 items", result)
+	}
+}
+
+func TestCountItems(t *testing.T) {
+	items := []string{"a", "A", "b", "a", "  A  ", ""}
+	counts := countItems(items)
+	if counts["a"] != 4 {
+		t.Errorf("count of 'a' = %d, want 4", counts["a"])
+	}
+	if counts["b"] != 1 {
+		t.Errorf("count of 'b' = %d, want 1", counts["b"])
+	}
+}

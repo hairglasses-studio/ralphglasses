@@ -648,3 +648,409 @@ func TestRecordLatency_SlidingWindow(t *testing.T) {
 		t.Errorf("expected P95=900ms after old samples dropped, got %v", lat.P95)
 	}
 }
+
+func TestSetBanditHooks(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	if cr.BanditConfigured() {
+		t.Error("expected BanditConfigured=false initially")
+	}
+
+	called := false
+	cr.SetBanditHooks(
+		func() (string, string) { return "gemini", "gemini-2.5-flash" },
+		func(provider string, reward float64) { called = true },
+	)
+
+	if !cr.BanditConfigured() {
+		t.Error("expected BanditConfigured=true after SetBanditHooks")
+	}
+
+	// Record enough results to trigger bandit usage
+	dir := t.TempDir()
+	cr2 := NewCascadeRouter(config, nil, nil, dir)
+	cr2.SetBanditHooks(
+		func() (string, string) { return "gemini", "gemini-2.5-flash" },
+		func(provider string, reward float64) { called = true },
+	)
+	for i := 0; i < 12; i++ {
+		cr2.RecordResult(CascadeResult{
+			Timestamp:    time.Now(),
+			UsedProvider: ProviderGemini,
+			CheapCostUSD: 0.01,
+		})
+	}
+	if !called {
+		t.Error("expected bandit update to be called on RecordResult")
+	}
+
+	// SelectTier should consult bandit when enough history
+	tier := cr2.SelectTier("lint", 1)
+	if tier.Provider != ProviderGemini {
+		t.Errorf("expected bandit-selected provider gemini, got %s", tier.Provider)
+	}
+}
+
+func TestSetDecisionModel(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// DecisionModelStats returns nil when no model set
+	if stats := cr.DecisionModelStats(); stats != nil {
+		t.Errorf("expected nil stats, got %v", stats)
+	}
+
+	// Set a mock decision model
+	mock := &mockDecisionModel{
+		trained:    true,
+		confidence: 0.95,
+		stats:      map[string]any{"accuracy": 0.92},
+	}
+	cr.SetDecisionModel(mock)
+
+	stats := cr.DecisionModelStats()
+	if stats == nil {
+		t.Fatal("expected non-nil stats after SetDecisionModel")
+	}
+	if stats["accuracy"] != 0.92 {
+		t.Errorf("expected accuracy=0.92, got %v", stats["accuracy"])
+	}
+
+	// EvaluateCheapResult should use the decision model
+	s := &Session{
+		ID:         "dm-sess",
+		TurnCount:  5,
+		LastOutput: "Done successfully",
+	}
+	escalate, conf, reason := cr.EvaluateCheapResult(s, 10, nil)
+	if escalate {
+		t.Error("expected no escalation with high-confidence model")
+	}
+	if conf != 0.95 {
+		t.Errorf("expected confidence=0.95 from model, got %f", conf)
+	}
+	if reason != "" {
+		t.Errorf("expected empty reason, got %s", reason)
+	}
+}
+
+type mockDecisionModel struct {
+	trained    bool
+	confidence float64
+	stats      map[string]any
+}
+
+func (m *mockDecisionModel) IsTrained() bool { return m.trained }
+func (m *mockDecisionModel) PredictConfidence(turnCount, expectedTurns int, lastOutput string, verifyPassed bool) float64 {
+	return m.confidence
+}
+func (m *mockDecisionModel) Stats() map[string]any { return m.stats }
+
+func TestSpeculativeLaunchOpts(t *testing.T) {
+	config := DefaultCascadeConfig()
+	config.MaxCheapBudgetUSD = 0.50
+	config.MaxCheapTurns = 10
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	base := LaunchOptions{
+		Provider:    ProviderClaude,
+		RepoPath:    "/tmp/repo",
+		Prompt:      "implement feature",
+		SessionName: "my-session",
+	}
+
+	cheap, expensive := cr.SpeculativeLaunchOpts(base)
+
+	if cheap.Provider != ProviderGemini {
+		t.Errorf("cheap provider = %s, want gemini", cheap.Provider)
+	}
+	if cheap.SessionName != "my-session-cheap" {
+		t.Errorf("cheap session name = %s, want my-session-cheap", cheap.SessionName)
+	}
+	if cheap.MaxBudgetUSD != 0.50 {
+		t.Errorf("cheap budget = %f, want 0.50", cheap.MaxBudgetUSD)
+	}
+	if expensive.SessionName != "my-session-speculative" {
+		t.Errorf("expensive session name = %s, want my-session-speculative", expensive.SessionName)
+	}
+	if expensive.Provider != ProviderClaude {
+		t.Errorf("expensive provider = %s, want claude", expensive.Provider)
+	}
+}
+
+func TestLogDecision(t *testing.T) {
+	// nil decision log — always allows
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+	if !cr.logDecision("test", "route", "testing", nil) {
+		t.Error("expected logDecision=true with nil decisions")
+	}
+
+	// With a decision log at sufficient level
+	dl := NewDecisionLog(t.TempDir(), LevelAutoOptimize)
+	cr2 := NewCascadeRouter(config, nil, dl, "")
+	if !cr2.logDecision("test", "route", "testing", map[string]any{"task": "lint"}) {
+		t.Error("expected logDecision=true at AutoOptimize level")
+	}
+}
+
+func TestSelectTier_BanditFallback(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// Set bandit that returns unknown provider
+	cr.SetBanditHooks(
+		func() (string, string) { return "unknown-provider", "" },
+		func(string, float64) {},
+	)
+
+	// Add enough results for bandit to be consulted
+	for i := 0; i < 12; i++ {
+		cr.mu.Lock()
+		cr.results = append(cr.results, CascadeResult{})
+		cr.mu.Unlock()
+	}
+
+	// Should fall through to static selection since bandit returns unknown
+	tier := cr.SelectTier("lint", 0)
+	if tier.Label != "ultra-cheap" {
+		t.Errorf("expected fallback to static selection, got label=%q", tier.Label)
+	}
+}
+
+func TestSelectTier_BanditEmptyProvider(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	cr.SetBanditHooks(
+		func() (string, string) { return "", "" },
+		func(string, float64) {},
+	)
+
+	for i := 0; i < 12; i++ {
+		cr.mu.Lock()
+		cr.results = append(cr.results, CascadeResult{})
+		cr.mu.Unlock()
+	}
+
+	tier := cr.SelectTier("lint", 0)
+	if tier.Label != "ultra-cheap" {
+		t.Errorf("expected static selection for empty bandit result, got label=%q", tier.Label)
+	}
+}
+
+func TestSelectTier_HighComplexityExceedsAllTiers(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// Set tiers with max complexity=2
+	cr.SetTiers([]ModelTier{
+		{Provider: ProviderGemini, Model: "small", MaxComplexity: 1, CostPer1M: 0.1, Label: "tiny"},
+		{Provider: ProviderGemini, Model: "medium", MaxComplexity: 2, CostPer1M: 0.5, Label: "medium"},
+	})
+
+	// Complexity 4 exceeds all tiers — should return highest-capability tier
+	tier := cr.SelectTier("", 4)
+	if tier.Label != "medium" {
+		t.Errorf("expected highest tier for exceeding complexity, got label=%q", tier.Label)
+	}
+}
+
+func TestRecentResults_LimitZero(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	for i := 0; i < 30; i++ {
+		cr.mu.Lock()
+		cr.results = append(cr.results, CascadeResult{TaskTitle: "task"})
+		cr.mu.Unlock()
+	}
+
+	// limit <= 0 defaults to 20
+	results := cr.RecentResults(0)
+	if len(results) != 20 {
+		t.Errorf("expected 20 results for limit=0, got %d", len(results))
+	}
+}
+
+func TestRecentResults_LessThanLimit(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	cr.mu.Lock()
+	cr.results = append(cr.results, CascadeResult{TaskTitle: "only-one"})
+	cr.mu.Unlock()
+
+	results := cr.RecentResults(10)
+	if len(results) != 1 {
+		t.Errorf("expected 1 result, got %d", len(results))
+	}
+	if results[0].TaskTitle != "only-one" {
+		t.Errorf("expected task title only-one, got %s", results[0].TaskTitle)
+	}
+}
+
+func TestCascadeStats_Empty(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	stats := cr.Stats()
+	if stats.TotalDecisions != 0 {
+		t.Errorf("expected 0 total decisions, got %d", stats.TotalDecisions)
+	}
+	if stats.EscalationRate != 0 {
+		t.Errorf("expected 0 escalation rate, got %f", stats.EscalationRate)
+	}
+}
+
+func TestRecordResult_BanditUpdateCalledWithReward(t *testing.T) {
+	dir := t.TempDir()
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, dir)
+
+	var lastProvider string
+	var lastReward float64
+	cr.SetBanditHooks(
+		func() (string, string) { return "gemini", "" },
+		func(provider string, reward float64) {
+			lastProvider = provider
+			lastReward = reward
+		},
+	)
+
+	// Non-escalated result should have reward 1.0
+	cr.RecordResult(CascadeResult{
+		UsedProvider: ProviderGemini,
+		Escalated:    false,
+	})
+	if lastProvider != "gemini" {
+		t.Errorf("expected provider=gemini, got %s", lastProvider)
+	}
+	if lastReward != 1.0 {
+		t.Errorf("expected reward=1.0 for non-escalated, got %f", lastReward)
+	}
+
+	// Escalated result should have reward 0.2
+	cr.RecordResult(CascadeResult{
+		UsedProvider: ProviderClaude,
+		Escalated:    true,
+	})
+	if lastProvider != "claude" {
+		t.Errorf("expected provider=claude, got %s", lastProvider)
+	}
+	if lastReward != 0.2 {
+		t.Errorf("expected reward=0.2 for escalated, got %f", lastReward)
+	}
+}
+
+func TestComputeConfidence(t *testing.T) {
+	tests := []struct {
+		name           string
+		turnCount      int
+		expectedTurns  int
+		lastOutput     string
+		verifyPassed   bool
+		wantMin        float64
+		wantMax        float64
+	}{
+		{
+			name:          "all_signals_positive",
+			turnCount:     5,
+			expectedTurns: 10,
+			lastOutput:    "Successfully completed the task",
+			verifyPassed:  true,
+			wantMin:       0.9,
+			wantMax:       1.0,
+		},
+		{
+			name:          "high_hedging",
+			turnCount:     20,
+			expectedTurns: 5,
+			lastOutput:    "I'm not sure this is right. Maybe the approach is wrong. I think there might be issues. I'm not confident. Possibly broken.",
+			verifyPassed:  false,
+			wantMin:       0.0,
+			wantMax:       0.30,
+		},
+		{
+			name:          "error_in_output",
+			turnCount:     5,
+			expectedTurns: 10,
+			lastOutput:    "error: compilation failed",
+			verifyPassed:  true,
+			wantMin:       0.4,
+			wantMax:       0.8,
+		},
+		{
+			name:          "empty_output_no_turns",
+			turnCount:     0,
+			expectedTurns: 0,
+			lastOutput:    "",
+			verifyPassed:  true,
+			wantMin:       0.6,
+			wantMax:       1.0,
+		},
+		{
+			name:          "over_2x_expected_turns",
+			turnCount:     25,
+			expectedTurns: 10,
+			lastOutput:    "Done.",
+			verifyPassed:  true,
+			wantMin:       0.4,
+			wantMax:       0.8,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			conf := computeConfidence(tc.turnCount, tc.expectedTurns, tc.lastOutput, tc.verifyPassed)
+			if conf < tc.wantMin || conf > tc.wantMax {
+				t.Errorf("computeConfidence() = %f, want in [%f, %f]", conf, tc.wantMin, tc.wantMax)
+			}
+		})
+	}
+}
+
+func TestComputePercentile_EdgeCases(t *testing.T) {
+	// Empty slice
+	if got := computePercentile(nil, 50); got != 0 {
+		t.Errorf("expected 0 for empty slice, got %v", got)
+	}
+
+	// Single element
+	if got := computePercentile([]time.Duration{100 * time.Millisecond}, 50); got != 100*time.Millisecond {
+		t.Errorf("expected 100ms for single element, got %v", got)
+	}
+
+	// P0 and P100
+	samples := []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	if got := computePercentile(samples, 100); got != 30*time.Millisecond {
+		t.Errorf("P100 = %v, want 30ms", got)
+	}
+}
+
+func TestGetProviderLatency_NoSamples(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	if lat := cr.GetProviderLatency("nonexistent"); lat != nil {
+		t.Errorf("expected nil for unknown provider, got %v", lat)
+	}
+}
+
+func TestAppendResult_NoStateDir(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// Should not panic with empty stateDir
+	cr.RecordResult(CascadeResult{
+		Timestamp:    time.Now(),
+		UsedProvider: ProviderGemini,
+	})
+
+	// Verify in-memory results still tracked
+	results := cr.RecentResults(10)
+	if len(results) != 1 {
+		t.Errorf("expected 1 result in memory, got %d", len(results))
+	}
+}
