@@ -15,6 +15,7 @@ func initGitRepo(t *testing.T, dir string) {
 		{"init", dir},
 		{"-C", dir, "config", "user.email", "test@test.com"},
 		{"-C", dir, "config", "user.name", "Test"},
+		{"-C", dir, "config", "commit.gpgsign", "false"},
 	} {
 		if err := exec.Command("git", args...).Run(); err != nil {
 			t.Fatalf("git %v: %v", args, err)
