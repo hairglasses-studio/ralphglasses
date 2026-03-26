@@ -22,15 +22,20 @@ func RenderLoopDetail(l *session.LoopRun, width, height int) string {
 	iterCount := len(l.Iterations)
 	lastError := l.LastError
 	createdAt := l.CreatedAt
+	budgetTotal := l.Profile.PlannerBudgetUSD + l.Profile.WorkerBudgetUSD + l.Profile.VerifierBudgetUSD
 
 	var lastIterNum int
 	var lastIterStatus, lastIterError, lastIterTask string
+	var plannerOutput, workerResult string
+	paused := l.Paused
 	if iterCount > 0 {
 		last := l.Iterations[iterCount-1]
 		lastIterNum = last.Number
 		lastIterStatus = last.Status
 		lastIterError = last.Error
 		lastIterTask = last.Task.Title
+		plannerOutput = last.PlannerOutput
+		workerResult = last.WorkerOutput
 	}
 	l.Unlock()
 
@@ -45,12 +50,19 @@ func RenderLoopDetail(l *session.LoopRun, width, height int) string {
 	b.WriteString("\n")
 	b.WriteString(fmt.Sprintf("  ID:         %s\n", id))
 	b.WriteString(fmt.Sprintf("  Repo:       %s\n", repoName))
+	statusLabel := status
+	if paused {
+		statusLabel = status + " (paused)"
+	}
 	b.WriteString(fmt.Sprintf("  Status:     %s %s\n",
 		styles.StatusIcon(status),
-		styles.StatusStyle(status).Render(status)))
+		styles.StatusStyle(status).Render(statusLabel)))
 	b.WriteString(fmt.Sprintf("  Iterations: %d\n", iterCount))
 	b.WriteString(fmt.Sprintf("  Started:    %s %s\n", styles.IconClock, createdAt.Format("2006-01-02 15:04:05")))
 	b.WriteString(fmt.Sprintf("  Elapsed:    %s\n", FormatDuration(elapsed)))
+	if budgetTotal > 0 {
+		b.WriteString(fmt.Sprintf("  Budget:     %s $%.2f\n", styles.IconCost, budgetTotal))
+	}
 	b.WriteString("\n")
 
 	if iterCount > 0 {
@@ -70,6 +82,27 @@ func RenderLoopDetail(l *session.LoopRun, width, height int) string {
 		b.WriteString("\n")
 	}
 
+	if plannerOutput != "" {
+		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Planner Output", styles.IconRunning)))
+		b.WriteString("\n")
+		// Truncate long output for display
+		po := plannerOutput
+		if len(po) > 500 {
+			po = po[:500] + "..."
+		}
+		b.WriteString(fmt.Sprintf("  %s\n\n", po))
+	}
+
+	if workerResult != "" {
+		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Worker Result", styles.IconRunning)))
+		b.WriteString("\n")
+		wr := workerResult
+		if len(wr) > 500 {
+			wr = wr[:500] + "..."
+		}
+		b.WriteString(fmt.Sprintf("  %s\n\n", wr))
+	}
+
 	if lastError != "" {
 		b.WriteString(styles.StatusFailed.Render(fmt.Sprintf("%s Loop Error", styles.IconErrored)))
 		b.WriteString("\n")
@@ -77,7 +110,7 @@ func RenderLoopDetail(l *session.LoopRun, width, height int) string {
 		b.WriteString("\n\n")
 	}
 
-	b.WriteString(styles.HelpStyle.Render("  Esc: back to loop list"))
+	b.WriteString(styles.HelpStyle.Render("  s step  r run/stop  p pause/resume  Esc back"))
 
 	return b.String()
 }

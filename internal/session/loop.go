@@ -119,6 +119,8 @@ type LoopRun struct {
 	UpdatedAt  time.Time       `json:"updated_at"`
 	Deadline   *time.Time      `json:"deadline,omitempty"`
 
+	Paused bool `json:"paused,omitempty"`
+
 	mu     sync.Mutex
 	cancel context.CancelFunc // set by RunLoop; called by StopLoop
 	done   chan struct{}       // closed when RunLoop exits
@@ -245,6 +247,17 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+		run.mu.Lock()
+		paused := run.Paused
+		run.mu.Unlock()
+		if paused {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(500 * time.Millisecond):
+				continue
+			}
+		}
 		err := m.StepLoop(ctx, id)
 		if err != nil {
 			run.mu.Lock()
@@ -307,6 +320,34 @@ func (m *Manager) StopLoop(id string) error {
 
 	m.PersistLoop(run)
 	_ = CleanupLoopWorktrees(repoPath, id)
+	return nil
+}
+
+// PauseLoop pauses auto-advance for a running loop.
+func (m *Manager) PauseLoop(id string) error {
+	run, ok := m.GetLoop(id)
+	if !ok {
+		return fmt.Errorf("loop not found: %s", id)
+	}
+	run.mu.Lock()
+	run.Paused = true
+	run.UpdatedAt = time.Now()
+	run.mu.Unlock()
+	m.PersistLoop(run)
+	return nil
+}
+
+// ResumeLoop resumes auto-advance for a paused loop.
+func (m *Manager) ResumeLoop(id string) error {
+	run, ok := m.GetLoop(id)
+	if !ok {
+		return fmt.Errorf("loop not found: %s", id)
+	}
+	run.mu.Lock()
+	run.Paused = false
+	run.UpdatedAt = time.Now()
+	run.mu.Unlock()
+	m.PersistLoop(run)
 	return nil
 }
 
