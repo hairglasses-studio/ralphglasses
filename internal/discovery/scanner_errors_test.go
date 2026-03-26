@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,7 +28,7 @@ func TestScan_PermissionDeniedSubdir(t *testing.T) {
 	}
 	defer os.Chmod(statusDir, 0755) //nolint:errcheck
 
-	repos, err := Scan(dir)
+	repos, err := Scan(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -49,7 +50,7 @@ func TestScan_SymlinkLoop(t *testing.T) {
 
 	// Scan walks one level deep, so the symlink is treated as a directory
 	// entry. It has no .ralph/ or .ralphrc, so it is skipped.
-	repos, err := Scan(dir)
+	repos, err := Scan(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("unexpected error with symlink loop: %v", err)
 	}
@@ -77,7 +78,7 @@ func TestScan_SymlinkToValidRepo(t *testing.T) {
 		t.Skipf("symlinks not supported: %v", err)
 	}
 
-	repos, err := Scan(scanRoot)
+	repos, err := Scan(context.Background(), scanRoot)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -99,7 +100,7 @@ func TestScan_DotPrefixedDirs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	repos, err := Scan(dir)
+	repos, err := Scan(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -121,7 +122,7 @@ func TestScan_ManyRepos(t *testing.T) {
 		}
 	}
 
-	repos, err := Scan(dir)
+	repos, err := Scan(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
