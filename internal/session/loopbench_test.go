@@ -491,6 +491,58 @@ func TestSummarizeObservationsMixed(t *testing.T) {
 	}
 }
 
+func TestStallCountPopulatedInObservation(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "stall_obs.jsonl")
+
+	obs := LoopObservation{
+		Timestamp:       time.Now().UTC().Truncate(time.Millisecond),
+		LoopID:          "loop-stall",
+		RepoName:        "test-repo",
+		IterationNumber: 1,
+		Status:          "idle",
+		StallCount:      5,
+	}
+
+	if err := WriteObservation(path, obs); err != nil {
+		t.Fatalf("WriteObservation: %v", err)
+	}
+
+	loaded, err := LoadObservations(path, time.Time{})
+	if err != nil {
+		t.Fatalf("LoadObservations: %v", err)
+	}
+	if len(loaded) != 1 {
+		t.Fatalf("expected 1 observation, got %d", len(loaded))
+	}
+	if loaded[0].StallCount != 5 {
+		t.Errorf("StallCount = %d, want 5", loaded[0].StallCount)
+	}
+
+	// Verify SummarizeObservations aggregates stalls correctly.
+	obs2 := LoopObservation{
+		LoopID:     "loop-stall",
+		Status:     "failed",
+		StallCount: 3,
+	}
+	summary := SummarizeObservations([]LoopObservation{obs, obs2})
+	if summary.TotalStalls != 8 {
+		t.Errorf("TotalStalls = %d, want 8", summary.TotalStalls)
+	}
+
+	// Zero stall count should be omitted from JSON (omitempty).
+	zeroObs := LoopObservation{LoopID: "no-stall", StallCount: 0}
+	data, err := json.Marshal(zeroObs)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if strings.Contains(string(data), "stall_count") {
+		t.Error("zero StallCount should be omitted from JSON")
+	}
+}
+
 func TestNewFieldsJSONRoundTrip(t *testing.T) {
 	t.Parallel()
 
