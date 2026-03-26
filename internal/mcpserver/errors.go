@@ -30,6 +30,7 @@ const (
 	ErrConfigInvalid       ErrorCode = "CONFIG_INVALID"
 	ErrWorkflow            ErrorCode = "WORKFLOW_ERROR"
 	ErrGateFailed          ErrorCode = "GATE_FAILED"
+	ErrServiceNotFound     ErrorCode = "SERVICE_NOT_FOUND"
 )
 
 // codedError returns an MCP error result with both a machine-parseable code
