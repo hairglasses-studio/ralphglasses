@@ -45,7 +45,13 @@ Or with a custom scan path:
 			server.WithToolCapabilities(true),
 			server.WithRecovery(),
 			// Outermost → innermost: timeout → instrumentation → event bus → validation → handler
-			server.WithToolHandlerMiddleware(mcpserver.TimeoutMiddleware(30*time.Second)),
+			server.WithToolHandlerMiddleware(mcpserver.TimeoutMiddleware(30*time.Second, map[string]time.Duration{
+				"ralphglasses_loop_step":       10 * time.Minute,
+				"ralphglasses_coverage_report": 5 * time.Minute,
+				"ralphglasses_merge_verify":    5 * time.Minute,
+				"ralphglasses_self_test":       0, // exempt
+				"ralphglasses_self_improve":    0, // exempt
+			})),
 			server.WithToolHandlerMiddleware(mcpserver.InstrumentationMiddleware(toolRec)),
 			server.WithToolHandlerMiddleware(mcpserver.EventBusMiddleware(bus)),
 			server.WithToolHandlerMiddleware(mcpserver.ValidationMiddleware(sp)),

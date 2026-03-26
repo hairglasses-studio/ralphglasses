@@ -11,7 +11,7 @@ import (
 )
 
 func TestTimeoutMiddleware_Success(t *testing.T) {
-	mw := TimeoutMiddleware(1 * time.Second)
+	mw := TimeoutMiddleware(1*time.Second, nil)
 
 	handler := mw(func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return &mcp.CallToolResult{
@@ -35,7 +35,7 @@ func TestTimeoutMiddleware_Success(t *testing.T) {
 }
 
 func TestTimeoutMiddleware_Timeout(t *testing.T) {
-	mw := TimeoutMiddleware(50 * time.Millisecond)
+	mw := TimeoutMiddleware(50*time.Millisecond, nil)
 
 	handler := mw(func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		select {
@@ -85,7 +85,7 @@ func TestTimeoutMiddleware_Timeout(t *testing.T) {
 }
 
 func TestTimeoutMiddleware_ContextAlreadyCanceled(t *testing.T) {
-	mw := TimeoutMiddleware(1 * time.Second)
+	mw := TimeoutMiddleware(1*time.Second, nil)
 
 	handler := mw(func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		select {
@@ -113,5 +113,55 @@ func TestTimeoutMiddleware_ContextAlreadyCanceled(t *testing.T) {
 	}
 	if !result.IsError {
 		t.Fatal("expected error result for already-canceled context")
+	}
+}
+
+func TestTimeoutMiddleware_Override(t *testing.T) {
+	// Default is 10ms (very short), but override gives 2s for "slow_ok_tool".
+	mw := TimeoutMiddleware(10*time.Millisecond, map[string]time.Duration{
+		"slow_ok_tool": 2 * time.Second,
+	})
+
+	handler := mw(func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		time.Sleep(50 * time.Millisecond) // Would timeout with default but not with override.
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "ok"}},
+		}, nil
+	})
+
+	req := mcp.CallToolRequest{}
+	req.Params.Name = "slow_ok_tool"
+
+	result, err := handler(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatal("expected success — override should have extended timeout")
+	}
+}
+
+func TestTimeoutMiddleware_Exempt(t *testing.T) {
+	// Default is 10ms, but "exempt_tool" is mapped to 0 (exempt).
+	mw := TimeoutMiddleware(10*time.Millisecond, map[string]time.Duration{
+		"exempt_tool": 0,
+	})
+
+	handler := mw(func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		time.Sleep(50 * time.Millisecond) // Would timeout with default.
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "ok"}},
+		}, nil
+	})
+
+	req := mcp.CallToolRequest{}
+	req.Params.Name = "exempt_tool"
+
+	result, err := handler(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatal("expected success — exempt tool should skip timeout entirely")
 	}
 }

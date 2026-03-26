@@ -97,8 +97,9 @@ func NewServerWithBus(scanPath string, bus *events.Bus) *Server {
 		ScanPath:   scanPath,
 		ProcMgr:    process.NewManagerWithBus(bus),
 		SessMgr:    session.NewManagerWithBus(bus),
-		EventBus:   bus,
-		HTTPClient: &http.Client{Timeout: 30 * time.Second},
+		EventBus:       bus,
+		HTTPClient:     &http.Client{Timeout: 30 * time.Second},
+		FleetAnalytics: fleet.NewFleetAnalytics(10000, 24*time.Hour),
 	}
 }
 

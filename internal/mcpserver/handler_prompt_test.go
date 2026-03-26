@@ -682,10 +682,14 @@ func TestHandleClaudeMDCheck(t *testing.T) {
 			name: "valid repo with CLAUDE.md",
 			args: map[string]any{"repo": repoName},
 			check: func(t *testing.T, text string) {
-				// Should be valid JSON array
-				var results []any
-				if err := json.Unmarshal([]byte(text), &results); err != nil {
-					t.Errorf("expected JSON array: %v", err)
+				// When no findings, returns {"issues":[],"status":"pass"} object.
+				var result map[string]any
+				if err := json.Unmarshal([]byte(text), &result); err != nil {
+					t.Errorf("expected JSON object: %v", err)
+					return
+				}
+				if result["status"] != "pass" {
+					t.Errorf("expected status=pass, got %v", result["status"])
 				}
 			},
 		},
