@@ -608,6 +608,94 @@ func TestHandleWorkflowRun_MissingArgs(t *testing.T) {
 	}
 }
 
+func TestHandleWorkflowDelete(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	// First define a workflow to delete.
+	yamlStr := `name: delete-me
+steps:
+  - name: step1
+    prompt: "do thing"
+`
+	result, err := srv.handleWorkflowDefine(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+		"name": "delete-me",
+		"yaml": yamlStr,
+	}))
+	if err != nil {
+		t.Fatalf("handleWorkflowDefine: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleWorkflowDefine returned error: %s", getResultText(result))
+	}
+
+	// Now delete it.
+	result, err = srv.handleWorkflowDelete(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+		"name": "delete-me",
+	}))
+	if err != nil {
+		t.Fatalf("handleWorkflowDelete: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleWorkflowDelete returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "delete-me") {
+		t.Errorf("expected workflow name in output, got: %s", text)
+	}
+	if !strings.Contains(text, `"deleted":true`) {
+		t.Errorf("expected deleted:true, got: %s", text)
+	}
+
+	// Verify it's actually gone by trying to run it.
+	result, err = srv.handleWorkflowRun(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+		"name": "delete-me",
+	}))
+	if err != nil {
+		t.Fatalf("handleWorkflowRun: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for deleted workflow")
+	}
+}
+
+func TestHandleWorkflowDelete_MissingArgs(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleWorkflowDelete(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleWorkflowDelete: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing name")
+	}
+}
+
+func TestHandleWorkflowDelete_NotFound(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleWorkflowDelete(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+		"name": "nonexistent",
+	}))
+	if err != nil {
+		t.Fatalf("handleWorkflowDelete: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent workflow")
+	}
+}
+
 // --- Snapshot handler tests ---
 
 func TestHandleSnapshot_Save(t *testing.T) {
