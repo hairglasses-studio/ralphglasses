@@ -47,7 +47,7 @@ func NewWorkerAgent(coordinatorURL string, hostname string, port int, version st
 // Blocks until ctx is cancelled.
 func (w *WorkerAgent) Run(ctx context.Context) error {
 	// Discover local repos and providers
-	repos := w.discoverRepos()
+	repos := w.discoverRepos(ctx)
 	providers := w.discoverProviders()
 
 	tsIP := DiscoverTailscaleIP()
@@ -252,11 +252,11 @@ func (w *WorkerAgent) eventForwardLoop(ctx context.Context) {
 	}
 }
 
-func (w *WorkerAgent) discoverRepos() []string {
+func (w *WorkerAgent) discoverRepos(ctx context.Context) []string {
 	if w.scanPath == "" {
 		return nil
 	}
-	repos, err := discovery.Scan(w.scanPath)
+	repos, err := discovery.Scan(ctx, w.scanPath)
 	if err != nil {
 		return nil
 	}

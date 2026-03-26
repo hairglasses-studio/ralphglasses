@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -36,7 +37,7 @@ func TestScan_FindsReposWithRalphDir(t *testing.T) {
 	makeRepo(t, root, "repo-a", true, false)
 	makeRepo(t, root, "repo-b", true, false)
 
-	repos, err := Scan(root)
+	repos, err := Scan(context.Background(), root)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
@@ -58,7 +59,7 @@ func TestScan_FindsReposWithRCOnly(t *testing.T) {
 	root := t.TempDir()
 	makeRepo(t, root, "rc-only", false, true)
 
-	repos, err := Scan(root)
+	repos, err := Scan(context.Background(), root)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
@@ -84,7 +85,7 @@ func TestScan_SkipsNonRalphDirs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	repos, err := Scan(root)
+	repos, err := Scan(context.Background(), root)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
@@ -100,7 +101,7 @@ func TestScan_SkipsNonRalphDirs(t *testing.T) {
 func TestScan_EmptyDirectory(t *testing.T) {
 	root := t.TempDir()
 
-	repos, err := Scan(root)
+	repos, err := Scan(context.Background(), root)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
@@ -111,7 +112,7 @@ func TestScan_EmptyDirectory(t *testing.T) {
 }
 
 func TestScan_NonexistentRoot(t *testing.T) {
-	_, err := Scan("/nonexistent/path/that/does/not/exist")
+	_, err := Scan(context.Background(), "/nonexistent/path/that/does/not/exist")
 	if err == nil {
 		t.Fatal("expected error for nonexistent root")
 	}
@@ -127,7 +128,7 @@ func TestScan_SkipsFiles(t *testing.T) {
 
 	makeRepo(t, root, "real-repo", true, false)
 
-	repos, err := Scan(root)
+	repos, err := Scan(context.Background(), root)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
@@ -143,7 +144,7 @@ func TestScan_SortedAlphabetically(t *testing.T) {
 	makeRepo(t, root, "alpha", true, false)
 	makeRepo(t, root, "middle", true, false)
 
-	repos, err := Scan(root)
+	repos, err := Scan(context.Background(), root)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
@@ -178,7 +179,7 @@ func TestScan_RefreshesStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	repos, err := Scan(root)
+	repos, err := Scan(context.Background(), root)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
@@ -205,7 +206,7 @@ func TestScan_HasRalphAndHasRC(t *testing.T) {
 	makeRepo(t, root, "dir-only", true, false)
 	makeRepo(t, root, "rc-only", false, true)
 
-	repos, err := Scan(root)
+	repos, err := Scan(context.Background(), root)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
