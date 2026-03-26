@@ -51,7 +51,7 @@ type Manager struct {
 	bus         *events.Bus
 	errCh       chan ProcessErrorMsg
 	exitCh      chan ProcessExitMsg
-	KillTimeout time.Duration // timeout between kill sequence stages; defaults to 5s
+	KillTimeout time.Duration // timeout between kill sequence stages; defaults to 10s
 	AutoRestart bool          // if true, crashed processes are restarted with backoff
 	MaxRestarts int           // maximum restart attempts before giving up (default 3)
 }
@@ -60,13 +60,14 @@ type Manager struct {
 type ManagedProcess struct {
 	Cmd          *exec.Cmd
 	Paused       bool
-	PID          int    // stored at start time; safe to read under mu without racing Wait()
-	ChildPids    []int  // child PIDs collected at launch (best-effort, never nil)
-	Recovered    bool   // true if re-adopted from PID file (no reaper goroutine)
-	Stopping     bool   // true while Stop() owns this process's shutdown lifecycle
+	PID          int           // stored at start time; safe to read under mu without racing Wait()
+	ChildPids    []int         // child PIDs collected at launch (best-effort, never nil)
+	Recovered    bool          // true if re-adopted from PID file (no reaper goroutine)
+	Stopping     bool          // true while Stop() owns this process's shutdown lifecycle
 	ExitCode     int
 	ExitError    string
-	RestartCount int // number of times this process has been auto-restarted
+	RestartCount int           // number of times this process has been auto-restarted
+	KillTimeout  time.Duration // per-process kill timeout; zero means use Manager.KillTimeout
 }
 
 // lastExits tracks exit status after reaping (keyed by repo path).
@@ -81,7 +82,7 @@ type exitStatus struct {
 }
 
 // DefaultKillTimeout is the default timeout between kill sequence stages.
-const DefaultKillTimeout = 5 * time.Second
+const DefaultKillTimeout = 10 * time.Second
 
 // DefaultMaxRestarts is the default maximum restart attempts for auto-restart.
 const DefaultMaxRestarts = 3
@@ -486,10 +487,11 @@ func sendSignal(pid int, sig syscall.Signal) error {
 }
 
 // Stop initiates a graceful shutdown of the ralph loop process using a
-// fallback kill sequence: SIGTERM primary → 5s wait → SIGTERM children →
-// 5s wait → SIGKILL any survivors. The sequence runs in a background
-// goroutine so Stop returns immediately. The context can be used to set
-// a deadline on the overall shutdown.
+// fallback kill sequence: SIGTERM primary → wait → SIGTERM children →
+// wait → SIGKILL any survivors. The wait duration uses the per-process
+// KillTimeout if set, otherwise the Manager.KillTimeout, defaulting to
+// DefaultKillTimeout (10s). The sequence runs in a background goroutine
+// so Stop returns immediately.
 func (m *Manager) Stop(ctx context.Context, repoPath string) error {
 	m.mu.Lock()
 	mp, ok := m.procs[repoPath]
@@ -505,6 +507,9 @@ func (m *Manager) Stop(ctx context.Context, repoPath string) error {
 	// The reaper will skip cleanup/restart for processes marked as stopping.
 	mp.Stopping = true
 
+	// Prefer per-process KillTimeout over manager-level KillTimeout.
+	procTimeout := mp.KillTimeout
+
 	// For recovered processes, clean up immediately (no reaper goroutine).
 	if recovered {
 		removePIDFile(repoPath)
@@ -512,7 +517,7 @@ func (m *Manager) Stop(ctx context.Context, repoPath string) error {
 	}
 	m.mu.Unlock()
 
-	timeout := m.killTimeout()
+	timeout := m.killTimeoutWithOverride(procTimeout)
 	go func() {
 		runKillSequence(pid, childPids, timeout)
 		// Post-stop orphan audit: detect lingering ralph_loop processes.
@@ -527,6 +532,15 @@ func (m *Manager) killTimeout() time.Duration {
 		return DefaultKillTimeout
 	}
 	return m.KillTimeout
+}
+
+// killTimeoutWithOverride returns the per-process timeout if set, otherwise
+// falls back to the manager-level killTimeout.
+func (m *Manager) killTimeoutWithOverride(perProcess time.Duration) time.Duration {
+	if perProcess > 0 {
+		return perProcess
+	}
+	return m.killTimeout()
 }
 
 // runKillSequence executes the escalating shutdown sequence:

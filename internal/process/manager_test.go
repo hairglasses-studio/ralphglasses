@@ -554,13 +554,17 @@ func TestManager_KillTimeout_Default(t *testing.T) {
 	if m.KillTimeout != DefaultKillTimeout {
 		t.Errorf("expected default KillTimeout %v, got %v", DefaultKillTimeout, m.KillTimeout)
 	}
+	// Verify DefaultKillTimeout is 10s.
+	if DefaultKillTimeout != 10*time.Second {
+		t.Errorf("expected DefaultKillTimeout to be 10s, got %v", DefaultKillTimeout)
+	}
 }
 
 func TestManager_KillTimeout_Custom(t *testing.T) {
 	m := NewManager()
-	m.KillTimeout = 10 * time.Second
-	if m.killTimeout() != 10*time.Second {
-		t.Errorf("expected custom KillTimeout 10s, got %v", m.killTimeout())
+	m.KillTimeout = 15 * time.Second
+	if m.killTimeout() != 15*time.Second {
+		t.Errorf("expected custom KillTimeout 15s, got %v", m.killTimeout())
 	}
 }
 
@@ -569,6 +573,79 @@ func TestManager_KillTimeout_ZeroFallback(t *testing.T) {
 	m.KillTimeout = 0
 	if m.killTimeout() != DefaultKillTimeout {
 		t.Errorf("expected fallback to DefaultKillTimeout, got %v", m.killTimeout())
+	}
+}
+
+func TestManager_KillTimeoutWithOverride_PerProcess(t *testing.T) {
+	m := NewManager()
+	// Per-process timeout should take priority over manager timeout.
+	perProcess := 3 * time.Second
+	got := m.killTimeoutWithOverride(perProcess)
+	if got != perProcess {
+		t.Errorf("expected per-process timeout %v, got %v", perProcess, got)
+	}
+}
+
+func TestManager_KillTimeoutWithOverride_ZeroFallsBackToManager(t *testing.T) {
+	m := NewManager()
+	m.KillTimeout = 7 * time.Second
+	got := m.killTimeoutWithOverride(0)
+	if got != 7*time.Second {
+		t.Errorf("expected manager timeout 7s, got %v", got)
+	}
+}
+
+func TestManager_KillTimeoutWithOverride_BothZeroFallsBackToDefault(t *testing.T) {
+	m := NewManager()
+	m.KillTimeout = 0
+	got := m.killTimeoutWithOverride(0)
+	if got != DefaultKillTimeout {
+		t.Errorf("expected DefaultKillTimeout %v, got %v", DefaultKillTimeout, got)
+	}
+}
+
+func TestManagedProcess_KillTimeout_UsedInStop(t *testing.T) {
+	// Verify that per-process KillTimeout is passed to the kill sequence.
+	h := newHarness(100)
+	defer h.install()()
+
+	var recordedSleeps []time.Duration
+	setSleepFn(func(d time.Duration) {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		recordedSleeps = append(recordedSleeps, d)
+		h.sleeps++
+	})
+
+	m := NewManager()
+	m.KillTimeout = 10 * time.Second
+
+	// Inject a fake managed process with a per-process timeout.
+	perProcessTimeout := 2 * time.Second
+	m.mu.Lock()
+	m.procs["/test/repo"] = &ManagedProcess{
+		PID:         100,
+		Recovered:   true, // skip reaper cleanup
+		KillTimeout: perProcessTimeout,
+	}
+	m.mu.Unlock()
+
+	err := m.Stop(context.Background(), "/test/repo")
+	if err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
+
+	// Give the background goroutine time to run.
+	time.Sleep(100 * time.Millisecond)
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	// The kill sequence should have used the per-process timeout (2s), not the manager's (10s).
+	for i, d := range recordedSleeps {
+		if d != perProcessTimeout {
+			t.Errorf("sleep[%d]: expected %v, got %v", i, perProcessTimeout, d)
+		}
 	}
 }
 
