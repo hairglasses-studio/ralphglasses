@@ -607,3 +607,64 @@ func TestNewFieldsJSONRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+func TestPercentile(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		sorted []float64
+		p      float64
+		want   float64
+		tol    float64
+	}{
+		{"empty", nil, 50, 0, 0},
+		{"single", []float64{5.0}, 50, 5.0, 0},
+		{"single_p99", []float64{5.0}, 99, 5.0, 0},
+		{"two_p50", []float64{1.0, 3.0}, 50, 2.0, 0.001},
+		{"ten_p50", []float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, 50, 5.5, 0.001},
+		{"ten_p95", []float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, 95, 9.55, 0.001},
+		{"ten_p99", []float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, 99, 9.91, 0.001},
+		{"ten_p0", []float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, 0, 1.0, 0},
+		{"ten_p100", []float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, 100, 10.0, 0},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := percentile(tc.sorted, tc.p)
+			diff := got - tc.want
+			if diff < 0 {
+				diff = -diff
+			}
+			if diff > tc.tol {
+				t.Errorf("percentile(%v, %f) = %f, want %f (tol %f)", tc.sorted, tc.p, got, tc.want, tc.tol)
+			}
+		})
+	}
+}
+
+func TestSummarizeObservationsPercentiles(t *testing.T) {
+	t.Parallel()
+
+	obs := make([]LoopObservation, 10)
+	for i := range obs {
+		obs[i] = LoopObservation{
+			Status:         "idle",
+			TotalLatencyMs: int64((i + 1) * 1000),
+			TotalCostUSD:   float64(i+1) * 0.01,
+		}
+	}
+
+	s := SummarizeObservations(obs)
+
+	// p50 of 1..10 = 5.5
+	if s.LatencyP50 < 5.4 || s.LatencyP50 > 5.6 {
+		t.Errorf("LatencyP50 = %f, want ~5.5", s.LatencyP50)
+	}
+	if s.LatencyP95 < 9.5 || s.LatencyP95 > 9.6 {
+		t.Errorf("LatencyP95 = %f, want ~9.55", s.LatencyP95)
+	}
+	if s.CostP50 < 0.054 || s.CostP50 > 0.056 {
+		t.Errorf("CostP50 = %f, want ~0.055", s.CostP50)
+	}
+}
