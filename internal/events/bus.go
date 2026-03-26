@@ -63,6 +63,11 @@ const (
 	// Self-improvement acceptance
 	SelfImproveMerged EventType = "self_improve.merged"     // Safe changes auto-merged
 	SelfImprovePR     EventType = "self_improve.pr_created" // PR created for review-required changes
+
+	// Worker lifecycle
+	WorkerDeregistered EventType = "worker.deregistered"
+	WorkerPaused       EventType = "worker.paused"
+	WorkerResumed      EventType = "worker.resumed"
 )
 
 // knownEventTypes is the set of all declared EventType constants.
@@ -90,6 +95,9 @@ var knownEventTypes = map[EventType]struct{}{
 	ProviderHealthChanged: {},
 	SelfImproveMerged:     {},
 	SelfImprovePR:         {},
+	WorkerDeregistered:    {},
+	WorkerPaused:          {},
+	WorkerResumed:         {},
 }
 
 // ValidEventType returns true if the given EventType is a known constant.
@@ -125,6 +133,7 @@ type Bus struct {
 	history      []Event
 	maxHistory   int
 	totalCount   int // monotonic event counter (survives ring buffer drops)
+	retentionTTL time.Duration
 
 	persistFile   *os.File
 	persistPath   string
@@ -148,6 +157,14 @@ func NewBus(maxHistory int) *Bus {
 	}
 }
 
+// SetRetentionTTL configures how long events are retained in history.
+// Events older than the TTL are trimmed during Publish. Zero disables TTL.
+func (b *Bus) SetRetentionTTL(ttl time.Duration) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.retentionTTL = ttl
+}
+
 // Publish sends an event to all subscribers and appends it to history.
 func (b *Bus) Publish(event Event) {
 	if event.Timestamp.IsZero() {
@@ -168,6 +185,18 @@ func (b *Bus) Publish(event Event) {
 	}
 	b.history = append(b.history, event)
 	b.totalCount++
+
+	// TTL retention: trim events older than the retention window
+	if b.retentionTTL > 0 {
+		cutoff := time.Now().Add(-b.retentionTTL)
+		trimIdx := 0
+		for trimIdx < len(b.history) && b.history[trimIdx].Timestamp.Before(cutoff) {
+			trimIdx++
+		}
+		if trimIdx > 0 {
+			b.history = b.history[trimIdx:]
+		}
+	}
 
 	// Persist to JSONL file if configured
 	if b.persistFile != nil {
@@ -394,8 +423,14 @@ func (b *Bus) StartAsync() {
 	if !b.AsyncWrites {
 		return
 	}
+	b.mu.Lock()
+	if b.writeCh != nil {
+		b.mu.Unlock()
+		return // already started
+	}
 	b.writeCh = make(chan Event, 256)
 	b.writeDone = make(chan struct{})
+	b.mu.Unlock()
 	go func() {
 		defer close(b.writeDone)
 		for e := range b.writeCh {
