@@ -1,0 +1,853 @@
+package tui
+
+import (
+	"context"
+	"testing"
+
+	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
+	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
+)
+
+// --- dispatchViewKeys tests ---
+
+func TestDispatchViewKeys_BindingMatch(t *testing.T) {
+	called := false
+	entries := []ViewKeyEntry{
+		{
+			Binding: func(km *KeyMap) key.Binding { return km.Enter },
+			Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+				called = true
+				return *m, nil
+			},
+		},
+	}
+	m := NewModel("/tmp/test", nil)
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	dispatchViewKeys(entries, &m, msg)
+	if !called {
+		t.Error("expected binding handler to be called on matching key")
+	}
+}
+
+func TestDispatchViewKeys_MatchFunc(t *testing.T) {
+	called := false
+	entries := []ViewKeyEntry{
+		{
+			Match: func(msg tea.KeyMsg) bool { return msg.Type == tea.KeyBackspace },
+			Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+				called = true
+				return *m, nil
+			},
+		},
+	}
+	m := NewModel("/tmp/test", nil)
+	msg := tea.KeyMsg{Type: tea.KeyBackspace}
+	dispatchViewKeys(entries, &m, msg)
+	if !called {
+		t.Error("expected match handler to be called on matching key")
+	}
+}
+
+func TestDispatchViewKeys_NoMatch(t *testing.T) {
+	entries := []ViewKeyEntry{
+		{
+			Binding: func(km *KeyMap) key.Binding { return km.Enter },
+			Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+				t.Error("handler should not be called")
+				return *m, nil
+			},
+		},
+	}
+	m := NewModel("/tmp/test", nil)
+	msg := tea.KeyMsg{Type: tea.KeyBackspace}
+	result, cmd := dispatchViewKeys(entries, &m, msg)
+	if cmd != nil {
+		t.Error("expected nil cmd when no entry matches")
+	}
+	_ = result
+}
+
+func TestDispatchViewKeys_FirstMatchWins(t *testing.T) {
+	order := ""
+	entries := []ViewKeyEntry{
+		{
+			Match:   func(msg tea.KeyMsg) bool { return true },
+			Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { order += "A"; return *m, nil },
+		},
+		{
+			Match:   func(msg tea.KeyMsg) bool { return true },
+			Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { order += "B"; return *m, nil },
+		},
+	}
+	m := NewModel("/tmp/test", nil)
+	dispatchViewKeys(entries, &m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	if order != "A" {
+		t.Errorf("expected first match to win, got order=%q", order)
+	}
+}
+
+// --- handleCommandInput tests ---
+
+func TestHandleCommandInput_TypeCharacters(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.InputMode = ModeCommand
+
+	m2, _ := m.handleCommandInput(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("h")})
+	m = m2.(Model)
+	m2, _ = m.handleCommandInput(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("i")})
+	m = m2.(Model)
+
+	if m.CommandBuf != "hi" {
+		t.Errorf("CommandBuf = %q, want %q", m.CommandBuf, "hi")
+	}
+}
+
+func TestHandleCommandInput_Backspace(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.InputMode = ModeCommand
+	m.CommandBuf = "abc"
+
+	m2, _ := m.handleCommandInput(tea.KeyMsg{Type: tea.KeyBackspace})
+	m = m2.(Model)
+	if m.CommandBuf != "ab" {
+		t.Errorf("CommandBuf = %q, want %q", m.CommandBuf, "ab")
+	}
+}
+
+func TestHandleCommandInput_BackspaceEmpty(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.InputMode = ModeCommand
+	m.CommandBuf = ""
+
+	m2, _ := m.handleCommandInput(tea.KeyMsg{Type: tea.KeyBackspace})
+	m = m2.(Model)
+	if m.CommandBuf != "" {
+		t.Errorf("CommandBuf = %q, want empty", m.CommandBuf)
+	}
+}
+
+func TestHandleCommandInput_Escape(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.InputMode = ModeCommand
+	m.CommandBuf = "partial"
+
+	m2, _ := m.handleCommandInput(tea.KeyMsg{Type: tea.KeyEscape})
+	m = m2.(Model)
+	if m.InputMode != ModeNormal {
+		t.Errorf("InputMode = %d, want ModeNormal", m.InputMode)
+	}
+	if m.CommandBuf != "" {
+		t.Errorf("CommandBuf = %q, want empty after escape", m.CommandBuf)
+	}
+}
+
+func TestHandleCommandInput_EnterExecutes(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.InputMode = ModeCommand
+	m.CommandBuf = "sessions"
+
+	m2, _ := m.handleCommandInput(tea.KeyMsg{Type: tea.KeyEnter})
+	m = m2.(Model)
+	if m.InputMode != ModeNormal {
+		t.Errorf("InputMode = %d, want ModeNormal after enter", m.InputMode)
+	}
+	if m.CommandBuf != "" {
+		t.Errorf("CommandBuf = %q, want empty after enter", m.CommandBuf)
+	}
+	if m.CurrentView != ViewSessions {
+		t.Errorf("CurrentView = %v, want ViewSessions after :sessions", m.CurrentView)
+	}
+}
+
+// --- handleFilterInput tests ---
+
+func TestHandleFilterInput_TypeCharacters(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.InputMode = ModeFilter
+	m.Filter.Active = true
+
+	m2, _ := m.handleFilterInput(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m = m2.(Model)
+	m2, _ = m.handleFilterInput(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("b")})
+	m = m2.(Model)
+
+	if m.Filter.Text != "ab" {
+		t.Errorf("Filter.Text = %q, want %q", m.Filter.Text, "ab")
+	}
+}
+
+func TestHandleFilterInput_Backspace(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.InputMode = ModeFilter
+	m.Filter.Active = true
+	m.Filter.Text = "xyz"
+
+	m2, _ := m.handleFilterInput(tea.KeyMsg{Type: tea.KeyBackspace})
+	m = m2.(Model)
+	if m.Filter.Text != "xy" {
+		t.Errorf("Filter.Text = %q, want %q", m.Filter.Text, "xy")
+	}
+}
+
+func TestHandleFilterInput_EnterConfirms(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.InputMode = ModeFilter
+	m.Filter.Active = true
+	m.Filter.Text = "search"
+
+	m2, _ := m.handleFilterInput(tea.KeyMsg{Type: tea.KeyEnter})
+	m = m2.(Model)
+	if m.InputMode != ModeNormal {
+		t.Errorf("InputMode = %d, want ModeNormal after enter", m.InputMode)
+	}
+	// Filter text is preserved on enter (not cleared)
+	if m.Filter.Text != "search" {
+		t.Errorf("Filter.Text = %q, want %q (preserved on enter)", m.Filter.Text, "search")
+	}
+}
+
+func TestHandleFilterInput_EscapeClears(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.InputMode = ModeFilter
+	m.Filter.Active = true
+	m.Filter.Text = "query"
+
+	m2, _ := m.handleFilterInput(tea.KeyMsg{Type: tea.KeyEscape})
+	m = m2.(Model)
+	if m.InputMode != ModeNormal {
+		t.Errorf("InputMode = %d, want ModeNormal after escape", m.InputMode)
+	}
+	if m.Filter.Text != "" {
+		t.Errorf("Filter.Text = %q, want empty after escape", m.Filter.Text)
+	}
+	if m.Filter.Active {
+		t.Error("Filter should not be active after escape")
+	}
+}
+
+// --- execCommand tests ---
+
+func TestExecCommand_Quit(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Ctx = context.Background()
+	_, cmd := m.execCommand(Command{Name: "quit"})
+	if cmd == nil {
+		t.Error(":quit should produce a quit command")
+	}
+}
+
+func TestExecCommand_Q(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Ctx = context.Background()
+	_, cmd := m.execCommand(Command{Name: "q"})
+	if cmd == nil {
+		t.Error(":q should produce a quit command")
+	}
+}
+
+func TestExecCommand_Scan(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	_, cmd := m.execCommand(Command{Name: "scan"})
+	if cmd == nil {
+		t.Error(":scan should produce a command")
+	}
+}
+
+func TestExecCommand_Sessions(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m2, _ := m.execCommand(Command{Name: "sessions"})
+	got := m2.(Model)
+	if got.CurrentView != ViewSessions {
+		t.Errorf("CurrentView = %v, want ViewSessions", got.CurrentView)
+	}
+	if got.ActiveTab != 1 {
+		t.Errorf("ActiveTab = %d, want 1", got.ActiveTab)
+	}
+}
+
+func TestExecCommand_Teams(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m2, _ := m.execCommand(Command{Name: "teams"})
+	got := m2.(Model)
+	if got.CurrentView != ViewTeams {
+		t.Errorf("CurrentView = %v, want ViewTeams", got.CurrentView)
+	}
+	if got.ActiveTab != 2 {
+		t.Errorf("ActiveTab = %d, want 2", got.ActiveTab)
+	}
+}
+
+func TestExecCommand_Fleet(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m2, _ := m.execCommand(Command{Name: "fleet"})
+	got := m2.(Model)
+	if got.CurrentView != ViewFleet {
+		t.Errorf("CurrentView = %v, want ViewFleet", got.CurrentView)
+	}
+	if got.ActiveTab != 3 {
+		t.Errorf("ActiveTab = %d, want 3", got.ActiveTab)
+	}
+}
+
+func TestExecCommand_Repos(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	// Switch away first
+	m.switchTab(1, ViewSessions, "Sessions")
+	m2, _ := m.execCommand(Command{Name: "repos"})
+	got := m2.(Model)
+	if got.CurrentView != ViewOverview {
+		t.Errorf("CurrentView = %v, want ViewOverview", got.CurrentView)
+	}
+	if got.ActiveTab != 0 {
+		t.Errorf("ActiveTab = %d, want 0", got.ActiveTab)
+	}
+}
+
+func TestExecCommand_StopAll(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m2, _ := m.execCommand(Command{Name: "stopall"})
+	got := m2.(Model)
+	if got.ConfirmDialog == nil {
+		t.Error(":stopall should show confirm dialog")
+	}
+	if got.ConfirmDialog != nil && got.ConfirmDialog.Action != "stopAll" {
+		t.Errorf("ConfirmDialog.Action = %q, want %q", got.ConfirmDialog.Action, "stopAll")
+	}
+}
+
+func TestExecCommand_Unknown(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m2, cmd := m.execCommand(Command{Name: "boguscommand"})
+	got := m2.(Model)
+	if cmd != nil {
+		t.Error("unknown command should return nil cmd")
+	}
+	if !got.Notify.Active() {
+		t.Error("unknown command should trigger notification")
+	}
+}
+
+func TestExecCommand_StartNoArgs(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m2, cmd := m.execCommand(Command{Name: "start"})
+	_ = m2
+	if cmd != nil {
+		t.Error(":start with no args should return nil cmd")
+	}
+}
+
+func TestExecCommand_StopRepoNotFound(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m2, _ := m.execCommand(Command{Name: "stop", Args: []string{"nonexistent"}})
+	got := m2.(Model)
+	if !got.Notify.Active() {
+		t.Error(":stop with unknown repo should trigger notification")
+	}
+}
+
+// --- handleConfirmKey tests ---
+
+func TestHandleConfirmKey_Yes(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Ctx = context.Background()
+	m.ConfirmDialog = &components.ConfirmDialog{
+		Title:   "Test",
+		Message: "Confirm?",
+		Action:  "stopAll",
+		Active:  true,
+		Width:   50,
+	}
+
+	m2, _ := m.handleConfirmKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
+	got := m2.(Model)
+	if got.ConfirmDialog != nil {
+		t.Error("confirm dialog should be cleared after 'y'")
+	}
+}
+
+func TestHandleConfirmKey_No(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ConfirmDialog = &components.ConfirmDialog{
+		Title:  "Test",
+		Action: "stopAll",
+		Active: true,
+		Width:  50,
+	}
+
+	m2, _ := m.handleConfirmKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")})
+	got := m2.(Model)
+	if got.ConfirmDialog != nil {
+		t.Error("confirm dialog should be cleared after 'n'")
+	}
+}
+
+func TestHandleConfirmKey_Escape(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ConfirmDialog = &components.ConfirmDialog{
+		Title:  "Test",
+		Action: "stopAll",
+		Active: true,
+		Width:  50,
+	}
+
+	m2, _ := m.handleConfirmKey(tea.KeyMsg{Type: tea.KeyEscape})
+	got := m2.(Model)
+	if got.ConfirmDialog != nil {
+		t.Error("confirm dialog should be cleared after escape")
+	}
+}
+
+func TestHandleConfirmKey_Navigation(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ConfirmDialog = &components.ConfirmDialog{
+		Title:    "Test",
+		Action:   "stopAll",
+		Selected: 0,
+		Active:   true,
+		Width:    50,
+	}
+
+	// Move right
+	m2, _ := m.handleConfirmKey(tea.KeyMsg{Type: tea.KeyRight})
+	got := m2.(Model)
+	// Dialog should still be active (not dismissed by navigation)
+	if got.ConfirmDialog == nil || !got.ConfirmDialog.Active {
+		t.Error("dialog should still be active after right arrow")
+	}
+	if got.ConfirmDialog != nil && got.ConfirmDialog.Selected != 1 {
+		t.Errorf("Selected = %d, want 1 after right arrow", got.ConfirmDialog.Selected)
+	}
+}
+
+func TestHandleConfirmKey_EnterOnYes(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Ctx = context.Background()
+	m.ConfirmDialog = &components.ConfirmDialog{
+		Title:    "Test",
+		Action:   "stopAll",
+		Selected: 0, // Yes
+		Active:   true,
+		Width:    50,
+	}
+
+	m2, _ := m.handleConfirmKey(tea.KeyMsg{Type: tea.KeyEnter})
+	got := m2.(Model)
+	if got.ConfirmDialog != nil {
+		t.Error("confirm dialog should be cleared after enter on Yes")
+	}
+}
+
+func TestHandleConfirmKey_EnterOnNo(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ConfirmDialog = &components.ConfirmDialog{
+		Title:    "Test",
+		Action:   "stopAll",
+		Selected: 1, // No
+		Active:   true,
+		Width:    50,
+	}
+
+	m2, _ := m.handleConfirmKey(tea.KeyMsg{Type: tea.KeyEnter})
+	got := m2.(Model)
+	if got.ConfirmDialog != nil {
+		t.Error("confirm dialog should be cleared after enter on No")
+	}
+}
+
+func TestHandleConfirmKey_Tab(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ConfirmDialog = &components.ConfirmDialog{
+		Title:    "Test",
+		Action:   "stopAll",
+		Selected: 0,
+		Active:   true,
+		Width:    50,
+	}
+
+	m2, _ := m.handleConfirmKey(tea.KeyMsg{Type: tea.KeyTab})
+	got := m2.(Model)
+	if got.ConfirmDialog != nil && got.ConfirmDialog.Selected != 1 {
+		t.Errorf("Selected = %d, want 1 after tab", got.ConfirmDialog.Selected)
+	}
+}
+
+// --- handleActionMenuKey tests ---
+
+func TestHandleActionMenuKey_Escape(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{
+		Title:  "Actions",
+		Active: true,
+		Items: []components.ActionItem{
+			{Key: "s", Label: "Scan", Action: "scan"},
+		},
+	}
+
+	m2, cmd := m.handleActionMenuKey(tea.KeyMsg{Type: tea.KeyEscape})
+	got := m2.(Model)
+	// Escape deactivates the menu but does not trigger handleActionResult
+	// (selected=false), so ActionMenu pointer remains but Active=false.
+	if got.ActionMenu != nil && got.ActionMenu.Active {
+		t.Error("action menu should be inactive after escape")
+	}
+	if cmd != nil {
+		t.Error("escape should return nil cmd")
+	}
+}
+
+func TestHandleActionMenuKey_Navigate(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{
+		Title:  "Actions",
+		Active: true,
+		Cursor: 0,
+		Items: []components.ActionItem{
+			{Key: "s", Label: "Scan", Action: "scan"},
+			{Key: "x", Label: "Stop All", Action: "stopAll"},
+		},
+	}
+
+	// Down
+	m2, _ := m.handleActionMenuKey(tea.KeyMsg{Type: tea.KeyDown})
+	got := m2.(Model)
+	if got.ActionMenu == nil {
+		t.Fatal("action menu should still be open after down")
+	}
+	if got.ActionMenu.Cursor != 1 {
+		t.Errorf("Cursor = %d, want 1 after down", got.ActionMenu.Cursor)
+	}
+
+	// Up
+	m2, _ = got.handleActionMenuKey(tea.KeyMsg{Type: tea.KeyUp})
+	got = m2.(Model)
+	if got.ActionMenu != nil && got.ActionMenu.Cursor != 0 {
+		t.Errorf("Cursor = %d, want 0 after up", got.ActionMenu.Cursor)
+	}
+}
+
+func TestHandleActionMenuKey_EnterSelectsItem(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{
+		Title:  "Actions",
+		Active: true,
+		Cursor: 0,
+		Items: []components.ActionItem{
+			{Key: "s", Label: "Scan", Action: "scan"},
+		},
+	}
+
+	m2, cmd := m.handleActionMenuKey(tea.KeyMsg{Type: tea.KeyEnter})
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("action menu should be cleared after enter selection")
+	}
+	if cmd == nil {
+		t.Error("selecting 'scan' should produce a command")
+	}
+}
+
+func TestHandleActionMenuKey_ShortcutKey(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{
+		Title:  "Actions",
+		Active: true,
+		Cursor: 0,
+		Items: []components.ActionItem{
+			{Key: "s", Label: "Scan", Action: "scan"},
+			{Key: "x", Label: "Stop All", Action: "stopAll"},
+		},
+	}
+
+	// Press 's' shortcut key
+	m2, cmd := m.handleActionMenuKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("action menu should be cleared after shortcut key selection")
+	}
+	if cmd == nil {
+		t.Error("selecting 'scan' via shortcut should produce a command")
+	}
+}
+
+// --- handleEventLogKey tests ---
+
+func TestHandleEventLogKey_ScrollDown(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	ev := views.NewEventLogView()
+	m.EventLog = &ev
+
+	m2, _ := m.handleEventLogKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	_ = m2 // should not panic
+}
+
+func TestHandleEventLogKey_ScrollUp(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	ev := views.NewEventLogView()
+	m.EventLog = &ev
+
+	m2, _ := m.handleEventLogKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	_ = m2 // should not panic
+}
+
+func TestHandleEventLogKey_NilEventLog(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.EventLog = nil
+
+	// Should not panic with nil EventLog
+	m2, _ := m.handleEventLogKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	_ = m2
+	m2, _ = m.handleEventLogKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	_ = m2
+}
+
+// --- truncateID tests ---
+
+func TestTruncateID(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"abcdefghij", "abcdefgh"},
+		{"short", "short"},
+		{"12345678", "12345678"},
+		{"123456789", "12345678"},
+		{"", ""},
+	}
+	for _, tt := range tests {
+		got := truncateID(tt.input)
+		if got != tt.want {
+			t.Errorf("truncateID(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+// --- findFullSessionID tests ---
+
+func TestFindFullSessionID_NilManager(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	got := m.findFullSessionID("abc")
+	if got != "" {
+		t.Errorf("findFullSessionID with nil manager = %q, want empty", got)
+	}
+}
+
+// --- startOutputStreaming tests ---
+
+func TestStartOutputStreaming_NoSession(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.SelectedSession = ""
+
+	m2, cmd := m.startOutputStreaming()
+	got := m2.(Model)
+	if cmd != nil {
+		t.Error("startOutputStreaming with no session should return nil cmd")
+	}
+	if got.StreamingOutput {
+		t.Error("StreamingOutput should be false when no session selected")
+	}
+}
+
+func TestStartOutputStreaming_NilSessMgr(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.SelectedSession = "test-session-id"
+	m.SessMgr = nil
+
+	m2, cmd := m.startOutputStreaming()
+	got := m2.(Model)
+	if cmd != nil {
+		t.Error("startOutputStreaming with nil SessMgr should return nil cmd")
+	}
+	if got.StreamingOutput {
+		t.Error("StreamingOutput should be false with nil SessMgr")
+	}
+}
+
+// --- handleConfirmResult tests ---
+
+func TestHandleConfirmResult_Cancel(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ConfirmDialog = &components.ConfirmDialog{
+		Title:  "Test",
+		Action: "stopAll",
+		Active: true,
+	}
+
+	result := components.ConfirmResultMsg{
+		Action: "stopAll",
+		Result: components.ConfirmCancel,
+	}
+	m2, cmd := m.handleConfirmResult(result)
+	got := m2.(Model)
+	if got.ConfirmDialog != nil {
+		t.Error("ConfirmDialog should be nil after cancel")
+	}
+	if cmd != nil {
+		t.Error("cancel should return nil cmd")
+	}
+}
+
+func TestHandleConfirmResult_NoResult(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ConfirmDialog = &components.ConfirmDialog{
+		Title:  "Test",
+		Action: "stopAll",
+		Active: true,
+	}
+
+	result := components.ConfirmResultMsg{
+		Action: "stopAll",
+		Result: components.ConfirmNo,
+	}
+	m2, cmd := m.handleConfirmResult(result)
+	got := m2.(Model)
+	if got.ConfirmDialog != nil {
+		t.Error("ConfirmDialog should be nil after No")
+	}
+	if cmd != nil {
+		t.Error("No result should return nil cmd")
+	}
+}
+
+func TestHandleConfirmResult_StopAll(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Ctx = context.Background()
+	m.ConfirmDialog = &components.ConfirmDialog{
+		Title:  "Test",
+		Action: "stopAll",
+		Active: true,
+	}
+
+	result := components.ConfirmResultMsg{
+		Action: "stopAll",
+		Result: components.ConfirmYes,
+	}
+	m2, _ := m.handleConfirmResult(result)
+	got := m2.(Model)
+	if got.ConfirmDialog != nil {
+		t.Error("ConfirmDialog should be nil after confirm stopAll")
+	}
+}
+
+// --- handleActionResult tests ---
+
+func TestHandleActionResult_Scan(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+
+	result := components.ActionResultMsg{Action: "scan"}
+	m2, cmd := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("ActionMenu should be nil after action result")
+	}
+	if cmd == nil {
+		t.Error("scan action should produce a command")
+	}
+}
+
+func TestHandleActionResult_StopAll(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+
+	result := components.ActionResultMsg{Action: "stopAll"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("ActionMenu should be nil after action result")
+	}
+	if got.ConfirmDialog == nil {
+		t.Error("stopAll action should show confirm dialog")
+	}
+}
+
+// --- handleLaunchResult tests ---
+
+func TestHandleLaunchResult_EmptyPrompt(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Launcher = &components.SessionLauncher{}
+
+	result := components.LaunchResultMsg{Prompt: ""}
+	m2, cmd := m.handleLaunchResult(result)
+	got := m2.(Model)
+	if got.Launcher != nil {
+		t.Error("Launcher should be nil after empty prompt")
+	}
+	if cmd != nil {
+		t.Error("empty prompt should return nil cmd")
+	}
+	if !got.Notify.Active() {
+		t.Error("empty prompt should show notification")
+	}
+}
+
+func TestHandleLaunchResult_NilSessMgr(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.SessMgr = nil
+	m.Launcher = &components.SessionLauncher{}
+
+	result := components.LaunchResultMsg{
+		Prompt:   "fix the bug",
+		Provider: "claude",
+		RepoPath: "/tmp/test",
+	}
+	m2, cmd := m.handleLaunchResult(result)
+	got := m2.(Model)
+	if got.Launcher != nil {
+		t.Error("Launcher should be nil after result")
+	}
+	if cmd != nil {
+		t.Error("nil SessMgr should return nil cmd")
+	}
+	if !got.Notify.Active() {
+		t.Error("nil SessMgr should show notification")
+	}
+}
+
+// --- streamSessionOutput tests ---
+
+func TestStreamSessionOutput_NilSessMgr(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.SessMgr = nil
+	cmd := m.streamSessionOutput("test-id")
+	msg := cmd()
+	if done, ok := msg.(SessionOutputDoneMsg); !ok {
+		t.Errorf("expected SessionOutputDoneMsg, got %T", msg)
+	} else if done.SessionID != "test-id" {
+		t.Errorf("SessionID = %q, want %q", done.SessionID, "test-id")
+	}
+}
+
+// --- Integration: command input flow through handleCommandInput into execCommand ---
+
+func TestCommandInputFlow_QuitViaEnter(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Ctx = context.Background()
+	m.InputMode = ModeCommand
+	m.CommandBuf = "q"
+
+	m2, cmd := m.handleCommandInput(tea.KeyMsg{Type: tea.KeyEnter})
+	got := m2.(Model)
+	if got.InputMode != ModeNormal {
+		t.Errorf("InputMode = %d, want ModeNormal", got.InputMode)
+	}
+	if cmd == nil {
+		t.Error("entering 'q' command should produce quit cmd")
+	}
+}
+
+func TestCommandInputFlow_TabSwitch(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.InputMode = ModeCommand
+	m.CommandBuf = "fleet"
+
+	m2, _ := m.handleCommandInput(tea.KeyMsg{Type: tea.KeyEnter})
+	got := m2.(Model)
+	if got.CurrentView != ViewFleet {
+		t.Errorf("CurrentView = %v, want ViewFleet", got.CurrentView)
+	}
+}
