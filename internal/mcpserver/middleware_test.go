@@ -61,7 +61,7 @@ func TestInstrumentationMiddleware_Error(t *testing.T) {
 	mw := InstrumentationMiddleware(rec)
 
 	errHandler := func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return errResult("something broke"), nil
+		return codedError(ErrInternal, "something broke"), nil
 	}
 	wrapped := mw(errHandler)
 
