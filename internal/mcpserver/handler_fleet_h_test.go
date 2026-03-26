@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/blackboard"
 )
 
 // --- handleBlackboardQuery ---
@@ -129,6 +131,144 @@ func TestHandleCostForecast_NilCostPredictor(t *testing.T) {
 	}
 	if !strings.Contains(text, "cost predictor not initialized") {
 		t.Errorf("expected 'cost predictor not initialized' in result, got: %s", text)
+	}
+}
+
+// --- handleBlackboardQuery with real blackboard ---
+
+func TestHandleBlackboardQuery_WithBlackboard_MissingNamespace(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	srv.Blackboard = blackboard.NewBlackboard(t.TempDir())
+
+	result, err := srv.handleBlackboardQuery(context.Background(), makeRequest(map[string]any{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertErrorCode(t, "handleBlackboardQuery", result, "INVALID_PARAMS")
+}
+
+func TestHandleBlackboardQuery_WithBlackboard_ValidNamespace(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	srv.Blackboard = blackboard.NewBlackboard(t.TempDir())
+
+	result, err := srv.handleBlackboardQuery(context.Background(), makeRequest(map[string]any{
+		"namespace": "test-ns",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "test-ns") {
+		t.Errorf("expected namespace in result, got: %s", text)
+	}
+	if !strings.Contains(text, `"count":0`) {
+		t.Errorf("expected count 0 for empty namespace, got: %s", text)
+	}
+}
+
+// --- handleBlackboardPut with real blackboard ---
+
+func TestHandleBlackboardPut_WithBlackboard_MissingNamespace(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	srv.Blackboard = blackboard.NewBlackboard(t.TempDir())
+
+	result, err := srv.handleBlackboardPut(context.Background(), makeRequest(map[string]any{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertErrorCode(t, "handleBlackboardPut", result, "INVALID_PARAMS")
+}
+
+func TestHandleBlackboardPut_WithBlackboard_MissingKey(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	srv.Blackboard = blackboard.NewBlackboard(t.TempDir())
+
+	result, err := srv.handleBlackboardPut(context.Background(), makeRequest(map[string]any{
+		"namespace": "test-ns",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertErrorCode(t, "handleBlackboardPut", result, "INVALID_PARAMS")
+}
+
+func TestHandleBlackboardPut_WithBlackboard_MissingValue(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	srv.Blackboard = blackboard.NewBlackboard(t.TempDir())
+
+	result, err := srv.handleBlackboardPut(context.Background(), makeRequest(map[string]any{
+		"namespace": "test-ns",
+		"key":       "k1",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertErrorCode(t, "handleBlackboardPut", result, "INVALID_PARAMS")
+}
+
+func TestHandleBlackboardPut_WithBlackboard_InvalidJSON(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	srv.Blackboard = blackboard.NewBlackboard(t.TempDir())
+
+	result, err := srv.handleBlackboardPut(context.Background(), makeRequest(map[string]any{
+		"namespace": "test-ns",
+		"key":       "k1",
+		"value":     "not valid json{{{",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertErrorCode(t, "handleBlackboardPut", result, "INVALID_PARAMS")
+}
+
+func TestHandleBlackboardPut_WithBlackboard_ValidPut(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	srv.Blackboard = blackboard.NewBlackboard(t.TempDir())
+
+	result, err := srv.handleBlackboardPut(context.Background(), makeRequest(map[string]any{
+		"namespace": "test-ns",
+		"key":       "k1",
+		"value":     `{"foo":"bar"}`,
+		"writer_id": "test-writer",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "test-ns") {
+		t.Errorf("expected namespace in result, got: %s", text)
+	}
+}
+
+func TestHandleBlackboardPut_WithBlackboard_WithTTL(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	srv.Blackboard = blackboard.NewBlackboard(t.TempDir())
+
+	result, err := srv.handleBlackboardPut(context.Background(), makeRequest(map[string]any{
+		"namespace":   "test-ns",
+		"key":         "k2",
+		"value":       `{"temp":true}`,
+		"ttl_seconds": float64(60),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
 	}
 }
 
