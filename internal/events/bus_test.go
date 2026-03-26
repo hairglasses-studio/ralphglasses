@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -917,6 +918,96 @@ func TestCloseFlushes(t *testing.T) {
 	}
 	if len(events) != total {
 		t.Fatalf("expected %d persisted events after close, got %d", total, len(events))
+	}
+}
+
+func TestSubscribeFiltered_ReceivesMatchingEvents(t *testing.T) {
+	bus := NewBus(100)
+	ch := bus.SubscribeFiltered("f-match", LoopStarted)
+
+	bus.Publish(Event{Type: LoopStarted, RepoName: "yes"})
+	bus.Publish(Event{Type: LoopStopped, RepoName: "no"})
+
+	select {
+	case e := <-ch:
+		if e.Type != LoopStarted {
+			t.Errorf("type = %q, want %q", e.Type, LoopStarted)
+		}
+		if e.RepoName != "yes" {
+			t.Errorf("repo = %q, want yes", e.RepoName)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for matching event")
+	}
+
+	// LoopStopped should not appear
+	select {
+	case e := <-ch:
+		t.Errorf("unexpected event: %+v", e)
+	case <-time.After(50 * time.Millisecond):
+		// expected
+	}
+}
+
+func TestSubscribeFiltered_NoMatch(t *testing.T) {
+	bus := NewBus(100)
+	ch := bus.SubscribeFiltered("f-nomatch", LoopStarted)
+
+	bus.Publish(Event{Type: LoopStopped, RepoName: "nope"})
+	bus.Publish(Event{Type: SessionStarted, RepoName: "nope2"})
+	bus.Publish(Event{Type: CostUpdate, RepoName: "nope3"})
+
+	select {
+	case e := <-ch:
+		t.Errorf("expected no events, got: %+v", e)
+	case <-time.After(100 * time.Millisecond):
+		// expected — nothing matched
+	}
+}
+
+func TestSubscribeFiltered_ConcurrentPublish(t *testing.T) {
+	bus := NewBus(10000)
+	ch := bus.SubscribeFiltered("f-concurrent", LoopStarted)
+
+	const goroutines = 10
+	const eventsPerGoroutine = 100
+
+	// Drain the channel concurrently to avoid overflow drops
+	var received int64
+	drainDone := make(chan struct{})
+	go func() {
+		defer close(drainDone)
+		for e := range ch {
+			if e.Type != LoopStarted {
+				t.Errorf("filtered subscriber received wrong type: %q", e.Type)
+			}
+			atomic.AddInt64(&received, 1)
+		}
+	}()
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for g := 0; g < goroutines; g++ {
+		go func() {
+			defer wg.Done()
+			for i := 0; i < eventsPerGoroutine; i++ {
+				// Alternate between matching and non-matching types
+				bus.Publish(Event{Type: LoopStarted, RepoName: "match"})
+				bus.Publish(Event{Type: LoopStopped, RepoName: "skip"})
+			}
+		}()
+	}
+	wg.Wait()
+
+	// Allow drain goroutine to finish processing buffered events
+	time.Sleep(100 * time.Millisecond)
+	bus.Unsubscribe("f-concurrent") // closes channel, terminates drain goroutine
+	<-drainDone
+
+	expectedMatches := int64(goroutines * eventsPerGoroutine)
+	got := atomic.LoadInt64(&received)
+	if got != expectedMatches {
+		t.Errorf("received %d events, want %d", got, expectedMatches)
 	}
 }
 
