@@ -17,205 +17,350 @@ import (
 
 // --- View-specific key handlers ---
 
-func (m Model) handleOverviewKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		m.Table.MoveDown()
-	case key.Matches(msg, m.Keys.Up):
-		m.Table.MoveUp()
-	case key.Matches(msg, m.Keys.Sort):
-		m.Table.CycleSort()
-	case key.Matches(msg, m.Keys.Enter):
-		row := m.Table.SelectedRow()
-		if row != nil {
-			m.SelectedIdx = m.findRepoByName(row[0])
-			if m.SelectedIdx >= 0 {
-				m.pushView(ViewRepoDetail, m.Repos[m.SelectedIdx].Name)
-			}
-		}
-	case key.Matches(msg, m.Keys.StartLoop):
-		return m.startSelectedLoop()
-	case key.Matches(msg, m.Keys.StopAction):
-		return m.stopSelectedLoop()
-	case key.Matches(msg, m.Keys.PauseLoop):
-		return m.togglePauseSelected()
-	case key.Matches(msg, m.Keys.Space):
-		m.Table.ToggleSelect()
-	case key.Matches(msg, m.Keys.ActionsMenu):
-		m.ActionMenu = &components.ActionMenu{
-			Title:  "Actions",
-			Items:  components.OverviewActions(),
-			Active: true,
-			Width:  35,
+// ViewKeyEntry pairs a key matcher with a handler for table-driven dispatch.
+type ViewKeyEntry struct {
+	Match   func(m Model, msg tea.KeyMsg) bool
+	Handler func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd)
+}
+
+// dispatchViewKeys iterates entries and invokes the first matching handler.
+// Returns (m, nil) when no entry matches, preserving original switch semantics.
+func dispatchViewKeys(m Model, msg tea.KeyMsg, entries []ViewKeyEntry) (tea.Model, tea.Cmd) {
+	for _, e := range entries {
+		if e.Match(m, msg) {
+			return e.Handler(m, msg)
 		}
 	}
 	return m, nil
+}
+
+var overviewKeys = []ViewKeyEntry{
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Down) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.Table.MoveDown(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Up) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.Table.MoveUp(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Sort) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.Table.CycleSort(); return m, nil },
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Enter) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			row := m.Table.SelectedRow()
+			if row != nil {
+				m.SelectedIdx = m.findRepoByName(row[0])
+				if m.SelectedIdx >= 0 {
+					m.pushView(ViewRepoDetail, m.Repos[m.SelectedIdx].Name)
+				}
+			}
+			return m, nil
+		},
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.StartLoop) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { return m.startSelectedLoop() },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.StopAction) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { return m.stopSelectedLoop() },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.PauseLoop) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { return m.togglePauseSelected() },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Space) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.Table.ToggleSelect(); return m, nil },
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.ActionsMenu) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.ActionMenu = &components.ActionMenu{
+				Title:  "Actions",
+				Items:  components.OverviewActions(),
+				Active: true,
+				Width:  35,
+			}
+			return m, nil
+		},
+	},
+}
+
+var detailKeys = []ViewKeyEntry{
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Enter) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.LogOffset = 0
+			m.LogView = views.NewLogView()
+			m.LogView.SetDimensions(m.Width, m.Height)
+			lines, _ := process.ReadFullLog(m.Repos[m.SelectedIdx].Path)
+			m.LogView.SetLines(lines)
+			m.pushView(ViewLogs, "Logs")
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.EditConfig) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			repo := m.Repos[m.SelectedIdx]
+			if repo.Config != nil {
+				m.ConfigEdit = views.NewConfigEditor(repo.Config)
+				m.ConfigEdit.Height = m.Height
+				m.pushView(ViewConfigEditor, "Config")
+			} else {
+				m.Notify.Show("No .ralphrc found", 3*time.Second)
+			}
+			return m, nil
+		},
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.StartLoop) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { return m.startLoop(m.SelectedIdx) },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.StopAction) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { return m.stopLoop(m.SelectedIdx) },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.PauseLoop) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { return m.togglePause(m.SelectedIdx) },
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.DiffView) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.pushView(ViewDiff, "Diff")
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.ActionsMenu) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.ActionMenu = &components.ActionMenu{
+				Title:  "Repo Actions",
+				Items:  components.RepoDetailActions(),
+				Active: true,
+				Width:  35,
+			}
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.LaunchSession) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			repo := m.Repos[m.SelectedIdx]
+			m.Launcher = components.NewSessionLauncher(repo.Path, repo.Name)
+			m.Launcher.Width = m.Width
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.TimelineView) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.pushView(ViewTimeline, "Timeline")
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.LoopHealth) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.pushView(ViewLoopHealth, "Loop Health")
+			return m, nil
+		},
+	},
+}
+
+var logKeys = []ViewKeyEntry{
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Down) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.LogView.ScrollDown(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Up) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.LogView.ScrollUp(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.GotoEnd) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.LogView.ScrollToEnd(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.GotoStart) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.LogView.ScrollToStart(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.FollowToggle) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.LogView.ToggleFollow(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.PageUp) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.LogView.PageUp(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.PageDown) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.LogView.PageDown(); return m, nil },
+	},
+}
+
+var configKeys = []ViewKeyEntry{
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Down) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.ConfigEdit.MoveDown(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Up) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.ConfigEdit.MoveUp(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Enter) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.ConfigEdit.StartEdit(); return m, nil },
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.WriteConfig) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if err := m.ConfigEdit.Save(); err != nil {
+				m.Notify.Show(fmt.Sprintf("Save error: %v", err), 3*time.Second)
+			} else {
+				m.Notify.Show("Config saved", 2*time.Second)
+			}
+			return m, nil
+		},
+	},
+}
+
+var configEditInputKeys = []ViewKeyEntry{
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Enter) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.ConfigEdit.ConfirmEdit(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Escape) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.ConfigEdit.CancelEdit(); return m, nil },
+	},
+	{
+		Match:   func(_ Model, msg tea.KeyMsg) bool { return msg.Type == tea.KeyBackspace },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.ConfigEdit.Backspace(); return m, nil },
+	},
+	{
+		Match: func(_ Model, msg tea.KeyMsg) bool { return len(msg.Runes) == 1 },
+		Handler: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.ConfigEdit.TypeChar(msg.Runes[0])
+			return m, nil
+		},
+	},
+}
+
+var commandInputKeys = []ViewKeyEntry{
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Enter) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			cmd := ParseCommand(m.CommandBuf)
+			m.InputMode = ModeNormal
+			m.CommandBuf = ""
+			return m.execCommand(cmd)
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Escape) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.InputMode = ModeNormal
+			m.CommandBuf = ""
+			return m, nil
+		},
+	},
+	{
+		Match: func(_ Model, msg tea.KeyMsg) bool { return msg.Type == tea.KeyBackspace },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if len(m.CommandBuf) > 0 {
+				m.CommandBuf = m.CommandBuf[:len(m.CommandBuf)-1]
+			}
+			return m, nil
+		},
+	},
+	{
+		Match: func(_ Model, msg tea.KeyMsg) bool { return len(msg.Runes) == 1 },
+		Handler: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.CommandBuf += string(msg.Runes[0])
+			return m, nil
+		},
+	},
+}
+
+var filterInputKeys = []ViewKeyEntry{
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Enter) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.InputMode = ModeNormal
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Escape) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.InputMode = ModeNormal
+			m.Filter.Clear()
+			if tbl := m.activeTable(); tbl != nil {
+				tbl.SetFilter("")
+			}
+			return m, nil
+		},
+	},
+	{
+		Match: func(_ Model, msg tea.KeyMsg) bool { return msg.Type == tea.KeyBackspace },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.Filter.Backspace()
+			if tbl := m.activeTable(); tbl != nil {
+				tbl.SetFilter(m.Filter.Text)
+			}
+			return m, nil
+		},
+	},
+	{
+		Match: func(_ Model, msg tea.KeyMsg) bool { return len(msg.Runes) == 1 },
+		Handler: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.Filter.Type(msg.Runes[0])
+			if tbl := m.activeTable(); tbl != nil {
+				tbl.SetFilter(m.Filter.Text)
+			}
+			return m, nil
+		},
+	},
+}
+
+func (m Model) handleOverviewKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	return dispatchViewKeys(m, msg, overviewKeys)
 }
 
 func (m Model) handleDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.SelectedIdx < 0 || m.SelectedIdx >= len(m.Repos) {
 		return m, nil
 	}
-	switch {
-	case key.Matches(msg, m.Keys.Enter):
-		m.LogOffset = 0
-		m.LogView = views.NewLogView()
-		m.LogView.SetDimensions(m.Width, m.Height)
-		lines, _ := process.ReadFullLog(m.Repos[m.SelectedIdx].Path)
-		m.LogView.SetLines(lines)
-		m.pushView(ViewLogs, "Logs")
-		return m, nil
-	case key.Matches(msg, m.Keys.EditConfig):
-		repo := m.Repos[m.SelectedIdx]
-		if repo.Config != nil {
-			m.ConfigEdit = views.NewConfigEditor(repo.Config)
-			m.ConfigEdit.Height = m.Height
-			m.pushView(ViewConfigEditor, "Config")
-		} else {
-			m.Notify.Show("No .ralphrc found", 3*time.Second)
-		}
-		return m, nil
-	case key.Matches(msg, m.Keys.StartLoop):
-		return m.startLoop(m.SelectedIdx)
-	case key.Matches(msg, m.Keys.StopAction):
-		return m.stopLoop(m.SelectedIdx)
-	case key.Matches(msg, m.Keys.PauseLoop):
-		return m.togglePause(m.SelectedIdx)
-	case key.Matches(msg, m.Keys.DiffView):
-		m.pushView(ViewDiff, "Diff")
-		return m, nil
-	case key.Matches(msg, m.Keys.ActionsMenu):
-		m.ActionMenu = &components.ActionMenu{
-			Title:  "Repo Actions",
-			Items:  components.RepoDetailActions(),
-			Active: true,
-			Width:  35,
-		}
-		return m, nil
-	case key.Matches(msg, m.Keys.LaunchSession):
-		repo := m.Repos[m.SelectedIdx]
-		m.Launcher = components.NewSessionLauncher(repo.Path, repo.Name)
-		m.Launcher.Width = m.Width
-		return m, nil
-	case key.Matches(msg, m.Keys.TimelineView):
-		m.pushView(ViewTimeline, "Timeline")
-		return m, nil
-	case key.Matches(msg, m.Keys.LoopHealth):
-		m.pushView(ViewLoopHealth, "Loop Health")
-		return m, nil
-	}
-	return m, nil
+	return dispatchViewKeys(m, msg, detailKeys)
 }
 
 func (m Model) handleLogKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		m.LogView.ScrollDown()
-	case key.Matches(msg, m.Keys.Up):
-		m.LogView.ScrollUp()
-	case key.Matches(msg, m.Keys.GotoEnd):
-		m.LogView.ScrollToEnd()
-	case key.Matches(msg, m.Keys.GotoStart):
-		m.LogView.ScrollToStart()
-	case key.Matches(msg, m.Keys.FollowToggle):
-		m.LogView.ToggleFollow()
-	case key.Matches(msg, m.Keys.PageUp):
-		m.LogView.PageUp()
-	case key.Matches(msg, m.Keys.PageDown):
-		m.LogView.PageDown()
-	}
-	return m, nil
+	return dispatchViewKeys(m, msg, logKeys)
 }
 
 func (m Model) handleConfigKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.ConfigEdit == nil {
 		return m, nil
 	}
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		m.ConfigEdit.MoveDown()
-	case key.Matches(msg, m.Keys.Up):
-		m.ConfigEdit.MoveUp()
-	case key.Matches(msg, m.Keys.Enter):
-		m.ConfigEdit.StartEdit()
-	case key.Matches(msg, m.Keys.WriteConfig):
-		if err := m.ConfigEdit.Save(); err != nil {
-			m.Notify.Show(fmt.Sprintf("Save error: %v", err), 3*time.Second)
-		} else {
-			m.Notify.Show("Config saved", 2*time.Second)
-		}
-	}
-	return m, nil
+	return dispatchViewKeys(m, msg, configKeys)
 }
 
 func (m Model) handleConfigEditInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Enter):
-		m.ConfigEdit.ConfirmEdit()
-	case key.Matches(msg, m.Keys.Escape):
-		m.ConfigEdit.CancelEdit()
-	case msg.Type == tea.KeyBackspace:
-		m.ConfigEdit.Backspace()
-	default:
-		if len(msg.Runes) == 1 {
-			m.ConfigEdit.TypeChar(msg.Runes[0])
-		}
-	}
-	return m, nil
+	return dispatchViewKeys(m, msg, configEditInputKeys)
 }
 
 func (m Model) handleCommandInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Enter):
-		cmd := ParseCommand(m.CommandBuf)
-		m.InputMode = ModeNormal
-		m.CommandBuf = ""
-		return m.execCommand(cmd)
-	case key.Matches(msg, m.Keys.Escape):
-		m.InputMode = ModeNormal
-		m.CommandBuf = ""
-		return m, nil
-	case msg.Type == tea.KeyBackspace:
-		if len(m.CommandBuf) > 0 {
-			m.CommandBuf = m.CommandBuf[:len(m.CommandBuf)-1]
-		}
-		return m, nil
-	default:
-		if len(msg.Runes) == 1 {
-			m.CommandBuf += string(msg.Runes[0])
-		}
-		return m, nil
-	}
+	return dispatchViewKeys(m, msg, commandInputKeys)
 }
 
 func (m Model) handleFilterInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	tbl := m.activeTable()
-	switch {
-	case key.Matches(msg, m.Keys.Enter):
-		m.InputMode = ModeNormal
-		return m, nil
-	case key.Matches(msg, m.Keys.Escape):
-		m.InputMode = ModeNormal
-		m.Filter.Clear()
-		if tbl != nil {
-			tbl.SetFilter("")
-		}
-		return m, nil
-	case msg.Type == tea.KeyBackspace:
-		m.Filter.Backspace()
-		if tbl != nil {
-			tbl.SetFilter(m.Filter.Text)
-		}
-		return m, nil
-	default:
-		if len(msg.Runes) == 1 {
-			m.Filter.Type(msg.Runes[0])
-			if tbl != nil {
-				tbl.SetFilter(m.Filter.Text)
-			}
-		}
-		return m, nil
-	}
+	return dispatchViewKeys(m, msg, filterInputKeys)
 }
 
 func (m Model) execCommand(cmd Command) (tea.Model, tea.Cmd) {
@@ -418,161 +563,206 @@ func handleLoopListPause(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return *m, nil
 }
 
-func (m Model) handleLoopListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		m.LoopListTable.MoveDown()
-	case key.Matches(msg, m.Keys.Up):
-		m.LoopListTable.MoveUp()
-	case key.Matches(msg, m.Keys.Enter):
-		if m.LoopListTable == nil {
-			return m, nil
-		}
-		row := m.LoopListTable.SelectedRow()
-		if row == nil {
-			return m, nil
-		}
-		prefix := row[0]
-		if m.SessMgr != nil {
-			for _, l := range m.SessMgr.ListLoops() {
-				l.Lock()
-				id := l.ID
-				l.Unlock()
-				if strings.HasPrefix(id, prefix) {
-					m.SelectedLoop = id
-					break
+var loopListKeys = []ViewKeyEntry{
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Down) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.LoopListTable.MoveDown(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Up) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.LoopListTable.MoveUp(); return m, nil },
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Enter) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if m.LoopListTable == nil {
+				return m, nil
+			}
+			row := m.LoopListTable.SelectedRow()
+			if row == nil {
+				return m, nil
+			}
+			prefix := row[0]
+			if m.SessMgr != nil {
+				for _, l := range m.SessMgr.ListLoops() {
+					l.Lock()
+					id := l.ID
+					l.Unlock()
+					if strings.HasPrefix(id, prefix) {
+						m.SelectedLoop = id
+						break
+					}
 				}
 			}
-		}
-		if m.SelectedLoop != "" {
-			m.pushView(ViewLoopDetail, "Loop Detail")
-		}
-		return m, nil
-	}
-	return m, nil
+			if m.SelectedLoop != "" {
+				m.pushView(ViewLoopDetail, "Loop Detail")
+			}
+			return m, nil
+		},
+	},
+}
+
+var loopControlKeys = []ViewKeyEntry{
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Down) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if m.LoopControlIdx < len(m.LoopControlData)-1 {
+				m.LoopControlIdx++
+			}
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Up) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if m.LoopControlIdx > 0 {
+				m.LoopControlIdx--
+			}
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.LoopCtrlStep) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if m.SessMgr == nil || len(m.LoopControlData) == 0 {
+				return m, nil
+			}
+			loopID := m.LoopControlData[m.LoopControlIdx].ID
+			sessMgr := m.SessMgr
+			return m, func() tea.Msg {
+				err := sessMgr.StepLoop(context.Background(), loopID)
+				return LoopStepResultMsg{LoopID: loopID, Err: err}
+			}
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.LoopCtrlToggle) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if m.SessMgr == nil || len(m.LoopControlData) == 0 {
+				return m, nil
+			}
+			d := m.LoopControlData[m.LoopControlIdx]
+			sessMgr := m.SessMgr
+			if d.Status == "running" {
+				return m, func() tea.Msg {
+					err := sessMgr.StopLoop(d.ID)
+					return LoopToggleResultMsg{LoopID: d.ID, Started: false, Err: err}
+				}
+			}
+			l, ok := sessMgr.GetLoop(d.ID)
+			if !ok {
+				m.Notify.Show("Loop not found", 3*time.Second)
+				return m, nil
+			}
+			l.Lock()
+			repoPath := l.RepoPath
+			l.Unlock()
+			return m, func() tea.Msg {
+				_, err := sessMgr.StartLoop(context.Background(), repoPath, session.DefaultLoopProfile())
+				return LoopToggleResultMsg{LoopID: d.ID, Started: true, Err: err}
+			}
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.LoopCtrlPause) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if m.SessMgr == nil || len(m.LoopControlData) == 0 {
+				return m, nil
+			}
+			d := m.LoopControlData[m.LoopControlIdx]
+			sessMgr := m.SessMgr
+			if d.Paused {
+				return m, func() tea.Msg {
+					err := sessMgr.ResumeLoop(d.ID)
+					return LoopPauseResultMsg{LoopID: d.ID, Paused: false, Err: err}
+				}
+			}
+			return m, func() tea.Msg {
+				err := sessMgr.PauseLoop(d.ID)
+				return LoopPauseResultMsg{LoopID: d.ID, Paused: true, Err: err}
+			}
+		},
+	},
+}
+
+var loopDetailKeys = []ViewKeyEntry{
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.LoopDetailStep) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			loopID := m.SelectedLoop
+			sessMgr := m.SessMgr
+			return m, func() tea.Msg {
+				err := sessMgr.StepLoop(context.Background(), loopID)
+				return LoopStepResultMsg{LoopID: loopID, Err: err}
+			}
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.LoopDetailToggle) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			loopID := m.SelectedLoop
+			sessMgr := m.SessMgr
+			l, ok := sessMgr.GetLoop(loopID)
+			if !ok {
+				m.Notify.Show("Loop not found", 3*time.Second)
+				return m, nil
+			}
+			l.Lock()
+			status := l.Status
+			repoPath := l.RepoPath
+			l.Unlock()
+			if status == "running" {
+				return m, func() tea.Msg {
+					err := sessMgr.StopLoop(loopID)
+					return LoopToggleResultMsg{LoopID: loopID, Started: false, Err: err}
+				}
+			}
+			return m, func() tea.Msg {
+				_, err := sessMgr.StartLoop(context.Background(), repoPath, session.DefaultLoopProfile())
+				return LoopToggleResultMsg{LoopID: loopID, Started: true, Err: err}
+			}
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.LoopDetailPause) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			loopID := m.SelectedLoop
+			sessMgr := m.SessMgr
+			l, ok := sessMgr.GetLoop(loopID)
+			if !ok {
+				m.Notify.Show("Loop not found", 3*time.Second)
+				return m, nil
+			}
+			l.Lock()
+			paused := l.Paused
+			l.Unlock()
+			if paused {
+				return m, func() tea.Msg {
+					err := sessMgr.ResumeLoop(loopID)
+					return LoopPauseResultMsg{LoopID: loopID, Paused: false, Err: err}
+				}
+			}
+			return m, func() tea.Msg {
+				err := sessMgr.PauseLoop(loopID)
+				return LoopPauseResultMsg{LoopID: loopID, Paused: true, Err: err}
+			}
+		},
+	},
+}
+
+func (m Model) handleLoopListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	return dispatchViewKeys(m, msg, loopListKeys)
 }
 
 func (m Model) handleLoopControlKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		if m.LoopControlIdx < len(m.LoopControlData)-1 {
-			m.LoopControlIdx++
-		}
-	case key.Matches(msg, m.Keys.Up):
-		if m.LoopControlIdx > 0 {
-			m.LoopControlIdx--
-		}
-	case key.Matches(msg, m.Keys.LoopCtrlStep):
-		if m.SessMgr == nil || len(m.LoopControlData) == 0 {
-			return m, nil
-		}
-		loopID := m.LoopControlData[m.LoopControlIdx].ID
-		sessMgr := m.SessMgr
-		return m, func() tea.Msg {
-			err := sessMgr.StepLoop(context.Background(), loopID)
-			return LoopStepResultMsg{LoopID: loopID, Err: err}
-		}
-	case key.Matches(msg, m.Keys.LoopCtrlToggle):
-		if m.SessMgr == nil || len(m.LoopControlData) == 0 {
-			return m, nil
-		}
-		d := m.LoopControlData[m.LoopControlIdx]
-		sessMgr := m.SessMgr
-		if d.Status == "running" {
-			return m, func() tea.Msg {
-				err := sessMgr.StopLoop(d.ID)
-				return LoopToggleResultMsg{LoopID: d.ID, Started: false, Err: err}
-			}
-		}
-		l, ok := sessMgr.GetLoop(d.ID)
-		if !ok {
-			m.Notify.Show("Loop not found", 3*time.Second)
-			return m, nil
-		}
-		l.Lock()
-		repoPath := l.RepoPath
-		l.Unlock()
-		return m, func() tea.Msg {
-			_, err := sessMgr.StartLoop(context.Background(), repoPath, session.DefaultLoopProfile())
-			return LoopToggleResultMsg{LoopID: d.ID, Started: true, Err: err}
-		}
-	case key.Matches(msg, m.Keys.LoopCtrlPause):
-		if m.SessMgr == nil || len(m.LoopControlData) == 0 {
-			return m, nil
-		}
-		d := m.LoopControlData[m.LoopControlIdx]
-		sessMgr := m.SessMgr
-		if d.Paused {
-			return m, func() tea.Msg {
-				err := sessMgr.ResumeLoop(d.ID)
-				return LoopPauseResultMsg{LoopID: d.ID, Paused: false, Err: err}
-			}
-		}
-		return m, func() tea.Msg {
-			err := sessMgr.PauseLoop(d.ID)
-			return LoopPauseResultMsg{LoopID: d.ID, Paused: true, Err: err}
-		}
-	}
-	return m, nil
+	return dispatchViewKeys(m, msg, loopControlKeys)
 }
 
 func (m Model) handleLoopDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.SessMgr == nil || m.SelectedLoop == "" {
 		return m, nil
 	}
-	switch {
-	case key.Matches(msg, m.Keys.LoopDetailStep):
-		loopID := m.SelectedLoop
-		sessMgr := m.SessMgr
-		return m, func() tea.Msg {
-			err := sessMgr.StepLoop(context.Background(), loopID)
-			return LoopStepResultMsg{LoopID: loopID, Err: err}
-		}
-	case key.Matches(msg, m.Keys.LoopDetailToggle):
-		loopID := m.SelectedLoop
-		sessMgr := m.SessMgr
-		l, ok := sessMgr.GetLoop(loopID)
-		if !ok {
-			m.Notify.Show("Loop not found", 3*time.Second)
-			return m, nil
-		}
-		l.Lock()
-		status := l.Status
-		repoPath := l.RepoPath
-		l.Unlock()
-		if status == "running" {
-			return m, func() tea.Msg {
-				err := sessMgr.StopLoop(loopID)
-				return LoopToggleResultMsg{LoopID: loopID, Started: false, Err: err}
-			}
-		}
-		return m, func() tea.Msg {
-			_, err := sessMgr.StartLoop(context.Background(), repoPath, session.DefaultLoopProfile())
-			return LoopToggleResultMsg{LoopID: loopID, Started: true, Err: err}
-		}
-	case key.Matches(msg, m.Keys.LoopDetailPause):
-		loopID := m.SelectedLoop
-		sessMgr := m.SessMgr
-		l, ok := sessMgr.GetLoop(loopID)
-		if !ok {
-			m.Notify.Show("Loop not found", 3*time.Second)
-			return m, nil
-		}
-		l.Lock()
-		paused := l.Paused
-		l.Unlock()
-		if paused {
-			return m, func() tea.Msg {
-				err := sessMgr.ResumeLoop(loopID)
-				return LoopPauseResultMsg{LoopID: loopID, Paused: false, Err: err}
-			}
-		}
-		return m, func() tea.Msg {
-			err := sessMgr.PauseLoop(loopID)
-			return LoopPauseResultMsg{LoopID: loopID, Paused: true, Err: err}
-		}
-	}
-	return m, nil
+	return dispatchViewKeys(m, msg, loopDetailKeys)
 }
 
 // truncateID shortens an ID to 8 characters for display.
@@ -585,176 +775,294 @@ func truncateID(id string) string {
 
 // --- Session view key handlers ---
 
-func (m Model) handleSessionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		m.SessionTable.MoveDown()
-	case key.Matches(msg, m.Keys.Up):
-		m.SessionTable.MoveUp()
-	case key.Matches(msg, m.Keys.Sort):
-		m.SessionTable.CycleSort()
-	case key.Matches(msg, m.Keys.Enter):
-		row := m.SessionTable.SelectedRow()
-		if row != nil {
-			m.SelectedSession = m.findFullSessionID(row[0])
-			if m.SelectedSession != "" {
-				m.pushView(ViewSessionDetail, row[0])
-			}
-		}
-	case key.Matches(msg, m.Keys.StopAction):
-		row := m.SessionTable.SelectedRow()
-		if row != nil {
-			fullID := m.findFullSessionID(row[0])
-			if fullID != "" && m.SessMgr != nil {
-				if err := m.SessMgr.Stop(fullID); err != nil {
-					m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
-				} else {
-					m.Notify.Show(fmt.Sprintf("Stopped session %s", row[0]), 3*time.Second)
+var sessionsKeys = []ViewKeyEntry{
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Down) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.SessionTable.MoveDown(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Up) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.SessionTable.MoveUp(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Sort) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.SessionTable.CycleSort(); return m, nil },
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Enter) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			row := m.SessionTable.SelectedRow()
+			if row != nil {
+				m.SelectedSession = m.findFullSessionID(row[0])
+				if m.SelectedSession != "" {
+					m.pushView(ViewSessionDetail, row[0])
 				}
 			}
-		}
-	case key.Matches(msg, m.Keys.Space):
-		m.SessionTable.ToggleSelect()
-	case key.Matches(msg, m.Keys.TimelineView):
-		m.pushView(ViewTimeline, "Timeline")
-	}
-	return m, nil
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.StopAction) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			row := m.SessionTable.SelectedRow()
+			if row != nil {
+				fullID := m.findFullSessionID(row[0])
+				if fullID != "" && m.SessMgr != nil {
+					if err := m.SessMgr.Stop(fullID); err != nil {
+						m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
+					} else {
+						m.Notify.Show(fmt.Sprintf("Stopped session %s", row[0]), 3*time.Second)
+					}
+				}
+			}
+			return m, nil
+		},
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Space) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.SessionTable.ToggleSelect(); return m, nil },
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.TimelineView) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.pushView(ViewTimeline, "Timeline")
+			return m, nil
+		},
+	},
+}
+
+var sessionDetailKeys = []ViewKeyEntry{
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.StopAction) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if m.SelectedSession != "" && m.SessMgr != nil {
+				if err := m.SessMgr.Stop(m.SelectedSession); err != nil {
+					m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
+				} else {
+					id := m.SelectedSession
+					if len(id) > 8 {
+						id = id[:8]
+					}
+					m.Notify.Show(fmt.Sprintf("Stopped session %s", id), 3*time.Second)
+				}
+			}
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Enter) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if m.SelectedSession != "" && m.SessMgr != nil {
+				if s, ok := m.SessMgr.Get(m.SelectedSession); ok {
+					s.Lock()
+					output := s.LastOutput
+					s.Unlock()
+					m.LogView = views.NewLogView()
+					m.LogView.SetDimensions(m.Width, m.Height)
+					if output != "" {
+						m.LogView.SetLines(strings.Split(output, "\n"))
+					}
+					m.pushView(ViewLogs, "Session Output")
+				}
+			}
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.DiffView) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if m.SelectedSession != "" && m.SessMgr != nil {
+				if s, ok := m.SessMgr.Get(m.SelectedSession); ok {
+					s.Lock()
+					repoPath := s.RepoPath
+					s.Unlock()
+					idx := m.findRepoByPath(repoPath)
+					if idx >= 0 {
+						m.SelectedIdx = idx
+						m.pushView(ViewDiff, "Diff")
+					}
+				}
+			}
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.ActionsMenu) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.ActionMenu = &components.ActionMenu{
+				Title:  "Session Actions",
+				Items:  components.SessionDetailActions(),
+				Active: true,
+				Width:  35,
+			}
+			return m, nil
+		},
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.OutputView) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { return m.startOutputStreaming() },
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.TimelineView) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.pushView(ViewTimeline, "Timeline")
+			return m, nil
+		},
+	},
+}
+
+var teamsKeys = []ViewKeyEntry{
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Down) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.TeamTable.MoveDown(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Up) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.TeamTable.MoveUp(); return m, nil },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Sort) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { m.TeamTable.CycleSort(); return m, nil },
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Enter) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			row := m.TeamTable.SelectedRow()
+			if row != nil {
+				m.SelectedTeam = row[0]
+				m.pushView(ViewTeamDetail, row[0])
+			}
+			return m, nil
+		},
+	},
+}
+
+var teamDetailKeys = []ViewKeyEntry{
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Enter) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if m.SelectedTeam != "" && m.SessMgr != nil {
+				team, ok := m.SessMgr.GetTeam(m.SelectedTeam)
+				if ok && team.LeadID != "" {
+					m.SelectedSession = team.LeadID
+					m.pushView(ViewSessionDetail, "Lead Session")
+				}
+			}
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.TimelineView) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if m.SelectedTeam != "" && m.SessMgr != nil {
+				if team, ok := m.SessMgr.GetTeam(m.SelectedTeam); ok {
+					if idx := m.findRepoByPath(team.RepoPath); idx >= 0 {
+						m.SelectedIdx = idx
+					}
+					m.pushView(ViewTimeline, "Timeline")
+				}
+			}
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.DiffView) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			if m.SelectedTeam != "" && m.SessMgr != nil {
+				if team, ok := m.SessMgr.GetTeam(m.SelectedTeam); ok {
+					if idx := m.findRepoByPath(team.RepoPath); idx >= 0 {
+						m.SelectedIdx = idx
+						m.pushView(ViewDiff, "Diff")
+					}
+				}
+			}
+			return m, nil
+		},
+	},
+}
+
+var fleetKeys = []ViewKeyEntry{
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Down) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.moveFleetCursor(m.buildFleetData(), 1)
+			return m, nil
+		},
+	},
+	{
+		Match: func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Up) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.moveFleetCursor(m.buildFleetData(), -1)
+			return m, nil
+		},
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.Enter) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { return m.openFleetSelection(m.buildFleetData()) },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.StopAction) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { return m.stopFleetSelection(m.buildFleetData()) },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.DiffView) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { return m.diffFleetSelection(m.buildFleetData()) },
+	},
+	{
+		Match:   func(m Model, msg tea.KeyMsg) bool { return key.Matches(msg, m.Keys.TimelineView) },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { return m.timelineFleetSelection(m.buildFleetData()) },
+	},
+	{
+		Match: func(_ Model, msg tea.KeyMsg) bool { return msg.Type == tea.KeyTab || msg.Type == tea.KeyRight },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.cycleFleetSection(m.buildFleetData(), 1)
+			return m, nil
+		},
+	},
+	{
+		Match: func(_ Model, msg tea.KeyMsg) bool { return msg.Type == tea.KeyLeft },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.cycleFleetSection(m.buildFleetData(), -1)
+			return m, nil
+		},
+	},
+	{
+		Match: func(_ Model, msg tea.KeyMsg) bool { return len(msg.Runes) == 1 && msg.Runes[0] == ']' },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.FleetWindow = (m.FleetWindow + 1) % len(fleetWindows)
+			return m, nil
+		},
+	},
+	{
+		Match: func(_ Model, msg tea.KeyMsg) bool { return len(msg.Runes) == 1 && msg.Runes[0] == '[' },
+		Handler: func(m Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			m.FleetWindow--
+			if m.FleetWindow < 0 {
+				m.FleetWindow = len(fleetWindows) - 1
+			}
+			return m, nil
+		},
+	},
+}
+
+func (m Model) handleSessionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	return dispatchViewKeys(m, msg, sessionsKeys)
 }
 
 func (m Model) handleSessionDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.StopAction):
-		if m.SelectedSession != "" && m.SessMgr != nil {
-			if err := m.SessMgr.Stop(m.SelectedSession); err != nil {
-				m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
-			} else {
-				id := m.SelectedSession
-				if len(id) > 8 {
-					id = id[:8]
-				}
-				m.Notify.Show(fmt.Sprintf("Stopped session %s", id), 3*time.Second)
-			}
-		}
-	case key.Matches(msg, m.Keys.Enter):
-		if m.SelectedSession != "" && m.SessMgr != nil {
-			if s, ok := m.SessMgr.Get(m.SelectedSession); ok {
-				s.Lock()
-				output := s.LastOutput
-				s.Unlock()
-				m.LogView = views.NewLogView()
-				m.LogView.SetDimensions(m.Width, m.Height)
-				if output != "" {
-					m.LogView.SetLines(strings.Split(output, "\n"))
-				}
-				m.pushView(ViewLogs, "Session Output")
-			}
-		}
-	case key.Matches(msg, m.Keys.DiffView):
-		if m.SelectedSession != "" && m.SessMgr != nil {
-			if s, ok := m.SessMgr.Get(m.SelectedSession); ok {
-				s.Lock()
-				repoPath := s.RepoPath
-				s.Unlock()
-				idx := m.findRepoByPath(repoPath)
-				if idx >= 0 {
-					m.SelectedIdx = idx
-					m.pushView(ViewDiff, "Diff")
-				}
-			}
-		}
-	case key.Matches(msg, m.Keys.ActionsMenu):
-		m.ActionMenu = &components.ActionMenu{
-			Title:  "Session Actions",
-			Items:  components.SessionDetailActions(),
-			Active: true,
-			Width:  35,
-		}
-	case key.Matches(msg, m.Keys.OutputView):
-		return m.startOutputStreaming()
-	case key.Matches(msg, m.Keys.TimelineView):
-		m.pushView(ViewTimeline, "Timeline")
-	}
-	return m, nil
+	return dispatchViewKeys(m, msg, sessionDetailKeys)
 }
 
 func (m Model) handleTeamsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		m.TeamTable.MoveDown()
-	case key.Matches(msg, m.Keys.Up):
-		m.TeamTable.MoveUp()
-	case key.Matches(msg, m.Keys.Sort):
-		m.TeamTable.CycleSort()
-	case key.Matches(msg, m.Keys.Enter):
-		row := m.TeamTable.SelectedRow()
-		if row != nil {
-			m.SelectedTeam = row[0]
-			m.pushView(ViewTeamDetail, row[0])
-		}
-	}
-	return m, nil
+	return dispatchViewKeys(m, msg, teamsKeys)
 }
 
 func (m Model) handleTeamDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.Keys.Enter):
-		if m.SelectedTeam != "" && m.SessMgr != nil {
-			team, ok := m.SessMgr.GetTeam(m.SelectedTeam)
-			if ok && team.LeadID != "" {
-				m.SelectedSession = team.LeadID
-				m.pushView(ViewSessionDetail, "Lead Session")
-			}
-		}
-	case key.Matches(msg, m.Keys.TimelineView):
-		if m.SelectedTeam != "" && m.SessMgr != nil {
-			if team, ok := m.SessMgr.GetTeam(m.SelectedTeam); ok {
-				if idx := m.findRepoByPath(team.RepoPath); idx >= 0 {
-					m.SelectedIdx = idx
-				}
-				m.pushView(ViewTimeline, "Timeline")
-			}
-		}
-	case key.Matches(msg, m.Keys.DiffView):
-		if m.SelectedTeam != "" && m.SessMgr != nil {
-			if team, ok := m.SessMgr.GetTeam(m.SelectedTeam); ok {
-				if idx := m.findRepoByPath(team.RepoPath); idx >= 0 {
-					m.SelectedIdx = idx
-					m.pushView(ViewDiff, "Diff")
-				}
-			}
-		}
-	}
-	return m, nil
+	return dispatchViewKeys(m, msg, teamDetailKeys)
 }
 
 func (m Model) handleFleetKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	data := m.buildFleetData()
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		m.moveFleetCursor(data, 1)
-	case key.Matches(msg, m.Keys.Up):
-		m.moveFleetCursor(data, -1)
-	case key.Matches(msg, m.Keys.Enter):
-		return m.openFleetSelection(data)
-	case key.Matches(msg, m.Keys.StopAction):
-		return m.stopFleetSelection(data)
-	case key.Matches(msg, m.Keys.DiffView):
-		return m.diffFleetSelection(data)
-	case key.Matches(msg, m.Keys.TimelineView):
-		return m.timelineFleetSelection(data)
-	case msg.Type == tea.KeyTab || msg.Type == tea.KeyRight:
-		m.cycleFleetSection(data, 1)
-	case msg.Type == tea.KeyLeft:
-		m.cycleFleetSection(data, -1)
-	case len(msg.Runes) == 1 && msg.Runes[0] == ']':
-		m.FleetWindow = (m.FleetWindow + 1) % len(fleetWindows)
-	case len(msg.Runes) == 1 && msg.Runes[0] == '[':
-		m.FleetWindow--
-		if m.FleetWindow < 0 {
-			m.FleetWindow = len(fleetWindows) - 1
-		}
-	}
-	return m, nil
+	return dispatchViewKeys(m, msg, fleetKeys)
 }
 
 // --- Modal overlay key handlers ---
