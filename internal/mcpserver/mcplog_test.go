@@ -85,7 +85,7 @@ func TestMCPLoggerNilData(t *testing.T) {
 }
 
 func TestMCPLoggingMiddleware_Success(t *testing.T) {
-	t.Parallel()
+	// Not parallel: captureLog sets slog.SetDefault which is global state.
 	buf := captureLog(t)
 
 	logger := NewMCPLogger(nil, "mw-test")
@@ -114,7 +114,7 @@ func TestMCPLoggingMiddleware_Success(t *testing.T) {
 }
 
 func TestMCPLoggingMiddleware_Error(t *testing.T) {
-	t.Parallel()
+	// Not parallel: captureLog sets slog.SetDefault which is global state.
 	buf := captureLog(t)
 
 	logger := NewMCPLogger(nil, "mw-test")
