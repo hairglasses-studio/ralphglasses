@@ -8,8 +8,6 @@ import (
 )
 
 func TestDebugf_Enabled(t *testing.T) {
-	t.Parallel()
-
 	// Capture stderr
 	old := os.Stderr
 	r, w, err := os.Pipe()
@@ -38,8 +36,6 @@ func TestDebugf_Enabled(t *testing.T) {
 }
 
 func TestDebugf_Disabled(t *testing.T) {
-	t.Parallel()
-
 	old := os.Stderr
 	r, w, err := os.Pipe()
 	if err != nil {
@@ -102,7 +98,6 @@ func TestDebugf_FormatArgs(t *testing.T) {
 }
 
 func TestDebugLogger_DefaultDisabled(t *testing.T) {
-	t.Parallel()
 	d := &debugLogger{}
 	if d.Enabled {
 		t.Error("new debugLogger should be disabled by default")
@@ -110,7 +105,6 @@ func TestDebugLogger_DefaultDisabled(t *testing.T) {
 }
 
 func TestDebugLogger_EnableToggle(t *testing.T) {
-	t.Parallel()
 	d := &debugLogger{}
 	d.Enabled = true
 	if !d.Enabled {
@@ -123,7 +117,6 @@ func TestDebugLogger_EnableToggle(t *testing.T) {
 }
 
 func TestDebugGlobalInstance(t *testing.T) {
-	t.Parallel()
 	if Debug == nil {
 		t.Fatal("Debug global should not be nil")
 	}
