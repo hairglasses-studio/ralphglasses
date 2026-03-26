@@ -1,6 +1,7 @@
 package views
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -69,6 +70,32 @@ func TestRenderRepoDetailWithRC(t *testing.T) {
 	output := RenderRepoDetail(r, 80, nil)
 	if !strings.Contains(output, "failed to parse") {
 		t.Error("should show parse failure for HasRC without loaded config")
+	}
+}
+
+func TestRenderRepoDetailParseErrors(t *testing.T) {
+	r := &model.Repo{
+		Name: "warn-repo",
+		Path: "/path",
+		RefreshErrors: []error{
+			errors.New("failed to read .ralphrc"),
+			errors.New("invalid JSON"),
+		},
+	}
+	output := RenderRepoDetail(r, 80, nil)
+	// Compact indicator in title line
+	if !strings.Contains(output, "2") {
+		t.Error("title should show parse error count")
+	}
+	// Detailed warnings section
+	if !strings.Contains(output, "Warnings") {
+		t.Error("should render Warnings section")
+	}
+	if !strings.Contains(output, "failed to read .ralphrc") {
+		t.Error("should list first parse error")
+	}
+	if !strings.Contains(output, "invalid JSON") {
+		t.Error("should list second parse error")
 	}
 }
 
