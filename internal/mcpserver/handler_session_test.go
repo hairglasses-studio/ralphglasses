@@ -215,10 +215,10 @@ func TestHandleSessionStatus(t *testing.T) {
 		if !strings.Contains(text, id) {
 			t.Errorf("expected session ID in response, got: %s", text)
 		}
-		if !strings.Contains(text, `"model": "opus"`) {
+		if !strings.Contains(text, `"model":"opus"`) {
 			t.Errorf("expected model opus in response, got: %s", text)
 		}
-		if !strings.Contains(text, `"turns": 5`) {
+		if !strings.Contains(text, `"turns":5`) {
 			t.Errorf("expected turns 5 in response, got: %s", text)
 		}
 	})
@@ -286,10 +286,10 @@ func TestHandleSessionList(t *testing.T) {
 			t.Fatalf("unexpected error: %s", getResultText(result))
 		}
 		text := getResultText(result)
-		if !strings.Contains(text, `"status": "stopped"`) {
+		if !strings.Contains(text, `"status":"stopped"`) {
 			t.Errorf("expected stopped session in filtered list, got: %s", text)
 		}
-		if strings.Contains(text, `"status": "running"`) {
+		if strings.Contains(text, `"status":"running"`) {
 			t.Errorf("should not contain running sessions after filter, got: %s", text)
 		}
 	})
@@ -399,7 +399,7 @@ func TestHandleSessionErrors(t *testing.T) {
 			t.Fatalf("unexpected error: %s", getResultText(result))
 		}
 		text := getResultText(result)
-		if !strings.Contains(text, `"total_errors": 0`) {
+		if !strings.Contains(text, `"total_errors":0`) {
 			t.Errorf("expected 0 total errors, got: %s", text)
 		}
 	})
@@ -486,10 +486,10 @@ func TestHandleSessionBudget(t *testing.T) {
 			t.Fatalf("unexpected error: %s", getResultText(result))
 		}
 		text := getResultText(result)
-		if !strings.Contains(text, `"budget_usd": 20`) {
+		if !strings.Contains(text, `"budget_usd":20`) {
 			t.Errorf("expected updated budget 20, got: %s", text)
 		}
-		if !strings.Contains(text, `"remaining": 19`) {
+		if !strings.Contains(text, `"remaining":19`) {
 			t.Errorf("expected remaining 19, got: %s", text)
 		}
 	})
@@ -556,7 +556,7 @@ func TestHandleSessionOutput(t *testing.T) {
 		if !strings.Contains(text, "line-a") || !strings.Contains(text, "line-c") {
 			t.Errorf("expected output lines, got: %s", text)
 		}
-		if !strings.Contains(text, `"lines": 3`) {
+		if !strings.Contains(text, `"lines":3`) {
 			t.Errorf("expected 3 lines, got: %s", text)
 		}
 	})
@@ -621,10 +621,10 @@ func TestHandleSessionTailErrors(t *testing.T) {
 			t.Fatalf("unexpected error: %s", getResultText(result))
 		}
 		text := getResultText(result)
-		if !strings.Contains(text, `"next_cursor": "10"`) {
+		if !strings.Contains(text, `"next_cursor":"10"`) {
 			t.Errorf("expected next_cursor 10, got: %s", text)
 		}
-		if !strings.Contains(text, `"is_active": true`) {
+		if !strings.Contains(text, `"is_active":true`) {
 			t.Errorf("expected is_active true for running session, got: %s", text)
 		}
 	})

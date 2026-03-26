@@ -177,7 +177,7 @@ func textResult(text string) *mcp.CallToolResult {
 
 
 func jsonResult(v any) *mcp.CallToolResult {
-	data, err := json.MarshalIndent(v, "", "  ")
+	data, err := json.Marshal(v)
 	if err != nil {
 		return codedError(ErrInternal, fmt.Sprintf("json marshal: %v", err))
 	}
@@ -571,7 +571,7 @@ func (s *Server) handleSnapshot(ctx context.Context, req mcp.CallToolRequest) (*
 		"teams":     teams,
 	}
 
-	data, err := json.MarshalIndent(snapshot, "", "  ")
+	data, err := json.Marshal(snapshot)
 	if err != nil {
 		return codedError(ErrInternal, fmt.Sprintf("json marshal: %v", err)), nil
 	}

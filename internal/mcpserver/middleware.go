@@ -82,8 +82,12 @@ func InstrumentationMiddleware(rec *ToolCallRecorder) server.ToolHandlerMiddlewa
 				}
 			}
 			if result != nil {
-				if raw, merr := json.Marshal(result.Content); merr == nil {
-					entry.OutputSize = len(raw)
+				// Estimate output size from text content lengths to avoid
+				// marshalling the full response just for metrics.
+				for _, c := range result.Content {
+					if tc, ok := c.(mcp.TextContent); ok {
+						entry.OutputSize += len(tc.Text)
+					}
 				}
 			}
 
@@ -205,7 +209,7 @@ func injectTraceID(result *mcp.CallToolResult, traceID string) {
 			continue
 		}
 		m["_trace_id"] = traceID
-		data, err := json.MarshalIndent(m, "", "  ")
+		data, err := json.Marshal(m)
 		if err != nil {
 			continue
 		}
