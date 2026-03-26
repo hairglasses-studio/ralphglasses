@@ -536,3 +536,115 @@ func TestCascadeStats(t *testing.T) {
 		t.Errorf("expected avg cheap cost ~0.15, got %.3f", stats.AvgCheapCost)
 	}
 }
+
+func TestRecordLatency_TracksP50P95(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// Record 20 latencies: 10ms, 20ms, ..., 200ms
+	for i := 1; i <= 20; i++ {
+		cr.RecordLatency("gemini", time.Duration(i*10)*time.Millisecond)
+	}
+
+	lat := cr.GetProviderLatency("gemini")
+	if lat == nil {
+		t.Fatal("expected non-nil latency")
+	}
+	if lat.Samples != 20 {
+		t.Errorf("expected 20 samples, got %d", lat.Samples)
+	}
+
+	// P50 of [10..200] step 10 => 10th value = 100ms
+	if lat.P50 != 100*time.Millisecond {
+		t.Errorf("expected P50=100ms, got %v", lat.P50)
+	}
+
+	// P95 of 20 items => rank = ceil(0.95*20)-1 = 18 => 190ms
+	if lat.P95 != 190*time.Millisecond {
+		t.Errorf("expected P95=190ms, got %v", lat.P95)
+	}
+}
+
+func TestLatencyAwareRouting_SkipsSlow(t *testing.T) {
+	config := DefaultCascadeConfig()
+	config.LatencyThresholdMs = 500 // 500ms threshold
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// Record high latencies for cheap provider (gemini)
+	for i := 0; i < 20; i++ {
+		cr.RecordLatency("gemini", 800*time.Millisecond)
+	}
+
+	// ShouldCascade should return false (skip cheap, too slow)
+	if cr.ShouldCascade("feature", "do something") {
+		t.Error("expected ShouldCascade=false when cheap provider is slow")
+	}
+
+	// ResolveProvider should return expensive
+	if got := cr.ResolveProvider("feature"); got != ProviderClaude {
+		t.Errorf("expected expensive provider (claude), got %s", got)
+	}
+}
+
+func TestLatencyAwareRouting_UsesCheapWhenFast(t *testing.T) {
+	config := DefaultCascadeConfig()
+	config.LatencyThresholdMs = 500
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// Record low latencies for cheap provider
+	for i := 0; i < 20; i++ {
+		cr.RecordLatency("gemini", 100*time.Millisecond)
+	}
+
+	// ShouldCascade should return true (cheap is fast, try it)
+	if !cr.ShouldCascade("feature", "do something") {
+		t.Error("expected ShouldCascade=true when cheap provider is fast")
+	}
+}
+
+func TestLatencyAwareRouting_Disabled(t *testing.T) {
+	config := DefaultCascadeConfig()
+	config.LatencyThresholdMs = 0 // disabled
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// Record extremely high latencies
+	for i := 0; i < 20; i++ {
+		cr.RecordLatency("gemini", 5*time.Second)
+	}
+
+	// ShouldCascade should still return true — latency routing disabled
+	if !cr.ShouldCascade("feature", "do something") {
+		t.Error("expected ShouldCascade=true when latency threshold is disabled")
+	}
+}
+
+func TestRecordLatency_SlidingWindow(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// Fill window with 100 low-latency samples
+	for i := 0; i < 100; i++ {
+		cr.RecordLatency("gemini", 50*time.Millisecond)
+	}
+
+	lat := cr.GetProviderLatency("gemini")
+	if lat.Samples != 100 {
+		t.Fatalf("expected 100 samples, got %d", lat.Samples)
+	}
+	if lat.P95 != 50*time.Millisecond {
+		t.Errorf("expected P95=50ms, got %v", lat.P95)
+	}
+
+	// Add 100 more high-latency samples — old ones should be evicted
+	for i := 0; i < 100; i++ {
+		cr.RecordLatency("gemini", 900*time.Millisecond)
+	}
+
+	lat = cr.GetProviderLatency("gemini")
+	if lat.Samples != 100 {
+		t.Fatalf("expected 100 samples after overflow, got %d", lat.Samples)
+	}
+	if lat.P95 != 900*time.Millisecond {
+		t.Errorf("expected P95=900ms after old samples dropped, got %v", lat.P95)
+	}
+}
