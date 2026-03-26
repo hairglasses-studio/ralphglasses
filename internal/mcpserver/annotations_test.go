@@ -32,27 +32,19 @@ func TestEveryRegisteredToolHasAnnotation(t *testing.T) {
 
 func TestGetAnnotationDefault(t *testing.T) {
 	a := GetAnnotation("nonexistent_tool_xyz")
-	if !a.ReadOnly {
-		t.Error("default annotation should be ReadOnly")
+	// Unknown tools return zero-value ToolAnnotation (all hints nil)
+	if a.ReadOnlyHint != nil {
+		t.Error("default annotation should have nil ReadOnlyHint")
 	}
-	if !a.Idempotent {
-		t.Error("default annotation should be Idempotent")
-	}
-	if a.Destructive {
-		t.Error("default annotation should not be Destructive")
-	}
-	if a.OpenWorld {
-		t.Error("default annotation should not be OpenWorld")
+	if a.DestructiveHint != nil {
+		t.Error("default annotation should have nil DestructiveHint")
 	}
 }
 
 func TestGetAnnotationKnownTool(t *testing.T) {
 	a := GetAnnotation("ralphglasses_status")
-	if !a.ReadOnly {
-		t.Error("ralphglasses_status should be ReadOnly")
-	}
-	if !a.Idempotent {
-		t.Error("ralphglasses_status should be Idempotent")
+	if a.ReadOnlyHint == nil || !*a.ReadOnlyHint {
+		t.Error("ralphglasses_status should have ReadOnlyHint=true")
 	}
 }
 
@@ -71,16 +63,18 @@ func TestDestructiveToolsMarkedCorrectly(t *testing.T) {
 			t.Errorf("expected %q in ToolAnnotations", name)
 			continue
 		}
-		if !a.Destructive {
-			t.Errorf("%q should be marked Destructive", name)
+		if a.DestructiveHint == nil || !*a.DestructiveHint {
+			t.Errorf("%q should be marked DestructiveHint=true", name)
 		}
 	}
 }
 
 func TestDestructiveToolsNotReadOnly(t *testing.T) {
 	for name, a := range ToolAnnotations {
-		if a.Destructive && a.ReadOnly {
-			t.Errorf("%q is marked both Destructive and ReadOnly", name)
+		isDestructive := a.DestructiveHint != nil && *a.DestructiveHint
+		isReadOnly := a.ReadOnlyHint != nil && *a.ReadOnlyHint
+		if isDestructive && isReadOnly {
+			t.Errorf("%q is marked both DestructiveHint and ReadOnlyHint", name)
 		}
 	}
 }
