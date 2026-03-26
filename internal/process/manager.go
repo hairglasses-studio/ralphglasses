@@ -622,6 +622,14 @@ func (m *Manager) IsPaused(repoPath string) bool {
 	return ok && mp.Paused
 }
 
+// AddProcForTesting inserts a stub ManagedProcess entry so IsRunning/IsPaused
+// return expected values in tests. The entry has no real OS process.
+func (m *Manager) AddProcForTesting(repoPath string, paused bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.procs[repoPath] = &ManagedProcess{Paused: paused}
+}
+
 // StopAll sends SIGTERM to all managed processes.
 // It marks each process as Stopping before signaling so that reaper
 // goroutines will not race to auto-restart processes being shut down.
