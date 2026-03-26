@@ -3,7 +3,7 @@ package process
 import (
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -180,13 +180,13 @@ func (m *Manager) Start(repoPath string) error {
 	defer m.mu.Unlock()
 
 	if _, ok := m.procs[repoPath]; ok {
-		return fmt.Errorf("loop already running for %s", filepath.Base(repoPath))
+		return fmt.Errorf("%w: %s", ErrAlreadyRunning, filepath.Base(repoPath))
 	}
 
 	// Look for ralph_loop.sh in the repo directory.
 	loopScript := filepath.Join(repoPath, "ralph_loop.sh")
 	if _, err := os.Stat(loopScript); err != nil {
-		return fmt.Errorf("no ralph_loop.sh found in %s — use the native Go loop via session manager instead", filepath.Base(repoPath))
+		return fmt.Errorf("%w: %s — use the native Go loop via session manager instead", ErrNoLoopScript, filepath.Base(repoPath))
 	}
 	cmd := exec.Command("bash", loopScript)
 	cmd.Dir = repoPath
@@ -282,7 +282,7 @@ const killSequenceTimeout = 5 * time.Second
 func sendSignal(pid int, sig syscall.Signal) error {
 	pgid, err := getpgid(pid)
 	if err != nil {
-		log.Printf("WARNING: Getpgid(%d) failed: %v; falling back to direct PID signal", pid, err)
+		slog.Warn("Getpgid failed, falling back to direct PID signal", "pid", pid, "err", err)
 		return syscall.Kill(pid, sig)
 	}
 	return syscall.Kill(-pgid, sig)
@@ -297,7 +297,7 @@ func (m *Manager) Stop(repoPath string) error {
 	mp, ok := m.procs[repoPath]
 	if !ok {
 		m.mu.Unlock()
-		return fmt.Errorf("no running loop for %s", filepath.Base(repoPath))
+		return fmt.Errorf("%w: %s", ErrNotRunning, filepath.Base(repoPath))
 	}
 	pid := mp.PID
 	childPids := append([]int(nil), mp.ChildPids...)
@@ -359,7 +359,7 @@ func (m *Manager) TogglePause(repoPath string) (paused bool, err error) {
 
 	mp, ok := m.procs[repoPath]
 	if !ok {
-		return false, fmt.Errorf("no running loop for %s", filepath.Base(repoPath))
+		return false, fmt.Errorf("%w: %s", ErrNotRunning, filepath.Base(repoPath))
 	}
 
 	if mp.Paused {
