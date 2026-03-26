@@ -50,16 +50,16 @@ func TestAuditOrphanedProcesses(t *testing.T) {
 			}
 
 			// Stub the scanner.
-			orig := scanProcessesFn
-			defer func() { scanProcessesFn = orig }()
+			origScan := *scanProcessesFnPtr.Load()
+			defer func() { setScanProcessesFn(origScan) }()
 			scanned := tc.scanned
-			scanProcessesFn = func() []int { return scanned }
+			setScanProcessesFn(func() []int { return scanned })
 
 			// Collect orphan PIDs by shadowing the log output via a counter.
 			orphanCount := 0
-			origLog := orphanLogFn
-			defer func() { orphanLogFn = origLog }()
-			orphanLogFn = func(pid int) { orphanCount++ }
+			origLog := *orphanLogFnPtr.Load()
+			defer func() { setOrphanLogFn(origLog) }()
+			setOrphanLogFn(func(pid int) { orphanCount++ })
 
 			m.auditOrphanedProcesses()
 
