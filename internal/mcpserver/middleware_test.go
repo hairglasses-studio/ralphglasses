@@ -2,12 +2,14 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/tracing"
 )
 
 func makeReq(name string, args map[string]any) mcp.CallToolRequest {
@@ -213,5 +215,84 @@ func TestValidationMiddleware_NoArgs(t *testing.T) {
 	result, err := wrapped(context.Background(), req)
 	if err != nil || result.IsError {
 		t.Fatal("no args should pass through")
+	}
+}
+
+func TestTraceMiddleware_GeneratesID(t *testing.T) {
+	t.Parallel()
+	mw := TraceMiddleware()
+
+	// Use a handler that captures the trace ID from context.
+	var capturedID string
+	handler := func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		capturedID = tracing.TraceIDFromContext(ctx)
+		return jsonResult(map[string]any{"status": "ok"}), nil
+	}
+
+	wrapped := mw(handler)
+	result, err := wrapped(context.Background(), makeReq("test_tool", nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify trace ID was generated and passed to handler.
+	if capturedID == "" {
+		t.Fatal("expected trace ID in context, got empty")
+	}
+	if len(capturedID) != 16 {
+		t.Fatalf("expected 16-char trace ID, got %d: %q", len(capturedID), capturedID)
+	}
+
+	// Verify trace ID is in the JSON response.
+	if len(result.Content) == 0 {
+		t.Fatal("expected content in result")
+	}
+	tc, ok := result.Content[0].(mcp.TextContent)
+	if !ok {
+		t.Fatal("expected TextContent")
+	}
+	var respMap map[string]any
+	if err := json.Unmarshal([]byte(tc.Text), &respMap); err != nil {
+		t.Fatalf("failed to parse response JSON: %v", err)
+	}
+	if respMap["_trace_id"] != capturedID {
+		t.Fatalf("expected _trace_id=%q in response, got %v", capturedID, respMap["_trace_id"])
+	}
+}
+
+func TestTraceMiddleware_PreservesExisting(t *testing.T) {
+	t.Parallel()
+	mw := TraceMiddleware()
+
+	existingID := "abcdef0123456789"
+	var capturedID string
+	handler := func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		capturedID = tracing.TraceIDFromContext(ctx)
+		return jsonResult(map[string]any{"status": "ok"}), nil
+	}
+
+	wrapped := mw(handler)
+	ctx := tracing.WithTraceID(context.Background(), existingID)
+	result, err := wrapped(ctx, makeReq("test_tool", nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify the existing trace ID was preserved.
+	if capturedID != existingID {
+		t.Fatalf("expected preserved trace ID %q, got %q", existingID, capturedID)
+	}
+
+	// Verify response contains the existing trace ID.
+	tc, ok := result.Content[0].(mcp.TextContent)
+	if !ok {
+		t.Fatal("expected TextContent")
+	}
+	var respMap map[string]any
+	if err := json.Unmarshal([]byte(tc.Text), &respMap); err != nil {
+		t.Fatalf("failed to parse response JSON: %v", err)
+	}
+	if respMap["_trace_id"] != existingID {
+		t.Fatalf("expected _trace_id=%q in response, got %v", existingID, respMap["_trace_id"])
 	}
 }
