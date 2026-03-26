@@ -4,23 +4,31 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
+// defaultRegistry returns a ToolGroupRegistry populated with all standard
+// tool group builders in the canonical ordering. Each builder wraps the
+// corresponding build*Group method on Server.
+func defaultRegistry() *ToolGroupRegistry {
+	r := NewToolGroupRegistry()
+	r.Register(NewFuncBuilder("core", (*Server).buildCoreGroup))
+	r.Register(NewFuncBuilder("session", (*Server).buildSessionGroup))
+	r.Register(NewFuncBuilder("loop", (*Server).buildLoopGroup))
+	r.Register(NewFuncBuilder("prompt", (*Server).buildPromptGroup))
+	r.Register(NewFuncBuilder("fleet", (*Server).buildFleetGroup))
+	r.Register(NewFuncBuilder("repo", (*Server).buildRepoGroup))
+	r.Register(NewFuncBuilder("roadmap", (*Server).buildRoadmapGroup))
+	r.Register(NewFuncBuilder("team", (*Server).buildTeamGroup))
+	r.Register(NewFuncBuilder("awesome", (*Server).buildAwesomeGroup))
+	r.Register(NewFuncBuilder("advanced", (*Server).buildAdvancedGroup))
+	r.Register(NewFuncBuilder("eval", (*Server).buildEvalGroup))
+	r.Register(NewFuncBuilder("fleet_h", (*Server).buildFleetHGroup))
+	r.Register(NewFuncBuilder("observability", (*Server).buildObservabilityGroup))
+	return r
+}
+
 // buildToolGroups constructs all tool groups with their tool definitions and handlers.
+// It delegates to the default registry, preserving the canonical ordering.
 func (s *Server) buildToolGroups() []ToolGroup {
-	return []ToolGroup{
-		s.buildCoreGroup(),
-		s.buildSessionGroup(),
-		s.buildLoopGroup(),
-		s.buildPromptGroup(),
-		s.buildFleetGroup(),
-		s.buildRepoGroup(),
-		s.buildRoadmapGroup(),
-		s.buildTeamGroup(),
-		s.buildAwesomeGroup(),
-		s.buildAdvancedGroup(),
-		s.buildEvalGroup(),
-		s.buildFleetHGroup(),
-		s.buildObservabilityGroup(),
-	}
+	return defaultRegistry().BuildAllOrdered(s)
 }
 
 func (s *Server) buildCoreGroup() ToolGroup {
