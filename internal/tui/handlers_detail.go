@@ -3,7 +3,6 @@ package tui
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -41,11 +40,14 @@ var sessionsKeys = []ViewKeyEntry{
 		row := m.SessionTable.SelectedRow()
 		if row != nil {
 			fullID := m.findFullSessionID(row[0])
-			if fullID != "" && m.SessMgr != nil {
-				if err := m.SessMgr.Stop(fullID); err != nil {
-					m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
-				} else {
-					m.Notify.Show(fmt.Sprintf("Stopped session %s", row[0]), 3*time.Second)
+			if fullID != "" {
+				m.ConfirmDialog = &components.ConfirmDialog{
+					Title:   "Confirm Stop Session",
+					Message: fmt.Sprintf("Stop session %s?", row[0]),
+					Action:  "stopSession",
+					Data:    fullID,
+					Active:  true,
+					Width:   50,
 				}
 			}
 		}
@@ -66,14 +68,17 @@ var sessionsKeys = []ViewKeyEntry{
 var sessionDetailKeys = []ViewKeyEntry{
 	{Binding: func(km *KeyMap) key.Binding { return km.StopAction }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.SelectedSession != "" && m.SessMgr != nil {
-			if err := m.SessMgr.Stop(m.SelectedSession); err != nil {
-				m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
-			} else {
-				id := m.SelectedSession
-				if len(id) > 8 {
-					id = id[:8]
-				}
-				m.Notify.Show(fmt.Sprintf("Stopped session %s", id), 3*time.Second)
+			shortID := m.SelectedSession
+			if len(shortID) > 8 {
+				shortID = shortID[:8]
+			}
+			m.ConfirmDialog = &components.ConfirmDialog{
+				Title:   "Confirm Stop Session",
+				Message: fmt.Sprintf("Stop session %s?", shortID),
+				Action:  "stopSession",
+				Data:    m.SelectedSession,
+				Active:  true,
+				Width:   50,
 			}
 		}
 		return *m, nil

@@ -129,8 +129,13 @@ func (m Model) execCommand(cmd Command) (tea.Model, tea.Cmd) {
 			m.Notify.Show(fmt.Sprintf("Repo not found: %s", cmd.Args[0]), 3*time.Second)
 		}
 	case "stopall":
-		m.ProcMgr.StopAll()
-		m.Notify.Show("All loops stopped", 3*time.Second)
+		m.ConfirmDialog = &components.ConfirmDialog{
+			Title:   "Confirm Stop All",
+			Message: "Stop all running loops and sessions?",
+			Action:  "stopAll",
+			Active:  true,
+			Width:   50,
+		}
 	case "sessions":
 		m.switchTab(1, ViewSessions, "Sessions")
 	case "teams":
@@ -160,6 +165,10 @@ func (m Model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		keyType = "right"
 	case msg.Type == tea.KeyTab:
 		keyType = "tab"
+	case len(msg.Runes) == 1 && (msg.Runes[0] == 'y' || msg.Runes[0] == 'Y'):
+		keyType = "y"
+	case len(msg.Runes) == 1 && (msg.Runes[0] == 'n' || msg.Runes[0] == 'N'):
+		keyType = "n"
 	}
 	result, done := m.ConfirmDialog.HandleKey(keyType)
 	if done {
@@ -251,6 +260,15 @@ func (m Model) handleConfirmResult(msg components.ConfirmResultMsg) (tea.Model, 
 				}
 				m.Notify.Show(fmt.Sprintf("Stopped session %s", short), 3*time.Second)
 			}
+		}
+	case "stopManagedLoop":
+		if id, ok := msg.Data.(string); ok && id != "" && m.SessMgr != nil {
+			if err := m.SessMgr.StopLoop(id); err != nil {
+				m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
+			} else {
+				m.Notify.Show(fmt.Sprintf("Stopped loop %s", truncateID(id)), 3*time.Second)
+			}
+			return m, m.loopListCmd()
 		}
 	}
 	return m, nil
