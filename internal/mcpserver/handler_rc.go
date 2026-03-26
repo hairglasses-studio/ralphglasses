@@ -321,7 +321,7 @@ func (s *Server) handleRCRead(_ context.Context, req mcp.CallToolRequest) (*mcp.
 	} else {
 		sess = s.mostActiveSession()
 		if sess == nil {
-			return jsonResult(map[string]any{"status": "empty", "items": []any{}}), nil
+			return emptyResult("rc_messages"), nil
 		}
 	}
 
