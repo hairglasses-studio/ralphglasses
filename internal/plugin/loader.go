@@ -48,9 +48,14 @@ func LoadDir(dir string) ([]Plugin, error) {
 		)
 	}
 
-	// Return nil — actual plugin instantiation requires either:
-	//   - "builtin" protocol: lookup in a builtin registry (handled by caller)
-	//   - "grpc" protocol: hashicorp/go-plugin client launch (future)
+	// XL effort: Convert manifests into live Plugin instances.
+	// Currently returns nil because plugin instantiation is protocol-dependent:
+	//   - "builtin" protocol: caller must provide a name->Plugin registry map
+	//     and LoadDir would need a BuiltinRegistry parameter to look up plugins.
+	//   - "grpc" protocol: requires hashicorp/go-plugin client launch, health
+	//     check handshake (MagicCookieKey/MagicCookieValue), and lifecycle mgmt.
+	// Until then, use LoadDirManifests() to get raw manifests and handle
+	// instantiation in the caller (see Registry.RegisterGRPC for gRPC plugins).
 	return nil, nil
 }
 
