@@ -40,7 +40,7 @@ Observations from reliability & quality improvement workstreams + recursive self
 
 13. **Event persistence is synchronous on publish path** — R5 writes to disk in `Publish()` under the mutex. For high-throughput scenarios (fleet with 10+ sessions), this could become a bottleneck. Consider buffered async writes.
 
-14. **No event schema versioning** — JSONL events have no version field. When the Event struct changes, old persisted events may fail to deserialize. Add a `"v": 1` field.
+14. **~~No event schema versioning~~** — [RESOLVED] Event struct has `Version int` field (`json:"v"`), `PublishCtx` sets `Version=1` when zero, and `MigrateEvent` handles version upgrades for old persisted events.
 
 ## Worktree CWD Gotcha
 
@@ -48,11 +48,11 @@ Observations from reliability & quality improvement workstreams + recursive self
 
 ## Wiring Gaps (discovered during reliability work)
 
-16. **PersistSession callers don't use the error** — R4 changed `PersistSession` to return `error`, but most callers use `_ = m.PersistSession(s)`. The error should at minimum be logged once `slog` is in place (Q7). Pattern: wrap in a helper like `m.persistOrWarn(s)` that logs + publishes event.
+16. **~~PersistSession callers don't use the error~~** — [RESOLVED] `persistOrWarn` helper exists in `manager.go:608` that logs via `slog.Warn` on failure. Only one production caller of `PersistSession` (line 610) which checks the error.
 
-17. **Event types are stringly-typed** — `events.EventType` is a `string` type with constants, but nothing prevents typos or unknown types from being published. Consider adding a `ValidEventType()` check or using an enum/iota pattern.
+17. **~~Event types are stringly-typed~~** — [RESOLVED] `ValidEventType()` function exists in `bus.go:107` with `knownEventTypes` map. `PublishCtx` warns on unknown types via `slog.Warn`.
 
-18. **No event subscription filtering** — `Bus.Subscribe()` returns all events. Subscribers (TUI, marathon, fleet) each manually filter in their handler. Add `Bus.SubscribeFiltered(types ...EventType)` to reduce noise.
+18. **~~No event subscription filtering~~** — [RESOLVED] `Bus.SubscribeFiltered(id string, types ...EventType)` exists in `bus.go:280`, uses `filteredSubs` map with per-type channel routing.
 
 ## Workflow Improvements (discovered during parallel workstream execution)
 
@@ -100,7 +100,7 @@ Observations from reliability & quality improvement workstreams + recursive self
 
 37. **Two-tier acceptance needs `gh` CLI** — `CreateReviewPR` shell-outs to `gh pr create`. Should add `gh` to the provider prerequisites check or make PR creation optional with a fallback (create branch but skip PR if `gh` unavailable).
 
-38. **No `selftest` event types** — Stage 3 plan proposes `SelfImproveMerged` and `SelfImprovePR` event types. These should be added to `events/bus.go` before building the acceptance gate or TUI dashboard.
+38. **~~No `selftest` event types~~** — [RESOLVED] `SelfImproveMerged` and `SelfImprovePR` event types exist in `bus.go:66-67` and are registered in `knownEventTypes`.
 
 ## Round 4: Stage 2 Implementation Observations
 
@@ -108,13 +108,13 @@ Observations from reliability & quality improvement workstreams + recursive self
 
 40. **`gate-check` and `selftest --gate` overlap** — Both `cmd/gatecheck.go` and `cmd/selftest.go --gate` call `EvaluateFromObservations`. The gate-check command takes `--baseline` and `--hours` flags; selftest --gate passes hardcoded defaults (0 hours = all observations). Should consider whether gate-check can be deprecated in favor of `selftest --gate` or whether they serve different audiences (gate-check = manual, selftest --gate = CI).
 
-41. **`outputGateReport` duplicated** — `cmd/gatecheck.go:outputGateReport` and `cmd/selftest.go:outputSelftestGateReport` have nearly identical lipgloss rendering logic. Should extract to a shared `cmd/gate_output.go` helper. Low priority — cosmetic duplication.
+41. **~~`outputGateReport` duplicated~~** — [RESOLVED] Consolidated into `cmd/gate_output.go` with a single `outputGateReport` function used by both `gatecheck.go` and `selftest.go`.
 
 42. **CI self-test job can't run live iterations yet** — The `selftest` command's full mode calls `e2e.Prepare` which builds a snapshot binary and needs API credentials. CI would need `ANTHROPIC_API_KEY` secret + cost budget. Initially deploying as `--gate` only is correct, but should track when to enable full iterations.
 
 44. **Worktree agent replaced test file instead of appending** — WS-A agent was told to "append to loopbench_test.go or create if it doesn't exist" but replaced the entire file, deleting ~170 lines of existing tests. Root cause: the agent saw the file existed, decided to rewrite it with only the new tests. Workaround: manual merge in parent. Fix: agent prompts should explicitly say "do NOT delete existing test functions" when appending tests.
 
-43. **`selftest` exit code via `os.Exit(1)` bypasses cobra** — Both `gatecheck.go` and `selftest.go` call `os.Exit(1)` inside `RunE`, which skips defer cleanup and cobra's error handling. Should return a sentinel error and handle exit codes in `main()` or a `PersistentPostRunE`. Low priority — works fine in practice.
+43. **~~`selftest` exit code via `os.Exit(1)` bypasses cobra~~** — [RESOLVED] Both `gatecheck.go` and `selftest.go` now return `ErrGateFailed` sentinel error (defined in `cmd/gate_output.go:15`) instead of `os.Exit(1)`. Cobra's error pipeline handles the exit code.
 
 ## Round 5: Stage 3 Phase B Observations
 
@@ -261,9 +261,9 @@ All groups loaded (deferred loading bypassed). 202 tool calls in last 48h. Key b
 ### Remaining (not fixed this round)
 
 - **FINDING-55**: `merge_verify` error reporting — needs investigation of what specific failures cause the 66.7% error rate.
-- **FINDING-57/58**: Scratchpad tool descriptions need "repo required in multi-repo mode" note — deferred (cosmetic).
-- **FINDING-63**: `fleet_status` output size (100k chars) — needs `summary_only` param. Medium effort.
-- **FINDING-64**: Loop verify_pass_rate regression (100% → 68.75%) — needs root cause investigation.
+- **FINDING-57/58**: [RESOLVED] Scratchpad tool descriptions updated to say "auto-detected from CWD; required when multiple repos are scanned".
+- **FINDING-63**: [RESOLVED] `fleet_status` now supports `summary_only` boolean param (returns compact JSON with repo names, session counts, total spend).
+- **FINDING-64**: Root cause investigated (observation pollution from early runs). F2 fix applied: unified verify_pass_rate formula in `baseline.go` and `aggregate.go` to match `gates.go` lenient formula (`VerifyPassed || (status != "failed" && error == "")`).
 - **FINDING-65**: slog wiring to ralph.log — medium effort, cross-cutting change.
 - **FINDING-66**: Standardized empty-result envelope — would change output format for multiple tools, needs deprecation plan.
 - **FINDING-67**: Handler/builder param sync test — good candidate for next improvement round.
@@ -275,23 +275,17 @@ All groups loaded (deferred loading bypassed). 202 tool calls in last 48h. Key b
 
 All 107 registered MCP tools tested across 13 namespaces. 96 invoked with probe inputs — all returned expected results or correctly-structured error codes. 11 skipped to avoid side effects (session launches, loop starts, external API costs).
 
-### FINDING-68: `session_stop` returns `INTERNAL_ERROR` instead of `SESSION_NOT_FOUND`
+### FINDING-68: [RESOLVED] `session_stop` returns `INTERNAL_ERROR` instead of `SESSION_NOT_FOUND`
 **Tool**: `ralphglasses_session_stop`
-**Evidence**: Calling with nonexistent ID returns `[INTERNAL_ERROR] stop failed: session not found: nonexistent` while `session_status`, `session_output`, `session_tail`, `session_diff`, `session_budget` all return `SESSION_NOT_FOUND` for the same case.
-**Proposed fix**: Change `session_stop` handler to return `codedError(ErrSessionNotFound, ...)` instead of `codedError(ErrInternal, ...)` when session is not found.
-**Risk**: LOW — error code consistency fix.
+**Status**: Already fixed — `handleSessionStop` checks `strings.Contains(err.Error(), "not found")` and returns `ErrSessionNotFound`.
 
-### FINDING-69: `stop` (core) returns unstructured error vs `loop_stop` returns coded error
+### FINDING-69: [RESOLVED] `stop` (core) returns unstructured error vs `loop_stop` returns coded error
 **Tool**: `ralphglasses_stop` vs `ralphglasses_loop_stop`
-**Evidence**: `stop` returns `{"error":"stop failed: no running loop: ralphglasses","error_code":"internal_error"}` (lowercase error_code). `loop_stop` returns `{"error":"[LOOP_NOT_FOUND] stop loop: loop not found: ...","error_code":"LOOP_NOT_FOUND"}`. The `stop` handler likely still uses `errResult()` or a raw error path.
-**Proposed fix**: Migrate `stop` handler to use `codedError()` with appropriate constants (e.g., `ErrNotRunning`).
-**Risk**: LOW.
+**Status**: Fixed — `handleStop` now detects "no running loop" errors from `ProcMgr.Stop` and returns `codedError(ErrNotRunning, ...)`. Also fixed `handlePause` for the same pattern.
 
-### FINDING-70: `fleet_status` output exceeds 100KB — still no summary mode
+### FINDING-70: [RESOLVED] `fleet_status` output exceeds 100KB — summary mode added
 **Tool**: `ralphglasses_fleet_status`
-**Evidence**: Output saved to file (101,102 chars). Previously noted as FINDING-63 but not yet fixed. Contains full session details for all repos across scan path.
-**Proposed fix**: Add `summary_only` boolean param that returns aggregate counts. Add `repo` filter param.
-**Risk**: LOW — additive params.
+**Status**: Already fixed — `summary_only` boolean param added to tool builder and handler. Returns compact JSON with repo names, session counts, total spend.
 
 ### FINDING-71: `scratchpad_list/read/append` require explicit `repo` in multi-repo mode
 **Tool**: All scratchpad tools
@@ -299,29 +293,21 @@ All 107 registered MCP tools tested across 13 namespaces. 96 invoked with probe 
 **Status**: FIXED in commit 74fd551 — `resolveRepoPath` now auto-detects CWD repo via `os.Getwd()` prefix match against discovered repos. Needs MCP restart to take effect.
 **Verification**: After restart, call `scratchpad_list` without `repo` param from within a repo directory.
 
-### FINDING-72: `blackboard_put` and `blackboard_query` return "not initialized" — no way to initialize
+### FINDING-72: [RESOLVED] `blackboard_put` and `blackboard_query` return "not initialized" — no way to initialize
 **Tool**: `ralphglasses_blackboard_put`, `ralphglasses_blackboard_query`
-**Evidence**: Both return `{"message":"blackboard not initialized","status":"not_configured"}`. The blackboard requires fleet server mode (`ralphglasses serve`) but there's no documentation of this prerequisite in the tool descriptions.
-**Proposed fix**: Update tool descriptions to note "Requires fleet server mode (ralphglasses serve)". Consider lazy-init for standalone MCP mode.
-**Risk**: LOW — description update.
+**Status**: Already fixed — tool descriptions in `tools_builders.go` include "Requires fleet server mode (ralphglasses mcp --fleet)".
 
-### FINDING-73: `a2a_offers` and `cost_forecast` same "not initialized" pattern
+### FINDING-73: [RESOLVED] `a2a_offers` and `cost_forecast` same "not initialized" pattern
 **Tool**: `ralphglasses_a2a_offers`, `ralphglasses_cost_forecast`
-**Evidence**: Both return `not_configured` status. Same prerequisite issue as FINDING-72.
-**Proposed fix**: Same — update descriptions or add lazy initialization.
-**Risk**: LOW.
+**Status**: Already fixed — tool descriptions include "Requires fleet server mode (ralphglasses mcp --fleet)".
 
-### FINDING-74: `awesome_report` requires prior `awesome_analyze` — not documented
+### FINDING-74: [RESOLVED] `awesome_report` requires prior `awesome_analyze` — not documented
 **Tool**: `ralphglasses_awesome_report`
-**Evidence**: Returns `FILESYSTEM_ERROR: load analysis: open .ralph/awesome/analysis.json: no such file or directory`. The tool depends on a prior `awesome_analyze` or `awesome_sync` run to populate analysis.json.
-**Proposed fix**: Return structured error like `{"status":"no_data","message":"Run awesome_analyze or awesome_sync first"}` instead of raw filesystem error.
-**Risk**: LOW.
+**Status**: Already fixed — `handleAwesomeReport` checks `os.IsNotExist(err)` and returns `{"status":"no_data","message":"Run awesome_analyze or awesome_sync first to generate analysis data"}`.
 
-### FINDING-75: `team_create` launches a real session — no dry_run option
+### FINDING-75: [RESOLVED] `team_create` launches a real session — no dry_run option
 **Tool**: `ralphglasses_team_create`
-**Evidence**: Creating team "e2e-probe" launched session `8c59d15e-...` immediately. No way to validate team config without incurring session cost.
-**Proposed fix**: Add `dry_run` boolean param that validates config and returns the team structure without launching the lead session.
-**Risk**: LOW — additive param.
+**Status**: Already fixed — `dry_run` boolean param exists in tool builder and handler. Returns team config without launching sessions.
 
 ### FINDING-76: E2E probe artifacts left behind
 **Evidence**: `e2e-probe` workflow definition saved at `.ralph/workflows/e2e-probe.yaml`, `e2e_test_scratchpad.md` created. These are harmless but could accumulate across test runs.
@@ -334,5 +320,27 @@ All 107 registered MCP tools tested across 13 namespaces. 96 invoked with probe 
 - **Tool benchmark data shows healthy sub-1ms latency** for most tools. `loop_step` P50=203s is expected (runs full planner+worker+verify cycle). `coverage_report` at 3.6s is reasonable for `go test -cover`.
 - **scratchpad_list benchmark shows 66.7% success rate** — the 33.3% failures were from the multi-repo disambiguation issue, now fixed (FINDING-71).
 
-### Cross-Cutting Pattern: "not_configured" tools need prerequisite docs
-Tools that require fleet server mode (`blackboard_put/query`, `a2a_offers`, `cost_forecast`, `fleet_submit`) should either: (a) document the prerequisite in their description, or (b) lazy-initialize their backing stores in standalone MCP mode with reasonable defaults.
+### Cross-Cutting Pattern: [RESOLVED] "not_configured" tools need prerequisite docs
+All fleet-mode tools (`blackboard_put/query`, `a2a_offers`, `cost_forecast`, `fleet_submit`, `fleet_budget`, `fleet_workers`) now include "Requires fleet server mode (ralphglasses mcp --fleet)" in their tool descriptions.
+
+## Round 9: Scratchpad Audit & Consistency Fixes (2026-03-26)
+
+**Code fixes applied:**
+- **FINDING-69**: `handleStop` and `handlePause` now detect "no running loop" errors and return `codedError(ErrNotRunning, ...)` instead of `codedError(ErrInternal, ...)`.
+- **FINDING-57/58**: Scratchpad tool descriptions updated from "(default: first discovered)" to "(auto-detected from CWD; required when multiple repos are scanned)".
+- **FINDING-64 F2**: Unified verify_pass_rate formula across `baseline.go`, `aggregate.go`, and `gates.go` — all now use lenient formula: `VerifyPassed || (status != "failed" && error == "")`.
+
+**Marked as already resolved (implemented in prior rounds but not tracked):**
+- FINDING-14: Event Version field and MigrateEvent already exist.
+- FINDING-16: `persistOrWarn` helper exists, single production caller checks error.
+- FINDING-17: `ValidEventType()` exists with `knownEventTypes` map, `PublishCtx` warns on unknown types.
+- FINDING-18: `SubscribeFiltered()` exists with per-type channel routing.
+- FINDING-38: `SelfImproveMerged` and `SelfImprovePR` event types exist.
+- FINDING-41: `outputGateReport` consolidated in `cmd/gate_output.go`.
+- FINDING-43: `ErrGateFailed` sentinel replaces `os.Exit(1)` in `gatecheck.go` and `selftest.go`.
+- FINDING-63: `fleet_status` supports `summary_only` param.
+- FINDING-68: `session_stop` already checks for "not found" and returns `ErrSessionNotFound`.
+- FINDING-70: Same as FINDING-63 — `summary_only` already implemented.
+- FINDING-72/73: Fleet-mode tool descriptions already include prerequisite note.
+- FINDING-74: `awesome_report` returns structured `no_data` on missing analysis.
+- FINDING-75: `team_create` has `dry_run` param.
