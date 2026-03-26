@@ -202,7 +202,7 @@ func (s *Server) handleMergeVerify(ctx context.Context, req mcp.CallToolRequest)
 	result.TotalElapsedSeconds = time.Since(totalStart).Seconds()
 
 	// Return structured JSON.
-	data, err := json.MarshalIndent(result, "", "  ")
+	data, err := json.Marshal(result)
 	if err != nil {
 		return codedError(ErrInternal, fmt.Sprintf("json marshal: %v", err)), nil
 	}

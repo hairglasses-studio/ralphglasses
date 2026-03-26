@@ -58,7 +58,7 @@ func (s *Server) handleCircuitReset(_ context.Context, req mcp.CallToolRequest) 
 		State:      "CLOSED",
 		LastChange: now,
 	}
-	data, err := json.MarshalIndent(fresh, "", "  ")
+	data, err := json.Marshal(fresh)
 	if err != nil {
 		return codedError(ErrInternal, fmt.Sprintf("marshal: %v", err)), nil
 	}
