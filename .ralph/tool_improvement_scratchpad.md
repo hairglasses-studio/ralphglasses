@@ -12,15 +12,15 @@ Observations from reliability & quality improvement workstreams + recursive self
 
 ## MCP Tool Gaps
 
-4. **No `loop_observations` query tool** — after a loop run, querying `.ralph/logs/loop_observations.jsonl` requires raw file reads. A dedicated MCP tool (e.g., `ralphglasses_loop_observations`) could return filtered/aggregated observation data.
+4. **~~No `loop_observations` query tool~~** — RESOLVED: Phase 0.8 WS-1 added `ralphglasses_observation_query` and `ralphglasses_observation_summary` tools.
 
-5. **No cost estimation tool** — before launching a session, there's no way to estimate cost. A `ralphglasses_cost_estimate` tool that takes prompt length + provider + model could return expected cost range.
+5. **~~No cost estimation tool~~** — RESOLVED: Phase 0.8 WS-5 added `ralphglasses_cost_estimate` with per-provider rates and historical calibration.
 
 6. **No event query tool** — now that events persist to JSONL (R5), a `ralphglasses_event_query` tool could search/filter events by type, session, time range.
 
 ## Test Infrastructure
 
-7. **No test coverage tracking across runs** — `check-coverage.sh` enforces thresholds but doesn't track trends. A `ralphglasses_test_coverage` MCP tool or dashboard entry showing coverage over time would catch slow regression.
+7. **~~No test coverage tracking across runs~~** — RESOLVED: Phase 0.8 WS-4 added `ralphglasses_coverage_report` tool that runs `go test -coverprofile` and reports per-package vs threshold.
 
 8. **Fuzz test corpus not persisted** — Go fuzz tests generate corpus entries in `testdata/fuzz/` but these aren't tracked in git. Should add `testdata/fuzz/` to `.gitignore` or decide to commit seed corpus.
 
@@ -58,7 +58,7 @@ Observations from reliability & quality improvement workstreams + recursive self
 
 19. **Phase sequencing needs pre-commit** — Phase B agents didn't see Phase A changes because worktrees branched from stale HEAD. Fix: commit Phase A before launching Phase B agents. Alternatively, the orchestrator could create a temporary branch with Phase A changes for Phase B to branch from.
 
-20. **No automated merge verification between phases** — After merging 3+ worktree agents, must manually run `go vet` + full test suite. Should have a `merge-verify.sh` script that: copies worktree diffs, runs vet+test, reports conflicts.
+20. **~~No automated merge verification between phases~~** — RESOLVED: Phase 0.8 WS-6 added `ralphglasses_merge_verify` tool with sequential build→vet→test, 5-min timeout per step.
 
 21. **Observation pipeline not wired to git diffs** — `LoopObservation` has `FilesChanged`/`LinesAdded`/`LinesRemoved` but no actual file paths. Fixing this (plan item 2.3) would enable tracing regressions to specific code changes.
 
@@ -70,9 +70,9 @@ Observations from reliability & quality improvement workstreams + recursive self
 
 24. **`ralphglasses_event_query`** — Now that events persist to JSONL (R5), a query tool with filters (type, session, time range, limit) would replace raw file reads.
 
-25. **`ralphglasses_observation_query`** — Filter/aggregate `.ralph/logs/loop_observations.jsonl` by loop_id, date range, provider. Currently requires `jq` on the command line.
+25. **~~`ralphglasses_observation_query`~~** — RESOLVED: Phase 0.8 WS-1 implemented with filter by loop_id, status, provider, hours, limit.
 
-26. **`ralphglasses_coverage_report`** — Run `go test -coverprofile` and return per-package coverage vs thresholds. Integrates with `check-coverage.sh`.
+26. **~~`ralphglasses_coverage_report`~~** — RESOLVED: Phase 0.8 WS-4 implemented with per-package coverage vs configurable threshold.
 
 ## Merge Workflow (Round 2 Observations)
 

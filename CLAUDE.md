@@ -18,7 +18,7 @@ go build ./...
 go run . --scan-path ~/hairglasses-studio
 ```
 
-## MCP Server (86 tools, 10 namespaces)
+## MCP Server (109 tools, 13 namespaces)
 
 ```bash
 claude mcp add ralphglasses -- go run . mcp
@@ -26,7 +26,7 @@ claude mcp add ralphglasses -- go run . mcp
 
 A `.mcp.json` is also included in the repo root for automatic local discovery. See [docs/MCP-TOOLS.md](docs/MCP-TOOLS.md) for the full tool table.
 
-Tools use **deferred loading** — only the `core` namespace (12 tools) is loaded at startup. Use the `ralphglasses_tool_groups` meta-tool to list namespaces and `ralphglasses_load_tool_group` to load them on demand.
+Tools use **deferred loading** — only the `core` namespace (10 tools) is loaded at startup. Use the `ralphglasses_tool_groups` meta-tool to list namespaces and `ralphglasses_load_tool_group` to load them on demand.
 
 ## Prompt Enhancement
 
