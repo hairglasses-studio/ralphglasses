@@ -58,7 +58,16 @@ func (s *Server) handleAwesomeDiff(ctx context.Context, req mcp.CallToolRequest)
 		return codedError(ErrInternal, fmt.Sprintf("fetch: %v", err)), nil
 	}
 
-	prev, _ := awesome.LoadIndex(saveTo)
+	prev, err := awesome.LoadIndex(saveTo)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return jsonResult(map[string]any{
+				"status":  "no_data",
+				"message": "Run awesome_fetch first to generate comparison data",
+			}), nil
+		}
+		return codedError(ErrFilesystem, fmt.Sprintf("load index: %v", err)), nil
+	}
 	diff := awesome.Diff(prev, idx)
 	return jsonResult(diff), nil
 }
@@ -72,7 +81,10 @@ func (s *Server) handleAwesomeReport(_ context.Context, req mcp.CallToolRequest)
 	analysis, err := awesome.LoadAnalysis(saveTo)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return jsonResult(map[string]any{"status": "no_data", "message": "run awesome_analyze first"}), nil
+			return jsonResult(map[string]any{
+				"status":  "no_data",
+				"message": "Run awesome_analyze or awesome_sync first to generate analysis data",
+			}), nil
 		}
 		return codedError(ErrFilesystem, fmt.Sprintf("load analysis: %v", err)), nil
 	}
