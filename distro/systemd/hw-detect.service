@@ -8,7 +8,7 @@ ConditionPathExists=!/var/lib/hw-detect/configured
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/opt/ralphglasses/scripts/hw-detect.sh
+ExecStart=/usr/local/bin/hw-detect.sh
 ExecStartPost=/usr/bin/mkdir -p /var/lib/hw-detect
 ExecStartPost=/usr/bin/touch /var/lib/hw-detect/configured
 
