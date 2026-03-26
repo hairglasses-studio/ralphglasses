@@ -2,7 +2,7 @@ package plugin
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 )
@@ -38,7 +38,7 @@ func LoadDir(dir string) ([]Plugin, error) {
 	}
 
 	for _, path := range found {
-		log.Printf("plugin: would load %s (stub — see LoadDir TODO)", path)
+		slog.Info("plugin stub: would load", "path", path)
 	}
 
 	// Return empty slice; actual loading requires hashicorp/go-plugin integration.
