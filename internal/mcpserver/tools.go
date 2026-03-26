@@ -171,6 +171,17 @@ func jsonResult(v any) *mcp.CallToolResult {
 	return textResult(string(data))
 }
 
+// emptyResult returns a standardized empty-collection response with a
+// machine-parseable status and item_type so callers can distinguish between
+// "no data" and "error" without string matching.
+func emptyResult(itemType string) *mcp.CallToolResult {
+	return jsonResult(map[string]any{
+		"status":    "empty",
+		"items":     []any{},
+		"item_type": itemType,
+	})
+}
+
 func argsMap(req mcp.CallToolRequest) map[string]any {
 	if m, ok := req.Params.Arguments.(map[string]any); ok {
 		return m

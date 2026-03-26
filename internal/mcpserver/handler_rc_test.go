@@ -191,6 +191,9 @@ func TestHandleRCRead_NoSessions(t *testing.T) {
 	if !strings.Contains(text, `"status": "empty"`) {
 		t.Errorf("expected empty status JSON in output, got: %s", text)
 	}
+	if !strings.Contains(text, `"item_type": "rc_messages"`) {
+		t.Errorf("expected item_type rc_messages in empty result, got: %s", text)
+	}
 }
 
 func TestHandleRCRead_MissingSession(t *testing.T) {
