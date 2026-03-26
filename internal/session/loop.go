@@ -231,7 +231,7 @@ func (m *Manager) StartLoop(_ context.Context, repoPath string, profile LoopProf
 func (m *Manager) RunLoop(ctx context.Context, id string) error {
 	run, ok := m.GetLoop(id)
 	if !ok {
-		return fmt.Errorf("loop not found: %s", id)
+		return fmt.Errorf("loop %s: %w", id, ErrLoopNotFound)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -303,7 +303,7 @@ func (m *Manager) ListLoops() []*LoopRun {
 func (m *Manager) StopLoop(id string) error {
 	run, ok := m.GetLoop(id)
 	if !ok {
-		return fmt.Errorf("loop not found: %s", id)
+		return fmt.Errorf("loop %s: %w", id, ErrLoopNotFound)
 	}
 
 	run.mu.Lock()
@@ -333,7 +333,7 @@ func (m *Manager) StopLoop(id string) error {
 func (m *Manager) PauseLoop(id string) error {
 	run, ok := m.GetLoop(id)
 	if !ok {
-		return fmt.Errorf("loop not found: %s", id)
+		return fmt.Errorf("loop %s: %w", id, ErrLoopNotFound)
 	}
 	run.mu.Lock()
 	run.Paused = true
@@ -347,7 +347,7 @@ func (m *Manager) PauseLoop(id string) error {
 func (m *Manager) ResumeLoop(id string) error {
 	run, ok := m.GetLoop(id)
 	if !ok {
-		return fmt.Errorf("loop not found: %s", id)
+		return fmt.Errorf("loop %s: %w", id, ErrLoopNotFound)
 	}
 	run.mu.Lock()
 	run.Paused = false
@@ -363,13 +363,13 @@ func (m *Manager) ResumeLoop(id string) error {
 func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	run, ok := m.GetLoop(id)
 	if !ok {
-		return fmt.Errorf("loop not found: %s", id)
+		return fmt.Errorf("loop %s: %w", id, ErrLoopNotFound)
 	}
 
 	run.mu.Lock()
 	if run.Status == "stopped" {
 		run.mu.Unlock()
-		return fmt.Errorf("loop %s is stopped", id)
+		return fmt.Errorf("loop %s: %w", id, ErrLoopStopped)
 	}
 	if len(run.Iterations) > 0 {
 		last := run.Iterations[len(run.Iterations)-1]
@@ -400,7 +400,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		run.LastError = reason
 		run.mu.Unlock()
 		m.PersistLoop(run)
-		return fmt.Errorf("loop %s converged: %s", id, reason)
+		return fmt.Errorf("loop %s converged (%s): %w", id, reason, ErrLoopConverged)
 	}
 
 	// Snapshot previous iterations for planner dedup (while still under lock).
