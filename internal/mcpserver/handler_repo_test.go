@@ -10,6 +10,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 )
 
@@ -506,5 +507,345 @@ func TestHandleLogs_NoLogFile(t *testing.T) {
 	text := getResultText(result)
 	if !strings.Contains(text, "no log file yet") {
 		t.Errorf("expected 'no log file yet' message, got: %s", text)
+	}
+}
+
+// --- handleStart (codedError paths) ---
+
+func TestHandleStart_InvalidRepoName(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleStart(context.Background(), makeRequest(map[string]any{
+		"repo": "../escape",
+	}))
+	if err != nil {
+		t.Fatalf("handleStart: %v", err)
+	}
+	assertErrorCode(t, "handleStart", result, "INVALID_PARAMS")
+}
+
+func TestHandleStart_RepoNotFound(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleStart(context.Background(), makeRequest(map[string]any{
+		"repo": "nonexistent-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleStart: %v", err)
+	}
+	assertErrorCode(t, "handleStart", result, "REPO_NOT_FOUND")
+}
+
+func TestHandleStart_ScanError(t *testing.T) {
+	t.Parallel()
+	srv := NewServer("/nonexistent/path/that/does/not/exist")
+
+	result, err := srv.handleStart(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleStart: %v", err)
+	}
+	assertErrorCode(t, "handleStart", result, "SCAN_FAILED")
+}
+
+// --- handleStop (codedError paths) ---
+
+func TestHandleStop_InvalidRepoName(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleStop(context.Background(), makeRequest(map[string]any{
+		"repo": "../escape",
+	}))
+	if err != nil {
+		t.Fatalf("handleStop: %v", err)
+	}
+	assertErrorCode(t, "handleStop", result, "INVALID_PARAMS")
+}
+
+func TestHandleStop_RepoNotFound(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleStop(context.Background(), makeRequest(map[string]any{
+		"repo": "nonexistent-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleStop: %v", err)
+	}
+	assertErrorCode(t, "handleStop", result, "REPO_NOT_FOUND")
+}
+
+func TestHandleStop_NotRunning(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleStop(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleStop: %v", err)
+	}
+	assertErrorCode(t, "handleStop", result, "NOT_RUNNING")
+}
+
+func TestHandleStop_ScanError(t *testing.T) {
+	t.Parallel()
+	srv := NewServer("/nonexistent/path/that/does/not/exist")
+
+	result, err := srv.handleStop(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleStop: %v", err)
+	}
+	assertErrorCode(t, "handleStop", result, "SCAN_FAILED")
+}
+
+// --- handlePause (additional codedError paths) ---
+
+func TestHandlePause_InvalidRepoName(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handlePause(context.Background(), makeRequest(map[string]any{
+		"repo": "../escape",
+	}))
+	if err != nil {
+		t.Fatalf("handlePause: %v", err)
+	}
+	assertErrorCode(t, "handlePause", result, "INVALID_PARAMS")
+}
+
+func TestHandlePause_NotRunning(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handlePause(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handlePause: %v", err)
+	}
+	assertErrorCode(t, "handlePause", result, "NOT_RUNNING")
+}
+
+func TestHandlePause_ScanError(t *testing.T) {
+	t.Parallel()
+	srv := NewServer("/nonexistent/path/that/does/not/exist")
+
+	result, err := srv.handlePause(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handlePause: %v", err)
+	}
+	assertErrorCode(t, "handlePause", result, "SCAN_FAILED")
+}
+
+// --- handleStatus (additional codedError paths) ---
+
+func TestHandleStatus_InvalidRepoName(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleStatus(context.Background(), makeRequest(map[string]any{
+		"repo": "../escape",
+	}))
+	if err != nil {
+		t.Fatalf("handleStatus: %v", err)
+	}
+	assertErrorCode(t, "handleStatus", result, "INVALID_PARAMS")
+}
+
+// --- handleLogs (additional codedError paths) ---
+
+func TestHandleLogs_InvalidRepoName(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleLogs(context.Background(), makeRequest(map[string]any{
+		"repo": "../escape",
+	}))
+	if err != nil {
+		t.Fatalf("handleLogs: %v", err)
+	}
+	assertErrorCode(t, "handleLogs", result, "INVALID_PARAMS")
+}
+
+// --- handleConfig (additional codedError paths) ---
+
+func TestHandleConfig_InvalidRepoName(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleConfig(context.Background(), makeRequest(map[string]any{
+		"repo": "../escape",
+	}))
+	if err != nil {
+		t.Fatalf("handleConfig: %v", err)
+	}
+	assertErrorCode(t, "handleConfig", result, "INVALID_PARAMS")
+}
+
+func TestHandleConfig_ScanError(t *testing.T) {
+	t.Parallel()
+	srv := NewServer("/nonexistent/path/that/does/not/exist")
+
+	result, err := srv.handleConfig(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleConfig: %v", err)
+	}
+	assertErrorCode(t, "handleConfig", result, "SCAN_FAILED")
+}
+
+// --- handleScan with EventBus ---
+
+func TestHandleScan_WithEventBus(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	bus := events.NewBus(100)
+	srv.EventBus = bus
+
+	result, err := srv.handleScan(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleScan: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleScan returned error: %s", getResultText(result))
+	}
+
+	// Verify event was published
+	history := bus.History("", 10)
+	found := false
+	for _, e := range history {
+		if e.Type == events.ScanComplete {
+			found = true
+			if count, ok := e.Data["repo_count"]; ok {
+				if c, ok := count.(int); !ok || c < 1 {
+					t.Errorf("expected repo_count >= 1, got: %v", count)
+				}
+			}
+		}
+	}
+	if !found {
+		t.Error("expected ScanComplete event in bus history")
+	}
+}
+
+// --- handleConfigBulk with EventBus ---
+
+func TestHandleConfigBulk_SetWithEventBus(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	bus := events.NewBus(100)
+	srv.EventBus = bus
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleConfigBulk(context.Background(), makeRequest(map[string]any{
+		"key":   "MODEL",
+		"value": "opus",
+		"repos": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleConfigBulk: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleConfigBulk returned error: %s", getResultText(result))
+	}
+
+	// Verify event was published
+	history := bus.History("", 10)
+	found := false
+	for _, e := range history {
+		if e.Type == events.ConfigChanged {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected ConfigChanged event in bus history")
+	}
+}
+
+// --- handleConfigBulk: repo with no config ---
+
+func TestHandleConfigBulk_RepoWithoutConfig(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	repoPath := filepath.Join(root, "no-config-repo")
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// Write minimal status.json but no .ralphrc
+	statusData, _ := json.Marshal(model.LoopStatus{Status: "idle"})
+	if err := os.WriteFile(filepath.Join(ralphDir, "status.json"), statusData, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := NewServer(root)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleConfigBulk(context.Background(), makeRequest(map[string]any{
+		"key": "MODEL",
+	}))
+	if err != nil {
+		t.Fatalf("handleConfigBulk: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleConfigBulk returned error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "no .ralphrc") {
+		t.Errorf("expected 'no .ralphrc' in result, got: %s", text)
+	}
+}
+
+// --- handleList_ScanError ---
+
+func TestHandleList_ScanError(t *testing.T) {
+	t.Parallel()
+	srv := NewServer("/nonexistent/path/that/does/not/exist")
+
+	result, err := srv.handleList(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleList: %v", err)
+	}
+	assertErrorCode(t, "handleList", result, "SCAN_FAILED")
+}
+
+// --- handleStatus with full detail ---
+
+func TestHandleStatus_FullDetail(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleStatus(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleStatus: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleStatus returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	// Verify detailed fields are present
+	for _, key := range []string{"name", "path", "managed", "status", "circuit_breaker", "progress", "config"} {
+		if !strings.Contains(text, key) {
+			t.Errorf("expected %q in status detail, got: %s", key, text)
+		}
 	}
 }

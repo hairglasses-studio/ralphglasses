@@ -140,3 +140,49 @@ func TestHandleAwesomeDiffMissingSaveTo(t *testing.T) {
 		t.Error("expected tool error for missing save_to")
 	}
 }
+
+func TestHandleAwesomeSyncMissingSaveTo(t *testing.T) {
+	t.Parallel()
+
+	srv := &Server{}
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{}
+
+	result, err := srv.handleAwesomeSync(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.IsError {
+		t.Error("expected tool error for missing save_to")
+	}
+}
+
+func TestHandleAwesomeReportJSONFormat(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	srv := &Server{ScanPath: root}
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"save_to": root,
+		"format":  "json",
+	}
+
+	result, err := srv.handleAwesomeReport(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// No data on disk so returns no_data status
+	if result.IsError {
+		t.Fatalf("expected successful result, got tool error: %v", result.Content)
+	}
+	text := result.Content[0].(mcp.TextContent).Text
+	var body map[string]any
+	if err := json.Unmarshal([]byte(text), &body); err != nil {
+		t.Fatalf("response is not valid JSON: %v", err)
+	}
+	if body["status"] != "no_data" {
+		t.Errorf("expected no_data, got %v", body["status"])
+	}
+}
