@@ -117,13 +117,16 @@ func BuildBaseline(observations []session.LoopObservation, windowHours float64) 
 		SampleCount: len(allCosts),
 	}
 
-	// Rates
+	// Rates — use the same lenient formula as gates.go: count as verified
+	// when either VerifyPassed is true OR the observation didn't fail
+	// (status != "failed" and no error). This prevents early incomplete
+	// observations from permanently dragging down aggregate metrics.
 	var completed, verifyPassed, errored int
 	for _, obs := range filtered {
 		if obs.Status == "idle" {
 			completed++
 		}
-		if obs.VerifyPassed {
+		if obs.VerifyPassed || (obs.Status != "failed" && obs.Error == "") {
 			verifyPassed++
 		}
 		if obs.Error != "" {
