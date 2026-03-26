@@ -102,7 +102,7 @@ func EventBusMiddleware(bus *events.Bus) server.ToolHandlerMiddleware {
 
 			if bus != nil {
 				success := err == nil && result != nil && !result.IsError
-				bus.Publish(events.Event{
+				bus.PublishCtx(ctx, events.Event{
 					Type: events.ToolCalled,
 					Data: map[string]any{
 						"tool":       req.Params.Name,
