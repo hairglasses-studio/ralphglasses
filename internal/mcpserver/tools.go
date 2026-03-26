@@ -869,12 +869,16 @@ func (s *Server) scan() error {
 	return nil
 }
 
+// RACE FIX: return a shallow copy of the Repo struct so that callers
+// (e.g. handleStatus → RefreshRepo) can safely mutate fields without
+// racing with reposCopy or other concurrent readers of s.Repos.
 func (s *Server) findRepo(name string) *model.Repo {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for _, r := range s.Repos {
 		if r.Name == name {
-			return r
+			rc := *r
+			return &rc
 		}
 	}
 	return nil

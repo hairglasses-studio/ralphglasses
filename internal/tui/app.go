@@ -415,7 +415,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case process.ProcessExitMsg:
-		return m.applyProcessExit(msg)
+		applyProcessExit(msg, m.Repos)
+		// Re-arm the listener for the next exit.
+		if m.ProcMgr != nil {
+			return m, process.WaitForProcessExit(m.ProcMgr.ExitChan())
+		}
+		return m, nil
 
 	case components.ConfirmResultMsg:
 		return m.handleConfirmResult(msg)
@@ -444,22 +449,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) applyProcessExit(msg process.ProcessExitMsg) (tea.Model, tea.Cmd) {
-	// Update repo status based on exit code.
-	for _, r := range m.Repos {
+// applyProcessExit updates the status of the repo matching msg.RepoPath
+// based on the process exit code.
+func applyProcessExit(msg process.ProcessExitMsg, repos []*model.Repo) {
+	for _, r := range repos {
 		if r.Path == msg.RepoPath {
 			if r.Status == nil {
 				r.Status = &model.LoopStatus{}
 			}
 			r.Status.Status = model.RepoStatusFromExitCode(msg.ExitCode, msg.Error)
-			break
+			return
 		}
 	}
-	// Re-arm the listener for the next exit.
-	if m.ProcMgr != nil {
-		return m, process.WaitForProcessExit(m.ProcMgr.ExitChan())
-	}
-	return m, nil
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

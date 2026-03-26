@@ -104,256 +104,259 @@ All three providers support prompt caching for 80-90% input cost savings:
 
 Cache hit rates are tracked in the cost ledger and surfaced via `ralphglasses_fleet_analytics`.
 
-## Provider Event Normalization & Cost Extraction
+## Provider Cost Normalization & Stderr Fallback
 
-The `internal/session/` package normalizes heterogeneous provider output into a single `StreamEvent` type and extracts cost through a three-tier cascade.
+### Provider Event Normalizers
 
-### Event Normalizer Dispatch
+Each provider has a dedicated normalizer that parses streaming NDJSON into the unified `StreamEvent` struct (`internal/session/types.go`):
 
-`normalizeEvent()` in `providers.go` is the entry point called by `runner.go`'s stream reader on each output line:
+- **`normalizeClaudeEvent(line []byte) (StreamEvent, error)`** — JSON-unmarshals directly into `StreamEvent`, then does a secondary raw parse to extract nested cost fields
+- **`normalizeGeminiEvent(line []byte) (StreamEvent, error)`** — Parses raw JSON map, probes multiple field paths (`type`/`event`/`event_type`, `content`/`message`/`text`/`delta`, etc.), calls `applyEventDefaults()`
+- **`normalizeCodexEvent(line []byte) (StreamEvent, error)`** — Same map-probe pattern as Gemini, with Codex-specific paths (`item.type`, `output_text`)
 
+All three are dispatched by `normalizeEvent(provider Provider, line []byte)` in `internal/session/providers.go`, called from `runSessionOutput()` in `internal/session/runner.go`.
+
+### Cost Extraction Cascade
+
+Each normalizer applies a three-tier cost extraction:
+
+1. **Explicit cost field** — `firstNonZeroFloat(raw, "cost_usd", "usage.cost_usd", "usage.total_cost_usd")`
+2. **Token-based estimation** — `estimateCostFromTokens(provider, raw)` computes `(inputTokens/1M) × rate.InputPer1M + (outputTokens/1M) × rate.OutputPer1M` using `ProviderCostRates` from `internal/session/costnorm.go`
+   - Input token paths tried: `usage.input_tokens`, `usage_metadata.prompt_token_count`, `usage.prompt_tokens`
+   - Output token paths tried: `usage.output_tokens`, `usage_metadata.candidates_token_count`, `usage.completion_tokens`
+3. **Stderr fallback** — `ParseCostFromStderr(stderr string) float64` (defined in `providers.go:479`)
+
+Reference rates in `internal/session/costs.go`:
+
+```go
+CostClaudeSonnetInput  = 3.00   // USD per 1M tokens
+CostClaudeSonnetOutput = 15.00
+CostGeminiFlashInput   = 0.30
+CostGeminiFlashOutput  = 2.50
+CostCodexInput         = 2.50
+CostCodexOutput        = 15.00
 ```
-normalizeEvent(provider, line []byte) → StreamEvent
-  ├─ ProviderGemini  → normalizeGeminiEvent(line)
-  ├─ ProviderCodex   → normalizeCodexEvent(line)
-  └─ default/Claude  → normalizeClaudeEvent(line)
-```
-
-Each normalizer unmarshals the raw JSON into a `map[string]any`, extracts fields using dotted path helpers (`valueAtPath`, `firstNonZeroFloat`, etc.), and returns a unified `StreamEvent`. All three set `event.Raw` to the original bytes for downstream consumers.
-
-| Normalizer | Provider format | Notable behavior |
-|---|---|---|
-| `normalizeClaudeEvent` | Claude stream-json | Double-unmarshal: flat struct + raw map for nested fields; normalises `subagent` → `agent` type |
-| `normalizeGeminiEvent` | Gemini NDJSON | Path-based extraction; falls back to `fallbackTextEvent` on parse error |
-| `normalizeCodexEvent` | Codex quiet-mode JSON | Path-based extraction; similar fallback path |
-
-`applyEventDefaults()` is called by the Gemini and Codex normalizers to canonicalise type names (`message`/`delta`/`output` → `assistant`, `error` → `result`) and fill derived fields (`Text`, `Content`, `Result`).
-
-### Three-Tier Cost Extraction Cascade
-
-Within each normalizer, cost is extracted in priority order. The first tier to produce a non-zero value wins:
-
-**Tier 1 — Explicit cost field** (`firstNonZeroFloat`):
-```
-cost_usd  →  usage.cost_usd  →  usage.total_cost_usd
-```
-Resolves provider quirks where the cost field is top-level for some events and nested under `usage` for others.
-
-**Tier 2 — Token estimation** (`estimateCostFromTokens`):
-Activated only when Tier 1 returns zero. Walks multiple provider-specific token paths:
-- Input: `usage.input_tokens` → `usage_metadata.prompt_token_count` → `usage.prompt_tokens`
-- Output: `usage.output_tokens` → `usage_metadata.candidates_token_count` → `usage.completion_tokens`
-
-Cost is then computed using `ProviderCostRates` (USD per 1M tokens):
-```
-cost = (inputTokens / 1_000_000) × rates.InputPer1M
-     + (outputTokens / 1_000_000) × rates.OutputPer1M
-```
-
-**Tier 3 — Stderr fallback** (`ParseCostFromStderr`):
-An exported utility for callers that collect stderr separately (e.g. MCP tool handlers). Not called inline by the normalizers, but available as a last resort when structured stdout data is absent.
 
 ### Stderr Cost Fallback (`ParseCostFromStderr`)
 
-`ParseCostFromStderr` parses human-readable cost lines emitted by LLM CLIs to their terminal:
+**Trigger condition**: `StreamEvent.CostUSD == 0` after both explicit field lookup and token-based estimation return zero. This function is available for callers (e.g. loop orchestrator, MCP handlers) when structured cost data is absent from the provider's stdout JSON stream.
+
+**Parsing logic** (`providers.go:469-496`):
 
 ```go
 var stderrCostRe = regexp.MustCompile(
     `(?i)(?:total\s+)?(?:session\s+)?cost(?:_usd)?:\s*\$?([\d]+\.[\d]+)`)
 ```
 
-Matched patterns (case-insensitive):
-- `Cost: $0.0023`
-- `Total cost: 0.0023`
-- `cost_usd: $1.23`
-- `Session cost: $0.05`
+- Strips ANSI escape codes via `ansiRe` before matching
+- Matches patterns like `Cost: $0.0023`, `Total cost: 0.0023`, `cost_usd: $1.23`, `Session cost: $0.05`
+- Uses `FindAllStringSubmatch` and takes the **last** match (final/total cost)
+- Validates: returns `0` if parse fails or value is negative
 
-Processing steps:
-1. **ANSI strip** — removes terminal colour codes via `\x1b\[[0-9;]*[a-zA-Z]` before matching
-2. **Find all matches** — collects every match in the buffer
-3. **Last-match selection** — `matches[len(matches)-1]` picks the final printed cost, which is the cumulative total (CLIs often print intermediate costs as well)
-4. **Validation** — returns `0` if parse fails or `cost < 0`; negative costs are treated as absent
+**Stderr collection**: `runSession()` in `runner.go` reads stderr into a `strings.Builder` via a background goroutine. After process exit, stderr is used for error reporting (`sanitizeStderr`) and output fallback (`cleanProviderOutput`). `ParseCostFromStderr` operates on this same buffer.
 
-### Cross-Provider Normalization (`NormalizeProviderCost`)
+### Cross-Provider Cost Normalization
 
-`NormalizeProviderCost` in `costnorm.go` scales a raw provider cost to the Claude Sonnet baseline, enabling apples-to-apples comparisons in the fleet optimizer and auto-optimizer:
+`NormalizeProviderCost(p Provider, rawCostUSD float64, inputTokens, outputTokens int) NormalizedCost` in `internal/session/costnorm.go` normalizes any provider's cost to Claude-equivalent rates:
 
-```go
-func NormalizeProviderCost(p Provider, rawCostUSD float64,
-    inputTokens, outputTokens int) NormalizedCost
-```
+- **With token counts**: recomputes cost at `claudeBaseRate` (Claude Sonnet input/output rates)
+- **Without token counts**: scales raw cost by `claudeBlended / providerBlended` (50/50 input/output heuristic)
+- Returns `NormalizedCost` with `RawCostUSD`, `NormalizedUSD`, `EfficiencyPct` (raw/normalized × 100)
 
-Two normalization paths:
-
-| Token counts known | Method |
-|---|---|
-| Yes | `NormalizedUSD = (inputTokens/1M × claudeRate.Input) + (outputTokens/1M × claudeRate.Output)` |
-| No | Blended-rate scaling: `NormalizedUSD = rawCostUSD × (claudeBlended / providerBlended)` where blended = (InputPer1M + OutputPer1M) / 2 |
-
-`EfficiencyPct = (RawCostUSD / NormalizedUSD) × 100`. Values below 100 indicate the provider is cheaper than Claude at equivalent work.
-
-`NormalizeSessionCost(s *Session)` is a convenience wrapper that reads `s.SpentUSD` under the session mutex and delegates to `NormalizeProviderCost` with zero token counts.
-
-Consumers: `internal/session/autooptimize.go` (provider scoring) and `internal/fleet/optimizer.go` (fleet task routing).
-
-### Data Flow Diagram
+### Data Flow: Raw Output → `Session.SpentUSD`
 
 ```
-Provider CLI stdout (NDJSON stream)
-         │
-         ▼
-  normalizeEvent(provider, line)
-         │
-         ├─── normalizeClaudeEvent ──┐
-         ├─── normalizeGeminiEvent ──┤
-         └─── normalizeCodexEvent ───┘
-                                     │
-                     Three-tier cost cascade:
-                     1. Explicit cost_usd field
-                     2. Token estimation (ProviderCostRates)
-                     3. ParseCostFromStderr (caller-driven fallback)
-                                     │
-                                     ▼
-                            StreamEvent.CostUSD
-                                     │
-                    runner.go accumulates into Session:
-                    ┌─ Claude:  SpentUSD  = event.CostUSD  (cumulative)
-                    └─ Others:  SpentUSD += event.CostUSD  (additive)
-                                     │
-                                     ▼
-                            Session.SpentUSD
-                                     │
-              ┌──────────────────────┴──────────────────────┐
-              │                                             │
-    CostUpdate event bus                     NormalizeSessionCost()
-    (fleet monitoring,                                      │
-     budget enforcement)               NormalizeProviderCost(provider,
-                                         SpentUSD, 0, 0)
-                                                            │
-                                                            ▼
-                                                    NormalizedCost
-                                                  (NormalizedUSD,
-                                                   EfficiencyPct)
-                                                            │
-                                          ┌─────────────────┴──────────────┐
-                                          │                                │
-                                 autooptimize.go                  fleet/optimizer.go
-                                 (provider scoring)               (task routing)
+Provider CLI (stdout NDJSON)
+  │
+  ▼
+runSessionOutput()                     # runner.go — line-by-line scanner
+  │
+  ▼
+normalizeEvent(provider, line)         # providers.go — dispatches to per-provider normalizer
+  │
+  ├─ normalizeClaudeEvent(line)        # JSON unmarshal → secondary raw parse
+  ├─ normalizeGeminiEvent(line)        # raw map probe → applyEventDefaults()
+  └─ normalizeCodexEvent(line)         # raw map probe → applyEventDefaults()
+  │
+  │  Cost extracted via:
+  │    1. firstNonZeroFloat(raw, "cost_usd", "usage.cost_usd", ...)
+  │    2. estimateCostFromTokens(provider, raw)  [if step 1 = 0]
+  │
+  ▼
+StreamEvent.CostUSD                    # types.go:82
+  │
+  ▼
+runSession() event loop                # runner.go:327 — on "result" events:
+  │  Claude:  s.SpentUSD = event.CostUSD   (cumulative)
+  │  Others:  s.SpentUSD += event.CostUSD  (incremental)
+  │  → s.CostHistory append
+  │  → tracing.RecordTurnMetric()
+  │  → events.CostUpdate published
+  │
+  ▼
+Session.SpentUSD                       # types.go:47
+  │
+  ▼
+Loop orchestrator (loop.go)            # reads SpentUSD from planner + worker sessions
+  │  totalCost = planner.SpentUSD + Σ worker.SpentUSD
+  │  → CostPredictor.Record(CostObservation{CostUSD: totalCost})
+  │
+  ▼
+NormalizeProviderCost()                # costnorm.go — for cross-provider comparison
+  └─ NormalizedCost{RawCostUSD, NormalizedUSD, EfficiencyPct}
 ```
 
 ## TUI Loop Interaction Surface
 
-The `internal/tui/` package exposes loop management through four dedicated views, a key dispatch table, process exit plumbing, and a live status bar. This section documents how they fit together.
+The TUI exposes four loop-related views, a table-driven key dispatch system, and a status bar health summary. This section traces data flow from the loop engine (see [Provider Architecture](#provider-architecture) for session dispatch and [Data Flow: Raw Output → Session.SpentUSD](#data-flow-raw-output--sessionspentusd) for cost propagation) through the Bubble Tea update cycle to the rendered UI.
 
-### Loop Views & Data Flow
+### Loop Views
 
-| View constant | File | Data source | Purpose |
-|---|---|---|---|
-| `ViewLoopList` | `views/loop_list.go` | `SessMgr.ListLoops()` → `LoopListMsg` | Sortable table of all `LoopRun` objects; refreshed on every tick and after start/stop/pause actions |
-| `ViewLoopDetail` | `views/loopdetail.go` | `SessMgr.GetLoop(m.SelectedLoop)` | Full iteration history, status, and per-loop cost for a single `LoopRun` |
-| `ViewLoopControl` | `views/loop_control.go` | `views.SnapshotLoopControl(SessMgr.ListLoops())` → `Model.LoopControlData` | Multi-loop control panel; bulk step/toggle/pause across all running loops |
-| `ViewLoopHealth` | `views/loophealth.go` | `ObsCache[repoPath]` + `GateCache[repoPath]` | Regression gate verdicts and observation timeseries for the selected repo |
+Four `ViewMode` constants control loop navigation (`internal/tui/app.go`):
 
-**Refresh cadence:**
+| ViewMode | Purpose | Entry Key |
+|----------|---------|-----------|
+| `ViewLoopList` | Tabular list of all active loops | `l` |
+| `ViewLoopDetail` | Single loop deep-dive (iterations, output, errors) | `Enter` from loop list |
+| `ViewLoopControl` | Multi-loop control panel with expanded selection | `C` |
+| `ViewLoopHealth` | Regression gates, sparklines, task distribution | `h` |
+
+#### Loop List (`internal/tui/views/loop_list.go`)
+
+`LoopListColumns` defines the table schema (ID, Repo, Phase, Iters, Status). The `LoopRunsToRows()` function converts `[]*session.LoopRun` into `[]components.Row`:
+
+1. Locks each `LoopRun.mu` for thread-safe field access
+2. Extracts `ID` (truncated to 8 chars), `RepoName`, phase (from last iteration status), `IterCount`, and status
+3. Renders status with `components.ActivityDot()` and `styles.StatusIcon()`
+4. Overrides status to `"paused"` when `l.Paused && status == "running"`
+
+The table is created by `NewLoopListTable()` with empty message `"No active loops"` and `StatusColumn=4`.
+
+#### Loop Control Panel (`internal/tui/views/loop_control.go`)
+
+`LoopControlData` aggregates per-loop metrics: `ID`, `RepoName`, `Status`, `Paused`, `IterCount`, `LastIterStatus`, `LastIterTask`, `LastIterError`, `AvgIterDuration`, and a computed `NextEstimate` (e.g. `"paused"`, `"imminent"`, `"~30s"`). `RenderLoopControlPanel()` renders a title bar with running/paused/other counts, loop rows with next-iteration estimates, and expanded details for the selected loop.
+
+#### Loop Detail (`internal/tui/views/loopdetail.go`)
+
+`RenderLoopDetail()` shows a single `LoopRun`: header (ID, repo, status), iteration metrics, last iteration details (task, error), and truncated planner output / worker result (500 chars each).
+
+#### Loop Health (`internal/tui/views/loophealth.go`)
+
+`LoopHealthData` holds `Observations []session.LoopObservation`, a `*e2e.GateReport`, `*e2e.Summary`, and `*e2e.LoopBaseline`. Rendered sections: gate summary with sparklines and per-metric verdicts (pass/warn/fail with delta% and baseline), recent iterations table (last 15), and task type distribution bar chart.
+
+### Keybindings and Dispatch
+
+Key dispatch uses a **table-driven pattern** in `internal/tui/handlers.go`:
+
+```go
+type ViewKeyEntry struct {
+    Binding func(km *KeyMap) key.Binding  // key matcher (optional)
+    Match   func(msg tea.KeyMsg) bool     // custom matcher (optional)
+    Handler KeyHandler                     // func(m *Model, msg tea.KeyMsg) (tea.Model, tea.Cmd)
+}
+```
+
+`dispatchViewKeys()` iterates entries in order; **first match wins**. Each view has its own entry slice (`loopListKeys`, `loopControlKeys`, `loopDetailKeys`).
+
+#### Loop Key Bindings
+
+**Overview / Repo Detail** (global bindings in `handlers.go`):
+
+| Key | KeyMap Field | Handler | Effect |
+|-----|-------------|---------|--------|
+| `S` | `StartLoop` | `m.startSelectedLoop()` / `m.startLoop(idx)` | Launch loop for selected repo |
+| `X` | `StopAction` | `m.stopSelectedLoop()` / `m.stopLoop(idx)` | Stop selected loop |
+| `P` | `PauseLoop` | `m.togglePauseSelected()` / `m.togglePause(idx)` | Toggle pause/resume |
+
+**Loop List** (`loopListKeys`):
+
+| Key | Action |
+|-----|--------|
+| `j`/`k` or `↓`/`↑` | `m.LoopListTable.MoveDown()`/`MoveUp()` |
+| `Enter` | Push `ViewLoopDetail` |
+
+**Loop Control / Detail** (`loopControlKeys`, `loopDetailKeys`):
+
+| Key | KeyMap Field | Command Emitted | Message Type |
+|-----|-------------|-----------------|-------------|
+| `s` | `LoopCtrlStep` / `LoopDetailStep` | `sessMgr.StepLoop()` | `LoopStepResultMsg` |
+| `r` | `LoopCtrlToggle` / `LoopDetailToggle` | `sessMgr.StartLoop()` or `StopLoop()` | `LoopToggleResultMsg` |
+| `p` | `LoopCtrlPause` / `LoopDetailPause` | `sessMgr.PauseLoop()` or `ResumeLoop()` | `LoopPauseResultMsg` |
+
+### Message Types
+
+Loop operations produce typed messages handled in `Update()` (`internal/tui/app.go`):
+
+- **`LoopListMsg`** (`[]*session.LoopRun`) — refreshes loop table rows
+- **`LoopStepResultMsg`** (`LoopID`, `Err`) — shows notification, re-fetches loop list
+- **`LoopToggleResultMsg`** (`LoopID`, `Started`, `Err`) — shows "Started"/"Stopped" notification, re-fetches
+- **`LoopPauseResultMsg`** (`LoopID`, `Paused`, `Err`) — shows "Paused"/"Resumed" notification, re-fetches
+
+### `ProcessExitMsg` Flow
+
+`ProcessExitMsg` bridges the process manager to Bubble Tea's message loop, triggering repo status updates when a managed process terminates.
+
+**Definition** (`internal/process/manager.go`):
+
+```go
+type ProcessExitMsg struct {
+    RepoPath string
+    ExitCode int
+    Error    error
+}
+```
+
+**Data flow:**
 
 ```
-tea.Tick(2s) → tickMsg
-  ├─ refreshAllRepos()       — re-reads status.json / progress.json
-  ├─ refreshObsCache()       — TTL-gated observation refresh
-  ├─ refreshGateCache()      — TTL-gated gate report refresh
-  ├─ refreshLoopView()       — updates LoopView summary string (panel overlay)
-  ├─ refreshLoopControlData()— snapshots LoopControlData from SessMgr
-  └─ loopListCmd()           — fetches ListLoops(), returns LoopListMsg → LoopListTable.SetRows()
-```
-
-`LoopListMsg` is a `[]*session.LoopRun` type alias — it arrives as a `tea.Msg` in `Update()` and populates `m.LoopListTable` via `views.LoopRunsToRows()`. The loop panel overlay (`ShowLoopPanel`) renders `m.LoopView` inline, giving a compact summary without a full view transition.
-
-### Keybindings & Dispatch
-
-Key handling uses a layered priority system (`app.go: handleKey`):
-
-1. **Modal overlays** (`ConfirmDialog`, `ActionMenu`, `Launcher`) — intercept all keys when active
-2. **Input modes** (`ModeCommand`, `ModeFilter`) — raw character capture
-3. **`KeyDispatch` table** (`keymap.go`) — ordered `[]KeyDispatchEntry` slice; first match wins (deterministic, unlike a map)
-4. **View-specific handlers** — `handleLoopListKey`, `handleLoopDetailKey`, `handleLoopControlKey`, etc.
-
-`KeyDispatch` is the global table for cross-view keys. View-specific bindings are only enabled when `SetViewContext(view)` is called on a view transition (`pushView` / `popView` / `switchTab`).
-
-**Loop-specific key tables:**
-
-| Context | Key | Action |
-|---|---|---|
-| Global | `l` | Push `ViewLoopList` (`handleLoopPanel`) |
-| Global | `C` | Push `ViewLoopControl` (`handleLoopControlPanel`) |
-| `ViewLoopList` | `s` | Start loop for selected repo (`LoopListStart`) |
-| `ViewLoopList` | `x` / `d` | Stop selected loop (`LoopListStop`) |
-| `ViewLoopList` | `p` | Pause / resume loop (`LoopListPause`) |
-| `ViewLoopList` | `Enter` | Push `ViewLoopDetail` |
-| `ViewLoopDetail` | `s` | Force a single step (`LoopDetailStep`) |
-| `ViewLoopDetail` | `r` | Toggle run/stop (`LoopDetailToggle`) |
-| `ViewLoopDetail` | `p` | Pause / resume (`LoopDetailPause`) |
-| `ViewLoopControl` | `s` | Force step on focused loop (`LoopCtrlStep`) |
-| `ViewLoopControl` | `r` | Toggle run/stop on focused loop (`LoopCtrlToggle`) |
-| `ViewLoopControl` | `p` | Pause / resume focused loop (`LoopCtrlPause`) |
-| `ViewRepoDetail` | `h` | Push `ViewLoopHealth` (`LoopHealth`) |
-
-Loop action results arrive as `LoopStepResultMsg`, `LoopToggleResultMsg`, and `LoopPauseResultMsg` — each shows a notification and re-invokes `loopListCmd()` for an immediate table refresh.
-
-### ProcessExitMsg Flow
-
-Process exit signals travel from the OS reaper goroutine through a channel to the Bubble Tea event loop:
-
-```
-os/exec Cmd.Wait() goroutine (process/manager.go)
-  │   exit detected → exitCodeForMsg, waitErr
+process.Manager reaper goroutine          # manager.go — Start()
+  │  waitErr := cmd.Wait()
   │
-  └─► exitCh <- ProcessExitMsg{RepoPath, ExitCode, Error}   (buffered, cap 16)
-                          │
-         process.WaitForProcessExit(m.ProcMgr.ExitChan())
-         (tea.Cmd blocking on exitCh — re-armed in Init() and after each exit)
-                          │
-                          ▼
-              Update(process.ProcessExitMsg)
-                          │
-                          ▼
-              m.applyProcessExit(msg)
-                ├─ finds repo by RepoPath
-                ├─ r.Status.Status = model.RepoStatusFromExitCode(ExitCode, Error)
-                │     0  → "stopped"
-                │     1  → "error"
-                │     2  → "error"  (signal / CB kill)
-                │     other → "error"
-                └─ re-arms: WaitForProcessExit(m.ProcMgr.ExitChan())
+  ▼
+m.exitCh <- ProcessExitMsg{…}            # buffered channel (size 16), non-blocking send
+  │
+  ▼
+WaitForProcessExit(ch) tea.Cmd           # manager.go — blocks on <-ch, returns ProcessExitMsg
+  │
+  ▼
+Model.Update() case process.ProcessExitMsg   # app.go — main update switch
+  │
+  ├─ applyProcessExit(msg, m.Repos)      # finds repo by msg.RepoPath,
+  │    └─ r.Status.Status = model.RepoStatusFromExitCode(msg.ExitCode, msg.Error)
+  │
+  └─ return m, process.WaitForProcessExit(m.ProcMgr.ExitChan())
+       └─ re-arms listener for next exit
 ```
 
-`WaitForProcessExit` is a single-use `tea.Cmd`. It must be re-returned from `Update` after every delivery to keep the listener alive — `applyProcessExit` always returns it.
+`WaitForProcessExit()` is a `tea.Cmd` factory that blocks on `Manager.ExitChan()`. The `Update()` handler calls `applyProcessExit()` to update the matching repo's status via `model.RepoStatusFromExitCode()`, then immediately re-arms the listener by returning a new `WaitForProcessExit` command.
 
-### Status Bar Health Fields
+### Status Bar Loop Health
 
-`components.StatusBar` (`components/statusbar.go`) is populated from `updateTable()` on every tick:
+The `StatusBar` component (`internal/tui/components/statusbar.go`) surfaces aggregated loop metrics:
 
-| Field | Source | Displayed as |
-|---|---|---|
-| `RepoCount` | `len(m.Repos)` | repo icon + count |
-| `RunningCount` | `len(m.ProcMgr.RunningPaths())` | running icon + count; drives spinner |
-| `SessionCount` | `len(SessMgr.List(""))` | session icon + count |
-| `TotalSpendUSD` | sum of `s.SpentUSD` across all sessions | budget icon + `$x.xx` |
-| `ProviderCounts` | running/launching sessions grouped by `s.Provider` | per-provider icon + count (claude/gemini/codex) |
-| `FleetBudgetPct` | `TotalSpend / TotalBudget` across all sessions | inline 5-char gauge + percentage |
-| `AlertCount` | `countAlerts()` (open circuit breakers + other signals) | alert icon + count |
-| `HighestAlertSeverity` | `"critical"` if any circuit breaker is `OPEN`, else `"info"` | icon color |
-| `SpinnerFrame` | `m.Spinner.View()` | animated dot when `RunningCount > 0` |
-| `LastRefresh` | `m.LastRefresh` | clock icon + seconds/minutes ago |
+```go
+type StatusBar struct {
+    RunningCount         int              // active loop/process count
+    SessionCount         int              // total sessions
+    TotalSpendUSD        float64          // cumulative cost
+    ProviderCounts       map[string]int   // running sessions per provider
+    FleetBudgetPct       float64          // spend / total budget
+    AlertCount           int              // active alerts
+    HighestAlertSeverity string           // worst alert level
+    // … Mode, Filter, Width, SpinnerFrame, TickFrame, etc.
+}
+```
 
-`FleetBudgetPct` is `0` when no session has a budget set, suppressing the gauge entirely.
+**Update trigger**: `m.updateTable()` is called on every `tickMsg` (2-second polling interval, `internal/tui/app.go`). It populates:
 
-### Cross-References
+- `RunningCount` ← `len(m.ProcMgr.RunningPaths())`
+- `SessionCount` ← total active sessions from the session manager
+- `TotalSpendUSD` ← sum of `Session.SpentUSD` across all sessions (see [Data Flow: Raw Output → Session.SpentUSD](#data-flow-raw-output--sessionspentusd))
+- `ProviderCounts` ← per-provider breakdown of running sessions
+- `FleetBudgetPct` ← `totalSpend / totalBudget`
+- `AlertCount` / `HighestAlertSeverity` ← `m.countAlerts()`
 
-- Provider dispatch and cost extraction: [Provider Event Normalization & Cost Extraction](#provider-event-normalization--cost-extraction)
-- Session lifecycle and `SpentUSD` accumulation: [Provider Architecture](#provider-architecture)
-- Data flow from `normalizeEvent` to `Session.SpentUSD`: [Data Flow Diagram](#data-flow-diagram)
-- Loop engine and `LoopRun` types: `internal/session/loop.go`
-- Gate/observation subsystem: `internal/session/gates.go`, `internal/session/observation.go`
+`StatusBar.View()` renders left-aligned: mode badge, repo count, running count (with animated spinner from `TickFrame`), session count, spend, provider counts, fleet budget gauge, and alert indicator. Right-aligned: last refresh timestamp (relative, e.g. `"5s"`, `"2m"`, `"never"`).
 
 ## File Schemas
 
