@@ -298,6 +298,236 @@ func TestCoordinator_SubmitWork_Internal(t *testing.T) {
 	}
 }
 
+func TestCoordinator_DeregisterWorker(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Register worker
+	coord.mu.Lock()
+	coord.workers["w1"] = &WorkerInfo{
+		ID:            "w1",
+		Status:        WorkerOnline,
+		Providers:     []session.Provider{session.ProviderClaude},
+		Repos:         []string{"test-repo"},
+		MaxSessions:   4,
+		LastHeartbeat: time.Now(),
+	}
+	coord.mu.Unlock()
+	coord.health.RecordHeartbeat("w1")
+
+	// Submit and assign work
+	err := coord.SubmitWork(&WorkItem{
+		RepoName: "test-repo",
+		Prompt:   "fix lint",
+		Priority: 5,
+	})
+	if err != nil {
+		t.Fatalf("submit: %v", err)
+	}
+
+	// Poll to assign work to w1
+	coord.mu.RLock()
+	w := coord.workers["w1"]
+	coord.mu.RUnlock()
+	item := coord.assignWork("w1", w)
+	if item == nil {
+		t.Fatal("expected work to be assigned")
+	}
+	if item.Status != WorkAssigned || item.AssignedTo != "w1" {
+		t.Fatalf("work not assigned to w1: status=%s, assigned=%s", item.Status, item.AssignedTo)
+	}
+
+	// Deregister
+	if err := coord.DeregisterWorker("w1"); err != nil {
+		t.Fatalf("deregister: %v", err)
+	}
+
+	// Worker should be gone
+	coord.mu.RLock()
+	_, exists := coord.workers["w1"]
+	coord.mu.RUnlock()
+	if exists {
+		t.Error("worker w1 should have been removed")
+	}
+
+	// Work should be reclaimed to pending
+	reclaimed, ok := coord.queue.Get(item.ID)
+	if !ok {
+		t.Fatal("work item should still exist in queue")
+	}
+	if reclaimed.Status != WorkPending {
+		t.Errorf("reclaimed work status: got %q, want pending", reclaimed.Status)
+	}
+	if reclaimed.AssignedTo != "" {
+		t.Errorf("reclaimed work assignedTo: got %q, want empty", reclaimed.AssignedTo)
+	}
+
+	// Health tracking should be cleaned up
+	if state := coord.health.GetState("w1"); state != HealthUnknown {
+		t.Errorf("health state: got %q, want unknown", state)
+	}
+
+	// Deregister non-existent should error
+	if err := coord.DeregisterWorker("w1"); err == nil {
+		t.Error("expected error deregistering non-existent worker")
+	}
+}
+
+func TestCoordinator_PauseResumeWorker(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Register worker
+	coord.mu.Lock()
+	coord.workers["w1"] = &WorkerInfo{
+		ID:            "w1",
+		Status:        WorkerOnline,
+		Providers:     []session.Provider{session.ProviderClaude},
+		Repos:         []string{"test-repo"},
+		MaxSessions:   4,
+		LastHeartbeat: time.Now(),
+	}
+	coord.mu.Unlock()
+	coord.health.RecordHeartbeat("w1")
+
+	// Submit work
+	err := coord.SubmitWork(&WorkItem{
+		RepoName: "test-repo",
+		Prompt:   "fix lint",
+		Priority: 5,
+	})
+	if err != nil {
+		t.Fatalf("submit: %v", err)
+	}
+
+	// Pause worker
+	if err := coord.PauseWorker("w1"); err != nil {
+		t.Fatalf("pause: %v", err)
+	}
+
+	coord.mu.RLock()
+	if coord.workers["w1"].Status != WorkerPaused {
+		t.Errorf("status after pause: got %q, want paused", coord.workers["w1"].Status)
+	}
+	coord.mu.RUnlock()
+
+	// Paused worker should not get work
+	coord.mu.RLock()
+	w := coord.workers["w1"]
+	coord.mu.RUnlock()
+	item := coord.assignWork("w1", w)
+	if item != nil {
+		t.Error("paused worker should not receive work")
+	}
+
+	// Resume worker
+	if err := coord.ResumeWorker("w1"); err != nil {
+		t.Fatalf("resume: %v", err)
+	}
+
+	coord.mu.RLock()
+	if coord.workers["w1"].Status != WorkerOnline {
+		t.Errorf("status after resume: got %q, want online", coord.workers["w1"].Status)
+	}
+	coord.mu.RUnlock()
+
+	// Resumed worker should get work
+	coord.mu.RLock()
+	w = coord.workers["w1"]
+	coord.mu.RUnlock()
+	item = coord.assignWork("w1", w)
+	if item == nil {
+		t.Error("resumed worker should receive work")
+	}
+
+	// Pause non-existent should error
+	if err := coord.PauseWorker("no-such"); err == nil {
+		t.Error("expected error pausing non-existent worker")
+	}
+
+	// Resume non-paused should error
+	if err := coord.ResumeWorker("w1"); err == nil {
+		t.Error("expected error resuming non-paused worker")
+	}
+}
+
+func TestCoordinator_RetryDelay(t *testing.T) {
+	coord := newTestCoordinator()
+
+	// Register worker
+	coord.mu.Lock()
+	coord.workers["w1"] = &WorkerInfo{
+		ID:            "w1",
+		Status:        WorkerOnline,
+		Providers:     []session.Provider{session.ProviderClaude},
+		Repos:         []string{"test-repo"},
+		MaxSessions:   4,
+		LastHeartbeat: time.Now(),
+	}
+	coord.mu.Unlock()
+	coord.health.RecordHeartbeat("w1")
+
+	// Submit work
+	item := &WorkItem{
+		ID:       "retry-test",
+		RepoName: "test-repo",
+		Prompt:   "fix lint",
+		Priority: 5,
+	}
+	err := coord.SubmitWork(item)
+	if err != nil {
+		t.Fatalf("submit: %v", err)
+	}
+
+	// Assign to worker
+	coord.mu.RLock()
+	w := coord.workers["w1"]
+	coord.mu.RUnlock()
+	assigned := coord.assignWork("w1", w)
+	if assigned == nil {
+		t.Fatal("expected work to be assigned")
+	}
+
+	// Fail the work — triggers retry with delay
+	completePayload := `{"work_item_id":"retry-test","status":"failed","error":"test failure"}`
+	req := httptest.NewRequest("POST", "/api/v1/work/complete", strings.NewReader(completePayload))
+	rec := httptest.NewRecorder()
+	coord.handleWorkComplete(rec, req)
+
+	if rec.Code != 200 {
+		t.Fatalf("complete: got %d", rec.Code)
+	}
+
+	// Item should be back to pending with RetryAfter set
+	retried, ok := coord.queue.Get("retry-test")
+	if !ok {
+		t.Fatal("work item should still exist")
+	}
+	if retried.Status != WorkPending {
+		t.Errorf("status: got %q, want pending", retried.Status)
+	}
+	if retried.RetryAfter == nil {
+		t.Fatal("RetryAfter should be set after failure")
+	}
+	if retried.RetryAfter.Before(time.Now()) {
+		t.Error("RetryAfter should be in the future")
+	}
+
+	// Try to assign — should be skipped due to retry delay
+	assigned2 := coord.assignWork("w1", w)
+	if assigned2 != nil {
+		t.Error("work item in retry backoff should not be assigned")
+	}
+
+	// Manually clear the retry delay to simulate time passing
+	retried.RetryAfter = timePtr(time.Now().Add(-1 * time.Second))
+	coord.queue.Update(retried)
+
+	// Now it should be assignable
+	assigned3 := coord.assignWork("w1", w)
+	if assigned3 == nil {
+		t.Error("work item past retry delay should be assigned")
+	}
+}
+
 func TestCoordinator_StartStop(t *testing.T) {
 	bus := events.NewBus(100)
 	coord := NewCoordinator("test", "localhost", 0, "test", bus, session.NewManager())

@@ -253,7 +253,7 @@ func (c *Coordinator) handleWorkComplete(w http.ResponseWriter, r *http.Request)
 			}
 		}
 	} else {
-		retryable, _ := c.retries.RecordFailure(item.ID)
+		retryable, delay := c.retries.RecordFailure(item.ID)
 		// Check retry using both legacy counter and retry tracker
 		if retryable && item.RetryCount < item.MaxRetries {
 			item.RetryCount++
@@ -261,6 +261,7 @@ func (c *Coordinator) handleWorkComplete(w http.ResponseWriter, r *http.Request)
 			item.AssignedTo = ""
 			item.AssignedAt = nil
 			item.Error = payload.Error
+			item.RetryAfter = timePtr(time.Now().Add(delay))
 		} else {
 			item.Status = WorkFailed
 		}
@@ -468,6 +469,10 @@ func (c *Coordinator) buildCandidates() []WorkerCandidate {
 
 	candidates := make([]WorkerCandidate, 0, len(c.workers))
 	for _, w := range c.workers {
+		// Skip paused workers from routing candidates
+		if w.Status == WorkerPaused {
+			continue
+		}
 		candidates = append(candidates, WorkerCandidate{
 			ID:              w.ID,
 			ActiveTasks:     w.ActiveSessions,
@@ -507,6 +512,14 @@ func (c *Coordinator) assignWork(workerID string, worker *WorkerInfo) *WorkItem 
 		routerBoost = 15
 	}
 
+	// Skip if this worker is paused
+	c.mu.RLock()
+	if w, ok := c.workers[workerID]; ok && w.Status == WorkerPaused {
+		c.mu.RUnlock()
+		return nil
+	}
+	c.mu.RUnlock()
+
 	// Skip if this worker's health is down
 	if c.health.GetState(workerID) == HealthUnhealthy {
 		return nil
@@ -526,6 +539,11 @@ func (c *Coordinator) assignWork(workerID string, worker *WorkerInfo) *WorkItem 
 	}
 
 	item := c.queue.AssignBest(func(item *WorkItem) int {
+		// Retry delay gate — skip items still in backoff
+		if item.RetryAfter != nil && time.Now().Before(*item.RetryAfter) {
+			return -1
+		}
+
 		// Budget gate
 		if item.MaxBudgetUSD > 0 && item.MaxBudgetUSD > avail {
 			return -1 // skip
@@ -660,7 +678,70 @@ func (c *Coordinator) GetFleetState() FleetState {
 	}
 }
 
+// DeregisterWorker removes a worker from the fleet and reclaims its assigned work.
+func (c *Coordinator) DeregisterWorker(workerID string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	_, ok := c.workers[workerID]
+	if !ok {
+		return fmt.Errorf("worker %s not found", workerID)
+	}
+
+	// Reclaim assigned work items back to pending
+	for _, item := range c.queue.All() {
+		if item.AssignedTo == workerID && item.Status == WorkAssigned {
+			item.Status = WorkPending
+			item.AssignedTo = ""
+			item.AssignedAt = nil
+			c.queue.Update(item)
+		}
+	}
+
+	delete(c.workers, workerID)
+
+	// Clean up health tracking
+	if c.health != nil {
+		c.health.Remove(workerID)
+	}
+
+	return nil
+}
+
+// PauseWorker sets a worker's status to paused, preventing work assignment.
+func (c *Coordinator) PauseWorker(workerID string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	w, ok := c.workers[workerID]
+	if !ok {
+		return fmt.Errorf("worker %s not found", workerID)
+	}
+	w.Status = WorkerPaused
+	return nil
+}
+
+// ResumeWorker sets a paused worker's status back to online.
+func (c *Coordinator) ResumeWorker(workerID string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	w, ok := c.workers[workerID]
+	if !ok {
+		return fmt.Errorf("worker %s not found", workerID)
+	}
+	if w.Status != WorkerPaused {
+		return fmt.Errorf("worker %s is not paused (status: %s)", workerID, w.Status)
+	}
+	w.Status = WorkerOnline
+	return nil
+}
+
 // helper functions
+
+func timePtr(t time.Time) *time.Time {
+	return &t
+}
 
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
