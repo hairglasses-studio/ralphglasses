@@ -262,7 +262,7 @@ A `.mcp.json` is included in the repo root for automatic local discovery when yo
 go run . mcp --scan-path ~/projects
 ```
 
-The server uses stdio transport (JSON-RPC over stdin/stdout). It exposes 48 tools — see [CLAUDE.md](../CLAUDE.md) for the full tool list.
+The server uses stdio transport (JSON-RPC over stdin/stdout). It exposes 110 tools — see [CLAUDE.md](../CLAUDE.md) for the full tool list.
 
 ### Example: launch a session via MCP
 
