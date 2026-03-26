@@ -141,6 +141,7 @@ type FleetState struct {
 	ActiveWork    int            `json:"active_work"`
 	CompletedWork int            `json:"completed_work"`
 	FailedWork    int            `json:"failed_work"`
+	DLQDepth      int            `json:"dlq_depth"`
 	TotalSpentUSD float64       `json:"total_spent_usd"`
 	BudgetUSD     float64       `json:"budget_usd"`
 	UpdatedAt     time.Time     `json:"updated_at"`

@@ -68,7 +68,7 @@ func TestBuildToolGroups_ExpectedCounts(t *testing.T) {
 		"session":  13,
 		"loop":     9,
 		"prompt":   8,
-		"fleet":    6,
+		"fleet":    7,
 		"repo":     5,
 		"roadmap":  5,
 		"team":     6,
