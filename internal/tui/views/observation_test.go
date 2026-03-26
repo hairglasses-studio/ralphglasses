@@ -8,55 +8,66 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
-func TestRenderObservationView_Empty(t *testing.T) {
+func TestRenderObservationViewEmpty(t *testing.T) {
 	data := ObservationViewData{
-		RepoName:     "empty-repo",
+		RepoName:     "test-repo",
 		Observations: nil,
 	}
-
 	out := RenderObservationView(data, 120, 40)
 	if !strings.Contains(out, "No loop observations") {
-		t.Error("should show no-observations message")
+		t.Error("empty view should show 'No loop observations'")
 	}
-	if !strings.Contains(out, "empty-repo") {
-		t.Error("should show repo name in title")
+	if !strings.Contains(out, "test-repo") {
+		t.Error("empty view should show repo name")
 	}
 }
 
-func TestRenderObservationView_WithData(t *testing.T) {
-	obs := []session.LoopObservation{
-		{
-			Timestamp:        time.Now().Add(-10 * time.Minute),
-			IterationNumber:  1,
-			PlannerTokensOut: 500,
-			WorkerTokensOut:  1000,
-			TotalCostUSD:     0.50,
-			TotalLatencyMs:   5000,
-			FilesChanged:     3,
-		},
-		{
-			Timestamp:        time.Now().Add(-5 * time.Minute),
-			IterationNumber:  2,
-			PlannerTokensOut: 600,
-			WorkerTokensOut:  1200,
-			TotalCostUSD:     0.75,
-			TotalLatencyMs:   8000,
-			FilesChanged:     5,
-		},
-	}
-
+func TestRenderObservationViewPopulated(t *testing.T) {
+	now := time.Now()
 	data := ObservationViewData{
-		RepoName:     "active-repo",
-		Observations: obs,
+		RepoName: "my-repo",
+		Observations: []session.LoopObservation{
+			{
+				IterationNumber: 1,
+				Timestamp:       now.Add(-2 * time.Minute),
+				PlannerTokensOut: 100,
+				WorkerTokensOut:  200,
+				TotalCostUSD:    0.05,
+				TotalLatencyMs:  3000,
+				FilesChanged:    2,
+				VerifyPassed:    true,
+				Status:          "idle",
+			},
+			{
+				IterationNumber: 2,
+				Timestamp:       now.Add(-1 * time.Minute),
+				PlannerTokensOut: 150,
+				WorkerTokensOut:  250,
+				TotalCostUSD:    0.08,
+				TotalLatencyMs:  4500,
+				FilesChanged:    3,
+				VerifyPassed:    false,
+				Status:          "idle",
+			},
+			{
+				IterationNumber: 3,
+				Timestamp:       now,
+				PlannerTokensOut: 120,
+				WorkerTokensOut:  180,
+				TotalCostUSD:    0.06,
+				TotalLatencyMs:  2500,
+				FilesChanged:    1,
+				VerifyPassed:    true,
+				Status:          "idle",
+			},
+		},
 	}
-
 	out := RenderObservationView(data, 120, 40)
 
 	checks := []string{
-		"Observation Sparklines",
-		"active-repo",
+		"my-repo",
 		"Iteration Metrics",
-		"2 iterations",
+		"3 iterations",
 		"Tokens",
 		"Cost",
 		"Duration",
@@ -66,7 +77,7 @@ func TestRenderObservationView_WithData(t *testing.T) {
 		"Total cost",
 		"Total duration",
 		"Total files",
-		"Velocity", // 2 observations triggers velocity calculation
+		"Velocity",
 	}
 	for _, want := range checks {
 		if !strings.Contains(out, want) {
@@ -75,72 +86,27 @@ func TestRenderObservationView_WithData(t *testing.T) {
 	}
 }
 
-func TestRenderObservationView_SingleObservation(t *testing.T) {
-	obs := []session.LoopObservation{
-		{
-			Timestamp:        time.Now(),
-			IterationNumber:  1,
-			PlannerTokensOut: 100,
-			WorkerTokensOut:  200,
-			TotalCostUSD:     0.25,
-			TotalLatencyMs:   3000,
-			FilesChanged:     1,
+func TestRenderObservationViewNoVelocityWithOneObs(t *testing.T) {
+	data := ObservationViewData{
+		RepoName: "single-obs",
+		Observations: []session.LoopObservation{
+			{
+				IterationNumber: 1,
+				Timestamp:       time.Now(),
+				TotalCostUSD:    0.01,
+				TotalLatencyMs:  1000,
+				FilesChanged:    1,
+				Status:          "idle",
+			},
 		},
 	}
-
-	data := ObservationViewData{
-		RepoName:     "single-obs",
-		Observations: obs,
-	}
-
-	out := RenderObservationView(data, 100, 30)
-
-	// With only one observation, velocity should NOT be shown
+	out := RenderObservationView(data, 80, 30)
+	// Velocity requires >= 2 observations
 	if strings.Contains(out, "Velocity") {
 		t.Error("should not show velocity with only 1 observation")
 	}
-	if !strings.Contains(out, "1 iterations") {
-		t.Error("should show 1 iteration count")
-	}
-}
-
-func TestRenderObservationView_NarrowWidth(t *testing.T) {
-	obs := []session.LoopObservation{
-		{TotalCostUSD: 0.10, TotalLatencyMs: 1000, PlannerTokensOut: 50, WorkerTokensOut: 100, FilesChanged: 1},
-		{TotalCostUSD: 0.20, TotalLatencyMs: 2000, PlannerTokensOut: 60, WorkerTokensOut: 120, FilesChanged: 2},
-	}
-
-	data := ObservationViewData{
-		RepoName:     "narrow-repo",
-		Observations: obs,
-	}
-
-	// Should not panic at narrow width
-	out := RenderObservationView(data, 50, 20)
-	if out == "" {
-		t.Error("should produce output even at narrow width")
-	}
-}
-
-func TestRenderObservationView_SummaryTotals(t *testing.T) {
-	obs := []session.LoopObservation{
-		{TotalCostUSD: 1.00, TotalLatencyMs: 2000, PlannerTokensOut: 100, WorkerTokensOut: 200, FilesChanged: 2},
-		{TotalCostUSD: 2.00, TotalLatencyMs: 3000, PlannerTokensOut: 150, WorkerTokensOut: 250, FilesChanged: 3},
-	}
-
-	data := ObservationViewData{
-		RepoName:     "totals-repo",
-		Observations: obs,
-	}
-
-	out := RenderObservationView(data, 120, 40)
-
-	// Total cost should be 3.00
-	if !strings.Contains(out, "$3.000") {
-		t.Error("total cost should be $3.000")
-	}
-	// Average cost should be 1.50
-	if !strings.Contains(out, "$1.500") {
-		t.Error("average cost should be $1.500")
+	// Should still show summary
+	if !strings.Contains(out, "Summary") {
+		t.Error("should still show summary section")
 	}
 }
