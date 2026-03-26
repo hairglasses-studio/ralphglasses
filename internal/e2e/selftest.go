@@ -24,6 +24,8 @@ type SelfTestConfig struct {
 	AllowedPaths   []string `json:"allowed_paths,omitempty"`
 	ForbiddenPaths []string `json:"forbidden_paths,omitempty"`
 	UseSnapshot    bool     `json:"use_snapshot"`
+	DryRun         bool     `json:"dry_run,omitempty"`
+	BudgetOverride float64  `json:"budget_override,omitempty"`
 }
 
 // DefaultSelfTestConfig returns a SelfTestConfig with sane defaults.
@@ -40,6 +42,9 @@ func DefaultSelfTestConfig(repoPath string) SelfTestConfig {
 func (c *SelfTestConfig) applyDefaults() {
 	if c.MaxIterations <= 0 {
 		c.MaxIterations = 3
+	}
+	if c.BudgetOverride > 0 {
+		c.BudgetUSD = c.BudgetOverride
 	}
 	if c.BudgetUSD <= 0 {
 		c.BudgetUSD = 5.0
@@ -128,10 +133,21 @@ func Prepare(ctx context.Context, config SelfTestConfig) (*SelfTestRunner, error
 
 // Run executes the self-test loop, invoking the snapshot binary for each
 // iteration and collecting observations. It respects the budget limit.
+// If DryRun is true, validates config and returns immediately with zero iterations.
 func (r *SelfTestRunner) Run(ctx context.Context) (*SelfTestResult, error) {
 	start := time.Now()
 	result := &SelfTestResult{
 		BinaryHash: r.BinaryHash,
+	}
+
+	if r.Config.DryRun {
+		result.Iterations = 0
+		result.Duration = time.Since(start)
+		result.Observations = []map[string]any{{
+			"status":  "dry_run",
+			"message": "config validated, no iterations executed",
+		}}
+		return result, nil
 	}
 
 	var totalCost float64
