@@ -43,6 +43,8 @@ type Server struct {
 	mu           sync.RWMutex
 	ScanPath     string
 	Repos        []*model.Repo
+	lastScanAt   time.Time     // when the last successful scan completed
+	scanTTL      time.Duration // how long scan results are considered fresh (0 = forever)
 	ProcMgr      *process.Manager
 	SessMgr      *session.Manager
 	EventBus     *events.Bus
@@ -81,10 +83,15 @@ type Server struct {
 	Bandit *bandit.Selector
 }
 
+// DefaultScanTTL is how long repo scan results are considered fresh before
+// a lazy re-scan is triggered. Explicit scan tool calls bypass this TTL.
+const DefaultScanTTL = 30 * time.Second
+
 // NewServer creates a new MCP server instance.
 func NewServer(scanPath string) *Server {
 	return &Server{
 		ScanPath:   scanPath,
+		scanTTL:    DefaultScanTTL,
 		ProcMgr:    process.NewManager(),
 		SessMgr:    session.NewManager(),
 		HTTPClient: &http.Client{Timeout: 30 * time.Second},
@@ -94,9 +101,10 @@ func NewServer(scanPath string) *Server {
 // NewServerWithBus creates a new MCP server instance with an event bus.
 func NewServerWithBus(scanPath string, bus *events.Bus) *Server {
 	return &Server{
-		ScanPath:   scanPath,
-		ProcMgr:    process.NewManagerWithBus(bus),
-		SessMgr:    session.NewManagerWithBus(bus),
+		ScanPath:       scanPath,
+		scanTTL:        DefaultScanTTL,
+		ProcMgr:        process.NewManagerWithBus(bus),
+		SessMgr:        session.NewManagerWithBus(bus),
 		EventBus:       bus,
 		HTTPClient:     &http.Client{Timeout: 30 * time.Second},
 		FleetAnalytics: fleet.NewFleetAnalytics(10000, 24*time.Hour),
@@ -117,6 +125,7 @@ func (s *Server) scan() error {
 	}
 	s.mu.Lock()
 	s.Repos = repos
+	s.lastScanAt = time.Now()
 	s.mu.Unlock()
 	return nil
 }
@@ -150,7 +159,11 @@ func (s *Server) reposCopy() []*model.Repo {
 func (s *Server) reposNil() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.Repos == nil
+	if s.Repos == nil {
+		return true
+	}
+	// Treat cached results as stale when TTL has elapsed.
+	return s.scanTTL > 0 && time.Since(s.lastScanAt) > s.scanTTL
 }
 
 func textResult(text string) *mcp.CallToolResult {
