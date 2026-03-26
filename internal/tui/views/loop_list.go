@@ -48,7 +48,7 @@ func LoopRunsToRows(loops []*session.LoopRun, tickFrame int) []components.Row {
 		}
 		l.Unlock()
 
-		if paused {
+		if paused && status == "running" {
 			status = "paused"
 		}
 		isActive := status == "running"

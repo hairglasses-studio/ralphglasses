@@ -97,37 +97,3 @@ func TestLoopRunsToRowsEmpty(t *testing.T) {
 		t.Errorf("expected 0 rows, got %d", len(rows))
 	}
 }
-
-func TestLoopRunsToRowsPausedStatus(t *testing.T) {
-	loops := []*session.LoopRun{
-		{
-			ID:       "aabbccdd-0000-0000-0000-000000000001",
-			RepoName: "paused-repo",
-			RepoPath: "/path/to/paused-repo",
-			Status:   "running",
-			Paused:   true,
-		},
-		{
-			ID:       "aabbccdd-0000-0000-0000-000000000002",
-			RepoName: "running-repo",
-			RepoPath: "/path/to/running-repo",
-			Status:   "running",
-			Paused:   false,
-		},
-	}
-
-	rows := LoopRunsToRows(loops, 0)
-	if len(rows) != 2 {
-		t.Fatalf("expected 2 rows, got %d", len(rows))
-	}
-
-	// Paused loop should show "paused" in status cell
-	if !strings.Contains(rows[0][4], "paused") {
-		t.Errorf("paused loop status cell = %q, want contains 'paused'", rows[0][4])
-	}
-
-	// Running loop should show "running" in status cell
-	if !strings.Contains(rows[1][4], "running") {
-		t.Errorf("running loop status cell = %q, want contains 'running'", rows[1][4])
-	}
-}

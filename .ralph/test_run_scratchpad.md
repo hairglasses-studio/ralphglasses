@@ -2,7 +2,7 @@
 
 ## Current Status (2026-03-25)
 
-**Gate threshold fix deployed.** Selftest gate no longer blocks on historical failure stats. Rolling window (last 10 obs) + relaxed fail floors prevent infrastructure failures from poisoning rates. Gate returns "warn" (correct) instead of "fail" (blocking). 27 items resolved, 2 blocked/deferred, 2 observations remaining.
+**Run 19 complete — 5/5 passed, 4 auto-merged, 0 failures.** Best run ever. Gate fix validated: all 5 iterations passed gate (warn, not fail). Completion rate climbing (0.60→0.70). 28 items resolved, 2 blocked/deferred, 2 observations remaining.
 
 ---
 
@@ -396,6 +396,36 @@ error_rate           pass  (current=0.143)
 - **Gate blocks on historical stats**: completion_rate and verify_pass_rate are 0.000 from observation history (many early failed/orphaned runs). Gate will improve as successful runs accumulate observations.
 - **Planner still wraps JSON in markdown fences**: Iter 2 output was ````json{...}````. Parser handled it but stricter "no fences" wording could help.
 - **Planner did implementation in planning session**: Iter 2 planner (opus, 57 turns, $0.23) actually implemented the full pause/resume feature during planning, then emitted a task summary JSON for the worker. The worker re-implemented it. This wastes planner budget — could detect and skip worker when planner already made changes.
+
+### Run 19 (7dc53ec5) — Completed, 5 iterations (best run — 5/5 passed, 4 auto-merged)
+- **Status**: `completed` — max_iter reached, zero failures, zero manual intervention
+- **Total duration**: ~40 min (18:08–18:48)
+- **All 5 iterations passed CI + selftest gate**
+- **4 auto-merges**, 1 no-op (iter 4 had no code changes to merge)
+- **Gate fix validated**: All 5 gates returned "warn" (not "fail") — rolling window working
+
+| Iter | Task | Verify | Merge | Duration | Enhance | Planner Source |
+|------|------|--------|-------|----------|---------|---------------|
+| 1 | TUI pause/resume keybinding | passed | auto-merged | 14m | 9.6s | JSON |
+| 2 | ParseCostFromStderr regex | passed | auto-merged | 2m | 6.8s | JSON |
+| 3 | Loop control panel view | passed | auto-merged | 15m | 12.3s | JSON |
+| 4 | CI macOS workflow improvements | passed | no-op | ~5m | 7.8s | JSON |
+| 5 | Fix TestProcessExitMsg crash branch | passed | auto-merged | ~3m | 9.6s | JSON |
+
+#### Gate Progression (rolling window improving)
+| Iter | completion_rate | verify_pass_rate | error_rate |
+|------|----------------|-----------------|------------|
+| 1 | 0.600 (warn) | 0.600 (warn) | 0.400 (warn) |
+| 2 | 0.700 (warn) | 0.700 (warn) | 0.300 (warn) |
+| 3 | 0.700 (warn) | 0.700 (warn) | 0.300 (warn) |
+| 4 | 0.700 (warn) | 0.700 (warn) | 0.300 (warn) |
+| 5 | 0.700 (warn) | 0.700 (warn) | 0.300 (warn) |
+
+#### Observations
+- **100% planner JSON success**: All 5 planners returned clean JSON (0% fallback). JSON enforcement fix fully validated.
+- **Task diversity excellent**: TUI feature, cost parsing, control panel, CI workflow, test fix — 5 different categories.
+- **Planner prompt quality**: Iter 3 planner produced extremely detailed 6-file specification with test requirements. Opus planner quality excellent.
+- **Gate rates stabilizing**: completion/verify at 0.70, error at 0.30. Need ~3 more successful runs to push old failures out of the 10-obs window.
 
 ### Run 17 (2b8d7150) — Failed, 1 iteration (ci.sh regression)
 - **Status**: `failed` — ci.sh failed (test_doctor.sh)

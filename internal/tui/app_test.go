@@ -15,6 +15,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
+	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
 )
 
 func TestNewModel(t *testing.T) {
@@ -473,10 +474,9 @@ func TestKeyDispatchCoversGlobalBindings(t *testing.T) {
 	// block in handleKey and must therefore appear in KeyDispatch.
 	globalFields := map[string]bool{
 		"Quit": true, "CmdMode": true, "FilterMode": true, "Help": true,
-		"Escape": true, "Refresh": true, "LoopPanel": true,
+		"Escape": true, "Refresh": true, "LoopPanel": true, "LoopControlPanel": true,
 		"Tab1": true, "Tab2": true, "Tab3": true, "Tab4": true,
-		"LoopListStart": true, "LoopListStop": true,
-		"LoopControlPanel": true,
+		"LoopListStart": true, "LoopListStop": true, "LoopListPause": true,
 	}
 
 	for i := 0; i < rt.NumField(); i++ {
@@ -611,26 +611,72 @@ func TestLoopListKeyBindings(t *testing.T) {
 	if !strings.Contains(v, "stop loop") {
 		t.Error("loop list view should show 'stop loop' in footer hints")
 	}
+}
+
+func TestLoopListPauseKeyBinding(t *testing.T) {
+	mgr := session.NewManager()
+	m := NewModel("/tmp/test", mgr)
+	m.Width = 120
+	m.Height = 40
+	m.StatusBar.Width = 120
+
+	// Navigate to loop list view
+	m.pushView(ViewLoopList, "Loops")
+
+	// Verify LoopListPause is enabled in ViewLoopList
+	km := DefaultKeyMap()
+	km.SetViewContext(ViewLoopList)
+	if !km.LoopListPause.Enabled() {
+		t.Error("LoopListPause should be enabled in ViewLoopList")
+	}
+
+	// Verify LoopListPause is disabled in ViewOverview
+	km.SetViewContext(ViewOverview)
+	if km.LoopListPause.Enabled() {
+		t.Error("LoopListPause should be disabled in ViewOverview")
+	}
+
+	// Create a loop and select it in the table
+	tmpDir := t.TempDir()
+	_, err := mgr.StartLoop(context.Background(), tmpDir, session.DefaultLoopProfile())
+	if err != nil {
+		t.Fatalf("StartLoop: %v", err)
+	}
+
+	// Populate the loop list table
+	loops := mgr.ListLoops()
+	m.LoopListTable.SetRows(views.LoopRunsToRows(loops, 0))
+
+	// 'p' should not panic even with no selection
+	m2 := NewModel("/tmp/test", mgr)
+	m2.pushView(ViewLoopList, "Loops")
+	_, cmd := m2.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
+	_ = cmd // no panic is the key requirement
+
+	// With a loop selected, 'p' should trigger pause and show notification
+	m.LoopListTable.SetRows(views.LoopRunsToRows(loops, 0))
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
+	m = updated.(Model)
+	// Handler should produce a loopListCmd (non-nil) and show a notification
+	if cmd == nil {
+		t.Error("pressing 'p' in loop list should produce a non-nil Cmd")
+	}
+	if !m.Notify.Active() {
+		t.Error("pressing 'p' should trigger a notification (Paused/Resumed)")
+	}
+
+	// Verify footer shows pause/resume hint
+	m.LoopListTable.SetRows(views.LoopRunsToRows(mgr.ListLoops(), 0))
+	v := m.View()
 	if !strings.Contains(v, "pause/resume") {
 		t.Error("loop list view should show 'pause/resume' in footer hints")
 	}
 
-	// Verify LoopListPause enabled/disabled per view context
-	km3 := DefaultKeyMap()
-	km3.SetViewContext(ViewLoopList)
-	if !km3.LoopListPause.Enabled() {
-		t.Error("LoopListPause should be enabled in ViewLoopList")
-	}
-	km3.SetViewContext(ViewOverview)
-	if km3.LoopListPause.Enabled() {
-		t.Error("LoopListPause should be disabled in ViewOverview")
-	}
-
-	// Verify LoopListPause is in KeyDispatch
+	// Verify LoopListPause is in the KeyDispatch table
 	foundPause := false
-	km4 := DefaultKeyMap()
+	km2 := DefaultKeyMap()
 	for _, entry := range KeyDispatch {
-		b := entry.Binding(&km4)
+		b := entry.Binding(&km2)
 		for _, k := range b.Keys() {
 			if k == "p" {
 				foundPause = true
@@ -640,10 +686,6 @@ func TestLoopListKeyBindings(t *testing.T) {
 	if !foundPause {
 		t.Error("KeyDispatch should contain an entry for LoopListPause ('p')")
 	}
-
-	// 'p' should not panic with no selection
-	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
-	_ = cmd
 }
 
 func TestProcessExitMsg_SetsRepoStatus(t *testing.T) {

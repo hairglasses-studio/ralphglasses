@@ -9,219 +9,166 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
-// LoopControlData holds data for the loop control panel.
+// LoopControlData holds the snapshot data for a single loop in the control panel.
 type LoopControlData struct {
-	Loops    []*session.LoopRun
-	Selected int // index of selected loop
+	ID              string
+	RepoName        string
+	Status          string
+	Paused          bool
+	IterCount       int
+	LastIterStatus  string
+	LastIterTask    string
+	LastIterError   string
+	CreatedAt       time.Time
+	LastIterEndedAt *time.Time
+	AvgIterDuration time.Duration
+	NextEstimate    string
 }
 
-// RenderLoopControl renders the loop control panel showing all active loops
-// with state, last iteration result, next scheduled iteration estimate,
-// and average iteration duration. The selected loop shows inline detail.
-func RenderLoopControl(data LoopControlData, width, height int) string {
+// SnapshotLoopControl extracts display data from active loops.
+func SnapshotLoopControl(loops []*session.LoopRun) []LoopControlData {
+	out := make([]LoopControlData, 0, len(loops))
+	for _, l := range loops {
+		l.Lock()
+		d := LoopControlData{
+			ID:        l.ID,
+			RepoName:  l.RepoName,
+			Status:    l.Status,
+			Paused:    l.Paused,
+			IterCount: len(l.Iterations),
+			CreatedAt: l.CreatedAt,
+		}
+		if d.IterCount > 0 {
+			last := l.Iterations[d.IterCount-1]
+			d.LastIterStatus = last.Status
+			d.LastIterTask = last.Task.Title
+			d.LastIterError = last.Error
+			d.LastIterEndedAt = last.EndedAt
+
+			// Compute average iteration duration from completed iterations.
+			var total time.Duration
+			var count int
+			for _, it := range l.Iterations {
+				if it.EndedAt != nil {
+					dur := it.EndedAt.Sub(it.StartedAt)
+					if dur > 0 {
+						total += dur
+						count++
+					}
+				}
+			}
+			if count > 0 {
+				d.AvgIterDuration = total / time.Duration(count)
+			}
+		}
+		l.Unlock()
+
+		// Compute next iteration estimate.
+		if d.Paused {
+			d.NextEstimate = "paused"
+		} else if d.Status == "running" {
+			if d.LastIterEndedAt != nil && d.AvgIterDuration > 0 {
+				est := d.LastIterEndedAt.Add(d.AvgIterDuration)
+				if est.After(time.Now()) {
+					d.NextEstimate = fmt.Sprintf("~%s", FormatDuration(time.Until(est)))
+				} else {
+					d.NextEstimate = "imminent"
+				}
+			} else {
+				d.NextEstimate = "imminent"
+			}
+		} else {
+			d.NextEstimate = "—"
+		}
+
+		out = append(out, d)
+	}
+	return out
+}
+
+// RenderLoopControlPanel renders the loop control panel view.
+func RenderLoopControlPanel(data []LoopControlData, selectedIdx, width, height int) string {
 	var b strings.Builder
 
-	b.WriteString(styles.TitleStyle.Render(fmt.Sprintf("%s Loop Control Panel", styles.IconRunning)))
+	b.WriteString(styles.TitleStyle.Render(fmt.Sprintf(" %s Loop Control Panel ", styles.IconRunning)))
 	b.WriteString("\n\n")
 
-	if len(data.Loops) == 0 {
-		b.WriteString(styles.InfoStyle.Render("  No active loops"))
-		b.WriteString("\n")
-	} else {
-		for i, l := range data.Loops {
-			b.WriteString(renderLoopControlRow(l, i == data.Selected))
-		}
-		b.WriteString("\n")
-		if data.Selected >= 0 && data.Selected < len(data.Loops) {
-			b.WriteString(renderLoopControlInlineDetail(data.Loops[data.Selected], width))
-		}
+	if len(data) == 0 {
+		b.WriteString(styles.InfoStyle.Render("  No active loops — start a loop from the Repos tab (S)"))
+		b.WriteString("\n\n")
+		b.WriteString(styles.HelpStyle.Render("  Esc back"))
+		return b.String()
 	}
 
-	b.WriteString("\n")
-	b.WriteString(styles.HelpStyle.Render("  j/k navigate  s step  r run/stop  p pause/resume  Esc back"))
+	// Summary line
+	running, paused, stopped := 0, 0, 0
+	for _, d := range data {
+		switch {
+		case d.Paused:
+			paused++
+		case d.Status == "running":
+			running++
+		default:
+			stopped++
+		}
+	}
+	b.WriteString(fmt.Sprintf("  %s %d running  %s %d paused  %s %d other  (%d total)\n\n",
+		styles.StatusIcon("running"), running,
+		styles.StatusIcon("paused"), paused,
+		styles.StatusIcon("stopped"), stopped,
+		len(data)))
+
+	// Loop rows
+	for i, d := range data {
+		prefix := "  "
+		if i == selectedIdx {
+			prefix = styles.SelectedStyle.Render("▸ ")
+		}
+
+		id := d.ID
+		if len(id) > 8 {
+			id = id[:8]
+		}
+
+		statusLabel := d.Status
+		if d.Paused {
+			statusLabel = "paused"
+		}
+
+		b.WriteString(fmt.Sprintf("%s%s  %-16s  %s %-10s  iters:%-4d  next: %s\n",
+			prefix,
+			id,
+			d.RepoName,
+			styles.StatusIcon(statusLabel),
+			styles.StatusStyle(statusLabel).Render(statusLabel),
+			d.IterCount,
+			d.NextEstimate,
+		))
+
+		// Show last iteration detail for selected loop
+		if i == selectedIdx {
+			if d.LastIterTask != "" {
+				b.WriteString(fmt.Sprintf("    Task:   %s\n", d.LastIterTask))
+			}
+			if d.LastIterStatus != "" {
+				b.WriteString(fmt.Sprintf("    Result: %s %s\n",
+					styles.StatusIcon(d.LastIterStatus),
+					styles.StatusStyle(d.LastIterStatus).Render(d.LastIterStatus)))
+			}
+			if d.LastIterError != "" {
+				b.WriteString(fmt.Sprintf("    Error:  %s\n",
+					styles.StatusFailed.Render(d.LastIterError)))
+			}
+			elapsed := time.Since(d.CreatedAt)
+			b.WriteString(fmt.Sprintf("    Uptime: %s\n", FormatDuration(elapsed)))
+			if d.AvgIterDuration > 0 {
+				b.WriteString(fmt.Sprintf("    Avg iteration: %s\n", FormatDuration(d.AvgIterDuration)))
+			}
+		}
+		b.WriteString("\n")
+	}
+
+	b.WriteString(styles.HelpStyle.Render("  j/k navigate  s force-step  r run/stop  p pause/resume  Esc back"))
 
 	return b.String()
-}
-
-func renderLoopControlRow(l *session.LoopRun, selected bool) string {
-	l.Lock()
-	id := l.ID
-	if len(id) > 8 {
-		id = id[:8]
-	}
-	repoName := l.RepoName
-	status := l.Status
-	paused := l.Paused
-	iterCount := len(l.Iterations)
-	var lastIterStatus string
-	var lastIterTask string
-	if iterCount > 0 {
-		last := l.Iterations[iterCount-1]
-		lastIterStatus = last.Status
-		lastIterTask = last.Task.Title
-	}
-	avgDur := avgLoopIterDuration(l.Iterations)
-	nextEst := estimateLoopNextIteration(l)
-	l.Unlock()
-
-	if paused {
-		status = "paused"
-	}
-
-	cursor := "  "
-	if selected {
-		cursor = styles.StatusRunning.Render("> ")
-	}
-
-	var sb strings.Builder
-	sb.WriteString(cursor)
-	sb.WriteString(fmt.Sprintf("%-8s  %-20s  %s %-10s",
-		id,
-		loopControlTruncate(repoName, 20),
-		styles.StatusIcon(status),
-		styles.StatusStyle(status).Render(status),
-	))
-	if lastIterStatus != "" {
-		sb.WriteString(fmt.Sprintf("  last:%-10s", loopControlTruncate(lastIterStatus, 10)))
-	}
-	if lastIterTask != "" {
-		sb.WriteString(fmt.Sprintf("  task:%-20s", loopControlTruncate(lastIterTask, 20)))
-	}
-	if avgDur > 0 {
-		sb.WriteString(fmt.Sprintf("  avg:%s", FormatDuration(avgDur)))
-	}
-	if nextEst != "" {
-		sb.WriteString(fmt.Sprintf("  next:%s", nextEst))
-	}
-	sb.WriteString("\n")
-	return sb.String()
-}
-
-func renderLoopControlInlineDetail(l *session.LoopRun, width int) string {
-	l.Lock()
-	id := l.ID
-	repoName := l.RepoName
-	status := l.Status
-	paused := l.Paused
-	iterCount := len(l.Iterations)
-	lastError := l.LastError
-	createdAt := l.CreatedAt
-
-	var lastIterNum int
-	var lastIterStatus, lastIterError, lastIterTask string
-	if iterCount > 0 {
-		last := l.Iterations[iterCount-1]
-		lastIterNum = last.Number
-		lastIterStatus = last.Status
-		lastIterError = last.Error
-		lastIterTask = last.Task.Title
-	}
-	avgDur := avgLoopIterDuration(l.Iterations)
-	l.Unlock()
-
-	sepLen := 60
-	if width > 4 && width-2 < sepLen {
-		sepLen = width - 2
-	}
-	sep := strings.Repeat("─", sepLen)
-
-	statusLabel := status
-	if paused {
-		statusLabel = status + " (paused)"
-	}
-	elapsed := time.Since(createdAt)
-
-	var b strings.Builder
-	b.WriteString("  " + sep + "\n")
-	b.WriteString(fmt.Sprintf("  %s %s  repo:%s  status:%s  elapsed:%s\n",
-		styles.StatusIcon(status),
-		id,
-		repoName,
-		styles.StatusStyle(status).Render(statusLabel),
-		FormatDuration(elapsed),
-	))
-
-	iterLine := fmt.Sprintf("  iterations:%d", iterCount)
-	if avgDur > 0 {
-		iterLine += fmt.Sprintf("  avg:%s", FormatDuration(avgDur))
-	}
-	b.WriteString(iterLine + "\n")
-
-	if iterCount > 0 {
-		detail := fmt.Sprintf("  last iter #%d  status:%s",
-			lastIterNum,
-			styles.StatusStyle(lastIterStatus).Render(lastIterStatus),
-		)
-		if lastIterTask != "" {
-			detail += fmt.Sprintf("  task:%s", loopControlTruncate(lastIterTask, 40))
-		}
-		if lastIterError != "" {
-			detail += fmt.Sprintf("  err:%s", styles.StatusFailed.Render(loopControlTruncate(lastIterError, 40)))
-		}
-		b.WriteString(detail + "\n")
-	}
-
-	if lastError != "" {
-		b.WriteString(styles.StatusFailed.Render(fmt.Sprintf("  error: %s", loopControlTruncate(lastError, 60))))
-		b.WriteString("\n")
-	}
-
-	return b.String()
-}
-
-// avgLoopIterDuration computes the mean completed iteration duration.
-// Must be called with the loop lock held.
-func avgLoopIterDuration(iters []session.LoopIteration) time.Duration {
-	var total time.Duration
-	var count int
-	for _, it := range iters {
-		if it.EndedAt != nil {
-			total += it.EndedAt.Sub(it.StartedAt)
-			count++
-		}
-	}
-	if count == 0 {
-		return 0
-	}
-	return total / time.Duration(count)
-}
-
-// estimateLoopNextIteration returns a human-readable estimate of when the
-// next iteration will start. Must be called with the loop lock held.
-func estimateLoopNextIteration(l *session.LoopRun) string {
-	if l.Paused {
-		return "paused"
-	}
-	if l.Status != "running" {
-		return ""
-	}
-	iterCount := len(l.Iterations)
-	// If the last iteration has no EndedAt, it's currently executing.
-	if iterCount > 0 && l.Iterations[iterCount-1].EndedAt == nil {
-		return "in progress"
-	}
-	avg := avgLoopIterDuration(l.Iterations)
-	if avg == 0 || iterCount == 0 {
-		return "soon"
-	}
-	lastEnded := l.Iterations[iterCount-1].EndedAt
-	if lastEnded == nil {
-		return "in progress"
-	}
-	nextAt := lastEnded.Add(avg)
-	if time.Now().After(nextAt) {
-		return "soon"
-	}
-	return "in ~" + FormatDuration(time.Until(nextAt))
-}
-
-// loopControlTruncate shortens s to at most maxLen bytes (output length), appending "…" if trimmed.
-func loopControlTruncate(s string, maxLen int) string {
-	if len(s) < maxLen {
-		return s
-	}
-	if maxLen <= 1 {
-		return "…"
-	}
-	return s[:maxLen-1] + "…"
 }

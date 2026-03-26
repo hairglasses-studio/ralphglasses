@@ -394,22 +394,24 @@ func handleLoopListPause(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	idPrefix := row[0]
 	for _, l := range m.SessMgr.ListLoops() {
-		l.Lock()
-		id := l.ID
-		paused := l.Paused
-		l.Unlock()
-		if strings.HasPrefix(id, idPrefix) {
-			sessMgr := m.SessMgr
+		if strings.HasPrefix(l.ID, idPrefix) {
+			l.Lock()
+			paused := l.Paused
+			l.Unlock()
 			if paused {
-				return *m, func() tea.Msg {
-					err := sessMgr.ResumeLoop(id)
-					return LoopPauseResultMsg{LoopID: id, Paused: false, Err: err}
+				if err := m.SessMgr.ResumeLoop(l.ID); err != nil {
+					m.Notify.Show(fmt.Sprintf("Resume error: %v", err), 3*time.Second)
+				} else {
+					m.Notify.Show(fmt.Sprintf("Resumed: %s", l.RepoName), 3*time.Second)
+				}
+			} else {
+				if err := m.SessMgr.PauseLoop(l.ID); err != nil {
+					m.Notify.Show(fmt.Sprintf("Pause error: %v", err), 3*time.Second)
+				} else {
+					m.Notify.Show(fmt.Sprintf("Paused: %s", l.RepoName), 3*time.Second)
 				}
 			}
-			return *m, func() tea.Msg {
-				err := sessMgr.PauseLoop(id)
-				return LoopPauseResultMsg{LoopID: id, Paused: true, Err: err}
-			}
+			return *m, m.loopListCmd()
 		}
 	}
 	m.Notify.Show("Loop not found", 3*time.Second)
@@ -446,6 +448,70 @@ func (m Model) handleLoopListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.pushView(ViewLoopDetail, "Loop Detail")
 		}
 		return m, nil
+	}
+	return m, nil
+}
+
+func (m Model) handleLoopControlKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.Keys.Down):
+		if m.LoopControlIdx < len(m.LoopControlData)-1 {
+			m.LoopControlIdx++
+		}
+	case key.Matches(msg, m.Keys.Up):
+		if m.LoopControlIdx > 0 {
+			m.LoopControlIdx--
+		}
+	case key.Matches(msg, m.Keys.LoopCtrlStep):
+		if m.SessMgr == nil || len(m.LoopControlData) == 0 {
+			return m, nil
+		}
+		loopID := m.LoopControlData[m.LoopControlIdx].ID
+		sessMgr := m.SessMgr
+		return m, func() tea.Msg {
+			err := sessMgr.StepLoop(context.Background(), loopID)
+			return LoopStepResultMsg{LoopID: loopID, Err: err}
+		}
+	case key.Matches(msg, m.Keys.LoopCtrlToggle):
+		if m.SessMgr == nil || len(m.LoopControlData) == 0 {
+			return m, nil
+		}
+		d := m.LoopControlData[m.LoopControlIdx]
+		sessMgr := m.SessMgr
+		if d.Status == "running" {
+			return m, func() tea.Msg {
+				err := sessMgr.StopLoop(d.ID)
+				return LoopToggleResultMsg{LoopID: d.ID, Started: false, Err: err}
+			}
+		}
+		l, ok := sessMgr.GetLoop(d.ID)
+		if !ok {
+			m.Notify.Show("Loop not found", 3*time.Second)
+			return m, nil
+		}
+		l.Lock()
+		repoPath := l.RepoPath
+		l.Unlock()
+		return m, func() tea.Msg {
+			_, err := sessMgr.StartLoop(context.Background(), repoPath, session.DefaultLoopProfile())
+			return LoopToggleResultMsg{LoopID: d.ID, Started: true, Err: err}
+		}
+	case key.Matches(msg, m.Keys.LoopCtrlPause):
+		if m.SessMgr == nil || len(m.LoopControlData) == 0 {
+			return m, nil
+		}
+		d := m.LoopControlData[m.LoopControlIdx]
+		sessMgr := m.SessMgr
+		if d.Paused {
+			return m, func() tea.Msg {
+				err := sessMgr.ResumeLoop(d.ID)
+				return LoopPauseResultMsg{LoopID: d.ID, Paused: false, Err: err}
+			}
+		}
+		return m, func() tea.Msg {
+			err := sessMgr.PauseLoop(d.ID)
+			return LoopPauseResultMsg{LoopID: d.ID, Paused: true, Err: err}
+		}
 	}
 	return m, nil
 }
@@ -495,89 +561,6 @@ func (m Model) handleLoopDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		l.Lock()
 		paused := l.Paused
 		l.Unlock()
-		if paused {
-			return m, func() tea.Msg {
-				err := sessMgr.ResumeLoop(loopID)
-				return LoopPauseResultMsg{LoopID: loopID, Paused: false, Err: err}
-			}
-		}
-		return m, func() tea.Msg {
-			err := sessMgr.PauseLoop(loopID)
-			return LoopPauseResultMsg{LoopID: loopID, Paused: true, Err: err}
-		}
-	}
-	return m, nil
-}
-
-// --- Loop control panel handlers ---
-
-func handleLoopControlPanel(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-	m.LoopControlIdx = 0
-	m.refreshLoopControlData()
-	m.pushView(ViewLoopControl, "Loop Control")
-	return *m, m.loopListCmd()
-}
-
-func (m Model) handleLoopControlKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.SessMgr == nil {
-		return m, nil
-	}
-	loops := m.SessMgr.ListLoops()
-	switch {
-	case key.Matches(msg, m.Keys.Down):
-		if m.LoopControlIdx < len(loops)-1 {
-			m.LoopControlIdx++
-		}
-	case key.Matches(msg, m.Keys.Up):
-		if m.LoopControlIdx > 0 {
-			m.LoopControlIdx--
-		}
-	case key.Matches(msg, m.Keys.LoopCtrlStep):
-		if len(loops) == 0 || m.LoopControlIdx >= len(loops) {
-			m.Notify.Show("No loop selected", 3*time.Second)
-			return m, nil
-		}
-		loops[m.LoopControlIdx].Lock()
-		loopID := loops[m.LoopControlIdx].ID
-		loops[m.LoopControlIdx].Unlock()
-		sessMgr := m.SessMgr
-		return m, func() tea.Msg {
-			err := sessMgr.StepLoop(context.Background(), loopID)
-			return LoopStepResultMsg{LoopID: loopID, Err: err}
-		}
-	case key.Matches(msg, m.Keys.LoopCtrlToggle):
-		if len(loops) == 0 || m.LoopControlIdx >= len(loops) {
-			m.Notify.Show("No loop selected", 3*time.Second)
-			return m, nil
-		}
-		l := loops[m.LoopControlIdx]
-		l.Lock()
-		loopID := l.ID
-		status := l.Status
-		repoPath := l.RepoPath
-		l.Unlock()
-		sessMgr := m.SessMgr
-		if status == "running" {
-			return m, func() tea.Msg {
-				err := sessMgr.StopLoop(loopID)
-				return LoopToggleResultMsg{LoopID: loopID, Started: false, Err: err}
-			}
-		}
-		return m, func() tea.Msg {
-			_, err := sessMgr.StartLoop(context.Background(), repoPath, session.DefaultLoopProfile())
-			return LoopToggleResultMsg{LoopID: loopID, Started: true, Err: err}
-		}
-	case key.Matches(msg, m.Keys.LoopCtrlPause):
-		if len(loops) == 0 || m.LoopControlIdx >= len(loops) {
-			m.Notify.Show("No loop selected", 3*time.Second)
-			return m, nil
-		}
-		l := loops[m.LoopControlIdx]
-		l.Lock()
-		loopID := l.ID
-		paused := l.Paused
-		l.Unlock()
-		sessMgr := m.SessMgr
 		if paused {
 			return m, func() tea.Msg {
 				err := sessMgr.ResumeLoop(loopID)
