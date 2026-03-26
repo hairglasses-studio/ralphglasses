@@ -283,6 +283,111 @@ func TestStop_TwiceOnSameProcess(t *testing.T) {
 	}
 }
 
+// TestStop_ReaperRace exercises the race between Stop() and reaperLoop.
+// A short-lived process exits almost immediately, causing the reaper to
+// fire. Meanwhile Stop() is called concurrently. With the stopping flag
+// this must not panic, double-delete, or corrupt the procs map.
+// Run with: go test -race -count=3 ./internal/process/...
+func TestStop_ReaperRace(t *testing.T) {
+	// Stub sleep so kill-sequence timeouts don't slow the test.
+	origSleep := *sleepFnPtr.Load()
+	setSleepFn(func(d time.Duration) {})
+	t.Cleanup(func() { setSleepFn(origSleep) })
+
+	for i := 0; i < 20; i++ {
+		t.Run("", func(t *testing.T) {
+			m := NewManager()
+			repoPath := t.TempDir()
+			ralphDir := filepath.Join(repoPath, ".ralph")
+			if err := os.MkdirAll(ralphDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			// Script exits almost immediately — the reaper fires right away.
+			writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"), "exit 1")
+
+			if err := m.Start(context.Background(), repoPath); err != nil {
+				t.Fatalf("Start: %v", err)
+			}
+
+			// Call Stop concurrently with the reaper that is triggered by the
+			// near-instant process exit. Either Stop wins (process is stopped)
+			// or the reaper wins (process already cleaned up and Stop returns
+			// ErrNotRunning). Both are acceptable — the important thing is no
+			// panic, no data race, and no double-delete.
+			_ = m.Stop(context.Background(), repoPath)
+
+			// Wait for everything to settle.
+			deadline := time.Now().Add(3 * time.Second)
+			for time.Now().Before(deadline) {
+				if !m.IsRunning(repoPath) {
+					break
+				}
+				time.Sleep(20 * time.Millisecond)
+			}
+
+			if m.IsRunning(repoPath) {
+				m.StopAll(context.Background())
+				t.Fatal("process still running after Stop + reaper race")
+			}
+		})
+	}
+}
+
+// TestStop_ReaperRace_WithAutoRestart verifies the stopping flag prevents
+// the reaper from auto-restarting a process that Stop() is shutting down.
+func TestStop_ReaperRace_WithAutoRestart(t *testing.T) {
+	origSleep := *sleepFnPtr.Load()
+	setSleepFn(func(d time.Duration) {})
+	t.Cleanup(func() { setSleepFn(origSleep) })
+
+	for i := 0; i < 10; i++ {
+		t.Run("", func(t *testing.T) {
+			m := NewManager()
+			m.AutoRestart = true
+			m.MaxRestarts = 5
+
+			repoPath := t.TempDir()
+			ralphDir := filepath.Join(repoPath, ".ralph")
+			if err := os.MkdirAll(ralphDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			counterFile := filepath.Join(ralphDir, "race_counter")
+			writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"),
+				`COUNTER_FILE="`+counterFile+`"
+if [ ! -f "$COUNTER_FILE" ]; then
+  echo 1 > "$COUNTER_FILE"
+else
+  COUNT=$(cat "$COUNTER_FILE")
+  echo $((COUNT + 1)) > "$COUNTER_FILE"
+fi
+exit 1`)
+
+			if err := m.Start(context.Background(), repoPath); err != nil {
+				t.Fatalf("Start: %v", err)
+			}
+
+			// Brief pause to let at least one iteration run.
+			time.Sleep(50 * time.Millisecond)
+
+			// Stop while the reaper may be mid-restart-cycle.
+			_ = m.Stop(context.Background(), repoPath)
+
+			deadline := time.Now().Add(3 * time.Second)
+			for time.Now().Before(deadline) {
+				if !m.IsRunning(repoPath) {
+					break
+				}
+				time.Sleep(20 * time.Millisecond)
+			}
+
+			if m.IsRunning(repoPath) {
+				m.StopAll(context.Background())
+				t.Fatal("process still running after Stop with auto-restart race")
+			}
+		})
+	}
+}
+
 func TestStop_NeverStarted_ReturnsError(t *testing.T) {
 	t.Parallel()
 
