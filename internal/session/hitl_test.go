@@ -115,6 +115,35 @@ func TestHITLTracker_AutoRecoveryRate(t *testing.T) {
 	}
 }
 
+func TestHITLTracker_ComputeTrend(t *testing.T) {
+	dir := t.TempDir()
+	tracker := NewHITLTracker(dir)
+
+	now := time.Now()
+	window := 24 * time.Hour
+
+	// Insufficient data — no events
+	if trend := tracker.computeTrend(now.Add(-window), window); trend != "insufficient_data" {
+		t.Errorf("empty: got %q, want insufficient_data", trend)
+	}
+
+	// Add events in current window (high manual rate)
+	tracker.Record(HITLEvent{Timestamp: now.Add(-1 * time.Hour), Trigger: TriggerManual, MetricType: MetricManualSessionStop})
+	tracker.Record(HITLEvent{Timestamp: now.Add(-2 * time.Hour), Trigger: TriggerManual, MetricType: MetricManualSessionLaunch})
+	tracker.Record(HITLEvent{Timestamp: now.Add(-3 * time.Hour), Trigger: TriggerAutomatic, MetricType: MetricSessionCompleted})
+
+	// Add events in previous window (low manual rate)
+	tracker.Record(HITLEvent{Timestamp: now.Add(-25 * time.Hour), Trigger: TriggerAutomatic, MetricType: MetricSessionCompleted})
+	tracker.Record(HITLEvent{Timestamp: now.Add(-26 * time.Hour), Trigger: TriggerAutomatic, MetricType: MetricSessionCompleted})
+	tracker.Record(HITLEvent{Timestamp: now.Add(-27 * time.Hour), Trigger: TriggerAutomatic, MetricType: MetricAutoRecovery})
+
+	// Current: 2/3 manual = 66%, Previous: 0/3 = 0% => degrading
+	trend := tracker.computeTrend(now.Add(-window), window)
+	if trend != "degrading" {
+		t.Errorf("got %q, want degrading", trend)
+	}
+}
+
 func TestHITLTracker_SessionCompletionRate(t *testing.T) {
 	dir := t.TempDir()
 	tracker := NewHITLTracker(dir)

@@ -175,6 +175,121 @@ func TestManagerRunWorkflowParallelGroup(t *testing.T) {
 	}
 }
 
+func TestParseWorkflow_Valid(t *testing.T) {
+	yaml := `
+name: deploy-pipeline
+steps:
+  - name: lint
+    prompt: "Run linting checks"
+  - name: test
+    prompt: "Run test suite"
+    depends_on: [lint]
+  - name: deploy
+    prompt: "Deploy to staging"
+    depends_on: [test]
+`
+	wf, err := ParseWorkflow("", []byte(yaml))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if wf.Name != "deploy-pipeline" {
+		t.Errorf("name = %q, want deploy-pipeline", wf.Name)
+	}
+	if len(wf.Steps) != 3 {
+		t.Errorf("steps = %d, want 3", len(wf.Steps))
+	}
+}
+
+func TestParseWorkflow_DefaultName(t *testing.T) {
+	yaml := `
+steps:
+  - name: step1
+    prompt: "Do something"
+`
+	wf, err := ParseWorkflow("fallback-name", []byte(yaml))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if wf.Name != "fallback-name" {
+		t.Errorf("name = %q, want fallback-name", wf.Name)
+	}
+}
+
+func TestParseWorkflow_InvalidYAML(t *testing.T) {
+	_, err := ParseWorkflow("bad", []byte(":::invalid"))
+	if err == nil {
+		t.Fatal("expected error for invalid YAML")
+	}
+}
+
+func TestSaveLoadDeleteWorkflow(t *testing.T) {
+	dir := t.TempDir()
+
+	wf := WorkflowDef{
+		Name: "test workflow",
+		Steps: []WorkflowStep{
+			{Name: "step1", Prompt: "Do thing"},
+		},
+	}
+
+	if err := SaveWorkflow(dir, wf); err != nil {
+		t.Fatalf("SaveWorkflow: %v", err)
+	}
+
+	loaded, err := LoadWorkflow(dir, "test workflow")
+	if err != nil {
+		t.Fatalf("LoadWorkflow: %v", err)
+	}
+	if loaded.Name != "test workflow" {
+		t.Errorf("loaded name = %q", loaded.Name)
+	}
+	if len(loaded.Steps) != 1 {
+		t.Errorf("loaded steps = %d, want 1", len(loaded.Steps))
+	}
+
+	if err := DeleteWorkflow(dir, "test workflow"); err != nil {
+		t.Fatalf("DeleteWorkflow: %v", err)
+	}
+
+	_, err = LoadWorkflow(dir, "test workflow")
+	if err == nil {
+		t.Fatal("expected error loading deleted workflow")
+	}
+}
+
+func TestListWorkflows(t *testing.T) {
+	dir := t.TempDir()
+
+	// Empty dir — no error
+	wfs, err := ListWorkflows(dir)
+	if err != nil {
+		t.Fatalf("ListWorkflows empty: %v", err)
+	}
+	if wfs != nil {
+		t.Errorf("expected nil for no workflows dir, got %v", wfs)
+	}
+
+	// Save two workflows
+	_ = SaveWorkflow(dir, WorkflowDef{Name: "wf1", Steps: []WorkflowStep{{Name: "s1", Prompt: "p1"}}})
+	_ = SaveWorkflow(dir, WorkflowDef{Name: "wf2", Steps: []WorkflowStep{{Name: "s2", Prompt: "p2"}}})
+
+	wfs, err = ListWorkflows(dir)
+	if err != nil {
+		t.Fatalf("ListWorkflows: %v", err)
+	}
+	if len(wfs) != 2 {
+		t.Errorf("ListWorkflows = %d, want 2", len(wfs))
+	}
+}
+
+func TestDeleteWorkflow_NotFound(t *testing.T) {
+	dir := t.TempDir()
+	err := DeleteWorkflow(dir, "nonexistent")
+	if err == nil {
+		t.Fatal("expected error deleting nonexistent workflow")
+	}
+}
+
 func waitForWorkflowStatus(t *testing.T, run *WorkflowRun, want string) {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)
