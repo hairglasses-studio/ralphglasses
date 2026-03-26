@@ -706,12 +706,16 @@ func (s *Server) buildObservabilityGroup() ToolGroup {
 				mcp.WithString("status", mcp.Description("Filter by status (pass, fail, error)")),
 				mcp.WithString("provider", mcp.Description("Filter by provider")),
 				mcp.WithNumber("limit", mcp.Description("Max results (default 50, max 500)")),
+				mcp.WithString("since", mcp.Description("RFC3339 timestamp lower bound (overrides hours if set)")),
+				mcp.WithString("until", mcp.Description("RFC3339 timestamp upper bound")),
 			), s.handleObservationQuery},
 			{mcp.NewTool("ralphglasses_observation_summary",
-				mcp.WithDescription("Aggregate observation stats via SummarizeObservations"),
+				mcp.WithDescription("Aggregate observation stats with p50/p95/p99 percentiles via SummarizeObservations"),
 				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
 				mcp.WithNumber("hours", mcp.Description("Hours of history (default 48)")),
 				mcp.WithString("loop_id", mcp.Description("Filter by loop ID")),
+				mcp.WithString("since", mcp.Description("RFC3339 timestamp lower bound (overrides hours if set)")),
+				mcp.WithString("until", mcp.Description("RFC3339 timestamp upper bound")),
 			), s.handleObservationSummary},
 
 			// Scratchpad tools
