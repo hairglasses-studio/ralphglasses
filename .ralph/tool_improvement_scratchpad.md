@@ -344,3 +344,12 @@ All fleet-mode tools (`blackboard_put/query`, `a2a_offers`, `cost_forecast`, `fl
 - FINDING-72/73: Fleet-mode tool descriptions already include prerequisite note.
 - FINDING-74: `awesome_report` returns structured `no_data` on missing analysis.
 - FINDING-75: `team_create` has `dry_run` param.
+
+## Round 10: Log Path Consolidation (2026-03-26)
+
+### FINDING-79: [RESOLVED] Log file path constructed inline in 4+ locations — fragile, risk of mismatch
+**Tool**: `ralphglasses_logs`, `process.ReadFullLog`, `process.TailLog`, `resources.go` log resource
+**Evidence**: The path `.ralph/logs/ralph.log` was built via `filepath.Join` independently in `cmd/root.go`, `cmd/mcp.go`, `internal/process/logstream.go` (twice), and `internal/mcpserver/resources.go`. If the convention changed, all 5 sites would need updating — a classic path mismatch risk.
+**Fix applied**: Extracted `process.LogFilePath(basePath)` and `process.LogDirPath(basePath)` as canonical single-source-of-truth functions. Updated all 5 call sites to use them. Added 4 new tests: `TestLogFilePath_Canonical`, `TestLogDirPath_Canonical`, `TestLogFilePath_ContainedInLogDir`, and `TestLogPath_WriteReadRoundTrip` (validates that writing to `LogFilePath` and reading via `ReadFullLog` uses the same path). Also added `TestHandleLogs_NoLogFile` in `handler_repo_test.go` to exercise the graceful empty-response path for repos without log files.
+**Risk**: LOW — pure refactor, no behavior change.
+**Verification**: `go build ./...`, `go vet ./...`, `go test ./internal/process/... ./internal/mcpserver/...` — all pass.

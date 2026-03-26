@@ -9,6 +9,18 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// LogFilePath returns the canonical path to the ralph log file for a given
+// base directory (either a repo path or the scan root). All code that reads
+// or writes ralph.log MUST use this function to avoid path mismatches.
+func LogFilePath(basePath string) string {
+	return filepath.Join(basePath, ".ralph", "logs", "ralph.log")
+}
+
+// LogDirPath returns the directory containing the ralph log file.
+func LogDirPath(basePath string) string {
+	return filepath.Join(basePath, ".ralph", "logs")
+}
+
 // LogLinesMsg carries new log lines read from a file.
 type LogLinesMsg struct {
 	Lines []string
@@ -18,7 +30,7 @@ type LogLinesMsg struct {
 // Call this as a tea.Cmd to feed lines into the TUI.
 func TailLog(repoPath string, offset *int64) tea.Cmd {
 	return func() tea.Msg {
-		logPath := filepath.Join(repoPath, ".ralph", "logs", "ralph.log")
+		logPath := LogFilePath(repoPath)
 		f, err := os.Open(logPath)
 		if err != nil {
 			return LogLinesMsg{Lines: []string{"[error] Cannot read log: " + err.Error()}}
@@ -46,7 +58,7 @@ func TailLog(repoPath string, offset *int64) tea.Cmd {
 
 // ReadFullLog reads the entire ralph log file.
 func ReadFullLog(repoPath string) ([]string, error) {
-	logPath := filepath.Join(repoPath, ".ralph", "logs", "ralph.log")
+	logPath := LogFilePath(repoPath)
 	f, err := os.Open(logPath)
 	if err != nil {
 		return nil, err
