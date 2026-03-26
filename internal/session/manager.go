@@ -343,7 +343,7 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	m.persistOrWarn(s, "after session start")
 
 	if m.bus != nil {
-		m.bus.Publish(events.Event{
+		m.bus.PublishCtx(ctx, events.Event{
 			Type:      events.SessionStarted,
 			SessionID: s.ID,
 			RepoPath:  s.RepoPath,
@@ -656,7 +656,7 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 	m.mu.Unlock()
 
 	if m.bus != nil {
-		m.bus.Publish(events.Event{
+		m.bus.PublishCtx(ctx, events.Event{
 			Type:      events.TeamCreated,
 			SessionID: s.ID,
 			RepoPath:  config.RepoPath,

@@ -2,6 +2,7 @@ package events
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -1034,5 +1035,70 @@ func TestSyncWriteStillWorks(t *testing.T) {
 	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
 	if len(lines) != 2 {
 		t.Errorf("expected 2 persisted events, got %d", len(lines))
+	}
+}
+
+func TestPublishCtx_Normal(t *testing.T) {
+	bus := NewBus(100)
+	ch := bus.Subscribe("ctx-test")
+
+	ctx := context.Background()
+	err := bus.PublishCtx(ctx, Event{Type: SessionStarted, RepoName: "ctx-repo"})
+	if err != nil {
+		t.Fatalf("PublishCtx returned unexpected error: %v", err)
+	}
+
+	select {
+	case e := <-ch:
+		if e.Type != SessionStarted {
+			t.Errorf("type = %q, want %q", e.Type, SessionStarted)
+		}
+		if e.RepoName != "ctx-repo" {
+			t.Errorf("repo = %q, want ctx-repo", e.RepoName)
+		}
+		if e.Timestamp.IsZero() {
+			t.Error("timestamp should be set automatically")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for event")
+	}
+
+	// Verify event is in history
+	hist := bus.History("", 10)
+	if len(hist) != 1 {
+		t.Fatalf("history len = %d, want 1", len(hist))
+	}
+	if hist[0].RepoName != "ctx-repo" {
+		t.Errorf("history repo = %q, want ctx-repo", hist[0].RepoName)
+	}
+}
+
+func TestPublishCtx_CancelledContext(t *testing.T) {
+	bus := NewBus(100)
+	ch := bus.Subscribe("ctx-cancel-test")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	err := bus.PublishCtx(ctx, Event{Type: SessionStarted, RepoName: "cancelled-repo"})
+	if err == nil {
+		t.Fatal("PublishCtx should return error for cancelled context")
+	}
+	if err != context.Canceled {
+		t.Errorf("error = %v, want context.Canceled", err)
+	}
+
+	// Verify no event was delivered
+	select {
+	case e := <-ch:
+		t.Fatalf("should not receive event, got %+v", e)
+	case <-time.After(50 * time.Millisecond):
+		// Expected: no event delivered
+	}
+
+	// Verify nothing in history
+	hist := bus.History("", 10)
+	if len(hist) != 0 {
+		t.Errorf("history len = %d, want 0", len(hist))
 	}
 }
