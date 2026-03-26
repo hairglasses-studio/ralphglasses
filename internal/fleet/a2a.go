@@ -9,20 +9,71 @@ import (
 
 // Sentinel errors for A2A task offer operations.
 var (
-	ErrOfferNotFound = errors.New("a2a: offer not found")
-	ErrOfferNotOpen  = errors.New("a2a: offer is not open")
-	ErrOfferExpired  = errors.New("a2a: offer has expired")
+	ErrOfferNotFound       = errors.New("a2a: offer not found")
+	ErrOfferNotOpen        = errors.New("a2a: offer is not open")
+	ErrOfferExpired        = errors.New("a2a: offer has expired")
+	ErrInvalidTransition   = errors.New("a2a: invalid state transition")
+	ErrOfferNotAccepted    = errors.New("a2a: offer is not in an accepted/working state")
+	ErrOfferAlreadyTerminal = errors.New("a2a: offer is in a terminal state")
 )
 
 // OfferStatus represents the lifecycle state of a task offer.
+// These map to the A2A protocol lifecycle states.
 type OfferStatus string
 
 const (
-	OfferOpen      OfferStatus = "open"
-	OfferAccepted  OfferStatus = "accepted"
-	OfferCompleted OfferStatus = "completed"
-	OfferExpired   OfferStatus = "expired"
+	// OfferOpen is the legacy alias for OfferSubmitted.
+	OfferOpen OfferStatus = "open"
+
+	// A2A lifecycle states.
+	OfferSubmitted     OfferStatus = "submitted"
+	OfferWorking       OfferStatus = "working"
+	OfferInputRequired OfferStatus = "input-required"
+	OfferCompleted     OfferStatus = "completed"
+	OfferFailed        OfferStatus = "failed"
+	OfferCanceled      OfferStatus = "canceled"
+
+	// Legacy states retained for backward compatibility.
+	OfferAccepted OfferStatus = "accepted"
+	OfferExpired  OfferStatus = "expired"
 )
+
+// isTerminal returns true if the status is a terminal state (completed, failed, canceled, expired).
+func (s OfferStatus) isTerminal() bool {
+	switch s {
+	case OfferCompleted, OfferFailed, OfferCanceled, OfferExpired:
+		return true
+	}
+	return false
+}
+
+// A2AStatusToWorkItemStatus maps A2A offer statuses to WorkItemStatus values.
+func A2AStatusToWorkItemStatus(s OfferStatus) WorkItemStatus {
+	switch s {
+	case OfferOpen, OfferSubmitted:
+		return WorkPending
+	case OfferAccepted:
+		return WorkAssigned
+	case OfferWorking, OfferInputRequired:
+		return WorkRunning
+	case OfferCompleted:
+		return WorkCompleted
+	case OfferFailed, OfferCanceled, OfferExpired:
+		return WorkFailed
+	default:
+		return WorkPending
+	}
+}
+
+// Artifact represents a partial or final result produced during task execution.
+// Artifacts can be streamed incrementally as the task progresses.
+type Artifact struct {
+	Name    string `json:"name"`
+	Type    string `json:"type"`              // MIME type or semantic type (e.g., "text/plain", "application/json", "code")
+	Content string `json:"content"`
+	Index   int    `json:"index"`             // ordering index for streaming
+	Final   bool   `json:"final,omitempty"`   // true if this is the last chunk for this artifact name
+}
 
 // DelegationConstraints specifies requirements and preferences for task delegation.
 type DelegationConstraints struct {
@@ -34,6 +85,8 @@ type DelegationConstraints struct {
 
 // TaskOffer represents a task that one agent node offers to the fleet for delegation.
 // Other agents can accept, negotiate constraints, or let it expire.
+// The Status field tracks the full A2A lifecycle: submitted -> working -> completed/failed/canceled.
+// The InputRequired state allows a working task to pause and request additional input.
 type TaskOffer struct {
 	ID           string                `json:"id"`
 	OfferingNode string                `json:"offering_node"`
@@ -41,8 +94,10 @@ type TaskOffer struct {
 	Prompt       string                `json:"prompt"`
 	Constraints  DelegationConstraints `json:"constraints"`
 	Deadline     time.Time             `json:"deadline"`
-	Status       string                `json:"status"` // "open", "accepted", "completed", "expired"
+	Status       string                `json:"status"` // "submitted", "working", "input-required", "completed", "failed", "canceled", "open", "accepted", "expired"
 	AcceptedBy   string                `json:"accepted_by,omitempty"`
+	Artifacts    []Artifact            `json:"artifacts,omitempty"`
+	StatusMessage string              `json:"status_message,omitempty"` // human-readable context for current state
 	CreatedAt    time.Time             `json:"created_at"`
 	UpdatedAt    time.Time             `json:"updated_at"`
 }
@@ -195,8 +250,8 @@ func (a *A2AAdapter) GetOffer(offerID string) (*TaskOffer, bool) {
 	return &cp, true
 }
 
-// CompleteOffer marks an accepted offer as completed. The offer must exist
-// and be in "accepted" status.
+// CompleteOffer marks an offer as completed. The offer must exist
+// and be in "accepted" or "working" status.
 func (a *A2AAdapter) CompleteOffer(offerID string) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -206,13 +261,167 @@ func (a *A2AAdapter) CompleteOffer(offerID string) error {
 		return ErrOfferNotFound
 	}
 
-	if offer.Status != string(OfferAccepted) {
-		return ErrOfferNotOpen
+	s := OfferStatus(offer.Status)
+	if s.isTerminal() {
+		return ErrOfferAlreadyTerminal
+	}
+
+	switch s {
+	case OfferAccepted, OfferWorking, OfferInputRequired:
+		// valid
+	default:
+		return ErrOfferNotAccepted
 	}
 
 	offer.Status = string(OfferCompleted)
 	offer.UpdatedAt = time.Now()
 	return nil
+}
+
+// StartWorking transitions an accepted/submitted offer to the "working" state.
+func (a *A2AAdapter) StartWorking(offerID string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	offer, ok := a.offers[offerID]
+	if !ok {
+		return ErrOfferNotFound
+	}
+
+	s := OfferStatus(offer.Status)
+	if s.isTerminal() {
+		return ErrOfferAlreadyTerminal
+	}
+
+	// Allow transition from open, submitted, or accepted.
+	switch s {
+	case OfferOpen, OfferSubmitted, OfferAccepted, OfferInputRequired:
+		// valid
+	default:
+		return ErrInvalidTransition
+	}
+
+	offer.Status = string(OfferWorking)
+	offer.UpdatedAt = time.Now()
+	return nil
+}
+
+// RequestInput transitions a working offer to "input-required", pausing execution
+// until additional input is provided. The message explains what input is needed.
+func (a *A2AAdapter) RequestInput(offerID, message string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	offer, ok := a.offers[offerID]
+	if !ok {
+		return ErrOfferNotFound
+	}
+
+	s := OfferStatus(offer.Status)
+	if s.isTerminal() {
+		return ErrOfferAlreadyTerminal
+	}
+
+	if s != OfferWorking {
+		return ErrInvalidTransition
+	}
+
+	offer.Status = string(OfferInputRequired)
+	offer.StatusMessage = message
+	offer.UpdatedAt = time.Now()
+	return nil
+}
+
+// FailOffer marks an offer as failed with an error message.
+// Can transition from any non-terminal state.
+func (a *A2AAdapter) FailOffer(offerID, message string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	offer, ok := a.offers[offerID]
+	if !ok {
+		return ErrOfferNotFound
+	}
+
+	if OfferStatus(offer.Status).isTerminal() {
+		return ErrOfferAlreadyTerminal
+	}
+
+	offer.Status = string(OfferFailed)
+	offer.StatusMessage = message
+	offer.UpdatedAt = time.Now()
+	return nil
+}
+
+// CancelOffer marks an offer as canceled.
+// Can transition from any non-terminal state.
+func (a *A2AAdapter) CancelOffer(offerID string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	offer, ok := a.offers[offerID]
+	if !ok {
+		return ErrOfferNotFound
+	}
+
+	if OfferStatus(offer.Status).isTerminal() {
+		return ErrOfferAlreadyTerminal
+	}
+
+	offer.Status = string(OfferCanceled)
+	offer.UpdatedAt = time.Now()
+	return nil
+}
+
+// AddArtifact appends an artifact to an offer that is in a working or input-required state.
+// The artifact's Index is automatically set to the next sequential value if zero.
+func (a *A2AAdapter) AddArtifact(offerID string, art Artifact) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	offer, ok := a.offers[offerID]
+	if !ok {
+		return ErrOfferNotFound
+	}
+
+	s := OfferStatus(offer.Status)
+	if s.isTerminal() {
+		return ErrOfferAlreadyTerminal
+	}
+
+	switch s {
+	case OfferWorking, OfferInputRequired, OfferAccepted:
+		// valid states for adding artifacts
+	default:
+		return ErrInvalidTransition
+	}
+
+	if art.Index == 0 && len(offer.Artifacts) > 0 {
+		art.Index = len(offer.Artifacts)
+	}
+
+	offer.Artifacts = append(offer.Artifacts, art)
+	offer.UpdatedAt = time.Now()
+	return nil
+}
+
+// GetArtifacts returns a copy of the artifacts for a given offer.
+func (a *A2AAdapter) GetArtifacts(offerID string) ([]Artifact, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	offer, ok := a.offers[offerID]
+	if !ok {
+		return nil, ErrOfferNotFound
+	}
+
+	if len(offer.Artifacts) == 0 {
+		return nil, nil
+	}
+
+	result := make([]Artifact, len(offer.Artifacts))
+	copy(result, offer.Artifacts)
+	return result, nil
 }
 
 // ExpireStale scans all offers and marks any open offers past their deadline
@@ -224,7 +433,8 @@ func (a *A2AAdapter) ExpireStale() {
 
 	now := time.Now()
 	for _, offer := range a.offers {
-		if offer.Status == string(OfferOpen) && !offer.Deadline.IsZero() && now.After(offer.Deadline) {
+		s := OfferStatus(offer.Status)
+		if (s == OfferOpen || s == OfferSubmitted) && !offer.Deadline.IsZero() && now.After(offer.Deadline) {
 			offer.Status = string(OfferExpired)
 			offer.UpdatedAt = now
 		}
