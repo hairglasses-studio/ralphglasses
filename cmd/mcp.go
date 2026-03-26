@@ -58,7 +58,8 @@ Or with a custom scan path:
 			version+" ("+commit+")",
 			server.WithToolCapabilities(true),
 			server.WithRecovery(),
-			// Outermost → innermost: timeout → instrumentation → event bus → validation → handler
+			// Outermost → innermost: trace → timeout → instrumentation → event bus → validation → handler
+			server.WithToolHandlerMiddleware(mcpserver.TraceMiddleware()),
 			server.WithToolHandlerMiddleware(mcpserver.TimeoutMiddleware(30*time.Second, map[string]time.Duration{
 				"ralphglasses_loop_step":       10 * time.Minute,
 				"ralphglasses_coverage_report": 5 * time.Minute,

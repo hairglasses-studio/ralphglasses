@@ -15,6 +15,33 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/tracing"
 )
 
+// TraceMiddleware generates a trace ID for each tool call and propagates it
+// via context. If the context already carries a trace ID (e.g. from an
+// upstream caller), it is preserved. The trace ID is included in structured
+// log output for end-to-end observability.
+func TraceMiddleware() server.ToolHandlerMiddleware {
+	return func(next server.ToolHandlerFunc) server.ToolHandlerFunc {
+		return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			traceID := tracing.TraceIDFromContext(ctx)
+			if traceID == "" {
+				traceID = tracing.NewTraceID()
+				ctx = tracing.WithTraceID(ctx, traceID)
+			}
+
+			slog.InfoContext(ctx, "mcp.tool.trace",
+				"trace_id", traceID,
+				"tool", req.Params.Name,
+			)
+
+			result, err := next(ctx, req)
+			if result != nil {
+				injectTraceID(result, traceID)
+			}
+			return result, err
+		}
+	}
+}
+
 // InstrumentationMiddleware records timing, success, and size metrics for every
 // tool call via a ToolCallRecorder. It also pushes counters to Prometheus when
 // a PrometheusRecorder is configured.
@@ -67,6 +94,9 @@ func InstrumentationMiddleware(rec *ToolCallRecorder) server.ToolHandlerMiddlewa
 				"tool", entry.ToolName,
 				"duration_ms", entry.LatencyMs,
 				"success", entry.Success,
+			}
+			if tid := tracing.TraceIDFromContext(ctx); tid != "" {
+				logAttrs = append(logAttrs, "trace_id", tid)
 			}
 			// Extract repo from request args when available for log correlation.
 			if args := req.GetArguments(); args != nil {
@@ -149,6 +179,48 @@ func ValidationMiddleware(scanRoot string) server.ToolHandlerMiddleware {
 			return next(ctx, req)
 		}
 	}
+}
+
+// injectTraceID appends a _trace_id metadata field to the tool result.
+// If the first content item is a TextContent containing JSON, the trace ID is
+// merged into the JSON object. Otherwise a separate text content block is appended.
+func injectTraceID(result *mcp.CallToolResult, traceID string) {
+	if traceID == "" || len(result.Content) == 0 {
+		return
+	}
+
+	// Try to merge into the first JSON text content.
+	for i, c := range result.Content {
+		tc, ok := c.(mcp.TextContent)
+		if !ok {
+			continue
+		}
+		text := tc.Text
+		if len(text) < 2 || text[0] != '{' {
+			continue
+		}
+		// Parse existing JSON, add _trace_id, re-marshal.
+		var m map[string]any
+		if err := json.Unmarshal([]byte(text), &m); err != nil {
+			continue
+		}
+		m["_trace_id"] = traceID
+		data, err := json.MarshalIndent(m, "", "  ")
+		if err != nil {
+			continue
+		}
+		result.Content[i] = mcp.TextContent{
+			Type: "text",
+			Text: string(data),
+		}
+		return
+	}
+
+	// Fallback: append a metadata text block.
+	result.Content = append(result.Content, mcp.TextContent{
+		Type: "text",
+		Text: fmt.Sprintf(`{"_trace_id": %q}`, traceID),
+	})
 }
 
 // RecordToolCallPrometheus pushes a tool call metric to Prometheus.
