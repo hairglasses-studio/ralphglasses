@@ -6,8 +6,10 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -92,6 +94,16 @@ fleet management from any MCP-capable client.`,
 		m := tui.NewModel(scanPath, sessMgr)
 		m.EventBus = bus
 		m.NotifyEnabled = notifyFlag
+
+		// Graceful shutdown: stop all managed processes on SIGINT/SIGTERM.
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+		go func() {
+			<-sigCh
+			m.ProcMgr.StopAll()
+			os.Exit(0)
+		}()
+
 		p := tea.NewProgram(m, tea.WithAltScreen())
 		_, err = p.Run()
 		return err

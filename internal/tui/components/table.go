@@ -278,6 +278,11 @@ func (t *Table) View() string {
 	var b strings.Builder
 	cols := t.effectiveColumns()
 
+	// Clamp SortCol to valid range before rendering.
+	if len(t.Columns) > 0 && t.SortCol >= len(t.Columns) {
+		t.SortCol = 0
+	}
+
 	// Header
 	var hdr []string
 	for i, col := range cols {
