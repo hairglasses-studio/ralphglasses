@@ -289,9 +289,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleLoopDetailKey(msg)
 	case ViewLoopControl:
 		return m.handleLoopControlKey(msg)
-	case ViewHelp, ViewDiff, ViewTimeline, ViewLoopHealth:
+	case ViewHelp, ViewDiff, ViewTimeline, ViewLoopHealth, ViewObservation:
 		// Read-only views — Esc handled globally, no view-specific keys
 		return m, nil
+	case ViewEventLog:
+		return m.handleEventLogKey(msg)
 	}
 
 	return m, nil
