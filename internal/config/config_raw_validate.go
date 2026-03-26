@@ -9,6 +9,7 @@ type ValidationWarning struct {
 	Severity string // "warning" or "error"
 }
 
+// String formats the warning as "[severity] key: message".
 func (w ValidationWarning) String() string {
 	return fmt.Sprintf("[%s] %s: %s", w.Severity, w.Key, w.Message)
 }

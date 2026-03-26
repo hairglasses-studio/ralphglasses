@@ -16,6 +16,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
 )
 
+// Update handles incoming messages and returns the updated model and any follow-up commands.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:

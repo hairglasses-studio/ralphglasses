@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 )
 
+// ErrNoWorkers is returned when no eligible workers are available for routing.
 var ErrNoWorkers = errors.New("no eligible workers")
 
 // Router selects a worker for a given task.
@@ -29,6 +30,7 @@ type RoundRobinRouter struct {
 	counter atomic.Uint64
 }
 
+// SelectWorker picks the next worker in round-robin order among healthy candidates.
 func (r *RoundRobinRouter) SelectWorker(workers []WorkerCandidate) (string, error) {
 	eligible := filterHealthy(workers)
 	if len(eligible) == 0 {
@@ -41,6 +43,7 @@ func (r *RoundRobinRouter) SelectWorker(workers []WorkerCandidate) (string, erro
 // LeastLoadedRouter picks the worker with fewest active tasks.
 type LeastLoadedRouter struct{}
 
+// SelectWorker picks the healthy worker with the fewest active tasks.
 func (r *LeastLoadedRouter) SelectWorker(workers []WorkerCandidate) (string, error) {
 	eligible := filterHealthy(workers)
 	if len(eligible) == 0 {
@@ -55,6 +58,7 @@ func (r *LeastLoadedRouter) SelectWorker(workers []WorkerCandidate) (string, err
 // CostOptimalRouter picks the worker with lowest cost rate that has budget.
 type CostOptimalRouter struct{}
 
+// SelectWorker picks the healthy worker with the lowest cost rate that still has budget.
 func (r *CostOptimalRouter) SelectWorker(workers []WorkerCandidate) (string, error) {
 	eligible := filterHealthy(workers)
 	if len(eligible) == 0 {
@@ -83,6 +87,7 @@ type ProviderAffinityRouter struct {
 	Fallback          Router
 }
 
+// SelectWorker prefers workers running the configured provider, falling back to the delegate router.
 func (r *ProviderAffinityRouter) SelectWorker(workers []WorkerCandidate) (string, error) {
 	eligible := filterHealthy(workers)
 	if len(eligible) == 0 {
@@ -113,6 +118,7 @@ type CompositeRouter struct {
 	Weights map[string]float64 // factor name -> weight
 }
 
+// SelectWorker scores each worker across weighted factors (load, budget, cost) and picks the highest.
 func (r *CompositeRouter) SelectWorker(workers []WorkerCandidate) (string, error) {
 	eligible := filterHealthy(workers)
 	if len(eligible) == 0 {

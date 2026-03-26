@@ -130,6 +130,7 @@ func Get() Recorder {
 // NoopRecorder satisfies the Recorder interface with zero-cost no-ops.
 type NoopRecorder struct{}
 
+// StartSessionSpan returns a no-op span with the given metadata.
 func (n *NoopRecorder) StartSessionSpan(_ context.Context, sessionID, provider, model, repoName string) (context.Context, *SessionSpan) {
 	return context.Background(), &SessionSpan{
 		sessionID: sessionID,
@@ -140,13 +141,17 @@ func (n *NoopRecorder) StartSessionSpan(_ context.Context, sessionID, provider, 
 	}
 }
 
+// EndSessionSpan is a no-op.
 func (n *NoopRecorder) EndSessionSpan(_ *SessionSpan, _ float64, _ int, _ string) {}
 
+// RecordTurnMetric is a no-op.
 func (n *NoopRecorder) RecordTurnMetric(_ context.Context, _, _, _ string, _, _ int, _ float64, _ int64) {
 }
 
+// RecordError is a no-op.
 func (n *NoopRecorder) RecordError(_ *SessionSpan, _ string) {}
 
+// RecordCostMetric is a no-op.
 func (n *NoopRecorder) RecordCostMetric(_ context.Context, _, _ string, _ float64) {}
 
 // InMemoryRecorder captures metrics in memory for testing and local dashboards.
@@ -156,10 +161,12 @@ type InMemoryRecorder struct {
 	Metrics []Metric
 }
 
+// NewInMemoryRecorder creates an InMemoryRecorder for testing and local dashboards.
 func NewInMemoryRecorder() *InMemoryRecorder {
 	return &InMemoryRecorder{}
 }
 
+// StartSessionSpan creates and stores a span in memory.
 func (r *InMemoryRecorder) StartSessionSpan(_ context.Context, sessionID, provider, model, repoName string) (context.Context, *SessionSpan) {
 	span := &SessionSpan{
 		sessionID:  sessionID,
@@ -175,6 +182,7 @@ func (r *InMemoryRecorder) StartSessionSpan(_ context.Context, sessionID, provid
 	return context.Background(), span
 }
 
+// EndSessionSpan marks a span as ended and records cost, turn count, and exit reason.
 func (r *InMemoryRecorder) EndSessionSpan(span *SessionSpan, costUSD float64, turnCount int, exitReason string) {
 	if span == nil {
 		return
@@ -188,6 +196,7 @@ func (r *InMemoryRecorder) EndSessionSpan(span *SessionSpan, costUSD float64, tu
 	span.attributes[AttrGenAILatencyMs] = time.Since(span.startTime).Milliseconds()
 }
 
+// RecordTurnMetric stores token and cost metrics for a single turn.
 func (r *InMemoryRecorder) RecordTurnMetric(_ context.Context, provider, model, sessionID string, inputTokens, outputTokens int, costUSD float64, latencyMs int64) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -213,6 +222,7 @@ func (r *InMemoryRecorder) RecordTurnMetric(_ context.Context, provider, model, 
 	})
 }
 
+// RecordError appends an error event to the span.
 func (r *InMemoryRecorder) RecordError(span *SessionSpan, errMsg string) {
 	if span == nil {
 		return
@@ -228,6 +238,7 @@ func (r *InMemoryRecorder) RecordError(span *SessionSpan, errMsg string) {
 	})
 }
 
+// RecordCostMetric stores a cost metric for a provider and repo.
 func (r *InMemoryRecorder) RecordCostMetric(_ context.Context, provider, repoName string, costUSD float64) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

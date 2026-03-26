@@ -122,8 +122,10 @@ type openaiResultError struct {
 	Message string `json:"message"`
 }
 
+// Provider returns ProviderOpenAI.
 func (o *openaiClient) Provider() Provider { return ProviderOpenAI }
 
+// Submit uploads a JSONL file and creates an OpenAI batch job.
 func (o *openaiClient) Submit(ctx context.Context, requests []Request) (*BatchStatus, error) {
 	if len(requests) == 0 {
 		return nil, fmt.Errorf("batch: no requests provided")
@@ -211,6 +213,7 @@ func (o *openaiClient) Submit(ctx context.Context, requests []Request) (*BatchSt
 	return o.toBatchStatus(&batchResp), nil
 }
 
+// Poll checks the current status of an OpenAI batch by ID.
 func (o *openaiClient) Poll(ctx context.Context, batchID string) (*BatchStatus, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", o.baseURL+"/v1/batches/"+batchID, nil)
 	if err != nil {
@@ -240,6 +243,7 @@ func (o *openaiClient) Poll(ctx context.Context, batchID string) (*BatchStatus, 
 	return o.toBatchStatus(&batchResp), nil
 }
 
+// Results downloads and parses the output file for a completed OpenAI batch.
 func (o *openaiClient) Results(ctx context.Context, batchID string) ([]Result, error) {
 	// First poll to get the output file ID.
 	status, err := o.Poll(ctx, batchID)
@@ -281,6 +285,7 @@ func (o *openaiClient) Results(ctx context.Context, batchID string) ([]Result, e
 	return o.downloadResults(ctx, batchResp.OutputFileID)
 }
 
+// Cancel requests cancellation of a running OpenAI batch.
 func (o *openaiClient) Cancel(ctx context.Context, batchID string) error {
 	req, err := http.NewRequestWithContext(ctx, "POST", o.baseURL+"/v1/batches/"+batchID+"/cancel", nil)
 	if err != nil {
