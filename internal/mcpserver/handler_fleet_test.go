@@ -128,6 +128,43 @@ func TestHandleFleetStatus_Basic(t *testing.T) {
 	}
 }
 
+func TestHandleFleetStatus_SummaryOnly(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	// Scan first so repos are populated
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleFleetStatus(context.Background(), makeRequest(map[string]any{
+		"summary_only": true,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "repos") {
+		t.Errorf("expected repos in summary output, got: %s", text)
+	}
+	if !strings.Contains(text, "total_sessions") {
+		t.Errorf("expected total_sessions in summary output, got: %s", text)
+	}
+	if !strings.Contains(text, "total_spend_usd") {
+		t.Errorf("expected total_spend_usd in summary output, got: %s", text)
+	}
+	if !strings.Contains(text, "running_sessions") {
+		t.Errorf("expected running_sessions in summary output, got: %s", text)
+	}
+	if !strings.Contains(text, "repo_sessions") {
+		t.Errorf("expected repo_sessions in summary output, got: %s", text)
+	}
+	// Summary should NOT contain full-dump fields like "sessions" array or "alerts"
+	if strings.Contains(text, "\"sessions\"") {
+		t.Errorf("summary_only should not contain full sessions array, got: %s", text)
+	}
+}
+
 // --- handleFleetWorkers ---
 
 func TestHandleFleetWorkers_NilFleet(t *testing.T) {
