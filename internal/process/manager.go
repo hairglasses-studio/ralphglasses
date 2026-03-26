@@ -63,6 +63,7 @@ type ManagedProcess struct {
 	PID          int    // stored at start time; safe to read under mu without racing Wait()
 	ChildPids    []int  // child PIDs collected at launch (best-effort, never nil)
 	Recovered    bool   // true if re-adopted from PID file (no reaper goroutine)
+	Stopping     bool   // true while Stop() owns this process's shutdown lifecycle
 	ExitCode     int
 	ExitError    string
 	RestartCount int // number of times this process has been auto-restarted
@@ -265,12 +266,24 @@ func (m *Manager) reaperLoop(ctx context.Context, rp string, cmd *exec.Cmd) {
 		lastExits.m[rp] = exitStatus{Code: exitCode, Error: exitErrStr}
 		lastExits.Unlock()
 
+		// If Stop() has claimed this process, skip auto-restart and go
+		// straight to cleanup. The stopping flag prevents the reaper from
+		// racing with Stop's kill goroutine by ensuring we never attempt
+		// to restart a process that is being intentionally shut down.
+		m.mu.Lock()
+		mpCheck, tracked := m.procs[rp]
+		isStopping := tracked && mpCheck.Stopping
+		m.mu.Unlock()
+		if isStopping {
+			goto cleanup
+		}
+
 		// Auto-restart: only for non-zero exit codes (not signal kills which yield -1).
 		// Skip auto-restart if context is cancelled.
 		if exitCode > 0 && m.AutoRestart && ctx.Err() == nil {
 			m.mu.Lock()
 			mp, stillTracked := m.procs[rp]
-			if stillTracked && mp.RestartCount < m.maxRestartsLimit() {
+			if stillTracked && !mp.Stopping && mp.RestartCount < m.maxRestartsLimit() {
 				restartCount := mp.RestartCount
 				m.mu.Unlock()
 
@@ -290,6 +303,16 @@ func (m *Manager) reaperLoop(ctx context.Context, rp string, cmd *exec.Cmd) {
 					goto cleanup
 				}
 
+				// Re-check stopping flag after backoff — Stop() may have been
+				// called while we were sleeping.
+				m.mu.Lock()
+				mp2, ok2 := m.procs[rp]
+				if ok2 && mp2.Stopping {
+					m.mu.Unlock()
+					goto cleanup
+				}
+				m.mu.Unlock()
+
 				// Re-launch the same command with context.
 				loopScript := filepath.Join(rp, "ralph_loop.sh")
 				newCmd := exec.CommandContext(ctx, "bash", loopScript)
@@ -306,8 +329,8 @@ func (m *Manager) reaperLoop(ctx context.Context, rp string, cmd *exec.Cmd) {
 					}
 
 					m.mu.Lock()
-					// Check that the entry still exists (could have been stopped during backoff).
-					if _, ok := m.procs[rp]; ok {
+					// Check that the entry still exists and Stop hasn't claimed it.
+					if existing, ok := m.procs[rp]; ok && !existing.Stopping {
 						m.procs[rp] = &ManagedProcess{
 							Cmd:          newCmd,
 							PID:          newPID,
@@ -467,6 +490,10 @@ func (m *Manager) Stop(ctx context.Context, repoPath string) error {
 	pid := mp.PID
 	childPids := append([]int(nil), mp.ChildPids...)
 	recovered := mp.Recovered
+
+	// Signal the reaper that Stop owns this process's lifecycle.
+	// The reaper will skip cleanup/restart for processes marked as stopping.
+	mp.Stopping = true
 
 	// For recovered processes, clean up immediately (no reaper goroutine).
 	if recovered {
