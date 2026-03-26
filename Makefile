@@ -7,7 +7,9 @@ LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSIO
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-integration test-scripts fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example check-service-paths
+.DEFAULT_GOAL := check-paths
+
+.PHONY: bootstrap doctor test test-verbose test-cover test-integration test-scripts fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example check-paths
 
 bootstrap:
 	./scripts/bootstrap-toolchain.sh
@@ -186,13 +188,13 @@ plugin-example:
 	@echo "For production plugins, see the TODO in internal/plugin/loader.go"
 
 # Validate all systemd service files use /usr/local/bin/ paths (not /opt/ or other locations)
-check-service-paths:
+check-paths:
 	@echo "Checking systemd service ExecStart paths..."
 	@FAIL=0; \
-	for f in distro/systemd/*.service; do \
-		BAD=$$(grep -E '^ExecStart=' "$$f" | grep -v '^ExecStart=/usr/local/bin/' || true); \
+	for f in $$(find distro/ -name '*.service'); do \
+		BAD=$$(grep -HnE '^ExecStart=' "$$f" | grep -v '^[^:]*:[^:]*:ExecStart=/usr/local/bin/' || true); \
 		if [ -n "$$BAD" ]; then \
-			echo "FAIL $$f: $$BAD"; \
+			echo "FAIL $$BAD"; \
 			FAIL=1; \
 		else \
 			echo "ok   $$f"; \
