@@ -43,6 +43,9 @@ func TestHandleScratchpadReadMissing(t *testing.T) {
 	if !strings.Contains(text, `"status": "empty"`) {
 		t.Errorf("expected empty status JSON, got: %s", text)
 	}
+	if !strings.Contains(text, `"item_type": "scratchpad"`) {
+		t.Errorf("expected item_type scratchpad in empty result, got: %s", text)
+	}
 }
 
 func TestHandleScratchpadAppendAndRead(t *testing.T) {
