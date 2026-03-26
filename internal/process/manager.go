@@ -387,8 +387,14 @@ func (m *Manager) reaperLoop(ctx context.Context, rp string, cmd *exec.Cmd) {
 // Package-level indirections for testing.
 var (
 	getpgid = syscall.Getpgid
-	killPid = syscall.Kill  // direct PID signal; tests can stub this
-	aliveFn = isProcessAlive
+
+	// killPidPtr is an atomic pointer to the kill function, allowing
+	// tests to stub it without data races against background goroutines.
+	killPidPtr atomic.Pointer[func(int, syscall.Signal) error]
+
+	// aliveFnPtr is an atomic pointer to the process-alive check function,
+	// allowing tests to stub it without data races against background goroutines.
+	aliveFnPtr atomic.Pointer[func(int) bool]
 
 	// sleepFnPtr is an atomic pointer to the sleep function, allowing
 	// tests to stub it without data races against background goroutines.
@@ -396,8 +402,34 @@ var (
 )
 
 func init() {
-	fn := time.Sleep
-	sleepFnPtr.Store(&fn)
+	killFn := func(pid int, sig syscall.Signal) error { return syscall.Kill(pid, sig) }
+	killPidPtr.Store(&killFn)
+
+	aFn := isProcessAlive
+	aliveFnPtr.Store(&aFn)
+
+	sleepFn := time.Sleep
+	sleepFnPtr.Store(&sleepFn)
+}
+
+// killPid loads the current kill function atomically.
+func killPid(pid int, sig syscall.Signal) error {
+	return (*killPidPtr.Load())(pid, sig)
+}
+
+// setKillPid atomically replaces the kill function (for testing).
+func setKillPid(fn func(int, syscall.Signal) error) {
+	killPidPtr.Store(&fn)
+}
+
+// aliveFn loads the current alive-check function atomically.
+func aliveFn(pid int) bool {
+	return (*aliveFnPtr.Load())(pid)
+}
+
+// setAliveFn atomically replaces the alive-check function (for testing).
+func setAliveFn(fn func(int) bool) {
+	aliveFnPtr.Store(&fn)
 }
 
 // sleepFn loads the current sleep function atomically.
