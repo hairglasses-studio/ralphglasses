@@ -91,8 +91,12 @@ fleet management from any MCP-capable client.`,
 		hookExec.Start()
 		defer hookExec.Stop()
 
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
 		sessMgr := session.NewManagerWithBus(bus)
 		m := tui.NewModel(scanPath, sessMgr)
+		m.Ctx = ctx
 		m.EventBus = bus
 		m.NotifyEnabled = notifyFlag
 
@@ -101,7 +105,8 @@ fleet management from any MCP-capable client.`,
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		go func() {
 			<-sigCh
-			m.ProcMgr.StopAll(context.TODO())
+			cancel()
+			m.ProcMgr.StopAll(ctx)
 			os.Exit(0)
 		}()
 
