@@ -2,7 +2,34 @@
 
 ## Current Status (2026-03-25)
 
-**Run 19 complete — 5/5 passed, 4 auto-merged, 0 failures.** Best run ever. Gate fix validated: all 5 iterations passed gate (warn, not fail). Completion rate climbing (0.60→0.70). 28 items resolved, 2 blocked/deferred, 2 observations remaining.
+**Run 21 complete — 5/5 passed, 4 auto-merged, ALL GATES PASS.** First run with all-green gate. Rolling window pushed old failures out — completion_rate=1.000, verify_pass_rate=1.000, error_rate=0.000, cost -82%, latency -69%. 28 items resolved, 2 blocked/deferred, 2 observations remaining.
+
+### Run 20 (84fcd3a4) — 2/2 passed (1 no-op)
+- **Iter 1**: No-op (RepoStatusFromExitCode already complete) — passed, no merge
+- **Iter 2**: Parse error warning indicator in repo detail view — passed, auto-merged (repodetail.go + test)
+- **Gate**: completion_rate=0.700 (warn), verify_pass_rate=0.700 (warn)
+
+### Run 21 (0e9687f9) — 5/5 passed, 4 auto-merged, ALL GATES PASS
+- **Duration**: ~23 min (19:02–19:25)
+- **Total cost**: ~$0.184/iter avg
+- **Gate progression**: warn→warn→**PASS**→pass→pass
+
+| Iter | Task | Merged | Gate |
+|------|------|--------|------|
+| 1 | Race condition fix for MCP `findRepo` (shallow copy) | no (already done) | warn (0.70) |
+| 2 | Document cost normalization pipeline in ARCHITECTURE.md | yes | warn (0.80) |
+| 3 | Sub-phase timing assertions for loop iteration tests | yes | **pass** (1.00) |
+| 4 | Document TUI loop interaction surface in ARCHITECTURE.md | yes | **pass** (1.00) |
+| 5 | Getpgid fallback + warning logging (process/manager.go) | yes | **pass** (1.00) |
+
+#### Gate Progression (Runs 17→21)
+| Metric | Run 17 | Run 18 | Run 19 | Run 20 | Run 21 |
+|--------|--------|--------|--------|--------|--------|
+| completion_rate | 0.50 | 0.60 | 0.70 | 0.70 | **1.00** |
+| verify_pass_rate | 0.50 | 0.60 | 0.70 | 0.70 | **1.00** |
+| error_rate | 0.50 | 0.40 | 0.30 | 0.30 | **0.00** |
+| cost delta | -40% | -50% | -62% | -68% | **-82%** |
+| overall | fail | fail | warn | warn | **pass** |
 
 ---
 
