@@ -40,6 +40,8 @@ const (
 	ViewLoopList
 	ViewLoopDetail
 	ViewLoopControl
+	ViewObservation
+	ViewEventLog
 )
 
 // InputMode tracks the current input capture mode.
@@ -178,6 +180,9 @@ type Model struct {
 	// Loop control panel
 	LoopControlIdx  int
 	LoopControlData []views.LoopControlData
+
+	// Event log view
+	EventLog *views.EventLogView
 
 	// Loop observation cache (refreshed less often than 2s tick)
 	ObsCache     map[string][]session.LoopObservation // keyed by repo path
@@ -560,6 +565,21 @@ func (m Model) View() string {
 		}
 	case ViewLoopControl:
 		b.WriteString(views.RenderLoopControlPanel(m.LoopControlData, m.LoopControlIdx, m.Width, m.Height))
+	case ViewObservation:
+		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
+			repo := m.Repos[m.SelectedIdx]
+			data := views.ObservationViewData{
+				RepoName:     repo.Name,
+				Observations: m.getObservations(repo.Path),
+			}
+			b.WriteString(views.RenderObservationView(data, m.Width, m.Height))
+		}
+	case ViewEventLog:
+		if m.EventLog != nil {
+			b.WriteString(m.EventLog.View())
+		} else {
+			b.WriteString(styles.InfoStyle.Render("  No event log available"))
+		}
 	}
 
 	// Loop panel overlay
