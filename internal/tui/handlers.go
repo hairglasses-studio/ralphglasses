@@ -509,6 +509,89 @@ func (m Model) handleLoopDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// --- Loop control panel handlers ---
+
+func handleLoopControlPanel(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.LoopControlIdx = 0
+	m.refreshLoopControlData()
+	m.pushView(ViewLoopControl, "Loop Control")
+	return *m, m.loopListCmd()
+}
+
+func (m Model) handleLoopControlKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.SessMgr == nil {
+		return m, nil
+	}
+	loops := m.SessMgr.ListLoops()
+	switch {
+	case key.Matches(msg, m.Keys.Down):
+		if m.LoopControlIdx < len(loops)-1 {
+			m.LoopControlIdx++
+		}
+	case key.Matches(msg, m.Keys.Up):
+		if m.LoopControlIdx > 0 {
+			m.LoopControlIdx--
+		}
+	case key.Matches(msg, m.Keys.LoopCtrlStep):
+		if len(loops) == 0 || m.LoopControlIdx >= len(loops) {
+			m.Notify.Show("No loop selected", 3*time.Second)
+			return m, nil
+		}
+		loops[m.LoopControlIdx].Lock()
+		loopID := loops[m.LoopControlIdx].ID
+		loops[m.LoopControlIdx].Unlock()
+		sessMgr := m.SessMgr
+		return m, func() tea.Msg {
+			err := sessMgr.StepLoop(context.Background(), loopID)
+			return LoopStepResultMsg{LoopID: loopID, Err: err}
+		}
+	case key.Matches(msg, m.Keys.LoopCtrlToggle):
+		if len(loops) == 0 || m.LoopControlIdx >= len(loops) {
+			m.Notify.Show("No loop selected", 3*time.Second)
+			return m, nil
+		}
+		l := loops[m.LoopControlIdx]
+		l.Lock()
+		loopID := l.ID
+		status := l.Status
+		repoPath := l.RepoPath
+		l.Unlock()
+		sessMgr := m.SessMgr
+		if status == "running" {
+			return m, func() tea.Msg {
+				err := sessMgr.StopLoop(loopID)
+				return LoopToggleResultMsg{LoopID: loopID, Started: false, Err: err}
+			}
+		}
+		return m, func() tea.Msg {
+			_, err := sessMgr.StartLoop(context.Background(), repoPath, session.DefaultLoopProfile())
+			return LoopToggleResultMsg{LoopID: loopID, Started: true, Err: err}
+		}
+	case key.Matches(msg, m.Keys.LoopCtrlPause):
+		if len(loops) == 0 || m.LoopControlIdx >= len(loops) {
+			m.Notify.Show("No loop selected", 3*time.Second)
+			return m, nil
+		}
+		l := loops[m.LoopControlIdx]
+		l.Lock()
+		loopID := l.ID
+		paused := l.Paused
+		l.Unlock()
+		sessMgr := m.SessMgr
+		if paused {
+			return m, func() tea.Msg {
+				err := sessMgr.ResumeLoop(loopID)
+				return LoopPauseResultMsg{LoopID: loopID, Paused: false, Err: err}
+			}
+		}
+		return m, func() tea.Msg {
+			err := sessMgr.PauseLoop(loopID)
+			return LoopPauseResultMsg{LoopID: loopID, Paused: true, Err: err}
+		}
+	}
+	return m, nil
+}
+
 // truncateID shortens an ID to 8 characters for display.
 func truncateID(id string) string {
 	if len(id) > 8 {

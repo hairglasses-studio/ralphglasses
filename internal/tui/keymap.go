@@ -66,6 +66,12 @@ type KeyMap struct {
 	LoopDetailStep   key.Binding
 	LoopDetailToggle key.Binding
 	LoopDetailPause  key.Binding
+
+	// Loop control panel (global C key + panel-specific actions)
+	LoopControlPanel key.Binding
+	LoopCtrlStep     key.Binding
+	LoopCtrlToggle   key.Binding
+	LoopCtrlPause    key.Binding
 }
 
 // DefaultKeyMap returns the default key bindings.
@@ -223,6 +229,22 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("p"),
 			key.WithHelp("p", "Pause / resume"),
 		),
+		LoopControlPanel: key.NewBinding(
+			key.WithKeys("C"),
+			key.WithHelp("C", "Loop control panel"),
+		),
+		LoopCtrlStep: key.NewBinding(
+			key.WithKeys("s"),
+			key.WithHelp("s", "Step selected loop"),
+		),
+		LoopCtrlToggle: key.NewBinding(
+			key.WithKeys("r"),
+			key.WithHelp("r", "Toggle run/stop"),
+		),
+		LoopCtrlPause: key.NewBinding(
+			key.WithKeys("p"),
+			key.WithHelp("p", "Pause / resume"),
+		),
 	}
 }
 
@@ -253,6 +275,11 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 	k.LoopDetailStep.SetEnabled(true)
 	k.LoopDetailToggle.SetEnabled(true)
 	k.LoopDetailPause.SetEnabled(true)
+	k.LoopControlPanel.SetEnabled(true)
+	// LoopCtrl* bindings are off by default; only ViewLoopControl enables them.
+	k.LoopCtrlStep.SetEnabled(false)
+	k.LoopCtrlToggle.SetEnabled(false)
+	k.LoopCtrlPause.SetEnabled(false)
 
 	switch view {
 	case ViewOverview:
@@ -481,7 +508,33 @@ func (k *KeyMap) SetViewContext(view ViewMode) {
 		k.LoopListStop.SetEnabled(false)
 		k.LoopListPause.SetEnabled(false)
 		k.Refresh.SetEnabled(false)
+		k.LoopControlPanel.SetEnabled(false)
 		// LoopDetailStep, LoopDetailToggle, and LoopDetailPause remain enabled
+	case ViewLoopControl:
+		k.StartLoop.SetEnabled(false)
+		k.StopAction.SetEnabled(false)
+		k.PauseLoop.SetEnabled(false)
+		k.EditConfig.SetEnabled(false)
+		k.WriteConfig.SetEnabled(false)
+		k.DiffView.SetEnabled(false)
+		k.Space.SetEnabled(false)
+		k.LaunchSession.SetEnabled(false)
+		k.OutputView.SetEnabled(false)
+		k.TimelineView.SetEnabled(false)
+		k.LoopHealth.SetEnabled(false)
+		k.LoopPanel.SetEnabled(false)
+		k.LoopControlPanel.SetEnabled(false)
+		k.LoopListStart.SetEnabled(false)
+		k.LoopListStop.SetEnabled(false)
+		k.LoopListPause.SetEnabled(false)
+		k.LoopDetailStep.SetEnabled(false)
+		k.LoopDetailToggle.SetEnabled(false)
+		k.LoopDetailPause.SetEnabled(false)
+		k.Refresh.SetEnabled(false)
+		// LoopCtrlStep, LoopCtrlToggle, and LoopCtrlPause remain enabled
+		k.LoopCtrlStep.SetEnabled(true)
+		k.LoopCtrlToggle.SetEnabled(true)
+		k.LoopCtrlPause.SetEnabled(true)
 	}
 }
 
@@ -509,6 +562,7 @@ func (k KeyMap) HelpGroups() []views.HelpGroup {
 		{Name: "Global", Bindings: []key.Binding{k.Quit, k.CmdMode, k.FilterMode, k.Help, k.Escape, k.Refresh}},
 		{Name: "Loop List", Bindings: []key.Binding{k.LoopPanel, k.LoopListStart, k.LoopListStop, k.LoopListPause}},
 		{Name: "Loop Detail", Bindings: []key.Binding{k.LoopDetailStep, k.LoopDetailToggle, k.LoopDetailPause}},
+		{Name: "Loop Control", Bindings: []key.Binding{k.LoopControlPanel, k.LoopCtrlStep, k.LoopCtrlToggle, k.LoopCtrlPause}},
 		{Name: "Repos Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StartLoop, k.StopAction, k.PauseLoop}},
 		{Name: "Sessions Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort, k.StopAction}},
 		{Name: "Teams Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort}},
@@ -552,6 +606,7 @@ func init() {
 		{func(km *KeyMap) key.Binding { return km.LoopListStart }, handleLoopListStart},
 		{func(km *KeyMap) key.Binding { return km.LoopListStop }, handleLoopListStop},
 		{func(km *KeyMap) key.Binding { return km.LoopListPause }, handleLoopListPause},
+		{func(km *KeyMap) key.Binding { return km.LoopControlPanel }, handleLoopControlPanel},
 	}
 }
 

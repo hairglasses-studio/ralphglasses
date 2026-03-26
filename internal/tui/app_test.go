@@ -476,6 +476,7 @@ func TestKeyDispatchCoversGlobalBindings(t *testing.T) {
 		"Escape": true, "Refresh": true, "LoopPanel": true,
 		"Tab1": true, "Tab2": true, "Tab3": true, "Tab4": true,
 		"LoopListStart": true, "LoopListStop": true,
+		"LoopControlPanel": true,
 	}
 
 	for i := 0; i < rt.NumField(); i++ {
