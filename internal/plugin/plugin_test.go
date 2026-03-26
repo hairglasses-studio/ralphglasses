@@ -164,7 +164,7 @@ func TestRegistryString(t *testing.T) {
 	r.Register(&fakePlugin{name: "x", version: "1.0"})
 
 	got := r.String()
-	want := "plugin.Registry{count: 1}"
+	want := "plugin.Registry{count: 1, grpc: 0, tools: 0}"
 	if got != want {
 		t.Errorf("String() = %q, want %q", got, want)
 	}
