@@ -100,7 +100,7 @@ func EvaluateGates(observations []session.LoopObservation, baseline *LoopBaselin
 	for _, obs := range observations {
 		totalCost += obs.TotalCostUSD
 		totalLatency += float64(obs.TotalLatencyMs)
-		if obs.Status == "idle" {
+		if obs.Status != "failed" && obs.Error == "" {
 			completed++
 		}
 		if obs.VerifyPassed {
