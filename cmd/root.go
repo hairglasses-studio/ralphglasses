@@ -18,6 +18,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
+	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
@@ -62,12 +63,12 @@ fleet management from any MCP-capable client.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		scanPath = util.ExpandHome(scanPath)
 
-		// Wire structured logging to file.
-		logDir := filepath.Join(scanPath, ".ralph", "logs")
+		// Wire structured logging to file (uses canonical path from process package).
+		logDir := process.LogDirPath(scanPath)
 		if err := os.MkdirAll(logDir, 0o755); err != nil {
 			return err
 		}
-		logFile, err := os.OpenFile(filepath.Join(logDir, "ralph.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		logFile, err := os.OpenFile(process.LogFilePath(scanPath), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 		if err != nil {
 			return err
 		}

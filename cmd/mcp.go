@@ -12,6 +12,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
 	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver"
+	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
 
@@ -34,12 +35,12 @@ Or with a custom scan path:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
 
-		// Wire structured logging to file.
-		logDir := filepath.Join(sp, ".ralph", "logs")
+		// Wire structured logging to file (uses canonical path from process package).
+		logDir := process.LogDirPath(sp)
 		if err := os.MkdirAll(logDir, 0o755); err != nil {
 			return err
 		}
-		logFile, err := os.OpenFile(filepath.Join(logDir, "ralph.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		logFile, err := os.OpenFile(process.LogFilePath(sp), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 		if err != nil {
 			return err
 		}
