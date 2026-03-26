@@ -61,14 +61,14 @@ Pre-requisite fixes for existing bugs and silent failures. No new features. All 
 
 ### 0.5.4 — Getpgid fallback safety
 - [x] 0.5.4.1 — Log warning when `Getpgid` fails in `manager.go:78-82` (currently silent fallback to PID-only signal)
-- [ ] 0.5.4.2 — Track child PIDs: on process launch, record PID + all child PIDs if available
-- [ ] 0.5.4.3 — Fallback kill sequence: SIGTERM to PID → wait 5s → SIGTERM to known children → wait 5s → SIGKILL
-- [ ] 0.5.4.4 — Post-stop audit: check for orphaned processes matching `ralph_loop` pattern
+- [x] 0.5.4.2 — Track child PIDs: on process launch, record PID + all child PIDs if available
+- [x] 0.5.4.3 — Fallback kill sequence: SIGTERM to PID → wait 5s → SIGTERM to known children → wait 5s → SIGKILL
+- [x] 0.5.4.4 — Post-stop audit: check for orphaned processes matching `ralph_loop` pattern
 - **Acceptance:** `Stop()` reliably kills all child processes, no orphans
 
 ### 0.5.5 — Distro path mismatch
-- [ ] 0.5.5.1 — Align `hw-detect.service` ExecStart path with Dockerfile install location (`/usr/local/bin/`)
-- [ ] 0.5.5.2 — Add path consistency check to `distro/Makefile`: validate service files reference correct paths
+- [x] 0.5.5.1 — Align `hw-detect.service` ExecStart path with Dockerfile install location (`/usr/local/bin/`)
+- [x] 0.5.5.2 — Add path consistency check to `distro/Makefile`: validate service files reference correct paths
 - [ ] 0.5.5.3 — Document path conventions in `distro/README.md`: scripts → `/usr/local/bin/`, configs → `/etc/ralphglasses/`
 - **Acceptance:** `hw-detect.service` starts successfully on first boot
 
@@ -101,7 +101,7 @@ Pre-requisite fixes for existing bugs and silent failures. No new features. All 
 - **Acceptance:** `go test -race ./...` passes clean
 
 ### 0.5.10 — Marathon.sh edge cases
-- [ ] 0.5.10.1 — Add `bc` availability check at script start (budget calculation depends on it)
+- [x] 0.5.10.1 — Add `bc` availability check at script start (budget calculation depends on it)
 - [ ] 0.5.10.2 — Add disk space check before marathon start (warn if < 5GB free)
 - [ ] 0.5.10.3 — Fix infinite restart loop: cap MAX_RESTARTS, add cooldown between restarts
 - [ ] 0.5.10.4 — Add memory pressure monitoring: check `/proc/meminfo` AvailMem, warn at < 2GB
@@ -169,6 +169,20 @@ Post-gate-pass improvements. All items are independent, parallel, and sized for 
 - [ ] 0.6.7.3 — Add `DedupReason` field to skipped tasks for debugging planner behavior
 - [ ] 0.6.7.4 — Add dedup tests: exact match, near-match, and distinct task pairs
 - **Acceptance:** planner doesn't re-propose completed or near-duplicate tasks
+
+### Phase 0.7 — Codebase Hardening & Observability
+
+- [ ] 0.7.1 — Observation enrichment: add GitDiffStat, model fields, AcceptancePath, StallCount to LoopObservation; add SummarizeObservations helper
+- [ ] 0.7.2 — Loop config validation: ValidateLoopConfig with model name, enhancement flag, and StallTimeout checks
+- [ ] 0.7.3 — Stall detection: StallDetector monitors worker output timestamps, kills + retries on timeout
+- [ ] 0.7.4 — Gate report formatting: FormatGateReport, FormatGateReportMarkdown, CompareGateReports
+- [ ] 0.7.5 — Gate report dedup + baseline fix: consolidate outputGateReport, fix swallowed baseline save errors
+- [ ] 0.7.6 — Event bus improvements: SubscribeFiltered, event type validation, schema versioning, async persistence
+- [ ] 0.7.7 — Provider cost rate config: externalize hardcoded rates to .ralph/cost_rates.json
+- [ ] 0.7.8 — Worktree cleanup robustness: age-based cleanup with lock file + uncommitted change detection
+- [ ] 0.7.9 — CLI os.Exit fix: replace os.Exit in RunE with sentinel errors for proper cobra handling
+- [ ] 0.7.10 — Planner task dedup: Jaccard similarity matching for near-duplicate task detection
+- [ ] 0.7.11 — Marathon resource monitoring: disk space, memory checks, log rotation
 
 ## Phase 1: Harden & Test
 
