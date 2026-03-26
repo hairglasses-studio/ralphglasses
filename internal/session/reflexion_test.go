@@ -378,6 +378,129 @@ func TestGenerateCorrectionVariousFormats(t *testing.T) {
 	}
 }
 
+func TestExtractSelfCritique_SuccessfulIteration(t *testing.T) {
+	rs := NewReflexionStore("")
+	iter := LoopIteration{
+		Number: 2,
+		Status: "idle", // successful
+		Task:   LoopTask{Title: "add caching layer"},
+		Verification: []LoopVerification{
+			{
+				Command:  "go test ./...",
+				Status:   "passed",
+				ExitCode: 0,
+				Output:   "ok  github.com/example/pkg 0.5s\nwarning: deprecated API usage in cache.go\nok  github.com/example/other 0.1s",
+			},
+		},
+	}
+
+	r := rs.ExtractSelfCritique("loop-sc-1", iter)
+	if r == nil {
+		t.Fatal("expected non-nil self-critique for iteration with warnings")
+	}
+	if r.Category != "self-critique" {
+		t.Errorf("expected category=self-critique, got %s", r.Category)
+	}
+	if r.FailureMode != "warnings_detected" {
+		t.Errorf("expected failure_mode=warnings_detected, got %s", r.FailureMode)
+	}
+	if !strings.Contains(r.RootCause, "deprecated") {
+		t.Errorf("expected root cause to mention deprecated, got: %s", r.RootCause)
+	}
+	if r.LoopID != "loop-sc-1" {
+		t.Errorf("expected loop_id=loop-sc-1, got %s", r.LoopID)
+	}
+	if r.IterationNum != 2 {
+		t.Errorf("expected iteration=2, got %d", r.IterationNum)
+	}
+}
+
+func TestExtractSelfCritique_FailedIteration(t *testing.T) {
+	rs := NewReflexionStore("")
+	iter := LoopIteration{
+		Number: 1,
+		Status: "failed",
+		Task:   LoopTask{Title: "fix auth bug"},
+		Error:  "verification failed",
+		Verification: []LoopVerification{
+			{
+				Command:  "go test ./...",
+				Status:   "failed",
+				ExitCode: 1,
+				Output:   "--- FAIL: TestAuth (0.01s)",
+			},
+		},
+	}
+
+	r := rs.ExtractSelfCritique("loop-sc-2", iter)
+	if r == nil {
+		t.Fatal("expected non-nil reflection for failed iteration")
+	}
+	// Should delegate to ExtractReflection, so category should be empty (failure).
+	if r.Category == "self-critique" {
+		t.Error("failed iteration should not be categorized as self-critique")
+	}
+	if r.FailureMode != "verify_failed" {
+		t.Errorf("expected failure_mode=verify_failed, got %s", r.FailureMode)
+	}
+}
+
+func TestExtractSelfCritique_NoSignals(t *testing.T) {
+	rs := NewReflexionStore("")
+	iter := LoopIteration{
+		Number: 1,
+		Status: "idle", // successful
+		Task:   LoopTask{Title: "clean refactor"},
+		Verification: []LoopVerification{
+			{
+				Command:  "go test ./...",
+				Status:   "passed",
+				ExitCode: 0,
+				Output:   "ok  github.com/example/pkg 0.3s",
+			},
+		},
+	}
+
+	r := rs.ExtractSelfCritique("loop-sc-3", iter)
+	if r != nil {
+		t.Errorf("expected nil for clean success, got %+v", r)
+	}
+}
+
+func TestSelfCritique_InjectedIntoNextIteration(t *testing.T) {
+	rs := NewReflexionStore("")
+
+	// Store a self-critique reflection.
+	rs.Store(Reflection{
+		Timestamp:    time.Now(),
+		LoopID:       "loop-sc-4",
+		IterationNum: 1,
+		TaskTitle:    "add caching layer",
+		Category:     "self-critique",
+		FailureMode:  "warnings_detected",
+		RootCause:    "warning: deprecated API usage in cache.go",
+		Correction:   "Address verification warnings: warning: deprecated API usage in cache.go",
+	})
+
+	// Query for the task — self-critique should be returned.
+	results := rs.RecentForTask("caching layer", 5)
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result for 'caching layer', got %d", len(results))
+	}
+	if results[0].Category != "self-critique" {
+		t.Errorf("expected category=self-critique, got %s", results[0].Category)
+	}
+
+	// FormatForPrompt should render it as observations, not failures.
+	formatted := rs.FormatForPrompt(results)
+	if !strings.Contains(formatted, "observations") {
+		t.Errorf("expected 'observations' in formatted output for self-critique, got: %s", formatted)
+	}
+	if strings.Contains(formatted, "failed") {
+		t.Errorf("self-critique should not say 'failed' in formatted output, got: %s", formatted)
+	}
+}
+
 func TestSanitizeTaskTitleWrappedJSON(t *testing.T) {
 	tests := []struct {
 		name  string

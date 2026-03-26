@@ -1014,6 +1014,15 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		m.episodic.RecordSuccess(journal)
 	}
 
+	// WS1: Extract self-critique from successful iteration for proactive improvement.
+	if m.reflexion != nil && profile.EnableReflexion {
+		iterSnap := run.iterationsSnapshot()[index]
+		if ref := m.reflexion.ExtractSelfCritique(run.ID, iterSnap); ref != nil {
+			ref.Applied = false
+			m.reflexion.Store(*ref)
+		}
+	}
+
 	emitLoopObservation(run, index, m,
 		reflexionApplied, episodesUsed, cascadeResults, taskDifficulties, totalStallCount)
 
