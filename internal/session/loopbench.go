@@ -169,6 +169,7 @@ func ObservationPath(repoPath string) string {
 func emitLoopObservation(run *LoopRun, index int, m *Manager,
 	reflexionApplied bool, episodesUsed int,
 	cascadeResults []*CascadeResult, taskDifficulties []TaskDifficulty,
+	stallCount int,
 ) {
 	run.mu.Lock()
 	if index < 0 || index >= len(run.Iterations) {
@@ -295,6 +296,9 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 	}
 	obs.DiffPaths = allDiffPaths
 	obs.DiffSummary = buildDiffSummary(allDiffPaths)
+
+	// WS-B: Stall detection count from worker goroutines.
+	obs.StallCount = stallCount
 
 	// Self-learning subsystem fields
 	obs.ReflexionApplied = reflexionApplied
