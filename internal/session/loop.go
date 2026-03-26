@@ -638,6 +638,12 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 				detector = NewStallDetector(profile.StallTimeout)
 			}
 
+			// Check for cancellation before expensive worktree creation.
+			if err := ctx.Err(); err != nil {
+				resultCh <- workerResult{idx: workerIdx, err: fmt.Errorf("cancelled before worktree creation: %w", err)}
+				return
+			}
+
 			wt, br, wtErr := createLoopWorktree(ctx, repoPath, run.ID, iteration.Number*100+workerIdx)
 			if wtErr != nil {
 				resultCh <- workerResult{idx: workerIdx, err: fmt.Errorf("create worktree: %w", wtErr)}
@@ -689,6 +695,12 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			// count exceeds the configured threshold.
 			if profile.CompactionEnabled && iteration.Number > profile.CompactionThreshold {
 				baseOpts.Betas = append(baseOpts.Betas, "compact-2026-01-12")
+			}
+
+			// Check for cancellation before cascade/launch phase.
+			if err := ctx.Err(); err != nil {
+				resultCh <- workerResult{idx: workerIdx, worktree: wt, err: fmt.Errorf("cancelled before session launch: %w", err)}
+				return
 			}
 
 			// WS3: Try cheap provider first if cascade routing is enabled.
@@ -760,6 +772,12 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 					cr.Reason = reason
 					cascadeRes = &cr
 				}
+			}
+
+			// Check for cancellation before expensive main session launch.
+			if err := ctx.Err(); err != nil {
+				resultCh <- workerResult{idx: workerIdx, worktree: wt, err: fmt.Errorf("cancelled before main session launch: %w", err), cascadeResult: cascadeRes}
+				return
 			}
 
 			ws, launchErr := m.launchWorkflowSession(ctx, baseOpts)
