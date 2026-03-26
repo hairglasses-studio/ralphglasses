@@ -496,6 +496,36 @@ func (s *Server) handleWorkflowRun(ctx context.Context, req mcp.CallToolRequest)
 	return jsonResult(result), nil
 }
 
+func (s *Server) handleWorkflowDelete(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoName := getStringArg(req, "repo")
+	name := getStringArg(req, "name")
+	if repoName == "" || name == "" {
+		return codedError(ErrInvalidParams, "repo and name are required"), nil
+	}
+	if err := ValidateRepoName(repoName); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
+	}
+
+	if s.reposNil() {
+		if err := s.scan(); err != nil {
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(repoName)
+	if r == nil {
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
+	}
+
+	if err := session.DeleteWorkflow(r.Path, name); err != nil {
+		return codedError(ErrWorkflow, fmt.Sprintf("delete workflow: %v", err)), nil
+	}
+
+	return jsonResult(map[string]any{
+		"name":    name,
+		"deleted": true,
+	}), nil
+}
+
 func (s *Server) handleSnapshot(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Apply a 30-second timeout for snapshot operations.
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)

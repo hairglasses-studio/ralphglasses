@@ -111,6 +111,16 @@ func LoadWorkflow(repoPath, name string) (*WorkflowDef, error) {
 	return &wf, nil
 }
 
+// DeleteWorkflow removes a workflow definition file from .ralph/workflows/<name>.yaml.
+func DeleteWorkflow(repoPath, name string) error {
+	name = strings.ReplaceAll(name, " ", "-")
+	path := filepath.Join(repoPath, ".ralph", "workflows", name+".yaml")
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("delete workflow: %w", err)
+	}
+	return nil
+}
+
 // ListWorkflows returns all workflow definitions in .ralph/workflows/.
 func ListWorkflows(repoPath string) ([]WorkflowDef, error) {
 	dir := filepath.Join(repoPath, ".ralph", "workflows")
