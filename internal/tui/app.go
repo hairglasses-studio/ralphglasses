@@ -39,6 +39,7 @@ const (
 	ViewLoopHealth
 	ViewLoopList
 	ViewLoopDetail
+	ViewLoopControl
 )
 
 // InputMode tracks the current input capture mode.
@@ -174,6 +175,10 @@ type Model struct {
 	ShowLoopPanel bool
 	LoopView      string
 
+	// Loop control panel
+	LoopControlIdx  int
+	LoopControlData views.LoopControlData
+
 	// Loop observation cache (refreshed less often than 2s tick)
 	ObsCache     map[string][]session.LoopObservation // keyed by repo path
 	ObsCacheTime time.Time
@@ -280,6 +285,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.refreshGateCache()
 		m.drainRegressionEvents()
 		m.refreshLoopView()
+		m.refreshLoopControlData()
 		cmds = append(cmds, m.loopListCmd())
 		m.updateTable()
 		m.updateSessionTable()
@@ -510,6 +516,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleLoopListKey(msg)
 	case ViewLoopDetail:
 		return m.handleLoopDetailKey(msg)
+	case ViewLoopControl:
+		return m.handleLoopControlKey(msg)
 	case ViewHelp, ViewDiff, ViewTimeline, ViewLoopHealth:
 		// Read-only views — Esc handled globally, no view-specific keys
 		return m, nil
@@ -585,6 +593,17 @@ func (m *Model) refreshLoopView() {
 		b.WriteString("\n")
 	}
 	m.LoopView = b.String()
+}
+
+func (m *Model) refreshLoopControlData() {
+	if m.SessMgr == nil {
+		m.LoopControlData = views.LoopControlData{}
+		return
+	}
+	m.LoopControlData = views.LoopControlData{
+		Loops:    m.SessMgr.ListLoops(),
+		Selected: m.LoopControlIdx,
+	}
 }
 
 func (m *Model) updateTable() {
@@ -807,6 +826,8 @@ func (m Model) View() string {
 		b.WriteString(m.LoopListTable.View())
 		b.WriteString("\n")
 		b.WriteString(styles.HelpStyle.Render("  s start loop  x/d stop loop  p pause/resume  Enter detail  j/k navigate  Esc back"))
+	case ViewLoopControl:
+		b.WriteString(views.RenderLoopControl(m.LoopControlData, m.Width, m.Height))
 	case ViewLoopDetail:
 		if m.SessMgr != nil && m.SelectedLoop != "" {
 			if l, ok := m.SessMgr.GetLoop(m.SelectedLoop); ok {
