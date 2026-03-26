@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"context"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,7 +12,11 @@ import (
 
 // Scan walks the given root directory (one level deep) and returns repos
 // that contain a .ralph/ directory or .ralphrc file.
-func Scan(root string) ([]*model.Repo, error) {
+func Scan(ctx context.Context, root string) ([]*model.Repo, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return nil, err
@@ -19,6 +24,9 @@ func Scan(root string) ([]*model.Repo, error) {
 
 	var repos []*model.Repo
 	for _, e := range entries {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		if !e.IsDir() {
 			continue
 		}

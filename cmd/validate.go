@@ -25,7 +25,7 @@ var validateCmd = &cobra.Command{
 		sp := util.ExpandHome(scanPath)
 		util.Debug.Debugf("validate: scanning %s", sp)
 
-		repos, err := discovery.Scan(sp)
+		repos, err := discovery.Scan(cmd.Context(), sp)
 		if err != nil {
 			return fmt.Errorf("scan failed: %w", err)
 		}
