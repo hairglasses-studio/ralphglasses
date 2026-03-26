@@ -184,6 +184,64 @@ Post-gate-pass improvements. All items are independent, parallel, and sized for 
 - [ ] 0.7.10 — Planner task dedup: Jaccard similarity matching for near-duplicate task detection
 - [ ] 0.7.11 — Marathon resource monitoring: disk space, memory checks, log rotation
 
+## Phase 0.8: MCP Observability & Scratchpad Automation
+
+New `observability` tool group (13th namespace, 11 tools). Replaces sleep anti-patterns,
+adds programmatic scratchpad note-taking, surfaces observation/cost/coverage data via MCP.
+Implements MCP spec features: structured output schemas, logging notifications.
+
+> **Parallel workstreams:** 0.8.1–0.8.8 are independent (new files only). 0.8.9 wires registration.
+
+### 0.8.1 — Observation query tools (COMPLETE)
+- [x] `ralphglasses_observation_query`: filter/paginate loop observations by repo, hours, loop_id, status, provider
+- [x] `ralphglasses_observation_summary`: aggregate stats via SummarizeObservations
+
+### 0.8.2 — Scratchpad MCP tools (COMPLETE)
+- [x] `ralphglasses_scratchpad_read`: read `.ralph/{name}_scratchpad.md`
+- [x] `ralphglasses_scratchpad_append`: append markdown note with optional section header
+- [x] `ralphglasses_scratchpad_list`: glob `.ralph/*_scratchpad.md`
+- [x] `ralphglasses_scratchpad_resolve`: mark numbered item as resolved
+
+### 0.8.3 — Loop wait/poll tools (COMPLETE)
+- [x] `ralphglasses_loop_await`: blocking wait with timeout, replaces `sleep && echo done` anti-pattern
+- [x] `ralphglasses_loop_poll`: non-blocking single status check
+
+### 0.8.4 — Coverage report tool (COMPLETE)
+- [x] `ralphglasses_coverage_report`: run `go test -coverprofile`, report per-package vs threshold
+
+### 0.8.5 — Cost estimation tool (COMPLETE)
+- [x] `ralphglasses_cost_estimate`: pre-launch cost estimate with historical calibration (60/40 blend)
+
+### 0.8.6 — Merge verification tool (COMPLETE)
+- [x] `ralphglasses_merge_verify`: sequential build→vet→test with 5-min timeout per step
+
+### 0.8.7 — MCP logging integration (COMPLETE)
+- [x] `MCPLogger` wrapping `*server.MCPServer` for `notifications/message` emission
+- [x] `MCPLoggingMiddleware` returning `server.ToolHandlerMiddleware`
+- [x] Falls back to slog when no MCP client connected
+
+### 0.8.8 — Structured output schemas (COMPLETE)
+- [x] `OutputSchemas` map for 6 high-value tools (observation_query, observation_summary, loop_benchmark, fleet_status, cost_estimate, coverage_report)
+- [x] `SchemaForTool()` helper for integration
+
+### 0.8.9 — Registration wiring & bookkeeping (COMPLETE)
+- [x] `buildObservabilityGroup()` in tools_builders.go with 11 tool entries
+- [x] `"observability"` added to ToolGroupNames
+- [x] Test expectations updated (96→107 tools, 12→13 namespaces)
+- [x] Scratchpad items #4, #5, #7, #20, #25, #26 marked RESOLVED
+
+### MCP Spec Features Adopted
+| Feature | Spec Version | Implementation |
+|---|---|---|
+| Structured Output (`outputSchema`) | 2025-06-18 | WS-8: schemas for 6 tools |
+| MCP Logging (`notifications/message`) | 2024-11-05 | WS-7: LoggingMiddleware |
+
+### Future MCP Spec Adoption (not yet implemented)
+- Tasks (async with polling) — requires mcp-go task support verification
+- Resource subscriptions — requires framework support audit
+- Progress notifications — requires progressToken threading
+- Elicitation — requires client support verification
+
 ## Phase 1: Harden & Test
 
 **Completed:**

@@ -13,6 +13,7 @@ func TestToolGroupNames(t *testing.T) {
 	expected := []string{
 		"core", "session", "loop", "prompt", "fleet",
 		"repo", "roadmap", "team", "awesome", "advanced", "eval", "fleet_h",
+		"observability",
 	}
 	if len(ToolGroupNames) != len(expected) {
 		t.Fatalf("ToolGroupNames len = %d, want %d", len(ToolGroupNames), len(expected))
@@ -74,7 +75,8 @@ func TestBuildToolGroups_ExpectedCounts(t *testing.T) {
 		"awesome":  5,
 		"advanced": 21,
 		"eval":     4,
-		"fleet_h":  4,
+		"fleet_h":       4,
+		"observability": 11,
 	}
 
 	totalExpected := 0
