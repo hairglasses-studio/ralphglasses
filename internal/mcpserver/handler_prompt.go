@@ -211,6 +211,9 @@ func (s *Server) handleClaudeMDCheck(_ context.Context, req mcp.CallToolRequest)
 		return codedError(ErrFilesystem, fmt.Sprintf("check failed: %v", err)), nil
 	}
 
+	if findings == nil {
+		return jsonResult(map[string]any{"issues": []string{}, "status": "pass"}), nil
+	}
 	return jsonResult(findings), nil
 }
 
