@@ -179,6 +179,74 @@ func TestHandleCostEstimateCustomTokens(t *testing.T) {
 	}
 }
 
+func TestHandleCostEstimateInvalidProvider(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleCostEstimate(context.Background(), makeRequest(map[string]any{
+		"provider": "gpt4",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertErrorCode(t, "handleCostEstimate", result, "INVALID_PARAMS")
+}
+
+func TestHandleCostEstimateInvalidMode(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleCostEstimate(context.Background(), makeRequest(map[string]any{
+		"provider": "claude",
+		"mode":     "batch",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertErrorCode(t, "handleCostEstimate", result, "INVALID_PARAMS")
+}
+
+func TestHandleCostEstimateCodex(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleCostEstimate(context.Background(), makeRequest(map[string]any{
+		"provider": "codex",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+
+	var est CostEstimate
+	if err := json.Unmarshal([]byte(getResultText(result)), &est); err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+	if est.Provider != "codex" {
+		t.Errorf("provider = %q, want codex", est.Provider)
+	}
+}
+
+func TestHandleCostEstimateWithRepo(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	// Scan first so repos are populated
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleCostEstimate(context.Background(), makeRequest(map[string]any{
+		"provider": "claude",
+		"repo":     "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+}
+
 func TestEstimateSessionCostPure(t *testing.T) {
 	t.Parallel()
 	rates := session.DefaultCostRates()
