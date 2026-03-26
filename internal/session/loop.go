@@ -563,6 +563,11 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	resultCh := make(chan workerResult, len(tasks))
 	for i, task := range tasks {
 		go func(workerIdx int, t LoopTask) {
+			defer func() {
+				if r := recover(); r != nil {
+					resultCh <- workerResult{idx: workerIdx, err: fmt.Errorf("worker goroutine panicked: %v", r)}
+				}
+			}()
 			wt, br, wtErr := createLoopWorktree(ctx, repoPath, run.ID, iteration.Number*100+workerIdx)
 			if wtErr != nil {
 				resultCh <- workerResult{idx: workerIdx, err: fmt.Errorf("create worktree: %w", wtErr)}
@@ -702,22 +707,33 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	var firstWorktree, firstBranch string
 	var cascadeResults []*CascadeResult // WS3: cascade outcomes per worker
 
-	for range tasks {
-		res := <-resultCh
-		if res.session != nil {
-			workerSessionIDs[res.idx] = res.session.ID
-		}
-		workerWorktrees[res.idx] = res.worktree
-		workerOutputs[res.idx] = res.output
-		if res.err != nil {
-			workerErrs = append(workerErrs, fmt.Sprintf("worker %d: %s", res.idx, res.err))
-		}
-		if res.idx == 0 {
-			firstWorktree = res.worktree
-			firstBranch = res.branch
-		}
-		if res.cascadeResult != nil {
-			cascadeResults = append(cascadeResults, res.cascadeResult)
+	workerCollectTimeout := time.After(15 * time.Minute)
+	collected := 0
+	for collected < len(tasks) {
+		select {
+		case res := <-resultCh:
+			collected++
+			if res.session != nil {
+				workerSessionIDs[res.idx] = res.session.ID
+			}
+			workerWorktrees[res.idx] = res.worktree
+			workerOutputs[res.idx] = res.output
+			if res.err != nil {
+				workerErrs = append(workerErrs, fmt.Sprintf("worker %d: %s", res.idx, res.err))
+			}
+			if res.idx == 0 {
+				firstWorktree = res.worktree
+				firstBranch = res.branch
+			}
+			if res.cascadeResult != nil {
+				cascadeResults = append(cascadeResults, res.cascadeResult)
+			}
+		case <-workerCollectTimeout:
+			workerErrs = append(workerErrs, fmt.Sprintf("timed out waiting for %d/%d workers", len(tasks)-collected, len(tasks)))
+			collected = len(tasks)
+		case <-ctx.Done():
+			workerErrs = append(workerErrs, fmt.Sprintf("context cancelled waiting for workers: %v", ctx.Err()))
+			collected = len(tasks)
 		}
 	}
 
