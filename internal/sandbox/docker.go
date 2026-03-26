@@ -6,36 +6,66 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 )
 
 // ContainerConfig specifies resource limits and mounts for a sandbox container.
 type ContainerConfig struct {
-	Image       string            `json:"image"`                  // Docker image (default: "ubuntu:24.04")
-	WorkDir     string            `json:"work_dir"`               // Host workspace path to bind-mount
-	MountPath   string            `json:"mount_path,omitempty"`   // Container mount path (default: /workspace)
-	CPUs        float64           `json:"cpus,omitempty"`         // CPU limit (e.g., 2.0)
-	MemoryMB    int               `json:"memory_mb,omitempty"`    // Memory limit in MB (e.g., 4096)
-	NetworkMode string            `json:"network_mode,omitempty"` // "none", "host", "bridge" (default: "none")
-	Env         map[string]string `json:"env,omitempty"`          // Environment variables
-	Timeout     time.Duration     `json:"timeout,omitempty"`      // Container timeout (default: 1h)
-	ReadOnly    bool              `json:"read_only,omitempty"`    // Read-only root filesystem
+	Image        string            `json:"image"`                   // Docker image (default: "ubuntu:24.04")
+	WorkDir      string            `json:"work_dir"`                // Host workspace path to bind-mount
+	MountPath    string            `json:"mount_path,omitempty"`    // Container mount path (default: /workspace)
+	CPUs         float64           `json:"cpus,omitempty"`          // CPU limit (e.g., 2.0)
+	MemoryMB     int               `json:"memory_mb,omitempty"`     // Memory limit in MB (e.g., 4096)
+	MemorySwapMB int               `json:"memory_swap_mb,omitempty"` // Memory+swap limit in MB (default: same as MemoryMB to disable swap)
+	PidsLimit    int               `json:"pids_limit,omitempty"`    // Max PIDs to prevent fork bombs (default: 256)
+	UlimitNofile string            `json:"ulimit_nofile,omitempty"` // File descriptor ulimit soft:hard (default: "1024:2048")
+	NetworkMode  string            `json:"network_mode,omitempty"`  // "none", "host", "bridge" (default: "none")
+	Env          map[string]string `json:"env,omitempty"`           // Environment variables
+	Timeout      time.Duration     `json:"timeout,omitempty"`       // Container timeout (default: 1h)
+	ReadOnly     bool              `json:"read_only,omitempty"`     // Read-only root filesystem
 }
 
 // DefaultContainerConfig returns a secure default configuration.
 func DefaultContainerConfig(workDir string) ContainerConfig {
 	return ContainerConfig{
-		Image:       "ubuntu:24.04",
-		WorkDir:     workDir,
-		MountPath:   "/workspace",
-		CPUs:        2.0,
-		MemoryMB:    4096,
-		NetworkMode: "none",
-		Timeout:     time.Hour,
-		ReadOnly:    false,
+		Image:        "ubuntu:24.04",
+		WorkDir:      workDir,
+		MountPath:    "/workspace",
+		CPUs:         2.0,
+		MemoryMB:     4096,
+		MemorySwapMB: 4096,
+		PidsLimit:    256,
+		UlimitNofile: "1024:2048",
+		NetworkMode:  "none",
+		Timeout:      time.Hour,
+		ReadOnly:     false,
 	}
+}
+
+// envKeyRe validates that environment variable keys are safe POSIX identifiers.
+var envKeyRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+// ValidateEnvKey checks that an environment variable key is a safe POSIX identifier.
+// Keys must start with a letter or underscore and contain only alphanumeric characters
+// and underscores. This prevents injection of docker flags via crafted key names.
+func ValidateEnvKey(key string) error {
+	if !envKeyRe.MatchString(key) {
+		return fmt.Errorf("invalid env key %q: must match [A-Za-z_][A-Za-z0-9_]*", key)
+	}
+	return nil
+}
+
+// validateEnvValue checks that an environment variable value contains no null bytes,
+// which could be used to truncate strings or confuse argument parsing.
+func validateEnvValue(value string) error {
+	if strings.ContainsRune(value, '\x00') {
+		return fmt.Errorf("env value contains null byte")
+	}
+	return nil
 }
 
 // Container represents a running sandbox container.
@@ -83,7 +113,28 @@ func Create(ctx context.Context, name string, config ContainerConfig) (*Containe
 	}
 	if config.MemoryMB > 0 {
 		args = append(args, "--memory", fmt.Sprintf("%dm", config.MemoryMB))
+		// Set memory-swap equal to memory to disable swap abuse.
+		// If MemorySwapMB is explicitly set, use that; otherwise match MemoryMB.
+		swapMB := config.MemorySwapMB
+		if swapMB == 0 {
+			swapMB = config.MemoryMB
+		}
+		args = append(args, "--memory-swap", fmt.Sprintf("%dm", swapMB))
 	}
+
+	// Fork-bomb protection: limit number of PIDs in the container.
+	pidsLimit := config.PidsLimit
+	if pidsLimit == 0 {
+		pidsLimit = 256
+	}
+	args = append(args, "--pids-limit", fmt.Sprintf("%d", pidsLimit))
+
+	// File descriptor limits to prevent resource exhaustion.
+	ulimitNofile := config.UlimitNofile
+	if ulimitNofile == "" {
+		ulimitNofile = "1024:2048"
+	}
+	args = append(args, "--ulimit", fmt.Sprintf("nofile=%s", ulimitNofile))
 
 	// Network isolation
 	if config.NetworkMode != "" {
@@ -102,8 +153,16 @@ func Create(ctx context.Context, name string, config ContainerConfig) (*Containe
 		args = append(args, "-w", config.MountPath)
 	}
 
-	// Environment
+	// Environment — validate keys and values to prevent docker flag injection.
 	for k, v := range config.Env {
+		if err := ValidateEnvKey(k); err != nil {
+			slog.Warn("skipping invalid env key", "key", k, "error", err)
+			continue
+		}
+		if err := validateEnvValue(v); err != nil {
+			slog.Warn("skipping env var with invalid value", "key", k, "error", err)
+			continue
+		}
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
 
