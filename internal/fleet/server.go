@@ -37,6 +37,12 @@ type Coordinator struct {
 	bus     *events.Bus
 	sessMgr *session.Manager
 
+	// Subsystems wired in Phase B1
+	health  *HealthTracker
+	budgetMgr *BudgetManager
+	router  Router
+	retries *RetryTracker
+
 	startedAt time.Time
 	server    *http.Server
 }
@@ -53,6 +59,10 @@ func NewCoordinator(nodeID, hostname string, port int, version string, bus *even
 		budget:    GlobalBudget{LimitUSD: 500},
 		bus:       bus,
 		sessMgr:   sessMgr,
+		health:    NewHealthTracker(DefaultHealthConfig()),
+		budgetMgr: NewBudgetManager(10.0),
+		router:    &LeastLoadedRouter{},
+		retries:   NewRetryTracker(DefaultRetryPolicy()),
 		startedAt: time.Now(),
 	}
 }
@@ -134,6 +144,9 @@ func (c *Coordinator) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	c.mu.Unlock()
 
+	// Initialize health tracking for the new worker
+	c.health.RecordHeartbeat(workerID)
+
 	if c.bus != nil {
 		c.bus.Publish(events.Event{
 			Type: "fleet.worker_registered",
@@ -167,6 +180,9 @@ func (c *Coordinator) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unknown worker; re-register", http.StatusNotFound)
 		return
 	}
+
+	// Record heartbeat in health tracker
+	c.health.RecordHeartbeat(payload.WorkerID)
 
 	writeJSON(w, map[string]string{"status": "ok"})
 }
@@ -218,6 +234,7 @@ func (c *Coordinator) handleWorkComplete(w http.ResponseWriter, r *http.Request)
 
 	if payload.Status == WorkCompleted {
 		item.Status = WorkCompleted
+		c.retries.RecordSuccess(item.ID)
 		if payload.Result != nil {
 			c.mu.Lock()
 			c.budget.SpentUSD += payload.Result.SpentUSD
@@ -229,10 +246,16 @@ func (c *Coordinator) handleWorkComplete(w http.ResponseWriter, r *http.Request)
 			}
 			c.budget.LastUpdated = now
 			c.mu.Unlock()
+
+			// Track per-worker spend
+			if item.AssignedTo != "" {
+				c.budgetMgr.RecordSpend(item.AssignedTo, payload.Result.SpentUSD)
+			}
 		}
 	} else {
-		// Check retry
-		if item.RetryCount < item.MaxRetries {
+		retryable := c.retries.RecordFailure(item.ID)
+		// Check retry using both legacy counter and retry tracker
+		if retryable && item.RetryCount < item.MaxRetries {
 			item.RetryCount++
 			item.Status = WorkPending
 			item.AssignedTo = ""
@@ -437,8 +460,58 @@ func (c *Coordinator) handleSessions(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, c.sessMgr.List(""))
 }
 
+// buildCandidates constructs WorkerCandidate entries from all registered workers,
+// incorporating health state and per-worker budget remaining.
+func (c *Coordinator) buildCandidates() []WorkerCandidate {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	candidates := make([]WorkerCandidate, 0, len(c.workers))
+	for _, w := range c.workers {
+		candidates = append(candidates, WorkerCandidate{
+			ID:              w.ID,
+			ActiveSessions:  w.ActiveSessions,
+			MaxSessions:     w.MaxSessions,
+			HealthState:     c.health.State(w.ID),
+			BudgetRemaining: c.budgetMgr.Remaining(w.ID),
+		})
+	}
+	return candidates
+}
+
 // assignWork finds the best pending work item for a worker and assigns it.
+// Uses the router to validate the polling worker is a good candidate, then
+// scores work items for best fit.
 func (c *Coordinator) assignWork(workerID string, worker *WorkerInfo) *WorkItem {
+	// Ensure all registered workers have health records (handles workers added
+	// programmatically without going through the register handler).
+	c.mu.RLock()
+	for id, w := range c.workers {
+		if c.health.State(id) == HealthDown && w.Status != WorkerDisconnected {
+			c.health.RecordHeartbeat(id)
+		}
+	}
+	c.mu.RUnlock()
+
+	// Use router to check if this worker should receive work
+	candidates := c.buildCandidates()
+	preferredWorker, err := c.router.SelectWorker(candidates)
+	if err != nil {
+		// No healthy workers available at all
+		return nil
+	}
+
+	// Boost score if the router prefers this worker
+	routerBoost := 0
+	if preferredWorker == workerID {
+		routerBoost = 15
+	}
+
+	// Skip if this worker's health is down
+	if c.health.State(workerID) == HealthDown {
+		return nil
+	}
+
 	c.mu.RLock()
 	avail := c.budget.AvailableBudget()
 	c.mu.RUnlock()
@@ -458,7 +531,12 @@ func (c *Coordinator) assignWork(workerID string, worker *WorkerInfo) *WorkItem 
 			return -1 // skip
 		}
 
-		score := item.Priority * 100
+		// Per-worker budget gate
+		if item.MaxBudgetUSD > 0 && item.MaxBudgetUSD > c.budgetMgr.Remaining(workerID) {
+			return -1
+		}
+
+		score := item.Priority*100 + routerBoost
 
 		// Provider match
 		if item.Provider != "" && providerSet[item.Provider] {
