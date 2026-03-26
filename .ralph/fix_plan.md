@@ -4,15 +4,15 @@
 
 ### High Priority
 - [x] PID file management for process manager (orphan detection, recovery, cleanup)
-- [ ] CI pipeline hardening: add golangci-lint step, coverage threshold enforcement
-- [ ] Process manager: auto-restart on crash (with backoff)
-- [ ] MCP server: add `ralphglasses_circuit_reset` tool to reset circuit breaker state
-- [ ] Structured errors: wrap errors with context throughout, user-facing messages in TUI
+- [x] CI pipeline hardening: add golangci-lint step, coverage threshold enforcement
+- [x] Process manager: auto-restart on crash (with backoff)
+- [x] MCP server: add `ralphglasses_circuit_reset` tool to reset circuit breaker state
+- [ ] Structured errors: wrap errors with context throughout, user-facing messages in TUI (partially done — sentinel errors added in process, session, and mcpserver packages via Phase F WS-F3)
 
 ### Medium Priority
 - [ ] Config editor: add/delete keys, validation for known keys, reload on external change
-- [ ] TUI polish: confirm dialogs for destructive actions (stop, stopall)
-- [ ] TUI: graceful shutdown (stop all managed processes before exit)
+- [x] TUI polish: confirm dialogs for destructive actions (stop, stopall)
+- [x] TUI: graceful shutdown (stop all managed processes before exit)
 - [ ] MCP server: concurrency guards (prevent concurrent start/stop on same repo)
 - [ ] Integration test: full scan → start → status → stop lifecycle test
 
