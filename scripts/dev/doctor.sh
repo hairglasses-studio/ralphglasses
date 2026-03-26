@@ -42,6 +42,12 @@ else
   check "make" "fail" "make is required; install via system package manager"
 fi
 
+if command -v git >/dev/null 2>&1; then
+  check "git" "ok" "$(git --version)"
+else
+  check "git" "fail" "git is required; install via system package manager or Xcode CLT"
+fi
+
 for tool in shellcheck bats; do
   if command -v "${tool}" >/dev/null 2>&1; then
     check "${tool}" "ok" "$(command -v "${tool}")"
@@ -49,6 +55,21 @@ for tool in shellcheck bats; do
     check "${tool}" "warn" "missing on host; use devcontainer or install via system package manager"
   fi
 done
+
+# macOS-specific checks
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  if command -v brew >/dev/null 2>&1; then
+    check "brew" "ok" "$(command -v brew)"
+  else
+    check "brew" "warn" "Homebrew not found; recommended for installing dependencies"
+  fi
+
+  if xcode-select -p >/dev/null 2>&1; then
+    check "xcode-clt" "ok" "$(xcode-select -p)"
+  else
+    check "xcode-clt" "warn" "Xcode CLT not installed; run: xcode-select --install"
+  fi
+fi
 
 if command -v cc >/dev/null 2>&1 || command -v gcc >/dev/null 2>&1; then
   check "c-compiler" "ok" "$(command -v cc || command -v gcc)"
