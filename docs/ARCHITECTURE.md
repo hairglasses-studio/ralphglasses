@@ -241,6 +241,120 @@ Provider CLI stdout (NDJSON stream)
                                  (provider scoring)               (task routing)
 ```
 
+## TUI Loop Interaction Surface
+
+The `internal/tui/` package exposes loop management through four dedicated views, a key dispatch table, process exit plumbing, and a live status bar. This section documents how they fit together.
+
+### Loop Views & Data Flow
+
+| View constant | File | Data source | Purpose |
+|---|---|---|---|
+| `ViewLoopList` | `views/loop_list.go` | `SessMgr.ListLoops()` → `LoopListMsg` | Sortable table of all `LoopRun` objects; refreshed on every tick and after start/stop/pause actions |
+| `ViewLoopDetail` | `views/loopdetail.go` | `SessMgr.GetLoop(m.SelectedLoop)` | Full iteration history, status, and per-loop cost for a single `LoopRun` |
+| `ViewLoopControl` | `views/loop_control.go` | `views.SnapshotLoopControl(SessMgr.ListLoops())` → `Model.LoopControlData` | Multi-loop control panel; bulk step/toggle/pause across all running loops |
+| `ViewLoopHealth` | `views/loophealth.go` | `ObsCache[repoPath]` + `GateCache[repoPath]` | Regression gate verdicts and observation timeseries for the selected repo |
+
+**Refresh cadence:**
+
+```
+tea.Tick(2s) → tickMsg
+  ├─ refreshAllRepos()       — re-reads status.json / progress.json
+  ├─ refreshObsCache()       — TTL-gated observation refresh
+  ├─ refreshGateCache()      — TTL-gated gate report refresh
+  ├─ refreshLoopView()       — updates LoopView summary string (panel overlay)
+  ├─ refreshLoopControlData()— snapshots LoopControlData from SessMgr
+  └─ loopListCmd()           — fetches ListLoops(), returns LoopListMsg → LoopListTable.SetRows()
+```
+
+`LoopListMsg` is a `[]*session.LoopRun` type alias — it arrives as a `tea.Msg` in `Update()` and populates `m.LoopListTable` via `views.LoopRunsToRows()`. The loop panel overlay (`ShowLoopPanel`) renders `m.LoopView` inline, giving a compact summary without a full view transition.
+
+### Keybindings & Dispatch
+
+Key handling uses a layered priority system (`app.go: handleKey`):
+
+1. **Modal overlays** (`ConfirmDialog`, `ActionMenu`, `Launcher`) — intercept all keys when active
+2. **Input modes** (`ModeCommand`, `ModeFilter`) — raw character capture
+3. **`KeyDispatch` table** (`keymap.go`) — ordered `[]KeyDispatchEntry` slice; first match wins (deterministic, unlike a map)
+4. **View-specific handlers** — `handleLoopListKey`, `handleLoopDetailKey`, `handleLoopControlKey`, etc.
+
+`KeyDispatch` is the global table for cross-view keys. View-specific bindings are only enabled when `SetViewContext(view)` is called on a view transition (`pushView` / `popView` / `switchTab`).
+
+**Loop-specific key tables:**
+
+| Context | Key | Action |
+|---|---|---|
+| Global | `l` | Push `ViewLoopList` (`handleLoopPanel`) |
+| Global | `C` | Push `ViewLoopControl` (`handleLoopControlPanel`) |
+| `ViewLoopList` | `s` | Start loop for selected repo (`LoopListStart`) |
+| `ViewLoopList` | `x` / `d` | Stop selected loop (`LoopListStop`) |
+| `ViewLoopList` | `p` | Pause / resume loop (`LoopListPause`) |
+| `ViewLoopList` | `Enter` | Push `ViewLoopDetail` |
+| `ViewLoopDetail` | `s` | Force a single step (`LoopDetailStep`) |
+| `ViewLoopDetail` | `r` | Toggle run/stop (`LoopDetailToggle`) |
+| `ViewLoopDetail` | `p` | Pause / resume (`LoopDetailPause`) |
+| `ViewLoopControl` | `s` | Force step on focused loop (`LoopCtrlStep`) |
+| `ViewLoopControl` | `r` | Toggle run/stop on focused loop (`LoopCtrlToggle`) |
+| `ViewLoopControl` | `p` | Pause / resume focused loop (`LoopCtrlPause`) |
+| `ViewRepoDetail` | `h` | Push `ViewLoopHealth` (`LoopHealth`) |
+
+Loop action results arrive as `LoopStepResultMsg`, `LoopToggleResultMsg`, and `LoopPauseResultMsg` — each shows a notification and re-invokes `loopListCmd()` for an immediate table refresh.
+
+### ProcessExitMsg Flow
+
+Process exit signals travel from the OS reaper goroutine through a channel to the Bubble Tea event loop:
+
+```
+os/exec Cmd.Wait() goroutine (process/manager.go)
+  │   exit detected → exitCodeForMsg, waitErr
+  │
+  └─► exitCh <- ProcessExitMsg{RepoPath, ExitCode, Error}   (buffered, cap 16)
+                          │
+         process.WaitForProcessExit(m.ProcMgr.ExitChan())
+         (tea.Cmd blocking on exitCh — re-armed in Init() and after each exit)
+                          │
+                          ▼
+              Update(process.ProcessExitMsg)
+                          │
+                          ▼
+              m.applyProcessExit(msg)
+                ├─ finds repo by RepoPath
+                ├─ r.Status.Status = model.RepoStatusFromExitCode(ExitCode, Error)
+                │     0  → "stopped"
+                │     1  → "error"
+                │     2  → "error"  (signal / CB kill)
+                │     other → "error"
+                └─ re-arms: WaitForProcessExit(m.ProcMgr.ExitChan())
+```
+
+`WaitForProcessExit` is a single-use `tea.Cmd`. It must be re-returned from `Update` after every delivery to keep the listener alive — `applyProcessExit` always returns it.
+
+### Status Bar Health Fields
+
+`components.StatusBar` (`components/statusbar.go`) is populated from `updateTable()` on every tick:
+
+| Field | Source | Displayed as |
+|---|---|---|
+| `RepoCount` | `len(m.Repos)` | repo icon + count |
+| `RunningCount` | `len(m.ProcMgr.RunningPaths())` | running icon + count; drives spinner |
+| `SessionCount` | `len(SessMgr.List(""))` | session icon + count |
+| `TotalSpendUSD` | sum of `s.SpentUSD` across all sessions | budget icon + `$x.xx` |
+| `ProviderCounts` | running/launching sessions grouped by `s.Provider` | per-provider icon + count (claude/gemini/codex) |
+| `FleetBudgetPct` | `TotalSpend / TotalBudget` across all sessions | inline 5-char gauge + percentage |
+| `AlertCount` | `countAlerts()` (open circuit breakers + other signals) | alert icon + count |
+| `HighestAlertSeverity` | `"critical"` if any circuit breaker is `OPEN`, else `"info"` | icon color |
+| `SpinnerFrame` | `m.Spinner.View()` | animated dot when `RunningCount > 0` |
+| `LastRefresh` | `m.LastRefresh` | clock icon + seconds/minutes ago |
+
+`FleetBudgetPct` is `0` when no session has a budget set, suppressing the gauge entirely.
+
+### Cross-References
+
+- Provider dispatch and cost extraction: [Provider Event Normalization & Cost Extraction](#provider-event-normalization--cost-extraction)
+- Session lifecycle and `SpentUSD` accumulation: [Provider Architecture](#provider-architecture)
+- Data flow from `normalizeEvent` to `Session.SpentUSD`: [Data Flow Diagram](#data-flow-diagram)
+- Loop engine and `LoopRun` types: `internal/session/loop.go`
+- Gate/observation subsystem: `internal/session/gates.go`, `internal/session/observation.go`
+
 ## File Schemas
 
 - `.ralph/status.json`: LoopStatus (timestamp, loop_count, calls_made_this_hour, status, model, etc.)
