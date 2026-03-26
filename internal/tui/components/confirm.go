@@ -36,6 +36,8 @@ type ConfirmDialog struct {
 
 // HandleKey processes a key press in the confirm dialog.
 // Returns a result message and true if the dialog was dismissed.
+// Supports: left/right/tab navigation, enter to confirm selection,
+// y/Y for immediate yes, n/N or esc for immediate cancel.
 func (d *ConfirmDialog) HandleKey(keyType string) (ConfirmResultMsg, bool) {
 	switch keyType {
 	case "left":
@@ -58,6 +60,12 @@ func (d *ConfirmDialog) HandleKey(keyType string) (ConfirmResultMsg, bool) {
 		}
 		d.Active = false
 		return result, true
+	case "y":
+		d.Active = false
+		return ConfirmResultMsg{Action: d.Action, Result: ConfirmYes, Data: d.Data}, true
+	case "n":
+		d.Active = false
+		return ConfirmResultMsg{Action: d.Action, Result: ConfirmNo, Data: d.Data}, true
 	case "esc":
 		d.Active = false
 		return ConfirmResultMsg{Action: d.Action, Result: ConfirmCancel, Data: d.Data}, true

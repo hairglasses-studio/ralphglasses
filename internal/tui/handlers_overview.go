@@ -41,7 +41,7 @@ var overviewKeys = []ViewKeyEntry{
 		return m.startSelectedLoop()
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.StopAction }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		return m.stopSelectedLoop()
+		return m.confirmStopSelectedLoop()
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.PauseLoop }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.togglePauseSelected()
@@ -88,7 +88,17 @@ var detailKeys = []ViewKeyEntry{
 		return m.startLoop(m.SelectedIdx)
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.StopAction }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		return m.stopLoop(m.SelectedIdx)
+		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
+			m.ConfirmDialog = &components.ConfirmDialog{
+				Title:   "Confirm Stop",
+				Message: fmt.Sprintf("Stop loop for %s?", m.Repos[m.SelectedIdx].Name),
+				Action:  "stopLoop",
+				Data:    m.SelectedIdx,
+				Active:  true,
+				Width:   50,
+			}
+		}
+		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.PauseLoop }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.togglePause(m.SelectedIdx)
@@ -194,6 +204,25 @@ func (m Model) stopSelectedLoop() (tea.Model, tea.Cmd) {
 	idx := m.findRepoByName(row[0])
 	if idx >= 0 {
 		return m.stopLoop(idx)
+	}
+	return m, nil
+}
+
+func (m Model) confirmStopSelectedLoop() (tea.Model, tea.Cmd) {
+	row := m.Table.SelectedRow()
+	if row == nil {
+		return m, nil
+	}
+	idx := m.findRepoByName(row[0])
+	if idx >= 0 && idx < len(m.Repos) {
+		m.ConfirmDialog = &components.ConfirmDialog{
+			Title:   "Confirm Stop",
+			Message: fmt.Sprintf("Stop loop for %s?", m.Repos[idx].Name),
+			Action:  "stopLoop",
+			Data:    idx,
+			Active:  true,
+			Width:   50,
+		}
 	}
 	return m, nil
 }
