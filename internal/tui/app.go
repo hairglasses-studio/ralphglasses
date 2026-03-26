@@ -76,6 +76,26 @@ type SessionOutputDoneMsg struct {
 	SessionID string
 }
 
+// LoopStepResultMsg carries the result of a single StepLoop call.
+type LoopStepResultMsg struct {
+	LoopID string
+	Err    error
+}
+
+// LoopToggleResultMsg carries the result of starting or stopping a loop.
+type LoopToggleResultMsg struct {
+	LoopID  string
+	Started bool
+	Err     error
+}
+
+// LoopPauseResultMsg carries the result of pausing or resuming a loop.
+type LoopPauseResultMsg struct {
+	LoopID string
+	Paused bool
+	Err    error
+}
+
 // Model is the root Bubble Tea model.
 type Model struct {
 	// Config
@@ -277,6 +297,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.LoopListTable.SetRows(rows)
 		return m, nil
 
+	case LoopStepResultMsg:
+		if msg.Err != nil {
+			m.Notify.Show(fmt.Sprintf("Step error: %v", msg.Err), 3*time.Second)
+		} else {
+			m.Notify.Show(fmt.Sprintf("Stepped loop %s", truncateID(msg.LoopID)), 3*time.Second)
+		}
+		return m, m.loopListCmd()
+
+	case LoopToggleResultMsg:
+		if msg.Err != nil {
+			m.Notify.Show(fmt.Sprintf("Toggle error: %v", msg.Err), 3*time.Second)
+		} else if msg.Started {
+			m.Notify.Show(fmt.Sprintf("Started loop %s", truncateID(msg.LoopID)), 3*time.Second)
+		} else {
+			m.Notify.Show(fmt.Sprintf("Stopped loop %s", truncateID(msg.LoopID)), 3*time.Second)
+		}
+		return m, m.loopListCmd()
+
+	case LoopPauseResultMsg:
+		if msg.Err != nil {
+			m.Notify.Show(fmt.Sprintf("Pause error: %v", msg.Err), 3*time.Second)
+		} else if msg.Paused {
+			m.Notify.Show(fmt.Sprintf("Paused loop %s", truncateID(msg.LoopID)), 3*time.Second)
+		} else {
+			m.Notify.Show(fmt.Sprintf("Resumed loop %s", truncateID(msg.LoopID)), 3*time.Second)
+		}
+		return m, m.loopListCmd()
+
 	case RefreshErrorMsg:
 		m.Notify.Show(fmt.Sprintf("⚠ %s: parse errors", filepath.Base(msg.RepoPath)), 5*time.Second)
 		return m, nil
@@ -361,8 +409,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case process.ProcessExitMsg:
-		// Process exited; re-arm the listener for the next exit.
-		return m, process.WaitForProcessExit(m.ProcMgr.ExitChan())
+		// Update repo status based on exit code.
+		for _, r := range m.Repos {
+			if r.Path == msg.RepoPath {
+				if r.Status == nil {
+					r.Status = &model.LoopStatus{}
+				}
+				if msg.ExitCode != 0 {
+					r.Status.Status = "crashed"
+				} else {
+					r.Status.Status = "stopped"
+				}
+				break
+			}
+		}
+		// Re-arm the listener for the next exit.
+		if m.ProcMgr != nil {
+			return m, process.WaitForProcessExit(m.ProcMgr.ExitChan())
+		}
+		return m, nil
 
 	case components.ConfirmResultMsg:
 		return m.handleConfirmResult(msg)
@@ -447,7 +512,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleFleetKey(msg)
 	case ViewLoopList:
 		return m.handleLoopListKey(msg)
-	case ViewHelp, ViewDiff, ViewTimeline, ViewLoopHealth, ViewLoopDetail:
+	case ViewLoopDetail:
+		return m.handleLoopDetailKey(msg)
+	case ViewHelp, ViewDiff, ViewTimeline, ViewLoopHealth:
 		// Read-only views — Esc handled globally, no view-specific keys
 		return m, nil
 	}
