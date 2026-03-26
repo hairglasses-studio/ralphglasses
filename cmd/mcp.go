@@ -58,6 +58,7 @@ Or with a custom scan path:
 			version+" ("+commit+")",
 			server.WithToolCapabilities(true),
 			server.WithResourceCapabilities(false, false),
+			server.WithPromptCapabilities(true),
 			server.WithRecovery(),
 			// Outermost → innermost: trace → timeout → instrumentation → event bus → validation → handler
 			server.WithToolHandlerMiddleware(mcpserver.TraceMiddleware()),
@@ -81,6 +82,7 @@ Or with a custom scan path:
 		rg.InitSelfImprovement(filepath.Join(sp, ".ralph"), 0)
 		rg.Register(srv)
 		mcpserver.RegisterResources(srv, rg)
+		mcpserver.RegisterPrompts(srv, rg)
 
 		return server.ServeStdio(srv)
 	},
