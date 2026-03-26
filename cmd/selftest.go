@@ -4,10 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
@@ -49,10 +47,16 @@ Exits 0 on pass/warn/skip, exits 1 on fail.`,
 			if err != nil {
 				return fmt.Errorf("gate evaluation: %w", err)
 			}
-			return outputSelftestGateReport(report)
+			if err := outputGateReport(report, "Self-Test Gate", selftestJSON); err != nil {
+				return err
+			}
+			if report.Overall == e2e.VerdictFail {
+				return ErrGateFailed
+			}
+			return nil
 		}
 
-		// Full mode: prepare → run → evaluate.
+		// Full mode: prepare -> run -> evaluate.
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 		defer cancel()
 
@@ -97,69 +101,17 @@ Exits 0 on pass/warn/skip, exits 1 on fail.`,
 			fmt.Printf("Self-test complete: %d iterations, $%.4f spent, %s elapsed\n",
 				result.Iterations, result.TotalCostUSD, result.Duration.Round(time.Second))
 			if report != nil {
-				return outputSelftestGateReport(report)
+				if err := outputGateReport(report, "Self-Test Gate", selftestJSON); err != nil {
+					return err
+				}
 			}
 		}
 
 		if report != nil && report.Overall == e2e.VerdictFail {
-			os.Exit(1)
+			return ErrGateFailed
 		}
 		return nil
 	},
-}
-
-func outputSelftestGateReport(report *e2e.GateReport) error {
-	if selftestJSON {
-		data, err := json.MarshalIndent(report, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(data))
-		if report.Overall == e2e.VerdictFail {
-			os.Exit(1)
-		}
-		return nil
-	}
-
-	// Human-readable output (same style as gate-check).
-	okStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
-	warnStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
-	errStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
-	skipStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-
-	verdictStyle := func(v e2e.GateVerdict) lipgloss.Style {
-		switch v {
-		case e2e.VerdictPass:
-			return okStyle
-		case e2e.VerdictWarn:
-			return warnStyle
-		case e2e.VerdictFail:
-			return errStyle
-		default:
-			return skipStyle
-		}
-	}
-
-	fmt.Printf("Self-Test Gate (%d samples)\n", report.SampleCount)
-	fmt.Println("─────────────────────────────────────")
-
-	for _, r := range report.Results {
-		style := verdictStyle(r.Verdict)
-		if r.BaselineVal > 0 {
-			fmt.Printf("  %-20s %s  (current=%.3f baseline=%.3f delta=%+.1f%%)\n",
-				r.Metric, style.Render(string(r.Verdict)), r.CurrentVal, r.BaselineVal, r.DeltaPct)
-		} else {
-			fmt.Printf("  %-20s %s  (current=%.3f)\n",
-				r.Metric, style.Render(string(r.Verdict)), r.CurrentVal)
-		}
-	}
-
-	fmt.Printf("\nOverall: %s\n", verdictStyle(report.Overall).Render(string(report.Overall)))
-
-	if report.Overall == e2e.VerdictFail {
-		os.Exit(1)
-	}
-	return nil
 }
 
 func init() {
