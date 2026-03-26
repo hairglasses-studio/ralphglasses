@@ -415,11 +415,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if r.Status == nil {
 					r.Status = &model.LoopStatus{}
 				}
-				if msg.ExitCode != 0 {
-					r.Status.Status = "crashed"
-				} else {
-					r.Status.Status = "stopped"
-				}
+				r.Status.Status = model.RepoStatusFromExitCode(msg.ExitCode, msg.Error)
 				break
 			}
 		}

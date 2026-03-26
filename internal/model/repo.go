@@ -69,6 +69,15 @@ type IterationLog struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// RepoStatusFromExitCode maps a process exit code to a LoopStatus status string.
+// Exit code 0 means the process stopped cleanly; any non-zero code means it crashed.
+func RepoStatusFromExitCode(exitCode int, _ error) string {
+	if exitCode != 0 {
+		return "crashed"
+	}
+	return "stopped"
+}
+
 // StatusDisplay returns the display status, preferring LoopStatus over Progress.
 func (r *Repo) StatusDisplay() string {
 	if r.Status != nil && r.Status.Status != "" {

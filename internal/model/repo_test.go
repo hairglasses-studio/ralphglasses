@@ -1,9 +1,53 @@
 package model
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
+
+func TestRepoStatusFromExitCode(t *testing.T) {
+	tests := []struct {
+		name     string
+		exitCode int
+		err      error
+		want     string
+	}{
+		{
+			name:     "exit 0 no error → stopped",
+			exitCode: 0,
+			err:      nil,
+			want:     "stopped",
+		},
+		{
+			name:     "non-zero exit with error → crashed",
+			exitCode: 1,
+			err:      errors.New("exit status 1"),
+			want:     "crashed",
+		},
+		{
+			name:     "non-zero exit nil error → crashed",
+			exitCode: 137,
+			err:      nil,
+			want:     "crashed",
+		},
+		{
+			name:     "exit 0 with error → stopped",
+			exitCode: 0,
+			err:      errors.New("signal: terminated"),
+			want:     "stopped",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := RepoStatusFromExitCode(tt.exitCode, tt.err)
+			if got != tt.want {
+				t.Errorf("RepoStatusFromExitCode(%d, %v) = %q, want %q", tt.exitCode, tt.err, got, tt.want)
+			}
+		})
+	}
+}
 
 func TestRepo_StatusDisplay(t *testing.T) {
 	tests := []struct {
