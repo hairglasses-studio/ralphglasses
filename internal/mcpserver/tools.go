@@ -191,7 +191,7 @@ func internalErr(msg string) *mcp.CallToolResult   { return errCode("internal_er
 func jsonResult(v any) *mcp.CallToolResult {
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		return errResult(fmt.Sprintf("json marshal: %v", err))
+		return codedError(ErrInternal, fmt.Sprintf("json marshal: %v", err))
 	}
 	return textResult(string(data))
 }
@@ -257,7 +257,7 @@ func getBoolArg(req mcp.CallToolRequest, key string) bool {
 
 func (s *Server) handleEventList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.EventBus == nil {
-		return errResult("event bus not initialized"), nil
+		return codedError(ErrNotRunning, "event bus not initialized"), nil
 	}
 
 	typeFilter := events.EventType(getStringArg(req, "type"))
@@ -269,7 +269,7 @@ func (s *Server) handleEventList(_ context.Context, req mcp.CallToolRequest) (*m
 	if sinceStr != "" {
 		t, err := time.Parse(time.RFC3339, sinceStr)
 		if err != nil {
-			return errResult(fmt.Sprintf("invalid since timestamp: %v", err)), nil
+			return codedError(ErrInvalidParams, fmt.Sprintf("invalid since timestamp: %v", err)), nil
 		}
 		evts = s.EventBus.HistorySince(t)
 	} else {
@@ -379,7 +379,7 @@ func (s *Server) handleWorkflowDefine(_ context.Context, req mcp.CallToolRequest
 	name := getStringArg(req, "name")
 	yamlStr := getStringArg(req, "yaml")
 	if repoName == "" || name == "" || yamlStr == "" {
-		return errResult("repo, name, and yaml are required"), nil
+		return codedError(ErrInvalidParams, "repo, name, and yaml are required"), nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
 		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
@@ -387,21 +387,21 @@ func (s *Server) handleWorkflowDefine(_ context.Context, req mcp.CallToolRequest
 
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(repoName)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
 	wf, err := session.ParseWorkflow(name, []byte(yamlStr))
 	if err != nil {
-		return errResult(fmt.Sprintf("invalid workflow YAML: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid workflow YAML: %v", err)), nil
 	}
 
 	if err := session.SaveWorkflow(r.Path, wf); err != nil {
-		return errResult(fmt.Sprintf("save failed: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("save failed: %v", err)), nil
 	}
 
 	return jsonResult(map[string]any{
@@ -415,7 +415,7 @@ func (s *Server) handleWorkflowRun(ctx context.Context, req mcp.CallToolRequest)
 	repoName := getStringArg(req, "repo")
 	name := getStringArg(req, "name")
 	if repoName == "" || name == "" {
-		return errResult("repo and name are required"), nil
+		return codedError(ErrInvalidParams, "repo and name are required"), nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
 		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
@@ -423,22 +423,22 @@ func (s *Server) handleWorkflowRun(ctx context.Context, req mcp.CallToolRequest)
 
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(repoName)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", repoName)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
 	wf, err := session.LoadWorkflow(r.Path, name)
 	if err != nil {
-		return errResult(fmt.Sprintf("load workflow: %v", err)), nil
+		return codedError(ErrWorkflow, fmt.Sprintf("load workflow: %v", err)), nil
 	}
 
 	run, err := s.SessMgr.RunWorkflow(ctx, r.Path, *wf)
 	if err != nil {
-		return errResult(fmt.Sprintf("run workflow: %v", err)), nil
+		return codedError(ErrWorkflow, fmt.Sprintf("run workflow: %v", err)), nil
 	}
 
 	run.Lock()
@@ -569,22 +569,22 @@ func (s *Server) handleSnapshot(ctx context.Context, req mcp.CallToolRequest) (*
 func (s *Server) handleJournalRead(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
 	limit := int(getNumberArg(req, "limit", 10))
 	entries, err := session.ReadRecentJournal(r.Path, limit)
 	if err != nil {
-		return errResult(fmt.Sprintf("read journal: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("read journal: %v", err)), nil
 	}
 
 	synthesis := session.SynthesizeContext(entries)
@@ -599,16 +599,16 @@ func (s *Server) handleJournalRead(_ context.Context, req mcp.CallToolRequest) (
 func (s *Server) handleJournalWrite(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
 	entry := session.JournalEntry{
@@ -627,7 +627,7 @@ func (s *Server) handleJournalWrite(_ context.Context, req mcp.CallToolRequest) 
 	}
 
 	if err := session.WriteJournalEntryManual(r.Path, entry); err != nil {
-		return errResult(fmt.Sprintf("write journal: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("write journal: %v", err)), nil
 	}
 
 	if s.EventBus != nil {
@@ -651,16 +651,16 @@ func (s *Server) handleJournalWrite(_ context.Context, req mcp.CallToolRequest) 
 func (s *Server) handleJournalPrune(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
-		return errResult("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return errResult(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
-		return errResult(fmt.Sprintf("repo not found: %s", name)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
 	keep := int(getNumberArg(req, "keep", 100))
@@ -669,7 +669,7 @@ func (s *Server) handleJournalPrune(_ context.Context, req mcp.CallToolRequest) 
 	// Read current count
 	entries, err := session.ReadRecentJournal(r.Path, 100000)
 	if err != nil {
-		return errResult(fmt.Sprintf("read journal: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("read journal: %v", err)), nil
 	}
 
 	wouldPrune := len(entries) - keep
@@ -688,7 +688,7 @@ func (s *Server) handleJournalPrune(_ context.Context, req mcp.CallToolRequest) 
 
 	pruned, err := session.PruneJournal(r.Path, keep)
 	if err != nil {
-		return errResult(fmt.Sprintf("prune journal: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("prune journal: %v", err)), nil
 	}
 
 	return jsonResult(map[string]any{
@@ -843,7 +843,7 @@ func (s *Server) handleMarathonDashboard(_ context.Context, req mcp.CallToolRequ
 
 func (s *Server) handleToolBenchmark(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.ToolRecorder == nil {
-		return errResult("tool benchmarking not configured"), nil
+		return codedError(ErrNotRunning, "tool benchmarking not configured"), nil
 	}
 
 	hours := getNumberArg(req, "hours", 24)
