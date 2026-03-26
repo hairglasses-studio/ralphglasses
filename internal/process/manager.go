@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -50,17 +51,20 @@ type Manager struct {
 	errCh       chan ProcessErrorMsg
 	exitCh      chan ProcessExitMsg
 	KillTimeout time.Duration // timeout between kill sequence stages; defaults to 5s
+	AutoRestart bool          // if true, crashed processes are restarted with backoff
+	MaxRestarts int           // maximum restart attempts before giving up (default 3)
 }
 
 // ManagedProcess wraps an os/exec.Cmd for a ralph loop.
 type ManagedProcess struct {
-	Cmd       *exec.Cmd
-	Paused    bool
-	PID       int    // stored at start time; safe to read under mu without racing Wait()
-	ChildPids []int  // child PIDs collected at launch (best-effort, never nil)
-	Recovered bool   // true if re-adopted from PID file (no reaper goroutine)
-	ExitCode  int
-	ExitError string
+	Cmd          *exec.Cmd
+	Paused       bool
+	PID          int    // stored at start time; safe to read under mu without racing Wait()
+	ChildPids    []int  // child PIDs collected at launch (best-effort, never nil)
+	Recovered    bool   // true if re-adopted from PID file (no reaper goroutine)
+	ExitCode     int
+	ExitError    string
+	RestartCount int // number of times this process has been auto-restarted
 }
 
 // lastExits tracks exit status after reaping (keyed by repo path).
@@ -77,6 +81,9 @@ type exitStatus struct {
 // DefaultKillTimeout is the default timeout between kill sequence stages.
 const DefaultKillTimeout = 5 * time.Second
 
+// DefaultMaxRestarts is the default maximum restart attempts for auto-restart.
+const DefaultMaxRestarts = 3
+
 // NewManager creates a new process manager.
 func NewManager() *Manager {
 	return &Manager{
@@ -84,6 +91,7 @@ func NewManager() *Manager {
 		errCh:       make(chan ProcessErrorMsg, 16),
 		exitCh:      make(chan ProcessExitMsg, 16),
 		KillTimeout: DefaultKillTimeout,
+		MaxRestarts: DefaultMaxRestarts,
 	}
 }
 
@@ -95,7 +103,16 @@ func NewManagerWithBus(bus *events.Bus) *Manager {
 		errCh:       make(chan ProcessErrorMsg, 16),
 		exitCh:      make(chan ProcessExitMsg, 16),
 		KillTimeout: DefaultKillTimeout,
+		MaxRestarts: DefaultMaxRestarts,
 	}
+}
+
+// maxRestartsLimit returns the effective max restarts, defaulting to DefaultMaxRestarts.
+func (m *Manager) maxRestartsLimit() int {
+	if m.MaxRestarts <= 0 {
+		return DefaultMaxRestarts
+	}
+	return m.MaxRestarts
 }
 
 // ErrorChan returns a channel that receives ProcessErrorMsg when a managed
@@ -218,7 +235,15 @@ func (m *Manager) Start(repoPath string) error {
 
 	// Reap the process in the background and clean up PID file.
 	rp := repoPath
-	go func() {
+	go m.reaperLoop(rp, cmd)
+
+	return nil
+}
+
+// reaperLoop waits for the process to exit and handles auto-restart with
+// exponential backoff when AutoRestart is enabled.
+func (m *Manager) reaperLoop(rp string, cmd *exec.Cmd) {
+	for {
 		waitErr := cmd.Wait()
 		exitCode := 0
 		exitErrStr := ""
@@ -232,6 +257,73 @@ func (m *Manager) Start(repoPath string) error {
 		lastExits.m[rp] = exitStatus{Code: exitCode, Error: exitErrStr}
 		lastExits.Unlock()
 
+		// Auto-restart: only for non-zero exit codes (not signal kills which yield -1).
+		if exitCode > 0 && m.AutoRestart {
+			m.mu.Lock()
+			mp, stillTracked := m.procs[rp]
+			if stillTracked && mp.RestartCount < m.maxRestartsLimit() {
+				restartCount := mp.RestartCount
+				m.mu.Unlock()
+
+				// Exponential backoff: 1s, 2s, 4s, 8s, ...
+				backoff := time.Duration(1<<restartCount) * time.Second
+				slog.Info("auto-restarting crashed process",
+					"repo", filepath.Base(rp),
+					"exit_code", exitCode,
+					"restart", restartCount+1,
+					"backoff", backoff,
+				)
+				sleepFn(backoff)
+
+				// Re-launch the same command.
+				loopScript := filepath.Join(rp, "ralph_loop.sh")
+				newCmd := exec.Command("bash", loopScript)
+				newCmd.Dir = rp
+				newCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+				if err := newCmd.Start(); err != nil {
+					slog.Warn("auto-restart failed", "repo", filepath.Base(rp), "err", err)
+					// Fall through to normal cleanup below.
+				} else {
+					newPID := newCmd.Process.Pid
+					_ = writePIDFile(rp, newPID)
+
+					m.mu.Lock()
+					// Check that the entry still exists (could have been stopped during backoff).
+					if _, ok := m.procs[rp]; ok {
+						m.procs[rp] = &ManagedProcess{
+							Cmd:          newCmd,
+							PID:          newPID,
+							ChildPids:    collectChildPIDs(newPID),
+							RestartCount: restartCount + 1,
+						}
+					}
+					m.mu.Unlock()
+
+					// Publish restart event.
+					if m.bus != nil {
+						m.bus.Publish(events.Event{
+							Type:     events.LoopRestarted,
+							RepoPath: rp,
+							RepoName: filepath.Base(rp),
+							Data: map[string]any{
+								"restart_count": restartCount + 1,
+								"exit_code":     exitCode,
+								"backoff_ms":    backoff.Milliseconds(),
+							},
+						})
+					}
+
+					// Continue reaper loop watching the new process.
+					cmd = newCmd
+					continue
+				}
+			} else {
+				m.mu.Unlock()
+			}
+		}
+
+		// Normal cleanup: remove from map and PID file.
 		m.mu.Lock()
 		delete(m.procs, rp)
 		m.mu.Unlock()
@@ -269,18 +361,36 @@ func (m *Manager) Start(repoPath string) error {
 				Data:     map[string]any{"exit_code": exitCode, "error": exitErrStr},
 			})
 		}
-	}()
 
-	return nil
+		return // exit the reaper loop
+	}
 }
 
 // Package-level indirections for testing.
 var (
-	getpgid        = syscall.Getpgid
-	killPid        = syscall.Kill       // direct PID signal; tests can stub this
-	sleepFn        = time.Sleep         // tests can replace to avoid real waits
-	aliveFn        = isProcessAlive
+	getpgid = syscall.Getpgid
+	killPid = syscall.Kill  // direct PID signal; tests can stub this
+	aliveFn = isProcessAlive
+
+	// sleepFnPtr is an atomic pointer to the sleep function, allowing
+	// tests to stub it without data races against background goroutines.
+	sleepFnPtr atomic.Pointer[func(time.Duration)]
 )
+
+func init() {
+	fn := time.Sleep
+	sleepFnPtr.Store(&fn)
+}
+
+// sleepFn loads the current sleep function atomically.
+func sleepFn(d time.Duration) {
+	(*sleepFnPtr.Load())(d)
+}
+
+// setSleepFn atomically replaces the sleep function (for testing).
+func setSleepFn(fn func(time.Duration)) {
+	sleepFnPtr.Store(&fn)
+}
 
 // sendSignal sends a signal to a process, trying process group first.
 func sendSignal(pid int, sig syscall.Signal) error {

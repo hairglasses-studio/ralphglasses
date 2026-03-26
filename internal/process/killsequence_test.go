@@ -56,16 +56,16 @@ func (h *killSequenceHarness) sleepFn(_ time.Duration) {
 // install replaces the package-level stubs and returns a restore function.
 func (h *killSequenceHarness) install() func() {
 	origKill := killPid
-	origSleep := sleepFn
+	origSleep := *sleepFnPtr.Load()
 	origAlive := aliveFn
 
 	killPid = h.killFn
-	sleepFn = h.sleepFn
+	setSleepFn(h.sleepFn)
 	aliveFn = h.aliveFn
 
 	return func() {
 		killPid = origKill
-		sleepFn = origSleep
+		setSleepFn(origSleep)
 		aliveFn = origAlive
 	}
 }
