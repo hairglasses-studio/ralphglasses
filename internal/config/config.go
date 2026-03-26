@@ -35,6 +35,11 @@ type Config struct {
 
 	// HealthCheckInterval controls how often provider health is polled.
 	HealthCheckInterval time.Duration `json:"health_check_interval,omitempty"`
+
+	// ProviderCosts holds configurable per-model cost rates. When nil,
+	// DefaultProviderCosts() is used. Load from .ralph/cost_rates.json
+	// to override specific model rates without recompiling.
+	ProviderCosts *ProviderCosts `json:"provider_costs,omitempty"`
 }
 
 // Load reads a config JSON file from path. If the file does not exist,
