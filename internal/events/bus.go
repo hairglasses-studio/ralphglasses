@@ -142,9 +142,10 @@ type Bus struct {
 	persistWrites int
 
 	// Async write support
-	AsyncWrites bool
-	writeCh     chan Event
-	writeDone   chan struct{}
+	AsyncWrites  bool
+	asyncStarted bool
+	writeCh      chan Event
+	writeDone    chan struct{}
 }
 
 // NewBus creates an event bus that retains up to maxHistory events.
@@ -380,12 +381,17 @@ func (b *Bus) PersistTo(path string) error {
 }
 
 // Close flushes and closes the persist file, if any.
-// If async writes are active, drains the write channel first.
+// If async writes are active, drains the write channel first with a 5s timeout.
 func (b *Bus) Close() error {
 	// Drain async writer first (outside lock to avoid deadlock)
 	if b.writeCh != nil {
 		close(b.writeCh)
-		<-b.writeDone
+		select {
+		case <-b.writeDone:
+			// drained successfully
+		case <-time.After(5 * time.Second):
+			slog.Warn("event bus async drain timed out after 5s")
+		}
 		b.writeCh = nil
 	}
 
@@ -426,10 +432,11 @@ func (b *Bus) StartAsync() {
 		return
 	}
 	b.mu.Lock()
-	if b.writeCh != nil {
+	if b.asyncStarted {
 		b.mu.Unlock()
-		return // already started
+		return
 	}
+	b.asyncStarted = true
 	b.writeCh = make(chan Event, 256)
 	b.writeDone = make(chan struct{})
 	b.mu.Unlock()
