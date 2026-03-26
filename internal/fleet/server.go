@@ -87,6 +87,7 @@ func (c *Coordinator) Start(ctx context.Context) error {
 	mux.HandleFunc("GET /api/v1/status", c.handleStatus)
 	mux.HandleFunc("GET /api/v1/fleet", c.handleFleetState)
 	mux.HandleFunc("GET /api/v1/sessions", c.handleSessions)
+	mux.HandleFunc("GET /healthz", c.handleHealthz)
 
 	// Prometheus metrics endpoint
 	if promRec, ok := tracing.Get().(*tracing.PrometheusRecorder); ok {
@@ -459,6 +460,63 @@ func (c *Coordinator) handleSessions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, c.sessMgr.List(""))
+}
+
+// HealthCheckResponse is returned by GET /healthz.
+type HealthCheckResponse struct {
+	Status  string            `json:"status"`
+	Checks  map[string]string `json:"checks"`
+	Uptime  float64           `json:"uptime_seconds,omitempty"`
+}
+
+func (c *Coordinator) handleHealthz(w http.ResponseWriter, r *http.Request) {
+	checks := make(map[string]string)
+	healthy := true
+
+	// Check event bus responsiveness
+	if c.bus != nil {
+		// Publish a no-op ping event and verify the bus accepts it without error.
+		err := c.bus.PublishCtx(r.Context(), events.Event{
+			Type:      events.EventType("health.ping"),
+			Timestamp: time.Now(),
+		})
+		if err != nil {
+			checks["event_bus"] = "error"
+			checks["event_bus_error"] = err.Error()
+			healthy = false
+		} else {
+			checks["event_bus"] = "ok"
+		}
+	} else {
+		checks["event_bus"] = "not_configured"
+	}
+
+	// Check work queue accessibility
+	func() {
+		defer func() {
+			if rv := recover(); rv != nil {
+				checks["queue"] = "error"
+				checks["queue_error"] = fmt.Sprintf("panic: %v", rv)
+				healthy = false
+			}
+		}()
+		c.queue.Counts()
+		checks["queue"] = "ok"
+	}()
+
+	resp := HealthCheckResponse{
+		Checks: checks,
+		Uptime: time.Since(c.startedAt).Seconds(),
+	}
+
+	if healthy {
+		resp.Status = "healthy"
+		w.WriteHeader(http.StatusOK)
+	} else {
+		resp.Status = "degraded"
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}
+	writeJSON(w, resp)
 }
 
 // buildCandidates constructs WorkerCandidate entries from all registered workers,
