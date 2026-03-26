@@ -142,7 +142,7 @@ func (s *Server) handleToolGroups(_ context.Context, _ mcp.CallToolRequest) (*mc
 func (s *Server) handleLoadToolGroup(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	group := getStringArg(req, "group")
 	if group == "" {
-		return invalidParams("group is required"), nil
+		return codedError(ErrInvalidParams, "group is required"), nil
 	}
 
 	if s.loadedGroups[group] {
@@ -154,11 +154,11 @@ func (s *Server) handleLoadToolGroup(_ context.Context, req mcp.CallToolRequest)
 	}
 
 	if s.mcpSrv == nil {
-		return internalErr("MCP server reference not set"), nil
+		return codedError(ErrInternal, "MCP server reference not set"), nil
 	}
 
 	if err := s.RegisterToolGroup(s.mcpSrv, group); err != nil {
-		return invalidParams(err.Error()), nil
+		return codedError(ErrInvalidParams, err.Error()), nil
 	}
 
 	// Count tools in the loaded group.

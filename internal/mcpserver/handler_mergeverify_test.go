@@ -30,8 +30,8 @@ func TestHandleMergeVerifyNoRepo(t *testing.T) {
 	if err := json.Unmarshal([]byte(text), &resp); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	if resp["error_code"] != "invalid_params" {
-		t.Errorf("error_code = %q, want invalid_params", resp["error_code"])
+	if resp["error_code"] != "INVALID_PARAMS" {
+		t.Errorf("error_code = %q, want INVALID_PARAMS", resp["error_code"])
 	}
 }
 

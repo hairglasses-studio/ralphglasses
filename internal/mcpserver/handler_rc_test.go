@@ -207,8 +207,8 @@ func TestHandleRCRead_MissingSession(t *testing.T) {
 		t.Fatal("expected error for missing session")
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "not_found") {
-		t.Errorf("expected 'not_found' error code, got: %s", text)
+	if !strings.Contains(text, "SESSION_NOT_FOUND") {
+		t.Errorf("expected 'SESSION_NOT_FOUND' error code, got: %s", text)
 	}
 }
 
@@ -321,8 +321,8 @@ func TestHandleRCAct_StopMissingTarget(t *testing.T) {
 		t.Fatal("expected error for missing target on stop")
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "not_found") {
-		t.Errorf("expected not_found error, got: %s", text)
+	if !strings.Contains(text, "SESSION_NOT_FOUND") {
+		t.Errorf("expected SESSION_NOT_FOUND error, got: %s", text)
 	}
 }
 

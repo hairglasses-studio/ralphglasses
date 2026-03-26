@@ -329,8 +329,8 @@ func TestHandleSessionStop(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrInternal) {
-			t.Errorf("error_code = %q, want %q", code, ErrInternal)
+		if code != string(ErrSessionNotFound) {
+			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
 		}
 	})
 }

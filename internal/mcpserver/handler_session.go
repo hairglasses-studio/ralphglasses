@@ -251,7 +251,7 @@ func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolReques
 		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(name); err != nil {
-		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	sessionID := getStringArg(req, "session_id")
 	if sessionID == "" {
@@ -292,6 +292,9 @@ func (s *Server) handleSessionStop(_ context.Context, req mcp.CallToolRequest) (
 	}
 
 	if err := s.SessMgr.Stop(id); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
+		}
 		return codedError(ErrInternal, fmt.Sprintf("stop failed: %v", err)), nil
 	}
 	return textResult(fmt.Sprintf("Stopped session %s", id)), nil

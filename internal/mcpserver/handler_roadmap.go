@@ -18,7 +18,7 @@ func (s *Server) handleRoadmapParse(_ context.Context, req mcp.CallToolRequest) 
 		return codedError(ErrInvalidParams, "path required"), nil
 	}
 	if err := ValidatePath(path, s.ScanPath); err != nil {
-		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid path: %v", err)), nil
 	}
 	file := getStringArg(req, "file")
 	rmPath := roadmap.ResolvePath(path, file)
@@ -36,7 +36,7 @@ func (s *Server) handleRoadmapAnalyze(_ context.Context, req mcp.CallToolRequest
 		return codedError(ErrInvalidParams, "path required"), nil
 	}
 	if err := ValidatePath(path, s.ScanPath); err != nil {
-		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid path: %v", err)), nil
 	}
 	file := getStringArg(req, "file")
 	rmPath := roadmap.ResolvePath(path, file)
@@ -59,7 +59,7 @@ func (s *Server) handleRoadmapResearch(ctx context.Context, req mcp.CallToolRequ
 		return codedError(ErrInvalidParams, "path required"), nil
 	}
 	if err := ValidatePath(path, s.ScanPath); err != nil {
-		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid path: %v", err)), nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -79,7 +79,7 @@ func (s *Server) handleRoadmapExpand(ctx context.Context, req mcp.CallToolReques
 		return codedError(ErrInvalidParams, "path required"), nil
 	}
 	if err := ValidatePath(path, s.ScanPath); err != nil {
-		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid path: %v", err)), nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -116,7 +116,7 @@ func (s *Server) handleRoadmapExport(_ context.Context, req mcp.CallToolRequest)
 		return codedError(ErrInvalidParams, "path required"), nil
 	}
 	if err := ValidatePath(path, s.ScanPath); err != nil {
-		return invalidParams(fmt.Sprintf("invalid path: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid path: %v", err)), nil
 	}
 	file := getStringArg(req, "file")
 	format := getStringArg(req, "format")

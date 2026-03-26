@@ -137,10 +137,10 @@ func estimateSessionCost(
 func (s *Server) handleCostEstimate(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	provider := getStringArg(req, "provider")
 	if provider == "" {
-		return invalidParams("provider is required (claude, gemini, codex)"), nil
+		return codedError(ErrInvalidParams, "provider is required (claude, gemini, codex)"), nil
 	}
 	if _, ok := providerRateKeys[provider]; !ok {
-		return invalidParams("provider must be one of: claude, gemini, codex"), nil
+		return codedError(ErrInvalidParams, "provider must be one of: claude, gemini, codex"), nil
 	}
 
 	model := getStringArg(req, "model")
@@ -152,7 +152,7 @@ func (s *Server) handleCostEstimate(_ context.Context, req mcp.CallToolRequest) 
 		mode = "session"
 	}
 	if mode != "session" && mode != "loop" {
-		return invalidParams("mode must be 'session' or 'loop'"), nil
+		return codedError(ErrInvalidParams, "mode must be 'session' or 'loop'"), nil
 	}
 	iterations := int(getNumberArg(req, "iterations", 3))
 	repo := getStringArg(req, "repo")

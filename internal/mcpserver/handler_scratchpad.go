@@ -67,7 +67,7 @@ func (s *Server) resolveRepoPath(repo string) (string, error) {
 func (s *Server) handleScratchpadRead(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "name")
 	if name == "" {
-		return invalidParams("name is required"), nil
+		return codedError(ErrInvalidParams, "name is required"), nil
 	}
 
 	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
@@ -89,11 +89,11 @@ func (s *Server) handleScratchpadRead(_ context.Context, req mcp.CallToolRequest
 func (s *Server) handleScratchpadAppend(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "name")
 	if name == "" {
-		return invalidParams("name is required"), nil
+		return codedError(ErrInvalidParams, "name is required"), nil
 	}
 	content := getStringArg(req, "content")
 	if content == "" {
-		return invalidParams("content is required"), nil
+		return codedError(ErrInvalidParams, "content is required"), nil
 	}
 	section := getStringArg(req, "section")
 
@@ -155,11 +155,11 @@ func (s *Server) handleScratchpadList(_ context.Context, req mcp.CallToolRequest
 func (s *Server) handleScratchpadResolve(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "name")
 	if name == "" {
-		return invalidParams("name is required"), nil
+		return codedError(ErrInvalidParams, "name is required"), nil
 	}
 	itemNum := int(getNumberArg(req, "item_number", 0))
 	if itemNum == 0 {
-		return invalidParams("item_number is required"), nil
+		return codedError(ErrInvalidParams, "item_number is required"), nil
 	}
 	resolution := getStringArg(req, "resolution")
 

@@ -172,25 +172,6 @@ func errResult(msg string) *mcp.CallToolResult {
 	}
 }
 
-// errCode returns a structured error result with an error_code field.
-// error_code values: "invalid_params", "not_found", "internal_error"
-func errCode(code, msg string) *mcp.CallToolResult {
-	data, _ := json.Marshal(map[string]string{
-		"error":      msg,
-		"error_code": code,
-	})
-	return &mcp.CallToolResult{
-		IsError: true,
-		Content: []mcp.Content{mcp.TextContent{
-			Type: "text",
-			Text: string(data),
-		}},
-	}
-}
-
-func invalidParams(msg string) *mcp.CallToolResult { return errCode("invalid_params", msg) }
-func notFound(msg string) *mcp.CallToolResult      { return errCode("not_found", msg) }
-func internalErr(msg string) *mcp.CallToolResult   { return errCode("internal_error", msg) }
 
 func jsonResult(v any) *mcp.CallToolResult {
 	data, err := json.MarshalIndent(v, "", "  ")
@@ -427,7 +408,7 @@ func (s *Server) handleWorkflowDefine(_ context.Context, req mcp.CallToolRequest
 		return codedError(ErrInvalidParams, "repo, name, and yaml are required"), nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
-		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 
 	if s.reposNil() {
@@ -463,7 +444,7 @@ func (s *Server) handleWorkflowRun(ctx context.Context, req mcp.CallToolRequest)
 		return codedError(ErrInvalidParams, "repo and name are required"), nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
-		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 
 	if s.reposNil() {
@@ -896,7 +877,7 @@ func (s *Server) handleToolBenchmark(_ context.Context, req mcp.CallToolRequest)
 
 	entries, err := s.ToolRecorder.LoadEntries(since)
 	if err != nil {
-		return internalErr(fmt.Sprintf("loading benchmark data: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("loading benchmark data: %v", err)), nil
 	}
 
 	toolFilter := getStringArg(req, "tool")

@@ -223,24 +223,24 @@ func (s *Server) handleRCStatus(_ context.Context, _ mcp.CallToolRequest) (*mcp.
 func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
-		return invalidParams("repo name required"), nil
+		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(name); err != nil {
-		return invalidParams(fmt.Sprintf("invalid repo name: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
 	prompt := SanitizeString(getStringArg(req, "prompt"))
 	if prompt == "" {
-		return invalidParams("prompt required"), nil
+		return codedError(ErrInvalidParams, "prompt required"), nil
 	}
 
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
-			return internalErr(fmt.Sprintf("scan failed: %v", err)), nil
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 		}
 	}
 	r := s.findRepo(name)
 	if r == nil {
-		return notFound(fmt.Sprintf("repo not found: %s", name)), nil
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
 	provider := session.Provider(getStringArg(req, "provider"))
@@ -248,7 +248,7 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 		provider = session.ProviderClaude
 	}
 	if err := session.ValidateProvider(provider); err != nil {
-		return invalidParams(fmt.Sprintf("invalid provider: %v", err)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid provider: %v", err)), nil
 	}
 
 	// Check for resume
@@ -261,7 +261,7 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 			if psid != "" {
 				resumed, err := s.SessMgr.Resume(ctx, r.Path, provider, psid, prompt)
 				if err != nil {
-					return internalErr(fmt.Sprintf("resume failed: %v", err)), nil
+					return codedError(ErrInternal, fmt.Sprintf("resume failed: %v", err)), nil
 				}
 				return textResult(fmt.Sprintf("Resumed %s session on %s (id: %s)", provider, name, shortID(resumed.ID))), nil
 			}
@@ -301,7 +301,7 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 
 	sess, err := s.SessMgr.Launch(ctx, opts)
 	if err != nil {
-		return internalErr(fmt.Sprintf("launch failed: %v", err)), nil
+		return codedError(ErrInternal, fmt.Sprintf("launch failed: %v", err)), nil
 	}
 
 	return textResult(fmt.Sprintf("Launched %s session on %s (budget: %s, id: %s)",
@@ -316,7 +316,7 @@ func (s *Server) handleRCRead(_ context.Context, req mcp.CallToolRequest) (*mcp.
 		var ok bool
 		sess, ok = s.SessMgr.Get(id)
 		if !ok {
-			return notFound(fmt.Sprintf("session not found: %s", id)), nil
+			return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
 		}
 	} else {
 		sess = s.mostActiveSession()
@@ -351,7 +351,7 @@ func (s *Server) handleRCRead(_ context.Context, req mcp.CallToolRequest) (*mcp.
 	if cursorStr != "" {
 		cursor, err := strconv.Atoi(cursorStr)
 		if err != nil {
-			return invalidParams(fmt.Sprintf("invalid cursor: %s", cursorStr)), nil
+			return codedError(ErrInvalidParams, fmt.Sprintf("invalid cursor: %s", cursorStr)), nil
 		}
 		newLines := totalCount - cursor
 		if newLines <= 0 {
@@ -402,7 +402,7 @@ func (s *Server) handleEventPoll(_ context.Context, req mcp.CallToolRequest) (*m
 		var err error
 		cursor, err = strconv.Atoi(cursorStr)
 		if err != nil {
-			return invalidParams(fmt.Sprintf("invalid cursor: %s", cursorStr)), nil
+			return codedError(ErrInvalidParams, fmt.Sprintf("invalid cursor: %s", cursorStr)), nil
 		}
 	}
 
@@ -460,7 +460,7 @@ func (s *Server) handleEventPoll(_ context.Context, req mcp.CallToolRequest) (*m
 func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	action := getStringArg(req, "action")
 	if action == "" {
-		return invalidParams("action required"), nil
+		return codedError(ErrInvalidParams, "action required"), nil
 	}
 	target := getStringArg(req, "target")
 
@@ -468,7 +468,7 @@ func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	case "stop":
 		sess, err := s.resolveTarget(target)
 		if err != nil {
-			return notFound(err.Error()), nil
+			return codedError(ErrSessionNotFound, err.Error()), nil
 		}
 		sess.Lock()
 		sid := sess.ID
@@ -478,7 +478,7 @@ func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp
 		sess.Unlock()
 
 		if err := s.SessMgr.Stop(sid); err != nil {
-			return internalErr(fmt.Sprintf("stop failed: %v", err)), nil
+			return codedError(ErrInternal, fmt.Sprintf("stop failed: %v", err)), nil
 		}
 		return textResult(fmt.Sprintf("Stopped session %s on %s (%s, %dt)",
 			shortID(sid), repoName, formatCost(cost), turns)), nil
@@ -499,20 +499,20 @@ func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp
 
 	case "pause":
 		if target == "" {
-			return invalidParams("target required for pause"), nil
+			return codedError(ErrInvalidParams, "target required for pause"), nil
 		}
 		if s.reposNil() {
 			if err := s.scan(); err != nil {
-				return internalErr(fmt.Sprintf("scan failed: %v", err)), nil
+				return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
 			}
 		}
 		r := s.findRepo(target)
 		if r == nil {
-			return notFound(fmt.Sprintf("repo not found: %s", target)), nil
+			return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", target)), nil
 		}
 		nowPaused, err := s.ProcMgr.TogglePause(r.Path)
 		if err != nil {
-			return internalErr(fmt.Sprintf("pause toggle failed: %v", err)), nil
+			return codedError(ErrInternal, fmt.Sprintf("pause toggle failed: %v", err)), nil
 		}
 		if nowPaused {
 			return textResult(fmt.Sprintf("Paused loop on %s", target)), nil
@@ -521,11 +521,11 @@ func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp
 
 	case "resume":
 		if target == "" {
-			return invalidParams("target required for resume"), nil
+			return codedError(ErrInvalidParams, "target required for resume"), nil
 		}
 		sess, err := s.resolveTarget(target)
 		if err != nil {
-			return notFound(err.Error()), nil
+			return codedError(ErrSessionNotFound, err.Error()), nil
 		}
 		sess.Lock()
 		psid := sess.ProviderSessionID
@@ -533,18 +533,18 @@ func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp
 		provider := sess.Provider
 		sess.Unlock()
 		if psid == "" {
-			return invalidParams("session has no provider session ID to resume"), nil
+			return codedError(ErrInvalidParams, "session has no provider session ID to resume"), nil
 		}
 		newSess, err := s.SessMgr.Resume(ctx, repoPath, provider, psid, "")
 		if err != nil {
-			return internalErr(fmt.Sprintf("resume failed: %v", err)), nil
+			return codedError(ErrInternal, fmt.Sprintf("resume failed: %v", err)), nil
 		}
 		return textResult(fmt.Sprintf("Resumed session %s", shortID(newSess.ID))), nil
 
 	case "retry":
 		sess, err := s.resolveTarget(target)
 		if err != nil {
-			return notFound(err.Error()), nil
+			return codedError(ErrSessionNotFound, err.Error()), nil
 		}
 		sess.Lock()
 		opts := session.LaunchOptions{
@@ -560,11 +560,11 @@ func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp
 		sess.Unlock()
 		newSess, err := s.SessMgr.Launch(ctx, opts)
 		if err != nil {
-			return internalErr(fmt.Sprintf("retry failed: %v", err)), nil
+			return codedError(ErrInternal, fmt.Sprintf("retry failed: %v", err)), nil
 		}
 		return textResult(fmt.Sprintf("Retried → new session %s", shortID(newSess.ID))), nil
 
 	default:
-		return invalidParams(fmt.Sprintf("unknown action: %s (expected: stop, stop_all, pause, resume, retry)", action)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("unknown action: %s (expected: stop, stop_all, pause, resume, retry)", action)), nil
 	}
 }
