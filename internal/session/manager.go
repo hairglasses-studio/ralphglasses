@@ -321,13 +321,7 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 
 	// Set persistence and feedback callbacks so runner can persist and learn on completion
 	s.onComplete = func(sess *Session) {
-		if err := m.PersistSession(sess); err != nil && sess.bus != nil {
-			sess.bus.Publish(events.Event{
-				Type:      events.SessionError,
-				SessionID: sess.ID,
-				Data:      map[string]any{"error": err.Error(), "context": "persist_session"},
-			})
-		}
+		m.persistOrWarn(sess, "on session complete")
 		// Feed session results back into the self-improvement loop
 		if optimizer != nil {
 			optimizer.IngestSessionJournal(sess)
@@ -342,13 +336,7 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	m.mu.Unlock()
 
 	// Persist initial state to disk
-	if err := m.PersistSession(s); err != nil && m.bus != nil {
-		m.bus.Publish(events.Event{
-			Type:      events.SessionError,
-			SessionID: s.ID,
-			Data:      map[string]any{"error": err.Error(), "context": "persist_session"},
-		})
-	}
+	m.persistOrWarn(s, "after session start")
 
 	if m.bus != nil {
 		m.bus.Publish(events.Event{
@@ -463,10 +451,7 @@ func (m *Manager) Stop(id string) error {
 	s.mu.Unlock()
 
 	// Kill with escalation (SIGTERM -> wait -> SIGKILL) outside the lock.
-	killTimeout := m.KillTimeout
-	if killTimeout <= 0 {
-		killTimeout = 5 * time.Second
-	}
+	killTimeout := m.effectiveKillTimeout()
 	if cmd != nil && cmd.Process != nil {
 		escalated := killWithEscalation(cmd, killTimeout, doneCh)
 		if escalated && bus != nil {
@@ -481,9 +466,7 @@ func (m *Manager) Stop(id string) error {
 
 	// Persist stopped state (synchronous; s.mu is released above).
 	// Best-effort: stop succeeds even if persistence fails.
-	if err := m.PersistSession(s); err != nil {
-		slog.Warn("persist session after stop", "id", s.ID, "err", err)
-	}
+	m.persistOrWarn(s, "after stop")
 
 	return nil
 }
@@ -849,10 +832,7 @@ func (m *Manager) waitForSession(ctx context.Context, s *Session) error {
 	doneCh := s.doneCh
 	s.Unlock()
 
-	timeout := m.SessionTimeout
-	if timeout <= 0 {
-		timeout = 10 * time.Minute
-	}
+	timeout := m.effectiveSessionTimeout()
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 
@@ -1092,6 +1072,33 @@ func (m *Manager) runWorkflowStep(ctx context.Context, run *WorkflowRun, repoPat
 	return workflowStepOutcome{Name: step.Name, Status: "completed"}
 }
 
+// effectiveSessionTimeout returns the session wait timeout, defaulting to 10 minutes.
+func (m *Manager) effectiveSessionTimeout() time.Duration {
+	if m.SessionTimeout <= 0 {
+		return 10 * time.Minute
+	}
+	return m.SessionTimeout
+}
+
+// effectiveKillTimeout returns the SIGTERM→SIGKILL escalation timeout, defaulting to 5 seconds.
+func (m *Manager) effectiveKillTimeout() time.Duration {
+	if m.KillTimeout <= 0 {
+		return 5 * time.Second
+	}
+	return m.KillTimeout
+}
+
+// persistOrWarn persists session state and logs a warning on failure.
+func (m *Manager) persistOrWarn(s *Session, context string) {
+	if err := m.PersistSession(s); err != nil {
+		slog.Warn("persist session failed",
+			"session_id", s.ID,
+			"context", context,
+			"err", err,
+		)
+	}
+}
+
 // PersistSession writes session state to the shared state directory.
 // Safe to call from any goroutine; acquires the session lock.
 func (m *Manager) PersistSession(s *Session) error {
@@ -1190,9 +1197,7 @@ func (m *Manager) LoadExternalSessions() {
 		if existing, ok := m.sessions[id]; ok {
 			// Re-persist in-process sessions so disk stays current (best-effort).
 			go func(s *Session) {
-			if err := m.PersistSession(s); err != nil {
-				slog.Warn("re-persist session", "id", s.ID, "err", err)
-			}
+			m.persistOrWarn(s, "re-persist on load")
 		}(existing)
 			continue
 		}
