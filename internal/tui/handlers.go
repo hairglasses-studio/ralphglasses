@@ -416,6 +416,73 @@ func (m Model) handleLoopListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) handleLoopDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.SessMgr == nil || m.SelectedLoop == "" {
+		return m, nil
+	}
+	switch {
+	case key.Matches(msg, m.Keys.LoopDetailStep):
+		loopID := m.SelectedLoop
+		sessMgr := m.SessMgr
+		return m, func() tea.Msg {
+			err := sessMgr.StepLoop(context.Background(), loopID)
+			return LoopStepResultMsg{LoopID: loopID, Err: err}
+		}
+	case key.Matches(msg, m.Keys.LoopDetailToggle):
+		loopID := m.SelectedLoop
+		sessMgr := m.SessMgr
+		l, ok := sessMgr.GetLoop(loopID)
+		if !ok {
+			m.Notify.Show("Loop not found", 3*time.Second)
+			return m, nil
+		}
+		l.Lock()
+		status := l.Status
+		repoPath := l.RepoPath
+		l.Unlock()
+		if status == "running" {
+			return m, func() tea.Msg {
+				err := sessMgr.StopLoop(loopID)
+				return LoopToggleResultMsg{LoopID: loopID, Started: false, Err: err}
+			}
+		}
+		return m, func() tea.Msg {
+			_, err := sessMgr.StartLoop(context.Background(), repoPath, session.DefaultLoopProfile())
+			return LoopToggleResultMsg{LoopID: loopID, Started: true, Err: err}
+		}
+	case key.Matches(msg, m.Keys.LoopDetailPause):
+		loopID := m.SelectedLoop
+		sessMgr := m.SessMgr
+		l, ok := sessMgr.GetLoop(loopID)
+		if !ok {
+			m.Notify.Show("Loop not found", 3*time.Second)
+			return m, nil
+		}
+		l.Lock()
+		paused := l.Paused
+		l.Unlock()
+		if paused {
+			return m, func() tea.Msg {
+				err := sessMgr.ResumeLoop(loopID)
+				return LoopPauseResultMsg{LoopID: loopID, Paused: false, Err: err}
+			}
+		}
+		return m, func() tea.Msg {
+			err := sessMgr.PauseLoop(loopID)
+			return LoopPauseResultMsg{LoopID: loopID, Paused: true, Err: err}
+		}
+	}
+	return m, nil
+}
+
+// truncateID shortens an ID to 8 characters for display.
+func truncateID(id string) string {
+	if len(id) > 8 {
+		return id[:8]
+	}
+	return id
+}
+
 // --- Session view key handlers ---
 
 func (m Model) handleSessionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

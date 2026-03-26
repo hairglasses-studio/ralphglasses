@@ -881,6 +881,91 @@ func TestStepLoopDeadlineEnforced(t *testing.T) {
 	}
 }
 
+func TestSubPhaseTimingPopulated(t *testing.T) {
+	repoPath := setupLoopRepo(t)
+
+	m := NewManager()
+	m.SetStateDir(t.TempDir())
+	m.SetHooksForTesting(
+		func(_ context.Context, opts LaunchOptions) (*Session, error) {
+			sess := &Session{
+				ID:         sanitizeLoopName(opts.SessionName),
+				Provider:   opts.Provider,
+				RepoPath:   opts.RepoPath,
+				RepoName:   filepath.Base(opts.RepoPath),
+				Prompt:     opts.Prompt,
+				Model:      opts.Model,
+				Status:     StatusCompleted,
+				OutputCh:   make(chan string, 1),
+				LaunchedAt: time.Now(),
+			}
+			if opts.Model == "o1-pro" {
+				sess.LastOutput = `{"title":"Timing test task","prompt":"Do work for timing test."}`
+				sess.OutputHistory = []string{sess.LastOutput}
+			} else {
+				sess.LastOutput = "worker complete"
+				sess.OutputHistory = []string{"worker complete"}
+			}
+			return sess, nil
+		},
+		func(_ context.Context, sess *Session) error {
+			sess.Lock()
+			sess.Status = StatusCompleted
+			now := time.Now()
+			sess.EndedAt = &now
+			sess.Unlock()
+			return nil
+		},
+	)
+
+	run, err := m.StartLoop(context.Background(), repoPath, LoopProfile{
+		VerifyCommands: []string{"test -f README.md"},
+	})
+	if err != nil {
+		t.Fatalf("StartLoop: %v", err)
+	}
+
+	if err := m.StepLoop(context.Background(), run.ID); err != nil {
+		t.Fatalf("StepLoop: %v", err)
+	}
+
+	run, ok := m.GetLoop(run.ID)
+	if !ok {
+		t.Fatal("loop not found after step")
+	}
+
+	run.Lock()
+	defer run.Unlock()
+
+	if len(run.Iterations) != 1 {
+		t.Fatalf("iterations = %d", len(run.Iterations))
+	}
+	iter := run.Iterations[0]
+
+	// PromptBuildMs should be > 0 because buildLoopPlannerPromptN runs git log
+	// and file reads which take measurable time.
+	if iter.PromptBuildMs <= 0 {
+		t.Errorf("PromptBuildMs = %d, want > 0", iter.PromptBuildMs)
+	}
+
+	// ReflexionLookupMs and EpisodicLookupMs are measured even when subsystems
+	// are nil — they should be >= 0 (the timing assignment always runs).
+	if iter.ReflexionLookupMs < 0 {
+		t.Errorf("ReflexionLookupMs = %d, want >= 0", iter.ReflexionLookupMs)
+	}
+	if iter.EpisodicLookupMs < 0 {
+		t.Errorf("EpisodicLookupMs = %d, want >= 0", iter.EpisodicLookupMs)
+	}
+	if iter.EnhancementMs < 0 {
+		t.Errorf("EnhancementMs = %d, want >= 0", iter.EnhancementMs)
+	}
+
+	// EndedAt should be set on a completed iteration.
+	if iter.EndedAt == nil {
+		t.Error("EndedAt not set after iteration completed")
+	}
+}
+
 func TestStepLoopSelectTierSetsWorkerModel(t *testing.T) {
 	repoPath := setupLoopRepo(t)
 	stateDir := t.TempDir()

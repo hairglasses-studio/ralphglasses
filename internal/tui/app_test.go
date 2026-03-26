@@ -611,3 +611,158 @@ func TestLoopListKeyBindings(t *testing.T) {
 		t.Error("loop list view should show 'stop loop' in footer hints")
 	}
 }
+
+func TestProcessExitMsg_SetsRepoStatus(t *testing.T) {
+	tests := []struct {
+		name       string
+		exitCode   int
+		wantStatus string
+	}{
+		{"non-zero exit sets crashed", 1, "crashed"},
+		{"zero exit sets stopped", 0, "stopped"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewModel("/tmp/test", nil)
+			m.Repos = []*model.Repo{{Name: "myrepo", Path: "/tmp/myrepo"}}
+
+			m2, _ := m.Update(process.ProcessExitMsg{
+				RepoPath: "/tmp/myrepo",
+				ExitCode: tt.exitCode,
+			})
+			got := m2.(Model)
+
+			if got.Repos[0].Status == nil {
+				t.Fatal("expected Status to be set, got nil")
+			}
+			if got.Repos[0].Status.Status != tt.wantStatus {
+				t.Errorf("Status = %q, want %q", got.Repos[0].Status.Status, tt.wantStatus)
+			}
+		})
+	}
+}
+
+func TestLoopDetailKeyBindings(t *testing.T) {
+	mgr := session.NewManager()
+	m := NewModel("/tmp/test", mgr)
+	m.Width = 120
+	m.Height = 40
+	m.StatusBar.Width = 120
+
+	// Create a loop to interact with
+	tmpDir := t.TempDir()
+	run, err := mgr.StartLoop(context.Background(), tmpDir, session.DefaultLoopProfile())
+	if err != nil {
+		t.Fatalf("StartLoop: %v", err)
+	}
+
+	// Navigate to loop detail
+	m.SelectedLoop = run.ID
+	m.pushView(ViewLoopDetail, "Loop Detail")
+
+	// Verify keybindings are enabled
+	km := DefaultKeyMap()
+	km.SetViewContext(ViewLoopDetail)
+	if !km.LoopDetailStep.Enabled() {
+		t.Error("LoopDetailStep should be enabled in ViewLoopDetail")
+	}
+	if !km.LoopDetailToggle.Enabled() {
+		t.Error("LoopDetailToggle should be enabled in ViewLoopDetail")
+	}
+	if km.Refresh.Enabled() {
+		t.Error("Refresh should be disabled in ViewLoopDetail (r is used for toggle)")
+	}
+	if km.LoopListStart.Enabled() {
+		t.Error("LoopListStart should be disabled in ViewLoopDetail")
+	}
+
+	// 's' should produce a tea.Cmd (StepLoop) without panicking
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	if cmd == nil {
+		t.Error("pressing 's' in loop detail should produce a non-nil Cmd")
+	}
+	m = updated.(Model)
+
+	// Execute the command and verify it produces LoopStepResultMsg
+	msg := cmd()
+	if stepMsg, ok := msg.(LoopStepResultMsg); !ok {
+		t.Errorf("expected LoopStepResultMsg, got %T", msg)
+	} else if stepMsg.LoopID != run.ID {
+		t.Errorf("LoopStepResultMsg.LoopID = %q, want %q", stepMsg.LoopID, run.ID)
+	}
+
+	// 'r' should produce a tea.Cmd (toggle run/stop)
+	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
+	if cmd == nil {
+		t.Error("pressing 'r' in loop detail should produce a non-nil Cmd")
+	}
+	// Execute and verify it produces LoopToggleResultMsg
+	msg = cmd()
+	if toggleMsg, ok := msg.(LoopToggleResultMsg); !ok {
+		t.Errorf("expected LoopToggleResultMsg, got %T", msg)
+	} else if toggleMsg.LoopID != run.ID {
+		t.Errorf("LoopToggleResultMsg.LoopID = %q, want %q", toggleMsg.LoopID, run.ID)
+	}
+
+	// Verify loop detail view renders with keybinding help
+	v := m.View()
+	if !strings.Contains(v, "step") {
+		t.Error("loop detail view should show 'step' in footer hints")
+	}
+	if !strings.Contains(v, "run/stop") {
+		t.Error("loop detail view should show 'run/stop' in footer hints")
+	}
+
+	// 'p' should produce a tea.Cmd (pause/resume)
+	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
+	if cmd == nil {
+		t.Error("pressing 'p' in loop detail should produce a non-nil Cmd")
+	}
+	// Execute and verify it produces LoopPauseResultMsg
+	msg = cmd()
+	if pauseMsg, ok := msg.(LoopPauseResultMsg); !ok {
+		t.Errorf("expected LoopPauseResultMsg, got %T", msg)
+	} else if pauseMsg.LoopID != run.ID {
+		t.Errorf("LoopPauseResultMsg.LoopID = %q, want %q", pauseMsg.LoopID, run.ID)
+	} else if !pauseMsg.Paused {
+		t.Error("first pause toggle should set Paused=true")
+	}
+
+	// Verify LoopDetailPause is enabled in ViewLoopDetail
+	if !km.LoopDetailPause.Enabled() {
+		t.Error("LoopDetailPause should be enabled in ViewLoopDetail")
+	}
+
+	// Verify LoopDetailPause is disabled in ViewOverview
+	km2 := DefaultKeyMap()
+	km2.SetViewContext(ViewOverview)
+	if km2.LoopDetailPause.Enabled() {
+		t.Error("LoopDetailPause should be disabled in ViewOverview")
+	}
+
+	// Verify LoopStepResultMsg is handled correctly
+	m2, _ := m.Update(LoopStepResultMsg{LoopID: run.ID})
+	got := m2.(Model)
+	if !got.Notify.Active() {
+		t.Error("LoopStepResultMsg should trigger a notification")
+	}
+
+	// Verify LoopToggleResultMsg is handled correctly
+	m3, _ := m.Update(LoopToggleResultMsg{LoopID: run.ID, Started: false})
+	got3 := m3.(Model)
+	if !got3.Notify.Active() {
+		t.Error("LoopToggleResultMsg should trigger a notification")
+	}
+
+	// Verify LoopPauseResultMsg is handled correctly
+	m4, _ := m.Update(LoopPauseResultMsg{LoopID: run.ID, Paused: true})
+	got4 := m4.(Model)
+	if !got4.Notify.Active() {
+		t.Error("LoopPauseResultMsg should trigger a notification")
+	}
+
+	// Verify loop detail view includes pause/resume hint
+	if !strings.Contains(v, "pause/resume") {
+		t.Error("loop detail view should show 'pause/resume' in footer hints")
+	}
+}
