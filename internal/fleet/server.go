@@ -89,6 +89,10 @@ func (c *Coordinator) Start(ctx context.Context) error {
 	mux.HandleFunc("GET /api/v1/sessions", c.handleSessions)
 	mux.HandleFunc("GET /healthz", c.handleHealthz)
 
+	// A2A AgentCard discovery endpoint
+	mux.HandleFunc("GET /.well-known/agent.json", c.handleAgentCard)
+	mux.HandleFunc("GET /api/v1/a2a/task/{taskID}", c.handleA2ATaskStatus)
+
 	// Prometheus metrics endpoint
 	if promRec, ok := tracing.Get().(*tracing.PrometheusRecorder); ok {
 		mux.HandleFunc("GET /metrics", promRec.Handler())
@@ -861,6 +865,51 @@ func (c *Coordinator) PurgeDLQ() int {
 func (c *Coordinator) DLQDepth() int {
 	return c.queue.DLQDepth()
 }
+func (c *Coordinator) handleAgentCard(w http.ResponseWriter, r *http.Request) {
+	card := BuildAgentCard(c)
+	writeJSON(w, card)
+}
+
+func (c *Coordinator) handleA2ATaskStatus(w http.ResponseWriter, r *http.Request) {
+	taskID := r.PathValue("taskID")
+	if taskID == "" {
+		http.Error(w, "missing task ID", http.StatusBadRequest)
+		return
+	}
+
+	// Check the work queue for the item
+	item, ok := c.queue.Get(taskID)
+	if !ok {
+		http.Error(w, "task not found", http.StatusNotFound)
+		return
+	}
+
+	// Map WorkItem to TaskOffer for A2A response
+	offer := TaskOffer{
+		ID:           item.ID,
+		OfferingNode: item.AssignedTo,
+		TaskType:     string(item.Type),
+		Prompt:       item.Prompt,
+		Constraints: DelegationConstraints{
+			RequireProvider: string(item.Constraints.RequireProvider),
+			MaxBudgetUSD:    item.MaxBudgetUSD,
+			RequireRepo:     item.RepoName,
+			PreferLocal:     item.Constraints.RequireLocal,
+		},
+		Status:    string(item.Status),
+		CreatedAt: item.SubmittedAt,
+		UpdatedAt: item.SubmittedAt,
+	}
+	if item.CompletedAt != nil {
+		offer.UpdatedAt = *item.CompletedAt
+	} else if item.AssignedAt != nil {
+		offer.UpdatedAt = *item.AssignedAt
+		offer.AcceptedBy = item.AssignedTo
+	}
+
+	writeJSON(w, offer)
+}
+
 // helper functions
 
 func timePtr(t time.Time) *time.Time {
