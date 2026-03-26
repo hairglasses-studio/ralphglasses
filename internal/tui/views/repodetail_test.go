@@ -73,32 +73,6 @@ func TestRenderRepoDetailWithRC(t *testing.T) {
 	}
 }
 
-func TestRenderRepoDetailParseErrors(t *testing.T) {
-	r := &model.Repo{
-		Name: "warn-repo",
-		Path: "/path",
-		RefreshErrors: []error{
-			errors.New("failed to read .ralphrc"),
-			errors.New("invalid JSON"),
-		},
-	}
-	output := RenderRepoDetail(r, 80, nil)
-	// Compact indicator in title line
-	if !strings.Contains(output, "2") {
-		t.Error("title should show parse error count")
-	}
-	// Detailed warnings section
-	if !strings.Contains(output, "Warnings") {
-		t.Error("should render Warnings section")
-	}
-	if !strings.Contains(output, "failed to read .ralphrc") {
-		t.Error("should list first parse error")
-	}
-	if !strings.Contains(output, "invalid JSON") {
-		t.Error("should list second parse error")
-	}
-}
-
 func TestRenderRepoDetailExitReason(t *testing.T) {
 	r := &model.Repo{
 		Name: "exited-repo",
@@ -112,5 +86,29 @@ func TestRenderRepoDetailExitReason(t *testing.T) {
 	output := RenderRepoDetail(r, 80, nil)
 	if !strings.Contains(output, "budget exceeded") {
 		t.Error("should show exit reason")
+	}
+}
+
+func TestRenderRepoDetailParseErrors(t *testing.T) {
+	r := &model.Repo{
+		Name: "broken-repo",
+		Path: "/path",
+		RefreshErrors: []error{
+			errors.New("invalid JSON in loop_status.json"),
+			errors.New("bad timestamp in circuit_breaker.json"),
+		},
+	}
+	output := RenderRepoDetail(r, 120, nil)
+
+	// Status bar line should contain the compact warning indicator
+	if !strings.Contains(output, "2 parse error(s)") {
+		t.Error("title line should show '2 parse error(s)' warning indicator")
+	}
+	// Detailed warnings section should still be present
+	if !strings.Contains(output, "Warnings") {
+		t.Error("should show detailed Warnings section")
+	}
+	if !strings.Contains(output, "invalid JSON") {
+		t.Error("should show individual error details")
 	}
 }
