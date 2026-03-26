@@ -2,12 +2,35 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
+
+// applyToolMetadata enriches a tool with annotations and output schema if available.
+func applyToolMetadata(t *mcp.Tool) {
+	// Wire annotations from the ToolAnnotations map.
+	if ann, ok := ToolAnnotations[t.Name]; ok {
+		t.Annotations = ann
+	}
+
+	// Wire output schema from the OutputSchemas map.
+	if schema := SchemaForTool(t.Name); schema != nil {
+		raw, err := json.Marshal(schema)
+		if err == nil {
+			t.RawOutputSchema = raw
+		}
+	}
+}
+
+// addToolWithMetadata registers a tool entry with annotations and output schema applied.
+func addToolWithMetadata(srv *server.MCPServer, entry ToolEntry) {
+	applyToolMetadata(&entry.Tool)
+	srv.AddTool(entry.Tool, entry.Handler)
+}
 
 // Register adds all ralphglasses tools to the MCP server (backward compatible).
 func (s *Server) Register(srv *server.MCPServer) {
@@ -36,7 +59,7 @@ func (s *Server) RegisterCoreTools(srv *server.MCPServer) {
 	// Register core group tools.
 	coreGroup := s.buildCoreGroup()
 	for _, entry := range coreGroup.Tools {
-		srv.AddTool(entry.Tool, entry.Handler)
+		addToolWithMetadata(srv, entry)
 	}
 	s.loadedGroups["core"] = true
 }
@@ -48,7 +71,7 @@ func (s *Server) RegisterToolGroup(srv *server.MCPServer, group string) error {
 	for _, g := range groups {
 		if g.Name == group {
 			for _, entry := range g.Tools {
-				srv.AddTool(entry.Tool, entry.Handler)
+				addToolWithMetadata(srv, entry)
 			}
 			if s.loadedGroups != nil {
 				s.loadedGroups[group] = true
@@ -76,7 +99,7 @@ func (s *Server) RegisterAllTools(srv *server.MCPServer) {
 
 	for _, g := range s.buildToolGroups() {
 		for _, entry := range g.Tools {
-			srv.AddTool(entry.Tool, entry.Handler)
+			addToolWithMetadata(srv, entry)
 		}
 		s.loadedGroups[g.Name] = true
 	}
