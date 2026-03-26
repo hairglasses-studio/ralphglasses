@@ -2,8 +2,8 @@
 
 package process
 
-// CollectChildPIDs is a no-op stub on non-Linux platforms.
-// On Linux, /proc enumeration is used to find processes sharing the same pgid.
-func CollectChildPIDs(pid int) []int {
-	return nil
+// collectChildPIDsFromProc is a no-op on non-Linux platforms where /proc is
+// not available. Returns an empty (non-nil) slice.
+func collectChildPIDsFromProc(_ int) []int {
+	return []int{}
 }

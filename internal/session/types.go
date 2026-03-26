@@ -58,7 +58,9 @@ type Session struct {
 	CostHistory       []float64     `json:"cost_history,omitempty"`
 	OutputHistory    []string `json:"output_history,omitempty"`    // last N output lines
 	TotalOutputCount int      `json:"total_output_count,omitempty"` // monotonic counter for cursor-based tailing
-	ChildPids        []int    `json:"child_pids,omitempty"`         // PIDs of child processes sharing the session's process group
+
+	Pid       int   `json:"pid,omitempty"`        // process PID captured at launch
+	ChildPids []int `json:"child_pids,omitempty"` // child PIDs collected at launch (best-effort)
 
 	cmd        *exec.Cmd
 	cancel     func()

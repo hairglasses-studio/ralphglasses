@@ -15,7 +15,9 @@ DEVICE       ?=
 QEMU_RAM     ?= 4096
 QEMU_CPUS    ?= 4
 
-.PHONY: iso docker test-vm usb clean rootfs
+.PHONY: all iso docker test-vm usb clean rootfs check-paths
+
+all: check-paths
 
 # ── Build Docker image ───────────────────────────────────────────────
 docker:
@@ -104,6 +106,20 @@ usb: iso
 	sudo dd if=$(ISO_NAME) of=$(DEVICE) bs=4M status=progress oflag=sync
 	sudo sync
 	@echo "==> USB drive ready. Boot from $(DEVICE)."
+
+# ── Check service file paths ────────────────────────────────────
+# Validates all ExecStart= lines in *.service files use /usr/local/bin/.
+# Scans all .service files under distro/ recursively.
+# Run: make check-paths
+check-paths:
+	@bad=$$(find . -name '*.service' -type f -exec grep -Hn 'ExecStart=' {} + 2>/dev/null \
+		| grep -v 'ExecStart=/usr/local/bin/'); \
+	if [ -n "$$bad" ]; then \
+		echo "ERROR: ExecStart paths must use /usr/local/bin/ prefix:"; \
+		echo "$$bad"; \
+		exit 1; \
+	fi
+	@echo "check-paths: OK"
 
 # ── Clean build artifacts ────────────────────────────────────────────
 clean:
