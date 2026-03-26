@@ -8,7 +8,11 @@ import (
 // Send dispatches a desktop notification.
 // macOS: osascript, Linux: notify-send, other: no-op.
 func Send(title, body string) error {
-	switch runtime.GOOS {
+	return sendForOS(runtime.GOOS, title, body)
+}
+
+func sendForOS(goos, title, body string) error {
+	switch goos {
 	case "darwin":
 		script := `display notification "` + escapeOSA(body) + `" with title "` + escapeOSA(title) + `"`
 		return exec.Command("osascript", "-e", script).Run()
