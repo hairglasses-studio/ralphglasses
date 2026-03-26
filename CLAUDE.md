@@ -18,7 +18,7 @@ go build ./...
 go run . --scan-path ~/hairglasses-studio
 ```
 
-## MCP Server (109 tools, 13 namespaces)
+## MCP Server (110 tools, 13 namespaces)
 
 ```bash
 claude mcp add ralphglasses -- go run . mcp
@@ -71,7 +71,7 @@ The `distro/` directory contains configs for a bootable Linux thin client (Ubunt
 ## See Also
 
 - [docs/PROVIDER-SETUP.md](docs/PROVIDER-SETUP.md) — Multi-provider prerequisites, env vars, orchestration pattern
-- [docs/MCP-TOOLS.md](docs/MCP-TOOLS.md) — Full 86-tool table with descriptions, deferred loading
+- [docs/MCP-TOOLS.md](docs/MCP-TOOLS.md) — Full 110-tool table with descriptions, deferred loading
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Package layout, provider dispatch, middleware, fleet, tiered routing, prompt caching
 - [docs/MARATHON.md](docs/MARATHON.md) — Marathon supervisor, RC tools, environment setup
 - [docs/AUTONOMY.md](docs/AUTONOMY.md) — Autonomy levels, self-improvement subsystems
