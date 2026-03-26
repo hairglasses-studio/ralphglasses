@@ -53,9 +53,9 @@ func (m *Manager) LaunchWithFailover(ctx context.Context, opts LaunchOptions, ch
 // failover chain, then falls back to the default static chain. This replaces
 // the static [claude→gemini→codex] ordering with data-driven provider selection.
 func (m *Manager) LaunchWithSmartFailover(ctx context.Context, opts LaunchOptions) (*Session, Provider, error) {
-	m.mu.Lock()
+	m.mu.RLock()
 	optimizer := m.optimizer
-	m.mu.Unlock()
+	m.mu.RUnlock()
 
 	var chain FailoverChain
 	if optimizer != nil {
