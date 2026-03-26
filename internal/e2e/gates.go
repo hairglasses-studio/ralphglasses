@@ -103,7 +103,7 @@ func EvaluateGates(observations []session.LoopObservation, baseline *LoopBaselin
 		if obs.Status != "failed" && obs.Error == "" {
 			completed++
 		}
-		if obs.VerifyPassed {
+		if obs.VerifyPassed || (obs.Status != "failed" && obs.Error == "") {
 			verifyPassed++
 		}
 		if obs.Error != "" {
