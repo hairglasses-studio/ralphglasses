@@ -19,6 +19,7 @@ var (
 	selftestRepoPath   string
 	selftestJSON       bool
 	selftestGateOnly   bool
+	selftestDryRun     bool
 )
 
 var selftestCmd = &cobra.Command{
@@ -34,6 +35,12 @@ Exits 0 on pass/warn/skip, exits 1 on fail.`,
 
   # Gate-check only (no iterations)
   ralphglasses selftest --gate
+
+  # Validate config without running
+  ralphglasses selftest --dry-run
+
+  # Override budget for CI
+  ralphglasses selftest --budget 1.0
 
   # JSON output for CI
   ralphglasses selftest --gate --json`,
@@ -63,10 +70,40 @@ Exits 0 on pass/warn/skip, exits 1 on fail.`,
 		cfg := e2e.DefaultSelfTestConfig(repoPath)
 		cfg.MaxIterations = selftestIterations
 		cfg.BudgetUSD = selftestBudget
+		cfg.DryRun = selftestDryRun
 
 		runner, err := e2e.Prepare(ctx, cfg)
 		if err != nil {
 			return fmt.Errorf("prepare self-test: %w", err)
+		}
+
+		if selftestDryRun {
+			if selftestJSON {
+				out := map[string]any{
+					"dry_run":     true,
+					"repo_path":   cfg.RepoPath,
+					"iterations":  cfg.MaxIterations,
+					"budget_usd":  cfg.BudgetUSD,
+					"binary_path": runner.BinaryPath,
+					"binary_hash": runner.BinaryHash,
+					"status":      "validated",
+				}
+				data, err := json.MarshalIndent(out, "", "  ")
+				if err != nil {
+					return err
+				}
+				fmt.Println(string(data))
+			} else {
+				fmt.Printf("Self-test config validated (dry run):\n")
+				fmt.Printf("  Repo:       %s\n", cfg.RepoPath)
+				fmt.Printf("  Iterations: %d\n", cfg.MaxIterations)
+				fmt.Printf("  Budget:     $%.2f\n", cfg.BudgetUSD)
+				fmt.Printf("  Binary:     %s\n", runner.BinaryPath)
+				if runner.BinaryHash != "" {
+					fmt.Printf("  Hash:       %s\n", runner.BinaryHash)
+				}
+			}
+			return nil
 		}
 
 		result, err := runner.Run(ctx)
@@ -120,5 +157,6 @@ func init() {
 	selftestCmd.Flags().StringVar(&selftestRepoPath, "repo-path", ".", "repository path to test")
 	selftestCmd.Flags().BoolVar(&selftestJSON, "json", false, "output JSON for automation")
 	selftestCmd.Flags().BoolVar(&selftestGateOnly, "gate", false, "gate-check only, skip iterations")
+	selftestCmd.Flags().BoolVar(&selftestDryRun, "dry-run", false, "validate config and print summary without running iterations")
 	rootCmd.AddCommand(selftestCmd)
 }

@@ -56,6 +56,18 @@ func TestSelftestCmd_Defaults(t *testing.T) {
 	}
 }
 
+func TestSelftestCmd_DryRunFlag(t *testing.T) {
+	f := selftestCmd.Flags()
+
+	dryRun, err := f.GetBool("dry-run")
+	if err != nil {
+		t.Fatalf("dry-run flag not found: %v", err)
+	}
+	if dryRun {
+		t.Error("dry-run default should be false")
+	}
+}
+
 func TestSelftestCmd_Registration(t *testing.T) {
 	// Verify the command is registered on rootCmd.
 	found := false

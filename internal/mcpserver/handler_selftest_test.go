@@ -188,3 +188,68 @@ func TestHandleSelfTest_InvalidBudget(t *testing.T) {
 		t.Fatal("expected error result for negative budget")
 	}
 }
+
+func TestHandleSelfTest_DryRun(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"repo":    repoPath,
+		"dry_run": true,
+	}
+
+	result, err := srv.handleSelfTest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %v", result.Content)
+	}
+
+	text := result.Content[0].(mcp.TextContent).Text
+	var resp map[string]any
+	if err := json.Unmarshal([]byte(text), &resp); err != nil {
+		t.Fatalf("invalid JSON response: %v", err)
+	}
+
+	if resp["dry_run"] != true {
+		t.Errorf("dry_run = %v, want true", resp["dry_run"])
+	}
+	if resp["status"] != "validated" {
+		t.Errorf("status = %v, want validated", resp["status"])
+	}
+}
+
+func TestHandleSelfTest_DryRunFalseDefault(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"repo": repoPath,
+	}
+
+	result, err := srv.handleSelfTest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %v", result.Content)
+	}
+
+	text := result.Content[0].(mcp.TextContent).Text
+	var resp map[string]any
+	if err := json.Unmarshal([]byte(text), &resp); err != nil {
+		t.Fatalf("invalid JSON response: %v", err)
+	}
+
+	if resp["dry_run"] != false {
+		t.Errorf("dry_run = %v, want false", resp["dry_run"])
+	}
+	if resp["status"] != "prepared" {
+		t.Errorf("status = %v, want prepared", resp["status"])
+	}
+}

@@ -216,19 +216,24 @@ var OutputSchemas = map[string]map[string]any{
 	},
 
 	"ralphglasses_session_list": {
-		"type": "array",
-		"items": map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"id":        map[string]any{"type": "string"},
-				"provider":  map[string]any{"type": "string"},
-				"repo":      map[string]any{"type": "string"},
-				"status":    map[string]any{"type": "string"},
-				"model":     map[string]any{"type": "string"},
-				"spent_usd": map[string]any{"type": "number"},
-				"turns":     map[string]any{"type": "integer"},
-				"agent":     map[string]any{"type": "string"},
-				"team":      map[string]any{"type": "string"},
+		"type": "object",
+		"properties": map[string]any{
+			"sessions": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"id":        map[string]any{"type": "string"},
+						"provider":  map[string]any{"type": "string"},
+						"repo":      map[string]any{"type": "string"},
+						"status":    map[string]any{"type": "string"},
+						"model":     map[string]any{"type": "string"},
+						"spent_usd": map[string]any{"type": "number"},
+						"turns":     map[string]any{"type": "integer"},
+						"agent":     map[string]any{"type": "string"},
+						"team":      map[string]any{"type": "string"},
+					},
+				},
 			},
 		},
 	},
