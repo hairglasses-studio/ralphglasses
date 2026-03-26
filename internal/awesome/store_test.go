@@ -1,9 +1,20 @@
 package awesome
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
+
+func TestStorePath(t *testing.T) {
+	t.Parallel()
+	got := StorePath("/home/user/repo")
+	want := filepath.Join("/home/user/repo", ".ralph/awesome")
+	if got != want {
+		t.Errorf("StorePath = %q, want %q", got, want)
+	}
+}
 
 func TestStoreRoundTrip_Index(t *testing.T) {
 	t.Parallel()
@@ -100,5 +111,77 @@ func TestStoreRotation(t *testing.T) {
 	}
 	if prev.Source != "v1" {
 		t.Errorf("prev source = %q, want v1", prev.Source)
+	}
+}
+
+func TestSaveReport(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	content := "# Test Report\n\nSome content here"
+
+	if err := SaveReport(dir, content); err != nil {
+		t.Fatalf("SaveReport: %v", err)
+	}
+
+	// Verify the file was written
+	path := filepath.Join(StorePath(dir), "report.md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(data) != content {
+		t.Errorf("report content = %q, want %q", string(data), content)
+	}
+}
+
+func TestLoadIndex_NotFound(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	_, err := LoadIndex(dir)
+	if err == nil {
+		t.Error("expected error loading non-existent index")
+	}
+}
+
+func TestLoadPrevIndex_NotFound(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	_, err := LoadPrevIndex(dir)
+	if err == nil {
+		t.Error("expected error loading non-existent prev index")
+	}
+}
+
+func TestLoadAnalysis_NotFound(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	_, err := LoadAnalysis(dir)
+	if err == nil {
+		t.Error("expected error loading non-existent analysis")
+	}
+}
+
+func TestSaveIndex_CreatesDirectory(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	// Use a nested path that doesn't exist yet
+	nested := filepath.Join(dir, "deep", "nested")
+
+	idx := &Index{
+		Source:    "test/repo",
+		FetchedAt: time.Now().UTC(),
+		Entries:   []AwesomeEntry{{Name: "a", URL: "u1"}},
+	}
+
+	if err := SaveIndex(nested, idx); err != nil {
+		t.Fatalf("SaveIndex: %v", err)
+	}
+
+	loaded, err := LoadIndex(nested)
+	if err != nil {
+		t.Fatalf("LoadIndex: %v", err)
+	}
+	if loaded.Source != "test/repo" {
+		t.Errorf("source = %q", loaded.Source)
 	}
 }
