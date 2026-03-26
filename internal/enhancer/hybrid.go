@@ -19,7 +19,7 @@ const (
 // ValidMode checks if a string is a valid enhance mode.
 func ValidMode(s string) EnhanceMode {
 	switch EnhanceMode(s) {
-	case ModeLocal, ModeLLM, ModeAuto:
+	case ModeLocal, ModeLLM, ModeAuto, ModeSampling:
 		return EnhanceMode(s)
 	default:
 		return ""
