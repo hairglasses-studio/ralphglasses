@@ -61,8 +61,26 @@ func TestParamSync(t *testing.T) {
 		}
 	}
 
-	// Cross-check: for each tool, ensure handler params are a subset of builder params.
-	var errors []string
+	// Sanity check: we should find a meaningful number of tools and handlers.
+	if len(builderParams) < 10 {
+		t.Fatalf("only found %d tools in builders — expected at least 10; AST extraction may be broken", len(builderParams))
+	}
+	if len(handlerParams) < 10 {
+		t.Fatalf("only found %d handler funcs with params — expected at least 10; AST extraction may be broken", len(handlerParams))
+	}
+	if len(toolToHandler) < 10 {
+		t.Fatalf("only found %d tool→handler mappings — expected at least 10; AST extraction may be broken", len(toolToHandler))
+	}
+
+	t.Logf("found %d tools in builders, %d handler funcs with params, %d tool→handler mappings",
+		len(builderParams), len(handlerParams), len(toolToHandler))
+
+	// Cross-check: for each tool, ensure handler params match builder params.
+	var (
+		errs     []string
+		warnings []string
+		checked  int
+	)
 	for toolName, bParams := range builderParams {
 		handlerFunc, ok := toolToHandler[toolName]
 		if !ok {
@@ -71,30 +89,53 @@ func TestParamSync(t *testing.T) {
 
 		hParams, ok := handlerParams[handlerFunc]
 		if !ok {
-			continue // Handler not found or doesn't read params.
+			// Handler exists but reads no params — fine if builder also declares none.
+			if len(bParams) > 0 {
+				for param := range bParams {
+					warnings = append(warnings, fmt.Sprintf(
+						"tool %s declares param %q in builder but handler %s reads no params at all",
+						toolName, param, handlerFunc))
+				}
+			}
+			continue
 		}
 
-		// Check handler reads a param not declared in builder.
+		checked++
+
+		// ERROR: handler reads a param not declared in builder (undeclared consumed param).
 		for param := range hParams {
 			if !bParams[param] {
-				errors = append(errors, fmt.Sprintf(
-					"handler %s reads param %q but tool %s does not declare it in builder",
+				errs = append(errs, fmt.Sprintf(
+					"UNDECLARED: handler %s reads param %q but tool %s does not declare it in builder",
 					handlerFunc, param, toolName))
 			}
 		}
 
-		// Check builder declares a param not read by handler.
+		// WARNING: builder declares a param not read by handler (unused declared param).
 		for param := range bParams {
 			if !hParams[param] {
-				errors = append(errors, fmt.Sprintf(
-					"tool %s declares param %q in builder but handler %s never reads it",
+				warnings = append(warnings, fmt.Sprintf(
+					"UNUSED: tool %s declares param %q in builder but handler %s never reads it",
 					toolName, param, handlerFunc))
 			}
 		}
 	}
 
-	for _, e := range errors {
+	t.Logf("cross-checked %d tools with both builder params and handler params", checked)
+
+	// Log warnings (unused declared params) — informational, not failures.
+	for _, w := range warnings {
+		t.Log(w)
+	}
+
+	// Fail on errors (undeclared consumed params) — these are real bugs.
+	for _, e := range errs {
 		t.Error(e)
+	}
+
+	// Also fail on unused declared params — they indicate stale builder declarations.
+	for _, w := range warnings {
+		t.Error(w)
 	}
 }
 
