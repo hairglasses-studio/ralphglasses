@@ -4,7 +4,7 @@ package process
 import (
 	"bytes"
 	"errors"
-	"log"
+	"log/slog"
 	"os"
 	"strings"
 	"syscall"
@@ -19,11 +19,11 @@ func TestSendSignal_GetpgidFailure_LogsWarningAndFallsToPID(t *testing.T) {
 		return 0, errors.New("injected getpgid failure")
 	}
 
-	// Capture log output.
+	// Capture slog output by installing a text handler that writes to a buffer.
 	var buf bytes.Buffer
-	origOutput := log.Writer()
-	log.SetOutput(&buf)
-	t.Cleanup(func() { log.SetOutput(origOutput) })
+	origLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	t.Cleanup(func() { slog.SetDefault(origLogger) })
 
 	// Send signal 0 (no-op probe) to our own PID — safe and always succeeds.
 	pid := os.Getpid()
@@ -34,8 +34,8 @@ func TestSendSignal_GetpgidFailure_LogsWarningAndFallsToPID(t *testing.T) {
 
 	// Assert warning log was emitted.
 	logOutput := buf.String()
-	if !strings.Contains(logOutput, "WARNING") {
-		t.Errorf("expected WARNING in log output, got: %q", logOutput)
+	if !strings.Contains(logOutput, "WARN") {
+		t.Errorf("expected WARN in log output, got: %q", logOutput)
 	}
 	if !strings.Contains(logOutput, "Getpgid") {
 		t.Errorf("expected 'Getpgid' in log output, got: %q", logOutput)
