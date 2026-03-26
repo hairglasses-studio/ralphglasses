@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -91,6 +92,77 @@ func TestHandleTeamCreate(t *testing.T) {
 			t.Errorf("expected team name in result, got: %s", text)
 		}
 	})
+}
+
+func TestHandleTeamCreate_DryRun(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	// Scan first so repos are populated
+	_, err := srv.handleScan(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("scan failed: %v", err)
+	}
+
+	result, err := srv.handleTeamCreate(context.Background(), makeRequest(map[string]any{
+		"repo":           "test-repo",
+		"name":           "dry-team",
+		"tasks":          "implement feature A\nwrite tests for feature A",
+		"provider":       "claude",
+		"max_budget_usd": 5.0,
+		"dry_run":        true,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success, got error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(text), &parsed); err != nil {
+		t.Fatalf("failed to parse dry_run result as JSON: %v\nraw: %s", err, text)
+	}
+
+	// Verify dry_run flag is set
+	if dryRun, ok := parsed["dry_run"].(bool); !ok || !dryRun {
+		t.Errorf("expected dry_run=true, got: %v", parsed["dry_run"])
+	}
+
+	// Verify team name
+	if name, _ := parsed["name"].(string); name != "dry-team" {
+		t.Errorf("expected name=dry-team, got: %s", name)
+	}
+
+	// Verify tasks were parsed
+	tasks, ok := parsed["tasks"].([]any)
+	if !ok {
+		t.Fatalf("expected tasks array, got: %T", parsed["tasks"])
+	}
+	if len(tasks) != 2 {
+		t.Errorf("expected 2 tasks, got: %d", len(tasks))
+	}
+
+	// Verify task_count
+	if count, _ := parsed["task_count"].(float64); count != 2 {
+		t.Errorf("expected task_count=2, got: %v", count)
+	}
+
+	// Verify no team was actually created by checking team status returns not found
+	statusResult, err := srv.handleTeamStatus(context.Background(), makeRequest(map[string]any{
+		"name": "dry-team",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !statusResult.IsError {
+		t.Fatal("expected team NOT to be created during dry_run, but team was found")
+	}
+	statusText := getResultText(statusResult)
+	if !strings.Contains(statusText, "TEAM_NOT_FOUND") {
+		t.Errorf("expected TEAM_NOT_FOUND, got: %s", statusText)
+	}
 }
 
 func TestHandleTeamDelegate(t *testing.T) {
