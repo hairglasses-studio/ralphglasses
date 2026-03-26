@@ -27,7 +27,7 @@ func buildCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 // The session runs in a background goroutine that parses streaming output.
 func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Session, error) {
 	if opts.RepoPath == "" {
-		return nil, fmt.Errorf("repo path required")
+		return nil, ErrRepoPathRequired
 	}
 	if opts.Prompt == "" && opts.Resume == "" && !opts.Continue {
 		return nil, fmt.Errorf("prompt required (unless resuming)")
