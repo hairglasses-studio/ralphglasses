@@ -86,3 +86,51 @@ func TestActionMenu_View(t *testing.T) {
 		t.Error("inactive menu should render empty")
 	}
 }
+
+func TestOverviewActions(t *testing.T) {
+	actions := OverviewActions()
+	if len(actions) == 0 {
+		t.Fatal("expected non-empty actions")
+	}
+	found := false
+	for _, a := range actions {
+		if a.Action == "scan" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected scan action in overview actions")
+	}
+}
+
+func TestRepoDetailActions(t *testing.T) {
+	actions := RepoDetailActions()
+	if len(actions) == 0 {
+		t.Fatal("expected non-empty actions")
+	}
+	found := false
+	for _, a := range actions {
+		if a.Action == "startLoop" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected startLoop action")
+	}
+}
+
+func TestSessionDetailActions(t *testing.T) {
+	actions := SessionDetailActions()
+	if len(actions) == 0 {
+		t.Fatal("expected non-empty actions")
+	}
+	found := false
+	for _, a := range actions {
+		if a.Action == "stopSession" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected stopSession action")
+	}
+}
