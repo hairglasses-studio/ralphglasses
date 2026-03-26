@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -244,7 +245,7 @@ func (m Model) startLoop(idx int) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	repo := m.Repos[idx]
-	if err := m.ProcMgr.Start(repo.Path); err != nil {
+	if err := m.ProcMgr.Start(context.TODO(), repo.Path); err != nil {
 		m.Notify.Show(fmt.Sprintf("Start error: %v", err), 3*time.Second)
 	} else {
 		m.Notify.Show(fmt.Sprintf("Started loop: %s", repo.Name), 3*time.Second)
@@ -257,7 +258,7 @@ func (m Model) stopLoop(idx int) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	repo := m.Repos[idx]
-	if err := m.ProcMgr.Stop(repo.Path); err != nil {
+	if err := m.ProcMgr.Stop(context.TODO(), repo.Path); err != nil {
 		m.Notify.Show(fmt.Sprintf("Stop error: %v", err), 3*time.Second)
 	} else {
 		m.Notify.Show(fmt.Sprintf("Stopped loop: %s", repo.Name), 3*time.Second)

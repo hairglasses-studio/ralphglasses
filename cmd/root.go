@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -100,7 +101,7 @@ fleet management from any MCP-capable client.`,
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		go func() {
 			<-sigCh
-			m.ProcMgr.StopAll()
+			m.ProcMgr.StopAll(context.TODO())
 			os.Exit(0)
 		}()
 

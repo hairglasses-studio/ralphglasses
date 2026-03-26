@@ -126,7 +126,7 @@ func (s *Server) handleStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.
 	return jsonResult(detail), nil
 }
 
-func (s *Server) handleStart(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleStart(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
 		return codedError(ErrInvalidParams, "repo name required"), nil
@@ -143,13 +143,13 @@ func (s *Server) handleStart(_ context.Context, req mcp.CallToolRequest) (*mcp.C
 	if r == nil {
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
-	if err := s.ProcMgr.Start(r.Path); err != nil {
+	if err := s.ProcMgr.Start(ctx, r.Path); err != nil {
 		return codedError(ErrInternal, fmt.Sprintf("start failed: %v", err)), nil
 	}
 	return textResult(fmt.Sprintf("Started ralph loop for %s", name)), nil
 }
 
-func (s *Server) handleStop(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleStop(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
 		return codedError(ErrInvalidParams, "repo name required"), nil
@@ -166,14 +166,14 @@ func (s *Server) handleStop(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	if r == nil {
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
-	if err := s.ProcMgr.Stop(r.Path); err != nil {
+	if err := s.ProcMgr.Stop(ctx, r.Path); err != nil {
 		return codedError(ErrInternal, fmt.Sprintf("stop failed: %v", err)), nil
 	}
 	return textResult(fmt.Sprintf("Stopped ralph loop for %s", name)), nil
 }
 
-func (s *Server) handleStopAll(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	s.ProcMgr.StopAll()
+func (s *Server) handleStopAll(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	s.ProcMgr.StopAll(ctx)
 	return textResult("All managed loops stopped"), nil
 }
 
