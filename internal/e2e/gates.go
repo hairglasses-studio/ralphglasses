@@ -2,7 +2,7 @@ package e2e
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os/exec"
 	"path/filepath"
 	"time"
@@ -268,7 +268,7 @@ func EvaluateFromObservations(repoRoot string, thresholds GateThresholds, hours 
 	freshBaseline := BuildBaseline(observations, float64(hours))
 	if saveErr := SaveBaseline(blPath, freshBaseline); saveErr != nil {
 		// Non-fatal — log but don't fail the gate
-		log.Printf("WARNING: failed to save baseline: %v", saveErr)
+		slog.Warn("failed to save baseline", "err", saveErr)
 	}
 
 	return report, nil
