@@ -328,6 +328,42 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 	return fleetJSON(rec)
 }
 
+func (s *Server) handleFleetDLQ(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if s.FleetCoordinator == nil {
+		return codedError(ErrNotRunning, "fleet coordinator not active — DLQ requires coordinator mode"), nil
+	}
+
+	action := getStringArg(req, "action")
+	if action == "" {
+		action = "list"
+	}
+
+	switch action {
+	case "list":
+		items := s.FleetCoordinator.ListDLQ()
+		return fleetJSON(map[string]any{
+			"items": items,
+			"count": len(items),
+		})
+	case "retry":
+		itemID := getStringArg(req, "item_id")
+		if itemID == "" {
+			return codedError(ErrInvalidParams, "item_id required for retry action"), nil
+		}
+		if err := s.FleetCoordinator.RetryFromDLQ(itemID); err != nil {
+			return codedError(ErrInternal, err.Error()), nil
+		}
+		return fleetJSON(map[string]string{"status": "retried", "item_id": itemID})
+	case "purge":
+		n := s.FleetCoordinator.PurgeDLQ()
+		return fleetJSON(map[string]any{"status": "purged", "count": n})
+	case "depth":
+		return fleetJSON(map[string]any{"dlq_depth": s.FleetCoordinator.DLQDepth()})
+	default:
+		return codedError(ErrInvalidParams, fmt.Sprintf("unknown action %q — use list, retry, purge, or depth", action)), nil
+	}
+}
+
 // fleetJSON marshals v and returns it as a text content result.
 func fleetJSON(v any) (*mcp.CallToolResult, error) {
 	data, err := json.MarshalIndent(v, "", "  ")
