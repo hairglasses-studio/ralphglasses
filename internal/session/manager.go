@@ -430,14 +430,14 @@ func (m *Manager) Stop(id string) error {
 	m.mu.Unlock()
 
 	if !ok {
-		return fmt.Errorf("session not found: %s", id)
+		return fmt.Errorf("session %s: %w", id, ErrSessionNotFound)
 	}
 
 	s.mu.Lock()
 
 	if s.Status != StatusRunning && s.Status != StatusLaunching {
 		s.mu.Unlock()
-		return fmt.Errorf("session %s is not running (status: %s)", id, s.Status)
+		return fmt.Errorf("session %s (status: %s): %w", id, s.Status, ErrSessionNotRunning)
 	}
 
 	s.Status = StatusStopped
@@ -543,13 +543,13 @@ func (m *Manager) FindByRepo(repoName string) []*Session {
 // LaunchTeam creates an agent team by launching a lead session with team env vars.
 func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatus, error) {
 	if config.Name == "" {
-		return nil, fmt.Errorf("team name required")
+		return nil, ErrTeamNameRequired
 	}
 	if config.RepoPath == "" {
-		return nil, fmt.Errorf("repo path required")
+		return nil, ErrRepoPathRequired
 	}
 	if len(config.Tasks) == 0 {
-		return nil, fmt.Errorf("at least one task required")
+		return nil, ErrNoTasks
 	}
 
 	// Build a lead prompt that instructs the lead to use agent teams
@@ -688,7 +688,7 @@ func (m *Manager) DelegateTask(teamName string, task TeamTask) (int, error) {
 	defer m.mu.Unlock()
 	team, ok := m.teams[teamName]
 	if !ok {
-		return 0, fmt.Errorf("team not found: %s", teamName)
+		return 0, fmt.Errorf("team %s: %w", teamName, ErrTeamNotFound)
 	}
 	team.Tasks = append(team.Tasks, task)
 	return len(team.Tasks), nil
@@ -863,12 +863,12 @@ func (m *Manager) waitForSession(ctx context.Context, s *Session) error {
 			if exitReason != "" {
 				return true, errors.New(exitReason)
 			}
-			return true, fmt.Errorf("session %s errored", s.ID)
+			return true, fmt.Errorf("session %s: %w", s.ID, ErrSessionErrored)
 		case StatusStopped:
 			if exitReason != "" {
 				return true, errors.New(exitReason)
 			}
-			return true, fmt.Errorf("session %s stopped", s.ID)
+			return true, fmt.Errorf("session %s: %w", s.ID, ErrSessionStopped)
 		}
 		return false, nil
 	}
@@ -878,7 +878,7 @@ func (m *Manager) waitForSession(ctx context.Context, s *Session) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-timer.C:
-			return fmt.Errorf("waitForSession: timed out after %s waiting for session %s", timeout, s.ID)
+			return fmt.Errorf("session %s after %s: %w", s.ID, timeout, ErrWaitTimeout)
 		case <-doneCh:
 			// Process exited. Give the runner goroutine a moment to set status.
 			time.Sleep(50 * time.Millisecond)
@@ -889,7 +889,7 @@ func (m *Manager) waitForSession(ctx context.Context, s *Session) error {
 			s.Lock()
 			status := s.Status
 			s.Unlock()
-			return fmt.Errorf("session %s process exited unexpectedly with status %s", s.ID, status)
+			return fmt.Errorf("session %s (status: %s): %w", s.ID, status, ErrUnexpectedExit)
 		case <-ticker.C:
 			if done, err := checkTerminal(); done {
 				return err
@@ -1137,17 +1137,17 @@ func (m *Manager) MigrateSession(ctx context.Context, sessionID string, targetPr
 	s, ok := m.sessions[sessionID]
 	m.mu.Unlock()
 	if !ok {
-		return nil, fmt.Errorf("session not found: %s", sessionID)
+		return nil, fmt.Errorf("session %s: %w", sessionID, ErrSessionNotFound)
 	}
 
 	s.mu.Lock()
 	if s.Status != StatusRunning && s.Status != StatusLaunching {
 		s.mu.Unlock()
-		return nil, fmt.Errorf("session %s is not running (status: %s)", sessionID, s.Status)
+		return nil, fmt.Errorf("session %s (status: %s): %w", sessionID, s.Status, ErrSessionNotRunning)
 	}
 	if s.Provider == targetProvider {
 		s.mu.Unlock()
-		return nil, fmt.Errorf("session %s is already on provider %s", sessionID, targetProvider)
+		return nil, fmt.Errorf("session %s on %s: %w", sessionID, targetProvider, ErrAlreadyOnProvider)
 	}
 	// Capture state before stopping.
 	remaining := s.BudgetUSD - s.SpentUSD
