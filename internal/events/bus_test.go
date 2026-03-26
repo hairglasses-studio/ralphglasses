@@ -475,6 +475,100 @@ func TestSubscribeFiltered_Unsubscribe(t *testing.T) {
 	}
 }
 
+func TestStartAsyncIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	persistPath := filepath.Join(dir, "idem_events.jsonl")
+
+	bus := NewBus(100)
+	bus.AsyncWrites = true
+	if err := bus.PersistTo(persistPath); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call StartAsync twice — should not panic or leak goroutines
+	bus.StartAsync()
+	bus.StartAsync()
+
+	bus.Publish(Event{Type: SessionStarted, RepoName: "test"})
+
+	if err := bus.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	events, err := LoadEvents(persistPath, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 {
+		t.Errorf("expected 1 event, got %d", len(events))
+	}
+}
+
+func TestEventTTL(t *testing.T) {
+	bus := NewBus(100)
+	bus.SetRetentionTTL(100 * time.Millisecond)
+
+	// Publish events with explicit old timestamps
+	oldTime := time.Now().Add(-200 * time.Millisecond)
+	bus.Publish(Event{Type: SessionStarted, Timestamp: oldTime, RepoName: "old1"})
+	bus.Publish(Event{Type: SessionStarted, Timestamp: oldTime, RepoName: "old2"})
+
+	// Wait to ensure TTL window passes
+	time.Sleep(150 * time.Millisecond)
+
+	// Publish a fresh event — this triggers TTL trimming
+	bus.Publish(Event{Type: SessionEnded, RepoName: "fresh"})
+
+	history := bus.History("", 100)
+	if len(history) != 1 {
+		t.Fatalf("expected 1 event after TTL trim, got %d", len(history))
+	}
+	if history[0].RepoName != "fresh" {
+		t.Errorf("expected fresh event, got %q", history[0].RepoName)
+	}
+}
+
+func TestSubscribeFiltered(t *testing.T) {
+	bus := NewBus(100)
+	ch := bus.SubscribeFiltered("test-filter", SessionStarted)
+
+	bus.Publish(Event{Type: SessionStarted, RepoName: "yes1"})
+	bus.Publish(Event{Type: CostUpdate, RepoName: "no"})
+	bus.Publish(Event{Type: LoopStarted, RepoName: "no2"})
+	bus.Publish(Event{Type: SessionStarted, RepoName: "yes2"})
+
+	// Should receive only the two SessionStarted events
+	for _, want := range []string{"yes1", "yes2"} {
+		select {
+		case e := <-ch:
+			if e.Type != SessionStarted {
+				t.Errorf("type = %q, want %q", e.Type, SessionStarted)
+			}
+			if e.RepoName != want {
+				t.Errorf("repo = %q, want %q", e.RepoName, want)
+			}
+		case <-time.After(time.Second):
+			t.Fatalf("timeout waiting for event %q", want)
+		}
+	}
+
+	// Channel should be empty
+	select {
+	case e := <-ch:
+		t.Errorf("unexpected event: %+v", e)
+	case <-time.After(50 * time.Millisecond):
+		// expected
+	}
+}
+
+func TestWorkerEventTypes(t *testing.T) {
+	for _, et := range []EventType{WorkerDeregistered, WorkerPaused, WorkerResumed} {
+		if !ValidEventType(et) {
+			t.Errorf("ValidEventType(%q) = false, want true", et)
+		}
+	}
+}
+
 func TestValidEventType_Known(t *testing.T) {
 	knownTypes := []EventType{
 		SessionStarted, SessionEnded, SessionStopped,
@@ -484,6 +578,7 @@ func TestValidEventType_Known(t *testing.T) {
 		PromptEnhanced, ToolCalled, SessionError,
 		AutoOptimized, ProviderSelected, SessionRecovered, ContextConflict,
 		ProviderHealthChanged, SelfImproveMerged, SelfImprovePR,
+		WorkerDeregistered, WorkerPaused, WorkerResumed,
 	}
 	for _, et := range knownTypes {
 		if !ValidEventType(et) {
