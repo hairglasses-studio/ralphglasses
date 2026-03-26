@@ -597,13 +597,16 @@ func TestTextResult(t *testing.T) {
 
 func TestErrResult(t *testing.T) {
 	t.Parallel()
-	r := errResult("something failed")
+	r := codedError(ErrInternal, "something failed")
 	if !r.IsError {
-		t.Error("errResult should be an error")
+		t.Error("codedError should be an error")
 	}
 	text := getResultText(r)
-	if text != "something failed" {
-		t.Errorf("text = %q, want %q", text, "something failed")
+	if !strings.Contains(text, `"error_code":"INTERNAL_ERROR"`) {
+		t.Errorf("expected error_code in text, got %q", text)
+	}
+	if !strings.Contains(text, "[INTERNAL_ERROR] something failed") {
+		t.Errorf("expected prefixed message in text, got %q", text)
 	}
 }
 
