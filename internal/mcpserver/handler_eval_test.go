@@ -112,6 +112,68 @@ func TestHandleEvalChangepoints_RepoNotFound(t *testing.T) {
 	}
 }
 
+// --- eval handlers with valid repo but no observations ---
+
+func TestHandleEvalCounterfactual_NoObservations(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleEvalCounterfactual(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "no observations") {
+		t.Errorf("expected 'no observations' message, got: %s", text)
+	}
+}
+
+func TestHandleEvalABTest_NoObservations(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleEvalABTest(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "no observations") {
+		t.Errorf("expected 'no observations' message, got: %s", text)
+	}
+}
+
+func TestHandleEvalChangepoints_NoObservations(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleEvalChangepoints(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "no observations") {
+		t.Errorf("expected 'no observations' message, got: %s", text)
+	}
+}
+
 // --- handleBanditStatus ---
 
 func TestHandleBanditStatus_NilSessionManager(t *testing.T) {
