@@ -119,6 +119,7 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_workflow_run":            {Title: "Run Workflow", OpenWorldHint: boolPtr(true)},
 	"ralphglasses_bandit_status":           {Title: "Bandit Status", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_confidence_calibration":  {Title: "Confidence Calibration", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_circuit_reset":           {Title: "Reset Circuit Breaker", DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true)},
 
 	// ── eval ─────────────────────────────────────────────────────────────
 	"ralphglasses_eval_counterfactual": {Title: "Counterfactual Eval", ReadOnlyHint: boolPtr(true)},

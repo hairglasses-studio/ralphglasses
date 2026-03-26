@@ -617,6 +617,10 @@ func (s *Server) buildAdvancedGroup() ToolGroup {
 			{mcp.NewTool("ralphglasses_confidence_calibration",
 				mcp.WithDescription("View calibrated confidence model weights, training status, and feature importances"),
 			), s.handleConfidenceCalibration},
+			{mcp.NewTool("ralphglasses_circuit_reset",
+				mcp.WithDescription("Reset circuit breaker state for a named service, re-enabling requests after failures. Use 'enhancer' for the LLM prompt enhancer circuit breaker, or a repo name for its file-based circuit breaker."),
+				mcp.WithString("service", mcp.Required(), mcp.Description("Service/circuit to reset: 'enhancer' or a repo name")),
+			), s.handleCircuitReset},
 		},
 	}
 }
