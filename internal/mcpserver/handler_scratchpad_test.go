@@ -230,3 +230,111 @@ func TestHandleScratchpadResolve(t *testing.T) {
 		t.Errorf("item 3 should not be resolved")
 	}
 }
+
+func TestHandleScratchpadDelete(t *testing.T) {
+	t.Parallel()
+	srv, root := scratchpadServer(t)
+
+	// Write a scratchpad with numbered items.
+	content := "# Findings\n\n1. First finding\n2. Second finding\n3. Third finding\n"
+	ralphDir := filepath.Join(root, ".ralph")
+	if err := os.WriteFile(filepath.Join(ralphDir, "bugs_scratchpad.md"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Delete item 2.
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"scratchpad": "bugs",
+		"finding_id": "2",
+	}
+
+	result, err := srv.handleScratchpadDelete(context.Background(), req)
+	if err != nil {
+		t.Fatalf("delete error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("delete tool error: %v", result.Content)
+	}
+
+	text := result.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(text, "Deleted finding 2") {
+		t.Errorf("unexpected delete result: %s", text)
+	}
+	if !strings.Contains(text, "Second finding") {
+		t.Errorf("expected deleted finding summary in result: %s", text)
+	}
+
+	// Read and verify item 2 is gone.
+	data, err := os.ReadFile(filepath.Join(ralphDir, "bugs_scratchpad.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fileText := string(data)
+	if strings.Contains(fileText, "2. Second finding") {
+		t.Errorf("item 2 should have been deleted, got:\n%s", fileText)
+	}
+	if !strings.Contains(fileText, "1. First finding") {
+		t.Errorf("item 1 should still exist, got:\n%s", fileText)
+	}
+	if !strings.Contains(fileText, "3. Third finding") {
+		t.Errorf("item 3 should still exist, got:\n%s", fileText)
+	}
+}
+
+func TestHandleScratchpadDelete_NotFound(t *testing.T) {
+	t.Parallel()
+	srv, root := scratchpadServer(t)
+
+	// Write a scratchpad.
+	ralphDir := filepath.Join(root, ".ralph")
+	if err := os.WriteFile(filepath.Join(ralphDir, "notes_scratchpad.md"), []byte("1. Only item\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"scratchpad": "notes",
+		"finding_id": "99",
+	}
+
+	result, err := srv.handleScratchpadDelete(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for nonexistent finding")
+	}
+}
+
+func TestHandleScratchpadDelete_MissingParams(t *testing.T) {
+	t.Parallel()
+	srv, _ := scratchpadServer(t)
+
+	// Missing finding_id.
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"scratchpad": "test",
+	}
+
+	result, err := srv.handleScratchpadDelete(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing finding_id")
+	}
+
+	// Missing scratchpad.
+	req.Params.Arguments = map[string]any{
+		"finding_id": "1",
+	}
+
+	result, err = srv.handleScratchpadDelete(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected error for missing scratchpad")
+	}
+}
