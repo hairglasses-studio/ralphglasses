@@ -40,6 +40,7 @@ func LoopRunsToRows(loops []*session.LoopRun, tickFrame int) []components.Row {
 			repo = filepath.Base(l.RepoPath)
 		}
 		status := l.Status
+		paused := l.Paused
 		iterCount := len(l.Iterations)
 		phase := "-"
 		if iterCount > 0 {
@@ -47,6 +48,9 @@ func LoopRunsToRows(loops []*session.LoopRun, tickFrame int) []components.Row {
 		}
 		l.Unlock()
 
+		if paused {
+			status = "paused"
+		}
 		isActive := status == "running"
 		statusCell := fmt.Sprintf("%s%s %s",
 			components.ActivityDot(isActive, tickFrame),
