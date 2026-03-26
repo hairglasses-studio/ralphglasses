@@ -7,16 +7,45 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 )
 
-// scanProcessesFn is the package-level hook used by auditOrphanedProcesses.
-// Tests may replace it to inject a controlled set of PIDs.
-var scanProcessesFn = scanRalphLoopProcesses
+// scanProcessesFnPtr is an atomic pointer to the scan function, allowing
+// tests to stub it without data races against background goroutines.
+var scanProcessesFnPtr atomic.Pointer[func() []int]
 
-// orphanLogFn is called for each orphaned PID. Tests may replace it to
-// capture log output without writing to stderr.
-var orphanLogFn = func(pid int) {
-	slog.Warn("orphaned ralph process detected", "pid", pid)
+// orphanLogFnPtr is an atomic pointer to the orphan log function, allowing
+// tests to stub it without data races against background goroutines.
+var orphanLogFnPtr atomic.Pointer[func(int)]
+
+func init() {
+	scanFn := scanRalphLoopProcesses
+	scanProcessesFnPtr.Store(&scanFn)
+
+	logFn := func(pid int) {
+		slog.Warn("orphaned ralph process detected", "pid", pid)
+	}
+	orphanLogFnPtr.Store(&logFn)
+}
+
+// loadScanProcessesFn loads the current scan function atomically.
+func loadScanProcessesFn() func() []int {
+	return *scanProcessesFnPtr.Load()
+}
+
+// setScanProcessesFn atomically replaces the scan function (for testing).
+func setScanProcessesFn(fn func() []int) {
+	scanProcessesFnPtr.Store(&fn)
+}
+
+// loadOrphanLogFn loads the current orphan log function atomically.
+func loadOrphanLogFn() func(int) {
+	return *orphanLogFnPtr.Load()
+}
+
+// setOrphanLogFn atomically replaces the orphan log function (for testing).
+func setOrphanLogFn(fn func(int)) {
+	orphanLogFnPtr.Store(&fn)
 }
 
 // scanRalphLoopProcesses returns the PIDs of all running processes whose
@@ -81,7 +110,7 @@ func scanRalphLoopProcessesPS() []int {
 // auditOrphanedProcesses scans for ralph-related processes and logs a warning
 // for any PID that is not tracked by this manager.
 func (m *Manager) auditOrphanedProcesses() {
-	scanned := scanProcessesFn()
+	scanned := loadScanProcessesFn()()
 	if len(scanned) == 0 {
 		return
 	}
@@ -95,7 +124,7 @@ func (m *Manager) auditOrphanedProcesses() {
 
 	for _, pid := range scanned {
 		if !known[pid] {
-			orphanLogFn(pid)
+			loadOrphanLogFn()(pid)
 		}
 	}
 }
