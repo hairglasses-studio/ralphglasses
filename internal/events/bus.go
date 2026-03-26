@@ -2,6 +2,7 @@ package events
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -168,8 +169,14 @@ func (b *Bus) SetRetentionTTL(ttl time.Duration) {
 	b.retentionTTL = ttl
 }
 
-// Publish sends an event to all subscribers and appends it to history.
-func (b *Bus) Publish(event Event) {
+// PublishCtx sends an event to all subscribers and appends it to history,
+// respecting context cancellation. If the context is already cancelled,
+// the event is not published and the context error is returned.
+func (b *Bus) PublishCtx(ctx context.Context, event Event) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	if event.Timestamp.IsZero() {
 		event.Timestamp = time.Now()
 	}
@@ -248,6 +255,15 @@ func (b *Bus) Publish(event Event) {
 		default:
 		}
 	}
+
+	return nil
+}
+
+// Publish sends an event to all subscribers and appends it to history.
+// This is a backward-compatible wrapper around PublishCtx that uses
+// context.Background().
+func (b *Bus) Publish(event Event) {
+	_ = b.PublishCtx(context.Background(), event)
 }
 
 // Subscribe creates a buffered channel that receives events.
