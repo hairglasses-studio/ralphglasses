@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"path/filepath"
+	"time"
 
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
@@ -43,7 +44,8 @@ Or with a custom scan path:
 			version+" ("+commit+")",
 			server.WithToolCapabilities(true),
 			server.WithRecovery(),
-			// Outermost → innermost: instrumentation → event bus → validation → handler
+			// Outermost → innermost: timeout → instrumentation → event bus → validation → handler
+			server.WithToolHandlerMiddleware(mcpserver.TimeoutMiddleware(30*time.Second)),
 			server.WithToolHandlerMiddleware(mcpserver.InstrumentationMiddleware(toolRec)),
 			server.WithToolHandlerMiddleware(mcpserver.EventBusMiddleware(bus)),
 			server.WithToolHandlerMiddleware(mcpserver.ValidationMiddleware(sp)),
