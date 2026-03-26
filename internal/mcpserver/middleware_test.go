@@ -174,6 +174,36 @@ func TestValidationMiddleware_InvalidPath(t *testing.T) {
 	}
 }
 
+func TestValidationMiddleware_AbsoluteRepoPath_WithinScanRoot(t *testing.T) {
+	t.Parallel()
+	mw := ValidationMiddleware("/tmp/scan")
+	wrapped := mw(okHandler)
+
+	req := makeReq("merge_verify", map[string]any{"repo": "/tmp/scan/my-repo"})
+	result, err := wrapped(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatal("absolute repo path within scanRoot should pass validation")
+	}
+}
+
+func TestValidationMiddleware_AbsoluteRepoPath_OutsideScanRoot(t *testing.T) {
+	t.Parallel()
+	mw := ValidationMiddleware("/tmp/scan")
+	wrapped := mw(okHandler)
+
+	req := makeReq("coverage_report", map[string]any{"repo": "/etc/passwd"})
+	result, err := wrapped(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("absolute repo path outside scanRoot should be rejected")
+	}
+}
+
 func TestValidationMiddleware_NoArgs(t *testing.T) {
 	t.Parallel()
 	mw := ValidationMiddleware("")
