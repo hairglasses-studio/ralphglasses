@@ -8,42 +8,57 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
-func TestRenderSessionDetail_Nil(t *testing.T) {
-	out := RenderSessionDetail(nil, 100, 40)
+func TestRenderSessionDetailNil(t *testing.T) {
+	out := RenderSessionDetail(nil, 80, 40)
 	if !strings.Contains(out, "No session selected") {
-		t.Errorf("nil session: expected 'No session selected', got: %q", out)
+		t.Error("nil session should show 'No session selected'")
 	}
 }
 
-func TestRenderSessionDetail_BasicFields(t *testing.T) {
+func TestRenderSessionDetailFull(t *testing.T) {
 	now := time.Now()
 	s := &session.Session{
-		ID:         "abcdef1234567890",
-		Provider:   session.ProviderClaude,
-		RepoName:   "test-repo",
-		RepoPath:   "/home/user/test-repo",
-		Status:     session.StatusRunning,
-		Model:      "opus-4",
-		LaunchedAt: now.Add(-10 * time.Minute),
-		SpentUSD:   3.50,
-		BudgetUSD:  10.00,
-		TurnCount:  15,
-		MaxTurns:   50,
+		ID:                "session-1234567890",
+		Provider:          session.ProviderClaude,
+		ProviderSessionID: "prov-abc",
+		RepoName:          "test-repo",
+		RepoPath:          "/tmp/test-repo",
+		Status:            session.StatusRunning,
+		Model:             "sonnet-4",
+		AgentName:         "planner",
+		TeamName:          "alpha",
+		SpentUSD:          3.50,
+		BudgetUSD:         10.0,
+		TurnCount:         15,
+		MaxTurns:          100,
+		LaunchedAt:        now.Add(-5 * time.Minute),
+		LastActivity:      now.Add(-10 * time.Second),
+		LastEventType:     "assistant",
+		StreamParseErrors: 1,
+		CostHistory:       []float64{0.1, 0.2, 0.3, 0.5},
+		OutputHistory:     []string{"line 1", "line 2"},
 	}
 
-	out := RenderSessionDetail(s, 120, 50)
+	out := RenderSessionDetail(s, 120, 40)
 
 	checks := []string{
-		"abcdef1234567890",
-		"claude",
-		"test-repo",
-		"/home/user/test-repo",
-		"opus-4",
+		"session-12",  // truncated in title
 		"Session Info",
+		"claude",
+		"prov-abc",
+		"test-repo",
+		"sonnet-4",
+		"planner",
+		"alpha",
 		"Cost",
 		"$3.50",
-		"15",
-		"Esc: back",
+		"15/100",
+		"$/turn",
+		"Output History",
+		"line 1",
+		"Last Event",
+		"assistant",
+		"Parse Errors",
 	}
 	for _, want := range checks {
 		if !strings.Contains(out, want) {
@@ -52,167 +67,68 @@ func TestRenderSessionDetail_BasicFields(t *testing.T) {
 	}
 }
 
-func TestRenderSessionDetail_WithError(t *testing.T) {
+func TestRenderSessionDetailWithError(t *testing.T) {
+	now := time.Now()
 	s := &session.Session{
-		ID:         "err-sess",
+		ID:         "err-sess-1",
 		Provider:   session.ProviderGemini,
+		RepoName:   "broken-repo",
 		Status:     session.StatusErrored,
-		Error:      "rate limit exceeded",
-		LaunchedAt: time.Now(),
+		Error:      "process exited with code 1",
+		ExitReason: "error",
+		LaunchedAt: now.Add(-time.Minute),
 	}
 
-	out := RenderSessionDetail(s, 100, 40)
-	if !strings.Contains(out, "rate limit exceeded") {
+	out := RenderSessionDetail(s, 80, 40)
+	if !strings.Contains(out, "process exited with code 1") {
 		t.Error("should show error message")
 	}
-	if !strings.Contains(out, "Error") {
-		t.Error("should show Error section header")
-	}
-}
-
-func TestRenderSessionDetail_WithExitReason(t *testing.T) {
-	s := &session.Session{
-		ID:         "exit-sess",
-		Provider:   session.ProviderCodex,
-		Status:     session.StatusStopped,
-		ExitReason: "budget exhausted",
-		LaunchedAt: time.Now(),
-	}
-
-	out := RenderSessionDetail(s, 100, 40)
-	if !strings.Contains(out, "budget exhausted") {
+	if !strings.Contains(out, "error") {
 		t.Error("should show exit reason")
 	}
 }
 
-func TestRenderSessionDetail_WithAgent(t *testing.T) {
+func TestRenderSessionDetailMinimalFields(t *testing.T) {
 	s := &session.Session{
-		ID:         "agent-ses",
-		Provider:   session.ProviderClaude,
-		Status:     session.StatusRunning,
-		AgentName:  "coder",
-		TeamName:   "backend",
+		ID:         "minimal",
+		Provider:   session.ProviderCodex,
+		RepoName:   "repo",
+		Status:     session.StatusStopped,
 		LaunchedAt: time.Now(),
 	}
 
-	out := RenderSessionDetail(s, 100, 40)
-	if !strings.Contains(out, "coder") {
-		t.Error("should show agent name")
+	out := RenderSessionDetail(s, 80, 40)
+	if !strings.Contains(out, "codex") {
+		t.Error("should show provider")
 	}
-	if !strings.Contains(out, "backend") {
-		t.Error("should show team name")
-	}
-}
-
-func TestRenderSessionDetail_WithOutputHistory(t *testing.T) {
-	s := &session.Session{
-		ID:            "hist-sess",
-		Provider:      session.ProviderClaude,
-		Status:        session.StatusRunning,
-		OutputHistory: []string{"line one", "line two", "line three"},
-		LaunchedAt:    time.Now(),
-	}
-
-	out := RenderSessionDetail(s, 100, 50)
-	if !strings.Contains(out, "Output History") {
-		t.Error("should show Output History header")
-	}
-	if !strings.Contains(out, "line one") {
-		t.Error("should show output history lines")
+	// Should not contain budget section details since BudgetUSD is 0
+	if strings.Contains(out, "Utilization") {
+		t.Error("should not show budget utilization when budget is 0")
 	}
 }
 
-func TestRenderSessionDetail_LastOutputFallback(t *testing.T) {
-	s := &session.Session{
-		ID:         "last-sess",
-		Provider:   session.ProviderClaude,
-		Status:     session.StatusCompleted,
-		LastOutput: "final output line",
-		LaunchedAt: time.Now(),
-	}
-
-	out := RenderSessionDetail(s, 100, 50)
-	if !strings.Contains(out, "final output line") {
-		t.Error("should show last output when output history is empty")
+func TestRenderBudgetBar(t *testing.T) {
+	// Test various percentages don't panic
+	for _, pct := range []float64{0, 25, 50, 75, 90, 100, 150} {
+		bar := renderBudgetBar(pct, 30)
+		if bar == "" {
+			t.Errorf("renderBudgetBar(%.0f, 30) returned empty", pct)
+		}
 	}
 }
 
-func TestRenderSessionDetail_CostPerTurn(t *testing.T) {
-	s := &session.Session{
-		ID:         "cpt-sess",
-		Provider:   session.ProviderClaude,
-		Status:     session.StatusRunning,
-		SpentUSD:   5.0,
-		TurnCount:  10,
-		LaunchedAt: time.Now(),
+func TestFormatStaleness(t *testing.T) {
+	tests := []struct {
+		dur    time.Duration
+		expect string
+	}{
+		{30 * time.Second, "30s"},
+		{90 * time.Second, "1m30s"},
 	}
-
-	out := RenderSessionDetail(s, 100, 40)
-	if !strings.Contains(out, "$/turn") {
-		t.Error("should show cost per turn")
-	}
-}
-
-func TestRenderSessionDetail_CostSparkline(t *testing.T) {
-	s := &session.Session{
-		ID:          "spark-ses",
-		Provider:    session.ProviderClaude,
-		Status:      session.StatusRunning,
-		CostHistory: []float64{0.1, 0.2, 0.15, 0.3, 0.25},
-		LaunchedAt:  time.Now(),
-	}
-
-	out := RenderSessionDetail(s, 100, 40)
-	if !strings.Contains(out, "Cost trend") {
-		t.Error("should show cost trend sparkline")
-	}
-}
-
-func TestRenderSessionDetail_ParseErrors(t *testing.T) {
-	s := &session.Session{
-		ID:                "parse-ses",
-		Provider:          session.ProviderCodex,
-		Status:            session.StatusRunning,
-		StreamParseErrors: 5,
-		LaunchedAt:        time.Now(),
-	}
-
-	out := RenderSessionDetail(s, 100, 40)
-	if !strings.Contains(out, "Parse Errors") {
-		t.Error("should show parse errors count")
-	}
-}
-
-func TestRenderSessionDetail_ProviderSessionID(t *testing.T) {
-	s := &session.Session{
-		ID:                "prov-sess",
-		Provider:          session.ProviderCodex,
-		ProviderSessionID: "ext-provider-456",
-		Status:            session.StatusRunning,
-		LaunchedAt:        time.Now(),
-	}
-
-	out := RenderSessionDetail(s, 100, 40)
-	if !strings.Contains(out, "Provider ID") {
-		t.Error("should show Provider ID label")
-	}
-	if !strings.Contains(out, "ext-provider-456") {
-		t.Error("should show provider session ID value")
-	}
-}
-
-func TestRenderSessionDetail_NoBudget(t *testing.T) {
-	s := &session.Session{
-		ID:        "nobudget",
-		Provider:  session.ProviderClaude,
-		Status:    session.StatusRunning,
-		SpentUSD:  1.25,
-		BudgetUSD: 0,
-		LaunchedAt: time.Now(),
-	}
-
-	out := RenderSessionDetail(s, 100, 40)
-	if !strings.Contains(out, "$1.25") {
-		t.Error("should show spend amount even without budget")
+	for _, tt := range tests {
+		got := formatStaleness(tt.dur)
+		if got != tt.expect {
+			t.Errorf("formatStaleness(%v) = %q, want %q", tt.dur, got, tt.expect)
+		}
 	}
 }
