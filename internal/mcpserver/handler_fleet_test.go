@@ -338,3 +338,202 @@ func TestHandleFleetAnalytics_WithProviderFilter(t *testing.T) {
 		t.Errorf("expected total_sessions in output, got: %s", text)
 	}
 }
+
+// --- handleFleetDLQ ---
+
+func TestHandleFleetDLQ(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		args      map[string]any
+		noCoord   bool
+		wantErr   bool
+		errCode   string
+		checkText func(t *testing.T, text string)
+	}{
+		{
+			name:    "nil coordinator",
+			args:    map[string]any{},
+			noCoord: true,
+			wantErr: true,
+			errCode: "NOT_RUNNING",
+		},
+		{
+			name: "list empty DLQ (default action)",
+			args: map[string]any{},
+			checkText: func(t *testing.T, text string) {
+				if !strings.Contains(text, "\"count\":0") {
+					t.Errorf("expected count:0 for empty DLQ, got: %s", text)
+				}
+				if !strings.Contains(text, "\"items\"") {
+					t.Errorf("expected items field, got: %s", text)
+				}
+			},
+		},
+		{
+			name: "list action explicit",
+			args: map[string]any{"action": "list"},
+			checkText: func(t *testing.T, text string) {
+				if !strings.Contains(text, "\"count\":0") {
+					t.Errorf("expected count:0, got: %s", text)
+				}
+			},
+		},
+		{
+			name: "depth action",
+			args: map[string]any{"action": "depth"},
+			checkText: func(t *testing.T, text string) {
+				if !strings.Contains(text, "dlq_depth") {
+					t.Errorf("expected dlq_depth field, got: %s", text)
+				}
+			},
+		},
+		{
+			name: "purge empty DLQ",
+			args: map[string]any{"action": "purge"},
+			checkText: func(t *testing.T, text string) {
+				if !strings.Contains(text, "purged") {
+					t.Errorf("expected purged status, got: %s", text)
+				}
+				if !strings.Contains(text, "\"count\":0") {
+					t.Errorf("expected count:0 after purging empty DLQ, got: %s", text)
+				}
+			},
+		},
+		{
+			name:    "retry without item_id",
+			args:    map[string]any{"action": "retry"},
+			wantErr: true,
+			errCode: "INVALID_PARAMS",
+		},
+		{
+			name:    "retry with nonexistent item_id",
+			args:    map[string]any{"action": "retry", "item_id": "nonexistent-item"},
+			wantErr: true,
+			errCode: "INTERNAL_ERROR",
+		},
+		{
+			name:    "unknown action",
+			args:    map[string]any{"action": "invalid_action"},
+			wantErr: true,
+			errCode: "INVALID_PARAMS",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			srv, _ := setupTestServer(t)
+			if tt.noCoord {
+				srv.FleetCoordinator = nil
+			} else {
+				srv.FleetCoordinator = fleet.NewCoordinator("test-node", "localhost", 0, "test", nil, nil)
+			}
+
+			result, err := srv.handleFleetDLQ(context.Background(), makeRequest(tt.args))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			text := getResultText(result)
+			if tt.wantErr {
+				if !result.IsError {
+					t.Fatalf("expected error result, got: %s", text)
+				}
+				if tt.errCode != "" && !strings.Contains(text, tt.errCode) {
+					t.Errorf("expected %s error code, got: %s", tt.errCode, text)
+				}
+				return
+			}
+			if result.IsError {
+				t.Fatalf("unexpected error: %s", text)
+			}
+			if tt.checkText != nil {
+				tt.checkText(t, text)
+			}
+		})
+	}
+}
+
+// --- handleFleetWorkers actions ---
+
+func TestHandleFleetWorkers_Actions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		args    map[string]any
+		noCoord bool
+		wantErr bool
+		errCode string
+	}{
+		{
+			name:    "action without coordinator (client-only)",
+			args:    map[string]any{"action": "pause", "worker_id": "w1"},
+			noCoord: true,
+			wantErr: true,
+			errCode: "NOT_RUNNING",
+		},
+		{
+			name:    "action missing worker_id",
+			args:    map[string]any{"action": "pause"},
+			wantErr: true,
+			errCode: "INVALID_PARAMS",
+		},
+		{
+			name:    "unknown action",
+			args:    map[string]any{"action": "reboot", "worker_id": "w1"},
+			wantErr: true,
+			errCode: "INVALID_PARAMS",
+		},
+		{
+			name:    "pause non-existent worker",
+			args:    map[string]any{"action": "pause", "worker_id": "no-such-worker"},
+			wantErr: true,
+			errCode: "INTERNAL_ERROR",
+		},
+		{
+			name:    "resume non-existent worker",
+			args:    map[string]any{"action": "resume", "worker_id": "no-such-worker"},
+			wantErr: true,
+			errCode: "INTERNAL_ERROR",
+		},
+		{
+			name:    "drain non-existent worker",
+			args:    map[string]any{"action": "drain", "worker_id": "no-such-worker"},
+			wantErr: true,
+			errCode: "INTERNAL_ERROR",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			srv, _ := setupTestServer(t)
+			if tt.noCoord {
+				srv.FleetCoordinator = nil
+				srv.FleetClient = nil
+			} else {
+				srv.FleetCoordinator = fleet.NewCoordinator("test-node", "localhost", 0, "test", nil, nil)
+			}
+
+			result, err := srv.handleFleetWorkers(context.Background(), makeRequest(tt.args))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			text := getResultText(result)
+			if tt.wantErr {
+				if !result.IsError {
+					t.Fatalf("expected error result, got: %s", text)
+				}
+				if tt.errCode != "" && !strings.Contains(text, tt.errCode) {
+					t.Errorf("expected %s error code, got: %s", tt.errCode, text)
+				}
+				return
+			}
+			if result.IsError {
+				t.Fatalf("unexpected error: %s", text)
+			}
+		})
+	}
+}
