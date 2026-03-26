@@ -96,6 +96,7 @@ const (
 	WorkerStale        WorkerStatus = "stale"        // no heartbeat for 90s
 	WorkerDisconnected WorkerStatus = "disconnected"  // no heartbeat for 5m
 	WorkerPaused       WorkerStatus = "paused"        // manually paused, skip for assignment
+	WorkerDraining     WorkerStatus = "draining"      // no new work, waiting for active to finish
 )
 
 // HeartbeatPayload is sent by workers every 30s.
