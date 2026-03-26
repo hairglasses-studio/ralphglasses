@@ -69,6 +69,9 @@ type Server struct {
 	FeedbackAnalyzer *session.FeedbackAnalyzer
 	AutoOptimizer    *session.AutoOptimizer
 
+	// Fleet analytics engine.
+	FleetAnalytics *fleet.FleetAnalytics
+
 	// Phase H subsystems (set via setter methods).
 	Blackboard    *blackboard.Blackboard
 	A2A           *fleet.A2AAdapter
@@ -260,36 +263,44 @@ func (s *Server) handleEventList(_ context.Context, req mcp.CallToolRequest) (*m
 		return codedError(ErrNotRunning, "event bus not initialized"), nil
 	}
 
-	typeFilter := events.EventType(getStringArg(req, "type"))
-	repoFilter := getStringArg(req, "repo")
-	limit := int(getNumberArg(req, "limit", 50))
-	sinceStr := getStringArg(req, "since")
+	// Build query from params.
+	q := events.EventQuery{
+		Limit:     int(getNumberArg(req, "limit", 50)),
+		Offset:    int(getNumberArg(req, "offset", 0)),
+		SessionID: getStringArg(req, "session_id"),
+		RepoName:  getStringArg(req, "repo"),
+		Provider:  getStringArg(req, "provider"),
+	}
 
-	var evts []events.Event
-	if sinceStr != "" {
+	// Parse comma-separated type filter.
+	if typesStr := getStringArg(req, "types"); typesStr != "" {
+		for _, t := range strings.Split(typesStr, ",") {
+			t = strings.TrimSpace(t)
+			if t != "" {
+				q.Types = append(q.Types, events.EventType(t))
+			}
+		}
+	} else if t := getStringArg(req, "type"); t != "" {
+		q.Types = []events.EventType{events.EventType(t)}
+	}
+
+	// Parse time range.
+	if sinceStr := getStringArg(req, "since"); sinceStr != "" {
 		t, err := time.Parse(time.RFC3339, sinceStr)
 		if err != nil {
 			return codedError(ErrInvalidParams, fmt.Sprintf("invalid since timestamp: %v", err)), nil
 		}
-		evts = s.EventBus.HistorySince(t)
-	} else {
-		evts = s.EventBus.History(typeFilter, limit)
+		q.Since = &t
+	}
+	if untilStr := getStringArg(req, "until"); untilStr != "" {
+		t, err := time.Parse(time.RFC3339, untilStr)
+		if err != nil {
+			return codedError(ErrInvalidParams, fmt.Sprintf("invalid until timestamp: %v", err)), nil
+		}
+		q.Until = &t
 	}
 
-	// Apply filters
-	var filtered []events.Event
-	for _, e := range evts {
-		if typeFilter != "" && e.Type != typeFilter {
-			continue
-		}
-		if repoFilter != "" && e.RepoName != repoFilter {
-			continue
-		}
-		filtered = append(filtered, e)
-	}
-	if len(filtered) > limit {
-		filtered = filtered[len(filtered)-limit:]
-	}
+	result := s.EventBus.Query(q)
 
 	type eventOut struct {
 		Type      string         `json:"type"`
@@ -299,8 +310,8 @@ func (s *Server) handleEventList(_ context.Context, req mcp.CallToolRequest) (*m
 		Provider  string         `json:"provider,omitempty"`
 		Data      map[string]any `json:"data,omitempty"`
 	}
-	out := make([]eventOut, len(filtered))
-	for i, e := range filtered {
+	out := make([]eventOut, len(result.Events))
+	for i, e := range result.Events {
 		out[i] = eventOut{
 			Type:      string(e.Type),
 			Timestamp: e.Timestamp.Format(time.RFC3339),
@@ -310,7 +321,12 @@ func (s *Server) handleEventList(_ context.Context, req mcp.CallToolRequest) (*m
 			Data:      e.Data,
 		}
 	}
-	return jsonResult(out), nil
+
+	return jsonResult(map[string]any{
+		"events":      out,
+		"total_count": result.TotalCount,
+		"has_more":    result.HasMore,
+	}), nil
 }
 
 func (s *Server) handleFleetAnalytics(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -371,6 +387,34 @@ func (s *Server) handleFleetAnalytics(_ context.Context, req mcp.CallToolRequest
 		"repos":          repos,
 		"total_sessions": len(sessions),
 	}
+
+	// If FleetAnalytics is available, enrich with rolling-window metrics.
+	if s.FleetAnalytics != nil {
+		windowStr := getStringArg(req, "window")
+		window := time.Hour
+		if windowStr != "" {
+			if d, err := time.ParseDuration(windowStr); err == nil && d > 0 {
+				window = d
+			}
+		}
+		snap := s.FleetAnalytics.Snapshot(window)
+		result["metrics"] = map[string]any{
+			"window":              window.String(),
+			"completions":         snap.TotalCompletions,
+			"failures":            snap.TotalFailures,
+			"failure_rate":        snap.FailureRate,
+			"latency_p50_ms":     snap.LatencyP50Ms,
+			"latency_p95_ms":     snap.LatencyP95Ms,
+			"latency_p99_ms":     snap.LatencyP99Ms,
+			"total_cost_usd":     snap.TotalCostUSD,
+			"cost_per_provider":  snap.CostPerProvider,
+			"worker_utilization": snap.WorkerUtilization,
+		}
+		if forecast := s.FleetAnalytics.CostForecast(24 * time.Hour); forecast > 0 {
+			result["cost_forecast_24h_usd"] = forecast
+		}
+	}
+
 	return jsonResult(result), nil
 }
 
