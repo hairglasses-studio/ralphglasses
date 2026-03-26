@@ -249,11 +249,11 @@ func (c *Coordinator) handleWorkComplete(w http.ResponseWriter, r *http.Request)
 
 			// Track per-worker spend
 			if item.AssignedTo != "" {
-				c.budgetMgr.RecordSpend(item.AssignedTo, payload.Result.SpentUSD)
+				c.budgetMgr.RecordCost(item.AssignedTo, payload.Result.SpentUSD)
 			}
 		}
 	} else {
-		retryable := c.retries.RecordFailure(item.ID)
+		retryable, _ := c.retries.RecordFailure(item.ID)
 		// Check retry using both legacy counter and retry tracker
 		if retryable && item.RetryCount < item.MaxRetries {
 			item.RetryCount++
@@ -470,10 +470,9 @@ func (c *Coordinator) buildCandidates() []WorkerCandidate {
 	for _, w := range c.workers {
 		candidates = append(candidates, WorkerCandidate{
 			ID:              w.ID,
-			ActiveSessions:  w.ActiveSessions,
-			MaxSessions:     w.MaxSessions,
-			HealthState:     c.health.State(w.ID),
-			BudgetRemaining: c.budgetMgr.Remaining(w.ID),
+			ActiveTasks:     w.ActiveSessions,
+			HealthState:     c.health.GetState(w.ID),
+			BudgetRemaining: c.budgetMgr.GetBudget(w.ID).Remaining(),
 		})
 	}
 	return candidates
@@ -487,7 +486,8 @@ func (c *Coordinator) assignWork(workerID string, worker *WorkerInfo) *WorkItem 
 	// programmatically without going through the register handler).
 	c.mu.RLock()
 	for id, w := range c.workers {
-		if c.health.State(id) == HealthDown && w.Status != WorkerDisconnected {
+		state := c.health.GetState(id)
+		if (state == HealthUnhealthy || state == HealthUnknown) && w.Status != WorkerDisconnected {
 			c.health.RecordHeartbeat(id)
 		}
 	}
@@ -508,7 +508,7 @@ func (c *Coordinator) assignWork(workerID string, worker *WorkerInfo) *WorkItem 
 	}
 
 	// Skip if this worker's health is down
-	if c.health.State(workerID) == HealthDown {
+	if c.health.GetState(workerID) == HealthUnhealthy {
 		return nil
 	}
 
@@ -532,7 +532,7 @@ func (c *Coordinator) assignWork(workerID string, worker *WorkerInfo) *WorkItem 
 		}
 
 		// Per-worker budget gate
-		if item.MaxBudgetUSD > 0 && item.MaxBudgetUSD > c.budgetMgr.Remaining(workerID) {
+		if item.MaxBudgetUSD > 0 && item.MaxBudgetUSD > c.budgetMgr.GetBudget(workerID).Remaining() {
 			return -1
 		}
 

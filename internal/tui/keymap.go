@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -756,13 +758,27 @@ func handleObservationView(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func handleEventLogView(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.EventLog == nil {
-		m.EventLog = views.NewEventLogView()
+		elv := views.NewEventLogView()
+		m.EventLog = &elv
 		m.EventLog.SetDimensions(m.Width, m.Height)
 	}
 	// Load recent history from event bus
 	if m.EventBus != nil {
 		history := m.EventBus.History("", 200)
-		m.EventLog.LoadHistory(history)
+		entries := make([]views.EventLogEntry, len(history))
+		for i, e := range history {
+			msg := string(e.Type)
+			if v, ok := e.Data["message"]; ok {
+				msg = fmt.Sprintf("%v", v)
+			}
+			entries[i] = views.EventLogEntry{
+				Timestamp: e.Timestamp,
+				Type:      string(e.Type),
+				Session:   e.SessionID,
+				Message:   msg,
+			}
+		}
+		m.EventLog.LoadHistory(entries)
 	}
 	m.pushView(ViewEventLog, "Event Log")
 	return *m, nil
