@@ -528,6 +528,81 @@ func TestCoordinator_RetryDelay(t *testing.T) {
 	}
 }
 
+func TestHealthz_Healthy(t *testing.T) {
+	coord := newTestCoordinator()
+
+	req := httptest.NewRequest("GET", "/healthz", nil)
+	w := httptest.NewRecorder()
+	coord.handleHealthz(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("healthz: got %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+
+	var resp HealthCheckResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp.Status != "healthy" {
+		t.Errorf("status: got %q, want healthy", resp.Status)
+	}
+	if resp.Checks["event_bus"] != "ok" {
+		t.Errorf("event_bus check: got %q, want ok", resp.Checks["event_bus"])
+	}
+	if resp.Checks["queue"] != "ok" {
+		t.Errorf("queue check: got %q, want ok", resp.Checks["queue"])
+	}
+	if resp.Uptime <= 0 {
+		t.Errorf("uptime should be positive, got %f", resp.Uptime)
+	}
+}
+
+func TestHealthz_Degraded(t *testing.T) {
+	// Create coordinator without an event bus to simulate a degraded state
+	coord := NewCoordinator("test-coord", "localhost", 0, "test", nil, nil)
+
+	// Verify event_bus reports not_configured (still healthy — bus is optional)
+	req := httptest.NewRequest("GET", "/healthz", nil)
+	w := httptest.NewRecorder()
+	coord.handleHealthz(w, req)
+
+	var resp HealthCheckResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp.Checks["event_bus"] != "not_configured" {
+		t.Errorf("event_bus check: got %q, want not_configured", resp.Checks["event_bus"])
+	}
+
+	// Now test with a cancelled context to make the bus check fail
+	coordWithBus := newTestCoordinator()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	req2 := httptest.NewRequest("GET", "/healthz", nil)
+	req2 = req2.WithContext(ctx)
+	w2 := httptest.NewRecorder()
+	coordWithBus.handleHealthz(w2, req2)
+
+	if w2.Code != http.StatusServiceUnavailable {
+		t.Fatalf("healthz degraded: got %d, want 503; body: %s", w2.Code, w2.Body.String())
+	}
+
+	var resp2 HealthCheckResponse
+	if err := json.Unmarshal(w2.Body.Bytes(), &resp2); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp2.Status != "degraded" {
+		t.Errorf("status: got %q, want degraded", resp2.Status)
+	}
+	if resp2.Checks["event_bus"] != "error" {
+		t.Errorf("event_bus check: got %q, want error", resp2.Checks["event_bus"])
+	}
+	if resp2.Checks["event_bus_error"] == "" {
+		t.Error("expected event_bus_error to be set")
+	}
+}
+
 func TestCoordinator_StartStop(t *testing.T) {
 	bus := events.NewBus(100)
 	coord := NewCoordinator("test", "localhost", 0, "test", bus, session.NewManager())
