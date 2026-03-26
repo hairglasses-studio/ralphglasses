@@ -379,6 +379,30 @@ func (m *Manager) List(repoPath string) []*Session {
 	return result
 }
 
+// DefaultStallThreshold is the default duration after which a running session
+// with no activity is considered stalled.
+const DefaultStallThreshold = 5 * time.Minute
+
+// DetectStalls returns the IDs of sessions that are in "running" state but
+// have not recorded any activity within the given threshold duration.
+func (m *Manager) DetectStalls(threshold time.Duration) []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var stalled []string
+	for _, s := range m.sessions {
+		s.mu.Lock()
+		isRunning := s.Status == StatusRunning
+		elapsed := time.Since(s.LastActivity)
+		s.mu.Unlock()
+
+		if isRunning && elapsed > threshold {
+			stalled = append(stalled, s.ID)
+		}
+	}
+	return stalled
+}
+
 // killWithEscalation sends SIGTERM, waits up to timeout, then sends SIGKILL if still alive.
 // Returns true if SIGKILL was needed.
 //

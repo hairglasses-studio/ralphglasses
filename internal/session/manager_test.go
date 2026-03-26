@@ -767,3 +767,54 @@ func TestPersistSession_EmptyStateDir(t *testing.T) {
 		t.Errorf("expected nil error for empty stateDir, got: %v", err)
 	}
 }
+
+func TestDetectStalls(t *testing.T) {
+	m := NewManager()
+
+	// Insert a stalled session: running but with old LastActivity.
+	stale := &Session{
+		ID:           "stale-session",
+		Status:       StatusRunning,
+		LastActivity: time.Now().Add(-10 * time.Minute),
+	}
+	// Insert a fresh running session.
+	fresh := &Session{
+		ID:           "fresh-session",
+		Status:       StatusRunning,
+		LastActivity: time.Now(),
+	}
+	// Insert a completed session with old activity (should NOT be returned).
+	completed := &Session{
+		ID:           "done-session",
+		Status:       StatusCompleted,
+		LastActivity: time.Now().Add(-1 * time.Hour),
+	}
+
+	m.mu.Lock()
+	m.sessions[stale.ID] = stale
+	m.sessions[fresh.ID] = fresh
+	m.sessions[completed.ID] = completed
+	m.mu.Unlock()
+
+	stalled := m.DetectStalls(1 * time.Second)
+	if len(stalled) != 1 {
+		t.Fatalf("DetectStalls returned %d sessions, want 1", len(stalled))
+	}
+	if stalled[0] != "stale-session" {
+		t.Errorf("DetectStalls returned %q, want %q", stalled[0], "stale-session")
+	}
+
+	// With a very large threshold, nothing should be stalled.
+	stalled = m.DetectStalls(24 * time.Hour)
+	if len(stalled) != 0 {
+		t.Errorf("DetectStalls with large threshold returned %d sessions, want 0", len(stalled))
+	}
+}
+
+func TestDetectStalls_Empty(t *testing.T) {
+	m := NewManager()
+	stalled := m.DetectStalls(1 * time.Second)
+	if len(stalled) != 0 {
+		t.Errorf("DetectStalls on empty manager returned %d sessions, want 0", len(stalled))
+	}
+}
