@@ -610,6 +610,39 @@ func TestLoopListKeyBindings(t *testing.T) {
 	if !strings.Contains(v, "stop loop") {
 		t.Error("loop list view should show 'stop loop' in footer hints")
 	}
+	if !strings.Contains(v, "pause/resume") {
+		t.Error("loop list view should show 'pause/resume' in footer hints")
+	}
+
+	// Verify LoopListPause enabled/disabled per view context
+	km3 := DefaultKeyMap()
+	km3.SetViewContext(ViewLoopList)
+	if !km3.LoopListPause.Enabled() {
+		t.Error("LoopListPause should be enabled in ViewLoopList")
+	}
+	km3.SetViewContext(ViewOverview)
+	if km3.LoopListPause.Enabled() {
+		t.Error("LoopListPause should be disabled in ViewOverview")
+	}
+
+	// Verify LoopListPause is in KeyDispatch
+	foundPause := false
+	km4 := DefaultKeyMap()
+	for _, entry := range KeyDispatch {
+		b := entry.Binding(&km4)
+		for _, k := range b.Keys() {
+			if k == "p" {
+				foundPause = true
+			}
+		}
+	}
+	if !foundPause {
+		t.Error("KeyDispatch should contain an entry for LoopListPause ('p')")
+	}
+
+	// 'p' should not panic with no selection
+	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
+	_ = cmd
 }
 
 func TestProcessExitMsg_SetsRepoStatus(t *testing.T) {

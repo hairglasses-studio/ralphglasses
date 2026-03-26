@@ -382,6 +382,40 @@ func handleLoopListStop(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return *m, nil
 }
 
+func handleLoopListPause(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.SessMgr == nil {
+		m.Notify.Show("No session manager", 3*time.Second)
+		return *m, nil
+	}
+	row := m.LoopListTable.SelectedRow()
+	if row == nil {
+		m.Notify.Show("No loop selected", 3*time.Second)
+		return *m, nil
+	}
+	idPrefix := row[0]
+	for _, l := range m.SessMgr.ListLoops() {
+		l.Lock()
+		id := l.ID
+		paused := l.Paused
+		l.Unlock()
+		if strings.HasPrefix(id, idPrefix) {
+			sessMgr := m.SessMgr
+			if paused {
+				return *m, func() tea.Msg {
+					err := sessMgr.ResumeLoop(id)
+					return LoopPauseResultMsg{LoopID: id, Paused: false, Err: err}
+				}
+			}
+			return *m, func() tea.Msg {
+				err := sessMgr.PauseLoop(id)
+				return LoopPauseResultMsg{LoopID: id, Paused: true, Err: err}
+			}
+		}
+	}
+	m.Notify.Show("Loop not found", 3*time.Second)
+	return *m, nil
+}
+
 func (m Model) handleLoopListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.Keys.Down):

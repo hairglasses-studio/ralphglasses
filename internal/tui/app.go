@@ -806,7 +806,7 @@ func (m Model) View() string {
 	case ViewLoopList:
 		b.WriteString(m.LoopListTable.View())
 		b.WriteString("\n")
-		b.WriteString(styles.HelpStyle.Render("  s start loop  x/d stop loop  Enter detail  j/k navigate  Esc back"))
+		b.WriteString(styles.HelpStyle.Render("  s start loop  x/d stop loop  p pause/resume  Enter detail  j/k navigate  Esc back"))
 	case ViewLoopDetail:
 		if m.SessMgr != nil && m.SelectedLoop != "" {
 			if l, ok := m.SessMgr.GetLoop(m.SelectedLoop); ok {
