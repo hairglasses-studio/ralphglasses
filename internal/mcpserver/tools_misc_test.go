@@ -556,7 +556,7 @@ steps:
 	if !strings.Contains(text, "test-workflow") {
 		t.Errorf("expected workflow name in output, got: %s", text)
 	}
-	if !strings.Contains(text, `"steps": 2`) {
+	if !strings.Contains(text, `"steps":2`) {
 		t.Errorf("expected 2 steps, got: %s", text)
 	}
 }
@@ -833,7 +833,7 @@ func TestHandleJournalRead(t *testing.T) {
 	if !strings.Contains(text, "synthesis") {
 		t.Errorf("expected synthesis in output, got: %s", text)
 	}
-	if !strings.Contains(text, `"count": 3`) {
+	if !strings.Contains(text, `"count":3`) {
 		t.Errorf("expected count 3, got: %s", text)
 	}
 }
@@ -854,7 +854,7 @@ func TestHandleJournalRead_Empty(t *testing.T) {
 	}
 
 	text := getResultText(result)
-	if !strings.Contains(text, `"count": 0`) {
+	if !strings.Contains(text, `"count":0`) {
 		t.Errorf("expected count 0, got: %s", text)
 	}
 }
@@ -878,7 +878,7 @@ func TestHandleJournalWrite(t *testing.T) {
 	}
 
 	text := getResultText(result)
-	if !strings.Contains(text, `"status": "written"`) {
+	if !strings.Contains(text, `"status":"written"`) {
 		t.Errorf("expected written status, got: %s", text)
 	}
 
@@ -922,10 +922,10 @@ func TestHandleJournalPrune_DryRun(t *testing.T) {
 	}
 
 	text := getResultText(result)
-	if !strings.Contains(text, `"dry_run": true`) {
+	if !strings.Contains(text, `"dry_run":true`) {
 		t.Errorf("expected dry_run true, got: %s", text)
 	}
-	if !strings.Contains(text, `"would_prune": 2`) {
+	if !strings.Contains(text, `"would_prune":2`) {
 		t.Errorf("expected would_prune 2, got: %s", text)
 	}
 
@@ -950,10 +950,10 @@ func TestHandleMarathonDashboardEmpty(t *testing.T) {
 		t.Fatalf("handleMarathonDashboard returned error: %s", getResultText(result))
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, `"total": 0`) {
+	if !strings.Contains(text, `"total":0`) {
 		t.Errorf("expected 0 total sessions, got: %s", text)
 	}
-	if !strings.Contains(text, `"total_usd": 0`) {
+	if !strings.Contains(text, `"total_usd":0`) {
 		t.Errorf("expected 0 total cost, got: %s", text)
 	}
 }
@@ -976,7 +976,7 @@ func TestHandleMarathonDashboardStale(t *testing.T) {
 		t.Fatalf("handleMarathonDashboard: %v", err)
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, `"stale": 1`) {
+	if !strings.Contains(text, `"stale":1`) {
 		t.Errorf("expected 1 stale session, got: %s", text)
 	}
 	if !strings.Contains(text, "stale_session") {
@@ -1085,10 +1085,10 @@ func TestRCRead_NoSessions(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, `"status": "empty"`) {
+	if !strings.Contains(text, `"status":"empty"`) {
 		t.Errorf("expected empty status JSON, got: %s", text)
 	}
-	if !strings.Contains(text, `"item_type": "rc_messages"`) {
+	if !strings.Contains(text, `"item_type":"rc_messages"`) {
 		t.Errorf("expected item_type rc_messages in empty result, got: %s", text)
 	}
 }
@@ -1177,7 +1177,7 @@ func TestEventPoll_WithEvents(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, `"count": 2`) {
+	if !strings.Contains(text, `"count":2`) {
 		t.Errorf("expected 2 events, got: %s", text)
 	}
 	if !strings.Contains(text, "cursor") {
@@ -1196,7 +1196,7 @@ func TestEventPoll_CursorAdvance(t *testing.T) {
 	result, _ := srv.handleEventPoll(context.Background(), makeRequest(nil))
 	text := getResultText(result)
 	// Extract cursor value
-	if !strings.Contains(text, `"cursor": "1"`) {
+	if !strings.Contains(text, `"cursor":"1"`) {
 		t.Errorf("expected cursor 1, got: %s", text)
 	}
 
@@ -1208,7 +1208,7 @@ func TestEventPoll_CursorAdvance(t *testing.T) {
 		"cursor": "1",
 	}))
 	text = getResultText(result)
-	if !strings.Contains(text, `"count": 1`) {
+	if !strings.Contains(text, `"count":1`) {
 		t.Errorf("expected 1 new event, got: %s", text)
 	}
 }
