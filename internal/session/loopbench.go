@@ -7,12 +7,29 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/gitutil"
 )
+
+// percentile computes the p-th percentile from a pre-sorted slice of float64
+// using linear interpolation. Returns 0 for empty input.
+func percentile(sorted []float64, p float64) float64 {
+	if len(sorted) == 0 {
+		return 0
+	}
+	idx := p / 100.0 * float64(len(sorted)-1)
+	lower := int(idx)
+	upper := lower + 1
+	if upper >= len(sorted) {
+		return sorted[lower]
+	}
+	weight := idx - float64(lower)
+	return sorted[lower]*(1-weight) + sorted[upper]*weight
+}
 
 // ResolveMainRepoPath returns the top-level working directory of the main
 // repository. In a worktree, this resolves back to the main checkout.
@@ -484,6 +501,16 @@ type IterationSummary struct {
 	TotalDeletions    int            `json:"total_deletions"`
 	AcceptanceCounts  map[string]int `json:"acceptance_counts"` // "auto_merge" -> N, etc.
 	ModelUsage        map[string]int `json:"model_usage"`       // model ID -> count
+
+	// Latency percentiles (seconds).
+	LatencyP50 float64 `json:"latency_p50"`
+	LatencyP95 float64 `json:"latency_p95"`
+	LatencyP99 float64 `json:"latency_p99"`
+
+	// Cost percentiles (USD).
+	CostP50 float64 `json:"cost_p50"`
+	CostP95 float64 `json:"cost_p95"`
+	CostP99 float64 `json:"cost_p99"`
 }
 
 // SummarizeObservations computes aggregate statistics from a slice of observations.
@@ -498,6 +525,8 @@ func SummarizeObservations(obs []LoopObservation) IterationSummary {
 
 	s.TotalIterations = len(obs)
 	var totalDurationMs int64
+	latencies := make([]float64, 0, len(obs))
+	costs := make([]float64, 0, len(obs))
 	for _, o := range obs {
 		// Status accounting
 		switch o.Status {
@@ -512,6 +541,8 @@ func SummarizeObservations(obs []LoopObservation) IterationSummary {
 
 		// Duration
 		totalDurationMs += o.TotalLatencyMs
+		latencies = append(latencies, float64(o.TotalLatencyMs)/1000.0)
+		costs = append(costs, o.TotalCostUSD)
 
 		// Diff stats from DiffStat if present, otherwise from flat fields
 		if o.GitDiffStat != nil {
@@ -539,6 +570,19 @@ func SummarizeObservations(obs []LoopObservation) IterationSummary {
 	}
 
 	s.AvgDurationSec = float64(totalDurationMs) / float64(len(obs)) / 1000.0
+
+	// Compute latency percentiles (seconds).
+	sort.Float64s(latencies)
+	s.LatencyP50 = percentile(latencies, 50)
+	s.LatencyP95 = percentile(latencies, 95)
+	s.LatencyP99 = percentile(latencies, 99)
+
+	// Compute cost percentiles (USD).
+	sort.Float64s(costs)
+	s.CostP50 = percentile(costs, 50)
+	s.CostP95 = percentile(costs, 95)
+	s.CostP99 = percentile(costs, 99)
+
 	return s
 }
 
