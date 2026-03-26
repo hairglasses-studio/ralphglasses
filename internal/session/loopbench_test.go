@@ -370,3 +370,188 @@ func TestLoopObservationDiffPathsJSON(t *testing.T) {
 		t.Errorf("DiffSummary = %q, want %q", decoded.DiffSummary, obs.DiffSummary)
 	}
 }
+
+func TestSummarizeObservationsEmpty(t *testing.T) {
+	t.Parallel()
+	s := SummarizeObservations(nil)
+	if s.TotalIterations != 0 {
+		t.Errorf("TotalIterations = %d, want 0", s.TotalIterations)
+	}
+	if s.CompletedCount != 0 {
+		t.Errorf("CompletedCount = %d, want 0", s.CompletedCount)
+	}
+	if s.FailedCount != 0 {
+		t.Errorf("FailedCount = %d, want 0", s.FailedCount)
+	}
+	if s.AvgDurationSec != 0 {
+		t.Errorf("AvgDurationSec = %f, want 0", s.AvgDurationSec)
+	}
+	if s.AcceptanceCounts == nil {
+		t.Error("AcceptanceCounts should not be nil")
+	}
+	if s.ModelUsage == nil {
+		t.Error("ModelUsage should not be nil")
+	}
+}
+
+func TestSummarizeObservationsMixed(t *testing.T) {
+	t.Parallel()
+	obs := []LoopObservation{
+		{
+			Status:           "idle",
+			TotalLatencyMs:   10000,
+			FilesChanged:     3,
+			LinesAdded:       50,
+			LinesRemoved:     10,
+			PlannerModelUsed: "claude-opus-4-6",
+			WorkerModelUsed:  "claude-sonnet-4-6",
+			AcceptancePath:   "auto_merge",
+			StallCount:       0,
+		},
+		{
+			Status:           "failed",
+			TotalLatencyMs:   5000,
+			FilesChanged:     0,
+			LinesAdded:       0,
+			LinesRemoved:     0,
+			PlannerModelUsed: "claude-opus-4-6",
+			WorkerModelUsed:  "gemini-2.5-pro",
+			AcceptancePath:   "rejected",
+			StallCount:       2,
+		},
+		{
+			Status:         "idle",
+			TotalLatencyMs: 15000,
+			GitDiffStat: &DiffStat{
+				FilesChanged: 5,
+				Insertions:   100,
+				Deletions:    20,
+			},
+			PlannerModelUsed: "o1-pro",
+			WorkerModelUsed:  "claude-sonnet-4-6",
+			AcceptancePath:   "pr",
+			StallCount:       1,
+		},
+	}
+
+	s := SummarizeObservations(obs)
+
+	if s.TotalIterations != 3 {
+		t.Errorf("TotalIterations = %d, want 3", s.TotalIterations)
+	}
+	if s.CompletedCount != 2 {
+		t.Errorf("CompletedCount = %d, want 2", s.CompletedCount)
+	}
+	if s.FailedCount != 1 {
+		t.Errorf("FailedCount = %d, want 1", s.FailedCount)
+	}
+	if s.TotalStalls != 3 {
+		t.Errorf("TotalStalls = %d, want 3", s.TotalStalls)
+	}
+
+	// AvgDurationSec: (10000+5000+15000)/3/1000 = 10.0
+	if diff := s.AvgDurationSec - 10.0; diff > 0.01 || diff < -0.01 {
+		t.Errorf("AvgDurationSec = %f, want 10.0", s.AvgDurationSec)
+	}
+
+	// obs[0]: flat fields 3+50+10, obs[1]: flat 0+0+0, obs[2]: DiffStat 5+100+20
+	if s.TotalFilesChanged != 8 {
+		t.Errorf("TotalFilesChanged = %d, want 8", s.TotalFilesChanged)
+	}
+	if s.TotalInsertions != 150 {
+		t.Errorf("TotalInsertions = %d, want 150", s.TotalInsertions)
+	}
+	if s.TotalDeletions != 30 {
+		t.Errorf("TotalDeletions = %d, want 30", s.TotalDeletions)
+	}
+
+	// Acceptance counts
+	if s.AcceptanceCounts["auto_merge"] != 1 {
+		t.Errorf("AcceptanceCounts[auto_merge] = %d, want 1", s.AcceptanceCounts["auto_merge"])
+	}
+	if s.AcceptanceCounts["pr"] != 1 {
+		t.Errorf("AcceptanceCounts[pr] = %d, want 1", s.AcceptanceCounts["pr"])
+	}
+	if s.AcceptanceCounts["rejected"] != 1 {
+		t.Errorf("AcceptanceCounts[rejected] = %d, want 1", s.AcceptanceCounts["rejected"])
+	}
+
+	// Model usage: claude-opus-4-6 x2 (planner), o1-pro x1, claude-sonnet-4-6 x2, gemini-2.5-pro x1
+	if s.ModelUsage["claude-opus-4-6"] != 2 {
+		t.Errorf("ModelUsage[claude-opus-4-6] = %d, want 2", s.ModelUsage["claude-opus-4-6"])
+	}
+	if s.ModelUsage["claude-sonnet-4-6"] != 2 {
+		t.Errorf("ModelUsage[claude-sonnet-4-6] = %d, want 2", s.ModelUsage["claude-sonnet-4-6"])
+	}
+	if s.ModelUsage["o1-pro"] != 1 {
+		t.Errorf("ModelUsage[o1-pro] = %d, want 1", s.ModelUsage["o1-pro"])
+	}
+	if s.ModelUsage["gemini-2.5-pro"] != 1 {
+		t.Errorf("ModelUsage[gemini-2.5-pro] = %d, want 1", s.ModelUsage["gemini-2.5-pro"])
+	}
+}
+
+func TestNewFieldsJSONRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	obs := LoopObservation{
+		LoopID:           "loop-rt",
+		PlannerModelUsed: "claude-opus-4-6",
+		WorkerModelUsed:  "claude-sonnet-4-6",
+		AcceptancePath:   "auto_merge",
+		StallCount:       3,
+		GitDiffStat: &DiffStat{
+			FilesChanged: 4,
+			Insertions:   77,
+			Deletions:    12,
+		},
+	}
+
+	data, err := json.Marshal(obs)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+
+	var decoded LoopObservation
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+
+	if decoded.PlannerModelUsed != "claude-opus-4-6" {
+		t.Errorf("PlannerModelUsed = %q, want claude-opus-4-6", decoded.PlannerModelUsed)
+	}
+	if decoded.WorkerModelUsed != "claude-sonnet-4-6" {
+		t.Errorf("WorkerModelUsed = %q, want claude-sonnet-4-6", decoded.WorkerModelUsed)
+	}
+	if decoded.AcceptancePath != "auto_merge" {
+		t.Errorf("AcceptancePath = %q, want auto_merge", decoded.AcceptancePath)
+	}
+	if decoded.StallCount != 3 {
+		t.Errorf("StallCount = %d, want 3", decoded.StallCount)
+	}
+	if decoded.GitDiffStat == nil {
+		t.Fatal("GitDiffStat is nil after round-trip")
+	}
+	if decoded.GitDiffStat.FilesChanged != 4 {
+		t.Errorf("GitDiffStat.FilesChanged = %d, want 4", decoded.GitDiffStat.FilesChanged)
+	}
+	if decoded.GitDiffStat.Insertions != 77 {
+		t.Errorf("GitDiffStat.Insertions = %d, want 77", decoded.GitDiffStat.Insertions)
+	}
+	if decoded.GitDiffStat.Deletions != 12 {
+		t.Errorf("GitDiffStat.Deletions = %d, want 12", decoded.GitDiffStat.Deletions)
+	}
+
+	// Omitempty: zero-valued new fields should not appear in JSON.
+	obsEmpty := LoopObservation{LoopID: "empty"}
+	emptyData, err := json.Marshal(obsEmpty)
+	if err != nil {
+		t.Fatalf("Marshal empty: %v", err)
+	}
+	emptyJSON := string(emptyData)
+	for _, field := range []string{"git_diff_stat", "planner_model_used", "worker_model_used", "acceptance_path", "stall_count"} {
+		if strings.Contains(emptyJSON, field) {
+			t.Errorf("zero-valued %q should be omitted from JSON", field)
+		}
+	}
+}
