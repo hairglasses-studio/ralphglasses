@@ -106,6 +106,26 @@ func ValidatePath(p, scanRoot string) error {
 	return nil
 }
 
+// Common length limits for MCP tool string parameters.
+const (
+	// MaxPromptLength is the maximum allowed length for prompt fields (200KB).
+	MaxPromptLength = 200 * 1024
+	// MaxDescriptionLength is the maximum allowed length for description/content fields (10KB).
+	MaxDescriptionLength = 10 * 1024
+	// MaxNameLength is the maximum allowed length for name fields (256 bytes).
+	MaxNameLength = 256
+)
+
+// ValidateStringLength returns an error if len(s) exceeds maxLen.
+// Empty strings are always accepted. fieldName is used in the error message
+// to identify which parameter failed validation.
+func ValidateStringLength(s string, maxLen int, fieldName string) error {
+	if len(s) > maxLen {
+		return fmt.Errorf("%s exceeds maximum length (%d > %d bytes)", fieldName, len(s), maxLen)
+	}
+	return nil
+}
+
 // SanitizeString strips null bytes from s. It is intended for free-text
 // fields (prompts, descriptions) where arbitrary content is allowed but
 // null bytes would cause issues with C-string APIs downstream.
