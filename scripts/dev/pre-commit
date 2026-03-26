@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Running pre-commit checks..."
+
+echo "→ go vet"
+go vet ./...
+
+echo "→ go test -short"
+go test -short -count=1 ./...
+
+echo "✓ All checks passed"
