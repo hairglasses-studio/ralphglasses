@@ -68,13 +68,21 @@ func InstrumentationMiddleware(rec *ToolCallRecorder) server.ToolHandlerMiddlewa
 				"duration_ms", entry.LatencyMs,
 				"success", entry.Success,
 			}
+			// Extract repo from request args when available for log correlation.
+			if args := req.GetArguments(); args != nil {
+				if repo, ok := args["repo"]; ok {
+					if rs, ok := repo.(string); ok && rs != "" {
+						logAttrs = append(logAttrs, "repo", rs)
+					}
+				}
+			}
 			if entry.ErrorMsg != "" {
 				logAttrs = append(logAttrs, "error", entry.ErrorMsg)
 			}
 			if entry.Success {
-				slog.InfoContext(ctx, "tool call completed", logAttrs...)
+				slog.InfoContext(ctx, "mcp.tool.call", logAttrs...)
 			} else {
-				slog.WarnContext(ctx, "tool call failed", logAttrs...)
+				slog.WarnContext(ctx, "mcp.tool.call", logAttrs...)
 			}
 
 			return result, err
