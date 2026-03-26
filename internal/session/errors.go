@@ -44,4 +44,13 @@ var (
 
 	// ErrUnexpectedExit indicates the session process exited unexpectedly.
 	ErrUnexpectedExit = errors.New("process exited unexpectedly")
+
+	// ErrLoopNotFound indicates the requested loop ID does not exist.
+	ErrLoopNotFound = errors.New("loop not found")
+
+	// ErrLoopStopped indicates the loop is in a stopped state.
+	ErrLoopStopped = errors.New("loop stopped")
+
+	// ErrLoopConverged indicates the loop has converged and should not continue.
+	ErrLoopConverged = errors.New("loop converged")
 )
