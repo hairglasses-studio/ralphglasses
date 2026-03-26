@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -153,7 +153,7 @@ func (b *Bus) Publish(event Event) {
 	}
 
 	if !ValidEventType(event.Type) {
-		log.Printf("[events] warning: unknown event type %q published", event.Type)
+		slog.Warn("unknown event type published", "type", event.Type)
 	}
 
 	b.mu.Lock()

@@ -1,7 +1,7 @@
 package process
 
 import (
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"runtime"
@@ -16,7 +16,7 @@ var scanProcessesFn = scanRalphLoopProcesses
 // orphanLogFn is called for each orphaned PID. Tests may replace it to
 // capture log output without writing to stderr.
 var orphanLogFn = func(pid int) {
-	log.Printf("WARNING: orphaned ralph process detected: PID %d is not tracked by this manager", pid)
+	slog.Warn("orphaned ralph process detected", "pid", pid)
 }
 
 // scanRalphLoopProcesses returns the PIDs of all running processes whose
