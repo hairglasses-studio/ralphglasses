@@ -31,13 +31,20 @@ func (s *Server) resolveRepoPath(repo string) (string, error) {
 		return r.Path, nil
 	}
 
-	// No repo specified — use first discovered or ScanPath.
+	// No repo specified — use single discovered repo or require explicit param.
 	if s.reposNil() {
 		_ = s.scan()
 	}
 	repos := s.reposCopy()
-	if len(repos) > 0 {
+	if len(repos) == 1 {
 		return repos[0].Path, nil
+	}
+	if len(repos) > 1 {
+		names := make([]string, len(repos))
+		for i, r := range repos {
+			names[i] = r.Name
+		}
+		return "", fmt.Errorf("multiple repos found, specify repo param: %s", strings.Join(names, ", "))
 	}
 	if s.ScanPath != "" {
 		return s.ScanPath, nil
@@ -53,7 +60,7 @@ func (s *Server) handleScratchpadRead(_ context.Context, req mcp.CallToolRequest
 
 	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
 	if err != nil {
-		return errResult(err.Error()), nil
+		return codedError(ErrInvalidParams, err.Error()), nil
 	}
 
 	path := filepath.Join(repoPath, ".ralph", name+"_scratchpad.md")
@@ -62,7 +69,7 @@ func (s *Server) handleScratchpadRead(_ context.Context, req mcp.CallToolRequest
 		if os.IsNotExist(err) {
 			return textResult("No scratchpad found: " + name), nil
 		}
-		return errResult(fmt.Sprintf("read scratchpad: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("read scratchpad: %v", err)), nil
 	}
 	return textResult(string(data)), nil
 }
@@ -80,18 +87,18 @@ func (s *Server) handleScratchpadAppend(_ context.Context, req mcp.CallToolReque
 
 	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
 	if err != nil {
-		return errResult(err.Error()), nil
+		return codedError(ErrInvalidParams, err.Error()), nil
 	}
 
 	dir := filepath.Join(repoPath, ".ralph")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return errResult(fmt.Sprintf("create .ralph dir: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("create .ralph dir: %v", err)), nil
 	}
 
 	path := filepath.Join(dir, name+"_scratchpad.md")
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		return errResult(fmt.Sprintf("open scratchpad: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("open scratchpad: %v", err)), nil
 	}
 	defer f.Close()
 
@@ -105,7 +112,7 @@ func (s *Server) handleScratchpadAppend(_ context.Context, req mcp.CallToolReque
 	}
 
 	if _, err := f.WriteString(buf.String()); err != nil {
-		return errResult(fmt.Sprintf("write scratchpad: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("write scratchpad: %v", err)), nil
 	}
 
 	return textResult("Appended to " + name + " scratchpad"), nil
@@ -114,13 +121,13 @@ func (s *Server) handleScratchpadAppend(_ context.Context, req mcp.CallToolReque
 func (s *Server) handleScratchpadList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
 	if err != nil {
-		return errResult(err.Error()), nil
+		return codedError(ErrInvalidParams, err.Error()), nil
 	}
 
 	pattern := filepath.Join(repoPath, ".ralph", "*_scratchpad.md")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
-		return errResult(fmt.Sprintf("glob scratchpads: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("glob scratchpads: %v", err)), nil
 	}
 
 	names := make([]string, 0, len(matches))
@@ -146,7 +153,7 @@ func (s *Server) handleScratchpadResolve(_ context.Context, req mcp.CallToolRequ
 
 	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
 	if err != nil {
-		return errResult(err.Error()), nil
+		return codedError(ErrInvalidParams, err.Error()), nil
 	}
 
 	path := filepath.Join(repoPath, ".ralph", name+"_scratchpad.md")
@@ -155,7 +162,7 @@ func (s *Server) handleScratchpadResolve(_ context.Context, req mcp.CallToolRequ
 		if os.IsNotExist(err) {
 			return textResult("No scratchpad found: " + name), nil
 		}
-		return errResult(fmt.Sprintf("read scratchpad: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("read scratchpad: %v", err)), nil
 	}
 
 	prefix := strconv.Itoa(itemNum) + ". "
@@ -177,11 +184,11 @@ func (s *Server) handleScratchpadResolve(_ context.Context, req mcp.CallToolRequ
 	}
 
 	if !found {
-		return errResult(fmt.Sprintf("item %d not found in scratchpad %s", itemNum, name)), nil
+		return codedError(ErrInvalidParams, fmt.Sprintf("item %d not found in scratchpad %s", itemNum, name)), nil
 	}
 
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
-		return errResult(fmt.Sprintf("write scratchpad: %v", err)), nil
+		return codedError(ErrFilesystem, fmt.Sprintf("write scratchpad: %v", err)), nil
 	}
 
 	return textResult("Resolved item " + strconv.Itoa(itemNum)), nil
