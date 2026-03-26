@@ -23,7 +23,7 @@ const DefaultStateDir = "~/.ralphglasses/sessions"
 
 // Manager tracks all active Claude Code sessions and teams.
 type Manager struct {
-	mu            sync.Mutex
+	mu            sync.RWMutex
 	sessions      map[string]*Session     // keyed by session ID
 	teams         map[string]*TeamStatus  // keyed by team name
 	workflowRuns  map[string]*WorkflowRun // keyed by workflow run ID
@@ -74,7 +74,7 @@ func NewManagerWithBus(bus *events.Bus) *Manager {
 // It sweeps for orphaned processes from previous runs and logs them without
 // killing them — the user should decide what to do.
 func (m *Manager) Init() {
-	m.mu.Lock()
+	m.mu.RLock()
 	activePIDs := make(map[int]bool)
 	for _, s := range m.sessions {
 		if s.Pid > 0 {
@@ -82,7 +82,7 @@ func (m *Manager) Init() {
 		}
 	}
 	ralphDir := filepath.Dir(m.stateDir)
-	m.mu.Unlock()
+	m.mu.RUnlock()
 
 	orphans := SweepOrphans(ralphDir, activePIDs)
 	if len(orphans) > 0 {
@@ -141,36 +141,36 @@ func (m *Manager) SetCurriculumSorter(cs *CurriculumSorter) {
 
 // HasReflexion returns true if a ReflexionStore is already attached.
 func (m *Manager) HasReflexion() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.reflexion != nil
 }
 
 // HasEpisodicMemory returns true if an EpisodicMemory is already attached.
 func (m *Manager) HasEpisodicMemory() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.episodic != nil
 }
 
 // GetEpisodicMemory returns the attached EpisodicMemory, or nil.
 func (m *Manager) GetEpisodicMemory() *EpisodicMemory {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.episodic
 }
 
 // HasCascadeRouter returns true if a CascadeRouter is already attached.
 func (m *Manager) HasCascadeRouter() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.cascade != nil
 }
 
 // HasCurriculumSorter returns true if a CurriculumSorter is already attached.
 func (m *Manager) HasCurriculumSorter() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.curriculum != nil
 }
 
@@ -188,15 +188,15 @@ func (m *Manager) SetBanditHooks(selectFn func() (string, string), updateFn func
 
 // HasBandit returns true if bandit hooks have been configured.
 func (m *Manager) HasBandit() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.banditSelect != nil
 }
 
 // GetCascadeRouter returns the attached CascadeRouter, or nil.
 func (m *Manager) GetCascadeRouter() *CascadeRouter {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.cascade
 }
 
@@ -209,15 +209,15 @@ func (m *Manager) SetBlackboard(bb *Blackboard) {
 
 // HasBlackboard returns true if a Blackboard is already attached.
 func (m *Manager) HasBlackboard() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.blackboard != nil
 }
 
 // GetBlackboard returns the attached Blackboard, or nil.
 func (m *Manager) GetBlackboard() *Blackboard {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.blackboard
 }
 
@@ -230,22 +230,22 @@ func (m *Manager) SetCostPredictor(cp *CostPredictor) {
 
 // HasCostPredictor returns true if a CostPredictor is already attached.
 func (m *Manager) HasCostPredictor() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.costPredictor != nil
 }
 
 // GetCostPredictor returns the attached CostPredictor, or nil.
 func (m *Manager) GetCostPredictor() *CostPredictor {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.costPredictor
 }
 
 // GetReflexionStore returns the attached ReflexionStore, or nil.
 func (m *Manager) GetReflexionStore() *ReflexionStore {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.reflexion
 }
 
@@ -271,9 +271,9 @@ func (m *Manager) SetHealthCheckForTesting(fn func(Provider) ProviderHealth) {
 // checkHealth returns the health of a provider, using the injectable function
 // if set, otherwise falling back to CheckProviderHealth.
 func (m *Manager) checkHealth(p Provider) ProviderHealth {
-	m.mu.Lock()
+	m.mu.RLock()
 	fn := m.healthCheck
-	m.mu.Unlock()
+	m.mu.RUnlock()
 	if fn != nil {
 		return fn(p)
 	}
@@ -307,9 +307,9 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	}
 
 	// Level 2+ auto-optimization: consult FeedbackAnalyzer for provider/budget
-	m.mu.Lock()
+	m.mu.RLock()
 	optimizer := m.optimizer
-	m.mu.Unlock()
+	m.mu.RUnlock()
 	if optimizer != nil {
 		var changed bool
 		opts, changed = optimizer.OptimizedLaunchOptions(opts)
@@ -358,16 +358,16 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 
 // Get returns a session by ID.
 func (m *Manager) Get(id string) (*Session, bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	s, ok := m.sessions[id]
 	return s, ok
 }
 
 // List returns all sessions, optionally filtered by repo path.
 func (m *Manager) List(repoPath string) []*Session {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	var result []*Session
 	for _, s := range m.sessions {
@@ -386,8 +386,8 @@ const DefaultStallThreshold = 5 * time.Minute
 // DetectStalls returns the IDs of sessions that are in "running" state but
 // have not recorded any activity within the given threshold duration.
 func (m *Manager) DetectStalls(threshold time.Duration) []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	var stalled []string
 	for _, s := range m.sessions {
@@ -449,9 +449,9 @@ func killWithEscalation(cmd *exec.Cmd, timeout time.Duration, done <-chan struct
 
 // Stop gracefully stops a running session.
 func (m *Manager) Stop(id string) error {
-	m.mu.Lock()
+	m.mu.RLock()
 	s, ok := m.sessions[id]
-	m.mu.Unlock()
+	m.mu.RUnlock()
 
 	if !ok {
 		return fmt.Errorf("session %s: %w", id, ErrSessionNotFound)
@@ -501,7 +501,7 @@ func (m *Manager) Stop(id string) error {
 
 // StopAll stops all running sessions.
 func (m *Manager) StopAll() {
-	m.mu.Lock()
+	m.mu.RLock()
 	ids := make([]string, 0, len(m.sessions))
 	for id, s := range m.sessions {
 		s.mu.Lock()
@@ -510,7 +510,7 @@ func (m *Manager) StopAll() {
 		}
 		s.mu.Unlock()
 	}
-	m.mu.Unlock()
+	m.mu.RUnlock()
 
 	for _, id := range ids {
 		if err := m.Stop(id); err != nil {
@@ -535,8 +535,8 @@ func (m *Manager) Resume(ctx context.Context, repoPath string, provider Provider
 
 // IsRunning checks if any session is running for the given repo path.
 func (m *Manager) IsRunning(repoPath string) bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	for _, s := range m.sessions {
 		if s.RepoPath == repoPath {
 			s.mu.Lock()
@@ -552,8 +552,8 @@ func (m *Manager) IsRunning(repoPath string) bool {
 
 // FindByRepo returns all sessions for a given repo name.
 func (m *Manager) FindByRepo(repoName string) []*Session {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	var result []*Session
 	for _, s := range m.sessions {
@@ -810,8 +810,8 @@ func (m *Manager) updateTeamOnSessionEnd(sess *Session) {
 
 // ListTeams returns all teams.
 func (m *Manager) ListTeams() []*TeamStatus {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	result := make([]*TeamStatus, 0, len(m.teams))
 	for _, t := range m.teams {
@@ -822,8 +822,8 @@ func (m *Manager) ListTeams() []*TeamStatus {
 
 // GetWorkflowRun returns a workflow run by ID.
 func (m *Manager) GetWorkflowRun(id string) (*WorkflowRun, bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	run, ok := m.workflowRuns[id]
 	return run, ok
 }
@@ -1157,9 +1157,9 @@ func (m *Manager) PersistSession(s *Session) error {
 // The new session inherits the original prompt, remaining budget, max turns, and team.
 // Returns the new session on success; the old session is stopped regardless.
 func (m *Manager) MigrateSession(ctx context.Context, sessionID string, targetProvider Provider) (*Session, error) {
-	m.mu.Lock()
+	m.mu.RLock()
 	s, ok := m.sessions[sessionID]
-	m.mu.Unlock()
+	m.mu.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("session %s: %w", sessionID, ErrSessionNotFound)
 	}
@@ -1272,9 +1272,9 @@ func (m *Manager) LoadExternalSessions() {
 // HITLSnapshot returns the current HITL score over a 24h window.
 // Returns nil if no AutoOptimizer is configured.
 func (m *Manager) HITLSnapshot() *HITLSnapshot {
-	m.mu.Lock()
+	m.mu.RLock()
 	opt := m.optimizer
-	m.mu.Unlock()
+	m.mu.RUnlock()
 	if opt == nil || opt.hitl == nil {
 		return nil
 	}
@@ -1285,9 +1285,9 @@ func (m *Manager) HITLSnapshot() *HITLSnapshot {
 // FeedbackProfiles returns all prompt profiles from the feedback analyzer.
 // Returns nil if no AutoOptimizer is configured.
 func (m *Manager) FeedbackProfiles() []PromptProfile {
-	m.mu.Lock()
+	m.mu.RLock()
 	opt := m.optimizer
-	m.mu.Unlock()
+	m.mu.RUnlock()
 	if opt == nil || opt.feedback == nil {
 		return nil
 	}
@@ -1297,9 +1297,9 @@ func (m *Manager) FeedbackProfiles() []PromptProfile {
 // ProviderProfiles returns all provider profiles from the feedback analyzer.
 // Returns nil if no AutoOptimizer is configured.
 func (m *Manager) ProviderProfiles() []ProviderProfile {
-	m.mu.Lock()
+	m.mu.RLock()
 	opt := m.optimizer
-	m.mu.Unlock()
+	m.mu.RUnlock()
 	if opt == nil || opt.feedback == nil {
 		return nil
 	}
@@ -1309,9 +1309,9 @@ func (m *Manager) ProviderProfiles() []ProviderProfile {
 // RecentDecisions returns the last n autonomous decisions.
 // Returns nil if no AutoOptimizer is configured.
 func (m *Manager) RecentDecisions(n int) []AutonomousDecision {
-	m.mu.Lock()
+	m.mu.RLock()
 	opt := m.optimizer
-	m.mu.Unlock()
+	m.mu.RUnlock()
 	if opt == nil || opt.decisions == nil {
 		return nil
 	}
@@ -1321,9 +1321,9 @@ func (m *Manager) RecentDecisions(n int) []AutonomousDecision {
 // GetAutonomyLevel returns the current autonomy level.
 // Returns LevelObserve if no AutoOptimizer is configured.
 func (m *Manager) GetAutonomyLevel() AutonomyLevel {
-	m.mu.Lock()
+	m.mu.RLock()
 	opt := m.optimizer
-	m.mu.Unlock()
+	m.mu.RUnlock()
 	if opt == nil || opt.decisions == nil {
 		return LevelObserve
 	}
