@@ -256,10 +256,10 @@ func TestIntegration_SessionLifecycle(t *testing.T) {
 		t.Fatalf("status returned error: %s", getResultText(statusResult))
 	}
 	statusText := getResultText(statusResult)
-	if !strings.Contains(statusText, `"model": "opus"`) {
+	if !strings.Contains(statusText, `"model":"opus"`) {
 		t.Fatalf("status: expected model opus, got: %s", statusText)
 	}
-	if !strings.Contains(statusText, `"turns": 8`) {
+	if !strings.Contains(statusText, `"turns":8`) {
 		t.Fatalf("status: expected turns 8, got: %s", statusText)
 	}
 
@@ -275,10 +275,10 @@ func TestIntegration_SessionLifecycle(t *testing.T) {
 		t.Fatalf("budget returned error: %s", getResultText(budgetResult))
 	}
 	budgetText := getResultText(budgetResult)
-	if !strings.Contains(budgetText, `"budget_usd": 25`) {
+	if !strings.Contains(budgetText, `"budget_usd":25`) {
 		t.Fatalf("budget: expected budget 25, got: %s", budgetText)
 	}
-	if !strings.Contains(budgetText, `"remaining": 23`) {
+	if !strings.Contains(budgetText, `"remaining":23`) {
 		t.Fatalf("budget: expected remaining 23, got: %s", budgetText)
 	}
 
@@ -303,7 +303,7 @@ func TestIntegration_SessionLifecycle(t *testing.T) {
 		t.Fatalf("status after stop: %v", err)
 	}
 	statusText2 := getResultText(statusResult2)
-	if !strings.Contains(statusText2, `"status": "stopped"`) {
+	if !strings.Contains(statusText2, `"status":"stopped"`) {
 		t.Fatalf("status after stop: expected stopped, got: %s", statusText2)
 	}
 }
@@ -589,7 +589,7 @@ func TestIntegration_JournalLifecycle(t *testing.T) {
 		t.Fatalf("journal_write returned error: %s", getResultText(writeResult))
 	}
 	writeText := getResultText(writeResult)
-	if !strings.Contains(writeText, `"status":  "written"`) && !strings.Contains(writeText, `"status": "written"`) {
+	if !strings.Contains(writeText, `"status":"written"`) {
 		t.Fatalf("journal_write: expected written status, got: %s", writeText)
 	}
 
@@ -731,7 +731,7 @@ func TestIntegration_SessionErrorsFlow(t *testing.T) {
 		t.Fatalf("errors (empty): %v", err)
 	}
 	errText := getResultText(errResult)
-	if !strings.Contains(errText, `"total_errors": 0`) {
+	if !strings.Contains(errText, `"total_errors":0`) {
 		t.Fatalf("errors: expected 0 total_errors, got: %s", errText)
 	}
 
@@ -756,7 +756,7 @@ func TestIntegration_SessionErrorsFlow(t *testing.T) {
 	if !strings.Contains(errText2, "budget_warning") {
 		t.Fatalf("errors: expected budget_warning, got: %s", errText2)
 	}
-	if !strings.Contains(errText2, `"total_errors": 2`) {
+	if !strings.Contains(errText2, `"total_errors":2`) {
 		t.Fatalf("errors: expected 2 total_errors (budget_warning + session_error), got: %s", errText2)
 	}
 }

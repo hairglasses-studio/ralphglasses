@@ -188,10 +188,10 @@ func TestHandleRCRead_NoSessions(t *testing.T) {
 		t.Fatalf("unexpected error: %s", getResultText(result))
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, `"status": "empty"`) {
+	if !strings.Contains(text, `"status":"empty"`) {
 		t.Errorf("expected empty status JSON in output, got: %s", text)
 	}
-	if !strings.Contains(text, `"item_type": "rc_messages"`) {
+	if !strings.Contains(text, `"item_type":"rc_messages"`) {
 		t.Errorf("expected item_type rc_messages in empty result, got: %s", text)
 	}
 }

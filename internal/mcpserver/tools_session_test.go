@@ -232,7 +232,7 @@ func TestHandleSessionTail(t *testing.T) {
 	if !strings.Contains(text, "line1") || !strings.Contains(text, "line5") {
 		t.Errorf("expected all lines, got: %s", text)
 	}
-	if !strings.Contains(text, `"next_cursor": "15"`) {
+	if !strings.Contains(text, `"next_cursor":"15"`) {
 		t.Errorf("expected next_cursor 15, got: %s", text)
 	}
 }
@@ -256,7 +256,7 @@ func TestHandleSessionTailNoCursor(t *testing.T) {
 		t.Fatalf("handleSessionTail: %v", err)
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, `"lines_returned": 3`) {
+	if !strings.Contains(text, `"lines_returned":3`) {
 		t.Errorf("expected 3 lines returned, got: %s", text)
 	}
 	// Should contain e, f, g but not a, b
@@ -284,7 +284,7 @@ func TestHandleSessionTailWithCursor(t *testing.T) {
 		t.Fatalf("handleSessionTail: %v", err)
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, `"lines_returned": 2`) {
+	if !strings.Contains(text, `"lines_returned":2`) {
 		t.Errorf("expected 2 new lines, got: %s", text)
 	}
 	if !strings.Contains(text, "line4") || !strings.Contains(text, "line5") {
@@ -421,7 +421,7 @@ func TestHandleSessionErrors_SeverityFilter(t *testing.T) {
 	}
 	text := getResultText(result)
 	// The errors array should only contain critical entries
-	if !strings.Contains(text, `"total_errors": 1`) {
+	if !strings.Contains(text, `"total_errors":1`) {
 		t.Errorf("expected 1 error after filter, got: %s", text)
 	}
 	// The filtered errors should all be critical
