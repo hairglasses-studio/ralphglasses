@@ -151,7 +151,10 @@ func (s *Server) handleSessionStop(_ context.Context, req mcp.CallToolRequest) (
 
 	if err := s.SessMgr.Stop(id); err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
+			if len(s.SessMgr.List("")) == 0 {
+				return codedError(ErrNoActiveSessions, "no active sessions — use ralphglasses_session_launch to start one"), nil
+			}
+			return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 		}
 		return codedError(ErrInternal, fmt.Sprintf("stop failed: %v", err)), nil
 	}
@@ -223,7 +226,10 @@ func (s *Server) handleSessionRetry(ctx context.Context, req mcp.CallToolRequest
 
 	sess, ok := s.SessMgr.Get(id)
 	if !ok {
-		return codedError(ErrSessionNotFound, fmt.Sprintf("session not found: %s", id)), nil
+		if len(s.SessMgr.List("")) == 0 {
+			return codedError(ErrNoActiveSessions, "no active sessions — use ralphglasses_session_launch to start one"), nil
+		}
+		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
 
 	sess.Lock()

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mark3labs/mcp-go/mcp"
+
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -171,7 +173,7 @@ func TestHandleSessionStatus(t *testing.T) {
 		}
 	})
 
-	t.Run("non-existent session", func(t *testing.T) {
+	t.Run("non-existent session no sessions", func(t *testing.T) {
 		t.Parallel()
 		srv, _ := setupTestServer(t)
 
@@ -185,8 +187,8 @@ func TestHandleSessionStatus(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrSessionNotFound) {
-			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
+		if code != string(ErrNoActiveSessions) {
+			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
 		}
 	})
 
@@ -315,7 +317,7 @@ func TestHandleSessionStop(t *testing.T) {
 		}
 	})
 
-	t.Run("non-existent session", func(t *testing.T) {
+	t.Run("non-existent session no sessions", func(t *testing.T) {
 		t.Parallel()
 		srv, _ := setupTestServer(t)
 
@@ -329,8 +331,8 @@ func TestHandleSessionStop(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrSessionNotFound) {
-			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
+		if code != string(ErrNoActiveSessions) {
+			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
 		}
 	})
 }
@@ -445,7 +447,7 @@ func TestHandleSessionBudget(t *testing.T) {
 		}
 	})
 
-	t.Run("non-existent session", func(t *testing.T) {
+	t.Run("non-existent session no sessions", func(t *testing.T) {
 		t.Parallel()
 		srv, _ := setupTestServer(t)
 
@@ -459,8 +461,8 @@ func TestHandleSessionBudget(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrSessionNotFound) {
-			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
+		if code != string(ErrNoActiveSessions) {
+			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
 		}
 	})
 
@@ -515,7 +517,7 @@ func TestHandleSessionOutput(t *testing.T) {
 		}
 	})
 
-	t.Run("non-existent session", func(t *testing.T) {
+	t.Run("non-existent session no sessions", func(t *testing.T) {
 		t.Parallel()
 		srv, _ := setupTestServer(t)
 
@@ -529,8 +531,8 @@ func TestHandleSessionOutput(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrSessionNotFound) {
-			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
+		if code != string(ErrNoActiveSessions) {
+			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
 		}
 	})
 
@@ -582,7 +584,7 @@ func TestHandleSessionTailErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("non-existent session", func(t *testing.T) {
+	t.Run("non-existent session no sessions", func(t *testing.T) {
 		t.Parallel()
 		srv, _ := setupTestServer(t)
 
@@ -596,8 +598,8 @@ func TestHandleSessionTailErrors(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrSessionNotFound) {
-			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
+		if code != string(ErrNoActiveSessions) {
+			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
 		}
 	})
 
@@ -676,7 +678,7 @@ func TestHandleSessionDiffCodes(t *testing.T) {
 		}
 	})
 
-	t.Run("non-existent session", func(t *testing.T) {
+	t.Run("non-existent session no sessions", func(t *testing.T) {
 		t.Parallel()
 		srv, _ := setupTestServer(t)
 
@@ -690,8 +692,8 @@ func TestHandleSessionDiffCodes(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrSessionNotFound) {
-			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
+		if code != string(ErrNoActiveSessions) {
+			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
 		}
 	})
 
@@ -762,7 +764,7 @@ func TestHandleSessionCompare(t *testing.T) {
 		}
 	})
 
-	t.Run("id1 not found", func(t *testing.T) {
+	t.Run("id1 not found no sessions", func(t *testing.T) {
 		t.Parallel()
 		srv, _ := setupTestServer(t)
 
@@ -777,8 +779,8 @@ func TestHandleSessionCompare(t *testing.T) {
 			t.Fatal("expected error for non-existent sessions")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrSessionNotFound) {
-			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
+		if code != string(ErrNoActiveSessions) {
+			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
 		}
 	})
 
@@ -814,4 +816,164 @@ func TestHandleSessionCompare(t *testing.T) {
 			t.Errorf("expected cost_per_turn field, got: %s", text)
 		}
 	})
+}
+
+func TestSessionToolsNoActiveSessions(t *testing.T) {
+	t.Parallel()
+
+	handlers := []struct {
+		name string
+		call func(*Server) (*mcp.CallToolResult, error)
+	}{
+		{"session_status", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionStatus(context.Background(), makeRequest(map[string]any{"id": "nonexistent"}))
+		}},
+		{"session_output", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionOutput(context.Background(), makeRequest(map[string]any{"id": "nonexistent"}))
+		}},
+		{"session_budget", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionBudget(context.Background(), makeRequest(map[string]any{"id": "nonexistent"}))
+		}},
+		{"session_tail", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionTail(context.Background(), makeRequest(map[string]any{"id": "nonexistent"}))
+		}},
+		{"session_diff", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionDiff(context.Background(), makeRequest(map[string]any{"id": "nonexistent"}))
+		}},
+		{"session_retry", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionRetry(context.Background(), makeRequest(map[string]any{"id": "nonexistent"}))
+		}},
+		{"session_stop", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionStop(context.Background(), makeRequest(map[string]any{"id": "nonexistent"}))
+		}},
+		{"session_compare", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionCompare(context.Background(), makeRequest(map[string]any{"id1": "a", "id2": "b"}))
+		}},
+	}
+
+	for _, h := range handlers {
+		h := h
+		t.Run(h.name+"_no_sessions", func(t *testing.T) {
+			t.Parallel()
+			srv, _ := setupTestServer(t)
+
+			result, err := h.call(srv)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !result.IsError {
+				t.Fatal("expected error when no sessions exist")
+			}
+			code := parseErrorCode(t, getResultText(result))
+			if code != string(ErrNoActiveSessions) {
+				t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
+			}
+			text := getResultText(result)
+			if !strings.Contains(text, "ralphglasses_session_launch") {
+				t.Errorf("expected guidance to use session_launch, got: %s", text)
+			}
+		})
+	}
+}
+
+func TestSessionToolsWithInvalidID(t *testing.T) {
+	t.Parallel()
+
+	handlers := []struct {
+		name string
+		call func(*Server) (*mcp.CallToolResult, error)
+	}{
+		{"session_status", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionStatus(context.Background(), makeRequest(map[string]any{"id": "wrong-id"}))
+		}},
+		{"session_output", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionOutput(context.Background(), makeRequest(map[string]any{"id": "wrong-id"}))
+		}},
+		{"session_budget", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionBudget(context.Background(), makeRequest(map[string]any{"id": "wrong-id"}))
+		}},
+		{"session_tail", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionTail(context.Background(), makeRequest(map[string]any{"id": "wrong-id"}))
+		}},
+		{"session_diff", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionDiff(context.Background(), makeRequest(map[string]any{"id": "wrong-id"}))
+		}},
+		{"session_retry", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleSessionRetry(context.Background(), makeRequest(map[string]any{"id": "wrong-id"}))
+		}},
+	}
+
+	for _, h := range handlers {
+		h := h
+		t.Run(h.name+"_invalid_id", func(t *testing.T) {
+			t.Parallel()
+			srv, root := setupTestServer(t)
+			repoPath := filepath.Join(root, "test-repo")
+
+			// Inject a session so the manager is not empty
+			injectTestSession(t, srv, repoPath, nil)
+
+			result, err := h.call(srv)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !result.IsError {
+				t.Fatal("expected error for invalid session ID")
+			}
+			code := parseErrorCode(t, getResultText(result))
+			if code != string(ErrSessionNotFound) {
+				t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
+			}
+			text := getResultText(result)
+			if !strings.Contains(text, "ralphglasses_session_list") {
+				t.Errorf("expected guidance to use session_list, got: %s", text)
+			}
+		})
+	}
+}
+
+func TestFleetToolsNotRunning(t *testing.T) {
+	t.Parallel()
+
+	handlers := []struct {
+		name string
+		call func(*Server) (*mcp.CallToolResult, error)
+	}{
+		{"fleet_submit", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleFleetSubmit(context.Background(), makeRequest(map[string]any{"repo": "r", "prompt": "p"}))
+		}},
+		{"fleet_budget", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleFleetBudget(context.Background(), makeRequest(nil))
+		}},
+		{"fleet_workers", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleFleetWorkers(context.Background(), makeRequest(nil))
+		}},
+		{"fleet_dlq", func(srv *Server) (*mcp.CallToolResult, error) {
+			return srv.handleFleetDLQ(context.Background(), makeRequest(nil))
+		}},
+	}
+
+	for _, h := range handlers {
+		h := h
+		t.Run(h.name, func(t *testing.T) {
+			t.Parallel()
+			srv, _ := setupTestServer(t)
+
+			result, err := h.call(srv)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !result.IsError {
+				t.Fatal("expected error when fleet not running")
+			}
+			code := parseErrorCode(t, getResultText(result))
+			if code != string(ErrFleetNotRunning) {
+				t.Errorf("error_code = %q, want %q", code, ErrFleetNotRunning)
+			}
+			text := getResultText(result)
+			if !strings.Contains(text, "ralphglasses mcp --fleet") {
+				t.Errorf("expected guidance to start fleet, got: %s", text)
+			}
+		})
+	}
 }
