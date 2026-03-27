@@ -1108,3 +1108,205 @@ func TestPublishCtx_CancelledContext(t *testing.T) {
 		t.Errorf("history len = %d, want 0", len(hist))
 	}
 }
+
+func TestStartAsyncWrites_PublishDrains(t *testing.T) {
+	dir := t.TempDir()
+	persistPath := filepath.Join(dir, "async_drain.jsonl")
+
+	bus := NewBus(100)
+	if err := bus.PersistTo(persistPath); err != nil {
+		t.Fatal(err)
+	}
+
+	bus.StartAsyncWrites(64)
+
+	const total = 10
+	for i := 0; i < total; i++ {
+		bus.Publish(Event{Type: LoopIterated, Data: map[string]any{"i": i}})
+	}
+
+	bus.StopAsyncWrites()
+
+	events, err := LoadEvents(persistPath, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != total {
+		t.Fatalf("expected %d persisted events, got %d", total, len(events))
+	}
+
+	// Verify each event is intact
+	for i, ev := range events {
+		if ev.Type != LoopIterated {
+			t.Errorf("event[%d].Type = %q, want %q", i, ev.Type, LoopIterated)
+		}
+	}
+}
+
+func TestStartAsyncWrites_Idempotent(t *testing.T) {
+	dir := t.TempDir()
+	persistPath := filepath.Join(dir, "idem2.jsonl")
+
+	bus := NewBus(100)
+	if err := bus.PersistTo(persistPath); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call StartAsyncWrites twice — must not panic or leak goroutines
+	bus.StartAsyncWrites(32)
+	bus.StartAsyncWrites(32) // no-op
+
+	bus.Publish(Event{Type: SessionStarted, RepoName: "idem"})
+
+	bus.StopAsyncWrites()
+
+	events, err := LoadEvents(persistPath, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 {
+		t.Errorf("expected 1 event, got %d", len(events))
+	}
+}
+
+func TestStopAsyncWrites_DrainsChannel(t *testing.T) {
+	dir := t.TempDir()
+	persistPath := filepath.Join(dir, "drain_stop.jsonl")
+
+	bus := NewBus(500)
+	if err := bus.PersistTo(persistPath); err != nil {
+		t.Fatal(err)
+	}
+
+	// Use a small buffer to ensure events queue up
+	bus.StartAsyncWrites(16)
+
+	const total = 100
+	for i := 0; i < total; i++ {
+		bus.Publish(Event{Type: LoopIterated, Data: map[string]any{"i": i}})
+	}
+
+	// StopAsyncWrites must drain all queued events
+	bus.StopAsyncWrites()
+
+	events, err := LoadEvents(persistPath, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != total {
+		t.Fatalf("expected %d persisted events after drain, got %d", total, len(events))
+	}
+
+	// After stop, AsyncWrites should be false
+	if bus.AsyncWrites {
+		t.Error("AsyncWrites should be false after StopAsyncWrites")
+	}
+}
+
+func TestStopAsyncWrites_Noop(t *testing.T) {
+	bus := NewBus(100)
+	// Calling stop without ever starting should not panic
+	bus.StopAsyncWrites()
+}
+
+func TestWithAsyncWrites_Option(t *testing.T) {
+	dir := t.TempDir()
+	persistPath := filepath.Join(dir, "opt_async.jsonl")
+
+	bus := NewBus(100, WithAsyncWrites(64))
+	if !bus.AsyncWrites {
+		t.Fatal("AsyncWrites should be true after WithAsyncWrites option")
+	}
+
+	if err := bus.PersistTo(persistPath); err != nil {
+		t.Fatal(err)
+	}
+
+	// StartAsync (legacy) should work since AsyncWrites is already set
+	bus.StartAsync()
+
+	bus.Publish(Event{Type: SessionStarted, RepoName: "opt"})
+
+	if err := bus.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	events, err := LoadEvents(persistPath, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 {
+		t.Errorf("expected 1 event, got %d", len(events))
+	}
+}
+
+func TestStartAsyncWrites_ThenStopThenRestart(t *testing.T) {
+	dir := t.TempDir()
+	persistPath := filepath.Join(dir, "restart.jsonl")
+
+	bus := NewBus(100)
+	if err := bus.PersistTo(persistPath); err != nil {
+		t.Fatal(err)
+	}
+
+	// First cycle
+	bus.StartAsyncWrites(32)
+	bus.Publish(Event{Type: SessionStarted, RepoName: "phase1"})
+	bus.StopAsyncWrites()
+
+	// Second cycle — should work without issues
+	bus.StartAsyncWrites(32)
+	bus.Publish(Event{Type: SessionEnded, RepoName: "phase2"})
+	bus.StopAsyncWrites()
+
+	events, err := LoadEvents(persistPath, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("expected 2 events across restart cycles, got %d", len(events))
+	}
+}
+
+func BenchmarkPublishCtx_Sync(b *testing.B) {
+	dir := b.TempDir()
+	persistPath := filepath.Join(dir, "bench_sync.jsonl")
+
+	bus := NewBus(10000)
+	if err := bus.PersistTo(persistPath); err != nil {
+		b.Fatal(err)
+	}
+	defer bus.Close()
+
+	evt := Event{Type: LoopIterated, Data: map[string]any{"bench": true}}
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = bus.PublishCtx(ctx, evt)
+	}
+}
+
+func BenchmarkPublishCtx_Async(b *testing.B) {
+	dir := b.TempDir()
+	persistPath := filepath.Join(dir, "bench_async.jsonl")
+
+	bus := NewBus(10000)
+	if err := bus.PersistTo(persistPath); err != nil {
+		b.Fatal(err)
+	}
+
+	bus.StartAsyncWrites(4096)
+
+	evt := Event{Type: LoopIterated, Data: map[string]any{"bench": true}}
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = bus.PublishCtx(ctx, evt)
+	}
+	b.StopTimer()
+
+	bus.StopAsyncWrites()
+	bus.Close()
+}
