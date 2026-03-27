@@ -180,10 +180,18 @@ func (s *Server) handleScratchpadList(_ context.Context, req mcp.CallToolRequest
 		return codedError(ErrFilesystem, fmt.Sprintf("glob scratchpads: %v", err)), nil
 	}
 
+	seen := make(map[string]struct{}, len(matches))
 	names := make([]string, 0, len(matches))
 	for _, m := range matches {
 		base := filepath.Base(m)
 		name := strings.TrimSuffix(base, "_scratchpad.md")
+		// Strip redundant _scratchpad suffix (e.g. "tool_improvement_scratchpad_scratchpad.md"
+		// would become "tool_improvement_scratchpad", then we trim again).
+		name = strings.TrimSuffix(name, "_scratchpad")
+		if _, dup := seen[name]; dup {
+			continue
+		}
+		seen[name] = struct{}{}
 		names = append(names, name)
 	}
 
