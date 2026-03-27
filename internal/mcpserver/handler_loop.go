@@ -182,7 +182,7 @@ func (s *Server) handleLoopStop(_ context.Context, req mcp.CallToolRequest) (*mc
 	}
 
 	if err := s.SessMgr.StopLoop(id); err != nil {
-		return codedError(ErrLoopNotFound, fmt.Sprintf("stop loop: %v", err)), nil
+		return codedError(ErrLoopNotFound, fmt.Sprintf("loop %s not found — use ralphglasses_loop_status to check active loops", id)), nil
 	}
 	return textResult(fmt.Sprintf("Stopped loop %s", id)), nil
 }
