@@ -52,6 +52,16 @@ func main() {
 		return
 	}
 
+	if err := dispatch(args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+// dispatch routes command-line args to the appropriate handler.
+// Returns an error for usage issues; handlers that need to exit non-zero
+// for other reasons (e.g., runHook exit 2) still call os.Exit directly.
+func dispatch(args []string) error {
 	switch args[0] {
 	case "enhance":
 		taskType := ""
@@ -96,8 +106,7 @@ func main() {
 			prompt = readStdin()
 		}
 		if prompt == "" {
-			fmt.Fprintln(os.Stderr, "usage: prompt-improver enhance <prompt> [--type T] [--mode local|llm|auto] [--provider P] [--target-provider P] [--quiet]")
-			os.Exit(1)
+			return fmt.Errorf("usage: prompt-improver enhance <prompt> [--type T] [--mode local|llm|auto] [--provider P] [--target-provider P] [--quiet]")
 		}
 		if mode != "" || provider != "" || targetProvider != "" {
 			if mode == "" {
@@ -148,8 +157,7 @@ func main() {
 			prompt = readStdin()
 		}
 		if prompt == "" {
-			fmt.Fprintln(os.Stderr, "usage: prompt-improver improve <prompt> [--thinking] [--feedback hint] [--type T] [--provider P] [--quiet]")
-			os.Exit(1)
+			return fmt.Errorf("usage: prompt-improver improve <prompt> [--thinking] [--feedback hint] [--type T] [--provider P] [--quiet]")
 		}
 		runImprove(prompt, taskType, thinking, feedback, quiet, provider)
 
@@ -159,8 +167,7 @@ func main() {
 			prompt = readStdin()
 		}
 		if prompt == "" {
-			fmt.Fprintln(os.Stderr, "usage: prompt-improver diff <prompt>")
-			os.Exit(1)
+			return fmt.Errorf("usage: prompt-improver diff <prompt>")
 		}
 		runDiff(prompt)
 
@@ -186,15 +193,13 @@ func main() {
 			prompt = readStdin()
 		}
 		if prompt == "" {
-			fmt.Fprintln(os.Stderr, "usage: prompt-improver analyze <prompt> [--target-provider P]")
-			os.Exit(1)
+			return fmt.Errorf("usage: prompt-improver analyze <prompt> [--target-provider P]")
 		}
 		runAnalyze(prompt, targetProvider)
 
 	case "template":
 		if len(args) < 2 {
-			fmt.Fprintln(os.Stderr, "usage: prompt-improver template <name> [--var value ...]")
-			os.Exit(1)
+			return fmt.Errorf("usage: prompt-improver template <name> [--var value ...]")
 		}
 		runTemplate(args[1], args[2:])
 
@@ -207,8 +212,7 @@ func main() {
 			prompt = readStdin()
 		}
 		if prompt == "" {
-			fmt.Fprintln(os.Stderr, "usage: prompt-improver lint <prompt>")
-			os.Exit(1)
+			return fmt.Errorf("usage: prompt-improver lint <prompt>")
 		}
 		runLint(prompt)
 
@@ -250,6 +254,7 @@ func main() {
 		prompt := strings.Join(args, " ")
 		runEnhance(prompt, "")
 	}
+	return nil
 }
 
 func runEnhance(prompt, taskType string) {
