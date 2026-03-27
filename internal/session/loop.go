@@ -102,6 +102,17 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 				continue
 			}
 		}
+		// WS5: Check aggregate budget before each step iteration.
+		if exceeded, reason := m.checkLoopBudget(run); exceeded {
+			run.mu.Lock()
+			run.Status = "completed"
+			run.LastError = "budget exceeded: " + reason
+			run.mu.Unlock()
+			m.PersistLoop(run)
+			slog.Warn("loop budget exceeded, stopping", "loop", id, "reason", reason)
+			return nil
+		}
+
 		err := m.StepLoop(ctx, id)
 		if err != nil {
 			run.mu.Lock()
@@ -160,6 +171,51 @@ func (m *Manager) bootstrapLoopAutonomy(repoPath string) *AutonomyConfig {
 		cfg[strings.TrimSpace(k)] = strings.Trim(strings.TrimSpace(v), "\"")
 	}
 	return BootstrapAutonomy(cfg)
+}
+
+// checkLoopBudget computes aggregate spend across all sessions in a loop run
+// and checks whether the total budget (planner + worker) has been exceeded.
+// Returns (false, "") when no budget is configured or spend is within limits.
+func (m *Manager) checkLoopBudget(run *LoopRun) (bool, string) {
+	if m.budgetEnforcer == nil {
+		return false, ""
+	}
+
+	run.mu.Lock()
+	profile := run.Profile
+	iterations := make([]LoopIteration, len(run.Iterations))
+	copy(iterations, run.Iterations)
+	run.mu.Unlock()
+
+	totalBudget := profile.PlannerBudgetUSD + profile.WorkerBudgetUSD
+	if totalBudget <= 0 {
+		return false, ""
+	}
+
+	var totalSpent float64
+	for _, iter := range iterations {
+		if iter.PlannerSessionID != "" {
+			if ps, ok := m.Get(iter.PlannerSessionID); ok {
+				ps.Lock()
+				totalSpent += ps.SpentUSD
+				ps.Unlock()
+			}
+		}
+		for _, wid := range iter.WorkerSessionIDs {
+			if ws, ok := m.Get(wid); ok {
+				ws.Lock()
+				totalSpent += ws.SpentUSD
+				ws.Unlock()
+			}
+		}
+	}
+
+	threshold := totalBudget * m.budgetEnforcer.Headroom
+	if totalSpent >= threshold {
+		return true, fmt.Sprintf("spent $%.2f of $%.2f budget (%.0f%% headroom)",
+			totalSpent, totalBudget, m.budgetEnforcer.Headroom*100)
+	}
+	return false, ""
 }
 
 // GetLoop returns a loop run by ID.

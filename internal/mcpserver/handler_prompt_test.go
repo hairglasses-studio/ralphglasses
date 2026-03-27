@@ -695,7 +695,7 @@ func TestHandlePromptShouldEnhance(t *testing.T) {
 			},
 		},
 		{
-			name: "xml structured should not enhance",
+			name: "xml structured with weak dimensions should enhance",
 			args: map[string]any{"prompt": "<instructions>Do something useful with the code base and make sure it works properly</instructions>"},
 			check: func(t *testing.T, text string) {
 				var m map[string]any
@@ -706,8 +706,8 @@ func TestHandlePromptShouldEnhance(t *testing.T) {
 				if !ok {
 					t.Fatal("should_enhance is not bool")
 				}
-				if shouldEnhance {
-					t.Error("XML-structured prompt should not need enhancement")
+				if !shouldEnhance {
+					t.Error("XML-structured prompt with weak dimensions should still need enhancement")
 				}
 			},
 		},
