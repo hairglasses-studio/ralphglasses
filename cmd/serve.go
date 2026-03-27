@@ -50,15 +50,22 @@ Tailscale peers on the fleet port to auto-discover the coordinator.`,
 			cancel()
 		}()
 
-		bus := events.NewBus(1000)
-		sessMgr := session.NewManagerWithBus(bus)
-		hostname := fleet.GetHostname()
+		bus, sessMgr, hostname := setupServe()
 
 		if serveCoordinator {
 			return runCoordinator(ctx, hostname, bus, sessMgr)
 		}
 		return runWorker(ctx, hostname, sp, bus, sessMgr)
 	},
+}
+
+// setupServe creates the event bus, session manager, and resolves the hostname
+// for fleet communication.
+func setupServe() (*events.Bus, *session.Manager, string) {
+	bus := events.NewBus(1000)
+	sessMgr := session.NewManagerWithBus(bus)
+	hostname := fleet.GetHostname()
+	return bus, sessMgr, hostname
 }
 
 func runCoordinator(ctx context.Context, hostname string, bus *events.Bus, sessMgr *session.Manager) error {
