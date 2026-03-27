@@ -36,7 +36,8 @@ type Manager struct {
 	banditUpdate func(string, float64)   // bandit reward recording hook
 	blackboard   *Blackboard             // Phase H: shared inter-subsystem state
 	costPredictor *CostPredictor         // Phase H: task cost prediction
-	noopDetector  *NoOpDetector          // WS2-noop: consecutive no-op iteration detection
+	noopDetector    *NoOpDetector          // WS2-noop: consecutive no-op iteration detection
+	budgetEnforcer  *BudgetEnforcer        // WS5: secondary budget enforcement for loops
 	launchSession  func(context.Context, LaunchOptions) (*Session, error)
 	waitSession    func(context.Context, *Session) error
 	healthCheck    func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
@@ -53,21 +54,23 @@ func NewManager() *Manager {
 		teams:        make(map[string]*TeamStatus),
 		workflowRuns: make(map[string]*WorkflowRun),
 		loops:        make(map[string]*LoopRun),
-		stateDir:     expandHome(DefaultStateDir),
-		noopDetector: NewNoOpDetector(2),
+		stateDir:       expandHome(DefaultStateDir),
+		noopDetector:   NewNoOpDetector(2),
+		budgetEnforcer: NewBudgetEnforcer(),
 	}
 }
 
 // NewManagerWithBus creates a session manager wired to an event bus.
 func NewManagerWithBus(bus *events.Bus) *Manager {
 	return &Manager{
-		sessions:     make(map[string]*Session),
-		teams:        make(map[string]*TeamStatus),
-		workflowRuns: make(map[string]*WorkflowRun),
-		loops:        make(map[string]*LoopRun),
-		bus:          bus,
-		stateDir:     expandHome(DefaultStateDir),
-		noopDetector: NewNoOpDetector(2),
+		sessions:       make(map[string]*Session),
+		teams:          make(map[string]*TeamStatus),
+		workflowRuns:   make(map[string]*WorkflowRun),
+		loops:          make(map[string]*LoopRun),
+		bus:            bus,
+		stateDir:       expandHome(DefaultStateDir),
+		noopDetector:   NewNoOpDetector(2),
+		budgetEnforcer: NewBudgetEnforcer(),
 	}
 }
 
