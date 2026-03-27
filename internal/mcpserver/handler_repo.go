@@ -28,7 +28,14 @@ func (s *Server) handleScan(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 			Data: map[string]any{"repo_count": len(repos)},
 		})
 	}
-	return textResult(fmt.Sprintf("Found %d ralph-enabled repos", len(repos))), nil
+	repoNames := make([]string, len(repos))
+	for i, r := range repos {
+		repoNames[i] = r.Name
+	}
+	return jsonResult(map[string]any{
+		"repos_found": len(repos),
+		"repos":       repoNames,
+	}), nil
 }
 
 func (s *Server) handleList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -115,7 +122,11 @@ func (s *Server) handleStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.
 		detail["progress"] = r.Progress
 	}
 	if r.Config != nil {
-		detail["config"] = r.Config.Values
+		if getBoolArg(req, "include_config") {
+			detail["config"] = r.Config.Values
+		} else {
+			detail["config_keys"] = len(r.Config.Values)
+		}
 	}
 	return jsonResult(detail), nil
 }
@@ -170,8 +181,12 @@ func (s *Server) handleStop(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 }
 
 func (s *Server) handleStopAll(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	runningBefore := s.ProcMgr.RunningPaths()
 	s.ProcMgr.StopAll(ctx)
-	return textResult("All managed loops stopped"), nil
+	return jsonResult(map[string]any{
+		"stopped_count": len(runningBefore),
+		"stopped":       runningBefore,
+	}), nil
 }
 
 func (s *Server) handlePause(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
