@@ -89,3 +89,83 @@ func TestResolveSpeculative_OnlyCheapDone(t *testing.T) {
 		t.Error("expected expensive to not be done")
 	}
 }
+
+func TestResolveSpeculative_OnlyExpensiveDone(t *testing.T) {
+	cheap := makeSession(StatusRunning, 2, 0.10)
+	expensive := makeSession(StatusCompleted, 5, 3.00)
+
+	result := ResolveSpeculative(cheap, expensive, false, false)
+
+	if result.Winner != "expensive" {
+		t.Errorf("expected winner=expensive (only one done), got %s", result.Winner)
+	}
+}
+
+func TestResolveSpeculative_NeitherDone(t *testing.T) {
+	cheap := makeSession(StatusRunning, 2, 0.10)
+	expensive := makeSession(StatusRunning, 2, 1.00)
+
+	result := ResolveSpeculative(cheap, expensive, false, false)
+
+	if result.Winner != "expensive" {
+		t.Errorf("expected winner=expensive (fallback when neither done), got %s", result.Winner)
+	}
+}
+
+func TestResolveSpeculative_OnlyCheapVerified(t *testing.T) {
+	cheap := makeSession(StatusCompleted, 5, 0.50)
+	expensive := makeSession(StatusCompleted, 5, 3.00)
+
+	result := ResolveSpeculative(cheap, expensive, true, false)
+
+	if result.Winner != "cheap" {
+		t.Errorf("expected winner=cheap (only cheap verified), got %s", result.Winner)
+	}
+	if result.CostSavedUSD <= 0 {
+		t.Errorf("expected positive cost savings, got %.2f", result.CostSavedUSD)
+	}
+}
+
+func TestResolveSpeculative_CheapVerifiedExpensiveNotDone(t *testing.T) {
+	cheap := makeSession(StatusCompleted, 5, 0.50)
+	expensive := makeSession(StatusRunning, 2, 1.00)
+
+	result := ResolveSpeculative(cheap, expensive, true, false)
+
+	if result.Winner != "cheap" {
+		t.Errorf("expected winner=cheap (verified and done), got %s", result.Winner)
+	}
+	// expensive not done, so CostSavedUSD should be 0 (no expensive cost to save)
+	if result.CostSavedUSD != 0 {
+		t.Errorf("expected 0 cost savings (expensive not done), got %.2f", result.CostSavedUSD)
+	}
+}
+
+func TestResolveSpeculative_ErroredSession(t *testing.T) {
+	cheap := makeSession(StatusErrored, 5, 0.50)
+	expensive := makeSession(StatusCompleted, 5, 3.00)
+
+	result := ResolveSpeculative(cheap, expensive, false, true)
+
+	// Expensive is verified, cheap errored (done but not verified)
+	if result.Winner != "expensive" {
+		t.Errorf("expected winner=expensive (verified), got %s", result.Winner)
+	}
+	if !result.CheapDone {
+		t.Error("errored session should count as done")
+	}
+}
+
+func TestResolveSpeculative_StoppedSession(t *testing.T) {
+	cheap := makeSession(StatusStopped, 5, 0.50)
+	expensive := makeSession(StatusRunning, 2, 1.00)
+
+	result := ResolveSpeculative(cheap, expensive, false, false)
+
+	if result.Winner != "cheap" {
+		t.Errorf("expected winner=cheap (stopped counts as done), got %s", result.Winner)
+	}
+	if !result.CheapDone {
+		t.Error("stopped session should count as done")
+	}
+}

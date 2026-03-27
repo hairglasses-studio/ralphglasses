@@ -290,6 +290,201 @@ func TestDeleteWorkflow_NotFound(t *testing.T) {
 	}
 }
 
+func TestWorkflowRun_StepByName(t *testing.T) {
+	run := newWorkflowRun("/tmp", WorkflowDef{
+		Name: "test",
+		Steps: []WorkflowStep{
+			{Name: "step1", Prompt: "do 1"},
+			{Name: "step2", Prompt: "do 2"},
+		},
+	})
+
+	step := run.stepByName("step1")
+	if step == nil {
+		t.Fatal("expected step1 to be found")
+	}
+	if step.Name != "step1" {
+		t.Errorf("name = %q, want step1", step.Name)
+	}
+
+	missing := run.stepByName("nonexistent")
+	if missing != nil {
+		t.Errorf("expected nil for missing step, got %+v", missing)
+	}
+}
+
+func TestWorkflowRun_UpdateStep(t *testing.T) {
+	run := newWorkflowRun("/tmp", WorkflowDef{
+		Name: "test",
+		Steps: []WorkflowStep{
+			{Name: "step1", Prompt: "do 1"},
+		},
+	})
+
+	// Update with mutate func
+	run.updateStep("step1", "running", func(s *WorkflowStepResult) {
+		s.SessionID = "sess-123"
+	})
+
+	run.Lock()
+	if run.Steps[0].Status != "running" {
+		t.Errorf("step status = %q, want running", run.Steps[0].Status)
+	}
+	if run.Steps[0].SessionID != "sess-123" {
+		t.Errorf("session ID = %q, want sess-123", run.Steps[0].SessionID)
+	}
+	run.Unlock()
+
+	// Update with nil mutate
+	run.updateStep("step1", "completed", nil)
+	run.Lock()
+	if run.Steps[0].Status != "completed" {
+		t.Errorf("step status = %q, want completed", run.Steps[0].Status)
+	}
+	run.Unlock()
+
+	// Update nonexistent step - should not panic
+	run.updateStep("nonexistent", "failed", nil)
+}
+
+func TestWorkflowRun_SetStatus(t *testing.T) {
+	run := newWorkflowRun("/tmp", WorkflowDef{
+		Name:  "test",
+		Steps: []WorkflowStep{{Name: "s1", Prompt: "p1"}},
+	})
+	run.setStatus("running")
+	run.Lock()
+	if run.Status != "running" {
+		t.Errorf("status = %q, want running", run.Status)
+	}
+	run.Unlock()
+}
+
+func TestNewWorkflowRun(t *testing.T) {
+	wf := WorkflowDef{
+		Name: "deploy",
+		Steps: []WorkflowStep{
+			{Name: "build", Prompt: "build it"},
+			{Name: "test", Prompt: "test it"},
+			{Name: "deploy", Prompt: "ship it"},
+		},
+	}
+	run := newWorkflowRun("/tmp/repo", wf)
+
+	if run.Name != "deploy" {
+		t.Errorf("name = %q, want deploy", run.Name)
+	}
+	if run.RepoPath != "/tmp/repo" {
+		t.Errorf("repo = %q", run.RepoPath)
+	}
+	if run.Status != "pending" {
+		t.Errorf("status = %q, want pending", run.Status)
+	}
+	if len(run.Steps) != 3 {
+		t.Fatalf("steps = %d, want 3", len(run.Steps))
+	}
+	for _, step := range run.Steps {
+		if step.Status != "pending" {
+			t.Errorf("step %q status = %q, want pending", step.Name, step.Status)
+		}
+	}
+	if run.ID == "" {
+		t.Error("expected non-empty ID")
+	}
+}
+
+func TestValidateWorkflow_EmptyStepName(t *testing.T) {
+	wf := WorkflowDef{
+		Name: "test",
+		Steps: []WorkflowStep{
+			{Name: "", Prompt: "no name"},
+		},
+	}
+	err := ValidateWorkflow(wf)
+	if err == nil || !strings.Contains(err.Error(), "step name required") {
+		t.Errorf("expected step name required error, got: %v", err)
+	}
+}
+
+func TestValidateWorkflow_EmptyStepPrompt(t *testing.T) {
+	wf := WorkflowDef{
+		Name: "test",
+		Steps: []WorkflowStep{
+			{Name: "step1", Prompt: ""},
+		},
+	}
+	err := ValidateWorkflow(wf)
+	if err == nil || !strings.Contains(err.Error(), "prompt required") {
+		t.Errorf("expected prompt required error, got: %v", err)
+	}
+}
+
+func TestValidateWorkflow_UnknownProvider(t *testing.T) {
+	wf := WorkflowDef{
+		Name: "test",
+		Steps: []WorkflowStep{
+			{Name: "step1", Prompt: "do it", Provider: "unknown_provider"},
+		},
+	}
+	err := ValidateWorkflow(wf)
+	if err == nil || !strings.Contains(err.Error(), "unknown provider") {
+		t.Errorf("expected unknown provider error, got: %v", err)
+	}
+}
+
+func TestValidateWorkflow_NoSteps(t *testing.T) {
+	wf := WorkflowDef{
+		Name:  "empty",
+		Steps: nil,
+	}
+	err := ValidateWorkflow(wf)
+	if err == nil || !strings.Contains(err.Error(), "at least one step") {
+		t.Errorf("expected at least one step error, got: %v", err)
+	}
+}
+
+func TestValidateWorkflow_ValidDAG(t *testing.T) {
+	wf := WorkflowDef{
+		Name: "valid",
+		Steps: []WorkflowStep{
+			{Name: "a", Prompt: "p1"},
+			{Name: "b", Prompt: "p2", DependsOn: []string{"a"}},
+			{Name: "c", Prompt: "p3", DependsOn: []string{"a", "b"}},
+		},
+	}
+	if err := ValidateWorkflow(wf); err != nil {
+		t.Fatalf("expected valid workflow, got: %v", err)
+	}
+}
+
+func TestSaveWorkflow_SpacesInName(t *testing.T) {
+	dir := t.TempDir()
+	wf := WorkflowDef{
+		Name: "my workflow name",
+		Steps: []WorkflowStep{
+			{Name: "s1", Prompt: "p1"},
+		},
+	}
+	if err := SaveWorkflow(dir, wf); err != nil {
+		t.Fatalf("SaveWorkflow: %v", err)
+	}
+	loaded, err := LoadWorkflow(dir, "my workflow name")
+	if err != nil {
+		t.Fatalf("LoadWorkflow: %v", err)
+	}
+	if loaded.Name != "my workflow name" {
+		t.Errorf("loaded name = %q", loaded.Name)
+	}
+}
+
+func TestLoadWorkflow_NotFound(t *testing.T) {
+	dir := t.TempDir()
+	_, err := LoadWorkflow(dir, "nonexistent")
+	if err == nil {
+		t.Error("expected error for missing workflow")
+	}
+}
+
 func waitForWorkflowStatus(t *testing.T, run *WorkflowRun, want string) {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)

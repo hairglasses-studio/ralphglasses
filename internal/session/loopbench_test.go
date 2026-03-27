@@ -668,3 +668,175 @@ func TestSummarizeObservationsPercentiles(t *testing.T) {
 		t.Errorf("CostP50 = %f, want ~0.055", s.CostP50)
 	}
 }
+
+func TestWriteObservation_CreatesIntermediateDirs(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "deep", "nested", "dir", "obs.jsonl")
+
+	err := WriteObservation(path, LoopObservation{LoopID: "dir-test"})
+	if err != nil {
+		t.Fatalf("WriteObservation should create intermediate dirs: %v", err)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Errorf("file not created at nested path: %v", err)
+	}
+}
+
+func TestLoadObservations_MalformedLines(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "malformed.jsonl")
+
+	f, _ := os.Create(path)
+	_, _ = f.WriteString(`{"loop_id":"good1","ts":"2026-01-01T00:00:00Z"}` + "\n")
+	_, _ = f.WriteString("this is not valid json\n")
+	_, _ = f.WriteString(`{"loop_id":"good2","ts":"2026-02-01T00:00:00Z"}` + "\n")
+	_, _ = f.WriteString("\n") // empty line
+	f.Close()
+
+	loaded, err := LoadObservations(path, time.Time{})
+	if err != nil {
+		t.Fatalf("LoadObservations: %v", err)
+	}
+	if len(loaded) != 2 {
+		t.Errorf("expected 2 valid observations (skipping malformed), got %d", len(loaded))
+	}
+}
+
+func TestAggregateObservations_ZeroWindowReturnsEmpty(t *testing.T) {
+	t.Parallel()
+	obs := []LoopObservation{{LoopID: "a", TotalCostUSD: 1.0}}
+	summary := AggregateObservations(obs, 0)
+	if summary.TotalIterations != 0 {
+		t.Errorf("expected 0 iterations for zero window, got %d", summary.TotalIterations)
+	}
+}
+
+func TestAggregateObservations_EfficiencyScore(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	obs := []LoopObservation{
+		{Timestamp: now.Add(-30 * time.Minute), Status: "idle", TotalCostUSD: 0.25},
+		{Timestamp: now.Add(-20 * time.Minute), Status: "idle", TotalCostUSD: 0.25},
+		{Timestamp: now.Add(-10 * time.Minute), Status: "failed", TotalCostUSD: 0.50},
+	}
+
+	summary := AggregateObservations(obs, 1)
+	// 2 completed / $1.00 total = 2.0
+	if diff := summary.EfficiencyScore - 2.0; diff > 0.01 || diff < -0.01 {
+		t.Errorf("EfficiencyScore = %f, want 2.0", summary.EfficiencyScore)
+	}
+}
+
+func TestAggregateObservations_ZeroCostEfficiency(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	obs := []LoopObservation{
+		{Timestamp: now.Add(-30 * time.Minute), Status: "idle", TotalCostUSD: 0},
+	}
+
+	summary := AggregateObservations(obs, 1)
+	if summary.EfficiencyScore != 0 {
+		t.Errorf("EfficiencyScore = %f, want 0 for zero cost", summary.EfficiencyScore)
+	}
+}
+
+func TestAggregateObservations_StableCostTrend(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	obs := []LoopObservation{
+		// Previous window (1-2 hours ago)
+		{Timestamp: now.Add(-90 * time.Minute), Status: "idle", TotalCostUSD: 1.00},
+		// Current window (last hour)
+		{Timestamp: now.Add(-30 * time.Minute), Status: "idle", TotalCostUSD: 1.05},
+	}
+
+	summary := AggregateObservations(obs, 1)
+	if summary.CostTrend != "stable" {
+		t.Errorf("CostTrend = %q, want stable (ratio ~1.05)", summary.CostTrend)
+	}
+}
+
+func TestAggregateObservations_IncreasingCostTrend(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	obs := []LoopObservation{
+		{Timestamp: now.Add(-90 * time.Minute), Status: "idle", TotalCostUSD: 0.10},
+		{Timestamp: now.Add(-30 * time.Minute), Status: "idle", TotalCostUSD: 2.00},
+	}
+
+	summary := AggregateObservations(obs, 1)
+	if summary.CostTrend != "increasing" {
+		t.Errorf("CostTrend = %q, want increasing", summary.CostTrend)
+	}
+}
+
+func TestAggregateObservations_VelocityIncluded(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	obs := []LoopObservation{
+		{Timestamp: now.Add(-30 * time.Minute), Status: "idle", TotalCostUSD: 0.10, VerifyPassed: true, FilesChanged: 3},
+		{Timestamp: now.Add(-15 * time.Minute), Status: "idle", TotalCostUSD: 0.10, VerifyPassed: true, FilesChanged: 1},
+	}
+
+	summary := AggregateObservations(obs, 1)
+	// 2 useful in 1 hour = 2.0
+	if summary.Velocity != 2.0 {
+		t.Errorf("Velocity = %f, want 2.0", summary.Velocity)
+	}
+}
+
+func TestAggregateObservations_NoPreviousWindow(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	obs := []LoopObservation{
+		{Timestamp: now.Add(-30 * time.Minute), Status: "idle", TotalCostUSD: 1.00},
+	}
+
+	summary := AggregateObservations(obs, 1)
+	if summary.CostTrend != "stable" {
+		t.Errorf("CostTrend = %q, want stable with no previous window", summary.CostTrend)
+	}
+}
+
+func TestAggregateObservations_AllOutsideWindow(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	obs := []LoopObservation{
+		{Timestamp: now.Add(-5 * time.Hour), Status: "idle", TotalCostUSD: 1.00},
+	}
+
+	summary := AggregateObservations(obs, 1)
+	if summary.TotalIterations != 0 {
+		t.Errorf("expected 0 iterations when all outside window, got %d", summary.TotalIterations)
+	}
+}
+
+func TestLoopVelocity_NegativeWindow(t *testing.T) {
+	t.Parallel()
+	if v := LoopVelocity(nil, -1); v != 0 {
+		t.Errorf("expected 0 for negative window, got %f", v)
+	}
+}
+
+func TestSummarizeObservations_SingleObs(t *testing.T) {
+	t.Parallel()
+	obs := []LoopObservation{
+		{Status: "idle", TotalLatencyMs: 3000, TotalCostUSD: 0.25},
+	}
+
+	s := SummarizeObservations(obs)
+	if s.LatencyP50 != 3.0 {
+		t.Errorf("LatencyP50 = %f, want 3.0 for single obs", s.LatencyP50)
+	}
+	if s.LatencyP95 != 3.0 {
+		t.Errorf("LatencyP95 = %f, want 3.0 for single obs", s.LatencyP95)
+	}
+	if s.LatencyP99 != 3.0 {
+		t.Errorf("LatencyP99 = %f, want 3.0 for single obs", s.LatencyP99)
+	}
+	if s.CostP50 != 0.25 {
+		t.Errorf("CostP50 = %f, want 0.25 for single obs", s.CostP50)
+	}
+}
