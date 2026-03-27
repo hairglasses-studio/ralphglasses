@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -38,6 +40,67 @@ func (l AutonomyLevel) String() string {
 	default:
 		return fmt.Sprintf("unknown(%d)", l)
 	}
+}
+
+// AutonomyConfig holds bootstrapped autonomy settings parsed from .ralphrc.
+type AutonomyConfig struct {
+	Level         AutonomyLevel // 0=observe, 1=auto-recover (max for bootstrap)
+	AutoRecover   bool          // whether auto-recovery is enabled
+	MaxRecoveries int           // max auto-recoveries per loop before requiring manual intervention
+}
+
+// BootstrapAutonomy reads autonomy settings from a .ralphrc config map and
+// returns an AutonomyConfig. Only levels 0 (observe) and 1 (auto-recover)
+// are supported during bootstrapping; higher values are clamped to 1.
+func BootstrapAutonomy(cfg map[string]string) *AutonomyConfig {
+	ac := &AutonomyConfig{
+		Level:         LevelObserve,
+		AutoRecover:   false,
+		MaxRecoveries: 3,
+	}
+
+	if v, ok := cfg["AUTONOMY_LEVEL"]; ok {
+		if n, err := strconv.Atoi(v); err == nil {
+			if n > int(LevelAutoRecover) {
+				n = int(LevelAutoRecover) // clamp to level 1 during bootstrap
+			}
+			if n < 0 {
+				n = 0
+			}
+			ac.Level = AutonomyLevel(n)
+		}
+	}
+
+	if v, ok := cfg["AUTONOMY_AUTO_RECOVER"]; ok {
+		switch strings.ToLower(v) {
+		case "true", "1", "yes":
+			ac.AutoRecover = true
+		}
+	}
+
+	if v, ok := cfg["AUTONOMY_AUTO_RECOVER_MAX"]; ok {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			ac.MaxRecoveries = n
+		}
+	}
+
+	return ac
+}
+
+// ShouldRecover returns true if autonomy config allows auto-recovery for a loop
+// that has failed recoveryCount times already.
+func (ac *AutonomyConfig) ShouldRecover(recoveryCount int) bool {
+	return ac.Level >= LevelAutoRecover && ac.AutoRecover && recoveryCount < ac.MaxRecoveries
+}
+
+// RecoveryBackoff returns the backoff duration for the given recovery attempt
+// (0-indexed). The schedule is 30s, 60s, 120s, etc. (exponential with base 30s, factor 2).
+func RecoveryBackoff(attempt int) time.Duration {
+	base := 30 * time.Second
+	for i := 0; i < attempt; i++ {
+		base *= 2
+	}
+	return base
 }
 
 // DecisionCategory groups autonomous decisions.

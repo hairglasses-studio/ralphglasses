@@ -59,6 +59,10 @@ func (m *Manager) StartLoop(_ context.Context, repoPath string, profile LoopProf
 // RunLoop drives a loop to completion by calling StepLoop repeatedly until
 // max iterations, duration limit, retry limit, or stop signal is reached.
 // It runs synchronously — callers should launch it in a goroutine if needed.
+//
+// When autonomy level >= 1 and auto-recover is enabled in .ralphrc, failed
+// iterations are retried with exponential backoff (30s, 60s, 120s...) up to
+// MaxRecoveries times before giving up.
 func (m *Manager) RunLoop(ctx context.Context, id string) error {
 	run, ok := m.GetLoop(id)
 	if !ok {
@@ -71,12 +75,17 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 	run.mu.Lock()
 	run.cancel = cancel
 	run.done = done
+	repoPath := run.RepoPath
 	run.mu.Unlock()
 
 	defer func() {
 		cancel()
 		close(done)
 	}()
+
+	// Bootstrap autonomy config from .ralphrc (best-effort; defaults to level 0).
+	autonomyCfg := m.bootstrapLoopAutonomy(repoPath)
+	recoveryCount := 0
 
 	for {
 		if ctx.Err() != nil {
@@ -98,12 +107,59 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 			run.mu.Lock()
 			status := run.Status
 			run.mu.Unlock()
-			if status == "completed" || status == "stopped" {
+			if status == "completed" || status == "stopped" || status == "converged" {
 				return nil
 			}
+
+			// Auto-recovery: if enabled and under limit, wait with backoff and retry.
+			if autonomyCfg.ShouldRecover(recoveryCount) {
+				backoff := RecoveryBackoff(recoveryCount)
+				recoveryCount++
+				slog.Info("loop auto-recovery: scheduling retry",
+					"loop", id, "attempt", recoveryCount,
+					"max", autonomyCfg.MaxRecoveries, "backoff", backoff,
+					"error", err.Error())
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(backoff):
+					continue
+				}
+			}
+
+			if autonomyCfg.Level >= LevelAutoRecover && autonomyCfg.AutoRecover && recoveryCount >= autonomyCfg.MaxRecoveries {
+				slog.Warn("loop auto-recovery: max recoveries exceeded, manual intervention required",
+					"loop", id, "recoveries", recoveryCount, "max", autonomyCfg.MaxRecoveries)
+			}
+
 			return err
 		}
+		// Reset recovery count on successful step.
+		recoveryCount = 0
 	}
+}
+
+// bootstrapLoopAutonomy reads .ralphrc from the repo path and returns
+// an AutonomyConfig. Falls back to defaults (level 0, no auto-recover) on error.
+func (m *Manager) bootstrapLoopAutonomy(repoPath string) *AutonomyConfig {
+	rcPath := filepath.Join(repoPath, ".ralphrc")
+	cfg := make(map[string]string)
+	data, err := os.ReadFile(rcPath)
+	if err != nil {
+		return BootstrapAutonomy(cfg)
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		k, v, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		cfg[strings.TrimSpace(k)] = strings.Trim(strings.TrimSpace(v), "\"")
+	}
+	return BootstrapAutonomy(cfg)
 }
 
 // GetLoop returns a loop run by ID.
