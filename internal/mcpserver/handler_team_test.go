@@ -108,7 +108,7 @@ func TestHandleTeamCreate_DryRun(t *testing.T) {
 		"name":           "dry-team",
 		"tasks":          "implement feature A\nwrite tests for feature A",
 		"provider":       "claude",
-		"max_budget_usd": 5.0,
+		"budget_usd": 5.0,
 		"dry_run":        true,
 	}))
 	if err != nil {
@@ -210,7 +210,7 @@ func TestHandleTeamCreate_DryRunDefaults(t *testing.T) {
 		t.Error("lead_agent should not be empty in dry_run preview")
 	}
 	// max_budget_usd should show effective default, not 0
-	if budget, _ := parsed["max_budget_usd"].(float64); budget <= 0 {
+	if budget, _ := parsed["budget_usd"].(float64); budget <= 0 {
 		t.Errorf("max_budget_usd = %f, want > 0", budget)
 	}
 }

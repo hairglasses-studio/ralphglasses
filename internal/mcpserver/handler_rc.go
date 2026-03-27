@@ -404,7 +404,7 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 		}
 	}
 
-	budget := getNumberArg(req, "budget", 5.0)
+	budget := getNumberArg(req, "budget_usd", 5.0)
 	opts := session.LaunchOptions{
 		Provider:     provider,
 		RepoPath:     r.Path,
