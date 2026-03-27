@@ -942,8 +942,11 @@ func TestHandleJournalRead_Empty(t *testing.T) {
 	}
 
 	text := getResultText(result)
-	if !strings.Contains(text, `"count":0`) {
-		t.Errorf("expected count 0, got: %s", text)
+	if !strings.Contains(text, `"status":"empty"`) {
+		t.Errorf("expected status=empty, got: %s", text)
+	}
+	if !strings.Contains(text, `"item_type":"journal_entries"`) {
+		t.Errorf("expected item_type=journal_entries, got: %s", text)
 	}
 }
 

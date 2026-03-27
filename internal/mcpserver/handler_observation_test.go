@@ -42,12 +42,15 @@ func TestHandleObservationQueryEmpty(t *testing.T) {
 	}
 
 	text := getResultText(result)
-	var obs []session.LoopObservation
-	if err := json.Unmarshal([]byte(text), &obs); err != nil {
+	var emptyRes map[string]any
+	if err := json.Unmarshal([]byte(text), &emptyRes); err != nil {
 		t.Fatalf("failed to unmarshal result: %v", err)
 	}
-	if len(obs) != 0 {
-		t.Errorf("expected empty array, got %d observations", len(obs))
+	if emptyRes["status"] != "empty" {
+		t.Errorf("expected status=empty, got %v", emptyRes["status"])
+	}
+	if emptyRes["item_type"] != "observations" {
+		t.Errorf("expected item_type=observations, got %v", emptyRes["item_type"])
 	}
 }
 

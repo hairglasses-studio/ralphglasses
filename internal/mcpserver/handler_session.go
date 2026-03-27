@@ -82,8 +82,8 @@ func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (
 		})
 	}
 
-	if summaries == nil {
-		summaries = []sessionSummary{}
+	if len(summaries) == 0 {
+		return emptyResult("sessions"), nil
 	}
 	return jsonResult(summaries), nil
 }

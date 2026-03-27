@@ -157,6 +157,9 @@ func (s *Server) handleSnapshot(ctx context.Context, req mcp.CallToolRequest) (*
 				snapshots = append(snapshots, filepath.Base(snap))
 			}
 		}
+		if len(snapshots) == 0 {
+			return emptyResult("snapshots"), nil
+		}
 		return jsonResult(map[string]any{"snapshots": snapshots}), nil
 	}
 
@@ -255,6 +258,10 @@ func (s *Server) handleJournalRead(_ context.Context, req mcp.CallToolRequest) (
 	entries, err := session.ReadRecentJournal(r.Path, limit)
 	if err != nil {
 		return codedError(ErrFilesystem, fmt.Sprintf("read journal: %v", err)), nil
+	}
+
+	if len(entries) == 0 {
+		return emptyResult("journal_entries"), nil
 	}
 
 	synthesis := session.SynthesizeContext(entries)

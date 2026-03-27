@@ -230,7 +230,7 @@ func (s *Server) handleLogs(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	allLines, err := process.ReadFullLog(r.Path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return jsonResult(map[string]any{"lines": []string{}, "message": "no log file yet"}), nil
+			return emptyResult("log_lines"), nil
 		}
 		return codedError(ErrFilesystem, fmt.Sprintf("read log: %v", err)), nil
 	}
