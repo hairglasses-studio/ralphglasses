@@ -1,43 +1,31 @@
-PROJECT_NAME="ralphglasses"
-PROJECT_TYPE="go"
-MAX_CALLS_PER_HOUR=80
-CLAUDE_TIMEOUT_MINUTES=20
-CLAUDE_OUTPUT_FORMAT="json"
-SESSION_CONTINUITY=true
-SESSION_EXPIRY_HOURS=24
-MARATHON_MODE=true
-MARATHON_DURATION_HOURS=12
-MARATHON_CHECKPOINT_INTERVAL=3
-CB_NO_PROGRESS_THRESHOLD=4
-CB_SAME_ERROR_THRESHOLD=5
-CB_PERMISSION_DENIAL_THRESHOLD=2
-CB_COOLDOWN_MINUTES=15
-CB_AUTO_RESET=true
-LOG_RETENTION_DAYS=7
-# Model strategy (from mesmer/hg-mcp patterns)
-PRIMARY_MODEL="sonnet"
-BATCH_SIMILAR_TASKS=true
-MAX_TASKS_PER_BATCH=3
-MAX_LINES_PER_BATCH=600
-# Quality gates (Go)
-QG_GO_BUILD=true
-QG_GO_VET=true
-QG_GO_TEST=true
+CLAUDE_TIMEOUT_MINUTES="20"
+MARATHON_DURATION_HOURS="12"
+CB_SAME_ERROR_THRESHOLD="5"
+MAX_LINES_PER_BATCH="600"
 ALLOWED_TOOLS="Write,Read,Edit,Grep,Glob,Bash(go build *),Bash(go test *),Bash(go vet *),Bash(go run *),Bash(go mod *),Bash(git add *),Bash(git commit *),Bash(git diff *),Bash(git log *),Bash(git status),Bash(git status *),Bash(git push *),Bash(make *)"
-RALPH_SESSION_BUDGET=100
-
-# =============================================================================
-# FAST MODE STRATEGY
-# =============================================================================
-
-# Enable phase-aware fast mode switching
-FAST_MODE_ENABLED=true
-
-# Which phases use fast mode (comma-separated)
-# "execution" phases: code gen, mechanical fixes, test expansion, docs
-# "analysis" phases: architecture review, debugging, planning, refactoring
-FAST_MODE_PHASES="execution,test,docs,mechanical"
+PROJECT_NAME="ralphglasses"
+LOG_RETENTION_DAYS="7"
+SESSION_CONTINUITY="true"
+SESSION_EXPIRY_HOURS="24"
+QG_GO_BUILD="true"
+RALPH_SESSION_BUDGET="100"
+CASCADE_ENABLED="true"
+CASCADE_CHEAP_THRESHOLD="0.4"
+QG_GO_TEST="true"
+MARATHON_MODE="true"
+MARATHON_CHECKPOINT_INTERVAL="3"
+BATCH_SIMILAR_TASKS="true"
+MAX_TASKS_PER_BATCH="3"
+QG_GO_VET="true"
+FAST_MODE_DEFAULT="false"
+CLAUDE_OUTPUT_FORMAT="json"
+CB_NO_PROGRESS_THRESHOLD="4"
+CB_COOLDOWN_MINUTES="15"
+CB_AUTO_RESET="true"
 STANDARD_MODE_PHASES="analysis,planning,debug,refactor,architecture"
-
-# Default when phase is unknown
-FAST_MODE_DEFAULT=false
+PROJECT_TYPE="go"
+MAX_CALLS_PER_HOUR="80"
+CB_PERMISSION_DENIAL_THRESHOLD="2"
+PRIMARY_MODEL="sonnet"
+FAST_MODE_ENABLED="true"
+FAST_MODE_PHASES="execution,test,docs,mechanical"
