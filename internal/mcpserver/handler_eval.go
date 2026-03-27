@@ -37,12 +37,7 @@ func (s *Server) handleEvalCounterfactual(_ context.Context, req mcp.CallToolReq
 	}
 
 	if len(observations) == 0 {
-		return jsonResult(map[string]any{
-			"repo":         repoName,
-			"hours":        hours,
-			"observations": 0,
-			"message":      "no observations in window",
-		}), nil
+		return emptyResult("counterfactuals"), nil
 	}
 
 	policy := getStringArg(req, "policy")
@@ -104,12 +99,7 @@ func (s *Server) handleEvalABTest(_ context.Context, req mcp.CallToolRequest) (*
 	}
 
 	if len(observations) == 0 {
-		return jsonResult(map[string]any{
-			"repo":         repoName,
-			"hours":        hours,
-			"observations": 0,
-			"message":      "no observations in window",
-		}), nil
+		return emptyResult("ab_tests"), nil
 	}
 
 	mode := getStringArg(req, "mode")
@@ -180,12 +170,7 @@ func (s *Server) handleEvalChangepoints(_ context.Context, req mcp.CallToolReque
 	}
 
 	if len(observations) == 0 {
-		return jsonResult(map[string]any{
-			"repo":         repoName,
-			"hours":        hours,
-			"observations": 0,
-			"message":      "no observations in window",
-		}), nil
+		return emptyResult("changepoints"), nil
 	}
 
 	metricName := getStringArg(req, "metric")

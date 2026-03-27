@@ -26,6 +26,9 @@ func (s *Server) handleBlackboardQuery(_ context.Context, req mcp.CallToolReques
 	}
 
 	entries := s.Blackboard.Query(ns)
+	if len(entries) == 0 {
+		return emptyResult("blackboard_entries"), nil
+	}
 	return jsonResult(map[string]any{
 		"namespace": ns,
 		"count":     len(entries),
@@ -93,6 +96,9 @@ func (s *Server) handleA2AOffers(_ context.Context, _ mcp.CallToolRequest) (*mcp
 	}
 
 	offers := s.A2A.ListOpenOffers()
+	if len(offers) == 0 {
+		return emptyResult("a2a_offers"), nil
+	}
 	return jsonResult(map[string]any{
 		"count":  len(offers),
 		"offers": offers,

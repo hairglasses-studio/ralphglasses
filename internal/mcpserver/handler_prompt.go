@@ -212,7 +212,7 @@ func (s *Server) handleClaudeMDCheck(_ context.Context, req mcp.CallToolRequest)
 	}
 
 	if findings == nil {
-		return jsonResult(map[string]any{"issues": []string{}, "status": "pass"}), nil
+		return emptyResult("claudemd_issues"), nil
 	}
 	return jsonResult(findings), nil
 }

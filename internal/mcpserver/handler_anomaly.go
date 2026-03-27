@@ -52,14 +52,7 @@ func (s *Server) handleAnomalyDetect(_ context.Context, req mcp.CallToolRequest)
 	}
 
 	if len(observations) == 0 {
-		return jsonResult(map[string]any{
-			"repo":         repoName,
-			"metric":       metricName,
-			"hours":        hours,
-			"observations": 0,
-			"anomalies":    []eval.Anomaly{},
-			"message":      "no observations in window",
-		}), nil
+		return emptyResult("anomalies"), nil
 	}
 
 	anomalies, err := eval.DetectFromObservations(observations, metricName)
