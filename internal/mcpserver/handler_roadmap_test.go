@@ -287,3 +287,144 @@ func extractText(t *testing.T, res *mcp.CallToolResult) string {
 	}
 	return tc.Text
 }
+
+// --- handleRoadmapParse with phase filter ---
+
+func TestHandleRoadmapParse_PhaseFilter(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapParse(context.Background(), roadmapReq(map[string]any{
+		"path":  repoPath,
+		"phase": "Phase 1: Core Features",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	if !strings.Contains(text, "Core Features") {
+		t.Errorf("expected Core Features phase in output, got: %s", text)
+	}
+	// Should not contain other phases
+	if strings.Contains(text, "Phase 2") {
+		t.Errorf("expected Phase 2 to be filtered out, got: %s", text)
+	}
+}
+
+func TestHandleRoadmapParse_PhaseFilterNoMatch(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapParse(context.Background(), roadmapReq(map[string]any{
+		"path":  repoPath,
+		"phase": "Nonexistent Phase",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Should still return valid JSON with empty phases
+	if !strings.Contains(text, "phases") {
+		t.Errorf("expected phases key in output, got: %s", text)
+	}
+}
+
+// --- handleRoadmapAnalyze with category filter ---
+
+func TestHandleRoadmapAnalyze_CategoryFilter(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+
+	// Test each category filter
+	for _, cat := range []string{"gaps", "stale", "orphaned", "ready"} {
+		res, err := s.handleRoadmapAnalyze(context.Background(), roadmapReq(map[string]any{
+			"path":     repoPath,
+			"category": cat,
+		}))
+		if err != nil {
+			t.Fatalf("unexpected error for category %s: %v", cat, err)
+		}
+		if res.IsError {
+			t.Fatalf("unexpected error result for category %s: %s", cat, extractText(t, res))
+		}
+		text := extractText(t, res)
+		if !strings.Contains(text, cat) {
+			t.Errorf("expected %s key in output, got: %s", cat, text)
+		}
+		if !strings.Contains(text, "summary") {
+			t.Errorf("expected summary in output for category %s, got: %s", cat, text)
+		}
+	}
+}
+
+func TestHandleRoadmapAnalyze_Limit(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapAnalyze(context.Background(), roadmapReq(map[string]any{
+		"path":  repoPath,
+		"limit": float64(1),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Should still have valid analysis output
+	if !strings.Contains(text, "gaps") || !strings.Contains(text, "summary") {
+		t.Errorf("expected analysis fields in output, got: %s", text)
+	}
+}
+
+// --- handleRoadmapExpand with phase filter and limit ---
+
+func TestHandleRoadmapExpand_PhaseFilter(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapExpand(context.Background(), roadmapReq(map[string]any{
+		"path":  repoPath,
+		"phase": "Phase 1: Core Features",
+		"style": "conservative",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	if !strings.Contains(text, "proposals") {
+		t.Errorf("expected proposals in output, got: %s", text)
+	}
+}
+
+func TestHandleRoadmapExpand_Limit(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapExpand(context.Background(), roadmapReq(map[string]any{
+		"path":  repoPath,
+		"limit": float64(1),
+		"style": "aggressive",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	if !strings.Contains(text, "proposals") {
+		t.Errorf("expected proposals in output, got: %s", text)
+	}
+}
