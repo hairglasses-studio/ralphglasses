@@ -43,7 +43,7 @@ func (s *Server) buildRoadmapGroup() ToolGroup {
 				mcp.WithDescription("Export roadmap items at `path` as structured task specs for ralph loop consumption"),
 				mcp.WithString("path", mcp.Required(), mcp.Description("Repo root path")),
 				mcp.WithString("file", mcp.Description("Override filename (default: ROADMAP.md)")),
-				mcp.WithString("format", mcp.Description("Output format: rdcycle, fix_plan, progress (default: rdcycle)")),
+				mcp.WithString("format", mcp.Description("Output format: rdcycle, fix_plan, progress, launch_ready (default: rdcycle). launch_ready enriches tasks with difficulty_score, suggested_provider, estimated_budget_usd")),
 				mcp.WithString("phase", mcp.Description("Filter by phase name (default: all)")),
 				mcp.WithString("section", mcp.Description("Filter by section name (default: all)")),
 				mcp.WithNumber("max_tasks", mcp.Description("Max tasks to export (default 20)")),
