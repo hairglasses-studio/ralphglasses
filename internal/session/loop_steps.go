@@ -233,17 +233,28 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	}
 
 	// Near-duplicate task filtering: reject tasks whose titles are too similar
-	// to already-completed work (exact match or Jaccard similarity >= 0.8).
+	// to already-completed work (exact match or Jaccard similarity >= threshold).
 	var completedForDedup []string
+	var completedTasksForContent []LoopTask
 	for _, iter := range prevIterations {
 		if iter.Status != "failed" && iter.Task.Title != "" {
 			completedForDedup = append(completedForDedup, iter.Task.Title)
+			completedTasksForContent = append(completedTasksForContent, iter.Task)
 		}
 	}
 	if len(completedForDedup) > 0 {
 		tasks = filterDuplicateTasks(tasks, completedForDedup, DefaultSimilarityThreshold)
 		if len(tasks) == 0 {
 			return m.failLoopIteration(run, index, errors.New("all planner tasks were near-duplicates of completed work"))
+		}
+	}
+
+	// Content-based dedup: reject tasks whose file paths overlap >50% with
+	// any completed task's file paths.
+	if len(completedTasksForContent) > 0 {
+		tasks = filterDuplicateTasksByContent(tasks, completedTasksForContent)
+		if len(tasks) == 0 {
+			return m.failLoopIteration(run, index, errors.New("all planner tasks target files already modified by completed work"))
 		}
 	}
 
