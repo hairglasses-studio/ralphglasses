@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -225,5 +226,78 @@ func TestHandleLoopStop_NotFound(t *testing.T) {
 	text := getResultText(result)
 	if !strings.Contains(text, string(ErrLoopNotFound)) {
 		t.Fatalf("expected LOOP_NOT_FOUND error code, got: %s", text)
+	}
+}
+
+func TestHandleLoopStatus_JournalEntryCount(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+
+	repoPath := filepath.Join(root, "test-repo")
+
+	// Start a loop to get a valid loop ID.
+	run, err := srv.SessMgr.StartLoop(context.Background(), repoPath, session.DefaultLoopProfile())
+	if err != nil {
+		t.Fatalf("start loop: %v", err)
+	}
+
+	// Case 1: No journal file — count should be 0.
+	result, err := srv.handleLoopStatus(context.Background(), makeRequest(map[string]any{
+		"id": run.ID,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleLoopStatus returned error: %s", getResultText(result))
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &data); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	countVal, ok := data["journal_entry_count"]
+	if !ok {
+		t.Fatal("expected journal_entry_count key in response")
+	}
+	if int(countVal.(float64)) != 0 {
+		t.Fatalf("journal_entry_count = %v, want 0 (no journal file)", countVal)
+	}
+
+	// Case 2: Write journal entries and verify count increases.
+	for i := 0; i < 3; i++ {
+		entry := session.JournalEntry{
+			Timestamp: time.Now(),
+			SessionID: fmt.Sprintf("test-session-%d", i),
+			RepoName:  "test-repo",
+			Worked:    []string{"item"},
+		}
+		if err := session.WriteJournalEntryManual(repoPath, entry); err != nil {
+			t.Fatalf("write journal entry: %v", err)
+		}
+	}
+
+	result2, err := srv.handleLoopStatus(context.Background(), makeRequest(map[string]any{
+		"id": run.ID,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result2.IsError {
+		t.Fatalf("handleLoopStatus returned error: %s", getResultText(result2))
+	}
+
+	var data2 map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result2)), &data2); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	countVal2, ok := data2["journal_entry_count"]
+	if !ok {
+		t.Fatal("expected journal_entry_count key in response after writing entries")
+	}
+	if int(countVal2.(float64)) != 3 {
+		t.Fatalf("journal_entry_count = %v, want 3", countVal2)
 	}
 }
