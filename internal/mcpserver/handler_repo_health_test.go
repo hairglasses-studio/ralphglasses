@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -443,6 +444,89 @@ func TestRepoHealth_ScanError(t *testing.T) {
 		t.Fatalf("handleRepoHealth: %v", err)
 	}
 	assertErrorCode(t, "handleRepoHealth", result, "SCAN_FAILED")
+}
+
+func TestRepoHealth_EmptyArraysNotNull(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	repoPath := filepath.Join(root, "test-repo")
+
+	// Write a CLAUDE.md so the health check can inspect it.
+	_ = os.WriteFile(filepath.Join(repoPath, "CLAUDE.md"), []byte("# Test\nSome instructions.\n"), 0644)
+
+	// Write healthy state — no issues should be generated.
+	writeRepoCircuit(t, repoPath, model.CircuitBreakerState{State: "CLOSED"})
+	writeRepoStatus(t, repoPath, model.LoopStatus{
+		Timestamp: time.Now(),
+		LoopCount: 5,
+		Status:    "running",
+	})
+
+	result, err := srv.handleRepoHealth(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleRepoHealth: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleRepoHealth returned error: %s", getResultText(result))
+	}
+
+	raw := getResultText(result)
+
+	// Verify "issues" is [] not null in the raw JSON.
+	if strings.Contains(raw, `"issues":null`) {
+		t.Error("issues field marshaled as null instead of []")
+	}
+	if !strings.Contains(raw, `"issues":[]`) {
+		t.Errorf("expected issues:[] in JSON output, got: %s", raw)
+	}
+
+	// Verify "claudemd_findings" is [] not null in the raw JSON.
+	if strings.Contains(raw, `"claudemd_findings":null`) {
+		t.Error("claudemd_findings field marshaled as null instead of []")
+	}
+	if !strings.Contains(raw, `"claudemd_findings":[]`) {
+		t.Errorf("expected claudemd_findings:[] in JSON output, got: %s", raw)
+	}
+}
+
+func TestRepoOptimize_EmptyArraysNotNull(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+
+	// Create a bare repo inside the scan path so ValidatePath accepts it.
+	emptyRepo := filepath.Join(root, "empty-optimize-repo")
+	if err := os.MkdirAll(emptyRepo, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := srv.handleRepoOptimize(context.Background(), makeRequest(map[string]any{
+		"path": emptyRepo,
+	}))
+	if err != nil {
+		t.Fatalf("handleRepoOptimize: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleRepoOptimize returned error: %s", getResultText(result))
+	}
+
+	raw := getResultText(result)
+
+	// Optimizations should be [] not null.
+	if strings.Contains(raw, `"optimizations":null`) {
+		t.Error("optimizations field marshaled as null instead of []")
+	}
+	if !strings.Contains(raw, `"optimizations":[]`) {
+		t.Errorf("expected optimizations:[] in JSON output, got: %s", raw)
+	}
+
+	// Issues should also be a non-null array (there will be issues for missing files).
+	if strings.Contains(raw, `"issues":null`) {
+		t.Error("issues field marshaled as null instead of []")
+	}
 }
 
 func TestRepoHealth_LoopRunningField(t *testing.T) {
