@@ -1,0 +1,6 @@
+name: regression-check
+steps:
+    - name: health-check
+      prompt: Run repo_health on ralphglasses and report score
+    - name: gate-check
+      prompt: Run loop_gates on ralphglasses and report pass/fail

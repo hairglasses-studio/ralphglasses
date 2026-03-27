@@ -1789,3 +1789,104 @@ Claude has historical calibration (calibration_ratio=28.6) from 32 observations;
 | 12 | 158–172 (15) | 2 | 11–15 |
 | 13 | 173–203 (31) | TBD | 16 |
 | **Total** | **108 findings** | **14 confirmed fixed** | **16 opportunities** |
+
+## Cycle 15: Tool Exploration & Scratchpad Gap Analysis (2026-03-27)
+
+
+### Overview
+Exercised 82/112 tools (73%) across all 13 namespaces via 8 chained workflows (A-H). Budget: ~97 tool calls (limit 100). Focus: scratchpad lens at every friction point — "would a scratchpad step have prevented this?"
+
+### New Findings (FINDING-237 through FINDING-269, 33 total)
+
+**P0 — Critical (3 findings, all multi-cycle regressions)**
+| ID | Tool | Issue | Cycle Count |
+|----|------|-------|-------------|
+| 268 | snapshot | Saves to wrong repo path (claudekit not ralphglasses) | 4th cycle |
+| 160 | session_launch | "signal: killed" — sessions die in <1s | 3rd cycle |
+| 169 | logs | NO_LOG_FILE — never works for any repo | 4th cycle |
+
+**P1 — High Priority (8 findings)**
+| ID | Tool | Issue |
+|----|------|-------|
+| 237 | fleet_analytics | All-zero metrics while observation_summary shows 32 real iterations |
+| 240 | prompt_analyze | Overall=97/A but dimensions show C/D/F/D — score inflated |
+| 241 | prompt_should_enhance | Returns false for F-grade prompt (structure-only check) |
+| 246 | session_launch | enhance_prompt applies code constraints to documentation tasks |
+| 258 | rc_send | budget_usd param silently ignored, uses $5 default |
+| 261 | self_improve | budget_usd param silently ignored, shows $0 |
+| 267 | loop_prune | 398 stale runs accumulated, no auto-prune |
+| 269 | session_stop_all | No way to bulk-purge errored/ghost sessions |
+
+**P2 — Medium Priority (12 findings)**
+| ID | Tool | Issue |
+|----|------|-------|
+| 238 | loop_gates | Baseline values zero instead of stored baseline (2nd cycle) |
+| 239 | list | Stale jobb status=running vs marathon 0 running (2nd cycle) |
+| 242 | prompt_enhance | target_provider=gemini still outputs XML (should be markdown) |
+| 243 | prompt_enhance | 10/13 stages silently skipped, no explanation |
+| 245 | roadmap_export | rdcycle format lacks difficulty_score and provider hints |
+| 248 | agent_list/define | Require `repo`/`prompt` params not documented in tool description |
+| 249 | team_delegate | Accepts tasks on errored team without warning |
+| 252 | anomaly_detect | Requires full field names while eval_changepoints accepts shorthand |
+| 254 | merge_verify | Path doubling (appends repo to scan path) |
+| 257 | autonomy_level | Resets to 0 on MCP restart (not persisted) |
+| 262 | provider_recommend | Always Claude — circular dependency (3rd cycle) |
+| 264 | blackboard_put/query | Works without --fleet but other fleet tools don't |
+
+**P3 — Low Priority (10 findings)**
+| ID | Tool | Issue |
+|----|------|-------|
+| 244 | prompt_improve | LLM cost not reported in response |
+| 247 | cost_estimate | Calibration ratio volatile across MCP instances |
+| 250 | team_create | dry_run=false now works (FINDING-218 FIXED) |
+| 251 | team_create | Lead session error cascades to all tasks, no retry |
+| 253 | eval_counterfactual | Gemini estimated 62% more expensive (wrong — uses Claude rates) |
+| 255 | observation_query | 80% no-op rate (8/10 with files_changed=0) |
+| 256 | observation_query | difficulty_score range 0.37-0.51 — no differentiation |
+| 259 | rc_read | SESSION_NOT_FOUND for just-launched session (2nd cycle) |
+| 260 | workflow_define | Requires `yaml` string, not `steps` JSON |
+| 265 | cost_forecast | Returns empty data instead of not_configured |
+| 266 | fleet_submit | Returns not_configured before validating budget param |
+
+### Scratchpad Gap Analysis — 25 Gaps (SG-1 through SG-25)
+
+**OPPORTUNITY-17: Scratchpad Validation Layer**
+Add `scratchpad_validate` tool that checks tool output against expected constraints. Addresses 7 gaps (SG-2,4,12,16,19,24,25): score inflation, path errors, budget mismatches, no-op detection.
+
+**OPPORTUNITY-18: Cross-Tool Context Carry**
+Add `scratchpad_context` tool that builds running context from tool chain outputs. Addresses 5 gaps (SG-1,8,10,13,18): fleet/observation disconnect, missing routing metadata, calibration volatility.
+
+**OPPORTUNITY-19: Intermediate Reasoning Steps**
+Add `scratchpad_reason` tool for lightweight inference between tool calls. Addresses 6 gaps (SG-3,5,7,9,15,21,23): dimension-to-stage mapping, rate card lookup, auto-prune thresholds.
+
+**OPPORTUNITY-20: Param Disambiguation**
+Standardize tool parameter naming and improve descriptions with all required params. Addresses 4 gaps (SG-11,14,17,20,22): repo, metric names, path handling, yaml vs JSON.
+
+**OPPORTUNITY-21: Chain Orchestration Transparency**
+Add `scratchpad_plan` tool that returns prerequisites, outputs, and skip conditions per workflow step. Addresses 2 gaps (SG-6,22): stage skip explanations, fleet prerequisite checks.
+
+### Regression Summary (7/7 checked)
+| Finding | Status | Cycle |
+|---------|--------|-------|
+| FINDING-148 (snapshot path) | **STILL OPEN** | 4th |
+| FINDING-160 (session killed) | **STILL OPEN** | 3rd |
+| FINDING-169 (logs NO_LOG_FILE) | **STILL OPEN** | 4th |
+| FINDING-218 (team dry_run) | **FIXED** ✅ | Resolved |
+| FINDING-220 (provider Claude-only) | **STILL OPEN** | 3rd |
+| FINDING-225 (session purge) | **STILL OPEN** | 2nd |
+| FINDING-230 (awesome chaining) | **STILL OPEN** | 2nd |
+Fix rate: 1/7 (14%).
+
+### Cumulative Statistics (Cycles 7–15)
+| Cycle | Findings | Fixed | Opportunities |
+|-------|----------|-------|---------------|
+| 7 | 15 | 3 | — |
+| 8 | 9 | 2 | — |
+| 9 | 11 | 1 | — |
+| 10 | 13 | 4 | — |
+| 11 | 14 | 2 | 1–10 |
+| 12 | 15 | 2 | 11–15 |
+| 13 | 31 | 2 | 16 |
+| 14 | 33 | 1 | — |
+| 15 | 33 | TBD | 17–21 |
+| **Total** | **174 findings** | **17 confirmed fixed** | **21 opportunities** |
