@@ -14,6 +14,8 @@ func (s *Server) buildRoadmapGroup() ToolGroup {
 				mcp.WithString("path", mcp.Required(), mcp.Description("Repo root or direct .md path")),
 				mcp.WithString("file", mcp.Description("Override filename (default: ROADMAP.md)")),
 				mcp.WithString("phase", mcp.Description("Filter to a specific phase name")),
+				mcp.WithBoolean("summary_only", mcp.Description("Return compact summary (phase counts, completion %) instead of full task details")),
+				mcp.WithNumber("max_depth", mcp.Description("Depth of detail: 0=phases only, 1=phases+sections, 2=full (default 2)")),
 			), s.handleRoadmapParse},
 			{mcp.NewTool("ralphglasses_roadmap_analyze",
 				mcp.WithDescription("Compare roadmap vs codebase at `path` — find gaps, stale checkboxes, ready tasks, orphaned code"),
@@ -46,6 +48,7 @@ func (s *Server) buildRoadmapGroup() ToolGroup {
 				mcp.WithString("section", mcp.Description("Filter by section name (default: all)")),
 				mcp.WithNumber("max_tasks", mcp.Description("Max tasks to export (default 20)")),
 				mcp.WithString("respect_deps", mcp.Description("Skip tasks with unmet deps (default: true)")),
+				mcp.WithString("status", mcp.Description("Filter by status: incomplete (default), complete, all")),
 			), s.handleRoadmapExport},
 		},
 	}
