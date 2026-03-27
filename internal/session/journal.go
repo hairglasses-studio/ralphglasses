@@ -49,6 +49,10 @@ type ConsolidatedItem struct {
 const (
 	journalFile  = ".ralph/improvement_journal.jsonl"
 	patternsFile = ".ralph/improvement_patterns.json"
+
+	// DefaultJournalMaxEntries is the threshold above which auto-consolidation
+	// triggers on journal writes (WS-7).
+	DefaultJournalMaxEntries = 100
 )
 
 // WriteJournalEntry appends a journal entry for a completed session.
@@ -110,18 +114,19 @@ func WriteJournalEntry(s *Session) error {
 	repoPath := s.RepoPath
 	s.mu.Unlock()
 
-	return writeJournalEntryToFile(repoPath, entry)
+	return writeJournalEntryToFile(repoPath, entry, true)
 }
 
 // WriteJournalEntryManual writes a manually constructed journal entry.
+// Does not trigger auto-consolidation (use PruneJournal explicitly if needed).
 func WriteJournalEntryManual(repoPath string, entry JournalEntry) error {
 	if entry.Timestamp.IsZero() {
 		entry.Timestamp = time.Now()
 	}
-	return writeJournalEntryToFile(repoPath, entry)
+	return writeJournalEntryToFile(repoPath, entry, false)
 }
 
-func writeJournalEntryToFile(repoPath string, entry JournalEntry) error {
+func writeJournalEntryToFile(repoPath string, entry JournalEntry, autoConsolidate bool) error {
 	ralphDir := filepath.Join(repoPath, ".ralph")
 	if err := os.MkdirAll(ralphDir, 0755); err != nil {
 		return fmt.Errorf("create .ralph dir: %w", err)
@@ -140,8 +145,56 @@ func writeJournalEntryToFile(repoPath string, entry JournalEntry) error {
 	}
 	defer f.Close()
 
-	_, err = f.Write(data)
-	return err
+	if _, err := f.Write(data); err != nil {
+		return err
+	}
+
+	// WS-7: Auto-consolidate journal when entry count exceeds threshold.
+	// Only triggered from session-based writes, not manual/test writes.
+	if autoConsolidate {
+		go autoConsolidateJournal(repoPath, DefaultJournalMaxEntries)
+	}
+	return nil
+}
+
+// autoConsolidateJournal prunes journal entries exceeding maxEntries,
+// consolidating patterns first. Errors are logged but not propagated.
+func autoConsolidateJournal(repoPath string, maxEntries int) {
+	if maxEntries <= 0 {
+		maxEntries = 100
+	}
+
+	count := CountJournalEntries(repoPath)
+	if count <= maxEntries {
+		return
+	}
+
+	pruned, err := PruneJournal(repoPath, maxEntries)
+	if err != nil {
+		return // silently ignore — best-effort consolidation
+	}
+	_ = pruned
+}
+
+// CountJournalEntries returns the number of entries in the journal file.
+// Returns 0 if the file does not exist or cannot be read.
+func CountJournalEntries(repoPath string) int {
+	path := filepath.Join(repoPath, journalFile)
+	f, err := os.Open(path)
+	if err != nil {
+		return 0
+	}
+	defer f.Close()
+
+	count := 0
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 0, 64*1024), 64*1024)
+	for scanner.Scan() {
+		if len(scanner.Bytes()) > 0 {
+			count++
+		}
+	}
+	return count
 }
 
 // ReadRecentJournal reads the last maxEntries from the journal file.

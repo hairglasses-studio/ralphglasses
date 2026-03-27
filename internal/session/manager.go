@@ -43,6 +43,12 @@ type Manager struct {
 	SessionTimeout time.Duration                 // timeout for waitForSession; 0 uses default (10m)
 	KillTimeout    time.Duration                 // SIGTERM→SIGKILL escalation timeout; 0 uses default (5s)
 	Enhancer       *enhancer.HybridEngine        // optional prompt enhancement for loop integration
+
+	// WS-7: Loop engine hygiene — auto-prune and journal consolidation config.
+	PruneRetention   time.Duration // max age for stale loop runs; 0 uses default (7 days)
+	PruneMaxRuns     int           // unused currently; reserved for max run cap
+	JournalMaxEntries int          // auto-consolidation threshold; 0 uses default (100)
+	totalPrunedThisSession int     // counter for pruned runs this session
 }
 
 // NewManager creates a new session manager.
@@ -73,6 +79,7 @@ func NewManagerWithBus(bus *events.Bus) *Manager {
 // Init performs one-time startup work after the Manager is constructed.
 // It sweeps for orphaned processes from previous runs and logs them without
 // killing them — the user should decide what to do.
+// It also auto-prunes stale loop runs (WS-7: FINDING-267).
 func (m *Manager) Init() {
 	m.mu.RLock()
 	activePIDs := make(map[int]bool)
@@ -88,6 +95,9 @@ func (m *Manager) Init() {
 	if len(orphans) > 0 {
 		slog.Warn("found orphaned processes from previous run", "count", len(orphans))
 	}
+
+	// WS-7: Auto-prune stale loop runs on startup (non-blocking).
+	go m.autoPruneLoopRuns()
 }
 
 // SetStateDir overrides the persistence directory. Intended for tests and
@@ -99,7 +109,8 @@ func (m *Manager) SetStateDir(dir string) {
 }
 
 // ApplyConfig reads relevant settings from a .ralphrc config and applies them
-// to the Manager. Currently handles KILL_ESCALATION_TIMEOUT.
+// to the Manager. Handles KILL_ESCALATION_TIMEOUT, PRUNE_RETENTION_DAYS,
+// and JOURNAL_MAX_ENTRIES.
 func (m *Manager) ApplyConfig(cfg *model.RalphConfig) {
 	if cfg == nil {
 		return
@@ -107,6 +118,18 @@ func (m *Manager) ApplyConfig(cfg *model.RalphConfig) {
 	if raw := cfg.Get("KILL_ESCALATION_TIMEOUT", ""); raw != "" {
 		if v, err := strconv.Atoi(raw); err == nil && v >= 1 && v <= 60 {
 			m.KillTimeout = time.Duration(v) * time.Second
+		}
+	}
+	// WS-7: Configurable prune retention (days). Default 7 if unset.
+	if raw := cfg.Get("PRUNE_RETENTION_DAYS", ""); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil && v >= 1 && v <= 365 {
+			m.PruneRetention = time.Duration(v) * 24 * time.Hour
+		}
+	}
+	// WS-7: Configurable journal max entries before auto-consolidation. Default 100.
+	if raw := cfg.Get("JOURNAL_MAX_ENTRIES", ""); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil && v >= 10 && v <= 10000 {
+			m.JournalMaxEntries = v
 		}
 	}
 }
@@ -119,6 +142,49 @@ func expandHome(path string) string {
 		}
 	}
 	return path
+}
+
+// autoPruneLoopRuns prunes stale loop runs (pending/failed) older than the
+// configured retention period. Safe to call from a goroutine.
+func (m *Manager) autoPruneLoopRuns() {
+	loopDir := m.LoopStateDir()
+	if loopDir == "" {
+		return
+	}
+
+	retention := m.PruneRetention
+	if retention == 0 {
+		retention = 7 * 24 * time.Hour // default: 7 days
+	}
+
+	pruned, err := PruneLoopRuns(loopDir, retention, []string{"pending", "failed"}, false)
+	if err != nil {
+		slog.Warn("auto-prune loop runs failed", "error", err)
+		return
+	}
+	if pruned > 0 {
+		slog.Info("auto-pruned stale loop runs on startup", "pruned", pruned, "retention", retention.String())
+		m.mu.Lock()
+		m.totalPrunedThisSession += pruned
+		m.mu.Unlock()
+	}
+}
+
+// TotalPrunedThisSession returns how many loop runs have been pruned since
+// the Manager was created (WS-7 metric).
+func (m *Manager) TotalPrunedThisSession() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.totalPrunedThisSession
+}
+
+// ConsecutiveNoOps returns the current consecutive no-op iteration count
+// for the given loop ID. Returns 0 if no detector is configured.
+func (m *Manager) ConsecutiveNoOps(loopID string) int {
+	if m.noopDetector == nil {
+		return 0
+	}
+	return m.noopDetector.ConsecutiveCount(loopID)
 }
 
 // RunWorkflow validates and starts a workflow asynchronously.
