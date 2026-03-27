@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -35,6 +36,15 @@ type AcceptanceResult struct {
 	PRCreated   bool     `json:"pr_created"`
 	PRURL       string   `json:"pr_url,omitempty"`
 	Error       string   `json:"error,omitempty"`
+}
+
+// AcceptanceTrace provides structured tracing for the acceptance gate to help
+// diagnose silent rejections (e.g., 0 files staged despite worker changes).
+type AcceptanceTrace struct {
+	SafePaths       []string `json:"safe_paths,omitempty"`
+	ReviewPaths     []string `json:"review_paths,omitempty"`
+	StagedFileCount int      `json:"staged_file_count"`
+	Reason          string   `json:"reason"` // "auto_merged", "pr_created", "no_staged_files", "verify_reverted", "worker_no_changes"
 }
 
 // selfImproveSafePrefixes are path prefixes that can be auto-merged.
@@ -69,20 +79,25 @@ var selfImproveReviewExact = []string{
 func ClassifySelfImprovePaths(paths []string) (safe, review []string) {
 	for _, p := range paths {
 		if strings.HasSuffix(p, "_test.go") {
+			slog.Debug("acceptance: classify path as safe (test file)", "path", p)
 			safe = append(safe, p)
 			continue
 		}
 		if isReviewPath(p) {
+			slog.Debug("acceptance: classify path as review (review prefix/exact)", "path", p)
 			review = append(review, p)
 			continue
 		}
 		if isSafePath(p) {
+			slog.Debug("acceptance: classify path as safe (safe prefix)", "path", p)
 			safe = append(safe, p)
 			continue
 		}
 		// Unknown paths default to review for safety.
+		slog.Debug("acceptance: classify path as review (unknown prefix)", "path", p)
 		review = append(review, p)
 	}
+	slog.Info("acceptance: classified paths", "total", len(paths), "safe", len(safe), "review", len(review))
 	return safe, review
 }
 
@@ -134,12 +149,24 @@ func isGitWorktree(dir string) bool {
 // would fail because main is locked by the parent repo) and instead updates
 // the main branch ref directly via `git update-ref`.
 func AutoCommitAndMerge(dir, mainBranch, message string) error {
+	trace, err := AutoCommitAndMergeTraced(dir, mainBranch, message)
+	if trace.Reason != "" {
+		slog.Info("acceptance: AutoCommitAndMerge completed", "reason", trace.Reason, "staged_files", trace.StagedFileCount)
+	}
+	return err
+}
+
+// AutoCommitAndMergeTraced stages, commits, and fast-forward merges changes from a
+// worktree back to the main branch, returning an AcceptanceTrace with details
+// about what happened. Uses the same secret exclusions as checkpoint.go.
+func AutoCommitAndMergeTraced(dir, mainBranch, message string) (AcceptanceTrace, error) {
+	var trace AcceptanceTrace
 	ts := time.Now().Format("20060102-150405")
 	branch := fmt.Sprintf("self-improve-%s", ts)
 
 	// Create feature branch in worktree
 	if err := gitRun(dir, "checkout", "-b", branch); err != nil {
-		return fmt.Errorf("create branch: %w", err)
+		return trace, fmt.Errorf("create branch: %w", err)
 	}
 
 	// Stage all changes, excluding sensitive files
@@ -147,23 +174,30 @@ func AutoCommitAndMerge(dir, mainBranch, message string) error {
 	for _, excl := range checkpointExcludes {
 		addArgs = append(addArgs, ":(exclude)"+excl)
 	}
+	slog.Debug("acceptance: staging with excludes", "excludes", checkpointExcludes)
 	if err := gitRun(dir, addArgs...); err != nil {
-		return fmt.Errorf("git add: %w", err)
+		return trace, fmt.Errorf("git add: %w", err)
 	}
+
+	// Count staged files via git diff --cached --stat
+	trace.StagedFileCount = countStagedFiles(dir)
+	slog.Info("acceptance: staged file count after git add", "count", trace.StagedFileCount, "dir", dir)
 
 	// Check if anything was staged
 	statusCmd := exec.Command("git", "diff", "--cached", "--quiet")
 	statusCmd.Dir = dir
 	if statusCmd.Run() == nil {
 		// Nothing staged — nothing to merge
+		trace.Reason = "no_staged_files"
+		slog.Warn("acceptance: nothing staged after git add, rolling back branch", "dir", dir)
 		_ = gitRun(dir, "checkout", mainBranch)
 		_ = gitRun(dir, "branch", "-D", branch)
-		return nil
+		return trace, nil
 	}
 
 	// Commit
 	if err := gitRun(dir, "commit", "-m", message); err != nil {
-		return fmt.Errorf("git commit: %w", err)
+		return trace, fmt.Errorf("git commit: %w", err)
 	}
 
 	if isGitWorktree(dir) {
@@ -171,12 +205,12 @@ func AutoCommitAndMerge(dir, mainBranch, message string) error {
 		// Verify we can fast-forward, then update the ref directly.
 		mergeBase, err := gitOutput(dir, "merge-base", "HEAD", mainBranch)
 		if err != nil {
-			return fmt.Errorf("merge-base: %w", err)
+			return trace, fmt.Errorf("merge-base: %w", err)
 		}
 
 		mainRef, err := gitOutput(dir, "rev-parse", mainBranch)
 		if err != nil {
-			return fmt.Errorf("rev-parse %s: %w", mainBranch, err)
+			return trace, fmt.Errorf("rev-parse %s: %w", mainBranch, err)
 		}
 
 		// Fast-forward is only valid if main is the merge-base (i.e., main
@@ -184,45 +218,55 @@ func AutoCommitAndMerge(dir, mainBranch, message string) error {
 		if strings.TrimSpace(mergeBase) != strings.TrimSpace(mainRef) {
 			// Main has diverged — try rebasing our branch onto main.
 			if err := tryRebaseOnto(dir, mainBranch); err != nil {
-				return err
+				return trace, err
 			}
 			// Rebase succeeded — fall through to update-ref with new HEAD.
 		}
 
 		headRef, err := gitOutput(dir, "rev-parse", "HEAD")
 		if err != nil {
-			return fmt.Errorf("rev-parse HEAD: %w", err)
+			return trace, fmt.Errorf("rev-parse HEAD: %w", err)
 		}
 
 		// Update main branch ref to point to our commit.
 		if err := gitRun(dir, "update-ref", "refs/heads/"+mainBranch, strings.TrimSpace(headRef)); err != nil {
-			return fmt.Errorf("update-ref: %w", err)
+			return trace, fmt.Errorf("update-ref: %w", err)
 		}
 	} else {
 		// Normal repo: switch to main and fast-forward merge.
 		if err := gitRun(dir, "checkout", mainBranch); err != nil {
-			return fmt.Errorf("checkout main: %w", err)
+			return trace, fmt.Errorf("checkout main: %w", err)
 		}
 		if err := gitRun(dir, "merge", "--ff-only", branch); err != nil {
 			// ff-only failed — rebase the feature branch onto main and retry.
 			if err := gitRun(dir, "checkout", branch); err != nil {
-				return fmt.Errorf("checkout branch for rebase: %w", err)
+				return trace, fmt.Errorf("checkout branch for rebase: %w", err)
 			}
 			if rebaseErr := tryRebaseOnto(dir, mainBranch); rebaseErr != nil {
-				return rebaseErr
+				return trace, rebaseErr
 			}
 			if err := gitRun(dir, "checkout", mainBranch); err != nil {
-				return fmt.Errorf("checkout main after rebase: %w", err)
+				return trace, fmt.Errorf("checkout main after rebase: %w", err)
 			}
 			if err := gitRun(dir, "merge", "--ff-only", branch); err != nil {
-				return fmt.Errorf("ff-merge after rebase: %w", err)
+				return trace, fmt.Errorf("ff-merge after rebase: %w", err)
 			}
 		}
 	}
 
 	// Cleanup branch
 	_ = gitRun(dir, "branch", "-d", branch)
-	return nil
+	trace.Reason = "auto_merged"
+	return trace, nil
+}
+
+// countStagedFiles returns the number of files in the git staging area.
+func countStagedFiles(dir string) int {
+	out, err := gitOutput(dir, "diff", "--cached", "--name-only")
+	if err != nil || out == "" {
+		return 0
+	}
+	return len(strings.Split(out, "\n"))
 }
 
 // gitOutput executes a git command and returns its trimmed stdout.

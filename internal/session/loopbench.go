@@ -112,6 +112,12 @@ type LoopObservation struct {
 	// Values: "auto_merge", "pr", "rejected", "no_change"
 	AcceptancePath string `json:"acceptance_path,omitempty"`
 
+	// WS11: Acceptance gate tracing fields for diagnosing silent rejections.
+	AcceptanceReason      string `json:"acceptance_reason,omitempty"`       // "auto_merged", "pr_created", "no_staged_files", "worker_no_changes"
+	StagedFilesCount      int    `json:"staged_files_count,omitempty"`      // files staged after git add (post-exclude)
+	AcceptanceSafeCount   int    `json:"acceptance_safe_count,omitempty"`   // paths classified as safe
+	AcceptanceReviewCount int    `json:"acceptance_review_count,omitempty"` // paths classified as needing review
+
 	// StallCount is the number of stall events detected during this iteration.
 	StallCount int `json:"stall_count,omitempty"`
 
