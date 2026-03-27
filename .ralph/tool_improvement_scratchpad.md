@@ -685,3 +685,160 @@ Exercised 80+ of 112 tools across all 13 namespaces. 288 tool calls in 24h windo
 **Evidence**: 70+ tools show 0ms latency. Sub-millisecond calls round to 0.
 **Proposed fix**: Use microseconds or float milliseconds for precision
 **Risk**: LOW
+
+## Cycle 9: Fix Verification & Stress Testing (2026-03-27)
+
+
+### Cycle 7/8 Fix Validation Matrix (Re-verified via Live Tool Calls)
+
+| Finding | Description | Code Status | Runtime Status |
+|---------|------------|-------------|----------------|
+| FINDING-85 | repo_health null arrays | Code has fix (handler_repo_health.go:117-122) | **NOT FIXED** — `issues: null, claudemd_findings: null` |
+| FINDING-86 | should_enhance missing reason | Code has fix (handler_prompt.go:260-300) | **FIXED** ✅ — `reason: "too short: 3 words (minimum 5)"` |
+| FINDING-87 | classify missing confidence/alternatives | Code has fix (handler_prompt.go:220-239) | **NOT FIXED** — only `task_type` returned |
+| FINDING-88 | prompt_templates missing code template | Unknown | **NOT FIXED** — 5 templates, no `code` |
+| FINDING-89 | session_errors null errors | Unknown | **NOT FIXED** — `errors: null` |
+| FINDING-90 | loop_baseline window_hours=0 | Code has fix (handler_loopbench.go:132-133) | **NOT FIXED** — `window_hours: 0` on view action |
+| FINDING-91 | loop_benchmark missing fields | Code has fix (handler_loopbench.go:57-59) | **PARTIAL** — has observations/hours but no window_type/window_size |
+| FINDING-92 | observation_summary empty fields | Code has backfill (handler_observation.go:185-214) | **NOT FIXED** — `acceptance_counts: {}, model_usage: {}` |
+| FINDING-95 | fleet degradation inconsistency | N/A | **NOT FIXED** — fleet=coded_error, fleet_h=status_object |
+| FINDING-97/114 | roadmap_parse unbounded/missing params | Code has params (tools_builders_misc.go:17-18) | **NOT FIXED** — schema shows only path/file, 104K output |
+| FINDING-98 | team_create zero defaults | Unknown | **NOT FIXED** — `max_budget_usd: 0` |
+| FINDING-102 | event_poll missing tool names | Partial (in Summary text) | **NOT FIXED** — summaries show `[tool.called] ` with empty tool name |
+| FINDING-103 | feedback_profiles empty | Unknown | **NOT FIXED** — `prompt_profiles: [], provider_profiles: []` despite 50 journal entries |
+| FINDING-104 | provider_recommend zero budget | Unknown | **NOT FIXED** — `estimated_budget_usd: 0` |
+| FINDING-105 | ab_test insufficient_data guard | Code has guard (handler_eval.go:136-160) | **NOT FIXED** — periods mode returns zeros instead of insufficient_data for sample_size_b=0 |
+| FINDING-106 | changepoints burn-in filter | Code has filter (handler_eval.go:263-264) | **NOT FIXED** — index-0 changepoints still present |
+| FINDING-107 | marathon null arrays | Partial in tools_fleet.go | **NOT FIXED** — `alerts: null, stale_list: null, teams.summary: null` |
+| FINDING-108 | hitl_history null events | Unknown | **NOT FIXED** — `events: null` |
+| FINDING-109 | anomaly null | Unknown | **NOT FIXED** — `anomalies: null` |
+| FINDING-110 | rc_status plain text | handler_rc.go:341 uses textResult | **CONFIRMED** — plain text output |
+| FINDING-111 | rc_act plain text | handler_rc.go uses textResult | **CONFIRMED** — not tested (side-effect) |
+| FINDING-113 | roadmap_analyze unbounded | Code has limit param (line 25) | **NOT FIXED** — 216K output, schema has no limit param |
+| FINDING-116 | status missing include_config | Code has param (tools_builders.go:48) | **NOT FIXED** — schema shows only repo, always includes config |
+| FINDING-117 | prompt_enhance minimal | N/A | **CONFIRMED** — 2/13 stages on short prompt, adds verification block |
+| FINDING-120 | scratchpad_list no metadata | Builder only has repo | **CONFIRMED** — bare JSON array of names |
+
+**Summary: 2 FIXED (86, partial 91), 22 NOT FIXED at runtime**
+
+**Root cause hypothesis**: Code exploration found fix code in handler files, but the running MCP server binary may not include these changes. The `go run . mcp` command should compile fresh, but the fixes may be in unreachable code paths, gated behind conditions that don't trigger, or the exploration agent misidentified the code.
+
+## Cycle 9 New Findings
+
+
+### FINDING-122: Schema registration disconnect — builder params not in MCP schema
+**Tool**: Multiple (status, roadmap_parse, roadmap_analyze)
+**Category**: SCHEMA_DRIFT
+**Evidence**: Code exploration found `include_config` in tools_builders.go:48, `summary_only`/`max_depth` in tools_builders_misc.go:17-18, `limit` in line 25. But ToolSearch schema shows none of these params. The `status` tool always returns full config (include_config not respected). `roadmap_parse` returns 104K without truncation.
+**Root cause**: Builder schema defines params but either (a) they're not registered in the MCP tool definition, (b) the running binary is stale, or (c) the builder registration path has a bug that drops extra params.
+**Proposed fix**: Verify the builder→MCP schema registration pipeline. Add integration test that asserts param counts match between builder and exported schema.
+**Risk**: HIGH — this affects ALL schema drift fixes. If the registration pipeline is broken, no param additions will work.
+**Verification**: `go test ./internal/mcpserver/ -run TestSchemaParamCounts`
+
+### FINDING-123: observation_query limit=0 returns 1 result instead of 0
+**Tool**: `ralphglasses_observation_query`
+**Category**: ADVERSARIAL
+**Evidence**: `observation_query(repo="ralphglasses", limit=0)` returns 1 observation. `observation_query(hours=0)` correctly returns `[]`.
+**Root cause**: Likely `if limit == 0 { limit = defaultLimit }` fallback treats 0 as "use default" instead of "return nothing".
+**Proposed fix**: Either document limit=0 as "use default" or add `limit=0 → return []` early exit.
+**Risk**: LOW
+**Verification**: Call with limit=0 and verify empty result.
+
+### FINDING-124: event_list vs observation_query inconsistent limit=0 behavior
+**Tool**: `ralphglasses_event_list` vs `ralphglasses_observation_query`
+**Category**: CROSS_TOOL
+**Evidence**: `event_list(limit=0)` returns all 261 events (treats 0 as unlimited). `observation_query(limit=0)` returns 1 result (treats 0 as default=50, then returns 1). Different semantics for same parameter name.
+**Proposed fix**: Standardize: limit=0 should either mean "use default" everywhere or "unlimited" everywhere. Document convention.
+**Risk**: MEDIUM — consumers can't predict behavior.
+**Verification**: Test both tools with limit=0,1,-1 and compare.
+
+### FINDING-125: event_poll summaries have empty tool names
+**Tool**: `ralphglasses_event_poll`
+**Category**: SEMANTIC
+**Evidence**: All events show `summary: "[tool.called] "` with nothing after the prefix. Meanwhile `event_list` returns `data.tool: "ralphglasses_repo_health"` with full tool name. event_poll's `compactEvent` drops the tool name.
+**Root cause**: handler_rc.go `compactEvent` struct builds summary via `summarizeEvent()` but tool name extraction fails or returns empty.
+**Proposed fix**: Include `data.tool` value in event_poll summary, e.g. `"[tool.called] ralphglasses_repo_health"`.
+**Risk**: MEDIUM — event_poll is the primary mobile/RC polling endpoint.
+**Verification**: Call event_poll, verify tool names appear in summaries.
+
+### FINDING-126: feedback_profiles returns empty despite 50 journal entries
+**Tool**: `ralphglasses_feedback_profiles`
+**Category**: SEMANTIC
+**Evidence**: `journal_read(limit=50)` returns 50 entries with provider=claude, model data, cost data. But `feedback_profiles()` returns `{prompt_profiles: [], provider_profiles: []}`. The profile aggregation logic isn't consuming journal data.
+**Root cause**: Profile generation may require a minimum threshold not met, or the aggregation path reads from a different data source than journal.
+**Proposed fix**: Verify profile generation reads from journal. If threshold-based, lower minimum or return `{status: "insufficient_data", entries_found: 50, minimum_required: N}`.
+**Risk**: HIGH — feedback profiles drive provider_recommend, which currently returns defaults.
+**Verification**: After fix, call feedback_profiles and verify non-empty profiles.
+
+### FINDING-127: prompt_classify missing confidence and alternatives fields
+**Tool**: `ralphglasses_prompt_classify`
+**Category**: CODE_ABSENT
+**Evidence**: Returns only `{task_type: "troubleshooting"}`. No `confidence` float, no `alternatives` array. Code exploration found these at handler_prompt.go:220-239, but runtime doesn't return them.
+**Root cause**: Either the code path with confidence/alternatives is unreachable, or the handler returns early before reaching that code.
+**Proposed fix**: Debug handler flow — add logging to confirm which code path executes.
+**Risk**: MEDIUM — classify without confidence is less useful for routing decisions.
+**Verification**: Call prompt_classify, verify confidence and alternatives in response.
+
+### FINDING-128: cost_estimate(turns=0, iterations=0) returns all-zero estimate without warning
+**Tool**: `ralphglasses_cost_estimate`
+**Category**: ADVERSARIAL
+**Evidence**: `cost_estimate(provider="claude", turns=0, iterations=0)` returns `{estimate: {low: 0, mid: 0, high: 0}}` with no warning that the input is degenerate.
+**Proposed fix**: Return `{status: "degenerate_input", message: "turns=0 produces zero cost estimate"}` or clamp to minimum 1 turn.
+**Risk**: LOW
+**Verification**: Call with turns=0, verify helpful response.
+
+### FINDING-129: team_create dry_run shows zero defaults for budget, model, worker_provider
+**Tool**: `ralphglasses_team_create`
+**Category**: SEMANTIC
+**Evidence**: `team_create(dry_run=true)` returns `{max_budget_usd: 0, model: "", worker_provider: "", lead_agent: ""}`. A team with $0 budget and no model would fail on launch.
+**Proposed fix**: Dry run should show resolved defaults: budget=$5 (or config default), model=PRIMARY_MODEL, worker_provider=claude.
+**Risk**: MEDIUM — dry_run is supposed to preview what would happen; showing zeros misleads.
+**Verification**: Call team_create dry_run, verify non-zero budget and populated model.
+
+### FINDING-130: scratchpad naming confusion — tool_improvement vs tool_improvement_scratchpad
+**Tool**: `ralphglasses_scratchpad_list`, `ralphglasses_scratchpad_read`
+**Category**: SEMANTIC
+**Evidence**: `scratchpad_list` returns both `tool_improvement` and `tool_improvement_scratchpad`. These are different files with different content (57KB vs ~5KB). The `_scratchpad` suffix is redundant since the file path is already `.ralph/{name}_scratchpad.md`.
+**Root cause**: Two scratchpads were created at different times with overlapping names.
+**Proposed fix**: (a) Warn when creating a scratchpad whose name is a substring/superstring of an existing one, or (b) normalize names by stripping `_scratchpad` suffix.
+**Risk**: LOW — cosmetic/UX issue.
+**Verification**: Call scratchpad_list, verify no confusingly similar names.
+
+### FINDING-131: prompt_templates missing code template (FINDING-88 re-confirmed)
+**Tool**: `ralphglasses_prompt_templates`
+**Category**: CODE_ABSENT
+**Evidence**: 5 templates returned: troubleshoot, code_review, workflow_create, data_analysis, creative_brief. No `code` template for code generation/implementation tasks — the most common use case.
+**Proposed fix**: Add a `code` template with variables like `task`, `language`, `constraints`, `existing_code`.
+**Risk**: LOW
+**Verification**: Call prompt_templates, verify `code` template listed.
+
+## Cycle 9 Priority Matrix
+
+
+| Priority | Finding(s) | Category | Effort | Impact |
+|----------|-----------|----------|--------|--------|
+| **P0** | FINDING-122 | SCHEMA_DRIFT | M | Blocks ALL param fixes — must fix registration pipeline first |
+| **P0** | FINDING-126 | SEMANTIC | M | feedback_profiles empty → provider_recommend useless → no intelligent routing |
+| **P1** | 85,89,107,108,109 | NULL_ARRAY | S | 5 tools return null instead of [] — mechanical nil→make fix |
+| **P1** | FINDING-105 | EVAL | S | ab_test periods mode missing insufficient_data guard for sample_size_b=0 |
+| **P1** | FINDING-106 | EVAL | S | changepoint burn-in filter not executing — index-0 still present |
+| **P1** | FINDING-127 | CODE_ABSENT | S | classify missing confidence/alternatives despite code existing |
+| **P2** | FINDING-125 | SEMANTIC | S | event_poll summaries empty — mobile RC endpoint degraded |
+| **P2** | FINDING-129 | SEMANTIC | S | team_create dry_run shows zero defaults |
+| **P2** | FINDING-104 | SEMANTIC | S | provider_recommend returns estimated_budget_usd=0 |
+| **P2** | FINDING-92 | SEMANTIC | M | observation_summary acceptance_counts/model_usage empty despite backfill code |
+| **P2** | 110,111 | FORMAT | M | rc_status/rc_act return plain text not JSON |
+| **P3** | FINDING-123,124 | ADVERSARIAL | S | limit=0 inconsistent across tools |
+| **P3** | FINDING-128 | ADVERSARIAL | S | cost_estimate accepts degenerate input silently |
+| **P3** | FINDING-130 | SEMANTIC | S | scratchpad naming confusion |
+| **P3** | FINDING-131 | CODE_ABSENT | S | Missing code prompt template |
+| **P3** | FINDING-120 | FEATURE | S | scratchpad_list returns bare names, no metadata |
+
+**Critical path**: FINDING-122 (schema registration) must be investigated first. If the builder→MCP pipeline drops params, every schema fix since Cycle 7 is phantom. All "code has fix" findings that fail at runtime point to this root cause.
+
+**Cross-tool consistency issues confirmed**:
+- Fleet degradation: 3 patterns (coded_error, status_object, plain_text) — should be 1
+- Limit=0 semantics: 2 different behaviors — should be standardized
+- Null vs empty: 7+ tools still return null — should all use empty arrays
+
+**Cycle 9 totals**: 10 new findings (FINDING-122–131), 22/24 prior findings re-confirmed NOT FIXED, 2 confirmed FIXED (86, partial 91).
