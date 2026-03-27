@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -37,31 +38,65 @@ func (s *Server) resolveRepoPath(repo string) (string, error) {
 	}
 	repos := s.reposCopy()
 
-	// If CWD is inside a discovered repo, use that repo automatically.
+	if len(repos) == 1 {
+		return repos[0].Path, nil
+	}
+
 	if len(repos) > 1 {
+		// Try CWD path-prefix match against discovered repos.
+		// EvalSymlinks handles macOS /var -> /private/var and similar.
 		if cwd, err := os.Getwd(); err == nil {
+			cwdReal, _ := filepath.EvalSymlinks(cwd)
+			if cwdReal == "" {
+				cwdReal = cwd
+			}
+			cwdClean := filepath.Clean(cwdReal)
 			for _, r := range repos {
-				if strings.HasPrefix(cwd, r.Path) {
+				rReal, _ := filepath.EvalSymlinks(r.Path)
+				if rReal == "" {
+					rReal = r.Path
+				}
+				rClean := filepath.Clean(rReal)
+				if cwdClean == rClean || strings.HasPrefix(cwdClean, rClean+string(filepath.Separator)) {
 					return r.Path, nil
 				}
 			}
 		}
-	}
 
-	if len(repos) == 1 {
-		return repos[0].Path, nil
-	}
-	if len(repos) > 1 {
+		// Try git rev-parse --show-toplevel to detect repo from CWD.
+		if gitRoot, err := s.gitToplevel(); err == nil {
+			gitRootClean := filepath.Clean(gitRoot)
+			for _, r := range repos {
+				if filepath.Clean(r.Path) == gitRootClean {
+					return r.Path, nil
+				}
+			}
+		}
+
+		// No match — return actionable error with available repo names.
 		names := make([]string, len(repos))
 		for i, r := range repos {
 			names[i] = r.Name
 		}
-		return "", fmt.Errorf("multiple repos found, specify repo param: %s", strings.Join(names, ", "))
+		return "", fmt.Errorf("multiple repos found, specify repo param (available: %s)", strings.Join(names, ", "))
 	}
+
 	if s.ScanPath != "" {
 		return s.ScanPath, nil
 	}
 	return "", fmt.Errorf("no repo available")
+}
+
+// gitToplevel runs "git rev-parse --show-toplevel" from CWD and returns the
+// cleaned result. This is used as a fallback when CWD path-prefix matching
+// fails (e.g. symlinks, bind mounts, or worktrees).
+func (s *Server) gitToplevel() (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 func (s *Server) handleScratchpadRead(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
