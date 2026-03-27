@@ -55,6 +55,11 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 		s.SessMgr.Enhancer = s.getEngine()
 	}
 
+	traceLevel := getStringArg(req, "trace_level")
+	if traceLevel == "" {
+		traceLevel = "summary"
+	}
+
 	run, err := s.SessMgr.StartLoop(ctx, r.Path, profile)
 	if err != nil {
 		return codedError(ErrLoopStart, fmt.Sprintf("start self-improvement loop: %v", err)), nil
@@ -66,11 +71,24 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 	}()
 
 	appliedBudget := profile.PlannerBudgetUSD + profile.WorkerBudgetUSD
-	return jsonResult(map[string]any{
+
+	result := map[string]any{
 		"message":            fmt.Sprintf("Self-improvement loop started: id=%s repo=%s budget=$%.0f max_iterations=%d", run.ID, repoName, appliedBudget, profile.MaxIterations),
 		"loop_id":            run.ID,
 		"repo":               repoName,
 		"applied_budget_usd": appliedBudget,
 		"max_iterations":     profile.MaxIterations,
-	}), nil
+	}
+
+	if traceLevel != "none" {
+		result["trace"] = map[string]any{
+			"planner_budget_usd": profile.PlannerBudgetUSD,
+			"worker_budget_usd":  profile.WorkerBudgetUSD,
+			"max_iterations":     profile.MaxIterations,
+			"max_duration_secs":  profile.MaxDurationSecs,
+			"enhancer_wired":     s.SessMgr.Enhancer != nil,
+		}
+	}
+
+	return jsonResult(result), nil
 }

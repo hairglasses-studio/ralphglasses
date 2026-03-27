@@ -56,6 +56,10 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 			"message":    "fleet coordinator not active — start with 'ralphglasses mcp --fleet'",
 			"items":      []any{},
 			"count":      0,
+			"prerequisites": []string{
+				"Start the MCP server with --fleet flag: ralphglasses mcp --fleet",
+				"Or connect to a remote coordinator via RALPH_FLEET_URL",
+			},
 		}), nil
 	}
 
@@ -109,6 +113,10 @@ func (s *Server) handleFleetBudget(_ context.Context, req mcp.CallToolRequest) (
 			"message":    "fleet coordinator not active — start with 'ralphglasses mcp --fleet'",
 			"items":      []any{},
 			"count":      0,
+			"prerequisites": []string{
+				"Start the MCP server with --fleet flag: ralphglasses mcp --fleet",
+				"Or connect to a remote coordinator via RALPH_FLEET_URL",
+			},
 		}), nil
 	}
 
@@ -149,6 +157,10 @@ func (s *Server) handleFleetWorkers(_ context.Context, req mcp.CallToolRequest) 
 			"message":    "fleet coordinator not active — start with 'ralphglasses mcp --fleet'",
 			"items":      []any{},
 			"count":      0,
+			"prerequisites": []string{
+				"Start the MCP server with --fleet flag: ralphglasses mcp --fleet",
+				"Or connect to a remote coordinator via RALPH_FLEET_URL",
+			},
 		}), nil
 	}
 
@@ -476,6 +488,10 @@ func (s *Server) handleFleetDLQ(_ context.Context, req mcp.CallToolRequest) (*mc
 			"message":    "fleet coordinator not active — start with 'ralphglasses mcp --fleet'",
 			"items":      []any{},
 			"count":      0,
+			"prerequisites": []string{
+				"Start the MCP server with --fleet flag: ralphglasses mcp --fleet",
+				"Fleet DLQ requires a local coordinator (remote client not supported)",
+			},
 		}), nil
 	}
 
