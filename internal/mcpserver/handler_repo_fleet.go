@@ -38,6 +38,29 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 		}
 	}
 
+	// Pagination and filter params
+	limit := int(getNumberArg(req, "limit", 50))
+	offset := int(getNumberArg(req, "offset", 0))
+	repoFilter := getStringArg(req, "repo")
+
+	if limit < 0 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Apply repo filter to s.Repos
+	filteredRepos := s.Repos
+	if repoFilter != "" {
+		filteredRepos = nil
+		for _, r := range s.Repos {
+			if r.Name == repoFilter {
+				filteredRepos = append(filteredRepos, r)
+			}
+		}
+	}
+
 	// Summary-only: compact JSON with repo names, session counts, and total spend.
 	if getBoolArg(req, "summary_only") {
 		allSessions := s.SessMgr.List("")
@@ -53,9 +76,41 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 			}
 			sess.Unlock()
 		}
-		repoNames := make([]string, 0, len(s.Repos))
-		for _, r := range s.Repos {
+		repoNames := make([]string, 0, len(filteredRepos))
+		for _, r := range filteredRepos {
 			repoNames = append(repoNames, r.Name)
+		}
+		// Filter session counts to matching repos when repo filter is set
+		if repoFilter != "" {
+			filtered := make(map[string]int)
+			for k, v := range repoSessionCounts {
+				if k == repoFilter {
+					filtered[k] = v
+				}
+			}
+			repoSessionCounts = filtered
+			// Recount totals for filtered view
+			totalSpend = 0
+			runningSessions = 0
+			var filteredTotal int
+			for _, sess := range allSessions {
+				sess.Lock()
+				if sess.RepoName == repoFilter {
+					totalSpend += sess.SpentUSD
+					filteredTotal++
+					if sess.Status == session.StatusRunning || sess.Status == session.StatusLaunching {
+						runningSessions++
+					}
+				}
+				sess.Unlock()
+			}
+			return jsonResult(map[string]any{
+				"repos":            repoNames,
+				"repo_sessions":    repoSessionCounts,
+				"total_sessions":   filteredTotal,
+				"running_sessions": runningSessions,
+				"total_spend_usd":  totalSpend,
+			}), nil
 		}
 		return jsonResult(map[string]any{
 			"repos":            repoNames,
@@ -87,11 +142,11 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 		TotalTasks      int     `json:"total_tasks"`
 	}
 
-	repos := make([]repoSummary, 0, len(s.Repos))
+	repos := make([]repoSummary, 0, len(filteredRepos))
 	var totalLoopSpend float64
 	var runningLoops, pausedLoops, openCircuits int
 
-	for _, r := range s.Repos {
+	for _, r := range filteredRepos {
 		managed := s.ProcMgr.IsRunning(r.Path)
 		paused := s.ProcMgr.IsPaused(r.Path)
 
@@ -183,12 +238,18 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 
 	for _, sess := range allSessions {
 		sess.Lock()
+		repoName := sess.RepoName
 		status := string(sess.Status)
 		provider := string(sess.Provider)
 		spent := sess.SpentUSD
 		turns := sess.TurnCount
 		isRunning := sess.Status == session.StatusRunning || sess.Status == session.StatusLaunching
 		sess.Unlock()
+
+		// Apply repo filter to sessions
+		if repoFilter != "" && repoName != repoFilter {
+			continue
+		}
 
 		totalSessionSpend += spent
 		if isRunning {
@@ -210,7 +271,7 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 		sessions = append(sessions, sessionSummary{
 			ID:       sess.ID,
 			Provider: provider,
-			Repo:     sess.RepoName,
+			Repo:     repoName,
 			Status:   status,
 			Model:    sess.Model,
 			SpentUSD: spent,
@@ -231,6 +292,10 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 
 	teams := make([]teamSummary, 0, len(allTeams))
 	for _, t := range allTeams {
+		teamRepo := filepath.Base(t.RepoPath)
+		if repoFilter != "" && teamRepo != repoFilter {
+			continue
+		}
 		var completed, pending int
 		for _, task := range t.Tasks {
 			switch task.Status {
@@ -242,7 +307,7 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 		}
 		teams = append(teams, teamSummary{
 			Name:           t.Name,
-			Repo:           filepath.Base(t.RepoPath),
+			Repo:           teamRepo,
 			Status:         string(t.Status),
 			TasksTotal:     len(t.Tasks),
 			TasksCompleted: completed,
@@ -258,7 +323,7 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 
 	var alerts []alert
 
-	for _, r := range s.Repos {
+	for _, r := range filteredRepos {
 		// Circuit breaker OPEN → critical
 		if r.Circuit != nil && r.Circuit.State == "OPEN" {
 			alerts = append(alerts, alert{
@@ -319,9 +384,13 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 	// Session errored → info
 	for _, sess := range allSessions {
 		sess.Lock()
+		repoName := sess.RepoName
 		st := sess.Status
 		errMsg := sess.Error
 		sess.Unlock()
+		if repoFilter != "" && repoName != repoFilter {
+			continue
+		}
 		if st == session.StatusErrored {
 			msg := fmt.Sprintf("Session %s errored", sess.ID)
 			if errMsg != "" {
@@ -329,7 +398,7 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 			}
 			alerts = append(alerts, alert{
 				Severity: "info",
-				Repo:     sess.RepoName,
+				Repo:     repoName,
 				Message:  msg,
 			})
 		}
@@ -358,7 +427,16 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 	runningLoopRuns := 0
 	for _, run := range loopRuns {
 		run.Lock()
-		if run.Status == "running" {
+		runRepoName := run.RepoName
+		runStatus := run.Status
+		run.Unlock()
+
+		if repoFilter != "" && runRepoName != repoFilter {
+			continue
+		}
+
+		run.Lock()
+		if runStatus == "running" {
 			runningLoopRuns++
 		}
 		loops = append(loops, loopSummary{
@@ -374,14 +452,27 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 		run.Unlock()
 	}
 
+	// Apply pagination to repos
+	totalRepoCount := len(repos)
+	hasMore := false
+	if offset >= len(repos) {
+		repos = repos[:0]
+	} else {
+		repos = repos[offset:]
+		if len(repos) > limit {
+			repos = repos[:limit]
+			hasMore = true
+		}
+	}
+
 	result := map[string]any{
 		"summary": map[string]any{
-			"total_repos":             len(s.Repos),
+			"total_repos":             len(filteredRepos),
 			"running_loops":           runningLoops,
 			"paused_loops":            pausedLoops,
-			"total_sessions":          len(allSessions),
+			"total_sessions":          len(sessions),
 			"running_sessions":        runningSessions,
-			"total_loop_runs":         len(loopRuns),
+			"total_loop_runs":         len(loops),
 			"running_loop_runs":       runningLoopRuns,
 			"total_loop_spend_usd":    totalLoopSpend,
 			"total_session_spend_usd": totalSessionSpend,
@@ -389,11 +480,13 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 			"open_circuits":           openCircuits,
 			"providers":               providerMap,
 		},
-		"repos":    repos,
-		"sessions": sessions,
-		"teams":    teams,
-		"loops":    loops,
-		"alerts":   alerts,
+		"repos":       repos,
+		"sessions":    sessions,
+		"teams":       teams,
+		"loops":       loops,
+		"alerts":      alerts,
+		"has_more":    hasMore,
+		"total_count": totalRepoCount,
 	}
 
 	return jsonResult(result), nil

@@ -939,3 +939,148 @@ func TestHandleFleetWorkers_ActionRequiresCoordinator(t *testing.T) {
 	}
 	assertErrorCode(t, "handleFleetWorkers", result, "NOT_RUNNING")
 }
+
+// --- handleFleetStatus pagination ---
+
+func TestHandleFleetStatus_Pagination(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	// Test with limit=1
+	result, err := srv.handleFleetStatus(context.Background(), makeRequest(map[string]any{
+		"limit": float64(1),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "has_more") {
+		t.Errorf("expected has_more in output, got: %s", text)
+	}
+	if !strings.Contains(text, "total_count") {
+		t.Errorf("expected total_count in output, got: %s", text)
+	}
+}
+
+func TestHandleFleetStatus_PaginationOffset(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	// Test with large offset to get empty repos
+	result, err := srv.handleFleetStatus(context.Background(), makeRequest(map[string]any{
+		"offset": float64(9999),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	// Should have empty repos array but still have summary
+	if !strings.Contains(text, "summary") {
+		t.Errorf("expected summary in output, got: %s", text)
+	}
+	if !strings.Contains(text, `"has_more":false`) {
+		t.Errorf("expected has_more=false with large offset, got: %s", text)
+	}
+}
+
+func TestHandleFleetStatus_RepoFilter(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.RepoName = "test-repo"
+		s.Provider = session.ProviderClaude
+		s.SpentUSD = 2.5
+		s.Status = session.StatusRunning
+	})
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.RepoName = "other-repo"
+		s.Provider = session.ProviderGemini
+		s.SpentUSD = 1.0
+		s.Status = session.StatusStopped
+	})
+
+	// Full mode with repo filter
+	result, err := srv.handleFleetStatus(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	// Sessions for other-repo should be filtered
+	if strings.Contains(text, "other-repo") {
+		t.Errorf("expected other-repo to be filtered out, got: %s", text)
+	}
+}
+
+func TestHandleFleetStatus_RepoFilterSummaryOnly(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.RepoName = "test-repo"
+		s.Provider = session.ProviderClaude
+		s.SpentUSD = 2.5
+		s.Status = session.StatusRunning
+	})
+	injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.RepoName = "other-repo"
+		s.Provider = session.ProviderGemini
+		s.SpentUSD = 1.0
+		s.Status = session.StatusStopped
+	})
+
+	// Summary with repo filter
+	result, err := srv.handleFleetStatus(context.Background(), makeRequest(map[string]any{
+		"summary_only": true,
+		"repo":         "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "total_sessions") {
+		t.Errorf("expected total_sessions, got: %s", text)
+	}
+	if !strings.Contains(text, "total_spend_usd") {
+		t.Errorf("expected total_spend_usd, got: %s", text)
+	}
+}
+
+func TestHandleFleetStatus_SummaryOnlySizeConstraint(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleFleetStatus(context.Background(), makeRequest(map[string]any{
+		"summary_only": true,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	// Summary-only should be compact (<5KB)
+	if len(text) > 5*1024 {
+		t.Errorf("summary_only output should be <5KB, got %d bytes", len(text))
+	}
+}
