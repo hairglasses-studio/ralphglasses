@@ -38,12 +38,21 @@ func DefaultModelTiers() []ModelTier {
 }
 
 // taskTypeComplexity maps well-known task types to their complexity level (1-4).
+// Includes both MCP tool task types and classifyTask() output categories.
 var taskTypeComplexity = map[string]int{
 	"lint":         1,
 	"format":       1,
 	"classify":     1,
+	"docs":         1,
+	"config":       2,
+	"review":       2,
+	"optimization": 2,
+	"bug_fix":      2,
 	"codegen":      3,
 	"test":         3,
+	"feature":      3,
+	"refactor":     3,
+	"general":      2,
 	"architecture": 4,
 	"analysis":     4,
 	"planning":     4,
