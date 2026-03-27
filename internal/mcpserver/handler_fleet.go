@@ -404,7 +404,30 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 		return codedError(ErrInvalidParams, "task description required"), nil
 	}
 
-	rec := s.AutoOptimizer.RecommendProvider(task)
+	// FINDING-220/262: Cold-start bootstrap — when FeedbackAnalyzer lacks
+	// sufficient non-Claude observations, bypass it and use cost-based tier
+	// selection from CascadeRouter. This breaks the circular dependency where
+	// provider_recommend always returns Claude because no Gemini data exists.
+	coldStart := s.FeedbackAnalyzer == nil || !s.FeedbackAnalyzer.HasMultiProviderData(5)
+
+	var rec session.ProviderRecommendation
+
+	if coldStart && s.SessMgr != nil && s.SessMgr.HasCascadeRouter() {
+		cr := s.SessMgr.GetCascadeRouter()
+		taskType := session.ClassifyTask(task)
+		tier := cr.SelectTier(taskType, 0)
+
+		rec = session.ProviderRecommendation{
+			Provider:   tier.Provider,
+			Model:      tier.Model,
+			TaskType:   taskType,
+			Confidence: "low",
+			Rationale: fmt.Sprintf("cold-start heuristic: %s tier (%s) for %s tasks (complexity %d) — no multi-provider feedback data yet",
+				tier.Label, tier.Model, taskType, tier.MaxComplexity),
+		}
+	} else {
+		rec = s.AutoOptimizer.RecommendProvider(task)
+	}
 
 	// FINDING-104: Fall back to model-based cost estimation when profile data
 	// yields zero budget so callers always get a usable estimate.
@@ -418,6 +441,13 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 	}
 	if rec.NormalizedCost > 0 {
 		result["normalized_cost_usd"] = rec.NormalizedCost
+	}
+
+	// Add data_source field to indicate recommendation origin.
+	if coldStart {
+		result["data_source"] = "heuristic"
+	} else {
+		result["data_source"] = "feedback_data"
 	}
 
 	if rec.EstimatedBudget == 0 {

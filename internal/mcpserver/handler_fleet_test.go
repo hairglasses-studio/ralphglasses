@@ -742,6 +742,106 @@ func TestHandleProviderRecommend_MissingTask(t *testing.T) {
 	assertErrorCode(t, "handleProviderRecommend", result, "NOT_RUNNING")
 }
 
+func TestHandleProviderRecommend_ColdStartBootstrap(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+
+	// Set up self-improvement infrastructure.
+	stateDir := filepath.Join(root, ".session-state")
+	srv.InitSelfImprovement(stateDir, 2)
+
+	// Wire a cascade router so SelectTier is available.
+	cfg := session.DefaultCascadeConfig()
+	cr := session.NewCascadeRouter(cfg, nil, nil, stateDir)
+	srv.SessMgr.SetCascadeRouter(cr)
+
+	// No feedback data seeded — cold-start condition.
+	// Simple task (lint/format) should route to Gemini, not Claude.
+	result, err := srv.handleProviderRecommend(context.Background(), makeRequest(map[string]any{
+		"task": "lint the project files",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+
+	// Cold-start should use heuristic data source.
+	if !strings.Contains(text, `"data_source":"heuristic"`) {
+		t.Errorf("expected data_source=heuristic, got: %s", text)
+	}
+	// Lint tasks are complexity 1, should pick gemini (cheapest).
+	if !strings.Contains(text, `"provider":"gemini"`) {
+		t.Errorf("expected provider=gemini for lint task, got: %s", text)
+	}
+	// Confidence should be low during cold start.
+	if !strings.Contains(text, `"confidence":"low"`) {
+		t.Errorf("expected confidence=low, got: %s", text)
+	}
+
+	// Complex task (architecture/planning) should pick Claude.
+	result2, err := srv.handleProviderRecommend(context.Background(), makeRequest(map[string]any{
+		"task": "plan the system architecture for the new module",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	text2 := getResultText(result2)
+	if !strings.Contains(text2, `"provider":"claude"`) {
+		t.Errorf("expected provider=claude for architecture task, got: %s", text2)
+	}
+	if !strings.Contains(text2, `"data_source":"heuristic"`) {
+		t.Errorf("expected data_source=heuristic for architecture task, got: %s", text2)
+	}
+}
+
+func TestHandleProviderRecommend_WithFeedbackData(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+
+	stateDir := filepath.Join(root, ".session-state")
+	srv.InitSelfImprovement(stateDir, 2)
+
+	cfg := session.DefaultCascadeConfig()
+	cr := session.NewCascadeRouter(cfg, nil, nil, stateDir)
+	srv.SessMgr.SetCascadeRouter(cr)
+
+	// Seed sufficient multi-provider data to exit cold start.
+	entries := make([]session.JournalEntry, 0, 10)
+	for i := 0; i < 5; i++ {
+		entries = append(entries, session.JournalEntry{
+			Provider:  "gemini",
+			TaskFocus: "lint code",
+			SpentUSD:  0.01,
+			TurnCount: 3,
+		})
+	}
+	for i := 0; i < 5; i++ {
+		entries = append(entries, session.JournalEntry{
+			Provider:  "claude",
+			TaskFocus: "lint code",
+			SpentUSD:  0.10,
+			TurnCount: 3,
+		})
+	}
+	srv.FeedbackAnalyzer.Ingest(entries)
+
+	result, err := srv.handleProviderRecommend(context.Background(), makeRequest(map[string]any{
+		"task": "lint the project",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	text := getResultText(result)
+
+	// With sufficient multi-provider data, should use feedback_data.
+	if !strings.Contains(text, `"data_source":"feedback_data"`) {
+		t.Errorf("expected data_source=feedback_data, got: %s", text)
+	}
+}
+
 // --- handleFleetDLQ ---
 
 // --- handleFleetAnalytics with injected sessions ---
