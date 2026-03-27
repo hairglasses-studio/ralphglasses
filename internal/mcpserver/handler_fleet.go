@@ -300,7 +300,16 @@ func (s *Server) handleFeedbackProfiles(_ context.Context, req mcp.CallToolReque
 		return codedError(ErrNotRunning, "feedback analyzer not initialized"), nil
 	}
 
+	action := getStringArg(req, "action")
+	if action == "" {
+		action = "get"
+	}
 	profileType := getStringArg(req, "type")
+
+	// Auto-seed when explicitly requested or when profiles are empty on a get.
+	if action == "seed" || (action == "get" && s.FeedbackAnalyzer.IsEmpty()) {
+		s.autoSeedFeedbackProfiles()
+	}
 
 	result := map[string]any{}
 
@@ -310,8 +319,37 @@ func (s *Server) handleFeedbackProfiles(_ context.Context, req mcp.CallToolReque
 	if profileType == "" || profileType == "provider" {
 		result["provider_profiles"] = s.FeedbackAnalyzer.AllProviderProfiles()
 	}
+	result["seeded"] = action == "seed" || s.feedbackWasAutoSeeded
 
 	return fleetJSON(result)
+}
+
+// autoSeedFeedbackProfiles tries to seed empty profiles from observation JSONL
+// files across all known repos.
+func (s *Server) autoSeedFeedbackProfiles() {
+	if s.FeedbackAnalyzer == nil || !s.FeedbackAnalyzer.IsEmpty() {
+		return
+	}
+
+	s.mu.RLock()
+	repos := s.Repos
+	s.mu.RUnlock()
+
+	var allObs []session.LoopObservation
+	for _, r := range repos {
+		obsPath := session.ObservationPath(r.Path)
+		obs, err := session.LoadObservations(obsPath, time.Time{})
+		if err != nil || len(obs) == 0 {
+			continue
+		}
+		allObs = append(allObs, obs...)
+	}
+
+	if len(allObs) > 0 {
+		if err := s.FeedbackAnalyzer.SeedFromObservations(allObs); err == nil {
+			s.feedbackWasAutoSeeded = true
+		}
+	}
 }
 
 func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
