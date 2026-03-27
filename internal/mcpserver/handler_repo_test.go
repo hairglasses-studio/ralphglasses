@@ -846,10 +846,137 @@ func TestHandleStatus_FullDetail(t *testing.T) {
 	}
 
 	text := getResultText(result)
-	// Verify detailed fields are present
-	for _, key := range []string{"name", "path", "managed", "status", "circuit_breaker", "progress", "config"} {
+	// Verify detailed fields are present (config_keys instead of full config by default)
+	for _, key := range []string{"name", "path", "managed", "status", "circuit_breaker", "progress", "config_keys"} {
 		if !strings.Contains(text, key) {
 			t.Errorf("expected %q in status detail, got: %s", key, text)
 		}
+	}
+	// Full config body should NOT be present without include_config
+	if strings.Contains(text, "\"config\"") {
+		t.Errorf("expected config to be omitted without include_config, got: %s", text)
+	}
+}
+
+func TestHandleStatus_WithIncludeConfig(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleStatus(context.Background(), makeRequest(map[string]any{
+		"repo":           "test-repo",
+		"include_config": true,
+	}))
+	if err != nil {
+		t.Fatalf("handleStatus: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleStatus returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	var data map[string]any
+	if err := json.Unmarshal([]byte(text), &data); err != nil {
+		t.Fatalf("unmarshal status result: %v", err)
+	}
+	// Full config should be present
+	if _, ok := data["config"]; !ok {
+		t.Error("expected full config in response with include_config=true")
+	}
+	// config_keys should NOT be present
+	if _, ok := data["config_keys"]; ok {
+		t.Error("expected config_keys to be absent with include_config=true")
+	}
+}
+
+func TestHandleScan_ReturnsJSON(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleScan(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleScan: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleScan returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	var data map[string]any
+	if err := json.Unmarshal([]byte(text), &data); err != nil {
+		t.Fatalf("scan should return JSON, got: %s", text)
+	}
+	if _, ok := data["repos_found"]; !ok {
+		t.Error("expected repos_found in scan JSON")
+	}
+	repos, ok := data["repos"].([]any)
+	if !ok {
+		t.Fatal("expected repos array in scan JSON")
+	}
+	if len(repos) < 1 {
+		t.Error("expected at least 1 repo in scan result")
+	}
+}
+
+func TestHandleStopAll_ReturnsJSON(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleStopAll(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleStopAll: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleStopAll returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	var data map[string]any
+	if err := json.Unmarshal([]byte(text), &data); err != nil {
+		t.Fatalf("stop_all should return JSON, got: %s", text)
+	}
+	stoppedCount, ok := data["stopped_count"].(float64)
+	if !ok {
+		t.Fatal("expected stopped_count in stop_all JSON")
+	}
+	if stoppedCount < 0 {
+		t.Errorf("stopped_count should be >= 0, got: %v", stoppedCount)
+	}
+	if _, ok := data["stopped"]; !ok {
+		t.Error("expected stopped array in stop_all JSON")
+	}
+}
+
+func TestHandleStatus_WithoutIncludeConfig_OmitsFullConfig(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleStatus(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleStatus: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleStatus returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	var data map[string]any
+	if err := json.Unmarshal([]byte(text), &data); err != nil {
+		t.Fatalf("unmarshal status result: %v", err)
+	}
+	// config_keys should be present as an integer
+	configKeys, ok := data["config_keys"].(float64)
+	if !ok {
+		t.Fatal("expected config_keys integer in status response")
+	}
+	if configKeys < 1 {
+		t.Errorf("expected config_keys >= 1, got: %v", configKeys)
+	}
+	// Full config object should NOT be present
+	if _, ok := data["config"]; ok {
+		t.Error("expected config to be absent without include_config")
 	}
 }
