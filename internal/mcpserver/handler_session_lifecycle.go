@@ -58,7 +58,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		RepoPath:     r.Path,
 		Prompt:       prompt,
 		Model:        getStringArg(req, "model"),
-		MaxBudgetUSD: getNumberArg(req, "max_budget_usd", 0),
+		MaxBudgetUSD: getNumberArg(req, "budget_usd", 0),
 		MaxTurns:     int(getNumberArg(req, "max_turns", 0)),
 		Agent:        getStringArg(req, "agent"),
 		SystemPrompt: systemPrompt,
@@ -249,7 +249,7 @@ func (s *Server) handleSessionRetry(ctx context.Context, req mcp.CallToolRequest
 	if m := getStringArg(req, "model"); m != "" {
 		opts.Model = m
 	}
-	if b := getNumberArg(req, "max_budget_usd", 0); b > 0 {
+	if b := getNumberArg(req, "budget_usd", 0); b > 0 {
 		opts.MaxBudgetUSD = b
 	}
 

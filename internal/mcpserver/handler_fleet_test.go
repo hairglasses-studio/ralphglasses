@@ -88,7 +88,7 @@ func TestHandleFleetSubmit_ValidCoordinator(t *testing.T) {
 		"repo":     "test-repo",
 		"prompt":   "implement feature X",
 		"provider": "claude",
-		"budget":   float64(10),
+		"budget_usd":   float64(10),
 		"priority": float64(3),
 	}))
 	if err != nil {
