@@ -50,11 +50,6 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 	ralphDir := filepath.Join(r.Path, ".ralph")
 	wireSubsystems(s, s.SessMgr, ralphDir)
 
-	// Wire prompt enhancer
-	if s.SessMgr.Enhancer == nil {
-		s.SessMgr.Enhancer = s.getEngine()
-	}
-
 	traceLevel := getStringArg(req, "trace_level")
 	if traceLevel == "" {
 		traceLevel = "summary"

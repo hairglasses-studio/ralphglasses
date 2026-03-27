@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -226,4 +227,64 @@ func TestHandleLoopStop_NotFound(t *testing.T) {
 	if !strings.Contains(text, string(ErrLoopNotFound)) {
 		t.Fatalf("expected LOOP_NOT_FOUND error code, got: %s", text)
 	}
+}
+
+// TestConcurrentLoopStartAndStatus exercises handleLoopStart and handleLoopStatus
+// from multiple goroutines to detect data races on shared state such as the
+// Enhancer field. Run with -race to verify.
+func TestConcurrentLoopStartAndStatus(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	ctx := context.Background()
+
+	// Scan so repos are populated.
+	_, _ = srv.handleScan(ctx, makeRequest(nil))
+
+	// Pre-trigger engineOnce to avoid real API calls.
+	srv.engineOnce.Do(func() { srv.Engine = nil })
+
+	srv.SessMgr.SetHooksForTesting(
+		func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
+			return &session.Session{
+				ID:         strings.ReplaceAll(opts.SessionName, " ", "-"),
+				Provider:   opts.Provider,
+				RepoPath:   opts.RepoPath,
+				RepoName:   filepath.Base(opts.RepoPath),
+				Prompt:     opts.Prompt,
+				Model:      opts.Model,
+				Status:     session.StatusCompleted,
+				OutputCh:   make(chan string, 1),
+				LaunchedAt: time.Now(),
+			}, nil
+		},
+		func(_ context.Context, sess *session.Session) error {
+			sess.Lock()
+			sess.Status = session.StatusCompleted
+			now := time.Now()
+			sess.EndedAt = &now
+			sess.Unlock()
+			return nil
+		},
+	)
+
+	const n = 10
+	var wg sync.WaitGroup
+	wg.Add(n * 2)
+
+	// Half goroutines call handleLoopStart, half call handleLoopStatus.
+	for i := 0; i < n; i++ {
+		go func() {
+			defer wg.Done()
+			_, _ = srv.handleLoopStart(ctx, makeRequest(map[string]any{
+				"repo": "test-repo",
+			}))
+		}()
+		go func() {
+			defer wg.Done()
+			_, _ = srv.handleLoopStatus(ctx, makeRequest(map[string]any{
+				"id": "nonexistent",
+			}))
+		}()
+	}
+	wg.Wait()
 }
