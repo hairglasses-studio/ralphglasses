@@ -66,8 +66,9 @@ type Server struct {
 	FleetClient      *fleet.Client
 	HITLTracker      *session.HITLTracker
 	DecisionLog      *session.DecisionLog
-	FeedbackAnalyzer *session.FeedbackAnalyzer
-	AutoOptimizer    *session.AutoOptimizer
+	FeedbackAnalyzer      *session.FeedbackAnalyzer
+	AutoOptimizer         *session.AutoOptimizer
+	feedbackWasAutoSeeded bool
 
 	// Fleet analytics engine.
 	FleetAnalytics *fleet.FleetAnalytics

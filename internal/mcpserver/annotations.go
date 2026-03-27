@@ -110,7 +110,7 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_autonomy_level":          {Title: "Autonomy Level", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_autonomy_decisions":      {Title: "Autonomy Decisions", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_autonomy_override":       {Title: "Override Autonomy", DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true)},
-	"ralphglasses_feedback_profiles":       {Title: "Feedback Profiles", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_feedback_profiles":       {Title: "Feedback Profiles", ReadOnlyHint: boolPtr(false), IdempotentHint: boolPtr(true)},
 	"ralphglasses_provider_recommend":      {Title: "Provider Recommend", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_tool_benchmark":          {Title: "Tool Benchmark", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_journal_read":            {Title: "Read Journal", ReadOnlyHint: boolPtr(true)},
