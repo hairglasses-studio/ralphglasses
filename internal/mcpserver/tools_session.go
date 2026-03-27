@@ -19,6 +19,10 @@ import (
 // resolveSnapshotRepo determines the target repo for snapshot storage.
 // Priority: 1) explicit repo param, 2) CWD match against scanned repos, 3) first repo (fallback).
 func resolveSnapshotRepo(allRepos []*model.Repo, repoName string, findRepo func(string) *model.Repo) *model.Repo {
+	if len(allRepos) == 0 {
+		return nil
+	}
+
 	// 1. Explicit repo parameter
 	if repoName != "" {
 		if r := findRepo(repoName); r != nil {
