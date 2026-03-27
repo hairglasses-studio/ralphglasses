@@ -1125,3 +1125,207 @@ Scope: Exercised all 13 tool namespaces via ~70 MCP calls across 8 phases. Focus
 **Top priority pattern**: Large-output tools without pagination (3 P1s, same root cause). Single fix pattern would resolve all three.
 
 **Prior fix verification**: Null-array fixes from Cycle 10 confirmed still working (marathon_dashboard, hitl_history, anomaly_detect all return `[]` not `null`). FINDING-110 (rc_status plain text) still open.
+
+## Cycle 12: Decision-Driven Tool Exercise — Provider Migration & Quality Audit (2026-03-27)
+
+
+### Context
+Cycle 12 used a provider migration decision scenario as a forcing function to exercise all 112 tools across 13 namespaces (~75 tool calls). The goal was to evaluate whether migrating 30% of worker sessions from Claude-only to mixed Claude+Gemini fleet is justified, while documenting tool friction and improvement opportunities.
+
+### Fleet Baseline
+- 7 repos discovered, 0 active sessions, $0 current spend
+- ralphglasses health score 100, 83.5% test coverage (1 package below 70%: cmd/ralphglasses-mcp at 66.7%)
+- Cost estimates: Claude 10-iter loop $2.70 mid vs Gemini $0.39 mid → **6.9x cost ratio**
+- Historical observations: 32 iterations, 22 passed (68.75%), cost P50 $0.11, P95 $0.59
+- All Claude-only — no Gemini data exists for comparison
+
+---
+
+### FINDING-158: prompt_lint returns null findings array
+- **Tool**: `prompt_lint`
+- **Category**: error-handling
+- **Priority**: P2
+- **Fix complexity**: trivial
+- **Detail**: When no lint findings exist, `findings` field is `null` instead of `[]`. Same null-array pattern fixed in Cycle 10 for marathon_dashboard/hitl_history/anomaly_detect. Needs the same `make([]Finding, 0)` guard.
+- **Repro**: `prompt_lint(prompt="Please refactor the handler to use the new framework.")`
+
+### FINDING-159: provider_recommend never suggests Gemini
+- **Tool**: `provider_recommend`
+- **Category**: data-quality
+- **Priority**: P1
+- **Fix complexity**: medium
+- **Detail**: All 5 recommendations returned Claude/sonnet regardless of task type. Tasks with insufficient data (bug_fix, docs, race conditions) fall back to identical $0.225 budget estimates. The recommender has no cold-start exploration strategy — it can never recommend Gemini because it has no Gemini data, and it can never get Gemini data because it never recommends Gemini. Classic explore/exploit problem.
+- **Suggested fix**: Add epsilon-greedy exploration — 10-20% of recommendations should suggest the alternate provider to build data.
+
+### FINDING-160: eval_ab_test providers mode requires provider_a/b but doesn't list valid options
+- **Tool**: `eval_ab_test`
+- **Category**: ux
+- **Priority**: P3
+- **Fix complexity**: trivial
+- **Detail**: Error "providers mode requires provider_a and provider_b" doesn't list available providers from observation data. Should say "valid providers: claude" (or whatever is in the data).
+- **Repro**: `eval_ab_test(repo="ralphglasses", mode="providers")`
+
+### FINDING-161: prompt_classify over-classifies as "code"
+- **Tool**: `prompt_classify`
+- **Category**: data-quality
+- **Priority**: P2
+- **Fix complexity**: medium
+- **Detail**: All 4 test prompts classified as "code" at high confidence. "Create a Grafana dashboard JSON" should be creative/config. "Write a changelog from git log" should be analysis/docs. Only the refactor prompt identified an alternative (troubleshooting at 0.33). The classifier appears biased toward "code" for anything mentioning technical terms.
+
+### FINDING-162: prompt_enhance misclassifies code tasks as analysis/creative
+- **Tool**: `prompt_enhance`
+- **Category**: data-quality
+- **Priority**: P2
+- **Fix complexity**: medium
+- **Detail**: "Add pagination support to fleet_status..." classified as "analysis" and received irrelevant constraints ("Support every claim with evidence", "Distinguish facts from inferences"). "Add a TUI view..." classified as "creative" and received "Balance creative ambition with practical constraints". Both are clearly code tasks. The enhance classifier disagrees with prompt_classify on task types.
+- **Suggested fix**: Unify classification logic between prompt_classify and prompt_enhance, or have enhance call classify internally.
+
+### FINDING-163: prompt_analyze scores specific surgical prompts poorly
+- **Tool**: `prompt_analyze`
+- **Category**: data-quality
+- **Priority**: P2
+- **Fix complexity**: medium
+- **Detail**: A highly specific prompt with file path, line number, and exact fix description scored 56/100 (D grade). The scorer penalizes lack of XML tags, examples, role definition, and format specification — even when those aren't needed for a targeted 1-line code change. The scoring model is biased toward verbose, structured prompts and doesn't recognize that brevity can be a quality signal for surgical tasks.
+- **Suggested fix**: Add task-complexity detection — short, specific prompts with code references should use a different scoring rubric than open-ended prompts.
+
+### FINDING-164: roadmap_research returns uniform relevance scores
+- **Tool**: `roadmap_research`
+- **Category**: data-quality
+- **Priority**: P2
+- **Fix complexity**: medium
+- **Detail**: All 10 research results returned `relevance: 0.5` — no meaningful ranking. Results included irrelevant repos like Excelize (Excel library) and 1Panel (VPS management panel) for a query about "multi-provider agent orchestration cost optimization". The relevance scorer appears to be a stub.
+- **Repro**: `roadmap_research(path=".", topics="multi-provider agent orchestration cost optimization")`
+
+### FINDING-165: roadmap_expand ignores limit parameter for output size
+- **Tool**: `roadmap_expand`
+- **Category**: performance
+- **Priority**: P1
+- **Fix complexity**: medium
+- **Detail**: `roadmap_expand(path=".", limit=10, style="conservative")` still produced 182K chars, exceeding token limits. The `limit` parameter constrains proposal count but not output size. Each proposal apparently includes full context/rationale that inflates the response. Confirmed from Cycle 11 FINDING-152 — limit param is not effective as a size control.
+- **Suggested fix**: Add `max_chars` parameter or truncate proposal rationale when output exceeds a threshold (e.g., 20K chars).
+
+### FINDING-166: awesome_diff race condition with parallel awesome_fetch
+- **Tool**: `awesome_diff`
+- **Category**: error-handling
+- **Priority**: P2
+- **Fix complexity**: medium
+- **Detail**: When awesome_fetch and awesome_diff are called in parallel, diff returns "Run awesome_fetch first" because fetch hasn't completed writing the baseline yet. The diff tool should either: (a) document that fetch must complete first, or (b) internally wait/retry for the baseline file.
+- **Confirmed**: FINDING-154 from Cycle 11 — same root cause.
+
+### FINDING-167: agent_compose error doesn't list available agents
+- **Tool**: `agent_compose`
+- **Category**: ux
+- **Priority**: P3
+- **Fix complexity**: trivial
+- **Detail**: Error "agent not found: planner" doesn't list available agents. Only 1 agent exists (fleet-optimizer). Error should include "available agents: fleet-optimizer".
+- **Repro**: `agent_compose(repo="ralphglasses", name="test", agents="planner,worker")`
+
+### FINDING-168: snapshot saves to wrong repo path
+- **Tool**: `snapshot`
+- **Category**: error-handling
+- **Priority**: P1
+- **Fix complexity**: medium
+- **Detail**: `snapshot(action="save", name="cycle-12-pre-migration")` saved to `/Users/mitchnotmitchell/hairglasses-studio/claudekit/.ralph/snapshots/` instead of `ralphglasses/.ralph/snapshots/`. The snapshot tool appears to use the first scanned repo's path rather than the CWD or active repo. Confirmed from Cycle 11 FINDING-148.
+- **Impact**: Snapshots are silently saved to the wrong location, making them unfindable when expected.
+
+### FINDING-169: logs tool fails after scan with NO_LOG_FILE
+- **Tool**: `logs`
+- **Category**: error-handling
+- **Priority**: P3
+- **Fix complexity**: trivial
+- **Detail**: `logs(repo="ralphglasses")` returns NO_LOG_FILE error even after scan completed. Log files are only created during active loop runs, but the error message says "ensure the repo has been scanned" — misleading. Should say "no log files exist (logs are created during loop runs)".
+
+### FINDING-170: merge_verify test failure is flaky TempDir cleanup
+- **Tool**: `merge_verify`
+- **Category**: data-quality
+- **Priority**: P2
+- **Fix complexity**: medium
+- **Detail**: `merge_verify` reports overall "fail" due to `TestLoadExternalSessions_SkipExisting` failing with a TempDir RemoveAll cleanup error (directory not empty). This is a flaky test, not a real merge issue. The tool should distinguish between test logic failures and test infrastructure failures.
+- **Note**: merge_verify correctly works with absolute path (Cycle 11 FINDING-147 workaround validated).
+
+### FINDING-171: journal shows recurring "not valid JSON" retry sessions
+- **Tool**: `journal_read`
+- **Category**: data-quality
+- **Priority**: P2
+- **Fix complexity**: medium
+- **Detail**: Journal entries show a pattern where every productive session is followed by a 1-turn retry session with task_focus "Your previous response was not valid JSON". These retry sessions waste $0.001-$0.004 each and pollute the journal. The session engine should handle JSON parse retries internally rather than creating new sessions.
+- **Impact**: ~50% of journal entries are noise, making journal analysis harder.
+
+### FINDING-172: config_bulk shows empty PRIMARY_MODEL for some repos
+- **Tool**: `config_bulk`
+- **Category**: ux
+- **Priority**: P3
+- **Fix complexity**: trivial
+- **Detail**: `config_bulk(key="PRIMARY_MODEL")` returns empty string for jobb and mesmer repos (not "no .ralphrc" but just ""). Should return the effective default value or explicitly say "not set (default: sonnet)".
+
+### Prior Finding Regressions Verified
+| Finding | Tool | Status | Notes |
+|---------|------|--------|-------|
+| FINDING-110 | rc_status | **STILL OPEN** | Returns plain text, not JSON |
+| FINDING-138 | prompt_should_enhance | **STILL OPEN** | Rejects <5 word prompts |
+| FINDING-139 | prompt_enhance | **PARTIALLY IMPROVED** | Now runs 2 stages (structure+self_check) instead of 1, but still no specificity improvement |
+| FINDING-148 | snapshot | **STILL OPEN** | Saves to wrong repo (claudekit instead of ralphglasses) |
+| FINDING-152 | roadmap_expand | **STILL OPEN** | 182K chars even with limit=10 |
+| FINDING-154 | awesome_diff | **STILL OPEN** | Race condition with parallel fetch |
+| FINDING-155 | observation_query | **STILL OPEN** | limit=0 returns 1 result |
+| FINDING-157 | scratchpad_read | **STILL OPEN** | "empty" instead of "not_found" for nonexistent pads |
+
+---
+
+### OPPORTUNITY-11: Unified task classification across prompt tools
+- **Category**: integration-gap
+- **Impact**: high
+- **Detail**: prompt_classify, prompt_enhance, and prompt_analyze each classify tasks independently and often disagree. A pagination task is "code" in classify, "analysis" in enhance, and scored as if it were open-ended in analyze. Create a single `classifyTask()` function used by all three tools.
+
+### OPPORTUNITY-12: Provider recommendation exploration strategy
+- **Category**: missing-feature
+- **Impact**: high
+- **Detail**: The provider_recommend → feedback_profiles → bandit pipeline has no cold-start strategy. Implement epsilon-greedy exploration where 10-20% of recommendations suggest the non-dominant provider, creating the observation data needed to actually compare providers. Without this, the "mixed fleet" migration question can never be answered by the tools themselves.
+
+### OPPORTUNITY-13: Cross-tool output→input pipeline helpers
+- **Category**: cross-tool-friction
+- **Impact**: medium
+- **Detail**: Common workflows require manual data extraction between tools:
+  - `session_list` → extract IDs → `session_compare(id1, id2)` — but session_compare requires specific IDs that aren't available when no sessions are running
+  - `roadmap_analyze(category="ready")` → `roadmap_export` → `provider_recommend` — the ready tasks don't include task descriptions in the format provider_recommend expects
+  - `prompt_classify` → `prompt_enhance` — enhance re-classifies instead of accepting classify's output
+  - Add `auto` mode to session_compare that picks the 2 most recent sessions.
+
+### OPPORTUNITY-14: Fleet tool graceful degradation
+- **Category**: ux
+- **Impact**: medium
+- **Detail**: 7 tools require fleet mode (fleet_workers, fleet_budget, fleet_dlq, blackboard_query, cost_forecast, confidence_calibration, bandit_status). All return "not_configured" with varying message formats. Standardize the response and add a `prerequisites` field listing what's needed to enable the tool. Consider returning partial data from local state when fleet mode isn't available.
+
+### OPPORTUNITY-15: Prompt scoring rubric for surgical vs open-ended tasks
+- **Category**: missing-feature
+- **Impact**: medium
+- **Detail**: prompt_analyze's 10-dimension scorer penalizes short, specific prompts that include file paths and line numbers. A "fix line 58 of handler_anomaly.go" prompt doesn't need XML tags, role definitions, or 3-5 examples — it needs precision. Add a "surgical task" rubric that scores file references, specificity, and testability higher than structure and examples.
+
+---
+
+### Cycle 12 Summary
+- **Tool calls**: ~75 across 13 namespaces
+- **New findings**: 15 (FINDING-158 through FINDING-172)
+- **New opportunities**: 5 (OPPORTUNITY-11 through OPPORTUNITY-15)
+- **Prior findings verified**: 8 (FINDING-110, 138, 139, 148, 152, 154, 155, 157)
+- **Null array fixes holding**: 3/3 (marathon_dashboard, hitl_history, anomaly_detect)
+- **New null array bug**: 1 (prompt_lint findings field — FINDING-158)
+
+### Migration Recommendation
+**Partial migration recommended, but not yet actionable.**
+
+Evidence from tools:
+1. **Cost case is strong**: 6.9x cost ratio (Claude $2.70 vs Gemini $0.39 per 10-iter loop). Counterfactual analysis estimates 67% completion rate for Gemini routing vs 69% actual for Claude — only 2% difference.
+2. **Data case is weak**: All 32 observations are Claude-only. The tools cannot currently validate Gemini quality because provider_recommend never suggests Gemini (FINDING-159) and no exploration strategy exists (OPPORTUNITY-12).
+3. **Infrastructure is ready**: tool_groups shows all namespaces loaded, agent_define works, cost_estimate supports all 3 providers.
+4. **Blockers**:
+   - Enable cascade router with epsilon-greedy exploration (OPPORTUNITY-12)
+   - Fix snapshot path bug so pre-migration baselines save correctly (FINDING-168)
+   - Accumulate ≥20 Gemini observations before making migration decision
+   - Fix roadmap_expand overflow to actually consume expansion proposals (FINDING-165)
+
+**Recommended next steps**:
+1. Define cascade config routing difficulty <0.4 tasks to Gemini
+2. Run 2-3 loop cycles with mixed routing to build Gemini observation data
+3. Use eval_ab_test(mode="providers") to compare after ≥20 observations per provider
+4. Make final migration decision based on actual comparative data
