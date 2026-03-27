@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -336,5 +337,132 @@ func TestHandleScratchpadDelete_MissingParams(t *testing.T) {
 	}
 	if !result.IsError {
 		t.Fatal("expected error for missing scratchpad")
+	}
+}
+
+func TestResolveRepoPath_SingleRepo(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	srv := &Server{
+		Repos: []*model.Repo{{Name: "myrepo", Path: root}},
+	}
+
+	got, err := srv.resolveRepoPath("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != root {
+		t.Errorf("expected %s, got %s", root, got)
+	}
+}
+
+func TestResolveRepoPath_ExplicitRepoParam(t *testing.T) {
+	t.Parallel()
+	rootA := t.TempDir()
+	rootB := t.TempDir()
+	srv := &Server{
+		Repos: []*model.Repo{
+			{Name: "alpha", Path: rootA},
+			{Name: "beta", Path: rootB},
+		},
+	}
+
+	got, err := srv.resolveRepoPath("beta")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != rootB {
+		t.Errorf("expected %s, got %s", rootB, got)
+	}
+}
+
+func TestResolveRepoPath_ExplicitInvalidRepo(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	srv := &Server{
+		Repos: []*model.Repo{{Name: "alpha", Path: root}},
+	}
+
+	_, err := srv.resolveRepoPath("nonexistent")
+	if err == nil {
+		t.Fatal("expected error for nonexistent repo")
+	}
+	if !strings.Contains(err.Error(), "repo not found") {
+		t.Errorf("expected 'repo not found' in error, got: %v", err)
+	}
+}
+
+func TestResolveRepoPath_MultiReposCWDInside(t *testing.T) {
+	// Not parallel: os.Chdir is process-global.
+	rootA := t.TempDir()
+	rootB := t.TempDir()
+
+	// Create a subdirectory inside rootB to simulate CWD being inside that repo.
+	subdir := filepath.Join(rootB, "src", "pkg")
+	if err := os.MkdirAll(subdir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := &Server{
+		Repos: []*model.Repo{
+			{Name: "alpha", Path: rootA},
+			{Name: "beta", Path: rootB},
+		},
+	}
+
+	// Change CWD to subdir inside rootB.
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(origDir) })
+	if err := os.Chdir(subdir); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := srv.resolveRepoPath("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != rootB {
+		t.Errorf("expected %s, got %s", rootB, got)
+	}
+}
+
+func TestResolveRepoPath_MultiReposCWDOutside(t *testing.T) {
+	// Not parallel: os.Chdir is process-global.
+	rootA := t.TempDir()
+	rootB := t.TempDir()
+	outside := t.TempDir() // CWD outside all repos
+
+	srv := &Server{
+		Repos: []*model.Repo{
+			{Name: "alpha", Path: rootA},
+			{Name: "beta", Path: rootB},
+		},
+	}
+
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(origDir) })
+	if err := os.Chdir(outside); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = srv.resolveRepoPath("")
+	if err == nil {
+		t.Fatal("expected error when CWD is outside all repos")
+	}
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, "multiple repos found") {
+		t.Errorf("expected 'multiple repos found' in error, got: %v", errMsg)
+	}
+	if !strings.Contains(errMsg, "available:") {
+		t.Errorf("expected 'available:' in error, got: %v", errMsg)
+	}
+	if !strings.Contains(errMsg, "alpha") || !strings.Contains(errMsg, "beta") {
+		t.Errorf("expected repo names in error, got: %v", errMsg)
 	}
 }
