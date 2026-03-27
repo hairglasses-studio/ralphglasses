@@ -169,7 +169,7 @@ func TestRunSessionStreamParsing(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		runSessionOutput(context.Background(), s, stdout)
+		runSessionOutput(context.Background(), s, stdout, nil)
 	}()
 	<-done
 
@@ -201,7 +201,7 @@ func TestRunSessionOutputRecordsParseErrors(t *testing.T) {
 		OutputCh: make(chan string, 10),
 	}
 
-	runSessionOutput(context.Background(), s, strings.NewReader("not-json\n"))
+	runSessionOutput(context.Background(), s, strings.NewReader("not-json\n"), nil)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
