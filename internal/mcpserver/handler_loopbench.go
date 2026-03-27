@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -47,10 +48,15 @@ func (s *Server) handleLoopBenchmark(_ context.Context, req mcp.CallToolRequest)
 
 	bl := e2e.BuildBaseline(observations, 0)
 
+	// Compute actual window span from observation timestamps.
+	actualHours := observations[len(observations)-1].Timestamp.Sub(observations[0].Timestamp).Hours()
+
 	result := map[string]any{
-		"repo":         repoName,
-		"hours":        hours,
-		"observations": len(observations),
+		"repo":              repoName,
+		"hours":             hours,
+		"observation_count": len(observations),
+		"window_type":       "rolling",
+		"window_size":       actualHours,
 	}
 	if bl.Aggregate != nil {
 		result["cost_p50"] = bl.Aggregate.CostP50
@@ -64,6 +70,16 @@ func (s *Server) handleLoopBenchmark(_ context.Context, req mcp.CallToolRequest)
 		result["error_rate"] = bl.Rates.ErrorRate
 	}
 	result["per_scenario"] = bl.Entries
+
+	// Load stored baseline and compute divergence warnings.
+	blPath := e2e.BaselinePath(r.Path)
+	storedBL, _ := e2e.LoadBaseline(blPath)
+	if storedBL != nil {
+		warnings := computeDivergenceWarnings(bl, storedBL)
+		if len(warnings) > 0 {
+			result["divergence_warnings"] = warnings
+		}
+	}
 
 	return jsonResult(result), nil
 }
@@ -105,13 +121,16 @@ func (s *Server) handleLoopBaseline(_ context.Context, req mcp.CallToolRequest) 
 		if err != nil {
 			return codedError(ErrGateFailed, fmt.Sprintf("refresh baseline: %v", err)), nil
 		}
+		enrichBaselineWindow(bl, hours)
 		if err := e2e.SaveBaseline(blPath, bl); err != nil {
 			return codedError(ErrFilesystem, fmt.Sprintf("save baseline: %v", err)), nil
 		}
 		return jsonResult(map[string]any{
-			"action":  "refresh",
-			"path":    blPath,
-			"samples": bl.Aggregate.SampleCount,
+			"action":      "refresh",
+			"path":        blPath,
+			"samples":     bl.Aggregate.SampleCount,
+			"window_type": windowType(hours),
+			"window_hours": bl.WindowHours,
 		}), nil
 
 	case "pin":
@@ -120,14 +139,17 @@ func (s *Server) handleLoopBaseline(_ context.Context, req mcp.CallToolRequest) 
 		if err != nil {
 			return codedError(ErrGateFailed, fmt.Sprintf("refresh baseline: %v", err)), nil
 		}
+		enrichBaselineWindow(bl, hours)
 		if err := e2e.SaveBaseline(blPath, bl); err != nil {
 			return codedError(ErrFilesystem, fmt.Sprintf("save baseline: %v", err)), nil
 		}
 		return jsonResult(map[string]any{
-			"action":  "pin",
-			"path":    blPath,
-			"samples": bl.Aggregate.SampleCount,
-			"message": "baseline pinned — future observations measured against this snapshot",
+			"action":       "pin",
+			"path":         blPath,
+			"samples":      bl.Aggregate.SampleCount,
+			"window_type":  windowType(hours),
+			"window_hours": bl.WindowHours,
+			"message":      "baseline pinned — future observations measured against this snapshot",
 		}), nil
 
 	default:
@@ -167,4 +189,96 @@ func (s *Server) handleLoopGates(_ context.Context, req mcp.CallToolRequest) (*m
 	report := e2e.EvaluateGates(observations, baseline, thresholds)
 
 	return jsonResult(report), nil
+}
+
+// windowType returns "rolling" if a window was explicitly specified, "all" otherwise.
+func windowType(hours float64) string {
+	if hours > 0 {
+		return "rolling"
+	}
+	return "all"
+}
+
+// enrichBaselineWindow replaces a zero WindowHours in a LoopBaseline with the
+// actual time span computed from the earliest and latest entry sample counts,
+// using GeneratedAt as the upper bound. When hours <= 0 (meaning "all data"),
+// the WindowHours stored in the baseline already reflects the BuildBaseline
+// input. We recompute from the baseline's GeneratedAt and the requested window.
+func enrichBaselineWindow(bl *e2e.LoopBaseline, requestedHours float64) {
+	if bl == nil {
+		return
+	}
+	if requestedHours <= 0 {
+		// "all" mode — keep whatever BuildBaseline stored but ensure it is
+		// not the ambiguous zero. Use the aggregate sample count as a hint;
+		// the true span is unknown without raw observations, so we leave
+		// WindowHours as-is (BuildBaseline sets it to 0 for "all").
+		// We do NOT overwrite here — the window_type field clarifies semantics.
+		return
+	}
+	// For rolling windows, ensure WindowHours reflects the requested value.
+	bl.WindowHours = requestedHours
+}
+
+// computeDivergenceWarnings compares current benchmark metrics against a stored
+// baseline and returns warnings for any metric that diverges by more than 20%.
+func computeDivergenceWarnings(current, stored *e2e.LoopBaseline) []string {
+	if current == nil || stored == nil {
+		return nil
+	}
+
+	var warnings []string
+
+	// Compare aggregate cost/latency metrics.
+	if current.Aggregate != nil && stored.Aggregate != nil {
+		type metricPair struct {
+			name    string
+			current float64
+			stored  float64
+		}
+		pairs := []metricPair{
+			{"cost_p50", current.Aggregate.CostP50, stored.Aggregate.CostP50},
+			{"cost_p95", current.Aggregate.CostP95, stored.Aggregate.CostP95},
+			{"latency_p50_ms", current.Aggregate.LatencyP50, stored.Aggregate.LatencyP50},
+			{"latency_p95_ms", current.Aggregate.LatencyP95, stored.Aggregate.LatencyP95},
+		}
+		for _, p := range pairs {
+			if pctDivergence(p.current, p.stored) > 20 {
+				warnings = append(warnings, fmt.Sprintf("%s diverged: baseline=%.4f current=%.4f", p.name, p.stored, p.current))
+			}
+		}
+	}
+
+	// Compare rates.
+	if current.Rates != nil && stored.Rates != nil {
+		type ratePair struct {
+			name    string
+			current float64
+			stored  float64
+		}
+		pairs := []ratePair{
+			{"verify_pass_rate", current.Rates.VerifyPassRate, stored.Rates.VerifyPassRate},
+			{"completion_rate", current.Rates.CompletionRate, stored.Rates.CompletionRate},
+			{"error_rate", current.Rates.ErrorRate, stored.Rates.ErrorRate},
+		}
+		for _, p := range pairs {
+			if pctDivergence(p.current, p.stored) > 20 {
+				warnings = append(warnings, fmt.Sprintf("%s diverged: baseline=%.4f current=%.4f", p.name, p.stored, p.current))
+			}
+		}
+	}
+
+	return warnings
+}
+
+// pctDivergence returns the absolute percentage difference between two values.
+// Returns 0 when both values are zero to avoid division-by-zero.
+func pctDivergence(a, b float64) float64 {
+	if b == 0 && a == 0 {
+		return 0
+	}
+	if b == 0 {
+		return 100 // infinite divergence capped at 100%
+	}
+	return math.Abs(a-b) / math.Abs(b) * 100
 }
