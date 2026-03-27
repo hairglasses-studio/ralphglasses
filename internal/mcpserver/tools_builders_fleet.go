@@ -23,7 +23,7 @@ func (s *Server) buildFleetGroup() ToolGroup {
 				mcp.WithString("window", mcp.Description("Duration window for metrics snapshot (e.g. '1h', '24h'). Default: 1h")),
 			), s.handleFleetAnalytics},
 			{mcp.NewTool("ralphglasses_fleet_submit",
-				mcp.WithDescription("Submit work to the distributed fleet queue for execution on any worker. Requires fleet server mode (ralphglasses mcp --fleet)."),
+				mcp.WithDescription("Submit work for `repo` with `prompt` to the distributed fleet queue. Requires fleet server mode (ralphglasses mcp --fleet)."),
 				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
 				mcp.WithString("prompt", mcp.Required(), mcp.Description("Task prompt")),
 				mcp.WithString("provider", mcp.Description("claude (default), gemini, codex")),
