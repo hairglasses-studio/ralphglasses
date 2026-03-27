@@ -157,7 +157,23 @@ func (s *Server) handleLoopStatus(_ context.Context, req mcp.CallToolRequest) (*
 	if !ok {
 		return codedError(ErrLoopNotFound, fmt.Sprintf("loop not found: %s", id)), nil
 	}
-	return jsonResult(loopResult(run)), nil
+
+	result := loopResult(run)
+
+	// WS-7: Add hygiene metrics to loop status response.
+	if s.SessMgr != nil {
+		result["consecutive_noops"] = s.SessMgr.ConsecutiveNoOps(id)
+		result["total_pruned_this_session"] = s.SessMgr.TotalPrunedThisSession()
+		// Journal entry count: derive repo path from run.
+		run.Lock()
+		repoPath := run.RepoPath
+		run.Unlock()
+		if repoPath != "" {
+			result["journal_entry_count"] = session.CountJournalEntries(repoPath)
+		}
+	}
+
+	return jsonResult(result), nil
 }
 
 func (s *Server) handleLoopStep(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
