@@ -963,14 +963,16 @@ func TestFleetToolsNotRunning(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if !result.IsError {
-				t.Fatal("expected error when fleet not running")
-			}
-			code := parseErrorCode(t, getResultText(result))
-			if code != string(ErrFleetNotRunning) {
-				t.Errorf("error_code = %q, want %q", code, ErrFleetNotRunning)
+			if result.IsError {
+				t.Fatal("expected graceful degradation (non-error), got IsError=true")
 			}
 			text := getResultText(result)
+			if !strings.Contains(text, `"status":"not_configured"`) {
+				t.Errorf("expected status not_configured, got: %s", text)
+			}
+			if !strings.Contains(text, `"fleet_mode":false`) {
+				t.Errorf("expected fleet_mode:false, got: %s", text)
+			}
 			if !strings.Contains(text, "ralphglasses mcp --fleet") {
 				t.Errorf("expected guidance to start fleet, got: %s", text)
 			}

@@ -25,12 +25,15 @@ func TestHandleFleetSubmit_NilFleet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !result.IsError {
-		t.Fatal("expected error when fleet is not active")
+	if result.IsError {
+		t.Fatal("expected graceful degradation (non-error), got IsError=true")
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "NOT_RUNNING") {
-		t.Errorf("expected NOT_RUNNING error code, got: %s", text)
+	if !strings.Contains(text, `"status":"not_configured"`) {
+		t.Errorf("expected status not_configured, got: %s", text)
+	}
+	if !strings.Contains(text, `"fleet_mode":false`) {
+		t.Errorf("expected fleet_mode:false, got: %s", text)
 	}
 }
 
@@ -178,12 +181,15 @@ func TestHandleFleetWorkers_NilFleet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !result.IsError {
-		t.Fatal("expected error when fleet is not active")
+	if result.IsError {
+		t.Fatal("expected graceful degradation (non-error), got IsError=true")
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "NOT_RUNNING") {
-		t.Errorf("expected NOT_RUNNING error code, got: %s", text)
+	if !strings.Contains(text, `"status":"not_configured"`) {
+		t.Errorf("expected status not_configured, got: %s", text)
+	}
+	if !strings.Contains(text, `"fleet_mode":false`) {
+		t.Errorf("expected fleet_mode:false, got: %s", text)
 	}
 }
 
@@ -222,12 +228,15 @@ func TestHandleFleetBudget_NilFleet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !result.IsError {
-		t.Fatal("expected error when fleet is not active")
+	if result.IsError {
+		t.Fatal("expected graceful degradation (non-error), got IsError=true")
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "NOT_RUNNING") {
-		t.Errorf("expected NOT_RUNNING error code, got: %s", text)
+	if !strings.Contains(text, `"status":"not_configured"`) {
+		t.Errorf("expected status not_configured, got: %s", text)
+	}
+	if !strings.Contains(text, `"fleet_mode":false`) {
+		t.Errorf("expected fleet_mode:false, got: %s", text)
 	}
 }
 
@@ -357,8 +366,15 @@ func TestHandleFleetDLQ(t *testing.T) {
 			name:    "nil coordinator",
 			args:    map[string]any{},
 			noCoord: true,
-			wantErr: true,
-			errCode: "NOT_RUNNING",
+			wantErr: false,
+			checkText: func(t *testing.T, text string) {
+				if !strings.Contains(text, `"status":"not_configured"`) {
+					t.Errorf("expected status not_configured, got: %s", text)
+				}
+				if !strings.Contains(text, `"fleet_mode":false`) {
+					t.Errorf("expected fleet_mode:false, got: %s", text)
+				}
+			},
 		},
 		{
 			name: "list empty DLQ (default action)",
@@ -469,11 +485,10 @@ func TestHandleFleetWorkers_Actions(t *testing.T) {
 		errCode string
 	}{
 		{
-			name:    "action without coordinator (client-only)",
+			name:    "action without coordinator (client-only) graceful degrade",
 			args:    map[string]any{"action": "pause", "worker_id": "w1"},
 			noCoord: true,
-			wantErr: true,
-			errCode: "NOT_RUNNING",
+			wantErr: false,
 		},
 		{
 			name:    "action missing worker_id",
@@ -840,7 +855,16 @@ func TestHandleFleetDLQ_NilCoordinator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	assertErrorCode(t, "handleFleetDLQ", result, "FLEET_NOT_RUNNING")
+	if result.IsError {
+		t.Fatal("expected graceful degradation (non-error), got IsError=true")
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, `"status":"not_configured"`) {
+		t.Errorf("expected status not_configured, got: %s", text)
+	}
+	if !strings.Contains(text, `"fleet_mode":false`) {
+		t.Errorf("expected fleet_mode:false, got: %s", text)
+	}
 }
 
 func TestHandleFleetDLQ_ListAction(t *testing.T) {
@@ -996,12 +1020,7 @@ func TestHandleFleetWorkers_ActionRequiresCoordinator(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
 	srv.FleetCoordinator = nil
-	// Need FleetClient so we pass the initial nil check
-	// But without coordinator, actions should fail
-	// Actually both nil returns "fleet not active", so we need FleetClient non-nil
-	// Let's just verify that nil coordinator with action is handled
 	srv.FleetClient = nil
-	srv.FleetCoordinator = nil
 
 	result, err := srv.handleFleetWorkers(context.Background(), makeRequest(map[string]any{
 		"action":    "pause",
@@ -1010,7 +1029,16 @@ func TestHandleFleetWorkers_ActionRequiresCoordinator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	assertErrorCode(t, "handleFleetWorkers", result, "FLEET_NOT_RUNNING")
+	if result.IsError {
+		t.Fatal("expected graceful degradation (non-error), got IsError=true")
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, `"status":"not_configured"`) {
+		t.Errorf("expected status not_configured, got: %s", text)
+	}
+	if !strings.Contains(text, `"fleet_mode":false`) {
+		t.Errorf("expected fleet_mode:false, got: %s", text)
+	}
 }
 
 // --- handleFleetStatus pagination ---
