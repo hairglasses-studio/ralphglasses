@@ -52,6 +52,7 @@ var KnownKeys = map[string]ConfigKeySpec{
 	"PROVIDER":              {Type: ConfigTypeString, Default: "claude", Description: "default session provider (claude/gemini/codex)"},
 	"AUTO_ENHANCE":          {Type: ConfigTypeBool, Default: "false", Description: "auto-enhance prompts before session launch"},
 	"AUTONOMY_LEVEL":        {Type: ConfigTypeInt, Default: "0", MinInt: 0, MaxInt: 3, Description: "autonomy level (0=observe, 3=full)"},
+	"KILL_ESCALATION_TIMEOUT": {Type: ConfigTypeInt, Default: "5", MinInt: 1, MaxInt: 60, Description: "kill escalation timeout in seconds"},
 }
 
 // ConfigWarning describes a non-fatal issue with a config value.
