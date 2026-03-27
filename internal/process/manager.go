@@ -65,6 +65,7 @@ type ManagedProcess struct {
 	ExitError    string
 	RestartCount int           // number of times this process has been auto-restarted
 	KillTimeout  time.Duration // per-process kill timeout; zero means use Manager.KillTimeout
+	LogFile      *os.File      // log file handle; closed when process exits
 }
 
 // lastExits tracks exit status after reaping (keyed by repo path).
