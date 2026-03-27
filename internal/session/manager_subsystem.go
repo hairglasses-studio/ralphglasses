@@ -194,6 +194,13 @@ func (m *Manager) AddSessionForTesting(s *Session) {
 	m.sessions[s.ID] = s
 }
 
+// AddTeamForTesting inserts a pre-built team into the manager. Intended for tests.
+func (m *Manager) AddTeamForTesting(t *TeamStatus) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.teams[t.Name] = t
+}
+
 // HITLSnapshot returns the current HITL score over a 24h window.
 // Returns nil if no AutoOptimizer is configured.
 func (m *Manager) HITLSnapshot() *HITLSnapshot {
