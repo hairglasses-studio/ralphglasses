@@ -1,6 +1,7 @@
 package mcpserver
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -17,11 +18,14 @@ import (
 
 // StepResult holds the outcome of a single verification step.
 type StepResult struct {
-	Name           string   `json:"name"`
-	Status         string   `json:"status"`
-	ElapsedSeconds float64  `json:"elapsed_seconds"`
-	Output         string   `json:"output"`
-	Coverage       *float64 `json:"coverage,omitempty"`
+	Name            string   `json:"name"`
+	Status          string   `json:"status"`
+	ElapsedSeconds  float64  `json:"elapsed_seconds"`
+	Output          string   `json:"output"`
+	Stderr          string   `json:"stderr,omitempty"`
+	FailureCategory string   `json:"failure_category,omitempty"`
+	SuggestedFix    string   `json:"suggested_fix,omitempty"`
+	Coverage        *float64 `json:"coverage,omitempty"`
 }
 
 // MergeVerifyResult holds the full verification outcome.
@@ -35,34 +39,72 @@ type MergeVerifyResult struct {
 
 const maxStepOutput = 5000
 
+// classifyFailure inspects combined stdout+stderr output and returns a failure
+// category and canned suggested fix.
+func classifyFailure(combined string) (category, suggestion string) {
+	switch {
+	case strings.Contains(combined, "cannot") ||
+		strings.Contains(combined, "undefined:") ||
+		strings.Contains(combined, "imported and not used"):
+		return "compile", "Check imports and type signatures in the changed files"
+	case strings.Contains(combined, "--- FAIL:") ||
+		strings.Contains(combined, "FAIL"):
+		return "test_fail", "Review test assertions — the changed code may have broken expectations"
+	case strings.Contains(combined, "context deadline exceeded") ||
+		strings.Contains(combined, "test timed out"):
+		return "timeout", "Tests may be hanging — check for missing context cancellation or infinite loops"
+	case strings.Contains(combined, "go vet"):
+		return "vet", "Run 'go vet ./...' locally to see the specific issue"
+	default:
+		return "unknown", ""
+	}
+}
+
 // runVerifyStep runs a single command in dir and returns the result.
 func runVerifyStep(ctx context.Context, dir, name string, args []string) StepResult {
 	start := time.Now()
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Dir = dir
 
-	out, err := cmd.CombinedOutput()
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
+
+	err := cmd.Run()
 	elapsed := time.Since(start).Seconds()
 
-	output := string(out)
+	stdoutStr := stdoutBuf.String()
+	stderrStr := stderrBuf.String()
+
+	// Combined output for display and classification (matches old behavior).
+	output := stdoutStr + stderrStr
 	if len(output) > maxStepOutput {
 		output = output[:maxStepOutput] + "\n... (truncated)"
 	}
 
 	status := "pass"
+	var failureCategory, suggestedFix, stderrOut string
 	if err != nil {
 		status = "fail"
 		// Include the error message if output is empty.
 		if output == "" {
 			output = err.Error()
 		}
+		failureCategory, suggestedFix = classifyFailure(output)
+		stderrOut = strings.TrimSpace(stderrStr)
+		if len(stderrOut) > maxStepOutput {
+			stderrOut = stderrOut[:maxStepOutput] + "\n... (truncated)"
+		}
 	}
 
 	return StepResult{
-		Name:           name,
-		Status:         status,
-		ElapsedSeconds: elapsed,
-		Output:         strings.TrimSpace(output),
+		Name:            name,
+		Status:          status,
+		ElapsedSeconds:  elapsed,
+		Output:          strings.TrimSpace(output),
+		Stderr:          stderrOut,
+		FailureCategory: failureCategory,
+		SuggestedFix:    suggestedFix,
 	}
 }
 
