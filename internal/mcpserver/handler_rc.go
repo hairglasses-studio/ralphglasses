@@ -141,9 +141,129 @@ func summarizeEvent(e events.Event) string {
 		return fmt.Sprintf("[loop] %s stopped", e.RepoName)
 	case events.TeamCreated:
 		return fmt.Sprintf("[team] %s created", e.RepoName)
+	case events.ToolCalled:
+		return fmt.Sprintf("[tool.called] %s", summarizeToolCalled(e.Data))
+	case events.ScanComplete:
+		return fmt.Sprintf("[scan.complete] %s", summarizeScanComplete(e.Data))
+	case events.LoopIterated:
+		return fmt.Sprintf("[loop.iterated] %s", summarizeLoopIterated(e.Data))
+	case events.LoopRegression:
+		return fmt.Sprintf("[loop.regression] %s", e.RepoName)
+	case events.PromptEnhanced:
+		return fmt.Sprintf("[prompt.enhanced] %s", e.RepoName)
+	case events.SessionError:
+		msg := dataString(e.Data, "error")
+		if msg != "" {
+			return fmt.Sprintf("[session.error] %s: %s", e.RepoName, msg)
+		}
+		return fmt.Sprintf("[session.error] %s", e.RepoName)
 	default:
-		return fmt.Sprintf("[%s] %s", e.Type, e.RepoName)
+		return fmt.Sprintf("[%s] %s", e.Type, summarizeDefault(e))
 	}
+}
+
+// dataString extracts a string value from a Data map, returning "" if missing or wrong type.
+func dataString(data map[string]any, key string) string {
+	if data == nil {
+		return ""
+	}
+	v, ok := data[key]
+	if !ok {
+		return ""
+	}
+	s, ok := v.(string)
+	if !ok {
+		return fmt.Sprintf("%v", v)
+	}
+	return s
+}
+
+// dataFloat extracts a float64 value from a Data map, returning 0 and false if missing or wrong type.
+func dataFloat(data map[string]any, key string) (float64, bool) {
+	if data == nil {
+		return 0, false
+	}
+	v, ok := data[key]
+	if !ok {
+		return 0, false
+	}
+	f, ok := v.(float64)
+	return f, ok
+}
+
+func summarizeToolCalled(data map[string]any) string {
+	name := dataString(data, "tool")
+	if name == "" {
+		name = dataString(data, "name")
+	}
+	latency := dataString(data, "latency")
+	if latency == "" {
+		if ms, ok := dataFloat(data, "latency_ms"); ok {
+			latency = fmt.Sprintf("%.0fms", ms)
+		}
+	}
+	if name != "" && latency != "" {
+		return fmt.Sprintf("%s (%s)", name, latency)
+	}
+	if name != "" {
+		return name
+	}
+	return "unknown"
+}
+
+func summarizeScanComplete(data map[string]any) string {
+	if count, ok := dataFloat(data, "repo_count"); ok {
+		return fmt.Sprintf("found %d repos", int(count))
+	}
+	if count, ok := dataFloat(data, "count"); ok {
+		return fmt.Sprintf("found %d repos", int(count))
+	}
+	return "scan finished"
+}
+
+func summarizeLoopIterated(data map[string]any) string {
+	step := ""
+	if n, ok := dataFloat(data, "step"); ok {
+		step = fmt.Sprintf("step %d", int(n))
+	}
+	status := dataString(data, "status")
+	if step != "" && status != "" {
+		return fmt.Sprintf("%s: %s", step, status)
+	}
+	if step != "" {
+		return step
+	}
+	if status != "" {
+		return status
+	}
+	return "iteration"
+}
+
+func summarizeDefault(e events.Event) string {
+	if e.RepoName != "" {
+		if len(e.Data) > 0 {
+			var parts []string
+			for k, v := range e.Data {
+				parts = append(parts, fmt.Sprintf("%s=%v", k, v))
+				if len(parts) >= 3 {
+					break
+				}
+			}
+			return fmt.Sprintf("%s %s", e.RepoName, strings.Join(parts, " "))
+		}
+		return e.RepoName
+	}
+	if len(e.Data) > 0 {
+		var parts []string
+		for k, v := range e.Data {
+			parts = append(parts, fmt.Sprintf("%s=%v", k, v))
+			if len(parts) >= 3 {
+				break
+			}
+		}
+		return strings.Join(parts, " ")
+	}
+	return ""
 }
 
 // --- Remote Control (RC) handlers ---
