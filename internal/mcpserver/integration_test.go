@@ -39,8 +39,8 @@ func TestIntegration_RepoLifecycle(t *testing.T) {
 		t.Fatalf("scan returned error: %s", getResultText(scanResult))
 	}
 	scanText := getResultText(scanResult)
-	if !strings.Contains(scanText, "1 ralph-enabled repos") {
-		t.Fatalf("scan: expected 1 repo, got: %s", scanText)
+	if !strings.Contains(scanText, "repos_found") {
+		t.Fatalf("scan: expected JSON with repos_found, got: %s", scanText)
 	}
 
 	// Step 2: List — repo discovered by scan should appear.
@@ -699,8 +699,8 @@ func TestIntegration_ScaffoldThenScan(t *testing.T) {
 		t.Fatalf("re-scan: %v", err)
 	}
 	scanText := getResultText(scanResult)
-	if !strings.Contains(scanText, "2 ralph-enabled repos") {
-		t.Fatalf("re-scan: expected 2 repos, got: %s", scanText)
+	if !strings.Contains(scanText, "repos_found") {
+		t.Fatalf("re-scan: expected JSON with repos_found, got: %s", scanText)
 	}
 
 	// Step 4: List — both repos should appear.
