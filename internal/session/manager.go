@@ -37,6 +37,7 @@ type Manager struct {
 	blackboard   *Blackboard             // Phase H: shared inter-subsystem state
 	costPredictor *CostPredictor         // Phase H: task cost prediction
 	noopDetector  *NoOpDetector          // WS2-noop: consecutive no-op iteration detection
+	store         Store                  // pluggable session persistence (default: MemoryStore)
 	launchSession  func(context.Context, LaunchOptions) (*Session, error)
 	waitSession    func(context.Context, *Session) error
 	healthCheck    func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
@@ -68,6 +69,34 @@ func NewManagerWithBus(bus *events.Bus) *Manager {
 		stateDir:     expandHome(DefaultStateDir),
 		noopDetector: NewNoOpDetector(2),
 	}
+}
+
+// NewManagerWithStore creates a session manager backed by the given Store.
+// The in-memory sessions map is still used for active (in-process) sessions;
+// the Store provides durable persistence.
+func NewManagerWithStore(store Store, bus *events.Bus) *Manager {
+	return &Manager{
+		sessions:     make(map[string]*Session),
+		teams:        make(map[string]*TeamStatus),
+		workflowRuns: make(map[string]*WorkflowRun),
+		loops:        make(map[string]*LoopRun),
+		bus:          bus,
+		store:        store,
+		stateDir:     expandHome(DefaultStateDir),
+		noopDetector: NewNoOpDetector(2),
+	}
+}
+
+// Store returns the session store, or nil if none is configured.
+func (m *Manager) Store() Store {
+	return m.store
+}
+
+// SetStore sets the session store. Intended for late initialization or tests.
+func (m *Manager) SetStore(store Store) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.store = store
 }
 
 // Init performs one-time startup work after the Manager is constructed.
