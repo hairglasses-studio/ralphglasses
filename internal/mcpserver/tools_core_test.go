@@ -184,8 +184,17 @@ func TestHandleScan(t *testing.T) {
 	}
 
 	text := getResultText(result)
-	if !strings.Contains(text, "1 ralph-enabled repos") {
-		t.Errorf("expected to find 1 repo, got: %s", text)
+	var data map[string]any
+	if err := json.Unmarshal([]byte(text), &data); err != nil {
+		t.Fatalf("unmarshal scan result: %v", err)
+	}
+	reposFound, ok := data["repos_found"].(float64)
+	if !ok || reposFound != 1 {
+		t.Errorf("expected repos_found=1, got: %v", data["repos_found"])
+	}
+	repos, ok := data["repos"].([]any)
+	if !ok || len(repos) != 1 {
+		t.Errorf("expected repos array with 1 entry, got: %v", data["repos"])
 	}
 }
 
@@ -455,8 +464,15 @@ func TestHandleStopAll(t *testing.T) {
 	}
 
 	text := getResultText(result)
-	if !strings.Contains(text, "stopped") {
-		t.Errorf("expected confirmation, got: %s", text)
+	var data map[string]any
+	if err := json.Unmarshal([]byte(text), &data); err != nil {
+		t.Fatalf("unmarshal stop_all result: %v", err)
+	}
+	if _, ok := data["stopped_count"]; !ok {
+		t.Error("expected stopped_count in JSON response")
+	}
+	if _, ok := data["stopped"]; !ok {
+		t.Error("expected stopped array in JSON response")
 	}
 }
 

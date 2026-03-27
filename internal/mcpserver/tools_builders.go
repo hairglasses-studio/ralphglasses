@@ -45,6 +45,7 @@ func (s *Server) buildCoreGroup() ToolGroup {
 			{mcp.NewTool("ralphglasses_status",
 				mcp.WithDescription("Get detailed status for a specific repo including loop status, circuit breaker, progress, and config"),
 				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name (basename of directory)")),
+				mcp.WithBoolean("include_config", mcp.Description("Include full config in status response")),
 			), s.handleStatus},
 			{mcp.NewTool("ralphglasses_start",
 				mcp.WithDescription("Start a ralph loop for a repo"),

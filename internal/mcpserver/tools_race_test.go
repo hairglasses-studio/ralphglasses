@@ -43,7 +43,7 @@ func TestConcurrentScan(t *testing.T) {
 		if results[i].IsError {
 			t.Errorf("goroutine %d: IsError: %s", i, getResultText(results[i]))
 		}
-		if text := getResultText(results[i]); !strings.Contains(text, "ralph-enabled repos") {
+		if text := getResultText(results[i]); !strings.Contains(text, "repos_found") {
 			t.Errorf("goroutine %d: unexpected text: %s", i, text)
 		}
 	}
@@ -212,7 +212,7 @@ func TestConcurrentHandlerSubtests(t *testing.T) {
 			handler: srv.handleScan,
 			req:     makeRequest(nil),
 			check: func(t *testing.T, r *mcp.CallToolResult) {
-				if !strings.Contains(getResultText(r), "ralph-enabled") {
+				if !strings.Contains(getResultText(r), "repos_found") {
 					t.Errorf("scan unexpected: %s", getResultText(r))
 				}
 			},
