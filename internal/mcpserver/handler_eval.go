@@ -11,6 +11,27 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
+// abTestMinGroupSize is the minimum number of observations required in each
+// group for an A/B test to produce meaningful results.
+const abTestMinGroupSize = 5
+
+// changepointBurnIn is the number of initial observations to ignore when
+// reporting changepoints, as early indices produce false positives due to
+// insufficient baseline data.
+const changepointBurnIn = 5
+
+// filterChangepointBurnIn removes changepoints at indices below the burn-in
+// threshold. Returns an empty (non-nil) slice if all are filtered out.
+func filterChangepointBurnIn(cps []eval.Changepoint, burnIn int) []eval.Changepoint {
+	filtered := make([]eval.Changepoint, 0, len(cps))
+	for _, cp := range cps {
+		if cp.Index >= burnIn {
+			filtered = append(filtered, cp)
+		}
+	}
+	return filtered
+}
+
 func (s *Server) handleEvalCounterfactual(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoName := getStringArg(req, "repo")
 	if repoName == "" {
@@ -111,6 +132,33 @@ func (s *Server) handleEvalABTest(_ context.Context, req mcp.CallToolRequest) (*
 		if providerA == "" || providerB == "" {
 			return codedError(ErrInvalidParams, "providers mode requires provider_a and provider_b"), nil
 		}
+
+		// FINDING-105: Check minimum group sizes before computing posteriors.
+		var groupA, groupB []session.LoopObservation
+		for _, o := range observations {
+			switch o.WorkerProvider {
+			case providerA:
+				groupA = append(groupA, o)
+			case providerB:
+				groupB = append(groupB, o)
+			}
+		}
+		if len(groupA) < abTestMinGroupSize || len(groupB) < abTestMinGroupSize {
+			insufficientGroup := providerA
+			insufficientCount := len(groupA)
+			if len(groupB) < len(groupA) {
+				insufficientGroup = providerB
+				insufficientCount = len(groupB)
+			}
+			return jsonResult(map[string]any{
+				"status":           "insufficient_data",
+				"message":          fmt.Sprintf("group %s has %d observations (minimum %d required)", insufficientGroup, insufficientCount, abTestMinGroupSize),
+				"group_a_count":    len(groupA),
+				"group_b_count":    len(groupB),
+				"minimum_required": abTestMinGroupSize,
+			}), nil
+		}
+
 		result := eval.CompareProviders(observations, providerA, providerB)
 		return jsonResult(map[string]any{
 			"repo":         repoName,
@@ -126,6 +174,32 @@ func (s *Server) handleEvalABTest(_ context.Context, req mcp.CallToolRequest) (*
 			return codedError(ErrInvalidParams, "periods mode requires split_hours_ago > 0"), nil
 		}
 		splitTime := time.Now().Add(-time.Duration(splitHoursAgo) * time.Hour)
+
+		// FINDING-105: Check minimum group sizes before computing posteriors.
+		var before, after []session.LoopObservation
+		for _, o := range observations {
+			if o.Timestamp.Before(splitTime) {
+				before = append(before, o)
+			} else {
+				after = append(after, o)
+			}
+		}
+		if len(before) < abTestMinGroupSize || len(after) < abTestMinGroupSize {
+			insufficientGroup := "before"
+			insufficientCount := len(before)
+			if len(after) < len(before) {
+				insufficientGroup = "after"
+				insufficientCount = len(after)
+			}
+			return jsonResult(map[string]any{
+				"status":           "insufficient_data",
+				"message":          fmt.Sprintf("group %s has %d observations (minimum %d required)", insufficientGroup, insufficientCount, abTestMinGroupSize),
+				"group_a_count":    len(before),
+				"group_b_count":    len(after),
+				"minimum_required": abTestMinGroupSize,
+			}), nil
+		}
+
 		successFn := func(obs session.LoopObservation) bool {
 			return obs.VerifyPassed
 		}
@@ -186,21 +260,29 @@ func (s *Server) handleEvalChangepoints(_ context.Context, req mcp.CallToolReque
 			return codedError(ErrInvalidParams, fmt.Sprintf("unknown metric: %q (available: %v)", metricName, names)), nil
 		}
 		result := eval.DetectChangepoints(observations, metricFn, metricName)
+		// FINDING-106: Filter out false positives at low indices (burn-in period).
+		result = filterChangepointBurnIn(result, changepointBurnIn)
 		return jsonResult(map[string]any{
 			"repo":         repoName,
 			"hours":        hours,
 			"metric":       metricName,
 			"observations": len(observations),
 			"changepoints": result,
+			"burn_in":      changepointBurnIn,
 		}), nil
 	}
 
 	results := eval.DetectAllChangepoints(observations)
+	// FINDING-106: Filter out false positives at low indices (burn-in period).
+	for metric, cps := range results {
+		results[metric] = filterChangepointBurnIn(cps, changepointBurnIn)
+	}
 	return jsonResult(map[string]any{
 		"repo":         repoName,
 		"hours":        hours,
 		"observations": len(observations),
 		"changepoints": results,
+		"burn_in":      changepointBurnIn,
 	}), nil
 }
 
