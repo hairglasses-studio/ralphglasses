@@ -442,3 +442,187 @@ func (fa *FeedbackAnalyzer) load() {
 		}
 	}
 }
+
+// FeedbackProfiles is the aggregate result of seeding from observations.
+type FeedbackProfiles struct {
+	PromptProfiles   []PromptProfile   `json:"prompt_profiles"`
+	ProviderProfiles []ProviderProfile `json:"provider_profiles"`
+}
+
+// SeedProfilesFromObservations builds feedback profiles from raw loop observations.
+// It groups observations by provider and task type, computing aggregate statistics.
+// Malformed or incomplete observations (missing provider/task_type) are skipped.
+func SeedProfilesFromObservations(obs []LoopObservation) (*FeedbackProfiles, error) {
+	result := &FeedbackProfiles{}
+	if len(obs) == 0 {
+		return result, nil
+	}
+
+	// --- Provider profiles ---
+	type providerAccum struct {
+		provider   string
+		totalCost  float64
+		totalLatMs int64
+		completed  int
+		total      int
+		totalTurns int
+	}
+	providerMap := make(map[string]*providerAccum)
+
+	for _, o := range obs {
+		// Use worker provider as primary provider; fall back to planner provider.
+		prov := o.WorkerProvider
+		if prov == "" {
+			prov = o.PlannerProvider
+		}
+		if prov == "" {
+			continue // skip observations with no provider info
+		}
+
+		acc, ok := providerMap[prov]
+		if !ok {
+			acc = &providerAccum{provider: prov}
+			providerMap[prov] = acc
+		}
+		acc.total++
+		acc.totalCost += o.TotalCostUSD
+		acc.totalLatMs += o.TotalLatencyMs
+		if o.VerifyPassed {
+			acc.completed++
+		}
+		// Use worker tokens as a proxy for turns.
+		acc.totalTurns += int(o.WorkerTokensOut)
+	}
+
+	for _, acc := range providerMap {
+		pp := ProviderProfile{
+			Provider:    acc.provider,
+			TaskType:    "all", // aggregate across task types
+			SampleCount: acc.total,
+			LastUpdated: time.Now(),
+		}
+		if acc.total > 0 {
+			pp.AvgCostUSD = acc.totalCost / float64(acc.total)
+			pp.AvgTurns = acc.totalTurns / acc.total
+			pp.CompletionRate = float64(acc.completed) / float64(acc.total) * 100
+			if acc.totalTurns > 0 {
+				pp.CostPerTurn = acc.totalCost / float64(acc.totalTurns)
+			}
+		}
+		result.ProviderProfiles = append(result.ProviderProfiles, pp)
+	}
+
+	// --- Task type (prompt) profiles ---
+	type taskAccum struct {
+		taskType     string
+		totalCost    float64
+		totalLatMs   int64
+		totalTurns   int
+		completed    int
+		total        int
+		providerHits map[string]int
+	}
+	taskMap := make(map[string]*taskAccum)
+
+	for _, o := range obs {
+		tt := o.TaskType
+		if tt == "" {
+			tt = "general"
+		}
+
+		acc, ok := taskMap[tt]
+		if !ok {
+			acc = &taskAccum{taskType: tt, providerHits: make(map[string]int)}
+			taskMap[tt] = acc
+		}
+		acc.total++
+		acc.totalCost += o.TotalCostUSD
+		acc.totalLatMs += o.TotalLatencyMs
+		acc.totalTurns += int(o.WorkerTokensOut)
+		if o.VerifyPassed {
+			acc.completed++
+		}
+		prov := o.WorkerProvider
+		if prov == "" {
+			prov = o.PlannerProvider
+		}
+		if prov != "" {
+			acc.providerHits[prov]++
+		}
+	}
+
+	for _, acc := range taskMap {
+		pp := PromptProfile{
+			TaskType:    acc.taskType,
+			SampleCount: acc.total,
+			LastUpdated: time.Now(),
+		}
+		if acc.total > 0 {
+			pp.AvgCostUSD = acc.totalCost / float64(acc.total)
+			pp.AvgTurns = acc.totalTurns / acc.total
+			pp.AvgDurationSec = float64(acc.totalLatMs) / float64(acc.total) / 1000.0
+			pp.CompletionRate = float64(acc.completed) / float64(acc.total) * 100
+			pp.SuggestedBudget = math.Ceil(pp.AvgCostUSD*2*2) / 2
+
+			// Find most-used provider.
+			bestCount := 0
+			for prov, count := range acc.providerHits {
+				if count > bestCount {
+					bestCount = count
+					pp.BestProvider = prov
+				}
+			}
+		}
+		result.PromptProfiles = append(result.PromptProfiles, pp)
+	}
+
+	return result, nil
+}
+
+// SeedProfilesFromJSONL reads loop observations from a JSONL file and seeds profiles.
+// Returns empty profiles if the file does not exist.
+func SeedProfilesFromJSONL(path string) (*FeedbackProfiles, error) {
+	obs, err := LoadObservations(path, time.Time{})
+	if err != nil {
+		return &FeedbackProfiles{}, nil // file missing or unreadable — return empty
+	}
+	return SeedProfilesFromObservations(obs)
+}
+
+// SeedFromObservations populates empty profile maps in the analyzer from observations.
+// Only seeds profiles that are currently empty — does not overwrite existing data.
+// This is idempotent: calling it multiple times produces the same result.
+func (fa *FeedbackAnalyzer) SeedFromObservations(obs []LoopObservation) error {
+	fa.mu.Lock()
+	defer fa.mu.Unlock()
+
+	// Only seed if profiles are empty.
+	if len(fa.promptProfiles) > 0 || len(fa.providerProfiles) > 0 {
+		return nil
+	}
+
+	seeded, err := SeedProfilesFromObservations(obs)
+	if err != nil {
+		return err
+	}
+
+	for i := range seeded.PromptProfiles {
+		p := seeded.PromptProfiles[i]
+		fa.promptProfiles[p.TaskType] = &p
+	}
+	for i := range seeded.ProviderProfiles {
+		p := seeded.ProviderProfiles[i]
+		key := p.Provider + ":" + p.TaskType
+		fa.providerProfiles[key] = &p
+	}
+
+	fa.save()
+	return nil
+}
+
+// IsEmpty returns true if there are no prompt or provider profiles.
+func (fa *FeedbackAnalyzer) IsEmpty() bool {
+	fa.mu.Lock()
+	defer fa.mu.Unlock()
+	return len(fa.promptProfiles) == 0 && len(fa.providerProfiles) == 0
+}
