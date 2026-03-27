@@ -247,6 +247,39 @@ func TestHandleCostEstimateWithRepo(t *testing.T) {
 	}
 }
 
+func TestEstimateSessionCostConfidenceDowngrade(t *testing.T) {
+	t.Parallel()
+	rates := session.DefaultCostRates()
+
+	// Model estimate for Claude defaults: ~$0.225
+	// Historical avg much lower: $0.04 — ratio = 0.225/0.04 = 5.625 (>2.0)
+	hist := 0.04
+	est := estimateSessionCost("claude", "", 5000, 2000, 5, "session", 3, rates, &hist)
+
+	if est.Confidence != "low" {
+		t.Errorf("confidence = %q, want %q (model/historical ratio > 2.0)", est.Confidence, "low")
+	}
+	if est.CalibrationRatio == nil {
+		t.Fatal("expected calibration_ratio to be set")
+	}
+	if *est.CalibrationRatio < 2.0 {
+		t.Errorf("calibration_ratio = %f, expected > 2.0", *est.CalibrationRatio)
+	}
+
+	// When ratio is within bounds, confidence should stay "high".
+	histClose := 0.20
+	estClose := estimateSessionCost("claude", "", 5000, 2000, 5, "session", 3, rates, &histClose)
+	if estClose.Confidence != "high" {
+		t.Errorf("confidence = %q, want %q when estimates are close", estClose.Confidence, "high")
+	}
+	if estClose.CalibrationRatio == nil {
+		t.Fatal("expected calibration_ratio to be set even when close")
+	}
+	if *estClose.CalibrationRatio < 0.5 || *estClose.CalibrationRatio > 2.0 {
+		t.Errorf("calibration_ratio = %f, expected between 0.5 and 2.0", *estClose.CalibrationRatio)
+	}
+}
+
 func TestEstimateSessionCostPure(t *testing.T) {
 	t.Parallel()
 	rates := session.DefaultCostRates()

@@ -65,15 +65,44 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 	}
 
 	if getBoolArg(req, "dry_run") {
+		// Apply the same default resolution as the real launch path so the
+		// preview shows effective values instead of zero/empty defaults.
+		effectiveProvider := config.Provider
+		if effectiveProvider == "" {
+			effectiveProvider = session.ProviderClaude
+		}
+		effectiveWorkerProvider := config.WorkerProvider
+		if effectiveWorkerProvider == "" {
+			effectiveWorkerProvider = effectiveProvider
+		}
+		effectiveModel := config.Model
+		if effectiveModel == "" {
+			switch effectiveProvider {
+			case session.ProviderGemini:
+				effectiveModel = "gemini-2.5-flash"
+			case session.ProviderCodex:
+				effectiveModel = "gpt-5.4"
+			default:
+				effectiveModel = "claude-sonnet-4-6"
+			}
+		}
+		effectiveLeadAgent := config.LeadAgent
+		if effectiveLeadAgent == "" {
+			effectiveLeadAgent = "team-lead"
+		}
+		effectiveBudget := config.MaxBudgetUSD
+		if effectiveBudget <= 0 {
+			effectiveBudget = 5.0
+		}
 		return jsonResult(map[string]any{
 			"dry_run":         true,
 			"name":            config.Name,
 			"repo":            repoName,
-			"provider":        string(config.Provider),
-			"worker_provider": string(config.WorkerProvider),
-			"lead_agent":      config.LeadAgent,
-			"model":           config.Model,
-			"max_budget_usd":  config.MaxBudgetUSD,
+			"provider":        string(effectiveProvider),
+			"worker_provider": string(effectiveWorkerProvider),
+			"lead_agent":      effectiveLeadAgent,
+			"model":           effectiveModel,
+			"max_budget_usd":  effectiveBudget,
 			"tasks":           config.Tasks,
 			"task_count":      len(config.Tasks),
 		}), nil
