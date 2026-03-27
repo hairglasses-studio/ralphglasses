@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -913,5 +914,374 @@ func TestLoopDetailKeyBindings(t *testing.T) {
 	// Verify loop detail view includes pause/resume hint
 	if !strings.Contains(v, "pause/resume") {
 		t.Error("loop detail view should show 'pause/resume' in footer hints")
+	}
+}
+
+// --- updateTable ---
+
+func TestUpdateTableBasic(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.Repos = []*model.Repo{
+		{Name: "alpha", Path: "/tmp/alpha", Status: &model.LoopStatus{Status: "running"}},
+		{Name: "beta", Path: "/tmp/beta"},
+	}
+	m.updateTable()
+	if m.StatusBar.RepoCount != 2 {
+		t.Errorf("RepoCount = %d, want 2", m.StatusBar.RepoCount)
+	}
+}
+
+func TestUpdateTableWithSessions(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	mgr := session.NewManager()
+	s1 := &session.Session{
+		ID: "s1", Provider: "claude", Status: session.StatusRunning,
+		SpentUSD: 2.0, BudgetUSD: 10.0, LaunchedAt: time.Now(),
+	}
+	s2 := &session.Session{
+		ID: "s2", Provider: "gemini", Status: session.StatusCompleted,
+		SpentUSD: 1.0, BudgetUSD: 5.0, LaunchedAt: time.Now(),
+	}
+	mgr.AddSessionForTesting(s1)
+	mgr.AddSessionForTesting(s2)
+	m.SessMgr = mgr
+	m.Repos = []*model.Repo{
+		{Name: "r", Path: "/tmp/r", Circuit: &model.CircuitBreakerState{State: "OPEN"}},
+	}
+	m.updateTable()
+	if m.StatusBar.SessionCount != 2 {
+		t.Errorf("SessionCount = %d, want 2", m.StatusBar.SessionCount)
+	}
+	if m.StatusBar.TotalSpendUSD != 3.0 {
+		t.Errorf("TotalSpendUSD = %.2f, want 3.0", m.StatusBar.TotalSpendUSD)
+	}
+	if m.StatusBar.FleetBudgetPct == 0 {
+		t.Error("FleetBudgetPct should be non-zero")
+	}
+	if m.StatusBar.AlertCount != 1 {
+		t.Errorf("AlertCount = %d, want 1", m.StatusBar.AlertCount)
+	}
+	if m.StatusBar.HighestAlertSeverity != "critical" {
+		t.Errorf("HighestAlertSeverity = %q, want critical", m.StatusBar.HighestAlertSeverity)
+	}
+}
+
+func TestUpdateTableNoBudget(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	mgr := session.NewManager()
+	s := &session.Session{
+		ID: "s1", Provider: "claude", Status: session.StatusRunning,
+		SpentUSD: 1.0, BudgetUSD: 0, LaunchedAt: time.Now(),
+	}
+	mgr.AddSessionForTesting(s)
+	m.SessMgr = mgr
+	m.updateTable()
+	if m.StatusBar.FleetBudgetPct != 0 {
+		t.Errorf("FleetBudgetPct = %.2f, want 0 when no budget", m.StatusBar.FleetBudgetPct)
+	}
+}
+
+func TestUpdateTableAlertSeverityInfo(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	mgr := session.NewManager()
+	s := &session.Session{
+		ID: "s1", Provider: "claude", Status: session.StatusErrored, LaunchedAt: time.Now(),
+	}
+	mgr.AddSessionForTesting(s)
+	m.SessMgr = mgr
+	m.updateTable()
+	if m.StatusBar.HighestAlertSeverity != "info" {
+		t.Errorf("HighestAlertSeverity = %q, want info (no open circuits)", m.StatusBar.HighestAlertSeverity)
+	}
+}
+
+// --- updateSessionTable ---
+
+func TestUpdateSessionTable(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	mgr := session.NewManager()
+	s := &session.Session{
+		ID: "s1", Provider: "claude", RepoName: "repo",
+		Status: session.StatusRunning, LaunchedAt: time.Now(),
+	}
+	mgr.AddSessionForTesting(s)
+	m.SessMgr = mgr
+	m.updateSessionTable()
+	// Should not panic and rows should be set
+}
+
+func TestUpdateSessionTableNilManager(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.SessMgr = nil
+	m.updateSessionTable() // should not panic
+}
+
+// --- updateTeamTable ---
+
+func TestUpdateTeamTable(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	mgr := session.NewManager()
+	mgr.AddTeamForTesting(&session.TeamStatus{
+		Name: "team-1", RepoPath: "/tmp/repo", Status: session.StatusRunning,
+	})
+	m.SessMgr = mgr
+	m.updateTeamTable()
+	// Should not panic
+}
+
+func TestUpdateTeamTableNilManager(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.SessMgr = nil
+	m.updateTeamTable() // should not panic
+}
+
+// --- findFullSessionID ---
+
+func TestFindFullSessionIDNilManager(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.SessMgr = nil
+	if got := m.findFullSessionID("abc"); got != "" {
+		t.Errorf("expected empty, got %q", got)
+	}
+}
+
+func TestFindFullSessionIDFound(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	mgr := session.NewManager()
+	mgr.AddSessionForTesting(&session.Session{
+		ID: "session-12345678-abcd", Provider: "claude", Status: session.StatusRunning,
+		LaunchedAt: time.Now(),
+	})
+	m.SessMgr = mgr
+	got := m.findFullSessionID("session-1")
+	if got != "session-12345678-abcd" {
+		t.Errorf("findFullSessionID = %q, want session-12345678-abcd", got)
+	}
+}
+
+func TestFindFullSessionIDNotFound(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	mgr := session.NewManager()
+	mgr.AddSessionForTesting(&session.Session{
+		ID: "session-12345678", Provider: "claude", Status: session.StatusRunning,
+		LaunchedAt: time.Now(),
+	})
+	m.SessMgr = mgr
+	got := m.findFullSessionID("zzzzz")
+	if got != "" {
+		t.Errorf("expected empty for no match, got %q", got)
+	}
+}
+
+// --- View rendering branches ---
+
+func TestViewTerminalTooSmall(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 2
+	m.Height = 2
+	got := m.View()
+	if !strings.Contains(got, "too small") {
+		t.Error("expected 'too small' message")
+	}
+}
+
+func TestViewOverview(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.CurrentView = ViewOverview
+	got := m.View()
+	if got == "" {
+		t.Error("View should not be empty")
+	}
+}
+
+func TestViewSessions(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.CurrentView = ViewSessions
+	got := m.View()
+	if got == "" {
+		t.Error("View should not be empty")
+	}
+}
+
+func TestViewTeams(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.CurrentView = ViewTeams
+	got := m.View()
+	if got == "" {
+		t.Error("View should not be empty")
+	}
+}
+
+func TestViewFleet(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.CurrentView = ViewFleet
+	got := m.View()
+	if got == "" {
+		t.Error("View should not be empty")
+	}
+}
+
+func TestViewTimeline(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.CurrentView = ViewTimeline
+	m.SelectedIdx = -1
+	got := m.View()
+	if got == "" {
+		t.Error("View should not be empty")
+	}
+}
+
+func TestViewRepoDetailValid(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.Repos = []*model.Repo{{Name: "alpha", Path: "/tmp/alpha"}}
+	m.SelectedIdx = 0
+	m.CurrentView = ViewRepoDetail
+	got := m.View()
+	if got == "" {
+		t.Error("View should not be empty")
+	}
+}
+
+func TestViewRepoDetailWithGate(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.Repos = []*model.Repo{{Name: "alpha", Path: "/tmp/alpha"}}
+	m.SelectedIdx = 0
+	m.CurrentView = ViewRepoDetail
+	m.GateCache = map[string]*GateCacheEntry{
+		"/tmp/alpha": {
+			Report: &e2e.GateReport{Overall: e2e.VerdictPass},
+		},
+	}
+	m.ObsCache = map[string][]session.LoopObservation{
+		"/tmp/alpha": {{TotalCostUSD: 1.0}},
+	}
+	got := m.View()
+	if got == "" {
+		t.Error("View should not be empty")
+	}
+}
+
+func TestViewSessionDetailNotFound(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.CurrentView = ViewSessionDetail
+	mgr := session.NewManager()
+	m.SessMgr = mgr
+	m.SelectedSession = "nonexistent"
+	got := m.View()
+	if !strings.Contains(got, "not found") {
+		t.Error("expected 'not found' for missing session")
+	}
+}
+
+func TestViewTeamDetailNotFound(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.CurrentView = ViewTeamDetail
+	mgr := session.NewManager()
+	m.SessMgr = mgr
+	m.SelectedTeam = "nonexistent"
+	got := m.View()
+	if !strings.Contains(got, "not found") {
+		t.Error("expected 'not found' for missing team")
+	}
+}
+
+func TestViewLoopList(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.CurrentView = ViewLoopList
+	got := m.View()
+	if !strings.Contains(got, "pause/resume") {
+		t.Error("expected loop list footer hints")
+	}
+}
+
+func TestViewDiff(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.Repos = []*model.Repo{{Name: "r", Path: "/tmp/test"}}
+	m.SelectedIdx = 0
+	m.CurrentView = ViewDiff
+	got := m.View()
+	if got == "" {
+		t.Error("View should not be empty")
+	}
+}
+
+func TestViewLoopHealth(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Width = 120
+	m.Height = 40
+	m.Repos = []*model.Repo{{Name: "r", Path: "/tmp/r"}}
+	m.SelectedIdx = 0
+	m.CurrentView = ViewLoopHealth
+	got := m.View()
+	if got == "" {
+		t.Error("View should not be empty")
+	}
+}
+
+// --- activeTable ---
+
+func TestActiveTableSessions(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.CurrentView = ViewSessions
+	tbl := m.activeTable()
+	if tbl != m.SessionTable {
+		t.Error("expected SessionTable for ViewSessions")
+	}
+}
+
+func TestActiveTableTeams(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.CurrentView = ViewTeams
+	tbl := m.activeTable()
+	if tbl != m.TeamTable {
+		t.Error("expected TeamTable for ViewTeams")
+	}
+}
+
+func TestActiveTableLoopList(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.CurrentView = ViewLoopList
+	tbl := m.activeTable()
+	if tbl != m.LoopListTable {
+		t.Error("expected LoopListTable for ViewLoopList")
+	}
+}
+
+func TestActiveTableDefault(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.CurrentView = ViewHelp // not a table view
+	tbl := m.activeTable()
+	if tbl != m.Table {
+		t.Error("expected default Table for non-table views")
 	}
 }
