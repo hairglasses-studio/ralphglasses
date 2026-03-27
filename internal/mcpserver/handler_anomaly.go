@@ -59,6 +59,9 @@ func (s *Server) handleAnomalyDetect(_ context.Context, req mcp.CallToolRequest)
 	if err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("anomaly detection: %v", err)), nil
 	}
+	if anomalies == nil {
+		anomalies = []eval.Anomaly{}
+	}
 
 	return jsonResult(map[string]any{
 		"repo":         repoName,

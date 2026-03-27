@@ -184,8 +184,8 @@ func (s *Server) handleMarathonDashboard(_ context.Context, req mcp.CallToolRequ
 		runningCount int
 		staleCount   int
 		erroredCount int
-		staleList    []map[string]any
-		alerts       []map[string]any
+		staleList = make([]map[string]any, 0)
+		alerts    = make([]map[string]any, 0)
 		byProvider   = make(map[string]float64)
 	)
 
@@ -257,8 +257,8 @@ func (s *Server) handleMarathonDashboard(_ context.Context, req mcp.CallToolRequ
 		hoursEst = remaining / burnRate
 	}
 
-	// Team summaries
-	var teamSummaries []map[string]any
+	// Team summaries — init as empty to marshal as [] not null.
+	teamSummaries := make([]map[string]any, 0)
 	var tasksCompleted, tasksTotal int
 	for _, team := range allTeams {
 		completed := 0
