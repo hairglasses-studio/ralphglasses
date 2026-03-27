@@ -75,6 +75,10 @@ func (s *Server) handlePromptEnhance(ctx context.Context, req mcp.CallToolReques
 	}
 	taskType := enhancer.ValidTaskType(getStringArg(req, "task_type"))
 	modeStr := getStringArg(req, "mode")
+	traceLevel := getStringArg(req, "trace_level")
+	if traceLevel == "" {
+		traceLevel = "summary"
+	}
 
 	// Load config from repo if specified
 	var cfg enhancer.Config
@@ -89,14 +93,41 @@ func (s *Server) handlePromptEnhance(ctx context.Context, req mcp.CallToolReques
 		cfg.TargetProvider = enhancer.ProviderName(tp)
 	}
 
+	var result enhancer.EnhanceResult
 	mode := enhancer.ValidMode(modeStr)
 	if mode == "" || mode == enhancer.ModeLocal {
-		result := enhancer.EnhanceWithConfig(prompt, taskType, cfg)
+		result = enhancer.EnhanceWithConfig(prompt, taskType, cfg)
+	} else {
+		result = enhancer.EnhanceHybrid(ctx, prompt, taskType, cfg, s.getEngine(), mode, cfg.TargetProvider)
+	}
+
+	if traceLevel == "none" {
 		return jsonResult(result), nil
 	}
 
-	result := enhancer.EnhanceHybrid(ctx, prompt, taskType, cfg, s.getEngine(), mode, cfg.TargetProvider)
-	return jsonResult(result), nil
+	// Build trace object
+	trace := map[string]any{
+		"stages_run":     result.StagesRun,
+		"stages_skipped": result.SkippedStages,
+		"total_stages":   13,
+	}
+
+	// Wrap result with trace
+	out := map[string]any{
+		"original":         result.Original,
+		"enhanced":         result.Enhanced,
+		"task_type":        result.TaskType,
+		"stages_run":       result.StagesRun,
+		"improvements":     result.Improvements,
+		"estimated_tokens": result.EstimatedTokens,
+		"cost_tier":        result.CostTier,
+		"trace":            trace,
+	}
+	if result.Source != "" {
+		out["source"] = result.Source
+	}
+
+	return jsonResult(out), nil
 }
 
 func (s *Server) handlePromptLint(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
