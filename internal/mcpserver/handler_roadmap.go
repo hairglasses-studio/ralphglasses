@@ -3,6 +3,8 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -38,6 +40,61 @@ func (s *Server) handleRoadmapParse(_ context.Context, req mcp.CallToolRequest) 
 			}
 		}
 		rm.Phases = filtered
+	}
+
+	// max_depth: 0=phases only, 1=phases+sections, 2=full (default 2)
+	maxDepth := int(getNumberArg(req, "max_depth", 2))
+
+	// summary_only: return compact summary instead of full task details
+	summaryOnly := getBoolArg(req, "summary_only")
+	if summaryOnly {
+		type phaseSummary struct {
+			Name            string  `json:"name"`
+			SectionCount    int     `json:"section_count"`
+			TaskCount       int     `json:"task_count"`
+			CompletedCount  int     `json:"completed_count"`
+			CompletionPct   float64 `json:"completion_pct"`
+		}
+		type summary struct {
+			Title      string         `json:"title"`
+			PhaseCount int            `json:"phase_count"`
+			TotalTasks int            `json:"total_tasks"`
+			Completed  int            `json:"completed"`
+			Phases     []phaseSummary `json:"phases"`
+		}
+		s := summary{
+			Title:      rm.Title,
+			PhaseCount: len(rm.Phases),
+			TotalTasks: rm.Stats.Total,
+			Completed:  rm.Stats.Completed,
+		}
+		for _, p := range rm.Phases {
+			ps := phaseSummary{
+				Name:           p.Name,
+				SectionCount:   len(p.Sections),
+				TaskCount:      p.Stats.Total,
+				CompletedCount: p.Stats.Completed,
+			}
+			if p.Stats.Total > 0 {
+				ps.CompletionPct = float64(p.Stats.Completed) / float64(p.Stats.Total) * 100
+			}
+			s.Phases = append(s.Phases, ps)
+		}
+		return jsonResult(s), nil
+	}
+
+	// Apply max_depth truncation
+	if maxDepth < 2 {
+		for i := range rm.Phases {
+			if maxDepth == 0 {
+				rm.Phases[i].Sections = nil
+			} else {
+				// maxDepth == 1: keep sections but strip tasks
+				for j := range rm.Phases[i].Sections {
+					rm.Phases[i].Sections[j].Tasks = nil
+				}
+			}
+		}
 	}
 
 	return jsonResult(rm), nil
@@ -215,6 +272,10 @@ func (s *Server) handleRoadmapExport(_ context.Context, req mcp.CallToolRequest)
 	section := getStringArg(req, "section")
 	maxTasks := int(getNumberArg(req, "max_tasks", 20))
 	respectDeps := getStringArg(req, "respect_deps") != "false"
+	statusFilter := getStringArg(req, "status")
+	if statusFilter == "" {
+		statusFilter = "incomplete"
+	}
 
 	rmPath := roadmap.ResolvePath(path, file)
 	rm, err := roadmap.Parse(rmPath)
@@ -222,9 +283,82 @@ func (s *Server) handleRoadmapExport(_ context.Context, req mcp.CallToolRequest)
 		return codedError(ErrFilesystem, fmt.Sprintf("parse roadmap: %v", err)), nil
 	}
 
+	// Apply status filter by pre-filtering tasks in the roadmap
+	if statusFilter != "all" {
+		filtered := filterRoadmapByStatus(rm, statusFilter)
+		rm = filtered
+	} else {
+		// For "all", sort incomplete first
+		sortRoadmapIncompleteFirst(rm)
+	}
+
+	// Generate unique task IDs: assign path-based IDs to tasks without IDs
+	assignUniqueTaskIDs(rm)
+
 	output, err := roadmap.Export(rm, format, phase, section, maxTasks, respectDeps)
 	if err != nil {
 		return codedError(ErrInternal, fmt.Sprintf("export: %v", err)), nil
 	}
 	return textResult(output), nil
+}
+
+// filterRoadmapByStatus returns a copy of the roadmap with tasks filtered by status.
+func filterRoadmapByStatus(rm *roadmap.Roadmap, status string) *roadmap.Roadmap {
+	wantDone := status == "complete"
+	out := &roadmap.Roadmap{
+		Title: rm.Title,
+		Stats: rm.Stats,
+	}
+	for _, p := range rm.Phases {
+		np := roadmap.Phase{Name: p.Name, Stats: p.Stats}
+		for _, s := range p.Sections {
+			ns := roadmap.Section{Name: s.Name, Acceptance: s.Acceptance}
+			for _, t := range s.Tasks {
+				if t.Done == wantDone {
+					ns.Tasks = append(ns.Tasks, t)
+				}
+			}
+			if len(ns.Tasks) > 0 {
+				np.Sections = append(np.Sections, ns)
+			}
+		}
+		if len(np.Sections) > 0 {
+			out.Phases = append(out.Phases, np)
+		}
+	}
+	return out
+}
+
+// sortRoadmapIncompleteFirst sorts tasks within each section so incomplete tasks come first.
+func sortRoadmapIncompleteFirst(rm *roadmap.Roadmap) {
+	for i := range rm.Phases {
+		for j := range rm.Phases[i].Sections {
+			tasks := rm.Phases[i].Sections[j].Tasks
+			sort.SliceStable(tasks, func(a, b int) bool {
+				if tasks[a].Done != tasks[b].Done {
+					return !tasks[a].Done // incomplete first
+				}
+				return false
+			})
+		}
+	}
+}
+
+// assignUniqueTaskIDs assigns path-based IDs to tasks that don't have one.
+// Uses a global task counter per phase to ensure uniqueness even when the parser
+// creates multiple implicit sections with the same name.
+func assignUniqueTaskIDs(rm *roadmap.Roadmap) {
+	for pi := range rm.Phases {
+		pName := strings.ReplaceAll(rm.Phases[pi].Name, "/", "_")
+		taskIdx := 0
+		for si := range rm.Phases[pi].Sections {
+			sName := strings.ReplaceAll(rm.Phases[pi].Sections[si].Name, "/", "_")
+			for ti := range rm.Phases[pi].Sections[si].Tasks {
+				if rm.Phases[pi].Sections[si].Tasks[ti].ID == "" {
+					rm.Phases[pi].Sections[si].Tasks[ti].ID = fmt.Sprintf("%s/%s/%d", pName, sName, taskIdx)
+				}
+				taskIdx++
+			}
+		}
+	}
 }
