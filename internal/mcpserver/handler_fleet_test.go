@@ -625,6 +625,79 @@ func TestHandleFeedbackProfiles_NilAnalyzer(t *testing.T) {
 	assertErrorCode(t, "handleFeedbackProfiles", result, "NOT_RUNNING")
 }
 
+func TestHandleFeedbackProfiles_EmptyAutoSeeds(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+	stateDir := filepath.Join(root, "state")
+	srv.InitSelfImprovement(stateDir, 3)
+
+	// Write observations for the test repo.
+	repoPath := filepath.Join(root, "test-repo")
+	obsPath := session.ObservationPath(repoPath)
+	for _, obs := range []session.LoopObservation{
+		{WorkerProvider: "claude", TaskType: "bug_fix", TotalCostUSD: 1.0, VerifyPassed: true, WorkerTokensOut: 5},
+		{WorkerProvider: "claude", TaskType: "feature", TotalCostUSD: 2.0, VerifyPassed: false, WorkerTokensOut: 10},
+	} {
+		if err := session.WriteObservation(obsPath, obs); err != nil {
+			t.Fatalf("write observation: %v", err)
+		}
+	}
+
+	// Trigger scan so repos are discovered.
+	if err := srv.scan(); err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+
+	result, err := srv.handleFeedbackProfiles(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error result: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "bug_fix") {
+		t.Errorf("expected seeded bug_fix profile, got: %s", text)
+	}
+	if !strings.Contains(text, `"seeded":true`) {
+		t.Errorf("expected seeded=true, got: %s", text)
+	}
+}
+
+func TestHandleFeedbackProfiles_SeedAction(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+	stateDir := filepath.Join(root, "state")
+	srv.InitSelfImprovement(stateDir, 3)
+
+	// Write observations.
+	repoPath := filepath.Join(root, "test-repo")
+	obsPath := session.ObservationPath(repoPath)
+	if err := session.WriteObservation(obsPath, session.LoopObservation{
+		WorkerProvider: "gemini", TaskType: "test", TotalCostUSD: 0.5, VerifyPassed: true,
+	}); err != nil {
+		t.Fatalf("write observation: %v", err)
+	}
+
+	if err := srv.scan(); err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+
+	result, err := srv.handleFeedbackProfiles(context.Background(), makeRequest(map[string]any{
+		"action": "seed",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error result: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "gemini") {
+		t.Errorf("expected gemini in seeded profiles, got: %s", text)
+	}
+}
+
 // --- handleProviderRecommend ---
 
 func TestHandleProviderRecommend_NilOptimizer(t *testing.T) {
