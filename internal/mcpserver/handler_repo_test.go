@@ -505,8 +505,11 @@ func TestHandleLogs_NoLogFile(t *testing.T) {
 		t.Fatalf("expected success (empty logs), got error: %s", getResultText(result))
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "no log file yet") {
-		t.Errorf("expected 'no log file yet' message, got: %s", text)
+	if !strings.Contains(text, `"status":"empty"`) {
+		t.Errorf("expected status=empty, got: %s", text)
+	}
+	if !strings.Contains(text, `"item_type":"log_lines"`) {
+		t.Errorf("expected item_type=log_lines, got: %s", text)
 	}
 }
 
