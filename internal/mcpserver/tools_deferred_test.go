@@ -66,7 +66,7 @@ func TestBuildToolGroups_ExpectedCounts(t *testing.T) {
 	expectations := map[string]int{
 		"core":     10,
 		"session":  13,
-		"loop":     9,
+		"loop":     10,
 		"prompt":   8,
 		"fleet":    7,
 		"repo":     5,

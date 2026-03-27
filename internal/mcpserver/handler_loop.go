@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
@@ -185,6 +187,70 @@ func (s *Server) handleLoopStop(_ context.Context, req mcp.CallToolRequest) (*mc
 		return codedError(ErrLoopNotFound, fmt.Sprintf("stop loop: %v", err)), nil
 	}
 	return textResult(fmt.Sprintf("Stopped loop %s", id)), nil
+}
+
+func (s *Server) handleLoopPrune(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	olderThanHours := getNumberArg(req, "older_than_hours", 72)
+	statusesStr := getStringArg(req, "statuses")
+	if statusesStr == "" {
+		statusesStr = "pending,failed"
+	}
+	dryRun := true
+	if v, ok := req.GetArguments()["dry_run"]; ok {
+		if b, isBool := v.(bool); isBool {
+			dryRun = b
+		}
+	}
+
+	olderThan := time.Duration(olderThanHours) * time.Hour
+	statuses := strings.Split(statusesStr, ",")
+
+	// Resolve loop state directory from session manager.
+	loopDir := s.SessMgr.LoopStateDir()
+	if loopDir == "" {
+		return jsonResult(map[string]any{
+			"pruned":  0,
+			"dry_run": dryRun,
+			"message": "no loop state directory configured",
+		}), nil
+	}
+
+	// If a repo filter is provided, we still prune from the central loop dir
+	// but only files whose repo_name matches.
+	repoFilter := getStringArg(req, "repo")
+
+	if repoFilter != "" {
+		pruned, err := pruneLoopRunsFiltered(loopDir, olderThan, statuses, repoFilter, dryRun)
+		if err != nil {
+			return codedError(ErrFilesystem, fmt.Sprintf("prune loop runs: %v", err)), nil
+		}
+		return jsonResult(map[string]any{
+			"pruned":  pruned,
+			"dry_run": dryRun,
+			"repo":    repoFilter,
+			"message": fmt.Sprintf("pruned %d loop run files", pruned),
+		}), nil
+	}
+
+	pruned, err := session.PruneLoopRuns(loopDir, olderThan, statuses, dryRun)
+	if err != nil {
+		return codedError(ErrFilesystem, fmt.Sprintf("prune loop runs: %v", err)), nil
+	}
+
+	return jsonResult(map[string]any{
+		"pruned":  pruned,
+		"dry_run": dryRun,
+		"message": fmt.Sprintf("pruned %d loop run files", pruned),
+	}), nil
+}
+
+// pruneLoopRunsFiltered wraps PruneLoopRuns but adds a repo name filter.
+// It reads each file to check the repo_name field before considering it for pruning.
+func pruneLoopRunsFiltered(loopDir string, olderThan time.Duration, statuses []string, repoFilter string, dryRun bool) (int, error) {
+	// Use a temporary filtered directory approach: just call PruneLoopRuns
+	// with the standard logic — the repo filter is handled by re-reading
+	// the same files and skipping non-matching repos.
+	return session.PruneLoopRunsFiltered(loopDir, olderThan, statuses, repoFilter, dryRun)
 }
 
 func loopResult(run *session.LoopRun) map[string]any {
