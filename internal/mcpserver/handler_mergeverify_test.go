@@ -192,3 +192,153 @@ func TestRunVerifyStepOutputTruncation(t *testing.T) {
 		t.Error("expected truncation notice in output")
 	}
 }
+
+func TestClassifyFailureCompile(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		output string
+	}{
+		{"cannot", "main.go:5: cannot convert string to int"},
+		{"undefined", "main.go:10: undefined: foo"},
+		{"unused_import", "main.go:3: imported and not used: \"fmt\""},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cat, fix := classifyFailure(tc.output)
+			if cat != "compile" {
+				t.Errorf("category = %q, want compile", cat)
+			}
+			if fix == "" {
+				t.Error("expected non-empty suggested fix")
+			}
+		})
+	}
+}
+
+func TestClassifyFailureTestFail(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		output string
+	}{
+		{"dash_fail", "--- FAIL: TestFoo (0.01s)\n    foo_test.go:10: expected 1, got 2"},
+		{"fail_line", "FAIL\tgithub.com/foo/bar\t0.123s"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cat, fix := classifyFailure(tc.output)
+			if cat != "test_fail" {
+				t.Errorf("category = %q, want test_fail", cat)
+			}
+			if fix == "" {
+				t.Error("expected non-empty suggested fix")
+			}
+		})
+	}
+}
+
+func TestClassifyFailureTimeout(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		output string
+	}{
+		{"deadline", "context deadline exceeded"},
+		{"timed_out", "panic: test timed out after 30s"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cat, fix := classifyFailure(tc.output)
+			if cat != "timeout" {
+				t.Errorf("category = %q, want timeout", cat)
+			}
+			if fix == "" {
+				t.Error("expected non-empty suggested fix")
+			}
+		})
+	}
+}
+
+func TestClassifyFailureVet(t *testing.T) {
+	t.Parallel()
+
+	cat, fix := classifyFailure("go vet: ./main.go:5: printf format %d has arg of wrong type")
+	if cat != "vet" {
+		t.Errorf("category = %q, want vet", cat)
+	}
+	if fix == "" {
+		t.Error("expected non-empty suggested fix")
+	}
+}
+
+func TestClassifyFailureUnknown(t *testing.T) {
+	t.Parallel()
+
+	cat, _ := classifyFailure("some random error output")
+	if cat != "unknown" {
+		t.Errorf("category = %q, want unknown", cat)
+	}
+}
+
+func TestRunVerifyStepSuccessNoFailureFields(t *testing.T) {
+	t.Parallel()
+
+	var args []string
+	if runtime.GOOS == "windows" {
+		args = []string{"cmd", "/c", "echo", "ok"}
+	} else {
+		args = []string{"echo", "ok"}
+	}
+
+	result := runVerifyStep(context.Background(), t.TempDir(), "clean-step", args)
+
+	if result.Status != "pass" {
+		t.Fatalf("status = %q, want pass", result.Status)
+	}
+	if result.FailureCategory != "" {
+		t.Errorf("failure_category = %q, want empty for passing step", result.FailureCategory)
+	}
+	if result.SuggestedFix != "" {
+		t.Errorf("suggested_fix = %q, want empty for passing step", result.SuggestedFix)
+	}
+	if result.Stderr != "" {
+		t.Errorf("stderr = %q, want empty for passing step", result.Stderr)
+	}
+}
+
+func TestRunVerifyStepFailureHasStderr(t *testing.T) {
+	t.Parallel()
+
+	// Use a shell command that writes to stderr and exits non-zero.
+	result := runVerifyStep(context.Background(), t.TempDir(), "stderr-step",
+		[]string{"sh", "-c", "echo 'some error' >&2; exit 1"})
+
+	if result.Status != "fail" {
+		t.Fatalf("status = %q, want fail", result.Status)
+	}
+	if !strings.Contains(result.Stderr, "some error") {
+		t.Errorf("stderr = %q, want to contain 'some error'", result.Stderr)
+	}
+}
+
+func TestRunVerifyStepCompileFailureCategory(t *testing.T) {
+	t.Parallel()
+
+	// Simulate a compile error by writing to stderr with a "cannot" message.
+	result := runVerifyStep(context.Background(), t.TempDir(), "compile-step",
+		[]string{"sh", "-c", "echo 'cannot convert string to int' >&2; exit 1"})
+
+	if result.Status != "fail" {
+		t.Fatalf("status = %q, want fail", result.Status)
+	}
+	if result.FailureCategory != "compile" {
+		t.Errorf("failure_category = %q, want compile", result.FailureCategory)
+	}
+	if result.SuggestedFix == "" {
+		t.Error("expected non-empty suggested fix for compile failure")
+	}
+}
