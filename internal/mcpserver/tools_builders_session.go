@@ -168,6 +168,13 @@ func (s *Server) buildLoopGroup() ToolGroup {
 				mcp.WithNumber("budget_usd", mcp.Description("Total budget in USD (default: 20.0, split 1/4 planner + 3/4 worker)")),
 				mcp.WithNumber("duration_hours", mcp.Description("Maximum duration in hours (default: 4)")),
 			), s.handleSelfImprove},
+			{mcp.NewTool("ralphglasses_loop_prune",
+				mcp.WithDescription("Prune stale loop run files by status and age — removes phantom pending/failed loop state that accumulates over time"),
+				mcp.WithNumber("older_than_hours", mcp.Description("Only prune loop runs older than this many hours (default: 72)")),
+				mcp.WithString("statuses", mcp.Description("Comma-separated statuses to prune (default: pending,failed)")),
+				mcp.WithBoolean("dry_run", mcp.Description("If true, return count without deleting (default: true)")),
+				mcp.WithString("repo", mcp.Description("Optional repo name filter — only prune runs for this repo")),
+			), s.handleLoopPrune},
 		},
 	}
 }

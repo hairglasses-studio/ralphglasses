@@ -262,6 +262,12 @@ func (m *Manager) loopStateDir() string {
 	return filepath.Join(m.stateDir, "loops")
 }
 
+// LoopStateDir returns the directory where loop run JSON files are persisted.
+// Exported for use by pruning tools.
+func (m *Manager) LoopStateDir() string {
+	return m.loopStateDir()
+}
+
 // PersistLoop writes loop state to disk.
 func (m *Manager) PersistLoop(run *LoopRun) {
 	dir := m.loopStateDir()
