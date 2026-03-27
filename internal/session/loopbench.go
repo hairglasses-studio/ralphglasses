@@ -115,6 +115,12 @@ type LoopObservation struct {
 	// StallCount is the number of stall events detected during this iteration.
 	StallCount int `json:"stall_count,omitempty"`
 
+	// NoopSkipped indicates this iteration was skipped due to consecutive no-op detection.
+	NoopSkipped bool `json:"noop_skipped,omitempty"`
+
+	// ConsecutiveNoops is the running count of consecutive no-op iterations for this loop.
+	ConsecutiveNoops int `json:"consecutive_noops,omitempty"`
+
 	// Sub-phase timing (ms) — surfaces where planner/worker time is actually spent.
 	PromptBuildMs     int64 `json:"prompt_build_ms,omitempty"`
 	ReflexionLookupMs int64 `json:"reflexion_lookup_ms,omitempty"`
