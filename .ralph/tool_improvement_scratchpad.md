@@ -353,3 +353,199 @@ All fleet-mode tools (`blackboard_put/query`, `a2a_offers`, `cost_forecast`, `fl
 **Fix applied**: Extracted `process.LogFilePath(basePath)` and `process.LogDirPath(basePath)` as canonical single-source-of-truth functions. Updated all 5 call sites to use them. Added 4 new tests: `TestLogFilePath_Canonical`, `TestLogDirPath_Canonical`, `TestLogFilePath_ContainedInLogDir`, and `TestLogPath_WriteReadRoundTrip` (validates that writing to `LogFilePath` and reading via `ReadFullLog` uses the same path). Also added `TestHandleLogs_NoLogFile` in `handler_repo_test.go` to exercise the graceful empty-response path for repos without log files.
 **Risk**: LOW — pure refactor, no behavior change.
 **Verification**: `go build ./...`, `go vet ./...`, `go test ./internal/process/... ./internal/mcpserver/...` — all pass.
+
+## Round 11: Systematic MCP Tool Exploration (2026-03-26)
+
+
+Exercised 80+ of 112 tools across all 13 namespaces. 288 tool calls in 24h window. 27 new findings below.
+
+---
+
+### FINDING-80: `load_tool_group` description missing 3 namespaces
+**Tool**: `ralphglasses_load_tool_group`
+**Evidence**: Description says "session, loop, prompt, fleet, repo, roadmap, team, awesome, advanced" — omits `eval`, `fleet_h`, `observability` (3 of 13 groups).
+**Proposed fix**: Update description in `tools_dispatch.go` to list all 13 group names.
+**Risk**: LOW — description-only.
+**Verification**: Call `tool_groups`, confirm all 13 names appear in `load_tool_group` description.
+
+### FINDING-81: `scan` returns plain text instead of structured JSON
+**Tool**: `ralphglasses_scan`
+**Evidence**: Returns "Found 7 ralph-enabled repos" (plain text). `list` returns structured JSON array. Scan output is not machine-parseable — callers must use `list` anyway.
+**Proposed fix**: Return JSON: `{"repos_found": 7, "repos": ["claudekit","hg-mcp",...]}` or merge scan into list (scan discovers, list returns the same data).
+**Risk**: MEDIUM — changes output format.
+**Verification**: Call `scan`, confirm JSON output.
+
+### FINDING-82: `stop_all` returns plain text with no structured status
+**Tool**: `ralphglasses_stop_all`
+**Evidence**: Returns "All managed loops stopped" (plain text) even when nothing was running. No JSON, no count of stopped loops.
+**Proposed fix**: Return `{"stopped_count": 0, "message": "no managed loops were running"}` when idle, `{"stopped_count": 3, "stopped": ["id1","id2","id3"]}` when loops exist.
+**Risk**: LOW — additive format change.
+**Verification**: Call `stop_all` with no running loops, confirm structured response.
+
+### FINDING-83: `status` and `config` return redundant config data
+**Tool**: `ralphglasses_status`, `ralphglasses_config`
+**Evidence**: `status` embeds the full `.ralphrc` config (29 keys) inside its response. `config` returns the same 29 keys. Callers get identical config data from either tool.
+**Proposed fix**: Remove `config` embed from `status` and add a `"config_keys": 29` count instead, or add `include_config: bool` param to `status` (default false).
+**Risk**: MEDIUM — changes status output format.
+**Verification**: Call `status`, confirm config is summary-only.
+
+### FINDING-84: No tool to remove stale/orphaned repos from scan results
+**Tool**: `ralphglasses_scan` / `ralphglasses_list`
+**Evidence**: `ralphglasses.wiped` appears in list with `status: "unknown"` — a stale entry from a deleted/moved repo. No `repo_remove` or `repo_forget` tool exists to clean it.
+**Proposed fix**: Add `ralphglasses_repo_forget` tool that removes a repo from the discovered list (deletes its `.ralph/` state or removes from in-memory registry).
+**Risk**: LOW — new tool.
+**Verification**: Call `repo_forget` with stale repo name, confirm removed from `list`.
+
+### FINDING-85: `repo_health` and `repo_optimize` return `null` instead of `[]` for empty arrays
+**Tool**: `ralphglasses_repo_health`, `ralphglasses_repo_optimize`
+**Evidence**: `repo_health` returns `claudemd_findings: null, issues: null`. `repo_optimize` returns `issues: null, optimizations: null`. But `claudemd_check` correctly returns `issues: []`.
+**Proposed fix**: In handlers, initialize slices before JSON marshaling: `if issues == nil { issues = []Issue{} }`.
+**Risk**: LOW — output normalization.
+**Verification**: Call both tools on healthy repo, confirm `[]` not `null`.
+
+### FINDING-86: `prompt_should_enhance` returns empty `reason` field
+**Tool**: `ralphglasses_prompt_should_enhance`
+**Evidence**: Returns `{"should_enhance": true, "reason": ""}` — recommends enhancement but gives no explanation. Other prompt tools (analyze, lint) provide detailed rationale.
+**Proposed fix**: Populate `reason` from the score/analysis: e.g., "score 55/100: missing structure, no examples, under 20 words".
+**Risk**: LOW — additive field population.
+**Verification**: Call with short prompt, confirm non-empty `reason`.
+
+### FINDING-87: `prompt_classify` returns bare task_type with no confidence
+**Tool**: `ralphglasses_prompt_classify`
+**Evidence**: Returns only `{"task_type": "troubleshooting"}`. No confidence score, no runner-up classifications. `prompt_analyze` returns 10-dimension scoring with letter grades.
+**Proposed fix**: Add `confidence: float`, `alternatives: [{type, confidence}]` to classify output.
+**Risk**: LOW — additive fields.
+**Verification**: Call classify, confirm confidence and alternatives present.
+
+### FINDING-88: No `code` task type prompt template
+**Tool**: `ralphglasses_prompt_templates`
+**Evidence**: 5 templates: troubleshoot, code_review, workflow_create, data_analysis, creative_brief. No `code` template despite it being the most common task type for LLM code assistants.
+**Proposed fix**: Add a `code` template with variables: `task`, `language`, `constraints`, `context`. Task type: "code".
+**Risk**: LOW — additive template.
+**Verification**: Call `prompt_templates`, confirm `code` template listed.
+
+### FINDING-89: `session_errors` returns `errors: null` instead of `errors: []`
+**Tool**: `ralphglasses_session_errors`
+**Evidence**: Returns `{"errors": null, "total_errors": 0}` when no errors. `session_list` correctly returns `[]`. Same null-vs-empty inconsistency as FINDING-85.
+**Proposed fix**: Initialize errors slice: `if errors == nil { errors = []SessionError{} }`.
+**Risk**: LOW.
+**Verification**: Call `session_errors` with no active sessions, confirm `errors: []`.
+
+### FINDING-90: `loop_baseline` `window_hours: 0` is semantically ambiguous
+**Tool**: `ralphglasses_loop_baseline`
+**Evidence**: Returns `"window_hours": 0` which could mean "all time" or "unset/default". The baseline was generated from all available observations, not a 0-hour window.
+**Proposed fix**: Use `"window_hours": "all"` or `-1` for unbounded, or populate with actual computed window (e.g., hours between oldest and newest observation).
+**Risk**: LOW — output clarification.
+**Verification**: Call `loop_baseline`, confirm window_hours is meaningful.
+
+### FINDING-91: `loop_benchmark` vs `loop_baseline` metric divergence not surfaced
+**Tool**: `ralphglasses_loop_benchmark`, `ralphglasses_loop_baseline`
+**Evidence**: Baseline shows `verify_pass_rate: 1.0, completion_rate: 1.0` (rolling window of 10). Benchmark shows `0.875, 0.6875` (full 48h, 32 observations). Neither tool explains the window size or warns about the discrepancy.
+**Proposed fix**: Add `window_type` and `window_size` fields to both tools. Consider adding a `"divergence_warning"` when baseline and benchmark rates differ by >20%.
+**Risk**: LOW — additive fields.
+**Verification**: Call both tools, confirm window metadata present.
+
+### FINDING-92: `observation_summary` has dead fields `acceptance_counts` and `model_usage`
+**Tool**: `ralphglasses_observation_summary`
+**Evidence**: Returns `"acceptance_counts": {}, "model_usage": {}` — always empty. 32 observations exist with model/provider data but these aggregation fields are never populated.
+**Proposed fix**: Either populate from observation data (count by model, count by acceptance status) or remove the fields to reduce noise.
+**Risk**: LOW — either populate or remove.
+**Verification**: Call `observation_summary` with observations present, confirm fields are populated or absent.
+
+### FINDING-93: `scratchpad_list` returns duplicate entries for same scratchpad
+**Tool**: `ralphglasses_scratchpad_list`
+**Evidence**: Returns `["e2e_test","fleet_audit","test_run","tool_improvement","tool_improvement_scratchpad"]`. Both `tool_improvement` and `tool_improvement_scratchpad` appear — likely because file `tool_improvement_scratchpad.md` has `_scratchpad` suffix AND is also matched by the prefix stripping. One physical file creates two list entries.
+**Proposed fix**: In `listScratchpads`, strip `_scratchpad` suffix from filenames before returning. Deduplicate entries.
+**Risk**: LOW — list formatting fix.
+**Verification**: Call `scratchpad_list`, confirm no duplicate entries.
+
+### FINDING-94: `cost_estimate` model-based vs historical estimates diverge 4.7x with misleading `confidence: "high"`
+**Tool**: `ralphglasses_cost_estimate`
+**Evidence**: Model-based: `mid_usd: 0.886`. Historical: `historical_avg_usd: 0.189`. 4.7x gap. Yet `confidence: "high"` is reported. The historical data (32 observations) should reduce confidence when it contradicts the model.
+**Proposed fix**: Lower confidence to "medium" or "low" when `abs(model - historical) / historical > 2.0`. Add `calibration_factor` showing the ratio.
+**Risk**: LOW — confidence label adjustment.
+**Verification**: Call `cost_estimate` with repo that has historical data, confirm confidence reflects model-vs-historical agreement.
+
+### FINDING-95: Fleet-mode prerequisite: two incompatible response patterns
+**Tool**: `ralphglasses_fleet_dlq`, `ralphglasses_fleet_budget`, `ralphglasses_fleet_workers` vs `ralphglasses_a2a_offers`, `ralphglasses_cost_forecast`, `ralphglasses_bandit_status`, `ralphglasses_confidence_calibration`
+**Evidence**: Same prerequisite (fleet mode not active). First group returns coded errors (`NOT_RUNNING`). Second group returns non-error `{"status":"not_configured","message":"..."}`. A caller can't handle fleet-mode-not-active uniformly.
+**Proposed fix**: Standardize on the non-error `not_configured` pattern for all fleet-mode tools (they aren't errors — it's expected state). Reserve `NOT_RUNNING` for cases where something was running and stopped unexpectedly.
+**Risk**: MEDIUM — changes error/non-error classification for 3 tools.
+**Verification**: Call `fleet_dlq` without fleet mode, confirm `{"status":"not_configured"}` not an error.
+
+### FINDING-96: `marathon_dashboard` gracefully degrades without fleet mode but sibling tools don't
+**Tool**: `ralphglasses_marathon_dashboard` vs `ralphglasses_fleet_dlq/budget/workers`
+**Evidence**: `marathon_dashboard` returns empty data (zeros, null arrays) when fleet isn't active. `fleet_dlq/budget/workers` return `NOT_RUNNING` errors. Same namespace, inconsistent behavior.
+**Proposed fix**: Make `fleet_dlq`, `fleet_budget`, `fleet_workers` return empty data with `"fleet_mode": false` indicator, matching `marathon_dashboard` behavior.
+**Risk**: MEDIUM — changes error handling for 3 tools.
+**Verification**: Call all fleet tools without fleet mode, confirm uniform graceful degradation.
+
+### FINDING-97: `roadmap_parse` output exceeds 100K chars with no truncation option
+**Tool**: `ralphglasses_roadmap_parse`
+**Evidence**: Returns 104,561 characters — causes MCP output to be saved to file instead of inline. No `summary_only`, `max_tasks`, or `max_depth` parameter exists.
+**Proposed fix**: Add `summary_only: bool` (return phase/section counts and completion stats without task details) and `max_depth: int` (0=phases, 1=sections, 2=tasks). Default behavior should cap at reasonable output size.
+**Risk**: LOW — additive params.
+**Verification**: Call `roadmap_parse` with `summary_only: true`, confirm compact output.
+
+### FINDING-98: `team_create` dry_run shows zero/empty defaults instead of effective config
+**Tool**: `ralphglasses_team_create`
+**Evidence**: With `dry_run: true`, returns `max_budget_usd: 0, model: "", lead_agent: "", worker_provider: ""`. Should preview the effective defaults that WOULD be applied (e.g., model="sonnet", provider="claude", max_budget=repo default).
+**Proposed fix**: In handler, resolve defaults before returning dry_run response: apply same default logic as the real launch path.
+**Risk**: LOW — dry_run output improvement.
+**Verification**: Call `team_create` with `dry_run: true`, confirm non-zero defaults shown.
+
+### FINDING-99: `roadmap_export` exports completed tasks by default
+**Tool**: `ralphglasses_roadmap_export`
+**Evidence**: With `max_tasks: 3`, all 3 returned tasks are `done: true` from "Phase 0: Foundation (COMPLETE)". Should prioritize incomplete tasks for loop consumption.
+**Proposed fix**: Add `status` filter param ("incomplete", "complete", "all" — default "incomplete"). Sort incomplete tasks first in default export.
+**Risk**: LOW — additive param + sort change.
+**Verification**: Call `roadmap_export` with `max_tasks: 3`, confirm incomplete tasks returned first.
+
+### FINDING-100: `roadmap_export` task IDs are all identical
+**Tool**: `ralphglasses_roadmap_export`
+**Evidence**: All 3 exported tasks have ID `"Phase 0: Foundation (COMPLETE)/Phase 0: Foundation (COMPLETE)"` — duplicated phase name, no task-level differentiation. IDs should be unique per task.
+**Proposed fix**: Generate unique IDs using `phase/section/task_index` or hash. Include task description in ID.
+**Risk**: LOW — ID generation fix.
+**Verification**: Call `roadmap_export`, confirm unique task IDs.
+
+### FINDING-101: `awesome_report` and `awesome_diff` require `save_to` param not in schema
+**Tool**: `ralphglasses_awesome_report`, `ralphglasses_awesome_diff`
+**Evidence**: Both return `INVALID_PARAMS: save_to required` but `save_to` is not declared in the tool builder schema. Handler requires it, builder doesn't expose it — classic description drift (FINDING-67 pattern).
+**Proposed fix**: Add `save_to` param to both tool builders in `tools_builders_misc.go`. Description: "File path to save report output".
+**Risk**: LOW — schema update.
+**Verification**: Call `awesome_report` with `save_to` param, confirm no schema error.
+
+### FINDING-102: `event_poll` summaries are empty strings
+**Tool**: `ralphglasses_event_poll`
+**Evidence**: All 20 events return `summary: "[tool.called] "` with empty detail after the event type prefix. The `event_list` tool includes rich `data` objects with tool names, latencies, etc. — `event_poll` discards all of this.
+**Proposed fix**: In `buildEventSummary`, include key data fields. For `tool.called`: `"[tool.called] ralphglasses_scan (2ms)"`. For `scan.complete`: `"[scan.complete] 7 repos found"`.
+**Risk**: LOW — summary string improvement.
+**Verification**: Call `event_poll`, confirm summaries include tool names and key metrics.
+
+### FINDING-103: `feedback_profiles` always empty despite journal data
+**Tool**: `ralphglasses_feedback_profiles`
+**Evidence**: Returns `{"prompt_profiles": [], "provider_profiles": []}` despite `journal_read` returning 3 entries with worked/failed/suggest data and specific provider/model information.
+**Proposed fix**: Wire profile aggregation to journal entries. Extract task_type, provider, model from journal; aggregate success/failure rates into profiles.
+**Risk**: MEDIUM — requires new aggregation logic.
+**Verification**: Call `feedback_profiles` after journal has entries, confirm non-empty profiles.
+
+### FINDING-104: `provider_recommend` returns zero budget with no fallback
+**Tool**: `ralphglasses_provider_recommend`
+**Evidence**: Returns `estimated_budget_usd: 0, confidence: "low"` with "need 5+ samples". The `cost_estimate` tool provides model-based estimates — `provider_recommend` should use it as fallback.
+**Proposed fix**: When insufficient profile data, call `cost_estimate` internally and include model-based budget. Change output to `estimated_budget_usd: 0.18 (model-based, low confidence)`.
+**Risk**: LOW — fallback integration.
+**Verification**: Call `provider_recommend` with new task type, confirm non-zero budget estimate.
+
+### FINDING-105: `eval_ab_test` returns meaningless 50/50 when one group has 0 observations
+**Tool**: `ralphglasses_eval_ab_test`
+**Evidence**: Period comparison with `split_hours_ago: 24` puts all 32 observations in period A, 0 in period B. Returns `prob_a_better: 0.5, prob_b_better: 0.5` — a coin flip. No warning about empty group.
+**Proposed fix**: When either group has 0 observations, return `{"status":"insufficient_data","message":"period B has 0 observations","minimum_required":5}` instead of misleading posteriors.
+**Risk**: LOW — input validation.
+**Verification**: Call `eval_ab_test` with one empty group, confirm error/warning instead of 50/50.
+
+### FINDING-106: `eval_changepoints` reports false positives at observation index 0
+**Tool**: `ralphglasses_eval_changepoints`
+**Evidence**: Reports changepoints at index 0 with `before_mean: 0` — this is the start of data, not a real performance shift. CUSUM needs a burn-in period.
+**Proposed fix**: Skip first N observations (e.g., 5) as burn-in before detecting changepoints. Add `min_observations_before_detection` param (default 5).
+**Risk**: LOW — detection logic improvement.
+**Verification**: Call `eval_changepoints`, confirm no changepoints at index 0.
