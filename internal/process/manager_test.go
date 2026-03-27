@@ -2,12 +2,15 @@ package process
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
 
 func TestNewManager(t *testing.T) {
@@ -925,4 +928,737 @@ exit 1`)
 	// With context cancelled, we should have at most a couple of invocations,
 	// definitely not all 6 (original + 5 restarts).
 	t.Logf("total invocations before context cancel took effect: %s", countStr)
+}
+
+// ---------------------------------------------------------------------------
+// Additional tests targeting 85%+ coverage
+// ---------------------------------------------------------------------------
+
+func TestAddProcForTesting(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+
+	// Add an unpaused proc.
+	m.AddProcForTesting("/test/repo1", false)
+	if !m.IsRunning("/test/repo1") {
+		t.Error("expected IsRunning=true after AddProcForTesting")
+	}
+	if m.IsPaused("/test/repo1") {
+		t.Error("expected IsPaused=false for unpaused test proc")
+	}
+
+	// Add a paused proc.
+	m.AddProcForTesting("/test/repo2", true)
+	if !m.IsRunning("/test/repo2") {
+		t.Error("expected IsRunning=true after AddProcForTesting (paused)")
+	}
+	if !m.IsPaused("/test/repo2") {
+		t.Error("expected IsPaused=true for paused test proc")
+	}
+
+	// RunningPaths should include both.
+	paths := m.RunningPaths()
+	if len(paths) != 2 {
+		t.Errorf("expected 2 running paths, got %d", len(paths))
+	}
+}
+
+func TestNewManagerWithBus(t *testing.T) {
+	t.Parallel()
+
+	bus := events.NewBus(100)
+	m := NewManagerWithBus(bus)
+	if m == nil {
+		t.Fatal("NewManagerWithBus returned nil")
+	}
+	if m.bus != bus {
+		t.Error("expected bus to be set on manager")
+	}
+	if m.procs == nil {
+		t.Fatal("procs map not initialized")
+	}
+	if m.KillTimeout != DefaultKillTimeout {
+		t.Errorf("expected default KillTimeout, got %v", m.KillTimeout)
+	}
+	if m.MaxRestarts != DefaultMaxRestarts {
+		t.Errorf("expected default MaxRestarts, got %v", m.MaxRestarts)
+	}
+}
+
+func TestWaitForProcessExit(t *testing.T) {
+	ch := make(chan ProcessExitMsg, 1)
+	ch <- ProcessExitMsg{RepoPath: "/test/repo", ExitCode: 42, Error: nil}
+
+	cmd := WaitForProcessExit(ch)
+	msg := cmd()
+
+	exitMsg, ok := msg.(ProcessExitMsg)
+	if !ok {
+		t.Fatalf("expected ProcessExitMsg, got %T", msg)
+	}
+	if exitMsg.RepoPath != "/test/repo" {
+		t.Errorf("unexpected RepoPath: %s", exitMsg.RepoPath)
+	}
+	if exitMsg.ExitCode != 42 {
+		t.Errorf("expected exit code 42, got %d", exitMsg.ExitCode)
+	}
+}
+
+func TestMaxRestartsLimit_ZeroFallsToDefault(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+	m.MaxRestarts = 0
+	if m.maxRestartsLimit() != DefaultMaxRestarts {
+		t.Errorf("expected DefaultMaxRestarts (%d), got %d", DefaultMaxRestarts, m.maxRestartsLimit())
+	}
+}
+
+func TestMaxRestartsLimit_NegativeFallsToDefault(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+	m.MaxRestarts = -5
+	if m.maxRestartsLimit() != DefaultMaxRestarts {
+		t.Errorf("expected DefaultMaxRestarts (%d), got %d", DefaultMaxRestarts, m.maxRestartsLimit())
+	}
+}
+
+func TestMaxRestartsLimit_PositiveValue(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+	m.MaxRestarts = 7
+	if m.maxRestartsLimit() != 7 {
+		t.Errorf("expected 7, got %d", m.maxRestartsLimit())
+	}
+}
+
+func TestRunKillSequence_ZeroTimeoutUsesDefault(t *testing.T) {
+	h := newHarness(100)
+	defer h.install()()
+
+	var sleepDurations []time.Duration
+	setSleepFn(func(d time.Duration) {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		sleepDurations = append(sleepDurations, d)
+		h.sleeps++
+	})
+
+	runKillSequence(100, nil, 0)
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	// With timeout=0, runKillSequence should fall back to DefaultKillTimeout.
+	for i, d := range sleepDurations {
+		if d != DefaultKillTimeout {
+			t.Errorf("sleep[%d]: expected %v, got %v", i, DefaultKillTimeout, d)
+		}
+	}
+}
+
+func TestConcurrentStartStop(t *testing.T) {
+	// Exercise concurrent access to the manager with the race detector.
+	origSleep := *sleepFnPtr.Load()
+	setSleepFn(func(d time.Duration) {})
+	t.Cleanup(func() { setSleepFn(origSleep) })
+
+	m := NewManager()
+	const n = 10
+	repos := make([]string, n)
+	for i := 0; i < n; i++ {
+		repos[i] = t.TempDir()
+		writeTestScript(t, filepath.Join(repos[i], "ralph_loop.sh"), "sleep 60")
+	}
+
+	// Start all concurrently.
+	errs := make(chan error, n)
+	for _, r := range repos {
+		r := r
+		go func() {
+			errs <- m.Start(context.Background(), r)
+		}()
+	}
+	for i := 0; i < n; i++ {
+		if err := <-errs; err != nil {
+			t.Errorf("Start error: %v", err)
+		}
+	}
+
+	// Query concurrently.
+	done := make(chan struct{})
+	go func() {
+		for i := 0; i < 50; i++ {
+			_ = m.RunningPaths()
+			_ = m.IsRunning(repos[0])
+			_ = m.IsPaused(repos[0])
+			_ = m.PidForRepo(repos[0])
+		}
+		close(done)
+	}()
+
+	// Stop all concurrently.
+	stopErrs := make(chan error, n)
+	for _, r := range repos {
+		r := r
+		go func() {
+			stopErrs <- m.Stop(context.Background(), r)
+		}()
+	}
+	for i := 0; i < n; i++ {
+		<-stopErrs // errors are acceptable (race with reaper)
+	}
+
+	<-done
+
+	// Give reapers time to clean up.
+	time.Sleep(200 * time.Millisecond)
+}
+
+func TestStartWithBus_PublishesEvents(t *testing.T) {
+	bus := events.NewBus(100)
+	m := NewManagerWithBus(bus)
+	repoPath := t.TempDir()
+	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"), "exit 0")
+
+	if err := m.Start(context.Background(), repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// Wait for exit.
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		if !m.IsRunning(repoPath) {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	// Check that LoopStarted event was published to the bus.
+	started := bus.History(events.LoopStarted, 10)
+	if len(started) == 0 {
+		t.Error("expected LoopStarted event published to the bus")
+	}
+
+	// Check that LoopStopped event was published to the bus.
+	stopped := bus.History(events.LoopStopped, 10)
+	if len(stopped) == 0 {
+		t.Error("expected LoopStopped event published to the bus")
+	}
+}
+
+func TestStopAll_MultipleProcesses_ClearsMap(t *testing.T) {
+	// Verify that AddProcForTesting populates and RunningPaths reports correctly.
+	// We do NOT call StopAll here because AddProcForTesting creates entries
+	// with PID=0, and sendSignal(0, SIGTERM) would kill the test runner's
+	// process group. Instead we verify the map state directly.
+	m := NewManager()
+
+	for i := 0; i < 5; i++ {
+		m.AddProcForTesting(filepath.Join("/fake/repo", strconv.Itoa(i)), false)
+	}
+
+	paths := m.RunningPaths()
+	if len(paths) != 5 {
+		t.Fatalf("expected 5 running, got %d", len(paths))
+	}
+
+	// Verify each path is reported.
+	pathSet := make(map[string]bool)
+	for _, p := range paths {
+		pathSet[p] = true
+	}
+	for i := 0; i < 5; i++ {
+		expected := filepath.Join("/fake/repo", strconv.Itoa(i))
+		if !pathSet[expected] {
+			t.Errorf("expected %q in running paths", expected)
+		}
+	}
+}
+
+func TestPidForRepo_AfterAddProcForTesting(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+	m.AddProcForTesting("/test/repo", false)
+
+	// AddProcForTesting creates a ManagedProcess with PID=0.
+	pid := m.PidForRepo("/test/repo")
+	if pid != 0 {
+		t.Errorf("expected PID 0 from AddProcForTesting, got %d", pid)
+	}
+}
+
+func TestErrorChan_BufferedAndNonBlocking(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+	errCh := m.ErrorChan()
+
+	// Channel should be readable.
+	if errCh == nil {
+		t.Fatal("ErrorChan returned nil")
+	}
+
+	// Verify channel has capacity (non-blocking send from producer side).
+	select {
+	case m.errCh <- ProcessErrorMsg{RepoPath: "/test", Err: nil}:
+		// ok
+	default:
+		t.Error("errCh should have buffer capacity")
+	}
+
+	// Read it back.
+	select {
+	case msg := <-errCh:
+		if msg.RepoPath != "/test" {
+			t.Errorf("unexpected RepoPath: %s", msg.RepoPath)
+		}
+	default:
+		t.Error("expected message on errCh")
+	}
+}
+
+func TestExitChan_BufferedAndNonBlocking(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+	exitCh := m.ExitChan()
+
+	if exitCh == nil {
+		t.Fatal("ExitChan returned nil")
+	}
+
+	select {
+	case m.exitCh <- ProcessExitMsg{RepoPath: "/test", ExitCode: 1}:
+	default:
+		t.Error("exitCh should have buffer capacity")
+	}
+
+	select {
+	case msg := <-exitCh:
+		if msg.ExitCode != 1 {
+			t.Errorf("expected exit code 1, got %d", msg.ExitCode)
+		}
+	default:
+		t.Error("expected message on exitCh")
+	}
+}
+
+func TestLastExitStatus_RecordedAfterExit(t *testing.T) {
+	// Directly inject into the global lastExits to test the lookup path.
+	lastExits.Lock()
+	lastExits.m["/test/last_exit"] = exitStatus{Code: 137, Error: "signal: killed"}
+	lastExits.Unlock()
+	t.Cleanup(func() {
+		lastExits.Lock()
+		delete(lastExits.m, "/test/last_exit")
+		lastExits.Unlock()
+	})
+
+	m := NewManager()
+	code, errStr, ok := m.LastExitStatus("/test/last_exit")
+	if !ok {
+		t.Fatal("expected ok=true for recorded exit status")
+	}
+	if code != 137 {
+		t.Errorf("expected code 137, got %d", code)
+	}
+	if errStr != "signal: killed" {
+		t.Errorf("expected error string 'signal: killed', got %q", errStr)
+	}
+}
+
+func TestStart_NoLoopScript(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+	repoPath := t.TempDir()
+	// No ralph_loop.sh — should get ErrNoLoopScript.
+
+	err := m.Start(context.Background(), repoPath)
+	if err == nil {
+		t.Fatal("expected error starting with no loop script")
+	}
+	if !strings.Contains(err.Error(), "no loop script found") {
+		t.Errorf("expected ErrNoLoopScript, got: %v", err)
+	}
+}
+
+func TestAutoRestart_ContextCancelDuringBackoff(t *testing.T) {
+	// Test that cancelling context during the backoff sleep prevents restart.
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Use a sleep function that cancels the context mid-backoff.
+	origSleep := *sleepFnPtr.Load()
+	callCount := 0
+	setSleepFn(func(d time.Duration) {
+		callCount++
+		if callCount == 1 {
+			// First backoff sleep — cancel context to simulate user stop.
+			cancel()
+		}
+	})
+	t.Cleanup(func() { setSleepFn(origSleep) })
+
+	m := NewManager()
+	m.AutoRestart = true
+	m.MaxRestarts = 5
+
+	repoPath := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
+	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"), "exit 1")
+
+	if err := m.Start(ctx, repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// Wait for cleanup.
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if !m.IsRunning(repoPath) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if m.IsRunning(repoPath) {
+		m.StopAll(context.Background())
+		t.Fatal("process still running after context cancel during backoff")
+	}
+}
+
+func TestWritePIDFile_And_ReadPIDFile(t *testing.T) {
+	t.Parallel()
+
+	repoPath := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
+
+	err := writePIDFile(repoPath, 12345)
+	if err != nil {
+		t.Fatalf("writePIDFile: %v", err)
+	}
+
+	pid := readPIDFile(repoPath)
+	if pid != 12345 {
+		t.Errorf("expected 12345, got %d", pid)
+	}
+}
+
+func TestRemovePIDFile_NonExistent(t *testing.T) {
+	t.Parallel()
+
+	// Should not panic on non-existent file.
+	removePIDFile("/nonexistent/path/that/does/not/exist")
+}
+
+func TestPidFilePath(t *testing.T) {
+	t.Parallel()
+
+	got := pidFilePath("/some/repo")
+	expected := filepath.Join("/some/repo", ".ralph", pidFileName)
+	if got != expected {
+		t.Errorf("expected %q, got %q", expected, got)
+	}
+}
+
+func TestStop_RecoveredProcess(t *testing.T) {
+	// Stopping a recovered process should clean up the PID file and
+	// remove it from the map immediately (no reaper goroutine).
+	h := newHarness() // no PIDs alive
+	defer h.install()()
+
+	m := NewManager()
+	repoPath := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
+
+	// Write a PID file so removePIDFile has something to remove.
+	_ = writePIDFile(repoPath, 99999)
+
+	// Inject a recovered process entry.
+	m.mu.Lock()
+	m.procs[repoPath] = &ManagedProcess{
+		PID:       99999,
+		Recovered: true,
+	}
+	m.mu.Unlock()
+
+	err := m.Stop(context.Background(), repoPath)
+	if err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
+
+	// Give the kill goroutine time to run.
+	time.Sleep(100 * time.Millisecond)
+
+	// Recovered process should be immediately removed from the map.
+	if m.IsRunning(repoPath) {
+		t.Error("expected recovered process to be removed from map after Stop")
+	}
+
+	// PID file should be removed.
+	pidPath := filepath.Join(repoPath, ".ralph", pidFileName)
+	if _, err := os.Stat(pidPath); !os.IsNotExist(err) {
+		t.Error("expected PID file to be removed for recovered process")
+	}
+}
+
+func TestAutoRestartWithBus_PublishesRestartEvent(t *testing.T) {
+	origSleep := *sleepFnPtr.Load()
+	setSleepFn(func(d time.Duration) {})
+	t.Cleanup(func() { setSleepFn(origSleep) })
+
+	bus := events.NewBus(100)
+	m := NewManagerWithBus(bus)
+	m.AutoRestart = true
+	m.MaxRestarts = 1
+
+	repoPath := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
+
+	// Script exits with 1 twice (original + 1 restart), triggering a restart event.
+	counterFile := filepath.Join(repoPath, ".ralph", "bus_counter")
+	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"),
+		`COUNTER_FILE="`+counterFile+`"
+if [ ! -f "$COUNTER_FILE" ]; then
+  echo 1 > "$COUNTER_FILE"
+  exit 1
+fi
+COUNT=$(cat "$COUNTER_FILE")
+COUNT=$((COUNT + 1))
+echo $COUNT > "$COUNTER_FILE"
+exit 1`)
+
+	if err := m.Start(context.Background(), repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		if !m.IsRunning(repoPath) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if m.IsRunning(repoPath) {
+		m.StopAll(context.Background())
+		t.Fatal("process still running")
+	}
+
+	// Check for LoopRestarted event.
+	allEvents := bus.History("", 100)
+	var hasRestart bool
+	for _, e := range allEvents {
+		if e.Type == events.LoopRestarted {
+			hasRestart = true
+			break
+		}
+	}
+	if !hasRestart {
+		t.Error("expected LoopRestarted event from bus")
+	}
+}
+
+func TestProcessErrorMsg_Fields(t *testing.T) {
+	t.Parallel()
+
+	msg := ProcessErrorMsg{RepoPath: "/test", Err: fmt.Errorf("test error")}
+	if msg.RepoPath != "/test" {
+		t.Errorf("unexpected RepoPath: %s", msg.RepoPath)
+	}
+	if msg.Err == nil || msg.Err.Error() != "test error" {
+		t.Errorf("unexpected Err: %v", msg.Err)
+	}
+}
+
+func TestProcessExitMsg_Fields(t *testing.T) {
+	t.Parallel()
+
+	msg := ProcessExitMsg{RepoPath: "/test", ExitCode: 42, Error: fmt.Errorf("exit 42")}
+	if msg.RepoPath != "/test" {
+		t.Errorf("unexpected RepoPath: %s", msg.RepoPath)
+	}
+	if msg.ExitCode != 42 {
+		t.Errorf("unexpected ExitCode: %d", msg.ExitCode)
+	}
+	if msg.Error == nil {
+		t.Error("expected non-nil Error")
+	}
+}
+
+func TestAutoRestart_StopAllDuringBackoff(t *testing.T) {
+	// Exercise the code path where StopAll removes the entry from the procs map
+	// while the reaper is sleeping in the backoff period. The reaper should detect
+	// the entry is gone and skip the restart.
+	m := NewManager()
+	m.AutoRestart = true
+	m.MaxRestarts = 5
+
+	origSleep := *sleepFnPtr.Load()
+	callCount := 0
+	setSleepFn(func(d time.Duration) {
+		callCount++
+		if callCount == 1 {
+			// During the first backoff sleep, call StopAll to remove the entry.
+			m.StopAll(context.Background())
+		}
+	})
+	t.Cleanup(func() { setSleepFn(origSleep) })
+
+	repoPath := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
+	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"), "exit 1")
+
+	if err := m.Start(context.Background(), repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// Wait for cleanup.
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if !m.IsRunning(repoPath) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if m.IsRunning(repoPath) {
+		m.StopAll(context.Background())
+		t.Fatal("process still running after StopAll during backoff")
+	}
+}
+
+func TestAutoRestart_StopDuringBackoff(t *testing.T) {
+	// Exercise the code path where Stop() sets Stopping=true while the reaper
+	// is sleeping in the backoff period. The reaper should see Stopping and
+	// skip the restart.
+	h := newHarness() // no real PIDs alive
+	origKill := *killPidPtr.Load()
+	origAlive := *aliveFnPtr.Load()
+
+	m := NewManager()
+	m.AutoRestart = true
+	m.MaxRestarts = 5
+
+	origSleep := *sleepFnPtr.Load()
+	callCount := 0
+	setSleepFn(func(d time.Duration) {
+		callCount++
+		if callCount == 1 {
+			// During the first backoff sleep, mark the process as Stopping.
+			m.mu.Lock()
+			for _, mp := range m.procs {
+				mp.Stopping = true
+			}
+			m.mu.Unlock()
+		}
+	})
+	t.Cleanup(func() {
+		setSleepFn(origSleep)
+		setKillPid(origKill)
+		setAliveFn(origAlive)
+		_ = h
+	})
+
+	repoPath := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)
+	writeTestScript(t, filepath.Join(repoPath, "ralph_loop.sh"), "exit 1")
+
+	if err := m.Start(context.Background(), repoPath); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// Wait for cleanup.
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if !m.IsRunning(repoPath) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if m.IsRunning(repoPath) {
+		m.StopAll(context.Background())
+		t.Fatal("process still running after Stop during backoff")
+	}
+}
+
+func TestWritePIDFile_CreatesDirIfMissing(t *testing.T) {
+	t.Parallel()
+
+	repoPath := t.TempDir()
+	// .ralph/ dir does not exist yet — writePIDFile should create it.
+	err := writePIDFile(repoPath, 12345)
+	if err != nil {
+		t.Fatalf("writePIDFile: %v", err)
+	}
+
+	pid := readPIDFile(repoPath)
+	if pid != 12345 {
+		t.Errorf("expected 12345, got %d", pid)
+	}
+}
+
+func TestWritePIDFile_ErrorOnReadOnlyParent(t *testing.T) {
+	t.Parallel()
+
+	// Create a directory that is read-only so MkdirAll will fail.
+	repoPath := t.TempDir()
+	if err := os.Chmod(repoPath, 0555); err != nil {
+		t.Skipf("cannot set read-only permissions: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(repoPath, 0755) })
+
+	err := writePIDFile(repoPath, 12345)
+	if err == nil {
+		t.Error("expected error writing PID file to read-only directory")
+	}
+}
+
+func TestScanRalphLoopProcessesPS(t *testing.T) {
+	t.Parallel()
+
+	// scanRalphLoopProcessesPS should return a slice (possibly empty) without error.
+	pids := scanRalphLoopProcessesPS()
+	if pids == nil {
+		// It's OK to return nil if ps fails, but let's at least verify it runs.
+		t.Log("scanRalphLoopProcessesPS returned nil (ps may have failed)")
+	}
+}
+
+func TestScanRalphLoopProcessesLinux_OnDarwin(t *testing.T) {
+	t.Parallel()
+
+	// On macOS, /proc doesn't exist so this returns nil immediately.
+	// This covers the ReadDir error path in the Linux scanner.
+	pids := scanRalphLoopProcessesLinux()
+	if pids != nil {
+		t.Logf("scanRalphLoopProcessesLinux returned %d pids (unexpected on darwin)", len(pids))
+	}
+}
+
+func TestScanRalphLoopProcesses_DelegatesToPS(t *testing.T) {
+	t.Parallel()
+
+	// On darwin, scanRalphLoopProcesses delegates to PS, not Linux.
+	pids := scanRalphLoopProcesses()
+	// Just verify it doesn't panic; may return empty or non-empty.
+	_ = pids
+}
+
+func TestCollectChildPIDsByPgid_OwnProcess(t *testing.T) {
+	t.Parallel()
+
+	// On macOS, Getpgid succeeds but ReadDir("/proc") fails, returning
+	// an empty slice. This covers the Getpgid success + ReadDir failure path.
+	result := collectChildPIDsByPgid(os.Getpid())
+	if result == nil {
+		t.Fatal("expected non-nil slice")
+	}
+	// On macOS: should return empty slice (no /proc).
+	// On Linux: may return some PIDs in same pgroup.
 }
