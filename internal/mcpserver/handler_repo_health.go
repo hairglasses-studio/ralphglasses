@@ -113,6 +113,14 @@ func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*
 		score = 0
 	}
 
+	// Ensure slices marshal as [] not null
+	if issues == nil {
+		issues = []string{}
+	}
+	if claudeMDFindings == nil {
+		claudeMDFindings = []enhancer.ClaudeMDResult{}
+	}
+
 	return jsonResult(map[string]any{
 		"repo":              name,
 		"health_score":      score,
@@ -144,5 +152,14 @@ func (s *Server) handleRepoOptimize(_ context.Context, req mcp.CallToolRequest) 
 	if err != nil {
 		return codedError(ErrInternal, fmt.Sprintf("optimize: %v", err)), nil
 	}
+
+	// Ensure slices marshal as [] not null
+	if result.Issues == nil {
+		result.Issues = []repofiles.OptimizeIssue{}
+	}
+	if result.Optimizations == nil {
+		result.Optimizations = []repofiles.OptimizeAction{}
+	}
+
 	return jsonResult(result), nil
 }
