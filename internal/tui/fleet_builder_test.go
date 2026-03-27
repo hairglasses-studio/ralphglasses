@@ -498,3 +498,367 @@ func TestBuildFleetDataTopExpensiveCapped(t *testing.T) {
 		}
 	}
 }
+
+// --- openFleetSelection ---
+
+func TestOpenFleetSelectionRepos(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Repos = []*model.Repo{
+		{Name: "alpha", Path: "/tmp/alpha"},
+		{Name: "beta", Path: "/tmp/beta"},
+	}
+	data := m.buildFleetData()
+	m.FleetSection = 0 // repos
+	m.FleetCursor = 0
+
+	m.openFleetSelection(data)
+	if m.CurrentView != ViewRepoDetail {
+		t.Errorf("expected ViewRepoDetail, got %d", m.CurrentView)
+	}
+	if m.SelectedIdx < 0 {
+		t.Error("SelectedIdx should be set")
+	}
+}
+
+func TestOpenFleetSelectionReposOutOfBounds(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Repos = []*model.Repo{{Name: "a", Path: "/tmp/a"}}
+	data := m.buildFleetData()
+	m.FleetSection = 0
+	m.FleetCursor = 99 // out of bounds
+
+	before := m.CurrentView
+	m.openFleetSelection(data)
+	if m.CurrentView != before {
+		t.Error("should not navigate when cursor out of bounds")
+	}
+}
+
+func TestOpenFleetSelectionSessions(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	mgr := session.NewManager()
+	s := &session.Session{
+		ID:         "sess-001",
+		Provider:   "claude",
+		RepoPath:   "/tmp/repo",
+		RepoName:   "repo",
+		Status:     session.StatusRunning,
+		LaunchedAt: time.Now(),
+	}
+	mgr.AddSessionForTesting(s)
+	m.SessMgr = mgr
+	data := m.buildFleetData()
+
+	m.FleetSection = 1 // sessions
+	m.FleetCursor = 0
+	m.openFleetSelection(data)
+	if m.CurrentView != ViewSessionDetail {
+		t.Errorf("expected ViewSessionDetail, got %d", m.CurrentView)
+	}
+	if m.SelectedSession != "sess-001" {
+		t.Errorf("SelectedSession = %q, want sess-001", m.SelectedSession)
+	}
+}
+
+func TestOpenFleetSelectionTeams(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	mgr := session.NewManager()
+	mgr.AddTeamForTesting(&session.TeamStatus{
+		Name:     "team-alpha",
+		RepoPath: "/tmp/repo",
+		Status:   session.StatusRunning,
+	})
+	m.SessMgr = mgr
+	data := m.buildFleetData()
+
+	m.FleetSection = 2 // teams
+	m.FleetCursor = 0
+	m.openFleetSelection(data)
+	if m.CurrentView != ViewTeamDetail {
+		t.Errorf("expected ViewTeamDetail, got %d", m.CurrentView)
+	}
+	if m.SelectedTeam != "team-alpha" {
+		t.Errorf("SelectedTeam = %q, want team-alpha", m.SelectedTeam)
+	}
+}
+
+// --- diffFleetSelection ---
+
+func TestDiffFleetSelectionRepos(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Repos = []*model.Repo{
+		{Name: "alpha", Path: "/tmp/alpha"},
+	}
+	data := m.buildFleetData()
+	m.FleetSection = 0
+	m.FleetCursor = 0
+
+	m.diffFleetSelection(data)
+	if m.CurrentView != ViewDiff {
+		t.Errorf("expected ViewDiff, got %d", m.CurrentView)
+	}
+}
+
+func TestDiffFleetSelectionSessions(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Repos = []*model.Repo{{Name: "repo", Path: "/tmp/repo"}}
+	mgr := session.NewManager()
+	s := &session.Session{
+		ID: "s1", Provider: "claude", RepoPath: "/tmp/repo", RepoName: "repo",
+		Status: session.StatusRunning, LaunchedAt: time.Now(),
+	}
+	mgr.AddSessionForTesting(s)
+	m.SessMgr = mgr
+	data := m.buildFleetData()
+
+	m.FleetSection = 1 // sessions
+	m.FleetCursor = 0
+	m.diffFleetSelection(data)
+	if m.CurrentView != ViewDiff {
+		t.Errorf("expected ViewDiff, got %d", m.CurrentView)
+	}
+}
+
+func TestDiffFleetSelectionTeams(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Repos = []*model.Repo{{Name: "repo", Path: "/tmp/repo"}}
+	mgr := session.NewManager()
+	mgr.AddTeamForTesting(&session.TeamStatus{
+		Name: "team-1", RepoPath: "/tmp/repo", Status: session.StatusRunning,
+	})
+	m.SessMgr = mgr
+	data := m.buildFleetData()
+
+	m.FleetSection = 2 // teams
+	m.FleetCursor = 0
+	m.diffFleetSelection(data)
+	if m.CurrentView != ViewDiff {
+		t.Errorf("expected ViewDiff, got %d", m.CurrentView)
+	}
+}
+
+func TestDiffFleetSelectionOutOfBounds(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	data := m.buildFleetData()
+	m.FleetSection = 0
+	m.FleetCursor = 5 // no repos
+	before := m.CurrentView
+	m.diffFleetSelection(data)
+	if m.CurrentView != before {
+		t.Error("should not navigate when cursor out of bounds")
+	}
+}
+
+// --- timelineFleetSelection ---
+
+func TestTimelineFleetSelectionRepos(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Repos = []*model.Repo{{Name: "alpha", Path: "/tmp/alpha"}}
+	data := m.buildFleetData()
+	m.FleetSection = 0
+	m.FleetCursor = 0
+
+	m.timelineFleetSelection(data)
+	if m.CurrentView != ViewTimeline {
+		t.Errorf("expected ViewTimeline, got %d", m.CurrentView)
+	}
+}
+
+func TestTimelineFleetSelectionSessions(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Repos = []*model.Repo{{Name: "repo", Path: "/tmp/repo"}}
+	mgr := session.NewManager()
+	s := &session.Session{
+		ID: "s1", Provider: "claude", RepoPath: "/tmp/repo", RepoName: "repo",
+		Status: session.StatusRunning, LaunchedAt: time.Now(),
+	}
+	mgr.AddSessionForTesting(s)
+	m.SessMgr = mgr
+	data := m.buildFleetData()
+
+	m.FleetSection = 1
+	m.FleetCursor = 0
+	m.timelineFleetSelection(data)
+	if m.CurrentView != ViewTimeline {
+		t.Errorf("expected ViewTimeline, got %d", m.CurrentView)
+	}
+}
+
+func TestTimelineFleetSelectionTeams(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Repos = []*model.Repo{{Name: "repo", Path: "/tmp/repo"}}
+	mgr := session.NewManager()
+	mgr.AddTeamForTesting(&session.TeamStatus{
+		Name: "team-1", RepoPath: "/tmp/repo", Status: session.StatusRunning,
+	})
+	m.SessMgr = mgr
+	data := m.buildFleetData()
+
+	m.FleetSection = 2
+	m.FleetCursor = 0
+	m.timelineFleetSelection(data)
+	if m.CurrentView != ViewTimeline {
+		t.Errorf("expected ViewTimeline, got %d", m.CurrentView)
+	}
+}
+
+// --- stopFleetSelection ---
+
+func TestStopFleetSelectionRepos(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Repos = []*model.Repo{{Name: "alpha", Path: "/tmp/alpha"}}
+	data := m.buildFleetData()
+	m.FleetSection = 0
+	m.FleetCursor = 0
+
+	m.stopFleetSelection(data)
+	if m.ConfirmDialog == nil {
+		t.Fatal("expected confirm dialog")
+	}
+	if m.ConfirmDialog.Action != "stopLoop" {
+		t.Errorf("action = %q, want stopLoop", m.ConfirmDialog.Action)
+	}
+}
+
+func TestStopFleetSelectionSessions(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	mgr := session.NewManager()
+	s := &session.Session{
+		ID: "session-12345678", Provider: "claude", RepoPath: "/tmp/repo", RepoName: "repo",
+		Status: session.StatusRunning, LaunchedAt: time.Now(),
+	}
+	mgr.AddSessionForTesting(s)
+	m.SessMgr = mgr
+	data := m.buildFleetData()
+
+	m.FleetSection = 1
+	m.FleetCursor = 0
+	m.stopFleetSelection(data)
+	if m.ConfirmDialog == nil {
+		t.Fatal("expected confirm dialog")
+	}
+	if m.ConfirmDialog.Action != "stopSession" {
+		t.Errorf("action = %q, want stopSession", m.ConfirmDialog.Action)
+	}
+}
+
+func TestStopFleetSelectionOutOfBounds(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	data := m.buildFleetData()
+	m.FleetSection = 0
+	m.FleetCursor = 99
+	m.stopFleetSelection(data)
+	if m.ConfirmDialog != nil {
+		t.Error("should not show confirm dialog when cursor out of bounds")
+	}
+}
+
+// --- buildTimelineEntries ---
+
+func TestBuildTimelineEntriesNilSessMgr(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.SessMgr = nil
+	got := m.buildTimelineEntries()
+	if got != nil {
+		t.Errorf("expected nil, got %v", got)
+	}
+}
+
+func TestBuildTimelineEntriesAllSessions(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	mgr := session.NewManager()
+	now := time.Now()
+	ended := now.Add(10 * time.Minute)
+	s1 := &session.Session{
+		ID: "s1", Provider: "claude", RepoPath: "/tmp/a", RepoName: "a",
+		Status: session.StatusCompleted, LaunchedAt: now, EndedAt: &ended,
+	}
+	s2 := &session.Session{
+		ID: "s2", Provider: "gemini", RepoPath: "/tmp/b", RepoName: "b",
+		Status: session.StatusRunning, LaunchedAt: now,
+	}
+	mgr.AddSessionForTesting(s1)
+	mgr.AddSessionForTesting(s2)
+	m.SessMgr = mgr
+	m.SelectedIdx = -1 // no repo filter
+
+	entries := m.buildTimelineEntries()
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(entries))
+	}
+	// Check one has end time
+	foundEnded := false
+	foundRunning := false
+	for _, e := range entries {
+		if e.EndTime != nil {
+			foundEnded = true
+		}
+		if e.Status == string(session.StatusRunning) {
+			foundRunning = true
+		}
+	}
+	if !foundEnded {
+		t.Error("expected at least one entry with EndTime")
+	}
+	if !foundRunning {
+		t.Error("expected at least one running entry")
+	}
+}
+
+func TestBuildTimelineEntriesFilteredByRepo(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	mgr := session.NewManager()
+	now := time.Now()
+	s1 := &session.Session{
+		ID: "s1", Provider: "claude", RepoPath: "/tmp/a", RepoName: "a",
+		Status: session.StatusRunning, LaunchedAt: now,
+	}
+	s2 := &session.Session{
+		ID: "s2", Provider: "gemini", RepoPath: "/tmp/b", RepoName: "b",
+		Status: session.StatusRunning, LaunchedAt: now,
+	}
+	mgr.AddSessionForTesting(s1)
+	mgr.AddSessionForTesting(s2)
+	m.SessMgr = mgr
+	m.Repos = []*model.Repo{
+		{Name: "a", Path: "/tmp/a"},
+		{Name: "b", Path: "/tmp/b"},
+	}
+	m.SelectedIdx = 0 // filter to /tmp/a
+
+	entries := m.buildTimelineEntries()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 filtered entry, got %d", len(entries))
+	}
+	if entries[0].ID != "s1" {
+		t.Errorf("expected s1, got %s", entries[0].ID)
+	}
+}
+
+// --- findRepoByPath ---
+
+func TestFindRepoByPath(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Repos = []*model.Repo{
+		{Name: "a", Path: "/tmp/a"},
+		{Name: "b", Path: "/tmp/b"},
+		{Name: "c", Path: "/tmp/c"},
+	}
+
+	tests := []struct {
+		path string
+		want int
+	}{
+		{"/tmp/a", 0},
+		{"/tmp/b", 1},
+		{"/tmp/c", 2},
+		{"/tmp/nonexistent", -1},
+		{"", -1},
+	}
+	for _, tt := range tests {
+		got := m.findRepoByPath(tt.path)
+		if got != tt.want {
+			t.Errorf("findRepoByPath(%q) = %d, want %d", tt.path, got, tt.want)
+		}
+	}
+}
