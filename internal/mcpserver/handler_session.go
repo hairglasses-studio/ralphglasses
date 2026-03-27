@@ -408,7 +408,7 @@ func (s *Server) handleSessionErrors(_ context.Context, req mcp.CallToolRequest)
 		Timestamp string `json:"timestamp"`
 	}
 
-	var errors []errorEntry
+	errors := make([]errorEntry, 0)
 	byType := make(map[string]int)
 	bySeverity := make(map[string]int)
 	healthySessions := 0

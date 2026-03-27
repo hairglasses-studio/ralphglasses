@@ -406,6 +406,27 @@ func TestHandleSessionErrors(t *testing.T) {
 		}
 	})
 
+	t.Run("empty errors is array not null", func(t *testing.T) {
+		t.Parallel()
+		srv, _ := setupTestServer(t)
+
+		result, err := srv.handleSessionErrors(context.Background(), makeRequest(nil))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if result.IsError {
+			t.Fatalf("unexpected error: %s", getResultText(result))
+		}
+		text := getResultText(result)
+		// Verify errors is [] not null (FINDING-89)
+		if strings.Contains(text, `"errors":null`) {
+			t.Errorf("errors field is null, should be empty array []: %s", text)
+		}
+		if !strings.Contains(text, `"errors":[]`) {
+			t.Errorf("expected errors:[], got: %s", text)
+		}
+	})
+
 	t.Run("budget warning at 80 percent", func(t *testing.T) {
 		t.Parallel()
 		srv, root := setupTestServer(t)
