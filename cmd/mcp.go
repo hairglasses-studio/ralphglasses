@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"log/slog"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -12,7 +10,6 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
 	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver"
-	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
 
@@ -35,62 +32,71 @@ Or with a custom scan path:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
 
-		// Wire structured logging to file (uses canonical path from process package).
-		logDir := process.LogDirPath(sp)
-		if err := os.MkdirAll(logDir, 0o755); err != nil {
-			return err
-		}
-		logFile, err := os.OpenFile(process.LogFilePath(sp), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		logFile, err := initLogging(sp)
 		if err != nil {
 			return err
 		}
 		defer logFile.Close()
-		slog.SetDefault(slog.New(newLogHandler(logFile)))
 
-		// Tool call recorder: writes to <scanPath>/.ralph/tool_benchmarks.jsonl
-		benchPath := filepath.Join(sp, ".ralph", "tool_benchmarks.jsonl")
-		toolRec := mcpserver.NewToolCallRecorder(benchPath, nil, 50)
-		defer toolRec.Close()
-
-		bus := events.NewBus(1000)
-
-		srv := server.NewMCPServer(
-			"ralphglasses",
-			version+" ("+commit+")",
-			server.WithToolCapabilities(true),
-			server.WithResourceCapabilities(false, false),
-			server.WithPromptCapabilities(true),
-			server.WithRecovery(),
-			// Outermost → innermost: trace → timeout → instrumentation → event bus → validation → handler
-			server.WithToolHandlerMiddleware(mcpserver.TraceMiddleware()),
-			server.WithToolHandlerMiddleware(mcpserver.TimeoutMiddleware(30*time.Second, map[string]time.Duration{
-				"ralphglasses_loop_step":       10 * time.Minute,
-				"ralphglasses_coverage_report": 5 * time.Minute,
-				"ralphglasses_merge_verify":    5 * time.Minute,
-				"ralphglasses_self_test":       0, // exempt
-				"ralphglasses_self_improve":    0, // exempt
-			})),
-			server.WithToolHandlerMiddleware(mcpserver.InstrumentationMiddleware(toolRec)),
-			server.WithToolHandlerMiddleware(mcpserver.EventBusMiddleware(bus)),
-			server.WithToolHandlerMiddleware(mcpserver.ValidationMiddleware(sp)),
-		)
-
-		hookExec := hooks.NewExecutor(bus)
-		hookExec.Start()
-		defer hookExec.Stop()
-		// Enable MCP Sampling so the server can request LLM completions
-		// from the host client (e.g., Claude Code) without separate API keys.
-		srv.EnableSampling()
-
-		rg := mcpserver.NewServerWithBus(sp, bus)
-		rg.ToolRecorder = toolRec
-		rg.InitSelfImprovement(filepath.Join(sp, ".ralph"), 0)
-		rg.Register(srv)
-		mcpserver.RegisterResources(srv, rg)
-		mcpserver.RegisterPrompts(srv, rg)
+		srv, cleanup, err := setupMCP(sp)
+		if err != nil {
+			return err
+		}
+		defer cleanup()
 
 		return server.ServeStdio(srv)
 	},
+}
+
+// setupMCP creates and configures the full MCP server with middleware, tools,
+// resources, and prompts. Returns the server, a cleanup function, and any error.
+func setupMCP(sp string) (*server.MCPServer, func(), error) {
+	// Tool call recorder: writes to <scanPath>/.ralph/tool_benchmarks.jsonl
+	benchPath := filepath.Join(sp, ".ralph", "tool_benchmarks.jsonl")
+	toolRec := mcpserver.NewToolCallRecorder(benchPath, nil, 50)
+
+	bus := events.NewBus(1000)
+
+	srv := server.NewMCPServer(
+		"ralphglasses",
+		version+" ("+commit+")",
+		server.WithToolCapabilities(true),
+		server.WithResourceCapabilities(false, false),
+		server.WithPromptCapabilities(true),
+		server.WithRecovery(),
+		// Outermost → innermost: trace → timeout → instrumentation → event bus → validation → handler
+		server.WithToolHandlerMiddleware(mcpserver.TraceMiddleware()),
+		server.WithToolHandlerMiddleware(mcpserver.TimeoutMiddleware(30*time.Second, map[string]time.Duration{
+			"ralphglasses_loop_step":       10 * time.Minute,
+			"ralphglasses_coverage_report": 5 * time.Minute,
+			"ralphglasses_merge_verify":    5 * time.Minute,
+			"ralphglasses_self_test":       0, // exempt
+			"ralphglasses_self_improve":    0, // exempt
+		})),
+		server.WithToolHandlerMiddleware(mcpserver.InstrumentationMiddleware(toolRec)),
+		server.WithToolHandlerMiddleware(mcpserver.EventBusMiddleware(bus)),
+		server.WithToolHandlerMiddleware(mcpserver.ValidationMiddleware(sp)),
+	)
+
+	hookExec := hooks.NewExecutor(bus)
+	hookExec.Start()
+	// Enable MCP Sampling so the server can request LLM completions
+	// from the host client (e.g., Claude Code) without separate API keys.
+	srv.EnableSampling()
+
+	rg := mcpserver.NewServerWithBus(sp, bus)
+	rg.ToolRecorder = toolRec
+	rg.InitSelfImprovement(filepath.Join(sp, ".ralph"), 0)
+	rg.Register(srv)
+	mcpserver.RegisterResources(srv, rg)
+	mcpserver.RegisterPrompts(srv, rg)
+
+	cleanup := func() {
+		hookExec.Stop()
+		toolRec.Close()
+	}
+
+	return srv, cleanup, nil
 }
 
 func init() {
