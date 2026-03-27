@@ -12,13 +12,14 @@ import (
 
 // CostEstimate holds the result of a pre-launch cost prediction.
 type CostEstimate struct {
-	Provider      string              `json:"provider"`
-	Model         string              `json:"model"`
-	Mode          string              `json:"mode"`
-	Estimate      CostEstimateRange   `json:"estimate"`
-	Breakdown     CostEstimateBreak   `json:"breakdown"`
-	HistoricalAvg *float64            `json:"historical_avg_usd,omitempty"`
-	Confidence    string              `json:"confidence"`
+	Provider         string            `json:"provider"`
+	Model            string            `json:"model"`
+	Mode             string            `json:"mode"`
+	Estimate         CostEstimateRange `json:"estimate"`
+	Breakdown        CostEstimateBreak `json:"breakdown"`
+	HistoricalAvg    *float64          `json:"historical_avg_usd,omitempty"`
+	Confidence       string            `json:"confidence"`
+	CalibrationRatio *float64          `json:"calibration_ratio,omitempty"`
 }
 
 // CostEstimateRange holds low/mid/high USD estimates.
@@ -102,9 +103,20 @@ func estimateSessionCost(
 
 	// If we have historical data, calibrate: blend estimated with historical.
 	midCost := baseCost
+	var calibrationRatio *float64
 	if historicalAvg != nil && *historicalAvg > 0 {
 		// Weight: 60% estimate, 40% historical.
 		midCost = baseCost*0.6 + (*historicalAvg)*0.4
+
+		// Compute calibration ratio (model estimate vs historical average).
+		ratio := baseCost / *historicalAvg
+		calibrationRatio = &ratio
+
+		// Downgrade confidence when model-based and historical estimates
+		// diverge significantly (ratio > 2.0 or < 0.5 means 2x+ divergence).
+		if ratio > 2.0 || ratio < 0.5 {
+			confidence = "low"
+		}
 	}
 
 	est := CostEstimate{
@@ -123,8 +135,9 @@ func estimateSessionCost(
 			OutputCostUSD: outputCost,
 			Turns:         turns,
 		},
-		HistoricalAvg: historicalAvg,
-		Confidence:    confidence,
+		HistoricalAvg:    historicalAvg,
+		Confidence:       confidence,
+		CalibrationRatio: calibrationRatio,
 	}
 
 	if mode == "loop" {

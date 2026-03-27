@@ -165,6 +165,56 @@ func TestHandleTeamCreate_DryRun(t *testing.T) {
 	}
 }
 
+func TestHandleTeamCreate_DryRunDefaults(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, err := srv.handleScan(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("scan failed: %v", err)
+	}
+
+	// Call dry_run without specifying optional fields to verify effective defaults.
+	result, err := srv.handleTeamCreate(context.Background(), makeRequest(map[string]any{
+		"repo":    "test-repo",
+		"name":    "default-team",
+		"tasks":   "task one\ntask two",
+		"dry_run": true,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success, got error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(text), &parsed); err != nil {
+		t.Fatalf("failed to parse dry_run result: %v\nraw: %s", err, text)
+	}
+
+	// provider should default to "claude", not empty
+	if prov, _ := parsed["provider"].(string); prov != "claude" {
+		t.Errorf("provider = %q, want %q", prov, "claude")
+	}
+	// worker_provider should default to provider value
+	if wp, _ := parsed["worker_provider"].(string); wp != "claude" {
+		t.Errorf("worker_provider = %q, want %q", wp, "claude")
+	}
+	// model should show effective default, not empty
+	if m, _ := parsed["model"].(string); m == "" {
+		t.Error("model should not be empty in dry_run preview")
+	}
+	// lead_agent should show effective default
+	if la, _ := parsed["lead_agent"].(string); la == "" {
+		t.Error("lead_agent should not be empty in dry_run preview")
+	}
+	// max_budget_usd should show effective default, not 0
+	if budget, _ := parsed["max_budget_usd"].(float64); budget <= 0 {
+		t.Errorf("max_budget_usd = %f, want > 0", budget)
+	}
+}
+
 func TestHandleTeamDelegate(t *testing.T) {
 	t.Parallel()
 

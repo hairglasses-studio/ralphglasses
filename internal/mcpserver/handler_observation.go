@@ -178,5 +178,40 @@ func (s *Server) handleObservationSummary(_ context.Context, req mcp.CallToolReq
 	}
 
 	summary := session.SummarizeObservations(observations)
+
+	// Backfill acceptance_counts and model_usage from provider fields when the
+	// dedicated fields (AcceptancePath, PlannerModelUsed, WorkerModelUsed) are
+	// not set in live-loop observations.
+	if len(summary.AcceptanceCounts) == 0 {
+		counts := make(map[string]int)
+		for _, o := range observations {
+			switch o.Status {
+			case "idle":
+				if o.VerifyPassed {
+					counts["auto_merge"]++
+				} else {
+					counts["no_change"]++
+				}
+			case "failed":
+				counts["rejected"]++
+			default:
+				counts["unknown"]++
+			}
+		}
+		summary.AcceptanceCounts = counts
+	}
+	if len(summary.ModelUsage) == 0 {
+		usage := make(map[string]int)
+		for _, o := range observations {
+			if o.PlannerProvider != "" {
+				usage[o.PlannerProvider]++
+			}
+			if o.WorkerProvider != "" {
+				usage[o.WorkerProvider]++
+			}
+		}
+		summary.ModelUsage = usage
+	}
+
 	return jsonResult(summary), nil
 }
