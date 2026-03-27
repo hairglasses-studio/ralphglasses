@@ -103,6 +103,69 @@ func TestCreateCheckpoint_DirtyWorktree(t *testing.T) {
 	}
 }
 
+func TestCreateCheckpoint_ExcludesPrecision(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	initGitRepo(t, dir)
+
+	// Legitimate Go source files that were previously over-excluded by
+	// the broad "credentials*" and "*secret*" globs.
+	legitimateFiles := []string{
+		"secret_rotation.go",
+		"credentials_handler.go",
+		"secret_test.go",
+		"lib/secret_manager.go",
+	}
+
+	// Actual secret/credential files that must still be excluded.
+	secretFiles := []string{
+		"credentials.json",
+		"credentials.yaml",
+		"credentials.yml",
+		"credentials.xml",
+		"credentials.toml",
+		"my-secret.json",
+		"app-secret.yaml",
+		"db-secret.yml",
+		"config.secret",
+		".env.secret",
+	}
+
+	for _, f := range append(legitimateFiles, secretFiles...) {
+		full := filepath.Join(dir, f)
+		if err := os.MkdirAll(filepath.Dir(full), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte("content"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := CreateCheckpoint(dir, 1, 0.10, 2); err != nil {
+		t.Fatalf("CreateCheckpoint: %v", err)
+	}
+
+	out, err := exec.Command("git", "-C", dir, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD").Output()
+	if err != nil {
+		t.Fatalf("git diff-tree: %v", err)
+	}
+	committed := string(out)
+
+	// Legitimate Go files MUST be committed (no longer over-excluded).
+	for _, f := range legitimateFiles {
+		if !strings.Contains(committed, f) {
+			t.Errorf("legitimate file %q should be committed but was excluded.\nCommitted:\n%s", f, committed)
+		}
+	}
+
+	// Actual secret files MUST NOT be committed.
+	for _, f := range secretFiles {
+		if strings.Contains(committed, f) {
+			t.Errorf("secret file %q was committed but should have been excluded.\nCommitted:\n%s", f, committed)
+		}
+	}
+}
+
 func TestCreateCheckpoint_ExcludesSensitiveFiles(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
