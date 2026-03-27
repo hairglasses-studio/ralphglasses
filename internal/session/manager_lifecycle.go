@@ -277,6 +277,17 @@ func (m *Manager) waitForSession(ctx context.Context, s *Session) error {
 	}
 }
 
+// DefaultErrorRetention is the default duration errored sessions remain queryable.
+const DefaultErrorRetention = 5 * time.Minute
+
+// effectiveErrorRetention returns the errored session retention window, defaulting to 5 minutes.
+func (m *Manager) effectiveErrorRetention() time.Duration {
+	if m.ErrorRetention <= 0 {
+		return DefaultErrorRetention
+	}
+	return m.ErrorRetention
+}
+
 // effectiveSessionTimeout returns the session wait timeout, defaulting to 10 minutes.
 func (m *Manager) effectiveSessionTimeout() time.Duration {
 	if m.SessionTimeout <= 0 {
@@ -379,16 +390,36 @@ func (m *Manager) LoadExternalSessions() {
 		m.sessions[id] = &s
 	}
 
-	// Clean up completed sessions older than 24h from disk
-	cutoff := time.Now().Add(-24 * time.Hour)
+	// Clean up terminal sessions from memory and disk.
+	// Errored sessions use a shorter retention window (default 5m) so they
+	// remain queryable by session_status and rc_read for debugging.
+	// Completed/stopped sessions use the 24h cutoff.
+	now := time.Now()
+	completedCutoff := now.Add(-24 * time.Hour)
+	errorRetention := m.effectiveErrorRetention()
+	erroredCutoff := now.Add(-errorRetention)
+
 	for id, s := range m.sessions {
 		s.mu.Lock()
 		ended := s.EndedAt
 		status := s.Status
 		s.mu.Unlock()
 
-		isTerminal := status == StatusCompleted || status == StatusErrored || status == StatusStopped
-		if isTerminal && ended != nil && ended.Before(cutoff) {
+		if !status.IsTerminal() {
+			continue
+		}
+		if ended == nil {
+			continue
+		}
+
+		var shouldRemove bool
+		if status == StatusErrored {
+			shouldRemove = ended.Before(erroredCutoff)
+		} else {
+			shouldRemove = ended.Before(completedCutoff)
+		}
+
+		if shouldRemove {
 			delete(m.sessions, id)
 			if err := os.Remove(filepath.Join(m.stateDir, id+".json")); err != nil && !os.IsNotExist(err) {
 				slog.Warn("failed to remove session state file", "session", id, "error", err)

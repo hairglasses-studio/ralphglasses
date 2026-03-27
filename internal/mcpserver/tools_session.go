@@ -6,13 +6,38 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
+
+// resolveSnapshotRepo determines the target repo for snapshot storage.
+// Priority: 1) explicit repo param, 2) CWD match against scanned repos, 3) first repo (fallback).
+func resolveSnapshotRepo(allRepos []*model.Repo, repoName string, findRepo func(string) *model.Repo) *model.Repo {
+	// 1. Explicit repo parameter
+	if repoName != "" {
+		if r := findRepo(repoName); r != nil {
+			return r
+		}
+	}
+
+	// 2. Match CWD against scanned repo paths
+	if cwd, err := os.Getwd(); err == nil {
+		for _, r := range allRepos {
+			if strings.HasPrefix(cwd, r.Path) {
+				return r
+			}
+		}
+	}
+
+	// 3. Fallback to first repo
+	return allRepos[0]
+}
 
 func (s *Server) handleWorkflowDefine(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoName := getStringArg(req, "repo")
@@ -209,7 +234,7 @@ func (s *Server) handleSnapshot(ctx context.Context, req mcp.CallToolRequest) (*
 		return codedError(ErrInternal, fmt.Sprintf("json marshal: %v", err)), nil
 	}
 
-	// Save to first repo's .ralph/snapshots/
+	// Resolve target repo for snapshot storage.
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return codedError(ErrInternal, fmt.Sprintf("scan failed: %v", err)), nil
@@ -220,7 +245,8 @@ func (s *Server) handleSnapshot(ctx context.Context, req mcp.CallToolRequest) (*
 		return codedError(ErrFilesystem, "no repos found; cannot save snapshot"), nil
 	}
 
-	dir := filepath.Join(allRepos[0].Path, ".ralph", "snapshots")
+	targetRepo := resolveSnapshotRepo(allRepos, getStringArg(req, "repo"), s.findRepo)
+	dir := filepath.Join(targetRepo.Path, ".ralph", "snapshots")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return codedError(ErrFilesystem, fmt.Sprintf("create snapshot dir: %v", err)), nil
 	}
