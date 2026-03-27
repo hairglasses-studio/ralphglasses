@@ -358,6 +358,13 @@ func buildProviderProfile(provider, taskType string, entries []JournalEntry) *Pr
 	return p
 }
 
+// ClassifyTask maps a task focus string to a task type category.
+// Categories are checked in priority order (first match wins).
+// Exported for use by other packages (e.g., mcpserver cold-start routing).
+func ClassifyTask(focus string) string {
+	return classifyTask(focus)
+}
+
 // classifyTask maps a task focus string to a task type category.
 // Categories are checked in priority order (first match wins).
 func classifyTask(focus string) string {
@@ -625,6 +632,24 @@ func (fa *FeedbackAnalyzer) IsEmpty() bool {
 	fa.mu.Lock()
 	defer fa.mu.Unlock()
 	return len(fa.promptProfiles) == 0 && len(fa.providerProfiles) == 0
+}
+
+// HasMultiProviderData returns true if there are at least minSamples
+// observations from non-Claude providers. This detects the cold-start
+// condition where all data comes from Claude, making provider recommendations
+// circular (FINDING-220).
+func (fa *FeedbackAnalyzer) HasMultiProviderData(minSamples int) bool {
+	fa.mu.Lock()
+	defer fa.mu.Unlock()
+
+	nonClaudeTotal := 0
+	for key, p := range fa.providerProfiles {
+		// Key format is "provider:task_type"
+		if !strings.HasPrefix(key, string(ProviderClaude)+":") {
+			nonClaudeTotal += p.SampleCount
+		}
+	}
+	return nonClaudeTotal >= minSamples
 }
 
 // Reset clears all in-memory profiles so that the next seed call repopulates

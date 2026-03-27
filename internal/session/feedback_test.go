@@ -554,3 +554,40 @@ func TestSeedProfilesFromObservations_FallbackToPlannerProvider(t *testing.T) {
 		t.Errorf("provider = %q, want gemini (fallback from planner)", profiles.ProviderProfiles[0].Provider)
 	}
 }
+
+func TestFeedbackAnalyzer_HasMultiProviderData(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	fa := NewFeedbackAnalyzer(dir, 2)
+
+	// Empty analyzer — no multi-provider data.
+	if fa.HasMultiProviderData(1) {
+		t.Error("expected HasMultiProviderData=false for empty analyzer")
+	}
+
+	// Ingest only Claude data — still no multi-provider data.
+	claudeOnly := []JournalEntry{
+		{Provider: "claude", TaskFocus: "fix bug", SpentUSD: 1.0, TurnCount: 5, ExitReason: "completed"},
+		{Provider: "claude", TaskFocus: "fix error", SpentUSD: 0.5, TurnCount: 3, ExitReason: "completed"},
+		{Provider: "claude", TaskFocus: "fix crash", SpentUSD: 0.8, TurnCount: 4, ExitReason: "completed"},
+	}
+	fa.Ingest(claudeOnly)
+	if fa.HasMultiProviderData(1) {
+		t.Error("expected HasMultiProviderData=false with only Claude data")
+	}
+
+	// Ingest some Gemini data — now has multi-provider data.
+	mixed := []JournalEntry{
+		{Provider: "gemini", TaskFocus: "lint files", SpentUSD: 0.01, TurnCount: 2, ExitReason: "completed"},
+		{Provider: "gemini", TaskFocus: "format code", SpentUSD: 0.01, TurnCount: 1, ExitReason: "completed"},
+		{Provider: "gemini", TaskFocus: "lint more", SpentUSD: 0.01, TurnCount: 2, ExitReason: "completed"},
+	}
+	fa.Ingest(mixed)
+	if !fa.HasMultiProviderData(3) {
+		t.Error("expected HasMultiProviderData=true with 3 Gemini samples")
+	}
+	// But not enough for threshold of 5.
+	if fa.HasMultiProviderData(5) {
+		t.Error("expected HasMultiProviderData=false with only 3 Gemini samples vs threshold of 5")
+	}
+}
