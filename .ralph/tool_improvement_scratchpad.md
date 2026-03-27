@@ -549,3 +549,139 @@ Exercised 80+ of 112 tools across all 13 namespaces. 288 tool calls in 24h windo
 **Proposed fix**: Skip first N observations (e.g., 5) as burn-in before detecting changepoints. Add `min_observations_before_detection` param (default 5).
 **Risk**: LOW — detection logic improvement.
 **Verification**: Call `eval_changepoints`, confirm no changepoints at index 0.
+
+## Cycle 8: Systematic MCP Audit — Validation Matrix (2026-03-27)
+
+
+## Audit Scope
+- 97 tool calls across 13 namespaces (113 tools)
+- Validated 24 Cycle 7 findings (FINDING-80 through FINDING-106)
+- Discovered 15 new findings (FINDING-107 through FINDING-121)
+
+## Cycle 7 Fix Validation Matrix
+
+| Finding | Tool | Status |
+|---------|------|--------|
+| 80 | load_tool_group | **NOT FIXED** — description lists 9/13 groups, missing eval/fleet_h/observability/core |
+| 81 | scan | **NOT FIXED** — returns plain text "Found 7 repos", not JSON |
+| 82 | stop_all | SKIP (side effects) |
+| 83 | status | **NOT FIXED** — full config embedded, `include_config` param not in schema |
+| 85 | repo_health/optimize | **NOT FIXED** — `issues: null`, `claudemd_findings: null` |
+| 86 | prompt_should_enhance | **NOT FIXED** — `reason: ""` when should_enhance=true |
+| 87 | prompt_classify | **NOT FIXED** — no `confidence` or `alternatives` fields |
+| 88 | prompt_templates | **NOT FIXED** — no `code` template; 5 templates only |
+| 89 | session_errors | **NOT FIXED** — `errors: null` |
+| 90 | loop_baseline | **NOT FIXED** — `window_hours: 0`, no `window_type` |
+| 91 | loop_benchmark | **PARTIAL** — has `observations: 32`/`hours: 48` but no `window_type`/`window_size` |
+| 92 | observation_summary | **NOT FIXED** — `acceptance_counts: {}`, `model_usage: {}` empty |
+| 93 | scratchpad_list | **NOT FIXED** — both `tool_improvement` AND `tool_improvement_scratchpad` |
+| 94 | cost_estimate | **NOT FIXED** — no `calibration_ratio`; confidence "high" despite 9x divergence |
+| 95 | fleet dlq/budget/workers | **NOT FIXED** — NOT_RUNNING error; fleet_h tools ARE fixed |
+| 97 | roadmap_parse | **NOT FIXED** — `summary_only`/`max_depth` not in schema; 104K default |
+| 98 | team_create dry_run | **NOT FIXED** — `max_budget_usd: 0`, `model: ""` |
+| 99 | roadmap_export | **NOT FIXED** — returns completed tasks first |
+| 100 | roadmap_export | **NOT FIXED** — duplicate IDs (3x same Phase 0 ID) |
+| 101 | awesome_report/diff | **FIXED** — save_to accepted |
+| 102 | event_poll | **NOT FIXED** — summaries `"[tool.called] "` with empty content |
+| 103 | feedback_profiles | **NOT FIXED** — empty arrays despite 95 journal entries |
+| 104 | provider_recommend | **NOT FIXED** — `estimated_budget_usd: 0` |
+| 105 | eval_ab_test | **NOT FIXED** — 50/50 with sample_size_b=0 |
+| 106 | eval_changepoints | **NOT FIXED** — index-0 changepoints, no burn_in field |
+
+**Summary: 1 FIXED, 1 PARTIAL, 1 SKIP, 21 NOT FIXED**
+
+## Cycle 8: New Findings Part 1 (FINDING-107 to FINDING-113)
+
+
+### FINDING-107: marathon_dashboard null arrays
+**Tool**: `ralphglasses_marathon_dashboard`
+**Evidence**: `alerts: null`, `stale_list: null`, `teams.summary: null`
+**Proposed fix**: Initialize as `[]` in handler_fleet.go
+**Risk**: LOW
+
+### FINDING-108: hitl_history events null
+**Tool**: `ralphglasses_hitl_history`
+**Evidence**: `{count: 0, events: null}` — should be `events: []`
+**Proposed fix**: Initialize events slice before marshaling
+**Risk**: LOW
+
+### FINDING-109: anomaly_detect anomalies null
+**Tool**: `ralphglasses_anomaly_detect`
+**Evidence**: `{anomalies: null, count: 0}` — should be `anomalies: []`
+**Proposed fix**: Initialize anomalies slice in handler_anomaly.go
+**Risk**: LOW
+
+### FINDING-110: rc_status returns plain text
+**Tool**: `ralphglasses_rc_status`
+**Evidence**: Returns `"0 running | $0.00 total\n\nNo active or recent sessions."` not JSON
+**Proposed fix**: Return JSON `{running: 0, total_spend_usd: 0, summary: "..."}`
+**Risk**: LOW (intentional for mobile but inconsistent)
+
+### FINDING-111: rc_act returns plain text
+**Tool**: `ralphglasses_rc_act`
+**Evidence**: Returns `"Stopped 0 session(s)"` instead of JSON
+**Proposed fix**: Return `{action: "stop_all", affected: 0, message: "..."}`
+**Risk**: LOW
+
+### FINDING-112: session_list bare array
+**Tool**: `ralphglasses_session_list`
+**Evidence**: Returns `[]` (bare array), not `{sessions: [], count: 0}` like session_errors pattern
+**Proposed fix**: Wrap in `{sessions: [], count: 0}` for consistency
+**Risk**: LOW (may break existing callers)
+
+### FINDING-113: roadmap_analyze unbounded output
+**Tool**: `ralphglasses_roadmap_analyze`
+**Evidence**: Returns 216,020 chars — exceeds MCP result limit, saved to disk
+**Proposed fix**: Add `summary_only` and `limit` params; default should fit in 10K chars
+**Risk**: MEDIUM (large outputs waste context tokens and trigger truncation)
+
+## Cycle 8: New Findings Part 2 (FINDING-114 to FINDING-121)
+
+
+### FINDING-114: roadmap_parse schema missing params
+**Tool**: `ralphglasses_roadmap_parse`
+**Evidence**: Schema only has `{file, path}`. Commit 285f048 mentions summary_only/max_depth but they're not in the builder.
+**Proposed fix**: Add `summary_only` (bool) and `max_depth` (number) to buildRoadmapGroup in tools_builders_misc.go
+**Risk**: MEDIUM (104K default output unusable without these)
+
+### FINDING-115: cost_estimate ignores divergence
+**Tool**: `ralphglasses_cost_estimate`
+**Evidence**: Model: $1.70, historical: $0.19 (9x divergence) but `confidence: "high"`, no `calibration_ratio`
+**Proposed fix**: Add calibration_ratio = model/historical. If ratio > 2.0, set confidence to "low"
+**Risk**: LOW
+
+### FINDING-116: status tool missing include_config param
+**Tool**: `ralphglasses_status`
+**Evidence**: Schema only has `{repo}`. Config (28 keys) always embedded. No include_config toggle.
+**Proposed fix**: Add `include_config` bool param (default false). When false, return `config_key_count: N`
+**Risk**: MEDIUM (wastes context on every status call)
+
+### FINDING-117: prompt_enhance no-op for vague prompts
+**Tool**: `ralphglasses_prompt_enhance`
+**Evidence**: `"do the thing with the stuff"` returns enhanced=original. Only structure stage ran.
+**Proposed fix**: Apply specificity/role stages even for short prompts scoring <40
+**Risk**: LOW
+
+### FINDING-118: journal_read synthesis includes raw JSON
+**Tool**: `ralphglasses_journal_read`
+**Evidence**: Synthesis "Reinforce" includes raw JSON task prompts verbatim
+**Proposed fix**: Truncate task_focus to 80 chars in synthesis, strip JSON wrapping
+**Risk**: LOW
+
+### FINDING-119: loop_gates silent skip
+**Tool**: `ralphglasses_loop_gates`
+**Evidence**: Returns `{overall: "skip"}` with no explanation when no observations
+**Proposed fix**: Add `message: "no observations in 24h window"` when verdict is skip
+**Risk**: LOW
+
+### FINDING-120: scratchpad_list no metadata
+**Tool**: `ralphglasses_scratchpad_list`
+**Evidence**: Returns bare string array with no size, date, or finding count
+**Proposed fix**: Return `[{name, size_bytes, modified_at, finding_count}]`
+**Risk**: LOW
+
+### FINDING-121: tool_benchmark sub-ms latency lost
+**Tool**: `ralphglasses_tool_benchmark`
+**Evidence**: 70+ tools show 0ms latency. Sub-millisecond calls round to 0.
+**Proposed fix**: Use microseconds or float milliseconds for precision
+**Risk**: LOW
