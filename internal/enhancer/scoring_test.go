@@ -432,6 +432,120 @@ func TestScore_LowDimensionsDragDown(t *testing.T) {
 	}
 }
 
+// TestScore_WeakDimensionsDragOverall is a golden test for FINDING-240.
+// A prompt that scores well on structure but poorly on specificity, examples,
+// and tone (3+ weak dimensions) must NOT inflate to 97/A.
+func TestScore_WeakDimensionsDragOverall(t *testing.T) {
+	t.Parallel()
+	// Prompt with decent structure (XML tags) but:
+	// - No examples (F on Examples)
+	// - Aggressive caps + negative framing (low Tone)
+	// - Vague, no numeric constraints (low Specificity)
+	// - No context/motivation
+	prompt := `<role>You are a developer.</role>
+<instructions>
+CRITICAL: You MUST NEVER write bad code. DO NOT use globals.
+Make it nice and clean. DO NOT forget edge cases.
+ALWAYS handle errors. NEVER skip tests.
+</instructions>`
+
+	ar := Analyze(prompt)
+	report := ar.ScoreReport
+	if report == nil {
+		t.Fatal("ScoreReport should not be nil")
+	}
+
+	// Count dimensions with grade D or F
+	weakCount := 0
+	for _, d := range report.Dimensions {
+		if d.Grade == "D" || d.Grade == "F" {
+			weakCount++
+			t.Logf("Weak dimension: %s = %d (%s)", d.Name, d.Score, d.Grade)
+		} else {
+			t.Logf("OK dimension:   %s = %d (%s)", d.Name, d.Score, d.Grade)
+		}
+	}
+
+	if weakCount < 3 {
+		t.Errorf("Expected at least 3 weak (D/F) dimensions, got %d", weakCount)
+	}
+
+	// The key assertion: overall must be dragged down, not inflated to 97
+	if report.Overall >= 70 {
+		t.Errorf("FINDING-240 regression: overall = %d (grade %s), want < 70 with %d weak dimensions",
+			report.Overall, report.Grade, weakCount)
+	}
+
+	// Must NOT be grade A
+	if report.Grade == "A" {
+		t.Errorf("FINDING-240 regression: grade = A with %d weak dimensions", weakCount)
+	}
+}
+
+// TestScore_NoCoherenceBonus verifies that the overall score equals the strict
+// weighted average of dimensions, with no coherence bonus or other additive term.
+// This locks down the FINDING-240 fix.
+func TestScore_NoCoherenceBonus(t *testing.T) {
+	t.Parallel()
+
+	// Two prompts: one with consistent dimensions, one with mixed.
+	// Both must equal their strict weighted average (no bonus either way).
+	prompts := []struct {
+		name   string
+		prompt string
+	}{
+		{
+			"consistent_high",
+			`<role>You are an expert Go developer with 15 years of experience.</role>
+<context>We are building a REST API for user management because the legacy system cannot scale.</context>
+<instructions>Review this function for error handling. Return exactly 3 findings sorted by severity.</instructions>
+<examples>
+<example index="1">Missing nil check on return value — causes panic.</example>
+<example index="2">Ignoring error from json.Marshal — produces empty output.</example>
+<example index="3">Defer before error check — panics on nil handle.</example>
+</examples>
+<output_format>Numbered list, each item: code pattern, risk in 10 words, fix.</output_format>`,
+		},
+		{
+			"mixed_quality",
+			"CRITICAL: You MUST fix this code. DO NOT break anything. Make it work somehow.",
+		},
+	}
+
+	for _, tc := range prompts {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ar := Analyze(tc.prompt)
+			report := ar.ScoreReport
+			if report == nil {
+				t.Fatal("ScoreReport should not be nil")
+			}
+
+			// Recompute the strict weighted average
+			var weightedSum float64
+			for _, d := range report.Dimensions {
+				weightedSum += float64(d.Score) * d.Weight
+			}
+			expectedOverall := int(weightedSum + 0.5)
+			if expectedOverall > 100 {
+				expectedOverall = 100
+			}
+			if expectedOverall < 0 {
+				expectedOverall = 0
+			}
+
+			if report.Overall != expectedOverall {
+				t.Errorf("Overall %d != strict weighted average %d (delta = %d)",
+					report.Overall, expectedOverall, report.Overall-expectedOverall)
+				for _, d := range report.Dimensions {
+					t.Logf("  %s: %d (weight=%.2f, contribution=%.1f)", d.Name, d.Score, d.Weight, float64(d.Score)*d.Weight)
+				}
+			}
+		})
+	}
+}
+
 // findDimension returns the DimensionScore with the given name, or a zero value.
 func findDimension(report *ScoreReport, name string) DimensionScore {
 	if report == nil {
