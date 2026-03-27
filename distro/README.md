@@ -97,6 +97,68 @@ distro/
 - Connects with Go app roadmap (tests, MCP hardening, TUI polish)
 - Distro work is independent and can proceed in parallel with app development
 
+## Installation Path Conventions
+
+All distro artifacts follow fixed paths on the target system. PRs that touch install paths must update both this section and the `check-paths` Makefile target together.
+
+### Scripts — `/usr/local/bin/`
+
+All executable scripts and binaries deploy to `/usr/local/bin/`:
+
+| Source | Installed As | Description |
+|--------|-------------|-------------|
+| `go build .` (repo root) | `/usr/local/bin/ralphglasses` | TUI agent fleet manager binary |
+| `distro/scripts/hw-detect.sh` | `/usr/local/bin/hw-detect.sh` | First-boot hardware detection (GPU enumeration, module blacklists) |
+| `distro/scripts/install-to-disk.sh` | `/usr/local/bin/install-to-disk.sh` | Writes the ISO to a target disk for bare-metal install |
+
+### Configuration — `/etc/ralphglasses/`
+
+Static configuration files deploy to `/etc/ralphglasses/`:
+
+| Source | Installed As | Description |
+|--------|-------------|-------------|
+| `distro/i3/config` | `/etc/ralphglasses/i3.conf` | i3 window manager config for the thin client session |
+| `distro/grub/grub.cfg` | `/etc/ralphglasses/grub.cfg` | Reference copy of the GRUB menu config (live copy is in `/boot/grub/`) |
+
+### Systemd Units — `/etc/systemd/system/`
+
+Service files deploy to `/etc/systemd/system/`. Enable and start with:
+
+```bash
+sudo systemctl enable --now hw-detect.service
+sudo systemctl enable --now ralphglasses.service
+```
+
+| Source | Installed As | Description |
+|--------|-------------|-------------|
+| `distro/systemd/hw-detect.service` | `/etc/systemd/system/hw-detect.service` | Oneshot: first-boot GPU and module detection |
+| `distro/systemd/ralphglasses.service` | `/etc/systemd/system/ralphglasses.service` | TUI autostart after graphical target is reached |
+
+See `distro/docs/service-paths.md` for boot ordering and unit dependencies.
+
+### Makefile Targets
+
+Run from the `distro/` directory:
+
+| Target | Description |
+|--------|-------------|
+| `make install` | Copies scripts to `/usr/local/bin/`, configs to `/etc/ralphglasses/`, and units to `/etc/systemd/system/`. Runs `systemctl daemon-reload`. |
+| `make uninstall` | Removes installed scripts, configs, and units. Runs `systemctl daemon-reload`. |
+| `make check-paths` | Validates all `ExecStart=` lines in `.service` files use the `/usr/local/bin/` prefix. |
+| `make iso` | Builds a bootable UEFI ISO from the Docker image. |
+| `make test-vm` | Launches the ISO in QEMU for testing. |
+| `make usb DEVICE=/dev/sdX` | Writes the ISO to a USB drive. |
+| `make clean` | Removes build artifacts and the Docker image. |
+
+### Path Consistency Rule
+
+All PRs that add, rename, or remove installed paths must update:
+1. This README (the tables above).
+2. The `check-paths` Makefile target (to validate the new paths).
+3. The `install` and `uninstall` Makefile targets.
+
+Failure to keep these in sync will be caught in review.
+
 ## What Does NOT Belong in This Repo
 
 - Windows driver archives (Google Drive)
