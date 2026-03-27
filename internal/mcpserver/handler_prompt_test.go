@@ -682,14 +682,17 @@ func TestHandleClaudeMDCheck(t *testing.T) {
 			name: "valid repo with CLAUDE.md",
 			args: map[string]any{"repo": repoName},
 			check: func(t *testing.T, text string) {
-				// When no findings, returns {"issues":[],"status":"pass"} object.
+				// When no findings, returns standardized empty-result format.
 				var result map[string]any
 				if err := json.Unmarshal([]byte(text), &result); err != nil {
 					t.Errorf("expected JSON object: %v", err)
 					return
 				}
-				if result["status"] != "pass" {
-					t.Errorf("expected status=pass, got %v", result["status"])
+				if result["status"] != "empty" {
+					t.Errorf("expected status=empty, got %v", result["status"])
+				}
+				if result["item_type"] != "claudemd_issues" {
+					t.Errorf("expected item_type=claudemd_issues, got %v", result["item_type"])
 				}
 			},
 		},
