@@ -1345,3 +1345,152 @@ func TestCheapLaunchOpts_ZeroBudgetAndTurns(t *testing.T) {
 		t.Errorf("expected base max turns preserved when config is 0, got %d", cheap.MaxTurns)
 	}
 }
+
+func TestDefaultCascadeFromConfig_NilConfig(t *testing.T) {
+	result := DefaultCascadeFromConfig(nil)
+	if result != nil {
+		t.Error("expected nil for nil config")
+	}
+}
+
+func TestDefaultCascadeFromConfig_EmptyConfig(t *testing.T) {
+	result := DefaultCascadeFromConfig(map[string]string{})
+	if result != nil {
+		t.Error("expected nil when CASCADE_ENABLED is not set")
+	}
+}
+
+func TestDefaultCascadeFromConfig_DisabledExplicit(t *testing.T) {
+	result := DefaultCascadeFromConfig(map[string]string{
+		"CASCADE_ENABLED": "false",
+	})
+	if result != nil {
+		t.Error("expected nil when CASCADE_ENABLED=false")
+	}
+}
+
+func TestDefaultCascadeFromConfig_EnabledDefaults(t *testing.T) {
+	result := DefaultCascadeFromConfig(map[string]string{
+		"CASCADE_ENABLED": "true",
+	})
+	if result == nil {
+		t.Fatal("expected non-nil config when CASCADE_ENABLED=true")
+	}
+	if result.CheapProvider != ProviderGemini {
+		t.Errorf("CheapProvider = %q, want %q", result.CheapProvider, ProviderGemini)
+	}
+	if result.ExpensiveProvider != ProviderClaude {
+		t.Errorf("ExpensiveProvider = %q, want %q", result.ExpensiveProvider, ProviderClaude)
+	}
+	if result.ConfidenceThreshold != 0.7 {
+		t.Errorf("ConfidenceThreshold = %f, want 0.7", result.ConfidenceThreshold)
+	}
+	if result.MaxCheapBudgetUSD != 2.00 {
+		t.Errorf("MaxCheapBudgetUSD = %f, want 2.00", result.MaxCheapBudgetUSD)
+	}
+	if result.MaxCheapTurns != 15 {
+		t.Errorf("MaxCheapTurns = %d, want 15", result.MaxCheapTurns)
+	}
+}
+
+func TestDefaultCascadeFromConfig_CustomValues(t *testing.T) {
+	result := DefaultCascadeFromConfig(map[string]string{
+		"CASCADE_ENABLED":              "true",
+		"CASCADE_CHEAP_PROVIDER":       "codex",
+		"CASCADE_EXPENSIVE_PROVIDER":   "gemini",
+		"CASCADE_CONFIDENCE_THRESHOLD": "0.85",
+		"CASCADE_MAX_CHEAP_BUDGET":     "5.50",
+	})
+	if result == nil {
+		t.Fatal("expected non-nil config")
+	}
+	if result.CheapProvider != ProviderCodex {
+		t.Errorf("CheapProvider = %q, want %q", result.CheapProvider, ProviderCodex)
+	}
+	if result.ExpensiveProvider != ProviderGemini {
+		t.Errorf("ExpensiveProvider = %q, want %q", result.ExpensiveProvider, ProviderGemini)
+	}
+	if result.ConfidenceThreshold != 0.85 {
+		t.Errorf("ConfidenceThreshold = %f, want 0.85", result.ConfidenceThreshold)
+	}
+	if result.MaxCheapBudgetUSD != 5.50 {
+		t.Errorf("MaxCheapBudgetUSD = %f, want 5.50", result.MaxCheapBudgetUSD)
+	}
+}
+
+func TestDefaultCascadeFromConfig_InvalidNumericsFallback(t *testing.T) {
+	result := DefaultCascadeFromConfig(map[string]string{
+		"CASCADE_ENABLED":              "true",
+		"CASCADE_CONFIDENCE_THRESHOLD": "notanumber",
+		"CASCADE_MAX_CHEAP_BUDGET":     "garbage",
+	})
+	if result == nil {
+		t.Fatal("expected non-nil config despite invalid numerics")
+	}
+	// Should fall back to defaults
+	if result.ConfidenceThreshold != 0.7 {
+		t.Errorf("ConfidenceThreshold = %f, want 0.7 (default fallback)", result.ConfidenceThreshold)
+	}
+	if result.MaxCheapBudgetUSD != 2.00 {
+		t.Errorf("MaxCheapBudgetUSD = %f, want 2.00 (default fallback)", result.MaxCheapBudgetUSD)
+	}
+}
+
+func TestDefaultCascadeFromConfig_PartialConfig(t *testing.T) {
+	result := DefaultCascadeFromConfig(map[string]string{
+		"CASCADE_ENABLED":        "true",
+		"CASCADE_CHEAP_PROVIDER": "codex",
+		// everything else should use defaults
+	})
+	if result == nil {
+		t.Fatal("expected non-nil config")
+	}
+	if result.CheapProvider != ProviderCodex {
+		t.Errorf("CheapProvider = %q, want codex", result.CheapProvider)
+	}
+	if result.ExpensiveProvider != ProviderClaude {
+		t.Errorf("ExpensiveProvider = %q, want claude (default)", result.ExpensiveProvider)
+	}
+	if result.ConfidenceThreshold != 0.7 {
+		t.Errorf("ConfidenceThreshold = %f, want 0.7 (default)", result.ConfidenceThreshold)
+	}
+}
+
+func TestDefaultCascadeFromConfig_EnabledVariants(t *testing.T) {
+	for _, val := range []string{"true", "TRUE", "True", "1", "yes"} {
+		result := DefaultCascadeFromConfig(map[string]string{
+			"CASCADE_ENABLED": val,
+		})
+		if result == nil {
+			t.Errorf("expected non-nil for CASCADE_ENABLED=%q", val)
+		}
+	}
+}
+
+func TestDefaultCascadeFromConfig_OutOfRangeConfidence(t *testing.T) {
+	result := DefaultCascadeFromConfig(map[string]string{
+		"CASCADE_ENABLED":              "true",
+		"CASCADE_CONFIDENCE_THRESHOLD": "1.5", // out of 0-1 range
+	})
+	if result == nil {
+		t.Fatal("expected non-nil config")
+	}
+	// Out-of-range should fall back to default
+	if result.ConfidenceThreshold != 0.7 {
+		t.Errorf("ConfidenceThreshold = %f, want 0.7 (default for out-of-range)", result.ConfidenceThreshold)
+	}
+}
+
+func TestDefaultCascadeFromConfig_NegativeBudget(t *testing.T) {
+	result := DefaultCascadeFromConfig(map[string]string{
+		"CASCADE_ENABLED":          "true",
+		"CASCADE_MAX_CHEAP_BUDGET": "-1.00",
+	})
+	if result == nil {
+		t.Fatal("expected non-nil config")
+	}
+	// Negative should fall back to default
+	if result.MaxCheapBudgetUSD != 2.00 {
+		t.Errorf("MaxCheapBudgetUSD = %f, want 2.00 (default for negative)", result.MaxCheapBudgetUSD)
+	}
+}
