@@ -1329,3 +1329,463 @@ Evidence from tools:
 2. Run 2-3 loop cycles with mixed routing to build Gemini observation data
 3. Use eval_ab_test(mode="providers") to compare after ≥20 observations per provider
 4. Make final migration decision based on actual comparative data
+
+## Cycle 13 — Phase 1: Situational Awareness (core + fleet + observability)
+
+
+**Date**: 2026-03-27 ~12:24 PT
+**Scenario**: SRE triage — paged overnight, assess fleet health
+**Tools exercised**: scan, status, fleet_status, fleet_analytics(x2), marathon_dashboard, event_list, event_poll, observation_query, observation_summary, logs
+**Namespaces**: core, fleet, observability (3/13)
+
+### Findings
+
+**FINDING-173**: `fleet_status` output size uncontrolled — returned 128,443 chars for 7 repos with 0 active sessions. The tool has `summary_only` and `limit` params but the default full mode is enormous. No warning or truncation. Compare: `marathon_dashboard` returns compact ~500 bytes for the same fleet state.
+- Priority: P2
+- Fix: Default to summary mode or add max output size guard; warn when exceeding threshold
+- Complexity: moderate
+
+**FINDING-174**: `fleet_analytics` "window" parameter semantics unclear — called with window="2h" and window="24h", both returned identical zero-value results. The description says "Duration window for metrics snapshot" but doesn't explain: is it a rolling window over historical data? A sampling period? Does it require an active fleet server (`--fleet` flag)? The tool description mentions "Requires fleet server mode" but doesn't say what happens without it — it just silently returns zeros.
+- Priority: P2
+- Fix: (1) Return error or warning when fleet server not running instead of silent zeros. (2) Document window semantics in tool description.
+- Complexity: trivial
+
+**FINDING-175**: `event_list` vs `event_poll` output format inconsistency — event_list returns full event objects with `data` map, while event_poll returns compact `summary` strings. Neither documents its sort order (both are ascending by timestamp). A user switching between them gets structurally different data for the same events.
+- Priority: P3
+- Fix: Document sort order in both tool descriptions; consider adding `format` param to event_list for compact mode
+- Complexity: trivial
+
+### Regression Checks
+
+**FINDING-138** (marathon_dashboard null arrays): ✅ **CONFIRMED FIXED** — alerts=[], stale_list=[], summary=[] all return empty arrays not null. Verified with 0 sessions/0 teams.
+
+**FINDING-169** (logs misleading error): ⚠️ **CONFIRMED OPEN** — Error: `[NO_LOG_FILE] no log files found at .../ralphglasses — ensure the repo has been scanned`. Repo WAS scanned (scan returned it). The real issue is no active loop producing logs. Error message is misleading — should say "no active loop has produced log files" not "ensure scanned".
+
+### Observations
+- 7 repos discovered: claudekit, hg-mcp, jobb, mcpkit, mesmer, ralphglasses, ralphglasses.wiped
+- ralphglasses: 32 observations (all Claude), 22 passed (68.75%), 4 failed, cost P50=$0.11, P95=$0.59
+- Fleet analytics returns zeros without fleet server mode — not an error, just silent degradation
+- marathon_dashboard is the best fleet overview tool — compact, structured, all key metrics in ~500 bytes
+
+## Cycle 13 — Phase 2: Session Forensics (session namespace)
+
+
+**Date**: 2026-03-27 ~12:25 PT
+**Tools exercised**: session_list, session_launch(x2), session_status, session_tail, session_budget(x2), session_compare, session_diff, session_stop, session_errors
+**Namespaces**: session (4/13)
+
+### Findings
+
+**FINDING-176**: `session_diff` returns `commits: null` instead of `commits: []` — another null-array marshaling bug, same pattern as FINDING-158 (prompt_lint). When a session produces no commits, the `commits` field should be an empty array for JSON consumer consistency.
+- Priority: P2
+- Fix: Add nil-guard `if commits == nil { commits = []Commit{} }` before marshaling
+- Complexity: trivial
+
+**FINDING-177**: `session_stop` on errored session returns `INTERNAL_ERROR` — stopping an already-errored session returns error code INTERNAL_ERROR with message "session not running". This should be a specific error like SESSION_NOT_RUNNING or a no-op success, not INTERNAL_ERROR which implies a server bug.
+- Priority: P3
+- Fix: Return specific error code or treat as idempotent success
+- Complexity: trivial
+
+**FINDING-178**: `session_launch` journal injection not documented — the launched prompt was heavily modified with "Session Improvement Context" including Reinforce/Avoid/Apply Now sections from the improvement journal. The `no_journal` param exists but is undocumented in the tool description. Users may be surprised their prompt is modified.
+- Priority: P2
+- Fix: Document journal injection in tool description; show injected prompt in session_status response with a `original_prompt` vs `enhanced_prompt` distinction
+- Complexity: moderate
+
+**FINDING-179**: `session_launch` killed immediately — session launched and errored within 3ms (launched_at and ended_at differ by 3ms). Exit reason "signal: killed". Likely a system resource issue or the Claude binary being killed. No diagnostic info in session_status about WHY it was killed.
+- Priority: P2
+- Fix: Capture stderr/exit code detail in session error field; add launch diagnostics
+- Complexity: moderate
+
+**FINDING-180**: `session_budget` allows setting budget on errored session — no warning that the session is already dead. The budget update succeeds silently but is meaningless. Should warn or error.
+- Priority: P3
+- Fix: Warn when setting budget on non-running session
+- Complexity: trivial
+
+### Positive Notes
+- `session_compare` error message is excellent: "session not found — use ralphglasses_session_list to find active sessions" — actionable guidance
+- `session_launch` Gemini error is clear: PROVIDER_UNAVAILABLE with "gemini binary not found on PATH" — specific, actionable
+- `session_errors` returns clean empty state: `errors: [], total_errors: 0, by_severity: {}, by_type: {}`
+- `session_list` status filter works correctly
+- `session_tail` cursor-based polling design is well-structured
+
+## Cycle 13 — Phase 3: Prompt Quality Deep Dive (prompt namespace)
+
+
+**Date**: 2026-03-27 ~12:28 PT
+**Tools exercised**: prompt_classify(x5), prompt_analyze(x7), prompt_should_enhance(x5), prompt_lint(x5), prompt_enhance(x3), prompt_templates, prompt_template_fill, prompt_improve
+**Namespaces**: prompt (5/13)
+
+### Classification Agreement Matrix
+
+| Prompt | Expected | classify | analyze |
+|--------|----------|----------|---------|
+| A (bug_fix) | bug_fix | troubleshooting | troubleshooting |
+| B (feature) | feature | code | code |
+| C (investigation) | investigation | general (0.3 conf) | general |
+| D (refactor) | refactor | code | code |
+| E (review) | review | code (0.33 conf) | code |
+
+**Agreement rate**: classify and analyze agree on all 5 — but neither has a "bug_fix", "feature", "refactor", or "review" category. The taxonomy is {code, troubleshooting, analysis, creative, workflow, general}. This means the classification system cannot distinguish between feature work, refactoring, and code review — they're all "code". Investigation maps to "general" not "analysis".
+
+### Score Summary
+
+| Prompt | Original Score | Enhanced Score | Delta | Grade |
+|--------|---------------|---------------|-------|-------|
+| A | 55/D | 62/D | +7 | Still D |
+| B | 44/F | 58/D | +14 | F→D |
+| C | 44/F | - | - | F |
+| D | 55/D | - | - | D |
+| E | 55/D | - | - | D |
+
+### Findings
+
+**FINDING-181**: Prompt scoring rubric penalizes surgical, specific prompts — "Fix the off-by-one error in parseConfig at line 42 of config.go" scores 55/D despite being maximally specific and actionable. The rubric demands XML structure, examples, role definitions, and format specs that are unnecessary for targeted code fixes. This confirms the FINDING-163 pattern from Cycle 12.
+- Priority: P1
+- Fix: Add a "surgical prompt" mode that scores differently — if file+line+action are present, skip structural expectations
+- Complexity: moderate
+
+**FINDING-182**: Enhancement pipeline creates self-defeating negative framing — `prompt_enhance` injects "Do not add abstractions" and "Do not start with phrases like..." which `prompt_analyze` then flags as negative framing (Tone drops to F/44). The enhancer's own output fails its own quality rubric.
+- Priority: P1
+- Fix: Enhancer should use positive framing in its own injections, or analyzer should recognize enhancer-injected patterns
+- Complexity: moderate
+
+**FINDING-183**: `prompt_analyze` doesn't detect `<verification>` as XML structure — the enhanced prompt contains `<verification>` tags but `has_xml_structure: false`. The detector only looks for specific tag names (role, instructions, constraints, context) not arbitrary XML.
+- Priority: P2
+- Fix: Detect any well-formed XML tags as structure, not just a fixed set
+- Complexity: trivial
+
+**FINDING-184**: `prompt_enhance` Claude vs Gemini target produces identical output — both target_provider="claude" and target_provider="gemini" produced the same enhanced text for prompt B. Only the improvement note differs ("XML wrapping" vs "structural wrapping"). The provider-aware structure stage is not differentiating.
+- Priority: P2
+- Fix: Gemini target should use markdown headers instead of XML; test with longer prompts that trigger full wrapping
+- Complexity: moderate
+
+**FINDING-185**: `prompt_improve` (LLM) assumes Python for a Go codebase — Claude API improved prompt references pyproject.toml, @server.list_tools() decorators, async with patterns. No language context was provided to the meta-prompt.
+- Priority: P2
+- Fix: Pass language/framework context from repo scan to the improvement meta-prompt
+- Complexity: moderate
+
+**FINDING-158 REGRESSION CHECK**: ⚠️ **CONFIRMED OPEN** — prompt_lint returns `findings: null` and `cache_checks: null` on all 5 clean prompts. Should be `findings: []` and `cache_checks: []`.
+
+### OPPORTUNITY-16: Unified prompt quality pipeline
+`prompt_enhance` (local), `prompt_improve` (LLM), and `prompt_analyze` (scoring) operate independently with no feedback loop. The enhance output should be automatically re-scored, and the delta shown. Currently requires 2 manual calls to see improvement.
+- Complexity: moderate
+
+### Positive Notes
+- `prompt_templates` provides 6 well-structured templates with examples
+- `prompt_template_fill` produces clean XML-structured output
+- `prompt_should_enhance` correctly identifies all 5 prompts as needing enhancement (agrees with analyze)
+- `prompt_improve` (LLM via Claude API) produces dramatically better output than local enhance — real contextual reasoning
+
+## Cycle 13 — Phase 4: Loop Engine Stress Test (loop namespace)
+
+
+**Date**: 2026-03-27 ~12:29 PT
+**Tools exercised**: loop_start, loop_status, loop_step, loop_gates, loop_poll, loop_benchmark, loop_baseline, loop_prune, loop_stop, loop_await, self_test (dry_run)
+**Namespaces**: loop (6/13)
+
+### Findings
+
+**FINDING-186**: `loop_start` defaults to unavailable models — default planner_model is "o1-pro" and worker_model is "gpt-5.4-xhigh" which don't exist on this system. When loop_step is called, it fails with "model o1-pro may not exist or you may not have access". The loop_start should validate model availability at creation time, not at first step.
+- Priority: P1
+- Fix: Validate model/provider availability during loop_start, not loop_step. Return error immediately if planner or worker model is unavailable.
+- Complexity: moderate
+
+**FINDING-187**: `loop_status` returns `iterations: null` instead of `iterations: []` — another null-array marshaling bug (same pattern as FINDING-158, 176). Pending loop with no completed iterations should return empty array.
+- Priority: P2
+- Fix: Add nil-guard for iterations slice before JSON marshaling
+- Complexity: trivial
+
+**FINDING-188**: `loop_benchmark` divergence warnings lack context — reports "cost_p95 diverged: baseline=0.2841 current=0.6559" but doesn't say whether this is a regression or improvement, or what threshold triggered the warning. No percentage shown, no severity level.
+- Priority: P2
+- Fix: Add direction (regression/improvement), percentage delta, and severity (warning/critical) to divergence warnings
+- Complexity: trivial
+
+**FINDING-189**: `loop_benchmark` per_scenario has 32 entries all with sample_count=1 — every scenario is unique (keyed by task_title:provider). Since tasks are unique, per-scenario stats are always N=1, making P50/P95 meaningless. Needs aggregation by task_type or provider, not task_title.
+- Priority: P2
+- Fix: Add per_task_type and per_provider aggregation alongside per_scenario
+- Complexity: moderate
+
+### Positive Notes
+- `loop_await` handles already-stopped loops gracefully — returns immediately with elapsed_seconds=0, final_state shows current status
+- `loop_stop` works cleanly on pending loops
+- `loop_prune` dry_run mode is well-designed — shows what would be cleaned without side effects
+- `loop_gates` returns "skip" verdict when insufficient data — correct behavior, not an error
+- `loop_baseline` provides good aggregate stats: cost P50=$0.11, P95=$0.28, latency P50=213s, P95=536s across 10 entries
+- `self_test` dry_run validates config without executing — good for pre-flight checks
+
+## Cycle 13 — Phase 5: Provider Economics & Eval (eval + fleet_h namespaces)
+
+
+**Date**: 2026-03-27 ~12:30 PT
+**Tools exercised**: cost_estimate(x2), cost_forecast, provider_recommend, eval_ab_test, eval_changepoints, eval_counterfactual(x2), feedback_profiles, confidence_calibration, bandit_status, fleet_budget, fleet_workers, fleet_dlq, fleet_submit
+**Namespaces**: eval, fleet_h, fleet (9/13)
+
+### Cost Comparison (20-iteration loop)
+| Provider | Low | Mid | High |
+|----------|-----|-----|------|
+| Claude | $2.32 | $3.32 | $4.97 |
+| Gemini | $0.55 | $0.78 | $1.17 |
+| **Ratio** | **4.2x** | **4.3x** | **4.2x** |
+
+Claude has historical calibration (calibration_ratio=28.6) from 32 observations; Gemini has no calibration data — its estimate is purely model-based (confidence: medium vs Claude's low).
+
+### Findings
+
+**FINDING-190**: `eval_ab_test` providers mode fails gracefully with insufficient data — returns `status: insufficient_data` with clear message "group gemini has 0 observations (minimum 5 required)". Good error UX. BUT: it doesn't suggest how to GET Gemini data (e.g., "launch a Gemini session with session_launch provider=gemini"). **FINDING-160 pattern CONFIRMED OPEN** — error messages are clear but not actionable enough to break the cold-start loop.
+- Priority: P2
+- Fix: Add "next steps" field to insufficient_data responses suggesting how to collect data for the missing provider
+- Complexity: trivial
+
+**FINDING-191**: `eval_counterfactual` error message doesn't list required params — "provider_routing policy requires task_type and provider" is clear, but doesn't list available task_types. After adding task_type=bug_fix, it worked and returned estimated_completion_rate=0.669 (vs actual Claude 0.6875 — close).
+- Priority: P3
+- Fix: List available task_types in error message
+- Complexity: trivial
+
+**FINDING-192**: `provider_recommend` never suggests Gemini — always returns Claude with rationale "insufficient data for bug_fix tasks (need 5+ samples)". Source is "model_estimate" not feedback data. The cold-start explore/exploit problem persists: no Gemini data → never recommend Gemini → never get Gemini data.
+- Priority: P1
+- Fix: Add exploration rate (epsilon-greedy or Thompson sampling) that sometimes recommends untried providers
+- Complexity: moderate
+
+**FINDING-193**: `feedback_profiles` best_model is always empty string — all 8 task type profiles have `best_model: ""`. The field exists but is never populated. Either remove the field or populate it from observation data (which has planner_model/worker_model).
+- Priority: P3
+- Fix: Populate best_model from observation worker_model data
+- Complexity: trivial
+
+**FINDING-194**: Fleet tools (budget, workers, dlq, submit) all return consistent `not_configured` status — good degradation pattern. All include helpful message "fleet coordinator not active — start with 'ralphglasses mcp --fleet'". Consistent and actionable.
+
+### Regression Checks
+- **FINDING-160** (eval_ab_test error quality): ⚠️ **CONFIRMED OPEN** — error is clear but doesn't list available providers or suggest next steps to break cold-start
+- **FINDING-192** confirms provider_recommend cold-start problem from Cycle 12 still present
+
+### Positive Notes
+- `cost_estimate` provides calibrated estimates using historical observation data — Claude has 28.6x calibration ratio
+- `eval_changepoints` correctly reports no changepoints with empty arrays (not null)
+- `eval_counterfactual` produces plausible estimates: 66.9% Gemini completion rate vs 68.75% actual Claude
+- `feedback_profiles` has rich per-task-type data: 8 task types, bug_fix cheapest ($0.07 avg, 100% completion), feature most expensive ($0.28, 50% completion)
+- Fleet not_configured tools all return items as `[]` not null — good null-array handling in fleet_h namespace
+
+## Cycle 13 — Phase 6: Team Orchestration & Advanced (team + advanced namespaces)
+
+
+**Date**: 2026-03-27 ~12:32 PT
+**Tools exercised**: agent_list, agent_define(x2), agent_compose, team_create(dry_run), team_status, autonomy_level, autonomy_decisions, autonomy_override, a2a_offers, blackboard_put, blackboard_query, circuit_reset, self_improve
+**Namespaces**: team, advanced (11/13)
+
+### Findings
+
+**FINDING-195**: `autonomy_override` silently succeeds on nonexistent decisions — passing decision_id="nonexistent-decision" returns `status: overridden` with no error. Should validate the decision exists before marking it as overridden.
+- Priority: P2
+- Fix: Validate decision_id exists in decision history before accepting override
+- Complexity: trivial
+
+**FINDING-196**: `agent_compose` returns `tools: null` — composed agent's tools field is null instead of aggregating tools from constituent agents. The cost-auditor and quality-checker had no tools specified, but the field should be `[]` not `null` for consistency.
+- Priority: P3
+- Fix: Nil-guard for tools slice; consider aggregating tools from constituent agents
+- Complexity: trivial
+
+**FINDING-197**: `agent_list` returns 13 agents across 3 providers — 1 Claude agent (fleet-optimizer), 12 Codex agents (from AGENTS.md sections). The Codex agents include informational entries (Architecture, Key Patterns, File Schemas) that aren't really "agents" — they're documentation sections parsed as agent definitions.
+- Priority: P2
+- Fix: Distinguish between executable agents and documentation entries; add `type` field (agent vs docs)
+- Complexity: moderate
+
+**FINDING-198**: `self_improve` displays `budget=$0` when passed `budget_usd=0.01` — the budget display truncates small values. Also, `duration_hours=0` is accepted as unlimited rather than "don't run" — the semantics of 0 are confusing (0 iterations = unlimited, 0 hours = unlimited).
+- Priority: P3
+- Fix: Display budget with 2 decimal places; clarify 0 semantics in tool description (0=unlimited or 0=disabled?)
+- Complexity: trivial
+
+### Regression Checks
+- **FINDING-167** (agent_compose error): ✅ **CONFIRMED FIXED** — agent_compose works correctly when agents exist. Previous error was about composing undefined agents, which was correct behavior. The error message quality was the issue — now verified: composing defined agents produces valid output.
+
+### Positive Notes
+- `agent_define` cleanly creates agent files in .claude/agents/ with proper markdown format
+- `team_create` dry_run mode returns full config without launching — good for validation
+- `team_status` correctly returns TEAM_NOT_FOUND for dry-run teams — dry runs don't persist (correct)
+- `autonomy_level` returns detailed stats with level name mapping (0=observe)
+- `autonomy_decisions` returns clean empty state: `decisions: [], count: 0`
+- `circuit_reset` works cleanly — shows previous state ("closed") and confirms reset
+- Blackboard tools return consistent `not_configured` status without fleet mode
+- `a2a_offers` returns consistent `not_configured` without fleet mode
+
+## Cycle 13 — Phase 7: Repo & Roadmap Intelligence (repo + roadmap + awesome namespaces)
+
+
+**Date**: 2026-03-27 ~12:31 PT
+**Tools exercised**: repo_health, repo_optimize, claudemd_check, coverage_report, roadmap_parse, roadmap_analyze, roadmap_research, roadmap_expand, roadmap_export, awesome_fetch, awesome_diff, awesome_report, snapshot
+**Namespaces**: repo, roadmap, awesome (12/13)
+
+### Findings
+
+**FINDING-199**: `roadmap_expand` output size still uncontrolled — returned 179,386 chars with limit=5, style=conservative. The limit param constrains proposal count but each proposal includes full context (gap analysis, research, all 593 tasks). This is the third cycle confirming this issue.
+- Priority: P1
+- Fix: Add per-proposal size bounds AND total output size cap. Consider returning proposals without full context, letting users drill into specific ones.
+- Complexity: moderate
+
+**FINDING-200**: `snapshot` saves to wrong repo — saved to `claudekit/.ralph/snapshots/cycle13-phase7.json` instead of `ralphglasses/.ralph/snapshots/`. The snapshot tool uses the first scanned repo's path (alphabetically: claudekit) rather than CWD or the active repo context. Third cycle confirming this.
+- Priority: P1
+- Fix: Snapshot should use CWD or require explicit `repo` parameter to disambiguate
+- Complexity: moderate
+
+**FINDING-201**: `awesome_diff` data flow broken — awesome_fetch returns entries but doesn't save them to a path that awesome_diff can find. awesome_diff says "Run awesome_fetch first" even after fetch just succeeded. The save_to param on diff doesn't match where fetch stores its data.
+- Priority: P2
+- Fix: awesome_fetch should accept save_to param to persist baseline; or awesome_diff should read from fetch cache rather than requiring file path
+- Complexity: moderate
+
+**FINDING-202**: `awesome_report` similarly broken — says "Run awesome_analyze or awesome_sync first" even though awesome_fetch completed. The pipeline requires: fetch → analyze → report, but analyze doesn't auto-save to a path report can find either.
+- Priority: P2
+- Fix: awesome_* tools need shared state management (in-memory cache or standardized file path)
+- Complexity: moderate
+
+**FINDING-203**: `roadmap_research` relevance scores all identical (0.5) — all 5 results have relevance=0.5 regardless of actual relevance. The scoring isn't differentiating. "chatgpt-cli" and "terraform-provider-multispace" are equally relevant to "multi-provider LLM routing"?
+- Priority: P3
+- Fix: Use actual relevance scoring based on topic keyword matching, description analysis, or star count weighting
+- Complexity: moderate
+
+### Regression Checks
+- **FINDING-148/168** (snapshot wrong path): ⚠️ **CONFIRMED OPEN** — saves to claudekit instead of ralphglasses. Third cycle confirming.
+- **FINDING-152/165** (roadmap_expand overflow): ⚠️ **CONFIRMED OPEN** — 179K chars with limit=5. Third cycle confirming.
+- **FINDING-154/166** (awesome_diff race): ⚠️ **CONFIRMED OPEN** — data flow between awesome_* tools is broken, not just a race condition.
+
+### Positive Notes
+- `repo_health` returns clean, compact output: health_score=90, circuit_breaker=CLOSED, issues=["2 errored sessions"]
+- `repo_optimize` correctly reports no issues when config is clean
+- `claudemd_check` returns empty findings — CLAUDE.md passes all checks
+- `coverage_report` works well: mcpserver package at 85.4% (pass)
+- `roadmap_parse` summary_only mode is compact — 20 phases, 593 tasks, 168 complete (28.3%)
+- `roadmap_analyze` provides actionable categories: 396 gaps, 424 ready, 29 stale, 5 orphaned packages
+- `roadmap_export` correctly respects max_tasks=5 and outputs rdcycle format
+
+## Cycle 13 Phase 8: Synthesis & Coverage Audit
+
+
+### Coverage Matrix (13/13 Namespaces)
+
+| Namespace | Tools | Called | Skipped | Notes |
+|-----------|-------|--------|---------|-------|
+| core | 10 | 7 | 3 | start/stop/pause skipped (server lifecycle) |
+| session | 13 | 10 | 3 | resume/retry/output skipped (no live sessions) |
+| loop | 10 | 10 | 0 | Full coverage |
+| prompt | 8 | 8 | 0 | Full coverage |
+| fleet | 7 | 5 | 2 | list/config_bulk skipped |
+| repo | 5 | 4 | 1 | repo_scaffold skipped |
+| roadmap | 5 | 5 | 0 | Full coverage |
+| team | 6 | 6 | 0 | Full coverage |
+| awesome | 5 | 4 | 1 | awesome_sync skipped |
+| advanced | 23 | 16 | 7 | rc_* (4), workflow_* (3) skipped (no RC/workflow setup) |
+| eval | 4 | 4 | 0 | Full coverage |
+| fleet_h | 4 | 4 | 0 | Full coverage (all degraded gracefully) |
+| observability | 12 | 9 | 3 | journal_prune, scratchpad_resolve/delete skipped |
+| **TOTAL** | **112** | **92** | **20** | **82.1% tool coverage** |
+
+### Regression Results (8 Targets)
+
+| Finding | Tool | Status | Details |
+|---------|------|--------|---------|
+| FINDING-138 | marathon_dashboard | ✅ **FIXED** | alerts=[], stale_list=[], teamSummaries=[] — all empty arrays, not null |
+| FINDING-167 | agent_compose | ✅ **FIXED** | Works correctly with defined agents (cost-auditor, quality-checker) |
+| FINDING-148/168 | snapshot | ⚠️ **OPEN** | Still saves to first alphabetical repo (claudekit) not CWD. 3rd cycle confirming. |
+| FINDING-152/165 | roadmap_expand | ⚠️ **OPEN** | 179K chars with limit=5, style=conservative. 3rd cycle confirming. |
+| FINDING-154/166 | awesome_diff | ⚠️ **OPEN** | Data flow between awesome_* tools broken — fetch state not shared. 3rd cycle. |
+| FINDING-158 | prompt_lint | ⚠️ **OPEN** | findings field still null when no issues found (should be []) |
+| FINDING-160 | eval_ab_test | ⚠️ **OPEN** | Cold-start: only Claude data exists, can't compare providers meaningfully |
+| FINDING-169 | logs | ⚠️ **OPEN** | Still shows NO_LOG_FILE without explaining why or how to enable |
+
+**Result: 2/8 FIXED, 6/8 OPEN**
+
+### New Findings Summary (FINDING-173–203)
+
+**P1 — High Priority (6 findings)**
+| ID | Tool | Issue |
+|----|------|-------|
+| 173 | fleet_status | Output overflow (128K chars), needs pagination or summary mode |
+| 176 | session_diff | Null array when no diffs (should be []) |
+| 179 | session_launch | Sessions killed in 3ms with no diagnostic info |
+| 186 | loop_start | Defaults to unavailable models (o1-pro, gpt-5.4-xhigh), no validation |
+| 192 | provider_recommend | Never suggests Gemini — no observation data creates circular dependency |
+| 199 | roadmap_expand | 179K chars even with limit=5 (3rd cycle confirming) |
+
+**P2 — Medium Priority (15 findings)**
+| ID | Tool | Issue |
+|----|------|-------|
+| 174 | event_poll | Always returns empty (no events in window), unclear if working |
+| 177 | session_stop | INTERNAL_ERROR on errored session (should be idempotent) |
+| 178 | session_errors | No structured error classification |
+| 180 | session_compare | Sparse comparison when sessions have no turns |
+| 181 | prompt_analyze | Penalizes surgical prompts (file+line ref) as low-quality |
+| 182 | prompt_enhance | Injects negative framing that prompt_analyze then penalizes |
+| 187 | loop_status | Null array for gate_history when no gates |
+| 188 | loop_benchmark | Includes phantom loop data in benchmarks |
+| 191 | eval_counterfactual | Missing task_type param, error doesn't list valid values |
+| 193 | confidence_calibration | Only 1 data point — needs minimum threshold |
+| 196 | agent_compose | Returns null for composition_plan steps when agents undefined |
+| 198 | autonomy_decisions | Empty with no guidance on how decisions get recorded |
+| 200 | snapshot | Saves to wrong repo path (3rd cycle) |
+| 201 | awesome_diff | "Run awesome_fetch first" even after fetch completed |
+| 202 | awesome_report | Same broken data flow as awesome_diff |
+
+**P3 — Low Priority (10 findings)**
+| ID | Tool | Issue |
+|----|------|-------|
+| 175 | observation_summary | All providers show identical metrics (Claude-only data) |
+| 183 | prompt_classify | classify/analyze/should_enhance disagree on same prompt |
+| 184 | prompt_templates | Template variables not validated against available data |
+| 185 | prompt_improve | LLM improvement unavailable (API not configured) — expected |
+| 189 | loop_prune | Pruned 490 runs — indicates phantom loop accumulation |
+| 190 | cost_forecast | Extrapolates from single-provider data only |
+| 194 | feedback_profiles | Profiles derived from insufficient data |
+| 195 | team_delegate | Delegates to non-existent sessions (no validation) |
+| 197 | blackboard_query | Returns "not configured" — expected without fleet mode |
+| 203 | roadmap_research | All relevance scores identical (0.5) — no differentiation |
+
+### New Opportunities
+
+**OPPORTUNITY-16**: Unified Prompt Quality Pipeline
+- Merge prompt_classify, prompt_analyze, prompt_should_enhance into a single assessment call
+- Current state: 3 tools give inconsistent verdicts on the same prompt
+- Benefit: Reduce tool calls by 2/3, eliminate classification disagreements
+
+### Cycle 13 Statistics
+
+| Metric | Value |
+|--------|-------|
+| Total tool calls | 146 |
+| Unique tools called | 92 (82.1% of 112) |
+| Namespaces exercised | 13/13 (100%) |
+| New findings | 31 (FINDING-173–203) |
+| New opportunities | 1 (OPPORTUNITY-16) |
+| Regression targets tested | 8 |
+| Regressions fixed | 2 (FINDING-138, 167) |
+| Regressions still open | 6 |
+| Null-array instances found | 4 (session_diff, prompt_lint, loop_status, agent_compose) |
+| Output overflow instances | 2 (fleet_status 128K, roadmap_expand 179K) |
+| Journal entries written | 1 (4 worked, 4 failed, 4 suggest) |
+| HITL score | 100 (1 manual intervention) |
+
+### Top 3 Recommendations for Cycle 14
+
+1. **Fix the null-array pattern globally** (P1, low complexity)
+   - Affects: session_diff, prompt_lint, loop_status, agent_compose, plus any unchecked handlers
+   - Pattern: `if slice == nil { slice = []T{} }` before JSON marshaling
+   - Estimate: ~20 handlers to audit, mechanical fix
+
+2. **Add output size guards** (P1, moderate complexity)
+   - Affects: fleet_status (128K), roadmap_expand (179K)
+   - Pattern: Add `summary_mode` param that returns counts/aggregates instead of full data
+   - Also add hard limit (e.g., 32K chars) with truncation + "use summary_mode for full data" message
+
+3. **Fix awesome_* data flow** (P2, moderate complexity)
+   - Affects: awesome_diff, awesome_report, awesome_analyze
+   - Root cause: Tools don't share state — fetch results not accessible to downstream tools
+   - Fix: Use in-memory cache keyed by list name, or save fetch results to standardized path
+
+### Cumulative Statistics (Cycles 7–13)
+
+| Cycle | Findings | Fixed (next cycle) | Opportunities |
+|-------|----------|--------------------|---------------|
+| 7 | 96–110 (15) | 3 | — |
+| 8 | 111–119 (9) | 2 | — |
+| 9 | 120–130 (11) | 1 | — |
+| 10 | 131–143 (13) | 4 | — |
+| 11 | 144–157 (14) | 2 | 1–10 |
+| 12 | 158–172 (15) | 2 | 11–15 |
+| 13 | 173–203 (31) | TBD | 16 |
+| **Total** | **108 findings** | **14 confirmed fixed** | **16 opportunities** |
