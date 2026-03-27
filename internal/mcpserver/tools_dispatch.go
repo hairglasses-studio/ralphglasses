@@ -52,7 +52,7 @@ func (s *Server) RegisterCoreTools(srv *server.MCPServer) {
 	), s.handleToolGroups)
 
 	srv.AddTool(mcp.NewTool("ralphglasses_load_tool_group",
-		mcp.WithDescription("Load all tools in a named group (session, loop, prompt, fleet, repo, roadmap, team, awesome, advanced)"),
+		mcp.WithDescription("Load all tools in a named group (core, session, loop, prompt, fleet, repo, roadmap, team, awesome, advanced, eval, fleet_h, observability)"),
 		mcp.WithString("group", mcp.Required(), mcp.Description("Tool group name to load")),
 	), s.handleLoadToolGroup)
 
@@ -93,7 +93,7 @@ func (s *Server) RegisterAllTools(srv *server.MCPServer) {
 	), s.handleToolGroups)
 
 	srv.AddTool(mcp.NewTool("ralphglasses_load_tool_group",
-		mcp.WithDescription("Load all tools in a named group (session, loop, prompt, fleet, repo, roadmap, team, awesome, advanced)"),
+		mcp.WithDescription("Load all tools in a named group (core, session, loop, prompt, fleet, repo, roadmap, team, awesome, advanced, eval, fleet_h, observability)"),
 		mcp.WithString("group", mcp.Required(), mcp.Description("Tool group name to load")),
 	), s.handleLoadToolGroup)
 
