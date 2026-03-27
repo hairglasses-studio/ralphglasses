@@ -152,6 +152,83 @@ func TestLoadExternalSessions_CleanupOldTerminal(t *testing.T) {
 	}
 }
 
+func TestLoadExternalSessions_ErroredSessionRetained(t *testing.T) {
+	dir := t.TempDir()
+	m := NewManager()
+	m.SetStateDir(dir)
+
+	// An errored session that ended 2 minutes ago should be retained
+	// (default retention is 5 minutes).
+	ended := time.Now().Add(-2 * time.Minute)
+	errored := &Session{
+		ID:         "errored-1",
+		Provider:   ProviderClaude,
+		Status:     StatusErrored,
+		Error:      "signal: killed",
+		LaunchedAt: time.Now().Add(-3 * time.Minute),
+		EndedAt:    &ended,
+	}
+	m.mu.Lock()
+	m.sessions["errored-1"] = errored
+	m.mu.Unlock()
+	os.WriteFile(filepath.Join(dir, "errored-1.json"), marshalSession(errored), 0644)
+
+	m.LoadExternalSessions()
+
+	_, ok := m.Get("errored-1")
+	if !ok {
+		t.Error("expected recently errored session to be retained")
+	}
+}
+
+func TestLoadExternalSessions_ErroredSessionPurgedAfterRetention(t *testing.T) {
+	dir := t.TempDir()
+	m := NewManager()
+	m.SetStateDir(dir)
+	m.ErrorRetention = 1 * time.Minute // short retention for testing
+
+	// An errored session that ended 2 minutes ago should be purged
+	// when retention is only 1 minute.
+	ended := time.Now().Add(-2 * time.Minute)
+	errored := &Session{
+		ID:         "errored-old",
+		Provider:   ProviderClaude,
+		Status:     StatusErrored,
+		Error:      "signal: killed",
+		LaunchedAt: time.Now().Add(-3 * time.Minute),
+		EndedAt:    &ended,
+	}
+	m.mu.Lock()
+	m.sessions["errored-old"] = errored
+	m.mu.Unlock()
+	os.WriteFile(filepath.Join(dir, "errored-old.json"), marshalSession(errored), 0644)
+
+	m.LoadExternalSessions()
+
+	_, ok := m.Get("errored-old")
+	if ok {
+		t.Error("expected old errored session to be purged after retention window")
+	}
+}
+
+func TestIsTerminal(t *testing.T) {
+	tests := []struct {
+		status   SessionStatus
+		terminal bool
+	}{
+		{StatusLaunching, false},
+		{StatusRunning, false},
+		{StatusCompleted, true},
+		{StatusErrored, true},
+		{StatusStopped, true},
+	}
+	for _, tt := range tests {
+		if got := tt.status.IsTerminal(); got != tt.terminal {
+			t.Errorf("IsTerminal(%s) = %v, want %v", tt.status, got, tt.terminal)
+		}
+	}
+}
+
 func TestLoadExternalSessions_EmptyStateDir(t *testing.T) {
 	m := NewManager()
 	m.SetStateDir("")
