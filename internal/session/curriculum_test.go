@@ -284,6 +284,124 @@ func TestSortTasks_MultiTaskDiverseTypes(t *testing.T) {
 	}
 }
 
+func TestScoreTask_WithFeedback(t *testing.T) {
+	dir := t.TempDir()
+	fa := NewFeedbackAnalyzer(dir, 1)
+	fa.Ingest([]JournalEntry{
+		{Provider: "claude", TaskFocus: "fix bug A", SpentUSD: 1.0, TurnCount: 10, ExitReason: "completed"},
+		{Provider: "claude", TaskFocus: "fix bug B", SpentUSD: 0.5, TurnCount: 5, ExitReason: "completed"},
+		{Provider: "claude", TaskFocus: "fix bug C", SpentUSD: 2.0, TurnCount: 15, ExitReason: "errored"},
+	})
+
+	cs := NewCurriculumSorter(fa, nil)
+	task := LoopTask{
+		Title:  "fix null pointer bug",
+		Prompt: "The handler panics on nil input",
+	}
+	td := cs.ScoreTask(task)
+
+	if td.HistoricalSuccessRate == 0 {
+		t.Error("expected non-zero historical success rate with feedback data")
+	}
+	if td.AvgTurns == 0 {
+		t.Error("expected non-zero avg turns with feedback data")
+	}
+	if td.AvgCostUSD == 0 {
+		t.Error("expected non-zero avg cost with feedback data")
+	}
+	if td.SampleCount < 3 {
+		t.Errorf("expected sample count >= 3, got %d", td.SampleCount)
+	}
+}
+
+func TestScoreTask_EpisodicLowTurns(t *testing.T) {
+	mock := &mockEpisodicSource{
+		episodes: []CurriculumEpisode{
+			{TurnCount: 3, CostUSD: 0.05},
+			{TurnCount: 4, CostUSD: 0.06},
+		},
+	}
+	cs := NewCurriculumSorter(nil, mock)
+	task := LoopTask{
+		Title:  "simple test task",
+		Prompt: "Write a trivial test",
+	}
+	td := cs.ScoreTask(task)
+
+	// Low turns + "test" keyword = should be scored as easy
+	if td.DifficultyScore > 0.4 {
+		t.Errorf("expected easy score with low-turn episodes, got %f", td.DifficultyScore)
+	}
+}
+
+func TestScoreTask_EpisodicMediumTurns(t *testing.T) {
+	mock := &mockEpisodicSource{
+		episodes: []CurriculumEpisode{
+			{TurnCount: 12, CostUSD: 0.30},
+			{TurnCount: 8, CostUSD: 0.20},
+		},
+	}
+	cs := NewCurriculumSorter(nil, mock)
+	task := LoopTask{
+		Title:  "implement feature",
+		Prompt: "Add a new capability",
+	}
+	td := cs.ScoreTask(task)
+
+	if td.DifficultyScore < 0.3 || td.DifficultyScore > 0.8 {
+		t.Errorf("expected medium score, got %f", td.DifficultyScore)
+	}
+}
+
+func TestTaskTypeDifficulty(t *testing.T) {
+	tests := []struct {
+		title string
+		want  float64
+	}{
+		{"add unit test", 0.2},
+		{"lint the code", 0.2},
+		{"format files", 0.2},
+		{"update docs", 0.25},
+		{"add comment to code", 0.25},
+		{"fix the bug", 0.5},
+		{"add feature X", 0.6},
+		{"implement login", 0.6},
+		{"refactor auth", 0.65},
+		{"debug the issue", 0.5}, // "bug" in "debug" matches bug_fix (0.5) before debug (0.7)
+		{"architecture review", 0.8},
+		{"design system", 0.8},
+		{"unknown task type", 0.5},
+	}
+	for _, tt := range tests {
+		got := taskTypeDifficulty(tt.title)
+		if got != tt.want {
+			t.Errorf("taskTypeDifficulty(%q) = %f, want %f", tt.title, got, tt.want)
+		}
+	}
+}
+
+func TestKeywordDifficulty(t *testing.T) {
+	tests := []struct {
+		title  string
+		prompt string
+		want   float64
+	}{
+		{"simple fix", "", 0.15},
+		{"trivial change", "", 0.15},
+		{"minor tweak", "", 0.15},
+		{"complex overhaul", "", 0.85},
+		{"critical rewrite", "", 0.85},
+		{"redesign the system", "", 0.85},
+		{"normal task", "normal prompt", 0.5},
+	}
+	for _, tt := range tests {
+		got := keywordDifficulty(tt.title, tt.prompt)
+		if got != tt.want {
+			t.Errorf("keywordDifficulty(%q, %q) = %f, want %f", tt.title, tt.prompt, got, tt.want)
+		}
+	}
+}
+
 func TestScoreTask_WithEpisodicSource(t *testing.T) {
 	mock := &mockEpisodicSource{
 		episodes: []CurriculumEpisode{

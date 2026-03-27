@@ -1054,3 +1054,294 @@ func TestAppendResult_NoStateDir(t *testing.T) {
 		t.Errorf("expected 1 result in memory, got %d", len(results))
 	}
 }
+
+func TestComputeConfidence_EmptyOutputVerifyFailed(t *testing.T) {
+	// Empty output with verify failed — should be low confidence
+	conf := computeConfidence(5, 10, "", false)
+	// verify=0, hedge=1.0, error-free=1.0, turn efficiency=1.0 => (0+1+1+1)/4 = 0.75
+	// But verify failed, so second component = 0 => (1+0+1+1)/4 = 0.75
+	if conf >= 1.0 || conf < 0 {
+		t.Errorf("computeConfidence empty output + verify failed = %f, out of range", conf)
+	}
+}
+
+func TestComputeConfidence_PanicInOutput(t *testing.T) {
+	conf := computeConfidence(5, 10, "panic: runtime error", true)
+	// error signals in output => no error-free score
+	if conf >= 1.0 {
+		t.Errorf("expected confidence < 1.0 with panic in output, got %f", conf)
+	}
+}
+
+func TestComputeConfidence_FailedInOutput(t *testing.T) {
+	conf := computeConfidence(5, 10, "failed: compilation error in main.go", true)
+	if conf >= 1.0 {
+		t.Errorf("expected confidence < 1.0 with failed: in output, got %f", conf)
+	}
+}
+
+func TestComputeConfidence_MidRangeTurnRatio(t *testing.T) {
+	// turnCount=15, expectedTurns=10 => ratio 1.5, so turn score = 0.5
+	conf := computeConfidence(15, 10, "Done.", true)
+	if conf <= 0 || conf >= 1.0 {
+		t.Errorf("expected mid-range confidence for 1.5x turn ratio, got %f", conf)
+	}
+}
+
+func TestComputeConfidence_ZeroTurnsZeroExpected(t *testing.T) {
+	// 0 turns, 0 expected => no turn component
+	conf := computeConfidence(0, 0, "Output here", true)
+	if conf <= 0 || conf > 1.0 {
+		t.Errorf("expected valid confidence for zero turns/expected, got %f", conf)
+	}
+}
+
+func TestComputeConfidence_NoExpectedTurns(t *testing.T) {
+	// Non-zero turns but 0 expected => skip turn component
+	conf := computeConfidence(5, 0, "All done successfully.", true)
+	// verify=1, hedge=1, error-free=1 => 3/3 = 1.0
+	if conf != 1.0 {
+		t.Errorf("expected 1.0 for all positive signals with no expected turns, got %f", conf)
+	}
+}
+
+func TestShouldCascade_LatencyThresholdNoSamples(t *testing.T) {
+	config := DefaultCascadeConfig()
+	config.LatencyThresholdMs = 500
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// No latency samples recorded — should cascade (don't skip cheap)
+	if !cr.ShouldCascade("feature", "something") {
+		t.Error("expected ShouldCascade=true with no latency samples")
+	}
+}
+
+func TestResolveProvider_LatencyHighSkipsCheap(t *testing.T) {
+	config := DefaultCascadeConfig()
+	config.LatencyThresholdMs = 200
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// Record high latencies
+	for i := 0; i < 20; i++ {
+		cr.RecordLatency("gemini", 500*time.Millisecond)
+	}
+
+	got := cr.ResolveProvider("feature")
+	if got != ProviderClaude {
+		t.Errorf("expected expensive provider when cheap is slow, got %s", got)
+	}
+}
+
+func TestCascadeStats_AllEscalated(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	for i := 0; i < 5; i++ {
+		cr.mu.Lock()
+		cr.results = append(cr.results, CascadeResult{
+			Escalated:    true,
+			CheapCostUSD: 0.10,
+			TotalCostUSD: 1.00,
+		})
+		cr.mu.Unlock()
+	}
+
+	stats := cr.Stats()
+	if stats.Escalations != 5 {
+		t.Errorf("Escalations = %d, want 5", stats.Escalations)
+	}
+	if stats.EscalationRate != 1.0 {
+		t.Errorf("EscalationRate = %f, want 1.0", stats.EscalationRate)
+	}
+	if stats.CostSavedUSD != 0 {
+		t.Errorf("CostSavedUSD = %f, want 0 when all escalated", stats.CostSavedUSD)
+	}
+}
+
+func TestCascadeStats_NoneEscalated(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	for i := 0; i < 3; i++ {
+		cr.mu.Lock()
+		cr.results = append(cr.results, CascadeResult{
+			Escalated:    false,
+			CheapCostUSD: 0.20,
+			TotalCostUSD: 0.20,
+		})
+		cr.mu.Unlock()
+	}
+
+	stats := cr.Stats()
+	if stats.EscalationRate != 0 {
+		t.Errorf("EscalationRate = %f, want 0", stats.EscalationRate)
+	}
+	if diff := stats.CostSavedUSD - 0.60; diff > 0.01 || diff < -0.01 {
+		t.Errorf("CostSavedUSD = %f, want 0.60", stats.CostSavedUSD)
+	}
+}
+
+func TestEvaluateCheapResult_DecisionModelUntrained(t *testing.T) {
+	config := DefaultCascadeConfig()
+	config.ConfidenceThreshold = 0.7
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	// Set an untrained model — should fall back to heuristic
+	mock := &mockDecisionModel{
+		trained:    false,
+		confidence: 0.99, // would pass if used, but model isn't trained
+	}
+	cr.SetDecisionModel(mock)
+
+	s := &Session{
+		ID:         "untrained-dm-sess",
+		TurnCount:  5,
+		LastOutput: "Successfully done.",
+	}
+
+	escalate, conf, _ := cr.EvaluateCheapResult(s, 10, nil)
+	// Should use heuristic, not the model's 0.99
+	if conf == 0.99 {
+		t.Error("should use heuristic when decision model is untrained")
+	}
+	// With good signals, heuristic should give high confidence
+	if escalate {
+		t.Errorf("expected no escalation with good signals, conf=%f", conf)
+	}
+}
+
+func TestRecordResult_PersistenceIntegrity(t *testing.T) {
+	dir := t.TempDir()
+	config := DefaultCascadeConfig()
+
+	cr := NewCascadeRouter(config, nil, nil, dir)
+
+	// Record multiple results with varying fields
+	for i := 0; i < 5; i++ {
+		cr.RecordResult(CascadeResult{
+			Timestamp:       time.Now(),
+			TaskType:        "feature",
+			TaskTitle:       "task-" + string(rune('A'+i)),
+			UsedProvider:    ProviderGemini,
+			Escalated:       i%2 == 0,
+			CheapConfidence: float64(i) * 0.2,
+			CheapCostUSD:    float64(i) * 0.05,
+			TotalCostUSD:    float64(i) * 0.10,
+		})
+	}
+
+	// Reload and verify
+	cr2 := NewCascadeRouter(config, nil, nil, dir)
+	results := cr2.RecentResults(10)
+	if len(results) != 5 {
+		t.Fatalf("expected 5 loaded results, got %d", len(results))
+	}
+	for i, r := range results {
+		want := "task-" + string(rune('A'+i))
+		if r.TaskTitle != want {
+			t.Errorf("result[%d].TaskTitle = %q, want %q", i, r.TaskTitle, want)
+		}
+	}
+}
+
+func TestSelectTier_BanditNotEnoughHistory(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	called := false
+	cr.SetBanditHooks(
+		func() (string, string) { called = true; return "gemini", "" },
+		func(string, float64) {},
+	)
+
+	// Only 5 results (< 10 minimum)
+	for i := 0; i < 5; i++ {
+		cr.mu.Lock()
+		cr.results = append(cr.results, CascadeResult{})
+		cr.mu.Unlock()
+	}
+
+	tier := cr.SelectTier("lint", 0)
+	if called {
+		t.Error("bandit should not be consulted with < 10 history items")
+	}
+	if tier.Label != "ultra-cheap" {
+		t.Errorf("expected static selection, got label=%q", tier.Label)
+	}
+}
+
+func TestRecordLatency_MultipleProviders(t *testing.T) {
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	cr.RecordLatency("gemini", 100*time.Millisecond)
+	cr.RecordLatency("gemini", 200*time.Millisecond)
+	cr.RecordLatency("claude", 500*time.Millisecond)
+	cr.RecordLatency("claude", 600*time.Millisecond)
+
+	gemLat := cr.GetProviderLatency("gemini")
+	claudeLat := cr.GetProviderLatency("claude")
+
+	if gemLat == nil || claudeLat == nil {
+		t.Fatal("expected non-nil latencies for both providers")
+	}
+	if gemLat.Samples != 2 {
+		t.Errorf("gemini samples = %d, want 2", gemLat.Samples)
+	}
+	if claudeLat.Samples != 2 {
+		t.Errorf("claude samples = %d, want 2", claudeLat.Samples)
+	}
+	// Gemini P50 should be lower than Claude P50
+	if gemLat.P50 >= claudeLat.P50 {
+		t.Errorf("expected gemini P50 < claude P50: %v >= %v", gemLat.P50, claudeLat.P50)
+	}
+}
+
+func TestDefaultCascadeConfig(t *testing.T) {
+	config := DefaultCascadeConfig()
+	if config.CheapProvider != ProviderGemini {
+		t.Errorf("CheapProvider = %s, want gemini", config.CheapProvider)
+	}
+	if config.ExpensiveProvider != ProviderClaude {
+		t.Errorf("ExpensiveProvider = %s, want claude", config.ExpensiveProvider)
+	}
+	if config.ConfidenceThreshold != 0.7 {
+		t.Errorf("ConfidenceThreshold = %f, want 0.7", config.ConfidenceThreshold)
+	}
+	if config.MaxCheapBudgetUSD != 2.00 {
+		t.Errorf("MaxCheapBudgetUSD = %f, want 2.00", config.MaxCheapBudgetUSD)
+	}
+	if config.MaxCheapTurns != 15 {
+		t.Errorf("MaxCheapTurns = %d, want 15", config.MaxCheapTurns)
+	}
+	if config.TaskTypeOverrides == nil {
+		t.Error("TaskTypeOverrides should be initialized")
+	}
+	if config.LatencyThresholdMs != 0 {
+		t.Errorf("LatencyThresholdMs = %d, want 0 (disabled)", config.LatencyThresholdMs)
+	}
+}
+
+func TestCheapLaunchOpts_ZeroBudgetAndTurns(t *testing.T) {
+	config := DefaultCascadeConfig()
+	config.MaxCheapBudgetUSD = 0
+	config.MaxCheapTurns = 0
+
+	cr := NewCascadeRouter(config, nil, nil, "")
+
+	base := LaunchOptions{
+		Provider:     ProviderClaude,
+		MaxBudgetUSD: 5.00,
+		MaxTurns:     50,
+		SessionName:  "test",
+	}
+
+	cheap := cr.CheapLaunchOpts(base)
+	// With zero config values, base values should be preserved
+	if cheap.MaxBudgetUSD != 5.00 {
+		t.Errorf("expected base budget preserved when config is 0, got %f", cheap.MaxBudgetUSD)
+	}
+	if cheap.MaxTurns != 50 {
+		t.Errorf("expected base max turns preserved when config is 0, got %d", cheap.MaxTurns)
+	}
+}
