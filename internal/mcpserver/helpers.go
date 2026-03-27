@@ -1,9 +1,12 @@
 package mcpserver
 
 import (
+	"path/filepath"
+
 	"github.com/hairglasses-studio/ralphglasses/internal/bandit"
 	"github.com/hairglasses-studio/ralphglasses/internal/blackboard"
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet"
+	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -36,7 +39,8 @@ func wireSubsystems(s *Server, sessMgr *session.Manager, ralphDir string) {
 		sessMgr.SetEpisodicMemory(session.NewEpisodicMemory(ralphDir, 500, 0))
 	}
 	if !sessMgr.HasCascadeRouter() {
-		cfg := session.DefaultCascadeConfig()
+		repoPath := filepath.Dir(ralphDir)
+		cfg := cascadeConfigFromRepo(repoPath, ralphDir)
 		sessMgr.SetCascadeRouter(session.NewCascadeRouter(cfg, nil, nil, ralphDir))
 	}
 	if !sessMgr.HasCurriculumSorter() {
@@ -108,4 +112,17 @@ func wireSubsystems(s *Server, sessMgr *session.Manager, ralphDir string) {
 	if !sessMgr.HasCostPredictor() {
 		sessMgr.SetCostPredictor(session.NewCostPredictor(ralphDir))
 	}
+}
+
+// cascadeConfigFromRepo reads .ralphrc from the repo and returns a CascadeConfig.
+// If the repo has CASCADE_ENABLED=true, settings are loaded from .ralphrc.
+// Otherwise, returns the hardcoded DefaultCascadeConfig.
+func cascadeConfigFromRepo(repoPath, _ string) session.CascadeConfig {
+	rc, err := model.LoadConfig(repoPath)
+	if err == nil && rc != nil {
+		if ccfg := session.DefaultCascadeFromConfig(rc.Values); ccfg != nil {
+			return *ccfg
+		}
+	}
+	return session.DefaultCascadeConfig()
 }
