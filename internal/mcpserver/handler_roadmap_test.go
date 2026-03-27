@@ -428,3 +428,196 @@ func TestHandleRoadmapExpand_Limit(t *testing.T) {
 		t.Errorf("expected proposals in output, got: %s", text)
 	}
 }
+
+// --- handleRoadmapParse summary_only ---
+
+func TestHandleRoadmapParse_SummaryOnly(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapParse(context.Background(), roadmapReq(map[string]any{
+		"path":         repoPath,
+		"summary_only": true,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Summary should include phase_count and completion_pct but not individual task descriptions
+	if !strings.Contains(text, "phase_count") {
+		t.Errorf("expected phase_count in summary output, got: %s", text)
+	}
+	if !strings.Contains(text, "completion_pct") {
+		t.Errorf("expected completion_pct in summary output, got: %s", text)
+	}
+	// Should be compact — under 5K chars
+	if len(text) > 5000 {
+		t.Errorf("summary_only output too large: %d chars (want <5000)", len(text))
+	}
+	// Should NOT contain individual task descriptions
+	if strings.Contains(text, "Implement line parser") {
+		t.Errorf("summary_only should not contain individual task descriptions")
+	}
+}
+
+func TestHandleRoadmapParse_MaxDepth0(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapParse(context.Background(), roadmapReq(map[string]any{
+		"path":      repoPath,
+		"max_depth": float64(0),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Should have phases but no sections
+	if !strings.Contains(text, "phases") {
+		t.Errorf("expected phases in output, got: %s", text)
+	}
+	// Sections should be null/empty
+	if strings.Contains(text, "Parser") {
+		t.Errorf("max_depth=0 should not contain section names, got: %s", text)
+	}
+}
+
+func TestHandleRoadmapParse_MaxDepth1(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapParse(context.Background(), roadmapReq(map[string]any{
+		"path":      repoPath,
+		"max_depth": float64(1),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Should have sections but no tasks
+	if !strings.Contains(text, "Parser") {
+		t.Errorf("expected section names in output, got: %s", text)
+	}
+	if strings.Contains(text, "Implement line parser") {
+		t.Errorf("max_depth=1 should not contain task descriptions, got: %s", text)
+	}
+}
+
+// --- handleRoadmapExport unique IDs ---
+
+func TestHandleRoadmapExport_UniqueTaskIDs(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapExport(context.Background(), roadmapReq(map[string]any{
+		"path":   repoPath,
+		"format": "rdcycle",
+		"status": "all",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Parse the JSON to check IDs are unique
+	seen := make(map[string]int)
+	// Simple check: count occurrences of "id" values
+	for _, line := range strings.Split(text, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, `"id":`) {
+			id := strings.Trim(strings.TrimPrefix(line, `"id":`), ` ",`)
+			seen[id]++
+		}
+	}
+	for id, count := range seen {
+		if count > 1 {
+			t.Errorf("duplicate task ID %q found %d times", id, count)
+		}
+	}
+}
+
+// --- handleRoadmapExport status filter ---
+
+func TestHandleRoadmapExport_StatusIncomplete(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapExport(context.Background(), roadmapReq(map[string]any{
+		"path":   repoPath,
+		"format": "fix_plan",
+		"status": "incomplete",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Should not contain completed tasks
+	if strings.Contains(text, "[x]") {
+		t.Errorf("status=incomplete should not include completed tasks, got: %s", text)
+	}
+	// Should contain incomplete tasks
+	if !strings.Contains(text, "[ ]") {
+		t.Errorf("status=incomplete should include incomplete tasks, got: %s", text)
+	}
+}
+
+func TestHandleRoadmapExport_StatusComplete(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapExport(context.Background(), roadmapReq(map[string]any{
+		"path":   repoPath,
+		"format": "fix_plan",
+		"status": "complete",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Should not contain incomplete tasks
+	if strings.Contains(text, "[ ]") {
+		t.Errorf("status=complete should not include incomplete tasks, got: %s", text)
+	}
+}
+
+func TestHandleRoadmapExport_StatusAll(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapExport(context.Background(), roadmapReq(map[string]any{
+		"path":   repoPath,
+		"format": "fix_plan",
+		"status": "all",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Should contain both complete and incomplete tasks
+	if !strings.Contains(text, "[ ]") {
+		t.Errorf("status=all should include incomplete tasks, got: %s", text)
+	}
+	if !strings.Contains(text, "[x]") {
+		t.Errorf("status=all should include complete tasks, got: %s", text)
+	}
+}
