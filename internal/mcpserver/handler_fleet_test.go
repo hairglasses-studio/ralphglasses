@@ -767,7 +767,7 @@ func TestHandleFleetDLQ_NilCoordinator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	assertErrorCode(t, "handleFleetDLQ", result, "NOT_RUNNING")
+	assertErrorCode(t, "handleFleetDLQ", result, "FLEET_NOT_RUNNING")
 }
 
 func TestHandleFleetDLQ_ListAction(t *testing.T) {
@@ -937,7 +937,7 @@ func TestHandleFleetWorkers_ActionRequiresCoordinator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	assertErrorCode(t, "handleFleetWorkers", result, "NOT_RUNNING")
+	assertErrorCode(t, "handleFleetWorkers", result, "FLEET_NOT_RUNNING")
 }
 
 // --- handleFleetStatus pagination ---

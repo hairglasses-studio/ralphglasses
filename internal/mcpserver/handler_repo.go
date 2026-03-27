@@ -227,10 +227,11 @@ func (s *Server) handleLogs(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		maxLines = 500
 	}
 
-	allLines, err := process.ReadFullLog(r.Path)
+	repoPath := strings.TrimRight(r.Path, "/")
+	allLines, err := process.ReadFullLog(repoPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return jsonResult(map[string]any{"lines": []string{}, "message": "no log file yet"}), nil
+			return codedError(ErrNoLogFile, fmt.Sprintf("no log files found at %s — ensure the repo has been scanned", repoPath)), nil
 		}
 		return codedError(ErrFilesystem, fmt.Sprintf("read log: %v", err)), nil
 	}
