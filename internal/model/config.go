@@ -62,6 +62,7 @@ var KnownKeys = map[string]ConfigKeySpec{
 	"CASCADE_CONFIDENCE_THRESHOLD": {Type: ConfigTypeFloat, Default: "0.7", MinFloat: 0, MaxFloat: 1, Description: "confidence threshold for cascade escalation"},
 	"CASCADE_MAX_CHEAP_BUDGET":     {Type: ConfigTypeFloat, Default: "2.00", MinFloat: 0.01, MaxFloat: 100, Description: "max budget for cheap cascade tier in USD"},
 	"CASCADE_DIFFICULTY_THRESHOLD": {Type: ConfigTypeFloat, Default: "0.4", MinFloat: 0, MaxFloat: 1, Description: "difficulty threshold for bypassing cheap tier"},
+	"KILL_ESCALATION_TIMEOUT":      {Type: ConfigTypeInt, Default: "5", MinInt: 1, MaxInt: 60, Description: "kill escalation timeout in seconds"},
 }
 
 // ConfigWarning describes a non-fatal issue with a config value.
