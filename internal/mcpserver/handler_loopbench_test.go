@@ -155,8 +155,8 @@ func TestHandleLoopBenchmark_WithObservations(t *testing.T) {
 	if err := json.Unmarshal([]byte(getResultText(result)), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if out["observations"] == float64(0) {
-		t.Fatal("expected observations > 0")
+	if out["observation_count"] == float64(0) {
+		t.Fatal("expected observation_count > 0")
 	}
 }
 
@@ -400,5 +400,186 @@ func TestHandleLoopGates_EvaluatesGates(t *testing.T) {
 	}
 	if report == nil {
 		t.Fatal("expected non-nil gate report")
+	}
+}
+
+// --- FINDING-90 / FINDING-91 tests ---
+
+func TestHandleLoopBaseline_RefreshNeverReturnsWindowHoursZero(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	repo := srv.findRepo("test-repo")
+	if repo == nil {
+		t.Fatal("test-repo not found after scan")
+	}
+
+	now := time.Now()
+	writeObservationsJSONL(t, repo.Path, []session.LoopObservation{
+		{Timestamp: now.Add(-6 * time.Hour), LoopID: "loop-1", RepoName: "test-repo", TotalLatencyMs: 1000, TotalCostUSD: 0.03, Status: "completed", VerifyPassed: true, TaskType: "build"},
+		{Timestamp: now.Add(-3 * time.Hour), LoopID: "loop-2", RepoName: "test-repo", TotalLatencyMs: 1500, TotalCostUSD: 0.04, Status: "completed", VerifyPassed: true, TaskType: "build"},
+		{Timestamp: now, LoopID: "loop-3", RepoName: "test-repo", TotalLatencyMs: 2000, TotalCostUSD: 0.05, Status: "completed", VerifyPassed: true, TaskType: "test"},
+	})
+
+	result, err := srv.handleLoopBaseline(context.Background(), makeRequest(map[string]any{
+		"repo":   "test-repo",
+		"action": "refresh",
+		"hours":  float64(48),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success, got error: %s", getResultText(result))
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &data); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	wh, ok := data["window_hours"]
+	if !ok {
+		t.Fatal("expected window_hours field in response")
+	}
+	if wh == float64(0) {
+		t.Fatal("window_hours must not be 0 — FINDING-90")
+	}
+
+	wt, ok := data["window_type"]
+	if !ok {
+		t.Fatal("expected window_type field in response")
+	}
+	if wt != "rolling" {
+		t.Fatalf("expected window_type=rolling, got: %v", wt)
+	}
+}
+
+func TestHandleLoopBenchmark_IncludesObservationCount(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	repo := srv.findRepo("test-repo")
+	if repo == nil {
+		t.Fatal("test-repo not found after scan")
+	}
+
+	now := time.Now()
+	writeObservationsJSONL(t, repo.Path, []session.LoopObservation{
+		{Timestamp: now.Add(-2 * time.Hour), LoopID: "loop-1", RepoName: "test-repo", TotalLatencyMs: 1000, TotalCostUSD: 0.03, Status: "completed", VerifyPassed: true, TaskType: "build"},
+		{Timestamp: now, LoopID: "loop-2", RepoName: "test-repo", TotalLatencyMs: 2000, TotalCostUSD: 0.05, Status: "completed", VerifyPassed: true, TaskType: "build"},
+	})
+
+	result, err := srv.handleLoopBenchmark(context.Background(), makeRequest(map[string]any{
+		"repo":  "test-repo",
+		"hours": float64(48),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success, got error: %s", getResultText(result))
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &data); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	oc, ok := data["observation_count"]
+	if !ok {
+		t.Fatal("expected observation_count field — FINDING-91")
+	}
+	if oc != float64(2) {
+		t.Fatalf("expected observation_count=2, got: %v", oc)
+	}
+
+	wt, ok := data["window_type"]
+	if !ok {
+		t.Fatal("expected window_type field — FINDING-91")
+	}
+	if wt != "rolling" {
+		t.Fatalf("expected window_type=rolling, got: %v", wt)
+	}
+
+	ws, ok := data["window_size"]
+	if !ok {
+		t.Fatal("expected window_size field — FINDING-91")
+	}
+	if ws.(float64) <= 0 {
+		t.Fatalf("expected window_size > 0, got: %v", ws)
+	}
+}
+
+func TestHandleLoopBenchmark_DivergenceWarnings(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	repo := srv.findRepo("test-repo")
+	if repo == nil {
+		t.Fatal("test-repo not found after scan")
+	}
+
+	now := time.Now()
+	// Write observations with high cost (diverges from baseline).
+	writeObservationsJSONL(t, repo.Path, []session.LoopObservation{
+		{Timestamp: now.Add(-1 * time.Hour), LoopID: "loop-1", RepoName: "test-repo", TotalLatencyMs: 5000, TotalCostUSD: 0.50, Status: "completed", VerifyPassed: true, TaskType: "build"},
+		{Timestamp: now, LoopID: "loop-2", RepoName: "test-repo", TotalLatencyMs: 6000, TotalCostUSD: 0.60, Status: "completed", VerifyPassed: false, TaskType: "build"},
+	})
+
+	// Write a baseline with much lower cost/latency — >20% divergence expected.
+	writeBaselineFile(t, repo.Path, &e2e.LoopBaseline{
+		Aggregate: &e2e.BaselineStats{
+			SampleCount: 10,
+			CostP50:     0.03,
+			CostP95:     0.08,
+			LatencyP50:  1200,
+			LatencyP95:  2500,
+		},
+		Rates: &e2e.BaselineRates{
+			CompletionRate: 0.90,
+			VerifyPassRate: 0.95,
+			ErrorRate:      0.05,
+		},
+	})
+
+	result, err := srv.handleLoopBenchmark(context.Background(), makeRequest(map[string]any{
+		"repo":  "test-repo",
+		"hours": float64(48),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success, got error: %s", getResultText(result))
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &data); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	dw, ok := data["divergence_warnings"]
+	if !ok {
+		t.Fatal("expected divergence_warnings when baseline and benchmark differ significantly — FINDING-91")
+	}
+	warnings, ok := dw.([]any)
+	if !ok || len(warnings) == 0 {
+		t.Fatal("expected non-empty divergence_warnings array")
+	}
+
+	// Verify at least one cost-related warning is present.
+	found := false
+	for _, w := range warnings {
+		if s, ok := w.(string); ok && (strings.Contains(s, "cost_p50") || strings.Contains(s, "cost_p95")) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected cost-related divergence warning, got: %v", warnings)
 	}
 }
