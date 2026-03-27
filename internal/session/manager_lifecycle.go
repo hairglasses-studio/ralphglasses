@@ -315,9 +315,22 @@ func (m *Manager) persistOrWarn(s *Session, context string) {
 	}
 }
 
-// PersistSession writes session state to the shared state directory.
+// PersistSession writes session state to the shared state directory and,
+// if a Store is configured, also saves to the store.
 // Safe to call from any goroutine; acquires the session lock.
 func (m *Manager) PersistSession(s *Session) error {
+	// Write to Store if configured.
+	if m.store != nil {
+		s.mu.Lock()
+		// SaveSession reads exported fields; lock protects concurrent mutation.
+		err := m.store.SaveSession(context.Background(), s)
+		s.mu.Unlock()
+		if err != nil {
+			slog.Warn("store save failed, falling back to JSON", "session_id", s.ID, "err", err)
+		}
+	}
+
+	// Legacy JSON file persistence (still active until full migration).
 	if m.stateDir == "" {
 		return nil
 	}
