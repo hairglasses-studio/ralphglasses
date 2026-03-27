@@ -1,0 +1,8 @@
+name: fleet-remediation
+steps:
+    - name: diagnose
+      prompt: 'Run ralphglasses_fleet_status and ralphglasses_loop_benchmark for ralphglasses repo. Confirm: (1) >100 failed loops on repo 001, (2) >300 pending loops, (3) recent iterations show 0 files_changed. Report findings.'
+    - name: fix
+      prompt: 'Implement 3 fixes: (1) Add PruneStaleLoops function to internal/session/ that removes loops older than threshold with pending/failed status. (2) Add NoOpDetector to loop engine that auto-skips after 2 consecutive 0-file iterations. (3) Create default cascade config routing difficulty<0.4 to gemini, >=0.4 to claude. Run go build/vet/test after each change.'
+    - name: verify
+      prompt: Run ralphglasses_merge_verify and ralphglasses_self_test for ralphglasses repo. Confirm all tests pass with -race. Run ralphglasses_loop_benchmark to verify no regressions.
