@@ -490,6 +490,124 @@ func TestEnhance_InjectSelfCheck_Analysis(t *testing.T) {
 	assertContains(t, result.Enhanced, "claim is supported")
 }
 
+// --- Fix 3 (FINDING-242): Target provider markdown structure ---
+
+func TestEnhanceWithConfig_GeminiMarkdownStructure(t *testing.T) {
+	t.Parallel()
+	cfg := Config{TargetProvider: ProviderGemini}
+	result := EnhanceWithConfig("write a function to sort users by name with error handling and edge case coverage in Go", TaskTypeCode, cfg)
+
+	// Should use markdown headers, not XML tags
+	assertContains(t, result.Enhanced, "## Role")
+	assertContains(t, result.Enhanced, "## Instructions")
+	assertContains(t, result.Enhanced, "## Constraints")
+	assertNotContains(t, result.Enhanced, "<role>")
+	assertNotContains(t, result.Enhanced, "<instructions>")
+	assertNotContains(t, result.Enhanced, "<constraints>")
+}
+
+func TestEnhanceWithConfig_OpenAIMarkdownStructure(t *testing.T) {
+	t.Parallel()
+	cfg := Config{TargetProvider: ProviderOpenAI}
+	result := EnhanceWithConfig("write a function to sort users by name with error handling and edge case coverage in Go", TaskTypeCode, cfg)
+
+	assertContains(t, result.Enhanced, "## Role")
+	assertNotContains(t, result.Enhanced, "<role>")
+}
+
+func TestEnhanceWithConfig_ClaudeXMLStructure(t *testing.T) {
+	t.Parallel()
+	cfg := Config{TargetProvider: ProviderClaude}
+	result := EnhanceWithConfig("write a function to sort users by name with error handling and edge case coverage in Go", TaskTypeCode, cfg)
+
+	assertContains(t, result.Enhanced, "<role>")
+	assertNotContains(t, result.Enhanced, "## Role")
+}
+
+// --- Fix 4 (FINDING-243): SkippedStages transparency ---
+
+func TestEnhance_SkippedStagesPopulated(t *testing.T) {
+	t.Parallel()
+	// A clean prompt with no vague phrases, no negatives, no caps — many stages should be skipped
+	result := Enhance("write a function to sort users by name with error handling and edge case coverage in Go", TaskTypeCode)
+
+	if len(result.SkippedStages) == 0 {
+		t.Error("Expected some skipped stages for a clean prompt")
+	}
+
+	// Verify skipped stages have both name and reason
+	for _, ss := range result.SkippedStages {
+		if ss.Name == "" {
+			t.Error("SkippedStage has empty name")
+		}
+		if ss.Reason == "" {
+			t.Errorf("SkippedStage %q has empty reason", ss.Name)
+		}
+	}
+}
+
+func TestEnhance_SkippedStagesDisabledConfig(t *testing.T) {
+	t.Parallel()
+	cfg := Config{DisabledStages: []string{"structure", "self_check"}}
+	result := EnhanceWithConfig("write a function to sort users by name with error handling in Go", TaskTypeCode, cfg)
+
+	// Disabled stages should appear in skipped with "disabled in config" reason
+	found := 0
+	for _, ss := range result.SkippedStages {
+		if (ss.Name == "structure" || ss.Name == "self_check") && ss.Reason == "disabled in config" {
+			found++
+		}
+	}
+	if found != 2 {
+		t.Errorf("Expected 2 disabled stages in SkippedStages, found %d", found)
+	}
+}
+
+func TestEnhance_SkippedStagesNonClaudeTarget(t *testing.T) {
+	t.Parallel()
+	cfg := Config{TargetProvider: ProviderGemini}
+	result := EnhanceWithConfig("CRITICAL: You MUST follow this rule when writing code for the project", TaskTypeCode, cfg)
+
+	// tone_downgrade and overtrigger_rewrite should be skipped for Gemini
+	for _, ss := range result.SkippedStages {
+		if ss.Name == "tone_downgrade" {
+			assertContains(t, ss.Reason, "gemini")
+			return
+		}
+	}
+	t.Error("Expected tone_downgrade to be skipped for Gemini target")
+}
+
+// --- Fix 5 (FINDING-246): Task-type awareness ---
+
+func TestClassify_DocumentationAsAnalysis(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		prompt string
+	}{
+		{"write_docs", "Write documentation for the API endpoints"},
+		{"document_module", "Document the authentication system thoroughly"},
+		{"api_docs", "Create api documentation for the user service"},
+	}
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			got := Classify(tc.prompt)
+			if got == TaskTypeCode {
+				t.Errorf("Classify(%q) = %q, documentation should not classify as code", tc.prompt, got)
+			}
+		})
+	}
+}
+
+func TestEnhance_NonCodeTaskNoCodeConstraints(t *testing.T) {
+	t.Parallel()
+	result := Enhance("analyze the performance data for trends and patterns in the user behavior metrics", TaskTypeAnalysis)
+	assertNotContains(t, result.Enhanced, "Write clean, idiomatic code")
+	assertContains(t, result.Enhanced, "evidence")
+}
+
 func TestEnhance_PreambleBeforeStructure(t *testing.T) {
 	t.Parallel()
 	// Test that preamble + structure interaction works correctly
