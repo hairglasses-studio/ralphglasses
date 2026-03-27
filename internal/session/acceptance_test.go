@@ -521,30 +521,22 @@ func TestCheckpointExcludes_DoNotFilterGoFiles(t *testing.T) {
 	}
 }
 
-func TestCheckpointExcludes_KnownOverBroadPatterns(t *testing.T) {
-	// Document that *secret* and credentials* patterns can match Go source
-	// files with those words in their basename. This is a known risk (A22)
-	// that can cause 0-files-staged rejections if a worker creates files
-	// like "secret_rotation.go" or "credentials.go".
-	knownOverBroad := map[string]string{
-		"internal/session/secret_rotation.go": "*secret*",
-		"internal/credentials_manager.go":     "credentials*",
-		"internal/auth/credentials.go":        "credentials*",
+func TestCheckpointExcludes_NarrowedPatterns(t *testing.T) {
+	// Verify that the narrowed patterns (post-WS1) no longer match legitimate
+	// Go source files that happened to contain "secret" or "credentials" in
+	// their names. This was the root cause of A22 zero-file iterations.
+	legitimateFiles := []string{
+		"internal/session/secret_rotation.go",
+		"internal/credentials_manager.go",
+		"internal/auth/credentials.go",
 	}
 
-	for file, expectedPattern := range knownOverBroad {
+	for _, file := range legitimateFiles {
 		base := filepath.Base(file)
-		matched := false
 		for _, excl := range checkpointExcludes {
 			if m, _ := filepath.Match(excl, base); m {
-				if excl != expectedPattern {
-					t.Errorf("file %q matched unexpected pattern %q (expected %q)", file, excl, expectedPattern)
-				}
-				matched = true
+				t.Errorf("narrowed pattern %q still matches legitimate file %q — A22 regression", excl, file)
 			}
-		}
-		if !matched {
-			t.Errorf("expected file %q to be over-broadly matched by %q, but it wasn't", file, expectedPattern)
 		}
 	}
 }
@@ -557,7 +549,7 @@ func TestCheckpointExcludes_MatchSecretFiles(t *testing.T) {
 		"server.pem",
 		"private.key",
 		"credentials.json",
-		"my_secret.yaml",
+		"app-secret.yaml",
 	}
 
 	for _, f := range secretFiles {

@@ -535,9 +535,11 @@ func (b *Bus) StopAsyncWrites() {
 // startWriter spawns the background goroutine that reads from writeCh and persists events.
 // Must only be called once per start cycle (guarded by asyncStarted).
 func (b *Bus) startWriter() {
+	ch := b.writeCh
+	done := b.writeDone
 	go func() {
-		defer close(b.writeDone)
-		for e := range b.writeCh {
+		defer close(done)
+		for e := range ch {
 			b.mu.Lock()
 			if b.persistFile != nil {
 				b.appendEvent(e)

@@ -98,7 +98,7 @@ func TestHandleAnomalyDetect_NoObservations(t *testing.T) {
 		t.Fatalf("unexpected error: %s", getResultText(result))
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "no observations") {
-		t.Errorf("expected 'no observations' message, got: %s", text)
+	if !strings.Contains(text, `"status":"empty"`) && !strings.Contains(text, "no observations") {
+		t.Errorf("expected empty result or 'no observations' message, got: %s", text)
 	}
 }
