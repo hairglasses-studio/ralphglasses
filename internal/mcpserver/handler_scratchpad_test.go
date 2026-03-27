@@ -177,6 +177,64 @@ func TestHandleScratchpadList(t *testing.T) {
 	}
 }
 
+func TestHandleScratchpadListDedup(t *testing.T) {
+	t.Parallel()
+	srv, root := scratchpadServer(t)
+
+	// Create files that would cause duplicates: "tool_improvement_scratchpad.md"
+	// yields "tool_improvement" after suffix trim, which is the same as what
+	// "tool_improvement_scratchpad_scratchpad.md" would yield after double trim.
+	// In practice the duplicate comes from a file like "tool_improvement_scratchpad.md"
+	// being listed alongside other scratchpads.
+	ralphDir := filepath.Join(root, ".ralph")
+	// Normal scratchpad
+	if err := os.WriteFile(filepath.Join(ralphDir, "alpha_scratchpad.md"), []byte("# Alpha\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Another scratchpad whose base name after _scratchpad.md trim is "tool_improvement"
+	if err := os.WriteFile(filepath.Join(ralphDir, "tool_improvement_scratchpad.md"), []byte("# TI\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// A file that would produce "tool_improvement_scratchpad" after removing "_scratchpad.md"
+	// then gets deduped to "tool_improvement" after the extra _scratchpad strip.
+	if err := os.WriteFile(filepath.Join(ralphDir, "tool_improvement_scratchpad_scratchpad.md"), []byte("# TI dup\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{}
+
+	result, err := srv.handleScratchpadList(context.Background(), req)
+	if err != nil {
+		t.Fatalf("list error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("list tool error: %v", result.Content)
+	}
+
+	text := result.Content[0].(mcp.TextContent).Text
+	var names []string
+	if err := json.Unmarshal([]byte(text), &names); err != nil {
+		t.Fatalf("invalid JSON: %v (text: %s)", err, text)
+	}
+
+	// Count occurrences of tool_improvement
+	tiCount := 0
+	for _, n := range names {
+		if n == "tool_improvement" {
+			tiCount++
+		}
+	}
+	if tiCount != 1 {
+		t.Errorf("expected exactly 1 'tool_improvement' entry, got %d (names: %v)", tiCount, names)
+	}
+
+	// Should have 2 unique names: alpha, tool_improvement
+	if len(names) != 2 {
+		t.Errorf("expected 2 unique scratchpads, got %d: %v", len(names), names)
+	}
+}
+
 func TestHandleScratchpadResolve(t *testing.T) {
 	t.Parallel()
 	srv, root := scratchpadServer(t)
