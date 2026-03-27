@@ -222,8 +222,21 @@ func (s *Server) handlePromptClassify(_ context.Context, req mcp.CallToolRequest
 	if prompt == "" {
 		return codedError(ErrInvalidParams, "prompt required"), nil
 	}
-	taskType := enhancer.Classify(prompt)
-	return jsonResult(map[string]any{"task_type": string(taskType)}), nil
+	best, alts := enhancer.ClassifyDetailed(prompt)
+
+	altList := make([]map[string]any, 0, len(alts))
+	for _, a := range alts {
+		altList = append(altList, map[string]any{
+			"task_type":  string(a.TaskType),
+			"confidence": a.Confidence,
+		})
+	}
+
+	return jsonResult(map[string]any{
+		"task_type":    string(best.TaskType),
+		"confidence":   best.Confidence,
+		"alternatives": altList,
+	}), nil
 }
 
 func (s *Server) handlePromptShouldEnhance(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -261,6 +274,28 @@ func (s *Server) handlePromptShouldEnhance(_ context.Context, req mcp.CallToolRe
 			reason = "already has XML structure"
 		default:
 			reason = "matched skip pattern"
+		}
+	} else {
+		// Build a reason from scoring dimensions so the caller knows why enhancement is recommended
+		ar := enhancer.Analyze(prompt)
+		lints := enhancer.Lint(prompt)
+		report := enhancer.Score(prompt, ar.TaskType, lints, &ar, cfg.TargetProvider)
+
+		var weakParts []string
+		for _, dim := range report.Dimensions {
+			if dim.Grade == "D" || dim.Grade == "F" {
+				weakParts = append(weakParts, fmt.Sprintf("weak %s (%s)", strings.ToLower(dim.Name), dim.Grade))
+			}
+		}
+		wordCount := len(strings.Fields(strings.TrimSpace(prompt)))
+		if wordCount < 20 {
+			weakParts = append(weakParts, fmt.Sprintf("under 20 words (%d)", wordCount))
+		}
+
+		if len(weakParts) > 0 {
+			reason = fmt.Sprintf("score %d/100: %s", report.Overall, strings.Join(weakParts, ", "))
+		} else {
+			reason = fmt.Sprintf("score %d/100: could benefit from enhancement", report.Overall)
 		}
 	}
 
