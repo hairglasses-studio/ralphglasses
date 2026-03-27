@@ -56,6 +56,19 @@ func TailLog(repoPath string, offset *int64) tea.Cmd {
 	}
 }
 
+// OpenLogFile creates the log directory and opens the ralph log file for
+// appending. The caller is responsible for closing the returned file.
+// This is the canonical way to obtain a writable log handle — both the
+// process manager (ralph_loop.sh stdout/stderr) and the session runner
+// (streaming JSON output) should use it.
+func OpenLogFile(repoPath string) (*os.File, error) {
+	dir := LogDirPath(repoPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, err
+	}
+	return os.OpenFile(LogFilePath(repoPath), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+}
+
 // ReadFullLog reads the entire ralph log file.
 func ReadFullLog(repoPath string) ([]string, error) {
 	logPath := LogFilePath(repoPath)

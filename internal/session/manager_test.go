@@ -549,7 +549,7 @@ func TestManagerConcurrentSessionWrite(t *testing.T) {
 			s.SpentUSD += 0.01
 			s.TurnCount++
 			s.CostHistory = append(s.CostHistory, float64(i)*0.001)
-			appendSessionOutput(s, fmt.Sprintf("output from worker %d", i))
+			appendSessionOutput(s, fmt.Sprintf("output from worker %d", i), nil)
 			s.mu.Unlock()
 		}(i)
 	}

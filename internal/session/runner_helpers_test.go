@@ -67,7 +67,7 @@ func TestAppendSessionOutput_Basic(t *testing.T) {
 	s := &Session{
 		OutputCh: make(chan string, 10),
 	}
-	appendSessionOutput(s, "hello world")
+	appendSessionOutput(s, "hello world", nil)
 
 	if s.TotalOutputCount != 1 {
 		t.Errorf("TotalOutputCount = %d, want 1", s.TotalOutputCount)
@@ -89,7 +89,7 @@ func TestAppendSessionOutput_Truncation(t *testing.T) {
 	}
 	// Generate a string longer than 4000 characters
 	long := strings.Repeat("x", 5000)
-	appendSessionOutput(s, long)
+	appendSessionOutput(s, long, nil)
 
 	if len(s.LastOutput) != 4000 {
 		t.Errorf("LastOutput len = %d, want 4000 (truncated)", len(s.LastOutput))
@@ -106,7 +106,7 @@ func TestAppendSessionOutput_HistoryOverflow(t *testing.T) {
 	}
 	// Add 110 entries — should be capped to 100
 	for i := 0; i < 110; i++ {
-		appendSessionOutput(s, "line")
+		appendSessionOutput(s, "line", nil)
 	}
 	if len(s.OutputHistory) != 100 {
 		t.Errorf("OutputHistory len = %d, want 100 (capped)", len(s.OutputHistory))
@@ -121,7 +121,7 @@ func TestAppendSessionOutput_ChannelFull(t *testing.T) {
 	s := &Session{
 		OutputCh: make(chan string),
 	}
-	appendSessionOutput(s, "should not block")
+	appendSessionOutput(s, "should not block", nil)
 	if s.TotalOutputCount != 1 {
 		t.Errorf("TotalOutputCount = %d, want 1", s.TotalOutputCount)
 	}
