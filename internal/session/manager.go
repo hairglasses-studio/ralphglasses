@@ -5,12 +5,14 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/model"
 )
 
 // DefaultStateDir is the shared directory for session state persistence.
@@ -91,6 +93,19 @@ func (m *Manager) SetStateDir(dir string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.stateDir = dir
+}
+
+// ApplyConfig reads relevant settings from a .ralphrc config and applies them
+// to the Manager. Currently handles KILL_ESCALATION_TIMEOUT.
+func (m *Manager) ApplyConfig(cfg *model.RalphConfig) {
+	if cfg == nil {
+		return
+	}
+	if raw := cfg.Get("KILL_ESCALATION_TIMEOUT", ""); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil && v >= 1 && v <= 60 {
+			m.KillTimeout = time.Duration(v) * time.Second
+		}
+	}
 }
 
 // expandHome replaces a leading ~ with the user's home directory.
