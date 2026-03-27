@@ -57,3 +57,42 @@ Migrated all ~75 legacy error helper calls (`invalidParams()`, `notFound()`, `in
 - mcpserver: 71.7% (target 80% — needs more handler tests)
 - tui core: 52.5% (target 60% — close)
 - session/manager.go: 758 LOC (deferred split)
+
+## Cycle 3 Results (2026-03-26)
+
+**Status**: Complete — 34/34 packages pass, 0 race conditions, pushed to main.
+
+### Coverage Gains
+| Package | Before | After | Target |
+|---------|--------|-------|--------|
+| tui/styles | 13.3% | 100.0% | 60% ✅ |
+| notify | 71.4% | 93.3% | 80% ✅ |
+| tui/components | 70.1% | 86.6% | 82% ✅ |
+| batch | 73.9% | 83.7% | 80% ✅ |
+| e2e | 72.6% | 82.9% | 78% ✅ |
+| tui core | 52.5% | 66.5% | 62% ✅ |
+| mcpserver | 71.7% | 74.3% | 80% ❌ |
+| enhancer | 87.6% | 87.6% | — |
+| session | 80.8% | 80.8% | — |
+
+### File Splits
+| File | Before | After |
+|------|--------|-------|
+| mcpserver/tools_builders.go | 818 | 83 (+3 new files) |
+| enhancer/enhancer.go | 836 | 318 (+2 new files) |
+| tui/keymap.go | 822 | 197 (+2 new files) |
+| e2e/catalog.go | 1019 | 307 (+4 new files) |
+| session/manager.go | 758 | 501 (+2 new files) |
+
+### New Test Files (24 total)
+- mcpserver: tools_builders_test, errors_test, tools_dispatch_test, tools_registry_test, tools_fleet_event_test, handler_repo_fleet_test, handler_repo_health_test
+- tui: handlers_overview_test, handlers_detail_test, handlers_loops_test
+- tui/styles: theme_test, icons_test (+ styles_test extended)
+- tui/components: gauge_test, tabbar_test, width_test (+ table_test, actionmenu_test extended)
+- batch: claude_test, openai_test
+- e2e: aggregate_test, baseline_test
+- notify: notify_test extended
+
+### Remaining Gaps
+- mcpserver: 74.3% (target 80%) — handler_rc.go, handler_session.go, schemas.go need more test depth
+- session/manager.go still 501 LOC (target <400)
