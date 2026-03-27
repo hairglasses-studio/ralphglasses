@@ -2,6 +2,8 @@ package session
 
 import (
 	"log/slog"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -28,6 +30,47 @@ func DefaultCascadeConfig() CascadeConfig {
 		MaxCheapTurns:       15,
 		TaskTypeOverrides:   make(map[string]Provider),
 	}
+}
+
+// DefaultCascadeFromConfig creates a CascadeConfig from .ralphrc key-value pairs.
+// Returns nil if CASCADE_ENABLED is not "true". Missing or invalid numeric values
+// fall back to sensible defaults.
+func DefaultCascadeFromConfig(cfg map[string]string) *CascadeConfig {
+	if cfg == nil {
+		return nil
+	}
+	enabled := strings.ToLower(strings.TrimSpace(cfg["CASCADE_ENABLED"]))
+	if enabled != "true" && enabled != "1" && enabled != "yes" {
+		return nil
+	}
+
+	defaults := DefaultCascadeConfig()
+
+	if v, ok := cfg["CASCADE_CHEAP_PROVIDER"]; ok && v != "" {
+		defaults.CheapProvider = Provider(v)
+	}
+	if v, ok := cfg["CASCADE_EXPENSIVE_PROVIDER"]; ok && v != "" {
+		defaults.ExpensiveProvider = Provider(v)
+	}
+	if v, ok := cfg["CASCADE_CONFIDENCE_THRESHOLD"]; ok && v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0 && f <= 1 {
+			defaults.ConfidenceThreshold = f
+		}
+	}
+	if v, ok := cfg["CASCADE_MAX_CHEAP_BUDGET"]; ok && v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f > 0 {
+			defaults.MaxCheapBudgetUSD = f
+		}
+	}
+	if v, ok := cfg["CASCADE_DIFFICULTY_THRESHOLD"]; ok && v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0 && f <= 1 {
+			// Store on the config as ConfidenceThreshold if caller wants difficulty-based routing.
+			// For now, we log that the key was recognized but keep standard behavior.
+			slog.Debug("cascade: difficulty threshold from config", "value", f)
+		}
+	}
+
+	return &defaults
 }
 
 // CascadeResult records the outcome of a cascade routing decision.

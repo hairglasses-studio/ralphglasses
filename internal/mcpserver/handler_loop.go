@@ -84,7 +84,7 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 	if getBoolArg(req, "enable_cascade") {
 		profile.EnableCascade = true
 		if !s.SessMgr.HasCascadeRouter() {
-			cfg := session.DefaultCascadeConfig()
+			cfg := cascadeConfigFromRepo(r.Path, ralphDir)
 			s.SessMgr.SetCascadeRouter(session.NewCascadeRouter(cfg, nil, nil, ralphDir))
 		}
 	}
