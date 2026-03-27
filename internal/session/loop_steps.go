@@ -458,7 +458,9 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	// Self-improvement acceptance gate: classify changes and route.
 	if profile.SelfImprovement && postVerifyStatus == "idle" {
 		accStart := time.Now()
-		result, accErr := m.handleSelfImprovementAcceptance(ctx, run, index, workerWorktrees)
+		atr, accErr := m.handleSelfImprovementAcceptanceTraced(ctx, run, index, workerWorktrees)
+		result := atr.Result
+		trace := atr.Trace
 		if accErr != nil {
 			// Log but don't fail — changes stay in worktree for manual handling.
 			run.mu.Lock()
@@ -471,6 +473,8 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			run.mu.Lock()
 			if index < len(run.Iterations) {
 				run.Iterations[index].Acceptance = result
+				run.Iterations[index].AcceptanceReason = trace.Reason
+				run.Iterations[index].StagedFilesCount = trace.StagedFileCount
 			}
 			run.mu.Unlock()
 			if result.AutoMerged && m.bus != nil {
@@ -496,6 +500,15 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 				})
 			}
 		}
+
+		// WS11: Warn if staged file count is 0 but worker reported diff paths.
+		// This is the root cause of A22 — silent rejection of worker changes.
+		if trace.StagedFileCount == 0 && trace.Reason != "worker_no_changes" {
+			slog.Warn("acceptance: 0 staged files despite worker changes — possible over-filtering by checkpointExcludes",
+				"loop_id", run.ID, "iteration", index, "reason", trace.Reason,
+				"safe_paths", len(trace.SafePaths), "review_paths", len(trace.ReviewPaths))
+		}
+
 		m.updateLoopIteration(run, index, "", func(iter *LoopIteration, loop *LoopRun) {
 			iter.AcceptanceMs = time.Since(accStart).Milliseconds()
 		})
