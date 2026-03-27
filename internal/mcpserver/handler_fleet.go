@@ -50,7 +50,13 @@ func (s *Server) WireAutoOptimizer(mgr *session.Manager) {
 
 func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil && s.FleetClient == nil {
-		return codedError(ErrFleetNotRunning, "fleet server not active — start with 'ralphglasses mcp --fleet'"), nil
+		return jsonResult(map[string]any{
+			"status":     "not_configured",
+			"fleet_mode": false,
+			"message":    "fleet coordinator not active — start with 'ralphglasses mcp --fleet'",
+			"items":      []any{},
+			"count":      0,
+		}), nil
 	}
 
 	repo := getStringArg(req, "repo")
@@ -97,7 +103,13 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 
 func (s *Server) handleFleetBudget(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil && s.FleetClient == nil {
-		return codedError(ErrFleetNotRunning, "fleet server not active — start with 'ralphglasses mcp --fleet'"), nil
+		return jsonResult(map[string]any{
+			"status":     "not_configured",
+			"fleet_mode": false,
+			"message":    "fleet coordinator not active — start with 'ralphglasses mcp --fleet'",
+			"items":      []any{},
+			"count":      0,
+		}), nil
 	}
 
 	newLimit := getNumberArg(req, "limit", 0)
@@ -131,7 +143,13 @@ func (s *Server) handleFleetBudget(_ context.Context, req mcp.CallToolRequest) (
 
 func (s *Server) handleFleetWorkers(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil && s.FleetClient == nil {
-		return codedError(ErrFleetNotRunning, "fleet server not active — start with 'ralphglasses mcp --fleet'"), nil
+		return jsonResult(map[string]any{
+			"status":     "not_configured",
+			"fleet_mode": false,
+			"message":    "fleet coordinator not active — start with 'ralphglasses mcp --fleet'",
+			"items":      []any{},
+			"count":      0,
+		}), nil
 	}
 
 	action := getStringArg(req, "action")
@@ -368,7 +386,13 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 
 func (s *Server) handleFleetDLQ(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil {
-		return codedError(ErrFleetNotRunning, "fleet server not active — start with 'ralphglasses mcp --fleet'"), nil
+		return jsonResult(map[string]any{
+			"status":     "not_configured",
+			"fleet_mode": false,
+			"message":    "fleet coordinator not active — start with 'ralphglasses mcp --fleet'",
+			"items":      []any{},
+			"count":      0,
+		}), nil
 	}
 
 	action := getStringArg(req, "action")
