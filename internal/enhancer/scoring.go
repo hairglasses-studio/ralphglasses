@@ -54,25 +54,12 @@ func Score(text string, taskType TaskType, lints []LintResult, ar *AnalyzeResult
 		scoreTone(text, taskType, lints, ar, targetProvider),
 	}
 
-	// Compute weighted overall
+	// Compute weighted overall — strict weighted average so low dimensions drag down the score.
 	var weighted float64
 	for _, d := range dims {
 		weighted += float64(d.Score) * d.Weight
 	}
 	overall := int(weighted + 0.5) // round
-
-	// Coherence bonus: reward well-rounded prompts that score ≥60 on multiple dimensions.
-	// This helps CLI prompts that lack XML formalism but are otherwise well-written.
-	// Only applies when the base score is ≥46 to avoid inflating truly poor prompts.
-	aboveThreshold := 0
-	for _, d := range dims {
-		if d.Score >= 60 {
-			aboveThreshold++
-		}
-	}
-	if aboveThreshold >= 3 && overall >= 46 {
-		overall += aboveThreshold * 3
-	}
 
 	if overall > 100 {
 		overall = 100

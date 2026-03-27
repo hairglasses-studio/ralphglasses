@@ -21,14 +21,21 @@ import (
 
 // EnhanceResult holds the output of the enhancement pipeline
 type EnhanceResult struct {
-	Original        string   `json:"original"`
-	Enhanced        string   `json:"enhanced"`
-	TaskType        TaskType `json:"task_type"`
-	StagesRun       []string `json:"stages_run"`
-	Improvements    []string `json:"improvements"`
-	EstimatedTokens int      `json:"estimated_tokens"`
-	CostTier        string   `json:"cost_tier"`
-	Source          string   `json:"source,omitempty"` // "local", "llm", "llm_cached", "local_fallback", "error"
+	Original        string         `json:"original"`
+	Enhanced        string         `json:"enhanced"`
+	TaskType        TaskType       `json:"task_type"`
+	StagesRun       []string       `json:"stages_run"`
+	SkippedStages   []SkippedStage `json:"skipped_stages,omitempty"`
+	Improvements    []string       `json:"improvements"`
+	EstimatedTokens int            `json:"estimated_tokens"`
+	CostTier        string         `json:"cost_tier"`
+	Source          string         `json:"source,omitempty"` // "local", "llm", "llm_cached", "local_fallback", "error"
+}
+
+// SkippedStage records a pipeline stage that was skipped and why.
+type SkippedStage struct {
+	Name   string `json:"name"`
+	Reason string `json:"reason"`
 }
 
 // AnalyzeResult holds prompt quality analysis
@@ -74,58 +81,114 @@ func EnhanceWithConfig(raw string, taskType TaskType, cfg Config) EnhanceResult 
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "config_rules")
 			result.Improvements = append(result.Improvements, imps...)
+		} else {
+			result.SkippedStages = append(result.SkippedStages, SkippedStage{
+				Name: "config_rules", Reason: "no config rules matched the prompt",
+			})
 		}
 	}
 
 	// Stage 1: Specificity — replace vague phrases with concrete instructions
-	if !cfg.IsStageDisabled("specificity") {
+	if cfg.IsStageDisabled("specificity") {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "specificity", Reason: "disabled in config",
+		})
+	} else {
 		text, imps = improveSpecificity(text)
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "specificity")
 			result.Improvements = append(result.Improvements, imps...)
+		} else {
+			result.SkippedStages = append(result.SkippedStages, SkippedStage{
+				Name: "specificity", Reason: "no vague phrases detected",
+			})
 		}
 	}
 
 	// Stage 2: Positive reframing — rewrite known negative patterns first
-	if !cfg.IsStageDisabled("positive_reframe") {
+	if cfg.IsStageDisabled("positive_reframe") {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "positive_reframe", Reason: "disabled in config",
+		})
+	} else {
 		text, imps = reframeNegatives(text)
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "positive_reframe")
 			result.Improvements = append(result.Improvements, imps...)
+		} else {
+			result.SkippedStages = append(result.SkippedStages, SkippedStage{
+				Name: "positive_reframe", Reason: "no negative patterns detected",
+			})
 		}
 	}
 
 	// Stage 3: Tone — downgrade remaining aggressive ALL-CAPS for Claude 4.x
 	// Skip for non-Claude targets — other models don't overtrigger on aggressive language
-	if !cfg.IsStageDisabled("tone_downgrade") && (cfg.TargetProvider == "" || cfg.TargetProvider == ProviderClaude) {
+	if cfg.IsStageDisabled("tone_downgrade") {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "tone_downgrade", Reason: "disabled in config",
+		})
+	} else if cfg.TargetProvider != "" && cfg.TargetProvider != ProviderClaude {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "tone_downgrade", Reason: "not applicable for target provider " + string(cfg.TargetProvider),
+		})
+	} else {
 		text, imps = downgradeTone(text)
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "tone_downgrade")
 			result.Improvements = append(result.Improvements, imps...)
+		} else {
+			result.SkippedStages = append(result.SkippedStages, SkippedStage{
+				Name: "tone_downgrade", Reason: "no aggressive caps detected",
+			})
 		}
 	}
 
 	// Stage 4: Overtrigger rewrite — soften aggressive anti-laziness phrases for Claude 4.x
 	// Skip for non-Claude targets — aggressive prefixes may be useful for other models
-	if !cfg.IsStageDisabled("overtrigger_rewrite") && (cfg.TargetProvider == "" || cfg.TargetProvider == ProviderClaude) {
+	if cfg.IsStageDisabled("overtrigger_rewrite") {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "overtrigger_rewrite", Reason: "disabled in config",
+		})
+	} else if cfg.TargetProvider != "" && cfg.TargetProvider != ProviderClaude {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "overtrigger_rewrite", Reason: "not applicable for target provider " + string(cfg.TargetProvider),
+		})
+	} else {
 		text, imps = rewriteOvertriggerPhrases(text)
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "overtrigger_rewrite")
 			result.Improvements = append(result.Improvements, imps...)
+		} else {
+			result.SkippedStages = append(result.SkippedStages, SkippedStage{
+				Name: "overtrigger_rewrite", Reason: "no overtrigger phrases detected",
+			})
 		}
 	}
 
 	// Stage 5: Example detection — wrap bare Input/Output pairs in <example> tags
-	if !cfg.IsStageDisabled("examples") {
+	if cfg.IsStageDisabled("examples") {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "example_wrapping", Reason: "disabled in config",
+		})
+	} else {
 		text, imps = DetectAndWrapExamples(text)
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "example_wrapping")
 			result.Improvements = append(result.Improvements, imps...)
+		} else {
+			result.SkippedStages = append(result.SkippedStages, SkippedStage{
+				Name: "example_wrapping", Reason: "no bare example pairs detected",
+			})
 		}
 	}
 
 	// Stage 6: Structure — wrap in XML tags (Claude) or markdown sections (Gemini/OpenAI)
-	if !cfg.IsStageDisabled("structure") {
+	if cfg.IsStageDisabled("structure") {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "structure", Reason: "disabled in config",
+		})
+	} else {
 		if cfg.TargetProvider != "" && cfg.TargetProvider != ProviderClaude {
 			text, imps = addMarkdownStructure(text, taskType)
 		} else {
@@ -136,56 +199,120 @@ func EnhanceWithConfig(raw string, taskType TaskType, cfg Config) EnhanceResult 
 	}
 
 	// Stage 7: Long-context reordering — move bulk context before query
-	if !cfg.IsStageDisabled("context_reorder") {
+	if cfg.IsStageDisabled("context_reorder") {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "context_reorder", Reason: "disabled in config",
+		})
+	} else {
 		text, imps = ReorderLongContext(text)
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "context_reorder")
 			result.Improvements = append(result.Improvements, imps...)
+		} else {
+			result.SkippedStages = append(result.SkippedStages, SkippedStage{
+				Name: "context_reorder", Reason: "prompt too short for long-context reordering",
+			})
 		}
 	}
 
 	// Stage 8: Format enforcement — detect output format requests
-	if !cfg.IsStageDisabled("format_enforcement") {
+	if cfg.IsStageDisabled("format_enforcement") {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "format_enforcement", Reason: "disabled in config",
+		})
+	} else {
 		text, imps = enforceOutputFormat(text)
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "format_enforcement")
 			result.Improvements = append(result.Improvements, imps...)
+		} else {
+			result.SkippedStages = append(result.SkippedStages, SkippedStage{
+				Name: "format_enforcement", Reason: "no format request detected or already specified",
+			})
 		}
 	}
 
 	// Stage 9: Quote grounding — inject "find quotes first" for long-context analysis
-	if !cfg.IsStageDisabled("quote_grounding") {
+	if cfg.IsStageDisabled("quote_grounding") {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "quote_grounding", Reason: "disabled in config",
+		})
+	} else {
 		text, imps = InjectQuoteGrounding(text, taskType)
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "quote_grounding")
 			result.Improvements = append(result.Improvements, imps...)
+		} else {
+			reason := "prompt too short for quote grounding"
+			if taskType != TaskTypeAnalysis && taskType != TaskTypeGeneral {
+				reason = "not applicable for task type " + string(taskType)
+			}
+			result.SkippedStages = append(result.SkippedStages, SkippedStage{
+				Name: "quote_grounding", Reason: reason,
+			})
 		}
 	}
 
 	// Stage 10: Self-check — inject verification for code/math/analysis
-	if !cfg.IsStageDisabled("self_check") {
+	if cfg.IsStageDisabled("self_check") {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "self_check", Reason: "disabled in config",
+		})
+	} else {
 		text, imps = injectSelfCheck(text, taskType)
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "self_check")
 			result.Improvements = append(result.Improvements, imps...)
+		} else {
+			reason := "not applicable for task type " + string(taskType)
+			if taskType == TaskTypeCode || taskType == TaskTypeAnalysis || taskType == TaskTypeTroubleshooting {
+				reason = "verification instruction already present"
+			}
+			result.SkippedStages = append(result.SkippedStages, SkippedStage{
+				Name: "self_check", Reason: reason,
+			})
 		}
 	}
 
 	// Stage 11: Overengineering guard — prevent unnecessary abstractions (code tasks only)
-	if !cfg.IsStageDisabled("overengineering_guard") {
+	if cfg.IsStageDisabled("overengineering_guard") {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "overengineering_guard", Reason: "disabled in config",
+		})
+	} else {
 		text, imps = injectOverengineeringGuard(text, taskType)
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "overengineering_guard")
 			result.Improvements = append(result.Improvements, imps...)
+		} else {
+			reason := "not applicable for task type " + string(taskType)
+			if taskType == TaskTypeCode {
+				reason = "scaffolding prompt or guard already present"
+			}
+			result.SkippedStages = append(result.SkippedStages, SkippedStage{
+				Name: "overengineering_guard", Reason: reason,
+			})
 		}
 	}
 
 	// Stage 12: Preamble suppression — add direct response instruction
-	if !cfg.IsStageDisabled("preamble_suppression") {
+	if cfg.IsStageDisabled("preamble_suppression") {
+		result.SkippedStages = append(result.SkippedStages, SkippedStage{
+			Name: "preamble_suppression", Reason: "disabled in config",
+		})
+	} else {
 		text, imps = suppressPreamble(text, taskType)
 		if len(imps) > 0 {
 			result.StagesRun = append(result.StagesRun, "preamble_suppression")
 			result.Improvements = append(result.Improvements, imps...)
+		} else {
+			reason := "not applicable for task type " + string(taskType)
+			if taskType == TaskTypeCode || taskType == TaskTypeWorkflow {
+				reason = "preamble suppression already present"
+			}
+			result.SkippedStages = append(result.SkippedStages, SkippedStage{
+				Name: "preamble_suppression", Reason: reason,
+			})
 		}
 	}
 

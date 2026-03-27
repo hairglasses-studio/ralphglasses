@@ -30,6 +30,7 @@ var taskTypePatterns = map[TaskType][]string{
 		"review", "analyze", "compare", "evaluate", "assess", "audit",
 		"inspect", "examine", "investigate", "explain", "understand",
 		"performance", "benchmark", "profile", "measure",
+		"documentation", "document", "summarize", "describe", "outline",
 	},
 	TaskTypeCreative: {
 		"design", "visual", "music", "audio", "video", "art",
@@ -55,6 +56,8 @@ var taskTypePhrases = map[TaskType][]string{
 	},
 	TaskTypeAnalysis: {
 		"root cause", "code review", "security audit",
+		"write documentation", "api documentation", "user guide",
+		"technical writing", "readme",
 	},
 }
 
