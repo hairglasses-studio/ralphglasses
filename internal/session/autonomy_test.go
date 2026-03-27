@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestDecisionLog_ProposeAtLevel(t *testing.T) {
@@ -198,6 +199,129 @@ func TestDecisionLog_SetLevel(t *testing.T) {
 	dl.SetLevel(LevelAutoRecover)
 	if dl.Level() != LevelAutoRecover {
 		t.Errorf("after set: got %d, want 1", dl.Level())
+	}
+}
+
+func TestBootstrapAutonomy_Defaults(t *testing.T) {
+	ac := BootstrapAutonomy(nil)
+	if ac.Level != LevelObserve {
+		t.Errorf("default level: got %d, want 0", ac.Level)
+	}
+	if ac.AutoRecover {
+		t.Error("default auto-recover should be false")
+	}
+	if ac.MaxRecoveries != 3 {
+		t.Errorf("default max recoveries: got %d, want 3", ac.MaxRecoveries)
+	}
+}
+
+func TestBootstrapAutonomy_EmptyMap(t *testing.T) {
+	ac := BootstrapAutonomy(map[string]string{})
+	if ac.Level != LevelObserve {
+		t.Errorf("empty map level: got %d, want 0", ac.Level)
+	}
+}
+
+func TestBootstrapAutonomy_Level1(t *testing.T) {
+	cfg := map[string]string{
+		"AUTONOMY_LEVEL":        "1",
+		"AUTONOMY_AUTO_RECOVER": "true",
+	}
+	ac := BootstrapAutonomy(cfg)
+	if ac.Level != LevelAutoRecover {
+		t.Errorf("level: got %d, want 1", ac.Level)
+	}
+	if !ac.AutoRecover {
+		t.Error("auto-recover should be true")
+	}
+}
+
+func TestBootstrapAutonomy_ClampsHighLevel(t *testing.T) {
+	cfg := map[string]string{
+		"AUTONOMY_LEVEL": "3",
+	}
+	ac := BootstrapAutonomy(cfg)
+	if ac.Level != LevelAutoRecover {
+		t.Errorf("clamped level: got %d, want 1 (max for bootstrap)", ac.Level)
+	}
+}
+
+func TestBootstrapAutonomy_MaxRecoveries(t *testing.T) {
+	cfg := map[string]string{
+		"AUTONOMY_AUTO_RECOVER_MAX": "5",
+	}
+	ac := BootstrapAutonomy(cfg)
+	if ac.MaxRecoveries != 5 {
+		t.Errorf("max recoveries: got %d, want 5", ac.MaxRecoveries)
+	}
+}
+
+func TestBootstrapAutonomy_InvalidValues(t *testing.T) {
+	cfg := map[string]string{
+		"AUTONOMY_LEVEL":            "notanumber",
+		"AUTONOMY_AUTO_RECOVER":     "maybe",
+		"AUTONOMY_AUTO_RECOVER_MAX": "-1",
+	}
+	ac := BootstrapAutonomy(cfg)
+	// Invalid level falls back to default 0
+	if ac.Level != LevelObserve {
+		t.Errorf("invalid level: got %d, want 0", ac.Level)
+	}
+	// Invalid bool falls back to false
+	if ac.AutoRecover {
+		t.Error("invalid auto-recover should be false")
+	}
+	// Invalid max falls back to default 3
+	if ac.MaxRecoveries != 3 {
+		t.Errorf("invalid max recoveries: got %d, want 3", ac.MaxRecoveries)
+	}
+}
+
+func TestShouldRecover_Level0(t *testing.T) {
+	ac := &AutonomyConfig{Level: LevelObserve, AutoRecover: true, MaxRecoveries: 3}
+	if ac.ShouldRecover(0) {
+		t.Error("level 0 should not auto-recover")
+	}
+}
+
+func TestShouldRecover_Level1_Enabled(t *testing.T) {
+	ac := &AutonomyConfig{Level: LevelAutoRecover, AutoRecover: true, MaxRecoveries: 3}
+	if !ac.ShouldRecover(0) {
+		t.Error("level 1 with auto-recover should allow recovery at count 0")
+	}
+	if !ac.ShouldRecover(2) {
+		t.Error("level 1 with auto-recover should allow recovery at count 2")
+	}
+	if ac.ShouldRecover(3) {
+		t.Error("level 1 should not recover at max count")
+	}
+	if ac.ShouldRecover(5) {
+		t.Error("level 1 should not recover beyond max count")
+	}
+}
+
+func TestShouldRecover_Level1_Disabled(t *testing.T) {
+	ac := &AutonomyConfig{Level: LevelAutoRecover, AutoRecover: false, MaxRecoveries: 3}
+	if ac.ShouldRecover(0) {
+		t.Error("auto-recover disabled should not allow recovery")
+	}
+}
+
+func TestRecoveryBackoff(t *testing.T) {
+	tests := []struct {
+		attempt int
+		want    time.Duration
+	}{
+		{0, 30 * time.Second},
+		{1, 60 * time.Second},
+		{2, 120 * time.Second},
+		{3, 240 * time.Second},
+	}
+	for _, tt := range tests {
+		got := RecoveryBackoff(tt.attempt)
+		if got != tt.want {
+			t.Errorf("RecoveryBackoff(%d) = %v, want %v", tt.attempt, got, tt.want)
+		}
 	}
 }
 
