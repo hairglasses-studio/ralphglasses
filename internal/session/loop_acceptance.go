@@ -4,9 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 )
 
+// AcceptanceTraceResult bundles the acceptance result with the detailed trace.
+type AcceptanceTraceResult struct {
+	Result *AcceptanceResult
+	Trace  AcceptanceTrace
+}
+
 func (m *Manager) handleSelfImprovementAcceptance(ctx context.Context, run *LoopRun, index int, worktrees []string) (*AcceptanceResult, error) {
+	atr, err := m.handleSelfImprovementAcceptanceTraced(ctx, run, index, worktrees)
+	return atr.Result, err
+}
+
+func (m *Manager) handleSelfImprovementAcceptanceTraced(ctx context.Context, run *LoopRun, index int, worktrees []string) (AcceptanceTraceResult, error) {
+	var trace AcceptanceTrace
+
 	// Collect all diff paths across worktrees.
 	var allPaths []string
 	seen := make(map[string]bool)
@@ -16,6 +30,7 @@ func (m *Manager) handleSelfImprovementAcceptance(ctx context.Context, run *Loop
 		}
 		paths, err := gitDiffPathsForWorktree(wt)
 		if err != nil {
+			slog.Warn("acceptance: failed to get diff paths", "worktree", wt, "error", err)
 			continue
 		}
 		for _, p := range paths {
@@ -27,10 +42,18 @@ func (m *Manager) handleSelfImprovementAcceptance(ctx context.Context, run *Loop
 	}
 
 	if len(allPaths) == 0 {
-		return &AcceptanceResult{}, nil
+		trace.Reason = "worker_no_changes"
+		slog.Info("acceptance: no diff paths from any worktree", "worktree_count", len(worktrees))
+		return AcceptanceTraceResult{
+			Result: &AcceptanceResult{},
+			Trace:  trace,
+		}, nil
 	}
 
 	safe, review := ClassifySelfImprovePaths(allPaths)
+	trace.SafePaths = safe
+	trace.ReviewPaths = review
+
 	result := &AcceptanceResult{
 		SafePaths:   safe,
 		ReviewPaths: review,
@@ -46,7 +69,13 @@ func (m *Manager) handleSelfImprovementAcceptance(ctx context.Context, run *Loop
 				continue
 			}
 			msg := fmt.Sprintf("self-improve: auto-merge (%s)", buildDiffSummary(safe))
-			if err := AutoCommitAndMerge(wt, mainBranch, msg); err != nil {
+			commitTrace, err := AutoCommitAndMergeTraced(wt, mainBranch, msg)
+			trace.StagedFileCount += commitTrace.StagedFileCount
+			if commitTrace.Reason == "no_staged_files" {
+				slog.Warn("acceptance: AutoCommitAndMerge found no staged files despite diff paths",
+					"worktree", wt, "diff_paths", len(allPaths))
+			}
+			if err != nil {
 				if errors.Is(err, ErrRebaseConflict) {
 					// Rebase had conflicts — fall through to PR creation.
 					review = append(review, safe...)
@@ -55,11 +84,13 @@ func (m *Manager) handleSelfImprovementAcceptance(ctx context.Context, run *Loop
 					break
 				}
 				result.Error = err.Error()
-				return result, err
+				trace.Reason = commitTrace.Reason
+				return AcceptanceTraceResult{Result: result, Trace: trace}, err
 			}
 		}
 		if !rebaseConflict {
 			result.AutoMerged = true
+			trace.Reason = "auto_merged"
 		}
 	}
 	if !autoMerge || rebaseConflict {
@@ -72,13 +103,15 @@ func (m *Manager) handleSelfImprovementAcceptance(ctx context.Context, run *Loop
 			url, err := CreateReviewPR(wt, mainBranch, title, review)
 			if err != nil {
 				result.Error = err.Error()
-				return result, err
+				trace.Reason = "pr_failed"
+				return AcceptanceTraceResult{Result: result, Trace: trace}, err
 			}
 			result.PRCreated = true
 			result.PRURL = url
+			trace.Reason = "pr_created"
 			break
 		}
 	}
 
-	return result, nil
+	return AcceptanceTraceResult{Result: result, Trace: trace}, nil
 }
