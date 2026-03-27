@@ -345,3 +345,174 @@ func TestExport_UnknownFormat(t *testing.T) {
 		t.Fatal("expected error for unknown format")
 	}
 }
+
+func TestExport_LaunchReady(t *testing.T) {
+	t.Parallel()
+	path := writeTestRoadmap(t)
+	rm, err := Parse(path)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	output, err := Export(rm, "launch_ready", "", "", 20, false)
+	if err != nil {
+		t.Fatalf("Export launch_ready: %v", err)
+	}
+
+	var tasks []LaunchTask
+	if err := json.Unmarshal([]byte(output), &tasks); err != nil {
+		t.Fatalf("unmarshal launch_ready output: %v", err)
+	}
+
+	if len(tasks) == 0 {
+		t.Fatal("expected tasks in launch_ready output")
+	}
+
+	for _, task := range tasks {
+		if task.Prompt == "" {
+			t.Error("task prompt should not be empty")
+		}
+		if task.Provider == "" {
+			t.Error("task provider should not be empty")
+		}
+		if task.BudgetUSD <= 0 {
+			t.Errorf("task budget_usd should be positive, got %f", task.BudgetUSD)
+		}
+		if task.DifficultyScore < 0 || task.DifficultyScore > 1.0 {
+			t.Errorf("difficulty_score should be 0-1, got %f", task.DifficultyScore)
+		}
+		if task.SuggestedProvider == "" {
+			t.Error("suggested_provider should not be empty")
+		}
+		if task.EstimatedBudget <= 0 {
+			t.Errorf("estimated_budget_usd should be positive, got %f", task.EstimatedBudget)
+		}
+	}
+}
+
+func TestExport_LaunchReady_PhaseFilter(t *testing.T) {
+	t.Parallel()
+	path := writeTestRoadmap(t)
+	rm, err := Parse(path)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	output, err := Export(rm, "launch_ready", "Phase 1", "", 20, false)
+	if err != nil {
+		t.Fatalf("Export launch_ready: %v", err)
+	}
+
+	var tasks []LaunchTask
+	if err := json.Unmarshal([]byte(output), &tasks); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	for _, task := range tasks {
+		if task.Phase != "Phase 1: Core Features" {
+			t.Errorf("phase filter leaked task from phase %q", task.Phase)
+		}
+	}
+}
+
+func TestComputeDifficulty(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		desc       string
+		deps       int
+		hasSection bool
+		wantMin    float64
+		wantMax    float64
+	}{
+		{
+			name:       "simple_docs_task",
+			desc:       "Add docs",
+			deps:       0,
+			hasSection: true,
+			wantMin:    0.0,
+			wantMax:    0.3,
+		},
+		{
+			name:       "medium_implement_task",
+			desc:       "Implement line parser with error handling",
+			deps:       1,
+			hasSection: true,
+			wantMin:    0.3,
+			wantMax:    0.7,
+		},
+		{
+			name:       "complex_refactor_task",
+			desc:       "Refactor the entire session architecture to support multi-provider cascade routing with automatic failover and budget tracking across all providers in the fleet",
+			deps:       3,
+			hasSection: false,
+			wantMin:    0.7,
+			wantMax:    1.0,
+		},
+		{
+			name:       "no_deps_no_section_short",
+			desc:       "Fix typo",
+			deps:       0,
+			hasSection: true,
+			wantMin:    0.0,
+			wantMax:    0.3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			score := ComputeDifficulty(tt.desc, tt.deps, tt.hasSection)
+			if score < tt.wantMin || score > tt.wantMax {
+				t.Errorf("ComputeDifficulty(%q, %d, %v) = %f, want [%f, %f]",
+					tt.desc, tt.deps, tt.hasSection, score, tt.wantMin, tt.wantMax)
+			}
+		})
+	}
+}
+
+func TestSuggestedProvider(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		difficulty float64
+		want       string
+	}{
+		{0.1, "gemini/flash"},
+		{0.29, "gemini/flash"},
+		{0.3, "claude/sonnet"},
+		{0.5, "claude/sonnet"},
+		{0.7, "claude/sonnet"},
+		{0.71, "claude/opus"},
+		{0.9, "claude/opus"},
+	}
+
+	for _, tt := range tests {
+		got := SuggestedProvider(tt.difficulty)
+		if got != tt.want {
+			t.Errorf("SuggestedProvider(%f) = %q, want %q", tt.difficulty, got, tt.want)
+		}
+	}
+}
+
+func TestEstimatedBudget(t *testing.T) {
+	t.Parallel()
+
+	// Low difficulty: $0.25-0.50
+	lowBudget := EstimatedBudget(0.1)
+	if lowBudget < 0.25 || lowBudget > 0.50 {
+		t.Errorf("EstimatedBudget(0.1) = %f, want [0.25, 0.50]", lowBudget)
+	}
+
+	// Medium difficulty: $0.50-2.00
+	medBudget := EstimatedBudget(0.5)
+	if medBudget < 0.50 || medBudget > 2.00 {
+		t.Errorf("EstimatedBudget(0.5) = %f, want [0.50, 2.00]", medBudget)
+	}
+
+	// High difficulty: $2.00-5.00
+	highBudget := EstimatedBudget(0.9)
+	if highBudget < 2.00 || highBudget > 5.00 {
+		t.Errorf("EstimatedBudget(0.9) = %f, want [2.00, 5.00]", highBudget)
+	}
+}

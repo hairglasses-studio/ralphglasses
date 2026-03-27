@@ -275,6 +275,36 @@ func TestHandleRoadmapExport_WithFormat(t *testing.T) {
 	}
 }
 
+func TestHandleRoadmapExport_LaunchReady(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapExport(context.Background(), roadmapReq(map[string]any{
+		"path":   repoPath,
+		"format": "launch_ready",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Should be JSON array with enriched fields
+	if !strings.Contains(text, "difficulty_score") {
+		t.Errorf("expected difficulty_score in launch_ready output, got: %s", text)
+	}
+	if !strings.Contains(text, "suggested_provider") {
+		t.Errorf("expected suggested_provider in launch_ready output, got: %s", text)
+	}
+	if !strings.Contains(text, "estimated_budget_usd") {
+		t.Errorf("expected estimated_budget_usd in launch_ready output, got: %s", text)
+	}
+	if !strings.Contains(text, "prompt") {
+		t.Errorf("expected prompt field in launch_ready output, got: %s", text)
+	}
+}
+
 // extractText pulls the text from the first content item of a CallToolResult.
 func extractText(t *testing.T, res *mcp.CallToolResult) string {
 	t.Helper()
