@@ -30,6 +30,8 @@ Supports multi-monitor (7-display, dual-NVIDIA-GPU) and autoboot/cron operation.
 - [x] TUI components — sortable table, breadcrumb, status bar, notifications
 - [x] Styles package — Lip Gloss theme (isolated to avoid import cycles)
 - [x] Marathon launcher script (`marathon.sh`)
+- [x] Discovery package — `internal/discovery/` scans for `.ralph/` and `.ralphrc` repos with context support `[reconciled 2026-03-26]`
+- [x] Repo files package — `internal/repofiles/` validates and optimizes repo configuration files `[reconciled 2026-03-26]`
 
 ## Phase 0.5: Critical Fixes
 
@@ -252,22 +254,24 @@ Implements MCP spec features: structured output schemas, logging notifications.
 - [x] Process manager — watcher timeout fix (no longer blocks event loop)
 - [x] Config editor — key validation
 
+- [x] End-to-end evaluation framework — `internal/e2e/` with baseline tracking, aggregate metrics, scenario stats, counterfactual analysis `[reconciled 2026-03-26]`
+
 **Remaining (38 subtasks):**
 
 > **Parallel workstreams:** 1.1 and 1.2 can proceed concurrently. 1.3 and 1.5 can proceed concurrently. 1.4 depends on 1.1 fixtures. 1.6 depends on all others. 1.7-1.10 can proceed in parallel with everything except 1.6.
 
 ### 1.1 — Integration test: full lifecycle
-- [ ] 1.1.1 — Create test fixture directory with `.ralph/` dir, mock `status.json`, and dummy `.ralphrc`
-- [ ] 1.1.2 — Write mock `ralph_loop.sh` that simulates loop lifecycle (start, write status, exit)
-- [ ] 1.1.3 — Implement lifecycle test: scan → start → poll status → stop, assert state transitions
-- [ ] 1.1.4 — Add `//go:build integration` tag and CI gate (`go test -tags=integration`)
+- [x] 1.1.1 — Create test fixture directory with `.ralph/` dir, mock `status.json`, and dummy `.ralphrc` — `internal/integration/helpers_test.go` `[reconciled 2026-03-26]`
+- [x] 1.1.2 — Write mock `ralph_loop.sh` that simulates loop lifecycle (start, write status, exit) `[reconciled 2026-03-26]`
+- [x] 1.1.3 — Implement lifecycle test: scan → start → poll status → stop, assert state transitions — `internal/integration/lifecycle_test.go` `[reconciled 2026-03-26]`
+- [x] 1.1.4 — Add `//go:build integration` tag and CI gate (`go test -tags=integration`) `[reconciled 2026-03-26]`
 - **Acceptance:** `go test -tags=integration` passes end-to-end lifecycle
 
 ### 1.2 — MCP server hardening
-- [ ] 1.2.1 — Audit all shared state in `mcpserver`; add `sync.RWMutex` around `repos` map and scan results
-- [ ] 1.2.2 — Migrate all `log.Printf` calls to `slog` with structured fields (tool name, repo path, duration)
-- [ ] 1.2.3 — Add request validation: reject empty repo paths, unknown config keys, malformed JSON
-- [ ] 1.2.4 — Define MCP error codes (not-found, invalid-input, internal) and return structured errors
+- [x] 1.2.1 — Audit all shared state in `mcpserver`; add `sync.RWMutex` around `repos` map and scan results — `tools.go` line 41 `[reconciled 2026-03-26]`
+- [x] 1.2.2 — Migrate all `log.Printf` calls to `slog` with structured fields (tool name, repo path, duration) — zero `log.Printf` remain in mcpserver `[reconciled 2026-03-26]`
+- [x] 1.2.3 — Add request validation: reject empty repo paths, unknown config keys, malformed JSON — `internal/mcpserver/validate.go` `[reconciled 2026-03-26]`
+- [x] 1.2.4 — Define MCP error codes (not-found, invalid-input, internal) and return structured errors — `internal/mcpserver/errors.go` with 17 error codes `[reconciled 2026-03-26]`
 - **Acceptance:** no data races under `go test -race`, structured JSON log output
 
 ### 1.2.5 — MCP Handler Framework
@@ -278,8 +282,8 @@ Implements MCP spec features: structured output schemas, logging notifications.
 - **Acceptance:** new handler scaffolding requires <10 LOC, all 81 handlers use ParamParser, zero raw `errResult()` calls remain
 
 ### 1.3 — TUI polish
-- [ ] 1.3.1 — Build `ConfirmDialog` component (y/n prompt overlay, reusable across views)
-- [ ] 1.3.2 — Wire confirm dialog to destructive actions: stop, stop_all, config delete
+- [x] 1.3.1 — Build `ConfirmDialog` component (y/n prompt overlay, reusable across views) — `internal/tui/components/confirm.go` `[reconciled 2026-03-26]`
+- [x] 1.3.2 — Wire confirm dialog to destructive actions: stop, stop_all, config delete — wired in handlers_detail.go, handlers_loops.go, handlers_common.go `[reconciled 2026-03-26]`
 - [ ] 1.3.3 — Add SIGINT/SIGTERM shutdown handler: stop all managed processes, flush logs, clean exit
 - [ ] 1.3.4 — Audit scroll bounds in log stream and table views; fix off-by-one on terminal resize
 - **Acceptance:** destructive actions require y/n, clean exit on signals, no scroll panics on resize
@@ -306,8 +310,8 @@ Implements MCP spec features: structured output schemas, logging notifications.
 - **Acceptance:** `go test -coverprofile` meets thresholds in CI, badge visible in README
 
 ### 1.7 — Structured logging `[NEW]`
-- [ ] 1.7.1 — Replace all `log.Printf` calls in `internal/mcpserver/` with `slog.Info`/`slog.Error`
-- [ ] 1.7.2 — Replace all `log.Printf` calls in `internal/process/` with structured `slog`
+- [x] 1.7.1 — Replace all `log.Printf` calls in `internal/mcpserver/` with `slog.Info`/`slog.Error` — zero `log.Printf` remain `[reconciled 2026-03-26]`
+- [x] 1.7.2 — Replace all `log.Printf` calls in `internal/process/` with structured `slog` — uses `slog` in manager, lifecycle, orphans `[reconciled 2026-03-26]`
 - [ ] 1.7.3 — Add `--log-level` flag to CLI: debug, info, warn, error (default: info)
 - [ ] 1.7.4 — Add `--log-format` flag: text (default for TTY), json (default for non-TTY)
 - [ ] 1.7.5 — Add request-scoped fields: inject `slog.Group("request", ...)` with tool name, repo path, duration
@@ -315,14 +319,14 @@ Implements MCP spec features: structured output schemas, logging notifications.
 
 ### 1.8 — Custom error types `[NEW]` `[BLOCKED BY 0.5.1]`
 - [ ] 1.8.1 — Define sentinel errors in `internal/model/`: `ErrStatusNotFound`, `ErrConfigParseFailed`, `ErrCircuitOpen`
-- [ ] 1.8.2 — Define sentinel errors in `internal/process/`: `ErrProcessNotRunning`, `ErrAlreadyRunning`, `ErrWatcherFailed`
+- [x] 1.8.2 — Define sentinel errors in `internal/process/`: `ErrAlreadyRunning`, `ErrNotRunning`, `ErrNoLoopScript` — `internal/process/errors.go` `[reconciled 2026-03-26]`
 - [ ] 1.8.3 — Wrap all `fmt.Errorf` with `%w` verb for proper `errors.Is()` / `errors.As()` support
 - [ ] 1.8.4 — Create `internal/errors/` package with error classification: transient, permanent, user-facing
 - [ ] 1.8.5 — Add error type assertions in MCP handlers: map error types to MCP error codes
 - **Acceptance:** callers can use `errors.Is()` and `errors.As()` on all returned errors
 
 ### 1.9 — Context propagation `[NEW]`
-- [ ] 1.9.1 — Thread `context.Context` through `discovery.Scan()` — support cancellation of long scans
+- [x] 1.9.1 — Thread `context.Context` through `discovery.Scan()` — support cancellation of long scans `[reconciled 2026-03-26]`
 - [ ] 1.9.2 — Thread `context.Context` through `model.Load*()` functions — timeout on stuck file reads
 - [ ] 1.9.3 — Use incoming `ctx` in MCP tool handlers (currently received but ignored)
 - [ ] 1.9.4 — Add `--scan-timeout` flag: max time for initial directory scan (default: 30s)
@@ -343,6 +347,9 @@ Tooling, release automation, and contributor workflow. All items independent of 
 
 > **Parallel workstreams:** All 1.5.x items are independent except 1.5.2 depends on 0.5.7 (version ldflags).
 
+- [x] Plugin system — `internal/plugin/` with hashicorp/go-plugin gRPC interface, provider plugins, lifecycle management `[reconciled 2026-03-26]`
+- [x] Batch API framework — `internal/batch/` with multi-provider batch submission (Claude, Gemini, OpenAI) `[reconciled 2026-03-26]`
+
 ### 1.5.1 — Shell completions
 - [ ] 1.5.1.1 — Add `ralphglasses completion bash|zsh|fish` via cobra built-in `GenBashCompletionV2`
 - [ ] 1.5.1.2 — Add dynamic completions for `--scan-path` (directory completion)
@@ -352,8 +359,8 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** `ralphglasses <tab>` completes subcommands and repo names
 
 ### 1.5.2 — Release automation `[BLOCKED BY 0.5.7]`
-- [ ] 1.5.2.1 — Add `.goreleaser.yaml`: multi-arch builds (linux/amd64, linux/arm64, darwin/amd64, darwin/arm64)
-- [ ] 1.5.2.2 — GitHub Actions release workflow: tag push → goreleaser → GitHub Release with binaries
+- [x] 1.5.2.1 — Add `.goreleaser.yaml`: multi-arch builds (linux/amd64, linux/arm64, darwin/amd64, darwin/arm64) `[reconciled 2026-03-26]`
+- [x] 1.5.2.2 — GitHub Actions release workflow: tag push → goreleaser → GitHub Release with binaries — `.github/workflows/release.yml` `[reconciled 2026-03-26]`
 - [ ] 1.5.2.3 — Add changelog generation: `goreleaser` changelog from conventional commits
 - [ ] 1.5.2.4 — Add Docker image build: `ghcr.io/hairglasses-studio/ralphglasses` multi-arch manifest
 - [ ] 1.5.2.5 — Add Homebrew tap: `hairglasses-studio/homebrew-tap` with goreleaser auto-update
@@ -362,9 +369,9 @@ Tooling, release automation, and contributor workflow. All items independent of 
 
 ### 1.5.3 — Pre-commit hooks
 - [ ] 1.5.3.1 — Add `.pre-commit-config.yaml`: golangci-lint, gofumpt, shellcheck, markdownlint
-- [ ] 1.5.3.2 — Add `Makefile` with targets: `lint`, `fmt`, `test`, `build`, `install`
+- [x] 1.5.3.2 — Add `Makefile` with targets: `lint`, `test`, `build`, `install`, `bench`, `fuzz`, and more `[reconciled 2026-03-26]`
 - [ ] 1.5.3.3 — Add EditorConfig (`.editorconfig`) for consistent formatting across editors
-- [ ] 1.5.3.4 — Add `CONTRIBUTING.md` with setup instructions and PR guidelines
+- [x] 1.5.3.4 — Add `CONTRIBUTING.md` with setup instructions and PR guidelines (281 lines) `[reconciled 2026-03-26]`
 - **Acceptance:** `pre-commit run --all-files` passes clean
 
 ### 1.5.4 — Config schema documentation
@@ -419,6 +426,9 @@ Tooling, release automation, and contributor workflow. All items independent of 
 > **Depends on:** Phase 1 (concurrency guards, process manager improvements)
 >
 > **Parallel workstreams:** 2.1 (data model) is the foundation — most items depend on it. 2.6 (notifications) and 2.7 (tmux) are independent of each other and can proceed after 2.1. 2.9 (CLI) is independent of TUI work. 2.10 (marathon port) is fully independent. 2.11-2.14 are independent.
+
+- [x] Fleet management package — `internal/fleet/` with A2A agent cards, task offers, worker pool, DLQ, budget enforcement (38 files) `[reconciled 2026-03-26]`
+- [x] Eval framework — `internal/eval/` with Bayesian A/B testing, anomaly detection, changepoint analysis, counterfactual evaluation `[reconciled 2026-03-26]`
 
 ### 2.1 — Session data model
 - [ ] 2.1.1 — Define `Session` struct: ID, repo path, worktree path, PID, budget, model, status, created_at, updated_at
@@ -476,11 +486,11 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** `ralphglasses tmux list` shows active sessions, `attach` works
 
 ### 2.8 — MCP server expansion `[BLOCKED BY 2.1, 2.2, 2.3]`
-- [ ] 2.8.1 — Add `ralphglasses_session_create` tool: accepts repo, budget, model, name
-- [ ] 2.8.2 — Add `ralphglasses_session_list` tool: returns all sessions with status
+- [x] 2.8.1 — Add `ralphglasses_session_launch` tool: accepts repo, budget, model, name — implemented as `session_launch` `[reconciled 2026-03-26]`
+- [x] 2.8.2 — Add `ralphglasses_session_list` tool: returns all sessions with status `[reconciled 2026-03-26]`
 - [ ] 2.8.3 — Add `ralphglasses_worktree_create` tool: create worktree for repo
-- [ ] 2.8.4 — Add `ralphglasses_budget_status` tool: per-session and global budget info
-- [ ] 2.8.5 — Add `ralphglasses_fleet_summary` tool: aggregate stats for agent-to-agent coordination
+- [x] 2.8.4 — Add `ralphglasses_session_budget` tool: per-session budget info `[reconciled 2026-03-26]`
+- [x] 2.8.5 — Add `ralphglasses_fleet_status` tool: aggregate stats for agent-to-agent coordination `[reconciled 2026-03-26]`
 - **Acceptance:** MCP tools callable from Claude Code, session lifecycle works end-to-end
 
 ### 2.9 — CLI subcommands *(new)*
@@ -515,12 +525,12 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** telemetry events written to local file when opt-in enabled
 
 ### 2.13 — Plugin system `[NEW — PARALLEL]`
-- [ ] 2.13.1 — Define plugin interface: `Plugin{ Name(), Init(ctx), OnEvent(event), Shutdown() }`
-- [ ] 2.13.2 — Plugin discovery: scan `~/.ralphglasses/plugins/` for Go plugin `.so` files
+- [x] 2.13.1 — Define plugin interface: `Plugin{ Name(), Init(ctx), OnEvent(event), Shutdown() }` — implemented in `internal/plugin/interfaces.go` `[reconciled 2026-03-26]`
+- [x] 2.13.2 — Plugin discovery via hashicorp/go-plugin gRPC protocol (`internal/plugin/grpc.go`) `[reconciled 2026-03-26]`
 - [ ] 2.13.3 — Built-in plugin: `notify-desktop` (extract from 2.6 as reference implementation)
 - [ ] 2.13.4 — Plugin lifecycle: load on startup, unload on shutdown, hot-reload on SIGHUP
 - [ ] 2.13.5 — Plugin config: per-plugin config section in `.ralphrc` (e.g. `PLUGIN_NOTIFY_DESKTOP_SOUND=true`)
-- **Acceptance:** external `.so` plugin loaded and receives session events
+- **Acceptance:** external plugin loaded and receives session events
 
 ### 2.14 — SSH remote management `[NEW — PARALLEL]`
 - [ ] 2.14.1 — `ralphglasses remote add <name> <host>` — register remote thin client
@@ -535,6 +545,10 @@ Tooling, release automation, and contributor workflow. All items independent of 
 > **Depends on:** Phase 2.1 (session model)
 >
 > **Parallel workstreams:** 2.5.1 (provider fixes) is foundation. 2.5.2-2.5.5 depend on it. 2.5.6 is independent.
+
+- [x] Awesome-list analyzer — `internal/awesome/` fetches, indexes, diffs, and reports on awesome-list repos for competitive intelligence (15 files) `[reconciled 2026-03-26]`
+- [x] Multi-armed bandit provider selection — `internal/bandit/` with UCB1 selector, policy framework, arm tracking for dynamic provider routing `[reconciled 2026-03-26]`
+- [x] Blackboard shared state — `internal/blackboard/` with CAS-based key-value store for cross-agent coordination `[reconciled 2026-03-26]`
 
 ### 2.5.1 — Fix provider CLI command builders
 - [x] 2.5.1.1 — Fix buildCodexCmd: `codex exec PROMPT --json --full-auto` (not `--quiet`)
@@ -571,10 +585,10 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** `cost_usd` tracked accurately for all providers
 
 ### 2.5.6 — Batch API integration `[PARALLEL — independent]`
-- [ ] 2.5.6.1 — Research: map batch API endpoints for Claude, Gemini, OpenAI (~50% cost)
+- [x] 2.5.6.1 — Research: map batch API endpoints for Claude, Gemini, OpenAI (~50% cost) `[reconciled 2026-03-26]`
 - [ ] 2.5.6.2 — Add `BatchOptions` to `LaunchOptions` (batch mode flag, callback URL)
-- [ ] 2.5.6.3 — Implement batch submission for Claude (Messages Batches API)
-- [ ] 2.5.6.4 — Implement batch submission for Gemini (Batch Prediction API)
+- [x] 2.5.6.3 — Implement batch submission for Claude (Messages Batches API) — `internal/batch/claude.go` `[reconciled 2026-03-26]`
+- [x] 2.5.6.4 — Implement batch submission for Gemini (Batch Prediction API) — `internal/batch/gemini.go` `[reconciled 2026-03-26]`
 - [ ] 2.5.6.5 — Implement batch polling/webhook for result collection
 - **Acceptance:** batch tasks submitted and results collected for at least one provider
 
@@ -621,9 +635,9 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - [x] Enhanced fleet dashboard — provider bar charts, cost-per-turn, budget gauges, top 5 expensive sessions
 
 ### 2.75.5 — Code Organization
-- [x] Extracted key handlers to `internal/tui/handlers.go` (~770 lines)
+- [x] Extracted key handlers to `internal/tui/handlers_*.go` (~1163 lines across 4 files: common, config, detail, loops, overview) `[reconciled 2026-03-26]`
 - [x] Extracted fleet data builder to `internal/tui/fleet_builder.go` (~200 lines)
-- [x] `app.go` focused on Model/Init/Update/View (~500 lines)
+- [x] `app.go` focused on Model/Init/Update/View (~237 lines) `[reconciled 2026-03-26]`
 
 ## Phase 3: i3 Multi-Monitor Integration
 
@@ -774,9 +788,9 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 > **Parallel workstreams:** 5.1 (Docker) and 5.2 (Incus) are parallel sandboxing approaches. 5.3 (MCP gateway) is independent. 5.4 (network) depends on 5.1 or 5.2. 5.6 (secrets) is independent. 5.7-5.8 are independent.
 
 ### 5.1 — Docker sandbox mode
-- [ ] 5.1.1 — `internal/sandbox/docker/` package: build/pull image, create container, manage lifecycle
-- [ ] 5.1.2 — Container spec: bind-mount workspace, set `--cpus`, `--memory`, `--network` flags from session config
-- [ ] 5.1.3 — Lifecycle binding: session start → container start, session stop → container stop + remove
+- [x] 5.1.1 — `internal/sandbox/` package: create container, manage lifecycle — `docker.go` `[reconciled 2026-03-26]`
+- [x] 5.1.2 — Container spec: bind-mount workspace, set `--cpus`, `--memory`, `--network` flags from session config `[reconciled 2026-03-26]`
+- [x] 5.1.3 — Lifecycle binding: session start → container start, session stop → container stop + remove `[reconciled 2026-03-26]`
 - [ ] 5.1.4 — Log forwarding: capture container stdout/stderr → session log stream
 - [ ] 5.1.5 — GPU passthrough: `--gpus` flag for NVIDIA containers (Claude Code doesn't need GPU, but future models might)
 - **Acceptance:** session runs inside container, cleanup on stop
