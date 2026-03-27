@@ -3,6 +3,8 @@ package session
 import (
 	"testing"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/model"
 )
 
 func TestPauseLoop_Success(t *testing.T) {
@@ -238,6 +240,63 @@ func TestEffectiveKillTimeout(t *testing.T) {
 	m.KillTimeout = 10 * time.Second
 	if d := m.effectiveKillTimeout(); d != 10*time.Second {
 		t.Errorf("custom kill timeout = %v, want 10s", d)
+	}
+}
+
+func TestKillTimeoutFromConfig(t *testing.T) {
+	// Config value is applied correctly.
+	m := NewManager()
+	cfg := &model.RalphConfig{Values: map[string]string{"KILL_ESCALATION_TIMEOUT": "15"}}
+	m.ApplyConfig(cfg)
+	if d := m.effectiveKillTimeout(); d != 15*time.Second {
+		t.Errorf("config kill timeout = %v, want 15s", d)
+	}
+
+	// Minimum boundary: 1s is valid.
+	m2 := NewManager()
+	cfg2 := &model.RalphConfig{Values: map[string]string{"KILL_ESCALATION_TIMEOUT": "1"}}
+	m2.ApplyConfig(cfg2)
+	if d := m2.effectiveKillTimeout(); d != 1*time.Second {
+		t.Errorf("min boundary kill timeout = %v, want 1s", d)
+	}
+
+	// Maximum boundary: 60s is valid.
+	m3 := NewManager()
+	cfg3 := &model.RalphConfig{Values: map[string]string{"KILL_ESCALATION_TIMEOUT": "60"}}
+	m3.ApplyConfig(cfg3)
+	if d := m3.effectiveKillTimeout(); d != 60*time.Second {
+		t.Errorf("max boundary kill timeout = %v, want 60s", d)
+	}
+
+	// Below minimum: 0 is rejected, falls back to default.
+	m4 := NewManager()
+	cfg4 := &model.RalphConfig{Values: map[string]string{"KILL_ESCALATION_TIMEOUT": "0"}}
+	m4.ApplyConfig(cfg4)
+	if d := m4.effectiveKillTimeout(); d != 5*time.Second {
+		t.Errorf("below-min kill timeout = %v, want 5s (default)", d)
+	}
+
+	// Above maximum: 61 is rejected, falls back to default.
+	m5 := NewManager()
+	cfg5 := &model.RalphConfig{Values: map[string]string{"KILL_ESCALATION_TIMEOUT": "61"}}
+	m5.ApplyConfig(cfg5)
+	if d := m5.effectiveKillTimeout(); d != 5*time.Second {
+		t.Errorf("above-max kill timeout = %v, want 5s (default)", d)
+	}
+
+	// Non-integer value is rejected, falls back to default.
+	m6 := NewManager()
+	cfg6 := &model.RalphConfig{Values: map[string]string{"KILL_ESCALATION_TIMEOUT": "abc"}}
+	m6.ApplyConfig(cfg6)
+	if d := m6.effectiveKillTimeout(); d != 5*time.Second {
+		t.Errorf("non-integer kill timeout = %v, want 5s (default)", d)
+	}
+
+	// Nil config is safe.
+	m7 := NewManager()
+	m7.ApplyConfig(nil)
+	if d := m7.effectiveKillTimeout(); d != 5*time.Second {
+		t.Errorf("nil config kill timeout = %v, want 5s (default)", d)
 	}
 }
 
