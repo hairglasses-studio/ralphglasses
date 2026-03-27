@@ -840,3 +840,149 @@ func TestSummarizeObservations_SingleObs(t *testing.T) {
 		t.Errorf("CostP50 = %f, want 0.25 for single obs", s.CostP50)
 	}
 }
+
+// TestEmitSessionObservation_Completed verifies that emitSessionObservation
+// writes a JSONL record for a completed standalone session (FINDING-237).
+func TestEmitSessionObservation_Completed(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	repoPath := filepath.Join(dir, "test-repo")
+	if err := os.MkdirAll(filepath.Join(repoPath, ".ralph", "logs"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now()
+	ended := now.Add(-1 * time.Second)
+	sess := &Session{
+		ID:           "test-session-obs",
+		Provider:     ProviderClaude,
+		RepoPath:     repoPath,
+		RepoName:     "test-repo",
+		Status:       StatusCompleted,
+		SpentUSD:     1.23,
+		TurnCount:    10,
+		LaunchedAt:   now.Add(-60 * time.Second),
+		LastActivity: ended,
+		EndedAt:      &ended,
+		Prompt:       "fix all the bugs",
+	}
+
+	emitSessionObservation(sess)
+
+	obsPath := ObservationPath(repoPath)
+	obs, err := LoadObservations(obsPath, time.Time{})
+	if err != nil {
+		t.Fatalf("LoadObservations: %v", err)
+	}
+	if len(obs) != 1 {
+		t.Fatalf("expected 1 observation, got %d", len(obs))
+	}
+
+	o := obs[0]
+	if o.Status != "completed" {
+		t.Errorf("status = %q, want completed", o.Status)
+	}
+	if o.Mode != "standalone" {
+		t.Errorf("mode = %q, want standalone", o.Mode)
+	}
+	if o.TotalCostUSD != 1.23 {
+		t.Errorf("total_cost_usd = %f, want 1.23", o.TotalCostUSD)
+	}
+	if o.WorkerProvider != "claude" {
+		t.Errorf("worker_provider = %q, want claude", o.WorkerProvider)
+	}
+	if !o.VerifyPassed {
+		t.Error("expected verify_passed=true for completed session")
+	}
+	if o.Confidence != 1.0 {
+		t.Errorf("confidence = %f, want 1.0", o.Confidence)
+	}
+	if !strings.HasPrefix(o.LoopID, "session:") {
+		t.Errorf("loop_id = %q, want prefix 'session:'", o.LoopID)
+	}
+	if o.TotalLatencyMs <= 0 {
+		t.Errorf("expected positive total_latency_ms, got %d", o.TotalLatencyMs)
+	}
+}
+
+// TestEmitSessionObservation_Errored verifies observation for errored sessions.
+func TestEmitSessionObservation_Errored(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	repoPath := filepath.Join(dir, "err-repo")
+	if err := os.MkdirAll(filepath.Join(repoPath, ".ralph", "logs"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now()
+	ended := now.Add(-1 * time.Second)
+	sess := &Session{
+		ID:           "test-session-err",
+		Provider:     ProviderClaude,
+		RepoPath:     repoPath,
+		RepoName:     "err-repo",
+		Status:       StatusErrored,
+		SpentUSD:     0.05,
+		TurnCount:    1,
+		LaunchedAt:   now.Add(-10 * time.Second),
+		LastActivity: ended,
+		EndedAt:      &ended,
+		Error:        "process exited with code 1",
+	}
+
+	emitSessionObservation(sess)
+
+	obsPath := ObservationPath(repoPath)
+	obs, err := LoadObservations(obsPath, time.Time{})
+	if err != nil {
+		t.Fatalf("LoadObservations: %v", err)
+	}
+	if len(obs) != 1 {
+		t.Fatalf("expected 1 observation, got %d", len(obs))
+	}
+
+	o := obs[0]
+	if o.Status != "failed" {
+		t.Errorf("status = %q, want failed", o.Status)
+	}
+	if o.Confidence != 0.0 {
+		t.Errorf("confidence = %f, want 0.0", o.Confidence)
+	}
+	if o.Error == "" {
+		t.Error("expected non-empty error field")
+	}
+	if o.VerifyPassed {
+		t.Error("expected verify_passed=false for errored session")
+	}
+}
+
+// TestEmitSessionObservation_NonTerminalSkipped verifies that running sessions
+// do not produce observations.
+func TestEmitSessionObservation_NonTerminalSkipped(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	repoPath := filepath.Join(dir, "running-repo")
+	if err := os.MkdirAll(filepath.Join(repoPath, ".ralph", "logs"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	sess := &Session{
+		ID:         "test-session-running",
+		Provider:   ProviderClaude,
+		RepoPath:   repoPath,
+		RepoName:   "running-repo",
+		Status:     StatusRunning,
+		LaunchedAt: time.Now(),
+	}
+
+	emitSessionObservation(sess)
+
+	obsPath := ObservationPath(repoPath)
+	obs, err := LoadObservations(obsPath, time.Time{})
+	if err != nil {
+		t.Fatalf("LoadObservations: %v", err)
+	}
+	if len(obs) != 0 {
+		t.Errorf("expected 0 observations for running session, got %d", len(obs))
+	}
+}
