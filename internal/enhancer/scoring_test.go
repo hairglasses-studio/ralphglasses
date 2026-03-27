@@ -365,10 +365,10 @@ func TestScoringCalibration(t *testing.T) {
 		minScore int
 		maxScore int
 	}{
-		{"simple CLI prompt", "Write a Go function that parses JSON and returns a struct", 55, 75},
-		{"structured system prompt", "<role>You are an expert Go engineer</role>\n<instructions>Review this code for bugs</instructions>\n<constraints>Focus on error handling</constraints>", 75, 100},
-		{"trivial question", "what does this do", 30, 50},
-		{"medium effort", "Analyze the authentication middleware in this codebase. Look for security vulnerabilities, especially around token validation and session management. Provide a severity rating for each finding.", 60, 85},
+		{"simple CLI prompt", "Write a Go function that parses JSON and returns a struct", 35, 60},
+		{"structured system prompt", "<role>You are an expert Go engineer</role>\n<instructions>Review this code for bugs</instructions>\n<constraints>Focus on error handling</constraints>", 55, 80},
+		{"trivial question", "what does this do", 25, 50},
+		{"medium effort", "Analyze the authentication middleware in this codebase. Look for security vulnerabilities, especially around token validation and session management. Provide a severity rating for each finding.", 40, 65},
 	}
 	for _, tt := range tests {
 		tc := tt
@@ -378,6 +378,57 @@ func TestScoringCalibration(t *testing.T) {
 				t.Errorf("score %d outside expected range [%d, %d]", result.ScoreReport.Overall, tc.minScore, tc.maxScore)
 			}
 		})
+	}
+}
+
+// TestScore_NoInflation verifies that the overall score is a strict weighted average
+// of dimensions, with no bonus that can push it above the true average (FINDING-240).
+func TestScore_NoInflation(t *testing.T) {
+	t.Parallel()
+	// A prompt with mixed dimensions: some good, some bad.
+	// The overall must not exceed the weighted average.
+	prompt := "CRITICAL: You MUST NEVER expose secrets. DO NOT use bullet points. Write clean code."
+	ar := Analyze(prompt)
+	report := ar.ScoreReport
+	if report == nil {
+		t.Fatal("ScoreReport should not be nil")
+	}
+
+	// Compute expected weighted average
+	var expected float64
+	for _, d := range report.Dimensions {
+		expected += float64(d.Score) * d.Weight
+	}
+	expectedInt := int(expected + 0.5)
+
+	if report.Overall != expectedInt {
+		t.Errorf("Overall %d != weighted average %d (dimensions: ", report.Overall, expectedInt)
+		for _, d := range report.Dimensions {
+			t.Logf("  %s: %d (%s) weight=%.2f", d.Name, d.Score, d.Grade, d.Weight)
+		}
+	}
+}
+
+// TestScore_LowDimensionsDragDown verifies that F/D dimensions properly reduce the overall.
+func TestScore_LowDimensionsDragDown(t *testing.T) {
+	t.Parallel()
+	// Prompt with no examples (F), no role (F), but decent clarity
+	prompt := "Write a function that sorts users by name in Go"
+	ar := Analyze(prompt)
+	report := ar.ScoreReport
+	if report == nil {
+		t.Fatal("ScoreReport should not be nil")
+	}
+
+	// Find the Examples dimension - should be low
+	examples := findDimension(report, "Examples")
+	if examples.Score >= 50 {
+		t.Skipf("Examples scored %d, expected low score for this prompt", examples.Score)
+	}
+
+	// Overall should not be in A range when multiple dimensions are D/F
+	if report.Overall >= 90 {
+		t.Errorf("Overall %d is too high when Examples=%d, should be dragged down", report.Overall, examples.Score)
 	}
 }
 

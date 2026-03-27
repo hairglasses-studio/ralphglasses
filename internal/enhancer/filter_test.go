@@ -51,3 +51,15 @@ func TestShouldEnhance(t *testing.T) {
 		})
 	}
 }
+
+// TestShouldEnhance_WeakDimensionsOverrideStructure verifies that prompts with
+// XML structure but weak quality dimensions (D/F) still get enhanced (FINDING-241).
+func TestShouldEnhance_WeakDimensionsOverrideStructure(t *testing.T) {
+	t.Parallel()
+	// A structured prompt that lacks examples, role depth, and context
+	prompt := "<instructions>Do the thing and make it work properly in the system</instructions>"
+	got := ShouldEnhance(prompt, Config{})
+	if !got {
+		t.Error("ShouldEnhance should return true for structured prompts with weak dimensions (D/F grades)")
+	}
+}
