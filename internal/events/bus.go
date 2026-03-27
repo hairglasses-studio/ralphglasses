@@ -145,20 +145,42 @@ type Bus struct {
 	// Async write support
 	AsyncWrites  bool
 	asyncStarted bool
+	asyncBufSize int
 	writeCh      chan Event
 	writeDone    chan struct{}
 }
 
+// BusOption configures a Bus during construction.
+type BusOption func(*Bus)
+
+// WithAsyncWrites returns a BusOption that enables async event persistence
+// with the given channel buffer size. The background writer goroutine is
+// started automatically once PersistTo is called (or immediately if PersistTo
+// was already called).
+func WithAsyncWrites(bufSize int) BusOption {
+	return func(b *Bus) {
+		b.asyncBufSize = bufSize
+		if b.asyncBufSize <= 0 {
+			b.asyncBufSize = 256
+		}
+		b.AsyncWrites = true
+	}
+}
+
 // NewBus creates an event bus that retains up to maxHistory events.
-func NewBus(maxHistory int) *Bus {
+func NewBus(maxHistory int, opts ...BusOption) *Bus {
 	if maxHistory <= 0 {
 		maxHistory = 1000
 	}
-	return &Bus{
+	b := &Bus{
 		subscribers:  make(map[string]chan Event),
 		filteredSubs: make(map[string]filteredSub),
 		maxHistory:   maxHistory,
 	}
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b
 }
 
 // SetRetentionTTL configures how long events are retained in history.
@@ -400,15 +422,26 @@ func (b *Bus) PersistTo(path string) error {
 // If async writes are active, drains the write channel first with a 5s timeout.
 func (b *Bus) Close() error {
 	// Drain async writer first (outside lock to avoid deadlock)
-	if b.writeCh != nil {
-		close(b.writeCh)
+	b.mu.Lock()
+	ch := b.writeCh
+	done := b.writeDone
+	if ch != nil {
+		b.writeCh = nil
+	}
+	b.mu.Unlock()
+
+	if ch != nil {
+		close(ch)
 		select {
-		case <-b.writeDone:
+		case <-done:
 			// drained successfully
 		case <-time.After(5 * time.Second):
 			slog.Warn("event bus async drain timed out after 5s")
 		}
-		b.writeCh = nil
+		b.mu.Lock()
+		b.asyncStarted = false
+		b.AsyncWrites = false
+		b.mu.Unlock()
 	}
 
 	b.mu.Lock()
@@ -441,21 +474,67 @@ func (b *Bus) appendEvent(e Event) {
 	}
 }
 
-// StartAsync launches the background writer goroutine for async persistence.
-// Only effective when AsyncWrites is true and PersistTo has been called.
-func (b *Bus) StartAsync() {
-	if !b.AsyncWrites {
-		return
-	}
+// StartAsyncWrites launches the background writer goroutine for async persistence.
+// bufSize controls the channel buffer capacity; if <= 0, defaults to 256.
+// Idempotent: calling it when async writes are already running is a no-op.
+func (b *Bus) StartAsyncWrites(bufSize int) {
 	b.mu.Lock()
 	if b.asyncStarted {
 		b.mu.Unlock()
 		return
 	}
+	if bufSize <= 0 {
+		bufSize = 256
+	}
 	b.asyncStarted = true
-	b.writeCh = make(chan Event, 256)
+	b.AsyncWrites = true
+	b.asyncBufSize = bufSize
+	b.writeCh = make(chan Event, bufSize)
 	b.writeDone = make(chan struct{})
 	b.mu.Unlock()
+	b.startWriter()
+}
+
+// StartAsync launches the background writer goroutine for async persistence.
+// Deprecated: Use StartAsyncWrites(bufSize) instead.
+// Only effective when AsyncWrites is true and PersistTo has been called.
+func (b *Bus) StartAsync() {
+	if !b.AsyncWrites {
+		return
+	}
+	bufSize := b.asyncBufSize
+	if bufSize <= 0 {
+		bufSize = 256
+	}
+	b.StartAsyncWrites(bufSize)
+}
+
+// StopAsyncWrites closes the write channel, waits for the background goroutine
+// to drain all remaining events, and sets AsyncWrites to false.
+// Safe to call even if async writes were never started (no-op).
+func (b *Bus) StopAsyncWrites() {
+	b.mu.Lock()
+	if !b.asyncStarted || b.writeCh == nil {
+		b.mu.Unlock()
+		return
+	}
+	ch := b.writeCh
+	done := b.writeDone
+	b.writeCh = nil
+	b.mu.Unlock()
+
+	close(ch)
+	<-done
+
+	b.mu.Lock()
+	b.asyncStarted = false
+	b.AsyncWrites = false
+	b.mu.Unlock()
+}
+
+// startWriter spawns the background goroutine that reads from writeCh and persists events.
+// Must only be called once per start cycle (guarded by asyncStarted).
+func (b *Bus) startWriter() {
 	go func() {
 		defer close(b.writeDone)
 		for e := range b.writeCh {
