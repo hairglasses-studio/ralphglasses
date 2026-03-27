@@ -3,7 +3,6 @@ package cmd
 import (
 	"io"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"time"
 

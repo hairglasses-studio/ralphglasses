@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
@@ -370,7 +369,7 @@ func TestHandleProviderRecommend_Initialized(t *testing.T) {
 	}
 }
 
-func TestHandleProviderRecommend_MissingTask(t *testing.T) {
+func TestHandleProviderRecommend_MissingTask_Boost(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
 	stateDir := t.TempDir()
@@ -402,7 +401,7 @@ func TestHandleBanditStatus_NilSessMgr(t *testing.T) {
 	}
 }
 
-func TestHandleBanditStatus_NoCascadeRouter(t *testing.T) {
+func TestHandleBanditStatus_NoCascadeRouter_Boost(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
 
@@ -434,7 +433,7 @@ func TestHandleConfidenceCalibration_NilSessMgr(t *testing.T) {
 	}
 }
 
-func TestHandleConfidenceCalibration_NoCascadeRouter(t *testing.T) {
+func TestHandleConfidenceCalibration_NoCascadeRouter_Boost(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
 
@@ -602,7 +601,7 @@ func TestHandleCostForecast_NilPredictor(t *testing.T) {
 
 // --- A2A offers (handler_fleet_h.go) ---
 
-func TestHandleA2AOffers_NilA2A(t *testing.T) {
+func TestHandleA2AOffers_NilA2A_Boost(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
 	srv.A2A = nil

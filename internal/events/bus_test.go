@@ -1178,8 +1178,8 @@ func TestStopAsyncWrites_DrainsChannel(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Use a small buffer to ensure events queue up
-	bus.StartAsyncWrites(16)
+	// Buffer must be >= total since PublishCtx uses non-blocking send
+	bus.StartAsyncWrites(128)
 
 	const total = 100
 	for i := 0; i < total; i++ {
