@@ -18,6 +18,7 @@ var filePathOnlyPattern = regexp.MustCompile(`^[./~][\w/.*\- ]+$`)
 
 // ShouldEnhance returns true if the prompt is worth running through the enhancement pipeline.
 // Short conversational replies, already-structured prompts, and bare file paths are skipped.
+// However, if ANY quality dimension grades D or F, enhancement is recommended regardless of structure.
 func ShouldEnhance(prompt string, cfg Config) bool {
 	trimmed := strings.TrimSpace(prompt)
 	if trimmed == "" {
@@ -40,11 +41,6 @@ func ShouldEnhance(prompt string, cfg Config) bool {
 		return false
 	}
 
-	// Already-structured gate
-	if alreadyStructuredPattern.MatchString(trimmed) {
-		return false
-	}
-
 	// File-path-only gate
 	if filePathOnlyPattern.MatchString(trimmed) {
 		return false
@@ -59,5 +55,30 @@ func ShouldEnhance(prompt string, cfg Config) bool {
 		}
 	}
 
+	// Quality dimension check: if ANY dimension grades D or F, always enhance.
+	// This prevents false negatives where structured prompts with weak dimensions are skipped.
+	if hasWeakDimensions(trimmed) {
+		return true
+	}
+
+	// Already-structured gate — only skip if all dimensions are healthy
+	if alreadyStructuredPattern.MatchString(trimmed) {
+		return false
+	}
+
 	return true
+}
+
+// hasWeakDimensions returns true if any scoring dimension grades D or F (score < 65).
+func hasWeakDimensions(prompt string) bool {
+	ar := Analyze(prompt)
+	if ar.ScoreReport == nil {
+		return false
+	}
+	for _, d := range ar.ScoreReport.Dimensions {
+		if d.Score < 65 { // D or F
+			return true
+		}
+	}
+	return false
 }
