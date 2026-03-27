@@ -181,6 +181,14 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 		obs.Confidence = 0.5
 	}
 
+	// WS11: Acceptance gate tracing — populate from iteration fields.
+	obs.AcceptanceReason = iter.AcceptanceReason
+	obs.StagedFilesCount = iter.StagedFilesCount
+	if iter.Acceptance != nil {
+		obs.AcceptanceSafeCount = len(iter.Acceptance.SafePaths)
+		obs.AcceptanceReviewCount = len(iter.Acceptance.ReviewPaths)
+	}
+
 	// Derive acceptance path from the iteration's acceptance result.
 	if iter.Acceptance != nil {
 		switch {

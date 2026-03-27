@@ -91,6 +91,10 @@ type LoopIteration struct {
 	WorktreeSetupMs   int64 `json:"worktree_setup_ms,omitempty"`
 	AcceptanceMs      int64 `json:"acceptance_ms,omitempty"`
 	IdleBetweenMs     int64 `json:"idle_between_ms,omitempty"` // gap from previous iteration's EndedAt
+
+	// WS11: Acceptance gate tracing fields for diagnosing silent rejections.
+	AcceptanceReason string `json:"acceptance_reason,omitempty"` // "auto_merged", "pr_created", "no_staged_files", "worker_no_changes"
+	StagedFilesCount int    `json:"staged_files_count,omitempty"`
 }
 
 // LoopRun is persisted state for a perpetual development loop.
