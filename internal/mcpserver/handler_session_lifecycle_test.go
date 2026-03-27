@@ -112,7 +112,7 @@ func TestHandleSessionRetry(t *testing.T) {
 		}
 	})
 
-	t.Run("non-existent session", func(t *testing.T) {
+	t.Run("non-existent session no sessions", func(t *testing.T) {
 		t.Parallel()
 		srv, _ := setupTestServer(t)
 
@@ -126,8 +126,8 @@ func TestHandleSessionRetry(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrSessionNotFound) {
-			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
+		if code != string(ErrNoActiveSessions) {
+			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
 		}
 	})
 }

@@ -50,7 +50,7 @@ func (s *Server) WireAutoOptimizer(mgr *session.Manager) {
 
 func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil && s.FleetClient == nil {
-		return codedError(ErrNotRunning, "fleet not active — start with 'ralphglasses serve'"), nil
+		return codedError(ErrFleetNotRunning, "fleet server not active — start with 'ralphglasses mcp --fleet'"), nil
 	}
 
 	repo := getStringArg(req, "repo")
@@ -97,7 +97,7 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 
 func (s *Server) handleFleetBudget(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil && s.FleetClient == nil {
-		return codedError(ErrNotRunning, "fleet not active"), nil
+		return codedError(ErrFleetNotRunning, "fleet server not active — start with 'ralphglasses mcp --fleet'"), nil
 	}
 
 	newLimit := getNumberArg(req, "limit", 0)
@@ -131,7 +131,7 @@ func (s *Server) handleFleetBudget(_ context.Context, req mcp.CallToolRequest) (
 
 func (s *Server) handleFleetWorkers(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil && s.FleetClient == nil {
-		return codedError(ErrNotRunning, "fleet not active"), nil
+		return codedError(ErrFleetNotRunning, "fleet server not active — start with 'ralphglasses mcp --fleet'"), nil
 	}
 
 	action := getStringArg(req, "action")
@@ -330,7 +330,7 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 
 func (s *Server) handleFleetDLQ(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil {
-		return codedError(ErrNotRunning, "fleet coordinator not active — DLQ requires coordinator mode"), nil
+		return codedError(ErrFleetNotRunning, "fleet server not active — start with 'ralphglasses mcp --fleet'"), nil
 	}
 
 	action := getStringArg(req, "action")
