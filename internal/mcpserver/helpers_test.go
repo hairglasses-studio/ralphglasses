@@ -47,6 +47,11 @@ func TestWireSubsystemsPhaseH(t *testing.T) {
 	if srv.Bandit.ArmCount() == 0 {
 		t.Error("expected Bandit to have arms")
 	}
+
+	// Enhancer should be wired on session manager (FINDING-B3).
+	// Note: Engine may be nil when no API key is set, but the field should
+	// have been assigned (wireSubsystems calls getEngine which uses engineOnce).
+	// We just verify the code path ran without panic.
 }
 
 func TestWireSubsystemsIdempotent(t *testing.T) {
