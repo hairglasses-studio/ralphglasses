@@ -34,6 +34,7 @@ type Manager struct {
 	banditUpdate func(string, float64)   // bandit reward recording hook
 	blackboard   *Blackboard             // Phase H: shared inter-subsystem state
 	costPredictor *CostPredictor         // Phase H: task cost prediction
+	noopDetector  *NoOpDetector          // WS2-noop: consecutive no-op iteration detection
 	launchSession  func(context.Context, LaunchOptions) (*Session, error)
 	waitSession    func(context.Context, *Session) error
 	healthCheck    func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
@@ -50,6 +51,7 @@ func NewManager() *Manager {
 		workflowRuns: make(map[string]*WorkflowRun),
 		loops:        make(map[string]*LoopRun),
 		stateDir:     expandHome(DefaultStateDir),
+		noopDetector: NewNoOpDetector(2),
 	}
 }
 
@@ -62,6 +64,7 @@ func NewManagerWithBus(bus *events.Bus) *Manager {
 		loops:        make(map[string]*LoopRun),
 		bus:          bus,
 		stateDir:     expandHome(DefaultStateDir),
+		noopDetector: NewNoOpDetector(2),
 	}
 }
 
