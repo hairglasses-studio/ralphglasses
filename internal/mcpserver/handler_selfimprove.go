@@ -65,9 +65,12 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 		_ = s.SessMgr.RunLoop(context.Background(), run.ID)
 	}()
 
-	return mcp.NewToolResultText(fmt.Sprintf(
-		"Self-improvement loop started: id=%s repo=%s budget=$%.0f max_iterations=%d",
-		run.ID, repoName,
-		profile.PlannerBudgetUSD+profile.WorkerBudgetUSD, profile.MaxIterations,
-	)), nil
+	appliedBudget := profile.PlannerBudgetUSD + profile.WorkerBudgetUSD
+	return jsonResult(map[string]any{
+		"message":            fmt.Sprintf("Self-improvement loop started: id=%s repo=%s budget=$%.0f max_iterations=%d", run.ID, repoName, appliedBudget, profile.MaxIterations),
+		"loop_id":            run.ID,
+		"repo":               repoName,
+		"applied_budget_usd": appliedBudget,
+		"max_iterations":     profile.MaxIterations,
+	}), nil
 }

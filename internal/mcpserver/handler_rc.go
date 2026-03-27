@@ -427,8 +427,13 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 		return codedError(ErrInternal, fmt.Sprintf("launch failed: %v", err)), nil
 	}
 
-	return textResult(fmt.Sprintf("Launched %s session on %s (budget: %s, id: %s)",
-		provider, name, formatCost(budget), shortID(sess.ID))), nil
+	return jsonResult(map[string]any{
+		"message":            fmt.Sprintf("Launched %s session on %s (budget: %s, id: %s)", provider, name, formatCost(budget), shortID(sess.ID)),
+		"session_id":         sess.ID,
+		"provider":           string(provider),
+		"repo":               name,
+		"applied_budget_usd": budget,
+	}), nil
 }
 
 func (s *Server) handleRCRead(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
