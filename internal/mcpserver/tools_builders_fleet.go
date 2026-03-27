@@ -11,6 +11,9 @@ func (s *Server) buildFleetGroup() ToolGroup {
 		Tools: []ToolEntry{
 			{mcp.NewTool("ralphglasses_fleet_status",
 				mcp.WithDescription("Fleet-wide dashboard: aggregate status, costs, health, and alerts across all repos and sessions in one call"),
+				mcp.WithNumber("limit", mcp.Description("Max repos to return in full mode (default 50)")),
+				mcp.WithNumber("offset", mcp.Description("Pagination offset for repos (default 0)")),
+				mcp.WithString("repo", mcp.Description("Filter to a specific repo name")),
 				mcp.WithBoolean("summary_only", mcp.Description("Return compact JSON with just repo names, session counts, and total spend instead of full dump")),
 			), s.handleFleetStatus},
 			{mcp.NewTool("ralphglasses_fleet_analytics",
