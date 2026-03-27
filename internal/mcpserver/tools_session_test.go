@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -396,6 +397,14 @@ func TestHandleSessionErrorsClassification(t *testing.T) {
 	}
 	if !strings.Contains(text, `"critical"`) {
 		t.Errorf("expected critical severity, got: %s", text)
+	}
+}
+
+func TestResolveSnapshotRepo_EmptyRepos(t *testing.T) {
+	t.Parallel()
+	result := resolveSnapshotRepo(nil, "", func(string) *model.Repo { return nil })
+	if result != nil {
+		t.Errorf("expected nil for empty repo list, got %v", result)
 	}
 }
 
