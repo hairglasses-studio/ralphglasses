@@ -325,7 +325,8 @@ func (s *Server) handleFeedbackProfiles(_ context.Context, req mcp.CallToolReque
 }
 
 // autoSeedFeedbackProfiles tries to seed empty profiles from observation JSONL
-// files across all known repos.
+// files across all known repos. Falls back to journal entries when no
+// observations are available (FINDING-103).
 func (s *Server) autoSeedFeedbackProfiles() {
 	if s.FeedbackAnalyzer == nil || !s.FeedbackAnalyzer.IsEmpty() {
 		return
@@ -336,19 +337,30 @@ func (s *Server) autoSeedFeedbackProfiles() {
 	s.mu.RUnlock()
 
 	var allObs []session.LoopObservation
+	var allJournal []session.JournalEntry
 	for _, r := range repos {
 		obsPath := session.ObservationPath(r.Path)
 		obs, err := session.LoadObservations(obsPath, time.Time{})
-		if err != nil || len(obs) == 0 {
-			continue
+		if err == nil && len(obs) > 0 {
+			allObs = append(allObs, obs...)
 		}
-		allObs = append(allObs, obs...)
+		// Also collect journal entries as a fallback data source.
+		entries, err := session.ReadRecentJournal(r.Path, 100)
+		if err == nil && len(entries) > 0 {
+			allJournal = append(allJournal, entries...)
+		}
 	}
 
 	if len(allObs) > 0 {
 		if err := s.FeedbackAnalyzer.SeedFromObservations(allObs); err == nil {
 			s.feedbackWasAutoSeeded = true
 		}
+	}
+
+	// FINDING-103: Fall back to journal entries when observations yield no profiles.
+	if s.FeedbackAnalyzer.IsEmpty() && len(allJournal) > 0 {
+		s.FeedbackAnalyzer.Ingest(allJournal)
+		s.feedbackWasAutoSeeded = true
 	}
 }
 
@@ -363,7 +375,37 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 	}
 
 	rec := s.AutoOptimizer.RecommendProvider(task)
-	return fleetJSON(rec)
+
+	// FINDING-104: Fall back to model-based cost estimation when profile data
+	// yields zero budget so callers always get a usable estimate.
+	result := map[string]any{
+		"provider":             rec.Provider,
+		"model":                rec.Model,
+		"estimated_budget_usd": rec.EstimatedBudget,
+		"confidence":           rec.Confidence,
+		"task_type":            rec.TaskType,
+		"rationale":            rec.Rationale,
+	}
+	if rec.NormalizedCost > 0 {
+		result["normalized_cost_usd"] = rec.NormalizedCost
+	}
+
+	if rec.EstimatedBudget == 0 {
+		// Use model-based cost estimation as fallback.
+		rates := session.DefaultCostRates()
+		est := estimateSessionCost(
+			string(rec.Provider), rec.Model,
+			5000,  // default prompt tokens
+			2000,  // default output tokens per turn
+			5,     // default turns
+			"session", 1,
+			rates, nil,
+		)
+		result["estimated_budget_usd"] = est.Estimate.MidUSD
+		result["source"] = "model_estimate"
+	}
+
+	return fleetJSON(result)
 }
 
 func (s *Server) handleFleetDLQ(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
