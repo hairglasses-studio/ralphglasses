@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -33,6 +34,14 @@ Install via claude CLI:
 Or with a custom scan path:
   claude mcp add ralphglasses -e RALPHGLASSES_SCAN_PATH=~/hairglasses-studio -- go run . mcp`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// In MCP mode, stderr IS the transport — any writes corrupt the
+		// protocol. Immediately silence the default slog handler (which
+		// targets stderr) before doing anything that might log.
+		slog.SetDefault(slog.New(slog.NewJSONHandler(io.Discard, nil)))
+
+		// Also ensure util.Debug never writes to stderr in MCP mode.
+		util.Debug.Enabled = false
+
 		sp := util.ExpandHome(scanPath)
 
 		// Wire structured logging to file (uses canonical path from process package).
