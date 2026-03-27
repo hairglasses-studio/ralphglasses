@@ -389,3 +389,260 @@ func TestAutoCommitAndMerge_RebaseConflictFallback(t *testing.T) {
 		t.Fatalf("expected ErrRebaseConflict, got: %v", err)
 	}
 }
+
+func TestAutoCommitAndMergeTraced_NoChanges(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	gitInit := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+
+	gitInit("init")
+	gitInit("config", "user.email", "test@test.com")
+	gitInit("config", "user.name", "Test")
+	gitInit("config", "commit.gpgsign", "false")
+
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitInit("add", ".")
+	gitInit("commit", "-m", "initial")
+
+	cmd := exec.Command("git", "branch", "--show-current")
+	cmd.Dir = dir
+	branchOut, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mainBranch := strings.TrimSpace(string(branchOut))
+
+	// No changes — trace should report no_staged_files
+	trace, err := AutoCommitAndMergeTraced(dir, mainBranch, "test: no changes")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if trace.Reason != "no_staged_files" {
+		t.Errorf("expected reason 'no_staged_files', got %q", trace.Reason)
+	}
+	if trace.StagedFileCount != 0 {
+		t.Errorf("expected 0 staged files, got %d", trace.StagedFileCount)
+	}
+}
+
+func TestAutoCommitAndMergeTraced_WithChanges(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	gitInit := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+
+	gitInit("init")
+	gitInit("config", "user.email", "test@test.com")
+	gitInit("config", "user.name", "Test")
+	gitInit("config", "commit.gpgsign", "false")
+
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitInit("add", ".")
+	gitInit("commit", "-m", "initial")
+
+	cmd := exec.Command("git", "branch", "--show-current")
+	cmd.Dir = dir
+	branchOut, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mainBranch := strings.TrimSpace(string(branchOut))
+
+	// Add a file
+	if err := os.WriteFile(filepath.Join(dir, "new_test.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	trace, err := AutoCommitAndMergeTraced(dir, mainBranch, "test: with changes")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if trace.Reason != "auto_merged" {
+		t.Errorf("expected reason 'auto_merged', got %q", trace.Reason)
+	}
+	if trace.StagedFileCount != 1 {
+		t.Errorf("expected 1 staged file, got %d", trace.StagedFileCount)
+	}
+}
+
+func TestClassifySelfImprovePaths_TestFilesAreSafe(t *testing.T) {
+	paths := []string{
+		"internal/session/acceptance_test.go",
+		"internal/mcpserver/handler_test.go",
+		"cmd/root_test.go",
+	}
+	safe, review := ClassifySelfImprovePaths(paths)
+	if len(review) != 0 {
+		t.Errorf("test files should all be safe, got review: %v", review)
+	}
+	if len(safe) != 3 {
+		t.Errorf("expected 3 safe paths, got %d", len(safe))
+	}
+}
+
+func TestCheckpointExcludes_DoNotFilterGoFiles(t *testing.T) {
+	// Verify that checkpointExcludes patterns don't accidentally match
+	// legitimate Go source files. Files without "secret" or "credentials"
+	// in their basename should never match.
+	safeFiles := []string{
+		"internal/session/loop.go",
+		"cmd/secretsctl/main.go", // "secretsctl" is a dir name, basename is "main.go"
+		"internal/auth/provider.go",
+	}
+
+	for _, f := range safeFiles {
+		for _, excl := range checkpointExcludes {
+			base := filepath.Base(f)
+			if m, _ := filepath.Match(excl, base); m {
+				t.Errorf("checkpointExcludes pattern %q matches legitimate Go file %q (base=%q)", excl, f, base)
+			}
+		}
+	}
+}
+
+func TestCheckpointExcludes_KnownOverBroadPatterns(t *testing.T) {
+	// Document that *secret* and credentials* patterns can match Go source
+	// files with those words in their basename. This is a known risk (A22)
+	// that can cause 0-files-staged rejections if a worker creates files
+	// like "secret_rotation.go" or "credentials.go".
+	knownOverBroad := map[string]string{
+		"internal/session/secret_rotation.go": "*secret*",
+		"internal/credentials_manager.go":     "credentials*",
+		"internal/auth/credentials.go":        "credentials*",
+	}
+
+	for file, expectedPattern := range knownOverBroad {
+		base := filepath.Base(file)
+		matched := false
+		for _, excl := range checkpointExcludes {
+			if m, _ := filepath.Match(excl, base); m {
+				if excl != expectedPattern {
+					t.Errorf("file %q matched unexpected pattern %q (expected %q)", file, excl, expectedPattern)
+				}
+				matched = true
+			}
+		}
+		if !matched {
+			t.Errorf("expected file %q to be over-broadly matched by %q, but it wasn't", file, expectedPattern)
+		}
+	}
+}
+
+func TestCheckpointExcludes_MatchSecretFiles(t *testing.T) {
+	// Verify that actual secret/credential files ARE matched.
+	secretFiles := []string{
+		".env",
+		".env.local",
+		"server.pem",
+		"private.key",
+		"credentials.json",
+		"my_secret.yaml",
+	}
+
+	for _, f := range secretFiles {
+		matched := false
+		for _, excl := range checkpointExcludes {
+			if m, _ := filepath.Match(excl, f); m {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			t.Errorf("expected checkpointExcludes to match secret file %q", f)
+		}
+	}
+}
+
+func TestAcceptanceTrace_JSON(t *testing.T) {
+	trace := AcceptanceTrace{
+		SafePaths:       []string{"docs/README.md"},
+		ReviewPaths:     []string{"cmd/root.go"},
+		StagedFileCount: 2,
+		Reason:          "auto_merged",
+	}
+	data, err := json.Marshal(trace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded AcceptanceTrace
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Reason != "auto_merged" {
+		t.Errorf("Reason = %q, want %q", decoded.Reason, "auto_merged")
+	}
+	if decoded.StagedFileCount != 2 {
+		t.Errorf("StagedFileCount = %d, want 2", decoded.StagedFileCount)
+	}
+}
+
+func TestCountStagedFiles(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+
+	run("init")
+	run("config", "user.email", "test@test.com")
+	run("config", "user.name", "Test")
+	run("config", "commit.gpgsign", "false")
+
+	// Initial commit
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run("add", ".")
+	run("commit", "-m", "initial")
+
+	// No staged files
+	if n := countStagedFiles(dir); n != 0 {
+		t.Errorf("expected 0 staged files, got %d", n)
+	}
+
+	// Stage a file
+	if err := os.WriteFile(filepath.Join(dir, "new.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run("add", "new.go")
+	if n := countStagedFiles(dir); n != 1 {
+		t.Errorf("expected 1 staged file, got %d", n)
+	}
+
+	// Stage another
+	if err := os.WriteFile(filepath.Join(dir, "other.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run("add", "other.go")
+	if n := countStagedFiles(dir); n != 2 {
+		t.Errorf("expected 2 staged files, got %d", n)
+	}
+}
