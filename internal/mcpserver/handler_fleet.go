@@ -328,8 +328,9 @@ func (s *Server) handleFeedbackProfiles(_ context.Context, req mcp.CallToolReque
 	profileType := getStringArg(req, "type")
 
 	// Auto-seed when explicitly requested or when profiles are empty on a get.
+	// force=true when action=="seed" so existing profiles are replaced.
 	if action == "seed" || (action == "get" && s.FeedbackAnalyzer.IsEmpty()) {
-		s.autoSeedFeedbackProfiles()
+		s.autoSeedFeedbackProfiles(action == "seed")
 	}
 
 	result := map[string]any{}
@@ -345,12 +346,20 @@ func (s *Server) handleFeedbackProfiles(_ context.Context, req mcp.CallToolReque
 	return fleetJSON(result)
 }
 
-// autoSeedFeedbackProfiles tries to seed empty profiles from observation JSONL
-// files across all known repos. Falls back to journal entries when no
-// observations are available (FINDING-103).
-func (s *Server) autoSeedFeedbackProfiles() {
-	if s.FeedbackAnalyzer == nil || !s.FeedbackAnalyzer.IsEmpty() {
+// autoSeedFeedbackProfiles tries to seed profiles from observation JSONL files
+// across all known repos. Falls back to journal entries when no observations
+// are available (FINDING-103). When force is true, existing profiles are
+// cleared before seeding so that an explicit action=seed always re-reads data.
+func (s *Server) autoSeedFeedbackProfiles(force bool) {
+	if s.FeedbackAnalyzer == nil {
 		return
+	}
+	if !force && !s.FeedbackAnalyzer.IsEmpty() {
+		return
+	}
+
+	if force {
+		s.FeedbackAnalyzer.Reset()
 	}
 
 	s.mu.RLock()
