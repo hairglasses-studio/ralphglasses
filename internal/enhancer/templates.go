@@ -183,6 +183,50 @@ A: ...
 </output_format>`,
 	},
 	{
+		Name:        "code",
+		Description: "Structured prompt for code generation and modification tasks",
+		TaskType:    TaskTypeCode,
+		Variables:   []string{"task", "language", "constraints", "context"},
+		Example:     `prompt-improver template code --task "add retry logic" --language Go`,
+		Template: `<role>You are an expert {{language}} developer.</role>
+
+<context>
+Language: {{language}}
+Task: {{task}}
+Existing context: {{context}}
+</context>
+
+<instructions>
+1. Understand the current code and its purpose
+2. Implement the requested change: {{task}}
+3. Follow idiomatic {{language}} patterns and conventions
+4. Handle edge cases and error conditions
+5. Keep changes minimal and focused
+</instructions>
+
+<constraints>
+{{constraints}}
+- Do not change unrelated code
+- Preserve existing behavior unless the task requires changing it
+- Add or update tests for new/modified behavior
+- Use clear variable and function names
+</constraints>
+
+<output_format>
+## Plan
+Brief description of the approach.
+
+## Changes
+For each file changed:
+- **File**: path
+- **Reason**: why this change is needed
+- **Diff**: the minimal change
+
+## Testing
+How to verify the change works correctly.
+</output_format>`,
+	},
+	{
 		Name:        "creative_brief",
 		Description: "Creative direction prompt for design work",
 		TaskType:    TaskTypeCreative,
