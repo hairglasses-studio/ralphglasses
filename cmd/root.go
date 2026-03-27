@@ -63,29 +63,15 @@ fleet management from any MCP-capable client.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		scanPath = util.ExpandHome(scanPath)
 
-		// Wire structured logging to file (uses canonical path from process package).
-		logDir := process.LogDirPath(scanPath)
-		if err := os.MkdirAll(logDir, 0o755); err != nil {
-			return err
-		}
-		logFile, err := os.OpenFile(process.LogFilePath(scanPath), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		logFile, err := initLogging(scanPath)
 		if err != nil {
 			return err
 		}
 		defer logFile.Close()
-		slog.SetDefault(slog.New(newLogHandler(logFile)))
 
 		util.Debug.Debugf("scan-path: %s", scanPath)
 
-		// Apply theme
-		if themes := styles.DefaultThemes(); themes[themeName] != nil {
-			styles.ApplyTheme(themes[themeName])
-		} else if themeName != "k9s" {
-			// Try loading as file path
-			if t, err := styles.LoadTheme(themeName); err == nil {
-				styles.ApplyTheme(t)
-			}
-		}
+		applyTheme(themeName)
 
 		bus := events.NewBus(1000)
 		hookExec := hooks.NewExecutor(bus)
@@ -193,6 +179,32 @@ func newLogHandler(w io.Writer) slog.Handler {
 		return slog.NewTextHandler(w, opts)
 	}
 	return slog.NewJSONHandler(w, opts)
+}
+
+// initLogging sets up structured logging to a file under the scan path.
+// Returns the log file handle (caller must close) and any error.
+func initLogging(sp string) (*os.File, error) {
+	logDir := process.LogDirPath(sp)
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
+		return nil, err
+	}
+	logFile, err := os.OpenFile(process.LogFilePath(sp), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return nil, err
+	}
+	slog.SetDefault(slog.New(newLogHandler(logFile)))
+	return logFile, nil
+}
+
+// applyTheme applies the named theme to the TUI styles.
+func applyTheme(name string) {
+	if themes := styles.DefaultThemes(); themes[name] != nil {
+		styles.ApplyTheme(themes[name])
+	} else if name != "k9s" {
+		if t, err := styles.LoadTheme(name); err == nil {
+			styles.ApplyTheme(t)
+		}
+	}
 }
 
 // Execute runs the root command.
