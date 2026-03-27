@@ -180,7 +180,7 @@ func (s *Server) handleSessionBudget(_ context.Context, req mcp.CallToolRequest)
 		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
 
-	newBudget := getNumberArg(req, "budget", 0)
+	newBudget := getNumberArg(req, "budget_usd", 0)
 	if newBudget > 0 {
 		sess.Lock()
 		sess.BudgetUSD = newBudget
