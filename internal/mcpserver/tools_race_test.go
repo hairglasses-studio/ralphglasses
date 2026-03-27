@@ -3,11 +3,15 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 const raceConcurrency = 10
@@ -263,6 +267,74 @@ func TestConcurrentHandlerSubtests(t *testing.T) {
 				}
 				tc.check(t, result)
 			})
+		}
+	}
+}
+
+func TestConcurrentSessionLaunchAndList(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	srv.SessMgr.SetHooksForTesting(
+		func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
+			return &session.Session{
+				ID:         opts.SessionName + "-" + time.Now().Format("150405.000000000"),
+				Provider:   opts.Provider,
+				RepoPath:   opts.RepoPath,
+				RepoName:   filepath.Base(opts.RepoPath),
+				Prompt:     opts.Prompt,
+				Model:      opts.Model,
+				Status:     session.StatusRunning,
+				OutputCh:   make(chan string, 1),
+				LaunchedAt: time.Now(),
+			}, nil
+		},
+		func(_ context.Context, sess *session.Session) error {
+			sess.Lock()
+			sess.Status = session.StatusCompleted
+			now := time.Now()
+			sess.EndedAt = &now
+			sess.Unlock()
+			return nil
+		},
+	)
+
+	ctx := context.Background()
+	const N = 10
+	var wg sync.WaitGroup
+	wg.Add(N * 2)
+
+	launchErrs := make([]error, N)
+	listErrs := make([]error, N)
+
+	// 10 goroutines launching sessions
+	for i := 0; i < N; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			_, launchErrs[idx] = srv.handleSessionLaunch(ctx, makeRequest(map[string]any{
+				"repo":   "test-repo",
+				"prompt": "do something",
+			}))
+		}(i)
+	}
+
+	// 10 goroutines listing sessions
+	for i := 0; i < N; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			_, listErrs[idx] = srv.handleSessionList(ctx, makeRequest(nil))
+		}(i)
+	}
+
+	wg.Wait()
+
+	for i := 0; i < N; i++ {
+		if launchErrs[i] != nil {
+			t.Errorf("launch goroutine %d: %v", i, launchErrs[i])
+		}
+		if listErrs[i] != nil {
+			t.Errorf("list goroutine %d: %v", i, listErrs[i])
 		}
 	}
 }
