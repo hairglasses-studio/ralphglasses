@@ -3,9 +3,11 @@ package model
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
+// Run: go test -fuzz=FuzzLoadConfig -fuzztime=30s ./internal/model/...
 func FuzzLoadConfig(f *testing.F) {
 	f.Add("KEY=value\n")
 	f.Add("# comment\nKEY=\"quoted\"\n")
@@ -17,6 +19,11 @@ func FuzzLoadConfig(f *testing.F) {
 	f.Add("QUOTED=\"hello world\"\n")
 	f.Add("EMPTY=\n")
 	f.Add("#\n#\n#\n")
+	f.Add("   \n\t  ")
+	f.Add("KEY=こんにちは世界 🎉\n")
+	f.Add("\x00\x00")
+	f.Add(strings.Repeat("KEY=value\n", 200))
+	f.Add("KEY==equals=in=value\n")
 
 	f.Fuzz(func(t *testing.T, data string) {
 		dir := t.TempDir()
@@ -35,6 +42,7 @@ func FuzzLoadConfig(f *testing.F) {
 	})
 }
 
+// Run: go test -fuzz=FuzzConfigKey -fuzztime=30s ./internal/model/...
 func FuzzConfigKey(f *testing.F) {
 	f.Add("VALID_KEY")
 	f.Add("bad key")
@@ -42,6 +50,10 @@ func FuzzConfigKey(f *testing.F) {
 	f.Add("")
 	f.Add("KEY!")
 	f.Add("lowercase")
+	f.Add("こんにちは世界 🎉")
+	f.Add("\x00\x00")
+	f.Add("   \n\t  ")
+	f.Add(strings.Repeat("K", 500))
 
 	f.Fuzz(func(t *testing.T, key string) {
 		dir := t.TempDir()
