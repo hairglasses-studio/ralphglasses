@@ -114,8 +114,8 @@ func (s *Server) handleObservationQuery(_ context.Context, req mcp.CallToolReque
 		filtered = filtered[len(filtered)-limit:]
 	}
 
-	if filtered == nil {
-		filtered = []session.LoopObservation{}
+	if len(filtered) == 0 {
+		return emptyResult("observations"), nil
 	}
 
 	return jsonResult(filtered), nil

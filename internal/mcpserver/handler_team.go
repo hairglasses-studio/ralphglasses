@@ -247,8 +247,8 @@ func (s *Server) handleAgentList(_ context.Context, req mcp.CallToolRequest) (*m
 		}
 	}
 
-	if agents == nil {
-		agents = []session.AgentDef{}
+	if len(agents) == 0 {
+		return emptyResult("agents"), nil
 	}
 	return jsonResult(agents), nil
 }
