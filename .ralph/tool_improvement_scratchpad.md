@@ -842,3 +842,157 @@ Exercised 80+ of 112 tools across all 13 namespaces. 288 tool calls in 24h windo
 - Null vs empty: 7+ tools still return null — should all use empty arrays
 
 **Cycle 9 totals**: 10 new findings (FINDING-122–131), 22/24 prior findings re-confirmed NOT FIXED, 2 confirmed FIXED (86, partial 91).
+
+## Cycle 10: Schema Pipeline Diagnosis & Deep Fix Verification (2026-03-27)
+
+
+## Critical Correction: FINDING-122 is FALSE
+
+Code exploration traced the full schema pipeline:
+- `mcp.NewTool()` + `mcp.With*()` → `ToolEntry.Tool.InputSchema.Properties`
+- `applyToolMetadata()` only touches Annotations + RawOutputSchema, never InputSchema
+- `addToolWithMetadata()` → `srv.AddTool()` passes intact schema to mcp-go
+- `DeferredLoading` defaults to `false` — all 112 tools registered at startup
+- `TestParamDriftDetection` test verifies all schemas correct
+
+Cycles 8-9 "22/24 not fixed" was caused by ToolSearch caching stale schemas, not a registration bug.
+
+## Validation Matrix
+
+| Finding | Tool | Status | Evidence |
+|---------|------|--------|----------|
+| FINDING-85 | repo_health null arrays | **FIXED** | `issues: []`, `claudemd_findings: []` |
+| FINDING-86 | should_enhance reason | **FIXED** | reason field: "score 44/100: weak clarity (D)..." |
+| FINDING-89 | session_errors null | **FIXED** | `errors: []` |
+| FINDING-105 | ab_test insufficient_data | **FIXED** | `status: "insufficient_data", minimum_required: 5` |
+| FINDING-106 | changepoints burn-in | **FIXED** | `burn_in: 5`, empty arrays, no index-0 entries |
+| FINDING-107 | marathon null arrays | **NOT FIXED** | `alerts: null, stale_list: null, teams.summary: null` |
+| FINDING-108 | hitl_history null events | **NOT FIXED** | `events: null` |
+| FINDING-109 | anomaly null | **NOT FIXED** | `anomalies: null` |
+| FINDING-110 | rc_status plain text | **NOT FIXED** | Returns "0 running | $0.00 total" |
+| FINDING-122 | schema pipeline disconnect | **FALSE** | Pipeline intact, all params registered |
+| FINDING-123 | limit=0 returns 1 | **CONFIRMED** | observation_query(limit=0) returns 1 result |
+| FINDING-124 | limit=0 inconsistency | **CONFIRMED** | event_list(limit=0) returns ALL events |
+| FINDING-125 | event_poll tool names | **PARTIAL** | event_list has data.tool field; event_poll only in summary text |
+| FINDING-126 | feedback_profiles empty | **FIXED** | 8 prompt profiles + 1 provider profile, seeded=true |
+| FINDING-127 | classify confidence | **FIXED** | `confidence: 1, alternatives: []` |
+| FINDING-129 | team_create defaults | **NOTED** | Default $5 budget (not $0), reasonable |
+
+Score: 8 FIXED, 4 NOT FIXED, 2 CONFIRMED bugs, 1 FALSE, 1 PARTIAL
+
+## Cycle 10: New Findings
+
+
+### FINDING-132: prompt_enhance skips vague prompts instead of enhancing them
+**Tool**: `ralphglasses_prompt_enhance`
+**Category**: PROMPT_PIPELINE
+**Evidence**: `prompt_enhance(prompt="make the tests better", mode="local")` → only "structure" stage ran, output unchanged. Classified as "general" and skipped XML wrapping due to "over-tagging prevention". A vague prompt is exactly what SHOULD trigger maximum enhancement.
+**Proposed fix**: In `internal/enhancer/`, adjust short-prompt heuristic: if `should_enhance=true` AND word_count < 20, force specificity/context/structure stages instead of skipping them.
+**Risk**: MEDIUM — vague prompts sent to loops will remain vague
+**Roadmap item**: "Enhance short/vague prompts aggressively in the 13-stage pipeline"
+
+### FINDING-133: Three tools require repo param but schema marks it optional
+**Tool**: `ralphglasses_claudemd_check`, `ralphglasses_logs`, `ralphglasses_journal_prune`
+**Category**: SCHEMA_DRIFT
+**Evidence**: All three return `INVALID_PARAMS: repo required` when called without repo, but ToolSearch schema shows `repo` as optional (not in `required` array).
+**Proposed fix**: In `tools_builders_misc.go`, add `mcp.Required()` to the repo param for these 3 tools. Or add auto-detection fallback in handlers.
+**Risk**: LOW — 3-line fix per tool
+
+### FINDING-134: marathon_dashboard returns null for all array/object fields
+**Tool**: `ralphglasses_marathon_dashboard`
+**Category**: NULL_ARRAY
+**Evidence**: `alerts: null`, `stale_list: null`, `teams.summary: null`, `cost.by_provider: {}` (empty map OK)
+**Proposed fix**: In marathon handler, initialize `alerts`, `stale_list`, `teams.summary` as empty slices before marshal.
+**Risk**: LOW — mechanical nil-guard fix
+
+### FINDING-135: hitl_history and anomaly_detect return null arrays
+**Tool**: `ralphglasses_hitl_history`, `ralphglasses_anomaly_detect`
+**Category**: NULL_ARRAY
+**Evidence**: `hitl_history → events: null`, `anomaly_detect → anomalies: null`
+**Proposed fix**: Nil-guard before jsonResult() in both handlers.
+**Risk**: LOW — mechanical
+
+### FINDING-136: Flaky test in session package
+**Tool**: `ralphglasses_merge_verify`
+**Category**: TEST_RELIABILITY
+**Evidence**: `TestLoadExternalSessions_SkipExisting` fails with "TempDir RemoveAll cleanup: directory not empty". Race condition in temp dir cleanup.
+**Proposed fix**: Add t.Cleanup() with explicit file removal, or use unique subdirectories per test case.
+**Risk**: LOW — test-only, no production impact
+
+### FINDING-137: event_poll lacks structured tool name field
+**Tool**: `ralphglasses_event_poll`
+**Category**: CROSS_TOOL
+**Evidence**: event_poll returns `summary: "[tool.called] ralphglasses_status"` (embedded in text). event_list returns `data.tool: "ralphglasses_status"` (proper field). Inconsistent.
+**Proposed fix**: In `handler_rc.go`, add `tool` field to compactEvent struct in event_poll.
+**Risk**: LOW — additive change
+
+## Cycle 10: Scratchpad Improvement Opportunities
+
+
+### OPPORTUNITY-01: Journal noise from JSON parse failures degrades feedback profiles
+**Affected prompt category**: all
+**Current gap**: 10+ journal entries are "Your previous response was not valid JSON" fallback entries with 0 useful signal. These pollute feedback_profiles aggregation.
+**Evidence**: journal_read shows repeated entries with `task_focus: "Your previous response was not valid JSON"`, `duration_sec: ~5s`, `spent_usd: ~$0.002`. These are parse-retry attempts, not real work.
+**Suggested scratchpad seed content**: "Filter journal entries where task_focus contains 'not valid JSON' from feedback profile aggregation. These are parser retries, not task completions."
+**Estimated impact**: MEDIUM — cleaner profiles → better provider_recommend accuracy
+**Roadmap integration**: Phase 1 (Harden & Test) → Add journal noise filter
+
+### OPPORTUNITY-02: Single-provider feedback profiles can't drive cost optimization
+**Affected prompt category**: code_generation, troubleshooting
+**Current gap**: All 32 observations and all journal entries use claude-only. feedback_profiles has `best_provider: "claude"` for every task type because there's no gemini/codex data. provider_recommend always returns claude.
+**Evidence**: `observation_summary.model_usage: {claude: 64}`, `provider_profiles[0].provider: "claude"`, all recommend calls return `provider: "claude"`.
+**Suggested scratchpad seed content**: "Run 10+ loop iterations with gemini-2.5-flash on difficulty<0.4 tasks to seed multi-provider feedback data. Enable cascade router with cheap_provider=gemini threshold."
+**Estimated impact**: HIGH — 6.9x cost savings potential (claude $0.225 vs gemini $0.033 per session)
+**Roadmap integration**: Phase 2.5 (Multi-LLM Agent Orchestration) → Enable cascade routing
+
+### OPPORTUNITY-03: Observation data shows 68.75% completion rate with predictable failure patterns
+**Affected prompt category**: code_generation, testing
+**Current gap**: 22/32 observations passed verify, 4 failed, 6 unknown. Failed tasks cluster around "test" type (TUI tests, CI integration). No scratchpad reasoning captures these failure patterns for loop self-improvement.
+**Evidence**: Failed observations: TUI unit tests (iteration 4, $0.17), loop pause/resume (iteration 2, $0.53), doctor checks ($0.36), refactor helper ($0.15). Common pattern: complex multi-file changes with CI gate failures.
+**Suggested scratchpad seed content**: "Task types with <50% completion: test (50%), feature (50%). Budget accordingly: test tasks need $0.15-0.25 budget with 2+ iterations. Feature tasks need $0.27+ with fallback to simpler decomposition."
+**Estimated impact**: MEDIUM — better budget allocation reduces wasted iterations
+**Roadmap integration**: Phase 0.8 (MCP Observability) → Auto-budget from historical task-type data
+
+### OPPORTUNITY-04: Roadmap has 425 incomplete tasks but loop only attempts ~10 task types
+**Affected prompt category**: analysis, refactoring
+**Current gap**: roadmap_analyze shows 396 gaps, 424 ready tasks across 20 phases. But observation task_type distribution is narrow: test(10), general(8), feature(4), refactor(5), docs(2), bug_fix(2), config(1), review(1). No "analysis", "architecture", or "infrastructure" task types.
+**Evidence**: `roadmap_export(status=incomplete, max_tasks=10)` returns Phase 0.5 distro tasks (GRUB, marathon edge cases). These are ready but not being picked up by loops.
+**Suggested scratchpad seed content**: "Roadmap ready tasks skew toward distro/infrastructure (0.5.6 GRUB, 0.5.10 marathon, 0.5.11 config). Current loops focus on test/feature/refactor. Consider dedicated distro loop with different verify command."
+**Estimated impact**: MEDIUM — unlocks 100+ ready tasks currently ignored
+**Roadmap integration**: Phase 1.5 (Developer Experience) → Task type routing per repo area
+
+### OPPORTUNITY-05: Tool benchmark reveals 0% success tools that need graceful degradation
+**Affected prompt category**: troubleshooting
+**Current gap**: 9 tools at 0% success rate: fleet_dlq, fleet_budget, fleet_workers, session_status, session_compare, session_diff, session_stop, session_budget, team_status. All require active sessions or fleet mode. No scratchpad guidance on when these tools are usable.
+**Evidence**: tool_benchmark shows 327 calls, 9 tools at 0% success. All return coded errors (NOT_RUNNING, no active sessions). These tools work correctly — they just need prerequisites.
+**Suggested scratchpad seed content**: "Fleet tools (fleet_dlq/budget/workers) require `--fleet` mode. Session tools (session_status/compare/diff/stop/budget) require active session IDs. team_status requires active team. Pre-check: call session_list or fleet_status first."
+**Estimated impact**: LOW — reduces tool call waste in audit cycles
+**Roadmap integration**: Phase 1 (Harden & Test) → Add prerequisite hints to tool descriptions
+
+## Cycle 10: Priority Matrix
+
+
+## Priority Matrix
+
+| Priority | Finding | Fix Description | LOC Est |
+|----------|---------|----------------|---------|
+| **P0** | FINDING-133 | Add `mcp.Required()` to repo param for claudemd_check, logs, journal_prune | 3 |
+| **P0** | FINDING-134 | Nil-guard marathon_dashboard: alerts, stale_list, teams.summary | 6 |
+| **P0** | FINDING-135 | Nil-guard hitl_history events, anomaly_detect anomalies | 4 |
+| **P1** | FINDING-137 | Add tool field to event_poll compactEvent struct | 5 |
+| **P1** | FINDING-123/124 | Normalize limit=0 behavior: either "return all" or "invalid" across all tools | 10 |
+| **P2** | FINDING-132 | Enhance vague prompts aggressively instead of skipping | 20 |
+| **P2** | FINDING-110 | Convert rc_status from textResult to jsonResult | 15 |
+| **P2** | FINDING-136 | Fix flaky TestLoadExternalSessions_SkipExisting temp dir race | 10 |
+| **P3** | OPP-01 | Filter JSON-parse-retry journal entries from feedback aggregation | 15 |
+| **P3** | OPP-02 | Seed multi-provider observation data for cascade routing | config |
+| **P3** | OPP-04 | Add task-type routing to match roadmap ready tasks to loop focus | 30 |
+
+## Cycle 10 Summary
+
+- **~65 tool calls** executed across 5 phases
+- **FINDING-122 DISPROVED** — schema pipeline is intact, prior cycles had stale ToolSearch cache
+- **8 prior findings FIXED**, 4 NOT FIXED, 2 CONFIRMED, 1 FALSE, 1 PARTIAL
+- **6 new findings** (FINDING-132–137)
+- **5 scratchpad improvement opportunities** (OPPORTUNITY-01–05)
+- **Key insight**: The biggest improvement opportunity isn't tool bugs — it's the single-provider bottleneck. Enabling cascade routing with gemini-2.5-flash for easy tasks could save 60-75% on costs.

@@ -233,6 +233,9 @@ func (s *Server) handleHITLHistory(_ context.Context, req mcp.CallToolRequest) (
 	window := time.Duration(hours * float64(time.Hour))
 
 	events := s.HITLTracker.History(window, limit)
+	if events == nil {
+		events = []session.HITLEvent{}
+	}
 	return fleetJSON(map[string]any{
 		"events": events,
 		"count":  len(events),
