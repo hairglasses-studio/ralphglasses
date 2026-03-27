@@ -60,11 +60,14 @@ func TestHandleSelfImprove_ValidRepo(t *testing.T) {
 	}
 
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, "Self-improvement loop started") {
-		t.Errorf("expected success message, got: %s", text)
+	if !strings.Contains(text, `"status":"started"`) {
+		t.Errorf("expected status started, got: %s", text)
 	}
-	if !strings.Contains(text, "test-repo") {
+	if !strings.Contains(text, `"repo":"test-repo"`) {
 		t.Errorf("expected repo name in result, got: %s", text)
+	}
+	if !strings.Contains(text, `"trace"`) {
+		t.Errorf("expected trace in default response, got: %s", text)
 	}
 }
 
@@ -87,8 +90,8 @@ func TestHandleSelfImprove_CustomBudget(t *testing.T) {
 	}
 
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, "budget=$40") {
-		t.Errorf("expected budget=$40 in result, got: %s", text)
+	if !strings.Contains(text, `"budget_usd":40`) {
+		t.Errorf("expected budget_usd:40 in result, got: %s", text)
 	}
 }
 
@@ -111,8 +114,8 @@ func TestHandleSelfImprove_CustomIterations(t *testing.T) {
 	}
 
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, "max_iterations=10") {
-		t.Errorf("expected max_iterations=10 in result, got: %s", text)
+	if !strings.Contains(text, `"max_iterations":10`) {
+		t.Errorf("expected max_iterations:10 in result, got: %s", text)
 	}
 }
 
