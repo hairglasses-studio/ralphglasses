@@ -107,6 +107,7 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 			run.mu.Lock()
 			run.Status = "completed"
 			run.LastError = "budget exceeded: " + reason
+			run.UpdatedAt = time.Now()
 			run.mu.Unlock()
 			m.PersistLoop(run)
 			slog.Warn("loop budget exceeded, stopping", "loop", id, "reason", reason)
