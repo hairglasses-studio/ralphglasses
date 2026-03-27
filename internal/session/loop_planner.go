@@ -131,6 +131,28 @@ In headless mode, no human will answer. Re-task with explicit instructions to ma
 				"Completed tasks (DO NOT repeat these):\n"+strings.Join(completedTitles, "\n"))
 		}
 
+		// Detailed completed-task context with file paths so the planner
+		// avoids re-proposing work on files that were already modified.
+		var detailLines []string
+		for _, iter := range prevIterations {
+			if iter.Status == "failed" || iter.Task.Title == "" {
+				continue
+			}
+			paths := extractFilePathsFromText(iter.Task.Prompt)
+			entry := fmt.Sprintf("  <task iteration=%q status=%q>\n    <title>%s</title>",
+				fmt.Sprintf("%d", iter.Number), iter.Status, iter.Task.Title)
+			if len(paths) > 0 {
+				entry += fmt.Sprintf("\n    <files>%s</files>", strings.Join(paths, ", "))
+			}
+			entry += "\n  </task>"
+			detailLines = append(detailLines, entry)
+		}
+		if len(detailLines) > 0 {
+			sections = append(sections,
+				"<completed-tasks-detail>\n"+strings.Join(detailLines, "\n")+"\n</completed-tasks-detail>\n"+
+					"DO NOT propose tasks that target the same files listed above. Choose new, untouched areas of the codebase.")
+		}
+
 		// Inject recent task types for diversity steering.
 		recentCount := 3
 		if recentCount > len(prevIterations) {
