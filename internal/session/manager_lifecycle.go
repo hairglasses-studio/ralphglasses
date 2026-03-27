@@ -43,6 +43,11 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	// Set persistence and feedback callbacks so runner can persist and learn on completion
 	s.onComplete = func(sess *Session) {
 		m.persistOrWarn(sess, "on session complete")
+		// FINDING-237: Write observation data so fleet_analytics has data in
+		// standalone mode (no fleet coordinator). This mirrors what
+		// emitLoopObservation does for loop iterations, but covers direct
+		// session launches.
+		emitSessionObservation(sess)
 		// Feed session results back into the self-improvement loop
 		if optimizer != nil {
 			optimizer.IngestSessionJournal(sess)

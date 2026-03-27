@@ -1397,3 +1397,103 @@ func TestHandleFleetStatus_SummaryOnlySizeConstraint(t *testing.T) {
 		t.Errorf("summary_only output should be <5KB, got %d bytes", len(text))
 	}
 }
+
+// TestFleetAnalytics_StandaloneFallback verifies that fleet_analytics returns
+// nonzero metrics in standalone mode (no FleetAnalytics coordinator) when
+// session completions have been recorded as observations (FINDING-237).
+func TestFleetAnalytics_StandaloneFallback(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	// Ensure no fleet coordinator — standalone mode.
+	srv.FleetAnalytics = nil
+
+	// Get repo path from scanned repos.
+	srv.mu.RLock()
+	if len(srv.Repos) == 0 {
+		srv.mu.RUnlock()
+		t.Fatal("expected at least one scanned repo")
+	}
+	repoPath := srv.Repos[0].Path
+	repoName := srv.Repos[0].Name
+	srv.mu.RUnlock()
+
+	// Add a completed session to the manager.
+	now := time.Now()
+	ended := now.Add(-1 * time.Second)
+	sess := &session.Session{
+		ID:           "standalone-test-1",
+		Provider:     session.ProviderClaude,
+		RepoPath:     repoPath,
+		RepoName:     repoName,
+		Status:       session.StatusCompleted,
+		SpentUSD:     0.42,
+		TurnCount:    5,
+		LaunchedAt:   now.Add(-30 * time.Second),
+		LastActivity: ended,
+		EndedAt:      &ended,
+		Prompt:       "fix the tests",
+	}
+	srv.SessMgr.AddSessionForTesting(sess)
+
+	// Write observation data — this is what emitSessionObservation does on
+	// real session completion. Simulate it directly.
+	obs := session.LoopObservation{
+		Timestamp:       now,
+		LoopID:          "session:standalone-test-1",
+		RepoName:        repoName,
+		IterationNumber: 1,
+		TotalLatencyMs:  29000,
+		TotalCostUSD:    0.42,
+		WorkerProvider:  "claude",
+		PlannerProvider: "claude",
+		WorkerCostUSD:   0.42,
+		Status:          "completed",
+		VerifyPassed:    true,
+		Mode:            "standalone",
+		Confidence:      1.0,
+	}
+	obsPath := session.ObservationPath(repoPath)
+	if err := session.WriteObservation(obsPath, obs); err != nil {
+		t.Fatalf("write observation: %v", err)
+	}
+
+	// Call fleet_analytics in standalone mode.
+	result, err := srv.handleFleetAnalytics(context.Background(), makeRequest(map[string]any{
+		"window": "1h",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+
+	// Verify data_source is observation_store.
+	if !strings.Contains(text, `"data_source":"observation_store"`) {
+		t.Errorf("expected data_source observation_store, got: %s", text)
+	}
+
+	// Verify total_sessions > 0.
+	if strings.Contains(text, `"total_sessions":0`) {
+		t.Errorf("expected total_sessions > 0, got: %s", text)
+	}
+
+	// Verify observation_count > 0.
+	if strings.Contains(text, `"observation_count":0`) {
+		t.Errorf("expected observation_count > 0, got: %s", text)
+	}
+
+	// Verify completions > 0 in metrics.
+	if strings.Contains(text, `"completions":0`) {
+		t.Errorf("expected completions > 0 in metrics, got: %s", text)
+	}
+
+	// Verify cost is reported.
+	if !strings.Contains(text, `"total_cost_usd"`) {
+		t.Errorf("expected total_cost_usd in output, got: %s", text)
+	}
+}
