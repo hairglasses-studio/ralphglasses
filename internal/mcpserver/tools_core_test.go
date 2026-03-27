@@ -107,6 +107,9 @@ func setupTestServer(t *testing.T) (*Server, string) {
 
 	// Stop any background RunLoop goroutines before temp dir cleanup.
 	t.Cleanup(func() {
+		if srv.SessMgr == nil {
+			return
+		}
 		for _, run := range srv.SessMgr.ListLoops() {
 			_ = srv.SessMgr.StopLoop(run.ID)
 		}
