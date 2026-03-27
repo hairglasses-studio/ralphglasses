@@ -461,6 +461,18 @@ func TestHandlePromptClassify(t *testing.T) {
 				if m["task_type"] == nil || m["task_type"] == "" {
 					t.Error("expected non-empty task_type")
 				}
+				// Verify confidence is present and in range
+				conf, ok := m["confidence"].(float64)
+				if !ok {
+					t.Fatal("expected confidence to be a float")
+				}
+				if conf < 0.0 || conf > 1.0 {
+					t.Errorf("confidence %f not in [0,1]", conf)
+				}
+				// Verify alternatives is present as array
+				if _, ok := m["alternatives"].([]any); !ok {
+					t.Fatal("expected alternatives to be an array")
+				}
 			},
 		},
 		{
@@ -472,6 +484,46 @@ func TestHandlePromptClassify(t *testing.T) {
 			name:    "empty prompt",
 			args:    map[string]any{"prompt": ""},
 			wantErr: true,
+		},
+		{
+			name: "mixed signal prompt with alternatives",
+			args: map[string]any{"prompt": "Review and fix the broken build pipeline code that crashes with an error"},
+			check: func(t *testing.T, text string) {
+				var m map[string]any
+				if err := json.Unmarshal([]byte(text), &m); err != nil {
+					t.Errorf("expected JSON: %v", err)
+				}
+				conf, ok := m["confidence"].(float64)
+				if !ok {
+					t.Fatal("expected confidence float")
+				}
+				if conf < 0.0 || conf > 1.0 {
+					t.Errorf("confidence %f not in [0,1]", conf)
+				}
+				alts, ok := m["alternatives"].([]any)
+				if !ok {
+					t.Fatal("expected alternatives array")
+				}
+				if len(alts) == 0 {
+					t.Error("expected non-empty alternatives for prompt with mixed signals")
+				}
+				for i, alt := range alts {
+					am, ok := alt.(map[string]any)
+					if !ok {
+						t.Errorf("alternative[%d] is not an object", i)
+						continue
+					}
+					if am["task_type"] == nil || am["task_type"] == "" {
+						t.Errorf("alternative[%d] missing task_type", i)
+					}
+					ac, ok := am["confidence"].(float64)
+					if !ok {
+						t.Errorf("alternative[%d] missing confidence float", i)
+					} else if ac < 0.0 || ac > 1.0 {
+						t.Errorf("alternative[%d] confidence %f not in [0,1]", i, ac)
+					}
+				}
+			},
 		},
 		{
 			name: "debug prompt",
@@ -493,6 +545,34 @@ func TestHandlePromptClassify(t *testing.T) {
 				var m map[string]any
 				if err := json.Unmarshal([]byte(text), &m); err != nil {
 					t.Errorf("expected JSON: %v", err)
+				}
+				// Confidence should still be present
+				if _, ok := m["confidence"].(float64); !ok {
+					t.Error("expected confidence float")
+				}
+				// Alternatives should be present (may be empty array)
+				if _, ok := m["alternatives"].([]any); !ok {
+					t.Error("expected alternatives array")
+				}
+			},
+		},
+		{
+			name: "general prompt with no keywords",
+			args: map[string]any{"prompt": "Tell me about the weather today"},
+			check: func(t *testing.T, text string) {
+				var m map[string]any
+				if err := json.Unmarshal([]byte(text), &m); err != nil {
+					t.Errorf("expected JSON: %v", err)
+				}
+				if m["task_type"] != "general" {
+					t.Errorf("expected task_type=general for ambiguous prompt, got %v", m["task_type"])
+				}
+				conf, ok := m["confidence"].(float64)
+				if !ok {
+					t.Fatal("expected confidence float")
+				}
+				if conf < 0.0 || conf > 1.0 {
+					t.Errorf("confidence %f not in [0,1]", conf)
 				}
 			},
 		},
@@ -541,11 +621,45 @@ func TestHandlePromptShouldEnhance(t *testing.T) {
 				if err := json.Unmarshal([]byte(text), &m); err != nil {
 					t.Errorf("expected JSON: %v", err)
 				}
-				if _, ok := m["should_enhance"]; !ok {
-					t.Error("expected should_enhance field")
+				shouldEnhance, ok := m["should_enhance"].(bool)
+				if !ok {
+					t.Fatal("expected should_enhance bool")
 				}
-				if _, ok := m["reason"]; !ok {
-					t.Error("expected reason field")
+				if !shouldEnhance {
+					t.Error("expected should_enhance to be true for this prompt")
+				}
+				reason, _ := m["reason"].(string)
+				if reason == "" {
+					t.Error("expected non-empty reason when should_enhance is true")
+				}
+				// Reason should contain score information
+				if !strings.Contains(reason, "score") {
+					t.Errorf("expected reason to contain score info, got: %s", reason)
+				}
+			},
+		},
+		{
+			name: "low quality prompt should enhance with detailed reason",
+			args: map[string]any{"prompt": "Make the code better and fix all the things that are wrong with it please"},
+			check: func(t *testing.T, text string) {
+				var m map[string]any
+				if err := json.Unmarshal([]byte(text), &m); err != nil {
+					t.Errorf("expected JSON: %v", err)
+				}
+				shouldEnhance, ok := m["should_enhance"].(bool)
+				if !ok {
+					t.Fatal("expected should_enhance bool")
+				}
+				if !shouldEnhance {
+					t.Error("expected should_enhance to be true for low-quality prompt")
+				}
+				reason, _ := m["reason"].(string)
+				if reason == "" {
+					t.Error("expected non-empty reason for low-quality prompt")
+				}
+				// Reason should mention the score
+				if !strings.Contains(reason, "/100") {
+					t.Errorf("expected reason to contain score denominator, got: %s", reason)
 				}
 			},
 		},
