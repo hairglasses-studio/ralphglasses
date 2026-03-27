@@ -49,6 +49,7 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_loop_gates":     {Title: "Loop Gates", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_self_test":      {Title: "Self Test", ReadOnlyHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_self_improve":   {Title: "Self Improve", DestructiveHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_loop_prune":     {Title: "Loop Prune", DestructiveHint: boolPtr(true)},
 
 	// ── prompt ───────────────────────────────────────────────────────────
 	"ralphglasses_prompt_analyze":        {Title: "Analyze Prompt", ReadOnlyHint: boolPtr(true)},
