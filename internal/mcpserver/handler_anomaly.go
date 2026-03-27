@@ -22,6 +22,9 @@ func (s *Server) handleAnomalyDetect(_ context.Context, req mcp.CallToolRequest)
 		return codedError(ErrInvalidParams, "metric name required"), nil
 	}
 
+	// Normalize shorthand metric names to canonical full names.
+	metricName = normalizeMetricName(metricName)
+
 	// Validate metric name early.
 	metrics := eval.AnomalyMetrics()
 	if _, ok := metrics[metricName]; !ok {

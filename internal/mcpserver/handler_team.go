@@ -61,7 +61,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		LeadAgent:      getStringArg(req, "lead_agent"),
 		Tasks:          tasks,
 		Model:          getStringArg(req, "model"),
-		MaxBudgetUSD:   getNumberArg(req, "max_budget_usd", 0),
+		MaxBudgetUSD:   getNumberArg(req, "budget_usd", 0),
 	}
 
 	if getBoolArg(req, "dry_run") {
@@ -102,7 +102,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 			"worker_provider": string(effectiveWorkerProvider),
 			"lead_agent":      effectiveLeadAgent,
 			"model":           effectiveModel,
-			"max_budget_usd":  effectiveBudget,
+			"budget_usd":  effectiveBudget,
 			"tasks":           config.Tasks,
 			"task_count":      len(config.Tasks),
 		}), nil
