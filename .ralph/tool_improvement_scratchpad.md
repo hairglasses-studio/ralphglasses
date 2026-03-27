@@ -996,3 +996,132 @@ Score: 8 FIXED, 4 NOT FIXED, 2 CONFIRMED bugs, 1 FALSE, 1 PARTIAL
 - **6 new findings** (FINDING-132–137)
 - **5 scratchpad improvement opportunities** (OPPORTUNITY-01–05)
 - **Key insight**: The biggest improvement opportunity isn't tool bugs — it's the single-provider bottleneck. Enabling cascade routing with gemini-2.5-flash for easy tasks could save 60-75% on costs.
+
+## Cycle 11: Full-Surface Exploration (2026-03-27)
+
+
+Scope: Exercised all 13 tool namespaces via ~70 MCP calls across 8 phases. Focus on cross-tool friction, integration gaps, and adversarial edge cases.
+
+### Prompt Pipeline Findings
+
+**FINDING-138** | `prompt_should_enhance` | error-handling | P2 | Low
+- Rejects prompts <5 words ("too short to evaluate") — exactly the prompts that need enhancement most. Inverted logic: short/vague prompts should score highest for enhancement need.
+
+**FINDING-139** | `prompt_enhance` | data-quality | P2 | Medium
+- Local mode returns vague prompts unchanged due to "over-tagging prevention." `prompt_enhance(prompt="fix the bug", mode="local")` is effectively a no-op for its primary use case. Should still attempt structure injection and specificity.
+
+**FINDING-140** | `prompt_template_fill` | error-handling | P3 | Low
+- Returns INVALID_PARAMS for missing template name. Should return a dedicated NOT_FOUND code (like TEMPLATE_NOT_FOUND) to distinguish from malformed input.
+
+### Cross-Tool Friction
+
+**FINDING-141** | multiple tools | ux | P2 | Medium
+- Inconsistent "empty" status semantics: `session_list` returns `status: "empty"` for no sessions, `claudemd_check` returns `status: "empty"` for no issues found. Same field, opposite meanings (bad state vs good state).
+
+**FINDING-142** | `fleet_status` | performance | P1 | Medium
+- Full output: 127,548 chars — exceeds max tokens. No pagination, truncation, or `summary_only` flag (unlike `fleet_status(summary_only=true)` which works). The non-summary mode needs a `limit` or `max_sessions` param.
+
+**FINDING-143** | `eval_counterfactual` | data-quality | P2 | Low
+- Confidence interval upper bound 1.038 for completion rate. Mathematically impossible (rate ∈ [0,1]). Should clamp CI bounds to [0,1] for rate metrics.
+
+**FINDING-144** | `eval_counterfactual` / `eval_ab_test` | data-quality | P3 | Low
+- Returns empty `best_model: ""` when data is insufficient. Should return null or omit the field rather than empty string, which could be misinterpreted.
+
+**FINDING-145** | `provider_recommend` | data-quality | P2 | Medium
+- No complexity scaling: returns $0.225/session budget for both "complex TUI view" and "fix a typo." Budget estimate should factor in detected task complexity. Cost ratio Claude:Gemini = 6.9x consistently regardless of task.
+
+**FINDING-146** | `tool_benchmark` | data-quality | P2 | Medium
+- Reports 19 regressions including session/loop tools that require active sessions to succeed. Regression detector doesn't distinguish "requires active state" from "broken tool." Should tag tools as stateful and exclude from regression when no sessions exist.
+
+## Cycle 11 Findings (continued)
+
+
+### Path & Resolution Inconsistencies
+
+**FINDING-147** | `merge_verify` | ux | P2 | Low
+- Requires absolute path for `repo` param, while most other tools (status, repo_health, anomaly_detect) accept just the repo name. Inconsistent interface — user must know which tools want paths vs names.
+
+**FINDING-148** | `snapshot` | data-quality | P2 | Medium
+- `snapshot(action="save", name="cycle-11-exploration")` saved to `claudekit/.ralph/snapshots/` instead of `ralphglasses/.ralph/snapshots/`. Cross-repo path resolution bug when CWD is ralphglasses.
+
+**FINDING-149** | `session_diff` | ux | P3 | Low
+- Doesn't resolve "latest" as a convenience alias for the most recent session ID. Returns NO_ACTIVE_SESSIONS. Should accept "latest" and resolve to most recent session.
+
+### Roadmap & Awesome Tool Findings
+
+**FINDING-150** | `roadmap_parse` | data-quality | P3 | Low
+- At `max_depth=1`, flat-list phases (Phase 0, Phase 1) show the phase name duplicated as every section name (e.g., "Phase 0: Foundation (COMPLETE)" appears 16 times as section names). Parser isn't extracting sub-headers for phases that use flat checkbox lists.
+
+**FINDING-151** | `roadmap_analyze` | data-quality | P2 | Medium
+- Stale detection false positive: task 1.10.2 "Add search UI to LogView: `/` to enter search, `n`/`N` for next/prev" has evidence `"exists: /"` — the regex matches the filesystem root `/` as evidence. Needs path-length or specificity filter.
+
+**FINDING-152** | `roadmap_expand` | performance | P1 | Medium
+- Returns 182,748 chars with no pagination. Same pattern as FINDING-142 (fleet_status). Needs `limit`, `offset`, or `summary_only` params.
+
+**FINDING-153** | `awesome_analyze` | performance | P1 | Medium
+- Returns 119,421 chars with no pagination. Same pattern as FINDING-142 and FINDING-152. Needs `limit` or `top_n` param to control output size.
+
+**FINDING-154** | `awesome_diff` | error-handling | P3 | Low
+- Returns "Run awesome_fetch first to generate comparison data" even when awesome_fetch was called in the same batch. Real issue: no *previous* fetch exists to compare against. Error message should say "no previous fetch baseline found — run awesome_fetch, then run it again later to generate a diff."
+
+### Adversarial / Edge Case Findings
+
+**FINDING-155** | `observation_query` | data-quality | P2 | Low
+- `limit=0` returns 1 result instead of 0. Zero limit should return empty array or be treated as "use default."
+
+**FINDING-156** | `observation_query` | data-quality | P3 | Low
+- Documentation says "max 500" but `limit=10000` is accepted without capping. Should enforce documented max or update docs.
+
+**FINDING-157** | `scratchpad_read` | error-handling | P3 | Low
+- Nonexistent scratchpad returns `{status: "empty", items: []}` instead of a not-found error or distinct status. Can't distinguish "scratchpad exists but empty" from "scratchpad doesn't exist."
+
+### Confirmed Working (no findings)
+- `prompt_analyze("")` → clean INVALID_PARAMS error
+- `cost_estimate(provider="nonexistent")` → clean INVALID_PARAMS with valid options
+- `prompt_classify(garbage_input)` → graceful "general" at 0.3 confidence
+- `event_list(offset=999999)` → clean empty response with total_count
+- `repo_health(nonexistent_repo)` → clean REPO_NOT_FOUND error
+- `repo_optimize(dry_run=true)` → clean empty result (no issues)
+
+## Cycle 11 Opportunities
+
+
+**OPPORTUNITY-06** | Pagination for large-output tools
+- Affects: fleet_status, roadmap_expand, awesome_analyze (and potentially roadmap_export at scale)
+- All three exceeded max token output (119K-182K chars). Add `limit`/`offset` or `summary_only` params.
+- Fix complexity: Medium (pattern already exists in fleet_status summary_only)
+
+**OPPORTUNITY-07** | "latest" alias for session-scoped tools
+- Affects: session_diff, session_output, session_status, session_tail
+- Resolve "latest" to most recent session ID automatically. Saves users from needing to call session_list first.
+- Fix complexity: Low (add ID resolution helper)
+
+**OPPORTUNITY-08** | Unified path/name resolution
+- Affects: merge_verify (requires absolute path), repo_optimize (requires path), vs repo_health/status/anomaly_detect (accept repo name)
+- All tools should accept either repo name or absolute path. The `findRepo` pattern already exists.
+- Fix complexity: Low (wrap existing findRepo in path-accepting tools)
+
+**OPPORTUNITY-09** | Complexity-aware cost estimates in provider_recommend
+- Currently returns flat $0.225/session for Claude regardless of task. Should scale budget by detected complexity (typo fix → $0.05, multi-file refactor → $0.50).
+- Fix complexity: Medium (need complexity→budget mapping table)
+
+**OPPORTUNITY-10** | Suggested next tools in output
+- Cross-tool workflows require knowing which tool to call next. Add `suggested_next` field to tool outputs (e.g., after `scan` → suggest `list`, `repo_health`; after `session_errors` → suggest `circuit_reset`, `session_retry`).
+- Fix complexity: Medium (per-tool annotations, but high UX value)
+
+### Cycle 11 Summary
+
+| Metric | Count |
+|--------|-------|
+| New findings | 20 (FINDING-138 through FINDING-157) |
+| New opportunities | 5 (OPPORTUNITY-06 through OPPORTUNITY-10) |
+| P1 (must fix) | 3 (FINDING-142, 152, 153 — output overflow) |
+| P2 (should fix) | 10 |
+| P3 (nice to have) | 7 |
+| Tool calls | ~70 |
+| Namespaces exercised | 13/13 |
+| Confirmed working | 6 adversarial cases passed cleanly |
+
+**Top priority pattern**: Large-output tools without pagination (3 P1s, same root cause). Single fix pattern would resolve all three.
+
+**Prior fix verification**: Null-array fixes from Cycle 10 confirmed still working (marathon_dashboard, hitl_history, anomaly_detect all return `[]` not `null`). FINDING-110 (rc_status plain text) still open.
