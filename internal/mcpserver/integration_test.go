@@ -266,7 +266,7 @@ func TestIntegration_SessionLifecycle(t *testing.T) {
 	// Step 5: Update budget — verify new budget and remaining.
 	budgetResult, err := srv.handleSessionBudget(ctx, makeRequest(map[string]any{
 		"id":     sessionID,
-		"budget": float64(25),
+		"budget_usd": float64(25),
 	}))
 	if err != nil {
 		t.Fatalf("budget: %v", err)

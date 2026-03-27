@@ -126,3 +126,19 @@ func cascadeConfigFromRepo(repoPath, _ string) session.CascadeConfig {
 	}
 	return session.DefaultCascadeConfig()
 }
+
+// normalizeMetricName maps shorthand metric names to their canonical full names.
+// This bridges the gap between eval_changepoints (which uses "cost", "latency")
+// and anomaly_detect (which uses "total_cost_usd", "total_latency_ms").
+// Unknown names are returned as-is for downstream validation.
+func normalizeMetricName(name string) string {
+	aliases := map[string]string{
+		"cost":       "total_cost_usd",
+		"latency":    "total_latency_ms",
+		"difficulty": "difficulty_score",
+	}
+	if canonical, ok := aliases[name]; ok {
+		return canonical
+	}
+	return name
+}
