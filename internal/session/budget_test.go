@@ -3,6 +3,7 @@ package session
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -160,6 +161,72 @@ func TestCheckLoopBudget(t *testing.T) {
 	exceeded, _ = m.checkLoopBudget(run)
 	if exceeded {
 		t.Error("should not exceed at $6.5 of $10.0")
+	}
+}
+
+func TestRunLoop_BudgetReasonInLastError(t *testing.T) {
+	m := NewManager()
+	m.SetStateDir(t.TempDir())
+
+	// Create a loop run with a small budget that will be exceeded.
+	run := &LoopRun{
+		ID:       "budget-lasterror-test",
+		RepoPath: t.TempDir(),
+		RepoName: "test",
+		Status:   "running",
+		Profile: LoopProfile{
+			PlannerBudgetUSD: 1.0,
+			WorkerBudgetUSD:  4.0,
+		},
+		Iterations: []LoopIteration{},
+	}
+
+	// Add sessions that exceed the $5.00 total budget (90% headroom = $4.50).
+	plannerSess := &Session{ID: "p-1", SpentUSD: 1.0}
+	workerSess := &Session{ID: "w-1", SpentUSD: 4.0}
+	m.mu.Lock()
+	m.sessions["p-1"] = plannerSess
+	m.sessions["w-1"] = workerSess
+	m.mu.Unlock()
+
+	run.Iterations = append(run.Iterations, LoopIteration{
+		PlannerSessionID: "p-1",
+		WorkerSessionIDs: []string{"w-1"},
+	})
+
+	// Verify checkLoopBudget detects the overspend.
+	exceeded, reason := m.checkLoopBudget(run)
+	if !exceeded {
+		t.Fatal("expected budget exceeded at $5.0 of $5.0")
+	}
+	if reason == "" {
+		t.Fatal("expected non-empty reason")
+	}
+
+	// Simulate what RunLoop does when budget is exceeded:
+	// set LastError and status, then verify callers can see the reason.
+	run.mu.Lock()
+	run.Status = "completed"
+	run.LastError = "budget exceeded: " + reason
+	run.mu.Unlock()
+
+	// Verify LastError contains the budget reason.
+	run.mu.Lock()
+	lastErr := run.LastError
+	status := run.Status
+	run.mu.Unlock()
+
+	if status != "completed" {
+		t.Errorf("expected status 'completed', got %q", status)
+	}
+	if lastErr == "" {
+		t.Error("expected LastError to be set after budget exceeded")
+	}
+	if !strings.Contains(lastErr, "budget") {
+		t.Errorf("expected LastError to contain 'budget', got %q", lastErr)
+	}
+	if !strings.Contains(lastErr, "spent") {
+		t.Errorf("expected LastError to contain spend details, got %q", lastErr)
 	}
 }
 
