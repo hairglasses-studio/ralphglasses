@@ -501,6 +501,143 @@ func TestSelfCritique_InjectedIntoNextIteration(t *testing.T) {
 	}
 }
 
+func TestExtractRootCause_CompileErrors(t *testing.T) {
+	iter := LoopIteration{
+		Status: "failed",
+		Verification: []LoopVerification{
+			{
+				Status:   "failed",
+				ExitCode: 1,
+				Output:   "internal/session/cascade.go:42:10: undefined: FooBar\ninternal/session/types.go:15:5: cannot use x",
+			},
+		},
+	}
+	cause := extractRootCause(iter)
+	if !strings.Contains(cause, "cascade.go:42") {
+		t.Errorf("expected compile error file reference, got: %s", cause)
+	}
+}
+
+func TestExtractRootCause_TestFailures(t *testing.T) {
+	iter := LoopIteration{
+		Status: "failed",
+		Verification: []LoopVerification{
+			{
+				Status:   "failed",
+				ExitCode: 1,
+				Output:   "--- FAIL: TestFoo (0.05s)\n--- FAIL: TestBar (0.10s)",
+			},
+		},
+	}
+	cause := extractRootCause(iter)
+	if !strings.Contains(cause, "TestFoo") || !strings.Contains(cause, "TestBar") {
+		t.Errorf("expected both test names, got: %s", cause)
+	}
+}
+
+func TestExtractRootCause_FallbackErrorPatterns(t *testing.T) {
+	iter := LoopIteration{
+		Status: "failed",
+		Error:  "failed to connect to remote service",
+	}
+	cause := extractRootCause(iter)
+	if !strings.Contains(cause, "failed to connect") {
+		t.Errorf("expected error pattern match, got: %s", cause)
+	}
+}
+
+func TestExtractRootCause_WorkerOutputs(t *testing.T) {
+	iter := LoopIteration{
+		Status:        "failed",
+		WorkerOutputs: []string{"worker 1: panic: nil pointer dereference"},
+	}
+	cause := extractRootCause(iter)
+	if !strings.Contains(cause, "panic") {
+		t.Errorf("expected panic from WorkerOutputs, got: %s", cause)
+	}
+}
+
+func TestExtractRootCause_UnknownFailure(t *testing.T) {
+	iter := LoopIteration{
+		Status: "failed",
+	}
+	cause := extractRootCause(iter)
+	if cause != "unknown failure" {
+		t.Errorf("expected 'unknown failure', got: %s", cause)
+	}
+}
+
+func TestExtractRootCause_LongTruncation(t *testing.T) {
+	longError := strings.Repeat("a", 300)
+	iter := LoopIteration{
+		Status: "failed",
+		Error:  longError,
+	}
+	cause := extractRootCause(iter)
+	if len(cause) > 200 {
+		t.Errorf("expected root cause truncated to 200, got len=%d", len(cause))
+	}
+}
+
+func TestGenerateCorrection_WorkerErrorEmpty(t *testing.T) {
+	iter := LoopIteration{
+		Status: "failed",
+		Error:  "",
+	}
+	correction := generateCorrection("worker_error", "some root cause", iter)
+	if !strings.Contains(correction, "some root cause") {
+		t.Errorf("expected root cause used as fallback, got: %s", correction)
+	}
+}
+
+func TestGenerateCorrection_PlannerErrorEmpty(t *testing.T) {
+	iter := LoopIteration{
+		Status: "failed",
+		Error:  "",
+	}
+	correction := generateCorrection("planner_error", "parse failed", iter)
+	if !strings.Contains(correction, "parse failed") {
+		t.Errorf("expected root cause fallback, got: %s", correction)
+	}
+}
+
+func TestGenerateCorrection_VerifyFailedFallback(t *testing.T) {
+	// Verification output without test failure patterns or broad matches
+	iter := LoopIteration{
+		Status: "failed",
+		Verification: []LoopVerification{
+			{
+				Status:   "failed",
+				ExitCode: 1,
+				Output:   "some generic output without patterns",
+			},
+		},
+	}
+	correction := generateCorrection("verify_failed", "root", iter)
+	if !strings.Contains(correction, "verification commands pass") {
+		t.Errorf("expected fallback correction, got: %s", correction)
+	}
+	if !strings.Contains(correction, "some generic output") {
+		t.Errorf("expected verify snippet in correction, got: %s", correction)
+	}
+}
+
+func TestGenerateCorrection_WorkerErrorLong(t *testing.T) {
+	longErr := strings.Repeat("x", 300)
+	iter := LoopIteration{
+		Status: "failed",
+		Error:  longErr,
+	}
+	correction := generateCorrection("worker_error", "root", iter)
+	// The error message in the correction should be truncated to 200
+	if len(correction) > 250 {
+		// Reasonable length: prefix + 200 char error + suffix
+	}
+	if !strings.Contains(correction, "worker encountered") {
+		t.Errorf("expected worker error correction, got: %s", correction)
+	}
+}
+
 func TestSanitizeTaskTitleWrappedJSON(t *testing.T) {
 	tests := []struct {
 		name  string
