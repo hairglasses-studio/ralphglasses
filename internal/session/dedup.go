@@ -1,12 +1,15 @@
 package session
 
 import (
+	"regexp"
 	"strings"
 )
 
 // DefaultSimilarityThreshold is the Jaccard similarity threshold above which
-// two task titles are considered near-duplicates.
-const DefaultSimilarityThreshold = 0.8
+// two task titles are considered near-duplicates. Lowered from 0.8 to 0.7
+// to catch rephrasings like "add tests for session" vs "write test coverage
+// for session package".
+const DefaultSimilarityThreshold = 0.7
 
 // JaccardSimilarity computes word-level Jaccard similarity between two strings.
 // Both strings are lowercased and split on whitespace. Returns a value between
@@ -84,6 +87,93 @@ func filterDuplicateTasks(tasks []LoopTask, completedTitles []string, threshold 
 		}
 
 		filtered = append(filtered, task)
+	}
+	return filtered
+}
+
+// filePathPattern matches Go source file paths in task prompts. It captures
+// paths starting with common Go project directories.
+var filePathPattern = regexp.MustCompile(`(?:internal|cmd|pkg)/\S+\.go`)
+
+// extractFilePathsFromText returns unique file paths found in text matching the
+// standard Go project layout (internal/, cmd/, pkg/ prefixed .go files).
+func extractFilePathsFromText(text string) []string {
+	matches := filePathPattern.FindAllString(text, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(matches))
+	unique := make([]string, 0, len(matches))
+	for _, m := range matches {
+		if _, ok := seen[m]; !ok {
+			seen[m] = struct{}{}
+			unique = append(unique, m)
+		}
+	}
+	return unique
+}
+
+// fileOverlapRatio computes the fraction of paths in "a" that also appear in
+// "b". Returns 0 if a is empty.
+func fileOverlapRatio(a, b []string) float64 {
+	if len(a) == 0 {
+		return 0
+	}
+	bSet := make(map[string]struct{}, len(b))
+	for _, p := range b {
+		bSet[p] = struct{}{}
+	}
+	overlap := 0
+	for _, p := range a {
+		if _, ok := bSet[p]; ok {
+			overlap++
+		}
+	}
+	return float64(overlap) / float64(len(a))
+}
+
+// ContentOverlapThreshold is the minimum fraction of a proposed task's file
+// paths that must overlap with a completed task's file paths for the proposed
+// task to be considered a content duplicate.
+const ContentOverlapThreshold = 0.5
+
+// filterDuplicateTasksByContent removes proposed tasks whose file paths
+// overlap significantly with completed tasks. A proposed task is rejected if
+// >50% of its referenced file paths appear in any single completed task's
+// prompt. Tasks with no extractable file paths are always kept.
+func filterDuplicateTasksByContent(proposed []LoopTask, completed []LoopTask) []LoopTask {
+	if len(completed) == 0 {
+		return proposed
+	}
+
+	// Pre-extract file paths from all completed tasks.
+	completedPaths := make([][]string, len(completed))
+	for i, c := range completed {
+		completedPaths[i] = extractFilePathsFromText(c.Prompt)
+	}
+
+	filtered := make([]LoopTask, 0, len(proposed))
+	for _, p := range proposed {
+		paths := extractFilePathsFromText(p.Prompt)
+		if len(paths) == 0 {
+			// No file paths to compare — keep the task.
+			filtered = append(filtered, p)
+			continue
+		}
+
+		isDup := false
+		for _, cp := range completedPaths {
+			if len(cp) == 0 {
+				continue
+			}
+			if fileOverlapRatio(paths, cp) > ContentOverlapThreshold {
+				isDup = true
+				break
+			}
+		}
+		if !isDup {
+			filtered = append(filtered, p)
+		}
 	}
 	return filtered
 }
