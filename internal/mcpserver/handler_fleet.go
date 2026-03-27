@@ -62,7 +62,7 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 	repo := getStringArg(req, "repo")
 	prompt := getStringArg(req, "prompt")
 	provider := getStringArg(req, "provider")
-	budget := getNumberArg(req, "budget", 5)
+	budget := getNumberArg(req, "budget_usd", 5)
 	priority := int(getNumberArg(req, "priority", 5))
 
 	if repo == "" || prompt == "" {

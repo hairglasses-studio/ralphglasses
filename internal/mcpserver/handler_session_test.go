@@ -500,7 +500,7 @@ func TestHandleSessionBudget(t *testing.T) {
 		// Set new budget
 		result, err := srv.handleSessionBudget(context.Background(), makeRequest(map[string]any{
 			"id":     id,
-			"budget": float64(20),
+			"budget_usd": float64(20),
 		}))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

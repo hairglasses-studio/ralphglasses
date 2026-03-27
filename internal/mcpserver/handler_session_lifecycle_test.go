@@ -813,7 +813,7 @@ func TestHandleSessionRetry_WithOverrides(t *testing.T) {
 	result, err := srv.handleSessionRetry(context.Background(), makeRequest(map[string]any{
 		"id":             id,
 		"model":          "opus",
-		"max_budget_usd": float64(20),
+		"budget_usd": float64(20),
 	}))
 	if err != nil {
 		t.Fatalf("handleSessionRetry: %v", err)

@@ -813,7 +813,7 @@ func TestHandleRCSend_WithBudget(t *testing.T) {
 	result, err := srv.handleRCSend(context.Background(), makeRequest(map[string]any{
 		"repo":   "test-repo",
 		"prompt": "do something",
-		"budget": float64(20),
+		"budget_usd": float64(20),
 	}))
 	if err != nil {
 		t.Fatalf("handleRCSend: %v", err)
