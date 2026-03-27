@@ -626,3 +626,12 @@ func (fa *FeedbackAnalyzer) IsEmpty() bool {
 	defer fa.mu.Unlock()
 	return len(fa.promptProfiles) == 0 && len(fa.providerProfiles) == 0
 }
+
+// Reset clears all in-memory profiles so that the next seed call repopulates
+// them from current observation data.
+func (fa *FeedbackAnalyzer) Reset() {
+	fa.mu.Lock()
+	defer fa.mu.Unlock()
+	fa.promptProfiles = make(map[string]*PromptProfile)
+	fa.providerProfiles = make(map[string]*ProviderProfile)
+}
