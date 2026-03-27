@@ -1,9 +1,11 @@
 package session
 
 import (
+	"strings"
 	"testing"
 )
 
+// Run: go test -fuzz=FuzzParsePlannerTask -fuzztime=30s ./internal/session/...
 func FuzzParsePlannerTask(f *testing.F) {
 	// Valid JSON task
 	f.Add(`{"title": "fix bug", "prompt": "Fix the login bug"}`)
@@ -30,6 +32,18 @@ func FuzzParsePlannerTask(f *testing.F) {
 	f.Add(`[{"title": "a", "prompt": "b"}]`)
 	// Plain text (no JSON)
 	f.Add("just some plain text\nwith multiple lines")
+	// Malformed JSON
+	f.Add(`{invalid`)
+	// Unicode content
+	f.Add(`{"title": "こんにちは世界 🎉", "prompt": "Unicode prompt"}`)
+	// Null bytes
+	f.Add("\x00\x00")
+	// Just whitespace
+	f.Add("   \n\t  ")
+	// Valid JSON with extra/unexpected fields
+	f.Add(`{"title": "t", "prompt": "p", "priority": 1, "tags": ["a","b"], "nested": {"deep": true}}`)
+	// Very long prompt
+	f.Add(`{"title": "t", "prompt": "` + strings.Repeat("long ", 200) + `"}`)
 
 	f.Fuzz(func(t *testing.T, input string) {
 		// Must not panic on any input
@@ -46,6 +60,7 @@ func FuzzParsePlannerTask(f *testing.F) {
 	})
 }
 
+// Run: go test -fuzz=FuzzParsePlannerTasks -fuzztime=30s ./internal/session/...
 func FuzzParsePlannerTasks(f *testing.F) {
 	// Valid JSON array of tasks
 	f.Add(`[{"title": "task1", "prompt": "do thing 1"}, {"title": "task2", "prompt": "do thing 2"}]`)
@@ -69,6 +84,18 @@ func FuzzParsePlannerTasks(f *testing.F) {
 	f.Add("no json here at all")
 	// Large array
 	f.Add(`[{"title":"a","prompt":"b"},{"title":"c","prompt":"d"},{"title":"e","prompt":"f"},{"title":"g","prompt":"h"}]`)
+	// Malformed JSON
+	f.Add(`[{invalid`)
+	// Unicode content
+	f.Add(`[{"title": "こんにちは世界 🎉", "prompt": "Unicode task"}]`)
+	// Null bytes
+	f.Add("\x00\x00")
+	// Just whitespace
+	f.Add("   \n\t  ")
+	// Extra/unexpected fields in array items
+	f.Add(`[{"title": "t", "prompt": "p", "extra": true, "score": 99}]`)
+	// Very long input
+	f.Add(`[` + strings.Repeat(`{"title":"t","prompt":"p"},`, 100) + `{"title":"last","prompt":"end"}]`)
 
 	f.Fuzz(func(t *testing.T, input string) {
 		// Must not panic on any input
