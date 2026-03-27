@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/tracing"
 )
 
@@ -129,11 +131,26 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 		stdin.Close()
 	}()
 
+	// Open log file for persisting session output to disk so the `logs`
+	// MCP tool can read it via process.ReadFullLog.
+	var logFile *os.File
+	if opts.RepoPath != "" {
+		if lf, err := process.OpenLogFile(opts.RepoPath); err != nil {
+			slog.Warn("session: failed to open log file, output will not be persisted to disk",
+				"repo", opts.RepoPath, "error", err)
+		} else {
+			logFile = lf
+		}
+	}
+
 	// Background goroutine: parse streaming JSON output
 	go func() {
 		defer cancel()
 		defer close(s.OutputCh)
-		runSession(sessionCtx, s, stdout, stderr, span)
+		if logFile != nil {
+			defer logFile.Close()
+		}
+		runSession(sessionCtx, s, stdout, stderr, span, logFile)
 	}()
 
 	// Startup probe: wait up to 5 seconds for the process to stabilize.
@@ -195,7 +212,8 @@ func startupProbe(s *Session, timeout time.Duration) error {
 }
 
 // runSession reads streaming JSON from stdout/stderr and updates session state.
-func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span *tracing.SessionSpan) {
+// If logFile is non-nil, output lines are also written to it for disk persistence.
+func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span *tracing.SessionSpan, logFile *os.File) {
 	// Read stderr in background for error capture
 	var stderrBuf strings.Builder
 	stderrDone := make(chan struct{})
@@ -204,7 +222,7 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span 
 		_, _ = io.Copy(&stderrBuf, stderr)
 	}()
 
-	runSessionOutput(ctx, s, stdout)
+	runSessionOutput(ctx, s, stdout, logFile)
 
 	// Wait for stderr collection
 	<-stderrDone
@@ -312,7 +330,8 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span 
 // runSessionOutput parses streaming JSON lines from stdout and updates session state.
 // It selects on ctx.Done() so it returns promptly when the session is cancelled,
 // without waiting for the next line from the provider process.
-func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader) {
+// If logFile is non-nil, parsed output is also written to it for disk persistence.
+func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile *os.File) {
 	scanner := bufio.NewScanner(stdout)
 	scanner.Buffer(make([]byte, 0, 1024*1024), 1024*1024)
 
@@ -350,7 +369,7 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader) {
 				s.StreamParseErrors++
 				s.LastEventType = "parse_error"
 				if msg := strings.TrimSpace(string(line)); msg != "" {
-					appendSessionOutput(s, msg)
+					appendSessionOutput(s, msg, logFile)
 				}
 				if s.Error == "" {
 					s.Error = truncateStr(err.Error(), 2000)
@@ -370,16 +389,16 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader) {
 					s.ProviderSessionID = event.SessionID
 				}
 				if eventText != "" {
-					appendSessionOutput(s, eventText)
+					appendSessionOutput(s, eventText, logFile)
 				}
 			case "assistant":
 				if eventText != "" {
-					appendSessionOutput(s, eventText)
+					appendSessionOutput(s, eventText, logFile)
 				}
 			case "result":
 				if eventText != "" {
 					s.LastOutput = truncateStr(eventText, 4000)
-					appendSessionOutput(s, eventText)
+					appendSessionOutput(s, eventText, logFile)
 				}
 				if event.CostUSD > 0 {
 					prevSpent := s.SpentUSD
@@ -428,7 +447,7 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader) {
 				}
 			default:
 				if eventText != "" {
-					appendSessionOutput(s, eventText)
+					appendSessionOutput(s, eventText, logFile)
 				}
 				if event.IsError {
 					s.Error = truncateStr(firstNonEmpty(event.Error, eventText), 2000)
@@ -440,7 +459,7 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader) {
 	}
 }
 
-func appendSessionOutput(s *Session, text string) {
+func appendSessionOutput(s *Session, text string, logFile *os.File) {
 	s.TotalOutputCount++
 	s.LastOutput = truncateStr(text, 4000)
 	s.OutputHistory = append(s.OutputHistory, text)
@@ -450,6 +469,10 @@ func appendSessionOutput(s *Session, text string) {
 	select {
 	case s.OutputCh <- text:
 	default:
+	}
+	// Persist to disk log file for the `logs` MCP tool.
+	if logFile != nil {
+		_, _ = fmt.Fprintln(logFile, text)
 	}
 }
 
