@@ -533,9 +533,74 @@ func TestSummarizeEvent_AllTypes(t *testing.T) {
 			"[team] myrepo created",
 		},
 		{
+			"tool_called_with_data",
+			events.Event{Type: events.ToolCalled, Data: map[string]any{"tool": "prompt_analyze", "latency_ms": float64(45)}},
+			"[tool.called] prompt_analyze (45ms)",
+		},
+		{
+			"tool_called_name_only",
+			events.Event{Type: events.ToolCalled, Data: map[string]any{"name": "session_launch"}},
+			"[tool.called] session_launch",
+		},
+		{
+			"tool_called_no_data",
+			events.Event{Type: events.ToolCalled},
+			"[tool.called] unknown",
+		},
+		{
+			"scan_complete_with_count",
+			events.Event{Type: events.ScanComplete, Data: map[string]any{"repo_count": float64(7)}},
+			"[scan.complete] found 7 repos",
+		},
+		{
+			"scan_complete_no_data",
+			events.Event{Type: events.ScanComplete},
+			"[scan.complete] scan finished",
+		},
+		{
+			"loop_iterated_with_step_status",
+			events.Event{Type: events.LoopIterated, Data: map[string]any{"step": float64(3), "status": "pass"}},
+			"[loop.iterated] step 3: pass",
+		},
+		{
+			"loop_iterated_step_only",
+			events.Event{Type: events.LoopIterated, Data: map[string]any{"step": float64(5)}},
+			"[loop.iterated] step 5",
+		},
+		{
+			"loop_iterated_no_data",
+			events.Event{Type: events.LoopIterated},
+			"[loop.iterated] iteration",
+		},
+		{
+			"loop_regression",
+			events.Event{Type: events.LoopRegression, RepoName: "myrepo"},
+			"[loop.regression] myrepo",
+		},
+		{
+			"prompt_enhanced",
+			events.Event{Type: events.PromptEnhanced, RepoName: "myrepo"},
+			"[prompt.enhanced] myrepo",
+		},
+		{
+			"session_error_with_msg",
+			events.Event{Type: events.SessionError, RepoName: "myrepo", Data: map[string]any{"error": "timeout"}},
+			"[session.error] myrepo: timeout",
+		},
+		{
+			"session_error_no_data",
+			events.Event{Type: events.SessionError, RepoName: "myrepo"},
+			"[session.error] myrepo",
+		},
+		{
 			"unknown_type",
 			events.Event{Type: "custom.event", RepoName: "myrepo"},
 			"[custom.event] myrepo",
+		},
+		{
+			"unknown_type_with_data",
+			events.Event{Type: "custom.event", RepoName: "myrepo", Data: map[string]any{"key1": "val1"}},
+			"key1=val1",
 		},
 	}
 	for _, tt := range tests {
