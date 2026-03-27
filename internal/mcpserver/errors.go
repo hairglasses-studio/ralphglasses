@@ -31,6 +31,9 @@ const (
 	ErrWorkflow            ErrorCode = "WORKFLOW_ERROR"
 	ErrGateFailed          ErrorCode = "GATE_FAILED"
 	ErrServiceNotFound     ErrorCode = "SERVICE_NOT_FOUND"
+	ErrNoActiveSessions    ErrorCode = "NO_ACTIVE_SESSIONS"
+	ErrFleetNotRunning     ErrorCode = "FLEET_NOT_RUNNING"
+	ErrNoLogFile           ErrorCode = "NO_LOG_FILE"
 )
 
 // codedError returns an MCP error result with both a machine-parseable code
