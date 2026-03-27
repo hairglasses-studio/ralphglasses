@@ -8,8 +8,8 @@ import (
 func TestListTemplates(t *testing.T) {
 	t.Parallel()
 	templates := ListTemplates()
-	if len(templates) != 5 {
-		t.Errorf("expected 5 templates, got %d", len(templates))
+	if len(templates) != 6 {
+		t.Errorf("expected 6 templates, got %d", len(templates))
 	}
 	for _, tmpl := range templates {
 		if tmpl.Name == "" {
@@ -36,7 +36,7 @@ func TestListTemplates(t *testing.T) {
 func TestTemplateListSummary(t *testing.T) {
 	t.Parallel()
 	summary := TemplateListSummary()
-	expectedNames := []string{"troubleshoot", "code_review", "workflow_create", "data_analysis", "creative_brief"}
+	expectedNames := []string{"troubleshoot", "code_review", "workflow_create", "data_analysis", "code", "creative_brief"}
 	for _, name := range expectedNames {
 		assertContains(t, summary, name)
 	}
@@ -74,7 +74,7 @@ func TestFillTemplate_NilVars(t *testing.T) {
 
 func TestGetTemplate_AllNames(t *testing.T) {
 	t.Parallel()
-	names := []string{"troubleshoot", "code_review", "workflow_create", "data_analysis", "creative_brief"}
+	names := []string{"troubleshoot", "code_review", "workflow_create", "data_analysis", "code", "creative_brief"}
 	for _, name := range names {
 		name := name
 		t.Run(name, func(t *testing.T) {
