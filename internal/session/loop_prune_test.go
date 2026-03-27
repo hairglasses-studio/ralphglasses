@@ -138,6 +138,113 @@ func TestPruneLoopRuns_EmptyPath(t *testing.T) {
 	}
 }
 
+func TestAutoPruneLoopRuns(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+	dir := t.TempDir()
+	m.SetStateDir(dir)
+
+	loopDir := m.LoopStateDir()
+	if err := os.MkdirAll(loopDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now()
+
+	// Create 5 stale loop run files (old, prunable statuses).
+	writeLoopRunFile(t, loopDir, "stale-pending-1", "pending", now.Add(-10*24*time.Hour))
+	writeLoopRunFile(t, loopDir, "stale-pending-2", "pending", now.Add(-9*24*time.Hour))
+	writeLoopRunFile(t, loopDir, "stale-pending-3", "pending", now.Add(-8*24*time.Hour))
+	writeLoopRunFile(t, loopDir, "stale-failed-1", "failed", now.Add(-15*24*time.Hour))
+	writeLoopRunFile(t, loopDir, "stale-failed-2", "failed", now.Add(-20*24*time.Hour))
+
+	// Create 2 fresh loop run files that should survive (running status, or recent).
+	writeLoopRunFile(t, loopDir, "fresh-running", "running", now.Add(-10*24*time.Hour))
+	writeLoopRunFile(t, loopDir, "fresh-pending", "pending", now.Add(-1*time.Hour))
+
+	// Use the default 7-day retention (PruneRetention == 0 → 7 days).
+	// All 5 stale files are >7 days old with pending/failed status.
+	// fresh-running is old but "running" status (not prunable).
+	// fresh-pending is <7 days old (not prunable by age).
+
+	// Call autoPruneLoopRuns directly (Init runs it in a goroutine).
+	m.autoPruneLoopRuns()
+
+	if got := m.TotalPrunedThisSession(); got != 5 {
+		t.Errorf("TotalPrunedThisSession() = %d, want 5", got)
+	}
+
+	entries, err := os.ReadDir(loopDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 2 {
+		t.Errorf("remaining files = %d, want 2", len(entries))
+		for _, e := range entries {
+			t.Logf("  remaining: %s", e.Name())
+		}
+	}
+
+	// Verify the correct files survived.
+	remaining := make(map[string]bool)
+	for _, e := range entries {
+		remaining[e.Name()] = true
+	}
+	if !remaining["fresh-running.json"] {
+		t.Error("fresh-running.json was incorrectly pruned")
+	}
+	if !remaining["fresh-pending.json"] {
+		t.Error("fresh-pending.json was incorrectly pruned")
+	}
+}
+
+func TestAutoPruneLoopRuns_CustomRetention(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+	dir := t.TempDir()
+	m.SetStateDir(dir)
+
+	loopDir := m.LoopStateDir()
+	if err := os.MkdirAll(loopDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now()
+	// Files are 3 days old — would survive default 7-day retention.
+	writeLoopRunFile(t, loopDir, "pending-3d", "pending", now.Add(-3*24*time.Hour))
+	writeLoopRunFile(t, loopDir, "failed-3d", "failed", now.Add(-3*24*time.Hour))
+
+	// Set a short 1-day retention — both should be pruned.
+	m.PruneRetention = 1 * 24 * time.Hour
+	m.autoPruneLoopRuns()
+
+	if got := m.TotalPrunedThisSession(); got != 2 {
+		t.Errorf("TotalPrunedThisSession() = %d, want 2", got)
+	}
+
+	entries, _ := os.ReadDir(loopDir)
+	if len(entries) != 0 {
+		t.Errorf("remaining files = %d, want 0", len(entries))
+	}
+}
+
+func TestAutoPruneLoopRuns_EmptyLoopDir(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+	dir := t.TempDir()
+	m.SetStateDir(dir)
+
+	// Don't create the loops subdirectory — autoPrune should handle gracefully.
+	m.autoPruneLoopRuns()
+
+	if got := m.TotalPrunedThisSession(); got != 0 {
+		t.Errorf("TotalPrunedThisSession() = %d, want 0", got)
+	}
+}
+
 func TestPruneLoopRuns_ConcurrentAccess(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
