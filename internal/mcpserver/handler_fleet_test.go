@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -843,6 +844,117 @@ func TestHandleFleetAnalytics_FilterByRepo(t *testing.T) {
 	text := getResultText(result)
 	if !strings.Contains(text, "test-repo") {
 		t.Errorf("expected test-repo in repos, got: %s", text)
+	}
+}
+
+// --- FINDING-237: observation-store fallback ---
+
+func TestHandleFleetAnalytics_ObservationFallback(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	// Ensure FleetAnalytics is nil (standalone mode).
+	srv.FleetAnalytics = nil
+
+	// Write observation data to the test repo.
+	obsPath := session.ObservationPath(repoPath)
+	obs := []session.LoopObservation{
+		{
+			Timestamp:       time.Now().Add(-10 * time.Minute),
+			LoopID:          "loop-1",
+			RepoName:        "test-repo",
+			PlannerProvider: "claude",
+			WorkerProvider:  "claude",
+			TotalLatencyMs:  500,
+			TotalCostUSD:    0.05,
+			PlannerCostUSD:  0.03,
+			WorkerCostUSD:   0.02,
+			Status:          "idle",
+		},
+		{
+			Timestamp:       time.Now().Add(-5 * time.Minute),
+			LoopID:          "loop-1",
+			RepoName:        "test-repo",
+			PlannerProvider: "gemini",
+			WorkerProvider:  "gemini",
+			TotalLatencyMs:  300,
+			TotalCostUSD:    0.02,
+			PlannerCostUSD:  0.01,
+			WorkerCostUSD:   0.01,
+			Status:          "idle",
+		},
+		{
+			Timestamp:      time.Now().Add(-2 * time.Minute),
+			LoopID:         "loop-1",
+			RepoName:       "test-repo",
+			TotalCostUSD:   0,
+			TotalLatencyMs: 100,
+			Status:         "failed",
+			Error:          "test error",
+		},
+	}
+	for _, o := range obs {
+		if err := session.WriteObservation(obsPath, o); err != nil {
+			t.Fatalf("write observation: %v", err)
+		}
+	}
+
+	// Trigger a scan so the server knows about the repo.
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleFleetAnalytics(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+
+	// Must include data_source=observation_store.
+	if !strings.Contains(text, `"data_source":"observation_store"`) {
+		t.Errorf("expected data_source observation_store, got: %s", text)
+	}
+	// Must include observation_count.
+	if !strings.Contains(text, `"observation_count":3`) {
+		t.Errorf("expected observation_count:3, got: %s", text)
+	}
+	// Must include metrics block with completions and failures.
+	if !strings.Contains(text, `"completions":2`) {
+		t.Errorf("expected 2 completions, got: %s", text)
+	}
+	if !strings.Contains(text, `"failures":1`) {
+		t.Errorf("expected 1 failure, got: %s", text)
+	}
+	// Must have latency data.
+	if !strings.Contains(text, "latency_p50_ms") {
+		t.Errorf("expected latency_p50_ms in output, got: %s", text)
+	}
+	// Must have cost_per_provider.
+	if !strings.Contains(text, "cost_per_provider") {
+		t.Errorf("expected cost_per_provider in output, got: %s", text)
+	}
+}
+
+func TestHandleFleetAnalytics_FleetCoordinatorDataSource(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	// Set up FleetAnalytics (simulating fleet mode).
+	srv.FleetAnalytics = fleet.NewFleetAnalytics(1000, 24*time.Hour)
+	srv.FleetAnalytics.RecordCompletion("worker-1", "claude", 500*time.Millisecond, 0.10)
+
+	result, err := srv.handleFleetAnalytics(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, `"data_source":"fleet_coordinator"`) {
+		t.Errorf("expected data_source fleet_coordinator, got: %s", text)
+	}
+	if !strings.Contains(text, `"completions":1`) {
+		t.Errorf("expected 1 completion, got: %s", text)
 	}
 }
 
