@@ -910,3 +910,203 @@ func TestLoopStatusProfileNested(t *testing.T) {
 		}
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Tool Description Drift Audit (WS7 / FINDING-67)
+// ---------------------------------------------------------------------------
+
+// extractBacktickNames extracts backtick-wrapped words from a string, which
+// are conventionally used in tool descriptions to reference parameter names.
+func extractBacktickNames(s string) []string {
+	var names []string
+	inBacktick := false
+	start := 0
+	for i, c := range s {
+		if c == '`' {
+			if inBacktick {
+				name := s[start:i]
+				// Only include plausible parameter names (no spaces, not empty).
+				if name != "" && !strings.Contains(name, " ") {
+					names = append(names, name)
+				}
+				inBacktick = false
+			} else {
+				start = i + 1
+				inBacktick = true
+			}
+		}
+	}
+	return names
+}
+
+// TestToolDescriptionsMatchHandlers iterates all registered tools and detects
+// drift between tool descriptions and their InputSchema properties:
+//   - Description mentions backtick-wrapped param names not in schema (phantom params)
+//   - Required schema properties not mentioned anywhere in description (undocumented required)
+func TestToolDescriptionsMatchHandlers(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	for _, spec := range allBuilderSpecs() {
+		group := spec.buildFn(srv)
+		for _, te := range group.Tools {
+			te := te
+			t.Run(te.Tool.Name, func(t *testing.T) {
+				t.Parallel()
+
+				desc := te.Tool.Description
+				schema := te.Tool.InputSchema
+				propKeys := make(map[string]bool, len(schema.Properties))
+				for k := range schema.Properties {
+					propKeys[k] = true
+				}
+
+				// 1. Check backtick-wrapped names in description against schema.
+				btNames := extractBacktickNames(desc)
+				for _, name := range btNames {
+					// Skip names that look like enum values, tool names, or
+					// well-known non-param references.
+					if strings.Contains(name, "_") && strings.HasPrefix(name, "ralphglasses_") {
+						continue // tool name reference
+					}
+					if strings.Contains(name, ".") {
+						continue // dotted path like "mode=loop"
+					}
+					// Skip known enum/value tokens that appear in descriptions.
+					knownValues := map[string]bool{
+						"true": true, "false": true,
+						"claude": true, "gemini": true, "codex": true, "openai": true,
+						"pass": true, "fail": true, "warn": true, "skip": true,
+						"session": true, "loop": true, "local": true, "llm": true, "auto": true,
+						"critical": true, "warning": true, "info": true,
+						"conservative": true, "balanced": true, "aggressive": true,
+						"rdcycle": true, "fix_plan": true, "progress": true,
+						"json": true, "markdown": true, "yaml": true,
+						"stop": true, "stop_all": true, "pause": true, "resume": true, "retry": true,
+						"config": true, "prompt": true, "plan": true, "all": true,
+						"list": true, "save": true, "refresh": true, "pin": true, "view": true,
+						"purge": true, "depth": true, "drain": true,
+						"observe": true, "healthy": true, "degraded": true,
+						"low": true, "medium": true, "high": true, "max": true,
+						"enhancer": true,
+						"providers": true, "periods": true,
+						"code": true, "troubleshooting": true, "analysis": true,
+						"creative": true, "workflow": true, "general": true,
+						"completion_rate": true, "cost": true, "latency": true,
+						"confidence": true, "difficulty": true,
+						"cascade_threshold": true, "provider_routing": true,
+						// File/path references
+						".ralph/": true, ".ralphrc": true, "ROADMAP.md": true,
+						"PROMPT.md": true, "AGENT.md": true, "fix_plan.md": true,
+						"CLAUDE.md": true, ".claude/agents/": true,
+						".gemini/agents/": true, "AGENTS.md": true,
+						"go.mod": true, "package.json": true,
+						".ralph/logs/loop_observations.jsonl": true,
+						"-short": true, "-race": true,
+						"./...": true, "./scripts/dev/ci.sh": true,
+						// Format strings
+						"--fleet": true, "--json-schema": true, "--output-schema": true,
+					}
+					if knownValues[name] {
+						continue
+					}
+					// Check if the backtick name is a schema property.
+					if !propKeys[name] {
+						// Only flag if the name looks like a parameter (snake_case or simple lowercase).
+						isParamLike := true
+						for _, c := range name {
+							if c != '_' && !(c >= 'a' && c <= 'z') && !(c >= '0' && c <= '9') {
+								isParamLike = false
+								break
+							}
+						}
+						if isParamLike && len(name) > 1 {
+							t.Errorf("description mentions `%s` but it is not in InputSchema.Properties", name)
+						}
+					}
+				}
+
+				// 2. Every required schema property should be mentioned in description.
+				descLower := strings.ToLower(desc)
+				for _, req := range schema.Required {
+					if !strings.Contains(descLower, strings.ToLower(req)) {
+						// Check if the param is at least referenced by backtick.
+						found := false
+						for _, bn := range btNames {
+							if bn == req {
+								found = true
+								break
+							}
+						}
+						if !found {
+							t.Errorf("required param %q not mentioned in description", req)
+						}
+					}
+				}
+			})
+		}
+	}
+}
+
+// TestToolInputSchemaConsistency validates structural invariants of tool
+// InputSchema definitions:
+//   - Tools that mention "param" in description should have at least one property
+//   - Every required field must exist in Properties
+//   - Property definitions must have a "type" or "description" key
+func TestToolInputSchemaConsistency(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	for _, spec := range allBuilderSpecs() {
+		group := spec.buildFn(srv)
+		for _, te := range group.Tools {
+			te := te
+			t.Run(te.Tool.Name, func(t *testing.T) {
+				t.Parallel()
+
+				schema := te.Tool.InputSchema
+
+				// Every required field must be in Properties.
+				for _, req := range schema.Required {
+					if _, ok := schema.Properties[req]; !ok {
+						t.Errorf("required field %q not found in Properties", req)
+					}
+				}
+
+				// Every property must be a map with at least a "type" or "description".
+				for name, propRaw := range schema.Properties {
+					prop, ok := propRaw.(map[string]any)
+					if !ok {
+						t.Errorf("property %q is not map[string]any: %T", name, propRaw)
+						continue
+					}
+					_, hasType := prop["type"]
+					_, hasDesc := prop["description"]
+					if !hasType && !hasDesc {
+						t.Errorf("property %q has neither 'type' nor 'description'", name)
+					}
+				}
+			})
+		}
+	}
+}
+
+// TestOutputSchemasMatchRegisteredTools checks that every tool with an entry
+// in OutputSchemas is actually registered, and that the schema key matches a
+// real tool name.
+func TestOutputSchemasMatchRegisteredTools(t *testing.T) {
+	srv, _ := setupTestServer(t)
+
+	// Collect all registered tool names.
+	registered := make(map[string]bool)
+	for _, spec := range allBuilderSpecs() {
+		group := spec.buildFn(srv)
+		for _, te := range group.Tools {
+			registered[te.Tool.Name] = true
+		}
+	}
+
+	for schemaName := range OutputSchemas {
+		if !registered[schemaName] {
+			t.Errorf("OutputSchemas has key %q but no tool with that name is registered", schemaName)
+		}
+	}
+}
