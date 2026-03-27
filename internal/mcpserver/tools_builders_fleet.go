@@ -110,6 +110,7 @@ func (s *Server) buildRepoGroup() ToolGroup {
 				mcp.WithDescription("Save or list fleet state snapshots"),
 				mcp.WithString("action", mcp.Description("Action: save (default) or list")),
 				mcp.WithString("name", mcp.Description("Snapshot name (auto-generated if omitted)")),
+				mcp.WithString("repo", mcp.Description("Target repo name for snapshot storage (resolved from CWD if omitted)")),
 			), s.handleSnapshot},
 		},
 	}

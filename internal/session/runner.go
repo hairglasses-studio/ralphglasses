@@ -136,7 +136,62 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 		runSession(sessionCtx, s, stdout, stderr, span)
 	}()
 
+	// Startup probe: wait up to 5 seconds for the process to stabilize.
+	// If it exits during this window, return the error immediately instead
+	// of reporting a fake success (FINDING-160).
+	if err := startupProbe(s, 5*time.Second); err != nil {
+		return nil, err
+	}
+
 	return s, nil
+}
+
+// startupProbe waits for the process to produce first output or survive the
+// probe window. If the process exits during the window, it returns the error.
+func startupProbe(s *Session, timeout time.Duration) error {
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-s.doneCh:
+			// Process exited during startup. Give the runner a moment to
+			// set the final status and error fields.
+			time.Sleep(100 * time.Millisecond)
+			s.mu.Lock()
+			status := s.Status
+			errMsg := s.Error
+			exitReason := s.ExitReason
+			s.mu.Unlock()
+
+			if status == StatusErrored || status == StatusStopped {
+				detail := errMsg
+				if detail == "" {
+					detail = exitReason
+				}
+				if detail == "" {
+					detail = "process exited during startup"
+				}
+				return fmt.Errorf("session startup failed: %s", detail)
+			}
+			// Completed normally (unlikely for a long-running session, but valid)
+			return nil
+		case <-ticker.C:
+			// Check if the session has produced any output (non-destructive).
+			s.mu.Lock()
+			hasOutput := s.TotalOutputCount > 0
+			s.mu.Unlock()
+			if hasOutput {
+				return nil
+			}
+		case <-timer.C:
+			// Process survived the probe window without exiting — success
+			return nil
+		}
+	}
 }
 
 // runSession reads streaming JSON from stdout/stderr and updates session state.

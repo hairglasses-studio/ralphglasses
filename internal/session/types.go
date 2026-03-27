@@ -29,6 +29,11 @@ const (
 	StatusErrored   SessionStatus = "errored"
 )
 
+// IsTerminal returns true if the status represents a finished session.
+func (s SessionStatus) IsTerminal() bool {
+	return s == StatusCompleted || s == StatusErrored || s == StatusStopped
+}
+
 // Session represents a managed headless LLM CLI session.
 type Session struct {
 	ID                string        `json:"id"`

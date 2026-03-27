@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -768,6 +769,80 @@ func TestHandleSnapshot_List(t *testing.T) {
 	text := getResultText(result)
 	if !strings.Contains(text, "snapshots") {
 		t.Errorf("expected snapshots key, got: %s", text)
+	}
+}
+
+func TestResolveSnapshotRepo_ExplicitParam(t *testing.T) {
+	t.Parallel()
+	repos := []*model.Repo{
+		{Name: "claudekit", Path: "/repos/claudekit"},
+		{Name: "ralphglasses", Path: "/repos/ralphglasses"},
+	}
+	findRepo := func(name string) *model.Repo {
+		for _, r := range repos {
+			if r.Name == name {
+				return r
+			}
+		}
+		return nil
+	}
+
+	got := resolveSnapshotRepo(repos, "ralphglasses", findRepo)
+	if got.Name != "ralphglasses" {
+		t.Errorf("expected ralphglasses, got %s", got.Name)
+	}
+}
+
+func TestResolveSnapshotRepo_FallbackToFirst(t *testing.T) {
+	t.Parallel()
+	repos := []*model.Repo{
+		{Name: "claudekit", Path: "/repos/claudekit"},
+		{Name: "ralphglasses", Path: "/repos/ralphglasses"},
+	}
+	findRepo := func(name string) *model.Repo { return nil }
+
+	got := resolveSnapshotRepo(repos, "", findRepo)
+	if got.Name != "claudekit" {
+		t.Errorf("expected claudekit fallback, got %s", got.Name)
+	}
+}
+
+func TestResolveSnapshotRepo_UnknownRepoFallsBack(t *testing.T) {
+	t.Parallel()
+	repos := []*model.Repo{
+		{Name: "claudekit", Path: "/repos/claudekit"},
+	}
+	findRepo := func(name string) *model.Repo { return nil }
+
+	got := resolveSnapshotRepo(repos, "nonexistent", findRepo)
+	if got.Name != "claudekit" {
+		t.Errorf("expected fallback to first repo, got %s", got.Name)
+	}
+}
+
+func TestHandleSnapshot_SaveWithRepo(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleSnapshot(context.Background(), makeRequest(map[string]any{
+		"name": "repo-snap",
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleSnapshot: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleSnapshot returned error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "repo-snap") {
+		t.Errorf("expected snapshot name, got: %s", text)
+	}
+	// Path should contain test-repo, not another repo
+	if !strings.Contains(text, "test-repo") {
+		t.Errorf("expected path with test-repo, got: %s", text)
 	}
 }
 
