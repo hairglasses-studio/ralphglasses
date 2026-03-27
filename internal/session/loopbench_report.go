@@ -16,6 +16,7 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 	reflexionApplied bool, episodesUsed int,
 	cascadeResults []*CascadeResult, taskDifficulties []TaskDifficulty,
 	stallCount int,
+	noopSkipped bool, consecutiveNoops int,
 ) {
 	run.mu.Lock()
 	if index < 0 || index >= len(run.Iterations) {
@@ -145,6 +146,10 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 
 	// WS-B: Stall detection count from worker goroutines.
 	obs.StallCount = stallCount
+
+	// No-op iteration detection fields.
+	obs.NoopSkipped = noopSkipped
+	obs.ConsecutiveNoops = consecutiveNoops
 
 	// Self-learning subsystem fields
 	obs.ReflexionApplied = reflexionApplied

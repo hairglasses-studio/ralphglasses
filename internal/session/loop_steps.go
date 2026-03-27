@@ -352,6 +352,44 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		iter.WorkersEndedAt = &workersDone
 	})
 
+	// WS2-noop: Check for no-op iteration (0 files changed, 0 lines added).
+	// Computed early so we can skip verification if the loop is stuck.
+	var noopFilesChanged, noopLinesAdded int
+	for _, wt := range workerWorktrees {
+		if wt == "" {
+			continue
+		}
+		files, added, _ := gitDiffStats(wt)
+		noopFilesChanged += files
+		noopLinesAdded += added
+	}
+
+	var noopSkipped bool
+	var noopConsecutive int
+	if m.noopDetector != nil {
+		skip, reason := m.noopDetector.RecordIteration(run.ID, noopFilesChanged, noopLinesAdded)
+		noopConsecutive = m.noopDetector.ConsecutiveCount(run.ID)
+		if skip {
+			noopSkipped = true
+			slog.Warn("no-op iteration detected, skipping",
+				"loop", run.ID, "iteration", iteration.Number,
+				"consecutive_noops", noopConsecutive, "reason", reason)
+			m.updateLoopIteration(run, index, "idle", func(iter *LoopIteration, loop *LoopRun) {
+				iter.Error = reason
+				now := time.Now()
+				iter.EndedAt = &now
+			})
+			emitLoopObservation(run, index, m,
+				reflexionApplied, episodesUsed, cascadeResults, taskDifficulties, totalStallCount,
+				noopSkipped, noopConsecutive)
+			m.PersistLoop(run)
+			if err := writeLoopJournal(run, run.iterationsSnapshot()[index]); err != nil {
+				slog.Warn("failed to write loop journal", "loop", run.ID, "error", err)
+			}
+			return fmt.Errorf("loop %s: %s", run.ID, reason)
+		}
+	}
+
 	// Detect if any worker asked questions instead of acting autonomously.
 	hasQ := false
 	for _, wo := range workerOutputs {
@@ -386,7 +424,8 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			}
 
 			emitLoopObservation(run, index, m,
-				reflexionApplied, episodesUsed, cascadeResults, taskDifficulties, totalStallCount)
+				reflexionApplied, episodesUsed, cascadeResults, taskDifficulties, totalStallCount,
+				noopSkipped, noopConsecutive)
 			m.PersistLoop(run)
 			if err := writeLoopJournal(run, run.Iterations[index]); err != nil {
 		slog.Warn("failed to write loop journal", "loop", run.ID, "error", err)
@@ -487,7 +526,8 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	}
 
 	emitLoopObservation(run, index, m,
-		reflexionApplied, episodesUsed, cascadeResults, taskDifficulties, totalStallCount)
+		reflexionApplied, episodesUsed, cascadeResults, taskDifficulties, totalStallCount,
+		noopSkipped, noopConsecutive)
 
 	// Feed cost sample to CostPredictor if wired.
 	if m.costPredictor != nil {
