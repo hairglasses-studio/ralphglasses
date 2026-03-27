@@ -34,7 +34,20 @@ func (m *Manager) Start(ctx context.Context, repoPath string) error {
 	cmd.Dir = repoPath
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
+	// Redirect stdout/stderr to the canonical log file so that the `logs`
+	// MCP tool (which reads .ralph/logs/ralph.log) can find output.
+	logFile, err := OpenLogFile(repoPath)
+	if err != nil {
+		slog.Warn("failed to open log file, process output will be lost", "repo", repoPath, "error", err)
+	} else {
+		cmd.Stdout = logFile
+		cmd.Stderr = logFile
+	}
+
 	if err := cmd.Start(); err != nil {
+		if logFile != nil {
+			logFile.Close()
+		}
 		return fmt.Errorf("start loop: %w", err)
 	}
 
@@ -43,7 +56,7 @@ func (m *Manager) Start(ctx context.Context, repoPath string) error {
 		slog.Warn("failed to write PID file", "repo", repoPath, "pid", pid, "error", err)
 	}
 
-	m.procs[repoPath] = &ManagedProcess{Cmd: cmd, PID: pid, ChildPids: collectChildPIDs(pid)}
+	m.procs[repoPath] = &ManagedProcess{Cmd: cmd, PID: pid, ChildPids: collectChildPIDs(pid), LogFile: logFile}
 
 	// Publish loop started event.
 	if m.bus != nil {
@@ -134,8 +147,21 @@ func (m *Manager) reaperLoop(ctx context.Context, rp string, cmd *exec.Cmd) {
 				newCmd.Dir = rp
 				newCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
+				// Reopen log file for the restarted process (append mode).
+				var newLogFile *os.File
+				if lf, err := OpenLogFile(rp); err != nil {
+					slog.Warn("failed to open log file for restart", "repo", rp, "error", err)
+				} else {
+					newLogFile = lf
+					newCmd.Stdout = lf
+					newCmd.Stderr = lf
+				}
+
 				if err := newCmd.Start(); err != nil {
 					slog.Warn("auto-restart failed", "repo", filepath.Base(rp), "err", err)
+					if newLogFile != nil {
+						newLogFile.Close()
+					}
 					// Fall through to normal cleanup below.
 				} else {
 					newPID := newCmd.Process.Pid
@@ -154,6 +180,7 @@ func (m *Manager) reaperLoop(ctx context.Context, rp string, cmd *exec.Cmd) {
 							PID:          newPID,
 							ChildPids:    collectChildPIDs(newPID),
 							RestartCount: restartCount + 1,
+							LogFile:      newLogFile,
 						}
 					} else {
 						// Entry gone or stopping — kill the orphan we just spawned.
@@ -187,8 +214,11 @@ func (m *Manager) reaperLoop(ctx context.Context, rp string, cmd *exec.Cmd) {
 		}
 
 	cleanup:
-		// Normal cleanup: remove from map and PID file.
+		// Normal cleanup: remove from map, close log file, and remove PID file.
 		m.mu.Lock()
+		if mp, ok := m.procs[rp]; ok && mp.LogFile != nil {
+			mp.LogFile.Close()
+		}
 		delete(m.procs, rp)
 		m.mu.Unlock()
 		removePIDFile(rp)
