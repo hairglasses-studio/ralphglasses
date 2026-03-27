@@ -267,6 +267,74 @@ func TestHandleObservationSummaryTimeRange(t *testing.T) {
 	}
 }
 
+func TestHandleObservationSummaryBackfillProviderCounts(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+
+	repoPath := root + "/test-repo"
+	obsPath := session.ObservationPath(repoPath)
+	// Write observations with provider fields but no model/acceptance fields
+	// to exercise the backfill logic in the handler.
+	for i := 0; i < 4; i++ {
+		obs := session.LoopObservation{
+			Timestamp:       time.Now().Add(-time.Duration(i) * time.Minute),
+			LoopID:          "loop-backfill",
+			RepoName:        "test-repo",
+			IterationNumber: i + 1,
+			Status:          "idle",
+			VerifyPassed:    i < 3, // first 3 pass, last one doesn't
+			TotalLatencyMs:  1000,
+			TotalCostUSD:    0.05,
+			PlannerProvider: "claude",
+			WorkerProvider:  "gemini",
+		}
+		if i == 3 {
+			obs.Status = "failed"
+		}
+		if err := session.WriteObservation(obsPath, obs); err != nil {
+			t.Fatalf("write observation: %v", err)
+		}
+	}
+
+	result, err := srv.handleObservationSummary(context.Background(), makeRequest(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error result: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	var summary session.IterationSummary
+	if err := json.Unmarshal([]byte(text), &summary); err != nil {
+		t.Fatalf("failed to unmarshal summary: %v", err)
+	}
+
+	// Verify acceptance_counts is populated via backfill.
+	if len(summary.AcceptanceCounts) == 0 {
+		t.Error("expected acceptance_counts to be populated via backfill")
+	}
+	if summary.AcceptanceCounts["auto_merge"] != 3 {
+		t.Errorf("expected 3 auto_merge, got %d", summary.AcceptanceCounts["auto_merge"])
+	}
+	if summary.AcceptanceCounts["rejected"] != 1 {
+		t.Errorf("expected 1 rejected, got %d", summary.AcceptanceCounts["rejected"])
+	}
+
+	// Verify model_usage is populated via backfill (using provider names).
+	if len(summary.ModelUsage) == 0 {
+		t.Error("expected model_usage to be populated via backfill")
+	}
+	if summary.ModelUsage["claude"] != 4 {
+		t.Errorf("expected claude count 4, got %d", summary.ModelUsage["claude"])
+	}
+	if summary.ModelUsage["gemini"] != 4 {
+		t.Errorf("expected gemini count 4, got %d", summary.ModelUsage["gemini"])
+	}
+}
+
 func TestHandleObservationQueryInvalidSince(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
