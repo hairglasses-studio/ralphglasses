@@ -52,6 +52,14 @@ var KnownKeys = map[string]ConfigKeySpec{
 	"PROVIDER":              {Type: ConfigTypeString, Default: "claude", Description: "default session provider (claude/gemini/codex)"},
 	"AUTO_ENHANCE":          {Type: ConfigTypeBool, Default: "false", Description: "auto-enhance prompts before session launch"},
 	"AUTONOMY_LEVEL":        {Type: ConfigTypeInt, Default: "0", MinInt: 0, MaxInt: 3, Description: "autonomy level (0=observe, 3=full)"},
+	"CASCADE_ENABLED":              {Type: ConfigTypeBool, Default: "false", Description: "enable cheap-then-expensive cascade routing"},
+	"CASCADE_CHEAP_PROVIDER":       {Type: ConfigTypeString, Default: "gemini", Description: "cheap provider for cascade routing"},
+	"CASCADE_CHEAP_MODEL":          {Type: ConfigTypeString, Default: "gemini-2.5-flash", Description: "cheap model for cascade routing"},
+	"CASCADE_EXPENSIVE_PROVIDER":   {Type: ConfigTypeString, Default: "claude", Description: "expensive provider for cascade routing"},
+	"CASCADE_EXPENSIVE_MODEL":      {Type: ConfigTypeString, Default: "claude-sonnet-4-6", Description: "expensive model for cascade routing"},
+	"CASCADE_CONFIDENCE_THRESHOLD": {Type: ConfigTypeFloat, Default: "0.7", MinFloat: 0, MaxFloat: 1, Description: "confidence threshold for cascade escalation"},
+	"CASCADE_MAX_CHEAP_BUDGET":     {Type: ConfigTypeFloat, Default: "2.00", MinFloat: 0.01, MaxFloat: 100, Description: "max budget for cheap cascade tier in USD"},
+	"CASCADE_DIFFICULTY_THRESHOLD": {Type: ConfigTypeFloat, Default: "0.4", MinFloat: 0, MaxFloat: 1, Description: "difficulty threshold for bypassing cheap tier"},
 }
 
 // ConfigWarning describes a non-fatal issue with a config value.
