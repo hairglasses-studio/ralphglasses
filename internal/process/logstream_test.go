@@ -217,3 +217,68 @@ func TestLogPath_WriteReadRoundTrip(t *testing.T) {
 		t.Errorf("lines[0] = %q, want %q", lines[0], "server log entry 1")
 	}
 }
+
+// --- OpenLogFile pressure tests (FINDING-169) ---
+
+func TestOpenLogFile_CreatesDir(t *testing.T) {
+	dir := t.TempDir()
+	// Verify .ralph/logs/ does NOT exist yet
+	logDir := filepath.Join(dir, ".ralph", "logs")
+	if _, err := os.Stat(logDir); err == nil {
+		t.Fatal("expected .ralph/logs/ to not exist before OpenLogFile")
+	}
+
+	f, err := OpenLogFile(dir)
+	if err != nil {
+		t.Fatalf("OpenLogFile: %v", err)
+	}
+	defer f.Close()
+
+	if f == nil {
+		t.Fatal("expected non-nil file handle")
+	}
+
+	// Verify the directory was created
+	info, err := os.Stat(logDir)
+	if err != nil {
+		t.Fatalf("expected .ralph/logs/ to exist after OpenLogFile: %v", err)
+	}
+	if !info.IsDir() {
+		t.Fatal("expected .ralph/logs/ to be a directory")
+	}
+
+	// Verify file is writable: write, close, read back
+	msg := "pressure test write\n"
+	if _, err := f.WriteString(msg); err != nil {
+		t.Fatalf("write to log file: %v", err)
+	}
+	f.Close()
+
+	data, err := os.ReadFile(LogFilePath(dir))
+	if err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	if string(data) != msg {
+		t.Errorf("read back = %q, want %q", string(data), msg)
+	}
+}
+
+func TestOpenLogFile_ExistingDir(t *testing.T) {
+	dir := setupLogDir(t) // creates .ralph/logs/
+
+	f, err := OpenLogFile(dir)
+	if err != nil {
+		t.Fatalf("OpenLogFile: %v", err)
+	}
+	defer f.Close()
+
+	if f == nil {
+		t.Fatal("expected non-nil file handle")
+	}
+
+	// Verify writable
+	msg := "existing dir test\n"
+	if _, err := f.WriteString(msg); err != nil {
+		t.Fatalf("write to log file: %v", err)
+	}
+}

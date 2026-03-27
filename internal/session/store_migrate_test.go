@@ -123,3 +123,80 @@ func TestMigrateJSONToStore(t *testing.T) {
 		}
 	})
 }
+
+func TestMigrateJSONToStore_CorruptFile(t *testing.T) {
+	jsonDir := filepath.Join(t.TempDir(), "sessions-corrupt")
+	if err := os.MkdirAll(jsonDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Two valid session JSON files.
+	valid1 := &Session{
+		ID:           "valid-1",
+		Provider:     ProviderClaude,
+		RepoPath:     "/repos/alpha",
+		RepoName:     "alpha",
+		Status:       StatusCompleted,
+		Prompt:       "implement feature",
+		SpentUSD:     1.25,
+		LaunchedAt:   time.Now().Add(-1 * time.Hour),
+		LastActivity: time.Now(),
+	}
+	valid2 := &Session{
+		ID:           "valid-2",
+		Provider:     ProviderGemini,
+		RepoPath:     "/repos/beta",
+		RepoName:     "beta",
+		Status:       StatusRunning,
+		Prompt:       "refactor module",
+		SpentUSD:     0.50,
+		LaunchedAt:   time.Now().Add(-30 * time.Minute),
+		LastActivity: time.Now(),
+	}
+
+	for _, s := range []*Session{valid1, valid2} {
+		data, _ := json.Marshal(s)
+		if err := os.WriteFile(filepath.Join(jsonDir, s.ID+".json"), data, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// One corrupt JSON file.
+	if err := os.WriteFile(filepath.Join(jsonDir, "corrupt-1.json"), []byte("{{{not json!!!"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	store := NewMemoryStore()
+
+	imported, err := MigrateJSONToStore(ctx, jsonDir, store)
+	if err != nil {
+		t.Fatalf("MigrateJSONToStore: %v", err)
+	}
+	if imported != 2 {
+		t.Errorf("imported = %d, want 2 (corrupt file should be skipped)", imported)
+	}
+
+	// Verify the two valid sessions are in the store.
+	got1, err := store.GetSession(ctx, "valid-1")
+	if err != nil {
+		t.Fatalf("GetSession(valid-1): %v", err)
+	}
+	if got1.SpentUSD != 1.25 {
+		t.Errorf("valid-1 SpentUSD = %f, want 1.25", got1.SpentUSD)
+	}
+
+	got2, err := store.GetSession(ctx, "valid-2")
+	if err != nil {
+		t.Fatalf("GetSession(valid-2): %v", err)
+	}
+	if got2.SpentUSD != 0.50 {
+		t.Errorf("valid-2 SpentUSD = %f, want 0.50", got2.SpentUSD)
+	}
+
+	// Corrupt session should not be in the store.
+	_, err = store.GetSession(ctx, "corrupt-1")
+	if err != ErrSessionNotFound {
+		t.Errorf("expected ErrSessionNotFound for corrupt-1, got: %v", err)
+	}
+}

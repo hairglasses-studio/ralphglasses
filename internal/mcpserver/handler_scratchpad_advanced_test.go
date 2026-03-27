@@ -3,13 +3,120 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
+
+// --- concurrency stress tests ---
+
+func TestConcurrentScratchpadValidate(t *testing.T) {
+	t.Parallel()
+	srv, root := scratchpadServer(t)
+
+	// Create a scratchpad file with some findings for validate to check.
+	ralphDir := filepath.Join(root, ".ralph")
+	content := `# Test Scratchpad
+overall: 55
+clarity: 60
+specificity: 50
+structure: 55
+tone: 55
+`
+	if err := os.WriteFile(filepath.Join(ralphDir, "test_scratchpad.md"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	const N = 10
+	var wg sync.WaitGroup
+	wg.Add(N)
+	errs := make([]error, N)
+	results := make([]*mcp.CallToolResult, N)
+
+	for i := 0; i < N; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			req := mcp.CallToolRequest{}
+			req.Params.Arguments = map[string]any{
+				"name":  "test",
+				"check": "all",
+			}
+			results[idx], errs[idx] = srv.handleScratchpadValidate(context.Background(), req)
+		}(i)
+	}
+	wg.Wait()
+
+	for i := 0; i < N; i++ {
+		if errs[i] != nil {
+			t.Errorf("goroutine %d: unexpected error: %v", i, errs[i])
+		}
+		if results[i] == nil {
+			t.Fatalf("goroutine %d: nil result", i)
+		}
+		// Each result should be valid JSON — no corruption from concurrent reads.
+		text := results[i].Content[0].(mcp.TextContent).Text
+		var vr validateResult
+		if err := json.Unmarshal([]byte(text), &vr); err != nil {
+			t.Errorf("goroutine %d: invalid JSON: %v (text: %s)", i, err, text)
+		}
+	}
+}
+
+func TestConcurrentScratchpadContext(t *testing.T) {
+	t.Parallel()
+	srv, root := scratchpadServer(t)
+
+	// Ensure .ralph dir exists (scratchpadServer already does this).
+	_ = root
+
+	const N = 10
+	var wg sync.WaitGroup
+	wg.Add(N)
+	errs := make([]error, N)
+	results := make([]*mcp.CallToolResult, N)
+
+	for i := 0; i < N; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			padName := fmt.Sprintf("pad-%d", idx)
+			req := mcp.CallToolRequest{}
+			req.Params.Arguments = map[string]any{
+				"name":     padName,
+				"sections": "fleet",
+			}
+			results[idx], errs[idx] = srv.handleScratchpadContext(context.Background(), req)
+		}(i)
+	}
+	wg.Wait()
+
+	for i := 0; i < N; i++ {
+		if errs[i] != nil {
+			t.Errorf("goroutine %d: unexpected error: %v", i, errs[i])
+		}
+		if results[i] == nil {
+			t.Fatalf("goroutine %d: nil result", i)
+		}
+		if results[i].IsError {
+			t.Errorf("goroutine %d: tool error: %v", i, results[i].Content)
+			continue
+		}
+		// Verify each pad file was created without corruption.
+		padName := fmt.Sprintf("pad-%d", i)
+		data, err := os.ReadFile(filepath.Join(root, ".ralph", padName+"_scratchpad.md"))
+		if err != nil {
+			t.Errorf("goroutine %d: pad file not created: %v", i, err)
+			continue
+		}
+		if len(data) == 0 {
+			t.Errorf("goroutine %d: pad file is empty", i)
+		}
+	}
+}
 
 // --- scratchpad_validate tests ---
 
@@ -623,5 +730,97 @@ func TestHandleScratchpadReason_InvalidInputJSON(t *testing.T) {
 	}
 	if !result.IsError {
 		t.Fatal("expected error for invalid JSON input")
+	}
+}
+
+// TestValidateScores_NoScoreLines verifies that a scratchpad with no
+// "score: N" lines passes the scores check cleanly with zero violations.
+func TestValidateScores_NoScoreLines(t *testing.T) {
+	t.Parallel()
+	srv, root := scratchpadServer(t)
+
+	// Create a scratchpad with only narrative text — no score patterns.
+	content := "# Planning Notes\nWe should refactor the parser module.\nNo scores here.\n"
+	ralphDir := filepath.Join(root, ".ralph")
+	if err := os.WriteFile(filepath.Join(ralphDir, "noscores_scratchpad.md"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"name":  "noscores",
+		"check": "scores",
+	}
+
+	result, err := srv.handleScratchpadValidate(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %v", result.Content)
+	}
+
+	var vr validateResult
+	text := result.Content[0].(mcp.TextContent).Text
+	if err := json.Unmarshal([]byte(text), &vr); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	if !vr.Valid {
+		t.Errorf("expected valid=true when no score lines present, got violations: %+v", vr.Violations)
+	}
+	if len(vr.Violations) != 0 {
+		t.Errorf("expected 0 violations, got %d: %+v", len(vr.Violations), vr.Violations)
+	}
+}
+
+// TestValidatePaths_NonexistentPaths verifies that a scratchpad referencing
+// a path outside the expected repo root triggers a path violation.
+func TestValidatePaths_NonexistentPaths(t *testing.T) {
+	t.Parallel()
+	srv, root := scratchpadServer(t)
+
+	// Create a scratchpad that references a path outside the test root.
+	content := fmt.Sprintf("# Snapshot\npath: /some/nonexistent/repo/internal/file.go\nrepo: %s/valid.go\n", root)
+	ralphDir := filepath.Join(root, ".ralph")
+	if err := os.WriteFile(filepath.Join(ralphDir, "badpaths_scratchpad.md"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"name":  "badpaths",
+		"check": "paths",
+	}
+
+	result, err := srv.handleScratchpadValidate(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %v", result.Content)
+	}
+
+	var vr validateResult
+	text := result.Content[0].(mcp.TextContent).Text
+	if err := json.Unmarshal([]byte(text), &vr); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	if vr.Valid {
+		t.Error("expected valid=false for scratchpad with out-of-repo path references")
+	}
+	if len(vr.Violations) == 0 {
+		t.Fatal("expected at least one path violation")
+	}
+	foundPathViolation := false
+	for _, v := range vr.Violations {
+		if v.Check == "paths" {
+			foundPathViolation = true
+			break
+		}
+	}
+	if !foundPathViolation {
+		t.Errorf("expected a violation with check=paths, got: %+v", vr.Violations)
 	}
 }

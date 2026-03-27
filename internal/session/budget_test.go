@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -230,6 +231,48 @@ func TestRunLoop_BudgetReasonInLastError(t *testing.T) {
 	}
 }
 
+func TestCheckLoopBudget_ZeroBudget(t *testing.T) {
+	m := NewManager()
+	m.SetStateDir(t.TempDir())
+
+	// Create a loop run with ZERO budget (both planner and worker)
+	run := &LoopRun{
+		ID:       "zero-budget-test",
+		RepoPath: t.TempDir(),
+		RepoName: "test",
+		Status:   "running",
+		Profile: LoopProfile{
+			PlannerBudgetUSD: 0,
+			WorkerBudgetUSD:  0,
+		},
+		Iterations: []LoopIteration{},
+	}
+
+	// Add sessions that have spent money
+	plannerSess := &Session{ID: "zb-planner-1", SpentUSD: 5.0}
+	workerSess := &Session{ID: "zb-worker-1", SpentUSD: 15.0}
+	m.mu.Lock()
+	m.sessions["zb-planner-1"] = plannerSess
+	m.sessions["zb-worker-1"] = workerSess
+	m.mu.Unlock()
+
+	run.Iterations = append(run.Iterations, LoopIteration{
+		PlannerSessionID: "zb-planner-1",
+		WorkerSessionIDs: []string{"zb-worker-1"},
+	})
+
+	// With totalBudget=0, checkLoopBudget should return (false, "")
+	// regardless of how much has been spent — zero budget means "no limit".
+	exceeded, reason := m.checkLoopBudget(run)
+	if exceeded {
+		t.Error("checkLoopBudget should return false when totalBudget is zero (no limit)")
+	}
+	if reason != "" {
+		t.Errorf("expected empty reason for zero budget, got %q", reason)
+	}
+}
+
+
 func TestBudgetEnforcerWriteCostSummary(t *testing.T) {
 	root := t.TempDir()
 	b := NewBudgetEnforcer()
@@ -255,5 +298,194 @@ func TestBudgetEnforcerWriteCostSummary(t *testing.T) {
 	}
 	if len(data) == 0 {
 		t.Error("summary file is empty")
+	}
+}
+
+// --- Batch 2b pressure tests (WS-5 Budget Enforcement) ---
+
+// Test 2.6: checkLoopBudget gracefully handles missing sessions (no panic).
+func TestCheckLoopBudget_MissingSessions(t *testing.T) {
+	m := NewManager()
+	m.SetStateDir(t.TempDir())
+
+	run := &LoopRun{
+		ID:       "missing-sessions-test",
+		RepoPath: t.TempDir(),
+		RepoName: "test",
+		Status:   "running",
+		Profile: LoopProfile{
+			PlannerBudgetUSD: 5.0,
+			WorkerBudgetUSD:  5.0,
+		},
+		Iterations: []LoopIteration{
+			{
+				PlannerSessionID: "planner-missing",
+				WorkerSessionIDs: []string{"worker-missing"},
+			},
+		},
+	}
+
+	// Neither "planner-missing" nor "worker-missing" exist in m.sessions.
+	// checkLoopBudget should skip them and return (false, ""), not panic.
+	exceeded, reason := m.checkLoopBudget(run)
+	if exceeded {
+		t.Errorf("expected false for missing sessions, got exceeded with reason: %s", reason)
+	}
+	if reason != "" {
+		t.Errorf("expected empty reason for missing sessions, got %q", reason)
+	}
+}
+
+// Test 2.7: checkLoopBudget is safe under concurrent access with -race.
+func TestCheckLoopBudget_ConcurrentAccess(t *testing.T) {
+	m := NewManager()
+	m.SetStateDir(t.TempDir())
+
+	// Create real sessions.
+	for i := 0; i < 5; i++ {
+		sid := "conc-worker-" + string(rune('0'+i))
+		s := &Session{ID: sid, SpentUSD: 1.0}
+		m.mu.Lock()
+		m.sessions[sid] = s
+		m.mu.Unlock()
+	}
+
+	run := &LoopRun{
+		ID:       "concurrent-test",
+		RepoPath: t.TempDir(),
+		RepoName: "test",
+		Status:   "running",
+		Profile: LoopProfile{
+			PlannerBudgetUSD: 50.0,
+			WorkerBudgetUSD:  50.0,
+		},
+		Iterations: []LoopIteration{
+			{
+				PlannerSessionID: "conc-worker-0",
+				WorkerSessionIDs: []string{"conc-worker-1", "conc-worker-2"},
+			},
+			{
+				PlannerSessionID: "conc-worker-3",
+				WorkerSessionIDs: []string{"conc-worker-4"},
+			},
+		},
+	}
+
+	var wg sync.WaitGroup
+
+	// 5 goroutines reading budget concurrently.
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			m.checkLoopBudget(run)
+		}()
+	}
+
+	// 2 goroutines mutating Iterations concurrently.
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			run.Lock()
+			run.Iterations = append(run.Iterations, LoopIteration{
+				PlannerSessionID: "conc-worker-0",
+				WorkerSessionIDs: []string{"conc-worker-1"},
+			})
+			run.Unlock()
+		}()
+	}
+
+	wg.Wait()
+	// If we get here without a race detector failure, the test passes.
+}
+
+// Test 2.8: checkLoopBudget returns exceeded at 90% threshold, documenting
+// that RunLoop calls checkLoopBudget each iteration and would stop.
+func TestRunLoop_BudgetExceededStopsLoop(t *testing.T) {
+	m := NewManager()
+	m.SetStateDir(t.TempDir())
+
+	// Budget: planner=$1, worker=$1, total=$2. Threshold at 90% = $1.80.
+	run := &LoopRun{
+		ID:       "runloop-budget-test",
+		RepoPath: t.TempDir(),
+		RepoName: "test",
+		Status:   "running",
+		Profile: LoopProfile{
+			PlannerBudgetUSD: 1.0,
+			WorkerBudgetUSD:  1.0,
+		},
+		Iterations: []LoopIteration{},
+	}
+
+	// Add sessions whose total spend = $1.80 (exactly at 90% of $2.00).
+	plannerSess := &Session{ID: "rl-planner", SpentUSD: 0.80}
+	workerSess := &Session{ID: "rl-worker", SpentUSD: 1.00}
+	m.mu.Lock()
+	m.sessions["rl-planner"] = plannerSess
+	m.sessions["rl-worker"] = workerSess
+	m.mu.Unlock()
+
+	run.Iterations = append(run.Iterations, LoopIteration{
+		PlannerSessionID: "rl-planner",
+		WorkerSessionIDs: []string{"rl-worker"},
+	})
+
+	// Total = $1.80, threshold = $1.80 → exceeded (>=).
+	exceeded, reason := m.checkLoopBudget(run)
+	if !exceeded {
+		t.Error("expected budget exceeded at $1.80 of $2.00 (90% headroom)")
+	}
+	if reason == "" {
+		t.Error("expected reason string when budget is exceeded")
+	}
+
+	// Slightly under: $1.79 total → NOT exceeded.
+	workerSess.Lock()
+	workerSess.SpentUSD = 0.99
+	workerSess.Unlock()
+
+	exceeded, _ = m.checkLoopBudget(run)
+	if exceeded {
+		t.Error("should not exceed at $1.79 of $2.00")
+	}
+
+	// NOTE: RunLoop calls checkLoopBudget at the start of each iteration.
+	// When it returns (true, reason), RunLoop sets run.Status to "budget_exceeded"
+	// and exits. This test validates the gate function directly.
+}
+
+// Test 2.9: BudgetEnforcer.Check exact boundary behavior at 90% headroom.
+func TestBudgetEnforcer_BoundaryAt90Pct(t *testing.T) {
+	b := NewBudgetEnforcer()
+
+	tests := []struct {
+		name     string
+		budget   float64
+		spent    float64
+		exceeded bool
+	}{
+		{"under_at_89.9", 100.0, 89.9, false},
+		{"at_90.0", 100.0, 90.0, true},
+		{"under_at_89.99", 100.0, 89.99, false},
+		{"over_at_90.01", 100.0, 90.01, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Session{BudgetUSD: tt.budget, SpentUSD: tt.spent}
+			exceeded, reason := b.Check(s)
+			if exceeded != tt.exceeded {
+				t.Errorf("BudgetUSD=%.2f SpentUSD=%.4f: got exceeded=%v, want %v (reason=%q)",
+					tt.budget, tt.spent, exceeded, tt.exceeded, reason)
+			}
+			if tt.exceeded && reason == "" {
+				t.Error("expected non-empty reason when exceeded")
+			}
+			if !tt.exceeded && reason != "" {
+				t.Errorf("expected empty reason when not exceeded, got %q", reason)
+			}
+		})
 	}
 }

@@ -3,6 +3,7 @@ package session
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 )
@@ -1492,5 +1493,87 @@ func TestDefaultCascadeFromConfig_NegativeBudget(t *testing.T) {
 	// Negative should fall back to default
 	if result.MaxCheapBudgetUSD != 2.00 {
 		t.Errorf("MaxCheapBudgetUSD = %f, want 2.00 (default for negative)", result.MaxCheapBudgetUSD)
+	}
+}
+
+func TestCascadeRouter_ConcurrentShouldCascade(t *testing.T) {
+	t.Parallel()
+	config := DefaultCascadeConfig()
+	cr := NewCascadeRouter(config, nil, nil, t.TempDir())
+
+	const N = 10
+	var wg sync.WaitGroup
+
+	// 10 goroutines calling ShouldCascade and SelectTier concurrently
+	for i := 0; i < N; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			for j := 0; j < 50; j++ {
+				taskTypes := []string{"feature", "docs", "refactor", "lint", "test"}
+				tt := taskTypes[j%len(taskTypes)]
+				_ = cr.ShouldCascade(tt, "do some work")
+				_ = cr.SelectTier(tt, idx%4+1)
+			}
+		}(i)
+	}
+
+	// 1 goroutine modifying state: recording latencies and results
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for j := 0; j < 100; j++ {
+			cr.RecordLatency("gemini", time.Duration(j+100)*time.Millisecond)
+			cr.RecordLatency("claude", time.Duration(j+200)*time.Millisecond)
+		}
+	}()
+
+	wg.Wait()
+
+	// After concurrent access, methods should still work correctly.
+	got := cr.ShouldCascade("feature", "implement something")
+	if !got {
+		t.Error("expected ShouldCascade=true with nil feedback")
+	}
+	tier := cr.SelectTier("lint", 1)
+	if tier.Provider == "" {
+		t.Error("expected non-empty provider from SelectTier")
+	}
+}
+
+// TestCascadeConfig_MalformedThreshold verifies that DefaultCascadeFromConfig
+// falls back to the default ConfidenceThreshold (0.7) when the config value
+// is malformed (non-numeric).
+func TestCascadeConfig_MalformedThreshold(t *testing.T) {
+	t.Parallel()
+
+	cfg := DefaultCascadeFromConfig(map[string]string{
+		"CASCADE_ENABLED":              "true",
+		"CASCADE_CONFIDENCE_THRESHOLD": "abc",
+	})
+	if cfg == nil {
+		t.Fatal("expected non-nil config when CASCADE_ENABLED=true")
+	}
+	if cfg.ConfidenceThreshold != 0.7 {
+		t.Errorf("expected default threshold 0.7 for malformed value, got %f", cfg.ConfidenceThreshold)
+	}
+}
+
+// TestCascadeRouter_NilRouterNoPanic verifies that when a Manager has no
+// CascadeRouter attached, calling cascade-related accessors does not panic.
+func TestCascadeRouter_NilRouterNoPanic(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+
+	// HasCascadeRouter should return false, not panic.
+	if m.HasCascadeRouter() {
+		t.Error("expected HasCascadeRouter=false for fresh manager")
+	}
+
+	// GetCascadeRouter should return nil, not panic.
+	cr := m.GetCascadeRouter()
+	if cr != nil {
+		t.Error("expected GetCascadeRouter=nil for fresh manager")
 	}
 }

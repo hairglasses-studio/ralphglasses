@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -436,5 +437,86 @@ func TestHandleSessionErrors_SeverityFilter(t *testing.T) {
 	// The filtered errors should all be critical
 	if !strings.Contains(text, `"session_error"`) {
 		t.Errorf("expected session_error in filtered results, got: %s", text)
+	}
+}
+
+// --- resolveSnapshotRepo pressure tests (FINDING-148/268) ---
+
+func TestResolveSnapshotRepo_ExplicitParamThreeRepos(t *testing.T) {
+	t.Parallel()
+
+	repos := []*model.Repo{
+		{Name: "alpha", Path: "/repos/alpha"},
+		{Name: "beta", Path: "/repos/beta"},
+		{Name: "zeta", Path: "/repos/zeta"},
+	}
+
+	findRepo := func(name string) *model.Repo {
+		for _, r := range repos {
+			if r.Name == name {
+				return r
+			}
+		}
+		return nil
+	}
+
+	got := resolveSnapshotRepo(repos, "beta", findRepo)
+	if got == nil {
+		t.Fatal("expected non-nil repo")
+	}
+	if got.Name != "beta" {
+		t.Errorf("expected beta, got %s", got.Name)
+	}
+	// Must NOT return repos[0] when explicit param matches a different repo
+	if got == repos[0] {
+		t.Error("returned repos[0] (alpha) instead of the explicitly requested beta")
+	}
+}
+
+func TestResolveSnapshotRepo_CWDFallback(t *testing.T) {
+	t.Parallel()
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("os.Getwd: %v", err)
+	}
+
+	// Create repos where one path is an ancestor of CWD
+	repos := []*model.Repo{
+		{Name: "unrelated", Path: "/some/unrelated/path"},
+		{Name: "cwd-match", Path: cwd},
+	}
+
+	findRepo := func(_ string) *model.Repo { return nil }
+
+	got := resolveSnapshotRepo(repos, "", findRepo)
+	if got == nil {
+		t.Fatal("expected non-nil repo")
+	}
+	if got.Name != "cwd-match" {
+		t.Errorf("expected cwd-match, got %s", got.Name)
+	}
+}
+
+func TestResolveSnapshotRepo_FallbackToFirstThreeRepos(t *testing.T) {
+	t.Parallel()
+
+	repos := []*model.Repo{
+		{Name: "first", Path: "/nonexistent/path/alpha"},
+		{Name: "second", Path: "/nonexistent/path/beta"},
+		{Name: "third", Path: "/nonexistent/path/gamma"},
+	}
+
+	findRepo := func(_ string) *model.Repo { return nil }
+
+	got := resolveSnapshotRepo(repos, "", findRepo)
+	if got == nil {
+		t.Fatal("expected non-nil repo, got nil (should not panic)")
+	}
+	if got.Name != "first" {
+		t.Errorf("expected fallback to first repo, got %s", got.Name)
+	}
+	if got != repos[0] {
+		t.Error("expected exact repos[0] reference")
 	}
 }
