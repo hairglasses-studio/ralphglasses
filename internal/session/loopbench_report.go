@@ -228,6 +228,84 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 	}
 }
 
+// emitSessionObservation writes a LoopObservation record for a standalone
+// session completion (not part of a loop). This ensures fleet_analytics has
+// observation data to aggregate even in standalone mode (FINDING-237).
+func emitSessionObservation(sess *Session) {
+	sess.mu.Lock()
+	repoPath := sess.RepoPath
+	repoName := sess.RepoName
+	status := sess.Status
+	provider := string(sess.Provider)
+	spentUSD := sess.SpentUSD
+	turns := sess.TurnCount
+	errMsg := sess.Error
+	launchedAt := sess.LaunchedAt
+	endedAt := sess.EndedAt
+	sessionID := sess.ID
+	prompt := sess.Prompt
+	sess.mu.Unlock()
+
+	if repoPath == "" {
+		return
+	}
+
+	// Only record for terminal statuses.
+	if !status.IsTerminal() {
+		return
+	}
+
+	var totalLatencyMs int64
+	if endedAt != nil {
+		totalLatencyMs = endedAt.Sub(launchedAt).Milliseconds()
+	}
+
+	obsStatus := "completed"
+	if status == StatusErrored {
+		obsStatus = "failed"
+	} else if status == StatusStopped {
+		obsStatus = "stopped"
+	}
+
+	obs := LoopObservation{
+		Timestamp:       time.Now(),
+		LoopID:          "session:" + sessionID,
+		RepoName:        repoName,
+		IterationNumber: 1,
+		TotalLatencyMs:  totalLatencyMs,
+		TotalCostUSD:    spentUSD,
+		WorkerProvider:  provider,
+		PlannerProvider: provider,
+		Status:          obsStatus,
+		VerifyPassed:    obsStatus == "completed",
+		Error:           errMsg,
+		Mode:            "standalone",
+		TaskTitle:       truncateStr(prompt, 200),
+	}
+
+	// Derive confidence from status.
+	switch obsStatus {
+	case "completed":
+		obs.Confidence = 1.0
+	case "failed":
+		obs.Confidence = 0.0
+	default:
+		obs.Confidence = 0.5
+	}
+
+	// Map cost to both planner and worker fields so aggregateObservationMetrics
+	// can attribute it via either provider field.
+	if turns > 0 {
+		obs.WorkerCostUSD = spentUSD
+		obs.WorkerTokensOut = int64(turns)
+	}
+
+	obsPath := ObservationPath(repoPath)
+	if err := WriteObservation(obsPath, obs); err != nil {
+		slog.Warn("failed to write session observation", "session", sessionID, "path", obsPath, "error", err)
+	}
+}
+
 // gitDiffStats runs git diff --stat on a worktree and parses the summary line.
 func gitDiffStats(worktreePath string) (files, added, removed int) {
 	return gitutil.GitDiffStats(worktreePath)
