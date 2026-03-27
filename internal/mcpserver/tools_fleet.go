@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -142,15 +143,17 @@ func (s *Server) handleFleetAnalytics(_ context.Context, req mcp.CallToolRequest
 		"total_sessions": len(sessions),
 	}
 
+	// Parse window for metrics.
+	windowStr := getStringArg(req, "window")
+	window := time.Hour
+	if windowStr != "" {
+		if d, err := time.ParseDuration(windowStr); err == nil && d > 0 {
+			window = d
+		}
+	}
+
 	// If FleetAnalytics is available, enrich with rolling-window metrics.
 	if s.FleetAnalytics != nil {
-		windowStr := getStringArg(req, "window")
-		window := time.Hour
-		if windowStr != "" {
-			if d, err := time.ParseDuration(windowStr); err == nil && d > 0 {
-				window = d
-			}
-		}
 		snap := s.FleetAnalytics.Snapshot(window)
 		result["metrics"] = map[string]any{
 			"window":              window.String(),
@@ -167,9 +170,133 @@ func (s *Server) handleFleetAnalytics(_ context.Context, req mcp.CallToolRequest
 		if forecast := s.FleetAnalytics.CostForecast(24 * time.Hour); forecast > 0 {
 			result["cost_forecast_24h_usd"] = forecast
 		}
+		result["data_source"] = "fleet_coordinator"
+	} else {
+		// FINDING-237: Fallback — aggregate metrics from observation store when
+		// FleetAnalytics is nil (standalone MCP mode).
+		metrics, obsCount := s.aggregateObservationMetrics(window, repoFilter, providerFilter)
+		if obsCount > 0 {
+			result["metrics"] = metrics
+		}
+		result["observation_count"] = obsCount
+		result["data_source"] = "observation_store"
 	}
 
 	return jsonResult(result), nil
+}
+
+// aggregateObservationMetrics reads observation JSONL files from known repos
+// and computes fleet-style metrics (completions, failures, latency percentiles,
+// cost) for the given time window. Returns the metrics map and total observation
+// count.
+func (s *Server) aggregateObservationMetrics(window time.Duration, repoFilter, providerFilter string) (map[string]any, int) {
+	since := time.Now().Add(-window)
+
+	s.mu.RLock()
+	repos := s.Repos
+	s.mu.RUnlock()
+
+	var allObs []session.LoopObservation
+	for _, r := range repos {
+		if repoFilter != "" && r.Name != repoFilter {
+			continue
+		}
+		obsPath := session.ObservationPath(r.Path)
+		obs, err := session.LoadObservations(obsPath, since)
+		if err != nil || len(obs) == 0 {
+			continue
+		}
+		allObs = append(allObs, obs...)
+	}
+
+	if len(allObs) == 0 {
+		return map[string]any{
+			"window":             window.String(),
+			"completions":        0,
+			"failures":           0,
+			"failure_rate":       0.0,
+			"latency_p50_ms":    0.0,
+			"latency_p95_ms":    0.0,
+			"latency_p99_ms":    0.0,
+			"total_cost_usd":    0.0,
+			"cost_per_provider": map[string]float64{},
+		}, 0
+	}
+
+	var (
+		completions   int
+		failures      int
+		totalCostUSD  float64
+		costByProv    = make(map[string]float64)
+		latencies     []float64
+	)
+
+	for _, obs := range allObs {
+		// Apply provider filter.
+		if providerFilter != "" {
+			if obs.PlannerProvider != providerFilter && obs.WorkerProvider != providerFilter {
+				continue
+			}
+		}
+
+		if obs.Status == "failed" || obs.Error != "" {
+			failures++
+		} else {
+			completions++
+		}
+
+		totalCostUSD += obs.TotalCostUSD
+		if obs.PlannerProvider != "" {
+			costByProv[obs.PlannerProvider] += obs.PlannerCostUSD
+		}
+		if obs.WorkerProvider != "" {
+			costByProv[obs.WorkerProvider] += obs.WorkerCostUSD
+		}
+
+		if obs.TotalLatencyMs > 0 {
+			latencies = append(latencies, float64(obs.TotalLatencyMs))
+		}
+	}
+
+	total := completions + failures
+	var failureRate float64
+	if total > 0 {
+		failureRate = float64(failures) / float64(total)
+	}
+
+	var p50, p95, p99 float64
+	if len(latencies) > 0 {
+		sort.Float64s(latencies)
+		p50 = obsPercentile(latencies, 50)
+		p95 = obsPercentile(latencies, 95)
+		p99 = obsPercentile(latencies, 99)
+	}
+
+	metrics := map[string]any{
+		"window":             window.String(),
+		"completions":        completions,
+		"failures":           failures,
+		"failure_rate":       failureRate,
+		"latency_p50_ms":    p50,
+		"latency_p95_ms":    p95,
+		"latency_p99_ms":    p99,
+		"total_cost_usd":    totalCostUSD,
+		"cost_per_provider": costByProv,
+	}
+
+	return metrics, completions + failures
+}
+
+// obsPercentile returns the p-th percentile from a sorted slice.
+func obsPercentile(sorted []float64, p int) float64 {
+	if len(sorted) == 0 {
+		return 0
+	}
+	idx := len(sorted) * p / 100
+	if idx >= len(sorted) {
+		idx = len(sorted) - 1
+	}
+	return sorted[idx]
 }
 
 func (s *Server) handleMarathonDashboard(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
