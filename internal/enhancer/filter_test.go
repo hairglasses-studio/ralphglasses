@@ -63,3 +63,36 @@ func TestShouldEnhance_WeakDimensionsOverrideStructure(t *testing.T) {
 		t.Error("ShouldEnhance should return true for structured prompts with weak dimensions (D/F grades)")
 	}
 }
+
+// TestShouldEnhance_ExactMinWordBoundary verifies the exact boundary of the
+// default 5-word minimum: 5 words should pass, 4 words should not.
+func TestShouldEnhance_ExactMinWordBoundary(t *testing.T) {
+	t.Parallel()
+
+	// Exactly 5 words — should pass the word gate and return true.
+	fiveWords := "refactor this code for clarity"
+	if got := ShouldEnhance(fiveWords, Config{}); !got {
+		t.Errorf("ShouldEnhance(%q) = false, want true (exactly 5 words should pass)", fiveWords)
+	}
+
+	// Exactly 4 words — should be blocked by the word gate.
+	fourWords := "refactor this for clarity"
+	if got := ShouldEnhance(fourWords, Config{}); got {
+		t.Errorf("ShouldEnhance(%q) = true, want false (4 words should be blocked by minWords=5)", fourWords)
+	}
+}
+
+// TestShouldEnhance_AllDimensionsWeakButShort verifies that the word count gate
+// takes priority over weak quality dimensions. A 3-word prompt with D/F grades
+// should still return false because it is too short.
+func TestShouldEnhance_AllDimensionsWeakButShort(t *testing.T) {
+	t.Parallel()
+
+	// 3-word prompt — below the default minWords=5 threshold.
+	// Even though quality dimensions would score poorly, the word gate fires first.
+	shortPrompt := "fix the bug"
+	got := ShouldEnhance(shortPrompt, Config{})
+	if got {
+		t.Errorf("ShouldEnhance(%q) = true, want false (word gate should take priority over weak dimensions)", shortPrompt)
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -360,5 +361,111 @@ func TestHandleLoopStatus_JournalEntryCount(t *testing.T) {
 	}
 	if int(countVal2.(float64)) != 3 {
 		t.Fatalf("journal_entry_count = %v, want 3", countVal2)
+	}
+}
+
+// TestHandleLoopPrune_NoPrunableLoops verifies that when all loop runs are
+// recent and running, prune returns count=0.
+func TestHandleLoopPrune_NoPrunableLoops(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	// Write recent loop run files with status="running" into the loop state dir.
+	loopDir := srv.SessMgr.LoopStateDir()
+	if err := os.MkdirAll(loopDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now()
+	for _, id := range []string{"run-a", "run-b"} {
+		data, _ := json.Marshal(map[string]any{
+			"id":         id,
+			"repo_name":  "test-repo",
+			"status":     "running",
+			"created_at": now.Add(-1 * time.Hour),
+			"updated_at": now,
+		})
+		if err := os.WriteFile(filepath.Join(loopDir, id+".json"), data, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	result, err := srv.handleLoopPrune(context.Background(), makeRequest(map[string]any{
+		"older_than_hours": float64(72),
+		"statuses":         "pending,failed",
+		"dry_run":          true,
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+
+	var pruneData map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &pruneData); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	pruned, _ := pruneData["pruned"].(float64)
+	if pruned != 0 {
+		t.Errorf("expected pruned=0 for recent running loops, got %v", pruned)
+	}
+}
+
+// TestHandleLoopPrune_OlderThanZero verifies that older_than_hours=0 prunes
+// ALL matching-status loops regardless of age.
+func TestHandleLoopPrune_OlderThanZero(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	loopDir := srv.SessMgr.LoopStateDir()
+	if err := os.MkdirAll(loopDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now()
+	// Write loop runs with status="failed" — one recent, one old.
+	for i, age := range []time.Duration{-5 * time.Minute, -100 * time.Hour} {
+		id := fmt.Sprintf("prune-%d", i)
+		pruneFileData, _ := json.Marshal(map[string]any{
+			"id":         id,
+			"repo_name":  "test-repo",
+			"status":     "failed",
+			"created_at": now.Add(age - time.Hour),
+			"updated_at": now.Add(age),
+		})
+		if err := os.WriteFile(filepath.Join(loopDir, id+".json"), pruneFileData, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// older_than_hours=0 means olderThan=0s, so cutoff=now; all past timestamps are before cutoff.
+	result, err := srv.handleLoopPrune(context.Background(), makeRequest(map[string]any{
+		"older_than_hours": float64(0),
+		"statuses":         "failed",
+		"dry_run":          false,
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+
+	var pruneResult map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &pruneResult); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	pruned, _ := pruneResult["pruned"].(float64)
+	if pruned != 2 {
+		t.Errorf("expected pruned=2 with older_than_hours=0, got %v", pruned)
+	}
+
+	// Verify files were actually removed.
+	entries, _ := os.ReadDir(loopDir)
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), "prune-") {
+			t.Errorf("expected prune file %s to be deleted", e.Name())
+		}
 	}
 }
