@@ -121,11 +121,6 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 		wireSubsystems(s, s.SessMgr, ralphDir)
 	}
 
-	// Wire prompt enhancer into session manager for loop integration
-	if s.SessMgr.Enhancer == nil {
-		s.SessMgr.Enhancer = s.getEngine()
-	}
-
 	// Iteration and duration limits
 	if maxIter := int(getNumberArg(req, "max_iterations", 0)); maxIter > 0 {
 		profile.MaxIterations = maxIter

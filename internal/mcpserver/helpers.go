@@ -112,6 +112,11 @@ func wireSubsystems(s *Server, sessMgr *session.Manager, ralphDir string) {
 	if !sessMgr.HasCostPredictor() {
 		sessMgr.SetCostPredictor(session.NewCostPredictor(ralphDir))
 	}
+
+	// --- Prompt enhancer (singleton via engineOnce) ---
+	if sessMgr.Enhancer == nil {
+		sessMgr.Enhancer = s.getEngine()
+	}
 }
 
 // cascadeConfigFromRepo reads .ralphrc from the repo and returns a CascadeConfig.
