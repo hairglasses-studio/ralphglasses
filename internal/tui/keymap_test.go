@@ -1,10 +1,12 @@
 package tui
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestDefaultKeyMapReturnsNonNil(t *testing.T) {
@@ -323,5 +325,259 @@ func TestKeyDispatchNotEmpty(t *testing.T) {
 		if entry.Handler == nil {
 			t.Errorf("KeyDispatch[%d] handler is nil", i)
 		}
+	}
+}
+
+// --- handleTab handlers tests ---
+
+func TestHandleTab1(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.switchTab(2, ViewTeams, "Teams") // start on different tab
+
+	m2, cmd := handleTab1(&m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("1")})
+	got := m2.(Model)
+	if got.ActiveTab != 0 {
+		t.Errorf("ActiveTab = %d, want 0", got.ActiveTab)
+	}
+	if got.CurrentView != ViewOverview {
+		t.Errorf("CurrentView = %v, want ViewOverview", got.CurrentView)
+	}
+	if cmd != nil {
+		t.Error("handleTab1 should return nil cmd")
+	}
+}
+
+func TestHandleTab2(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+
+	m2, cmd := handleTab2(&m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("2")})
+	got := m2.(Model)
+	if got.ActiveTab != 1 {
+		t.Errorf("ActiveTab = %d, want 1", got.ActiveTab)
+	}
+	if got.CurrentView != ViewSessions {
+		t.Errorf("CurrentView = %v, want ViewSessions", got.CurrentView)
+	}
+	if cmd != nil {
+		t.Error("handleTab2 should return nil cmd")
+	}
+}
+
+func TestHandleTab3(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+
+	m2, cmd := handleTab3(&m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("3")})
+	got := m2.(Model)
+	if got.ActiveTab != 2 {
+		t.Errorf("ActiveTab = %d, want 2", got.ActiveTab)
+	}
+	if got.CurrentView != ViewTeams {
+		t.Errorf("CurrentView = %v, want ViewTeams", got.CurrentView)
+	}
+	if cmd != nil {
+		t.Error("handleTab3 should return nil cmd")
+	}
+}
+
+func TestHandleTab4(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+
+	m2, cmd := handleTab4(&m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("4")})
+	got := m2.(Model)
+	if got.ActiveTab != 3 {
+		t.Errorf("ActiveTab = %d, want 3", got.ActiveTab)
+	}
+	if got.CurrentView != ViewFleet {
+		t.Errorf("CurrentView = %v, want ViewFleet", got.CurrentView)
+	}
+	if cmd != nil {
+		t.Error("handleTab4 should return nil cmd")
+	}
+}
+
+// --- handleLoopControlPanel test ---
+
+func TestHandleLoopControlPanel(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+
+	m2, cmd := handleLoopControlPanel(&m, tea.KeyMsg{})
+	got := m2.(Model)
+	if got.CurrentView != ViewLoopControl {
+		t.Errorf("CurrentView = %v, want ViewLoopControl", got.CurrentView)
+	}
+	if cmd != nil {
+		t.Error("handleLoopControlPanel should return nil cmd")
+	}
+}
+
+// --- handleObservationView test ---
+
+func TestHandleObservationView_NoRepos(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.SelectedIdx = 0
+	// No repos — should return unchanged model
+	m2, cmd := handleObservationView(&m, tea.KeyMsg{})
+	got := m2.(Model)
+	if got.CurrentView == ViewObservation {
+		t.Error("should not push observation view when no repos exist")
+	}
+	if cmd != nil {
+		t.Error("should return nil cmd when no repos")
+	}
+}
+
+func TestHandleObservationView_NegativeIdx(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.SelectedIdx = -1
+	m2, cmd := handleObservationView(&m, tea.KeyMsg{})
+	got := m2.(Model)
+	if got.CurrentView == ViewObservation {
+		t.Error("should not push observation view with negative index")
+	}
+	if cmd != nil {
+		t.Error("should return nil cmd")
+	}
+}
+
+// --- handleEventLogView test ---
+
+func TestHandleEventLogView_NilEventLog(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.EventLog = nil
+	m.Width = 120
+	m.Height = 40
+
+	m2, cmd := handleEventLogView(&m, tea.KeyMsg{})
+	got := m2.(Model)
+	if got.CurrentView != ViewEventLog {
+		t.Errorf("CurrentView = %v, want ViewEventLog", got.CurrentView)
+	}
+	if got.EventLog == nil {
+		t.Error("EventLog should be initialized")
+	}
+	if cmd != nil {
+		t.Error("handleEventLogView should return nil cmd")
+	}
+}
+
+// --- handleEscape tests ---
+
+func TestHandleEscape_LoopPanelOpen(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ShowLoopPanel = true
+
+	m2, cmd := handleEscape(&m, tea.KeyMsg{Type: tea.KeyEscape})
+	got := m2.(Model)
+	if got.ShowLoopPanel {
+		t.Error("escape should close loop panel")
+	}
+	if cmd != nil {
+		t.Error("escape should return nil cmd")
+	}
+}
+
+func TestHandleEscape_PopView(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.pushView(ViewRepoDetail, "Detail")
+
+	m2, cmd := handleEscape(&m, tea.KeyMsg{Type: tea.KeyEscape})
+	got := m2.(Model)
+	if got.CurrentView != ViewOverview {
+		t.Errorf("CurrentView = %v, want ViewOverview after pop", got.CurrentView)
+	}
+	_ = cmd
+}
+
+// --- handleQuit test ---
+
+func TestHandleQuit(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Ctx = context.Background()
+
+	_, cmd := handleQuit(&m, tea.KeyMsg{})
+	if cmd == nil {
+		t.Error("handleQuit should return tea.Quit")
+	}
+}
+
+// --- handleCmdMode test ---
+
+func TestHandleCmdMode(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+
+	m2, cmd := handleCmdMode(&m, tea.KeyMsg{})
+	got := m2.(Model)
+	if got.InputMode != ModeCommand {
+		t.Errorf("InputMode = %d, want ModeCommand", got.InputMode)
+	}
+	if got.CommandBuf != "" {
+		t.Error("CommandBuf should be empty")
+	}
+	if cmd != nil {
+		t.Error("handleCmdMode should return nil cmd")
+	}
+}
+
+// --- handleFilterMode test ---
+
+func TestHandleFilterMode(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+
+	m2, cmd := handleFilterMode(&m, tea.KeyMsg{})
+	got := m2.(Model)
+	if got.InputMode != ModeFilter {
+		t.Errorf("InputMode = %d, want ModeFilter", got.InputMode)
+	}
+	if !got.Filter.Active {
+		t.Error("Filter should be active")
+	}
+	if cmd != nil {
+		t.Error("handleFilterMode should return nil cmd")
+	}
+}
+
+// --- handleHelp tests ---
+
+func TestHandleHelp_Toggle(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+
+	// Push help
+	m2, _ := handleHelp(&m, tea.KeyMsg{})
+	got := m2.(Model)
+	if got.CurrentView != ViewHelp {
+		t.Errorf("CurrentView = %v, want ViewHelp", got.CurrentView)
+	}
+
+	// Pop help
+	m3, _ := handleHelp(&got, tea.KeyMsg{})
+	got2 := m3.(Model)
+	if got2.CurrentView != ViewOverview {
+		t.Errorf("CurrentView = %v, want ViewOverview after toggle", got2.CurrentView)
+	}
+}
+
+// --- handleRefresh test ---
+
+func TestHandleRefresh(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+
+	_, cmd := handleRefresh(&m, tea.KeyMsg{})
+	if cmd == nil {
+		t.Error("handleRefresh should return a scan command")
+	}
+}
+
+// --- handleLoopPanel test ---
+
+func TestHandleLoopPanel(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+
+	m2, cmd := handleLoopPanel(&m, tea.KeyMsg{})
+	got := m2.(Model)
+	if got.CurrentView != ViewLoopList {
+		t.Errorf("CurrentView = %v, want ViewLoopList", got.CurrentView)
+	}
+	if cmd == nil {
+		t.Error("handleLoopPanel should return a loop list cmd")
 	}
 }

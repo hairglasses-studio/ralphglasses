@@ -162,25 +162,106 @@ var stderrCostRe = regexp.MustCompile(`(?i)(?:total\s+)?(?:session\s+)?cost(?:_u
 // regex patterns that match common LLM CLI formats. Returns 0 if no cost found.
 // This serves as a fallback when structured cost/usage fields are absent.
 func ParseCostFromStderr(stderr string) float64 {
-	if stderr == "" {
-		return 0
-	}
-	// Strip ANSI codes before matching
-	cleaned := ansiRe.ReplaceAllString(stderr, "")
-	matches := stderrCostRe.FindAllStringSubmatch(cleaned, -1)
-	if len(matches) == 0 {
-		return 0
-	}
-	// Use the last match (most likely the final/total cost)
-	last := matches[len(matches)-1]
-	cost, err := strconv.ParseFloat(last[1], 64)
-	if err != nil || cost < 0 {
-		return 0
-	}
+	cost, _ := ParseProviderCostFromStderr(ProviderClaude, stderr)
 	return cost
 }
 
 var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+
+// Provider-specific stderr cost patterns.
+var (
+	// geminiTokensRe matches "N tokens used" or "prompt_token_count: N, candidates_token_count: M"
+	geminiTokensUsedRe = regexp.MustCompile(`(?i)(\d+)\s+tokens?\s+used`)
+	geminiTokenCountRe = regexp.MustCompile(`(?i)prompt_token_count:\s*(\d+).*?candidates_token_count:\s*(\d+)`)
+
+	// codexTokensRe matches "Tokens: N input / M output" or "N input tokens, M output tokens"
+	codexTokensRe  = regexp.MustCompile(`(?i)(\d+)\s+input\s+tokens?.*?(\d+)\s+output\s+tokens?`)
+	codexTokensRe2 = regexp.MustCompile(`(?i)tokens:\s*(\d+)\s+input\s*/\s*(\d+)\s+output`)
+)
+
+// ParseProviderCostFromStderr extracts a cost value from stderr using
+// provider-specific patterns. Returns the cost and true if found, or 0 and
+// false if no cost could be determined.
+//
+// For Claude: looks for "Cost: $X.XX", "Total cost: X.XX" patterns.
+// For Gemini: looks for token count patterns and estimates cost from rates.
+// For Codex: looks for cost patterns first, then token count patterns.
+func ParseProviderCostFromStderr(provider Provider, stderr string) (float64, bool) {
+	if stderr == "" {
+		return 0, false
+	}
+	cleaned := ansiRe.ReplaceAllString(stderr, "")
+
+	// All providers: try the universal cost regex first
+	if matches := stderrCostRe.FindAllStringSubmatch(cleaned, -1); len(matches) > 0 {
+		last := matches[len(matches)-1]
+		if cost, err := strconv.ParseFloat(last[1], 64); err == nil && cost > 0 {
+			return cost, true
+		}
+	}
+
+	// Provider-specific token-based cost estimation
+	switch provider {
+	case ProviderGemini:
+		return parseGeminiStderrCost(cleaned)
+	case ProviderCodex:
+		return parseCodexStderrCost(cleaned)
+	}
+
+	return 0, false
+}
+
+// parseGeminiStderrCost extracts cost from Gemini-specific stderr patterns.
+func parseGeminiStderrCost(cleaned string) (float64, bool) {
+	rates, ok := ProviderCostRates[ProviderGemini]
+	if !ok {
+		return 0, false
+	}
+
+	// Try "prompt_token_count: N, candidates_token_count: M"
+	if m := geminiTokenCountRe.FindStringSubmatch(cleaned); len(m) == 3 {
+		input, err1 := strconv.ParseFloat(m[1], 64)
+		output, err2 := strconv.ParseFloat(m[2], 64)
+		if err1 == nil && err2 == nil && (input > 0 || output > 0) {
+			cost := (input/1_000_000)*rates.InputPer1M + (output/1_000_000)*rates.OutputPer1M
+			return cost, true
+		}
+	}
+
+	// Try "N tokens used" (assume 50/50 input/output split)
+	if m := geminiTokensUsedRe.FindStringSubmatch(cleaned); len(m) == 2 {
+		total, err := strconv.ParseFloat(m[1], 64)
+		if err == nil && total > 0 {
+			blended := (rates.InputPer1M + rates.OutputPer1M) / 2
+			cost := (total / 1_000_000) * blended
+			return cost, true
+		}
+	}
+
+	return 0, false
+}
+
+// parseCodexStderrCost extracts cost from Codex-specific stderr patterns.
+func parseCodexStderrCost(cleaned string) (float64, bool) {
+	rates, ok := ProviderCostRates[ProviderCodex]
+	if !ok {
+		return 0, false
+	}
+
+	// Try "N input tokens, M output tokens" or "Tokens: N input / M output"
+	for _, re := range []*regexp.Regexp{codexTokensRe, codexTokensRe2} {
+		if m := re.FindStringSubmatch(cleaned); len(m) == 3 {
+			input, err1 := strconv.ParseFloat(m[1], 64)
+			output, err2 := strconv.ParseFloat(m[2], 64)
+			if err1 == nil && err2 == nil && (input > 0 || output > 0) {
+				cost := (input/1_000_000)*rates.InputPer1M + (output/1_000_000)*rates.OutputPer1M
+				return cost, true
+			}
+		}
+	}
+
+	return 0, false
+}
 
 // cleanProviderOutput extracts human-readable output from stderr for
 // providers whose stdout JSON stream may not capture all output.

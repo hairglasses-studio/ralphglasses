@@ -16,6 +16,128 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
+// HealthWeights controls the penalty applied per health check category.
+// Each field is a multiplier on the default penalty for that category.
+// A value of 1.0 means the default penalty; 0 disables the check.
+type HealthWeights struct {
+	CircuitBreakerOpen     float64 `json:"circuit_breaker_open"`      // default penalty: 30
+	CircuitBreakerHalfOpen float64 `json:"circuit_breaker_half_open"` // default penalty: 10
+	Staleness              float64 `json:"staleness"`                 // default penalty: 15
+	BudgetExceeded         float64 `json:"budget_exceeded"`           // default penalty: 20
+	ErroredSession         float64 `json:"errored_session"`           // default penalty: 5 per session
+	ConfigParseError       float64 `json:"config_parse_error"`        // default penalty: 5
+	MissingDirectory       float64 `json:"missing_directory"`         // default penalty: 5 per dir
+	StaleLockFile          float64 `json:"stale_lock_file"`           // default penalty: 10
+	ClaudeMDWarnings       float64 `json:"claudemd_warnings"`         // default penalty: 10
+}
+
+// DefaultHealthWeights returns sensible default weights (all 1.0).
+func DefaultHealthWeights() HealthWeights {
+	return HealthWeights{
+		CircuitBreakerOpen:     1.0,
+		CircuitBreakerHalfOpen: 1.0,
+		Staleness:              1.0,
+		BudgetExceeded:         1.0,
+		ErroredSession:         1.0,
+		ConfigParseError:       1.0,
+		MissingDirectory:       1.0,
+		StaleLockFile:          1.0,
+		ClaudeMDWarnings:       1.0,
+	}
+}
+
+// weightedPenalty computes a penalty as int(basePenalty * weight), clamped to >= 0.
+func weightedPenalty(base int, weight float64) int {
+	p := int(float64(base) * weight)
+	if p < 0 {
+		return 0
+	}
+	return p
+}
+
+// computeHealthScore computes a repo health score (0-100) given a set of
+// issue booleans/counts and the provided weights. It returns the score and
+// the list of issue strings. This is extracted for testability.
+func computeHealthScore(params healthParams, w HealthWeights) (int, []string) {
+	score := 100
+	var issues []string
+
+	// Circuit breaker
+	if params.cbState == "OPEN" {
+		score -= weightedPenalty(30, w.CircuitBreakerOpen)
+		issues = append(issues, fmt.Sprintf("circuit breaker OPEN: %s", params.cbReason))
+	} else if params.cbState == "HALF_OPEN" {
+		score -= weightedPenalty(10, w.CircuitBreakerHalfOpen)
+		issues = append(issues, "circuit breaker HALF_OPEN")
+	}
+
+	// Staleness
+	if params.staleMinutes > 60 {
+		score -= weightedPenalty(15, w.Staleness)
+		issues = append(issues, fmt.Sprintf("status stale (%.0f min)", params.staleMinutes))
+	}
+
+	// Budget
+	if params.budgetExceeded {
+		score -= weightedPenalty(20, w.BudgetExceeded)
+		issues = append(issues, "budget exceeded")
+	}
+
+	// Errored sessions
+	for i := 0; i < params.erroredSessions; i++ {
+		score -= weightedPenalty(5, w.ErroredSession)
+	}
+	if params.erroredSessions > 0 {
+		issues = append(issues, fmt.Sprintf("%d errored sessions", params.erroredSessions))
+	}
+
+	// Config parse error
+	if params.configParseError != "" {
+		score -= weightedPenalty(5, w.ConfigParseError)
+		issues = append(issues, fmt.Sprintf(".ralphrc parse error: %s", params.configParseError))
+	}
+
+	// Deprecated config keys
+	issues = append(issues, params.deprecatedKeyIssues...)
+
+	// Missing directories
+	for _, dir := range params.missingDirs {
+		score -= weightedPenalty(5, w.MissingDirectory)
+		issues = append(issues, fmt.Sprintf("missing directory: %s", dir))
+	}
+
+	// Stale lock file
+	if params.staleLockMinutes > 60 {
+		score -= weightedPenalty(10, w.StaleLockFile)
+		issues = append(issues, fmt.Sprintf("stale .git/index.lock (age: %.0f min)", params.staleLockMinutes))
+	}
+
+	// CLAUDE.md warnings
+	if params.claudeMDWarnings > 3 {
+		score -= weightedPenalty(10, w.ClaudeMDWarnings)
+		issues = append(issues, fmt.Sprintf("CLAUDE.md: %d warnings", params.claudeMDWarnings))
+	}
+
+	if score < 0 {
+		score = 0
+	}
+	return score, issues
+}
+
+// healthParams captures the raw data needed for health score computation.
+type healthParams struct {
+	cbState             string
+	cbReason            string
+	staleMinutes        float64
+	budgetExceeded      bool
+	erroredSessions     int
+	configParseError    string
+	deprecatedKeyIssues []string
+	missingDirs         []string
+	staleLockMinutes    float64
+	claudeMDWarnings    int
+}
+
 func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
@@ -39,40 +161,30 @@ func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*
 		}
 	}
 
-	score := 100
-	var issues []string
+	weights := DefaultHealthWeights()
+
+	var params healthParams
 
 	// Circuit breaker
-	cbState := "CLOSED"
+	params.cbState = "CLOSED"
 	if r.Circuit != nil {
-		cbState = r.Circuit.State
-		if cbState == "OPEN" {
-			score -= 30
-			issues = append(issues, fmt.Sprintf("circuit breaker OPEN: %s", r.Circuit.Reason))
-		} else if cbState == "HALF_OPEN" {
-			score -= 10
-			issues = append(issues, "circuit breaker HALF_OPEN")
-		}
+		params.cbState = r.Circuit.State
+		params.cbReason = r.Circuit.Reason
 	}
 
 	// Staleness
 	if r.Status != nil && !r.Status.Timestamp.IsZero() {
 		age := time.Since(r.Status.Timestamp)
-		if age > time.Hour {
-			score -= 15
-			issues = append(issues, fmt.Sprintf("status stale (%.0f min)", age.Minutes()))
-		}
+		params.staleMinutes = age.Minutes()
 	}
 
 	// Budget
 	if r.Status != nil && r.Status.BudgetStatus == "exceeded" {
-		score -= 20
-		issues = append(issues, "budget exceeded")
+		params.budgetExceeded = true
 	}
 
 	// Active sessions
 	activeSessions := 0
-	erroredSessions := 0
 	totalSpend := 0.0
 	for _, sess := range s.SessMgr.List("") {
 		sess.Lock()
@@ -81,31 +193,24 @@ func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*
 				activeSessions++
 			}
 			if sess.Status == session.StatusErrored {
-				erroredSessions++
-				score -= 5
+				params.erroredSessions++
 			}
 			totalSpend += sess.SpentUSD
 		}
 		sess.Unlock()
 	}
 
-	if erroredSessions > 0 {
-		issues = append(issues, fmt.Sprintf("%d errored sessions", erroredSessions))
-	}
-
 	// .ralphrc parse check
 	if _, err := model.LoadConfig(r.Path); err != nil {
-		if os.IsNotExist(err) {
-			// Missing .ralphrc is fine — not all repos have one.
-		} else {
-			score -= 5
-			issues = append(issues, fmt.Sprintf(".ralphrc parse error: %v", err))
+		if !os.IsNotExist(err) {
+			params.configParseError = err.Error()
 		}
 	} else if r.Config != nil {
 		configWarnings, _ := model.ValidateConfig(r.Config)
 		for _, w := range configWarnings {
 			if _, deprecated := model.DeprecatedKeys[w.Key]; deprecated {
-				issues = append(issues, fmt.Sprintf("deprecated config key %s: %s", w.Key, w.Message))
+				params.deprecatedKeyIssues = append(params.deprecatedKeyIssues,
+					fmt.Sprintf("deprecated config key %s: %s", w.Key, w.Message))
 			}
 		}
 	}
@@ -114,18 +219,14 @@ func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*
 	for _, dir := range []string{".ralph", filepath.Join(".ralph", "logs")} {
 		dirPath := filepath.Join(r.Path, dir)
 		if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-			score -= 5
-			issues = append(issues, fmt.Sprintf("missing directory: %s", dir))
+			params.missingDirs = append(params.missingDirs, dir)
 		}
 	}
 
 	// Stale lock files
 	lockPath := filepath.Join(r.Path, ".git", "index.lock")
 	if info, err := os.Stat(lockPath); err == nil {
-		if time.Since(info.ModTime()) > time.Hour {
-			score -= 10
-			issues = append(issues, fmt.Sprintf("stale .git/index.lock (age: %.0f min)", time.Since(info.ModTime()).Minutes()))
-		}
+		params.staleLockMinutes = time.Since(info.ModTime()).Minutes()
 	}
 
 	// CLAUDE.md health
@@ -133,21 +234,15 @@ func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*
 	var claudeMDFindings []enhancer.ClaudeMDResult
 	if claudeResults, err := enhancer.CheckClaudeMD(claudeMDPath); err == nil {
 		claudeMDFindings = claudeResults
-		warningCount := 0
 		for _, finding := range claudeResults {
 			if finding.Severity == "warn" {
-				warningCount++
+				params.claudeMDWarnings++
 			}
-		}
-		if warningCount > 3 {
-			score -= 10
-			issues = append(issues, fmt.Sprintf("CLAUDE.md: %d warnings", warningCount))
 		}
 	}
 
-	if score < 0 {
-		score = 0
-	}
+	cbState := params.cbState
+	score, issues := computeHealthScore(params, weights)
 
 	// Ensure slices marshal as [] not null
 	if issues == nil {
@@ -162,7 +257,7 @@ func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*
 		"health_score":      score,
 		"circuit_breaker":   cbState,
 		"active_sessions":   activeSessions,
-		"errored_sessions":  erroredSessions,
+		"errored_sessions":  params.erroredSessions,
 		"total_spend_usd":   totalSpend,
 		"loop_running":      s.ProcMgr.IsRunning(r.Path),
 		"issues":            issues,

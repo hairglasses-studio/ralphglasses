@@ -3,6 +3,7 @@ package session
 import (
 	"fmt"
 	"log/slog"
+	"runtime"
 	"strings"
 	"time"
 
@@ -204,6 +205,12 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 	} else if obs.FilesChanged == 0 {
 		obs.AcceptancePath = "no_change"
 	}
+
+	// Runtime diagnostics.
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	obs.MemoryUsageMB = float64(memStats.Alloc) / (1024 * 1024)
+	obs.GoroutineCount = runtime.NumGoroutine()
 
 	// Write to JSONL
 	obsPath := ObservationPath(repoPath)

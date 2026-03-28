@@ -268,6 +268,14 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span 
 		}
 	}
 
+	// Fallback: if no cost was captured from structured output, try stderr patterns
+	if s.SpentUSD == 0 {
+		if cost, ok := ParseProviderCostFromStderr(s.Provider, stderrBuf.String()); ok && cost > 0 {
+			s.SpentUSD = cost
+			s.CostHistory = append(s.CostHistory, cost)
+		}
+	}
+
 	// Fallback: if no output was captured from stdout events, use cleaned stderr
 	if s.LastOutput == "" && s.Error == "" {
 		if cleaned := cleanProviderOutput(s.Provider, stderrBuf.String()); cleaned != "" {

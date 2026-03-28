@@ -138,6 +138,10 @@ type LoopObservation struct {
 	EnhancementMs     int64 `json:"enhancement_ms,omitempty"`
 	AcceptanceMs      int64 `json:"acceptance_ms,omitempty"`
 	IdleBetweenMs     int64 `json:"idle_between_ms,omitempty"`
+
+	// Runtime diagnostics captured at observation time.
+	MemoryUsageMB  float64 `json:"memory_usage_mb,omitempty"`
+	GoroutineCount int     `json:"goroutine_count,omitempty"`
 }
 
 // WriteObservation appends a single observation as a JSONL line.

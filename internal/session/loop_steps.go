@@ -616,7 +616,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 				SpendUSD:   iterCost,
 				RecordedAt: time.Now(),
 			}
-			if err := m.store.RecordCost(context.Background(), entry); err != nil {
+			if err := m.store.RecordCost(ctx, entry); err != nil {
 				slog.Warn("store record cost failed", "loop", run.ID, "err", err)
 			}
 		}

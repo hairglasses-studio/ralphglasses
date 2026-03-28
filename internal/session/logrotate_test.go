@@ -90,3 +90,49 @@ func TestRotateLogs_SkipsDirectories(t *testing.T) {
 		t.Fatalf("expected 0, got %d", count)
 	}
 }
+
+func TestRotateLogs_NonExistentDir(t *testing.T) {
+	// Pre-loop calls RotateLogs on .ralph/logs which may not exist.
+	// Should return an error, not panic.
+	_, err := RotateLogs("/nonexistent/path/logs", MaxLogSize)
+	if err == nil {
+		t.Fatal("expected error for non-existent directory")
+	}
+}
+
+func TestRotateLogs_MultipleFiles(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create two oversized files and one small file.
+	big := make([]byte, 300)
+	for i := range big {
+		big[i] = byte('X')
+	}
+	small := []byte("tiny")
+
+	for _, name := range []string{"a.log", "b.log"} {
+		if err := os.WriteFile(filepath.Join(dir, name), big, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(dir, "c.log"), small, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := RotateLogs(dir, 100)
+	if err != nil {
+		t.Fatalf("RotateLogs error: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("expected 2 truncated files, got %d", count)
+	}
+
+	// c.log should be untouched.
+	info, err := os.Stat(filepath.Join(dir, "c.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Size() != int64(len(small)) {
+		t.Fatalf("small file was modified: got %d bytes, want %d", info.Size(), len(small))
+	}
+}
