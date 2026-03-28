@@ -1,0 +1,20 @@
+{
+  "updated_at": "2026-03-27T20:10:24.792155-07:00",
+  "positive": [
+    {
+      "text": "your previous response was not valid json. here is what you said:",
+      "count": 26,
+      "last_seen": "2026-03-27T20:10:24.791397-07:00",
+      "category": "positive"
+    }
+  ],
+  "negative": [
+    {
+      "text": "signal: killed",
+      "count": 6,
+      "last_seen": "2026-03-27T14:01:36.655877-07:00",
+      "category": "negative"
+    }
+  ],
+  "rules": null
+}

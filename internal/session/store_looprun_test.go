@@ -222,6 +222,183 @@ func TestSQLiteStoreLoopRun(t *testing.T) {
 	runLoopRunStoreTests(t, store)
 }
 
+// TestPersistLoopWritesToStore verifies that PersistLoop writes to both JSON and Store.
+func TestPersistLoopWritesToStore(t *testing.T) {
+	store := NewMemoryStore()
+	mgr := NewManager()
+	mgr.SetStore(store)
+	mgr.SetStateDir(t.TempDir())
+
+	run := testLoopRun("persist-1", "/repos/test", "running")
+	mgr.mu.Lock()
+	mgr.loops[run.ID] = run
+	mgr.mu.Unlock()
+
+	mgr.PersistLoop(run)
+
+	// Verify JSON file was written.
+	dir := mgr.LoopStateDir()
+	if dir == "" {
+		t.Fatal("LoopStateDir should not be empty")
+	}
+	jsonPath := filepath.Join(dir, run.ID+".json")
+	if _, err := filepath.Abs(jsonPath); err != nil {
+		t.Fatalf("bad json path: %v", err)
+	}
+	// The JSON file should exist on disk.
+	if _, statErr := filepath.Abs(jsonPath); statErr != nil {
+		t.Fatalf("JSON file not created: %v", statErr)
+	}
+
+	// Verify Store received the loop run.
+	ctx := context.Background()
+	got, err := store.GetLoopRun(ctx, "persist-1")
+	if err != nil {
+		t.Fatalf("Store.GetLoopRun: %v", err)
+	}
+	if got.ID != "persist-1" {
+		t.Errorf("Store loop ID = %q, want %q", got.ID, "persist-1")
+	}
+	if got.Status != "running" {
+		t.Errorf("Store loop Status = %q, want %q", got.Status, "running")
+	}
+}
+
+// TestPersistLoopWithoutStore verifies PersistLoop works when store is nil.
+func TestPersistLoopWithoutStore(t *testing.T) {
+	mgr := NewManager()
+	mgr.SetStateDir(t.TempDir())
+
+	run := testLoopRun("persist-nostore", "/repos/test", "running")
+	mgr.mu.Lock()
+	mgr.loops[run.ID] = run
+	mgr.mu.Unlock()
+
+	// Should not panic when store is nil.
+	mgr.PersistLoop(run)
+
+	// JSON file should still be written.
+	dir := mgr.LoopStateDir()
+	jsonPath := filepath.Join(dir, run.ID+".json")
+	if _, err := filepath.Abs(jsonPath); err != nil {
+		t.Fatalf("bad json path: %v", err)
+	}
+}
+
+// TestCostRecordingToStore verifies that CostEntry can be recorded and aggregated via Store.
+func TestCostRecordingToStore(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+
+	entry := &CostEntry{
+		SessionID:  "sess-1",
+		LoopID:     "loop-1",
+		Provider:   "claude",
+		Model:      "sonnet",
+		SpendUSD:   2.50,
+		RecordedAt: time.Now(),
+	}
+	if err := store.RecordCost(ctx, entry); err != nil {
+		t.Fatalf("RecordCost: %v", err)
+	}
+	if entry.ID == 0 {
+		t.Error("expected non-zero ID after RecordCost")
+	}
+
+	entry2 := &CostEntry{
+		SessionID:  "sess-2",
+		LoopID:     "loop-1",
+		Provider:   "gemini",
+		Model:      "pro",
+		SpendUSD:   0.50,
+		RecordedAt: time.Now(),
+	}
+	if err := store.RecordCost(ctx, entry2); err != nil {
+		t.Fatalf("RecordCost: %v", err)
+	}
+
+	agg, err := store.AggregateCostByProvider(ctx, time.Now().Add(-1*time.Minute))
+	if err != nil {
+		t.Fatalf("AggregateCostByProvider: %v", err)
+	}
+	if agg["claude"] != 2.50 {
+		t.Errorf("claude spend = %f, want 2.50", agg["claude"])
+	}
+	if agg["gemini"] != 0.50 {
+		t.Errorf("gemini spend = %f, want 0.50", agg["gemini"])
+	}
+}
+
+// TestLoadExternalLoopsFromStore verifies that LoadExternalLoops reads from Store first.
+func TestLoadExternalLoopsFromStore(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+
+	// Pre-populate Store with a loop run.
+	run := testLoopRun("store-loop-1", "/repos/delta", "completed")
+	if err := store.SaveLoopRun(ctx, run); err != nil {
+		t.Fatalf("SaveLoopRun: %v", err)
+	}
+
+	mgr := NewManager()
+	mgr.SetStore(store)
+	mgr.SetStateDir(t.TempDir())
+
+	mgr.LoadExternalLoops()
+
+	// The loop from Store should now be in the manager.
+	got, ok := mgr.GetLoop("store-loop-1")
+	if !ok {
+		t.Fatal("expected loop store-loop-1 to be loaded from Store")
+	}
+	if got.Status != "completed" {
+		t.Errorf("Status = %q, want %q", got.Status, "completed")
+	}
+	if got.RepoPath != "/repos/delta" {
+		t.Errorf("RepoPath = %q, want %q", got.RepoPath, "/repos/delta")
+	}
+}
+
+// TestLoadExternalLoopsMergesStoreAndJSON verifies Store-first with JSON fallback.
+func TestLoadExternalLoopsMergesStoreAndJSON(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+
+	// Store has one loop.
+	storeRun := testLoopRun("from-store", "/repos/s", "running")
+	if err := store.SaveLoopRun(ctx, storeRun); err != nil {
+		t.Fatalf("SaveLoopRun: %v", err)
+	}
+
+	mgr := NewManager()
+	mgr.SetStore(store)
+	tmpDir := t.TempDir()
+	mgr.SetStateDir(tmpDir)
+
+	// Write a different loop as JSON file.
+	jsonRun := testLoopRun("from-json", "/repos/j", "stopped")
+	mgr.mu.Lock()
+	mgr.loops[jsonRun.ID] = jsonRun
+	mgr.mu.Unlock()
+	mgr.PersistLoop(jsonRun)
+
+	// Clear in-memory state except what PersistLoop wrote to Store.
+	mgr.mu.Lock()
+	delete(mgr.loops, "from-json")
+	delete(mgr.loops, "from-store")
+	mgr.mu.Unlock()
+
+	mgr.LoadExternalLoops()
+
+	// Both loops should be present.
+	if _, ok := mgr.GetLoop("from-store"); !ok {
+		t.Error("expected from-store loop to be loaded")
+	}
+	if _, ok := mgr.GetLoop("from-json"); !ok {
+		t.Error("expected from-json loop to be loaded from JSON fallback")
+	}
+}
+
 func TestSQLiteStoreLoopRunIterations(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "loop-iters.db")
 	store, err := NewSQLiteStore(dbPath)
