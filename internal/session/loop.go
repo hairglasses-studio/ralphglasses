@@ -12,8 +12,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// DefaultMaxRestarts is the maximum number of full loop restarts (recovery cycles
+// that have been fully exhausted) before the loop gives up permanently.
+const DefaultMaxRestarts = 5
+
 // StartLoop registers a new loop run for a repo.
-func (m *Manager) StartLoop(_ context.Context, repoPath string, profile LoopProfile) (*LoopRun, error) {
+func (m *Manager) StartLoop(ctx context.Context, repoPath string, profile LoopProfile) (*LoopRun, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("start loop: %w", err)
+	}
 	if strings.TrimSpace(repoPath) == "" {
 		return nil, ErrRepoPathRequired
 	}
@@ -87,10 +94,26 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 		close(done)
 	}()
 
+	// Pre-loop checks: disk space, memory pressure, log rotation.
+	// These are advisory — failures log warnings but do not abort the loop.
+	if warn := DiskSpaceWarning(repoPath, uint64(DefaultMinFreeDiskBytes)); warn != "" {
+		slog.Warn("pre-loop disk space check", "loop", id, "warning", warn)
+	}
+	if warn := MemoryPressureWarning(uint64(DefaultMaxHeapBytes), DefaultHeapUsageRatio); warn != "" {
+		slog.Warn("pre-loop memory pressure check", "loop", id, "warning", warn)
+	}
+	logDir := filepath.Join(repoPath, ".ralph", "logs")
+	if rotated, err := RotateLogs(logDir, MaxLogSize); err != nil {
+		slog.Warn("pre-loop log rotation failed", "loop", id, "dir", logDir, "error", err)
+	} else if rotated > 0 {
+		slog.Info("pre-loop log rotation", "loop", id, "files_rotated", rotated)
+	}
+
 	// Bootstrap autonomy config from .ralphrc (best-effort; defaults to level 0).
 	autonomyCfg := m.bootstrapLoopAutonomy(repoPath)
 	recoveryCount := 0
 	consecutiveNoops := 0
+	restartCount := 0
 
 	for {
 		if ctx.Err() != nil {
@@ -178,8 +201,25 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 			}
 
 			if autonomyCfg.Level >= LevelAutoRecover && autonomyCfg.AutoRecover && recoveryCount >= autonomyCfg.MaxRecoveries {
-				slog.Warn("loop auto-recovery: max recoveries exceeded, manual intervention required",
-					"loop", id, "recoveries", recoveryCount, "max", autonomyCfg.MaxRecoveries)
+				restartCount++
+				if restartCount >= DefaultMaxRestarts {
+					slog.Warn("loop restart cap reached, giving up",
+						"loop", id, "restarts", restartCount, "max", DefaultMaxRestarts,
+						"recoveries", recoveryCount)
+					return fmt.Errorf("loop %s: restart cap (%d) exceeded after %d total recoveries", id, DefaultMaxRestarts, recoveryCount)
+				}
+				// Reset recovery count for next restart cycle with cooldown.
+				cooldown := RecoveryBackoff(restartCount)
+				slog.Warn("loop auto-recovery: max recoveries exceeded, restarting recovery cycle",
+					"loop", id, "restart", restartCount, "max_restarts", DefaultMaxRestarts,
+					"recoveries", recoveryCount, "cooldown", cooldown)
+				recoveryCount = 0
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(cooldown):
+					continue
+				}
 			}
 
 			return err

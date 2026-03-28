@@ -1,8 +1,10 @@
 package model
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -443,6 +445,191 @@ func TestConfigDiff_NilConfigs(t *testing.T) {
 	changes = ConfigDiff(nil, nil)
 	if len(changes) != 0 {
 		t.Errorf("both nil should have no changes, got %v", changes)
+	}
+}
+
+// --- MigrateConfig tests ---
+
+func TestMigrateConfig_MigratesDeprecatedKeys(t *testing.T) {
+	cfg := &RalphConfig{
+		Values: map[string]string{
+			"CLAUDE_MODEL":    "sonnet",
+			"GEMINI_MODEL":    "flash",
+			"MAX_RETRIES":     "5",
+			"TIMEOUT_SECONDS": "120",
+		},
+	}
+	migrated, warnings := MigrateConfig(cfg)
+	if migrated != 4 {
+		t.Errorf("migrated = %d, want 4", migrated)
+	}
+	if len(warnings) != 4 {
+		t.Errorf("warnings len = %d, want 4", len(warnings))
+	}
+	// Old keys should be removed.
+	for _, oldKey := range []string{"CLAUDE_MODEL", "GEMINI_MODEL", "MAX_RETRIES", "TIMEOUT_SECONDS"} {
+		if _, ok := cfg.Values[oldKey]; ok {
+			t.Errorf("deprecated key %s still present after migration", oldKey)
+		}
+	}
+	// New keys should be set.
+	expected := map[string]string{
+		"PLANNER_MODEL": "sonnet",
+		"WORKER_MODEL":  "flash",
+		"RETRY_LIMIT":   "5",
+		"LOOP_TIMEOUT":  "120",
+	}
+	for k, want := range expected {
+		if got := cfg.Values[k]; got != want {
+			t.Errorf("Values[%s] = %q, want %q", k, got, want)
+		}
+	}
+}
+
+func TestMigrateConfig_SkipsIfNewKeyExists(t *testing.T) {
+	cfg := &RalphConfig{
+		Values: map[string]string{
+			"CLAUDE_MODEL":  "sonnet",
+			"PLANNER_MODEL": "opus",
+		},
+	}
+	migrated, warnings := MigrateConfig(cfg)
+	if migrated != 0 {
+		t.Errorf("migrated = %d, want 0 (new key already set)", migrated)
+	}
+	// Should have a warning about the conflict.
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w, "already set") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected warning about existing key, got: %v", warnings)
+	}
+	// Old key should still be present (not deleted).
+	if cfg.Values["CLAUDE_MODEL"] != "sonnet" {
+		t.Error("CLAUDE_MODEL should remain when new key exists")
+	}
+	if cfg.Values["PLANNER_MODEL"] != "opus" {
+		t.Error("PLANNER_MODEL should be unchanged")
+	}
+}
+
+func TestMigrateConfig_NilConfig(t *testing.T) {
+	migrated, warnings := MigrateConfig(nil)
+	if migrated != 0 || warnings != nil {
+		t.Errorf("nil config: migrated=%d, warnings=%v", migrated, warnings)
+	}
+}
+
+func TestMigrateConfig_NoDeprecatedKeys(t *testing.T) {
+	cfg := &RalphConfig{
+		Values: map[string]string{"MODEL": "sonnet", "BUDGET": "5.00"},
+	}
+	migrated, warnings := MigrateConfig(cfg)
+	if migrated != 0 {
+		t.Errorf("migrated = %d, want 0", migrated)
+	}
+	if len(warnings) != 0 {
+		t.Errorf("warnings = %v, want none", warnings)
+	}
+}
+
+// --- ExportConfig / ImportConfig tests ---
+
+func TestExportImportConfig_RoundTrip(t *testing.T) {
+	cfg := &RalphConfig{
+		Path: "/tmp/test/.ralphrc",
+		Values: map[string]string{
+			"MODEL":  "sonnet",
+			"BUDGET": "5.00",
+		},
+	}
+	data, err := ExportConfig(cfg)
+	if err != nil {
+		t.Fatalf("ExportConfig: %v", err)
+	}
+
+	imported, err := ImportConfig(data)
+	if err != nil {
+		t.Fatalf("ImportConfig: %v", err)
+	}
+	if imported.Path != cfg.Path {
+		t.Errorf("Path = %q, want %q", imported.Path, cfg.Path)
+	}
+	if imported.Values["MODEL"] != "sonnet" {
+		t.Errorf("MODEL = %q, want sonnet", imported.Values["MODEL"])
+	}
+	if imported.Values["BUDGET"] != "5.00" {
+		t.Errorf("BUDGET = %q, want 5.00", imported.Values["BUDGET"])
+	}
+}
+
+func TestExportConfig_NilConfig(t *testing.T) {
+	_, err := ExportConfig(nil)
+	if err == nil {
+		t.Error("ExportConfig(nil) should return error")
+	}
+}
+
+func TestExportConfig_NilValues(t *testing.T) {
+	cfg := &RalphConfig{Path: "/tmp/test"}
+	data, err := ExportConfig(cfg)
+	if err != nil {
+		t.Fatalf("ExportConfig: %v", err)
+	}
+	// Should serialize an empty map, not null.
+	if !strings.Contains(string(data), `"values"`) {
+		t.Error("exported JSON should contain values field")
+	}
+}
+
+func TestExportConfig_ValidJSON(t *testing.T) {
+	cfg := &RalphConfig{
+		Values: map[string]string{"MODEL": "sonnet"},
+	}
+	data, err := ExportConfig(cfg)
+	if err != nil {
+		t.Fatalf("ExportConfig: %v", err)
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("exported data is not valid JSON: %v", err)
+	}
+}
+
+func TestImportConfig_EmptyData(t *testing.T) {
+	_, err := ImportConfig(nil)
+	if err == nil {
+		t.Error("ImportConfig(nil) should return error")
+	}
+	_, err = ImportConfig([]byte{})
+	if err == nil {
+		t.Error("ImportConfig(empty) should return error")
+	}
+}
+
+func TestImportConfig_InvalidJSON(t *testing.T) {
+	_, err := ImportConfig([]byte("not json"))
+	if err == nil {
+		t.Error("ImportConfig with invalid JSON should return error")
+	}
+}
+
+func TestImportConfig_MissingValues(t *testing.T) {
+	_, err := ImportConfig([]byte(`{"path":"/tmp"}`))
+	if err == nil {
+		t.Error("ImportConfig without values field should return error")
+	}
+}
+
+func TestImportConfig_ValidationFailure(t *testing.T) {
+	// Budget with invalid value should fail validation.
+	data := []byte(`{"values":{"BUDGET":"not-a-number"}}`)
+	_, err := ImportConfig(data)
+	if err == nil {
+		t.Error("ImportConfig with invalid value should return error")
 	}
 }
 

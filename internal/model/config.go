@@ -2,6 +2,7 @@ package model
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -71,6 +72,15 @@ var DeprecatedKeys = map[string]string{
 	"GEMINI_MODEL":    "Use WORKER_MODEL instead",
 	"MAX_RETRIES":     "Use RETRY_LIMIT instead",
 	"TIMEOUT_SECONDS": "Use LOOP_TIMEOUT instead",
+}
+
+// deprecatedKeyMapping maps deprecated keys to their canonical replacements.
+// Extracted from the hint strings in DeprecatedKeys.
+var deprecatedKeyMapping = map[string]string{
+	"CLAUDE_MODEL":    "PLANNER_MODEL",
+	"GEMINI_MODEL":    "WORKER_MODEL",
+	"MAX_RETRIES":     "RETRY_LIMIT",
+	"TIMEOUT_SECONDS": "LOOP_TIMEOUT",
 }
 
 // ConfigWarning describes a non-fatal issue with a config value.
@@ -257,4 +267,75 @@ func (c *RalphConfig) Save() error {
 		}
 	}
 	return w.Flush()
+}
+
+// MigrateConfig scans cfg for deprecated keys and copies their values to the
+// canonical replacement key (if the new key is not already set). It removes
+// the deprecated key after migration. Returns the count of migrated keys and
+// any warnings produced during migration.
+func MigrateConfig(cfg *RalphConfig) (migrated int, warnings []string) {
+	if cfg == nil {
+		return 0, nil
+	}
+	for oldKey, val := range cfg.Values {
+		newKey, ok := deprecatedKeyMapping[oldKey]
+		if !ok {
+			continue
+		}
+		if _, exists := cfg.Values[newKey]; exists {
+			warnings = append(warnings, fmt.Sprintf(
+				"deprecated key %s not migrated: canonical key %s already set", oldKey, newKey))
+			continue
+		}
+		cfg.Values[newKey] = val
+		delete(cfg.Values, oldKey)
+		migrated++
+		warnings = append(warnings, fmt.Sprintf("migrated %s -> %s", oldKey, newKey))
+	}
+	return migrated, warnings
+}
+
+// configExport is the JSON-serializable representation of a RalphConfig.
+type configExport struct {
+	Path   string            `json:"path,omitempty"`
+	Values map[string]string `json:"values"`
+}
+
+// ExportConfig serializes a RalphConfig to JSON.
+func ExportConfig(cfg *RalphConfig) ([]byte, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("cannot export nil config")
+	}
+	vals := cfg.Values
+	if vals == nil {
+		vals = map[string]string{}
+	}
+	return json.MarshalIndent(configExport{
+		Path:   cfg.Path,
+		Values: vals,
+	}, "", "  ")
+}
+
+// ImportConfig deserializes a RalphConfig from JSON and validates it.
+func ImportConfig(data []byte) (*RalphConfig, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("empty config data")
+	}
+	var exp configExport
+	if err := json.Unmarshal(data, &exp); err != nil {
+		return nil, fmt.Errorf("invalid config JSON: %w", err)
+	}
+	if exp.Values == nil {
+		return nil, fmt.Errorf("config missing values field")
+	}
+	cfg := &RalphConfig{
+		Path:   exp.Path,
+		Values: exp.Values,
+	}
+	// Validate imported config.
+	_, errs := ValidateConfig(cfg)
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("config validation failed: %v", errs[0])
+	}
+	return cfg, nil
 }

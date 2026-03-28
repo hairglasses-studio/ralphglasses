@@ -529,6 +529,121 @@ func TestRepoOptimize_EmptyArraysNotNull(t *testing.T) {
 	}
 }
 
+// --- HealthWeights / computeHealthScore tests ---
+
+func TestDefaultHealthWeights_AllOne(t *testing.T) {
+	w := DefaultHealthWeights()
+	if w.CircuitBreakerOpen != 1.0 || w.Staleness != 1.0 || w.BudgetExceeded != 1.0 ||
+		w.ErroredSession != 1.0 || w.ConfigParseError != 1.0 || w.MissingDirectory != 1.0 ||
+		w.StaleLockFile != 1.0 || w.ClaudeMDWarnings != 1.0 || w.CircuitBreakerHalfOpen != 1.0 {
+		t.Error("DefaultHealthWeights should have all fields at 1.0")
+	}
+}
+
+func TestComputeHealthScore_PerfectHealth(t *testing.T) {
+	params := healthParams{cbState: "CLOSED"}
+	score, issues := computeHealthScore(params, DefaultHealthWeights())
+	if score != 100 {
+		t.Errorf("score = %d, want 100", score)
+	}
+	if len(issues) != 0 {
+		t.Errorf("issues = %v, want none", issues)
+	}
+}
+
+func TestComputeHealthScore_CircuitBreakerOpen(t *testing.T) {
+	params := healthParams{cbState: "OPEN", cbReason: "failures"}
+	score, issues := computeHealthScore(params, DefaultHealthWeights())
+	if score != 70 {
+		t.Errorf("score = %d, want 70 (100-30)", score)
+	}
+	if len(issues) != 1 {
+		t.Errorf("issues len = %d, want 1", len(issues))
+	}
+}
+
+func TestComputeHealthScore_CustomWeights(t *testing.T) {
+	params := healthParams{cbState: "OPEN", cbReason: "test"}
+	w := DefaultHealthWeights()
+	w.CircuitBreakerOpen = 2.0 // double penalty
+	score, _ := computeHealthScore(params, w)
+	if score != 40 {
+		t.Errorf("score = %d, want 40 (100 - 30*2)", score)
+	}
+}
+
+func TestComputeHealthScore_ZeroWeightDisablesCheck(t *testing.T) {
+	params := healthParams{
+		cbState:        "OPEN",
+		cbReason:       "test",
+		budgetExceeded: true,
+	}
+	w := DefaultHealthWeights()
+	w.CircuitBreakerOpen = 0 // disable CB check
+	score, issues := computeHealthScore(params, w)
+	// Only budget penalty should apply: 100 - 20 = 80
+	if score != 80 {
+		t.Errorf("score = %d, want 80 (CB disabled, budget -20)", score)
+	}
+	// Should still report both issues.
+	if len(issues) != 2 {
+		t.Errorf("issues len = %d, want 2", len(issues))
+	}
+}
+
+func TestComputeHealthScore_FloorAtZero(t *testing.T) {
+	params := healthParams{
+		cbState:         "OPEN",
+		cbReason:        "test",
+		budgetExceeded:  true,
+		erroredSessions: 20,
+		staleMinutes:    120,
+	}
+	w := DefaultHealthWeights()
+	w.CircuitBreakerOpen = 5.0 // 30*5 = 150 penalty alone
+	score, _ := computeHealthScore(params, w)
+	if score != 0 {
+		t.Errorf("score = %d, want 0 (floor)", score)
+	}
+}
+
+func TestComputeHealthScore_AllPenalties(t *testing.T) {
+	params := healthParams{
+		cbState:          "OPEN",
+		cbReason:         "test",
+		staleMinutes:     120,
+		budgetExceeded:   true,
+		erroredSessions:  2,
+		configParseError: "bad",
+		missingDirs:      []string{".ralph"},
+		staleLockMinutes: 120,
+		claudeMDWarnings: 5,
+	}
+	// 100 - 30 - 15 - 20 - 10 - 5 - 5 - 10 - 10 = -5 -> 0
+	score, issues := computeHealthScore(params, DefaultHealthWeights())
+	if score > 5 {
+		t.Errorf("score = %d, expected near 0 with all penalties", score)
+	}
+	if len(issues) < 7 {
+		t.Errorf("issues len = %d, expected >= 7", len(issues))
+	}
+}
+
+func TestWeightedPenalty(t *testing.T) {
+	if got := weightedPenalty(30, 1.0); got != 30 {
+		t.Errorf("weightedPenalty(30, 1.0) = %d, want 30", got)
+	}
+	if got := weightedPenalty(30, 0.5); got != 15 {
+		t.Errorf("weightedPenalty(30, 0.5) = %d, want 15", got)
+	}
+	if got := weightedPenalty(30, 0); got != 0 {
+		t.Errorf("weightedPenalty(30, 0) = %d, want 0", got)
+	}
+	if got := weightedPenalty(10, 2.0); got != 20 {
+		t.Errorf("weightedPenalty(10, 2.0) = %d, want 20", got)
+	}
+}
+
 func TestRepoHealth_LoopRunningField(t *testing.T) {
 	t.Parallel()
 	srv, root := setupTestServer(t)

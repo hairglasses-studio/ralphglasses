@@ -1302,3 +1302,202 @@ func TestValueAtPath(t *testing.T) {
 		t.Errorf("invalid nested on string = %v, want nil", got)
 	}
 }
+
+func TestParseProviderCostFromStderr(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider Provider
+		stderr   string
+		wantCost float64
+		wantOK   bool
+	}{
+		// Claude: universal cost patterns
+		{
+			name:     "claude_cost_with_dollar",
+			provider: ProviderClaude,
+			stderr:   "Processing complete.\nCost: $0.0023\nDone.",
+			wantCost: 0.0023,
+			wantOK:   true,
+		},
+		{
+			name:     "claude_total_cost",
+			provider: ProviderClaude,
+			stderr:   "Total cost: 0.0450",
+			wantCost: 0.0450,
+			wantOK:   true,
+		},
+		{
+			name:     "claude_session_cost",
+			provider: ProviderClaude,
+			stderr:   "Session cost: $1.05",
+			wantCost: 1.05,
+			wantOK:   true,
+		},
+		{
+			name:     "claude_no_cost",
+			provider: ProviderClaude,
+			stderr:   "Some random output without cost",
+			wantCost: 0,
+			wantOK:   false,
+		},
+		{
+			name:     "claude_empty",
+			provider: ProviderClaude,
+			stderr:   "",
+			wantCost: 0,
+			wantOK:   false,
+		},
+		// Gemini: token count patterns
+		{
+			name:     "gemini_token_counts",
+			provider: ProviderGemini,
+			stderr:   "prompt_token_count: 1000, candidates_token_count: 500",
+			wantCost: (1000.0/1_000_000)*CostGeminiFlashInput + (500.0/1_000_000)*CostGeminiFlashOutput,
+			wantOK:   true,
+		},
+		{
+			name:     "gemini_tokens_used",
+			provider: ProviderGemini,
+			stderr:   "Completed. 2000 tokens used.",
+			wantCost: (2000.0 / 1_000_000) * (CostGeminiFlashInput + CostGeminiFlashOutput) / 2,
+			wantOK:   true,
+		},
+		{
+			name:     "gemini_cost_pattern",
+			provider: ProviderGemini,
+			stderr:   "Total cost: $0.05",
+			wantCost: 0.05,
+			wantOK:   true,
+		},
+		{
+			name:     "gemini_no_cost",
+			provider: ProviderGemini,
+			stderr:   "Task completed successfully",
+			wantCost: 0,
+			wantOK:   false,
+		},
+		// Codex: token count patterns
+		{
+			name:     "codex_input_output_tokens",
+			provider: ProviderCodex,
+			stderr:   "Used 5000 input tokens, 1000 output tokens",
+			wantCost: (5000.0/1_000_000)*CostCodexInput + (1000.0/1_000_000)*CostCodexOutput,
+			wantOK:   true,
+		},
+		{
+			name:     "codex_tokens_format2",
+			provider: ProviderCodex,
+			stderr:   "Tokens: 3000 input / 800 output",
+			wantCost: (3000.0/1_000_000)*CostCodexInput + (800.0/1_000_000)*CostCodexOutput,
+			wantOK:   true,
+		},
+		{
+			name:     "codex_cost_pattern",
+			provider: ProviderCodex,
+			stderr:   "Cost: $0.12",
+			wantCost: 0.12,
+			wantOK:   true,
+		},
+		{
+			name:     "codex_no_cost",
+			provider: ProviderCodex,
+			stderr:   "Done.",
+			wantCost: 0,
+			wantOK:   false,
+		},
+		// ANSI codes should be stripped
+		{
+			name:     "ansi_codes_stripped",
+			provider: ProviderClaude,
+			stderr:   "\x1b[32mCost: $0.50\x1b[0m",
+			wantCost: 0.50,
+			wantOK:   true,
+		},
+		// Multiple cost lines: last wins
+		{
+			name:     "multiple_costs_last_wins",
+			provider: ProviderClaude,
+			stderr:   "Cost: $0.01\nMore output\nTotal cost: $0.05",
+			wantCost: 0.05,
+			wantOK:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ParseProviderCostFromStderr(tt.provider, tt.stderr)
+			if ok != tt.wantOK {
+				t.Errorf("ParseProviderCostFromStderr() ok = %v, want %v", ok, tt.wantOK)
+			}
+			if math.Abs(got-tt.wantCost) > 1e-9 {
+				t.Errorf("ParseProviderCostFromStderr() = %v, want %v", got, tt.wantCost)
+			}
+		})
+	}
+}
+
+func TestBatchOptionsInLaunchOptions(t *testing.T) {
+	// Verify nil Batch means non-batch mode (backward compatibility)
+	opts := LaunchOptions{
+		Provider: ProviderClaude,
+		RepoPath: "/tmp/repo",
+		Prompt:   "test",
+	}
+	if opts.Batch != nil {
+		t.Error("default LaunchOptions.Batch should be nil")
+	}
+
+	// Verify BatchOptions can be set
+	opts.Batch = &BatchOptions{
+		Enabled:     true,
+		CallbackURL: "https://example.com/webhook",
+		BatchID:     "batch-123",
+		Priority:    5,
+	}
+	if !opts.Batch.Enabled {
+		t.Error("Batch.Enabled should be true")
+	}
+	if opts.Batch.CallbackURL != "https://example.com/webhook" {
+		t.Errorf("Batch.CallbackURL = %q", opts.Batch.CallbackURL)
+	}
+	if opts.Batch.BatchID != "batch-123" {
+		t.Errorf("Batch.BatchID = %q", opts.Batch.BatchID)
+	}
+	if opts.Batch.Priority != 5 {
+		t.Errorf("Batch.Priority = %d", opts.Batch.Priority)
+	}
+}
+
+func TestBatchOptionsJSON(t *testing.T) {
+	bo := BatchOptions{
+		Enabled:     true,
+		CallbackURL: "https://example.com/callback",
+		BatchID:     "b-1",
+		Priority:    3,
+	}
+	data, err := json.Marshal(bo)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var decoded BatchOptions
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded != bo {
+		t.Errorf("roundtrip mismatch: got %+v, want %+v", decoded, bo)
+	}
+
+	// Verify omitempty for optional fields
+	bo2 := BatchOptions{Enabled: true}
+	data2, _ := json.Marshal(bo2)
+	s := string(data2)
+	if strings.Contains(s, "callback_url") {
+		t.Error("empty callback_url should be omitted")
+	}
+	if strings.Contains(s, "batch_id") {
+		t.Error("empty batch_id should be omitted")
+	}
+	if strings.Contains(s, "priority") {
+		t.Error("zero priority should be omitted")
+	}
+}

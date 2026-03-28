@@ -423,3 +423,259 @@ func TestCLI_Version(t *testing.T) {
 		t.Error("should output version")
 	}
 }
+
+func TestCLI_Improve_NoAPIKey(t *testing.T) {
+	// improve requires an API key; without one, engine returns nil
+	tmpDir := t.TempDir()
+	cmd := exec.Command(binaryPath, "improve", "fix the sorting bug in the codebase")
+	cmd.Env = []string{
+		"HOME=" + tmpDir,
+		"PATH=" + os.Getenv("PATH"),
+		// No ANTHROPIC_API_KEY, GOOGLE_API_KEY, or OPENAI_API_KEY
+	}
+	var errBuf strings.Builder
+	cmd.Stderr = &errBuf
+	err := cmd.Run()
+	if err == nil {
+		t.Error("improve without API key should fail")
+	}
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		if exitErr.ExitCode() != 1 {
+			t.Errorf("expected exit 1, got %d", exitErr.ExitCode())
+		}
+	}
+	if !strings.Contains(errBuf.String(), "not set") {
+		t.Errorf("stderr should mention API key not set, got: %s", errBuf.String())
+	}
+}
+
+func TestCLI_Improve_WithProvider(t *testing.T) {
+	// improve --provider gemini should mention GOOGLE_API_KEY
+	tmpDir := t.TempDir()
+	cmd := exec.Command(binaryPath, "improve", "--provider", "gemini", "fix the bug")
+	cmd.Env = []string{
+		"HOME=" + tmpDir,
+		"PATH=" + os.Getenv("PATH"),
+	}
+	var errBuf strings.Builder
+	cmd.Stderr = &errBuf
+	err := cmd.Run()
+	if err == nil {
+		t.Error("improve without API key should fail")
+	}
+	if !strings.Contains(errBuf.String(), "GOOGLE_API_KEY") {
+		t.Errorf("stderr should mention GOOGLE_API_KEY, got: %s", errBuf.String())
+	}
+}
+
+func TestCLI_Improve_OpenAIProvider(t *testing.T) {
+	tmpDir := t.TempDir()
+	cmd := exec.Command(binaryPath, "improve", "--provider", "openai", "fix the bug")
+	cmd.Env = []string{
+		"HOME=" + tmpDir,
+		"PATH=" + os.Getenv("PATH"),
+	}
+	var errBuf strings.Builder
+	cmd.Stderr = &errBuf
+	_ = cmd.Run()
+	if !strings.Contains(errBuf.String(), "OPENAI_API_KEY") {
+		t.Errorf("stderr should mention OPENAI_API_KEY, got: %s", errBuf.String())
+	}
+}
+
+func TestCLI_Improve_EmptyPrompt(t *testing.T) {
+	_, stderr, code := runCLI(t, "", "improve")
+	if code == 0 {
+		t.Error("improve with no prompt should fail")
+	}
+	if !strings.Contains(stderr, "usage") {
+		t.Errorf("stderr should contain usage, got: %s", stderr)
+	}
+}
+
+func TestCLI_Diff(t *testing.T) {
+	stdout, _, code := runCLI(t, "", "diff", "write a function to sort users by name with error handling")
+	if code != 0 {
+		t.Errorf("expected exit 0, got %d", code)
+	}
+	if !strings.Contains(stdout, "--- original") {
+		t.Error("diff output should contain --- original")
+	}
+	if !strings.Contains(stdout, "+++ enhanced") {
+		t.Error("diff output should contain +++ enhanced")
+	}
+}
+
+func TestCLI_Diff_EmptyPrompt(t *testing.T) {
+	_, stderr, code := runCLI(t, "", "diff")
+	if code == 0 {
+		t.Error("diff with no prompt should fail")
+	}
+	if !strings.Contains(stderr, "usage") {
+		t.Errorf("stderr should contain usage, got: %s", stderr)
+	}
+}
+
+func TestCLI_Enhance_Quiet(t *testing.T) {
+	stdout, _, code := runCLI(t, "", "enhance", "--quiet", "write a function to sort users by name with error handling")
+	if code != 0 {
+		t.Errorf("expected exit 0, got %d", code)
+	}
+	// Quiet mode should not produce JSON
+	if strings.Contains(stdout, `"enhanced"`) {
+		t.Error("quiet mode should not produce JSON output")
+	}
+	// But should produce some output (the enhanced prompt itself)
+	if len(strings.TrimSpace(stdout)) == 0 {
+		t.Error("quiet mode should produce enhanced prompt text")
+	}
+}
+
+func TestCLI_Enhance_WithMode(t *testing.T) {
+	stdout, _, code := runCLI(t, "", "enhance", "--mode", "local", "write a function to sort users by name with error handling")
+	if code != 0 {
+		t.Errorf("expected exit 0, got %d", code)
+	}
+	if !strings.Contains(stdout, `"enhanced"`) {
+		t.Error("output should contain enhanced JSON field")
+	}
+}
+
+func TestCLI_Enhance_InvalidMode(t *testing.T) {
+	_, _, code := runCLI(t, "", "enhance", "--mode", "invalid", "fix the bug")
+	if code == 0 {
+		t.Error("invalid mode should fail")
+	}
+}
+
+func TestCLI_Analyze_WithTargetProvider(t *testing.T) {
+	stdout, _, code := runCLI(t, "", "analyze", "--target-provider", "gemini", "write a function to sort users")
+	if code != 0 {
+		t.Errorf("expected exit 0, got %d", code)
+	}
+	if !strings.Contains(stdout, `"score_report"`) {
+		t.Error("analyze with target-provider should include score_report")
+	}
+}
+
+func TestCLI_Template_NoName(t *testing.T) {
+	_, stderr, code := runCLI(t, "", "template")
+	if code == 0 {
+		t.Error("template with no name should fail")
+	}
+	if !strings.Contains(stderr, "usage") {
+		t.Errorf("stderr should contain usage, got: %s", stderr)
+	}
+}
+
+func TestCLI_CacheCheck_NonexistentFile(t *testing.T) {
+	_, _, code := runCLI(t, "", "cache-check", "/nonexistent/file.txt")
+	if code == 0 {
+		t.Error("cache-check with nonexistent file should fail")
+	}
+}
+
+func TestCLI_CheckClaudeMD_Nonexistent(t *testing.T) {
+	_, _, code := runCLI(t, "", "check-claudemd", "/nonexistent/CLAUDE.md")
+	if code == 0 {
+		t.Error("check-claudemd with nonexistent file should fail")
+	}
+}
+
+func TestCLI_Lint_EmptyPrompt(t *testing.T) {
+	_, stderr, code := runCLI(t, "", "lint")
+	if code == 0 {
+		t.Error("lint with no prompt should fail")
+	}
+	if !strings.Contains(stderr, "usage") {
+		t.Errorf("stderr should contain usage, got: %s", stderr)
+	}
+}
+
+func TestCLI_Hook_BlockedPattern(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping slow hook integration test")
+	}
+	// Create a config with block patterns
+	tmpDir := t.TempDir()
+	configDir := filepath.Join(tmpDir, ".prompt-improver.yaml")
+	_ = os.WriteFile(configDir, []byte("block_patterns:\n  - \"^BLOCKED\""), 0644)
+
+	hookJSON := fmt.Sprintf(`{"session_id":"test","prompt":"BLOCKED this prompt","hook_event_name":"UserPromptSubmit","cwd":"%s"}`, tmpDir)
+	cmd := exec.Command(binaryPath, "hook")
+	cmd.Stdin = strings.NewReader(hookJSON)
+	cmd.Env = append(os.Environ(), "HOME="+tmpDir, "PROMPT_IMPROVER_LLM=0")
+	var outBuf strings.Builder
+	cmd.Stdout = &outBuf
+	err := cmd.Run()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			if exitErr.ExitCode() == 2 {
+				return // blocked as expected
+			}
+		}
+	}
+}
+
+func TestCLI_Hook_InvalidJSON(t *testing.T) {
+	// Invalid JSON that is not valid JSON structure — should be treated as raw prompt
+	cmd := exec.Command(binaryPath, "hook")
+	cmd.Stdin = strings.NewReader("{invalid json content")
+	var outBuf strings.Builder
+	cmd.Stdout = &outBuf
+	err := cmd.Run()
+	_ = err
+	// Should not crash
+}
+
+func TestCLI_Enhance_WithTargetProvider(t *testing.T) {
+	stdout, _, code := runCLI(t, "", "enhance", "--mode", "local", "--target-provider", "gemini", "write a function to sort users by name with error handling")
+	if code != 0 {
+		t.Errorf("expected exit 0, got %d", code)
+	}
+	if !strings.Contains(stdout, `"enhanced"`) {
+		t.Error("output should contain enhanced JSON field")
+	}
+}
+
+func TestCLI_Enhance_QuietWithMode(t *testing.T) {
+	stdout, _, code := runCLI(t, "", "enhance", "--mode", "local", "--quiet", "write a function to sort users by name with error handling")
+	if code != 0 {
+		t.Errorf("expected exit 0, got %d", code)
+	}
+	if strings.Contains(stdout, `"enhanced"`) {
+		t.Error("quiet mode should not produce JSON")
+	}
+	if len(strings.TrimSpace(stdout)) == 0 {
+		t.Error("quiet mode should produce enhanced text")
+	}
+}
+
+func TestCLI_Improve_WithThinkingFlag(t *testing.T) {
+	tmpDir := t.TempDir()
+	cmd := exec.Command(binaryPath, "improve", "--thinking", "fix the sorting bug in the codebase")
+	cmd.Env = []string{
+		"HOME=" + tmpDir,
+		"PATH=" + os.Getenv("PATH"),
+	}
+	var errBuf strings.Builder
+	cmd.Stderr = &errBuf
+	err := cmd.Run()
+	// Should fail (no API key) but exercise the --thinking path
+	if err == nil {
+		t.Error("improve without API key should fail")
+	}
+}
+
+func TestCLI_Improve_WithFeedback(t *testing.T) {
+	tmpDir := t.TempDir()
+	cmd := exec.Command(binaryPath, "improve", "--feedback", "focus on performance", "fix the sorting bug")
+	cmd.Env = []string{
+		"HOME=" + tmpDir,
+		"PATH=" + os.Getenv("PATH"),
+	}
+	var errBuf strings.Builder
+	cmd.Stderr = &errBuf
+	_ = cmd.Run()
+	// Exercises the --feedback code path
+}

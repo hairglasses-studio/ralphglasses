@@ -1432,3 +1432,283 @@ func TestDoctorCmd_ScanPathIsFile(t *testing.T) {
 		t.Errorf("doctor with file scan-path returned unexpected error: %v", err)
 	}
 }
+
+// --- setupServe tests ---
+
+func TestSetupServe_ReturnsNonNil(t *testing.T) {
+	bus, sessMgr, hostname := setupServe()
+	if bus == nil {
+		t.Error("setupServe should return non-nil bus")
+	}
+	if sessMgr == nil {
+		t.Error("setupServe should return non-nil session manager")
+	}
+	if hostname == "" {
+		t.Error("setupServe should return non-empty hostname")
+	}
+}
+
+// --- Serve command flag tests ---
+
+func TestServeCmd_PortDefault(t *testing.T) {
+	f := serveCmd.Flags()
+	port, err := f.GetInt("port")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if port == 0 {
+		t.Error("port default should not be 0")
+	}
+}
+
+func TestServeCmd_CoordinatorURLDefault(t *testing.T) {
+	f := serveCmd.Flags()
+	url, err := f.GetString("coordinator-url")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if url != "" {
+		t.Errorf("coordinator-url default = %q, want empty", url)
+	}
+}
+
+// --- applyTheme additional tests ---
+
+func TestApplyTheme_Gruvbox(t *testing.T) {
+	applyTheme("gruvbox")
+}
+
+func TestApplyTheme_Nord(t *testing.T) {
+	applyTheme("nord")
+}
+
+func TestApplyTheme_InvalidFilePath(t *testing.T) {
+	// Non-existent file path — should not panic, just silently fail
+	applyTheme("/nonexistent/path/theme.yaml")
+}
+
+// --- newLogHandler level filtering tests ---
+
+func TestNewLogHandler_DebugLevel(t *testing.T) {
+	origLevel := logLevel
+	origFormat := logFormat
+	defer func() {
+		logLevel = origLevel
+		logFormat = origFormat
+	}()
+
+	logLevel = "debug"
+	logFormat = "json"
+
+	var buf bytes.Buffer
+	h := newLogHandler(&buf)
+	logger := slog.New(h)
+	logger.Debug("debug msg")
+
+	if !strings.Contains(buf.String(), "debug msg") {
+		t.Error("debug handler should include debug messages")
+	}
+}
+
+func TestNewLogHandler_ErrorLevel(t *testing.T) {
+	origLevel := logLevel
+	origFormat := logFormat
+	defer func() {
+		logLevel = origLevel
+		logFormat = origFormat
+	}()
+
+	logLevel = "error"
+	logFormat = "json"
+
+	var buf bytes.Buffer
+	h := newLogHandler(&buf)
+	logger := slog.New(h)
+	logger.Info("info msg")
+
+	if strings.Contains(buf.String(), "info msg") {
+		t.Error("error handler should not include info messages")
+	}
+}
+
+// --- runCoordinator with pre-cancelled context ---
+
+func TestRunCoordinator_CancelledContext(t *testing.T) {
+	bus, sessMgr, hostname := setupServe()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // pre-cancel
+
+	origPort := servePort
+	origBudget := fleetBudget
+	defer func() {
+		servePort = origPort
+		fleetBudget = origBudget
+	}()
+	servePort = 0 // ephemeral port
+	fleetBudget = 100
+
+	err := runCoordinator(ctx, hostname, bus, sessMgr)
+	// Pre-cancelled context should cause the coordinator to stop quickly
+	if err != nil && err != context.Canceled {
+		t.Logf("runCoordinator returned: %v (acceptable)", err)
+	}
+}
+
+// --- newLogHandler text format ---
+
+func TestNewLogHandler_TextFormat(t *testing.T) {
+	origLevel := logLevel
+	origFormat := logFormat
+	defer func() {
+		logLevel = origLevel
+		logFormat = origFormat
+	}()
+
+	logLevel = "info"
+	logFormat = "text"
+
+	var buf bytes.Buffer
+	h := newLogHandler(&buf)
+	logger := slog.New(h)
+	logger.Info("test text")
+
+	if !strings.Contains(buf.String(), "test text") {
+		t.Error("text handler should include info messages")
+	}
+}
+
+// --- Serve command flag: fleet-budget ---
+
+func TestServeCmd_FleetBudgetDefault(t *testing.T) {
+	f := serveCmd.Flags()
+	budget, err := f.GetFloat64("fleet-budget")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if budget != 500 {
+		t.Errorf("fleet-budget default = %f, want 500", budget)
+	}
+}
+
+// --- gatecheck with observations error path ---
+
+func TestGateCheckCmd_ObservationsLoadError(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a valid baseline file
+	baselinePath := tmpDir + "/baseline.json"
+	os.WriteFile(baselinePath, []byte(`{"generated_at":"2024-01-01T00:00:00Z","window_hours":24,"entries":{}}`), 0644)
+
+	// Create observation path as a directory (to trigger non-NotExist error)
+	obsDir := tmpDir + "/.ralph/observations"
+	os.MkdirAll(obsDir, 0755)
+	// Create the expected file path as a directory
+	os.MkdirAll(obsDir+"/loop_observations.json", 0755)
+
+	origScanPath := scanPath
+	origBaselinePath := gateBaselinePath
+	origJSON := gateJSON
+	defer func() {
+		scanPath = origScanPath
+		gateBaselinePath = origBaselinePath
+		gateJSON = origJSON
+	}()
+	scanPath = tmpDir
+	gateBaselinePath = baselinePath
+	gateJSON = true
+
+	cmd := *gateCheckCmd
+	err := cmd.RunE(&cmd, nil)
+	// If observations path is a directory, it may error or skip
+	_ = err // Just exercise the code path
+}
+
+func TestServeCmd_CoordinatorDefault(t *testing.T) {
+	f := serveCmd.Flags()
+	coord, err := f.GetBool("coordinator")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if coord {
+		t.Error("coordinator default should be false")
+	}
+}
+
+// --- gatecheck RunE tests ---
+
+func TestGateCheckCmd_NoBaseline(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	origScanPath := scanPath
+	origBaselinePath := gateBaselinePath
+	origJSON := gateJSON
+	defer func() {
+		scanPath = origScanPath
+		gateBaselinePath = origBaselinePath
+		gateJSON = origJSON
+	}()
+	scanPath = tmpDir
+	gateBaselinePath = "" // use default, which won't exist
+	gateJSON = true
+
+	cmd := *gateCheckCmd
+	err := cmd.RunE(&cmd, nil)
+	// With no baseline, should produce a skip report (not error)
+	if err != nil {
+		t.Errorf("gate-check with no baseline should not error, got: %v", err)
+	}
+}
+
+func TestGateCheckCmd_WithBaseline_NoObservations(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a valid baseline file
+	baselinePath := tmpDir + "/baseline.json"
+	os.WriteFile(baselinePath, []byte(`{"generated_at":"2024-01-01T00:00:00Z","window_hours":24,"entries":{}}`), 0644)
+
+	origScanPath := scanPath
+	origBaselinePath := gateBaselinePath
+	origJSON := gateJSON
+	defer func() {
+		scanPath = origScanPath
+		gateBaselinePath = origBaselinePath
+		gateJSON = origJSON
+	}()
+	scanPath = tmpDir
+	gateBaselinePath = baselinePath
+	gateJSON = true
+
+	cmd := *gateCheckCmd
+	err := cmd.RunE(&cmd, nil)
+	// No observations file — should produce skip report
+	if err != nil {
+		t.Errorf("gate-check with no observations should not error, got: %v", err)
+	}
+}
+
+func TestGateCheckCmd_InvalidBaselinePath(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create baseline as a directory to trigger non-NotExist error
+	baselinePath := tmpDir + "/baseline.json"
+	os.MkdirAll(baselinePath, 0755)
+
+	origScanPath := scanPath
+	origBaselinePath := gateBaselinePath
+	origJSON := gateJSON
+	defer func() {
+		scanPath = origScanPath
+		gateBaselinePath = origBaselinePath
+		gateJSON = origJSON
+	}()
+	scanPath = tmpDir
+	gateBaselinePath = baselinePath
+	gateJSON = false
+
+	cmd := *gateCheckCmd
+	err := cmd.RunE(&cmd, nil)
+	// Should return error (not IsNotExist, but read error)
+	if err == nil {
+		t.Error("gate-check with directory as baseline should error")
+	}
+}

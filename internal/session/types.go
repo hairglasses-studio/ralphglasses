@@ -98,6 +98,16 @@ type StreamEvent struct {
 	Raw       json.RawMessage `json:"-"`
 }
 
+// BatchOptions configures batch/async session execution.
+// When Enabled is true, the session is treated as part of a batch and results
+// are collected via polling or webhook callback.
+type BatchOptions struct {
+	Enabled     bool   `json:"enabled"`
+	CallbackURL string `json:"callback_url,omitempty"`
+	BatchID     string `json:"batch_id,omitempty"`
+	Priority    int    `json:"priority,omitempty"` // 0 = default, higher = more urgent
+}
+
 // LaunchOptions configures a session launch.
 type LaunchOptions struct {
 	Provider     Provider
@@ -122,6 +132,8 @@ type LaunchOptions struct {
 	Betas         []string          // --betas (beta feature headers)
 	FallbackModel string            // --fallback-model (auto-fallback on overload)
 	OutputSchema  json.RawMessage   // --json-schema (Claude) / --output-schema (Codex)
+
+	Batch *BatchOptions // nil means non-batch (normal) mode
 }
 
 // TeamConfig holds agent team configuration.

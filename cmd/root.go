@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -26,15 +27,16 @@ import (
 )
 
 var (
-	scanPath   string
-	themeName  string
-	notifyFlag bool
-	debugMode  bool
-	logLevel   string
-	logFormat  string
-	version    = "dev"
-	commit     = "unknown"
-	buildDate  = "unknown"
+	scanPath    string
+	themeName   string
+	notifyFlag  bool
+	debugMode   bool
+	logLevel    string
+	logFormat   string
+	scanTimeout string
+	version     = "dev"
+	commit      = "unknown"
+	buildDate   = "unknown"
 )
 
 var rootCmd = &cobra.Command{
@@ -51,6 +53,14 @@ fleet management from any MCP-capable client.`,
 	Version: version,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		util.Debug.Enabled = debugMode
+
+		// Configure structured logging from flags before anything else logs.
+		slog.SetDefault(slog.New(newLogHandler(os.Stderr)))
+
+		// Validate --scan-timeout is a valid duration.
+		if _, err := time.ParseDuration(scanTimeout); err != nil {
+			return fmt.Errorf("invalid --scan-timeout %q: %w", scanTimeout, err)
+		}
 
 		// Load and validate runtime config (warnings only, non-fatal).
 		home, _ := os.UserHomeDir()
@@ -116,11 +126,23 @@ func init() {
 		"Log level (debug, info, warn, error)")
 	rootCmd.PersistentFlags().StringVar(&logFormat, "log-format", "json",
 		"Log format (json, text)")
+	rootCmd.PersistentFlags().StringVar(&scanTimeout, "scan-timeout", "30s",
+		"Timeout for repository scanning (e.g. 30s, 1m)")
 	rootCmd.Flags().StringVar(&themeName, "theme", "k9s",
 		"Color theme (k9s, dracula, gruvbox, nord, or path to YAML)")
 	rootCmd.Flags().BoolVar(&notifyFlag, "notify", false,
 		"Enable desktop notifications for critical alerts")
 	rootCmd.AddCommand(completionCmd)
+}
+
+// ScanTimeoutDuration returns the parsed --scan-timeout duration.
+// It panics if called before PersistentPreRunE has validated the value.
+func ScanTimeoutDuration() time.Duration {
+	d, err := time.ParseDuration(scanTimeout)
+	if err != nil {
+		return 30 * time.Second
+	}
+	return d
 }
 
 // parseLogLevel converts a string level name to slog.Level.
