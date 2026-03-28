@@ -16,16 +16,18 @@ import (
 // Session lifecycle handlers (launch, stop, resume, retry)
 
 func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "repo")
-	if name == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
+	p := NewParams(req)
+
+	name, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := ValidateRepoName(name); err != nil {
 		return codedError(ErrRepoNameInvalid, fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
-	prompt := getStringArg(req, "prompt")
-	if prompt == "" {
-		return codedError(ErrInvalidParams, "prompt required"), nil
+	prompt, errResult := p.RequireString("prompt")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := ValidateStringLength(prompt, MaxPromptLength, "prompt"); err != nil {
 		return codedError(ErrInvalidParams, err.Error()), nil
@@ -40,7 +42,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
-	provider := session.Provider(getStringArg(req, "provider"))
+	provider := session.Provider(p.OptionalString("provider", ""))
 	if provider == "" {
 		provider = session.ProviderClaude
 	}
@@ -48,7 +50,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		return codedError(ErrProviderUnavailable, fmt.Sprintf("invalid provider %q: %v", provider, err)), nil
 	}
 
-	systemPrompt := getStringArg(req, "system_prompt")
+	systemPrompt := p.OptionalString("system_prompt", "")
 	if err := ValidateStringLength(systemPrompt, MaxPromptLength, "system_prompt"); err != nil {
 		return codedError(ErrInvalidParams, err.Error()), nil
 	}
@@ -57,27 +59,27 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		Provider:     provider,
 		RepoPath:     r.Path,
 		Prompt:       prompt,
-		Model:        getStringArg(req, "model"),
-		MaxBudgetUSD: getNumberArg(req, "budget_usd", 0),
-		MaxTurns:     int(getNumberArg(req, "max_turns", 0)),
-		Agent:        getStringArg(req, "agent"),
+		Model:        p.OptionalString("model", ""),
+		MaxBudgetUSD: p.OptionalNumber("budget_usd", 0),
+		MaxTurns:     int(p.OptionalNumber("max_turns", 0)),
+		Agent:        p.OptionalString("agent", ""),
 		SystemPrompt: systemPrompt,
-		SessionName:  getStringArg(req, "session_name"),
-		Worktree:     getStringArg(req, "worktree"),
+		SessionName:  p.OptionalString("session_name", ""),
+		Worktree:     p.OptionalString("worktree", ""),
 	}
-	if getBoolArg(req, "bare") {
+	if p.OptionalBool("bare", false) {
 		opts.Bare = true
 	}
-	if effort := getStringArg(req, "effort"); effort != "" {
+	if effort := p.OptionalString("effort", ""); effort != "" {
 		opts.Effort = effort
 	}
-	if fallback := getStringArg(req, "fallback_model"); fallback != "" {
+	if fallback := p.OptionalString("fallback_model", ""); fallback != "" {
 		opts.FallbackModel = fallback
 	}
-	if tools := getStringArg(req, "allowed_tools"); tools != "" {
+	if tools := p.OptionalString("allowed_tools", ""); tools != "" {
 		opts.AllowedTools = strings.Split(tools, ",")
 	}
-	if schema := getStringArg(req, "output_schema"); schema != "" {
+	if schema := p.OptionalString("output_schema", ""); schema != "" {
 		if !json.Valid([]byte(schema)) {
 			return codedError(ErrInvalidParams, "output_schema must be valid JSON"), nil
 		}
@@ -85,7 +87,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 	}
 
 	// Inject improvement context from journal
-	if getStringArg(req, "no_journal") != "true" {
+	if p.OptionalString("no_journal", "") != "true" {
 		journal, _ := session.ReadRecentJournal(r.Path, 5)
 		if len(journal) > 0 {
 			journalCtx := session.SynthesizeContext(journal)
@@ -96,7 +98,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 	}
 
 	// Auto-enhance prompt if requested
-	enhanceMode := getStringArg(req, "enhance_prompt")
+	enhanceMode := p.OptionalString("enhance_prompt", "")
 	if enhanceMode != "" {
 		cfg := enhancer.LoadConfig(r.Path)
 		if enhancer.ShouldEnhance(prompt, cfg) {
@@ -104,7 +106,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 			if mode == "" {
 				mode = enhancer.ModeLocal
 			}
-			targetProvider := enhancer.ProviderName(getStringArg(req, "target_provider"))
+			targetProvider := enhancer.ProviderName(p.OptionalString("target_provider", ""))
 			if targetProvider == "" {
 				targetProvider = mapSessionProvider(provider)
 			}

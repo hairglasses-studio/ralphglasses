@@ -13,9 +13,11 @@ import (
 )
 
 func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoName := getStringArg(req, "repo")
-	if repoName == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
+	p := NewParams(req)
+
+	repoName, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
 		return codedError(ErrRepoNameInvalid, fmt.Sprintf("invalid repo name: %v", err)), nil
@@ -32,66 +34,66 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 	}
 
 	profile := session.DefaultLoopProfile()
-	if value := getStringArg(req, "planner_model"); value != "" {
+	if value := p.OptionalString("planner_model", ""); value != "" {
 		profile.PlannerModel = value
 	}
-	if value := getStringArg(req, "worker_model"); value != "" {
+	if value := p.OptionalString("worker_model", ""); value != "" {
 		profile.WorkerModel = value
 	}
-	if value := getStringArg(req, "verifier_model"); value != "" {
+	if value := p.OptionalString("verifier_model", ""); value != "" {
 		profile.VerifierModel = value
 	}
-	if value := getStringArg(req, "worktree_policy"); value != "" {
+	if value := p.OptionalString("worktree_policy", ""); value != "" {
 		profile.WorktreePolicy = value
 	}
-	if value := int(getNumberArg(req, "retry_limit", float64(profile.RetryLimit))); value != profile.RetryLimit {
+	if value := int(p.OptionalNumber("retry_limit", float64(profile.RetryLimit))); value != profile.RetryLimit {
 		profile.RetryLimit = value
 	}
-	if value := int(getNumberArg(req, "max_concurrent_workers", float64(profile.MaxConcurrentWorkers))); value != profile.MaxConcurrentWorkers {
+	if value := int(p.OptionalNumber("max_concurrent_workers", float64(profile.MaxConcurrentWorkers))); value != profile.MaxConcurrentWorkers {
 		profile.MaxConcurrentWorkers = value
 	}
-	if commands := splitLines(getStringArg(req, "verify_commands")); len(commands) > 0 {
+	if commands := splitLines(p.OptionalString("verify_commands", "")); len(commands) > 0 {
 		profile.VerifyCommands = commands
 	}
-	if pp := getStringArg(req, "planner_provider"); pp != "" {
+	if pp := p.OptionalString("planner_provider", ""); pp != "" {
 		profile.PlannerProvider = session.Provider(pp)
 	}
-	if wp := getStringArg(req, "worker_provider"); wp != "" {
+	if wp := p.OptionalString("worker_provider", ""); wp != "" {
 		profile.WorkerProvider = session.Provider(wp)
 	}
-	if vp := getStringArg(req, "verifier_provider"); vp != "" {
+	if vp := p.OptionalString("verifier_provider", ""); vp != "" {
 		profile.VerifierProvider = session.Provider(vp)
 	}
-	if budgetUSD := getNumberArg(req, "budget_usd", 0); budgetUSD > 0 {
+	if budgetUSD := p.OptionalNumber("budget_usd", 0); budgetUSD > 0 {
 		profile.PlannerBudgetUSD = budgetUSD / 3
 		profile.WorkerBudgetUSD = budgetUSD * 2 / 3
 	}
 
 	// Wire self-learning subsystems when requested (singleton: only create if not already set).
 	ralphDir := filepath.Join(r.Path, ".ralph")
-	if getBoolArg(req, "enable_reflexion") {
+	if p.OptionalBool("enable_reflexion", false) {
 		profile.EnableReflexion = true
 		if !s.SessMgr.HasReflexion() {
 			s.SessMgr.SetReflexionStore(session.NewReflexionStore(ralphDir))
 		}
 	}
-	if getBoolArg(req, "enable_episodic_memory") {
+	if p.OptionalBool("enable_episodic_memory", false) {
 		profile.EnableEpisodicMemory = true
 		if !s.SessMgr.HasEpisodicMemory() {
 			s.SessMgr.SetEpisodicMemory(session.NewEpisodicMemory(ralphDir, 500, 0))
 		}
 	}
-	if getBoolArg(req, "enable_cascade") {
+	if p.OptionalBool("enable_cascade", false) {
 		profile.EnableCascade = true
 		if !s.SessMgr.HasCascadeRouter() {
 			cfg := cascadeConfigFromRepo(r.Path, ralphDir)
 			s.SessMgr.SetCascadeRouter(session.NewCascadeRouter(cfg, nil, nil, ralphDir))
 		}
 	}
-	if getBoolArg(req, "enable_uncertainty") {
+	if p.OptionalBool("enable_uncertainty", false) {
 		profile.EnableUncertainty = true
 	}
-	if getBoolArg(req, "enable_curriculum") {
+	if p.OptionalBool("enable_curriculum", false) {
 		profile.EnableCurriculum = true
 		if !s.SessMgr.HasCurriculumSorter() {
 			// Wire to real episodic memory if available for richer difficulty scoring.
@@ -104,16 +106,16 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 	}
 
 	// Self-improvement mode: override profile with SelfImprovementProfile defaults.
-	if getBoolArg(req, "self_improvement") {
+	if p.OptionalBool("self_improvement", false) {
 		profile = session.SelfImprovementProfile()
 		// Re-apply explicit overrides on top of self-improvement defaults.
-		if value := getStringArg(req, "planner_model"); value != "" {
+		if value := p.OptionalString("planner_model", ""); value != "" {
 			profile.PlannerModel = value
 		}
-		if value := getStringArg(req, "worker_model"); value != "" {
+		if value := p.OptionalString("worker_model", ""); value != "" {
 			profile.WorkerModel = value
 		}
-		if budgetUSD := getNumberArg(req, "budget_usd", 0); budgetUSD > 0 {
+		if budgetUSD := p.OptionalNumber("budget_usd", 0); budgetUSD > 0 {
 			profile.PlannerBudgetUSD = budgetUSD / 4
 			profile.WorkerBudgetUSD = budgetUSD * 3 / 4
 		}
@@ -122,10 +124,10 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 	}
 
 	// Iteration and duration limits
-	if maxIter := int(getNumberArg(req, "max_iterations", 0)); maxIter > 0 {
+	if maxIter := int(p.OptionalNumber("max_iterations", 0)); maxIter > 0 {
 		profile.MaxIterations = maxIter
 	}
-	if durationHours := getNumberArg(req, "duration_hours", 0); durationHours > 0 {
+	if durationHours := p.OptionalNumber("duration_hours", 0); durationHours > 0 {
 		profile.MaxDurationSecs = int(durationHours * 3600)
 	}
 

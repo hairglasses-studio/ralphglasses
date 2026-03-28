@@ -80,6 +80,39 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_repo ON sessions(repo_path);
 CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
 CREATE INDEX IF NOT EXISTS idx_sessions_repo_name ON sessions(repo_name);
+
+CREATE TABLE IF NOT EXISTS loop_runs (
+	id TEXT PRIMARY KEY,
+	repo_path TEXT NOT NULL DEFAULT '',
+	repo_name TEXT NOT NULL DEFAULT '',
+	status TEXT NOT NULL DEFAULT 'pending',
+	profile TEXT NOT NULL DEFAULT '{}',
+	iterations TEXT NOT NULL DEFAULT '[]',
+	last_error TEXT NOT NULL DEFAULT '',
+	paused INTEGER NOT NULL DEFAULT 0,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	deadline DATETIME
+);
+
+CREATE INDEX IF NOT EXISTS idx_loop_runs_repo ON loop_runs(repo_path);
+CREATE INDEX IF NOT EXISTS idx_loop_runs_status ON loop_runs(status);
+
+CREATE TABLE IF NOT EXISTS cost_ledger (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	session_id TEXT,
+	loop_id TEXT,
+	provider TEXT NOT NULL DEFAULT '',
+	model TEXT NOT NULL DEFAULT '',
+	spend_usd REAL NOT NULL DEFAULT 0,
+	turn_count INTEGER NOT NULL DEFAULT 0,
+	elapsed_sec REAL NOT NULL DEFAULT 0,
+	recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_cost_ledger_session ON cost_ledger(session_id);
+CREATE INDEX IF NOT EXISTS idx_cost_ledger_loop ON cost_ledger(loop_id);
+CREATE INDEX IF NOT EXISTS idx_cost_ledger_provider ON cost_ledger(provider);
 `
 	_, err := s.db.Exec(ddl)
 	return err
@@ -315,4 +348,228 @@ func scanSession(row *sql.Row) (*Session, error) {
 
 func scanSessionRows(rows *sql.Rows) (*Session, error) {
 	return scanSessionFromScanner(rows)
+}
+
+// ---------- LoopRun persistence ----------
+
+func (s *SQLiteStore) SaveLoopRun(ctx context.Context, run *LoopRun) error {
+	if run == nil || run.ID == "" {
+		return fmt.Errorf("save loop run: nil run or empty ID")
+	}
+
+	profileJSON, err := json.Marshal(run.Profile)
+	if err != nil {
+		return fmt.Errorf("save loop run %s: marshal profile: %w", run.ID, err)
+	}
+
+	iterJSON, err := json.Marshal(run.Iterations)
+	if err != nil {
+		return fmt.Errorf("save loop run %s: marshal iterations: %w", run.ID, err)
+	}
+
+	var deadline *string
+	if run.Deadline != nil {
+		t := run.Deadline.Format(time.RFC3339)
+		deadline = &t
+	}
+
+	paused := 0
+	if run.Paused {
+		paused = 1
+	}
+
+	const query = `
+INSERT INTO loop_runs (
+	id, repo_path, repo_name, status, profile, iterations,
+	last_error, paused, created_at, updated_at, deadline
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+	repo_path=excluded.repo_path, repo_name=excluded.repo_name,
+	status=excluded.status, profile=excluded.profile, iterations=excluded.iterations,
+	last_error=excluded.last_error, paused=excluded.paused,
+	updated_at=excluded.updated_at, deadline=excluded.deadline
+`
+	_, err = s.db.ExecContext(ctx, query,
+		run.ID, run.RepoPath, run.RepoName, run.Status,
+		string(profileJSON), string(iterJSON),
+		run.LastError, paused,
+		run.CreatedAt.Format(time.RFC3339),
+		run.UpdatedAt.Format(time.RFC3339),
+		deadline,
+	)
+	if err != nil {
+		return fmt.Errorf("save loop run %s: %w", run.ID, err)
+	}
+	return nil
+}
+
+func (s *SQLiteStore) GetLoopRun(ctx context.Context, id string) (*LoopRun, error) {
+	const query = `
+SELECT id, repo_path, repo_name, status, profile, iterations,
+	last_error, paused, created_at, updated_at, deadline
+FROM loop_runs WHERE id = ?
+`
+	row := s.db.QueryRowContext(ctx, query, id)
+	run, err := scanLoopRun(row)
+	if err == sql.ErrNoRows {
+		return nil, ErrLoopNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get loop run %s: %w", id, err)
+	}
+	return run, nil
+}
+
+func (s *SQLiteStore) ListLoopRuns(ctx context.Context, filter LoopRunFilter) ([]*LoopRun, error) {
+	query := `SELECT id, repo_path, repo_name, status, profile, iterations,
+		last_error, paused, created_at, updated_at, deadline
+		FROM loop_runs WHERE 1=1`
+	var args []any
+
+	if filter.RepoPath != "" {
+		query += " AND repo_path = ?"
+		args = append(args, filter.RepoPath)
+	}
+	if filter.Status != "" {
+		query += " AND status = ?"
+		args = append(args, filter.Status)
+	}
+
+	query += " ORDER BY created_at DESC"
+
+	if filter.Limit > 0 {
+		query += fmt.Sprintf(" LIMIT %d", filter.Limit)
+	}
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list loop runs: %w", err)
+	}
+	defer rows.Close()
+
+	var result []*LoopRun
+	for rows.Next() {
+		run, err := scanLoopRunRows(rows)
+		if err != nil {
+			return nil, fmt.Errorf("list loop runs: scan: %w", err)
+		}
+		result = append(result, run)
+	}
+	return result, rows.Err()
+}
+
+func (s *SQLiteStore) UpdateLoopRunStatus(ctx context.Context, id string, status string) error {
+	res, err := s.db.ExecContext(ctx,
+		"UPDATE loop_runs SET status = ?, updated_at = ? WHERE id = ?",
+		status, time.Now().Format(time.RFC3339), id,
+	)
+	if err != nil {
+		return fmt.Errorf("update loop run status %s: %w", id, err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrLoopNotFound
+	}
+	return nil
+}
+
+func scanLoopRunFromScanner(sc scanner) (*LoopRun, error) {
+	var (
+		run           LoopRun
+		profileJSON   string
+		iterJSON      string
+		paused        int
+		createdAt     string
+		updatedAt     string
+		deadline      *string
+	)
+
+	err := sc.Scan(
+		&run.ID, &run.RepoPath, &run.RepoName, &run.Status,
+		&profileJSON, &iterJSON,
+		&run.LastError, &paused,
+		&createdAt, &updatedAt, &deadline,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	run.Paused = paused != 0
+
+	if profileJSON != "" && profileJSON != "{}" {
+		_ = json.Unmarshal([]byte(profileJSON), &run.Profile)
+	}
+	if iterJSON != "" && iterJSON != "[]" {
+		_ = json.Unmarshal([]byte(iterJSON), &run.Iterations)
+	}
+
+	if t, err := time.Parse(time.RFC3339, createdAt); err == nil {
+		run.CreatedAt = t
+	}
+	if t, err := time.Parse(time.RFC3339, updatedAt); err == nil {
+		run.UpdatedAt = t
+	}
+	if deadline != nil {
+		if t, err := time.Parse(time.RFC3339, *deadline); err == nil {
+			run.Deadline = &t
+		}
+	}
+
+	return &run, nil
+}
+
+func scanLoopRun(row *sql.Row) (*LoopRun, error) {
+	return scanLoopRunFromScanner(row)
+}
+
+func scanLoopRunRows(rows *sql.Rows) (*LoopRun, error) {
+	return scanLoopRunFromScanner(rows)
+}
+
+// ---------- Cost ledger persistence ----------
+
+func (s *SQLiteStore) RecordCost(ctx context.Context, entry *CostEntry) error {
+	if entry == nil {
+		return fmt.Errorf("record cost: nil entry")
+	}
+
+	const query = `
+INSERT INTO cost_ledger (session_id, loop_id, provider, model, spend_usd, turn_count, elapsed_sec, recorded_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`
+	recordedAt := entry.RecordedAt
+	if recordedAt.IsZero() {
+		recordedAt = time.Now()
+	}
+
+	res, err := s.db.ExecContext(ctx, query,
+		entry.SessionID, entry.LoopID, entry.Provider, entry.Model,
+		entry.SpendUSD, entry.TurnCount, entry.ElapsedSec,
+		recordedAt.Format(time.RFC3339),
+	)
+	if err != nil {
+		return fmt.Errorf("record cost: %w", err)
+	}
+	entry.ID, _ = res.LastInsertId()
+	return nil
+}
+
+func (s *SQLiteStore) AggregateCostByProvider(ctx context.Context, since time.Time) (map[string]float64, error) {
+	const query = `SELECT provider, COALESCE(SUM(spend_usd), 0) FROM cost_ledger WHERE recorded_at >= ? GROUP BY provider`
+	rows, err := s.db.QueryContext(ctx, query, since.Format(time.RFC3339))
+	if err != nil {
+		return nil, fmt.Errorf("aggregate cost by provider: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[string]float64)
+	for rows.Next() {
+		var provider string
+		var total float64
+		if err := rows.Scan(&provider, &total); err != nil {
+			return nil, fmt.Errorf("aggregate cost by provider: scan: %w", err)
+		}
+		result[provider] = total
+	}
+	return result, rows.Err()
 }

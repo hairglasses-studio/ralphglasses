@@ -635,3 +635,667 @@ func cronFieldMatch(field string, value int) bool {
 	return value == n
 }
 
+// --- Tier 2 rdcycle tools ---
+
+func (s *Server) handleLoopReplay(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	loopID := getStringArg(req, "loop_id")
+	if loopID == "" {
+		return codedError(ErrInvalidParams, "loop_id is required"), nil
+	}
+	iteration := int(getNumberArg(req, "iteration", -1))
+	if iteration < 0 {
+		return codedError(ErrInvalidParams, "iteration is required"), nil
+	}
+	overridesStr := getStringArg(req, "overrides")
+
+	// Find loop run file in the first available repo's .ralph dir.
+	repo := getStringArg(req, "repo")
+	repoPath, err := s.resolveRepoPath(repo)
+	if err != nil {
+		return codedError(ErrRepoNotFound, err.Error()), nil
+	}
+
+	runPath := filepath.Join(repoPath, ".ralph", "loop_runs", loopID+".json")
+	data, err := os.ReadFile(runPath)
+	if err != nil {
+		return codedError(ErrFilesystem, fmt.Sprintf("cannot read loop run file: %v", err)), nil
+	}
+
+	var loopRun map[string]any
+	if err := json.Unmarshal(data, &loopRun); err != nil {
+		return codedError(ErrInternal, fmt.Sprintf("invalid loop run JSON: %v", err)), nil
+	}
+
+	// Find the specified iteration.
+	iterations, _ := loopRun["iterations"].([]any)
+	if iterations == nil {
+		return codedError(ErrInvalidParams, "loop run has no iterations"), nil
+	}
+	if iteration >= len(iterations) {
+		return codedError(ErrInvalidParams, fmt.Sprintf("iteration %d out of range (max %d)", iteration, len(iterations)-1)), nil
+	}
+
+	iterData, ok := iterations[iteration].(map[string]any)
+	if !ok {
+		return codedError(ErrInternal, "iteration data is not a valid object"), nil
+	}
+
+	// Build merged config from iteration data.
+	newConfig := make(map[string]any)
+	if cfg, ok := iterData["config"].(map[string]any); ok {
+		for k, v := range cfg {
+			newConfig[k] = v
+		}
+	}
+	// Copy top-level loop fields as defaults.
+	for _, key := range []string{"model", "provider", "budget", "prompt"} {
+		if v, ok := loopRun[key]; ok {
+			if _, exists := newConfig[key]; !exists {
+				newConfig[key] = v
+			}
+		}
+	}
+
+	originalError, _ := iterData["error"].(string)
+
+	var overridesApplied map[string]any
+	if overridesStr != "" {
+		if err := json.Unmarshal([]byte(overridesStr), &overridesApplied); err != nil {
+			return codedError(ErrInvalidParams, fmt.Sprintf("invalid overrides JSON: %v", err)), nil
+		}
+		for k, v := range overridesApplied {
+			newConfig[k] = v
+		}
+	}
+
+	result := map[string]any{
+		"loop_id":           loopID,
+		"iteration":         iteration,
+		"new_config":        newConfig,
+		"original_error":    originalError,
+		"overrides_applied": overridesApplied,
+		"status":            "ready_to_replay",
+	}
+	return jsonResult(result), nil
+}
+
+func (s *Server) handleBudgetForecast(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	loopID := getStringArg(req, "loop_id")
+	if loopID == "" {
+		return codedError(ErrInvalidParams, "loop_id is required"), nil
+	}
+	iterations := int(getNumberArg(req, "iterations", 10))
+
+	repo := getStringArg(req, "repo")
+	repoPath, err := s.resolveRepoPath(repo)
+	if err != nil {
+		return codedError(ErrRepoNotFound, err.Error()), nil
+	}
+
+	costPath := filepath.Join(repoPath, ".ralph", "cost_observations.json")
+	data, err := os.ReadFile(costPath)
+	if err != nil {
+		return codedError(ErrFilesystem, fmt.Sprintf("cannot read cost_observations.json: %v", err)), nil
+	}
+
+	var observations []map[string]any
+	if err := json.Unmarshal(data, &observations); err != nil {
+		return codedError(ErrInternal, fmt.Sprintf("invalid cost_observations JSON: %v", err)), nil
+	}
+
+	// Filter entries matching loop_id.
+	var costs []float64
+	for _, obs := range observations {
+		obsLoop, _ := obs["loop_id"].(string)
+		if obsLoop != loopID {
+			continue
+		}
+		cost, ok := obs["cost"].(float64)
+		if !ok {
+			if costUSD, ok := obs["cost_usd"].(float64); ok {
+				cost = costUSD
+			} else {
+				continue
+			}
+		}
+		costs = append(costs, cost)
+	}
+
+	if len(costs) == 0 {
+		return codedError(ErrInvalidParams, fmt.Sprintf("no cost observations found for loop_id %q", loopID)), nil
+	}
+
+	// Compute mean.
+	var sum float64
+	for _, c := range costs {
+		sum += c
+	}
+	mean := sum / float64(len(costs))
+
+	// Sort for percentiles.
+	sort.Float64s(costs)
+	p50 := percentileFloat(costs, 50)
+	p95 := percentileFloat(costs, 95)
+
+	// Confidence based on sample size.
+	confidence := float64(len(costs)) / float64(len(costs)+5) * 100 // asymptotic to 100%
+	if confidence > 99 {
+		confidence = 99
+	}
+
+	result := map[string]any{
+		"loop_id":                 loopID,
+		"estimated_cost_p50":      p50 * float64(iterations),
+		"estimated_cost_p95":      p95 * float64(iterations),
+		"cost_per_iteration_mean": mean,
+		"cost_per_iteration_p50":  p50,
+		"cost_per_iteration_p95":  p95,
+		"iterations_analyzed":     len(costs),
+		"iterations_requested":    iterations,
+		"confidence_pct":          confidence,
+	}
+	return jsonResult(result), nil
+}
+
+// percentile computes the p-th percentile from a sorted float64 slice.
+func percentileFloat(sorted []float64, p float64) float64 {
+	if len(sorted) == 0 {
+		return 0
+	}
+	if len(sorted) == 1 {
+		return sorted[0]
+	}
+	idx := p / 100 * float64(len(sorted)-1)
+	lower := int(idx)
+	upper := lower + 1
+	if upper >= len(sorted) {
+		return sorted[len(sorted)-1]
+	}
+	frac := idx - float64(lower)
+	return sorted[lower]*(1-frac) + sorted[upper]*frac
+}
+
+func (s *Server) handleDiffReview(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoArg := getStringArg(req, "repo")
+	if repoArg == "" {
+		return codedError(ErrInvalidParams, "repo is required"), nil
+	}
+	ref := getStringArg(req, "ref")
+	if ref == "" {
+		ref = "HEAD"
+	}
+	checksStr := getStringArg(req, "checks")
+	checks := map[string]bool{
+		"scope_creep":   true,
+		"missing_tests": true,
+		"todos":         true,
+		"style":         true,
+	}
+	if checksStr != "" {
+		checks = make(map[string]bool)
+		for _, c := range splitCSV(checksStr) {
+			checks[c] = true
+		}
+	}
+
+	repoPath, err := s.resolveRepoPath(repoArg)
+	if err != nil {
+		return codedError(ErrRepoNotFound, err.Error()), nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "git", "-C", repoPath, "diff", ref+"~1.."+ref)
+	out, err := cmd.Output()
+	if err != nil {
+		return codedError(ErrInternal, fmt.Sprintf("git diff failed: %v", err)), nil
+	}
+
+	diffOutput := string(out)
+	if diffOutput == "" {
+		return jsonResult(map[string]any{
+			"issues":         []any{},
+			"files_reviewed": 0,
+			"ref":            ref,
+			"status":         "clean",
+		}), nil
+	}
+
+	// Parse diff into per-file hunks.
+	type fileHunk struct {
+		path         string
+		addedLines   []string
+		linesChanged int
+	}
+
+	var hunks []fileHunk
+	fileRe := regexp.MustCompile(`^diff --git a/.+ b/(.+)$`)
+	dirs := make(map[string]bool)
+
+	var current *fileHunk
+	for _, line := range strings.Split(diffOutput, "\n") {
+		if m := fileRe.FindStringSubmatch(line); m != nil {
+			if current != nil {
+				hunks = append(hunks, *current)
+			}
+			current = &fileHunk{path: m[1]}
+			dirs[filepath.Dir(m[1])] = true
+			continue
+		}
+		if current == nil {
+			continue
+		}
+		if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+++") {
+			current.addedLines = append(current.addedLines, line[1:])
+			current.linesChanged++
+		} else if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
+			current.linesChanged++
+		}
+	}
+	if current != nil {
+		hunks = append(hunks, *current)
+	}
+
+	type issue struct {
+		Severity       string `json:"severity"`
+		File           string `json:"file"`
+		Line           int    `json:"line,omitempty"`
+		Check          string `json:"check"`
+		Recommendation string `json:"recommendation"`
+	}
+	var issues []issue
+
+	// Check: scope_creep — flag if > 5 distinct directories changed.
+	if checks["scope_creep"] && len(dirs) > 5 {
+		issues = append(issues, issue{
+			Severity:       "warning",
+			File:           "",
+			Check:          "scope_creep",
+			Recommendation: fmt.Sprintf("Changes span %d directories — consider splitting into smaller PRs", len(dirs)),
+		})
+	}
+
+	// Check: missing_tests — .go files changed but no _test.go files.
+	if checks["missing_tests"] {
+		hasGoChanges := false
+		hasTestChanges := false
+		for _, h := range hunks {
+			if strings.HasSuffix(h.path, ".go") && !strings.HasSuffix(h.path, "_test.go") {
+				hasGoChanges = true
+			}
+			if strings.HasSuffix(h.path, "_test.go") {
+				hasTestChanges = true
+			}
+		}
+		if hasGoChanges && !hasTestChanges {
+			issues = append(issues, issue{
+				Severity:       "warning",
+				File:           "",
+				Check:          "missing_tests",
+				Recommendation: "Go source files changed but no test files were modified — add or update tests",
+			})
+		}
+	}
+
+	// Check: todos — grep for TODO/FIXME/HACK in added lines.
+	if checks["todos"] {
+		todoRe := regexp.MustCompile(`(?i)\b(TODO|FIXME|HACK)\b`)
+		for _, h := range hunks {
+			for lineNum, line := range h.addedLines {
+				if todoRe.MatchString(line) {
+					issues = append(issues, issue{
+						Severity:       "info",
+						File:           h.path,
+						Line:           lineNum + 1,
+						Check:          "todos",
+						Recommendation: fmt.Sprintf("New TODO/FIXME/HACK marker: %s", strings.TrimSpace(line)),
+					})
+				}
+			}
+		}
+	}
+
+	// Check: style — flag files with > 500 lines changed.
+	if checks["style"] {
+		for _, h := range hunks {
+			if h.linesChanged > 500 {
+				issues = append(issues, issue{
+					Severity:       "warning",
+					File:           h.path,
+					Check:          "style",
+					Recommendation: fmt.Sprintf("File has %d lines changed — consider breaking into smaller changes", h.linesChanged),
+				})
+			}
+		}
+	}
+
+	issueList := make([]any, len(issues))
+	for i, iss := range issues {
+		issueList[i] = map[string]any{
+			"severity":       iss.Severity,
+			"file":           iss.File,
+			"line":           iss.Line,
+			"check":          iss.Check,
+			"recommendation": iss.Recommendation,
+		}
+	}
+
+	result := map[string]any{
+		"issues":         issueList,
+		"files_reviewed": len(hunks),
+		"ref":            ref,
+		"directories":    len(dirs),
+		"status":         "reviewed",
+	}
+	return jsonResult(result), nil
+}
+
+func (s *Server) handleFindingReason(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "name")
+	if name == "" {
+		return codedError(ErrInvalidParams, "name is required"), nil
+	}
+
+	repo := getStringArg(req, "repo")
+	repoPath, err := s.resolveRepoPath(repo)
+	if err != nil {
+		return codedError(ErrRepoNotFound, err.Error()), nil
+	}
+
+	// Try scratchpads/<name>.md first, then <name>_scratchpad.md.
+	scratchpadPath := filepath.Join(repoPath, ".ralph", "scratchpads", name+".md")
+	data, err := os.ReadFile(scratchpadPath)
+	if err != nil {
+		scratchpadPath = filepath.Join(repoPath, ".ralph", name+"_scratchpad.md")
+		data, err = os.ReadFile(scratchpadPath)
+		if err != nil {
+			return codedError(ErrFilesystem, fmt.Sprintf("cannot read scratchpad: %v", err)), nil
+		}
+	}
+
+	content := string(data)
+	lines := strings.Split(content, "\n")
+
+	// Parse findings: lines starting with FINDING- prefix or ## sections.
+	type finding struct {
+		ID   string
+		Text string
+	}
+	var findings []finding
+
+	findingRe := regexp.MustCompile(`FINDING-\d+`)
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if findingRe.MatchString(trimmed) || strings.HasPrefix(trimmed, "## ") {
+			// Collect text until next finding or section.
+			var text []string
+			for j := i; j < len(lines); j++ {
+				if j > i && (findingRe.MatchString(strings.TrimSpace(lines[j])) || (strings.HasPrefix(strings.TrimSpace(lines[j]), "## ") && j != i)) {
+					break
+				}
+				text = append(text, lines[j])
+			}
+			id := trimmed
+			if m := findingRe.FindString(trimmed); m != "" {
+				id = m
+			}
+			findings = append(findings, finding{ID: id, Text: strings.Join(text, "\n")})
+		}
+	}
+
+	// Categorize findings by keyword matching.
+	categories := map[string][]string{
+		"test":        {},
+		"coverage":    {},
+		"error":       {},
+		"performance": {},
+		"config":      {},
+		"docs":        {},
+	}
+	categoryKeywords := map[string][]string{
+		"test":        {"test", "assert", "expect", "mock", "stub"},
+		"coverage":    {"coverage", "cover", "uncovered", "untested"},
+		"error":       {"error", "fail", "panic", "crash", "bug", "fix"},
+		"performance": {"perf", "slow", "latency", "timeout", "memory", "cpu"},
+		"config":      {"config", "env", "setting", "flag", "option"},
+		"docs":        {"doc", "readme", "comment", "godoc"},
+	}
+
+	for _, f := range findings {
+		textLower := strings.ToLower(f.Text)
+		matched := false
+		for cat, keywords := range categoryKeywords {
+			for _, kw := range keywords {
+				if strings.Contains(textLower, kw) {
+					categories[cat] = append(categories[cat], f.ID)
+					matched = true
+					break
+				}
+			}
+		}
+		if !matched {
+			// Uncategorized findings go into a general bucket.
+			categories["other"] = append(categories["other"], f.ID)
+		}
+	}
+
+	// Build root causes: categories with >= 3 findings.
+	type rootCause struct {
+		Category       string   `json:"category"`
+		Count          int      `json:"count"`
+		Findings       []string `json:"findings"`
+		Recommendation string   `json:"recommendation"`
+	}
+
+	recommendations := map[string]string{
+		"test":        "Systemic test gaps — consider adding a test coverage gate to CI",
+		"coverage":    "Coverage debt accumulating — run coverage_report and set thresholds",
+		"error":       "Recurring errors — investigate shared error patterns or missing validation",
+		"performance": "Performance issues clustering — profile hot paths and add benchmarks",
+		"config":      "Configuration complexity — consider consolidating config sources",
+		"docs":        "Documentation gaps — schedule a docs improvement cycle",
+		"other":       "Uncategorized findings — review and add proper categorization",
+	}
+
+	var rootCauses []any
+	categoryCount := 0
+	for cat, findingIDs := range categories {
+		if len(findingIDs) == 0 {
+			continue
+		}
+		categoryCount++
+		if len(findingIDs) >= 3 {
+			rec := recommendations[cat]
+			if rec == "" {
+				rec = fmt.Sprintf("Multiple findings in %q suggest systemic issues", cat)
+			}
+			rootCauses = append(rootCauses, map[string]any{
+				"category":       cat,
+				"count":          len(findingIDs),
+				"findings":       findingIDs,
+				"recommendation": rec,
+			})
+		}
+	}
+
+	result := map[string]any{
+		"root_causes":    rootCauses,
+		"total_findings": len(findings),
+		"categories":     categoryCount,
+		"scratchpad":     name,
+		"status":         "analyzed",
+	}
+	return jsonResult(result), nil
+}
+
+func (s *Server) handleObservationCorrelate(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoArg := getStringArg(req, "repo")
+	if repoArg == "" {
+		return codedError(ErrInvalidParams, "repo is required"), nil
+	}
+	hours := int(getNumberArg(req, "hours", 24))
+
+	repoPath, err := s.resolveRepoPath(repoArg)
+	if err != nil {
+		return codedError(ErrRepoNotFound, err.Error()), nil
+	}
+
+	// Read observations from .ralph/observations/ directory (JSONL files).
+	obsDir := filepath.Join(repoPath, ".ralph", "observations")
+	obsFiles, err := filepath.Glob(filepath.Join(obsDir, "*.jsonl"))
+	if err != nil {
+		obsFiles = nil
+	}
+	// Also check for single-file observations.
+	if singleFile := filepath.Join(repoPath, ".ralph", "logs", "loop_observations.jsonl"); fileExists(singleFile) {
+		obsFiles = append(obsFiles, singleFile)
+	}
+
+	type observation struct {
+		ID        string    `json:"id"`
+		Timestamp time.Time `json:"timestamp"`
+		SessionID string    `json:"session_id"`
+		LoopID    string    `json:"loop_id"`
+		Status    string    `json:"status"`
+	}
+
+	cutoff := time.Now().Add(-time.Duration(hours) * time.Hour)
+	var observations []observation
+
+	for _, f := range obsFiles {
+		data, err := os.ReadFile(f)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(data), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			var raw map[string]any
+			if err := json.Unmarshal([]byte(line), &raw); err != nil {
+				continue
+			}
+			var obs observation
+			obs.ID, _ = raw["id"].(string)
+			if obs.ID == "" {
+				obs.ID, _ = raw["observation_id"].(string)
+			}
+			obs.SessionID, _ = raw["session_id"].(string)
+			obs.LoopID, _ = raw["loop_id"].(string)
+			obs.Status, _ = raw["status"].(string)
+
+			// Parse timestamp from various fields.
+			for _, tsKey := range []string{"timestamp", "ts", "created_at", "time"} {
+				if tsStr, ok := raw[tsKey].(string); ok {
+					if t, err := time.Parse(time.RFC3339, tsStr); err == nil {
+						obs.Timestamp = t
+						break
+					}
+					if t, err := time.Parse(time.RFC3339Nano, tsStr); err == nil {
+						obs.Timestamp = t
+						break
+					}
+				}
+			}
+			if obs.Timestamp.IsZero() || obs.Timestamp.Before(cutoff) {
+				continue
+			}
+			observations = append(observations, obs)
+		}
+	}
+
+	// Run git log.
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "git", "-C", repoPath, "log",
+		fmt.Sprintf("--since=%dh", hours),
+		"--format=%H|%s|%ai",
+	)
+	out, err := cmd.Output()
+	if err != nil {
+		return codedError(ErrInternal, fmt.Sprintf("git log failed: %v", err)), nil
+	}
+
+	type commit struct {
+		SHA     string
+		Msg     string
+		Time    time.Time
+		Matched bool
+	}
+	var commits []commit
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "|", 3)
+		if len(parts) < 3 {
+			continue
+		}
+		t, _ := time.Parse("2006-01-02 15:04:05 -0700", parts[2])
+		commits = append(commits, commit{SHA: parts[0], Msg: parts[1], Time: t})
+	}
+
+	// Match observations to commits by timestamp proximity (within 5 minutes).
+	type correlation struct {
+		ObservationID string `json:"observation_id"`
+		Timestamp     string `json:"timestamp"`
+		CommitSHA     string `json:"commit_sha"`
+		CommitMsg     string `json:"commit_msg"`
+		SessionID     string `json:"session_id"`
+		DeltaSeconds  int    `json:"delta_seconds"`
+	}
+
+	var correlations []any
+	matchedObs := make(map[int]bool)
+	for i, obs := range observations {
+		for j := range commits {
+			delta := obs.Timestamp.Sub(commits[j].Time)
+			if delta < 0 {
+				delta = -delta
+			}
+			if delta <= 5*time.Minute {
+				correlations = append(correlations, map[string]any{
+					"observation_id": obs.ID,
+					"timestamp":      obs.Timestamp.Format(time.RFC3339),
+					"commit_sha":     commits[j].SHA,
+					"commit_msg":     commits[j].Msg,
+					"session_id":     obs.SessionID,
+					"delta_seconds":  int(delta.Seconds()),
+				})
+				matchedObs[i] = true
+				commits[j].Matched = true
+				break
+			}
+		}
+	}
+
+	unmatchedObs := len(observations) - len(matchedObs)
+	unmatchedCommits := 0
+	for _, c := range commits {
+		if !c.Matched {
+			unmatchedCommits++
+		}
+	}
+
+	result := map[string]any{
+		"correlations":           correlations,
+		"total_observations":     len(observations),
+		"total_commits":          len(commits),
+		"unmatched_observations": unmatchedObs,
+		"unmatched_commits":      unmatchedCommits,
+		"hours":                  hours,
+		"status":                 "correlated",
+	}
+	return jsonResult(result), nil
+}
+
+// fileExists checks if a file exists.
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+

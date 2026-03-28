@@ -131,6 +131,69 @@ func TestStallCount_Increments(t *testing.T) {
 	}
 }
 
+func TestSetOnStall_CallbackFires(t *testing.T) {
+	sd := NewStallDetector(50 * time.Millisecond)
+
+	var mu sync.Mutex
+	var called bool
+	var gotID string
+
+	sd.SetOnStall("session-42", func(sid string) {
+		mu.Lock()
+		defer mu.Unlock()
+		called = true
+		gotID = sid
+	})
+
+	ch := sd.Start()
+	defer sd.Stop()
+
+	select {
+	case <-ch:
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("timed out waiting for stall")
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if !called {
+		t.Fatal("expected onStall callback to fire")
+	}
+	if gotID != "session-42" {
+		t.Fatalf("expected sessionID 'session-42', got %q", gotID)
+	}
+}
+
+func TestSetOnStall_CorrectSessionID(t *testing.T) {
+	sd := NewStallDetector(50 * time.Millisecond)
+
+	receivedIDs := make(chan string, 5)
+	sd.SetOnStall("my-session", func(sid string) {
+		select {
+		case receivedIDs <- sid:
+		default:
+		}
+	})
+
+	ch := sd.Start()
+	defer sd.Stop()
+
+	select {
+	case <-ch:
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("timed out waiting for stall")
+	}
+
+	select {
+	case id := <-receivedIDs:
+		if id != "my-session" {
+			t.Fatalf("expected 'my-session', got %q", id)
+		}
+	default:
+		t.Fatal("callback was not invoked")
+	}
+}
+
 func TestStallDetector_ThreadSafety(t *testing.T) {
 	sd := NewStallDetector(100 * time.Millisecond)
 	ch := sd.Start()

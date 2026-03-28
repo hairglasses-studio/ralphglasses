@@ -150,6 +150,175 @@ func TestValidateLoopConfig_TimeoutValidation(t *testing.T) {
 	}
 }
 
+// --- ValidateLoopProfile tests ---
+
+func validProfile() LoopProfile {
+	return LoopProfile{
+		PlannerProvider:      ProviderClaude,
+		WorkerProvider:       ProviderClaude,
+		MaxIterations:        10,
+		MaxConcurrentWorkers: 2,
+		PlannerBudgetUSD:     5.0,
+		WorkerBudgetUSD:      10.0,
+		RetryLimit:           3,
+		StallTimeout:         10 * time.Minute,
+	}
+}
+
+func TestValidateLoopProfile_ValidProfile(t *testing.T) {
+	if err := ValidateLoopProfile(validProfile()); err != nil {
+		t.Errorf("expected nil error for valid profile, got: %v", err)
+	}
+}
+
+func TestValidateLoopProfile_ValidDefaults(t *testing.T) {
+	// Minimal valid profile: empty providers, one limit set, zero budgets.
+	p := LoopProfile{MaxDurationSecs: 3600}
+	if err := ValidateLoopProfile(p); err != nil {
+		t.Errorf("expected nil error for minimal valid profile, got: %v", err)
+	}
+}
+
+func TestValidateLoopProfile_InvalidPlannerProvider(t *testing.T) {
+	p := validProfile()
+	p.PlannerProvider = "invalid"
+	if err := ValidateLoopProfile(p); err == nil {
+		t.Error("expected error for invalid planner_provider")
+	}
+}
+
+func TestValidateLoopProfile_InvalidWorkerProvider(t *testing.T) {
+	p := validProfile()
+	p.WorkerProvider = "invalid"
+	if err := ValidateLoopProfile(p); err == nil {
+		t.Error("expected error for invalid worker_provider")
+	}
+}
+
+func TestValidateLoopProfile_ZeroLimitsValid(t *testing.T) {
+	// Zero means unlimited — valid for both fields.
+	p := validProfile()
+	p.MaxIterations = 0
+	p.MaxDurationSecs = 0
+	if err := ValidateLoopProfile(p); err != nil {
+		t.Errorf("expected nil error for zero limits (unlimited), got: %v", err)
+	}
+}
+
+func TestValidateLoopProfile_NegativeIterations(t *testing.T) {
+	p := validProfile()
+	p.MaxIterations = -1
+	if err := ValidateLoopProfile(p); err == nil {
+		t.Error("expected error for negative max_iterations")
+	}
+}
+
+func TestValidateLoopProfile_NegativeDuration(t *testing.T) {
+	p := validProfile()
+	p.MaxDurationSecs = -1
+	if err := ValidateLoopProfile(p); err == nil {
+		t.Error("expected error for negative max_duration_secs")
+	}
+}
+
+func TestValidateLoopProfile_MaxConcurrentWorkersOutOfRange(t *testing.T) {
+	tests := []struct {
+		name    string
+		val     int
+		wantErr bool
+	}{
+		{"zero ok", 0, false},
+		{"one ok", 1, false},
+		{"ten ok", 10, false},
+		{"eleven invalid", 11, true},
+		{"negative invalid", -1, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := validProfile()
+			p.MaxConcurrentWorkers = tt.val
+			err := ValidateLoopProfile(p)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("MaxConcurrentWorkers=%d: got err=%v, wantErr=%v", tt.val, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateLoopProfile_BudgetMismatch(t *testing.T) {
+	// Only planner budget set.
+	p := validProfile()
+	p.PlannerBudgetUSD = 5.0
+	p.WorkerBudgetUSD = 0
+	if err := ValidateLoopProfile(p); err == nil {
+		t.Error("expected error when only planner_budget_usd is set")
+	}
+
+	// Only worker budget set.
+	p2 := validProfile()
+	p2.PlannerBudgetUSD = 0
+	p2.WorkerBudgetUSD = 10.0
+	if err := ValidateLoopProfile(p2); err == nil {
+		t.Error("expected error when only worker_budget_usd is set")
+	}
+
+	// Both zero is fine.
+	p3 := validProfile()
+	p3.PlannerBudgetUSD = 0
+	p3.WorkerBudgetUSD = 0
+	if err := ValidateLoopProfile(p3); err != nil {
+		t.Errorf("expected nil error when both budgets are zero, got: %v", err)
+	}
+}
+
+func TestValidateLoopProfile_RetryLimitOutOfRange(t *testing.T) {
+	tests := []struct {
+		name    string
+		val     int
+		wantErr bool
+	}{
+		{"zero ok", 0, false},
+		{"ten ok", 10, false},
+		{"eleven invalid", 11, true},
+		{"negative invalid", -1, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := validProfile()
+			p.RetryLimit = tt.val
+			err := ValidateLoopProfile(p)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RetryLimit=%d: got err=%v, wantErr=%v", tt.val, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateLoopProfile_NegativeStallTimeout(t *testing.T) {
+	p := validProfile()
+	p.StallTimeout = -1 * time.Second
+	if err := ValidateLoopProfile(p); err == nil {
+		t.Error("expected error for negative stall_timeout")
+	}
+
+	// Zero is fine.
+	p.StallTimeout = 0
+	if err := ValidateLoopProfile(p); err != nil {
+		t.Errorf("expected nil error for zero stall_timeout, got: %v", err)
+	}
+}
+
+func TestValidateLoopProfile_AllProviders(t *testing.T) {
+	for _, prov := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex, ""} {
+		p := validProfile()
+		p.PlannerProvider = prov
+		p.WorkerProvider = prov
+		if err := ValidateLoopProfile(p); err != nil {
+			t.Errorf("provider %q should be valid, got: %v", prov, err)
+		}
+	}
+}
+
 func TestLoopValidationWarning_String(t *testing.T) {
 	w := LoopValidationWarning{Field: "model", Message: "mismatch"}
 	got := w.String()

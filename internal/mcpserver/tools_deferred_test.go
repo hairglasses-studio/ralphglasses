@@ -77,7 +77,7 @@ func TestBuildToolGroups_ExpectedCounts(t *testing.T) {
 		"eval":     4,
 		"fleet_h":       4,
 		"observability": 15,
-		"rdcycle":       5,
+		"rdcycle":       10,
 	}
 
 	totalExpected := 0

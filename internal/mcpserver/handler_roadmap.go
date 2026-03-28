@@ -101,14 +101,16 @@ func (s *Server) handleRoadmapParse(_ context.Context, req mcp.CallToolRequest) 
 }
 
 func (s *Server) handleRoadmapAnalyze(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	path := getStringArg(req, "path")
-	if path == "" {
-		return codedError(ErrInvalidParams, "path required"), nil
+	p := NewParams(req)
+
+	path, errResult := p.RequireString("path")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := ValidatePath(path, s.ScanPath); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid path: %v", err)), nil
 	}
-	file := getStringArg(req, "file")
+	file := p.OptionalString("file", "")
 	rmPath := roadmap.ResolvePath(path, file)
 
 	rm, err := roadmap.Parse(rmPath)
@@ -122,8 +124,8 @@ func (s *Server) handleRoadmapAnalyze(_ context.Context, req mcp.CallToolRequest
 	}
 
 	// Category filter: return only a specific category
-	category := getStringArg(req, "category")
-	limit := int(getNumberArg(req, "limit", 20))
+	category := p.OptionalString("category", "")
+	limit := int(p.OptionalNumber("limit", 20))
 
 	if category != "" || limit > 0 {
 		// Apply category filter
