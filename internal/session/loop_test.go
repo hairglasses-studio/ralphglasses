@@ -445,9 +445,6 @@ func setupLoopRepo(t *testing.T) string {
 	}
 
 	runGitLoop(t, repoPath, "init")
-	runGitLoop(t, repoPath, "config", "user.email", "test@example.com")
-	runGitLoop(t, repoPath, "config", "user.name", "Test User")
-	runGitLoop(t, repoPath, "config", "commit.gpgsign", "false")
 	runGitLoop(t, repoPath, "add", ".")
 	runGitLoop(t, repoPath, "commit", "-m", "initial")
 	return repoPath
@@ -456,6 +453,17 @@ func setupLoopRepo(t *testing.T) string {
 func runGitLoop(t *testing.T, repoPath string, args ...string) {
 	t.Helper()
 	cmd := exec.Command("git", append([]string{"-C", repoPath}, args...)...)
+	cmd.Env = []string{
+		"HOME=" + repoPath,
+		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_TERMINAL_PROMPT=0",
+		"GIT_AUTHOR_NAME=Test User",
+		"GIT_AUTHOR_EMAIL=test@example.com",
+		"GIT_COMMITTER_NAME=Test User",
+		"GIT_COMMITTER_EMAIL=test@example.com",
+		"PATH=" + os.Getenv("PATH"),
+	}
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, output)
 	}

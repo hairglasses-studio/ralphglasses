@@ -8,18 +8,30 @@ import (
 	"testing"
 )
 
+// gitEnv returns a minimal, isolated environment for git commands in tests.
+// This prevents parallel test git processes from sharing global config.
+func gitEnv(dir string) []string {
+	return []string{
+		"HOME=" + dir,
+		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_TERMINAL_PROMPT=0",
+		"GIT_AUTHOR_NAME=Test",
+		"GIT_AUTHOR_EMAIL=test@test.com",
+		"GIT_COMMITTER_NAME=Test",
+		"GIT_COMMITTER_EMAIL=test@test.com",
+		"PATH=" + os.Getenv("PATH"),
+	}
+}
+
 // initGitRepo creates a git repo in dir with an initial commit.
 func initGitRepo(t *testing.T, dir string) {
 	t.Helper()
-	for _, args := range [][]string{
-		{"init", dir},
-		{"-C", dir, "config", "user.email", "test@test.com"},
-		{"-C", dir, "config", "user.name", "Test"},
-		{"-C", dir, "config", "commit.gpgsign", "false"},
-	} {
-		if err := exec.Command("git", args...).Run(); err != nil {
-			t.Fatalf("git %v: %v", args, err)
-		}
+	env := gitEnv(dir)
+	initCmd := exec.Command("git", "init", dir)
+	initCmd.Env = env
+	if err := initCmd.Run(); err != nil {
+		t.Fatalf("git init: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("# test"), 0644); err != nil {
 		t.Fatal(err)
@@ -28,7 +40,9 @@ func initGitRepo(t *testing.T, dir string) {
 		{"-C", dir, "add", "."},
 		{"-C", dir, "commit", "-m", "initial"},
 	} {
-		if err := exec.Command("git", args...).Run(); err != nil {
+		cmd := exec.Command("git", args...)
+		cmd.Env = env
+		if err := cmd.Run(); err != nil {
 			t.Fatalf("git %v: %v", args, err)
 		}
 	}
@@ -36,7 +50,9 @@ func initGitRepo(t *testing.T, dir string) {
 
 func gitLog(t *testing.T, dir string) string {
 	t.Helper()
-	out, err := exec.Command("git", "-C", dir, "log", "--oneline").Output()
+	cmd := exec.Command("git", "-C", dir, "log", "--oneline")
+	cmd.Env = gitEnv(dir)
+	out, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("git log: %v", err)
 	}
@@ -45,7 +61,9 @@ func gitLog(t *testing.T, dir string) string {
 
 func gitTags(t *testing.T, dir string) string {
 	t.Helper()
-	out, err := exec.Command("git", "-C", dir, "tag", "-l").Output()
+	cmd := exec.Command("git", "-C", dir, "tag", "-l")
+	cmd.Env = gitEnv(dir)
+	out, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("git tag -l: %v", err)
 	}
@@ -145,7 +163,9 @@ func TestCreateCheckpoint_ExcludesPrecision(t *testing.T) {
 		t.Fatalf("CreateCheckpoint: %v", err)
 	}
 
-	out, err := exec.Command("git", "-C", dir, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD").Output()
+	dtCmd := exec.Command("git", "-C", dir, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD")
+	dtCmd.Env = gitEnv(dir)
+	out, err := dtCmd.Output()
 	if err != nil {
 		t.Fatalf("git diff-tree: %v", err)
 	}
@@ -201,11 +221,13 @@ func TestCreateCheckpoint_ExcludesSensitiveFiles(t *testing.T) {
 	}
 
 	// List files in the last commit.
-	out, err := exec.Command("git", "-C", dir, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD").Output()
-	if err != nil {
-		t.Fatalf("git diff-tree: %v", err)
+	dtCmd2 := exec.Command("git", "-C", dir, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD")
+	dtCmd2.Env = gitEnv(dir)
+	out2, err2 := dtCmd2.Output()
+	if err2 != nil {
+		t.Fatalf("git diff-tree: %v", err2)
 	}
-	committed := string(out)
+	committed := string(out2)
 
 	// Normal files should be committed.
 	for _, f := range normalFiles {
@@ -222,7 +244,9 @@ func TestCreateCheckpoint_ExcludesSensitiveFiles(t *testing.T) {
 	}
 
 	// Sensitive files should still be untracked in the working tree.
-	statusOut, err := exec.Command("git", "-C", dir, "status", "--porcelain").Output()
+	statusCmd := exec.Command("git", "-C", dir, "status", "--porcelain")
+	statusCmd.Env = gitEnv(dir)
+	statusOut, err := statusCmd.Output()
 	if err != nil {
 		t.Fatalf("git status: %v", err)
 	}
