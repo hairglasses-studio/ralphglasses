@@ -193,6 +193,84 @@ func (rs *ReflexionStore) FormatForPrompt(reflections []Reflection) string {
 	return sb.String()
 }
 
+// ReflexionRule is a learned rule extracted from repeated failure patterns.
+type ReflexionRule struct {
+	FailureMode string `json:"failure_mode"`
+	Pattern     string `json:"pattern"`
+	Count       int    `json:"count"`
+	Rule        string `json:"rule"`
+}
+
+// Rules analyzes stored reflections and extracts learned rules from repeated
+// failure patterns. A rule is generated when 3+ reflections share the same
+// failure mode. Returns the top 3 most common patterns as rules.
+func (rs *ReflexionStore) Rules() []ReflexionRule {
+	rs.mu.Lock()
+	defer rs.mu.Unlock()
+
+	if len(rs.reflections) < 5 {
+		return make([]ReflexionRule, 0)
+	}
+
+	// Group by failure mode.
+	type modeGroup struct {
+		mode       string
+		count      int
+		rootCauses []string
+	}
+	groups := make(map[string]*modeGroup)
+	for _, r := range rs.reflections {
+		if r.FailureMode == "" {
+			continue
+		}
+		g, ok := groups[r.FailureMode]
+		if !ok {
+			g = &modeGroup{mode: r.FailureMode}
+			groups[r.FailureMode] = g
+		}
+		g.count++
+		if len(g.rootCauses) < 5 {
+			g.rootCauses = append(g.rootCauses, r.RootCause)
+		}
+	}
+
+	// Collect groups with 3+ occurrences, sorted by count descending.
+	var candidates []*modeGroup
+	for _, g := range groups {
+		if g.count >= 3 {
+			candidates = append(candidates, g)
+		}
+	}
+	// Simple insertion sort for small slice.
+	for i := 1; i < len(candidates); i++ {
+		for j := i; j > 0 && candidates[j].count > candidates[j-1].count; j-- {
+			candidates[j], candidates[j-1] = candidates[j-1], candidates[j]
+		}
+	}
+
+	// Take top 3.
+	if len(candidates) > 3 {
+		candidates = candidates[:3]
+	}
+
+	rules := make([]ReflexionRule, 0, len(candidates))
+	for _, g := range candidates {
+		// Use the most common root cause as the pattern summary.
+		pattern := g.rootCauses[0]
+		if len(pattern) > 150 {
+			pattern = pattern[:150]
+		}
+		rules = append(rules, ReflexionRule{
+			FailureMode: g.mode,
+			Pattern:     pattern,
+			Count:       g.count,
+			Rule:        fmt.Sprintf("Recurring %s (%dx): %s", g.mode, g.count, pattern),
+		})
+	}
+
+	return rules
+}
+
 // --- internal helpers ---
 
 func classifyFailureMode(iter LoopIteration) string {
@@ -380,7 +458,7 @@ func extractFilePaths(iter LoopIteration) []string {
 
 	matches := filePathRe.FindAllString(combined.String(), -1)
 	seen := make(map[string]bool)
-	var unique []string
+	unique := make([]string, 0)
 	for _, m := range matches {
 		// Skip paths shorter than 4 chars (e.g. "a.go") — likely fragments.
 		if len(m) < 4 {

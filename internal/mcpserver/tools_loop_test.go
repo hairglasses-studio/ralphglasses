@@ -33,7 +33,7 @@ func TestHandleLoopLifecycle(t *testing.T) {
 				OutputCh:   make(chan string, 1),
 				LaunchedAt: time.Now(),
 			}
-			if opts.Model == "o1-pro" {
+			if opts.Model == "gpt-4o" || opts.Model == "o1-pro" {
 				sess.LastOutput = `{"title":"Tighten provider docs","prompt":"Update provider docs and tests to match actual codex resume behavior."}`
 				sess.OutputHistory = []string{sess.LastOutput}
 			} else {

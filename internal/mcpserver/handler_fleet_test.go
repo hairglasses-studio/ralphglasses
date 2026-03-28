@@ -303,8 +303,9 @@ func TestHandleFleetAnalytics_NoSessions(t *testing.T) {
 		t.Fatalf("unexpected tool error: %s", getResultText(result))
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "total_sessions") {
-		t.Errorf("expected total_sessions in output, got: %s", text)
+	// FINDING-237: With no sessions and no FleetAnalytics, returns a warning.
+	if !strings.Contains(text, "fleet not initialized") {
+		t.Errorf("expected fleet not initialized warning, got: %s", text)
 	}
 }
 
@@ -325,9 +326,10 @@ func TestHandleFleetAnalytics_WithRepoFilter(t *testing.T) {
 		t.Fatalf("unexpected tool error: %s", getResultText(result))
 	}
 	text := getResultText(result)
-	// With a nonexistent repo filter, total_sessions should be 0
-	if !strings.Contains(text, "total_sessions") {
-		t.Errorf("expected total_sessions in output, got: %s", text)
+	// FINDING-237: With a nonexistent repo filter, no sessions, and no fleet
+	// coordinator, returns warning.
+	if !strings.Contains(text, "fleet not initialized") {
+		t.Errorf("expected fleet not initialized warning, got: %s", text)
 	}
 }
 
@@ -345,8 +347,9 @@ func TestHandleFleetAnalytics_WithProviderFilter(t *testing.T) {
 		t.Fatalf("unexpected tool error: %s", getResultText(result))
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "total_sessions") {
-		t.Errorf("expected total_sessions in output, got: %s", text)
+	// FINDING-237: With no sessions and no fleet coordinator, returns warning.
+	if !strings.Contains(text, "fleet not initialized") {
+		t.Errorf("expected fleet not initialized warning, got: %s", text)
 	}
 }
 
@@ -1495,5 +1498,33 @@ func TestFleetAnalytics_StandaloneFallback(t *testing.T) {
 	// Verify cost is reported.
 	if !strings.Contains(text, `"total_cost_usd"`) {
 		t.Errorf("expected total_cost_usd in output, got: %s", text)
+	}
+}
+
+// FINDING-237: When FleetAnalytics is nil and no sessions exist, the handler
+// should return a warning message instead of all-zero metrics.
+func TestHandleFleetAnalytics_NilFleetNoSessions_ReturnsWarning(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	srv.FleetAnalytics = nil
+
+	result, err := srv.handleFleetAnalytics(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success with warning, got error: %s", getResultText(result))
+	}
+
+	text := getResultText(result)
+	if !strings.Contains(text, "fleet not initialized") {
+		t.Errorf("expected 'fleet not initialized' warning, got: %s", text)
+	}
+	if !strings.Contains(text, `"analytics":{}`) && !strings.Contains(text, `"analytics": {}`) {
+		t.Errorf("expected empty analytics object, got: %s", text)
+	}
+	// Should NOT contain all-zero metrics that look like real data
+	if strings.Contains(text, `"total_sessions"`) {
+		t.Errorf("should not contain total_sessions (misleading zeros), got: %s", text)
 	}
 }

@@ -424,8 +424,9 @@ func TestHandleFleetAnalytics_Empty(t *testing.T) {
 	}
 
 	text := getResultText(result)
-	if !strings.Contains(text, "total_sessions") {
-		t.Errorf("expected total_sessions in output, got: %s", text)
+	// FINDING-237: With no sessions and no FleetAnalytics, returns a warning.
+	if !strings.Contains(text, "fleet not initialized") {
+		t.Errorf("expected fleet not initialized warning, got: %s", text)
 	}
 }
 

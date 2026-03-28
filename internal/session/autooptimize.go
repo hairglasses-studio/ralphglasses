@@ -52,6 +52,11 @@ func LoadAutonomyLevel(ralphDir string) (int, error) {
 	return state.Level, nil
 }
 
+// PersistAutonomyLevel is an alias for SaveAutonomyLevel for backward compatibility.
+func PersistAutonomyLevel(level int, ralphDir string) error {
+	return SaveAutonomyLevel(ralphDir, level)
+}
+
 // AutoOptimizer implements Level 2 (auto-optimize) decision engines.
 // It wires FeedbackAnalyzer profiles and CostNorm into launch decisions,
 // making the system learn from every session.

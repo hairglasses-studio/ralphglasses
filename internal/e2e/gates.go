@@ -331,6 +331,68 @@ func FormatReportJSON(r *GateReport) ([]byte, error) {
 	return json.MarshalIndent(r, "", "  ")
 }
 
+// GateVerdictTrend represents the verdict-level change for a single gate between two reports.
+type GateVerdictTrend struct {
+	Gate      string `json:"gate"`
+	Previous  string `json:"previous"`  // pass/warn/fail/skip
+	Current   string `json:"current"`
+	Direction string `json:"direction"` // improved/degraded/unchanged
+}
+
+// CompareGateVerdicts compares each gate's verdict between two reports and returns
+// the direction of change. A move from fail->warn or warn->pass is "improved";
+// the reverse is "degraded"; same verdict is "unchanged".
+func CompareGateVerdicts(prev, current *GateReport) []GateVerdictTrend {
+	if prev == nil || current == nil {
+		return nil
+	}
+
+	prevByMetric := make(map[string]GateVerdict, len(prev.Results))
+	for _, r := range prev.Results {
+		prevByMetric[r.Metric] = r.Verdict
+	}
+
+	var trends []GateVerdictTrend
+	for _, cur := range current.Results {
+		pv, ok := prevByMetric[cur.Metric]
+		if !ok {
+			continue
+		}
+
+		direction := "unchanged"
+		if verdictRank(cur.Verdict) > verdictRank(pv) {
+			direction = "improved"
+		} else if verdictRank(cur.Verdict) < verdictRank(pv) {
+			direction = "degraded"
+		}
+
+		trends = append(trends, GateVerdictTrend{
+			Gate:      cur.Metric,
+			Previous:  string(pv),
+			Current:   string(cur.Verdict),
+			Direction: direction,
+		})
+	}
+
+	return trends
+}
+
+// verdictRank assigns a numeric rank for ordering verdicts (higher = better).
+func verdictRank(v GateVerdict) int {
+	switch v {
+	case VerdictPass:
+		return 3
+	case VerdictWarn:
+		return 2
+	case VerdictFail:
+		return 1
+	case VerdictSkip:
+		return 0
+	default:
+		return 0
+	}
+}
+
 // absoluteCeilingGate evaluates a rate metric against absolute ceilings.
 func absoluteCeilingGate(metric string, current, warnCeiling, failCeiling float64) GateResult {
 	verdict := VerdictPass

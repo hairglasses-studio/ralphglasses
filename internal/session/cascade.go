@@ -10,6 +10,7 @@ import (
 
 // CascadeConfig configures the cheap-then-expensive routing strategy.
 type CascadeConfig struct {
+	Enabled              bool                `json:"enabled"` // when false, cascade routing is disabled
 	CheapProvider       Provider            `json:"cheap_provider"`
 	ExpensiveProvider   Provider            `json:"expensive_provider"`
 	ConfidenceThreshold float64             `json:"confidence_threshold"` // 0.0-1.0, default 0.7
@@ -20,9 +21,10 @@ type CascadeConfig struct {
 	LatencyThresholdMs   int                 `json:"latency_threshold_ms"` // 0 = disabled; if cheap P95 exceeds this, skip to expensive
 }
 
-// DefaultCascadeConfig returns sensible defaults.
+// DefaultCascadeConfig returns sensible defaults with cascade enabled.
 func DefaultCascadeConfig() CascadeConfig {
 	return CascadeConfig{
+		Enabled:             true,
 		CheapProvider:       ProviderGemini,
 		ExpensiveProvider:   ProviderClaude,
 		ConfidenceThreshold: 0.7,
@@ -45,6 +47,7 @@ func DefaultCascadeFromConfig(cfg map[string]string) *CascadeConfig {
 	}
 
 	defaults := DefaultCascadeConfig()
+	defaults.Enabled = true // explicit from config
 
 	if v, ok := cfg["CASCADE_CHEAP_PROVIDER"]; ok && v != "" {
 		defaults.CheapProvider = Provider(v)

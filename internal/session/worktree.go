@@ -2,6 +2,7 @@ package session
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -74,12 +75,28 @@ func CleanupStaleWorktrees(repoPath string, olderThan time.Duration) (int, error
 		}
 		if info.ModTime().Before(cutoff) {
 			p := filepath.Join(base, e.Name())
-			// Skip worktrees with an active lock file to avoid
+
+			// Skip worktrees with an active index.lock file to avoid
 			// removing directories that are mid-operation.
 			lockPath := filepath.Join(p, ".git", "index.lock")
 			if _, err := os.Stat(lockPath); err == nil {
+				slog.Debug("skipping worktree with index.lock", "path", p)
 				continue
 			}
+
+			// Skip worktrees with a .lock file (git worktree lock).
+			worktreeLock := p + ".lock"
+			if _, err := os.Stat(worktreeLock); err == nil {
+				slog.Debug("skipping locked worktree", "path", p)
+				continue
+			}
+
+			// Skip worktrees with uncommitted changes.
+			if worktreeIsDirty(p) {
+				slog.Warn("skipping stale worktree with uncommitted changes", "path", p)
+				continue
+			}
+
 			if err := os.RemoveAll(p); err == nil {
 				cleaned++
 			}
@@ -92,4 +109,16 @@ func CleanupStaleWorktrees(repoPath string, olderThan time.Duration) (int, error
 		_ = cmd.Run()
 	}
 	return cleaned, nil
+}
+
+// worktreeIsDirty returns true if the given path has uncommitted changes
+// according to `git status --porcelain`. Returns false if the command
+// fails (e.g., path is not a git directory) to avoid blocking cleanup.
+func worktreeIsDirty(path string) bool {
+	cmd := exec.Command("git", "-C", path, "status", "--porcelain")
+	out, err := cmd.Output()
+	if err != nil {
+		return false // assume clean if git fails (not a valid repo)
+	}
+	return len(strings.TrimSpace(string(out))) > 0
 }

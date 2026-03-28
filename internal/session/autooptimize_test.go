@@ -450,3 +450,53 @@ func TestAutoOptimizer_HandleSessionCompleteWithOutcome_NilDecisions(t *testing.
 	ao.HandleSessionCompleteWithOutcome(context.Background(), s)
 	// Should not panic
 }
+
+func TestAutonomyPersistence_SaveAndLoad(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := SaveAutonomyLevel(dir, 2); err != nil {
+		t.Fatalf("SaveAutonomyLevel: %v", err)
+	}
+
+	level, err := LoadAutonomyLevel(dir)
+	if err != nil {
+		t.Fatalf("LoadAutonomyLevel: %v", err)
+	}
+	if level != 2 {
+		t.Errorf("level = %d, want 2", level)
+	}
+}
+
+func TestLoadAutonomyLevel_Missing(t *testing.T) {
+	dir := t.TempDir()
+	level, err := LoadAutonomyLevel(dir)
+	if err != nil {
+		t.Fatalf("LoadAutonomyLevel on missing file: %v", err)
+	}
+	if level != 0 {
+		t.Errorf("level = %d, want 0 for missing file", level)
+	}
+}
+
+func TestPersistAutonomyLevel(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := PersistAutonomyLevel(3, dir); err != nil {
+		t.Fatalf("PersistAutonomyLevel: %v", err)
+	}
+
+	level, err := LoadAutonomyLevel(dir)
+	if err != nil {
+		t.Fatalf("LoadAutonomyLevel: %v", err)
+	}
+	if level != 3 {
+		t.Errorf("level = %d, want 3", level)
+	}
+}
+
+func TestAutonomyPersistence_EmptyDir(t *testing.T) {
+	err := SaveAutonomyLevel("", 1)
+	if err == nil {
+		t.Fatal("expected error for empty ralph dir")
+	}
+}

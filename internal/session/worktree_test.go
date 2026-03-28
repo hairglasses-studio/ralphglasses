@@ -2,6 +2,7 @@ package session
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -153,5 +154,89 @@ func TestCleanupStaleWorktrees_NoDir(t *testing.T) {
 	}
 	if cleaned != 0 {
 		t.Fatalf("expected 0 cleaned, got %d", cleaned)
+	}
+}
+
+// Phase 0.6.6: Tests for worktree cleanup enhancement.
+
+func TestCleanupStaleWorktrees_SkipsWorktreeLockFile(t *testing.T) {
+	t.Parallel()
+
+	repoDir := t.TempDir()
+	base := filepath.Join(repoDir, ".ralph", "worktrees", "loops")
+
+	wtDir := filepath.Join(base, "loop-wt-locked")
+	if err := os.MkdirAll(wtDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	old := time.Now().Add(-48 * time.Hour)
+	os.Chtimes(wtDir, old, old)
+
+	// Create a .lock file next to the worktree (git worktree lock mechanism).
+	lockFile := wtDir + ".lock"
+	if err := os.WriteFile(lockFile, []byte("reason: active"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cleaned, err := CleanupStaleWorktrees(repoDir, 24*time.Hour)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cleaned != 0 {
+		t.Errorf("expected 0 cleaned (worktree .lock present), got %d", cleaned)
+	}
+	if _, err := os.Stat(wtDir); os.IsNotExist(err) {
+		t.Error("locked worktree should not have been removed")
+	}
+}
+
+func TestCleanupStaleWorktrees_SkipsDirtyWorktree(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not found")
+	}
+	t.Parallel()
+
+	repoDir := t.TempDir()
+	base := filepath.Join(repoDir, ".ralph", "worktrees", "loops")
+
+	wtDir := filepath.Join(base, "loop-dirty")
+	if err := os.MkdirAll(wtDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command("git", "init", wtDir)
+	cmd.Env = append(os.Environ(),
+		"GIT_CONFIG_NOSYSTEM=1",
+		"HOME="+t.TempDir(),
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+
+	// Create an uncommitted file to make it dirty.
+	if err := os.WriteFile(filepath.Join(wtDir, "uncommitted.txt"), []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	old := time.Now().Add(-48 * time.Hour)
+	os.Chtimes(wtDir, old, old)
+
+	cleaned, err := CleanupStaleWorktrees(repoDir, 24*time.Hour)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cleaned != 0 {
+		t.Errorf("expected 0 cleaned (dirty worktree), got %d", cleaned)
+	}
+	if _, err := os.Stat(wtDir); os.IsNotExist(err) {
+		t.Error("dirty worktree should not have been removed")
+	}
+}
+
+func TestWorktreeIsDirty_NonGitDir(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if worktreeIsDirty(dir) {
+		t.Error("expected false for non-git directory")
 	}
 }
