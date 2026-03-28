@@ -54,6 +54,14 @@ func nonEmptyLines(text string) []string {
 	return out
 }
 
+// looksLikeJSON returns true if the string, after trimming whitespace,
+// starts with '{' or '[', indicating it is likely JSON output rather than
+// freeform text. Used as a fast pre-check before attempting full JSON parsing.
+func looksLikeJSON(s string) bool {
+	s = strings.TrimSpace(s)
+	return len(s) > 0 && (s[0] == '{' || s[0] == '[')
+}
+
 func sessionOutputSummary(s *Session) string {
 	s.mu.Lock()
 	defer s.mu.Unlock()

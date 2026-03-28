@@ -210,8 +210,13 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		return m.failLoopIteration(run, index, errors.New("planner returned no valid tasks"))
 	}
 
+	// Proactive JSON format check: if the planner output doesn't look like JSON
+	// at all, skip straight to retry instead of relying on the fallback source
+	// detection. This reduces wasted parsing cycles (was 25.7% retry rate).
+	needsRetry := !looksLikeJSON(plannerOutput) || (len(tasks) > 0 && tasks[0].Source == "fallback")
+
 	// Retry if planner returned freeform text instead of JSON.
-	if len(tasks) > 0 && tasks[0].Source == "fallback" {
+	if needsRetry {
 		retryPrompt := fmt.Sprintf("Your previous response was not valid JSON. Here is what you said:\n\n%s\n\nRespond with ONLY a JSON object: {\"title\":\"...\",\"prompt\":\"...\"}", plannerOutput)
 		retryOpts := LaunchOptions{
 			SessionName:  fmt.Sprintf("loop-plan-%s-%03d-retry", run.RepoName, iteration.Number),

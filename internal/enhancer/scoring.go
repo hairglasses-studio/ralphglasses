@@ -119,7 +119,7 @@ func clamp(v, lo, hi int) int {
 // --- dimension scorers ---
 
 func scoreClarity(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult) DimensionScore {
-	score := 50 // baseline
+	score := 30 // baseline (lowered from 50 to reduce score inflation)
 	var suggestions []string
 
 	wc := ar.WordCount
@@ -172,7 +172,7 @@ func scoreClarity(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult
 }
 
 func scoreSpecificity(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult) DimensionScore {
-	score := 50
+	score := 30 // baseline (lowered from 50 to reduce score inflation)
 	var suggestions []string
 
 	// Numeric constraints

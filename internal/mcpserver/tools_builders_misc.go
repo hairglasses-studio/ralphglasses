@@ -315,6 +315,41 @@ func (s *Server) buildEvalGroup() ToolGroup {
 	}
 }
 
+func (s *Server) buildRdcycleGroup() ToolGroup {
+	return ToolGroup{
+		Name:        "rdcycle",
+		Description: "R&D cycle automation — finding-to-task conversion, cycle planning, baselines, merging, and scheduling",
+		Tools: []ToolEntry{
+			{mcp.NewTool("ralphglasses_finding_to_task",
+				mcp.WithDescription("Convert a scratchpad finding into a structured loop task spec"),
+				mcp.WithString("finding_id", mcp.Required(), mcp.Description("Finding ID (e.g., FINDING-240)")),
+				mcp.WithString("scratchpad_name", mcp.Required(), mcp.Description("Scratchpad filename without path")),
+			), s.handleFindingToTask},
+			{mcp.NewTool("ralphglasses_cycle_baseline",
+				mcp.WithDescription("Snapshot current repo metrics as a cycle baseline"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repository name or path")),
+				mcp.WithString("metrics", mcp.Description("Comma-separated metric names to capture (default: all)")),
+			), s.handleCycleBaseline},
+			{mcp.NewTool("ralphglasses_cycle_plan",
+				mcp.WithDescription("Generate a prioritized task plan for the next R&D cycle from unresolved findings"),
+				mcp.WithString("previous_cycle_id", mcp.Description("Previous cycle ID for continuity")),
+				mcp.WithNumber("max_tasks", mcp.Description("Maximum tasks to include (default: 10)")),
+				mcp.WithNumber("budget", mcp.Description("Budget in USD (default: 5.0)")),
+			), s.handleCyclePlan},
+			{mcp.NewTool("ralphglasses_cycle_merge",
+				mcp.WithDescription("Merge parallel worktree results with conflict detection"),
+				mcp.WithString("worktree_paths", mcp.Required(), mcp.Description("Comma-separated worktree paths to merge")),
+				mcp.WithString("conflict_strategy", mcp.Description("Conflict resolution: ours, theirs, or manual (default: manual)")),
+			), s.handleCycleMerge},
+			{mcp.NewTool("ralphglasses_cycle_schedule",
+				mcp.WithDescription("Schedule recurring R&D cycles with cron expressions"),
+				mcp.WithString("cron_expr", mcp.Required(), mcp.Description("Cron expression (e.g., '0 2 * * 1' for Monday 2am)")),
+				mcp.WithString("cycle_config", mcp.Description("JSON cycle configuration")),
+			), s.handleCycleSchedule},
+		},
+	}
+}
+
 func (s *Server) buildObservabilityGroup() ToolGroup {
 	return ToolGroup{
 		Name:        "observability",
