@@ -38,7 +38,9 @@ type LoopProfile struct {
 	EnableWorkerEnhancement  bool  `json:"enable_worker_enhancement"`  // run prompt enhancement before worker calls
 	MaxIterations        int           `json:"max_iterations,omitempty"`
 	MaxDurationSecs      int           `json:"max_duration_secs,omitempty"`
-	StallTimeout         time.Duration `json:"stall_timeout,omitempty"` // 0 = disabled, default 10min
+	StallTimeout         time.Duration `json:"stall_timeout,omitempty"`      // 0 = disabled, default 10min
+	HardBudgetCapUSD     float64       `json:"hard_budget_cap_usd,omitempty"` // absolute spend ceiling (0 = disabled)
+	NoopPlateauLimit     int           `json:"noop_plateau_limit,omitempty"`  // stop after N consecutive no-op iterations (0 = disabled)
 }
 
 // LoopTask is the bounded implementation unit produced by the planner.
@@ -167,6 +169,47 @@ func SelfImprovementProfile() LoopProfile {
 		EnableWorkerEnhancement:  false, // worker prompts already well-structured by planner
 		MaxIterations:        10,
 		MaxDurationSecs:      14400, // 4 hours
+	}
+}
+
+// BudgetOptimizedSelfImprovementProfile returns a self-improvement profile that
+// uses Sonnet-only (no Opus) to maximize iterations per dollar. Per-session
+// budgets are scaled from the total budget. For a $100 total budget this yields
+// ~$1.50 planner + $3.00 worker per iteration with a hard cap at 95%.
+func BudgetOptimizedSelfImprovementProfile(totalBudget float64) LoopProfile {
+	if totalBudget <= 0 {
+		totalBudget = 100
+	}
+	return LoopProfile{
+		PlannerProvider:      ProviderClaude,
+		PlannerModel:         "claude-sonnet-4-6",
+		WorkerProvider:       ProviderClaude,
+		WorkerModel:          "claude-sonnet-4-6",
+		VerifierProvider:     ProviderClaude,
+		VerifierModel:        "claude-sonnet-4-6",
+		MaxConcurrentWorkers: 1,
+		RetryLimit:           2,
+		VerifyCommands:       []string{"./scripts/dev/ci.sh", "go run . selftest --gate"},
+		WorktreePolicy:       "git",
+		PlannerBudgetUSD:     totalBudget * 0.015, // $1.50 per planner call at $100
+		WorkerBudgetUSD:      totalBudget * 0.030, // $3.00 per worker call at $100
+		VerifierBudgetUSD:    totalBudget * 0.005, // $0.50 per verifier call at $100
+		HardBudgetCapUSD:     totalBudget * 0.95,  // hard stop at 95%, preserves 5% buffer
+		NoopPlateauLimit:     3,
+		EnableReflexion:      true,
+		EnableEpisodicMemory: true,
+		EnableUncertainty:    true,
+		EnableCurriculum:     true,
+		EnableCascade:        false,
+		SelfImprovement:      true,
+		CompactionEnabled:    true,
+		CompactionThreshold:  5,
+		AutoMergeAll:         true,
+		EnablePlannerEnhancement: false,
+		EnableWorkerEnhancement:  false,
+		MaxIterations:        int(totalBudget * 1.5), // ~150 at $100
+		MaxDurationSecs:      28800,                   // 8 hours
+		StallTimeout:         10 * time.Minute,
 	}
 }
 
