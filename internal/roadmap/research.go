@@ -205,17 +205,76 @@ func searchGitHub(ctx context.Context, client *http.Client, query string) ([]Fin
 	}
 
 	var findings []Finding
+	queryKW := extractQueryKeywords(query)
 	for _, item := range result.Items {
+		itemText := item.FullName + " " + item.Description
+		itemKW := extractQueryKeywords(itemText)
 		findings = append(findings, Finding{
 			Name:        item.FullName,
 			URL:         item.HTMLURL,
 			Description: item.Description,
 			Stars:       item.Stars,
 			Language:    item.Language,
-			Relevance:   0.5, // Base relevance, could be refined
+			Relevance:   jaccardSimilarity(queryKW, itemKW),
 		})
 	}
 	return findings, nil
+}
+
+// stopWords is the set of common English words filtered from keyword extraction.
+var stopWords = map[string]bool{
+	"the": true, "a": true, "an": true, "is": true, "are": true, "was": true,
+	"were": true, "be": true, "been": true, "being": true, "have": true, "has": true,
+	"had": true, "do": true, "does": true, "did": true, "will": true, "would": true,
+	"could": true, "should": true, "may": true, "might": true, "must": true,
+	"shall": true, "can": true, "need": true, "dare": true, "ought": true, "used": true,
+	"to": true, "of": true, "in": true, "for": true, "on": true, "with": true,
+	"at": true, "by": true, "from": true, "as": true, "into": true, "through": true,
+	"during": true, "before": true, "after": true, "above": true, "below": true,
+	"between": true, "out": true, "off": true, "over": true, "under": true,
+	"again": true, "further": true, "then": true, "once": true, "and": true,
+	"but": true, "or": true, "nor": true, "not": true, "so": true, "yet": true,
+	"both": true, "either": true, "neither": true, "each": true, "every": true,
+	"all": true, "any": true, "few": true, "more": true, "most": true, "other": true,
+	"some": true, "such": true, "no": true, "only": true, "own": true, "same": true,
+	"than": true, "too": true, "very": true, "just": true, "because": true,
+	"if": true, "when": true, "where": true, "how": true, "what": true, "which": true,
+	"who": true, "whom": true, "this": true, "that": true, "these": true,
+	"those": true, "it": true, "its": true,
+}
+
+// extractQueryKeywords splits text into lowercase keywords, filtering stop words
+// and short tokens.
+func extractQueryKeywords(text string) map[string]bool {
+	kw := make(map[string]bool)
+	for _, w := range strings.Fields(strings.ToLower(text)) {
+		// Strip common punctuation and path separators
+		w = strings.Trim(w, ".,;:!?\"'`()[]{}/-")
+		if len(w) < 2 || stopWords[w] {
+			continue
+		}
+		kw[w] = true
+	}
+	return kw
+}
+
+// jaccardSimilarity computes |intersection| / |union| of two keyword sets.
+// Returns 0.0 if both sets are empty.
+func jaccardSimilarity(a, b map[string]bool) float64 {
+	if len(a) == 0 && len(b) == 0 {
+		return 0.0
+	}
+	intersection := 0
+	for k := range a {
+		if b[k] {
+			intersection++
+		}
+	}
+	union := len(a) + len(b) - intersection
+	if union == 0 {
+		return 0.0
+	}
+	return float64(intersection) / float64(union)
 }
 
 func dedupStrings(ss []string) []string {

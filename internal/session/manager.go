@@ -129,6 +129,18 @@ func (m *Manager) Init() {
 		slog.Warn("found orphaned processes from previous run", "count", len(orphans))
 	}
 
+	// QW-9: Restore persisted autonomy level on startup.
+	m.mu.RLock()
+	stateDir := m.stateDir
+	opt := m.optimizer
+	m.mu.RUnlock()
+	if level, err := LoadAutonomyLevel(filepath.Dir(stateDir)); err == nil && level > 0 {
+		if opt != nil && opt.decisions != nil {
+			opt.decisions.RestoreLevel(AutonomyLevel(level))
+			slog.Info("restored persisted autonomy level", "level", level)
+		}
+	}
+
 	// WS-7: Auto-prune stale loop runs on startup (non-blocking).
 	go m.autoPruneLoopRuns()
 }
@@ -165,12 +177,15 @@ func (m *Manager) ApplyConfig(cfg *model.RalphConfig) {
 			m.JournalMaxEntries = v
 		}
 	}
-	// WS3: Initialize CascadeRouter when CASCADE_ENABLED=true and no router is attached yet.
+	// QW-2: Initialize cascade routing by default unless explicitly disabled.
+	// If CASCADE_ENABLED is not set, treat it as true (the new default).
 	if !m.HasCascadeRouter() {
-		if cascadeCfg := DefaultCascadeFromConfig(cfg.Values); cascadeCfg != nil {
-			cr := NewCascadeRouter(*cascadeCfg, nil, nil, m.stateDir)
+		cascadeVal := strings.ToLower(strings.TrimSpace(cfg.Get("CASCADE_ENABLED", "true")))
+		if cascadeVal != "false" && cascadeVal != "0" && cascadeVal != "no" {
+			cascadeCfg := DefaultCascadeConfig()
+			cr := NewCascadeRouter(cascadeCfg, nil, nil, m.stateDir)
 			m.SetCascadeRouter(cr)
-			slog.Info("cascade router initialized from config", "cheap", cascadeCfg.CheapProvider, "expensive", cascadeCfg.ExpensiveProvider)
+			slog.Info("cascade routing enabled by default")
 		}
 	}
 }

@@ -10,6 +10,48 @@ import (
 	"time"
 )
 
+// autonomyState is the JSON structure persisted for autonomy level.
+type autonomyState struct {
+	Level     int    `json:"level"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+// SaveAutonomyLevel persists the autonomy level to ralphDir/autonomy.json.
+func SaveAutonomyLevel(ralphDir string, level int) error {
+	if ralphDir == "" {
+		return fmt.Errorf("empty ralph dir")
+	}
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		return fmt.Errorf("create autonomy dir: %w", err)
+	}
+	state := autonomyState{
+		Level:     level,
+		UpdatedAt: time.Now().UTC().Format(time.RFC3339),
+	}
+	data, err := json.Marshal(state)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(ralphDir, "autonomy.json"), data, 0644)
+}
+
+// LoadAutonomyLevel reads the persisted autonomy level from ralphDir/autonomy.json.
+// Returns 0 if the file does not exist.
+func LoadAutonomyLevel(ralphDir string) (int, error) {
+	data, err := os.ReadFile(filepath.Join(ralphDir, "autonomy.json"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	var state autonomyState
+	if err := json.Unmarshal(data, &state); err != nil {
+		return 0, fmt.Errorf("parse autonomy.json: %w", err)
+	}
+	return state.Level, nil
+}
+
 // AutoOptimizer implements Level 2 (auto-optimize) decision engines.
 // It wires FeedbackAnalyzer profiles and CostNorm into launch decisions,
 // making the system learn from every session.

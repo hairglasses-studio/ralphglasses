@@ -305,6 +305,7 @@ func ConsolidatePatterns(repoPath string) error {
 
 	patterns := ConsolidatedPatterns{
 		UpdatedAt: time.Now(),
+		Rules:     []string{},
 	}
 
 	for text, count := range workedCounts {
@@ -474,24 +475,6 @@ func extractSignalsFromOutput(history []string, status SessionStatus, spentUSD f
 		}
 	}
 
-	// Extract suggestions from common advisory patterns in output
-	suggestionPrefixes := []string{"you should ", "consider ", "try ", "next time ", "recommend ", "suggestion: ", "hint: ", "tip: "}
-	for _, line := range history {
-		lower := strings.ToLower(strings.TrimSpace(line))
-		for _, prefix := range suggestionPrefixes {
-			if strings.Contains(lower, prefix) {
-				item := strings.TrimSpace(line)
-				if len(item) > 120 {
-					item = item[:120]
-				}
-				if item != "" {
-					suggest = append(suggest, item)
-				}
-				break
-			}
-		}
-	}
-
 	// Friction: repeated identical errors suggest systematic issues
 	for errLine, count := range errorCounts {
 		if count >= 3 {
@@ -515,7 +498,7 @@ func extractSignalsFromOutput(history []string, status SessionStatus, spentUSD f
 		failed = failed[:5]
 	}
 	if len(suggest) > 5 {
-		suggest = suggest[:5]
+		suggest = suggest[:3]
 	}
 
 	return worked, failed, suggest
