@@ -93,6 +93,50 @@ func TestWriteAndLoadObservations(t *testing.T) {
 	}
 }
 
+func TestObservationWorkerEnhancementSource(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "obs.jsonl")
+
+	obs := LoopObservation{
+		Timestamp:               time.Now().UTC().Truncate(time.Millisecond),
+		LoopID:                  "loop-enh",
+		IterationNumber:         1,
+		WorkerEnhancementSource: "api",
+		Status:                  "idle",
+	}
+
+	if err := WriteObservation(path, obs); err != nil {
+		t.Fatalf("WriteObservation: %v", err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+
+	var decoded LoopObservation
+	if err := json.Unmarshal(data[:len(data)-1], &decoded); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if decoded.WorkerEnhancementSource != "api" {
+		t.Errorf("WorkerEnhancementSource = %q, want %q", decoded.WorkerEnhancementSource, "api")
+	}
+
+	// Verify omitempty: empty value should not appear in JSON.
+	obs2 := LoopObservation{
+		Timestamp:       time.Now().UTC().Truncate(time.Millisecond),
+		LoopID:          "loop-enh2",
+		IterationNumber: 2,
+		Status:          "idle",
+	}
+	raw, _ := json.Marshal(obs2)
+	if strings.Contains(string(raw), "worker_enhancement_source") {
+		t.Error("expected worker_enhancement_source to be omitted when empty")
+	}
+}
+
 func TestLoadObservations_MissingFile(t *testing.T) {
 	t.Parallel()
 	obs, err := LoadObservations("/nonexistent/path.jsonl", time.Time{})

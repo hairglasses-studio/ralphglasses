@@ -103,3 +103,54 @@ func ValidateLoopConfig(cfg LoopConfig) []LoopValidationWarning {
 
 	return warnings
 }
+
+// validLoopProfileProviders is the set of accepted provider values for loop profiles.
+var validLoopProfileProviders = map[Provider]bool{
+	ProviderClaude: true,
+	ProviderGemini: true,
+	ProviderCodex:  true,
+	"":             true, // empty = use default
+}
+
+// ValidateLoopProfile checks a LoopProfile for invalid settings before loop execution.
+// Returns an error describing the first invalid field found, or nil if valid.
+func ValidateLoopProfile(p LoopProfile) error {
+	if !validLoopProfileProviders[p.PlannerProvider] {
+		return fmt.Errorf("invalid planner_provider %q: must be one of claude, gemini, codex, or empty", p.PlannerProvider)
+	}
+	if !validLoopProfileProviders[p.WorkerProvider] {
+		return fmt.Errorf("invalid worker_provider %q: must be one of claude, gemini, codex, or empty", p.WorkerProvider)
+	}
+
+	if p.MaxIterations < 0 {
+		return fmt.Errorf("max_iterations must be non-negative, got %d", p.MaxIterations)
+	}
+	if p.MaxDurationSecs < 0 {
+		return fmt.Errorf("max_duration_secs must be non-negative, got %d", p.MaxDurationSecs)
+	}
+
+	if p.MaxConcurrentWorkers < 0 || p.MaxConcurrentWorkers > 10 {
+		return fmt.Errorf("max_concurrent_workers must be 0-10, got %d", p.MaxConcurrentWorkers)
+	}
+
+	// Budget: either both set (> 0) or both zero (no budget).
+	if (p.PlannerBudgetUSD > 0) != (p.WorkerBudgetUSD > 0) {
+		return fmt.Errorf("planner_budget_usd and worker_budget_usd must both be set or both be zero")
+	}
+	if p.PlannerBudgetUSD < 0 {
+		return fmt.Errorf("planner_budget_usd must be non-negative, got %f", p.PlannerBudgetUSD)
+	}
+	if p.WorkerBudgetUSD < 0 {
+		return fmt.Errorf("worker_budget_usd must be non-negative, got %f", p.WorkerBudgetUSD)
+	}
+
+	if p.RetryLimit < 0 || p.RetryLimit > 10 {
+		return fmt.Errorf("retry_limit must be 0-10, got %d", p.RetryLimit)
+	}
+
+	if p.StallTimeout < 0 {
+		return fmt.Errorf("stall_timeout must be non-negative, got %s", p.StallTimeout)
+	}
+
+	return nil
+}

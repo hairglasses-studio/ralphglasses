@@ -1,10 +1,12 @@
 package e2e
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -298,6 +300,35 @@ func RunE2EGate(repoRoot string) (*GateReport, error) {
 	}
 
 	return EvaluateFromObservations(repoRoot, DefaultGateThresholds(), 0)
+}
+
+// FormatReport returns a human-readable markdown table of gate results.
+func FormatReport(r *GateReport) string {
+	if r == nil {
+		return ""
+	}
+
+	var b strings.Builder
+
+	fmt.Fprintf(&b, "## Gate Report — %s\n\n", r.Timestamp.Format(time.RFC3339))
+	fmt.Fprintf(&b, "**Overall: %s** (samples: %d)\n\n", string(r.Overall), r.SampleCount)
+	b.WriteString("| Metric | Verdict | Baseline | Current | Delta |\n")
+	b.WriteString("|--------|---------|----------|---------|-------|\n")
+
+	for _, gr := range r.Results {
+		baseline := fmt.Sprintf("%.4f", gr.BaselineVal)
+		current := fmt.Sprintf("%.4f", gr.CurrentVal)
+		delta := fmt.Sprintf("%.1f%%", gr.DeltaPct)
+		fmt.Fprintf(&b, "| %s | %s | %s | %s | %s |\n",
+			gr.Metric, string(gr.Verdict), baseline, current, delta)
+	}
+
+	return b.String()
+}
+
+// FormatReportJSON returns the gate report as formatted JSON.
+func FormatReportJSON(r *GateReport) ([]byte, error) {
+	return json.MarshalIndent(r, "", "  ")
 }
 
 // absoluteCeilingGate evaluates a rate metric against absolute ceilings.

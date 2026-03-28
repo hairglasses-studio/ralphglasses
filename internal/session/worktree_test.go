@@ -98,6 +98,52 @@ func TestCleanupStaleWorktrees(t *testing.T) {
 	}
 }
 
+func TestCleanupStaleWorktrees_SkipsLockedDir(t *testing.T) {
+	tmp := t.TempDir()
+	base := filepath.Join(tmp, ".ralph", "worktrees", "loops")
+
+	// Create a stale worktree with an index.lock file.
+	locked := filepath.Join(base, "locked-loop")
+	lockDir := filepath.Join(locked, ".git")
+	if err := os.MkdirAll(lockDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(lockDir, "index.lock"), []byte("lock"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Make it old enough to qualify for cleanup.
+	past := time.Now().Add(-48 * time.Hour)
+	if err := os.Chtimes(locked, past, past); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a stale worktree without a lock file.
+	unlocked := filepath.Join(base, "unlocked-loop")
+	if err := os.MkdirAll(unlocked, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(unlocked, past, past); err != nil {
+		t.Fatal(err)
+	}
+
+	cleaned, err := CleanupStaleWorktrees(tmp, 24*time.Hour)
+	if err != nil {
+		t.Fatalf("CleanupStaleWorktrees returned error: %v", err)
+	}
+	if cleaned != 1 {
+		t.Fatalf("expected 1 cleaned (only unlocked), got %d", cleaned)
+	}
+
+	// Locked directory should survive.
+	if _, err := os.Stat(locked); os.IsNotExist(err) {
+		t.Fatal("locked worktree was removed but should have been skipped")
+	}
+	// Unlocked directory should be gone.
+	if _, err := os.Stat(unlocked); !os.IsNotExist(err) {
+		t.Fatal("unlocked worktree should have been removed")
+	}
+}
+
 func TestCleanupStaleWorktrees_NoDir(t *testing.T) {
 	tmp := t.TempDir()
 	// Base directory doesn't exist — should return 0 with no error.

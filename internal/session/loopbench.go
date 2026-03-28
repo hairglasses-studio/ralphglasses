@@ -118,6 +118,10 @@ type LoopObservation struct {
 	AcceptanceSafeCount   int    `json:"acceptance_safe_count,omitempty"`   // paths classified as safe
 	AcceptanceReviewCount int    `json:"acceptance_review_count,omitempty"` // paths classified as needing review
 
+	// WorkerEnhancementSource records how the worker prompt was enhanced.
+	// Values: "none", "local", "api"
+	WorkerEnhancementSource string `json:"worker_enhancement_source,omitempty"`
+
 	// StallCount is the number of stall events detected during this iteration.
 	StallCount int `json:"stall_count,omitempty"`
 

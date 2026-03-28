@@ -122,20 +122,22 @@ func (s *Server) handleScratchpadRead(_ context.Context, req mcp.CallToolRequest
 }
 
 func (s *Server) handleScratchpadAppend(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "name")
-	if name == "" {
-		return codedError(ErrInvalidParams, "name is required"), nil
+	p := NewParams(req)
+
+	name, errResult := p.RequireString("name")
+	if errResult != nil {
+		return errResult, nil
 	}
-	content := getStringArg(req, "content")
-	if content == "" {
-		return codedError(ErrInvalidParams, "content is required"), nil
+	content, errResult := p.RequireString("content")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := ValidateStringLength(content, MaxDescriptionLength, "content"); err != nil {
 		return codedError(ErrInvalidParams, err.Error()), nil
 	}
-	section := getStringArg(req, "section")
+	section := p.OptionalString("section", "")
 
-	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
+	repoPath, err := s.resolveRepoPath(p.OptionalString("repo", ""))
 	if err != nil {
 		return codedError(ErrInvalidParams, err.Error()), nil
 	}

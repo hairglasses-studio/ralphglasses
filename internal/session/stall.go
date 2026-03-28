@@ -13,6 +13,8 @@ type StallDetector struct {
 	lastActive time.Time
 	stallCount int
 	done       chan struct{}
+	onStall    func(string) // callback when stall detected
+	sessionID  string       // associated session
 }
 
 // NewStallDetector creates a detector with the given timeout.
@@ -82,7 +84,12 @@ func (sd *StallDetector) Start() <-chan bool {
 				if sd.IsStalled() {
 					sd.mu.Lock()
 					sd.stallCount++
+					cb := sd.onStall
+					sid := sd.sessionID
 					sd.mu.Unlock()
+					if cb != nil {
+						cb(sid)
+					}
 					select {
 					case ch <- true:
 					default:
@@ -94,6 +101,15 @@ func (sd *StallDetector) Start() <-chan bool {
 	}()
 
 	return ch
+}
+
+// SetOnStall registers a callback that fires when a stall is detected.
+// The callback receives the sessionID associated with this detector.
+func (sd *StallDetector) SetOnStall(sessionID string, callback func(sessionID string)) {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+	sd.sessionID = sessionID
+	sd.onStall = callback
 }
 
 // Stop halts stall monitoring.

@@ -34,6 +34,9 @@ const (
 	ErrNoActiveSessions    ErrorCode = "NO_ACTIVE_SESSIONS"
 	ErrFleetNotRunning     ErrorCode = "FLEET_NOT_RUNNING"
 	ErrNoLogFile           ErrorCode = "NO_LOG_FILE"
+	ErrTimeout             ErrorCode = "TIMEOUT"
+	ErrRateLimited         ErrorCode = "RATE_LIMITED"
+	ErrPermissionDenied    ErrorCode = "PERMISSION_DENIED"
 )
 
 // codedError returns an MCP error result with both a machine-parseable code

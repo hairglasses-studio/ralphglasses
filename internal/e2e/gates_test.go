@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -332,6 +333,156 @@ func TestEvaluateFromObservations_WithData(t *testing.T) {
 		for _, r := range report2.Results {
 			t.Logf("  %s: %s (current=%.3f baseline=%.3f delta=%.1f%%)", r.Metric, r.Verdict, r.CurrentVal, r.BaselineVal, r.DeltaPct)
 		}
+	}
+}
+
+func TestFormatReport_ValidMarkdown(t *testing.T) {
+	t.Parallel()
+
+	ts := time.Date(2025, 6, 15, 10, 30, 0, 0, time.UTC)
+	report := &GateReport{
+		Timestamp:   ts,
+		SampleCount: 5,
+		Overall:     VerdictPass,
+		Results: []GateResult{
+			{Metric: "cost_per_iteration", Verdict: VerdictPass, BaselineVal: 1.0, CurrentVal: 0.85, DeltaPct: -15.0},
+			{Metric: "completion_rate", Verdict: VerdictWarn, BaselineVal: 0, CurrentVal: 0.80, DeltaPct: 0},
+		},
+	}
+
+	md := FormatReport(report)
+
+	// Check header
+	if !strings.Contains(md, "## Gate Report") {
+		t.Error("missing markdown header")
+	}
+	if !strings.Contains(md, ts.Format(time.RFC3339)) {
+		t.Error("missing timestamp in header")
+	}
+
+	// Check overall verdict
+	if !strings.Contains(md, "Overall: pass") {
+		t.Error("missing overall verdict")
+	}
+
+	// Check table columns
+	if !strings.Contains(md, "| Metric | Verdict | Baseline | Current | Delta |") {
+		t.Error("missing table header row")
+	}
+
+	// Check table rows
+	if !strings.Contains(md, "cost_per_iteration") {
+		t.Error("missing cost_per_iteration row")
+	}
+	if !strings.Contains(md, "completion_rate") {
+		t.Error("missing completion_rate row")
+	}
+}
+
+func TestFormatReport_EmptyResults(t *testing.T) {
+	t.Parallel()
+
+	report := &GateReport{
+		Timestamp:   time.Now(),
+		SampleCount: 0,
+		Overall:     VerdictSkip,
+		Results:     nil,
+	}
+
+	md := FormatReport(report)
+
+	if !strings.Contains(md, "## Gate Report") {
+		t.Error("missing markdown header")
+	}
+	// Should have table headers but no data rows
+	if !strings.Contains(md, "| Metric | Verdict | Baseline | Current | Delta |") {
+		t.Error("missing table header row")
+	}
+	// No result rows means the table header separator is the last line with |
+	lines := strings.Split(strings.TrimSpace(md), "\n")
+	lastPipeLine := ""
+	for _, l := range lines {
+		if strings.Contains(l, "|") {
+			lastPipeLine = l
+		}
+	}
+	if !strings.Contains(lastPipeLine, "---") {
+		t.Log("last pipe line:", lastPipeLine)
+	}
+}
+
+func TestFormatReport_Nil(t *testing.T) {
+	t.Parallel()
+
+	md := FormatReport(nil)
+	if md != "" {
+		t.Errorf("nil report should produce empty string, got %q", md)
+	}
+}
+
+func TestFormatReportJSON_RoundTrip(t *testing.T) {
+	t.Parallel()
+
+	ts := time.Date(2025, 6, 15, 10, 30, 0, 0, time.UTC)
+	original := &GateReport{
+		Timestamp:   ts,
+		SampleCount: 3,
+		Overall:     VerdictWarn,
+		Results: []GateResult{
+			{Metric: "cost_per_iteration", Verdict: VerdictWarn, BaselineVal: 1.0, CurrentVal: 1.35, DeltaPct: 35.0},
+		},
+	}
+
+	data, err := FormatReportJSON(original)
+	if err != nil {
+		t.Fatalf("FormatReportJSON: %v", err)
+	}
+
+	var decoded GateReport
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if decoded.Overall != original.Overall {
+		t.Errorf("overall = %s, want %s", decoded.Overall, original.Overall)
+	}
+	if decoded.SampleCount != original.SampleCount {
+		t.Errorf("sample_count = %d, want %d", decoded.SampleCount, original.SampleCount)
+	}
+	if len(decoded.Results) != len(original.Results) {
+		t.Fatalf("results len = %d, want %d", len(decoded.Results), len(original.Results))
+	}
+	if decoded.Results[0].Metric != original.Results[0].Metric {
+		t.Errorf("metric = %q, want %q", decoded.Results[0].Metric, original.Results[0].Metric)
+	}
+	if decoded.Results[0].DeltaPct != original.Results[0].DeltaPct {
+		t.Errorf("delta_pct = %.1f, want %.1f", decoded.Results[0].DeltaPct, original.Results[0].DeltaPct)
+	}
+}
+
+func TestFormatReportJSON_EmptyReport(t *testing.T) {
+	t.Parallel()
+
+	report := &GateReport{
+		Timestamp: time.Now(),
+		Overall:   VerdictSkip,
+	}
+
+	data, err := FormatReportJSON(report)
+	if err != nil {
+		t.Fatalf("FormatReportJSON: %v", err)
+	}
+
+	var decoded GateReport
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if decoded.Overall != VerdictSkip {
+		t.Errorf("overall = %s, want skip", decoded.Overall)
+	}
+	if len(decoded.Results) != 0 {
+		t.Errorf("results len = %d, want 0", len(decoded.Results))
 	}
 }
 

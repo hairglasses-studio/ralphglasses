@@ -74,6 +74,12 @@ func CleanupStaleWorktrees(repoPath string, olderThan time.Duration) (int, error
 		}
 		if info.ModTime().Before(cutoff) {
 			p := filepath.Join(base, e.Name())
+			// Skip worktrees with an active lock file to avoid
+			// removing directories that are mid-operation.
+			lockPath := filepath.Join(p, ".git", "index.lock")
+			if _, err := os.Stat(lockPath); err == nil {
+				continue
+			}
 			if err := os.RemoveAll(p); err == nil {
 				cleaned++
 			}
