@@ -31,6 +31,18 @@ func (q *WorkQueue) Push(item *WorkItem) {
 	q.items[item.ID] = item
 }
 
+// PushValidated adds a work item to the queue after validating its RepoPath.
+// Returns an error if RepoPath is non-empty and does not exist on disk.
+func (q *WorkQueue) PushValidated(item *WorkItem) error {
+	if item.RepoPath != "" {
+		if _, err := os.Stat(item.RepoPath); err != nil {
+			return fmt.Errorf("invalid repo path %q: %w", item.RepoPath, err)
+		}
+	}
+	q.Push(item)
+	return nil
+}
+
 // Get retrieves a work item by ID.
 func (q *WorkQueue) Get(id string) (*WorkItem, bool) {
 	q.mu.Lock()

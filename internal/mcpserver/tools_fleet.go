@@ -177,9 +177,19 @@ func (s *Server) handleFleetAnalytics(_ context.Context, req mcp.CallToolRequest
 		metrics, obsCount := s.aggregateObservationMetrics(window, repoFilter, providerFilter)
 		if obsCount > 0 {
 			result["metrics"] = metrics
+			result["observation_count"] = obsCount
+			result["data_source"] = "observation_store"
+		} else if len(sessions) == 0 {
+			// FINDING-237: No fleet coordinator, no sessions, no observations —
+			// return a warning instead of misleading all-zero metrics.
+			return jsonResult(map[string]any{
+				"warning":   "fleet not initialized — start a fleet session to collect analytics",
+				"analytics": map[string]any{},
+			}), nil
+		} else {
+			result["observation_count"] = obsCount
+			result["data_source"] = "observation_store"
 		}
-		result["observation_count"] = obsCount
-		result["data_source"] = "observation_store"
 	}
 
 	return jsonResult(result), nil

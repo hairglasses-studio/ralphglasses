@@ -239,6 +239,102 @@ func TestWindowSizeMsg(t *testing.T) {
 	}
 }
 
+func TestInit_ReturnsNil(t *testing.T) {
+	v := NewEventLogView()
+	cmd := v.Init()
+	if cmd != nil {
+		t.Error("Init() should return nil cmd")
+	}
+}
+
+func TestScrollDown_Exported(t *testing.T) {
+	v := NewEventLogView()
+	v.SetDimensions(80, 10)
+
+	// Add enough entries to enable scrolling (more than viewHeight)
+	for i := 0; i < 30; i++ {
+		v.AddEntry(makeEntry("loop.iterated", "iter"))
+	}
+
+	// Go to top first
+	v, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("g")})
+	if v.ScrollPos() != 0 {
+		t.Fatalf("should be at top, got %d", v.ScrollPos())
+	}
+
+	// Use exported ScrollDown
+	v.ScrollDown()
+	if v.ScrollPos() != 1 {
+		t.Errorf("ScrollDown from 0 should move to 1, got %d", v.ScrollPos())
+	}
+
+	v.ScrollDown()
+	if v.ScrollPos() != 2 {
+		t.Errorf("second ScrollDown should move to 2, got %d", v.ScrollPos())
+	}
+}
+
+func TestScrollDown_Bounded(t *testing.T) {
+	v := NewEventLogView()
+	v.SetDimensions(80, 10)
+
+	// Add only a few entries (less than viewHeight)
+	for i := 0; i < 3; i++ {
+		v.AddEntry(makeEntry("loop.iterated", "iter"))
+	}
+
+	v.ScrollDown()
+	if v.ScrollPos() != 0 {
+		t.Errorf("ScrollDown with few entries should stay at 0, got %d", v.ScrollPos())
+	}
+}
+
+func TestScrollUp_Exported(t *testing.T) {
+	v := NewEventLogView()
+	v.SetDimensions(80, 10)
+
+	for i := 0; i < 30; i++ {
+		v.AddEntry(makeEntry("loop.iterated", "iter"))
+	}
+
+	// Scroll down first
+	v, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("g")})
+	v.ScrollDown()
+	v.ScrollDown()
+	if v.ScrollPos() != 2 {
+		t.Fatalf("should be at 2, got %d", v.ScrollPos())
+	}
+
+	v.ScrollUp()
+	if v.ScrollPos() != 1 {
+		t.Errorf("ScrollUp from 2 should move to 1, got %d", v.ScrollPos())
+	}
+}
+
+func TestScrollUp_AtZero(t *testing.T) {
+	v := NewEventLogView()
+	v.ScrollUp()
+	if v.ScrollPos() != 0 {
+		t.Errorf("ScrollUp from 0 should stay at 0, got %d", v.ScrollPos())
+	}
+}
+
+func TestLoadHistory(t *testing.T) {
+	v := NewEventLogView()
+	v.SetDimensions(80, 20)
+
+	entries := []EventLogEntry{
+		makeEntry("session.started", "s1"),
+		makeEntry("loop.started", "l1"),
+		makeEntry("fleet.status", "f1"),
+	}
+	v.LoadHistory(entries)
+
+	if len(v.Entries()) != 3 {
+		t.Errorf("LoadHistory should add 3 entries, got %d", len(v.Entries()))
+	}
+}
+
 func TestColorForType(t *testing.T) {
 	tests := []struct {
 		eventType string

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -241,6 +242,86 @@ func TestBatchCollectorCollectedAtFilled(t *testing.T) {
 	results := bc.Results()
 	if results[0].CollectedAt.IsZero() {
 		t.Error("CollectedAt should be auto-filled when zero")
+	}
+}
+
+func TestFireWebhookRetry(t *testing.T) {
+	var mu sync.Mutex
+	var attempts int
+	done := make(chan struct{})
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		attempts++
+		current := attempts
+		mu.Unlock()
+
+		if current < 3 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		// Third attempt succeeds
+		var payload batchWebhookPayload
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Errorf("decode webhook body: %v", err)
+		}
+		if payload.Attempts != 3 {
+			t.Errorf("payload.Attempts = %d, want 3", payload.Attempts)
+		}
+		w.WriteHeader(http.StatusOK)
+		close(done)
+	}))
+	defer server.Close()
+
+	bc := NewBatchCollector("retry-batch")
+	bc.SetCallbackURL(server.URL)
+	bc.SetHTTPClient(server.Client())
+	bc.SetExpectedCount(1)
+
+	bc.AddResult("s1", SessionResult{Provider: ProviderClaude, Status: StatusCompleted})
+
+	select {
+	case <-done:
+	case <-time.After(15 * time.Second):
+		t.Fatal("webhook retry did not succeed within timeout")
+	}
+
+	mu.Lock()
+	if attempts != 3 {
+		t.Errorf("expected 3 attempts, got %d", attempts)
+	}
+	mu.Unlock()
+}
+
+func TestFireWebhookAllFail(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	err := fireWebhook(server.Client(), server.URL, "fail-batch", []SessionResult{
+		{SessionID: "s1", Status: StatusCompleted},
+	})
+	if err == nil {
+		t.Fatal("expected error when all attempts fail")
+	}
+	if !strings.Contains(err.Error(), "webhook failed after 3 attempts") {
+		t.Errorf("error = %q, want 'webhook failed after 3 attempts'", err)
+	}
+}
+
+func TestBatchCollectorNullArrayMarshal(t *testing.T) {
+	bc := NewBatchCollector("null-test")
+	results := bc.Results()
+	data, err := json.Marshal(results)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) == "null" {
+		t.Error("Results() marshals as null, want []")
+	}
+	if string(data) != "[]" {
+		t.Errorf("Results() marshals as %q, want []", string(data))
 	}
 }
 

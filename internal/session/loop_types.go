@@ -130,11 +130,11 @@ func (r *LoopRun) Unlock() { r.mu.Unlock() }
 func DefaultLoopProfile() LoopProfile {
 	return LoopProfile{
 		PlannerProvider:      ProviderCodex,
-		PlannerModel:         "o1-pro",
+		PlannerModel:         "gpt-4o",
 		WorkerProvider:       ProviderCodex,
-		WorkerModel:          "gpt-5.4-xhigh",
+		WorkerModel:          "gpt-4o",
 		VerifierProvider:     ProviderCodex,
-		VerifierModel:        "gpt-5.4-xhigh",
+		VerifierModel:        "gpt-4o",
 		MaxConcurrentWorkers: 1,
 		RetryLimit:           1,
 		VerifyCommands:       []string{defaultLoopVerifyCommand},

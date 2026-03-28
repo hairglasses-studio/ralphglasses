@@ -154,3 +154,25 @@ func ValidateLoopProfile(p LoopProfile) error {
 
 	return nil
 }
+
+// KnownModels maps provider names to known valid model identifiers.
+var KnownModels = map[string][]string{
+	"claude": {"claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"},
+	"gemini": {"gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"},
+	"openai": {"gpt-4o", "gpt-4o-mini", "o1", "o1-mini", "o3-mini"},
+}
+
+// ValidateModelName checks if a model name is known for the given provider.
+// Returns nil for known models or unknown providers (permissive).
+func ValidateModelName(provider, model string) error {
+	models, ok := KnownModels[provider]
+	if !ok {
+		return nil // unknown provider — permissive
+	}
+	for _, m := range models {
+		if m == model {
+			return nil
+		}
+	}
+	return fmt.Errorf("unknown model %q for provider %q (known: %v)", model, provider, models)
+}

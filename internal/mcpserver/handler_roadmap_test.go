@@ -305,6 +305,58 @@ func TestHandleRoadmapExport_LaunchReady(t *testing.T) {
 	}
 }
 
+// --- relevanceScore ---
+
+func TestRelevanceScore(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		title     string
+		query     string
+		wantMin   float64
+		wantMax   float64
+	}{
+		{"exact match", "implement parser", "implement parser", 1.0, 1.0},
+		{"partial overlap", "implement line parser", "parser tests", 0.1, 0.5},
+		{"no overlap", "add documentation", "fix build errors", 0.0, 0.0},
+		{"empty title", "", "parser", 0.0, 0.0},
+		{"empty query", "implement parser", "", 0.0, 0.0},
+		{"both empty", "", "", 0.0, 0.0},
+		{"case insensitive", "Implement Parser", "implement parser", 1.0, 1.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			score := relevanceScore(tt.title, tt.query)
+			if score < tt.wantMin || score > tt.wantMax {
+				t.Errorf("relevanceScore(%q, %q) = %f, want [%f, %f]",
+					tt.title, tt.query, score, tt.wantMin, tt.wantMax)
+			}
+		})
+	}
+}
+
+func TestHandleRoadmapAnalyze_WithQuery(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapAnalyze(context.Background(), roadmapReq(map[string]any{
+		"path":  repoPath,
+		"query": "parser",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	if !strings.Contains(text, "gaps") || !strings.Contains(text, "ready") {
+		t.Errorf("expected analysis fields in output, got: %s", text)
+	}
+}
+
 // extractText pulls the text from the first content item of a CallToolResult.
 func extractText(t *testing.T, res *mcp.CallToolResult) string {
 	t.Helper()

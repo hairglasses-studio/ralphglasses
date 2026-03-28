@@ -41,6 +41,7 @@ type BatchCollector struct {
 func NewBatchCollector(batchID string) *BatchCollector {
 	return &BatchCollector{
 		batchID:    batchID,
+		results:    make([]SessionResult, 0),
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
 }
@@ -157,37 +158,50 @@ type batchWebhookPayload struct {
 	BatchID  string          `json:"batch_id"`
 	Complete bool            `json:"complete"`
 	Count    int             `json:"count"`
+	Attempts int             `json:"attempts"`
 	Results  []SessionResult `json:"results"`
 }
 
-// fireWebhook POSTs batch results to the callback URL.
+// fireWebhook POSTs batch results to the callback URL with exponential backoff retry.
 func fireWebhook(client *http.Client, url, batchID string, results []SessionResult) error {
-	payload := batchWebhookPayload{
-		BatchID:  batchID,
-		Complete: true,
-		Count:    len(results),
-		Results:  results,
-	}
+	const maxAttempts = 3
 
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("marshal webhook payload: %w", err)
-	}
+	var lastErr error
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		if attempt > 0 {
+			time.Sleep(time.Duration(1<<uint(attempt-1)) * time.Second) // 1s, 2s
+		}
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("create webhook request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
+		payload := batchWebhookPayload{
+			BatchID:  batchID,
+			Complete: true,
+			Count:    len(results),
+			Attempts: attempt + 1,
+			Results:  results,
+		}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("webhook POST to %s: %w", url, err)
-	}
-	defer resp.Body.Close()
+		body, err := json.Marshal(payload)
+		if err != nil {
+			return fmt.Errorf("marshal webhook payload: %w", err)
+		}
 
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("webhook POST to %s returned %d", url, resp.StatusCode)
+		req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+		if err != nil {
+			return fmt.Errorf("create webhook request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("webhook POST to %s: %w", url, err)
+			continue
+		}
+		resp.Body.Close()
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			return nil
+		}
+		lastErr = fmt.Errorf("webhook returned status %d", resp.StatusCode)
 	}
-	return nil
+	return fmt.Errorf("webhook failed after %d attempts: %w", maxAttempts, lastErr)
 }
