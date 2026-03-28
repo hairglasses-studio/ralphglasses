@@ -21,6 +21,10 @@ func (m *Manager) StartLoop(_ context.Context, repoPath string, profile LoopProf
 		return nil, fmt.Errorf("stat repo: %w", err)
 	}
 
+	if err := ValidateLoopProfile(profile); err != nil {
+		return nil, fmt.Errorf("invalid loop profile: %w", err)
+	}
+
 	profile, err := normalizeLoopProfile(profile)
 	if err != nil {
 		return nil, err

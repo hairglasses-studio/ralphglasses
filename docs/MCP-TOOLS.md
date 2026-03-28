@@ -1,6 +1,6 @@
 # MCP Server & Tools
 
-Ralphglasses is an installable MCP server exposing 115 tools (113 namespace tools + 2 meta-tools) in 13 namespaces for managing ralph loops, multi-provider LLM sessions, fleet orchestration, and self-improvement subsystems programmatically.
+Ralphglasses is an installable MCP server exposing 125 tools (123 namespace tools + 2 meta-tools) in 14 namespaces for managing ralph loops, multi-provider LLM sessions, fleet orchestration, and self-improvement subsystems programmatically.
 
 ## Install
 
@@ -19,7 +19,7 @@ A `.mcp.json` is also included in the repo root for automatic local discovery.
 
 ## Deferred Loading
 
-To minimize startup latency and memory usage, only core tools are loaded upfront. The remaining tools are organized into 13 namespaces and loaded on demand via meta-tools:
+To minimize startup latency and memory usage, only core tools are loaded upfront. The remaining tools are organized into 14 namespaces and loaded on demand via meta-tools:
 
 | Namespace | Tools | Description |
 |-----------|-------|-------------|
@@ -36,6 +36,7 @@ To minimize startup latency and memory usage, only core tools are loaded upfront
 | `eval` | 4 | Offline evaluation: counterfactual, A/B test, changepoints, anomaly detection |
 | `fleet_h` | 4 | Fleet intelligence: blackboard coordination, A2A offers, cost forecasting |
 | `observability` | 15 | Observations, scratchpad, loop wait/poll, coverage, cost estimation, merge verification |
+| `rdcycle` | 10 | R&D cycle automation: finding_to_task, cycle_baseline, cycle_plan, cycle_merge, cycle_schedule, loop_replay, budget_forecast, diff_review, finding_reason, observation_correlate |
 
 Use the meta-tools below to discover and load tool groups at runtime.
 
@@ -226,6 +227,21 @@ Use the meta-tools below to discover and load tool groups at runtime.
 | `ralphglasses_scratchpad_validate` | Validate scratchpad entries against expected constraints |
 | `ralphglasses_scratchpad_context` | Auto-enrich scratchpad with current system context |
 | `ralphglasses_scratchpad_reason` | Record intermediate reasoning between tool calls |
+
+### rdcycle (10 tools)
+
+| Tool | Description |
+|------|-------------|
+| `ralphglasses_finding_to_task` | Convert a scratchpad finding into an actionable task spec |
+| `ralphglasses_cycle_baseline` | Capture repo metrics baseline (build, test, coverage, vet) |
+| `ralphglasses_cycle_plan` | Generate prioritized task list from unresolved findings |
+| `ralphglasses_cycle_merge` | Merge worktree changes with conflict detection |
+| `ralphglasses_cycle_schedule` | Schedule recurring R&D cycles via cron expressions |
+| `ralphglasses_loop_replay` | Replay a failed loop iteration with modified parameters |
+| `ralphglasses_budget_forecast` | Predict cost of N more iterations from historical data |
+| `ralphglasses_diff_review` | Auto-review git diff for scope creep, missing tests, TODOs |
+| `ralphglasses_finding_reason` | Analyze scratchpad findings for root causes and patterns |
+| `ralphglasses_observation_correlate` | Link observations to git commits by timestamp |
 
 ## Restarting After Code Changes
 

@@ -63,15 +63,19 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 		}), nil
 	}
 
-	repo := getStringArg(req, "repo")
-	prompt := getStringArg(req, "prompt")
-	provider := getStringArg(req, "provider")
-	budget := getNumberArg(req, "budget_usd", 5)
-	priority := int(getNumberArg(req, "priority", 5))
+	p := NewParams(req)
 
-	if repo == "" || prompt == "" {
-		return codedError(ErrInvalidParams, "repo and prompt required"), nil
+	repo, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
+	prompt, errResult := p.RequireString("prompt")
+	if errResult != nil {
+		return errResult, nil
+	}
+	provider := p.OptionalString("provider", "")
+	budget := p.OptionalNumber("budget_usd", 5)
+	priority := int(p.OptionalNumber("priority", 5))
 
 	item := &fleet.WorkItem{
 		Type:         fleet.WorkTypeSession,

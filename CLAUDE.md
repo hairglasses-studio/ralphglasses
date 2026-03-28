@@ -18,7 +18,7 @@ go build ./...
 go run . --scan-path ~/hairglasses-studio
 ```
 
-## MCP Server (120 tools, 14 namespaces)
+## MCP Server (125 tools, 14 namespaces)
 
 ```bash
 claude mcp add ralphglasses -- go run . mcp
