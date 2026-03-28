@@ -257,3 +257,102 @@ func hashFile(path string) (string, error) {
 func joinPathList(paths []string) string {
 	return strings.Join(paths, ":")
 }
+
+// RegressionSeverity describes the severity of a detected regression.
+type RegressionSeverity string
+
+const (
+	SeverityCritical RegressionSeverity = "critical"
+	SeverityWarning  RegressionSeverity = "warning"
+	SeverityInfo     RegressionSeverity = "info"
+)
+
+// Regression describes a single regression detected between two self-test runs.
+type Regression struct {
+	Field    string             `json:"field"`
+	OldValue any                `json:"old_value"`
+	NewValue any                `json:"new_value"`
+	Severity RegressionSeverity `json:"severity"`
+	Message  string             `json:"message"`
+}
+
+// CompareResults compares two SelfTestResult values and returns any regressions
+// detected. It checks for: iteration count drops, cost increases, duration
+// regressions, and new errors in observations.
+func CompareResults(current, previous SelfTestResult) []Regression {
+	var regressions []Regression
+
+	// Iteration count drop (fewer iterations completed).
+	if current.Iterations < previous.Iterations && previous.Iterations > 0 {
+		regressions = append(regressions, Regression{
+			Field:    "iterations",
+			OldValue: previous.Iterations,
+			NewValue: current.Iterations,
+			Severity: SeverityWarning,
+			Message:  fmt.Sprintf("iteration count dropped from %d to %d", previous.Iterations, current.Iterations),
+		})
+	}
+
+	// Cost increase > 50%.
+	if previous.TotalCostUSD > 0 && current.TotalCostUSD > previous.TotalCostUSD*1.5 {
+		regressions = append(regressions, Regression{
+			Field:    "total_cost_usd",
+			OldValue: previous.TotalCostUSD,
+			NewValue: current.TotalCostUSD,
+			Severity: SeverityWarning,
+			Message:  fmt.Sprintf("cost increased from $%.2f to $%.2f (>50%%)", previous.TotalCostUSD, current.TotalCostUSD),
+		})
+	}
+
+	// Duration regression > 100% (took more than 2x as long).
+	if previous.Duration > 0 && current.Duration > previous.Duration*2 {
+		regressions = append(regressions, Regression{
+			Field:    "duration",
+			OldValue: previous.Duration.String(),
+			NewValue: current.Duration.String(),
+			Severity: SeverityWarning,
+			Message:  fmt.Sprintf("duration increased from %s to %s (>2x)", previous.Duration, current.Duration),
+		})
+	}
+
+	// New errors in observations that weren't present before.
+	prevErrors := countObservationErrors(previous.Observations)
+	currErrors := countObservationErrors(current.Observations)
+	if currErrors > prevErrors {
+		sev := SeverityWarning
+		if currErrors-prevErrors >= 3 {
+			sev = SeverityCritical
+		}
+		regressions = append(regressions, Regression{
+			Field:    "observation_errors",
+			OldValue: prevErrors,
+			NewValue: currErrors,
+			Severity: sev,
+			Message:  fmt.Sprintf("observation errors increased from %d to %d", prevErrors, currErrors),
+		})
+	}
+
+	// Binary hash changed (informational).
+	if previous.BinaryHash != "" && current.BinaryHash != "" && current.BinaryHash != previous.BinaryHash {
+		regressions = append(regressions, Regression{
+			Field:    "binary_hash",
+			OldValue: previous.BinaryHash,
+			NewValue: current.BinaryHash,
+			Severity: SeverityInfo,
+			Message:  "binary hash changed between runs",
+		})
+	}
+
+	return regressions
+}
+
+// countObservationErrors counts observations containing an "error" key.
+func countObservationErrors(observations []map[string]any) int {
+	count := 0
+	for _, obs := range observations {
+		if _, hasErr := obs["error"]; hasErr {
+			count++
+		}
+	}
+	return count
+}

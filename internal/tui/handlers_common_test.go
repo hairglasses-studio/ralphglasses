@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
 )
@@ -849,5 +851,468 @@ func TestCommandInputFlow_TabSwitch(t *testing.T) {
 	got := m2.(Model)
 	if got.CurrentView != ViewFleet {
 		t.Errorf("CurrentView = %v, want ViewFleet", got.CurrentView)
+	}
+}
+
+// --- handleConfigKey tests ---
+
+func TestHandleConfigKey_NilEditor(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ConfigEdit = nil
+
+	m2, cmd := m.handleConfigKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	got := m2.(Model)
+	_ = got
+	if cmd != nil {
+		t.Error("handleConfigKey with nil editor should return nil cmd")
+	}
+}
+
+func TestHandleConfigKey_MoveDown(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	cfg := &views.ConfigEditor{}
+	m.ConfigEdit = cfg
+
+	m2, cmd := m.handleConfigKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	_ = m2
+	if cmd != nil {
+		t.Error("move down should return nil cmd")
+	}
+}
+
+func TestHandleConfigKey_MoveUp(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	cfg := &views.ConfigEditor{}
+	m.ConfigEdit = cfg
+
+	m2, cmd := m.handleConfigKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	_ = m2
+	if cmd != nil {
+		t.Error("move up should return nil cmd")
+	}
+}
+
+func TestHandleConfigEditInput_TypeChar(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	cfg := &views.ConfigEditor{Editing: true}
+	m.ConfigEdit = cfg
+
+	m2, cmd := m.handleConfigEditInput(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	_ = m2
+	if cmd != nil {
+		t.Error("type char should return nil cmd")
+	}
+}
+
+func TestHandleConfigEditInput_Backspace(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	cfg := &views.ConfigEditor{Editing: true, EditBuf: "abc"}
+	m.ConfigEdit = cfg
+
+	m2, cmd := m.handleConfigEditInput(tea.KeyMsg{Type: tea.KeyBackspace})
+	_ = m2
+	if cmd != nil {
+		t.Error("backspace should return nil cmd")
+	}
+}
+
+func TestHandleConfigEditInput_Escape(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	cfg := &views.ConfigEditor{Editing: true, EditBuf: "test"}
+	m.ConfigEdit = cfg
+
+	m2, cmd := m.handleConfigEditInput(tea.KeyMsg{Type: tea.KeyEscape})
+	_ = m2
+	if cmd != nil {
+		t.Error("escape should return nil cmd")
+	}
+}
+
+func TestHandleConfigEditInput_Enter(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	cfg := &views.ConfigEditor{Editing: true, EditBuf: "value"}
+	m.ConfigEdit = cfg
+
+	m2, cmd := m.handleConfigEditInput(tea.KeyMsg{Type: tea.KeyEnter})
+	_ = m2
+	if cmd != nil {
+		t.Error("enter should return nil cmd")
+	}
+}
+
+// --- handleLauncherKey tests ---
+
+func TestHandleLauncherKey_Escape(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Launcher = &components.SessionLauncher{}
+
+	m2, cmd := m.handleLauncherKey(tea.KeyMsg{Type: tea.KeyEscape})
+	_ = m2
+	if cmd != nil {
+		t.Error("escape should return nil cmd")
+	}
+}
+
+func TestHandleLauncherKey_TypeChar(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Launcher = &components.SessionLauncher{}
+
+	m2, cmd := m.handleLauncherKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	_ = m2
+	if cmd != nil {
+		t.Error("type char should return nil cmd")
+	}
+}
+
+func TestHandleLauncherKey_Tab(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Launcher = &components.SessionLauncher{}
+
+	m2, cmd := m.handleLauncherKey(tea.KeyMsg{Type: tea.KeyTab})
+	_ = m2
+	if cmd != nil {
+		t.Error("tab should return nil cmd")
+	}
+}
+
+func TestHandleLauncherKey_Backspace(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Launcher = &components.SessionLauncher{}
+
+	m2, cmd := m.handleLauncherKey(tea.KeyMsg{Type: tea.KeyBackspace})
+	_ = m2
+	if cmd != nil {
+		t.Error("backspace should return nil cmd")
+	}
+}
+
+func TestHandleLauncherKey_UpDown(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Launcher = &components.SessionLauncher{}
+
+	m2, cmd := m.handleLauncherKey(tea.KeyMsg{Type: tea.KeyDown})
+	_ = m2
+	if cmd != nil {
+		t.Error("down should return nil cmd")
+	}
+
+	m3, cmd2 := m.handleLauncherKey(tea.KeyMsg{Type: tea.KeyUp})
+	_ = m3
+	if cmd2 != nil {
+		t.Error("up should return nil cmd")
+	}
+}
+
+// --- handleConfirmResult additional tests ---
+
+func TestHandleConfirmResult_StopLoop(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Ctx = context.Background()
+	m.ConfirmDialog = &components.ConfirmDialog{
+		Title:  "Test",
+		Action: "stopLoop",
+		Active: true,
+	}
+
+	result := components.ConfirmResultMsg{
+		Action: "stopLoop",
+		Result: components.ConfirmYes,
+		Data:   -1, // invalid index
+	}
+	m2, _ := m.handleConfirmResult(result)
+	got := m2.(Model)
+	if got.ConfirmDialog != nil {
+		t.Error("ConfirmDialog should be nil after confirm")
+	}
+}
+
+func TestHandleConfirmResult_StopSession(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ConfirmDialog = &components.ConfirmDialog{
+		Title:  "Test",
+		Action: "stopSession",
+		Active: true,
+	}
+
+	result := components.ConfirmResultMsg{
+		Action: "stopSession",
+		Result: components.ConfirmYes,
+		Data:   "nonexistent-session-id",
+	}
+	m2, _ := m.handleConfirmResult(result)
+	got := m2.(Model)
+	if got.ConfirmDialog != nil {
+		t.Error("ConfirmDialog should be nil after confirm")
+	}
+}
+
+func TestHandleConfirmResult_StopManagedLoop(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ConfirmDialog = &components.ConfirmDialog{
+		Title:  "Test",
+		Action: "stopManagedLoop",
+		Active: true,
+	}
+
+	result := components.ConfirmResultMsg{
+		Action: "stopManagedLoop",
+		Result: components.ConfirmYes,
+		Data:   "loop-id",
+	}
+	m2, _ := m.handleConfirmResult(result)
+	got := m2.(Model)
+	if got.ConfirmDialog != nil {
+		t.Error("ConfirmDialog should be nil after confirm")
+	}
+}
+
+// --- handleActionResult additional tests ---
+
+func TestHandleActionResult_StartAll(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+
+	result := components.ActionResultMsg{Action: "startAll"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("ActionMenu should be nil")
+	}
+}
+
+func TestHandleActionResult_StartLoop_NoSelection(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.SelectedIdx = -1
+
+	result := components.ActionResultMsg{Action: "startLoop"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("ActionMenu should be nil")
+	}
+}
+
+func TestHandleActionResult_PauseLoop_NoSelection(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.SelectedIdx = -1
+
+	result := components.ActionResultMsg{Action: "pauseLoop"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("ActionMenu should be nil")
+	}
+}
+
+func TestHandleActionResult_ViewLogs_NoSelection(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.SelectedIdx = -1
+
+	result := components.ActionResultMsg{Action: "viewLogs"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("ActionMenu should be nil")
+	}
+}
+
+func TestHandleActionResult_EditConfig_NoSelection(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.SelectedIdx = -1
+
+	result := components.ActionResultMsg{Action: "editConfig"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("ActionMenu should be nil")
+	}
+}
+
+func TestHandleActionResult_LaunchSession_NoSelection(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.SelectedIdx = -1
+
+	result := components.ActionResultMsg{Action: "launchSession"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("ActionMenu should be nil")
+	}
+}
+
+func TestHandleActionResult_ViewDiff_NoSelection(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.SelectedIdx = -1
+
+	result := components.ActionResultMsg{Action: "viewDiff"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("ActionMenu should be nil")
+	}
+}
+
+func TestHandleActionResult_StopSession_NoSession(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.SelectedSession = ""
+
+	result := components.ActionResultMsg{Action: "stopSession"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("ActionMenu should be nil")
+	}
+}
+
+func TestHandleActionResult_RetrySession_NoSession(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.SelectedSession = ""
+
+	result := components.ActionResultMsg{Action: "retrySession"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("ActionMenu should be nil")
+	}
+}
+
+func TestHandleActionResult_StreamOutput(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.SelectedSession = ""
+
+	result := components.ActionResultMsg{Action: "streamOutput"}
+	m2, cmd := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("ActionMenu should be nil")
+	}
+	// No session selected — startOutputStreaming returns nil
+	if cmd != nil {
+		t.Error("streamOutput with no session should return nil cmd")
+	}
+}
+
+func TestHandleActionResult_StopLoop_NoSelection(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.SelectedIdx = -1
+
+	result := components.ActionResultMsg{Action: "stopLoop"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ActionMenu != nil {
+		t.Error("ActionMenu should be nil")
+	}
+}
+
+// --- handleActionResult with valid selection ---
+
+func TestHandleActionResult_StopLoop_WithSelection(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.Repos = []*model.Repo{{Name: "test-repo", Path: "/tmp/test-repo"}}
+	m.SelectedIdx = 0
+
+	result := components.ActionResultMsg{Action: "stopLoop"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ConfirmDialog == nil {
+		t.Error("stopLoop with selection should set ConfirmDialog")
+	}
+}
+
+func TestHandleActionResult_ViewLogs_WithSelection(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.Repos = []*model.Repo{{Name: "test-repo", Path: "/tmp/test-repo"}}
+	m.SelectedIdx = 0
+
+	result := components.ActionResultMsg{Action: "viewLogs"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.CurrentView != ViewLogs {
+		t.Errorf("viewLogs should push ViewLogs, got %v", got.CurrentView)
+	}
+}
+
+func TestHandleActionResult_ViewDiff_WithSelection(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.Repos = []*model.Repo{{Name: "test-repo", Path: "/tmp/test-repo"}}
+	m.SelectedIdx = 0
+
+	result := components.ActionResultMsg{Action: "viewDiff"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.CurrentView != ViewDiff {
+		t.Errorf("viewDiff should push ViewDiff, got %v", got.CurrentView)
+	}
+}
+
+func TestHandleActionResult_LaunchSession_WithSelection(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.Repos = []*model.Repo{{Name: "test-repo", Path: "/tmp/test-repo"}}
+	m.SelectedIdx = 0
+
+	result := components.ActionResultMsg{Action: "launchSession"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.Launcher == nil {
+		t.Error("launchSession should set Launcher")
+	}
+}
+
+func TestHandleActionResult_StopSession_WithSession(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.ActionMenu = &components.ActionMenu{Active: true}
+	m.SelectedSession = "sess-123"
+	m.SessMgr = session.NewManager()
+
+	result := components.ActionResultMsg{Action: "stopSession"}
+	m2, _ := m.handleActionResult(result)
+	got := m2.(Model)
+	if got.ConfirmDialog == nil {
+		t.Error("stopSession should set ConfirmDialog")
+	}
+}
+
+// --- handleLaunchResult tests ---
+
+func TestHandleLaunchResult_NoSessMgr(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.Launcher = components.NewSessionLauncher("/tmp", "test")
+	m.SessMgr = nil
+
+	msg := components.LaunchResultMsg{Prompt: "do something", RepoPath: "/tmp", Provider: "claude"}
+	m2, _ := m.handleLaunchResult(msg)
+	got := m2.(Model)
+	if got.Launcher != nil {
+		t.Error("LaunchResult with no SessMgr should clear Launcher")
+	}
+}
+
+// --- startOutputStreaming tests ---
+
+func TestStartOutputStreaming_NoSessMgr(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m.SelectedSession = "sess-123"
+	m.SessMgr = nil
+	m2, c := m.startOutputStreaming()
+	got := m2.(Model)
+	if c != nil {
+		t.Error("startOutputStreaming with no SessMgr should return nil cmd")
+	}
+	if got.StreamingOutput {
+		t.Error("should not set StreamingOutput with no SessMgr")
 	}
 }

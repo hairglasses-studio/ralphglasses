@@ -132,13 +132,13 @@ Pre-requisite fixes for existing bugs and silent failures. No new features. All 
 ### 0.5.5 — Distro path mismatch
 - [x] 0.5.5.1 — Align `hw-detect.service` ExecStart path with Dockerfile install location (`/usr/local/bin/`)
 - [x] 0.5.5.2 — Add path consistency check to `distro/Makefile`: validate service files reference correct paths
-- [ ] 0.5.5.3 — Document path conventions in `distro/README.md`: scripts -> `/usr/local/bin/`, configs -> `/etc/ralphglasses/` `P2` `S`
+- [x] 0.5.5.3 — Document path conventions in `distro/README.md`: scripts -> `/usr/local/bin/`, configs -> `/etc/ralphglasses/` `P2` `S`
 - **Acceptance:** `hw-detect.service` starts successfully on first boot
 
 ### 0.5.6 — Grub AMD iGPU fallback
-- [ ] 0.5.6.1 — Add GRUB menuentry for AMD iGPU boot: `nomodeset` removed, `amdgpu.dc=1` enabled `P2` `M`
-- [ ] 0.5.6.2 — Add GRUB menuentry for headless/serial console boot `P2` `S`
-- [ ] 0.5.6.3 — Set GRUB timeout to 5s (allow human intervention on boot failure) `P2` `S`
+- [x] 0.5.6.1 — Add GRUB menuentry for AMD iGPU boot: `nomodeset` removed, `amdgpu.dc=1` enabled `P2` `M`
+- [x] 0.5.6.2 — Add GRUB menuentry for headless/serial console boot `P2` `S`
+- [x] 0.5.6.3 — Set GRUB timeout to 5s (allow human intervention on boot failure) `P2` `S`
 - [ ] 0.5.6.4 — Add `grub.cfg` validation to CI: parse all menuentry blocks, verify kernel image paths exist `P2` `M`
 - **Acceptance:** system boots on AMD iGPU when NVIDIA unavailable
 
@@ -165,17 +165,17 @@ Pre-requisite fixes for existing bugs and silent failures. No new features. All 
 
 ### 0.5.10 — Marathon.sh edge cases
 - [x] 0.5.10.1 — Add `bc` availability check at script start (budget calculation depends on it)
-- [ ] 0.5.10.2 — Add disk space check before marathon start (warn if < 5GB free) `P1` `S`
-- [ ] 0.5.10.3 — Fix infinite restart loop: cap MAX_RESTARTS, add cooldown between restarts `P1` `M`
-- [ ] 0.5.10.4 — Add memory pressure monitoring: check `/proc/meminfo` AvailMem, warn at < 2GB `P2` `S`
-- [ ] 0.5.10.5 — Add log rotation: rotate marathon logs at 100MB, keep last 3 `P2` `S`
+- [x] 0.5.10.2 — Add disk space check before marathon start (warn if < 5GB free) `P1` `S`
+- [x] 0.5.10.3 — Fix infinite restart loop: cap MAX_RESTARTS, add cooldown between restarts `P1` `M`
+- [x] 0.5.10.4 — Add memory pressure monitoring: check `/proc/meminfo` AvailMem, warn at < 2GB `P2` `S`
+- [x] 0.5.10.5 — Add log rotation: rotate marathon logs at 100MB, keep last 3 `P2` `S`
 - **Acceptance:** marathon.sh handles resource exhaustion gracefully
 
 ### 0.5.11 — Config validation strictness
-- [ ] 0.5.11.1 — Define canonical key list with types: `internal/model/config_schema.go` `P1` `M`
-- [ ] 0.5.11.2 — Warn on unknown keys in `.ralphrc` (typo detection) `P1` `S`
-- [ ] 0.5.11.3 — Validate numeric ranges: `MAX_CALLS_PER_HOUR` must be 1-1000, `CB_COOLDOWN_MINUTES` must be 1-60 `P1` `S`
-- [ ] 0.5.11.4 — Validate boolean values: only "true"/"false", reject "yes"/"1"/"on" `P2` `S`
+- [x] 0.5.11.1 — Define canonical key list with types: `internal/model/config_schema.go` `P1` `M`
+- [x] 0.5.11.2 — Warn on unknown keys in `.ralphrc` (typo detection) `P1` `S`
+- [x] 0.5.11.3 — Validate numeric ranges: `MAX_CALLS_PER_HOUR` must be 1-1000, `CB_COOLDOWN_MINUTES` must be 1-60 `P1` `S`
+- [x] 0.5.11.4 — Validate boolean values: only "true"/"false", reject "yes"/"1"/"on" `P2` `S`
 - **Acceptance:** invalid `.ralphrc` values produce clear error messages
 
 ## Phase 0.6: Code Quality & Observability
@@ -339,10 +339,10 @@ Implements MCP spec features: structured output schemas, logging notifications.
 - **Acceptance:** destructive actions require y/n, clean exit on signals, no scroll panics on resize
 
 ### 1.4 — Process manager improvements
-- [ ] 1.4.1 — Define PID file format (JSON: pid, start_time, repo_path) and write on process launch `[BLOCKED BY 1.1.1]` `P1` `M`
-- [ ] 1.4.2 — Implement orphan scanner: on startup, check PID files against running processes, clean stale entries `P1` `M`
-- [ ] 1.4.3 — Add restart policy to `.ralphrc` (`RESTART_ON_CRASH=true`, `MAX_RESTARTS=3`, `RESTART_DELAY_SEC=5`) `P1` `M`
-- [ ] 1.4.4 — Implement health check loop: poll process status every 5s, trigger restart or circuit breaker on repeated failures `P1` `L`
+- [x] 1.4.1 — Define PID file format (JSON: pid, start_time, repo_path) and write on process launch `[BLOCKED BY 1.1.1]` `P1` `M`
+- [x] 1.4.2 — Implement orphan scanner: on startup, check PID files against running processes, clean stale entries `P1` `M`
+- [x] 1.4.3 — Add restart policy to `.ralphrc` (`RESTART_ON_CRASH=true`, `MAX_RESTARTS=3`, `RESTART_DELAY_SEC=5`) `P1` `M`
+- [x] 1.4.4 — Implement health check loop: poll process status every 5s, trigger restart or circuit breaker on repeated failures `P1` `L`
 - **Acceptance:** survives ralph crash with auto-restart, no orphan processes after TUI exit
 
 ### 1.5 — Config editor enhancements
@@ -362,24 +362,24 @@ Implements MCP spec features: structured output schemas, logging notifications.
 ### 1.7 — Structured logging
 - [x] 1.7.1 — Replace all `log.Printf` calls in `internal/mcpserver/` with `slog.Info`/`slog.Error` — zero `log.Printf` remain `[reconciled 2026-03-26]`
 - [x] 1.7.2 — Replace all `log.Printf` calls in `internal/process/` with structured `slog` — uses `slog` in manager, lifecycle, orphans `[reconciled 2026-03-26]`
-- [ ] 1.7.3 — Add `--log-level` flag to CLI: debug, info, warn, error (default: info) `P1` `S`
-- [ ] 1.7.4 — Add `--log-format` flag: text (default for TTY), json (default for non-TTY) `P1` `S`
+- [x] 1.7.3 — Add `--log-level` flag to CLI: debug, info, warn, error (default: info) `P1` `S`
+- [x] 1.7.4 — Add `--log-format` flag: text (default for TTY), json (default for non-TTY) `P1` `S`
 - [ ] 1.7.5 — Add request-scoped fields: inject `slog.Group("request", ...)` with tool name, repo path, duration `P1` `M`
 - **Acceptance:** all log output is structured `slog`, configurable level and format
 
 ### 1.8 — Custom error types `[BLOCKED BY 0.5.1]`
-- [ ] 1.8.1 — Define sentinel errors in `internal/model/`: `ErrStatusNotFound`, `ErrConfigParseFailed`, `ErrCircuitOpen` `P1` `S`
+- [x] 1.8.1 — Define sentinel errors in `internal/model/`: `ErrStatusNotFound`, `ErrConfigParseFailed`, `ErrCircuitOpen` `P1` `S`
 - [x] 1.8.2 — Define sentinel errors in `internal/process/`: `ErrAlreadyRunning`, `ErrNotRunning`, `ErrNoLoopScript` — `internal/process/errors.go` `[reconciled 2026-03-26]`
 - [ ] 1.8.3 — Wrap all `fmt.Errorf` with `%w` verb for proper `errors.Is()` / `errors.As()` support `P1` `M`
-- [ ] 1.8.4 — Create `internal/errors/` package with error classification: transient, permanent, user-facing `P1` `M`
-- [ ] 1.8.5 — Add error type assertions in MCP handlers: map error types to MCP error codes `P1` `M`
+- [x] 1.8.4 — Create `internal/errors/` package with error classification: transient, permanent, user-facing `P1` `M`
+- [x] 1.8.5 — Add error type assertions in MCP handlers: map error types to MCP error codes `P1` `M`
 - **Acceptance:** callers can use `errors.Is()` and `errors.As()` on all returned errors
 
 ### 1.9 — Context propagation
 - [x] 1.9.1 — Thread `context.Context` through `discovery.Scan()` — support cancellation of long scans `[reconciled 2026-03-26]`
 - [ ] 1.9.2 — Thread `context.Context` through `model.Load*()` functions — timeout on stuck file reads `P1` `M`
-- [ ] 1.9.3 — Use incoming `ctx` in MCP tool handlers (currently received but ignored) `P0` `M`
-- [ ] 1.9.4 — Add `--scan-timeout` flag: max time for initial directory scan (default: 30s) `P1` `S`
+- [x] 1.9.3 — Use incoming `ctx` in MCP tool handlers (currently received but ignored) `P0` `M`
+- [x] 1.9.4 — Add `--scan-timeout` flag: max time for initial directory scan (default: 30s) `P1` `S`
 - [ ] 1.9.5 — Wire context cancellation to TUI shutdown: cancel in-flight operations on exit `P1` `M`
 - **Acceptance:** all long-running operations respect context cancellation
 
@@ -648,15 +648,15 @@ Tooling, release automation, and contributor workflow. All items independent of 
 ### 2.5.5 — Unified cost normalization `[BLOCKED BY 2.5.1]`
 - [x] 2.5.5.1 — Verify Codex `--json` cost output fields, update normalizer
 - [x] 2.5.5.2 — Verify Gemini `stream-json` cost output fields, update normalizer
-- [ ] 2.5.5.3 — Add provider-specific cost fallback (parse stderr for cost if not in JSON) `P1` `M`
+- [x] 2.5.5.3 — Add provider-specific cost fallback (parse stderr for cost if not in JSON) `P1` `M`
 - **Acceptance:** `cost_usd` tracked accurately for all providers
 
 ### 2.5.6 — Batch API integration `[PARALLEL — independent]`
 - [x] 2.5.6.1 — Research: map batch API endpoints for Claude, Gemini, OpenAI (~50% cost) `[reconciled 2026-03-26]`
-- [ ] 2.5.6.2 — Add `BatchOptions` to `LaunchOptions` (batch mode flag, callback URL) `P1` `M`
+- [x] 2.5.6.2 — Add `BatchOptions` to `LaunchOptions` (batch mode flag, callback URL) `P1` `M`
 - [x] 2.5.6.3 — Implement batch submission for Claude (Messages Batches API) — `internal/batch/claude.go` `[reconciled 2026-03-26]`
 - [x] 2.5.6.4 — Implement batch submission for Gemini (Batch Prediction API) — `internal/batch/gemini.go` `[reconciled 2026-03-26]`
-- [ ] 2.5.6.5 — Implement batch polling/webhook for result collection `P1` `L`
+- [x] 2.5.6.5 — Implement batch polling/webhook for result collection `P1` `L`
 - **Acceptance:** batch tasks submitted and results collected for at least one provider
 
 ## Phase 2.75: Architecture & Capability Extensions (COMPLETE)

@@ -315,6 +315,164 @@ func TestBudgetOverrideZeroNoEffect(t *testing.T) {
 	}
 }
 
+// --- CompareResults / Regression tests ---
+
+func TestCompareResults_NoRegressions(t *testing.T) {
+	prev := SelfTestResult{
+		Iterations:   3,
+		TotalCostUSD: 1.50,
+		Duration:     10 * time.Second,
+		BinaryHash:   "abc123",
+		Observations: []map[string]any{
+			{"iteration": 0},
+			{"iteration": 1},
+		},
+	}
+	curr := SelfTestResult{
+		Iterations:   3,
+		TotalCostUSD: 1.50,
+		Duration:     10 * time.Second,
+		BinaryHash:   "abc123",
+		Observations: []map[string]any{
+			{"iteration": 0},
+			{"iteration": 1},
+		},
+	}
+	regressions := CompareResults(curr, prev)
+	if len(regressions) != 0 {
+		t.Errorf("expected no regressions, got %d: %v", len(regressions), regressions)
+	}
+}
+
+func TestCompareResults_IterationDrop(t *testing.T) {
+	prev := SelfTestResult{Iterations: 5}
+	curr := SelfTestResult{Iterations: 2}
+	regressions := CompareResults(curr, prev)
+	found := false
+	for _, r := range regressions {
+		if r.Field == "iterations" {
+			found = true
+			if r.Severity != SeverityWarning {
+				t.Errorf("severity = %s, want warning", r.Severity)
+			}
+		}
+	}
+	if !found {
+		t.Error("expected iteration drop regression")
+	}
+}
+
+func TestCompareResults_CostIncrease(t *testing.T) {
+	prev := SelfTestResult{TotalCostUSD: 1.00}
+	curr := SelfTestResult{TotalCostUSD: 2.00} // >50% increase
+	regressions := CompareResults(curr, prev)
+	found := false
+	for _, r := range regressions {
+		if r.Field == "total_cost_usd" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected cost regression for >50% increase")
+	}
+}
+
+func TestCompareResults_CostIncreaseBelow50Percent(t *testing.T) {
+	prev := SelfTestResult{TotalCostUSD: 1.00}
+	curr := SelfTestResult{TotalCostUSD: 1.40} // 40%, not a regression
+	regressions := CompareResults(curr, prev)
+	for _, r := range regressions {
+		if r.Field == "total_cost_usd" {
+			t.Error("cost increase < 50% should not be a regression")
+		}
+	}
+}
+
+func TestCompareResults_DurationRegression(t *testing.T) {
+	prev := SelfTestResult{Duration: 10 * time.Second}
+	curr := SelfTestResult{Duration: 25 * time.Second} // >2x
+	regressions := CompareResults(curr, prev)
+	found := false
+	for _, r := range regressions {
+		if r.Field == "duration" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected duration regression for >2x increase")
+	}
+}
+
+func TestCompareResults_NewErrors(t *testing.T) {
+	prev := SelfTestResult{
+		Observations: []map[string]any{
+			{"iteration": 0},
+		},
+	}
+	curr := SelfTestResult{
+		Observations: []map[string]any{
+			{"iteration": 0, "error": "something failed"},
+			{"iteration": 1, "error": "another failure"},
+			{"iteration": 2, "error": "third failure"},
+		},
+	}
+	regressions := CompareResults(curr, prev)
+	found := false
+	for _, r := range regressions {
+		if r.Field == "observation_errors" {
+			found = true
+			if r.Severity != SeverityCritical {
+				t.Errorf("severity = %s, want critical (>=3 new errors)", r.Severity)
+			}
+		}
+	}
+	if !found {
+		t.Error("expected observation_errors regression")
+	}
+}
+
+func TestCompareResults_BinaryHashChange(t *testing.T) {
+	prev := SelfTestResult{BinaryHash: "aaa"}
+	curr := SelfTestResult{BinaryHash: "bbb"}
+	regressions := CompareResults(curr, prev)
+	found := false
+	for _, r := range regressions {
+		if r.Field == "binary_hash" {
+			found = true
+			if r.Severity != SeverityInfo {
+				t.Errorf("severity = %s, want info", r.Severity)
+			}
+		}
+	}
+	if !found {
+		t.Error("expected binary_hash change info regression")
+	}
+}
+
+func TestCompareResults_ZeroPreviousDoesNotRegress(t *testing.T) {
+	prev := SelfTestResult{} // all zero
+	curr := SelfTestResult{Iterations: 3, TotalCostUSD: 5.0, Duration: 30 * time.Second}
+	regressions := CompareResults(curr, prev)
+	// No regressions since previous was zero (nothing to regress from).
+	for _, r := range regressions {
+		if r.Field == "iterations" || r.Field == "total_cost_usd" || r.Field == "duration" {
+			t.Errorf("unexpected regression on %s from zero previous", r.Field)
+		}
+	}
+}
+
+func TestCountObservationErrors(t *testing.T) {
+	obs := []map[string]any{
+		{"iteration": 0},
+		{"iteration": 1, "error": "fail"},
+		{"iteration": 2},
+		{"iteration": 3, "error": "another"},
+	}
+	if got := countObservationErrors(obs); got != 2 {
+		t.Errorf("countObservationErrors = %d, want 2", got)
+	}
+}
+
 // initGitRepo creates a minimal git repo with one commit for tagging tests.
 func initGitRepo(t *testing.T, dir string) {
 	t.Helper()

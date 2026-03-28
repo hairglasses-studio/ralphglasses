@@ -21,12 +21,19 @@ import (
 var mcpCallCmd = &cobra.Command{
 	Use:   "mcp-call <tool-name> [--param key=value ...]",
 	Short: "Call an MCP tool directly and print the result",
-	Long: `Invokes a registered MCP tool in-process without starting a full MCP server.
-Useful for scripts and CI.
+	Long: `Invoke a registered MCP tool in-process without starting a full MCP server.
+Useful for scripts, CI pipelines, and quick one-off tool invocations.
 
-Example:
+Parameters are passed as repeatable -p key=value flags. Values are
+auto-detected as numbers, booleans, or strings.`,
+	Example: `  # Scan for repos
   ralphglasses mcp-call ralphglasses_scan
-  ralphglasses mcp-call ralphglasses_self_improve -p repo=myrepo -p budget_usd=10`,
+
+  # Run self-improvement with budget
+  ralphglasses mcp-call ralphglasses_self_improve -p repo=myrepo -p budget_usd=10
+
+  # Check fleet status
+  ralphglasses mcp-call ralphglasses_fleet_status`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runMCPCall,
 }
