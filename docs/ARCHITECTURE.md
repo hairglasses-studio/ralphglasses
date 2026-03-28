@@ -9,7 +9,7 @@
 - **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch, concurrent worker fan-out, autonomy levels, auto-optimization, auto-recovery, context store, HITL metrics, feedback profiling, prompt caching, self-improvement pipeline (reflexion, episodic memory, cascade routing, curriculum sorting, bandit-based provider selection), sentinel errors, acceptance testing
 - **internal/batch/**: Batch API support for Claude, Gemini, and OpenAI — submit non-interactive workloads at 50% discount
 - **internal/wsclient/**: WebSocket transport client for OpenAI Responses API (40% faster for multi-turn tool chains)
-- **internal/mcpserver/**: MCP tool handlers (110 tools in 13 namespaces, deferred loading, stdio transport via mcp-go)
+- **internal/mcpserver/**: MCP tool handlers (115 tools in 13 namespaces, deferred loading, stdio transport via mcp-go)
   - `tools.go` — Server struct, constructors, Register()
   - `tools_builders.go` — Tool definition builders for all namespaces
   - `tools_dispatch.go` — Dispatch table routing tool names to handlers
@@ -92,7 +92,7 @@ The MCP server supports composable middleware (`internal/mcpserver/middleware.go
 
 ### Tool Benchmarking
 
-`internal/mcpserver/toolbench.go` provides auto-benchmarking applied to all 110 tools:
+`internal/mcpserver/toolbench.go` provides auto-benchmarking applied to all 115 tools:
 
 - **JSONL recording**: All tool calls logged with latency, success, error, sizes
 - **Percentile summaries**: P50, P95, max latency per tool
@@ -175,15 +175,15 @@ The `internal/session/` package implements a five-component self-improvement pip
 
 ## MCP Namespaces
 
-The MCP server organizes 110 tools (108 namespace tools + 2 meta-tools) across 13 namespaces with deferred loading:
+The MCP server organizes 115 tools (113 namespace tools + 2 meta-tools) across 13 namespaces with deferred loading:
 
 | Namespace | Tools | Description |
 |-----------|-------|-------------|
 | `core` | 10 | Scan, list, status, start, stop, stop_all, pause, logs, config, config_bulk (always loaded) |
 | `session` | 13 | Session lifecycle: launch, list, status, resume, stop, stop_all, budget, retry, output, tail, diff, compare, errors |
-| `loop` | 9 | Perpetual dev loops: start, status, step, stop, benchmark, baseline, gates, self_test, self_improve |
+| `loop` | 10 | Perpetual dev loops: start, status, step, stop, benchmark, baseline, gates, self_test, self_improve, prune |
 | `prompt` | 8 | Prompt enhancement: analyze, enhance, lint, improve, classify, should_enhance, templates, template_fill |
-| `fleet` | 6 | Fleet ops: fleet_status, analytics, submit, budget, workers, marathon_dashboard |
+| `fleet` | 7 | Fleet ops: fleet_status, analytics, submit, budget, workers, marathon_dashboard, dlq |
 | `repo` | 5 | Repo management: health, optimize, scaffold, claudemd_check, snapshot |
 | `roadmap` | 5 | Roadmap automation: parse, analyze, research, expand, export |
 | `team` | 6 | Agent teams: team_create, team_status, team_delegate, agent_define, agent_list, agent_compose |
@@ -191,7 +191,7 @@ The MCP server organizes 110 tools (108 namespace tools + 2 meta-tools) across 1
 | `advanced` | 22 | RC tools, events, HITL, autonomy, feedback, journals, workflows, bandit, circuit breaker |
 | `eval` | 4 | Offline evaluation: counterfactual, A/B test, changepoints, anomaly detection |
 | `fleet_h` | 4 | Fleet intelligence: blackboard coordination, A2A offers, cost forecasting |
-| `observability` | 11 | Observations, scratchpad, loop wait/poll, coverage, cost estimation, merge verification |
+| `observability` | 15 | Observations, scratchpad, loop wait/poll, coverage, cost estimation, merge verification |
 
 See [docs/MCP-TOOLS.md](MCP-TOOLS.md) for the full tool table with descriptions.
 
@@ -467,4 +467,4 @@ type StatusBar struct {
 - **Anthropic API**: [API Reference](https://docs.anthropic.com/en/api) | [Tool Use](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
 - **Gemini**: [API Overview](https://ai.google.dev/gemini-api/docs) | [Gemini CLI](https://github.com/google-gemini/gemini-cli)
 - **OpenAI**: [API Reference](https://platform.openai.com/docs/api-reference) | [Codex CLI](https://github.com/openai/codex)
-- **MCP**: [Specification](https://modelcontextprotocol.io/) | [Go SDK (mcp-go)](https://github.com/mark3labs/mcp-go)
+- **MCP**: [Specification](https://modelcontextprotocol.io/) | [Go SDK (mcp-go)](https://github.com/mark3labs/mcp-go). Migration target: `modelcontextprotocol/go-sdk` v1.4.1 (official MCP Go SDK, supersedes `mark3labs/mcp-go`)

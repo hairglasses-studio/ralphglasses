@@ -1,6 +1,6 @@
 # MCP Server & Tools
 
-Ralphglasses is an installable MCP server exposing 110 tools (108 namespace tools + 2 meta-tools) in 13 namespaces for managing ralph loops, multi-provider LLM sessions, fleet orchestration, and self-improvement subsystems programmatically.
+Ralphglasses is an installable MCP server exposing 115 tools (113 namespace tools + 2 meta-tools) in 13 namespaces for managing ralph loops, multi-provider LLM sessions, fleet orchestration, and self-improvement subsystems programmatically.
 
 ## Install
 
@@ -25,9 +25,9 @@ To minimize startup latency and memory usage, only core tools are loaded upfront
 |-----------|-------|-------------|
 | `core` | 10 | Scan, list, status, start, stop, stop_all, pause, logs, config, config_bulk (always loaded) |
 | `session` | 13 | Session lifecycle: launch, list, status, resume, stop, stop_all, budget, retry, output, tail, diff, compare, errors |
-| `loop` | 9 | Perpetual dev loops: start, status, step, stop, benchmark, baseline, gates, self_test, self_improve |
+| `loop` | 10 | Perpetual dev loops: start, status, step, stop, benchmark, baseline, gates, self_test, self_improve, prune |
 | `prompt` | 8 | Prompt enhancement: analyze, enhance, lint, improve, classify, should_enhance, templates, template_fill |
-| `fleet` | 6 | Fleet ops: fleet_status, analytics, submit, budget, workers, marathon_dashboard |
+| `fleet` | 7 | Fleet ops: fleet_status, analytics, submit, budget, workers, marathon_dashboard, dlq |
 | `repo` | 5 | Repo management: health, optimize, scaffold, claudemd_check, snapshot |
 | `roadmap` | 5 | Roadmap automation: parse, analyze, research, expand, export |
 | `team` | 6 | Agent teams: team_create, team_status, team_delegate, agent_define, agent_list, agent_compose |
@@ -35,7 +35,7 @@ To minimize startup latency and memory usage, only core tools are loaded upfront
 | `advanced` | 22 | RC tools, events, HITL, autonomy, feedback, journals, workflows, bandit, circuit breaker |
 | `eval` | 4 | Offline evaluation: counterfactual, A/B test, changepoints, anomaly detection |
 | `fleet_h` | 4 | Fleet intelligence: blackboard coordination, A2A offers, cost forecasting |
-| `observability` | 11 | Observations, scratchpad, loop wait/poll, coverage, cost estimation, merge verification |
+| `observability` | 15 | Observations, scratchpad, loop wait/poll, coverage, cost estimation, merge verification |
 
 Use the meta-tools below to discover and load tool groups at runtime.
 
@@ -81,7 +81,7 @@ Use the meta-tools below to discover and load tool groups at runtime.
 | `ralphglasses_session_compare` | Compare two sessions by ID: cost, turns, duration, provider efficiency |
 | `ralphglasses_session_errors` | Aggregated error view: parse failures, API errors, budget warnings |
 
-### loop (9 tools)
+### loop (10 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -94,6 +94,7 @@ Use the meta-tools below to discover and load tool groups at runtime.
 | `ralphglasses_loop_gates` | Evaluate regression gates — returns pass/warn/fail report |
 | `ralphglasses_self_test` | Run recursive self-test iterations against a repository using the loop engine |
 | `ralphglasses_self_improve` | Start a self-improvement loop that autonomously improves a repository |
+| `ralphglasses_loop_prune` | Prune stale loop run files by status and age |
 
 ### prompt (8 tools)
 
@@ -108,7 +109,7 @@ Use the meta-tools below to discover and load tool groups at runtime.
 | `ralphglasses_prompt_templates` | List available prompt templates with descriptions and required variables |
 | `ralphglasses_prompt_template_fill` | Fill a prompt template with variable values |
 
-### fleet (6 tools)
+### fleet (7 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -118,6 +119,7 @@ Use the meta-tools below to discover and load tool groups at runtime.
 | `ralphglasses_fleet_budget` | View or set the fleet-wide budget (spent, remaining, active work) |
 | `ralphglasses_fleet_workers` | List registered fleet workers with status, capacity, and spend |
 | `ralphglasses_marathon_dashboard` | Compact marathon status: burn rate, stale sessions, team progress, alerts |
+| `ralphglasses_fleet_dlq` | Dead letter queue management for permanently failed fleet work items |
 
 ### repo (5 tools)
 
@@ -205,7 +207,7 @@ Use the meta-tools below to discover and load tool groups at runtime.
 | `ralphglasses_a2a_offers` | List open agent-to-agent task delegation offers |
 | `ralphglasses_cost_forecast` | Cost burn rate, anomaly detection, and budget exhaustion ETA |
 
-### observability (11 tools)
+### observability (15 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -220,6 +222,10 @@ Use the meta-tools below to discover and load tool groups at runtime.
 | `ralphglasses_coverage_report` | Run go test -coverprofile and report per-package coverage vs threshold |
 | `ralphglasses_cost_estimate` | Pre-launch cost estimate for a session or loop |
 | `ralphglasses_merge_verify` | Run build+vet+test sequence to verify a merge |
+| `ralphglasses_scratchpad_delete` | Delete a numbered finding from a scratchpad file |
+| `ralphglasses_scratchpad_validate` | Validate scratchpad entries against expected constraints |
+| `ralphglasses_scratchpad_context` | Auto-enrich scratchpad with current system context |
+| `ralphglasses_scratchpad_reason` | Record intermediate reasoning between tool calls |
 
 ## Restarting After Code Changes
 

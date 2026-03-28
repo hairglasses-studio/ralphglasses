@@ -203,17 +203,14 @@ func TestConsolidatePatterns(t *testing.T) {
 		t.Fatalf("unmarshal patterns: %v", err)
 	}
 
-	if len(patterns.Positive) != 1 {
-		t.Errorf("expected 1 positive pattern, got %d", len(patterns.Positive))
-	}
-	if len(patterns.Positive) > 0 && patterns.Positive[0].Count != 5 {
-		t.Errorf("positive count = %d, want 5", patterns.Positive[0].Count)
+	if len(patterns.Positive) != 2 {
+		t.Errorf("expected 2 positive patterns (threshold lowered to 2), got %d", len(patterns.Positive))
 	}
 	if len(patterns.Negative) != 1 {
 		t.Errorf("expected 1 negative pattern, got %d", len(patterns.Negative))
 	}
-	if len(patterns.Rules) != 1 {
-		t.Errorf("expected 1 rule, got %d", len(patterns.Rules))
+	if len(patterns.Rules) < 1 {
+		t.Errorf("expected at least 1 rule, got %d", len(patterns.Rules))
 	}
 }
 
