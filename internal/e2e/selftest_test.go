@@ -318,15 +318,25 @@ func TestBudgetOverrideZeroNoEffect(t *testing.T) {
 // initGitRepo creates a minimal git repo with one commit for tagging tests.
 func initGitRepo(t *testing.T, dir string) {
 	t.Helper()
+	env := []string{
+		"HOME=" + dir,
+		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_TERMINAL_PROMPT=0",
+		"GIT_AUTHOR_NAME=Test",
+		"GIT_AUTHOR_EMAIL=test@test.com",
+		"GIT_COMMITTER_NAME=Test",
+		"GIT_COMMITTER_EMAIL=test@test.com",
+		"PATH=" + os.Getenv("PATH"),
+	}
 	cmds := [][]string{
 		{"git", "init"},
-		{"git", "config", "user.email", "test@test.com"},
-		{"git", "config", "user.name", "Test"},
 		{"git", "commit", "--allow-empty", "-m", "init"},
 	}
 	for _, args := range cmds {
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Dir = dir
+		cmd.Env = env
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("%v failed: %v\n%s", args, err, out)
 		}

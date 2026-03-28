@@ -106,11 +106,16 @@ func setupTestServer(t *testing.T) (*Server, string) {
 	initGitRepo(t, repoPath)
 
 	// Stop any background RunLoop goroutines before temp dir cleanup.
+	// Clear RepoPath to prevent CleanupLoopWorktrees from running git on
+	// already-removed TempDirs (t.Cleanup runs LIFO, TempDir removal follows).
 	t.Cleanup(func() {
 		if srv.SessMgr == nil {
 			return
 		}
 		for _, run := range srv.SessMgr.ListLoops() {
+			run.Lock()
+			run.RepoPath = ""
+			run.Unlock()
 			_ = srv.SessMgr.StopLoop(run.ID)
 		}
 	})
@@ -121,9 +126,6 @@ func setupTestServer(t *testing.T) (*Server, string) {
 func initGitRepo(t *testing.T, repoPath string) {
 	t.Helper()
 	runGit(t, repoPath, "init")
-	runGit(t, repoPath, "config", "user.email", "test@example.com")
-	runGit(t, repoPath, "config", "user.name", "Test User")
-	runGit(t, repoPath, "config", "commit.gpgsign", "false")
 	runGit(t, repoPath, "add", ".")
 	runGit(t, repoPath, "commit", "-m", "initial")
 }
@@ -136,7 +138,18 @@ func runGit(t *testing.T, repoPath string, args ...string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", repoPath}, args...)...)
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GIT_EDITOR=true")
+	cmd.Env = []string{
+		"HOME=" + repoPath,
+		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_TERMINAL_PROMPT=0",
+		"GIT_EDITOR=true",
+		"GIT_AUTHOR_NAME=Test User",
+		"GIT_AUTHOR_EMAIL=test@example.com",
+		"GIT_COMMITTER_NAME=Test User",
+		"GIT_COMMITTER_EMAIL=test@example.com",
+		"PATH=" + os.Getenv("PATH"),
+	}
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, output)
 	}
