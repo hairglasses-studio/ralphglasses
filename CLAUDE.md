@@ -60,11 +60,14 @@ The `Manager.Enhancer` field enables automatic prompt enhancement in `StepLoop`.
 
 The `distro/` directory contains configs for a bootable Linux thin client (Ubuntu 24.04, i3, RTX 4090). Key files: `distro/hardware/proart-x870e.md` (hardware manifest), `distro/scripts/hw-detect.sh` (first-boot detection, testable with `--dry-run`), `distro/systemd/` (service units).
 
+## Merged From claudekit
+
+The `internal/themekit/`, `internal/envkit/`, and `internal/fontkit/` packages were ported from the claudekit repo (now archived). Reference rdcycle data in `docs/rdcycle-reference/`.
+
 ## Related Repos (same org)
 
 - **mcpkit**: Go MCP framework — ralph loop engine, finops, sampling, workflow, gateway
 - **hg-mcp**: Go MCP server with modular tool pattern (500+ tools)
-- **claudekit**: Go MCP with rdcycle perpetual loop, budget profiles
 - **shielddd**: Go + pure SQLite (modernc.org/sqlite) + MCP, audit logs
 - **mesmer**: Go MCP server with ralph integration
 
