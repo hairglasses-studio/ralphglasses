@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -90,6 +91,41 @@ func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*
 
 	if erroredSessions > 0 {
 		issues = append(issues, fmt.Sprintf("%d errored sessions", erroredSessions))
+	}
+
+	// .ralphrc parse check
+	if _, err := model.LoadConfig(r.Path); err != nil {
+		if os.IsNotExist(err) {
+			// Missing .ralphrc is fine — not all repos have one.
+		} else {
+			score -= 5
+			issues = append(issues, fmt.Sprintf(".ralphrc parse error: %v", err))
+		}
+	} else if r.Config != nil {
+		configWarnings, _ := model.ValidateConfig(r.Config)
+		for _, w := range configWarnings {
+			if _, deprecated := model.DeprecatedKeys[w.Key]; deprecated {
+				issues = append(issues, fmt.Sprintf("deprecated config key %s: %s", w.Key, w.Message))
+			}
+		}
+	}
+
+	// Missing directories
+	for _, dir := range []string{".ralph", filepath.Join(".ralph", "logs")} {
+		dirPath := filepath.Join(r.Path, dir)
+		if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+			score -= 5
+			issues = append(issues, fmt.Sprintf("missing directory: %s", dir))
+		}
+	}
+
+	// Stale lock files
+	lockPath := filepath.Join(r.Path, ".git", "index.lock")
+	if info, err := os.Stat(lockPath); err == nil {
+		if time.Since(info.ModTime()) > time.Hour {
+			score -= 10
+			issues = append(issues, fmt.Sprintf("stale .git/index.lock (age: %.0f min)", time.Since(info.ModTime()).Minutes()))
+		}
 	}
 
 	// CLAUDE.md health

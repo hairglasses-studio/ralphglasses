@@ -296,10 +296,33 @@ func (m *Manager) PersistLoop(run *LoopRun) {
 	if err := os.WriteFile(filepath.Join(dir, run.ID+".json"), data, 0644); err != nil {
 		slog.Warn("failed to persist loop state", "loop", run.ID, "error", err)
 	}
+
+	// Also persist to Store if configured (durable persistence).
+	if m.store != nil {
+		if err := m.store.SaveLoopRun(context.Background(), run); err != nil {
+			slog.Warn("store save loop run failed", "id", run.ID, "err", err)
+		}
+	}
 }
 
 // LoadExternalLoops merges loop runs persisted by other processes.
+// It tries the Store first (authoritative), then fills gaps from JSON files.
 func (m *Manager) LoadExternalLoops() {
+	// Store-first: load from durable Store if available.
+	if m.store != nil {
+		runs, err := m.store.ListLoopRuns(context.Background(), LoopRunFilter{})
+		if err == nil {
+			m.mu.Lock()
+			for _, run := range runs {
+				if _, ok := m.loops[run.ID]; !ok {
+					m.loops[run.ID] = run
+				}
+			}
+			m.mu.Unlock()
+		}
+	}
+
+	// Fall back to JSON files to fill gaps (other processes may have written them).
 	dir := m.loopStateDir()
 	if dir == "" {
 		return

@@ -13,10 +13,11 @@ import (
 
 // Session CRUD and status handlers
 
-func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleSessionList(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoFilter := getStringArg(req, "repo")
 	providerFilter := getStringArg(req, "provider")
 	statusFilter := getStringArg(req, "status")
+	includeEnded := getBoolArg(req, "include_ended")
 
 	var repoPath string
 	if repoFilter != "" {
@@ -44,6 +45,7 @@ func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (
 		Agent    string  `json:"agent,omitempty"`
 		Team     string  `json:"team,omitempty"`
 		Stalled  bool    `json:"stalled,omitempty"`
+		Source   string  `json:"source,omitempty"` // "live" or "store"
 	}
 
 	// Build a set of stalled session IDs using the default threshold.
@@ -51,6 +53,9 @@ func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (
 	for _, id := range s.SessMgr.DetectStalls(session.DefaultStallThreshold) {
 		stalledIDs[id] = true
 	}
+
+	// Track live session IDs so store results don't duplicate them.
+	liveIDs := make(map[string]bool)
 
 	var summaries []sessionSummary
 	for _, sess := range sessions {
@@ -68,6 +73,7 @@ func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (
 			continue
 		}
 
+		liveIDs[sess.ID] = true
 		summaries = append(summaries, sessionSummary{
 			ID:       sess.ID,
 			Provider: provider,
@@ -79,7 +85,49 @@ func (s *Server) handleSessionList(_ context.Context, req mcp.CallToolRequest) (
 			Agent:    sess.AgentName,
 			Team:     sess.TeamName,
 			Stalled:  stalledIDs[sess.ID],
+			Source:   "live",
 		})
+	}
+
+	// When include_ended=true and a Store is available, merge historical sessions.
+	if includeEnded && s.SessMgr.Store() != nil {
+		opts := session.ListOpts{
+			RepoPath: repoPath,
+		}
+		if statusFilter != "" {
+			opts.Status = session.SessionStatus(statusFilter)
+		}
+		stored, err := s.SessMgr.Store().ListSessions(ctx, opts)
+		if err == nil {
+			for _, sess := range stored {
+				if liveIDs[sess.ID] {
+					continue // live session takes precedence
+				}
+				sess.Lock()
+				status := string(sess.Status)
+				provider := string(sess.Provider)
+				spent := sess.SpentUSD
+				turns := sess.TurnCount
+				sess.Unlock()
+
+				if providerFilter != "" && provider != providerFilter {
+					continue
+				}
+
+				summaries = append(summaries, sessionSummary{
+					ID:       sess.ID,
+					Provider: provider,
+					Repo:     sess.RepoName,
+					Status:   status,
+					Model:    sess.Model,
+					SpentUSD: spent,
+					Turns:    turns,
+					Agent:    sess.AgentName,
+					Team:     sess.TeamName,
+					Source:   "store",
+				})
+			}
+		}
 	}
 
 	if len(summaries) == 0 {
@@ -166,7 +214,7 @@ func (s *Server) handleSessionOutput(_ context.Context, req mcp.CallToolRequest)
 	}), nil
 }
 
-func (s *Server) handleSessionBudget(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleSessionBudget(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := getStringArg(req, "id")
 	if id == "" {
 		return codedError(ErrInvalidParams, "session id required"), nil
@@ -197,6 +245,14 @@ func (s *Server) handleSessionBudget(_ context.Context, req mcp.CallToolRequest)
 		"status":     sess.Status,
 	}
 	sess.Unlock()
+
+	// Add historical cost breakdown if Store is available.
+	if store := s.SessMgr.Store(); store != nil {
+		since := time.Now().Add(-24 * time.Hour) // last 24 hours
+		if costByProvider, err := store.AggregateCostByProvider(ctx, since); err == nil && len(costByProvider) > 0 {
+			info["historical_cost"] = costByProvider
+		}
+	}
 
 	return jsonResult(info), nil
 }
