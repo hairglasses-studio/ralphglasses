@@ -1,19 +1,26 @@
 {
-  "generated_at": "2026-03-25T20:04:58.359982-07:00",
+  "generated_at": "2026-03-27T20:01:40.562502-07:00",
   "window_hours": 0,
   "entries": {
+    " selftest --gate — these have known environment issues in previous attempts.\\n\\nOnly edit the GRUB config template and any directly related distro config files. Do not touch internal/ Go packages.\"}:claude": {
+      "cost_p50": 0.03177,
+      "cost_p95": 0.03177,
+      "latency_p50_ms": 44124,
+      "latency_p95_ms": 44124,
+      "sample_count": 1
+    },
+    "Broaden distro Makefile service path checks:claude": {
+      "cost_p50": 0.055329,
+      "cost_p95": 0.055329,
+      "latency_p50_ms": 115843,
+      "latency_p95_ms": 115843,
+      "sample_count": 1
+    },
     "Child PID tracking for process/session packages:claude": {
       "cost_p50": 0.28408500000000003,
       "cost_p95": 0.28408500000000003,
       "latency_p50_ms": 536399,
       "latency_p95_ms": 536399,
-      "sample_count": 1
-    },
-    "Document TUI loop interaction surface in ARCHITECTURE.md:claude": {
-      "cost_p50": 0.11003399999999999,
-      "cost_p95": 0.11003399999999999,
-      "latency_p50_ms": 317339,
-      "latency_p95_ms": 317339,
       "sample_count": 1
     },
     "Escalating kill sequence for process manager:claude": {
@@ -58,30 +65,23 @@
       "latency_p95_ms": 99422,
       "sample_count": 1
     },
-    "refactor: extract ProcessExitMsg handler into applyProcessExit helper:claude": {
-      "cost_p50": 0.052835999999999994,
-      "cost_p95": 0.052835999999999994,
-      "latency_p50_ms": 129525,
-      "latency_p95_ms": 129525,
-      "sample_count": 1
-    },
-    "test: add sub-phase timing assertions to loop iteration tests:claude": {
-      "cost_p50": 0.157047,
-      "cost_p95": 0.157047,
-      "latency_p50_ms": 240144,
-      "latency_p95_ms": 240144,
+    "ses `nomodeset`) is preserved below it.\n\nBoth files already had `set timeout=5`. `go build ./...` and `make -C distro` both pass clean.\n\nRespond with ONLY a JSON object: {\"title\":\"...\",\"prompt\":\"...\"}:claude": {
+      "cost_p50": 0.005859,
+      "cost_p95": 0.005859,
+      "latency_p50_ms": 10967,
+      "latency_p95_ms": 10967,
       "sample_count": 1
     }
   },
   "aggregate": {
-    "cost_p50": 0.108993,
+    "cost_p50": 0.055329,
     "cost_p95": 0.28408500000000003,
-    "latency_p50_ms": 213471,
+    "latency_p50_ms": 137580,
     "latency_p95_ms": 536399,
     "sample_count": 10
   },
   "rates": {
-    "completion_rate": 1,
+    "completion_rate": 0.8,
     "verify_pass_rate": 1,
     "error_rate": 0
   }

@@ -3,7 +3,6 @@ package mcpserver
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -33,8 +32,39 @@ type MergeVerifyResult struct {
 	Repo                string       `json:"repo"`
 	Overall             string       `json:"overall"`
 	Steps               []StepResult `json:"steps"`
+	Summary             string       `json:"summary"`
 	FailedAt            string       `json:"failed_at,omitempty"`
 	TotalElapsedSeconds float64      `json:"total_elapsed_seconds"`
+}
+
+// buildSummary generates a human-readable summary from step results.
+func buildSummary(steps []StepResult) string {
+	var passed, failed, skipped []string
+	for _, s := range steps {
+		switch s.Status {
+		case "pass":
+			passed = append(passed, s.Name)
+		case "fail":
+			failed = append(failed, s.Name)
+		case "skip":
+			skipped = append(skipped, s.Name)
+		}
+	}
+
+	var parts []string
+	if len(passed) > 0 {
+		parts = append(parts, strings.Join(passed, " and ")+" passed")
+	}
+	if len(failed) > 0 {
+		parts = append(parts, strings.Join(failed, " and ")+" failed")
+	}
+	if len(skipped) > 0 {
+		parts = append(parts, strings.Join(skipped, " and ")+" skipped")
+	}
+	if len(parts) == 0 {
+		return "no steps executed"
+	}
+	return strings.Join(parts, ", ")
 }
 
 const maxStepOutput = 5000
@@ -178,6 +208,9 @@ func (s *Server) handleMergeVerify(ctx context.Context, req mcp.CallToolRequest)
 	}
 	totalStart := time.Now()
 
+	// skipRemaining tracks whether to skip subsequent steps (fast mode).
+	skipRemaining := false
+
 	// Step 1: go build ./...
 	buildCtx, buildCancel := context.WithTimeout(ctx, stepTimeout)
 	buildResult := runVerifyStep(buildCtx, repoPath, "build", []string{"go", "build", "./..."})
@@ -186,67 +219,77 @@ func (s *Server) handleMergeVerify(ctx context.Context, req mcp.CallToolRequest)
 	if buildResult.Status == "fail" {
 		result.Overall = "fail"
 		result.FailedAt = "build"
-		result.TotalElapsedSeconds = time.Since(totalStart).Seconds()
-		return jsonResult(result), nil
+		if fast {
+			skipRemaining = true
+		}
 	}
 
 	// Step 2: go vet ./...
-	vetCtx, vetCancel := context.WithTimeout(ctx, stepTimeout)
-	vetResult := runVerifyStep(vetCtx, repoPath, "vet", []string{"go", "vet", "./..."})
-	vetCancel()
-	result.Steps = append(result.Steps, vetResult)
-	if vetResult.Status == "fail" {
-		result.Overall = "fail"
-		result.FailedAt = "vet"
-		result.TotalElapsedSeconds = time.Since(totalStart).Seconds()
-		return jsonResult(result), nil
+	if skipRemaining {
+		result.Steps = append(result.Steps, StepResult{Name: "vet", Status: "skip"})
+	} else {
+		vetCtx, vetCancel := context.WithTimeout(ctx, stepTimeout)
+		vetResult := runVerifyStep(vetCtx, repoPath, "vet", []string{"go", "vet", "./..."})
+		vetCancel()
+		result.Steps = append(result.Steps, vetResult)
+		if vetResult.Status == "fail" {
+			result.Overall = "fail"
+			if result.FailedAt == "" {
+				result.FailedAt = "vet"
+			}
+			if fast {
+				skipRemaining = true
+			}
+		}
 	}
 
 	// Step 3: go test
-	testArgs := []string{"go", "test"}
-	if race {
-		testArgs = append(testArgs, "-race")
-	}
-	if fast {
-		testArgs = append(testArgs, "-short")
-	}
-
-	var coverProfile string
-	if coverage {
-		tmpFile, err := os.CreateTemp("", "mergeverify-cover-*.out")
-		if err == nil {
-			coverProfile = tmpFile.Name()
-			tmpFile.Close()
-			defer os.Remove(coverProfile)
-			testArgs = append(testArgs, "-coverprofile="+coverProfile)
+	if skipRemaining {
+		result.Steps = append(result.Steps, StepResult{Name: "test", Status: "skip"})
+	} else {
+		testArgs := []string{"go", "test"}
+		if race {
+			testArgs = append(testArgs, "-race")
 		}
-	}
-
-	testArgs = append(testArgs, packages)
-
-	testCtx, testCancel := context.WithTimeout(ctx, stepTimeout)
-	testResult := runVerifyStep(testCtx, repoPath, "test", testArgs)
-	testCancel()
-
-	// Parse coverage if requested and test passed.
-	if coverage && coverProfile != "" && testResult.Status == "pass" {
-		if cov, err := parseCoverageTotal(coverProfile); err == nil {
-			testResult.Coverage = &cov
+		if fast {
+			testArgs = append(testArgs, "-short")
 		}
-	}
 
-	result.Steps = append(result.Steps, testResult)
-	if testResult.Status == "fail" {
-		result.Overall = "fail"
-		result.FailedAt = "test"
+		var coverProfile string
+		if coverage {
+			tmpFile, err := os.CreateTemp("", "mergeverify-cover-*.out")
+			if err == nil {
+				coverProfile = tmpFile.Name()
+				tmpFile.Close()
+				defer os.Remove(coverProfile)
+				testArgs = append(testArgs, "-coverprofile="+coverProfile)
+			}
+		}
+
+		testArgs = append(testArgs, packages)
+
+		testCtx, testCancel := context.WithTimeout(ctx, stepTimeout)
+		testResult := runVerifyStep(testCtx, repoPath, "test", testArgs)
+		testCancel()
+
+		// Parse coverage if requested and test passed.
+		if coverage && coverProfile != "" && testResult.Status == "pass" {
+			if cov, err := parseCoverageTotal(coverProfile); err == nil {
+				testResult.Coverage = &cov
+			}
+		}
+
+		result.Steps = append(result.Steps, testResult)
+		if testResult.Status == "fail" {
+			result.Overall = "fail"
+			if result.FailedAt == "" {
+				result.FailedAt = "test"
+			}
+		}
 	}
 
 	result.TotalElapsedSeconds = time.Since(totalStart).Seconds()
+	result.Summary = buildSummary(result.Steps)
 
-	// Return structured JSON.
-	data, err := json.Marshal(result)
-	if err != nil {
-		return codedError(ErrInternal, fmt.Sprintf("json marshal: %v", err)), nil
-	}
-	return textResult(string(data)), nil
+	return jsonResult(result), nil
 }

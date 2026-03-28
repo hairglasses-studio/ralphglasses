@@ -65,22 +65,49 @@ var KnownKeys = map[string]ConfigKeySpec{
 	"KILL_ESCALATION_TIMEOUT":      {Type: ConfigTypeInt, Default: "5", MinInt: 1, MaxInt: 60, Description: "kill escalation timeout in seconds"},
 }
 
+// DeprecatedKeys maps deprecated config key names to migration hints.
+var DeprecatedKeys = map[string]string{
+	"CLAUDE_MODEL":    "Use PLANNER_MODEL instead",
+	"GEMINI_MODEL":    "Use WORKER_MODEL instead",
+	"MAX_RETRIES":     "Use RETRY_LIMIT instead",
+	"TIMEOUT_SECONDS": "Use LOOP_TIMEOUT instead",
+}
+
 // ConfigWarning describes a non-fatal issue with a config value.
 type ConfigWarning struct {
 	Key     string
 	Message string
 }
 
+// ConfigChange describes a single difference between two configs.
+type ConfigChange struct {
+	Key    string `json:"key"`
+	Type   string `json:"type"` // "added", "removed", "changed"
+	OldVal string `json:"old_value,omitempty"`
+	NewVal string `json:"new_value,omitempty"`
+}
+
 // ValidateConfig checks config values against the known key registry.
-// Returns warnings for unknown keys and validation errors for type/range mismatches.
+// Returns warnings for unknown/deprecated keys and validation errors for type/range mismatches.
 func ValidateConfig(cfg *RalphConfig) (warnings []ConfigWarning, errors []error) {
 	if cfg == nil {
 		return nil, nil
 	}
 	for key, val := range cfg.Values {
+		// Check deprecated keys first — they produce warnings, not errors.
+		if hint, deprecated := DeprecatedKeys[key]; deprecated {
+			warnings = append(warnings, ConfigWarning{
+				Key:     key,
+				Message: fmt.Sprintf("deprecated config key: %s", hint),
+			})
+			// Still validate the value if it also appears in KnownKeys.
+		}
 		spec, known := KnownKeys[key]
 		if !known {
-			warnings = append(warnings, ConfigWarning{Key: key, Message: "unknown config key"})
+			// If it was already flagged as deprecated, skip the "unknown" warning.
+			if _, deprecated := DeprecatedKeys[key]; !deprecated {
+				warnings = append(warnings, ConfigWarning{Key: key, Message: "unknown config key"})
+			}
 			continue
 		}
 		if err := validateValue(key, val, spec); err != nil {
@@ -88,6 +115,40 @@ func ValidateConfig(cfg *RalphConfig) (warnings []ConfigWarning, errors []error)
 		}
 	}
 	return warnings, errors
+}
+
+// ConfigDiff computes the differences between two configs.
+// Either old or new may be nil (treated as empty).
+func ConfigDiff(old, new *RalphConfig) []ConfigChange {
+	oldVals := map[string]string{}
+	newVals := map[string]string{}
+	if old != nil {
+		oldVals = old.Values
+	}
+	if new != nil {
+		newVals = new.Values
+	}
+
+	var changes []ConfigChange
+
+	// Check for removed and changed keys.
+	for k, ov := range oldVals {
+		nv, exists := newVals[k]
+		if !exists {
+			changes = append(changes, ConfigChange{Key: k, Type: "removed", OldVal: ov})
+		} else if ov != nv {
+			changes = append(changes, ConfigChange{Key: k, Type: "changed", OldVal: ov, NewVal: nv})
+		}
+	}
+
+	// Check for added keys.
+	for k, nv := range newVals {
+		if _, exists := oldVals[k]; !exists {
+			changes = append(changes, ConfigChange{Key: k, Type: "added", NewVal: nv})
+		}
+	}
+
+	return changes
 }
 
 func validateValue(key, val string, spec ConfigKeySpec) error {

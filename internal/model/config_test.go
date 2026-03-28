@@ -338,6 +338,138 @@ func TestValidateConfig_Nil(t *testing.T) {
 	}
 }
 
+func TestValidateConfig_DeprecatedKeys(t *testing.T) {
+	cfg := &RalphConfig{
+		Values: map[string]string{
+			"CLAUDE_MODEL":    "sonnet",
+			"GEMINI_MODEL":    "flash",
+			"MAX_RETRIES":     "3",
+			"TIMEOUT_SECONDS": "60",
+		},
+	}
+	warnings, errs := ValidateConfig(cfg)
+	if len(errs) != 0 {
+		t.Errorf("deprecated keys should not produce errors, got %v", errs)
+	}
+	if len(warnings) != 4 {
+		t.Fatalf("expected 4 deprecated warnings, got %d: %v", len(warnings), warnings)
+	}
+	for _, w := range warnings {
+		if _, ok := DeprecatedKeys[w.Key]; !ok {
+			t.Errorf("unexpected warning key %q", w.Key)
+		}
+		if w.Message == "unknown config key" {
+			t.Errorf("deprecated key %q should not get 'unknown config key' warning", w.Key)
+		}
+	}
+}
+
+func TestValidateConfig_DeprecatedKeyNotDuplicated(t *testing.T) {
+	// A deprecated key that is NOT in KnownKeys should get only one warning (deprecated), not also "unknown".
+	cfg := &RalphConfig{
+		Values: map[string]string{
+			"CLAUDE_MODEL": "sonnet",
+		},
+	}
+	warnings, _ := ValidateConfig(cfg)
+	count := 0
+	for _, w := range warnings {
+		if w.Key == "CLAUDE_MODEL" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("expected exactly 1 warning for deprecated key CLAUDE_MODEL, got %d", count)
+	}
+}
+
+func TestConfigDiff_AddedKeys(t *testing.T) {
+	old := &RalphConfig{Values: map[string]string{"MODEL": "sonnet"}}
+	new := &RalphConfig{Values: map[string]string{"MODEL": "sonnet", "BUDGET": "10"}}
+	changes := ConfigDiff(old, new)
+	if len(changes) != 1 {
+		t.Fatalf("expected 1 change, got %d: %v", len(changes), changes)
+	}
+	if changes[0].Type != "added" || changes[0].Key != "BUDGET" || changes[0].NewVal != "10" {
+		t.Errorf("unexpected change: %+v", changes[0])
+	}
+}
+
+func TestConfigDiff_RemovedKeys(t *testing.T) {
+	old := &RalphConfig{Values: map[string]string{"MODEL": "sonnet", "BUDGET": "10"}}
+	new := &RalphConfig{Values: map[string]string{"MODEL": "sonnet"}}
+	changes := ConfigDiff(old, new)
+	if len(changes) != 1 {
+		t.Fatalf("expected 1 change, got %d: %v", len(changes), changes)
+	}
+	if changes[0].Type != "removed" || changes[0].Key != "BUDGET" || changes[0].OldVal != "10" {
+		t.Errorf("unexpected change: %+v", changes[0])
+	}
+}
+
+func TestConfigDiff_ChangedKeys(t *testing.T) {
+	old := &RalphConfig{Values: map[string]string{"MODEL": "sonnet"}}
+	new := &RalphConfig{Values: map[string]string{"MODEL": "opus"}}
+	changes := ConfigDiff(old, new)
+	if len(changes) != 1 {
+		t.Fatalf("expected 1 change, got %d: %v", len(changes), changes)
+	}
+	if changes[0].Type != "changed" || changes[0].OldVal != "sonnet" || changes[0].NewVal != "opus" {
+		t.Errorf("unexpected change: %+v", changes[0])
+	}
+}
+
+func TestConfigDiff_NoChanges(t *testing.T) {
+	cfg := &RalphConfig{Values: map[string]string{"MODEL": "sonnet"}}
+	changes := ConfigDiff(cfg, cfg)
+	if len(changes) != 0 {
+		t.Errorf("expected no changes, got %v", changes)
+	}
+}
+
+func TestConfigDiff_NilConfigs(t *testing.T) {
+	new := &RalphConfig{Values: map[string]string{"MODEL": "sonnet"}}
+	changes := ConfigDiff(nil, new)
+	if len(changes) != 1 || changes[0].Type != "added" {
+		t.Errorf("nil old should show all keys as added, got %v", changes)
+	}
+
+	old := &RalphConfig{Values: map[string]string{"MODEL": "sonnet"}}
+	changes = ConfigDiff(old, nil)
+	if len(changes) != 1 || changes[0].Type != "removed" {
+		t.Errorf("nil new should show all keys as removed, got %v", changes)
+	}
+
+	changes = ConfigDiff(nil, nil)
+	if len(changes) != 0 {
+		t.Errorf("both nil should have no changes, got %v", changes)
+	}
+}
+
+func TestConfigDiff_Mixed(t *testing.T) {
+	old := &RalphConfig{Values: map[string]string{"A": "1", "B": "2", "C": "3"}}
+	new := &RalphConfig{Values: map[string]string{"A": "1", "B": "99", "D": "4"}}
+	changes := ConfigDiff(old, new)
+
+	byKey := map[string]ConfigChange{}
+	for _, c := range changes {
+		byKey[c.Key] = c
+	}
+
+	if len(changes) != 3 {
+		t.Fatalf("expected 3 changes, got %d: %v", len(changes), changes)
+	}
+	if byKey["B"].Type != "changed" {
+		t.Errorf("B should be changed, got %v", byKey["B"])
+	}
+	if byKey["C"].Type != "removed" {
+		t.Errorf("C should be removed, got %v", byKey["C"])
+	}
+	if byKey["D"].Type != "added" {
+		t.Errorf("D should be added, got %v", byKey["D"])
+	}
+}
+
 func TestRalphConfig_Save(t *testing.T) {
 	dir := t.TempDir()
 	rcPath := filepath.Join(dir, ".ralphrc")

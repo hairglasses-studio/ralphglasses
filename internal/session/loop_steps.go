@@ -586,6 +586,42 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		})
 	}
 
+	// Record iteration cost to Store if configured.
+	if m.store != nil {
+		run.mu.Lock()
+		iter := run.Iterations[index]
+		provider := string(run.Profile.WorkerProvider)
+		model := run.Profile.WorkerModel
+		run.mu.Unlock()
+
+		var iterCost float64
+		if ps, ok := m.Get(iter.PlannerSessionID); ok {
+			ps.Lock()
+			iterCost += ps.SpentUSD
+			ps.Unlock()
+		}
+		for _, wid := range iter.WorkerSessionIDs {
+			if ws, ok := m.Get(wid); ok {
+				ws.Lock()
+				iterCost += ws.SpentUSD
+				ws.Unlock()
+			}
+		}
+		if iterCost > 0 {
+			entry := &CostEntry{
+				SessionID:  iter.WorkerSessionID,
+				LoopID:     run.ID,
+				Provider:   provider,
+				Model:      model,
+				SpendUSD:   iterCost,
+				RecordedAt: time.Now(),
+			}
+			if err := m.store.RecordCost(context.Background(), entry); err != nil {
+				slog.Warn("store record cost failed", "loop", run.ID, "err", err)
+			}
+		}
+	}
+
 	m.PersistLoop(run)
 	if err := writeLoopJournal(run, run.Iterations[index]); err != nil {
 		slog.Warn("failed to write loop journal", "loop", run.ID, "error", err)
