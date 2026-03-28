@@ -129,6 +129,25 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 			}
 		}
 
+		// MaxWorkerTurns: absolute cap on total iterations (default 20).
+		maxTurns := run.Profile.MaxWorkerTurns
+		if maxTurns <= 0 {
+			maxTurns = 20
+		}
+		run.mu.Lock()
+		totalIters := len(run.Iterations)
+		run.mu.Unlock()
+		if totalIters >= maxTurns {
+			run.mu.Lock()
+			run.Status = "stopped"
+			run.LastError = fmt.Sprintf("max worker turns reached: %d", maxTurns)
+			run.UpdatedAt = time.Now()
+			run.mu.Unlock()
+			m.PersistLoop(run)
+			slog.Warn("loop max worker turns reached", "loop", id, "turns", totalIters, "max", maxTurns)
+			return fmt.Errorf("loop %s: max worker turns (%d) exceeded", id, maxTurns)
+		}
+
 		err := m.StepLoop(ctx, id)
 		if err != nil {
 			run.mu.Lock()

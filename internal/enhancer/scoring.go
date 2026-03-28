@@ -61,11 +61,11 @@ func Score(text string, taskType TaskType, lints []LintResult, ar *AnalyzeResult
 	}
 	overall := int(weighted + 0.5) // round
 
-	if overall > 100 {
-		overall = 100
+	if overall > 95 {
+		overall = 95 // nothing is perfect
 	}
-	if overall < 0 {
-		overall = 0
+	if overall < 5 {
+		overall = 5
 	}
 
 	return &ScoreReport{
@@ -104,6 +104,36 @@ func hasLintCategory(lints []LintResult, category string) bool {
 
 var numericConstraintPattern = regexp.MustCompile(`\b\d+\s*(items?|bullets?|sentences?|words?|lines?|steps?|paragraphs?|characters?|tokens?|minutes?|seconds?|points?|examples?|max|min|limit|at\s+most|at\s+least)\b`)
 
+// allCapsWordPattern matches words of 2+ uppercase letters (potential emphasis or acronyms).
+var allCapsWordPattern = regexp.MustCompile(`\b[A-Z]{2,}\b`)
+
+// numberPattern matches any digit sequence (used for specificity scoring).
+var numberPattern = regexp.MustCompile(`\d+`)
+
+// properNounOrTechTermPattern matches capitalized words that look like proper nouns
+// or common technical terms (e.g., "Go", "Python", "Kubernetes", "PostgreSQL").
+var properNounOrTechTermPattern = regexp.MustCompile(`\b[A-Z][a-z]{2,}[A-Za-z]*\b`)
+
+// sentenceSplit splits text into sentences on period/question/exclamation boundaries.
+func sentenceSplit(text string) []string {
+	var sentences []string
+	current := strings.Builder{}
+	for _, r := range text {
+		current.WriteRune(r)
+		if r == '.' || r == '?' || r == '!' {
+			s := strings.TrimSpace(current.String())
+			if s != "" {
+				sentences = append(sentences, s)
+			}
+			current.Reset()
+		}
+	}
+	if s := strings.TrimSpace(current.String()); s != "" {
+		sentences = append(sentences, s)
+	}
+	return sentences
+}
+
 var rolePattern = regexp.MustCompile(`(?i)(you\s+are\s+(a|an)\s+|<role>)`)
 
 func clamp(v, lo, hi int) int {
@@ -119,7 +149,7 @@ func clamp(v, lo, hi int) int {
 // --- dimension scorers ---
 
 func scoreClarity(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult) DimensionScore {
-	score := 30 // baseline (lowered from 50 to reduce score inflation)
+	score := 50 // baseline
 	var suggestions []string
 
 	wc := ar.WordCount
@@ -161,6 +191,33 @@ func scoreClarity(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult
 		score += 15
 	}
 
+	// Penalty: no question marks or imperative verbs → likely not a real prompt
+	if !strings.Contains(text, "?") && !imperativeVerbPattern.MatchString(text) {
+		score -= 10
+		suggestions = append(suggestions, "Add a clear question or imperative verb to indicate intent")
+	}
+
+	// Penalty: excessive ALL-CAPS words (aggressive tone)
+	allCapsWords := allCapsWordPattern.FindAllString(text, -1)
+	nonAcronymCaps := 0
+	for _, w := range allCapsWords {
+		if !acronymWhitelist[w] {
+			nonAcronymCaps++
+		}
+	}
+	if nonAcronymCaps > 3 {
+		score -= 5 * (nonAcronymCaps - 3)
+		suggestions = append(suggestions, "Reduce ALL-CAPS words — aggressive tone hurts clarity")
+	}
+
+	// Penalty: very long sentences (>50 words per sentence)
+	sentences := sentenceSplit(text)
+	for _, s := range sentences {
+		if len(strings.Fields(s)) > 50 {
+			score -= 5
+		}
+	}
+
 	score = clamp(score, 0, 100)
 	return DimensionScore{
 		Name:        "Clarity",
@@ -172,7 +229,7 @@ func scoreClarity(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult
 }
 
 func scoreSpecificity(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult) DimensionScore {
-	score := 30 // baseline (lowered from 50 to reduce score inflation)
+	score := 50
 	var suggestions []string
 
 	// Numeric constraints
@@ -202,6 +259,25 @@ func scoreSpecificity(text string, _ TaskType, lints []LintResult, ar *AnalyzeRe
 	// Format specification bonus
 	if ar.HasFormat {
 		score += 15
+	}
+
+	// Penalty: no numbers/quantities mentioned at all
+	if !numberPattern.MatchString(text) {
+		score -= 10
+		suggestions = append(suggestions, "Include specific numbers or quantities for precision")
+	}
+
+	// Penalty: no proper nouns or technical terms (indicates vague/generic prompt)
+	if !properNounOrTechTermPattern.MatchString(text) {
+		score -= 5
+		suggestions = append(suggestions, "Add specific names, technologies, or technical terms")
+	}
+
+	// Penalty: excessive trailing-off language ("etc", "and so on", "...")
+	trailingCount := strings.Count(lower, "etc") + strings.Count(lower, "and so on") + strings.Count(text, "...")
+	if trailingCount > 0 {
+		score -= 5 * trailingCount
+		suggestions = append(suggestions, "Replace 'etc'/'...' with explicit items — vague lists reduce specificity")
 	}
 
 	score = clamp(score, 0, 100)
