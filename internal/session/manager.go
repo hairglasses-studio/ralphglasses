@@ -165,6 +165,14 @@ func (m *Manager) ApplyConfig(cfg *model.RalphConfig) {
 			m.JournalMaxEntries = v
 		}
 	}
+	// WS3: Initialize CascadeRouter when CASCADE_ENABLED=true and no router is attached yet.
+	if !m.HasCascadeRouter() {
+		if cascadeCfg := DefaultCascadeFromConfig(cfg.Values); cascadeCfg != nil {
+			cr := NewCascadeRouter(*cascadeCfg, nil, nil, m.stateDir)
+			m.SetCascadeRouter(cr)
+			slog.Info("cascade router initialized from config", "cheap", cascadeCfg.CheapProvider, "expensive", cascadeCfg.ExpensiveProvider)
+		}
+	}
 }
 
 // expandHome replaces a leading ~ with the user's home directory.

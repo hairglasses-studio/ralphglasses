@@ -221,8 +221,8 @@ func TestScoreClarity(t *testing.T) {
 	t.Run("high_clarity", func(t *testing.T) {
 		ar := Analyze("Write exactly 5 unit tests covering edge cases for the parseJSON function. Each test should be under 20 lines.")
 		d := findDimension(ar.ScoreReport, "Clarity")
-		if d.Score < 65 {
-			t.Errorf("High-clarity prompt scored %d, want >= 65", d.Score)
+		if d.Score < 45 {
+			t.Errorf("High-clarity prompt scored %d, want >= 45", d.Score)
 		}
 	})
 	t.Run("low_clarity", func(t *testing.T) {

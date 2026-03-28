@@ -308,7 +308,7 @@ func ConsolidatePatterns(repoPath string) error {
 	}
 
 	for text, count := range workedCounts {
-		if count >= 3 {
+		if count >= 2 {
 			patterns.Positive = append(patterns.Positive, ConsolidatedItem{
 				Text:     text,
 				Count:    count,
@@ -319,7 +319,7 @@ func ConsolidatePatterns(repoPath string) error {
 	}
 
 	for text, count := range failedCounts {
-		if count >= 3 {
+		if count >= 2 {
 			patterns.Negative = append(patterns.Negative, ConsolidatedItem{
 				Text:     text,
 				Count:    count,
@@ -332,8 +332,24 @@ func ConsolidatePatterns(repoPath string) error {
 	// Extract rules from frequent suggestions
 	suggestCounts := countItems(collectAll(entries, func(e JournalEntry) []string { return e.Suggest }))
 	for text, count := range suggestCounts {
-		if count >= 3 {
+		if count >= 2 {
 			patterns.Rules = append(patterns.Rules, text)
+		}
+	}
+
+	// Auto-generate rules from high-frequency negative patterns
+	for _, neg := range patterns.Negative {
+		if neg.Count >= 3 {
+			rule := "Avoid: " + neg.Text
+			patterns.Rules = append(patterns.Rules, rule)
+		}
+	}
+
+	// Auto-generate rules from high-frequency positive patterns
+	for _, pos := range patterns.Positive {
+		if pos.Count >= 5 {
+			rule := "Continue: " + pos.Text
+			patterns.Rules = append(patterns.Rules, rule)
 		}
 	}
 
@@ -458,6 +474,24 @@ func extractSignalsFromOutput(history []string, status SessionStatus, spentUSD f
 		}
 	}
 
+	// Extract suggestions from common advisory patterns in output
+	suggestionPrefixes := []string{"you should ", "consider ", "try ", "next time ", "recommend ", "suggestion: ", "hint: ", "tip: "}
+	for _, line := range history {
+		lower := strings.ToLower(strings.TrimSpace(line))
+		for _, prefix := range suggestionPrefixes {
+			if strings.Contains(lower, prefix) {
+				item := strings.TrimSpace(line)
+				if len(item) > 120 {
+					item = item[:120]
+				}
+				if item != "" {
+					suggest = append(suggest, item)
+				}
+				break
+			}
+		}
+	}
+
 	// Friction: repeated identical errors suggest systematic issues
 	for errLine, count := range errorCounts {
 		if count >= 3 {
@@ -480,8 +514,8 @@ func extractSignalsFromOutput(history []string, status SessionStatus, spentUSD f
 	if len(failed) > 5 {
 		failed = failed[:5]
 	}
-	if len(suggest) > 3 {
-		suggest = suggest[:3]
+	if len(suggest) > 5 {
+		suggest = suggest[:5]
 	}
 
 	return worked, failed, suggest

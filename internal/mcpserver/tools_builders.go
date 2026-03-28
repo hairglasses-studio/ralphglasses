@@ -22,6 +22,7 @@ func defaultRegistry() *ToolGroupRegistry {
 	r.Register(NewFuncBuilder("eval", (*Server).buildEvalGroup))
 	r.Register(NewFuncBuilder("fleet_h", (*Server).buildFleetHGroup))
 	r.Register(NewFuncBuilder("observability", (*Server).buildObservabilityGroup))
+	r.Register(NewFuncBuilder("rdcycle", (*Server).buildRdcycleGroup))
 	return r
 }
 

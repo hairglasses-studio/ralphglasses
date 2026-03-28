@@ -99,7 +99,7 @@ func TestToolGroupNames(t *testing.T) {
 	expected := []string{
 		"core", "session", "loop", "prompt", "fleet",
 		"repo", "roadmap", "team", "awesome", "advanced", "eval", "fleet_h",
-		"observability",
+		"observability", "rdcycle",
 	}
 	if len(mcpserver.ToolGroupNames) != len(expected) {
 		t.Errorf("ToolGroupNames has %d entries, want %d", len(mcpserver.ToolGroupNames), len(expected))

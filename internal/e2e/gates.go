@@ -172,7 +172,18 @@ func EvaluateGates(observations []session.LoopObservation, baseline *LoopBaselin
 }
 
 // relativeGate evaluates a metric as a ratio against a baseline value.
+// Returns VerdictSkip if the baseline is zero to avoid division-by-zero or
+// infinite ratio edge cases.
 func relativeGate(metric string, baseline, current, ratio, warnThresh, failThresh float64) GateResult {
+	if baseline == 0 {
+		return GateResult{
+			Metric:      metric,
+			Verdict:     VerdictSkip,
+			BaselineVal: baseline,
+			CurrentVal:  current,
+			DeltaPct:    0,
+		}
+	}
 	deltaPct := (ratio - 1) * 100
 	verdict := VerdictPass
 	if ratio >= failThresh {

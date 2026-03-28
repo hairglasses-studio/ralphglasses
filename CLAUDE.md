@@ -18,7 +18,7 @@ go build ./...
 go run . --scan-path ~/hairglasses-studio
 ```
 
-## MCP Server (110 tools, 13 namespaces)
+## MCP Server (115 tools, 13 namespaces)
 
 ```bash
 claude mcp add ralphglasses -- go run . mcp
@@ -60,21 +60,18 @@ The `Manager.Enhancer` field enables automatic prompt enhancement in `StepLoop`.
 
 The `distro/` directory contains configs for a bootable Linux thin client (Ubuntu 24.04, i3, RTX 4090). Key files: `distro/hardware/proart-x870e.md` (hardware manifest), `distro/scripts/hw-detect.sh` (first-boot detection, testable with `--dry-run`), `distro/systemd/` (service units).
 
-## Merged From claudekit
-
-The `internal/themekit/`, `internal/envkit/`, and `internal/fontkit/` packages were ported from the claudekit repo (now archived). Reference rdcycle data in `docs/rdcycle-reference/`.
-
 ## Related Repos (same org)
 
 - **mcpkit**: Go MCP framework — ralph loop engine, finops, sampling, workflow, gateway
 - **hg-mcp**: Go MCP server with modular tool pattern (500+ tools)
+- **claudekit**: Go MCP with rdcycle perpetual loop, budget profiles
 - **shielddd**: Go + pure SQLite (modernc.org/sqlite) + MCP, audit logs
 - **mesmer**: Go MCP server with ralph integration
 
 ## See Also
 
 - [docs/PROVIDER-SETUP.md](docs/PROVIDER-SETUP.md) — Multi-provider prerequisites, env vars, orchestration pattern
-- [docs/MCP-TOOLS.md](docs/MCP-TOOLS.md) — Full 110-tool table with descriptions, deferred loading
+- [docs/MCP-TOOLS.md](docs/MCP-TOOLS.md) — Full 115-tool table with descriptions, deferred loading
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Package layout, provider dispatch, middleware, fleet, tiered routing, prompt caching
 - [docs/MARATHON.md](docs/MARATHON.md) — Marathon supervisor, RC tools, environment setup
 - [docs/AUTONOMY.md](docs/AUTONOMY.md) — Autonomy levels, self-improvement subsystems
