@@ -54,7 +54,7 @@ var KnownKeys = map[string]ConfigKeySpec{
 	"AUTONOMY_LEVEL":              {Type: ConfigTypeInt, Default: "0", MinInt: 0, MaxInt: 3, Description: "autonomy level (0=observe, 3=full)"},
 	"AUTONOMY_AUTO_RECOVER":       {Type: ConfigTypeBool, Default: "false", Description: "enable auto-recovery for failed loops"},
 	"AUTONOMY_AUTO_RECOVER_MAX":   {Type: ConfigTypeInt, Default: "3", MinInt: 1, MaxInt: 20, Description: "max auto-recoveries per loop"},
-	"CASCADE_ENABLED":              {Type: ConfigTypeBool, Default: "false", Description: "enable cheap-then-expensive cascade routing"},
+	"CASCADE_ENABLED":              {Type: ConfigTypeBool, Default: "true", Description: "enable cheap-then-expensive cascade routing"},
 	"CASCADE_CHEAP_PROVIDER":       {Type: ConfigTypeString, Default: "gemini", Description: "cheap provider for cascade routing"},
 	"CASCADE_CHEAP_MODEL":          {Type: ConfigTypeString, Default: "gemini-2.5-flash", Description: "cheap model for cascade routing"},
 	"CASCADE_EXPENSIVE_PROVIDER":   {Type: ConfigTypeString, Default: "claude", Description: "expensive provider for cascade routing"},

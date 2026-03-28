@@ -97,6 +97,47 @@ func (q *WorkQueue) ReclaimTimedOut(timeout time.Duration) {
 	}
 }
 
+// ReapStale moves pending items older than maxAge to the dead letter queue.
+// Items with a non-empty RepoPath that no longer exists on disk are also reaped.
+// Returns the number of reaped items.
+func (q *WorkQueue) ReapStale(maxAge time.Duration) int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	now := time.Now()
+	var staleIDs []string
+
+	for id, item := range q.items {
+		if item.Status != WorkPending {
+			continue
+		}
+
+		aged := now.Sub(item.SubmittedAt) > maxAge
+
+		pathGone := false
+		if item.RepoPath != "" {
+			if _, err := os.Stat(item.RepoPath); os.IsNotExist(err) {
+				pathGone = true
+			}
+		}
+
+		if aged || pathGone {
+			staleIDs = append(staleIDs, id)
+		}
+	}
+
+	for _, id := range staleIDs {
+		item := q.items[id]
+		now := time.Now()
+		item.CompletedAt = &now
+		item.Error = "reaped: stale task"
+		q.dlq[id] = item
+		delete(q.items, id)
+	}
+
+	return len(staleIDs)
+}
+
 // Counts returns the number of items in each status.
 func (q *WorkQueue) Counts() map[WorkItemStatus]int {
 	q.mu.Lock()

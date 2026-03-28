@@ -172,11 +172,25 @@ func (dl *DecisionLog) Level() AutonomyLevel {
 	return dl.level
 }
 
-// SetLevel changes the autonomy level.
-func (dl *DecisionLog) SetLevel(level AutonomyLevel) {
+// RestoreLevel sets the autonomy level without persisting to disk.
+// Intended for loading persisted state on startup.
+func (dl *DecisionLog) RestoreLevel(level AutonomyLevel) {
 	dl.mu.Lock()
 	defer dl.mu.Unlock()
 	dl.level = level
+}
+
+// SetLevel changes the autonomy level and persists it to disk.
+func (dl *DecisionLog) SetLevel(level AutonomyLevel) {
+	dl.mu.Lock()
+	dl.level = level
+	stateDir := dl.stateDir
+	dl.mu.Unlock()
+	if stateDir != "" {
+		if err := SaveAutonomyLevel(stateDir, int(level)); err != nil {
+			slog.Warn("failed to persist autonomy level", "level", level, "error", err)
+		}
+	}
 }
 
 // Block prevents a decision category from being executed.

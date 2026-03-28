@@ -41,6 +41,7 @@ type LoopProfile struct {
 	StallTimeout         time.Duration `json:"stall_timeout,omitempty"`      // 0 = disabled, default 10min
 	HardBudgetCapUSD     float64       `json:"hard_budget_cap_usd,omitempty"` // absolute spend ceiling (0 = disabled)
 	NoopPlateauLimit     int           `json:"noop_plateau_limit,omitempty"`  // stop after N consecutive no-op iterations (0 = disabled)
+	MaxWorkerTurns       int           `json:"max_worker_turns,omitempty"`    // absolute cap on total iterations (0 = default 20)
 }
 
 // LoopTask is the bounded implementation unit produced by the planner.
