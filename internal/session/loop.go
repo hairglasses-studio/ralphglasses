@@ -86,6 +86,7 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 	// Bootstrap autonomy config from .ralphrc (best-effort; defaults to level 0).
 	autonomyCfg := m.bootstrapLoopAutonomy(repoPath)
 	recoveryCount := 0
+	consecutiveNoops := 0
 
 	for {
 		if ctx.Err() != nil {
@@ -112,6 +113,20 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 			m.PersistLoop(run)
 			slog.Warn("loop budget exceeded, stopping", "loop", id, "reason", reason)
 			return nil
+		}
+
+		// Hard budget cap: absolute ceiling to preserve a buffer (e.g. $95 of $100).
+		if cap := run.Profile.HardBudgetCapUSD; cap > 0 {
+			if spent := m.aggregateLoopSpend(run); spent >= cap {
+				run.mu.Lock()
+				run.Status = "completed"
+				run.LastError = fmt.Sprintf("hard budget cap reached: spent $%.2f of $%.2f cap", spent, cap)
+				run.UpdatedAt = time.Now()
+				run.mu.Unlock()
+				m.PersistLoop(run)
+				slog.Warn("loop hard budget cap reached", "loop", id, "spent", spent, "cap", cap)
+				return nil
+			}
 		}
 
 		err := m.StepLoop(ctx, id)
@@ -148,6 +163,30 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 		}
 		// Reset recovery count on successful step.
 		recoveryCount = 0
+
+		// No-op plateau detection: stop if N consecutive iterations produced no changes.
+		if limit := run.Profile.NoopPlateauLimit; limit > 0 {
+			run.mu.Lock()
+			if n := len(run.Iterations); n > 0 {
+				reason := run.Iterations[n-1].AcceptanceReason
+				if reason == "no_staged_files" || reason == "worker_no_changes" {
+					consecutiveNoops++
+				} else {
+					consecutiveNoops = 0
+				}
+			}
+			run.mu.Unlock()
+			if consecutiveNoops >= limit {
+				run.mu.Lock()
+				run.Status = "converged"
+				run.LastError = fmt.Sprintf("no-op plateau: %d consecutive iterations with no changes", consecutiveNoops)
+				run.UpdatedAt = time.Now()
+				run.mu.Unlock()
+				m.PersistLoop(run)
+				slog.Info("loop converged (no-op plateau)", "loop", id, "consecutive_noops", consecutiveNoops)
+				return nil
+			}
+		}
 	}
 }
 
@@ -217,6 +256,33 @@ func (m *Manager) checkLoopBudget(run *LoopRun) (bool, string) {
 			totalSpent, totalBudget, m.budgetEnforcer.Headroom*100)
 	}
 	return false, ""
+}
+
+// aggregateLoopSpend sums SpentUSD across all planner and worker sessions in a loop run.
+func (m *Manager) aggregateLoopSpend(run *LoopRun) float64 {
+	run.mu.Lock()
+	iterations := make([]LoopIteration, len(run.Iterations))
+	copy(iterations, run.Iterations)
+	run.mu.Unlock()
+
+	var total float64
+	for _, iter := range iterations {
+		if iter.PlannerSessionID != "" {
+			if ps, ok := m.Get(iter.PlannerSessionID); ok {
+				ps.Lock()
+				total += ps.SpentUSD
+				ps.Unlock()
+			}
+		}
+		for _, wid := range iter.WorkerSessionIDs {
+			if ws, ok := m.Get(wid); ok {
+				ws.Lock()
+				total += ws.SpentUSD
+				ws.Unlock()
+			}
+		}
+	}
+	return total
 }
 
 // GetLoop returns a loop run by ID.

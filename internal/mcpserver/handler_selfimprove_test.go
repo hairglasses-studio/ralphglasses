@@ -75,10 +75,11 @@ func TestHandleSelfImprove_CustomBudget(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
 
+	// Budget <= $20 uses the standard profile with 1/4 + 3/4 split.
 	req := mcp.CallToolRequest{}
 	req.Params.Arguments = map[string]any{
 		"repo":       "test-repo",
-		"budget_usd": float64(40),
+		"budget_usd": float64(16),
 	}
 
 	result, err := srv.handleSelfImprove(context.Background(), req)
@@ -90,8 +91,38 @@ func TestHandleSelfImprove_CustomBudget(t *testing.T) {
 	}
 
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, `"applied_budget_usd":40`) {
-		t.Errorf("expected applied_budget_usd:40 in result, got: %s", text)
+	if !strings.Contains(text, `"applied_budget_usd":16`) {
+		t.Errorf("expected applied_budget_usd:16 in result, got: %s", text)
+	}
+}
+
+func TestHandleSelfImprove_OptimizedBudget(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	// Budget > $20 uses the cost-optimized Sonnet-only profile.
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"repo":       "test-repo",
+		"budget_usd": float64(100),
+	}
+
+	result, err := srv.handleSelfImprove(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %v", result.Content)
+	}
+
+	text := result.Content[0].(mcp.TextContent).Text
+	// Optimized profile: planner=$1.50, worker=$3.00, total=$4.50 per iteration
+	if !strings.Contains(text, `"applied_budget_usd":4.5`) {
+		t.Errorf("expected applied_budget_usd:4.5 in result, got: %s", text)
+	}
+	// Trace should show Sonnet-level per-session budgets (not Opus-level $5/$15)
+	if !strings.Contains(text, `"planner_budget_usd":1.5`) {
+		t.Errorf("expected planner_budget_usd:1.5 for optimized profile, got: %s", text)
 	}
 }
 

@@ -29,12 +29,19 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
-	profile := session.SelfImprovementProfile()
-
-	// Apply explicit overrides
-	if budgetUSD := getNumberArg(req, "budget_usd", 0); budgetUSD > 0 {
-		profile.PlannerBudgetUSD = budgetUSD / 4
-		profile.WorkerBudgetUSD = budgetUSD * 3 / 4
+	// For larger budgets (>$20), use the cost-optimized Sonnet-only profile
+	// which maximizes iterations per dollar. Smaller budgets use the default
+	// Opus planner profile for higher per-iteration quality.
+	budgetUSD := getNumberArg(req, "budget_usd", 0)
+	var profile session.LoopProfile
+	if budgetUSD > 20 {
+		profile = session.BudgetOptimizedSelfImprovementProfile(budgetUSD)
+	} else {
+		profile = session.SelfImprovementProfile()
+		if budgetUSD > 0 {
+			profile.PlannerBudgetUSD = budgetUSD / 4
+			profile.WorkerBudgetUSD = budgetUSD * 3 / 4
+		}
 	}
 
 	profile.MaxIterations = int(getNumberArg(req, "max_iterations", 5))
