@@ -501,16 +501,20 @@ func TestHandleLogs_NoLogFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("handleLogs: %v", err)
 	}
-	if !result.IsError {
-		t.Fatal("expected error for missing log file")
-	}
-	code := parseErrorCode(t, getResultText(result))
-	if code != string(ErrNoLogFile) {
-		t.Errorf("error_code = %q, want %q", code, ErrNoLogFile)
+	// FINDING-169: Missing log file should return success with empty entries,
+	// not an error.
+	if result.IsError {
+		t.Fatalf("expected success for missing log file, got error: %s", getResultText(result))
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "no log files found") {
-		t.Errorf("expected 'no log files found' message, got: %s", text)
+	if !strings.Contains(text, `"entries":[]`) {
+		t.Errorf("expected empty entries array, got: %s", text)
+	}
+	if !strings.Contains(text, "no log file found") {
+		t.Errorf("expected 'no log file found' message, got: %s", text)
+	}
+	if !strings.Contains(text, "log_paths_checked") {
+		t.Errorf("expected log_paths_checked in response, got: %s", text)
 	}
 }
 

@@ -520,3 +520,88 @@ func TestResolveSnapshotRepo_FallbackToFirstThreeRepos(t *testing.T) {
 		t.Error("expected exact repos[0] reference")
 	}
 }
+
+// FINDING-268/QW-7: Verify that CWD matching picks the deepest (most specific)
+// repo path, not a parent repo whose path is a prefix.
+func TestResolveSnapshotRepo_CWDPrefersDeepestMatch(t *testing.T) {
+	t.Parallel()
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("os.Getwd: %v", err)
+	}
+
+	// Parent path is a strict prefix of CWD; child is exact CWD.
+	// The old HasPrefix logic would match the parent first (if listed first).
+	parentPath := filepath.Dir(cwd)
+	repos := []*model.Repo{
+		{Name: "parent-repo", Path: parentPath},
+		{Name: "child-repo", Path: cwd},
+	}
+
+	findRepo := func(_ string) *model.Repo { return nil }
+
+	got := resolveSnapshotRepo(repos, "", findRepo)
+	if got == nil {
+		t.Fatal("expected non-nil repo")
+	}
+	if got.Name != "child-repo" {
+		t.Errorf("expected deepest match 'child-repo', got %q — parent prefix matched incorrectly", got.Name)
+	}
+}
+
+// FINDING-268: Verify that partial directory name matches do NOT match.
+// E.g., /repos/claudekit should NOT match CWD /repos/claudekit-extra.
+// FINDING-268: Verify that partial directory name matches do NOT match.
+// E.g., /repos/claudekit should NOT match CWD /repos/claudekit-extra.
+// This test changes CWD, so it must NOT run in parallel.
+func TestResolveSnapshotRepo_CWDNoPartialDirMatch(t *testing.T) {
+	// Use a temp dir so we have a real CWD we can chdir to.
+	base := t.TempDir()
+
+	// Resolve symlinks (macOS /var -> /private/var) for consistent path comparison.
+	base, err := filepath.EvalSymlinks(base)
+	if err != nil {
+		t.Fatalf("EvalSymlinks: %v", err)
+	}
+
+	repoA := filepath.Join(base, "claudekit")
+	repoB := filepath.Join(base, "claudekit-extra")
+	if err := os.MkdirAll(repoA, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(repoB, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Save and restore CWD.
+	origDir, _ := os.Getwd()
+	t.Cleanup(func() { _ = os.Chdir(origDir) })
+	if err := os.Chdir(repoB); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+
+	// Put "fallback" first so it will be the fallback if CWD doesn't match.
+	// If the CWD incorrectly prefix-matches claudekit, we'd get "claudekit"
+	// instead of "fallback".
+	repos := []*model.Repo{
+		{Name: "fallback", Path: "/nonexistent"},
+		{Name: "claudekit", Path: repoA},
+	}
+
+	findRepo := func(_ string) *model.Repo { return nil }
+
+	got := resolveSnapshotRepo(repos, "", findRepo)
+	// CWD is claudekit-extra; the "claudekit" repo should NOT match because
+	// the separator check prevents partial directory name matches.
+	// We should get the fallback (first repo) since nothing matched CWD.
+	if got == nil {
+		t.Fatal("expected non-nil repo")
+	}
+	if got.Name == "claudekit" {
+		t.Error("partial directory name 'claudekit' should NOT match CWD 'claudekit-extra'")
+	}
+	if got.Name != "fallback" {
+		t.Errorf("expected fallback repo, got %q", got.Name)
+	}
+}

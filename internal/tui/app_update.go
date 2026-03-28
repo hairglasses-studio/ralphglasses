@@ -16,9 +16,15 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
 )
 
+// shutdownMsg signals the TUI to perform a graceful shutdown.
+type shutdownMsg struct{}
+
 // Update handles incoming messages and returns the updated model and any follow-up commands.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case shutdownMsg:
+		return m, tea.Quit
+
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
 		m.Height = msg.Height
@@ -60,7 +66,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.LastRefresh = time.Now()
 		cmds = append(cmds, m.tickCmd())
 		// If viewing logs, tail the log
-		if m.CurrentView == ViewLogs && m.SelectedIdx < len(m.Repos) {
+		if m.CurrentView == ViewLogs && m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
 			cmds = append(cmds, process.TailLog(m.Repos[m.SelectedIdx].Path, &m.LogOffset))
 		}
 		return m, tea.Batch(cmds...)

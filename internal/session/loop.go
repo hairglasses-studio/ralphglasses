@@ -59,6 +59,13 @@ func (m *Manager) StartLoop(ctx context.Context, repoPath string, profile LoopPr
 		slog.Warn("failed to cleanup stale worktrees", "repo", repoPath, "error", err)
 	}
 
+	// Auto-prune stale loop runs if count exceeds threshold.
+	if pruned, err := m.PruneStaleLoopRuns(repoPath, 200); err != nil {
+		slog.Warn("failed to prune stale loop runs", "repo", repoPath, "error", err)
+	} else if pruned > 0 {
+		slog.Info("auto-pruned stale loop runs", "repo", repoPath, "pruned", pruned)
+	}
+
 	m.mu.Lock()
 	m.loops[run.ID] = run
 	m.mu.Unlock()
@@ -454,4 +461,49 @@ func (m *Manager) updateLoopIteration(run *LoopRun, index int, status string, mu
 	}
 	run.Status = "running"
 	run.UpdatedAt = time.Now()
+}
+
+// PruneStaleLoopRuns removes loop run JSON files older than 7 days from
+// the state directory when the total count exceeds maxRuns. Returns the
+// number of files pruned.
+func (m *Manager) PruneStaleLoopRuns(repoPath string, maxRuns int) (int, error) {
+	dir := m.loopStateDir()
+	if dir == "" {
+		return 0, nil
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("read loop state dir: %w", err)
+	}
+
+	// Only prune when count exceeds threshold.
+	var jsonFiles []os.DirEntry
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
+			jsonFiles = append(jsonFiles, e)
+		}
+	}
+	if len(jsonFiles) <= maxRuns {
+		return 0, nil
+	}
+
+	cutoff := time.Now().Add(-7 * 24 * time.Hour)
+	pruned := 0
+	for _, e := range jsonFiles {
+		info, infoErr := e.Info()
+		if infoErr != nil {
+			continue
+		}
+		if info.ModTime().Before(cutoff) {
+			path := filepath.Join(dir, e.Name())
+			if rmErr := os.Remove(path); rmErr == nil {
+				pruned++
+			}
+		}
+	}
+	return pruned, nil
 }

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/process"
 )
 
 // Launch starts a new Claude Code session via claude -p.
@@ -63,6 +64,21 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 
 	// Persist initial state to disk
 	m.persistOrWarn(s, "after session start")
+
+	// FINDING-65: Write PID file so orphan detection works across restarts.
+	if s.Pid > 0 {
+		pidDir := m.pidDir()
+		if pidDir != "" {
+			if err := process.WritePIDFile(pidDir, process.PIDInfo{
+				PID:       s.Pid,
+				StartTime: s.LaunchedAt,
+				RepoPath:  s.RepoPath,
+				Provider:  string(s.Provider),
+			}); err != nil {
+				slog.Warn("failed to write session PID file", "session", s.ID, "pid", s.Pid, "error", err)
+			}
+		}
+	}
 
 	if m.bus != nil {
 		m.bus.PublishCtx(ctx, events.Event{
@@ -140,6 +156,16 @@ func (m *Manager) Stop(id string) error {
 	// Persist stopped state (synchronous; s.mu is released above).
 	// Best-effort: stop succeeds even if persistence fails.
 	m.persistOrWarn(s, "after stop")
+
+	// FINDING-65: Remove PID file on stop.
+	if s.Pid > 0 {
+		pidDir := m.pidDir()
+		if pidDir != "" {
+			if err := process.RemovePIDFile(pidDir, s.Pid); err != nil {
+				slog.Warn("failed to remove session PID file", "session", s.ID, "pid", s.Pid, "error", err)
+			}
+		}
+	}
 
 	return nil
 }
@@ -443,5 +469,65 @@ func (m *Manager) LoadExternalSessions() {
 				slog.Warn("failed to remove session state file", "session", id, "error", err)
 			}
 		}
+	}
+}
+
+// pidDir returns the directory path for session PID files.
+// Returns empty string if stateDir is unset.
+func (m *Manager) pidDir() string {
+	m.mu.RLock()
+	stateDir := m.stateDir
+	m.mu.RUnlock()
+	if stateDir == "" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(stateDir), "pids")
+}
+
+// InitPIDFiles scans for orphaned PID files from previous runs. Processes that
+// are still alive are re-adopted into the session map as external sessions;
+// dead entries are cleaned up. Called during Manager.Init().
+func (m *Manager) InitPIDFiles() {
+	pidDir := m.pidDir()
+	if pidDir == "" {
+		return
+	}
+
+	orphans, err := process.ScanOrphans(pidDir)
+	if err != nil {
+		slog.Warn("PID file scan failed", "dir", pidDir, "error", err)
+		return
+	}
+
+	// Clean up PID files for dead processes.
+	for _, info := range orphans {
+		if err := process.RemovePIDFile(pidDir, info.PID); err != nil {
+			slog.Warn("failed to remove orphan PID file", "pid", info.PID, "error", err)
+		} else {
+			slog.Info("cleaned orphan PID file", "pid", info.PID, "repo", info.RepoPath)
+		}
+	}
+
+	// Re-adopt alive PIDs that are not already tracked.
+	alive, err := process.ListPIDFiles(pidDir)
+	if err != nil {
+		return
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, info := range alive {
+		// Check if already tracked.
+		alreadyTracked := false
+		for _, s := range m.sessions {
+			if s.Pid == info.PID {
+				alreadyTracked = true
+				break
+			}
+		}
+		if alreadyTracked {
+			continue
+		}
+		slog.Info("re-adopted PID from previous run", "pid", info.PID, "repo", info.RepoPath)
 	}
 }

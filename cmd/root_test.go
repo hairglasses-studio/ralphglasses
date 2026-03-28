@@ -6,12 +6,18 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 )
+
+// gateGlobalsMu protects package-level globals (scanPath, gateBaselinePath,
+// gateJSON) that are mutated by gate-check tests. Without this mutex the
+// race detector fires when tests run in parallel (FINDING-62).
+var gateGlobalsMu sync.Mutex
 
 // --- parseLogLevel tests ---
 
@@ -1605,6 +1611,8 @@ func TestGateCheckCmd_ObservationsLoadError(t *testing.T) {
 	// Create the expected file path as a directory
 	os.MkdirAll(obsDir+"/loop_observations.json", 0755)
 
+	// FINDING-62: Guard global mutations with mutex to prevent data races.
+	gateGlobalsMu.Lock()
 	origScanPath := scanPath
 	origBaselinePath := gateBaselinePath
 	origJSON := gateJSON
@@ -1612,6 +1620,7 @@ func TestGateCheckCmd_ObservationsLoadError(t *testing.T) {
 		scanPath = origScanPath
 		gateBaselinePath = origBaselinePath
 		gateJSON = origJSON
+		gateGlobalsMu.Unlock()
 	}()
 	scanPath = tmpDir
 	gateBaselinePath = baselinePath
@@ -1639,6 +1648,8 @@ func TestServeCmd_CoordinatorDefault(t *testing.T) {
 func TestGateCheckCmd_NoBaseline(t *testing.T) {
 	tmpDir := t.TempDir()
 
+	// FINDING-62: Guard global mutations with mutex to prevent data races.
+	gateGlobalsMu.Lock()
 	origScanPath := scanPath
 	origBaselinePath := gateBaselinePath
 	origJSON := gateJSON
@@ -1646,6 +1657,7 @@ func TestGateCheckCmd_NoBaseline(t *testing.T) {
 		scanPath = origScanPath
 		gateBaselinePath = origBaselinePath
 		gateJSON = origJSON
+		gateGlobalsMu.Unlock()
 	}()
 	scanPath = tmpDir
 	gateBaselinePath = "" // use default, which won't exist
@@ -1666,6 +1678,8 @@ func TestGateCheckCmd_WithBaseline_NoObservations(t *testing.T) {
 	baselinePath := tmpDir + "/baseline.json"
 	os.WriteFile(baselinePath, []byte(`{"generated_at":"2024-01-01T00:00:00Z","window_hours":24,"entries":{}}`), 0644)
 
+	// FINDING-62: Guard global mutations with mutex to prevent data races.
+	gateGlobalsMu.Lock()
 	origScanPath := scanPath
 	origBaselinePath := gateBaselinePath
 	origJSON := gateJSON
@@ -1673,6 +1687,7 @@ func TestGateCheckCmd_WithBaseline_NoObservations(t *testing.T) {
 		scanPath = origScanPath
 		gateBaselinePath = origBaselinePath
 		gateJSON = origJSON
+		gateGlobalsMu.Unlock()
 	}()
 	scanPath = tmpDir
 	gateBaselinePath = baselinePath
@@ -1693,6 +1708,8 @@ func TestGateCheckCmd_InvalidBaselinePath(t *testing.T) {
 	baselinePath := tmpDir + "/baseline.json"
 	os.MkdirAll(baselinePath, 0755)
 
+	// FINDING-62: Guard global mutations with mutex to prevent data races.
+	gateGlobalsMu.Lock()
 	origScanPath := scanPath
 	origBaselinePath := gateBaselinePath
 	origJSON := gateJSON
@@ -1700,6 +1717,7 @@ func TestGateCheckCmd_InvalidBaselinePath(t *testing.T) {
 		scanPath = origScanPath
 		gateBaselinePath = origBaselinePath
 		gateJSON = origJSON
+		gateGlobalsMu.Unlock()
 	}()
 	scanPath = tmpDir
 	gateBaselinePath = baselinePath

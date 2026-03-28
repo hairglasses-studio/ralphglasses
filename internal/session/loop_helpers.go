@@ -367,6 +367,48 @@ func hasGitChanges(repoPath string) bool {
 	return len(strings.TrimSpace(string(output))) > 0
 }
 
+// EnrichObservationSummary augments an IterationSummary with provider-level
+// cost breakdown from the observation set. This is the enrichment layer for
+// Phase 0.6.2 — it fills fields that the base SummarizeObservations does not.
+func EnrichObservationSummary(obs []LoopObservation) EnrichedSummary {
+	base := SummarizeObservations(obs)
+	enriched := EnrichedSummary{
+		IterationSummary:  base,
+		ProviderBreakdown: make(map[string]int),
+		TotalCostUSD:      0,
+		SuccessRate:       0,
+	}
+	if len(obs) == 0 {
+		return enriched
+	}
+
+	var totalCost float64
+	successes := 0
+	for _, o := range obs {
+		totalCost += o.TotalCostUSD
+		if o.Status != "failed" && o.Error == "" {
+			successes++
+		}
+		// Provider breakdown by worker (dominant cost driver).
+		if o.WorkerProvider != "" {
+			enriched.ProviderBreakdown[o.WorkerProvider]++
+		} else if o.PlannerProvider != "" {
+			enriched.ProviderBreakdown[o.PlannerProvider]++
+		}
+	}
+	enriched.TotalCostUSD = totalCost
+	enriched.SuccessRate = float64(successes) / float64(len(obs))
+	return enriched
+}
+
+// EnrichedSummary extends IterationSummary with provider-level breakdown fields.
+type EnrichedSummary struct {
+	IterationSummary
+	ProviderBreakdown map[string]int `json:"provider_breakdown"`
+	TotalCostUSD      float64        `json:"total_cost_usd"`
+	SuccessRate       float64        `json:"success_rate"`
+}
+
 func normalizeLoopProfile(profile LoopProfile) (LoopProfile, error) {
 	def := DefaultLoopProfile()
 

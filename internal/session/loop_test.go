@@ -18,10 +18,10 @@ func TestDefaultLoopProfile(t *testing.T) {
 	if profile.PlannerProvider != ProviderCodex {
 		t.Fatalf("planner provider = %q", profile.PlannerProvider)
 	}
-	if profile.PlannerModel != "o1-pro" {
+	if profile.PlannerModel != "gpt-4o" {
 		t.Fatalf("planner model = %q", profile.PlannerModel)
 	}
-	if profile.WorkerModel != "gpt-5.4-xhigh" {
+	if profile.WorkerModel != "gpt-4o" {
 		t.Fatalf("worker model = %q", profile.WorkerModel)
 	}
 	if len(profile.VerifyCommands) != 1 || profile.VerifyCommands[0] != "./scripts/dev/ci.sh" {
@@ -47,7 +47,7 @@ func TestLoopStepSuccess(t *testing.T) {
 				OutputCh:   make(chan string, 1),
 				LaunchedAt: time.Now(),
 			}
-			if opts.Model == "o1-pro" {
+			if opts.Model == "gpt-4o" {
 				sess.LastOutput = `{"title":"Add README note","prompt":"Append a loop-generated marker comment to README.md."}`
 				sess.OutputHistory = []string{sess.LastOutput}
 			} else {
@@ -143,7 +143,7 @@ func TestStepLoop_EmptyPlannerTasks(t *testing.T) {
 			}
 			// Planner returns empty output, which should trigger an error
 			// rather than a panic on tasks[0].
-			if opts.Model == "o1-pro" {
+			if opts.Model == "gpt-4o" {
 				sess.LastOutput = ""
 				sess.OutputHistory = []string{}
 			}
@@ -204,7 +204,7 @@ func TestLoopStepVerificationFailure(t *testing.T) {
 				OutputCh:   make(chan string, 1),
 				LaunchedAt: time.Now(),
 			}
-			if opts.Model == "o1-pro" {
+			if opts.Model == "gpt-4o" {
 				sess.LastOutput = `{"title":"Break verify","prompt":"Do some work that will fail verification."}`
 			}
 			return sess, nil
@@ -297,7 +297,7 @@ func TestCompactionBetaSetAfterThreshold(t *testing.T) {
 				OutputCh:   make(chan string, 1),
 				LaunchedAt: time.Now(),
 			}
-			if opts.Model == "o1-pro" {
+			if opts.Model == "gpt-4o" {
 				sess.LastOutput = fmt.Sprintf(`{"title":"Task %d","prompt":"Do work %d."}`, n, n)
 				sess.OutputHistory = []string{sess.LastOutput}
 			} else {
@@ -921,7 +921,7 @@ func TestSubPhaseTimingPopulated(t *testing.T) {
 				OutputCh:   make(chan string, 1),
 				LaunchedAt: time.Now(),
 			}
-			if opts.Model == "o1-pro" {
+			if opts.Model == "gpt-4o" {
 				sess.LastOutput = `{"title":"Timing test task","prompt":"Do work for timing test."}`
 				sess.OutputHistory = []string{sess.LastOutput}
 			} else {
@@ -1027,7 +1027,7 @@ func TestStepLoopSelectTierSetsWorkerModel(t *testing.T) {
 				LaunchedAt: time.Now(),
 			}
 			// Planner returns a task with "test" in the title.
-			if opts.Model == "o1-pro" {
+			if opts.Model == "gpt-4o" {
 				sess.LastOutput = `{"title":"Add test for parser","prompt":"Write unit tests for the parser module."}`
 				sess.OutputHistory = []string{sess.LastOutput}
 			} else {
@@ -1197,6 +1197,103 @@ func TestLoopIterationSubPhaseTiming(t *testing.T) {
 				t.Error("EndedAt is nil after roundtrip")
 			}
 		})
+	}
+}
+
+func TestCheckLoopBudget_ExceededStopsLoop(t *testing.T) {
+	m := NewManager()
+	m.SetStateDir(t.TempDir())
+
+	// Create a session with high spend.
+	sess := &Session{
+		ID:       "planner-sess",
+		SpentUSD: 10.0,
+	}
+	m.mu.Lock()
+	m.sessions["planner-sess"] = sess
+	m.mu.Unlock()
+
+	run := &LoopRun{
+		ID:       "budget-test",
+		RepoPath: t.TempDir(),
+		RepoName: "test",
+		Status:   "running",
+		Profile: LoopProfile{
+			PlannerBudgetUSD: 5.0,
+			WorkerBudgetUSD:  5.0,
+		},
+		Iterations: []LoopIteration{
+			{
+				PlannerSessionID: "planner-sess",
+				WorkerSessionIDs: []string{},
+			},
+		},
+	}
+
+	exceeded, reason := m.checkLoopBudget(run)
+	if !exceeded {
+		t.Fatal("expected budget to be exceeded")
+	}
+	if reason == "" {
+		t.Fatal("expected non-empty reason")
+	}
+	if !strings.Contains(reason, "spent") {
+		t.Errorf("reason should mention spend, got: %s", reason)
+	}
+}
+
+func TestCheckLoopBudget_UnderBudget(t *testing.T) {
+	m := NewManager()
+	m.SetStateDir(t.TempDir())
+
+	// Create a session with low spend.
+	sess := &Session{
+		ID:       "planner-low",
+		SpentUSD: 0.10,
+	}
+	m.mu.Lock()
+	m.sessions["planner-low"] = sess
+	m.mu.Unlock()
+
+	run := &LoopRun{
+		ID:       "budget-ok",
+		RepoPath: t.TempDir(),
+		RepoName: "test",
+		Status:   "running",
+		Profile: LoopProfile{
+			PlannerBudgetUSD: 50.0,
+			WorkerBudgetUSD:  50.0,
+		},
+		Iterations: []LoopIteration{
+			{
+				PlannerSessionID: "planner-low",
+				WorkerSessionIDs: []string{},
+			},
+		},
+	}
+
+	exceeded, _ := m.checkLoopBudget(run)
+	if exceeded {
+		t.Fatal("expected budget NOT to be exceeded")
+	}
+}
+
+func TestCheckLoopBudget_NoBudgetConfigured(t *testing.T) {
+	m := NewManager()
+	m.SetStateDir(t.TempDir())
+
+	run := &LoopRun{
+		ID:       "no-budget",
+		RepoPath: t.TempDir(),
+		RepoName: "test",
+		Status:   "running",
+		Profile:  LoopProfile{},
+		Iterations: []LoopIteration{},
+	}
+
+	exceeded, _ := m.checkLoopBudget(run)
+	if exceeded {
+		t.Fatal("expected no budget enforcement when budget is zero")
 	}
 }
 

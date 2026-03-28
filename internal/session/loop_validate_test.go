@@ -327,3 +327,61 @@ func TestLoopValidationWarning_String(t *testing.T) {
 		t.Errorf("String() = %q, want %q", got, want)
 	}
 }
+
+// --- ValidateModelName tests ---
+
+func TestValidateModelName_KnownValid(t *testing.T) {
+	tests := []struct {
+		provider string
+		model    string
+	}{
+		{"claude", "claude-opus-4-6"},
+		{"claude", "claude-sonnet-4-6"},
+		{"claude", "claude-haiku-4-5-20251001"},
+		{"gemini", "gemini-2.5-pro"},
+		{"gemini", "gemini-2.5-flash"},
+		{"gemini", "gemini-2.0-flash"},
+		{"openai", "gpt-4o"},
+		{"openai", "gpt-4o-mini"},
+		{"openai", "o1"},
+		{"openai", "o1-mini"},
+		{"openai", "o3-mini"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.provider+"/"+tt.model, func(t *testing.T) {
+			if err := ValidateModelName(tt.provider, tt.model); err != nil {
+				t.Errorf("expected nil for known model, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateModelName_KnownInvalid(t *testing.T) {
+	tests := []struct {
+		provider string
+		model    string
+	}{
+		{"claude", "gpt-4o"},
+		{"gemini", "claude-opus-4-6"},
+		{"openai", "gemini-2.5-pro"},
+		{"openai", "o1-pro"},
+		{"claude", "nonexistent-model"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.provider+"/"+tt.model, func(t *testing.T) {
+			if err := ValidateModelName(tt.provider, tt.model); err == nil {
+				t.Error("expected error for unknown model, got nil")
+			}
+		})
+	}
+}
+
+func TestValidateModelName_UnknownProvider(t *testing.T) {
+	// Unknown providers should be permissive (return nil).
+	if err := ValidateModelName("anthropic", "any-model"); err != nil {
+		t.Errorf("expected nil for unknown provider, got: %v", err)
+	}
+	if err := ValidateModelName("", "any-model"); err != nil {
+		t.Errorf("expected nil for empty provider, got: %v", err)
+	}
+}

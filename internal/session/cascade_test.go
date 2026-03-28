@@ -8,6 +8,18 @@ import (
 	"time"
 )
 
+func TestDefaultCascadeConfig_EnabledByDefault(t *testing.T) {
+	config := DefaultCascadeConfig()
+	if !config.Enabled {
+		t.Error("expected DefaultCascadeConfig().Enabled to be true")
+	}
+	// Verify cascade works with default config (no opt-in required)
+	cr := NewCascadeRouter(config, nil, nil, "")
+	if !cr.ShouldCascade("feature", "implement something") {
+		t.Error("expected cascade to work by default with DefaultCascadeConfig()")
+	}
+}
+
 func TestShouldCascade_Default(t *testing.T) {
 	config := DefaultCascadeConfig()
 	cr := NewCascadeRouter(config, nil, nil, "")

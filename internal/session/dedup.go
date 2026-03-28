@@ -1,6 +1,8 @@
 package session
 
 import (
+	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 )
@@ -46,16 +48,42 @@ func JaccardSimilarity(a, b string) float64 {
 	return float64(intersection) / float64(union)
 }
 
+// DedupResult describes why a task was considered a duplicate.
+type DedupResult struct {
+	IsDuplicate bool    // true if the task is a duplicate
+	Reason      string  // human-readable reason for deduplication
+	MatchedTask string  // the completed task title that matched
+	Score       float64 // similarity score (0.0-1.0)
+	Method      string  // "exact", "jaccard", or "file_overlap"
+}
+
 // IsSimilarTask checks whether title is similar to any entry in completed
 // above the given threshold. Returns whether a match was found and the
 // matched title.
 func IsSimilarTask(title string, completed []string, threshold float64) (bool, string) {
+	result := IsSimilarTaskWithReason(title, completed, threshold)
+	return result.IsDuplicate, result.MatchedTask
+}
+
+// IsSimilarTaskWithReason checks whether title is similar to any entry in
+// completed above the given threshold. Returns a DedupResult with the reason,
+// score, and matched title.
+func IsSimilarTaskWithReason(title string, completed []string, threshold float64) DedupResult {
 	for _, c := range completed {
-		if JaccardSimilarity(title, c) >= threshold {
-			return true, c
+		score := JaccardSimilarity(title, c)
+		if score >= threshold {
+			reason := fmt.Sprintf("jaccard similarity %.2f >= threshold %.2f against %q", score, threshold, c)
+			slog.Debug("task deduplicated", "title", title, "matched", c, "score", score, "method", "jaccard")
+			return DedupResult{
+				IsDuplicate: true,
+				Reason:      reason,
+				MatchedTask: c,
+				Score:       score,
+				Method:      "jaccard",
+			}
 		}
 	}
-	return false, ""
+	return DedupResult{}
 }
 
 // filterDuplicateTasks removes tasks whose titles are exact or near-duplicate
@@ -78,11 +106,13 @@ func filterDuplicateTasks(tasks []LoopTask, completedTitles []string, threshold 
 
 		// Exact match check.
 		if _, ok := exactSet[lower]; ok {
+			slog.Debug("task deduplicated", "title", task.Title, "method", "exact")
 			continue
 		}
 
 		// Near-duplicate check via Jaccard similarity.
-		if similar, _ := IsSimilarTask(task.Title, completedTitles, threshold); similar {
+		result := IsSimilarTaskWithReason(task.Title, completedTitles, threshold)
+		if result.IsDuplicate {
 			continue
 		}
 

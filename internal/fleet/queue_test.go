@@ -31,6 +31,56 @@ func TestWorkQueue_PushAndGet(t *testing.T) {
 	}
 }
 
+func TestWorkQueue_PushValidated_InvalidRepoPath(t *testing.T) {
+	q := NewWorkQueue()
+
+	item := &WorkItem{
+		ID:       "w1",
+		Type:     WorkTypeSession,
+		Status:   WorkPending,
+		RepoPath: "/nonexistent/path/does/not/exist",
+	}
+	err := q.PushValidated(item)
+	if err == nil {
+		t.Fatal("expected error for invalid repo path")
+	}
+	if _, ok := q.Get("w1"); ok {
+		t.Error("item should not be in queue after failed push")
+	}
+}
+
+func TestWorkQueue_PushValidated_ValidRepoPath(t *testing.T) {
+	q := NewWorkQueue()
+	dir := t.TempDir()
+
+	item := &WorkItem{
+		ID:       "w1",
+		Type:     WorkTypeSession,
+		Status:   WorkPending,
+		RepoPath: dir,
+	}
+	err := q.PushValidated(item)
+	if err != nil {
+		t.Fatalf("unexpected error for valid repo path: %v", err)
+	}
+	if _, ok := q.Get("w1"); !ok {
+		t.Error("expected to find item in queue")
+	}
+}
+
+func TestWorkQueue_PushValidated_EmptyRepoPath(t *testing.T) {
+	q := NewWorkQueue()
+
+	item := &WorkItem{
+		ID:     "w1",
+		Status: WorkPending,
+	}
+	err := q.PushValidated(item)
+	if err != nil {
+		t.Fatalf("unexpected error for empty repo path: %v", err)
+	}
+}
+
 func TestWorkQueue_AssignBest(t *testing.T) {
 	q := NewWorkQueue()
 

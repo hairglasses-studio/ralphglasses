@@ -546,6 +546,94 @@ func TestScore_NoCoherenceBonus(t *testing.T) {
 	}
 }
 
+// TestScoringCorpus validates score distribution across known-quality prompts (FINDING-240/QW-4).
+func TestScoringCorpus(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		prompt   string
+		minScore int
+		maxScore int
+	}{
+		{
+			"terrible_fix_the_bug",
+			"fix the bug",
+			5, 50,
+		},
+		{
+			"mediocre_login_page",
+			"Update the login page to be more user-friendly",
+			35, 60,
+		},
+		{
+			"good_detailed_review",
+			`You are a senior Go engineer reviewing a production codebase.
+
+<context>
+We have a REST API built with chi router serving 50K requests/minute.
+The authentication middleware was written 2 years ago and has not been updated.
+We've had 3 production incidents related to token validation in the past month.
+</context>
+
+<instructions>
+Review the authentication middleware for security vulnerabilities.
+Focus on: JWT validation, session management, and CSRF protection.
+For each finding, provide the exact code location, severity (P0-P3), and a fix.
+Limit your response to the top 5 most critical issues.
+</instructions>
+
+<examples>
+<example index="1">
+Location: middleware/auth.go:45
+Severity: P0
+Issue: JWT signature not verified before claims extraction
+Fix: Call jwt.Parse with ValidMethods option before accessing claims
+</example>
+<example index="2">
+Location: middleware/session.go:23
+Severity: P1
+Issue: Session token stored in localStorage, vulnerable to XSS
+Fix: Use httpOnly secure cookies with SameSite=Strict
+</example>
+<example index="3">
+Location: middleware/csrf.go:12
+Severity: P2
+Issue: CSRF token not rotated per request
+Fix: Generate new token on each state-changing request
+</example>
+</examples>
+
+<output_format>
+For each issue:
+1. File and line number
+2. Severity (P0=critical, P1=high, P2=medium, P3=low)
+3. Description in 1 sentence
+4. Fix in 1-2 sentences
+</output_format>
+
+<constraints>
+- Only report issues you can verify from the code
+- Do not suggest architectural changes, only targeted fixes
+- Sort by severity (P0 first)
+</constraints>`,
+			70, 90,
+		},
+	}
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			result := Analyze(tc.prompt)
+			if result.ScoreReport.Overall < tc.minScore || result.ScoreReport.Overall > tc.maxScore {
+				t.Errorf("score %d outside expected range [%d, %d]", result.ScoreReport.Overall, tc.minScore, tc.maxScore)
+				for _, d := range result.ScoreReport.Dimensions {
+					t.Logf("  %s: %d (%s)", d.Name, d.Score, d.Grade)
+				}
+			}
+		})
+	}
+}
+
 // findDimension returns the DimensionScore with the given name, or a zero value.
 func findDimension(report *ScoreReport, name string) DimensionScore {
 	if report == nil {

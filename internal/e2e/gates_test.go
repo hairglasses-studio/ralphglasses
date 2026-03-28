@@ -460,6 +460,89 @@ func TestFormatReportJSON_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestCompareGateVerdicts_Trends(t *testing.T) {
+	t.Parallel()
+
+	prev := &GateReport{
+		Results: []GateResult{
+			{Metric: "cost_per_iteration", Verdict: VerdictFail},
+			{Metric: "completion_rate", Verdict: VerdictWarn},
+			{Metric: "error_rate", Verdict: VerdictPass},
+			{Metric: "verify_pass_rate", Verdict: VerdictWarn},
+		},
+	}
+	current := &GateReport{
+		Results: []GateResult{
+			{Metric: "cost_per_iteration", Verdict: VerdictWarn}, // improved (fail->warn)
+			{Metric: "completion_rate", Verdict: VerdictPass},    // improved (warn->pass)
+			{Metric: "error_rate", Verdict: VerdictFail},         // degraded (pass->fail)
+			{Metric: "verify_pass_rate", Verdict: VerdictWarn},   // unchanged
+		},
+	}
+
+	trends := CompareGateVerdicts(prev, current)
+	if len(trends) != 4 {
+		t.Fatalf("expected 4 trends, got %d", len(trends))
+	}
+
+	expected := map[string]string{
+		"cost_per_iteration": "improved",
+		"completion_rate":    "improved",
+		"error_rate":         "degraded",
+		"verify_pass_rate":   "unchanged",
+	}
+
+	for _, tr := range trends {
+		want, ok := expected[tr.Gate]
+		if !ok {
+			t.Errorf("unexpected gate %q", tr.Gate)
+			continue
+		}
+		if tr.Direction != want {
+			t.Errorf("gate %s: direction = %q, want %q (prev=%s curr=%s)",
+				tr.Gate, tr.Direction, want, tr.Previous, tr.Current)
+		}
+	}
+}
+
+func TestCompareGateVerdicts_NilInputs(t *testing.T) {
+	t.Parallel()
+
+	report := &GateReport{
+		Results: []GateResult{{Metric: "cost_per_iteration", Verdict: VerdictPass}},
+	}
+	if trends := CompareGateVerdicts(nil, report); trends != nil {
+		t.Errorf("nil prev: expected nil, got %v", trends)
+	}
+	if trends := CompareGateVerdicts(report, nil); trends != nil {
+		t.Errorf("nil current: expected nil, got %v", trends)
+	}
+}
+
+func TestCompareGateVerdicts_DisjointMetrics(t *testing.T) {
+	t.Parallel()
+
+	prev := &GateReport{Results: []GateResult{{Metric: "a", Verdict: VerdictPass}}}
+	current := &GateReport{Results: []GateResult{{Metric: "b", Verdict: VerdictFail}}}
+
+	trends := CompareGateVerdicts(prev, current)
+	if len(trends) != 0 {
+		t.Errorf("disjoint metrics: expected 0 trends, got %d", len(trends))
+	}
+}
+
+func TestVerdictRank(t *testing.T) {
+	if verdictRank(VerdictPass) <= verdictRank(VerdictWarn) {
+		t.Error("pass should rank higher than warn")
+	}
+	if verdictRank(VerdictWarn) <= verdictRank(VerdictFail) {
+		t.Error("warn should rank higher than fail")
+	}
+	if verdictRank(VerdictFail) <= verdictRank(VerdictSkip) {
+		t.Error("fail should rank higher than skip")
+	}
+}
+
 func TestFormatReportJSON_EmptyReport(t *testing.T) {
 	t.Parallel()
 

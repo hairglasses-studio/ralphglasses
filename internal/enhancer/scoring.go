@@ -405,14 +405,14 @@ func scoreExamples(text string, _ TaskType, lints []LintResult, _ *AnalyzeResult
 }
 
 func scoreDocumentPlacement(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult) DimensionScore {
-	score := 60 // default OK if not applicable
+	score := 50 // neutral baseline
 	var suggestions []string
 
 	tokens := ar.EstimatedTokens
 
-	// For short prompts, placement is less important
+	// For short prompts, placement is less critical but also less likely to be optimal
 	if tokens < 1000 {
-		score = 70
+		score = 55
 	}
 
 	// Cache-unfriendly lints
@@ -483,7 +483,7 @@ func scoreRoleDefinition(text string, _ TaskType, _ []LintResult, _ *AnalyzeResu
 }
 
 func scoreTaskFocus(text string, _ TaskType, lints []LintResult, _ *AnalyzeResult, _ ProviderName) DimensionScore {
-	score := 60
+	score := 40
 	var suggestions []string
 
 	// Decomposition needed = too many tasks
@@ -505,9 +505,16 @@ func scoreTaskFocus(text string, _ TaskType, lints []LintResult, _ *AnalyzeResul
 		score -= 10
 		suggestions = append(suggestions, "Add clear action verbs — tell the model exactly what to do")
 	case len(verbs) >= 1 && len(verbs) <= 3:
-		score += 20 // focused
-	case len(verbs) > 3:
-		score += 5 // some, but potentially unfocused
+		score += 35 // focused — clear, directed task
+	case len(verbs) > 3 && len(verbs) <= 6:
+		score += 25 // multiple actions but still manageable
+	case len(verbs) > 6:
+		score += 10 // many actions, potentially unfocused
+	}
+
+	// Bonus: measurable outcome specified
+	if numericConstraintPattern.MatchString(text) {
+		score += 10
 	}
 
 	score = clamp(score, 0, 100)
@@ -554,8 +561,18 @@ func scoreFormatSpec(text string, _ TaskType, _ []LintResult, ar *AnalyzeResult)
 }
 
 func scoreTone(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult, targetProvider ProviderName) DimensionScore {
-	score := 80 // default good tone
+	score := 50 // neutral baseline
 	var suggestions []string
+
+	// Positive signals: polite/professional language earns points
+	lower := strings.ToLower(text)
+	if strings.Contains(lower, "please") || strings.Contains(lower, "thank") {
+		score += 10
+	}
+	// Calm, direct phrasing with no aggressive markers
+	if !ar.HasAggressiveCaps && !ar.HasNegativeFrames {
+		score += 25
+	}
 
 	if ar.HasAggressiveCaps {
 		if targetProvider == "" || targetProvider == ProviderClaude {

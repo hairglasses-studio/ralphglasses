@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -72,10 +73,15 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	}
 
 	iteration := LoopIteration{
-		Number:        len(run.Iterations) + 1,
-		Status:        "planning",
-		StartedAt:     time.Now(),
-		IdleBetweenMs: idleBetweenMs,
+		Number:           len(run.Iterations) + 1,
+		Status:           "planning",
+		StartedAt:        time.Now(),
+		IdleBetweenMs:    idleBetweenMs,
+		Tasks:            []LoopTask{},
+		WorkerSessionIDs: []string{},
+		WorktreePaths:    []string{},
+		WorkerOutputs:    []string{},
+		Verification:     []LoopVerification{},
 	}
 	run.Iterations = append(run.Iterations, iteration)
 	index := len(run.Iterations) - 1
@@ -361,6 +367,15 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	if len(workerErrs) > 0 {
 		errMsg := strings.Join(workerErrs, "; ")
 		return m.failLoopIteration(run, index, fmt.Errorf("worker(s) failed: %s", errMsg))
+	}
+
+	// QW-1: JSON pre-validation of worker outputs — log warnings for non-JSON
+	// outputs so downstream processing can handle raw text gracefully.
+	for i, output := range workerOutputs {
+		if output != "" && looksLikeJSON(output) && !json.Valid([]byte(output)) {
+			slog.Warn("worker output looks like JSON but is not valid",
+				"loop", run.ID, "worker", i)
+		}
 	}
 
 	workersDone := time.Now()

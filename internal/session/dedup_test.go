@@ -382,6 +382,49 @@ func TestFilterDuplicateTasksByContent_MixedFileOverlapDifferentTitle(t *testing
 	}
 }
 
+// --- DedupResult tests (Phase 0.6.7) ---
+
+func TestIsSimilarTaskWithReason_Found(t *testing.T) {
+	completed := []string{"add unit tests for parser"}
+	result := IsSimilarTaskWithReason("add unit tests for the parser", completed, 0.8)
+	if !result.IsDuplicate {
+		t.Fatal("expected duplicate")
+	}
+	if result.Method != "jaccard" {
+		t.Errorf("method = %q, want jaccard", result.Method)
+	}
+	if result.MatchedTask != "add unit tests for parser" {
+		t.Errorf("matched = %q, want %q", result.MatchedTask, "add unit tests for parser")
+	}
+	if result.Score < 0.8 {
+		t.Errorf("score = %f, want >= 0.8", result.Score)
+	}
+	if result.Reason == "" {
+		t.Error("reason should not be empty")
+	}
+}
+
+func TestIsSimilarTaskWithReason_NotFound(t *testing.T) {
+	completed := []string{"fix CI timeout"}
+	result := IsSimilarTaskWithReason("add new MCP tool", completed, 0.8)
+	if result.IsDuplicate {
+		t.Error("should not be duplicate")
+	}
+	if result.Method != "" {
+		t.Errorf("method should be empty for non-duplicate, got %q", result.Method)
+	}
+	if result.Score != 0 {
+		t.Errorf("score should be 0 for non-duplicate, got %f", result.Score)
+	}
+}
+
+func TestIsSimilarTaskWithReason_EmptyCompleted(t *testing.T) {
+	result := IsSimilarTaskWithReason("any task", nil, 0.8)
+	if result.IsDuplicate {
+		t.Error("empty completed list should not produce duplicate")
+	}
+}
+
 // --- Threshold 0.7 rephrasing tests ---
 
 func TestSimilarityThreshold07_CatchesRephrasings(t *testing.T) {

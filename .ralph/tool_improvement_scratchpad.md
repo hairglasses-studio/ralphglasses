@@ -1890,3 +1890,53 @@ Fix rate: 1/7 (14%).
 | 14 | 33 | 1 | — |
 | 15 | 33 | TBD | 17–21 |
 | **Total** | **174 findings** | **17 confirmed fixed** | **21 opportunities** |
+
+## Sprint 5 Post-Test Improvement Notes (2026-03-28)
+
+
+### FINDING-62: Race condition in cmd/root_test.go gate check tests
+- **File:** `cmd/root_test.go:1608-1615`
+- **Severity:** P1
+- **Issue:** `TestGateCheckCmd_ObservationsLoadError` mutates package-level vars (`scanPath`, `gateBaselinePath`, `gateJSON`) without synchronization. Fails intermittently under `-race` when other tests in the same package run concurrently.
+- **Fix:** Either (a) use `t.Setenv()` + env-var-based config, (b) extract gate logic into a function that accepts params instead of reading globals, or (c) add `t.Parallel()` guards and a mutex around the shared state. Option (b) is preferred — it makes the code testable without shared mutable state.
+
+### FINDING-63: cmd packages structurally capped at ~60-75% coverage
+- **Packages:** `cmd` (74.5%), `cmd/prompt-improver` (70%), `cmd/ralphglasses-mcp` (59.1%)
+- **Severity:** P2
+- **Issue:** Main entry points call `tea.NewProgram().Run()` (blocking TUI), `server.ServeStdio()` (blocking MCP), or `os.Exit()` — none of which are testable in-process. `go test` coverage can never reach 80% without refactoring.
+- **Fix:** Extract testable logic from `Execute()`, `runImprove()`, `runHook()`, `main()` into pure functions that return errors instead of calling `os.Exit()`. The thin `main()` wrapper handles exit codes. This is a pattern used in cobra best practices.
+
+### FINDING-64: Coverage uplift (83.6→84.4%) below 88% target
+- **Severity:** P2
+- **Issue:** Sprint 5 target was 88% but achieved 84.4%. The 3.6% gap comes from: (a) the 3 cmd packages (~2%), (b) remaining 74 zero-coverage functions in session/fleet/e2e (~1.5%).
+- **Fix:** Next sprint should focus on: (1) refactoring cmd entry points per FINDING-63, (2) adding mock-based tests for the remaining session functions (RunLoop edges, buildCmdForProvider, runSession), (3) fleet worker integration tests with httptest.
+
+### FINDING-65: PID file functions in pidfile.go are feature-complete but not wired into Manager
+- **File:** `internal/process/pidfile.go`
+- **Severity:** P2
+- **Issue:** WS-3 created the PID file infrastructure (WritePIDFile, ReadPIDFile, ScanOrphans, CleanupOrphans, RestartPolicy, StartHealthCheck) but didn't wire them into the actual `Manager.Start()`/`Manager.Stop()` lifecycle. The functions exist but aren't called in production.
+- **Fix:** Wire `WritePIDFile` into `Manager.Start()`, `RemovePIDFile` into `Manager.Stop()`, and `ScanOrphans`+`CleanupOrphans` into `Manager.Init()`.
+
+### FINDING-66: BatchCollector webhook has no retry or timeout
+- **File:** `internal/session/batch.go`
+- **Severity:** P2
+- **Issue:** When batch completes with a callback URL, the webhook POST fires once in a goroutine with no timeout, no retry, and no error reporting. If the callback server is down, results are silently lost.
+- **Fix:** Add `context.WithTimeout` (30s), retry with exponential backoff (3 attempts), and log errors on final failure.
+
+### FINDING-67: sentinel errors in model/errors.go don't match ROADMAP naming
+- **File:** `internal/model/errors.go`
+- **Severity:** P3
+- **Issue:** ROADMAP 1.8.1 specifies `ErrStatusNotFound`, `ErrConfigParseFailed`, `ErrCircuitOpen` but implementation created `ErrNotFound`, `ErrInvalidParams`, `ErrBudgetExceeded`, `ErrTimeout`, `ErrStalled`, `ErrShuttingDown`, `ErrAlreadyRunning`, `ErrNotRunning`. The generic names are arguably better, but the ROADMAP-specific ones are missing.
+- **Fix:** Add the 3 ROADMAP-specified errors alongside the existing generic ones, or update ROADMAP to reflect the actual implementation.
+
+### FINDING-68: prompt-improver test duration is 12-17s (slowest unit test suite)
+- **File:** `cmd/prompt-improver/main_test.go`
+- **Severity:** P3
+- **Issue:** Takes 12-17s per run, likely due to subprocess compilation or network timeouts. This is 10x longer than comparable cmd test suites.
+- **Fix:** Investigate if tests are hitting real network endpoints or compiling binaries. Mock external calls, use `TestMain` to pre-build binary once, or add `-short` guards for expensive tests.
+
+### FINDING-69: WS-4 observation enrichment fields may break JSON consumers
+- **File:** `internal/session/loopbench.go`
+- **Severity:** P3
+- **Issue:** Added `MemoryUsageMB` and `GoroutineCount` fields to `LoopObservation`. Any external consumers parsing `loop_observations.jsonl` will see new fields. Since JSON is forward-compatible (unknown fields ignored), this is low risk, but any strict schema validators would break.
+- **Fix:** Document the new fields in the observation schema. Consider adding a schema version field to LoopObservation for future changes.
