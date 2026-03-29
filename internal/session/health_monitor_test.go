@@ -1,6 +1,7 @@
 package session
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -152,5 +153,166 @@ func writeObservations(t *testing.T, path string, obs []LoopObservation) {
 		if err := WriteObservation(path, o); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestHealthMonitor_HITLRate(t *testing.T) {
+	dir := t.TempDir()
+	ralphDir := filepath.Join(dir, ".ralph")
+	os.MkdirAll(ralphDir, 0o755)
+
+	// Write HITL events: 3 manual, 7 automatic → rate = 0.30 > 0.10 threshold.
+	hitlPath := filepath.Join(ralphDir, "hitl_events.jsonl")
+	for i := 0; i < 10; i++ {
+		trigger := TriggerAutomatic
+		if i < 3 {
+			trigger = TriggerManual
+		}
+		e := HITLEvent{
+			Timestamp:  time.Now().Add(-time.Duration(i) * time.Minute),
+			MetricType: "session_intervention",
+			Trigger:    trigger,
+		}
+		data, _ := json.Marshal(e)
+		data = append(data, '\n')
+		f, _ := os.OpenFile(hitlPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		f.Write(data)
+		f.Close()
+	}
+
+	// Also write cost observations so idle_time doesn't mask our signal.
+	obsPath := filepath.Join(ralphDir, "cost_observations.json")
+	writeObservations(t, obsPath, []LoopObservation{
+		{Timestamp: time.Now(), VerifyPassed: true, TotalCostUSD: 0.01},
+	})
+
+	hm := NewHealthMonitor(DefaultHealthThresholds())
+	signals := hm.Evaluate(dir)
+
+	found := false
+	for _, s := range signals {
+		if s.Metric == "hitl_rate" {
+			found = true
+			if s.Value < 0.10 {
+				t.Fatalf("expected rate > 0.10, got %f", s.Value)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected hitl_rate signal")
+	}
+}
+
+func TestHealthMonitor_LowCoverage(t *testing.T) {
+	dir := t.TempDir()
+	ralphDir := filepath.Join(dir, ".ralph")
+	os.MkdirAll(ralphDir, 0o755)
+
+	// Write coverage below threshold.
+	os.WriteFile(filepath.Join(ralphDir, "coverage.txt"), []byte("65.2\n"), 0644)
+
+	// Write obs so other checks have data.
+	obsPath := filepath.Join(ralphDir, "cost_observations.json")
+	writeObservations(t, obsPath, []LoopObservation{
+		{Timestamp: time.Now(), VerifyPassed: true, TotalCostUSD: 0.01},
+	})
+
+	hm := NewHealthMonitor(DefaultHealthThresholds())
+	signals := hm.Evaluate(dir)
+
+	found := false
+	for _, s := range signals {
+		if s.Metric == "test_coverage" {
+			found = true
+			if s.Value != 65.2 {
+				t.Fatalf("expected coverage 65.2, got %f", s.Value)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected test_coverage signal")
+	}
+}
+
+func TestHealthMonitor_CriticalFindings(t *testing.T) {
+	disableCycleSafety(t)
+
+	dir := t.TempDir()
+	ralphDir := filepath.Join(dir, ".ralph")
+	os.MkdirAll(ralphDir, 0o755)
+
+	// Create an active cycle with 4 critical findings.
+	cycle := &CycleRun{
+		ID:        "crit-test",
+		RepoPath:  dir,
+		Phase:     CycleExecuting,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Findings: []CycleFinding{
+			{ID: "f1", Severity: "critical"},
+			{ID: "f2", Severity: "critical"},
+			{ID: "f3", Severity: "low"},
+			{ID: "f4", Severity: "critical"},
+			{ID: "f5", Severity: "critical"},
+		},
+	}
+	if err := SaveCycle(dir, cycle); err != nil {
+		t.Fatal(err)
+	}
+
+	// Write obs so other checks have data.
+	obsPath := filepath.Join(ralphDir, "cost_observations.json")
+	writeObservations(t, obsPath, []LoopObservation{
+		{Timestamp: time.Now(), VerifyPassed: true, TotalCostUSD: 0.01},
+	})
+
+	hm := NewHealthMonitor(DefaultHealthThresholds())
+	signals := hm.Evaluate(dir)
+
+	found := false
+	for _, s := range signals {
+		if s.Metric == "critical_findings" {
+			found = true
+			if s.Value != 4 {
+				t.Fatalf("expected 4 critical findings, got %f", s.Value)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected critical_findings signal")
+	}
+}
+
+func TestHealthMonitor_MeanCycleCost(t *testing.T) {
+	dir := t.TempDir()
+	ralphDir := filepath.Join(dir, ".ralph")
+	os.MkdirAll(ralphDir, 0o755)
+
+	// 3 observations, $3 each → mean = $3 > $2 threshold.
+	obsPath := filepath.Join(ralphDir, "cost_observations.json")
+	var obs []LoopObservation
+	for i := 0; i < 3; i++ {
+		obs = append(obs, LoopObservation{
+			Timestamp:    time.Now().Add(-time.Duration(i) * time.Minute),
+			VerifyPassed: true,
+			TotalCostUSD: 3.0,
+		})
+	}
+	writeObservations(t, obsPath, obs)
+
+	hm := NewHealthMonitor(DefaultHealthThresholds())
+	signals := hm.Evaluate(dir)
+
+	found := false
+	for _, s := range signals {
+		if s.Metric == "mean_cycle_cost" {
+			found = true
+			if s.Value != 3.0 {
+				t.Fatalf("expected mean cost 3.0, got %f", s.Value)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected mean_cycle_cost signal")
 	}
 }

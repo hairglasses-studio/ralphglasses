@@ -92,6 +92,10 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	s.running = true
 	s.startedAt = time.Now()
 	s.done = make(chan struct{})
+
+	// Enable the E2E test gate at L2+ so auto-optimizer changes are validated.
+	GateEnabled = true
+
 	go s.run(childCtx)
 	return nil
 }

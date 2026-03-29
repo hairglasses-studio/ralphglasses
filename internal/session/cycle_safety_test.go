@@ -159,3 +159,50 @@ func TestValidateCycleStart_IgnoresOtherRepos(t *testing.T) {
 		t.Fatalf("expected nil error for different repo, got %v", err)
 	}
 }
+
+func TestValidateCycleAdvance_BatchSkipsCooldown(t *testing.T) {
+	// A cycle just advanced (UpdatedAt = now) — normally blocked by 30s cooldown.
+	cycle := &CycleRun{
+		ID:         "batch-test",
+		Phase:      CycleBaselining,
+		BaselineID: "b-1",
+		CreatedAt:  time.Now().Add(-1 * time.Hour),
+		UpdatedAt:  time.Now(), // just advanced
+	}
+	config := DefaultCycleSafety // PhaseCooldown = 30s
+
+	// Without batch: should fail.
+	err := ValidateCycleAdvance(cycle, config)
+	if err == nil {
+		t.Fatal("expected cooldown error without batch option, got nil")
+	}
+	var safetyErr *CycleSafetyError
+	if !errors.As(err, &safetyErr) || safetyErr.Check != "phase_cooldown" {
+		t.Fatalf("expected phase_cooldown error, got %v", err)
+	}
+
+	// With batch: should pass.
+	if err := ValidateCycleAdvance(cycle, config, WithBatchAdvance()); err != nil {
+		t.Fatalf("expected batch advance to skip cooldown, got %v", err)
+	}
+}
+
+func TestValidateCycleAdvance_BatchStillEnforcesAge(t *testing.T) {
+	// Batch advance skips cooldown but NOT the max age check.
+	cycle := &CycleRun{
+		ID:        "batch-age",
+		Phase:     CycleExecuting,
+		CreatedAt: time.Now().Add(-48 * time.Hour), // well past 24h max age
+		UpdatedAt: time.Now(),
+	}
+	config := DefaultCycleSafety
+
+	err := ValidateCycleAdvance(cycle, config, WithBatchAdvance())
+	if err == nil {
+		t.Fatal("expected age error even with batch, got nil")
+	}
+	var safetyErr *CycleSafetyError
+	if !errors.As(err, &safetyErr) || safetyErr.Check != "max_cycle_age" {
+		t.Fatalf("expected max_cycle_age error, got %v", err)
+	}
+}

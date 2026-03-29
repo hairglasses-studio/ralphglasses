@@ -971,7 +971,8 @@ func TestSubscribeFiltered_ConcurrentPublish(t *testing.T) {
 	ch := bus.SubscribeFiltered("f-concurrent", LoopStarted)
 
 	const goroutines = 10
-	const eventsPerGoroutine = 100
+	const eventsPerGoroutine = 5
+	const expectedMatches = goroutines * eventsPerGoroutine // 50, well within channel buffer of 100
 
 	// Drain the channel concurrently to avoid overflow drops
 	var received int64
@@ -1000,21 +1001,16 @@ func TestSubscribeFiltered_ConcurrentPublish(t *testing.T) {
 	}
 	wg.Wait()
 
-	// Allow drain goroutine to finish processing buffered events
-	time.Sleep(100 * time.Millisecond)
-	bus.Unsubscribe("f-concurrent") // closes channel, terminates drain goroutine
+	// All publishers are done. Close the subscription to terminate the drain
+	// goroutine once it has consumed every buffered event.
+	bus.Unsubscribe("f-concurrent")
 	<-drainDone
 
-	expectedMatches := int64(goroutines * eventsPerGoroutine)
 	got := atomic.LoadInt64(&received)
-	// The bus uses non-blocking sends and drops events when the subscriber
-	// channel buffer (100) is full. With 10 concurrent publishers the drain
-	// goroutine may not keep up, so we accept a lower bound instead of an
-	// exact match. Receiving at least 25% confirms concurrency safety;
-	// the exact drop rate depends on goroutine scheduling and CPU load.
-	minAcceptable := int64(float64(expectedMatches) * 0.25)
-	if got < minAcceptable || got > expectedMatches {
-		t.Errorf("received %d events, want between %d and %d", got, minAcceptable, expectedMatches)
+	// With eventsPerGoroutine=5 and 10 goroutines, total matching events (50)
+	// fit within the subscriber channel buffer (100), so no drops should occur.
+	if got != int64(expectedMatches) {
+		t.Errorf("received %d events, want exactly %d", got, expectedMatches)
 	}
 }
 

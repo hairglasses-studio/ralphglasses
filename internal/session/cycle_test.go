@@ -335,3 +335,48 @@ func TestCycleLoadNotFound(t *testing.T) {
 		t.Fatal("expected error loading nonexistent cycle")
 	}
 }
+
+func TestCycleFailureWritesObservation(t *testing.T) {
+	dir := t.TempDir()
+	mgr := NewManager()
+	mgr.SetStateDir(filepath.Join(dir, "sessions"))
+	CycleSafety = &DisabledCycleSafety
+	defer func() { CycleSafety = nil }()
+
+	cycle, err := mgr.CreateCycle(dir, "test-fail", "will fail", nil)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	_ = mgr.FailCycle(cycle, "simulated failure")
+
+	// Simulate what the RunCycle fail closure does: write observation.
+	obs := LoopObservation{
+		Timestamp: time.Now(),
+		LoopID:    "cycle:" + cycle.ID,
+		RepoName:  filepath.Base(dir),
+		Status:    "cycle_failed",
+		Error:     "simulated failure",
+	}
+	obsPath := ObservationPath(dir)
+	if err := WriteObservation(obsPath, obs); err != nil {
+		t.Fatalf("write observation: %v", err)
+	}
+
+	// Verify the observation is loadable and has the right status.
+	loaded, err := LoadObservations(obsPath, time.Time{})
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if len(loaded) != 1 {
+		t.Fatalf("expected 1 observation, got %d", len(loaded))
+	}
+	if loaded[0].Status != "cycle_failed" {
+		t.Fatalf("status = %q, want %q", loaded[0].Status, "cycle_failed")
+	}
+	if loaded[0].Error != "simulated failure" {
+		t.Fatalf("error = %q, want %q", loaded[0].Error, "simulated failure")
+	}
+	if loaded[0].LoopID != "cycle:"+cycle.ID {
+		t.Fatalf("loop_id = %q, want %q", loaded[0].LoopID, "cycle:"+cycle.ID)
+	}
+}

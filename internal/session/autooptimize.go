@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -331,8 +332,19 @@ var GateEnabled bool
 
 // RunTestGate is a pluggable function that runs the E2E gate.
 // It's a variable so tests can replace it with a mock.
-var RunTestGate = func(repoRoot string) (verdict string, err error) {
-	return "skip", nil // default no-op; wired to e2e.RunE2EGate at init time
+// Default implementation runs `go test ./... -count=1` with a 60s timeout.
+var RunTestGate = defaultTestGate
+
+func defaultTestGate(repoRoot string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "go", "test", "./...", "-count=1")
+	cmd.Dir = repoRoot
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "fail", fmt.Errorf("test gate failed: %s: %w", string(out), err)
+	}
+	return "pass", nil
 }
 
 // GateChange evaluates a proposed change against the E2E test gate.
