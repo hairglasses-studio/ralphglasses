@@ -49,6 +49,7 @@ type Manager struct {
 	MinSessionDuration time.Duration               // sessions younger than this are protected from reaper; 0 uses default (30s)
 	Enhancer       *enhancer.HybridEngine        // optional prompt enhancement for loop integration
 	FleetPool      *pool.State                   // fleet-wide budget pooling and metrics aggregation
+	supervisor     *Supervisor                   // autonomous R&D supervisor, runs at level >= 2
 
 	// WS-7: Loop engine hygiene — auto-prune and journal consolidation config.
 	PruneRetention   time.Duration // max age for stale loop runs; 0 uses default (7 days)
@@ -270,6 +271,58 @@ func (m *Manager) ConsecutiveNoOps(loopID string) int {
 		return 0
 	}
 	return m.noopDetector.ConsecutiveCount(loopID)
+}
+
+// SetAutonomyLevel changes the autonomy level and starts/stops the supervisor.
+func (m *Manager) SetAutonomyLevel(level AutonomyLevel, repoPath string) {
+	m.mu.Lock()
+	if m.optimizer != nil && m.optimizer.decisions != nil {
+		m.optimizer.decisions.SetLevel(level)
+	}
+
+	// Start or stop supervisor based on level.
+	if level >= LevelAutoOptimize {
+		m.startSupervisor(repoPath)
+	} else {
+		m.stopSupervisor()
+	}
+	m.mu.Unlock()
+}
+
+// startSupervisor creates and starts the autonomous R&D supervisor.
+// Must be called with m.mu held.
+func (m *Manager) startSupervisor(repoPath string) {
+	if m.supervisor != nil && m.supervisor.Running() {
+		return // already running
+	}
+	m.supervisor = NewSupervisor(m, repoPath)
+	m.supervisor.monitor = NewHealthMonitor(DefaultHealthThresholds())
+	m.supervisor.chainer = NewCycleChainer()
+	if m.optimizer != nil {
+		m.supervisor.decisions = m.optimizer.decisions
+	}
+	ctx := context.Background()
+	m.supervisor.Start(ctx)
+}
+
+// stopSupervisor stops the supervisor if running.
+// Must be called with m.mu held.
+func (m *Manager) stopSupervisor() {
+	if m.supervisor != nil {
+		m.supervisor.Stop()
+		m.supervisor = nil
+	}
+}
+
+// SupervisorStatus returns the current supervisor state, or nil if not running.
+func (m *Manager) SupervisorStatus() *SupervisorState {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.supervisor == nil {
+		return nil
+	}
+	state := m.supervisor.Status()
+	return &state
 }
 
 // RunWorkflow validates and starts a workflow asynchronously.
