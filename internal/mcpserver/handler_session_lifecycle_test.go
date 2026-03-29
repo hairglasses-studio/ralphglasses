@@ -126,8 +126,8 @@ func TestHandleSessionRetry(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrNoActiveSessions) {
-			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
+		if code != string(ErrSessionNotFound) {
+			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
 		}
 	})
 }
