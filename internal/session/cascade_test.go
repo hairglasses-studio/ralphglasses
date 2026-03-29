@@ -1625,6 +1625,26 @@ func TestCascadeRouter_DefaultEnabledAllConstructors(t *testing.T) {
 	})
 }
 
+// TestCascadeRouter_ProfileDefaultEnabled verifies all default loop profiles
+// have EnableCascade=true (QW-2: cascade routing on by default).
+func TestCascadeRouter_ProfileDefaultEnabled(t *testing.T) {
+	t.Parallel()
+
+	t.Run("DefaultLoopProfile", func(t *testing.T) {
+		p := DefaultLoopProfile()
+		if !p.EnableCascade {
+			t.Error("DefaultLoopProfile: expected EnableCascade=true (QW-2)")
+		}
+	})
+
+	t.Run("BudgetOptimizedSelfImprovementProfile", func(t *testing.T) {
+		p := BudgetOptimizedSelfImprovementProfile(100)
+		if !p.EnableCascade {
+			t.Error("BudgetOptimizedSelfImprovementProfile: expected EnableCascade=true (QW-2)")
+		}
+	})
+}
+
 // TestCascadeRouter_ConfigExplicitDisable verifies that CASCADE_ENABLED=false
 // in config removes the default cascade router.
 func TestCascadeRouter_ConfigExplicitDisable(t *testing.T) {
