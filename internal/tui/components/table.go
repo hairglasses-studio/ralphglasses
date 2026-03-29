@@ -476,6 +476,42 @@ func max(a, b int) int {
 	return b
 }
 
+// HandleMouse processes a mouse event for the table.
+// On left-click, it calculates which row was clicked based on the Y offset
+// from the table header (2 rows: header + separator) and sets the cursor.
+// Returns true if the click was handled (i.e., a valid row was clicked).
+func (t *Table) HandleMouse(x, y int, button, action int) bool {
+	// Only handle left-click press events.
+	// button 1 = MouseButtonLeft, action 0 = MouseActionPress
+	if button != 1 || action != 0 {
+		return false
+	}
+
+	// The table renders: header (row 0), separator (row 1), then data rows.
+	headerRows := 2
+	clickedRow := y - headerRows
+
+	if clickedRow < 0 {
+		return false
+	}
+
+	// Convert to absolute row index (accounting for scroll offset).
+	absIdx := t.Offset + clickedRow
+
+	if absIdx < 0 || absIdx >= len(t.filtered) {
+		return false
+	}
+
+	// Ensure within visible range.
+	visible := t.visibleRows()
+	if clickedRow >= visible {
+		return false
+	}
+
+	t.Cursor = absIdx
+	return true
+}
+
 // StyledCell wraps a cell value with a lipgloss style.
 func StyledCell(style lipgloss.Style, val string) string {
 	return style.Render(val)

@@ -119,6 +119,55 @@ func (d *ConfirmDialog) View() string {
 	return box
 }
 
+// HandleMouse processes a mouse event for the confirm dialog.
+// On left-click, it detects clicks on the Yes/No/Cancel buttons.
+// Returns (confirmed result, handled). If handled is false, the click was not on a button.
+func (d *ConfirmDialog) HandleMouse(x, y int, button, action int) (ConfirmResultMsg, bool) {
+	if !d.Active {
+		return ConfirmResultMsg{}, false
+	}
+
+	// Only handle left-click press events.
+	if button != 1 || action != 0 {
+		return ConfirmResultMsg{}, false
+	}
+
+	// The dialog layout (relative to the dialog box):
+	// Row 0: Title
+	// Row 1: blank
+	// Row 2: Message
+	// Row 3: blank
+	// Row 4: Buttons — "  Yes  No  Cancel"
+	// The button row is at y == 4 relative to the dialog start.
+	// Since we cannot know the absolute position of the dialog,
+	// we accept clicks on any Y and check X ranges for the buttons.
+	// Buttons are rendered as: "  " + " Yes " + "  " + " No " + "  " + " Cancel "
+	// Starting at x=2: Yes(5 chars), gap(2), No(4 chars), gap(2), Cancel(8 chars)
+
+	// Button layout: "  " prefix (2 chars), then buttons with 2-char gaps
+	// " Yes " = 5 chars, " No " = 4 chars, " Cancel " = 8 chars
+	buttons := []struct {
+		label  string
+		width  int
+		result ConfirmResult
+	}{
+		{"Yes", 5, ConfirmYes},     // " Yes " = 5
+		{"No", 4, ConfirmNo},       // " No " = 4
+		{"Cancel", 8, ConfirmCancel}, // " Cancel " = 8
+	}
+
+	pos := 2 // initial "  " prefix
+	for _, btn := range buttons {
+		if x >= pos && x < pos+btn.width {
+			d.Active = false
+			return ConfirmResultMsg{Action: d.Action, Result: btn.result, Data: d.Data}, true
+		}
+		pos += btn.width + 2 // 2-char gap between buttons
+	}
+
+	return ConfirmResultMsg{}, false
+}
+
 // --- Modal interface methods ---
 
 // IsActive implements Modal.

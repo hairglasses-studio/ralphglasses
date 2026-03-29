@@ -97,7 +97,7 @@ fleet management from any MCP-capable client.`,
 		m.EventBus = bus
 		m.NotifyEnabled = notifyFlag
 
-		p := tea.NewProgram(m, tea.WithAltScreen())
+		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 		// Graceful shutdown: on SIGINT/SIGTERM, quit the TUI and stop processes.
 		sigCh := make(chan os.Signal, 1)
