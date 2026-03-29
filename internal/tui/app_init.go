@@ -190,6 +190,9 @@ type Model struct {
 	// Global search
 	SearchInput *components.SearchInput
 	SearchView  *views.SearchView
+
+	// View registry for incremental switch-to-dispatch migration
+	viewRegistry *views.Registry
 }
 
 type tickMsg time.Time
