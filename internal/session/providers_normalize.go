@@ -41,8 +41,14 @@ func normalizeClaudeEvent(line []byte) (StreamEvent, error) {
 		if event.CostUSD == 0 {
 			event.CostUSD = firstNonZeroFloat(raw, "cost_usd", "usage.cost_usd", "usage.total_cost_usd")
 		}
+		if event.CostUSD > 0 && event.CostSource == "" {
+			event.CostSource = "structured"
+		}
 		if event.CostUSD == 0 {
 			event.CostUSD = estimateCostFromTokens(ProviderClaude, raw)
+			if event.CostUSD > 0 {
+				event.CostSource = "estimated"
+			}
 		}
 		if event.NumTurns == 0 {
 			event.NumTurns = firstNonZeroInt(raw, "num_turns", "turns", "usage.turns")
@@ -103,8 +109,14 @@ func normalizeGeminiEvent(line []byte) (StreamEvent, error) {
 	event.Result = firstText(raw, "result", "summary", "final", "response")
 	event.Error = firstText(raw, "error", "error.message", "details.error", "details.message")
 	event.CostUSD = firstNonZeroFloat(raw, "cost_usd", "usage.cost_usd", "usage.total_cost_usd")
+	if event.CostUSD > 0 {
+		event.CostSource = "structured"
+	}
 	if event.CostUSD == 0 {
 		event.CostUSD = estimateCostFromTokens(ProviderGemini, raw)
+		if event.CostUSD > 0 {
+			event.CostSource = "estimated"
+		}
 	}
 	event.NumTurns = firstNonZeroInt(raw, "num_turns", "turns", "usage.turns")
 	event.Duration = firstNonZeroFloat(raw, "duration_seconds", "duration", "metadata.duration_seconds")
@@ -302,8 +314,14 @@ func normalizeCodexEvent(line []byte) (StreamEvent, error) {
 	event.Result = firstText(raw, "result", "summary", "final", "content", "message")
 	event.Error = firstText(raw, "error", "error.message", "message.error")
 	event.CostUSD = firstNonZeroFloat(raw, "cost_usd", "usage.cost_usd", "usage.total_cost_usd")
+	if event.CostUSD > 0 {
+		event.CostSource = "structured"
+	}
 	if event.CostUSD == 0 {
 		event.CostUSD = estimateCostFromTokens(ProviderCodex, raw)
+		if event.CostUSD > 0 {
+			event.CostSource = "estimated"
+		}
 	}
 	event.NumTurns = firstNonZeroInt(raw, "num_turns", "turns", "usage.turns")
 	event.IsError = firstTrueBool(raw, "is_error", "error")

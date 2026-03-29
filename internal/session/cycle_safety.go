@@ -43,9 +43,27 @@ func (e *CycleSafetyError) Error() string {
 	return fmt.Sprintf("cycle safety: %s: %s", e.Check, e.Message)
 }
 
+// AdvanceOption configures cycle advance validation behavior.
+type AdvanceOption func(*advanceOpts)
+
+type advanceOpts struct {
+	skipCooldown bool
+}
+
+// WithBatchAdvance skips the phase cooldown check, for use when RunCycle
+// drives multiple sequential advances within a single logical operation.
+func WithBatchAdvance() AdvanceOption {
+	return func(o *advanceOpts) { o.skipCooldown = true }
+}
+
 // ValidateCycleAdvance checks whether a cycle can advance to the next phase.
 // It enforces age limits, phase cooldown, baseline requirements, and task caps.
-func ValidateCycleAdvance(cycle *CycleRun, config CycleSafetyConfig) error {
+func ValidateCycleAdvance(cycle *CycleRun, config CycleSafetyConfig, opts ...AdvanceOption) error {
+	var ao advanceOpts
+	for _, fn := range opts {
+		fn(&ao)
+	}
+
 	now := timeNow()
 
 	// Check: cycle age — fail cycles that have been running too long.
@@ -57,8 +75,9 @@ func ValidateCycleAdvance(cycle *CycleRun, config CycleSafetyConfig) error {
 	}
 
 	// Check: phase cooldown — prevent rapid phase transitions.
-	// Skip cooldown for the initial proposed→baselining transition (same logical op as creation).
-	if config.PhaseCooldown > 0 && cycle.Phase != CycleProposed && now.Sub(cycle.UpdatedAt) < config.PhaseCooldown {
+	// Skip cooldown for: initial proposed→baselining transition, or batch advances within RunCycle.
+	skipCooldown := cycle.Phase == CycleProposed || ao.skipCooldown
+	if config.PhaseCooldown > 0 && !skipCooldown && now.Sub(cycle.UpdatedAt) < config.PhaseCooldown {
 		remaining := config.PhaseCooldown - now.Sub(cycle.UpdatedAt)
 		return &CycleSafetyError{
 			Check:   "phase_cooldown",

@@ -286,6 +286,7 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span 
 	if s.SpentUSD == 0 {
 		if cost, ok := ParseProviderCostFromStderr(s.Provider, stderrBuf.String()); ok && cost > 0 {
 			s.SpentUSD = cost
+			s.CostSource = "stderr"
 			s.CostHistory = append(s.CostHistory, cost)
 		}
 	}
@@ -310,6 +311,7 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span 
 				"exit_reason": s.ExitReason,
 				"spent_usd":   s.SpentUSD,
 				"turns":       s.TurnCount,
+				"cost_source": s.CostSource,
 			},
 		})
 	}
@@ -452,6 +454,9 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile
 				} else {
 					s.SpentUSD += event.CostUSD // Gemini/Codex emit per-event cost
 				}
+				if event.CostSource != "" {
+					s.CostSource = event.CostSource
+				}
 				s.CostHistory = append(s.CostHistory, s.SpentUSD)
 				// Record turn metric for tracing
 				if delta := s.SpentUSD - prevSpent; delta > 0 {
@@ -465,7 +470,7 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile
 						RepoPath:  s.RepoPath,
 						RepoName:  s.RepoName,
 						Provider:  string(s.Provider),
-						Data:      map[string]any{"spent_usd": s.SpentUSD, "turns": s.TurnCount},
+						Data:      map[string]any{"spent_usd": s.SpentUSD, "turns": s.TurnCount, "cost_source": s.CostSource},
 					})
 				}
 				// Check budget exceeded

@@ -7,7 +7,7 @@ LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSIO
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-integration test-scripts fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run
+.PHONY: bootstrap doctor test test-verbose test-cover test-integration test-scripts smoke fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run
 
 # Install pre-commit hook (idempotent)
 hooks:
@@ -38,6 +38,21 @@ test-cover:
 # Run integration tests (requires build tag)
 test-integration:
 	$(GO) test -tags integration -v ./internal/...
+
+# Smoke test: build + vet + supervisor integration + golden cost extraction
+# Fast end-to-end sanity check (~30s). Use before push or after major changes.
+smoke:
+	@echo "=== smoke: build ==="
+	$(GO) build ./...
+	@echo "=== smoke: vet ==="
+	$(GO) vet ./...
+	@echo "=== smoke: supervisor integration ==="
+	$(GO) test -race -count=1 -timeout 60s -run "FullCycleLifecycle|BudgetTermination|DecisionOutcomeRecorded" ./internal/session/...
+	@echo "=== smoke: cost extraction golden tests ==="
+	$(GO) test -race -count=1 -timeout 30s -run "Golden" ./internal/session/...
+	@echo "=== smoke: event bus concurrency ==="
+	$(GO) test -race -count=3 -timeout 30s -run "ConcurrentPublish" ./internal/events/...
+	@echo "=== smoke: all passed ==="
 
 # Run fuzz tests (30s each)
 fuzz:
