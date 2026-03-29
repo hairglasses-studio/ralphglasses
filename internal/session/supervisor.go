@@ -313,15 +313,18 @@ func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal, decis
 	})
 }
 
-// runSelfTest runs go test with recursion guard.
+// runSelfTest runs go test with recursion guard and captures coverage.
 func (s *Supervisor) runSelfTest(ctx context.Context) {
 	if err := RecursionGuard(); err != nil {
 		slog.Warn("supervisor: self-test blocked by recursion guard", "error", err)
 		return
 	}
-	testCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	testCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(testCtx, "go", "test", "./...", "-count=1")
+
+	coverOut := filepath.Join(s.RepoPath, ".ralph", "coverage.out")
+	cmd := exec.CommandContext(testCtx, "go", "test", "./...", "-count=1",
+		"-coverprofile="+coverOut)
 	cmd.Dir = s.RepoPath
 	cmd.Env = SetSelfTestEnv(os.Environ())
 	out, err := cmd.CombinedOutput()
@@ -329,6 +332,13 @@ func (s *Supervisor) runSelfTest(ctx context.Context) {
 		slog.Warn("supervisor: self-test failed", "error", err, "output", string(out))
 	} else {
 		slog.Info("supervisor: self-test passed")
+	}
+
+	// Write coverage percentage so HealthMonitor can read it.
+	if pct, parseErr := ParseCoveragePercent(coverOut); parseErr == nil {
+		covPath := filepath.Join(s.RepoPath, ".ralph", "coverage.txt")
+		_ = os.WriteFile(covPath, []byte(fmt.Sprintf("%.1f\n", pct)), 0644)
+		slog.Info("supervisor: coverage captured", "percent", pct)
 	}
 }
 

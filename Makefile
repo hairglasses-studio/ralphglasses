@@ -32,6 +32,9 @@ test-verbose:
 test-cover:
 	$(GO) test -race -coverprofile=coverage.out ./...
 	$(GO) tool cover -func=coverage.out
+	@mkdir -p .ralph
+	@$(GO) tool cover -func=coverage.out | tail -1 | awk '{print $$NF}' | tr -d '%' > .ralph/coverage.txt
+	@echo "Coverage written to .ralph/coverage.txt: $$(cat .ralph/coverage.txt)%"
 	@echo ""
 	@echo "To view HTML report: ./scripts/dev/go.sh tool cover -html=coverage.out"
 
