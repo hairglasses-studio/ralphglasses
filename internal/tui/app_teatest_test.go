@@ -9,7 +9,16 @@ import (
 	"github.com/charmbracelet/x/exp/teatest"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 )
+
+// frozenTime is the fixed "now" for golden file determinism.
+var frozenTime = time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+
+func init() {
+	// Freeze the clock so formatAgo produces deterministic output in golden files.
+	components.NowFunc = func() time.Time { return frozenTime }
+}
 
 // newTestModel creates a Model with deterministic state for golden file tests.
 func newTestModel(t *testing.T) Model {
@@ -17,7 +26,7 @@ func newTestModel(t *testing.T) Model {
 	m := NewModel(t.TempDir(), nil)
 	m.Width = 120
 	m.Height = 40
-	m.LastRefresh = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	m.LastRefresh = frozenTime.Add(-5 * time.Minute) // always "5m" ago
 	return m
 }
 

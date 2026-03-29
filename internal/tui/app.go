@@ -42,9 +42,14 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 		LoopListTable: loopListTable,
 		TabBar:       components.TabBar{Tabs: tabNames},
 		LogView:        views.NewLogView(),
-		HelpView:       views.NewHelpView(),
-		RepoDetailView: views.NewRepoDetailView(),
-		LoopHealthView: views.NewLoopHealthView(),
+		HelpView:          views.NewHelpView(),
+		RepoDetailView:    views.NewRepoDetailView(),
+		LoopHealthView:    views.NewLoopHealthView(),
+		SessionDetailView: views.NewSessionDetailView(),
+		TeamDetailView:    views.NewTeamDetailView(),
+		FleetView:         views.NewFleetView(),
+		DiffViewport:      views.NewDiffViewport(),
+		TimelineViewport:  views.NewTimelineViewport(),
 		ProcMgr:        process.NewManager(),
 		SessMgr:        sessMgr,
 		Keys:           DefaultKeyMap(),
@@ -114,7 +119,9 @@ func (m Model) View() string {
 	case ViewSessionDetail:
 		if m.SessMgr != nil {
 			if s, ok := m.SessMgr.Get(m.Sel.SessionID); ok {
-				b.WriteString(views.RenderSessionDetail(s, m.Width, m.Height))
+				m.SessionDetailView.SetData(s)
+				m.SessionDetailView.SetDimensions(m.Width, m.Height-4)
+				b.WriteString(m.SessionDetailView.Render())
 			} else {
 				b.WriteString(styles.InfoStyle.Render("  Session not found"))
 			}
@@ -125,17 +132,23 @@ func (m Model) View() string {
 		if m.SessMgr != nil {
 			if team, ok := m.SessMgr.GetTeam(m.Sel.TeamName); ok {
 				leadSession, _ := m.SessMgr.Get(team.LeadID)
-				b.WriteString(views.RenderTeamDetail(team, leadSession, m.Width))
+				m.TeamDetailView.SetData(team, leadSession)
+				m.TeamDetailView.SetDimensions(m.Width, m.Height-4)
+				b.WriteString(m.TeamDetailView.Render())
 			} else {
 				b.WriteString(styles.InfoStyle.Render("  Team not found"))
 			}
 		}
 	case ViewFleet:
 		data := m.buildFleetData()
-		b.WriteString(views.RenderFleetDashboard(data, m.Width, m.Height))
+		m.FleetView.SetData(data)
+		m.FleetView.SetDimensions(m.Width, m.Height-4)
+		b.WriteString(m.FleetView.Render())
 	case ViewDiff:
 		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
-			b.WriteString(views.RenderDiffView(m.Repos[m.Sel.RepoIdx].Path, "", m.Width, m.Height))
+			m.DiffViewport.SetData(m.Repos[m.Sel.RepoIdx].Path, "")
+			m.DiffViewport.SetDimensions(m.Width, m.Height-4)
+			b.WriteString(m.DiffViewport.Render())
 		}
 	case ViewTimeline:
 		entries := m.buildTimelineEntries()
@@ -143,7 +156,9 @@ func (m Model) View() string {
 		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
 			repoName = m.Repos[m.Sel.RepoIdx].Name
 		}
-		b.WriteString(views.RenderTimeline(entries, repoName, m.Width, m.Height))
+		m.TimelineViewport.SetData(entries, repoName)
+		m.TimelineViewport.SetDimensions(m.Width, m.Height-4)
+		b.WriteString(m.TimelineViewport.Render())
 	case ViewLoopHealth:
 		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
 			repo := m.Repos[m.Sel.RepoIdx]

@@ -125,9 +125,14 @@ type Model struct {
 	Notify       components.NotificationManager
 	LogView        *views.LogView
 	ConfigEdit     *views.ConfigEditor
-	HelpView       *views.HelpView
-	RepoDetailView *views.RepoDetailView
-	LoopHealthView *views.LoopHealthView
+	HelpView          *views.HelpView
+	RepoDetailView    *views.RepoDetailView
+	LoopHealthView    *views.LoopHealthView
+	SessionDetailView *views.SessionDetailView
+	TeamDetailView    *views.TeamDetailView
+	FleetView         *views.FleetView
+	DiffViewport      *views.DiffViewport
+	TimelineViewport  *views.TimelineViewport
 
 	// Bubbles components
 	Keys    KeyMap

@@ -28,6 +28,23 @@ func TestDefaultLoopProfile(t *testing.T) {
 	if len(profile.VerifyCommands) != 1 || profile.VerifyCommands[0] != "./scripts/dev/ci.sh" {
 		t.Fatalf("verify commands = %#v", profile.VerifyCommands)
 	}
+	if !profile.EnableCascade {
+		t.Fatal("DefaultLoopProfile: EnableCascade must be true")
+	}
+}
+
+func TestBudgetOptimizedSelfImprovementProfileCascade(t *testing.T) {
+	profile := BudgetOptimizedSelfImprovementProfile(100)
+	if !profile.EnableCascade {
+		t.Fatal("BudgetOptimizedSelfImprovementProfile: EnableCascade must be true")
+	}
+}
+
+func TestSelfImprovementProfileCascadeDisabled(t *testing.T) {
+	profile := SelfImprovementProfile()
+	if profile.EnableCascade {
+		t.Fatal("SelfImprovementProfile: EnableCascade must remain false (fixed provider assignments)")
+	}
 }
 
 func TestLoopStepSuccess(t *testing.T) {

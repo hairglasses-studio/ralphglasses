@@ -171,6 +171,14 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_diff_review":           {Title: "Diff Review", ReadOnlyHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_finding_reason":        {Title: "Finding Reason", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_observation_correlate": {Title: "Observation Correlate", ReadOnlyHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+
+	// ── cycle engine (state machine) ────────────────────────────────────
+	"ralphglasses_cycle_create":     {Title: "Cycle Create", DestructiveHint: boolPtr(false)},
+	"ralphglasses_cycle_advance":    {Title: "Cycle Advance", DestructiveHint: boolPtr(false)},
+	"ralphglasses_cycle_status":     {Title: "Cycle Status", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_cycle_fail":       {Title: "Cycle Fail", DestructiveHint: boolPtr(false)},
+	"ralphglasses_cycle_list":       {Title: "Cycle List", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_cycle_synthesize": {Title: "Cycle Synthesize", DestructiveHint: boolPtr(false)},
 }
 
 // GetAnnotation returns the ToolAnnotation for a named tool, or an empty

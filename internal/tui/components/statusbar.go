@@ -82,11 +82,14 @@ func (s *StatusBar) View() string {
 	)
 }
 
+// NowFunc is the clock used by formatAgo. Override in tests for determinism.
+var NowFunc = time.Now
+
 func formatAgo(t time.Time) string {
 	if t.IsZero() {
 		return "never"
 	}
-	d := time.Since(t)
+	d := NowFunc().Sub(t)
 	if d < time.Minute {
 		return fmt.Sprintf("%ds", int(d.Seconds()))
 	}

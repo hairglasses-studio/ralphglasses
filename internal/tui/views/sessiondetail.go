@@ -181,6 +181,48 @@ func formatStaleness(d time.Duration) string {
 }
 
 // renderBudgetBar renders a progress bar using bubbles/progress.
+// SessionDetailView wraps RenderSessionDetail in a scrollable viewport.
+type SessionDetailView struct {
+	Viewport *ViewportView
+	session  *session.Session
+	width    int
+	height   int
+}
+
+// NewSessionDetailView creates a new SessionDetailView.
+func NewSessionDetailView() *SessionDetailView {
+	return &SessionDetailView{
+		Viewport: NewViewportView(),
+	}
+}
+
+// SetData updates the session and regenerates content.
+func (v *SessionDetailView) SetData(s *session.Session) {
+	v.session = s
+	v.regenerate()
+}
+
+// SetDimensions updates the available width and height.
+func (v *SessionDetailView) SetDimensions(width, height int) {
+	v.width = width
+	v.height = height
+	v.Viewport.SetDimensions(width, height)
+	v.regenerate()
+}
+
+// Render returns the scrollable viewport content.
+func (v *SessionDetailView) Render() string {
+	return v.Viewport.Render()
+}
+
+func (v *SessionDetailView) regenerate() {
+	if v.session == nil {
+		return
+	}
+	content := RenderSessionDetail(v.session, v.width, v.height)
+	v.Viewport.SetContent(content)
+}
+
 func renderBudgetBar(pct float64, width int) string {
 	if pct > 100 {
 		pct = 100
