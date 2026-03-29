@@ -1,6 +1,7 @@
 package session
 
 import (
+	"log/slog"
 	"os/exec"
 	"syscall"
 	"time"
@@ -29,6 +30,11 @@ func (m *Manager) DetectStalls(threshold time.Duration) []string {
 	}
 	return stalled
 }
+
+// DefaultSessionKillTimeout is the default SIGTERM→SIGKILL grace period for sessions.
+// Increased from 5s to 15s to give self-improvement loops time to checkpoint state
+// before being forcefully killed (addresses "signal: killed" pattern).
+const DefaultSessionKillTimeout = 15 * time.Second
 
 // killWithEscalation sends SIGTERM, waits up to timeout, then sends SIGKILL if still alive.
 // Returns true if SIGKILL was needed.
@@ -64,6 +70,9 @@ func killWithEscalation(cmd *exec.Cmd, timeout time.Duration, done <-chan struct
 	case <-done:
 		return false
 	case <-time.After(timeout):
+		// Log the escalation for observability before sending SIGKILL.
+		slog.Warn("killWithEscalation: SIGTERM timeout expired, escalating to SIGKILL",
+			"pid", cmd.Process.Pid, "timeout", timeout)
 		// Escalate to SIGKILL.
 		if pgid > 0 {
 			_ = syscall.Kill(-pgid, syscall.SIGKILL)

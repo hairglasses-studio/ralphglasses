@@ -23,6 +23,7 @@ var (
 	_ View = (*LoopDetailView)(nil)
 	_ View = (*LoopControlView)(nil)
 	_ View = (*ObservationViewport)(nil)
+	_ View = (*RDCycleView)(nil)
 )
 
 func TestViewportView_SetContent(t *testing.T) {
@@ -449,5 +450,93 @@ func TestObservationViewport_WithData(t *testing.T) {
 	out := v.Render()
 	if !strings.Contains(out, "Observation") {
 		t.Error("expected observation title in render output")
+	}
+}
+
+func TestRDCycleView_Render_Empty(t *testing.T) {
+	v := NewRDCycleView()
+	v.SetDimensions(80, 30)
+	v.SetCycles(nil)
+	out := v.Render()
+	if !strings.Contains(out, "R&D Cycle Dashboard") {
+		t.Error("expected R&D cycle dashboard title in render output")
+	}
+	if !strings.Contains(out, "No R&D cycles") {
+		t.Error("expected no-cycles message in render output")
+	}
+}
+
+func TestRDCycleView_Render_WithActiveCycle(t *testing.T) {
+	v := NewRDCycleView()
+	v.SetDimensions(120, 40)
+	cycles := []*session.CycleRun{
+		{
+			ID:        "cycle-1",
+			Name:      "test-cycle",
+			Phase:     session.CycleExecuting,
+			Objective: "Improve coverage",
+			Tasks: []session.CycleTask{
+				{Title: "Add unit tests", Source: "roadmap", Status: "done", LoopID: "loop-abc"},
+				{Title: "Fix flaky test", Source: "finding", Status: "executing", LoopID: "loop-def"},
+				{Title: "Lint cleanup", Source: "manual", Status: "pending"},
+			},
+			Findings: []session.CycleFinding{
+				{ID: "f1", Description: "Coverage below 80%", Category: "quality", Severity: "warning"},
+				{ID: "f2", Description: "Segfault in parallel tests", Category: "stability", Severity: "critical"},
+			},
+			Synthesis: &session.CycleSynthesis{
+				Summary:       "Good progress on coverage",
+				Accomplished:  []string{"Added 20 tests", "Fixed 3 bugs"},
+				Remaining:     []string{"Lint cleanup"},
+				NextObjective: "Reach 90% coverage",
+				Patterns:      []string{"Test-first approach is faster"},
+			},
+		},
+	}
+	v.SetCycles(cycles)
+	out := v.Render()
+	if !strings.Contains(out, "test-cycle") {
+		t.Error("expected cycle name in render output")
+	}
+	if !strings.Contains(out, "Improve coverage") {
+		t.Error("expected objective in render output")
+	}
+	if !strings.Contains(out, "Add unit tests") {
+		t.Error("expected task title in render output")
+	}
+	if !strings.Contains(out, "Coverage below 80%") {
+		t.Error("expected finding description in render output")
+	}
+	if !strings.Contains(out, "Good progress") {
+		t.Error("expected synthesis summary in render output")
+	}
+}
+
+func TestRDCycleView_Render_CompletedCycles(t *testing.T) {
+	v := NewRDCycleView()
+	v.SetDimensions(100, 40)
+	cycles := []*session.CycleRun{
+		{ID: "c1", Name: "completed-cycle", Phase: session.CycleComplete, Tasks: []session.CycleTask{{Title: "t1", Status: "done"}}},
+		{ID: "c2", Name: "failed-cycle", Phase: session.CycleFailed, Findings: []session.CycleFinding{{ID: "f1", Description: "crash"}}},
+	}
+	v.SetCycles(cycles)
+	out := v.Render()
+	if !strings.Contains(out, "Cycle History") {
+		t.Error("expected cycle history section in render output")
+	}
+	if !strings.Contains(out, "completed-cycle") {
+		t.Error("expected completed cycle name in render output")
+	}
+}
+
+func TestRDCycleView_SetDimensions_Regenerates(t *testing.T) {
+	v := NewRDCycleView()
+	v.SetCycles([]*session.CycleRun{
+		{ID: "c1", Name: "dim-test", Phase: session.CycleProposed, Objective: "test"},
+	})
+	v.SetDimensions(120, 40)
+	out := v.Render()
+	if out == "" {
+		t.Error("expected non-empty render after SetDimensions")
 	}
 }

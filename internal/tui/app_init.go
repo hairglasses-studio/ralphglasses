@@ -42,6 +42,7 @@ const (
 	ViewLoopControl
 	ViewObservation
 	ViewEventLog
+	ViewRDCycle
 )
 
 // InputMode tracks the current input capture mode.
@@ -136,6 +137,7 @@ type Model struct {
 	LoopDetailView       *views.LoopDetailView
 	LoopControlView      *views.LoopControlView
 	ObservationViewport  *views.ObservationViewport
+	RDCycleView          *views.RDCycleView
 
 	// Bubbles components
 	Keys    KeyMap
@@ -264,6 +266,9 @@ func (m Model) tickCmd() tea.Cmd {
 
 func (m Model) scanRepos() tea.Cmd {
 	path := m.ScanPath
+	if path == "" {
+		return nil
+	}
 	return func() tea.Msg {
 		repos, err := discovery.Scan(context.Background(), path)
 		if err != nil {

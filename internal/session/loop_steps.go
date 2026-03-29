@@ -94,6 +94,16 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 
 	m.PersistLoop(run)
 
+	// Pre-iteration memory pressure check: if the Go heap is under heavy pressure,
+	// pause before launching new sessions to avoid OS OOM kills (addresses "signal: killed"
+	// pattern — 6 occurrences in improvement_patterns.json).
+	if warn := MemoryPressureWarning(uint64(DefaultMaxHeapBytes), DefaultHeapUsageRatio); warn != "" {
+		slog.Warn("memory pressure before loop iteration, forcing GC and brief pause",
+			"loop", id, "iteration", iteration.Number, "warning", warn)
+		// Force GC and give the system a moment to reclaim memory.
+		forceGCAndPause()
+	}
+
 	// Validate that critical ralph files still exist before proceeding.
 	// Claude can accidentally delete .ralph/ during cleanup tasks.
 	if err := repofiles.ValidateIntegrity(repoPath); err != nil {
