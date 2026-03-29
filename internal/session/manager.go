@@ -301,6 +301,7 @@ func (m *Manager) startSupervisor(repoPath string) {
 	m.supervisor.bus = m.bus
 	if m.optimizer != nil {
 		m.supervisor.decisions = m.optimizer.decisions
+		m.supervisor.optimizer = m.optimizer
 	}
 	ctx := context.Background()
 	m.supervisor.Start(ctx)
