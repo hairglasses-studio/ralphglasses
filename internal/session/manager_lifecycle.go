@@ -63,7 +63,16 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 		}
 	}
 
-	s, err := launch(ctx, opts, m.bus)
+	var s *Session
+	var err error
+	m.mu.RLock()
+	hook := m.launchSession
+	m.mu.RUnlock()
+	if hook != nil {
+		s, err = hook(ctx, opts)
+	} else {
+		s, err = launch(ctx, opts, m.bus)
+	}
 	if err != nil {
 		return nil, err
 	}

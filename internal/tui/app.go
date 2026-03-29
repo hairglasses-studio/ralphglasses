@@ -48,8 +48,11 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 		SessionDetailView: views.NewSessionDetailView(),
 		TeamDetailView:    views.NewTeamDetailView(),
 		FleetView:         views.NewFleetView(),
-		DiffViewport:      views.NewDiffViewport(),
-		TimelineViewport:  views.NewTimelineViewport(),
+		DiffViewport:         views.NewDiffViewport(),
+		TimelineViewport:     views.NewTimelineViewport(),
+		LoopDetailView:       views.NewLoopDetailView(),
+		LoopControlView:      views.NewLoopControlView(),
+		ObservationViewport:  views.NewObservationViewport(),
 		ProcMgr:        process.NewManager(),
 		SessMgr:        sessMgr,
 		Keys:           DefaultKeyMap(),
@@ -181,13 +184,17 @@ func (m Model) View() string {
 	case ViewLoopDetail:
 		if m.SessMgr != nil && m.Sel.LoopID != "" {
 			if l, ok := m.SessMgr.GetLoop(m.Sel.LoopID); ok {
-				b.WriteString(views.RenderLoopDetail(l, m.Width, m.Height))
+				m.LoopDetailView.SetData(l)
+				m.LoopDetailView.SetDimensions(m.Width, m.Height-4)
+				b.WriteString(m.LoopDetailView.Render())
 			} else {
 				b.WriteString(styles.InfoStyle.Render("  Loop not found"))
 			}
 		}
 	case ViewLoopControl:
-		b.WriteString(views.RenderLoopControlPanel(m.LoopControlData, m.LoopControlIdx, m.Width, m.Height))
+		m.LoopControlView.SetData(m.LoopControlData, m.LoopControlIdx)
+		m.LoopControlView.SetDimensions(m.Width, m.Height-4)
+		b.WriteString(m.LoopControlView.Render())
 	case ViewObservation:
 		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
 			repo := m.Repos[m.Sel.RepoIdx]
@@ -195,7 +202,9 @@ func (m Model) View() string {
 				RepoName:     repo.Name,
 				Observations: m.getObservations(repo.Path),
 			}
-			b.WriteString(views.RenderObservationView(data, m.Width, m.Height))
+			m.ObservationViewport.SetData(data)
+			m.ObservationViewport.SetDimensions(m.Width, m.Height-4)
+			b.WriteString(m.ObservationViewport.Render())
 		}
 	case ViewEventLog:
 		if m.EventLog != nil {

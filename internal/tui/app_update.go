@@ -39,6 +39,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.FleetView.SetDimensions(msg.Width, msg.Height-4)
 		m.DiffViewport.SetDimensions(msg.Width, msg.Height-4)
 		m.TimelineViewport.SetDimensions(msg.Width, msg.Height-4)
+		m.LoopDetailView.SetDimensions(msg.Width, msg.Height-4)
+		m.LoopControlView.SetDimensions(msg.Width, msg.Height-4)
+		m.ObservationViewport.SetDimensions(msg.Width, msg.Height-4)
 		m.StatusBar.Width = msg.Width
 		return m, nil
 
@@ -323,8 +326,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case ViewTimeline:
 		return m.handleTimelineKey(msg)
 	case ViewObservation:
-		// Read-only view — Esc handled globally, no view-specific keys
-		return m, nil
+		return m.handleObservationKey(msg)
 	case ViewEventLog:
 		return m.handleEventLogKey(msg)
 	}

@@ -114,3 +114,42 @@ func RenderLoopDetail(l *session.LoopRun, width, height int) string {
 
 	return b.String()
 }
+
+// LoopDetailView wraps RenderLoopDetail in a scrollable viewport.
+type LoopDetailView struct {
+	Viewport *ViewportView
+	loop     *session.LoopRun
+	width    int
+	height   int
+}
+
+// NewLoopDetailView creates a new LoopDetailView.
+func NewLoopDetailView() *LoopDetailView {
+	return &LoopDetailView{
+		Viewport: NewViewportView(),
+	}
+}
+
+// SetData updates the loop data and regenerates content.
+func (v *LoopDetailView) SetData(l *session.LoopRun) {
+	v.loop = l
+	v.regenerate()
+}
+
+// SetDimensions updates the available width and height.
+func (v *LoopDetailView) SetDimensions(width, height int) {
+	v.width = width
+	v.height = height
+	v.Viewport.SetDimensions(width, height)
+	v.regenerate()
+}
+
+// Render returns the scrollable viewport content.
+func (v *LoopDetailView) Render() string {
+	return v.Viewport.Render()
+}
+
+func (v *LoopDetailView) regenerate() {
+	content := RenderLoopDetail(v.loop, v.width, v.height)
+	v.Viewport.SetContent(content)
+}

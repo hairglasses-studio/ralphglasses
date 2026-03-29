@@ -415,6 +415,14 @@ func (s *Server) buildRdcycleGroup() ToolGroup {
 				mcp.WithString("next_objective", mcp.Description("Objective for next cycle")),
 				mcp.WithString("patterns", mcp.Description("Comma-separated patterns observed")),
 			), s.handleCycleSynthesize},
+			{mcp.NewTool("ralphglasses_cycle_run",
+				mcp.WithDescription("Drive a full R&D cycle synchronously through all phases: create, baseline, plan, execute, observe, synthesize, complete"),
+				mcp.WithString("repo_path", mcp.Required(), mcp.Description("Repository name or path")),
+				mcp.WithString("name", mcp.Description("Cycle name (default: 'cycle')")),
+				mcp.WithString("objective", mcp.Required(), mcp.Description("Cycle objective")),
+				mcp.WithString("criteria", mcp.Description("Comma-separated success criteria")),
+				mcp.WithNumber("max_tasks", mcp.Description("Max tasks to plan (default 10)")),
+			), s.handleCycleRun},
 		},
 	}
 }
