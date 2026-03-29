@@ -3,6 +3,7 @@ package session
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -144,6 +145,36 @@ func TestHealthMonitor_NoSignalsWhenHealthy(t *testing.T) {
 		if s.Metric == "completion_rate" || s.Metric == "cost_rate_per_hour" {
 			t.Fatalf("unexpected signal for healthy repo: %+v", s)
 		}
+	}
+}
+
+func TestParseCoveragePercent(t *testing.T) {
+	// Generate a real coverage profile from a small package.
+	dir := t.TempDir()
+	coverOut := filepath.Join(dir, "coverage.out")
+
+	// Use the events package — small, fast, guaranteed non-zero coverage.
+	cmd := exec.Command("go", "test", "-coverprofile="+coverOut, "./internal/events/...", "-count=1", "-timeout=30s")
+	cmd.Dir = filepath.Join("..", "..")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("go test -coverprofile: %v\n%s", err, out)
+	}
+
+	pct, err := ParseCoveragePercent(coverOut)
+	if err != nil {
+		t.Fatalf("ParseCoveragePercent: %v", err)
+	}
+	if pct <= 0 || pct > 100 {
+		t.Fatalf("unexpected coverage percentage: %f", pct)
+	}
+	t.Logf("coverage: %.1f%%", pct)
+}
+
+func TestParseCoveragePercent_MissingFile(t *testing.T) {
+	_, err := ParseCoveragePercent("/nonexistent/coverage.out")
+	if err == nil {
+		t.Fatal("expected error for missing file")
 	}
 }
 
