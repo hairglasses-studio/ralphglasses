@@ -422,41 +422,6 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile
 					s.LastOutput = truncateStr(eventText, 4000)
 					appendSessionOutput(s, eventText, logFile)
 				}
-				if event.CostUSD > 0 {
-					prevSpent := s.SpentUSD
-					if s.Provider == ProviderClaude {
-						s.SpentUSD = event.CostUSD // Claude emits cumulative cost
-					} else {
-						s.SpentUSD += event.CostUSD // Gemini/Codex emit per-event cost
-					}
-					s.CostHistory = append(s.CostHistory, s.SpentUSD)
-					// Record turn metric for tracing
-					if delta := s.SpentUSD - prevSpent; delta > 0 {
-						tracing.Get().RecordTurnMetric(ctx, string(s.Provider), s.Model, s.ID, 0, 0, delta, 0)
-					}
-					// Publish cost update event
-					if s.bus != nil && s.SpentUSD != prevSpent {
-						s.bus.Publish(events.Event{
-							Type:      events.CostUpdate,
-							SessionID: s.ID,
-							RepoPath:  s.RepoPath,
-							RepoName:  s.RepoName,
-							Provider:  string(s.Provider),
-							Data:      map[string]any{"spent_usd": s.SpentUSD, "turns": s.TurnCount},
-						})
-					}
-					// Check budget exceeded
-					if s.bus != nil && s.BudgetUSD > 0 && s.SpentUSD >= s.BudgetUSD {
-						s.bus.Publish(events.Event{
-							Type:      events.BudgetExceeded,
-							SessionID: s.ID,
-							RepoPath:  s.RepoPath,
-							RepoName:  s.RepoName,
-							Provider:  string(s.Provider),
-							Data:      map[string]any{"spent_usd": s.SpentUSD, "budget_usd": s.BudgetUSD},
-						})
-					}
-				}
 				if event.NumTurns > 0 {
 					s.TurnCount = event.NumTurns
 				}
@@ -473,6 +438,46 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile
 				}
 				if event.IsError {
 					s.Error = truncateStr(firstNonEmpty(event.Error, eventText), 2000)
+				}
+			}
+
+			// Cost tracking — runs for ALL event types, not just "result".
+			// Claude CLI with API key auth may emit cost/usage data on non-result
+			// events (e.g. system, message_stop). Max accounts emit cost_usd on
+			// result events. This catches both paths.
+			if event.CostUSD > 0 {
+				prevSpent := s.SpentUSD
+				if s.Provider == ProviderClaude {
+					s.SpentUSD = event.CostUSD // Claude emits cumulative cost
+				} else {
+					s.SpentUSD += event.CostUSD // Gemini/Codex emit per-event cost
+				}
+				s.CostHistory = append(s.CostHistory, s.SpentUSD)
+				// Record turn metric for tracing
+				if delta := s.SpentUSD - prevSpent; delta > 0 {
+					tracing.Get().RecordTurnMetric(ctx, string(s.Provider), s.Model, s.ID, 0, 0, delta, 0)
+				}
+				// Publish cost update event
+				if s.bus != nil && s.SpentUSD != prevSpent {
+					s.bus.Publish(events.Event{
+						Type:      events.CostUpdate,
+						SessionID: s.ID,
+						RepoPath:  s.RepoPath,
+						RepoName:  s.RepoName,
+						Provider:  string(s.Provider),
+						Data:      map[string]any{"spent_usd": s.SpentUSD, "turns": s.TurnCount},
+					})
+				}
+				// Check budget exceeded
+				if s.bus != nil && s.BudgetUSD > 0 && s.SpentUSD >= s.BudgetUSD {
+					s.bus.Publish(events.Event{
+						Type:      events.BudgetExceeded,
+						SessionID: s.ID,
+						RepoPath:  s.RepoPath,
+						RepoName:  s.RepoName,
+						Provider:  string(s.Provider),
+						Data:      map[string]any{"spent_usd": s.SpentUSD, "budget_usd": s.BudgetUSD},
+					})
 				}
 			}
 
