@@ -21,6 +21,7 @@ type Supervisor struct {
 	decisions *DecisionLog
 	monitor   *HealthMonitor
 	chainer   *CycleChainer
+	optimizer *AutoOptimizer
 
 	mu      sync.Mutex
 	running bool
@@ -73,6 +74,9 @@ func (s *Supervisor) SetMonitor(m *HealthMonitor) { s.mu.Lock(); s.monitor = m; 
 
 // SetChainer sets the cycle chainer.
 func (s *Supervisor) SetChainer(c *CycleChainer) { s.mu.Lock(); s.chainer = c; s.mu.Unlock() }
+
+// SetOptimizer sets the auto-optimizer for note generation and application.
+func (s *Supervisor) SetOptimizer(o *AutoOptimizer) { s.mu.Lock(); s.optimizer = o; s.mu.Unlock() }
 
 // SetBus sets the event bus for publishing supervisor events.
 func (s *Supervisor) SetBus(b *events.Bus) { s.mu.Lock(); s.bus = b; s.mu.Unlock() }
@@ -342,12 +346,55 @@ func (s *Supervisor) runSelfTest(ctx context.Context) {
 	}
 }
 
-// runConsolidation consolidates journal patterns.
+// runConsolidation consolidates journal patterns, generates improvement notes,
+// and auto-applies eligible ones — closing the reflexion feedback loop.
 func (s *Supervisor) runConsolidation() {
 	if err := ConsolidatePatterns(s.RepoPath); err != nil {
 		slog.Warn("supervisor: consolidation failed", "error", err)
-	} else {
-		slog.Info("supervisor: patterns consolidated")
+		return
+	}
+	slog.Info("supervisor: patterns consolidated")
+
+	s.mu.Lock()
+	opt := s.optimizer
+	s.mu.Unlock()
+	if opt == nil {
+		return
+	}
+
+	// Load consolidated patterns and generate improvement notes.
+	patternsPath := filepath.Join(s.RepoPath, ".ralph", "improvement_patterns.json")
+	data, err := os.ReadFile(patternsPath)
+	if err != nil {
+		slog.Debug("supervisor: read patterns for notes", "error", err)
+		return
+	}
+	var patterns ConsolidatedPatterns
+	if err := json.Unmarshal(data, &patterns); err != nil {
+		slog.Warn("supervisor: parse patterns", "error", err)
+		return
+	}
+
+	notes := opt.GenerateNotes(&patterns)
+	for _, note := range notes {
+		if err := WriteImprovementNote(s.RepoPath, note); err != nil {
+			slog.Warn("supervisor: write note", "error", err, "note", note.Title)
+		}
+	}
+	if len(notes) > 0 {
+		slog.Info("supervisor: improvement notes generated", "count", len(notes))
+	}
+
+	// Auto-apply eligible pending notes.
+	applied, rejected, err := opt.ApplyPendingNotes(s.RepoPath)
+	if err != nil {
+		slog.Warn("supervisor: apply notes failed", "error", err)
+	} else if applied > 0 || rejected > 0 {
+		slog.Info("supervisor: notes applied", "applied", applied, "rejected", rejected)
+		s.publishEvent(events.AutoOptimized, map[string]any{
+			"source": "supervisor", "action": "apply_notes",
+			"applied": applied, "rejected": rejected,
+		})
 	}
 }
 
