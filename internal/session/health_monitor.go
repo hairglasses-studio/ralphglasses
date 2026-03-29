@@ -1,7 +1,11 @@
 package session
 
 import (
+	"bufio"
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"time"
 )
@@ -23,6 +27,12 @@ type HealthThresholds struct {
 	MinVerifyPassRate  float64       // below → launch fix cycle
 	MaxIdleTime        time.Duration // above → launch exploration cycle
 	MinIterationRate   float64       // iterations/hour; below → consolidation
+
+	// L2 spec thresholds (docs/AUTONOMY.md)
+	MinCoverage         float64 // test coverage percentage; below → launch coverage cycle
+	MaxMeanCycleCostUSD float64 // per-cycle average; above → budget adjustment
+	MaxHITLRate         float64 // manual/(manual+auto) ratio; above → investigate
+	MaxCriticalFindings int     // open critical findings; above → launch fix cycle
 }
 
 // DefaultHealthThresholds returns production defaults.
@@ -33,6 +43,12 @@ func DefaultHealthThresholds() HealthThresholds {
 		MinVerifyPassRate:  0.80,
 		MaxIdleTime:        1 * time.Hour,
 		MinIterationRate:   0.5,
+
+		// L2 spec (docs/AUTONOMY.md)
+		MinCoverage:         80.0,
+		MaxMeanCycleCostUSD: 2.00,
+		MaxHITLRate:         0.10,
+		MaxCriticalFindings: 3,
 	}
 }
 
@@ -182,5 +198,163 @@ func (hm *HealthMonitor) evaluate(repoPath string) []HealthSignal {
 		})
 	}
 
+	// --- L2 spec: mean cycle cost ---
+	if t.MaxMeanCycleCostUSD > 0 && len(obs) > 0 {
+		var totalCostAll float64
+		for _, o := range obs {
+			totalCostAll += o.TotalCostUSD
+		}
+		meanCost := totalCostAll / float64(len(obs))
+		if meanCost > t.MaxMeanCycleCostUSD {
+			signals = append(signals, HealthSignal{
+				Category:        DecisionBudgetAdjust,
+				Metric:          "mean_cycle_cost",
+				Value:           meanCost,
+				Threshold:       t.MaxMeanCycleCostUSD,
+				Rationale:       "Mean cycle cost exceeds L2 threshold",
+				SuggestedAction: "reduce_budget",
+			})
+		}
+	}
+
+	// --- L2 spec: HITL intervention rate ---
+	if t.MaxHITLRate > 0 {
+		hitlRate := evaluateHITLRate(repoPath)
+		if hitlRate >= 0 && hitlRate > t.MaxHITLRate {
+			signals = append(signals, HealthSignal{
+				Category:        DecisionLaunch,
+				Metric:          "hitl_rate",
+				Value:           hitlRate,
+				Threshold:       t.MaxHITLRate,
+				Rationale:       "HITL intervention rate exceeds L2 threshold — too many manual interventions",
+				SuggestedAction: "launch_investigation",
+			})
+		}
+	}
+
+	// --- L2 spec: test coverage ---
+	if t.MinCoverage > 0 {
+		cov := evaluateCoverage(repoPath)
+		if cov >= 0 && cov < t.MinCoverage {
+			signals = append(signals, HealthSignal{
+				Category:        DecisionLaunch,
+				Metric:          "test_coverage",
+				Value:           cov,
+				Threshold:       t.MinCoverage,
+				Rationale:       "Test coverage below L2 threshold",
+				SuggestedAction: "launch_coverage",
+			})
+		}
+	}
+
+	// --- L2 spec: critical findings ---
+	if t.MaxCriticalFindings > 0 {
+		count := countCriticalFindings(repoPath, cycles)
+		if count > t.MaxCriticalFindings {
+			signals = append(signals, HealthSignal{
+				Category:        DecisionLaunch,
+				Metric:          "critical_findings",
+				Value:           float64(count),
+				Threshold:       float64(t.MaxCriticalFindings),
+				Rationale:       "Open critical findings exceed L2 threshold",
+				SuggestedAction: "launch_fix",
+			})
+		}
+	}
+
+	// --- Self-test signal: emit after every 5 completed cycles ---
+	completedCycles := 0
+	for _, c := range cycles {
+		if c.Phase == CycleComplete {
+			completedCycles++
+		}
+	}
+	if completedCycles > 0 && completedCycles%5 == 0 {
+		signals = append(signals, HealthSignal{
+			Category:        DecisionSelfTest,
+			Metric:          "periodic_self_test",
+			Value:           float64(completedCycles),
+			Threshold:       5,
+			Rationale:       "Periodic self-test after 5 completed cycles",
+			SuggestedAction: "run_self_test",
+		})
+	}
+
+	// --- Reflexion signal: emit when patterns are accumulating ---
+	patternsPath := filepath.Join(repoPath, ".ralph", "improvement_patterns.json")
+	if data, err := os.ReadFile(patternsPath); err == nil && len(data) > 100 {
+		signals = append(signals, HealthSignal{
+			Category:        DecisionReflexion,
+			Metric:          "pattern_accumulation",
+			Value:           float64(len(data)),
+			Threshold:       100,
+			Rationale:       "Improvement patterns accumulating — consolidate learnings",
+			SuggestedAction: "consolidate_patterns",
+		})
+	}
+
 	return signals
+}
+
+// evaluateHITLRate computes manual/(manual+auto) ratio from hitl_events.jsonl.
+// Returns -1 if no data available.
+func evaluateHITLRate(repoPath string) float64 {
+	path := filepath.Join(repoPath, ".ralph", "hitl_events.jsonl")
+	f, err := os.Open(path)
+	if err != nil {
+		return -1
+	}
+	defer f.Close()
+
+	var manual, auto int
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		var e HITLEvent
+		if json.Unmarshal(scanner.Bytes(), &e) != nil {
+			continue
+		}
+		switch e.Trigger {
+		case TriggerManual:
+			manual++
+		case TriggerAutomatic, TriggerScheduled:
+			auto++
+		}
+	}
+	total := manual + auto
+	if total == 0 {
+		return -1
+	}
+	return float64(manual) / float64(total)
+}
+
+// evaluateCoverage reads the most recent coverage percentage from .ralph/coverage.txt.
+// The file should contain a single line like "86.0" (percentage).
+// Returns -1 if no data available.
+func evaluateCoverage(repoPath string) float64 {
+	path := filepath.Join(repoPath, ".ralph", "coverage.txt")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return -1
+	}
+	var pct float64
+	if _, err := fmt.Sscanf(string(data), "%f", &pct); err != nil {
+		return -1
+	}
+	return pct
+}
+
+// countCriticalFindings counts open critical-severity findings across recent cycles.
+func countCriticalFindings(repoPath string, cycles []*CycleRun) int {
+	count := 0
+	for _, c := range cycles {
+		if c.Phase == CycleComplete || c.Phase == CycleFailed {
+			continue // only count open cycles
+		}
+		for _, f := range c.Findings {
+			if f.Severity == "critical" {
+				count++
+			}
+		}
+	}
+	return count
 }

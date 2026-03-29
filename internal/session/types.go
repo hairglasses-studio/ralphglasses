@@ -60,6 +60,7 @@ type Session struct {
 	Error             string        `json:"error,omitempty"`
 	LastEventType     string        `json:"last_event_type,omitempty"`
 	StreamParseErrors int           `json:"stream_parse_errors,omitempty"`
+	CostSource        string        `json:"cost_source,omitempty"` // "structured", "stderr", or "estimated"
 	CostHistory       []float64     `json:"cost_history,omitempty"`
 	OutputHistory    []string `json:"output_history,omitempty"`    // last N output lines
 	TotalOutputCount int      `json:"total_output_count,omitempty"` // monotonic counter for cursor-based tailing
@@ -95,7 +96,8 @@ type StreamEvent struct {
 	Duration  float64         `json:"duration_seconds,omitempty"`
 	IsError   bool            `json:"is_error,omitempty"`
 	Result    string          `json:"result,omitempty"`
-	Raw       json.RawMessage `json:"-"`
+	CostSource string          `json:"-"`              // "structured" or "estimated" — set by normalizer
+	Raw        json.RawMessage `json:"-"`
 }
 
 // BatchOptions configures batch/async session execution.

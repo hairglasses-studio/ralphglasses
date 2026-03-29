@@ -51,9 +51,9 @@ func (m *Manager) ListCycles(repoPath string) ([]*CycleRun, error) {
 }
 
 // AdvanceCycle transitions a cycle to the next phase and persists it.
-func (m *Manager) AdvanceCycle(cycle *CycleRun) error {
+func (m *Manager) AdvanceCycle(cycle *CycleRun, opts ...AdvanceOption) error {
 	// Safety: validate before advancing.
-	if err := ValidateCycleAdvance(cycle, cycleSafetyConfig()); err != nil {
+	if err := ValidateCycleAdvance(cycle, cycleSafetyConfig(), opts...); err != nil {
 		return err
 	}
 
@@ -235,6 +235,19 @@ func (m *Manager) RunCycle(ctx context.Context, repoPath, name, objective string
 
 	fail := func(msg string) (*CycleRun, error) {
 		_ = m.FailCycle(cycle, msg)
+		// Write a failure observation so the health monitor can detect and
+		// self-correct. Without this, failed cycles are invisible to the
+		// supervisor's signal evaluation.
+		obs := LoopObservation{
+			Timestamp: timeNow(),
+			LoopID:    "cycle:" + cycle.ID,
+			RepoName:  filepath.Base(repoPath),
+			Status:    "cycle_failed",
+			Error:     msg,
+		}
+		if err := WriteObservation(ObservationPath(repoPath), obs); err != nil {
+			slog.Warn("RunCycle: failed to write failure observation", "error", err)
+		}
 		return cycle, fmt.Errorf("%s", msg)
 	}
 
@@ -269,15 +282,19 @@ func (m *Manager) RunCycle(ctx context.Context, repoPath, name, objective string
 		}
 	}
 
+	// All advances within RunCycle are part of a single logical operation,
+	// so skip phase cooldown to avoid blocking rapid sequential transitions.
+	batch := WithBatchAdvance()
+
 	// If no tasks were planned, synthesize immediately.
 	if len(cycle.Tasks) == 0 {
-		if err := m.AdvanceCycle(cycle); err != nil { // baselining → executing
+		if err := m.AdvanceCycle(cycle, batch); err != nil { // baselining → executing
 			return fail(fmt.Sprintf("advance to executing (empty): %v", err))
 		}
-		if err := m.AdvanceCycle(cycle); err != nil { // executing → observing
+		if err := m.AdvanceCycle(cycle, batch); err != nil { // executing → observing
 			return fail(fmt.Sprintf("advance to observing (empty): %v", err))
 		}
-		if err := m.AdvanceCycle(cycle); err != nil { // observing → synthesizing
+		if err := m.AdvanceCycle(cycle, batch); err != nil { // observing → synthesizing
 			return fail(fmt.Sprintf("advance to synthesizing (empty): %v", err))
 		}
 		synthesis := CycleSynthesis{
@@ -287,14 +304,14 @@ func (m *Manager) RunCycle(ctx context.Context, repoPath, name, objective string
 		if err := m.SetCycleSynthesis(cycle, synthesis); err != nil {
 			return fail(fmt.Sprintf("set synthesis (empty): %v", err))
 		}
-		if err := m.AdvanceCycle(cycle); err != nil { // synthesizing → complete
+		if err := m.AdvanceCycle(cycle, batch); err != nil { // synthesizing → complete
 			return fail(fmt.Sprintf("advance to complete (empty): %v", err))
 		}
 		return cycle, nil
 	}
 
 	// 5. Advance baselining → executing.
-	if err := m.AdvanceCycle(cycle); err != nil {
+	if err := m.AdvanceCycle(cycle, batch); err != nil {
 		return fail(fmt.Sprintf("advance to executing: %v", err))
 	}
 
@@ -325,7 +342,7 @@ func (m *Manager) RunCycle(ctx context.Context, repoPath, name, objective string
 	}
 
 	// 8. Advance executing → observing.
-	if err := m.AdvanceCycle(cycle); err != nil {
+	if err := m.AdvanceCycle(cycle, batch); err != nil {
 		return fail(fmt.Sprintf("advance to observing: %v", err))
 	}
 
@@ -339,7 +356,7 @@ func (m *Manager) RunCycle(ctx context.Context, repoPath, name, objective string
 	}
 
 	// 10. Advance observing → synthesizing.
-	if err := m.AdvanceCycle(cycle); err != nil {
+	if err := m.AdvanceCycle(cycle, batch); err != nil {
 		return fail(fmt.Sprintf("advance to synthesizing: %v", err))
 	}
 
@@ -350,7 +367,7 @@ func (m *Manager) RunCycle(ctx context.Context, repoPath, name, objective string
 	}
 
 	// 12. Advance synthesizing → complete.
-	if err := m.AdvanceCycle(cycle); err != nil {
+	if err := m.AdvanceCycle(cycle, batch); err != nil {
 		return fail(fmt.Sprintf("advance to complete: %v", err))
 	}
 

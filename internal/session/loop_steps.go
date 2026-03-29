@@ -604,10 +604,24 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 				ws.Unlock()
 			}
 		}
+		var turnCount int
+		if ps, ok := m.Get(iter.PlannerSessionID); ok {
+			ps.Lock()
+			turnCount += ps.TurnCount
+			ps.Unlock()
+		}
+		for _, wid := range iter.WorkerSessionIDs {
+			if ws, ok := m.Get(wid); ok {
+				ws.Lock()
+				turnCount += ws.TurnCount
+				ws.Unlock()
+			}
+		}
 		m.costPredictor.Record(CostObservation{
-			TaskType: taskType,
-			Provider: provider,
-			CostUSD:  totalCost,
+			TaskType:  taskType,
+			Provider:  provider,
+			CostUSD:   totalCost,
+			TurnCount: turnCount,
 		})
 	}
 
