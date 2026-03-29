@@ -323,7 +323,7 @@ func scoreContextMotivation(text string, _ TaskType, lints []LintResult, ar *Ana
 }
 
 func scoreStructure(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult, targetProvider ProviderName) DimensionScore {
-	score := 40
+	score := 25 // FINDING-240: no structure signals → low score
 	var suggestions []string
 
 	if ar.HasXML {
@@ -410,9 +410,9 @@ func scoreDocumentPlacement(text string, _ TaskType, lints []LintResult, ar *Ana
 
 	tokens := ar.EstimatedTokens
 
-	// For short prompts, placement is less important
+	// For short prompts, placement is less important — neutral score
 	if tokens < 1000 {
-		score = 50 // FINDING-240: lowered from 70
+		score = 40 // FINDING-240: short prompts get neutral placement, not inflated
 	}
 
 	// Cache-unfriendly lints
@@ -483,7 +483,7 @@ func scoreRoleDefinition(text string, _ TaskType, _ []LintResult, _ *AnalyzeResu
 }
 
 func scoreTaskFocus(text string, _ TaskType, lints []LintResult, _ *AnalyzeResult, _ ProviderName) DimensionScore {
-	score := 40 // FINDING-240: lowered from 60 to prevent score inflation
+	score := 30 // FINDING-240: must earn score from actual task signals
 	var suggestions []string
 
 	// Decomposition needed = too many tasks
@@ -560,7 +560,7 @@ func scoreFormatSpec(text string, _ TaskType, _ []LintResult, ar *AnalyzeResult)
 }
 
 func scoreTone(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult, targetProvider ProviderName) DimensionScore {
-	score := 60 // FINDING-240: lowered from 80 to prevent score inflation
+	score := 70 // FINDING-240: neutral tone is the expected baseline; only penalize actual problems
 	var suggestions []string
 
 	// Bonus for polite/professional language markers

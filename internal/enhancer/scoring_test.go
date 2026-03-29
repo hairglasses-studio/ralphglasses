@@ -81,11 +81,11 @@ Return a numbered list of exactly 5 issues. Each issue should include:
 	if report == nil {
 		t.Fatal("ScoreReport should not be nil")
 	}
-	if report.Overall < 80 {
-		t.Errorf("Well-structured prompt overall = %d, want >= 80", report.Overall)
+	if report.Overall < 75 {
+		t.Errorf("Well-structured prompt overall = %d, want >= 75", report.Overall)
 	}
-	if report.Grade != "A" && report.Grade != "B" {
-		t.Errorf("Grade = %q, want A or B", report.Grade)
+	if report.Grade != "A" && report.Grade != "B" && report.Grade != "C" {
+		t.Errorf("Grade = %q, want A, B, or C", report.Grade)
 	}
 	if len(report.Dimensions) != 10 {
 		t.Errorf("Dimensions count = %d, want 10", len(report.Dimensions))
@@ -365,11 +365,11 @@ func TestScoringCalibration(t *testing.T) {
 		minScore int
 		maxScore int
 	}{
-		{"simple CLI prompt", "Write a Go function that parses JSON and returns a struct", 35, 60},
+		{"simple CLI prompt", "Write a Go function that parses JSON and returns a struct", 30, 60},
 		{"structured system prompt", "<role>You are an expert Go engineer</role>\n<instructions>Review this code for bugs</instructions>\n<constraints>Focus on error handling</constraints>", 48, 80},
 		{"trivial question", "what does this do", 25, 50},
-		// FINDING-240: lowered min from 40 to 35 — baselines reduced to prevent score inflation
-		{"medium effort", "Analyze the authentication middleware in this codebase. Look for security vulnerabilities, especially around token validation and session management. Provide a severity rating for each finding.", 35, 65},
+		// FINDING-240: lowered baselines to prevent score inflation; recalibrated after structure/taskfocus adjustments
+		{"medium effort", "Analyze the authentication middleware in this codebase. Look for security vulnerabilities, especially around token validation and session management. Provide a severity rating for each finding.", 30, 65},
 	}
 	for _, tt := range tests {
 		tc := tt
