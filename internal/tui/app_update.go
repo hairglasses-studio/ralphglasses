@@ -43,6 +43,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.LoopControlView.SetDimensions(msg.Width, msg.Height-4)
 		m.ObservationViewport.SetDimensions(msg.Width, msg.Height-4)
 		m.RDCycleView.SetDimensions(msg.Width, msg.Height-4)
+		m.TeamOrchestrationView.SetDimensions(msg.Width, msg.Height-4)
 		m.StatusBar.Width = msg.Width
 		return m, nil
 
@@ -282,6 +283,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleFilterInput(msg)
 	}
 
+	// Search mode input
+	if m.InputMode == ModeSearch {
+		return m.handleSearchInput(msg)
+	}
+
 	// Config editor in edit mode
 	if m.Nav.CurrentView == ViewConfigEditor && m.ConfigEdit != nil && m.ConfigEdit.Editing {
 		return m.handleConfigEditInput(msg)
@@ -334,6 +340,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleEventLogKey(msg)
 	case ViewRDCycle:
 		return m.handleRDCycleKey(msg)
+	case ViewTeamOrchestration:
+		return m.handleTeamOrchestrationKey(msg)
 	}
 
 	return m, nil

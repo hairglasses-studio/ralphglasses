@@ -76,6 +76,12 @@ type KeyMap struct {
 
 	// R&D Cycle
 	RDCycle key.Binding
+
+	// Team Orchestration
+	OrchestrationView key.Binding
+
+	// Global search
+	GlobalSearch key.Binding
 }
 
 // DefaultKeyMap returns the default key bindings.
@@ -260,6 +266,14 @@ func DefaultKeyMap() KeyMap {
 		RDCycle: key.NewBinding(
 			key.WithKeys("R"),
 			key.WithHelp("R", "R&D Cycle"),
+		),
+		OrchestrationView: key.NewBinding(
+			key.WithKeys("o"),
+			key.WithHelp("o", "Team orchestration"),
+		),
+		GlobalSearch: key.NewBinding(
+			key.WithKeys("ctrl+f"),
+			key.WithHelp("Ctrl+F", "Global search"),
 		),
 	}
 }
