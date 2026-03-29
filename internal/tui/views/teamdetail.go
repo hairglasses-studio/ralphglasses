@@ -106,6 +106,48 @@ func RenderTeamDetail(team *session.TeamStatus, leadSession *session.Session, wi
 	return b.String()
 }
 
+// TeamDetailView wraps RenderTeamDetail in a scrollable viewport.
+type TeamDetailView struct {
+	Viewport    *ViewportView
+	team        *session.TeamStatus
+	leadSession *session.Session
+	width       int
+}
+
+// NewTeamDetailView creates a new TeamDetailView.
+func NewTeamDetailView() *TeamDetailView {
+	return &TeamDetailView{
+		Viewport: NewViewportView(),
+	}
+}
+
+// SetData updates the team and lead session, then regenerates content.
+func (v *TeamDetailView) SetData(team *session.TeamStatus, leadSession *session.Session) {
+	v.team = team
+	v.leadSession = leadSession
+	v.regenerate()
+}
+
+// SetDimensions updates the available width and height.
+func (v *TeamDetailView) SetDimensions(width, height int) {
+	v.width = width
+	v.Viewport.SetDimensions(width, height)
+	v.regenerate()
+}
+
+// Render returns the scrollable viewport content.
+func (v *TeamDetailView) Render() string {
+	return v.Viewport.Render()
+}
+
+func (v *TeamDetailView) regenerate() {
+	if v.team == nil {
+		return
+	}
+	content := RenderTeamDetail(v.team, v.leadSession, v.width)
+	v.Viewport.SetContent(content)
+}
+
 func taskIndicator(status string) string {
 	switch status {
 	case "completed":

@@ -82,6 +82,50 @@ func RenderDiffView(repoPath string, fromRef string, width, height int) string {
 	return b.String()
 }
 
+// DiffViewport wraps RenderDiffView in a scrollable viewport.
+type DiffViewport struct {
+	Viewport *ViewportView
+	repoPath string
+	fromRef  string
+	width    int
+	height   int
+}
+
+// NewDiffViewport creates a new DiffViewport.
+func NewDiffViewport() *DiffViewport {
+	return &DiffViewport{
+		Viewport: NewViewportView(),
+	}
+}
+
+// SetData updates the repo path and ref, then regenerates content.
+func (v *DiffViewport) SetData(repoPath, fromRef string) {
+	v.repoPath = repoPath
+	v.fromRef = fromRef
+	v.regenerate()
+}
+
+// SetDimensions updates the available width and height.
+func (v *DiffViewport) SetDimensions(width, height int) {
+	v.width = width
+	v.height = height
+	v.Viewport.SetDimensions(width, height)
+	v.regenerate()
+}
+
+// Render returns the scrollable viewport content.
+func (v *DiffViewport) Render() string {
+	return v.Viewport.Render()
+}
+
+func (v *DiffViewport) regenerate() {
+	if v.repoPath == "" {
+		return
+	}
+	content := RenderDiffView(v.repoPath, v.fromRef, v.width, v.height)
+	v.Viewport.SetContent(content)
+}
+
 func colorizeDiffLine(line string) string {
 	switch {
 	case strings.HasPrefix(line, "+++") || strings.HasPrefix(line, "---"):

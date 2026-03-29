@@ -141,6 +141,7 @@ func DefaultLoopProfile() LoopProfile {
 		RetryLimit:           1,
 		VerifyCommands:       []string{defaultLoopVerifyCommand},
 		WorktreePolicy:       "git",
+		EnableCascade:        true,
 	}
 }
 
@@ -203,7 +204,7 @@ func BudgetOptimizedSelfImprovementProfile(totalBudget float64) LoopProfile {
 		EnableEpisodicMemory: true,
 		EnableUncertainty:    true,
 		EnableCurriculum:     true,
-		EnableCascade:        false,
+		EnableCascade:        true,
 		SelfImprovement:      true,
 		CompactionEnabled:    true,
 		CompactionThreshold:  5,

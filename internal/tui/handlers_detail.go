@@ -66,6 +66,30 @@ var sessionsKeys = []ViewKeyEntry{
 // --- Session detail dispatch table ---
 
 var sessionDetailKeys = []ViewKeyEntry{
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.SessionDetailView.Viewport.ScrollDown()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.SessionDetailView.Viewport.ScrollUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.SessionDetailView.Viewport.GotoBottom()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.SessionDetailView.Viewport.GotoTop()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.SessionDetailView.Viewport.PageUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.SessionDetailView.Viewport.PageDown()
+		return *m, nil
+	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.StopAction }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.Sel.SessionID != "" && m.SessMgr != nil {
 			shortID := m.Sel.SessionID
@@ -160,6 +184,30 @@ var teamsKeys = []ViewKeyEntry{
 // --- Team detail dispatch table ---
 
 var teamDetailKeys = []ViewKeyEntry{
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TeamDetailView.Viewport.ScrollDown()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TeamDetailView.Viewport.ScrollUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TeamDetailView.Viewport.GotoBottom()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TeamDetailView.Viewport.GotoTop()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TeamDetailView.Viewport.PageUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TeamDetailView.Viewport.PageDown()
+		return *m, nil
+	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.Sel.TeamName != "" && m.SessMgr != nil {
 			team, ok := m.SessMgr.GetTeam(m.Sel.TeamName)
@@ -200,11 +248,29 @@ var fleetKeys = []ViewKeyEntry{
 	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		data := m.buildFleetData()
 		m.moveFleetCursor(data, 1)
+		m.FleetView.Viewport.ScrollDown()
 		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		data := m.buildFleetData()
 		m.moveFleetCursor(data, -1)
+		m.FleetView.Viewport.ScrollUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.FleetView.Viewport.GotoBottom()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.FleetView.Viewport.GotoTop()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.FleetView.Viewport.PageUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.FleetView.Viewport.PageDown()
 		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -266,4 +332,70 @@ func (m Model) handleTeamDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m Model) handleFleetKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return dispatchViewKeys(fleetKeys, &m, msg)
+}
+
+// --- Diff view dispatch table ---
+
+var diffKeys = []ViewKeyEntry{
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.DiffViewport.Viewport.ScrollDown()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.DiffViewport.Viewport.ScrollUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.DiffViewport.Viewport.GotoBottom()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.DiffViewport.Viewport.GotoTop()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.DiffViewport.Viewport.PageUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.DiffViewport.Viewport.PageDown()
+		return *m, nil
+	}},
+}
+
+func (m Model) handleDiffKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	return dispatchViewKeys(diffKeys, &m, msg)
+}
+
+// --- Timeline view dispatch table ---
+
+var timelineKeys = []ViewKeyEntry{
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TimelineViewport.Viewport.ScrollDown()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TimelineViewport.Viewport.ScrollUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TimelineViewport.Viewport.GotoBottom()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TimelineViewport.Viewport.GotoTop()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TimelineViewport.Viewport.PageUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TimelineViewport.Viewport.PageDown()
+		return *m, nil
+	}},
+}
+
+func (m Model) handleTimelineKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	return dispatchViewKeys(timelineKeys, &m, msg)
 }
