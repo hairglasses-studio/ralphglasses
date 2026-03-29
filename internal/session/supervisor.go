@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
 
 // Supervisor monitors health metrics, proposes decisions via DecisionLog,
@@ -29,7 +32,14 @@ type Supervisor struct {
 	MaxConcurrent   int           // default 1
 	CooldownBetween time.Duration // default 5m
 
+	// Termination conditions (0 = unlimited).
+	MaxCycles       int
+	MaxTotalCostUSD float64
+	MaxDuration     time.Duration
+
+	bus             *events.Bus
 	lastCycleLaunch time.Time
+	cyclesLaunched  int
 	tickCount       int
 	startedAt       time.Time
 }
@@ -63,6 +73,9 @@ func (s *Supervisor) SetMonitor(m *HealthMonitor) { s.mu.Lock(); s.monitor = m; 
 
 // SetChainer sets the cycle chainer.
 func (s *Supervisor) SetChainer(c *CycleChainer) { s.mu.Lock(); s.chainer = c; s.mu.Unlock() }
+
+// SetBus sets the event bus for publishing supervisor events.
+func (s *Supervisor) SetBus(b *events.Bus) { s.mu.Lock(); s.bus = b; s.mu.Unlock() }
 
 // Start launches the supervisor goroutine. Idempotent.
 func (s *Supervisor) Start(ctx context.Context) error {
@@ -138,6 +151,17 @@ func (s *Supervisor) run(ctx context.Context) {
 }
 
 func (s *Supervisor) tick(ctx context.Context) {
+	if reason := s.shouldTerminate(); reason != "" {
+		slog.Info("supervisor: termination condition met", "reason", reason)
+		s.publishEvent(events.LoopStopped, map[string]any{
+			"source": "supervisor", "reason": reason,
+		})
+		if s.cancel != nil {
+			s.cancel()
+		}
+		return
+	}
+
 	s.mu.Lock()
 	monitor, chainer := s.monitor, s.chainer
 	s.mu.Unlock()
@@ -146,6 +170,9 @@ func (s *Supervisor) tick(ctx context.Context) {
 		for _, sig := range signals {
 			s.executeDecision(ctx, sig)
 		}
+		s.publishEvent(events.AutoOptimized, map[string]any{
+			"source": "supervisor", "signal_count": len(signals),
+		})
 	}
 	if chainer != nil {
 		if nextCycle, err := chainer.CheckAndChain(ctx, s.RepoPath); err != nil {
@@ -164,8 +191,49 @@ func (s *Supervisor) tick(ctx context.Context) {
 	s.persistState()
 }
 
+// shouldTerminate checks if any termination condition is met.
+func (s *Supervisor) shouldTerminate() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.MaxCycles > 0 && s.cyclesLaunched >= s.MaxCycles {
+		return fmt.Sprintf("max_cycles reached (%d)", s.MaxCycles)
+	}
+	if s.MaxDuration > 0 && !s.startedAt.IsZero() && time.Since(s.startedAt) >= s.MaxDuration {
+		return fmt.Sprintf("max_duration elapsed (%s)", s.MaxDuration)
+	}
+	if s.MaxTotalCostUSD > 0 {
+		obsPath := filepath.Join(s.RepoPath, ".ralph", "cost_observations.json")
+		if obs, err := LoadObservations(obsPath, s.startedAt); err == nil {
+			var total float64
+			for _, o := range obs {
+				total += o.TotalCostUSD
+			}
+			if total >= s.MaxTotalCostUSD {
+				return fmt.Sprintf("budget exhausted ($%.2f >= $%.2f)", total, s.MaxTotalCostUSD)
+			}
+		}
+	}
+	return ""
+}
+
+// publishEvent sends an event to the bus if one is configured.
+func (s *Supervisor) publishEvent(typ events.EventType, data map[string]any) {
+	s.mu.Lock()
+	bus, repoPath := s.bus, s.RepoPath
+	s.mu.Unlock()
+	if bus == nil {
+		return
+	}
+	bus.Publish(events.Event{
+		Type:     typ,
+		RepoPath: repoPath,
+		Data:     data,
+	})
+}
+
 func (s *Supervisor) executeDecision(ctx context.Context, signal HealthSignal) {
 	decision := AutonomousDecision{
+		ID:            fmt.Sprintf("dec-%d", time.Now().UnixNano()),
 		Category:      signal.Category,
 		RequiredLevel: LevelAutoOptimize,
 		Rationale:     signal.Rationale,
@@ -182,20 +250,26 @@ func (s *Supervisor) executeDecision(ctx context.Context, signal HealthSignal) {
 	}
 	switch signal.Category {
 	case DecisionLaunch:
-		s.launchCycle(ctx, signal)
+		s.launchCycle(ctx, signal, decision.ID)
 	case DecisionBudgetAdjust:
-		slog.Info("supervisor: budget adjustment deferred", "metric", signal.Metric)
+		slog.Info("supervisor: budget adjustment advisory",
+			"metric", signal.Metric, "value", signal.Value, "threshold", signal.Threshold)
+		s.publishEvent(events.AutoOptimized, map[string]any{
+			"source": "supervisor", "action": "budget_advisory",
+			"metric": signal.Metric, "value": signal.Value,
+		})
 	case DecisionSelfTest:
-		slog.Info("supervisor: self-test requested (not yet wired)")
+		s.runSelfTest(ctx)
 	case DecisionReflexion:
-		slog.Info("supervisor: consolidation requested (not yet wired)")
+		s.runConsolidation()
 	}
 }
 
-func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal) {
+func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal, decisionID string) {
 	s.mu.Lock()
 	elapsed := time.Since(s.lastCycleLaunch)
 	cooldown, mgr, repoPath := s.CooldownBetween, s.mgr, s.RepoPath
+	dl := s.decisions
 	isFirst := s.lastCycleLaunch.IsZero()
 	s.mu.Unlock()
 
@@ -210,14 +284,57 @@ func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal) {
 	name := fmt.Sprintf("auto-%d", time.Now().Unix())
 	if mgr != nil {
 		go func() {
-			if _, err := mgr.RunCycle(ctx, repoPath, name, objective, []string{"Tests pass", "No regressions"}, 3); err != nil {
+			_, err := mgr.RunCycle(ctx, repoPath, name, objective, []string{"Tests pass", "No regressions"}, 3)
+			outcome := DecisionOutcome{
+				EvaluatedAt: time.Now(),
+				Success:     err == nil,
+			}
+			if err != nil {
+				outcome.Details = err.Error()
 				slog.Warn("supervisor: RunCycle failed", "error", err)
+			} else {
+				outcome.Details = "cycle completed"
+			}
+			if dl != nil && decisionID != "" {
+				dl.RecordOutcome(decisionID, outcome)
 			}
 		}()
 	}
 	s.mu.Lock()
 	s.lastCycleLaunch = time.Now()
+	s.cyclesLaunched++
 	s.mu.Unlock()
+	s.publishEvent(events.LoopStarted, map[string]any{
+		"source": "supervisor", "cycle": name, "objective": objective,
+	})
+}
+
+// runSelfTest runs go test with recursion guard.
+func (s *Supervisor) runSelfTest(ctx context.Context) {
+	if err := RecursionGuard(); err != nil {
+		slog.Warn("supervisor: self-test blocked by recursion guard", "error", err)
+		return
+	}
+	testCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(testCtx, "go", "test", "./...", "-count=1")
+	cmd.Dir = s.RepoPath
+	cmd.Env = SetSelfTestEnv(os.Environ())
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		slog.Warn("supervisor: self-test failed", "error", err, "output", string(out))
+	} else {
+		slog.Info("supervisor: self-test passed")
+	}
+}
+
+// runConsolidation consolidates journal patterns.
+func (s *Supervisor) runConsolidation() {
+	if err := ConsolidatePatterns(s.RepoPath); err != nil {
+		slog.Warn("supervisor: consolidation failed", "error", err)
+	} else {
+		slog.Info("supervisor: patterns consolidated")
+	}
 }
 
 func (s *Supervisor) persistState() {
