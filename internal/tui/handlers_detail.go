@@ -240,6 +240,45 @@ var teamDetailKeys = []ViewKeyEntry{
 		}
 		return *m, nil
 	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.OrchestrationView }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		if m.Sel.TeamName != "" {
+			m.pushView(ViewTeamOrchestration, "Orchestration")
+		}
+		return *m, nil
+	}},
+}
+
+// --- Team orchestration dispatch table ---
+
+var teamOrchestrationKeys = []ViewKeyEntry{
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TeamOrchestrationView.Viewport.ScrollDown()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TeamOrchestrationView.Viewport.ScrollUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TeamOrchestrationView.Viewport.GotoBottom()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TeamOrchestrationView.Viewport.GotoTop()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TeamOrchestrationView.Viewport.PageUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.TeamOrchestrationView.Viewport.PageDown()
+		return *m, nil
+	}},
+}
+
+func (m Model) handleTeamOrchestrationKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	return dispatchViewKeys(teamOrchestrationKeys, &m, msg)
 }
 
 // --- Fleet dispatch table ---
