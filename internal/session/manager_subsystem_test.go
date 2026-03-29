@@ -15,8 +15,9 @@ func TestManagerSubsystem_SetAndGet(t *testing.T) {
 	if m.HasEpisodicMemory() {
 		t.Error("expected HasEpisodicMemory=false initially")
 	}
-	if m.HasCascadeRouter() {
-		t.Error("expected HasCascadeRouter=false initially")
+	// QW-2: Cascade routing is now enabled by default in NewManager.
+	if !m.HasCascadeRouter() {
+		t.Error("expected HasCascadeRouter=true by default (QW-2)")
 	}
 	if m.HasCurriculumSorter() {
 		t.Error("expected HasCurriculumSorter=false initially")
@@ -33,8 +34,8 @@ func TestManagerSubsystem_SetAndGet(t *testing.T) {
 	if m.GetEpisodicMemory() != nil {
 		t.Error("expected GetEpisodicMemory=nil initially")
 	}
-	if m.GetCascadeRouter() != nil {
-		t.Error("expected GetCascadeRouter=nil initially")
+	if m.GetCascadeRouter() == nil {
+		t.Error("expected GetCascadeRouter=non-nil by default (QW-2)")
 	}
 	if m.GetBlackboard() != nil {
 		t.Error("expected GetBlackboard=nil initially")

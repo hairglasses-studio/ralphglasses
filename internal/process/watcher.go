@@ -45,7 +45,7 @@ func watchWithWatcher(repoPaths []string, watcher *fsnotify.Watcher) tea.Msg {
 	// If ALL watches failed, report error and let TUI fall back to polling
 	if len(addErrors) == len(repoPaths) && len(repoPaths) > 0 {
 		_ = watcher.Close()
-		return WatcherErrorMsg{Err: fmt.Errorf("all watches failed: %v", addErrors[0])}
+		return WatcherErrorMsg{Err: fmt.Errorf("all watches failed: %w", addErrors[0])}
 	}
 
 	// Block until an event arrives or timeout.

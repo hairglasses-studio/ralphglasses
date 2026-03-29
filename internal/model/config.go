@@ -335,7 +335,7 @@ func ImportConfig(data []byte) (*RalphConfig, error) {
 	// Validate imported config.
 	_, errs := ValidateConfig(cfg)
 	if len(errs) > 0 {
-		return nil, fmt.Errorf("config validation failed: %v", errs[0])
+		return nil, fmt.Errorf("config validation failed: %w", errs[0])
 	}
 	return cfg, nil
 }

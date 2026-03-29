@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/model"
 )
 
 func TestDefaultCascadeConfig_EnabledByDefault(t *testing.T) {
@@ -1572,20 +1574,70 @@ func TestCascadeConfig_MalformedThreshold(t *testing.T) {
 }
 
 // TestCascadeRouter_NilRouterNoPanic verifies that when a Manager has no
-// CascadeRouter attached, calling cascade-related accessors does not panic.
-func TestCascadeRouter_NilRouterNoPanic(t *testing.T) {
+// QW-2: Cascade routing is now enabled by default, so a fresh manager
+// should always have a cascade router configured.
+func TestCascadeRouter_DefaultEnabled(t *testing.T) {
 	t.Parallel()
 
 	m := NewManager()
 
-	// HasCascadeRouter should return false, not panic.
-	if m.HasCascadeRouter() {
-		t.Error("expected HasCascadeRouter=false for fresh manager")
+	// HasCascadeRouter should return true — cascade is enabled by default.
+	if !m.HasCascadeRouter() {
+		t.Error("expected HasCascadeRouter=true for fresh manager (QW-2)")
 	}
 
-	// GetCascadeRouter should return nil, not panic.
+	// GetCascadeRouter should return a non-nil default router.
 	cr := m.GetCascadeRouter()
-	if cr != nil {
-		t.Error("expected GetCascadeRouter=nil for fresh manager")
+	if cr == nil {
+		t.Error("expected GetCascadeRouter=non-nil for fresh manager (QW-2)")
+	}
+
+	// The default router should allow cascading for unknown task types.
+	if !cr.ShouldCascade("feature", "implement something") {
+		t.Error("expected default cascade router to allow cascading")
+	}
+}
+
+// TestCascadeRouter_DefaultEnabledAllConstructors verifies all Manager
+// constructors create a cascade router by default (QW-2).
+func TestCascadeRouter_DefaultEnabledAllConstructors(t *testing.T) {
+	t.Parallel()
+
+	t.Run("NewManager", func(t *testing.T) {
+		m := NewManager()
+		if !m.HasCascadeRouter() {
+			t.Error("NewManager: expected cascade router by default")
+		}
+	})
+
+	t.Run("NewManagerWithBus", func(t *testing.T) {
+		m := NewManagerWithBus(nil)
+		if !m.HasCascadeRouter() {
+			t.Error("NewManagerWithBus: expected cascade router by default")
+		}
+	})
+
+	t.Run("NewManagerWithStore", func(t *testing.T) {
+		m := NewManagerWithStore(nil, nil)
+		if !m.HasCascadeRouter() {
+			t.Error("NewManagerWithStore: expected cascade router by default")
+		}
+	})
+}
+
+// TestCascadeRouter_ConfigExplicitDisable verifies that CASCADE_ENABLED=false
+// in config removes the default cascade router.
+func TestCascadeRouter_ConfigExplicitDisable(t *testing.T) {
+	t.Parallel()
+
+	m := NewManager()
+	if !m.HasCascadeRouter() {
+		t.Fatal("precondition: expected cascade router by default")
+	}
+
+	cfg := &model.RalphConfig{Values: map[string]string{"CASCADE_ENABLED": "false"}}
+	m.ApplyConfig(cfg)
+	if m.HasCascadeRouter() {
+		t.Error("expected cascade router disabled after CASCADE_ENABLED=false")
 	}
 }

@@ -403,6 +403,109 @@ func TestHandleLoopGates_EvaluatesGates(t *testing.T) {
 	}
 }
 
+// --- QW-6 (FINDING-226/238): Loop gates baseline auto-initialization ---
+
+func TestHandleLoopGates_AutoInitBaseline(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	repo := srv.findRepo("test-repo")
+	if repo == nil {
+		t.Fatal("test-repo not found after scan")
+	}
+
+	// Write observations but NO baseline file — the handler should auto-create one.
+	now := time.Now()
+	writeObservationsJSONL(t, repo.Path, []session.LoopObservation{
+		{Timestamp: now, LoopID: "loop-1", RepoName: "test-repo", TotalLatencyMs: 1000, TotalCostUSD: 0.03, Status: "idle", VerifyPassed: true, TaskType: "build", PlannerProvider: "claude"},
+		{Timestamp: now, LoopID: "loop-2", RepoName: "test-repo", TotalLatencyMs: 2000, TotalCostUSD: 0.05, Status: "idle", VerifyPassed: true, TaskType: "build", PlannerProvider: "claude"},
+		{Timestamp: now, LoopID: "loop-3", RepoName: "test-repo", TotalLatencyMs: 1500, TotalCostUSD: 0.04, Status: "idle", VerifyPassed: true, TaskType: "test", PlannerProvider: "claude"},
+		{Timestamp: now, LoopID: "loop-4", RepoName: "test-repo", TotalLatencyMs: 1200, TotalCostUSD: 0.04, Status: "idle", VerifyPassed: true, TaskType: "build", PlannerProvider: "claude"},
+		{Timestamp: now, LoopID: "loop-5", RepoName: "test-repo", TotalLatencyMs: 1100, TotalCostUSD: 0.03, Status: "idle", VerifyPassed: true, TaskType: "test", PlannerProvider: "claude"},
+	})
+
+	// Verify no baseline file exists before the call.
+	blPath := e2e.BaselinePath(repo.Path)
+	if _, err := os.Stat(blPath); err == nil {
+		t.Fatal("precondition failed: baseline file should not exist yet")
+	}
+
+	result, err := srv.handleLoopGates(context.Background(), makeRequest(map[string]any{
+		"repo":  "test-repo",
+		"hours": float64(24),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected non-error result, got: %s", getResultText(result))
+	}
+
+	// After the call, a baseline file should have been auto-created.
+	if _, err := os.Stat(blPath); err != nil {
+		t.Fatalf("expected baseline file to be auto-created at %s, got error: %v", blPath, err)
+	}
+
+	// Load the auto-created baseline and verify it has meaningful (non-zero) values.
+	bl, err := e2e.LoadBaseline(blPath)
+	if err != nil {
+		t.Fatalf("failed to load auto-created baseline: %v", err)
+	}
+	if bl.Aggregate == nil {
+		t.Fatal("expected auto-created baseline to have non-nil Aggregate")
+	}
+	if bl.Aggregate.CostP95 == 0 {
+		t.Error("expected auto-created baseline CostP95 > 0 (not zero-initialized)")
+	}
+	if bl.Aggregate.LatencyP95 == 0 {
+		t.Error("expected auto-created baseline LatencyP95 > 0 (not zero-initialized)")
+	}
+	if bl.Aggregate.SampleCount == 0 {
+		t.Error("expected auto-created baseline SampleCount > 0")
+	}
+}
+
+func TestHandleLoopGates_SaveErrorPropagated(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	repo := srv.findRepo("test-repo")
+	if repo == nil {
+		t.Fatal("test-repo not found after scan")
+	}
+
+	// Write observations.
+	now := time.Now()
+	writeObservationsJSONL(t, repo.Path, []session.LoopObservation{
+		{Timestamp: now, LoopID: "loop-1", RepoName: "test-repo", TotalLatencyMs: 1000, TotalCostUSD: 0.03, Status: "idle", VerifyPassed: true, TaskType: "build", PlannerProvider: "claude"},
+	})
+
+	// Make the baseline directory read-only so SaveBaseline fails.
+	ralphDir := filepath.Join(repo.Path, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// Create a directory at the baseline path to cause a write error.
+	blPath := e2e.BaselinePath(repo.Path)
+	if err := os.MkdirAll(blPath, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := srv.handleLoopGates(context.Background(), makeRequest(map[string]any{
+		"repo":  "test-repo",
+		"hours": float64(24),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// The result should be an error because SaveBaseline failed.
+	if !result.IsError {
+		t.Error("expected error result when baseline save fails, but got success")
+	}
+}
+
 // --- FINDING-90 / FINDING-91 tests ---
 
 func TestHandleLoopBaseline_RefreshNeverReturnsWindowHoursZero(t *testing.T) {

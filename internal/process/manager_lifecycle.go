@@ -395,6 +395,66 @@ func (m *Manager) StopAll(ctx context.Context) {
 	}
 }
 
+// StopAllGraceful sends SIGTERM to all managed processes, waits for them to
+// exit (up to the context deadline), then sends SIGKILL to any that remain.
+// It returns the number of processes that required SIGKILL.
+func (m *Manager) StopAllGraceful(ctx context.Context) int {
+	m.mu.Lock()
+
+	// Collect PIDs before clearing the map.
+	type pidEntry struct {
+		path string
+		pid  int
+	}
+	var entries []pidEntry
+	for path, mp := range m.procs {
+		mp.Stopping = true
+		entries = append(entries, pidEntry{path: path, pid: mp.PID})
+	}
+
+	// Send SIGTERM to all.
+	for _, e := range entries {
+		if err := sendSignal(e.pid, syscall.SIGTERM); err != nil {
+			slog.Warn("StopAllGraceful: SIGTERM failed", "pid", e.pid, "repo", e.path, "error", err)
+		}
+		removePIDFile(e.path)
+		delete(m.procs, e.path)
+	}
+	m.mu.Unlock()
+
+	if len(entries) == 0 {
+		return 0
+	}
+
+	// Wait for processes to die, polling every 100ms.
+	killed := 0
+	for {
+		var alive []pidEntry
+		for _, e := range entries {
+			if aliveFn(e.pid) {
+				alive = append(alive, e)
+			}
+		}
+		if len(alive) == 0 {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			// Timeout: SIGKILL remaining processes.
+			for _, e := range alive {
+				slog.Warn("StopAllGraceful: sending SIGKILL after timeout", "pid", e.pid, "repo", e.path)
+				_ = killPid(e.pid, syscall.SIGKILL)
+				killed++
+			}
+			return killed
+		default:
+			sleepFn(100 * time.Millisecond)
+		}
+		entries = alive
+	}
+	return killed
+}
+
 // Recover scans the given repo paths for stale PID files and re-adopts
 // processes that are still alive. Removes PID files for dead processes.
 func (m *Manager) Recover(repoPaths []string) int {

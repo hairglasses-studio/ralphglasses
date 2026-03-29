@@ -1,6 +1,8 @@
 package session
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestInitBaselineFromFirstObservation_Empty(t *testing.T) {
 	b := InitBaselineFromFirstObservation(nil)
@@ -106,5 +108,90 @@ func TestInitBaselineFromFirstObservation_IgnoresRest(t *testing.T) {
 	}
 	if b.AvgTotalCostUSD != 1.00 {
 		t.Errorf("AvgTotalCostUSD = %f, want 1.00 (first only)", b.AvgTotalCostUSD)
+	}
+}
+
+// TestGateDeltasMeaningfulAfterBaselineInit verifies that deltas computed
+// against a baseline initialized from first observation are non-zero and
+// meaningful (QW-6: FINDING-226/238).
+func TestGateDeltasMeaningfulAfterBaselineInit(t *testing.T) {
+	firstObs := []LoopObservation{
+		{
+			PlannerLatencyMs: 100,
+			WorkerLatencyMs:  200,
+			TotalLatencyMs:   300,
+			TotalCostUSD:     1.00,
+			FilesChanged:     5,
+			LinesAdded:       50,
+		},
+	}
+	baseline := InitBaselineFromFirstObservation(firstObs)
+	if baseline == nil {
+		t.Fatal("expected non-nil baseline from first observation")
+	}
+
+	// A second observation that differs from the first should produce
+	// meaningful (non-zero) deltas when compared.
+	secondObs := LoopObservation{
+		PlannerLatencyMs: 200,
+		WorkerLatencyMs:  400,
+		TotalLatencyMs:   600,
+		TotalCostUSD:     2.00,
+		FilesChanged:     10,
+		LinesAdded:       100,
+	}
+
+	// Compute deltas — these should be non-zero because baseline was
+	// initialized from real data, not zero-initialized.
+	costDelta := secondObs.TotalCostUSD - baseline.AvgTotalCostUSD
+	latencyDelta := secondObs.TotalLatencyMs - baseline.AvgTotalLatencyMs
+	filesDelta := secondObs.FilesChanged - baseline.AvgFilesChanged
+
+	if costDelta == 0 {
+		t.Error("expected non-zero cost delta after baseline init from first observation")
+	}
+	if costDelta != 1.00 {
+		t.Errorf("cost delta = %f, want 1.00", costDelta)
+	}
+	if latencyDelta == 0 {
+		t.Error("expected non-zero latency delta after baseline init from first observation")
+	}
+	if latencyDelta != 300 {
+		t.Errorf("latency delta = %d, want 300", latencyDelta)
+	}
+	if filesDelta == 0 {
+		t.Error("expected non-zero files delta after baseline init from first observation")
+	}
+	if filesDelta != 5 {
+		t.Errorf("files delta = %d, want 5", filesDelta)
+	}
+}
+
+// TestBaselineNeverZeroInitialized verifies that a baseline created from real
+// observations has non-zero values, preventing meaningless deltas (QW-6).
+func TestBaselineNeverZeroInitialized(t *testing.T) {
+	obs := []LoopObservation{
+		{TotalLatencyMs: 500, TotalCostUSD: 0.50, FilesChanged: 3},
+		{TotalLatencyMs: 700, TotalCostUSD: 0.70, FilesChanged: 5},
+	}
+
+	// InitBaselineFromFirstObservation should use the first obs, not zeros.
+	b1 := InitBaselineFromFirstObservation(obs)
+	if b1 == nil {
+		t.Fatal("expected non-nil baseline")
+	}
+	if b1.AvgTotalLatencyMs == 0 || b1.AvgTotalCostUSD == 0 || b1.AvgFilesChanged == 0 {
+		t.Errorf("baseline has zero values: latency=%d cost=%f files=%d — should use first observation",
+			b1.AvgTotalLatencyMs, b1.AvgTotalCostUSD, b1.AvgFilesChanged)
+	}
+
+	// BaselineFromObservations should average, not zero-initialize.
+	b2 := BaselineFromObservations(obs)
+	if b2 == nil {
+		t.Fatal("expected non-nil baseline")
+	}
+	if b2.AvgTotalLatencyMs == 0 || b2.AvgTotalCostUSD == 0 || b2.AvgFilesChanged == 0 {
+		t.Errorf("baseline has zero values: latency=%d cost=%f files=%d — should average observations",
+			b2.AvgTotalLatencyMs, b2.AvgTotalCostUSD, b2.AvgFilesChanged)
 	}
 }

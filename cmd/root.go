@@ -97,18 +97,30 @@ fleet management from any MCP-capable client.`,
 		m.EventBus = bus
 		m.NotifyEnabled = notifyFlag
 
-		// Graceful shutdown: stop all managed processes on SIGINT/SIGTERM.
+		p := tea.NewProgram(m, tea.WithAltScreen())
+
+		// Graceful shutdown: on SIGINT/SIGTERM, quit the TUI and stop processes.
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		go func() {
 			<-sigCh
+			slog.Info("received shutdown signal, stopping TUI")
 			cancel()
-			m.ProcMgr.StopAll(ctx)
-			os.Exit(0)
+			p.Kill()
 		}()
 
-		p := tea.NewProgram(m, tea.WithAltScreen())
 		_, err = p.Run()
+
+		// After TUI exits (whether from signal or user quit), gracefully
+		// stop all managed processes with a 5-second timeout.
+		slog.Info("shutting down managed processes")
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCancel()
+		killed := m.ProcMgr.StopAllGraceful(shutdownCtx)
+		if killed > 0 {
+			slog.Warn("force-killed processes that did not exit in time", "count", killed)
+		}
+		slog.Info("shutdown complete")
 		return err
 	},
 }

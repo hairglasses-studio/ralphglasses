@@ -31,6 +31,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.LoopListTable.Width = msg.Width
 		m.LoopListTable.Height = msg.Height
 		m.LogView.SetDimensions(msg.Width, msg.Height)
+		m.HelpView.SetDimensions(msg.Width, msg.Height-4)
+		m.RepoDetailView.SetDimensions(msg.Width, msg.Height-4)
+		m.LoopHealthView.SetDimensions(msg.Width, msg.Height-4)
 		m.StatusBar.Width = msg.Width
 		return m, nil
 
@@ -40,6 +43,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case tickMsg:
+		// Check for external shutdown (e.g. SIGINT/SIGTERM cancelled the context).
+		if m.Ctx != nil {
+			select {
+			case <-m.Ctx.Done():
+				return m, tea.Quit
+			default:
+			}
+		}
 		m.TickFrame++
 		var cmds []tea.Cmd
 		cmds = append(cmds, m.refreshAllRepos()...)
@@ -298,7 +309,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleLoopDetailKey(msg)
 	case ViewLoopControl:
 		return m.handleLoopControlKey(msg)
-	case ViewHelp, ViewDiff, ViewTimeline, ViewLoopHealth, ViewObservation:
+	case ViewHelp:
+		return m.handleHelpKey(msg)
+	case ViewLoopHealth:
+		return m.handleLoopHealthKey(msg)
+	case ViewDiff, ViewTimeline, ViewObservation:
 		// Read-only views — Esc handled globally, no view-specific keys
 		return m, nil
 	case ViewEventLog:
