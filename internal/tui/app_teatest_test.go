@@ -23,7 +23,7 @@ func init() {
 // newTestModel creates a Model with deterministic state for golden file tests.
 func newTestModel(t *testing.T) Model {
 	t.Helper()
-	m := NewModel(t.TempDir(), nil)
+	m := NewModel("", nil) // empty path skips scanRepos for deterministic golden files
 	m.Width = 120
 	m.Height = 40
 	m.LastRefresh = frozenTime.Add(-5 * time.Minute) // always "5m" ago

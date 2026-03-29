@@ -35,6 +35,7 @@ var viewBindings = map[ViewMode][]func(*KeyMap) *key.Binding{
 		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
 		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
 		func(k *KeyMap) *key.Binding { return &k.EventLogView },
+		func(k *KeyMap) *key.Binding { return &k.RDCycle },
 	},
 	ViewRepoDetail: {
 		func(k *KeyMap) *key.Binding { return &k.StartLoop },
@@ -55,6 +56,7 @@ var viewBindings = map[ViewMode][]func(*KeyMap) *key.Binding{
 		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
 		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
 		func(k *KeyMap) *key.Binding { return &k.ObservationView },
+		func(k *KeyMap) *key.Binding { return &k.RDCycle },
 	},
 	ViewSessions: {
 		func(k *KeyMap) *key.Binding { return &k.StopAction },
@@ -122,6 +124,7 @@ var viewBindings = map[ViewMode][]func(*KeyMap) *key.Binding{
 		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
 		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
 		func(k *KeyMap) *key.Binding { return &k.EventLogView },
+		func(k *KeyMap) *key.Binding { return &k.RDCycle },
 	},
 	ViewLogs: {
 		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
@@ -267,6 +270,17 @@ var viewBindings = map[ViewMode][]func(*KeyMap) *key.Binding{
 		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
 		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
 		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+	},
+	ViewRDCycle: {
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+		func(k *KeyMap) *key.Binding { return &k.RDCycle },
 	},
 }
 

@@ -168,6 +168,7 @@ func TestSetViewContextAllViews(t *testing.T) {
 		{"ViewLoopControl", ViewLoopControl},
 		{"ViewObservation", ViewObservation},
 		{"ViewEventLog", ViewEventLog},
+		{"ViewRDCycle", ViewRDCycle},
 	}
 	for _, tt := range views {
 		t.Run(tt.name, func(t *testing.T) {

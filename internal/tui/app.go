@@ -53,6 +53,8 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 		LoopDetailView:       views.NewLoopDetailView(),
 		LoopControlView:      views.NewLoopControlView(),
 		ObservationViewport:  views.NewObservationViewport(),
+		RDCycleView:          views.NewRDCycleView(),
+		LastRefresh:    components.NowFunc(),
 		ProcMgr:        process.NewManager(),
 		SessMgr:        sessMgr,
 		Keys:           DefaultKeyMap(),
@@ -212,6 +214,11 @@ func (m Model) View() string {
 		} else {
 			b.WriteString(styles.InfoStyle.Render("  No event log available"))
 		}
+	case ViewRDCycle:
+		cycles := m.buildRDCycleData()
+		m.RDCycleView.SetCycles(cycles)
+		m.RDCycleView.SetDimensions(m.Width, m.Height-4)
+		b.WriteString(m.RDCycleView.Render())
 	}
 
 	// Loop panel overlay
@@ -267,8 +274,31 @@ func (m Model) View() string {
 		m.StatusBar.Mode = "NORMAL"
 		m.StatusBar.Filter = m.Filter.Text
 		m.StatusBar.SpinnerFrame = m.Spinner.View()
+		m.StatusBar.LastRefresh = m.LastRefresh
 		b.WriteString(m.StatusBar.View())
 	}
 
 	return b.String()
+}
+
+// buildRDCycleData gathers R&D cycle data from all repos.
+func (m Model) buildRDCycleData() []*session.CycleRun {
+	var all []*session.CycleRun
+	for _, r := range m.Repos {
+		cycles, err := session.ListCycles(r.Path)
+		if err != nil {
+			continue
+		}
+		all = append(all, cycles...)
+	}
+	// Sort by UpdatedAt descending (ListCycles already returns sorted per-repo,
+	// but we need a global sort across repos).
+	if len(all) > 1 {
+		for i := 1; i < len(all); i++ {
+			for j := i; j > 0 && all[j].UpdatedAt.After(all[j-1].UpdatedAt); j-- {
+				all[j], all[j-1] = all[j-1], all[j]
+			}
+		}
+	}
+	return all
 }

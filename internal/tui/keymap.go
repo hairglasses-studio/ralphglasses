@@ -43,6 +43,7 @@ func (k KeyMap) HelpGroups() []views.HelpGroup {
 		{Name: "Fleet", Bindings: []key.Binding{k.Down, k.Enter, k.StopAction, k.DiffView, k.TimelineView}},
 		{Name: "Log Viewer", Bindings: []key.Binding{k.Down, k.GotoEnd, k.GotoStart, k.FollowToggle, k.PageUp, k.PageDown}},
 		{Name: "Config Editor", Bindings: []key.Binding{k.Down, k.Enter, k.WriteConfig}},
+		{Name: "R&D Cycle", Bindings: []key.Binding{k.RDCycle, k.Down, k.GotoEnd, k.GotoStart, k.PageUp, k.PageDown}},
 	}
 }
 
@@ -80,6 +81,7 @@ func init() {
 		{func(km *KeyMap) key.Binding { return km.LoopListStart }, handleLoopListStart},
 		{func(km *KeyMap) key.Binding { return km.LoopListStop }, handleLoopListStop},
 		{func(km *KeyMap) key.Binding { return km.LoopListPause }, handleLoopListPause},
+		{func(km *KeyMap) key.Binding { return km.RDCycle }, handleRDCycleView},
 	}
 }
 
@@ -193,5 +195,10 @@ func handleTab3(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func handleTab4(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	m.switchTab(3, ViewFleet, "Fleet")
+	return *m, nil
+}
+
+func handleRDCycleView(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.pushView(ViewRDCycle, "R&D Cycle")
 	return *m, nil
 }
