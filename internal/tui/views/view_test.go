@@ -15,6 +15,11 @@ var (
 	_ View = (*RepoDetailView)(nil)
 	_ View = (*HelpView)(nil)
 	_ View = (*LoopHealthView)(nil)
+	_ View = (*SessionDetailView)(nil)
+	_ View = (*TeamDetailView)(nil)
+	_ View = (*FleetView)(nil)
+	_ View = (*DiffViewport)(nil)
+	_ View = (*TimelineViewport)(nil)
 )
 
 func TestViewportView_SetContent(t *testing.T) {
@@ -230,4 +235,135 @@ func TestViewportView_ScrollDown_Sequence(t *testing.T) {
 	if !v.AtBottom() {
 		t.Error("expected to be at bottom after scrolling past content")
 	}
+}
+
+func TestSessionDetailView_Render(t *testing.T) {
+	v := NewSessionDetailView()
+	v.SetDimensions(80, 30)
+	s := &session.Session{
+		ID:       "test-session-123",
+		Provider: "claude",
+		RepoName: "test-repo",
+		Status:   session.StatusRunning,
+	}
+	v.SetData(s)
+	out := v.Render()
+	if !strings.Contains(out, "test-session-123") {
+		t.Error("expected session ID in render output")
+	}
+}
+
+func TestSessionDetailView_NilSession(t *testing.T) {
+	v := NewSessionDetailView()
+	v.SetDimensions(80, 30)
+	// No data set — should not panic
+	out := v.Render()
+	_ = out
+}
+
+func TestSessionDetailView_SetDimensions_Regenerates(t *testing.T) {
+	v := NewSessionDetailView()
+	s := &session.Session{
+		ID:       "test-session",
+		Provider: "claude",
+		RepoName: "test-repo",
+		Status:   session.StatusRunning,
+	}
+	v.SetData(s)
+	v.SetDimensions(120, 40)
+	out := v.Render()
+	if out == "" {
+		t.Error("expected non-empty render after SetDimensions")
+	}
+}
+
+func TestTeamDetailView_Render(t *testing.T) {
+	v := NewTeamDetailView()
+	v.SetDimensions(80, 30)
+	team := &session.TeamStatus{
+		Name:   "test-team",
+		Status: session.StatusRunning,
+		Tasks: []session.TeamTask{
+			{Description: "task 1", Status: "completed"},
+		},
+	}
+	v.SetData(team, nil)
+	out := v.Render()
+	if !strings.Contains(out, "test-team") {
+		t.Error("expected team name in render output")
+	}
+}
+
+func TestTeamDetailView_NilTeam(t *testing.T) {
+	v := NewTeamDetailView()
+	v.SetDimensions(80, 30)
+	// No data set — should not panic
+	out := v.Render()
+	_ = out
+}
+
+func TestFleetView_Render(t *testing.T) {
+	v := NewFleetView()
+	v.SetDimensions(120, 40)
+	data := FleetData{
+		TotalRepos:    3,
+		RunningLoops:  1,
+		TotalSessions: 2,
+	}
+	v.SetData(data)
+	out := v.Render()
+	if !strings.Contains(out, "Fleet Dashboard") {
+		t.Error("expected fleet dashboard title in render output")
+	}
+}
+
+func TestFleetView_Empty(t *testing.T) {
+	v := NewFleetView()
+	v.SetDimensions(80, 30)
+	v.SetData(FleetData{})
+	out := v.Render()
+	if !strings.Contains(out, "Fleet") {
+		t.Error("expected fleet title in render output")
+	}
+}
+
+func TestDiffViewport_Render(t *testing.T) {
+	v := NewDiffViewport()
+	v.SetDimensions(80, 30)
+	// No data set — should not panic
+	out := v.Render()
+	_ = out
+}
+
+func TestDiffViewport_SetDimensions(t *testing.T) {
+	v := NewDiffViewport()
+	v.SetDimensions(120, 40)
+	// Should not panic with no data
+	out := v.Render()
+	_ = out
+}
+
+func TestTimelineViewport_Render(t *testing.T) {
+	v := NewTimelineViewport()
+	v.SetDimensions(80, 30)
+	entries := []TimelineEntry{
+		{
+			ID:       "sess-1",
+			Provider: "claude",
+			Status:   "running",
+		},
+	}
+	v.SetData(entries, "test-repo")
+	out := v.Render()
+	if !strings.Contains(out, "test-repo") {
+		t.Error("expected repo name in render output")
+	}
+}
+
+func TestTimelineViewport_Empty(t *testing.T) {
+	v := NewTimelineViewport()
+	v.SetDimensions(80, 30)
+	// No data set — should not panic
+	out := v.Render()
+	_ = out
 }

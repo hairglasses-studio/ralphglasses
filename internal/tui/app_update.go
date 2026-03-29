@@ -34,6 +34,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.HelpView.SetDimensions(msg.Width, msg.Height-4)
 		m.RepoDetailView.SetDimensions(msg.Width, msg.Height-4)
 		m.LoopHealthView.SetDimensions(msg.Width, msg.Height-4)
+		m.SessionDetailView.SetDimensions(msg.Width, msg.Height-4)
+		m.TeamDetailView.SetDimensions(msg.Width, msg.Height-4)
+		m.FleetView.SetDimensions(msg.Width, msg.Height-4)
+		m.DiffViewport.SetDimensions(msg.Width, msg.Height-4)
+		m.TimelineViewport.SetDimensions(msg.Width, msg.Height-4)
 		m.StatusBar.Width = msg.Width
 		return m, nil
 
@@ -313,8 +318,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleHelpKey(msg)
 	case ViewLoopHealth:
 		return m.handleLoopHealthKey(msg)
-	case ViewDiff, ViewTimeline, ViewObservation:
-		// Read-only views — Esc handled globally, no view-specific keys
+	case ViewDiff:
+		return m.handleDiffKey(msg)
+	case ViewTimeline:
+		return m.handleTimelineKey(msg)
+	case ViewObservation:
+		// Read-only view — Esc handled globally, no view-specific keys
 		return m, nil
 	case ViewEventLog:
 		return m.handleEventLogKey(msg)

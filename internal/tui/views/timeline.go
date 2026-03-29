@@ -152,3 +152,47 @@ func statusTimelineStyle(status string) StyleFunc {
 type StyleFunc = interface{ Render(strs ...string) string }
 
 func wrapStyle(s StyleFunc) StyleFunc { return s }
+
+// TimelineViewport wraps RenderTimeline in a scrollable viewport.
+type TimelineViewport struct {
+	Viewport *ViewportView
+	entries  []TimelineEntry
+	repoName string
+	width    int
+	height   int
+}
+
+// NewTimelineViewport creates a new TimelineViewport.
+func NewTimelineViewport() *TimelineViewport {
+	return &TimelineViewport{
+		Viewport: NewViewportView(),
+	}
+}
+
+// SetData updates the timeline entries and regenerates content.
+func (v *TimelineViewport) SetData(entries []TimelineEntry, repoName string) {
+	v.entries = entries
+	v.repoName = repoName
+	v.regenerate()
+}
+
+// SetDimensions updates the available width and height.
+func (v *TimelineViewport) SetDimensions(width, height int) {
+	v.width = width
+	v.height = height
+	v.Viewport.SetDimensions(width, height)
+	v.regenerate()
+}
+
+// Render returns the scrollable viewport content.
+func (v *TimelineViewport) Render() string {
+	return v.Viewport.Render()
+}
+
+func (v *TimelineViewport) regenerate() {
+	if v.entries == nil && v.repoName == "" {
+		return
+	}
+	content := RenderTimeline(v.entries, v.repoName, v.width, v.height)
+	v.Viewport.SetContent(content)
+}
