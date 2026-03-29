@@ -54,11 +54,19 @@
 .codex/sessions/
 .codex/cache/
 
-# Claude local settings
+# Claude runtime state
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Ralph runtime scratchpads (append-only R&D cycle logs)
+.ralph/*_scratchpad.md
+.ralph/meta_improvements.md
+.ralph/blackboard.jsonl
+.ralph/worktrees/
 
 # Test artifacts
 cover.out
+coverage.out
 
 # Repo-managed toolchain cache
 .tools/
