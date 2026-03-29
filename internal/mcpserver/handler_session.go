@@ -144,9 +144,6 @@ func (s *Server) handleSessionStatus(_ context.Context, req mcp.CallToolRequest)
 
 	sess, ok := s.SessMgr.Get(id)
 	if !ok {
-		if len(s.SessMgr.List("")) == 0 {
-			return codedError(ErrNoActiveSessions, "no active sessions — use ralphglasses_session_launch to start one"), nil
-		}
 		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
 
@@ -192,9 +189,6 @@ func (s *Server) handleSessionOutput(_ context.Context, req mcp.CallToolRequest)
 
 	sess, ok := s.SessMgr.Get(id)
 	if !ok {
-		if len(s.SessMgr.List("")) == 0 {
-			return codedError(ErrNoActiveSessions, "no active sessions — use ralphglasses_session_launch to start one"), nil
-		}
 		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
 
@@ -222,9 +216,6 @@ func (s *Server) handleSessionBudget(ctx context.Context, req mcp.CallToolReques
 
 	sess, ok := s.SessMgr.Get(id)
 	if !ok {
-		if len(s.SessMgr.List("")) == 0 {
-			return codedError(ErrNoActiveSessions, "no active sessions — use ralphglasses_session_launch to start one"), nil
-		}
 		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
 
@@ -267,9 +258,6 @@ func (s *Server) handleSessionCompare(_ context.Context, req mcp.CallToolRequest
 	s1, ok1 := s.SessMgr.Get(id1)
 	s2, ok2 := s.SessMgr.Get(id2)
 	if !ok1 || !ok2 {
-		if len(s.SessMgr.List("")) == 0 {
-			return codedError(ErrNoActiveSessions, "no active sessions — use ralphglasses_session_launch to start one"), nil
-		}
 		if !ok1 {
 			return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id1)), nil
 		}
@@ -325,9 +313,6 @@ func (s *Server) handleSessionTail(_ context.Context, req mcp.CallToolRequest) (
 
 	sess, ok := s.SessMgr.Get(id)
 	if !ok {
-		if len(s.SessMgr.List("")) == 0 {
-			return codedError(ErrNoActiveSessions, "no active sessions — use ralphglasses_session_launch to start one"), nil
-		}
 		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
 
@@ -392,9 +377,6 @@ func (s *Server) handleSessionDiff(_ context.Context, req mcp.CallToolRequest) (
 
 	sess, ok := s.SessMgr.Get(id)
 	if !ok {
-		if len(s.SessMgr.List("")) == 0 {
-			return codedError(ErrNoActiveSessions, "no active sessions — use ralphglasses_session_launch to start one"), nil
-		}
 		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
 
