@@ -521,6 +521,56 @@ func TestResolveSnapshotRepo_FallbackToFirstThreeRepos(t *testing.T) {
 	}
 }
 
+// TestResolveSnapshotRepo_PrefersRalphglasses verifies QW-7: when no CWD match
+// or explicit param is given, the resolver prefers a repo named "ralphglasses"
+// over falling back to the first repo (which could be "claudekit").
+func TestResolveSnapshotRepo_PrefersRalphglasses(t *testing.T) {
+	t.Parallel()
+
+	repos := []*model.Repo{
+		{Name: "claudekit", Path: "/repos/claudekit"},
+		{Name: "ralphglasses", Path: "/repos/ralphglasses"},
+		{Name: "other", Path: "/repos/other"},
+	}
+
+	findRepo := func(_ string) *model.Repo { return nil }
+
+	got := resolveSnapshotRepo(repos, "", findRepo)
+	if got == nil {
+		t.Fatal("expected non-nil repo")
+	}
+	if got.Name != "ralphglasses" {
+		t.Errorf("expected ralphglasses, got %s (QW-7: snapshots should not save to claudekit)", got.Name)
+	}
+}
+
+// TestResolveSnapshotRepo_PrefersRalphDir verifies QW-7: when no "ralphglasses"
+// repo exists, prefer a repo with a .ralph/ directory.
+func TestResolveSnapshotRepo_PrefersRalphDir(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	repoA := filepath.Join(dir, "repoA")
+	repoB := filepath.Join(dir, "repoB")
+	_ = os.MkdirAll(repoA, 0o755)
+	_ = os.MkdirAll(filepath.Join(repoB, ".ralph"), 0o755)
+
+	repos := []*model.Repo{
+		{Name: "repoA", Path: repoA},
+		{Name: "repoB", Path: repoB},
+	}
+
+	findRepo := func(_ string) *model.Repo { return nil }
+
+	got := resolveSnapshotRepo(repos, "", findRepo)
+	if got == nil {
+		t.Fatal("expected non-nil repo")
+	}
+	if got.Name != "repoB" {
+		t.Errorf("expected repoB (has .ralph/), got %s", got.Name)
+	}
+}
+
 // TestResolveSnapshotRepo_NestedPathBoundary verifies that path-separator
 // boundary checking prevents /repos/foo from matching CWD /repos/foobar.
 // This is the fix for FINDING-268.

@@ -57,6 +57,10 @@ type Manager struct {
 	totalPrunedThisSession int     // counter for pruned runs this session
 }
 
+// DefaultEstimatedSessionCost is the conservative per-launch cost estimate
+// used by the CanSpend gate when no specific estimate is available.
+const DefaultEstimatedSessionCost = 0.50
+
 // NewManager creates a new session manager.
 func NewManager() *Manager {
 	stateDir := expandHome(DefaultStateDir)
@@ -69,6 +73,7 @@ func NewManager() *Manager {
 		noopDetector:   NewNoOpDetector(2),
 		budgetEnforcer: NewBudgetEnforcer(),
 		cascade:        NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
+		FleetPool:      pool.NewState(0), // 0 = unlimited by default
 	}
 }
 
@@ -85,6 +90,7 @@ func NewManagerWithBus(bus *events.Bus) *Manager {
 		noopDetector:   NewNoOpDetector(2),
 		budgetEnforcer: NewBudgetEnforcer(),
 		cascade:        NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
+		FleetPool:      pool.NewState(0),
 	}
 }
 
@@ -103,6 +109,7 @@ func NewManagerWithStore(store Store, bus *events.Bus) *Manager {
 		stateDir:     stateDir,
 		noopDetector: NewNoOpDetector(2),
 		cascade:      NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
+		FleetPool:    pool.NewState(0),
 	}
 }
 
@@ -186,6 +193,16 @@ func (m *Manager) ApplyConfig(cfg *model.RalphConfig) {
 			m.JournalMaxEntries = v
 		}
 	}
+	// Fleet budget cap from config (0 = unlimited).
+	if raw := cfg.Get("FLEET_BUDGET_CAP_USD", ""); raw != "" {
+		if f, err := strconv.ParseFloat(raw, 64); err == nil && f >= 0 {
+			if m.FleetPool != nil {
+				m.FleetPool.SetBudgetCap(f)
+				slog.Info("fleet budget cap configured", "cap_usd", f)
+			}
+		}
+	}
+
 	// QW-2: Cascade routing is enabled by default in constructors.
 	// Allow explicit config to disable it, or re-configure with custom values.
 	cascadeVal := strings.ToLower(strings.TrimSpace(cfg.Get("CASCADE_ENABLED", "true")))
@@ -456,6 +473,16 @@ func (m *Manager) runWorkflowStep(ctx context.Context, run *WorkflowRun, repoPat
 		result.EndedAt = &now
 	})
 	return workflowStepOutcome{Name: step.Name, Status: "completed"}
+}
+
+// RefreshFleetState updates the fleet pool state from current session data.
+// Intended to be called periodically from the TUI tick or a manager goroutine.
+func (m *Manager) RefreshFleetState() {
+	if m.FleetPool == nil {
+		return
+	}
+	snapshots := m.SnapshotSessions()
+	m.FleetPool.Update(snapshots)
 }
 
 // SnapshotSessions creates read-only snapshots of all sessions for fleet aggregation.

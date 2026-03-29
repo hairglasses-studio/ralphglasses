@@ -51,6 +51,19 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 		opts.Model = ProviderDefaults(opts.Provider)
 	}
 
+	// Fleet budget gate: reject launch if spending would exceed fleet cap.
+	if m.FleetPool != nil {
+		estimatedCost := opts.MaxBudgetUSD
+		if estimatedCost <= 0 {
+			estimatedCost = DefaultEstimatedSessionCost
+		}
+		if !m.FleetPool.CanSpend(estimatedCost) {
+			sum := m.FleetPool.GetSummary()
+			return nil, fmt.Errorf("fleet budget cap exceeded: spent $%.2f of $%.2f cap",
+				sum.TotalSpentUSD, sum.BudgetCapUSD)
+		}
+	}
+
 	// Level 2+ auto-optimization: consult FeedbackAnalyzer for provider/budget
 	m.mu.RLock()
 	optimizer := m.optimizer

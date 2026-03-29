@@ -53,7 +53,21 @@ func resolveSnapshotRepo(allRepos []*model.Repo, repoName string, findRepo func(
 		}
 	}
 
-	// 3. Fallback to first repo
+	// 3. Prefer a repo whose name matches the current binary (ralphglasses)
+	// or one that already has a .ralph/ directory, to avoid saving to unrelated repos.
+	for _, r := range allRepos {
+		name := filepath.Base(r.Path)
+		if name == "ralphglasses" {
+			return r
+		}
+	}
+	for _, r := range allRepos {
+		if info, err := os.Stat(filepath.Join(r.Path, ".ralph")); err == nil && info.IsDir() {
+			return r
+		}
+	}
+
+	// 4. Fallback to first repo
 	return allRepos[0]
 }
 

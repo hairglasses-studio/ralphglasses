@@ -1,5 +1,7 @@
 package session
 
+import "fmt"
+
 // LoopBaseline captures the expected performance characteristics of a loop,
 // derived from historical observations. Used as a regression gate — if a new
 // iteration deviates significantly from the baseline, the loop can pause for
@@ -12,6 +14,95 @@ type LoopBaseline struct {
 	AvgFilesChanged     int     `json:"avg_files_changed"`
 	AvgLinesAdded       int     `json:"avg_lines_added"`
 	SampleCount         int     `json:"sample_count"`
+}
+
+// IsZero reports whether the baseline was zero-initialized (no real data).
+// A valid baseline always has SampleCount > 0.
+func (b *LoopBaseline) IsZero() bool {
+	return b == nil || b.SampleCount == 0
+}
+
+// BaselineStatus describes the state of a baseline check.
+type BaselineStatus string
+
+const (
+	BaselineReady      BaselineStatus = "ready"       // baseline exists with real data
+	BaselineNotYet     BaselineStatus = "no_baseline"  // no baseline established yet
+	BaselineZeroInit   BaselineStatus = "zero_init"    // baseline exists but has zero sample count
+)
+
+// BaselineCheck holds the result of checking whether a baseline is usable.
+type BaselineCheck struct {
+	Status   BaselineStatus `json:"status"`
+	Message  string         `json:"message"`
+	Baseline *LoopBaseline  `json:"baseline,omitempty"`
+}
+
+// CheckBaseline validates that a baseline is usable for gate comparisons.
+// Returns a clear status when baseline is nil, zero-initialized, or ready.
+func CheckBaseline(baseline *LoopBaseline) BaselineCheck {
+	if baseline == nil {
+		return BaselineCheck{
+			Status:  BaselineNotYet,
+			Message: "no baseline established — run at least one observation before gate checks produce meaningful deltas",
+		}
+	}
+	if baseline.SampleCount == 0 {
+		return BaselineCheck{
+			Status:  BaselineZeroInit,
+			Message: "baseline has zero sample count — likely zero-initialized, not populated from real observations",
+		}
+	}
+	return BaselineCheck{
+		Status:   BaselineReady,
+		Message:  fmt.Sprintf("baseline ready with %d samples", baseline.SampleCount),
+		Baseline: baseline,
+	}
+}
+
+// BaselineDelta holds the difference between an observation and a baseline.
+type BaselineDelta struct {
+	CostDelta    float64 `json:"cost_delta_usd"`
+	LatencyDelta int64   `json:"latency_delta_ms"`
+	FilesDelta   int     `json:"files_delta"`
+	LinesDelta   int     `json:"lines_delta"`
+	Valid        bool    `json:"valid"` // false when baseline was nil/zero
+}
+
+// ComputeDelta computes the delta between an observation and a baseline.
+// Returns a delta with Valid=false if the baseline is nil or zero-initialized,
+// preventing meaningless zero-deltas (QW-6).
+func ComputeDelta(obs LoopObservation, baseline *LoopBaseline) BaselineDelta {
+	if baseline.IsZero() {
+		return BaselineDelta{Valid: false}
+	}
+	return BaselineDelta{
+		CostDelta:    obs.TotalCostUSD - baseline.AvgTotalCostUSD,
+		LatencyDelta: obs.TotalLatencyMs - baseline.AvgTotalLatencyMs,
+		FilesDelta:   obs.FilesChanged - baseline.AvgFilesChanged,
+		LinesDelta:   obs.LinesAdded - baseline.AvgLinesAdded,
+		Valid:        true,
+	}
+}
+
+// EnsureBaseline returns an existing baseline if usable, or initializes one
+// from the provided observations. Returns the baseline and any error from
+// the save callback. The save function is called only when a new baseline is
+// created; errors are propagated (not swallowed).
+func EnsureBaseline(existing *LoopBaseline, observations []LoopObservation, save func(*LoopBaseline) error) (*LoopBaseline, error) {
+	if !existing.IsZero() {
+		return existing, nil
+	}
+	baseline := InitBaselineFromFirstObservation(observations)
+	if baseline == nil {
+		return nil, nil // no observations available
+	}
+	if save != nil {
+		if err := save(baseline); err != nil {
+			return nil, fmt.Errorf("save initial baseline: %w", err)
+		}
+	}
+	return baseline, nil
 }
 
 // InitBaselineFromFirstObservation creates a baseline from the first loop

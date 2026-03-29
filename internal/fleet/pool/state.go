@@ -72,6 +72,14 @@ func NewState(budgetCapUSD float64) *State {
 	}
 }
 
+// SetBudgetCap updates the fleet-wide hard budget cap.
+// A value of 0 means unlimited.
+func (s *State) SetBudgetCap(capUSD float64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.BudgetCapUSD = capUSD
+}
+
 // Update refreshes fleet state from session snapshot data.
 func (s *State) Update(sessions []SessionSnapshot) {
 	s.mu.Lock()

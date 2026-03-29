@@ -547,6 +547,80 @@ func TestScore_NoCoherenceBonus(t *testing.T) {
 	}
 }
 
+// TestScore_TrivialPromptInflation verifies QW-4: trivial prompts like "hello"
+// score in the 2-3 range (legacy 1-10 scale), not 8-9.
+func TestScore_TrivialPromptInflation(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		prompt   string
+		maxLegacy int
+		maxOverall int
+	}{
+		{"hello", "hello", 3, 35},
+		{"hi", "hi", 3, 35},
+		{"fix this", "fix this", 4, 45},
+		{"do it", "do it", 3, 40},
+	}
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ar := Analyze(tc.prompt)
+			if ar.Score > tc.maxLegacy {
+				t.Errorf("legacy score %d for %q, want <= %d (overall=%d)",
+					ar.Score, tc.prompt, tc.maxLegacy, ar.ScoreReport.Overall)
+			}
+			if ar.ScoreReport.Overall > tc.maxOverall {
+				t.Errorf("overall score %d for %q, want <= %d",
+					ar.ScoreReport.Overall, tc.prompt, tc.maxOverall)
+			}
+		})
+	}
+}
+
+// TestScore_DistributionSpan verifies QW-4 acceptance: scores span the 3-9 range
+// across diverse inputs.
+func TestScore_DistributionSpan(t *testing.T) {
+	t.Parallel()
+	prompts := map[string]string{
+		"trivial":    "hello",
+		"short":      "fix this bug",
+		"medium":     "Write a Go function that parses JSON and returns a User struct with error handling",
+		"good":       "<role>You are an expert Go developer.</role>\n<instructions>Review this function for error handling issues.\nFocus on nil pointer dereferences.</instructions>\n<context>Payment API service.</context>",
+		"excellent":  "<role>You are an expert Go developer with 10 years of experience.</role>\n<context>Building a user management API in Go using chi router.</context>\n<instructions>Review for error handling. Return exactly 5 issues sorted by severity.</instructions>\n<examples>\n<example index=\"1\">Missing nil check.</example>\n<example index=\"2\">Ignored error.</example>\n<example index=\"3\">Defer before check.</example>\n</examples>\n<output_format>Numbered list with code, risk, fix.</output_format>",
+	}
+
+	scores := make(map[string]int)
+	for name, prompt := range prompts {
+		ar := Analyze(prompt)
+		scores[name] = ar.Score
+	}
+
+	// Trivial should score low (1-3), excellent should score high (7+)
+	if scores["trivial"] > 3 {
+		t.Errorf("trivial scored %d, want <= 3", scores["trivial"])
+	}
+	if scores["excellent"] < 7 {
+		t.Errorf("excellent scored %d, want >= 7", scores["excellent"])
+	}
+	// The range should span at least 5 points
+	minScore, maxScore := 11, 0
+	for _, s := range scores {
+		if s < minScore {
+			minScore = s
+		}
+		if s > maxScore {
+			maxScore = s
+		}
+	}
+	spread := maxScore - minScore
+	if spread < 5 {
+		t.Errorf("score spread = %d (min=%d, max=%d), want >= 5; scores: %v",
+			spread, minScore, maxScore, scores)
+	}
+}
+
 // findDimension returns the DimensionScore with the given name, or a zero value.
 func findDimension(report *ScoreReport, name string) DimensionScore {
 	if report == nil {

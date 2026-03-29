@@ -154,6 +154,12 @@ func scoreClarity(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult
 
 	wc := ar.WordCount
 
+	// Trivial prompt penalty: 1-3 words with no structure is essentially noise (QW-4)
+	if wc <= 3 {
+		score -= 20
+		suggestions = append(suggestions, "Prompt is trivially short — provide a full sentence with context and constraints")
+	}
+
 	// Word count contribution
 	switch {
 	case wc >= 50:
@@ -231,6 +237,11 @@ func scoreClarity(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult
 func scoreSpecificity(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult) DimensionScore {
 	score := 25 // FINDING-240: lowered from 50 to prevent score inflation
 	var suggestions []string
+
+	// Trivial prompt penalty (QW-4): ultra-short prompts are maximally vague
+	if ar.WordCount <= 3 {
+		score -= 15
+	}
 
 	// Numeric constraints
 	numericMatches := numericConstraintPattern.FindAllString(text, -1)
@@ -482,9 +493,14 @@ func scoreRoleDefinition(text string, _ TaskType, _ []LintResult, _ *AnalyzeResu
 	}
 }
 
-func scoreTaskFocus(text string, _ TaskType, lints []LintResult, _ *AnalyzeResult, _ ProviderName) DimensionScore {
+func scoreTaskFocus(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult, _ ProviderName) DimensionScore {
 	score := 30 // FINDING-240: must earn score from actual task signals
 	var suggestions []string
+
+	// Trivial prompt penalty (QW-4): 1-3 words cannot define a focused task
+	if ar.WordCount <= 3 {
+		score -= 15
+	}
 
 	// Decomposition needed = too many tasks
 	if hasLintCategory(lints, "decomposition-needed") {
