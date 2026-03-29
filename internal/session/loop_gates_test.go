@@ -301,7 +301,7 @@ func TestComputeDelta_MeaningfulAfterInit(t *testing.T) {
 func TestEnsureBaseline_ReturnsExisting(t *testing.T) {
 	existing := &LoopBaseline{SampleCount: 5, AvgTotalCostUSD: 2.0}
 	saveCalled := false
-	bl, err := EnsureBaseline(existing, nil, func(_ *LoopBaseline) error {
+	bl, isNew, err := EnsureBaseline(existing, nil, func(_ *LoopBaseline) error {
 		saveCalled = true
 		return nil
 	})
@@ -310,6 +310,9 @@ func TestEnsureBaseline_ReturnsExisting(t *testing.T) {
 	}
 	if bl != existing {
 		t.Error("should return existing baseline")
+	}
+	if isNew {
+		t.Error("isNew should be false when returning an existing baseline")
 	}
 	if saveCalled {
 		t.Error("save should not be called when existing baseline is valid")
@@ -324,7 +327,7 @@ func TestEnsureBaseline_InitializesFromObservations(t *testing.T) {
 		LinesAdded:     30,
 	}}
 	var saved *LoopBaseline
-	bl, err := EnsureBaseline(nil, obs, func(b *LoopBaseline) error {
+	bl, isNew, err := EnsureBaseline(nil, obs, func(b *LoopBaseline) error {
 		saved = b
 		return nil
 	})
@@ -337,6 +340,9 @@ func TestEnsureBaseline_InitializesFromObservations(t *testing.T) {
 	if bl.SampleCount != 1 {
 		t.Errorf("SampleCount = %d, want 1", bl.SampleCount)
 	}
+	if !isNew {
+		t.Error("isNew should be true when baseline was just initialized from observations")
+	}
 	if saved == nil {
 		t.Error("save callback should have been called")
 	}
@@ -345,7 +351,7 @@ func TestEnsureBaseline_InitializesFromObservations(t *testing.T) {
 func TestEnsureBaseline_PropagatesSaveError(t *testing.T) {
 	obs := []LoopObservation{{TotalCostUSD: 1.0}}
 	saveErr := errors.New("disk full")
-	_, err := EnsureBaseline(nil, obs, func(_ *LoopBaseline) error {
+	_, _, err := EnsureBaseline(nil, obs, func(_ *LoopBaseline) error {
 		return saveErr
 	})
 	if err == nil {
@@ -357,7 +363,7 @@ func TestEnsureBaseline_PropagatesSaveError(t *testing.T) {
 }
 
 func TestEnsureBaseline_NoObservations(t *testing.T) {
-	bl, err := EnsureBaseline(nil, nil, func(_ *LoopBaseline) error {
+	bl, isNew, err := EnsureBaseline(nil, nil, func(_ *LoopBaseline) error {
 		t.Error("save should not be called with no observations")
 		return nil
 	})
@@ -366,5 +372,136 @@ func TestEnsureBaseline_NoObservations(t *testing.T) {
 	}
 	if bl != nil {
 		t.Error("expected nil baseline with no observations")
+	}
+	if isNew {
+		t.Error("isNew should be false when no observations were available")
+	}
+}
+
+// TestGateNotFiredOnCycle1 verifies that EnsureBaseline returns isNew=true on
+// the first call with no existing baseline, and that computing ComputeDelta
+// against the same observations yields zero self-delta (trivially-passing gate
+// prevention — the caller should skip evaluation when isNew=true).
+func TestGateNotFiredOnCycle1(t *testing.T) {
+	obs := []LoopObservation{{
+		TotalLatencyMs: 400,
+		TotalCostUSD:   1.50,
+		FilesChanged:   4,
+		LinesAdded:     40,
+	}}
+
+	bl, isNew, err := EnsureBaseline(nil, obs, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !isNew {
+		t.Error("isNew should be true on cycle 1 when no baseline existed")
+	}
+	if bl == nil {
+		t.Fatal("expected non-nil baseline from first observation")
+	}
+
+	// Self-delta: comparing the same observation against the baseline built
+	// from it must yield zero on all dimensions.
+	delta := ComputeDelta(obs[0], bl)
+	if !delta.Valid {
+		t.Fatal("delta should be valid after baseline init from real observation")
+	}
+	if delta.CostDelta != 0 {
+		t.Errorf("self CostDelta = %f, want 0 (cycle 1 trivial pass)", delta.CostDelta)
+	}
+	if delta.LatencyDelta != 0 {
+		t.Errorf("self LatencyDelta = %d, want 0 (cycle 1 trivial pass)", delta.LatencyDelta)
+	}
+	if delta.FilesDelta != 0 {
+		t.Errorf("self FilesDelta = %d, want 0 (cycle 1 trivial pass)", delta.FilesDelta)
+	}
+}
+
+// TestGateFiredOnCycle2_ScoreRegresses verifies that EnsureBaseline returns
+// isNew=false when an existing baseline is provided (cycle 2+), and that
+// ComputeDelta returns non-zero positive deltas when the second observation is
+// worse than the baseline.
+func TestGateFiredOnCycle2_ScoreRegresses(t *testing.T) {
+	existing := &LoopBaseline{
+		SampleCount:         1,
+		AvgTotalLatencyMs:   300,
+		AvgTotalCostUSD:     1.00,
+		AvgFilesChanged:     5,
+		AvgLinesAdded:       50,
+	}
+
+	bl, isNew, err := EnsureBaseline(existing, nil, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if isNew {
+		t.Error("isNew should be false on cycle 2+ when an existing baseline was reused")
+	}
+	if bl != existing {
+		t.Error("should return the existing baseline unchanged")
+	}
+
+	// Second observation is worse on every dimension.
+	secondObs := LoopObservation{
+		TotalLatencyMs: 600,
+		TotalCostUSD:   2.00,
+		FilesChanged:   10,
+		LinesAdded:     100,
+	}
+	delta := ComputeDelta(secondObs, bl)
+	if !delta.Valid {
+		t.Fatal("delta should be valid against a real existing baseline")
+	}
+	if delta.CostDelta <= 0 {
+		t.Errorf("CostDelta = %f, want > 0 (regression)", delta.CostDelta)
+	}
+	if delta.LatencyDelta <= 0 {
+		t.Errorf("LatencyDelta = %d, want > 0 (regression)", delta.LatencyDelta)
+	}
+	if delta.FilesDelta <= 0 {
+		t.Errorf("FilesDelta = %d, want > 0 (regression)", delta.FilesDelta)
+	}
+}
+
+// TestGateNotFiredOnCycle2_ScoreStable verifies that EnsureBaseline returns
+// isNew=false on cycle 2+ and that ComputeDelta returns zero deltas when the
+// second observation exactly matches the baseline.
+func TestGateNotFiredOnCycle2_ScoreStable(t *testing.T) {
+	existing := &LoopBaseline{
+		SampleCount:         2,
+		AvgTotalLatencyMs:   500,
+		AvgTotalCostUSD:     0.75,
+		AvgFilesChanged:     3,
+		AvgLinesAdded:       30,
+	}
+
+	bl, isNew, err := EnsureBaseline(existing, nil, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if isNew {
+		t.Error("isNew should be false when returning an existing baseline")
+	}
+
+	// Observation that exactly matches the baseline → all deltas zero.
+	matchingObs := LoopObservation{
+		TotalLatencyMs: 500,
+		TotalCostUSD:   0.75,
+		FilesChanged:   3,
+		LinesAdded:     30,
+	}
+	delta := ComputeDelta(matchingObs, bl)
+	if !delta.Valid {
+		t.Fatal("delta should be valid against a real existing baseline")
+	}
+	if delta.CostDelta != 0 {
+		t.Errorf("CostDelta = %f, want 0 (stable cycle)", delta.CostDelta)
+	}
+	if delta.LatencyDelta != 0 {
+		t.Errorf("LatencyDelta = %d, want 0 (stable cycle)", delta.LatencyDelta)
+	}
+	if delta.FilesDelta != 0 {
+		t.Errorf("FilesDelta = %d, want 0 (stable cycle)", delta.FilesDelta)
 	}
 }
