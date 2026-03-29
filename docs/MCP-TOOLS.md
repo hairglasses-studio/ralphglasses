@@ -1,6 +1,6 @@
 # MCP Server & Tools
 
-Ralphglasses is an installable MCP server exposing 125 tools (123 namespace tools + 2 meta-tools) in 14 namespaces for managing ralph loops, multi-provider LLM sessions, fleet orchestration, and self-improvement subsystems programmatically.
+Ralphglasses is an installable MCP server exposing 126 tools (124 namespace tools + 2 meta-tools) in 14 namespaces for managing ralph loops, multi-provider LLM sessions, fleet orchestration, and self-improvement subsystems programmatically.
 
 ## Install
 
@@ -32,7 +32,7 @@ To minimize startup latency and memory usage, only core tools are loaded upfront
 | `roadmap` | 5 | Roadmap automation: parse, analyze, research, expand, export |
 | `team` | 6 | Agent teams: team_create, team_status, team_delegate, agent_define, agent_list, agent_compose |
 | `awesome` | 5 | Awesome-list research: fetch, analyze, diff, report, sync |
-| `advanced` | 22 | RC tools, events, HITL, autonomy, feedback, journals, workflows, bandit, circuit breaker |
+| `advanced` | 24 | RC tools, events, HITL, autonomy, feedback, journals, workflows, bandit, circuit breaker |
 | `eval` | 4 | Offline evaluation: counterfactual, A/B test, changepoints, anomaly detection |
 | `fleet_h` | 4 | Fleet intelligence: blackboard coordination, A2A offers, cost forecasting |
 | `observability` | 15 | Observations, scratchpad, loop wait/poll, coverage, cost estimation, merge verification |
@@ -163,7 +163,7 @@ Use the meta-tools below to discover and load tool groups at runtime.
 | `ralphglasses_awesome_report` | Generate formatted report from saved analysis results |
 | `ralphglasses_awesome_sync` | Full pipeline: fetch awesome-list, diff, analyze new entries, report, save |
 
-### advanced (22 tools)
+### advanced (24 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -189,6 +189,7 @@ Use the meta-tools below to discover and load tool groups at runtime.
 | `ralphglasses_bandit_status` | View multi-armed bandit arm statistics for provider selection |
 | `ralphglasses_confidence_calibration` | View calibrated confidence model weights, training status, and feature importances |
 | `ralphglasses_circuit_reset` | Reset circuit breaker state for a named service |
+| `ralphglasses_supervisor_status` | Get supervisor status: active sessions, health monitor state, cycle chainer progress, and recovery actions |
 
 ### eval (4 tools)
 

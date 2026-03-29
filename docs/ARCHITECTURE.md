@@ -6,10 +6,10 @@
 - **internal/discovery/**: Scans directories for `.ralph/` and `.ralphrc`
 - **internal/model/**: Data types and parsers for status.json, progress.json, circuit breaker state, .ralphrc
 - **internal/process/**: Process management (launch/stop/pause via os/exec), fsnotify file watcher, log tailing
-- **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch, concurrent worker fan-out, autonomy levels, auto-optimization, auto-recovery, context store, HITL metrics, feedback profiling, prompt caching, self-improvement pipeline (reflexion, episodic memory, cascade routing, curriculum sorting, bandit-based provider selection), sentinel errors, acceptance testing
+- **internal/session/**: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch, concurrent worker fan-out, autonomy levels, auto-optimization, auto-recovery, context store, HITL metrics, feedback profiling, prompt caching, self-improvement pipeline (reflexion, episodic memory, cascade routing, curriculum sorting, bandit-based provider selection), supervisor (session lifecycle orchestration, health monitor, cycle chainer), sentinel errors, acceptance testing
 - **internal/batch/**: Batch API support for Claude, Gemini, and OpenAI — submit non-interactive workloads at 50% discount
 - **internal/wsclient/**: WebSocket transport client for OpenAI Responses API (40% faster for multi-turn tool chains)
-- **internal/mcpserver/**: MCP tool handlers (115 tools in 13 namespaces, deferred loading, stdio transport via mcp-go)
+- **internal/mcpserver/**: MCP tool handlers (126 tools in 14 namespaces, deferred loading, stdio transport via mcp-go)
   - `tools.go` — Server struct, constructors, Register()
   - `tools_builders.go` — Tool definition builders for all namespaces
   - `tools_dispatch.go` — Dispatch table routing tool names to handlers
@@ -92,7 +92,7 @@ The MCP server supports composable middleware (`internal/mcpserver/middleware.go
 
 ### Tool Benchmarking
 
-`internal/mcpserver/toolbench.go` provides auto-benchmarking applied to all 115 tools:
+`internal/mcpserver/toolbench.go` provides auto-benchmarking applied to all 126 tools:
 
 - **JSONL recording**: All tool calls logged with latency, success, error, sizes
 - **Percentile summaries**: P50, P95, max latency per tool
@@ -175,7 +175,7 @@ The `internal/session/` package implements a five-component self-improvement pip
 
 ## MCP Namespaces
 
-The MCP server organizes 115 tools (113 namespace tools + 2 meta-tools) across 13 namespaces with deferred loading:
+The MCP server organizes 126 tools (124 namespace tools + 2 meta-tools) across 14 namespaces with deferred loading:
 
 | Namespace | Tools | Description |
 |-----------|-------|-------------|
@@ -188,10 +188,11 @@ The MCP server organizes 115 tools (113 namespace tools + 2 meta-tools) across 1
 | `roadmap` | 5 | Roadmap automation: parse, analyze, research, expand, export |
 | `team` | 6 | Agent teams: team_create, team_status, team_delegate, agent_define, agent_list, agent_compose |
 | `awesome` | 5 | Awesome-list research: fetch, analyze, diff, report, sync |
-| `advanced` | 22 | RC tools, events, HITL, autonomy, feedback, journals, workflows, bandit, circuit breaker |
+| `advanced` | 24 | RC tools, events, HITL, autonomy, feedback, journals, workflows, bandit, circuit breaker |
 | `eval` | 4 | Offline evaluation: counterfactual, A/B test, changepoints, anomaly detection |
 | `fleet_h` | 4 | Fleet intelligence: blackboard coordination, A2A offers, cost forecasting |
 | `observability` | 15 | Observations, scratchpad, loop wait/poll, coverage, cost estimation, merge verification |
+| `rdcycle` | 10 | R&D cycle automation: finding_to_task, cycle_baseline, cycle_plan, cycle_merge, cycle_schedule, loop_replay, budget_forecast, diff_review, finding_reason, observation_correlate |
 
 See [docs/MCP-TOOLS.md](MCP-TOOLS.md) for the full tool table with descriptions.
 
