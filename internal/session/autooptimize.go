@@ -408,7 +408,7 @@ func (ao *AutoOptimizer) GenerateNotes(patterns *ConsolidatedPatterns) []Improve
 	var notes []ImprovementNote
 
 	for _, rule := range patterns.Rules {
-		note := ao.ruleToNote(rule)
+		note := ao.ruleToNote(rule.Action)
 		if note != nil {
 			notes = append(notes, *note)
 		}

@@ -255,6 +255,20 @@ func (m *Manager) RunCycle(ctx context.Context, repoPath, name, objective string
 		return fail(fmt.Sprintf("plan tasks: %v", err))
 	}
 
+	// 4b. Establish baseline from observations so the require_baseline safety
+	// gate passes. Without this, cycles with RequireBaseline=true would always
+	// fail when advancing from baselining to executing (QW-6).
+	if cycle.BaselineID == "" && len(observations) > 0 {
+		baseline := BaselineFromObservations(observations)
+		if baseline != nil && !baseline.IsZero() {
+			cycle.BaselineID = fmt.Sprintf("auto-%s", cycle.ID[:8])
+			cycle.UpdatedAt = timeNow()
+			if err := SaveCycle(cycle.RepoPath, cycle); err != nil {
+				return fail(fmt.Sprintf("persist baseline ID: %v", err))
+			}
+		}
+	}
+
 	// If no tasks were planned, synthesize immediately.
 	if len(cycle.Tasks) == 0 {
 		if err := m.AdvanceCycle(cycle); err != nil { // baselining → executing

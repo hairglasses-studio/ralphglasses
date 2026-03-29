@@ -250,6 +250,118 @@ func TestWorkItem_StatusTransitions(t *testing.T) {
 	}
 }
 
+// TestReapStale_CleansOldTasks verifies QW-11: stale pending tasks older than
+// maxAge are moved to the DLQ.
+func TestReapStale_CleansOldTasks(t *testing.T) {
+	q := NewWorkQueue()
+
+	// Fresh item: should survive reaping
+	fresh := &WorkItem{
+		ID:          "fresh",
+		Status:      WorkPending,
+		SubmittedAt: time.Now(),
+	}
+	q.Push(fresh)
+
+	// Stale item: submitted 2 hours ago
+	stale := &WorkItem{
+		ID:          "stale",
+		Status:      WorkPending,
+		SubmittedAt: time.Now().Add(-2 * time.Hour),
+	}
+	q.Push(stale)
+
+	reaped := q.ReapStale(time.Hour)
+	if reaped != 1 {
+		t.Errorf("ReapStale returned %d, want 1", reaped)
+	}
+
+	// Fresh should still be in queue
+	if _, ok := q.Get("fresh"); !ok {
+		t.Error("fresh item should still be in queue")
+	}
+
+	// Stale should be in DLQ
+	if _, ok := q.Get("stale"); ok {
+		t.Error("stale item should have been removed from queue")
+	}
+	dlq := q.ListDLQ()
+	found := false
+	for _, item := range dlq {
+		if item.ID == "stale" {
+			found = true
+			if item.Error != "reaped: stale task" {
+				t.Errorf("expected reaped error message, got %q", item.Error)
+			}
+		}
+	}
+	if !found {
+		t.Error("stale item not found in DLQ after reaping")
+	}
+}
+
+// TestReapStale_CleansPhantomPaths verifies QW-11: items with nonexistent
+// repo paths are reaped regardless of age.
+func TestReapStale_CleansPhantomPaths(t *testing.T) {
+	q := NewWorkQueue()
+
+	// Recent item with invalid path: should be reaped even though it's fresh
+	phantom := &WorkItem{
+		ID:          "phantom",
+		Status:      WorkPending,
+		RepoPath:    "/nonexistent/phantom/001/repo",
+		SubmittedAt: time.Now(), // just submitted
+	}
+	q.Push(phantom)
+
+	reaped := q.ReapStale(24 * time.Hour) // very long maxAge
+	if reaped != 1 {
+		t.Errorf("ReapStale returned %d, want 1 (phantom path)", reaped)
+	}
+	if _, ok := q.Get("phantom"); ok {
+		t.Error("phantom item should have been reaped")
+	}
+}
+
+// TestPushValidated_RejectsInvalidPath verifies QW-11: work items with
+// nonexistent repo paths are rejected at submission time.
+func TestPushValidated_RejectsInvalidPath(t *testing.T) {
+	q := NewWorkQueue()
+
+	item := &WorkItem{
+		ID:       "bad-path",
+		Status:   WorkPending,
+		RepoPath: "/nonexistent/phantom/001",
+	}
+	err := q.PushValidated(item)
+	if err == nil {
+		t.Fatal("expected error for invalid repo path")
+	}
+	if _, ok := q.Get("bad-path"); ok {
+		t.Error("item with invalid path should not be in queue")
+	}
+}
+
+// TestPushValidated_AcceptsValidPath verifies that PushValidated allows
+// items with valid paths.
+func TestPushValidated_AcceptsValidPath(t *testing.T) {
+	q := NewWorkQueue()
+
+	dir := t.TempDir()
+	item := &WorkItem{
+		ID:       "valid-path",
+		Status:   WorkPending,
+		RepoPath: dir,
+	}
+	err := q.PushValidated(item)
+	if err != nil {
+		t.Fatalf("unexpected error for valid path: %v", err)
+	}
+	if _, ok := q.Get("valid-path"); !ok {
+		t.Error("item with valid path should be in queue")
+	}
+}
+
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }

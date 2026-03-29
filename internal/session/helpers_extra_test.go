@@ -498,8 +498,8 @@ func TestAutoOptimizerGenerateNotes_NilPatterns(t *testing.T) {
 func TestAutoOptimizerGenerateNotes_ProviderRule(t *testing.T) {
 	ao := NewAutoOptimizer(nil, nil, nil, nil)
 	patterns := &ConsolidatedPatterns{
-		Rules: []string{
-			"use gemini for test tasks",
+		Rules: []Rule{
+			{ID: "apply-test", Pattern: "use gemini for test tasks", Action: "use gemini for test tasks"},
 		},
 	}
 	notes := ao.GenerateNotes(patterns)
@@ -671,7 +671,7 @@ func TestIngestSessionJournal_NilSession(t *testing.T) {
 func TestConsolidatedPatternsType(t *testing.T) {
 	// Just verify the type is accessible and usable
 	p := &ConsolidatedPatterns{
-		Rules:    []string{"rule 1"},
+		Rules:    []Rule{{ID: "test-1", Pattern: "rule 1", Action: "Apply: rule 1"}},
 		Negative: []ConsolidatedItem{{Text: "neg", Count: 1}},
 	}
 	_, _ = json.Marshal(p)

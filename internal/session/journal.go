@@ -2,10 +2,13 @@ package session
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -35,7 +38,7 @@ type ConsolidatedPatterns struct {
 	UpdatedAt time.Time          `json:"updated_at"`
 	Positive  []ConsolidatedItem `json:"positive"`
 	Negative  []ConsolidatedItem `json:"negative"`
-	Rules     []string           `json:"rules"`
+	Rules     []Rule             `json:"rules"`
 }
 
 // ConsolidatedItem is a pattern that appeared multiple times.
@@ -44,6 +47,18 @@ type ConsolidatedItem struct {
 	Count    int       `json:"count"`
 	LastSeen time.Time `json:"last_seen"`
 	Category string    `json:"category"`
+}
+
+// Rule is a learned rule extracted from recurring journal patterns.
+// Rules require a minimum occurrence threshold to avoid noise.
+type Rule struct {
+	ID              string    `json:"id"`
+	Pattern         string    `json:"pattern"`          // what was observed
+	Action          string    `json:"action"`            // recommended action
+	Confidence      float64   `json:"confidence"`        // 0-1 based on occurrence frequency
+	OccurrenceCount int       `json:"occurrence_count"`
+	FirstSeen       time.Time `json:"first_seen"`
+	LastSeen        time.Time `json:"last_seen"`
 }
 
 const (
@@ -305,7 +320,6 @@ func ConsolidatePatterns(repoPath string) error {
 
 	patterns := ConsolidatedPatterns{
 		UpdatedAt: time.Now(),
-		Rules:     []string{},
 	}
 
 	for text, count := range workedCounts {
@@ -330,29 +344,8 @@ func ConsolidatePatterns(repoPath string) error {
 		}
 	}
 
-	// Extract rules from frequent suggestions
-	suggestCounts := countItems(collectAll(entries, func(e JournalEntry) []string { return e.Suggest }))
-	for text, count := range suggestCounts {
-		if count >= 2 {
-			patterns.Rules = append(patterns.Rules, text)
-		}
-	}
-
-	// Auto-generate rules from high-frequency negative patterns
-	for _, neg := range patterns.Negative {
-		if neg.Count >= 3 {
-			rule := "Avoid: " + neg.Text
-			patterns.Rules = append(patterns.Rules, rule)
-		}
-	}
-
-	// Auto-generate rules from high-frequency positive patterns
-	for _, pos := range patterns.Positive {
-		if pos.Count >= 5 {
-			rule := "Continue: " + pos.Text
-			patterns.Rules = append(patterns.Rules, rule)
-		}
-	}
+	// Extract structured rules from patterns and suggestions.
+	patterns.Rules = ExtractRules(entries, patterns.Positive, patterns.Negative)
 
 	data, err := json.MarshalIndent(patterns, "", "  ")
 	if err != nil {
@@ -360,6 +353,116 @@ func ConsolidatePatterns(repoPath string) error {
 	}
 
 	return os.WriteFile(filepath.Join(repoPath, patternsFile), data, 0644)
+}
+
+// MinRuleOccurrences is the minimum number of times a pattern must appear
+// before it becomes a rule. Patterns with fewer occurrences are noise.
+const MinRuleOccurrences = 3
+
+// ExtractRules generates structured rules from journal entries and consolidated
+// patterns. Rules are extracted from three sources:
+//   - Negative patterns (count >= MinRuleOccurrences): generates "avoid" rules
+//   - Positive patterns (count >= MinRuleOccurrences+2): generates "continue" rules
+//   - Frequent suggestions (count >= MinRuleOccurrences): generates "apply" rules
+//
+// Confidence is calculated as min(1.0, occurrences / (2 * MinRuleOccurrences))
+// so that a pattern at the threshold gets 0.5 and higher counts approach 1.0.
+// Returns a non-nil (possibly empty) slice.
+func ExtractRules(entries []JournalEntry, positive, negative []ConsolidatedItem) []Rule {
+	rules := make([]Rule, 0)
+
+	// Source 1: negative patterns — things that keep failing.
+	for _, neg := range negative {
+		if neg.Count < MinRuleOccurrences {
+			continue
+		}
+		firstSeen := findFirstSeen(entries, neg.Text, func(e JournalEntry) []string { return e.Failed })
+		rules = append(rules, Rule{
+			ID:              ruleID("avoid", neg.Text),
+			Pattern:         neg.Text,
+			Action:          "Avoid: " + neg.Text,
+			Confidence:      ruleConfidence(neg.Count),
+			OccurrenceCount: neg.Count,
+			FirstSeen:       firstSeen,
+			LastSeen:        neg.LastSeen,
+		})
+	}
+
+	// Source 2: positive patterns — things that consistently work.
+	// Higher threshold (MinRuleOccurrences + 2) to avoid noise from one-off successes.
+	for _, pos := range positive {
+		if pos.Count < MinRuleOccurrences+2 {
+			continue
+		}
+		firstSeen := findFirstSeen(entries, pos.Text, func(e JournalEntry) []string { return e.Worked })
+		rules = append(rules, Rule{
+			ID:              ruleID("continue", pos.Text),
+			Pattern:         pos.Text,
+			Action:          "Continue: " + pos.Text,
+			Confidence:      ruleConfidence(pos.Count),
+			OccurrenceCount: pos.Count,
+			FirstSeen:       firstSeen,
+			LastSeen:        pos.LastSeen,
+		})
+	}
+
+	// Source 3: recurring suggestions.
+	suggestCounts := countItems(collectAll(entries, func(e JournalEntry) []string { return e.Suggest }))
+	for text, count := range suggestCounts {
+		if count < MinRuleOccurrences {
+			continue
+		}
+		firstSeen := findFirstSeen(entries, text, func(e JournalEntry) []string { return e.Suggest })
+		lastSeen := findLastSeen(entries, text, func(e JournalEntry) []string { return e.Suggest })
+		rules = append(rules, Rule{
+			ID:              ruleID("apply", text),
+			Pattern:         text,
+			Action:          "Apply: " + text,
+			Confidence:      ruleConfidence(count),
+			OccurrenceCount: count,
+			FirstSeen:       firstSeen,
+			LastSeen:        lastSeen,
+		})
+	}
+
+	// Sort by confidence descending for stable output.
+	sort.Slice(rules, func(i, j int) bool {
+		if rules[i].Confidence != rules[j].Confidence {
+			return rules[i].Confidence > rules[j].Confidence
+		}
+		return rules[i].OccurrenceCount > rules[j].OccurrenceCount
+	})
+
+	return rules
+}
+
+// ruleConfidence computes a confidence score from occurrence count.
+// At MinRuleOccurrences the confidence is 0.5; it approaches 1.0 as count grows.
+func ruleConfidence(count int) float64 {
+	c := float64(count) / float64(2*MinRuleOccurrences)
+	if c > 1.0 {
+		return 1.0
+	}
+	return c
+}
+
+// ruleID generates a deterministic short ID from category + pattern text.
+func ruleID(category, text string) string {
+	h := sha256.Sum256([]byte(category + ":" + text))
+	return category + "-" + hex.EncodeToString(h[:4])
+}
+
+// findFirstSeen returns the timestamp of the earliest entry containing the text.
+func findFirstSeen(entries []JournalEntry, text string, getter func(JournalEntry) []string) time.Time {
+	normalized := strings.TrimSpace(strings.ToLower(text))
+	for _, e := range entries {
+		for _, item := range getter(e) {
+			if strings.TrimSpace(strings.ToLower(item)) == normalized {
+				return e.Timestamp
+			}
+		}
+	}
+	return time.Time{}
 }
 
 // PruneJournal keeps only the last keepN entries, consolidating patterns first.

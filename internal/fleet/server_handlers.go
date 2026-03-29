@@ -220,7 +220,10 @@ func (c *Coordinator) handleWorkSubmit(w http.ResponseWriter, r *http.Request) {
 		item.MaxRetries = 2
 	}
 
-	c.queue.Push(&item)
+	if err := c.queue.PushValidated(&item); err != nil {
+		http.Error(w, fmt.Sprintf("invalid work item: %v", err), http.StatusBadRequest)
+		return
+	}
 
 	// Reserve budget
 	if item.MaxBudgetUSD > 0 {

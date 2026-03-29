@@ -212,6 +212,25 @@ func TestConsolidatePatterns(t *testing.T) {
 	if len(patterns.Rules) < 1 {
 		t.Errorf("expected at least 1 rule, got %d", len(patterns.Rules))
 	}
+
+	// Verify rule structure has required fields.
+	for _, r := range patterns.Rules {
+		if r.ID == "" {
+			t.Error("rule ID is empty")
+		}
+		if r.Pattern == "" {
+			t.Error("rule Pattern is empty")
+		}
+		if r.Action == "" {
+			t.Error("rule Action is empty")
+		}
+		if r.Confidence <= 0 || r.Confidence > 1 {
+			t.Errorf("rule Confidence = %f, want (0, 1]", r.Confidence)
+		}
+		if r.OccurrenceCount < MinRuleOccurrences {
+			t.Errorf("rule OccurrenceCount = %d, want >= %d", r.OccurrenceCount, MinRuleOccurrences)
+		}
+	}
 }
 
 func TestPruneJournal(t *testing.T) {
@@ -763,5 +782,222 @@ func TestCountItems(t *testing.T) {
 	}
 	if counts["b"] != 1 {
 		t.Errorf("count of 'b' = %d, want 1", counts["b"])
+	}
+}
+
+func TestExtractRules_ProducesNonNilRules(t *testing.T) {
+	// Build enough entries so patterns exceed MinRuleOccurrences.
+	now := time.Now()
+	var entries []JournalEntry
+	for i := 0; i < 5; i++ {
+		entries = append(entries, JournalEntry{
+			Timestamp: now.Add(time.Duration(i) * time.Hour),
+			SessionID: fmt.Sprintf("s%d", i),
+			Failed:    []string{"signal: killed"},
+			Worked:    []string{"tests pass quickly"},
+			Suggest:   []string{"increase memory limit"},
+		})
+	}
+
+	negative := []ConsolidatedItem{
+		{Text: "signal: killed", Count: 5, LastSeen: now, Category: "negative"},
+	}
+	positive := []ConsolidatedItem{
+		{Text: "tests pass quickly", Count: 5, LastSeen: now, Category: "positive"},
+	}
+
+	rules := ExtractRules(entries, positive, negative)
+
+	if rules == nil {
+		t.Fatal("ExtractRules returned nil, want non-nil slice")
+	}
+	if len(rules) == 0 {
+		t.Fatal("ExtractRules returned empty slice, want at least 1 rule")
+	}
+
+	// Should have rules from all three sources:
+	// 1. negative (count=5 >= 3)
+	// 2. positive (count=5 >= 5)
+	// 3. suggestions (count=5 >= 3)
+	if len(rules) < 3 {
+		t.Errorf("expected at least 3 rules (neg + pos + suggest), got %d", len(rules))
+	}
+
+	for _, r := range rules {
+		if r.ID == "" {
+			t.Error("rule has empty ID")
+		}
+		if r.Pattern == "" {
+			t.Error("rule has empty Pattern")
+		}
+		if r.Action == "" {
+			t.Error("rule has empty Action")
+		}
+		if r.OccurrenceCount < MinRuleOccurrences {
+			t.Errorf("rule OccurrenceCount=%d < MinRuleOccurrences=%d", r.OccurrenceCount, MinRuleOccurrences)
+		}
+	}
+}
+
+func TestExtractRules_MeaningfulConfidence(t *testing.T) {
+	now := time.Now()
+	var entries []JournalEntry
+
+	// Pattern A: 3 occurrences (at threshold)
+	// Pattern B: 6 occurrences (double threshold, should max out at 1.0)
+	for i := 0; i < 6; i++ {
+		e := JournalEntry{
+			Timestamp: now.Add(time.Duration(i) * time.Hour),
+			SessionID: fmt.Sprintf("s%d", i),
+			Failed:    []string{"pattern B"},
+		}
+		if i < 3 {
+			e.Failed = append(e.Failed, "pattern A")
+		}
+		entries = append(entries, e)
+	}
+
+	negative := []ConsolidatedItem{
+		{Text: "pattern A", Count: 3, LastSeen: now, Category: "negative"},
+		{Text: "pattern B", Count: 6, LastSeen: now, Category: "negative"},
+	}
+
+	rules := ExtractRules(entries, nil, negative)
+
+	if len(rules) != 2 {
+		t.Fatalf("expected 2 rules, got %d", len(rules))
+	}
+
+	// Rules are sorted by confidence descending.
+	highConf := rules[0]
+	lowConf := rules[1]
+
+	if highConf.Confidence <= lowConf.Confidence {
+		t.Errorf("expected rules sorted by confidence desc: %f <= %f", highConf.Confidence, lowConf.Confidence)
+	}
+
+	// Pattern B (6 occurrences) should have confidence 1.0
+	if highConf.Confidence != 1.0 {
+		t.Errorf("pattern B confidence = %f, want 1.0", highConf.Confidence)
+	}
+
+	// Pattern A (3 occurrences) should have confidence 0.5
+	if lowConf.Confidence != 0.5 {
+		t.Errorf("pattern A confidence = %f, want 0.5", lowConf.Confidence)
+	}
+}
+
+func TestExtractRules_BelowThresholdProducesNoRules(t *testing.T) {
+	now := time.Now()
+	// Only 2 occurrences — below MinRuleOccurrences=3.
+	entries := []JournalEntry{
+		{Timestamp: now, SessionID: "s1", Failed: []string{"rare error"}, Suggest: []string{"rare tip"}},
+		{Timestamp: now, SessionID: "s2", Failed: []string{"rare error"}, Suggest: []string{"rare tip"}},
+	}
+
+	negative := []ConsolidatedItem{
+		{Text: "rare error", Count: 2, LastSeen: now, Category: "negative"},
+	}
+
+	rules := ExtractRules(entries, nil, negative)
+
+	if rules == nil {
+		t.Fatal("ExtractRules returned nil, want non-nil empty slice")
+	}
+	if len(rules) != 0 {
+		t.Errorf("expected 0 rules for below-threshold patterns, got %d", len(rules))
+	}
+}
+
+func TestExtractRules_PersistedToFile(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
+
+	// Write enough entries to trigger rule extraction.
+	for i := 0; i < 4; i++ {
+		_ = WriteJournalEntryManual(dir, JournalEntry{
+			Timestamp: time.Now(),
+			SessionID: fmt.Sprintf("s%d", i),
+			Failed:    []string{"recurring bug"},
+			Suggest:   []string{"add timeout"},
+		})
+	}
+
+	if err := ConsolidatePatterns(dir); err != nil {
+		t.Fatalf("ConsolidatePatterns: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, patternsFile))
+	if err != nil {
+		t.Fatalf("read patterns file: %v", err)
+	}
+
+	var patterns ConsolidatedPatterns
+	if err := json.Unmarshal(data, &patterns); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if patterns.Rules == nil {
+		t.Fatal("Rules is nil after ConsolidatePatterns with sufficient data")
+	}
+	if len(patterns.Rules) == 0 {
+		t.Fatal("Rules is empty after ConsolidatePatterns with 4 identical failure entries")
+	}
+
+	// Verify the rule references our recurring bug.
+	found := false
+	for _, r := range patterns.Rules {
+		if strings.Contains(r.Pattern, "recurring bug") || strings.Contains(r.Pattern, "add timeout") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected a rule mentioning 'recurring bug' or 'add timeout', got %+v", patterns.Rules)
+	}
+}
+
+func TestExtractRules_EmptyInput(t *testing.T) {
+	rules := ExtractRules(nil, nil, nil)
+	if rules == nil {
+		t.Fatal("ExtractRules(nil, nil, nil) returned nil, want non-nil empty slice")
+	}
+	if len(rules) != 0 {
+		t.Errorf("expected 0 rules, got %d", len(rules))
+	}
+}
+
+func TestRuleConfidence(t *testing.T) {
+	tests := []struct {
+		count int
+		want  float64
+	}{
+		{0, 0.0},
+		{MinRuleOccurrences, 0.5},
+		{2 * MinRuleOccurrences, 1.0},
+		{10 * MinRuleOccurrences, 1.0}, // capped at 1.0
+	}
+	for _, tt := range tests {
+		got := ruleConfidence(tt.count)
+		if got != tt.want {
+			t.Errorf("ruleConfidence(%d) = %f, want %f", tt.count, got, tt.want)
+		}
+	}
+}
+
+func TestRuleID_Deterministic(t *testing.T) {
+	id1 := ruleID("avoid", "signal: killed")
+	id2 := ruleID("avoid", "signal: killed")
+	if id1 != id2 {
+		t.Errorf("ruleID not deterministic: %q != %q", id1, id2)
+	}
+
+	id3 := ruleID("continue", "signal: killed")
+	if id1 == id3 {
+		t.Error("different categories should produce different IDs")
+	}
+
+	if !strings.HasPrefix(id1, "avoid-") {
+		t.Errorf("expected ID to start with 'avoid-', got %q", id1)
 	}
 }

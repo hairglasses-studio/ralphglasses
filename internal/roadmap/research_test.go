@@ -279,6 +279,106 @@ func containsStr(s, sub string) bool {
 	return false
 }
 
+// TestStripSearchModifiers verifies QW-10: GitHub search modifiers are removed.
+func TestStripSearchModifiers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"mcp tui language:go", "mcp tui"},
+		{"golang", "golang"},
+		{"agent sort:stars language:python", "agent"},
+		{"", ""},
+	}
+	for _, tt := range tests {
+		got := stripSearchModifiers(tt.input)
+		if got != tt.want {
+			t.Errorf("stripSearchModifiers(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+// TestWeightedRelevance_Varies verifies QW-10: relevance scores vary meaningfully
+// across different items rather than clustering at a single value.
+func TestWeightedRelevance_Varies(t *testing.T) {
+	t.Parallel()
+
+	query := extractQueryKeywords("mcp agent tui")
+	items := []struct {
+		text  string
+		stars int
+	}{
+		{"mcp-go agent tui framework for building model context protocol servers", 5000},
+		{"agent orchestration framework for distributed systems", 100},
+		{"random utility library for string manipulation", 10},
+		{"mcp agent tui client server protocol", 500},
+	}
+
+	var scores []float64
+	for _, item := range items {
+		itemKW := extractQueryKeywords(item.text)
+		score := weightedRelevance(query, itemKW, item.stars)
+		scores = append(scores, score)
+	}
+
+	// Scores must not all be the same
+	allSame := true
+	for _, s := range scores[1:] {
+		if s != scores[0] {
+			allSame = false
+			break
+		}
+	}
+	if allSame {
+		t.Errorf("all relevance scores are identical: %v (QW-10 regression)", scores)
+	}
+
+	// The exact-match item (index 3: "mcp agent tui ...") should score higher
+	// than the unrelated item (index 2: "random utility library")
+	if scores[2] >= scores[3] {
+		t.Errorf("unrelated item scored %.3f >= exact match %.3f", scores[2], scores[3])
+	}
+
+	// Spread should be meaningful (> 0.1)
+	min, max := scores[0], scores[0]
+	for _, s := range scores {
+		if s < min {
+			min = s
+		}
+		if s > max {
+			max = s
+		}
+	}
+	if max-min < 0.1 {
+		t.Errorf("score spread %.3f too narrow (min=%.3f max=%.3f), want > 0.1", max-min, min, max)
+	}
+}
+
+// TestJaccardSimilarity verifies the base Jaccard implementation.
+func TestJaccardSimilarity_Basics(t *testing.T) {
+	t.Parallel()
+
+	// Identical sets => 1.0
+	a := map[string]bool{"mcp": true, "agent": true}
+	if got := jaccardSimilarity(a, a); got != 1.0 {
+		t.Errorf("identical sets: got %.3f, want 1.0", got)
+	}
+
+	// Disjoint sets => 0.0
+	b := map[string]bool{"foo": true, "bar": true}
+	if got := jaccardSimilarity(a, b); got != 0.0 {
+		t.Errorf("disjoint sets: got %.3f, want 0.0", got)
+	}
+
+	// Partial overlap
+	c := map[string]bool{"mcp": true, "server": true}
+	got := jaccardSimilarity(a, c)
+	if got <= 0.0 || got >= 1.0 {
+		t.Errorf("partial overlap: got %.3f, want (0, 1)", got)
+	}
+}
+
 func TestDedupStrings(t *testing.T) {
 	t.Parallel()
 	input := []string{"a", "b", "a", "c", "b"}

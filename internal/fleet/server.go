@@ -135,6 +135,7 @@ func (c *Coordinator) maintenanceLoop(ctx context.Context) {
 		case <-ticker.C:
 			c.expireWorkers()
 			c.reclaimTimedOut()
+			c.queue.ReapStale(time.Hour) // QW-11: clean phantom/stale tasks older than 1 hour
 		}
 	}
 }
