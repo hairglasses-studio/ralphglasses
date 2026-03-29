@@ -53,7 +53,10 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 		LoopDetailView:       views.NewLoopDetailView(),
 		LoopControlView:      views.NewLoopControlView(),
 		ObservationViewport:  views.NewObservationViewport(),
-		RDCycleView:          views.NewRDCycleView(),
+		RDCycleView:              views.NewRDCycleView(),
+		TeamOrchestrationView:    views.NewTeamOrchestrationView(),
+		SearchInput:   components.NewSearchInput(),
+		SearchView:    views.NewSearchView(),
 		LastRefresh:    components.NowFunc(),
 		ProcMgr:        process.NewManager(),
 		SessMgr:        sessMgr,
@@ -140,6 +143,17 @@ func (m Model) View() string {
 				m.TeamDetailView.SetData(team, leadSession)
 				m.TeamDetailView.SetDimensions(m.Width, m.Height-4)
 				b.WriteString(m.TeamDetailView.Render())
+			} else {
+				b.WriteString(styles.InfoStyle.Render("  Team not found"))
+			}
+		}
+	case ViewTeamOrchestration:
+		if m.SessMgr != nil {
+			if team, ok := m.SessMgr.GetTeam(m.Sel.TeamName); ok {
+				leadSession, _ := m.SessMgr.Get(team.LeadID)
+				m.TeamOrchestrationView.SetTeam(team, leadSession)
+				m.TeamOrchestrationView.SetDimensions(m.Width, m.Height-4)
+				b.WriteString(m.TeamOrchestrationView.Render())
 			} else {
 				b.WriteString(styles.InfoStyle.Render("  Team not found"))
 			}
@@ -243,6 +257,12 @@ func (m Model) View() string {
 		b.WriteString(m.Modals.Launcher.View())
 	}
 
+	// Global search overlay
+	if m.SearchInput != nil && m.SearchInput.Active {
+		b.WriteString("\n")
+		b.WriteString(m.SearchInput.View(m.Width))
+	}
+
 	// Notification overlay
 	if notif := m.Notify.View(); notif != "" {
 		b.WriteString("\n")
@@ -268,6 +288,10 @@ func (m Model) View() string {
 	case ModeFilter:
 		b.WriteString(styles.CommandStyle.Render("/"))
 		b.WriteString(m.Filter.Text)
+		b.WriteString(styles.CommandStyle.Render("█"))
+	case ModeSearch:
+		b.WriteString(styles.CommandStyle.Render("search: "))
+		b.WriteString(m.SearchInput.Query)
 		b.WriteString(styles.CommandStyle.Render("█"))
 	default:
 		// Mode indicator in status bar

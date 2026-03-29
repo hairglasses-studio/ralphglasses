@@ -22,6 +22,7 @@ var globalBindings = []func(*KeyMap) *key.Binding{
 	func(k *KeyMap) *key.Binding { return &k.Up },
 	func(k *KeyMap) *key.Binding { return &k.Enter },
 	func(k *KeyMap) *key.Binding { return &k.Sort },
+	func(k *KeyMap) *key.Binding { return &k.GlobalSearch },
 }
 
 // viewBindings maps each ViewMode to the bindings it enables (in addition to globals).
@@ -107,6 +108,18 @@ var viewBindings = map[ViewMode][]func(*KeyMap) *key.Binding{
 		func(k *KeyMap) *key.Binding { return &k.PageDown },
 		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
 		func(k *KeyMap) *key.Binding { return &k.TimelineView },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+		func(k *KeyMap) *key.Binding { return &k.EventLogView },
+		func(k *KeyMap) *key.Binding { return &k.OrchestrationView },
+	},
+	ViewTeamOrchestration: {
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
 		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
 		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
 		func(k *KeyMap) *key.Binding { return &k.EventLogView },

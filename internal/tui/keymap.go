@@ -30,7 +30,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 func (k KeyMap) HelpGroups() []views.HelpGroup {
 	return []views.HelpGroup{
 		{Name: "Navigation", Bindings: []key.Binding{k.Tab1, k.Tab2, k.Tab3, k.Tab4}},
-		{Name: "Global", Bindings: []key.Binding{k.Quit, k.CmdMode, k.FilterMode, k.Help, k.Escape, k.Refresh, k.EventLogView}},
+		{Name: "Global", Bindings: []key.Binding{k.Quit, k.CmdMode, k.FilterMode, k.GlobalSearch, k.Help, k.Escape, k.Refresh, k.EventLogView}},
 		{Name: "Loop List", Bindings: []key.Binding{k.LoopPanel, k.LoopListStart, k.LoopListStop, k.LoopListPause}},
 		{Name: "Loop Detail", Bindings: []key.Binding{k.LoopDetailStep, k.LoopDetailToggle, k.LoopDetailPause}},
 		{Name: "Loop Control", Bindings: []key.Binding{k.LoopControlPanel, k.LoopCtrlStep, k.LoopCtrlToggle, k.LoopCtrlPause}},
@@ -39,7 +39,8 @@ func (k KeyMap) HelpGroups() []views.HelpGroup {
 		{Name: "Teams Table", Bindings: []key.Binding{k.Down, k.Enter, k.Sort}},
 		{Name: "Repo Detail", Bindings: []key.Binding{k.Enter, k.EditConfig, k.StartLoop, k.StopAction, k.PauseLoop, k.DiffView, k.LoopHealth, k.ObservationView}},
 		{Name: "Session Detail", Bindings: []key.Binding{k.Enter, k.OutputView, k.DiffView, k.TimelineView, k.StopAction}},
-		{Name: "Team Detail", Bindings: []key.Binding{k.Enter, k.DiffView, k.TimelineView}},
+		{Name: "Team Detail", Bindings: []key.Binding{k.Enter, k.DiffView, k.TimelineView, k.OrchestrationView}},
+		{Name: "Team Orchestration", Bindings: []key.Binding{k.Down, k.GotoEnd, k.GotoStart, k.PageUp, k.PageDown}},
 		{Name: "Fleet", Bindings: []key.Binding{k.Down, k.Enter, k.StopAction, k.DiffView, k.TimelineView}},
 		{Name: "Log Viewer", Bindings: []key.Binding{k.Down, k.GotoEnd, k.GotoStart, k.FollowToggle, k.PageUp, k.PageDown}},
 		{Name: "Config Editor", Bindings: []key.Binding{k.Down, k.Enter, k.WriteConfig}},
@@ -82,6 +83,7 @@ func init() {
 		{func(km *KeyMap) key.Binding { return km.LoopListStop }, handleLoopListStop},
 		{func(km *KeyMap) key.Binding { return km.LoopListPause }, handleLoopListPause},
 		{func(km *KeyMap) key.Binding { return km.RDCycle }, handleRDCycleView},
+		{func(km *KeyMap) key.Binding { return km.GlobalSearch }, handleGlobalSearch},
 	}
 }
 
@@ -200,5 +202,11 @@ func handleTab4(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func handleRDCycleView(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	m.pushView(ViewRDCycle, "R&D Cycle")
+	return *m, nil
+}
+
+func handleGlobalSearch(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.InputMode = ModeSearch
+	m.SearchInput.Activate()
 	return *m, nil
 }

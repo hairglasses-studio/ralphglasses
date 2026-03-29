@@ -43,6 +43,8 @@ const (
 	ViewObservation
 	ViewEventLog
 	ViewRDCycle
+	ViewTeamOrchestration
+	ViewSearch
 )
 
 // InputMode tracks the current input capture mode.
@@ -53,6 +55,7 @@ const (
 	ModeCommand
 	ModeFilter
 	ModeLauncher
+	ModeSearch
 )
 
 // NavigationState tracks view stack and tab state.
@@ -137,7 +140,8 @@ type Model struct {
 	LoopDetailView       *views.LoopDetailView
 	LoopControlView      *views.LoopControlView
 	ObservationViewport  *views.ObservationViewport
-	RDCycleView          *views.RDCycleView
+	RDCycleView              *views.RDCycleView
+	TeamOrchestrationView    *views.TeamOrchestrationView
 
 	// Bubbles components
 	Keys    KeyMap
@@ -182,6 +186,10 @@ type Model struct {
 
 	// Event log view
 	EventLog *views.EventLogView
+
+	// Global search
+	SearchInput *components.SearchInput
+	SearchView  *views.SearchView
 }
 
 type tickMsg time.Time
