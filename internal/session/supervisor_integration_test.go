@@ -2,7 +2,9 @@ package session
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync/atomic"
 	"testing"
@@ -258,5 +260,66 @@ func TestSupervisor_DecisionOutcomeRecorded(t *testing.T) {
 	}
 	if !decisionWithOutcome.Outcome.Success {
 		t.Errorf("outcome success = false, details: %s", decisionWithOutcome.Outcome.Details)
+	}
+}
+
+// TestSupervisor_ReflexionLoop verifies that runConsolidation generates
+// improvement notes from consolidated patterns and auto-applies eligible ones.
+func TestSupervisor_ReflexionLoop(t *testing.T) {
+	s, dir := newTestSupervisor(t)
+	ralphDir := filepath.Join(dir, ".ralph")
+	os.MkdirAll(ralphDir, 0o755)
+
+	// Write journal entries with recurring patterns so consolidation produces rules.
+	journalPath := filepath.Join(ralphDir, "improvement_journal.jsonl")
+	for i := 0; i < 5; i++ {
+		entry := JournalEntry{
+			Timestamp: time.Now().Add(-time.Duration(i) * time.Hour),
+			Worked:    []string{"use gemini for refactoring tasks"},
+			Failed:    []string{"budget exceeded on large prompts"},
+		}
+		data, _ := json.Marshal(entry)
+		data = append(data, '\n')
+		f, _ := os.OpenFile(journalPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		f.Write(data)
+		f.Close()
+	}
+
+	// Set up optimizer so notes get generated.
+	dl := NewDecisionLog("", LevelAutoOptimize)
+	ao := NewAutoOptimizer(nil, dl, nil, nil)
+	s.SetOptimizer(ao)
+	s.SetDecisionLog(dl)
+
+	// Run consolidation directly.
+	s.runConsolidation()
+
+	// Verify patterns were consolidated.
+	patternsPath := filepath.Join(ralphDir, "improvement_patterns.json")
+	if _, err := os.Stat(patternsPath); err != nil {
+		t.Fatalf("expected improvement_patterns.json, got: %v", err)
+	}
+
+	// Verify improvement notes were generated.
+	notesPath := filepath.Join(ralphDir, "improvement_notes.jsonl")
+	notesData, err := os.ReadFile(notesPath)
+	if err != nil {
+		t.Fatalf("expected improvement_notes.jsonl, got: %v", err)
+	}
+	if len(notesData) == 0 {
+		t.Fatal("expected non-empty improvement notes")
+	}
+
+	// Verify at least one note exists.
+	notes, err := ReadPendingNotes(dir)
+	if err != nil {
+		t.Fatalf("ReadPendingNotes: %v", err)
+	}
+	if len(notes) == 0 {
+		t.Fatal("expected at least one improvement note")
+	}
+	t.Logf("generated %d improvement notes", len(notes))
+	for _, n := range notes {
+		t.Logf("  [%s] %s (status=%s, auto=%v)", n.Category, n.Title, n.Status, n.AutoApply)
 	}
 }
