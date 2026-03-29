@@ -25,7 +25,7 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
 
 > **Parallel workstreams:** All items independent. Target: complete in 1-2 loop iterations.
 
-- [ ] **QW-1** — Fix JSON response format enforcement (25.7% retry rate, "not valid json" pattern seen 26 times across 15 cycles) `P0` `S`
+- [x] **QW-1** — Fix JSON response format enforcement (25.7% retry rate, "not valid json" pattern seen 26 times across 15 cycles) `P0` `S`
   - File: `internal/session/loop_worker.go` — add JSON schema validation + retry with format reminder
   - **Acceptance:** JSON parse retry rate < 5%
 
@@ -33,7 +33,7 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
   - File: `.ralphrc` default + `internal/session/manager.go` — set `CASCADE_ENABLED=true` in defaults
   - **Acceptance:** New sessions use cascade routing without explicit config
 
-- [ ] **QW-3** — Cap worker turns at 20 to prevent runaway sessions (FINDING-160: signal:killed, 3rd cycle recurrence) `P0` `S`
+- [x] **QW-3** — Cap worker turns at 20 to prevent runaway sessions (FINDING-160: signal:killed, 3rd cycle recurrence) `P0` `S`
   - File: `internal/session/loop.go` — add `MaxWorkerTurns` with default 20
   - **Acceptance:** Sessions terminate cleanly at turn limit instead of being killed
 
@@ -41,7 +41,7 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
   - File: `internal/enhancer/analyze.go` — recalibrate scoring rubric, add negative signal detection
   - **Acceptance:** Score distribution spans 3-9 range on test corpus
 
-- [ ] **QW-5** — Fix prompt_enhance stage skipping transparency (FINDING-243: stages silently skipped) `P1` `S`
+- [x] **QW-5** — Fix prompt_enhance stage skipping transparency (FINDING-243: stages silently skipped) `P1` `S`
   - File: `internal/enhancer/pipeline.go` — add `SkippedStages` field to result, log skip reasons
   - **Acceptance:** Enhanced result includes list of skipped stages with reasons
 
@@ -53,11 +53,11 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
   - File: `internal/session/snapshot.go` — update path resolution to use ralphglasses project root
   - **Acceptance:** Snapshots save to `.ralph/snapshots/` not `claudekit/` path
 
-- [ ] **QW-8** — Fix budget params silently ignored in session_launch (FINDING-258/261) `P0` `S`
+- [x] **QW-8** — Fix budget params silently ignored in session_launch (FINDING-258/261) `P0` `S`
   - File: `internal/mcpserver/tools_session.go` — wire budget_usd and max_turns params through to LaunchOptions
   - **Acceptance:** `session_launch budget_usd=5.0` actually enforces $5 budget
 
-- [ ] **QW-9** — Persist autonomy level changes across restarts (FINDING-257) `P1` `S`
+- [x] **QW-9** — Persist autonomy level changes across restarts (FINDING-257) `P1` `S`
   - File: `internal/session/autooptimize.go` — write autonomy level to `.ralph/autonomy.json`
   - **Acceptance:** `autonomy_level` survives process restart
 
@@ -192,45 +192,45 @@ Post-gate-pass improvements. All items are independent, parallel, and sized for 
 - **Acceptance:** each new test exercises an error path that previously had no coverage
 
 ### 0.6.2 — Observation enrichment
-- [ ] 0.6.2.1 — Add `GitDiffStat` field to `LoopObservation`: files changed, insertions, deletions from worker output `P1` `M`
-- [ ] 0.6.2.2 — Add `PlannerModelUsed` and `WorkerModelUsed` fields to `LoopObservation` for provider tracking `P1` `S`
-- [ ] 0.6.2.3 — Add `AcceptancePath` field to `LoopObservation`: "auto_merge", "pr", "rejected" for merge outcome tracking `P1` `M`
-- [ ] 0.6.2.4 — Add observation summary helper: `SummarizeObservations([]LoopObservation) ObservationSummary` with aggregate stats `P1` `M`
+- [x] 0.6.2.1 — Add `GitDiffStat` field to `LoopObservation`: files changed, insertions, deletions from worker output `P1` `M`
+- [x] 0.6.2.2 — Add `PlannerModelUsed` and `WorkerModelUsed` fields to `LoopObservation` for provider tracking `P1` `S`
+- [x] 0.6.2.3 — Add `AcceptancePath` field to `LoopObservation`: "auto_merge", "pr", "rejected" for merge outcome tracking `P1` `M`
+- [x] 0.6.2.4 — Add observation summary helper: `SummarizeObservations([]LoopObservation) ObservationSummary` with aggregate stats `P1` `M`
 - **Acceptance:** new fields populated in observations, summary helper has tests
 
 ### 0.6.3 — Loop configuration validation
-- [ ] 0.6.3.1 — Add `ValidateLoopConfig(LoopConfig) []error` — validate all loop config fields before loop start `P0` `M`
-- [ ] 0.6.3.2 — Validate model names against known provider models (claude-opus-4-6, claude-sonnet-4-6, gemini-2.5-pro, etc.) `P1` `S`
+- [x] 0.6.3.1 — Add `ValidateLoopConfig(LoopConfig) []error` — validate all loop config fields before loop start `P0` `M`
+- [x] 0.6.3.2 — Validate model names against known provider models (claude-opus-4-6, claude-sonnet-4-6, gemini-2.5-pro, etc.) `P1` `S`
 - [ ] 0.6.3.3 — Validate enhancement flags: warn if `enable_worker_enhancement=true` with non-Claude worker (no effect) `P1` `S`
-- [ ] 0.6.3.4 — Add config validation call at loop start, return clear error before spawning any sessions `P0` `S`
+- [x] 0.6.3.4 — Add config validation call at loop start, return clear error before spawning any sessions `P0` `S`
 - **Acceptance:** invalid loop configs rejected with descriptive errors before work begins
 
 ### 0.6.4 — Gate report formatting
-- [ ] 0.6.4.1 — Add `FormatGateReport(*GateReport) string` — human-readable gate summary with pass/warn/fail coloring hints `P1` `M`
-- [ ] 0.6.4.2 — Add `FormatGateReportMarkdown(*GateReport) string` — markdown table for scratchpad/PR descriptions `P1` `S`
-- [ ] 0.6.4.3 — Add gate trend helper: `CompareGateReports(prev, current *GateReport) []GateTrend` showing improvement/regression per metric `P1` `M`
+- [x] 0.6.4.1 — Add `FormatGateReport(*GateReport) string` — human-readable gate summary with pass/warn/fail coloring hints `P1` `M`
+- [x] 0.6.4.2 — Add `FormatGateReportMarkdown(*GateReport) string` — markdown table for scratchpad/PR descriptions `P1` `S`
+- [x] 0.6.4.3 — Add gate trend helper: `CompareGateReports(prev, current *GateReport) []GateTrend` showing improvement/regression per metric `P1` `M`
 - [ ] 0.6.4.4 — Wire `FormatGateReport` into loop status output and MCP `loop_gates` tool response `P1` `S`
 - **Acceptance:** gate reports render as readable tables, trend comparison shows metric direction
 
 ### 0.6.5 — Session timeout and stall detection
-- [ ] 0.6.5.1 — Add `StallTimeout` field to `LoopConfig` (default: 10 minutes) — max time for a single iteration with no output `P0` `M`
-- [ ] 0.6.5.2 — Implement stall detector in `StepLoop`: monitor worker session output timestamp, kill and retry on timeout `P0` `L`
-- [ ] 0.6.5.3 — Add `StallCount` field to `LoopObservation` for tracking stall frequency `P1` `S`
-- [ ] 0.6.5.4 — Add stall detection tests: mock session that produces no output, assert timeout triggers `P1` `M`
+- [x] 0.6.5.1 — Add `StallTimeout` field to `LoopConfig` (default: 10 minutes) — max time for a single iteration with no output `P0` `M`
+- [x] 0.6.5.2 — Implement stall detector in `StepLoop`: monitor worker session output timestamp, kill and retry on timeout `P0` `L`
+- [x] 0.6.5.3 — Add `StallCount` field to `LoopObservation` for tracking stall frequency `P1` `S`
+- [x] 0.6.5.4 — Add stall detection tests: mock session that produces no output, assert timeout triggers `P1` `M`
 - **Acceptance:** stalled iterations detected and retried, stall count tracked in observations
 
 ### 0.6.6 — Worktree cleanup robustness
-- [ ] 0.6.6.1 — Add `CleanupStaleWorktrees(repoRoot string, maxAge time.Duration) (int, error)` — remove worktrees older than maxAge `P1` `M`
-- [ ] 0.6.6.2 — Add worktree lock file detection: skip cleanup if `.lock` file present (active worktree) `P1` `S`
-- [ ] 0.6.6.3 — Call `CleanupStaleWorktrees` at loop start with 24h maxAge `P1` `S`
+- [x] 0.6.6.1 — Add `CleanupStaleWorktrees(repoRoot string, maxAge time.Duration) (int, error)` — remove worktrees older than maxAge `P1` `M`
+- [x] 0.6.6.2 — Add worktree lock file detection: skip cleanup if `.lock` file present (active worktree) `P1` `S`
+- [x] 0.6.6.3 — Call `CleanupStaleWorktrees` at loop start with 24h maxAge `P1` `S`
 - [ ] 0.6.6.4 — Add `ralphglasses_worktree_cleanup` MCP tool for manual cleanup `P2` `M`
 - **Acceptance:** stale worktrees cleaned up automatically, active worktrees preserved
 
 ### 0.6.7 — Planner task deduplication improvement
-- [ ] 0.6.7.1 — Add Levenshtein/Jaccard similarity check to `isDuplicateTask`: catch near-duplicate titles (threshold 0.8) `P1` `M`
-- [ ] 0.6.7.2 — Track completed task titles in observation history, reject re-proposals of already-completed work `P1` `M`
+- [x] 0.6.7.1 — Add Levenshtein/Jaccard similarity check to `isDuplicateTask`: catch near-duplicate titles (threshold 0.8) `P1` `M`
+- [x] 0.6.7.2 — Track completed task titles in observation history, reject re-proposals of already-completed work `P1` `M`
 - [ ] 0.6.7.3 — Add `DedupReason` field to skipped tasks for debugging planner behavior `P2` `S`
-- [ ] 0.6.7.4 — Add dedup tests: exact match, near-match, and distinct task pairs `P1` `M`
+- [x] 0.6.7.4 — Add dedup tests: exact match, near-match, and distinct task pairs `P1` `M`
 - **Acceptance:** planner doesn't re-propose completed or near-duplicate tasks
 
 ### Phase 0.7 — Codebase Hardening & Observability

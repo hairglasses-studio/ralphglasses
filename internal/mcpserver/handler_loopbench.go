@@ -188,7 +188,19 @@ func (s *Server) handleLoopGates(_ context.Context, req mcp.CallToolRequest) (*m
 	thresholds := e2e.DefaultGateThresholds()
 	report := e2e.EvaluateGates(observations, baseline, thresholds)
 
-	return jsonResult(report), nil
+	// Wrap the report with human-readable and markdown-formatted summaries.
+	type gateResponse struct {
+		Report   *e2e.GateReport `json:"report"`
+		Summary  string          `json:"summary"`
+		Markdown string          `json:"markdown"`
+	}
+	resp := gateResponse{
+		Report:   report,
+		Summary:  e2e.FormatGateReport(report),
+		Markdown: e2e.FormatGateReportMarkdown(report),
+	}
+
+	return jsonResult(resp), nil
 }
 
 // windowType returns "rolling" if a window was explicitly specified, "all" otherwise.

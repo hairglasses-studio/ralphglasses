@@ -246,14 +246,19 @@ func (s *Server) handleLogs(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	allLines, err := process.ReadFullLog(repoPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			logPath := process.LogFilePath(repoPath)
-			return jsonResult(map[string]any{
-				"entries":            []any{},
-				"message":            fmt.Sprintf("no log file found at %s", logPath),
-				"log_paths_checked":  []string{logPath},
-			}), nil
+			// FINDING-169: Fall back to legacy log paths before returning an error.
+			// Check .ralph/logs/*.log and .ralph/ralph.log for older log formats.
+			allLines, err = process.ReadFullLogFallback(repoPath)
+			if err != nil {
+				// No log files at any path — return empty gracefully instead of an error.
+				return jsonResult(map[string]any{
+					"lines":   make([]string, 0),
+					"message": "no log files found — session output will appear here once a session runs",
+				}), nil
+			}
+		} else {
+			return codedError(ErrFilesystem, fmt.Sprintf("read log: %v", err)), nil
 		}
-		return codedError(ErrFilesystem, fmt.Sprintf("read log: %v", err)), nil
 	}
 
 	start := 0

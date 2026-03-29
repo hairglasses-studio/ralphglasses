@@ -156,6 +156,7 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_coverage_report":     {Title: "Coverage Report", ReadOnlyHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_cost_estimate":       {Title: "Cost Estimate", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_merge_verify":        {Title: "Merge Verify", ReadOnlyHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_worktree_cleanup":    {Title: "Worktree Cleanup", DestructiveHint: boolPtr(true)},
 
 	// ── rdcycle ──────────────────────────────────────────────────────────
 	"ralphglasses_finding_to_task": {Title: "Finding to Task", ReadOnlyHint: boolPtr(true)},

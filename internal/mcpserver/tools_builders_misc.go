@@ -499,6 +499,13 @@ func (s *Server) buildObservabilityGroup() ToolGroup {
 				mcp.WithString("packages", mcp.Description("Package pattern to test (default ./...)")),
 				mcp.WithBoolean("race", mcp.Description("Enable -race detector (default true)")),
 			), s.handleMergeVerify},
+
+			// Worktree cleanup
+			{mcp.NewTool("ralphglasses_worktree_cleanup",
+				mcp.WithDescription("Clean up stale loop worktrees older than a given age — skips locked/active worktrees"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithNumber("max_age_hours", mcp.Description("Max age in hours before cleanup (default 24)")),
+			), s.handleWorktreeCleanup},
 		},
 	}
 }

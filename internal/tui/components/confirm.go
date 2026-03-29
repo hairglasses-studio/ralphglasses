@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
@@ -33,6 +34,9 @@ type ConfirmDialog struct {
 	Active   bool
 	Width    int
 }
+
+// Ensure ConfirmDialog satisfies Modal at compile time.
+var _ Modal = (*ConfirmDialog)(nil)
 
 // HandleKey processes a key press in the confirm dialog.
 // Returns a result message and true if the dialog was dismissed.
@@ -113,4 +117,38 @@ func (d *ConfirmDialog) View() string {
 	// Box it
 	box := styles.StatBox.Width(innerWidth).Render(content)
 	return box
+}
+
+// --- Modal interface methods ---
+
+// IsActive implements Modal.
+func (d *ConfirmDialog) IsActive() bool { return d.Active }
+
+// Deactivate implements Modal.
+func (d *ConfirmDialog) Deactivate() { d.Active = false }
+
+// ModalHandleKey implements Modal.HandleKey by adapting the existing HandleKey logic.
+func (d *ConfirmDialog) ModalHandleKey(msg tea.KeyMsg) (tea.Cmd, bool) {
+	keyType := msg.Type.String()
+	if msg.Type == tea.KeyRunes {
+		keyType = string(msg.Runes)
+	}
+
+	switch keyType {
+	case "left", "right", "tab":
+		d.HandleKey(keyType)
+		return nil, true
+	case "enter", "y", "n", "esc":
+		result, dismissed := d.HandleKey(keyType)
+		if dismissed {
+			return func() tea.Msg { return result }, true
+		}
+		return nil, true
+	}
+	return nil, false
+}
+
+// ModalView implements Modal.View.
+func (d *ConfirmDialog) ModalView(width, height int) string {
+	return d.View()
 }

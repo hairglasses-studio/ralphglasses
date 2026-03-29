@@ -11,12 +11,12 @@ import (
 
 // TeamColumns defines the teams table structure.
 var TeamColumns = []components.Column{
-	{Title: "Name", Width: 16, Sortable: true, Grow: true},
-	{Title: "Repo", Width: 16, Sortable: true},
-	{Title: "Status", Width: 14, Sortable: true},
-	{Title: "Lead", Width: 10, Sortable: false},
-	{Title: "Progress", Width: 16, Sortable: true},
-	{Title: "Tasks", Width: 8, Sortable: true},
+	{Title: "Name", Width: 16, Sortable: true, MinWidth: 10, Flex: 2.0},
+	{Title: "Repo", Width: 16, Sortable: true, MinWidth: 10, Flex: 1.5},
+	{Title: "Status", Width: 14, Sortable: true, MinWidth: 10},
+	{Title: "Lead", Width: 10, Sortable: false, MinWidth: 8},
+	{Title: "Progress", Width: 16, Sortable: true, MinWidth: 10, Flex: 1.0},
+	{Title: "Tasks", Width: 8, Sortable: true, MinWidth: 6},
 }
 
 // NewTeamsTable creates a table pre-configured for teams.

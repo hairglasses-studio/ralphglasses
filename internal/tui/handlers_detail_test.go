@@ -18,7 +18,7 @@ func newDetailModel(repos ...*model.Repo) Model {
 	m.Width = 120
 	m.Height = 40
 	if len(repos) > 0 {
-		m.SelectedIdx = 0
+		m.Sel.RepoIdx = 0
 		m.pushView(ViewRepoDetail, repos[0].Name)
 	}
 	return m
@@ -29,9 +29,9 @@ func newDetailModel(repos ...*model.Repo) Model {
 func TestDetail_InvalidSelectedIdx(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Ctx = context.Background()
-	m.CurrentView = ViewRepoDetail
+	m.Nav.CurrentView = ViewRepoDetail
 	m.Keys.SetViewContext(ViewRepoDetail)
-	m.SelectedIdx = -1
+	m.Sel.RepoIdx = -1
 
 	m2, cmd := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyEnter})
 	got := m2.(Model)
@@ -39,17 +39,17 @@ func TestDetail_InvalidSelectedIdx(t *testing.T) {
 		t.Error("expected nil cmd for invalid SelectedIdx")
 	}
 	// Should remain in same view since guard returned early
-	if got.CurrentView != ViewRepoDetail {
-		t.Errorf("CurrentView = %v, want ViewRepoDetail", got.CurrentView)
+	if got.Nav.CurrentView != ViewRepoDetail {
+		t.Errorf("CurrentView = %v, want ViewRepoDetail", got.Nav.CurrentView)
 	}
 }
 
 func TestDetail_SelectedIdxOutOfRange(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Ctx = context.Background()
-	m.CurrentView = ViewRepoDetail
+	m.Nav.CurrentView = ViewRepoDetail
 	m.Keys.SetViewContext(ViewRepoDetail)
-	m.SelectedIdx = 999
+	m.Sel.RepoIdx = 999
 
 	m2, cmd := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyEnter})
 	_ = m2
@@ -64,8 +64,8 @@ func TestDetail_EnterPushesLogView(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
 	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyEnter})
 	got := m2.(Model)
-	if got.CurrentView != ViewLogs {
-		t.Errorf("CurrentView = %v, want ViewLogs", got.CurrentView)
+	if got.Nav.CurrentView != ViewLogs {
+		t.Errorf("CurrentView = %v, want ViewLogs", got.Nav.CurrentView)
 	}
 }
 
@@ -79,8 +79,8 @@ func TestDetail_EditConfig_NoConfig(t *testing.T) {
 	if !got.Notify.Active() {
 		t.Error("expected notification when config is nil")
 	}
-	if got.CurrentView != ViewRepoDetail {
-		t.Errorf("should remain in detail view, got %v", got.CurrentView)
+	if got.Nav.CurrentView != ViewRepoDetail {
+		t.Errorf("should remain in detail view, got %v", got.Nav.CurrentView)
 	}
 }
 
@@ -92,8 +92,8 @@ func TestDetail_EditConfig_WithConfig(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo", Config: cfg})
 	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("e")})
 	got := m2.(Model)
-	if got.CurrentView != ViewConfigEditor {
-		t.Errorf("CurrentView = %v, want ViewConfigEditor", got.CurrentView)
+	if got.Nav.CurrentView != ViewConfigEditor {
+		t.Errorf("CurrentView = %v, want ViewConfigEditor", got.Nav.CurrentView)
 	}
 	if got.ConfigEdit == nil {
 		t.Error("expected ConfigEdit to be set")
@@ -117,11 +117,11 @@ func TestDetail_StopAction(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
 	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
 	got := m2.(Model)
-	if got.ConfirmDialog == nil {
+	if got.Modals.ConfirmDialog == nil {
 		t.Error("expected ConfirmDialog after stop key in detail")
 	}
-	if got.ConfirmDialog != nil && got.ConfirmDialog.Action != "stopLoop" {
-		t.Errorf("ConfirmDialog.Action = %q, want %q", got.ConfirmDialog.Action, "stopLoop")
+	if got.Modals.ConfirmDialog != nil && got.Modals.ConfirmDialog.Action != "stopLoop" {
+		t.Errorf("ConfirmDialog.Action = %q, want %q", got.Modals.ConfirmDialog.Action, "stopLoop")
 	}
 }
 
@@ -142,8 +142,8 @@ func TestDetail_DiffView(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
 	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
 	got := m2.(Model)
-	if got.CurrentView != ViewDiff {
-		t.Errorf("CurrentView = %v, want ViewDiff", got.CurrentView)
+	if got.Nav.CurrentView != ViewDiff {
+		t.Errorf("CurrentView = %v, want ViewDiff", got.Nav.CurrentView)
 	}
 }
 
@@ -153,7 +153,7 @@ func TestDetail_ActionsMenu(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
 	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
 	got := m2.(Model)
-	if got.ActionMenu == nil {
+	if got.Modals.ActionMenu == nil {
 		t.Error("expected ActionMenu after 'a' in detail")
 	}
 }
@@ -164,7 +164,7 @@ func TestDetail_LaunchSession(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
 	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("L")})
 	got := m2.(Model)
-	if got.Launcher == nil {
+	if got.Modals.Launcher == nil {
 		t.Error("expected Launcher after 'L' in detail")
 	}
 }
@@ -175,8 +175,8 @@ func TestDetail_TimelineView(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
 	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
 	got := m2.(Model)
-	if got.CurrentView != ViewTimeline {
-		t.Errorf("CurrentView = %v, want ViewTimeline", got.CurrentView)
+	if got.Nav.CurrentView != ViewTimeline {
+		t.Errorf("CurrentView = %v, want ViewTimeline", got.Nav.CurrentView)
 	}
 }
 
@@ -186,8 +186,8 @@ func TestDetail_LoopHealth(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
 	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("h")})
 	got := m2.(Model)
-	if got.CurrentView != ViewLoopHealth {
-		t.Errorf("CurrentView = %v, want ViewLoopHealth", got.CurrentView)
+	if got.Nav.CurrentView != ViewLoopHealth {
+		t.Errorf("CurrentView = %v, want ViewLoopHealth", got.Nav.CurrentView)
 	}
 }
 
@@ -206,7 +206,7 @@ func TestDetail_UnmatchedKey(t *testing.T) {
 
 func TestSessions_MoveDown(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessions
+	m.Nav.CurrentView = ViewSessions
 	m.Keys.SetViewContext(ViewSessions)
 	m.SessionTable.SetRows([]components.Row{
 		{"abc12345", "claude", "/tmp/repo", "running"},
@@ -226,7 +226,7 @@ func TestSessions_MoveDown(t *testing.T) {
 
 func TestSessions_MoveUp(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessions
+	m.Nav.CurrentView = ViewSessions
 	m.Keys.SetViewContext(ViewSessions)
 	m.SessionTable.SetRows([]components.Row{
 		{"abc12345", "claude", "/tmp/repo", "running"},
@@ -249,7 +249,7 @@ func TestSessions_MoveUp(t *testing.T) {
 
 func TestSessions_Sort(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessions
+	m.Nav.CurrentView = ViewSessions
 	m.Keys.SetViewContext(ViewSessions)
 	m.SessionTable.SetRows([]components.Row{
 		{"abc12345", "claude", "/tmp/repo", "running"},
@@ -260,29 +260,29 @@ func TestSessions_Sort(t *testing.T) {
 
 func TestSessions_Enter_EmptyTable(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessions
+	m.Nav.CurrentView = ViewSessions
 	m.Keys.SetViewContext(ViewSessions)
 	m2, _ := m.handleSessionsKey(tea.KeyMsg{Type: tea.KeyEnter})
 	got := m2.(Model)
-	if got.CurrentView != ViewSessions {
+	if got.Nav.CurrentView != ViewSessions {
 		t.Errorf("should stay in sessions view with empty table")
 	}
 }
 
 func TestSessions_StopAction_EmptyTable(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessions
+	m.Nav.CurrentView = ViewSessions
 	m.Keys.SetViewContext(ViewSessions)
 	m2, _ := m.handleSessionsKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
 	got := m2.(Model)
-	if got.ConfirmDialog != nil {
+	if got.Modals.ConfirmDialog != nil {
 		t.Error("should not show confirm dialog with empty table")
 	}
 }
 
 func TestSessions_SpaceToggle(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessions
+	m.Nav.CurrentView = ViewSessions
 	m.Keys.SetViewContext(ViewSessions)
 	m.SessionTable.SetRows([]components.Row{
 		{"abc12345", "claude", "/tmp/repo", "running"},
@@ -293,12 +293,12 @@ func TestSessions_SpaceToggle(t *testing.T) {
 
 func TestSessions_TimelineView(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessions
+	m.Nav.CurrentView = ViewSessions
 	m.Keys.SetViewContext(ViewSessions)
 	m2, _ := m.handleSessionsKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
 	got := m2.(Model)
-	if got.CurrentView != ViewTimeline {
-		t.Errorf("CurrentView = %v, want ViewTimeline", got.CurrentView)
+	if got.Nav.CurrentView != ViewTimeline {
+		t.Errorf("CurrentView = %v, want ViewTimeline", got.Nav.CurrentView)
 	}
 }
 
@@ -306,34 +306,34 @@ func TestSessions_TimelineView(t *testing.T) {
 
 func TestSessionDetail_StopAction_NoSession(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessionDetail
+	m.Nav.CurrentView = ViewSessionDetail
 	m.Keys.SetViewContext(ViewSessionDetail)
-	m.SelectedSession = "" // no session
+	m.Sel.SessionID = "" // no session
 
 	m2, _ := m.handleSessionDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
 	got := m2.(Model)
-	if got.ConfirmDialog != nil {
+	if got.Modals.ConfirmDialog != nil {
 		t.Error("should not show dialog with no session")
 	}
 }
 
 func TestSessionDetail_ActionsMenu(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessionDetail
+	m.Nav.CurrentView = ViewSessionDetail
 	m.Keys.SetViewContext(ViewSessionDetail)
 
 	m2, _ := m.handleSessionDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
 	got := m2.(Model)
-	if got.ActionMenu == nil {
+	if got.Modals.ActionMenu == nil {
 		t.Error("expected ActionMenu after 'a' in session detail")
 	}
 }
 
 func TestSessionDetail_OutputView_NoSession(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessionDetail
+	m.Nav.CurrentView = ViewSessionDetail
 	m.Keys.SetViewContext(ViewSessionDetail)
-	m.SelectedSession = ""
+	m.Sel.SessionID = ""
 	m.SessMgr = nil
 
 	m2, cmd := m.handleSessionDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("o")})
@@ -345,42 +345,42 @@ func TestSessionDetail_OutputView_NoSession(t *testing.T) {
 
 func TestSessionDetail_TimelineView(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessionDetail
+	m.Nav.CurrentView = ViewSessionDetail
 	m.Keys.SetViewContext(ViewSessionDetail)
 
 	m2, _ := m.handleSessionDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
 	got := m2.(Model)
-	if got.CurrentView != ViewTimeline {
-		t.Errorf("CurrentView = %v, want ViewTimeline", got.CurrentView)
+	if got.Nav.CurrentView != ViewTimeline {
+		t.Errorf("CurrentView = %v, want ViewTimeline", got.Nav.CurrentView)
 	}
 }
 
 func TestSessionDetail_Enter_NoSessMgr(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessionDetail
+	m.Nav.CurrentView = ViewSessionDetail
 	m.Keys.SetViewContext(ViewSessionDetail)
-	m.SelectedSession = "test-id"
+	m.Sel.SessionID = "test-id"
 	m.SessMgr = nil
 
 	m2, _ := m.handleSessionDetailKey(tea.KeyMsg{Type: tea.KeyEnter})
 	got := m2.(Model)
 	// Should stay since no SessMgr
-	if got.CurrentView != ViewSessionDetail {
-		t.Errorf("should stay in session detail, got %v", got.CurrentView)
+	if got.Nav.CurrentView != ViewSessionDetail {
+		t.Errorf("should stay in session detail, got %v", got.Nav.CurrentView)
 	}
 }
 
 func TestSessionDetail_DiffView_NoSessMgr(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessionDetail
+	m.Nav.CurrentView = ViewSessionDetail
 	m.Keys.SetViewContext(ViewSessionDetail)
-	m.SelectedSession = "test-id"
+	m.Sel.SessionID = "test-id"
 	m.SessMgr = nil
 
 	m2, _ := m.handleSessionDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
 	got := m2.(Model)
-	if got.CurrentView != ViewSessionDetail {
-		t.Errorf("should stay in session detail, got %v", got.CurrentView)
+	if got.Nav.CurrentView != ViewSessionDetail {
+		t.Errorf("should stay in session detail, got %v", got.Nav.CurrentView)
 	}
 }
 
@@ -388,7 +388,7 @@ func TestSessionDetail_DiffView_NoSessMgr(t *testing.T) {
 
 func TestTeams_MoveDown(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewTeams
+	m.Nav.CurrentView = ViewTeams
 	m.Keys.SetViewContext(ViewTeams)
 	m.TeamTable.SetRows([]components.Row{
 		{"team-alpha", "abc123", "2", "active"},
@@ -408,7 +408,7 @@ func TestTeams_MoveDown(t *testing.T) {
 
 func TestTeams_Enter_WithRow(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewTeams
+	m.Nav.CurrentView = ViewTeams
 	m.Keys.SetViewContext(ViewTeams)
 	m.TeamTable.SetRows([]components.Row{
 		{"team-alpha", "abc123", "2", "active"},
@@ -416,28 +416,28 @@ func TestTeams_Enter_WithRow(t *testing.T) {
 
 	m2, _ := m.handleTeamsKey(tea.KeyMsg{Type: tea.KeyEnter})
 	got := m2.(Model)
-	if got.CurrentView != ViewTeamDetail {
-		t.Errorf("CurrentView = %v, want ViewTeamDetail", got.CurrentView)
+	if got.Nav.CurrentView != ViewTeamDetail {
+		t.Errorf("CurrentView = %v, want ViewTeamDetail", got.Nav.CurrentView)
 	}
-	if got.SelectedTeam != "team-alpha" {
-		t.Errorf("SelectedTeam = %q, want %q", got.SelectedTeam, "team-alpha")
+	if got.Sel.TeamName != "team-alpha" {
+		t.Errorf("SelectedTeam = %q, want %q", got.Sel.TeamName, "team-alpha")
 	}
 }
 
 func TestTeams_Enter_EmptyTable(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewTeams
+	m.Nav.CurrentView = ViewTeams
 	m.Keys.SetViewContext(ViewTeams)
 	m2, _ := m.handleTeamsKey(tea.KeyMsg{Type: tea.KeyEnter})
 	got := m2.(Model)
-	if got.CurrentView != ViewTeams {
+	if got.Nav.CurrentView != ViewTeams {
 		t.Error("should stay in teams view with empty table")
 	}
 }
 
 func TestTeams_Sort(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewTeams
+	m.Nav.CurrentView = ViewTeams
 	m.Keys.SetViewContext(ViewTeams)
 	m.TeamTable.SetRows([]components.Row{
 		{"team-alpha", "abc123", "2", "active"},
@@ -450,55 +450,55 @@ func TestTeams_Sort(t *testing.T) {
 
 func TestTeamDetail_Enter_NoSessMgr(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewTeamDetail
+	m.Nav.CurrentView = ViewTeamDetail
 	m.Keys.SetViewContext(ViewTeamDetail)
-	m.SelectedTeam = "test-team"
+	m.Sel.TeamName = "test-team"
 	m.SessMgr = nil
 
 	m2, _ := m.handleTeamDetailKey(tea.KeyMsg{Type: tea.KeyEnter})
 	got := m2.(Model)
-	if got.CurrentView != ViewTeamDetail {
+	if got.Nav.CurrentView != ViewTeamDetail {
 		t.Error("should stay in team detail with nil SessMgr")
 	}
 }
 
 func TestTeamDetail_Timeline_NoSessMgr(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewTeamDetail
+	m.Nav.CurrentView = ViewTeamDetail
 	m.Keys.SetViewContext(ViewTeamDetail)
-	m.SelectedTeam = "test-team"
+	m.Sel.TeamName = "test-team"
 	m.SessMgr = nil
 
 	m2, _ := m.handleTeamDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
 	got := m2.(Model)
-	if got.CurrentView != ViewTeamDetail {
+	if got.Nav.CurrentView != ViewTeamDetail {
 		t.Error("should stay in team detail with nil SessMgr")
 	}
 }
 
 func TestTeamDetail_DiffView_NoSessMgr(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewTeamDetail
+	m.Nav.CurrentView = ViewTeamDetail
 	m.Keys.SetViewContext(ViewTeamDetail)
-	m.SelectedTeam = "test-team"
+	m.Sel.TeamName = "test-team"
 	m.SessMgr = nil
 
 	m2, _ := m.handleTeamDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
 	got := m2.(Model)
-	if got.CurrentView != ViewTeamDetail {
+	if got.Nav.CurrentView != ViewTeamDetail {
 		t.Error("should stay in team detail with nil SessMgr")
 	}
 }
 
 func TestTeamDetail_Enter_EmptyTeam(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewTeamDetail
+	m.Nav.CurrentView = ViewTeamDetail
 	m.Keys.SetViewContext(ViewTeamDetail)
-	m.SelectedTeam = ""
+	m.Sel.TeamName = ""
 
 	m2, _ := m.handleTeamDetailKey(tea.KeyMsg{Type: tea.KeyEnter})
 	got := m2.(Model)
-	if got.CurrentView != ViewTeamDetail {
+	if got.Nav.CurrentView != ViewTeamDetail {
 		t.Error("should stay in team detail with empty team name")
 	}
 }
@@ -521,7 +521,7 @@ func asModel(t *testing.T, tm tea.Model) Model {
 
 func TestFleet_MoveDown(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewFleet
+	m.Nav.CurrentView = ViewFleet
 	m.Keys.SetViewContext(ViewFleet)
 	m.Width = 120
 	m.Height = 40
@@ -532,7 +532,7 @@ func TestFleet_MoveDown(t *testing.T) {
 
 func TestFleet_MoveUp(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewFleet
+	m.Nav.CurrentView = ViewFleet
 	m.Keys.SetViewContext(ViewFleet)
 	m.Width = 120
 	m.Height = 40
@@ -543,7 +543,7 @@ func TestFleet_MoveUp(t *testing.T) {
 
 func TestFleet_Enter(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewFleet
+	m.Nav.CurrentView = ViewFleet
 	m.Keys.SetViewContext(ViewFleet)
 	m.Width = 120
 	m.Height = 40
@@ -554,7 +554,7 @@ func TestFleet_Enter(t *testing.T) {
 
 func TestFleet_StopAction(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewFleet
+	m.Nav.CurrentView = ViewFleet
 	m.Keys.SetViewContext(ViewFleet)
 	m.Width = 120
 	m.Height = 40
@@ -565,7 +565,7 @@ func TestFleet_StopAction(t *testing.T) {
 
 func TestFleet_DiffView(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewFleet
+	m.Nav.CurrentView = ViewFleet
 	m.Keys.SetViewContext(ViewFleet)
 	m.Width = 120
 	m.Height = 40
@@ -576,7 +576,7 @@ func TestFleet_DiffView(t *testing.T) {
 
 func TestFleet_TimelineView(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewFleet
+	m.Nav.CurrentView = ViewFleet
 	m.Keys.SetViewContext(ViewFleet)
 	m.Width = 120
 	m.Height = 40
@@ -587,7 +587,7 @@ func TestFleet_TimelineView(t *testing.T) {
 
 func TestFleet_TabCycleSection(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewFleet
+	m.Nav.CurrentView = ViewFleet
 	m.Keys.SetViewContext(ViewFleet)
 	m.Width = 120
 	m.Height = 40
@@ -598,7 +598,7 @@ func TestFleet_TabCycleSection(t *testing.T) {
 
 func TestFleet_LeftCycleSection(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewFleet
+	m.Nav.CurrentView = ViewFleet
 	m.Keys.SetViewContext(ViewFleet)
 	m.Width = 120
 	m.Height = 40
@@ -609,16 +609,16 @@ func TestFleet_LeftCycleSection(t *testing.T) {
 
 func TestFleet_BracketWindowCycle(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewFleet
+	m.Nav.CurrentView = ViewFleet
 	m.Keys.SetViewContext(ViewFleet)
 	m.Width = 120
 	m.Height = 40
 
-	initial := m.FleetWindow
+	initial := m.Fleet.Window
 
 	m2, _ := m.handleFleetKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("]")})
 	got := asModel(t, m2)
-	if got.FleetWindow == initial {
+	if got.Fleet.Window == initial {
 		// Could wrap around, but at least it changed or wrapped
 	}
 

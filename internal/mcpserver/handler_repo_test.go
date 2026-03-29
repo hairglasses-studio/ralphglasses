@@ -476,7 +476,8 @@ func TestHandleLogs_RepoNotFound(t *testing.T) {
 
 func TestHandleLogs_NoLogFile(t *testing.T) {
 	t.Parallel()
-	// Create a repo without a log file to exercise the ErrNotExist path.
+	// FINDING-169: When no log files exist at any path, return a graceful
+	// empty response instead of an error.
 	root := t.TempDir()
 	repoPath := filepath.Join(root, "no-log-repo")
 	ralphDir := filepath.Join(repoPath, ".ralph")
@@ -501,20 +502,54 @@ func TestHandleLogs_NoLogFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("handleLogs: %v", err)
 	}
-	// FINDING-169: Missing log file should return success with empty entries,
-	// not an error.
+	// Should return graceful empty response (not an error) when no logs exist.
 	if result.IsError {
-		t.Fatalf("expected success for missing log file, got error: %s", getResultText(result))
+		t.Fatalf("expected graceful empty response, got error: %s", getResultText(result))
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, `"entries":[]`) {
-		t.Errorf("expected empty entries array, got: %s", text)
+	if !strings.Contains(text, "no log files found") {
+		t.Errorf("expected 'no log files found' message, got: %s", text)
 	}
-	if !strings.Contains(text, "no log file found") {
-		t.Errorf("expected 'no log file found' message, got: %s", text)
+}
+
+func TestHandleLogs_FallbackLegacyPath(t *testing.T) {
+	t.Parallel()
+	// FINDING-169: When primary ralph.log doesn't exist but legacy path does,
+	// read from the fallback location.
+	root := t.TempDir()
+	repoPath := filepath.Join(root, "legacy-log-repo")
+	ralphDir := filepath.Join(repoPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(text, "log_paths_checked") {
-		t.Errorf("expected log_paths_checked in response, got: %s", text)
+	if err := os.WriteFile(filepath.Join(repoPath, ".ralphrc"), []byte("MODEL=sonnet\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	statusData, _ := json.Marshal(model.LoopStatus{Status: "idle"})
+	if err := os.WriteFile(filepath.Join(ralphDir, "status.json"), statusData, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Write log at legacy path (.ralph/ralph.log)
+	if err := os.WriteFile(filepath.Join(ralphDir, "ralph.log"), []byte("legacy line 1\nlegacy line 2\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := NewServer(root)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleLogs(context.Background(), makeRequest(map[string]any{
+		"repo": "legacy-log-repo",
+	}))
+	if err != nil {
+		t.Fatalf("handleLogs: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success reading legacy log, got error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "legacy line 1") {
+		t.Errorf("expected legacy log content, got: %s", text)
 	}
 }
 
