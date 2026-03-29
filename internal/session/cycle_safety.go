@@ -57,7 +57,8 @@ func ValidateCycleAdvance(cycle *CycleRun, config CycleSafetyConfig) error {
 	}
 
 	// Check: phase cooldown — prevent rapid phase transitions.
-	if config.PhaseCooldown > 0 && now.Sub(cycle.UpdatedAt) < config.PhaseCooldown {
+	// Skip cooldown for the initial proposed→baselining transition (same logical op as creation).
+	if config.PhaseCooldown > 0 && cycle.Phase != CycleProposed && now.Sub(cycle.UpdatedAt) < config.PhaseCooldown {
 		remaining := config.PhaseCooldown - now.Sub(cycle.UpdatedAt)
 		return &CycleSafetyError{
 			Check:   "phase_cooldown",
