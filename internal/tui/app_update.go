@@ -236,6 +236,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Notify.Show("Session output stream ended", 3*time.Second)
 		return m, nil
 
+	case tea.MouseMsg:
+		return m.handleMouse(msg)
+
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 	}
