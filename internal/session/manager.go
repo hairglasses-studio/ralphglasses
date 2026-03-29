@@ -298,6 +298,7 @@ func (m *Manager) startSupervisor(repoPath string) {
 	m.supervisor = NewSupervisor(m, repoPath)
 	m.supervisor.monitor = NewHealthMonitor(DefaultHealthThresholds())
 	m.supervisor.chainer = NewCycleChainer()
+	m.supervisor.bus = m.bus
 	if m.optimizer != nil {
 		m.supervisor.decisions = m.optimizer.decisions
 	}

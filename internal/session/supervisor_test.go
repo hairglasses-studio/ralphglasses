@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
 
 func newTestSupervisor(t *testing.T) (*Supervisor, string) {
@@ -153,3 +155,104 @@ func TestSupervisor_MonitorSignalsDispatched(t *testing.T) {
 	}
 	s.Stop()
 }
+
+func TestSupervisor_MaxCyclesTermination(t *testing.T) {
+	s, _ := newTestSupervisor(t)
+	s.MaxCycles = 2
+	s.mu.Lock()
+	s.cyclesLaunched = 2
+	s.mu.Unlock()
+
+	reason := s.shouldTerminate()
+	if reason == "" {
+		t.Fatal("expected termination reason for max cycles")
+	}
+	if !contains(reason, "max_cycles") {
+		t.Fatalf("unexpected reason: %s", reason)
+	}
+}
+
+func TestSupervisor_MaxDurationTermination(t *testing.T) {
+	s, _ := newTestSupervisor(t)
+	s.MaxDuration = 50 * time.Millisecond
+	s.mu.Lock()
+	s.startedAt = time.Now().Add(-100 * time.Millisecond)
+	s.mu.Unlock()
+
+	reason := s.shouldTerminate()
+	if reason == "" {
+		t.Fatal("expected termination reason for max duration")
+	}
+	if !contains(reason, "max_duration") {
+		t.Fatalf("unexpected reason: %s", reason)
+	}
+}
+
+func TestSupervisor_NoTerminationWhenUnlimited(t *testing.T) {
+	s, _ := newTestSupervisor(t)
+	// All limits are zero (unlimited).
+	reason := s.shouldTerminate()
+	if reason != "" {
+		t.Fatalf("unexpected termination: %s", reason)
+	}
+}
+
+func TestSupervisor_EventBusPublish(t *testing.T) {
+	s, _ := newTestSupervisor(t)
+	bus := events.NewBus(100)
+	s.SetBus(bus)
+	ch := bus.Subscribe("test-sub")
+
+	// Inject a signal that will trigger AutoOptimized event.
+	s.SetMonitor(&HealthMonitor{
+		EvaluateFunc: func(_ string) []HealthSignal {
+			return []HealthSignal{{
+				Category: DecisionLaunch, Metric: "idle_time",
+				Value: 300, Threshold: 60, Rationale: "idle", SuggestedAction: "launch",
+			}}
+		},
+	})
+	s.mgr = nil // prevent actual cycle launch
+	s.tick(context.Background())
+
+	// Drain events and check for AutoOptimized.
+	found := false
+	timeout := time.After(200 * time.Millisecond)
+	for {
+		select {
+		case evt := <-ch:
+			if evt.Type == events.AutoOptimized {
+				found = true
+			}
+		case <-timeout:
+			if !found {
+				t.Fatal("expected AutoOptimized event from tick")
+			}
+			return
+		}
+	}
+}
+
+func TestSupervisor_CycleCompletionTracked(t *testing.T) {
+	s, _ := newTestSupervisor(t)
+	s.CooldownBetween = 0
+	dl := NewDecisionLog("", LevelAutoOptimize)
+	s.SetDecisionLog(dl)
+
+	// Manually call launchCycle with nil mgr — should increment counter without panic.
+	s.mgr = nil
+	signal := HealthSignal{
+		Category: DecisionLaunch, Metric: "idle_time",
+		Value: 300, Threshold: 60,
+	}
+	s.launchCycle(context.Background(), signal, "test-dec-1")
+
+	s.mu.Lock()
+	launched := s.cyclesLaunched
+	s.mu.Unlock()
+	if launched != 1 {
+		t.Fatalf("cyclesLaunched = %d, want 1", launched)
+	}
+}
+
+// contains is defined in agents_test.go (same package).
