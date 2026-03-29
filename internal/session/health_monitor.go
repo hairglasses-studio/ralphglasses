@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -357,4 +359,34 @@ func countCriticalFindings(repoPath string, cycles []*CycleRun) int {
 		}
 	}
 	return count
+}
+
+// ParseCoveragePercent extracts the total coverage percentage from a Go
+// coverage profile (coverage.out). It runs `go tool cover -func` and parses
+// the "total:" line. Returns the percentage as a float64 (e.g., 84.5).
+func ParseCoveragePercent(coverProfile string) (float64, error) {
+	if _, err := os.Stat(coverProfile); err != nil {
+		return 0, err
+	}
+	out, err := exec.Command("go", "tool", "cover", "-func="+coverProfile).Output()
+	if err != nil {
+		return 0, fmt.Errorf("go tool cover: %w", err)
+	}
+	// Last line looks like: "total:\t(statements)\t84.5%"
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) == 0 {
+		return 0, fmt.Errorf("no output from go tool cover")
+	}
+	last := lines[len(lines)-1]
+	// Extract the percentage number before the % sign.
+	idx := strings.LastIndex(last, "\t")
+	if idx < 0 {
+		return 0, fmt.Errorf("unexpected format: %s", last)
+	}
+	pctStr := strings.TrimSuffix(strings.TrimSpace(last[idx+1:]), "%")
+	var pct float64
+	if _, err := fmt.Sscanf(pctStr, "%f", &pct); err != nil {
+		return 0, fmt.Errorf("parse percentage %q: %w", pctStr, err)
+	}
+	return pct, nil
 }
