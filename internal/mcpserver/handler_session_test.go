@@ -187,8 +187,8 @@ func TestHandleSessionStatus(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrNoActiveSessions) {
-			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
+		if code != string(ErrSessionNotFound) {
+			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
 		}
 	})
 
@@ -331,8 +331,8 @@ func TestHandleSessionStop(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrNoActiveSessions) {
-			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
+		if code != string(ErrSessionNotFound) {
+			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
 		}
 	})
 }
@@ -482,8 +482,8 @@ func TestHandleSessionBudget(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrNoActiveSessions) {
-			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
+		if code != string(ErrSessionNotFound) {
+			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
 		}
 	})
 
@@ -552,8 +552,8 @@ func TestHandleSessionOutput(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrNoActiveSessions) {
-			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
+		if code != string(ErrSessionNotFound) {
+			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
 		}
 	})
 
@@ -619,8 +619,8 @@ func TestHandleSessionTailErrors(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrNoActiveSessions) {
-			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
+		if code != string(ErrSessionNotFound) {
+			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
 		}
 	})
 
@@ -713,8 +713,8 @@ func TestHandleSessionDiffCodes(t *testing.T) {
 			t.Fatal("expected error for non-existent session")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrNoActiveSessions) {
-			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
+		if code != string(ErrSessionNotFound) {
+			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
 		}
 	})
 
@@ -800,8 +800,8 @@ func TestHandleSessionCompare(t *testing.T) {
 			t.Fatal("expected error for non-existent sessions")
 		}
 		code := parseErrorCode(t, getResultText(result))
-		if code != string(ErrNoActiveSessions) {
-			t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
+		if code != string(ErrSessionNotFound) {
+			t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
 		}
 	})
 
@@ -886,12 +886,12 @@ func TestSessionToolsNoActiveSessions(t *testing.T) {
 				t.Fatal("expected error when no sessions exist")
 			}
 			code := parseErrorCode(t, getResultText(result))
-			if code != string(ErrNoActiveSessions) {
-				t.Errorf("error_code = %q, want %q", code, ErrNoActiveSessions)
+			if code != string(ErrSessionNotFound) {
+				t.Errorf("error_code = %q, want %q", code, ErrSessionNotFound)
 			}
 			text := getResultText(result)
-			if !strings.Contains(text, "ralphglasses_session_launch") {
-				t.Errorf("expected guidance to use session_launch, got: %s", text)
+			if !strings.Contains(text, "ralphglasses_session_list") {
+				t.Errorf("expected guidance to use session_list, got: %s", text)
 			}
 		})
 	}

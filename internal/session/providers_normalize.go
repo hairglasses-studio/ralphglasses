@@ -34,9 +34,23 @@ func normalizeClaudeEvent(line []byte) (StreamEvent, error) {
 
 	// Secondary raw parse: extract nested fields that don't map to
 	// StreamEvent's flat JSON tags. Claude may emit cost in usage.cost_usd,
-	// sub-agent events in description/message, etc.
+	// sub-agent events in description/message, content as array of blocks, etc.
 	var raw map[string]any
 	if json.Unmarshal(line, &raw) == nil {
+		// Claude CLI emits assistant messages with content as an array of
+		// content blocks (e.g. [{"type":"text","text":"..."}]). The flat
+		// json.Unmarshal above silently drops these since Content is a string.
+		// Use firstText which recursively extracts text from arrays/objects.
+		if event.Content == "" {
+			event.Content = firstText(raw, "content", "message", "text")
+		}
+		if event.Result == "" {
+			event.Result = firstText(raw, "result", "summary")
+		}
+		if event.Text == "" {
+			event.Text = firstNonEmpty(event.Content, event.Result)
+		}
+
 		// Cost may be nested under usage (e.g. {"usage":{"cost_usd":0.12}})
 		if event.CostUSD == 0 {
 			event.CostUSD = firstNonZeroFloat(raw, "cost_usd", "usage.cost_usd", "usage.total_cost_usd")
@@ -62,7 +76,7 @@ func normalizeClaudeEvent(line []byte) (StreamEvent, error) {
 			text := firstNonEmpty(
 				getString(raw, "description"),
 				getString(raw, "message"),
-				getString(raw, "content"),
+				event.Content,
 			)
 			if text != "" {
 				event.Content = text
