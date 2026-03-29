@@ -9,6 +9,17 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
 
+// TeamSafety holds the safety configuration for team operations.
+// If nil, DefaultTeamSafety is used.
+var TeamSafety *TeamSafetyConfig
+
+func teamSafetyConfig() TeamSafetyConfig {
+	if TeamSafety != nil {
+		return *TeamSafety
+	}
+	return DefaultTeamSafety
+}
+
 // LaunchTeam creates an agent team by launching a lead session with team env vars.
 func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatus, error) {
 	if config.Name == "" {
@@ -19,6 +30,14 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 	}
 	if len(config.Tasks) == 0 {
 		return nil, ErrNoTasks
+	}
+
+	// Safety: enforce team creation limits.
+	m.mu.RLock()
+	existingCount := len(m.teams)
+	m.mu.RUnlock()
+	if err := ValidateTeamCreate(config.Name, len(config.Tasks), existingCount, teamSafetyConfig()); err != nil {
+		return nil, err
 	}
 
 	// Build a lead prompt that instructs the lead to use agent teams

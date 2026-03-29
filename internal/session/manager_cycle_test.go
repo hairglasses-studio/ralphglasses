@@ -10,6 +10,15 @@ import (
 	"time"
 )
 
+// disableCycleSafety sets permissive safety config for the duration of a test.
+func disableCycleSafety(t *testing.T) {
+	t.Helper()
+	old := CycleSafety
+	disabled := DisabledCycleSafety
+	CycleSafety = &disabled
+	t.Cleanup(func() { CycleSafety = old })
+}
+
 func TestManagerCreateCycle(t *testing.T) {
 	m := NewManager()
 	repoPath := t.TempDir()
@@ -82,6 +91,7 @@ func TestManagerGetActiveCycle(t *testing.T) {
 }
 
 func TestManagerAdvanceCycle(t *testing.T) {
+	disableCycleSafety(t)
 	m := NewManager()
 	repoPath := t.TempDir()
 
@@ -103,6 +113,7 @@ func TestManagerAdvanceCycle(t *testing.T) {
 }
 
 func TestManagerAdvanceCycle_FullPath(t *testing.T) {
+	disableCycleSafety(t)
 	m := NewManager()
 	repoPath := t.TempDir()
 
@@ -146,6 +157,7 @@ func TestManagerFailCycle(t *testing.T) {
 }
 
 func TestManagerPlanCycleTasks(t *testing.T) {
+	disableCycleSafety(t)
 	m := NewManager()
 	repoPath := t.TempDir()
 
@@ -323,6 +335,7 @@ func TestTimeNowOverride(t *testing.T) {
 }
 
 func TestManagerRunCycle_HappyPath(t *testing.T) {
+	disableCycleSafety(t)
 	// Speed up polling for tests.
 	origPoll := cyclePollInterval
 	cyclePollInterval = 10 * time.Millisecond
@@ -391,6 +404,7 @@ func TestManagerRunCycle_HappyPath(t *testing.T) {
 }
 
 func TestManagerRunCycle_NoTasks(t *testing.T) {
+	disableCycleSafety(t)
 	origPoll := cyclePollInterval
 	cyclePollInterval = 10 * time.Millisecond
 	defer func() { cyclePollInterval = origPoll }()
@@ -417,6 +431,7 @@ func TestManagerRunCycle_NoTasks(t *testing.T) {
 }
 
 func TestManagerRunCycle_ContextCancelled(t *testing.T) {
+	disableCycleSafety(t)
 	origPoll := cyclePollInterval
 	cyclePollInterval = 10 * time.Millisecond
 	defer func() { cyclePollInterval = origPoll }()

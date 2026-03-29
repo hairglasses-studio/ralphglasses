@@ -8,8 +8,25 @@ import (
 	"time"
 )
 
+// CycleSafety holds the safety configuration for cycle operations.
+// If nil, DefaultCycleSafety is used.
+var CycleSafety *CycleSafetyConfig
+
+func cycleSafetyConfig() CycleSafetyConfig {
+	if CycleSafety != nil {
+		return *CycleSafety
+	}
+	return DefaultCycleSafety
+}
+
 // CreateCycle creates a new CycleRun in the proposed phase and persists it.
 func (m *Manager) CreateCycle(repoPath, name, objective string, criteria []string) (*CycleRun, error) {
+	// Safety: enforce concurrent cycle limit.
+	existing, _ := ListCycles(repoPath)
+	if err := ValidateCycleStart(repoPath, existing, cycleSafetyConfig()); err != nil {
+		return nil, err
+	}
+
 	cycle := NewCycleRun(name, repoPath, objective, criteria)
 	if err := SaveCycle(repoPath, cycle); err != nil {
 		return nil, fmt.Errorf("persist new cycle: %w", err)
@@ -35,6 +52,11 @@ func (m *Manager) ListCycles(repoPath string) ([]*CycleRun, error) {
 
 // AdvanceCycle transitions a cycle to the next phase and persists it.
 func (m *Manager) AdvanceCycle(cycle *CycleRun) error {
+	// Safety: validate before advancing.
+	if err := ValidateCycleAdvance(cycle, cycleSafetyConfig()); err != nil {
+		return err
+	}
+
 	next, ok := validTransitions[cycle.Phase]
 	if !ok {
 		return fmt.Errorf("no valid transition from %s", cycle.Phase)
