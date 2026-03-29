@@ -796,6 +796,9 @@ func TestResolveSnapshotRepo_ExplicitParam(t *testing.T) {
 
 func TestResolveSnapshotRepo_FallbackToFirst(t *testing.T) {
 	t.Parallel()
+	// QW-7: When both claudekit and ralphglasses are present, the resolver
+	// should prefer ralphglasses over claudekit to avoid saving snapshots
+	// to the wrong project.
 	repos := []*model.Repo{
 		{Name: "claudekit", Path: "/repos/claudekit"},
 		{Name: "ralphglasses", Path: "/repos/ralphglasses"},
@@ -803,8 +806,8 @@ func TestResolveSnapshotRepo_FallbackToFirst(t *testing.T) {
 	findRepo := func(name string) *model.Repo { return nil }
 
 	got := resolveSnapshotRepo(repos, "", findRepo)
-	if got.Name != "claudekit" {
-		t.Errorf("expected claudekit fallback, got %s", got.Name)
+	if got.Name != "ralphglasses" {
+		t.Errorf("expected ralphglasses (QW-7 fix), got %s", got.Name)
 	}
 }
 

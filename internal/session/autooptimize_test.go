@@ -296,7 +296,10 @@ func TestAutoOptimizer_GenerateNotes(t *testing.T) {
 	t.Run("with_rules_and_negatives", func(t *testing.T) {
 		patterns := &ConsolidatedPatterns{
 			UpdatedAt: time.Now(),
-			Rules:     []string{"use gemini for lint tasks", "adjust budget limits"},
+			Rules: []Rule{
+				{ID: "apply-1", Pattern: "use gemini for lint tasks", Action: "use gemini for lint tasks"},
+				{ID: "apply-2", Pattern: "adjust budget limits", Action: "adjust budget limits"},
+			},
 			Negative: []ConsolidatedItem{
 				{Text: "timeout errors", Count: 5, Category: "error"},
 			},
@@ -309,7 +312,7 @@ func TestAutoOptimizer_GenerateNotes(t *testing.T) {
 
 	t.Run("rules_not_actionable", func(t *testing.T) {
 		patterns := &ConsolidatedPatterns{
-			Rules: []string{"some generic advice"},
+			Rules: []Rule{{ID: "apply-3", Pattern: "some generic advice", Action: "some generic advice"}},
 		}
 		notes := ao.GenerateNotes(patterns)
 		if len(notes) != 0 {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -205,7 +206,7 @@ func searchGitHub(ctx context.Context, client *http.Client, query string) ([]Fin
 	}
 
 	var findings []Finding
-	queryKW := extractQueryKeywords(query)
+	queryKW := extractQueryKeywords(stripSearchModifiers(query))
 	for _, item := range result.Items {
 		itemText := item.FullName + " " + item.Description
 		itemKW := extractQueryKeywords(itemText)
@@ -215,7 +216,7 @@ func searchGitHub(ctx context.Context, client *http.Client, query string) ([]Fin
 			Description: item.Description,
 			Stars:       item.Stars,
 			Language:    item.Language,
-			Relevance:   jaccardSimilarity(queryKW, itemKW),
+			Relevance:   weightedRelevance(queryKW, itemKW, item.Stars),
 		})
 	}
 	return findings, nil
@@ -275,6 +276,54 @@ func jaccardSimilarity(a, b map[string]bool) float64 {
 		return 0.0
 	}
 	return float64(intersection) / float64(union)
+}
+
+// stripSearchModifiers removes GitHub search qualifiers (e.g., "language:go")
+// from a query string so they don't pollute keyword extraction. (QW-10)
+func stripSearchModifiers(query string) string {
+	var words []string
+	for _, w := range strings.Fields(query) {
+		if !strings.Contains(w, ":") {
+			words = append(words, w)
+		}
+	}
+	return strings.Join(words, " ")
+}
+
+// weightedRelevance computes a relevance score that varies meaningfully across
+// results by combining keyword overlap (Jaccard) with a coverage ratio and a
+// small star-count signal. This replaces flat Jaccard which clustered at 0.5. (QW-10)
+func weightedRelevance(queryKW, itemKW map[string]bool, stars int) float64 {
+	jaccard := jaccardSimilarity(queryKW, itemKW)
+
+	// Coverage: fraction of query keywords found in item (recall-oriented)
+	coverage := 0.0
+	if len(queryKW) > 0 {
+		matched := 0
+		for k := range queryKW {
+			if itemKW[k] {
+				matched++
+			}
+		}
+		coverage = float64(matched) / float64(len(queryKW))
+	}
+
+	// Star signal: log-scale popularity boost (capped at 0.15)
+	starBoost := 0.0
+	if stars > 0 {
+		// log2(stars)/20 gives ~0.05 at 10 stars, ~0.10 at 100, ~0.15 at 1000+
+		starBoost = math.Log2(float64(stars)) / 20.0
+		if starBoost > 0.15 {
+			starBoost = 0.15
+		}
+	}
+
+	// Combined: 40% jaccard + 45% coverage + 15% star boost
+	score := 0.40*jaccard + 0.45*coverage + starBoost
+	if score > 1.0 {
+		score = 1.0
+	}
+	return score
 }
 
 func dedupStrings(ss []string) []string {
