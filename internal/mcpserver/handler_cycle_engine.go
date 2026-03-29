@@ -273,3 +273,76 @@ func (s *Server) handleCycleSynthesize(_ context.Context, req mcp.CallToolReques
 		"status":         "synthesized",
 	}), nil
 }
+
+// handleCycleRun drives a full R&D cycle synchronously through all phases.
+func (s *Server) handleCycleRun(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repo := getStringArg(req, "repo_path")
+	if repo == "" {
+		repo = getStringArg(req, "repo")
+	}
+	if repo == "" {
+		return codedError(ErrInvalidParams, "repo_path required"), nil
+	}
+	repoPath, err := s.resolveRepoPath(repo)
+	if err != nil {
+		return codedError(ErrRepoNotFound, err.Error()), nil
+	}
+
+	name := getStringArg(req, "name")
+	if name == "" {
+		name = "cycle"
+	}
+	objective := getStringArg(req, "objective")
+	if objective == "" {
+		return codedError(ErrInvalidParams, "objective required"), nil
+	}
+
+	var criteria []string
+	if c := getStringArg(req, "criteria"); c != "" {
+		criteria = splitCSV(c)
+	}
+
+	maxTasks := int(getNumberArg(req, "max_tasks", 10))
+
+	cycle, err := s.SessMgr.RunCycle(ctx, repoPath, name, objective, criteria, maxTasks)
+	if err != nil {
+		result := map[string]any{
+			"status": "failed",
+			"error":  err.Error(),
+		}
+		if cycle != nil {
+			result["cycle_id"] = cycle.ID
+			result["phase"] = string(cycle.Phase)
+		}
+		return jsonResult(result), nil
+	}
+
+	taskSummary := make([]map[string]any, len(cycle.Tasks))
+	for i, t := range cycle.Tasks {
+		taskSummary[i] = map[string]any{
+			"title":   t.Title,
+			"status":  t.Status,
+			"loop_id": t.LoopID,
+		}
+	}
+
+	result := map[string]any{
+		"cycle_id":  cycle.ID,
+		"name":      cycle.Name,
+		"phase":     string(cycle.Phase),
+		"objective": cycle.Objective,
+		"tasks":     taskSummary,
+		"findings":  len(cycle.Findings),
+		"status":    "complete",
+	}
+	if cycle.Synthesis != nil {
+		result["synthesis"] = map[string]any{
+			"summary":        cycle.Synthesis.Summary,
+			"accomplished":   cycle.Synthesis.Accomplished,
+			"remaining":      cycle.Synthesis.Remaining,
+			"next_objective": cycle.Synthesis.NextObjective,
+			"patterns":       cycle.Synthesis.Patterns,
+		}
+	}
+	return jsonResult(result), nil
+}

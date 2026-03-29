@@ -179,6 +179,7 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_cycle_fail":       {Title: "Cycle Fail", DestructiveHint: boolPtr(false)},
 	"ralphglasses_cycle_list":       {Title: "Cycle List", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_cycle_synthesize": {Title: "Cycle Synthesize", DestructiveHint: boolPtr(false)},
+	"ralphglasses_cycle_run":        {Title: "Cycle Run", DestructiveHint: boolPtr(false)},
 }
 
 // GetAnnotation returns the ToolAnnotation for a named tool, or an empty

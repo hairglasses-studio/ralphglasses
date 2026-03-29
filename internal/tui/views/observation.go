@@ -109,3 +109,42 @@ func RenderObservationView(data ObservationViewData, width, height int) string {
 
 	return b.String()
 }
+
+// ObservationViewport wraps RenderObservationView in a scrollable viewport.
+type ObservationViewport struct {
+	Viewport *ViewportView
+	data     ObservationViewData
+	width    int
+	height   int
+}
+
+// NewObservationViewport creates a new ObservationViewport.
+func NewObservationViewport() *ObservationViewport {
+	return &ObservationViewport{
+		Viewport: NewViewportView(),
+	}
+}
+
+// SetData updates the observation data and regenerates content.
+func (v *ObservationViewport) SetData(data ObservationViewData) {
+	v.data = data
+	v.regenerate()
+}
+
+// SetDimensions updates the available width and height.
+func (v *ObservationViewport) SetDimensions(width, height int) {
+	v.width = width
+	v.height = height
+	v.Viewport.SetDimensions(width, height)
+	v.regenerate()
+}
+
+// Render returns the scrollable viewport content.
+func (v *ObservationViewport) Render() string {
+	return v.Viewport.Render()
+}
+
+func (v *ObservationViewport) regenerate() {
+	content := RenderObservationView(v.data, v.width, v.height)
+	v.Viewport.SetContent(content)
+}

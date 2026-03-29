@@ -172,3 +172,44 @@ func RenderLoopControlPanel(data []LoopControlData, selectedIdx, width, height i
 
 	return b.String()
 }
+
+// LoopControlView wraps RenderLoopControlPanel in a scrollable viewport.
+type LoopControlView struct {
+	Viewport    *ViewportView
+	data        []LoopControlData
+	selectedIdx int
+	width       int
+	height      int
+}
+
+// NewLoopControlView creates a new LoopControlView.
+func NewLoopControlView() *LoopControlView {
+	return &LoopControlView{
+		Viewport: NewViewportView(),
+	}
+}
+
+// SetData updates the loop control data and regenerates content.
+func (v *LoopControlView) SetData(data []LoopControlData, selectedIdx int) {
+	v.data = data
+	v.selectedIdx = selectedIdx
+	v.regenerate()
+}
+
+// SetDimensions updates the available width and height.
+func (v *LoopControlView) SetDimensions(width, height int) {
+	v.width = width
+	v.height = height
+	v.Viewport.SetDimensions(width, height)
+	v.regenerate()
+}
+
+// Render returns the scrollable viewport content.
+func (v *LoopControlView) Render() string {
+	return v.Viewport.Render()
+}
+
+func (v *LoopControlView) regenerate() {
+	content := RenderLoopControlPanel(v.data, v.selectedIdx, v.width, v.height)
+	v.Viewport.SetContent(content)
+}
