@@ -270,6 +270,39 @@ func (m Model) handleLoopHealthKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return dispatchViewKeys(loopHealthKeys, &m, msg)
 }
 
+// --- Observation view dispatch table ---
+
+var observationKeys = []ViewKeyEntry{
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.ObservationViewport.Viewport.ScrollDown()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.ObservationViewport.Viewport.ScrollUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.ObservationViewport.Viewport.GotoBottom()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.ObservationViewport.Viewport.GotoTop()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.ObservationViewport.Viewport.PageUp()
+		return *m, nil
+	}},
+	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+		m.ObservationViewport.Viewport.PageDown()
+		return *m, nil
+	}},
+}
+
+func (m Model) handleObservationKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	return dispatchViewKeys(observationKeys, &m, msg)
+}
+
 // --- Process management helpers ---
 
 func (m Model) startSelectedLoop() (tea.Model, tea.Cmd) {

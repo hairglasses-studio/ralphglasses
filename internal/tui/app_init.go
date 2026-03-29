@@ -131,8 +131,11 @@ type Model struct {
 	SessionDetailView *views.SessionDetailView
 	TeamDetailView    *views.TeamDetailView
 	FleetView         *views.FleetView
-	DiffViewport      *views.DiffViewport
-	TimelineViewport  *views.TimelineViewport
+	DiffViewport         *views.DiffViewport
+	TimelineViewport     *views.TimelineViewport
+	LoopDetailView       *views.LoopDetailView
+	LoopControlView      *views.LoopControlView
+	ObservationViewport  *views.ObservationViewport
 
 	// Bubbles components
 	Keys    KeyMap

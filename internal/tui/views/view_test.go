@@ -20,6 +20,9 @@ var (
 	_ View = (*FleetView)(nil)
 	_ View = (*DiffViewport)(nil)
 	_ View = (*TimelineViewport)(nil)
+	_ View = (*LoopDetailView)(nil)
+	_ View = (*LoopControlView)(nil)
+	_ View = (*ObservationViewport)(nil)
 )
 
 func TestViewportView_SetContent(t *testing.T) {
@@ -366,4 +369,85 @@ func TestTimelineViewport_Empty(t *testing.T) {
 	// No data set — should not panic
 	out := v.Render()
 	_ = out
+}
+
+func TestLoopDetailView_Render(t *testing.T) {
+	v := NewLoopDetailView()
+	v.SetDimensions(80, 30)
+	// No data set — should not panic and should show placeholder
+	out := v.Render()
+	if !strings.Contains(out, "No loop selected") {
+		t.Error("expected no-loop message in render output")
+	}
+}
+
+func TestLoopDetailView_SetDimensions(t *testing.T) {
+	v := NewLoopDetailView()
+	v.SetDimensions(120, 40)
+	out := v.Render()
+	if out == "" {
+		t.Error("expected non-empty render after SetDimensions")
+	}
+}
+
+func TestLoopControlView_Render(t *testing.T) {
+	v := NewLoopControlView()
+	v.SetDimensions(80, 30)
+	v.SetData(nil, 0)
+	out := v.Render()
+	if !strings.Contains(out, "Loop Control Panel") {
+		t.Error("expected loop control title in render output")
+	}
+}
+
+func TestLoopControlView_WithData(t *testing.T) {
+	v := NewLoopControlView()
+	v.SetDimensions(100, 40)
+	data := []LoopControlData{
+		{
+			ID:        "loop-123",
+			RepoName:  "test-repo",
+			Status:    "running",
+			IterCount: 5,
+		},
+	}
+	v.SetData(data, 0)
+	out := v.Render()
+	if !strings.Contains(out, "test-repo") {
+		t.Error("expected repo name in render output")
+	}
+}
+
+func TestObservationViewport_Render(t *testing.T) {
+	v := NewObservationViewport()
+	v.SetDimensions(80, 30)
+	data := ObservationViewData{
+		RepoName: "test-repo",
+	}
+	v.SetData(data)
+	out := v.Render()
+	if !strings.Contains(out, "test-repo") {
+		t.Error("expected repo name in render output")
+	}
+}
+
+func TestObservationViewport_WithData(t *testing.T) {
+	v := NewObservationViewport()
+	v.SetDimensions(100, 40)
+	data := ObservationViewData{
+		RepoName: "test-repo",
+		Observations: []session.LoopObservation{
+			{
+				IterationNumber: 1,
+				TotalCostUSD:    0.05,
+				TotalLatencyMs:  1200,
+				FilesChanged:    3,
+			},
+		},
+	}
+	v.SetData(data)
+	out := v.Render()
+	if !strings.Contains(out, "Observation") {
+		t.Error("expected observation title in render output")
+	}
 }

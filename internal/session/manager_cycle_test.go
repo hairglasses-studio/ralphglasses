@@ -2,8 +2,10 @@ package session
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -317,5 +319,142 @@ func TestTimeNowOverride(t *testing.T) {
 	got := timeNow()
 	if !got.Equal(fixed) {
 		t.Errorf("expected %v, got %v", fixed, got)
+	}
+}
+
+func TestManagerRunCycle_HappyPath(t *testing.T) {
+	// Speed up polling for tests.
+	origPoll := cyclePollInterval
+	cyclePollInterval = 10 * time.Millisecond
+	defer func() { cyclePollInterval = origPoll }()
+
+	m := NewManager()
+	repoPath := t.TempDir()
+
+	// Create a ROADMAP.md with unchecked items so PlanCycleTasks produces tasks.
+	roadmap := "## Features\n- [ ] Add widget support\n- [ ] Fix flaky test\n"
+	os.WriteFile(filepath.Join(repoPath, "ROADMAP.md"), []byte(roadmap), 0o644)
+
+	// Write some observations so PlanCycleTasks has both sources.
+	obsDir := filepath.Join(repoPath, ".ralph", "logs")
+	os.MkdirAll(obsDir, 0o755)
+	obsData := `{"loop_id":"loop-1","status":"failed","task_title":"build broke","error":"compile error","timestamp":"2026-01-01T00:00:00Z"}
+`
+	os.WriteFile(filepath.Join(obsDir, "loop_observations.jsonl"), []byte(obsData), 0o644)
+
+	// Stub Launch to return a completed session immediately.
+	var launchCount atomic.Int32
+	m.launchSession = func(_ context.Context, opts LaunchOptions) (*Session, error) {
+		n := launchCount.Add(1)
+		id := fmt.Sprintf("sess-%d", n)
+		sess := &Session{
+			ID:       id,
+			Provider: ProviderClaude,
+			RepoPath: opts.RepoPath,
+			RepoName: "test",
+			Status:   StatusCompleted,
+			Prompt:   opts.Prompt,
+		}
+		m.mu.Lock()
+		m.sessions[id] = sess
+		m.mu.Unlock()
+		return sess, nil
+	}
+
+	ctx := context.Background()
+	cycle, err := m.RunCycle(ctx, repoPath, "test-run", "improve coverage", []string{"80% coverage"}, 5)
+	if err != nil {
+		t.Fatalf("RunCycle failed: %v", err)
+	}
+
+	if cycle.Phase != CycleComplete {
+		t.Errorf("expected complete, got %s", cycle.Phase)
+	}
+	if cycle.Synthesis == nil {
+		t.Error("expected synthesis to be set")
+	}
+	if len(cycle.Tasks) == 0 {
+		t.Error("expected at least one task")
+	}
+	if launchCount.Load() == 0 {
+		t.Error("expected at least one Launch call")
+	}
+
+	// Verify persisted.
+	loaded, err := LoadCycle(repoPath, cycle.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Phase != CycleComplete {
+		t.Errorf("persisted: expected complete, got %s", loaded.Phase)
+	}
+}
+
+func TestManagerRunCycle_NoTasks(t *testing.T) {
+	origPoll := cyclePollInterval
+	cyclePollInterval = 10 * time.Millisecond
+	defer func() { cyclePollInterval = origPoll }()
+
+	m := NewManager()
+	repoPath := t.TempDir()
+
+	// No observations, no ROADMAP.md — should produce zero tasks and still complete.
+	ctx := context.Background()
+	cycle, err := m.RunCycle(ctx, repoPath, "empty-cycle", "do something", nil, 5)
+	if err != nil {
+		t.Fatalf("RunCycle failed: %v", err)
+	}
+
+	if cycle.Phase != CycleComplete {
+		t.Errorf("expected complete, got %s", cycle.Phase)
+	}
+	if len(cycle.Tasks) != 0 {
+		t.Errorf("expected 0 tasks, got %d", len(cycle.Tasks))
+	}
+	if cycle.Synthesis == nil {
+		t.Error("expected synthesis even with no tasks")
+	}
+}
+
+func TestManagerRunCycle_ContextCancelled(t *testing.T) {
+	origPoll := cyclePollInterval
+	cyclePollInterval = 10 * time.Millisecond
+	defer func() { cyclePollInterval = origPoll }()
+
+	m := NewManager()
+	repoPath := t.TempDir()
+
+	// Create roadmap so we get tasks.
+	roadmap := "## Tasks\n- [ ] Do something\n"
+	os.WriteFile(filepath.Join(repoPath, "ROADMAP.md"), []byte(roadmap), 0o644)
+
+	// Stub Launch — session stays running so we'll hit the poll loop.
+	m.launchSession = func(_ context.Context, opts LaunchOptions) (*Session, error) {
+		sess := &Session{
+			ID:       "stuck-sess",
+			Provider: ProviderClaude,
+			RepoPath: opts.RepoPath,
+			RepoName: "test",
+			Status:   StatusRunning,
+			Prompt:   opts.Prompt,
+		}
+		m.mu.Lock()
+		m.sessions["stuck-sess"] = sess
+		m.mu.Unlock()
+		return sess, nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	cycle, err := m.RunCycle(ctx, repoPath, "cancel-cycle", "objective", nil, 5)
+	if err == nil {
+		t.Fatal("expected error from cancelled context")
+	}
+	if cycle == nil {
+		t.Fatal("expected cycle to be returned even on failure")
+	}
+	if cycle.Phase != CycleFailed {
+		t.Errorf("expected failed, got %s", cycle.Phase)
 	}
 }

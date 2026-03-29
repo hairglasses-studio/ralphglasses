@@ -197,5 +197,219 @@ func (m *Manager) SetCycleSynthesis(cycle *CycleRun, synthesis CycleSynthesis) e
 	return nil
 }
 
+// cyclePollInterval is the polling interval for RunCycle's wait loop (overridable in tests).
+var cyclePollInterval = 2 * time.Second
+
+// RunCycle drives a full R&D cycle through all phases synchronously.
+// It creates a cycle, gathers observations, plans tasks, launches them,
+// waits for completion, collects findings, synthesizes, and completes.
+func (m *Manager) RunCycle(ctx context.Context, repoPath, name, objective string, criteria []string, maxTasks int) (*CycleRun, error) {
+	// 1. Create the cycle.
+	cycle, err := m.CreateCycle(repoPath, name, objective, criteria)
+	if err != nil {
+		return nil, fmt.Errorf("create cycle: %w", err)
+	}
+	slog.Info("RunCycle: created", "cycle_id", cycle.ID)
+
+	fail := func(msg string) (*CycleRun, error) {
+		_ = m.FailCycle(cycle, msg)
+		return cycle, fmt.Errorf("%s", msg)
+	}
+
+	// 2. Advance proposed → baselining.
+	if err := m.AdvanceCycle(cycle); err != nil {
+		return fail(fmt.Sprintf("advance to baselining: %v", err))
+	}
+
+	// 3. Gather observations.
+	obsPath := ObservationPath(repoPath)
+	observations, err := LoadObservations(obsPath, time.Time{})
+	if err != nil {
+		return fail(fmt.Sprintf("load observations: %v", err))
+	}
+
+	// 4. Plan tasks from observations.
+	if err := m.PlanCycleTasks(cycle, observations, maxTasks); err != nil {
+		return fail(fmt.Sprintf("plan tasks: %v", err))
+	}
+
+	// If no tasks were planned, synthesize immediately.
+	if len(cycle.Tasks) == 0 {
+		if err := m.AdvanceCycle(cycle); err != nil { // baselining → executing
+			return fail(fmt.Sprintf("advance to executing (empty): %v", err))
+		}
+		if err := m.AdvanceCycle(cycle); err != nil { // executing → observing
+			return fail(fmt.Sprintf("advance to observing (empty): %v", err))
+		}
+		if err := m.AdvanceCycle(cycle); err != nil { // observing → synthesizing
+			return fail(fmt.Sprintf("advance to synthesizing (empty): %v", err))
+		}
+		synthesis := CycleSynthesis{
+			Summary:   "No tasks planned — cycle completed with no work.",
+			Remaining: []string{objective},
+		}
+		if err := m.SetCycleSynthesis(cycle, synthesis); err != nil {
+			return fail(fmt.Sprintf("set synthesis (empty): %v", err))
+		}
+		if err := m.AdvanceCycle(cycle); err != nil { // synthesizing → complete
+			return fail(fmt.Sprintf("advance to complete (empty): %v", err))
+		}
+		return cycle, nil
+	}
+
+	// 5. Advance baselining → executing.
+	if err := m.AdvanceCycle(cycle); err != nil {
+		return fail(fmt.Sprintf("advance to executing: %v", err))
+	}
+
+	// 6. Launch each pending task.
+	var loopIDs []string
+	for i := range cycle.Tasks {
+		if cycle.Tasks[i].Status != "pending" {
+			continue
+		}
+		opts := LaunchOptions{
+			Provider:     ProviderClaude,
+			RepoPath:     repoPath,
+			SessionName:  fmt.Sprintf("%s-task-%d", name, i),
+			MaxTurns:     20,
+			MaxBudgetUSD: 1.0,
+		}
+		loopID, err := m.LaunchCycleTask(ctx, cycle, i, opts)
+		if err != nil {
+			slog.Warn("RunCycle: task launch failed", "task_idx", i, "error", err)
+			continue // non-fatal: other tasks may still succeed
+		}
+		loopIDs = append(loopIDs, loopID)
+	}
+
+	// 7. Wait for all launched loops to finish (poll with 2s interval).
+	if err := m.waitForLoops(ctx, loopIDs); err != nil {
+		return fail(fmt.Sprintf("wait for loops: %v", err))
+	}
+
+	// 8. Advance executing → observing.
+	if err := m.AdvanceCycle(cycle); err != nil {
+		return fail(fmt.Sprintf("advance to observing: %v", err))
+	}
+
+	// 9. Re-gather observations and collect findings.
+	observations2, err := LoadObservations(obsPath, time.Time{})
+	if err != nil {
+		return fail(fmt.Sprintf("reload observations: %v", err))
+	}
+	if err := m.CollectCycleFindings(cycle, observations2); err != nil {
+		return fail(fmt.Sprintf("collect findings: %v", err))
+	}
+
+	// 10. Advance observing → synthesizing.
+	if err := m.AdvanceCycle(cycle); err != nil {
+		return fail(fmt.Sprintf("advance to synthesizing: %v", err))
+	}
+
+	// 11. Build synthesis from findings.
+	synthesis := buildSynthesisFromFindings(cycle)
+	if err := m.SetCycleSynthesis(cycle, synthesis); err != nil {
+		return fail(fmt.Sprintf("set synthesis: %v", err))
+	}
+
+	// 12. Advance synthesizing → complete.
+	if err := m.AdvanceCycle(cycle); err != nil {
+		return fail(fmt.Sprintf("advance to complete: %v", err))
+	}
+
+	// 13. Return the cycle.
+	slog.Info("RunCycle: complete", "cycle_id", cycle.ID, "tasks", len(cycle.Tasks), "findings", len(cycle.Findings))
+	return cycle, nil
+}
+
+// waitForLoops polls session status for the given loop IDs until all are
+// non-running or the context is cancelled.
+func (m *Manager) waitForLoops(ctx context.Context, loopIDs []string) error {
+	if len(loopIDs) == 0 {
+		return nil
+	}
+
+	pending := make(map[string]bool, len(loopIDs))
+	for _, id := range loopIDs {
+		pending[id] = true
+	}
+
+	for len(pending) > 0 {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		for id := range pending {
+			sess, ok := m.Get(id)
+			if !ok {
+				// Session not in memory — check if it was a loop ID instead.
+				loop, lok := m.GetLoop(id)
+				if !lok {
+					delete(pending, id) // unknown — consider done
+					continue
+				}
+				if loop.Status != "running" && loop.Status != "pending" {
+					delete(pending, id)
+				}
+				continue
+			}
+			if sess.Status.IsTerminal() {
+				delete(pending, id)
+			}
+		}
+
+		if len(pending) > 0 {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(cyclePollInterval):
+			}
+		}
+	}
+	return nil
+}
+
+// buildSynthesisFromFindings constructs a basic CycleSynthesis from a cycle's
+// tasks and findings.
+func buildSynthesisFromFindings(cycle *CycleRun) CycleSynthesis {
+	var accomplished, remaining []string
+	var patterns []string
+
+	for _, t := range cycle.Tasks {
+		switch t.Status {
+		case "done":
+			accomplished = append(accomplished, t.Title)
+		case "failed":
+			remaining = append(remaining, t.Title)
+		case "pending", "executing":
+			remaining = append(remaining, t.Title)
+		}
+	}
+
+	for _, f := range cycle.Findings {
+		patterns = append(patterns, fmt.Sprintf("[%s] %s", f.Category, f.Description))
+	}
+
+	summary := fmt.Sprintf("Cycle %q completed: %d accomplished, %d remaining, %d findings",
+		cycle.Name, len(accomplished), len(remaining), len(cycle.Findings))
+
+	nextObj := ""
+	if len(remaining) > 0 {
+		nextObj = fmt.Sprintf("Address remaining: %s", remaining[0])
+	}
+
+	return CycleSynthesis{
+		Summary:       summary,
+		Accomplished:  accomplished,
+		Remaining:     remaining,
+		NextObjective: nextObj,
+		Patterns:      patterns,
+	}
+}
+
 // timeNow is a package-level function for testability.
 var timeNow = func() time.Time { return time.Now() }
+
