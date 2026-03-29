@@ -127,14 +127,16 @@ func (r *LoopRun) Lock() { r.mu.Lock() }
 func (r *LoopRun) Unlock() { r.mu.Unlock() }
 
 // DefaultLoopProfile returns the repo-default Codex-only planner/worker setup.
+// FINDING-186: Use available models (o4-mini, codex-mini-latest) instead of
+// unavailable ones (o1-pro, gpt-5.4-xhigh) that cause immediate launch failures.
 func DefaultLoopProfile() LoopProfile {
 	return LoopProfile{
 		PlannerProvider:      ProviderCodex,
-		PlannerModel:         "gpt-4o",
+		PlannerModel:         "o4-mini",
 		WorkerProvider:       ProviderCodex,
-		WorkerModel:          "gpt-4o",
+		WorkerModel:          "codex-mini-latest",
 		VerifierProvider:     ProviderCodex,
-		VerifierModel:        "gpt-4o",
+		VerifierModel:        "codex-mini-latest",
 		MaxConcurrentWorkers: 1,
 		RetryLimit:           1,
 		VerifyCommands:       []string{defaultLoopVerifyCommand},

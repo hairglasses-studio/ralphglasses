@@ -15,6 +15,8 @@ type LoopConfig struct {
 	BudgetUSD       float64       `json:"budget_usd,omitempty"`
 	EnhancePrompt   bool          `json:"enhance_prompt,omitempty"`
 	EnhancerProvider string       `json:"enhancer_provider,omitempty"` // provider configured for enhancement
+	WorkerProvider   Provider     `json:"worker_provider,omitempty"`   // worker session provider
+	EnableWorkerEnhancement bool  `json:"enable_worker_enhancement,omitempty"` // prompt enhancement before worker calls
 	Timeout         time.Duration `json:"timeout,omitempty"`
 }
 
@@ -85,6 +87,15 @@ func ValidateLoopConfig(cfg LoopConfig) []LoopValidationWarning {
 		})
 	}
 
+	// 3b. Worker enhancement with non-Claude worker: enhancement has no effect
+	// because only Claude supports prompt caching and structured enhancement.
+	if cfg.EnableWorkerEnhancement && cfg.WorkerProvider != "" && cfg.WorkerProvider != ProviderClaude {
+		warnings = append(warnings, LoopValidationWarning{
+			Field:   "enable_worker_enhancement",
+			Message: fmt.Sprintf("worker enhancement enabled but worker provider is %q — enhancement only has effect with Claude workers", cfg.WorkerProvider),
+		})
+	}
+
 	// 4. Timeout validation.
 	if cfg.Timeout != 0 {
 		if cfg.Timeout < 10*time.Second {
@@ -152,27 +163,10 @@ func ValidateLoopProfile(p LoopProfile) error {
 		return fmt.Errorf("stall_timeout must be non-negative, got %s", p.StallTimeout)
 	}
 
+	// Worker enhancement with non-Claude worker has no effect.
+	if p.EnableWorkerEnhancement && p.WorkerProvider != "" && p.WorkerProvider != ProviderClaude {
+		return fmt.Errorf("enable_worker_enhancement has no effect with non-Claude worker provider %q", p.WorkerProvider)
+	}
+
 	return nil
-}
-
-// KnownModels maps provider names to known valid model identifiers.
-var KnownModels = map[string][]string{
-	"claude": {"claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"},
-	"gemini": {"gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"},
-	"openai": {"gpt-4o", "gpt-4o-mini", "o1", "o1-mini", "o3-mini"},
-}
-
-// ValidateModelName checks if a model name is known for the given provider.
-// Returns nil for known models or unknown providers (permissive).
-func ValidateModelName(provider, model string) error {
-	models, ok := KnownModels[provider]
-	if !ok {
-		return nil // unknown provider — permissive
-	}
-	for _, m := range models {
-		if m == model {
-			return nil
-		}
-	}
-	return fmt.Errorf("unknown model %q for provider %q (known: %v)", model, provider, models)
 }

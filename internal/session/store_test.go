@@ -30,6 +30,7 @@ func testSession(id, repoPath string, status SessionStatus, spend float64) *Sess
 
 // runStoreTests exercises all Store interface methods against any implementation.
 func runStoreTests(t *testing.T, store Store) {
+	t.Helper()
 	ctx := context.Background()
 
 	t.Run("SaveAndGet", func(t *testing.T) {

@@ -11,9 +11,12 @@ import (
 // Column defines a table column.
 type Column struct {
 	Title    string
-	Width    int
+	Width    int     // base/min width (kept for backward compat)
 	Sortable bool
-	Grow     bool // if true, this column expands to fill remaining width
+	Grow     bool    // if true, this column expands to fill remaining width (legacy; prefer Flex)
+	MinWidth int     // minimum width (0 = use Width as min)
+	MaxWidth int     // maximum width (0 = unlimited)
+	Flex     float64 // flex weight for proportional sizing (0 = fixed)
 }
 
 // Row is a slice of styled cell strings.
@@ -244,31 +247,102 @@ func (t *Table) sortRows() {
 	t.applyFilter()
 }
 
-// effectiveColumns returns columns with Grow widths resolved.
+// effectiveWidths computes effective column widths based on Flex weights,
+// MinWidth/MaxWidth constraints, and the table's available Width.
+func (t *Table) effectiveWidths() []int {
+	n := len(t.Columns)
+	if n == 0 {
+		return nil
+	}
+
+	widths := make([]int, n)
+	flexWeights := make([]float64, n)
+
+	// 1. Determine base width and flex weight for each column.
+	for i, col := range t.Columns {
+		base := col.Width
+		if col.MinWidth > 0 && col.MinWidth > base {
+			base = col.MinWidth
+		}
+		widths[i] = base
+
+		flex := col.Flex
+		// Backward compat: Grow:true with no explicit Flex → Flex 1.0
+		if col.Grow && flex == 0 {
+			flex = 1.0
+		}
+		flexWeights[i] = flex
+	}
+
+	if t.Width <= 0 {
+		return widths
+	}
+
+	// 2. Calculate total fixed width + gaps (1 space between columns).
+	gaps := n - 1
+	totalFixed := gaps
+	for _, w := range widths {
+		totalFixed += w
+	}
+
+	remaining := t.Width - totalFixed
+	if remaining <= 0 {
+		return widths
+	}
+
+	// 3. Distribute remaining space proportionally by flex weight.
+	//    Iterate to handle MaxWidth caps and redistribute overflow.
+	capped := make([]bool, n)
+	for round := 0; round < n; round++ {
+		totalFlex := 0.0
+		for i, fw := range flexWeights {
+			if fw > 0 && !capped[i] {
+				totalFlex += fw
+			}
+		}
+		if totalFlex == 0 {
+			break
+		}
+
+		overflow := 0
+		allFit := true
+		for i, fw := range flexWeights {
+			if fw <= 0 || capped[i] {
+				continue
+			}
+			extra := int(float64(remaining) * fw / totalFlex)
+			proposed := widths[i] + extra
+
+			if t.Columns[i].MaxWidth > 0 && proposed > t.Columns[i].MaxWidth {
+				overflow += proposed - t.Columns[i].MaxWidth
+				widths[i] = t.Columns[i].MaxWidth
+				capped[i] = true
+				allFit = false
+			} else {
+				widths[i] = proposed
+			}
+		}
+
+		if allFit || overflow == 0 {
+			break
+		}
+		// Recalculate remaining for the next round with overflow.
+		remaining = overflow
+	}
+
+	return widths
+}
+
+// effectiveColumns returns columns with widths resolved via effectiveWidths.
 func (t *Table) effectiveColumns() []Column {
 	cols := make([]Column, len(t.Columns))
 	copy(cols, t.Columns)
 
-	if t.Width <= 0 {
-		return cols
-	}
-
-	growIdx := -1
-	fixedWidth := 0
-	for i, col := range cols {
-		if col.Grow {
-			growIdx = i
-		} else {
-			fixedWidth += col.Width
+	widths := t.effectiveWidths()
+	for i := range cols {
+		if i < len(widths) {
+			cols[i].Width = widths[i]
 		}
-	}
-	if growIdx >= 0 {
-		gaps := len(cols) - 1 // spaces between columns
-		growWidth := t.Width - fixedWidth - gaps
-		if growWidth < cols[growIdx].Width {
-			growWidth = cols[growIdx].Width
-		}
-		cols[growIdx].Width = growWidth
 	}
 	return cols
 }

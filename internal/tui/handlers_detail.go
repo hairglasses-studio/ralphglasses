@@ -29,8 +29,8 @@ var sessionsKeys = []ViewKeyEntry{
 	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		row := m.SessionTable.SelectedRow()
 		if row != nil {
-			m.SelectedSession = m.findFullSessionID(row[0])
-			if m.SelectedSession != "" {
+			m.Sel.SessionID = m.findFullSessionID(row[0])
+			if m.Sel.SessionID != "" {
 				m.pushView(ViewSessionDetail, row[0])
 			}
 		}
@@ -41,7 +41,7 @@ var sessionsKeys = []ViewKeyEntry{
 		if row != nil {
 			fullID := m.findFullSessionID(row[0])
 			if fullID != "" {
-				m.ConfirmDialog = &components.ConfirmDialog{
+				m.Modals.ConfirmDialog = &components.ConfirmDialog{
 					Title:   "Confirm Stop Session",
 					Message: fmt.Sprintf("Stop session %s?", row[0]),
 					Action:  "stopSession",
@@ -67,16 +67,16 @@ var sessionsKeys = []ViewKeyEntry{
 
 var sessionDetailKeys = []ViewKeyEntry{
 	{Binding: func(km *KeyMap) key.Binding { return km.StopAction }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		if m.SelectedSession != "" && m.SessMgr != nil {
-			shortID := m.SelectedSession
+		if m.Sel.SessionID != "" && m.SessMgr != nil {
+			shortID := m.Sel.SessionID
 			if len(shortID) > 8 {
 				shortID = shortID[:8]
 			}
-			m.ConfirmDialog = &components.ConfirmDialog{
+			m.Modals.ConfirmDialog = &components.ConfirmDialog{
 				Title:   "Confirm Stop Session",
 				Message: fmt.Sprintf("Stop session %s?", shortID),
 				Action:  "stopSession",
-				Data:    m.SelectedSession,
+				Data:    m.Sel.SessionID,
 				Active:  true,
 				Width:   50,
 			}
@@ -84,8 +84,8 @@ var sessionDetailKeys = []ViewKeyEntry{
 		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		if m.SelectedSession != "" && m.SessMgr != nil {
-			if s, ok := m.SessMgr.Get(m.SelectedSession); ok {
+		if m.Sel.SessionID != "" && m.SessMgr != nil {
+			if s, ok := m.SessMgr.Get(m.Sel.SessionID); ok {
 				s.Lock()
 				output := s.LastOutput
 				s.Unlock()
@@ -100,14 +100,14 @@ var sessionDetailKeys = []ViewKeyEntry{
 		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.DiffView }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		if m.SelectedSession != "" && m.SessMgr != nil {
-			if s, ok := m.SessMgr.Get(m.SelectedSession); ok {
+		if m.Sel.SessionID != "" && m.SessMgr != nil {
+			if s, ok := m.SessMgr.Get(m.Sel.SessionID); ok {
 				s.Lock()
 				repoPath := s.RepoPath
 				s.Unlock()
 				idx := m.findRepoByPath(repoPath)
 				if idx >= 0 {
-					m.SelectedIdx = idx
+					m.Sel.RepoIdx = idx
 					m.pushView(ViewDiff, "Diff")
 				}
 			}
@@ -115,7 +115,7 @@ var sessionDetailKeys = []ViewKeyEntry{
 		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.ActionsMenu }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		m.ActionMenu = &components.ActionMenu{
+		m.Modals.ActionMenu = &components.ActionMenu{
 			Title:  "Session Actions",
 			Items:  components.SessionDetailActions(),
 			Active: true,
@@ -150,7 +150,7 @@ var teamsKeys = []ViewKeyEntry{
 	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		row := m.TeamTable.SelectedRow()
 		if row != nil {
-			m.SelectedTeam = row[0]
+			m.Sel.TeamName = row[0]
 			m.pushView(ViewTeamDetail, row[0])
 		}
 		return *m, nil
@@ -161,20 +161,20 @@ var teamsKeys = []ViewKeyEntry{
 
 var teamDetailKeys = []ViewKeyEntry{
 	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		if m.SelectedTeam != "" && m.SessMgr != nil {
-			team, ok := m.SessMgr.GetTeam(m.SelectedTeam)
+		if m.Sel.TeamName != "" && m.SessMgr != nil {
+			team, ok := m.SessMgr.GetTeam(m.Sel.TeamName)
 			if ok && team.LeadID != "" {
-				m.SelectedSession = team.LeadID
+				m.Sel.SessionID = team.LeadID
 				m.pushView(ViewSessionDetail, "Lead Session")
 			}
 		}
 		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.TimelineView }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		if m.SelectedTeam != "" && m.SessMgr != nil {
-			if team, ok := m.SessMgr.GetTeam(m.SelectedTeam); ok {
+		if m.Sel.TeamName != "" && m.SessMgr != nil {
+			if team, ok := m.SessMgr.GetTeam(m.Sel.TeamName); ok {
 				if idx := m.findRepoByPath(team.RepoPath); idx >= 0 {
-					m.SelectedIdx = idx
+					m.Sel.RepoIdx = idx
 				}
 				m.pushView(ViewTimeline, "Timeline")
 			}
@@ -182,10 +182,10 @@ var teamDetailKeys = []ViewKeyEntry{
 		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.DiffView }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		if m.SelectedTeam != "" && m.SessMgr != nil {
-			if team, ok := m.SessMgr.GetTeam(m.SelectedTeam); ok {
+		if m.Sel.TeamName != "" && m.SessMgr != nil {
+			if team, ok := m.SessMgr.GetTeam(m.Sel.TeamName); ok {
 				if idx := m.findRepoByPath(team.RepoPath); idx >= 0 {
-					m.SelectedIdx = idx
+					m.Sel.RepoIdx = idx
 					m.pushView(ViewDiff, "Diff")
 				}
 			}
@@ -234,13 +234,13 @@ var fleetKeys = []ViewKeyEntry{
 		return *m, nil
 	}},
 	{Match: func(msg tea.KeyMsg) bool { return len(msg.Runes) == 1 && msg.Runes[0] == ']' }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		m.FleetWindow = (m.FleetWindow + 1) % len(fleetWindows)
+		m.Fleet.Window = (m.Fleet.Window + 1) % len(fleetWindows)
 		return *m, nil
 	}},
 	{Match: func(msg tea.KeyMsg) bool { return len(msg.Runes) == 1 && msg.Runes[0] == '[' }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		m.FleetWindow--
-		if m.FleetWindow < 0 {
-			m.FleetWindow = len(fleetWindows) - 1
+		m.Fleet.Window--
+		if m.Fleet.Window < 0 {
+			m.Fleet.Window = len(fleetWindows) - 1
 		}
 		return *m, nil
 	}},

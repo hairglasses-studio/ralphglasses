@@ -24,7 +24,7 @@ func TestNewModel(t *testing.T) {
 	if m.ScanPath != "/tmp/test" {
 		t.Errorf("ScanPath = %q", m.ScanPath)
 	}
-	if m.CurrentView != ViewOverview {
+	if m.Nav.CurrentView != ViewOverview {
 		t.Error("should start at overview")
 	}
 	if m.Table == nil {
@@ -46,21 +46,21 @@ func TestInit(t *testing.T) {
 func TestViewStackPushPop(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.pushView(ViewRepoDetail, "my-repo")
-	if m.CurrentView != ViewRepoDetail {
+	if m.Nav.CurrentView != ViewRepoDetail {
 		t.Error("should be at repo detail")
 	}
 	m.pushView(ViewLogs, "Logs")
-	if len(m.ViewStack) != 2 {
-		t.Errorf("stack len = %d", len(m.ViewStack))
+	if len(m.Nav.ViewStack) != 2 {
+		t.Errorf("stack len = %d", len(m.Nav.ViewStack))
 	}
 	m2, _ := m.popView()
 	m = m2.(Model)
-	if m.CurrentView != ViewRepoDetail {
+	if m.Nav.CurrentView != ViewRepoDetail {
 		t.Error("should be back at repo detail")
 	}
 	m2, _ = m.popView()
 	m = m2.(Model)
-	if m.CurrentView != ViewOverview {
+	if m.Nav.CurrentView != ViewOverview {
 		t.Error("should be back at overview")
 	}
 }
@@ -129,12 +129,12 @@ func TestHandleKeyHelpToggle(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
 	m = m2.(Model)
-	if m.CurrentView != ViewHelp {
+	if m.Nav.CurrentView != ViewHelp {
 		t.Error("? should push help view")
 	}
 	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
 	m = m2.(Model)
-	if m.CurrentView != ViewOverview {
+	if m.Nav.CurrentView != ViewOverview {
 		t.Error("? again should pop back")
 	}
 }
@@ -219,7 +219,7 @@ func TestHandleKeyEscAtRoot(t *testing.T) {
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
 	m = m2.(Model)
 	// At root, Esc does nothing (no crash)
-	if m.CurrentView != ViewOverview {
+	if m.Nav.CurrentView != ViewOverview {
 		t.Error("Esc at root should stay at overview")
 	}
 }
@@ -229,7 +229,7 @@ func TestHandleKeyEscPopsView(t *testing.T) {
 	m.pushView(ViewHelp, "Help")
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
 	m = m2.(Model)
-	if m.CurrentView != ViewOverview {
+	if m.Nav.CurrentView != ViewOverview {
 		t.Error("Esc should pop back to overview")
 	}
 }
@@ -328,7 +328,7 @@ func TestViewRepoDetail(t *testing.T) {
 	m.Repos = []*model.Repo{{Name: "test", Path: "/tmp/test"}}
 	m.Width = 120
 	m.Height = 40
-	m.SelectedIdx = 0
+	m.Sel.RepoIdx = 0
 	m.pushView(ViewRepoDetail, "test")
 	view := m.View()
 	if view == "" {
@@ -451,15 +451,15 @@ func TestLoopPanelToggle(t *testing.T) {
 	// l navigates to the loop list view
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
 	m = m2.(Model)
-	if m.CurrentView != ViewLoopList {
-		t.Errorf("l should navigate to ViewLoopList, got %v", m.CurrentView)
+	if m.Nav.CurrentView != ViewLoopList {
+		t.Errorf("l should navigate to ViewLoopList, got %v", m.Nav.CurrentView)
 	}
 
 	// Esc from loop list pops back to overview
 	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyEscape})
 	m = m2.(Model)
-	if m.CurrentView != ViewOverview {
-		t.Errorf("Esc should return to ViewOverview, got %v", m.CurrentView)
+	if m.Nav.CurrentView != ViewOverview {
+		t.Errorf("Esc should return to ViewOverview, got %v", m.Nav.CurrentView)
 	}
 }
 
@@ -807,7 +807,7 @@ func TestLoopDetailKeyBindings(t *testing.T) {
 	}
 
 	// Navigate to loop detail
-	m.SelectedLoop = run.ID
+	m.Sel.LoopID = run.ID
 	m.pushView(ViewLoopDetail, "Loop Detail")
 
 	// Verify keybindings are enabled
@@ -1097,7 +1097,7 @@ func TestViewOverview(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
-	m.CurrentView = ViewOverview
+	m.Nav.CurrentView = ViewOverview
 	got := m.View()
 	if got == "" {
 		t.Error("View should not be empty")
@@ -1108,7 +1108,7 @@ func TestViewSessions(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
-	m.CurrentView = ViewSessions
+	m.Nav.CurrentView = ViewSessions
 	got := m.View()
 	if got == "" {
 		t.Error("View should not be empty")
@@ -1119,7 +1119,7 @@ func TestViewTeams(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
-	m.CurrentView = ViewTeams
+	m.Nav.CurrentView = ViewTeams
 	got := m.View()
 	if got == "" {
 		t.Error("View should not be empty")
@@ -1130,7 +1130,7 @@ func TestViewFleet(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
-	m.CurrentView = ViewFleet
+	m.Nav.CurrentView = ViewFleet
 	got := m.View()
 	if got == "" {
 		t.Error("View should not be empty")
@@ -1141,8 +1141,8 @@ func TestViewTimeline(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
-	m.CurrentView = ViewTimeline
-	m.SelectedIdx = -1
+	m.Nav.CurrentView = ViewTimeline
+	m.Sel.RepoIdx = -1
 	got := m.View()
 	if got == "" {
 		t.Error("View should not be empty")
@@ -1154,8 +1154,8 @@ func TestViewRepoDetailValid(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 	m.Repos = []*model.Repo{{Name: "alpha", Path: "/tmp/alpha"}}
-	m.SelectedIdx = 0
-	m.CurrentView = ViewRepoDetail
+	m.Sel.RepoIdx = 0
+	m.Nav.CurrentView = ViewRepoDetail
 	got := m.View()
 	if got == "" {
 		t.Error("View should not be empty")
@@ -1167,14 +1167,14 @@ func TestViewRepoDetailWithGate(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 	m.Repos = []*model.Repo{{Name: "alpha", Path: "/tmp/alpha"}}
-	m.SelectedIdx = 0
-	m.CurrentView = ViewRepoDetail
-	m.GateCache = map[string]*GateCacheEntry{
+	m.Sel.RepoIdx = 0
+	m.Nav.CurrentView = ViewRepoDetail
+	m.Cache.Gate = map[string]*GateCacheEntry{
 		"/tmp/alpha": {
 			Report: &e2e.GateReport{Overall: e2e.VerdictPass},
 		},
 	}
-	m.ObsCache = map[string][]session.LoopObservation{
+	m.Cache.Obs = map[string][]session.LoopObservation{
 		"/tmp/alpha": {{TotalCostUSD: 1.0}},
 	}
 	got := m.View()
@@ -1187,10 +1187,10 @@ func TestViewSessionDetailNotFound(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
-	m.CurrentView = ViewSessionDetail
+	m.Nav.CurrentView = ViewSessionDetail
 	mgr := session.NewManager()
 	m.SessMgr = mgr
-	m.SelectedSession = "nonexistent"
+	m.Sel.SessionID = "nonexistent"
 	got := m.View()
 	if !strings.Contains(got, "not found") {
 		t.Error("expected 'not found' for missing session")
@@ -1201,10 +1201,10 @@ func TestViewTeamDetailNotFound(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
-	m.CurrentView = ViewTeamDetail
+	m.Nav.CurrentView = ViewTeamDetail
 	mgr := session.NewManager()
 	m.SessMgr = mgr
-	m.SelectedTeam = "nonexistent"
+	m.Sel.TeamName = "nonexistent"
 	got := m.View()
 	if !strings.Contains(got, "not found") {
 		t.Error("expected 'not found' for missing team")
@@ -1215,7 +1215,7 @@ func TestViewLoopList(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Width = 120
 	m.Height = 40
-	m.CurrentView = ViewLoopList
+	m.Nav.CurrentView = ViewLoopList
 	got := m.View()
 	if !strings.Contains(got, "pause/resume") {
 		t.Error("expected loop list footer hints")
@@ -1227,8 +1227,8 @@ func TestViewDiff(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 	m.Repos = []*model.Repo{{Name: "r", Path: "/tmp/test"}}
-	m.SelectedIdx = 0
-	m.CurrentView = ViewDiff
+	m.Sel.RepoIdx = 0
+	m.Nav.CurrentView = ViewDiff
 	got := m.View()
 	if got == "" {
 		t.Error("View should not be empty")
@@ -1240,8 +1240,8 @@ func TestViewLoopHealth(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 	m.Repos = []*model.Repo{{Name: "r", Path: "/tmp/r"}}
-	m.SelectedIdx = 0
-	m.CurrentView = ViewLoopHealth
+	m.Sel.RepoIdx = 0
+	m.Nav.CurrentView = ViewLoopHealth
 	got := m.View()
 	if got == "" {
 		t.Error("View should not be empty")
@@ -1252,7 +1252,7 @@ func TestViewLoopHealth(t *testing.T) {
 
 func TestActiveTableSessions(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewSessions
+	m.Nav.CurrentView = ViewSessions
 	tbl := m.activeTable()
 	if tbl != m.SessionTable {
 		t.Error("expected SessionTable for ViewSessions")
@@ -1261,7 +1261,7 @@ func TestActiveTableSessions(t *testing.T) {
 
 func TestActiveTableTeams(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewTeams
+	m.Nav.CurrentView = ViewTeams
 	tbl := m.activeTable()
 	if tbl != m.TeamTable {
 		t.Error("expected TeamTable for ViewTeams")
@@ -1270,7 +1270,7 @@ func TestActiveTableTeams(t *testing.T) {
 
 func TestActiveTableLoopList(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopList
+	m.Nav.CurrentView = ViewLoopList
 	tbl := m.activeTable()
 	if tbl != m.LoopListTable {
 		t.Error("expected LoopListTable for ViewLoopList")
@@ -1279,7 +1279,7 @@ func TestActiveTableLoopList(t *testing.T) {
 
 func TestActiveTableDefault(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewHelp // not a table view
+	m.Nav.CurrentView = ViewHelp // not a table view
 	tbl := m.activeTable()
 	if tbl != m.Table {
 		t.Error("expected default Table for non-table views")

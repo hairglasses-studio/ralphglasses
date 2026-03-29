@@ -24,6 +24,7 @@ func testLoopRun(id, repoPath, status string) *LoopRun {
 
 // runLoopRunStoreTests exercises all loop run and cost ledger Store methods.
 func runLoopRunStoreTests(t *testing.T, store Store) {
+	t.Helper()
 	ctx := context.Background()
 
 	t.Run("SaveAndGetLoopRun", func(t *testing.T) {

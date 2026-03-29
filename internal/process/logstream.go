@@ -87,3 +87,53 @@ func ReadFullLog(repoPath string) ([]string, error) {
 	}
 	return lines, scanner.Err()
 }
+
+// ReadFullLogFallback attempts to read logs from legacy paths when the primary
+// log file does not exist. It checks:
+//  1. .ralph/ralph.log (legacy single-file location)
+//  2. .ralph/logs/*.log (glob for any log files in the log directory)
+//
+// Returns os.ErrNotExist if no log files are found at any fallback path.
+func ReadFullLogFallback(repoPath string) ([]string, error) {
+	// Try legacy .ralph/ralph.log
+	legacyPath := filepath.Join(repoPath, ".ralph", "ralph.log")
+	if lines, err := readLogFile(legacyPath); err == nil {
+		return lines, nil
+	}
+
+	// Try .ralph/logs/*.log (glob)
+	pattern := filepath.Join(repoPath, ".ralph", "logs", "*.log")
+	matches, err := filepath.Glob(pattern)
+	if err != nil || len(matches) == 0 {
+		return nil, os.ErrNotExist
+	}
+
+	var allLines []string
+	for _, m := range matches {
+		if lines, err := readLogFile(m); err == nil {
+			allLines = append(allLines, lines...)
+		}
+	}
+	if len(allLines) == 0 {
+		return nil, os.ErrNotExist
+	}
+	return allLines, nil
+}
+
+// readLogFile reads all lines from a single log file.
+func readLogFile(path string) ([]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(f)
+	buf := make([]byte, 0, 256*1024)
+	scanner.Buffer(buf, 1024*1024)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	return lines, scanner.Err()
+}

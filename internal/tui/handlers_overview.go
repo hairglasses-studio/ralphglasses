@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
 )
@@ -30,9 +29,9 @@ var overviewKeys = []ViewKeyEntry{
 	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		row := m.Table.SelectedRow()
 		if row != nil {
-			m.SelectedIdx = m.findRepoByName(row[0])
-			if m.SelectedIdx >= 0 {
-				m.pushView(ViewRepoDetail, m.Repos[m.SelectedIdx].Name)
+			m.Sel.RepoIdx = m.findRepoByName(row[0])
+			if m.Sel.RepoIdx >= 0 {
+				m.pushView(ViewRepoDetail, m.Repos[m.Sel.RepoIdx].Name)
 			}
 		}
 		return *m, nil
@@ -51,7 +50,7 @@ var overviewKeys = []ViewKeyEntry{
 		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.ActionsMenu }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		m.ActionMenu = &components.ActionMenu{
+		m.Modals.ActionMenu = &components.ActionMenu{
 			Title:  "Actions",
 			Items:  components.OverviewActions(),
 			Active: true,
@@ -68,13 +67,12 @@ var detailKeys = []ViewKeyEntry{
 		m.LogOffset = 0
 		m.LogView = views.NewLogView()
 		m.LogView.SetDimensions(m.Width, m.Height)
-		lines, _ := process.ReadFullLog(m.Repos[m.SelectedIdx].Path)
-		m.LogView.SetLines(lines)
+		repoPath := m.Repos[m.Sel.RepoIdx].Path
 		m.pushView(ViewLogs, "Logs")
-		return *m, nil
+		return *m, loadLogCmd(repoPath)
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.EditConfig }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		repo := m.Repos[m.SelectedIdx]
+		repo := m.Repos[m.Sel.RepoIdx]
 		if repo.Config != nil {
 			m.ConfigEdit = views.NewConfigEditor(repo.Config)
 			m.ConfigEdit.Height = m.Height
@@ -85,15 +83,15 @@ var detailKeys = []ViewKeyEntry{
 		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.StartLoop }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		return m.startLoop(m.SelectedIdx)
+		return m.startLoop(m.Sel.RepoIdx)
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.StopAction }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-			m.ConfirmDialog = &components.ConfirmDialog{
+		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
+			m.Modals.ConfirmDialog = &components.ConfirmDialog{
 				Title:   "Confirm Stop",
-				Message: fmt.Sprintf("Stop loop for %s?", m.Repos[m.SelectedIdx].Name),
+				Message: fmt.Sprintf("Stop loop for %s?", m.Repos[m.Sel.RepoIdx].Name),
 				Action:  "stopLoop",
-				Data:    m.SelectedIdx,
+				Data:    m.Sel.RepoIdx,
 				Active:  true,
 				Width:   50,
 			}
@@ -101,14 +99,14 @@ var detailKeys = []ViewKeyEntry{
 		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.PauseLoop }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		return m.togglePause(m.SelectedIdx)
+		return m.togglePause(m.Sel.RepoIdx)
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.DiffView }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.pushView(ViewDiff, "Diff")
 		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.ActionsMenu }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		m.ActionMenu = &components.ActionMenu{
+		m.Modals.ActionMenu = &components.ActionMenu{
 			Title:  "Repo Actions",
 			Items:  components.RepoDetailActions(),
 			Active: true,
@@ -117,9 +115,9 @@ var detailKeys = []ViewKeyEntry{
 		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.LaunchSession }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		repo := m.Repos[m.SelectedIdx]
-		m.Launcher = components.NewSessionLauncher(repo.Path, repo.Name)
-		m.Launcher.Width = m.Width
+		repo := m.Repos[m.Sel.RepoIdx]
+		m.Modals.Launcher = components.NewSessionLauncher(repo.Path, repo.Name)
+		m.Modals.Launcher.Width = m.Width
 		return *m, nil
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.TimelineView }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -172,7 +170,7 @@ func (m Model) handleOverviewKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.SelectedIdx < 0 || m.SelectedIdx >= len(m.Repos) {
+	if m.Sel.RepoIdx < 0 || m.Sel.RepoIdx >= len(m.Repos) {
 		return m, nil
 	}
 	return dispatchViewKeys(detailKeys, &m, msg)
@@ -215,7 +213,7 @@ func (m Model) confirmStopSelectedLoop() (tea.Model, tea.Cmd) {
 	}
 	idx := m.findRepoByName(row[0])
 	if idx >= 0 && idx < len(m.Repos) {
-		m.ConfirmDialog = &components.ConfirmDialog{
+		m.Modals.ConfirmDialog = &components.ConfirmDialog{
 			Title:   "Confirm Stop",
 			Message: fmt.Sprintf("Stop loop for %s?", m.Repos[idx].Name),
 			Action:  "stopLoop",

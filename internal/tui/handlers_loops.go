@@ -39,12 +39,12 @@ var loopListKeys = []ViewKeyEntry{
 				id := l.ID
 				l.Unlock()
 				if strings.HasPrefix(id, prefix) {
-					m.SelectedLoop = id
+					m.Sel.LoopID = id
 					break
 				}
 			}
 		}
-		if m.SelectedLoop != "" {
+		if m.Sel.LoopID != "" {
 			m.pushView(ViewLoopDetail, "Loop Detail")
 		}
 		return *m, nil
@@ -125,7 +125,7 @@ var loopControlKeys = []ViewKeyEntry{
 
 var loopDetailKeys = []ViewKeyEntry{
 	{Binding: func(km *KeyMap) key.Binding { return km.LoopDetailStep }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		loopID := m.SelectedLoop
+		loopID := m.Sel.LoopID
 		sessMgr := m.SessMgr
 		return *m, func() tea.Msg {
 			err := sessMgr.StepLoop(context.Background(), loopID)
@@ -133,7 +133,7 @@ var loopDetailKeys = []ViewKeyEntry{
 		}
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.LoopDetailToggle }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		loopID := m.SelectedLoop
+		loopID := m.Sel.LoopID
 		sessMgr := m.SessMgr
 		l, ok := sessMgr.GetLoop(loopID)
 		if !ok {
@@ -156,7 +156,7 @@ var loopDetailKeys = []ViewKeyEntry{
 		}
 	}},
 	{Binding: func(km *KeyMap) key.Binding { return km.LoopDetailPause }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-		loopID := m.SelectedLoop
+		loopID := m.Sel.LoopID
 		sessMgr := m.SessMgr
 		l, ok := sessMgr.GetLoop(loopID)
 		if !ok {
@@ -220,7 +220,7 @@ func handleLoopListStop(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	idPrefix := row[0]
 	for _, l := range m.SessMgr.ListLoops() {
 		if strings.HasPrefix(l.ID, idPrefix) {
-			m.ConfirmDialog = &components.ConfirmDialog{
+			m.Modals.ConfirmDialog = &components.ConfirmDialog{
 				Title:   "Confirm Stop Loop",
 				Message: fmt.Sprintf("Stop loop %s (%s)?", idPrefix, l.RepoName),
 				Action:  "stopManagedLoop",
@@ -282,7 +282,7 @@ func (m Model) handleLoopControlKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleLoopDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.SessMgr == nil || m.SelectedLoop == "" {
+	if m.SessMgr == nil || m.Sel.LoopID == "" {
 		return m, nil
 	}
 	return dispatchViewKeys(loopDetailKeys, &m, msg)

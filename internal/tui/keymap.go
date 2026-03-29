@@ -105,7 +105,7 @@ func handleFilterMode(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func handleHelp(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.CurrentView == ViewHelp {
+	if m.Nav.CurrentView == ViewHelp {
 		return m.popView()
 	}
 	m.pushView(ViewHelp, "Help")
@@ -124,7 +124,7 @@ func handleLoopControlPanel(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func handleObservationView(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.SelectedIdx < 0 || m.SelectedIdx >= len(m.Repos) {
+	if m.Sel.RepoIdx < 0 || m.Sel.RepoIdx >= len(m.Repos) {
 		return *m, nil
 	}
 	m.pushView(ViewObservation, "Observations")

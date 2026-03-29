@@ -54,19 +54,66 @@ const (
 	ModeLauncher
 )
 
+// NavigationState tracks view stack and tab state.
+type NavigationState struct {
+	CurrentView ViewMode
+	ViewStack   []ViewMode
+	Breadcrumb  components.Breadcrumb
+	ActiveTab   int
+}
+
+// SelectionState tracks the currently selected items across views.
+type SelectionState struct {
+	RepoIdx   int    // index into Repos slice
+	SessionID string // selected session ID
+	TeamName  string // selected team name
+	LoopID    string // selected loop ID
+}
+
+// ModalState tracks active modal overlays.
+type ModalState struct {
+	ConfirmDialog *components.ConfirmDialog
+	ActionMenu    *components.ActionMenu
+	Launcher      *components.SessionLauncher
+}
+
+// StreamState tracks session output streaming.
+type StreamState struct {
+	SessionID  string
+	Active     bool
+	OutputView *views.LogView
+}
+
+// CacheState holds TTL-gated cached data.
+type CacheState struct {
+	Obs              map[string][]session.LoopObservation
+	ObsTime          time.Time
+	Gate             map[string]*GateCacheEntry
+	GateExp          time.Time
+	PrevGateVerdicts map[string]string
+}
+
+// FleetNavState tracks fleet dashboard navigation.
+type FleetNavState struct {
+	Window  int
+	Section int
+	Cursor  int
+}
+
 // Model is the root Bubble Tea model.
 type Model struct {
+	Nav    NavigationState
+	Sel    SelectionState
+	Modals ModalState
+	Stream StreamState
+	Cache  CacheState
+	Fleet  FleetNavState
+
 	// Config
 	ScanPath string
 
 	// Data
 	Repos []*model.Repo
-
-	// Navigation
-	CurrentView ViewMode
-	ViewStack   []ViewMode
-	Breadcrumb  components.Breadcrumb
-	ActiveTab   int // 0=repos, 1=sessions, 2=teams, 3=fleet
 
 	// Components
 	Table         *components.Table
@@ -84,23 +131,7 @@ type Model struct {
 	Spinner spinner.Model
 
 	// Session management
-	SessMgr         *session.Manager
-	SelectedSession string // session ID for detail view
-	SelectedTeam    string // team name for detail view
-	SelectedLoop    string // loop ID for detail view
-	FleetWindow     int
-	FleetSection    int
-	FleetCursor     int
-
-	// Modal overlays
-	ConfirmDialog *components.ConfirmDialog
-	ActionMenu    *components.ActionMenu
-	Launcher      *components.SessionLauncher
-
-	// Session output streaming
-	StreamingSessionID string
-	StreamingOutput    bool
-	SessionOutputView  *views.LogView
+	SessMgr *session.Manager
 
 	// Animation
 	TickFrame int
@@ -114,7 +145,6 @@ type Model struct {
 	InputMode   InputMode
 	CommandBuf  string
 	Filter      FilterState
-	SelectedIdx int // index into Repos for detail/log views
 	LogOffset   int64
 	LastRefresh time.Time
 
@@ -139,13 +169,6 @@ type Model struct {
 
 	// Event log view
 	EventLog *views.EventLogView
-
-	// Loop observation cache (refreshed less often than 2s tick)
-	ObsCache     map[string][]session.LoopObservation // keyed by repo path
-	ObsCacheTime time.Time
-	GateCache    map[string]*GateCacheEntry // keyed by repo path
-	GateCacheExp time.Time
-	PrevGateVerdicts map[string]string // keyed by repo path, for change detection
 }
 
 type tickMsg time.Time
@@ -193,9 +216,23 @@ type LoopPauseResultMsg struct {
 	Err    error
 }
 
+// LogLoadedMsg is returned when async log loading completes.
+type LogLoadedMsg struct {
+	Lines []string
+	Err   error
+}
+
 type scanResultMsg struct {
 	repos []*model.Repo
 	err   error
+}
+
+// loadLogCmd returns a tea.Cmd that reads the full log asynchronously.
+func loadLogCmd(repoPath string) tea.Cmd {
+	return func() tea.Msg {
+		lines, err := process.ReadFullLog(repoPath)
+		return LogLoadedMsg{Lines: lines, Err: err}
+	}
 }
 
 // Init returns the initial set of commands: repo scan, tick timer, spinner, and process exit watcher.
@@ -228,21 +265,21 @@ func (m Model) scanRepos() tea.Cmd {
 // Navigation helpers
 
 func (m *Model) pushView(v ViewMode, name string) {
-	m.ViewStack = append(m.ViewStack, m.CurrentView)
-	m.CurrentView = v
-	m.Breadcrumb.Push(name)
+	m.Nav.ViewStack = append(m.Nav.ViewStack, m.Nav.CurrentView)
+	m.Nav.CurrentView = v
+	m.Nav.Breadcrumb.Push(name)
 	m.Keys.SetViewContext(v)
 }
 
 func (m Model) popView() (tea.Model, tea.Cmd) {
-	if len(m.ViewStack) == 0 {
+	if len(m.Nav.ViewStack) == 0 {
 		// At root — no-op on Esc
 		return m, nil
 	}
-	m.CurrentView = m.ViewStack[len(m.ViewStack)-1]
-	m.ViewStack = m.ViewStack[:len(m.ViewStack)-1]
-	m.Breadcrumb.Pop()
-	m.Keys.SetViewContext(m.CurrentView)
+	m.Nav.CurrentView = m.Nav.ViewStack[len(m.Nav.ViewStack)-1]
+	m.Nav.ViewStack = m.Nav.ViewStack[:len(m.Nav.ViewStack)-1]
+	m.Nav.Breadcrumb.Pop()
+	m.Keys.SetViewContext(m.Nav.CurrentView)
 	return m, nil
 }
 
@@ -381,7 +418,7 @@ func (m Model) loopListCmd() tea.Cmd {
 
 // activeTable returns the table for the current view.
 func (m *Model) activeTable() *components.Table {
-	switch m.CurrentView {
+	switch m.Nav.CurrentView {
 	case ViewOverview:
 		return m.Table
 	case ViewSessions:
@@ -397,11 +434,11 @@ func (m *Model) activeTable() *components.Table {
 
 // switchTab changes the active tab, clearing the view stack.
 func (m *Model) switchTab(tab int, view ViewMode, name string) {
-	m.ActiveTab = tab
+	m.Nav.ActiveTab = tab
 	m.TabBar.Active = tab
-	m.CurrentView = view
-	m.ViewStack = nil
-	m.Breadcrumb = components.Breadcrumb{Parts: []string{name}}
+	m.Nav.CurrentView = view
+	m.Nav.ViewStack = nil
+	m.Nav.Breadcrumb = components.Breadcrumb{Parts: []string{name}}
 	m.Filter.Clear()
 	m.Keys.SetViewContext(view)
 }

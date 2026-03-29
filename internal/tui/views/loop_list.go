@@ -11,11 +11,11 @@ import (
 
 // LoopListColumns defines the loop list table structure.
 var LoopListColumns = []components.Column{
-	{Title: "ID", Width: 10, Sortable: false},
-	{Title: "Repo", Width: 20, Sortable: true, Grow: true},
-	{Title: "Phase", Width: 12, Sortable: true},
-	{Title: "Iters", Width: 6, Sortable: true},
-	{Title: "Status", Width: 10, Sortable: true},
+	{Title: "ID", Width: 10, Sortable: false, MinWidth: 9},
+	{Title: "Repo", Width: 20, Sortable: true, MinWidth: 12, Flex: 2.0},
+	{Title: "Phase", Width: 12, Sortable: true, MinWidth: 8, Flex: 0.5},
+	{Title: "Iters", Width: 6, Sortable: true, MinWidth: 5},
+	{Title: "Status", Width: 10, Sortable: true, MinWidth: 8},
 }
 
 // NewLoopListTable creates a table pre-configured for the loop list.

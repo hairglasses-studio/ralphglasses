@@ -28,8 +28,14 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 	sessionTable.MultiSelect = true
 
 	return Model{
+		Nav: NavigationState{
+			CurrentView: ViewOverview,
+			Breadcrumb:  components.Breadcrumb{Parts: []string{"Repos"}},
+		},
+		Fleet: FleetNavState{
+			Window: 1,
+		},
 		ScanPath:      scanPath,
-		CurrentView:   ViewOverview,
 		Table:         table,
 		SessionTable:  sessionTable,
 		TeamTable:     teamTable,
@@ -38,10 +44,8 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 		LogView:      views.NewLogView(),
 		ProcMgr:      process.NewManager(),
 		SessMgr:      sessMgr,
-		Breadcrumb:   components.Breadcrumb{Parts: []string{"Repos"}},
 		Keys:         DefaultKeyMap(),
 		Spinner:      s,
-		FleetWindow:  1,
 	}
 }
 
@@ -56,7 +60,7 @@ var tabNames = []string{
 // View renders the TUI.
 func (m Model) View() string {
 	if m.Width < 3 || m.Height < 3 {
-		return "Terminal too small. Resize to at least 10x3."
+		return "Terminal too small. Please resize."
 	}
 
 	var b strings.Builder
@@ -64,7 +68,7 @@ func (m Model) View() string {
 	// Title bar
 	b.WriteString(styles.TitleStyle.Render(fmt.Sprintf(" %s ralphglasses ", styles.IconGlasses)))
 	b.WriteString("  ")
-	b.WriteString(m.Breadcrumb.View())
+	b.WriteString(m.Nav.Breadcrumb.View())
 	b.WriteString("\n")
 
 	// Tab bar
@@ -72,12 +76,12 @@ func (m Model) View() string {
 	b.WriteString("\n\n")
 
 	// Main content
-	switch m.CurrentView {
+	switch m.Nav.CurrentView {
 	case ViewOverview:
 		b.WriteString(m.Table.View())
 	case ViewRepoDetail:
-		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-			repo := m.Repos[m.SelectedIdx]
+		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
+			repo := m.Repos[m.Sel.RepoIdx]
 			var detailHealth *views.RepoDetailHealth
 			if entry := m.getGateEntry(repo.Path); entry != nil {
 				detailHealth = &views.RepoDetailHealth{
@@ -102,7 +106,7 @@ func (m Model) View() string {
 		b.WriteString(m.SessionTable.View())
 	case ViewSessionDetail:
 		if m.SessMgr != nil {
-			if s, ok := m.SessMgr.Get(m.SelectedSession); ok {
+			if s, ok := m.SessMgr.Get(m.Sel.SessionID); ok {
 				b.WriteString(views.RenderSessionDetail(s, m.Width, m.Height))
 			} else {
 				b.WriteString(styles.InfoStyle.Render("  Session not found"))
@@ -112,7 +116,7 @@ func (m Model) View() string {
 		b.WriteString(m.TeamTable.View())
 	case ViewTeamDetail:
 		if m.SessMgr != nil {
-			if team, ok := m.SessMgr.GetTeam(m.SelectedTeam); ok {
+			if team, ok := m.SessMgr.GetTeam(m.Sel.TeamName); ok {
 				leadSession, _ := m.SessMgr.Get(team.LeadID)
 				b.WriteString(views.RenderTeamDetail(team, leadSession, m.Width))
 			} else {
@@ -123,19 +127,19 @@ func (m Model) View() string {
 		data := m.buildFleetData()
 		b.WriteString(views.RenderFleetDashboard(data, m.Width, m.Height))
 	case ViewDiff:
-		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-			b.WriteString(views.RenderDiffView(m.Repos[m.SelectedIdx].Path, "", m.Width, m.Height))
+		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
+			b.WriteString(views.RenderDiffView(m.Repos[m.Sel.RepoIdx].Path, "", m.Width, m.Height))
 		}
 	case ViewTimeline:
 		entries := m.buildTimelineEntries()
 		repoName := "All Sessions"
-		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-			repoName = m.Repos[m.SelectedIdx].Name
+		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
+			repoName = m.Repos[m.Sel.RepoIdx].Name
 		}
 		b.WriteString(views.RenderTimeline(entries, repoName, m.Width, m.Height))
 	case ViewLoopHealth:
-		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-			repo := m.Repos[m.SelectedIdx]
+		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
+			repo := m.Repos[m.Sel.RepoIdx]
 			healthData := views.LoopHealthData{
 				RepoName:     repo.Name,
 				Observations: m.getObservations(repo.Path),
@@ -151,8 +155,8 @@ func (m Model) View() string {
 		b.WriteString("\n")
 		b.WriteString(styles.HelpStyle.Render("  s start loop  x/d stop loop  p pause/resume  Enter detail  j/k navigate  Esc back"))
 	case ViewLoopDetail:
-		if m.SessMgr != nil && m.SelectedLoop != "" {
-			if l, ok := m.SessMgr.GetLoop(m.SelectedLoop); ok {
+		if m.SessMgr != nil && m.Sel.LoopID != "" {
+			if l, ok := m.SessMgr.GetLoop(m.Sel.LoopID); ok {
 				b.WriteString(views.RenderLoopDetail(l, m.Width, m.Height))
 			} else {
 				b.WriteString(styles.InfoStyle.Render("  Loop not found"))
@@ -161,8 +165,8 @@ func (m Model) View() string {
 	case ViewLoopControl:
 		b.WriteString(views.RenderLoopControlPanel(m.LoopControlData, m.LoopControlIdx, m.Width, m.Height))
 	case ViewObservation:
-		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-			repo := m.Repos[m.SelectedIdx]
+		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
+			repo := m.Repos[m.Sel.RepoIdx]
 			data := views.ObservationViewData{
 				RepoName:     repo.Name,
 				Observations: m.getObservations(repo.Path),
@@ -186,17 +190,17 @@ func (m Model) View() string {
 	}
 
 	// Modal overlays
-	if m.ConfirmDialog != nil && m.ConfirmDialog.Active {
+	if m.Modals.ConfirmDialog != nil && m.Modals.ConfirmDialog.Active {
 		b.WriteString("\n")
-		b.WriteString(m.ConfirmDialog.View())
+		b.WriteString(m.Modals.ConfirmDialog.View())
 	}
-	if m.ActionMenu != nil && m.ActionMenu.Active {
+	if m.Modals.ActionMenu != nil && m.Modals.ActionMenu.Active {
 		b.WriteString("\n")
-		b.WriteString(m.ActionMenu.View())
+		b.WriteString(m.Modals.ActionMenu.View())
 	}
-	if m.Launcher != nil && m.Launcher.Active {
+	if m.Modals.Launcher != nil && m.Modals.Launcher.Active {
 		b.WriteString("\n")
-		b.WriteString(m.Launcher.View())
+		b.WriteString(m.Modals.Launcher.View())
 	}
 
 	// Notification overlay
@@ -206,11 +210,11 @@ func (m Model) View() string {
 	}
 
 	// Session output streaming view (split pane)
-	if m.StreamingOutput && m.SessionOutputView != nil {
+	if m.Stream.Active && m.Stream.OutputView != nil {
 		b.WriteString("\n")
 		b.WriteString(styles.TitleStyle.Render(" Live Output "))
 		b.WriteString("\n")
-		b.WriteString(m.SessionOutputView.View())
+		b.WriteString(m.Stream.OutputView.View())
 	}
 
 	b.WriteString("\n")

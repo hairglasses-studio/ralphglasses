@@ -336,11 +336,11 @@ func TestHandleTab1(t *testing.T) {
 
 	m2, cmd := handleTab1(&m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("1")})
 	got := m2.(Model)
-	if got.ActiveTab != 0 {
-		t.Errorf("ActiveTab = %d, want 0", got.ActiveTab)
+	if got.Nav.ActiveTab != 0 {
+		t.Errorf("ActiveTab = %d, want 0", got.Nav.ActiveTab)
 	}
-	if got.CurrentView != ViewOverview {
-		t.Errorf("CurrentView = %v, want ViewOverview", got.CurrentView)
+	if got.Nav.CurrentView != ViewOverview {
+		t.Errorf("CurrentView = %v, want ViewOverview", got.Nav.CurrentView)
 	}
 	if cmd != nil {
 		t.Error("handleTab1 should return nil cmd")
@@ -352,11 +352,11 @@ func TestHandleTab2(t *testing.T) {
 
 	m2, cmd := handleTab2(&m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("2")})
 	got := m2.(Model)
-	if got.ActiveTab != 1 {
-		t.Errorf("ActiveTab = %d, want 1", got.ActiveTab)
+	if got.Nav.ActiveTab != 1 {
+		t.Errorf("ActiveTab = %d, want 1", got.Nav.ActiveTab)
 	}
-	if got.CurrentView != ViewSessions {
-		t.Errorf("CurrentView = %v, want ViewSessions", got.CurrentView)
+	if got.Nav.CurrentView != ViewSessions {
+		t.Errorf("CurrentView = %v, want ViewSessions", got.Nav.CurrentView)
 	}
 	if cmd != nil {
 		t.Error("handleTab2 should return nil cmd")
@@ -368,11 +368,11 @@ func TestHandleTab3(t *testing.T) {
 
 	m2, cmd := handleTab3(&m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("3")})
 	got := m2.(Model)
-	if got.ActiveTab != 2 {
-		t.Errorf("ActiveTab = %d, want 2", got.ActiveTab)
+	if got.Nav.ActiveTab != 2 {
+		t.Errorf("ActiveTab = %d, want 2", got.Nav.ActiveTab)
 	}
-	if got.CurrentView != ViewTeams {
-		t.Errorf("CurrentView = %v, want ViewTeams", got.CurrentView)
+	if got.Nav.CurrentView != ViewTeams {
+		t.Errorf("CurrentView = %v, want ViewTeams", got.Nav.CurrentView)
 	}
 	if cmd != nil {
 		t.Error("handleTab3 should return nil cmd")
@@ -384,11 +384,11 @@ func TestHandleTab4(t *testing.T) {
 
 	m2, cmd := handleTab4(&m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("4")})
 	got := m2.(Model)
-	if got.ActiveTab != 3 {
-		t.Errorf("ActiveTab = %d, want 3", got.ActiveTab)
+	if got.Nav.ActiveTab != 3 {
+		t.Errorf("ActiveTab = %d, want 3", got.Nav.ActiveTab)
 	}
-	if got.CurrentView != ViewFleet {
-		t.Errorf("CurrentView = %v, want ViewFleet", got.CurrentView)
+	if got.Nav.CurrentView != ViewFleet {
+		t.Errorf("CurrentView = %v, want ViewFleet", got.Nav.CurrentView)
 	}
 	if cmd != nil {
 		t.Error("handleTab4 should return nil cmd")
@@ -402,8 +402,8 @@ func TestHandleLoopControlPanel(t *testing.T) {
 
 	m2, cmd := handleLoopControlPanel(&m, tea.KeyMsg{})
 	got := m2.(Model)
-	if got.CurrentView != ViewLoopControl {
-		t.Errorf("CurrentView = %v, want ViewLoopControl", got.CurrentView)
+	if got.Nav.CurrentView != ViewLoopControl {
+		t.Errorf("CurrentView = %v, want ViewLoopControl", got.Nav.CurrentView)
 	}
 	if cmd != nil {
 		t.Error("handleLoopControlPanel should return nil cmd")
@@ -414,11 +414,11 @@ func TestHandleLoopControlPanel(t *testing.T) {
 
 func TestHandleObservationView_NoRepos(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.SelectedIdx = 0
+	m.Sel.RepoIdx = 0
 	// No repos — should return unchanged model
 	m2, cmd := handleObservationView(&m, tea.KeyMsg{})
 	got := m2.(Model)
-	if got.CurrentView == ViewObservation {
+	if got.Nav.CurrentView == ViewObservation {
 		t.Error("should not push observation view when no repos exist")
 	}
 	if cmd != nil {
@@ -428,10 +428,10 @@ func TestHandleObservationView_NoRepos(t *testing.T) {
 
 func TestHandleObservationView_NegativeIdx(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.SelectedIdx = -1
+	m.Sel.RepoIdx = -1
 	m2, cmd := handleObservationView(&m, tea.KeyMsg{})
 	got := m2.(Model)
-	if got.CurrentView == ViewObservation {
+	if got.Nav.CurrentView == ViewObservation {
 		t.Error("should not push observation view with negative index")
 	}
 	if cmd != nil {
@@ -449,8 +449,8 @@ func TestHandleEventLogView_NilEventLog(t *testing.T) {
 
 	m2, cmd := handleEventLogView(&m, tea.KeyMsg{})
 	got := m2.(Model)
-	if got.CurrentView != ViewEventLog {
-		t.Errorf("CurrentView = %v, want ViewEventLog", got.CurrentView)
+	if got.Nav.CurrentView != ViewEventLog {
+		t.Errorf("CurrentView = %v, want ViewEventLog", got.Nav.CurrentView)
 	}
 	if got.EventLog == nil {
 		t.Error("EventLog should be initialized")
@@ -482,8 +482,8 @@ func TestHandleEscape_PopView(t *testing.T) {
 
 	m2, cmd := handleEscape(&m, tea.KeyMsg{Type: tea.KeyEscape})
 	got := m2.(Model)
-	if got.CurrentView != ViewOverview {
-		t.Errorf("CurrentView = %v, want ViewOverview after pop", got.CurrentView)
+	if got.Nav.CurrentView != ViewOverview {
+		t.Errorf("CurrentView = %v, want ViewOverview after pop", got.Nav.CurrentView)
 	}
 	_ = cmd
 }
@@ -544,15 +544,15 @@ func TestHandleHelp_Toggle(t *testing.T) {
 	// Push help
 	m2, _ := handleHelp(&m, tea.KeyMsg{})
 	got := m2.(Model)
-	if got.CurrentView != ViewHelp {
-		t.Errorf("CurrentView = %v, want ViewHelp", got.CurrentView)
+	if got.Nav.CurrentView != ViewHelp {
+		t.Errorf("CurrentView = %v, want ViewHelp", got.Nav.CurrentView)
 	}
 
 	// Pop help
 	m3, _ := handleHelp(&got, tea.KeyMsg{})
 	got2 := m3.(Model)
-	if got2.CurrentView != ViewOverview {
-		t.Errorf("CurrentView = %v, want ViewOverview after toggle", got2.CurrentView)
+	if got2.Nav.CurrentView != ViewOverview {
+		t.Errorf("CurrentView = %v, want ViewOverview after toggle", got2.Nav.CurrentView)
 	}
 }
 
@@ -574,8 +574,8 @@ func TestHandleLoopPanel(t *testing.T) {
 
 	m2, cmd := handleLoopPanel(&m, tea.KeyMsg{})
 	got := m2.(Model)
-	if got.CurrentView != ViewLoopList {
-		t.Errorf("CurrentView = %v, want ViewLoopList", got.CurrentView)
+	if got.Nav.CurrentView != ViewLoopList {
+		t.Errorf("CurrentView = %v, want ViewLoopList", got.Nav.CurrentView)
 	}
 	if cmd == nil {
 		t.Error("handleLoopPanel should return a loop list cmd")

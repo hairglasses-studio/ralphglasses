@@ -321,7 +321,7 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 		Message  string `json:"message"`
 	}
 
-	var alerts []alert
+	alerts := make([]alert, 0)
 
 	for _, r := range filteredRepos {
 		// Circuit breaker OPEN → critical
@@ -404,8 +404,10 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 		}
 	}
 
-	if alerts == nil {
-		alerts = []alert{}
+	// --- Truncate session list for output size control (FINDING-173) ---
+	totalSessionCount := len(sessions)
+	if limit > 0 && len(sessions) > limit {
+		sessions = sessions[:limit]
 	}
 
 	// --- Assemble response ---
@@ -480,13 +482,14 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 			"open_circuits":           openCircuits,
 			"providers":               providerMap,
 		},
-		"repos":       repos,
-		"sessions":    sessions,
-		"teams":       teams,
-		"loops":       loops,
-		"alerts":      alerts,
-		"has_more":    hasMore,
-		"total_count": totalRepoCount,
+		"repos":               repos,
+		"sessions":            sessions,
+		"teams":               teams,
+		"loops":               loops,
+		"alerts":              alerts,
+		"has_more":            hasMore,
+		"total_count":         totalRepoCount,
+		"total_session_count": totalSessionCount,
 	}
 
 	return jsonResult(result), nil

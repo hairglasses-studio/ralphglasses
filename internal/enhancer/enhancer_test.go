@@ -222,8 +222,9 @@ Focus on nil pointer dereferences and unchecked errors.</instructions>
 <output_format>List issues by severity with line numbers.</output_format>
 <examples><example>Good: if err != nil { return fmt.Errorf("upload: %w", err) }</example></examples>`)
 
-		if good.Score < 7 {
-			t.Errorf("Well-structured prompt scored %d, expected >= 7", good.Score)
+		// FINDING-240: lowered from 7 to 6 — baselines reduced to prevent score inflation
+		if good.Score < 6 {
+			t.Errorf("Well-structured prompt scored %d, expected >= 6", good.Score)
 		}
 		if !good.HasXML {
 			t.Error("Should detect XML structure")

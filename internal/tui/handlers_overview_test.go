@@ -14,7 +14,7 @@ import (
 func newOverviewModel(repos ...*model.Repo) Model {
 	m := NewModel("/tmp/test", nil)
 	m.Ctx = context.Background()
-	m.CurrentView = ViewOverview
+	m.Nav.CurrentView = ViewOverview
 	m.Keys.SetViewContext(ViewOverview)
 	m.Repos = repos
 	// Populate table rows matching repo names (column 0 = name)
@@ -88,14 +88,14 @@ func TestOverview_EnterPushesDetailView(t *testing.T) {
 	)
 	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyEnter})
 	got := m2.(Model)
-	if got.CurrentView != ViewRepoDetail {
-		t.Errorf("CurrentView = %v, want ViewRepoDetail", got.CurrentView)
+	if got.Nav.CurrentView != ViewRepoDetail {
+		t.Errorf("CurrentView = %v, want ViewRepoDetail", got.Nav.CurrentView)
 	}
-	if got.SelectedIdx != 0 {
-		t.Errorf("SelectedIdx = %d, want 0", got.SelectedIdx)
+	if got.Sel.RepoIdx != 0 {
+		t.Errorf("SelectedIdx = %d, want 0", got.Sel.RepoIdx)
 	}
-	if len(got.ViewStack) != 1 {
-		t.Errorf("ViewStack len = %d, want 1", len(got.ViewStack))
+	if len(got.Nav.ViewStack) != 1 {
+		t.Errorf("ViewStack len = %d, want 1", len(got.Nav.ViewStack))
 	}
 }
 
@@ -104,8 +104,8 @@ func TestOverview_EnterEmptyTable(t *testing.T) {
 	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyEnter})
 	got := m2.(Model)
 	// Should stay in overview since no row selected
-	if got.CurrentView != ViewOverview {
-		t.Errorf("CurrentView = %v, want ViewOverview (no rows)", got.CurrentView)
+	if got.Nav.CurrentView != ViewOverview {
+		t.Errorf("CurrentView = %v, want ViewOverview (no rows)", got.Nav.CurrentView)
 	}
 }
 
@@ -141,10 +141,10 @@ func TestOverview_ActionsMenu(t *testing.T) {
 	)
 	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
 	got := m2.(Model)
-	if got.ActionMenu == nil {
+	if got.Modals.ActionMenu == nil {
 		t.Error("expected ActionMenu to be set after 'a'")
 	}
-	if got.ActionMenu != nil && !got.ActionMenu.Active {
+	if got.Modals.ActionMenu != nil && !got.Modals.ActionMenu.Active {
 		t.Error("ActionMenu should be active")
 	}
 }
@@ -182,11 +182,11 @@ func TestOverview_StopLoop(t *testing.T) {
 	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
 	got := m2.(Model)
 	// Should show confirm dialog since there's a selected row
-	if got.ConfirmDialog == nil {
+	if got.Modals.ConfirmDialog == nil {
 		t.Error("expected ConfirmDialog after stop key")
 	}
-	if got.ConfirmDialog != nil && got.ConfirmDialog.Action != "stopLoop" {
-		t.Errorf("ConfirmDialog.Action = %q, want %q", got.ConfirmDialog.Action, "stopLoop")
+	if got.Modals.ConfirmDialog != nil && got.Modals.ConfirmDialog.Action != "stopLoop" {
+		t.Errorf("ConfirmDialog.Action = %q, want %q", got.Modals.ConfirmDialog.Action, "stopLoop")
 	}
 }
 
@@ -195,7 +195,7 @@ func TestOverview_StopLoop_EmptyTable(t *testing.T) {
 	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
 	got := m2.(Model)
 	// No row selected, so no dialog
-	if got.ConfirmDialog != nil {
+	if got.Modals.ConfirmDialog != nil {
 		t.Error("should not show confirm dialog with no row selected")
 	}
 }
@@ -302,7 +302,7 @@ func TestConfirmStopSelectedLoop_NoRow(t *testing.T) {
 	m := newOverviewModel()
 	m2, _ := m.confirmStopSelectedLoop()
 	got := m2.(Model)
-	if got.ConfirmDialog != nil {
+	if got.Modals.ConfirmDialog != nil {
 		t.Error("should not show confirm dialog when no row selected")
 	}
 }
@@ -322,7 +322,7 @@ func TestConfirmStopSelectedLoop_WithRow(t *testing.T) {
 	)
 	m2, _ := m.confirmStopSelectedLoop()
 	got := m2.(Model)
-	if got.ConfirmDialog == nil {
+	if got.Modals.ConfirmDialog == nil {
 		t.Error("expected confirm dialog with selected row")
 	}
 }
@@ -331,7 +331,7 @@ func TestConfirmStopSelectedLoop_WithRow(t *testing.T) {
 
 func TestLogView_ScrollDown(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLogs
+	m.Nav.CurrentView = ViewLogs
 	m.Keys.SetViewContext(ViewLogs)
 	m.LogView.SetLines([]string{"line1", "line2", "line3"})
 	m.LogView.SetDimensions(80, 24)
@@ -342,7 +342,7 @@ func TestLogView_ScrollDown(t *testing.T) {
 
 func TestLogView_ScrollUp(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLogs
+	m.Nav.CurrentView = ViewLogs
 	m.Keys.SetViewContext(ViewLogs)
 	m.LogView.SetLines([]string{"line1", "line2", "line3"})
 	m.LogView.SetDimensions(80, 24)
@@ -353,7 +353,7 @@ func TestLogView_ScrollUp(t *testing.T) {
 
 func TestLogView_GotoEnd(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLogs
+	m.Nav.CurrentView = ViewLogs
 	m.Keys.SetViewContext(ViewLogs)
 	m.LogView.SetLines([]string{"line1", "line2", "line3"})
 	m.LogView.SetDimensions(80, 24)
@@ -364,7 +364,7 @@ func TestLogView_GotoEnd(t *testing.T) {
 
 func TestLogView_GotoStart(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLogs
+	m.Nav.CurrentView = ViewLogs
 	m.Keys.SetViewContext(ViewLogs)
 	m.LogView.SetLines([]string{"line1", "line2", "line3"})
 	m.LogView.SetDimensions(80, 24)
@@ -375,7 +375,7 @@ func TestLogView_GotoStart(t *testing.T) {
 
 func TestLogView_FollowToggle(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLogs
+	m.Nav.CurrentView = ViewLogs
 	m.Keys.SetViewContext(ViewLogs)
 	m.LogView.SetLines([]string{"line1"})
 	m.LogView.SetDimensions(80, 24)
@@ -386,7 +386,7 @@ func TestLogView_FollowToggle(t *testing.T) {
 
 func TestLogView_PageUpDown(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLogs
+	m.Nav.CurrentView = ViewLogs
 	m.Keys.SetViewContext(ViewLogs)
 	m.LogView.SetLines([]string{"line1", "line2", "line3"})
 	m.LogView.SetDimensions(80, 24)

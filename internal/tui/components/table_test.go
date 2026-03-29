@@ -270,6 +270,148 @@ func TestViewWithGrowColumn(t *testing.T) {
 	}
 }
 
+func TestEffectiveWidths_NarrowTerminal(t *testing.T) {
+	cols := []Column{
+		{Title: "Name", Width: 18, MinWidth: 12, Flex: 2.0},
+		{Title: "Status", Width: 10, MinWidth: 8},
+		{Title: "Loop", Width: 6, MinWidth: 5},
+		{Title: "Calls", Width: 12, MinWidth: 5, Flex: 0.5},
+		{Title: "Budget", Width: 12, MinWidth: 8, Flex: 1.0},
+	}
+	tbl := NewTable(cols)
+	tbl.Width = 60 // narrow — no extra space to distribute
+
+	widths := tbl.effectiveWidths()
+	if len(widths) != 5 {
+		t.Fatalf("expected 5 widths, got %d", len(widths))
+	}
+	// At 60 cols: base widths are 18+10+6+12+12=58, gaps=4, total=62 > 60
+	// So remaining <= 0, all columns stay at base width
+	expected := []int{18, 10, 6, 12, 12}
+	for i, w := range widths {
+		if w != expected[i] {
+			t.Errorf("col %d: got %d, want %d", i, w, expected[i])
+		}
+	}
+}
+
+func TestEffectiveWidths_StandardTerminal(t *testing.T) {
+	cols := []Column{
+		{Title: "Name", Width: 12, MinWidth: 12, Flex: 2.0},
+		{Title: "Status", Width: 8, MinWidth: 8},
+		{Title: "Budget", Width: 8, MinWidth: 8, Flex: 1.0},
+	}
+	tbl := NewTable(cols)
+	tbl.Width = 120
+
+	widths := tbl.effectiveWidths()
+	if len(widths) != 3 {
+		t.Fatalf("expected 3 widths, got %d", len(widths))
+	}
+	// Base: 12+8+8=28, gaps=2, total=30, remaining=90
+	// Flex total=3.0; Name gets 2/3*90=60, Budget gets 1/3*90=30
+	// Name=12+60=72, Status=8, Budget=8+30=38
+	if widths[0] != 72 {
+		t.Errorf("Name: got %d, want 72", widths[0])
+	}
+	if widths[1] != 8 {
+		t.Errorf("Status: got %d, want 8", widths[1])
+	}
+	if widths[2] != 38 {
+		t.Errorf("Budget: got %d, want 38", widths[2])
+	}
+}
+
+func TestEffectiveWidths_WideTerminal(t *testing.T) {
+	cols := []Column{
+		{Title: "Name", Width: 12, MinWidth: 12, Flex: 2.0, MaxWidth: 40},
+		{Title: "Status", Width: 8, MinWidth: 8},
+		{Title: "Budget", Width: 8, MinWidth: 8, Flex: 1.0, MaxWidth: 30},
+	}
+	tbl := NewTable(cols)
+	tbl.Width = 240
+
+	widths := tbl.effectiveWidths()
+	if len(widths) != 3 {
+		t.Fatalf("expected 3 widths, got %d", len(widths))
+	}
+	// Name should be capped at MaxWidth=40
+	if widths[0] > 40 {
+		t.Errorf("Name exceeded MaxWidth: got %d, want <= 40", widths[0])
+	}
+	// Budget should be capped at MaxWidth=30
+	if widths[2] > 30 {
+		t.Errorf("Budget exceeded MaxWidth: got %d, want <= 30", widths[2])
+	}
+	// Status stays fixed
+	if widths[1] != 8 {
+		t.Errorf("Status: got %d, want 8", widths[1])
+	}
+}
+
+func TestEffectiveWidths_BackwardCompat(t *testing.T) {
+	cols := []Column{
+		{Title: "Name", Width: 10},
+		{Title: "Desc", Width: 5, Grow: true}, // Grow:true, no Flex → treated as Flex:1.0
+	}
+	tbl := NewTable(cols)
+	tbl.Width = 60
+
+	widths := tbl.effectiveWidths()
+	if len(widths) != 2 {
+		t.Fatalf("expected 2 widths, got %d", len(widths))
+	}
+	// Base: 10+5=15, gaps=1, total=16, remaining=44
+	// Only Desc has flex (1.0 from Grow), so it gets all 44
+	// Desc=5+44=49
+	if widths[0] != 10 {
+		t.Errorf("Name: got %d, want 10", widths[0])
+	}
+	if widths[1] != 49 {
+		t.Errorf("Desc: got %d, want 49", widths[1])
+	}
+}
+
+func TestEffectiveWidths_NoFlex(t *testing.T) {
+	cols := []Column{
+		{Title: "A", Width: 10},
+		{Title: "B", Width: 20},
+		{Title: "C", Width: 15},
+	}
+	tbl := NewTable(cols)
+	tbl.Width = 120
+
+	widths := tbl.effectiveWidths()
+	// No flex columns — all stay at base width
+	expected := []int{10, 20, 15}
+	for i, w := range widths {
+		if w != expected[i] {
+			t.Errorf("col %d: got %d, want %d", i, w, expected[i])
+		}
+	}
+}
+
+func TestEffectiveWidths_ZeroWidth(t *testing.T) {
+	cols := []Column{
+		{Title: "Name", Width: 10, Flex: 1.0},
+	}
+	tbl := NewTable(cols)
+	tbl.Width = 0 // no terminal width set
+
+	widths := tbl.effectiveWidths()
+	if widths[0] != 10 {
+		t.Errorf("with zero Width: got %d, want 10", widths[0])
+	}
+}
+
+func TestEffectiveWidths_Empty(t *testing.T) {
+	tbl := NewTable(nil)
+	widths := tbl.effectiveWidths()
+	if widths != nil {
+		t.Errorf("expected nil for empty columns, got %v", widths)
+	}
+}
+
 func TestViewWithRowStyleFunc(t *testing.T) {
 	tbl := makeTestTable()
 	tbl.Width = 40

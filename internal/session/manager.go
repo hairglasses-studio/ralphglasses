@@ -42,9 +42,10 @@ type Manager struct {
 	launchSession  func(context.Context, LaunchOptions) (*Session, error)
 	waitSession    func(context.Context, *Session) error
 	healthCheck    func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
-	SessionTimeout time.Duration                 // timeout for waitForSession; 0 uses default (10m)
-	KillTimeout    time.Duration                 // SIGTERM→SIGKILL escalation timeout; 0 uses default (5s)
-	ErrorRetention time.Duration                 // how long errored sessions remain queryable; 0 uses default (5m)
+	SessionTimeout     time.Duration               // timeout for waitForSession; 0 uses default (10m)
+	KillTimeout        time.Duration               // SIGTERM→SIGKILL escalation timeout; 0 uses default (5s)
+	ErrorRetention     time.Duration               // how long errored sessions remain queryable; 0 uses default (5m)
+	MinSessionDuration time.Duration               // sessions younger than this are protected from reaper; 0 uses default (30s)
 	Enhancer       *enhancer.HybridEngine        // optional prompt enhancement for loop integration
 
 	// WS-7: Loop engine hygiene — auto-prune and journal consolidation config.

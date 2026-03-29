@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
@@ -98,6 +99,56 @@ func (m *ActionMenu) View() string {
 		width = 30
 	}
 	return styles.StatBox.Width(width).Render(b.String())
+}
+
+// Ensure ActionMenu satisfies Modal at compile time.
+var _ Modal = (*ActionMenu)(nil)
+
+// --- Modal interface methods ---
+
+// IsActive implements Modal.
+func (m *ActionMenu) IsActive() bool { return m.Active }
+
+// Deactivate implements Modal.
+func (m *ActionMenu) Deactivate() { m.Active = false }
+
+// ModalHandleKey implements Modal.ModalHandleKey by adapting the existing HandleKey logic.
+func (m *ActionMenu) ModalHandleKey(msg tea.KeyMsg) (tea.Cmd, bool) {
+	keyType := msg.Type.String()
+	var r rune
+	if msg.Type == tea.KeyRunes {
+		keyType = "rune"
+		if len(msg.Runes) > 0 {
+			r = msg.Runes[0]
+		}
+	}
+
+	switch keyType {
+	case "up", "down":
+		m.HandleKey(keyType, 0)
+		return nil, true
+	case "enter":
+		result, selected := m.HandleKey(keyType, 0)
+		if selected {
+			return func() tea.Msg { return result }, true
+		}
+		return nil, true
+	case "esc":
+		m.HandleKey(keyType, 0)
+		return nil, true
+	case "rune":
+		result, selected := m.HandleKey(keyType, r)
+		if selected {
+			return func() tea.Msg { return result }, true
+		}
+		return nil, true
+	}
+	return nil, false
+}
+
+// ModalView implements Modal.ModalView.
+func (m *ActionMenu) ModalView(width, height int) string {
+	return m.View()
 }
 
 // OverviewActions returns actions for the overview/repos tab.

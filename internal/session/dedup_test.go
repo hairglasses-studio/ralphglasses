@@ -382,46 +382,109 @@ func TestFilterDuplicateTasksByContent_MixedFileOverlapDifferentTitle(t *testing
 	}
 }
 
-// --- DedupResult tests (Phase 0.6.7) ---
+// --- DedupSkip reason tracking tests ---
 
-func TestIsSimilarTaskWithReason_Found(t *testing.T) {
+func TestFilterDuplicateTasksWithReason_ExactMatchReason(t *testing.T) {
+	tasks := []LoopTask{
+		{Title: "add logging"},
+		{Title: "fix tests"},
+	}
+	completed := []string{"add logging"}
+
+	kept, skipped := filterDuplicateTasksWithReason(tasks, completed, DefaultSimilarityThreshold)
+	if len(kept) != 1 {
+		t.Fatalf("kept = %d, want 1", len(kept))
+	}
+	if len(skipped) != 1 {
+		t.Fatalf("skipped = %d, want 1", len(skipped))
+	}
+	if skipped[0].DedupReason != "exact_match" {
+		t.Errorf("reason = %q, want %q", skipped[0].DedupReason, "exact_match")
+	}
+	if skipped[0].TaskTitle != "add logging" {
+		t.Errorf("task_title = %q, want %q", skipped[0].TaskTitle, "add logging")
+	}
+	if skipped[0].Similarity != 1.0 {
+		t.Errorf("similarity = %f, want 1.0", skipped[0].Similarity)
+	}
+}
+
+func TestFilterDuplicateTasksWithReason_NearDuplicateReason(t *testing.T) {
+	tasks := []LoopTask{
+		{Title: "add unit tests for the parser"},
+	}
 	completed := []string{"add unit tests for parser"}
-	result := IsSimilarTaskWithReason("add unit tests for the parser", completed, 0.8)
-	if !result.IsDuplicate {
-		t.Fatal("expected duplicate")
+
+	kept, skipped := filterDuplicateTasksWithReason(tasks, completed, DefaultSimilarityThreshold)
+	if len(kept) != 0 {
+		t.Fatalf("kept = %d, want 0", len(kept))
 	}
-	if result.Method != "jaccard" {
-		t.Errorf("method = %q, want jaccard", result.Method)
+	if len(skipped) != 1 {
+		t.Fatalf("skipped = %d, want 1", len(skipped))
 	}
-	if result.MatchedTask != "add unit tests for parser" {
-		t.Errorf("matched = %q, want %q", result.MatchedTask, "add unit tests for parser")
+	if skipped[0].DedupReason != "near_duplicate" {
+		t.Errorf("reason = %q, want %q", skipped[0].DedupReason, "near_duplicate")
 	}
-	if result.Score < 0.8 {
-		t.Errorf("score = %f, want >= 0.8", result.Score)
+	if skipped[0].MatchedWith != "add unit tests for parser" {
+		t.Errorf("matched_with = %q, want %q", skipped[0].MatchedWith, "add unit tests for parser")
 	}
-	if result.Reason == "" {
-		t.Error("reason should not be empty")
+	if skipped[0].Similarity < 0.7 {
+		t.Errorf("similarity = %f, want >= 0.7", skipped[0].Similarity)
 	}
 }
 
-func TestIsSimilarTaskWithReason_NotFound(t *testing.T) {
-	completed := []string{"fix CI timeout"}
-	result := IsSimilarTaskWithReason("add new MCP tool", completed, 0.8)
-	if result.IsDuplicate {
-		t.Error("should not be duplicate")
+func TestFilterDuplicateTasksWithReason_NoSkips(t *testing.T) {
+	tasks := []LoopTask{
+		{Title: "completely new task"},
 	}
-	if result.Method != "" {
-		t.Errorf("method should be empty for non-duplicate, got %q", result.Method)
+	completed := []string{"something unrelated"}
+
+	kept, skipped := filterDuplicateTasksWithReason(tasks, completed, DefaultSimilarityThreshold)
+	if len(kept) != 1 {
+		t.Fatalf("kept = %d, want 1", len(kept))
 	}
-	if result.Score != 0 {
-		t.Errorf("score should be 0 for non-duplicate, got %f", result.Score)
+	if len(skipped) != 0 {
+		t.Fatalf("skipped = %d, want 0", len(skipped))
 	}
 }
 
-func TestIsSimilarTaskWithReason_EmptyCompleted(t *testing.T) {
-	result := IsSimilarTaskWithReason("any task", nil, 0.8)
-	if result.IsDuplicate {
-		t.Error("empty completed list should not produce duplicate")
+func TestFilterDuplicateTasksByContentWithReason_ContentOverlap(t *testing.T) {
+	proposed := []LoopTask{
+		{Title: "improve manager", Prompt: "Refactor internal/session/manager.go for clarity"},
+	}
+	completed := []LoopTask{
+		{Title: "add tests for manager", Prompt: "Add tests for internal/session/manager.go"},
+	}
+
+	kept, skipped := filterDuplicateTasksByContentWithReason(proposed, completed)
+	if len(kept) != 0 {
+		t.Fatalf("kept = %d, want 0", len(kept))
+	}
+	if len(skipped) != 1 {
+		t.Fatalf("skipped = %d, want 1", len(skipped))
+	}
+	if skipped[0].DedupReason != "content_overlap" {
+		t.Errorf("reason = %q, want %q", skipped[0].DedupReason, "content_overlap")
+	}
+	if skipped[0].MatchedWith != "add tests for manager" {
+		t.Errorf("matched_with = %q, want %q", skipped[0].MatchedWith, "add tests for manager")
+	}
+}
+
+func TestFilterDuplicateTasksByContentWithReason_NoOverlap(t *testing.T) {
+	proposed := []LoopTask{
+		{Title: "improve planner", Prompt: "Refactor internal/session/loop_planner.go"},
+	}
+	completed := []LoopTask{
+		{Title: "fix manager", Prompt: "Fix internal/session/manager.go"},
+	}
+
+	kept, skipped := filterDuplicateTasksByContentWithReason(proposed, completed)
+	if len(kept) != 1 {
+		t.Fatalf("kept = %d, want 1", len(kept))
+	}
+	if len(skipped) != 0 {
+		t.Fatalf("skipped = %d, want 0", len(skipped))
 	}
 }
 

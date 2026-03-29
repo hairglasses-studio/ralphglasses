@@ -30,18 +30,21 @@ func resolveSnapshotRepo(allRepos []*model.Repo, repoName string, findRepo func(
 		}
 	}
 
-	// 2. Match CWD against scanned repo paths.
-	// Use longest-path match to prefer child repos (e.g., ralphglasses)
-	// over parent repos (e.g., hairglasses-studio) when CWD is nested.
+	// 2. Match CWD against scanned repo paths (longest-path wins with boundary check).
 	if cwd, err := os.Getwd(); err == nil {
 		var best *model.Repo
 		bestLen := 0
 		for _, r := range allRepos {
-			rPath := filepath.Clean(r.Path)
-			if strings.HasPrefix(cwd, rPath+string(filepath.Separator)) || cwd == rPath {
-				if len(rPath) > bestLen {
-					best = r
-					bestLen = len(rPath)
+			rp := r.Path
+			if strings.HasPrefix(cwd, rp) {
+				// Boundary check: CWD must equal the repo path exactly or
+				// the character immediately after the prefix must be a path
+				// separator. Without this, /repos/foo matches /repos/foobar.
+				if len(cwd) == len(rp) || cwd[len(rp)] == filepath.Separator {
+					if len(rp) > bestLen {
+						best = r
+						bestLen = len(rp)
+					}
 				}
 			}
 		}
