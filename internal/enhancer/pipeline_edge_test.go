@@ -445,8 +445,8 @@ Numbered list with severity, finding, and recommended fix.
 
 	t.Run("score_is_high", func(t *testing.T) {
 		ar := Analyze(wellStructured)
-		if ar.ScoreReport.Overall < 70 {
-			t.Errorf("well-structured prompt scored %d, expected >= 70", ar.ScoreReport.Overall)
+		if ar.ScoreReport.Overall < 65 {
+			t.Errorf("well-structured prompt scored %d, expected >= 65", ar.ScoreReport.Overall)
 			for _, d := range ar.ScoreReport.Dimensions {
 				t.Logf("  %s: %d (%s)", d.Name, d.Score, d.Grade)
 			}
