@@ -12,6 +12,7 @@ import (
 
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/fleet/pool"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 )
 
@@ -47,6 +48,7 @@ type Manager struct {
 	ErrorRetention     time.Duration               // how long errored sessions remain queryable; 0 uses default (5m)
 	MinSessionDuration time.Duration               // sessions younger than this are protected from reaper; 0 uses default (30s)
 	Enhancer       *enhancer.HybridEngine        // optional prompt enhancement for loop integration
+	FleetPool      *pool.State                   // fleet-wide budget pooling and metrics aggregation
 
 	// WS-7: Loop engine hygiene — auto-prune and journal consolidation config.
 	PruneRetention   time.Duration // max age for stale loop runs; 0 uses default (7 days)
@@ -454,5 +456,33 @@ func (m *Manager) runWorkflowStep(ctx context.Context, run *WorkflowRun, repoPat
 		result.EndedAt = &now
 	})
 	return workflowStepOutcome{Name: step.Name, Status: "completed"}
+}
+
+// SnapshotSessions creates read-only snapshots of all sessions for fleet aggregation.
+// Each session is locked briefly to copy fields, then unlocked.
+func (m *Manager) SnapshotSessions() []pool.SessionSnapshot {
+	m.mu.RLock()
+	sessions := make([]*Session, 0, len(m.sessions))
+	for _, s := range m.sessions {
+		sessions = append(sessions, s)
+	}
+	m.mu.RUnlock()
+
+	snaps := make([]pool.SessionSnapshot, 0, len(sessions))
+	for _, s := range sessions {
+		s.Lock()
+		snap := pool.SessionSnapshot{
+			ID:        s.ID,
+			Provider:  string(s.Provider),
+			Status:    string(s.Status),
+			SpentUSD:  s.SpentUSD,
+			BudgetUSD: s.BudgetUSD,
+			RepoPath:  s.RepoPath,
+			StartedAt: s.LaunchedAt,
+		}
+		s.Unlock()
+		snaps = append(snaps, snap)
+	}
+	return snaps
 }
 

@@ -62,6 +62,7 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 		SessMgr:        sessMgr,
 		Keys:           DefaultKeyMap(),
 		Spinner:        s,
+		viewRegistry:   initViewRegistry(),
 	}
 }
 
@@ -91,7 +92,11 @@ func (m Model) View() string {
 	b.WriteString(m.TabBar.View())
 	b.WriteString("\n\n")
 
-	// Main content
+	// Main content — try registry first, fall back to switch
+	if rv, ok := viewDispatch[m.Nav.CurrentView]; ok {
+		mCopy := m
+		b.WriteString(rv.render(&mCopy, m.Width, m.Height-4))
+	} else {
 	switch m.Nav.CurrentView {
 	case ViewOverview:
 		b.WriteString(m.Table.View())
@@ -234,6 +239,7 @@ func (m Model) View() string {
 		m.RDCycleView.SetDimensions(m.Width, m.Height-4)
 		b.WriteString(m.RDCycleView.Render())
 	}
+	} // end else (fallback switch)
 
 	// Loop panel overlay
 	if m.ShowLoopPanel {

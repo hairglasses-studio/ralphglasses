@@ -300,7 +300,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// View-specific keys
+	// View-specific keys — try registry first, fall back to switch
+	if rv, ok := viewDispatch[m.Nav.CurrentView]; ok {
+		return rv.handleKey(m, msg)
+	}
 	switch m.Nav.CurrentView {
 	case ViewOverview:
 		return m.handleOverviewKey(msg)
