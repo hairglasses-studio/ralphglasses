@@ -2,8 +2,8 @@
 
 Command-and-control TUI + bootable thin client for parallel multi-LLM agent fleets.
 
-**Last updated:** 2026-03-27
-**Codebase:** 37 packages, 115 MCP tools (13 namespaces + 2 meta), 18 TUI views
+**Last updated:** 2026-03-29
+**Codebase:** 37 packages, 126 MCP tools (124 namespace + 2 meta), 19 TUI views
 **Status:** 619 tasks, 175 complete (28.3%), 444 remaining
 **Key deps:** Go 1.26.1, mcp-go v0.45.0, bubbletea v1.3.10, anthropic-sdk-go v1.27.1
 
@@ -1157,7 +1157,8 @@ Partially complete: `internal/session/reflexion.go`, `episodic.go`, `cascade.go`
 - [x] 8.5.2 — Episodic memory: Jaccard/cosine similarity for experience retrieval `[reconciled 2026-03-27]`
 - [x] 8.5.3 — Cascade router: try-cheap-then-escalate routing strategy `[reconciled 2026-03-27]`
 - [x] 8.5.4 — Curriculum sorter: difficulty scoring for task ordering `[reconciled 2026-03-27]`
-- [ ] 8.5.5 — Meta-agent: session that monitors other sessions' effectiveness `P1` `XL`
+- [x] 8.5.5 — Meta-agent: session that monitors other sessions' effectiveness `P1` `XL` `[reconciled 2026-03-29]`
+  - Implemented as Supervisor in `internal/session/supervisor.go` — HealthMonitor evaluates metrics, CycleChainer feeds synthesis into next cycle
 - [ ] 8.5.6 — Config optimization: suggest `.ralphrc` changes based on observed patterns `P1` `L`
 - [ ] 8.5.7 — Prompt evolution: mutate and test prompts, keep highest-performing variants `P2` `L`
 - [ ] 8.5.8 — Report generation: weekly summary of fleet performance, trends, recommendations `P2` `M`
@@ -1327,6 +1328,17 @@ Score roadmap items by impact/effort/dependency.
 - Outputs: prioritized list with scores, suggested next batch
 - Namespace: `roadmap`
 - **Acceptance:** top 10 items match human judgment on 7/10 picks
+
+---
+
+## Phase 9.5: Autonomous R&D Supervisor (COMPLETE)
+
+- [x] 9.5.1 — Supervisor core: persistent goroutine, 60s tick, decision dispatch via DecisionLog
+- [x] 9.5.2 — Health monitor: 5-threshold evaluator (completion rate, cost rate, verify rate, idle time, iteration velocity)
+- [x] 9.5.3 — Cycle chainer: synthesis → next cycle, lineage tracking, depth cap (10)
+- [x] 9.5.4 — Manager wiring: SetAutonomyLevel starts/stops supervisor at level 2
+- [x] 9.5.5 — MCP bridge: supervisor_status tool, autonomy_level repo_path parameter
+- **Acceptance:** `autonomy_level set=2` enables fully autonomous R&D cycles
 
 ---
 
