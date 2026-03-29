@@ -6,7 +6,7 @@ The session manager supports graduated autonomous decision-making via `internal/
 |-------|------|----------|
 | 0 | Observe | Log decisions only ("would have done X") |
 | 1 | AutoRecover | Auto-restart on transient errors, provider failover |
-| 2 | AutoOptimize | Auto-adjust budgets, providers, and rate limits from feedback profiles |
+| 2 | AutoOptimize | Auto-adjust budgets, providers, and rate limits from feedback profiles; continuous supervisor monitors health and chains R&D cycles |
 | 3 | FullAutonomy | Auto-launch from roadmap, scale teams, apply config changes |
 
 All decisions are recorded in a JSONL decision log with rationale, inputs, and outcomes. Human overrides are tracked by the HITL subsystem.
@@ -20,6 +20,63 @@ All decisions are recorded in a JSONL decision log with rationale, inputs, and o
 - **`feedback.go`**: Provider/task performance profiling (avg cost, turns, duration, completion rate per task type)
 - **`hitl.go`**: Human-in-the-loop metric tracking — manual interventions vs autonomous actions, trend scoring (improving/stable/degrading)
 - **`promptcache.go`**: Prompt prefix caching — identifies stable preamble (CLAUDE.md, system prompts) for cost savings across sessions
+
+## Supervisor
+
+At Level 2, a background supervisor (`internal/session/supervisor.go`) ticks every 60 seconds, evaluates repo health, and chains R&D cycles without human input.
+
+```
+60s tick → HealthMonitor.Assess() → SupervisorDecision → CycleChainer.Launch()
+```
+
+**Components**
+
+- **`supervisor.go`** — Main loop. Reads the decision log, fires a health check each tick, and calls the chainer if the decision is `launch`. All decisions are appended to the JSONL audit log with rationale.
+- **`health_monitor.go`** — Scores 5 metrics against configurable thresholds. Returns `healthy | degraded | critical`.
+- **`cycle_chainer.go`** — Launches the next R&D cycle, attaches lineage metadata (`parent_cycle_id`, `chain_depth`), and enforces the depth cap.
+
+**Enabling**
+
+```bash
+# Via MCP
+autonomy_level set=2 repo=/path/to/repo
+
+# Via TUI
+:autonomy 2
+```
+
+**Health Thresholds** (all configurable; defaults shown)
+
+| Metric | Default |
+|--------|---------|
+| Test coverage | ≥ 80% |
+| Build success rate | ≥ 95% |
+| Mean cycle cost USD | ≤ 2.00 |
+| HITL intervention rate | ≤ 10% |
+| Open critical findings | ≤ 3 |
+
+**Cycle Chaining**
+
+Each launched cycle carries `parent_cycle_id` and `chain_depth` in its metadata. The chainer refuses to start a new cycle if `chain_depth ≥ 10` (hard cap), preventing runaway chains. Lineage is queryable via `cycle_status` and `observation_query`.
+
+**Safety Model**
+
+| Gate | Behavior |
+|------|----------|
+| Budget | Supervisor checks remaining budget before launch; skips cycle if headroom < worker budget |
+| Concurrency | At most 1 supervisor-launched cycle runs at a time per repo |
+| Chain depth | Hard cap of 10; chain halts and logs `chain_depth_exceeded` |
+| Cooldown | Minimum 5 minutes between launches regardless of tick rate |
+| Decision audit | Every tick writes a decision record (action, rationale, metric snapshot) to the JSONL log |
+
+**Monitoring**
+
+```bash
+# MCP
+supervisor_status repo=/path/to/repo
+
+# Returns: current health score, last decision, active chain depth, next tick ETA
+```
 
 ## Loop Profiles
 
