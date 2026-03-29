@@ -62,6 +62,48 @@ func RenderHelp(groups []HelpGroup, width, height int) string {
 	return b.String()
 }
 
+// HelpView wraps RenderHelp in a scrollable viewport.
+type HelpView struct {
+	Viewport *ViewportView
+	groups   []HelpGroup
+	width    int
+	height   int
+}
+
+// NewHelpView creates a new HelpView.
+func NewHelpView() *HelpView {
+	return &HelpView{
+		Viewport: NewViewportView(),
+	}
+}
+
+// SetData updates the help groups and regenerates content.
+func (v *HelpView) SetData(groups []HelpGroup) {
+	v.groups = groups
+	v.regenerate()
+}
+
+// SetDimensions updates the available width and height.
+func (v *HelpView) SetDimensions(width, height int) {
+	v.width = width
+	v.height = height
+	v.Viewport.SetDimensions(width, height)
+	v.regenerate()
+}
+
+// Render returns the scrollable viewport content.
+func (v *HelpView) Render() string {
+	return v.Viewport.Render()
+}
+
+func (v *HelpView) regenerate() {
+	if v.groups == nil {
+		return
+	}
+	content := RenderHelp(v.groups, v.width, v.height)
+	v.Viewport.SetContent(content)
+}
+
 func padRight(s string, n int) string {
 	w := ansi.StringWidth(s)
 	if w >= n {

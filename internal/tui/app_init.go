@@ -123,8 +123,11 @@ type Model struct {
 	TabBar       components.TabBar
 	StatusBar    components.StatusBar
 	Notify       components.NotificationManager
-	LogView      *views.LogView
-	ConfigEdit   *views.ConfigEditor
+	LogView        *views.LogView
+	ConfigEdit     *views.ConfigEditor
+	HelpView       *views.HelpView
+	RepoDetailView *views.RepoDetailView
+	LoopHealthView *views.LoopHealthView
 
 	// Bubbles components
 	Keys    KeyMap

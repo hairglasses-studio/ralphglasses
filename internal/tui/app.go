@@ -41,11 +41,14 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 		TeamTable:     teamTable,
 		LoopListTable: loopListTable,
 		TabBar:       components.TabBar{Tabs: tabNames},
-		LogView:      views.NewLogView(),
-		ProcMgr:      process.NewManager(),
-		SessMgr:      sessMgr,
-		Keys:         DefaultKeyMap(),
-		Spinner:      s,
+		LogView:        views.NewLogView(),
+		HelpView:       views.NewHelpView(),
+		RepoDetailView: views.NewRepoDetailView(),
+		LoopHealthView: views.NewLoopHealthView(),
+		ProcMgr:        process.NewManager(),
+		SessMgr:        sessMgr,
+		Keys:           DefaultKeyMap(),
+		Spinner:        s,
 	}
 }
 
@@ -92,7 +95,9 @@ func (m Model) View() string {
 					detailHealth.ProviderProfiles = m.SessMgr.ProviderProfiles()
 				}
 			}
-			b.WriteString(views.RenderRepoDetail(repo, m.Width, detailHealth))
+			m.RepoDetailView.SetData(repo, detailHealth)
+			m.RepoDetailView.SetDimensions(m.Width, m.Height-4)
+			b.WriteString(m.RepoDetailView.Render())
 		}
 	case ViewLogs:
 		b.WriteString(m.LogView.View())
@@ -101,7 +106,9 @@ func (m Model) View() string {
 			b.WriteString(m.ConfigEdit.View())
 		}
 	case ViewHelp:
-		b.WriteString(views.RenderHelp(m.Keys.HelpGroups(), m.Width, m.Height))
+		m.HelpView.SetData(m.Keys.HelpGroups())
+		m.HelpView.SetDimensions(m.Width, m.Height-4)
+		b.WriteString(m.HelpView.Render())
 	case ViewSessions:
 		b.WriteString(m.SessionTable.View())
 	case ViewSessionDetail:
@@ -148,7 +155,9 @@ func (m Model) View() string {
 				healthData.GateReport = entry.Report
 				healthData.Summary = entry.Summary
 			}
-			b.WriteString(views.RenderLoopHealth(healthData, m.Width, m.Height))
+			m.LoopHealthView.SetData(healthData)
+			m.LoopHealthView.SetDimensions(m.Width, m.Height-4)
+			b.WriteString(m.LoopHealthView.Render())
 		}
 	case ViewLoopList:
 		b.WriteString(m.LoopListTable.View())

@@ -1,40 +1,40 @@
-[?25l[?2004h[K
-  Team Detail[K
-    Enter               Drill into item[K
-    d                   View git diff[K
-    t                   Session timeline[K
+[?25l[?2004h 1: Repos   2: Sessions   3: Teams   4: Fleet [K
 [K
-  Fleet[K
-    j / k               Navigate down / up[K
-    Enter               Drill into item[K
-    X                   Stop loop / session[K
-    d                   View git diff[K
-    t                   Session timeline[K
-[K
-  Log Viewer[K
-    j / k               Navigate down / up[K
-    G                   Jump to end[K
-    g                   Jump to start[K
-    f                   Toggle follow mode[K
-    Ctrl+U              Page up[K
-    Ctrl+D              Page down[K
-[K
-  Config Editor[K
-    j / k               Navigate down / up[K
-    Enter               Drill into item[K
-    w                   Save config[K
-[K
-   Commands[K
-    :repos              Switch to repos tab[K
-    :sessions           Switch to sessions tab[K
-    :teams              Switch to teams tab[K
-    :fleet              Switch to fleet dashboard[K
-    :start <repo>       Start loop for repo[K
-    :stop <repo>        Stop loop for repo[K
-    :stopall            Stop all loops[K
-    :scan               Re-scan for repos[K
-    :quit               Quit[K
-[K
-[K
+   Ralphglasses Help                                                                                                   
+                                                                                                                        
+  Navigation                                                                                                            
+    1                   Repos tab                                                                                       
+    2                   Sessions tab                                                                                    
+    3                   Teams tab                                                                                       
+    4                   Fleet dashboard                                                                                 
+                                                                                                                        
+  Global                                                                                                                
+    q / Ctrl+C          Quit                                                                                            
+    :                   Command mode                                                                                    
+    /                   Filter mode                                                                                     
+    ?                   Toggle help                                                                                     
+    Esc                 Back / cancel                                                                                   
+    r                   Refresh                                                                                         
+    e                   Event log                                                                                       
+                                                                                                                        
+  Loop List                                                                                                             
+    l                   Loop list                                                                                       
+    s                   Start loop for repo                                                                             
+    x / d               Stop selected loop                                                                              
+    p                   Pause / resume loop                                                                             
+                                                                                                                        
+  Loop Detail                                                                                                           
+    s                   Step loop once                                                                                  
+    r                   Toggle run/stop                                                                                 
+    p                   Pause / resume                                                                                  
+                                                                                                                        
+  Loop Control                                                                                                          
+    C                   Loop control panel                                                                              
+    s                   Force step iteration                                                                            
+    r                   Toggle run/stop                                                                                 
+    p                   Pause / resume                                                                                  
+                                                                                                                        
+  Repos Table                                                                                                           
+    j / k               Navigate down / up                                                                              
   NORMAL   0   0   0   $0.00                                                                                       
  never                                                                                                                  [2K[?2004l[?25h[?1002l[?1003l[?1006l

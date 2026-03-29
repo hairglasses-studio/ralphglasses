@@ -57,28 +57,32 @@ type Manager struct {
 
 // NewManager creates a new session manager.
 func NewManager() *Manager {
+	stateDir := expandHome(DefaultStateDir)
 	return &Manager{
-		sessions:     make(map[string]*Session),
-		teams:        make(map[string]*TeamStatus),
-		workflowRuns: make(map[string]*WorkflowRun),
-		loops:        make(map[string]*LoopRun),
-		stateDir:       expandHome(DefaultStateDir),
+		sessions:       make(map[string]*Session),
+		teams:          make(map[string]*TeamStatus),
+		workflowRuns:   make(map[string]*WorkflowRun),
+		loops:          make(map[string]*LoopRun),
+		stateDir:       stateDir,
 		noopDetector:   NewNoOpDetector(2),
 		budgetEnforcer: NewBudgetEnforcer(),
+		cascade:        NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
 	}
 }
 
 // NewManagerWithBus creates a session manager wired to an event bus.
 func NewManagerWithBus(bus *events.Bus) *Manager {
+	stateDir := expandHome(DefaultStateDir)
 	return &Manager{
 		sessions:       make(map[string]*Session),
 		teams:          make(map[string]*TeamStatus),
 		workflowRuns:   make(map[string]*WorkflowRun),
 		loops:          make(map[string]*LoopRun),
 		bus:            bus,
-		stateDir:       expandHome(DefaultStateDir),
+		stateDir:       stateDir,
 		noopDetector:   NewNoOpDetector(2),
 		budgetEnforcer: NewBudgetEnforcer(),
+		cascade:        NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
 	}
 }
 
@@ -86,6 +90,7 @@ func NewManagerWithBus(bus *events.Bus) *Manager {
 // The in-memory sessions map is still used for active (in-process) sessions;
 // the Store provides durable persistence.
 func NewManagerWithStore(store Store, bus *events.Bus) *Manager {
+	stateDir := expandHome(DefaultStateDir)
 	return &Manager{
 		sessions:     make(map[string]*Session),
 		teams:        make(map[string]*TeamStatus),
@@ -93,8 +98,9 @@ func NewManagerWithStore(store Store, bus *events.Bus) *Manager {
 		loops:        make(map[string]*LoopRun),
 		bus:          bus,
 		store:        store,
-		stateDir:     expandHome(DefaultStateDir),
+		stateDir:     stateDir,
 		noopDetector: NewNoOpDetector(2),
+		cascade:      NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
 	}
 }
 
@@ -178,16 +184,19 @@ func (m *Manager) ApplyConfig(cfg *model.RalphConfig) {
 			m.JournalMaxEntries = v
 		}
 	}
-	// QW-2: Initialize cascade routing by default unless explicitly disabled.
-	// If CASCADE_ENABLED is not set, treat it as true (the new default).
-	if !m.HasCascadeRouter() {
-		cascadeVal := strings.ToLower(strings.TrimSpace(cfg.Get("CASCADE_ENABLED", "true")))
-		if cascadeVal != "false" && cascadeVal != "0" && cascadeVal != "no" {
-			cascadeCfg := DefaultCascadeConfig()
-			cr := NewCascadeRouter(cascadeCfg, nil, nil, m.stateDir)
-			m.SetCascadeRouter(cr)
-			slog.Info("cascade routing enabled by default")
-		}
+	// QW-2: Cascade routing is enabled by default in constructors.
+	// Allow explicit config to disable it, or re-configure with custom values.
+	cascadeVal := strings.ToLower(strings.TrimSpace(cfg.Get("CASCADE_ENABLED", "true")))
+	if cascadeVal == "false" || cascadeVal == "0" || cascadeVal == "no" {
+		// Explicitly disabled — remove the default cascade router.
+		m.SetCascadeRouter(nil)
+		slog.Info("cascade routing explicitly disabled via config")
+	} else if !m.HasCascadeRouter() {
+		// Not yet configured (shouldn't happen with new constructors, but defensive).
+		cascadeCfg := DefaultCascadeConfig()
+		cr := NewCascadeRouter(cascadeCfg, nil, nil, m.stateDir)
+		m.SetCascadeRouter(cr)
+		slog.Info("cascade routing enabled by default")
 	}
 }
 
