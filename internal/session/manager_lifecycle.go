@@ -338,10 +338,13 @@ func (m *Manager) effectiveSessionTimeout() time.Duration {
 	return m.SessionTimeout
 }
 
-// effectiveKillTimeout returns the SIGTERM→SIGKILL escalation timeout, defaulting to 5 seconds.
+// effectiveKillTimeout returns the SIGTERM→SIGKILL escalation timeout,
+// defaulting to DefaultSessionKillTimeout (15s). Increased from 5s to give
+// self-improvement loops adequate time to checkpoint state before SIGKILL
+// (addresses the "signal: killed" pattern — 6 occurrences).
 func (m *Manager) effectiveKillTimeout() time.Duration {
 	if m.KillTimeout <= 0 {
-		return 5 * time.Second
+		return DefaultSessionKillTimeout
 	}
 	return m.KillTimeout
 }

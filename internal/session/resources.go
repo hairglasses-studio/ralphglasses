@@ -3,7 +3,9 @@ package session
 import (
 	"fmt"
 	"runtime"
+	"runtime/debug"
 	"syscall"
+	"time"
 )
 
 // OneGB is a convenience constant for 1 gibibyte.
@@ -54,4 +56,13 @@ func MemoryPressureWarning(maxHeapBytes uint64, maxRatio float64) string {
 	}
 
 	return ""
+}
+
+// forceGCAndPause triggers a garbage collection cycle and briefly pauses to let
+// the OS reclaim memory before launching new sessions. This reduces the chance
+// of the OS OOM killer targeting child processes during memory spikes.
+func forceGCAndPause() {
+	debug.FreeOSMemory()
+	runtime.GC()
+	time.Sleep(500 * time.Millisecond)
 }

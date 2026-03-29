@@ -246,7 +246,21 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span 
 			s.ExitReason = "stopped by user"
 		} else {
 			s.Status = StatusErrored
-			s.ExitReason = err.Error()
+			// Classify kill signals for better observability and retry decisions.
+			if IsKillSignalError(err.Error()) {
+				reason := ClassifyExitSignal(err, s.Pid, false)
+				s.ExitReason = FormatKillError(err, reason)
+				slog.Warn("session killed by signal",
+					"session_id", s.ID,
+					"pid", s.Pid,
+					"reason", reason.String(),
+					"provider", string(s.Provider),
+					"repo", s.RepoName,
+					"spent_usd", s.SpentUSD,
+					"turns", s.TurnCount)
+			} else {
+				s.ExitReason = err.Error()
+			}
 			if errStr := stderrBuf.String(); errStr != "" && s.Error == "" {
 				s.Error = truncateStr(sanitizeStderr(s.Provider, errStr), 2000)
 			}

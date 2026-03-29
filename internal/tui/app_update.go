@@ -42,6 +42,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.LoopDetailView.SetDimensions(msg.Width, msg.Height-4)
 		m.LoopControlView.SetDimensions(msg.Width, msg.Height-4)
 		m.ObservationViewport.SetDimensions(msg.Width, msg.Height-4)
+		m.RDCycleView.SetDimensions(msg.Width, msg.Height-4)
 		m.StatusBar.Width = msg.Width
 		return m, nil
 
@@ -76,7 +77,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateTable()
 		m.updateSessionTable()
 		m.updateTeamTable()
-		m.LastRefresh = time.Now()
+		m.LastRefresh = components.NowFunc()
 		cmds = append(cmds, m.tickCmd())
 		// If viewing logs, tail the log
 		if m.Nav.CurrentView == ViewLogs && m.Sel.RepoIdx < len(m.Repos) {
@@ -136,7 +137,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Notify.Show(fmt.Sprintf("Recovered %d orphaned loop(s)", n), 5*time.Second)
 		}
 		m.updateTable()
-		m.LastRefresh = time.Now()
 		// Start watching status files
 		return m, process.WatchStatusFiles(paths)
 
@@ -329,6 +329,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleObservationKey(msg)
 	case ViewEventLog:
 		return m.handleEventLogKey(msg)
+	case ViewRDCycle:
+		return m.handleRDCycleKey(msg)
 	}
 
 	return m, nil

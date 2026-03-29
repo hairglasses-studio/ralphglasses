@@ -231,9 +231,9 @@ func TestEffectiveSessionTimeout(t *testing.T) {
 func TestEffectiveKillTimeout(t *testing.T) {
 	m := NewManager()
 
-	// Default
-	if d := m.effectiveKillTimeout(); d != 5*time.Second {
-		t.Errorf("default kill timeout = %v, want 5s", d)
+	// Default: 15s (increased from 5s to give self-improvement loops time to checkpoint)
+	if d := m.effectiveKillTimeout(); d != 15*time.Second {
+		t.Errorf("default kill timeout = %v, want 15s", d)
 	}
 
 	// Custom
@@ -268,35 +268,35 @@ func TestKillTimeoutFromConfig(t *testing.T) {
 		t.Errorf("max boundary kill timeout = %v, want 60s", d)
 	}
 
-	// Below minimum: 0 is rejected, falls back to default.
+	// Below minimum: 0 is rejected, falls back to default (15s).
 	m4 := NewManager()
 	cfg4 := &model.RalphConfig{Values: map[string]string{"KILL_ESCALATION_TIMEOUT": "0"}}
 	m4.ApplyConfig(cfg4)
-	if d := m4.effectiveKillTimeout(); d != 5*time.Second {
-		t.Errorf("below-min kill timeout = %v, want 5s (default)", d)
+	if d := m4.effectiveKillTimeout(); d != DefaultSessionKillTimeout {
+		t.Errorf("below-min kill timeout = %v, want %v (default)", d, DefaultSessionKillTimeout)
 	}
 
-	// Above maximum: 61 is rejected, falls back to default.
+	// Above maximum: 61 is rejected, falls back to default (15s).
 	m5 := NewManager()
 	cfg5 := &model.RalphConfig{Values: map[string]string{"KILL_ESCALATION_TIMEOUT": "61"}}
 	m5.ApplyConfig(cfg5)
-	if d := m5.effectiveKillTimeout(); d != 5*time.Second {
-		t.Errorf("above-max kill timeout = %v, want 5s (default)", d)
+	if d := m5.effectiveKillTimeout(); d != DefaultSessionKillTimeout {
+		t.Errorf("above-max kill timeout = %v, want %v (default)", d, DefaultSessionKillTimeout)
 	}
 
-	// Non-integer value is rejected, falls back to default.
+	// Non-integer value is rejected, falls back to default (15s).
 	m6 := NewManager()
 	cfg6 := &model.RalphConfig{Values: map[string]string{"KILL_ESCALATION_TIMEOUT": "abc"}}
 	m6.ApplyConfig(cfg6)
-	if d := m6.effectiveKillTimeout(); d != 5*time.Second {
-		t.Errorf("non-integer kill timeout = %v, want 5s (default)", d)
+	if d := m6.effectiveKillTimeout(); d != DefaultSessionKillTimeout {
+		t.Errorf("non-integer kill timeout = %v, want %v (default)", d, DefaultSessionKillTimeout)
 	}
 
 	// Nil config is safe.
 	m7 := NewManager()
 	m7.ApplyConfig(nil)
-	if d := m7.effectiveKillTimeout(); d != 5*time.Second {
-		t.Errorf("nil config kill timeout = %v, want 5s (default)", d)
+	if d := m7.effectiveKillTimeout(); d != DefaultSessionKillTimeout {
+		t.Errorf("nil config kill timeout = %v, want %v (default)", d, DefaultSessionKillTimeout)
 	}
 }
 

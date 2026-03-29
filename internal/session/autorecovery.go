@@ -9,9 +9,13 @@ import (
 )
 
 // TransientErrorPatterns are error strings that indicate a retryable failure.
+// "signal: killed" was added because self-improvement loops may be killed by
+// timeout escalation (SIGTERM→SIGKILL) or transient memory pressure; retrying
+// with backoff often succeeds. OOM kills that recur will exhaust the retry limit.
 var TransientErrorPatterns = []string{
 	"connection reset",
 	"timeout",
+	"timeout_killed",
 	"rate limit",
 	"429",
 	"503",
@@ -22,6 +26,7 @@ var TransientErrorPatterns = []string{
 	"overloaded",
 	"temporary failure",
 	"internal server error",
+	"signal: killed",
 }
 
 // AutoRecoveryConfig configures the auto-recovery behavior.
