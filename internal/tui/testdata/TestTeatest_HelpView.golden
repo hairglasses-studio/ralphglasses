@@ -1,0 +1,40 @@
+[?25l[?2004h[K
+  Team Detail[K
+    Enter               Drill into item[K
+    d                   View git diff[K
+    t                   Session timeline[K
+[K
+  Fleet[K
+    j / k               Navigate down / up[K
+    Enter               Drill into item[K
+    X                   Stop loop / session[K
+    d                   View git diff[K
+    t                   Session timeline[K
+[K
+  Log Viewer[K
+    j / k               Navigate down / up[K
+    G                   Jump to end[K
+    g                   Jump to start[K
+    f                   Toggle follow mode[K
+    Ctrl+U              Page up[K
+    Ctrl+D              Page down[K
+[K
+  Config Editor[K
+    j / k               Navigate down / up[K
+    Enter               Drill into item[K
+    w                   Save config[K
+[K
+   Commands[K
+    :repos              Switch to repos tab[K
+    :sessions           Switch to sessions tab[K
+    :teams              Switch to teams tab[K
+    :fleet              Switch to fleet dashboard[K
+    :start <repo>       Start loop for repo[K
+    :stop <repo>        Stop loop for repo[K
+    :stopall            Stop all loops[K
+    :scan               Re-scan for repos[K
+    :quit               Quit[K
+[K
+[K
+  NORMAL   0   0   0   $0.00                                                                                       
+ never                                                                                                                  [2K[?2004l[?25h[?1002l[?1003l[?1006l
