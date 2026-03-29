@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -1661,4 +1662,102 @@ func TestCollectChildPIDsByPgid_OwnProcess(t *testing.T) {
 	}
 	// On macOS: should return empty slice (no /proc).
 	// On Linux: may return some PIDs in same pgroup.
+}
+
+func TestStopAllGraceful_Empty(t *testing.T) {
+	m := NewManager()
+	// Should not panic and return 0 kills.
+	killed := m.StopAllGraceful(context.Background())
+	if killed != 0 {
+		t.Errorf("expected 0 killed on empty manager, got %d", killed)
+	}
+}
+
+func TestStopAllGraceful_ProcessesExitCleanly(t *testing.T) {
+	// Stub sleep to no-op for speed.
+	origSleep := *sleepFnPtr.Load()
+	setSleepFn(func(d time.Duration) {})
+	t.Cleanup(func() { setSleepFn(origSleep) })
+
+	// Stub aliveFn to report dead immediately after SIGTERM.
+	origAlive := *aliveFnPtr.Load()
+	setAliveFn(func(pid int) bool { return false })
+	t.Cleanup(func() { setAliveFn(origAlive) })
+
+	// Stub killPid to no-op (fake PIDs).
+	origKill := *killPidPtr.Load()
+	setKillPid(func(pid int, sig syscall.Signal) error { return nil })
+	t.Cleanup(func() { setKillPid(origKill) })
+
+	// Stub getpgid to avoid real syscall on fake PIDs.
+	origGetpgid := getpgid
+	getpgid = func(pid int) (int, error) { return pid, nil }
+	t.Cleanup(func() { getpgid = origGetpgid })
+
+	m := NewManager()
+	// Manually inject entries with non-zero PIDs.
+	m.mu.Lock()
+	m.procs["/repo/a"] = &ManagedProcess{PID: 99901}
+	m.procs["/repo/b"] = &ManagedProcess{PID: 99902}
+	m.mu.Unlock()
+
+	killed := m.StopAllGraceful(context.Background())
+	if killed != 0 {
+		t.Errorf("expected 0 killed (clean exit), got %d", killed)
+	}
+	if len(m.RunningPaths()) != 0 {
+		t.Errorf("expected 0 running after StopAllGraceful, got %d", len(m.RunningPaths()))
+	}
+}
+
+func TestStopAllGraceful_TimeoutEscalatesToSIGKILL(t *testing.T) {
+	// Stub sleep to no-op for speed.
+	origSleep := *sleepFnPtr.Load()
+	setSleepFn(func(d time.Duration) {})
+	t.Cleanup(func() { setSleepFn(origSleep) })
+
+	// Stub aliveFn to always report alive (simulates hung process).
+	origAlive := *aliveFnPtr.Load()
+	setAliveFn(func(pid int) bool { return true })
+	t.Cleanup(func() { setAliveFn(origAlive) })
+
+	// Track signals sent.
+	var killSignals []syscall.Signal
+	origKill := *killPidPtr.Load()
+	setKillPid(func(pid int, sig syscall.Signal) error {
+		killSignals = append(killSignals, sig)
+		return nil
+	})
+	t.Cleanup(func() { setKillPid(origKill) })
+
+	// Stub getpgid.
+	origGetpgid := getpgid
+	getpgid = func(pid int) (int, error) { return pid, nil }
+	t.Cleanup(func() { getpgid = origGetpgid })
+
+	m := NewManager()
+	m.mu.Lock()
+	m.procs["/repo/stuck"] = &ManagedProcess{PID: 99999}
+	m.mu.Unlock()
+
+	// Use an already-expired context to trigger immediate SIGKILL escalation.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	killed := m.StopAllGraceful(ctx)
+	if killed != 1 {
+		t.Errorf("expected 1 killed (SIGKILL), got %d", killed)
+	}
+
+	// Verify SIGKILL was sent (after the initial SIGTERM from sendSignal).
+	foundKill := false
+	for _, sig := range killSignals {
+		if sig == syscall.SIGKILL {
+			foundKill = true
+			break
+		}
+	}
+	if !foundKill {
+		t.Errorf("expected SIGKILL in kill signals, got %v", killSignals)
+	}
 }

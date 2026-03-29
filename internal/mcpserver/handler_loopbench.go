@@ -183,7 +183,16 @@ func (s *Server) handleLoopGates(_ context.Context, req mcp.CallToolRequest) (*m
 	}
 
 	blPath := e2e.BaselinePath(r.Path)
-	baseline, _ := e2e.LoadBaseline(blPath) // nil baseline is ok — gates still evaluate rates
+	baseline, loadErr := e2e.LoadBaseline(blPath)
+	if loadErr != nil && len(observations) > 0 {
+		// QW-6 (FINDING-226/238): No saved baseline — initialize from current
+		// observations so that future gate checks produce meaningful deltas
+		// instead of skipping cost/latency gates due to nil baseline.
+		baseline = e2e.BuildBaseline(observations, hours)
+		if saveErr := e2e.SaveBaseline(blPath, baseline); saveErr != nil {
+			return codedError(ErrFilesystem, fmt.Sprintf("save initial baseline: %v", saveErr)), nil
+		}
+	}
 
 	thresholds := e2e.DefaultGateThresholds()
 	report := e2e.EvaluateGates(observations, baseline, thresholds)

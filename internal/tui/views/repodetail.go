@@ -239,6 +239,48 @@ func RenderRepoDetail(r *model.Repo, width int, health *RepoDetailHealth) string
 	return b.String()
 }
 
+// RepoDetailView wraps RenderRepoDetail in a scrollable viewport.
+type RepoDetailView struct {
+	Viewport *ViewportView
+	repo     *model.Repo
+	width    int
+	health   *RepoDetailHealth
+}
+
+// NewRepoDetailView creates a new RepoDetailView.
+func NewRepoDetailView() *RepoDetailView {
+	return &RepoDetailView{
+		Viewport: NewViewportView(),
+	}
+}
+
+// SetData updates the view's data and regenerates the content.
+func (v *RepoDetailView) SetData(repo *model.Repo, health *RepoDetailHealth) {
+	v.repo = repo
+	v.health = health
+	v.regenerate()
+}
+
+// SetDimensions updates the available width and height.
+func (v *RepoDetailView) SetDimensions(width, height int) {
+	v.width = width
+	v.Viewport.SetDimensions(width, height)
+	v.regenerate()
+}
+
+// Render returns the scrollable viewport content.
+func (v *RepoDetailView) Render() string {
+	return v.Viewport.Render()
+}
+
+func (v *RepoDetailView) regenerate() {
+	if v.repo == nil {
+		return
+	}
+	content := RenderRepoDetail(v.repo, v.width, v.health)
+	v.Viewport.SetContent(content)
+}
+
 // percentile computes p-th percentile (0.0–1.0) of a sorted copy of vals.
 func percentile(vals []float64, p float64) float64 {
 	if len(vals) == 0 {
