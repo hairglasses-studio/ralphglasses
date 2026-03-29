@@ -279,6 +279,12 @@ func (s *Server) handleAutonomyLevel(_ context.Context, req mcp.CallToolRequest)
 			return codedError(ErrInvalidParams, fmt.Sprintf("invalid level: %s (use 0-3 or name)", levelStr)), nil
 		}
 		s.DecisionLog.SetLevel(level)
+
+		// Also tell the Manager to start/stop the supervisor at the new level.
+		if s.SessMgr != nil {
+			repoPath := getStringArg(req, "repo_path")
+			s.SessMgr.SetAutonomyLevel(level, repoPath)
+		}
 	}
 
 	current := s.DecisionLog.Level()
@@ -286,6 +292,23 @@ func (s *Server) handleAutonomyLevel(_ context.Context, req mcp.CallToolRequest)
 		"level":      int(current),
 		"level_name": current.String(),
 		"stats":      s.DecisionLog.Stats(),
+	})
+}
+
+func (s *Server) handleSupervisorStatus(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if s.SessMgr == nil {
+		return fleetJSON(map[string]any{"running": false, "error": "no manager"})
+	}
+	status := s.SessMgr.SupervisorStatus()
+	if status == nil {
+		return fleetJSON(map[string]any{"running": false, "message": "supervisor not active"})
+	}
+	return fleetJSON(map[string]any{
+		"running":           status.Running,
+		"repo_path":         status.RepoPath,
+		"tick_count":        status.TickCount,
+		"last_cycle_launch": status.LastCycleLaunch,
+		"started_at":        status.StartedAt,
 	})
 }
 

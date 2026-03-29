@@ -73,7 +73,7 @@ func TestBuildToolGroups_ExpectedCounts(t *testing.T) {
 		"roadmap":  5,
 		"team":     6,
 		"awesome":  5,
-		"advanced": 23,
+		"advanced": 24,
 		"eval":     4,
 		"fleet_h":       4,
 		"observability": 16,

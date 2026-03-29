@@ -194,8 +194,13 @@ func (m *Manager) Stop(id string) error {
 	return nil
 }
 
-// StopAll stops all running sessions.
+// StopAll stops all running sessions and the supervisor if active.
 func (m *Manager) StopAll() {
+	// Stop the supervisor first so it doesn't relaunch sessions we're about to kill.
+	m.mu.Lock()
+	m.stopSupervisor()
+	m.mu.Unlock()
+
 	m.mu.RLock()
 	ids := make([]string, 0, len(m.sessions))
 	for id, s := range m.sessions {
