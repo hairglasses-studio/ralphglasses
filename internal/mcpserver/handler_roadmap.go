@@ -100,35 +100,6 @@ func (s *Server) handleRoadmapParse(_ context.Context, req mcp.CallToolRequest) 
 	return jsonResult(rm), nil
 }
 
-// relevanceScore computes Jaccard similarity between a task title and a query string.
-// Returns 0 if either is empty.
-func relevanceScore(taskTitle, query string) float64 {
-	titleWords := strings.Fields(strings.ToLower(taskTitle))
-	queryWords := strings.Fields(strings.ToLower(query))
-	if len(titleWords) == 0 || len(queryWords) == 0 {
-		return 0
-	}
-	titleSet := make(map[string]bool, len(titleWords))
-	for _, w := range titleWords {
-		titleSet[w] = true
-	}
-	querySet := make(map[string]bool, len(queryWords))
-	for _, w := range queryWords {
-		querySet[w] = true
-	}
-	intersection := 0
-	for w := range querySet {
-		if titleSet[w] {
-			intersection++
-		}
-	}
-	union := len(titleSet) + len(querySet) - intersection
-	if union == 0 {
-		return 0
-	}
-	return float64(intersection) / float64(union)
-}
-
 func (s *Server) handleRoadmapAnalyze(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	p := NewParams(req)
 
@@ -150,18 +121,6 @@ func (s *Server) handleRoadmapAnalyze(_ context.Context, req mcp.CallToolRequest
 	analysis, err := roadmap.Analyze(rm, path)
 	if err != nil {
 		return codedError(ErrInternal, fmt.Sprintf("analyze: %v", err)), nil
-	}
-
-	// Query-based relevance sorting: if a query is provided, sort ready items
-	// by relevance score (descending) instead of using a flat score.
-	query := p.OptionalString("query", "")
-	if query != "" {
-		sort.Slice(analysis.Ready, func(i, j int) bool {
-			return relevanceScore(analysis.Ready[i].Description, query) > relevanceScore(analysis.Ready[j].Description, query)
-		})
-		sort.Slice(analysis.Gaps, func(i, j int) bool {
-			return relevanceScore(analysis.Gaps[i].Description, query) > relevanceScore(analysis.Gaps[j].Description, query)
-		})
 	}
 
 	// Category filter: return only a specific category
@@ -296,6 +255,24 @@ func (s *Server) handleRoadmapExpand(ctx context.Context, req mcp.CallToolReques
 	expandLimit := int(getNumberArg(req, "limit", 20))
 	if expandLimit > 0 && len(expansion.Proposals) > expandLimit {
 		expansion.Proposals = expansion.Proposals[:expandLimit]
+	}
+
+	// FINDING-199: Truncate long proposal descriptions and markdown to prevent
+	// 179K+ char output that overflows MCP response limits. Summary mode returns
+	// only type/phase/section with truncated descriptions.
+	const maxDescLen = 500
+	const maxMarkdownLen = 2000
+	summaryMode := getBoolArg(req, "summary_only")
+	for i := range expansion.Proposals {
+		p := &expansion.Proposals[i]
+		if len(p.Description) > maxDescLen {
+			p.Description = p.Description[:maxDescLen] + "..."
+		}
+		if summaryMode {
+			p.Markdown = ""
+		} else if len(p.Markdown) > maxMarkdownLen {
+			p.Markdown = p.Markdown[:maxMarkdownLen] + "\n... (truncated)"
+		}
 	}
 
 	return jsonResult(expansion), nil

@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
@@ -129,7 +128,7 @@ func (m Model) execCommand(cmd Command) (tea.Model, tea.Cmd) {
 			m.Notify.Show(fmt.Sprintf("Repo not found: %s", cmd.Args[0]), 3*time.Second)
 		}
 	case "stopall":
-		m.ConfirmDialog = &components.ConfirmDialog{
+		m.Modals.ConfirmDialog = &components.ConfirmDialog{
 			Title:   "Confirm Stop All",
 			Message: "Stop all running loops and sessions?",
 			Action:  "stopAll",
@@ -170,7 +169,7 @@ func (m Model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case len(msg.Runes) == 1 && (msg.Runes[0] == 'n' || msg.Runes[0] == 'N'):
 		keyType = "n"
 	}
-	result, done := m.ConfirmDialog.HandleKey(keyType)
+	result, done := m.Modals.ConfirmDialog.HandleKey(keyType)
 	if done {
 		return m.handleConfirmResult(result)
 	}
@@ -195,7 +194,7 @@ func (m Model) handleActionMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			r = msg.Runes[0]
 		}
 	}
-	result, selected := m.ActionMenu.HandleKey(keyType, r)
+	result, selected := m.Modals.ActionMenu.HandleKey(keyType, r)
 	if selected {
 		return m.handleActionResult(result)
 	}
@@ -224,7 +223,7 @@ func (m Model) handleLauncherKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			r = msg.Runes[0]
 		}
 	}
-	result, submitted := m.Launcher.HandleKey(keyType, r)
+	result, submitted := m.Modals.Launcher.HandleKey(keyType, r)
 	if submitted {
 		return m.handleLaunchResult(result)
 	}
@@ -234,7 +233,7 @@ func (m Model) handleLauncherKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // --- Result handlers ---
 
 func (m Model) handleConfirmResult(msg components.ConfirmResultMsg) (tea.Model, tea.Cmd) {
-	m.ConfirmDialog = nil
+	m.Modals.ConfirmDialog = nil
 	if msg.Result != components.ConfirmYes {
 		return m, nil
 	}
@@ -275,7 +274,7 @@ func (m Model) handleConfirmResult(msg components.ConfirmResultMsg) (tea.Model, 
 }
 
 func (m Model) handleActionResult(msg components.ActionResultMsg) (tea.Model, tea.Cmd) {
-	m.ActionMenu = nil
+	m.Modals.ActionMenu = nil
 	switch msg.Action {
 	case "scan":
 		return m, m.scanRepos()
@@ -287,7 +286,7 @@ func (m Model) handleActionResult(msg components.ActionResultMsg) (tea.Model, te
 		}
 		m.Notify.Show("Starting all loops", 3*time.Second)
 	case "stopAll":
-		m.ConfirmDialog = &components.ConfirmDialog{
+		m.Modals.ConfirmDialog = &components.ConfirmDialog{
 			Title:   "Confirm Stop All",
 			Message: "Stop all running loops and sessions?",
 			Action:  "stopAll",
@@ -295,36 +294,36 @@ func (m Model) handleActionResult(msg components.ActionResultMsg) (tea.Model, te
 			Width:   50,
 		}
 	case "startLoop":
-		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-			return m.startLoop(m.SelectedIdx)
+		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
+			return m.startLoop(m.Sel.RepoIdx)
 		}
 	case "stopLoop":
-		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-			m.ConfirmDialog = &components.ConfirmDialog{
+		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
+			m.Modals.ConfirmDialog = &components.ConfirmDialog{
 				Title:   "Confirm Stop",
-				Message: fmt.Sprintf("Stop loop for %s?", m.Repos[m.SelectedIdx].Name),
+				Message: fmt.Sprintf("Stop loop for %s?", m.Repos[m.Sel.RepoIdx].Name),
 				Action:  "stopLoop",
-				Data:    m.SelectedIdx,
+				Data:    m.Sel.RepoIdx,
 				Active:  true,
 				Width:   50,
 			}
 		}
 	case "pauseLoop":
-		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-			return m.togglePause(m.SelectedIdx)
+		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
+			return m.togglePause(m.Sel.RepoIdx)
 		}
 	case "viewLogs":
-		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
+		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
 			m.LogOffset = 0
 			m.LogView = views.NewLogView()
 			m.LogView.SetDimensions(m.Width, m.Height)
-			lines, _ := process.ReadFullLog(m.Repos[m.SelectedIdx].Path)
-			m.LogView.SetLines(lines)
+			repoPath := m.Repos[m.Sel.RepoIdx].Path
 			m.pushView(ViewLogs, "Logs")
+			return m, loadLogCmd(repoPath)
 		}
 	case "editConfig":
-		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-			repo := m.Repos[m.SelectedIdx]
+		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
+			repo := m.Repos[m.Sel.RepoIdx]
 			if repo.Config != nil {
 				m.ConfigEdit = views.NewConfigEditor(repo.Config)
 				m.ConfigEdit.Height = m.Height
@@ -332,40 +331,40 @@ func (m Model) handleActionResult(msg components.ActionResultMsg) (tea.Model, te
 			}
 		}
 	case "launchSession":
-		if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-			repo := m.Repos[m.SelectedIdx]
-			m.Launcher = components.NewSessionLauncher(repo.Path, repo.Name)
-			m.Launcher.Width = m.Width
+		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
+			repo := m.Repos[m.Sel.RepoIdx]
+			m.Modals.Launcher = components.NewSessionLauncher(repo.Path, repo.Name)
+			m.Modals.Launcher.Width = m.Width
 		}
 	case "viewDiff":
-		if m.CurrentView == ViewSessionDetail && m.SelectedSession != "" && m.SessMgr != nil {
-			if s, ok := m.SessMgr.Get(m.SelectedSession); ok {
+		if m.Nav.CurrentView == ViewSessionDetail && m.Sel.SessionID != "" && m.SessMgr != nil {
+			if s, ok := m.SessMgr.Get(m.Sel.SessionID); ok {
 				s.Lock()
 				repoPath := s.RepoPath
 				s.Unlock()
 				idx := m.findRepoByPath(repoPath)
 				if idx >= 0 {
-					m.SelectedIdx = idx
+					m.Sel.RepoIdx = idx
 					m.pushView(ViewDiff, "Diff")
 				}
 			}
-		} else if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
+		} else if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
 			m.pushView(ViewDiff, "Diff")
 		}
 	case "stopSession":
-		if m.SelectedSession != "" && m.SessMgr != nil {
-			m.ConfirmDialog = &components.ConfirmDialog{
+		if m.Sel.SessionID != "" && m.SessMgr != nil {
+			m.Modals.ConfirmDialog = &components.ConfirmDialog{
 				Title:   "Confirm Stop Session",
 				Message: "Stop this session?",
 				Action:  "stopSession",
-				Data:    m.SelectedSession,
+				Data:    m.Sel.SessionID,
 				Active:  true,
 				Width:   50,
 			}
 		}
 	case "retrySession":
-		if m.SelectedSession != "" && m.SessMgr != nil {
-			if s, ok := m.SessMgr.Get(m.SelectedSession); ok {
+		if m.Sel.SessionID != "" && m.SessMgr != nil {
+			if s, ok := m.SessMgr.Get(m.Sel.SessionID); ok {
 				s.Lock()
 				opts := session.LaunchOptions{
 					RepoPath: s.RepoPath,
@@ -393,7 +392,7 @@ func (m Model) handleActionResult(msg components.ActionResultMsg) (tea.Model, te
 }
 
 func (m Model) handleLaunchResult(msg components.LaunchResultMsg) (tea.Model, tea.Cmd) {
-	m.Launcher = nil
+	m.Modals.Launcher = nil
 	if msg.Prompt == "" {
 		m.Notify.Show("Launch cancelled (empty prompt)", 2*time.Second)
 		return m, nil
@@ -420,7 +419,7 @@ func (m Model) handleLaunchResult(msg components.LaunchResultMsg) (tea.Model, te
 	if len(id) > 8 {
 		id = id[:8]
 	}
-	m.SelectedSession = s.ID
+	m.Sel.SessionID = s.ID
 	m.Notify.Show(fmt.Sprintf("Launched session %s (%s)", id, msg.Provider), 3*time.Second)
 	m.pushView(ViewSessionDetail, id)
 	return m, nil
@@ -429,26 +428,26 @@ func (m Model) handleLaunchResult(msg components.LaunchResultMsg) (tea.Model, te
 // --- Session output streaming ---
 
 func (m Model) startOutputStreaming() (tea.Model, tea.Cmd) {
-	if m.SelectedSession == "" || m.SessMgr == nil {
+	if m.Sel.SessionID == "" || m.SessMgr == nil {
 		return m, nil
 	}
-	m.StreamingSessionID = m.SelectedSession
-	m.StreamingOutput = true
-	m.SessionOutputView = views.NewLogView()
-	m.SessionOutputView.SetDimensions(m.Width, m.Height/2)
+	m.Stream.SessionID = m.Sel.SessionID
+	m.Stream.Active = true
+	m.Stream.OutputView = views.NewLogView()
+	m.Stream.OutputView.SetDimensions(m.Width, m.Height/2)
 
 	// Pre-fill with output history
-	if s, ok := m.SessMgr.Get(m.SelectedSession); ok {
+	if s, ok := m.SessMgr.Get(m.Sel.SessionID); ok {
 		s.Lock()
 		history := make([]string, len(s.OutputHistory))
 		copy(history, s.OutputHistory)
 		s.Unlock()
 		if len(history) > 0 {
-			m.SessionOutputView.SetLines(history)
+			m.Stream.OutputView.SetLines(history)
 		}
 	}
 
-	return m, m.streamSessionOutput(m.SelectedSession)
+	return m, m.streamSessionOutput(m.Sel.SessionID)
 }
 
 func (m Model) streamSessionOutput(sessionID string) tea.Cmd {

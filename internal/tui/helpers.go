@@ -24,44 +24,44 @@ type GateCacheEntry struct {
 
 // refreshObsCache loads loop observations for all repos, gated by TTL.
 func (m *Model) refreshObsCache() {
-	if time.Since(m.ObsCacheTime) < obsCacheTTL {
+	if time.Since(m.Cache.ObsTime) < obsCacheTTL {
 		return
 	}
-	if m.ObsCache == nil {
-		m.ObsCache = make(map[string][]session.LoopObservation)
+	if m.Cache.Obs == nil {
+		m.Cache.Obs = make(map[string][]session.LoopObservation)
 	}
 	since := time.Now().Add(-24 * time.Hour)
 	for _, r := range m.Repos {
 		obsPath := session.ObservationPath(r.Path)
 		observations, err := session.LoadObservations(obsPath, since)
 		if err != nil || len(observations) == 0 {
-			delete(m.ObsCache, r.Path)
+			delete(m.Cache.Obs, r.Path)
 			continue
 		}
-		m.ObsCache[r.Path] = observations
+		m.Cache.Obs[r.Path] = observations
 	}
-	m.ObsCacheTime = time.Now()
+	m.Cache.ObsTime = time.Now()
 }
 
 // refreshGateCache evaluates regression gates for repos with observations.
 func (m *Model) refreshGateCache() {
-	if time.Since(m.GateCacheExp) < gateCacheTTL {
+	if time.Since(m.Cache.GateExp) < gateCacheTTL {
 		return
 	}
-	if m.GateCache == nil {
-		m.GateCache = make(map[string]*GateCacheEntry)
+	if m.Cache.Gate == nil {
+		m.Cache.Gate = make(map[string]*GateCacheEntry)
 	}
-	if m.PrevGateVerdicts == nil {
-		m.PrevGateVerdicts = make(map[string]string)
+	if m.Cache.PrevGateVerdicts == nil {
+		m.Cache.PrevGateVerdicts = make(map[string]string)
 	}
 
 	thresholds := e2e.DefaultGateThresholds()
 
-	for repoPath, observations := range m.ObsCache {
+	for repoPath, observations := range m.Cache.Obs {
 		baseline := e2e.BuildBaseline(observations, 48)
 		report := e2e.EvaluateGates(observations, baseline, thresholds)
 		summary := e2e.AggregateSummary(observations)
-		m.GateCache[repoPath] = &GateCacheEntry{
+		m.Cache.Gate[repoPath] = &GateCacheEntry{
 			Report:  report,
 			Summary: &summary,
 		}
@@ -69,7 +69,7 @@ func (m *Model) refreshGateCache() {
 		// Gate change notifications
 		newVerdict := string(report.Overall)
 		repoName := filepath.Base(repoPath)
-		if prev, ok := m.PrevGateVerdicts[repoPath]; ok && prev != newVerdict {
+		if prev, ok := m.Cache.PrevGateVerdicts[repoPath]; ok && prev != newVerdict {
 			switch {
 			case prev == "pass" && newVerdict == "warn":
 				m.Notify.Show(fmt.Sprintf("⚠ %s: gate degraded to WARN", repoName), 8*time.Second)
@@ -79,39 +79,39 @@ func (m *Model) refreshGateCache() {
 				m.Notify.Show(fmt.Sprintf("✓ %s: gate recovered to PASS", repoName), 5*time.Second)
 			}
 		}
-		m.PrevGateVerdicts[repoPath] = newVerdict
+		m.Cache.PrevGateVerdicts[repoPath] = newVerdict
 	}
 
 	// Remove stale entries for repos without observations
-	for repoPath := range m.GateCache {
-		if _, ok := m.ObsCache[repoPath]; !ok {
-			delete(m.GateCache, repoPath)
-			delete(m.PrevGateVerdicts, repoPath)
+	for repoPath := range m.Cache.Gate {
+		if _, ok := m.Cache.Obs[repoPath]; !ok {
+			delete(m.Cache.Gate, repoPath)
+			delete(m.Cache.PrevGateVerdicts, repoPath)
 		}
 	}
 
-	m.GateCacheExp = time.Now()
+	m.Cache.GateExp = time.Now()
 }
 
 // getObservations returns cached observations for a repo path.
 func (m *Model) getObservations(repoPath string) []session.LoopObservation {
-	if m.ObsCache == nil {
+	if m.Cache.Obs == nil {
 		return nil
 	}
-	return m.ObsCache[repoPath]
+	return m.Cache.Obs[repoPath]
 }
 
 // getGateEntry returns cached gate report and summary for a repo path.
 func (m *Model) getGateEntry(repoPath string) *GateCacheEntry {
-	if m.GateCache == nil {
+	if m.Cache.Gate == nil {
 		return nil
 	}
-	return m.GateCache[repoPath]
+	return m.Cache.Gate[repoPath]
 }
 
 // buildHealthData constructs per-repo health data for the overview table.
 func (m *Model) buildHealthData() map[string]views.RepoHealthData {
-	if len(m.GateCache) == 0 && len(m.ObsCache) == 0 {
+	if len(m.Cache.Gate) == 0 && len(m.Cache.Obs) == 0 {
 		return nil
 	}
 	data := make(map[string]views.RepoHealthData, len(m.Repos))

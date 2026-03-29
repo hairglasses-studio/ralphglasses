@@ -73,6 +73,9 @@ type KeyMap struct {
 	// Observation and event log views
 	ObservationView key.Binding
 	EventLogView    key.Binding
+
+	// R&D Cycle
+	RDCycle key.Binding
 }
 
 // DefaultKeyMap returns the default key bindings.
@@ -253,6 +256,10 @@ func DefaultKeyMap() KeyMap {
 		EventLogView: key.NewBinding(
 			key.WithKeys("e"),
 			key.WithHelp("e", "Event log"),
+		),
+		RDCycle: key.NewBinding(
+			key.WithKeys("R"),
+			key.WithHelp("R", "R&D Cycle"),
 		),
 	}
 }

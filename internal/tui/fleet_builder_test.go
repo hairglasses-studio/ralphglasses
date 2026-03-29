@@ -77,7 +77,7 @@ func TestClampFleetWindow(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := NewModel("/tmp/test", nil)
-			m.FleetWindow = tt.window
+			m.Fleet.Window = tt.window
 			if got := m.clampFleetWindow(); got != tt.want {
 				t.Errorf("clampFleetWindow() = %d, want %d", got, tt.want)
 			}
@@ -98,7 +98,7 @@ func TestSelectedFleetSection(t *testing.T) {
 	}
 	for _, tt := range tests {
 		m := NewModel("/tmp/test", nil)
-		m.FleetSection = tt.section
+		m.Fleet.Section = tt.section
 		if got := m.selectedFleetSection(); got != tt.want {
 			t.Errorf("FleetSection=%d: selectedFleetSection() = %q, want %q", tt.section, got, tt.want)
 		}
@@ -303,7 +303,7 @@ func TestBuildFleetCostHistoryWithCostEvents(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	bus := events.NewBus(100)
 	m.EventBus = bus
-	m.FleetWindow = 4 // "all" window (Span=0)
+	m.Fleet.Window = 4 // "all" window (Span=0)
 
 	bus.Publish(events.Event{
 		Type:      events.CostUpdate,
@@ -346,7 +346,7 @@ func TestBuildFleetCostHistorySkipsNonCostEvents(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	bus := events.NewBus(100)
 	m.EventBus = bus
-	m.FleetWindow = 4 // "all"
+	m.Fleet.Window = 4 // "all"
 
 	bus.Publish(events.Event{
 		Type:      events.LoopStarted,
@@ -389,33 +389,33 @@ func TestMoveFleetCursor(t *testing.T) {
 	data := m.buildFleetData()
 
 	// Move down
-	m.FleetCursor = 0
+	m.Fleet.Cursor = 0
 	m.moveFleetCursor(data, 1)
-	if m.FleetCursor != 1 {
-		t.Errorf("after +1: cursor = %d, want 1", m.FleetCursor)
+	if m.Fleet.Cursor != 1 {
+		t.Errorf("after +1: cursor = %d, want 1", m.Fleet.Cursor)
 	}
 
 	// Clamp at end
-	m.FleetCursor = 2
+	m.Fleet.Cursor = 2
 	m.moveFleetCursor(data, 1)
-	if m.FleetCursor != 2 {
-		t.Errorf("after clamp at end: cursor = %d, want 2", m.FleetCursor)
+	if m.Fleet.Cursor != 2 {
+		t.Errorf("after clamp at end: cursor = %d, want 2", m.Fleet.Cursor)
 	}
 
 	// Clamp at start
-	m.FleetCursor = 0
+	m.Fleet.Cursor = 0
 	m.moveFleetCursor(data, -1)
-	if m.FleetCursor != 0 {
-		t.Errorf("after clamp at start: cursor = %d, want 0", m.FleetCursor)
+	if m.Fleet.Cursor != 0 {
+		t.Errorf("after clamp at start: cursor = %d, want 0", m.Fleet.Cursor)
 	}
 
 	// Empty data
 	m.Repos = nil
 	data = m.buildFleetData()
-	m.FleetCursor = 5
+	m.Fleet.Cursor = 5
 	m.moveFleetCursor(data, 0)
-	if m.FleetCursor != 0 {
-		t.Errorf("empty data: cursor = %d, want 0", m.FleetCursor)
+	if m.Fleet.Cursor != 0 {
+		t.Errorf("empty data: cursor = %d, want 0", m.Fleet.Cursor)
 	}
 }
 
@@ -423,27 +423,27 @@ func TestCycleFleetSection(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	data := m.buildFleetData()
 
-	m.FleetSection = 0
+	m.Fleet.Section = 0
 	m.cycleFleetSection(data, 1)
-	if m.FleetSection != 1 {
-		t.Errorf("after +1 from 0: section = %d, want 1", m.FleetSection)
+	if m.Fleet.Section != 1 {
+		t.Errorf("after +1 from 0: section = %d, want 1", m.Fleet.Section)
 	}
 
 	m.cycleFleetSection(data, 1)
-	if m.FleetSection != 2 {
-		t.Errorf("after +1 from 1: section = %d, want 2", m.FleetSection)
+	if m.Fleet.Section != 2 {
+		t.Errorf("after +1 from 1: section = %d, want 2", m.Fleet.Section)
 	}
 
 	// Wrap forward
 	m.cycleFleetSection(data, 1)
-	if m.FleetSection != 0 {
-		t.Errorf("after wrap forward: section = %d, want 0", m.FleetSection)
+	if m.Fleet.Section != 0 {
+		t.Errorf("after wrap forward: section = %d, want 0", m.Fleet.Section)
 	}
 
 	// Wrap backward
 	m.cycleFleetSection(data, -1)
-	if m.FleetSection != 2 {
-		t.Errorf("after wrap backward: section = %d, want 2", m.FleetSection)
+	if m.Fleet.Section != 2 {
+		t.Errorf("after wrap backward: section = %d, want 2", m.Fleet.Section)
 	}
 }
 
@@ -459,12 +459,12 @@ func TestFleetSectionLen(t *testing.T) {
 	}
 	data := m.buildFleetData()
 
-	m.FleetSection = 0 // repos
+	m.Fleet.Section = 0 // repos
 	if got := m.fleetSectionLen(data); got != 2 {
 		t.Errorf("repos section len = %d, want 2", got)
 	}
 
-	m.FleetSection = 1 // sessions
+	m.Fleet.Section = 1 // sessions
 	if got := m.fleetSectionLen(data); got != 1 {
 		t.Errorf("sessions section len = %d, want 1", got)
 	}
@@ -508,14 +508,14 @@ func TestOpenFleetSelectionRepos(t *testing.T) {
 		{Name: "beta", Path: "/tmp/beta"},
 	}
 	data := m.buildFleetData()
-	m.FleetSection = 0 // repos
-	m.FleetCursor = 0
+	m.Fleet.Section = 0 // repos
+	m.Fleet.Cursor = 0
 
 	m.openFleetSelection(data)
-	if m.CurrentView != ViewRepoDetail {
-		t.Errorf("expected ViewRepoDetail, got %d", m.CurrentView)
+	if m.Nav.CurrentView != ViewRepoDetail {
+		t.Errorf("expected ViewRepoDetail, got %d", m.Nav.CurrentView)
 	}
-	if m.SelectedIdx < 0 {
+	if m.Sel.RepoIdx < 0 {
 		t.Error("SelectedIdx should be set")
 	}
 }
@@ -524,12 +524,12 @@ func TestOpenFleetSelectionReposOutOfBounds(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Repos = []*model.Repo{{Name: "a", Path: "/tmp/a"}}
 	data := m.buildFleetData()
-	m.FleetSection = 0
-	m.FleetCursor = 99 // out of bounds
+	m.Fleet.Section = 0
+	m.Fleet.Cursor = 99 // out of bounds
 
-	before := m.CurrentView
+	before := m.Nav.CurrentView
 	m.openFleetSelection(data)
-	if m.CurrentView != before {
+	if m.Nav.CurrentView != before {
 		t.Error("should not navigate when cursor out of bounds")
 	}
 }
@@ -549,14 +549,14 @@ func TestOpenFleetSelectionSessions(t *testing.T) {
 	m.SessMgr = mgr
 	data := m.buildFleetData()
 
-	m.FleetSection = 1 // sessions
-	m.FleetCursor = 0
+	m.Fleet.Section = 1 // sessions
+	m.Fleet.Cursor = 0
 	m.openFleetSelection(data)
-	if m.CurrentView != ViewSessionDetail {
-		t.Errorf("expected ViewSessionDetail, got %d", m.CurrentView)
+	if m.Nav.CurrentView != ViewSessionDetail {
+		t.Errorf("expected ViewSessionDetail, got %d", m.Nav.CurrentView)
 	}
-	if m.SelectedSession != "sess-001" {
-		t.Errorf("SelectedSession = %q, want sess-001", m.SelectedSession)
+	if m.Sel.SessionID != "sess-001" {
+		t.Errorf("SelectedSession = %q, want sess-001", m.Sel.SessionID)
 	}
 }
 
@@ -571,14 +571,14 @@ func TestOpenFleetSelectionTeams(t *testing.T) {
 	m.SessMgr = mgr
 	data := m.buildFleetData()
 
-	m.FleetSection = 2 // teams
-	m.FleetCursor = 0
+	m.Fleet.Section = 2 // teams
+	m.Fleet.Cursor = 0
 	m.openFleetSelection(data)
-	if m.CurrentView != ViewTeamDetail {
-		t.Errorf("expected ViewTeamDetail, got %d", m.CurrentView)
+	if m.Nav.CurrentView != ViewTeamDetail {
+		t.Errorf("expected ViewTeamDetail, got %d", m.Nav.CurrentView)
 	}
-	if m.SelectedTeam != "team-alpha" {
-		t.Errorf("SelectedTeam = %q, want team-alpha", m.SelectedTeam)
+	if m.Sel.TeamName != "team-alpha" {
+		t.Errorf("SelectedTeam = %q, want team-alpha", m.Sel.TeamName)
 	}
 }
 
@@ -590,12 +590,12 @@ func TestDiffFleetSelectionRepos(t *testing.T) {
 		{Name: "alpha", Path: "/tmp/alpha"},
 	}
 	data := m.buildFleetData()
-	m.FleetSection = 0
-	m.FleetCursor = 0
+	m.Fleet.Section = 0
+	m.Fleet.Cursor = 0
 
 	m.diffFleetSelection(data)
-	if m.CurrentView != ViewDiff {
-		t.Errorf("expected ViewDiff, got %d", m.CurrentView)
+	if m.Nav.CurrentView != ViewDiff {
+		t.Errorf("expected ViewDiff, got %d", m.Nav.CurrentView)
 	}
 }
 
@@ -611,11 +611,11 @@ func TestDiffFleetSelectionSessions(t *testing.T) {
 	m.SessMgr = mgr
 	data := m.buildFleetData()
 
-	m.FleetSection = 1 // sessions
-	m.FleetCursor = 0
+	m.Fleet.Section = 1 // sessions
+	m.Fleet.Cursor = 0
 	m.diffFleetSelection(data)
-	if m.CurrentView != ViewDiff {
-		t.Errorf("expected ViewDiff, got %d", m.CurrentView)
+	if m.Nav.CurrentView != ViewDiff {
+		t.Errorf("expected ViewDiff, got %d", m.Nav.CurrentView)
 	}
 }
 
@@ -629,22 +629,22 @@ func TestDiffFleetSelectionTeams(t *testing.T) {
 	m.SessMgr = mgr
 	data := m.buildFleetData()
 
-	m.FleetSection = 2 // teams
-	m.FleetCursor = 0
+	m.Fleet.Section = 2 // teams
+	m.Fleet.Cursor = 0
 	m.diffFleetSelection(data)
-	if m.CurrentView != ViewDiff {
-		t.Errorf("expected ViewDiff, got %d", m.CurrentView)
+	if m.Nav.CurrentView != ViewDiff {
+		t.Errorf("expected ViewDiff, got %d", m.Nav.CurrentView)
 	}
 }
 
 func TestDiffFleetSelectionOutOfBounds(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	data := m.buildFleetData()
-	m.FleetSection = 0
-	m.FleetCursor = 5 // no repos
-	before := m.CurrentView
+	m.Fleet.Section = 0
+	m.Fleet.Cursor = 5 // no repos
+	before := m.Nav.CurrentView
 	m.diffFleetSelection(data)
-	if m.CurrentView != before {
+	if m.Nav.CurrentView != before {
 		t.Error("should not navigate when cursor out of bounds")
 	}
 }
@@ -655,12 +655,12 @@ func TestTimelineFleetSelectionRepos(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Repos = []*model.Repo{{Name: "alpha", Path: "/tmp/alpha"}}
 	data := m.buildFleetData()
-	m.FleetSection = 0
-	m.FleetCursor = 0
+	m.Fleet.Section = 0
+	m.Fleet.Cursor = 0
 
 	m.timelineFleetSelection(data)
-	if m.CurrentView != ViewTimeline {
-		t.Errorf("expected ViewTimeline, got %d", m.CurrentView)
+	if m.Nav.CurrentView != ViewTimeline {
+		t.Errorf("expected ViewTimeline, got %d", m.Nav.CurrentView)
 	}
 }
 
@@ -676,11 +676,11 @@ func TestTimelineFleetSelectionSessions(t *testing.T) {
 	m.SessMgr = mgr
 	data := m.buildFleetData()
 
-	m.FleetSection = 1
-	m.FleetCursor = 0
+	m.Fleet.Section = 1
+	m.Fleet.Cursor = 0
 	m.timelineFleetSelection(data)
-	if m.CurrentView != ViewTimeline {
-		t.Errorf("expected ViewTimeline, got %d", m.CurrentView)
+	if m.Nav.CurrentView != ViewTimeline {
+		t.Errorf("expected ViewTimeline, got %d", m.Nav.CurrentView)
 	}
 }
 
@@ -694,11 +694,11 @@ func TestTimelineFleetSelectionTeams(t *testing.T) {
 	m.SessMgr = mgr
 	data := m.buildFleetData()
 
-	m.FleetSection = 2
-	m.FleetCursor = 0
+	m.Fleet.Section = 2
+	m.Fleet.Cursor = 0
 	m.timelineFleetSelection(data)
-	if m.CurrentView != ViewTimeline {
-		t.Errorf("expected ViewTimeline, got %d", m.CurrentView)
+	if m.Nav.CurrentView != ViewTimeline {
+		t.Errorf("expected ViewTimeline, got %d", m.Nav.CurrentView)
 	}
 }
 
@@ -708,15 +708,15 @@ func TestStopFleetSelectionRepos(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Repos = []*model.Repo{{Name: "alpha", Path: "/tmp/alpha"}}
 	data := m.buildFleetData()
-	m.FleetSection = 0
-	m.FleetCursor = 0
+	m.Fleet.Section = 0
+	m.Fleet.Cursor = 0
 
 	m.stopFleetSelection(data)
-	if m.ConfirmDialog == nil {
+	if m.Modals.ConfirmDialog == nil {
 		t.Fatal("expected confirm dialog")
 	}
-	if m.ConfirmDialog.Action != "stopLoop" {
-		t.Errorf("action = %q, want stopLoop", m.ConfirmDialog.Action)
+	if m.Modals.ConfirmDialog.Action != "stopLoop" {
+		t.Errorf("action = %q, want stopLoop", m.Modals.ConfirmDialog.Action)
 	}
 }
 
@@ -731,24 +731,24 @@ func TestStopFleetSelectionSessions(t *testing.T) {
 	m.SessMgr = mgr
 	data := m.buildFleetData()
 
-	m.FleetSection = 1
-	m.FleetCursor = 0
+	m.Fleet.Section = 1
+	m.Fleet.Cursor = 0
 	m.stopFleetSelection(data)
-	if m.ConfirmDialog == nil {
+	if m.Modals.ConfirmDialog == nil {
 		t.Fatal("expected confirm dialog")
 	}
-	if m.ConfirmDialog.Action != "stopSession" {
-		t.Errorf("action = %q, want stopSession", m.ConfirmDialog.Action)
+	if m.Modals.ConfirmDialog.Action != "stopSession" {
+		t.Errorf("action = %q, want stopSession", m.Modals.ConfirmDialog.Action)
 	}
 }
 
 func TestStopFleetSelectionOutOfBounds(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	data := m.buildFleetData()
-	m.FleetSection = 0
-	m.FleetCursor = 99
+	m.Fleet.Section = 0
+	m.Fleet.Cursor = 99
 	m.stopFleetSelection(data)
-	if m.ConfirmDialog != nil {
+	if m.Modals.ConfirmDialog != nil {
 		t.Error("should not show confirm dialog when cursor out of bounds")
 	}
 }
@@ -780,7 +780,7 @@ func TestBuildTimelineEntriesAllSessions(t *testing.T) {
 	mgr.AddSessionForTesting(s1)
 	mgr.AddSessionForTesting(s2)
 	m.SessMgr = mgr
-	m.SelectedIdx = -1 // no repo filter
+	m.Sel.RepoIdx = -1 // no repo filter
 
 	entries := m.buildTimelineEntries()
 	if len(entries) != 2 {
@@ -824,7 +824,7 @@ func TestBuildTimelineEntriesFilteredByRepo(t *testing.T) {
 		{Name: "a", Path: "/tmp/a"},
 		{Name: "b", Path: "/tmp/b"},
 	}
-	m.SelectedIdx = 0 // filter to /tmp/a
+	m.Sel.RepoIdx = 0 // filter to /tmp/a
 
 	entries := m.buildTimelineEntries()
 	if len(entries) != 1 {

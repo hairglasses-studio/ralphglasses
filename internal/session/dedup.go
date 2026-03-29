@@ -1,8 +1,6 @@
 package session
 
 import (
-	"fmt"
-	"log/slog"
 	"regexp"
 	"strings"
 )
@@ -48,50 +46,40 @@ func JaccardSimilarity(a, b string) float64 {
 	return float64(intersection) / float64(union)
 }
 
-// DedupResult describes why a task was considered a duplicate.
-type DedupResult struct {
-	IsDuplicate bool    // true if the task is a duplicate
-	Reason      string  // human-readable reason for deduplication
-	MatchedTask string  // the completed task title that matched
-	Score       float64 // similarity score (0.0-1.0)
-	Method      string  // "exact", "jaccard", or "file_overlap"
-}
-
 // IsSimilarTask checks whether title is similar to any entry in completed
 // above the given threshold. Returns whether a match was found and the
 // matched title.
 func IsSimilarTask(title string, completed []string, threshold float64) (bool, string) {
-	result := IsSimilarTaskWithReason(title, completed, threshold)
-	return result.IsDuplicate, result.MatchedTask
-}
-
-// IsSimilarTaskWithReason checks whether title is similar to any entry in
-// completed above the given threshold. Returns a DedupResult with the reason,
-// score, and matched title.
-func IsSimilarTaskWithReason(title string, completed []string, threshold float64) DedupResult {
 	for _, c := range completed {
-		score := JaccardSimilarity(title, c)
-		if score >= threshold {
-			reason := fmt.Sprintf("jaccard similarity %.2f >= threshold %.2f against %q", score, threshold, c)
-			slog.Debug("task deduplicated", "title", title, "matched", c, "score", score, "method", "jaccard")
-			return DedupResult{
-				IsDuplicate: true,
-				Reason:      reason,
-				MatchedTask: c,
-				Score:       score,
-				Method:      "jaccard",
-			}
+		if JaccardSimilarity(title, c) >= threshold {
+			return true, c
 		}
 	}
-	return DedupResult{}
+	return false, ""
+}
+
+// DedupSkip records why a proposed task was filtered by deduplication.
+type DedupSkip struct {
+	TaskTitle   string  `json:"task_title"`
+	DedupReason string  `json:"dedup_reason"`  // "exact_match", "near_duplicate", "content_overlap"
+	MatchedWith string  `json:"matched_with,omitempty"` // title or description of the matched completed task
+	Similarity  float64 `json:"similarity,omitempty"`   // Jaccard score for near-duplicate matches
 }
 
 // filterDuplicateTasks removes tasks whose titles are exact or near-duplicate
 // matches against a list of completed task titles. It returns the filtered
 // task slice (which may be shorter than the input).
 func filterDuplicateTasks(tasks []LoopTask, completedTitles []string, threshold float64) []LoopTask {
+	kept, _ := filterDuplicateTasksWithReason(tasks, completedTitles, threshold)
+	return kept
+}
+
+// filterDuplicateTasksWithReason removes tasks whose titles are exact or
+// near-duplicate matches against completed task titles, and returns both the
+// filtered tasks and the list of skipped tasks with their dedup reasons.
+func filterDuplicateTasksWithReason(tasks []LoopTask, completedTitles []string, threshold float64) ([]LoopTask, []DedupSkip) {
 	if len(completedTitles) == 0 {
-		return tasks
+		return tasks, nil
 	}
 
 	// Build a set of lowercased completed titles for fast exact matching.
@@ -101,24 +89,35 @@ func filterDuplicateTasks(tasks []LoopTask, completedTitles []string, threshold 
 	}
 
 	filtered := make([]LoopTask, 0, len(tasks))
+	var skipped []DedupSkip
 	for _, task := range tasks {
 		lower := strings.ToLower(strings.TrimSpace(task.Title))
 
 		// Exact match check.
 		if _, ok := exactSet[lower]; ok {
-			slog.Debug("task deduplicated", "title", task.Title, "method", "exact")
+			skipped = append(skipped, DedupSkip{
+				TaskTitle:   task.Title,
+				DedupReason: "exact_match",
+				MatchedWith: lower,
+				Similarity:  1.0,
+			})
 			continue
 		}
 
 		// Near-duplicate check via Jaccard similarity.
-		result := IsSimilarTaskWithReason(task.Title, completedTitles, threshold)
-		if result.IsDuplicate {
+		if similar, matched := IsSimilarTask(task.Title, completedTitles, threshold); similar {
+			skipped = append(skipped, DedupSkip{
+				TaskTitle:   task.Title,
+				DedupReason: "near_duplicate",
+				MatchedWith: matched,
+				Similarity:  JaccardSimilarity(task.Title, matched),
+			})
 			continue
 		}
 
 		filtered = append(filtered, task)
 	}
-	return filtered
+	return filtered, skipped
 }
 
 // filePathPattern matches Go source file paths in task prompts. It captures
@@ -172,8 +171,15 @@ const ContentOverlapThreshold = 0.5
 // >50% of its referenced file paths appear in any single completed task's
 // prompt. Tasks with no extractable file paths are always kept.
 func filterDuplicateTasksByContent(proposed []LoopTask, completed []LoopTask) []LoopTask {
+	kept, _ := filterDuplicateTasksByContentWithReason(proposed, completed)
+	return kept
+}
+
+// filterDuplicateTasksByContentWithReason is like filterDuplicateTasksByContent
+// but also returns DedupSkip entries for rejected tasks.
+func filterDuplicateTasksByContentWithReason(proposed []LoopTask, completed []LoopTask) ([]LoopTask, []DedupSkip) {
 	if len(completed) == 0 {
-		return proposed
+		return proposed, nil
 	}
 
 	// Pre-extract file paths from all completed tasks.
@@ -183,6 +189,7 @@ func filterDuplicateTasksByContent(proposed []LoopTask, completed []LoopTask) []
 	}
 
 	filtered := make([]LoopTask, 0, len(proposed))
+	var skipped []DedupSkip
 	for _, p := range proposed {
 		paths := extractFilePathsFromText(p.Prompt)
 		if len(paths) == 0 {
@@ -192,20 +199,32 @@ func filterDuplicateTasksByContent(proposed []LoopTask, completed []LoopTask) []
 		}
 
 		isDup := false
-		for _, cp := range completedPaths {
+		matchIdx := -1
+		for j, cp := range completedPaths {
 			if len(cp) == 0 {
 				continue
 			}
 			if fileOverlapRatio(paths, cp) > ContentOverlapThreshold {
 				isDup = true
+				matchIdx = j
 				break
 			}
 		}
-		if !isDup {
+		if isDup {
+			matched := ""
+			if matchIdx >= 0 && matchIdx < len(completed) {
+				matched = completed[matchIdx].Title
+			}
+			skipped = append(skipped, DedupSkip{
+				TaskTitle:   p.Title,
+				DedupReason: "content_overlap",
+				MatchedWith: matched,
+			})
+		} else {
 			filtered = append(filtered, p)
 		}
 	}
-	return filtered
+	return filtered, skipped
 }
 
 // wordSet is defined in episodic.go — reused here for Jaccard computation.

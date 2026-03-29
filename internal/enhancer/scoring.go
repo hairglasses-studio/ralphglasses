@@ -149,7 +149,7 @@ func clamp(v, lo, hi int) int {
 // --- dimension scorers ---
 
 func scoreClarity(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult) DimensionScore {
-	score := 50 // baseline
+	score := 30 // baseline (FINDING-240: lowered from 50 to prevent score inflation)
 	var suggestions []string
 
 	wc := ar.WordCount
@@ -229,7 +229,7 @@ func scoreClarity(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult
 }
 
 func scoreSpecificity(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult) DimensionScore {
-	score := 50
+	score := 25 // FINDING-240: lowered from 50 to prevent score inflation
 	var suggestions []string
 
 	// Numeric constraints
@@ -405,14 +405,14 @@ func scoreExamples(text string, _ TaskType, lints []LintResult, _ *AnalyzeResult
 }
 
 func scoreDocumentPlacement(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult) DimensionScore {
-	score := 50 // neutral baseline
+	score := 40 // FINDING-240: lowered from 60 to prevent score inflation
 	var suggestions []string
 
 	tokens := ar.EstimatedTokens
 
-	// For short prompts, placement is less critical but also less likely to be optimal
+	// For short prompts, placement is less important
 	if tokens < 1000 {
-		score = 55
+		score = 50 // FINDING-240: lowered from 70
 	}
 
 	// Cache-unfriendly lints
@@ -483,7 +483,7 @@ func scoreRoleDefinition(text string, _ TaskType, _ []LintResult, _ *AnalyzeResu
 }
 
 func scoreTaskFocus(text string, _ TaskType, lints []LintResult, _ *AnalyzeResult, _ ProviderName) DimensionScore {
-	score := 40
+	score := 40 // FINDING-240: lowered from 60 to prevent score inflation
 	var suggestions []string
 
 	// Decomposition needed = too many tasks
@@ -505,16 +505,15 @@ func scoreTaskFocus(text string, _ TaskType, lints []LintResult, _ *AnalyzeResul
 		score -= 10
 		suggestions = append(suggestions, "Add clear action verbs — tell the model exactly what to do")
 	case len(verbs) >= 1 && len(verbs) <= 3:
-		score += 35 // focused — clear, directed task
-	case len(verbs) > 3 && len(verbs) <= 6:
-		score += 25 // multiple actions but still manageable
-	case len(verbs) > 6:
-		score += 10 // many actions, potentially unfocused
+		score += 20 // focused
+	case len(verbs) > 3:
+		score += 5 // some, but potentially unfocused
 	}
 
-	// Bonus: measurable outcome specified
-	if numericConstraintPattern.MatchString(text) {
-		score += 10
+	// Bonus for explicit task scoping tags (instructions/constraints)
+	lower := strings.ToLower(text)
+	if strings.Contains(lower, "<instructions>") || strings.Contains(lower, "<constraints>") {
+		score += 15
 	}
 
 	score = clamp(score, 0, 100)
@@ -561,17 +560,23 @@ func scoreFormatSpec(text string, _ TaskType, _ []LintResult, ar *AnalyzeResult)
 }
 
 func scoreTone(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult, targetProvider ProviderName) DimensionScore {
-	score := 50 // neutral baseline
+	score := 60 // FINDING-240: lowered from 80 to prevent score inflation
 	var suggestions []string
 
-	// Positive signals: polite/professional language earns points
+	// Bonus for polite/professional language markers
 	lower := strings.ToLower(text)
-	if strings.Contains(lower, "please") || strings.Contains(lower, "thank") {
-		score += 10
+	politeMarkers := []string{"please", "thank", "could you", "would you", "suggest", "recommend", "consider"}
+	politeCount := 0
+	for _, m := range politeMarkers {
+		if strings.Contains(lower, m) {
+			politeCount++
+		}
 	}
-	// Calm, direct phrasing with no aggressive markers
-	if !ar.HasAggressiveCaps && !ar.HasNegativeFrames {
-		score += 25
+	if politeCount >= 1 {
+		score += 15
+	}
+	if politeCount >= 3 {
+		score += 10
 	}
 
 	if ar.HasAggressiveCaps {

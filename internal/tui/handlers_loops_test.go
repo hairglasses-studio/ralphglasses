@@ -13,7 +13,7 @@ import (
 
 func TestLoopList_MoveDown(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopList
+	m.Nav.CurrentView = ViewLoopList
 	m.Keys.SetViewContext(ViewLoopList)
 	m.LoopListTable.SetRows([]components.Row{
 		{"abc12345", "repo-a", "running", "5", "idle"},
@@ -33,7 +33,7 @@ func TestLoopList_MoveDown(t *testing.T) {
 
 func TestLoopList_MoveUp(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopList
+	m.Nav.CurrentView = ViewLoopList
 	m.Keys.SetViewContext(ViewLoopList)
 	m.LoopListTable.SetRows([]components.Row{
 		{"abc12345", "repo-a", "running", "5", "idle"},
@@ -56,20 +56,20 @@ func TestLoopList_MoveUp(t *testing.T) {
 
 func TestLoopList_Enter_EmptyTable(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopList
+	m.Nav.CurrentView = ViewLoopList
 	m.Keys.SetViewContext(ViewLoopList)
 	// No rows set
 
 	m2, _ := m.handleLoopListKey(tea.KeyMsg{Type: tea.KeyEnter})
 	got := m2.(Model)
-	if got.CurrentView != ViewLoopList {
+	if got.Nav.CurrentView != ViewLoopList {
 		t.Error("should stay in loop list with empty table")
 	}
 }
 
 func TestLoopList_Enter_NilTable(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopList
+	m.Nav.CurrentView = ViewLoopList
 	m.Keys.SetViewContext(ViewLoopList)
 	m.LoopListTable = nil
 
@@ -88,7 +88,7 @@ func TestLoopList_Enter_NilTable(t *testing.T) {
 
 func TestLoopList_Enter_NoSessMgr(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopList
+	m.Nav.CurrentView = ViewLoopList
 	m.Keys.SetViewContext(ViewLoopList)
 	m.SessMgr = nil
 	m.LoopListTable.SetRows([]components.Row{
@@ -98,8 +98,8 @@ func TestLoopList_Enter_NoSessMgr(t *testing.T) {
 	m2, _ := m.handleLoopListKey(tea.KeyMsg{Type: tea.KeyEnter})
 	got := m2.(Model)
 	// No SessMgr, so can't resolve loop ID -> should stay
-	if got.CurrentView != ViewLoopList {
-		t.Errorf("should stay in loop list without SessMgr, got %v", got.CurrentView)
+	if got.Nav.CurrentView != ViewLoopList {
+		t.Errorf("should stay in loop list without SessMgr, got %v", got.Nav.CurrentView)
 	}
 }
 
@@ -107,7 +107,7 @@ func TestLoopList_Enter_NoSessMgr(t *testing.T) {
 
 func TestLoopListStart_NoSessMgr(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopList
+	m.Nav.CurrentView = ViewLoopList
 	m.Keys.SetViewContext(ViewLoopList)
 	m.SessMgr = nil
 	m.LoopListTable.SetRows([]components.Row{
@@ -123,7 +123,7 @@ func TestLoopListStart_NoSessMgr(t *testing.T) {
 
 func TestLoopListStart_NoRow(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopList
+	m.Nav.CurrentView = ViewLoopList
 	m.Keys.SetViewContext(ViewLoopList)
 	m.SessMgr = nil // doesn't matter, row check first
 	// Empty table
@@ -139,7 +139,7 @@ func TestLoopListStart_NoRow(t *testing.T) {
 
 func TestLoopListStop_NoSessMgr(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopList
+	m.Nav.CurrentView = ViewLoopList
 	m.Keys.SetViewContext(ViewLoopList)
 	m.SessMgr = nil
 
@@ -152,7 +152,7 @@ func TestLoopListStop_NoSessMgr(t *testing.T) {
 
 func TestLoopListStop_NoRow(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopList
+	m.Nav.CurrentView = ViewLoopList
 	m.Keys.SetViewContext(ViewLoopList)
 	m.SessMgr = nil
 
@@ -167,7 +167,7 @@ func TestLoopListStop_NoRow(t *testing.T) {
 
 func TestLoopListPause_NoSessMgr(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopList
+	m.Nav.CurrentView = ViewLoopList
 	m.Keys.SetViewContext(ViewLoopList)
 	m.SessMgr = nil
 
@@ -180,7 +180,7 @@ func TestLoopListPause_NoSessMgr(t *testing.T) {
 
 func TestLoopListPause_NoRow(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopList
+	m.Nav.CurrentView = ViewLoopList
 	m.Keys.SetViewContext(ViewLoopList)
 	m.SessMgr = nil
 
@@ -195,10 +195,10 @@ func TestLoopListPause_NoRow(t *testing.T) {
 
 func TestLoopDetail_NilSessMgr(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopDetail
+	m.Nav.CurrentView = ViewLoopDetail
 	m.Keys.SetViewContext(ViewLoopDetail)
 	m.SessMgr = nil
-	m.SelectedLoop = "some-loop"
+	m.Sel.LoopID = "some-loop"
 
 	m2, cmd := m.handleLoopDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
 	_ = m2.(Model)
@@ -209,9 +209,9 @@ func TestLoopDetail_NilSessMgr(t *testing.T) {
 
 func TestLoopDetail_EmptySelectedLoop(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopDetail
+	m.Nav.CurrentView = ViewLoopDetail
 	m.Keys.SetViewContext(ViewLoopDetail)
-	m.SelectedLoop = ""
+	m.Sel.LoopID = ""
 
 	m2, cmd := m.handleLoopDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
 	_ = m2.(Model)
@@ -224,7 +224,7 @@ func TestLoopDetail_EmptySelectedLoop(t *testing.T) {
 
 func TestLoopControl_MoveDown(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopControl
+	m.Nav.CurrentView = ViewLoopControl
 	m.Keys.SetViewContext(ViewLoopControl)
 	m.LoopControlData = []views.LoopControlData{
 		{ID: "loop-1", Status: "running"},
@@ -241,7 +241,7 @@ func TestLoopControl_MoveDown(t *testing.T) {
 
 func TestLoopControl_MoveDown_AtEnd(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopControl
+	m.Nav.CurrentView = ViewLoopControl
 	m.Keys.SetViewContext(ViewLoopControl)
 	m.LoopControlData = []views.LoopControlData{
 		{ID: "loop-1", Status: "running"},
@@ -257,7 +257,7 @@ func TestLoopControl_MoveDown_AtEnd(t *testing.T) {
 
 func TestLoopControl_MoveUp(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopControl
+	m.Nav.CurrentView = ViewLoopControl
 	m.Keys.SetViewContext(ViewLoopControl)
 	m.LoopControlData = []views.LoopControlData{
 		{ID: "loop-1", Status: "running"},
@@ -274,7 +274,7 @@ func TestLoopControl_MoveUp(t *testing.T) {
 
 func TestLoopControl_MoveUp_AtStart(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopControl
+	m.Nav.CurrentView = ViewLoopControl
 	m.Keys.SetViewContext(ViewLoopControl)
 	m.LoopControlData = []views.LoopControlData{
 		{ID: "loop-1", Status: "running"},
@@ -290,7 +290,7 @@ func TestLoopControl_MoveUp_AtStart(t *testing.T) {
 
 func TestLoopControl_Step_NoSessMgr(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopControl
+	m.Nav.CurrentView = ViewLoopControl
 	m.Keys.SetViewContext(ViewLoopControl)
 	m.SessMgr = nil
 	m.LoopControlData = []views.LoopControlData{
@@ -307,7 +307,7 @@ func TestLoopControl_Step_NoSessMgr(t *testing.T) {
 
 func TestLoopControl_Step_EmptyData(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopControl
+	m.Nav.CurrentView = ViewLoopControl
 	m.Keys.SetViewContext(ViewLoopControl)
 	m.LoopControlData = nil
 
@@ -320,7 +320,7 @@ func TestLoopControl_Step_EmptyData(t *testing.T) {
 
 func TestLoopControl_Toggle_NoSessMgr(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopControl
+	m.Nav.CurrentView = ViewLoopControl
 	m.Keys.SetViewContext(ViewLoopControl)
 	m.SessMgr = nil
 	m.LoopControlData = []views.LoopControlData{
@@ -336,7 +336,7 @@ func TestLoopControl_Toggle_NoSessMgr(t *testing.T) {
 
 func TestLoopControl_Toggle_EmptyData(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopControl
+	m.Nav.CurrentView = ViewLoopControl
 	m.Keys.SetViewContext(ViewLoopControl)
 	m.LoopControlData = nil
 
@@ -349,7 +349,7 @@ func TestLoopControl_Toggle_EmptyData(t *testing.T) {
 
 func TestLoopControl_Pause_NoSessMgr(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopControl
+	m.Nav.CurrentView = ViewLoopControl
 	m.Keys.SetViewContext(ViewLoopControl)
 	m.SessMgr = nil
 	m.LoopControlData = []views.LoopControlData{
@@ -365,7 +365,7 @@ func TestLoopControl_Pause_NoSessMgr(t *testing.T) {
 
 func TestLoopControl_Pause_EmptyData(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m.CurrentView = ViewLoopControl
+	m.Nav.CurrentView = ViewLoopControl
 	m.Keys.SetViewContext(ViewLoopControl)
 	m.LoopControlData = nil
 

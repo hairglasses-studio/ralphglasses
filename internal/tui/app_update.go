@@ -16,15 +16,9 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
 )
 
-// shutdownMsg signals the TUI to perform a graceful shutdown.
-type shutdownMsg struct{}
-
 // Update handles incoming messages and returns the updated model and any follow-up commands.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case shutdownMsg:
-		return m, tea.Quit
-
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
 		m.Height = msg.Height
@@ -66,8 +60,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.LastRefresh = time.Now()
 		cmds = append(cmds, m.tickCmd())
 		// If viewing logs, tail the log
-		if m.CurrentView == ViewLogs && m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-			cmds = append(cmds, process.TailLog(m.Repos[m.SelectedIdx].Path, &m.LogOffset))
+		if m.Nav.CurrentView == ViewLogs && m.Sel.RepoIdx < len(m.Repos) {
+			cmds = append(cmds, process.TailLog(m.Repos[m.Sel.RepoIdx].Path, &m.LogOffset))
 		}
 		return m, tea.Batch(cmds...)
 
@@ -181,6 +175,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, process.WatchStatusFiles(paths))
 		return m, tea.Batch(cmds...)
 
+	case LogLoadedMsg:
+		if msg.Err != nil {
+			m.Notify.Show(fmt.Sprintf("Log load error: %v", msg.Err), 3*time.Second)
+		} else if m.LogView != nil {
+			m.LogView.SetLines(msg.Lines)
+		}
+		return m, nil
+
 	case process.LogLinesMsg:
 		if len(msg.Lines) > 0 {
 			m.LogView.AppendLines(msg.Lines)
@@ -205,13 +207,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleLaunchResult(msg)
 
 	case SessionOutputMsg:
-		if msg.SessionID == m.StreamingSessionID && m.SessionOutputView != nil {
-			m.SessionOutputView.AppendLines([]string{msg.Line})
+		if msg.SessionID == m.Stream.SessionID && m.Stream.OutputView != nil {
+			m.Stream.OutputView.AppendLines([]string{msg.Line})
 		}
 		return m, m.streamSessionOutput(msg.SessionID)
 
 	case SessionOutputDoneMsg:
-		m.StreamingOutput = false
+		m.Stream.Active = false
 		m.Notify.Show("Session output stream ended", 3*time.Second)
 		return m, nil
 
@@ -238,13 +240,13 @@ func applyProcessExit(msg process.ProcessExitMsg, repos []*model.Repo) {
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Modal overlays take priority
-	if m.ConfirmDialog != nil && m.ConfirmDialog.Active {
+	if m.Modals.ConfirmDialog != nil && m.Modals.ConfirmDialog.Active {
 		return m.handleConfirmKey(msg)
 	}
-	if m.ActionMenu != nil && m.ActionMenu.Active {
+	if m.Modals.ActionMenu != nil && m.Modals.ActionMenu.Active {
 		return m.handleActionMenuKey(msg)
 	}
-	if m.Launcher != nil && m.Launcher.Active {
+	if m.Modals.Launcher != nil && m.Modals.Launcher.Active {
 		return m.handleLauncherKey(msg)
 	}
 
@@ -259,7 +261,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// Config editor in edit mode
-	if m.CurrentView == ViewConfigEditor && m.ConfigEdit != nil && m.ConfigEdit.Editing {
+	if m.Nav.CurrentView == ViewConfigEditor && m.ConfigEdit != nil && m.ConfigEdit.Editing {
 		return m.handleConfigEditInput(msg)
 	}
 
@@ -271,7 +273,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// View-specific keys
-	switch m.CurrentView {
+	switch m.Nav.CurrentView {
 	case ViewOverview:
 		return m.handleOverviewKey(msg)
 	case ViewRepoDetail:

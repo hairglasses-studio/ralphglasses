@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -150,6 +151,17 @@ func TestLoadExternalSessions_CleanupOldTerminal(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "cleanup-1.json")); !os.IsNotExist(err) {
 		t.Error("expected old terminal session file to be cleaned up from disk")
 	}
+
+	// LoadExternalSessions fires a best-effort background goroutine to re-persist
+	// any in-memory session it encounters; that goroutine may recreate the JSON
+	// file after the cleanup loop deletes it. Register a cleanup (runs before
+	// t.TempDir's RemoveAll due to LIFO ordering) that waits for the goroutine
+	// and removes any such leftover file so RemoveAll does not fail.
+	t.Cleanup(func() {
+		runtime.Gosched()
+		time.Sleep(5 * time.Millisecond)
+		os.Remove(filepath.Join(dir, "cleanup-1.json"))
+	})
 }
 
 func TestLoadExternalSessions_ErroredSessionRetained(t *testing.T) {

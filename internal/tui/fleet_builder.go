@@ -57,7 +57,7 @@ func (m *Model) buildFleetData() views.FleetData {
 		Providers:  make(map[string]views.ProviderStat),
 	}
 	data.SelectedSection = m.selectedFleetSection()
-	data.SelectedCursor = m.FleetCursor
+	data.SelectedCursor = m.Fleet.Cursor
 	data.CostWindowLabel = fleetWindows[m.clampFleetWindow()].Label
 
 	// Repo stats
@@ -241,9 +241,9 @@ func (m *Model) buildFleetData() views.FleetData {
 	}
 
 	// Gate reports from cache
-	if m.GateCache != nil {
+	if m.Cache.Gate != nil {
 		data.GateReports = make(map[string]*e2e.GateReport)
-		for repoPath, entry := range m.GateCache {
+		for repoPath, entry := range m.Cache.Gate {
 			// Use repo name instead of full path
 			name := filepath.Base(repoPath)
 			data.GateReports[name] = entry.Report
@@ -267,14 +267,14 @@ func (m *Model) buildFleetData() views.FleetData {
 }
 
 func (m *Model) clampFleetWindow() int {
-	if m.FleetWindow < 0 || m.FleetWindow >= len(fleetWindows) {
+	if m.Fleet.Window < 0 || m.Fleet.Window >= len(fleetWindows) {
 		return 0
 	}
-	return m.FleetWindow
+	return m.Fleet.Window
 }
 
 func (m *Model) selectedFleetSection() string {
-	switch m.FleetSection {
+	switch m.Fleet.Section {
 	case 1:
 		return "sessions"
 	case 2:
@@ -298,25 +298,25 @@ func (m *Model) fleetSectionLen(data views.FleetData) int {
 func (m *Model) moveFleetCursor(data views.FleetData, delta int) {
 	size := m.fleetSectionLen(data)
 	if size == 0 {
-		m.FleetCursor = 0
+		m.Fleet.Cursor = 0
 		return
 	}
-	m.FleetCursor += delta
-	if m.FleetCursor < 0 {
-		m.FleetCursor = 0
+	m.Fleet.Cursor += delta
+	if m.Fleet.Cursor < 0 {
+		m.Fleet.Cursor = 0
 	}
-	if m.FleetCursor >= size {
-		m.FleetCursor = size - 1
+	if m.Fleet.Cursor >= size {
+		m.Fleet.Cursor = size - 1
 	}
 }
 
 func (m *Model) cycleFleetSection(data views.FleetData, delta int) {
-	m.FleetSection += delta
-	if m.FleetSection < 0 {
-		m.FleetSection = 2
+	m.Fleet.Section += delta
+	if m.Fleet.Section < 0 {
+		m.Fleet.Section = 2
 	}
-	if m.FleetSection > 2 {
-		m.FleetSection = 0
+	if m.Fleet.Section > 2 {
+		m.Fleet.Section = 0
 	}
 	m.moveFleetCursor(data, 0)
 }
@@ -324,20 +324,20 @@ func (m *Model) cycleFleetSection(data views.FleetData, delta int) {
 func (m *Model) openFleetSelection(data views.FleetData) (tea.Model, tea.Cmd) {
 	switch m.selectedFleetSection() {
 	case "sessions":
-		if m.FleetCursor >= 0 && m.FleetCursor < len(data.Sessions) {
-			m.SelectedSession = data.Sessions[m.FleetCursor].ID
+		if m.Fleet.Cursor >= 0 && m.Fleet.Cursor < len(data.Sessions) {
+			m.Sel.SessionID = data.Sessions[m.Fleet.Cursor].ID
 			m.pushView(ViewSessionDetail, "Session")
 		}
 	case "teams":
-		if m.FleetCursor >= 0 && m.FleetCursor < len(data.Teams) {
-			m.SelectedTeam = data.Teams[m.FleetCursor].Name
-			m.pushView(ViewTeamDetail, data.Teams[m.FleetCursor].Name)
+		if m.Fleet.Cursor >= 0 && m.Fleet.Cursor < len(data.Teams) {
+			m.Sel.TeamName = data.Teams[m.Fleet.Cursor].Name
+			m.pushView(ViewTeamDetail, data.Teams[m.Fleet.Cursor].Name)
 		}
 	default:
-		if m.FleetCursor >= 0 && m.FleetCursor < len(data.Repos) {
-			if idx := m.findRepoByPath(data.Repos[m.FleetCursor].Path); idx >= 0 {
-				m.SelectedIdx = idx
-				m.pushView(ViewRepoDetail, data.Repos[m.FleetCursor].Name)
+		if m.Fleet.Cursor >= 0 && m.Fleet.Cursor < len(data.Repos) {
+			if idx := m.findRepoByPath(data.Repos[m.Fleet.Cursor].Path); idx >= 0 {
+				m.Sel.RepoIdx = idx
+				m.pushView(ViewRepoDetail, data.Repos[m.Fleet.Cursor].Name)
 			}
 		}
 	}
@@ -347,13 +347,13 @@ func (m *Model) openFleetSelection(data views.FleetData) (tea.Model, tea.Cmd) {
 func (m *Model) stopFleetSelection(data views.FleetData) (tea.Model, tea.Cmd) {
 	switch m.selectedFleetSection() {
 	case "sessions":
-		if m.FleetCursor >= 0 && m.FleetCursor < len(data.Sessions) {
-			s := data.Sessions[m.FleetCursor]
+		if m.Fleet.Cursor >= 0 && m.Fleet.Cursor < len(data.Sessions) {
+			s := data.Sessions[m.Fleet.Cursor]
 			shortID := s.ID
 			if len(shortID) > 8 {
 				shortID = shortID[:8]
 			}
-			m.ConfirmDialog = &components.ConfirmDialog{
+			m.Modals.ConfirmDialog = &components.ConfirmDialog{
 				Title:   "Confirm Stop Session",
 				Message: fmt.Sprintf("Stop session %s?", shortID),
 				Action:  "stopSession",
@@ -363,11 +363,11 @@ func (m *Model) stopFleetSelection(data views.FleetData) (tea.Model, tea.Cmd) {
 			}
 		}
 	default:
-		if m.FleetCursor >= 0 && m.FleetCursor < len(data.Repos) {
-			if idx := m.findRepoByPath(data.Repos[m.FleetCursor].Path); idx >= 0 {
-				m.ConfirmDialog = &components.ConfirmDialog{
+		if m.Fleet.Cursor >= 0 && m.Fleet.Cursor < len(data.Repos) {
+			if idx := m.findRepoByPath(data.Repos[m.Fleet.Cursor].Path); idx >= 0 {
+				m.Modals.ConfirmDialog = &components.ConfirmDialog{
 					Title:   "Confirm Stop",
-					Message: fmt.Sprintf("Stop loop for %s?", data.Repos[m.FleetCursor].Name),
+					Message: fmt.Sprintf("Stop loop for %s?", data.Repos[m.Fleet.Cursor].Name),
 					Action:  "stopLoop",
 					Data:    idx,
 					Active:  true,
@@ -382,23 +382,23 @@ func (m *Model) stopFleetSelection(data views.FleetData) (tea.Model, tea.Cmd) {
 func (m *Model) diffFleetSelection(data views.FleetData) (tea.Model, tea.Cmd) {
 	switch m.selectedFleetSection() {
 	case "sessions":
-		if m.FleetCursor >= 0 && m.FleetCursor < len(data.Sessions) {
-			if idx := m.findRepoByPath(data.Sessions[m.FleetCursor].RepoPath); idx >= 0 {
-				m.SelectedIdx = idx
+		if m.Fleet.Cursor >= 0 && m.Fleet.Cursor < len(data.Sessions) {
+			if idx := m.findRepoByPath(data.Sessions[m.Fleet.Cursor].RepoPath); idx >= 0 {
+				m.Sel.RepoIdx = idx
 				m.pushView(ViewDiff, "Diff")
 			}
 		}
 	case "teams":
-		if m.FleetCursor >= 0 && m.FleetCursor < len(data.Teams) {
-			if idx := m.findRepoByPath(data.Teams[m.FleetCursor].RepoPath); idx >= 0 {
-				m.SelectedIdx = idx
+		if m.Fleet.Cursor >= 0 && m.Fleet.Cursor < len(data.Teams) {
+			if idx := m.findRepoByPath(data.Teams[m.Fleet.Cursor].RepoPath); idx >= 0 {
+				m.Sel.RepoIdx = idx
 				m.pushView(ViewDiff, "Diff")
 			}
 		}
 	default:
-		if m.FleetCursor >= 0 && m.FleetCursor < len(data.Repos) {
-			if idx := m.findRepoByPath(data.Repos[m.FleetCursor].Path); idx >= 0 {
-				m.SelectedIdx = idx
+		if m.Fleet.Cursor >= 0 && m.Fleet.Cursor < len(data.Repos) {
+			if idx := m.findRepoByPath(data.Repos[m.Fleet.Cursor].Path); idx >= 0 {
+				m.Sel.RepoIdx = idx
 				m.pushView(ViewDiff, "Diff")
 			}
 		}
@@ -409,23 +409,23 @@ func (m *Model) diffFleetSelection(data views.FleetData) (tea.Model, tea.Cmd) {
 func (m *Model) timelineFleetSelection(data views.FleetData) (tea.Model, tea.Cmd) {
 	switch m.selectedFleetSection() {
 	case "sessions":
-		if m.FleetCursor >= 0 && m.FleetCursor < len(data.Sessions) {
-			if idx := m.findRepoByPath(data.Sessions[m.FleetCursor].RepoPath); idx >= 0 {
-				m.SelectedIdx = idx
+		if m.Fleet.Cursor >= 0 && m.Fleet.Cursor < len(data.Sessions) {
+			if idx := m.findRepoByPath(data.Sessions[m.Fleet.Cursor].RepoPath); idx >= 0 {
+				m.Sel.RepoIdx = idx
 			}
 			m.pushView(ViewTimeline, "Timeline")
 		}
 	case "teams":
-		if m.FleetCursor >= 0 && m.FleetCursor < len(data.Teams) {
-			if idx := m.findRepoByPath(data.Teams[m.FleetCursor].RepoPath); idx >= 0 {
-				m.SelectedIdx = idx
+		if m.Fleet.Cursor >= 0 && m.Fleet.Cursor < len(data.Teams) {
+			if idx := m.findRepoByPath(data.Teams[m.Fleet.Cursor].RepoPath); idx >= 0 {
+				m.Sel.RepoIdx = idx
 			}
 			m.pushView(ViewTimeline, "Timeline")
 		}
 	default:
-		if m.FleetCursor >= 0 && m.FleetCursor < len(data.Repos) {
-			if idx := m.findRepoByPath(data.Repos[m.FleetCursor].Path); idx >= 0 {
-				m.SelectedIdx = idx
+		if m.Fleet.Cursor >= 0 && m.Fleet.Cursor < len(data.Repos) {
+			if idx := m.findRepoByPath(data.Repos[m.Fleet.Cursor].Path); idx >= 0 {
+				m.Sel.RepoIdx = idx
 			}
 			m.pushView(ViewTimeline, "Timeline")
 		}
@@ -475,8 +475,8 @@ func (m *Model) buildTimelineEntries() []views.TimelineEntry {
 	}
 	// If in repo detail context, filter to that repo
 	var repoPath string
-	if m.SelectedIdx >= 0 && m.SelectedIdx < len(m.Repos) {
-		repoPath = m.Repos[m.SelectedIdx].Path
+	if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
+		repoPath = m.Repos[m.Sel.RepoIdx].Path
 	}
 	sessions := m.SessMgr.List("")
 	var entries []views.TimelineEntry

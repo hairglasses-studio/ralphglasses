@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
@@ -160,6 +161,41 @@ func (l *SessionLauncher) Submit() LaunchResultMsg {
 		RepoPath: l.RepoPath,
 		RepoName: l.RepoName,
 	}
+}
+
+// Ensure SessionLauncher satisfies Modal at compile time.
+var _ Modal = (*SessionLauncher)(nil)
+
+// --- Modal interface methods ---
+
+// IsActive implements Modal.
+func (l *SessionLauncher) IsActive() bool { return l.Active }
+
+// Deactivate implements Modal.
+func (l *SessionLauncher) Deactivate() { l.Active = false }
+
+// ModalHandleKey implements Modal.ModalHandleKey by adapting the existing HandleKey logic.
+func (l *SessionLauncher) ModalHandleKey(msg tea.KeyMsg) (tea.Cmd, bool) {
+	keyType := msg.Type.String()
+	var r rune
+	if msg.Type == tea.KeyRunes {
+		keyType = "rune"
+		if len(msg.Runes) > 0 {
+			r = msg.Runes[0]
+		}
+	}
+
+	result, submitted := l.HandleKey(keyType, r)
+	if submitted {
+		return func() tea.Msg { return result }, true
+	}
+	// The launcher handles all keys when active (navigation, editing, etc.)
+	return nil, true
+}
+
+// ModalView implements Modal.ModalView.
+func (l *SessionLauncher) ModalView(width, height int) string {
+	return l.View()
 }
 
 // View renders the launcher form.

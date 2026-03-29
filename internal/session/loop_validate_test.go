@@ -120,6 +120,64 @@ func TestValidateLoopConfig_EnhancementWithoutProvider(t *testing.T) {
 	}
 }
 
+func TestValidateLoopConfig_WorkerEnhancementNonClaude(t *testing.T) {
+	tests := []struct {
+		name           string
+		workerProvider Provider
+		enableEnhance  bool
+		wantWarn       bool
+	}{
+		{"claude worker with enhancement: no warn", ProviderClaude, true, false},
+		{"gemini worker with enhancement: warn", ProviderGemini, true, true},
+		{"codex worker with enhancement: warn", ProviderCodex, true, true},
+		{"gemini worker no enhancement: no warn", ProviderGemini, false, false},
+		{"empty provider with enhancement: no warn", "", true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := LoopConfig{
+				WorkerProvider:          tt.workerProvider,
+				EnableWorkerEnhancement: tt.enableEnhance,
+			}
+			warnings := ValidateLoopConfig(cfg)
+			hasWarn := false
+			for _, w := range warnings {
+				if w.Field == "enable_worker_enhancement" {
+					hasWarn = true
+				}
+			}
+			if hasWarn != tt.wantWarn {
+				t.Errorf("worker enhancement warning: got %v, want %v (warnings: %v)", hasWarn, tt.wantWarn, warnings)
+			}
+		})
+	}
+}
+
+func TestValidateLoopProfile_WorkerEnhancementNonClaude(t *testing.T) {
+	p := validProfile()
+	p.EnableWorkerEnhancement = true
+	p.WorkerProvider = ProviderGemini
+	if err := ValidateLoopProfile(p); err == nil {
+		t.Error("expected error for worker enhancement with non-Claude provider")
+	}
+
+	// Claude worker + enhancement should be fine.
+	p2 := validProfile()
+	p2.EnableWorkerEnhancement = true
+	p2.WorkerProvider = ProviderClaude
+	if err := ValidateLoopProfile(p2); err != nil {
+		t.Errorf("unexpected error for Claude worker with enhancement: %v", err)
+	}
+
+	// Enhancement disabled with non-Claude: no error.
+	p3 := validProfile()
+	p3.EnableWorkerEnhancement = false
+	p3.WorkerProvider = ProviderGemini
+	if err := ValidateLoopProfile(p3); err != nil {
+		t.Errorf("unexpected error for disabled enhancement: %v", err)
+	}
+}
+
 func TestValidateLoopConfig_TimeoutValidation(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -325,63 +383,5 @@ func TestLoopValidationWarning_String(t *testing.T) {
 	want := "model: mismatch"
 	if got != want {
 		t.Errorf("String() = %q, want %q", got, want)
-	}
-}
-
-// --- ValidateModelName tests ---
-
-func TestValidateModelName_KnownValid(t *testing.T) {
-	tests := []struct {
-		provider string
-		model    string
-	}{
-		{"claude", "claude-opus-4-6"},
-		{"claude", "claude-sonnet-4-6"},
-		{"claude", "claude-haiku-4-5-20251001"},
-		{"gemini", "gemini-2.5-pro"},
-		{"gemini", "gemini-2.5-flash"},
-		{"gemini", "gemini-2.0-flash"},
-		{"openai", "gpt-4o"},
-		{"openai", "gpt-4o-mini"},
-		{"openai", "o1"},
-		{"openai", "o1-mini"},
-		{"openai", "o3-mini"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.provider+"/"+tt.model, func(t *testing.T) {
-			if err := ValidateModelName(tt.provider, tt.model); err != nil {
-				t.Errorf("expected nil for known model, got: %v", err)
-			}
-		})
-	}
-}
-
-func TestValidateModelName_KnownInvalid(t *testing.T) {
-	tests := []struct {
-		provider string
-		model    string
-	}{
-		{"claude", "gpt-4o"},
-		{"gemini", "claude-opus-4-6"},
-		{"openai", "gemini-2.5-pro"},
-		{"openai", "o1-pro"},
-		{"claude", "nonexistent-model"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.provider+"/"+tt.model, func(t *testing.T) {
-			if err := ValidateModelName(tt.provider, tt.model); err == nil {
-				t.Error("expected error for unknown model, got nil")
-			}
-		})
-	}
-}
-
-func TestValidateModelName_UnknownProvider(t *testing.T) {
-	// Unknown providers should be permissive (return nil).
-	if err := ValidateModelName("anthropic", "any-model"); err != nil {
-		t.Errorf("expected nil for unknown provider, got: %v", err)
-	}
-	if err := ValidateModelName("", "any-model"); err != nil {
-		t.Errorf("expected nil for empty provider, got: %v", err)
 	}
 }

@@ -1,373 +1,329 @@
 package tui
 
-// SetViewContext enables/disables bindings based on the current view.
-func (k *KeyMap) SetViewContext(view ViewMode) {
-	// Reset all view-specific bindings to enabled
-	k.StartLoop.SetEnabled(true)
-	k.StopAction.SetEnabled(true)
-	k.PauseLoop.SetEnabled(true)
-	k.EditConfig.SetEnabled(true)
-	k.WriteConfig.SetEnabled(true)
-	k.DiffView.SetEnabled(true)
-	k.GotoEnd.SetEnabled(true)
-	k.GotoStart.SetEnabled(true)
-	k.FollowToggle.SetEnabled(true)
-	k.PageUp.SetEnabled(true)
-	k.PageDown.SetEnabled(true)
-	k.Space.SetEnabled(true)
-	k.ActionsMenu.SetEnabled(true)
-	k.LaunchSession.SetEnabled(true)
-	k.OutputView.SetEnabled(true)
-	k.TimelineView.SetEnabled(true)
-	k.LoopHealth.SetEnabled(true)
-	k.LoopPanel.SetEnabled(true)
-	k.LoopListStart.SetEnabled(true)
-	k.LoopListStop.SetEnabled(true)
-	k.LoopListPause.SetEnabled(true)
-	k.LoopDetailStep.SetEnabled(true)
-	k.LoopDetailToggle.SetEnabled(true)
-	k.LoopDetailPause.SetEnabled(true)
-	k.LoopControlPanel.SetEnabled(true)
-	k.LoopCtrlStep.SetEnabled(true)
-	k.LoopCtrlToggle.SetEnabled(true)
-	k.LoopCtrlPause.SetEnabled(true)
-	k.ObservationView.SetEnabled(true)
-	k.EventLogView.SetEnabled(true)
+import (
+	"unsafe"
 
-	switch view {
-	case ViewOverview:
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.DiffView.SetEnabled(false)
-		k.GotoEnd.SetEnabled(false)
-		k.GotoStart.SetEnabled(false)
-		k.FollowToggle.SetEnabled(false)
-		k.PageUp.SetEnabled(false)
-		k.PageDown.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.TimelineView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-	case ViewRepoDetail:
-		k.Space.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.EventLogView.SetEnabled(false) // 'e' is EditConfig here
-	case ViewSessions:
-		k.StartLoop.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.DiffView.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-	case ViewSessionDetail:
-		k.StartLoop.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.Space.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.ObservationView.SetEnabled(false) // 'o' is OutputView here
-	case ViewTeams:
-		k.StartLoop.SetEnabled(false)
-		k.StopAction.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.DiffView.SetEnabled(false)
-		k.Space.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.TimelineView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-	case ViewTeamDetail:
-		k.StartLoop.SetEnabled(false)
-		k.StopAction.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.Space.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-	case ViewFleet:
-		k.StartLoop.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.Space.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-	case ViewLogs:
-		k.StartLoop.SetEnabled(false)
-		k.StopAction.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.DiffView.SetEnabled(false)
-		k.Space.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.TimelineView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-		k.EventLogView.SetEnabled(false)
-	case ViewConfigEditor:
-		k.StartLoop.SetEnabled(false)
-		k.StopAction.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.DiffView.SetEnabled(false)
-		k.Space.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.TimelineView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.EventLogView.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-	case ViewTimeline:
-		k.StartLoop.SetEnabled(false)
-		k.StopAction.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.DiffView.SetEnabled(false)
-		k.Space.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.TimelineView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-		k.EventLogView.SetEnabled(false)
-	case ViewDiff:
-		k.StartLoop.SetEnabled(false)
-		k.StopAction.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.Space.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.TimelineView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-		k.EventLogView.SetEnabled(false)
-	case ViewHelp:
-		k.StartLoop.SetEnabled(false)
-		k.StopAction.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.DiffView.SetEnabled(false)
-		k.Space.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.TimelineView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-		k.EventLogView.SetEnabled(false)
-	case ViewLoopList:
-		k.StartLoop.SetEnabled(false)
-		k.StopAction.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.DiffView.SetEnabled(false)
-		k.Space.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.TimelineView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopPanel.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-		k.EventLogView.SetEnabled(false)
-		// LoopListStart, LoopListStop, and LoopListPause remain enabled
-	case ViewLoopDetail:
-		k.StartLoop.SetEnabled(false)
-		k.StopAction.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.DiffView.SetEnabled(false)
-		k.Space.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.TimelineView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopPanel.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.Refresh.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-		k.EventLogView.SetEnabled(false)
-		// LoopDetailStep, LoopDetailToggle, and LoopDetailPause remain enabled
-	case ViewLoopControl:
-		k.StartLoop.SetEnabled(false)
-		k.StopAction.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.DiffView.SetEnabled(false)
-		k.Space.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.TimelineView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopPanel.SetEnabled(false)
-		k.LoopControlPanel.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-		k.EventLogView.SetEnabled(false)
-		// LoopCtrlStep, LoopCtrlToggle, and LoopCtrlPause remain enabled
-	case ViewObservation, ViewEventLog:
-		// Read-only views — disable all action keys
-		k.StartLoop.SetEnabled(false)
-		k.StopAction.SetEnabled(false)
-		k.PauseLoop.SetEnabled(false)
-		k.EditConfig.SetEnabled(false)
-		k.WriteConfig.SetEnabled(false)
-		k.DiffView.SetEnabled(false)
-		k.Space.SetEnabled(false)
-		k.LaunchSession.SetEnabled(false)
-		k.OutputView.SetEnabled(false)
-		k.TimelineView.SetEnabled(false)
-		k.LoopHealth.SetEnabled(false)
-		k.LoopListStart.SetEnabled(false)
-		k.LoopListStop.SetEnabled(false)
-		k.LoopListPause.SetEnabled(false)
-		k.LoopDetailStep.SetEnabled(false)
-		k.LoopDetailToggle.SetEnabled(false)
-		k.LoopDetailPause.SetEnabled(false)
-		k.LoopCtrlStep.SetEnabled(false)
-		k.LoopCtrlToggle.SetEnabled(false)
-		k.LoopCtrlPause.SetEnabled(false)
-		k.ObservationView.SetEnabled(false)
-		k.EventLogView.SetEnabled(false)
+	"github.com/charmbracelet/bubbles/key"
+)
+
+// globalBindings are always enabled regardless of view.
+var globalBindings = []func(*KeyMap) *key.Binding{
+	func(k *KeyMap) *key.Binding { return &k.Quit },
+	func(k *KeyMap) *key.Binding { return &k.CmdMode },
+	func(k *KeyMap) *key.Binding { return &k.FilterMode },
+	func(k *KeyMap) *key.Binding { return &k.Help },
+	func(k *KeyMap) *key.Binding { return &k.Escape },
+	func(k *KeyMap) *key.Binding { return &k.Refresh },
+	func(k *KeyMap) *key.Binding { return &k.Tab1 },
+	func(k *KeyMap) *key.Binding { return &k.Tab2 },
+	func(k *KeyMap) *key.Binding { return &k.Tab3 },
+	func(k *KeyMap) *key.Binding { return &k.Tab4 },
+	func(k *KeyMap) *key.Binding { return &k.Down },
+	func(k *KeyMap) *key.Binding { return &k.Up },
+	func(k *KeyMap) *key.Binding { return &k.Enter },
+	func(k *KeyMap) *key.Binding { return &k.Sort },
+}
+
+// viewBindings maps each ViewMode to the bindings it enables (in addition to globals).
+var viewBindings = map[ViewMode][]func(*KeyMap) *key.Binding{
+	ViewOverview: {
+		func(k *KeyMap) *key.Binding { return &k.StartLoop },
+		func(k *KeyMap) *key.Binding { return &k.StopAction },
+		func(k *KeyMap) *key.Binding { return &k.PauseLoop },
+		func(k *KeyMap) *key.Binding { return &k.Space },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+		func(k *KeyMap) *key.Binding { return &k.EventLogView },
+	},
+	ViewRepoDetail: {
+		func(k *KeyMap) *key.Binding { return &k.StartLoop },
+		func(k *KeyMap) *key.Binding { return &k.StopAction },
+		func(k *KeyMap) *key.Binding { return &k.PauseLoop },
+		func(k *KeyMap) *key.Binding { return &k.EditConfig },
+		func(k *KeyMap) *key.Binding { return &k.WriteConfig },
+		func(k *KeyMap) *key.Binding { return &k.DiffView },
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LaunchSession },
+		func(k *KeyMap) *key.Binding { return &k.TimelineView },
+		func(k *KeyMap) *key.Binding { return &k.LoopHealth },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+		func(k *KeyMap) *key.Binding { return &k.ObservationView },
+	},
+	ViewSessions: {
+		func(k *KeyMap) *key.Binding { return &k.StopAction },
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.Space },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.TimelineView },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+		func(k *KeyMap) *key.Binding { return &k.EventLogView },
+	},
+	ViewSessionDetail: {
+		func(k *KeyMap) *key.Binding { return &k.StopAction },
+		func(k *KeyMap) *key.Binding { return &k.DiffView },
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.OutputView },
+		func(k *KeyMap) *key.Binding { return &k.TimelineView },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+		func(k *KeyMap) *key.Binding { return &k.EventLogView },
+	},
+	ViewTeams: {
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+		func(k *KeyMap) *key.Binding { return &k.EventLogView },
+	},
+	ViewTeamDetail: {
+		func(k *KeyMap) *key.Binding { return &k.DiffView },
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.TimelineView },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+		func(k *KeyMap) *key.Binding { return &k.EventLogView },
+	},
+	ViewFleet: {
+		func(k *KeyMap) *key.Binding { return &k.StopAction },
+		func(k *KeyMap) *key.Binding { return &k.DiffView },
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.TimelineView },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+		func(k *KeyMap) *key.Binding { return &k.EventLogView },
+	},
+	ViewLogs: {
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+	},
+	ViewConfigEditor: {
+		func(k *KeyMap) *key.Binding { return &k.EditConfig },
+		func(k *KeyMap) *key.Binding { return &k.WriteConfig },
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+	},
+	ViewTimeline: {
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+	},
+	ViewDiff: {
+		func(k *KeyMap) *key.Binding { return &k.DiffView },
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+	},
+	ViewHelp: {
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LoopDetailPause },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopCtrlStep },
+		func(k *KeyMap) *key.Binding { return &k.LoopCtrlToggle },
+		func(k *KeyMap) *key.Binding { return &k.LoopCtrlPause },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+	},
+	ViewLoopHealth: {
+		// No specific case in original — all view-specific bindings remain enabled.
+		func(k *KeyMap) *key.Binding { return &k.StartLoop },
+		func(k *KeyMap) *key.Binding { return &k.StopAction },
+		func(k *KeyMap) *key.Binding { return &k.PauseLoop },
+		func(k *KeyMap) *key.Binding { return &k.EditConfig },
+		func(k *KeyMap) *key.Binding { return &k.WriteConfig },
+		func(k *KeyMap) *key.Binding { return &k.DiffView },
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.Space },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LaunchSession },
+		func(k *KeyMap) *key.Binding { return &k.OutputView },
+		func(k *KeyMap) *key.Binding { return &k.TimelineView },
+		func(k *KeyMap) *key.Binding { return &k.LoopHealth },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopListStart },
+		func(k *KeyMap) *key.Binding { return &k.LoopListStop },
+		func(k *KeyMap) *key.Binding { return &k.LoopListPause },
+		func(k *KeyMap) *key.Binding { return &k.LoopDetailStep },
+		func(k *KeyMap) *key.Binding { return &k.LoopDetailToggle },
+		func(k *KeyMap) *key.Binding { return &k.LoopDetailPause },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopCtrlStep },
+		func(k *KeyMap) *key.Binding { return &k.LoopCtrlToggle },
+		func(k *KeyMap) *key.Binding { return &k.LoopCtrlPause },
+		func(k *KeyMap) *key.Binding { return &k.ObservationView },
+		func(k *KeyMap) *key.Binding { return &k.EventLogView },
+	},
+	ViewLoopList: {
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LoopListStart },
+		func(k *KeyMap) *key.Binding { return &k.LoopListStop },
+		func(k *KeyMap) *key.Binding { return &k.LoopListPause },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+	},
+	ViewLoopDetail: {
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LoopDetailStep },
+		func(k *KeyMap) *key.Binding { return &k.LoopDetailToggle },
+		func(k *KeyMap) *key.Binding { return &k.LoopDetailPause },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+	},
+	ViewLoopControl: {
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LoopCtrlStep },
+		func(k *KeyMap) *key.Binding { return &k.LoopCtrlToggle },
+		func(k *KeyMap) *key.Binding { return &k.LoopCtrlPause },
+	},
+	ViewObservation: {
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+	},
+	ViewEventLog: {
+		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
+		func(k *KeyMap) *key.Binding { return &k.GotoStart },
+		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
+		func(k *KeyMap) *key.Binding { return &k.PageUp },
+		func(k *KeyMap) *key.Binding { return &k.PageDown },
+		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
+		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
+		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
+	},
+}
+
+// globalOverrides maps specific views to global bindings that should be disabled.
+// This handles cases where a normally-global binding must be turned off for a view.
+var globalOverrides = map[ViewMode][]func(*KeyMap) *key.Binding{
+	ViewLoopDetail: {
+		func(k *KeyMap) *key.Binding { return &k.Refresh },
+	},
+}
+
+// allViewBindings holds every view-specific binding accessor, deduplicated.
+// Populated by init().
+var allViewBindings []func(*KeyMap) *key.Binding
+
+func init() {
+	seen := make(map[uintptr]bool)
+	var ref KeyMap
+	base := uintptr(unsafe.Pointer(&ref))
+	for _, accessors := range viewBindings {
+		for _, acc := range accessors {
+			offset := uintptr(unsafe.Pointer(acc(&ref))) - base
+			if !seen[offset] {
+				seen[offset] = true
+				allViewBindings = append(allViewBindings, acc)
+			}
+		}
+	}
+}
+
+// disableAllViewBindings disables all non-global bindings.
+func (k *KeyMap) disableAllViewBindings() {
+	for _, acc := range allViewBindings {
+		acc(k).SetEnabled(false)
+	}
+}
+
+// SetViewContext enables only the bindings relevant to the given view.
+func (k *KeyMap) SetViewContext(view ViewMode) {
+	k.disableAllViewBindings()
+
+	// Globals are always enabled.
+	for _, acc := range globalBindings {
+		acc(k).SetEnabled(true)
+	}
+
+	// View-specific bindings.
+	if accessors, ok := viewBindings[view]; ok {
+		for _, acc := range accessors {
+			acc(k).SetEnabled(true)
+		}
+	}
+
+	// Apply global overrides (disable specific globals for certain views).
+	if overrides, ok := globalOverrides[view]; ok {
+		for _, acc := range overrides {
+			acc(k).SetEnabled(false)
+		}
 	}
 }
