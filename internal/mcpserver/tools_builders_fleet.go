@@ -52,6 +52,12 @@ func (s *Server) buildFleetGroup() ToolGroup {
 				mcp.WithDescription("Compact marathon status: burn rate, stale sessions, team progress, alerts"),
 				mcp.WithNumber("stale_threshold_min", mcp.Description("Minutes idle before flagged stale (default 5)")),
 			), s.handleMarathonDashboard},
+			{mcp.NewTool("ralphglasses_fleet_grafana",
+				mcp.WithDescription("Export a Grafana-compatible JSON dashboard for fleet metrics (session throughput, cost burn rate, provider comparison, error rate, active sessions, budget utilization). Import the output directly into Grafana."),
+				mcp.WithString("title", mcp.Description("Dashboard title (default: 'Ralphglasses Fleet Metrics')")),
+				mcp.WithString("metrics", mcp.Description("Comma-separated metric names to include: session_throughput, cost_burn_rate, provider_comparison, error_rate, active_sessions, budget_utilization. Default: all")),
+				mcp.WithString("datasource", mcp.Description("Prometheus data source name/UID (default: 'prometheus')")),
+			), s.handleFleetGrafana},
 		},
 	}
 }
