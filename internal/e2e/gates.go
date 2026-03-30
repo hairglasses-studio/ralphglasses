@@ -3,7 +3,6 @@ package e2e
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -88,6 +87,7 @@ func EvaluateGates(observations []session.LoopObservation, baseline *LoopBaselin
 		Timestamp:   time.Now(),
 		SampleCount: len(observations),
 		Overall:     VerdictPass,
+		Results:     make([]GateResult, 0, 5), // pre-allocate for standard gates
 	}
 
 	if len(observations) < thresholds.MinSamples {
@@ -280,8 +280,7 @@ func EvaluateFromObservations(repoRoot string, thresholds GateThresholds, hours 
 	// Rebuild and persist updated baseline for next run
 	freshBaseline := BuildBaseline(observations, float64(hours))
 	if saveErr := SaveBaseline(blPath, freshBaseline); saveErr != nil {
-		// Non-fatal — log but don't fail the gate
-		slog.Warn("failed to save baseline", "err", saveErr)
+		return nil, fmt.Errorf("refresh baseline: %w", saveErr)
 	}
 
 	return report, nil
@@ -391,6 +390,23 @@ func verdictRank(v GateVerdict) int {
 	default:
 		return 0
 	}
+}
+
+// DedupeResults removes duplicate metric entries from a gate report, keeping
+// only the first occurrence of each metric name.
+func DedupeResults(report *GateReport) {
+	if report == nil || len(report.Results) <= 1 {
+		return
+	}
+	seen := make(map[string]bool, len(report.Results))
+	deduped := make([]GateResult, 0, len(report.Results))
+	for _, r := range report.Results {
+		if !seen[r.Metric] {
+			deduped = append(deduped, r)
+			seen[r.Metric] = true
+		}
+	}
+	report.Results = deduped
 }
 
 // absoluteCeilingGate evaluates a rate metric against absolute ceilings.

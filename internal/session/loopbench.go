@@ -131,6 +131,9 @@ type LoopObservation struct {
 	// ConsecutiveNoops is the running count of consecutive no-op iterations for this loop.
 	ConsecutiveNoops int `json:"consecutive_noops,omitempty"`
 
+	// TurnCount is the total number of LLM turns (planner + workers) for this iteration.
+	TurnCount int `json:"turn_count,omitempty"`
+
 	// Sub-phase timing (ms) — surfaces where planner/worker time is actually spent.
 	PromptBuildMs     int64 `json:"prompt_build_ms,omitempty"`
 	ReflexionLookupMs int64 `json:"reflexion_lookup_ms,omitempty"`

@@ -104,6 +104,7 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 	obs.WorkerCostUSD = totalWorkerCost
 	obs.WorkerTokensOut = totalWorkerTokens
 	obs.TotalCostUSD = obs.PlannerCostUSD + obs.WorkerCostUSD
+	obs.TurnCount = int(obs.PlannerTokensOut + obs.WorkerTokensOut) // sum of planner + worker turns
 
 	// Git diff stats from worktrees
 	for _, wt := range iter.WorktreePaths {

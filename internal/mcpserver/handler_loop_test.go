@@ -104,9 +104,9 @@ func TestHandleLoopStart_ValidParams(t *testing.T) {
 	)
 
 	result, err := srv.handleLoopStart(context.Background(), makeRequest(map[string]any{
-		"repo":         "test-repo",
-		"planner_model": "o1-pro",
-		"worker_model":  "sonnet",
+		"repo":           "test-repo",
+		"planner_model":  "o4-mini",
+		"worker_model":   "codex-mini-latest",
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
