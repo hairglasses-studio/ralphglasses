@@ -92,7 +92,7 @@ client.urgent           #f7768e #f7768e #1a1b26 #f7768e   #f7768e
 
 # --- Status bar ---
 bar {
-    status_command i3status
+    status_command i3blocks -c /opt/ralphglasses/distro/i3/i3blocks.conf
     position top
     colors {
         background #1a1b26

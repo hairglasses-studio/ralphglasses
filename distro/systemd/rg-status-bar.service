@@ -5,11 +5,6 @@
 # preventing bar freezes during slow MCP calls.
 #
 # Paired with rg-status-bar.timer (30s interval).
-#
-# TODO: Implement --all --json output in rg-status-bar.sh
-# TODO: Ensure ralphglasses binary is available at /usr/local/bin/ralphglasses
-# TODO: Add Restart=on-failure with RestartSec=5
-# TODO: Add MemoryMax= / CPUQuota= resource limits
 
 [Unit]
 Description=Refresh ralphglasses fleet status cache for status bar
@@ -19,6 +14,8 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 User=ralph
-ExecStart=/opt/ralphglasses/distro/scripts/rg-status-bar.sh --all --json
-# TODO: pipe output to /tmp/rg-status.json via wrapper or ExecStart=/bin/sh -c '...'
-StandardOutput=file:/tmp/rg-status.json
+ExecStart=/bin/sh -c '/opt/ralphglasses/distro/scripts/rg-status-bar.sh --all --json > /tmp/rg-status.json 2>/dev/null || true'
+Restart=on-failure
+RestartSec=5
+MemoryMax=64M
+CPUQuota=10%
