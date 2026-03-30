@@ -74,7 +74,8 @@ func setupMCP(sp string) (*server.MCPServer, func(), error) {
 		server.WithResourceCapabilities(false, false),
 		server.WithPromptCapabilities(true),
 		server.WithRecovery(),
-		// Outermost → innermost: trace → timeout → instrumentation → event bus → validation → handler
+		// Outermost → innermost: concurrency → trace → timeout → instrumentation → event bus → validation → handler
+		server.WithToolHandlerMiddleware(mcpserver.ConcurrencyMiddleware(mcpserver.DefaultMaxConcurrent)),
 		server.WithToolHandlerMiddleware(mcpserver.TraceMiddleware()),
 		server.WithToolHandlerMiddleware(mcpserver.TimeoutMiddleware(30*time.Second, map[string]time.Duration{
 			"ralphglasses_loop_step":       10 * time.Minute,
