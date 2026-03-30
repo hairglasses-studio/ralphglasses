@@ -47,8 +47,18 @@ var configListKeysCmd = &cobra.Command{
 	},
 }
 
+var configInitCmd = &cobra.Command{
+	Use:   "init [directory]",
+	Short: "Generate a .ralphrc with all known keys and defaults",
+	Long:  `Alias for 'ralphglasses init'. Creates a .ralphrc in the given directory.`,
+	Args:  cobra.MaximumNArgs(1),
+	RunE:  runInit,
+}
+
 func init() {
 	configCmd.PersistentFlags().BoolVar(&configJSON, "json", false, "Output as JSON")
-	configCmd.AddCommand(configListKeysCmd)
+	configInitCmd.Flags().BoolVar(&initForce, "force", false, "Overwrite existing .ralphrc")
+	configInitCmd.Flags().BoolVar(&initMinimal, "minimal", false, "Minimal config only")
+	configCmd.AddCommand(configListKeysCmd, configInitCmd)
 	rootCmd.AddCommand(configCmd)
 }

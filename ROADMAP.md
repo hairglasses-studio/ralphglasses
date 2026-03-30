@@ -402,7 +402,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 
 ### 1.5.1 — Shell completions
 - [x] 1.5.1.1 — `ralphglasses completion bash|zsh|fish` via cobra built-in `GenBashCompletion` `P1` `S`
-- [ ] 1.5.1.2 — Add dynamic completions for `--scan-path` (directory completion) `P2` `S`
+- [x] 1.5.1.2 — Add dynamic completions for `--scan-path` (directory completion) `P2` `S`
 - [x] 1.5.1.3 — Add dynamic completions for repo names in `status`, `start`, `stop` subcommands `P2` `M`
 - [ ] 1.5.1.4 — Add install instructions for each shell to `docs/completions.md` `P2` `S`
 - [ ] 1.5.1.5 — Package completions in release artifacts (`.deb` installs to `/usr/share/bash-completion/`) `P2` `M`
@@ -428,7 +428,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 1.5.4.1 — Write `docs/ralphrc-reference.md`: all keys, types, defaults, descriptions, examples `P2` `M`
 - [x] 1.5.4.2 — Add `ralphglasses config list-keys` subcommand: print all known keys with defaults `P2` `S`
 - [x] 1.5.4.3 — Add `ralphglasses config validate` subcommand: check `.ralphrc` against schema `P1` `S`
-- [ ] 1.5.4.4 — Add `ralphglasses config init` subcommand: generate `.ralphrc` with all keys and defaults `P2` `S`
+- [x] 1.5.4.4 — Add `ralphglasses config init` subcommand: generate `.ralphrc` with all keys and defaults `P2` `S`
 - [ ] 1.5.4.5 — Auto-generate config docs from schema (Go code -> Markdown via `go:generate`) `P2` `M`
 - **Acceptance:** `ralphglasses config list-keys` outputs all valid configuration keys
 
@@ -563,7 +563,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 ### 2.9 — CLI subcommands
 - [x] 2.9.1 — `ralphglasses session list|start|stop|status` — non-TUI session management `P1` `M`
 - [x] 2.9.2 — `ralphglasses worktree create|list|merge|clean` — worktree operations from CLI `P1` `M`
-- [ ] 2.9.3 — `ralphglasses budget status|set|reset` — budget management from CLI `P2` `S`
+- [x] 2.9.3 — `ralphglasses budget status|set|reset` — budget management from CLI `P2` `S`
 - [x] 2.9.4 — JSON output flag (`--json`) for all subcommands for scripting/piping `P1` `S`
 - **Acceptance:** all fleet operations available without TUI, JSON output parseable by `jq`
 
