@@ -420,7 +420,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 ### 1.5.3 — Pre-commit hooks
 - [ ] 1.5.3.1 — Add `.pre-commit-config.yaml`: golangci-lint, gofumpt, shellcheck, markdownlint `P2` `S`
 - [x] 1.5.3.2 — Add `Makefile` with targets: `lint`, `test`, `build`, `install`, `bench`, `fuzz`, and more `[reconciled 2026-03-26]`
-- [ ] 1.5.3.3 — Add EditorConfig (`.editorconfig`) for consistent formatting across editors `P2` `S`
+- [x] 1.5.3.3 — Add EditorConfig (`.editorconfig`) for consistent formatting across editors `P2` `S`
 - [x] 1.5.3.4 — Add `CONTRIBUTING.md` with setup instructions and PR guidelines (281 lines) `[reconciled 2026-03-26]`
 - **Acceptance:** `pre-commit run --all-files` passes clean
 
@@ -570,7 +570,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 ### 2.10 — Marathon.sh Go port `[PARALLEL — fully independent]`
 - [ ] 2.10.1 — Port `marathon.sh` to `internal/marathon/` package: duration limit, budget limit, checkpoints `P1` `L`
 - [ ] 2.10.2 — `ralphglasses marathon` subcommand: `--budget`, `--duration`, `--checkpoint-interval` `P1` `M`
-- [ ] 2.10.3 — Replace shell signal handling with Go `os/signal` (SIGINT/SIGTERM -> graceful shutdown) `P1` `M`
+- [x] 2.10.3 — Replace shell signal handling with Go `os/signal` (SIGINT/SIGTERM -> graceful shutdown) `P1` `M`
 - [x] 2.10.4 — Git checkpoint tagging in Go: `git tag marathon-<timestamp>` at configurable interval `P1` `S`
 - [x] 2.10.5 — Structured marathon logging via `slog` (replace bash `log()` function) `P1` `S`
 - **Acceptance:** `ralphglasses marathon` replaces `bash marathon.sh` with identical behavior
@@ -767,10 +767,10 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - [x] 3.5.1.1 — Switch theme colors from ANSI-256 integers to hex strings `P1` `M`
 - [x] 3.5.1.2 — Add `snazzy` theme `P1` `S`
 - [x] 3.5.1.3 — Add `catppuccin-macchiato` and `catppuccin-mocha` themes `P1` `S`
-- [ ] 3.5.1.4 — Add `tokyo-night` theme `P2` `S`
+- [x] 3.5.1.4 — Add `tokyo-night` theme `P2` `S`
 - [x] 3.5.1.5 — Support `~/.config/ralphglasses/themes/` external theme directory `P1` `M`
 - [x] 3.5.1.6 — Add `--theme` CLI flag and `RALPH_THEME` .ralphrc key `P1` `S`
-- [ ] 3.5.1.7 — Add `:theme <name>` TUI command for live theme switching `P1` `M`
+- [x] 3.5.1.7 — Add `:theme <name>` TUI command for live theme switching `P1` `M`
 - **Acceptance:** `ralphglasses --theme snazzy` renders with hex-accurate palette; user themes load correctly
 
 ### 3.5.2 — Plugin system v2 (like k9s plugins.yml)
