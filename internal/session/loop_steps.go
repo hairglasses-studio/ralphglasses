@@ -331,6 +331,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	// Collect results
 	workerSessionIDs := make([]string, len(tasks))
 	workerWorktrees := make([]string, len(tasks))
+	workerPooled := make([]bool, len(tasks)) // Phase 10.5.8: track pooled worktrees
 	workerOutputs := make([]string, len(tasks))
 	var workerErrs []string
 	var firstWorktree, firstBranch string
@@ -347,6 +348,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 				workerSessionIDs[res.idx] = res.session.ID
 			}
 			workerWorktrees[res.idx] = res.worktree
+			workerPooled[res.idx] = res.pooled
 			workerOutputs[res.idx] = res.output
 			totalStallCount += res.stallCount // WS-B
 			if res.err != nil {
@@ -665,6 +667,15 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			}
 			if err := m.store.RecordCost(ctx, entry); err != nil {
 				slog.Warn("store record cost failed", "loop", run.ID, "err", err)
+			}
+		}
+	}
+
+	// Phase 10.5.8: Release pooled worktrees back to the pool for reuse.
+	if pool := m.WorktreePool(); pool != nil {
+		for i, wt := range workerWorktrees {
+			if wt != "" && workerPooled[i] {
+				pool.Release(ctx, repoPath, wt)
 			}
 		}
 	}
