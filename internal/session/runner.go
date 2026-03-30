@@ -140,6 +140,36 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 		stdin.Close()
 	}()
 
+	// Create replay recorder if recording is enabled.
+	if opts.RecordingEnabled {
+		replayDir := opts.RecordingDir
+		if replayDir == "" {
+			replayDir = filepath.Join(opts.RepoPath, ".ralph", "replays")
+		}
+		if err := os.MkdirAll(replayDir, 0755); err != nil {
+			slog.Warn("session: failed to create replay dir, recording disabled",
+				"dir", replayDir, "error", err)
+		} else {
+			replayPath := filepath.Join(replayDir, s.ID+".jsonl")
+			s.recorder = NewRecorder(s.ID, replayPath)
+			// Record the initial input event (the prompt).
+			if opts.Prompt != "" {
+				_ = s.recorder.Record(ReplayEvent{Type: ReplayInput, Data: opts.Prompt})
+			}
+			// Emit recording started event.
+			if sessionBus != nil {
+				sessionBus.Publish(events.Event{
+					Type:      events.RecordingStarted,
+					SessionID: s.ID,
+					RepoPath:  s.RepoPath,
+					RepoName:  s.RepoName,
+					Provider:  string(s.Provider),
+					Data:      map[string]any{"replay_path": replayPath},
+				})
+			}
+		}
+	}
+
 	// Open log file for persisting session output to disk so the `logs`
 	// MCP tool can read it via process.ReadFullLog.
 	var logFile *os.File
@@ -304,6 +334,25 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span 
 	if s.LastOutput == "" && s.Error == "" {
 		if cleaned := cleanProviderOutput(s.Provider, stderrBuf.String()); cleaned != "" {
 			s.LastOutput = truncateStr(cleaned, 4000)
+		}
+	}
+
+	// Close replay recorder and emit recording ended event.
+	if s.recorder != nil {
+		_ = s.recorder.Record(ReplayEvent{
+			Type: ReplayStatus,
+			Data: fmt.Sprintf("session ended: %s (%s)", s.Status, s.ExitReason),
+		})
+		_ = s.recorder.Close()
+		if s.bus != nil {
+			s.bus.Publish(events.Event{
+				Type:      events.RecordingEnded,
+				SessionID: s.ID,
+				RepoPath:  s.RepoPath,
+				RepoName:  s.RepoName,
+				Provider:  string(s.Provider),
+				Data:      map[string]any{"status": string(s.Status)},
+			})
 		}
 	}
 
@@ -515,9 +564,29 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile
 				}
 			}
 
+			// Record replay event if recorder is active.
+			if s.recorder != nil && eventText != "" {
+				replayType := ReplayOutput
+				switch {
+				case event.Type == "system":
+					replayType = ReplayStatus
+				case strings.HasPrefix(event.Type, "tool"):
+					replayType = ReplayTool
+				}
+				_ = s.recorder.Record(ReplayEvent{Type: replayType, Data: eventText})
+			}
+
 			s.mu.Unlock()
 		}
 	}
+}
+
+// recordReplayEvent is a no-op-safe helper that records a single replay event.
+func recordReplayEvent(rec *Recorder, typ ReplayEventType, data string) {
+	if rec == nil || data == "" {
+		return
+	}
+	_ = rec.Record(ReplayEvent{Type: typ, Data: data})
 }
 
 func appendSessionOutput(s *Session, text string, logFile *os.File) {

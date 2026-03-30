@@ -77,6 +77,7 @@ type Session struct {
 	OutputCh            chan string    `json:"-"` // real-time output channel
 	bus                 *events.Bus    `json:"-"` // event bus for publishing lifecycle events
 	onComplete          func(*Session) `json:"-"` // called when session ends (for persistence)
+	recorder            *Recorder      `json:"-"` // session replay recorder (nil if recording disabled)
 }
 
 // Lock locks the session mutex for external callers.
@@ -138,6 +139,9 @@ type LaunchOptions struct {
 	OutputSchema  json.RawMessage   // --json-schema (Claude) / --output-schema (Codex)
 
 	Batch *BatchOptions // nil means non-batch (normal) mode
+
+	RecordingEnabled bool   // enable session replay recording
+	RecordingDir     string // override replay output directory (default: .ralph/replays)
 }
 
 // TeamConfig holds agent team configuration.
