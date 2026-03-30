@@ -30,6 +30,40 @@ Uses direnv (`.envrc` → `dotenv` → `.env`). The `.env` holds API keys for al
 
 Both `.env` and `.envrc` are gitignored.
 
+## Claude Code Native Features
+
+The `marathon.sh` supervisor can be complemented or replaced by Claude Code's built-in scheduling and autonomy features. See [claude-code-autonomy-research.md](claude-code-autonomy-research.md) for full details.
+
+### Cloud Scheduled Tasks (replaces marathon.sh for durable execution)
+```bash
+/schedule "0 2 * * *"   # Run marathon daily at 2am, even when computer is off
+```
+Cloud tasks run on Anthropic infrastructure — no tmux, no process supervision needed. Trade-off: limited local file access (works from fresh clone).
+
+### Session Continuation (multi-sprint chains)
+```bash
+session_id=$(claude -p "Execute sprint 5" --output-format json | jq -r '.session_id')
+claude --resume "$session_id" -p "Execute sprint 6"
+```
+Full context preserved between invocations. The `--resume` flag on `go run . marathon` uses `supervisor_state.json` for the same purpose.
+
+### Auto Mode (recommended permission level)
+Auto Mode (research preview, March 2026) uses a model-based classifier to approve safe actions and block risky ones. Ideal for supervised marathon runs — safer than `--dangerously-skip-permissions`, less friction than manual approval.
+
+### `/batch` for Sprint-Level Parallelism
+```bash
+/batch "Implement the next 5 ROADMAP items, each in an isolated worktree"
+```
+Decomposes work into 5-30 parallel agents with git worktree isolation. Natural replacement for our manual parallel worktree pattern.
+
+### Context Management
+Add Compact Instructions to CLAUDE.md for marathon-aware compaction:
+```markdown
+## Compact Instructions
+Preserve: sprint number, ROADMAP progress, active cycle state, budget spent, unresolved findings.
+Discard: individual file diffs, tool output, intermediate search results.
+```
+
 ## Incompatibilities
 
 `--monitor` is incompatible with the supervisor (tmux fork breaks PID tracking). Use `--verbose` or `--live` instead.

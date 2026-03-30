@@ -78,6 +78,28 @@ supervisor_status repo=/path/to/repo
 # Returns: current health score, last decision, active chain depth, next tick ETA
 ```
 
+## Claude Code Permission Mode Mapping
+
+Our autonomy levels map naturally to Claude Code's permission modes. See [claude-code-autonomy-research.md](claude-code-autonomy-research.md) for full details.
+
+| Autonomy Level | Name | Claude Code Permission Mode | Rationale |
+|----------------|------|-----------------------------|-----------|
+| 0 | Observe | Plan Mode | Read-only, no modifications — log "would have done X" |
+| 1 | AutoRecover | Normal Mode + hooks | Hooks handle transient error retry; human approves risky operations |
+| 2 | AutoOptimize | Auto Mode (research preview) | Model-based classifier approves safe actions, blocks risky ones |
+| 3 | FullAutonomy | Bypass (`--dangerously-skip-permissions`) | Isolated environments only — containers, VMs, or dedicated machines |
+
+**Safety recommendations by level:**
+- **L0-L1**: No special isolation needed. Standard development environment.
+- **L2**: Recommended: git commit before starting, budget ceiling set, cloud scheduled task for durability.
+- **L3**: Required: container/VM isolation, network restrictions, hard budget + time limits, full audit logging.
+
+**Claude Code features per level:**
+- **L0**: `/loop` for monitoring, Plan Mode agents
+- **L1**: Hooks for auto-recovery, `--continue` for session resumption
+- **L2**: Auto Mode, `/batch` for parallel execution, cloud scheduled tasks, Agent SDK
+- **L3**: `--dangerously-skip-permissions`, `--bare` for reproducibility, full Bypass mode
+
 ## Loop Profiles
 
 `LoopProfile` (defined in `internal/session/loop.go`) configures a perpetual planner/worker loop.
