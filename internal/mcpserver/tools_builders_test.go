@@ -19,16 +19,16 @@ type builderSpec struct {
 func allBuilderSpecs() []builderSpec {
 	return []builderSpec{
 		{"core", (*Server).buildCoreGroup, 10, true},
-		{"session", (*Server).buildSessionGroup, 14, true},
+		{"session", (*Server).buildSessionGroup, 15, true},
 		{"loop", (*Server).buildLoopGroup, 9, true},
 		{"prompt", (*Server).buildPromptGroup, 8, true},
-		{"fleet", (*Server).buildFleetGroup, 7, true},
+		{"fleet", (*Server).buildFleetGroup, 9, true},
 		{"repo", (*Server).buildRepoGroup, 5, true},
 		{"roadmap", (*Server).buildRoadmapGroup, 5, true},
 		{"team", (*Server).buildTeamGroup, 6, true},
 		{"awesome", (*Server).buildAwesomeGroup, 5, true},
 		{"advanced", (*Server).buildAdvancedGroup, 23, true},
-		{"eval", (*Server).buildEvalGroup, 5, true},
+		{"eval", (*Server).buildEvalGroup, 6, true},
 		{"fleet_h", (*Server).buildFleetHGroup, 5, true},
 		{"observability", (*Server).buildObservabilityGroup, 12, true},
 	}
