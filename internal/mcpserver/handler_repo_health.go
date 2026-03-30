@@ -138,7 +138,7 @@ type healthParams struct {
 	claudeMDWarnings    int
 }
 
-func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleRepoHealth(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
 		return codedError(ErrInvalidParams, "repo name required"), nil
@@ -155,7 +155,7 @@ func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*
 	if r == nil {
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
-	if errs := model.RefreshRepo(r); len(errs) > 0 {
+	if errs := model.RefreshRepo(ctx, r); len(errs) > 0 {
 		for _, e := range errs {
 			slog.Warn("handleRepoHealth: refresh failed", "repo", r.Path, "err", e)
 		}
@@ -201,7 +201,7 @@ func (s *Server) handleRepoHealth(_ context.Context, req mcp.CallToolRequest) (*
 	}
 
 	// .ralphrc parse check
-	if _, err := model.LoadConfig(r.Path); err != nil {
+	if _, err := model.LoadConfig(ctx, r.Path); err != nil {
 		if !os.IsNotExist(err) {
 			params.configParseError = err.Error()
 		}

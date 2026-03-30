@@ -176,7 +176,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmds []tea.Cmd
 		for _, r := range m.Repos {
 			if r.Path == msg.RepoPath {
-				if errs := model.RefreshRepo(r); len(errs) > 0 {
+				if errs := model.RefreshRepo(m.Ctx, r); len(errs) > 0 {
 					repoPath := r.Path
 					errs := errs
 					cmds = append(cmds, func() tea.Msg {

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,7 +10,15 @@ import (
 )
 
 // LoadStatus reads and parses .ralph/status.json from the given repo path.
-func LoadStatus(repoPath string) (*LoopStatus, error) {
+// The context is checked for cancellation before file I/O to allow callers
+// to abort stuck reads (e.g. NFS, slow disks).
+func LoadStatus(ctx context.Context, repoPath string) (*LoopStatus, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	data, err := os.ReadFile(filepath.Join(repoPath, ".ralph", "status.json"))
 	if err != nil {
 		return nil, err
@@ -22,7 +31,13 @@ func LoadStatus(repoPath string) (*LoopStatus, error) {
 }
 
 // LoadCircuitBreaker reads and parses .ralph/.circuit_breaker_state.
-func LoadCircuitBreaker(repoPath string) (*CircuitBreakerState, error) {
+func LoadCircuitBreaker(ctx context.Context, repoPath string) (*CircuitBreakerState, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	data, err := os.ReadFile(filepath.Join(repoPath, ".ralph", ".circuit_breaker_state"))
 	if err != nil {
 		return nil, err
@@ -35,7 +50,13 @@ func LoadCircuitBreaker(repoPath string) (*CircuitBreakerState, error) {
 }
 
 // LoadProgress reads and parses .ralph/progress.json.
-func LoadProgress(repoPath string) (*Progress, error) {
+func LoadProgress(ctx context.Context, repoPath string) (*Progress, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	data, err := os.ReadFile(filepath.Join(repoPath, ".ralph", "progress.json"))
 	if err != nil {
 		return nil, err
@@ -50,26 +71,31 @@ func LoadProgress(repoPath string) (*Progress, error) {
 // RefreshRepo reloads all status files for a repo.
 // Returns a slice of non-nil errors for any files that failed to parse.
 // Missing files (os.ErrNotExist) are not considered errors.
-func RefreshRepo(r *Repo) []error {
+// The context is checked before each file read; if cancelled, remaining
+// files are skipped and the cancellation error is included in the result.
+func RefreshRepo(ctx context.Context, r *Repo) []error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	var errs []error
 
 	var err error
-	r.Status, err = LoadStatus(r.Path)
+	r.Status, err = LoadStatus(ctx, r.Path)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		errs = append(errs, fmt.Errorf("status.json: %w", err))
 	}
 
-	r.Circuit, err = LoadCircuitBreaker(r.Path)
+	r.Circuit, err = LoadCircuitBreaker(ctx, r.Path)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		errs = append(errs, fmt.Errorf("circuit_breaker_state: %w", err))
 	}
 
-	r.Progress, err = LoadProgress(r.Path)
+	r.Progress, err = LoadProgress(ctx, r.Path)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		errs = append(errs, fmt.Errorf("progress.json: %w", err))
 	}
 
-	r.Config, err = LoadConfig(r.Path)
+	r.Config, err = LoadConfig(ctx, r.Path)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		errs = append(errs, fmt.Errorf(".ralphrc: %w", err))
 	}

@@ -47,7 +47,7 @@ func TestScanRefreshCycle(t *testing.T) {
 	status.LoopCount = 5
 	status.Status = "idle"
 	writeJSON(t, filepath.Join(ralphDir, "status.json"), status)
-	if errs := model.RefreshRepo(repo); len(errs) > 0 {
+	if errs := model.RefreshRepo(context.Background(), repo); len(errs) > 0 {
 		t.Errorf("RefreshRepo returned unexpected errors: %v", errs)
 	}
 	if repo.Status.LoopCount != 5 {
@@ -64,7 +64,7 @@ func TestScanRefreshCycle(t *testing.T) {
 
 	repo.Config.Values["NEW_KEY"] = "new_value"
 	repo.Config.Save()
-	reloaded, _ := model.LoadConfig(repo.Path)
+	reloaded, _ := model.LoadConfig(context.Background(), repo.Path)
 	if reloaded.Values["NEW_KEY"] != "new_value" {
 		t.Error("config change not persisted")
 	}

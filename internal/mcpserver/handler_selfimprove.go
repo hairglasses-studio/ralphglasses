@@ -55,7 +55,7 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 
 	// Wire self-learning subsystems (shared helper).
 	ralphDir := filepath.Join(r.Path, ".ralph")
-	wireSubsystems(s, s.SessMgr, ralphDir)
+	wireSubsystems(ctx, s, s.SessMgr, ralphDir)
 
 	traceLevel := getStringArg(req, "trace_level")
 	if traceLevel == "" {

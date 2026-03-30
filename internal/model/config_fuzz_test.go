@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,7 +32,7 @@ func FuzzLoadConfig(f *testing.F) {
 		if err := os.WriteFile(rcPath, []byte(data), 0644); err != nil {
 			t.Skip()
 		}
-		cfg, err := LoadConfig(dir)
+		cfg, err := LoadConfig(context.Background(), dir)
 		if err != nil {
 			return
 		}

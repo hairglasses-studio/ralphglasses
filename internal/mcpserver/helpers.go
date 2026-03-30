@@ -1,6 +1,7 @@
 package mcpserver
 
 import (
+	"context"
 	"path/filepath"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/bandit"
@@ -25,7 +26,7 @@ func DefaultProviderArms() []bandit.Arm {
 // manager and server. Phase G subsystems (reflexion, episodic, cascade,
 // curriculum) and Phase H subsystems (blackboard, cost predictor) are all wired
 // here so that both handleLoopStart and handleSelfImprove get the same set.
-func wireSubsystems(s *Server, sessMgr *session.Manager, ralphDir string) {
+func wireSubsystems(ctx context.Context, s *Server, sessMgr *session.Manager, ralphDir string) {
 	// --- Bandit (independent of cascade) ---
 	if s.Bandit == nil {
 		s.Bandit = bandit.NewSelector(DefaultProviderArms())
@@ -40,7 +41,7 @@ func wireSubsystems(s *Server, sessMgr *session.Manager, ralphDir string) {
 	}
 	if !sessMgr.HasCascadeRouter() {
 		repoPath := filepath.Dir(ralphDir)
-		cfg := cascadeConfigFromRepo(repoPath, ralphDir)
+		cfg := cascadeConfigFromRepo(ctx, repoPath, ralphDir)
 		sessMgr.SetCascadeRouter(session.NewCascadeRouter(cfg, nil, nil, ralphDir))
 	}
 	if !sessMgr.HasCurriculumSorter() {
@@ -122,8 +123,8 @@ func wireSubsystems(s *Server, sessMgr *session.Manager, ralphDir string) {
 // cascadeConfigFromRepo reads .ralphrc from the repo and returns a CascadeConfig.
 // If the repo has CASCADE_ENABLED=true, settings are loaded from .ralphrc.
 // Otherwise, returns the hardcoded DefaultCascadeConfig.
-func cascadeConfigFromRepo(repoPath, _ string) session.CascadeConfig {
-	rc, err := model.LoadConfig(repoPath)
+func cascadeConfigFromRepo(ctx context.Context, repoPath, _ string) session.CascadeConfig {
+	rc, err := model.LoadConfig(ctx, repoPath)
 	if err == nil && rc != nil {
 		if ccfg := session.DefaultCascadeFromConfig(rc.Values); ccfg != nil {
 			return *ccfg

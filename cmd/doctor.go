@@ -252,7 +252,7 @@ func checkRalphRC(cmd *cobra.Command, sp string) (string, string) {
 		if !repo.HasRC {
 			continue
 		}
-		cfg, err := model.LoadConfig(repo.Path)
+		cfg, err := model.LoadConfig(context.Background(), repo.Path)
 		if err != nil {
 			return "WARN", fmt.Sprintf("%s: parse error: %s", repo.Name, err.Error())
 		}

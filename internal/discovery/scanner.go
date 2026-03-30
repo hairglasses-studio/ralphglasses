@@ -44,7 +44,7 @@ func Scan(ctx context.Context, root string) ([]*model.Repo, error) {
 			HasRalph: hasRalph,
 			HasRC:    hasRC,
 		}
-		if errs := model.RefreshRepo(r); len(errs) > 0 {
+		if errs := model.RefreshRepo(ctx, r); len(errs) > 0 {
 			for _, e := range errs {
 				slog.Warn("scan: refresh failed", "repo", r.Path, "err", e)
 			}
