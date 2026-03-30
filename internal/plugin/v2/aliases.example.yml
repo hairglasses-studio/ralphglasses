@@ -1,0 +1,32 @@
+version: 1
+
+aliases:
+  gs:
+    command: git status --short
+    description: Show compact git status
+
+  gl:
+    command: git log --oneline
+    description: Short git log
+    args: ["-n", "20"]
+
+  gd:
+    command: git diff
+    description: Show unstaged changes
+
+  build:
+    command: go build ./...
+    description: Build all packages
+
+  test:
+    command: go test ./...
+    description: Run all tests
+    args: ["-count=1"]
+
+  lint:
+    command: golangci-lint run
+    description: Run Go linter
+
+  scan:
+    command: ralphglasses --scan-path .
+    description: Scan current directory for sessions
