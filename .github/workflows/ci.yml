@@ -183,6 +183,14 @@ jobs:
           benchstat bench-prev/bench.txt bench.txt | tee -a "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Generate benchmark dashboard
+        run: |
+          if [ -f bench-prev/bench.txt ]; then
+            bash scripts/bench-dashboard.sh bench-prev/bench.txt bench.txt >> "$GITHUB_STEP_SUMMARY"
+          else
+            bash scripts/bench-dashboard.sh bench.txt >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
         with:

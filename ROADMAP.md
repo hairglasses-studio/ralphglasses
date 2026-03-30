@@ -140,7 +140,7 @@ Pre-requisite fixes for existing bugs and silent failures. No new features. All 
 - [x] 0.5.6.1 — Add GRUB menuentry for AMD iGPU boot: `nomodeset` removed, `amdgpu.dc=1` enabled `P2` `M`
 - [x] 0.5.6.2 — Add GRUB menuentry for headless/serial console boot `P2` `S`
 - [x] 0.5.6.3 — Set GRUB timeout to 5s (allow human intervention on boot failure) `P2` `S`
-- [ ] 0.5.6.4 — Add `grub.cfg` validation to CI: parse all menuentry blocks, verify kernel image paths exist `P2` `M`
+- [x] 0.5.6.4 — Add `grub.cfg` validation to CI: parse all menuentry blocks, verify kernel image paths exist `P2` `M`
 - **Acceptance:** system boots on AMD iGPU when NVIDIA unavailable
 
 ### 0.5.7 — Hardcoded version string (COMPLETE)
@@ -347,7 +347,7 @@ Implements MCP spec features: structured output schemas, logging notifications.
 - **Acceptance:** survives ralph crash with auto-restart, no orphan processes after TUI exit
 
 ### 1.5 — Config editor enhancements
-- [ ] 1.5.1 — Add key CRUD operations: insert new key, rename key, delete key from TUI `P2` `M`
+- [x] 1.5.1 — Add key CRUD operations: insert new key, rename key, delete key from TUI `P2` `M`
 - [x] 1.5.2 — Wire fsnotify on `.ralphrc` file; reload config on external change, emit notification `P1` `M`
 - [x] 1.5.3 — Add validation rules per key type (numeric ranges, boolean, enum values) `P1` `M`
 - [x] 1.5.4 — Implement undo buffer (single-level: revert last edit) `P2` `S`
@@ -356,8 +356,8 @@ Implements MCP spec features: structured output schemas, logging notifications.
 ### 1.6 — Test coverage targets
 - [x] 1.6.1 — Per-package coverage targets in `check-coverage.sh` + `make test-cover-strict` Makefile target `P1` `S`
 - [x] 1.6.2 — Add CI enforcement step: `go test -coverprofile` -> parse -> fail if below threshold `P1` `M`
-- [ ] 1.6.3 — Add coverage badge to README via codecov or go-cover-treemap `P2` `S`
-- [ ] 1.6.4 — Write missing tests to reach 85%+ overall (focus on untested error paths) `P1` `L`
+- [x] 1.6.3 — Add coverage badge to README via codecov or go-cover-treemap `P2` `S`
+- [x] 1.6.4 — Write missing tests to reach 85%+ overall (focus on untested error paths) `P1` `L`
 - **Acceptance:** `go test -coverprofile` meets thresholds in CI, badge visible in README
 
 ### 1.7 — Structured logging
@@ -440,29 +440,29 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** `man ralphglasses` works after install
 
 ### 1.5.6 — Multi-arch builds
-- [ ] 1.5.6.1 — Add arm64 cross-compilation to CI matrix (linux/arm64 for Raspberry Pi) `P2` `M`
-- [ ] 1.5.6.2 — Test arm64 binary in QEMU user-mode emulation in CI `P2` `M`
+- [x] 1.5.6.1 — Add arm64 cross-compilation to CI matrix (linux/arm64 for Raspberry Pi) `P2` `M`
+- [x] 1.5.6.2 — Test arm64 binary in QEMU user-mode emulation in CI `P2` `M`
 - [x] 1.5.6.3 — Add `GOARCH=arm64` smoke test: build + run `--help` + exit `P2` `S`
-- [ ] 1.5.6.4 — Document Raspberry Pi thin client setup in `docs/raspberry-pi.md` `P2` `S`
+- [x] 1.5.6.4 — Document Raspberry Pi thin client setup in `docs/raspberry-pi.md` `P2` `S`
 - **Acceptance:** arm64 binary runs on Raspberry Pi 4/5
 
 ### 1.5.7 — Nix flake (optional)
 - [x] 1.5.7.1 — Add `flake.nix` with `buildGoModule` + dev shell (Go, golangci-lint, shellcheck) `P2` `M`
-- [ ] 1.5.7.2 — Add NixOS module: systemd service, option types for config `P2` `L`
+- [x] 1.5.7.2 — Add NixOS module: systemd service, option types for config `P2` `L`
 - [x] 1.5.7.3 — Add `flake.lock` and CI check: `nix build` + `nix flake check` `P2` `S`
 - **Acceptance:** `nix run github:hairglasses-studio/ralphglasses` works
 
 ### 1.5.8 — Development containers
 - [x] 1.5.8.1 — Add `.devcontainer/devcontainer.json`: Go + tools, port forwarding, recommended extensions `P2` `S`
 - [x] 1.5.8.2 — Add `.devcontainer/Dockerfile`: Go 1.26+, golangci-lint, BATS, shellcheck `P2` `S`
-- [ ] 1.5.8.3 — GitHub Codespaces support: verify `go build ./...` and `go test ./...` work `P2` `M`
+- [x] 1.5.8.3 — GitHub Codespaces support: verify `go build ./...` and `go test ./...` work `P2` `M`
 - **Acceptance:** `devcontainer up` provides working dev environment
 
 ### 1.5.9 — Documentation site
 - [x] 1.5.9.1 — Add `docs/` site with mdBook or mkdocs: getting started, architecture, API reference `P2` `L`
 - [x] 1.5.9.2 — Add GitHub Actions: build docs on push, deploy to GitHub Pages `P2` `M`
 - [x] 1.5.9.3 — Add architecture diagrams: mermaid flowcharts for data flow, component relationships `P2` `M`
-- [ ] 1.5.9.4 — Add MCP tool API reference: auto-generated from tool handler docstrings `P2` `L`
+- [x] 1.5.9.4 — Add MCP tool API reference: auto-generated from tool handler docstrings `P2` `L`
 - **Acceptance:** docs site live at `hairglasses-studio.github.io/ralphglasses`
 
 ### 1.5.10 — Charmbracelet v2 migration
@@ -485,7 +485,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 ### 1.5.12 — Benchmarking infrastructure
 - [x] 1.5.12.1 — Add Go benchmarks for hot paths: `RefreshRepo`, `Scan`, `LoadStatus`, table rendering `P1` `M`
 - [x] 1.5.12.2 — Add `benchstat` comparison in CI: detect performance regressions between commits `P1` `M`
-- [ ] 1.5.12.3 — Add benchmark dashboard: track p50/p99 latencies over time `P2` `L`
+- [x] 1.5.12.3 — Add benchmark dashboard: track p50/p99 latencies over time `P2` `L`
 - [x] 1.5.12.4 — Add memory allocation benchmarks: `b.ReportAllocs()` on all benchmark functions `P1` `S`
 - **Acceptance:** CI fails on >10% performance regression
 
@@ -588,7 +588,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [x] 2.12.1 — Define telemetry event schema: session_start, session_stop, crash, budget_hit, circuit_trip `P2` `S`
 - [x] 2.12.2 — Local JSONL file writer: append events to `~/.ralphglasses/telemetry.jsonl` `P2` `M`
 - [x] 2.12.3 — Add `--telemetry` flag and `TELEMETRY_ENABLED` config key (default: off) `P2` `S`
-- [ ] 2.12.4 — Optional remote POST: send anonymized events to configurable endpoint `P2` `M`
+- [x] 2.12.4 — Optional remote POST: send anonymized events to configurable endpoint `P2` `M`
 - [x] 2.12.5 — Add `ralphglasses telemetry export` subcommand: export telemetry as CSV/JSON `P2` `S`
 - **Acceptance:** telemetry events written to local file when opt-in enabled
 
@@ -596,7 +596,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [x] 2.13.1 — Define plugin interface: `Plugin{ Name(), Init(ctx), OnEvent(event), Shutdown() }` — implemented in `internal/plugin/interfaces.go` `[reconciled 2026-03-26]`
 - [x] 2.13.2 — Plugin discovery via hashicorp/go-plugin gRPC protocol (`internal/plugin/grpc.go`) `[reconciled 2026-03-26]`
 - [x] 2.13.3 — Built-in plugin: `notify-desktop` (extract from 2.6 as reference implementation) `P2` `M`
-- [ ] 2.13.4 — Plugin lifecycle: load on startup, unload on shutdown, hot-reload on SIGHUP `P2` `M`
+- [x] 2.13.4 — Plugin lifecycle: load on startup, unload on shutdown, hot-reload on SIGHUP `P2` `M`
 - [x] 2.13.5 — Plugin config: per-plugin config section in `.ralphrc` (e.g. `PLUGIN_NOTIFY_DESKTOP_SOUND=true`) `P2` `S`
 - **Acceptance:** external plugin loaded and receives session events
 
@@ -604,8 +604,8 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [x] 2.14.1 — `ralphglasses remote add <name> <host>` — register remote thin client `P2` `M`
 - [x] 2.14.2 — `ralphglasses remote status` — SSH into registered hosts, collect session status `P2` `M`
 - [x] 2.14.3 — `ralphglasses remote start <host> <repo>` — start ralph loop on remote host `P2` `M`
-- [ ] 2.14.4 — Aggregate remote sessions into fleet view (poll via SSH tunnel) `P2` `L`
-- [ ] 2.14.5 — SSH key management: `~/.ralphglasses/ssh/` with per-host key configuration `P2` `M`
+- [x] 2.14.4 — Aggregate remote sessions into fleet view (poll via SSH tunnel) `P2` `L`
+- [x] 2.14.5 — SSH key management: `~/.ralphglasses/ssh/` with per-host key configuration `P2` `M`
 - **Acceptance:** fleet view shows sessions from multiple physical machines
 
 ## Phase 2.5: Multi-LLM Agent Orchestration
