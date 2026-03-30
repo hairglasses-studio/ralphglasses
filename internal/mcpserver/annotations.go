@@ -185,6 +185,16 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_cycle_run":        {Title: "Cycle Run", DestructiveHint: boolPtr(false)},
 
 	// ── plugin ──────────────────────────────────────────────────────────
+	// ── session export ──────────────────────────────────────────────────
+	"ralphglasses_session_export": {Title: "Export Session", ReadOnlyHint: boolPtr(true)},
+
+	// ── eval ─────────────────────────────────────────────────────────────
+	"ralphglasses_eval_define": {Title: "Define A/B Test", ReadOnlyHint: boolPtr(true)},
+
+	// ── cost recommend ──────────────────────────────────────────────────
+	"ralphglasses_cost_recommend": {Title: "Cost Recommendations", ReadOnlyHint: boolPtr(true)},
+
+	// ── plugin ──────────────────────────────────────────────────────────
 	"ralphglasses_plugin_list":    {Title: "List Plugins", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_plugin_info":    {Title: "Plugin Info", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_plugin_enable":  {Title: "Enable Plugin", DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true)},
