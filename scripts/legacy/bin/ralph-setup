@@ -1,0 +1,6 @@
+#!/bin/bash
+# Ralph Project Setup - Global Command
+
+RALPH_HOME="$HOME/.ralph"
+
+exec "$RALPH_HOME/setup.sh" "$@"

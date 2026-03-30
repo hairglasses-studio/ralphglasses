@@ -6,10 +6,16 @@ import (
 
 func TestAutoMode_HourlySpend_ViaRequestPermission(t *testing.T) {
 	// Set up a config with a very low global cost limit so hourlySpend is exercised.
+	// CategoryCostBearing has base risk RiskMedium, so MaxRisk must be >= RiskMedium.
 	cfg := DefaultAutoModeConfig()
 	cfg.Enabled = true
 	cfg.AutonomyLevel = LevelFullAutonomy
 	cfg.GlobalCostLimitUSD = 0.01 // very tight limit
+	cfg.Policies[CategoryCostBearing] = PermissionPolicy{
+		MaxRisk:          RiskHigh, // allow medium risk actions to pass risk check
+		CostLimitUSD:     1.0,
+		RateLimitPerHour: 100,
+	}
 	am := NewAutoMode(cfg)
 
 	// First request with a small cost should be checked against global limit.
@@ -28,12 +34,17 @@ func TestAutoMode_HourlySpend_ExceedsLimit(t *testing.T) {
 	cfg.Enabled = true
 	cfg.AutonomyLevel = LevelFullAutonomy
 	cfg.GlobalCostLimitUSD = 0.001 // very low limit
+	cfg.Policies[CategoryCostBearing] = PermissionPolicy{
+		MaxRisk:          RiskHigh,
+		CostLimitUSD:     100.0,
+		RateLimitPerHour: 100,
+	}
 	am := NewAutoMode(cfg)
 
-	// Request with cost greater than the limit.
+	// Request with cost greater than global limit triggers hourlySpend check.
 	action := AutoAction{
 		Category: CategoryCostBearing,
-		CostUSD:  1.0, // way over limit
+		CostUSD:  0.01, // over global limit of 0.001
 	}
 	ok, reason := am.RequestPermission(action)
 	if ok {

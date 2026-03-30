@@ -1,0 +1,6 @@
+#!/bin/bash
+# Ralph PRD Import - Global Command
+
+RALPH_HOME="$HOME/.ralph"
+
+exec "$RALPH_HOME/ralph_import.sh" "$@"

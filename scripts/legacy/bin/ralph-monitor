@@ -1,0 +1,6 @@
+#!/bin/bash
+# Ralph Monitor - Global Command
+
+RALPH_HOME="$HOME/.ralph"
+
+exec "$RALPH_HOME/ralph_monitor.sh" "$@"
