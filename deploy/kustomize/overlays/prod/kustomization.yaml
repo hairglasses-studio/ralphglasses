@@ -1,0 +1,62 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: ralphglasses-prod
+
+namespace: ralphglasses-prod
+
+commonLabels:
+  app.kubernetes.io/environment: prod
+
+resources:
+  - ../../base
+  - hpa.yaml
+
+patches:
+  # Production replicas
+  - target:
+      kind: Deployment
+      name: ralphglasses
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  # Production resource limits
+  - target:
+      kind: Deployment
+      name: ralphglasses
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: "2"
+            memory: 1Gi
+  # Production PVC size
+  - target:
+      kind: PersistentVolumeClaim
+      name: ralphglasses-workspace
+    patch: |
+      - op: replace
+        path: /spec/resources/requests/storage
+        value: 50Gi
+  # Pod disruption budget annotation
+  - target:
+      kind: Deployment
+      name: ralphglasses
+    patch: |
+      - op: add
+        path: /spec/template/metadata/annotations/cluster-autoscaler.kubernetes.io~1safe-to-evict
+        value: "false"
+
+configMapGenerator:
+  - name: ralphglasses-config
+    behavior: merge
+    literals:
+      - budget.maxSessionCost=10.00
+      - budget.maxDailyCost=200.00
+      - budget.costTier=balanced

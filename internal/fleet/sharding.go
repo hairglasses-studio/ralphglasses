@@ -308,3 +308,236 @@ func (m *ShardMap) WorkerRepoCount() map[string]int {
 func RepoPathNormalize(path string) string {
 	return strings.ReplaceAll(filepath.Clean(path), "\\", "/")
 }
+
+// --- ShardManager: high-level node lifecycle + session distribution ---
+
+// ShardManager distributes sessions across nodes using consistent hashing.
+// It wraps ShardMap with node join/leave lifecycle, automatic rebalancing,
+// and migration tracking. All methods are concurrency-safe.
+type ShardManager struct {
+	mu       sync.RWMutex
+	shardMap *ShardMap
+	nodes    map[string]*NodeInfo // nodeID -> info
+	strategy ShardStrategy
+
+	// MigrationCallback is called when sessions need to move between nodes
+	// during rebalancing. The caller is responsible for actual session transfer.
+	// If nil, rebalancing only updates the shard map without triggering moves.
+	MigrationCallback func(migrations []Migration)
+}
+
+// NodeInfo describes a node participating in the shard ring.
+type NodeInfo struct {
+	ID          string
+	Address     string // host:port
+	Capacity    int    // max concurrent sessions
+	Active      int    // current active sessions
+	JoinedAt    int64  // unix nano timestamp
+	LastSeen    int64  // unix nano timestamp
+	Draining    bool   // true if node is being removed gracefully
+}
+
+// Migration describes a session that needs to move from one node to another.
+type Migration struct {
+	SessionKey string
+	FromNode   string
+	ToNode     string
+}
+
+// ShardManagerOption configures a ShardManager during construction.
+type ShardManagerOption func(*ShardManager)
+
+// WithMigrationCallback sets the callback for session migrations.
+func WithMigrationCallback(cb func([]Migration)) ShardManagerOption {
+	return func(sm *ShardManager) {
+		sm.MigrationCallback = cb
+	}
+}
+
+// WithReplicas sets the number of virtual nodes per real node on the hash ring.
+func WithReplicas(n int) ShardManagerOption {
+	return func(sm *ShardManager) {
+		if hs, ok := sm.strategy.(*HashShardStrategy); ok {
+			hs.Replicas = n
+		}
+	}
+}
+
+// NewShardManager creates a ShardManager with consistent hashing and the given options.
+func NewShardManager(opts ...ShardManagerOption) *ShardManager {
+	strategy := &HashShardStrategy{Replicas: 128}
+	sm := &ShardManager{
+		shardMap: NewShardMap(strategy),
+		nodes:    make(map[string]*NodeInfo),
+		strategy: strategy,
+	}
+	for _, opt := range opts {
+		opt(sm)
+	}
+	return sm
+}
+
+// JoinNode adds a node to the shard ring and triggers rebalancing. If the node
+// already exists, its info is updated without rebalancing.
+func (sm *ShardManager) JoinNode(node NodeInfo) []Migration {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+
+	_, existed := sm.nodes[node.ID]
+	sm.nodes[node.ID] = &node
+
+	if existed {
+		return nil
+	}
+
+	return sm.rebalanceLocked()
+}
+
+// LeaveNode removes a node from the shard ring and triggers rebalancing.
+// Sessions assigned to the leaving node are redistributed.
+func (sm *ShardManager) LeaveNode(nodeID string) []Migration {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+
+	if _, ok := sm.nodes[nodeID]; !ok {
+		return nil
+	}
+	delete(sm.nodes, nodeID)
+
+	return sm.rebalanceLocked()
+}
+
+// DrainNode marks a node as draining. It remains in the ring but receives no
+// new assignments. Call LeaveNode when draining is complete.
+func (sm *ShardManager) DrainNode(nodeID string) {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+
+	if n, ok := sm.nodes[nodeID]; ok {
+		n.Draining = true
+	}
+}
+
+// AssignSession assigns a session key to a node via consistent hashing.
+// Returns the chosen node ID. If no nodes are available, returns empty string.
+func (sm *ShardManager) AssignSession(sessionKey string) string {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+
+	workers := sm.availableWorkersLocked()
+	if len(workers) == 0 {
+		return ""
+	}
+
+	nodeID := sm.strategy.Assign(sessionKey, workers)
+	if nodeID != "" {
+		sm.shardMap.Assign(sessionKey, nodeID)
+	}
+	return nodeID
+}
+
+// NodeForSession returns which node owns a session key.
+func (sm *ShardManager) NodeForSession(sessionKey string) (string, bool) {
+	return sm.shardMap.WorkerFor(sessionKey)
+}
+
+// SessionsForNode returns all session keys assigned to a node.
+func (sm *ShardManager) SessionsForNode(nodeID string) []string {
+	return sm.shardMap.ReposFor(nodeID)
+}
+
+// RemoveSession removes a session from the shard map.
+func (sm *ShardManager) RemoveSession(sessionKey string) {
+	sm.shardMap.Unassign(sessionKey)
+}
+
+// Nodes returns a snapshot of all registered nodes.
+func (sm *ShardManager) Nodes() []NodeInfo {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+
+	out := make([]NodeInfo, 0, len(sm.nodes))
+	for _, n := range sm.nodes {
+		out = append(out, *n)
+	}
+	return out
+}
+
+// NodeCount returns the number of registered nodes.
+func (sm *ShardManager) NodeCount() int {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	return len(sm.nodes)
+}
+
+// SessionCount returns the total number of assigned sessions.
+func (sm *ShardManager) SessionCount() int {
+	return sm.shardMap.Len()
+}
+
+// Distribution returns a map of nodeID -> number of assigned sessions.
+func (sm *ShardManager) Distribution() map[string]int {
+	return sm.shardMap.WorkerRepoCount()
+}
+
+// availableWorkersLocked returns WorkerInfo for non-draining nodes. Must hold mu.
+func (sm *ShardManager) availableWorkersLocked() []WorkerInfo {
+	workers := make([]WorkerInfo, 0, len(sm.nodes))
+	for _, n := range sm.nodes {
+		if n.Draining {
+			continue
+		}
+		workers = append(workers, WorkerInfo{
+			ID:       n.ID,
+			Hostname: n.Address,
+			Status:   WorkerOnline,
+		})
+	}
+	return workers
+}
+
+// allWorkersLocked returns WorkerInfo for all nodes (including draining). Must hold mu.
+func (sm *ShardManager) allWorkersLocked() []WorkerInfo {
+	workers := make([]WorkerInfo, 0, len(sm.nodes))
+	for _, n := range sm.nodes {
+		workers = append(workers, WorkerInfo{
+			ID:       n.ID,
+			Hostname: n.Address,
+			Status:   WorkerOnline,
+		})
+	}
+	return workers
+}
+
+// rebalanceLocked redistributes sessions and returns migrations. Must hold mu.
+func (sm *ShardManager) rebalanceLocked() []Migration {
+	before := sm.shardMap.AllAssignments()
+
+	workers := sm.allWorkersLocked()
+	sm.shardMap.Rebalance(workers)
+
+	after := sm.shardMap.AllAssignments()
+
+	var migrations []Migration
+	for key, oldNode := range before {
+		newNode, ok := after[key]
+		if !ok || newNode != oldNode {
+			migrations = append(migrations, Migration{
+				SessionKey: key,
+				FromNode:   oldNode,
+				ToNode:     newNode,
+			})
+		}
+	}
+
+	// Sort for deterministic output.
+	sort.Slice(migrations, func(i, j int) bool {
+		return migrations[i].SessionKey < migrations[j].SessionKey
+	})
+
+	if len(migrations) > 0 && sm.MigrationCallback != nil {
+		sm.MigrationCallback(migrations)
+	}
+
+	return migrations
+}

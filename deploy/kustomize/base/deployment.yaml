@@ -1,0 +1,197 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ralphglasses
+  labels:
+    app.kubernetes.io/name: ralphglasses
+    app.kubernetes.io/component: mcp-gateway
+    app.kubernetes.io/part-of: ralphglasses
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ralphglasses
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ralphglasses
+        app.kubernetes.io/component: mcp-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+    spec:
+      serviceAccountName: ralphglasses
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: ralphglasses
+          image: ghcr.io/hairglasses-studio/ralphglasses:0.1.0
+          args:
+            - mcp
+            - --listen
+            - "0.0.0.0:8080"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: RALPH_SCAN_PATH
+              value: /workspace
+            - name: RALPH_AUTONOMY_LEVEL
+              value: "1"
+            - name: RALPH_BUDGET_MAX_SESSION
+              valueFrom:
+                configMapKeyRef:
+                  name: ralphglasses-config
+                  key: budget.maxSessionCost
+            - name: RALPH_BUDGET_MAX_DAILY
+              valueFrom:
+                configMapKeyRef:
+                  name: ralphglasses-config
+                  key: budget.maxDailyCost
+            - name: RALPH_COST_TIER
+              valueFrom:
+                configMapKeyRef:
+                  name: ralphglasses-config
+                  key: budget.costTier
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ralphglasses-provider-keys
+                  key: ANTHROPIC_API_KEY
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ralphglasses-provider-keys
+                  key: GEMINI_API_KEY
+                  optional: true
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ralphglasses-provider-keys
+                  key: OPENAI_API_KEY
+                  optional: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+            - name: ralph-state
+              mountPath: /home/ralphglasses/.ralph
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: ralphglasses-workspace
+        - name: ralph-state
+          emptyDir: {}
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ralphglasses
+  labels:
+    app.kubernetes.io/name: ralphglasses
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 9090
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    app.kubernetes.io/name: ralphglasses
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ralphglasses-config
+  labels:
+    app.kubernetes.io/name: ralphglasses
+data:
+  budget.maxSessionCost: "5.00"
+  budget.maxDailyCost: "50.00"
+  budget.alertThresholdPercent: "80"
+  budget.costTier: balanced
+  ralph.yaml: |
+    scan_path: /workspace
+    autonomy_level: 1
+    mcp:
+      listen: "0.0.0.0:8080"
+      preload_namespaces:
+        - core
+    providers:
+      claude:
+        model: claude-sonnet-4-20250514
+      gemini:
+        model: gemini-2.5-pro
+    budget:
+      max_session_cost: 5.00
+      max_daily_cost: 50.00
+      alert_threshold_percent: 80
+      cost_tier: balanced
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ralphglasses
+  labels:
+    app.kubernetes.io/name: ralphglasses
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ralphglasses-workspace
+  labels:
+    app.kubernetes.io/name: ralphglasses
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi

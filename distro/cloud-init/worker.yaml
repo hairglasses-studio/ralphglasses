@@ -1,0 +1,159 @@
+#cloud-config
+# Cloud-init user-data for provisioning ralphglasses fleet worker VMs.
+# Tested on Ubuntu 24.04 LTS. Requires COORDINATOR_URL and TAILSCALE_AUTH_KEY
+# to be passed via instance metadata or replaced before use.
+#
+# Usage:
+#   multipass launch --name rg-worker-01 --cloud-init worker.yaml 24.04
+#   # or pass as user-data to any cloud provider (AWS, GCP, Hetzner, etc.)
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - git
+  - curl
+  - jq
+  - build-essential
+  - ca-certificates
+
+# Create ralphglasses service user
+users:
+  - name: ralphglasses
+    system: true
+    shell: /usr/sbin/nologin
+    groups: [systemd-journal]
+    home: /opt/ralphglasses
+
+write_files:
+  # Systemd service for the fleet worker
+  - path: /etc/systemd/system/ralphglasses-worker.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Ralphglasses Fleet Worker
+      After=network-online.target tailscaled.service
+      Wants=network-online.target
+      Requires=tailscaled.service
+
+      [Service]
+      Type=simple
+      User=ralphglasses
+      Group=ralphglasses
+      WorkingDirectory=/opt/ralphglasses/src
+      ExecStart=/opt/ralphglasses/bin/ralphglasses worker \
+        --coordinator=${COORDINATOR_URL} \
+        --scan-path=/opt/ralphglasses/repos \
+        --port=8081
+      Restart=always
+      RestartSec=10
+      Environment=HOME=/opt/ralphglasses
+      Environment=GOPATH=/opt/ralphglasses/go
+      EnvironmentFile=-/opt/ralphglasses/env
+
+      # Hardening
+      NoNewPrivileges=yes
+      ProtectSystem=strict
+      ReadWritePaths=/opt/ralphglasses
+      PrivateTmp=yes
+      ProtectHome=yes
+
+      [Install]
+      WantedBy=multi-user.target
+
+  # Environment file (overridden by metadata on first boot)
+  - path: /opt/ralphglasses/env
+    permissions: "0600"
+    content: |
+      COORDINATOR_URL=http://coordinator:9090
+      TAILSCALE_AUTH_KEY=
+      RALPH_WORKER_PORT=8081
+      RALPH_MAX_SESSIONS=4
+
+  # Tailscale install + auth script
+  - path: /opt/ralphglasses/scripts/setup-tailscale.sh
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      # Source env for auth key
+      source /opt/ralphglasses/env
+
+      if ! command -v tailscale &>/dev/null; then
+        curl -fsSL https://tailscale.com/install.sh | sh
+      fi
+
+      if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
+        tailscale up --authkey="${TAILSCALE_AUTH_KEY}" --hostname="$(hostname)" --accept-routes
+      else
+        echo "WARNING: TAILSCALE_AUTH_KEY not set, skipping tailscale auth" >&2
+      fi
+
+  # Go install script
+  - path: /opt/ralphglasses/scripts/install-go.sh
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      GO_VERSION="${GO_VERSION:-1.24.2}"
+      ARCH="$(dpkg --print-architecture)"
+
+      if [ -d "/usr/local/go" ] && /usr/local/go/bin/go version | grep -q "go${GO_VERSION}"; then
+        echo "Go ${GO_VERSION} already installed"
+        exit 0
+      fi
+
+      curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz" \
+        | tar -C /usr/local -xz
+
+      # Symlink into PATH
+      ln -sf /usr/local/go/bin/go /usr/local/bin/go
+      ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
+
+  # Clone and build script
+  - path: /opt/ralphglasses/scripts/build.sh
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      REPO_URL="${REPO_URL:-https://github.com/hairglasses-studio/ralphglasses.git}"
+      SRC_DIR="/opt/ralphglasses/src"
+      BIN_DIR="/opt/ralphglasses/bin"
+
+      mkdir -p "${BIN_DIR}" /opt/ralphglasses/repos
+
+      if [ -d "${SRC_DIR}/.git" ]; then
+        cd "${SRC_DIR}" && git pull --ff-only
+      else
+        git clone "${REPO_URL}" "${SRC_DIR}"
+      fi
+
+      cd "${SRC_DIR}"
+      export GOPATH=/opt/ralphglasses/go
+      export GOCACHE=/opt/ralphglasses/go-cache
+
+      go build -o "${BIN_DIR}/ralphglasses" .
+      echo "Build complete: $(${BIN_DIR}/ralphglasses --version 2>/dev/null || echo 'ok')"
+
+runcmd:
+  # Install Go
+  - /opt/ralphglasses/scripts/install-go.sh
+
+  # Setup Tailscale
+  - /opt/ralphglasses/scripts/setup-tailscale.sh
+
+  # Clone, build, and install ralphglasses
+  - /opt/ralphglasses/scripts/build.sh
+
+  # Fix ownership
+  - chown -R ralphglasses:ralphglasses /opt/ralphglasses
+
+  # Enable and start the worker service
+  - systemctl daemon-reload
+  - systemctl enable ralphglasses-worker.service
+  - systemctl start ralphglasses-worker.service
+
+final_message: "ralphglasses fleet worker provisioned in $UPTIME seconds"
