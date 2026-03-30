@@ -53,4 +53,10 @@ var (
 
 	// ErrLoopConverged indicates the loop has converged and should not continue.
 	ErrLoopConverged = errors.New("loop converged")
+
+	// ErrRepoNotExist indicates the repo path does not exist on the filesystem.
+	ErrRepoNotExist = errors.New("repo path does not exist")
+
+	// ErrRepoNotGit indicates the repo path is not a git repository.
+	ErrRepoNotGit = errors.New("repo path is not a git repository")
 )

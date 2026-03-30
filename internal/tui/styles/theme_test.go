@@ -149,6 +149,71 @@ func TestApplyTheme_ChangesPackageLevelVars(t *testing.T) {
 	})
 }
 
+func TestLoadExternalThemes(t *testing.T) {
+	dir := t.TempDir()
+
+	// Write a valid theme YAML.
+	content := `name: my-custom
+primary: "#aabbcc"
+accent: "#ddeeff"
+green: "#00ff00"
+yellow: "#ffff00"
+red: "#ff0000"
+gray: "#808080"
+dark_bg: "#000000"
+bright_fg: "#ffffff"
+`
+	if err := os.WriteFile(filepath.Join(dir, "my-custom.yaml"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// Write a non-YAML file that should be ignored.
+	if err := os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("not a theme"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	themes := LoadExternalThemes(dir)
+	if len(themes) != 1 {
+		t.Fatalf("LoadExternalThemes() returned %d themes, want 1", len(themes))
+	}
+	if themes["my-custom"] == nil {
+		t.Fatal("expected theme keyed as 'my-custom'")
+	}
+	if themes["my-custom"].Primary != "#aabbcc" {
+		t.Errorf("Primary = %q, want %q", themes["my-custom"].Primary, "#aabbcc")
+	}
+}
+
+func TestLoadExternalThemes_EmptyDir(t *testing.T) {
+	themes := LoadExternalThemes(t.TempDir())
+	if len(themes) != 0 {
+		t.Errorf("LoadExternalThemes(empty) returned %d themes, want 0", len(themes))
+	}
+}
+
+func TestLoadExternalThemes_NonexistentDir(t *testing.T) {
+	themes := LoadExternalThemes("/nonexistent/dir")
+	if len(themes) != 0 {
+		t.Errorf("LoadExternalThemes(nonexistent) returned %d themes, want 0", len(themes))
+	}
+}
+
+func TestResolveTheme_BuiltIn(t *testing.T) {
+	th := ResolveTheme("dracula")
+	if th == nil {
+		t.Fatal("ResolveTheme('dracula') returned nil")
+	}
+	if th.Name != "dracula" {
+		t.Errorf("Name = %q, want 'dracula'", th.Name)
+	}
+}
+
+func TestResolveTheme_NotFound(t *testing.T) {
+	th := ResolveTheme("nonexistent-theme-name")
+	if th != nil {
+		t.Error("ResolveTheme for unknown theme should return nil")
+	}
+}
+
 func TestApplyTheme_NilIsNoOp(t *testing.T) {
 	before := string(ColorPrimary)
 	ApplyTheme(nil)

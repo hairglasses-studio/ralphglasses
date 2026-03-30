@@ -31,6 +31,15 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 	if opts.RepoPath == "" {
 		return nil, ErrRepoPathRequired
 	}
+	// Validate launch preconditions: repo must exist and be a git repo.
+	if info, err := os.Stat(opts.RepoPath); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrRepoNotExist, opts.RepoPath)
+	} else if !info.IsDir() {
+		return nil, fmt.Errorf("%w: %s is not a directory", ErrRepoNotExist, opts.RepoPath)
+	}
+	if _, err := os.Stat(filepath.Join(opts.RepoPath, ".git")); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrRepoNotGit, opts.RepoPath)
+	}
 	if opts.Prompt == "" && opts.Resume == "" && !opts.Continue {
 		return nil, fmt.Errorf("prompt required (unless resuming)")
 	}
