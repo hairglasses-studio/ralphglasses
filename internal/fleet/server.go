@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,6 +43,9 @@ type Coordinator struct {
 	router  Router
 	retries *RetryTracker
 
+	// Tailscale integration (nil-safe: auth middleware passes all when nil)
+	tsClient TailscaleClient
+
 	startedAt time.Time
 	server    *http.Server
 }
@@ -62,6 +66,7 @@ func NewCoordinator(nodeID, hostname string, port int, version string, bus *even
 		budgetMgr: NewBudgetManager(10.0),
 		router:    &LeastLoadedRouter{},
 		retries:   NewRetryTracker(DefaultRetryPolicy()),
+		tsClient:  DefaultTailscaleClient(),
 		startedAt: time.Now(),
 	}
 }
@@ -97,9 +102,15 @@ func (c *Coordinator) Start(ctx context.Context) error {
 		mux.HandleFunc("GET /metrics", promRec.Handler())
 	}
 
+	// Wrap the mux with Tailscale auth middleware. When Tailscale is available
+	// and responding, only peers with tag:ralph-fleet (or any authenticated
+	// tailnet member) are allowed through. Health and status endpoints are
+	// always open for monitoring.
+	handler := TailscaleAuthMiddleware(c.tsClient, mux)
+
 	c.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", c.port),
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		BaseContext:  func(_ net.Listener) context.Context { return ctx },
@@ -335,4 +346,110 @@ func (c *Coordinator) PurgeDLQ() int {
 // DLQDepth returns the number of items in the dead letter queue.
 func (c *Coordinator) DLQDepth() int {
 	return c.queue.DLQDepth()
+}
+
+// SetTSClient replaces the coordinator's Tailscale client (useful for testing).
+func (c *Coordinator) SetTSClient(tc TailscaleClient) {
+	c.tsClient = tc
+}
+
+// FleetTag is the Tailscale ACL tag that fleet nodes should carry.
+const FleetTag = "tag:ralph-fleet"
+
+// tailscaleAuthExemptPaths are URL paths that bypass auth for health checks
+// and monitoring.
+var tailscaleAuthExemptPaths = []string{
+	"/healthz",
+	"/metrics",
+	"/.well-known/agent.json",
+}
+
+// TailscaleAuthMiddleware verifies that incoming requests originate from an
+// authenticated Tailscale peer. It calls WhoIs on the remote address; if the
+// peer carries tag:ralph-fleet the request proceeds. If Tailscale is not
+// available (WhoIs fails), the middleware is permissive and allows all requests
+// for backward compatibility with non-Tailscale deployments.
+//
+// Health, metrics, and agent-card endpoints are always exempt.
+func TailscaleAuthMiddleware(tsClient TailscaleClient, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Always allow exempt paths (health checks, metrics, agent card).
+		for _, path := range tailscaleAuthExemptPaths {
+			if r.URL.Path == path {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		// If no Tailscale client is configured, pass through (backward compatible).
+		if tsClient == nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Determine the remote address for WhoIs lookup.
+		remoteAddr := r.RemoteAddr
+		if remoteAddr == "" {
+			// No remote addr available (e.g. tests); allow through.
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+
+		who, err := tsClient.WhoIs(ctx, remoteAddr)
+		if err != nil {
+			// Tailscale not available or peer not on tailnet.
+			// Check if the remote IP is a Tailscale IP (100.x.x.x range).
+			// If it's NOT a Tailscale IP, allow through — this is a local/LAN
+			// request and Tailscale auth doesn't apply.
+			host, _, _ := net.SplitHostPort(remoteAddr)
+			if host == "" {
+				host = remoteAddr
+			}
+			if !isTailscaleIP(host) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			// It IS a Tailscale IP but WhoIs failed — deny.
+			util.Debug.Debugf("tailscale auth: WhoIs failed for %s: %v", remoteAddr, err)
+			http.Error(w, "tailscale auth failed", http.StatusForbidden)
+			return
+		}
+
+		// WhoIs succeeded — peer is on our tailnet. Check for fleet tag.
+		if who.Node.HasTag(FleetTag) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// No fleet tag, but the peer is an authenticated tailnet member.
+		// Allow access (the tag requirement can be tightened later via config).
+		// Log a warning so operators know untagged peers are connecting.
+		if who.UserProfile != nil {
+			util.Debug.Debugf("tailscale auth: allowing untagged peer %s (user: %s)",
+				who.Node.HostName, who.UserProfile.LoginName)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// isTailscaleIP returns true if the address falls in the Tailscale CGNAT
+// range (100.64.0.0/10) or the Tailscale IPv6 range (fd7a:115c:a1e0::/48).
+func isTailscaleIP(addr string) bool {
+	ip := net.ParseIP(addr)
+	if ip == nil {
+		return false
+	}
+	// Tailscale IPv4 CGNAT: 100.64.0.0/10
+	_, tsV4, _ := net.ParseCIDR("100.64.0.0/10")
+	if tsV4 != nil && tsV4.Contains(ip) {
+		return true
+	}
+	// Tailscale IPv6: fd7a:115c:a1e0::/48
+	if strings.HasPrefix(ip.String(), "fd7a:115c:a1e0:") {
+		return true
+	}
+	return false
 }
