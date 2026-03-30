@@ -9,6 +9,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -167,6 +168,18 @@ func (s *Server) handleLoopStatus(_ context.Context, req mcp.CallToolRequest) (*
 		run.Unlock()
 		if repoPath != "" {
 			result["journal_entry_count"] = session.CountJournalEntries(repoPath)
+
+			// Wire gate report into loop status (0.6.4.4).
+			obsPath := session.ObservationPath(repoPath)
+			since := time.Now().Add(-24 * time.Hour)
+			if obs, err := session.LoadObservations(obsPath, since); err == nil && len(obs) > 0 {
+				blPath := e2e.BaselinePath(repoPath)
+				if baseline, err := e2e.LoadBaseline(blPath); err == nil && baseline != nil && baseline.Aggregate != nil {
+					report := e2e.EvaluateGates(obs, baseline, e2e.DefaultGateThresholds())
+					result["gate_report"] = report
+					result["gate_summary"] = e2e.FormatGateReport(report)
+				}
+			}
 		}
 	}
 
