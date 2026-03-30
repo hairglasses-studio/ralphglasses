@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	lipgloss "charm.land/lipgloss/v2"
 )
 
 const testThemeYAML = `name: hotswap-test
@@ -138,8 +139,8 @@ func TestWatchThemeFile_AppliesTheme(t *testing.T) {
 			t.Fatalf("expected ThemeChangedMsg, got %T", msg)
 		}
 		// Verify that ApplyTheme was called by checking the package-level var.
-		if string(ColorPrimary) != "#112233" {
-			t.Errorf("ColorPrimary = %q after hot-swap, want %q", string(ColorPrimary), "#112233")
+		if ColorPrimary != lipgloss.Color("#112233") {
+			t.Errorf("ColorPrimary = %v after hot-swap, want %v", ColorPrimary, lipgloss.Color("#112233"))
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out")
@@ -251,10 +252,10 @@ func TestThemeWatcher_DetectsChange(t *testing.T) {
 	time.Sleep(300 * time.Millisecond)
 
 	ThemeMu.RLock()
-	got := string(ColorPrimary)
+	got := ColorPrimary
 	ThemeMu.RUnlock()
-	if got != "#112233" {
-		t.Errorf("ColorPrimary = %q after ThemeWatcher reload, want %q", got, "#112233")
+	if got != lipgloss.Color("#112233") {
+		t.Errorf("ColorPrimary = %v after ThemeWatcher reload, want %v", got, lipgloss.Color("#112233"))
 	}
 
 	// Restore.

@@ -234,11 +234,11 @@ func renderBudgetBar(pct float64, width int) string {
 	var color string
 	switch {
 	case pct >= 90:
-		color = string(styles.ColorRed)
+		color = styles.ColorRedStr
 	case pct >= 70:
-		color = string(styles.ColorYellow)
+		color = styles.ColorYellowStr
 	default:
-		color = string(styles.ColorGreen)
+		color = styles.ColorGreenStr
 	}
 
 	p := progress.New(progress.WithSolidFill(color), progress.WithoutPercentage())
