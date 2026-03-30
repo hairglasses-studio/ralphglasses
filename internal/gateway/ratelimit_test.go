@@ -56,7 +56,7 @@ func TestRateLimiter_Allow_PerKeyIsolation(t *testing.T) {
 }
 
 func TestRateLimiter_Allow_Refill(t *testing.T) {
-	rl := NewRateLimiter(1000.0, 1) // 1000/s, burst 1
+	rl := NewRateLimiter(100.0, 1) // 100/s, burst 1
 
 	if !rl.Allow("k") {
 		t.Fatal("first request should be allowed")
@@ -65,7 +65,7 @@ func TestRateLimiter_Allow_Refill(t *testing.T) {
 		t.Fatal("immediate second should be denied")
 	}
 
-	time.Sleep(5 * time.Millisecond) // 5ms at 1000/s = ~5 tokens
+	time.Sleep(50 * time.Millisecond) // 50ms at 100/s = ~5 tokens
 
 	if !rl.Allow("k") {
 		t.Fatal("request after refill should be allowed")
