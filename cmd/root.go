@@ -132,6 +132,9 @@ func init() {
 	))
 	rootCmd.PersistentFlags().StringVar(&scanPath, "scan-path", "~/hairglasses-studio",
 		"Root directory to scan for ralph-enabled repos")
+	rootCmd.RegisterFlagCompletionFunc("scan-path", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return nil, cobra.ShellCompDirectiveFilterDirs
+	})
 	rootCmd.PersistentFlags().BoolVar(&debugMode, "debug", false,
 		"Enable verbose debug logging to stderr")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info",
