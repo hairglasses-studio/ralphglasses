@@ -578,6 +578,75 @@ func (s *Server) handleSessionErrors(_ context.Context, req mcp.CallToolRequest)
 	}), nil
 }
 
+func (s *Server) handleSessionReplayDiff(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	pathA := getStringArg(req, "path_a")
+	pathB := getStringArg(req, "path_b")
+	if pathA == "" || pathB == "" {
+		return codedError(ErrInvalidParams, "both path_a and path_b are required"), nil
+	}
+
+	playerA, err := session.NewPlayer(pathA)
+	if err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("cannot load replay A: %v", err)), nil
+	}
+	playerB, err := session.NewPlayer(pathB)
+	if err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("cannot load replay B: %v", err)), nil
+	}
+
+	diff, err := session.DiffSessions(playerA, playerB)
+	if err != nil {
+		return codedError(ErrInternal, fmt.Sprintf("diff failed: %v", err)), nil
+	}
+
+	// Cap events in the response to avoid oversized payloads.
+	maxEvents := int(getNumberArg(req, "max_events", 100))
+	if maxEvents < 1 {
+		maxEvents = 100
+	}
+	truncated := false
+	events := diff.Events
+	if len(events) > maxEvents {
+		events = events[:maxEvents]
+		truncated = true
+	}
+
+	// Build event summaries.
+	eventSummaries := make([]map[string]any, len(events))
+	for i, de := range events {
+		entry := map[string]any{
+			"status": string(de.Status),
+		}
+		if de.EventA != nil {
+			entry["type_a"] = string(de.EventA.Type)
+			entry["data_a"] = truncateForAlert(de.EventA.Data, 200)
+			entry["offset_a"] = de.OffsetA.String()
+		}
+		if de.EventB != nil {
+			entry["type_b"] = string(de.EventB.Type)
+			entry["data_b"] = truncateForAlert(de.EventB.Data, 200)
+			entry["offset_b"] = de.OffsetB.String()
+		}
+		eventSummaries[i] = entry
+	}
+
+	return jsonResult(map[string]any{
+		"session_id_a": diff.SessionIDA,
+		"session_id_b": diff.SessionIDB,
+		"total_a":      diff.TotalA,
+		"total_b":      diff.TotalB,
+		"matched":      diff.Matched,
+		"modified":     diff.Modified,
+		"only_a":       diff.OnlyA,
+		"only_b":       diff.OnlyB,
+		"similarity":   diff.Similarity,
+		"duration_a":   diff.DurationA.String(),
+		"duration_b":   diff.DurationB.String(),
+		"events":       eventSummaries,
+		"truncated":    truncated,
+	}), nil
+}
+
 func truncateForAlert(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
