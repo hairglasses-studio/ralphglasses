@@ -186,6 +186,15 @@ func (p *CostPredictor) Len() int {
 	return len(p.samples)
 }
 
+// Samples returns a copy of all recorded cost samples.
+func (p *CostPredictor) Samples() []CostSample {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	out := make([]CostSample, len(p.samples))
+	copy(out, p.samples)
+	return out
+}
+
 // ---------- helpers ----------
 
 func avgCost(samples []CostSample) float64 {
