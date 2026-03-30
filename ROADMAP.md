@@ -4,7 +4,7 @@ Command-and-control TUI + bootable thin client for parallel multi-LLM agent flee
 
 **Last updated:** 2026-03-29
 **Codebase:** 37 packages, 126 MCP tools (124 namespace + 2 meta), 19 TUI views
-**Status:** 619 tasks, 175 complete (28.3%), 444 remaining
+**Status:** 634 tasks, 175 complete (27.6%), 459 remaining
 **Key deps:** Go 1.26.1, mcp-go v0.45.0, bubbletea v1.3.10, anthropic-sdk-go v1.27.1
 
 ## Core Deliverables
@@ -1339,6 +1339,43 @@ Score roadmap items by impact/effort/dependency.
 - [x] 9.5.4 — Manager wiring: SetAutonomyLevel starts/stops supervisor at level 2
 - [x] 9.5.5 — MCP bridge: supervisor_status tool, autonomy_level repo_path parameter
 - **Acceptance:** `autonomy_level set=2` enables fully autonomous R&D cycles
+
+## Phase 10: Claude Code Native Integration `[NEW]`
+
+> **Research:** See [docs/claude-code-autonomy-research.md](docs/claude-code-autonomy-research.md) for full background.
+>
+> **Depends on:** Phase 9.5 (supervisor), Phase 2.75 (event bus)
+
+### 10.1 — Sprint Executor Agent & Batch Integration
+- [ ] 10.1.1 — Create `.claude/agents/sprint-executor.md` with `isolation: worktree`, `permissionMode: dontAsk`, `model: sonnet` `P1` `S`
+- [ ] 10.1.2 — Create `.claude/agents/marathon-monitor.md` with `model: haiku` for cheap status polling `P2` `S`
+- [ ] 10.1.3 — Integrate `/batch` decomposition for parallel sprint execution (5 ROADMAP items → 5 batch units) `P1` `M`
+- [ ] 10.1.4 — Add batch result merging to `cycle_merge.go` for worktree outputs `P1` `M`
+- **Acceptance:** `/batch "Implement next 5 ROADMAP items"` produces 5 parallel agents that each implement 1 item
+
+### 10.2 — Cloud Scheduled Tasks & Durable Marathons
+- [ ] 10.2.1 — Add cloud scheduled task support for durable marathon execution (replaces `marathon.sh`) `P1` `M`
+- [ ] 10.2.2 — Implement session continuation via `--resume` for multi-sprint chains `P1` `M`
+- [ ] 10.2.3 — Add `supervisor_state.json` restoration for cross-invocation continuity `P1` `S`
+- **Acceptance:** Cloud scheduled marathon runs unattended, resumes state across invocations
+
+### 10.3 — Hook-Based Automation
+- [ ] 10.3.1 — Add PostToolUse hooks for auto-`go vet` / auto-lint on Write/Edit `P2` `S`
+- [ ] 10.3.2 — Add PreToolUse hooks for Bash safety rules (block `rm -rf`, force push) `P2` `S`
+- [ ] 10.3.3 — Add Stop hook to force continuation during marathon sessions `P2` `S`
+- **Acceptance:** Hooks fire on tool use, enforcing code quality and safety gates automatically
+
+### 10.4 — Permission & Context Management
+- [ ] 10.4.1 — Integrate Auto Mode permission level for L2 marathon sessions `P1` `S`
+- [ ] 10.4.2 — Add Compact Instructions to CLAUDE.md for marathon context preservation `P1` `S`
+- [ ] 10.4.3 — Wire `CompactionEnabled` in loop profile to trigger `/compact` between sprints `P1` `M`
+- **Acceptance:** Marathon sessions use Auto Mode, compact cleanly between sprints preserving critical state
+
+### 10.5 — Cost Optimization
+- [ ] 10.5.1 — Integrate token counting API for accurate pre-cycle budget forecasting `P2` `S`
+- [ ] 10.5.2 — Add Batch API support for non-interactive marathon workloads (50% discount) `P2` `M`
+- [ ] 10.5.3 — Wire prompt caching for stable CLAUDE.md/system prompts across iterations `P1` `S`
+- **Acceptance:** Marathon cost per sprint reduced 50-80% vs naive execution
 
 ---
 
