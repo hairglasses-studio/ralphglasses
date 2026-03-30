@@ -11,9 +11,9 @@ import (
 
 // injectSession adds a session directly to the manager's internal map for testing.
 func injectSession(mgr *Manager, s *Session) {
-	mgr.mu.Lock()
+	mgr.sessionsMu.Lock()
 	mgr.sessions[s.ID] = s
-	mgr.mu.Unlock()
+	mgr.sessionsMu.Unlock()
 }
 
 func TestSupervisorStallHandler_NoStalls(t *testing.T) {

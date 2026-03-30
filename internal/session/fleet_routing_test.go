@@ -13,7 +13,7 @@ func TestFleetPoolRefresh(t *testing.T) {
 	m.SetStateDir(t.TempDir())
 
 	// Inject sessions directly into the manager.
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["s1"] = &Session{
 		ID:         "s1",
 		Provider:   ProviderClaude,
@@ -32,7 +32,7 @@ func TestFleetPoolRefresh(t *testing.T) {
 		RepoPath:   "/tmp/repo2",
 		LaunchedAt: time.Now().Add(-5 * time.Minute),
 	}
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	// Refresh fleet state.
 	m.RefreshFleetState()
@@ -64,7 +64,7 @@ func TestCanSpendGate(t *testing.T) {
 	m.FleetPool = pool.NewState(2.00)
 
 	// Inject a session that already spent most of the budget.
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["s1"] = &Session{
 		ID:         "s1",
 		Provider:   ProviderClaude,
@@ -74,7 +74,7 @@ func TestCanSpendGate(t *testing.T) {
 		RepoPath:   "/tmp/repo",
 		LaunchedAt: time.Now(),
 	}
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	// Refresh so pool knows about existing spend.
 	m.RefreshFleetState()

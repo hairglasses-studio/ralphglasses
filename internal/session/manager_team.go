@@ -33,9 +33,9 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 	}
 
 	// Safety: enforce team creation limits.
-	m.mu.RLock()
+	m.workersMu.RLock()
 	existingCount := len(m.teams)
-	m.mu.RUnlock()
+	m.workersMu.RUnlock()
 	if err := ValidateTeamCreate(config.Name, len(config.Tasks), existingCount, teamSafetyConfig()); err != nil {
 		return nil, err
 	}
@@ -139,9 +139,9 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 		Tasks:    tasks,
 	}
 
-	m.mu.Lock()
+	m.workersMu.Lock()
 	m.teams[config.Name] = team
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	if m.bus != nil {
 		m.bus.PublishCtx(ctx, events.Event{
@@ -172,8 +172,8 @@ func teamLeadAllowedTools() []string {
 // DelegateTask appends a task to a team under the manager mutex.
 // Returns the updated task count.
 func (m *Manager) DelegateTask(teamName string, task TeamTask) (int, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.workersMu.Lock()
+	defer m.workersMu.Unlock()
 	team, ok := m.teams[teamName]
 	if !ok {
 		return 0, fmt.Errorf("team %s: %w", teamName, ErrTeamNotFound)
@@ -185,8 +185,10 @@ func (m *Manager) DelegateTask(teamName string, task TeamTask) (int, error) {
 // GetTeam returns team status by name.
 // It also correlates task statuses from worker sessions.
 func (m *Manager) GetTeam(name string) (*TeamStatus, bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.sessionsMu.RLock()
+	defer m.sessionsMu.RUnlock()
+	m.workersMu.Lock()
+	defer m.workersMu.Unlock()
 
 	team, ok := m.teams[name]
 	if !ok {
@@ -209,7 +211,7 @@ func (m *Manager) GetTeam(name string) (*TeamStatus, bool) {
 }
 
 // correlateTaskStatuses updates task statuses by matching worker sessions.
-// Must be called with m.mu held.
+// Must be called with m.sessionsMu and m.workersMu held.
 func (m *Manager) correlateTaskStatuses(team *TeamStatus) {
 	// Collect worker sessions for this team (excluding the lead)
 	var workers []*Session
@@ -249,8 +251,8 @@ func (m *Manager) correlateTaskStatuses(team *TeamStatus) {
 // updateTeamOnSessionEnd checks if the completed session is a team lead
 // and transitions the team status accordingly.
 func (m *Manager) updateTeamOnSessionEnd(sess *Session) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.workersMu.Lock()
+	defer m.workersMu.Unlock()
 
 	for _, team := range m.teams {
 		if team.LeadID != sess.ID {
@@ -274,8 +276,8 @@ func (m *Manager) updateTeamOnSessionEnd(sess *Session) {
 
 // ListTeams returns all teams.
 func (m *Manager) ListTeams() []*TeamStatus {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.workersMu.RLock()
+	defer m.workersMu.RUnlock()
 
 	result := make([]*TeamStatus, 0, len(m.teams))
 	for _, t := range m.teams {

@@ -69,9 +69,9 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	}
 
 	// Level 2+ auto-optimization: consult FeedbackAnalyzer for provider/budget
-	m.mu.RLock()
+	m.configMu.RLock()
 	optimizer := m.optimizer
-	m.mu.RUnlock()
+	m.configMu.RUnlock()
 	if optimizer != nil {
 		var changed bool
 		opts, changed = optimizer.OptimizedLaunchOptions(opts)
@@ -82,9 +82,9 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 
 	var s *Session
 	var err error
-	m.mu.RLock()
+	m.configMu.RLock()
 	hook := m.launchSession
-	m.mu.RUnlock()
+	m.configMu.RUnlock()
 	if hook != nil {
 		s, err = hook(ctx, opts)
 	} else {
@@ -111,9 +111,9 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 		m.updateTeamOnSessionEnd(sess)
 	}
 
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions[s.ID] = s
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	// Persist initial state to disk
 	m.persistOrWarn(s, "after session start")
@@ -148,9 +148,9 @@ func (m *Manager) Resume(ctx context.Context, repoPath string, provider Provider
 
 // Stop gracefully stops a running session.
 func (m *Manager) Stop(id string) error {
-	m.mu.RLock()
+	m.sessionsMu.RLock()
 	s, ok := m.sessions[id]
-	m.mu.RUnlock()
+	m.sessionsMu.RUnlock()
 
 	if !ok {
 		return fmt.Errorf("session %s: %w", id, ErrSessionNotFound)
@@ -201,11 +201,11 @@ func (m *Manager) Stop(id string) error {
 // StopAll stops all running sessions and the supervisor if active.
 func (m *Manager) StopAll() {
 	// Stop the supervisor first so it doesn't relaunch sessions we're about to kill.
-	m.mu.Lock()
+	m.configMu.Lock()
 	m.stopSupervisor()
-	m.mu.Unlock()
+	m.configMu.Unlock()
 
-	m.mu.RLock()
+	m.sessionsMu.RLock()
 	ids := make([]string, 0, len(m.sessions))
 	for id, s := range m.sessions {
 		s.mu.Lock()
@@ -214,7 +214,7 @@ func (m *Manager) StopAll() {
 		}
 		s.mu.Unlock()
 	}
-	m.mu.RUnlock()
+	m.sessionsMu.RUnlock()
 
 	for _, id := range ids {
 		if err := m.Stop(id); err != nil {
@@ -227,9 +227,9 @@ func (m *Manager) StopAll() {
 // The new session inherits the original prompt, remaining budget, max turns, and team.
 // Returns the new session on success; the old session is stopped regardless.
 func (m *Manager) MigrateSession(ctx context.Context, sessionID string, targetProvider Provider) (*Session, error) {
-	m.mu.RLock()
+	m.sessionsMu.RLock()
 	s, ok := m.sessions[sessionID]
-	m.mu.RUnlock()
+	m.sessionsMu.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("session %s: %w", sessionID, ErrSessionNotFound)
 	}
@@ -453,8 +453,8 @@ func (m *Manager) LoadExternalSessions() {
 		return
 	}
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.sessionsMu.Lock()
+	defer m.sessionsMu.Unlock()
 
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {

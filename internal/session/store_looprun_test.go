@@ -231,9 +231,9 @@ func TestPersistLoopWritesToStore(t *testing.T) {
 	mgr.SetStateDir(t.TempDir())
 
 	run := testLoopRun("persist-1", "/repos/test", "running")
-	mgr.mu.Lock()
+	mgr.workersMu.Lock()
 	mgr.loops[run.ID] = run
-	mgr.mu.Unlock()
+	mgr.workersMu.Unlock()
 
 	mgr.PersistLoop(run)
 
@@ -271,9 +271,9 @@ func TestPersistLoopWithoutStore(t *testing.T) {
 	mgr.SetStateDir(t.TempDir())
 
 	run := testLoopRun("persist-nostore", "/repos/test", "running")
-	mgr.mu.Lock()
+	mgr.workersMu.Lock()
 	mgr.loops[run.ID] = run
-	mgr.mu.Unlock()
+	mgr.workersMu.Unlock()
 
 	// Should not panic when store is nil.
 	mgr.PersistLoop(run)
@@ -378,16 +378,16 @@ func TestLoadExternalLoopsMergesStoreAndJSON(t *testing.T) {
 
 	// Write a different loop as JSON file.
 	jsonRun := testLoopRun("from-json", "/repos/j", "stopped")
-	mgr.mu.Lock()
+	mgr.workersMu.Lock()
 	mgr.loops[jsonRun.ID] = jsonRun
-	mgr.mu.Unlock()
+	mgr.workersMu.Unlock()
 	mgr.PersistLoop(jsonRun)
 
 	// Clear in-memory state except what PersistLoop wrote to Store.
-	mgr.mu.Lock()
+	mgr.workersMu.Lock()
 	delete(mgr.loops, "from-json")
 	delete(mgr.loops, "from-store")
-	mgr.mu.Unlock()
+	mgr.workersMu.Unlock()
 
 	mgr.LoadExternalLoops()
 

@@ -6,16 +6,16 @@ import (
 
 // Get returns a session by ID.
 func (m *Manager) Get(id string) (*Session, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.sessionsMu.RLock()
+	defer m.sessionsMu.RUnlock()
 	s, ok := m.sessions[id]
 	return s, ok
 }
 
 // List returns all sessions, optionally filtered by repo path.
 func (m *Manager) List(repoPath string) []*Session {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.sessionsMu.RLock()
+	defer m.sessionsMu.RUnlock()
 
 	var result []*Session
 	for _, s := range m.sessions {
@@ -29,8 +29,8 @@ func (m *Manager) List(repoPath string) []*Session {
 
 // IsRunning checks if any session is running for the given repo path.
 func (m *Manager) IsRunning(repoPath string) bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.sessionsMu.RLock()
+	defer m.sessionsMu.RUnlock()
 	for _, s := range m.sessions {
 		if s.RepoPath == repoPath {
 			s.mu.Lock()
@@ -46,8 +46,8 @@ func (m *Manager) IsRunning(repoPath string) bool {
 
 // FindByRepo returns all sessions for a given repo name.
 func (m *Manager) FindByRepo(repoName string) []*Session {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.sessionsMu.RLock()
+	defer m.sessionsMu.RUnlock()
 
 	var result []*Session
 	for _, s := range m.sessions {
@@ -60,8 +60,8 @@ func (m *Manager) FindByRepo(repoName string) []*Session {
 
 // GetWorkflowRun returns a workflow run by ID.
 func (m *Manager) GetWorkflowRun(id string) (*WorkflowRun, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.workersMu.RLock()
+	defer m.workersMu.RUnlock()
 	run, ok := m.workflowRuns[id]
 	return run, ok
 }

@@ -138,10 +138,10 @@ func TestCheckLoopBudget(t *testing.T) {
 	// Add a mock session that has spent money
 	plannerSess := &Session{ID: "planner-1", SpentUSD: 1.5}
 	workerSess := &Session{ID: "worker-1", SpentUSD: 7.5}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["planner-1"] = plannerSess
 	m.sessions["worker-1"] = workerSess
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	run.Iterations = append(run.Iterations, LoopIteration{
 		PlannerSessionID: "planner-1",
@@ -185,10 +185,10 @@ func TestRunLoop_BudgetReasonInLastError(t *testing.T) {
 	// Add sessions that exceed the $5.00 total budget (90% headroom = $4.50).
 	plannerSess := &Session{ID: "p-1", SpentUSD: 1.0}
 	workerSess := &Session{ID: "w-1", SpentUSD: 4.0}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["p-1"] = plannerSess
 	m.sessions["w-1"] = workerSess
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	run.Iterations = append(run.Iterations, LoopIteration{
 		PlannerSessionID: "p-1",
@@ -251,10 +251,10 @@ func TestCheckLoopBudget_ZeroBudget(t *testing.T) {
 	// Add sessions that have spent money
 	plannerSess := &Session{ID: "zb-planner-1", SpentUSD: 5.0}
 	workerSess := &Session{ID: "zb-worker-1", SpentUSD: 15.0}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["zb-planner-1"] = plannerSess
 	m.sessions["zb-worker-1"] = workerSess
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	run.Iterations = append(run.Iterations, LoopIteration{
 		PlannerSessionID: "zb-planner-1",
@@ -345,9 +345,9 @@ func TestCheckLoopBudget_ConcurrentAccess(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		sid := "conc-worker-" + string(rune('0'+i))
 		s := &Session{ID: sid, SpentUSD: 1.0}
-		m.mu.Lock()
+		m.sessionsMu.Lock()
 		m.sessions[sid] = s
-		m.mu.Unlock()
+		m.sessionsMu.Unlock()
 	}
 
 	run := &LoopRun{
@@ -422,10 +422,10 @@ func TestRunLoop_BudgetExceededStopsLoop(t *testing.T) {
 	// Add sessions whose total spend = $1.80 (exactly at 90% of $2.00).
 	plannerSess := &Session{ID: "rl-planner", SpentUSD: 0.80}
 	workerSess := &Session{ID: "rl-worker", SpentUSD: 1.00}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["rl-planner"] = plannerSess
 	m.sessions["rl-worker"] = workerSess
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	run.Iterations = append(run.Iterations, LoopIteration{
 		PlannerSessionID: "rl-planner",

@@ -61,9 +61,9 @@ func TestLoadExternalSessions_SkipExisting(t *testing.T) {
 		Provider: ProviderGemini,
 		Status:   StatusRunning,
 	}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["in-proc"] = existing
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	// Write a stale version to disk
 	stale := &Session{
@@ -135,9 +135,9 @@ func TestLoadExternalSessions_CleanupOldTerminal(t *testing.T) {
 		EndedAt:    &ended,
 	}
 	// Inject into memory
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["cleanup-1"] = old
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 	// Write to disk
 	os.WriteFile(filepath.Join(dir, "cleanup-1.json"), marshalSession(old), 0644)
 
@@ -180,9 +180,9 @@ func TestLoadExternalSessions_ErroredSessionRetained(t *testing.T) {
 		LaunchedAt: time.Now().Add(-3 * time.Minute),
 		EndedAt:    &ended,
 	}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["errored-1"] = errored
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 	os.WriteFile(filepath.Join(dir, "errored-1.json"), marshalSession(errored), 0644)
 
 	m.LoadExternalSessions()
@@ -210,9 +210,9 @@ func TestLoadExternalSessions_ErroredSessionPurgedAfterRetention(t *testing.T) {
 		LaunchedAt: time.Now().Add(-3 * time.Minute),
 		EndedAt:    &ended,
 	}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["errored-old"] = errored
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 	os.WriteFile(filepath.Join(dir, "errored-old.json"), marshalSession(errored), 0644)
 
 	m.LoadExternalSessions()
@@ -276,9 +276,9 @@ func TestPersistLoop_RoundTrip(t *testing.T) {
 			WorkerProvider: ProviderClaude,
 		},
 	}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.loops["loop-1"] = run
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	m.PersistLoop(run)
 
@@ -326,9 +326,9 @@ func TestLoadExternalLoops_NewLoop(t *testing.T) {
 
 	m.LoadExternalLoops()
 
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	got, ok := m.loops["ext-loop-1"]
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	if !ok {
 		t.Fatal("expected external loop to be loaded")
@@ -343,9 +343,9 @@ func TestLoadExternalLoops_SkipExisting(t *testing.T) {
 	m := NewManager()
 	m.SetStateDir(dir)
 
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.loops["existing"] = &LoopRun{ID: "existing", Status: "running"}
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	loopDir := filepath.Join(dir, "loops")
 	os.MkdirAll(loopDir, 0755)
@@ -354,9 +354,9 @@ func TestLoadExternalLoops_SkipExisting(t *testing.T) {
 
 	m.LoadExternalLoops()
 
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	got := m.loops["existing"]
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	if got.Status != "running" {
 		t.Errorf("status = %q, want running (in-memory should not be overwritten)", got.Status)
@@ -380,9 +380,9 @@ func TestLoadExternalLoops_InvalidJSON(t *testing.T) {
 
 	m.LoadExternalLoops()
 
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	count := len(m.loops)
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	if count != 0 {
 		t.Errorf("expected 0 loops (invalid JSON skipped), got %d", count)

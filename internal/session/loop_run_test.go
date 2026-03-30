@@ -56,9 +56,9 @@ func TestRunLoop_ContextCancelled(t *testing.T) {
 		},
 		Iterations: []LoopIteration{},
 	}
-	m.mu.Lock()
+	m.workersMu.Lock()
 	m.loops["run-cancel"] = run
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -98,9 +98,9 @@ func TestRunLoop_PausedThenCancelled(t *testing.T) {
 		},
 		Iterations: []LoopIteration{},
 	}
-	m.mu.Lock()
+	m.workersMu.Lock()
 	m.loops["paused-run"] = run
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -145,9 +145,9 @@ func TestStopLoop_CancelsRunLoop(t *testing.T) {
 		cancel:     cancel,
 		done:       done,
 	}
-	m.mu.Lock()
+	m.workersMu.Lock()
 	m.loops["stop-test"] = run
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	// Simulate a RunLoop goroutine that waits for context cancel and closes done
 	go func() {

@@ -144,9 +144,9 @@ func TestSetStateDir(t *testing.T) {
 	dir := t.TempDir()
 	m.SetStateDir(dir)
 	// Verify it was set by checking the internal field
-	m.mu.RLock()
+	m.configMu.RLock()
 	got := m.stateDir
-	m.mu.RUnlock()
+	m.configMu.RUnlock()
 	if got != dir {
 		t.Errorf("stateDir = %q, want %q", got, dir)
 	}
