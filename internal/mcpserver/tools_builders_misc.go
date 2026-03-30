@@ -315,6 +315,10 @@ func (s *Server) buildEvalGroup() ToolGroup {
 				mcp.WithNumber("hours", mcp.Description("Observation window in hours (default: 168)")),
 				mcp.WithString("metric", mcp.Required(), mcp.Description("Metric to analyze — full names (total_cost_usd, total_latency_ms, confidence, difficulty_score) or shorthands (cost, latency, difficulty)")),
 			), s.handleAnomalyDetect},
+			{mcp.NewTool("ralphglasses_eval_define",
+				mcp.WithDescription("Validate and parse an A/B test definition from YAML content. Returns the parsed definition or validation errors."),
+				mcp.WithString("yaml_content", mcp.Required(), mcp.Description("YAML content defining the A/B test (name, variants, metrics, sample_size, timeout)")),
+			), s.handleEvalDefine},
 		},
 	}
 }
