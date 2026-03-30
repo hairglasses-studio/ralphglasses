@@ -395,8 +395,16 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span 
 		onComplete(s)
 	}
 
-	// Write improvement journal entry (fire-and-forget).
+	// Write improvement journal entry (fire-and-forget with timeout).
 	go func() {
+		// Use a bounded context so the goroutine cannot hang indefinitely.
+		writeCtx, writeCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer writeCancel()
+		select {
+		case <-writeCtx.Done():
+			return
+		default:
+		}
 		if err := WriteJournalEntry(s); err == nil && s.bus != nil {
 			s.bus.Publish(events.Event{
 				Type:      events.JournalWritten,

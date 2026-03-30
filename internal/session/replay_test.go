@@ -159,9 +159,12 @@ func TestPlayerPlayCancellation(t *testing.T) {
 
 	p, _ := NewPlayer(path)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	// Use a fast speed (100x) so inter-event sleeps are ~10ms, not 1000s.
+	// Also add a timeout safety net so the test can never hang indefinitely.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	var count int
-	err := p.Play(ctx, 0.001, func(_ ReplayEvent) {
+	err := p.Play(ctx, 100.0, func(_ ReplayEvent) {
 		count++
 		if count >= 2 {
 			cancel()
