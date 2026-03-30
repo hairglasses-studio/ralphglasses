@@ -507,18 +507,18 @@ Tooling, release automation, and contributor workflow. All items independent of 
 
 ### 2.2 — Git worktree orchestration `[BLOCKED BY 2.1]`
 - [ ] 2.2.1 — Create `internal/worktree/` package: wrapping `git worktree add/list/remove` `P0` `M`
-- [ ] 2.2.2 — Auto-create worktree on session launch: branch naming convention `ralph/<session-id>` `P0` `M`
+- [x] 2.2.2 — Auto-create worktree on session launch: branch naming convention `ralph/<session-id>` `P0` `M`
 - [ ] 2.2.3 — Implement merge-back: `git merge --no-ff` with conflict detection and abort-on-conflict option `P0` `L`
 - [x] 2.2.4 — Add worktree cleanup on session stop/archive (remove worktree dir, prune) `P1` `S`
 - [x] 2.2.5 — Handle edge cases: dirty worktree on stop, orphaned branches, worktree path conflicts `P1` `M`
 - **Acceptance:** `ralphglasses worktree create <repo>` produces isolated worktree, merge-back detects conflicts
 
 ### 2.3 — Budget tracking `[BLOCKED BY 2.1]`
-- [ ] 2.3.1 — Per-session spend poller: read `session_spend_usd` from `.ralph/status.json` on watcher tick `P0` `M`
-- [ ] 2.3.2 — Implement global budget pool: total ceiling, per-session allocation, remaining calculation `P0` `M`
+- [x] 2.3.1 — Per-session spend poller: read `session_spend_usd` from `.ralph/status.json` on watcher tick `P0` `M`
+- [x] 2.3.2 — Implement global budget pool: total ceiling, per-session allocation, remaining calculation `P0` `M`
 - [x] 2.3.3 — Add threshold alerts at 50%, 75%, 90% — emit BubbleTea message for TUI notification `P1` `S`
-- [ ] 2.3.4 — Auto-pause session at budget ceiling: send SIGSTOP, update session state `P0` `M`
-- [ ] 2.3.5 — Port budget tracking patterns from `mcpkit/finops` (cost ledger, rate calculation) `P1` `M`
+- [x] 2.3.4 — Auto-pause session at budget ceiling: send SIGSTOP, update session state `P0` `M`
+- [x] 2.3.5 — Port budget tracking patterns from `mcpkit/finops` (cost ledger, rate calculation) `P1` `M`
 - **Acceptance:** session auto-pauses when budget exhausted, alerts visible in TUI
 
 ### 2.4 — Fleet dashboard TUI view `[BLOCKED BY 2.1]`
@@ -715,25 +715,25 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 > **Parallel workstreams:** 3.1 (i3 IPC) is the foundation. 3.4 (autorandr) is independent. 3.5 (Sway) can proceed in parallel with 3.2. 3.3 depends on 3.1 + 2.1 (SQLite). 3.6 (Hyprland) is independent.
 
 ### 3.1 — i3 IPC client
-- [ ] 3.1.1 — Create `internal/i3/` package wrapping go-i3: connect to i3 socket, subscribe to events `P1` `M`
-- [ ] 3.1.2 — Workspace CRUD: create named workspace, move to output, rename, close `P1` `M`
-- [ ] 3.1.3 — Window management: focus, move-to-workspace, set layout (splitv/splith/tabbed/stacked) `P1` `M`
+- [x] 3.1.1 — Create `internal/i3/` package wrapping go-i3: connect to i3 socket, subscribe to events `P1` `M`
+- [x] 3.1.2 — Workspace CRUD: create named workspace, move to output, rename, close `P1` `M`
+- [x] 3.1.3 — Window management: focus, move-to-workspace, set layout (splitv/splith/tabbed/stacked) `P1` `M`
 - [ ] 3.1.4 — Monitor enumeration: list outputs via i3 IPC (name, resolution, position) `P1` `S`
 - [ ] 3.1.5 — Event listener: workspace focus, window create/close, output connect/disconnect `P1` `M`
 - **Acceptance:** programmatic workspace creation and window placement from Go
 
 ### 3.2 — Monitor layout manager `[BLOCKED BY 3.1]`
-- [ ] 3.2.1 — Define layout presets as JSON: "dev" (agents + logs), "fleet" (all sessions), "focused" (single agent) `P1` `M`
-- [ ] 3.2.2 — 7-monitor workspace assignment config (`distro/i3/workspaces.json`) `P1` `S`
+- [x] 3.2.1 — Define layout presets as JSON: "dev" (agents + logs), "fleet" (all sessions), "focused" (single agent) `P1` `M`
+- [x] 3.2.2 — 7-monitor workspace assignment config (`distro/i3/workspaces.json`) `P1` `S`
 - [ ] 3.2.3 — TUI command `:layout <name>` — apply preset `P1` `M`
 - [ ] 3.2.4 — Save current layout as custom preset (`:layout save <name>`) `P2` `M`
-- [ ] 3.2.5 — Handle missing monitors gracefully: skip unavailable outputs, log warning, fall back `P1` `S`
+- [x] 3.2.5 — Handle missing monitors gracefully: skip unavailable outputs, log warning, fall back `P1` `S`
 - **Acceptance:** `:layout fleet` redistributes windows across monitors
 
 ### 3.3 — Multi-instance coordination `[BLOCKED BY 3.1, 2.1]`
 - [ ] 3.3.1 — Shared state via SQLite: same DB file, WAL mode, `PRAGMA busy_timeout` `P1` `L`
-- [ ] 3.3.2 — Instance discovery: Unix domain socket per instance, advertise PID and capabilities `P1` `M`
-- [ ] 3.3.3 — Leader election: simple file-lock based leader for fleet operations `P1` `M`
+- [x] 3.3.2 — Instance discovery: Unix domain socket per instance, advertise PID and capabilities `P1` `M`
+- [x] 3.3.3 — Leader election: simple file-lock based leader for fleet operations `P1` `M`
 - [ ] 3.3.4 — Leader failover: detect leader crash via heartbeat, re-elect `P2` `M`
 - **Acceptance:** two ralphglasses instances share session state without corruption
 
@@ -877,9 +877,9 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 ### 4.8 — Marathon.sh hardening `[PARALLEL]`
 - [ ] 4.8.1 — Disk space monitoring `P1` `S`
 - [ ] 4.8.2 — Memory pressure monitoring `P1` `S`
-- [ ] 4.8.3 — Fix restart logic: cap MAX_RESTARTS, exponential backoff `P0` `M`
+- [x] 4.8.3 — Fix restart logic: cap MAX_RESTARTS, exponential backoff `P0` `M`
 - [ ] 4.8.4 — Add `bc` availability check `P2` `S`
-- [ ] 4.8.5 — Marathon summary report on completion `P2` `M`
+- [x] 4.8.5 — Marathon summary report on completion `P2` `M`
 - **Acceptance:** marathon.sh survives disk fill and memory pressure
 
 ### 4.9 — Secure boot support `[PARALLEL]`
@@ -987,7 +987,7 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - [x] 6.1.1 — StepLoop implementation with iteration management, observation tracking `[reconciled 2026-03-27]`
 - [x] 6.1.4 — Parallel execution: run independent tasks concurrently `[reconciled 2026-03-27]`
 - [x] 6.1.5 — Progress telemetry: structured events to session event log `[reconciled 2026-03-27]`
-- [ ] 6.1.2 — Typed task specs: define task schema (inputs, outputs, dependencies) as Go structs `P1` `M`
+- [x] 6.1.2 — Typed task specs: define task schema (inputs, outputs, dependencies) as Go structs `P1` `M`
 - [ ] 6.1.3 — DAG visualization in TUI: show task graph with status `P2` `L`
 - **Acceptance:** ralph loop runs natively in Go, DAG visible in TUI
 
@@ -1000,15 +1000,15 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - **Acceptance:** automated benchmark -> task generation cycle runs unattended
 
 ### 6.3 — Cross-session coordination `[BLOCKED BY 6.1, 2.1]`
-- [ ] 6.3.1 — Shared context store `P1` `M`
-- [ ] 6.3.2 — Dedup engine `P1` `M`
+- [x] 6.3.1 — Shared context store `P1` `M`
+- [x] 6.3.2 — Dedup engine `P1` `M`
 - [ ] 6.3.3 — Dependency ordering `P1` `L`
 - [ ] 6.3.4 — Conflict resolution `P1` `L`
 - [ ] 6.3.5 — Coordination dashboard `P2` `M`
 - **Acceptance:** two agents targeting same repo don't conflict on same files
 
 ### 6.4 — Analytics & observability `[PARALLEL]`
-- [ ] 6.4.1 — Historical data model: SQLite `P1` `M`
+- [x] 6.4.1 — Historical data model: SQLite `P1` `M`
 - [ ] 6.4.2 — TUI analytics view `P1` `L`
 - [ ] 6.4.3 — OpenTelemetry traces `P1` `L`
 - [x] 6.4.4 — Prometheus metrics endpoint `P1` `M`
