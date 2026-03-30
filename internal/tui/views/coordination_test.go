@@ -17,7 +17,7 @@ func TestCoordinationModel_Init(t *testing.T) {
 
 func TestCoordinationModel_View_Empty(t *testing.T) {
 	m := NewCoordination()
-	view := m.View()
+	view := m.View().Content
 
 	if !strings.Contains(view, "Coordination Dashboard") {
 		t.Fatal("empty view should contain title")
@@ -44,7 +44,7 @@ func TestCoordinationModel_View_SingleSession(t *testing.T) {
 		},
 	})
 
-	view := m.View()
+	view := m.View().Content
 
 	if !strings.Contains(view, "1 total") {
 		t.Fatalf("view should show 1 total node, got:\n%s", view)
@@ -104,7 +104,7 @@ func TestCoordinationModel_View_MultipleSessions_WithDependencies(t *testing.T) 
 		},
 	})
 
-	view := m.View()
+	view := m.View().Content
 
 	if !strings.Contains(view, "3 total") {
 		t.Fatalf("view should show 3 total nodes, got:\n%s", view)
@@ -156,7 +156,7 @@ func TestCoordinationModel_View_ResourceContention(t *testing.T) {
 		},
 	})
 
-	view := m.View()
+	view := m.View().Content
 
 	if !strings.Contains(view, "Resource Contention") {
 		t.Fatalf("view should show contention when two sessions share a repo, got:\n%s", view)
@@ -386,7 +386,7 @@ func TestCoordinationModel_View_ClaimedTasks(t *testing.T) {
 		},
 	})
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "claims:") {
 		t.Fatal("view should show claimed tasks")
 	}
@@ -409,7 +409,7 @@ func TestCoordinationModel_View_LongNameTruncation(t *testing.T) {
 		},
 	})
 
-	view := m.View()
+	view := m.View().Content
 	if strings.Contains(view, "very-long-session-name-that-exceeds-limit") {
 		t.Fatal("long name should be truncated")
 	}

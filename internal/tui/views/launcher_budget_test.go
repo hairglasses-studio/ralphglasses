@@ -31,7 +31,7 @@ func TestLauncherBudgetModel_Init(t *testing.T) {
 
 func TestLauncherBudgetModel_View(t *testing.T) {
 	m := NewLauncherBudget(testModels, 10.0)
-	view := m.View()
+	view := m.View().Content
 
 	checks := []string{
 		"Budget",
@@ -182,7 +182,7 @@ func TestLauncherBudgetModel_EmptyModels(t *testing.T) {
 	if m.SelectedModel() != "" {
 		t.Errorf("selected model with nil models = %q, want empty", m.SelectedModel())
 	}
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "(none)") {
 		t.Error("view should show (none) when no models")
 	}
