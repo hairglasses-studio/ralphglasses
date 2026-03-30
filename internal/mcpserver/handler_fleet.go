@@ -553,6 +553,56 @@ func (s *Server) handleFleetDLQ(_ context.Context, req mcp.CallToolRequest) (*mc
 	}
 }
 
+func (s *Server) handleFleetSchedule(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	tasksJSON := getStringArg(req, "tasks")
+	if tasksJSON == "" {
+		return codedError(ErrInvalidParams, "tasks parameter is required (JSON array of task objects)"), nil
+	}
+
+	var tasks []fleet.TaskNode
+	if err := json.Unmarshal([]byte(tasksJSON), &tasks); err != nil {
+		return codedError(ErrInvalidParams, "invalid tasks JSON: "+err.Error()), nil
+	}
+
+	if len(tasks) == 0 {
+		return fleetJSON(map[string]any{
+			"schedule": &fleet.SchedulePlan{},
+			"message":  "no tasks provided",
+		})
+	}
+
+	graph := fleet.NewTaskGraph()
+	for _, t := range tasks {
+		graph.AddNode(t)
+	}
+
+	// Detect cycles before building schedule.
+	if cycles := graph.DetectCycles(); len(cycles) > 0 {
+		return fleetJSON(map[string]any{
+			"error":  "dependency cycle detected",
+			"cycles": cycles,
+		})
+	}
+
+	plan, err := fleet.BuildSchedule(graph)
+	if err != nil {
+		return codedError(ErrInternal, err.Error()), nil
+	}
+
+	critPath := graph.CriticalPath()
+	var critIDs []string
+	for _, n := range critPath {
+		critIDs = append(critIDs, n.ID)
+	}
+
+	return fleetJSON(map[string]any{
+		"schedule":      plan,
+		"critical_path": critIDs,
+		"total_tasks":   plan.TotalTasks,
+		"depth":         plan.Depth,
+	})
+}
+
 // fleetJSON marshals v and returns it as a text content result.
 func fleetJSON(v any) (*mcp.CallToolResult, error) {
 	data, err := json.Marshal(v)
