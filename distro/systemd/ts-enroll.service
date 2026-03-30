@@ -1,0 +1,16 @@
+[Unit]
+Description=Ralphglasses Tailscale Enrollment (first boot)
+After=tailscaled.service hw-detect.service network-online.target
+Requires=tailscaled.service
+Wants=network-online.target
+Before=ralphglasses.service
+ConditionPathExists=!/var/lib/tailscale/ralph-enrolled
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=-/etc/ralphglasses/environment
+ExecStart=/usr/local/bin/ts-enroll.sh
+
+[Install]
+WantedBy=multi-user.target
