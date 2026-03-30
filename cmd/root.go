@@ -20,10 +20,12 @@ import (
 
 	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/headless"
 	"github.com/hairglasses-studio/ralphglasses/internal/healthz"
 	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
+	tmuxpkg "github.com/hairglasses-studio/ralphglasses/internal/tmux"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
@@ -96,6 +98,36 @@ fleet management from any MCP-capable client.`,
 		defer logFile.Close()
 
 		util.Debug.Debugf("scan-path: %s", scanPath)
+
+		// Headless mode: when no TTY is detected, auto-launch in tmux
+		// instead of the interactive TUI.
+		if headless.IsHeadless() {
+			slog.Info("headless mode: no TTY detected")
+			if tmuxpkg.Available() {
+				tmuxName := "ralphglasses"
+				if _, err := tmuxpkg.EnsureSession(tmuxName); err != nil {
+					return fmt.Errorf("headless: create tmux session: %w", err)
+				}
+				fmt.Fprintf(os.Stderr, "headless: started tmux session %q (attach with: tmux attach -t %s)\n", tmuxName, tmuxName)
+				// Send the TUI command into the tmux session
+				tuiCmd := fmt.Sprintf("ralphglasses --scan-path %s", scanPath)
+				if err := tmuxpkg.SendKeys(tmuxName, tuiCmd); err != nil {
+					return fmt.Errorf("headless: send keys to tmux: %w", err)
+				}
+				return nil
+			}
+			// No tmux available — fall through to plain log mode
+			fmt.Fprintln(os.Stderr, "headless: no tmux available, running in log-only mode")
+			_ = events.NewBus(1000)
+			_, headlessCancel := context.WithCancel(context.Background())
+			defer headlessCancel()
+			headlessSigCh := make(chan os.Signal, 1)
+			signal.Notify(headlessSigCh, syscall.SIGINT, syscall.SIGTERM)
+			<-headlessSigCh
+			headlessCancel()
+			fmt.Fprintln(os.Stderr, "headless: shutting down")
+			return nil
+		}
 
 		applyTheme(themeName)
 
