@@ -271,9 +271,66 @@ func (r *Registry) List() []PluginInfo {
 			Name:    e.plugin.Name(),
 			Version: e.plugin.Version(),
 			Status:  e.status,
+			Type:    r.pluginType(e.plugin),
 		}
 	}
 	return out
+}
+
+// pluginType determines the PluginType for a given plugin.
+// Must be called with r.mu held (at least RLock).
+func (r *Registry) pluginType(p Plugin) PluginType {
+	// Check if the plugin implements the GRPCPlugin interface.
+	if _, ok := p.(GRPCPlugin); ok {
+		return TypeGRPC
+	}
+	return TypeBuiltin
+}
+
+// Enable re-enables a disabled plugin, restoring it to active status.
+// Returns an error if the plugin is not found or is not currently disabled.
+func (r *Registry) Enable(name string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for i := range r.plugins {
+		if r.plugins[i].plugin.Name() == name {
+			if r.plugins[i].status != StatusDisabled {
+				return fmt.Errorf("plugin %q is not disabled (status: %s)", name, r.plugins[i].status)
+			}
+			r.plugins[i].status = StatusActive
+			return nil
+		}
+	}
+	return fmt.Errorf("plugin %q not found", name)
+}
+
+// Disable disables an active plugin, preventing it from receiving events.
+// Returns an error if the plugin is not found or is not currently active.
+func (r *Registry) Disable(name string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for i := range r.plugins {
+		if r.plugins[i].plugin.Name() == name {
+			if r.plugins[i].status != StatusActive {
+				return fmt.Errorf("plugin %q is not active (status: %s)", name, r.plugins[i].status)
+			}
+			r.plugins[i].status = StatusDisabled
+			return nil
+		}
+	}
+	return fmt.Errorf("plugin %q not found", name)
+}
+
+// GetStatus returns the current status of a plugin by name.
+func (r *Registry) GetStatus(name string) (PluginStatus, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, e := range r.plugins {
+		if e.plugin.Name() == name {
+			return e.status, true
+		}
+	}
+	return "", false
 }
 
 // Plugins returns a snapshot of the raw Plugin values in registration order.
