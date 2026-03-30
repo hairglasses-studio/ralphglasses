@@ -69,15 +69,15 @@ func (m *Manager) GetEpisodicMemory() *EpisodicMemory {
 
 // SetDepthEstimator attaches the adaptive iteration depth subsystem.
 func (m *Manager) SetDepthEstimator(de *DepthEstimator) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.configMu.Lock()
+	defer m.configMu.Unlock()
 	m.depthEstimator = de
 }
 
 // DepthEstimator returns the attached DepthEstimator, or nil.
 func (m *Manager) DepthEstimator() *DepthEstimator {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.configMu.RLock()
+	defer m.configMu.RUnlock()
 	return m.depthEstimator
 }
 

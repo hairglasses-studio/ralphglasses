@@ -284,15 +284,15 @@ func (m *Manager) TotalPrunedThisSession() int {
 
 // WorktreePool returns the worktree pool, or nil if none is configured.
 func (m *Manager) WorktreePool() *WorktreePool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.configMu.RLock()
+	defer m.configMu.RUnlock()
 	return m.worktreePool
 }
 
 // SetWorktreePool sets the worktree pool for reuse across sessions.
 func (m *Manager) SetWorktreePool(pool *WorktreePool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.configMu.Lock()
+	defer m.configMu.Unlock()
 	m.worktreePool = pool
 }
 
