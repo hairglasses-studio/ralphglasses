@@ -152,12 +152,15 @@ var viewBindings = map[ViewMode][]func(*KeyMap) *key.Binding{
 	ViewConfigEditor: {
 		func(k *KeyMap) *key.Binding { return &k.EditConfig },
 		func(k *KeyMap) *key.Binding { return &k.WriteConfig },
+		func(k *KeyMap) *key.Binding { return &k.ConfigInsert },
+		func(k *KeyMap) *key.Binding { return &k.ConfigRename },
+		func(k *KeyMap) *key.Binding { return &k.ConfigDelete },
+		func(k *KeyMap) *key.Binding { return &k.ConfigUndo },
 		func(k *KeyMap) *key.Binding { return &k.GotoEnd },
 		func(k *KeyMap) *key.Binding { return &k.GotoStart },
 		func(k *KeyMap) *key.Binding { return &k.FollowToggle },
 		func(k *KeyMap) *key.Binding { return &k.PageUp },
 		func(k *KeyMap) *key.Binding { return &k.PageDown },
-		func(k *KeyMap) *key.Binding { return &k.ActionsMenu },
 		func(k *KeyMap) *key.Binding { return &k.LoopPanel },
 		func(k *KeyMap) *key.Binding { return &k.LoopControlPanel },
 	},
@@ -302,6 +305,13 @@ var viewBindings = map[ViewMode][]func(*KeyMap) *key.Binding{
 var globalOverrides = map[ViewMode][]func(*KeyMap) *key.Binding{
 	ViewLoopDetail: {
 		func(k *KeyMap) *key.Binding { return &k.Refresh },
+	},
+	ViewConfigEditor: {
+		// Disable globals that conflict with config CRUD keys:
+		// r=Refresh conflicts with r=ConfigRename,
+		// sort (s) not needed in config editor.
+		func(k *KeyMap) *key.Binding { return &k.Refresh },
+		func(k *KeyMap) *key.Binding { return &k.Sort },
 	},
 }
 
