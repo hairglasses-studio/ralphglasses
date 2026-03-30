@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -13,9 +14,273 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
 
+// TestSupervisorIntegration verifies the full autonomous pipeline:
+// sprint planner, budget envelope, config validation, and state persistence/resume.
+func TestSupervisorIntegration(t *testing.T) {
+	// --- 1. Set up temp dir with fake ROADMAP.md ---
+	repoDir := t.TempDir()
+	roadmapPath := filepath.Join(repoDir, "ROADMAP.md")
+	roadmapContent := `## Test Section
+- [ ] Item 1 — small fix ` + "`P0`" + ` ` + "`S`" + `
+- [ ] Item 2 — medium feature ` + "`P1`" + ` ` + "`M`" + `
+- [ ] Item 3 — another fix ` + "`P0`" + ` ` + "`S`" + `
+- [x] Item 4 — already done ` + "`P1`" + ` ` + "`S`" + `
+- [ ] Item 5 — low priority ` + "`P2`" + ` ` + "`S`" + `
+`
+	if err := os.WriteFile(roadmapPath, []byte(roadmapContent), 0644); err != nil {
+		t.Fatalf("write ROADMAP.md: %v", err)
+	}
+
+	// --- 2. Create Manager ---
+	mgr := NewManager()
+	mgr.SetStateDir(filepath.Join(repoDir, "sessions"))
+
+	// --- 3. Create Supervisor with all components wired ---
+	s := NewSupervisor(mgr, repoDir)
+	s.TickInterval = 10 * time.Millisecond
+
+	s.SetMonitor(NewHealthMonitor(DefaultHealthThresholds()))
+	s.SetChainer(NewCycleChainer())
+	s.SetSprintPlanner(NewSprintPlanner(roadmapPath))
+	s.SetStallHandler(NewSupervisorStallHandler())
+
+	gates := DefaultSupervisorGates()
+	gates.RequireBuild = false
+	gates.RequireTest = false
+	gates.RequireVet = false
+	s.SetGates(gates)
+
+	s.SetBudget(NewBudgetEnvelope(10.0))
+	bus := events.NewBus(100)
+	s.SetBus(bus)
+
+	// --- 4. Test sprint planner independently ---
+	t.Run("SprintPlanner", func(t *testing.T) {
+		planner := NewSprintPlanner(roadmapPath)
+		cycle := planner.PlanNextSprint(repoDir)
+		if cycle == nil {
+			t.Fatal("PlanNextSprint returned nil, expected a CycleRun")
+		}
+		if len(cycle.Tasks) == 0 {
+			t.Fatal("expected at least one task")
+		}
+		if len(cycle.Tasks) > 5 {
+			t.Errorf("expected <= 5 tasks, got %d", len(cycle.Tasks))
+		}
+
+		// Verify priority ordering: P0 (1.0) before P1 (0.8) before P2 (0.5).
+		for i := 1; i < len(cycle.Tasks); i++ {
+			if cycle.Tasks[i].Priority > cycle.Tasks[i-1].Priority {
+				t.Errorf("tasks not sorted by priority: task[%d].Priority=%.1f > task[%d].Priority=%.1f",
+					i, cycle.Tasks[i].Priority, i-1, cycle.Tasks[i-1].Priority)
+			}
+		}
+
+		// Verify the checked item (Item 4) is excluded.
+		for _, task := range cycle.Tasks {
+			if strings.Contains(task.Title, "already done") || strings.Contains(task.Title, "Item 4") {
+				t.Errorf("checked item should be excluded: %s", task.Title)
+			}
+		}
+
+		t.Logf("Sprint planned: %d tasks, objective: %s", len(cycle.Tasks), cycle.Objective)
+		for i, task := range cycle.Tasks {
+			t.Logf("  task[%d]: %s (priority=%.1f, size=%s)", i, task.Title, task.Priority, task.Size)
+		}
+	})
+
+	// --- 5. Test budget envelope ---
+	t.Run("BudgetEnvelope", func(t *testing.T) {
+		budget := NewBudgetEnvelope(10.0)
+
+		if !budget.CanSpend(1.0) {
+			t.Error("CanSpend(1.0) should be true initially")
+		}
+
+		budget.RecordSpend(9.5)
+
+		if budget.CanSpend(1.0) {
+			t.Error("CanSpend(1.0) should be false after spending 9.5 of 10.0")
+		}
+
+		remaining := budget.Remaining()
+		if remaining != 0.5 {
+			t.Errorf("Remaining() = %.2f, want 0.5", remaining)
+		}
+
+		if budget.Spent() != 9.5 {
+			t.Errorf("Spent() = %.2f, want 9.5", budget.Spent())
+		}
+
+		// Verify PerCycleCap defaults to TotalBudget/10.
+		if cap := budget.PerCycleCap(); cap != 1.0 {
+			t.Errorf("PerCycleCap() = %.2f, want 1.0", cap)
+		}
+	})
+
+	// --- 6. Test config validation ---
+	t.Run("ConfigValidation", func(t *testing.T) {
+		// Create a valid repo structure.
+		validRepo := t.TempDir()
+		gitDir := filepath.Join(validRepo, ".git")
+		if err := os.Mkdir(gitDir, 0755); err != nil {
+			t.Fatalf("mkdir .git: %v", err)
+		}
+		ralphDir := filepath.Join(validRepo, ".ralph")
+		if err := os.Mkdir(ralphDir, 0755); err != nil {
+			t.Fatalf("mkdir .ralph: %v", err)
+		}
+		validRoadmap := filepath.Join(validRepo, "ROADMAP.md")
+		if err := os.WriteFile(validRoadmap, []byte("- [ ] unchecked item\n"), 0644); err != nil {
+			t.Fatalf("write ROADMAP.md: %v", err)
+		}
+
+		vr := ValidateConfig(validRepo)
+		if !vr.OK() {
+			t.Errorf("ValidateConfig should be OK, got errors: %v", vr.Errors)
+		}
+
+		// Delete .git and verify validation fails.
+		if err := os.RemoveAll(gitDir); err != nil {
+			t.Fatalf("remove .git: %v", err)
+		}
+		vr2 := ValidateConfig(validRepo)
+		if vr2.OK() {
+			t.Error("ValidateConfig should fail without .git directory")
+		}
+
+		foundGitError := false
+		for _, e := range vr2.Errors {
+			if strings.Contains(e, ".git") {
+				foundGitError = true
+				break
+			}
+		}
+		if !foundGitError {
+			t.Errorf("expected .git-related error, got: %v", vr2.Errors)
+		}
+	})
+
+	// --- 7. Test supervisor state persistence and resume ---
+	t.Run("StatePersistenceAndResume", func(t *testing.T) {
+		persistDir := t.TempDir()
+		ralphDir := filepath.Join(persistDir, ".ralph")
+		if err := os.MkdirAll(ralphDir, 0755); err != nil {
+			t.Fatalf("mkdir .ralph: %v", err)
+		}
+
+		// Create a supervisor and set some state.
+		mgr1 := NewManager()
+		s1 := NewSupervisor(mgr1, persistDir)
+		s1.mu.Lock()
+		s1.tickCount = 42
+		s1.lastCycleLaunch = time.Date(2026, 3, 29, 10, 0, 0, 0, time.UTC)
+		s1.running = true
+		s1.mu.Unlock()
+
+		// Persist the state.
+		s1.persistState()
+
+		// Verify the state file was created.
+		statePath := filepath.Join(ralphDir, "supervisor_state.json")
+		data, err := os.ReadFile(statePath)
+		if err != nil {
+			t.Fatalf("read supervisor_state.json: %v", err)
+		}
+
+		var state SupervisorState
+		if err := json.Unmarshal(data, &state); err != nil {
+			t.Fatalf("unmarshal state: %v", err)
+		}
+		if state.TickCount != 42 {
+			t.Errorf("persisted TickCount = %d, want 42", state.TickCount)
+		}
+
+		// Create a new supervisor and resume from persisted state.
+		mgr2 := NewManager()
+		s2 := NewSupervisor(mgr2, persistDir)
+		if err := s2.ResumeFromState(); err != nil {
+			t.Fatalf("ResumeFromState: %v", err)
+		}
+
+		s2.mu.Lock()
+		restoredTick := s2.tickCount
+		restoredLaunch := s2.lastCycleLaunch
+		s2.mu.Unlock()
+
+		if restoredTick != 42 {
+			t.Errorf("restored tickCount = %d, want 42", restoredTick)
+		}
+		if !restoredLaunch.Equal(time.Date(2026, 3, 29, 10, 0, 0, 0, time.UTC)) {
+			t.Errorf("restored lastCycleLaunch = %v, want 2026-03-29 10:00:00 UTC", restoredLaunch)
+		}
+	})
+}
+
+// TestSupervisorComponentsWired verifies all setters work without panicking
+// and the supervisor can Start/Stop cleanly with all components attached.
+func TestSupervisorComponentsWired(t *testing.T) {
+	dir := t.TempDir()
+	mgr := NewManager()
+	mgr.SetStateDir(filepath.Join(dir, "sessions"))
+
+	s := NewSupervisor(mgr, dir)
+	s.TickInterval = 10 * time.Millisecond
+
+	// Wire all components — none of these should panic.
+	s.SetMonitor(NewHealthMonitor(DefaultHealthThresholds()))
+	s.SetChainer(NewCycleChainer())
+	s.SetSprintPlanner(NewSprintPlanner(filepath.Join(dir, "ROADMAP.md")))
+	s.SetStallHandler(NewSupervisorStallHandler())
+
+	gates := DefaultSupervisorGates()
+	gates.RequireBuild = false
+	gates.RequireTest = false
+	gates.RequireVet = false
+	s.SetGates(gates)
+
+	s.SetBudget(NewBudgetEnvelope(10.0))
+
+	bus := events.NewBus(100)
+	s.SetBus(bus)
+
+	dl := NewDecisionLog("", LevelAutoOptimize)
+	s.SetDecisionLog(dl)
+
+	// Verify the supervisor starts and stops cleanly.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	if !s.Running() {
+		t.Fatal("expected running after Start")
+	}
+
+	// Let it tick a couple of times.
+	time.Sleep(50 * time.Millisecond)
+
+	s.Stop()
+	if s.Running() {
+		t.Fatal("expected not running after Stop")
+	}
+
+	// Verify at least one tick happened.
+	if s.TickCount() < 1 {
+		t.Errorf("tickCount = %d, want >= 1", s.TickCount())
+	}
+
+	// Verify status snapshot works after stop.
+	st := s.Status()
+	if st.RepoPath != dir {
+		t.Errorf("Status().RepoPath = %q, want %q", st.RepoPath, dir)
+	}
+}
+
 // TestSupervisor_FullCycleLifecycle exercises the complete chain:
-// supervisor tick → health signal → decision proposal → cycle launch →
-// RunCycle (stubbed) → completion tracking → event bus publication.
+// supervisor tick -> health signal -> decision proposal -> cycle launch ->
+// RunCycle (stubbed) -> completion tracking -> event bus publication.
 func TestSupervisor_FullCycleLifecycle(t *testing.T) {
 	disableCycleSafety(t)
 	origPoll := cyclePollInterval
