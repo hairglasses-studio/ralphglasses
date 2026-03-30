@@ -473,16 +473,36 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile
 						Data:      map[string]any{"spent_usd": s.SpentUSD, "turns": s.TurnCount, "cost_source": s.CostSource},
 					})
 				}
-				// Check budget exceeded
-				if s.bus != nil && s.BudgetUSD > 0 && s.SpentUSD >= s.BudgetUSD {
-					s.bus.Publish(events.Event{
-						Type:      events.BudgetExceeded,
-						SessionID: s.ID,
-						RepoPath:  s.RepoPath,
-						RepoName:  s.RepoName,
-						Provider:  string(s.Provider),
-						Data:      map[string]any{"spent_usd": s.SpentUSD, "budget_usd": s.BudgetUSD},
-					})
+				// Emit budget threshold alerts at 50%, 75%, 90%.
+				if s.bus != nil && s.BudgetUSD > 0 {
+					ratio := s.SpentUSD / s.BudgetUSD
+					if s.budgetAlertsEmitted == nil {
+						s.budgetAlertsEmitted = make(map[string]bool)
+					}
+					for _, t := range DefaultBudgetThresholds {
+						if ratio >= t.Pct && !s.budgetAlertsEmitted[t.Label] {
+							s.budgetAlertsEmitted[t.Label] = true
+							s.bus.Publish(events.Event{
+								Type:      events.BudgetAlert,
+								SessionID: s.ID,
+								RepoPath:  s.RepoPath,
+								RepoName:  s.RepoName,
+								Provider:  string(s.Provider),
+								Data:      map[string]any{"threshold": t.Label, "spent_usd": s.SpentUSD, "budget_usd": s.BudgetUSD},
+							})
+						}
+					}
+					// Full budget exceeded
+					if s.SpentUSD >= s.BudgetUSD {
+						s.bus.Publish(events.Event{
+							Type:      events.BudgetExceeded,
+							SessionID: s.ID,
+							RepoPath:  s.RepoPath,
+							RepoName:  s.RepoName,
+							Provider:  string(s.Provider),
+							Data:      map[string]any{"spent_usd": s.SpentUSD, "budget_usd": s.BudgetUSD},
+						})
+					}
 				}
 			}
 

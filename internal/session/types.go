@@ -68,13 +68,14 @@ type Session struct {
 	Pid       int   `json:"pid,omitempty"`        // process PID captured at launch
 	ChildPids []int `json:"child_pids,omitempty"` // child PIDs collected at launch (best-effort)
 
-	cmd        *exec.Cmd
-	cancel     func()
-	mu         sync.Mutex
-	doneCh     chan struct{}   // closed when cmd.Wait() returns in the runner goroutine
-	OutputCh   chan string    `json:"-"` // real-time output channel
-	bus        *events.Bus    `json:"-"` // event bus for publishing lifecycle events
-	onComplete func(*Session) `json:"-"` // called when session ends (for persistence)
+	cmd                 *exec.Cmd
+	cancel              func()
+	mu                  sync.Mutex
+	doneCh              chan struct{}   // closed when cmd.Wait() returns in the runner goroutine
+	budgetAlertsEmitted map[string]bool // tracks which threshold labels (e.g. "50%") have fired
+	OutputCh            chan string    `json:"-"` // real-time output channel
+	bus                 *events.Bus    `json:"-"` // event bus for publishing lifecycle events
+	onComplete          func(*Session) `json:"-"` // called when session ends (for persistence)
 }
 
 // Lock locks the session mutex for external callers.

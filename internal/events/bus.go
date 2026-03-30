@@ -23,6 +23,7 @@ const (
 
 	// Cost
 	CostUpdate     EventType = "cost.update"
+	BudgetAlert    EventType = "budget.alert" // Threshold crossed (50%, 75%, 90%)
 	BudgetExceeded EventType = "budget.exceeded"
 
 	// Loop lifecycle
@@ -78,6 +79,7 @@ var knownEventTypes = map[EventType]struct{}{
 	SessionEnded:          {},
 	SessionStopped:        {},
 	CostUpdate:            {},
+	BudgetAlert:           {},
 	BudgetExceeded:        {},
 	LoopStarted:           {},
 	LoopStopped:           {},

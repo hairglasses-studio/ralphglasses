@@ -197,7 +197,13 @@ func initLogging(sp string) (*os.File, error) {
 }
 
 // applyTheme applies the named theme to the TUI styles.
+// Falls back to RALPH_THEME env var when no --theme flag is given.
 func applyTheme(name string) {
+	if name == "k9s" {
+		if envTheme := os.Getenv("RALPH_THEME"); envTheme != "" {
+			name = envTheme
+		}
+	}
 	if themes := styles.DefaultThemes(); themes[name] != nil {
 		styles.ApplyTheme(themes[name])
 	} else if name != "k9s" {

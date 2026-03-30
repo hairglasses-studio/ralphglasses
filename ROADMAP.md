@@ -509,14 +509,14 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 2.2.1 — Create `internal/worktree/` package: wrapping `git worktree add/list/remove` `P0` `M`
 - [ ] 2.2.2 — Auto-create worktree on session launch: branch naming convention `ralph/<session-id>` `P0` `M`
 - [ ] 2.2.3 — Implement merge-back: `git merge --no-ff` with conflict detection and abort-on-conflict option `P0` `L`
-- [ ] 2.2.4 — Add worktree cleanup on session stop/archive (remove worktree dir, prune) `P1` `S`
+- [x] 2.2.4 — Add worktree cleanup on session stop/archive (remove worktree dir, prune) `P1` `S`
 - [ ] 2.2.5 — Handle edge cases: dirty worktree on stop, orphaned branches, worktree path conflicts `P1` `M`
 - **Acceptance:** `ralphglasses worktree create <repo>` produces isolated worktree, merge-back detects conflicts
 
 ### 2.3 — Budget tracking `[BLOCKED BY 2.1]`
 - [ ] 2.3.1 — Per-session spend poller: read `session_spend_usd` from `.ralph/status.json` on watcher tick `P0` `M`
 - [ ] 2.3.2 — Implement global budget pool: total ceiling, per-session allocation, remaining calculation `P0` `M`
-- [ ] 2.3.3 — Add threshold alerts at 50%, 75%, 90% — emit BubbleTea message for TUI notification `P1` `S`
+- [x] 2.3.3 — Add threshold alerts at 50%, 75%, 90% — emit BubbleTea message for TUI notification `P1` `S`
 - [ ] 2.3.4 — Auto-pause session at budget ceiling: send SIGSTOP, update session state `P0` `M`
 - [ ] 2.3.5 — Port budget tracking patterns from `mcpkit/finops` (cost ledger, rate calculation) `P1` `M`
 - **Acceptance:** session auto-pauses when budget exhausted, alerts visible in TUI
@@ -764,12 +764,12 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 > Starship module design, and Claude Code skills framework.
 
 ### 3.5.1 — Theme ecosystem (like k9s skins + Ghostty themes)
-- [ ] 3.5.1.1 — Switch theme colors from ANSI-256 integers to hex strings `P1` `M`
-- [ ] 3.5.1.2 — Add `snazzy` theme `P1` `S`
-- [ ] 3.5.1.3 — Add `catppuccin-macchiato` and `catppuccin-mocha` themes `P1` `S`
+- [x] 3.5.1.1 — Switch theme colors from ANSI-256 integers to hex strings `P1` `M`
+- [x] 3.5.1.2 — Add `snazzy` theme `P1` `S`
+- [x] 3.5.1.3 — Add `catppuccin-macchiato` and `catppuccin-mocha` themes `P1` `S`
 - [ ] 3.5.1.4 — Add `tokyo-night` theme `P2` `S`
 - [ ] 3.5.1.5 — Support `~/.config/ralphglasses/themes/` external theme directory `P1` `M`
-- [ ] 3.5.1.6 — Add `--theme` CLI flag and `RALPH_THEME` .ralphrc key `P1` `S`
+- [x] 3.5.1.6 — Add `--theme` CLI flag and `RALPH_THEME` .ralphrc key `P1` `S`
 - [ ] 3.5.1.7 — Add `:theme <name>` TUI command for live theme switching `P1` `M`
 - **Acceptance:** `ralphglasses --theme snazzy` renders with hex-accurate palette; user themes load correctly
 
