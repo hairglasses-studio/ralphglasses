@@ -2,7 +2,7 @@ package fleet
 
 import (
 	"context"
-	"os"
+	"net"
 	"path/filepath"
 	"time"
 
@@ -286,13 +286,26 @@ func (w *WorkerAgent) NodeID() string {
 }
 
 // DiscoverTailscaleIP gets the node's Tailscale IP, or empty string if unavailable.
+// It queries the Tailscale status (via LocalAPI or CLI) and extracts the first
+// IPv4 address from the self node.
 func DiscoverTailscaleIP() string {
-	// Check common Tailscale IP paths
-	data, err := os.ReadFile("/run/tailscale/tailscaled.pid")
+	status, err := GetTailscaleStatus()
 	if err != nil {
+		util.Debug.Debugf("DiscoverTailscaleIP: tailscale unavailable: %v", err)
 		return ""
 	}
-	_ = data
-	// Full implementation uses `tailscale status --json` — deferred to discovery.go
+
+	// Prefer the first IPv4 address from the self node.
+	for _, ip := range status.Self.TailscaleIPs {
+		parsed := net.ParseIP(ip)
+		if parsed != nil && parsed.To4() != nil {
+			return ip
+		}
+	}
+
+	// Fall back to the first address of any family.
+	if len(status.Self.TailscaleIPs) > 0 {
+		return status.Self.TailscaleIPs[0]
+	}
 	return ""
 }

@@ -1,6 +1,7 @@
 package fleet
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
@@ -65,11 +66,30 @@ func TestNewWorkerAgent_EmptyScanPath(t *testing.T) {
 	}
 }
 
-func TestDiscoverTailscaleIP_NoFile(t *testing.T) {
-	// DiscoverTailscaleIP reads /run/tailscale/tailscaled.pid which shouldn't exist in test env
+func TestDiscoverTailscaleIP_WorkerIntegration(t *testing.T) {
+	original := DefaultTailscaleClient()
+	defer SetTailscaleClient(original)
+
+	// With a working mock, should return the first IPv4 from Self.
+	SetTailscaleClient(&mockTSClient{
+		status: &TailscaleStatus{
+			Self: TailscalePeer{
+				TailscaleIPs: []string{"100.64.7.42", "fd7a:115c:a1e0::7"},
+			},
+		},
+	})
 	ip := DiscoverTailscaleIP()
+	if ip != "100.64.7.42" {
+		t.Errorf("DiscoverTailscaleIP = %q, want 100.64.7.42", ip)
+	}
+
+	// With a failing mock, should return empty.
+	SetTailscaleClient(&mockTSClient{
+		statusErr: fmt.Errorf("tailscale not running"),
+	})
+	ip = DiscoverTailscaleIP()
 	if ip != "" {
-		t.Errorf("DiscoverTailscaleIP should return empty in test env, got %q", ip)
+		t.Errorf("DiscoverTailscaleIP should return empty when unavailable, got %q", ip)
 	}
 }
 
