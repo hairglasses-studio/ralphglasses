@@ -7,7 +7,7 @@ LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSIO
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke smoke-arm64 fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap
+.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke smoke-arm64 fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap skill-doc
 
 # Install pre-commit hook (idempotent)
 hooks:
@@ -153,6 +153,10 @@ install-prompt-improver: build-prompt-improver
 # Generate man pages
 man:
 	$(GO) run ./tools/gendoc/
+
+# Generate docs/SKILLS.md from MCP tool registrations
+skill-doc:
+	$(GO) run ./tools/genskilldoc -output docs/SKILLS.md
 
 # Install man pages to system directory
 install-man: man
