@@ -118,6 +118,133 @@ func TestHandlePromptAnalyze(t *testing.T) {
 	}
 }
 
+// TestHandlePromptAnalyze_ScoreRange verifies QW-4 / FINDING-240: scores span a
+// full dynamic range and do not cluster at 8-9/10.
+func TestHandlePromptAnalyze_ScoreRange(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	type scoreCase struct {
+		name      string
+		prompt    string
+		maxLegacy int // legacy score must be ≤ this
+		minLegacy int // legacy score must be ≥ this
+	}
+
+	cases := []scoreCase{
+		{
+			name:      "poor prompt scores low",
+			prompt:    "do it",
+			maxLegacy: 4,
+			minLegacy: 1,
+		},
+		{
+			name:      "trivial prompt scores low",
+			prompt:    "fix this",
+			maxLegacy: 4,
+			minLegacy: 1,
+		},
+		{
+			name: "high quality prompt scores high",
+			prompt: `<role>You are an expert Go developer with 10 years of experience.</role>
+
+<context>
+We are building a user management API in Go. The codebase uses the standard library
+net/http package with chi router. This is because we want minimal dependencies.
+</context>
+
+<instructions>
+Review the following function for error handling issues.
+Focus on nil pointer dereferences and unchecked errors because these cause runtime panics.
+Return exactly 5 issues, each in one sentence, sorted by severity.
+</instructions>
+
+<examples>
+<example index="1">
+Input: func getUser(id string) *User { return db.Find(id) }
+Output: Missing nil check on db.Find return — will panic if user not found.
+</example>
+<example index="2">
+Input: data, _ := json.Marshal(user)
+Output: Ignoring json.Marshal error — will silently produce empty data on failure.
+</example>
+<example index="3">
+Input: f, err := os.Open(path); defer f.Close()
+Output: Defer before error check — will panic on nil file handle if Open fails.
+</example>
+</examples>
+
+<output_format>
+Return a numbered list of exactly 5 issues. Each issue should include:
+1. The problematic code pattern
+2. The risk (in 10 words or fewer)
+3. The fix
+</output_format>
+
+<constraints>
+- Only report real issues supported by the code, because false positives waste review time
+- Distinguish severity levels (critical, warning, info) to help prioritize fixes
+</constraints>`,
+			minLegacy: 8,
+			maxLegacy: 10,
+		},
+	}
+
+	scores := make(map[string]int)
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := srv.handlePromptAnalyze(context.Background(), makeRequest(map[string]any{"prompt": tc.prompt}))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.IsError {
+				t.Fatalf("unexpected error: %s", getResultText(result))
+			}
+			var m map[string]any
+			if err := json.Unmarshal([]byte(getResultText(result)), &m); err != nil {
+				t.Fatalf("expected JSON: %v", err)
+			}
+			score := int(m["score"].(float64))
+			scores[tc.name] = score
+			if score < tc.minLegacy || score > tc.maxLegacy {
+				t.Errorf("score %d outside expected [%d, %d]", score, tc.minLegacy, tc.maxLegacy)
+			}
+		})
+	}
+
+	// Varied inputs must not produce identical scores
+	t.Run("scores_are_not_all_equal", func(t *testing.T) {
+		prompts := []string{
+			"hello",
+			"Write a Go function that parses JSON and returns a struct",
+			"<role>Expert Go dev.</role>\n<instructions>Review code for bugs. Return 3 findings.</instructions>\n<context>Payment service.</context>\n<examples><example>Missing nil check.</example></examples>",
+		}
+		var allScores []int
+		for _, p := range prompts {
+			result, err := srv.handlePromptAnalyze(context.Background(), makeRequest(map[string]any{"prompt": p}))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			var m map[string]any
+			if err := json.Unmarshal([]byte(getResultText(result)), &m); err != nil {
+				t.Fatalf("expected JSON: %v", err)
+			}
+			allScores = append(allScores, int(m["score"].(float64)))
+		}
+		allSame := true
+		for _, s := range allScores[1:] {
+			if s != allScores[0] {
+				allSame = false
+				break
+			}
+		}
+		if allSame {
+			t.Errorf("all scores identical (%d) — expected varied scores for diverse prompts", allScores[0])
+		}
+	})
+}
+
 // --- prompt_enhance ---
 
 func TestHandlePromptEnhance(t *testing.T) {

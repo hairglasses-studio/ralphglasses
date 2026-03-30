@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"time"
 
@@ -184,18 +185,52 @@ func (s *Server) handleLoopGates(_ context.Context, req mcp.CallToolRequest) (*m
 
 	blPath := e2e.BaselinePath(r.Path)
 	baseline, loadErr := e2e.LoadBaseline(blPath)
+
+	// QW-6 (FINDING-226/238): sentinel check — a baseline is only usable as a
+	// prior reference point when it existed BEFORE this invocation. If no
+	// baseline was saved yet, or the saved one has no aggregate (saved from an
+	// empty time window), we initialize it now and return VerdictSkip.
+	// Evaluating gates on cycle 1 against a baseline derived from the same
+	// observations produces trivially-passing relative gates (ratio ≈ 1.0).
 	if loadErr != nil && len(observations) > 0 {
-		// QW-6 (FINDING-226/238): No saved baseline — initialize from current
-		// observations so that future gate checks produce meaningful deltas
-		// instead of skipping cost/latency gates due to nil baseline.
+		// Cycle 1: no prior baseline — establish one and skip gate evaluation.
 		baseline = e2e.BuildBaseline(observations, hours)
 		if saveErr := e2e.SaveBaseline(blPath, baseline); saveErr != nil {
 			return codedError(ErrFilesystem, fmt.Sprintf("save initial baseline: %v", saveErr)), nil
 		}
+		slog.Info("loop_gates: baseline established (cycle 1), skipping gate evaluation", "repo", repoName)
+		return jsonResult(map[string]any{
+			"report":  map[string]any{"overall": "skip", "sample_count": len(observations)},
+			"summary": "baseline established — gates will evaluate from cycle 2 onward",
+			"markdown": "**Baseline established.** No prior reference point exists; gate evaluation begins on the next cycle.",
+		}), nil
+	} else if baseline != nil && baseline.Aggregate == nil && len(observations) > 0 {
+		// QW-6 (cycle 2 recurrence): baseline was saved from an empty time window
+		// (Aggregate == nil means no observations passed the filter). Rebuild it
+		// from current observations and skip this cycle for the same reason.
+		baseline = e2e.BuildBaseline(observations, hours)
+		if saveErr := e2e.SaveBaseline(blPath, baseline); saveErr != nil {
+			return codedError(ErrFilesystem, fmt.Sprintf("save rebuilt baseline: %v", saveErr)), nil
+		}
+		slog.Info("loop_gates: nil-aggregate baseline rebuilt (QW-6 recurrence), skipping gate evaluation", "repo", repoName)
+		return jsonResult(map[string]any{
+			"report":  map[string]any{"overall": "skip", "sample_count": len(observations)},
+			"summary": "baseline rebuilt (prior had no aggregate data) — gates will evaluate from the next cycle",
+			"markdown": "**Baseline rebuilt.** Prior baseline had no aggregate data; gate evaluation resumes next cycle.",
+		}), nil
 	}
 
 	thresholds := e2e.DefaultGateThresholds()
 	report := e2e.EvaluateGates(observations, baseline, thresholds)
+
+	// Refresh baseline after evaluation so subsequent cycle gate checks use
+	// up-to-date data instead of a stale snapshot.
+	if len(observations) > 0 {
+		fresh := e2e.BuildBaseline(observations, hours)
+		if saveErr := e2e.SaveBaseline(blPath, fresh); saveErr != nil {
+			slog.Warn("loop_gates: failed to refresh baseline", "err", saveErr)
+		}
+	}
 
 	// Wrap the report with human-readable and markdown-formatted summaries.
 	type gateResponse struct {

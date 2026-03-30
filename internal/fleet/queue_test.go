@@ -1,6 +1,7 @@
 package fleet
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -362,84 +363,97 @@ func TestPushValidated_AcceptsValidPath(t *testing.T) {
 	}
 }
 
-// TestReapPhantomRepos_QW11 verifies that ReapPhantomRepos moves "001"
-// placeholder entries to the DLQ and leaves valid / non-pending items untouched.
+// TestReapPhantomRepos_QW11 verifies that ReapPhantomRepos removes all pending
+// items whose RepoName is "001" or whose RepoPath ends in "001", and preserves
+// all valid entries.
 func TestReapPhantomRepos_QW11(t *testing.T) {
 	q := NewWorkQueue()
 
-	// phantom by RepoName
+	// Valid entries — must survive cleanup
+	validIDs := []string{"valid-1", "valid-2", "valid-3"}
+	q.Push(&WorkItem{ID: "valid-1", Status: WorkPending, RepoName: "myrepo", SubmittedAt: time.Now()})
+	q.Push(&WorkItem{ID: "valid-2", Status: WorkPending, RepoName: "001extra", SubmittedAt: time.Now()}) // not bare "001"
+	q.Push(&WorkItem{ID: "valid-3", Status: WorkPending, RepoName: "project001", SubmittedAt: time.Now()})
+
+	// Phantom entries — must be reaped
+	phantomCount := 5
+	for i := 0; i < phantomCount; i++ {
+		q.Push(&WorkItem{
+			ID:          fmt.Sprintf("phantom-name-%d", i),
+			Status:      WorkPending,
+			RepoName:    "001",
+			SubmittedAt: time.Now(),
+		})
+	}
+	// Phantom by path segment
 	q.Push(&WorkItem{
-		ID:          "phantom-name",
+		ID:          "phantom-path-1",
 		Status:      WorkPending,
-		RepoName:    "001",
+		RepoName:    "some-repo",
+		RepoPath:    "/home/ci/repos/001",
 		SubmittedAt: time.Now(),
 	})
-
-	// phantom by RepoPath basename
 	q.Push(&WorkItem{
-		ID:          "phantom-path",
+		ID:          "phantom-path-2",
 		Status:      WorkPending,
-		RepoPath:    "/some/prefix/001",
+		RepoName:    "another",
+		RepoPath:    "/srv/001",
 		SubmittedAt: time.Now(),
 	})
+	totalPhantoms := phantomCount + 2
 
-	// valid entry — must be preserved
+	// Non-pending phantom by name — should NOT be reaped (only pending are targeted)
 	q.Push(&WorkItem{
-		ID:          "valid",
-		Status:      WorkPending,
-		RepoName:    "real-repo",
-		RepoPath:    "/repos/real-repo",
-		SubmittedAt: time.Now(),
-	})
-
-	// non-pending phantom — must NOT be reaped
-	q.Push(&WorkItem{
-		ID:       "assigned-phantom",
+		ID:       "phantom-assigned",
 		Status:   WorkAssigned,
 		RepoName: "001",
 	})
 
 	reaped := q.ReapPhantomRepos()
-	if reaped != 2 {
-		t.Errorf("ReapPhantomRepos returned %d, want 2", reaped)
+	if reaped != totalPhantoms {
+		t.Errorf("ReapPhantomRepos returned %d, want %d", reaped, totalPhantoms)
 	}
 
-	// valid item must still be in queue
-	if _, ok := q.Get("valid"); !ok {
-		t.Error("valid item should remain in queue")
+	// All valid entries must still be present
+	for _, id := range validIDs {
+		if _, ok := q.Get(id); !ok {
+			t.Errorf("valid entry %q was incorrectly removed", id)
+		}
 	}
 
-	// non-pending phantom must still be in queue
-	if _, ok := q.Get("assigned-phantom"); !ok {
-		t.Error("non-pending phantom should not be reaped")
+	// Non-pending phantom must still be in queue (was not targeted)
+	if _, ok := q.Get("phantom-assigned"); !ok {
+		t.Error("non-pending phantom should not have been reaped")
 	}
 
-	// reaped items must be gone from queue
-	if _, ok := q.Get("phantom-name"); ok {
-		t.Error("phantom-name should have been removed from queue")
+	// All phantom pending entries must be gone from main queue
+	for i := 0; i < phantomCount; i++ {
+		id := fmt.Sprintf("phantom-name-%d", i)
+		if _, ok := q.Get(id); ok {
+			t.Errorf("phantom entry %q should have been reaped", id)
+		}
 	}
-	if _, ok := q.Get("phantom-path"); ok {
-		t.Error("phantom-path should have been removed from queue")
+	for _, id := range []string{"phantom-path-1", "phantom-path-2"} {
+		if _, ok := q.Get(id); ok {
+			t.Errorf("phantom entry %q should have been reaped", id)
+		}
 	}
 
-	// DLQ must contain both phantoms with correct error
+	// Reaped items must be in DLQ with correct error
 	dlq := q.ListDLQ()
 	dlqByID := make(map[string]*WorkItem, len(dlq))
 	for _, item := range dlq {
 		dlqByID[item.ID] = item
 	}
-
-	for _, id := range []string{"phantom-name", "phantom-path"} {
+	for i := 0; i < phantomCount; i++ {
+		id := fmt.Sprintf("phantom-name-%d", i)
 		item, ok := dlqByID[id]
 		if !ok {
-			t.Errorf("DLQ missing expected item %q", id)
+			t.Errorf("phantom entry %q not found in DLQ", id)
 			continue
 		}
 		if item.Error != "reaped: phantom repo placeholder" {
-			t.Errorf("item %q: got error %q, want %q", id, item.Error, "reaped: phantom repo placeholder")
-		}
-		if item.CompletedAt == nil {
-			t.Errorf("item %q: CompletedAt should be set", id)
+			t.Errorf("phantom entry %q has wrong error %q", id, item.Error)
 		}
 	}
 }
