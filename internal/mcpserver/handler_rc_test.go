@@ -325,8 +325,8 @@ func TestHandleRCAct_StopMissingTarget(t *testing.T) {
 		t.Fatal("expected error for missing target on stop")
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "SESSION_NOT_FOUND") {
-		t.Errorf("expected SESSION_NOT_FOUND error, got: %s", text)
+	if !strings.Contains(text, "INVALID_PARAMS") {
+		t.Errorf("expected INVALID_PARAMS error for missing target, got: %s", text)
 	}
 }
 
@@ -423,12 +423,16 @@ func TestResolveTarget_Empty(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
 
-	_, err := srv.resolveTarget("")
-	if err == nil {
+	_, errRes := srv.resolveTarget("")
+	if errRes == nil {
 		t.Fatal("expected error for empty target")
 	}
-	if !strings.Contains(err.Error(), "target required") {
-		t.Errorf("expected 'target required' error, got: %v", err)
+	text := getResultText(errRes)
+	if !strings.Contains(text, "target required") {
+		t.Errorf("expected 'target required' error, got: %s", text)
+	}
+	if !strings.Contains(text, string(ErrInvalidParams)) {
+		t.Errorf("expected error_code %s, got: %s", ErrInvalidParams, text)
 	}
 }
 
@@ -438,9 +442,9 @@ func TestResolveTarget_ByID(t *testing.T) {
 
 	sid := injectTestSession(t, srv, root+"/test-repo", nil)
 
-	sess, err := srv.resolveTarget(sid)
-	if err != nil {
-		t.Fatalf("resolveTarget: %v", err)
+	sess, errRes := srv.resolveTarget(sid)
+	if errRes != nil {
+		t.Fatalf("resolveTarget: %s", getResultText(errRes))
 	}
 	if sess.ID != sid {
 		t.Errorf("expected session ID %s, got %s", sid, sess.ID)
@@ -451,12 +455,16 @@ func TestResolveTarget_NotFound(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
 
-	_, err := srv.resolveTarget("nonexistent")
-	if err == nil {
+	_, errRes := srv.resolveTarget("nonexistent")
+	if errRes == nil {
 		t.Fatal("expected error for nonexistent target")
 	}
-	if !strings.Contains(err.Error(), "no session found") {
-		t.Errorf("expected 'no session found' error, got: %v", err)
+	text := getResultText(errRes)
+	if !strings.Contains(text, "no session found") {
+		t.Errorf("expected 'no session found' error, got: %s", text)
+	}
+	if !strings.Contains(text, string(ErrSessionNotFound)) {
+		t.Errorf("expected error_code %s, got: %s", ErrSessionNotFound, text)
 	}
 }
 
@@ -469,9 +477,9 @@ func TestResolveTarget_ByRepoName(t *testing.T) {
 		s.LastActivity = time.Now()
 	})
 
-	sess, err := srv.resolveTarget("test-repo")
-	if err != nil {
-		t.Fatalf("resolveTarget: %v", err)
+	sess, errRes := srv.resolveTarget("test-repo")
+	if errRes != nil {
+		t.Fatalf("resolveTarget: %s", getResultText(errRes))
 	}
 	if sess.ID != sid {
 		t.Errorf("expected session ID %s, got %s", sid, sess.ID)
@@ -1168,9 +1176,9 @@ func TestResolveTarget_PrefersRunning(t *testing.T) {
 		s.LastActivity = time.Now()
 	})
 
-	sess, err := srv.resolveTarget("test-repo")
-	if err != nil {
-		t.Fatalf("resolveTarget: %v", err)
+	sess, errRes := srv.resolveTarget("test-repo")
+	if errRes != nil {
+		t.Fatalf("resolveTarget: %s", getResultText(errRes))
 	}
 	if sess.ID != runningSID {
 		t.Errorf("expected running session ID %s, got %s", runningSID, sess.ID)
@@ -1192,9 +1200,9 @@ func TestResolveTarget_MostRecentRunning(t *testing.T) {
 		s.LastActivity = time.Now()
 	})
 
-	sess, err := srv.resolveTarget("test-repo")
-	if err != nil {
-		t.Fatalf("resolveTarget: %v", err)
+	sess, errRes := srv.resolveTarget("test-repo")
+	if errRes != nil {
+		t.Fatalf("resolveTarget: %s", getResultText(errRes))
 	}
 	if sess.ID != newerSID {
 		t.Errorf("expected most recent running session ID %s, got %s", newerSID, sess.ID)
@@ -1216,9 +1224,9 @@ func TestResolveTarget_MostRecentStopped(t *testing.T) {
 		s.LastActivity = time.Now().Add(-1 * time.Minute)
 	})
 
-	sess, err := srv.resolveTarget("test-repo")
-	if err != nil {
-		t.Fatalf("resolveTarget: %v", err)
+	sess, errRes := srv.resolveTarget("test-repo")
+	if errRes != nil {
+		t.Fatalf("resolveTarget: %s", getResultText(errRes))
 	}
 	if sess.ID != newerSID {
 		t.Errorf("expected most recent stopped session ID %s, got %s", newerSID, sess.ID)

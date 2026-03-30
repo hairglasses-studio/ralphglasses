@@ -2,7 +2,7 @@
 
 Command-and-control TUI + bootable thin client for parallel multi-LLM agent fleets.
 
-**Last updated:** 2026-03-29
+**Last updated:** 2026-03-30
 **Codebase:** 37 packages, 126 MCP tools (124 namespace + 2 meta), 19 TUI views
 **Status:** 634 tasks, 175 complete (27.6%), 459 remaining
 **Key deps:** Go 1.26.1, mcp-go v0.45.0, bubbletea v1.3.10, anthropic-sdk-go v1.27.1
@@ -1694,6 +1694,334 @@ The self-improvement pipeline operates as a closed loop:
 - `hg-mcp/` — Modular tool registration pattern
 - `shielddd/` — Pure-Go SQLite (modernc.org/sqlite), audit logs
 - `claudekit/` — rdcycle perpetual loop, budget profiles
+
+---
+
+## Phase 10.5: Horizontal & Vertical Scaling `[NEW]`
+
+Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30). Each item maps to a specific bottleneck identified in the current codebase.
+
+### 10.5.1 Session Manager Lock Splitting `P0` `L`
+
+**Bottleneck:** Single `Manager.mu` RWMutex in `internal/session/manager.go` serializes all session operations at 100+ concurrent sessions.
+
+- [ ] Split into per-map fine-grained locks: `sessionsMu`, `workersMu`, `budgetMu`, `configMu`
+- [ ] Use `sync.Map` for hot-path reads (session lookups, status queries)
+- [ ] Add lock contention metrics (pprof mutex profile integration)
+- [ ] Benchmark: target 70-80% contention reduction at 100 concurrent sessions
+- Files: `internal/session/manager.go`, `internal/session/types.go`
+
+### 10.5.2 MCP Server Concurrent Handler Limits `P1` `M`
+
+**Bottleneck:** No concurrency limit on MCP tool handlers — 126 tools with no semaphore means unbounded goroutine creation under load.
+
+- [ ] Add `semaphore.Weighted` (golang.org/x/sync) to `internal/mcpserver/middleware.go`
+- [ ] Default limit: 32 concurrent handlers, configurable via `MCP_MAX_CONCURRENT`
+- [ ] Per-namespace rate limiting for expensive tools (fleet, session launch)
+- [ ] Add handler queue depth metric
+- Files: `internal/mcpserver/middleware.go`, `internal/mcpserver/server.go`
+
+### 10.5.3 Event Bus Scaling (NATS Streaming) `P1` `L`
+
+**Bottleneck:** In-process `events.Bus` with 1000-event ring buffer + JSONL persistence caps at single-node, single-process.
+
+- [ ] Abstract event bus behind `EventTransport` interface (in-memory default, NATS optional)
+- [ ] NATS JetStream integration: persistent subjects per event type, consumer groups
+- [ ] Windowed aggregation: 1m/5m/15m sliding windows for fleet metrics
+- [ ] Partitioned storage: shard events by repo or session ID
+- [ ] Event-driven TUI updates (replace 2s polling tick with bus subscription)
+- Files: `internal/events/bus.go`, new `internal/events/nats.go`, `internal/tui/app.go`
+
+### 10.5.4 Worker Pool Auto-Scaling `P1` `L`
+
+**Bottleneck:** `MaxConcurrentWorkers=8` is static. No scaling based on queue depth, provider availability, or budget.
+
+- [ ] Auto-scale triggers: queue depth > 2x workers, provider rate limit headroom, budget remaining
+- [ ] Provider specialization: route GPU-heavy tasks to specific workers, cost-optimize by provider
+- [ ] Health scoring: per-worker success rate, latency p99, stale task ratio
+- [ ] Priority queue with aging: prevent task starvation, priority decay over time
+- [ ] Batch assignment: group related tasks (same repo, same provider) for worker affinity
+- Files: `internal/fleet/coordinator.go`, `internal/fleet/worker.go`, new `internal/fleet/autoscaler.go`
+
+### 10.5.5 Adaptive Iteration Depth `P1` `M`
+
+**Bottleneck:** Fixed iteration limits waste compute on easy tasks and starve complex ones.
+
+- [ ] Complexity estimator: LOC, dependency depth, test count → predicted iterations
+- [ ] Dynamic budget allocation: start conservative, expand on progress signals
+- [ ] Deep work mode: for high-value tasks, double iteration limit + add verification passes
+- [ ] Smart convergence: detect diminishing returns (δ < threshold for N iterations → early stop)
+- Files: `internal/session/loop.go`, `internal/session/convergence.go`, new `internal/session/depth.go`
+
+### 10.5.6 Multi-Node Marathon Distribution `P1` `XL`
+
+**Bottleneck:** Marathons run on a single machine. Large fleets need cross-node coordination.
+
+- [ ] Repo sharding: partition repos across nodes by hash or explicit assignment
+- [ ] Pipeline parallelism: plan on coordinator, execute on workers, verify on coordinator
+- [ ] Warm-start prefetching: pre-clone repos + pre-pull models on target workers
+- [ ] State replication: supervisor state sync across coordinator nodes (leader election)
+- Files: `internal/fleet/coordinator.go`, `internal/session/manager_cycle.go`, new `internal/fleet/sharding.go`
+
+### 10.5.7 Cost Optimization Engine `P1` `L`
+
+**Bottleneck:** Static cascade routing misses 2-4x cost reduction opportunities.
+
+- [ ] Dynamic cost-tier routing via contextual bandits (extend existing UCB1 in `internal/bandit/`)
+- [ ] Batch API utilization: auto-batch non-urgent tasks for 50% discount (extend `internal/batch/`)
+- [ ] Fleet-wide prompt caching: shared cache prefix across sessions targeting same repo
+- [ ] Budget forecasting: predict remaining marathon budget from spend velocity + task queue
+- [ ] Token optimization: context pruning, tool call deduplication (target 25-35% reduction)
+- Files: `internal/session/cascade.go`, `internal/batch/batch.go`, `internal/bandit/selector.go`
+
+### 10.5.8 Git Scaling `P2` `L`
+
+**Bottleneck:** Worktree creation overhead at scale, disk usage with many clones.
+
+- [ ] Worktree pooling: pre-create N worktrees per repo, reuse across sessions (10x creation speedup)
+- [ ] Git alternates: share object store across clones (16x disk reduction for large repos)
+- [ ] Merge conflict prevention: pre-check branch divergence before parallel work
+- [ ] Multi-repo coordination: atomic cross-repo changes with two-phase commit
+- Files: `internal/session/worktree.go`, new `internal/session/worktree_pool.go`
+
+### 10.5.9 State Persistence (SQLite WAL) `P1` `L`
+
+**Bottleneck:** JSON file persistence is fragile under concurrent access and doesn't scale.
+
+- [ ] SQLite WAL mode for fleet state (coordinator, sessions, observations)
+- [ ] Per-entity locking instead of global mutex
+- [ ] State sharding by repo for parallel writes
+- [ ] Observation partitioning: time-based partitions for efficient queries
+- [ ] Migration path from JSON files to SQLite (dual-write during transition)
+- Deps: `modernc.org/sqlite` (pure Go, already used in shielddd)
+- Files: new `internal/store/sqlite.go`, `internal/fleet/coordinator.go`
+
+### 10.5.10 Monitoring & Observability Stack `P2` `L`
+
+**Bottleneck:** No external metrics export, no structured alerting.
+
+- [ ] Prometheus metrics exporter: session counts, costs, latencies, error rates
+- [ ] Structured alerting: webhook, Slack, Discord notifications on fleet events
+- [ ] Distributed tracing: OpenTelemetry spans for session lifecycle
+- [ ] Capacity planning: predict resource needs from historical fleet data
+- Files: new `internal/metrics/prometheus.go`, new `internal/metrics/alerting.go`
+
+### 10.5.11 Autonomy Scaling `P2` `XL`
+
+**Bottleneck:** Single-repo supervisor, no multi-repo autonomy.
+
+- [ ] Multi-repo supervisor: coordinate R&D cycles across the hairglasses-studio org
+- [ ] Contextual multi-armed bandit for task selection (per-repo arms with shared context)
+- [ ] Online learning with concept drift detection (detect when past learnings become stale)
+- [ ] Fleet-wide anomaly detector with kill switch (halt autonomy on regression)
+- Files: `internal/session/manager_cycle.go`, `internal/session/autooptimize.go`, `internal/bandit/selector.go`
+
+---
+
+## Phase 11: A2A Protocol Integration `[NEW]`
+
+Agent-to-Agent (A2A) v1.0.0 protocol integration for cross-node fleet coordination. A2A complements MCP — MCP handles model-to-tool communication, A2A handles agent-to-agent task delegation, status tracking, and artifact exchange.
+
+**Go SDK:** `github.com/a2aproject/a2a-go/v2` (Go 1.24+, Apache 2.0)
+
+### Current State
+
+Partial A2A support exists in `internal/fleet/`:
+- `a2a.go` — `A2AAdapter` with task offer lifecycle
+- `a2a_card.go` — `AgentCard`, `BuildAgentCard()`, `DiscoverAgent()`, `RemoteA2AAdapter`
+- Handlers at `/.well-known/agent.json` and `/api/v1/a2a/task/{taskID}`
+
+### Gap Analysis
+
+| Feature | Current | A2A v1.0 Spec | Gap |
+|---------|---------|---------------|-----|
+| Discovery | `/.well-known/agent.json` | `/.well-known/agent-card.json` | Path mismatch |
+| Agent Card | Custom subset | Full schema (skills, capabilities, security, signatures) | Missing security, interfaces, capabilities |
+| Task lifecycle | `TaskOffer` string status | `Task` with typed `TaskState`, Messages, Artifacts | Adopt `a2a.Task` type |
+| Message format | Plain `Prompt` string | Multi-part (Text/File/Data) | Need Part support |
+| Streaming | Custom SSE | SSE on `/tasks/sendStreaming`, `/tasks/{id}/subscribe` | A2A-compliant endpoints |
+| Push notifications | Not implemented | Webhook registration with auth | New feature |
+| Authentication | None (network trust) | SecuritySchemes (apiKey, bearer, OAuth2, mTLS) | Need scheme enforcement |
+| Transport | REST only | REST + JSON-RPC + gRPC | Add gRPC for intra-cluster |
+
+### 11.1 Adopt Official Go SDK `P1` `M`
+- [ ] Add `github.com/a2aproject/a2a-go/v2` to `go.mod`
+- [ ] Migrate `AgentCard` in `a2a_card.go` to `a2a.AgentCard` type
+- [ ] Fix discovery path to `/.well-known/agent-card.json`
+- [ ] Register `a2asrv.NewStaticAgentCardHandler` on fleet HTTP server
+- [ ] Declare capabilities: streaming, push notifications, skills
+- Files: `go.mod`, `internal/fleet/a2a_card.go`, `internal/fleet/server_handlers.go`
+
+### 11.2 Implement FleetExecutor `P1` `L`
+- [ ] Implement `a2asrv.AgentExecutor` interface wrapping `session.Manager.Launch()`
+- [ ] Mount `a2asrv.NewRESTHandler()` on coordinator
+- [ ] Map `session.StreamEvent` → `a2a.TaskStatusUpdateEvent` / `a2a.TaskArtifactUpdateEvent`
+- [ ] Support task cancellation via `AgentExecutor.Cancel()`
+- Files: new `internal/fleet/a2a_executor.go`, `internal/fleet/server.go`
+
+### 11.3 A2A Client for Cross-Fleet Dispatch `P1` `L`
+- [ ] Replace `RemoteA2AAdapter.SubmitTask()` with `a2aclient.SendMessage()`
+- [ ] Use `a2aclient.SubscribeToTask()` for real-time progress tracking
+- [ ] Push notification registration for marathon coordination (webhook callbacks)
+- [ ] Cross-machine task delegation: thin client coordinator → cloud worker agents
+- Files: `internal/fleet/a2a.go`, new `internal/fleet/a2a_dispatch.go`
+
+### 11.4 Dynamic Capability Discovery `P2` `L`
+- [ ] Workers advertise skills via Agent Card (provider type, model, capacity)
+- [ ] Coordinator indexes capabilities from discovered cards
+- [ ] Route tasks based on discovered skills, not hardcoded provider configs
+- [ ] Supervisor health checks via A2A task status subscriptions
+- Files: `internal/fleet/discovery.go`, `internal/fleet/types.go`
+
+### 11.5 Event Bus Federation `P2` `L`
+- [ ] Bridge `events.Bus` to A2A push notifications (outbound: local events → remote coordinators)
+- [ ] Inbound webhook handler: A2A push → local event bus
+- [ ] Security: bearer token auth on push webhooks, Tailscale network trust as base layer
+- [ ] gRPC transport binding for low-latency intra-cluster communication
+- Files: new `internal/fleet/a2a_federation.go`, `internal/events/bus.go`
+
+---
+
+## Phase 12: Tailscale Fleet Networking `[NEW]`
+
+Tailscale-based fleet networking for secure, zero-config connectivity between thin client coordinator, cloud VM workers, and admin machines. All fleet HTTP traffic flows over WireGuard-encrypted Tailscale connections.
+
+### Current State
+
+Partial Tailscale support exists:
+- `internal/fleet/types.go` — `WorkerInfo.TailscaleIP` field
+- `internal/fleet/discovery.go` — `GetTailscaleStatus()` (shells out to `tailscale status --json`), `DiscoverCoordinator()` probes peers
+- `internal/fleet/worker.go` — `RegisterPayload.TailscaleIP`, `DiscoverTailscaleIP()` stub
+- `cmd/serve.go` — Auto-discovers coordinator via Tailscale peer probing
+
+### Tag Taxonomy
+
+| Tag | Purpose |
+|-----|---------|
+| `tag:ralph-fleet` | All ralphglasses nodes |
+| `tag:ralph-coordinator` | Fleet coordinator (thin client) |
+| `tag:ralph-worker` | Worker nodes (cloud VMs) |
+| `tag:ralph-mcp` | Nodes exposing MCP server endpoints |
+
+### Architecture
+
+```
+                    +--------------------------+
+                    |     Tailnet (WireGuard)   |
+                    +--------------------------+
+                              |
+            +-----------------+-----------------+
+            |                 |                 |
+  +-------------------+  +----------+  +----------+
+  | Thin Client       |  | Cloud VM |  | Cloud VM |
+  | ralph-coord-01    |  | ralph-   |  | ralph-   |
+  | tag:coordinator   |  | worker-01|  | worker-02|
+  | 7 monitors, 4090  |  | tag:     |  | tag:     |
+  | Coordinator:9473  |  | worker   |  | worker   |
+  | MCP Server        |  | :9473    |  | :9473    |
+  +-------------------+  +----------+  +----------+
+```
+
+### 12.1 First-Boot Enrollment `P1` `M`
+- [ ] Create `distro/scripts/ts-enroll.sh` — headless enrollment with pre-auth key
+- [ ] Create `distro/systemd/ts-enroll.service` — oneshot, gated by marker file
+- [ ] Integration with `hw-detect.sh` boot sequence: `tailscaled` → `hw-detect` → `ts-enroll` → `ralphglasses`
+- [ ] Auth key provisioning: `/etc/ralphglasses/ts-authkey` injected by install-to-disk.sh or cloud-init
+- [ ] Hostname derivation from hardware serial or MAC address
+- Files: new `distro/scripts/ts-enroll.sh`, new `distro/systemd/ts-enroll.service`
+
+### 12.2 ACL Policy & SSH `P1` `M`
+- [ ] Define tailnet policy file with ralph tag taxonomy
+- [ ] Coordinator → worker SSH: `action: accept` (machine-to-machine, no re-auth)
+- [ ] Admin → fleet SSH: `action: check` with 12h re-auth period
+- [ ] Auto-approve subnet routes for fleet tags
+- [ ] ACL tests validating fleet connectivity rules
+- Files: new `distro/tailscale/policy.json`
+
+### 12.3 Go SDK Integration `P1` `L`
+- [ ] Add `tailscale.com/tsnet` and `tailscale.com/client/local` to `go.mod`
+- [ ] Replace `GetTailscaleStatus()` shell-out with `local.Client.Status()` in `discovery.go`
+- [ ] Complete `DiscoverTailscaleIP()` stub in `worker.go`
+- [ ] Add `WhoIs`-based auth middleware to fleet HTTP server (verify `tag:ralph-fleet`)
+- [ ] MagicDNS-based coordinator discovery: resolve `ralph-coord-01` instead of peer enumeration
+- Files: `go.mod`, `internal/fleet/discovery.go`, `internal/fleet/worker.go`, `internal/fleet/server.go`
+
+### 12.4 tsnet Embedding `P2` `L`
+- [ ] Embed `tsnet.Server` in coordinator for zero-config networking
+- [ ] `tsnet.Listen()` for fleet API (tailnet-only)
+- [ ] `tsnet.ListenFunnel()` for public MCP endpoint (HTTPS via Let's Encrypt)
+- [ ] Peer identity verification via `LocalClient.WhoIs()` — replace token auth with Tailscale identity
+- Files: `internal/fleet/server.go`, `cmd/serve.go`
+
+### 12.5 Cloud VM Auto-Enrollment `P2` `M`
+- [ ] cloud-init template for worker VMs: install Tailscale, enroll, start ralphglasses worker
+- [ ] OAuth client credentials flow for programmatic auth key generation
+- [ ] Worker systemd unit: `ralphglasses-worker.service` with `Requires=tailscaled.service`
+- [ ] Fleet health monitoring via Tailscale control plane API (device last-seen, online status)
+- Files: new `distro/cloud-init/worker.yaml`, new `distro/systemd/ralphglasses-worker.service`
+
+### 12.6 Worktree Sync Over Tailscale `P2` `M`
+- [ ] rsync over Tailscale SSH (no key distribution needed)
+- [ ] Git-based sync: `ssh ralph@ralph-worker-01 "cd /workspace && git pull --ff-only"`
+- [ ] Pre-flight repo sync before session launch on remote worker
+- Files: `internal/fleet/worker.go`, new `internal/fleet/sync.go`
+
+---
+
+## Scaling Bottleneck Analysis `[NEW]`
+
+Deep codebase analysis (2026-03-30) identified these performance bottlenecks with estimated impact at scale:
+
+| Bottleneck | Component | Impact at 100+ Sessions | Mitigation | Phase |
+|-----------|-----------|------------------------|------------|-------|
+| Single `Manager.mu` RWMutex | `session/manager.go` | All session ops serialize | Per-map lock splitting | 10.5.1 |
+| No MCP handler concurrency limit | `mcpserver/middleware.go` | Unbounded goroutines | Semaphore (32 default) | 10.5.2 |
+| In-process event bus | `events/bus.go` | Single-node, 1000-event cap | NATS JetStream | 10.5.3 |
+| Static worker pool (max=8) | `fleet/coordinator.go` | Queue backs up | Auto-scaling | 10.5.4 |
+| Fixed iteration depth | `session/loop.go` | Waste on easy, starve hard | Adaptive depth | 10.5.5 |
+| Single-machine marathons | `session/manager_cycle.go` | CPU/memory ceiling | Multi-node distribution | 10.5.6 |
+| Static cascade routing | `session/cascade.go` | Misses 2-4x cost savings | Contextual bandits | 10.5.7 |
+| Worktree creation overhead | `session/worktree.go` | I/O bottleneck | Pooling + alternates | 10.5.8 |
+| JSON file persistence | Multiple | Corrupt under concurrent writes | SQLite WAL | 10.5.9 |
+| OutputHistory unbounded | `session/types.go` | Memory leak over time | Ring buffer + persistence | 10.5.1 |
+| TUI 2s polling tick | `tui/app.go` | 444-line rebuild every tick | Event-driven updates | 10.5.3 |
+| No virtual scrolling | TUI fleet dashboard | Unusable at 100+ sessions | Virtual list component | 10.5.3 |
+
+### Codebase Statistics (2026-03-30 Snapshot)
+
+| Metric | Value |
+|--------|-------|
+| Total packages | 37 |
+| MCP tools | 126 (124 namespace + 2 meta), 14 namespaces |
+| TUI views | 19 (11% migrated to Phase 2 View interface) |
+| Test files | 427 (114K LOC) |
+| Coverage | 84.5% (target 90%) |
+| Middleware layers | 5 (trace → timeout → instrumentation → eventbus → validation) |
+| Event types | 32, in-process pub/sub, 1000-event ring buffer |
+| Provider rate limits | Claude 50/min, Gemini 60/min, Codex 20/min |
+| Autonomy levels | 4 (observe → auto-recover → auto-optimize → full-autonomy) |
+| Supervisor tick | 60s, max chain depth 10 |
+| Enhancer pipeline | 13 stages, 10-dimension scoring, 11+ lint rules |
+
+---
+
+## Updated Dependency Chain `[NEW]`
+
+```
+Phase 10.5 (Scaling) ----> Phase 11 (A2A) ----> Phase 12 (Tailscale)
+     |                          |                       |
+     v                          v                       v
+  10.5.1 (Lock Split)     11.1 (SDK)              12.1 (Enrollment)
+  10.5.2 (Handler Limit)  11.2 (Executor)          12.2 (ACL)
+  10.5.9 (SQLite) -------> 10.5.6 (Multi-Node) --> 12.3 (Go SDK)
+  10.5.3 (NATS) ---------> 11.5 (Federation) ----> 12.4 (tsnet)
+  10.5.4 (Auto-Scale) ---> 11.3 (A2A Dispatch) --> 12.5 (Cloud VM)
+  10.5.7 (Cost Engine) --> 10.5.5 (Adaptive Depth)
+  10.5.8 (Git Scale) ----> 12.6 (Worktree Sync)
+  10.5.10 (Monitoring) --> 10.5.11 (Autonomy Scale)
+```
+
+**Critical path:** 10.5.1 (lock split) → 10.5.9 (SQLite) → 10.5.6 (multi-node) → 11.2 (A2A executor) → 12.3 (Tailscale SDK)
 
 ---
 

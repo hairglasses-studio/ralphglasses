@@ -1,10 +1,40 @@
 {
-  "updated_at": "2026-03-29T23:42:12.657139-07:00",
+  "updated_at": "2026-03-30T00:38:32.621164-07:00",
   "positive": [
     {
-      "text": "1→package session\n     2→\n     3→import (\n     4→\t\"errors\"\n     5→\t\"testing\"\n     6→)\n     7→\n     8→fun",
+      "text": "the file /users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/mcpserver/handler_scratchpad_test.go has been",
       "count": 3,
+      "last_seen": "2026-03-30T00:12:58.653288-07:00",
+      "category": "positive"
+    },
+    {
+      "text": "1→package mcpserver\n     2→\n     3→import (\n     4→\t\"encoding/json\"\n     5→\t\"fmt\"\n     6→\n     7→\t\"github.",
+      "count": 2,
+      "last_seen": "2026-03-30T00:14:35.920396-07:00",
+      "category": "positive"
+    },
+    {
+      "text": "you are the planner for a perpetual development loop.",
+      "count": 3,
+      "last_seen": "2026-03-30T00:38:32.619642-07:00",
+      "category": "positive"
+    },
+    {
+      "text": "the file /users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/session/loop_gates_test.go has been updated su",
+      "count": 2,
       "last_seen": "2026-03-29T18:57:21.958584-07:00",
+      "category": "positive"
+    },
+    {
+      "text": "your previous response was not valid json. here is what you said:",
+      "count": 25,
+      "last_seen": "2026-03-30T00:14:41.603993-07:00",
+      "category": "positive"
+    },
+    {
+      "text": "--- pass: teste2eallscenarios/bandit-cascade-integration (0.16s)\n    --- pass: teste2eallscenarios/episodic-with-embedde",
+      "count": 2,
+      "last_seen": "2026-03-29T19:05:13.15598-07:00",
       "category": "positive"
     },
     {
@@ -20,15 +50,9 @@
       "category": "positive"
     },
     {
-      "text": "all 37 packages pass with no failures. the qw-4 fix is already complete in the codebase — the scoring inflation issue",
-      "count": 2,
-      "last_seen": "2026-03-29T17:03:07.046086-07:00",
-      "category": "positive"
-    },
-    {
-      "text": "the file /users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/session/loop_gates_test.go has been updated su",
-      "count": 2,
-      "last_seen": "2026-03-29T18:57:21.958584-07:00",
+      "text": "the file /users/mitchnotmitchell/hairglasses-studio/ralphglasses/roadmap.md has been updated successfully.",
+      "count": 4,
+      "last_seen": "2026-03-29T19:09:50.232866-07:00",
       "category": "positive"
     },
     {
@@ -38,9 +62,15 @@
       "category": "positive"
     },
     {
-      "text": "your previous response was not valid json. here is what you said:",
-      "count": 26,
-      "last_seen": "2026-03-29T23:42:12.655738-07:00",
+      "text": "1→package session\n     2→\n     3→import (\n     4→\t\"errors\"\n     5→\t\"testing\"\n     6→)\n     7→\n     8→fun",
+      "count": 3,
+      "last_seen": "2026-03-29T18:57:21.958584-07:00",
+      "category": "positive"
+    },
+    {
+      "text": "all 37 packages pass with no failures. the qw-4 fix is already complete in the codebase — the scoring inflation issue",
+      "count": 2,
+      "last_seen": "2026-03-29T17:03:07.046086-07:00",
       "category": "positive"
     },
     {
@@ -48,24 +78,54 @@
       "count": 3,
       "last_seen": "2026-03-29T18:22:09.982252-07:00",
       "category": "positive"
-    },
-    {
-      "text": "the file /users/mitchnotmitchell/hairglasses-studio/ralphglasses/roadmap.md has been updated successfully.",
-      "count": 4,
-      "last_seen": "2026-03-29T19:09:50.232866-07:00",
-      "category": "positive"
-    },
-    {
-      "text": "--- pass: teste2eallscenarios/bandit-cascade-integration (0.16s)\n    --- pass: teste2eallscenarios/episodic-with-embedde",
-      "count": 2,
-      "last_seen": "2026-03-29T19:05:13.15598-07:00",
-      "category": "positive"
     }
   ],
   "negative": [
     {
-      "text": "signal: killed",
+      "text": "1→package enhancer\n     2→\n     3→import (\n     4→\t\"regexp\"\n     5→\t\"s",
+      "count": 5,
+      "last_seen": "2026-03-29T18:51:25.736458-07:00",
+      "category": "negative"
+    },
+    {
+      "text": "1→package session\n     2→\n     3→import (\n     4→\t\"math\"\n     5→\t\"sort",
+      "count": 3,
+      "last_seen": "2026-03-29T18:45:16.730964-07:00",
+      "category": "negative"
+    },
+    {
+      "text": "1→package enhancer\n     2→\n     3→import (\n     4→\t\"testing\"\n     5→)",
+      "count": 4,
+      "last_seen": "2026-03-29T18:51:25.736458-07:00",
+      "category": "negative"
+    },
+    {
+      "text": "1→package mcpserver\n     2→\n     3→import (\n     4→\t\"context\"\n     5→",
+      "count": 6,
+      "last_seen": "2026-03-29T23:41:37.145477-07:00",
+      "category": "negative"
+    },
+    {
+      "text": "1→package mcpserver\n     2→\n     3→import (\n     4→\t\"encoding/json\"",
+      "count": 3,
+      "last_seen": "2026-03-30T00:14:35.920396-07:00",
+      "category": "negative"
+    },
+    {
+      "text": "verify command failed (./scripts/dev/ci.sh)",
       "count": 7,
+      "last_seen": "2026-03-30T00:14:51.523165-07:00",
+      "category": "negative"
+    },
+    {
+      "text": "/users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/session/agents.",
+      "count": 3,
+      "last_seen": "2026-03-29T17:05:39.74464-07:00",
+      "category": "negative"
+    },
+    {
+      "text": "signal: killed",
+      "count": 5,
       "last_seen": "2026-03-28T20:42:04.243348-07:00",
       "category": "negative"
     },
@@ -82,21 +142,9 @@
       "category": "negative"
     },
     {
-      "text": "planner failed to produce valid json after 2 retries",
-      "count": 3,
-      "last_seen": "2026-03-29T17:05:54.223394-07:00",
-      "category": "negative"
-    },
-    {
       "text": "1→package session\n     2→\n     3→import (\n     4→\t\"context\"\n     5→\t\"l",
       "count": 2,
       "last_seen": "2026-03-29T19:05:13.15598-07:00",
-      "category": "negative"
-    },
-    {
-      "text": "/users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/session/agents.",
-      "count": 3,
-      "last_seen": "2026-03-29T17:05:39.74464-07:00",
       "category": "negative"
     },
     {
@@ -106,33 +154,9 @@
       "category": "negative"
     },
     {
-      "text": "verify command failed (./scripts/dev/ci.sh)",
-      "count": 5,
-      "last_seen": "2026-03-29T15:13:57.283784-07:00",
-      "category": "negative"
-    },
-    {
-      "text": "1→package session\n     2→\n     3→import (\n     4→\t\"math\"\n     5→\t\"sort",
+      "text": "planner failed to produce valid json after 2 retries",
       "count": 3,
-      "last_seen": "2026-03-29T18:45:16.730964-07:00",
-      "category": "negative"
-    },
-    {
-      "text": "1→package mcpserver\n     2→\n     3→import (\n     4→\t\"context\"\n     5→",
-      "count": 6,
-      "last_seen": "2026-03-29T23:41:37.145477-07:00",
-      "category": "negative"
-    },
-    {
-      "text": "1→package enhancer\n     2→\n     3→import (\n     4→\t\"regexp\"\n     5→\t\"s",
-      "count": 5,
-      "last_seen": "2026-03-29T18:51:25.736458-07:00",
-      "category": "negative"
-    },
-    {
-      "text": "1→package enhancer\n     2→\n     3→import (\n     4→\t\"testing\"\n     5→)",
-      "count": 4,
-      "last_seen": "2026-03-29T18:51:25.736458-07:00",
+      "last_seen": "2026-03-29T17:05:54.223394-07:00",
       "category": "negative"
     }
   ],
@@ -142,18 +166,18 @@
       "pattern": "your previous response was not valid json. here is what you said:",
       "action": "Continue: your previous response was not valid json. here is what you said:",
       "confidence": 1,
-      "occurrence_count": 26,
-      "first_seen": "2026-03-25T20:01:55.832613-07:00",
-      "last_seen": "2026-03-29T23:42:12.655738-07:00"
+      "occurrence_count": 25,
+      "first_seen": "2026-03-27T19:59:57.452265-07:00",
+      "last_seen": "2026-03-30T00:14:41.603993-07:00"
     },
     {
-      "id": "avoid-47b8b852",
-      "pattern": "signal: killed",
-      "action": "Avoid: signal: killed",
+      "id": "avoid-7bee8200",
+      "pattern": "verify command failed (./scripts/dev/ci.sh)",
+      "action": "Avoid: verify command failed (./scripts/dev/ci.sh)",
       "confidence": 1,
       "occurrence_count": 7,
-      "first_seen": "2026-03-25T23:57:14.4317-07:00",
-      "last_seen": "2026-03-28T20:42:04.243348-07:00"
+      "first_seen": "2026-03-27T20:03:20.030338-07:00",
+      "last_seen": "2026-03-30T00:14:51.523165-07:00"
     },
     {
       "id": "avoid-aa0588a3",
@@ -165,24 +189,6 @@
       "last_seen": "2026-03-29T23:41:37.145477-07:00"
     },
     {
-      "id": "avoid-ecd36926",
-      "pattern": "parse planner output: planner output is empty",
-      "action": "Avoid: parse planner output: planner output is empty",
-      "confidence": 0.8333333333333334,
-      "occurrence_count": 5,
-      "first_seen": "2026-03-27T13:40:43.335419-07:00",
-      "last_seen": "2026-03-29T15:18:25.269603-07:00"
-    },
-    {
-      "id": "avoid-7bee8200",
-      "pattern": "verify command failed (./scripts/dev/ci.sh)",
-      "action": "Avoid: verify command failed (./scripts/dev/ci.sh)",
-      "confidence": 0.8333333333333334,
-      "occurrence_count": 5,
-      "first_seen": "2026-03-27T20:03:20.030338-07:00",
-      "last_seen": "2026-03-29T15:13:57.283784-07:00"
-    },
-    {
       "id": "avoid-bd177687",
       "pattern": "1→package enhancer\n     2→\n     3→import (\n     4→\t\"regexp\"\n     5→\t\"s",
       "action": "Avoid: 1→package enhancer\n     2→\n     3→import (\n     4→\t\"regexp\"\n     5→\t\"s",
@@ -192,6 +198,24 @@
       "last_seen": "2026-03-29T18:51:25.736458-07:00"
     },
     {
+      "id": "avoid-47b8b852",
+      "pattern": "signal: killed",
+      "action": "Avoid: signal: killed",
+      "confidence": 0.8333333333333334,
+      "occurrence_count": 5,
+      "first_seen": "2026-03-27T13:34:01.392583-07:00",
+      "last_seen": "2026-03-28T20:42:04.243348-07:00"
+    },
+    {
+      "id": "avoid-ecd36926",
+      "pattern": "parse planner output: planner output is empty",
+      "action": "Avoid: parse planner output: planner output is empty",
+      "confidence": 0.8333333333333334,
+      "occurrence_count": 5,
+      "first_seen": "2026-03-27T13:40:43.335419-07:00",
+      "last_seen": "2026-03-29T15:18:25.269603-07:00"
+    },
+    {
       "id": "avoid-50ebcecc",
       "pattern": "1→package enhancer\n     2→\n     3→import (\n     4→\t\"testing\"\n     5→)",
       "action": "Avoid: 1→package enhancer\n     2→\n     3→import (\n     4→\t\"testing\"\n     5→)",
@@ -199,6 +223,33 @@
       "occurrence_count": 4,
       "first_seen": "2026-03-29T17:03:07.046086-07:00",
       "last_seen": "2026-03-29T18:51:25.736458-07:00"
+    },
+    {
+      "id": "avoid-818b94e7",
+      "pattern": "1→package session\n     2→\n     3→import (\n     4→\t\"math\"\n     5→\t\"sort",
+      "action": "Avoid: 1→package session\n     2→\n     3→import (\n     4→\t\"math\"\n     5→\t\"sort",
+      "confidence": 0.5,
+      "occurrence_count": 3,
+      "first_seen": "2026-03-29T16:59:15.649092-07:00",
+      "last_seen": "2026-03-29T18:45:16.730964-07:00"
+    },
+    {
+      "id": "avoid-685a037d",
+      "pattern": "1→package mcpserver\n     2→\n     3→import (\n     4→\t\"encoding/json\"",
+      "action": "Avoid: 1→package mcpserver\n     2→\n     3→import (\n     4→\t\"encoding/json\"",
+      "confidence": 0.5,
+      "occurrence_count": 3,
+      "first_seen": "2026-03-29T23:41:37.145477-07:00",
+      "last_seen": "2026-03-30T00:14:35.920396-07:00"
+    },
+    {
+      "id": "avoid-ce1e0af1",
+      "pattern": "/users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/session/agents.",
+      "action": "Avoid: /users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/session/agents.",
+      "confidence": 0.5,
+      "occurrence_count": 3,
+      "first_seen": "2026-03-29T16:51:52.958842-07:00",
+      "last_seen": "2026-03-29T17:05:39.74464-07:00"
     },
     {
       "id": "avoid-d2cdd504",
@@ -217,24 +268,6 @@
       "occurrence_count": 3,
       "first_seen": "2026-03-29T16:59:31.369522-07:00",
       "last_seen": "2026-03-29T17:05:54.223394-07:00"
-    },
-    {
-      "id": "avoid-ce1e0af1",
-      "pattern": "/users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/session/agents.",
-      "action": "Avoid: /users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/session/agents.",
-      "confidence": 0.5,
-      "occurrence_count": 3,
-      "first_seen": "2026-03-29T16:51:52.958842-07:00",
-      "last_seen": "2026-03-29T17:05:39.74464-07:00"
-    },
-    {
-      "id": "avoid-818b94e7",
-      "pattern": "1→package session\n     2→\n     3→import (\n     4→\t\"math\"\n     5→\t\"sort",
-      "action": "Avoid: 1→package session\n     2→\n     3→import (\n     4→\t\"math\"\n     5→\t\"sort",
-      "confidence": 0.5,
-      "occurrence_count": 3,
-      "first_seen": "2026-03-29T16:59:15.649092-07:00",
-      "last_seen": "2026-03-29T18:45:16.730964-07:00"
     }
   ]
 }

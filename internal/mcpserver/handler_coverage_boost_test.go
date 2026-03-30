@@ -456,12 +456,16 @@ func TestResolveRepoPath_InvalidRepoName(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
 
-	_, err := srv.resolveRepoPath("../evil")
-	if err == nil {
+	_, errRes := srv.resolveRepoPath("../evil")
+	if errRes == nil {
 		t.Fatal("expected error for invalid repo name")
 	}
-	if !strings.Contains(err.Error(), "invalid repo name") {
-		t.Errorf("expected 'invalid repo name' error, got: %v", err)
+	text := getResultText(errRes)
+	if !strings.Contains(text, "invalid repo name") {
+		t.Errorf("expected 'invalid repo name' error, got: %s", text)
+	}
+	if !strings.Contains(text, string(ErrInvalidParams)) {
+		t.Errorf("expected error_code %s, got: %s", ErrInvalidParams, text)
 	}
 }
 
@@ -469,12 +473,16 @@ func TestResolveRepoPath_RepoNotFound(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
 
-	_, err := srv.resolveRepoPath("nonexistent-repo")
-	if err == nil {
+	_, errRes := srv.resolveRepoPath("nonexistent-repo")
+	if errRes == nil {
 		t.Fatal("expected error for nonexistent repo")
 	}
-	if !strings.Contains(err.Error(), "not found") {
-		t.Errorf("expected 'not found' error, got: %v", err)
+	text := getResultText(errRes)
+	if !strings.Contains(text, "not found") {
+		t.Errorf("expected 'not found' error, got: %s", text)
+	}
+	if !strings.Contains(text, string(ErrRepoNotFound)) {
+		t.Errorf("expected error_code %s, got: %s", ErrRepoNotFound, text)
 	}
 }
 
@@ -484,9 +492,9 @@ func TestResolveRepoPath_ValidRepo(t *testing.T) {
 	// Scan to find repos
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
-	path, err := srv.resolveRepoPath("test-repo")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	path, errRes := srv.resolveRepoPath("test-repo")
+	if errRes != nil {
+		t.Fatalf("unexpected error: %s", getResultText(errRes))
 	}
 	expected := filepath.Join(root, "test-repo")
 	if path != expected {
@@ -500,9 +508,9 @@ func TestResolveRepoPath_EmptyUsesFirstRepo(t *testing.T) {
 	// Scan to find repos
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
-	path, err := srv.resolveRepoPath("")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	path, errRes := srv.resolveRepoPath("")
+	if errRes != nil {
+		t.Fatalf("unexpected error: %s", getResultText(errRes))
 	}
 	expected := filepath.Join(root, "test-repo")
 	if path != expected {
@@ -515,9 +523,9 @@ func TestResolveRepoPath_EmptyNoRepos(t *testing.T) {
 	root := t.TempDir()
 	srv := NewServer(root)
 
-	path, err := srv.resolveRepoPath("")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	path, errRes := srv.resolveRepoPath("")
+	if errRes != nil {
+		t.Fatalf("unexpected error: %s", getResultText(errRes))
 	}
 	// Falls back to ScanPath
 	if path != root {
@@ -529,12 +537,16 @@ func TestResolveRepoPath_EmptyScanPathEmpty(t *testing.T) {
 	t.Parallel()
 	srv := &Server{ScanPath: ""}
 
-	_, err := srv.resolveRepoPath("")
-	if err == nil {
+	_, errRes := srv.resolveRepoPath("")
+	if errRes == nil {
 		t.Fatal("expected error for empty scan path with no repos")
 	}
-	if !strings.Contains(err.Error(), "no repo available") {
-		t.Errorf("expected 'no repo available' error, got: %v", err)
+	text := getResultText(errRes)
+	if !strings.Contains(text, "no repo available") {
+		t.Errorf("expected 'no repo available' error, got: %s", text)
+	}
+	if !strings.Contains(text, string(ErrInvalidParams)) {
+		t.Errorf("expected error_code %s, got: %s", ErrInvalidParams, text)
 	}
 }
 
@@ -542,12 +554,16 @@ func TestResolveRepoPath_ScanFails(t *testing.T) {
 	t.Parallel()
 	srv := NewServer("/nonexistent/path/that/does/not/exist")
 
-	_, err := srv.resolveRepoPath("some-repo")
-	if err == nil {
+	_, errRes := srv.resolveRepoPath("some-repo")
+	if errRes == nil {
 		t.Fatal("expected error when scan fails")
 	}
-	if !strings.Contains(err.Error(), "scan failed") {
-		t.Errorf("expected 'scan failed' error, got: %v", err)
+	text := getResultText(errRes)
+	if !strings.Contains(text, "scan failed") {
+		t.Errorf("expected 'scan failed' error, got: %s", text)
+	}
+	if !strings.Contains(text, string(ErrScanFailed)) {
+		t.Errorf("expected error_code %s, got: %s", ErrScanFailed, text)
 	}
 }
 
