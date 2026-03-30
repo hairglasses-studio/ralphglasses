@@ -3,6 +3,8 @@ package notify
 import (
 	"os/exec"
 	"runtime"
+	"sync"
+	"time"
 )
 
 // EventType defines the category of notification events.
@@ -46,6 +48,31 @@ func sendForOS(goos, title, body string) error {
 	default:
 		return nil
 	}
+}
+
+// Throttler deduplicates notifications by event type + session ID.
+// A notification for the same key is suppressed if sent within the cooldown window.
+type Throttler struct {
+	cooldown time.Duration
+	mu       sync.Mutex
+	last     map[string]time.Time
+}
+
+// NewThrottler creates a throttler with the given cooldown (e.g. 60s).
+func NewThrottler(cooldown time.Duration) *Throttler {
+	return &Throttler{cooldown: cooldown, last: make(map[string]time.Time)}
+}
+
+// Allow returns true if a notification for this event+session should be sent.
+func (t *Throttler) Allow(eventType EventType, sessionID string) bool {
+	key := string(eventType) + ":" + sessionID
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if last, ok := t.last[key]; ok && time.Since(last) < t.cooldown {
+		return false
+	}
+	t.last[key] = time.Now()
+	return true
 }
 
 func escapeOSA(s string) string {

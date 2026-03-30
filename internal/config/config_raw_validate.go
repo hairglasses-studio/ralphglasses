@@ -44,6 +44,7 @@ var canonicalKeys = map[string]keySpec{
 	"provider":              {Type: "string", AllowedStr: []string{"claude", "gemini", "codex", "openai", "ollama"}},
 	"notify_desktop":        {Type: "bool"},
 	"notify_sound":          {Type: "bool"},
+	"telemetry_enabled":     {Type: "bool"},
 }
 
 // KeyInfo describes a config key for external consumers.
