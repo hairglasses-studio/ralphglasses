@@ -552,6 +552,13 @@ func (s *Server) buildObservabilityGroup() ToolGroup {
 				mcp.WithBoolean("race", mcp.Description("Enable -race detector (default true)")),
 			), s.handleMergeVerify},
 
+			// Worktree create
+			{mcp.NewTool("ralphglasses_worktree_create",
+				mcp.WithDescription("Create a new git worktree for a repo under .ralph/worktrees/manual/"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithString("name", mcp.Required(), mcp.Description("Worktree name (sanitized for filesystem)")),
+			), s.handleWorktreeCreate},
+
 			// Worktree cleanup
 			{mcp.NewTool("ralphglasses_worktree_cleanup",
 				mcp.WithDescription("Clean up stale loop worktrees older than a given age — skips locked/active worktrees"),

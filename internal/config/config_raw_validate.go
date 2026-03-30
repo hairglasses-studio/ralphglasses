@@ -1,6 +1,9 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 // ValidationWarning represents a single config validation issue.
 type ValidationWarning struct {
@@ -39,6 +42,32 @@ var canonicalKeys = map[string]keySpec{
 	"log_level":             {Type: "string", AllowedStr: []string{"debug", "info", "warn", "error"}},
 	"auto_restart":          {Type: "bool"},
 	"provider":              {Type: "string", AllowedStr: []string{"claude", "gemini", "codex", "openai", "ollama"}},
+}
+
+// KeyInfo describes a config key for external consumers.
+type KeyInfo struct {
+	Name       string   `json:"name"`
+	Type       string   `json:"type"`
+	AllowedStr []string `json:"allowed_values,omitempty"`
+	MinInt     int      `json:"min,omitempty"`
+	MaxInt     int      `json:"max,omitempty"`
+}
+
+// KnownKeys returns a sorted list of all recognized config keys with their specs.
+func KnownKeys() []KeyInfo {
+	keys := make([]KeyInfo, 0, len(canonicalKeys))
+	for name, spec := range canonicalKeys {
+		keys = append(keys, KeyInfo{
+			Name:       name,
+			Type:       spec.Type,
+			AllowedStr: spec.AllowedStr,
+			MinInt:     spec.MinInt,
+			MaxInt:     spec.MaxInt,
+		})
+	}
+	// Sort for stable output.
+	sort.Slice(keys, func(i, j int) bool { return keys[i].Name < keys[j].Name })
+	return keys
 }
 
 // ValidateRawConfig validates a raw key-value config map (e.g. from a .ralphrc
