@@ -164,6 +164,89 @@ func commitDirtyWorktree(path string) {
 	}
 }
 
+// WorktreeInfo describes an active worktree directory.
+type WorktreeInfo struct {
+	Path    string `json:"path"`
+	Loop    string `json:"loop"`
+	Dirty   bool   `json:"dirty"`
+	Branch  string `json:"branch,omitempty"`
+	ModTime string `json:"mod_time,omitempty"`
+}
+
+// ListWorktrees returns information about all loop worktrees under a repo.
+func ListWorktrees(repoPath string) ([]WorktreeInfo, error) {
+	base := filepath.Join(repoPath, ".ralph", "worktrees", "loops")
+	loopDirs, err := os.ReadDir(base)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("read worktree dir: %w", err)
+	}
+
+	var result []WorktreeInfo
+	for _, loopEntry := range loopDirs {
+		if !loopEntry.IsDir() {
+			continue
+		}
+		loopName := loopEntry.Name()
+		iterDirs, err := os.ReadDir(filepath.Join(base, loopName))
+		if err != nil {
+			continue
+		}
+		for _, iterEntry := range iterDirs {
+			if !iterEntry.IsDir() {
+				continue
+			}
+			wtPath := filepath.Join(base, loopName, iterEntry.Name())
+			info := WorktreeInfo{
+				Path:  wtPath,
+				Loop:  loopName,
+				Dirty: worktreeIsDirty(wtPath),
+			}
+			if fi, err := iterEntry.Info(); err == nil {
+				info.ModTime = fi.ModTime().Format(time.RFC3339)
+			}
+			// Try to get branch name.
+			cmd := exec.Command("git", "-C", wtPath, "rev-parse", "--abbrev-ref", "HEAD")
+			if out, err := cmd.Output(); err == nil {
+				info.Branch = strings.TrimSpace(string(out))
+			}
+			result = append(result, info)
+		}
+	}
+	return result, nil
+}
+
+// CreateWorktree creates a git worktree for a repo at a named path under .ralph/worktrees/.
+// Returns the worktree path and branch name.
+func CreateWorktree(repoPath, name string) (string, string, error) {
+	if strings.TrimSpace(repoPath) == "" {
+		return "", "", fmt.Errorf("repo path is empty")
+	}
+	sanitized := sanitizeLoopName(name)
+	if sanitized == "" {
+		return "", "", fmt.Errorf("invalid worktree name %q", name)
+	}
+
+	base := filepath.Join(repoPath, ".ralph", "worktrees", "manual")
+	wtPath := filepath.Join(base, sanitized)
+
+	if _, err := os.Stat(wtPath); err == nil {
+		return "", "", fmt.Errorf("worktree already exists: %s", wtPath)
+	}
+	if err := os.MkdirAll(base, 0755); err != nil {
+		return "", "", fmt.Errorf("create worktree parent: %w", err)
+	}
+
+	branch := fmt.Sprintf("ralph/wt/%s", sanitized)
+	cmd := exec.Command("git", "-C", repoPath, "worktree", "add", "-B", branch, wtPath, "HEAD")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return "", "", fmt.Errorf("git worktree add: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	return wtPath, branch, nil
+}
+
 // cleanupOrphanedLoopBranches removes branches created by a loop that no longer
 // have associated worktrees. Branch names follow the pattern "loop-<id>-iter-<n>".
 func cleanupOrphanedLoopBranches(repoPath, loopID string) {

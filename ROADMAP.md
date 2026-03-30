@@ -426,7 +426,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 
 ### 1.5.4 — Config schema documentation
 - [ ] 1.5.4.1 — Write `docs/ralphrc-reference.md`: all keys, types, defaults, descriptions, examples `P2` `M`
-- [ ] 1.5.4.2 — Add `ralphglasses config list-keys` subcommand: print all known keys with defaults `P2` `S`
+- [x] 1.5.4.2 — Add `ralphglasses config list-keys` subcommand: print all known keys with defaults `P2` `S`
 - [x] 1.5.4.3 — Add `ralphglasses config validate` subcommand: check `.ralphrc` against schema `P1` `S`
 - [ ] 1.5.4.4 — Add `ralphglasses config init` subcommand: generate `.ralphrc` with all keys and defaults `P2` `S`
 - [ ] 1.5.4.5 — Auto-generate config docs from schema (Go code -> Markdown via `go:generate`) `P2` `M`
@@ -555,14 +555,14 @@ Tooling, release automation, and contributor workflow. All items independent of 
 ### 2.8 — MCP server expansion `[BLOCKED BY 2.1, 2.2, 2.3]`
 - [x] 2.8.1 — Add `ralphglasses_session_launch` tool: accepts repo, budget, model, name — implemented as `session_launch` `[reconciled 2026-03-26]`
 - [x] 2.8.2 — Add `ralphglasses_session_list` tool: returns all sessions with status `[reconciled 2026-03-26]`
-- [ ] 2.8.3 — Add `ralphglasses_worktree_create` tool: create worktree for repo `P1` `M`
+- [x] 2.8.3 — Add `ralphglasses_worktree_create` tool: create worktree for repo `P1` `M`
 - [x] 2.8.4 — Add `ralphglasses_session_budget` tool: per-session budget info `[reconciled 2026-03-26]`
 - [x] 2.8.5 — Add `ralphglasses_fleet_status` tool: aggregate stats for agent-to-agent coordination `[reconciled 2026-03-26]`
 - **Acceptance:** MCP tools callable from Claude Code, session lifecycle works end-to-end
 
 ### 2.9 — CLI subcommands
 - [x] 2.9.1 — `ralphglasses session list|start|stop|status` — non-TUI session management `P1` `M`
-- [ ] 2.9.2 — `ralphglasses worktree create|list|merge|clean` — worktree operations from CLI `P1` `M`
+- [x] 2.9.2 — `ralphglasses worktree create|list|merge|clean` — worktree operations from CLI `P1` `M`
 - [ ] 2.9.3 — `ralphglasses budget status|set|reset` — budget management from CLI `P2` `S`
 - [x] 2.9.4 — JSON output flag (`--json`) for all subcommands for scripting/piping `P1` `S`
 - **Acceptance:** all fleet operations available without TUI, JSON output parseable by `jq`
