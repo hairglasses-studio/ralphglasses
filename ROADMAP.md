@@ -530,7 +530,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** fleet view shows all sessions with live-updating spend/status
 
 ### 2.5 — Session launcher `[BLOCKED BY 2.1, 2.2, 2.3]`
-- [ ] 2.5.1 — Implement `:launch` command: pick repo from discovered list, set session name `P1` `M`
+- [x] 2.5.1 — Implement `:launch` command: pick repo from discovered list, set session name `P1` `M`
 - [ ] 2.5.2 — Add budget/model selection to launch flow: dropdown or tab-complete for model, numeric input for budget `P1` `M`
 - [x] 2.5.3 — Default budget from `.ralphrc` (`RALPH_SESSION_BUDGET`) or global config fallback `P1` `S`
 - [x] 2.5.4 — Session templates: save current launch config as named template, load from template `P2` `M`
@@ -993,7 +993,7 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 
 ### 6.2 — R&D cycle orchestrator `[BLOCKED BY 6.1]`
 - [ ] 6.2.1 — Port perpetual improvement loop from claudekit rdcycle `P1` `L`
-- [ ] 6.2.2 — Self-benchmark: coverage, lint score, build time, binary size per iteration `P1` `M`
+- [x] 6.2.2 — Self-benchmark: coverage, lint score, build time, binary size per iteration `P1` `M`
 - [ ] 6.2.3 — Regression detection: compare benchmarks, flag regressions `P0` `M`
 - [ ] 6.2.4 — Auto-generate improvement tasks from benchmark regressions `P1` `L`
 - [ ] 6.2.5 — Cycle dashboard: iteration history, benchmark trends `P2` `M`
@@ -1024,9 +1024,9 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - **Acceptance:** Discord webhook fires on session completion
 
 ### 6.6 — Model routing
-- [ ] 6.6.1 — Model registry: available models with capabilities, cost/token, context window `P1` `M`
+- [x] 6.6.1 — Model registry: available models with capabilities, cost/token, context window `P1` `M`
 - [ ] 6.6.2 — Task-type classifier: map task types to preferred models `P1` `M`
-- [ ] 6.6.3 — Routing rules in `.ralphrc` `P1` `S`
+- [x] 6.6.3 — Routing rules in `.ralphrc` `P1` `S`
 - [ ] 6.6.4 — Dynamic routing: switch model mid-session based on task type `P1` `L`
 - [ ] 6.6.5 — Cost optimization: suggest cheaper model when task below threshold `P1` `M`
 - **Acceptance:** different task types route to appropriate models
@@ -1059,7 +1059,7 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - [ ] 6.10.1 — Historical cost model `P1` `M`
 - [ ] 6.10.2 — Budget projection `P1` `M`
 - [ ] 6.10.3 — TUI forecast widget `P2` `M`
-- [ ] 6.10.4 — Alert on anomaly: flag >2x predicted rate `P1` `S`
+- [x] 6.10.4 — Alert on anomaly: flag >2x predicted rate `P1` `S`
 - [ ] 6.10.5 — Recommendation engine `P2` `M`
 - **Acceptance:** forecast accuracy within 20% after 10+ sessions
 
