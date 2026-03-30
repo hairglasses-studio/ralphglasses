@@ -1,19 +1,34 @@
 package styles
 
-import "github.com/charmbracelet/lipgloss"
+import "charm.land/lipgloss/v2"
+
+// k9s-inspired raw color strings (ANSI color codes as strings).
+// Use these when a plain string color is required (e.g., bubbles/progress).
+const (
+	ColorRedStr         = "196"
+	ColorGreenStr       = "42"
+	ColorYellowStr      = "214"
+	ColorPrimaryStr     = "39"
+	ColorSecondaryStr   = "62"
+	ColorAccentStr      = "205"
+	ColorGrayStr        = "244"
+	ColorDarkGrayStr    = "241"
+	ColorBrightWhiteStr = "255"
+	ColorDarkBgStr      = "236"
+)
 
 // k9s-inspired color palette.
 var (
-	ColorPrimary     = lipgloss.Color("39")  // Cyan
-	ColorSecondary   = lipgloss.Color("62")  // Blue
-	ColorAccent      = lipgloss.Color("205") // Magenta
-	ColorGreen       = lipgloss.Color("42")
-	ColorYellow      = lipgloss.Color("214")
-	ColorRed         = lipgloss.Color("196")
-	ColorGray        = lipgloss.Color("244")
-	ColorDarkGray    = lipgloss.Color("241")
-	ColorBrightWhite = lipgloss.Color("255")
-	ColorDarkBg      = lipgloss.Color("236")
+	ColorPrimary     = lipgloss.Color(ColorPrimaryStr)     // Cyan
+	ColorSecondary   = lipgloss.Color(ColorSecondaryStr)   // Blue
+	ColorAccent      = lipgloss.Color(ColorAccentStr)      // Magenta
+	ColorGreen       = lipgloss.Color(ColorGreenStr)
+	ColorYellow      = lipgloss.Color(ColorYellowStr)
+	ColorRed         = lipgloss.Color(ColorRedStr)
+	ColorGray        = lipgloss.Color(ColorGrayStr)
+	ColorDarkGray    = lipgloss.Color(ColorDarkGrayStr)
+	ColorBrightWhite = lipgloss.Color(ColorBrightWhiteStr)
+	ColorDarkBg      = lipgloss.Color(ColorDarkBgStr)
 
 	TitleStyle = lipgloss.NewStyle().
 			Bold(true).

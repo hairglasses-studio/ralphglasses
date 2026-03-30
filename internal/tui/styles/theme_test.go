@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	lipgloss "charm.land/lipgloss/v2"
 )
 
 func TestDefaultThemes_ReturnsExpectedNames(t *testing.T) {
@@ -104,10 +106,6 @@ func TestLoadTheme_MissingFile(t *testing.T) {
 }
 
 func TestApplyTheme_ChangesPackageLevelVars(t *testing.T) {
-	// Save originals
-	origPrimary := ColorPrimary
-	origAccent := ColorAccent
-
 	theme := &Theme{
 		Name:     "custom",
 		Primary:  "#ff0000",
@@ -121,11 +119,13 @@ func TestApplyTheme_ChangesPackageLevelVars(t *testing.T) {
 	}
 	ApplyTheme(theme)
 
-	if string(ColorPrimary) != "#ff0000" {
-		t.Errorf("ColorPrimary = %q after ApplyTheme, want %q", string(ColorPrimary), "#ff0000")
+	wantPrimary := lipgloss.Color("#ff0000")
+	wantAccent := lipgloss.Color("#00ff00")
+	if ColorPrimary != wantPrimary {
+		t.Errorf("ColorPrimary = %v after ApplyTheme, want %v", ColorPrimary, wantPrimary)
 	}
-	if string(ColorAccent) != "#00ff00" {
-		t.Errorf("ColorAccent = %q after ApplyTheme, want %q", string(ColorAccent), "#00ff00")
+	if ColorAccent != wantAccent {
+		t.Errorf("ColorAccent = %v after ApplyTheme, want %v", ColorAccent, wantAccent)
 	}
 
 	// Verify styles were rebuilt by checking they render non-empty
@@ -136,16 +136,16 @@ func TestApplyTheme_ChangesPackageLevelVars(t *testing.T) {
 		t.Error("ProviderClaudeStyle.Render returned empty after ApplyTheme")
 	}
 
-	// Restore defaults
+	// Restore defaults using known string constants
 	ApplyTheme(&Theme{
-		Primary:  string(origPrimary),
-		Accent:   string(origAccent),
-		Green:    "42",
-		Yellow:   "214",
-		Red:      "196",
-		Gray:     "244",
-		DarkBg:   "236",
-		BrightFg: "255",
+		Primary:  ColorPrimaryStr,
+		Accent:   ColorAccentStr,
+		Green:    ColorGreenStr,
+		Yellow:   ColorYellowStr,
+		Red:      ColorRedStr,
+		Gray:     ColorGrayStr,
+		DarkBg:   ColorDarkBgStr,
+		BrightFg: ColorBrightWhiteStr,
 	})
 }
 
@@ -215,10 +215,10 @@ func TestResolveTheme_NotFound(t *testing.T) {
 }
 
 func TestApplyTheme_NilIsNoOp(t *testing.T) {
-	before := string(ColorPrimary)
+	before := ColorPrimary
 	ApplyTheme(nil)
-	after := string(ColorPrimary)
+	after := ColorPrimary
 	if before != after {
-		t.Errorf("ApplyTheme(nil) changed ColorPrimary from %q to %q", before, after)
+		t.Errorf("ApplyTheme(nil) changed ColorPrimary from %v to %v", before, after)
 	}
 }

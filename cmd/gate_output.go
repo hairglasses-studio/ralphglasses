@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
 )
