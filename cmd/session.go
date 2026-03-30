@@ -129,8 +129,33 @@ var sessionStopCmd = &cobra.Command{
 	},
 }
 
+// sessionIDCompletion provides dynamic completion of session IDs.
+func sessionIDCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	sp := util.ExpandHome(scanPath)
+	mgr := session.NewManager()
+	mgr.SetStateDir(filepath.Join(sp, ".session-state"))
+	mgr.LoadExternalSessions()
+
+	var ids []string
+	for _, s := range mgr.List("") {
+		s.Lock()
+		id := s.ID
+		desc := fmt.Sprintf("%s\t%s %s", id, s.Status, s.RepoName)
+		s.Unlock()
+		if toComplete == "" || strings.HasPrefix(id, toComplete) {
+			ids = append(ids, desc)
+		}
+	}
+	return ids, cobra.ShellCompDirectiveNoFileComp
+}
+
 func init() {
 	sessionCmd.PersistentFlags().BoolVar(&sessionJSON, "json", false, "Output as JSON")
+	sessionStatusCmd.ValidArgsFunction = sessionIDCompletion
+	sessionStopCmd.ValidArgsFunction = sessionIDCompletion
 	sessionCmd.AddCommand(sessionListCmd)
 	sessionCmd.AddCommand(sessionStatusCmd)
 	sessionCmd.AddCommand(sessionStopCmd)
