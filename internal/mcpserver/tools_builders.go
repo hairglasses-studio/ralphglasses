@@ -23,6 +23,7 @@ func defaultRegistry() *ToolGroupRegistry {
 	r.Register(NewFuncBuilder("fleet_h", (*Server).buildFleetHGroup))
 	r.Register(NewFuncBuilder("observability", (*Server).buildObservabilityGroup))
 	r.Register(NewFuncBuilder("rdcycle", (*Server).buildRdcycleGroup))
+	r.Register(NewFuncBuilder("plugin", (*Server).buildPluginGroup))
 	return r
 }
 
@@ -80,6 +81,30 @@ func (s *Server) buildCoreGroup() ToolGroup {
 				mcp.WithString("value", mcp.Description("Value to set (omit to query)")),
 				mcp.WithString("repos", mcp.Description("Comma-separated repo names (default: all)")),
 			), s.handleConfigBulk},
+		},
+	}
+}
+
+func (s *Server) buildPluginGroup() ToolGroup {
+	return ToolGroup{
+		Name:        "plugin",
+		Description: "Plugin management: list, info, enable, disable registered plugins",
+		Tools: []ToolEntry{
+			{mcp.NewTool("ralphglasses_plugin_list",
+				mcp.WithDescription("List all registered plugins with name, version, status, and type (builtin/yaml/grpc)"),
+			), s.handlePluginList},
+			{mcp.NewTool("ralphglasses_plugin_info",
+				mcp.WithDescription("Show detailed information for a specific plugin"),
+				mcp.WithString("name", mcp.Required(), mcp.Description("Plugin name")),
+			), s.handlePluginInfo},
+			{mcp.NewTool("ralphglasses_plugin_enable",
+				mcp.WithDescription("Enable a disabled plugin"),
+				mcp.WithString("name", mcp.Required(), mcp.Description("Plugin name to enable")),
+			), s.handlePluginEnable},
+			{mcp.NewTool("ralphglasses_plugin_disable",
+				mcp.WithDescription("Disable an active plugin"),
+				mcp.WithString("name", mcp.Required(), mcp.Description("Plugin name to disable")),
+			), s.handlePluginDisable},
 		},
 	}
 }
