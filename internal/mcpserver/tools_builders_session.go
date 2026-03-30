@@ -7,7 +7,7 @@ import (
 func (s *Server) buildSessionGroup() ToolGroup {
 	return ToolGroup{
 		Name:        "session",
-		Description: "LLM session lifecycle: launch, list, status, resume, stop, budget, retry, output, tail, diff, compare, errors",
+		Description: "LLM session lifecycle: launch, list, status, resume, stop, budget, retry, output, tail, diff, compare, errors, export",
 		Tools: []ToolEntry{
 			{mcp.NewTool("ralphglasses_session_launch",
 				mcp.WithDescription("Launch a headless LLM CLI session (claude/gemini/codex) for a repo with a `prompt`"),
@@ -93,6 +93,15 @@ func (s *Server) buildSessionGroup() ToolGroup {
 				mcp.WithString("severity", mcp.Description("Filter: critical, warning, info")),
 				mcp.WithNumber("limit", mcp.Description("Max errors (default 50)")),
 			), s.handleSessionErrors},
+			{mcp.NewTool("ralphglasses_session_export",
+				mcp.WithDescription("Export a recorded session replay as Markdown or JSON — includes timeline, tool calls, inputs/outputs"),
+				mcp.WithString("session_id", mcp.Required(), mcp.Description("Session ID whose replay to export")),
+				mcp.WithString("format", mcp.Description("Export format: markdown (default) or json")),
+				mcp.WithString("repo", mcp.Description("Repo name hint for locating replay file")),
+				mcp.WithString("event_types", mcp.Description("Comma-separated event types to include: input, output, tool, status (default: all)")),
+				mcp.WithString("after", mcp.Description("Only include events after this RFC3339 timestamp")),
+				mcp.WithString("before", mcp.Description("Only include events before this RFC3339 timestamp")),
+			), s.handleSessionExport},
 		},
 	}
 }
