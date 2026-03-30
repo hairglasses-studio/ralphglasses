@@ -44,6 +44,7 @@ type Manager struct {
 	costPredictor *CostPredictor         // Phase H: task cost prediction
 	noopDetector    *NoOpDetector          // WS2-noop: consecutive no-op iteration detection
 	budgetEnforcer  *BudgetEnforcer        // WS5: secondary budget enforcement for loops
+	depthEstimator  *DepthEstimator        // Phase 10.5.5: adaptive iteration depth
 	store           Store                  // pluggable session persistence (default: MemoryStore)
 	launchSession  func(context.Context, LaunchOptions) (*Session, error)
 	waitSession    func(context.Context, *Session) error
