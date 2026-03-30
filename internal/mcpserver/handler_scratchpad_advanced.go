@@ -41,9 +41,9 @@ func (s *Server) handleScratchpadValidate(_ context.Context, req mcp.CallToolReq
 		return codedError(ErrInvalidParams, "check is required (scores, paths, budget, noops, all)"), nil
 	}
 
-	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
-	if err != nil {
-		return codedError(ErrInvalidParams, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(getStringArg(req, "repo"))
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	path := filepath.Join(repoPath, ".ralph", name+"_scratchpad.md")
@@ -242,9 +242,9 @@ func (s *Server) handleScratchpadContext(_ context.Context, req mcp.CallToolRequ
 		return codedError(ErrInvalidParams, "sections is required (fleet, observations, routing, autonomy, all)"), nil
 	}
 
-	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
-	if err != nil {
-		return codedError(ErrInvalidParams, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(getStringArg(req, "repo"))
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	sections := resolveSections(sectionsStr)
@@ -470,9 +470,9 @@ func (s *Server) handleScratchpadReason(_ context.Context, req mcp.CallToolReque
 	}
 	inputStr := getStringArg(req, "input")
 
-	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
-	if err != nil {
-		return codedError(ErrInvalidParams, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(getStringArg(req, "repo"))
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	// Parse optional input JSON.

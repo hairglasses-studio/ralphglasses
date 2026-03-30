@@ -148,27 +148,26 @@ func estimateSessionCost(
 }
 
 func (s *Server) handleCostEstimate(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	provider := getStringArg(req, "provider")
-	if provider == "" {
-		return codedError(ErrInvalidParams, "provider is required (claude, gemini, codex)"), nil
+	pp := NewParamParser(argsMap(req))
+
+	provider, errResult := pp.String("provider")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if _, ok := providerRateKeys[provider]; !ok {
 		return codedError(ErrInvalidParams, "provider must be one of: claude, gemini, codex"), nil
 	}
 
-	model := getStringArg(req, "model")
-	promptTokens := int(getNumberArg(req, "prompt_tokens", 5000))
-	turns := int(getNumberArg(req, "turns", 5))
-	outputTokensPerTurn := int(getNumberArg(req, "output_tokens_per_turn", 2000))
-	mode := getStringArg(req, "mode")
-	if mode == "" {
-		mode = "session"
-	}
+	model := pp.StringOpt("model", "")
+	promptTokens := pp.IntOpt("prompt_tokens", 5000)
+	turns := pp.IntOpt("turns", 5)
+	outputTokensPerTurn := pp.IntOpt("output_tokens_per_turn", 2000)
+	mode := pp.StringOpt("mode", "session")
 	if mode != "session" && mode != "loop" {
 		return codedError(ErrInvalidParams, "mode must be 'session' or 'loop'"), nil
 	}
-	iterations := int(getNumberArg(req, "iterations", 3))
-	repo := getStringArg(req, "repo")
+	iterations := pp.IntOpt("iterations", 3)
+	repo := pp.StringOpt("repo", "")
 
 	// Load cost rates.
 	rates := session.DefaultCostRates()

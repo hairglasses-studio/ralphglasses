@@ -28,9 +28,9 @@ func (s *Server) handleFindingToTask(_ context.Context, req mcp.CallToolRequest)
 	}
 
 	repo := getStringArg(req, "repo")
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	scratchpadPath := filepath.Join(repoPath, ".ralph", scratchpadName+"_scratchpad.md")
@@ -112,9 +112,9 @@ func (s *Server) handleCycleBaseline(_ context.Context, req mcp.CallToolRequest)
 		}
 	}
 
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	baselineID := fmt.Sprintf("baseline-%s-%d", repo, time.Now().Unix())
@@ -215,9 +215,9 @@ func (s *Server) handleCyclePlan(_ context.Context, req mcp.CallToolRequest) (*m
 	budget := getNumberArg(req, "budget", 5.0)
 
 	repo := getStringArg(req, "repo")
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	planID := fmt.Sprintf("plan-%d", time.Now().Unix())
@@ -466,9 +466,9 @@ func (s *Server) handleCycleSchedule(_ context.Context, req mcp.CallToolRequest)
 	cycleConfig := getStringArg(req, "cycle_config")
 
 	repo := getStringArg(req, "repo")
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	// Validate cron expression (5 fields: min hour dom month dow).
@@ -650,9 +650,9 @@ func (s *Server) handleLoopReplay(_ context.Context, req mcp.CallToolRequest) (*
 
 	// Find loop run file in the first available repo's .ralph dir.
 	repo := getStringArg(req, "repo")
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	runPath := filepath.Join(repoPath, ".ralph", "loop_runs", loopID+".json")
@@ -727,9 +727,9 @@ func (s *Server) handleBudgetForecast(_ context.Context, req mcp.CallToolRequest
 	iterations := int(getNumberArg(req, "iterations", 10))
 
 	repo := getStringArg(req, "repo")
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	costPath := filepath.Join(repoPath, ".ralph", "cost_observations.json")
@@ -838,9 +838,9 @@ func (s *Server) handleDiffReview(_ context.Context, req mcp.CallToolRequest) (*
 		}
 	}
 
-	repoPath, err := s.resolveRepoPath(repoArg)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repoArg)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -998,9 +998,9 @@ func (s *Server) handleFindingReason(_ context.Context, req mcp.CallToolRequest)
 	}
 
 	repo := getStringArg(req, "repo")
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	// Try scratchpads/<name>.md first, then <name>_scratchpad.md.
@@ -1136,9 +1136,9 @@ func (s *Server) handleObservationCorrelate(_ context.Context, req mcp.CallToolR
 	}
 	hours := int(getNumberArg(req, "hours", 24))
 
-	repoPath, err := s.resolveRepoPath(repoArg)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repoArg)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	// Read observations from .ralph/observations/ directory (JSONL files).

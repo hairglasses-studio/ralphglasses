@@ -12,12 +12,14 @@ import (
 )
 
 func (s *Server) handleAnomalyDetect(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoName := getStringArg(req, "repo")
+	pp := NewParamParser(argsMap(req))
+
+	repoName := pp.StringOpt("repo", "")
 	if repoName == "" {
 		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 
-	metricName := getStringArg(req, "metric")
+	metricName := pp.StringOpt("metric", "")
 	if metricName == "" {
 		return codedError(ErrInvalidParams, "metric name required"), nil
 	}
@@ -45,7 +47,7 @@ func (s *Server) handleAnomalyDetect(_ context.Context, req mcp.CallToolRequest)
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
-	hours := getNumberArg(req, "hours", 168)
+	hours := pp.IntOpt("hours", 168)
 	since := time.Now().Add(-time.Duration(hours) * time.Hour)
 
 	obsPath := session.ObservationPath(r.Path)

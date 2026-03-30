@@ -14,20 +14,20 @@ import (
 
 // resolveRepoPath returns the .ralph directory root for the given optional repo
 // name. If repo is empty, it uses the first discovered repo or falls back to
-// the ScanPath.
-func (s *Server) resolveRepoPath(repo string) (string, error) {
+// the ScanPath. Returns a codedError with the appropriate error code on failure.
+func (s *Server) resolveRepoPath(repo string) (string, *mcp.CallToolResult) {
 	if repo != "" {
 		if err := ValidateRepoName(repo); err != nil {
-			return "", fmt.Errorf("invalid repo name: %w", err)
+			return "", codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err))
 		}
 		if s.reposNil() {
 			if err := s.scan(); err != nil {
-				return "", fmt.Errorf("scan failed: %w", err)
+				return "", codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err))
 			}
 		}
 		r := s.findRepo(repo)
 		if r == nil {
-			return "", fmt.Errorf("repo not found: %s", repo)
+			return "", codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repo))
 		}
 		return r.Path, nil
 	}
@@ -78,13 +78,13 @@ func (s *Server) resolveRepoPath(repo string) (string, error) {
 		for i, r := range repos {
 			names[i] = r.Name
 		}
-		return "", fmt.Errorf("multiple repos found, specify repo param (available: %s)", strings.Join(names, ", "))
+		return "", codedError(ErrInvalidParams, fmt.Sprintf("multiple repos found, specify repo param (available: %s)", strings.Join(names, ", ")))
 	}
 
 	if s.ScanPath != "" {
 		return s.ScanPath, nil
 	}
-	return "", fmt.Errorf("no repo available")
+	return "", codedError(ErrInvalidParams, "no repo available")
 }
 
 // gitToplevel runs "git rev-parse --show-toplevel" from CWD and returns the
@@ -105,9 +105,9 @@ func (s *Server) handleScratchpadRead(_ context.Context, req mcp.CallToolRequest
 		return codedError(ErrInvalidParams, "name is required"), nil
 	}
 
-	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
-	if err != nil {
-		return codedError(ErrInvalidParams, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(getStringArg(req, "repo"))
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	path := filepath.Join(repoPath, ".ralph", name+"_scratchpad.md")
@@ -137,9 +137,9 @@ func (s *Server) handleScratchpadAppend(_ context.Context, req mcp.CallToolReque
 	}
 	section := p.OptionalString("section", "")
 
-	repoPath, err := s.resolveRepoPath(p.OptionalString("repo", ""))
-	if err != nil {
-		return codedError(ErrInvalidParams, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(p.OptionalString("repo", ""))
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	dir := filepath.Join(repoPath, ".ralph")
@@ -171,9 +171,9 @@ func (s *Server) handleScratchpadAppend(_ context.Context, req mcp.CallToolReque
 }
 
 func (s *Server) handleScratchpadList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
-	if err != nil {
-		return codedError(ErrInvalidParams, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(getStringArg(req, "repo"))
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	pattern := filepath.Join(repoPath, ".ralph", "*_scratchpad.md")
@@ -210,9 +210,9 @@ func (s *Server) handleScratchpadDelete(_ context.Context, req mcp.CallToolReque
 		return codedError(ErrInvalidParams, "finding_id is required"), nil
 	}
 
-	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
-	if err != nil {
-		return codedError(ErrInvalidParams, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(getStringArg(req, "repo"))
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	path := filepath.Join(repoPath, ".ralph", name+"_scratchpad.md")
@@ -260,9 +260,9 @@ func (s *Server) handleScratchpadResolve(_ context.Context, req mcp.CallToolRequ
 	}
 	resolution := getStringArg(req, "resolution")
 
-	repoPath, err := s.resolveRepoPath(getStringArg(req, "repo"))
-	if err != nil {
-		return codedError(ErrInvalidParams, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(getStringArg(req, "repo"))
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	path := filepath.Join(repoPath, ".ralph", name+"_scratchpad.md")
