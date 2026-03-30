@@ -51,6 +51,8 @@ type Manager struct {
 	FleetPool      *pool.State                   // fleet-wide budget pooling and metrics aggregation
 	supervisor     *Supervisor                   // autonomous R&D supervisor, runs at level >= 2
 
+	DefaultBudgetUSD float64 // from RALPH_SESSION_BUDGET; applied when Launch opts has no budget
+
 	// WS-7: Loop engine hygiene — auto-prune and journal consolidation config.
 	PruneRetention   time.Duration // max age for stale loop runs; 0 uses default (7 days)
 	PruneMaxRuns     int           // unused currently; reserved for max run cap
@@ -192,6 +194,12 @@ func (m *Manager) ApplyConfig(cfg *model.RalphConfig) {
 	if raw := cfg.Get("JOURNAL_MAX_ENTRIES", ""); raw != "" {
 		if v, err := strconv.Atoi(raw); err == nil && v >= 10 && v <= 10000 {
 			m.JournalMaxEntries = v
+		}
+	}
+	// Default session budget from .ralphrc (2.5.3).
+	if raw := cfg.Get("RALPH_SESSION_BUDGET", ""); raw != "" {
+		if f, err := strconv.ParseFloat(raw, 64); err == nil && f > 0 {
+			m.DefaultBudgetUSD = f
 		}
 	}
 	// Fleet budget cap from config (0 = unlimited).
