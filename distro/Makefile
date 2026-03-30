@@ -15,7 +15,7 @@
 
 SHELL := /bin/bash
 .PHONY: all iso iso-debootstrap docker rootfs rootfs-debootstrap chroot \
-        test-vm usb clean validate install-deps check-paths
+        test-vm usb clean validate validate-grub install-deps check-paths
 
 # ── Variables ──────────────────────────────────────────────────────────
 DISTRO_NAME  := ralphglasses
@@ -219,6 +219,10 @@ validate:
 	@echo "    Size: $$(du -h $(ISO_NAME) | cut -f1)"
 	@echo "    SHA256: $$(sha256sum $(ISO_NAME) | cut -d' ' -f1)"
 	@echo "==> Validation passed"
+
+# ── Validate grub.cfg (CI-safe, no ISO required) ─────────────────────
+validate-grub:
+	@bash scripts/validate-grub.sh grub/grub.cfg
 
 # ── Test in QEMU (UEFI) ──────────────────────────────────────────────
 test-vm:
