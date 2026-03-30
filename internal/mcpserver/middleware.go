@@ -5,15 +5,53 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/tracing"
 )
+
+// DefaultMaxConcurrent is the default number of concurrent MCP tool handlers.
+const DefaultMaxConcurrent = 32
+
+// ConcurrencyMiddleware limits the number of concurrent MCP tool handler
+// executions using a weighted semaphore. When all slots are occupied, incoming
+// requests block until the context is cancelled (e.g. timeout), at which point
+// an ErrRateLimited error is returned. The limit is configurable via the
+// RG_MCP_MAX_CONCURRENT environment variable; 0 or negative disables the limit.
+func ConcurrencyMiddleware(limit int64) server.ToolHandlerMiddleware {
+	if e := os.Getenv("RG_MCP_MAX_CONCURRENT"); e != "" {
+		if n, err := strconv.ParseInt(e, 10, 64); err == nil {
+			limit = n
+		}
+	}
+	if limit <= 0 {
+		return func(next server.ToolHandlerFunc) server.ToolHandlerFunc { return next }
+	}
+	sem := semaphore.NewWeighted(limit)
+	return func(next server.ToolHandlerFunc) server.ToolHandlerFunc {
+		return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			if err := sem.Acquire(ctx, 1); err != nil {
+				slog.WarnContext(ctx, "mcp.concurrency.rejected",
+					"tool", req.Params.Name,
+					"limit", limit,
+				)
+				return codedError(ErrRateLimited, fmt.Sprintf(
+					"too many concurrent requests (limit %d); try again shortly", limit,
+				)), nil
+			}
+			defer sem.Release(1)
+			return next(ctx, req)
+		}
+	}
+}
 
 // TraceMiddleware generates a trace ID for each tool call and propagates it
 // via context. If the context already carries a trace ID (e.g. from an
