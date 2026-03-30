@@ -222,6 +222,115 @@ func ExportMarkdown(skills []SkillDef) string {
 	return b.String()
 }
 
+// ExportSkillsFromGroups converts all tools across multiple ToolGroups to skill definitions.
+func ExportSkillsFromGroups(groups []ToolGroup) []SkillDef {
+	var regs []ToolRegistration
+	for _, g := range groups {
+		for _, entry := range g.Tools {
+			reg := AdaptToolEntry(entry)
+			regs = append(regs, reg)
+		}
+	}
+	return ExportSkills(regs)
+}
+
+// ExportSkillMarkdown generates a SKILL.md document from tool groups.
+// It produces a table of contents, a tool count summary, and one section per
+// group with each tool's name, description, parameters table, and example usage.
+func ExportSkillMarkdown(groups []ToolGroup) string {
+	if len(groups) == 0 {
+		return "# Ralphglasses Skills\n\nNo tool groups defined.\n"
+	}
+
+	// Count total tools.
+	totalTools := 0
+	for _, g := range groups {
+		totalTools += len(g.Tools)
+	}
+
+	var b strings.Builder
+
+	// Header + summary.
+	b.WriteString("# Ralphglasses Skills\n\n")
+	b.WriteString(fmt.Sprintf("> %d tools across %d namespaces\n\n", totalTools, len(groups)))
+
+	// Table of contents.
+	b.WriteString("## Table of Contents\n\n")
+	for _, g := range groups {
+		anchor := strings.ReplaceAll(g.Name, "_", "-")
+		b.WriteString(fmt.Sprintf("- [%s](#%s) (%d tools) — %s\n", g.Name, anchor, len(g.Tools), g.Description))
+	}
+	b.WriteString("\n---\n\n")
+
+	// Per-group sections.
+	for _, g := range groups {
+		b.WriteString(fmt.Sprintf("## %s\n\n", g.Name))
+		if g.Description != "" {
+			b.WriteString(g.Description + "\n\n")
+		}
+
+		skills := ExportSkillsFromGroups([]ToolGroup{g})
+		for _, s := range skills {
+			b.WriteString(fmt.Sprintf("### `%s`\n\n", s.Name))
+			if s.Description != "" {
+				b.WriteString(s.Description + "\n\n")
+			}
+			if len(s.Parameters) > 0 {
+				b.WriteString("| Parameter | Type | Required | Description |\n")
+				b.WriteString("|-----------|------|----------|-------------|\n")
+				for _, p := range s.Parameters {
+					req := ""
+					if p.Required {
+						req = "yes"
+					}
+					desc := p.Description
+					if p.Default != nil {
+						desc += fmt.Sprintf(" (default: %v)", p.Default)
+					}
+					b.WriteString(fmt.Sprintf("| `%s` | %s | %s | %s |\n", p.Name, p.Type, req, desc))
+				}
+				b.WriteString("\n")
+			}
+
+			// Example usage block.
+			b.WriteString("**Example:**\n\n```json\n")
+			example := map[string]any{"tool": s.Name}
+			if len(s.Parameters) > 0 {
+				args := make(map[string]any)
+				for _, p := range s.Parameters {
+					if p.Required {
+						args[p.Name] = exampleValue(p.Type)
+					}
+				}
+				if len(args) > 0 {
+					example["arguments"] = args
+				}
+			}
+			data, _ := json.MarshalIndent(example, "", "  ")
+			b.WriteString(string(data))
+			b.WriteString("\n```\n\n")
+		}
+	}
+
+	return b.String()
+}
+
+// exampleValue returns a placeholder value for a given JSON Schema type.
+func exampleValue(typ string) any {
+	switch typ {
+	case "number", "integer":
+		return 1
+	case "boolean":
+		return true
+	case "array":
+		return []any{}
+	case "object":
+		return map[string]any{}
+	default:
+		return "..."
+	}
+}
+
 // ExportClaudeAgent exports skill definitions in Claude Code agent definition format.
 // This produces a structured YAML-like text block that describes each skill as an
 // agent tool with name, description, and parameter schema.
