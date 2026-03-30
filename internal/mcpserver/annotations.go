@@ -183,6 +183,12 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_cycle_list":       {Title: "Cycle List", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_cycle_synthesize": {Title: "Cycle Synthesize", DestructiveHint: boolPtr(false)},
 	"ralphglasses_cycle_run":        {Title: "Cycle Run", DestructiveHint: boolPtr(false)},
+
+	// ── plugin ──────────────────────────────────────────────────────────
+	"ralphglasses_plugin_list":    {Title: "List Plugins", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_plugin_info":    {Title: "Plugin Info", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_plugin_enable":  {Title: "Enable Plugin", DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true)},
+	"ralphglasses_plugin_disable": {Title: "Disable Plugin", DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true)},
 }
 
 // GetAnnotation returns the ToolAnnotation for a named tool, or an empty
