@@ -7,7 +7,7 @@ LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSIO
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-integration test-scripts smoke fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run
+.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run
 
 # Install pre-commit hook (idempotent)
 hooks:
@@ -37,6 +37,10 @@ test-cover:
 	@echo "Coverage written to .ralph/coverage.txt: $$(cat .ralph/coverage.txt)%"
 	@echo ""
 	@echo "To view HTML report: ./scripts/dev/go.sh tool cover -html=coverage.out"
+
+# Coverage with per-package threshold enforcement
+test-cover-strict: test-cover
+	./scripts/dev/check-coverage.sh coverage.out
 
 # Run integration tests (requires build tag)
 test-integration:
