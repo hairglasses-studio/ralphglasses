@@ -342,14 +342,16 @@ func (s *Server) handleRCStatus(_ context.Context, _ mcp.CallToolRequest) (*mcp.
 }
 
 func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "repo")
+	pp := NewParamParser(argsMap(req))
+
+	name := pp.StringOpt("repo", "")
 	if name == "" {
 		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
 	if err := ValidateRepoName(name); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
-	prompt := SanitizeString(getStringArg(req, "prompt"))
+	prompt := SanitizeString(pp.StringOpt("prompt", ""))
 	if prompt == "" {
 		return codedError(ErrInvalidParams, "prompt required"), nil
 	}
@@ -364,7 +366,7 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
-	provider := session.Provider(getStringArg(req, "provider"))
+	provider := session.Provider(pp.StringOpt("provider", ""))
 	if provider == "" {
 		provider = session.ProviderClaude
 	}
@@ -373,7 +375,7 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 	}
 
 	// Check for resume
-	if getStringArg(req, "resume") == "true" {
+	if pp.StringOpt("resume", "") == "true" {
 		existing := s.SessMgr.FindByRepo(name)
 		for _, sess := range existing {
 			sess.Lock()
@@ -409,7 +411,7 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 		Provider:     provider,
 		RepoPath:     r.Path,
 		Prompt:       prompt,
-		Model:        getStringArg(req, "model"),
+		Model:        pp.StringOpt("model", ""),
 		MaxBudgetUSD: budget,
 	}
 
@@ -437,7 +439,8 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 }
 
 func (s *Server) handleRCRead(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	id := getStringArg(req, "id")
+	pp := NewParamParser(argsMap(req))
+	id := pp.StringOpt("id", "")
 	var sess *session.Session
 
 	if id != "" {
@@ -453,7 +456,7 @@ func (s *Server) handleRCRead(_ context.Context, req mcp.CallToolRequest) (*mcp.
 		}
 	}
 
-	lines := int(getNumberArg(req, "lines", 10))
+	lines := pp.IntOpt("lines", 10)
 	if lines > 30 {
 		lines = 30
 	}
@@ -473,7 +476,7 @@ func (s *Server) handleRCRead(_ context.Context, req mcp.CallToolRequest) (*mcp.
 	lastActivity := sess.LastActivity
 	sess.Unlock()
 
-	cursorStr := getStringArg(req, "cursor")
+	cursorStr := pp.StringOpt("cursor", "")
 	var output []string
 
 	if cursorStr != "" {
@@ -524,7 +527,8 @@ func (s *Server) handleEventPoll(_ context.Context, req mcp.CallToolRequest) (*m
 		return codedError(ErrNotRunning, "event bus not initialized"), nil
 	}
 
-	cursorStr := getStringArg(req, "cursor")
+	pp := NewParamParser(argsMap(req))
+	cursorStr := pp.StringOpt("cursor", "")
 	cursor := 0
 	if cursorStr != "" {
 		var err error
@@ -534,7 +538,7 @@ func (s *Server) handleEventPoll(_ context.Context, req mcp.CallToolRequest) (*m
 		}
 	}
 
-	limit := int(getNumberArg(req, "limit", 20))
+	limit := pp.IntOpt("limit", 20)
 	if limit > 50 {
 		limit = 50
 	}
@@ -542,7 +546,7 @@ func (s *Server) handleEventPoll(_ context.Context, req mcp.CallToolRequest) (*m
 		limit = 20
 	}
 
-	typeFilter := events.EventType(getStringArg(req, "type"))
+	typeFilter := events.EventType(pp.StringOpt("type", ""))
 
 	evts, newCursor := s.EventBus.HistoryAfterCursor(cursor, limit*2) // fetch extra for filtering
 
@@ -586,11 +590,12 @@ func (s *Server) handleEventPoll(_ context.Context, req mcp.CallToolRequest) (*m
 }
 
 func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	action := getStringArg(req, "action")
-	if action == "" {
-		return codedError(ErrInvalidParams, "action required"), nil
+	pp := NewParamParser(argsMap(req))
+	action, errResult := pp.String("action")
+	if errResult != nil {
+		return errResult, nil
 	}
-	target := getStringArg(req, "target")
+	target := pp.StringOpt("target", "")
 
 	switch action {
 	case "stop":
