@@ -5,6 +5,7 @@ project_name: ralphglasses
 before:
   hooks:
     - go mod tidy
+    - go run ./tools/gendoc/
 
 builds:
   - id: ralphglasses
@@ -50,6 +51,8 @@ archives:
         formats:
           - zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - man/man1/*
 
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
