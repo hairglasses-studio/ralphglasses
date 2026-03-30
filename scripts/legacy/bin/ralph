@@ -1,0 +1,8 @@
+#!/bin/bash
+# Ralph for Claude Code - Main Command
+
+RALPH_HOME="$HOME/.ralph"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source the actual ralph loop script with global paths
+exec "$RALPH_HOME/ralph_loop.sh" "$@"

@@ -1,0 +1,7 @@
+#!/bin/bash
+# Ralph Enable - Interactive Wizard for Existing Projects
+# Adds Ralph configuration to an existing codebase
+
+RALPH_HOME="$HOME/.ralph"
+
+exec "$RALPH_HOME/ralph_enable.sh" "$@"

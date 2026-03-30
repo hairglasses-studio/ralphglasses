@@ -1,0 +1,7 @@
+#!/bin/bash
+# Ralph Enable CI - Non-Interactive Version for Automation
+# Adds Ralph configuration with sensible defaults
+
+RALPH_HOME="$HOME/.ralph"
+
+exec "$RALPH_HOME/ralph_enable_ci.sh" "$@"

@@ -1,0 +1,7 @@
+#!/bin/bash
+# Ralph Migration - Global Command
+# Migrates existing projects from flat structure to .ralph/ subfolder
+
+RALPH_HOME="$HOME/.ralph"
+
+exec "$RALPH_HOME/migrate_to_ralph_folder.sh" "$@"
