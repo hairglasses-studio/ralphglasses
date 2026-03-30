@@ -328,7 +328,7 @@ Implements MCP spec features: structured output schemas, logging notifications.
 ### 1.2.5 — MCP Handler Framework
 - [ ] 1.2.5.1 — Extract ParamParser helper: type-safe parameter extraction with validation, replacing manual `getStringArg`/`getNumberArg` calls across 81 handlers `P1` `L`
 - [x] 1.2.5.2 — Standardize error codes across all handlers: migrate from `errResult()` to `errCode()` with consistent error_code values (invalid_params, not_found, internal_error) `P1` `L`
-- [ ] 1.2.5.3 — Handler test harness: mock Server with mock providers for table-driven tests, reducing per-handler test boilerplate `P1` `M`
+- [x] 1.2.5.3 — Handler test harness: mock Server with mock providers for table-driven tests, reducing per-handler test boilerplate `P1` `M`
 - [ ] 1.2.5.4 — Handler generator: codegen tool for new MCP tool scaffolding (registration + handler + test stub) `[BLOCKED BY 1.2.5.1, 1.2.5.2]` `P2` `M`
 - **Acceptance:** new handler scaffolding requires <10 LOC, all 81 handlers use ParamParser, zero raw `errResult()` calls remain
 
@@ -775,22 +775,22 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - **Acceptance:** `ralphglasses --theme snazzy` renders with hex-accurate palette; user themes load correctly
 
 ### 3.5.2 — Plugin system v2 (like k9s plugins.yml)
-- [ ] 3.5.2.1 — Define `~/.config/ralphglasses/plugins.yml` schema `P1` `M`
-- [ ] 3.5.2.2 — Plugin loader: parse YAML at startup, register keybinds per scope `P1` `M`
-- [ ] 3.5.2.3 — Variable resolver: substitute runtime context in command args `P1` `M`
-- [ ] 3.5.2.4 — Built-in plugins: `stern-logs`, `gh-pr`, `session-cost-report` `P2` `L`
+- [x] 3.5.2.1 — Define `~/.config/ralphglasses/plugins.yml` schema `P1` `M`
+- [x] 3.5.2.2 — Plugin loader: parse YAML at startup, register keybinds per scope `P1` `M`
+- [x] 3.5.2.3 — Variable resolver: substitute runtime context in command args `P1` `M`
+- [x] 3.5.2.4 — Built-in plugins: `stern-logs`, `gh-pr`, `session-cost-report` `P2` `L`
 - [x] 3.5.2.5 — Plugin shortcut display in help view `P2` `S`
-- [ ] 3.5.2.6 — MCP tool for plugin management `P2` `M`
+- [x] 3.5.2.6 — MCP tool for plugin management `P2` `M`
 - **Acceptance:** user-defined YAML plugins execute commands with variable substitution from TUI
 
 ### 3.5.3 — Resource aliases (like k9s aliases.yml)
 - [x] 3.5.3.1 — Define `~/.config/ralphglasses/aliases.yml` schema `P2` `S`
 - [x] 3.5.3.2 — Built-in aliases: `:rp` -> repos, `:ss` -> sessions, `:tm` -> teams, `:fl` -> fleet `P2` `S`
-- [ ] 3.5.3.3 — User-defined command aliases `P2` `M`
+- [x] 3.5.3.3 — User-defined command aliases `P2` `M`
 - **Acceptance:** `:alias-name` in command mode executes mapped command
 
 ### 3.5.4 — MCP skill export (like Claude Code skills)
-- [ ] 3.5.4.1 — Generate `.claude/skills/ralphglasses/SKILL.md` from MCP tool descriptions `P1` `M`
+- [x] 3.5.4.1 — Generate `.claude/skills/ralphglasses/SKILL.md` from MCP tool descriptions `P1` `M`
 - [x] 3.5.4.2 — Include YAML frontmatter with allowed-tools `P1` `S`
 - [x] 3.5.4.3 — Auto-update skill on `ralphglasses mcp` server start `P1` `S`
 - **Acceptance:** Claude Code auto-discovers ralphglasses skill when MCP server is connected
@@ -800,7 +800,7 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 - [x] 3.5.5.1 — `ralphglasses theme export ghostty` -> generate Ghostty palette config `P2` `S`
 - [x] 3.5.5.2 — `ralphglasses theme export starship` -> generate Starship color overrides `P2` `S`
 - [x] 3.5.5.3 — `ralphglasses theme export k9s` -> generate k9s skin.yml `P2` `S`
-- [ ] 3.5.5.4 — `ralphglasses theme sync` -> export to all supported tools simultaneously `P2` `M`
+- [x] 3.5.5.4 — `ralphglasses theme sync` -> export to all supported tools simultaneously `P2` `M`
 - **Acceptance:** `ralphglasses theme sync` updates Ghostty, Starship, and k9s to match TUI theme
 
 ---
@@ -1003,9 +1003,9 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 ### 6.3 — Cross-session coordination `[BLOCKED BY 6.1, 2.1]`
 - [x] 6.3.1 — Shared context store `P1` `M`
 - [x] 6.3.2 — Dedup engine `P1` `M`
-- [ ] 6.3.3 — Dependency ordering `P1` `L`
+- [x] 6.3.3 — Dependency ordering `P1` `L`
 - [x] 6.3.4 — Conflict resolution `P1` `L`
-- [ ] 6.3.5 — Coordination dashboard `P2` `M`
+- [x] 6.3.5 — Coordination dashboard `P2` `M`
 - **Acceptance:** two agents targeting same repo don't conflict on same files
 
 ### 6.4 — Analytics & observability `[PARALLEL]`
@@ -1013,7 +1013,7 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - [x] 6.4.2 — TUI analytics view `P1` `L`
 - [ ] 6.4.3 — OpenTelemetry traces `P1` `L`
 - [x] 6.4.4 — Prometheus metrics endpoint `P1` `M`
-- [ ] 6.4.5 — Grafana dashboard JSON `P2` `M`
+- [x] 6.4.5 — Grafana dashboard JSON `P2` `M`
 - **Acceptance:** Grafana dashboard shows session metrics over time
 
 ### 6.5 — External notifications `[PARALLEL]`
@@ -1033,17 +1033,17 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - **Acceptance:** different task types route to appropriate models
 
 ### 6.7 — Replay/audit trail `[BLOCKED BY 6.4]`
-- [ ] 6.7.1 — Session recording `P2` `L`
-- [ ] 6.7.2 — Replay viewer `P2` `L`
-- [ ] 6.7.3 — Export as Markdown/JSON `P2` `M`
-- [ ] 6.7.4 — Diff view: compare two session replays `P2` `L`
+- [x] 6.7.1 — Session recording `P2` `L`
+- [x] 6.7.2 — Replay viewer `P2` `L`
+- [x] 6.7.3 — Export as Markdown/JSON `P2` `M`
+- [x] 6.7.4 — Diff view: compare two session replays `P2` `L`
 - [x] 6.7.5 — Retention policy `P2` `S`
 - **Acceptance:** can replay a completed session step-by-step
 
 ### 6.8 — Multi-model A/B testing `[PARALLEL]`
-- [ ] 6.8.1 — A/B test definition `P2` `M`
-- [ ] 6.8.2 — Metric collection `P2` `M`
-- [ ] 6.8.3 — Comparison report with statistical significance `P2` `L`
+- [x] 6.8.1 — A/B test definition `P2` `M`
+- [x] 6.8.2 — Metric collection `P2` `M`
+- [x] 6.8.3 — Comparison report with statistical significance `P2` `L`
 - [ ] 6.8.4 — TUI A/B view `P2` `L`
 - [ ] 6.8.5 — Auto-promote default model based on results `P2` `M`
 - **Acceptance:** `ralphglasses ab-test --model-a opus --model-b sonnet` produces comparison
@@ -1059,9 +1059,9 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 ### 6.10 — Cost forecasting `[PARALLEL]`
 - [x] 6.10.1 — Historical cost model `P1` `M`
 - [x] 6.10.2 — Budget projection `P1` `M`
-- [ ] 6.10.3 — TUI forecast widget `P2` `M`
+- [x] 6.10.3 — TUI forecast widget `P2` `M`
 - [x] 6.10.4 — Alert on anomaly: flag >2x predicted rate `P1` `S`
-- [ ] 6.10.5 — Recommendation engine `P2` `M`
+- [x] 6.10.5 — Recommendation engine `P2` `M`
 - **Acceptance:** forecast accuracy within 20% after 10+ sessions
 
 ---
