@@ -8,7 +8,7 @@ import (
 
 func TestDefaultThemes_ReturnsExpectedNames(t *testing.T) {
 	themes := DefaultThemes()
-	expected := []string{"k9s", "dracula", "gruvbox", "nord", "snazzy"}
+	expected := []string{"k9s", "dracula", "gruvbox", "nord", "snazzy", "catppuccin-macchiato", "catppuccin-mocha"}
 	for _, name := range expected {
 		if _, ok := themes[name]; !ok {
 			t.Errorf("DefaultThemes() missing expected theme %q", name)
