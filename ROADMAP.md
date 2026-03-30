@@ -61,8 +61,8 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
   - File: `internal/session/autooptimize.go` — write autonomy level to `.ralph/autonomy.json`
   - **Acceptance:** `autonomy_level` survives process restart
 
-- [ ] **QW-10** — Fix relevance scoring flat at 0.5 for all results (research-audit FINDING) `P1` `M`
-  - File: `internal/mcpserver/tools_roadmap.go` — implement actual TF-IDF or keyword overlap scoring
+- [x] **QW-10** — Fix relevance scoring flat at 0.5 for all results (research-audit FINDING) `P1` `M`
+  - File: `internal/roadmap/research.go` — implement actual TF-IDF or keyword overlap scoring
   - **Acceptance:** Relevance scores vary meaningfully (stddev > 0.15)
 
 - [ ] **QW-11** — Clean phantom fleet work (73% stale, 109 phantom "001" repo entries) `P1` `S`
@@ -1456,7 +1456,7 @@ Derived from R&D cycle findings and scratchpad analysis.
 | Loop gates zero baseline | Medium — misleading metrics | S | loop_gates.go | QW-6 | FINDING-226/238 |
 | Budget params ignored | High — budget not enforced | S | tools_session.go | QW-8 | FINDING-258/261 |
 | Provider recommend Claude-only | Medium — no multi-provider | M | tools_provider.go | 2.5 | FINDING-220/262 |
-| Relevance scoring flat 0.5 | Medium — research unusable | M | tools_roadmap.go | QW-10 | research_audit |
+| Relevance scoring flat 0.5 | Medium — research unusable | M | internal/roadmap/research.go | QW-10 | research_audit |
 | improvement_patterns rules null | Low — no learning | S | reflexion.go | QW-12 | pattern_analysis |
 | Autonomy not persisted | Medium — state lost on restart | S | autooptimize.go | QW-9 | FINDING-257 |
 | Session signal:killed | High — unclean shutdown | M | loop.go, manager.go | QW-3, 0.6.5 | FINDING-160 |

@@ -379,6 +379,38 @@ func TestJaccardSimilarity_Basics(t *testing.T) {
 	}
 }
 
+// TestWeightedRelevance verifies QW-10 threshold assertions:
+// fully-relevant items score > 0.7, zero-overlap items score < 0.3,
+// and all three fixture scores differ.
+func TestWeightedRelevance(t *testing.T) {
+	t.Parallel()
+
+	query := extractQueryKeywords("mcp agent tui")
+
+	// Fully-relevant: all 3 query keywords present + 500 stars
+	fullKW := extractQueryKeywords("mcp agent tui protocol server")
+	fullScore := weightedRelevance(query, fullKW, 500)
+	if fullScore <= 0.7 {
+		t.Errorf("fully-relevant item score %.3f, want > 0.7", fullScore)
+	}
+
+	// Zero-overlap: no shared keywords, 0 stars
+	zeroKW := extractQueryKeywords("database migration schema versioning")
+	zeroScore := weightedRelevance(query, zeroKW, 0)
+	if zeroScore >= 0.3 {
+		t.Errorf("zero-overlap item score %.3f, want < 0.3", zeroScore)
+	}
+
+	// Partial-overlap: one keyword match, moderate stars
+	partialKW := extractQueryKeywords("mcp server http middleware")
+	partialScore := weightedRelevance(query, partialKW, 50)
+
+	// All three scores must differ
+	if fullScore == zeroScore || fullScore == partialScore || zeroScore == partialScore {
+		t.Errorf("scores not all distinct: full=%.3f partial=%.3f zero=%.3f", fullScore, partialScore, zeroScore)
+	}
+}
+
 func TestDedupStrings(t *testing.T) {
 	t.Parallel()
 	input := []string{"a", "b", "a", "c", "b"}
