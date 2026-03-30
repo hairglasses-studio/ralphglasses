@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // ValidationWarning represents a single config validation issue.
@@ -86,6 +87,10 @@ func ValidateRawConfig(cfg map[string]any) []ValidationWarning {
 	for key, val := range cfg {
 		spec, known := canonicalKeys[key]
 		if !known {
+			// Allow plugin_* keys without warning (per-plugin config namespace).
+			if strings.HasPrefix(key, "plugin_") {
+				continue
+			}
 			warnings = append(warnings, ValidationWarning{
 				Key:      key,
 				Message:  fmt.Sprintf("unknown config key %q", key),
