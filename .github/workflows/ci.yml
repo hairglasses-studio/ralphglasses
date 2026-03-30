@@ -216,3 +216,12 @@ jobs:
 
       - name: Run BATS tests
         run: bats scripts/test/
+
+  grub-validate:
+    name: Validate grub.cfg
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate grub.cfg menuentry blocks and kernel paths
+        run: bash distro/scripts/validate-grub.sh distro/grub/grub.cfg
