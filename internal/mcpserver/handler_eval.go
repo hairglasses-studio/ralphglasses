@@ -346,6 +346,46 @@ func (s *Server) handleBanditStatus(_ context.Context, _ mcp.CallToolRequest) (*
 	}), nil
 }
 
+// handleEvalDefine validates and parses an A/B test definition from YAML content.
+func (s *Server) handleEvalDefine(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	yamlContent := getStringArg(req, "yaml_content")
+	if yamlContent == "" {
+		return codedError(ErrInvalidParams, "yaml_content is required"), nil
+	}
+
+	def, err := eval.ParseTestDefinition([]byte(yamlContent))
+	if err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid test definition: %v", err)), nil
+	}
+
+	// Also verify it converts to a runtime ABTest.
+	ab, err := eval.ToABTest(def)
+	if err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("conversion error: %v", err)), nil
+	}
+
+	return jsonResult(map[string]any{
+		"status":      "valid",
+		"name":        def.Name,
+		"description": def.Description,
+		"variant_a": map[string]any{
+			"name":        def.VariantA.Name,
+			"provider":    def.VariantA.Provider,
+			"model":       def.VariantA.Model,
+			"temperature": def.VariantA.Temperature,
+		},
+		"variant_b": map[string]any{
+			"name":        def.VariantB.Name,
+			"provider":    def.VariantB.Provider,
+			"model":       def.VariantB.Model,
+			"temperature": def.VariantB.Temperature,
+		},
+		"metrics":     def.Metrics,
+		"sample_size": ab.SampleSize,
+		"timeout":     def.Timeout,
+	}), nil
+}
+
 // handleConfidenceCalibration returns the decision model's training status,
 // weights, and feature importances.
 func (s *Server) handleConfidenceCalibration(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
