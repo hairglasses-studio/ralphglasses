@@ -187,13 +187,16 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 
 	// ── plugin ──────────────────────────────────────────────────────────
 	// ── session export ──────────────────────────────────────────────────
-	"ralphglasses_session_export": {Title: "Export Session", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_session_export":      {Title: "Export Session", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_session_replay_diff": {Title: "Session Replay Diff", ReadOnlyHint: boolPtr(true)},
 
 	// ── eval ─────────────────────────────────────────────────────────────
 	"ralphglasses_eval_define": {Title: "Define A/B Test", ReadOnlyHint: boolPtr(true)},
 
 	// ── cost recommend ──────────────────────────────────────────────────
-	"ralphglasses_cost_recommend": {Title: "Cost Recommendations", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_cost_recommend":  {Title: "Cost Recommendations", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_fleet_schedule":  {Title: "Fleet Schedule", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_fleet_grafana":   {Title: "Grafana Export", ReadOnlyHint: boolPtr(true)},
 
 	// ── plugin ──────────────────────────────────────────────────────────
 	"ralphglasses_plugin_list":    {Title: "List Plugins", ReadOnlyHint: boolPtr(true)},
