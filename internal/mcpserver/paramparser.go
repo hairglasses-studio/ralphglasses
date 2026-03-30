@@ -254,3 +254,71 @@ func (p *ParamParser) BoolErr(key string) (bool, *mcp.CallToolResult) {
 	}
 	return b, nil
 }
+
+// --- Convenience aliases matching the task's naming convention ---
+
+// Require is an alias for [Required].
+func (p *ParamParser) Require(keys ...string) error {
+	return p.Required(keys...)
+}
+
+// OptionalString is an alias for [StringOr].
+func (p *ParamParser) OptionalString(key, defaultVal string) string {
+	return p.StringOr(key, defaultVal)
+}
+
+// OptionalInt is an alias for [IntOr].
+func (p *ParamParser) OptionalInt(key string, defaultVal int) int {
+	return p.IntOr(key, defaultVal)
+}
+
+// BoolOr returns the boolean value for key, or defaultVal if the key is
+// absent or the value is not a boolean.
+func (p *ParamParser) BoolOr(key string, defaultVal bool) bool {
+	if p.args == nil {
+		return defaultVal
+	}
+	v, ok := p.args[key]
+	if !ok {
+		return defaultVal
+	}
+	b, ok := v.(bool)
+	if !ok {
+		return defaultVal
+	}
+	return b
+}
+
+// OptionalBool is an alias for [BoolOr].
+func (p *ParamParser) OptionalBool(key string, defaultVal bool) bool {
+	return p.BoolOr(key, defaultVal)
+}
+
+// FloatOr returns the float64 value for key, or defaultVal if the key is
+// absent or the value is not a number.
+func (p *ParamParser) FloatOr(key string, defaultVal float64) float64 {
+	if p.args == nil {
+		return defaultVal
+	}
+	v, ok := p.args[key]
+	if !ok {
+		return defaultVal
+	}
+	f, ok := v.(float64)
+	if !ok {
+		return defaultVal
+	}
+	return f
+}
+
+// OptionalFloat is an alias for [FloatOr].
+func (p *ParamParser) OptionalFloat(key string, defaultVal float64) float64 {
+	return p.FloatOr(key, defaultVal)
+}
+
+// NewParamParserFromRequest extracts the argument map from a CallToolRequest
+// and returns a ParamParser. This is a convenience for handler functions.
+func NewParamParserFromRequest(req mcp.CallToolRequest) *ParamParser {
+	args := req.GetArguments()
+	return NewParamParser(args)
+}
