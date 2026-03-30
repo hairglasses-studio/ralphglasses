@@ -223,7 +223,7 @@ Post-gate-pass improvements. All items are independent, parallel, and sized for 
 - [x] 0.6.6.1 — Add `CleanupStaleWorktrees(repoRoot string, maxAge time.Duration) (int, error)` — remove worktrees older than maxAge `P1` `M`
 - [x] 0.6.6.2 — Add worktree lock file detection: skip cleanup if `.lock` file present (active worktree) `P1` `S`
 - [x] 0.6.6.3 — Call `CleanupStaleWorktrees` at loop start with 24h maxAge `P1` `S`
-- [ ] 0.6.6.4 — Add `ralphglasses_worktree_cleanup` MCP tool for manual cleanup `P2` `M`
+- [x] 0.6.6.4 — Add `ralphglasses_worktree_cleanup` MCP tool for manual cleanup `P2` `M`
 - **Acceptance:** stale worktrees cleaned up automatically, active worktrees preserved
 
 ### 0.6.7 — Planner task deduplication improvement
@@ -387,7 +387,7 @@ Implements MCP spec features: structured output schemas, logging notifications.
 - [x] 1.10.1 — SortCol out-of-bounds: clamped to valid range when columns change `P0` `S`
 - [ ] 1.10.2 — Add search UI to LogView: `/` to enter search, `n`/`N` for next/prev match `P2` `M`
 - [x] 1.10.3 — Audited all slice access in TUI components — 19 locations verified with proper guards `P0` `M`
-- [ ] 1.10.4 — Add fuzz tests for table rendering with random column counts and data `P2` `M`
+- [x] 1.10.4 — Add fuzz tests for table rendering with random column counts and data `P2` `M`
 - [x] 1.10.5 — Zero-height terminal guard: shows "Terminal too small" for width/height < 3 `P1` `S`
 - **Acceptance:** no panics on edge-case terminal sizes or empty data
 
@@ -403,7 +403,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 ### 1.5.1 — Shell completions
 - [x] 1.5.1.1 — `ralphglasses completion bash|zsh|fish` via cobra built-in `GenBashCompletion` `P1` `S`
 - [ ] 1.5.1.2 — Add dynamic completions for `--scan-path` (directory completion) `P2` `S`
-- [ ] 1.5.1.3 — Add dynamic completions for repo names in `status`, `start`, `stop` subcommands `P2` `M`
+- [x] 1.5.1.3 — Add dynamic completions for repo names in `status`, `start`, `stop` subcommands `P2` `M`
 - [ ] 1.5.1.4 — Add install instructions for each shell to `docs/completions.md` `P2` `S`
 - [ ] 1.5.1.5 — Package completions in release artifacts (`.deb` installs to `/usr/share/bash-completion/`) `P2` `M`
 - **Acceptance:** `ralphglasses <tab>` completes subcommands and repo names
@@ -418,7 +418,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** `git tag v0.2.0 && git push --tags` produces release with binaries, Docker image, Homebrew formula
 
 ### 1.5.3 — Pre-commit hooks
-- [ ] 1.5.3.1 — Add `.pre-commit-config.yaml`: golangci-lint, gofumpt, shellcheck, markdownlint `P2` `S`
+- [x] 1.5.3.1 — Add `.pre-commit-config.yaml`: golangci-lint, gofumpt, shellcheck, markdownlint `P2` `S`
 - [x] 1.5.3.2 — Add `Makefile` with targets: `lint`, `test`, `build`, `install`, `bench`, `fuzz`, and more `[reconciled 2026-03-26]`
 - [x] 1.5.3.3 — Add EditorConfig (`.editorconfig`) for consistent formatting across editors `P2` `S`
 - [x] 1.5.3.4 — Add `CONTRIBUTING.md` with setup instructions and PR guidelines (281 lines) `[reconciled 2026-03-26]`
