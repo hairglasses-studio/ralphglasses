@@ -404,7 +404,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [x] 1.5.1.1 — `ralphglasses completion bash|zsh|fish` via cobra built-in `GenBashCompletion` `P1` `S`
 - [x] 1.5.1.2 — Add dynamic completions for `--scan-path` (directory completion) `P2` `S`
 - [x] 1.5.1.3 — Add dynamic completions for repo names in `status`, `start`, `stop` subcommands `P2` `M`
-- [ ] 1.5.1.4 — Add install instructions for each shell to `docs/completions.md` `P2` `S`
+- [x] 1.5.1.4 — Add install instructions for each shell to `docs/completions.md` `P2` `S`
 - [x] 1.5.1.5 — Package completions in release artifacts (`.deb` installs to `/usr/share/bash-completion/`) `P2` `M`
 - **Acceptance:** `ralphglasses <tab>` completes subcommands and repo names
 
@@ -778,7 +778,7 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - [ ] 3.5.2.2 — Plugin loader: parse YAML at startup, register keybinds per scope `P1` `M`
 - [ ] 3.5.2.3 — Variable resolver: substitute runtime context in command args `P1` `M`
 - [ ] 3.5.2.4 — Built-in plugins: `stern-logs`, `gh-pr`, `session-cost-report` `P2` `L`
-- [ ] 3.5.2.5 — Plugin shortcut display in help view `P2` `S`
+- [x] 3.5.2.5 — Plugin shortcut display in help view `P2` `S`
 - [ ] 3.5.2.6 — MCP tool for plugin management `P2` `M`
 - **Acceptance:** user-defined YAML plugins execute commands with variable substitution from TUI
 
@@ -1020,7 +1020,7 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - [ ] 6.5.2 — Discord integration `P2` `M`
 - [ ] 6.5.3 — Slack integration `P2` `M`
 - [x] 6.5.4 — Notification templates `P2` `S`
-- [ ] 6.5.5 — Rate limiting and retry `P2` `M`
+- [x] 6.5.5 — Rate limiting and retry `P2` `M`
 - **Acceptance:** Discord webhook fires on session completion
 
 ### 6.6 — Model routing
@@ -1128,7 +1128,7 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - **Acceptance:** architect/worker pattern produces PRs with automated code review
 
 ### 8.2 — Prompt management `[PARALLEL]`
-- [ ] 8.2.1 — Prompt library: `~/.ralphglasses/prompts/` `P2` `M`
+- [x] 8.2.1 — Prompt library: `~/.ralphglasses/prompts/` `P2` `M`
 - [ ] 8.2.2 — Variable interpolation `P2` `M`
 - [ ] 8.2.3 — Prompt versioning `P2` `M`
 - [ ] 8.2.4 — A/B testing `P2` `L`
