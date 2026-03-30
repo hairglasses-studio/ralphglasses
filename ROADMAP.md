@@ -1019,7 +1019,7 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - [ ] 6.5.1 — Webhook dispatcher `P2` `M`
 - [ ] 6.5.2 — Discord integration `P2` `M`
 - [ ] 6.5.3 — Slack integration `P2` `M`
-- [ ] 6.5.4 — Notification templates `P2` `S`
+- [x] 6.5.4 — Notification templates `P2` `S`
 - [ ] 6.5.5 — Rate limiting and retry `P2` `M`
 - **Acceptance:** Discord webhook fires on session completion
 
@@ -1036,7 +1036,7 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - [ ] 6.7.2 — Replay viewer `P2` `L`
 - [ ] 6.7.3 — Export as Markdown/JSON `P2` `M`
 - [ ] 6.7.4 — Diff view: compare two session replays `P2` `L`
-- [ ] 6.7.5 — Retention policy `P2` `S`
+- [x] 6.7.5 — Retention policy `P2` `S`
 - **Acceptance:** can replay a completed session step-by-step
 
 ### 6.8 — Multi-model A/B testing `[PARALLEL]`
@@ -1052,12 +1052,12 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - [ ] 6.9.2 — Command parser `P2` `L`
 - [ ] 6.9.3 — Intent classifier `P2` `M`
 - [ ] 6.9.4 — Confirmation flow `P2` `M`
-- [ ] 6.9.5 — History: persist and replay commands `P2` `S`
+- [x] 6.9.5 — History: persist and replay commands `P2` `S`
 - **Acceptance:** natural language commands execute fleet operations
 
 ### 6.10 — Cost forecasting `[PARALLEL]`
-- [ ] 6.10.1 — Historical cost model `P1` `M`
-- [ ] 6.10.2 — Budget projection `P1` `M`
+- [x] 6.10.1 — Historical cost model `P1` `M`
+- [x] 6.10.2 — Budget projection `P1` `M`
 - [ ] 6.10.3 — TUI forecast widget `P2` `M`
 - [x] 6.10.4 — Alert on anomaly: flag >2x predicted rate `P1` `S`
 - [ ] 6.10.5 — Recommendation engine `P2` `M`
