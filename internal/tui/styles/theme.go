@@ -2,6 +2,8 @@ package styles
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"gopkg.in/yaml.v3"
@@ -114,6 +116,71 @@ func LoadTheme(path string) (*Theme, error) {
 		return nil, err
 	}
 	return &t, nil
+}
+
+// ThemeDir returns the default external theme directory:
+// ~/.config/ralphglasses/themes/
+func ThemeDir() string {
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return filepath.Join(xdg, "ralphglasses", "themes")
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".config", "ralphglasses", "themes")
+}
+
+// LoadExternalThemes scans the external theme directory for .yaml/.yml files
+// and returns them keyed by name (filename without extension).
+func LoadExternalThemes(dir string) map[string]*Theme {
+	themes := make(map[string]*Theme)
+	if dir == "" {
+		return themes
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return themes
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		ext := strings.ToLower(filepath.Ext(e.Name()))
+		if ext != ".yaml" && ext != ".yml" {
+			continue
+		}
+		t, err := LoadTheme(filepath.Join(dir, e.Name()))
+		if err != nil {
+			continue
+		}
+		name := strings.TrimSuffix(e.Name(), filepath.Ext(e.Name()))
+		if t.Name == "" {
+			t.Name = name
+		}
+		themes[name] = t
+	}
+	return themes
+}
+
+// ResolveTheme looks up a theme by name: built-in themes first, then external
+// themes from ThemeDir(), then tries loading the name as a file path.
+func ResolveTheme(name string) *Theme {
+	// Built-in themes.
+	if t := DefaultThemes()[name]; t != nil {
+		return t
+	}
+	// External theme directory.
+	if dir := ThemeDir(); dir != "" {
+		if ext := LoadExternalThemes(dir); ext[name] != nil {
+			return ext[name]
+		}
+	}
+	// Direct file path.
+	if t, err := LoadTheme(name); err == nil {
+		return t
+	}
+	return nil
 }
 
 // ApplyTheme updates all package-level style variables to use the given theme.
