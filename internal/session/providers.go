@@ -14,7 +14,7 @@ import (
 // from ProviderCostRates (defined in costnorm.go). Returns 0 if no token data
 // is found or the provider is unknown.
 func estimateCostFromTokens(provider Provider, raw map[string]any) float64 {
-	rates, ok := ProviderCostRates[provider]
+	rates, ok := getProviderCostRate(provider)
 	if !ok {
 		return 0
 	}

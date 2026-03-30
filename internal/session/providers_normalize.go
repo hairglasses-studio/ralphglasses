@@ -239,7 +239,7 @@ func ParseProviderCostFromStderr(provider Provider, stderr string) (float64, boo
 
 // parseGeminiStderrCost extracts cost from Gemini-specific stderr patterns.
 func parseGeminiStderrCost(cleaned string) (float64, bool) {
-	rates, ok := ProviderCostRates[ProviderGemini]
+	rates, ok := getProviderCostRate(ProviderGemini)
 	if !ok {
 		return 0, false
 	}
@@ -269,7 +269,7 @@ func parseGeminiStderrCost(cleaned string) (float64, bool) {
 
 // parseCodexStderrCost extracts cost from Codex-specific stderr patterns.
 func parseCodexStderrCost(cleaned string) (float64, bool) {
-	rates, ok := ProviderCostRates[ProviderCodex]
+	rates, ok := getProviderCostRate(ProviderCodex)
 	if !ok {
 		return 0, false
 	}

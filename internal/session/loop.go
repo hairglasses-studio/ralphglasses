@@ -37,6 +37,9 @@ func (m *Manager) StartLoop(ctx context.Context, repoPath string, profile LoopPr
 		return nil, err
 	}
 
+	// Load per-repo cost rate overrides from .ralph/cost_rates.json.
+	LoadCostRatesFromDir(filepath.Join(repoPath, ".ralph"))
+
 	now := time.Now()
 	run := &LoopRun{
 		ID:         uuid.NewString(),
@@ -122,6 +125,16 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 	consecutiveNoops := 0
 	restartCount := 0
 
+	// Stall detector: check at step boundaries if any iteration has been running too long.
+	var loopStallDetector *LoopStallDetector
+	if run.Profile.StallTimeout > 0 {
+		loopStallDetector = NewLoopStallDetector(run.Profile.StallTimeout, func(r *LoopRun, iter *LoopIteration) {
+			slog.Warn("stall detected in loop iteration",
+				"loop", r.ID, "iteration", iter.Number, "status", iter.Status,
+				"started_at", iter.StartedAt, "timeout", run.Profile.StallTimeout)
+		})
+	}
+
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -180,6 +193,23 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 			m.PersistLoop(run)
 			slog.Warn("loop max worker turns reached", "loop", id, "turns", totalIters, "max", maxTurns)
 			return fmt.Errorf("loop %s: max worker turns (%d) exceeded", id, maxTurns)
+		}
+
+		// Stall detection: check if the previous iteration is stuck before starting the next step.
+		if loopStallDetector != nil {
+			run.mu.Lock()
+			stalledIndices := loopStallDetector.CheckRun(run)
+			for _, si := range stalledIndices {
+				iter := &run.Iterations[si]
+				iter.Status = "failed"
+				iter.Error = "stall detected"
+				now := time.Now()
+				iter.EndedAt = &now
+			}
+			run.mu.Unlock()
+			if len(stalledIndices) > 0 {
+				m.PersistLoop(run)
+			}
 		}
 
 		err := m.StepLoop(ctx, id)

@@ -1,14 +1,24 @@
 package session
 
+import (
+	"log/slog"
+	"path/filepath"
+	"sync"
+)
+
 // CostRate holds input/output token pricing for a provider (USD per 1M tokens).
 type CostRate struct {
 	InputPer1M  float64 `json:"input_per_1m_usd"`
 	OutputPer1M float64 `json:"output_per_1m_usd"`
 }
 
+// costRateMu protects ProviderCostRates and claudeBaseRate from concurrent access.
+var costRateMu sync.RWMutex
+
 // ProviderCostRates maps each provider to its approximate token pricing.
 // These are reference rates for cross-provider cost normalization; update when
-// provider pricing changes.
+// provider pricing changes. Call LoadCostRatesFromDir to override from a
+// .ralph/cost_rates.json file. Access must be guarded by costRateMu.
 var ProviderCostRates = map[Provider]CostRate{
 	ProviderClaude: {InputPer1M: CostClaudeSonnetInput, OutputPer1M: CostClaudeSonnetOutput}, // claude-sonnet-4.6
 	ProviderGemini: {InputPer1M: CostGeminiFlashInput, OutputPer1M: CostGeminiFlashOutput},   // gemini-2.5-flash
@@ -17,6 +27,46 @@ var ProviderCostRates = map[Provider]CostRate{
 
 // claudeBaseRate is the reference rate used for normalization.
 var claudeBaseRate = ProviderCostRates[ProviderClaude]
+
+// getProviderCostRate returns the cost rate for a provider, safe for concurrent use.
+func getProviderCostRate(p Provider) (CostRate, bool) {
+	costRateMu.RLock()
+	defer costRateMu.RUnlock()
+	rate, ok := ProviderCostRates[p]
+	return rate, ok
+}
+
+// getClaudeBaseRate returns the Claude base rate, safe for concurrent use.
+func getClaudeBaseRate() CostRate {
+	costRateMu.RLock()
+	defer costRateMu.RUnlock()
+	return claudeBaseRate
+}
+
+// LoadCostRatesFromDir loads cost rate overrides from ralphDir/cost_rates.json.
+// If the file doesn't exist, the compiled-in defaults remain unchanged.
+// On successful load, ProviderCostRates and claudeBaseRate are updated.
+// Safe for concurrent use.
+func LoadCostRatesFromDir(ralphDir string) {
+	path := filepath.Join(ralphDir, "cost_rates.json")
+	cr, err := LoadCostRates(path)
+	if err != nil {
+		slog.Warn("failed to load cost rates override", "path", path, "error", err)
+		return
+	}
+
+	costRateMu.Lock()
+	defer costRateMu.Unlock()
+
+	// Apply overrides to ProviderCostRates.
+	for _, provider := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex} {
+		rate := cr.ProviderCostRateFrom(provider)
+		if rate.InputPer1M > 0 || rate.OutputPer1M > 0 {
+			ProviderCostRates[provider] = rate
+		}
+	}
+	claudeBaseRate = ProviderCostRates[ProviderClaude]
+}
 
 // NormalizedCost holds a cost breakdown with cross-provider normalization.
 type NormalizedCost struct {
@@ -46,16 +96,17 @@ func NormalizeProviderCost(p Provider, rawCostUSD float64, inputTokens, outputTo
 		return n
 	}
 
-	rate, hasRate := ProviderCostRates[p]
+	rate, hasRate := getProviderCostRate(p)
+	baseRate := getClaudeBaseRate()
 
 	if inputTokens > 0 || outputTokens > 0 {
 		// Exact normalization using token counts.
-		n.NormalizedUSD = (float64(inputTokens)/1_000_000)*claudeBaseRate.InputPer1M +
-			(float64(outputTokens)/1_000_000)*claudeBaseRate.OutputPer1M
+		n.NormalizedUSD = (float64(inputTokens)/1_000_000)*baseRate.InputPer1M +
+			(float64(outputTokens)/1_000_000)*baseRate.OutputPer1M
 	} else if hasRate {
 		// Estimate: scale raw cost by the ratio of Claude's blended rate to provider's blended rate.
 		providerBlended := (rate.InputPer1M + rate.OutputPer1M) / 2
-		claudeBlended := (claudeBaseRate.InputPer1M + claudeBaseRate.OutputPer1M) / 2
+		claudeBlended := (baseRate.InputPer1M + baseRate.OutputPer1M) / 2
 		if providerBlended > 0 {
 			n.NormalizedUSD = rawCostUSD * (claudeBlended / providerBlended)
 		} else {

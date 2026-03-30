@@ -56,7 +56,7 @@ func TestNormalizeSessionCostLocked(t *testing.T) {
 
 func TestProviderCostRatesAllProvidersPresent(t *testing.T) {
 	for _, p := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex} {
-		if _, ok := ProviderCostRates[p]; !ok {
+		if _, ok := getProviderCostRate(p); !ok {
 			t.Errorf("missing cost rate for provider %q", p)
 		}
 	}

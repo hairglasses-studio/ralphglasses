@@ -27,7 +27,11 @@ func outputGateReport(report *e2e.GateReport, title string, jsonOutput bool) err
 		return nil
 	}
 
-	// Human-readable output
+	// Human-readable output: delegate to e2e.FormatGateReport for the tabular
+	// body, then colorize the overall verdict with lipgloss.
+	fmt.Printf("%s (%d samples)\n", title, report.SampleCount)
+	fmt.Print(e2e.FormatGateReport(report))
+
 	okStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
 	warnStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
 	errStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
@@ -43,20 +47,6 @@ func outputGateReport(report *e2e.GateReport, title string, jsonOutput bool) err
 			return errStyle
 		default:
 			return skipStyle
-		}
-	}
-
-	fmt.Printf("%s (%d samples)\n", title, report.SampleCount)
-	fmt.Println("─────────────────────────────────────")
-
-	for _, r := range report.Results {
-		style := verdictStyle(r.Verdict)
-		if r.BaselineVal > 0 {
-			fmt.Printf("  %-20s %s  (current=%.3f baseline=%.3f delta=%+.1f%%)\n",
-				r.Metric, style.Render(string(r.Verdict)), r.CurrentVal, r.BaselineVal, r.DeltaPct)
-		} else {
-			fmt.Printf("  %-20s %s  (current=%.3f)\n",
-				r.Metric, style.Render(string(r.Verdict)), r.CurrentVal)
 		}
 	}
 
