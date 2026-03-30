@@ -67,6 +67,20 @@ func (m *Manager) GetEpisodicMemory() *EpisodicMemory {
 	return m.episodic
 }
 
+// SetDepthEstimator attaches the adaptive iteration depth subsystem.
+func (m *Manager) SetDepthEstimator(de *DepthEstimator) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.depthEstimator = de
+}
+
+// DepthEstimator returns the attached DepthEstimator, or nil.
+func (m *Manager) DepthEstimator() *DepthEstimator {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.depthEstimator
+}
+
 // HasCascadeRouter returns true if a CascadeRouter is already attached.
 func (m *Manager) HasCascadeRouter() bool {
 	m.configMu.RLock()

@@ -125,6 +125,14 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 	consecutiveNoops := 0
 	restartCount := 0
 
+	// Adaptive depth: initialize estimator and track progress deltas.
+	depthEst := m.depthEstimator
+	if depthEst == nil {
+		depthEst = NewDepthEstimator(m.reflexion)
+	}
+	var progressDeltas []float64
+	adaptiveMax := 0 // 0 = not yet estimated, will be set after first iteration
+
 	// Stall detector: check at step boundaries if any iteration has been running too long.
 	var loopStallDetector *LoopStallDetector
 	if run.Profile.StallTimeout > 0 {
@@ -183,16 +191,51 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 		}
 		run.mu.Lock()
 		totalIters := len(run.Iterations)
+
+		// Adaptive depth: estimate max from task info after first iteration.
+		if adaptiveMax == 0 && totalIters > 0 {
+			task := run.Iterations[0].Task
+			estimated := depthEst.EstimateDepth(TaskInfo{
+				Title:     task.Title,
+				FileCount: run.Iterations[0].StagedFilesCount,
+			})
+			// Use the larger of adaptive estimate and configured maxTurns.
+			if estimated > maxTurns {
+				adaptiveMax = estimated
+			} else {
+				adaptiveMax = maxTurns
+			}
+			slog.Info("adaptive depth estimated", "loop", id, "estimated", estimated, "effective_max", adaptiveMax)
+		}
+		effectiveMax := maxTurns
+		if adaptiveMax > effectiveMax {
+			effectiveMax = adaptiveMax
+		}
 		run.mu.Unlock()
-		if totalIters >= maxTurns {
-			run.mu.Lock()
-			run.Status = "stopped"
-			run.LastError = fmt.Sprintf("max worker turns reached: %d", maxTurns)
-			run.UpdatedAt = time.Now()
-			run.mu.Unlock()
-			m.PersistLoop(run)
-			slog.Warn("loop max worker turns reached", "loop", id, "turns", totalIters, "max", maxTurns)
-			return fmt.Errorf("loop %s: max worker turns (%d) exceeded", id, maxTurns)
+
+		if totalIters >= effectiveMax {
+			// Check if we should extend: compute recent progress.
+			var lastDelta float64
+			if len(progressDeltas) > 0 {
+				lastDelta = progressDeltas[len(progressDeltas)-1]
+			}
+			budgetOK := true
+			if run.Profile.HardBudgetCapUSD > 0 {
+				budgetOK = m.aggregateLoopSpend(run) < run.Profile.HardBudgetCapUSD*0.9
+			}
+			if depthEst.ShouldExtend(totalIters, effectiveMax, lastDelta, budgetOK) {
+				adaptiveMax = effectiveMax + 5
+				slog.Info("adaptive depth extended", "loop", id, "new_max", adaptiveMax, "last_delta", lastDelta)
+			} else {
+				run.mu.Lock()
+				run.Status = "stopped"
+				run.LastError = fmt.Sprintf("max worker turns reached: %d", effectiveMax)
+				run.UpdatedAt = time.Now()
+				run.mu.Unlock()
+				m.PersistLoop(run)
+				slog.Warn("loop max worker turns reached", "loop", id, "turns", totalIters, "max", effectiveMax)
+				return fmt.Errorf("loop %s: max worker turns (%d) exceeded", id, effectiveMax)
+			}
 		}
 
 		// Stall detection: check if the previous iteration is stuck before starting the next step.
@@ -287,7 +330,63 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 				return nil
 			}
 		}
+
+		// Adaptive depth: track progress delta and check for early stop.
+		run.mu.Lock()
+		iterCount := len(run.Iterations)
+		run.mu.Unlock()
+		delta := iterationProgressDelta(run, iterCount)
+		progressDeltas = append(progressDeltas, delta)
+		if depthEst.ShouldEarlyStop(iterCount, progressDeltas) {
+			run.mu.Lock()
+			run.Status = "converged"
+			run.LastError = "adaptive early stop: diminishing returns"
+			run.UpdatedAt = time.Now()
+			run.mu.Unlock()
+			m.PersistLoop(run)
+			slog.Info("loop adaptive early stop", "loop", id, "iteration", iterCount, "deltas", progressDeltas)
+			return nil
+		}
 	}
+}
+
+// iterationProgressDelta computes a progress signal for the most recent iteration.
+// Returns a value in [0, 1] where 0 = no progress, 1 = max progress.
+// Uses staged file count and acceptance reason as proxy signals.
+func iterationProgressDelta(run *LoopRun, iterCount int) float64 {
+	run.mu.Lock()
+	defer run.mu.Unlock()
+
+	if iterCount <= 0 || iterCount > len(run.Iterations) {
+		return 0
+	}
+	iter := run.Iterations[iterCount-1]
+
+	// No changes = no progress.
+	if iter.AcceptanceReason == "no_staged_files" || iter.AcceptanceReason == "worker_no_changes" {
+		return 0
+	}
+	if iter.Status == "failed" {
+		return 0
+	}
+
+	// Use staged files count as a progress proxy: more files = more progress.
+	// Cap at 1.0 for 10+ files.
+	files := iter.StagedFilesCount
+	if files <= 0 {
+		// If acceptance result has paths, count those.
+		if iter.Acceptance != nil {
+			files = len(iter.Acceptance.SafePaths) + len(iter.Acceptance.ReviewPaths)
+		}
+	}
+	if files <= 0 {
+		return 0.05 // completed but no file signal — small positive
+	}
+	delta := float64(files) / 10.0
+	if delta > 1.0 {
+		delta = 1.0
+	}
+	return delta
 }
 
 // bootstrapLoopAutonomy reads .ralphrc from the repo path and returns
