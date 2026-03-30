@@ -233,6 +233,37 @@ func (q *WorkQueue) LoadFrom(path string) error {
 	return nil
 }
 
+// ReapPhantomRepos removes pending items whose repo identifier is the bare
+// placeholder "001" — either the RepoName equals "001" or the last path
+// segment of RepoPath equals "001". These are sentinel values left by
+// auto-generated stubs and should never reach workers. Returns the count of
+// removed items.
+func (q *WorkQueue) ReapPhantomRepos() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	var phantomIDs []string
+	for id, item := range q.items {
+		if item.Status != WorkPending {
+			continue
+		}
+		if item.RepoName == "001" || filepath.Base(item.RepoPath) == "001" {
+			phantomIDs = append(phantomIDs, id)
+		}
+	}
+
+	for _, id := range phantomIDs {
+		item := q.items[id]
+		now := time.Now()
+		item.CompletedAt = &now
+		item.Error = "reaped: phantom repo placeholder"
+		q.dlq[id] = item
+		delete(q.items, id)
+	}
+
+	return len(phantomIDs)
+}
+
 // MoveToDLQ moves a work item from the main queue to the dead letter queue.
 // Returns false if the item was not found in the main queue.
 func (q *WorkQueue) MoveToDLQ(itemID string) bool {
@@ -301,34 +332,4 @@ func (q *WorkQueue) DLQDepth() int {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	return len(q.dlq)
-}
-
-// ReapPhantomRepos moves pending items to the DLQ when RepoName == "001" or
-// filepath.Base(RepoPath) == "001". These are known placeholder entries that
-// should never be dispatched to workers.
-// Returns the number of reaped items.
-func (q *WorkQueue) ReapPhantomRepos() int {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-
-	var phantomIDs []string
-	for id, item := range q.items {
-		if item.Status != WorkPending {
-			continue
-		}
-		if item.RepoName == "001" || filepath.Base(item.RepoPath) == "001" {
-			phantomIDs = append(phantomIDs, id)
-		}
-	}
-
-	for _, id := range phantomIDs {
-		item := q.items[id]
-		now := time.Now()
-		item.CompletedAt = &now
-		item.Error = "reaped: phantom repo placeholder"
-		q.dlq[id] = item
-		delete(q.items, id)
-	}
-
-	return len(phantomIDs)
 }

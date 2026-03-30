@@ -86,23 +86,28 @@ func ComputeDelta(obs LoopObservation, baseline *LoopBaseline) BaselineDelta {
 }
 
 // EnsureBaseline returns an existing baseline if usable, or initializes one
-// from the provided observations. Returns the baseline and any error from
-// the save callback. The save function is called only when a new baseline is
-// created; errors are propagated (not swallowed).
-func EnsureBaseline(existing *LoopBaseline, observations []LoopObservation, save func(*LoopBaseline) error) (*LoopBaseline, error) {
+// from the provided observations. isNew is true when a new baseline was just
+// created from the first real observation (cycle 1) — callers MUST skip gate
+// evaluation in this case since there is no prior reference point to compare
+// against; evaluating on cycle 1 produces trivially-passing relative gates
+// (ratio ≈ 1.0) because the baseline equals the current observations.
+//
+// The save function is called only when a new baseline is created; errors are
+// propagated (not swallowed).
+func EnsureBaseline(existing *LoopBaseline, observations []LoopObservation, save func(*LoopBaseline) error) (baseline *LoopBaseline, isNew bool, err error) {
 	if !existing.IsZero() {
-		return existing, nil
+		return existing, false, nil
 	}
-	baseline := InitBaselineFromFirstObservation(observations)
+	baseline = InitBaselineFromFirstObservation(observations)
 	if baseline == nil {
-		return nil, nil // no observations available
+		return nil, false, nil // no observations available
 	}
 	if save != nil {
 		if err := save(baseline); err != nil {
-			return nil, fmt.Errorf("save initial baseline: %w", err)
+			return nil, false, fmt.Errorf("save initial baseline: %w", err)
 		}
 	}
-	return baseline, nil
+	return baseline, true, nil
 }
 
 // InitBaselineFromFirstObservation creates a baseline from the first loop

@@ -634,3 +634,54 @@ func TestResolveSnapshotRepo_LongestPathWins(t *testing.T) {
 		t.Errorf("expected deepest match 'exact', got %s", got.Name)
 	}
 }
+
+// TestResolveSnapshotRepo_PathNotInClaudekitBase verifies QW-7 (FINDING-148/268):
+// the resolved snapshot base path must be inside the ralphglasses repo root,
+// not inside an unrelated repo such as claudekit.
+func TestResolveSnapshotRepo_PathNotInClaudekitBase(t *testing.T) {
+	t.Parallel()
+
+	repos := []*model.Repo{
+		{Name: "claudekit", Path: "/repos/claudekit"},
+		{Name: "ralphglasses", Path: "/repos/ralphglasses"},
+	}
+	findRepo := func(_ string) *model.Repo { return nil }
+
+	got := resolveSnapshotRepo(repos, "", findRepo)
+	if got == nil {
+		t.Fatal("expected non-nil repo")
+	}
+
+	snapshotBase := filepath.Join(got.Path, ".ralph", "snapshots")
+
+	// The resolved base must be inside ralphglasses, not claudekit.
+	if !strings.HasPrefix(snapshotBase, "/repos/ralphglasses") {
+		t.Errorf("QW-7: snapshot base %q must be under ralphglasses, not claudekit", snapshotBase)
+	}
+	if strings.HasPrefix(snapshotBase, "/repos/claudekit") {
+		t.Errorf("QW-7: snapshot base %q must NOT be under claudekit", snapshotBase)
+	}
+}
+
+// TestResolveSnapshotRepo_Idempotent verifies that calling resolveSnapshotRepo
+// twice with identical inputs returns the same repo (deterministic resolution).
+func TestResolveSnapshotRepo_Idempotent(t *testing.T) {
+	t.Parallel()
+
+	repos := []*model.Repo{
+		{Name: "claudekit", Path: "/repos/claudekit"},
+		{Name: "ralphglasses", Path: "/repos/ralphglasses"},
+		{Name: "other", Path: "/repos/other"},
+	}
+	findRepo := func(_ string) *model.Repo { return nil }
+
+	first := resolveSnapshotRepo(repos, "", findRepo)
+	second := resolveSnapshotRepo(repos, "", findRepo)
+
+	if first == nil || second == nil {
+		t.Fatal("expected non-nil results from both calls")
+	}
+	if first != second {
+		t.Errorf("idempotency violated: first call returned %q, second returned %q", first.Name, second.Name)
+	}
+}

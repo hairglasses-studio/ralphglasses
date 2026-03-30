@@ -193,6 +193,9 @@ type Model struct {
 
 	// View registry for incremental switch-to-dispatch migration
 	viewRegistry *views.Registry
+
+	// App start time for uptime tracking
+	StartedAt time.Time
 }
 
 type tickMsg time.Time
@@ -413,6 +416,70 @@ func (m *Model) updateTable() {
 				}
 			}
 		}
+
+		// Cost velocity and sparkline
+		m.StatusBar.CostHistory = nil
+		var earliestLaunch time.Time
+		for _, s := range sessions {
+			s.Lock()
+			if earliestLaunch.IsZero() || (!s.LaunchedAt.IsZero() && s.LaunchedAt.Before(earliestLaunch)) {
+				earliestLaunch = s.LaunchedAt
+			}
+			m.StatusBar.CostHistory = append(m.StatusBar.CostHistory, s.CostHistory...)
+			s.Unlock()
+		}
+		if !earliestLaunch.IsZero() {
+			if mins := time.Since(earliestLaunch).Minutes(); mins > 0 {
+				m.StatusBar.CostVelocity = totalSpend / mins
+			}
+		}
+		if len(m.StatusBar.CostHistory) > 20 {
+			m.StatusBar.CostHistory = m.StatusBar.CostHistory[len(m.StatusBar.CostHistory)-20:]
+		}
+
+		// Loops
+		loops := m.SessMgr.ListLoops()
+		var activeLoops, totalIters, totalSuccess int
+		var loopIterHistory []float64
+		for _, l := range loops {
+			l.Lock()
+			if l.Status == "running" && !l.Paused {
+				activeLoops++
+			}
+			for _, iter := range l.Iterations {
+				totalIters++
+				if iter.Status == "completed" || iter.Status == "verified" {
+					totalSuccess++
+				}
+				if iter.EndedAt != nil {
+					loopIterHistory = append(loopIterHistory, iter.EndedAt.Sub(iter.StartedAt).Seconds())
+				}
+			}
+			l.Unlock()
+		}
+		m.StatusBar.ActiveLoopCount = activeLoops
+		m.StatusBar.LoopIterTotal = totalIters
+		if totalIters > 0 {
+			m.StatusBar.LoopSuccessRate = float64(totalSuccess) / float64(totalIters)
+		} else {
+			m.StatusBar.LoopSuccessRate = 0
+		}
+		if len(loopIterHistory) > 20 {
+			loopIterHistory = loopIterHistory[len(loopIterHistory)-20:]
+		}
+		m.StatusBar.LoopIterHistory = loopIterHistory
+
+		// Provider health
+		healthMap := make(map[string]bool)
+		for _, p := range []session.Provider{session.ProviderClaude, session.ProviderGemini, session.ProviderCodex} {
+			h := session.CheckProviderHealth(p)
+			healthMap[string(p)] = h.Healthy()
+		}
+		m.StatusBar.ProviderHealthy = healthMap
+
+		// Autonomy + Uptime
+		m.StatusBar.AutonomyLevel = m.SessMgr.GetAutonomyLevel().String()
+		m.StatusBar.Uptime = time.Since(m.StartedAt)
 	}
 }
 

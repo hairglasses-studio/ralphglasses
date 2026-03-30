@@ -104,6 +104,15 @@ func hasLintCategory(lints []LintResult, category string) bool {
 
 var numericConstraintPattern = regexp.MustCompile(`\b\d+\s*(items?|bullets?|sentences?|words?|lines?|steps?|paragraphs?|characters?|tokens?|minutes?|seconds?|points?|examples?|max|min|limit|at\s+most|at\s+least)\b`)
 
+// extendedNumericPattern catches "3 unit tests", "5 error messages" etc.
+var extendedNumericPattern = regexp.MustCompile(`\b\d+\s+(?:\w+\s+)?(tests?|functions?|files?|methods?|issues?|findings?|results?|errors?|endpoints?|classes?)\b`)
+
+// enumerationPattern detects concrete deliverable lists.
+var enumerationPattern = regexp.MustCompile(`(?i)(covering|including|such as|namely|specifically)\s*:?\s`)
+
+// techTermPattern matches specific technology/domain terms for context detection.
+var techTermPattern = regexp.MustCompile(`(?i)\b(go|golang|python|javascript|typescript|rust|java|kotlin|swift|ruby|php|sql|html|css|react|vue|angular|node|docker|kubernetes|k8s|api|rest|grpc|graphql|json|xml|yaml|csv|http|tcp|udp|git|linux|unix|aws|gcp|azure|redis|postgres|mysql|sqlite|mongodb|nginx)\b`)
+
 // allCapsWordPattern matches words of 2+ uppercase letters (potential emphasis or acronyms).
 var allCapsWordPattern = regexp.MustCompile(`\b[A-Z]{2,}\b`)
 
@@ -113,6 +122,18 @@ var numberPattern = regexp.MustCompile(`\d+`)
 // properNounOrTechTermPattern matches capitalized words that look like proper nouns
 // or common technical terms (e.g., "Go", "Python", "Kubernetes", "PostgreSQL").
 var properNounOrTechTermPattern = regexp.MustCompile(`\b[A-Z][a-z]{2,}[A-Za-z]*\b`)
+
+// bulletItemPattern matches lines that start a bullet list item.
+var bulletItemPattern = regexp.MustCompile(`(?m)^[ \t]*[-*•]\s+\S`)
+
+// numberedItemPattern matches lines that start a numbered list item.
+var numberedItemPattern = regexp.MustCompile(`(?m)^[ \t]*\d+\.\s+\S`)
+
+// problemStatementPattern detects implicit context via goal/task/problem framing.
+var problemStatementPattern = regexp.MustCompile(`(?i)\b(we\s+need\s+to|the\s+(issue|goal|task|problem|objective)\s+is|we\s+want\s+to|i\s+need\s+to|the\s+(purpose|aim)\s+is)\b`)
+
+// colonEnumPattern detects colon-introduced enumerations like "covering: A, B, C".
+var colonEnumPattern = regexp.MustCompile(`(?i)\w[\w\s]{2,}:\s*\w[^.!?\n]{5,}`)
 
 // sentenceSplit splits text into sentences on period/question/exclamation boundaries.
 func sentenceSplit(text string) []string {
@@ -284,6 +305,18 @@ func scoreSpecificity(text string, _ TaskType, lints []LintResult, ar *AnalyzeRe
 		suggestions = append(suggestions, "Add specific names, technologies, or technical terms")
 	}
 
+	// Domain vocabulary density bonus
+	techTerms := techTermPattern.FindAllString(text, -1)
+	if len(techTerms) >= 3 {
+		score += 10
+	} else if len(techTerms) >= 1 {
+		score += 5
+	}
+
+	// Extended numeric references (e.g. "3 unit tests", "5 error messages")
+	extNumericMatches := extendedNumericPattern.FindAllString(text, -1)
+	score += len(extNumericMatches) * 5
+
 	// Penalty: excessive trailing-off language ("etc", "and so on", "...")
 	trailingCount := strings.Count(lower, "etc") + strings.Count(lower, "and so on") + strings.Count(text, "...")
 	if trailingCount > 0 {
@@ -314,6 +347,20 @@ func scoreContextMotivation(text string, _ TaskType, lints []LintResult, ar *Ana
 	// Motivation markers
 	if motivationMarkers.MatchString(text) {
 		score += 25
+	}
+
+	// Implicit context: problem-statement framing
+	if problemStatementPattern.MatchString(text) {
+		score += 15
+	}
+
+	// Sentence count as proxy for context depth
+	ctxSentences := sentenceSplit(text)
+	switch {
+	case len(ctxSentences) >= 4:
+		score += 20
+	case len(ctxSentences) >= 3:
+		score += 10
 	}
 
 	// Unmotivated rule penalty
@@ -366,6 +413,28 @@ func scoreStructure(text string, _ TaskType, lints []LintResult, ar *AnalyzeResu
 		score += 10
 	}
 
+	// Plain-text list structure bonuses
+	bulletCount := len(bulletItemPattern.FindAllString(text, -1))
+	numberedCount := len(numberedItemPattern.FindAllString(text, -1))
+	listTotal := bulletCount + numberedCount
+	if listTotal >= 3 {
+		score += 20
+	} else if listTotal >= 1 {
+		score += 10
+	}
+
+	// Organized multi-sentence plain-text (no XML/markdown) with clear task verbs
+	if !ar.HasXML && !hasMarkdownStructure(text) {
+		structSentences := sentenceSplit(text)
+		structVerbs := imperativeVerbPattern.FindAllString(text, -1)
+		switch {
+		case len(structSentences) >= 4 && len(structVerbs) >= 1:
+			score += 25
+		case len(structSentences) >= 3 && len(structVerbs) >= 1:
+			score += 12
+		}
+	}
+
 	score = clamp(score, 0, 100)
 	return DimensionScore{
 		Name:        "Structure",
@@ -391,8 +460,23 @@ func scoreExamples(text string, _ TaskType, lints []LintResult, _ *AnalyzeResult
 	}
 
 	// General example mention without tags
-	if exampleCount == 0 && (strings.Contains(lower, "example") || strings.Contains(lower, "e.g.") || strings.Contains(lower, "for instance")) {
-		score += 15
+	if exampleCount == 0 {
+		if strings.Contains(lower, "e.g.") || strings.Contains(lower, "for instance") {
+			score += 20
+		} else if strings.Contains(lower, "example") {
+			score += 15
+		}
+		if strings.Contains(lower, "such as") || enumerationPattern.MatchString(text) {
+			score += 10
+		}
+		// Backtick inline code implies concrete examples
+		if strings.Count(text, "`") >= 2 {
+			score += 15
+		}
+		// Colon-introduced enumeration
+		if colonEnumPattern.MatchString(text) {
+			score += 15
+		}
 	}
 
 	if exampleCount == 0 {
@@ -421,9 +505,10 @@ func scoreDocumentPlacement(text string, _ TaskType, lints []LintResult, ar *Ana
 
 	tokens := ar.EstimatedTokens
 
-	// For short prompts, placement is less important — neutral score
-	if tokens < 1000 {
-		score = 40 // FINDING-240: short prompts get neutral placement, not inflated
+	// For short prompts, placement is less important — neutral score.
+	// However, if the prompt already has XML structure, placement is demonstrated.
+	if tokens < 1000 && !ar.HasXML {
+		score = 40
 	}
 
 	// Cache-unfriendly lints
@@ -561,6 +646,16 @@ func scoreFormatSpec(text string, _ TaskType, _ []LintResult, ar *AnalyzeResult)
 		score += 15
 	}
 
+	// Implicit format keywords
+	if !ar.HasFormat {
+		for _, kw := range []string{"style", "numbered", "bullet", "table", "list", "markdown", "json", "yaml", "csv"} {
+			if strings.Contains(lower, kw) {
+				score += 10
+				break
+			}
+		}
+	}
+
 	if !ar.HasFormat {
 		suggestions = append(suggestions, "Specify desired output format — use positive format instructions")
 	}
@@ -592,6 +687,11 @@ func scoreTone(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult, t
 		score += 15
 	}
 	if politeCount >= 3 {
+		score += 10
+	}
+
+	// Structured prompts with XML tags demonstrate professional, measured tone
+	if strings.Contains(lower, "<role>") || strings.Contains(lower, "<instructions>") {
 		score += 10
 	}
 
