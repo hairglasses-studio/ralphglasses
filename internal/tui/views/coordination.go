@@ -88,7 +88,7 @@ func (m CoordinationModel) Update(msg tea.Msg) (CoordinationModel, tea.Cmd) {
 }
 
 // View implements tea.Model.
-func (m CoordinationModel) View() string {
+func (m CoordinationModel) View() tea.View {
 	var b strings.Builder
 
 	// Title
@@ -137,7 +137,7 @@ func (m CoordinationModel) View() string {
 	b.WriteString("\n")
 	b.WriteString(styles.HelpStyle.Render("  r:refresh  q:back  j/k:move  Enter:select"))
 
-	return b.String()
+	return tea.NewView(b.String())
 }
 
 // renderGraph builds an ASCII dependency graph with box-drawing characters.

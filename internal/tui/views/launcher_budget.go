@@ -95,7 +95,7 @@ func (m LauncherBudgetModel) Update(msg tea.Msg) (LauncherBudgetModel, tea.Cmd) 
 }
 
 // View implements tea.Model.
-func (m LauncherBudgetModel) View() string {
+func (m LauncherBudgetModel) View() tea.View {
 	var b strings.Builder
 
 	b.WriteString(styles.TitleStyle.Render("  "+styles.IconBudget+" Launch Budget Configuration"))
@@ -146,7 +146,7 @@ func (m LauncherBudgetModel) View() string {
 	b.WriteString("\n")
 	b.WriteString(styles.HelpStyle.Render("  Tab: next field  ↑/↓: adjust  Enter: confirm  Esc: cancel"))
 
-	return b.String()
+	return tea.NewView(b.String())
 }
 
 // TotalBudget returns the current total budget value (for testing).

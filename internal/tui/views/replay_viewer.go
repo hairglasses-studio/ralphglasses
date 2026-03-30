@@ -173,7 +173,7 @@ func (m *ReplayViewerModel) updateSearch(msg tea.KeyPressMsg) (ReplayViewerModel
 }
 
 // View implements tea.Model.
-func (m ReplayViewerModel) View() string {
+func (m ReplayViewerModel) View() tea.View {
 	var b strings.Builder
 
 	// Header
@@ -263,7 +263,7 @@ func (m ReplayViewerModel) View() string {
 	b.WriteString(styles.HelpStyle.Render(
 		"  j/k:step p:play s:speed f:filter /:search n/N:next/prev match"))
 
-	return b.String()
+	return tea.NewView(b.String())
 }
 
 // --- Accessors for testing ---

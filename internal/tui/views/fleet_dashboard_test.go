@@ -18,7 +18,7 @@ func TestFleetDashboardModel_Init(t *testing.T) {
 
 func TestFleetDashboardModel_View_Empty(t *testing.T) {
 	m := NewFleetDashboard()
-	view := m.View()
+	view := m.View().Content
 
 	if !strings.Contains(view, "Fleet Dashboard") {
 		t.Fatal("empty view should contain title")
@@ -60,7 +60,7 @@ func TestFleetDashboardModel_View_WithSessions(t *testing.T) {
 		},
 	})
 
-	view := m.View()
+	view := m.View().Content
 
 	// Title present
 	if !strings.Contains(view, "Fleet Dashboard") {
@@ -210,7 +210,7 @@ func TestFleetDashboardModel_SetSessions(t *testing.T) {
 		{ID: "s3", Provider: "codex", Status: "failed"},
 	})
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "3 total") {
 		t.Fatal("should show 3 total sessions after SetSessions")
 	}
@@ -226,7 +226,7 @@ func TestFleetDashboardModel_SetSessions(t *testing.T) {
 
 	// Empty sessions
 	m.SetSessions(nil)
-	view = m.View()
+	view = m.View().Content
 	if !strings.Contains(view, "No sessions") {
 		t.Fatal("should show 'No sessions' after setting nil")
 	}
