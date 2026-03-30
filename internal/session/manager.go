@@ -50,6 +50,7 @@ type Manager struct {
 	Enhancer       *enhancer.HybridEngine        // optional prompt enhancement for loop integration
 	FleetPool      *pool.State                   // fleet-wide budget pooling and metrics aggregation
 	supervisor     *Supervisor                   // autonomous R&D supervisor, runs at level >= 2
+	worktreePool   *WorktreePool                // Phase 10.5.8: reusable worktree pool
 
 	DefaultBudgetUSD float64 // from RALPH_SESSION_BUDGET; applied when Launch opts has no budget
 
@@ -270,6 +271,20 @@ func (m *Manager) TotalPrunedThisSession() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.totalPrunedThisSession
+}
+
+// WorktreePool returns the worktree pool, or nil if none is configured.
+func (m *Manager) WorktreePool() *WorktreePool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.worktreePool
+}
+
+// SetWorktreePool sets the worktree pool for reuse across sessions.
+func (m *Manager) SetWorktreePool(pool *WorktreePool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.worktreePool = pool
 }
 
 // ConsecutiveNoOps returns the current consecutive no-op iteration count

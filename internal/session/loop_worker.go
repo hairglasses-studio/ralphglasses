@@ -22,6 +22,7 @@ type workerResult struct {
 	err           error
 	cascadeResult *CascadeResult // WS3: non-nil if cascade routing was attempted
 	stallCount    int            // WS-B: stall events detected by StallDetector
+	pooled        bool           // Phase 10.5.8: true if worktree came from pool
 }
 
 // workerParams bundles the inputs for runWorkerTask to avoid a long parameter list.
@@ -50,7 +51,22 @@ func (m *Manager) runWorkerTask(p workerParams) workerResult {
 		return workerResult{idx: p.workerIdx, err: fmt.Errorf("cancelled before worktree creation: %w", err)}
 	}
 
-	wt, br, wtErr := createLoopWorktree(p.ctx, p.repoPath, p.run.ID, p.iteration.Number*100+p.workerIdx)
+	// Phase 10.5.8: Try worktree pool first, fall back to direct creation.
+	var wt, br string
+	var wtErr error
+	var pooled bool
+	if pool := m.WorktreePool(); pool != nil {
+		wt, br, wtErr = pool.Acquire(p.ctx, p.repoPath)
+		if wtErr == nil {
+			pooled = true
+		} else {
+			slog.Debug("worktree pool acquire failed, falling back to direct creation",
+				"repo", p.repoPath, "error", wtErr)
+		}
+	}
+	if !pooled {
+		wt, br, wtErr = createLoopWorktree(p.ctx, p.repoPath, p.run.ID, p.iteration.Number*100+p.workerIdx)
+	}
 	if wtErr != nil {
 		return workerResult{idx: p.workerIdx, err: fmt.Errorf("create worktree: %w", wtErr)}
 	}
@@ -104,7 +120,7 @@ func (m *Manager) runWorkerTask(p workerParams) workerResult {
 
 	// Check for cancellation before cascade/launch phase.
 	if err := p.ctx.Err(); err != nil {
-		return workerResult{idx: p.workerIdx, worktree: wt, err: fmt.Errorf("cancelled before session launch: %w", err)}
+		return workerResult{idx: p.workerIdx, worktree: wt, pooled: pooled, err: fmt.Errorf("cancelled before session launch: %w", err)}
 	}
 
 	// WS3: Try cheap provider first if cascade routing is enabled.
@@ -167,7 +183,7 @@ func (m *Manager) runWorkerTask(p workerParams) workerResult {
 				return workerResult{
 					idx: p.workerIdx, session: cheapSess, worktree: wt,
 					branch: br, output: out, cascadeResult: &cr,
-					stallCount: workerStalls,
+					stallCount: workerStalls, pooled: pooled,
 				}
 			}
 			// Escalate: continue to expensive provider
@@ -179,12 +195,12 @@ func (m *Manager) runWorkerTask(p workerParams) workerResult {
 
 	// Check for cancellation before expensive main session launch.
 	if err := p.ctx.Err(); err != nil {
-		return workerResult{idx: p.workerIdx, worktree: wt, err: fmt.Errorf("cancelled before main session launch: %w", err), cascadeResult: cascadeRes}
+		return workerResult{idx: p.workerIdx, worktree: wt, pooled: pooled, err: fmt.Errorf("cancelled before main session launch: %w", err), cascadeResult: cascadeRes}
 	}
 
 	ws, launchErr := m.launchWorkflowSession(p.ctx, baseOpts)
 	if launchErr != nil {
-		return workerResult{idx: p.workerIdx, worktree: wt, err: fmt.Errorf("launch worker: %w", launchErr), cascadeResult: cascadeRes}
+		return workerResult{idx: p.workerIdx, worktree: wt, pooled: pooled, err: fmt.Errorf("launch worker: %w", launchErr), cascadeResult: cascadeRes}
 	}
 	ws.EnhancementSource = workerEnhance.source
 	ws.EnhancementPreScore = workerEnhance.preScore
@@ -222,7 +238,7 @@ func (m *Manager) runWorkerTask(p workerParams) workerResult {
 	if detector != nil {
 		workerStalls = detector.StallCount()
 	}
-	return workerResult{idx: p.workerIdx, session: ws, worktree: wt, branch: br, output: out, err: waitErr, cascadeResult: cascadeRes, stallCount: workerStalls}
+	return workerResult{idx: p.workerIdx, session: ws, worktree: wt, branch: br, output: out, err: waitErr, cascadeResult: cascadeRes, stallCount: workerStalls, pooled: pooled}
 }
 
 func createLoopWorktree(ctx context.Context, repoPath, loopID string, iteration int) (string, string, error) {
