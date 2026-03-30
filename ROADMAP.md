@@ -441,7 +441,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 ### 1.5.6 — Multi-arch builds
 - [ ] 1.5.6.1 — Add arm64 cross-compilation to CI matrix (linux/arm64 for Raspberry Pi) `P2` `M`
 - [ ] 1.5.6.2 — Test arm64 binary in QEMU user-mode emulation in CI `P2` `M`
-- [ ] 1.5.6.3 — Add `GOARCH=arm64` smoke test: build + run `--help` + exit `P2` `S`
+- [x] 1.5.6.3 — Add `GOARCH=arm64` smoke test: build + run `--help` + exit `P2` `S`
 - [ ] 1.5.6.4 — Document Raspberry Pi thin client setup in `docs/raspberry-pi.md` `P2` `S`
 - **Acceptance:** arm64 binary runs on Raspberry Pi 4/5
 
@@ -596,7 +596,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [x] 2.13.2 — Plugin discovery via hashicorp/go-plugin gRPC protocol (`internal/plugin/grpc.go`) `[reconciled 2026-03-26]`
 - [ ] 2.13.3 — Built-in plugin: `notify-desktop` (extract from 2.6 as reference implementation) `P2` `M`
 - [ ] 2.13.4 — Plugin lifecycle: load on startup, unload on shutdown, hot-reload on SIGHUP `P2` `M`
-- [ ] 2.13.5 — Plugin config: per-plugin config section in `.ralphrc` (e.g. `PLUGIN_NOTIFY_DESKTOP_SOUND=true`) `P2` `S`
+- [x] 2.13.5 — Plugin config: per-plugin config section in `.ralphrc` (e.g. `PLUGIN_NOTIFY_DESKTOP_SOUND=true`) `P2` `S`
 - **Acceptance:** external plugin loaded and receives session events
 
 ### 2.14 — SSH remote management `[PARALLEL]`
@@ -783,7 +783,7 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - **Acceptance:** user-defined YAML plugins execute commands with variable substitution from TUI
 
 ### 3.5.3 — Resource aliases (like k9s aliases.yml)
-- [ ] 3.5.3.1 — Define `~/.config/ralphglasses/aliases.yml` schema `P2` `S`
+- [x] 3.5.3.1 — Define `~/.config/ralphglasses/aliases.yml` schema `P2` `S`
 - [x] 3.5.3.2 — Built-in aliases: `:rp` -> repos, `:ss` -> sessions, `:tm` -> teams, `:fl` -> fleet `P2` `S`
 - [ ] 3.5.3.3 — User-defined command aliases `P2` `M`
 - **Acceptance:** `:alias-name` in command mode executes mapped command
@@ -796,9 +796,9 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 
 ### 3.5.5 — Theme export to terminal (like claudekit themekit)
 Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026-03-27]`
-- [ ] 3.5.5.1 — `ralphglasses theme export ghostty` -> generate Ghostty palette config `P2` `S`
-- [ ] 3.5.5.2 — `ralphglasses theme export starship` -> generate Starship color overrides `P2` `S`
-- [ ] 3.5.5.3 — `ralphglasses theme export k9s` -> generate k9s skin.yml `P2` `S`
+- [x] 3.5.5.1 — `ralphglasses theme export ghostty` -> generate Ghostty palette config `P2` `S`
+- [x] 3.5.5.2 — `ralphglasses theme export starship` -> generate Starship color overrides `P2` `S`
+- [x] 3.5.5.3 — `ralphglasses theme export k9s` -> generate k9s skin.yml `P2` `S`
 - [ ] 3.5.5.4 — `ralphglasses theme sync` -> export to all supported tools simultaneously `P2` `M`
 - **Acceptance:** `ralphglasses theme sync` updates Ghostty, Starship, and k9s to match TUI theme
 
