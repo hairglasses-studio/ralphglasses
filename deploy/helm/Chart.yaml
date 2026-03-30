@@ -1,0 +1,20 @@
+apiVersion: v2
+name: ralphglasses
+description: Command-and-control platform for parallel multi-LLM agent fleets with MCP gateway
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/hairglasses-studio/ralphglasses
+sources:
+  - https://github.com/hairglasses-studio/ralphglasses
+maintainers:
+  - name: hairglasses-studio
+    url: https://github.com/hairglasses-studio
+keywords:
+  - llm
+  - agents
+  - mcp
+  - fleet-management
+  - claude
+  - gemini
+  - openai

@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ralphglasses.fullname" . }}-config
+  labels:
+    {{- include "ralphglasses.labels" . | nindent 4 }}
+data:
+  # Budget controls
+  budget.maxSessionCost: {{ .Values.budget.maxSessionCost | quote }}
+  budget.maxDailyCost: {{ .Values.budget.maxDailyCost | quote }}
+  budget.alertThresholdPercent: {{ .Values.budget.alertThresholdPercent | quote }}
+  budget.costTier: {{ .Values.budget.costTier | quote }}
+
+  # MCP gateway
+  mcp.preloadNamespaces: {{ .Values.mcp.preloadNamespaces | join "," | quote }}
+
+  # Ralph config file
+  ralph.yaml: |
+    scan_path: {{ .Values.ralph.scanPath }}
+    autonomy_level: {{ .Values.ralph.autonomyLevel }}
+    mcp:
+      listen: "0.0.0.0:{{ .Values.mcp.port }}"
+      preload_namespaces:
+        {{- range .Values.mcp.preloadNamespaces }}
+        - {{ . }}
+        {{- end }}
+    providers:
+      {{- if .Values.providers.claude.enabled }}
+      claude:
+        model: {{ .Values.providers.claude.model }}
+      {{- end }}
+      {{- if .Values.providers.gemini.enabled }}
+      gemini:
+        model: {{ .Values.providers.gemini.model }}
+      {{- end }}
+      {{- if .Values.providers.openai.enabled }}
+      openai:
+        model: {{ .Values.providers.openai.model }}
+      {{- end }}
+    budget:
+      max_session_cost: {{ .Values.budget.maxSessionCost }}
+      max_daily_cost: {{ .Values.budget.maxDailyCost }}
+      alert_threshold_percent: {{ .Values.budget.alertThresholdPercent }}
+      cost_tier: {{ .Values.budget.costTier }}
+    {{- if .Values.ralph.supervisor.enabled }}
+    supervisor:
+      enabled: true
+      max_cycles: {{ .Values.ralph.supervisor.maxCycles }}
+      cooldown_seconds: {{ .Values.ralph.supervisor.cooldownSeconds }}
+    {{- end }}

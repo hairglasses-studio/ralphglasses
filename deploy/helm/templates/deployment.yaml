@@ -1,0 +1,150 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ralphglasses.fullname" . }}
+  labels:
+    {{- include "ralphglasses.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "ralphglasses.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "ralphglasses.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "ralphglasses.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - mcp
+            - --listen
+            - "0.0.0.0:{{ .Values.mcp.port }}"
+          ports:
+            - name: http
+              containerPort: {{ .Values.mcp.port }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.service.metricsPort }}
+              protocol: TCP
+          env:
+            - name: RALPH_SCAN_PATH
+              value: {{ .Values.ralph.scanPath | quote }}
+            - name: RALPH_AUTONOMY_LEVEL
+              value: {{ .Values.ralph.autonomyLevel | quote }}
+            - name: RALPH_BUDGET_MAX_SESSION
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "ralphglasses.fullname" . }}-config
+                  key: budget.maxSessionCost
+            - name: RALPH_BUDGET_MAX_DAILY
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "ralphglasses.fullname" . }}-config
+                  key: budget.maxDailyCost
+            - name: RALPH_COST_TIER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "ralphglasses.fullname" . }}-config
+                  key: budget.costTier
+            {{- if .Values.providers.claude.enabled }}
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.providers.claude.apiKeySecret }}
+                  key: {{ .Values.providers.claude.apiKeySecretKey }}
+            - name: RALPH_CLAUDE_MODEL
+              value: {{ .Values.providers.claude.model | quote }}
+            {{- end }}
+            {{- if .Values.providers.gemini.enabled }}
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.providers.gemini.apiKeySecret }}
+                  key: {{ .Values.providers.gemini.apiKeySecretKey }}
+            - name: RALPH_GEMINI_MODEL
+              value: {{ .Values.providers.gemini.model | quote }}
+            {{- end }}
+            {{- if .Values.providers.openai.enabled }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.providers.openai.apiKeySecret }}
+                  key: {{ .Values.providers.openai.apiKeySecretKey }}
+            - name: RALPH_OPENAI_MODEL
+              value: {{ .Values.providers.openai.model | quote }}
+            {{- end }}
+            {{- if .Values.ralph.supervisor.enabled }}
+            - name: RALPH_SUPERVISOR_ENABLED
+              value: "true"
+            - name: RALPH_SUPERVISOR_MAX_CYCLES
+              value: {{ .Values.ralph.supervisor.maxCycles | quote }}
+            - name: RALPH_SUPERVISOR_COOLDOWN
+              value: {{ .Values.ralph.supervisor.cooldownSeconds | quote }}
+            {{- end }}
+          {{- with .Values.probes.liveness }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.probes.readiness }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: workspace
+              mountPath: {{ .Values.ralph.scanPath }}
+            - name: ralph-state
+              mountPath: /home/ralphglasses/.ralph
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: workspace
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "ralphglasses.fullname" . }}-workspace
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: ralph-state
+          emptyDir: {}
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

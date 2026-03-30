@@ -1,0 +1,133 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/hairglasses-studio/ralphglasses
+  pullPolicy: IfNotPresent
+  tag: ""  # Defaults to Chart.appVersion
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9090"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8080
+  metricsPort: 9090
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+# MCP gateway configuration
+mcp:
+  enabled: true
+  port: 8080
+  # Tool namespaces to load at startup (others loaded on demand)
+  preloadNamespaces:
+    - core
+
+# Provider configuration
+providers:
+  claude:
+    enabled: true
+    model: claude-sonnet-4-20250514
+    # API key supplied via secret reference
+    apiKeySecret: ralphglasses-provider-keys
+    apiKeySecretKey: ANTHROPIC_API_KEY
+  gemini:
+    enabled: true
+    model: gemini-2.5-pro
+    apiKeySecret: ralphglasses-provider-keys
+    apiKeySecretKey: GEMINI_API_KEY
+  openai:
+    enabled: false
+    model: gpt-4o
+    apiKeySecret: ralphglasses-provider-keys
+    apiKeySecretKey: OPENAI_API_KEY
+
+# Budget and cost controls
+budget:
+  # Maximum spend per session in USD
+  maxSessionCost: "5.00"
+  # Maximum total daily spend in USD
+  maxDailyCost: "50.00"
+  # Alert threshold percentage (0-100)
+  alertThresholdPercent: 80
+  # Provider cost tier routing: cheap | balanced | premium
+  costTier: balanced
+
+# Ralph configuration
+ralph:
+  scanPath: /workspace
+  autonomyLevel: 1
+  # Supervisor settings
+  supervisor:
+    enabled: false
+    maxCycles: 10
+    cooldownSeconds: 30
+
+# Persistent storage for workspace and ralph state
+persistence:
+  enabled: true
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  mountPath: /workspace
+
+# Liveness and readiness probes
+probes:
+  liveness:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 5
+  readiness:
+    httpGet:
+      path: /readyz
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Horizontal Pod Autoscaler (disabled by default, enable in prod overlay)
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
