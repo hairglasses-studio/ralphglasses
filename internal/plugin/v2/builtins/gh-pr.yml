@@ -1,0 +1,22 @@
+name: gh-pr
+version: "1.0.0"
+description: GitHub pull request operations via the gh CLI.
+author: hairglasses-studio
+
+commands:
+  - name: pr-list
+    description: List open pull requests for a repository
+    run: gh pr list --repo $REPO
+  - name: pr-create
+    description: Create a new pull request
+    run: gh pr create --repo $REPO --title "$TITLE"
+  - name: pr-status
+    description: Show status of pull requests for a repository
+    run: gh pr status --repo $REPO
+
+config:
+  default_base:
+    type: string
+    default: "main"
+    description: Default base branch for new pull requests
+    required: false
