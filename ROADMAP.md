@@ -229,7 +229,7 @@ Post-gate-pass improvements. All items are independent, parallel, and sized for 
 ### 0.6.7 — Planner task deduplication improvement
 - [x] 0.6.7.1 — Add Levenshtein/Jaccard similarity check to `isDuplicateTask`: catch near-duplicate titles (threshold 0.8) `P1` `M`
 - [x] 0.6.7.2 — Track completed task titles in observation history, reject re-proposals of already-completed work `P1` `M`
-- [ ] 0.6.7.3 — Add `DedupReason` field to skipped tasks for debugging planner behavior `P2` `S`
+- [x] 0.6.7.3 — `DedupSkip` with reason, matched title, similarity wired into `LoopIteration.SkippedTasks` `P2` `S`
 - [x] 0.6.7.4 — Add dedup tests: exact match, near-match, and distinct task pairs `P1` `M`
 - **Acceptance:** planner doesn't re-propose completed or near-duplicate tasks
 
@@ -335,7 +335,7 @@ Implements MCP spec features: structured output schemas, logging notifications.
 - [x] 1.3.1 — Build `ConfirmDialog` component (y/n prompt overlay, reusable across views) — `internal/tui/components/confirm.go` `[reconciled 2026-03-26]`
 - [x] 1.3.2 — Wire confirm dialog to destructive actions: stop, stop_all, config delete — wired in handlers_detail.go, handlers_loops.go, handlers_common.go `[reconciled 2026-03-26]`
 - [x] 1.3.3 — SIGINT/SIGTERM shutdown handler: graceful stop of all managed processes, flush logs, clean exit `P0` `M`
-- [ ] 1.3.4 — Audit scroll bounds in log stream and table views; fix off-by-one on terminal resize `P1` `M`
+- [x] 1.3.4 — Scroll bounds hardened: clampScrollPos on filter change and resize in EventLogView `P1` `M`
 - **Acceptance:** destructive actions require y/n, clean exit on signals, no scroll panics on resize
 
 ### 1.4 — Process manager improvements
@@ -353,7 +353,7 @@ Implements MCP spec features: structured output schemas, logging notifications.
 - **Acceptance:** external edits reflected without restart, invalid values rejected with message
 
 ### 1.6 — Test coverage targets
-- [ ] 1.6.1 — Set per-package coverage targets: discovery 90%, model 90%, process 85%, mcpserver 85%, tui 70% `P1` `S`
+- [x] 1.6.1 — Per-package coverage targets in `check-coverage.sh` + `make test-cover-strict` Makefile target `P1` `S`
 - [ ] 1.6.2 — Add CI enforcement step: `go test -coverprofile` -> parse -> fail if below threshold `P1` `M`
 - [ ] 1.6.3 — Add coverage badge to README via codecov or go-cover-treemap `P2` `S`
 - [ ] 1.6.4 — Write missing tests to reach 85%+ overall (focus on untested error paths) `P1` `L`
@@ -364,13 +364,13 @@ Implements MCP spec features: structured output schemas, logging notifications.
 - [x] 1.7.2 — Replace all `log.Printf` calls in `internal/process/` with structured `slog` — uses `slog` in manager, lifecycle, orphans `[reconciled 2026-03-26]`
 - [x] 1.7.3 — Add `--log-level` flag to CLI: debug, info, warn, error (default: info) `P1` `S`
 - [x] 1.7.4 — Add `--log-format` flag: text (default for TTY), json (default for non-TTY) `P1` `S`
-- [ ] 1.7.5 — Add request-scoped fields: inject `slog.Group("request", ...)` with tool name, repo path, duration `P1` `M`
+- [x] 1.7.5 — Request-scoped context fields: `tracing.WithToolName/WithRepo/WithRequestStart` + `RequestLogger(ctx)` helper `P1` `M`
 - **Acceptance:** all log output is structured `slog`, configurable level and format
 
 ### 1.8 — Custom error types `[BLOCKED BY 0.5.1]`
 - [x] 1.8.1 — Define sentinel errors in `internal/model/`: `ErrStatusNotFound`, `ErrConfigParseFailed`, `ErrCircuitOpen` `P1` `S`
 - [x] 1.8.2 — Define sentinel errors in `internal/process/`: `ErrAlreadyRunning`, `ErrNotRunning`, `ErrNoLoopScript` — `internal/process/errors.go` `[reconciled 2026-03-26]`
-- [ ] 1.8.3 — Wrap all `fmt.Errorf` with `%w` verb for proper `errors.Is()` / `errors.As()` support `P1` `M`
+- [x] 1.8.3 — Audited all `fmt.Errorf` calls: 1 instance fixed (`handler_mergeverify.go` `%v` → `%w`) `P1` `M`
 - [x] 1.8.4 — Create `internal/errors/` package with error classification: transient, permanent, user-facing `P1` `M`
 - [x] 1.8.5 — Add error type assertions in MCP handlers: map error types to MCP error codes `P1` `M`
 - **Acceptance:** callers can use `errors.Is()` and `errors.As()` on all returned errors

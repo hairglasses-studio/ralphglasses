@@ -54,6 +54,17 @@ func InstrumentationMiddleware(rec *ToolCallRecorder) server.ToolHandlerMiddlewa
 
 			start := time.Now()
 
+			// Inject request-scoped context fields for handler logging.
+			ctx = tracing.WithToolName(ctx, req.Params.Name)
+			ctx = tracing.WithRequestStart(ctx, start)
+			if args := req.GetArguments(); args != nil {
+				if repo, ok := args["repo"]; ok {
+					if rs, ok := repo.(string); ok && rs != "" {
+						ctx = tracing.WithRepo(ctx, rs)
+					}
+				}
+			}
+
 			// Measure input size.
 			var inputSize int
 			if raw, err := json.Marshal(req.Params.Arguments); err == nil {

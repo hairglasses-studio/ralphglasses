@@ -98,6 +98,9 @@ type LoopIteration struct {
 	// WS11: Acceptance gate tracing fields for diagnosing silent rejections.
 	AcceptanceReason string `json:"acceptance_reason,omitempty"` // "auto_merged", "pr_created", "no_staged_files", "worker_no_changes"
 	StagedFilesCount int    `json:"staged_files_count,omitempty"`
+
+	// Dedup tracking: tasks filtered out by near-duplicate or content overlap detection.
+	SkippedTasks []DedupSkip `json:"skipped_tasks,omitempty"`
 }
 
 // LoopRun is persisted state for a perpetual development loop.

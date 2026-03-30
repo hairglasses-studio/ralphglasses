@@ -75,6 +75,7 @@ func (v EventLogView) Update(msg tea.Msg) (EventLogView, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		v.width = msg.Width
 		v.height = msg.Height
+		v.clampScrollPos()
 	}
 	return v, nil
 }
@@ -187,17 +188,32 @@ func (v *EventLogView) cycleFilter() {
 	v.applyFilter()
 }
 
-// applyFilter rebuilds the filtered slice from entries.
+// applyFilter rebuilds the filtered slice from entries and clamps scroll position.
 func (v *EventLogView) applyFilter() {
 	if v.filter == "" {
 		v.filtered = v.entries
-		return
-	}
-	v.filtered = nil
-	for _, e := range v.entries {
-		if strings.Contains(e.Type, v.filter) {
-			v.filtered = append(v.filtered, e)
+	} else {
+		v.filtered = nil
+		for _, e := range v.entries {
+			if strings.Contains(e.Type, v.filter) {
+				v.filtered = append(v.filtered, e)
+			}
 		}
+	}
+	v.clampScrollPos()
+}
+
+// clampScrollPos ensures scrollPos is within valid bounds after filter or resize.
+func (v *EventLogView) clampScrollPos() {
+	maxPos := len(v.filtered) - v.viewHeight()
+	if maxPos < 0 {
+		maxPos = 0
+	}
+	if v.scrollPos > maxPos {
+		v.scrollPos = maxPos
+	}
+	if v.scrollPos < 0 {
+		v.scrollPos = 0
 	}
 }
 
