@@ -56,6 +56,12 @@ func (s *Server) RegisterCoreTools(srv *server.MCPServer) {
 		mcp.WithString("group", mcp.Required(), mcp.Description("Tool group name to load")),
 	), s.handleLoadToolGroup)
 
+	srv.AddTool(mcp.NewTool("ralphglasses_skill_export",
+		mcp.WithDescription("Generate SKILL.md documentation from all registered tool groups. Returns markdown or JSON."),
+		mcp.WithString("format", mcp.Description("Output format: \"markdown\" (default) or \"json\"")),
+		mcp.WithString("group", mcp.Description("Filter to a specific namespace (e.g. \"core\", \"session\")")),
+	), s.handleSkillExport)
+
 	// Register core group tools.
 	coreGroup := s.buildCoreGroup()
 	for _, entry := range coreGroup.Tools {
@@ -96,6 +102,12 @@ func (s *Server) RegisterAllTools(srv *server.MCPServer) {
 		mcp.WithDescription("Load all tools in a named group (core, session, loop, prompt, fleet, repo, roadmap, team, awesome, advanced, eval, fleet_h, observability)"),
 		mcp.WithString("group", mcp.Required(), mcp.Description("Tool group name to load")),
 	), s.handleLoadToolGroup)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_skill_export",
+		mcp.WithDescription("Generate SKILL.md documentation from all registered tool groups. Returns markdown or JSON."),
+		mcp.WithString("format", mcp.Description("Output format: \"markdown\" (default) or \"json\"")),
+		mcp.WithString("group", mcp.Description("Filter to a specific namespace (e.g. \"core\", \"session\")")),
+	), s.handleSkillExport)
 
 	for _, g := range s.buildToolGroups() {
 		for _, entry := range g.Tools {
