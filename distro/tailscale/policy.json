@@ -1,0 +1,56 @@
+{
+  "// NOTE": "Tailscale ACL policy for ralphglasses fleet. Deploy via Tailscale admin console or `tailscale set --policy-file`.",
+
+  "tagOwners": {
+    "tag:ralph-fleet":       ["autogroup:admin"],
+    "tag:ralph-coordinator": ["autogroup:admin"],
+    "tag:ralph-worker":      ["autogroup:admin"],
+    "tag:ralph-mcp":         ["autogroup:admin"]
+  },
+
+  "acls": [
+    {
+      "// comment": "Fleet-internal: all ralph nodes can reach each other on any port",
+      "action": "accept",
+      "src":    ["tag:ralph-fleet"],
+      "dst":    ["tag:ralph-fleet:*"]
+    },
+    {
+      "// comment": "MCP servers can reach fleet nodes (tool dispatch)",
+      "action": "accept",
+      "src":    ["tag:ralph-mcp"],
+      "dst":    ["tag:ralph-fleet:*"]
+    },
+    {
+      "// comment": "Admin users can reach all fleet nodes",
+      "action": "accept",
+      "src":    ["autogroup:admin"],
+      "dst":    ["tag:ralph-fleet:*"]
+    }
+  ],
+
+  "ssh": [
+    {
+      "// comment": "Coordinator can SSH into any worker without approval",
+      "action": "accept",
+      "src":    ["tag:ralph-coordinator"],
+      "dst":    ["tag:ralph-worker"],
+      "users":  ["autogroup:nonroot", "root"]
+    },
+    {
+      "// comment": "Admin can SSH into any fleet node with 12h re-auth",
+      "action": "check",
+      "src":    ["autogroup:admin"],
+      "dst":    ["tag:ralph-fleet"],
+      "users":  ["autogroup:nonroot", "root"],
+      "checkPeriod": "12h"
+    }
+  ],
+
+  "autoApprovers": {
+    "routes": {
+      "10.0.0.0/8":    ["tag:ralph-fleet"],
+      "172.16.0.0/12": ["tag:ralph-fleet"]
+    }
+  }
+}
