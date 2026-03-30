@@ -21,6 +21,7 @@ type PluginDef struct {
 	Commands    []CommandDef          `yaml:"commands"`
 	Hooks       []HookDef             `yaml:"hooks"`
 	Config      map[string]*ConfigDef `yaml:"config"`
+	Keybinds    []KeybindDef          `yaml:"keybinds"`
 }
 
 // CommandDef defines a command exposed by a plugin.
@@ -127,6 +128,24 @@ func Validate(p *PluginDef) error {
 		if strings.TrimSpace(hook.Command) == "" {
 			return fmt.Errorf("hook[%d]: command is required", i)
 		}
+	}
+
+	seenBinds := make(map[string]bool)
+	for i, kb := range p.Keybinds {
+		if strings.TrimSpace(kb.Key) == "" {
+			return fmt.Errorf("keybind[%d]: key is required", i)
+		}
+		if strings.TrimSpace(kb.Scope) == "" {
+			return fmt.Errorf("keybind[%d]: scope is required", i)
+		}
+		if strings.TrimSpace(kb.Action) == "" {
+			return fmt.Errorf("keybind[%d]: action is required", i)
+		}
+		bk := kb.Scope + "\x00" + kb.Key
+		if seenBinds[bk] {
+			return fmt.Errorf("keybind[%d]: duplicate key %q in scope %q", i, kb.Key, kb.Scope)
+		}
+		seenBinds[bk] = true
 	}
 
 	validTypes := map[string]bool{
