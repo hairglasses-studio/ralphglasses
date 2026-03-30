@@ -13,20 +13,22 @@ import (
 // Team handlers
 
 func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoName := getStringArg(req, "repo")
-	if repoName == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
+	pp := NewParamParserFromRequest(req)
+
+	repoName, errResult := pp.StringErr("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := ValidateRepoName(repoName); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
 	}
-	teamName := getStringArg(req, "name")
-	if teamName == "" {
-		return codedError(ErrInvalidParams, "team name required"), nil
+	teamName, errResult := pp.StringErr("name")
+	if errResult != nil {
+		return errResult, nil
 	}
-	tasksStr := getStringArg(req, "tasks")
-	if tasksStr == "" {
-		return codedError(ErrInvalidParams, "tasks required (newline-separated)"), nil
+	tasksStr, errResult := pp.StringErr("tasks")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
@@ -46,25 +48,25 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		}
 	}
 
-	teamProvider := session.Provider(getStringArg(req, "provider"))
+	teamProvider := session.Provider(pp.OptionalString("provider", ""))
 	if teamProvider == "" {
 		teamProvider = session.ProviderClaude
 	}
 
-	workerProvider := session.Provider(getStringArg(req, "worker_provider"))
+	workerProvider := session.Provider(pp.String("worker_provider"))
 
 	config := session.TeamConfig{
 		Name:           teamName,
 		Provider:       teamProvider,
 		WorkerProvider: workerProvider,
 		RepoPath:       r.Path,
-		LeadAgent:      getStringArg(req, "lead_agent"),
+		LeadAgent:      pp.String("lead_agent"),
 		Tasks:          tasks,
-		Model:          getStringArg(req, "model"),
-		MaxBudgetUSD:   getNumberArg(req, "budget_usd", 0),
+		Model:          pp.String("model"),
+		MaxBudgetUSD:   pp.FloatOr("budget_usd", 0),
 	}
 
-	if getBoolArg(req, "dry_run") {
+	if pp.Bool("dry_run") {
 		// Apply the same default resolution as the real launch path so the
 		// preview shows effective values instead of zero/empty defaults.
 		effectiveProvider := config.Provider
