@@ -57,6 +57,7 @@ func (s *Server) handleCycleAdvance(_ context.Context, req mcp.CallToolRequest) 
 
 	cycleID := getStringArg(req, "cycle_id")
 	var cycle *session.CycleRun
+	var err error
 	if cycleID != "" {
 		cycle, err = s.SessMgr.GetCycle(repoPath, cycleID)
 	} else {
@@ -92,6 +93,7 @@ func (s *Server) handleCycleStatus(_ context.Context, req mcp.CallToolRequest) (
 
 	cycleID := getStringArg(req, "cycle_id")
 	var cycle *session.CycleRun
+	var err error
 	if cycleID != "" {
 		cycle, err = s.SessMgr.GetCycle(repoPath, cycleID)
 	} else {
@@ -156,6 +158,7 @@ func (s *Server) handleCycleFail(_ context.Context, req mcp.CallToolRequest) (*m
 	}
 
 	var cycle *session.CycleRun
+	var err error
 	if cycleID != "" {
 		cycle, err = s.SessMgr.GetCycle(repoPath, cycleID)
 	} else {
@@ -232,6 +235,7 @@ func (s *Server) handleCycleSynthesize(_ context.Context, req mcp.CallToolReques
 
 	cycleID := getStringArg(req, "cycle_id")
 	var cycle *session.CycleRun
+	var err error
 	if cycleID != "" {
 		cycle, err = s.SessMgr.GetCycle(repoPath, cycleID)
 	} else {
