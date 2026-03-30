@@ -37,6 +37,62 @@ func (b *BudgetEnforcer) Check(s *Session) (exceeded bool, reason string) {
 	return false, ""
 }
 
+// BudgetThreshold represents a budget usage level that triggers an alert.
+type BudgetThreshold struct {
+	Pct    float64 // e.g. 0.50, 0.75, 0.90
+	Label  string  // e.g. "50%", "75%", "90%"
+}
+
+// DefaultBudgetThresholds are the standard alert levels.
+var DefaultBudgetThresholds = []BudgetThreshold{
+	{Pct: 0.50, Label: "50%"},
+	{Pct: 0.75, Label: "75%"},
+	{Pct: 0.90, Label: "90%"},
+}
+
+// BudgetAlertLevel returns the highest crossed threshold for the session.
+// Returns nil if no threshold has been crossed.
+func (b *BudgetEnforcer) BudgetAlertLevel(s *Session) *BudgetThreshold {
+	if s.BudgetUSD <= 0 {
+		return nil
+	}
+
+	s.mu.Lock()
+	spent := s.SpentUSD
+	s.mu.Unlock()
+
+	ratio := spent / s.BudgetUSD
+	var highest *BudgetThreshold
+	for i := range DefaultBudgetThresholds {
+		t := &DefaultBudgetThresholds[i]
+		if ratio >= t.Pct {
+			highest = t
+		}
+	}
+	return highest
+}
+
+// CheckThresholds returns all crossed thresholds for the session, suitable for
+// emitting BudgetAlert events at each level.
+func (b *BudgetEnforcer) CheckThresholds(s *Session) []BudgetThreshold {
+	if s.BudgetUSD <= 0 {
+		return nil
+	}
+
+	s.mu.Lock()
+	spent := s.SpentUSD
+	s.mu.Unlock()
+
+	ratio := spent / s.BudgetUSD
+	var crossed []BudgetThreshold
+	for _, t := range DefaultBudgetThresholds {
+		if ratio >= t.Pct {
+			crossed = append(crossed, t)
+		}
+	}
+	return crossed
+}
+
 // LedgerEntry records a cost snapshot for the cost ledger.
 type LedgerEntry struct {
 	Timestamp  time.Time `json:"ts"`
