@@ -541,13 +541,13 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 2.6.1 — Desktop notification abstraction: `freedesktop.org` D-Bus (Linux), `osascript` (macOS) `P2` `M`
 - [x] 2.6.2 — Define event types: session_complete, budget_warning, circuit_breaker_trip, crash, restart `P2` `S`
 - [x] 2.6.3 — Add `.ralphrc` config keys: `NOTIFY_DESKTOP=true`, `NOTIFY_SOUND=true` `P2` `S`
-- [ ] 2.6.4 — Implement notification dedup/throttle: no repeat within 60s for same event type + session `P2` `M`
+- [x] 2.6.4 — Implement notification dedup/throttle: no repeat within 60s for same event type + session `P2` `M`
 - **Acceptance:** desktop notification fires on circuit breaker trip
 
 ### 2.7 — tmux integration `[PARALLEL — independent after 2.1]`
 - [ ] 2.7.1 — `internal/tmux/` package: create/list/kill sessions, name windows, attach/detach `P2` `M`
 - [ ] 2.7.2 — One tmux pane per agent session: auto-create on session launch, name = session ID `P2` `M`
-- [ ] 2.7.3 — `ralphglasses tmux` subcommand: `list`, `attach <session>`, `detach` `P2` `S`
+- [x] 2.7.3 — `ralphglasses tmux` subcommand: `list`, `attach <session>`, `detach` `P2` `S`
 - [ ] 2.7.4 — Headless mode: detect no TTY -> auto-use tmux instead of TUI `P1` `M`
 - [ ] 2.7.5 — Port patterns from claude-tools (WSL-native tmux management, `/mnt/c/` path handling) `P2` `S`
 - **Acceptance:** `ralphglasses tmux list` shows active sessions, `attach` works
@@ -578,15 +578,15 @@ Tooling, release automation, and contributor workflow. All items independent of 
 ### 2.11 — Health check endpoint `[PARALLEL]`
 - [x] 2.11.1 — Add optional `--http-addr` flag (default: disabled, e.g. `:9090`) `P2` `S`
 - [x] 2.11.2 — Implement `/healthz` endpoint: returns 200 if process alive, 503 if shutting down `P2` `S`
-- [ ] 2.11.3 — Implement `/readyz` endpoint: returns 200 if scan complete and sessions loaded `P2` `S`
-- [ ] 2.11.4 — Implement `/metrics` stub: placeholder for Prometheus endpoint (wired in Phase 6) `P2` `S`
+- [x] 2.11.3 — Implement `/readyz` endpoint: returns 200 if scan complete and sessions loaded `P2` `S`
+- [x] 2.11.4 — Implement `/metrics` stub: placeholder for Prometheus endpoint (wired in Phase 6) `P2` `S`
 - [ ] 2.11.5 — Add systemd watchdog integration: `sd_notify` READY and WATCHDOG signals `P2` `M`
 - **Acceptance:** `curl localhost:9090/healthz` returns 200 when TUI is running
 
 ### 2.12 — Telemetry opt-in `[PARALLEL]`
-- [ ] 2.12.1 — Define telemetry event schema: session_start, session_stop, crash, budget_hit, circuit_trip `P2` `S`
+- [x] 2.12.1 — Define telemetry event schema: session_start, session_stop, crash, budget_hit, circuit_trip `P2` `S`
 - [ ] 2.12.2 — Local JSONL file writer: append events to `~/.ralphglasses/telemetry.jsonl` `P2` `M`
-- [ ] 2.12.3 — Add `--telemetry` flag and `TELEMETRY_ENABLED` config key (default: off) `P2` `S`
+- [x] 2.12.3 — Add `--telemetry` flag and `TELEMETRY_ENABLED` config key (default: off) `P2` `S`
 - [ ] 2.12.4 — Optional remote POST: send anonymized events to configurable endpoint `P2` `M`
 - [ ] 2.12.5 — Add `ralphglasses telemetry export` subcommand: export telemetry as CSV/JSON `P2` `S`
 - **Acceptance:** telemetry events written to local file when opt-in enabled
