@@ -144,6 +144,43 @@ func (m Model) execCommand(cmd Command) (tea.Model, tea.Cmd) {
 		m.switchTab(3, ViewFleet, "Fleet")
 	case "repos":
 		m.switchTab(0, ViewOverview, "Repos")
+	case "launch":
+		// :launch <repo> [model] — launch a new session from discovered repos
+		if len(cmd.Args) == 0 {
+			// Show list of available repos
+			var names []string
+			for _, r := range m.Repos {
+				names = append(names, r.Name)
+			}
+			if len(names) == 0 {
+				m.Notify.Show("No repos discovered. Run :scan first.", 3*time.Second)
+			} else {
+				m.Notify.Show(fmt.Sprintf("Usage: :launch <repo> [model] — repos: %s", strings.Join(names, ", ")), 4*time.Second)
+			}
+			return m, nil
+		}
+		idx := m.findRepoByName(cmd.Args[0])
+		if idx < 0 {
+			m.Notify.Show(fmt.Sprintf("Repo not found: %s", cmd.Args[0]), 3*time.Second)
+			return m, nil
+		}
+		launchModel := ""
+		if len(cmd.Args) > 1 {
+			launchModel = cmd.Args[1]
+		}
+		repo := m.Repos[idx]
+		opts := session.LaunchOptions{
+			RepoPath: repo.Path,
+			Prompt:   "Continue working on improvements",
+			Model:    launchModel,
+		}
+		s, err := m.SessMgr.Launch(context.Background(), opts)
+		if err != nil {
+			m.Notify.Show(fmt.Sprintf("Launch failed: %s", err), 4*time.Second)
+			return m, nil
+		}
+		m.Notify.Show(fmt.Sprintf("Launched session %s for %s", s.ID[:8], repo.Name), 3*time.Second)
+		return m, nil
 	case "theme":
 		if len(cmd.Args) == 0 {
 			names := make([]string, 0)

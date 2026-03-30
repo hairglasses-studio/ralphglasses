@@ -46,6 +46,7 @@ func RenderHelp(groups []HelpGroup, width, height int) string {
 		{":teams", "Switch to teams tab"},
 		{":fleet", "Switch to fleet dashboard"},
 		{":start <repo>", "Start loop for repo"},
+		{":launch <repo>", "Launch session for repo"},
 		{":stop <repo>", "Stop loop for repo"},
 		{":stopall", "Stop all loops"},
 		{":scan", "Re-scan for repos"},
