@@ -17,11 +17,15 @@ import (
 // Supervisor monitors health metrics, proposes decisions via DecisionLog,
 // and executes them. It runs when autonomy level >= 2.
 type Supervisor struct {
-	mgr       *Manager
-	decisions *DecisionLog
-	monitor   *HealthMonitor
-	chainer   *CycleChainer
-	optimizer *AutoOptimizer
+	mgr          *Manager
+	decisions    *DecisionLog
+	monitor      *HealthMonitor
+	chainer      *CycleChainer
+	optimizer    *AutoOptimizer
+	stallHandler *SupervisorStallHandler
+	gates        *SupervisorGates
+	planner      *SprintPlanner
+	budget       *BudgetEnvelope
 
 	mu      sync.Mutex
 	running bool
@@ -48,6 +52,7 @@ type Supervisor struct {
 // SupervisorState is persisted to .ralph/supervisor_state.json.
 type SupervisorState struct {
 	Running         bool      `json:"running"`
+	BudgetSpentUSD  float64   `json:"budget_spent_usd,omitempty"`
 	RepoPath        string    `json:"repo_path"`
 	LastCycleLaunch time.Time `json:"last_cycle_launch"`
 	TickCount       int       `json:"tick_count"`
@@ -80,6 +85,22 @@ func (s *Supervisor) SetOptimizer(o *AutoOptimizer) { s.mu.Lock(); s.optimizer =
 
 // SetBus sets the event bus for publishing supervisor events.
 func (s *Supervisor) SetBus(b *events.Bus) { s.mu.Lock(); s.bus = b; s.mu.Unlock() }
+
+// SetStallHandler sets the stall detection handler.
+func (s *Supervisor) SetStallHandler(h *SupervisorStallHandler) {
+	s.mu.Lock()
+	s.stallHandler = h
+	s.mu.Unlock()
+}
+
+// SetGates sets the acceptance gates for post-cycle validation.
+func (s *Supervisor) SetGates(g *SupervisorGates) { s.mu.Lock(); s.gates = g; s.mu.Unlock() }
+
+// SetSprintPlanner sets the sprint planner for automatic roadmap-driven sprint planning.
+func (s *Supervisor) SetSprintPlanner(sp *SprintPlanner) { s.mu.Lock(); s.planner = sp; s.mu.Unlock() }
+
+// SetBudget sets the budget envelope for real-time cost tracking.
+func (s *Supervisor) SetBudget(b *BudgetEnvelope) { s.mu.Lock(); s.budget = b; s.mu.Unlock() }
 
 // Start launches the supervisor goroutine. Idempotent.
 func (s *Supervisor) Start(ctx context.Context) error {
@@ -137,11 +158,16 @@ func (s *Supervisor) TickCount() int { s.mu.Lock(); defer s.mu.Unlock(); return 
 // Status returns a state snapshot.
 func (s *Supervisor) Status() SupervisorState {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	return SupervisorState{
+	budget := s.budget
+	st := SupervisorState{
 		Running: s.running, RepoPath: s.RepoPath,
 		LastCycleLaunch: s.lastCycleLaunch, TickCount: s.tickCount, StartedAt: s.startedAt,
 	}
+	s.mu.Unlock()
+	if budget != nil {
+		st.BudgetSpentUSD = budget.Spent()
+	}
+	return st
 }
 
 func (s *Supervisor) run(ctx context.Context) {
@@ -170,8 +196,19 @@ func (s *Supervisor) tick(ctx context.Context) {
 		return
 	}
 
+	// Check for stalled sessions before health evaluation.
 	s.mu.Lock()
-	monitor, chainer := s.monitor, s.chainer
+	stallHandler := s.stallHandler
+	s.mu.Unlock()
+	if stallHandler != nil && s.mgr != nil {
+		if killed := stallHandler.CheckAndHandle(ctx, s.mgr, s.bus, s.RepoPath); len(killed) > 0 {
+			slog.Info("supervisor: killed stalled sessions", "count", len(killed), "ids", killed)
+		}
+	}
+
+	s.mu.Lock()
+	monitor, chainer, planner := s.monitor, s.chainer, s.planner
+	mgr, repoPath := s.mgr, s.RepoPath
 	s.mu.Unlock()
 
 	if signals := monitor.Evaluate(s.RepoPath); len(signals) > 0 {
@@ -182,17 +219,41 @@ func (s *Supervisor) tick(ctx context.Context) {
 			"source": "supervisor", "signal_count": len(signals),
 		})
 	}
+
+	var chainedCycle *CycleRun
 	if chainer != nil {
 		if nextCycle, err := chainer.CheckAndChain(ctx, s.RepoPath); err != nil {
 			slog.Warn("supervisor: chain check failed", "error", err)
-		} else if nextCycle != nil && s.mgr != nil {
+		} else if nextCycle != nil && mgr != nil {
+			chainedCycle = nextCycle
 			go func() {
-				if _, err := s.mgr.RunCycle(ctx, nextCycle.RepoPath, nextCycle.Name, nextCycle.Objective, nextCycle.SuccessCriteria, 3); err != nil {
+				if _, err := mgr.RunCycle(ctx, nextCycle.RepoPath, nextCycle.Name, nextCycle.Objective, nextCycle.SuccessCriteria, 3); err != nil {
 					slog.Warn("supervisor: chained cycle failed", "error", err)
 				}
 			}()
 		}
 	}
+
+	// If chainer did not produce a cycle, try sprint planner.
+	if planner != nil && chainedCycle == nil && mgr != nil {
+		if planned := planner.PlanNextSprint(repoPath); planned != nil {
+			slog.Info("supervisor: sprint planner produced cycle",
+				"name", planned.Name, "tasks", len(planned.Tasks))
+			go func() {
+				if _, err := mgr.RunCycle(ctx, planned.RepoPath, planned.Name, planned.Objective, planned.SuccessCriteria, len(planned.Tasks)); err != nil {
+					slog.Warn("supervisor: planned sprint failed", "error", err)
+				}
+			}()
+			s.mu.Lock()
+			s.lastCycleLaunch = time.Now()
+			s.cyclesLaunched++
+			s.mu.Unlock()
+			s.publishEvent(events.LoopStarted, map[string]any{
+				"source": "sprint_planner", "cycle": planned.Name, "objective": planned.Objective,
+			})
+		}
+	}
+
 	s.mu.Lock()
 	s.tickCount++
 	s.mu.Unlock()
@@ -209,7 +270,11 @@ func (s *Supervisor) shouldTerminate() string {
 	if s.MaxDuration > 0 && !s.startedAt.IsZero() && time.Since(s.startedAt) >= s.MaxDuration {
 		return fmt.Sprintf("max_duration elapsed (%s)", s.MaxDuration)
 	}
-	if s.MaxTotalCostUSD > 0 {
+	if s.budget != nil && !s.budget.CanSpend(0) {
+		return fmt.Sprintf("budget exhausted ($%.2f spent of $%.2f)", s.budget.Spent(), s.budget.TotalBudgetUSD)
+	}
+	if s.budget == nil && s.MaxTotalCostUSD > 0 {
+		// Fallback: file-polling cost check when no budget envelope is set.
 		obsPath := filepath.Join(s.RepoPath, ".ralph", "cost_observations.json")
 		if obs, err := LoadObservations(obsPath, s.startedAt); err == nil {
 			var total float64
@@ -279,10 +344,15 @@ func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal, decis
 	cooldown, mgr, repoPath := s.CooldownBetween, s.mgr, s.RepoPath
 	dl := s.decisions
 	isFirst := s.lastCycleLaunch.IsZero()
+	budget := s.budget
 	s.mu.Unlock()
 
 	if !isFirst && elapsed < cooldown {
 		slog.Debug("supervisor: cycle launch skipped (cooldown)", "elapsed", elapsed)
+		return
+	}
+	if budget != nil && !budget.CanSpend(budget.PerCycleCap()) {
+		slog.Info("supervisor: cycle launch skipped (budget)", "remaining", budget.Remaining())
 		return
 	}
 	objective := "Explore improvements from ROADMAP.md"
@@ -301,7 +371,23 @@ func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal, decis
 				outcome.Details = err.Error()
 				slog.Warn("supervisor: RunCycle failed", "error", err)
 			} else {
-				outcome.Details = "cycle completed"
+				// Run acceptance gates after successful cycle.
+				s.mu.Lock()
+				gates := s.gates
+				s.mu.Unlock()
+				if gates != nil {
+					findings, passed := gates.Evaluate(ctx, repoPath)
+					if !passed {
+						outcome.Details = fmt.Sprintf("cycle completed but %d gate(s) failed", len(findings))
+						slog.Warn("supervisor: gate failures", "count", len(findings))
+						s.recordGateFindings(repoPath, findings)
+					} else {
+						outcome.Details = "cycle completed, all gates passed"
+					}
+				} else {
+					outcome.Details = "cycle completed"
+				}
+				outcome.Success = true
 			}
 			if dl != nil && decisionID != "" {
 				dl.RecordOutcome(decisionID, outcome)
@@ -404,8 +490,12 @@ func (s *Supervisor) persistState() {
 		Running: s.running, RepoPath: s.RepoPath,
 		LastCycleLaunch: s.lastCycleLaunch, TickCount: s.tickCount, StartedAt: s.startedAt,
 	}
+	budget := s.budget
 	repoPath := s.RepoPath
 	s.mu.Unlock()
+	if budget != nil {
+		state.BudgetSpentUSD = budget.Spent()
+	}
 	if repoPath == "" {
 		return
 	}
@@ -418,4 +508,35 @@ func (s *Supervisor) persistState() {
 		return
 	}
 	_ = os.WriteFile(filepath.Join(dir, "supervisor_state.json"), data, 0644)
+}
+
+// ResumeFromState reads .ralph/supervisor_state.json and restores state.
+func (s *Supervisor) ResumeFromState() error {
+	statePath := filepath.Join(s.RepoPath, ".ralph", "supervisor_state.json")
+	data, err := os.ReadFile(statePath)
+	if err != nil {
+		return fmt.Errorf("read state: %w", err)
+	}
+	var state SupervisorState
+	if err := json.Unmarshal(data, &state); err != nil {
+		return fmt.Errorf("parse state: %w", err)
+	}
+	s.mu.Lock()
+	s.tickCount = state.TickCount
+	s.lastCycleLaunch = state.LastCycleLaunch
+	// Don't restore startedAt — this is a new run.
+	s.mu.Unlock()
+	slog.Info("supervisor: resumed state", "tick_count", state.TickCount, "last_launch", state.LastCycleLaunch)
+	return nil
+}
+
+// recordGateFindings writes gate findings to .ralph/gate_findings.json.
+func (s *Supervisor) recordGateFindings(repoPath string, findings []CycleFinding) {
+	dir := filepath.Join(repoPath, ".ralph")
+	_ = os.MkdirAll(dir, 0755)
+	data, err := json.MarshalIndent(findings, "", "  ")
+	if err != nil {
+		return
+	}
+	_ = os.WriteFile(filepath.Join(dir, "gate_findings.json"), data, 0644)
 }
