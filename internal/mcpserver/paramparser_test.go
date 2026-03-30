@@ -531,3 +531,133 @@ func TestParamParser_BoolErr(t *testing.T) {
 		})
 	}
 }
+
+// --- Tests for new convenience methods ---
+
+func TestParamParser_Require_Alias(t *testing.T) {
+	t.Parallel()
+	pp := NewParamParser(map[string]any{"a": "1"})
+	if err := pp.Require("a"); err != nil {
+		t.Fatalf("Require present key: unexpected error: %v", err)
+	}
+	if err := pp.Require("a", "b"); err == nil {
+		t.Fatal("Require with missing key: expected error, got nil")
+	}
+}
+
+func TestParamParser_OptionalString(t *testing.T) {
+	t.Parallel()
+	pp := NewParamParser(map[string]any{"k": "val"})
+	if got := pp.OptionalString("k", "def"); got != "val" {
+		t.Errorf("OptionalString present = %q, want %q", got, "val")
+	}
+	if got := pp.OptionalString("missing", "def"); got != "def" {
+		t.Errorf("OptionalString absent = %q, want %q", got, "def")
+	}
+}
+
+func TestParamParser_OptionalInt(t *testing.T) {
+	t.Parallel()
+	pp := NewParamParser(map[string]any{"k": float64(42)})
+	if got := pp.OptionalInt("k", 10); got != 42 {
+		t.Errorf("OptionalInt present = %d, want 42", got)
+	}
+	if got := pp.OptionalInt("missing", 10); got != 10 {
+		t.Errorf("OptionalInt absent = %d, want 10", got)
+	}
+}
+
+func TestParamParser_BoolOr(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		args       map[string]any
+		key        string
+		defaultVal bool
+		want       bool
+	}{
+		{name: "present_true", args: map[string]any{"k": true}, key: "k", defaultVal: false, want: true},
+		{name: "present_false", args: map[string]any{"k": false}, key: "k", defaultVal: true, want: false},
+		{name: "absent_default_true", args: map[string]any{}, key: "k", defaultVal: true, want: true},
+		{name: "absent_default_false", args: map[string]any{}, key: "k", defaultVal: false, want: false},
+		{name: "wrong_type", args: map[string]any{"k": "true"}, key: "k", defaultVal: true, want: true},
+		{name: "nil_map", args: nil, key: "k", defaultVal: true, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			pp := NewParamParser(tt.args)
+			got := pp.BoolOr(tt.key, tt.defaultVal)
+			if got != tt.want {
+				t.Errorf("BoolOr(%q, %v) = %v, want %v", tt.key, tt.defaultVal, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParamParser_OptionalBool(t *testing.T) {
+	t.Parallel()
+	pp := NewParamParser(map[string]any{"k": true})
+	if got := pp.OptionalBool("k", false); got != true {
+		t.Errorf("OptionalBool present = %v, want true", got)
+	}
+	if got := pp.OptionalBool("missing", true); got != true {
+		t.Errorf("OptionalBool absent = %v, want true", got)
+	}
+}
+
+func TestParamParser_FloatOr(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		args       map[string]any
+		key        string
+		defaultVal float64
+		want       float64
+	}{
+		{name: "present", args: map[string]any{"k": 3.14}, key: "k", defaultVal: 1.0, want: 3.14},
+		{name: "absent", args: map[string]any{}, key: "k", defaultVal: 2.5, want: 2.5},
+		{name: "wrong_type", args: map[string]any{"k": "nope"}, key: "k", defaultVal: 9.9, want: 9.9},
+		{name: "nil_map", args: nil, key: "k", defaultVal: 7.7, want: 7.7},
+		{name: "zero_default", args: map[string]any{}, key: "k", defaultVal: 0, want: 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			pp := NewParamParser(tt.args)
+			got := pp.FloatOr(tt.key, tt.defaultVal)
+			if got != tt.want {
+				t.Errorf("FloatOr(%q, %f) = %f, want %f", tt.key, tt.defaultVal, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParamParser_OptionalFloat(t *testing.T) {
+	t.Parallel()
+	pp := NewParamParser(map[string]any{"k": 3.14})
+	if got := pp.OptionalFloat("k", 1.0); got != 3.14 {
+		t.Errorf("OptionalFloat present = %f, want 3.14", got)
+	}
+	if got := pp.OptionalFloat("missing", 1.0); got != 1.0 {
+		t.Errorf("OptionalFloat absent = %f, want 1.0", got)
+	}
+}
+
+func TestNewParamParserFromRequest_NilArgs(t *testing.T) {
+	t.Parallel()
+	// Verify all Optional* methods return defaults on nil map.
+	pp := NewParamParser(nil)
+	if got := pp.String("anything"); got != "" {
+		t.Errorf("String on nil parser = %q, want empty", got)
+	}
+	if got := pp.OptionalInt("x", 5); got != 5 {
+		t.Errorf("OptionalInt on nil parser = %d, want 5", got)
+	}
+	if got := pp.OptionalBool("x", true); got != true {
+		t.Errorf("OptionalBool on nil parser = %v, want true", got)
+	}
+	if got := pp.OptionalFloat("x", 2.5); got != 2.5 {
+		t.Errorf("OptionalFloat on nil parser = %f, want 2.5", got)
+	}
+}

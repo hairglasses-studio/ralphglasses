@@ -14,10 +14,11 @@ import (
 // Session CRUD and status handlers
 
 func (s *Server) handleSessionList(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoFilter := getStringArg(req, "repo")
-	providerFilter := getStringArg(req, "provider")
-	statusFilter := getStringArg(req, "status")
-	includeEnded := getBoolArg(req, "include_ended")
+	pp := NewParamParserFromRequest(req)
+	repoFilter := pp.String("repo")
+	providerFilter := pp.String("provider")
+	statusFilter := pp.String("status")
+	includeEnded := pp.Bool("include_ended")
 
 	var repoPath string
 	if repoFilter != "" {
