@@ -43,7 +43,7 @@ func (k KeyMap) HelpGroups() []views.HelpGroup {
 		{Name: "Team Orchestration", Bindings: []key.Binding{k.Down, k.GotoEnd, k.GotoStart, k.PageUp, k.PageDown}},
 		{Name: "Fleet", Bindings: []key.Binding{k.Down, k.Enter, k.StopAction, k.DiffView, k.TimelineView}},
 		{Name: "Log Viewer", Bindings: []key.Binding{k.Down, k.GotoEnd, k.GotoStart, k.FollowToggle, k.PageUp, k.PageDown}},
-		{Name: "Config Editor", Bindings: []key.Binding{k.Down, k.Enter, k.WriteConfig}},
+		{Name: "Config Editor", Bindings: []key.Binding{k.Down, k.Enter, k.ConfigInsert, k.ConfigRename, k.ConfigDelete, k.ConfigUndo, k.WriteConfig}},
 		{Name: "R&D Cycle", Bindings: []key.Binding{k.RDCycle, k.Down, k.GotoEnd, k.GotoStart, k.PageUp, k.PageDown}},
 	}
 }
