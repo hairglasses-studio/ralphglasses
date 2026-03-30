@@ -100,8 +100,8 @@ func (c *Coordinator) Start(ctx context.Context) error {
 	mux.HandleFunc("GET /api/v1/sessions", c.handleSessions)
 	mux.HandleFunc("GET /healthz", c.handleHealthz)
 
-	// A2A AgentCard discovery endpoint
-	mux.HandleFunc("GET /.well-known/agent.json", c.handleAgentCard)
+	// A2A AgentCard discovery endpoint (v1.0 spec path)
+	mux.HandleFunc("GET "+AgentCardDiscoveryPath, c.handleAgentCard)
 	mux.HandleFunc("GET /api/v1/a2a/task/{taskID}", c.handleA2ATaskStatus)
 
 	// Prometheus metrics endpoint
