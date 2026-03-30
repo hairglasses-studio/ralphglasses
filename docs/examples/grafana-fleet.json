@@ -1,0 +1,849 @@
+{
+  "__README__": "Ralphglasses Fleet Monitoring Dashboard. Import into Grafana via Dashboards > Import > Upload JSON. Requires a Prometheus datasource scraping the ralphglasses /metrics endpoint. Metric names match internal/tracing/prometheus.go: gen_ai_sessions_total, gen_ai_sessions_active, gen_ai_cost_usd_total, gen_ai_errors_total, gen_ai_turn_latency_ms_total, gen_ai_input_tokens_total, gen_ai_output_tokens_total, mcp_tool_calls_total, etc.",
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "enable": true,
+        "expr": "changes(gen_ai_sessions_total[$__interval]) > 0",
+        "hide": false,
+        "iconColor": "green",
+        "name": "Session Start",
+        "step": "30s",
+        "tagKeys": "provider",
+        "titleFormat": "Session started ({{provider}})",
+        "type": "dashboard",
+        "useValueForTime": false
+      },
+      {
+        "builtIn": 0,
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "enable": true,
+        "expr": "delta(gen_ai_sessions_active[1m]) < 0",
+        "hide": false,
+        "iconColor": "red",
+        "name": "Session Stop",
+        "step": "30s",
+        "tagKeys": "provider",
+        "titleFormat": "Session stopped ({{provider}})",
+        "type": "dashboard",
+        "useValueForTime": false
+      }
+    ]
+  },
+  "description": "Fleet-wide monitoring for ralphglasses multi-LLM agent sessions. Tracks sessions, costs, errors, latency, and provider distribution across Claude, Gemini, and OpenAI.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Fleet Overview",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Currently active sessions across all providers",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 20 }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(gen_ai_sessions_active{provider=~\"$provider\"})",
+          "legendFormat": "Active Sessions",
+          "refId": "A"
+        }
+      ],
+      "title": "Active Sessions",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Total sessions launched over selected time range",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(increase(gen_ai_sessions_total{provider=~\"$provider\"}[$__range]))",
+          "legendFormat": "Total Launched",
+          "refId": "A"
+        }
+      ],
+      "title": "Sessions Launched",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Error rate as percentage of total turns",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 10 }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(gen_ai_errors_total{provider=~\"$provider\"}[5m])) / (sum(rate(gen_ai_turns_total{provider=~\"$provider\"}[5m])) > 0) * 100",
+          "legendFormat": "Error Rate %",
+          "refId": "A"
+        }
+      ],
+      "title": "Error Rate",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Current cost burn rate across the fleet",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "continuous-GrYlRd" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "red", "value": 20 }
+            ]
+          },
+          "unit": "currencyUSD",
+          "min": 0,
+          "max": 50
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "id": 4,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(gen_ai_cost_usd_total{provider=~\"$provider\"}[5m])) * 3600",
+          "legendFormat": "$/hr",
+          "refId": "A"
+        }
+      ],
+      "title": "Cost per Hour",
+      "type": "gauge"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Cumulative fleet spend over the selected time range",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 100 }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(increase(gen_ai_cost_usd_total{provider=~\"$provider\"}[$__range]))",
+          "legendFormat": "Total Spend",
+          "refId": "A"
+        }
+      ],
+      "title": "Total Spend",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Total MCP tool invocations",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "purple", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "id": 6,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(increase(mcp_tool_calls_total[$__range]))",
+          "legendFormat": "Tool Calls",
+          "refId": "A"
+        }
+      ],
+      "title": "Tool Calls",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 101,
+      "title": "Sessions & Providers",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Active session count over time, broken down by provider",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "Sessions",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": { "group": "A", "mode": "normal" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "id": 10,
+      "options": {
+        "legend": { "calcs": ["mean", "max", "lastNotNull"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "gen_ai_sessions_active{provider=~\"$provider\"}",
+          "legendFormat": "{{provider}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Active Sessions Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Session distribution across Claude, Gemini, and OpenAI providers",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "hideFrom": { "legend": false, "tooltip": false, "viz": false } }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "claude" }, "properties": [{ "id": "color", "value": { "fixedColor": "#da7b30", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "gemini" }, "properties": [{ "id": "color", "value": { "fixedColor": "#4285f4", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "openai" }, "properties": [{ "id": "color", "value": { "fixedColor": "#10a37f", "mode": "fixed" } }] }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 6 },
+      "id": 11,
+      "options": {
+        "displayLabels": ["name", "percent"],
+        "legend": { "displayMode": "list", "placement": "bottom", "values": ["value", "percent"] },
+        "pieType": "donut",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (provider) (increase(gen_ai_sessions_total{provider=~\"$provider\"}[$__range]))",
+          "legendFormat": "{{provider}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Provider Distribution",
+      "type": "piechart"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Session launch rate over time",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisLabel": "Sessions/min",
+            "axisPlacement": "auto",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "scaleDistribution": { "type": "linear" },
+            "stacking": { "group": "A", "mode": "normal" }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 6 },
+      "id": 12,
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (provider) (rate(gen_ai_sessions_total{provider=~\"$provider\"}[5m])) * 60",
+          "legendFormat": "{{provider}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Session Launch Rate",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "id": 102,
+      "title": "Cost & Tokens",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Cumulative cost over time by provider",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisLabel": "USD",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": { "group": "A", "mode": "normal" }
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "id": 20,
+      "options": {
+        "legend": { "calcs": ["sum", "lastNotNull"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (provider) (increase(gen_ai_cost_usd_total{provider=~\"$provider\"}[$__interval]))",
+          "legendFormat": "{{provider}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Cumulative Cost",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Token throughput by type and provider",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisLabel": "Tokens/sec",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": { "group": "A", "mode": "none" }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "id": 21,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (provider) (rate(gen_ai_input_tokens_total{provider=~\"$provider\"}[5m]))",
+          "legendFormat": "{{provider}} input",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (provider) (rate(gen_ai_output_tokens_total{provider=~\"$provider\"}[5m]))",
+          "legendFormat": "{{provider}} output",
+          "refId": "B"
+        }
+      ],
+      "title": "Token Throughput",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "id": 103,
+      "title": "Latency & Errors",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Average turn latency by provider. For p50/p95/p99, configure a histogram metric (gen_ai_turn_latency_seconds) in the application.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisLabel": "Latency (ms)",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "dashed" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 30000 },
+              { "color": "red", "value": 60000 }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "id": 30,
+      "options": {
+        "legend": { "calcs": ["mean", "max", "lastNotNull"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (provider) (rate(gen_ai_turn_latency_ms_total{provider=~\"$provider\"}[5m])) / sum by (provider) (rate(gen_ai_turns_total{provider=~\"$provider\"}[5m]))",
+          "legendFormat": "{{provider}} avg",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.50, sum by (le, provider) (rate(gen_ai_turn_latency_seconds_bucket{provider=~\"$provider\"}[5m])))",
+          "legendFormat": "{{provider}} p50",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.95, sum by (le, provider) (rate(gen_ai_turn_latency_seconds_bucket{provider=~\"$provider\"}[5m])))",
+          "legendFormat": "{{provider}} p95",
+          "refId": "C"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.99, sum by (le, provider) (rate(gen_ai_turn_latency_seconds_bucket{provider=~\"$provider\"}[5m])))",
+          "legendFormat": "{{provider}} p99",
+          "refId": "D"
+        }
+      ],
+      "title": "Turn Latency (avg + p50/p95/p99)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Error rate over time by provider",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisLabel": "Errors/min",
+            "axisPlacement": "auto",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "scaleDistribution": { "type": "linear" },
+            "stacking": { "group": "A", "mode": "normal" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "id": 31,
+      "options": {
+        "legend": { "calcs": ["sum", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (provider) (rate(gen_ai_errors_total{provider=~\"$provider\"}[5m])) * 60",
+          "legendFormat": "{{provider}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Error Rate Over Time",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
+      "id": 104,
+      "title": "MCP Tools & Active Sessions Table",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Top MCP tools by call volume",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisLabel": "Calls/min",
+            "axisPlacement": "auto",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "scaleDistribution": { "type": "linear" },
+            "stacking": { "group": "A", "mode": "normal" }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 33 },
+      "id": 40,
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "right" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "topk(10, sum by (tool) (rate(mcp_tool_calls_total[5m]))) * 60",
+          "legendFormat": "{{tool}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Top MCP Tool Calls",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Current active sessions with provider, model, repo, and cost details",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Cost (USD)" },
+            "properties": [
+              { "id": "unit", "value": "currencyUSD" },
+              { "id": "decimals", "value": 4 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Turns" },
+            "properties": [
+              { "id": "decimals", "value": 0 }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 33 },
+      "id": 41,
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Cost (USD)" }],
+        "cellHeight": "sm",
+        "footer": { "countRows": true, "enablePagination": true, "fields": ["Cost (USD)"], "reducer": ["sum"], "show": true }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "gen_ai_session_cost_usd{provider=~\"$provider\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Active Sessions",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true },
+            "renameByName": {
+              "provider": "Provider",
+              "repo_name": "Repository",
+              "Value": "Cost (USD)"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["ralphglasses", "fleet", "llm", "multi-agent"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": false, "text": "Prometheus", "value": "Prometheus" },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "allValue": ".*",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "definition": "label_values(gen_ai_sessions_total, provider)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Provider",
+        "multi": true,
+        "name": "provider",
+        "options": [],
+        "query": { "qryType": 1, "query": "label_values(gen_ai_sessions_total, provider)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": { "selected": false, "text": "All", "value": "$__all" },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "definition": "label_values(gen_ai_session_cost_usd, repo_name)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Session ID",
+        "multi": true,
+        "name": "session_id",
+        "options": [],
+        "query": { "qryType": 1, "query": "label_values(gen_ai_session_cost_usd, repo_name)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d"]
+  },
+  "timezone": "browser",
+  "title": "Ralphglasses Fleet Monitor",
+  "uid": "ralphglasses-fleet",
+  "version": 1,
+  "weekStart": "",
+  "liveNow": false,
+  "style": "dark",
+  "alerts": [
+    {
+      "name": "Budget Exceeded",
+      "message": "Fleet cost burn rate exceeds $20/hr threshold",
+      "conditions": [
+        {
+          "evaluator": { "type": "gt", "params": [20] },
+          "operator": { "type": "and" },
+          "query": { "params": ["A", "5m", "now"] },
+          "reducer": { "type": "avg", "params": [] },
+          "type": "query"
+        }
+      ],
+      "executionErrorState": "alerting",
+      "for": "2m",
+      "frequency": "1m",
+      "noDataState": "no_data",
+      "notifications": [],
+      "alertRuleTags": { "severity": "critical", "team": "fleet" }
+    },
+    {
+      "name": "Error Spike",
+      "message": "Error rate exceeds 10% of total turns across the fleet",
+      "conditions": [
+        {
+          "evaluator": { "type": "gt", "params": [10] },
+          "operator": { "type": "and" },
+          "query": { "params": ["A", "5m", "now"] },
+          "reducer": { "type": "avg", "params": [] },
+          "type": "query"
+        }
+      ],
+      "executionErrorState": "alerting",
+      "for": "3m",
+      "frequency": "1m",
+      "noDataState": "ok",
+      "notifications": [],
+      "alertRuleTags": { "severity": "warning", "team": "fleet" }
+    },
+    {
+      "name": "Session Stall",
+      "message": "No turns recorded for any active session in 10 minutes — possible stall",
+      "conditions": [
+        {
+          "evaluator": { "type": "lt", "params": [0.01] },
+          "operator": { "type": "and" },
+          "query": { "params": ["A", "10m", "now"] },
+          "reducer": { "type": "avg", "params": [] },
+          "type": "query"
+        }
+      ],
+      "executionErrorState": "alerting",
+      "for": "10m",
+      "frequency": "2m",
+      "noDataState": "ok",
+      "notifications": [],
+      "alertRuleTags": { "severity": "warning", "team": "fleet" }
+    }
+  ]
+}
