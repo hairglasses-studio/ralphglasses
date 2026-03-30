@@ -245,7 +245,7 @@ Post-gate-pass improvements. All items are independent, parallel, and sized for 
 - [x] 0.7.8 — Worktree cleanup robustness: age-based cleanup with lock file + uncommitted change detection `P1` `M`
 - [x] 0.7.9 — CLI os.Exit fix: sentinel errors (ErrChecksFailed, ErrGateFailed) for cobra handling `P1` `S`
 - [x] 0.7.10 — Planner task dedup: Jaccard similarity + content-overlap filtering in loop_steps.go `P1` `M`
-- [ ] 0.7.11 — Marathon resource monitoring: disk space, memory checks, log rotation `P2` `M`
+- [x] 0.7.11 — Marathon resource monitoring: disk space, memory checks, log rotation `P2` `M`
 
 ## Phase 0.8: MCP Observability & Scratchpad Automation (COMPLETE)
 
@@ -349,7 +349,7 @@ Implements MCP spec features: structured output schemas, logging notifications.
 - [ ] 1.5.1 — Add key CRUD operations: insert new key, rename key, delete key from TUI `P2` `M`
 - [x] 1.5.2 — Wire fsnotify on `.ralphrc` file; reload config on external change, emit notification `P1` `M`
 - [x] 1.5.3 — Add validation rules per key type (numeric ranges, boolean, enum values) `P1` `M`
-- [ ] 1.5.4 — Implement undo buffer (single-level: revert last edit) `P2` `S`
+- [x] 1.5.4 — Implement undo buffer (single-level: revert last edit) `P2` `S`
 - **Acceptance:** external edits reflected without restart, invalid values rejected with message
 
 ### 1.6 — Test coverage targets
@@ -546,10 +546,10 @@ Tooling, release automation, and contributor workflow. All items independent of 
 
 ### 2.7 — tmux integration `[PARALLEL — independent after 2.1]`
 - [x] 2.7.1 — `internal/tmux/` package: create/list/kill sessions, name windows, attach/detach `P2` `M`
-- [ ] 2.7.2 — One tmux pane per agent session: auto-create on session launch, name = session ID `P2` `M`
+- [x] 2.7.2 — One tmux pane per agent session: auto-create on session launch, name = session ID `P2` `M`
 - [x] 2.7.3 — `ralphglasses tmux` subcommand: `list`, `attach <session>`, `detach` `P2` `S`
-- [ ] 2.7.4 — Headless mode: detect no TTY -> auto-use tmux instead of TUI `P1` `M`
-- [ ] 2.7.5 — Port patterns from claude-tools (WSL-native tmux management, `/mnt/c/` path handling) `P2` `S`
+- [x] 2.7.4 — Headless mode: detect no TTY -> auto-use tmux instead of TUI `P1` `M`
+- [x] 2.7.5 — Port patterns from claude-tools (WSL-native tmux management, `/mnt/c/` path handling) `P2` `S`
 - **Acceptance:** `ralphglasses tmux list` shows active sessions, `attach` works
 
 ### 2.8 — MCP server expansion `[BLOCKED BY 2.1, 2.2, 2.3]`

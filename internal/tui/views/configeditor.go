@@ -9,6 +9,12 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
+// undoEntry stores a single-level undo snapshot.
+type undoEntry struct {
+	Key      string
+	OldValue string
+}
+
 // ConfigEditor provides a simple form-based .ralphrc editor.
 type ConfigEditor struct {
 	Config  *model.RalphConfig
@@ -18,6 +24,7 @@ type ConfigEditor struct {
 	EditBuf string
 	Dirty   bool
 	Height  int
+	undo    *undoEntry // single-level undo buffer
 }
 
 // NewConfigEditor creates an editor for the given config.
@@ -70,15 +77,28 @@ func (ce *ConfigEditor) Backspace() {
 	}
 }
 
-// ConfirmEdit saves the edit.
+// ConfirmEdit saves the edit and stores the previous value for undo.
 func (ce *ConfigEditor) ConfirmEdit() {
 	if !ce.Editing || len(ce.Keys) == 0 || ce.Cursor >= len(ce.Keys) {
 		return
 	}
 	key := ce.Keys[ce.Cursor]
+	oldValue := ce.Config.Values[key]
+	ce.undo = &undoEntry{Key: key, OldValue: oldValue}
 	ce.Config.Values[key] = ce.EditBuf
 	ce.Editing = false
 	ce.Dirty = true
+}
+
+// Undo reverts the last edit. Returns true if an undo was performed.
+func (ce *ConfigEditor) Undo() bool {
+	if ce.undo == nil || ce.Editing {
+		return false
+	}
+	ce.Config.Values[ce.undo.Key] = ce.undo.OldValue
+	ce.undo = nil
+	ce.Dirty = true
+	return true
 }
 
 // CancelEdit discards the edit.
@@ -141,7 +161,7 @@ func (ce *ConfigEditor) View() string {
 	if ce.Editing {
 		b.WriteString(styles.HelpStyle.Render("  Enter: save value  Esc: cancel"))
 	} else {
-		b.WriteString(styles.HelpStyle.Render("  Enter: edit  w: save to disk  Esc: back"))
+		b.WriteString(styles.HelpStyle.Render("  Enter: edit  u: undo  w: save to disk  Esc: back"))
 	}
 
 	return b.String()
