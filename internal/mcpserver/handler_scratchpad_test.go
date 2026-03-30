@@ -405,9 +405,9 @@ func TestResolveRepoPath_SingleRepo(t *testing.T) {
 		Repos: []*model.Repo{{Name: "myrepo", Path: root}},
 	}
 
-	got, err := srv.resolveRepoPath("")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	got, errRes := srv.resolveRepoPath("")
+	if errRes != nil {
+		t.Fatalf("unexpected error: %s", getResultText(errRes))
 	}
 	if got != root {
 		t.Errorf("expected %s, got %s", root, got)
@@ -425,9 +425,9 @@ func TestResolveRepoPath_ExplicitRepoParam(t *testing.T) {
 		},
 	}
 
-	got, err := srv.resolveRepoPath("beta")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	got, errRes := srv.resolveRepoPath("beta")
+	if errRes != nil {
+		t.Fatalf("unexpected error: %s", getResultText(errRes))
 	}
 	if got != rootB {
 		t.Errorf("expected %s, got %s", rootB, got)
@@ -441,12 +441,16 @@ func TestResolveRepoPath_ExplicitInvalidRepo(t *testing.T) {
 		Repos: []*model.Repo{{Name: "alpha", Path: root}},
 	}
 
-	_, err := srv.resolveRepoPath("nonexistent")
-	if err == nil {
+	_, errRes := srv.resolveRepoPath("nonexistent")
+	if errRes == nil {
 		t.Fatal("expected error for nonexistent repo")
 	}
-	if !strings.Contains(err.Error(), "repo not found") {
-		t.Errorf("expected 'repo not found' in error, got: %v", err)
+	text := getResultText(errRes)
+	if !strings.Contains(text, "repo not found") {
+		t.Errorf("expected 'repo not found' in error, got: %s", text)
+	}
+	if !strings.Contains(text, string(ErrRepoNotFound)) {
+		t.Errorf("expected error_code %s, got: %s", ErrRepoNotFound, text)
 	}
 }
 
@@ -478,9 +482,9 @@ func TestResolveRepoPath_MultiReposCWDInside(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := srv.resolveRepoPath("")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	got, errRes := srv.resolveRepoPath("")
+	if errRes != nil {
+		t.Fatalf("unexpected error: %s", getResultText(errRes))
 	}
 	if got != rootB {
 		t.Errorf("expected %s, got %s", rootB, got)
@@ -509,18 +513,21 @@ func TestResolveRepoPath_MultiReposCWDOutside(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = srv.resolveRepoPath("")
-	if err == nil {
+	_, errRes := srv.resolveRepoPath("")
+	if errRes == nil {
 		t.Fatal("expected error when CWD is outside all repos")
 	}
-	errMsg := err.Error()
+	errMsg := getResultText(errRes)
 	if !strings.Contains(errMsg, "multiple repos found") {
-		t.Errorf("expected 'multiple repos found' in error, got: %v", errMsg)
+		t.Errorf("expected 'multiple repos found' in error, got: %s", errMsg)
 	}
 	if !strings.Contains(errMsg, "available:") {
-		t.Errorf("expected 'available:' in error, got: %v", errMsg)
+		t.Errorf("expected 'available:' in error, got: %s", errMsg)
 	}
 	if !strings.Contains(errMsg, "alpha") || !strings.Contains(errMsg, "beta") {
-		t.Errorf("expected repo names in error, got: %v", errMsg)
+		t.Errorf("expected repo names in error, got: %s", errMsg)
+	}
+	if !strings.Contains(errMsg, string(ErrInvalidParams)) {
+		t.Errorf("expected error_code %s, got: %s", ErrInvalidParams, errMsg)
 	}
 }

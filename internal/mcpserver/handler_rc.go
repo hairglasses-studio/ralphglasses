@@ -38,9 +38,10 @@ func formatCost(usd float64) string {
 }
 
 // resolveTarget finds a session by ID or by repo name (most recent running session).
-func (s *Server) resolveTarget(target string) (*session.Session, error) {
+// Returns a codedError with the appropriate error code on failure.
+func (s *Server) resolveTarget(target string) (*session.Session, *mcp.CallToolResult) {
 	if target == "" {
-		return nil, fmt.Errorf("target required")
+		return nil, codedError(ErrInvalidParams, "target required")
 	}
 	// Try as session ID first
 	if sess, ok := s.SessMgr.Get(target); ok {
@@ -49,7 +50,7 @@ func (s *Server) resolveTarget(target string) (*session.Session, error) {
 	// Try as repo name
 	sessions := s.SessMgr.FindByRepo(target)
 	if len(sessions) == 0 {
-		return nil, fmt.Errorf("no session found for %q", target)
+		return nil, codedError(ErrSessionNotFound, fmt.Sprintf("no session found for %q", target))
 	}
 	// Prefer running session, otherwise most recent
 	var best *session.Session
@@ -599,9 +600,9 @@ func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp
 
 	switch action {
 	case "stop":
-		sess, err := s.resolveTarget(target)
-		if err != nil {
-			return codedError(ErrSessionNotFound, err.Error()), nil
+		sess, errRes := s.resolveTarget(target)
+		if errRes != nil {
+			return errRes, nil
 		}
 		sess.Lock()
 		sid := sess.ID
@@ -656,9 +657,9 @@ func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp
 		if target == "" {
 			return codedError(ErrInvalidParams, "target required for resume"), nil
 		}
-		sess, err := s.resolveTarget(target)
-		if err != nil {
-			return codedError(ErrSessionNotFound, err.Error()), nil
+		sess, errRes := s.resolveTarget(target)
+		if errRes != nil {
+			return errRes, nil
 		}
 		sess.Lock()
 		psid := sess.ProviderSessionID
@@ -675,9 +676,9 @@ func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp
 		return textResult(fmt.Sprintf("Resumed session %s", shortID(newSess.ID))), nil
 
 	case "retry":
-		sess, err := s.resolveTarget(target)
-		if err != nil {
-			return codedError(ErrSessionNotFound, err.Error()), nil
+		sess, errRes := s.resolveTarget(target)
+		if errRes != nil {
+			return errRes, nil
 		}
 		sess.Lock()
 		opts := session.LaunchOptions{
