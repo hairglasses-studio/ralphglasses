@@ -47,15 +47,49 @@ Then run `direnv allow`.
 
 ## Installation
 
-### Build from source
+=== "Go install"
 
-```bash
-git clone https://github.com/hairglasses-studio/ralphglasses
-cd ralphglasses
-go build -o ralphglasses .
-# Or install to GOBIN:
-go install .
-```
+    ```bash
+    go install github.com/hairglasses-studio/ralphglasses@latest
+    ```
+
+=== "Build from source"
+
+    ```bash
+    git clone https://github.com/hairglasses-studio/ralphglasses
+    cd ralphglasses
+    go build -o ralphglasses .
+    # Or install to GOBIN:
+    go install .
+    ```
+
+=== "Homebrew"
+
+    ```bash
+    brew tap hairglasses-studio/tap
+    brew install ralphglasses
+    ```
+
+=== "Docker"
+
+    ```bash
+    docker pull ghcr.io/hairglasses-studio/ralphglasses:latest
+    docker run -it --rm \
+      -v ~/hairglasses-studio:/workspace \
+      -e ANTHROPIC_API_KEY \
+      ghcr.io/hairglasses-studio/ralphglasses:latest \
+      --scan-path /workspace
+    ```
+
+=== "Nix"
+
+    ```bash
+    # With flakes enabled
+    nix run github:hairglasses-studio/ralphglasses
+
+    # Or add to your flake inputs
+    # inputs.ralphglasses.url = "github:hairglasses-studio/ralphglasses";
+    ```
 
 ### Bootstrap toolchain (recommended)
 

@@ -1,0 +1,17 @@
+[Unit]
+Description=ralphglasses Watchdog
+After=network.target graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ralphglasses-watchdog
+Restart=always
+RestartSec=5
+WatchdogSec=30
+NotifyAccess=all
+Environment=DISPLAY=:0
+User=ralph
+
+[Install]
+WantedBy=graphical-session.target
