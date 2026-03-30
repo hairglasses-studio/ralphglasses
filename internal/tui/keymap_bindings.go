@@ -39,8 +39,12 @@ type KeyMap struct {
 	PageDown     key.Binding
 
 	// Config editor
-	EditConfig  key.Binding
-	WriteConfig key.Binding
+	EditConfig   key.Binding
+	WriteConfig  key.Binding
+	ConfigInsert key.Binding
+	ConfigRename key.Binding
+	ConfigDelete key.Binding
+	ConfigUndo   key.Binding
 
 	// Diff view
 	DiffView key.Binding
@@ -182,6 +186,22 @@ func DefaultKeyMap() KeyMap {
 		WriteConfig: key.NewBinding(
 			key.WithKeys("w"),
 			key.WithHelp("w", "Save config"),
+		),
+		ConfigInsert: key.NewBinding(
+			key.WithKeys("i", "a"),
+			key.WithHelp("i / a", "Insert new key"),
+		),
+		ConfigRename: key.NewBinding(
+			key.WithKeys("r"),
+			key.WithHelp("r", "Rename key"),
+		),
+		ConfigDelete: key.NewBinding(
+			key.WithKeys("d", "x"),
+			key.WithHelp("d / x", "Delete key"),
+		),
+		ConfigUndo: key.NewBinding(
+			key.WithKeys("u"),
+			key.WithHelp("u", "Undo last change"),
 		),
 		DiffView: key.NewBinding(
 			key.WithKeys("d"),

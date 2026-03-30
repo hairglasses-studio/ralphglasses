@@ -288,8 +288,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleSearchInput(msg)
 	}
 
-	// Config editor in edit mode
-	if m.Nav.CurrentView == ViewConfigEditor && m.ConfigEdit != nil && m.ConfigEdit.Editing {
+	// Config editor in any input mode (editing, insert, rename, delete confirm)
+	if m.Nav.CurrentView == ViewConfigEditor && m.ConfigEdit != nil && m.ConfigEdit.InputMode != views.ConfigModeNormal {
 		return m.handleConfigEditInput(msg)
 	}
 
