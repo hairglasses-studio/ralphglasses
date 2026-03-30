@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
@@ -34,7 +34,7 @@ func TestConfigKey_NilConfigEdit(t *testing.T) {
 	m.Nav.CurrentView = ViewConfigEditor
 	m.ConfigEdit = nil
 
-	m2, cmd := m.handleConfigKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, cmd := m.handleConfigKey(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	got := m2.(Model)
 	if cmd != nil {
 		t.Error("expected nil cmd when ConfigEdit is nil")
@@ -50,7 +50,7 @@ func TestConfigKey_MoveDown(t *testing.T) {
 		"beta":  "2",
 	})
 
-	m2, cmd := m.handleConfigKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, cmd := m.handleConfigKey(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	got := m2.(Model)
 	if cmd != nil {
 		t.Error("expected nil cmd for move down")
@@ -67,7 +67,7 @@ func TestConfigKey_MoveUp(t *testing.T) {
 	})
 	m.ConfigEdit.Cursor = 1
 
-	m2, cmd := m.handleConfigKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	m2, cmd := m.handleConfigKey(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	got := m2.(Model)
 	if cmd != nil {
 		t.Error("expected nil cmd for move up")
@@ -83,7 +83,7 @@ func TestConfigKey_MoveUpAtTop(t *testing.T) {
 	})
 	m.ConfigEdit.Cursor = 0
 
-	m2, _ := m.handleConfigKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	m2, _ := m.handleConfigKey(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	got := m2.(Model)
 	if got.ConfigEdit.Cursor != 0 {
 		t.Errorf("Cursor = %d, want 0 (should stay at top)", got.ConfigEdit.Cursor)
@@ -95,7 +95,7 @@ func TestConfigKey_EnterStartsEdit(t *testing.T) {
 		"alpha": "value1",
 	})
 
-	m2, _ := m.handleConfigKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleConfigKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if !got.ConfigEdit.Editing {
 		t.Error("expected Editing to be true after Enter")
@@ -111,7 +111,7 @@ func TestConfigKey_WriteConfig_SaveError(t *testing.T) {
 	})
 	// Config.Path points to a non-writable location, so Save() will fail
 
-	m2, _ := m.handleConfigKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("w")})
+	m2, _ := m.handleConfigKey(tea.KeyPressMsg{Code: 'w', Text: "w"})
 	got := m2.(Model)
 	// Should show a notification (either save error or save success)
 	if !got.Notify.Active() {
@@ -124,7 +124,7 @@ func TestConfigKey_UnmatchedKey(t *testing.T) {
 		"alpha": "1",
 	})
 
-	m2, cmd := m.handleConfigKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("z")})
+	m2, cmd := m.handleConfigKey(tea.KeyPressMsg{Code: 'z', Text: "z"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("unmatched key should return nil cmd")
@@ -140,7 +140,7 @@ func TestConfigEditInput_EnterConfirmsEdit(t *testing.T) {
 	m.ConfigEdit.StartEdit()
 	m.ConfigEdit.EditBuf = "new"
 
-	m2, _ := m.handleConfigEditInput(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleConfigEditInput(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.ConfigEdit.Editing {
 		t.Error("expected Editing to be false after confirm")
@@ -160,7 +160,7 @@ func TestConfigEditInput_EscapeCancelsEdit(t *testing.T) {
 	m.ConfigEdit.StartEdit()
 	m.ConfigEdit.EditBuf = "changed"
 
-	m2, _ := m.handleConfigEditInput(tea.KeyMsg{Type: tea.KeyEscape})
+	m2, _ := m.handleConfigEditInput(tea.KeyPressMsg{Code: tea.KeyEsc})
 	got := m2.(Model)
 	if got.ConfigEdit.Editing {
 		t.Error("expected Editing to be false after Escape")
@@ -177,7 +177,7 @@ func TestConfigEditInput_BackspaceDeletesChar(t *testing.T) {
 	})
 	m.ConfigEdit.StartEdit()
 
-	m2, _ := m.handleConfigEditInput(tea.KeyMsg{Type: tea.KeyBackspace})
+	m2, _ := m.handleConfigEditInput(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	got := m2.(Model)
 	if got.ConfigEdit.EditBuf != "ab" {
 		t.Errorf("EditBuf = %q, want %q", got.ConfigEdit.EditBuf, "ab")
@@ -190,7 +190,7 @@ func TestConfigEditInput_TypeCharAppendsChar(t *testing.T) {
 	})
 	m.ConfigEdit.StartEdit()
 
-	m2, _ := m.handleConfigEditInput(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	m2, _ := m.handleConfigEditInput(tea.KeyPressMsg{Code: 'x', Text: "x"})
 	got := m2.(Model)
 	if got.ConfigEdit.EditBuf != "valx" {
 		t.Errorf("EditBuf = %q, want %q", got.ConfigEdit.EditBuf, "valx")
@@ -204,10 +204,10 @@ func TestConfigEditInput_MultipleChars(t *testing.T) {
 	m.ConfigEdit.StartEdit()
 
 	// Type 'h'
-	m2, _ := m.handleConfigEditInput(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("h")})
+	m2, _ := m.handleConfigEditInput(tea.KeyPressMsg{Code: 'h', Text: "h"})
 	m = m2.(Model)
 	// Type 'i'
-	m2, _ = m.handleConfigEditInput(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("i")})
+	m2, _ = m.handleConfigEditInput(tea.KeyPressMsg{Code: 'i', Text: "i"})
 	got := m2.(Model)
 	if got.ConfigEdit.EditBuf != "hi" {
 		t.Errorf("EditBuf = %q, want %q", got.ConfigEdit.EditBuf, "hi")
@@ -221,7 +221,7 @@ func TestConfigEditInput_BackspaceOnEmpty(t *testing.T) {
 	m.ConfigEdit.StartEdit()
 	m.ConfigEdit.EditBuf = ""
 
-	m2, _ := m.handleConfigEditInput(tea.KeyMsg{Type: tea.KeyBackspace})
+	m2, _ := m.handleConfigEditInput(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	got := m2.(Model)
 	if got.ConfigEdit.EditBuf != "" {
 		t.Errorf("EditBuf = %q, want empty string", got.ConfigEdit.EditBuf)
@@ -234,7 +234,7 @@ func TestConfigKeys_EmptyConfigEnterNoOp(t *testing.T) {
 	m := newConfigModel(map[string]string{})
 
 	// Enter on empty config should not panic
-	m2, cmd := m.handleConfigKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, cmd := m.handleConfigKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.ConfigEdit.Editing {
 		t.Error("should not enter edit mode with empty config")

@@ -1,8 +1,8 @@
-[?25l[?2004h  ralphglasses   Repos[K
- 1: Repos   2: Sessions   3: Teams   4: Fleet [K
-[K
-Name ▲                   Status     Loop   Calls         Budget          Progress    CB         Health       Updated  [K
-──────────────────────── ────────── ────── ───────────── ─────────────── ─────────── ────────── ──────────── ─────────[K
-  No repos found — press r to scan[K
-[K
-  NORMAL │  0/0 │  $0.00 │  5m                                                                                       [2K[?2004l[?25h[?1002l[?1003l[?1006l
+[>4m[=0;1u[?1049h[?25l[?2004h[?1002h[?1006h[>4;2m[=1;1u[H[2J  ralphglasses   Repos
+ 1: Repos   2: Sessions   3: Teams   4: Fleet
+
+Name ▲[18X[4;25H Status     Loop   Calls         Budget          Progress    CB         Health       Updated  
+──────────────────────── ────────── ────── ───────────── ─────────────── ─────────── ────────── ──────────── ─────────
+  No repos found — press r to scan
+
+  NORMAL │  0/0 │  $0.00 │  5m[K[>4m[=0;1u[40d[?1049l[?25h[?2004l[?1002l[?1003l[?1006l[?2026$p[?2027$p

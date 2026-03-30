@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
@@ -33,7 +33,7 @@ func TestDetail_InvalidSelectedIdx(t *testing.T) {
 	m.Keys.SetViewContext(ViewRepoDetail)
 	m.Sel.RepoIdx = -1
 
-	m2, cmd := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, cmd := m.handleDetailKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if cmd != nil {
 		t.Error("expected nil cmd for invalid SelectedIdx")
@@ -51,7 +51,7 @@ func TestDetail_SelectedIdxOutOfRange(t *testing.T) {
 	m.Keys.SetViewContext(ViewRepoDetail)
 	m.Sel.RepoIdx = 999
 
-	m2, cmd := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, cmd := m.handleDetailKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	_ = m2
 	if cmd != nil {
 		t.Error("expected nil cmd for out-of-range SelectedIdx")
@@ -62,7 +62,7 @@ func TestDetail_SelectedIdxOutOfRange(t *testing.T) {
 
 func TestDetail_EnterPushesLogView(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
-	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleDetailKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewLogs {
 		t.Errorf("CurrentView = %v, want ViewLogs", got.Nav.CurrentView)
@@ -73,7 +73,7 @@ func TestDetail_EnterPushesLogView(t *testing.T) {
 
 func TestDetail_EditConfig_NoConfig(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo", Config: nil})
-	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("e")})
+	m2, _ := m.handleDetailKey(tea.KeyPressMsg{Code: 'e', Text: "e"})
 	got := m2.(Model)
 	// Should show notification about missing config
 	if !got.Notify.Active() {
@@ -90,7 +90,7 @@ func TestDetail_EditConfig_WithConfig(t *testing.T) {
 		Values: map[string]string{"max_calls_per_hour": "10"},
 	}
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo", Config: cfg})
-	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("e")})
+	m2, _ := m.handleDetailKey(tea.KeyPressMsg{Code: 'e', Text: "e"})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewConfigEditor {
 		t.Errorf("CurrentView = %v, want ViewConfigEditor", got.Nav.CurrentView)
@@ -104,7 +104,7 @@ func TestDetail_EditConfig_WithConfig(t *testing.T) {
 
 func TestDetail_StartLoop(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
-	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("S")})
+	m2, _ := m.handleDetailKey(tea.KeyPressMsg{Code: 'S', Text: "S"})
 	got := m2.(Model)
 	if !got.Notify.Active() {
 		t.Error("expected notification after start loop")
@@ -115,7 +115,7 @@ func TestDetail_StartLoop(t *testing.T) {
 
 func TestDetail_StopAction(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
-	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
+	m2, _ := m.handleDetailKey(tea.KeyPressMsg{Code: 'X', Text: "X"})
 	got := m2.(Model)
 	if got.Modals.ConfirmDialog == nil {
 		t.Error("expected ConfirmDialog after stop key in detail")
@@ -129,7 +129,7 @@ func TestDetail_StopAction(t *testing.T) {
 
 func TestDetail_PauseLoop(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
-	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P")})
+	m2, _ := m.handleDetailKey(tea.KeyPressMsg{Code: 'P', Text: "P"})
 	got := m2.(Model)
 	if !got.Notify.Active() {
 		t.Error("expected notification after pause in detail")
@@ -140,7 +140,7 @@ func TestDetail_PauseLoop(t *testing.T) {
 
 func TestDetail_DiffView(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
-	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
+	m2, _ := m.handleDetailKey(tea.KeyPressMsg{Code: 'd', Text: "d"})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewDiff {
 		t.Errorf("CurrentView = %v, want ViewDiff", got.Nav.CurrentView)
@@ -151,7 +151,7 @@ func TestDetail_DiffView(t *testing.T) {
 
 func TestDetail_ActionsMenu(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
-	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m2, _ := m.handleDetailKey(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	got := m2.(Model)
 	if got.Modals.ActionMenu == nil {
 		t.Error("expected ActionMenu after 'a' in detail")
@@ -162,7 +162,7 @@ func TestDetail_ActionsMenu(t *testing.T) {
 
 func TestDetail_LaunchSession(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
-	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("L")})
+	m2, _ := m.handleDetailKey(tea.KeyPressMsg{Code: 'L', Text: "L"})
 	got := m2.(Model)
 	if got.Modals.Launcher == nil {
 		t.Error("expected Launcher after 'L' in detail")
@@ -173,7 +173,7 @@ func TestDetail_LaunchSession(t *testing.T) {
 
 func TestDetail_TimelineView(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
-	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
+	m2, _ := m.handleDetailKey(tea.KeyPressMsg{Code: 't', Text: "t"})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewTimeline {
 		t.Errorf("CurrentView = %v, want ViewTimeline", got.Nav.CurrentView)
@@ -184,7 +184,7 @@ func TestDetail_TimelineView(t *testing.T) {
 
 func TestDetail_LoopHealth(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
-	m2, _ := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("h")})
+	m2, _ := m.handleDetailKey(tea.KeyPressMsg{Code: 'h', Text: "h"})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewLoopHealth {
 		t.Errorf("CurrentView = %v, want ViewLoopHealth", got.Nav.CurrentView)
@@ -195,7 +195,7 @@ func TestDetail_LoopHealth(t *testing.T) {
 
 func TestDetail_UnmatchedKey(t *testing.T) {
 	m := newDetailModel(&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"})
-	m2, cmd := m.handleDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("z")})
+	m2, cmd := m.handleDetailKey(tea.KeyPressMsg{Code: 'z', Text: "z"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("unmatched key should return nil cmd")
@@ -213,7 +213,7 @@ func TestSessions_MoveDown(t *testing.T) {
 		{"def67890", "gemini", "/tmp/repo2", "done"},
 	})
 
-	m2, _ := m.handleSessionsKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, _ := m.handleSessionsKey(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	got := m2.(Model)
 	row := got.SessionTable.SelectedRow()
 	if row == nil {
@@ -234,9 +234,9 @@ func TestSessions_MoveUp(t *testing.T) {
 	})
 
 	// Move down then up
-	m2, _ := m.handleSessionsKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, _ := m.handleSessionsKey(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	m = m2.(Model)
-	m2, _ = m.handleSessionsKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	m2, _ = m.handleSessionsKey(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	got := m2.(Model)
 	row := got.SessionTable.SelectedRow()
 	if row == nil {
@@ -254,7 +254,7 @@ func TestSessions_Sort(t *testing.T) {
 	m.SessionTable.SetRows([]components.Row{
 		{"abc12345", "claude", "/tmp/repo", "running"},
 	})
-	m2, _ := m.handleSessionsKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	m2, _ := m.handleSessionsKey(tea.KeyPressMsg{Code: 's', Text: "s"})
 	_ = m2.(Model)
 }
 
@@ -262,7 +262,7 @@ func TestSessions_Enter_EmptyTable(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Nav.CurrentView = ViewSessions
 	m.Keys.SetViewContext(ViewSessions)
-	m2, _ := m.handleSessionsKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleSessionsKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewSessions {
 		t.Errorf("should stay in sessions view with empty table")
@@ -273,7 +273,7 @@ func TestSessions_StopAction_EmptyTable(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Nav.CurrentView = ViewSessions
 	m.Keys.SetViewContext(ViewSessions)
-	m2, _ := m.handleSessionsKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
+	m2, _ := m.handleSessionsKey(tea.KeyPressMsg{Code: 'X', Text: "X"})
 	got := m2.(Model)
 	if got.Modals.ConfirmDialog != nil {
 		t.Error("should not show confirm dialog with empty table")
@@ -287,7 +287,7 @@ func TestSessions_SpaceToggle(t *testing.T) {
 	m.SessionTable.SetRows([]components.Row{
 		{"abc12345", "claude", "/tmp/repo", "running"},
 	})
-	m2, _ := m.handleSessionsKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ")})
+	m2, _ := m.handleSessionsKey(tea.KeyPressMsg{Code: ' ', Text: " "})
 	_ = m2.(Model)
 }
 
@@ -295,7 +295,7 @@ func TestSessions_TimelineView(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Nav.CurrentView = ViewSessions
 	m.Keys.SetViewContext(ViewSessions)
-	m2, _ := m.handleSessionsKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
+	m2, _ := m.handleSessionsKey(tea.KeyPressMsg{Code: 't', Text: "t"})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewTimeline {
 		t.Errorf("CurrentView = %v, want ViewTimeline", got.Nav.CurrentView)
@@ -310,7 +310,7 @@ func TestSessionDetail_StopAction_NoSession(t *testing.T) {
 	m.Keys.SetViewContext(ViewSessionDetail)
 	m.Sel.SessionID = "" // no session
 
-	m2, _ := m.handleSessionDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
+	m2, _ := m.handleSessionDetailKey(tea.KeyPressMsg{Code: 'X', Text: "X"})
 	got := m2.(Model)
 	if got.Modals.ConfirmDialog != nil {
 		t.Error("should not show dialog with no session")
@@ -322,7 +322,7 @@ func TestSessionDetail_ActionsMenu(t *testing.T) {
 	m.Nav.CurrentView = ViewSessionDetail
 	m.Keys.SetViewContext(ViewSessionDetail)
 
-	m2, _ := m.handleSessionDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m2, _ := m.handleSessionDetailKey(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	got := m2.(Model)
 	if got.Modals.ActionMenu == nil {
 		t.Error("expected ActionMenu after 'a' in session detail")
@@ -336,7 +336,7 @@ func TestSessionDetail_OutputView_NoSession(t *testing.T) {
 	m.Sel.SessionID = ""
 	m.SessMgr = nil
 
-	m2, cmd := m.handleSessionDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("o")})
+	m2, cmd := m.handleSessionDetailKey(tea.KeyPressMsg{Code: 'o', Text: "o"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("expected nil cmd with no session")
@@ -348,7 +348,7 @@ func TestSessionDetail_TimelineView(t *testing.T) {
 	m.Nav.CurrentView = ViewSessionDetail
 	m.Keys.SetViewContext(ViewSessionDetail)
 
-	m2, _ := m.handleSessionDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
+	m2, _ := m.handleSessionDetailKey(tea.KeyPressMsg{Code: 't', Text: "t"})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewTimeline {
 		t.Errorf("CurrentView = %v, want ViewTimeline", got.Nav.CurrentView)
@@ -362,7 +362,7 @@ func TestSessionDetail_Enter_NoSessMgr(t *testing.T) {
 	m.Sel.SessionID = "test-id"
 	m.SessMgr = nil
 
-	m2, _ := m.handleSessionDetailKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleSessionDetailKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	// Should stay since no SessMgr
 	if got.Nav.CurrentView != ViewSessionDetail {
@@ -377,7 +377,7 @@ func TestSessionDetail_DiffView_NoSessMgr(t *testing.T) {
 	m.Sel.SessionID = "test-id"
 	m.SessMgr = nil
 
-	m2, _ := m.handleSessionDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
+	m2, _ := m.handleSessionDetailKey(tea.KeyPressMsg{Code: 'd', Text: "d"})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewSessionDetail {
 		t.Errorf("should stay in session detail, got %v", got.Nav.CurrentView)
@@ -395,7 +395,7 @@ func TestTeams_MoveDown(t *testing.T) {
 		{"team-beta", "def456", "3", "active"},
 	})
 
-	m2, _ := m.handleTeamsKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, _ := m.handleTeamsKey(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	got := m2.(Model)
 	row := got.TeamTable.SelectedRow()
 	if row == nil {
@@ -414,7 +414,7 @@ func TestTeams_Enter_WithRow(t *testing.T) {
 		{"team-alpha", "abc123", "2", "active"},
 	})
 
-	m2, _ := m.handleTeamsKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleTeamsKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewTeamDetail {
 		t.Errorf("CurrentView = %v, want ViewTeamDetail", got.Nav.CurrentView)
@@ -428,7 +428,7 @@ func TestTeams_Enter_EmptyTable(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Nav.CurrentView = ViewTeams
 	m.Keys.SetViewContext(ViewTeams)
-	m2, _ := m.handleTeamsKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleTeamsKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewTeams {
 		t.Error("should stay in teams view with empty table")
@@ -442,7 +442,7 @@ func TestTeams_Sort(t *testing.T) {
 	m.TeamTable.SetRows([]components.Row{
 		{"team-alpha", "abc123", "2", "active"},
 	})
-	m2, _ := m.handleTeamsKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	m2, _ := m.handleTeamsKey(tea.KeyPressMsg{Code: 's', Text: "s"})
 	_ = m2.(Model)
 }
 
@@ -455,7 +455,7 @@ func TestTeamDetail_Enter_NoSessMgr(t *testing.T) {
 	m.Sel.TeamName = "test-team"
 	m.SessMgr = nil
 
-	m2, _ := m.handleTeamDetailKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleTeamDetailKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewTeamDetail {
 		t.Error("should stay in team detail with nil SessMgr")
@@ -469,7 +469,7 @@ func TestTeamDetail_Timeline_NoSessMgr(t *testing.T) {
 	m.Sel.TeamName = "test-team"
 	m.SessMgr = nil
 
-	m2, _ := m.handleTeamDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
+	m2, _ := m.handleTeamDetailKey(tea.KeyPressMsg{Code: 't', Text: "t"})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewTeamDetail {
 		t.Error("should stay in team detail with nil SessMgr")
@@ -483,7 +483,7 @@ func TestTeamDetail_DiffView_NoSessMgr(t *testing.T) {
 	m.Sel.TeamName = "test-team"
 	m.SessMgr = nil
 
-	m2, _ := m.handleTeamDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
+	m2, _ := m.handleTeamDetailKey(tea.KeyPressMsg{Code: 'd', Text: "d"})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewTeamDetail {
 		t.Error("should stay in team detail with nil SessMgr")
@@ -496,7 +496,7 @@ func TestTeamDetail_Enter_EmptyTeam(t *testing.T) {
 	m.Keys.SetViewContext(ViewTeamDetail)
 	m.Sel.TeamName = ""
 
-	m2, _ := m.handleTeamDetailKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleTeamDetailKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewTeamDetail {
 		t.Error("should stay in team detail with empty team name")
@@ -526,7 +526,7 @@ func TestFleet_MoveDown(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 
-	m2, _ := m.handleFleetKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, _ := m.handleFleetKey(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	_ = asModel(t, m2) // no crash
 }
 
@@ -537,7 +537,7 @@ func TestFleet_MoveUp(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 
-	m2, _ := m.handleFleetKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	m2, _ := m.handleFleetKey(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	_ = asModel(t, m2)
 }
 
@@ -548,7 +548,7 @@ func TestFleet_Enter(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 
-	m2, _ := m.handleFleetKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleFleetKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	_ = asModel(t, m2)
 }
 
@@ -559,7 +559,7 @@ func TestFleet_StopAction(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 
-	m2, _ := m.handleFleetKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
+	m2, _ := m.handleFleetKey(tea.KeyPressMsg{Code: 'X', Text: "X"})
 	_ = asModel(t, m2)
 }
 
@@ -570,7 +570,7 @@ func TestFleet_DiffView(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 
-	m2, _ := m.handleFleetKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
+	m2, _ := m.handleFleetKey(tea.KeyPressMsg{Code: 'd', Text: "d"})
 	_ = asModel(t, m2)
 }
 
@@ -581,7 +581,7 @@ func TestFleet_TimelineView(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 
-	m2, _ := m.handleFleetKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
+	m2, _ := m.handleFleetKey(tea.KeyPressMsg{Code: 't', Text: "t"})
 	_ = asModel(t, m2)
 }
 
@@ -592,7 +592,7 @@ func TestFleet_TabCycleSection(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 
-	m2, _ := m.handleFleetKey(tea.KeyMsg{Type: tea.KeyTab})
+	m2, _ := m.handleFleetKey(tea.KeyPressMsg{Code: tea.KeyTab})
 	_ = asModel(t, m2)
 }
 
@@ -603,7 +603,7 @@ func TestFleet_LeftCycleSection(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 
-	m2, _ := m.handleFleetKey(tea.KeyMsg{Type: tea.KeyLeft})
+	m2, _ := m.handleFleetKey(tea.KeyPressMsg{Code: tea.KeyLeft})
 	_ = asModel(t, m2)
 }
 
@@ -616,13 +616,13 @@ func TestFleet_BracketWindowCycle(t *testing.T) {
 
 	initial := m.Fleet.Window
 
-	m2, _ := m.handleFleetKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("]")})
+	m2, _ := m.handleFleetKey(tea.KeyPressMsg{Code: ']', Text: "]"})
 	got := asModel(t, m2)
 	if got.Fleet.Window == initial {
 		// Could wrap around, but at least it changed or wrapped
 	}
 
-	m2, _ = got.handleFleetKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[")})
+	m2, _ = got.handleFleetKey(tea.KeyPressMsg{Code: '[', Text: "["})
 	got2 := asModel(t, m2)
 	_ = got2
 }

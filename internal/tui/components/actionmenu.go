@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
@@ -113,13 +113,26 @@ func (m *ActionMenu) IsActive() bool { return m.Active }
 func (m *ActionMenu) Deactivate() { m.Active = false }
 
 // ModalHandleKey implements Modal.ModalHandleKey by adapting the existing HandleKey logic.
-func (m *ActionMenu) ModalHandleKey(msg tea.KeyMsg) (tea.Cmd, bool) {
-	keyType := msg.Type.String()
+func (m *ActionMenu) ModalHandleKey(msg tea.KeyPressMsg) (tea.Cmd, bool) {
+	k := msg.Key()
+	var keyType string
 	var r rune
-	if msg.Type == tea.KeyRunes {
-		keyType = "rune"
-		if len(msg.Runes) > 0 {
-			r = msg.Runes[0]
+	switch k.Code {
+	case tea.KeyUp:
+		keyType = "up"
+	case tea.KeyDown:
+		keyType = "down"
+	case tea.KeyEnter:
+		keyType = "enter"
+	case tea.KeyEscape:
+		keyType = "esc"
+	default:
+		if k.Text != "" {
+			keyType = "rune"
+			runes := []rune(k.Text)
+			if len(runes) > 0 {
+				r = runes[0]
+			}
 		}
 	}
 

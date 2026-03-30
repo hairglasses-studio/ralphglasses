@@ -114,7 +114,7 @@ func TestLogSearchModel_View(t *testing.T) {
 	m.height = 20
 
 	// Initial view should show line count header and help bar.
-	v := m.View()
+	v := m.View().Content
 	if !strings.Contains(v, "6 lines") {
 		t.Error("expected view to contain line count")
 	}
@@ -127,7 +127,7 @@ func TestLogSearchModel_View(t *testing.T) {
 	m.matches = m.Search("server")
 	m.currentMatch = 0
 	m.scrollToMatch()
-	v = m.View()
+	v = m.View().Content
 	if !strings.Contains(v, "match 1 of 2") {
 		t.Errorf("expected match status in view, got:\n%s", v)
 	}
@@ -143,7 +143,7 @@ func TestLogSearchModel_View(t *testing.T) {
 	// Test searching state.
 	m.searching = true
 	m.query = "test"
-	v = m.View()
+	v = m.View().Content
 	if !strings.Contains(v, "Search:") {
 		t.Error("expected 'Search:' prompt in searching mode")
 	}
@@ -153,7 +153,7 @@ func TestLogSearchModel_View(t *testing.T) {
 	m.query = "zzz"
 	m.matches = m.Search("zzz")
 	m.currentMatch = -1
-	v = m.View()
+	v = m.View().Content
 	if !strings.Contains(v, "no matches") {
 		t.Error("expected 'no matches' in view")
 	}

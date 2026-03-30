@@ -1,7 +1,7 @@
 package tui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
@@ -9,7 +9,11 @@ import (
 
 // handleSearchInput processes keys while the global search overlay is active.
 func (m Model) handleSearchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	result, confirmed := m.SearchInput.HandleKey(msg)
+	press, ok := msg.(tea.KeyPressMsg)
+	if !ok {
+		return m, nil
+	}
+	result, confirmed := m.SearchInput.HandleKey(press)
 
 	if confirmed {
 		// Navigate to the selected result's target view.

@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestDefaultKeyMapReturnsNonNil(t *testing.T) {
@@ -335,7 +335,7 @@ func TestHandleTab1(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.switchTab(2, ViewTeams, "Teams") // start on different tab
 
-	m2, cmd := handleTab1(&m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("1")})
+	m2, cmd := handleTab1(&m, tea.KeyPressMsg{Code: '1', Text: "1"})
 	got := m2.(Model)
 	if got.Nav.ActiveTab != 0 {
 		t.Errorf("ActiveTab = %d, want 0", got.Nav.ActiveTab)
@@ -351,7 +351,7 @@ func TestHandleTab1(t *testing.T) {
 func TestHandleTab2(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 
-	m2, cmd := handleTab2(&m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("2")})
+	m2, cmd := handleTab2(&m, tea.KeyPressMsg{Code: '2', Text: "2"})
 	got := m2.(Model)
 	if got.Nav.ActiveTab != 1 {
 		t.Errorf("ActiveTab = %d, want 1", got.Nav.ActiveTab)
@@ -367,7 +367,7 @@ func TestHandleTab2(t *testing.T) {
 func TestHandleTab3(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 
-	m2, cmd := handleTab3(&m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("3")})
+	m2, cmd := handleTab3(&m, tea.KeyPressMsg{Code: '3', Text: "3"})
 	got := m2.(Model)
 	if got.Nav.ActiveTab != 2 {
 		t.Errorf("ActiveTab = %d, want 2", got.Nav.ActiveTab)
@@ -383,7 +383,7 @@ func TestHandleTab3(t *testing.T) {
 func TestHandleTab4(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 
-	m2, cmd := handleTab4(&m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("4")})
+	m2, cmd := handleTab4(&m, tea.KeyPressMsg{Code: '4', Text: "4"})
 	got := m2.(Model)
 	if got.Nav.ActiveTab != 3 {
 		t.Errorf("ActiveTab = %d, want 3", got.Nav.ActiveTab)
@@ -401,7 +401,7 @@ func TestHandleTab4(t *testing.T) {
 func TestHandleLoopControlPanel(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 
-	m2, cmd := handleLoopControlPanel(&m, tea.KeyMsg{})
+	m2, cmd := handleLoopControlPanel(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewLoopControl {
 		t.Errorf("CurrentView = %v, want ViewLoopControl", got.Nav.CurrentView)
@@ -417,7 +417,7 @@ func TestHandleObservationView_NoRepos(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Sel.RepoIdx = 0
 	// No repos — should return unchanged model
-	m2, cmd := handleObservationView(&m, tea.KeyMsg{})
+	m2, cmd := handleObservationView(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if got.Nav.CurrentView == ViewObservation {
 		t.Error("should not push observation view when no repos exist")
@@ -430,7 +430,7 @@ func TestHandleObservationView_NoRepos(t *testing.T) {
 func TestHandleObservationView_NegativeIdx(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Sel.RepoIdx = -1
-	m2, cmd := handleObservationView(&m, tea.KeyMsg{})
+	m2, cmd := handleObservationView(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if got.Nav.CurrentView == ViewObservation {
 		t.Error("should not push observation view with negative index")
@@ -448,7 +448,7 @@ func TestHandleEventLogView_NilEventLog(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 
-	m2, cmd := handleEventLogView(&m, tea.KeyMsg{})
+	m2, cmd := handleEventLogView(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewEventLog {
 		t.Errorf("CurrentView = %v, want ViewEventLog", got.Nav.CurrentView)
@@ -467,7 +467,7 @@ func TestHandleEscape_LoopPanelOpen(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.ShowLoopPanel = true
 
-	m2, cmd := handleEscape(&m, tea.KeyMsg{Type: tea.KeyEscape})
+	m2, cmd := handleEscape(&m, tea.KeyPressMsg{Code: tea.KeyEsc})
 	got := m2.(Model)
 	if got.ShowLoopPanel {
 		t.Error("escape should close loop panel")
@@ -481,7 +481,7 @@ func TestHandleEscape_PopView(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.pushView(ViewRepoDetail, "Detail")
 
-	m2, cmd := handleEscape(&m, tea.KeyMsg{Type: tea.KeyEscape})
+	m2, cmd := handleEscape(&m, tea.KeyPressMsg{Code: tea.KeyEsc})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewOverview {
 		t.Errorf("CurrentView = %v, want ViewOverview after pop", got.Nav.CurrentView)
@@ -495,7 +495,7 @@ func TestHandleQuit(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Ctx = context.Background()
 
-	_, cmd := handleQuit(&m, tea.KeyMsg{})
+	_, cmd := handleQuit(&m, tea.KeyPressMsg{})
 	if cmd == nil {
 		t.Error("handleQuit should return tea.Quit")
 	}
@@ -506,7 +506,7 @@ func TestHandleQuit(t *testing.T) {
 func TestHandleCmdMode(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 
-	m2, cmd := handleCmdMode(&m, tea.KeyMsg{})
+	m2, cmd := handleCmdMode(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if got.InputMode != ModeCommand {
 		t.Errorf("InputMode = %d, want ModeCommand", got.InputMode)
@@ -524,7 +524,7 @@ func TestHandleCmdMode(t *testing.T) {
 func TestHandleFilterMode(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 
-	m2, cmd := handleFilterMode(&m, tea.KeyMsg{})
+	m2, cmd := handleFilterMode(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if got.InputMode != ModeFilter {
 		t.Errorf("InputMode = %d, want ModeFilter", got.InputMode)
@@ -543,14 +543,14 @@ func TestHandleHelp_Toggle(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 
 	// Push help
-	m2, _ := handleHelp(&m, tea.KeyMsg{})
+	m2, _ := handleHelp(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewHelp {
 		t.Errorf("CurrentView = %v, want ViewHelp", got.Nav.CurrentView)
 	}
 
 	// Pop help
-	m3, _ := handleHelp(&got, tea.KeyMsg{})
+	m3, _ := handleHelp(&got, tea.KeyPressMsg{})
 	got2 := m3.(Model)
 	if got2.Nav.CurrentView != ViewOverview {
 		t.Errorf("CurrentView = %v, want ViewOverview after toggle", got2.Nav.CurrentView)
@@ -562,7 +562,7 @@ func TestHandleHelp_Toggle(t *testing.T) {
 func TestHandleRefresh(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 
-	_, cmd := handleRefresh(&m, tea.KeyMsg{})
+	_, cmd := handleRefresh(&m, tea.KeyPressMsg{})
 	if cmd == nil {
 		t.Error("handleRefresh should return a scan command")
 	}
@@ -573,7 +573,7 @@ func TestHandleRefresh(t *testing.T) {
 func TestHandleLoopPanel(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 
-	m2, cmd := handleLoopPanel(&m, tea.KeyMsg{})
+	m2, cmd := handleLoopPanel(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewLoopList {
 		t.Errorf("CurrentView = %v, want ViewLoopList", got.Nav.CurrentView)

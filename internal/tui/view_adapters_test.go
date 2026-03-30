@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestInitViewRegistry_ReturnsRegistry(t *testing.T) {
@@ -96,7 +96,7 @@ func TestViewDispatch_HandleKeyFunctions_NoPanic(t *testing.T) {
 	m.Width = 80
 	m.Height = 30
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	msg := tea.KeyPressMsg{Code: 'q', Text: "q"}
 
 	for mode, rv := range viewDispatch {
 		func() {
@@ -175,7 +175,7 @@ func TestRegisteredView_Types(t *testing.T) {
 		t.Errorf("expected 'test-render', got %q", out)
 	}
 
-	result, cmd := rv.handleKey(m, tea.KeyMsg{})
+	result, cmd := rv.handleKey(m, tea.KeyPressMsg{})
 	if result == nil {
 		t.Error("handleKey returned nil model")
 	}

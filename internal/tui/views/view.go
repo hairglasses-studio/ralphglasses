@@ -1,7 +1,7 @@
 package views
 
 import (
-	"github.com/charmbracelet/bubbles/viewport"
+	"charm.land/bubbles/v2/viewport"
 )
 
 // View is the interface that all TUI views implement.
@@ -24,7 +24,7 @@ type ViewportView struct {
 
 // NewViewportView creates a new ViewportView with disabled built-in key bindings.
 func NewViewportView() *ViewportView {
-	vp := viewport.New(0, 0)
+	vp := viewport.New()
 	// Disable built-in key bindings — we handle keys ourselves.
 	vp.KeyMap = viewport.KeyMap{}
 	return &ViewportView{vp: vp}
@@ -43,8 +43,8 @@ func (v *ViewportView) SetDimensions(width, height int) {
 	if height < 1 {
 		height = 1
 	}
-	v.vp.Width = width
-	v.vp.Height = height
+	v.vp.SetWidth(width)
+	v.vp.SetHeight(height)
 }
 
 // Render returns the viewport's rendered content.

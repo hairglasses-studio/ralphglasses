@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestNewEventLogView(t *testing.T) {
@@ -125,7 +125,7 @@ func TestScrollBoundsUp(t *testing.T) {
 	v.SetDimensions(80, 10)
 
 	// scrollPos starts at 0, scrolling up should stay at 0
-	v, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	v, _ = v.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	if v.ScrollPos() != 0 {
 		t.Errorf("scroll up from 0 should stay at 0, got %d", v.ScrollPos())
 	}
@@ -140,7 +140,7 @@ func TestScrollBoundsDown(t *testing.T) {
 		v.AddEntry(makeEntry("loop.iterated", "iter"))
 	}
 
-	v, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	v, _ = v.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	if v.ScrollPos() != 0 {
 		t.Errorf("scroll down with few entries should stay at 0, got %d", v.ScrollPos())
 	}
@@ -155,13 +155,13 @@ func TestScrollToBottom(t *testing.T) {
 	}
 
 	// Go to top
-	v, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("g")})
+	v, _ = v.Update(tea.KeyPressMsg{Code: 'g', Text: "g"})
 	if v.ScrollPos() != 0 {
 		t.Errorf("g should scroll to top, got %d", v.ScrollPos())
 	}
 
 	// Go to bottom
-	v, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("G")})
+	v, _ = v.Update(tea.KeyPressMsg{Code: 'G', Text: "G"})
 	vh := v.viewHeight()
 	expected := len(v.Filtered()) - vh
 	if expected < 0 {
@@ -179,11 +179,11 @@ func TestPauseToggle(t *testing.T) {
 	if v.Paused() {
 		t.Error("should start unpaused")
 	}
-	v, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
+	v, _ = v.Update(tea.KeyPressMsg{Code: 'p', Text: "p"})
 	if !v.Paused() {
 		t.Error("p should pause")
 	}
-	v, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
+	v, _ = v.Update(tea.KeyPressMsg{Code: 'p', Text: "p"})
 	if v.Paused() {
 		t.Error("second p should unpause")
 	}
@@ -223,7 +223,7 @@ func TestViewShowsFilterLabel(t *testing.T) {
 func TestViewShowsPausedLabel(t *testing.T) {
 	v := NewEventLogView()
 	v.SetDimensions(80, 20)
-	v, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
+	v, _ = v.Update(tea.KeyPressMsg{Code: 'p', Text: "p"})
 
 	output := v.View()
 	if !strings.Contains(output, "PAUSED") {
@@ -257,7 +257,7 @@ func TestScrollDown_Exported(t *testing.T) {
 	}
 
 	// Go to top first
-	v, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("g")})
+	v, _ = v.Update(tea.KeyPressMsg{Code: 'g', Text: "g"})
 	if v.ScrollPos() != 0 {
 		t.Fatalf("should be at top, got %d", v.ScrollPos())
 	}
@@ -298,7 +298,7 @@ func TestScrollUp_Exported(t *testing.T) {
 	}
 
 	// Scroll down first
-	v, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("g")})
+	v, _ = v.Update(tea.KeyPressMsg{Code: 'g', Text: "g"})
 	v.ScrollDown()
 	v.ScrollDown()
 	if v.ScrollPos() != 2 {
