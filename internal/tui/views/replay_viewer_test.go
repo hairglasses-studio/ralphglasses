@@ -400,7 +400,7 @@ func TestReplayViewRenders(t *testing.T) {
 	m := NewReplayViewerModel(sampleEvents())
 	m.SetDimensions(80, 30)
 
-	output := m.View()
+	output := m.View().Content
 	if !strings.Contains(output, "Replay Viewer") {
 		t.Error("view should contain title")
 	}
@@ -423,7 +423,7 @@ func TestReplayViewShowsFilterLabel(t *testing.T) {
 	m.SetDimensions(80, 30)
 
 	m, _ = m.Update(keyMsg("f")) // -> input
-	output := m.View()
+	output := m.View().Content
 	if !strings.Contains(output, "filter: input") {
 		t.Error("view should show active filter label")
 	}
@@ -434,7 +434,7 @@ func TestViewShowsPlayingLabel(t *testing.T) {
 	m.SetDimensions(80, 30)
 
 	m, _ = m.Update(keyMsg("p"))
-	output := m.View()
+	output := m.View().Content
 	if !strings.Contains(output, "PLAYING") {
 		t.Error("view should show PLAYING when auto-playing")
 	}
@@ -448,7 +448,7 @@ func TestViewShowsSearchMatches(t *testing.T) {
 	m, _ = m.Update(tea.KeyPressMsg{Text: "response"})
 	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 
-	output := m.View()
+	output := m.View().Content
 	if !strings.Contains(output, "matches: 2") {
 		t.Error("view should show match count")
 	}
@@ -483,7 +483,7 @@ func TestEmptyEventsView(t *testing.T) {
 	m := NewReplayViewerModel(nil)
 	m.SetDimensions(80, 30)
 
-	output := m.View()
+	output := m.View().Content
 	if !strings.Contains(output, "0/0") {
 		t.Error("empty model should show 0/0")
 	}

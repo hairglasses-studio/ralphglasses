@@ -85,7 +85,7 @@ func (m FleetDashboardModel) Update(msg tea.Msg) (FleetDashboardModel, tea.Cmd) 
 }
 
 // View implements tea.Model.
-func (m FleetDashboardModel) View() string {
+func (m FleetDashboardModel) View() tea.View {
 	var b strings.Builder
 
 	// Title
@@ -152,7 +152,7 @@ func (m FleetDashboardModel) View() string {
 	b.WriteString("\n")
 	b.WriteString(styles.HelpStyle.Render("  r:refresh  q:back  j/k:move  Enter:select"))
 
-	return b.String()
+	return tea.NewView(b.String())
 }
 
 // countByStatus returns active, idle, and failed session counts.
