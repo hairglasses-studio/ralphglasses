@@ -24,6 +24,7 @@ var (
 	marathonDuration   string
 	marathonCheckpoint string
 	marathonRepo       string
+	marathonResume     bool
 )
 
 var marathonCmd = &cobra.Command{
@@ -67,15 +68,52 @@ Checkpoints are saved at the specified interval for resumability.`,
 		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.SetAutonomyLevel(session.LevelAutoOptimize, repoPath)
 
+		// Pre-flight validation.
+		result := session.ValidateConfig(repoPath)
+		for _, w := range result.Warnings {
+			fmt.Fprintf(os.Stderr, "marathon: WARNING: %s\n", w)
+		}
+		if !result.OK() {
+			for _, e := range result.Errors {
+				fmt.Fprintf(os.Stderr, "marathon: ERROR: %s\n", e)
+			}
+			return fmt.Errorf("pre-flight validation failed (%d errors)", len(result.Errors))
+		}
+
 		fmt.Fprintf(os.Stderr, "marathon: starting (budget=$%.2f, duration=%s, checkpoint=%s)\n",
 			marathonBudget, dur, cpInterval)
 		fmt.Fprintf(os.Stderr, "marathon: repo=%s\n", repoPath)
 
-		// Checkpoint ticker
+		// Create and configure supervisor.
+		sup := session.NewSupervisor(mgr, repoPath)
+		sup.MaxTotalCostUSD = marathonBudget
+		sup.MaxDuration = dur
+		sup.SetBus(bus)
+		sup.SetMonitor(session.NewHealthMonitor(session.DefaultHealthThresholds()))
+		sup.SetChainer(session.NewCycleChainer())
+
+		// Resume from previous state if flag set.
+		if marathonResume {
+			if err := sup.ResumeFromState(); err != nil {
+				slog.Warn("marathon: resume failed, starting fresh", "error", err)
+			} else {
+				fmt.Fprintln(os.Stderr, "marathon: resumed from previous state")
+			}
+		}
+
+		// Start supervisor.
+		if err := sup.Start(ctx); err != nil {
+			return fmt.Errorf("supervisor start: %w", err)
+		}
+		defer sup.Stop()
+
+		fmt.Fprintln(os.Stderr, "marathon: supervisor started")
+
+		// Checkpoint ticker.
 		cpTicker := time.NewTicker(cpInterval)
 		defer cpTicker.Stop()
 
-		// Resource monitoring ticker (every 60s)
+		// Resource monitoring ticker (every 60s).
 		resTicker := time.NewTicker(60 * time.Second)
 		defer resTicker.Stop()
 
@@ -113,5 +151,7 @@ func init() {
 		"Checkpoint save interval (e.g. 5m, 10m)")
 	marathonCmd.Flags().StringVar(&marathonRepo, "repo", "",
 		"Target repository path (default: <scan-path>/ralphglasses)")
+	marathonCmd.Flags().BoolVar(&marathonResume, "resume", false,
+		"Resume from previous supervisor state")
 	rootCmd.AddCommand(marathonCmd)
 }
