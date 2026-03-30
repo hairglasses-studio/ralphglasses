@@ -41,13 +41,34 @@ func CleanupLoopWorktrees(repoPath, loopID string) error {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return nil
 	}
+
+	// Edge case 2.2.5: enumerate and handle each worktree subdirectory.
+	entries, readErr := os.ReadDir(dir)
+	if readErr != nil {
+		// Not a directory or unreadable — fall through to remove.
+		entries = nil
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		wtPath := filepath.Join(dir, e.Name())
+		if worktreeIsDirty(wtPath) {
+			slog.Warn("dirty worktree on stop — committing changes before cleanup",
+				"path", wtPath, "loop", loopID)
+			commitDirtyWorktree(wtPath)
+		}
+	}
+
 	if err := os.RemoveAll(dir); err != nil {
 		return fmt.Errorf("remove loop worktrees %s: %w", sanitized, err)
 	}
-	// Prune stale git worktree references
+
+	// Prune stale git worktree references and orphaned branches.
 	cmd := exec.Command("git", "worktree", "prune")
 	cmd.Dir = repoPath
 	_ = cmd.Run() // best-effort
+	cleanupOrphanedLoopBranches(repoPath, sanitized)
 	return nil
 }
 
@@ -121,4 +142,49 @@ func worktreeIsDirty(path string) bool {
 		return false // assume clean if git fails (not a valid repo)
 	}
 	return len(strings.TrimSpace(string(out))) > 0
+}
+
+// commitDirtyWorktree does a best-effort commit of uncommitted changes in a
+// worktree before cleanup. This prevents data loss when a loop is stopped
+// mid-edit (edge case 2.2.5).
+func commitDirtyWorktree(path string) {
+	env := append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GIT_EDITOR=true")
+
+	addCmd := exec.Command("git", "-C", path, "add", "-A")
+	addCmd.Env = env
+	if err := addCmd.Run(); err != nil {
+		slog.Warn("failed to stage dirty worktree", "path", path, "err", err)
+		return
+	}
+
+	commitCmd := exec.Command("git", "-C", path, "commit", "-m", "auto: save dirty worktree before cleanup")
+	commitCmd.Env = env
+	if err := commitCmd.Run(); err != nil {
+		slog.Warn("failed to commit dirty worktree", "path", path, "err", err)
+	}
+}
+
+// cleanupOrphanedLoopBranches removes branches created by a loop that no longer
+// have associated worktrees. Branch names follow the pattern "loop-<id>-iter-<n>".
+func cleanupOrphanedLoopBranches(repoPath, loopID string) {
+	prefix := "loop-" + loopID + "-"
+	cmd := exec.Command("git", "branch", "--list", prefix+"*")
+	cmd.Dir = repoPath
+	out, err := cmd.Output()
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		branch := strings.TrimSpace(line)
+		if branch == "" || strings.HasPrefix(branch, "*") {
+			continue
+		}
+		delCmd := exec.Command("git", "branch", "-D", branch)
+		delCmd.Dir = repoPath
+		if err := delCmd.Run(); err != nil {
+			slog.Debug("failed to delete orphaned loop branch", "branch", branch, "err", err)
+		} else {
+			slog.Info("deleted orphaned loop branch", "branch", branch)
+		}
+	}
 }

@@ -237,6 +237,10 @@ func (s *StatusBar) renderFleet() string {
 		parts = append(parts, fmt.Sprintf("p50:%.0fms", s.FleetLatencyP50))
 	}
 
+	if s.FleetUtilization > 0 {
+		parts = append(parts, fmt.Sprintf("util:%.0f%%", s.FleetUtilization*100))
+	}
+
 	return strings.Join(parts, " ")
 }
 

@@ -50,6 +50,10 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	if opts.Model == "" {
 		opts.Model = ProviderDefaults(opts.Provider)
 	}
+	// Apply default budget from .ralphrc (RALPH_SESSION_BUDGET) when none specified.
+	if opts.MaxBudgetUSD <= 0 && m.DefaultBudgetUSD > 0 {
+		opts.MaxBudgetUSD = m.DefaultBudgetUSD
+	}
 
 	// Fleet budget gate: reject launch if spending would exceed fleet cap.
 	if m.FleetPool != nil {
