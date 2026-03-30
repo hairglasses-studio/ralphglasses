@@ -14,6 +14,7 @@ import (
 
 	"github.com/hairglasses-studio/ralphglasses/internal/bandit"
 	"github.com/hairglasses-studio/ralphglasses/internal/blackboard"
+	"github.com/hairglasses-studio/ralphglasses/internal/plugin"
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
@@ -80,6 +81,9 @@ type Server struct {
 
 	// Bandit: provider selection independent of cascade routing.
 	Bandit *bandit.Selector
+
+	// PluginRegistry holds the plugin system registry for MCP plugin tools.
+	PluginRegistry *plugin.Registry
 }
 
 // DefaultScanTTL is how long repo scan results are considered fresh before

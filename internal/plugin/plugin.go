@@ -57,9 +57,19 @@ type ToolHandler func(ctx context.Context, args map[string]any) (any, error)
 type PluginStatus string
 
 const (
-	StatusLoaded PluginStatus = "loaded" // registered but not yet initialized
-	StatusActive PluginStatus = "active" // Init succeeded
-	StatusFailed PluginStatus = "failed" // Init returned an error
+	StatusLoaded   PluginStatus = "loaded"   // registered but not yet initialized
+	StatusActive   PluginStatus = "active"   // Init succeeded
+	StatusFailed   PluginStatus = "failed"   // Init returned an error
+	StatusDisabled PluginStatus = "disabled" // explicitly disabled by user
+)
+
+// PluginType describes the origin/transport of a plugin.
+type PluginType string
+
+const (
+	TypeBuiltin PluginType = "builtin"
+	TypeYAML    PluginType = "yaml"
+	TypeGRPC    PluginType = "grpc"
 )
 
 // PluginInfo is returned by Registry.List() to describe registered plugins.
@@ -67,6 +77,7 @@ type PluginInfo struct {
 	Name    string       `json:"name"`
 	Version string       `json:"version"`
 	Status  PluginStatus `json:"status"`
+	Type    PluginType   `json:"type"`
 }
 
 // Event mirrors the fleet event types from internal/events.
