@@ -3,7 +3,7 @@ package views
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // stubHandler is a minimal ViewHandler for testing the registry.
@@ -60,12 +60,12 @@ func TestRegistry_HandleKey(t *testing.T) {
 	r := NewRegistry()
 	r.Register(1, &stubHandler{})
 
-	handled, _ := r.HandleKey(1, tea.KeyMsg{})
+	handled, _ := r.HandleKey(1, tea.KeyPressMsg{})
 	if !handled {
 		t.Fatal("expected handled=true")
 	}
 
-	handled, _ = r.HandleKey(99, tea.KeyMsg{})
+	handled, _ = r.HandleKey(99, tea.KeyPressMsg{})
 	if handled {
 		t.Fatal("expected handled=false for unregistered mode")
 	}

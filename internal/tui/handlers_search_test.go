@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
@@ -18,7 +18,7 @@ func TestSearchInput_EscapeReturnsNormal(t *testing.T) {
 	m.InputMode = ModeSearch
 	m.SearchInput.Activate()
 
-	m2, cmd := m.handleSearchInput(tea.KeyMsg{Type: tea.KeyEscape})
+	m2, cmd := m.handleSearchInput(tea.KeyPressMsg{Code: tea.KeyEsc})
 	got := m2.(Model)
 	if got.InputMode != ModeNormal {
 		t.Errorf("InputMode = %v, want ModeNormal", got.InputMode)
@@ -37,7 +37,7 @@ func TestSearchInput_TypeCharUpdatesQuery(t *testing.T) {
 	m.InputMode = ModeSearch
 	m.SearchInput.Activate()
 
-	m2, _ := m.handleSearchInput(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m2, _ := m.handleSearchInput(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	got := m2.(Model)
 	if got.SearchInput.Query != "a" {
 		t.Errorf("Query = %q, want %q", got.SearchInput.Query, "a")
@@ -54,7 +54,7 @@ func TestSearchInput_EnterNoResults(t *testing.T) {
 	m.SearchInput.Activate()
 
 	// Enter with no results should return to normal mode
-	m2, cmd := m.handleSearchInput(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, cmd := m.handleSearchInput(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	// With no results, HandleKey returns (zero, false) so confirmed=false,
 	// but Active is still true, so we stay in search mode.
@@ -76,7 +76,7 @@ func TestSearchInput_EnterWithRepoResult(t *testing.T) {
 		{Type: components.SearchTypeRepo, Name: "myrepo", Path: "/tmp/myrepo", Score: 90},
 	})
 
-	m2, cmd := m.handleSearchInput(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, cmd := m.handleSearchInput(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.InputMode != ModeNormal {
 		t.Errorf("InputMode = %v, want ModeNormal after confirmed search", got.InputMode)
@@ -98,7 +98,7 @@ func TestSearchInput_EnterWithSessionResult(t *testing.T) {
 		{Type: components.SearchTypeSession, Name: "session-1", Path: "sess-id-123", Score: 80},
 	})
 
-	m2, _ := m.handleSearchInput(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleSearchInput(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.InputMode != ModeNormal {
 		t.Errorf("InputMode = %v, want ModeNormal", got.InputMode)
@@ -120,7 +120,7 @@ func TestSearchInput_EnterWithTeamResult(t *testing.T) {
 		{Type: components.SearchTypeTeam, Name: "alpha-team", Path: "alpha-team", Score: 85},
 	})
 
-	m2, _ := m.handleSearchInput(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleSearchInput(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.Sel.TeamName != "alpha-team" {
 		t.Errorf("TeamName = %q, want %q", got.Sel.TeamName, "alpha-team")
@@ -139,7 +139,7 @@ func TestSearchInput_EnterWithCycleResult(t *testing.T) {
 		{Type: components.SearchTypeCycle, Name: "cycle-1", Path: "cycle-id", Score: 70},
 	})
 
-	m2, _ := m.handleSearchInput(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleSearchInput(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewRDCycle {
 		t.Errorf("CurrentView = %v, want ViewRDCycle", got.Nav.CurrentView)
@@ -161,7 +161,7 @@ func TestSearchInput_ArrowDownMovesSelection(t *testing.T) {
 		{Type: components.SearchTypeRepo, Name: "repo2", Path: "/tmp/repo2", Score: 80},
 	})
 
-	m2, _ := m.handleSearchInput(tea.KeyMsg{Type: tea.KeyDown})
+	m2, _ := m.handleSearchInput(tea.KeyPressMsg{Code: tea.KeyDown})
 	got := m2.(Model)
 	// After arrow down, refreshSearchResults re-runs the search.
 	// The Selected value depends on the refresh, but the key was processed.
@@ -176,7 +176,7 @@ func TestSearchInput_BackspaceDeletesChar(t *testing.T) {
 	m.SearchInput.Activate()
 	m.SearchInput.Query = "ab"
 
-	m2, _ := m.handleSearchInput(tea.KeyMsg{Type: tea.KeyBackspace})
+	m2, _ := m.handleSearchInput(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	got := m2.(Model)
 	if got.SearchInput.Query != "a" {
 		t.Errorf("Query = %q, want %q", got.SearchInput.Query, "a")

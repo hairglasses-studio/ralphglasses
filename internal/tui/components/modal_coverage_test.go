@@ -3,7 +3,7 @@ package components
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // ---------------------------------------------------------------------------
@@ -38,7 +38,7 @@ func TestActionMenu_ModalHandleKey_Up(t *testing.T) {
 		Items:  []ActionItem{{Key: "a", Label: "A", Action: "act-a"}, {Key: "b", Label: "B", Action: "act-b"}},
 		Cursor: 1,
 	}
-	cmd, handled := m.ModalHandleKey(tea.KeyMsg{Type: tea.KeyUp})
+	cmd, handled := m.ModalHandleKey(tea.KeyPressMsg{Code: tea.KeyUp})
 	if !handled {
 		t.Error("up key should be handled")
 	}
@@ -57,7 +57,7 @@ func TestActionMenu_ModalHandleKey_Down(t *testing.T) {
 		Items:  []ActionItem{{Key: "a", Label: "A", Action: "act-a"}, {Key: "b", Label: "B", Action: "act-b"}},
 		Cursor: 0,
 	}
-	cmd, handled := m.ModalHandleKey(tea.KeyMsg{Type: tea.KeyDown})
+	cmd, handled := m.ModalHandleKey(tea.KeyPressMsg{Code: tea.KeyDown})
 	if !handled {
 		t.Error("down key should be handled")
 	}
@@ -76,7 +76,7 @@ func TestActionMenu_ModalHandleKey_Enter(t *testing.T) {
 		Items:  []ActionItem{{Key: "a", Label: "A", Action: "act-a"}},
 		Cursor: 0,
 	}
-	cmd, handled := m.ModalHandleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	cmd, handled := m.ModalHandleKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if !handled {
 		t.Error("enter key should be handled")
 	}
@@ -100,7 +100,7 @@ func TestActionMenu_ModalHandleKey_Escape(t *testing.T) {
 		Active: true,
 		Items:  []ActionItem{{Key: "a", Label: "A", Action: "act-a"}},
 	}
-	_, handled := m.ModalHandleKey(tea.KeyMsg{Type: tea.KeyEscape})
+	_, handled := m.ModalHandleKey(tea.KeyPressMsg{Code: tea.KeyEsc})
 	if !handled {
 		t.Error("escape key should be handled")
 	}
@@ -118,7 +118,7 @@ func TestActionMenu_ModalHandleKey_Rune(t *testing.T) {
 			{Key: "x", Label: "Stop", Action: "stop"},
 		},
 	}
-	cmd, handled := m.ModalHandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}})
+	cmd, handled := m.ModalHandleKey(tea.KeyPressMsg{Code: 'x', Text: "x"})
 	if !handled {
 		t.Error("rune key should be handled")
 	}
@@ -138,7 +138,7 @@ func TestActionMenu_ModalHandleKey_UnknownKey(t *testing.T) {
 		Active: true,
 		Items:  []ActionItem{{Key: "a", Label: "A", Action: "act"}},
 	}
-	_, handled := m.ModalHandleKey(tea.KeyMsg{Type: tea.KeyTab})
+	_, handled := m.ModalHandleKey(tea.KeyPressMsg{Code: tea.KeyTab})
 	if handled {
 		t.Error("tab key should not be handled by action menu")
 	}
@@ -186,7 +186,7 @@ func TestConfirmDialog_Deactivate(t *testing.T) {
 func TestConfirmDialog_ModalHandleKey_Left(t *testing.T) {
 	t.Parallel()
 	d := &ConfirmDialog{Active: true, Selected: 1}
-	cmd, handled := d.ModalHandleKey(tea.KeyMsg{Type: tea.KeyLeft})
+	cmd, handled := d.ModalHandleKey(tea.KeyPressMsg{Code: tea.KeyLeft})
 	if !handled {
 		t.Error("left key should be handled")
 	}
@@ -201,7 +201,7 @@ func TestConfirmDialog_ModalHandleKey_Left(t *testing.T) {
 func TestConfirmDialog_ModalHandleKey_Right(t *testing.T) {
 	t.Parallel()
 	d := &ConfirmDialog{Active: true, Selected: 0}
-	cmd, handled := d.ModalHandleKey(tea.KeyMsg{Type: tea.KeyRight})
+	cmd, handled := d.ModalHandleKey(tea.KeyPressMsg{Code: tea.KeyRight})
 	if !handled {
 		t.Error("right key should be handled")
 	}
@@ -216,7 +216,7 @@ func TestConfirmDialog_ModalHandleKey_Right(t *testing.T) {
 func TestConfirmDialog_ModalHandleKey_Tab(t *testing.T) {
 	t.Parallel()
 	d := &ConfirmDialog{Active: true, Selected: 0}
-	_, handled := d.ModalHandleKey(tea.KeyMsg{Type: tea.KeyTab})
+	_, handled := d.ModalHandleKey(tea.KeyPressMsg{Code: tea.KeyTab})
 	if !handled {
 		t.Error("tab key should be handled")
 	}
@@ -228,7 +228,7 @@ func TestConfirmDialog_ModalHandleKey_Tab(t *testing.T) {
 func TestConfirmDialog_ModalHandleKey_Enter(t *testing.T) {
 	t.Parallel()
 	d := &ConfirmDialog{Active: true, Action: "delete", Selected: 0}
-	cmd, handled := d.ModalHandleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	cmd, handled := d.ModalHandleKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if !handled {
 		t.Error("enter key should be handled")
 	}
@@ -248,7 +248,7 @@ func TestConfirmDialog_ModalHandleKey_Enter(t *testing.T) {
 func TestConfirmDialog_ModalHandleKey_Y(t *testing.T) {
 	t.Parallel()
 	d := &ConfirmDialog{Active: true, Action: "confirm"}
-	cmd, handled := d.ModalHandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+	cmd, handled := d.ModalHandleKey(tea.KeyPressMsg{Code: 'y', Text: "y"})
 	if !handled {
 		t.Error("y key should be handled")
 	}
@@ -265,7 +265,7 @@ func TestConfirmDialog_ModalHandleKey_Y(t *testing.T) {
 func TestConfirmDialog_ModalHandleKey_N(t *testing.T) {
 	t.Parallel()
 	d := &ConfirmDialog{Active: true, Action: "confirm"}
-	cmd, handled := d.ModalHandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	cmd, handled := d.ModalHandleKey(tea.KeyPressMsg{Code: 'n', Text: "n"})
 	if !handled {
 		t.Error("n key should be handled")
 	}
@@ -282,7 +282,7 @@ func TestConfirmDialog_ModalHandleKey_N(t *testing.T) {
 func TestConfirmDialog_ModalHandleKey_Escape(t *testing.T) {
 	t.Parallel()
 	d := &ConfirmDialog{Active: true, Action: "confirm"}
-	cmd, handled := d.ModalHandleKey(tea.KeyMsg{Type: tea.KeyEscape})
+	cmd, handled := d.ModalHandleKey(tea.KeyPressMsg{Code: tea.KeyEsc})
 	if !handled {
 		t.Error("escape should be handled")
 	}
@@ -299,7 +299,7 @@ func TestConfirmDialog_ModalHandleKey_Escape(t *testing.T) {
 func TestConfirmDialog_ModalHandleKey_UnknownKey(t *testing.T) {
 	t.Parallel()
 	d := &ConfirmDialog{Active: true}
-	_, handled := d.ModalHandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'z'}})
+	_, handled := d.ModalHandleKey(tea.KeyPressMsg{Code: 'z', Text: "z"})
 	if handled {
 		t.Error("z key should not be handled by confirm dialog")
 	}
@@ -347,7 +347,7 @@ func TestSessionLauncher_Deactivate(t *testing.T) {
 func TestSessionLauncher_ModalHandleKey_Escape(t *testing.T) {
 	t.Parallel()
 	l := NewSessionLauncher("/path", "repo")
-	cmd, handled := l.ModalHandleKey(tea.KeyMsg{Type: tea.KeyEscape})
+	cmd, handled := l.ModalHandleKey(tea.KeyPressMsg{Code: tea.KeyEsc})
 	if !handled {
 		t.Error("escape should be handled")
 	}
@@ -362,11 +362,11 @@ func TestSessionLauncher_ModalHandleKey_Escape(t *testing.T) {
 func TestSessionLauncher_ModalHandleKey_UpDown(t *testing.T) {
 	t.Parallel()
 	l := NewSessionLauncher("/path", "repo")
-	l.ModalHandleKey(tea.KeyMsg{Type: tea.KeyDown})
+	l.ModalHandleKey(tea.KeyPressMsg{Code: tea.KeyDown})
 	if l.Cursor != FieldPrompt {
 		t.Errorf("cursor after down = %d, want %d", l.Cursor, FieldPrompt)
 	}
-	l.ModalHandleKey(tea.KeyMsg{Type: tea.KeyUp})
+	l.ModalHandleKey(tea.KeyPressMsg{Code: tea.KeyUp})
 	if l.Cursor != FieldProvider {
 		t.Errorf("cursor after up = %d, want %d", l.Cursor, FieldProvider)
 	}
@@ -376,7 +376,7 @@ func TestSessionLauncher_ModalHandleKey_Rune(t *testing.T) {
 	t.Parallel()
 	l := NewSessionLauncher("/path", "repo")
 	l.Cursor = FieldPrompt
-	l.ModalHandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	l.ModalHandleKey(tea.KeyPressMsg{Code: 'h', Text: "h"})
 	if !l.Editing {
 		t.Error("should enter editing mode on rune input")
 	}

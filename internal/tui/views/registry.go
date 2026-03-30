@@ -1,7 +1,7 @@
 package views
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // ViewHandler defines the interface all views must implement for the view registry.

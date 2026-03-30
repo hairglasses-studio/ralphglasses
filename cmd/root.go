@@ -15,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/config"
@@ -144,7 +144,7 @@ fleet management from any MCP-capable client.`,
 		m.EventBus = bus
 		m.NotifyEnabled = notifyFlag
 
-		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
+		p := tea.NewProgram(m)
 
 		// Graceful shutdown: on SIGINT/SIGTERM, quit the TUI and stop processes.
 		sigCh := make(chan os.Signal, 1)

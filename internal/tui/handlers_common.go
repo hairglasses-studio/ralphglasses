@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
@@ -52,15 +52,19 @@ var commandInputKeys = []ViewKeyEntry{
 		m.CommandBuf = ""
 		return *m, nil
 	}},
-	{Match: func(msg tea.KeyMsg) bool { return msg.Type == tea.KeyBackspace }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Match: func(msg tea.KeyMsg) bool { return msg.Key().Code == tea.KeyBackspace }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.CommandBuf) > 0 {
 			m.CommandBuf = m.CommandBuf[:len(m.CommandBuf)-1]
 		}
 		return *m, nil
 	}},
 	{Match: func(msg tea.KeyMsg) bool { return true }, Handler: func(m *Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-		if len(msg.Runes) == 1 {
-			m.CommandBuf += string(msg.Runes[0])
+		k := msg.Key()
+		if k.Text != "" {
+			runes := []rune(k.Text)
+			if len(runes) == 1 {
+				m.CommandBuf += string(runes[0])
+			}
 		}
 		return *m, nil
 	}},
@@ -79,7 +83,7 @@ var filterInputKeys = []ViewKeyEntry{
 		}
 		return *m, nil
 	}},
-	{Match: func(msg tea.KeyMsg) bool { return msg.Type == tea.KeyBackspace }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Match: func(msg tea.KeyMsg) bool { return msg.Key().Code == tea.KeyBackspace }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.Filter.Backspace()
 		if tbl := m.activeTable(); tbl != nil {
 			tbl.SetFilter(m.Filter.Text)
@@ -87,10 +91,14 @@ var filterInputKeys = []ViewKeyEntry{
 		return *m, nil
 	}},
 	{Match: func(msg tea.KeyMsg) bool { return true }, Handler: func(m *Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-		if len(msg.Runes) == 1 {
-			m.Filter.Type(msg.Runes[0])
-			if tbl := m.activeTable(); tbl != nil {
-				tbl.SetFilter(m.Filter.Text)
+		k := msg.Key()
+		if k.Text != "" {
+			runes := []rune(k.Text)
+			if len(runes) == 1 {
+				m.Filter.Type(runes[0])
+				if tbl := m.activeTable(); tbl != nil {
+					tbl.SetFilter(m.Filter.Text)
+				}
 			}
 		}
 		return *m, nil
@@ -206,20 +214,21 @@ func (m Model) execCommand(cmd Command) (tea.Model, tea.Cmd) {
 
 func (m Model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	keyType := "rune"
+	k := msg.Key()
 	switch {
 	case key.Matches(msg, m.Keys.Enter):
 		keyType = "enter"
 	case key.Matches(msg, m.Keys.Escape):
 		keyType = "esc"
-	case msg.Type == tea.KeyLeft:
+	case k.Code == tea.KeyLeft:
 		keyType = "left"
-	case msg.Type == tea.KeyRight:
+	case k.Code == tea.KeyRight:
 		keyType = "right"
-	case msg.Type == tea.KeyTab:
+	case k.Code == tea.KeyTab:
 		keyType = "tab"
-	case len(msg.Runes) == 1 && (msg.Runes[0] == 'y' || msg.Runes[0] == 'Y'):
+	case k.Text == "y" || k.Text == "Y":
 		keyType = "y"
-	case len(msg.Runes) == 1 && (msg.Runes[0] == 'n' || msg.Runes[0] == 'N'):
+	case k.Text == "n" || k.Text == "N":
 		keyType = "n"
 	}
 	result, done := m.Modals.ConfirmDialog.HandleKey(keyType)
@@ -232,19 +241,23 @@ func (m Model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) handleActionMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	keyType := "rune"
 	var r rune
+	k := msg.Key()
 	switch {
 	case key.Matches(msg, m.Keys.Enter):
 		keyType = "enter"
 	case key.Matches(msg, m.Keys.Escape):
 		keyType = "esc"
-	case msg.Type == tea.KeyUp || key.Matches(msg, m.Keys.Up):
+	case k.Code == tea.KeyUp || key.Matches(msg, m.Keys.Up):
 		keyType = "up"
-	case msg.Type == tea.KeyDown || key.Matches(msg, m.Keys.Down):
+	case k.Code == tea.KeyDown || key.Matches(msg, m.Keys.Down):
 		keyType = "down"
 	default:
-		if len(msg.Runes) == 1 {
-			keyType = "rune"
-			r = msg.Runes[0]
+		if k.Text != "" {
+			runes := []rune(k.Text)
+			if len(runes) == 1 {
+				keyType = "rune"
+				r = runes[0]
+			}
 		}
 	}
 	result, selected := m.Modals.ActionMenu.HandleKey(keyType, r)
@@ -257,23 +270,27 @@ func (m Model) handleActionMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) handleLauncherKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	keyType := "rune"
 	var r rune
+	k := msg.Key()
 	switch {
 	case key.Matches(msg, m.Keys.Enter):
 		keyType = "enter"
 	case key.Matches(msg, m.Keys.Escape):
 		keyType = "esc"
-	case msg.Type == tea.KeyUp || key.Matches(msg, m.Keys.Up):
+	case k.Code == tea.KeyUp || key.Matches(msg, m.Keys.Up):
 		keyType = "up"
-	case msg.Type == tea.KeyDown || key.Matches(msg, m.Keys.Down):
+	case k.Code == tea.KeyDown || key.Matches(msg, m.Keys.Down):
 		keyType = "down"
-	case msg.Type == tea.KeyTab:
+	case k.Code == tea.KeyTab:
 		keyType = "tab"
-	case msg.Type == tea.KeyBackspace:
+	case k.Code == tea.KeyBackspace:
 		keyType = "backspace"
 	default:
-		if len(msg.Runes) == 1 {
-			keyType = "rune"
-			r = msg.Runes[0]
+		if k.Text != "" {
+			runes := []rune(k.Text)
+			if len(runes) == 1 {
+				keyType = "rune"
+				r = runes[0]
+			}
 		}
 	}
 	result, submitted := m.Modals.Launcher.HandleKey(keyType, r)

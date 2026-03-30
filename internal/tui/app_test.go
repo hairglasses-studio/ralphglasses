@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
@@ -101,7 +101,7 @@ func TestLogLinesMsg(t *testing.T) {
 
 func TestHandleKeyQuit(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	if cmd == nil {
 		t.Error("q should produce quit command")
 	}
@@ -109,7 +109,7 @@ func TestHandleKeyQuit(t *testing.T) {
 
 func TestHandleKeyCommandMode(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(":")})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: ':', Text: ":"})
 	m = m2.(Model)
 	if m.InputMode != ModeCommand {
 		t.Errorf("mode = %d, want ModeCommand", m.InputMode)
@@ -118,7 +118,7 @@ func TestHandleKeyCommandMode(t *testing.T) {
 
 func TestHandleKeyFilterMode(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	m = m2.(Model)
 	if m.InputMode != ModeFilter {
 		t.Error("should be filter mode")
@@ -127,12 +127,12 @@ func TestHandleKeyFilterMode(t *testing.T) {
 
 func TestHandleKeyHelpToggle(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: '?', Text: "?"})
 	m = m2.(Model)
 	if m.Nav.CurrentView != ViewHelp {
 		t.Error("? should push help view")
 	}
-	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
+	m2, _ = m.Update(tea.KeyPressMsg{Code: '?', Text: "?"})
 	m = m2.(Model)
 	if m.Nav.CurrentView != ViewOverview {
 		t.Error("? again should pop back")
@@ -158,7 +158,7 @@ func TestView(t *testing.T) {
 	m.Table.Height = 40
 	m.StatusBar.Width = 120
 	m.LastRefresh = time.Now()
-	if m.View() == "" {
+	if m.View().Content == "" {
 		t.Error("view should not be empty")
 	}
 }
@@ -168,7 +168,7 @@ func TestViewSmallTerminal(t *testing.T) {
 	// Zero size
 	m.Width = 0
 	m.Height = 0
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "Terminal too small") {
 		t.Errorf("zero size should show small terminal message, got: %q", view)
 	}
@@ -176,7 +176,7 @@ func TestViewSmallTerminal(t *testing.T) {
 	// Width too small
 	m.Width = 2
 	m.Height = 40
-	view = m.View()
+	view = m.View().Content
 	if !strings.Contains(view, "Terminal too small") {
 		t.Errorf("narrow terminal should show small terminal message, got: %q", view)
 	}
@@ -184,7 +184,7 @@ func TestViewSmallTerminal(t *testing.T) {
 	// Height too small
 	m.Width = 120
 	m.Height = 2
-	view = m.View()
+	view = m.View().Content
 	if !strings.Contains(view, "Terminal too small") {
 		t.Errorf("short terminal should show small terminal message, got: %q", view)
 	}
@@ -192,7 +192,7 @@ func TestViewSmallTerminal(t *testing.T) {
 	// Just large enough
 	m.Width = 3
 	m.Height = 3
-	view = m.View()
+	view = m.View().Content
 	if strings.Contains(view, "Terminal too small") {
 		t.Error("3x3 terminal should render normally")
 	}
@@ -200,7 +200,7 @@ func TestViewSmallTerminal(t *testing.T) {
 
 func TestHandleKeyCtrlC(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	if cmd == nil {
 		t.Error("ctrl+c should produce quit command")
 	}
@@ -208,7 +208,7 @@ func TestHandleKeyCtrlC(t *testing.T) {
 
 func TestHandleKeyRefresh(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
 	if cmd == nil {
 		t.Error("r should produce scan command")
 	}
@@ -216,7 +216,7 @@ func TestHandleKeyRefresh(t *testing.T) {
 
 func TestHandleKeyEscAtRoot(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = m2.(Model)
 	// At root, Esc does nothing (no crash)
 	if m.Nav.CurrentView != ViewOverview {
@@ -227,7 +227,7 @@ func TestHandleKeyEscAtRoot(t *testing.T) {
 func TestHandleKeyEscPopsView(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.pushView(ViewHelp, "Help")
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = m2.(Model)
 	if m.Nav.CurrentView != ViewOverview {
 		t.Error("Esc should pop back to overview")
@@ -237,28 +237,28 @@ func TestHandleKeyEscPopsView(t *testing.T) {
 func TestCommandModeInput(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	// Enter command mode
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(":")})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: ':', Text: ":"})
 	m = m2.(Model)
 	if m.InputMode != ModeCommand {
 		t.Fatal("should be in command mode")
 	}
 
 	// Type characters
-	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	m2, _ = m.Update(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	m = m2.(Model)
 	if m.CommandBuf != "q" {
 		t.Errorf("CommandBuf = %q, want 'q'", m.CommandBuf)
 	}
 
 	// Backspace
-	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	m2, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	m = m2.(Model)
 	if m.CommandBuf != "" {
 		t.Errorf("after backspace, CommandBuf = %q", m.CommandBuf)
 	}
 
 	// Escape exits command mode
-	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	m2, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = m2.(Model)
 	if m.InputMode != ModeNormal {
 		t.Error("Esc should exit command mode")
@@ -268,13 +268,13 @@ func TestCommandModeInput(t *testing.T) {
 func TestCommandModeExec(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	// Enter command mode and type "quit"
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(":")})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: ':', Text: ":"})
 	m = m2.(Model)
 	for _, ch := range "quit" {
-		m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		m2, _ = m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = m2.(Model)
 	}
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil {
 		t.Error(":quit should produce quit command")
 	}
@@ -283,7 +283,7 @@ func TestCommandModeExec(t *testing.T) {
 func TestFilterModeInput(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	// Enter filter mode
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	m = m2.(Model)
 	if m.InputMode != ModeFilter {
 		t.Fatal("should be in filter mode")
@@ -293,14 +293,14 @@ func TestFilterModeInput(t *testing.T) {
 	}
 
 	// Type characters
-	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m2, _ = m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	m = m2.(Model)
 	if m.Filter.Text != "a" {
 		t.Errorf("Filter.Text = %q, want 'a'", m.Filter.Text)
 	}
 
 	// Enter confirms filter
-	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = m2.(Model)
 	if m.InputMode != ModeNormal {
 		t.Error("Enter should exit filter mode")
@@ -309,11 +309,11 @@ func TestFilterModeInput(t *testing.T) {
 
 func TestFilterModeEscClears(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	m = m2.(Model)
-	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	m2, _ = m.Update(tea.KeyPressMsg{Code: 'x', Text: "x"})
 	m = m2.(Model)
-	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	m2, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = m2.(Model)
 	if m.Filter.Text != "" {
 		t.Error("Esc should clear filter text")
@@ -330,7 +330,7 @@ func TestViewRepoDetail(t *testing.T) {
 	m.Height = 40
 	m.Sel.RepoIdx = 0
 	m.pushView(ViewRepoDetail, "test")
-	view := m.View()
+	view := m.View().Content
 	if view == "" {
 		t.Error("detail view should not be empty")
 	}
@@ -343,7 +343,7 @@ func TestViewLogs(t *testing.T) {
 	m.LogView.Width = 120
 	m.LogView.Height = 40
 	m.pushView(ViewLogs, "Logs")
-	view := m.View()
+	view := m.View().Content
 	if view == "" {
 		t.Error("log view should not be empty")
 	}
@@ -354,7 +354,7 @@ func TestViewHelp(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 	m.pushView(ViewHelp, "Help")
-	view := m.View()
+	view := m.View().Content
 	if view == "" {
 		t.Error("help view should not be empty")
 	}
@@ -366,7 +366,7 @@ func TestViewCommandMode(t *testing.T) {
 	m.Height = 40
 	m.InputMode = ModeCommand
 	m.CommandBuf = "scan"
-	view := m.View()
+	view := m.View().Content
 	if view == "" {
 		t.Error("command mode view should not be empty")
 	}
@@ -378,7 +378,7 @@ func TestViewFilterMode(t *testing.T) {
 	m.Height = 40
 	m.InputMode = ModeFilter
 	m.Filter.Text = "test"
-	view := m.View()
+	view := m.View().Content
 	if view == "" {
 		t.Error("filter mode view should not be empty")
 	}
@@ -424,10 +424,10 @@ func TestOverviewKeyJK(t *testing.T) {
 	m.Repos = []*model.Repo{{Name: "a", Path: "/tmp/a"}, {Name: "b", Path: "/tmp/b"}}
 	m.updateTable()
 
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	_ = m2 // should not panic
 
-	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	m2, _ = m.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	_ = m2 // should not panic
 }
 
@@ -439,7 +439,7 @@ func TestLogViewKeys(t *testing.T) {
 
 	keys := []string{"j", "k", "G", "g", "f"}
 	for _, k := range keys {
-		m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)})
+		m2, _ := m.Update(tea.KeyPressMsg{Text: k})
 		m = m2.(Model)
 	}
 	// Should not panic
@@ -449,14 +449,14 @@ func TestLoopPanelToggle(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 
 	// l navigates to the loop list view
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: 'l', Text: "l"})
 	m = m2.(Model)
 	if m.Nav.CurrentView != ViewLoopList {
 		t.Errorf("l should navigate to ViewLoopList, got %v", m.Nav.CurrentView)
 	}
 
 	// Esc from loop list pops back to overview
-	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	m2, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = m2.(Model)
 	if m.Nav.CurrentView != ViewOverview {
 		t.Errorf("Esc should return to ViewOverview, got %v", m.Nav.CurrentView)
@@ -471,7 +471,7 @@ func TestLoopPanelViewRender(t *testing.T) {
 	m.ShowLoopPanel = true
 	m.LoopView = "  myrepo  running  iters:3  Fix the bug\n"
 
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "Loop Status") {
 		t.Error("view should contain 'Loop Status'")
 	}
@@ -491,7 +491,7 @@ func TestLoopPanelHidden(t *testing.T) {
 	m.ShowLoopPanel = false
 	m.LoopView = "  myrepo  running  iters:3  Some task\n"
 
-	view := m.View()
+	view := m.View().Content
 	if strings.Contains(view, "Loop Status") {
 		t.Error("loop panel should not appear when ShowLoopPanel=false")
 	}
@@ -565,7 +565,7 @@ func TestRefreshLoopViewWithManager(t *testing.T) {
 	m2.Width = 120
 	m2.Height = 40
 	m2.StatusBar.Width = 120
-	view := m2.View()
+	view := m2.View().Content
 	if !strings.Contains(view, "Loop Status") {
 		t.Error("view should contain 'Loop Status' when ShowLoopPanel=true")
 	}
@@ -582,16 +582,16 @@ func TestLoopListKeyBindings(t *testing.T) {
 	m.pushView(ViewLoopList, "Loops")
 
 	// 's' should produce a loopListCmd (non-nil) even with no row selected
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 's', Text: "s"})
 	// cmd may be nil (no selection) or non-nil; no panic is the key requirement
 	_ = cmd
 
 	// 'x' should also not panic
-	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	_, cmd = m.Update(tea.KeyPressMsg{Code: 'x', Text: "x"})
 	_ = cmd
 
 	// 'd' should also not panic
-	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
+	_, cmd = m.Update(tea.KeyPressMsg{Code: 'd', Text: "d"})
 	_ = cmd
 
 	// Verify LoopListStart binding key matches 's'
@@ -640,7 +640,7 @@ func TestLoopListKeyBindings(t *testing.T) {
 	m2.Height = 40
 	m2.StatusBar.Width = 120
 	m2.pushView(ViewLoopList, "Loops")
-	v := m2.View()
+	v := m2.View().Content
 	if !strings.Contains(v, "start loop") {
 		t.Error("loop list view should show 'start loop' in footer hints")
 	}
@@ -686,12 +686,12 @@ func TestLoopListPauseKeyBinding(t *testing.T) {
 	// 'p' should not panic even with no selection
 	m2 := NewModel("/tmp/test", mgr)
 	m2.pushView(ViewLoopList, "Loops")
-	_, cmd := m2.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
+	_, cmd := m2.Update(tea.KeyPressMsg{Code: 'p', Text: "p"})
 	_ = cmd // no panic is the key requirement
 
 	// With a loop selected, 'p' should trigger pause and show notification
 	m.LoopListTable.SetRows(views.LoopRunsToRows(loops, 0))
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: 'p', Text: "p"})
 	m = updated.(Model)
 	// Handler should produce a loopListCmd (non-nil) and show a notification
 	if cmd == nil {
@@ -703,7 +703,7 @@ func TestLoopListPauseKeyBinding(t *testing.T) {
 
 	// Verify footer shows pause/resume hint
 	m.LoopListTable.SetRows(views.LoopRunsToRows(mgr.ListLoops(), 0))
-	v := m.View()
+	v := m.View().Content
 	if !strings.Contains(v, "pause/resume") {
 		t.Error("loop list view should show 'pause/resume' in footer hints")
 	}
@@ -827,7 +827,7 @@ func TestLoopDetailKeyBindings(t *testing.T) {
 	}
 
 	// 's' should produce a tea.Cmd (StepLoop) without panicking
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: 's', Text: "s"})
 	if cmd == nil {
 		t.Error("pressing 's' in loop detail should produce a non-nil Cmd")
 	}
@@ -842,7 +842,7 @@ func TestLoopDetailKeyBindings(t *testing.T) {
 	}
 
 	// 'r' should produce a tea.Cmd (toggle run/stop)
-	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
+	_, cmd = m.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
 	if cmd == nil {
 		t.Error("pressing 'r' in loop detail should produce a non-nil Cmd")
 	}
@@ -855,7 +855,7 @@ func TestLoopDetailKeyBindings(t *testing.T) {
 	}
 
 	// Verify loop detail view renders with keybinding help
-	v := m.View()
+	v := m.View().Content
 	if !strings.Contains(v, "step") {
 		t.Error("loop detail view should show 'step' in footer hints")
 	}
@@ -864,7 +864,7 @@ func TestLoopDetailKeyBindings(t *testing.T) {
 	}
 
 	// 'p' should produce a tea.Cmd (pause/resume)
-	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
+	_, cmd = m.Update(tea.KeyPressMsg{Code: 'p', Text: "p"})
 	if cmd == nil {
 		t.Error("pressing 'p' in loop detail should produce a non-nil Cmd")
 	}
@@ -1087,7 +1087,7 @@ func TestViewTerminalTooSmall(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Width = 2
 	m.Height = 2
-	got := m.View()
+	got := m.View().Content
 	if !strings.Contains(got, "too small") {
 		t.Error("expected 'too small' message")
 	}
@@ -1098,7 +1098,7 @@ func TestViewOverview(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 	m.Nav.CurrentView = ViewOverview
-	got := m.View()
+	got := m.View().Content
 	if got == "" {
 		t.Error("View should not be empty")
 	}
@@ -1109,7 +1109,7 @@ func TestViewSessions(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 	m.Nav.CurrentView = ViewSessions
-	got := m.View()
+	got := m.View().Content
 	if got == "" {
 		t.Error("View should not be empty")
 	}
@@ -1120,7 +1120,7 @@ func TestViewTeams(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 	m.Nav.CurrentView = ViewTeams
-	got := m.View()
+	got := m.View().Content
 	if got == "" {
 		t.Error("View should not be empty")
 	}
@@ -1131,7 +1131,7 @@ func TestViewFleet(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 	m.Nav.CurrentView = ViewFleet
-	got := m.View()
+	got := m.View().Content
 	if got == "" {
 		t.Error("View should not be empty")
 	}
@@ -1143,7 +1143,7 @@ func TestViewTimeline(t *testing.T) {
 	m.Height = 40
 	m.Nav.CurrentView = ViewTimeline
 	m.Sel.RepoIdx = -1
-	got := m.View()
+	got := m.View().Content
 	if got == "" {
 		t.Error("View should not be empty")
 	}
@@ -1156,7 +1156,7 @@ func TestViewRepoDetailValid(t *testing.T) {
 	m.Repos = []*model.Repo{{Name: "alpha", Path: "/tmp/alpha"}}
 	m.Sel.RepoIdx = 0
 	m.Nav.CurrentView = ViewRepoDetail
-	got := m.View()
+	got := m.View().Content
 	if got == "" {
 		t.Error("View should not be empty")
 	}
@@ -1177,7 +1177,7 @@ func TestViewRepoDetailWithGate(t *testing.T) {
 	m.Cache.Obs = map[string][]session.LoopObservation{
 		"/tmp/alpha": {{TotalCostUSD: 1.0}},
 	}
-	got := m.View()
+	got := m.View().Content
 	if got == "" {
 		t.Error("View should not be empty")
 	}
@@ -1191,7 +1191,7 @@ func TestViewSessionDetailNotFound(t *testing.T) {
 	mgr := session.NewManager()
 	m.SessMgr = mgr
 	m.Sel.SessionID = "nonexistent"
-	got := m.View()
+	got := m.View().Content
 	if !strings.Contains(got, "not found") {
 		t.Error("expected 'not found' for missing session")
 	}
@@ -1205,7 +1205,7 @@ func TestViewTeamDetailNotFound(t *testing.T) {
 	mgr := session.NewManager()
 	m.SessMgr = mgr
 	m.Sel.TeamName = "nonexistent"
-	got := m.View()
+	got := m.View().Content
 	if !strings.Contains(got, "not found") {
 		t.Error("expected 'not found' for missing team")
 	}
@@ -1216,7 +1216,7 @@ func TestViewLoopList(t *testing.T) {
 	m.Width = 120
 	m.Height = 40
 	m.Nav.CurrentView = ViewLoopList
-	got := m.View()
+	got := m.View().Content
 	if !strings.Contains(got, "pause/resume") {
 		t.Error("expected loop list footer hints")
 	}
@@ -1229,7 +1229,7 @@ func TestViewDiff(t *testing.T) {
 	m.Repos = []*model.Repo{{Name: "r", Path: "/tmp/test"}}
 	m.Sel.RepoIdx = 0
 	m.Nav.CurrentView = ViewDiff
-	got := m.View()
+	got := m.View().Content
 	if got == "" {
 		t.Error("View should not be empty")
 	}
@@ -1242,7 +1242,7 @@ func TestViewLoopHealth(t *testing.T) {
 	m.Repos = []*model.Repo{{Name: "r", Path: "/tmp/r"}}
 	m.Sel.RepoIdx = 0
 	m.Nav.CurrentView = ViewLoopHealth
-	got := m.View()
+	got := m.View().Content
 	if got == "" {
 		t.Error("View should not be empty")
 	}

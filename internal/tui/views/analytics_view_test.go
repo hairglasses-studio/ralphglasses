@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func sampleAnalyticsData() AnalyticsData {
@@ -202,7 +202,7 @@ func TestAnalyticsView_HandleKey_Tab(t *testing.T) {
 		t.Fatal("initial panel should be SessionCount")
 	}
 
-	handled, _ := v.HandleKey(tea.KeyMsg{Type: tea.KeyTab})
+	handled, _ := v.HandleKey(tea.KeyPressMsg{Code: tea.KeyTab})
 	if !handled {
 		t.Fatal("tab should be handled")
 	}
@@ -210,18 +210,18 @@ func TestAnalyticsView_HandleKey_Tab(t *testing.T) {
 		t.Errorf("panel = %v, want CostPerSession after tab", v.Panel())
 	}
 
-	v.HandleKey(tea.KeyMsg{Type: tea.KeyTab})
+	v.HandleKey(tea.KeyPressMsg{Code: tea.KeyTab})
 	if v.Panel() != PanelProviderDist {
 		t.Errorf("panel = %v, want ProviderDist after second tab", v.Panel())
 	}
 
-	v.HandleKey(tea.KeyMsg{Type: tea.KeyTab})
+	v.HandleKey(tea.KeyPressMsg{Code: tea.KeyTab})
 	if v.Panel() != PanelSuccessRate {
 		t.Errorf("panel = %v, want SuccessRate after third tab", v.Panel())
 	}
 
 	// Wrap around
-	v.HandleKey(tea.KeyMsg{Type: tea.KeyTab})
+	v.HandleKey(tea.KeyPressMsg{Code: tea.KeyTab})
 	if v.Panel() != PanelSessionCount {
 		t.Errorf("panel = %v, want SessionCount after wrap", v.Panel())
 	}
@@ -232,7 +232,7 @@ func TestAnalyticsView_HandleKey_ShiftTab(t *testing.T) {
 	v.SetDimensions(120, 40)
 
 	// Reverse wrap
-	handled, _ := v.HandleKey(tea.KeyMsg{Type: tea.KeyShiftTab})
+	handled, _ := v.HandleKey(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 	if !handled {
 		t.Fatal("shift+tab should be handled")
 	}
@@ -243,7 +243,7 @@ func TestAnalyticsView_HandleKey_ShiftTab(t *testing.T) {
 
 func TestAnalyticsView_HandleKey_Refresh(t *testing.T) {
 	v := NewAnalyticsView()
-	handled, cmd := v.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
+	handled, cmd := v.HandleKey(tea.KeyPressMsg{Code: 'r', Text: "r"})
 	if !handled {
 		t.Fatal("r should be handled")
 	}
@@ -266,7 +266,7 @@ func TestAnalyticsView_HandleKey_TimeRange(t *testing.T) {
 	}
 
 	// ] moves forward
-	handled, _ := v.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("]")})
+	handled, _ := v.HandleKey(tea.KeyPressMsg{Code: ']', Text: "]"})
 	if !handled {
 		t.Fatal("] should be handled")
 	}
@@ -275,7 +275,7 @@ func TestAnalyticsView_HandleKey_TimeRange(t *testing.T) {
 	}
 
 	// [ moves backward
-	handled, _ = v.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[")})
+	handled, _ = v.HandleKey(tea.KeyPressMsg{Code: '[', Text: "["})
 	if !handled {
 		t.Fatal("[ should be handled")
 	}
@@ -284,27 +284,27 @@ func TestAnalyticsView_HandleKey_TimeRange(t *testing.T) {
 	}
 
 	// [ again
-	v.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[")})
+	v.HandleKey(tea.KeyPressMsg{Code: '[', Text: "["})
 	if v.TimeRange() != TimeRange1h {
 		t.Errorf("time range = %v, want 1h", v.TimeRange())
 	}
 
 	// [ at min does not go below
-	v.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[")})
+	v.HandleKey(tea.KeyPressMsg{Code: '[', Text: "["})
 	if v.TimeRange() != TimeRange1h {
 		t.Errorf("time range = %v, want 1h (clamped)", v.TimeRange())
 	}
 
 	// Go to max
-	v.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("]")})
-	v.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("]")})
-	v.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("]")})
+	v.HandleKey(tea.KeyPressMsg{Code: ']', Text: "]"})
+	v.HandleKey(tea.KeyPressMsg{Code: ']', Text: "]"})
+	v.HandleKey(tea.KeyPressMsg{Code: ']', Text: "]"})
 	if v.TimeRange() != TimeRange30d {
 		t.Errorf("time range = %v, want 30d", v.TimeRange())
 	}
 
 	// ] at max does not go above
-	v.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("]")})
+	v.HandleKey(tea.KeyPressMsg{Code: ']', Text: "]"})
 	if v.TimeRange() != TimeRange30d {
 		t.Errorf("time range = %v, want 30d (clamped)", v.TimeRange())
 	}
@@ -312,7 +312,7 @@ func TestAnalyticsView_HandleKey_TimeRange(t *testing.T) {
 
 func TestAnalyticsView_HandleKey_Unhandled(t *testing.T) {
 	v := NewAnalyticsView()
-	handled, cmd := v.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	handled, cmd := v.HandleKey(tea.KeyPressMsg{Code: 'x', Text: "x"})
 	if handled {
 		t.Error("x should not be handled")
 	}

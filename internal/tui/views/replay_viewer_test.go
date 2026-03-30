@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -30,8 +30,11 @@ func sampleEvents() []session.ReplayEvent {
 	}
 }
 
-func keyMsg(s string) tea.KeyMsg {
-	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+func keyMsg(s string) tea.KeyPressMsg {
+	if len(s) == 1 {
+		return tea.KeyPressMsg{Code: rune(s[0]), Text: s}
+	}
+	return tea.KeyPressMsg{Text: s}
 }
 
 func TestNewReplayViewerModel(t *testing.T) {
@@ -76,7 +79,7 @@ func TestStepForward(t *testing.T) {
 		t.Errorf("j should move cursor to 1, got %d", m.Cursor())
 	}
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	if m.Cursor() != 2 {
 		t.Errorf("down arrow should move cursor to 2, got %d", m.Cursor())
 	}
@@ -98,7 +101,7 @@ func TestStepBack(t *testing.T) {
 		t.Errorf("k should move cursor to 1, got %d", m.Cursor())
 	}
 
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	if m.Cursor() != 0 {
 		t.Errorf("up arrow should move cursor to 0, got %d", m.Cursor())
 	}
@@ -296,13 +299,13 @@ func TestSearchEnterAndJump(t *testing.T) {
 	}
 
 	// Type query
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("response")})
+	m, _ = m.Update(tea.KeyPressMsg{Text: "response"})
 	if m.SearchQuery() != "response" {
 		t.Errorf("query should be 'response', got %q", m.SearchQuery())
 	}
 
 	// Confirm search
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if m.Searching() {
 		t.Error("enter should exit search mode")
 	}
@@ -321,8 +324,8 @@ func TestSearchNextPrev(t *testing.T) {
 
 	// Search for "response"
 	m, _ = m.Update(keyMsg("/"))
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("response")})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m, _ = m.Update(tea.KeyPressMsg{Text: "response"})
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 
 	// At first hit (index 1)
 	if m.Cursor() != 1 {
@@ -353,8 +356,8 @@ func TestSearchEscape(t *testing.T) {
 	m.SetDimensions(80, 30)
 
 	m, _ = m.Update(keyMsg("/"))
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("test")})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m, _ = m.Update(tea.KeyPressMsg{Text: "test"})
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 
 	if m.Searching() {
 		t.Error("esc should exit search mode")
@@ -369,8 +372,8 @@ func TestSearchBackspace(t *testing.T) {
 	m.SetDimensions(80, 30)
 
 	m, _ = m.Update(keyMsg("/"))
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("abc")})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	m, _ = m.Update(tea.KeyPressMsg{Text: "abc"})
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 
 	if m.SearchQuery() != "ab" {
 		t.Errorf("backspace should remove last char, got %q", m.SearchQuery())
@@ -382,8 +385,8 @@ func TestSearchNoHits(t *testing.T) {
 	m.SetDimensions(80, 30)
 
 	m, _ = m.Update(keyMsg("/"))
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("zzzznotfound")})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m, _ = m.Update(tea.KeyPressMsg{Text: "zzzznotfound"})
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 
 	if len(m.SearchHits()) != 0 {
 		t.Errorf("expected 0 hits, got %d", len(m.SearchHits()))
@@ -442,8 +445,8 @@ func TestViewShowsSearchMatches(t *testing.T) {
 	m.SetDimensions(80, 30)
 
 	m, _ = m.Update(keyMsg("/"))
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("response")})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m, _ = m.Update(tea.KeyPressMsg{Text: "response"})
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 
 	output := m.View()
 	if !strings.Contains(output, "matches: 2") {

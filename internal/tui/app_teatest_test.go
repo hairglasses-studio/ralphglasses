@@ -1,12 +1,12 @@
 package tui
 
 import (
-	"io"
+	"bytes"
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/x/exp/teatest"
+	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/exp/golden"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
@@ -43,73 +43,79 @@ func newTestModelWithRepos(t *testing.T) Model {
 	return m
 }
 
+// keyPressMsg constructs a v2 key press message for a single printable character.
+func keyPressMsg(ch rune) tea.KeyPressMsg {
+	return tea.KeyPressMsg{Code: ch, Text: string(ch)}
+}
+
+// testProgram runs model m with the given messages sent before quit, capturing output.
+// Returns (finalModel, output).
+func testProgram(t *testing.T, m Model, width, height int, msgs ...tea.Msg) (Model, []byte) {
+	t.Helper()
+	var out bytes.Buffer
+
+	p := tea.NewProgram(m,
+		tea.WithInput(bytes.NewBuffer(nil)),
+		tea.WithOutput(&out),
+		tea.WithoutSignals(),
+		tea.WithWindowSize(width, height),
+	)
+
+	go func() {
+		for _, msg := range msgs {
+			p.Send(msg)
+		}
+	}()
+
+	final, err := p.Run()
+	if err != nil {
+		t.Fatalf("program failed: %v", err)
+	}
+	fm, ok := final.(Model)
+	if !ok {
+		t.Fatalf("unexpected final model type: %T", final)
+	}
+	return fm, out.Bytes()
+}
+
 // --- Golden file snapshot tests ---
 
 func TestTeatest_OverviewEmpty(t *testing.T) {
 	m := newTestModel(t)
-	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(120, 40))
-
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
-	out, err := io.ReadAll(tm.FinalOutput(t, teatest.WithFinalTimeout(3*time.Second)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	teatest.RequireEqualOutput(t, out)
+	_, out := testProgram(t, m, 120, 40, keyPressMsg('q'))
+	golden.RequireEqual(t, out)
 }
 
 func TestTeatest_OverviewWithRepos(t *testing.T) {
 	m := newTestModelWithRepos(t)
-	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(120, 40))
-
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
-	out, err := io.ReadAll(tm.FinalOutput(t, teatest.WithFinalTimeout(3*time.Second)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	teatest.RequireEqualOutput(t, out)
+	_, out := testProgram(t, m, 120, 40, keyPressMsg('q'))
+	golden.RequireEqual(t, out)
 }
 
 func TestTeatest_HelpView(t *testing.T) {
 	m := newTestModel(t)
 	m.Nav.CurrentView = ViewHelp
 	m.Nav.Breadcrumb.Push("Help")
-	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(120, 40))
-
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
-	out, err := io.ReadAll(tm.FinalOutput(t, teatest.WithFinalTimeout(3*time.Second)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	teatest.RequireEqualOutput(t, out)
+	_, out := testProgram(t, m, 120, 40, keyPressMsg('q'))
+	golden.RequireEqual(t, out)
 }
 
 func TestTeatest_SmallTerminal(t *testing.T) {
 	m := NewModel(t.TempDir(), nil)
 	m.Width = 2
 	m.Height = 2
-	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(2, 2))
-
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
-	out, err := io.ReadAll(tm.FinalOutput(t, teatest.WithFinalTimeout(3*time.Second)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	teatest.RequireEqualOutput(t, out)
+	_, out := testProgram(t, m, 2, 2, keyPressMsg('q'))
+	golden.RequireEqual(t, out)
 }
 
 // --- Interactive flow tests ---
 
 func TestTeatest_NavigateToHelp(t *testing.T) {
 	m := newTestModel(t)
-	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(120, 40))
-
-	// Press ? to open help, then quit
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
-
-	// Verify final model is in help view
-	final := tm.FinalModel(t, teatest.WithFinalTimeout(3*time.Second))
-	fm := final.(Model)
+	fm, _ := testProgram(t, m, 120, 40,
+		keyPressMsg('?'),
+		keyPressMsg('q'),
+	)
 	if fm.Nav.CurrentView != ViewHelp {
 		t.Errorf("expected ViewHelp, got %d", fm.Nav.CurrentView)
 	}
@@ -117,15 +123,11 @@ func TestTeatest_NavigateToHelp(t *testing.T) {
 
 func TestTeatest_TabSwitching(t *testing.T) {
 	m := newTestModel(t)
-	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(120, 40))
-
-	// Switch to Sessions (2), then Teams (3), then quit
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("2")})
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("3")})
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
-
-	final := tm.FinalModel(t, teatest.WithFinalTimeout(3*time.Second))
-	fm := final.(Model)
+	fm, _ := testProgram(t, m, 120, 40,
+		keyPressMsg('2'),
+		keyPressMsg('3'),
+		keyPressMsg('q'),
+	)
 	if fm.Nav.ActiveTab != 2 {
 		t.Errorf("expected tab 2 (Teams), got %d", fm.Nav.ActiveTab)
 	}
@@ -133,15 +135,18 @@ func TestTeatest_TabSwitching(t *testing.T) {
 
 func TestTeatest_WindowResize(t *testing.T) {
 	m := newTestModel(t)
-	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(120, 40))
-
-	// Resize terminal, then quit
-	tm.Send(tea.WindowSizeMsg{Width: 200, Height: 60})
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
-
-	final := tm.FinalModel(t, teatest.WithFinalTimeout(3*time.Second))
-	fm := final.(Model)
-	if fm.Width != 200 || fm.Height != 60 {
-		t.Errorf("expected 200x60, got %dx%d", fm.Width, fm.Height)
+	// Test resize via direct Update to avoid v2 Send timing races.
+	resized, _ := m.Update(tea.WindowSizeMsg{Width: 200, Height: 60})
+	rm := resized.(Model)
+	if rm.Width != 200 || rm.Height != 60 {
+		t.Errorf("expected 200x60, got %dx%d", rm.Width, rm.Height)
 	}
 }
+
+// requiredFinalOutput is kept for backward compatibility with golden tests
+// that may call it via RequireEqualOutput.
+func RequireEqualOutput(t *testing.T, out []byte) {
+	t.Helper()
+	golden.RequireEqual(t, out)
+}
+

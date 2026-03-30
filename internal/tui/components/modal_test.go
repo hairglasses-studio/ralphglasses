@@ -3,7 +3,7 @@ package components
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // mockModal is a test double for the Modal interface.
@@ -18,7 +18,7 @@ type mockModal struct {
 func (m *mockModal) IsActive() bool { return m.active }
 func (m *mockModal) Deactivate()    { m.active = false }
 
-func (m *mockModal) ModalHandleKey(msg tea.KeyMsg) (tea.Cmd, bool) {
+func (m *mockModal) ModalHandleKey(msg tea.KeyPressMsg) (tea.Cmd, bool) {
 	m.handleCalls++
 	if m.deactivate {
 		m.active = false
@@ -56,7 +56,7 @@ func TestModalStack_PushPop(t *testing.T) {
 
 func TestModalStack_HandleKey_Empty(t *testing.T) {
 	var s ModalStack
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	msg := tea.KeyPressMsg{Code: tea.KeyEnter}
 
 	cmd, handled := s.HandleKey(msg)
 	if cmd != nil {
@@ -72,7 +72,7 @@ func TestModalStack_HandleKey_Delegates(t *testing.T) {
 	m := &mockModal{active: true}
 	s.Push(m)
 
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	msg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	_, handled := s.HandleKey(msg)
 
 	if !handled {
@@ -92,7 +92,7 @@ func TestModalStack_AutoPop(t *testing.T) {
 	m := &mockModal{active: true, deactivate: true}
 	s.Push(m)
 
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	msg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	_, handled := s.HandleKey(msg)
 
 	if !handled {

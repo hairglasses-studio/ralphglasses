@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
@@ -68,8 +68,9 @@ func (s *SearchInput) Reset() {
 // Returns (selected result, true) when the user confirms a selection with Enter.
 // Returns (zero, false) for all other keys. Caller should check Active after
 // this call — Escape sets Active = false.
-func (s *SearchInput) HandleKey(msg tea.KeyMsg) (SearchResult, bool) {
-	switch msg.Type {
+func (s *SearchInput) HandleKey(msg tea.KeyPressMsg) (SearchResult, bool) {
+	k := msg.Key()
+	switch k.Code {
 	case tea.KeyEscape:
 		s.Deactivate()
 		return SearchResult{}, false
@@ -98,11 +99,11 @@ func (s *SearchInput) HandleKey(msg tea.KeyMsg) (SearchResult, bool) {
 			s.Selected = 0
 		}
 		return SearchResult{}, false
+	}
 
-	case tea.KeyRunes:
-		s.Query += string(msg.Runes)
+	if k.Text != "" {
+		s.Query += k.Text
 		s.Selected = 0
-		return SearchResult{}, false
 	}
 
 	return SearchResult{}, false

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
 )
@@ -72,13 +72,17 @@ var configEditKeys = []ViewKeyEntry{
 		m.ConfigEdit.CancelEdit()
 		return *m, nil
 	}},
-	{Match: func(msg tea.KeyMsg) bool { return msg.Type == tea.KeyBackspace }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Match: func(msg tea.KeyMsg) bool { return msg.Key().Code == tea.KeyBackspace }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.ConfigEdit.Backspace()
 		return *m, nil
 	}},
 	{Match: func(msg tea.KeyMsg) bool { return true }, Handler: func(m *Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-		if len(msg.Runes) == 1 {
-			m.ConfigEdit.TypeChar(msg.Runes[0])
+		k := msg.Key()
+		if k.Text != "" {
+			runes := []rune(k.Text)
+			if len(runes) == 1 {
+				m.ConfigEdit.TypeChar(runes[0])
+			}
 		}
 		return *m, nil
 	}},
@@ -88,7 +92,8 @@ var configEditKeys = []ViewKeyEntry{
 
 var configDeleteKeys = []ViewKeyEntry{
 	{Match: func(msg tea.KeyMsg) bool {
-		return len(msg.Runes) == 1 && (msg.Runes[0] == 'y' || msg.Runes[0] == 'Y')
+		k := msg.Key()
+		return k.Text == "y" || k.Text == "Y"
 	}, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if key := m.ConfigEdit.ConfirmDelete(); key != "" {
 			m.Notify.Show(fmt.Sprintf("Deleted %s", key), 2*time.Second)
@@ -96,7 +101,8 @@ var configDeleteKeys = []ViewKeyEntry{
 		return *m, nil
 	}},
 	{Match: func(msg tea.KeyMsg) bool {
-		return len(msg.Runes) == 1 && (msg.Runes[0] == 'n' || msg.Runes[0] == 'N')
+		k := msg.Key()
+		return k.Text == "n" || k.Text == "N"
 	}, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.ConfigEdit.CancelDelete()
 		return *m, nil

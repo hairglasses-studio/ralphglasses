@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestNewPromptEditor_Defaults(t *testing.T) {
@@ -33,7 +33,7 @@ func TestPromptEditor_TabSwitchesPane(t *testing.T) {
 		t.Fatal("should start on original pane")
 	}
 
-	msg := tea.KeyMsg{Type: tea.KeyTab}
+	msg := tea.KeyPressMsg{Code: tea.KeyTab}
 	result, _ := m.Update(msg)
 	m2 := result.(PromptEditorModel)
 	if m2.ActivePane() != PaneEnhanced {
@@ -50,7 +50,7 @@ func TestPromptEditor_TabSwitchesPane(t *testing.T) {
 func TestPromptEditor_ShiftTabSwitchesPane(t *testing.T) {
 	m := NewPromptEditor("orig", []string{"claude"})
 
-	msg := tea.KeyMsg{Type: tea.KeyShiftTab}
+	msg := tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift}
 	result, _ := m.Update(msg)
 	m2 := result.(PromptEditorModel)
 	if m2.ActivePane() != PaneEnhanced {
@@ -61,7 +61,7 @@ func TestPromptEditor_ShiftTabSwitchesPane(t *testing.T) {
 func TestPromptEditor_EnterAcceptsOriginal(t *testing.T) {
 	m := NewPromptEditor("my prompt", []string{"claude"})
 
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	msg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	_, cmd := m.Update(msg)
 	if cmd == nil {
 		t.Fatal("enter should produce a command")
@@ -85,11 +85,11 @@ func TestPromptEditor_EnterAcceptsEnhanced(t *testing.T) {
 	m.SetEnhanced("better prompt")
 
 	// Switch to enhanced pane
-	tabMsg := tea.KeyMsg{Type: tea.KeyTab}
+	tabMsg := tea.KeyPressMsg{Code: tea.KeyTab}
 	result, _ := m.Update(tabMsg)
 	m2 := result.(PromptEditorModel)
 
-	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	enterMsg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	_, cmd := m2.Update(enterMsg)
 	if cmd == nil {
 		t.Fatal("enter should produce a command")
@@ -105,11 +105,11 @@ func TestPromptEditor_EnterAcceptsEnhanced(t *testing.T) {
 func TestPromptEditor_EnterOnEmptyEnhancedFallsBackToOriginal(t *testing.T) {
 	m := NewPromptEditor("orig", []string{"claude"})
 	// No enhanced text set; switch to enhanced pane
-	tabMsg := tea.KeyMsg{Type: tea.KeyTab}
+	tabMsg := tea.KeyPressMsg{Code: tea.KeyTab}
 	result, _ := m.Update(tabMsg)
 	m2 := result.(PromptEditorModel)
 
-	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	enterMsg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	_, cmd := m2.Update(enterMsg)
 	out := cmd()
 	accepted := out.(PromptAcceptedMsg)
@@ -125,7 +125,7 @@ func TestPromptEditor_ProviderCycling(t *testing.T) {
 	}
 
 	// Press 'p' to cycle forward
-	pMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}}
+	pMsg := tea.KeyPressMsg{Code: 'p', Text: "p"}
 	result, _ := m.Update(pMsg)
 	m2 := result.(PromptEditorModel)
 	if m2.SelectedProvider() != "gemini" {
@@ -147,7 +147,7 @@ func TestPromptEditor_ProviderCycling(t *testing.T) {
 
 func TestPromptEditor_ProviderCycleBackward(t *testing.T) {
 	m := NewPromptEditor("test", []string{"claude", "gemini"})
-	bigP := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'P'}}
+	bigP := tea.KeyPressMsg{Code: 'P', Text: "P"}
 	result, _ := m.Update(bigP)
 	m2 := result.(PromptEditorModel)
 	if m2.SelectedProvider() != "gemini" {
@@ -158,14 +158,14 @@ func TestPromptEditor_ProviderCycleBackward(t *testing.T) {
 func TestPromptEditor_ScrollKeys(t *testing.T) {
 	m := NewPromptEditor("line1\nline2\nline3\nline4\nline5", []string{"claude"})
 
-	downMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	downMsg := tea.KeyPressMsg{Code: 'j', Text: "j"}
 	result, _ := m.Update(downMsg)
 	m2 := result.(PromptEditorModel)
 	if m2.scrollLeft != 1 {
 		t.Fatalf("expected scrollLeft=1, got %d", m2.scrollLeft)
 	}
 
-	upMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
+	upMsg := tea.KeyPressMsg{Code: 'k', Text: "k"}
 	result, _ = m2.Update(upMsg)
 	m3 := result.(PromptEditorModel)
 	if m3.scrollLeft != 0 {
@@ -175,7 +175,7 @@ func TestPromptEditor_ScrollKeys(t *testing.T) {
 
 func TestPromptEditor_ScrollUpDoesNotGoNegative(t *testing.T) {
 	m := NewPromptEditor("test", []string{"claude"})
-	upMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
+	upMsg := tea.KeyPressMsg{Code: 'k', Text: "k"}
 	result, _ := m.Update(upMsg)
 	m2 := result.(PromptEditorModel)
 	if m2.scrollLeft != 0 {
@@ -187,7 +187,7 @@ func TestPromptEditor_ViewContainsTitle(t *testing.T) {
 	m := NewPromptEditor("hello", []string{"claude"})
 	m.width = 100
 	m.height = 30
-	output := m.View()
+	output := m.View().Content
 	if !strings.Contains(output, "Prompt A/B Editor") {
 		t.Fatal("view should contain title")
 	}
@@ -198,7 +198,7 @@ func TestPromptEditor_ViewContainsPaneLabels(t *testing.T) {
 	m.width = 100
 	m.height = 30
 	m.SetEnhanced("improved prompt")
-	output := m.View()
+	output := m.View().Content
 	if !strings.Contains(output, "Original") {
 		t.Fatal("view should contain 'Original' label")
 	}
@@ -212,7 +212,7 @@ func TestPromptEditor_ViewContainsPromptContent(t *testing.T) {
 	m.width = 100
 	m.height = 30
 	m.SetEnhanced("charlie delta")
-	output := m.View()
+	output := m.View().Content
 	if !strings.Contains(output, "alpha bravo") {
 		t.Fatal("view should contain original prompt text")
 	}
@@ -233,7 +233,7 @@ func TestPromptEditor_ScoreRendering(t *testing.T) {
 			{Name: "structure", Score: 75, Grade: "C"},
 		},
 	})
-	output := m.View()
+	output := m.View().Content
 	if !strings.Contains(output, "82/100") {
 		t.Fatal("view should contain overall score")
 	}
@@ -249,7 +249,7 @@ func TestPromptEditor_ViewContainsHelpBar(t *testing.T) {
 	m := NewPromptEditor("test", []string{"claude"})
 	m.width = 100
 	m.height = 30
-	output := m.View()
+	output := m.View().Content
 	if !strings.Contains(output, "tab:switch pane") {
 		t.Fatal("view should contain help text")
 	}
@@ -262,7 +262,7 @@ func TestPromptEditor_ViewShowsProviders(t *testing.T) {
 	m := NewPromptEditor("test", []string{"claude", "gemini"})
 	m.width = 100
 	m.height = 30
-	output := m.View()
+	output := m.View().Content
 	if !strings.Contains(output, "claude") {
 		t.Fatal("view should show claude provider")
 	}
@@ -293,7 +293,7 @@ func TestPromptEditor_EmptyContent(t *testing.T) {
 	m := NewPromptEditor("", []string{"claude"})
 	m.width = 80
 	m.height = 24
-	output := m.View()
+	output := m.View().Content
 	if !strings.Contains(output, "(empty)") {
 		t.Fatal("empty content should show placeholder")
 	}
@@ -316,12 +316,12 @@ func TestPromptEditor_ScrollRightPane(t *testing.T) {
 	m.SetEnhanced("line1\nline2\nline3")
 
 	// Switch to enhanced pane
-	tabMsg := tea.KeyMsg{Type: tea.KeyTab}
+	tabMsg := tea.KeyPressMsg{Code: tea.KeyTab}
 	result, _ := m.Update(tabMsg)
 	m2 := result.(PromptEditorModel)
 
 	// Scroll down in right pane
-	downMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	downMsg := tea.KeyPressMsg{Code: 'j', Text: "j"}
 	result, _ = m2.Update(downMsg)
 	m3 := result.(PromptEditorModel)
 	if m3.scrollRight != 1 {

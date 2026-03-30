@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
+	"charm.land/bubbles/v2/viewport"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
@@ -20,7 +20,7 @@ type LogView struct {
 
 // NewLogView creates a log view.
 func NewLogView() *LogView {
-	vp := viewport.New(0, 0)
+	vp := viewport.New()
 	// Disable built-in key bindings — we handle keys ourselves.
 	vp.KeyMap = viewport.KeyMap{}
 	return &LogView{
@@ -37,8 +37,8 @@ func (lv *LogView) SetDimensions(width, height int) {
 	if vpHeight < 1 {
 		vpHeight = 1
 	}
-	lv.vp.Width = width
-	lv.vp.Height = vpHeight
+	lv.vp.SetWidth(width)
+	lv.vp.SetHeight(vpHeight)
 }
 
 // AppendLines adds new log lines and auto-scrolls if following.
@@ -154,8 +154,8 @@ func (lv *LogView) View() string {
 	if vpHeight < 1 {
 		vpHeight = 1
 	}
-	lv.vp.Width = lv.Width
-	lv.vp.Height = vpHeight
+	lv.vp.SetWidth(lv.Width)
+	lv.vp.SetHeight(vpHeight)
 
 	var b strings.Builder
 
