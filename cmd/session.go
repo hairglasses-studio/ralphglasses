@@ -9,7 +9,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
 
@@ -26,7 +25,7 @@ var sessionListCmd = &cobra.Command{
 	Short: "List all known sessions",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
-		mgr := session.NewManager()
+		mgr := initManagerWithStore(nil)
 		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.LoadExternalSessions()
 
@@ -68,7 +67,7 @@ var sessionStatusCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
-		mgr := session.NewManager()
+		mgr := initManagerWithStore(nil)
 		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.LoadExternalSessions()
 
@@ -117,7 +116,7 @@ var sessionStopCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
-		mgr := session.NewManager()
+		mgr := initManagerWithStore(nil)
 		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.LoadExternalSessions()
 
@@ -135,7 +134,7 @@ func sessionIDCompletion(cmd *cobra.Command, args []string, toComplete string) (
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 	sp := util.ExpandHome(scanPath)
-	mgr := session.NewManager()
+	mgr := initManagerWithStore(nil)
 	mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 	mgr.LoadExternalSessions()
 

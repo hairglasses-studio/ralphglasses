@@ -24,7 +24,6 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/healthz"
 	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
-	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	tmuxpkg "github.com/hairglasses-studio/ralphglasses/internal/tmux"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
@@ -139,7 +138,7 @@ fleet management from any MCP-capable client.`,
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		sessMgr := session.NewManagerWithBus(bus)
+		sessMgr := initManagerWithStore(bus)
 		m := tui.NewModel(scanPath, sessMgr)
 		m.Ctx = ctx
 		m.EventBus = bus
