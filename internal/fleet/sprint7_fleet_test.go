@@ -60,14 +60,14 @@ func TestRemoteA2AAdapter_Discover_MockServer(t *testing.T) {
 		Description: "A test agent",
 		URL:         "http://test:9473",
 		Version:     "v1.0",
-		Capabilities: []string{"task_delegation"},
+		Capabilities: AgentCapabilities{Streaming: true},
 		Skills: []AgentSkill{
 			{ID: "work_submit", Name: "Submit Work"},
 		},
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/.well-known/agent.json" {
+		if r.URL.Path != AgentCardDiscoveryPath {
 			http.NotFound(w, r)
 			return
 		}
