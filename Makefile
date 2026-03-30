@@ -7,7 +7,7 @@ LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSIO
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke smoke-arm64 fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man
+.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke smoke-arm64 fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap
 
 # Install pre-commit hook (idempotent)
 hooks:
@@ -30,11 +30,18 @@ test-verbose:
 
 # Generate coverage report with threshold enforcement
 test-cover:
-	$(GO) test -race -coverprofile=coverage.out ./...
-	$(GO) tool cover -func=coverage.out
 	@mkdir -p .ralph
+	$(GO) test -race -coverprofile=coverage.out ./... | tee .ralph/test-cover-output.txt
+	$(GO) tool cover -func=coverage.out
 	@$(GO) tool cover -func=coverage.out | tail -1 | awk '{print $$NF}' | tr -d '%' > .ralph/coverage.txt
 	@echo "Coverage written to .ralph/coverage.txt: $$(cat .ralph/coverage.txt)%"
+	@echo ""
+	@echo "=== Per-package coverage summary (sorted) ==="
+	@grep -E 'coverage:' .ralph/test-cover-output.txt | \
+		sed 's/.*ok[[:space:]]*//' | \
+		awk '{pkg=$$1; pct=0; for(i=1;i<=NF;i++){if($$i=="coverage:"){pct=$$(i+1)+0}}} pct>0{printf "%6.1f  %s\n", pct, pkg}' | \
+		sort -rn | \
+		awk '{pct=$$1+0; warn=""; if (pct < 60) warn=" [NEEDS ATTENTION]"; printf "  %-70s %5.1f%%%s\n", $$2, pct, warn}'
 	@echo ""
 	@echo "To view HTML report: ./scripts/dev/go.sh tool cover -html=coverage.out"
 
@@ -172,6 +179,62 @@ lint:
 		exit 1; \
 	fi
 
+# Generate coverage badge SVG (runs tests if profile missing)
+coverage-badge:
+	@mkdir -p .ralph
+	@if [ ! -f .ralph/coverage.out ]; then \
+		echo "Running tests to generate coverage profile..."; \
+		$(GO) test -race -coverprofile=.ralph/coverage.out ./...; \
+	fi
+	$(GO) run ./tools/covbadge -i .ralph/coverage.out -o .ralph/coverage-badge.svg
+
+# Generate HTML coverage report + per-package summary
+coverage-report:
+	@mkdir -p .ralph
+	@if [ ! -f .ralph/coverage.out ]; then \
+		echo "Running tests to generate coverage profile..."; \
+		$(GO) test -race -coverprofile=.ralph/coverage.out ./...; \
+	fi
+	$(GO) tool cover -html=.ralph/coverage.out -o .ralph/coverage.html
+	@echo "HTML report: .ralph/coverage.html"
+	@echo ""
+	@echo "=== Per-package coverage summary (sorted by %) ==="
+	@$(GO) tool cover -func=.ralph/coverage.out | \
+		grep -v 'total:' | \
+		awk '{pkg=$$1; sub(/:[^:]+$$/, "", pkg); pct=$$NF+0; stmts[pkg]++; if(pct>0) hit[pkg]++} END{for(p in stmts){pct=hit[p]/stmts[p]*100; printf "%6.1f  %s\n", pct, p}}' | \
+		sort -rn | \
+		awk '{pct=$$1+0; warn=""; if (pct < 60) warn=" \033[31m[NEEDS ATTENTION]\033[0m"; printf "  %-70s %5.1f%%%s\n", $$2, pct, warn}'
+	@echo ""
+	@$(GO) tool cover -func=.ralph/coverage.out | tail -1
+
+# Generate coverage treemap (text-based fallback if go-cover-treemap unavailable)
+coverage-treemap:
+	@mkdir -p .ralph
+	@if [ ! -f .ralph/coverage.out ]; then \
+		echo "Running tests to generate coverage profile..."; \
+		$(GO) test -race -coverprofile=.ralph/coverage.out ./...; \
+	fi
+	@if command -v go-cover-treemap >/dev/null 2>&1; then \
+		echo "Generating SVG treemap with go-cover-treemap..."; \
+		go-cover-treemap -coverprofile .ralph/coverage.out > .ralph/coverage-treemap.svg; \
+		echo "Treemap: .ralph/coverage-treemap.svg"; \
+	else \
+		echo "go-cover-treemap not installed, generating text treemap..."; \
+		echo ""; \
+		echo "=== Coverage Treemap (text) ==="; \
+		echo ""; \
+		$(GO) tool cover -func=.ralph/coverage.out | \
+			grep -v 'total:' | \
+			awk '{pkg=$$1; sub(/:[^:]+$$/, "", pkg); pct=$$NF+0; sum[pkg]+=pct; cnt[pkg]++} END{for(p in sum){avg=sum[p]/cnt[p]; printf "%6.1f  %s\n", avg, p}}' | \
+			sort -rn | \
+			awk '{pct=$$1+0; bar=""; for(i=0;i<pct/2;i++) bar=bar "#"; \
+				if(pct>=80) color="\033[32m"; else if(pct>=60) color="\033[33m"; else color="\033[31m"; \
+				printf "  %s%-50s %5.1f%% %s\033[0m\n", color, $$2, pct, bar}'; \
+		echo ""; \
+		echo "Install go-cover-treemap for an SVG visualization:"; \
+		echo "  go install github.com/nikolaydubina/go-cover-treemap@latest"; \
+	fi
+
 # CI pipeline: bootstrap-aware vet + test + build
 ci:
 	./scripts/dev/ci.sh
@@ -181,6 +244,7 @@ clean:
 	rm -f coverage.out
 	rm -f ralphglasses
 	rm -f prompt-improver
+	rm -f .ralph/coverage.out .ralph/coverage.html .ralph/coverage-badge.svg .ralph/coverage-treemap.svg .ralph/test-cover-output.txt
 	$(GO) clean ./...
 
 # Generate CHANGELOG.md from git log grouped by version tags
