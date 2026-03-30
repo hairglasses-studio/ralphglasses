@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -151,11 +152,14 @@ func RoadmapToTasks(roadmapPath string, maxTasks int) ([]CycleTask, error) {
 			prompt = fmt.Sprintf("[%s] %s", currentSection, prompt)
 		}
 
+		priority, size := parseRoadmapAnnotations(trimmed)
+
 		tasks = append(tasks, CycleTask{
 			Title:    title,
 			Prompt:   prompt,
 			Source:   "roadmap",
-			Priority: 0.5, // default; caller can re-prioritize
+			Priority: priority,
+			Size:     size,
 			Status:   "pending",
 		})
 
@@ -222,6 +226,37 @@ func cycleJaccardSimilarity(a, b string) float64 {
 		return 1.0
 	}
 	return float64(intersection) / float64(union)
+}
+
+// priorityTagRe matches backtick-wrapped priority annotations like `P0`, `P1`, `P2`.
+var priorityTagRe = regexp.MustCompile("`(P[0-2])`")
+
+// sizeTagRe matches backtick-wrapped size annotations like `S`, `M`, `L`.
+var sizeTagRe = regexp.MustCompile("`([SML])`")
+
+// parseRoadmapAnnotations extracts priority and size from backtick annotations
+// in a ROADMAP line. Returns (priority float64, size string).
+// Priority mapping: P0→1.0, P1→0.8, P2→0.5, missing→0.5.
+// Size: "S", "M", "L", or "" if missing.
+func parseRoadmapAnnotations(line string) (float64, string) {
+	priority := 0.5
+	if m := priorityTagRe.FindStringSubmatch(line); len(m) > 1 {
+		switch m[1] {
+		case "P0":
+			priority = 1.0
+		case "P1":
+			priority = 0.8
+		case "P2":
+			priority = 0.5
+		}
+	}
+
+	var size string
+	if m := sizeTagRe.FindStringSubmatch(line); len(m) > 1 {
+		size = m[1]
+	}
+
+	return priority, size
 }
 
 // deduplicateTasks removes tasks whose titles are too similar (above threshold).

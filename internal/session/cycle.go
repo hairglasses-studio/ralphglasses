@@ -59,7 +59,8 @@ type CycleTask struct {
 	Source    string  `json:"source"`               // "finding", "roadmap", "manual"
 	FindingID string  `json:"finding_id,omitempty"`
 	Priority  float64 `json:"priority"`
-	Status    string  `json:"status"` // "pending", "executing", "done", "failed"
+	Size      string  `json:"size,omitempty"` // "S", "M", "L" — parsed from roadmap annotations
+	Status    string  `json:"status"`         // "pending", "executing", "done", "failed"
 	LoopID    string  `json:"loop_id,omitempty"`
 }
 
