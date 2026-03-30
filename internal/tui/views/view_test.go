@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/key"
+	"charm.land/bubbles/v2/key"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
@@ -55,8 +55,8 @@ func TestViewportView_SetDimensions_ZeroHeight(t *testing.T) {
 	v := NewViewportView()
 	v.SetDimensions(80, 0)
 	// Should clamp to 1
-	if v.vp.Height != 1 {
-		t.Errorf("expected viewport height 1, got %d", v.vp.Height)
+	if v.vp.Height() != 1 {
+		t.Errorf("expected viewport height 1, got %d", v.vp.Height())
 	}
 }
 

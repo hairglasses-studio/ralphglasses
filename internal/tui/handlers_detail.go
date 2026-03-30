@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
@@ -328,21 +328,24 @@ var fleetKeys = []ViewKeyEntry{
 		data := m.buildFleetData()
 		return m.timelineFleetSelection(data)
 	}},
-	{Match: func(msg tea.KeyMsg) bool { return msg.Type == tea.KeyTab || msg.Type == tea.KeyRight }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Match: func(msg tea.KeyMsg) bool {
+		k := msg.Key()
+		return k.Code == tea.KeyTab || k.Code == tea.KeyRight
+	}, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		data := m.buildFleetData()
 		m.cycleFleetSection(data, 1)
 		return *m, nil
 	}},
-	{Match: func(msg tea.KeyMsg) bool { return msg.Type == tea.KeyLeft }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Match: func(msg tea.KeyMsg) bool { return msg.Key().Code == tea.KeyLeft }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		data := m.buildFleetData()
 		m.cycleFleetSection(data, -1)
 		return *m, nil
 	}},
-	{Match: func(msg tea.KeyMsg) bool { return len(msg.Runes) == 1 && msg.Runes[0] == ']' }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Match: func(msg tea.KeyMsg) bool { return msg.Key().Text == "]" }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.Fleet.Window = (m.Fleet.Window + 1) % len(fleetWindows)
 		return *m, nil
 	}},
-	{Match: func(msg tea.KeyMsg) bool { return len(msg.Runes) == 1 && msg.Runes[0] == '[' }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Match: func(msg tea.KeyMsg) bool { return msg.Key().Text == "[" }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.Fleet.Window--
 		if m.Fleet.Window < 0 {
 			m.Fleet.Window = len(fleetWindows) - 1

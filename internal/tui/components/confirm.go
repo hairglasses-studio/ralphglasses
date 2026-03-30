@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
@@ -177,10 +177,24 @@ func (d *ConfirmDialog) IsActive() bool { return d.Active }
 func (d *ConfirmDialog) Deactivate() { d.Active = false }
 
 // ModalHandleKey implements Modal.HandleKey by adapting the existing HandleKey logic.
-func (d *ConfirmDialog) ModalHandleKey(msg tea.KeyMsg) (tea.Cmd, bool) {
-	keyType := msg.Type.String()
-	if msg.Type == tea.KeyRunes {
-		keyType = string(msg.Runes)
+func (d *ConfirmDialog) ModalHandleKey(msg tea.KeyPressMsg) (tea.Cmd, bool) {
+	k := msg.Key()
+	var keyType string
+	switch k.Code {
+	case tea.KeyLeft:
+		keyType = "left"
+	case tea.KeyRight:
+		keyType = "right"
+	case tea.KeyTab:
+		keyType = "tab"
+	case tea.KeyEnter:
+		keyType = "enter"
+	case tea.KeyEscape:
+		keyType = "esc"
+	default:
+		if k.Text != "" {
+			keyType = k.Text
+		}
 	}
 
 	switch keyType {

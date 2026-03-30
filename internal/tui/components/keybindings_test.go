@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestRuneKey(t *testing.T) {
 	k := RuneKey('j')
-	if k.Type != tea.KeyRunes {
-		t.Errorf("Type = %v, want KeyRunes", k.Type)
+	if k.Code != 0 {
+		t.Errorf("Code = %v, want 0 (character key)", k.Code)
 	}
 	if k.Rune != 'j' {
 		t.Errorf("Rune = %c, want j", k.Rune)
@@ -22,8 +22,8 @@ func TestRuneKey(t *testing.T) {
 
 func TestCtrlKey(t *testing.T) {
 	k := CtrlKey('c')
-	if k.Type != tea.KeyRunes {
-		t.Errorf("Type = %v, want KeyRunes", k.Type)
+	if k.Code != 0 {
+		t.Errorf("Code = %v, want 0 (character key)", k.Code)
 	}
 	if k.Rune != 'c' {
 		t.Errorf("Rune = %c, want c", k.Rune)
@@ -35,8 +35,8 @@ func TestCtrlKey(t *testing.T) {
 
 func TestSpecialKey(t *testing.T) {
 	k := SpecialKey(tea.KeyEnter)
-	if k.Type != tea.KeyEnter {
-		t.Errorf("Type = %v, want KeyEnter", k.Type)
+	if k.Code != tea.KeyEnter {
+		t.Errorf("Code = %v, want KeyEnter", k.Code)
 	}
 	if k.Rune != 0 {
 		t.Errorf("Rune = %c, want 0", k.Rune)
@@ -56,8 +56,8 @@ func TestKeyEqual(t *testing.T) {
 		{"rune vs special", RuneKey('j'), SpecialKey(tea.KeyUp), false},
 		{"ctrl modifier", CtrlKey('c'), CtrlKey('c'), true},
 		{"ctrl vs no ctrl", CtrlKey('c'), RuneKey('c'), false},
-		{"alt modifier", Key{Type: tea.KeyRunes, Rune: 'x', Alt: true}, Key{Type: tea.KeyRunes, Rune: 'x', Alt: true}, true},
-		{"alt vs no alt", Key{Type: tea.KeyRunes, Rune: 'x', Alt: true}, RuneKey('x'), false},
+		{"alt modifier", Key{Code: 0, Rune: 'x', Alt: true}, Key{Code: 0, Rune: 'x', Alt: true}, true},
+		{"alt vs no alt", Key{Code: 0, Rune: 'x', Alt: true}, RuneKey('x'), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -77,13 +77,13 @@ func TestKeyString(t *testing.T) {
 		{RuneKey('?'), "?"},
 		{RuneKey(' '), "space"},
 		{CtrlKey('c'), "ctrl+c"},
-		{Key{Type: tea.KeyRunes, Rune: 'x', Alt: true}, "alt+x"},
-		{Key{Type: tea.KeyRunes, Rune: 'z', Ctrl: true, Alt: true}, "ctrl+alt+z"},
+		{Key{Code: 0, Rune: 'x', Alt: true}, "alt+x"},
+		{Key{Code: 0, Rune: 'z', Ctrl: true, Alt: true}, "ctrl+alt+z"},
 		{SpecialKey(tea.KeyEnter), "enter"},
 		{SpecialKey(tea.KeyEscape), "esc"},
 		{SpecialKey(tea.KeyUp), "up"},
 		{SpecialKey(tea.KeyTab), "tab"},
-		{SpecialKey(tea.KeyShiftTab), "shift+tab"},
+		{ShiftTabKey(), "shift+tab"},
 		{SpecialKey(tea.KeyPgUp), "pgup"},
 		{SpecialKey(tea.KeyF1), "f1"},
 	}
@@ -97,31 +97,31 @@ func TestKeyString(t *testing.T) {
 }
 
 func TestKeyFromMsg_Rune(t *testing.T) {
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	msg := tea.KeyPressMsg{Text: "j"}
 	k := KeyFromMsg(msg)
-	if k.Type != tea.KeyRunes || k.Rune != 'j' {
+	if k.Code != 0 || k.Rune != 'j' {
 		t.Errorf("got %+v, want rune 'j'", k)
 	}
 }
 
 func TestKeyFromMsg_Special(t *testing.T) {
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	msg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	k := KeyFromMsg(msg)
-	if k.Type != tea.KeyEnter {
-		t.Errorf("got Type=%v, want KeyEnter", k.Type)
+	if k.Code != tea.KeyEnter {
+		t.Errorf("got Code=%v, want KeyEnter", k.Code)
 	}
 }
 
 func TestKeyFromMsg_CtrlC(t *testing.T) {
-	msg := tea.KeyMsg{Type: tea.KeyCtrlC}
+	msg := tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}
 	k := KeyFromMsg(msg)
-	if !k.Ctrl || k.Rune != 'c' || k.Type != tea.KeyRunes {
+	if !k.Ctrl || k.Rune != 'c' || k.Code != 0 {
 		t.Errorf("got %+v, want ctrl+c as Ctrl=true Rune='c'", k)
 	}
 }
 
 func TestKeyFromMsg_Alt(t *testing.T) {
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}, Alt: true}
+	msg := tea.KeyPressMsg{Text: "x", Mod: tea.ModAlt}
 	k := KeyFromMsg(msg)
 	if !k.Alt || k.Rune != 'x' {
 		t.Errorf("got %+v, want alt+x", k)
@@ -149,7 +149,7 @@ func TestKeyMap_ResolveMsg(t *testing.T) {
 	km := NewKeyMap([]Binding{
 		{RuneKey('j'), ActionNavDown},
 	})
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	msg := tea.KeyPressMsg{Text: "j"}
 	if got := km.ResolveMsg(msg); got != ActionNavDown {
 		t.Errorf("ResolveMsg = %q, want %q", got, ActionNavDown)
 	}
@@ -170,7 +170,7 @@ func TestKeyMap_KeysFor(t *testing.T) {
 	if keys[0].Rune != 'k' {
 		t.Errorf("keys[0] = %v, want 'k'", keys[0])
 	}
-	if keys[1].Type != tea.KeyUp {
+	if keys[1].Code != tea.KeyUp {
 		t.Errorf("keys[1] = %v, want KeyUp", keys[1])
 	}
 
@@ -364,7 +364,7 @@ func TestParseKey_AltCombo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := Key{Type: tea.KeyRunes, Rune: 'x', Alt: true}
+	expected := Key{Code: 0, Rune: 'x', Alt: true}
 	if !k.Equal(expected) {
 		t.Errorf("got %v, want %v", k, expected)
 	}
@@ -532,7 +532,7 @@ func TestHelpOverlay_Deactivate(t *testing.T) {
 
 func TestHelpOverlay_ModalHandleKey_Escape(t *testing.T) {
 	h := &HelpOverlay{Active: true, KeyMap: DefaultKeyMap()}
-	msg := tea.KeyMsg{Type: tea.KeyEscape}
+	msg := tea.KeyPressMsg{Code: tea.KeyEscape}
 	_, handled := h.ModalHandleKey(msg)
 	if !handled {
 		t.Error("escape should be handled")
@@ -544,7 +544,7 @@ func TestHelpOverlay_ModalHandleKey_Escape(t *testing.T) {
 
 func TestHelpOverlay_ModalHandleKey_QuestionMark(t *testing.T) {
 	h := &HelpOverlay{Active: true, KeyMap: DefaultKeyMap()}
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}}
+	msg := tea.KeyPressMsg{Text: "?"}
 	_, handled := h.ModalHandleKey(msg)
 	if !handled {
 		t.Error("? should be handled")
@@ -556,7 +556,7 @@ func TestHelpOverlay_ModalHandleKey_QuestionMark(t *testing.T) {
 
 func TestHelpOverlay_ModalHandleKey_ConsumesOtherKeys(t *testing.T) {
 	h := &HelpOverlay{Active: true, KeyMap: DefaultKeyMap()}
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	msg := tea.KeyPressMsg{Text: "j"}
 	_, handled := h.ModalHandleKey(msg)
 	if !handled {
 		t.Error("other keys should be consumed")
@@ -683,9 +683,9 @@ func TestMerge_PreservesUnrelatedBindings(t *testing.T) {
 }
 
 func TestKeyFromMsg_CtrlR(t *testing.T) {
-	msg := tea.KeyMsg{Type: tea.KeyCtrlR}
+	msg := tea.KeyPressMsg{Code: 'r', Mod: tea.ModCtrl}
 	k := KeyFromMsg(msg)
-	if !k.Ctrl || k.Rune != 'r' || k.Type != tea.KeyRunes {
+	if !k.Ctrl || k.Rune != 'r' || k.Code != 0 {
 		t.Errorf("got %+v, want ctrl+r as Ctrl=true Rune='r'", k)
 	}
 }

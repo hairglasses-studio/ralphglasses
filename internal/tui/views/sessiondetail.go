@@ -5,8 +5,9 @@ import (
 	"strings"
 	"time"
 
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/NimbleMarkets/ntcharts/sparkline"
-	"github.com/charmbracelet/bubbles/progress"
+	"charm.land/bubbles/v2/progress"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
@@ -241,7 +242,6 @@ func renderBudgetBar(pct float64, width int) string {
 		color = styles.ColorGreenStr
 	}
 
-	p := progress.New(progress.WithSolidFill(color), progress.WithoutPercentage())
-	p.Width = width
+	p := progress.New(progress.WithColors(lipgloss.Color(color), lipgloss.Color(color)), progress.WithoutPercentage(), progress.WithWidth(width))
 	return p.ViewAs(pct / 100)
 }

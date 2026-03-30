@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestFleetDashboardModel_Init(t *testing.T) {
@@ -121,18 +121,18 @@ func TestFleetDashboardModel_KeyBindings(t *testing.T) {
 		m := NewFleetDashboard()
 		m.SetSessions(sessions)
 
-		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+		m, _ = m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 		if m.cursor != 1 {
 			t.Fatalf("cursor = %d, want 1", m.cursor)
 		}
 
-		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+		m, _ = m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 		if m.cursor != 2 {
 			t.Fatalf("cursor = %d, want 2", m.cursor)
 		}
 
 		// Should not go past last
-		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+		m, _ = m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 		if m.cursor != 2 {
 			t.Fatalf("cursor = %d, want 2 (clamped)", m.cursor)
 		}
@@ -143,18 +143,18 @@ func TestFleetDashboardModel_KeyBindings(t *testing.T) {
 		m.SetSessions(sessions)
 		m.cursor = 2
 
-		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+		m, _ = m.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
 		if m.cursor != 1 {
 			t.Fatalf("cursor = %d, want 1", m.cursor)
 		}
 
-		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+		m, _ = m.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
 		if m.cursor != 0 {
 			t.Fatalf("cursor = %d, want 0", m.cursor)
 		}
 
 		// Should not go below 0
-		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+		m, _ = m.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
 		if m.cursor != 0 {
 			t.Fatalf("cursor = %d, want 0 (clamped)", m.cursor)
 		}
@@ -165,7 +165,7 @@ func TestFleetDashboardModel_KeyBindings(t *testing.T) {
 		m.SetSessions(sessions)
 		m.cursor = 1
 
-		_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		if cmd == nil {
 			t.Fatal("enter should produce a cmd")
 		}
@@ -181,7 +181,7 @@ func TestFleetDashboardModel_KeyBindings(t *testing.T) {
 
 	t.Run("r triggers refresh", func(t *testing.T) {
 		m := NewFleetDashboard()
-		_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
+		_, cmd := m.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
 		if cmd == nil {
 			t.Fatal("r should produce a cmd")
 		}
@@ -193,7 +193,7 @@ func TestFleetDashboardModel_KeyBindings(t *testing.T) {
 
 	t.Run("q quits", func(t *testing.T) {
 		m := NewFleetDashboard()
-		_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+		_, cmd := m.Update(tea.KeyPressMsg{Code: 'q', Text: "q"})
 		if cmd == nil {
 			t.Fatal("q should produce a quit cmd")
 		}

@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
@@ -20,7 +20,7 @@ func TestLoopList_MoveDown(t *testing.T) {
 		{"def67890", "repo-b", "stopped", "2", "idle"},
 	})
 
-	m2, _ := m.handleLoopListKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, _ := m.handleLoopListKey(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	got := m2.(Model)
 	row := got.LoopListTable.SelectedRow()
 	if row == nil {
@@ -41,9 +41,9 @@ func TestLoopList_MoveUp(t *testing.T) {
 	})
 
 	// Down then up
-	m2, _ := m.handleLoopListKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, _ := m.handleLoopListKey(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	m = m2.(Model)
-	m2, _ = m.handleLoopListKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	m2, _ = m.handleLoopListKey(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	got := m2.(Model)
 	row := got.LoopListTable.SelectedRow()
 	if row == nil {
@@ -60,7 +60,7 @@ func TestLoopList_Enter_EmptyTable(t *testing.T) {
 	m.Keys.SetViewContext(ViewLoopList)
 	// No rows set
 
-	m2, _ := m.handleLoopListKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleLoopListKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewLoopList {
 		t.Error("should stay in loop list with empty table")
@@ -76,7 +76,7 @@ func TestLoopList_Enter_NilTable(t *testing.T) {
 	// Use the raw dispatch entry to test the nil check
 	entries := loopListKeys
 	// Find the enter handler (index 2)
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	msg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	m.LoopListTable = nil
 	// The Enter handler checks LoopListTable == nil
 	// We need to manually test it since handleLoopListKey would dereference nil
@@ -95,7 +95,7 @@ func TestLoopList_Enter_NoSessMgr(t *testing.T) {
 		{"abc12345", "repo-a", "running", "5", "idle"},
 	})
 
-	m2, _ := m.handleLoopListKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleLoopListKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	// No SessMgr, so can't resolve loop ID -> should stay
 	if got.Nav.CurrentView != ViewLoopList {
@@ -114,7 +114,7 @@ func TestLoopListStart_NoSessMgr(t *testing.T) {
 		{"abc12345", "repo-a", "running", "5", "idle"},
 	})
 
-	m2, _ := handleLoopListStart(&m, tea.KeyMsg{})
+	m2, _ := handleLoopListStart(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if !got.Notify.Active() {
 		t.Error("expected notification about no session manager")
@@ -128,7 +128,7 @@ func TestLoopListStart_NoRow(t *testing.T) {
 	m.SessMgr = nil // doesn't matter, row check first
 	// Empty table
 
-	m2, _ := handleLoopListStart(&m, tea.KeyMsg{})
+	m2, _ := handleLoopListStart(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if !got.Notify.Active() {
 		t.Error("expected notification for no session manager or no row")
@@ -143,7 +143,7 @@ func TestLoopListStop_NoSessMgr(t *testing.T) {
 	m.Keys.SetViewContext(ViewLoopList)
 	m.SessMgr = nil
 
-	m2, _ := handleLoopListStop(&m, tea.KeyMsg{})
+	m2, _ := handleLoopListStop(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if !got.Notify.Active() {
 		t.Error("expected notification about no session manager")
@@ -156,7 +156,7 @@ func TestLoopListStop_NoRow(t *testing.T) {
 	m.Keys.SetViewContext(ViewLoopList)
 	m.SessMgr = nil
 
-	m2, _ := handleLoopListStop(&m, tea.KeyMsg{})
+	m2, _ := handleLoopListStop(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if !got.Notify.Active() {
 		t.Error("expected notification for no row")
@@ -171,7 +171,7 @@ func TestLoopListPause_NoSessMgr(t *testing.T) {
 	m.Keys.SetViewContext(ViewLoopList)
 	m.SessMgr = nil
 
-	m2, _ := handleLoopListPause(&m, tea.KeyMsg{})
+	m2, _ := handleLoopListPause(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if !got.Notify.Active() {
 		t.Error("expected notification about no session manager")
@@ -184,7 +184,7 @@ func TestLoopListPause_NoRow(t *testing.T) {
 	m.Keys.SetViewContext(ViewLoopList)
 	m.SessMgr = nil
 
-	m2, _ := handleLoopListPause(&m, tea.KeyMsg{})
+	m2, _ := handleLoopListPause(&m, tea.KeyPressMsg{})
 	got := m2.(Model)
 	if !got.Notify.Active() {
 		t.Error("expected notification")
@@ -200,7 +200,7 @@ func TestLoopDetail_NilSessMgr(t *testing.T) {
 	m.SessMgr = nil
 	m.Sel.LoopID = "some-loop"
 
-	m2, cmd := m.handleLoopDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	m2, cmd := m.handleLoopDetailKey(tea.KeyPressMsg{Code: 's', Text: "s"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("expected nil cmd with nil SessMgr")
@@ -213,7 +213,7 @@ func TestLoopDetail_EmptySelectedLoop(t *testing.T) {
 	m.Keys.SetViewContext(ViewLoopDetail)
 	m.Sel.LoopID = ""
 
-	m2, cmd := m.handleLoopDetailKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	m2, cmd := m.handleLoopDetailKey(tea.KeyPressMsg{Code: 's', Text: "s"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("expected nil cmd with empty SelectedLoop")
@@ -232,7 +232,7 @@ func TestLoopControl_MoveDown(t *testing.T) {
 	}
 	m.LoopControlIdx = 0
 
-	m2, _ := m.handleLoopControlKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, _ := m.handleLoopControlKey(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	got := m2.(Model)
 	if got.LoopControlIdx != 1 {
 		t.Errorf("LoopControlIdx = %d, want 1", got.LoopControlIdx)
@@ -248,7 +248,7 @@ func TestLoopControl_MoveDown_AtEnd(t *testing.T) {
 	}
 	m.LoopControlIdx = 0
 
-	m2, _ := m.handleLoopControlKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, _ := m.handleLoopControlKey(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	got := m2.(Model)
 	if got.LoopControlIdx != 0 {
 		t.Errorf("LoopControlIdx = %d, want 0 (should not exceed list)", got.LoopControlIdx)
@@ -265,7 +265,7 @@ func TestLoopControl_MoveUp(t *testing.T) {
 	}
 	m.LoopControlIdx = 1
 
-	m2, _ := m.handleLoopControlKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	m2, _ := m.handleLoopControlKey(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	got := m2.(Model)
 	if got.LoopControlIdx != 0 {
 		t.Errorf("LoopControlIdx = %d, want 0", got.LoopControlIdx)
@@ -281,7 +281,7 @@ func TestLoopControl_MoveUp_AtStart(t *testing.T) {
 	}
 	m.LoopControlIdx = 0
 
-	m2, _ := m.handleLoopControlKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	m2, _ := m.handleLoopControlKey(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	got := m2.(Model)
 	if got.LoopControlIdx != 0 {
 		t.Errorf("LoopControlIdx = %d, want 0", got.LoopControlIdx)
@@ -298,7 +298,7 @@ func TestLoopControl_Step_NoSessMgr(t *testing.T) {
 	}
 	m.LoopControlIdx = 0
 
-	m2, cmd := m.handleLoopControlKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	m2, cmd := m.handleLoopControlKey(tea.KeyPressMsg{Code: 's', Text: "s"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("expected nil cmd with nil SessMgr")
@@ -311,7 +311,7 @@ func TestLoopControl_Step_EmptyData(t *testing.T) {
 	m.Keys.SetViewContext(ViewLoopControl)
 	m.LoopControlData = nil
 
-	m2, cmd := m.handleLoopControlKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	m2, cmd := m.handleLoopControlKey(tea.KeyPressMsg{Code: 's', Text: "s"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("expected nil cmd with empty data")
@@ -327,7 +327,7 @@ func TestLoopControl_Toggle_NoSessMgr(t *testing.T) {
 		{ID: "loop-1", Status: "running"},
 	}
 
-	m2, cmd := m.handleLoopControlKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
+	m2, cmd := m.handleLoopControlKey(tea.KeyPressMsg{Code: 'r', Text: "r"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("expected nil cmd with nil SessMgr")
@@ -340,7 +340,7 @@ func TestLoopControl_Toggle_EmptyData(t *testing.T) {
 	m.Keys.SetViewContext(ViewLoopControl)
 	m.LoopControlData = nil
 
-	m2, cmd := m.handleLoopControlKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
+	m2, cmd := m.handleLoopControlKey(tea.KeyPressMsg{Code: 'r', Text: "r"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("expected nil cmd with empty data")
@@ -356,7 +356,7 @@ func TestLoopControl_Pause_NoSessMgr(t *testing.T) {
 		{ID: "loop-1", Status: "running"},
 	}
 
-	m2, cmd := m.handleLoopControlKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
+	m2, cmd := m.handleLoopControlKey(tea.KeyPressMsg{Code: 'p', Text: "p"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("expected nil cmd with nil SessMgr")
@@ -369,7 +369,7 @@ func TestLoopControl_Pause_EmptyData(t *testing.T) {
 	m.Keys.SetViewContext(ViewLoopControl)
 	m.LoopControlData = nil
 
-	m2, cmd := m.handleLoopControlKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
+	m2, cmd := m.handleLoopControlKey(tea.KeyPressMsg{Code: 'p', Text: "p"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("expected nil cmd with empty data")

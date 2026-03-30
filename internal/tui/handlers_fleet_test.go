@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 )
@@ -16,7 +16,7 @@ func TestFleetSessionStart_NilSessMgr(t *testing.T) {
 	m.Ctx = context.Background()
 	m.SessMgr = nil
 
-	m2, cmd := handleFleetSessionStart(&m, tea.KeyMsg{})
+	m2, cmd := handleFleetSessionStart(&m, tea.KeyPressMsg{})
 	got := asModel(t, m2)
 	if !got.Notify.Active() {
 		t.Error("expected notification when SessMgr is nil")
@@ -31,7 +31,7 @@ func TestFleetSessionStart_NoSelectedRow(t *testing.T) {
 	m.Ctx = context.Background()
 	// FleetView.SessionTable has no rows by default
 
-	m2, cmd := handleFleetSessionStart(&m, tea.KeyMsg{})
+	m2, cmd := handleFleetSessionStart(&m, tea.KeyPressMsg{})
 	got := asModel(t, m2)
 	if !got.Notify.Active() {
 		t.Error("expected notification when no row selected")
@@ -49,7 +49,7 @@ func TestFleetSessionStart_RepoNotFound(t *testing.T) {
 	})
 	// No repos in model, so findRepoByName returns -1
 
-	m2, cmd := handleFleetSessionStart(&m, tea.KeyMsg{})
+	m2, cmd := handleFleetSessionStart(&m, tea.KeyPressMsg{})
 	got := asModel(t, m2)
 	if !got.Notify.Active() {
 		t.Error("expected notification when repo not found")
@@ -66,7 +66,7 @@ func TestFleetSessionStop_NilSessMgr(t *testing.T) {
 	m.Ctx = context.Background()
 	m.SessMgr = nil
 
-	m2, cmd := handleFleetSessionStop(&m, tea.KeyMsg{})
+	m2, cmd := handleFleetSessionStop(&m, tea.KeyPressMsg{})
 	got := asModel(t, m2)
 	if !got.Notify.Active() {
 		t.Error("expected notification when SessMgr is nil")
@@ -80,7 +80,7 @@ func TestFleetSessionStop_NoSelectedRow(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Ctx = context.Background()
 
-	m2, cmd := handleFleetSessionStop(&m, tea.KeyMsg{})
+	m2, cmd := handleFleetSessionStop(&m, tea.KeyPressMsg{})
 	got := asModel(t, m2)
 	if !got.Notify.Active() {
 		t.Error("expected notification when no row selected")
@@ -98,7 +98,7 @@ func TestFleetSessionStop_SessionNotFound(t *testing.T) {
 	})
 	// No sessions exist, so findFullSessionID returns ""
 
-	m2, cmd := handleFleetSessionStop(&m, tea.KeyMsg{})
+	m2, cmd := handleFleetSessionStop(&m, tea.KeyPressMsg{})
 	got := asModel(t, m2)
 	if !got.Notify.Active() {
 		t.Error("expected notification when session not found")
@@ -115,7 +115,7 @@ func TestFleetSessionPause_NilSessMgr(t *testing.T) {
 	m.Ctx = context.Background()
 	m.SessMgr = nil
 
-	m2, cmd := handleFleetSessionPause(&m, tea.KeyMsg{})
+	m2, cmd := handleFleetSessionPause(&m, tea.KeyPressMsg{})
 	got := asModel(t, m2)
 	if !got.Notify.Active() {
 		t.Error("expected notification when SessMgr is nil")
@@ -129,7 +129,7 @@ func TestFleetSessionPause_NoSelectedRow(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Ctx = context.Background()
 
-	m2, cmd := handleFleetSessionPause(&m, tea.KeyMsg{})
+	m2, cmd := handleFleetSessionPause(&m, tea.KeyPressMsg{})
 	got := asModel(t, m2)
 	if !got.Notify.Active() {
 		t.Error("expected notification when no row selected")
@@ -146,7 +146,7 @@ func TestFleetSessionPause_RepoNotFound(t *testing.T) {
 		{"sess-1", "nonexistent", "claude", "running"},
 	})
 
-	m2, cmd := handleFleetSessionPause(&m, tea.KeyMsg{})
+	m2, cmd := handleFleetSessionPause(&m, tea.KeyPressMsg{})
 	got := asModel(t, m2)
 	if !got.Notify.Active() {
 		t.Error("expected notification when repo not found")
@@ -167,7 +167,7 @@ func TestFleetSessionPause_WithValidRepo(t *testing.T) {
 	})
 
 	// togglePause with no process should still not panic
-	m2, _ := handleFleetSessionPause(&m, tea.KeyMsg{})
+	m2, _ := handleFleetSessionPause(&m, tea.KeyPressMsg{})
 	_ = asModel(t, m2)
 }
 
@@ -178,7 +178,7 @@ func TestFleetSessionResume_NilSessMgr(t *testing.T) {
 	m.Ctx = context.Background()
 	m.SessMgr = nil
 
-	m2, cmd := handleFleetSessionResume(&m, tea.KeyMsg{})
+	m2, cmd := handleFleetSessionResume(&m, tea.KeyPressMsg{})
 	got := asModel(t, m2)
 	if !got.Notify.Active() {
 		t.Error("expected notification when SessMgr is nil")
@@ -192,7 +192,7 @@ func TestFleetSessionResume_NoSelectedRow(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Ctx = context.Background()
 
-	m2, cmd := handleFleetSessionResume(&m, tea.KeyMsg{})
+	m2, cmd := handleFleetSessionResume(&m, tea.KeyPressMsg{})
 	got := asModel(t, m2)
 	if !got.Notify.Active() {
 		t.Error("expected notification when no row selected")
@@ -209,7 +209,7 @@ func TestFleetSessionResume_RepoNotFound(t *testing.T) {
 		{"sess-1", "nonexistent", "claude", "running"},
 	})
 
-	m2, cmd := handleFleetSessionResume(&m, tea.KeyMsg{})
+	m2, cmd := handleFleetSessionResume(&m, tea.KeyPressMsg{})
 	got := asModel(t, m2)
 	if !got.Notify.Active() {
 		t.Error("expected notification when repo not found")
@@ -229,7 +229,7 @@ func TestFleetSessionResume_WithValidRepo(t *testing.T) {
 		{"sess-1", "myrepo", "claude", "running"},
 	})
 
-	m2, _ := handleFleetSessionResume(&m, tea.KeyMsg{})
+	m2, _ := handleFleetSessionResume(&m, tea.KeyPressMsg{})
 	_ = asModel(t, m2)
 }
 

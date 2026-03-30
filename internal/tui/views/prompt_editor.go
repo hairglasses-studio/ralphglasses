@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
@@ -115,13 +115,13 @@ func (m PromptEditorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 	}
 	return m, nil
 }
 
-func (m PromptEditorModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m PromptEditorModel) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "tab":
 		m.activePane = PromptEditorPane((int(m.activePane) + 1) % promptEditorPaneCount)
@@ -189,8 +189,8 @@ func (m PromptEditorModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // View satisfies tea.Model.
-func (m PromptEditorModel) View() string {
-	return m.renderAt(m.width, m.height)
+func (m PromptEditorModel) View() tea.View {
+	return tea.NewView(m.renderAt(m.width, m.height))
 }
 
 // renderAt builds the full view at the given dimensions.

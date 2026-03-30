@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestNewSearchInput(t *testing.T) {
@@ -86,7 +86,7 @@ func TestSearchInput_HandleKey_Escape(t *testing.T) {
 	s := NewSearchInput()
 	s.Activate()
 
-	result, ok := s.HandleKey(tea.KeyMsg{Type: tea.KeyEscape})
+	result, ok := s.HandleKey(tea.KeyPressMsg{Code: tea.KeyEsc})
 	if ok {
 		t.Error("Escape should return ok=false")
 	}
@@ -108,7 +108,7 @@ func TestSearchInput_HandleKey_Enter_WithResults(t *testing.T) {
 	}
 	s.Selected = 1
 
-	result, ok := s.HandleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	result, ok := s.HandleKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if !ok {
 		t.Fatal("Enter with results should return ok=true")
 	}
@@ -125,7 +125,7 @@ func TestSearchInput_HandleKey_Enter_NoResults(t *testing.T) {
 	s := NewSearchInput()
 	s.Activate()
 
-	_, ok := s.HandleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	_, ok := s.HandleKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if ok {
 		t.Error("Enter with no results should return ok=false")
 	}
@@ -138,18 +138,18 @@ func TestSearchInput_HandleKey_ArrowUp(t *testing.T) {
 	s.Results = []SearchResult{{Name: "a"}, {Name: "b"}, {Name: "c"}}
 	s.Selected = 2
 
-	s.HandleKey(tea.KeyMsg{Type: tea.KeyUp})
+	s.HandleKey(tea.KeyPressMsg{Code: tea.KeyUp})
 	if s.Selected != 1 {
 		t.Errorf("Selected after Up = %d, want 1", s.Selected)
 	}
 
-	s.HandleKey(tea.KeyMsg{Type: tea.KeyUp})
+	s.HandleKey(tea.KeyPressMsg{Code: tea.KeyUp})
 	if s.Selected != 0 {
 		t.Errorf("Selected after second Up = %d, want 0", s.Selected)
 	}
 
 	// Should not go below 0.
-	s.HandleKey(tea.KeyMsg{Type: tea.KeyUp})
+	s.HandleKey(tea.KeyPressMsg{Code: tea.KeyUp})
 	if s.Selected != 0 {
 		t.Errorf("Selected after Up at 0 = %d, want 0", s.Selected)
 	}
@@ -162,13 +162,13 @@ func TestSearchInput_HandleKey_ArrowDown(t *testing.T) {
 	s.Results = []SearchResult{{Name: "a"}, {Name: "b"}}
 	s.Selected = 0
 
-	s.HandleKey(tea.KeyMsg{Type: tea.KeyDown})
+	s.HandleKey(tea.KeyPressMsg{Code: tea.KeyDown})
 	if s.Selected != 1 {
 		t.Errorf("Selected after Down = %d, want 1", s.Selected)
 	}
 
 	// Should not exceed len-1.
-	s.HandleKey(tea.KeyMsg{Type: tea.KeyDown})
+	s.HandleKey(tea.KeyPressMsg{Code: tea.KeyDown})
 	if s.Selected != 1 {
 		t.Errorf("Selected after Down at max = %d, want 1", s.Selected)
 	}
@@ -181,7 +181,7 @@ func TestSearchInput_HandleKey_Backspace(t *testing.T) {
 	s.Query = "abc"
 	s.Selected = 2
 
-	s.HandleKey(tea.KeyMsg{Type: tea.KeyBackspace})
+	s.HandleKey(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	if s.Query != "ab" {
 		t.Errorf("Query after Backspace = %q, want ab", s.Query)
 	}
@@ -191,7 +191,7 @@ func TestSearchInput_HandleKey_Backspace(t *testing.T) {
 
 	// Backspace on empty should be no-op.
 	s.Query = ""
-	s.HandleKey(tea.KeyMsg{Type: tea.KeyBackspace})
+	s.HandleKey(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	if s.Query != "" {
 		t.Errorf("Query after Backspace on empty = %q, want empty", s.Query)
 	}
@@ -203,7 +203,7 @@ func TestSearchInput_HandleKey_Delete(t *testing.T) {
 	s.Activate()
 	s.Query = "xy"
 
-	s.HandleKey(tea.KeyMsg{Type: tea.KeyDelete})
+	s.HandleKey(tea.KeyPressMsg{Code: tea.KeyDelete})
 	if s.Query != "x" {
 		t.Errorf("Query after Delete = %q, want x", s.Query)
 	}
@@ -214,8 +214,8 @@ func TestSearchInput_HandleKey_Runes(t *testing.T) {
 	s := NewSearchInput()
 	s.Activate()
 
-	s.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
-	s.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	s.HandleKey(tea.KeyPressMsg{Code: 'h', Text: "h"})
+	s.HandleKey(tea.KeyPressMsg{Code: 'i', Text: "i"})
 
 	if s.Query != "hi" {
 		t.Errorf("Query = %q, want hi", s.Query)
@@ -232,7 +232,7 @@ func TestSearchInput_HandleKey_UnhandledKey(t *testing.T) {
 	s.Query = "test"
 
 	// Tab or other unhandled key type.
-	_, ok := s.HandleKey(tea.KeyMsg{Type: tea.KeyTab})
+	_, ok := s.HandleKey(tea.KeyPressMsg{Code: tea.KeyTab})
 	if ok {
 		t.Error("unhandled key should return ok=false")
 	}

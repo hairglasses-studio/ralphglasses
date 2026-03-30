@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	lipglossv1 "github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/bubbles/v2/spinner"
+	lipgloss "charm.land/lipgloss/v2"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -23,8 +24,7 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	// Use v1 lipgloss for spinner style (bubbles/spinner is still on v1; migrates in phase 1B)
-	s.Style = lipglossv1.NewStyle().Foreground(lipglossv1.Color(styles.ColorGreenStr))
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color(styles.ColorGreenStr))
 
 	table.MultiSelect = true
 	sessionTable.MultiSelect = true
@@ -78,9 +78,9 @@ var tabNames = []string{
 }
 
 // View renders the TUI.
-func (m Model) View() string {
+func (m Model) View() tea.View {
 	if m.Width < 3 || m.Height < 3 {
-		return "Terminal too small. Please resize."
+		return tea.NewView("Terminal too small. Please resize.")
 	}
 
 	var b strings.Builder
@@ -311,7 +311,10 @@ func (m Model) View() string {
 		b.WriteString(m.StatusBar.View())
 	}
 
-	return b.String()
+	v := tea.NewView(b.String())
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 // buildRDCycleData gathers R&D cycle data from all repos.

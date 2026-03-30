@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
@@ -153,14 +153,17 @@ type Binding struct {
 }
 
 // Key represents a key or key combination that can trigger a binding.
-// For special keys (arrows, function keys, etc.), Type is set and Rune is 0.
-// For character keys, Type is tea.KeyRunes and Rune holds the character.
-// Ctrl and Alt are modifier flags.
+// For special keys (arrows, function keys, etc.), Code is the tea key constant (non-zero).
+// For character keys, Code is 0 and Rune holds the character.
+// Ctrl, Alt, and Shift are modifier flags.
 type Key struct {
-	Type tea.KeyType
-	Rune rune
-	Ctrl bool
-	Alt  bool
+	// Code is the tea key code for special keys (tea.KeyEnter, tea.KeyTab, etc.).
+	// Zero means this is a character key — see Rune.
+	Code  rune
+	Rune  rune
+	Ctrl  bool
+	Alt   bool
+	Shift bool // used for shift+tab
 }
 
 // String returns a human-readable representation of the key (e.g. "ctrl+c", "?", "pgdown").
@@ -172,17 +175,21 @@ func (k Key) String() string {
 	if k.Alt {
 		parts = append(parts, "alt")
 	}
+	if k.Shift {
+		parts = append(parts, "shift")
+	}
 
 	var name string
 	switch {
-	case k.Type == tea.KeyRunes:
+	case k.Code == 0:
+		// Character key
 		if k.Rune == ' ' {
 			name = "space"
 		} else {
 			name = string(k.Rune)
 		}
 	default:
-		name = keyTypeName(k.Type)
+		name = keyCodeName(k.Code)
 	}
 	parts = append(parts, name)
 	return strings.Join(parts, "+")
@@ -190,54 +197,75 @@ func (k Key) String() string {
 
 // Equal checks if two keys are the same combination.
 func (k Key) Equal(other Key) bool {
-	return k.Type == other.Type && k.Rune == other.Rune && k.Ctrl == other.Ctrl && k.Alt == other.Alt
+	return k.Code == other.Code && k.Rune == other.Rune && k.Ctrl == other.Ctrl && k.Alt == other.Alt && k.Shift == other.Shift
 }
 
 // RuneKey creates a Key for a single character.
 func RuneKey(r rune) Key {
-	return Key{Type: tea.KeyRunes, Rune: r}
+	return Key{Code: 0, Rune: r}
 }
 
 // CtrlKey creates a Key for a ctrl+letter combination.
 func CtrlKey(r rune) Key {
-	return Key{Type: tea.KeyRunes, Rune: r, Ctrl: true}
+	return Key{Code: 0, Rune: r, Ctrl: true}
 }
 
-// SpecialKey creates a Key for a special (non-rune) key type.
-func SpecialKey(t tea.KeyType) Key {
-	return Key{Type: t}
+// SpecialKey creates a Key for a special (non-rune) key code.
+func SpecialKey(code rune) Key {
+	return Key{Code: code}
 }
 
-// KeyFromMsg converts a bubbletea KeyMsg into our Key type.
-func KeyFromMsg(msg tea.KeyMsg) Key {
+// ShiftTabKey returns the Key representing shift+tab.
+func ShiftTabKey() Key {
+	return Key{Code: tea.KeyTab, Shift: true}
+}
+
+// KeyFromMsg converts a bubbletea KeyPressMsg into our Key type.
+func KeyFromMsg(msg tea.KeyPressMsg) Key {
 	k := Key{
-		Type: msg.Type,
-		Alt:  msg.Alt,
+		Code: msg.Code,
+		Alt:  msg.Mod.Contains(tea.ModAlt),
+		Ctrl: msg.Mod.Contains(tea.ModCtrl),
 	}
-	// Certain special keys share numeric values with ctrl+letter sequences
-	// (e.g. KeyEnter=13=KeyCtrlM, KeyTab=9=KeyCtrlI, KeyEscape=27).
-	// Preserve these as their special key identity rather than converting.
-	if isNamedSpecialKey(msg.Type) {
+
+	// Shift+Tab: tab with shift modifier.
+	if msg.Code == tea.KeyTab && msg.Mod.Contains(tea.ModShift) {
+		k.Shift = true
 		return k
 	}
-	// Map remaining ctrl+letter key types to Ctrl modifier with rune.
-	if msg.Type >= tea.KeyCtrlA && msg.Type <= tea.KeyCtrlZ {
-		k.Ctrl = true
-		k.Rune = rune('a' + (msg.Type - tea.KeyCtrlA))
-		k.Type = tea.KeyRunes
+
+	// For printable characters, Code is the rune itself; treat as rune key.
+	if msg.Text != "" {
+		runes := []rune(msg.Text)
+		if len(runes) > 0 {
+			k.Rune = runes[0]
+			k.Code = 0 // treat as character key
+		}
 		return k
 	}
-	if msg.Type == tea.KeyRunes && len(msg.Runes) > 0 {
-		k.Rune = msg.Runes[0]
+
+	// Ctrl+letter: when Ctrl is held and the code is a printable letter,
+	// treat the code as the rune and clear Code so key matching works correctly.
+	if k.Ctrl && msg.Text == "" && msg.Code >= 'a' && msg.Code <= 'z' {
+		k.Rune = msg.Code
+		k.Code = 0
+		return k
 	}
+
+	// Named special key — keep Code as-is, clear Ctrl for named specials that
+	// share integer values with ctrl+letter sequences.
+	if isNamedSpecialKey(msg.Code) {
+		k.Ctrl = false
+		return k
+	}
+
 	return k
 }
 
-// isNamedSpecialKey returns true for key types that have well-known names
-// and should not be decomposed into ctrl+letter. These overlap with the
-// ctrl+A..ctrl+Z integer range but are semantically distinct.
-func isNamedSpecialKey(t tea.KeyType) bool {
-	switch t {
+// isNamedSpecialKey returns true for key codes that have well-known names
+// and should not be treated as ctrl+letter combos.
+func isNamedSpecialKey(code rune) bool {
+	switch code {
 	case tea.KeyEnter, tea.KeyTab, tea.KeyEscape, tea.KeyBackspace:
 		return true
 	}
@@ -272,8 +300,8 @@ func (km *KeyMap) Resolve(k Key) Action {
 	return km.byKey[k]
 }
 
-// ResolveMsg converts a bubbletea KeyMsg and resolves the bound action.
-func (km *KeyMap) ResolveMsg(msg tea.KeyMsg) Action {
+// ResolveMsg converts a bubbletea KeyPressMsg and resolves the bound action.
+func (km *KeyMap) ResolveMsg(msg tea.KeyPressMsg) Action {
 	return km.Resolve(KeyFromMsg(msg))
 }
 
@@ -381,7 +409,7 @@ func DefaultBindings() []Binding {
 		{RuneKey('4'), ActionViewCycles},
 		{RuneKey('5'), ActionViewTeams},
 		{SpecialKey(tea.KeyTab), ActionViewNextTab},
-		{SpecialKey(tea.KeyShiftTab), ActionViewPrevTab},
+		{ShiftTabKey(), ActionViewPrevTab},
 
 		// Sessions
 		{RuneKey('s'), ActionSessionStart},
@@ -453,21 +481,23 @@ func ParseKey(s string) (Key, error) {
 			k.Ctrl = true
 		case "alt":
 			k.Alt = true
+		case "shift":
+			k.Shift = true
 		default:
 			return Key{}, fmt.Errorf("unknown modifier %q in key %q", m, s)
 		}
 	}
 
 	// Special key names.
-	if t, ok := parseKeyName(strings.ToLower(last)); ok {
-		k.Type = t
+	if code, ok := parseKeyName(strings.ToLower(last)); ok {
+		k.Code = code
 		return k, nil
 	}
 
 	// Single character.
 	runes := []rune(last)
 	if len(runes) == 1 {
-		k.Type = tea.KeyRunes
+		k.Code = 0
 		k.Rune = runes[0]
 		return k, nil
 	}
@@ -516,10 +546,10 @@ func (h *HelpOverlay) IsActive() bool { return h.Active }
 func (h *HelpOverlay) Deactivate() { h.Active = false }
 
 // ModalHandleKey implements Modal. Escape or ? dismisses the overlay.
-func (h *HelpOverlay) ModalHandleKey(msg tea.KeyMsg) (tea.Cmd, bool) {
+func (h *HelpOverlay) ModalHandleKey(msg tea.KeyPressMsg) (tea.Cmd, bool) {
 	k := KeyFromMsg(msg)
 	// Dismiss on escape or the help toggle key.
-	if msg.Type == tea.KeyEscape || (k.Type == tea.KeyRunes && k.Rune == '?') {
+	if k.Code == tea.KeyEscape || (k.Code == 0 && k.Rune == '?') {
 		h.Active = false
 		return nil, true
 	}
@@ -617,15 +647,13 @@ func (h *HelpOverlay) groupedBindings() map[Category][]helpItem {
 	return groups
 }
 
-// keyTypeName returns a display name for a bubbletea special key type.
-func keyTypeName(t tea.KeyType) string {
-	switch t {
+// keyCodeName returns a display name for a bubbletea v2 special key code.
+func keyCodeName(code rune) string {
+	switch code {
 	case tea.KeyEnter:
 		return "enter"
 	case tea.KeyTab:
 		return "tab"
-	case tea.KeyShiftTab:
-		return "shift+tab"
 	case tea.KeyEscape:
 		return "esc"
 	case tea.KeyUp:
@@ -675,19 +703,20 @@ func keyTypeName(t tea.KeyType) string {
 	case tea.KeyF12:
 		return "f12"
 	default:
-		return t.String()
+		if code > 0 {
+			return string(code)
+		}
+		return "unknown"
 	}
 }
 
-// parseKeyName maps a lowercase key name to a bubbletea KeyType.
-func parseKeyName(name string) (tea.KeyType, bool) {
+// parseKeyName maps a lowercase key name to a bubbletea v2 key code rune.
+func parseKeyName(name string) (rune, bool) {
 	switch name {
 	case "enter":
 		return tea.KeyEnter, true
 	case "tab":
 		return tea.KeyTab, true
-	case "shift+tab":
-		return tea.KeyShiftTab, true
 	case "esc", "escape":
 		return tea.KeyEscape, true
 	case "up":

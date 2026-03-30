@@ -1,6 +1,6 @@
 package components
 
-import tea "github.com/charmbracelet/bubbletea"
+import tea "charm.land/bubbletea/v2"
 
 // Modal is the interface for overlay dialogs.
 // Methods are prefixed with "Modal" to avoid collisions with existing
@@ -8,7 +8,7 @@ import tea "github.com/charmbracelet/bubbletea"
 type Modal interface {
 	IsActive() bool
 	Deactivate()
-	ModalHandleKey(msg tea.KeyMsg) (tea.Cmd, bool) // cmd, handled
+	ModalHandleKey(msg tea.KeyPressMsg) (tea.Cmd, bool) // cmd, handled
 	ModalView(width, height int) string
 }
 
@@ -50,7 +50,7 @@ func (s *ModalStack) Empty() bool {
 // HandleKey delegates key handling to the top modal.
 // Returns nil, false if the stack is empty.
 // If the top modal deactivates itself, it is automatically popped.
-func (s *ModalStack) HandleKey(msg tea.KeyMsg) (tea.Cmd, bool) {
+func (s *ModalStack) HandleKey(msg tea.KeyPressMsg) (tea.Cmd, bool) {
 	top := s.Top()
 	if top == nil {
 		return nil, false

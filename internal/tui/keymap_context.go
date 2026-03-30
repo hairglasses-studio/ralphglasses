@@ -3,7 +3,7 @@ package tui
 import (
 	"unsafe"
 
-	"github.com/charmbracelet/bubbles/key"
+	"charm.land/bubbles/v2/key"
 )
 
 // globalBindings are always enabled regardless of view.

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
@@ -93,7 +93,7 @@ func (m ReplayViewerModel) Init() tea.Cmd { return nil }
 // Update implements tea.Model.
 func (m ReplayViewerModel) Update(msg tea.Msg) (ReplayViewerModel, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if m.searching {
 			return m.updateSearch(msg)
 		}
@@ -113,7 +113,7 @@ func (m ReplayViewerModel) Update(msg tea.Msg) (ReplayViewerModel, tea.Cmd) {
 	return m, nil
 }
 
-func (m ReplayViewerModel) updateNormal(msg tea.KeyMsg) (ReplayViewerModel, tea.Cmd) {
+func (m ReplayViewerModel) updateNormal(msg tea.KeyPressMsg) (ReplayViewerModel, tea.Cmd) {
 	switch msg.String() {
 	case "j", "down":
 		if m.cursor < len(m.filtered)-1 {
@@ -150,12 +150,13 @@ func (m ReplayViewerModel) updateNormal(msg tea.KeyMsg) (ReplayViewerModel, tea.
 	return m, nil
 }
 
-func (m *ReplayViewerModel) updateSearch(msg tea.KeyMsg) (ReplayViewerModel, tea.Cmd) {
-	switch msg.Type {
+func (m *ReplayViewerModel) updateSearch(msg tea.KeyPressMsg) (ReplayViewerModel, tea.Cmd) {
+	k := msg.Key()
+	switch k.Code {
 	case tea.KeyEnter:
 		m.searching = false
 		m.executeSearch()
-	case tea.KeyEsc:
+	case tea.KeyEscape:
 		m.searching = false
 		m.searchQuery = ""
 		m.searchHits = nil
@@ -164,8 +165,8 @@ func (m *ReplayViewerModel) updateSearch(msg tea.KeyMsg) (ReplayViewerModel, tea
 			m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
 		}
 	default:
-		if msg.Type == tea.KeyRunes {
-			m.searchQuery += string(msg.Runes)
+		if k.Text != "" {
+			m.searchQuery += k.Text
 		}
 	}
 	return *m, nil

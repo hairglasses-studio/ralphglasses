@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
@@ -68,7 +68,7 @@ func (m LogSearchModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if m.searching {
 			return m.updateSearchMode(msg)
 		}
@@ -77,8 +77,9 @@ func (m LogSearchModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m LogSearchModel) updateSearchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
+func (m LogSearchModel) updateSearchMode(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	k := msg.Key()
+	switch k.Code {
 	case tea.KeyEscape:
 		m.searching = false
 		return m, nil
@@ -98,14 +99,14 @@ func (m LogSearchModel) updateSearchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	default:
-		if msg.Type == tea.KeyRunes {
-			m.query += string(msg.Runes)
+		if k.Text != "" {
+			m.query += k.Text
 		}
 		return m, nil
 	}
 }
 
-func (m LogSearchModel) updateNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m LogSearchModel) updateNormalMode(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "/":
 		m.searching = true
@@ -198,7 +199,7 @@ func (m *LogSearchModel) maxScrollOffset() int {
 }
 
 // View satisfies tea.Model.
-func (m LogSearchModel) View() string {
+func (m LogSearchModel) View() tea.View {
 	var b strings.Builder
 
 	viewHeight := m.viewableHeight()
@@ -279,5 +280,5 @@ func (m LogSearchModel) View() string {
 	b.WriteRune('\n')
 	b.WriteString(styles.HelpStyle.Render("  /: search  n/N: next/prev match  j/k: scroll  Esc: clear  q: quit"))
 
-	return b.String()
+	return tea.NewView(b.String())
 }

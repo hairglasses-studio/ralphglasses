@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
@@ -34,7 +34,7 @@ func TestOverview_MoveDown(t *testing.T) {
 		&model.Repo{Name: "beta", Path: "/tmp/beta"},
 	)
 
-	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, _ := m.handleOverviewKey(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	got := m2.(Model)
 	row := got.Table.SelectedRow()
 	if row == nil {
@@ -51,9 +51,9 @@ func TestOverview_MoveUp(t *testing.T) {
 		&model.Repo{Name: "beta", Path: "/tmp/beta"},
 	)
 	// Move down first, then up
-	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, _ := m.handleOverviewKey(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	m = m2.(Model)
-	m2, _ = m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	m2, _ = m.handleOverviewKey(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	got := m2.(Model)
 	row := got.Table.SelectedRow()
 	if row == nil {
@@ -69,7 +69,7 @@ func TestOverview_MoveDown_Arrow(t *testing.T) {
 		&model.Repo{Name: "alpha", Path: "/tmp/alpha"},
 		&model.Repo{Name: "beta", Path: "/tmp/beta"},
 	)
-	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyDown})
+	m2, _ := m.handleOverviewKey(tea.KeyPressMsg{Code: tea.KeyDown})
 	got := m2.(Model)
 	row := got.Table.SelectedRow()
 	if row == nil {
@@ -86,7 +86,7 @@ func TestOverview_EnterPushesDetailView(t *testing.T) {
 	m := newOverviewModel(
 		&model.Repo{Name: "myrepo", Path: "/tmp/myrepo"},
 	)
-	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleOverviewKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	if got.Nav.CurrentView != ViewRepoDetail {
 		t.Errorf("CurrentView = %v, want ViewRepoDetail", got.Nav.CurrentView)
@@ -101,7 +101,7 @@ func TestOverview_EnterPushesDetailView(t *testing.T) {
 
 func TestOverview_EnterEmptyTable(t *testing.T) {
 	m := newOverviewModel() // no repos
-	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m2, _ := m.handleOverviewKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	got := m2.(Model)
 	// Should stay in overview since no row selected
 	if got.Nav.CurrentView != ViewOverview {
@@ -117,7 +117,7 @@ func TestOverview_SortKey(t *testing.T) {
 		&model.Repo{Name: "beta", Path: "/tmp/beta"},
 	)
 	// Just verify it doesn't panic
-	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	m2, _ := m.handleOverviewKey(tea.KeyPressMsg{Code: 's', Text: "s"})
 	_ = m2.(Model)
 }
 
@@ -128,7 +128,7 @@ func TestOverview_SpaceToggleSelect(t *testing.T) {
 		&model.Repo{Name: "alpha", Path: "/tmp/alpha"},
 		&model.Repo{Name: "beta", Path: "/tmp/beta"},
 	)
-	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ")})
+	m2, _ := m.handleOverviewKey(tea.KeyPressMsg{Code: ' ', Text: " "})
 	_ = m2.(Model)
 	// No crash = success
 }
@@ -139,7 +139,7 @@ func TestOverview_ActionsMenu(t *testing.T) {
 	m := newOverviewModel(
 		&model.Repo{Name: "alpha", Path: "/tmp/alpha"},
 	)
-	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m2, _ := m.handleOverviewKey(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	got := m2.(Model)
 	if got.Modals.ActionMenu == nil {
 		t.Error("expected ActionMenu to be set after 'a'")
@@ -156,7 +156,7 @@ func TestOverview_StartLoop(t *testing.T) {
 		&model.Repo{Name: "alpha", Path: "/tmp/alpha"},
 	)
 	// 'S' starts loop for selected row
-	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("S")})
+	m2, _ := m.handleOverviewKey(tea.KeyPressMsg{Code: 'S', Text: "S"})
 	got := m2.(Model)
 	// Should show a notification (start error since no process exists, or started)
 	if !got.Notify.Active() {
@@ -166,7 +166,7 @@ func TestOverview_StartLoop(t *testing.T) {
 
 func TestOverview_StartLoop_EmptyTable(t *testing.T) {
 	m := newOverviewModel() // no repos
-	m2, cmd := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("S")})
+	m2, cmd := m.handleOverviewKey(tea.KeyPressMsg{Code: 'S', Text: "S"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("start loop on empty table should return nil cmd")
@@ -179,7 +179,7 @@ func TestOverview_StopLoop(t *testing.T) {
 	m := newOverviewModel(
 		&model.Repo{Name: "alpha", Path: "/tmp/alpha"},
 	)
-	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
+	m2, _ := m.handleOverviewKey(tea.KeyPressMsg{Code: 'X', Text: "X"})
 	got := m2.(Model)
 	// Should show confirm dialog since there's a selected row
 	if got.Modals.ConfirmDialog == nil {
@@ -192,7 +192,7 @@ func TestOverview_StopLoop(t *testing.T) {
 
 func TestOverview_StopLoop_EmptyTable(t *testing.T) {
 	m := newOverviewModel() // no repos
-	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("X")})
+	m2, _ := m.handleOverviewKey(tea.KeyPressMsg{Code: 'X', Text: "X"})
 	got := m2.(Model)
 	// No row selected, so no dialog
 	if got.Modals.ConfirmDialog != nil {
@@ -206,7 +206,7 @@ func TestOverview_PauseLoop(t *testing.T) {
 	m := newOverviewModel(
 		&model.Repo{Name: "alpha", Path: "/tmp/alpha"},
 	)
-	m2, _ := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P")})
+	m2, _ := m.handleOverviewKey(tea.KeyPressMsg{Code: 'P', Text: "P"})
 	got := m2.(Model)
 	// Should produce a notification (pause error since no process)
 	if !got.Notify.Active() {
@@ -216,7 +216,7 @@ func TestOverview_PauseLoop(t *testing.T) {
 
 func TestOverview_PauseLoop_EmptyTable(t *testing.T) {
 	m := newOverviewModel()
-	m2, cmd := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P")})
+	m2, cmd := m.handleOverviewKey(tea.KeyPressMsg{Code: 'P', Text: "P"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("pause on empty table should return nil cmd")
@@ -229,7 +229,7 @@ func TestOverview_UnmatchedKey(t *testing.T) {
 	m := newOverviewModel(
 		&model.Repo{Name: "alpha", Path: "/tmp/alpha"},
 	)
-	m2, cmd := m.handleOverviewKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("z")})
+	m2, cmd := m.handleOverviewKey(tea.KeyPressMsg{Code: 'z', Text: "z"})
 	_ = m2.(Model)
 	if cmd != nil {
 		t.Error("unmatched key should return nil cmd")
@@ -336,7 +336,7 @@ func TestLogView_ScrollDown(t *testing.T) {
 	m.LogView.SetLines([]string{"line1", "line2", "line3"})
 	m.LogView.SetDimensions(80, 24)
 
-	m2, _ := m.handleLogKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	m2, _ := m.handleLogKey(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	_ = m2.(Model) // should not panic
 }
 
@@ -347,7 +347,7 @@ func TestLogView_ScrollUp(t *testing.T) {
 	m.LogView.SetLines([]string{"line1", "line2", "line3"})
 	m.LogView.SetDimensions(80, 24)
 
-	m2, _ := m.handleLogKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	m2, _ := m.handleLogKey(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	_ = m2.(Model)
 }
 
@@ -358,7 +358,7 @@ func TestLogView_GotoEnd(t *testing.T) {
 	m.LogView.SetLines([]string{"line1", "line2", "line3"})
 	m.LogView.SetDimensions(80, 24)
 
-	m2, _ := m.handleLogKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("G")})
+	m2, _ := m.handleLogKey(tea.KeyPressMsg{Code: 'G', Text: "G"})
 	_ = m2.(Model)
 }
 
@@ -369,7 +369,7 @@ func TestLogView_GotoStart(t *testing.T) {
 	m.LogView.SetLines([]string{"line1", "line2", "line3"})
 	m.LogView.SetDimensions(80, 24)
 
-	m2, _ := m.handleLogKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("g")})
+	m2, _ := m.handleLogKey(tea.KeyPressMsg{Code: 'g', Text: "g"})
 	_ = m2.(Model)
 }
 
@@ -380,7 +380,7 @@ func TestLogView_FollowToggle(t *testing.T) {
 	m.LogView.SetLines([]string{"line1"})
 	m.LogView.SetDimensions(80, 24)
 
-	m2, _ := m.handleLogKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("f")})
+	m2, _ := m.handleLogKey(tea.KeyPressMsg{Code: 'f', Text: "f"})
 	_ = m2.(Model)
 }
 
@@ -391,8 +391,8 @@ func TestLogView_PageUpDown(t *testing.T) {
 	m.LogView.SetLines([]string{"line1", "line2", "line3"})
 	m.LogView.SetDimensions(80, 24)
 
-	m2, _ := m.handleLogKey(tea.KeyMsg{Type: tea.KeyCtrlD})
+	m2, _ := m.handleLogKey(tea.KeyPressMsg{Code: 'd', Mod: tea.ModCtrl})
 	_ = m2.(Model)
-	m2, _ = m.handleLogKey(tea.KeyMsg{Type: tea.KeyCtrlU})
+	m2, _ = m.handleLogKey(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
 	_ = m2.(Model)
 }

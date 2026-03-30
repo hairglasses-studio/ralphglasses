@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func newTestForecastView() ForecastView {
@@ -164,7 +164,7 @@ func TestCycleForecastRange(t *testing.T) {
 	v := newTestForecastView()
 	expected := []ForecastRange{ForecastRange4H, ForecastRange12H, ForecastRange24H, ForecastRange1H}
 	for _, want := range expected {
-		v, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("t")})
+		v, _ = v.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
 		if v.CurrentForecastRange() != want {
 			t.Errorf("expected %v, got %v", want, v.CurrentForecastRange())
 		}
@@ -424,7 +424,7 @@ func TestEffectiveWidth_Normal(t *testing.T) {
 func TestRefreshKey(t *testing.T) {
 	v := newTestForecastView()
 	var cmd tea.Cmd
-	v, cmd = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
+	v, cmd = v.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
 	if cmd == nil {
 		t.Error("pressing 'r' should return a cmd")
 	}
