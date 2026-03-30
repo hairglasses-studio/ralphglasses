@@ -1,0 +1,81 @@
+name: ARM64 CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  cross-compile:
+    name: Cross-compile linux/arm64
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.1"
+          cache: true
+
+      - name: Build for linux/arm64
+        env:
+          GOOS: linux
+          GOARCH: arm64
+        run: go build ./...
+
+  qemu-test:
+    name: Test under QEMU arm64
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-arm64-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-arm64-
+
+      - name: Run tests under arm64 emulation
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "${{ github.workspace }}:/workspace" \
+            -v ~/go/pkg/mod:/go/pkg/mod \
+            -v ~/.cache/go-build:/root/.cache/go-build \
+            -w /workspace \
+            -e GOMODCACHE=/go/pkg/mod \
+            -e GOCACHE=/root/.cache/go-build \
+            golang:1.26.1 \
+            go test -count=1 -timeout 20m ./...
+
+  static-check:
+    name: Static check (go vet) for arm64
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.1"
+          cache: true
+
+      - name: Run go vet for arm64
+        env:
+          GOOS: linux
+          GOARCH: arm64
+        run: go vet ./...

@@ -1,0 +1,36 @@
+name: example-formatter
+version: "1.0.0"
+description: Auto-format code on save using gofmt and prettier.
+author: hairglasses-studio
+
+commands:
+  - name: format-go
+    description: Format Go source files
+    run: gofmt -w .
+  - name: format-js
+    description: Format JavaScript/TypeScript files
+    run: npx prettier --write "**/*.{js,ts,tsx}"
+
+hooks:
+  - event: session.pre_start
+    command: format-go
+    priority: 10
+  - event: session.post_stop
+    command: format-js
+    priority: 20
+
+config:
+  auto_format:
+    type: bool
+    default: true
+    description: Enable automatic formatting on save
+    required: false
+  line_length:
+    type: int
+    default: 120
+    description: Maximum line length for formatting
+    required: false
+  formatter_path:
+    type: string
+    description: Path to a custom formatter binary
+    required: false
