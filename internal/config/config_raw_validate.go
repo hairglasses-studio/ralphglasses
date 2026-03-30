@@ -42,6 +42,8 @@ var canonicalKeys = map[string]keySpec{
 	"log_level":             {Type: "string", AllowedStr: []string{"debug", "info", "warn", "error"}},
 	"auto_restart":          {Type: "bool"},
 	"provider":              {Type: "string", AllowedStr: []string{"claude", "gemini", "codex", "openai", "ollama"}},
+	"notify_desktop":        {Type: "bool"},
+	"notify_sound":          {Type: "bool"},
 }
 
 // KeyInfo describes a config key for external consumers.

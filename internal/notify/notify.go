@@ -5,6 +5,28 @@ import (
 	"runtime"
 )
 
+// EventType defines the category of notification events.
+type EventType string
+
+const (
+	EventSessionComplete    EventType = "session_complete"
+	EventBudgetWarning      EventType = "budget_warning"
+	EventCircuitBreakerTrip EventType = "circuit_breaker_trip"
+	EventCrash              EventType = "crash"
+	EventRestart            EventType = "restart"
+)
+
+// AllEventTypes returns all defined notification event types.
+func AllEventTypes() []EventType {
+	return []EventType{
+		EventSessionComplete,
+		EventBudgetWarning,
+		EventCircuitBreakerTrip,
+		EventCrash,
+		EventRestart,
+	}
+}
+
 // Send dispatches a desktop notification.
 // macOS: osascript, Linux: notify-send, other: no-op.
 func Send(title, body string) error {
