@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
 
@@ -24,7 +23,7 @@ var budgetStatusCmd = &cobra.Command{
 	Short: "Show aggregate budget status across all sessions",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
-		mgr := session.NewManager()
+		mgr := initManagerWithStore(nil)
 		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.LoadExternalSessions()
 
@@ -73,7 +72,7 @@ var budgetSetCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
-		mgr := session.NewManager()
+		mgr := initManagerWithStore(nil)
 		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.LoadExternalSessions()
 
@@ -104,7 +103,7 @@ var budgetResetCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
-		mgr := session.NewManager()
+		mgr := initManagerWithStore(nil)
 		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.LoadExternalSessions()
 
