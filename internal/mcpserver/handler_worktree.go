@@ -10,6 +10,39 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
+func (s *Server) handleWorktreeCreate(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoName := getStringArg(req, "repo")
+	if repoName == "" {
+		return codedError(ErrInvalidParams, "repo name required"), nil
+	}
+	name := getStringArg(req, "name")
+	if name == "" {
+		return codedError(ErrInvalidParams, "worktree name required"), nil
+	}
+
+	if s.reposNil() {
+		if err := s.scan(); err != nil {
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(repoName)
+	if r == nil {
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
+	}
+
+	wtPath, branch, err := session.CreateWorktree(r.Path, name)
+	if err != nil {
+		return codedError(ErrFilesystem, fmt.Sprintf("create worktree: %v", err)), nil
+	}
+
+	type createResult struct {
+		Repo   string `json:"repo"`
+		Path   string `json:"path"`
+		Branch string `json:"branch"`
+	}
+	return jsonResult(createResult{Repo: repoName, Path: wtPath, Branch: branch}), nil
+}
+
 func (s *Server) handleWorktreeCleanup(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoName := getStringArg(req, "repo")
 	if repoName == "" {
