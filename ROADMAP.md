@@ -747,14 +747,14 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 ### 3.5 — Sway/Wayland compatibility `[PARALLEL]`
 - [ ] 3.5.1 — Abstract WM interface: `internal/wm/` with i3 and Sway backends `P2` `L`
 - [ ] 3.5.2 — Sway IPC client `P2` `M`
-- [ ] 3.5.3 — Auto-detect WM at startup: check `$SWAYSOCK` vs `$I3SOCK` `P2` `S`
+- [x] 3.5.3 — Auto-detect WM at startup: check `$SWAYSOCK` vs `$I3SOCK` `P2` `S`
 - [ ] 3.5.4 — Test suite: integration tests for both backends `P2` `M`
 - **Acceptance:** layout commands work on both i3 and Sway
 
 ### 3.6 — Hyprland support `[PARALLEL]`
 - [ ] 3.6.1 — Hyprland IPC client: `internal/wm/hyprland/` `P2` `M`
-- [ ] 3.6.2 — Workspace dispatch: `hyprctl dispatch workspace` `P2` `S`
-- [ ] 3.6.3 — Monitor configuration: `hyprctl monitors` `P2` `S`
+- [x] 3.6.2 — Workspace dispatch: `hyprctl dispatch workspace` `P2` `S`
+- [x] 3.6.3 — Monitor configuration: `hyprctl monitors` `P2` `S`
 - [ ] 3.6.4 — Dynamic workspaces: leverage Hyprland's per-monitor model `P2` `M`
 - **Acceptance:** layout commands work on Hyprland
 
@@ -1129,8 +1129,8 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 
 ### 8.2 — Prompt management `[PARALLEL]`
 - [x] 8.2.1 — Prompt library: `~/.ralphglasses/prompts/` `P2` `M`
-- [ ] 8.2.2 — Variable interpolation `P2` `M`
-- [ ] 8.2.3 — Prompt versioning `P2` `M`
+- [x] 8.2.2 — Variable interpolation `P2` `M`
+- [x] 8.2.3 — Prompt versioning `P2` `M`
 - [ ] 8.2.4 — A/B testing `P2` `L`
 - [ ] 8.2.5 — TUI prompt editor `P2` `L`
 - **Acceptance:** prompt templates configurable per task type
