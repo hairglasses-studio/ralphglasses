@@ -4,14 +4,20 @@
     "dockerfile": "Dockerfile"
   },
   "workspaceFolder": "/workspaces/ralphglasses",
+  "forwardPorts": [9090, 9473],
   "customizations": {
     "vscode": {
       "settings": {
-        "go.useLanguageServer": true
+        "go.useLanguageServer": true,
+        "go.lintTool": "golangci-lint",
+        "go.testFlags": ["-race", "-count=1"]
       },
       "extensions": [
         "golang.Go",
-        "timonwong.shellcheck"
+        "timonwong.shellcheck",
+        "ms-vscode.makefile-tools",
+        "EditorConfig.EditorConfig",
+        "eamodio.gitlens"
       ]
     }
   },
