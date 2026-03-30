@@ -1,0 +1,24 @@
+# rg-status-bar.service — Refresh fleet status cache for i3blocks
+#
+# Runs rg-status-bar.sh --all --json and writes to /tmp/rg-status.json.
+# i3blocks reads from this cache file instead of invoking the binary directly,
+# preventing bar freezes during slow MCP calls.
+#
+# Paired with rg-status-bar.timer (30s interval).
+#
+# TODO: Implement --all --json output in rg-status-bar.sh
+# TODO: Ensure ralphglasses binary is available at /usr/local/bin/ralphglasses
+# TODO: Add Restart=on-failure with RestartSec=5
+# TODO: Add MemoryMax= / CPUQuota= resource limits
+
+[Unit]
+Description=Refresh ralphglasses fleet status cache for status bar
+After=network-online.target ralphglasses.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ralph
+ExecStart=/opt/ralphglasses/distro/scripts/rg-status-bar.sh --all --json
+# TODO: pipe output to /tmp/rg-status.json via wrapper or ExecStart=/bin/sh -c '...'
+StandardOutput=file:/tmp/rg-status.json

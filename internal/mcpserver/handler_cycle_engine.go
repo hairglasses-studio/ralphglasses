@@ -14,9 +14,9 @@ func (s *Server) handleCycleCreate(_ context.Context, req mcp.CallToolRequest) (
 	if repo == "" {
 		return codedError(ErrInvalidParams, "repo required"), nil
 	}
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	name := getStringArg(req, "name")
@@ -50,9 +50,9 @@ func (s *Server) handleCycleCreate(_ context.Context, req mcp.CallToolRequest) (
 // handleCycleAdvance transitions a cycle to the next phase.
 func (s *Server) handleCycleAdvance(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repo := getStringArg(req, "repo")
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	cycleID := getStringArg(req, "cycle_id")
@@ -85,9 +85,9 @@ func (s *Server) handleCycleAdvance(_ context.Context, req mcp.CallToolRequest) 
 // handleCycleStatus returns the current state of a cycle.
 func (s *Server) handleCycleStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repo := getStringArg(req, "repo")
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	cycleID := getStringArg(req, "cycle_id")
@@ -144,9 +144,9 @@ func (s *Server) handleCycleStatus(_ context.Context, req mcp.CallToolRequest) (
 // handleCycleFail marks a cycle as failed.
 func (s *Server) handleCycleFail(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repo := getStringArg(req, "repo")
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	cycleID := getStringArg(req, "cycle_id")
@@ -183,9 +183,9 @@ func (s *Server) handleCycleFail(_ context.Context, req mcp.CallToolRequest) (*m
 // handleCycleList lists all cycles for a repo.
 func (s *Server) handleCycleList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repo := getStringArg(req, "repo")
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	cycles, err := s.SessMgr.ListCycles(repoPath)
@@ -225,9 +225,9 @@ func (s *Server) handleCycleList(_ context.Context, req mcp.CallToolRequest) (*m
 // handleCycleSynthesize sets the synthesis on a cycle and advances to complete.
 func (s *Server) handleCycleSynthesize(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repo := getStringArg(req, "repo")
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	cycleID := getStringArg(req, "cycle_id")
@@ -283,9 +283,9 @@ func (s *Server) handleCycleRun(ctx context.Context, req mcp.CallToolRequest) (*
 	if repo == "" {
 		return codedError(ErrInvalidParams, "repo_path required"), nil
 	}
-	repoPath, err := s.resolveRepoPath(repo)
-	if err != nil {
-		return codedError(ErrRepoNotFound, err.Error()), nil
+	repoPath, errRes := s.resolveRepoPath(repo)
+	if errRes != nil {
+		return errRes, nil
 	}
 
 	name := getStringArg(req, "name")
