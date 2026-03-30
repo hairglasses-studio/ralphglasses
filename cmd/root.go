@@ -204,12 +204,8 @@ func applyTheme(name string) {
 			name = envTheme
 		}
 	}
-	if themes := styles.DefaultThemes(); themes[name] != nil {
-		styles.ApplyTheme(themes[name])
-	} else if name != "k9s" {
-		if t, err := styles.LoadTheme(name); err == nil {
-			styles.ApplyTheme(t)
-		}
+	if t := styles.ResolveTheme(name); t != nil {
+		styles.ApplyTheme(t)
 	}
 }
 

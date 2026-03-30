@@ -534,7 +534,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 2.5.2 — Add budget/model selection to launch flow: dropdown or tab-complete for model, numeric input for budget `P1` `M`
 - [x] 2.5.3 — Default budget from `.ralphrc` (`RALPH_SESSION_BUDGET`) or global config fallback `P1` `S`
 - [ ] 2.5.4 — Session templates: save current launch config as named template, load from template `P2` `M`
-- [ ] 2.5.5 — Validate launch preconditions: repo exists, no conflicting worktree, budget available in pool `P1` `M`
+- [x] 2.5.5 — Validate launch preconditions: repo exists, no conflicting worktree, budget available in pool `P1` `M`
 - **Acceptance:** can launch a named session with budget from TUI command mode
 
 ### 2.6 — Notification system `[PARALLEL — independent after 2.1]`
@@ -768,7 +768,7 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - [x] 3.5.1.2 — Add `snazzy` theme `P1` `S`
 - [x] 3.5.1.3 — Add `catppuccin-macchiato` and `catppuccin-mocha` themes `P1` `S`
 - [ ] 3.5.1.4 — Add `tokyo-night` theme `P2` `S`
-- [ ] 3.5.1.5 — Support `~/.config/ralphglasses/themes/` external theme directory `P1` `M`
+- [x] 3.5.1.5 — Support `~/.config/ralphglasses/themes/` external theme directory `P1` `M`
 - [x] 3.5.1.6 — Add `--theme` CLI flag and `RALPH_THEME` .ralphrc key `P1` `S`
 - [ ] 3.5.1.7 — Add `:theme <name>` TUI command for live theme switching `P1` `M`
 - **Acceptance:** `ralphglasses --theme snazzy` renders with hex-accurate palette; user themes load correctly

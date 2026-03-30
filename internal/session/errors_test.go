@@ -135,4 +135,33 @@ func TestSessionErrors_Is(t *testing.T) {
 			t.Errorf("expected errors.Is(err, ErrRepoPathRequired), got: %v", err)
 		}
 	})
+
+	// --- ErrRepoNotExist from launch ---
+	t.Run("Launch_RepoNotExist", func(t *testing.T) {
+		_, err := m.Launch(t.Context(), LaunchOptions{
+			RepoPath: "/nonexistent/repo/path",
+			Prompt:   "test",
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, ErrRepoNotExist) {
+			t.Errorf("expected errors.Is(err, ErrRepoNotExist), got: %v", err)
+		}
+	})
+
+	// --- ErrRepoNotGit from launch ---
+	t.Run("Launch_RepoNotGit", func(t *testing.T) {
+		dir := t.TempDir() // exists but no .git
+		_, err := m.Launch(t.Context(), LaunchOptions{
+			RepoPath: dir,
+			Prompt:   "test",
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, ErrRepoNotGit) {
+			t.Errorf("expected errors.Is(err, ErrRepoNotGit), got: %v", err)
+		}
+	})
 }

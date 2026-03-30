@@ -357,7 +357,9 @@ func TestResume_WithProvider(t *testing.T) {
 
 	// Resume with explicit provider should pass that provider through.
 	// We verify by checking the error message references the correct binary.
-	_, err := m.Resume(context.Background(), t.TempDir(), ProviderGemini, "gem-session", "do stuff")
+	repoDir := t.TempDir()
+	os.MkdirAll(filepath.Join(repoDir, ".git"), 0755)
+	_, err := m.Resume(context.Background(), repoDir, ProviderGemini, "gem-session", "do stuff")
 	if err == nil {
 		return // unexpected success is fine
 	}
