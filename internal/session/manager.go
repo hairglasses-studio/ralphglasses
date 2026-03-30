@@ -23,6 +23,7 @@ const DefaultStateDir = "~/.ralphglasses/sessions"
 type Manager struct {
 	sessionsMu    sync.RWMutex
 	sessions      map[string]*Session     // keyed by session ID
+	statusCache   sync.Map                // hot-read path: session ID -> SessionStatus (Phase 10.5.1)
 
 	workersMu     sync.RWMutex
 	teams         map[string]*TeamStatus  // keyed by team name
