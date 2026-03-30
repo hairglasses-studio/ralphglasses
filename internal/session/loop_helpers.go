@@ -312,13 +312,13 @@ func (m *Manager) LoadExternalLoops() {
 	if m.store != nil {
 		runs, err := m.store.ListLoopRuns(context.Background(), LoopRunFilter{})
 		if err == nil {
-			m.mu.Lock()
+			m.workersMu.Lock()
 			for _, run := range runs {
 				if _, ok := m.loops[run.ID]; !ok {
 					m.loops[run.ID] = run
 				}
 			}
-			m.mu.Unlock()
+			m.workersMu.Unlock()
 		}
 	}
 
@@ -333,8 +333,8 @@ func (m *Manager) LoadExternalLoops() {
 		return
 	}
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.workersMu.Lock()
+	defer m.workersMu.Unlock()
 
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {

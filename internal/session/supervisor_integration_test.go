@@ -314,9 +314,9 @@ func TestSupervisor_FullCycleLifecycle(t *testing.T) {
 			Status:   StatusCompleted,
 			Prompt:   opts.Prompt,
 		}
-		s.mgr.mu.Lock()
+		s.mgr.sessionsMu.Lock()
 		s.mgr.sessions[id] = sess
-		s.mgr.mu.Unlock()
+		s.mgr.sessionsMu.Unlock()
 		return sess, nil
 	}
 
@@ -496,9 +496,9 @@ func TestSupervisor_DecisionOutcomeRecorded(t *testing.T) {
 			Status:   StatusCompleted,
 			Prompt:   opts.Prompt,
 		}
-		s.mgr.mu.Lock()
+		s.mgr.sessionsMu.Lock()
 		s.mgr.sessions["outcome-sess"] = sess
-		s.mgr.mu.Unlock()
+		s.mgr.sessionsMu.Unlock()
 		return sess, nil
 	}
 

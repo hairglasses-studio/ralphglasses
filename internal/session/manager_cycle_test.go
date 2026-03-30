@@ -368,9 +368,9 @@ func TestManagerRunCycle_HappyPath(t *testing.T) {
 			Status:   StatusCompleted,
 			Prompt:   opts.Prompt,
 		}
-		m.mu.Lock()
+		m.sessionsMu.Lock()
 		m.sessions[id] = sess
-		m.mu.Unlock()
+		m.sessionsMu.Unlock()
 		return sess, nil
 	}
 
@@ -453,9 +453,9 @@ func TestManagerRunCycle_ContextCancelled(t *testing.T) {
 			Status:   StatusRunning,
 			Prompt:   opts.Prompt,
 		}
-		m.mu.Lock()
+		m.sessionsMu.Lock()
 		m.sessions["stuck-sess"] = sess
-		m.mu.Unlock()
+		m.sessionsMu.Unlock()
 		return sess, nil
 	}
 

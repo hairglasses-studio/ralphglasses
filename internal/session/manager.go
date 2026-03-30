@@ -21,11 +21,16 @@ const DefaultStateDir = "~/.ralphglasses/sessions"
 
 // Manager tracks all active Claude Code sessions and teams.
 type Manager struct {
-	mu            sync.RWMutex
+	sessionsMu    sync.RWMutex
 	sessions      map[string]*Session     // keyed by session ID
+
+	workersMu     sync.RWMutex
 	teams         map[string]*TeamStatus  // keyed by team name
 	workflowRuns  map[string]*WorkflowRun // keyed by workflow run ID
 	loops         map[string]*LoopRun     // keyed by loop run ID
+	totalPrunedThisSession int             // counter for pruned runs this session
+
+	configMu      sync.RWMutex
 	bus           *events.Bus
 	stateDir      string // directory for persisted session JSON files
 	optimizer     *AutoOptimizer          // Level 2+ self-improvement engine
@@ -43,13 +48,14 @@ type Manager struct {
 	launchSession  func(context.Context, LaunchOptions) (*Session, error)
 	waitSession    func(context.Context, *Session) error
 	healthCheck    func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
+	supervisor     *Supervisor                   // autonomous R&D supervisor, runs at level >= 2
+
 	SessionTimeout     time.Duration               // timeout for waitForSession; 0 uses default (10m)
 	KillTimeout        time.Duration               // SIGTERM→SIGKILL escalation timeout; 0 uses default (5s)
 	ErrorRetention     time.Duration               // how long errored sessions remain queryable; 0 uses default (5m)
 	MinSessionDuration time.Duration               // sessions younger than this are protected from reaper; 0 uses default (30s)
 	Enhancer       *enhancer.HybridEngine        // optional prompt enhancement for loop integration
 	FleetPool      *pool.State                   // fleet-wide budget pooling and metrics aggregation
-	supervisor     *Supervisor                   // autonomous R&D supervisor, runs at level >= 2
 
 	DefaultBudgetUSD float64 // from RALPH_SESSION_BUDGET; applied when Launch opts has no budget
 
@@ -57,7 +63,6 @@ type Manager struct {
 	PruneRetention   time.Duration // max age for stale loop runs; 0 uses default (7 days)
 	PruneMaxRuns     int           // unused currently; reserved for max run cap
 	JournalMaxEntries int          // auto-consolidation threshold; 0 uses default (100)
-	totalPrunedThisSession int     // counter for pruned runs this session
 }
 
 // DefaultEstimatedSessionCost is the conservative per-launch cost estimate
@@ -123,8 +128,8 @@ func (m *Manager) Store() Store {
 
 // SetStore sets the session store. Intended for late initialization or tests.
 func (m *Manager) SetStore(store Store) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.configMu.Lock()
+	defer m.configMu.Unlock()
 	m.store = store
 }
 
@@ -133,15 +138,18 @@ func (m *Manager) SetStore(store Store) {
 // killing them — the user should decide what to do.
 // It also auto-prunes stale loop runs (WS-7: FINDING-267).
 func (m *Manager) Init() {
-	m.mu.RLock()
+	m.sessionsMu.RLock()
 	activePIDs := make(map[int]bool)
 	for _, s := range m.sessions {
 		if s.Pid > 0 {
 			activePIDs[s.Pid] = true
 		}
 	}
+	m.sessionsMu.RUnlock()
+
+	m.configMu.RLock()
 	ralphDir := filepath.Dir(m.stateDir)
-	m.mu.RUnlock()
+	m.configMu.RUnlock()
 
 	orphans := SweepOrphans(ralphDir, activePIDs)
 	if len(orphans) > 0 {
@@ -149,10 +157,10 @@ func (m *Manager) Init() {
 	}
 
 	// QW-9: Restore persisted autonomy level on startup.
-	m.mu.RLock()
+	m.configMu.RLock()
 	stateDir := m.stateDir
 	opt := m.optimizer
-	m.mu.RUnlock()
+	m.configMu.RUnlock()
 	if level, err := LoadAutonomyLevel(filepath.Dir(stateDir)); err == nil && level > 0 {
 		if opt != nil && opt.decisions != nil {
 			opt.decisions.RestoreLevel(AutonomyLevel(level))
@@ -167,8 +175,8 @@ func (m *Manager) Init() {
 // SetStateDir overrides the persistence directory. Intended for tests and
 // alternate embedding environments that want to isolate on-disk state.
 func (m *Manager) SetStateDir(dir string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.configMu.Lock()
+	defer m.configMu.Unlock()
 	m.stateDir = dir
 }
 
@@ -258,17 +266,17 @@ func (m *Manager) autoPruneLoopRuns() {
 	}
 	if pruned > 0 {
 		slog.Info("auto-pruned stale loop runs on startup", "pruned", pruned, "retention", retention.String())
-		m.mu.Lock()
+		m.workersMu.Lock()
 		m.totalPrunedThisSession += pruned
-		m.mu.Unlock()
+		m.workersMu.Unlock()
 	}
 }
 
 // TotalPrunedThisSession returns how many loop runs have been pruned since
 // the Manager was created (WS-7 metric).
 func (m *Manager) TotalPrunedThisSession() int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.workersMu.RLock()
+	defer m.workersMu.RUnlock()
 	return m.totalPrunedThisSession
 }
 
@@ -283,7 +291,7 @@ func (m *Manager) ConsecutiveNoOps(loopID string) int {
 
 // SetAutonomyLevel changes the autonomy level and starts/stops the supervisor.
 func (m *Manager) SetAutonomyLevel(level AutonomyLevel, repoPath string) {
-	m.mu.Lock()
+	m.configMu.Lock()
 	if m.optimizer != nil && m.optimizer.decisions != nil {
 		m.optimizer.decisions.SetLevel(level)
 	}
@@ -294,11 +302,11 @@ func (m *Manager) SetAutonomyLevel(level AutonomyLevel, repoPath string) {
 	} else {
 		m.stopSupervisor()
 	}
-	m.mu.Unlock()
+	m.configMu.Unlock()
 }
 
 // startSupervisor creates and starts the autonomous R&D supervisor.
-// Must be called with m.mu held.
+// Must be called with m.configMu held.
 func (m *Manager) startSupervisor(repoPath string) {
 	if m.supervisor != nil && m.supervisor.Running() {
 		return // already running
@@ -316,7 +324,7 @@ func (m *Manager) startSupervisor(repoPath string) {
 }
 
 // stopSupervisor stops the supervisor if running.
-// Must be called with m.mu held.
+// Must be called with m.configMu held.
 func (m *Manager) stopSupervisor() {
 	if m.supervisor != nil {
 		m.supervisor.Stop()
@@ -326,8 +334,8 @@ func (m *Manager) stopSupervisor() {
 
 // SupervisorStatus returns the current supervisor state, or nil if not running.
 func (m *Manager) SupervisorStatus() *SupervisorState {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.configMu.RLock()
+	defer m.configMu.RUnlock()
 	if m.supervisor == nil {
 		return nil
 	}
@@ -343,9 +351,9 @@ func (m *Manager) RunWorkflow(ctx context.Context, repoPath string, wf WorkflowD
 
 	run := newWorkflowRun(repoPath, wf)
 
-	m.mu.Lock()
+	m.workersMu.Lock()
 	m.workflowRuns[run.ID] = run
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	go m.executeWorkflow(detachContext(ctx), run, repoPath, wf)
 	return run, nil
@@ -551,12 +559,12 @@ func (m *Manager) RefreshFleetState() {
 // SnapshotSessions creates read-only snapshots of all sessions for fleet aggregation.
 // Each session is locked briefly to copy fields, then unlocked.
 func (m *Manager) SnapshotSessions() []pool.SessionSnapshot {
-	m.mu.RLock()
+	m.sessionsMu.RLock()
 	sessions := make([]*Session, 0, len(m.sessions))
 	for _, s := range m.sessions {
 		sessions = append(sessions, s)
 	}
-	m.mu.RUnlock()
+	m.sessionsMu.RUnlock()
 
 	snaps := make([]pool.SessionSnapshot, 0, len(sessions))
 	for _, s := range sessions {

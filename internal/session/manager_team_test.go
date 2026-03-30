@@ -39,8 +39,10 @@ func TestUpdateTeamOnSessionEnd_LeadCompleted(t *testing.T) {
 		ID:     "lead-1",
 		Status: StatusCompleted,
 	}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["lead-1"] = lead
+	m.sessionsMu.Unlock()
+	m.workersMu.Lock()
 	m.teams["my-team"] = &TeamStatus{
 		Name:   "my-team",
 		LeadID: "lead-1",
@@ -51,13 +53,13 @@ func TestUpdateTeamOnSessionEnd_LeadCompleted(t *testing.T) {
 			{Description: "task 3", Status: "completed"},
 		},
 	}
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	m.updateTeamOnSessionEnd(lead)
 
-	m.mu.Lock()
+	m.workersMu.Lock()
 	team := m.teams["my-team"]
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	if team.Status != StatusCompleted {
 		t.Errorf("team status = %q, want completed", team.Status)
@@ -83,8 +85,10 @@ func TestUpdateTeamOnSessionEnd_LeadErrored(t *testing.T) {
 		ID:     "lead-err",
 		Status: StatusErrored,
 	}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["lead-err"] = lead
+	m.sessionsMu.Unlock()
+	m.workersMu.Lock()
 	m.teams["err-team"] = &TeamStatus{
 		Name:   "err-team",
 		LeadID: "lead-err",
@@ -93,13 +97,13 @@ func TestUpdateTeamOnSessionEnd_LeadErrored(t *testing.T) {
 			{Description: "task 1", Status: "pending"},
 		},
 	}
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	m.updateTeamOnSessionEnd(lead)
 
-	m.mu.Lock()
+	m.workersMu.Lock()
 	team := m.teams["err-team"]
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	if team.Status != StatusErrored {
 		t.Errorf("team status = %q, want errored", team.Status)
@@ -116,8 +120,10 @@ func TestUpdateTeamOnSessionEnd_NonLeadSession(t *testing.T) {
 		ID:     "worker-1",
 		Status: StatusCompleted,
 	}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["worker-1"] = worker
+	m.sessionsMu.Unlock()
+	m.workersMu.Lock()
 	m.teams["my-team"] = &TeamStatus{
 		Name:   "my-team",
 		LeadID: "lead-1",
@@ -126,13 +132,13 @@ func TestUpdateTeamOnSessionEnd_NonLeadSession(t *testing.T) {
 			{Description: "task 1", Status: "pending"},
 		},
 	}
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	m.updateTeamOnSessionEnd(worker)
 
-	m.mu.Lock()
+	m.workersMu.Lock()
 	team := m.teams["my-team"]
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	// Team should remain running since worker-1 is not the lead
 	if team.Status != StatusRunning {
@@ -147,9 +153,9 @@ func TestUpdateTeamOnSessionEnd_NoTeams(t *testing.T) {
 	m := NewManager()
 
 	sess := &Session{ID: "orphan", Status: StatusCompleted}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["orphan"] = sess
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	// Should not panic with no teams
 	m.updateTeamOnSessionEnd(sess)
@@ -158,7 +164,7 @@ func TestUpdateTeamOnSessionEnd_NoTeams(t *testing.T) {
 func TestCorrelateTaskStatuses_ErroredWorker(t *testing.T) {
 	m := NewManager()
 
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["lead"] = &Session{ID: "lead", Status: StatusRunning, TeamName: "team-a"}
 	m.sessions["w1"] = &Session{
 		ID:       "w1",
@@ -172,6 +178,8 @@ func TestCorrelateTaskStatuses_ErroredWorker(t *testing.T) {
 		TeamName: "team-a",
 		Prompt:   "write docs for API",
 	}
+	m.sessionsMu.Unlock()
+	m.workersMu.Lock()
 	team := &TeamStatus{
 		Name:   "team-a",
 		LeadID: "lead",
@@ -182,7 +190,7 @@ func TestCorrelateTaskStatuses_ErroredWorker(t *testing.T) {
 		},
 	}
 	m.teams["team-a"] = team
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	// GetTeam triggers correlateTaskStatuses
 	got, ok := m.GetTeam("team-a")
@@ -200,7 +208,7 @@ func TestCorrelateTaskStatuses_ErroredWorker(t *testing.T) {
 func TestCorrelateTaskStatuses_TerminalNotOverwritten(t *testing.T) {
 	m := NewManager()
 
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["lead"] = &Session{ID: "lead", Status: StatusRunning, TeamName: "team-b"}
 	m.sessions["w1"] = &Session{
 		ID:       "w1",
@@ -208,6 +216,8 @@ func TestCorrelateTaskStatuses_TerminalNotOverwritten(t *testing.T) {
 		TeamName: "team-b",
 		Prompt:   "refactor auth",
 	}
+	m.sessionsMu.Unlock()
+	m.workersMu.Lock()
 	team := &TeamStatus{
 		Name:   "team-b",
 		LeadID: "lead",
@@ -217,7 +227,7 @@ func TestCorrelateTaskStatuses_TerminalNotOverwritten(t *testing.T) {
 		},
 	}
 	m.teams["team-b"] = team
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	got, _ := m.GetTeam("team-b")
 	// Completed status should not be overwritten by worker running status
