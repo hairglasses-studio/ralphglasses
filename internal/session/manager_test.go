@@ -83,9 +83,9 @@ func TestManagerStopAlreadyStopped(t *testing.T) {
 		ID:     "test-session",
 		Status: StatusCompleted,
 	}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions[s.ID] = s
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	err := m.Stop(s.ID)
 	if err == nil {
@@ -102,9 +102,9 @@ func TestManagerFindByRepo(t *testing.T) {
 		RepoName: "myrepo",
 		Status:   StatusRunning,
 	}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions[s.ID] = s
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	found := m.FindByRepo("myrepo")
 	if len(found) != 1 {
@@ -146,9 +146,9 @@ func TestManagerSessionLifecycle(t *testing.T) {
 		LaunchedAt:   time.Now(),
 		LastActivity: time.Now(),
 	}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions[s.ID] = s
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	// Get returns the session
 	got, ok := m.Get("lifecycle-test")
@@ -213,15 +213,15 @@ func TestManagerStopAll(t *testing.T) {
 			Status:   StatusRunning,
 			RepoPath: "/tmp/repo",
 		}
-		m.mu.Lock()
+		m.sessionsMu.Lock()
 		m.sessions[id] = s
-		m.mu.Unlock()
+		m.sessionsMu.Unlock()
 	}
 
 	// Add one completed session that should not be affected
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["s4"] = &Session{ID: "s4", Status: StatusCompleted, RepoPath: "/tmp/repo"}
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	m.StopAll()
 
@@ -242,10 +242,10 @@ func TestManagerStopAll(t *testing.T) {
 func TestManagerListFiltersByProvider(t *testing.T) {
 	m := NewManager()
 
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["claude-1"] = &Session{ID: "claude-1", Provider: ProviderClaude, RepoPath: "/tmp/a"}
 	m.sessions["gemini-1"] = &Session{ID: "gemini-1", Provider: ProviderGemini, RepoPath: "/tmp/b"}
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	// List all
 	all := m.List("")
@@ -269,10 +269,12 @@ func TestManagerTeamLifecycle(t *testing.T) {
 		},
 		CreatedAt: time.Now(),
 	}
-	m.mu.Lock()
-	m.teams["test-team"] = team
+	m.sessionsMu.Lock()
 	m.sessions["lead-session"] = &Session{ID: "lead-session", Status: StatusRunning}
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
+	m.workersMu.Lock()
+	m.teams["test-team"] = team
+	m.workersMu.Unlock()
 
 	// GetTeam
 	got, ok := m.GetTeam("test-team")
@@ -308,7 +310,10 @@ func TestManagerDelegateTask(t *testing.T) {
 	m := NewManager()
 
 	// Set up a team
-	m.mu.Lock()
+	m.sessionsMu.Lock()
+	m.sessions["lead"] = &Session{ID: "lead", Status: StatusRunning}
+	m.sessionsMu.Unlock()
+	m.workersMu.Lock()
 	m.teams["test-team"] = &TeamStatus{
 		Name:     "test-team",
 		RepoPath: "/tmp/repo",
@@ -316,8 +321,7 @@ func TestManagerDelegateTask(t *testing.T) {
 		Status:   StatusRunning,
 		Tasks:    []TeamTask{{Description: "task 1", Status: "pending"}},
 	}
-	m.sessions["lead"] = &Session{ID: "lead", Status: StatusRunning}
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	// Delegate a new task
 	count, err := m.DelegateTask("test-team", TeamTask{
@@ -351,18 +355,7 @@ func TestManagerTaskStatusCorrelation(t *testing.T) {
 	m := NewManager()
 
 	// Set up a team with tasks
-	m.mu.Lock()
-	m.teams["corr-team"] = &TeamStatus{
-		Name:     "corr-team",
-		RepoPath: "/tmp/repo",
-		LeadID:   "lead",
-		Status:   StatusRunning,
-		Tasks: []TeamTask{
-			{Description: "implement auth", Status: "pending"},
-			{Description: "write tests", Status: "pending"},
-			{Description: "update docs", Status: "pending"},
-		},
-	}
+	m.sessionsMu.Lock()
 	m.sessions["lead"] = &Session{ID: "lead", Status: StatusRunning, TeamName: "corr-team"}
 	// Worker sessions: one running, one completed
 	m.sessions["w1"] = &Session{
@@ -377,7 +370,20 @@ func TestManagerTaskStatusCorrelation(t *testing.T) {
 		TeamName: "corr-team",
 		Prompt:   "Please write tests for the auth module",
 	}
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
+	m.workersMu.Lock()
+	m.teams["corr-team"] = &TeamStatus{
+		Name:     "corr-team",
+		RepoPath: "/tmp/repo",
+		LeadID:   "lead",
+		Status:   StatusRunning,
+		Tasks: []TeamTask{
+			{Description: "implement auth", Status: "pending"},
+			{Description: "write tests", Status: "pending"},
+			{Description: "update docs", Status: "pending"},
+		},
+	}
+	m.workersMu.Unlock()
 
 	team, ok := m.GetTeam("corr-team")
 	if !ok {
@@ -450,9 +456,9 @@ func makeTestSession(m *Manager, id, repoPath string, status SessionStatus) *Ses
 		LastActivity: time.Now(),
 		OutputCh:     make(chan string, 100),
 	}
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions[id] = s
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 	return s
 }
 
@@ -603,9 +609,9 @@ func TestGoroutineCleanupOnStop(t *testing.T) {
 			OutputCh:     make(chan string, 10),
 			cancel:       cancel,
 		}
-		m.mu.Lock()
+		m.sessionsMu.Lock()
 		m.sessions[id] = s
-		m.mu.Unlock()
+		m.sessionsMu.Unlock()
 
 		// One goroutine representing the session lifecycle — exits on cancel.
 		go func(ctx context.Context, sess *Session) {
@@ -639,15 +645,17 @@ func TestGoroutineCleanupOnStop(t *testing.T) {
 func TestManagerConcurrentDelegateTask(t *testing.T) {
 	m := NewManager()
 
-	m.mu.Lock()
+	m.sessionsMu.Lock()
+	m.sessions["lead"] = &Session{ID: "lead", Status: StatusRunning}
+	m.sessionsMu.Unlock()
+	m.workersMu.Lock()
 	m.teams["race-team"] = &TeamStatus{
 		Name:     "race-team",
 		RepoPath: "/tmp/repo",
 		LeadID:   "lead",
 		Status:   StatusRunning,
 	}
-	m.sessions["lead"] = &Session{ID: "lead", Status: StatusRunning}
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	const n = 30
 	var wg sync.WaitGroup
@@ -790,11 +798,11 @@ func TestDetectStalls(t *testing.T) {
 		LastActivity: time.Now().Add(-1 * time.Hour),
 	}
 
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions[stale.ID] = stale
 	m.sessions[fresh.ID] = fresh
 	m.sessions[completed.ID] = completed
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	stalled := m.DetectStalls(1 * time.Second)
 	if len(stalled) != 1 {

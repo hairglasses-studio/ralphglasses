@@ -69,9 +69,9 @@ func (m *Manager) StartLoop(ctx context.Context, repoPath string, profile LoopPr
 		slog.Info("auto-pruned stale loop runs", "repo", repoPath, "pruned", pruned)
 	}
 
-	m.mu.Lock()
+	m.workersMu.Lock()
 	m.loops[run.ID] = run
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	m.PersistLoop(run)
 	return run, nil
@@ -389,8 +389,8 @@ func (m *Manager) aggregateLoopSpend(run *LoopRun) float64 {
 func (m *Manager) GetLoop(id string) (*LoopRun, bool) {
 	m.LoadExternalLoops()
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.workersMu.Lock()
+	defer m.workersMu.Unlock()
 	run, ok := m.loops[id]
 	return run, ok
 }
@@ -399,8 +399,8 @@ func (m *Manager) GetLoop(id string) (*LoopRun, bool) {
 func (m *Manager) ListLoops() []*LoopRun {
 	m.LoadExternalLoops()
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.workersMu.Lock()
+	defer m.workersMu.Unlock()
 
 	out := make([]*LoopRun, 0, len(m.loops))
 	for _, run := range m.loops {

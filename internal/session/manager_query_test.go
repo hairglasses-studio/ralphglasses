@@ -13,9 +13,9 @@ func TestGetWorkflowRun_Found(t *testing.T) {
 		Name:   "test-workflow",
 		Status: "completed",
 	}
-	m.mu.Lock()
+	m.workersMu.Lock()
 	m.workflowRuns["wf-123"] = run
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	got, ok := m.GetWorkflowRun("wf-123")
 	if !ok {
@@ -40,11 +40,11 @@ func TestGetWorkflowRun_NotFound(t *testing.T) {
 func TestIsRunning_MultipleRepos(t *testing.T) {
 	m := NewManager()
 
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["s1"] = &Session{ID: "s1", RepoPath: "/tmp/repo-a", Status: StatusRunning}
 	m.sessions["s2"] = &Session{ID: "s2", RepoPath: "/tmp/repo-b", Status: StatusCompleted}
 	m.sessions["s3"] = &Session{ID: "s3", RepoPath: "/tmp/repo-a", Status: StatusCompleted}
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	if !m.IsRunning("/tmp/repo-a") {
 		t.Error("expected repo-a to have a running session")
@@ -59,9 +59,9 @@ func TestIsRunning_MultipleRepos(t *testing.T) {
 
 func TestIsRunning_LaunchingStatus(t *testing.T) {
 	m := NewManager()
-	m.mu.Lock()
+	m.sessionsMu.Lock()
 	m.sessions["s1"] = &Session{ID: "s1", RepoPath: "/tmp/repo", Status: StatusLaunching}
-	m.mu.Unlock()
+	m.sessionsMu.Unlock()
 
 	if !m.IsRunning("/tmp/repo") {
 		t.Error("expected launching session to count as running")

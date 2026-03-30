@@ -14,8 +14,8 @@ const DefaultStallThreshold = 5 * time.Minute
 // DetectStalls returns the IDs of sessions that are in "running" state but
 // have not recorded any activity within the given threshold duration.
 func (m *Manager) DetectStalls(threshold time.Duration) []string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.sessionsMu.RLock()
+	defer m.sessionsMu.RUnlock()
 
 	var stalled []string
 	for _, s := range m.sessions {

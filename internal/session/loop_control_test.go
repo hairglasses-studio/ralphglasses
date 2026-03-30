@@ -19,9 +19,9 @@ func TestPauseLoop_Success(t *testing.T) {
 		Paused:    false,
 		UpdatedAt: time.Now().Add(-1 * time.Minute),
 	}
-	m.mu.Lock()
+	m.workersMu.Lock()
 	m.loops["pause-loop"] = run
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	err := m.PauseLoop("pause-loop")
 	if err != nil {
@@ -63,9 +63,9 @@ func TestResumeLoop_Success(t *testing.T) {
 		Paused:    true,
 		UpdatedAt: time.Now().Add(-1 * time.Minute),
 	}
-	m.mu.Lock()
+	m.workersMu.Lock()
 	m.loops["resume-loop"] = run
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	err := m.ResumeLoop("resume-loop")
 	if err != nil {
@@ -106,9 +106,9 @@ func TestGetLoop_Found(t *testing.T) {
 	m.SetStateDir("")
 
 	run := &LoopRun{ID: "found-loop", Status: "running"}
-	m.mu.Lock()
+	m.workersMu.Lock()
 	m.loops["found-loop"] = run
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	got, ok := m.GetLoop("found-loop")
 	if !ok {
@@ -133,10 +133,10 @@ func TestListLoops_Multiple(t *testing.T) {
 	m := NewManager()
 	m.SetStateDir("")
 
-	m.mu.Lock()
+	m.workersMu.Lock()
 	m.loops["loop-1"] = &LoopRun{ID: "loop-1", Status: "running"}
 	m.loops["loop-2"] = &LoopRun{ID: "loop-2", Status: "completed"}
-	m.mu.Unlock()
+	m.workersMu.Unlock()
 
 	loops := m.ListLoops()
 	if len(loops) != 2 {
