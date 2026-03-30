@@ -561,7 +561,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** MCP tools callable from Claude Code, session lifecycle works end-to-end
 
 ### 2.9 — CLI subcommands
-- [ ] 2.9.1 — `ralphglasses session list|start|stop|status` — non-TUI session management `P1` `M`
+- [x] 2.9.1 — `ralphglasses session list|start|stop|status` — non-TUI session management `P1` `M`
 - [ ] 2.9.2 — `ralphglasses worktree create|list|merge|clean` — worktree operations from CLI `P1` `M`
 - [ ] 2.9.3 — `ralphglasses budget status|set|reset` — budget management from CLI `P2` `S`
 - [x] 2.9.4 — JSON output flag (`--json`) for all subcommands for scripting/piping `P1` `S`
@@ -571,8 +571,8 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 2.10.1 — Port `marathon.sh` to `internal/marathon/` package: duration limit, budget limit, checkpoints `P1` `L`
 - [ ] 2.10.2 — `ralphglasses marathon` subcommand: `--budget`, `--duration`, `--checkpoint-interval` `P1` `M`
 - [ ] 2.10.3 — Replace shell signal handling with Go `os/signal` (SIGINT/SIGTERM -> graceful shutdown) `P1` `M`
-- [ ] 2.10.4 — Git checkpoint tagging in Go: `git tag marathon-<timestamp>` at configurable interval `P1` `S`
-- [ ] 2.10.5 — Structured marathon logging via `slog` (replace bash `log()` function) `P1` `S`
+- [x] 2.10.4 — Git checkpoint tagging in Go: `git tag marathon-<timestamp>` at configurable interval `P1` `S`
+- [x] 2.10.5 — Structured marathon logging via `slog` (replace bash `log()` function) `P1` `S`
 - **Acceptance:** `ralphglasses marathon` replaces `bash marathon.sh` with identical behavior
 
 ### 2.11 — Health check endpoint `[PARALLEL]`
