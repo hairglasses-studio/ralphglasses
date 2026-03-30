@@ -1,0 +1,17 @@
+name: session-cost
+version: "1.0.0"
+description: Session cost reporting and forecasting.
+author: hairglasses-studio
+
+commands:
+  - name: cost-summary
+    description: Display current session budget and spending
+    run: ralph session-budget
+  - name: cost-forecast
+    description: Forecast remaining budget based on current spend rate
+    run: ralph budget-forecast
+
+hooks:
+  - event: session.ended
+    command: "echo \"$(date -Iseconds),${SESSION_ID},${SESSION_COST}\" >> ~/.ralph/cost-log.csv"
+    priority: 50
