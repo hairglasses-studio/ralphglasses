@@ -80,3 +80,4 @@ session_cover.out
 .ralph/logs/loop_observations.jsonl
 .ralph/awesome/*.json
 .ralph/awesome/report.md
+internal/mcpserver/.ralph/
