@@ -283,7 +283,7 @@ func (s *Server) buildAdvancedGroup() ToolGroup {
 func (s *Server) buildEvalGroup() ToolGroup {
 	return ToolGroup{
 		Name:        "eval",
-		Description: "Offline evaluation: counterfactual analysis, Bayesian A/B testing, changepoint detection",
+		Description: "Offline evaluation: counterfactual analysis, Bayesian A/B testing, frequentist significance testing, changepoint detection",
 		Tools: []ToolEntry{
 			{mcp.NewTool("ralphglasses_eval_counterfactual",
 				mcp.WithDescription("Estimate outcomes under hypothetical policy changes using inverse propensity scoring on loop observations"),
@@ -309,6 +309,15 @@ func (s *Server) buildEvalGroup() ToolGroup {
 				mcp.WithNumber("hours", mcp.Description("Observation window in hours (default: 168)")),
 				mcp.WithString("metric", mcp.Description("Specific metric to analyze (completion_rate, cost, latency, confidence, difficulty). Omit for all.")),
 			), s.handleEvalChangepoints},
+			{mcp.NewTool("ralphglasses_eval_significance",
+				mcp.WithDescription("Frequentist significance testing (z-test/t-test) with combined Bayesian comparison report"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithNumber("hours", mcp.Description("Observation window in hours (default: 168)")),
+				mcp.WithString("mode", mcp.Required(), mcp.Description("Comparison mode: providers, periods, or cost")),
+				mcp.WithString("provider_a", mcp.Description("First provider (providers/cost mode)")),
+				mcp.WithString("provider_b", mcp.Description("Second provider (providers/cost mode)")),
+				mcp.WithNumber("split_hours_ago", mcp.Description("Hours ago to split time periods (periods mode)")),
+			), s.handleEvalSignificance},
 			{mcp.NewTool("ralphglasses_anomaly_detect",
 				mcp.WithDescription("Detect anomalies in metric streams using sliding-window z-score analysis"),
 				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
