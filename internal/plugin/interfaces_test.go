@@ -392,7 +392,10 @@ func TestMultiPlugin_AllInterfaces(t *testing.T) {
 	r.Register(mp)
 
 	// Should be discoverable via all three assertion helpers.
-	registered := r.List()[0]
+	registered, found := r.Get("multi")
+	if !found {
+		t.Fatal("Get(\"multi\") not found after Register")
+	}
 
 	pp, ok := AsProvider(registered)
 	if !ok {

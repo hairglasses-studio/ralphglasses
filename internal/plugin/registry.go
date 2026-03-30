@@ -7,16 +7,22 @@ import (
 	"sync"
 )
 
-// Registry holds registered plugins and dispatches events to them.
-// It tracks both regular event-based plugins and gRPC tool-call plugins.
+// Registry holds registered plugins and manages their lifecycle.
+// It tracks both regular plugins and gRPC tool-call plugins.
 type Registry struct {
 	mu      sync.RWMutex
-	plugins []Plugin
+	plugins []pluginEntry
 
 	grpcMu      sync.RWMutex
 	grpcPlugins []GRPCPlugin
 	// toolIndex maps tool name -> GRPCPlugin for fast dispatch.
 	toolIndex map[string]GRPCPlugin
+}
+
+// pluginEntry pairs a plugin with its lifecycle status.
+type pluginEntry struct {
+	plugin Plugin
+	status PluginStatus
 }
 
 // NewRegistry creates an empty Registry.
@@ -26,35 +32,133 @@ func NewRegistry() *Registry {
 	}
 }
 
-// Register adds a plugin to the registry.
-func (r *Registry) Register(p Plugin) {
+// Register adds a plugin to the registry. Returns an error if a plugin
+// with the same name is already registered.
+func (r *Registry) Register(p Plugin) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.plugins = append(r.plugins, p)
-}
 
-// Dispatch calls OnEvent on all registered plugins.
-// Errors are logged as warnings; dispatch continues on failure.
-func (r *Registry) Dispatch(ctx context.Context, event Event) {
-	r.mu.RLock()
-	plugins := make([]Plugin, len(r.plugins))
-	copy(plugins, r.plugins)
-	r.mu.RUnlock()
-
-	for _, p := range plugins {
-		if err := p.OnEvent(ctx, event); err != nil {
-			slog.Warn("plugin OnEvent failed", "plugin", p.Name(), "version", p.Version(), "err", err)
+	name := p.Name()
+	for _, e := range r.plugins {
+		if e.plugin.Name() == name {
+			return fmt.Errorf("plugin %q already registered", name)
 		}
 	}
+	r.plugins = append(r.plugins, pluginEntry{plugin: p, status: StatusLoaded})
+	return nil
 }
 
-// List returns a snapshot of registered plugins.
-func (r *Registry) List() []Plugin {
+// InitAll calls Init on every registered plugin in registration order.
+// A single plugin failure is logged and recorded but does not prevent
+// other plugins from initializing.
+func (r *Registry) InitAll(ctx context.Context, host PluginHost) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var firstErr error
+	for i := range r.plugins {
+		e := &r.plugins[i]
+		if err := e.plugin.Init(ctx, host); err != nil {
+			e.status = StatusFailed
+			slog.Warn("plugin init failed",
+				"plugin", e.plugin.Name(),
+				"version", e.plugin.Version(),
+				"err", err,
+			)
+			if firstErr == nil {
+				firstErr = fmt.Errorf("plugin %q init: %w", e.plugin.Name(), err)
+			}
+			continue
+		}
+		e.status = StatusActive
+	}
+	return firstErr
+}
+
+// ShutdownAll calls Shutdown on every active plugin in reverse registration
+// order. Errors are logged but do not prevent other plugins from shutting down.
+func (r *Registry) ShutdownAll() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var firstErr error
+	for i := len(r.plugins) - 1; i >= 0; i-- {
+		e := &r.plugins[i]
+		if e.status != StatusActive {
+			continue
+		}
+		if err := e.plugin.Shutdown(); err != nil {
+			slog.Warn("plugin shutdown failed",
+				"plugin", e.plugin.Name(),
+				"version", e.plugin.Version(),
+				"err", err,
+			)
+			if firstErr == nil {
+				firstErr = fmt.Errorf("plugin %q shutdown: %w", e.plugin.Name(), err)
+			}
+		}
+	}
+	return firstErr
+}
+
+// Get returns a plugin by name.
+func (r *Registry) Get(name string) (Plugin, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, e := range r.plugins {
+		if e.plugin.Name() == name {
+			return e.plugin, true
+		}
+	}
+	return nil, false
+}
+
+// List returns info about all registered plugins.
+func (r *Registry) List() []PluginInfo {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	out := make([]PluginInfo, len(r.plugins))
+	for i, e := range r.plugins {
+		out[i] = PluginInfo{
+			Name:    e.plugin.Name(),
+			Version: e.plugin.Version(),
+			Status:  e.status,
+		}
+	}
+	return out
+}
+
+// Plugins returns a snapshot of the raw Plugin values in registration order.
+func (r *Registry) Plugins() []Plugin {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]Plugin, len(r.plugins))
-	copy(out, r.plugins)
+	for i, e := range r.plugins {
+		out[i] = e.plugin
+	}
 	return out
+}
+
+// Dispatch calls OnEvent-style dispatch on all registered plugins that
+// support the legacy event callback. This bridges the old OnEvent API;
+// plugins that only implement Init/Shutdown are silently skipped.
+func (r *Registry) Dispatch(ctx context.Context, event Event) {
+	r.mu.RLock()
+	entries := make([]pluginEntry, len(r.plugins))
+	copy(entries, r.plugins)
+	r.mu.RUnlock()
+
+	for _, e := range entries {
+		type eventHandler interface {
+			OnEvent(ctx context.Context, event Event) error
+		}
+		if eh, ok := e.plugin.(eventHandler); ok {
+			if err := eh.OnEvent(ctx, event); err != nil {
+				slog.Warn("plugin OnEvent failed", "plugin", e.plugin.Name(), "version", e.plugin.Version(), "err", err)
+			}
+		}
+	}
 }
 
 // DispatchFunc returns a function suitable for use as an event handler.
@@ -70,9 +174,11 @@ func (r *Registry) DispatchFunc() func(ctx context.Context, eventType, repo stri
 }
 
 // RegisterGRPC adds a gRPC-capable plugin and indexes its tool capabilities.
-// It also registers the plugin as a regular Plugin for event dispatch.
-func (r *Registry) RegisterGRPC(p GRPCPlugin) {
-	r.Register(p) // register for event dispatch too
+// It also registers the plugin as a regular Plugin for lifecycle management.
+func (r *Registry) RegisterGRPC(p GRPCPlugin) error {
+	if err := r.Register(p); err != nil {
+		return err
+	}
 
 	r.grpcMu.Lock()
 	defer r.grpcMu.Unlock()
@@ -80,6 +186,7 @@ func (r *Registry) RegisterGRPC(p GRPCPlugin) {
 	for _, cap := range p.Capabilities() {
 		r.toolIndex[cap] = p
 	}
+	return nil
 }
 
 // DispatchToolCall routes a tool call to the GRPCPlugin that declared the

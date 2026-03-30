@@ -14,8 +14,10 @@ type fakeGRPCPlugin struct {
 	onEvent      func(ctx context.Context, event Event) error
 }
 
-func (f *fakeGRPCPlugin) Name() string    { return f.name }
-func (f *fakeGRPCPlugin) Version() string { return f.version }
+func (f *fakeGRPCPlugin) Name() string                          { return f.name }
+func (f *fakeGRPCPlugin) Version() string                        { return f.version }
+func (f *fakeGRPCPlugin) Init(_ context.Context, _ PluginHost) error { return nil }
+func (f *fakeGRPCPlugin) Shutdown() error                        { return nil }
 func (f *fakeGRPCPlugin) OnEvent(ctx context.Context, event Event) error {
 	if f.onEvent != nil {
 		return f.onEvent(ctx, event)

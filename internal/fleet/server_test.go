@@ -901,25 +901,25 @@ func TestCoordinator_HandleA2ATaskStatus(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/v1/a2a/task/task-123", nil)
 	req.SetPathValue("taskID", "task-123")
 	w := httptest.NewRecorder()
-	coord.handleA2ATaskStatus(w, req)
+	coord.handleA2ATaskGet(w, req)
 
 	if w.Code != 200 {
 		t.Fatalf("a2a task status: got %d, want 200", w.Code)
 	}
 
-	var offer TaskOffer
-	if err := json.Unmarshal(w.Body.Bytes(), &offer); err != nil {
+	var a2aResp A2ATaskResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &a2aResp); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if offer.ID != "task-123" {
-		t.Errorf("offer ID: got %q, want task-123", offer.ID)
+	if a2aResp.ID != "task-123" {
+		t.Errorf("task ID: got %q, want task-123", a2aResp.ID)
 	}
 
 	// Test not found
 	req2 := httptest.NewRequest("GET", "/api/v1/a2a/task/no-such", nil)
 	req2.SetPathValue("taskID", "no-such")
 	w2 := httptest.NewRecorder()
-	coord.handleA2ATaskStatus(w2, req2)
+	coord.handleA2ATaskGet(w2, req2)
 
 	if w2.Code != http.StatusNotFound {
 		t.Errorf("a2a task not found: got %d, want 404", w2.Code)
@@ -928,7 +928,7 @@ func TestCoordinator_HandleA2ATaskStatus(t *testing.T) {
 	// Test missing taskID
 	req3 := httptest.NewRequest("GET", "/api/v1/a2a/task/", nil)
 	w3 := httptest.NewRecorder()
-	coord.handleA2ATaskStatus(w3, req3)
+	coord.handleA2ATaskGet(w3, req3)
 
 	if w3.Code != http.StatusBadRequest {
 		t.Errorf("a2a task missing id: got %d, want 400", w3.Code)
@@ -949,7 +949,7 @@ func TestCoordinator_HandleA2ATaskStatus_WithCompletedAt(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/v1/a2a/task/task-done", nil)
 	req.SetPathValue("taskID", "task-done")
 	w := httptest.NewRecorder()
-	coord.handleA2ATaskStatus(w, req)
+	coord.handleA2ATaskGet(w, req)
 
 	if w.Code != 200 {
 		t.Fatalf("a2a completed task: got %d", w.Code)
@@ -971,16 +971,20 @@ func TestCoordinator_HandleA2ATaskStatus_WithAssignedAt(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/v1/a2a/task/task-assigned", nil)
 	req.SetPathValue("taskID", "task-assigned")
 	w := httptest.NewRecorder()
-	coord.handleA2ATaskStatus(w, req)
+	coord.handleA2ATaskGet(w, req)
 
 	if w.Code != 200 {
 		t.Fatalf("a2a assigned task: got %d", w.Code)
 	}
 
-	var offer TaskOffer
-	_ = json.Unmarshal(w.Body.Bytes(), &offer)
-	if offer.AcceptedBy != "w1" {
-		t.Errorf("accepted_by: got %q, want w1", offer.AcceptedBy)
+	var a2aResp A2ATaskResponse
+	_ = json.Unmarshal(w.Body.Bytes(), &a2aResp)
+	if a2aResp.ID != "task-assigned" {
+		t.Errorf("task ID: got %q, want task-assigned", a2aResp.ID)
+	}
+	// Assigned items map to queued in A2A terms.
+	if a2aResp.Status != TaskStateQueued {
+		t.Errorf("status: got %q, want %q", a2aResp.Status, TaskStateQueued)
 	}
 }
 

@@ -59,6 +59,36 @@ func LoadDir(dir string) ([]Plugin, error) {
 	return nil, nil
 }
 
+// LoadFromDir scans a directory for plugin configs and returns discovered
+// plugins. Each subdirectory must contain a plugin.json manifest.
+//
+// Currently only "builtin" type manifests are noted; the actual Plugin
+// instances for builtin types must be registered via Registry.Register().
+// Future: "grpc" type will launch out-of-process plugins via hashicorp/go-plugin.
+func LoadFromDir(dir string) ([]Plugin, error) {
+	manifests, err := LoadDirManifests(dir)
+	if err != nil {
+		return nil, fmt.Errorf("LoadFromDir %q: %w", dir, err)
+	}
+
+	if len(manifests) == 0 {
+		return nil, nil
+	}
+
+	for _, m := range manifests {
+		slog.Info("plugin discovered",
+			"name", m.Name,
+			"version", m.Version,
+			"type", m.Protocol,
+		)
+	}
+
+	// Builtin plugins must be registered by the caller. gRPC plugins are a
+	// future integration. Return nil to signal that caller-side registration
+	// is required.
+	return nil, nil
+}
+
 // LoadDirManifests is like LoadDir but returns the raw manifests instead of
 // instantiated Plugin values. This is useful for inspection and for callers
 // that handle plugin instantiation themselves.

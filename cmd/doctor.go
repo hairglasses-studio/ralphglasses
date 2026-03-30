@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -12,10 +15,15 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
+
+	_ "modernc.org/sqlite"
 )
+
+var doctorJSON bool
 
 var doctorCmd = &cobra.Command{
 	Use:   "doctor",
@@ -24,15 +32,21 @@ var doctorCmd = &cobra.Command{
 configured correctly for running ralphglasses.
 
 Checks include:
-  - Required binaries (ralph, claude, git, go)
-  - API keys and environment variables
-  - Scan path validity
-  - Go and git version compatibility
+  - Provider binaries (claude, gemini, codex)
+  - Git binary and version (>= 2.20 for worktree support)
+  - Config file (~/.ralphglasses/config.json)
+  - State directory (~/.ralphglasses/) permissions
+  - SQLite store (~/.ralphglasses/state.db)
+  - Scan path validity and repo discovery
   - Disk space availability
-  - MCP server buildability
-  - .ralphrc configuration validation`,
+  - API keys (ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY)
+
+Exit code 0 if all checks pass (warnings are OK), exit code 1 if any fail.`,
 	Example: `  # Run all checks
   ralphglasses doctor
+
+  # Machine-readable JSON output
+  ralphglasses doctor --json
 
   # Run with debug output
   ralphglasses doctor --debug`,
@@ -40,140 +54,390 @@ Checks include:
 }
 
 func init() {
+	doctorCmd.Flags().BoolVar(&doctorJSON, "json", false, "Output results as JSON")
 	rootCmd.AddCommand(doctorCmd)
 }
 
+// doctorStatus represents the outcome severity of a check.
+type doctorStatus string
+
+const (
+	statusPass doctorStatus = "pass"
+	statusWarn doctorStatus = "warn"
+	statusFail doctorStatus = "fail"
+)
+
 // doctorResult holds the outcome of a single doctor check.
 type doctorResult struct {
-	name     string
-	status   string
-	message  string
-	required bool
+	Name    string       `json:"name"`
+	Status  doctorStatus `json:"status"`
+	Message string       `json:"message"`
+}
+
+// doctorReport is the JSON-serialisable envelope for all check results.
+type doctorReport struct {
+	Results []doctorResult `json:"results"`
+	Summary struct {
+		Pass int  `json:"pass"`
+		Warn int  `json:"warn"`
+		Fail int  `json:"fail"`
+		OK   bool `json:"ok"`
+	} `json:"summary"`
 }
 
 func runDoctor(cmd *cobra.Command, args []string) error {
 	sp := util.ExpandHome(scanPath)
 	util.Debug.Debugf("doctor: scan-path=%s", sp)
 
-	okStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("10"))   // green
-	warnStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("11")) // yellow
-	errStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("9"))   // red
-
 	var results []doctorResult
-	anyFailed := false
 
-	check := func(name string, required bool, fn func() (string, string)) {
-		status, msg := fn()
-		if required && status == "MISSING" {
-			anyFailed = true
-		}
-		results = append(results, doctorResult{name, status, msg, required})
+	collect := func(r doctorResult) {
+		results = append(results, r)
 	}
 
-	binaryCheck := func(bin string) func() (string, string) {
-		return func() (string, string) {
-			path, err := exec.LookPath(bin)
-			if err != nil {
-				return "MISSING", bin + " not found in PATH"
-			}
-			return "OK", path
-		}
+	// --- Provider binaries ---
+	collect(checkClaude())
+	collect(checkGemini())
+	collect(checkCodex())
+
+	// --- Git ---
+	collect(checkGit())
+
+	// --- Config & state ---
+	collect(checkStateDir())
+	collect(checkConfig())
+	collect(checkSQLite())
+
+	// --- Scan path ---
+	collect(checkScanPath(cmd, sp))
+
+	// --- Disk space ---
+	collect(checkDiskSpaceCheck(sp))
+
+	// --- API keys ---
+	for _, r := range checkAPIKeys() {
+		collect(r)
 	}
 
-	// Required checks
-	check("ralph", true, binaryCheck("ralph"))
-	check("claude", true, binaryCheck("claude"))
-	check("git", true, binaryCheck("git"))
-	check("ANTHROPIC_API_KEY", true, func() (string, string) {
-		if os.Getenv("ANTHROPIC_API_KEY") != "" {
-			return "OK", "set"
-		}
-		return "WARN", "not set (Claude Code uses OAuth if missing)"
-	})
-	check("scan-path exists", true, func() (string, string) {
-		info, err := os.Stat(sp)
+	// Build the report.
+	report := buildDoctorReport(results)
+
+	if doctorJSON {
+		data, err := json.MarshalIndent(report, "", "  ")
 		if err != nil {
-			return "MISSING", "path not found: " + sp
+			return err
 		}
-		if !info.IsDir() {
-			return "MISSING", "not a directory: " + sp
-		}
-		return "OK", sp
-	})
-
-	// Go version check
-	check("go version", false, checkGoVersion)
-
-	// Git version check
-	check("git version", false, checkGitVersion)
-
-	// Disk space check
-	check("disk space", false, func() (string, string) {
-		return checkDiskSpace(sp)
-	})
-
-	// MCP server buildability
-	check("mcp build", false, checkMCPBuild)
-
-	// .ralphrc validation
-	check(".ralphrc valid", false, func() (string, string) {
-		return checkRalphRC(cmd, sp)
-	})
-
-	// Optional binary checks
-	check("gemini", false, binaryCheck("gemini"))
-	check("codex", false, binaryCheck("codex"))
-	check("goreleaser", false, binaryCheck("goreleaser"))
-	check("golangci-lint", false, binaryCheck("golangci-lint"))
-
-	// Print table
-	fmt.Printf("%-25s  %-8s  %s\n", "CHECK", "STATUS", "DETAILS")
-	fmt.Println(strings.Repeat("-", 65))
-	for _, r := range results {
-		var statusStr string
-		switch r.status {
-		case "OK":
-			statusStr = okStyle.Render("OK")
-		case "WARN":
-			statusStr = warnStyle.Render("WARN")
-		default:
-			if r.required {
-				statusStr = errStyle.Render("MISSING")
-			} else {
-				statusStr = warnStyle.Render("MISSING")
-			}
-		}
-		fmt.Printf("%-25s  %-17s  %s\n", r.name, statusStr, r.message)
+		fmt.Println(string(data))
+	} else {
+		printDoctorResults(results)
 	}
 
-	if anyFailed {
+	if !report.Summary.OK {
 		return ErrChecksFailed
 	}
 	return nil
 }
 
-// checkGoVersion verifies Go >= 1.22 is installed.
-func checkGoVersion() (string, string) {
-	out, err := exec.Command("go", "version").Output()
+// buildDoctorReport tallies results into a summary.
+func buildDoctorReport(results []doctorResult) doctorReport {
+	var report doctorReport
+	report.Results = results
+	for _, r := range results {
+		switch r.Status {
+		case statusPass:
+			report.Summary.Pass++
+		case statusWarn:
+			report.Summary.Warn++
+		case statusFail:
+			report.Summary.Fail++
+		}
+	}
+	report.Summary.OK = report.Summary.Fail == 0
+	return report
+}
+
+// printDoctorResults renders human-readable output with icons and colour.
+func printDoctorResults(results []doctorResult) {
+	okStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("10"))   // green
+	warnStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("11")) // yellow
+	errStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("9"))   // red
+
+	for _, r := range results {
+		var icon, styled string
+		switch r.Status {
+		case statusPass:
+			icon = okStyle.Render("[/]")
+			styled = okStyle.Render(r.Message)
+		case statusWarn:
+			icon = warnStyle.Render("[!]")
+			styled = warnStyle.Render(r.Message)
+		case statusFail:
+			icon = errStyle.Render("[x]")
+			styled = errStyle.Render(r.Message)
+		}
+		fmt.Printf(" %s %-22s %s\n", icon, r.Name, styled)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Individual check functions
+// ---------------------------------------------------------------------------
+
+// checkClaude verifies the claude binary is on PATH and reports its version.
+func checkClaude() doctorResult {
+	path, err := exec.LookPath("claude")
 	if err != nil {
-		return "WARN", "go not found or failed to run"
+		return doctorResult{Name: "claude", Status: statusFail, Message: "claude not found in PATH"}
+	}
+	out, err := exec.Command("claude", "--version").CombinedOutput()
+	if err != nil {
+		return doctorResult{Name: "claude", Status: statusPass, Message: path}
 	}
 	ver := strings.TrimSpace(string(out))
-	// Parse "go version go1.XX.Y ..."
-	parts := strings.Fields(ver)
-	if len(parts) < 3 {
-		return "WARN", "unexpected go version format: " + ver
+	// Take just the first line in case of multi-line output.
+	if idx := strings.IndexByte(ver, '\n'); idx >= 0 {
+		ver = ver[:idx]
 	}
-	goVer := strings.TrimPrefix(parts[2], "go")
-	major, minor, ok := parseGoVersion(goVer)
-	if !ok {
-		return "WARN", "could not parse version: " + goVer
-	}
-	if major < 1 || (major == 1 && minor < 22) {
-		return "WARN", fmt.Sprintf("go %s (need >= 1.22)", goVer)
-	}
-	return "OK", "go " + goVer
+	return doctorResult{Name: "claude", Status: statusPass, Message: ver}
 }
+
+// checkGemini verifies the gemini binary is on PATH (optional).
+func checkGemini() doctorResult {
+	path, err := exec.LookPath("gemini")
+	if err != nil {
+		return doctorResult{Name: "gemini", Status: statusWarn, Message: "gemini not found in PATH (optional)"}
+	}
+	return doctorResult{Name: "gemini", Status: statusPass, Message: path}
+}
+
+// checkCodex verifies the codex binary is on PATH (optional).
+func checkCodex() doctorResult {
+	path, err := exec.LookPath("codex")
+	if err != nil {
+		return doctorResult{Name: "codex", Status: statusWarn, Message: "codex not found in PATH (optional)"}
+	}
+	return doctorResult{Name: "codex", Status: statusPass, Message: path}
+}
+
+// checkGit verifies git is on PATH and its version is >= 2.20 (worktree support).
+func checkGit() doctorResult {
+	_, err := exec.LookPath("git")
+	if err != nil {
+		return doctorResult{Name: "git", Status: statusFail, Message: "git not found in PATH"}
+	}
+	out, err := exec.Command("git", "--version").Output()
+	if err != nil {
+		return doctorResult{Name: "git", Status: statusWarn, Message: "git found but could not determine version"}
+	}
+	ver := strings.TrimSpace(string(out))
+	// Parse "git version 2.XX.Y ..."
+	major, minor, ok := parseGitVersion(ver)
+	if !ok {
+		return doctorResult{Name: "git", Status: statusWarn, Message: "could not parse version: " + ver}
+	}
+	if major < 2 || (major == 2 && minor < 20) {
+		return doctorResult{
+			Name:    "git",
+			Status:  statusFail,
+			Message: fmt.Sprintf("git %d.%d (need >= 2.20 for worktree support)", major, minor),
+		}
+	}
+	return doctorResult{Name: "git", Status: statusPass, Message: ver}
+}
+
+// parseGitVersion extracts major.minor from "git version X.Y.Z".
+func parseGitVersion(raw string) (major, minor int, ok bool) {
+	// git version 2.43.0
+	parts := strings.Fields(raw)
+	if len(parts) < 3 {
+		return 0, 0, false
+	}
+	verStr := parts[2]
+	// Strip Apple-specific suffix like "2.39.5 (Apple Git-154)"
+	verStr = strings.SplitN(verStr, " ", 2)[0]
+	segments := strings.SplitN(verStr, ".", 3)
+	if len(segments) < 2 {
+		return 0, 0, false
+	}
+	maj, err := strconv.Atoi(segments[0])
+	if err != nil {
+		return 0, 0, false
+	}
+	min, err := strconv.Atoi(segments[1])
+	if err != nil {
+		return 0, 0, false
+	}
+	return maj, min, true
+}
+
+// checkConfig validates ~/.ralphglasses/config.json exists and is valid JSON.
+func checkConfig() doctorResult {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return doctorResult{Name: "config", Status: statusWarn, Message: "cannot resolve home directory"}
+	}
+	cfgPath := filepath.Join(home, ".ralphglasses", "config.json")
+	info, err := os.Stat(cfgPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return doctorResult{Name: "config", Status: statusWarn, Message: cfgPath + " not found (will use defaults)"}
+		}
+		return doctorResult{Name: "config", Status: statusWarn, Message: "cannot stat config: " + err.Error()}
+	}
+	if info.IsDir() {
+		return doctorResult{Name: "config", Status: statusFail, Message: cfgPath + " is a directory, expected file"}
+	}
+	cfg, err := config.Load(cfgPath)
+	if err != nil {
+		return doctorResult{Name: "config", Status: statusFail, Message: "invalid config: " + err.Error()}
+	}
+	if warnings := cfg.Validate(); len(warnings) > 0 {
+		msgs := make([]string, len(warnings))
+		for i, w := range warnings {
+			msgs[i] = w.Error()
+		}
+		return doctorResult{Name: "config", Status: statusWarn, Message: strings.Join(msgs, "; ")}
+	}
+	return doctorResult{Name: "config", Status: statusPass, Message: cfgPath}
+}
+
+// checkStateDir verifies ~/.ralphglasses/ exists and is writable.
+func checkStateDir() doctorResult {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return doctorResult{Name: "state dir", Status: statusWarn, Message: "cannot resolve home directory"}
+	}
+	dir := filepath.Join(home, ".ralphglasses")
+	info, err := os.Stat(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return doctorResult{Name: "state dir", Status: statusWarn, Message: dir + " does not exist (will be created on first run)"}
+		}
+		return doctorResult{Name: "state dir", Status: statusFail, Message: "cannot stat: " + err.Error()}
+	}
+	if !info.IsDir() {
+		return doctorResult{Name: "state dir", Status: statusFail, Message: dir + " exists but is not a directory"}
+	}
+	// Check writability by attempting to create and remove a temp file.
+	probe := filepath.Join(dir, ".doctor_probe")
+	f, err := os.Create(probe)
+	if err != nil {
+		return doctorResult{Name: "state dir", Status: statusFail, Message: dir + " is not writable"}
+	}
+	f.Close()
+	os.Remove(probe)
+	return doctorResult{Name: "state dir", Status: statusPass, Message: dir}
+}
+
+// checkSQLite verifies the SQLite store can be opened at ~/.ralphglasses/state.db.
+func checkSQLite() doctorResult {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return doctorResult{Name: "sqlite", Status: statusWarn, Message: "cannot resolve home directory"}
+	}
+	dbPath := filepath.Join(home, ".ralphglasses", "state.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return doctorResult{Name: "sqlite", Status: statusFail, Message: "cannot open: " + err.Error()}
+	}
+	defer db.Close()
+	if err := db.Ping(); err != nil {
+		return doctorResult{Name: "sqlite", Status: statusFail, Message: "ping failed: " + err.Error()}
+	}
+	return doctorResult{Name: "sqlite", Status: statusPass, Message: dbPath}
+}
+
+// checkScanPath verifies the scan path exists and contains repos.
+func checkScanPath(cmd *cobra.Command, sp string) doctorResult {
+	info, err := os.Stat(sp)
+	if err != nil {
+		return doctorResult{Name: "scan path", Status: statusFail, Message: "path not found: " + sp}
+	}
+	if !info.IsDir() {
+		return doctorResult{Name: "scan path", Status: statusFail, Message: "not a directory: " + sp}
+	}
+	ctx := cmd.Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	repos, err := discovery.Scan(ctx, sp)
+	if err != nil {
+		return doctorResult{Name: "scan path", Status: statusWarn, Message: sp + " (scan error: " + err.Error() + ")"}
+	}
+	if len(repos) == 0 {
+		return doctorResult{Name: "scan path", Status: statusWarn, Message: sp + " (no ralph-enabled repos found)"}
+	}
+	// Count repos with .ralphrc.
+	rcCount := 0
+	for _, r := range repos {
+		if r.HasRC {
+			rcCount++
+		}
+	}
+	return doctorResult{
+		Name:    "scan path",
+		Status:  statusPass,
+		Message: fmt.Sprintf("%s (%d repos, %d with .ralphrc)", sp, len(repos), rcCount),
+	}
+}
+
+// checkDiskSpaceCheck warns if less than 1GB free on the filesystem containing path.
+func checkDiskSpaceCheck(path string) doctorResult {
+	free, err := diskFreeBytes(path)
+	if err != nil {
+		return doctorResult{Name: "disk space", Status: statusWarn, Message: "could not check: " + err.Error()}
+	}
+	gb := float64(free) / (1024 * 1024 * 1024)
+	if gb < 1.0 {
+		return doctorResult{
+			Name:    "disk space",
+			Status:  statusWarn,
+			Message: fmt.Sprintf("%.1f GB free (< 1 GB)", gb),
+		}
+	}
+	return doctorResult{Name: "disk space", Status: statusPass, Message: fmt.Sprintf("%.1f GB free", gb)}
+}
+
+// checkAPIKeys checks ANTHROPIC_API_KEY, GEMINI_API_KEY, and OPENAI_API_KEY
+// with redacted display.
+func checkAPIKeys() []doctorResult {
+	keys := []struct {
+		env      string
+		name     string
+		required bool
+	}{
+		{"ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY", false},
+		{"GEMINI_API_KEY", "GEMINI_API_KEY", false},
+		{"OPENAI_API_KEY", "OPENAI_API_KEY", false},
+	}
+	var results []doctorResult
+	for _, k := range keys {
+		val := os.Getenv(k.env)
+		if val == "" {
+			status := statusWarn
+			msg := "not set"
+			if k.env == "ANTHROPIC_API_KEY" {
+				msg = "not set (Claude Code uses OAuth if missing)"
+			}
+			results = append(results, doctorResult{Name: k.name, Status: status, Message: msg})
+		} else {
+			results = append(results, doctorResult{Name: k.name, Status: statusPass, Message: redactKey(val)})
+		}
+	}
+	return results
+}
+
+// redactKey shows the first 4 and last 4 characters of a key, masking the rest.
+func redactKey(key string) string {
+	if len(key) <= 8 {
+		return "****"
+	}
+	return key[:4] + strings.Repeat("*", len(key)-8) + key[len(key)-4:]
+}
+
+// ---------------------------------------------------------------------------
+// Preserved helpers used by other checks (parseGoVersion, diskFreeBytes, etc.)
+// ---------------------------------------------------------------------------
 
 // parseGoVersion extracts major.minor from a Go version string like "1.22.1".
 func parseGoVersion(v string) (major, minor int, ok bool) {
@@ -192,29 +456,6 @@ func parseGoVersion(v string) (major, minor int, ok bool) {
 	return maj, min, true
 }
 
-// checkGitVersion reports the installed git version.
-func checkGitVersion() (string, string) {
-	out, err := exec.Command("git", "--version").Output()
-	if err != nil {
-		return "WARN", "git not found or failed to run"
-	}
-	ver := strings.TrimSpace(string(out))
-	return "OK", ver
-}
-
-// checkDiskSpace warns if less than 5GB free on the filesystem containing path.
-func checkDiskSpace(path string) (string, string) {
-	free, err := diskFreeBytes(path)
-	if err != nil {
-		return "WARN", "could not check disk space: " + err.Error()
-	}
-	gb := float64(free) / (1024 * 1024 * 1024)
-	if gb < 5.0 {
-		return "WARN", fmt.Sprintf("%.1f GB free (< 5 GB recommended)", gb)
-	}
-	return "OK", fmt.Sprintf("%.1f GB free", gb)
-}
-
 // diskFreeBytes returns the number of free bytes on the filesystem containing path.
 // This is extracted as a variable so tests can override it.
 var diskFreeBytes = diskFreeBytesImpl
@@ -223,22 +464,18 @@ func diskFreeBytesImpl(path string) (uint64, error) {
 	return diskFreeBytesSyscall(path)
 }
 
-// checkMCPBuild tries to build the MCP server binary.
-func checkMCPBuild() (string, string) {
-	cmd := exec.Command("go", "build", "./cmd/ralphglasses-mcp/...")
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		msg := strings.TrimSpace(string(out))
-		if len(msg) > 120 {
-			msg = msg[:120] + "..."
-		}
-		return "WARN", "build failed: " + msg
+// diskFreeBytesSyscall is the platform-specific implementation.
+// On non-unix systems it returns a safe default.
+func diskFreeBytesSyscall(path string) (uint64, error) {
+	if runtime.GOOS == "windows" {
+		// Statfs not available on Windows; report a safe value.
+		return 100 * 1024 * 1024 * 1024, nil // 100 GB placeholder
 	}
-	return "OK", "builds successfully"
+	return statfsFreeBytes(path)
 }
 
 // checkRalphRC validates the first .ralphrc found in the scan path.
+// Retained for use by other callers.
 func checkRalphRC(cmd *cobra.Command, sp string) (string, string) {
 	ctx := cmd.Context()
 	if ctx == nil {
@@ -262,14 +499,4 @@ func checkRalphRC(cmd *cobra.Command, sp string) (string, string) {
 		return "OK", fmt.Sprintf("%s: valid", repo.Name)
 	}
 	return "OK", "no repos with .ralphrc found"
-}
-
-// diskFreeBytesSyscall is the platform-specific implementation.
-// On non-unix systems it returns a safe default.
-func diskFreeBytesSyscall(path string) (uint64, error) {
-	if runtime.GOOS == "windows" {
-		// Statfs not available on Windows; report a safe value.
-		return 100 * 1024 * 1024 * 1024, nil // 100 GB placeholder
-	}
-	return statfsFreeBytes(path)
 }

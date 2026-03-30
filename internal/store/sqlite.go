@@ -193,7 +193,9 @@ func (s *Store) SaveSession(ctx context.Context, row *SessionRow) error {
 	if row.CreatedAt.IsZero() {
 		row.CreatedAt = now
 	}
-	row.UpdatedAt = now
+	if row.UpdatedAt.IsZero() {
+		row.UpdatedAt = now
+	}
 
 	dataBytes := normalizeJSON(row.Data)
 

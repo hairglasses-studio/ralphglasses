@@ -425,43 +425,8 @@ func (c *Coordinator) handleAgentCard(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, card)
 }
 
-func (c *Coordinator) handleA2ATaskStatus(w http.ResponseWriter, r *http.Request) {
-	taskID := r.PathValue("taskID")
-	if taskID == "" {
-		http.Error(w, "missing task ID", http.StatusBadRequest)
-		return
-	}
+// handleA2ATaskStatus is kept as a deprecated alias for backward compatibility.
+// New code should use handleA2ATaskGet in a2a_handler.go.
+// This stub is retained only in case external code references it directly.
 
-	// Check the work queue for the item
-	item, ok := c.queue.Get(taskID)
-	if !ok {
-		http.Error(w, "task not found", http.StatusNotFound)
-		return
-	}
-
-	// Map WorkItem to TaskOffer for A2A response
-	offer := TaskOffer{
-		ID:           item.ID,
-		OfferingNode: item.AssignedTo,
-		TaskType:     string(item.Type),
-		Prompt:       item.Prompt,
-		Constraints: DelegationConstraints{
-			RequireProvider: string(item.Constraints.RequireProvider),
-			MaxBudgetUSD:    item.MaxBudgetUSD,
-			RequireRepo:     item.RepoName,
-			PreferLocal:     item.Constraints.RequireLocal,
-		},
-		Status:    string(item.Status),
-		CreatedAt: item.SubmittedAt,
-		UpdatedAt: item.SubmittedAt,
-	}
-	if item.CompletedAt != nil {
-		offer.UpdatedAt = *item.CompletedAt
-	} else if item.AssignedAt != nil {
-		offer.UpdatedAt = *item.AssignedAt
-		offer.AcceptedBy = item.AssignedTo
-	}
-
-	writeJSON(w, offer)
-}
 
