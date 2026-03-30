@@ -19,12 +19,33 @@ type Config struct {
 	BudgetUSD          float64       // Maximum budget in USD.
 	Duration           time.Duration // Maximum run duration.
 	CheckpointInterval time.Duration // How often to save checkpoints.
+	SessionCount       int           // Number of parallel sessions to maintain.
 	RepoPath           string        // Target repository path.
 	Resume             bool          // Resume from last checkpoint.
 
 	// ResourceCheckInterval controls how often resource health is sampled.
 	// Defaults to 60s when zero.
 	ResourceCheckInterval time.Duration
+}
+
+// Validate returns an error if the Config has invalid or missing fields.
+func (c Config) Validate() error {
+	if c.Duration <= 0 {
+		return fmt.Errorf("duration must be positive, got %s", c.Duration)
+	}
+	if c.CheckpointInterval <= 0 {
+		return fmt.Errorf("checkpoint interval must be positive, got %s", c.CheckpointInterval)
+	}
+	if c.BudgetUSD < 0 {
+		return fmt.Errorf("budget must be non-negative, got %f", c.BudgetUSD)
+	}
+	if c.SessionCount < 0 {
+		return fmt.Errorf("session count must be non-negative, got %d", c.SessionCount)
+	}
+	if c.RepoPath == "" {
+		return fmt.Errorf("repo path must be set")
+	}
+	return nil
 }
 
 // Stats summarizes a marathon run.
@@ -35,13 +56,29 @@ type Stats struct {
 	SessionsRun     int           `json:"sessions_run"`
 }
 
+// MarathonStatus provides a full snapshot of a running marathon's state,
+// including active session count, elapsed time, and spend.
+type MarathonStatus struct {
+	Running        bool          `json:"running"`
+	SessionsActive int           `json:"sessions_active"`
+	Elapsed        time.Duration `json:"elapsed"`
+	SpentUSD       float64       `json:"spent_usd"`
+	BudgetUSD      float64       `json:"budget_usd"`
+	CyclesCompleted int          `json:"cycles_completed"`
+	SessionCount   int           `json:"session_count"`
+}
+
+// ErrBudgetExceeded is returned when the marathon's spend exceeds its budget.
+var ErrBudgetExceeded = fmt.Errorf("marathon: budget limit exceeded")
+
 // Marathon orchestrates continuous improvement cycles with budget and duration
 // constraints, periodic checkpoints, and resource monitoring.
 type Marathon struct {
-	cfg  Config
-	mgr  *session.Manager
-	bus  *events.Bus
-	sup  *session.Supervisor
+	cfg    Config
+	mgr    *session.Manager
+	bus    *events.Bus
+	sup    *session.Supervisor
+	cancel context.CancelFunc // set during Run, used for budget-triggered shutdown
 
 	mu        sync.Mutex
 	startedAt time.Time
@@ -52,6 +89,9 @@ type Marathon struct {
 func New(cfg Config, mgr *session.Manager, bus *events.Bus) *Marathon {
 	if cfg.ResourceCheckInterval == 0 {
 		cfg.ResourceCheckInterval = 60 * time.Second
+	}
+	if cfg.SessionCount <= 0 {
+		cfg.SessionCount = 1
 	}
 	return &Marathon{
 		cfg: cfg,
@@ -69,6 +109,7 @@ func (m *Marathon) Run(ctx context.Context) (*Stats, error) {
 
 	m.mu.Lock()
 	m.startedAt = time.Now()
+	m.cancel = cancel
 	m.mu.Unlock()
 
 	// Create and configure supervisor.
@@ -163,6 +204,75 @@ func (m *Marathon) Supervisor() *session.Supervisor {
 	return m.sup
 }
 
+// Status returns a full snapshot of the marathon's current state.
+func (m *Marathon) Status() MarathonStatus {
+	m.mu.Lock()
+	s := m.stats
+	started := m.startedAt
+	sup := m.sup
+	m.mu.Unlock()
+
+	var elapsed time.Duration
+	running := false
+	sessActive := 0
+
+	if !started.IsZero() {
+		elapsed = time.Since(started)
+		running = true
+	}
+
+	if sup != nil {
+		st := sup.Status()
+		running = st.Running
+		s.CyclesCompleted += st.TickCount
+	}
+
+	// Count active sessions from the manager.
+	if m.mgr != nil {
+		for _, sess := range m.mgr.List(m.cfg.RepoPath) {
+			if sess.Status == session.StatusRunning {
+				sessActive++
+			}
+		}
+	}
+
+	return MarathonStatus{
+		Running:         running,
+		SessionsActive:  sessActive,
+		Elapsed:         elapsed,
+		SpentUSD:        s.TotalSpentUSD,
+		BudgetUSD:       m.cfg.BudgetUSD,
+		CyclesCompleted: s.CyclesCompleted,
+		SessionCount:    m.cfg.SessionCount,
+	}
+}
+
+// Checkpoint triggers a manual checkpoint save and returns any error.
+func (m *Marathon) Checkpoint() error {
+	m.mu.Lock()
+	stats := m.stats
+	m.mu.Unlock()
+
+	supState := session.SupervisorState{}
+	if sup := m.Supervisor(); sup != nil {
+		supState = sup.Status()
+	}
+
+	cp := &Checkpoint{
+		Timestamp:       time.Now(),
+		CyclesCompleted: stats.CyclesCompleted + supState.TickCount,
+		SpentUSD:        stats.TotalSpentUSD,
+		SupervisorState: supState,
+	}
+
+	cpDir := checkpointDir(m.cfg.RepoPath)
+	if err := SaveCheckpoint(cpDir, cp); err != nil {
+		return fmt.Errorf("manual checkpoint: %w", err)
+	}
+	slog.Info("marathon: manual checkpoint saved", "time", cp.Timestamp.Format(time.RFC3339))
+	return nil
+}
+
 // Stats returns a snapshot of current marathon statistics.
 func (m *Marathon) CurrentStats() Stats {
 	m.mu.Lock()
@@ -190,7 +300,17 @@ func (m *Marathon) handleCostEvent(evt events.Event) {
 	if spent > m.stats.TotalSpentUSD {
 		m.stats.TotalSpentUSD = spent
 	}
+	exceeded := m.cfg.BudgetUSD > 0 && m.stats.TotalSpentUSD >= m.cfg.BudgetUSD
+	cancelFn := m.cancel
 	m.mu.Unlock()
+
+	if exceeded {
+		slog.Warn("marathon: budget limit reached",
+			"spent", spent, "budget", m.cfg.BudgetUSD)
+		if cancelFn != nil {
+			cancelFn()
+		}
+	}
 }
 
 func (m *Marathon) saveCheckpoint() {

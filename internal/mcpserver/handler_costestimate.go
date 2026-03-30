@@ -150,7 +150,7 @@ func estimateSessionCost(
 func (s *Server) handleCostEstimate(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	pp := NewParamParser(argsMap(req))
 
-	provider, errResult := pp.String("provider")
+	provider, errResult := pp.StringErr("provider")
 	if errResult != nil {
 		return errResult, nil
 	}
