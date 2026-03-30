@@ -77,6 +77,10 @@ const (
 	AnomalyDetected EventType = "anomaly.detected"   // Fleet anomaly detector triggered
 	EmergencyStop   EventType = "emergency.stop"      // Kill switch engaged
 	EmergencyResume EventType = "emergency.resume"     // Kill switch disengaged
+
+	// Recording
+	RecordingStarted EventType = "session.recording.started" // Session replay recording began
+	RecordingEnded   EventType = "session.recording.ended"   // Session replay recording finished
 )
 
 // knownEventTypes is the set of all declared EventType constants.
@@ -112,6 +116,8 @@ var knownEventTypes = map[EventType]struct{}{
 	AnomalyDetected:       {},
 	EmergencyStop:         {},
 	EmergencyResume:       {},
+	RecordingStarted:      {},
+	RecordingEnded:        {},
 }
 
 // ValidEventType returns true if the given EventType is a known constant.
