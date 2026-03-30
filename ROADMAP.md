@@ -411,7 +411,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 ### 1.5.2 — Release automation `[BLOCKED BY 0.5.7]`
 - [x] 1.5.2.1 — Add `.goreleaser.yaml`: multi-arch builds (linux/amd64, linux/arm64, darwin/amd64, darwin/arm64) `[reconciled 2026-03-26]`
 - [x] 1.5.2.2 — GitHub Actions release workflow: tag push -> goreleaser -> GitHub Release with binaries — `.github/workflows/release.yml` `[reconciled 2026-03-26]`
-- [ ] 1.5.2.3 — Add changelog generation: `goreleaser` changelog from conventional commits `P2` `S`
+- [x] 1.5.2.3 — Add changelog generation: `goreleaser` changelog from conventional commits `P2` `S`
 - [ ] 1.5.2.4 — Add Docker image build: `ghcr.io/hairglasses-studio/ralphglasses` multi-arch manifest `P2` `M`
 - [ ] 1.5.2.5 — Add Homebrew tap: `hairglasses-studio/homebrew-tap` with goreleaser auto-update `P2` `M`
 - [ ] 1.5.2.6 — Add AUR package: `PKGBUILD` for Arch Linux users `P2` `S`
@@ -434,7 +434,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 
 ### 1.5.5 — Man page generation
 - [x] 1.5.5.1 — Add `//go:generate` directive: `cobra/doc.GenManTree` for all subcommands `P2` `S`
-- [ ] 1.5.5.2 — Include man pages in release artifacts (`.tar.gz` includes `man/`) `P2` `S`
+- [x] 1.5.5.2 — Include man pages in release artifacts (`.tar.gz` includes `man/`) `P2` `S`
 - [x] 1.5.5.3 — Add `make install-man` target: copy to `/usr/local/share/man/man1/` `P2` `S`
 - **Acceptance:** `man ralphglasses` works after install
 
@@ -452,8 +452,8 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** `nix run github:hairglasses-studio/ralphglasses` works
 
 ### 1.5.8 — Development containers
-- [ ] 1.5.8.1 — Add `.devcontainer/devcontainer.json`: Go + tools, port forwarding, recommended extensions `P2` `S`
-- [ ] 1.5.8.2 — Add `.devcontainer/Dockerfile`: Go 1.26+, golangci-lint, BATS, shellcheck `P2` `S`
+- [x] 1.5.8.1 — Add `.devcontainer/devcontainer.json`: Go + tools, port forwarding, recommended extensions `P2` `S`
+- [x] 1.5.8.2 — Add `.devcontainer/Dockerfile`: Go 1.26+, golangci-lint, BATS, shellcheck `P2` `S`
 - [ ] 1.5.8.3 — GitHub Codespaces support: verify `go build ./...` and `go test ./...` work `P2` `M`
 - **Acceptance:** `devcontainer up` provides working dev environment
 
@@ -588,7 +588,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 2.12.2 — Local JSONL file writer: append events to `~/.ralphglasses/telemetry.jsonl` `P2` `M`
 - [x] 2.12.3 — Add `--telemetry` flag and `TELEMETRY_ENABLED` config key (default: off) `P2` `S`
 - [ ] 2.12.4 — Optional remote POST: send anonymized events to configurable endpoint `P2` `M`
-- [ ] 2.12.5 — Add `ralphglasses telemetry export` subcommand: export telemetry as CSV/JSON `P2` `S`
+- [x] 2.12.5 — Add `ralphglasses telemetry export` subcommand: export telemetry as CSV/JSON `P2` `S`
 - **Acceptance:** telemetry events written to local file when opt-in enabled
 
 ### 2.13 — Plugin system `[PARALLEL]`
@@ -784,7 +784,7 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 
 ### 3.5.3 — Resource aliases (like k9s aliases.yml)
 - [ ] 3.5.3.1 — Define `~/.config/ralphglasses/aliases.yml` schema `P2` `S`
-- [ ] 3.5.3.2 — Built-in aliases: `:rp` -> repos, `:ss` -> sessions, `:tm` -> teams, `:fl` -> fleet `P2` `S`
+- [x] 3.5.3.2 — Built-in aliases: `:rp` -> repos, `:ss` -> sessions, `:tm` -> teams, `:fl` -> fleet `P2` `S`
 - [ ] 3.5.3.3 — User-defined command aliases `P2` `M`
 - **Acceptance:** `:alias-name` in command mode executes mapped command
 
