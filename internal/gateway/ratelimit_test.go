@@ -132,12 +132,12 @@ func TestRateLimiter_Allow_ManyKeys(t *testing.T) {
 }
 
 func TestRateLimiter_Allow_HighRate(t *testing.T) {
-	rl := NewRateLimiter(1e6, 1) // 1M/s
+	rl := NewRateLimiter(10.0, 1) // 10/s, burst 1
 
 	if !rl.Allow("k") {
 		t.Fatal("first should be allowed")
 	}
-	// Even at 1M/s, immediate second call won't have enough elapsed time.
+	// At 10/s with burst 1, a second call within 100ms should be denied.
 	if rl.Allow("k") {
 		t.Fatal("immediate second should be denied")
 	}
