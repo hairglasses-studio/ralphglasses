@@ -362,6 +362,88 @@ func TestPushValidated_AcceptsValidPath(t *testing.T) {
 	}
 }
 
+// TestReapPhantomRepos_QW11 verifies that ReapPhantomRepos moves "001"
+// placeholder entries to the DLQ and leaves valid / non-pending items untouched.
+func TestReapPhantomRepos_QW11(t *testing.T) {
+	q := NewWorkQueue()
+
+	// phantom by RepoName
+	q.Push(&WorkItem{
+		ID:          "phantom-name",
+		Status:      WorkPending,
+		RepoName:    "001",
+		SubmittedAt: time.Now(),
+	})
+
+	// phantom by RepoPath basename
+	q.Push(&WorkItem{
+		ID:          "phantom-path",
+		Status:      WorkPending,
+		RepoPath:    "/some/prefix/001",
+		SubmittedAt: time.Now(),
+	})
+
+	// valid entry — must be preserved
+	q.Push(&WorkItem{
+		ID:          "valid",
+		Status:      WorkPending,
+		RepoName:    "real-repo",
+		RepoPath:    "/repos/real-repo",
+		SubmittedAt: time.Now(),
+	})
+
+	// non-pending phantom — must NOT be reaped
+	q.Push(&WorkItem{
+		ID:       "assigned-phantom",
+		Status:   WorkAssigned,
+		RepoName: "001",
+	})
+
+	reaped := q.ReapPhantomRepos()
+	if reaped != 2 {
+		t.Errorf("ReapPhantomRepos returned %d, want 2", reaped)
+	}
+
+	// valid item must still be in queue
+	if _, ok := q.Get("valid"); !ok {
+		t.Error("valid item should remain in queue")
+	}
+
+	// non-pending phantom must still be in queue
+	if _, ok := q.Get("assigned-phantom"); !ok {
+		t.Error("non-pending phantom should not be reaped")
+	}
+
+	// reaped items must be gone from queue
+	if _, ok := q.Get("phantom-name"); ok {
+		t.Error("phantom-name should have been removed from queue")
+	}
+	if _, ok := q.Get("phantom-path"); ok {
+		t.Error("phantom-path should have been removed from queue")
+	}
+
+	// DLQ must contain both phantoms with correct error
+	dlq := q.ListDLQ()
+	dlqByID := make(map[string]*WorkItem, len(dlq))
+	for _, item := range dlq {
+		dlqByID[item.ID] = item
+	}
+
+	for _, id := range []string{"phantom-name", "phantom-path"} {
+		item, ok := dlqByID[id]
+		if !ok {
+			t.Errorf("DLQ missing expected item %q", id)
+			continue
+		}
+		if item.Error != "reaped: phantom repo placeholder" {
+			t.Errorf("item %q: got error %q, want %q", id, item.Error, "reaped: phantom repo placeholder")
+		}
+		if item.CompletedAt == nil {
+			t.Errorf("item %q: CompletedAt should be set", id)
+		}
+	}
+}
+
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
