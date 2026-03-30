@@ -510,7 +510,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 2.2.2 — Auto-create worktree on session launch: branch naming convention `ralph/<session-id>` `P0` `M`
 - [ ] 2.2.3 — Implement merge-back: `git merge --no-ff` with conflict detection and abort-on-conflict option `P0` `L`
 - [x] 2.2.4 — Add worktree cleanup on session stop/archive (remove worktree dir, prune) `P1` `S`
-- [ ] 2.2.5 — Handle edge cases: dirty worktree on stop, orphaned branches, worktree path conflicts `P1` `M`
+- [x] 2.2.5 — Handle edge cases: dirty worktree on stop, orphaned branches, worktree path conflicts `P1` `M`
 - **Acceptance:** `ralphglasses worktree create <repo>` produces isolated worktree, merge-back detects conflicts
 
 ### 2.3 — Budget tracking `[BLOCKED BY 2.1]`
@@ -526,13 +526,13 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 2.4.2 — Columns: session name, repo, status, spend, loop count, model, uptime — sortable `P1` `M`
 - [ ] 2.4.3 — Live-update via watcher ticks: refresh spend/status/loop count per row `P1` `M`
 - [ ] 2.4.4 — Inline actions from fleet view: start/stop/pause selected session via keybinds `P1` `M`
-- [ ] 2.4.5 — Add fleet summary bar: total sessions, running count, total spend, aggregate throughput `P1` `S`
+- [x] 2.4.5 — Add fleet summary bar: total sessions, running count, total spend, aggregate throughput `P1` `S`
 - **Acceptance:** fleet view shows all sessions with live-updating spend/status
 
 ### 2.5 — Session launcher `[BLOCKED BY 2.1, 2.2, 2.3]`
 - [ ] 2.5.1 — Implement `:launch` command: pick repo from discovered list, set session name `P1` `M`
 - [ ] 2.5.2 — Add budget/model selection to launch flow: dropdown or tab-complete for model, numeric input for budget `P1` `M`
-- [ ] 2.5.3 — Default budget from `.ralphrc` (`RALPH_SESSION_BUDGET`) or global config fallback `P1` `S`
+- [x] 2.5.3 — Default budget from `.ralphrc` (`RALPH_SESSION_BUDGET`) or global config fallback `P1` `S`
 - [ ] 2.5.4 — Session templates: save current launch config as named template, load from template `P2` `M`
 - [ ] 2.5.5 — Validate launch preconditions: repo exists, no conflicting worktree, budget available in pool `P1` `M`
 - **Acceptance:** can launch a named session with budget from TUI command mode
