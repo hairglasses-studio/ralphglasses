@@ -118,7 +118,7 @@ func NewServerWithBus(scanPath string, bus *events.Bus) *Server {
 var ToolGroupNames = []string{
 	"core", "session", "loop", "prompt", "fleet",
 	"repo", "roadmap", "team", "awesome", "advanced", "eval", "fleet_h",
-	"observability", "rdcycle",
+	"observability", "rdcycle", "plugin",
 }
 
 func (s *Server) scan() error {
