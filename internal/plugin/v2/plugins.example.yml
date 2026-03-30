@@ -1,0 +1,63 @@
+# ~/.config/ralphglasses/plugins.yml
+#
+# User plugin definitions for ralphglasses.
+# Schema version must be 1. Each plugin entry follows the PluginDef format.
+
+version: 1
+
+plugins:
+  # Auto-formatter plugin — runs gofmt and prettier on session lifecycle events.
+  - name: auto-formatter
+    version: "1.0.0"
+    description: Auto-format code on save using gofmt and prettier
+    author: hairglasses-studio
+    commands:
+      - name: format-go
+        description: Format Go source files
+        run: gofmt -w .
+      - name: format-js
+        description: Format JavaScript/TypeScript files
+        run: npx prettier --write "**/*.{js,ts,tsx}"
+    hooks:
+      - event: session.pre_start
+        command: format-go
+        priority: 10
+      - event: session.post_stop
+        command: format-js
+        priority: 20
+    config:
+      auto_format:
+        type: bool
+        default: true
+        description: Enable automatic formatting on save
+        required: false
+      line_length:
+        type: int
+        default: 120
+        description: Maximum line length for formatting
+        required: false
+
+  # Cost reporter plugin — summarizes session costs after completion.
+  - name: cost-reporter
+    version: "0.2.0"
+    description: Log and summarize LLM costs per session
+    author: hairglasses-studio
+    commands:
+      - name: cost-summary
+        description: Print cost summary for the last session
+        run: cat .ralph/costs.json | jq '.total'
+    hooks:
+      - event: session.post_stop
+        command: cost-summary
+        priority: 50
+    config:
+      output_format:
+        type: string
+        default: table
+        description: "Output format: table, json, or csv"
+        required: false
+      warn_threshold:
+        type: float
+        default: 5.0
+        description: Cost threshold (USD) that triggers a warning
+        required: false
