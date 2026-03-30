@@ -55,7 +55,7 @@ func (s *Server) buildFleetGroup() ToolGroup {
 func (s *Server) buildFleetHGroup() ToolGroup {
 	return ToolGroup{
 		Name:        "fleet_h",
-		Description: "Fleet intelligence: blackboard coordination, A2A task delegation, cost forecasting",
+		Description: "Fleet intelligence: blackboard coordination, A2A task delegation, cost forecasting, cost recommendations",
 		Tools: []ToolEntry{
 			{mcp.NewTool("ralphglasses_blackboard_query",
 				mcp.WithDescription("Query blackboard entries by namespace for fleet worker coordination. Requires fleet server mode (ralphglasses mcp --fleet)."),
@@ -76,6 +76,14 @@ func (s *Server) buildFleetHGroup() ToolGroup {
 				mcp.WithDescription("Cost burn rate, anomaly detection, and budget exhaustion ETA. Requires fleet server mode (ralphglasses mcp --fleet)."),
 				mcp.WithNumber("budget_remaining", mcp.Description("Remaining budget in USD for exhaustion ETA (default: 0)")),
 			), s.handleCostForecast},
+			{mcp.NewTool("ralphglasses_cost_recommend",
+				mcp.WithDescription("Analyze cost history and recommend config changes: provider switches, budget pacing, anomaly responses, cache optimization, model downgrades"),
+				mcp.WithNumber("budget_remaining", mcp.Description("Remaining budget in USD for pacing recommendations")),
+				mcp.WithNumber("concurrency", mcp.Description("Current session concurrency for pacing recommendations")),
+				mcp.WithNumber("budget_hours", mcp.Description("Desired budget runway in hours (default: 8)")),
+				mcp.WithNumber("min_samples", mcp.Description("Minimum samples per provider for comparison (default: 5)")),
+				mcp.WithString("type", mcp.Description("Filter by recommendation type: provider_switch, budget_pacing, anomaly_response, cache_optimize, model_downgrade")),
+			), s.handleCostRecommend},
 		},
 	}
 }
