@@ -182,55 +182,27 @@ func (s *Server) handleLoopGates(_ context.Context, req mcp.CallToolRequest) (*m
 		return codedError(ErrFilesystem, fmt.Sprintf("load observations: %v", err)), nil
 	}
 
-	// gateResponse wraps the report with human-readable summaries.
-	type gateResponse struct {
-		Report   *e2e.GateReport `json:"report"`
-		Summary  string          `json:"summary"`
-		Markdown string          `json:"markdown"`
-	}
-	skipResult := func(metric string) (*mcp.CallToolResult, error) {
-		sr := &e2e.GateReport{
-			Timestamp:   time.Now(),
-			SampleCount: len(observations),
-			Overall:     e2e.VerdictSkip,
-			Results:     []e2e.GateResult{{Metric: metric, Verdict: e2e.VerdictSkip}},
-		}
-		return jsonResult(gateResponse{
-			Report:   sr,
-			Summary:  e2e.FormatGateReport(sr),
-			Markdown: e2e.FormatGateReportMarkdown(sr),
-		}), nil
-	}
-
 	blPath := e2e.BaselinePath(r.Path)
 	baseline, loadErr := e2e.LoadBaseline(blPath)
 	if loadErr != nil && len(observations) > 0 {
-		// Cycle 1: No saved baseline — save current observations as the
-		// reference point for future runs, then skip evaluation. Evaluating
-		// here would produce self-deltas of zero (ratio ≈ 1.0) and trivially
-		// pass every relative gate (QW-6 fix).
+		// QW-6 (FINDING-226/238): No saved baseline — initialize from current
+		// observations so that future gate checks produce meaningful deltas
+		// instead of skipping cost/latency gates due to nil baseline.
 		baseline = e2e.BuildBaseline(observations, hours)
 		if saveErr := e2e.SaveBaseline(blPath, baseline); saveErr != nil {
 			return codedError(ErrFilesystem, fmt.Sprintf("save initial baseline: %v", saveErr)), nil
 		}
-		return skipResult("baseline")
-	}
-
-	// Cycle 2+ nil-Aggregate guard: a stored baseline that predates aggregate
-	// stats cannot be used for relative gate evaluation. Rebuild and persist
-	// it for the next run, then skip rather than evaluate against an incomplete
-	// reference (QW-6 cycle 2).
-	if baseline != nil && baseline.Aggregate == nil && len(observations) > 0 {
-		freshBaseline := e2e.BuildBaseline(observations, hours)
-		if saveErr := e2e.SaveBaseline(blPath, freshBaseline); saveErr != nil {
-			return codedError(ErrFilesystem, fmt.Sprintf("save refreshed baseline: %v", saveErr)), nil
-		}
-		return skipResult("baseline_incomplete")
 	}
 
 	thresholds := e2e.DefaultGateThresholds()
 	report := e2e.EvaluateGates(observations, baseline, thresholds)
 
+	// Wrap the report with human-readable and markdown-formatted summaries.
+	type gateResponse struct {
+		Report   *e2e.GateReport `json:"report"`
+		Summary  string          `json:"summary"`
+		Markdown string          `json:"markdown"`
+	}
 	resp := gateResponse{
 		Report:   report,
 		Summary:  e2e.FormatGateReport(report),
