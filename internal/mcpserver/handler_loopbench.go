@@ -228,7 +228,7 @@ func (s *Server) handleLoopGates(_ context.Context, req mcp.CallToolRequest) (*m
 	if len(observations) > 0 {
 		fresh := e2e.BuildBaseline(observations, hours)
 		if saveErr := e2e.SaveBaseline(blPath, fresh); saveErr != nil {
-			slog.Warn("loop_gates: failed to refresh baseline", "err", saveErr)
+			return codedError(ErrFilesystem, fmt.Sprintf("refresh baseline: %v", saveErr)), nil
 		}
 	}
 

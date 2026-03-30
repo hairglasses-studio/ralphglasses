@@ -157,6 +157,7 @@ func TestValidateLoopProfile_WorkerEnhancementNonClaude(t *testing.T) {
 	p := validProfile()
 	p.EnableWorkerEnhancement = true
 	p.WorkerProvider = ProviderGemini
+	p.WorkerModel = "gemini-2.5-pro"
 	if err := ValidateLoopProfile(p); err == nil {
 		t.Error("expected error for worker enhancement with non-Claude provider")
 	}
@@ -173,6 +174,7 @@ func TestValidateLoopProfile_WorkerEnhancementNonClaude(t *testing.T) {
 	p3 := validProfile()
 	p3.EnableWorkerEnhancement = false
 	p3.WorkerProvider = ProviderGemini
+	p3.WorkerModel = "gemini-2.5-pro"
 	if err := ValidateLoopProfile(p3); err != nil {
 		t.Errorf("unexpected error for disabled enhancement: %v", err)
 	}
@@ -213,7 +215,11 @@ func TestValidateLoopConfig_TimeoutValidation(t *testing.T) {
 func validProfile() LoopProfile {
 	return LoopProfile{
 		PlannerProvider:      ProviderClaude,
+		PlannerModel:         "claude-sonnet-4-6",
 		WorkerProvider:       ProviderClaude,
+		WorkerModel:          "claude-sonnet-4-6",
+		VerifierProvider:     ProviderClaude,
+		VerifierModel:        "claude-sonnet-4-6",
 		MaxIterations:        10,
 		MaxConcurrentWorkers: 2,
 		PlannerBudgetUSD:     5.0,
@@ -367,13 +373,156 @@ func TestValidateLoopProfile_NegativeStallTimeout(t *testing.T) {
 }
 
 func TestValidateLoopProfile_AllProviders(t *testing.T) {
+	modelForProvider := map[Provider]string{
+		ProviderClaude: "claude-sonnet-4-6",
+		ProviderGemini: "gemini-2.5-pro",
+		ProviderCodex:  "gpt-4o",
+		"":             "",
+	}
 	for _, prov := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex, ""} {
 		p := validProfile()
 		p.PlannerProvider = prov
+		p.PlannerModel = modelForProvider[prov]
 		p.WorkerProvider = prov
+		p.WorkerModel = modelForProvider[prov]
+		p.VerifierProvider = prov
+		p.VerifierModel = modelForProvider[prov]
 		if err := ValidateLoopProfile(p); err != nil {
 			t.Errorf("provider %q should be valid, got: %v", prov, err)
 		}
+	}
+}
+
+func TestValidateLoopProfile_InvalidVerifierProvider(t *testing.T) {
+	p := validProfile()
+	p.VerifierProvider = "invalid"
+	if err := ValidateLoopProfile(p); err == nil {
+		t.Error("expected error for invalid verifier_provider")
+	}
+
+	// Valid verifier providers should pass.
+	modelForProvider := map[Provider]string{
+		ProviderClaude: "claude-sonnet-4-6",
+		ProviderGemini: "gemini-2.5-pro",
+		ProviderCodex:  "gpt-4o",
+		"":             "",
+	}
+	for _, prov := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex, ""} {
+		p2 := validProfile()
+		p2.VerifierProvider = prov
+		p2.VerifierModel = modelForProvider[prov]
+		if err := ValidateLoopProfile(p2); err != nil {
+			t.Errorf("verifier_provider %q should be valid, got: %v", prov, err)
+		}
+	}
+}
+
+func TestValidateLoopProfile_ModelProviderMismatch(t *testing.T) {
+	tests := []struct {
+		name     string
+		role     string
+		provider Provider
+		model    string
+		wantErr  bool
+	}{
+		// Planner
+		{"planner claude model on claude", "planner", ProviderClaude, "claude-sonnet-4-6", false},
+		{"planner gemini model on claude", "planner", ProviderClaude, "gemini-2.5-pro", true},
+		{"planner empty model skips", "planner", ProviderClaude, "", false},
+		{"planner empty provider skips", "planner", "", "claude-sonnet-4-6", false},
+		// Worker
+		{"worker gpt model on codex", "worker", ProviderCodex, "gpt-4o", false},
+		{"worker claude model on codex", "worker", ProviderCodex, "claude-sonnet-4-6", true},
+		{"worker o3 model on codex", "worker", ProviderCodex, "o3-mini", false},
+		{"worker codex model on codex", "worker", ProviderCodex, "codex-mini-latest", false},
+		// Verifier
+		{"verifier gemini model on gemini", "verifier", ProviderGemini, "gemini-2.5-pro", false},
+		{"verifier gpt model on gemini", "verifier", ProviderGemini, "gpt-4o", true},
+		{"verifier empty model skips", "verifier", ProviderGemini, "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := validProfile()
+			switch tt.role {
+			case "planner":
+				p.PlannerProvider = tt.provider
+				p.PlannerModel = tt.model
+			case "worker":
+				p.WorkerProvider = tt.provider
+				p.WorkerModel = tt.model
+			case "verifier":
+				p.VerifierProvider = tt.provider
+				p.VerifierModel = tt.model
+			}
+			err := ValidateLoopProfile(p)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateLoopProfile_HardBudgetCapNonNegative(t *testing.T) {
+	p := validProfile()
+	p.HardBudgetCapUSD = -1.0
+	if err := ValidateLoopProfile(p); err == nil {
+		t.Error("expected error for negative hard_budget_cap_usd")
+	}
+
+	// Zero (disabled) is fine.
+	p.HardBudgetCapUSD = 0
+	if err := ValidateLoopProfile(p); err != nil {
+		t.Errorf("expected nil error for zero hard_budget_cap_usd, got: %v", err)
+	}
+
+	// Positive is fine.
+	p.HardBudgetCapUSD = 95.0
+	if err := ValidateLoopProfile(p); err != nil {
+		t.Errorf("expected nil error for positive hard_budget_cap_usd, got: %v", err)
+	}
+}
+
+func TestValidateLoopProfile_NoopPlateauLimitNonNegative(t *testing.T) {
+	p := validProfile()
+	p.NoopPlateauLimit = -1
+	if err := ValidateLoopProfile(p); err == nil {
+		t.Error("expected error for negative noop_plateau_limit")
+	}
+
+	// Zero (disabled) is fine.
+	p.NoopPlateauLimit = 0
+	if err := ValidateLoopProfile(p); err != nil {
+		t.Errorf("expected nil error for zero noop_plateau_limit, got: %v", err)
+	}
+
+	// Positive is fine.
+	p.NoopPlateauLimit = 5
+	if err := ValidateLoopProfile(p); err != nil {
+		t.Errorf("expected nil error for positive noop_plateau_limit, got: %v", err)
+	}
+}
+
+func TestValidateModelProviderMatch(t *testing.T) {
+	tests := []struct {
+		name     string
+		role     string
+		provider Provider
+		model    string
+		wantErr  bool
+	}{
+		{"match", "planner", ProviderClaude, "claude-opus-4-6", false},
+		{"mismatch", "worker", ProviderGemini, "claude-sonnet-4-6", true},
+		{"empty provider", "verifier", "", "anything", false},
+		{"empty model", "planner", ProviderClaude, "", false},
+		{"both empty", "worker", "", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateModelProviderMatch(tt.role, tt.provider, tt.model)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+		})
 	}
 }
 

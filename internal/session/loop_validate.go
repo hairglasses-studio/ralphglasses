@@ -32,10 +32,12 @@ func (w LoopValidationWarning) String() string {
 }
 
 // knownModelPrefixes maps each provider to valid model name prefixes.
+// Includes shorthand names (sonnet, opus, haiku) used by Claude and
+// all OpenAI model families (o4- for newer reasoning models).
 var knownModelPrefixes = map[Provider][]string{
-	ProviderClaude: {"claude-"},
+	ProviderClaude: {"claude-", "sonnet", "opus", "haiku"},
 	ProviderGemini: {"gemini-"},
-	ProviderCodex:  {"gpt-", "o1-", "o3-", "codex-"},
+	ProviderCodex:  {"gpt-", "o1-", "o3-", "o4-", "codex-"},
 }
 
 // ValidateLoopConfig checks a LoopConfig for common misconfigurations and
@@ -123,6 +125,30 @@ var validLoopProfileProviders = map[Provider]bool{
 	"":             true, // empty = use default
 }
 
+// validateModelProviderMatch checks that a model name matches the expected prefixes
+// for the given provider. Returns an error if the model doesn't match, or nil if valid.
+// Skips validation when either provider or model is empty.
+func validateModelProviderMatch(role string, provider Provider, model string) error {
+	if provider == "" || model == "" {
+		return nil
+	}
+	// Allow well-known test/mock model names used in E2E harness.
+	if model == "mock" || model == "test" {
+		return nil
+	}
+	prefixes, known := knownModelPrefixes[provider]
+	if !known {
+		return nil
+	}
+	for _, p := range prefixes {
+		if strings.HasPrefix(model, p) {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s_model %q does not match expected prefixes for %s_provider %q (%s)",
+		role, model, role, provider, strings.Join(prefixes, ", "))
+}
+
 // ValidateLoopProfile checks a LoopProfile for invalid settings before loop execution.
 // Returns an error describing the first invalid field found, or nil if valid.
 func ValidateLoopProfile(p LoopProfile) error {
@@ -131,6 +157,20 @@ func ValidateLoopProfile(p LoopProfile) error {
 	}
 	if !validLoopProfileProviders[p.WorkerProvider] {
 		return fmt.Errorf("invalid worker_provider %q: must be one of claude, gemini, codex, or empty", p.WorkerProvider)
+	}
+	if !validLoopProfileProviders[p.VerifierProvider] {
+		return fmt.Errorf("invalid verifier_provider %q: must be one of claude, gemini, codex, or empty", p.VerifierProvider)
+	}
+
+	// Model-provider prefix mismatch checks.
+	if err := validateModelProviderMatch("planner", p.PlannerProvider, p.PlannerModel); err != nil {
+		return err
+	}
+	if err := validateModelProviderMatch("worker", p.WorkerProvider, p.WorkerModel); err != nil {
+		return err
+	}
+	if err := validateModelProviderMatch("verifier", p.VerifierProvider, p.VerifierModel); err != nil {
+		return err
 	}
 
 	if p.MaxIterations < 0 {
@@ -166,6 +206,13 @@ func ValidateLoopProfile(p LoopProfile) error {
 	// Worker enhancement with non-Claude worker has no effect.
 	if p.EnableWorkerEnhancement && p.WorkerProvider != "" && p.WorkerProvider != ProviderClaude {
 		return fmt.Errorf("enable_worker_enhancement has no effect with non-Claude worker provider %q", p.WorkerProvider)
+	}
+
+	if p.HardBudgetCapUSD < 0 {
+		return fmt.Errorf("hard_budget_cap_usd must be non-negative, got %f", p.HardBudgetCapUSD)
+	}
+	if p.NoopPlateauLimit < 0 {
+		return fmt.Errorf("noop_plateau_limit must be non-negative, got %d", p.NoopPlateauLimit)
 	}
 
 	return nil
