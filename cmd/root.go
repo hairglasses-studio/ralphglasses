@@ -1,5 +1,7 @@
 package cmd
 
+//go:generate go run ../tools/gendoc/main.go
+
 import (
 	"context"
 	"errors"
@@ -18,6 +20,7 @@ import (
 
 	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/healthz"
 	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -34,6 +37,7 @@ var (
 	logLevel    string
 	logFormat   string
 	scanTimeout string
+	httpAddr    string
 	version     = "dev"
 	commit      = "unknown"
 	buildDate   = "unknown"
@@ -67,6 +71,18 @@ fleet management from any MCP-capable client.`,
 		if home != "" {
 			cfgPath := filepath.Join(home, ".ralphglasses", "config.json")
 			_, _ = config.Load(cfgPath) // validation warnings logged inside Load
+		}
+
+		// Start health endpoint if --http-addr is set.
+		if httpAddr != "" {
+			hsrv := healthz.New(httpAddr)
+			go func() {
+				if err := hsrv.Start(); err != nil {
+					slog.Warn("healthz server stopped", "error", err)
+				}
+			}()
+			hsrv.SetReady()
+			slog.Info("healthz server started", "addr", httpAddr)
 		}
 		return nil
 	},
@@ -147,6 +163,8 @@ func init() {
 		"Color theme (k9s, dracula, gruvbox, nord, or path to YAML)")
 	rootCmd.Flags().BoolVar(&notifyFlag, "notify", false,
 		"Enable desktop notifications for critical alerts")
+	rootCmd.PersistentFlags().StringVar(&httpAddr, "http-addr", "",
+		"Enable health endpoints on this address (e.g. :9090, disabled by default)")
 	rootCmd.AddCommand(completionCmd)
 }
 
@@ -213,6 +231,9 @@ func applyTheme(name string) {
 }
 
 // Execute runs the root command.
+// RootCommand returns the root cobra.Command for documentation generation.
+func RootCommand() *cobra.Command { return rootCmd }
+
 func Execute() {
 	// Silence cobra's default error printing; we handle it below.
 	rootCmd.SilenceErrors = true
