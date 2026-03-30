@@ -9,9 +9,12 @@ import (
 	"syscall"
 	"time"
 
+	"log/slog"
+
 	"github.com/spf13/cobra"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/resource"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
@@ -72,11 +75,23 @@ Checkpoints are saved at the specified interval for resumability.`,
 		cpTicker := time.NewTicker(cpInterval)
 		defer cpTicker.Stop()
 
+		// Resource monitoring ticker (every 60s)
+		resTicker := time.NewTicker(60 * time.Second)
+		defer resTicker.Stop()
+
 		go func() {
 			for {
 				select {
 				case <-cpTicker.C:
 					fmt.Fprintf(os.Stderr, "marathon: checkpoint at %s\n", time.Now().Format(time.RFC3339))
+				case <-resTicker.C:
+					status := resource.Check(repoPath)
+					if !status.IsHealthy() {
+						for _, w := range status.Warnings {
+							slog.Warn("marathon: resource warning", "warning", w)
+							fmt.Fprintf(os.Stderr, "marathon: WARNING: %s\n", w)
+						}
+					}
 				case <-ctx.Done():
 					return
 				}
