@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -300,4 +301,34 @@ func (q *WorkQueue) DLQDepth() int {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	return len(q.dlq)
+}
+
+// ReapPhantomRepos moves pending items to the DLQ when RepoName == "001" or
+// filepath.Base(RepoPath) == "001". These are known placeholder entries that
+// should never be dispatched to workers.
+// Returns the number of reaped items.
+func (q *WorkQueue) ReapPhantomRepos() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	var phantomIDs []string
+	for id, item := range q.items {
+		if item.Status != WorkPending {
+			continue
+		}
+		if item.RepoName == "001" || filepath.Base(item.RepoPath) == "001" {
+			phantomIDs = append(phantomIDs, id)
+		}
+	}
+
+	for _, id := range phantomIDs {
+		item := q.items[id]
+		now := time.Now()
+		item.CompletedAt = &now
+		item.Error = "reaped: phantom repo placeholder"
+		q.dlq[id] = item
+		delete(q.items, id)
+	}
+
+	return len(phantomIDs)
 }
