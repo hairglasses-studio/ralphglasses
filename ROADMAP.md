@@ -790,8 +790,8 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 
 ### 3.5.4 — MCP skill export (like Claude Code skills)
 - [ ] 3.5.4.1 — Generate `.claude/skills/ralphglasses/SKILL.md` from MCP tool descriptions `P1` `M`
-- [ ] 3.5.4.2 — Include YAML frontmatter with allowed-tools `P1` `S`
-- [ ] 3.5.4.3 — Auto-update skill on `ralphglasses mcp` server start `P1` `S`
+- [x] 3.5.4.2 — Include YAML frontmatter with allowed-tools `P1` `S`
+- [x] 3.5.4.3 — Auto-update skill on `ralphglasses mcp` server start `P1` `S`
 - **Acceptance:** Claude Code auto-discovers ralphglasses skill when MCP server is connected
 
 ### 3.5.5 — Theme export to terminal (like claudekit themekit)
@@ -1028,7 +1028,7 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - [ ] 6.6.2 — Task-type classifier: map task types to preferred models `P1` `M`
 - [x] 6.6.3 — Routing rules in `.ralphrc` `P1` `S`
 - [ ] 6.6.4 — Dynamic routing: switch model mid-session based on task type `P1` `L`
-- [ ] 6.6.5 — Cost optimization: suggest cheaper model when task below threshold `P1` `M`
+- [x] 6.6.5 — Cost optimization: suggest cheaper model when task below threshold `P1` `M`
 - **Acceptance:** different task types route to appropriate models
 
 ### 6.7 — Replay/audit trail `[BLOCKED BY 6.4]`
