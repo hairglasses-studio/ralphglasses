@@ -1,0 +1,21 @@
+name: stern-logs
+version: "1.0.0"
+description: Tail Kubernetes pod logs using stern.
+author: hairglasses-studio
+
+commands:
+  - name: stern-logs
+    description: Tail recent pod logs in a Kubernetes namespace
+    run: stern $NAMESPACE --tail $TAIL_LINES
+
+config:
+  namespace:
+    type: string
+    default: "default"
+    description: Kubernetes namespace to tail logs from
+    required: false
+  tail_lines:
+    type: int
+    default: 50
+    description: Number of recent log lines to display
+    required: false
