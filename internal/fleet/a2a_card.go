@@ -10,16 +10,36 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
+// AgentCardDiscoveryPath is the well-known path for A2A agent card discovery
+// per the A2A v1.0 specification.
+const AgentCardDiscoveryPath = "/.well-known/agent-card.json"
+
 // AgentCard describes an A2A agent's identity, capabilities, and endpoint
-// following Google's Agent-to-Agent protocol specification.
+// following Google's Agent-to-Agent protocol v1.0 specification.
 type AgentCard struct {
-	Name         string        `json:"name"`
-	Description  string        `json:"description"`
-	URL          string        `json:"url"`
-	Version      string        `json:"version"`
-	Capabilities []string      `json:"capabilities"`
-	Skills       []AgentSkill  `json:"skills"`
-	Provider     AgentProvider `json:"provider,omitempty"`
+	Name                string              `json:"name"`
+	Description         string              `json:"description"`
+	URL                 string              `json:"url"`
+	Version             string              `json:"version"`
+	DocumentationURL    string              `json:"documentationUrl,omitempty"`
+	SupportedInterfaces []string            `json:"supportedInterfaces,omitempty"`
+	Capabilities        AgentCapabilities   `json:"capabilities"`
+	Skills              []AgentSkill        `json:"skills"`
+	SecuritySchemes     map[string]SecurityScheme `json:"securitySchemes,omitempty"`
+	Security            []map[string][]string     `json:"security,omitempty"`
+	Provider            AgentProvider       `json:"provider,omitempty"`
+
+	// SupportsA2A is a convenience field for backward compatibility;
+	// it lists string tags like "task_delegation", "provider:claude", etc.
+	// These are not part of the A2A v1.0 spec but are retained for internal use.
+	Tags []string `json:"tags,omitempty"`
+}
+
+// AgentCapabilities describes what protocol features the agent supports.
+type AgentCapabilities struct {
+	Streaming         bool `json:"streaming"`
+	PushNotifications bool `json:"pushNotifications"`
+	StateTransitionHistory bool `json:"stateTransitionHistory"`
 }
 
 // AgentSkill describes a specific capability an agent can perform.
@@ -27,8 +47,18 @@ type AgentSkill struct {
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
+	Tags        []string `json:"tags,omitempty"`
 	InputModes  []string `json:"inputModes"`
 	OutputModes []string `json:"outputModes"`
+	Examples    []string `json:"examples,omitempty"`
+}
+
+// SecurityScheme describes an authentication mechanism per OpenAPI-style definition.
+type SecurityScheme struct {
+	Type   string `json:"type"`             // "apiKey", "http", "oauth2", "openIdConnect"
+	In     string `json:"in,omitempty"`     // "header", "query", "cookie" (for apiKey)
+	Name   string `json:"name,omitempty"`   // header/query name (for apiKey)
+	Scheme string `json:"scheme,omitempty"` // "bearer", "basic" (for http)
 }
 
 // AgentProvider identifies the organization operating the agent.
@@ -42,7 +72,7 @@ func BuildAgentCard(c *Coordinator) AgentCard {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	// Collect unique provider names across all workers.
+	// Collect unique provider names across all workers for tags.
 	providerSet := make(map[string]bool)
 	for _, w := range c.workers {
 		for _, p := range w.Providers {
@@ -50,10 +80,10 @@ func BuildAgentCard(c *Coordinator) AgentCard {
 		}
 	}
 
-	capabilities := make([]string, 0, len(providerSet)+2)
-	capabilities = append(capabilities, "task_delegation", "work_queue")
+	tags := make([]string, 0, len(providerSet)+2)
+	tags = append(tags, "task_delegation", "work_queue")
 	for p := range providerSet {
-		capabilities = append(capabilities, "provider:"+p)
+		tags = append(tags, "provider:"+p)
 	}
 
 	skills := []AgentSkill{
@@ -61,6 +91,7 @@ func BuildAgentCard(c *Coordinator) AgentCard {
 			ID:          "work_submit",
 			Name:        "Submit Work",
 			Description: "Submit a work item to the fleet queue for execution",
+			Tags:        []string{"fleet", "work-queue"},
 			InputModes:  []string{"application/json"},
 			OutputModes: []string{"application/json"},
 		},
@@ -68,6 +99,7 @@ func BuildAgentCard(c *Coordinator) AgentCard {
 			ID:          "a2a_offer",
 			Name:        "Task Offer",
 			Description: "Publish a task offer for other agents to accept",
+			Tags:        []string{"a2a", "delegation"},
 			InputModes:  []string{"application/json"},
 			OutputModes: []string{"application/json"},
 		},
@@ -75,20 +107,36 @@ func BuildAgentCard(c *Coordinator) AgentCard {
 			ID:          "fleet_status",
 			Name:        "Fleet Status",
 			Description: "Get current fleet state including workers and queue depth",
+			Tags:        []string{"fleet", "monitoring"},
 			InputModes:  []string{"application/json"},
 			OutputModes: []string{"application/json"},
 		},
 	}
 
-	url := fmt.Sprintf("http://%s:%d", c.hostname, c.port)
+	agentURL := fmt.Sprintf("http://%s:%d", c.hostname, c.port)
 
 	return AgentCard{
-		Name:         "ralphglasses-" + c.nodeID,
-		Description:  "Ralphglasses fleet coordinator managing multi-LLM agent sessions",
-		URL:          url,
-		Version:      c.version,
-		Capabilities: capabilities,
-		Skills:       skills,
+		Name:        "ralphglasses-" + c.nodeID,
+		Description: "Ralphglasses fleet coordinator managing multi-LLM agent sessions",
+		URL:         agentURL,
+		Version:     c.version,
+		SupportedInterfaces: []string{"a2a/v1"},
+		Capabilities: AgentCapabilities{
+			Streaming:              true,
+			PushNotifications:      false,
+			StateTransitionHistory: true,
+		},
+		Skills: skills,
+		SecuritySchemes: map[string]SecurityScheme{
+			"bearer": {
+				Type:   "http",
+				Scheme: "bearer",
+			},
+		},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+		Tags: tags,
 		Provider: AgentProvider{
 			Organization: "hairglasses-studio",
 		},
@@ -96,14 +144,14 @@ func BuildAgentCard(c *Coordinator) AgentCard {
 }
 
 // DiscoverAgent fetches and parses the AgentCard from a remote agent's
-// well-known endpoint at {url}/.well-known/agent.json.
+// well-known endpoint at {url}/.well-known/agent-card.json (A2A v1.0 spec).
 func DiscoverAgent(url string) (*AgentCard, error) {
 	return DiscoverAgentWithClient(http.DefaultClient, url)
 }
 
 // DiscoverAgentWithClient fetches an AgentCard using the provided HTTP client.
 func DiscoverAgentWithClient(client *http.Client, url string) (*AgentCard, error) {
-	endpoint := url + "/.well-known/agent.json"
+	endpoint := url + AgentCardDiscoveryPath
 
 	resp, err := client.Get(endpoint)
 	if err != nil {

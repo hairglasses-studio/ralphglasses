@@ -17,6 +17,19 @@ var (
 	ErrOfferAlreadyTerminal = errors.New("a2a: offer is in a terminal state")
 )
 
+// TaskState represents the A2A v1.0 task lifecycle states.
+// These are the canonical wire values used in JSON payloads.
+type TaskState string
+
+const (
+	TaskStateQueued        TaskState = "queued"
+	TaskStateWorking       TaskState = "working"
+	TaskStateInputRequired TaskState = "input-required"
+	TaskStateCompleted     TaskState = "completed"
+	TaskStateFailed        TaskState = "failed"
+	TaskStateCanceled      TaskState = "canceled"
+)
+
 // OfferStatus represents the lifecycle state of a task offer.
 // These map to the A2A protocol lifecycle states.
 type OfferStatus string
@@ -37,6 +50,46 @@ const (
 	OfferAccepted OfferStatus = "accepted"
 	OfferExpired  OfferStatus = "expired"
 )
+
+// OfferStatusToTaskState maps internal OfferStatus values to A2A v1.0 TaskState constants.
+func OfferStatusToTaskState(s OfferStatus) TaskState {
+	switch s {
+	case OfferOpen, OfferSubmitted:
+		return TaskStateQueued
+	case OfferAccepted, OfferWorking:
+		return TaskStateWorking
+	case OfferInputRequired:
+		return TaskStateInputRequired
+	case OfferCompleted:
+		return TaskStateCompleted
+	case OfferFailed, OfferExpired:
+		return TaskStateFailed
+	case OfferCanceled:
+		return TaskStateCanceled
+	default:
+		return TaskStateQueued
+	}
+}
+
+// TaskStateToOfferStatus maps A2A v1.0 TaskState values back to internal OfferStatus.
+func TaskStateToOfferStatus(s TaskState) OfferStatus {
+	switch s {
+	case TaskStateQueued:
+		return OfferSubmitted
+	case TaskStateWorking:
+		return OfferWorking
+	case TaskStateInputRequired:
+		return OfferInputRequired
+	case TaskStateCompleted:
+		return OfferCompleted
+	case TaskStateFailed:
+		return OfferFailed
+	case TaskStateCanceled:
+		return OfferCanceled
+	default:
+		return OfferSubmitted
+	}
+}
 
 // isTerminal returns true if the status is a terminal state (completed, failed, canceled, expired).
 func (s OfferStatus) isTerminal() bool {
@@ -65,14 +118,69 @@ func A2AStatusToWorkItemStatus(s OfferStatus) WorkItemStatus {
 	}
 }
 
+// PartType identifies the kind of content in a message part.
+type PartType string
+
+const (
+	PartTypeText PartType = "text"
+	PartTypeData PartType = "data"
+	PartTypeFile PartType = "file"
+)
+
+// Part is a single content element within a Message.
+// A2A v1.0 defines TextPart, DataPart, and FilePart.
+type Part struct {
+	Type     PartType    `json:"type"`
+	Text     string      `json:"text,omitempty"`     // for TextPart
+	Data     interface{} `json:"data,omitempty"`      // for DataPart (arbitrary JSON)
+	MimeType string      `json:"mimeType,omitempty"`  // for DataPart/FilePart
+	FileURI  string      `json:"fileUri,omitempty"`   // for FilePart (URI reference)
+	FileData string      `json:"fileData,omitempty"`  // for FilePart (base64-encoded inline data)
+}
+
+// NewTextPart creates a Part containing plain text.
+func NewTextPart(text string) Part {
+	return Part{Type: PartTypeText, Text: text}
+}
+
+// NewDataPart creates a Part containing structured data with a MIME type.
+func NewDataPart(data interface{}, mimeType string) Part {
+	return Part{Type: PartTypeData, Data: data, MimeType: mimeType}
+}
+
+// NewFilePart creates a Part referencing a file by URI.
+func NewFilePart(uri, mimeType string) Part {
+	return Part{Type: PartTypeFile, FileURI: uri, MimeType: mimeType}
+}
+
+// MessageRole indicates the sender of a message.
+type MessageRole string
+
+const (
+	MessageRoleUser  MessageRole = "user"
+	MessageRoleAgent MessageRole = "agent"
+)
+
+// Message represents an A2A v1.0 message exchanged between agents.
+// Messages consist of one or more Parts and carry a role indicating the sender.
+type Message struct {
+	Role  MessageRole `json:"role"`
+	Parts []Part      `json:"parts"`
+}
+
 // Artifact represents a partial or final result produced during task execution.
-// Artifacts can be streamed incrementally as the task progresses.
+// Aligned with A2A v1.0: artifacts carry structured Parts instead of raw content,
+// though the Content and Type fields are retained for backward compatibility.
 type Artifact struct {
-	Name    string `json:"name"`
-	Type    string `json:"type"`              // MIME type or semantic type (e.g., "text/plain", "application/json", "code")
-	Content string `json:"content"`
-	Index   int    `json:"index"`             // ordering index for streaming
-	Final   bool   `json:"final,omitempty"`   // true if this is the last chunk for this artifact name
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Type        string `json:"type"`              // MIME type or semantic type (e.g., "text/plain", "application/json", "code")
+	Content     string `json:"content"`            // backward-compatible raw content
+	Parts       []Part `json:"parts,omitempty"`    // A2A v1.0 structured parts
+	Index       int    `json:"index"`              // ordering index for streaming
+	Append      bool   `json:"append,omitempty"`   // true if this extends a previous artifact at the same index
+	LastChunk   bool   `json:"lastChunk,omitempty"` // true if this is the final chunk for this artifact
+	Final       bool   `json:"final,omitempty"`     // legacy: true if this is the last chunk for this artifact name
 }
 
 // DelegationConstraints specifies requirements and preferences for task delegation.

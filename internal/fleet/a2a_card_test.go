@@ -41,19 +41,32 @@ func TestAgentCard_Build(t *testing.T) {
 		t.Errorf("expected 3 skills, got %d", len(card.Skills))
 	}
 
-	// Should have task_delegation, work_queue, and provider:* capabilities.
-	if len(card.Capabilities) < 3 {
-		t.Errorf("expected at least 3 capabilities, got %d", len(card.Capabilities))
+	// Capabilities struct should reflect supported features.
+	if !card.Capabilities.Streaming {
+		t.Error("expected Streaming capability to be true")
+	}
+	if !card.Capabilities.StateTransitionHistory {
+		t.Error("expected StateTransitionHistory capability to be true")
+	}
+
+	// Tags should include task_delegation, work_queue, and provider:* entries.
+	if len(card.Tags) < 3 {
+		t.Errorf("expected at least 3 tags, got %d", len(card.Tags))
 	}
 
 	hasTaskDelegation := false
-	for _, cap := range card.Capabilities {
-		if cap == "task_delegation" {
+	for _, tag := range card.Tags {
+		if tag == "task_delegation" {
 			hasTaskDelegation = true
 		}
 	}
 	if !hasTaskDelegation {
-		t.Error("expected 'task_delegation' capability")
+		t.Error("expected 'task_delegation' tag")
+	}
+
+	// SupportedInterfaces should include a2a/v1.
+	if len(card.SupportedInterfaces) == 0 {
+		t.Error("expected non-empty SupportedInterfaces")
 	}
 }
 
@@ -64,9 +77,9 @@ func TestAgentCard_BuildNoWorkers(t *testing.T) {
 	if card.Name != "ralphglasses-empty-node" {
 		t.Errorf("expected name 'ralphglasses-empty-node', got %q", card.Name)
 	}
-	// Should still have base capabilities.
-	if len(card.Capabilities) != 2 {
-		t.Errorf("expected 2 base capabilities, got %d: %v", len(card.Capabilities), card.Capabilities)
+	// Should still have base tags even without workers.
+	if len(card.Tags) != 2 {
+		t.Errorf("expected 2 base tags, got %d: %v", len(card.Tags), card.Tags)
 	}
 }
 
@@ -74,14 +87,14 @@ func TestAgentCard_Endpoint(t *testing.T) {
 	c := NewCoordinator("endpoint-test", "localhost", 9999, "2.0.0", nil, nil)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /.well-known/agent.json", c.handleAgentCard)
+	mux.HandleFunc("GET /.well-known/agent-card.json", c.handleAgentCard)
 
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/.well-known/agent.json")
+	resp, err := http.Get(srv.URL + "/.well-known/agent-card.json")
 	if err != nil {
-		t.Fatalf("GET /.well-known/agent.json error: %v", err)
+		t.Fatalf("GET /.well-known/agent-card.json error: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -109,11 +122,13 @@ func TestAgentCard_Endpoint(t *testing.T) {
 func TestAgentCard_Discover(t *testing.T) {
 	// Set up a mock server that serves an AgentCard at the well-known path.
 	expectedCard := AgentCard{
-		Name:         "remote-agent",
-		Description:  "A remote test agent",
-		URL:          "http://remote:9473",
-		Version:      "3.0.0",
-		Capabilities: []string{"task_delegation"},
+		Name:        "remote-agent",
+		Description: "A remote test agent",
+		URL:         "http://remote:9473",
+		Version:     "3.0.0",
+		Capabilities: AgentCapabilities{
+			Streaming: true,
+		},
 		Skills: []AgentSkill{
 			{
 				ID:          "test_skill",
@@ -127,7 +142,7 @@ func TestAgentCard_Discover(t *testing.T) {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/.well-known/agent.json", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/.well-known/agent-card.json", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(expectedCard)
 	})
@@ -296,7 +311,7 @@ func TestRemoteA2A_Discover(t *testing.T) {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/.well-known/agent.json", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/.well-known/agent-card.json", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(card)
 	})
