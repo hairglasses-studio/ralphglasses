@@ -4,7 +4,7 @@ Command-and-control TUI + bootable thin client for parallel multi-LLM agent flee
 
 **Last updated:** 2026-03-30
 **Codebase:** 37 packages, 126 MCP tools (124 namespace + 2 meta), 19 TUI views
-**Status:** 634 tasks, 175 complete (27.6%), 459 remaining
+**Status:** 634 tasks, 193 complete (30.4%), 441 remaining
 **Key deps:** Go 1.26.1, mcp-go v0.45.0, bubbletea v1.3.10, anthropic-sdk-go v1.27.1
 
 ## Core Deliverables
@@ -498,11 +498,11 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [x] Eval framework — `internal/eval/` with Bayesian A/B testing, anomaly detection, changepoint analysis, counterfactual evaluation `[reconciled 2026-03-26]`
 
 ### 2.1 — Session data model
-- [ ] 2.1.1 — Define `Session` struct: ID, repo path, worktree path, PID, budget, model, status, created_at, updated_at `P0` `M`
-- [ ] 2.1.2 — Add SQLite via `modernc.org/sqlite`: schema migrations, connection pool, WAL mode `P0` `L`
-- [ ] 2.1.3 — Implement Session CRUD: Create, Get, List, Update, Delete with prepared statements `P0` `M`
-- [ ] 2.1.4 — Implement lifecycle state machine: `created -> running -> paused -> stopped -> archived` with valid transition enforcement `P0` `M`
-- [ ] 2.1.5 — Add session event log table: state changes, errors, budget events with timestamps `P1` `M`
+- [x] 2.1.1 — Define `Session` struct: ID, repo path, worktree path, PID, budget, model, status, created_at, updated_at `P0` `M`
+- [x] 2.1.2 — Add SQLite via `modernc.org/sqlite`: schema migrations, connection pool, WAL mode `P0` `L`
+- [x] 2.1.3 — Implement Session CRUD: Create, Get, List, Update, Delete with prepared statements `P0` `M`
+- [x] 2.1.4 — Implement lifecycle state machine: `created -> running -> paused -> stopped -> archived` with valid transition enforcement `P0` `M`
+- [x] 2.1.5 — Add session event log table: state changes, errors, budget events with timestamps `P1` `M`
 - **Acceptance:** sessions survive TUI restart, queryable via SQL
 
 ### 2.2 — Git worktree orchestration `[BLOCKED BY 2.1]`
@@ -1011,7 +1011,7 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - [ ] 6.4.1 — Historical data model: SQLite `P1` `M`
 - [ ] 6.4.2 — TUI analytics view `P1` `L`
 - [ ] 6.4.3 — OpenTelemetry traces `P1` `L`
-- [ ] 6.4.4 — Prometheus metrics endpoint `P1` `M`
+- [x] 6.4.4 — Prometheus metrics endpoint `P1` `M`
 - [ ] 6.4.5 — Grafana dashboard JSON `P2` `M`
 - **Acceptance:** Grafana dashboard shows session metrics over time
 
@@ -1705,7 +1705,7 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 
 **Bottleneck:** Single `Manager.mu` RWMutex in `internal/session/manager.go` serializes all session operations at 100+ concurrent sessions.
 
-- [ ] Split into per-map fine-grained locks: `sessionsMu`, `workersMu`, `budgetMu`, `configMu`
+- [x] Split into per-map fine-grained locks: `sessionsMu`, `workersMu`, `budgetMu`, `configMu`
 - [ ] Use `sync.Map` for hot-path reads (session lookups, status queries)
 - [ ] Add lock contention metrics (pprof mutex profile integration)
 - [ ] Benchmark: target 70-80% contention reduction at 100 concurrent sessions
@@ -1715,8 +1715,8 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 
 **Bottleneck:** No concurrency limit on MCP tool handlers — 126 tools with no semaphore means unbounded goroutine creation under load.
 
-- [ ] Add `semaphore.Weighted` (golang.org/x/sync) to `internal/mcpserver/middleware.go`
-- [ ] Default limit: 32 concurrent handlers, configurable via `MCP_MAX_CONCURRENT`
+- [x] Add `semaphore.Weighted` (golang.org/x/sync) to `internal/mcpserver/middleware.go`
+- [x] Default limit: 32 concurrent handlers, configurable via `MCP_MAX_CONCURRENT`
 - [ ] Per-namespace rate limiting for expensive tools (fleet, session launch)
 - [ ] Add handler queue depth metric
 - Files: `internal/mcpserver/middleware.go`, `internal/mcpserver/server.go`
@@ -1725,7 +1725,7 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 
 **Bottleneck:** In-process `events.Bus` with 1000-event ring buffer + JSONL persistence caps at single-node, single-process.
 
-- [ ] Abstract event bus behind `EventTransport` interface (in-memory default, NATS optional)
+- [x] Abstract event bus behind `EventTransport` interface (in-memory default, NATS optional)
 - [ ] NATS JetStream integration: persistent subjects per event type, consumer groups
 - [ ] Windowed aggregation: 1m/5m/15m sliding windows for fleet metrics
 - [ ] Partitioned storage: shard events by repo or session ID
@@ -1736,10 +1736,10 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 
 **Bottleneck:** `MaxConcurrentWorkers=8` is static. No scaling based on queue depth, provider availability, or budget.
 
-- [ ] Auto-scale triggers: queue depth > 2x workers, provider rate limit headroom, budget remaining
+- [x] Auto-scale triggers: queue depth > 2x workers, provider rate limit headroom, budget remaining
 - [ ] Provider specialization: route GPU-heavy tasks to specific workers, cost-optimize by provider
-- [ ] Health scoring: per-worker success rate, latency p99, stale task ratio
-- [ ] Priority queue with aging: prevent task starvation, priority decay over time
+- [x] Health scoring: per-worker success rate, latency p99, stale task ratio
+- [x] Priority queue with aging: prevent task starvation, priority decay over time
 - [ ] Batch assignment: group related tasks (same repo, same provider) for worker affinity
 - Files: `internal/fleet/coordinator.go`, `internal/fleet/worker.go`, new `internal/fleet/autoscaler.go`
 
@@ -1747,10 +1747,10 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 
 **Bottleneck:** Fixed iteration limits waste compute on easy tasks and starve complex ones.
 
-- [ ] Complexity estimator: LOC, dependency depth, test count → predicted iterations
+- [x] Complexity estimator: LOC, dependency depth, test count → predicted iterations
 - [ ] Dynamic budget allocation: start conservative, expand on progress signals
 - [ ] Deep work mode: for high-value tasks, double iteration limit + add verification passes
-- [ ] Smart convergence: detect diminishing returns (δ < threshold for N iterations → early stop)
+- [x] Smart convergence: detect diminishing returns (δ < threshold for N iterations → early stop)
 - Files: `internal/session/loop.go`, `internal/session/convergence.go`, new `internal/session/depth.go`
 
 ### 10.5.6 Multi-Node Marathon Distribution `P1` `XL`
@@ -1767,7 +1767,7 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 
 **Bottleneck:** Static cascade routing misses 2-4x cost reduction opportunities.
 
-- [ ] Dynamic cost-tier routing via contextual bandits (extend existing UCB1 in `internal/bandit/`)
+- [x] Dynamic cost-tier routing via contextual bandits (extend existing UCB1 in `internal/bandit/`)
 - [ ] Batch API utilization: auto-batch non-urgent tasks for 50% discount (extend `internal/batch/`)
 - [ ] Fleet-wide prompt caching: shared cache prefix across sessions targeting same repo
 - [ ] Budget forecasting: predict remaining marathon budget from spend velocity + task queue
@@ -1778,7 +1778,7 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 
 **Bottleneck:** Worktree creation overhead at scale, disk usage with many clones.
 
-- [ ] Worktree pooling: pre-create N worktrees per repo, reuse across sessions (10x creation speedup)
+- [x] Worktree pooling: pre-create N worktrees per repo, reuse across sessions (10x creation speedup)
 - [ ] Git alternates: share object store across clones (16x disk reduction for large repos)
 - [ ] Merge conflict prevention: pre-check branch divergence before parallel work
 - [ ] Multi-repo coordination: atomic cross-repo changes with two-phase commit
@@ -1788,8 +1788,8 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 
 **Bottleneck:** JSON file persistence is fragile under concurrent access and doesn't scale.
 
-- [ ] SQLite WAL mode for fleet state (coordinator, sessions, observations)
-- [ ] Per-entity locking instead of global mutex
+- [x] SQLite WAL mode for fleet state (coordinator, sessions, observations)
+- [x] Per-entity locking instead of global mutex
 - [ ] State sharding by repo for parallel writes
 - [ ] Observation partitioning: time-based partitions for efficient queries
 - [ ] Migration path from JSON files to SQLite (dual-write during transition)
@@ -1800,7 +1800,7 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 
 **Bottleneck:** No external metrics export, no structured alerting.
 
-- [ ] Prometheus metrics exporter: session counts, costs, latencies, error rates
+- [x] Prometheus metrics exporter: session counts, costs, latencies, error rates
 - [ ] Structured alerting: webhook, Slack, Discord notifications on fleet events
 - [ ] Distributed tracing: OpenTelemetry spans for session lifecycle
 - [ ] Capacity planning: predict resource needs from historical fleet data
