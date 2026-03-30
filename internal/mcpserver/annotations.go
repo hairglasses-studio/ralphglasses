@@ -138,8 +138,9 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_cost_forecast":    {Title: "Cost Forecast", ReadOnlyHint: boolPtr(true)},
 
 	// ── meta ─────────────────────────────────────────────────────────────
-	"ralphglasses_tool_groups":    {Title: "Tool Groups", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_tool_groups":     {Title: "Tool Groups", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_load_tool_group": {Title: "Load Tool Group", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_skill_export":    {Title: "Skill Export", ReadOnlyHint: boolPtr(true)},
 
 	// ── observability ────────────────────────────────────────────────────
 	"ralphglasses_observation_query":   {Title: "Query Observations", ReadOnlyHint: boolPtr(true)},

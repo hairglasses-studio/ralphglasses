@@ -16,8 +16,8 @@ func TestEveryRegisteredToolHasAnnotation(t *testing.T) {
 			}
 		}
 	}
-	// Also check the two dispatch-only tools.
-	for _, name := range []string{"ralphglasses_tool_groups", "ralphglasses_load_tool_group"} {
+	// Also check the dispatch-only management tools.
+	for _, name := range []string{"ralphglasses_tool_groups", "ralphglasses_load_tool_group", "ralphglasses_skill_export"} {
 		if _, ok := ToolAnnotations[name]; !ok {
 			missing = append(missing, name)
 		}
