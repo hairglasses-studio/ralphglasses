@@ -285,15 +285,18 @@ var (
 	goTestSummRe  = regexp.MustCompile(`(?m)^(PASS|FAIL|ok)\s`)
 
 	// Generic test patterns (pytest, jest, etc.).
-	pytestSummRe  = regexp.MustCompile(`(\d+)\s+passed(?:.*?(\d+)\s+failed)?(?:.*?(\d+)\s+skipped)?`)
+	// pytestSummRe requires "passed" preceded by start-of-string or === to avoid double-counting jest output.
+	pytestSummRe  = regexp.MustCompile(`(?:^|===+\s+)(\d+)\s+passed(?:.*?(\d+)\s+failed)?(?:.*?(\d+)\s+skipped)?`)
 	jestSummRe    = regexp.MustCompile(`Tests:\s+(?:(\d+)\s+failed,?\s*)?(?:(\d+)\s+skipped,?\s*)?(\d+)\s+passed`)
 
 	// File modification patterns.
 	fileWriteRe   = regexp.MustCompile(`(?i)(?:created?|writ(?:e|ten|ing)|modified|updated|edited|saved)\s+(?:file\s+)?` + "`?" + `([^\s` + "`" + `]+\.\w{1,10})` + "`?")
 	diffFileRe    = regexp.MustCompile(`(?m)^(?:---|\+\+\+)\s+[ab]/(.+)$`)
 
-	// Git operation patterns.
-	gitCmdRe      = regexp.MustCompile(`(?m)(?:^|\$\s*|>\s*)git\s+(add|commit|push|pull|merge|checkout|branch|rebase|cherry-pick|stash|reset|tag|diff|log|status|switch|restore|revert|fetch|clone)\b(.*)`)
+	// Git operation patterns. Uses a non-greedy args capture that stops at
+	// command chaining operators (&&, ;, ||) or end of string. This lets the
+	// regex find multiple git commands in a single chained shell line.
+	gitCmdRe      = regexp.MustCompile(`git\s+(add|commit|push|pull|merge|checkout|branch|rebase|cherry-pick|stash|reset|tag|diff|log|status|switch|restore|revert|fetch|clone)\b([^&;|]*)`)
 	gitCommitMsgRe = regexp.MustCompile(`(?m)\[[\w/.-]+\s+[0-9a-f]+\]\s+(.+)`)
 
 	// Error patterns.
@@ -585,16 +588,20 @@ func parseCommaInt(s string) int {
 }
 
 // parseGitArgs splits a git argument string into meaningful tokens,
-// filtering out flags and empty strings.
+// filtering out flags and empty strings. Handles quoted arguments that
+// may span multiple Fields tokens (e.g., -m "fix the bug").
 func parseGitArgs(raw string) []string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return nil
 	}
-	fields := strings.Fields(raw)
+
+	// Tokenize respecting quotes.
+	tokens := tokenizeShellArgs(raw)
+
 	var args []string
 	skipNext := false
-	for i, f := range fields {
+	for i, f := range tokens {
 		if skipNext {
 			skipNext = false
 			continue
@@ -602,13 +609,10 @@ func parseGitArgs(raw string) []string {
 		// Skip common flags and their values.
 		if strings.HasPrefix(f, "-") {
 			// Flags that take a value argument: -m, -b, --message, etc.
-			if i+1 < len(fields) && isFlagWithValue(f) {
+			if i+1 < len(tokens) && isFlagWithValue(f) {
 				// Include commit message as summary.
 				if f == "-m" || f == "--message" {
-					val := fields[i+1]
-					// Strip surrounding quotes.
-					val = strings.Trim(val, `"'`)
-					args = append(args, val)
+					args = append(args, tokens[i+1])
 				}
 				skipNext = true
 			}
@@ -617,6 +621,50 @@ func parseGitArgs(raw string) []string {
 		args = append(args, f)
 	}
 	return args
+}
+
+// tokenizeShellArgs splits a string into tokens, respecting double and single
+// quotes. Quotes are stripped from the resulting tokens.
+func tokenizeShellArgs(s string) []string {
+	var tokens []string
+	var current strings.Builder
+	inSingle := false
+	inDouble := false
+	escaped := false
+
+	for _, r := range s {
+		if escaped {
+			current.WriteRune(r)
+			escaped = false
+			continue
+		}
+		if r == '\\' && !inSingle {
+			escaped = true
+			continue
+		}
+		if r == '\'' && !inDouble {
+			inSingle = !inSingle
+			continue
+		}
+		if r == '"' && !inSingle {
+			inDouble = !inDouble
+			continue
+		}
+		if r == ' ' || r == '\t' {
+			if inSingle || inDouble {
+				current.WriteRune(r)
+			} else if current.Len() > 0 {
+				tokens = append(tokens, current.String())
+				current.Reset()
+			}
+			continue
+		}
+		current.WriteRune(r)
+	}
+	if current.Len() > 0 {
+		tokens = append(tokens, current.String())
+	}
+	return tokens
 }
 
 func isFlagWithValue(flag string) bool {

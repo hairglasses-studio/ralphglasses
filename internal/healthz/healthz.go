@@ -16,14 +16,16 @@ type Server struct {
 	ready    atomic.Bool
 	srv      *http.Server
 	started  time.Time
+	probes   *ProbeRegistry
 }
 
 // New creates a health server on the given address (e.g. ":9090").
 func New(addr string) *Server {
-	s := &Server{addr: addr, started: time.Now()}
+	s := &Server{addr: addr, started: time.Now(), probes: NewProbeRegistry()}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", s.handleHealthz)
 	mux.HandleFunc("/readyz", s.handleReadyz)
+	mux.HandleFunc("/livez", s.handleLivez)
 	mux.HandleFunc("/metrics", s.handleMetrics)
 	s.srv = &http.Server{
 		Addr:              addr,
@@ -32,6 +34,9 @@ func New(addr string) *Server {
 	}
 	return s
 }
+
+// Probes returns the server's probe registry for registering health checks.
+func (s *Server) Probes() *ProbeRegistry { return s.probes }
 
 // SetReady marks the server as ready to serve traffic.
 func (s *Server) SetReady() { s.ready.Store(true) }
@@ -70,6 +75,11 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleReadyz(w http.ResponseWriter, r *http.Request) {
+	if s.probes.HasReadinessChecks() {
+		s.probes.HandleReadyz(w, r)
+		return
+	}
+	// Legacy boolean readiness when no probes are registered.
 	w.Header().Set("Content-Type", "application/json")
 	if s.ready.Load() {
 		w.WriteHeader(http.StatusOK)
@@ -78,4 +88,17 @@ func (s *Server) handleReadyz(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		json.NewEncoder(w).Encode(map[string]string{"status": "not_ready"})
 	}
+}
+
+func (s *Server) handleLivez(w http.ResponseWriter, r *http.Request) {
+	if s.probes.HasLivenessChecks() {
+		s.probes.HandleLivez(w, r)
+		return
+	}
+	// Fallback: no liveness checks registered, assume alive.
+	resp := ProbeResponse{
+		Status: StatusPass,
+		Checks: []CheckResult{},
+	}
+	writeProbeResponse(w, resp)
 }

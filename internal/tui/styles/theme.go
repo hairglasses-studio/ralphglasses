@@ -4,10 +4,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/charmbracelet/lipgloss"
 	"gopkg.in/yaml.v3"
 )
+
+// ThemeMu serializes access to package-level style variables.
+// ApplyTheme holds this during writes; callers reading globals from
+// concurrent goroutines should RLock.
+var ThemeMu sync.RWMutex
 
 // Theme defines a color scheme for the TUI.
 type Theme struct {
@@ -199,6 +205,9 @@ func ApplyTheme(t *Theme) {
 	if t == nil {
 		return
 	}
+
+	ThemeMu.Lock()
+	defer ThemeMu.Unlock()
 
 	ColorPrimary = lipgloss.Color(t.Primary)
 	ColorAccent = lipgloss.Color(t.Accent)
