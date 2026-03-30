@@ -358,18 +358,56 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 	return b.String()
 }
 
+// FleetSessionTable tracks the selected session in the fleet dashboard.
+type FleetSessionTable struct {
+	rows     [][]string
+	selected int
+}
+
+// SelectedRow returns the currently selected row, or nil if empty.
+func (t *FleetSessionTable) SelectedRow() []string {
+	if len(t.rows) == 0 || t.selected < 0 || t.selected >= len(t.rows) {
+		return nil
+	}
+	return t.rows[t.selected]
+}
+
+// SetRows replaces the table data.
+func (t *FleetSessionTable) SetRows(rows [][]string) {
+	t.rows = rows
+	if t.selected >= len(rows) {
+		t.selected = max(0, len(rows)-1)
+	}
+}
+
+// MoveUp selects the previous row.
+func (t *FleetSessionTable) MoveUp() {
+	if t.selected > 0 {
+		t.selected--
+	}
+}
+
+// MoveDown selects the next row.
+func (t *FleetSessionTable) MoveDown() {
+	if t.selected < len(t.rows)-1 {
+		t.selected++
+	}
+}
+
 // FleetView wraps RenderFleetDashboard in a scrollable viewport.
 type FleetView struct {
-	Viewport *ViewportView
-	data     FleetData
-	width    int
-	height   int
+	Viewport     *ViewportView
+	SessionTable *FleetSessionTable
+	data         FleetData
+	width        int
+	height       int
 }
 
 // NewFleetView creates a new FleetView.
 func NewFleetView() *FleetView {
 	return &FleetView{
-		Viewport: NewViewportView(),
+		Viewport:     NewViewportView(),
+		SessionTable: &FleetSessionTable{},
 	}
 }
 

@@ -441,6 +441,66 @@ func (m *Manager) PersistSession(s *Session) error {
 	return nil
 }
 
+// RehydrateFromStore loads persisted sessions from the SQLite store into the
+// in-memory map so they survive process restarts. Sessions that were running
+// or launching when the previous process died are marked as interrupted since
+// their OS process no longer exists. Sessions already in the in-memory map
+// (launched by the current process) are not overwritten.
+// Returns nil if no store is configured (no-op).
+func (m *Manager) RehydrateFromStore() error {
+	if m.store == nil {
+		return nil
+	}
+
+	// Load all non-terminal sessions, plus recently-terminal ones for visibility.
+	// We use an empty ListOpts to get everything, then filter client-side.
+	all, err := m.store.ListSessions(context.Background(), ListOpts{})
+	if err != nil {
+		return fmt.Errorf("rehydrate: list sessions from store: %w", err)
+	}
+
+	m.sessionsMu.Lock()
+	defer m.sessionsMu.Unlock()
+
+	rehydrated := 0
+	interrupted := 0
+	for _, sess := range all {
+		// Skip sessions already in the in-memory map (current process owns them).
+		if _, exists := m.sessions[sess.ID]; exists {
+			continue
+		}
+
+		// Sessions that were running or launching when the old process died
+		// cannot still be alive — mark them as interrupted.
+		if sess.Status == StatusRunning || sess.Status == StatusLaunching {
+			sess.Status = StatusInterrupted
+			now := time.Now()
+			sess.EndedAt = &now
+			sess.LastActivity = now
+			sess.ExitReason = "interrupted: process not found after restart"
+			sess.Pid = 0 // PID is stale
+			interrupted++
+
+			// Persist the updated status back to the store.
+			if err := m.store.SaveSession(context.Background(), sess); err != nil {
+				slog.Warn("rehydrate: failed to persist interrupted status",
+					"session_id", sess.ID, "err", err)
+			}
+		}
+
+		m.sessions[sess.ID] = sess
+		rehydrated++
+	}
+
+	if rehydrated > 0 {
+		slog.Info("rehydrated sessions from store",
+			"total", rehydrated,
+			"interrupted", interrupted,
+		)
+	}
+	return nil
+}
+
 // LoadExternalSessions reads session JSON files from the shared state directory
 // and merges any unknown sessions into the manager. This allows the TUI to
 // discover sessions launched by the MCP server (a separate process).

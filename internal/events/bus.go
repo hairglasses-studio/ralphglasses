@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -71,6 +72,11 @@ const (
 	WorkerDeregistered EventType = "worker.deregistered"
 	WorkerPaused       EventType = "worker.paused"
 	WorkerResumed      EventType = "worker.resumed"
+
+	// Safety
+	AnomalyDetected EventType = "anomaly.detected"   // Fleet anomaly detector triggered
+	EmergencyStop   EventType = "emergency.stop"      // Kill switch engaged
+	EmergencyResume EventType = "emergency.resume"     // Kill switch disengaged
 )
 
 // knownEventTypes is the set of all declared EventType constants.
@@ -103,6 +109,9 @@ var knownEventTypes = map[EventType]struct{}{
 	WorkerDeregistered:    {},
 	WorkerPaused:          {},
 	WorkerResumed:         {},
+	AnomalyDetected:       {},
+	EmergencyStop:         {},
+	EmergencyResume:       {},
 }
 
 // ValidEventType returns true if the given EventType is a known constant.
@@ -157,6 +166,9 @@ type Bus struct {
 	// Pluggable transport — when non-nil, Publish/Subscribe/Unsubscribe
 	// delegate fan-out to the transport instead of inline maps.
 	transport EventTransport
+
+	// Observability metrics
+	metrics metrics
 }
 
 // BusOption configures a Bus during construction.
@@ -203,6 +215,7 @@ func NewBus(maxHistory int, opts ...BusOption) *Bus {
 		filteredSubs: make(map[string]filteredSub),
 		maxHistory:   maxHistory,
 	}
+	b.metrics.publishedByType = make(map[EventType]*atomic.Int64)
 	for _, opt := range opts {
 		opt(b)
 	}
@@ -221,6 +234,8 @@ func (b *Bus) SetRetentionTTL(ttl time.Duration) {
 // respecting context cancellation. If the context is already cancelled,
 // the event is not published and the context error is returned.
 func (b *Bus) PublishCtx(ctx context.Context, event Event) error {
+	publishStart := time.Now()
+
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -294,11 +309,12 @@ func (b *Bus) PublishCtx(ctx context.Context, event Event) error {
 		b.mu.Unlock()
 
 		// Non-blocking send to each unfiltered subscriber
+		dropped := int64(0)
 		for _, ch := range subs {
 			select {
 			case ch <- event:
 			default:
-				// Drop on overflow — subscriber is too slow
+				dropped++
 			}
 		}
 
@@ -307,7 +323,14 @@ func (b *Bus) PublishCtx(ctx context.Context, event Event) error {
 			select {
 			case ch <- event:
 			default:
+				dropped++
 			}
+		}
+
+		b.metrics.recordPublish(event.Type)
+		b.metrics.recordLatency(time.Since(publishStart))
+		if dropped > 0 {
+			b.metrics.recordDrop(dropped)
 		}
 	}
 
@@ -325,6 +348,7 @@ func (b *Bus) Publish(event Event) {
 func (b *Bus) Subscribe(id string) <-chan Event {
 	if b.transport != nil {
 		ch, _ := b.transport.Subscribe(context.Background(), id, nil)
+		b.metrics.recordSubscribe()
 		return ch
 	}
 	b.mu.Lock()
@@ -332,6 +356,7 @@ func (b *Bus) Subscribe(id string) <-chan Event {
 
 	ch := make(chan Event, 100)
 	b.subscribers[id] = ch
+	b.metrics.recordSubscribe()
 	return ch
 }
 
@@ -347,6 +372,7 @@ func (b *Bus) SubscribeFiltered(id string, types ...EventType) <-chan Event {
 			return ok
 		}
 		ch, _ := b.transport.Subscribe(context.Background(), id, filter)
+		b.metrics.recordSubscribe()
 		return ch
 	}
 	b.mu.Lock()
@@ -359,6 +385,7 @@ func (b *Bus) SubscribeFiltered(id string, types ...EventType) <-chan Event {
 
 	ch := make(chan Event, 100)
 	b.filteredSubs[id] = filteredSub{ch: ch, types: typeSet}
+	b.metrics.recordSubscribe()
 	return ch
 }
 
@@ -366,6 +393,7 @@ func (b *Bus) SubscribeFiltered(id string, types ...EventType) <-chan Event {
 func (b *Bus) Unsubscribe(id string) {
 	if b.transport != nil {
 		b.transport.Unsubscribe(id)
+		b.metrics.recordUnsubscribe()
 		return
 	}
 	b.mu.Lock()
@@ -374,10 +402,12 @@ func (b *Bus) Unsubscribe(id string) {
 	if ch, ok := b.subscribers[id]; ok {
 		delete(b.subscribers, id)
 		close(ch)
+		b.metrics.recordUnsubscribe()
 	}
 	if fs, ok := b.filteredSubs[id]; ok {
 		delete(b.filteredSubs, id)
 		close(fs.ch)
+		b.metrics.recordUnsubscribe()
 	}
 }
 

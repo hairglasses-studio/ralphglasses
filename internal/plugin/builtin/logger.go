@@ -4,6 +4,7 @@ package builtin
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -16,6 +17,7 @@ type LoggerPlugin struct {
 	// LogPath is the file to append events to.
 	// Defaults to ~/.ralph/plugin-events.log.
 	LogPath string
+	logger  *slog.Logger
 }
 
 // NewLoggerPlugin creates a LoggerPlugin with the default log path.
@@ -31,6 +33,17 @@ func (l *LoggerPlugin) Name() string { return "builtin.logger" }
 
 // Version returns the plugin version.
 func (l *LoggerPlugin) Version() string { return "0.1.0" }
+
+// Init stores the host logger for later use.
+func (l *LoggerPlugin) Init(_ context.Context, host plugin.PluginHost) error {
+	if host != nil {
+		l.logger = host.Logger()
+	}
+	return nil
+}
+
+// Shutdown is a no-op for the logger plugin.
+func (l *LoggerPlugin) Shutdown() error { return nil }
 
 // OnEvent appends a line to LogPath with the event timestamp, type, and repo.
 func (l *LoggerPlugin) OnEvent(_ context.Context, event plugin.Event) error {

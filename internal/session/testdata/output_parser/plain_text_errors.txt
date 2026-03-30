@@ -1,0 +1,6 @@
+# github.com/example/repo/internal/server
+internal/server/handler.go:42:10: undefined: ValidateRequest
+internal/server/handler.go:55:3: cannot use resp (variable of type *Response) as type io.Writer
+internal/server/middleware.go:18:15: too many arguments in call to logger.New
+error: build failed
+fatal: not a git repository

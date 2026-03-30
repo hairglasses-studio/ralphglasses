@@ -22,16 +22,17 @@ const (
 type SessionStatus string
 
 const (
-	StatusLaunching SessionStatus = "launching"
-	StatusRunning   SessionStatus = "running"
-	StatusCompleted SessionStatus = "completed"
-	StatusStopped   SessionStatus = "stopped"
-	StatusErrored   SessionStatus = "errored"
+	StatusLaunching    SessionStatus = "launching"
+	StatusRunning      SessionStatus = "running"
+	StatusCompleted    SessionStatus = "completed"
+	StatusStopped      SessionStatus = "stopped"
+	StatusErrored      SessionStatus = "errored"
+	StatusInterrupted  SessionStatus = "interrupted" // process gone after restart; rehydrated from store
 )
 
 // IsTerminal returns true if the status represents a finished session.
 func (s SessionStatus) IsTerminal() bool {
-	return s == StatusCompleted || s == StatusErrored || s == StatusStopped
+	return s == StatusCompleted || s == StatusErrored || s == StatusStopped || s == StatusInterrupted
 }
 
 // Session represents a managed headless LLM CLI session.
