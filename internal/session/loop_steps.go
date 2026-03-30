@@ -263,8 +263,11 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 			completedTasksForContent = append(completedTasksForContent, iter.Task)
 		}
 	}
+	var allSkipped []DedupSkip
 	if len(completedForDedup) > 0 {
-		tasks = filterDuplicateTasks(tasks, completedForDedup, DefaultSimilarityThreshold)
+		var skipped []DedupSkip
+		tasks, skipped = filterDuplicateTasksWithReason(tasks, completedForDedup, DefaultSimilarityThreshold)
+		allSkipped = append(allSkipped, skipped...)
 		if len(tasks) == 0 {
 			return m.failLoopIteration(run, index, errors.New("all planner tasks were near-duplicates of completed work"))
 		}
@@ -273,7 +276,9 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 	// Content-based dedup: reject tasks whose file paths overlap >50% with
 	// any completed task's file paths.
 	if len(completedTasksForContent) > 0 {
-		tasks = filterDuplicateTasksByContent(tasks, completedTasksForContent)
+		var skipped []DedupSkip
+		tasks, skipped = filterDuplicateTasksByContentWithReason(tasks, completedTasksForContent)
+		allSkipped = append(allSkipped, skipped...)
 		if len(tasks) == 0 {
 			return m.failLoopIteration(run, index, errors.New("all planner tasks target files already modified by completed work"))
 		}
@@ -293,6 +298,9 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		iter.Task = tasks[0] // backwards compat: first task
 		iter.Tasks = tasks
 		iter.PlannerOutput = plannerOutput
+		if len(allSkipped) > 0 {
+			iter.SkippedTasks = allSkipped
+		}
 	})
 
 	// Fan out workers in parallel, each in their own worktree

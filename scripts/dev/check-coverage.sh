@@ -11,14 +11,16 @@ if [[ ! -f "$COVERFILE" ]]; then
 fi
 
 # Thresholds (package-suffix → minimum %)
-# Based on measured coverage as of 2026-03-24:
-#   discovery=100%, model=90%, process=92%, mcpserver=48%, session=68%
+# Based on measured coverage as of 2026-03-29:
+#   discovery=100%, model=90%, process=92%, mcpserver=48%, session=68%, tui=~40%
 declare -A THRESHOLDS=(
     [discovery]=90
-    [model]=80
-    [process]=80
-    [mcpserver]=40
+    [model]=90
+    [process]=85
+    [mcpserver]=45
     [session]=60
+    [tui]=30
+    [enhancer]=75
 )
 
 FAILED=0

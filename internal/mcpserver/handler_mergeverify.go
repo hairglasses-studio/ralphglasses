@@ -158,7 +158,7 @@ func parseCoverageTotal(profilePath string) (float64, error) {
 	if err != nil {
 		// Fallback: try to find percentage in the raw profile data.
 		_ = data
-		return 0, fmt.Errorf("go tool cover: %v: %s", err, string(out))
+		return 0, fmt.Errorf("go tool cover: %w: %s", err, string(out))
 	}
 
 	// Last line looks like: "total:	(statements)	78.5%"

@@ -10,6 +10,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -28,6 +29,69 @@ func TraceIDFromContext(ctx context.Context) string {
 		return id
 	}
 	return ""
+}
+
+// Request-scoped context keys for MCP handler logging.
+type toolNameKey struct{}
+type repoKey struct{}
+type requestStartKey struct{}
+
+// WithToolName attaches the tool name to the context.
+func WithToolName(ctx context.Context, name string) context.Context {
+	return context.WithValue(ctx, toolNameKey{}, name)
+}
+
+// ToolNameFromContext extracts the tool name, or "" if not set.
+func ToolNameFromContext(ctx context.Context) string {
+	if v, ok := ctx.Value(toolNameKey{}).(string); ok {
+		return v
+	}
+	return ""
+}
+
+// WithRepo attaches the repo name to the context.
+func WithRepo(ctx context.Context, repo string) context.Context {
+	return context.WithValue(ctx, repoKey{}, repo)
+}
+
+// RepoFromContext extracts the repo name, or "" if not set.
+func RepoFromContext(ctx context.Context) string {
+	if v, ok := ctx.Value(repoKey{}).(string); ok {
+		return v
+	}
+	return ""
+}
+
+// WithRequestStart attaches the request start time to the context.
+func WithRequestStart(ctx context.Context, t time.Time) context.Context {
+	return context.WithValue(ctx, requestStartKey{}, t)
+}
+
+// RequestStartFromContext extracts the request start time, or zero if not set.
+func RequestStartFromContext(ctx context.Context) time.Time {
+	if v, ok := ctx.Value(requestStartKey{}).(time.Time); ok {
+		return v
+	}
+	return time.Time{}
+}
+
+// RequestLogger returns an slog.Logger pre-scoped with request context fields
+// (tool name, repo, elapsed time). Use in MCP handlers instead of bare slog calls.
+func RequestLogger(ctx context.Context) *slog.Logger {
+	var attrs []any
+	if tool := ToolNameFromContext(ctx); tool != "" {
+		attrs = append(attrs, "tool", tool)
+	}
+	if repo := RepoFromContext(ctx); repo != "" {
+		attrs = append(attrs, "repo", repo)
+	}
+	if tid := TraceIDFromContext(ctx); tid != "" {
+		attrs = append(attrs, "trace_id", tid)
+	}
+	if start := RequestStartFromContext(ctx); !start.IsZero() {
+		attrs = append(attrs, "elapsed_ms", time.Since(start).Milliseconds())
+	}
+	return slog.With(attrs...)
 }
 
 // NewTraceID generates a 16-character hex trace ID using crypto/rand.
