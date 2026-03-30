@@ -207,7 +207,7 @@ func TestHandleConfigBulk_SetKey(t *testing.T) {
 	// Verify the value was persisted to disk.
 	// handleConfigBulk operates on a shallow copy, so check disk directly.
 	repo := srv.findRepo("test-repo")
-	reloaded, err := model.LoadConfig(filepath.Dir(repo.Config.Path))
+	reloaded, err := model.LoadConfig(context.Background(), filepath.Dir(repo.Config.Path))
 	if err != nil {
 		t.Fatalf("reload config from disk: %v", err)
 	}

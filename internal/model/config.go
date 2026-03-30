@@ -2,6 +2,7 @@ package model
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -207,7 +208,13 @@ type RalphConfig struct {
 }
 
 // LoadConfig reads and parses a .ralphrc file from the given repo path.
-func LoadConfig(repoPath string) (*RalphConfig, error) {
+func LoadConfig(ctx context.Context, repoPath string) (*RalphConfig, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	rcPath := filepath.Join(repoPath, ".ralphrc")
 	f, err := os.Open(rcPath)
 	if err != nil {

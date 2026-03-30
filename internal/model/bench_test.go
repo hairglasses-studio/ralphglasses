@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -16,7 +17,7 @@ func BenchmarkLoadConfig(b *testing.B) {
 	_ = os.WriteFile(filepath.Join(dir, ".ralphrc"), []byte(content), 0644)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = LoadConfig(dir)
+		_, _ = LoadConfig(context.Background(), dir)
 	}
 }
 
@@ -29,7 +30,7 @@ func BenchmarkLoadStatus(b *testing.B) {
 	_ = os.WriteFile(filepath.Join(ralphDir, "status.json"), data, 0644)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = LoadStatus(dir)
+		_, _ = LoadStatus(context.Background(), dir)
 	}
 }
 
@@ -47,6 +48,6 @@ func BenchmarkRefreshRepo(b *testing.B) {
 	r := &Repo{Path: dir}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		RefreshRepo(r)
+		RefreshRepo(context.Background(), r)
 	}
 }

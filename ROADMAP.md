@@ -347,14 +347,14 @@ Implements MCP spec features: structured output schemas, logging notifications.
 
 ### 1.5 — Config editor enhancements
 - [ ] 1.5.1 — Add key CRUD operations: insert new key, rename key, delete key from TUI `P2` `M`
-- [ ] 1.5.2 — Wire fsnotify on `.ralphrc` file; reload config on external change, emit notification `P1` `M`
-- [ ] 1.5.3 — Add validation rules per key type (numeric ranges, boolean, enum values) `P1` `M`
+- [x] 1.5.2 — Wire fsnotify on `.ralphrc` file; reload config on external change, emit notification `P1` `M`
+- [x] 1.5.3 — Add validation rules per key type (numeric ranges, boolean, enum values) `P1` `M`
 - [ ] 1.5.4 — Implement undo buffer (single-level: revert last edit) `P2` `S`
 - **Acceptance:** external edits reflected without restart, invalid values rejected with message
 
 ### 1.6 — Test coverage targets
 - [x] 1.6.1 — Per-package coverage targets in `check-coverage.sh` + `make test-cover-strict` Makefile target `P1` `S`
-- [ ] 1.6.2 — Add CI enforcement step: `go test -coverprofile` -> parse -> fail if below threshold `P1` `M`
+- [x] 1.6.2 — Add CI enforcement step: `go test -coverprofile` -> parse -> fail if below threshold `P1` `M`
 - [ ] 1.6.3 — Add coverage badge to README via codecov or go-cover-treemap `P2` `S`
 - [ ] 1.6.4 — Write missing tests to reach 85%+ overall (focus on untested error paths) `P1` `L`
 - **Acceptance:** `go test -coverprofile` meets thresholds in CI, badge visible in README
@@ -377,10 +377,10 @@ Implements MCP spec features: structured output schemas, logging notifications.
 
 ### 1.9 — Context propagation
 - [x] 1.9.1 — Thread `context.Context` through `discovery.Scan()` — support cancellation of long scans `[reconciled 2026-03-26]`
-- [ ] 1.9.2 — Thread `context.Context` through `model.Load*()` functions — timeout on stuck file reads `P1` `M`
+- [x] 1.9.2 — Thread `context.Context` through `model.Load*()` functions — timeout on stuck file reads `P1` `M`
 - [x] 1.9.3 — Use incoming `ctx` in MCP tool handlers (currently received but ignored) `P0` `M`
 - [x] 1.9.4 — Add `--scan-timeout` flag: max time for initial directory scan (default: 30s) `P1` `S`
-- [ ] 1.9.5 — Wire context cancellation to TUI shutdown: cancel in-flight operations on exit `P1` `M`
+- [x] 1.9.5 — Wire context cancellation to TUI shutdown: cancel in-flight operations on exit `P1` `M`
 - **Acceptance:** all long-running operations respect context cancellation
 
 ### 1.10 — TUI bounds safety

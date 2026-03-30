@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -31,7 +32,7 @@ func TestLoadStatus_UnreadableFile(t *testing.T) {
 	}
 	t.Cleanup(func() { os.Chmod(path, 0644) })
 
-	_, err := LoadStatus(dir)
+	_, err := LoadStatus(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for unreadable status.json, got nil")
 	}
@@ -51,7 +52,7 @@ func TestLoadCircuitBreaker_UnreadableFile(t *testing.T) {
 	}
 	t.Cleanup(func() { os.Chmod(path, 0644) })
 
-	_, err := LoadCircuitBreaker(dir)
+	_, err := LoadCircuitBreaker(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for unreadable circuit breaker file, got nil")
 	}
@@ -71,7 +72,7 @@ func TestLoadProgress_UnreadableFile(t *testing.T) {
 	}
 	t.Cleanup(func() { os.Chmod(path, 0644) })
 
-	_, err := LoadProgress(dir)
+	_, err := LoadProgress(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for unreadable progress file, got nil")
 	}
@@ -92,7 +93,7 @@ func TestRefreshRepo_MultipleCorruptFiles(t *testing.T) {
 	}
 
 	r := &Repo{Path: dir, Name: "test-repo"}
-	errs := RefreshRepo(r)
+	errs := RefreshRepo(context.Background(), r)
 
 	if len(errs) < 3 {
 		t.Errorf("expected at least 3 errors from RefreshRepo with all corrupt files, got %d: %v", len(errs), errs)
@@ -114,7 +115,7 @@ func TestRefreshRepo_MissingRalphDir(t *testing.T) {
 	dir := t.TempDir()
 	// No .ralph/ directory at all.
 	r := &Repo{Path: dir, Name: "test-repo"}
-	errs := RefreshRepo(r)
+	errs := RefreshRepo(context.Background(), r)
 
 	// Missing files are not errors (os.ErrNotExist is skipped).
 	if len(errs) != 0 {

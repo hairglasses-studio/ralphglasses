@@ -21,7 +21,7 @@ const (
 	fleetNoProgressThreshold = 3
 )
 
-func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleFleetStatus(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Auto-scan if needed
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
@@ -31,7 +31,7 @@ func (s *Server) handleFleetStatus(_ context.Context, req mcp.CallToolRequest) (
 
 	// Refresh all repos
 	for _, r := range s.Repos {
-		if errs := model.RefreshRepo(r); len(errs) > 0 {
+		if errs := model.RefreshRepo(ctx, r); len(errs) > 0 {
 			for _, e := range errs {
 				slog.Warn("handleFleetStatus: refresh failed", "repo", r.Path, "err", e)
 			}

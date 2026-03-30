@@ -87,7 +87,7 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 	if p.OptionalBool("enable_cascade", false) {
 		profile.EnableCascade = true
 		if !s.SessMgr.HasCascadeRouter() {
-			cfg := cascadeConfigFromRepo(r.Path, ralphDir)
+			cfg := cascadeConfigFromRepo(ctx, r.Path, ralphDir)
 			s.SessMgr.SetCascadeRouter(session.NewCascadeRouter(cfg, nil, nil, ralphDir))
 		}
 	}
@@ -121,7 +121,7 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 			profile.WorkerBudgetUSD = budgetUSD * 3 / 4
 		}
 		// Wire all self-learning subsystems (singleton creation).
-		wireSubsystems(s, s.SessMgr, ralphDir)
+		wireSubsystems(ctx, s, s.SessMgr, ralphDir)
 	}
 
 	// Iteration and duration limits
