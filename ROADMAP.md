@@ -69,8 +69,8 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
   - File: `internal/fleet/coordinator.go` — add stale task reaper, validate repo paths on submission
   - **Acceptance:** `fleet_status` shows 0 phantom entries after cleanup
 
-- [ ] **QW-12** — Fix improvement_patterns.json rules always null `P2` `S`
-  - File: `internal/session/reflexion.go` — implement rule extraction from positive/negative patterns
+- [x] **QW-12** — Fix improvement_patterns.json rules always null `P2` `S`
+  - File: `internal/session/reflexion.go` — rule extraction from positive/negative patterns already working
   - **Acceptance:** After 5+ cycles, `rules` array contains at least 1 learned rule
 
 ---
@@ -185,10 +185,10 @@ Post-gate-pass improvements. All items are independent, parallel, and sized for 
 > **Parallel workstreams:** All 0.6.x items are independent. No blockers between them.
 
 ### 0.6.1 — Test coverage for uncovered error paths
-- [ ] 0.6.1.1 — Add tests for `internal/discovery/` error paths: unreadable dirs, symlink cycles, permission denied `P1` `M`
-- [ ] 0.6.1.2 — Add tests for `internal/model/` corrupt file handling: truncated JSON, invalid UTF-8, zero-byte files `P1` `M`
-- [ ] 0.6.1.3 — Add tests for `internal/process/` edge cases: double-stop, stop-before-start, signal delivery to exited process `P1` `M`
-- [ ] 0.6.1.4 — Add tests for `internal/enhancer/` pipeline stages: empty input, extremely long input, unicode-heavy prompts `P1` `M`
+- [x] 0.6.1.1 — Tests for `internal/discovery/` error paths: unreadable dirs, symlink cycles, permission denied `P1` `M`
+- [x] 0.6.1.2 — Tests for `internal/model/` corrupt file handling: truncated JSON, invalid UTF-8, zero-byte files, unreadable files, RefreshRepo multi-corrupt `P1` `M`
+- [x] 0.6.1.3 — Tests for `internal/process/` edge cases: double-stop, stop-before-start, signal delivery to exited process, ESRCH handling `P1` `M`
+- [x] 0.6.1.4 — Tests for `internal/enhancer/` pipeline stages: empty input, extremely long input, unicode-heavy prompts `P1` `M`
 - **Acceptance:** each new test exercises an error path that previously had no coverage
 
 ### 0.6.2 — Observation enrichment
@@ -201,7 +201,7 @@ Post-gate-pass improvements. All items are independent, parallel, and sized for 
 ### 0.6.3 — Loop configuration validation
 - [x] 0.6.3.1 — Add `ValidateLoopConfig(LoopConfig) []error` — validate all loop config fields before loop start `P0` `M`
 - [x] 0.6.3.2 — Validate model names against known provider models (claude-opus-4-6, claude-sonnet-4-6, gemini-2.5-pro, etc.) `P1` `S`
-- [ ] 0.6.3.3 — Validate enhancement flags: warn if `enable_worker_enhancement=true` with non-Claude worker (no effect) `P1` `S`
+- [x] 0.6.3.3 — Validate enhancement flags: warn if `enable_worker_enhancement=true` with non-Claude worker (no effect) `P1` `S`
 - [x] 0.6.3.4 — Add config validation call at loop start, return clear error before spawning any sessions `P0` `S`
 - **Acceptance:** invalid loop configs rejected with descriptive errors before work begins
 
@@ -209,7 +209,7 @@ Post-gate-pass improvements. All items are independent, parallel, and sized for 
 - [x] 0.6.4.1 — Add `FormatGateReport(*GateReport) string` — human-readable gate summary with pass/warn/fail coloring hints `P1` `M`
 - [x] 0.6.4.2 — Add `FormatGateReportMarkdown(*GateReport) string` — markdown table for scratchpad/PR descriptions `P1` `S`
 - [x] 0.6.4.3 — Add gate trend helper: `CompareGateReports(prev, current *GateReport) []GateTrend` showing improvement/regression per metric `P1` `M`
-- [ ] 0.6.4.4 — Wire `FormatGateReport` into loop status output and MCP `loop_gates` tool response `P1` `S`
+- [x] 0.6.4.4 — Wire `FormatGateReport` into loop status output and MCP `loop_gates` tool response `P1` `S`
 - **Acceptance:** gate reports render as readable tables, trend comparison shows metric direction
 
 ### 0.6.5 — Session timeout and stall detection
@@ -235,16 +235,16 @@ Post-gate-pass improvements. All items are independent, parallel, and sized for 
 
 ### Phase 0.7 — Codebase Hardening & Observability
 
-- [ ] 0.7.1 — Observation enrichment: add GitDiffStat, model fields, AcceptancePath, StallCount to LoopObservation; add SummarizeObservations helper `P1` `L`
-- [ ] 0.7.2 — Loop config validation: ValidateLoopConfig with model name, enhancement flag, and StallTimeout checks `P0` `M`
-- [ ] 0.7.3 — Stall detection: StallDetector monitors worker output timestamps, kills + retries on timeout `P0` `L`
-- [ ] 0.7.4 — Gate report formatting: FormatGateReport, FormatGateReportMarkdown, CompareGateReports `P1` `M`
-- [ ] 0.7.5 — Gate report dedup + baseline fix: consolidate outputGateReport, fix swallowed baseline save errors `P0` `M`
-- [ ] 0.7.6 — Event bus improvements: SubscribeFiltered, event type validation, schema versioning, async persistence `P1` `L`
-- [ ] 0.7.7 — Provider cost rate config: externalize hardcoded rates to .ralph/cost_rates.json `P1` `S`
-- [ ] 0.7.8 — Worktree cleanup robustness: age-based cleanup with lock file + uncommitted change detection `P1` `M`
-- [ ] 0.7.9 — CLI os.Exit fix: replace os.Exit in RunE with sentinel errors for proper cobra handling `P1` `S`
-- [ ] 0.7.10 — Planner task dedup: Jaccard similarity matching for near-duplicate task detection `P1` `M`
+- [x] 0.7.1 — Observation enrichment: add GitDiffStat, model fields, AcceptancePath, StallCount, TurnCount to LoopObservation `P1` `L`
+- [x] 0.7.2 — Loop config validation: ValidateLoopProfile with model-provider prefix matching, verifier validation, budget/limit bounds `P0` `M`
+- [x] 0.7.3 — Stall detection: LoopStallDetector monitors iteration timestamps, wired into RunLoop `P0` `L`
+- [x] 0.7.4 — Gate report formatting: FormatGateReport, FormatGateReportMarkdown, CompareGateVerdicts `P1` `M`
+- [x] 0.7.5 — Gate report dedup + baseline fix: consolidated outputGateReport, fixed swallowed baseline save errors `P0` `M`
+- [x] 0.7.6 — Event bus improvements: SubscribeFiltered, event type validation, async persistence `P1` `L`
+- [x] 0.7.7 — Provider cost rate config: externalized to .ralph/cost_rates.json via LoadCostRatesFromDir `P1` `S`
+- [x] 0.7.8 — Worktree cleanup robustness: age-based cleanup with lock file + uncommitted change detection `P1` `M`
+- [x] 0.7.9 — CLI os.Exit fix: sentinel errors (ErrChecksFailed, ErrGateFailed) for cobra handling `P1` `S`
+- [x] 0.7.10 — Planner task dedup: Jaccard similarity + content-overlap filtering in loop_steps.go `P1` `M`
 - [ ] 0.7.11 — Marathon resource monitoring: disk space, memory checks, log rotation `P2` `M`
 
 ## Phase 0.8: MCP Observability & Scratchpad Automation (COMPLETE)
@@ -334,7 +334,7 @@ Implements MCP spec features: structured output schemas, logging notifications.
 ### 1.3 — TUI polish
 - [x] 1.3.1 — Build `ConfirmDialog` component (y/n prompt overlay, reusable across views) — `internal/tui/components/confirm.go` `[reconciled 2026-03-26]`
 - [x] 1.3.2 — Wire confirm dialog to destructive actions: stop, stop_all, config delete — wired in handlers_detail.go, handlers_loops.go, handlers_common.go `[reconciled 2026-03-26]`
-- [ ] 1.3.3 — Add SIGINT/SIGTERM shutdown handler: stop all managed processes, flush logs, clean exit `P0` `M`
+- [x] 1.3.3 — SIGINT/SIGTERM shutdown handler: graceful stop of all managed processes, flush logs, clean exit `P0` `M`
 - [ ] 1.3.4 — Audit scroll bounds in log stream and table views; fix off-by-one on terminal resize `P1` `M`
 - **Acceptance:** destructive actions require y/n, clean exit on signals, no scroll panics on resize
 
@@ -384,11 +384,11 @@ Implements MCP spec features: structured output schemas, logging notifications.
 - **Acceptance:** all long-running operations respect context cancellation
 
 ### 1.10 — TUI bounds safety
-- [ ] 1.10.1 — Fix SortCol out-of-bounds: clamp `SortCol` to valid range when columns change `P0` `S`
+- [x] 1.10.1 — SortCol out-of-bounds: clamped to valid range when columns change `P0` `S`
 - [ ] 1.10.2 — Add search UI to LogView: `/` to enter search, `n`/`N` for next/prev match `P2` `M`
-- [ ] 1.10.3 — Audit all slice access in TUI components for empty-slice panics `P0` `M`
+- [x] 1.10.3 — Audited all slice access in TUI components — 19 locations verified with proper guards `P0` `M`
 - [ ] 1.10.4 — Add fuzz tests for table rendering with random column counts and data `P2` `M`
-- [ ] 1.10.5 — Handle zero-height terminal gracefully (don't panic, show "terminal too small") `P1` `S`
+- [x] 1.10.5 — Zero-height terminal guard: shows "Terminal too small" for width/height < 3 `P1` `S`
 - **Acceptance:** no panics on edge-case terminal sizes or empty data
 
 ## Phase 1.5: Developer Experience
@@ -401,7 +401,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [x] Batch API framework — `internal/batch/` with multi-provider batch submission (Claude, Gemini, OpenAI) `[reconciled 2026-03-26]`
 
 ### 1.5.1 — Shell completions
-- [ ] 1.5.1.1 — Add `ralphglasses completion bash|zsh|fish` via cobra built-in `GenBashCompletionV2` `P1` `S`
+- [x] 1.5.1.1 — `ralphglasses completion bash|zsh|fish` via cobra built-in `GenBashCompletion` `P1` `S`
 - [ ] 1.5.1.2 — Add dynamic completions for `--scan-path` (directory completion) `P2` `S`
 - [ ] 1.5.1.3 — Add dynamic completions for repo names in `status`, `start`, `stop` subcommands `P2` `M`
 - [ ] 1.5.1.4 — Add install instructions for each shell to `docs/completions.md` `P2` `S`
