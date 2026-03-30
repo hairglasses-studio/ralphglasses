@@ -115,6 +115,7 @@ func BenchmarkHandleList(b *testing.B) {
 	ctx := context.Background()
 	req := makeRequest(nil)
 
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		result, err := srv.handleList(ctx, req)
@@ -132,6 +133,7 @@ func BenchmarkHandleStatus(b *testing.B) {
 	ctx := context.Background()
 	req := makeRequest(map[string]any{"repo": "bench-repo"})
 
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		result, err := srv.handleStatus(ctx, req)
@@ -156,6 +158,7 @@ func BenchmarkHandleSessionList(b *testing.B) {
 	ctx := context.Background()
 	req := makeRequest(nil)
 
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		result, err := srv.handleSessionList(ctx, req)
@@ -169,6 +172,7 @@ func BenchmarkHandleSessionList(b *testing.B) {
 }
 
 func BenchmarkJsonResult(b *testing.B) {
+	b.ReportAllocs()
 	// Build a payload representative of a typical handleList response.
 	payload := []map[string]any{
 		{"name": "repo-alpha", "status": "running", "loop_count": 42, "calls": "15/100", "circuit": "CLOSED", "managed": true},

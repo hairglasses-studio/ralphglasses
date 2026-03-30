@@ -9,6 +9,7 @@ import (
 )
 
 func BenchmarkLoadConfig(b *testing.B) {
+	b.ReportAllocs()
 	dir := b.TempDir()
 	var content string
 	for i := 0; i < 20; i++ {
@@ -22,6 +23,7 @@ func BenchmarkLoadConfig(b *testing.B) {
 }
 
 func BenchmarkLoadStatus(b *testing.B) {
+	b.ReportAllocs()
 	dir := b.TempDir()
 	ralphDir := filepath.Join(dir, ".ralph")
 	_ = os.MkdirAll(ralphDir, 0755)
@@ -35,6 +37,7 @@ func BenchmarkLoadStatus(b *testing.B) {
 }
 
 func BenchmarkRefreshRepo(b *testing.B) {
+	b.ReportAllocs()
 	dir := b.TempDir()
 	ralphDir := filepath.Join(dir, ".ralph")
 	_ = os.MkdirAll(ralphDir, 0755)

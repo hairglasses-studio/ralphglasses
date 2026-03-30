@@ -427,7 +427,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 ### 1.5.4 — Config schema documentation
 - [ ] 1.5.4.1 — Write `docs/ralphrc-reference.md`: all keys, types, defaults, descriptions, examples `P2` `M`
 - [ ] 1.5.4.2 — Add `ralphglasses config list-keys` subcommand: print all known keys with defaults `P2` `S`
-- [ ] 1.5.4.3 — Add `ralphglasses config validate` subcommand: check `.ralphrc` against schema `P1` `S`
+- [x] 1.5.4.3 — Add `ralphglasses config validate` subcommand: check `.ralphrc` against schema `P1` `S`
 - [ ] 1.5.4.4 — Add `ralphglasses config init` subcommand: generate `.ralphrc` with all keys and defaults `P2` `S`
 - [ ] 1.5.4.5 — Auto-generate config docs from schema (Go code -> Markdown via `go:generate`) `P2` `M`
 - **Acceptance:** `ralphglasses config list-keys` outputs all valid configuration keys
@@ -482,10 +482,10 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** All 115 tools register and pass integration tests with official SDK
 
 ### 1.5.12 — Benchmarking infrastructure
-- [ ] 1.5.12.1 — Add Go benchmarks for hot paths: `RefreshRepo`, `Scan`, `LoadStatus`, table rendering `P1` `M`
-- [ ] 1.5.12.2 — Add `benchstat` comparison in CI: detect performance regressions between commits `P1` `M`
+- [x] 1.5.12.1 — Add Go benchmarks for hot paths: `RefreshRepo`, `Scan`, `LoadStatus`, table rendering `P1` `M`
+- [x] 1.5.12.2 — Add `benchstat` comparison in CI: detect performance regressions between commits `P1` `M`
 - [ ] 1.5.12.3 — Add benchmark dashboard: track p50/p99 latencies over time `P2` `L`
-- [ ] 1.5.12.4 — Add memory allocation benchmarks: `b.ReportAllocs()` on all benchmark functions `P1` `S`
+- [x] 1.5.12.4 — Add memory allocation benchmarks: `b.ReportAllocs()` on all benchmark functions `P1` `S`
 - **Acceptance:** CI fails on >10% performance regression
 
 ## Phase 2: Multi-Session Fleet Management
@@ -564,7 +564,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 2.9.1 — `ralphglasses session list|start|stop|status` — non-TUI session management `P1` `M`
 - [ ] 2.9.2 — `ralphglasses worktree create|list|merge|clean` — worktree operations from CLI `P1` `M`
 - [ ] 2.9.3 — `ralphglasses budget status|set|reset` — budget management from CLI `P2` `S`
-- [ ] 2.9.4 — JSON output flag (`--json`) for all subcommands for scripting/piping `P1` `S`
+- [x] 2.9.4 — JSON output flag (`--json`) for all subcommands for scripting/piping `P1` `S`
 - **Acceptance:** all fleet operations available without TUI, JSON output parseable by `jq`
 
 ### 2.10 — Marathon.sh Go port `[PARALLEL — fully independent]`
