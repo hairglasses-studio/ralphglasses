@@ -71,12 +71,26 @@ type HourlySpend struct {
 
 // ForecastData holds all data needed to render the forecast view.
 type ForecastData struct {
-	TotalBudget   float64
-	CurrentSpend  float64
-	Providers     []ProviderCost
-	HourlySpends  []HourlySpend
-	StartTime     time.Time
+	TotalBudget    float64
+	CurrentSpend   float64
+	Providers      []ProviderCost
+	HourlySpends   []HourlySpend
+	StartTime      time.Time
 	ActiveSessions int
+
+	// Enhanced forecast fields (from fleet.Forecaster / fleet.CostPredictor)
+	BurnRatePerHour float64
+	Trend           string     // "accelerating", "stable", "decelerating", "increasing", "decreasing"
+	ExhaustionTime  *time.Time // predicted budget exhaustion
+	Anomalies       []ForecastAnomaly
+}
+
+// ForecastAnomaly represents a cost anomaly detected in the spend data.
+type ForecastAnomaly struct {
+	BucketIndex int
+	ZScore      float64
+	ActualUSD   float64
+	ExpectedUSD float64
 }
 
 // ForecastView displays a cost forecasting dashboard.
@@ -154,6 +168,10 @@ func (v ForecastView) Render() string {
 	b.WriteString(v.renderSummaryBoxes())
 	b.WriteString("\n\n")
 
+	// Budget projection bar
+	b.WriteString(v.renderBudgetBar())
+	b.WriteString("\n\n")
+
 	// Budget alerts
 	alerts := v.renderBudgetAlerts()
 	if alerts != "" {
@@ -161,8 +179,12 @@ func (v ForecastView) Render() string {
 		b.WriteString("\n\n")
 	}
 
-	// Sparkline chart
-	b.WriteString(v.renderSparkline())
+	// Sparkline chart with anomaly markers
+	b.WriteString(v.renderEnhancedSparkline())
+	b.WriteString("\n\n")
+
+	// Burn rate + trend + exhaustion ETA
+	b.WriteString(v.renderBurnRateSection())
 	b.WriteString("\n\n")
 
 	// Provider breakdown
@@ -253,6 +275,109 @@ func (v ForecastView) elapsedHours() float64 {
 		return 0
 	}
 	return time.Since(v.data.StartTime).Hours()
+}
+
+func (v ForecastView) renderBudgetBar() string {
+	var b strings.Builder
+	b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Budget Projection", styles.IconBudget)))
+	b.WriteString("\n")
+
+	pct := v.BudgetPercent()
+	barWidth := v.effectiveWidth() - 20 // leave room for percentage label
+	if barWidth < 20 {
+		barWidth = 20
+	}
+	b.WriteString("  ")
+	b.WriteString(BudgetProjectionBar(pct, barWidth))
+	b.WriteString("\n")
+	b.WriteString(styles.InfoStyle.Render(fmt.Sprintf("  $%.2f / $%.2f consumed",
+		v.data.CurrentSpend, v.data.TotalBudget)))
+
+	return b.String()
+}
+
+func (v ForecastView) renderEnhancedSparkline() string {
+	var b strings.Builder
+	b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Hourly Spend", styles.IconCost)))
+	b.WriteString("\n")
+
+	if len(v.data.HourlySpends) == 0 {
+		b.WriteString(styles.InfoStyle.Render("  No spend data yet."))
+		return b.String()
+	}
+
+	amounts := extractAmounts(v.data.HourlySpends)
+
+	// Build sparkline model with color gradient and anomaly markers
+	spark := NewSparklineModel(amounts)
+	sparkWidth := v.effectiveWidth() - 4
+	if sparkWidth > 0 {
+		spark.SetWidth(sparkWidth)
+	}
+
+	// Map ForecastAnomalies to sparkline AnomalyMarkers
+	if len(v.data.Anomalies) > 0 {
+		markers := make([]AnomalyMarker, 0, len(v.data.Anomalies))
+		for _, a := range v.data.Anomalies {
+			if a.BucketIndex >= 0 && a.BucketIndex < len(amounts) {
+				markers = append(markers, AnomalyMarker{
+					Index:   a.BucketIndex,
+					ZScore:  a.ZScore,
+					Message: fmt.Sprintf("$%.4f (expected $%.4f, z=%.1f)", a.ActualUSD, a.ExpectedUSD, a.ZScore),
+				})
+			}
+		}
+		spark.SetAnomalies(markers)
+	}
+
+	b.WriteString("  ")
+	b.WriteString(spark.Render())
+
+	// Legend
+	_, maxVal := minMax(amounts)
+	b.WriteString("\n")
+	legendParts := []string{
+		fmt.Sprintf("peak: $%.4f/hr", maxVal),
+		fmt.Sprintf("buckets: %d", len(v.data.HourlySpends)),
+	}
+	if len(v.data.Anomalies) > 0 {
+		legendParts = append(legendParts, fmt.Sprintf("anomalies: %d", len(v.data.Anomalies)))
+	}
+	b.WriteString(styles.InfoStyle.Render("  " + strings.Join(legendParts, "  ")))
+
+	return b.String()
+}
+
+func (v ForecastView) renderBurnRateSection() string {
+	var b strings.Builder
+	b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Burn Rate", styles.IconCost)))
+	b.WriteString("\n")
+
+	// Burn rate value
+	rate := v.data.BurnRatePerHour
+	if rate == 0 {
+		// Fallback: compute from elapsed time if no explicit rate provided
+		elapsed := v.elapsedHours()
+		if elapsed > 0 {
+			rate = v.data.CurrentSpend / elapsed
+		}
+	}
+	b.WriteString(fmt.Sprintf("  $%.4f/hr", rate))
+
+	// Trend indicator
+	trend := v.data.Trend
+	if trend == "" {
+		trend = "stable"
+	}
+	b.WriteString("  ")
+	b.WriteString(TrendIndicator(trend))
+
+	// Exhaustion ETA
+	b.WriteString("\n")
+	b.WriteString(fmt.Sprintf("  %s ETA: ", styles.IconClock))
+	b.WriteString(ExhaustionETA(v.data.ExhaustionTime))
+
+	return b.String()
 }
 
 func (v ForecastView) renderSummaryBoxes() string {
