@@ -7,7 +7,7 @@ LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSIO
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run
+.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man
 
 # Install pre-commit hook (idempotent)
 hooks:
@@ -136,6 +136,19 @@ install-prompt-improver: build-prompt-improver
 	sudo cp prompt-improver /usr/local/bin/prompt-improver
 	@if [ "$$(uname)" = "Darwin" ]; then sudo codesign -f -s - /usr/local/bin/prompt-improver; fi
 	@echo "prompt-improver installed to /usr/local/bin/prompt-improver"
+
+# Generate man pages
+man:
+	$(GO) run ./tools/gendoc/
+
+# Install man pages to system directory
+install-man: man
+	@MANDIR=/usr/local/share/man/man1; \
+	if [ ! -d "$$MANDIR" ]; then \
+		sudo mkdir -p "$$MANDIR"; \
+	fi; \
+	sudo cp man/man1/*.1 "$$MANDIR/"; \
+	echo "Man pages installed to $$MANDIR/"
 
 # Run go vet
 vet:
