@@ -326,7 +326,7 @@ Implements MCP spec features: structured output schemas, logging notifications.
 
 ### 1.2.5 — MCP Handler Framework
 - [ ] 1.2.5.1 — Extract ParamParser helper: type-safe parameter extraction with validation, replacing manual `getStringArg`/`getNumberArg` calls across 81 handlers `P1` `L`
-- [ ] 1.2.5.2 — Standardize error codes across all handlers: migrate from `errResult()` to `errCode()` with consistent error_code values (invalid_params, not_found, internal_error) `P1` `L`
+- [x] 1.2.5.2 — Standardize error codes across all handlers: migrate from `errResult()` to `errCode()` with consistent error_code values (invalid_params, not_found, internal_error) `P1` `L`
 - [ ] 1.2.5.3 — Handler test harness: mock Server with mock providers for table-driven tests, reducing per-handler test boilerplate `P1` `M`
 - [ ] 1.2.5.4 — Handler generator: codegen tool for new MCP tool scaffolding (registration + handler + test stub) `[BLOCKED BY 1.2.5.1, 1.2.5.2]` `P2` `M`
 - **Acceptance:** new handler scaffolding requires <10 LOC, all 81 handlers use ParamParser, zero raw `errResult()` calls remain
@@ -385,7 +385,7 @@ Implements MCP spec features: structured output schemas, logging notifications.
 
 ### 1.10 — TUI bounds safety
 - [x] 1.10.1 — SortCol out-of-bounds: clamped to valid range when columns change `P0` `S`
-- [ ] 1.10.2 — Add search UI to LogView: `/` to enter search, `n`/`N` for next/prev match `P2` `M`
+- [x] 1.10.2 — Add search UI to LogView: `/` to enter search, `n`/`N` for next/prev match `P2` `M`
 - [x] 1.10.3 — Audited all slice access in TUI components — 19 locations verified with proper guards `P0` `M`
 - [x] 1.10.4 — Add fuzz tests for table rendering with random column counts and data `P2` `M`
 - [x] 1.10.5 — Zero-height terminal guard: shows "Terminal too small" for width/height < 3 `P1` `S`
@@ -412,9 +412,9 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [x] 1.5.2.1 — Add `.goreleaser.yaml`: multi-arch builds (linux/amd64, linux/arm64, darwin/amd64, darwin/arm64) `[reconciled 2026-03-26]`
 - [x] 1.5.2.2 — GitHub Actions release workflow: tag push -> goreleaser -> GitHub Release with binaries — `.github/workflows/release.yml` `[reconciled 2026-03-26]`
 - [x] 1.5.2.3 — Add changelog generation: `goreleaser` changelog from conventional commits `P2` `S`
-- [ ] 1.5.2.4 — Add Docker image build: `ghcr.io/hairglasses-studio/ralphglasses` multi-arch manifest `P2` `M`
-- [ ] 1.5.2.5 — Add Homebrew tap: `hairglasses-studio/homebrew-tap` with goreleaser auto-update `P2` `M`
-- [ ] 1.5.2.6 — Add AUR package: `PKGBUILD` for Arch Linux users `P2` `S`
+- [x] 1.5.2.4 — Add Docker image build: `ghcr.io/hairglasses-studio/ralphglasses` multi-arch manifest `P2` `M`
+- [x] 1.5.2.5 — Add Homebrew tap: `hairglasses-studio/homebrew-tap` with goreleaser auto-update `P2` `M`
+- [x] 1.5.2.6 — Add AUR package: `PKGBUILD` for Arch Linux users `P2` `S`
 - **Acceptance:** `git tag v0.2.0 && git push --tags` produces release with binaries, Docker image, Homebrew formula
 
 ### 1.5.3 — Pre-commit hooks
@@ -425,11 +425,11 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** `pre-commit run --all-files` passes clean
 
 ### 1.5.4 — Config schema documentation
-- [ ] 1.5.4.1 — Write `docs/ralphrc-reference.md`: all keys, types, defaults, descriptions, examples `P2` `M`
+- [x] 1.5.4.1 — Write `docs/ralphrc-reference.md`: all keys, types, defaults, descriptions, examples `P2` `M`
 - [x] 1.5.4.2 — Add `ralphglasses config list-keys` subcommand: print all known keys with defaults `P2` `S`
 - [x] 1.5.4.3 — Add `ralphglasses config validate` subcommand: check `.ralphrc` against schema `P1` `S`
 - [x] 1.5.4.4 — Add `ralphglasses config init` subcommand: generate `.ralphrc` with all keys and defaults `P2` `S`
-- [ ] 1.5.4.5 — Auto-generate config docs from schema (Go code -> Markdown via `go:generate`) `P2` `M`
+- [x] 1.5.4.5 — Auto-generate config docs from schema (Go code -> Markdown via `go:generate`) `P2` `M`
 - **Acceptance:** `ralphglasses config list-keys` outputs all valid configuration keys
 
 ### 1.5.5 — Man page generation
@@ -446,9 +446,9 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** arm64 binary runs on Raspberry Pi 4/5
 
 ### 1.5.7 — Nix flake (optional)
-- [ ] 1.5.7.1 — Add `flake.nix` with `buildGoModule` + dev shell (Go, golangci-lint, shellcheck) `P2` `M`
+- [x] 1.5.7.1 — Add `flake.nix` with `buildGoModule` + dev shell (Go, golangci-lint, shellcheck) `P2` `M`
 - [ ] 1.5.7.2 — Add NixOS module: systemd service, option types for config `P2` `L`
-- [ ] 1.5.7.3 — Add `flake.lock` and CI check: `nix build` + `nix flake check` `P2` `S`
+- [x] 1.5.7.3 — Add `flake.lock` and CI check: `nix build` + `nix flake check` `P2` `S`
 - **Acceptance:** `nix run github:hairglasses-studio/ralphglasses` works
 
 ### 1.5.8 — Development containers
@@ -458,9 +458,9 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** `devcontainer up` provides working dev environment
 
 ### 1.5.9 — Documentation site
-- [ ] 1.5.9.1 — Add `docs/` site with mdBook or mkdocs: getting started, architecture, API reference `P2` `L`
-- [ ] 1.5.9.2 — Add GitHub Actions: build docs on push, deploy to GitHub Pages `P2` `M`
-- [ ] 1.5.9.3 — Add architecture diagrams: mermaid flowcharts for data flow, component relationships `P2` `M`
+- [x] 1.5.9.1 — Add `docs/` site with mdBook or mkdocs: getting started, architecture, API reference `P2` `L`
+- [x] 1.5.9.2 — Add GitHub Actions: build docs on push, deploy to GitHub Pages `P2` `M`
+- [x] 1.5.9.3 — Add architecture diagrams: mermaid flowcharts for data flow, component relationships `P2` `M`
 - [ ] 1.5.9.4 — Add MCP tool API reference: auto-generated from tool handler docstrings `P2` `L`
 - **Acceptance:** docs site live at `hairglasses-studio.github.io/ralphglasses`
 
@@ -522,23 +522,23 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** session auto-pauses when budget exhausted, alerts visible in TUI
 
 ### 2.4 — Fleet dashboard TUI view `[BLOCKED BY 2.1]`
-- [ ] 2.4.1 — Create `ViewFleet` in view stack with aggregate session table `P1` `M`
-- [ ] 2.4.2 — Columns: session name, repo, status, spend, loop count, model, uptime — sortable `P1` `M`
-- [ ] 2.4.3 — Live-update via watcher ticks: refresh spend/status/loop count per row `P1` `M`
-- [ ] 2.4.4 — Inline actions from fleet view: start/stop/pause selected session via keybinds `P1` `M`
+- [x] 2.4.1 — Create `ViewFleet` in view stack with aggregate session table `P1` `M`
+- [x] 2.4.2 — Columns: session name, repo, status, spend, loop count, model, uptime — sortable `P1` `M`
+- [x] 2.4.3 — Live-update via watcher ticks: refresh spend/status/loop count per row `P1` `M`
+- [x] 2.4.4 — Inline actions from fleet view: start/stop/pause selected session via keybinds `P1` `M`
 - [x] 2.4.5 — Add fleet summary bar: total sessions, running count, total spend, aggregate throughput `P1` `S`
 - **Acceptance:** fleet view shows all sessions with live-updating spend/status
 
 ### 2.5 — Session launcher `[BLOCKED BY 2.1, 2.2, 2.3]`
 - [x] 2.5.1 — Implement `:launch` command: pick repo from discovered list, set session name `P1` `M`
-- [ ] 2.5.2 — Add budget/model selection to launch flow: dropdown or tab-complete for model, numeric input for budget `P1` `M`
+- [x] 2.5.2 — Add budget/model selection to launch flow: dropdown or tab-complete for model, numeric input for budget `P1` `M`
 - [x] 2.5.3 — Default budget from `.ralphrc` (`RALPH_SESSION_BUDGET`) or global config fallback `P1` `S`
 - [x] 2.5.4 — Session templates: save current launch config as named template, load from template `P2` `M`
 - [x] 2.5.5 — Validate launch preconditions: repo exists, no conflicting worktree, budget available in pool `P1` `M`
 - **Acceptance:** can launch a named session with budget from TUI command mode
 
 ### 2.6 — Notification system `[PARALLEL — independent after 2.1]`
-- [ ] 2.6.1 — Desktop notification abstraction: `freedesktop.org` D-Bus (Linux), `osascript` (macOS) `P2` `M`
+- [x] 2.6.1 — Desktop notification abstraction: `freedesktop.org` D-Bus (Linux), `osascript` (macOS) `P2` `M`
 - [x] 2.6.2 — Define event types: session_complete, budget_warning, circuit_breaker_trip, crash, restart `P2` `S`
 - [x] 2.6.3 — Add `.ralphrc` config keys: `NOTIFY_DESKTOP=true`, `NOTIFY_SOUND=true` `P2` `S`
 - [x] 2.6.4 — Implement notification dedup/throttle: no repeat within 60s for same event type + session `P2` `M`
@@ -594,15 +594,15 @@ Tooling, release automation, and contributor workflow. All items independent of 
 ### 2.13 — Plugin system `[PARALLEL]`
 - [x] 2.13.1 — Define plugin interface: `Plugin{ Name(), Init(ctx), OnEvent(event), Shutdown() }` — implemented in `internal/plugin/interfaces.go` `[reconciled 2026-03-26]`
 - [x] 2.13.2 — Plugin discovery via hashicorp/go-plugin gRPC protocol (`internal/plugin/grpc.go`) `[reconciled 2026-03-26]`
-- [ ] 2.13.3 — Built-in plugin: `notify-desktop` (extract from 2.6 as reference implementation) `P2` `M`
+- [x] 2.13.3 — Built-in plugin: `notify-desktop` (extract from 2.6 as reference implementation) `P2` `M`
 - [ ] 2.13.4 — Plugin lifecycle: load on startup, unload on shutdown, hot-reload on SIGHUP `P2` `M`
 - [x] 2.13.5 — Plugin config: per-plugin config section in `.ralphrc` (e.g. `PLUGIN_NOTIFY_DESKTOP_SOUND=true`) `P2` `S`
 - **Acceptance:** external plugin loaded and receives session events
 
 ### 2.14 — SSH remote management `[PARALLEL]`
-- [ ] 2.14.1 — `ralphglasses remote add <name> <host>` — register remote thin client `P2` `M`
-- [ ] 2.14.2 — `ralphglasses remote status` — SSH into registered hosts, collect session status `P2` `M`
-- [ ] 2.14.3 — `ralphglasses remote start <host> <repo>` — start ralph loop on remote host `P2` `M`
+- [x] 2.14.1 — `ralphglasses remote add <name> <host>` — register remote thin client `P2` `M`
+- [x] 2.14.2 — `ralphglasses remote status` — SSH into registered hosts, collect session status `P2` `M`
+- [x] 2.14.3 — `ralphglasses remote start <host> <repo>` — start ralph loop on remote host `P2` `M`
 - [ ] 2.14.4 — Aggregate remote sessions into fleet view (poll via SSH tunnel) `P2` `L`
 - [ ] 2.14.5 — SSH key management: `~/.ralphglasses/ssh/` with per-host key configuration `P2` `M`
 - **Acceptance:** fleet view shows sessions from multiple physical machines
@@ -818,8 +818,8 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 - [x] `distro/systemd/ralphglasses.service` — TUI autostart after graphical target
 
 **Remaining:**
-- [ ] 4.1.1 — `distro/Makefile` target `build`: `docker build` with build args `P1` `M`
-- [ ] 4.1.2 — `distro/Makefile` target `squashfs`: extract rootfs, `mksquashfs` with xz `P1` `M`
+- [x] 4.1.1 — `distro/Makefile` target `build`: `docker build` with build args `P1` `M`
+- [x] 4.1.2 — `distro/Makefile` target `squashfs`: extract rootfs, `mksquashfs` with xz `P1` `M`
 - [ ] 4.1.3 — `distro/Makefile` target `iso`: `grub-mkrescue` with EFI + BIOS `P1` `M`
 - [ ] 4.1.4 — QEMU smoke test script: boot ISO, verify TUI starts `P1` `M`
 - [ ] 4.1.5 — CI integration: build ISO in GitHub Actions, upload as artifact `P2` `L`
@@ -868,10 +868,10 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 - **Acceptance:** OTA update replaces running image, rollback works on boot failure
 
 ### 4.7 — Health watchdog service `[PARALLEL]`
-- [ ] 4.7.1 — Systemd watchdog unit `P1` `S`
+- [x] 4.7.1 — Systemd watchdog unit `P1` `S`
 - [ ] 4.7.2 — Hardware health checks: GPU temp, disk space, memory `P1` `M`
 - [ ] 4.7.3 — Alert escalation `P2` `M`
-- [ ] 4.7.4 — Heartbeat file `P1` `S`
+- [x] 4.7.4 — Heartbeat file `P1` `S`
 - **Acceptance:** TUI auto-restarts within 10s of crash
 
 ### 4.8 — Marathon.sh hardening `[PARALLEL]`
@@ -908,8 +908,8 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 - [x] 5.1.1 — `internal/sandbox/` package: create container, manage lifecycle — `docker.go` `[reconciled 2026-03-26]`
 - [x] 5.1.2 — Container spec: bind-mount workspace, set `--cpus`, `--memory`, `--network` `[reconciled 2026-03-26]`
 - [x] 5.1.3 — Lifecycle binding: session start -> container start, session stop -> container stop + remove `[reconciled 2026-03-26]`
-- [ ] 5.1.4 — Log forwarding: capture container stdout/stderr -> session log stream `P1` `M`
-- [ ] 5.1.5 — GPU passthrough: `--gpus` flag for NVIDIA containers `P2` `M`
+- [x] 5.1.4 — Log forwarding: capture container stdout/stderr -> session log stream `P1` `M`
+- [x] 5.1.5 — GPU passthrough: `--gpus` flag for NVIDIA containers `P2` `M`
 - **Acceptance:** session runs inside container, cleanup on stop
 
 ### 5.2 — Incus/LXD containers
@@ -992,11 +992,11 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - **Acceptance:** ralph loop runs natively in Go, DAG visible in TUI
 
 ### 6.2 — R&D cycle orchestrator `[BLOCKED BY 6.1]`
-- [ ] 6.2.1 — Port perpetual improvement loop from claudekit rdcycle `P1` `L`
+- [x] 6.2.1 — Port perpetual improvement loop from claudekit rdcycle `P1` `L`
 - [x] 6.2.2 — Self-benchmark: coverage, lint score, build time, binary size per iteration `P1` `M`
-- [ ] 6.2.3 — Regression detection: compare benchmarks, flag regressions `P0` `M`
-- [ ] 6.2.4 — Auto-generate improvement tasks from benchmark regressions `P1` `L`
-- [ ] 6.2.5 — Cycle dashboard: iteration history, benchmark trends `P2` `M`
+- [x] 6.2.3 — Regression detection: compare benchmarks, flag regressions `P0` `M`
+- [x] 6.2.4 — Auto-generate improvement tasks from benchmark regressions `P1` `L`
+- [x] 6.2.5 — Cycle dashboard: iteration history, benchmark trends `P2` `M`
 - **Acceptance:** automated benchmark -> task generation cycle runs unattended
 
 ### 6.3 — Cross-session coordination `[BLOCKED BY 6.1, 2.1]`
@@ -1016,8 +1016,8 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - **Acceptance:** Grafana dashboard shows session metrics over time
 
 ### 6.5 — External notifications `[PARALLEL]`
-- [ ] 6.5.1 — Webhook dispatcher `P2` `M`
-- [ ] 6.5.2 — Discord integration `P2` `M`
+- [x] 6.5.1 — Webhook dispatcher `P2` `M`
+- [x] 6.5.2 — Discord integration `P2` `M`
 - [ ] 6.5.3 — Slack integration `P2` `M`
 - [x] 6.5.4 — Notification templates `P2` `S`
 - [x] 6.5.5 — Rate limiting and retry `P2` `M`
@@ -1025,9 +1025,9 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 
 ### 6.6 — Model routing
 - [x] 6.6.1 — Model registry: available models with capabilities, cost/token, context window `P1` `M`
-- [ ] 6.6.2 — Task-type classifier: map task types to preferred models `P1` `M`
+- [x] 6.6.2 — Task-type classifier: map task types to preferred models `P1` `M`
 - [x] 6.6.3 — Routing rules in `.ralphrc` `P1` `S`
-- [ ] 6.6.4 — Dynamic routing: switch model mid-session based on task type `P1` `L`
+- [x] 6.6.4 — Dynamic routing: switch model mid-session based on task type `P1` `L`
 - [x] 6.6.5 — Cost optimization: suggest cheaper model when task below threshold `P1` `M`
 - **Acceptance:** different task types route to appropriate models
 

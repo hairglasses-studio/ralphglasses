@@ -1,0 +1,37 @@
+# Maintainer: hairglasses-studio <https://github.com/hairglasses-studio>
+pkgname=ralphglasses
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Command-and-control TUI for parallel multi-LLM agent fleets"
+arch=('x86_64' 'aarch64')
+url="https://github.com/hairglasses-studio/ralphglasses"
+license=('MIT')
+depends=()
+makedepends=('go>=1.26')
+source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+  cd "${pkgname}-${pkgver}"
+  export CGO_ENABLED=0
+  export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+  go build \
+    -ldflags="-s -w -X github.com/hairglasses-studio/ralphglasses/cmd.version=${pkgver}" \
+    -o ${pkgname} .
+}
+
+package() {
+  cd "${pkgname}-${pkgver}"
+  install -Dm755 ${pkgname} "${pkgdir}/usr/bin/${pkgname}"
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+  # Shell completions
+  install -Dm644 completions/ralphglasses.bash "${pkgdir}/usr/share/bash-completion/completions/ralphglasses" 2>/dev/null || true
+  install -Dm644 completions/_ralphglasses "${pkgdir}/usr/share/zsh/site-functions/_ralphglasses" 2>/dev/null || true
+  install -Dm644 completions/ralphglasses.fish "${pkgdir}/usr/share/fish/vendor_completions.d/ralphglasses.fish" 2>/dev/null || true
+
+  # Man pages
+  if [ -d man/man1 ]; then
+    install -Dm644 man/man1/*.1 -t "${pkgdir}/usr/share/man/man1/"
+  fi
+}
