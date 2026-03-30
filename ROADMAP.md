@@ -65,7 +65,7 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
   - File: `internal/roadmap/research.go` — implement actual TF-IDF or keyword overlap scoring
   - **Acceptance:** Relevance scores vary meaningfully (stddev > 0.15)
 
-- [ ] **QW-11** — Clean phantom fleet work (73% stale, 109 phantom "001" repo entries) `P1` `S`
+- [x] **QW-11** — Clean phantom fleet work (73% stale, 109 phantom "001" repo entries) `P1` `S`
   - File: `internal/fleet/coordinator.go` — add stale task reaper, validate repo paths on submission
   - **Acceptance:** `fleet_status` shows 0 phantom entries after cleanup
 
