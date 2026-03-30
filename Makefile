@@ -7,7 +7,7 @@ LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSIO
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke smoke-arm64 fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap skill-doc
+.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke smoke-arm64 fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap skill-doc update-tool-counts
 
 # Install pre-commit hook (idempotent)
 hooks:
@@ -295,6 +295,11 @@ docker:
 # Run ralphglasses in Docker (mounts current directory as /workspace)
 docker-run:
 	docker run --rm -it -v $(PWD):/workspace ralphglasses:latest --scan-path /workspace
+
+# Regenerate tool_counts_generated.go from the live registry
+update-tool-counts:
+	$(GO) generate ./internal/mcpserver/...
+	@echo "tool_counts_generated.go updated"
 
 # Plugin example target (placeholder — see internal/plugin/loader.go TODO)
 # Actual .so plugin compilation requires: go build -buildmode=plugin -o my-plugin.so ./my-plugin/
