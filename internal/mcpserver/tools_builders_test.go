@@ -14,23 +14,31 @@ type builderSpec struct {
 }
 
 // allBuilderSpecs returns the canonical list of builder specs covering all 13
-// namespaces.  The minTools counts are taken from the current source code and
-// act as a regression guard — they must be updated when tools are added.
+// namespaces.  The minTools counts come from GeneratedToolCounts (auto-generated
+// by gen-tool-counts) so they never need manual updates; re-generate with:
+//
+//	go generate ./internal/mcpserver/...  (or: make update-tool-counts)
 func allBuilderSpecs() []builderSpec {
+	minFor := func(name string) int {
+		if c, ok := GeneratedToolCounts[name]; ok {
+			return c
+		}
+		return 1 // safe fallback: at least one tool
+	}
 	return []builderSpec{
-		{"core", (*Server).buildCoreGroup, 10, true},
-		{"session", (*Server).buildSessionGroup, 15, true},
-		{"loop", (*Server).buildLoopGroup, 9, true},
-		{"prompt", (*Server).buildPromptGroup, 8, true},
-		{"fleet", (*Server).buildFleetGroup, 9, true},
-		{"repo", (*Server).buildRepoGroup, 5, true},
-		{"roadmap", (*Server).buildRoadmapGroup, 5, true},
-		{"team", (*Server).buildTeamGroup, 6, true},
-		{"awesome", (*Server).buildAwesomeGroup, 5, true},
-		{"advanced", (*Server).buildAdvancedGroup, 23, true},
-		{"eval", (*Server).buildEvalGroup, 6, true},
-		{"fleet_h", (*Server).buildFleetHGroup, 5, true},
-		{"observability", (*Server).buildObservabilityGroup, 12, true},
+		{"core", (*Server).buildCoreGroup, minFor("core"), true},
+		{"session", (*Server).buildSessionGroup, minFor("session"), true},
+		{"loop", (*Server).buildLoopGroup, minFor("loop"), true},
+		{"prompt", (*Server).buildPromptGroup, minFor("prompt"), true},
+		{"fleet", (*Server).buildFleetGroup, minFor("fleet"), true},
+		{"repo", (*Server).buildRepoGroup, minFor("repo"), true},
+		{"roadmap", (*Server).buildRoadmapGroup, minFor("roadmap"), true},
+		{"team", (*Server).buildTeamGroup, minFor("team"), true},
+		{"awesome", (*Server).buildAwesomeGroup, minFor("awesome"), true},
+		{"advanced", (*Server).buildAdvancedGroup, minFor("advanced"), true},
+		{"eval", (*Server).buildEvalGroup, minFor("eval"), true},
+		{"fleet_h", (*Server).buildFleetHGroup, minFor("fleet_h"), true},
+		{"observability", (*Server).buildObservabilityGroup, minFor("observability"), true},
 	}
 }
 
