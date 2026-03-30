@@ -126,15 +126,25 @@ func TestCloudScheduler_Schedule(t *testing.T) {
 		t.Fatal("expected non-empty task ID")
 	}
 
-	// Give the goroutine time to run through the lifecycle.
-	time.Sleep(200 * time.Millisecond)
-
-	task, err := cs.TaskStatus(taskID)
-	if err != nil {
-		t.Fatalf("TaskStatus error: %v", err)
-	}
-	if task.ID != taskID {
-		t.Errorf("task ID mismatch: got %q, want %q", task.ID, taskID)
+	// Poll until the task is no longer pending.
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("task did not progress within deadline")
+		default:
+		}
+		task, err := cs.TaskStatus(taskID)
+		if err != nil {
+			t.Fatalf("TaskStatus error: %v", err)
+		}
+		if task.ID != taskID {
+			t.Errorf("task ID mismatch: got %q, want %q", task.ID, taskID)
+		}
+		if task.State != CloudTaskPending {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
 	}
 }
 
@@ -254,12 +264,24 @@ func TestCloudScheduler_Cancel(t *testing.T) {
 	// Wait for provisioning to complete before cancelling.
 	select {
 	case <-provisionDone:
-	case <-time.After(2 * time.Second):
+	case <-time.After(5 * time.Second):
 		t.Fatal("provisioning did not complete")
 	}
 
-	// Small delay so the task enters Running state.
-	time.Sleep(50 * time.Millisecond)
+	// Poll until the task enters Running state.
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("task did not reach running state within deadline")
+		default:
+		}
+		task, _ := cs.TaskStatus(taskID)
+		if task.State == CloudTaskRunning {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
 
 	if err := cs.Cancel(ctx, taskID); err != nil {
 		t.Fatalf("Cancel error: %v", err)
@@ -348,13 +370,25 @@ func TestCloudScheduler_ConcurrencyLimit(t *testing.T) {
 	defer cancel()
 
 	// First task should succeed.
-	_, err := cs.Schedule(ctx, validMarathonConfig(), validVMSpec())
+	id1, err := cs.Schedule(ctx, validMarathonConfig(), validVMSpec())
 	if err != nil {
 		t.Fatalf("first Schedule error: %v", err)
 	}
 
-	// Wait for provisioning.
-	time.Sleep(100 * time.Millisecond)
+	// Poll until task is in an active state (provisioning/running).
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("task did not reach active state within deadline")
+		default:
+		}
+		task, _ := cs.TaskStatus(id1)
+		if task.State == CloudTaskProvisioning || task.State == CloudTaskRunning {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
 
 	// Second task should be rejected.
 	_, err = cs.Schedule(ctx, validMarathonConfig(), validVMSpec())
@@ -375,8 +409,20 @@ func TestCloudScheduler_ListTasks(t *testing.T) {
 	id1, _ := cs.Schedule(ctx, validMarathonConfig(), validVMSpec())
 	id2, _ := cs.Schedule(ctx, validMarathonConfig(), validVMSpec())
 
-	// Wait for them to complete.
-	time.Sleep(500 * time.Millisecond)
+	// Poll until both tasks reach a terminal state.
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("tasks did not complete within deadline")
+		default:
+		}
+		all := cs.ListTasks([]CloudTaskState{CloudTaskCompleted, CloudTaskFailed})
+		if len(all) >= 2 {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
 
 	all := cs.ListTasks(nil)
 	if len(all) != 2 {
@@ -402,8 +448,20 @@ func TestCloudScheduler_ListTasksFilterByState(t *testing.T) {
 	ctx := context.Background()
 	cs.Schedule(ctx, validMarathonConfig(), validVMSpec())
 
-	// Wait for completion.
-	time.Sleep(500 * time.Millisecond)
+	// Poll until task reaches a terminal state.
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("task did not complete within deadline")
+		default:
+		}
+		done := cs.ListTasks([]CloudTaskState{CloudTaskCompleted, CloudTaskFailed})
+		if len(done) > 0 {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
 
 	completed := cs.ListTasks([]CloudTaskState{CloudTaskCompleted})
 	pending := cs.ListTasks([]CloudTaskState{CloudTaskPending})
@@ -434,8 +492,20 @@ func TestCloudScheduler_TotalCostUSD(t *testing.T) {
 	ctx := context.Background()
 	cs.Schedule(ctx, validMarathonConfig(), validVMSpec())
 
-	// Wait for completion.
-	time.Sleep(500 * time.Millisecond)
+	// Poll until task reaches a terminal state.
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("task did not complete within deadline")
+		default:
+		}
+		done := cs.ListTasks([]CloudTaskState{CloudTaskCompleted, CloudTaskFailed})
+		if len(done) > 0 {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
 
 	total := cs.TotalCostUSD()
 	// Expected: VM cost (2.00) + marathon cost (1.50) = 3.50
@@ -480,27 +550,26 @@ func TestCloudScheduler_VMTerminatedOnFailure(t *testing.T) {
 	ctx := context.Background()
 	taskID, _ := cs.Schedule(ctx, validMarathonConfig(), validVMSpec())
 
-	// Wait for failure.
-	deadline := time.After(2 * time.Second)
+	// Wait for failure state AND VM termination.
+	// The defer in runTask terminates the VM after failTask sets state,
+	// so we must poll for both conditions to avoid a race.
+	deadline := time.After(5 * time.Second)
 	for {
 		select {
 		case <-deadline:
-			t.Fatal("task did not fail within deadline")
+			t.Fatal("task did not fail and terminate VM within deadline")
 		default:
 		}
 
 		task, _ := cs.TaskStatus(taskID)
-		if task.State == CloudTaskFailed {
+		mock.mu.Lock()
+		terminated := mock.terminateCount
+		mock.mu.Unlock()
+
+		if task.State == CloudTaskFailed && terminated > 0 {
 			break
 		}
 		time.Sleep(50 * time.Millisecond)
-	}
-
-	// VM should still be terminated on failure.
-	mock.mu.Lock()
-	defer mock.mu.Unlock()
-	if mock.terminateCount == 0 {
-		t.Error("VM was not terminated after marathon failure")
 	}
 }
 
