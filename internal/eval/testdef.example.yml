@@ -1,0 +1,30 @@
+# A/B Test Definition: Claude Sonnet vs Gemini Flash
+# Compare two providers on the same coding task.
+
+name: claude-vs-gemini-coding
+description: Compare Claude Sonnet and Gemini Flash on Go coding tasks
+
+variant_a:
+  name: claude-sonnet
+  provider: claude
+  model: claude-sonnet-4-20250514
+  prompt: "Write a Go function that implements a concurrent-safe LRU cache with TTL expiration"
+  temperature: 0.3
+
+variant_b:
+  name: gemini-flash
+  provider: gemini
+  model: gemini-2.5-flash
+  prompt: "Write a Go function that implements a concurrent-safe LRU cache with TTL expiration"
+  temperature: 0.5
+
+metrics:
+  - name: code_quality
+    type: quality
+  - name: response_latency
+    type: latency
+  - name: token_cost
+    type: cost
+
+sample_size: 30
+timeout: 10m
