@@ -183,8 +183,8 @@ func (lf *LeaderFailover) tryAcquireLock() {
 		return
 	}
 
-	// Small delay then verify we won the race.
-	time.Sleep(time.Millisecond)
+	// Delay proportional to heartbeat interval then verify we won the race.
+	time.Sleep(lf.heartbeatInterval / 4)
 	verify, err := lf.readLock()
 	if err != nil || verify.InstanceID != lf.instanceID {
 		if err == nil {

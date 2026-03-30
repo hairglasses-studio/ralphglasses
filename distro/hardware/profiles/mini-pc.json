@@ -1,0 +1,36 @@
+{
+  "name": "mini-pc",
+  "description": "Intel NUC-style mini PC — integrated graphics, single monitor, 16GB RAM",
+  "cpu": {
+    "arch": "x86_64",
+    "cores": 4,
+    "model_pattern": "Intel Core i[357]"
+  },
+  "gpu_count": 1,
+  "gpus": [
+    {
+      "role": "primary",
+      "vendor": "intel",
+      "model_pattern": "Intel UHD|Iris",
+      "driver": "i915",
+      "pci_id": ""
+    }
+  ],
+  "monitor_count": 1,
+  "ram_mb": 16384,
+  "storage_type": "nvme",
+  "network": {
+    "primary": "ethernet",
+    "wifi": true,
+    "bandwidth_mbps": 1000
+  },
+  "xorg": {
+    "gpu_conf": false,
+    "multi_head": false
+  },
+  "kernel": {
+    "min_version": "5.15"
+  },
+  "blacklist_modules": [],
+  "notes": "Compact deployment node. Suitable for single-session or relay agent."
+}

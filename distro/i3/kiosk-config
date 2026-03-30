@@ -1,0 +1,178 @@
+# i3 kiosk-mode config for ralphglasses thin client
+#
+# Boots directly into ralphglasses TUI fullscreen on all 7 monitors.
+# No window decorations, no desktop, no distractions.
+#
+# Hardware target: ASUS ProArt X870E-CREATOR WIFI
+#   - GPU 0: NVIDIA RTX 4090 (DP-1..DP-3, HDMI-0)
+#   - GPU 1: AMD iGPU fallback (HDMI-1, DP-4, DP-5)
+#   - 7 monitors total
+#
+# Install: distro/scripts/kiosk-setup.sh
+# Normal config: distro/i3/config
+
+# ═══════════════════════════════════════════════════════════════════════
+# Modifier key
+# ═══════════════════════════════════════════════════════════════════════
+set $mod Mod4
+
+# ═══════════════════════════════════════════════════════════════════════
+# Monitor assignments — update to match xrandr --listmonitors output.
+# hw-detect.sh writes detected output names to /etc/ralphglasses/monitors.env
+# which kiosk-setup.sh sources to rewrite these values.
+# ═══════════════════════════════════════════════════════════════════════
+set $mon1 DP-1
+set $mon2 DP-2
+set $mon3 DP-3
+set $mon4 HDMI-0
+set $mon5 HDMI-1
+set $mon6 DP-4
+set $mon7 DP-5
+
+# ═══════════════════════════════════════════════════════════════════════
+# Workspace → monitor mapping (1:1 for 7 monitors)
+# ═══════════════════════════════════════════════════════════════════════
+workspace 1 output $mon1
+workspace 2 output $mon2
+workspace 3 output $mon3
+workspace 4 output $mon4
+workspace 5 output $mon5
+workspace 6 output $mon6
+workspace 7 output $mon7
+
+# ═══════════════════════════════════════════════════════════════════════
+# Appearance — zero chrome kiosk mode
+# ═══════════════════════════════════════════════════════════════════════
+font pango:monospace 0
+default_border none
+default_floating_border none
+hide_edge_borders both
+
+# Disable titlebars entirely
+for_window [class=".*"] border none
+for_window [class=".*"] title_format ""
+
+# Force all windows fullscreen
+for_window [class="Alacritty"] fullscreen enable
+
+# Colors (k9s-inspired dark theme — minimal, most are invisible in kiosk)
+# class                 border  bground text    indicator child_border
+client.focused          #1a1b26 #1a1b26 #c0caf5 #1a1b26   #1a1b26
+client.focused_inactive #1a1b26 #1a1b26 #888888 #1a1b26   #1a1b26
+client.unfocused        #1a1b26 #1a1b26 #555555 #1a1b26   #1a1b26
+client.urgent           #f7768e #f7768e #1a1b26 #f7768e   #f7768e
+client.background       #1a1b26
+
+# No status bar in kiosk mode — the TUI itself is the dashboard
+# Uncomment to re-enable for debugging:
+# bar {
+#     status_command i3blocks -c /opt/ralphglasses/distro/i3/i3blocks.conf
+#     position top
+#     mode hide
+#     hidden_state hide
+#     modifier none
+#     colors {
+#         background #1a1b26
+#         statusline #c0caf5
+#     }
+# }
+
+# ═══════════════════════════════════════════════════════════════════════
+# Emergency keybindings — these are the ONLY keybindings in kiosk mode
+# ═══════════════════════════════════════════════════════════════════════
+
+# Emergency exit — kills i3, drops to TTY
+# Ctrl+Alt+Backspace (classic X11 zap)
+bindsym Control+Mod1+BackSpace exit
+
+# Emergency reload — reloads i3 config without killing sessions
+bindsym $mod+Shift+c reload
+
+# Emergency restart — restarts i3 in-place, preserves layout
+bindsym $mod+Shift+r restart
+
+# Switch to normal (non-kiosk) config and reload
+# Mod+Escape — swap kiosk config for normal config
+bindsym $mod+Escape exec --no-startup-id bash -c '\
+    cp /opt/ralphglasses/distro/i3/config /home/ralph/.config/i3/config && \
+    i3-msg reload'
+
+# ═══════════════════════════════════════════════════════════════════════
+# Workspace navigation — needed to move between monitors
+# ═══════════════════════════════════════════════════════════════════════
+bindsym $mod+1 workspace number 1
+bindsym $mod+2 workspace number 2
+bindsym $mod+3 workspace number 3
+bindsym $mod+4 workspace number 4
+bindsym $mod+5 workspace number 5
+bindsym $mod+6 workspace number 6
+bindsym $mod+7 workspace number 7
+
+# Move focused container to workspace
+bindsym $mod+Shift+1 move container to workspace number 1
+bindsym $mod+Shift+2 move container to workspace number 2
+bindsym $mod+Shift+3 move container to workspace number 3
+bindsym $mod+Shift+4 move container to workspace number 4
+bindsym $mod+Shift+5 move container to workspace number 5
+bindsym $mod+Shift+6 move container to workspace number 6
+bindsym $mod+Shift+7 move container to workspace number 7
+
+# Focus between monitors
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+
+# ═══════════════════════════════════════════════════════════════════════
+# Auto-start — launch ralphglasses TUI on all 7 workspaces
+#
+# Each workspace gets its own alacritty instance running ralphglasses.
+# The TUI handles its own session management per workspace.
+# Stagger launches by 0.5s to avoid GPU contention during X11 init.
+# ═══════════════════════════════════════════════════════════════════════
+
+# Workspace 1: primary control surface
+exec --no-startup-id i3-msg 'workspace 1; exec alacritty --class rg-ws1 -e /usr/local/bin/ralphglasses --scan-path /workspace'
+
+# Workspaces 2-7: additional fleet surfaces (staggered start)
+exec --no-startup-id sleep 0.5 && i3-msg 'workspace 2; exec alacritty --class rg-ws2 -e /usr/local/bin/ralphglasses --scan-path /workspace'
+exec --no-startup-id sleep 1.0 && i3-msg 'workspace 3; exec alacritty --class rg-ws3 -e /usr/local/bin/ralphglasses --scan-path /workspace'
+exec --no-startup-id sleep 1.5 && i3-msg 'workspace 4; exec alacritty --class rg-ws4 -e /usr/local/bin/ralphglasses --scan-path /workspace'
+exec --no-startup-id sleep 2.0 && i3-msg 'workspace 5; exec alacritty --class rg-ws5 -e /usr/local/bin/ralphglasses --scan-path /workspace'
+exec --no-startup-id sleep 2.5 && i3-msg 'workspace 6; exec alacritty --class rg-ws6 -e /usr/local/bin/ralphglasses --scan-path /workspace'
+exec --no-startup-id sleep 3.0 && i3-msg 'workspace 7; exec alacritty --class rg-ws7 -e /usr/local/bin/ralphglasses --scan-path /workspace'
+
+# Assign each instance to its workspace by WM_CLASS
+assign [class="rg-ws1"] workspace 1
+assign [class="rg-ws2"] workspace 2
+assign [class="rg-ws3"] workspace 3
+assign [class="rg-ws4"] workspace 4
+assign [class="rg-ws5"] workspace 5
+assign [class="rg-ws6"] workspace 6
+assign [class="rg-ws7"] workspace 7
+
+# ═══════════════════════════════════════════════════════════════════════
+# Display setup — run autorandr to configure multi-monitor layout
+# ═══════════════════════════════════════════════════════════════════════
+exec --no-startup-id autorandr --change
+
+# Disable screen blanking / DPMS — kiosk should never sleep
+exec --no-startup-id xset s off
+exec --no-startup-id xset -dpms
+exec --no-startup-id xset s noblank
+
+# ═══════════════════════════════════════════════════════════════════════
+# Watchdog — restart ralphglasses if it crashes
+# Systemd watchdog.service handles this at the service level.
+# At the i3 level, we re-launch if the window closes unexpectedly.
+# ═══════════════════════════════════════════════════════════════════════
+exec --no-startup-id bash -c '\
+    while true; do \
+        sleep 10; \
+        for ws in 1 2 3 4 5 6 7; do \
+            count=$(i3-msg -t get_tree | jq "[.. | .nodes? // empty | .[] | select(.window_properties.class? == \"rg-ws${ws}\")] | length" 2>/dev/null || echo 0); \
+            if [ "$count" -eq 0 ]; then \
+                i3-msg "workspace ${ws}; exec alacritty --class rg-ws${ws} -e /usr/local/bin/ralphglasses --scan-path /workspace"; \
+            fi; \
+        done; \
+    done'
