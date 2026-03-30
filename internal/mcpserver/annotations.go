@@ -129,6 +129,7 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_eval_counterfactual": {Title: "Counterfactual Eval", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_eval_ab_test":        {Title: "A/B Test Eval", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_eval_changepoints":   {Title: "Changepoint Eval", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_eval_significance":   {Title: "Significance Test", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_anomaly_detect":      {Title: "Anomaly Detection", ReadOnlyHint: boolPtr(true)},
 
 	// ── fleet_h ──────────────────────────────────────────────────────────
