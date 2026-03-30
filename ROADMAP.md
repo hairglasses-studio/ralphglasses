@@ -29,7 +29,7 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
   - File: `internal/session/loop_worker.go` — add JSON schema validation + retry with format reminder
   - **Acceptance:** JSON parse retry rate < 5%
 
-- [ ] **QW-2** — Enable cascade routing by default (code exists in `internal/session/cascade.go`, fleet audit shows NOT configured) `P0` `S`
+- [x] **QW-2** — Enable cascade routing by default (code exists in `internal/session/cascade.go`, fleet audit shows NOT configured) `P0` `S`
   - File: `.ralphrc` default + `internal/session/manager.go` — set `CASCADE_ENABLED=true` in defaults
   - **Acceptance:** New sessions use cascade routing without explicit config
 
