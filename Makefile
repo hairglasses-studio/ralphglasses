@@ -7,7 +7,7 @@ LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSIO
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke smoke-arm64 fuzz bench bench-compare build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap skill-doc update-tool-counts
+.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke smoke-arm64 fuzz bench bench-compare bench-dashboard build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap skill-doc update-tool-counts
 
 # Install pre-commit hook (idempotent)
 hooks:
@@ -100,6 +100,10 @@ bench-compare: bench
 	else \
 		echo "No bench-old.txt found. Run 'make bench' on the baseline first, then 'cp bench-new.txt bench-old.txt'."; \
 	fi
+
+# Benchmark dashboard: parse results and emit markdown summary with regression check
+bench-dashboard: bench
+	@bash scripts/bench-dashboard.sh bench-new.txt
 
 # Run BATS tests for shell scripts
 test-scripts:
