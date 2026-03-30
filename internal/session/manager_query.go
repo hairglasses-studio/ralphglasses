@@ -65,3 +65,26 @@ func (m *Manager) GetWorkflowRun(id string) (*WorkflowRun, bool) {
 	run, ok := m.workflowRuns[id]
 	return run, ok
 }
+
+// GetStatus is a hot-read path that returns the SessionStatus for id without
+// acquiring sessionsMu. It reads from the lock-free statusCache (Phase 10.5.1).
+// Returns ("", false) if the session is not found in the cache.
+func (m *Manager) GetStatus(id string) (SessionStatus, bool) {
+	v, ok := m.statusCache.Load(id)
+	if !ok {
+		return "", false
+	}
+	return v.(SessionStatus), true
+}
+
+// updateStatusCache updates the lock-free statusCache for the given session.
+// Call this whenever a session's Status field changes.
+func (m *Manager) updateStatusCache(id string, status SessionStatus) {
+	m.statusCache.Store(id, status)
+}
+
+// evictStatusCache removes the status cache entry for a session.
+// Call this when a session is deleted.
+func (m *Manager) evictStatusCache(id string) {
+	m.statusCache.Delete(id)
+}

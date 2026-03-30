@@ -114,6 +114,7 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	m.sessionsMu.Lock()
 	m.sessions[s.ID] = s
 	m.sessionsMu.Unlock()
+	m.updateStatusCache(s.ID, s.Status) // Phase 10.5.1: seed hot-read status cache
 
 	// Persist initial state to disk
 	m.persistOrWarn(s, "after session start")
@@ -164,6 +165,7 @@ func (m *Manager) Stop(id string) error {
 	}
 
 	s.Status = StatusStopped
+	m.updateStatusCache(s.ID, StatusStopped) // Phase 10.5.1: update hot-read status cache
 
 	// Cancel context first
 	if s.cancel != nil {
@@ -489,6 +491,7 @@ func (m *Manager) RehydrateFromStore() error {
 		}
 
 		m.sessions[sess.ID] = sess
+		m.updateStatusCache(sess.ID, sess.Status) // Phase 10.5.1: seed status cache
 		rehydrated++
 	}
 
@@ -550,6 +553,7 @@ func (m *Manager) LoadExternalSessions() {
 		}
 
 		m.sessions[id] = &s
+		m.updateStatusCache(id, s.Status) // Phase 10.5.1: seed status cache
 	}
 
 	// Clean up terminal sessions from memory and disk.
@@ -583,6 +587,7 @@ func (m *Manager) LoadExternalSessions() {
 
 		if shouldRemove {
 			delete(m.sessions, id)
+			m.evictStatusCache(id) // Phase 10.5.1: evict hot-read cache entry
 			if err := os.Remove(filepath.Join(m.stateDir, id+".json")); err != nil && !os.IsNotExist(err) {
 				slog.Warn("failed to remove session state file", "session", id, "error", err)
 			}
