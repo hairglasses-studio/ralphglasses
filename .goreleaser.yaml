@@ -6,6 +6,7 @@ before:
   hooks:
     - go mod tidy
     - go run ./tools/gendoc/
+    - sh -c "mkdir -p completions && go run . completion bash > completions/ralphglasses.bash && go run . completion zsh > completions/_ralphglasses && go run . completion fish > completions/ralphglasses.fish"
 
 builds:
   - id: ralphglasses
@@ -53,6 +54,7 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - man/man1/*
+      - completions/*
 
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"

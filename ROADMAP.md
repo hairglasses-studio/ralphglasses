@@ -405,7 +405,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [x] 1.5.1.2 — Add dynamic completions for `--scan-path` (directory completion) `P2` `S`
 - [x] 1.5.1.3 — Add dynamic completions for repo names in `status`, `start`, `stop` subcommands `P2` `M`
 - [ ] 1.5.1.4 — Add install instructions for each shell to `docs/completions.md` `P2` `S`
-- [ ] 1.5.1.5 — Package completions in release artifacts (`.deb` installs to `/usr/share/bash-completion/`) `P2` `M`
+- [x] 1.5.1.5 — Package completions in release artifacts (`.deb` installs to `/usr/share/bash-completion/`) `P2` `M`
 - **Acceptance:** `ralphglasses <tab>` completes subcommands and repo names
 
 ### 1.5.2 — Release automation `[BLOCKED BY 0.5.7]`
@@ -533,7 +533,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 2.5.1 — Implement `:launch` command: pick repo from discovered list, set session name `P1` `M`
 - [ ] 2.5.2 — Add budget/model selection to launch flow: dropdown or tab-complete for model, numeric input for budget `P1` `M`
 - [x] 2.5.3 — Default budget from `.ralphrc` (`RALPH_SESSION_BUDGET`) or global config fallback `P1` `S`
-- [ ] 2.5.4 — Session templates: save current launch config as named template, load from template `P2` `M`
+- [x] 2.5.4 — Session templates: save current launch config as named template, load from template `P2` `M`
 - [x] 2.5.5 — Validate launch preconditions: repo exists, no conflicting worktree, budget available in pool `P1` `M`
 - **Acceptance:** can launch a named session with budget from TUI command mode
 
@@ -545,7 +545,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** desktop notification fires on circuit breaker trip
 
 ### 2.7 — tmux integration `[PARALLEL — independent after 2.1]`
-- [ ] 2.7.1 — `internal/tmux/` package: create/list/kill sessions, name windows, attach/detach `P2` `M`
+- [x] 2.7.1 — `internal/tmux/` package: create/list/kill sessions, name windows, attach/detach `P2` `M`
 - [ ] 2.7.2 — One tmux pane per agent session: auto-create on session launch, name = session ID `P2` `M`
 - [x] 2.7.3 — `ralphglasses tmux` subcommand: `list`, `attach <session>`, `detach` `P2` `S`
 - [ ] 2.7.4 — Headless mode: detect no TTY -> auto-use tmux instead of TUI `P1` `M`
@@ -569,7 +569,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 
 ### 2.10 — Marathon.sh Go port `[PARALLEL — fully independent]`
 - [ ] 2.10.1 — Port `marathon.sh` to `internal/marathon/` package: duration limit, budget limit, checkpoints `P1` `L`
-- [ ] 2.10.2 — `ralphglasses marathon` subcommand: `--budget`, `--duration`, `--checkpoint-interval` `P1` `M`
+- [x] 2.10.2 — `ralphglasses marathon` subcommand: `--budget`, `--duration`, `--checkpoint-interval` `P1` `M`
 - [x] 2.10.3 — Replace shell signal handling with Go `os/signal` (SIGINT/SIGTERM -> graceful shutdown) `P1` `M`
 - [x] 2.10.4 — Git checkpoint tagging in Go: `git tag marathon-<timestamp>` at configurable interval `P1` `S`
 - [x] 2.10.5 — Structured marathon logging via `slog` (replace bash `log()` function) `P1` `S`
@@ -585,7 +585,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 
 ### 2.12 — Telemetry opt-in `[PARALLEL]`
 - [x] 2.12.1 — Define telemetry event schema: session_start, session_stop, crash, budget_hit, circuit_trip `P2` `S`
-- [ ] 2.12.2 — Local JSONL file writer: append events to `~/.ralphglasses/telemetry.jsonl` `P2` `M`
+- [x] 2.12.2 — Local JSONL file writer: append events to `~/.ralphglasses/telemetry.jsonl` `P2` `M`
 - [x] 2.12.3 — Add `--telemetry` flag and `TELEMETRY_ENABLED` config key (default: off) `P2` `S`
 - [ ] 2.12.4 — Optional remote POST: send anonymized events to configurable endpoint `P2` `M`
 - [x] 2.12.5 — Add `ralphglasses telemetry export` subcommand: export telemetry as CSV/JSON `P2` `S`
