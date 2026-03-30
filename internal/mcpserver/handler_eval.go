@@ -286,6 +286,169 @@ func (s *Server) handleEvalChangepoints(_ context.Context, req mcp.CallToolReque
 	}), nil
 }
 
+func (s *Server) handleEvalSignificance(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	repoName := getStringArg(req, "repo")
+	if repoName == "" {
+		return codedError(ErrInvalidParams, "repo name required"), nil
+	}
+
+	if s.reposNil() {
+		if err := s.scan(); err != nil {
+			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
+		}
+	}
+	r := s.findRepo(repoName)
+	if r == nil {
+		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
+	}
+
+	hours := getNumberArg(req, "hours", 168)
+	since := time.Now().Add(-time.Duration(hours) * time.Hour)
+
+	obsPath := session.ObservationPath(r.Path)
+	observations, err := session.LoadObservations(obsPath, since)
+	if err != nil {
+		return codedError(ErrFilesystem, fmt.Sprintf("load observations: %v", err)), nil
+	}
+
+	if len(observations) == 0 {
+		return emptyResult("significance"), nil
+	}
+
+	mode := getStringArg(req, "mode")
+
+	switch mode {
+	case "providers":
+		providerA := getStringArg(req, "provider_a")
+		providerB := getStringArg(req, "provider_b")
+		if providerA == "" || providerB == "" {
+			return codedError(ErrInvalidParams, "providers mode requires provider_a and provider_b"), nil
+		}
+
+		var groupA, groupB []float64
+		for _, o := range observations {
+			switch o.WorkerProvider {
+			case providerA:
+				if o.VerifyPassed {
+					groupA = append(groupA, 1)
+				} else {
+					groupA = append(groupA, 0)
+				}
+			case providerB:
+				if o.VerifyPassed {
+					groupB = append(groupB, 1)
+				} else {
+					groupB = append(groupB, 0)
+				}
+			}
+		}
+
+		if len(groupA) < abTestMinGroupSize || len(groupB) < abTestMinGroupSize {
+			return jsonResult(map[string]any{
+				"status":           "insufficient_data",
+				"group_a_count":    len(groupA),
+				"group_b_count":    len(groupB),
+				"minimum_required": abTestMinGroupSize,
+			}), nil
+		}
+
+		successFn := func(v float64) bool { return v == 1 }
+		report := eval.GenerateReport(groupA, groupB, successFn)
+
+		return jsonResult(map[string]any{
+			"repo":           repoName,
+			"hours":          hours,
+			"mode":           mode,
+			"provider_a":     providerA,
+			"provider_b":     providerB,
+			"observations":   len(observations),
+			"report":         report,
+		}), nil
+
+	case "periods":
+		splitHoursAgo := getNumberArg(req, "split_hours_ago", 0)
+		if splitHoursAgo <= 0 {
+			return codedError(ErrInvalidParams, "periods mode requires split_hours_ago > 0"), nil
+		}
+		splitTime := time.Now().Add(-time.Duration(splitHoursAgo) * time.Hour)
+
+		var groupA, groupB []float64
+		for _, o := range observations {
+			val := 0.0
+			if o.VerifyPassed {
+				val = 1.0
+			}
+			if o.Timestamp.Before(splitTime) {
+				groupA = append(groupA, val)
+			} else {
+				groupB = append(groupB, val)
+			}
+		}
+
+		if len(groupA) < abTestMinGroupSize || len(groupB) < abTestMinGroupSize {
+			return jsonResult(map[string]any{
+				"status":           "insufficient_data",
+				"group_a_count":    len(groupA),
+				"group_b_count":    len(groupB),
+				"minimum_required": abTestMinGroupSize,
+			}), nil
+		}
+
+		successFn := func(v float64) bool { return v == 1 }
+		report := eval.GenerateReport(groupA, groupB, successFn)
+
+		return jsonResult(map[string]any{
+			"repo":            repoName,
+			"hours":           hours,
+			"mode":            mode,
+			"split_hours_ago": splitHoursAgo,
+			"observations":    len(observations),
+			"report":          report,
+		}), nil
+
+	case "cost":
+		providerA := getStringArg(req, "provider_a")
+		providerB := getStringArg(req, "provider_b")
+		if providerA == "" || providerB == "" {
+			return codedError(ErrInvalidParams, "cost mode requires provider_a and provider_b"), nil
+		}
+
+		var groupA, groupB []float64
+		for _, o := range observations {
+			switch o.WorkerProvider {
+			case providerA:
+				groupA = append(groupA, o.TotalCostUSD)
+			case providerB:
+				groupB = append(groupB, o.TotalCostUSD)
+			}
+		}
+
+		if len(groupA) < abTestMinGroupSize || len(groupB) < abTestMinGroupSize {
+			return jsonResult(map[string]any{
+				"status":           "insufficient_data",
+				"group_a_count":    len(groupA),
+				"group_b_count":    len(groupB),
+				"minimum_required": abTestMinGroupSize,
+			}), nil
+		}
+
+		tResult := eval.WelchTTest(groupA, groupB)
+
+		return jsonResult(map[string]any{
+			"repo":         repoName,
+			"hours":        hours,
+			"mode":         mode,
+			"provider_a":   providerA,
+			"provider_b":   providerB,
+			"observations": len(observations),
+			"t_test":       tResult,
+		}), nil
+
+	default:
+		return codedError(ErrInvalidParams, fmt.Sprintf("unknown mode: %q (use providers, periods, or cost)", mode)), nil
+	}
+}
+
 // handleBanditStatus returns current multi-armed bandit arm statistics
 // for provider selection. Reports whether bandit is configured and, if so,
 // the cascade router's bandit configuration status and recent results.
