@@ -337,3 +337,324 @@ func TestCheckpointDir(t *testing.T) {
 		t.Fatalf("checkpointDir: got %q, want %q", got, want)
 	}
 }
+
+// --- Config validation ---
+
+func TestConfig_Validate_Valid(t *testing.T) {
+	cfg := Config{
+		BudgetUSD:          10.0,
+		Duration:           time.Minute,
+		CheckpointInterval: 30 * time.Second,
+		SessionCount:       2,
+		RepoPath:           "/tmp/repo",
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected valid config, got error: %v", err)
+	}
+}
+
+func TestConfig_Validate_ZeroDuration(t *testing.T) {
+	cfg := Config{
+		BudgetUSD:          10.0,
+		CheckpointInterval: time.Minute,
+		RepoPath:           "/tmp/repo",
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected error for zero duration")
+	}
+}
+
+func TestConfig_Validate_NegativeDuration(t *testing.T) {
+	cfg := Config{
+		BudgetUSD:          10.0,
+		Duration:           -time.Second,
+		CheckpointInterval: time.Minute,
+		RepoPath:           "/tmp/repo",
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected error for negative duration")
+	}
+}
+
+func TestConfig_Validate_ZeroCheckpointInterval(t *testing.T) {
+	cfg := Config{
+		BudgetUSD: 10.0,
+		Duration:  time.Minute,
+		RepoPath:  "/tmp/repo",
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected error for zero checkpoint interval")
+	}
+}
+
+func TestConfig_Validate_NegativeBudget(t *testing.T) {
+	cfg := Config{
+		BudgetUSD:          -5.0,
+		Duration:           time.Minute,
+		CheckpointInterval: time.Minute,
+		RepoPath:           "/tmp/repo",
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected error for negative budget")
+	}
+}
+
+func TestConfig_Validate_ZeroBudget(t *testing.T) {
+	cfg := Config{
+		Duration:           time.Minute,
+		CheckpointInterval: time.Minute,
+		RepoPath:           "/tmp/repo",
+	}
+	// Zero budget is valid (means unlimited).
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("zero budget should be valid: %v", err)
+	}
+}
+
+func TestConfig_Validate_NegativeSessionCount(t *testing.T) {
+	cfg := Config{
+		BudgetUSD:          10.0,
+		Duration:           time.Minute,
+		CheckpointInterval: time.Minute,
+		SessionCount:       -1,
+		RepoPath:           "/tmp/repo",
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected error for negative session count")
+	}
+}
+
+func TestConfig_Validate_EmptyRepoPath(t *testing.T) {
+	cfg := Config{
+		BudgetUSD:          10.0,
+		Duration:           time.Minute,
+		CheckpointInterval: time.Minute,
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected error for empty repo path")
+	}
+}
+
+// --- SessionCount default ---
+
+func TestNew_DefaultSessionCount(t *testing.T) {
+	bus := events.NewBus(100)
+	mgr := session.NewManagerWithBus(bus)
+
+	m := New(Config{
+		BudgetUSD:          10,
+		Duration:           time.Minute,
+		CheckpointInterval: time.Minute,
+	}, mgr, bus)
+
+	if m.cfg.SessionCount != 1 {
+		t.Fatalf("expected default SessionCount=1, got %d", m.cfg.SessionCount)
+	}
+}
+
+func TestNew_CustomSessionCount(t *testing.T) {
+	bus := events.NewBus(100)
+	mgr := session.NewManagerWithBus(bus)
+
+	m := New(Config{
+		BudgetUSD:          10,
+		Duration:           time.Minute,
+		CheckpointInterval: time.Minute,
+		SessionCount:       4,
+	}, mgr, bus)
+
+	if m.cfg.SessionCount != 4 {
+		t.Fatalf("expected SessionCount=4, got %d", m.cfg.SessionCount)
+	}
+}
+
+// --- Status ---
+
+func TestStatus_BeforeRun(t *testing.T) {
+	bus := events.NewBus(100)
+	mgr := session.NewManagerWithBus(bus)
+
+	m := New(Config{
+		BudgetUSD:          50.0,
+		Duration:           time.Minute,
+		CheckpointInterval: time.Minute,
+		SessionCount:       3,
+	}, mgr, bus)
+
+	st := m.Status()
+	if st.Running {
+		t.Fatal("expected not running before Run")
+	}
+	if st.Elapsed != 0 {
+		t.Fatalf("expected zero elapsed, got %s", st.Elapsed)
+	}
+	if st.BudgetUSD != 50.0 {
+		t.Fatalf("expected budget 50.0, got %f", st.BudgetUSD)
+	}
+	if st.SessionCount != 3 {
+		t.Fatalf("expected session count 3, got %d", st.SessionCount)
+	}
+	if st.SessionsActive != 0 {
+		t.Fatalf("expected 0 active sessions, got %d", st.SessionsActive)
+	}
+}
+
+func TestStatus_DuringRun(t *testing.T) {
+	m, _ := newTestMarathon(t, Config{
+		BudgetUSD: 100.0,
+		Duration:  300 * time.Millisecond,
+	})
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, _ = m.Run(context.Background())
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+	st := m.Status()
+	if st.Elapsed <= 0 {
+		t.Fatal("expected positive elapsed during Run")
+	}
+	if st.BudgetUSD != 100.0 {
+		t.Fatalf("expected budget 100.0, got %f", st.BudgetUSD)
+	}
+	<-done
+}
+
+// --- Manual Checkpoint ---
+
+func TestCheckpoint_Manual(t *testing.T) {
+	m, dir := newTestMarathon(t, Config{
+		BudgetUSD: 100.0,
+		Duration:  time.Second,
+	})
+
+	// Manual checkpoint before Run (no supervisor).
+	if err := m.Checkpoint(); err != nil {
+		t.Fatalf("Checkpoint: %v", err)
+	}
+
+	cpDir := filepath.Join(dir, ".ralph", "marathon", "checkpoints")
+	cps, err := ListCheckpoints(cpDir)
+	if err != nil {
+		t.Fatalf("ListCheckpoints: %v", err)
+	}
+	if len(cps) != 1 {
+		t.Fatalf("expected 1 manual checkpoint, got %d", len(cps))
+	}
+}
+
+func TestCheckpoint_ManualDuringRun(t *testing.T) {
+	m, dir := newTestMarathon(t, Config{
+		BudgetUSD:          100.0,
+		Duration:           400 * time.Millisecond,
+		CheckpointInterval: 10 * time.Second, // long interval so periodic doesn't fire
+	})
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, _ = m.Run(context.Background())
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	if err := m.Checkpoint(); err != nil {
+		t.Fatalf("Checkpoint during Run: %v", err)
+	}
+
+	<-done
+
+	cpDir := filepath.Join(dir, ".ralph", "marathon", "checkpoints")
+	cps, err := ListCheckpoints(cpDir)
+	if err != nil {
+		t.Fatalf("ListCheckpoints: %v", err)
+	}
+	// At least 1 manual + 1 final checkpoint from finalize.
+	if len(cps) < 2 {
+		t.Fatalf("expected >= 2 checkpoints, got %d", len(cps))
+	}
+}
+
+// --- Budget enforcement ---
+
+func TestRun_BudgetEnforcement(t *testing.T) {
+	m, _ := newTestMarathon(t, Config{
+		BudgetUSD: 5.0,
+		Duration:  5 * time.Second, // long duration
+	})
+
+	// Publish a cost event that exceeds budget shortly after start.
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		m.bus.Publish(events.Event{
+			Type:     events.CostUpdate,
+			RepoPath: m.cfg.RepoPath,
+			Data:     map[string]any{"spent_usd": 6.0},
+		})
+	}()
+
+	start := time.Now()
+	stats, err := m.Run(context.Background())
+	elapsed := time.Since(start)
+
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if stats == nil {
+		t.Fatal("nil stats")
+	}
+	// Should have terminated well before the 5s duration.
+	if elapsed > 2*time.Second {
+		t.Fatalf("marathon should have stopped on budget, ran for %s", elapsed)
+	}
+	if stats.TotalSpentUSD < 5.0 {
+		t.Fatalf("expected spend >= 5.0, got %f", stats.TotalSpentUSD)
+	}
+}
+
+// --- ErrBudgetExceeded sentinel ---
+
+func TestErrBudgetExceeded(t *testing.T) {
+	if ErrBudgetExceeded == nil {
+		t.Fatal("ErrBudgetExceeded should not be nil")
+	}
+	if ErrBudgetExceeded.Error() != "marathon: budget limit exceeded" {
+		t.Fatalf("unexpected error message: %s", ErrBudgetExceeded.Error())
+	}
+}
+
+// --- MarathonStatus JSON roundtrip ---
+
+func TestMarathonStatus_Fields(t *testing.T) {
+	st := MarathonStatus{
+		Running:         true,
+		SessionsActive:  3,
+		Elapsed:         5 * time.Minute,
+		SpentUSD:        12.50,
+		BudgetUSD:       100.0,
+		CyclesCompleted: 42,
+		SessionCount:    4,
+	}
+
+	data, err := json.Marshal(st)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+
+	var restored MarathonStatus
+	if err := json.Unmarshal(data, &restored); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+
+	if restored.SessionsActive != 3 {
+		t.Fatalf("SessionsActive: got %d, want 3", restored.SessionsActive)
+	}
+	if restored.BudgetUSD != 100.0 {
+		t.Fatalf("BudgetUSD: got %f, want 100.0", restored.BudgetUSD)
+	}
+	if restored.SessionCount != 4 {
+		t.Fatalf("SessionCount: got %d, want 4", restored.SessionCount)
+	}
+}

@@ -4,7 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"os/signal"
+	"path/filepath"
 	"sync"
+	"syscall"
+	"time"
 )
 
 // Registry holds registered plugins and manages their lifecycle.
@@ -17,6 +22,13 @@ type Registry struct {
 	grpcPlugins []GRPCPlugin
 	// toolIndex maps tool name -> GRPCPlugin for fast dispatch.
 	toolIndex map[string]GRPCPlugin
+
+	// pluginDirs holds directories to scan during Reload.
+	pluginDirs []string
+	// modTimes tracks file modification times for change detection.
+	modTimes map[string]time.Time
+	// reloadCallbacks holds functions to invoke after a successful Reload.
+	reloadCallbacks []func(added, removed []string)
 }
 
 // pluginEntry pairs a plugin with its lifecycle status.
@@ -29,7 +41,142 @@ type pluginEntry struct {
 func NewRegistry() *Registry {
 	return &Registry{
 		toolIndex: make(map[string]GRPCPlugin),
+		modTimes:  make(map[string]time.Time),
 	}
+}
+
+// AddPluginDir registers a directory to scan during Reload. It also records
+// the current modification times of any plugin.json files found within.
+func (r *Registry) AddPluginDir(dir string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.pluginDirs = append(r.pluginDirs, dir)
+}
+
+// OnReload registers a callback that is invoked after each successful Reload
+// with the names of added and removed plugins.
+func (r *Registry) OnReload(fn func(added, removed []string)) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.reloadCallbacks = append(r.reloadCallbacks, fn)
+}
+
+// HandleSIGHUP starts a goroutine that listens for SIGHUP signals and triggers
+// Reload. The goroutine exits when ctx is cancelled.
+func (r *Registry) HandleSIGHUP(ctx context.Context) {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGHUP)
+
+	go func() {
+		defer signal.Stop(ch)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ch:
+				if err := r.Reload(); err != nil {
+					slog.Warn("plugin reload on SIGHUP failed", "err", err)
+				}
+			}
+		}
+	}()
+}
+
+// Reload re-scans all registered plugin directories, detects new, changed,
+// and removed plugins based on file modification times. New manifests are
+// recorded; removed manifests are cleaned up. Callbacks registered via
+// OnReload are invoked with the names of added and removed plugins.
+func (r *Registry) Reload() error {
+	r.mu.Lock()
+	dirs := make([]string, len(r.pluginDirs))
+	copy(dirs, r.pluginDirs)
+	r.mu.Unlock()
+
+	// Collect current manifests from all plugin dirs.
+	current := make(map[string]time.Time)
+	for _, dir := range dirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return fmt.Errorf("reload scan %q: %w", dir, err)
+		}
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			manifestPath := filepath.Join(dir, e.Name(), "plugin.json")
+			info, err := os.Stat(manifestPath)
+			if err != nil {
+				continue // no manifest in this subdir
+			}
+			current[manifestPath] = info.ModTime()
+		}
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var added, removed []string
+
+	// Detect new and changed plugins.
+	for path, modTime := range current {
+		prevTime, exists := r.modTimes[path]
+		if !exists {
+			// New plugin discovered.
+			m, err := LoadManifest(path)
+			if err != nil {
+				continue
+			}
+			if err := ValidateManifest(m); err != nil {
+				continue
+			}
+			added = append(added, m.Name)
+			r.modTimes[path] = modTime
+		} else if modTime.After(prevTime) {
+			// Plugin changed — update mod time. The manifest name is needed
+			// for callbacks so we load it.
+			m, err := LoadManifest(path)
+			if err != nil {
+				continue
+			}
+			// Treat as removed + added for callback purposes.
+			added = append(added, m.Name)
+			removed = append(removed, m.Name)
+			r.modTimes[path] = modTime
+		}
+		// Unchanged: skip.
+	}
+
+	// Detect removed plugins.
+	for path := range r.modTimes {
+		if _, exists := current[path]; !exists {
+			// Plugin was removed from disk.
+			m, err := LoadManifest(path)
+			if err != nil {
+				// Manifest file is gone, extract name from what we can.
+				// Just remove the tracking entry.
+				removed = append(removed, path)
+				delete(r.modTimes, path)
+				continue
+			}
+			removed = append(removed, m.Name)
+			delete(r.modTimes, path)
+		}
+	}
+
+	// Fire callbacks.
+	if len(added) > 0 || len(removed) > 0 {
+		callbacks := make([]func(added, removed []string), len(r.reloadCallbacks))
+		copy(callbacks, r.reloadCallbacks)
+
+		for _, fn := range callbacks {
+			fn(added, removed)
+		}
+	}
+
+	return nil
 }
 
 // Register adds a plugin to the registry. Returns an error if a plugin

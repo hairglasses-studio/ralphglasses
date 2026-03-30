@@ -592,7 +592,7 @@ func (s *Server) handleEventPoll(_ context.Context, req mcp.CallToolRequest) (*m
 
 func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	pp := NewParamParser(argsMap(req))
-	action, errResult := pp.String("action")
+	action, errResult := pp.StringErr("action")
 	if errResult != nil {
 		return errResult, nil
 	}

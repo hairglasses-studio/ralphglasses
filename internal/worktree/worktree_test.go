@@ -617,6 +617,381 @@ func TestHasConflictsCleanRepo(t *testing.T) {
 	}
 }
 
+// --- Worktree struct API tests ---
+
+func TestCreateWorktreeDefault(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not found")
+	}
+
+	repo := initTestRepo(t)
+	ctx := context.Background()
+
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	wtPath := filepath.Join(base, "wt-struct")
+	wt, err := CreateWorktree(ctx, repo, "struct-branch", WithPath(wtPath))
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+	if wt.Path != wtPath {
+		t.Errorf("Path = %q, want %q", wt.Path, wtPath)
+	}
+	if wt.Branch != "struct-branch" {
+		t.Errorf("Branch = %q, want %q", wt.Branch, "struct-branch")
+	}
+	if wt.CreatedAt.IsZero() {
+		t.Error("CreatedAt should be set")
+	}
+
+	// Verify directory exists.
+	if _, err := os.Stat(wtPath); err != nil {
+		t.Fatalf("worktree directory not created: %v", err)
+	}
+}
+
+func TestCreateWorktreeWithBaseBranch(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not found")
+	}
+
+	repo := initTestRepo(t)
+	ctx := context.Background()
+
+	// Create a branch to use as base.
+	runGit(t, repo, "checkout", "-b", "base-for-test")
+	if err := os.WriteFile(filepath.Join(repo, "base.txt"), []byte("base\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, repo, "add", ".")
+	runGit(t, repo, "commit", "-m", "base commit")
+	runGit(t, repo, "checkout", "master")
+
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	wtPath := filepath.Join(base, "wt-base")
+	wt, err := CreateWorktree(ctx, repo, "derived-branch", WithPath(wtPath), WithBaseBranch("base-for-test"))
+	if err != nil {
+		// Try with "main" if "master" default branch name differs.
+		runGit(t, repo, "checkout", "-")
+		t.Fatalf("CreateWorktree with base branch: %v", err)
+	}
+	if wt.BaseBranch != "base-for-test" {
+		t.Errorf("BaseBranch = %q, want %q", wt.BaseBranch, "base-for-test")
+	}
+
+	// The file from the base branch should exist.
+	if _, err := os.Stat(filepath.Join(wtPath, "base.txt")); err != nil {
+		t.Errorf("base.txt should exist in worktree (inherited from base branch): %v", err)
+	}
+}
+
+func TestListWorktrees(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not found")
+	}
+
+	repo := initTestRepo(t)
+	ctx := context.Background()
+
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	wtPath := filepath.Join(base, "wt-list-struct")
+	_, err := CreateWorktree(ctx, repo, "list-struct-branch", WithPath(wtPath))
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+
+	wts, err := ListWorktrees(ctx, repo)
+	if err != nil {
+		t.Fatalf("ListWorktrees: %v", err)
+	}
+	if len(wts) != 2 {
+		t.Fatalf("expected 2 worktrees, got %d", len(wts))
+	}
+
+	var found bool
+	for _, wt := range wts {
+		if wt.Path == wtPath {
+			found = true
+			if wt.Branch != "list-struct-branch" {
+				t.Errorf("Branch = %q, want %q", wt.Branch, "list-struct-branch")
+			}
+		}
+	}
+	if !found {
+		t.Errorf("worktree %q not found in list", wtPath)
+	}
+}
+
+func TestRemoveWorktree(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not found")
+	}
+
+	repo := initTestRepo(t)
+	ctx := context.Background()
+
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	wtPath := filepath.Join(base, "wt-remove-struct")
+	wt, err := CreateWorktree(ctx, repo, "remove-struct-branch", WithPath(wtPath))
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+
+	if err := RemoveWorktree(ctx, repo, wt); err != nil {
+		t.Fatalf("RemoveWorktree: %v", err)
+	}
+
+	if _, err := os.Stat(wtPath); !os.IsNotExist(err) {
+		t.Fatalf("worktree directory should be removed")
+	}
+}
+
+func TestRemoveWorktreeNil(t *testing.T) {
+	ctx := context.Background()
+	err := RemoveWorktree(ctx, "/tmp", nil)
+	if err == nil {
+		t.Fatal("expected error for nil worktree")
+	}
+}
+
+func TestCheckout(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not found")
+	}
+
+	repo := initTestRepo(t)
+	ctx := context.Background()
+
+	// Create a second branch in the repo.
+	runGit(t, repo, "checkout", "-b", "checkout-target")
+	if err := os.WriteFile(filepath.Join(repo, "checkout.txt"), []byte("checkout\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, repo, "add", ".")
+	runGit(t, repo, "commit", "-m", "checkout target commit")
+	targetSHA := runGit(t, repo, "rev-parse", "HEAD")
+	runGit(t, repo, "checkout", "-")
+
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	wtPath := filepath.Join(base, "wt-checkout")
+	wt, err := CreateWorktree(ctx, repo, "checkout-branch", WithPath(wtPath))
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+
+	// Checkout a specific commit SHA.
+	if err := Checkout(ctx, wt, targetSHA); err != nil {
+		t.Fatalf("Checkout: %v", err)
+	}
+
+	// Verify HEAD matches.
+	head := runGit(t, wtPath, "rev-parse", "HEAD")
+	if head != targetSHA {
+		t.Errorf("HEAD = %q, want %q", head, targetSHA)
+	}
+}
+
+func TestCheckoutNilWorktree(t *testing.T) {
+	ctx := context.Background()
+	err := Checkout(ctx, nil, "main")
+	if err == nil {
+		t.Fatal("expected error for nil worktree")
+	}
+}
+
+func TestStatusClean(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not found")
+	}
+
+	repo := initTestRepo(t)
+	ctx := context.Background()
+
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	wtPath := filepath.Join(base, "wt-status-clean")
+	wt, err := CreateWorktree(ctx, repo, "status-clean-branch", WithPath(wtPath))
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+
+	st, err := Status(ctx, wt)
+	if err != nil {
+		t.Fatalf("Status: %v", err)
+	}
+	if !st.Clean {
+		t.Errorf("expected clean status, got Modified=%v Added=%v Deleted=%v", st.Modified, st.Added, st.Deleted)
+	}
+}
+
+func TestStatusDirty(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not found")
+	}
+
+	repo := initTestRepo(t)
+	ctx := context.Background()
+
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	wtPath := filepath.Join(base, "wt-status-dirty")
+	wt, err := CreateWorktree(ctx, repo, "status-dirty-branch", WithPath(wtPath))
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+
+	// Create an untracked file.
+	if err := os.WriteFile(filepath.Join(wtPath, "untracked.txt"), []byte("new\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Modify an existing file.
+	if err := os.WriteFile(filepath.Join(wtPath, "README.md"), []byte("modified\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	st, err := Status(ctx, wt)
+	if err != nil {
+		t.Fatalf("Status: %v", err)
+	}
+	if st.Clean {
+		t.Fatal("expected dirty status")
+	}
+	if len(st.Added) == 0 {
+		t.Error("expected at least one added (untracked) file")
+	}
+	if len(st.Modified) == 0 {
+		t.Error("expected at least one modified file")
+	}
+}
+
+func TestIsClean(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not found")
+	}
+
+	repo := initTestRepo(t)
+	ctx := context.Background()
+
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	wtPath := filepath.Join(base, "wt-isclean")
+	wt, err := CreateWorktree(ctx, repo, "isclean-branch", WithPath(wtPath))
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+
+	clean, err := IsClean(ctx, wt)
+	if err != nil {
+		t.Fatalf("IsClean: %v", err)
+	}
+	if !clean {
+		t.Error("expected clean worktree")
+	}
+
+	// Make it dirty.
+	if err := os.WriteFile(filepath.Join(wtPath, "dirty.txt"), []byte("dirty\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	clean, err = IsClean(ctx, wt)
+	if err != nil {
+		t.Fatalf("IsClean (dirty): %v", err)
+	}
+	if clean {
+		t.Error("expected dirty worktree")
+	}
+}
+
+func TestStatusNilWorktree(t *testing.T) {
+	ctx := context.Background()
+	_, err := Status(ctx, nil)
+	if err == nil {
+		t.Fatal("expected error for nil worktree")
+	}
+}
+
+func TestIsCleanNilWorktree(t *testing.T) {
+	ctx := context.Background()
+	_, err := IsClean(ctx, nil)
+	if err == nil {
+		t.Fatal("expected error for nil worktree")
+	}
+}
+
+func TestEnsureGit(t *testing.T) {
+	// This test just verifies that EnsureGit doesn't panic.
+	// If git is available (which it is for these tests), it should succeed.
+	if err := EnsureGit(); err != nil {
+		t.Skip("git not available")
+	}
+}
+
+func TestOptionsApplication(t *testing.T) {
+	// Verify that options are applied correctly (unit test, no git required).
+	o := &createOpts{}
+
+	WithBaseBranch("develop")(o)
+	if o.baseBranch != "develop" {
+		t.Errorf("baseBranch = %q, want %q", o.baseBranch, "develop")
+	}
+
+	WithPath("/tmp/my-wt")(o)
+	if o.path != "/tmp/my-wt" {
+		t.Errorf("path = %q, want %q", o.path, "/tmp/my-wt")
+	}
+
+	WithOrphan()(o)
+	if !o.orphan {
+		t.Error("orphan should be true")
+	}
+}
+
+func TestCreateWorktreeListRemoveLifecycle(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not found")
+	}
+
+	repo := initTestRepo(t)
+	ctx := context.Background()
+
+	// Create.
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	wtPath := filepath.Join(base, "wt-lifecycle-struct")
+	wt, err := CreateWorktree(ctx, repo, "lifecycle-struct", WithPath(wtPath))
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+
+	// List — should have 2 entries.
+	wts, err := ListWorktrees(ctx, repo)
+	if err != nil {
+		t.Fatalf("ListWorktrees: %v", err)
+	}
+	if len(wts) != 2 {
+		t.Fatalf("expected 2 worktrees, got %d", len(wts))
+	}
+
+	// Check status — should be clean.
+	clean, err := IsClean(ctx, wt)
+	if err != nil {
+		t.Fatalf("IsClean: %v", err)
+	}
+	if !clean {
+		t.Error("new worktree should be clean")
+	}
+
+	// Remove.
+	if err := RemoveWorktree(ctx, repo, wt); err != nil {
+		t.Fatalf("RemoveWorktree: %v", err)
+	}
+
+	// List — should have 1 entry.
+	wts, err = ListWorktrees(ctx, repo)
+	if err != nil {
+		t.Fatalf("ListWorktrees after remove: %v", err)
+	}
+	if len(wts) != 1 {
+		t.Fatalf("expected 1 worktree, got %d", len(wts))
+	}
+}
+
 func TestCreateFromRef(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not found")

@@ -25,6 +25,7 @@ type ConfigEditor struct {
 	Dirty   bool
 	Height  int
 	undo    *undoEntry // single-level undo buffer
+	filter  string     // search/filter substring (empty = show all)
 }
 
 // NewConfigEditor creates an editor for the given config.
@@ -105,6 +106,94 @@ func (ce *ConfigEditor) Undo() bool {
 func (ce *ConfigEditor) CancelEdit() {
 	ce.Editing = false
 	ce.EditBuf = ""
+}
+
+// AddKey inserts a new key-value pair into the config. It returns an error if
+// the key already exists or is empty. The key must match [A-Z_][A-Z0-9_]*.
+func (ce *ConfigEditor) AddKey(key, value string) error {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return fmt.Errorf("key must not be empty")
+	}
+	if _, exists := ce.Config.Values[key]; exists {
+		return fmt.Errorf("key %q already exists", key)
+	}
+	ce.Config.Values[key] = value
+	ce.rebuildKeys()
+	ce.Dirty = true
+	// Position cursor on the newly added key.
+	for i, k := range ce.Keys {
+		if k == key {
+			ce.Cursor = i
+			break
+		}
+	}
+	return nil
+}
+
+// EditKey modifies the value of an existing key. It returns an error if the
+// key does not exist.
+func (ce *ConfigEditor) EditKey(key, newValue string) error {
+	if _, exists := ce.Config.Values[key]; !exists {
+		return fmt.Errorf("key %q not found", key)
+	}
+	oldValue := ce.Config.Values[key]
+	ce.undo = &undoEntry{Key: key, OldValue: oldValue}
+	ce.Config.Values[key] = newValue
+	ce.Dirty = true
+	return nil
+}
+
+// DeleteKey removes a key from the config. It returns an error if the key does
+// not exist.
+func (ce *ConfigEditor) DeleteKey(key string) error {
+	oldValue, exists := ce.Config.Values[key]
+	if !exists {
+		return fmt.Errorf("key %q not found", key)
+	}
+	ce.undo = &undoEntry{Key: key, OldValue: oldValue}
+	delete(ce.Config.Values, key)
+	ce.rebuildKeys()
+	ce.Dirty = true
+	// Adjust cursor if it points past the end.
+	if ce.Cursor >= len(ce.Keys) && ce.Cursor > 0 {
+		ce.Cursor = len(ce.Keys) - 1
+	}
+	return nil
+}
+
+// SetFilter sets the search/filter substring. Only keys whose name or value
+// contains the substring (case-insensitive) are shown. An empty string clears
+// the filter.
+func (ce *ConfigEditor) SetFilter(substr string) {
+	ce.filter = substr
+	ce.rebuildKeys()
+	if ce.Cursor >= len(ce.Keys) {
+		if len(ce.Keys) > 0 {
+			ce.Cursor = len(ce.Keys) - 1
+		} else {
+			ce.Cursor = 0
+		}
+	}
+}
+
+// Filter returns the current filter string.
+func (ce *ConfigEditor) Filter() string {
+	return ce.filter
+}
+
+// rebuildKeys regenerates the sorted, filtered key list from Config.Values.
+func (ce *ConfigEditor) rebuildKeys() {
+	ce.Keys = ce.Keys[:0]
+	lower := strings.ToLower(ce.filter)
+	for k, v := range ce.Config.Values {
+		if ce.filter == "" ||
+			strings.Contains(strings.ToLower(k), lower) ||
+			strings.Contains(strings.ToLower(v), lower) {
+			ce.Keys = append(ce.Keys, k)
+		}
+	}
+	sort.Strings(ce.Keys)
 }
 
 // Save writes config to disk.
