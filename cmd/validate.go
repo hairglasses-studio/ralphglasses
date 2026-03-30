@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -12,6 +13,8 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
+
+var validateJSON bool
 
 var validateCmd = &cobra.Command{
 	Use:   "validate",
@@ -31,9 +34,14 @@ var validateCmd = &cobra.Command{
 			return fmt.Errorf("scan failed: %w", err)
 		}
 
+		type repoResult struct {
+			Name   string   `json:"name"`
+			Status string   `json:"status"`
+			Issues []string `json:"issues,omitempty"`
+		}
+
 		hasError := false
-		fmt.Printf("%-30s  %-7s  %s\n", "REPO", "STATUS", "ISSUES")
-		fmt.Println(strings.Repeat("-", 72))
+		var results []repoResult
 
 		for _, repo := range repos {
 			if !repo.HasRC {
@@ -41,7 +49,8 @@ var validateCmd = &cobra.Command{
 			}
 			cfg, err := model.LoadConfig(context.Background(), repo.Path)
 			if err != nil {
-				fmt.Printf("%-30s  %-7s  %s\n", repo.Name, "ERROR", "cannot read .ralphrc: "+err.Error())
+				r := repoResult{Name: repo.Name, Status: "ERROR", Issues: []string{"cannot read .ralphrc: " + err.Error()}}
+				results = append(results, r)
 				hasError = true
 				continue
 			}
@@ -59,12 +68,28 @@ var validateCmd = &cobra.Command{
 				if status != "ERROR" {
 					status = "WARN"
 				}
-				fmt.Printf("%-30s  %-7s  %s\n", repo.Name, status, issues[0])
-				for _, iss := range issues[1:] {
-					fmt.Printf("%-30s  %-7s  %s\n", "", "", iss)
+			}
+			results = append(results, repoResult{Name: repo.Name, Status: status, Issues: issues})
+		}
+
+		if validateJSON {
+			data, err := json.MarshalIndent(results, "", "  ")
+			if err != nil {
+				return fmt.Errorf("json marshal: %w", err)
+			}
+			fmt.Println(string(data))
+		} else {
+			fmt.Printf("%-30s  %-7s  %s\n", "REPO", "STATUS", "ISSUES")
+			fmt.Println(strings.Repeat("-", 72))
+			for _, r := range results {
+				if len(r.Issues) > 0 {
+					fmt.Printf("%-30s  %-7s  %s\n", r.Name, r.Status, r.Issues[0])
+					for _, iss := range r.Issues[1:] {
+						fmt.Printf("%-30s  %-7s  %s\n", "", "", iss)
+					}
+				} else {
+					fmt.Printf("%-30s  %-7s\n", r.Name, r.Status)
 				}
-			} else {
-				fmt.Printf("%-30s  %-7s\n", repo.Name, status)
 			}
 		}
 
@@ -125,5 +150,6 @@ func validateConfig(cfg *model.RalphConfig) []string {
 }
 
 func init() {
+	validateCmd.Flags().BoolVar(&validateJSON, "json", false, "Output results as JSON")
 	rootCmd.AddCommand(validateCmd)
 }

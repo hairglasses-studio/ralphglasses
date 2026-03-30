@@ -1265,6 +1265,7 @@ func TestStartAsyncWrites_ThenStopThenRestart(t *testing.T) {
 }
 
 func BenchmarkPublishCtx_Sync(b *testing.B) {
+	b.ReportAllocs()
 	dir := b.TempDir()
 	persistPath := filepath.Join(dir, "bench_sync.jsonl")
 
@@ -1284,6 +1285,7 @@ func BenchmarkPublishCtx_Sync(b *testing.B) {
 }
 
 func BenchmarkPublishCtx_Async(b *testing.B) {
+	b.ReportAllocs()
 	dir := b.TempDir()
 	persistPath := filepath.Join(dir, "bench_async.jsonl")
 
