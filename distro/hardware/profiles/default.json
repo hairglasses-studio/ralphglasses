@@ -1,0 +1,36 @@
+{
+  "name": "default",
+  "description": "Generic x86_64 workstation — single GPU, single monitor",
+  "cpu": {
+    "arch": "x86_64",
+    "cores": 4,
+    "model_pattern": ""
+  },
+  "gpu_count": 1,
+  "gpus": [
+    {
+      "role": "primary",
+      "vendor": "any",
+      "model_pattern": "",
+      "driver": "auto",
+      "pci_id": ""
+    }
+  ],
+  "monitor_count": 1,
+  "ram_mb": 16384,
+  "storage_type": "ssd",
+  "network": {
+    "primary": "ethernet",
+    "wifi": false,
+    "bandwidth_mbps": 1000
+  },
+  "xorg": {
+    "gpu_conf": false,
+    "multi_head": false
+  },
+  "kernel": {
+    "min_version": "5.15"
+  },
+  "blacklist_modules": [],
+  "notes": "Fallback profile when no specific hardware is detected."
+}

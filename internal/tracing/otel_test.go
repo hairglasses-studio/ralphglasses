@@ -1,423 +1,595 @@
 package tracing
 
 import (
-	"bytes"
 	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
-
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-// newTestRecorder creates an OTelRecorder backed by an in-memory exporter
-// for assertions. The exporter is returned so tests can inspect spans.
-func newTestRecorder(t *testing.T) (*OTelRecorder, *tracetest.InMemoryExporter) {
-	t.Helper()
-	exp := tracetest.NewInMemoryExporter()
-	res, err := resource.New(context.Background(),
-		resource.WithAttributes(semconv.ServiceName("ralphglasses-test")),
-	)
-	if err != nil {
-		t.Fatalf("resource.New: %v", err)
+func TestNewTracer_EmptyServiceName(t *testing.T) {
+	t.Parallel()
+	_, err := NewTracer("")
+	if err == nil {
+		t.Fatal("expected error for empty service name")
 	}
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSyncer(exp),
-		sdktrace.WithResource(res),
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-	)
-	rec := newOTelRecorderFromProvider(tp)
-	return rec, exp
 }
 
-func TestOTelRecorder_SpanCreationAndAttributes(t *testing.T) {
-	rec, exp := newTestRecorder(t)
+func TestNewTracer_NoopMode(t *testing.T) {
+	t.Parallel()
+	// No endpoint configured -> noop mode.
+	tr, err := NewTracer("test-svc")
+	if err != nil {
+		t.Fatalf("NewTracer: %v", err)
+	}
+	defer tr.Shutdown(context.Background())
 
-	ctx, span := rec.StartSessionSpan(context.Background(), "sess-42", "claude", "sonnet-4", "my-repo")
+	ctx, span := tr.StartSpan(context.Background(), "op1")
 	if span == nil {
-		t.Fatal("StartSessionSpan returned nil span")
+		t.Fatal("span should not be nil")
 	}
 	if ctx == nil {
-		t.Fatal("StartSessionSpan returned nil context")
+		t.Fatal("ctx should not be nil")
 	}
+	span.SetAttribute("key", "value")
+	span.SetStatus(StatusOK, "all good")
+	span.AddEvent("checkpoint")
+	span.End()
 
-	rec.EndSessionSpan(span, 1.25, 8, "completed")
-
-	spans := exp.GetSpans()
-	if len(spans) != 1 {
-		t.Fatalf("expected 1 span, got %d", len(spans))
-	}
-
-	s := spans[0]
-	if s.Name != "session" {
-		t.Errorf("span name = %q, want session", s.Name)
-	}
-
-	// Verify launch-time attributes.
-	assertAttr(t, s.Attributes, AttrGenAISessionID, "sess-42")
-	assertAttr(t, s.Attributes, AttrGenAIProvider, "claude")
-	assertAttr(t, s.Attributes, AttrGenAIModel, "sonnet-4")
-	assertAttr(t, s.Attributes, AttrGenAIRepoName, "my-repo")
-
-	// Verify end-time attributes.
-	assertAttrFloat(t, s.Attributes, AttrGenAICostUSD, 1.25)
-	assertAttrInt(t, s.Attributes, AttrGenAITurnCount, 8)
-	assertAttr(t, s.Attributes, AttrGenAIExitReason, "completed")
+	// No panic, no export error.
 }
 
-func TestOTelRecorder_IterationSpanParentChild(t *testing.T) {
-	rec, exp := newTestRecorder(t)
+func TestTracer_SpanExportToCollector(t *testing.T) {
+	t.Parallel()
 
-	// Create session span (parent).
-	ctx, span := rec.StartSessionSpan(context.Background(), "sess-parent", "gemini", "pro", "repo")
+	var mu sync.Mutex
+	var received []otlpExportRequest
 
-	// Create iteration spans (children).
-	ctx1, iter1 := rec.StartIterationSpan(ctx, "sess-parent", 1)
-	_ = ctx1
-	iter1.End()
-
-	ctx2, iter2 := rec.StartIterationSpan(ctx, "sess-parent", 2)
-	_ = ctx2
-	iter2.End()
-
-	rec.EndSessionSpan(span, 0.5, 2, "done")
-
-	spans := exp.GetSpans()
-	if len(spans) != 3 {
-		t.Fatalf("expected 3 spans (1 session + 2 iterations), got %d", len(spans))
-	}
-
-	// Find session span and iteration spans.
-	var sessionSpanID, sessionTraceID string
-	iterParentIDs := map[string]bool{}
-
-	for _, s := range spans {
-		if s.Name == "session" {
-			sessionSpanID = s.SpanContext.SpanID().String()
-			sessionTraceID = s.SpanContext.TraceID().String()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
 		}
-	}
-	if sessionSpanID == "" {
-		t.Fatal("no session span found")
-	}
-
-	for _, s := range spans {
-		if s.Name == "iteration" {
-			iterParentIDs[s.Parent.SpanID().String()] = true
-			// Verify same trace ID.
-			if s.SpanContext.TraceID().String() != sessionTraceID {
-				t.Errorf("iteration span trace ID %s != session trace ID %s",
-					s.SpanContext.TraceID(), sessionTraceID)
-			}
+		if ct := r.Header.Get("Content-Type"); ct != "application/json" {
+			t.Errorf("expected application/json, got %s", ct)
 		}
-	}
-
-	// Both iteration spans should have the session span as parent.
-	if !iterParentIDs[sessionSpanID] {
-		t.Errorf("iteration spans should be children of session span %s, parents: %v",
-			sessionSpanID, iterParentIDs)
-	}
-}
-
-func TestOTelRecorder_IterationSpanAttributes(t *testing.T) {
-	rec, exp := newTestRecorder(t)
-
-	ctx, span := rec.StartSessionSpan(context.Background(), "sess-iter", "openai", "gpt-4o", "repo")
-	_, iterSpan := rec.StartIterationSpan(ctx, "sess-iter", 5)
-	iterSpan.End()
-	rec.EndSessionSpan(span, 0.0, 1, "done")
-
-	spans := exp.GetSpans()
-	for _, s := range spans {
-		if s.Name == "iteration" {
-			assertAttr(t, s.Attributes, AttrGenAISessionID, "sess-iter")
-			assertAttrInt(t, s.Attributes, "gen_ai.iteration", 5)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
 			return
 		}
-	}
-	t.Fatal("no iteration span found")
-}
-
-func TestOTelRecorder_RecordError(t *testing.T) {
-	rec, exp := newTestRecorder(t)
-
-	_, span := rec.StartSessionSpan(context.Background(), "sess-err", "claude", "opus", "repo")
-	rec.RecordError(span, "context deadline exceeded")
-	rec.EndSessionSpan(span, 0.0, 0, "error")
-
-	spans := exp.GetSpans()
-	if len(spans) != 1 {
-		t.Fatalf("expected 1 span, got %d", len(spans))
-	}
-
-	s := spans[0]
-	// Span should have error status.
-	if s.Status.Code.String() != "Error" {
-		t.Errorf("span status = %s, want Error", s.Status.Code)
-	}
-	if s.Status.Description != "context deadline exceeded" {
-		t.Errorf("span status description = %q, want 'context deadline exceeded'", s.Status.Description)
-	}
-
-	// Should have an exception event.
-	foundErr := false
-	for _, ev := range s.Events {
-		if ev.Name == "exception" {
-			foundErr = true
-			break
+		var req otlpExportRequest
+		if err := json.Unmarshal(body, &req); err != nil {
+			t.Errorf("unmarshal: %v", err)
+			return
 		}
-	}
-	if !foundErr {
-		t.Error("span should have an exception event from RecordError")
-	}
+		mu.Lock()
+		received = append(received, req)
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
 
-	// Internal SessionSpan should also record.
-	span.mu.Lock()
-	defer span.mu.Unlock()
-	if len(span.events) != 1 {
-		t.Fatalf("internal span should have 1 event, got %d", len(span.events))
-	}
-}
-
-func TestOTelRecorder_RecordError_NilSpan(t *testing.T) {
-	rec, _ := newTestRecorder(t)
-	// Should not panic.
-	rec.RecordError(nil, "some error")
-}
-
-func TestOTelRecorder_RecordTurnMetric(t *testing.T) {
-	rec, exp := newTestRecorder(t)
-
-	_, span := rec.StartSessionSpan(context.Background(), "sess-turn", "claude", "haiku", "repo")
-	rec.RecordTurnMetric(context.Background(), "claude", "haiku", "sess-turn", 500, 1000, 0.03, 250)
-	rec.RecordTurnMetric(context.Background(), "claude", "haiku", "sess-turn", 600, 1200, 0.04, 300)
-	rec.EndSessionSpan(span, 0.07, 2, "done")
-
-	spans := exp.GetSpans()
-	if len(spans) != 1 {
-		t.Fatalf("expected 1 span, got %d", len(spans))
-	}
-
-	s := spans[0]
-	turnEvents := 0
-	for _, ev := range s.Events {
-		if ev.Name == "turn" {
-			turnEvents++
-		}
-	}
-	if turnEvents != 2 {
-		t.Errorf("expected 2 turn events, got %d", turnEvents)
-	}
-}
-
-func TestOTelRecorder_RecordEvent(t *testing.T) {
-	rec, exp := newTestRecorder(t)
-
-	ctx, span := rec.StartSessionSpan(context.Background(), "sess-ev", "claude", "sonnet", "repo")
-	rec.RecordEvent(ctx, "prompt_enhanced",
-		attribute.String("original_grade", "C"),
-		attribute.String("enhanced_grade", "A"),
+	tr, err := NewTracer("test-svc",
+		WithEndpoint(srv.URL),
+		WithBatchSize(1), // flush on every span
+		WithSampling(1.0),
+		withHTTPClient(srv.Client()),
 	)
-	rec.EndSessionSpan(span, 0.0, 1, "done")
+	if err != nil {
+		t.Fatalf("NewTracer: %v", err)
+	}
 
-	spans := exp.GetSpans()
+	_, span := tr.StartSpan(context.Background(), "test-op")
+	span.SetAttribute("user", "alice")
+	span.SetAttribute("count", 42)
+	span.SetAttribute("rate", 0.95)
+	span.SetAttribute("active", true)
+	span.SetStatus(StatusOK, "done")
+	span.AddEvent("started", map[string]any{"phase": "init"})
+	span.End()
+
+	// Give a moment for the async export.
+	time.Sleep(50 * time.Millisecond)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	if len(received) != 1 {
+		t.Fatalf("expected 1 export request, got %d", len(received))
+	}
+
+	req := received[0]
+	if len(req.ResourceSpans) != 1 {
+		t.Fatalf("expected 1 resourceSpan, got %d", len(req.ResourceSpans))
+	}
+
+	rs := req.ResourceSpans[0]
+	// Verify service.name resource attribute.
+	foundSvc := false
+	for _, attr := range rs.Resource.Attributes {
+		if attr.Key == "service.name" && attr.Value.StringValue != nil && *attr.Value.StringValue == "test-svc" {
+			foundSvc = true
+		}
+	}
+	if !foundSvc {
+		t.Error("service.name resource attribute not found")
+	}
+
+	if len(rs.ScopeSpans) != 1 {
+		t.Fatalf("expected 1 scopeSpan, got %d", len(rs.ScopeSpans))
+	}
+
+	spans := rs.ScopeSpans[0].Spans
 	if len(spans) != 1 {
 		t.Fatalf("expected 1 span, got %d", len(spans))
 	}
 
-	found := false
-	for _, ev := range spans[0].Events {
-		if ev.Name == "prompt_enhanced" {
-			found = true
-			break
-		}
+	s := spans[0]
+	if s.Name != "test-op" {
+		t.Errorf("span name = %q, want test-op", s.Name)
 	}
-	if !found {
-		t.Error("expected prompt_enhanced event on span")
+	if s.TraceID == "" || len(s.TraceID) != 32 {
+		t.Errorf("traceID should be 32 hex chars, got %q", s.TraceID)
+	}
+	if s.SpanID == "" || len(s.SpanID) != 16 {
+		t.Errorf("spanID should be 16 hex chars, got %q", s.SpanID)
+	}
+	if s.Kind != 1 {
+		t.Errorf("kind = %d, want 1 (INTERNAL)", s.Kind)
+	}
+	if s.Status == nil || s.Status.Code != int(StatusOK) {
+		t.Errorf("status code = %v, want %d", s.Status, StatusOK)
+	}
+
+	// Verify attributes.
+	attrMap := make(map[string]otlpValue)
+	for _, a := range s.Attributes {
+		attrMap[a.Key] = a.Value
+	}
+	if v, ok := attrMap["user"]; !ok || v.StringValue == nil || *v.StringValue != "alice" {
+		t.Errorf("missing or wrong 'user' attribute")
+	}
+	if v, ok := attrMap["count"]; !ok || v.IntValue == nil || *v.IntValue != 42 {
+		t.Errorf("missing or wrong 'count' attribute")
+	}
+	if v, ok := attrMap["rate"]; !ok || v.DoubleValue == nil || *v.DoubleValue != 0.95 {
+		t.Errorf("missing or wrong 'rate' attribute")
+	}
+	if v, ok := attrMap["active"]; !ok || v.BoolValue == nil || *v.BoolValue != true {
+		t.Errorf("missing or wrong 'active' attribute")
+	}
+
+	// Verify events.
+	if len(s.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(s.Events))
+	}
+	if s.Events[0].Name != "started" {
+		t.Errorf("event name = %q, want started", s.Events[0].Name)
 	}
 }
 
-func TestOTelRecorder_EndSessionSpan_NilSpan(t *testing.T) {
-	rec, _ := newTestRecorder(t)
-	// Should not panic.
-	rec.EndSessionSpan(nil, 0.0, 0, "")
-}
+func TestTracer_ParentChildPropagation(t *testing.T) {
+	t.Parallel()
 
-func TestOTelRecorder_Shutdown(t *testing.T) {
-	rec, exp := newTestRecorder(t)
+	var mu sync.Mutex
+	var received []otlpExportRequest
 
-	// Create and end a span.
-	_, span := rec.StartSessionSpan(context.Background(), "sess-shut", "claude", "sonnet", "repo")
-	rec.EndSessionSpan(span, 0.0, 0, "done")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req otlpExportRequest
+		_ = json.Unmarshal(body, &req)
+		mu.Lock()
+		received = append(received, req)
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
 
-	// With a synchronous exporter the span is already available.
-	if len(exp.GetSpans()) != 1 {
-		t.Fatalf("expected 1 span before shutdown, got %d", len(exp.GetSpans()))
+	tr, err := NewTracer("test-svc",
+		WithEndpoint(srv.URL),
+		WithBatchSize(2),
+		withHTTPClient(srv.Client()),
+	)
+	if err != nil {
+		t.Fatalf("NewTracer: %v", err)
 	}
 
-	// Shutdown should complete without error.
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := rec.Shutdown(ctx); err != nil {
+	ctx, parent := tr.StartSpan(context.Background(), "parent-op")
+	_, child := tr.StartSpan(ctx, "child-op")
+
+	child.End()
+	parent.End()
+
+	time.Sleep(50 * time.Millisecond)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Both spans should have been flushed (batch of 2).
+	if len(received) != 1 {
+		t.Fatalf("expected 1 batch, got %d", len(received))
+	}
+
+	spans := received[0].ResourceSpans[0].ScopeSpans[0].Spans
+	if len(spans) != 2 {
+		t.Fatalf("expected 2 spans, got %d", len(spans))
+	}
+
+	spanMap := make(map[string]otlpSpan)
+	for _, s := range spans {
+		spanMap[s.Name] = s
+	}
+
+	parentSpan := spanMap["parent-op"]
+	childSpan := spanMap["child-op"]
+
+	// Same trace ID.
+	if parentSpan.TraceID != childSpan.TraceID {
+		t.Errorf("parent trace %q != child trace %q", parentSpan.TraceID, childSpan.TraceID)
+	}
+
+	// Child's parent should be the parent span.
+	if childSpan.ParentSpanID != parentSpan.SpanID {
+		t.Errorf("child parentSpanID %q != parent spanID %q", childSpan.ParentSpanID, parentSpan.SpanID)
+	}
+
+	// Parent should have no parent.
+	if parentSpan.ParentSpanID != "" {
+		t.Errorf("parent should have no parent, got %q", parentSpan.ParentSpanID)
+	}
+}
+
+func TestTracer_Shutdown_FlushesBuffer(t *testing.T) {
+	t.Parallel()
+
+	var mu sync.Mutex
+	var received []otlpExportRequest
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req otlpExportRequest
+		_ = json.Unmarshal(body, &req)
+		mu.Lock()
+		received = append(received, req)
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	tr, err := NewTracer("test-svc",
+		WithEndpoint(srv.URL),
+		WithBatchSize(100), // large batch so it won't auto-flush
+		withHTTPClient(srv.Client()),
+	)
+	if err != nil {
+		t.Fatalf("NewTracer: %v", err)
+	}
+
+	_, span := tr.StartSpan(context.Background(), "buffered-op")
+	span.End()
+
+	// Nothing should be exported yet (batch not full).
+	time.Sleep(20 * time.Millisecond)
+	mu.Lock()
+	preShutdown := len(received)
+	mu.Unlock()
+	if preShutdown != 0 {
+		t.Fatalf("expected 0 exports before shutdown, got %d", preShutdown)
+	}
+
+	// Shutdown should flush.
+	if err := tr.Shutdown(context.Background()); err != nil {
 		t.Fatalf("Shutdown: %v", err)
 	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(received) != 1 {
+		t.Fatalf("expected 1 export after shutdown, got %d", len(received))
+	}
 }
 
-func TestOTelRecorder_ImplementsRecorder(t *testing.T) {
-	rec, _ := newTestRecorder(t)
-	// Compile-time check: OTelRecorder satisfies Recorder.
-	var _ Recorder = rec
-}
+func TestTracer_SamplingZero_DropsSpans(t *testing.T) {
+	t.Parallel()
 
-func TestNewOTelRecorder_StdoutExporter(t *testing.T) {
-	// Use a buffer so stdout exporter doesn't pollute test output.
-	var buf bytes.Buffer
-	rec, err := NewOTelRecorder(OTelConfig{
-		ServiceName:  "test-svc",
-		ExporterType: ExporterStdout,
-		SampleRate:   1.0,
-		Writer:       &buf,
-	})
+	exportCount := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		exportCount++
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	tr, err := NewTracer("test-svc",
+		WithEndpoint(srv.URL),
+		WithSampling(0.0),
+		WithBatchSize(1),
+		withHTTPClient(srv.Client()),
+	)
 	if err != nil {
-		t.Fatalf("NewOTelRecorder: %v", err)
+		t.Fatalf("NewTracer: %v", err)
 	}
-	defer rec.Shutdown(context.Background())
 
-	if rec.provider == nil {
-		t.Error("TracerProvider should not be nil")
+	for i := 0; i < 10; i++ {
+		_, span := tr.StartSpan(context.Background(), "dropped")
+		span.End()
 	}
-	if rec.tracer == nil {
-		t.Error("Tracer should not be nil")
+
+	time.Sleep(50 * time.Millisecond)
+	tr.Shutdown(context.Background())
+
+	if exportCount != 0 {
+		t.Errorf("expected 0 exports with 0%% sampling, got %d", exportCount)
 	}
 }
 
-func TestNewOTelRecorder_DefaultServiceName(t *testing.T) {
-	var buf bytes.Buffer
-	rec, err := NewOTelRecorder(OTelConfig{
-		ExporterType: ExporterStdout,
-		Writer:       &buf,
-	})
+func TestSpan_EndIdempotent(t *testing.T) {
+	t.Parallel()
+
+	callCount := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	tr, err := NewTracer("test-svc",
+		WithEndpoint(srv.URL),
+		WithBatchSize(1),
+		withHTTPClient(srv.Client()),
+	)
 	if err != nil {
-		t.Fatalf("NewOTelRecorder: %v", err)
+		t.Fatalf("NewTracer: %v", err)
 	}
-	defer rec.Shutdown(context.Background())
-	// Should not error even with empty service name.
-}
 
-func TestNewOTelRecorder_InvalidExporter(t *testing.T) {
-	_, err := NewOTelRecorder(OTelConfig{
-		ExporterType: "unknown-backend",
-	})
-	if err == nil {
-		t.Fatal("expected error for unknown exporter type")
-	}
-}
+	_, span := tr.StartSpan(context.Background(), "op")
+	span.End()
+	span.End() // second End() should be no-op
+	span.End() // third End() should be no-op
 
-func TestNewOTelRecorder_OTLPRequiresExtraDeps(t *testing.T) {
-	_, err := NewOTelRecorder(OTelConfig{
-		ExporterType: ExporterOTLP,
-	})
-	if err == nil {
-		t.Fatal("expected error for OTLP without extra deps")
+	time.Sleep(50 * time.Millisecond)
+	tr.Shutdown(context.Background())
+
+	if callCount != 1 {
+		t.Errorf("expected 1 export (idempotent End), got %d", callCount)
 	}
 }
 
-func TestNewOTelRecorder_SampleRateClamping(t *testing.T) {
-	var buf bytes.Buffer
-	// Negative rate should be clamped to 1.0.
-	rec, err := NewOTelRecorder(OTelConfig{
-		ExporterType: ExporterStdout,
-		SampleRate:   -1.0,
-		Writer:       &buf,
-	})
+func TestSpan_SetAfterEnd_Ignored(t *testing.T) {
+	t.Parallel()
+	tr, err := NewTracer("test-svc")
 	if err != nil {
-		t.Fatalf("NewOTelRecorder: %v", err)
+		t.Fatalf("NewTracer: %v", err)
 	}
-	defer rec.Shutdown(context.Background())
+	defer tr.Shutdown(context.Background())
 
-	// Rate > 1.0 should be clamped.
-	rec2, err := NewOTelRecorder(OTelConfig{
-		ExporterType: ExporterStdout,
-		SampleRate:   5.0,
-		Writer:       &buf,
-	})
+	_, span := tr.StartSpan(context.Background(), "op")
+	span.End()
+
+	// These should be silently ignored.
+	span.SetAttribute("key", "value")
+	span.SetStatus(StatusError, "fail")
+	span.AddEvent("late-event")
+
+	span.mu.Lock()
+	defer span.mu.Unlock()
+	if _, ok := span.attributes["key"]; ok {
+		t.Error("attribute should not be set after End()")
+	}
+	if span.statusCode != StatusUnset {
+		t.Error("status should not change after End()")
+	}
+	if len(span.events) != 0 {
+		t.Error("events should not be added after End()")
+	}
+}
+
+func TestSpanFromContext(t *testing.T) {
+	t.Parallel()
+	tr, err := NewTracer("test-svc")
 	if err != nil {
-		t.Fatalf("NewOTelRecorder: %v", err)
+		t.Fatalf("NewTracer: %v", err)
 	}
-	defer rec2.Shutdown(context.Background())
-}
+	defer tr.Shutdown(context.Background())
 
-func TestOTelRecorder_RecordCostMetric(t *testing.T) {
-	rec, exp := newTestRecorder(t)
-
-	ctx, span := rec.StartSessionSpan(context.Background(), "sess-cost", "claude", "sonnet", "repo")
-	rec.RecordCostMetric(ctx, "claude", "repo", 2.50)
-	rec.EndSessionSpan(span, 2.50, 5, "done")
-
-	spans := exp.GetSpans()
-	if len(spans) != 1 {
-		t.Fatalf("expected 1 span, got %d", len(spans))
+	// Empty context.
+	if s := SpanFromContext(context.Background()); s != nil {
+		t.Error("expected nil span from empty context")
 	}
 
-	found := false
-	for _, ev := range spans[0].Events {
-		if ev.Name == "cost" {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Error("expected cost event on span")
+	ctx, span := tr.StartSpan(context.Background(), "op")
+	got := SpanFromContext(ctx)
+	if got != span {
+		t.Error("SpanFromContext should return the span set in context")
 	}
 }
 
-func TestOTelRecorder_TracerProvider(t *testing.T) {
-	rec, _ := newTestRecorder(t)
-	if rec.TracerProvider() == nil {
-		t.Error("TracerProvider() should not return nil")
+func TestSpan_IDs(t *testing.T) {
+	t.Parallel()
+	tr, err := NewTracer("test-svc")
+	if err != nil {
+		t.Fatalf("NewTracer: %v", err)
+	}
+	defer tr.Shutdown(context.Background())
+
+	_, span := tr.StartSpan(context.Background(), "op")
+	defer span.End()
+
+	if len(span.TraceID()) != 32 {
+		t.Errorf("traceID length = %d, want 32", len(span.TraceID()))
+	}
+	if len(span.SpanID()) != 16 {
+		t.Errorf("spanID length = %d, want 16", len(span.SpanID()))
 	}
 }
 
-// ---------- helpers ----------
+func TestTracer_CollectorError(t *testing.T) {
+	t.Parallel()
 
-func assertAttr(t *testing.T, attrs []attribute.KeyValue, key, want string) {
-	t.Helper()
-	for _, a := range attrs {
-		if string(a.Key) == key {
-			if got := a.Value.AsString(); got != want {
-				t.Errorf("attr %s = %q, want %q", key, got, want)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	tr, err := NewTracer("test-svc",
+		WithEndpoint(srv.URL),
+		WithBatchSize(1),
+		withHTTPClient(srv.Client()),
+	)
+	if err != nil {
+		t.Fatalf("NewTracer: %v", err)
+	}
+
+	_, span := tr.StartSpan(context.Background(), "op")
+	span.End()
+
+	// Should not panic even when collector returns error.
+	time.Sleep(50 * time.Millisecond)
+	tr.Shutdown(context.Background())
+}
+
+func TestTracer_StatusError(t *testing.T) {
+	t.Parallel()
+
+	var mu sync.Mutex
+	var received []otlpExportRequest
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req otlpExportRequest
+		_ = json.Unmarshal(body, &req)
+		mu.Lock()
+		received = append(received, req)
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	tr, err := NewTracer("test-svc",
+		WithEndpoint(srv.URL),
+		WithBatchSize(1),
+		withHTTPClient(srv.Client()),
+	)
+	if err != nil {
+		t.Fatalf("NewTracer: %v", err)
+	}
+
+	_, span := tr.StartSpan(context.Background(), "failing-op")
+	span.SetStatus(StatusError, "something went wrong")
+	span.End()
+
+	time.Sleep(50 * time.Millisecond)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	if len(received) != 1 {
+		t.Fatalf("expected 1 export, got %d", len(received))
+	}
+
+	s := received[0].ResourceSpans[0].ScopeSpans[0].Spans[0]
+	if s.Status == nil {
+		t.Fatal("expected status to be set")
+	}
+	if s.Status.Code != int(StatusError) {
+		t.Errorf("status code = %d, want %d", s.Status.Code, StatusError)
+	}
+	if s.Status.Message != "something went wrong" {
+		t.Errorf("status message = %q, want 'something went wrong'", s.Status.Message)
+	}
+}
+
+func TestTracer_ConcurrentSpans(t *testing.T) {
+	t.Parallel()
+
+	var mu sync.Mutex
+	spanCount := 0
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req otlpExportRequest
+		_ = json.Unmarshal(body, &req)
+		mu.Lock()
+		for _, rs := range req.ResourceSpans {
+			for _, ss := range rs.ScopeSpans {
+				spanCount += len(ss.Spans)
 			}
-			return
 		}
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	tr, err := NewTracer("test-svc",
+		WithEndpoint(srv.URL),
+		WithBatchSize(5),
+		withHTTPClient(srv.Client()),
+	)
+	if err != nil {
+		t.Fatalf("NewTracer: %v", err)
 	}
-	t.Errorf("attribute %s not found", key)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, span := tr.StartSpan(context.Background(), "concurrent-op")
+			span.SetAttribute("goroutine", true)
+			span.End()
+		}()
+	}
+	wg.Wait()
+
+	if err := tr.Shutdown(context.Background()); err != nil {
+		t.Fatalf("Shutdown: %v", err)
+	}
+
+	// Allow export to complete.
+	time.Sleep(50 * time.Millisecond)
+
+	mu.Lock()
+	defer mu.Unlock()
+	if spanCount != 20 {
+		t.Errorf("expected 20 spans exported, got %d", spanCount)
+	}
 }
 
-func assertAttrFloat(t *testing.T, attrs []attribute.KeyValue, key string, want float64) {
-	t.Helper()
-	for _, a := range attrs {
-		if string(a.Key) == key {
-			if got := a.Value.AsFloat64(); got != want {
-				t.Errorf("attr %s = %f, want %f", key, got, want)
-			}
-			return
-		}
+func TestNewTracer_SamplingClamping(t *testing.T) {
+	t.Parallel()
+
+	// Negative sampling rate should be clamped.
+	tr, err := NewTracer("test-svc", WithSampling(-5.0))
+	if err != nil {
+		t.Fatalf("NewTracer: %v", err)
 	}
-	t.Errorf("attribute %s not found", key)
+	defer tr.Shutdown(context.Background())
+	if tr.cfg.sampling != 0 {
+		t.Errorf("sampling = %f, want 0", tr.cfg.sampling)
+	}
+
+	// >1.0 should be clamped.
+	tr2, err := NewTracer("test-svc", WithSampling(5.0))
+	if err != nil {
+		t.Fatalf("NewTracer: %v", err)
+	}
+	defer tr2.Shutdown(context.Background())
+	if tr2.cfg.sampling != 1.0 {
+		t.Errorf("sampling = %f, want 1.0", tr2.cfg.sampling)
+	}
 }
 
-func assertAttrInt(t *testing.T, attrs []attribute.KeyValue, key string, want int) {
-	t.Helper()
-	for _, a := range attrs {
-		if string(a.Key) == key {
-			if got := a.Value.AsInt64(); got != int64(want) {
-				t.Errorf("attr %s = %d, want %d", key, got, want)
-			}
-			return
-		}
+func TestNewTracer_BatchSizeClamping(t *testing.T) {
+	t.Parallel()
+	tr, err := NewTracer("test-svc", WithBatchSize(0))
+	if err != nil {
+		t.Fatalf("NewTracer: %v", err)
 	}
-	t.Errorf("attribute %s not found", key)
+	defer tr.Shutdown(context.Background())
+	if tr.cfg.batchSize != 1 {
+		t.Errorf("batchSize = %d, want 1", tr.cfg.batchSize)
+	}
 }

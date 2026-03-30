@@ -1,0 +1,57 @@
+{
+  "name": "proart-x870e",
+  "description": "ASUS ProArt X870E-CREATOR WIFI — dual NVIDIA GPU, 7 monitors, 128GB DDR5",
+  "cpu": {
+    "arch": "x86_64",
+    "cores": 32,
+    "model_pattern": "Ryzen 9 7950X"
+  },
+  "gpu_count": 2,
+  "gpus": [
+    {
+      "role": "primary",
+      "vendor": "nvidia",
+      "model_pattern": "RTX 4090",
+      "driver": "nvidia-driver-550",
+      "pci_id": "10de:2684"
+    },
+    {
+      "role": "skip",
+      "vendor": "nvidia",
+      "model_pattern": "GTX 1060",
+      "driver": "blacklist",
+      "pci_id": "10de:1c03"
+    }
+  ],
+  "igpu": {
+    "vendor": "amd",
+    "model_pattern": "RDNA2 Raphael",
+    "driver": "amdgpu",
+    "pci_id": "1002:164e",
+    "role": "fallback"
+  },
+  "monitor_count": 7,
+  "ram_mb": 131072,
+  "storage_type": "nvme",
+  "network": {
+    "primary": "ethernet",
+    "ethernet_model": "Intel I226-V 2.5GbE",
+    "ethernet_pci_id": "8086:125c",
+    "wifi": true,
+    "wifi_model": "MediaTek MT7927 WiFi 7",
+    "wifi_pci_id": "14c3:7927",
+    "bandwidth_mbps": 2500
+  },
+  "xorg": {
+    "gpu_conf": true,
+    "multi_head": true
+  },
+  "kernel": {
+    "min_version": "6.12"
+  },
+  "blacklist_modules": [
+    "btmtk",
+    "nvidia (GTX 1060 PCI slot only)"
+  ],
+  "notes": "Primary ralphglasses thin client. See distro/hardware/proart-x870e.md for full manifest."
+}
