@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,7 +16,7 @@ func TestCorruptFileHandling(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(dir, ".ralph", "status.json"), []byte(`{"status":"run`), 0644); err != nil {
 			t.Fatal(err)
 		}
-		_, err := LoadStatus(dir)
+		_, err := LoadStatus(context.Background(), dir)
 		if err == nil {
 			t.Fatal("expected error for truncated JSON, got nil")
 		}
@@ -30,7 +31,7 @@ func TestCorruptFileHandling(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(dir, ".ralph", "status.json"), data, 0644); err != nil {
 			t.Fatal(err)
 		}
-		_, err := LoadStatus(dir)
+		_, err := LoadStatus(context.Background(), dir)
 		if err == nil {
 			t.Fatal("expected error for invalid UTF-8, got nil")
 		}
@@ -44,7 +45,7 @@ func TestCorruptFileHandling(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(dir, ".ralph", "status.json"), []byte{}, 0644); err != nil {
 			t.Fatal(err)
 		}
-		_, err := LoadStatus(dir)
+		_, err := LoadStatus(context.Background(), dir)
 		if err == nil {
 			t.Fatal("expected error for zero-byte file, got nil")
 		}

@@ -95,7 +95,7 @@ sleep 30
 		return err == nil
 	})
 
-	status, err := model.LoadStatus(repoPath)
+	status, err := model.LoadStatus(context.Background(), repoPath)
 	if err != nil {
 		t.Fatalf("LoadStatus: %v", err)
 	}

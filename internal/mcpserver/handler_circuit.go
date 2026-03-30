@@ -17,7 +17,7 @@ import (
 // Supported services:
 //   - "enhancer" — resets the in-memory LLM prompt enhancer circuit breaker
 //   - "<repo-name>" — resets the file-based .ralph/.circuit_breaker_state for a repo
-func (s *Server) handleCircuitReset(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleCircuitReset(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	service := getStringArg(req, "service")
 	if service == "" {
 		return codedError(ErrInvalidParams, "service parameter is required"), nil
@@ -48,7 +48,7 @@ func (s *Server) handleCircuitReset(_ context.Context, req mcp.CallToolRequest) 
 
 	// Read current state for the response.
 	prevState := "unknown"
-	if existing, err := model.LoadCircuitBreaker(repo.Path); err == nil {
+	if existing, err := model.LoadCircuitBreaker(ctx, repo.Path); err == nil {
 		prevState = existing.State
 	}
 

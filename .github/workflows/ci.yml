@@ -36,6 +36,9 @@ jobs:
       - name: Coverage report
         run: ./scripts/dev/go.sh tool cover -func=coverage.out | tail -1 || true
 
+      - name: Coverage threshold enforcement
+        run: ./scripts/dev/check-coverage.sh coverage.out
+
       - name: Build binary
         run: ./scripts/dev/go.sh build -o ralphglasses ./...
 

@@ -38,7 +38,7 @@ func (s *Server) handleScan(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}), nil
 }
 
-func (s *Server) handleList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleList(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
 			return codedError(ErrScanFailed, fmt.Sprintf("scan failed: %v", err)), nil
@@ -46,7 +46,7 @@ func (s *Server) handleList(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 	repos := s.reposCopy()
 	for _, r := range repos {
-		if errs := model.RefreshRepo(r); len(errs) > 0 {
+		if errs := model.RefreshRepo(ctx, r); len(errs) > 0 {
 			for _, e := range errs {
 				slog.Warn("handleList: refresh failed", "repo", r.Path, "err", e)
 			}
@@ -80,7 +80,7 @@ func (s *Server) handleList(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	return jsonResult(summaries), nil
 }
 
-func (s *Server) handleStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleStatus(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "repo")
 	if name == "" {
 		return codedError(ErrInvalidParams, "repo name required"), nil
@@ -97,7 +97,7 @@ func (s *Server) handleStatus(_ context.Context, req mcp.CallToolRequest) (*mcp.
 	if r == nil {
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
-	if errs := model.RefreshRepo(r); len(errs) > 0 {
+	if errs := model.RefreshRepo(ctx, r); len(errs) > 0 {
 		for _, e := range errs {
 			slog.Warn("handleStatus: refresh failed", "repo", r.Path, "err", e)
 		}
@@ -315,7 +315,7 @@ func (s *Server) handleConfig(_ context.Context, req mcp.CallToolRequest) (*mcp.
 	return textResult(fmt.Sprintf("%s=%s", key, v)), nil
 }
 
-func (s *Server) handleConfigBulk(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleConfigBulk(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	key := getStringArg(req, "key")
 	if key == "" {
 		return codedError(ErrInvalidParams, "key required"), nil
@@ -343,7 +343,7 @@ func (s *Server) handleConfigBulk(_ context.Context, req mcp.CallToolRequest) (*
 		if targetNames != nil && !targetNames[r.Name] {
 			continue
 		}
-		if errs := model.RefreshRepo(r); len(errs) > 0 {
+		if errs := model.RefreshRepo(ctx, r); len(errs) > 0 {
 			for _, e := range errs {
 				slog.Warn("handleConfigBulk: refresh failed", "repo", r.Path, "err", e)
 			}

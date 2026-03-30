@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -38,7 +39,7 @@ var validateCmd = &cobra.Command{
 			if !repo.HasRC {
 				continue
 			}
-			cfg, err := model.LoadConfig(repo.Path)
+			cfg, err := model.LoadConfig(context.Background(), repo.Path)
 			if err != nil {
 				fmt.Printf("%-30s  %-7s  %s\n", repo.Name, "ERROR", "cannot read .ralphrc: "+err.Error())
 				hasError = true

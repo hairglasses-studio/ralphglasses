@@ -41,11 +41,23 @@ func watchWithWatcher(repoPaths []string, watcher *fsnotify.Watcher) tea.Msg {
 		if err := watcher.Add(ralphDir); err != nil {
 			addErrors = append(addErrors, fmt.Errorf("watch %s: %w", ralphDir, err))
 		}
+		// Also watch the repo root for .ralphrc config changes.
+		if err := watcher.Add(rp); err != nil {
+			addErrors = append(addErrors, fmt.Errorf("watch %s: %w", rp, err))
+		}
 	}
 	// If ALL watches failed, report error and let TUI fall back to polling
-	if len(addErrors) == len(repoPaths) && len(repoPaths) > 0 {
+	if len(addErrors) == len(repoPaths)*2 && len(repoPaths) > 0 {
 		_ = watcher.Close()
 		return WatcherErrorMsg{Err: fmt.Errorf("all watches failed: %w", addErrors[0])}
+	}
+
+	// ralphFiles are files inside .ralph/ — repo path is two levels up.
+	// rcFiles are at the repo root — repo path is one level up.
+	ralphFiles := map[string]bool{
+		"status.json":            true,
+		".circuit_breaker_state": true,
+		"progress.json":          true,
 	}
 
 	// Block until an event arrives or timeout.
@@ -57,8 +69,13 @@ func watchWithWatcher(repoPaths []string, watcher *fsnotify.Watcher) tea.Msg {
 			}
 			if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) {
 				base := filepath.Base(event.Name)
-				if base == "status.json" || base == ".circuit_breaker_state" || base == "progress.json" {
+				if ralphFiles[base] {
 					repoPath := filepath.Dir(filepath.Dir(event.Name))
+					_ = watcher.Close()
+					return FileChangedMsg{RepoPath: repoPath}
+				}
+				if base == ".ralphrc" {
+					repoPath := filepath.Dir(event.Name)
 					_ = watcher.Close()
 					return FileChangedMsg{RepoPath: repoPath}
 				}

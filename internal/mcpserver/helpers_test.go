@@ -1,6 +1,7 @@
 package mcpserver
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/blackboard"
@@ -13,7 +14,7 @@ func TestWireSubsystemsPhaseH(t *testing.T) {
 	srv := NewServer(t.TempDir())
 	ralphDir := t.TempDir()
 
-	wireSubsystems(srv, srv.SessMgr, ralphDir)
+	wireSubsystems(context.Background(), srv, srv.SessMgr, ralphDir)
 
 	// Phase G subsystems should be wired on the session manager.
 	if !srv.SessMgr.HasReflexion() {
@@ -64,7 +65,7 @@ func TestWireSubsystemsIdempotent(t *testing.T) {
 	existing := blackboard.NewBlackboard(ralphDir)
 	srv.Blackboard = existing
 
-	wireSubsystems(srv, srv.SessMgr, ralphDir)
+	wireSubsystems(context.Background(), srv, srv.SessMgr, ralphDir)
 
 	// Should not replace existing blackboard.
 	if srv.Blackboard != existing {
@@ -81,7 +82,7 @@ func TestWireSubsystemsWithFeedbackAnalyzer(t *testing.T) {
 	// Pre-set a FeedbackAnalyzer on the server.
 	srv.FeedbackAnalyzer = session.NewFeedbackAnalyzer(ralphDir, 3)
 
-	wireSubsystems(srv, srv.SessMgr, ralphDir)
+	wireSubsystems(context.Background(), srv, srv.SessMgr, ralphDir)
 
 	// CurriculumSorter should be wired (B4 verified by this existing).
 	if !srv.SessMgr.HasCurriculumSorter() {

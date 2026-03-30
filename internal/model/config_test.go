@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -19,7 +20,7 @@ BUDGET=5.00
 		t.Fatal(err)
 	}
 
-	cfg, err := LoadConfig(dir)
+	cfg, err := LoadConfig(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
@@ -49,7 +50,7 @@ SPEC_FILE="spec.md"
 		t.Fatal(err)
 	}
 
-	cfg, err := LoadConfig(dir)
+	cfg, err := LoadConfig(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
@@ -76,7 +77,7 @@ BUDGET=10
 		t.Fatal(err)
 	}
 
-	cfg, err := LoadConfig(dir)
+	cfg, err := LoadConfig(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
@@ -91,7 +92,7 @@ BUDGET=10
 
 func TestLoadConfig_MissingFile(t *testing.T) {
 	dir := t.TempDir()
-	_, err := LoadConfig(dir)
+	_, err := LoadConfig(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for missing .ralphrc, got nil")
 	}
@@ -104,7 +105,7 @@ func TestLoadConfig_EmptyFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg, err := LoadConfig(dir)
+	cfg, err := LoadConfig(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
@@ -124,7 +125,7 @@ ALSO_GOOD=yes
 		t.Fatal(err)
 	}
 
-	cfg, err := LoadConfig(dir)
+	cfg, err := LoadConfig(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
@@ -142,7 +143,7 @@ func TestLoadConfig_WhitespaceAroundKeyValue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg, err := LoadConfig(dir)
+	cfg, err := LoadConfig(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
@@ -158,7 +159,7 @@ func TestLoadConfig_PathIsSet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg, err := LoadConfig(dir)
+	cfg, err := LoadConfig(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
@@ -674,7 +675,7 @@ func TestRalphConfig_Save(t *testing.T) {
 	}
 
 	// Re-load and verify
-	loaded, err := LoadConfig(dir)
+	loaded, err := LoadConfig(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("LoadConfig after save: %v", err)
 	}

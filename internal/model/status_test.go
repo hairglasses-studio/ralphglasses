@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -46,7 +47,7 @@ func TestLoadStatus_Valid(t *testing.T) {
 	}
 	writeJSON(t, filepath.Join(dir, ".ralph", "status.json"), status)
 
-	loaded, err := LoadStatus(dir)
+	loaded, err := LoadStatus(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("LoadStatus: %v", err)
 	}
@@ -67,7 +68,7 @@ func TestLoadStatus_Valid(t *testing.T) {
 
 func TestLoadStatus_MissingFile(t *testing.T) {
 	dir := t.TempDir()
-	_, err := LoadStatus(dir)
+	_, err := LoadStatus(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for missing status.json")
 	}
@@ -79,7 +80,7 @@ func TestLoadStatus_InvalidJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := LoadStatus(dir)
+	_, err := LoadStatus(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -98,7 +99,7 @@ func TestLoadCircuitBreaker_Valid(t *testing.T) {
 	}
 	writeJSON(t, filepath.Join(dir, ".ralph", ".circuit_breaker_state"), cb)
 
-	loaded, err := LoadCircuitBreaker(dir)
+	loaded, err := LoadCircuitBreaker(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("LoadCircuitBreaker: %v", err)
 	}
@@ -129,7 +130,7 @@ func TestLoadCircuitBreaker_OpenState(t *testing.T) {
 	}
 	writeJSON(t, filepath.Join(dir, ".ralph", ".circuit_breaker_state"), cb)
 
-	loaded, err := LoadCircuitBreaker(dir)
+	loaded, err := LoadCircuitBreaker(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("LoadCircuitBreaker: %v", err)
 	}
@@ -147,7 +148,7 @@ func TestLoadCircuitBreaker_OpenState(t *testing.T) {
 
 func TestLoadCircuitBreaker_MissingFile(t *testing.T) {
 	dir := t.TempDir()
-	_, err := LoadCircuitBreaker(dir)
+	_, err := LoadCircuitBreaker(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for missing file")
 	}
@@ -169,7 +170,7 @@ func TestLoadProgress_Valid(t *testing.T) {
 	}
 	writeJSON(t, filepath.Join(dir, ".ralph", "progress.json"), prog)
 
-	loaded, err := LoadProgress(dir)
+	loaded, err := LoadProgress(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("LoadProgress: %v", err)
 	}
@@ -190,7 +191,7 @@ func TestLoadProgress_Valid(t *testing.T) {
 
 func TestLoadProgress_MissingFile(t *testing.T) {
 	dir := t.TempDir()
-	_, err := LoadProgress(dir)
+	_, err := LoadProgress(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for missing file")
 	}
@@ -202,7 +203,7 @@ func TestLoadProgress_InvalidJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := LoadProgress(dir)
+	_, err := LoadProgress(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -231,7 +232,7 @@ func TestRefreshRepo_AllFiles(t *testing.T) {
 	}
 
 	r := &Repo{Path: dir}
-	RefreshRepo(r)
+	RefreshRepo(context.Background(), r)
 
 	if r.Status == nil {
 		t.Fatal("Status should not be nil after refresh")
@@ -266,7 +267,7 @@ func TestRefreshRepo_CorruptStatus_ReturnsError(t *testing.T) {
 	}
 
 	r := &Repo{Path: dir}
-	errs := RefreshRepo(r)
+	errs := RefreshRepo(context.Background(), r)
 
 	if len(errs) == 0 {
 		t.Fatal("expected errors for corrupt files, got none")
@@ -286,7 +287,7 @@ func TestRefreshRepo_CorruptStatus_ReturnsError(t *testing.T) {
 func TestRefreshRepo_NoFiles(t *testing.T) {
 	dir := t.TempDir()
 	r := &Repo{Path: dir}
-	errs := RefreshRepo(r)
+	errs := RefreshRepo(context.Background(), r)
 
 	// Missing files are not errors — should not panic, all fields remain nil
 	if len(errs) != 0 {
@@ -314,7 +315,7 @@ func TestLoadStatus_TruncatedJSON(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".ralph", "status.json"), []byte(`{"status":"runn`), 0644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := LoadStatus(dir)
+	_, err := LoadStatus(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for truncated JSON, got nil")
 	}
@@ -325,7 +326,7 @@ func TestLoadStatus_ZeroByteFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".ralph", "status.json"), []byte{}, 0644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := LoadStatus(dir)
+	_, err := LoadStatus(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for zero-byte file, got nil")
 	}
@@ -340,7 +341,7 @@ func TestLoadStatus_InvalidUTF8(t *testing.T) {
 	}
 	// json.Unmarshal may or may not error on invalid UTF-8 depending on Go version,
 	// but it must not panic.
-	_, _ = LoadStatus(dir)
+	_, _ = LoadStatus(context.Background(), dir)
 }
 
 func TestLoadCircuitBreaker_TruncatedJSON(t *testing.T) {
@@ -348,7 +349,7 @@ func TestLoadCircuitBreaker_TruncatedJSON(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".ralph", ".circuit_breaker_state"), []byte(`{"state":"CLO`), 0644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := LoadCircuitBreaker(dir)
+	_, err := LoadCircuitBreaker(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for truncated JSON, got nil")
 	}
@@ -359,7 +360,7 @@ func TestLoadCircuitBreaker_ZeroByteFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".ralph", ".circuit_breaker_state"), []byte{}, 0644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := LoadCircuitBreaker(dir)
+	_, err := LoadCircuitBreaker(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for zero-byte file, got nil")
 	}
@@ -370,7 +371,7 @@ func TestLoadProgress_TruncatedJSON(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".ralph", "progress.json"), []byte(`{"iteration":5,`), 0644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := LoadProgress(dir)
+	_, err := LoadProgress(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for truncated JSON, got nil")
 	}
@@ -381,7 +382,7 @@ func TestLoadProgress_ZeroByteFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".ralph", "progress.json"), []byte{}, 0644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := LoadProgress(dir)
+	_, err := LoadProgress(context.Background(), dir)
 	if err == nil {
 		t.Fatal("expected error for zero-byte file, got nil")
 	}
@@ -394,7 +395,7 @@ func TestLoadProgress_InvalidUTF8(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Must not panic regardless of whether it returns an error.
-	_, _ = LoadProgress(dir)
+	_, _ = LoadProgress(context.Background(), dir)
 }
 
 func TestRefreshRepo_MixedCorruptFiles(t *testing.T) {
@@ -412,7 +413,7 @@ func TestRefreshRepo_MixedCorruptFiles(t *testing.T) {
 	writeJSON(t, filepath.Join(dir, ".ralph", "progress.json"), Progress{Iteration: 1, Status: "running"})
 
 	r := &Repo{Path: dir}
-	errs := RefreshRepo(r)
+	errs := RefreshRepo(context.Background(), r)
 
 	if len(errs) != 2 {
 		t.Errorf("expected 2 errors (status + circuit), got %d: %v", len(errs), errs)
