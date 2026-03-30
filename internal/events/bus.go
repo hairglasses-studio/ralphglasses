@@ -131,6 +131,9 @@ type filteredSub struct {
 }
 
 // Bus is a simple in-process pub/sub event bus with history.
+// It manages a local ring buffer, persistence, and subscriber fan-out.
+// By default it uses an in-memory transport for fan-out. Supply
+// WithTransport to plug in an external transport (e.g. NATS).
 type Bus struct {
 	mu           sync.RWMutex
 	subscribers  map[string]chan Event
@@ -150,6 +153,10 @@ type Bus struct {
 	asyncBufSize int
 	writeCh      chan Event
 	writeDone    chan struct{}
+
+	// Pluggable transport — when non-nil, Publish/Subscribe/Unsubscribe
+	// delegate fan-out to the transport instead of inline maps.
+	transport EventTransport
 }
 
 // BusOption configures a Bus during construction.
@@ -167,6 +174,23 @@ func WithAsyncWrites(bufSize int) BusOption {
 		}
 		b.AsyncWrites = true
 	}
+}
+
+// WithTransport returns a BusOption that sets a custom EventTransport
+// for subscriber fan-out. When set, the Bus delegates Publish fan-out,
+// Subscribe, and Unsubscribe to the transport. History, persistence,
+// and TTL trimming remain local to the Bus.
+func WithTransport(t EventTransport) BusOption {
+	return func(b *Bus) {
+		b.transport = t
+	}
+}
+
+// Transport returns the EventTransport currently in use. If no external
+// transport was configured via WithTransport, this returns nil (the Bus
+// uses its built-in in-memory fan-out).
+func (b *Bus) Transport() EventTransport {
+	return b.transport
 }
 
 // NewBus creates an event bus that retains up to maxHistory events.
@@ -248,35 +272,42 @@ func (b *Bus) PublishCtx(ctx context.Context, event Event) error {
 		}
 	}
 
-	// Snapshot unfiltered subscribers under lock
-	subs := make([]chan Event, 0, len(b.subscribers))
-	for _, ch := range b.subscribers {
-		subs = append(subs, ch)
-	}
-
-	// Snapshot filtered subscribers that match this event type
-	var filteredChans []chan Event
-	for _, fs := range b.filteredSubs {
-		if _, ok := fs.types[event.Type]; ok {
-			filteredChans = append(filteredChans, fs.ch)
+	// Fan-out: delegate to transport if configured, otherwise use inline maps.
+	if b.transport != nil {
+		b.mu.Unlock()
+		// Transport handles its own concurrency.
+		_ = b.transport.Publish(ctx, event)
+	} else {
+		// Snapshot unfiltered subscribers under lock
+		subs := make([]chan Event, 0, len(b.subscribers))
+		for _, ch := range b.subscribers {
+			subs = append(subs, ch)
 		}
-	}
-	b.mu.Unlock()
 
-	// Non-blocking send to each unfiltered subscriber
-	for _, ch := range subs {
-		select {
-		case ch <- event:
-		default:
-			// Drop on overflow — subscriber is too slow
+		// Snapshot filtered subscribers that match this event type
+		var filteredChans []chan Event
+		for _, fs := range b.filteredSubs {
+			if _, ok := fs.types[event.Type]; ok {
+				filteredChans = append(filteredChans, fs.ch)
+			}
 		}
-	}
+		b.mu.Unlock()
 
-	// Non-blocking send to each matching filtered subscriber
-	for _, ch := range filteredChans {
-		select {
-		case ch <- event:
-		default:
+		// Non-blocking send to each unfiltered subscriber
+		for _, ch := range subs {
+			select {
+			case ch <- event:
+			default:
+				// Drop on overflow — subscriber is too slow
+			}
+		}
+
+		// Non-blocking send to each matching filtered subscriber
+		for _, ch := range filteredChans {
+			select {
+			case ch <- event:
+			default:
+			}
 		}
 	}
 
@@ -292,6 +323,10 @@ func (b *Bus) Publish(event Event) {
 
 // Subscribe creates a buffered channel that receives events.
 func (b *Bus) Subscribe(id string) <-chan Event {
+	if b.transport != nil {
+		ch, _ := b.transport.Subscribe(context.Background(), id, nil)
+		return ch
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -302,6 +337,18 @@ func (b *Bus) Subscribe(id string) <-chan Event {
 
 // SubscribeFiltered returns a channel that receives only events of the specified types.
 func (b *Bus) SubscribeFiltered(id string, types ...EventType) <-chan Event {
+	if b.transport != nil {
+		typeSet := make(map[EventType]struct{}, len(types))
+		for _, t := range types {
+			typeSet[t] = struct{}{}
+		}
+		filter := func(e Event) bool {
+			_, ok := typeSet[e.Type]
+			return ok
+		}
+		ch, _ := b.transport.Subscribe(context.Background(), id, filter)
+		return ch
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -317,6 +364,10 @@ func (b *Bus) SubscribeFiltered(id string, types ...EventType) <-chan Event {
 
 // Unsubscribe removes a subscriber and closes its channel.
 func (b *Bus) Unsubscribe(id string) {
+	if b.transport != nil {
+		b.transport.Unsubscribe(id)
+		return
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -444,6 +495,11 @@ func (b *Bus) Close() error {
 		b.asyncStarted = false
 		b.AsyncWrites = false
 		b.mu.Unlock()
+	}
+
+	// Close transport if configured
+	if b.transport != nil {
+		_ = b.transport.Close()
 	}
 
 	b.mu.Lock()
