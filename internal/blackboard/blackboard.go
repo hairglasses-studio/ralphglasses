@@ -29,15 +29,31 @@ type Entry struct {
 // WatchFunc is called whenever an entry is written via Put.
 type WatchFunc func(entry Entry)
 
+// Option configures a Blackboard at construction time.
+type Option func(*Blackboard)
+
+// WithDefaultTTL sets a default TTL applied to every entry that does not
+// already carry a non-zero TTL when passed to Put.
+func WithDefaultTTL(d time.Duration) Option {
+	return func(bb *Blackboard) {
+		bb.defaultTTL = d
+	}
+}
+
 // Blackboard is a shared coordination structure for fleet workers.
 // It stores entries keyed by namespace+key, supports optimistic concurrency
 // via monotonic versioning, watcher notifications, TTL-based GC, and JSONL
 // persistence.
 type Blackboard struct {
-	mu       sync.RWMutex
-	entries  map[string]*Entry // keyed by compositeKey(namespace, key)
-	watchers []WatchFunc
-	stateDir string
+	mu         sync.RWMutex
+	entries    map[string]*Entry // keyed by compositeKey(namespace, key)
+	watchers   []WatchFunc
+	stateDir   string
+	defaultTTL time.Duration
+
+	// evictor lifecycle
+	evictStop chan struct{}
+	evictDone chan struct{}
 }
 
 // compositeKey builds the map key from namespace and key.
@@ -47,10 +63,13 @@ func compositeKey(namespace, key string) string {
 
 // NewBlackboard creates a Blackboard and loads any persisted state from
 // stateDir. If stateDir is empty, persistence is disabled.
-func NewBlackboard(stateDir string) *Blackboard {
+func NewBlackboard(stateDir string, opts ...Option) *Blackboard {
 	bb := &Blackboard{
 		entries:  make(map[string]*Entry),
 		stateDir: stateDir,
+	}
+	for _, o := range opts {
+		o(bb)
 	}
 	bb.load()
 	return bb
@@ -76,6 +95,11 @@ func (bb *Blackboard) Put(entry Entry) error {
 			bb.mu.Unlock()
 			return ErrVersionConflict
 		}
+	}
+
+	// Apply default TTL when the entry does not carry one.
+	if entry.TTL == 0 && bb.defaultTTL > 0 {
+		entry.TTL = bb.defaultTTL
 	}
 
 	now := time.Now()

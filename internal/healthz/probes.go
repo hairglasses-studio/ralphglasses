@@ -66,6 +66,20 @@ func NewProbeRegistry() *ProbeRegistry {
 	}
 }
 
+// HasLivenessChecks reports whether any liveness checks have been registered.
+func (r *ProbeRegistry) HasLivenessChecks() bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.liveness) > 0
+}
+
+// HasReadinessChecks reports whether any readiness checks have been registered.
+func (r *ProbeRegistry) HasReadinessChecks() bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.readiness) > 0
+}
+
 // SetTimeout overrides the per-check timeout.
 func (r *ProbeRegistry) SetTimeout(d time.Duration) {
 	r.mu.Lock()
