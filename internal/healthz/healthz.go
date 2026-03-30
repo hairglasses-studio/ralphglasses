@@ -24,6 +24,7 @@ func New(addr string) *Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", s.handleHealthz)
 	mux.HandleFunc("/readyz", s.handleReadyz)
+	mux.HandleFunc("/metrics", s.handleMetrics)
 	s.srv = &http.Server{
 		Addr:              addr,
 		Handler:           mux,
@@ -56,6 +57,16 @@ func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
 		"status": "ok",
 		"uptime": time.Since(s.started).String(),
 	})
+}
+
+func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	fmt.Fprintf(w, "# HELP ralphglasses_up Whether the process is running.\n")
+	fmt.Fprintf(w, "# TYPE ralphglasses_up gauge\n")
+	fmt.Fprintf(w, "ralphglasses_up 1\n")
+	fmt.Fprintf(w, "# HELP ralphglasses_uptime_seconds Time since process start.\n")
+	fmt.Fprintf(w, "# TYPE ralphglasses_uptime_seconds gauge\n")
+	fmt.Fprintf(w, "ralphglasses_uptime_seconds %.0f\n", time.Since(s.started).Seconds())
 }
 
 func (s *Server) handleReadyz(w http.ResponseWriter, r *http.Request) {
