@@ -16,17 +16,31 @@ import (
 // DefaultPoolSize is the default number of pre-created worktrees per repo.
 const DefaultPoolSize = 4
 
+// DefaultStaleThreshold is the default age after which idle pool worktrees are
+// considered stale and eligible for automatic cleanup.
+const DefaultStaleThreshold = 24 * time.Hour
+
+// protectedBranches lists branch names that pool worktrees must never merge into.
+var protectedBranches = []string{"main", "master"}
+
 // WorktreePool manages a pool of pre-created git worktrees per repository.
 // Worktrees are acquired for session use and released back for reuse, avoiding
 // the overhead of repeated `git worktree add` / `git worktree remove` cycles.
 //
+// Features:
+//   - Git alternates: pool worktrees share the parent repo's object store,
+//     saving disk space by avoiding duplicate pack files.
+//   - Merge prevention: each pool worktree gets a pre-merge-commit hook that
+//     blocks merges into protected branches (main, master).
+//   - Stale cleanup: CleanupStale removes idle worktrees older than a threshold.
+//
 // Thread-safe: each repo has its own mutex to allow concurrent access across
 // different repos without contention.
 type WorktreePool struct {
-	mu       sync.Mutex            // protects repos map
-	repos    map[string]*repoPool  // keyed by canonical repo path
-	poolSize int                   // max idle worktrees per repo
-	counter  atomic.Int64          // monotonic counter for unique naming
+	mu       sync.Mutex           // protects repos map
+	repos    map[string]*repoPool // keyed by canonical repo path
+	poolSize int                  // max idle worktrees per repo
+	counter  atomic.Int64         // monotonic counter for unique naming
 	closed   atomic.Bool
 }
 
@@ -39,8 +53,9 @@ type repoPool struct {
 
 // poolEntry represents a single pooled worktree.
 type poolEntry struct {
-	Path   string // filesystem path to the worktree
-	Branch string // branch name checked out in the worktree
+	Path      string    // filesystem path to the worktree
+	Branch    string    // branch name checked out in the worktree
+	CreatedAt time.Time // when this entry was created or last released
 }
 
 // WorktreePoolStats exposes metrics about pool utilization.
@@ -140,7 +155,7 @@ func (wp *WorktreePool) Release(ctx context.Context, repoPath, wtPath string) {
 
 	// Determine the branch name currently checked out.
 	branch := wp.currentBranch(wtPath)
-	rp.idle = append(rp.idle, poolEntry{Path: wtPath, Branch: branch})
+	rp.idle = append(rp.idle, poolEntry{Path: wtPath, Branch: branch, CreatedAt: time.Now()})
 	slog.Debug("released worktree to pool", "path", wtPath, "idle", len(rp.idle), "repo", rp.repoRoot)
 }
 
@@ -185,7 +200,7 @@ func (wp *WorktreePool) Warm(ctx context.Context, repoPath string, count int) er
 
 		rp.mu.Lock()
 		if len(rp.idle) < wp.poolSize {
-			rp.idle = append(rp.idle, poolEntry{Path: path, Branch: branch})
+			rp.idle = append(rp.idle, poolEntry{Path: path, Branch: branch, CreatedAt: time.Now()})
 			created++
 		} else {
 			// Race: another goroutine filled the pool while we were creating.
@@ -196,6 +211,50 @@ func (wp *WorktreePool) Warm(ctx context.Context, repoPath string, count int) er
 
 	slog.Info("warmed worktree pool", "repo", rp.repoRoot, "created", created, "total_idle", existing+created)
 	return nil
+}
+
+// CleanupStale removes idle pool worktrees that have been sitting unused for
+// longer than the given threshold. Returns the number of worktrees removed.
+// Pass DefaultStaleThreshold for the standard 24-hour threshold.
+func (wp *WorktreePool) CleanupStale(olderThan time.Duration) int {
+	if wp.closed.Load() {
+		return 0
+	}
+
+	wp.mu.Lock()
+	reposCopy := make(map[string]*repoPool, len(wp.repos))
+	for k, v := range wp.repos {
+		reposCopy[k] = v
+	}
+	wp.mu.Unlock()
+
+	cutoff := time.Now().Add(-olderThan)
+	var totalCleaned int
+
+	for _, rp := range reposCopy {
+		rp.mu.Lock()
+		var kept []poolEntry
+		var stale []poolEntry
+		for _, e := range rp.idle {
+			if e.CreatedAt.Before(cutoff) {
+				stale = append(stale, e)
+			} else {
+				kept = append(kept, e)
+			}
+		}
+		rp.idle = kept
+		rp.mu.Unlock()
+
+		for _, e := range stale {
+			wp.destroyWorktree(rp.repoRoot, e.Path)
+			totalCleaned++
+		}
+	}
+
+	if totalCleaned > 0 {
+		slog.Info("cleaned stale pool worktrees", "removed", totalCleaned)
+	}
+	return totalCleaned
 }
 
 // Stats returns pool utilization for all known repos.
@@ -284,6 +343,8 @@ func resolveRepoRoot(ctx context.Context, repoPath string) (string, error) {
 }
 
 // createFreshWorktree creates a new git worktree under .ralph/worktrees/pool/.
+// After creation it sets up git alternates for space efficiency and installs
+// a merge-prevention hook.
 func (wp *WorktreePool) createFreshWorktree(ctx context.Context, repoRoot string) (string, string, error) {
 	seq := wp.counter.Add(1)
 	name := fmt.Sprintf("pool-%d-%d", time.Now().UnixMilli(), seq)
@@ -299,8 +360,162 @@ func (wp *WorktreePool) createFreshWorktree(ctx context.Context, repoRoot string
 		return "", "", fmt.Errorf("git worktree add: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 
+	// Set up git alternates so the worktree shares the parent repo's object
+	// store. This avoids duplicating pack files across pool worktrees, saving
+	// significant disk space for large repositories.
+	if err := setupAlternates(repoRoot, wtPath); err != nil {
+		slog.Warn("failed to set up alternates for pool worktree",
+			"path", wtPath, "error", err)
+		// Non-fatal: the worktree works without alternates, just uses more disk.
+	}
+
+	// Install a pre-merge-commit hook that prevents merging into protected
+	// branches (main, master). This is a safety net against accidental pushes
+	// from pool worktrees back into the main line.
+	if err := installMergePreventionHook(wtPath); err != nil {
+		slog.Warn("failed to install merge prevention hook",
+			"path", wtPath, "error", err)
+		// Non-fatal: merges are still possible but not recommended.
+	}
+
 	slog.Debug("created fresh worktree", "path", wtPath, "branch", branch)
 	return wtPath, branch, nil
+}
+
+// setupAlternates writes the parent repo's object directory into the worktree's
+// objects/info/alternates file. Git uses this to look up objects in the parent
+// store before fetching or creating new copies, providing space-efficient
+// shared storage across all pool worktrees.
+func setupAlternates(repoRoot, wtPath string) error {
+	// Resolve the parent repo's git object directory.
+	parentObjects := filepath.Join(repoRoot, ".git", "objects")
+	if _, err := os.Stat(parentObjects); err != nil {
+		return fmt.Errorf("parent objects dir not found: %w", err)
+	}
+
+	// Find the worktree's git dir. For worktrees, .git is a file pointing
+	// to the real git dir (e.g., "gitdir: /repo/.git/worktrees/pool-xxx").
+	wtGitDir, err := resolveWorktreeGitDir(wtPath)
+	if err != nil {
+		return fmt.Errorf("resolve worktree git dir: %w", err)
+	}
+
+	altDir := filepath.Join(wtGitDir, "objects", "info")
+	if err := os.MkdirAll(altDir, 0755); err != nil {
+		return fmt.Errorf("create alternates dir: %w", err)
+	}
+
+	altFile := filepath.Join(altDir, "alternates")
+	// Use absolute path for reliability across renames/moves.
+	absParentObjects, err := filepath.Abs(parentObjects)
+	if err != nil {
+		return fmt.Errorf("abs parent objects: %w", err)
+	}
+
+	// Read existing content to avoid duplicate entries.
+	existing, _ := os.ReadFile(altFile)
+	if strings.Contains(string(existing), absParentObjects) {
+		return nil // already set up
+	}
+
+	// Append (don't overwrite) in case other alternates exist.
+	f, err := os.OpenFile(altFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("open alternates file: %w", err)
+	}
+	defer f.Close()
+
+	if _, err := fmt.Fprintln(f, absParentObjects); err != nil {
+		return fmt.Errorf("write alternates: %w", err)
+	}
+
+	return nil
+}
+
+// resolveWorktreeGitDir returns the actual git directory for a worktree.
+// In a worktree, .git is a file containing "gitdir: <path>". For regular
+// repos, .git is a directory and we return it directly.
+func resolveWorktreeGitDir(wtPath string) (string, error) {
+	gitPath := filepath.Join(wtPath, ".git")
+	info, err := os.Stat(gitPath)
+	if err != nil {
+		return "", fmt.Errorf("stat .git: %w", err)
+	}
+
+	// Regular .git directory (not a worktree).
+	if info.IsDir() {
+		return gitPath, nil
+	}
+
+	// It's a file -- read the gitdir pointer.
+	data, err := os.ReadFile(gitPath)
+	if err != nil {
+		return "", fmt.Errorf("read .git file: %w", err)
+	}
+
+	content := strings.TrimSpace(string(data))
+	if !strings.HasPrefix(content, "gitdir: ") {
+		return "", fmt.Errorf("unexpected .git file content: %q", content)
+	}
+
+	gitDir := strings.TrimPrefix(content, "gitdir: ")
+	// Resolve relative paths against the worktree.
+	if !filepath.IsAbs(gitDir) {
+		gitDir = filepath.Join(wtPath, gitDir)
+	}
+
+	return filepath.Clean(gitDir), nil
+}
+
+// mergePreventionHookScript is installed as pre-merge-commit in pool worktrees.
+// It checks whether the current branch is a protected branch and refuses the
+// merge if so. This prevents agents from accidentally merging pool branches
+// into main/master.
+const mergePreventionHookScript = `#!/bin/sh
+# Installed by ralphglasses WorktreePool — prevents merges into protected branches.
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+case "$BRANCH" in
+  main|master)
+    echo "ERROR: merge into protected branch '$BRANCH' is blocked in pool worktrees." >&2
+    echo "Use 'git push' to a feature branch and create a pull request instead." >&2
+    exit 1
+    ;;
+esac
+exit 0
+`
+
+// installMergePreventionHook writes a pre-merge-commit hook into the worktree's
+// hooks directory. The hook rejects merges when the current branch is main or
+// master, preventing accidental contamination of protected branches from pool
+// worktree activity.
+func installMergePreventionHook(wtPath string) error {
+	wtGitDir, err := resolveWorktreeGitDir(wtPath)
+	if err != nil {
+		return fmt.Errorf("resolve git dir: %w", err)
+	}
+
+	hooksDir := filepath.Join(wtGitDir, "hooks")
+	if err := os.MkdirAll(hooksDir, 0755); err != nil {
+		return fmt.Errorf("create hooks dir: %w", err)
+	}
+
+	hookPath := filepath.Join(hooksDir, "pre-merge-commit")
+	if err := os.WriteFile(hookPath, []byte(mergePreventionHookScript), 0755); err != nil {
+		return fmt.Errorf("write hook: %w", err)
+	}
+
+	return nil
+}
+
+// IsProtectedBranch returns true if the given branch name is protected from
+// merges in pool worktrees.
+func IsProtectedBranch(branch string) bool {
+	for _, b := range protectedBranches {
+		if branch == b {
+			return true
+		}
+	}
+	return false
 }
 
 // resetWorktree resets a worktree to HEAD, discarding all local changes.

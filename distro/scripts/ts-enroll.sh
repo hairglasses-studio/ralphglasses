@@ -175,16 +175,48 @@ log "Tags: $TS_TAGS"
 
 log "--- Tailscale Enrollment ---"
 
-TS_CMD="tailscale up --authkey=${TS_AUTHKEY} --advertise-tags=${TS_TAGS} --hostname=${TS_HOSTNAME} --ssh --accept-routes"
-
 if [[ "$DRY_RUN" == true ]]; then
     log "DRY RUN: Would execute: tailscale up --authkey=<redacted> --advertise-tags=${TS_TAGS} --hostname=${TS_HOSTNAME} --ssh --accept-routes"
 else
     log "Executing: tailscale up --authkey=<redacted> --advertise-tags=${TS_TAGS} --hostname=${TS_HOSTNAME} --ssh --accept-routes"
-    if ! $TS_CMD; then
+    if ! tailscale up \
+        --authkey="${TS_AUTHKEY}" \
+        --advertise-tags="${TS_TAGS}" \
+        --hostname="${TS_HOSTNAME}" \
+        --ssh \
+        --accept-routes; then
         die "tailscale up failed"
     fi
     log "Tailscale enrollment succeeded"
+fi
+
+# --- Verify connectivity ---
+
+log "--- Connectivity Verification ---"
+
+if [[ "$DRY_RUN" == true ]]; then
+    log "DRY RUN: Would verify tailscale status and connectivity"
+else
+    # Verify tailscale reports as running
+    if ! ts_status="$(tailscale status --json 2>/dev/null)"; then
+        log "WARNING: Could not retrieve tailscale status after enrollment"
+    else
+        log "Tailscale status retrieved successfully"
+    fi
+
+    # Verify the node's IP was assigned
+    ts_ip="$(tailscale ip -4 2>/dev/null || true)"
+    if [[ -n "$ts_ip" ]]; then
+        log "Tailscale IPv4 address: $ts_ip"
+    else
+        log "WARNING: No Tailscale IPv4 address assigned yet (may take a moment)"
+    fi
+
+    # Verify hostname was set correctly
+    ts_name="$(tailscale status --self --json 2>/dev/null | grep -o '"HostName":"[^"]*"' | head -1 || true)"
+    if [[ -n "$ts_name" ]]; then
+        log "Tailscale self: $ts_name"
+    fi
 fi
 
 # --- Create marker file ---
