@@ -37,19 +37,19 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
   - File: `internal/session/loop.go` — add `MaxWorkerTurns` with default 20
   - **Acceptance:** Sessions terminate cleanly at turn limit instead of being killed
 
-- [ ] **QW-4** — Fix prompt_analyze score inflation (FINDING-240: scores cluster at 8-9/10 regardless of quality) `P1` `S`
-  - File: `internal/enhancer/analyze.go` — recalibrate scoring rubric, add negative signal detection
-  - **Acceptance:** Score distribution spans 3-9 range on test corpus
+- [x] **QW-4** — Fix prompt_analyze score inflation (FINDING-240: scores cluster at 8-9/10 regardless of quality) `P1` `S`
+  - File: `internal/enhancer/scoring.go` — lowered baselines (30/25), added trivial-prompt penalties, missing-structure penalties; strict weighted average with no coherence bonus
+  - **Acceptance:** Score distribution spans 3-9 range on test corpus — verified via `TestScore_TrivialPromptInflation`, `TestScore_DistributionSpan`, `TestScoringCalibration`, `TestScore_WeakDimensionsDragOverall`
 
 - [x] **QW-5** — Fix prompt_enhance stage skipping transparency (FINDING-243: stages silently skipped) `P1` `S`
   - File: `internal/enhancer/pipeline.go` — add `SkippedStages` field to result, log skip reasons
   - **Acceptance:** Enhanced result includes list of skipped stages with reasons
 
-- [ ] **QW-6** — Fix loop_gates zero-baseline bug (FINDING-226/238: baseline zero-init, 2nd cycle recurrence) `P0` `S`
+- [x] **QW-6** — Fix loop_gates zero-baseline bug (FINDING-226/238: baseline zero-init, 2nd cycle recurrence) `P0` `S`
   - File: `internal/session/loop_gates.go` — ensure baseline save errors propagate, initialize from first observation
   - **Acceptance:** `loop_gates` returns meaningful deltas on first run after baseline
 
-- [ ] **QW-7** — Fix snapshot path saving to claudekit path (FINDING-148/268: 4th cycle recurrence) `P1` `S`
+- [x] **QW-7** — Fix snapshot path saving to claudekit path (FINDING-148/268: 4th cycle recurrence) `P1` `S`
   - File: `internal/session/snapshot.go` — update path resolution to use ralphglasses project root
   - **Acceptance:** Snapshots save to `.ralph/snapshots/` not `claudekit/` path
 
@@ -62,7 +62,7 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
   - **Acceptance:** `autonomy_level` survives process restart
 
 - [x] **QW-10** — Fix relevance scoring flat at 0.5 for all results (research-audit FINDING) `P1` `M`
-  - File: `internal/roadmap/research.go` — implement actual TF-IDF or keyword overlap scoring
+  - File: `internal/roadmap/research.go` — `weightedRelevance()` combines Jaccard + coverage + star-boost
   - **Acceptance:** Relevance scores vary meaningfully (stddev > 0.15)
 
 - [x] **QW-11** — Clean phantom fleet work (73% stale, 109 phantom "001" repo entries) `P1` `S`
@@ -1456,7 +1456,7 @@ Derived from R&D cycle findings and scratchpad analysis.
 | Loop gates zero baseline | Medium — misleading metrics | S | loop_gates.go | QW-6 | FINDING-226/238 |
 | Budget params ignored | High — budget not enforced | S | tools_session.go | QW-8 | FINDING-258/261 |
 | Provider recommend Claude-only | Medium — no multi-provider | M | tools_provider.go | 2.5 | FINDING-220/262 |
-| Relevance scoring flat 0.5 | Medium — research unusable | M | internal/roadmap/research.go | QW-10 | research_audit |
+| Relevance scoring flat 0.5 | Medium — research unusable | M | tools_roadmap.go | QW-10 | research_audit |
 | improvement_patterns rules null | Low — no learning | S | reflexion.go | QW-12 | pattern_analysis |
 | Autonomy not persisted | Medium — state lost on restart | S | autooptimize.go | QW-9 | FINDING-257 |
 | Session signal:killed | High — unclean shutdown | M | loop.go, manager.go | QW-3, 0.6.5 | FINDING-160 |

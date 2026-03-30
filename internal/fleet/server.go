@@ -135,8 +135,8 @@ func (c *Coordinator) maintenanceLoop(ctx context.Context) {
 		case <-ticker.C:
 			c.expireWorkers()
 			c.reclaimTimedOut()
-			c.queue.ReapStale(time.Hour)
-			c.queue.ReapPhantomRepos()
+			c.queue.ReapStale(time.Hour)     // QW-11: clean phantom/stale tasks older than 1 hour
+			c.queue.ReapPhantomRepos()        // QW-11: purge bare "001" placeholder repo entries
 		}
 	}
 }

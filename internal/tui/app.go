@@ -58,6 +58,7 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 		SearchInput:   components.NewSearchInput(),
 		SearchView:    views.NewSearchView(),
 		LastRefresh:    components.NowFunc(),
+		StartedAt:      components.NowFunc(),
 		ProcMgr:        process.NewManager(),
 		SessMgr:        sessMgr,
 		Keys:           DefaultKeyMap(),

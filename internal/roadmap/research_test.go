@@ -379,43 +379,48 @@ func TestJaccardSimilarity_Basics(t *testing.T) {
 	}
 }
 
-// TestWeightedRelevance verifies QW-10 threshold assertions:
-// fully-relevant items score > 0.7, zero-overlap items score < 0.3,
-// and all three fixture scores differ.
-func TestWeightedRelevance(t *testing.T) {
-	t.Parallel()
-
-	query := extractQueryKeywords("mcp agent tui")
-
-	// Fully-relevant: all 3 query keywords present + 500 stars
-	fullKW := extractQueryKeywords("mcp agent tui protocol server")
-	fullScore := weightedRelevance(query, fullKW, 500)
-	if fullScore <= 0.7 {
-		t.Errorf("fully-relevant item score %.3f, want > 0.7", fullScore)
-	}
-
-	// Zero-overlap: no shared keywords, 0 stars
-	zeroKW := extractQueryKeywords("database migration schema versioning")
-	zeroScore := weightedRelevance(query, zeroKW, 0)
-	if zeroScore >= 0.3 {
-		t.Errorf("zero-overlap item score %.3f, want < 0.3", zeroScore)
-	}
-
-	// Partial-overlap: one keyword match, moderate stars
-	partialKW := extractQueryKeywords("mcp server http middleware")
-	partialScore := weightedRelevance(query, partialKW, 50)
-
-	// All three scores must differ
-	if fullScore == zeroScore || fullScore == partialScore || zeroScore == partialScore {
-		t.Errorf("scores not all distinct: full=%.3f partial=%.3f zero=%.3f", fullScore, partialScore, zeroScore)
-	}
-}
-
 func TestDedupStrings(t *testing.T) {
 	t.Parallel()
 	input := []string{"a", "b", "a", "c", "b"}
 	result := dedupStrings(input)
 	if len(result) != 3 {
 		t.Errorf("expected 3 unique strings, got %d: %v", len(result), result)
+	}
+}
+
+// TestWeightedRelevance_Thresholds verifies QW-10 acceptance criteria:
+// (a) clearly relevant results score above 0.7,
+// (b) clearly irrelevant results score below 0.3, and
+// (c) results with differing signals receive different scores.
+func TestWeightedRelevance_Thresholds(t *testing.T) {
+	t.Parallel()
+
+	query := extractQueryKeywords("mcp agent tui")
+
+	// (a) Clearly relevant: all query keywords present, plus popular (500 stars).
+	// jaccard = 3/(3+3) = 0.5, coverage = 3/3 = 1.0, starBoost = 0.15
+	// score = 0.40*0.5 + 0.45*1.0 + 0.15 = 0.80
+	relevantKW := extractQueryKeywords("mcp agent tui client server protocol")
+	relevantScore := weightedRelevance(query, relevantKW, 500)
+	if relevantScore <= 0.7 {
+		t.Errorf("clearly relevant result scored %.3f, want > 0.7 (QW-10a)", relevantScore)
+	}
+
+	// (b) Clearly irrelevant: zero keyword overlap, zero stars.
+	// jaccard = 0.0, coverage = 0.0, starBoost = 0.0 → score = 0.0
+	irrelevantKW := extractQueryKeywords("random utility library string manipulation")
+	irrelevantScore := weightedRelevance(query, irrelevantKW, 0)
+	if irrelevantScore >= 0.3 {
+		t.Errorf("clearly irrelevant result scored %.3f, want < 0.3 (QW-10b)", irrelevantScore)
+	}
+
+	// (c) Two results with different signals must receive different scores.
+	partialKW := extractQueryKeywords("mcp server framework golang")
+	partialScore := weightedRelevance(query, partialKW, 50)
+	if partialScore == irrelevantScore {
+		t.Errorf("partial-match scored same as irrelevant (%.3f == %.3f) (QW-10c)", partialScore, irrelevantScore)
+	}
+	if relevantScore == partialScore {
+		t.Errorf("full-match scored same as partial-match (%.3f == %.3f) (QW-10c)", relevantScore, partialScore)
 	}
 }
