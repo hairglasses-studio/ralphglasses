@@ -17,6 +17,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/plugin"
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
+	"github.com/hairglasses-studio/ralphglasses/internal/eval"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
@@ -84,6 +85,9 @@ type Server struct {
 
 	// PluginRegistry holds the plugin system registry for MCP plugin tools.
 	PluginRegistry *plugin.Registry
+
+	// MetricCollector collects A/B metrics from session and loop events.
+	MetricCollector *eval.MetricCollector
 }
 
 // DefaultScanTTL is how long repo scan results are considered fresh before
@@ -104,13 +108,14 @@ func NewServer(scanPath string) *Server {
 // NewServerWithBus creates a new MCP server instance with an event bus.
 func NewServerWithBus(scanPath string, bus *events.Bus) *Server {
 	return &Server{
-		ScanPath:       scanPath,
-		scanTTL:        DefaultScanTTL,
-		ProcMgr:        process.NewManagerWithBus(bus),
-		SessMgr:        session.NewManagerWithBus(bus),
-		EventBus:       bus,
-		HTTPClient:     &http.Client{Timeout: 30 * time.Second},
-		FleetAnalytics: fleet.NewFleetAnalytics(10000, 24*time.Hour),
+		ScanPath:        scanPath,
+		scanTTL:         DefaultScanTTL,
+		ProcMgr:         process.NewManagerWithBus(bus),
+		SessMgr:         session.NewManagerWithBus(bus),
+		EventBus:        bus,
+		HTTPClient:      &http.Client{Timeout: 30 * time.Second},
+		FleetAnalytics:  fleet.NewFleetAnalytics(10000, 24*time.Hour),
+		MetricCollector: eval.NewMetricCollector(bus),
 	}
 }
 
