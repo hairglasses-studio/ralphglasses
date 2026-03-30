@@ -320,6 +320,54 @@ func plannerJSONCandidates(text string) []string {
 		out = append(out, matches[1])
 	}
 
+	// Find all top-level JSON objects by scanning for balanced braces.
+	// Prioritize the last valid object since planner output often has
+	// prompt instructions with JSON examples before the actual response.
+	var jsonObjects []string
+	for i := 0; i < len(text); i++ {
+		if text[i] == '{' {
+			depth := 0
+			inStr := false
+			esc := false
+			for j := i; j < len(text); j++ {
+				if esc {
+					esc = false
+					continue
+				}
+				ch := text[j]
+				if inStr {
+					if ch == '\\' {
+						esc = true
+					} else if ch == '"' {
+						inStr = false
+					}
+					continue
+				}
+				switch ch {
+				case '"':
+					inStr = true
+				case '{':
+					depth++
+				case '}':
+					depth--
+					if depth == 0 {
+						candidate := text[i : j+1]
+						jsonObjects = append(jsonObjects, candidate)
+						i = j // outer loop will i++
+						goto nextChar
+					}
+				}
+			}
+		nextChar:
+		}
+	}
+	// Append in reverse order so the last JSON object (most likely the
+	// actual response) is tried first after the full-text attempt.
+	for k := len(jsonObjects) - 1; k >= 0; k-- {
+		out = append(out, jsonObjects[k])
+	}
+
+	// Legacy fallback: first '{' to last '}'
 	start := strings.IndexByte(text, '{')
 	end := strings.LastIndexByte(text, '}')
 	if start >= 0 && end > start {
