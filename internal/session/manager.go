@@ -170,6 +170,11 @@ func (m *Manager) Init() {
 		}
 	}
 
+	// Rehydrate persisted sessions from SQLite store so they survive restarts.
+	if err := m.RehydrateFromStore(); err != nil {
+		slog.Warn("failed to rehydrate sessions from store", "error", err)
+	}
+
 	// WS-7: Auto-prune stale loop runs on startup (non-blocking).
 	go m.autoPruneLoopRuns()
 }

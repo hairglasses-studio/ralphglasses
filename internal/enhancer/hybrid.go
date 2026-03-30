@@ -117,7 +117,7 @@ func EnhanceHybrid(ctx context.Context, prompt string, taskType TaskType, cfg Co
 		return result
 	}
 
-	// Call LLM
+	// Call LLM with exponential backoff + jitter on retryable errors
 	timeout := engine.Cfg.Timeout
 	if timeout <= 0 {
 		timeout = 30 * time.Second
@@ -125,7 +125,7 @@ func EnhanceHybrid(ctx context.Context, prompt string, taskType TaskType, cfg Co
 	llmCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	llmResult, err := engine.Client.Improve(llmCtx, prompt, opts)
+	llmResult, err := retryImprove(llmCtx, engine.Client, prompt, opts, DefaultBackoff())
 	if err != nil {
 		engine.CB.RecordFailure()
 		fmt.Fprintf(os.Stderr, "prompt-improver: LLM enhancement failed: %v\n", err)

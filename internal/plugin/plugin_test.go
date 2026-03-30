@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -18,6 +19,8 @@ type fakePlugin struct {
 
 func (f *fakePlugin) Name() string    { return f.name }
 func (f *fakePlugin) Version() string { return f.version }
+func (f *fakePlugin) Init(_ context.Context, _ PluginHost) error { return nil }
+func (f *fakePlugin) Shutdown() error                            { return nil }
 func (f *fakePlugin) OnEvent(ctx context.Context, event Event) error {
 	if f.onEvent != nil {
 		return f.onEvent(ctx, event)
@@ -50,8 +53,8 @@ func TestRegistryRegisterAndList(t *testing.T) {
 	if len(list) != 2 {
 		t.Fatalf("List() returned %d plugins, want 2", len(list))
 	}
-	if list[0].Name() != "p1" || list[1].Name() != "p2" {
-		t.Errorf("List() = [%s, %s], want [p1, p2]", list[0].Name(), list[1].Name())
+	if list[0].Name != "p1" || list[1].Name != "p2" {
+		t.Errorf("List() = [%s, %s], want [p1, p2]", list[0].Name, list[1].Name)
 	}
 }
 
@@ -62,10 +65,10 @@ func TestRegistryListReturnsSnapshot(t *testing.T) {
 
 	snapshot := r.List()
 	// Mutating the snapshot should not affect the registry.
-	snapshot[0] = nil
+	snapshot[0].Name = "mutated"
 
 	list := r.List()
-	if list[0] == nil {
+	if list[0].Name == "mutated" {
 		t.Error("List() returned a reference to internal slice, not a copy")
 	}
 }
@@ -179,7 +182,7 @@ func TestRegistryConcurrentAccess(t *testing.T) {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
-			r.Register(&fakePlugin{name: "concurrent", version: "1.0"})
+			r.Register(&fakePlugin{name: fmt.Sprintf("c-%d", n), version: "1.0"})
 			r.Dispatch(context.Background(), Event{Type: "test"})
 			r.List()
 		}(i)

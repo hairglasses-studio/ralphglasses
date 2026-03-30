@@ -1,0 +1,1 @@
+{"type":"result","session_id":"sess-xyz789","result":"All tests pass.","usage":{"input_tokens":5000,"output_tokens":2000,"total_tokens":7000,"cost_usd":0.0312,"cache_read_input_tokens":3000,"cache_creation_input_tokens":500}}

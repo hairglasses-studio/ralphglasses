@@ -107,7 +107,11 @@ func (c *Coordinator) Start(ctx context.Context) error {
 
 	// A2A AgentCard discovery endpoint (v1.0 spec path)
 	mux.HandleFunc("GET "+AgentCardDiscoveryPath, c.handleAgentCard)
-	mux.HandleFunc("GET /api/v1/a2a/task/{taskID}", c.handleA2ATaskStatus)
+
+	// A2A task endpoints (v1.0 task send/receive)
+	mux.HandleFunc("POST /api/v1/a2a/task/send", c.handleA2ATaskSend)
+	mux.HandleFunc("GET /api/v1/a2a/task/{taskID}", c.handleA2ATaskGet)
+	mux.HandleFunc("POST /api/v1/a2a/task/{taskID}/cancel", c.handleA2ATaskCancel)
 
 	// Prometheus metrics endpoint
 	if promRec, ok := tracing.Get().(*tracing.PrometheusRecorder); ok {

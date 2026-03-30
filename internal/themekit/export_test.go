@@ -1,0 +1,255 @@
+package themekit
+
+import (
+	"strings"
+	"testing"
+)
+
+// ---------------------------------------------------------------------------
+// ExportTheme dispatcher
+// ---------------------------------------------------------------------------
+
+func TestExportThemeUnsupportedFormat(t *testing.T) {
+	_, err := ExportTheme(Catppuccin(Mocha), ExportFormat("xml"))
+	if err == nil {
+		t.Fatal("expected error for unsupported format")
+	}
+	if !strings.Contains(err.Error(), "unsupported") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// YAML round-trip
+// ---------------------------------------------------------------------------
+
+func TestExportYAMLRoundTrip(t *testing.T) {
+	for _, flavor := range AllFlavors() {
+		t.Run(string(flavor), func(t *testing.T) {
+			orig := Catppuccin(flavor)
+
+			data, err := ExportTheme(orig, FormatYAML)
+			if err != nil {
+				t.Fatalf("ExportTheme(yaml): %v", err)
+			}
+			if len(data) == 0 {
+				t.Fatal("empty yaml output")
+			}
+
+			got, err := ParseYAML(data)
+			if err != nil {
+				t.Fatalf("ParseYAML: %v", err)
+			}
+
+			assertPalettesEqual(t, orig, got)
+		})
+	}
+}
+
+func TestExportYAMLContent(t *testing.T) {
+	data, err := ExportTheme(Catppuccin(Mocha), FormatYAML)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+
+	if !strings.Contains(content, "name: Catppuccin Mocha") {
+		t.Error("missing palette name in yaml")
+	}
+	if !strings.Contains(content, "1e1e2e") {
+		t.Error("missing base hex color in yaml")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// JSON round-trip
+// ---------------------------------------------------------------------------
+
+func TestExportJSONRoundTrip(t *testing.T) {
+	for _, flavor := range AllFlavors() {
+		t.Run(string(flavor), func(t *testing.T) {
+			orig := Catppuccin(flavor)
+
+			data, err := ExportTheme(orig, FormatJSON)
+			if err != nil {
+				t.Fatalf("ExportTheme(json): %v", err)
+			}
+			if len(data) == 0 {
+				t.Fatal("empty json output")
+			}
+
+			got, err := ParseJSON(data)
+			if err != nil {
+				t.Fatalf("ParseJSON: %v", err)
+			}
+
+			assertPalettesEqual(t, orig, got)
+		})
+	}
+}
+
+func TestExportJSONContent(t *testing.T) {
+	data, err := ExportTheme(Catppuccin(Mocha), FormatJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+
+	if !strings.Contains(content, `"name": "Catppuccin Mocha"`) {
+		t.Error("missing palette name in json")
+	}
+	if !strings.Contains(content, `"hex": "1e1e2e"`) {
+		t.Error("missing base hex color in json")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TOML round-trip
+// ---------------------------------------------------------------------------
+
+func TestExportTOMLRoundTrip(t *testing.T) {
+	for _, flavor := range AllFlavors() {
+		t.Run(string(flavor), func(t *testing.T) {
+			orig := Catppuccin(flavor)
+
+			data, err := ExportTheme(orig, FormatTOML)
+			if err != nil {
+				t.Fatalf("ExportTheme(toml): %v", err)
+			}
+			if len(data) == 0 {
+				t.Fatal("empty toml output")
+			}
+
+			got, err := ParseTOML(data)
+			if err != nil {
+				t.Fatalf("ParseTOML: %v", err)
+			}
+
+			assertPalettesEqual(t, orig, got)
+		})
+	}
+}
+
+func TestExportTOMLContent(t *testing.T) {
+	data, err := ExportTheme(Catppuccin(Mocha), FormatTOML)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+
+	if !strings.Contains(content, `name = "Catppuccin Mocha"`) {
+		t.Error("missing palette name in toml")
+	}
+	if !strings.Contains(content, "[[colors]]") {
+		t.Error("missing [[colors]] array-of-tables in toml")
+	}
+	if !strings.Contains(content, `hex = "1e1e2e"`) {
+		t.Error("missing base hex color in toml")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// CSS round-trip
+// ---------------------------------------------------------------------------
+
+func TestExportCSSRoundTrip(t *testing.T) {
+	for _, flavor := range AllFlavors() {
+		t.Run(string(flavor), func(t *testing.T) {
+			orig := Catppuccin(flavor)
+
+			data, err := ExportTheme(orig, FormatCSS)
+			if err != nil {
+				t.Fatalf("ExportTheme(css): %v", err)
+			}
+			if len(data) == 0 {
+				t.Fatal("empty css output")
+			}
+
+			got, err := ParseCSS(data)
+			if err != nil {
+				t.Fatalf("ParseCSS: %v", err)
+			}
+
+			assertPalettesEqual(t, orig, got)
+		})
+	}
+}
+
+func TestExportCSSContent(t *testing.T) {
+	data, err := ExportTheme(Catppuccin(Mocha), FormatCSS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+
+	if !strings.Contains(content, ":root {") {
+		t.Error("missing :root selector in css")
+	}
+	if !strings.Contains(content, "--theme-base: #1e1e2e;") {
+		t.Error("missing --theme-base variable in css")
+	}
+	if !strings.Contains(content, "--theme-base-rgb: 30, 30, 46;") {
+		t.Error("missing --theme-base-rgb variable in css")
+	}
+	if !strings.Contains(content, "generated by ralphglasses themekit") {
+		t.Error("missing generator comment in css")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// sorted output determinism
+// ---------------------------------------------------------------------------
+
+func TestExportDeterministic(t *testing.T) {
+	p := Catppuccin(Mocha)
+
+	for _, format := range []ExportFormat{FormatYAML, FormatJSON, FormatTOML, FormatCSS} {
+		t.Run(string(format), func(t *testing.T) {
+			first, err := ExportTheme(p, format)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for i := 0; i < 5; i++ {
+				again, err := ExportTheme(p, format)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(first) != string(again) {
+					t.Fatalf("non-deterministic output on iteration %d", i)
+				}
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// helpers
+// ---------------------------------------------------------------------------
+
+func assertPalettesEqual(t *testing.T, want, got Palette) {
+	t.Helper()
+
+	if got.Name != want.Name {
+		t.Errorf("name: got %q, want %q", got.Name, want.Name)
+	}
+	if len(got.Colors) != len(want.Colors) {
+		t.Fatalf("color count: got %d, want %d", len(got.Colors), len(want.Colors))
+	}
+	for name, wantCol := range want.Colors {
+		gotCol, ok := got.Colors[name]
+		if !ok {
+			t.Errorf("missing color %q", name)
+			continue
+		}
+		if gotCol.Name != wantCol.Name {
+			t.Errorf("color %q name: got %q, want %q", name, gotCol.Name, wantCol.Name)
+		}
+		if gotCol.Hex != wantCol.Hex {
+			t.Errorf("color %q hex: got %q, want %q", name, gotCol.Hex, wantCol.Hex)
+		}
+		if gotCol.R != wantCol.R || gotCol.G != wantCol.G || gotCol.B != wantCol.B {
+			t.Errorf("color %q rgb: got (%d,%d,%d), want (%d,%d,%d)",
+				name, gotCol.R, gotCol.G, gotCol.B, wantCol.R, wantCol.G, wantCol.B)
+		}
+	}
+}

@@ -584,6 +584,7 @@ func TestUpsertUpdatesTimestamp(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	row.Status = "completed"
+	row.UpdatedAt = time.Time{} // reset so SaveSession auto-sets to now
 	if err := s.SaveSession(ctx, row); err != nil {
 		t.Fatalf("upsert: %v", err)
 	}
