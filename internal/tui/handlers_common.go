@@ -11,6 +11,7 @@ import (
 
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
+	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
 )
 
@@ -143,6 +144,21 @@ func (m Model) execCommand(cmd Command) (tea.Model, tea.Cmd) {
 		m.switchTab(3, ViewFleet, "Fleet")
 	case "repos":
 		m.switchTab(0, ViewOverview, "Repos")
+	case "theme":
+		if len(cmd.Args) == 0 {
+			names := make([]string, 0)
+			for n := range styles.DefaultThemes() {
+				names = append(names, n)
+			}
+			m.Notify.Show(fmt.Sprintf("Usage: :theme <name> — available: %s", strings.Join(names, ", ")), 4*time.Second)
+			return m, nil
+		}
+		if t := styles.ResolveTheme(cmd.Args[0]); t != nil {
+			styles.ApplyTheme(t)
+			m.Notify.Show(fmt.Sprintf("Theme: %s", t.Name), 2*time.Second)
+		} else {
+			m.Notify.Show(fmt.Sprintf("Theme not found: %s", cmd.Args[0]), 3*time.Second)
+		}
 	default:
 		m.Notify.Show(fmt.Sprintf("Unknown command: %s", cmd.Name), 3*time.Second)
 	}

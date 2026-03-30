@@ -91,6 +91,17 @@ func DefaultThemes() map[string]*Theme {
 			DarkBg:   "#1e1e2e",
 			BrightFg: "#cdd6f4",
 		},
+		"tokyo-night": {
+			Name:     "tokyo-night",
+			Primary:  "#7aa2f7",
+			Accent:   "#bb9af7",
+			Green:    "#9ece6a",
+			Yellow:   "#e0af68",
+			Red:      "#f7768e",
+			Gray:     "#565f89",
+			DarkBg:   "#1a1b26",
+			BrightFg: "#c0caf5",
+		},
 		"snazzy": {
 			Name:     "snazzy",
 			Primary:  "#57c7ff",
