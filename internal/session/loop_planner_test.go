@@ -222,6 +222,26 @@ func TestParsePlannerTask_FallbackToPlainText(t *testing.T) {
 	}
 }
 
+func TestParsePlannerTask_JSONAfterPromptInstructions(t *testing.T) {
+	// Simulates planner output where the full prompt (including JSON
+	// examples in instructions) precedes the actual response JSON.
+	input := `Here is the analysis of the codebase...
+
+Respond with ONLY a JSON object: {"title":"...","prompt":"..."}
+
+{"title":"Fix health monitor thresholds","prompt":"Add coverage and HITL rate evaluation to HealthMonitor"}`
+	task, err := parsePlannerTask(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if task.Title != "Fix health monitor thresholds" {
+		t.Errorf("title = %q, want 'Fix health monitor thresholds'", task.Title)
+	}
+	if !strings.Contains(task.Prompt, "coverage and HITL") {
+		t.Errorf("prompt = %q, want prompt about coverage", task.Prompt)
+	}
+}
+
 func TestParsePlannerTask_Empty(t *testing.T) {
 	_, err := parsePlannerTask("")
 	if err == nil {
