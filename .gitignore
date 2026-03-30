@@ -71,3 +71,12 @@ coverage.out
 # Repo-managed toolchain cache
 .tools/
 .claude/worktrees/
+
+# Migration ephemeral artifacts
+cover_full.out
+patterns.test
+session.test
+session_cover.out
+.ralph/logs/loop_observations.jsonl
+.ralph/awesome/*.json
+.ralph/awesome/report.md
