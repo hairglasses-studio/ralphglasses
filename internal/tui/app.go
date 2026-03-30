@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
+	lipglossv1 "github.com/charmbracelet/lipgloss"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -22,7 +23,8 @@ func NewModel(scanPath string, sessMgr *session.Manager) Model {
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = styles.StatusRunning
+	// Use v1 lipgloss for spinner style (bubbles/spinner is still on v1; migrates in phase 1B)
+	s.Style = lipglossv1.NewStyle().Foreground(lipglossv1.Color(styles.ColorGreenStr))
 
 	table.MultiSelect = true
 	sessionTable.MultiSelect = true

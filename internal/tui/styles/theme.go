@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"gopkg.in/yaml.v3"
 )
 
