@@ -1,0 +1,93 @@
+/* Waybar style for ralphglasses thin client
+ * k9s-inspired dark theme — Tokyo Night palette
+ */
+
+* {
+    font-family: monospace;
+    font-size: 11px;
+    border: none;
+    border-radius: 0;
+    min-height: 0;
+}
+
+window#waybar {
+    background-color: #1a1b26;
+    color: #c0caf5;
+}
+
+/* Workspaces */
+#workspaces button {
+    padding: 0 6px;
+    color: #686868;
+    background: transparent;
+}
+
+#workspaces button.focused {
+    background-color: #4c7899;
+    color: #c0caf5;
+}
+
+#workspaces button.urgent {
+    background-color: #ff5c57;
+    color: #1a1b26;
+}
+
+/* Mode indicator */
+#mode {
+    padding: 0 8px;
+    color: #f3f99d;
+    font-weight: bold;
+}
+
+/* Clock */
+#clock {
+    padding: 0 8px;
+    color: #c0caf5;
+}
+
+/* Shared custom module styling */
+#custom-rg-fleet,
+#custom-rg-loops,
+#custom-rg-cost,
+#custom-rg-models,
+#custom-rg-repos,
+#custom-rg-iters {
+    padding: 0 8px;
+}
+
+/* Fleet — green (running/completed/failed counts) */
+#custom-rg-fleet {
+    color: #5af78e;
+}
+
+/* Loops — pink (run count and success rate) */
+#custom-rg-loops {
+    color: #ff6ac1;
+}
+
+/* Cost — green (spend tracker) */
+#custom-rg-cost {
+    color: #5af78e;
+}
+
+/* Models — yellow (model distribution) */
+#custom-rg-models {
+    color: #f3f99d;
+}
+
+/* Repos — cyan (scan/target counts) */
+#custom-rg-repos {
+    color: #57c7ff;
+}
+
+/* Iters — gray (iteration stats) */
+#custom-rg-iters {
+    color: #686868;
+}
+
+/* Tooltip styling */
+tooltip {
+    background-color: #1a1b26;
+    border: 1px solid #4c7899;
+    color: #c0caf5;
+}
