@@ -41,6 +41,7 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 	}
 	stopSource := getBoolArg(req, "stop_source")
 	contextLines := int(getNumberArg(req, "context_lines", 5))
+	handoffReason := getStringArg(req, "handoff_reason")
 
 	// Read exported fields — these are set at launch and mostly immutable.
 	prompt := src.Prompt
@@ -69,9 +70,19 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 			}
 		}
 
+		// Build context header with cost info.
+		header := fmt.Sprintf("## Handoff Context (from session %s)\n\nCost so far: $%.4f", sourceID[:8], spentUSD)
+		if handoffReason != "" {
+			header += fmt.Sprintf("\nReason: %s", handoffReason)
+		}
+
 		if len(parts) > 0 {
-			contextPayload = fmt.Sprintf("## Handoff Context (from session %s)\n\nPrevious observations:\n%s\n\nOriginal prompt: %s",
-				sourceID[:8], strings.Join(parts, "\n"), prompt)
+			contextPayload = fmt.Sprintf("%s\n\nPrevious observations:\n%s\n\nOriginal prompt: %s",
+				header, strings.Join(parts, "\n"), prompt)
+		} else {
+			// No observations — still include cost and prompt context.
+			contextPayload = fmt.Sprintf("%s\n\nNo prior observations available.\n\nOriginal prompt: %s",
+				header, prompt)
 		}
 	}
 
@@ -134,6 +145,8 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 		"transferred_context":    includeContext,
 		"context_size_bytes":     len(contextPayload),
 		"remaining_budget":       remaining,
+		"cost_so_far":            spentUSD,
+		"handoff_reason":         handoffReason,
 		"handoff_at":             time.Now().UTC().Format(time.RFC3339),
 	}
 

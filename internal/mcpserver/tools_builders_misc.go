@@ -51,10 +51,11 @@ func (s *Server) buildRoadmapGroup() ToolGroup {
 				mcp.WithString("status", mcp.Description("Filter by status: incomplete (default), complete, all")),
 			), s.handleRoadmapExport},
 			{mcp.NewTool("ralphglasses_roadmap_prioritize",
-				mcp.WithDescription("Score and rank uncompleted roadmap items by impact, effort, and dependency readiness. Returns prioritized list and recommended next sprint."),
+				mcp.WithDescription("Score and rank uncompleted roadmap items by impact, effort, and dependency readiness. Detects section-level blocking and adds phase momentum bonus. Returns prioritized list and recommended next sprint."),
 				mcp.WithString("repo", mcp.Required(), mcp.Description("Repository name or path")),
 				mcp.WithString("weights", mcp.Description("JSON weights: {\"impact\": 0.4, \"effort\": 0.3, \"dependency\": 0.3}")),
 				mcp.WithNumber("top_n", mcp.Description("Number of items to return (default: 20)")),
+				mcp.WithString("phase_filter", mcp.Description("Filter to phases containing this string (e.g., 'Phase 10')")),
 			), s.handleRoadmapPrioritize},
 		},
 	}
