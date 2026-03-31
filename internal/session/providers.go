@@ -246,8 +246,10 @@ func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	cmd.Dir = opts.RepoPath
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	// Strip CLAUDECODE env var so child sessions don't detect nesting and refuse to start.
-	cmd.Env = filterEnv(os.Environ(), "CLAUDECODE")
+	// Strip Claude env vars so child sessions don't detect nesting and refuse to start.
+	env := filterEnv(os.Environ(), "CLAUDECODE")
+	env = filterEnv(env, "CLAUDE_CODE_ENTRYPOINT")
+	cmd.Env = env
 
 	return cmd
 }
