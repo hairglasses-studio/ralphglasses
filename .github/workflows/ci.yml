@@ -233,3 +233,27 @@ jobs:
 
       - name: Validate grub.cfg menuentry blocks and kernel paths
         run: bash distro/scripts/validate-grub.sh distro/grub/grub.cfg
+
+  distro-validate:
+    name: Validate Distro Configs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install prerequisites
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Validate Hyprland configs
+        run: |
+          bash distro/scripts/validate-hyprland-conf.sh distro/hyprland/hyprland.conf
+          bash distro/scripts/validate-hyprland-conf.sh distro/hyprland/kiosk.conf
+
+      - name: Validate Waybar configs
+        run: |
+          bash distro/scripts/validate-waybar.sh distro/hyprland/waybar/config.jsonc
+          bash distro/scripts/validate-waybar.sh distro/sway/waybar/config.jsonc
+
+      - name: Validate Dockerfiles
+        run: |
+          bash distro/scripts/validate-dockerfile.sh distro/Dockerfile.manjaro
+          bash distro/scripts/validate-dockerfile.sh distro/Dockerfile.manjaro.hyprland
