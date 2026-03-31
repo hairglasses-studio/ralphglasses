@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -13,13 +14,26 @@ type DotfileSnapshot struct {
 }
 
 // managedPaths returns the relative paths of config files managed by claudekit.
+// The list is platform-aware: iTerm2 paths on macOS, Sway/Waybar paths on Linux.
 func managedPaths() []string {
-	return []string{
+	paths := []string{
 		".config/starship.toml",
 		".config/ghostty/config",
 		".config/bat/config",
 		".config/delta/catppuccin.gitconfig",
 	}
+	switch runtime.GOOS {
+	case "darwin":
+		// iTerm2 dynamic profiles are macOS-only
+		// (individual profile files are added via directory scan in Snapshot)
+	case "linux":
+		paths = append(paths,
+			".config/sway/config",
+			".config/waybar/config",
+			".config/waybar/style.css",
+		)
+	}
+	return paths
 }
 
 // itermDynamicProfilesDir returns the relative path to iTerm2 DynamicProfiles.
@@ -47,24 +61,26 @@ func Snapshot() (*DotfileSnapshot, error) {
 		snap.Files[rel] = string(data)
 	}
 
-	// Capture iTerm2 DynamicProfiles claudekit files
-	dpDir := filepath.Join(home, itermDynamicProfilesRel)
-	entries, err := os.ReadDir(dpDir)
-	if err == nil {
-		for _, e := range entries {
-			if e.IsDir() {
-				continue
+	// Capture iTerm2 DynamicProfiles claudekit files (macOS only)
+	if runtime.GOOS == "darwin" {
+		dpDir := filepath.Join(home, itermDynamicProfilesRel)
+		entries, err := os.ReadDir(dpDir)
+		if err == nil {
+			for _, e := range entries {
+				if e.IsDir() {
+					continue
+				}
+				if !strings.HasPrefix(e.Name(), "claudekit") {
+					continue
+				}
+				abs := filepath.Join(dpDir, e.Name())
+				data, err := os.ReadFile(abs)
+				if err != nil {
+					continue
+				}
+				rel := filepath.Join(itermDynamicProfilesRel, e.Name())
+				snap.Files[rel] = string(data)
 			}
-			if !strings.HasPrefix(e.Name(), "claudekit") {
-				continue
-			}
-			abs := filepath.Join(dpDir, e.Name())
-			data, err := os.ReadFile(abs)
-			if err != nil {
-				continue
-			}
-			rel := filepath.Join(itermDynamicProfilesRel, e.Name())
-			snap.Files[rel] = string(data)
 		}
 	}
 

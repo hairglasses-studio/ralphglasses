@@ -7,7 +7,8 @@
 
     "modules-left": [
         "sway/workspaces",
-        "sway/mode"
+        "sway/mode",
+        "sway/window"
     ],
     "modules-center": [
         "clock"
@@ -18,7 +19,12 @@
         "custom/rg-cost",
         "custom/rg-models",
         "custom/rg-repos",
-        "custom/rg-iters"
+        "custom/rg-iters",
+        "custom/k8s",
+        "mpris",
+        "network",
+        "cpu",
+        "battery"
     ],
 
     // Sway modules
@@ -87,6 +93,53 @@
         "return-type": "json",
         "interval": 30,
         "format": "󰔚 {}",
+        "tooltip": true
+    },
+
+    // System modules
+    "battery": {
+        "interval": 30,
+        "states": {
+            "warning": 30,
+            "critical": 15
+        },
+        "format": "{icon} {capacity}%",
+        "format-icons": ["", "", "", "", ""],
+        "format-charging": " {capacity}%",
+        "format-plugged": " {capacity}%",
+        "tooltip-format": "{timeTo}\n{power}W"
+    },
+    "cpu": {
+        "interval": 5,
+        "format": " {usage}%",
+        "tooltip-format": "{avg_frequency}GHz\n{usage}% used"
+    },
+    "network": {
+        "interval": 10,
+        "format-ethernet": " {bandwidthUpBits}/{bandwidthDownBits}",
+        "format-wifi": " {signalStrength}%",
+        "format-disconnected": " offline",
+        "tooltip-format": "{ifname}\n{ipaddr}/{cidr}\n {bandwidthUpBits}  {bandwidthDownBits}"
+    },
+    "mpris": {
+        "format": "{player_icon} {title}",
+        "format-paused": "{player_icon} {status_icon} {title}",
+        "player-icons": {
+            "default": ""
+        },
+        "status-icons": {
+            "paused": ""
+        },
+        "max-length": 30
+    },
+    "sway/window": {
+        "max-length": 40,
+        "tooltip": false
+    },
+    "custom/k8s": {
+        "exec": "/opt/ralphglasses/distro/scripts/k8s-context.sh",
+        "return-type": "json",
+        "interval": 30,
         "tooltip": true
     }
 }
