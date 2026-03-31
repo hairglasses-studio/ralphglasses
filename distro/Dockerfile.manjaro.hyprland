@@ -22,6 +22,8 @@ RUN pacman -Syu --noconfirm \
     efibootmgr \
     # Hyprland / Wayland
     hyprland \
+    # NOTE: Manjaro's waybar includes Hyprland IPC support by default.
+    # On other distros, ensure waybar is built with Hyprland support.
     waybar \
     wl-clipboard \
     xorg-xwayland \

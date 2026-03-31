@@ -16,6 +16,7 @@
 SHELL := /bin/bash
 .PHONY: all iso iso-debootstrap docker docker-sway docker-hyprland rootfs \
         rootfs-debootstrap chroot test-vm usb clean validate validate-grub \
+        validate-docker validate-hyprland validate-waybar validate-all \
         install-deps check-paths build-both
 
 # ── Variables ──────────────────────────────────────────────────────────
@@ -237,6 +238,25 @@ validate:
 # ── Validate grub.cfg (CI-safe, no ISO required) ─────────────────────
 validate-grub:
 	@bash scripts/validate-grub.sh grub/grub.cfg
+
+# ── Validate Dockerfiles (CI-safe, no Docker required) ───────────────
+validate-docker:
+	@bash scripts/validate-dockerfile.sh Dockerfile.manjaro
+	@bash scripts/validate-dockerfile.sh Dockerfile.manjaro.hyprland
+
+# ── Validate Hyprland configs ────────────────────────────────────────
+validate-hyprland:
+	@bash scripts/validate-hyprland-conf.sh hyprland/hyprland.conf
+	@bash scripts/validate-hyprland-conf.sh hyprland/kiosk.conf
+
+# ── Validate Waybar configs ─────────────────────────────────────────
+validate-waybar:
+	@bash scripts/validate-waybar.sh hyprland/waybar/config.jsonc
+	@bash scripts/validate-waybar.sh sway/waybar/config.jsonc
+
+# ── Run all validators ──────────────────────────────────────────────
+validate-all: validate-grub validate-docker validate-hyprland validate-waybar check-paths
+	@echo "==> All validations passed"
 
 # ── Test in QEMU (UEFI) ──────────────────────────────────────────────
 test-vm:
