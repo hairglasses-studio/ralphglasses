@@ -10,8 +10,10 @@ Minimal bootable Linux that starts into the ralphglasses TUI for autonomous Clau
 - **No Windows drivers** — the 12GB Windows archive is irrelevant to Linux builds
 - **Wired network only for marathons** — Intel I226-V 2.5GbE (`igc` module) is reliable for 12+ hour sessions
 - **Display: Sway + RTX 4090 (primary)** — NVIDIA proprietary driver on Wayland for display output only (no CUDA/compute needed)
+- **Hyprland alternative** — Full Hyprland compositor support as first-class alternative to Sway
 - **i3 legacy fallback** — Ubuntu 24.04 + i3 (X11) configs preserved in `distro/i3/` for rollback
 - **AMD iGPU fallback** — Ryzen 7950X RDNA2 iGPU via `amdgpu`, zero config, no conflict with NVIDIA
+- **Compositor abstraction** — Shell scripts (`compositor-detect.sh`, `compositor-cmd.sh`) unify Sway/Hyprland/i3 commands
 
 ## Target Hardware
 
@@ -81,14 +83,28 @@ distro/
       style.css          # k9s-inspired dark theme
     environment.d/
       nvidia-wayland.conf # NVIDIA Wayland env vars
+  hyprland/              # Hyprland compositor configs (Wayland, alternative)
+    hyprland.conf        # Normal 7-monitor config
+    kiosk.conf           # Zero-chrome kiosk mode
+    hypridle.conf        # Idle daemon config (kiosk: always-on)
+    hyprlock.conf        # Lock screen config (emergency-only)
+    waybar/
+      config.jsonc       # Waybar with hyprland/* modules
+      style.css          # Same Snazzy theme as Sway variant
+    environment.d/
+      nvidia-wayland.conf # NVIDIA Wayland env vars (XDG_CURRENT_DESKTOP=Hyprland)
   i3/                    # i3 window manager configs (X11, legacy fallback)
     config               # Normal 7-monitor config
     kiosk-config         # Zero-chrome kiosk mode
     i3blocks.conf        # i3blocks status bar
   scripts/
-    hw-detect.sh         # First-boot hardware detection (--dry-run, --wayland-only)
+    compositor-detect.sh # Detect running compositor (sway|hyprland|i3|unknown)
+    compositor-cmd.sh    # Unified compositor commands (workspace, outputs, etc.)
+    compositor-kiosk-setup.sh # Compositor-generic kiosk installer
+    hw-detect.sh         # First-boot hardware detection (writes Sway+Hyprland configs)
+    waybar-launch.sh     # Compositor-aware Waybar config selector + launcher
     kiosk-setup.sh       # i3 kiosk installer (legacy)
-    sway-kiosk-setup.sh  # Sway kiosk installer (primary)
+    sway-kiosk-setup.sh  # Sway kiosk installer (legacy, use compositor-kiosk-setup.sh)
     rg-status-bar.sh     # Status bar segments (--segment NAME [--waybar])
   systemd/
     hw-detect.service    # Oneshot unit for first-boot detection
@@ -96,7 +112,8 @@ distro/
     watchdog.service     # Process watchdog
   Dockerfile             # OS build (Ubuntu 24.04 + i3 + NVIDIA, legacy)
   Dockerfile.manjaro     # OS build (Manjaro + Sway + NVIDIA, primary)
-  Makefile               # Build targets (iso, docker, test-vm)
+  Dockerfile.manjaro.hyprland # OS build (Manjaro + Hyprland + NVIDIA)
+  Makefile               # Build targets (docker-sway, docker-hyprland, build-both)
   grub/                  # UEFI boot menu config
   dietpi/                # Legacy DietPi config (deprecated)
   pxe/                   # PXE network boot docs
