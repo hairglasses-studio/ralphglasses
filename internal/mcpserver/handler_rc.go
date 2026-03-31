@@ -425,7 +425,7 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 		}
 	}
 
-	sess, err := s.SessMgr.Launch(ctx, opts)
+	sess, err := s.SessMgr.Launch(context.Background(), opts)
 	if err != nil {
 		return codedError(ErrInternal, fmt.Sprintf("launch failed: %v", err)), nil
 	}
@@ -692,7 +692,7 @@ func (s *Server) handleRCAct(ctx context.Context, req mcp.CallToolRequest) (*mcp
 			TeamName:     sess.TeamName,
 		}
 		sess.Unlock()
-		newSess, err := s.SessMgr.Launch(ctx, opts)
+		newSess, err := s.SessMgr.Launch(context.Background(), opts)
 		if err != nil {
 			return codedError(ErrInternal, fmt.Sprintf("retry failed: %v", err)), nil
 		}
