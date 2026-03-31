@@ -3,6 +3,7 @@ package envkit
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -218,6 +219,52 @@ func TestManagedPathsNotEmpty(t *testing.T) {
 	paths := managedPaths()
 	if len(paths) == 0 {
 		t.Error("managedPaths should return non-empty list")
+	}
+	// Cross-platform paths should always be present
+	has := func(needle string) bool {
+		for _, p := range paths {
+			if p == needle {
+				return true
+			}
+		}
+		return false
+	}
+	if !has(".config/starship.toml") {
+		t.Error("managedPaths missing cross-platform path .config/starship.toml")
+	}
+}
+
+func TestManagedPathsPlatformSpecific(t *testing.T) {
+	paths := managedPaths()
+	has := func(needle string) bool {
+		for _, p := range paths {
+			if p == needle {
+				return true
+			}
+		}
+		return false
+	}
+
+	switch runtime.GOOS {
+	case "darwin":
+		// macOS should NOT include Sway/Waybar paths
+		if has(".config/sway/config") {
+			t.Error("darwin should not include .config/sway/config")
+		}
+		// Should have exactly 4 cross-platform paths
+		if len(paths) != 4 {
+			t.Errorf("darwin: expected 4 managed paths, got %d", len(paths))
+		}
+	case "linux":
+		// Linux should include Sway/Waybar paths
+		for _, p := range []string{".config/sway/config", ".config/waybar/config", ".config/waybar/style.css"} {
+			if !has(p) {
+				t.Errorf("linux should include %s", p)
+			}
+		}
+		if len(paths) != 7 {
+			t.Errorf("linux: expected 7 managed paths, got %d", len(paths))
+		}
 	}
 }
 
