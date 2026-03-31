@@ -138,7 +138,7 @@ func UnsupportedOptionsWarnings(p Provider, opts LaunchOptions) []string {
 func ProviderDefaults(p Provider) (model string) {
 	switch p {
 	case ProviderGemini:
-		return "gemini-3-pro"
+		return "gemini-2.5-pro"
 	case ProviderCodex:
 		return "o4-mini"
 	default:
