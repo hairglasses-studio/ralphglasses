@@ -140,7 +140,7 @@ func ProviderDefaults(p Provider) (model string) {
 	case ProviderGemini:
 		return "gemini-3-pro"
 	case ProviderCodex:
-		return "gpt-5.4-xhigh"
+		return "o4-mini"
 	default:
 		return "sonnet"
 	}
@@ -246,10 +246,8 @@ func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	cmd.Dir = opts.RepoPath
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	// Strip Claude env vars so child sessions don't detect nesting and refuse to start.
-	env := filterEnv(os.Environ(), "CLAUDECODE")
-	env = filterEnv(env, "CLAUDE_CODE_ENTRYPOINT")
-	cmd.Env = env
+	// Strip nesting env vars so child sessions don't detect nesting and refuse to start.
+	cmd.Env = stripNestingEnv(os.Environ())
 
 	return cmd
 }
@@ -276,6 +274,7 @@ func buildGeminiCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "gemini", args...)
 	cmd.Dir = opts.RepoPath
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Env = stripNestingEnv(os.Environ())
 	return cmd
 }
 
@@ -300,6 +299,7 @@ func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "codex", args...)
 	cmd.Dir = opts.RepoPath
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Env = stripNestingEnv(os.Environ())
 	return cmd
 }
 
@@ -308,6 +308,14 @@ func validateLaunchOptions(opts LaunchOptions) error {
 		return fmt.Errorf("codex provider does not support resume")
 	}
 	return nil
+}
+
+// stripNestingEnv removes env vars that cause CLI tools to detect they're running
+// inside another CLI session and refuse to start or behave differently.
+func stripNestingEnv(env []string) []string {
+	env = filterEnv(env, "CLAUDECODE")
+	env = filterEnv(env, "CLAUDE_CODE_ENTRYPOINT")
+	return env
 }
 
 // filterEnv returns a copy of env with any variable whose name matches key removed.
