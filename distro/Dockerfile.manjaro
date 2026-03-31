@@ -1,0 +1,204 @@
+# ralphglasses bootable Linux ISO — Manjaro + Sway (Wayland)
+# Build: docker build -f distro/Dockerfile.manjaro -t ralphglasses-os .
+# Convert to ISO: see Makefile `make iso`
+#
+# Base: Manjaro Linux with Sway compositor (Wayland)
+# The resulting image is converted to a bootable ISO using
+# grub-mkrescue/xorriso or the Kairos AuroraBoot toolchain.
+
+FROM manjarolinux/base:latest AS base
+
+ARG GO_VERSION=1.26.1
+ARG NODE_MAJOR=20
+
+# ── Core system packages ─────────────────────────────────────────────
+RUN pacman -Syu --noconfirm \
+    # Boot / init
+    linux \
+    linux-firmware \
+    systemd \
+    dbus \
+    # UEFI boot
+    grub \
+    efibootmgr \
+    # Sway / Wayland
+    sway \
+    swayidle \
+    swaylock \
+    waybar \
+    wl-clipboard \
+    xorg-xwayland \
+    # Terminal
+    alacritty \
+    # NVIDIA (proprietary)
+    nvidia \
+    nvidia-utils \
+    lib32-nvidia-utils \
+    nvidia-settings \
+    # Tools
+    git \
+    jq \
+    tmux \
+    curl \
+    wget \
+    htop \
+    sudo \
+    ca-certificates \
+    gnupg \
+    base-devel \
+    # Network
+    networkmanager \
+    iproute2 \
+    openssh \
+    ethtool \
+    # ProArt X870E hardware
+    linux-firmware \
+    bolt \
+    alsa-utils \
+    bluez \
+    bluez-utils \
+    fwupd \
+    # Filesystem
+    squashfs-tools \
+    dosfstools \
+    parted \
+    # Misc
+    which \
+    && pacman -Scc --noconfirm
+
+# ── Locale ────────────────────────────────────────────────────────────
+RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
+    && locale-gen
+ENV LANG=en_US.UTF-8
+
+# ── Go runtime ────────────────────────────────────────────────────────
+RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" \
+    | tar -C /usr/local -xzf - \
+    && ln -s /usr/local/go/bin/go /usr/local/bin/go \
+    && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
+
+# ── Node.js (for Claude Code CLI) ────────────────────────────────────
+RUN pacman -S --noconfirm nodejs npm
+
+# ── Claude Code CLI ──────────────────────────────────────────────────
+RUN npm install -g @anthropic-ai/claude-code
+
+# ── Non-root user ────────────────────────────────────────────────────
+RUN useradd -m -s /bin/bash -G wheel,video,render,input,bluetooth ralph \
+    && echo "ralph ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ralph
+
+# ── Build ralphglasses from source ───────────────────────────────────
+COPY . /build/ralphglasses
+WORKDIR /build/ralphglasses
+RUN go build -o /usr/local/bin/ralphglasses . \
+    && chmod 755 /usr/local/bin/ralphglasses
+
+# ── Sway config ──────────────────────────────────────────────────────
+RUN mkdir -p /home/ralph/.config/sway \
+    && cp /build/ralphglasses/distro/sway/config /home/ralph/.config/sway/config \
+    && chown -R ralph:ralph /home/ralph/.config
+
+# ── Waybar config ────────────────────────────────────────────────────
+RUN mkdir -p /home/ralph/.config/waybar \
+    && cp /build/ralphglasses/distro/sway/waybar/config.jsonc /home/ralph/.config/waybar/config \
+    && cp /build/ralphglasses/distro/sway/waybar/style.css /home/ralph/.config/waybar/style.css \
+    && chown -R ralph:ralph /home/ralph/.config/waybar
+
+# ── NVIDIA Wayland environment ────────────────────────────────────────
+RUN mkdir -p /home/ralph/.config/environment.d \
+    && cp /build/ralphglasses/distro/sway/environment.d/nvidia-wayland.conf \
+       /home/ralph/.config/environment.d/nvidia-wayland.conf \
+    && chown -R ralph:ralph /home/ralph/.config/environment.d
+
+# ── systemd: ralphglasses service ────────────────────────────────────
+COPY distro/systemd/ralphglasses.service /etc/systemd/system/ralphglasses.service
+RUN systemctl enable ralphglasses.service 2>/dev/null || true
+
+# ── hw-detect: first-boot hardware detection ────────────────────────
+COPY distro/scripts/hw-detect.sh /usr/local/bin/hw-detect.sh
+RUN chmod 755 /usr/local/bin/hw-detect.sh
+COPY distro/systemd/hw-detect.service /etc/systemd/system/hw-detect.service
+RUN systemctl enable hw-detect.service 2>/dev/null || true
+
+# ── install-to-disk script ──────────────────────────────────────────
+COPY distro/scripts/install-to-disk.sh /usr/local/bin/install-to-disk.sh
+RUN chmod 755 /usr/local/bin/install-to-disk.sh
+
+# ── Autologin via getty ─────────────────────────────────────────────
+RUN mkdir -p /etc/systemd/system/getty@tty1.service.d \
+    && printf '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin ralph --noclear %%I $TERM\n' \
+       > /etc/systemd/system/getty@tty1.service.d/autologin.conf
+
+# ── .bash_profile: auto start Sway on tty1 ──────────────────────────
+RUN printf '# ralphglasses kiosk — auto-start Sway on tty1\nif [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then\n  exec sway\nfi\n' \
+    >> /home/ralph/.bash_profile \
+    && chown ralph:ralph /home/ralph/.bash_profile
+
+# ── NVIDIA kernel params ──────────────────────────────────────────────
+# nvidia-drm.modeset=1 is required for Wayland
+RUN mkdir -p /etc/modprobe.d && cat > /etc/modprobe.d/nvidia-drm.conf <<'EOF'
+options nvidia-drm modeset=1
+EOF
+
+# ── Hostname ──────────────────────────────────────────────────────────
+RUN echo "ralphglasses" > /etc/hostname
+
+# ── ProArt X870E: kernel module config ──────────────────────────────
+# Blacklist problematic modules; hw-detect.sh regenerates this at first boot
+RUN cat > /etc/modprobe.d/ralphglasses-blacklist.conf <<'EOF'
+# MediaTek MT7927 Bluetooth — btmtk causes kernel panics on this board
+blacklist btmtk
+# Prevent nouveau from conflicting with nvidia
+blacklist nouveau
+options nouveau modeset=0
+EOF
+
+# ── ProArt X870E: NetworkManager wired connection priority ──────────
+RUN mkdir -p /etc/NetworkManager/conf.d && cat > /etc/NetworkManager/conf.d/10-proart.conf <<'EOF'
+[device-atlantic]
+# Marvell AQC113CS 10GbE — primary (user's active connection)
+match-device=driver:atlantic
+managed=1
+
+[device-igc]
+# Intel I226-V 2.5GbE — fallback
+match-device=driver:igc
+managed=1
+EOF
+
+# ── TP-Link UB400 (CSR8510 A10) Bluetooth dongle ───────────────────
+RUN mkdir -p /etc/udev/rules.d && cat > /etc/udev/rules.d/97-csr8510-bluetooth.rules <<'EOF'
+# CSR8510 A10 clone — force HCI mode (TP-Link UB400/UB500)
+ATTR{idVendor}=="0a12", ATTR{idProduct}=="0001", RUN+="/lib/udev/hid2hci --mode=hci --method=csr2 --devpath=%p"
+EOF
+
+# ── USB4 / Thunderbolt: auto-authorize devices ─────────────────────
+RUN mkdir -p /etc/bolt && cat > /etc/bolt/boltd.conf <<'EOF'
+[policy]
+# Auto-authorize Thunderbolt/USB4 devices (ASMedia ASM4242)
+default-policy=auto
+EOF
+
+# ── GRUB: add NVIDIA kernel params ──────────────────────────────────
+RUN if [ -f /etc/default/grub ]; then \
+        sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 nvidia-drm.modeset=1"/' /etc/default/grub; \
+    fi
+
+# ── Sway config directory for system overrides ──────────────────────
+RUN mkdir -p /etc/sway/config.d
+
+# ── Enable essential services ─────────────────────────────────────────
+RUN systemctl enable NetworkManager 2>/dev/null || true \
+    && systemctl enable bolt 2>/dev/null || true \
+    && systemctl enable bluetooth 2>/dev/null || true \
+    && systemctl set-default graphical.target 2>/dev/null || true
+
+# ── Workspace directory ──────────────────────────────────────────────
+RUN mkdir -p /workspace && chown ralph:ralph /workspace
+
+# ── Cleanup build artifacts ──────────────────────────────────────────
+RUN rm -rf /build/ralphglasses /root/.cache/go-build /tmp/* \
+    && pacman -Scc --noconfirm 2>/dev/null || true
+
+# The resulting image is a full rootfs. Convert to ISO with:
+#   make iso  (uses grub-mkrescue + xorriso)

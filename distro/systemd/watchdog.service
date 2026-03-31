@@ -10,7 +10,8 @@ Restart=always
 RestartSec=5
 WatchdogSec=30
 NotifyAccess=all
-Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-1
+Environment=XDG_RUNTIME_DIR=/run/user/1000
 User=ralph
 
 [Install]

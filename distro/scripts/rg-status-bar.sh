@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # rg-status-bar.sh — Fleet observability status bar for the thin client
 #
-# Two modes:
-#   --all --json    Cache writer (systemd timer → /tmp/rg-status.json)
-#   --segment NAME  Segment reader (i3blocks → reads cache → prints i3blocks format)
+# Three modes:
+#   --all --json          Cache writer (systemd timer → /tmp/rg-status.json)
+#   --segment NAME        Segment reader (i3blocks → reads cache → prints i3blocks format)
+#   --segment NAME --waybar  Segment reader (waybar → reads cache → prints waybar JSON)
 #
 # See also:
 #   distro/i3/i3blocks.conf        — i3blocks block definitions
+#   distro/sway/waybar/config.jsonc — waybar custom module definitions
 #   distro/systemd/rg-status-bar.* — systemd timer/service for cache refresh
 
 set -euo pipefail
@@ -46,13 +48,27 @@ i3blocks_out() {
   printf '%s\n%s\n%s\n' "$full" "$short" "$color"
 }
 
+# Print waybar JSON output: {"text": ..., "tooltip": ..., "class": ...}
+waybar_out() {
+  local text="$1" tooltip="$2" css_class="$3"
+  printf '{"text": "%s", "tooltip": "%s", "class": "%s"}\n' "$text" "$tooltip" "$css_class"
+}
+
 offline() {
-  i3blocks_out "offline" "offline" "$COLOR_GRAY"
+  if [[ "$WAYBAR_MODE" = true ]]; then
+    waybar_out "offline" "ralphglasses offline" "offline"
+  else
+    i3blocks_out "offline" "offline" "$COLOR_GRAY"
+  fi
   exit 0
 }
 
 idle() {
-  i3blocks_out "idle" "idle" "$COLOR_GRAY"
+  if [[ "$WAYBAR_MODE" = true ]]; then
+    waybar_out "idle" "no active fleet" "idle"
+  else
+    i3blocks_out "idle" "idle" "$COLOR_GRAY"
+  fi
   exit 0
 }
 
@@ -216,18 +232,83 @@ read_segment_iters() {
   i3blocks_out "${total} iters ~${avg}/run" "${total}i" "$COLOR_GRAY"
 }
 
+# ── Waybar Segment Readers ──
+
+read_segment_fleet_waybar() {
+  local data="$1"
+  local running completed failed total
+  running=$(echo "$data" | jq -r '.fleet.running')
+  completed=$(echo "$data" | jq -r '.fleet.completed')
+  failed=$(echo "$data" | jq -r '.fleet.failed')
+  total=$(echo "$data" | jq -r '.fleet.total')
+  if (( total == 0 )); then idle; fi
+  local css="ok"
+  if (( running > 0 )); then css="running"; elif (( failed > 0 )); then css="error"; fi
+  waybar_out "↻${running} ✓${completed} ✗${failed}" "${running} running, ${completed} completed, ${failed} failed" "rg-fleet-${css}"
+}
+
+read_segment_loops_waybar() {
+  local data="$1"
+  local total_runs converge_pct
+  total_runs=$(echo "$data" | jq -r '.loops.total_runs')
+  converge_pct=$(echo "$data" | jq -r '.loops.converge_pct')
+  waybar_out "${total_runs} runs ${converge_pct}%" "${total_runs} total runs, ${converge_pct}% converged" "rg-loops"
+}
+
+read_segment_cost_waybar() {
+  local data="$1"
+  local spend
+  spend=$(echo "$data" | jq -r '.cost.total_spend_usd')
+  waybar_out "\$${spend}" "Total spend: \$${spend}" "rg-cost"
+}
+
+read_segment_models_waybar() {
+  local data="$1"
+  local count text model abbr cnt
+  count=$(echo "$data" | jq -r '.models | length')
+  if (( count == 0 )); then
+    waybar_out "no models" "No active models" "rg-models"
+    return
+  fi
+  text=""
+  while IFS=$'\t' read -r model cnt; do
+    abbr=$(abbrev_model "$model")
+    if [[ -n "$text" ]]; then text+=" "; fi
+    text+="${abbr}:${cnt}"
+  done < <(echo "$data" | jq -r '.models[] | [.model, .count] | @tsv')
+  waybar_out "$text" "Model distribution: ${text}" "rg-models"
+}
+
+read_segment_repos_waybar() {
+  local data="$1"
+  local scanned targeted
+  scanned=$(echo "$data" | jq -r '.repos.scanned')
+  targeted=$(echo "$data" | jq -r '.repos.targeted')
+  waybar_out "${scanned} scan ${targeted} tgt" "${scanned} scanned, ${targeted} targeted" "rg-repos"
+}
+
+read_segment_iters_waybar() {
+  local data="$1"
+  local total avg
+  total=$(echo "$data" | jq -r '.iters.total')
+  avg=$(echo "$data" | jq -r '.iters.avg_per_run')
+  waybar_out "${total} iters ~${avg}/run" "${total} total iterations, ~${avg} per run" "rg-iters"
+}
+
 # ── Main ──
 
 MODE=""
 SEGMENT=""
 JSON_OUT=false
+WAYBAR_MODE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --all)     MODE="all"; shift ;;
     --json)    JSON_OUT=true; shift ;;
+    --waybar)  WAYBAR_MODE=true; shift ;;
     --segment) MODE="segment"; SEGMENT="${2:-}"; shift 2 ;;
-    --help|-h) echo "Usage: rg-status-bar.sh [--all --json] [--segment fleet|loops|cost|models|repos|iters]"; exit 0 ;;
+    --help|-h) echo "Usage: rg-status-bar.sh [--all --json] [--segment NAME [--waybar]]"; exit 0 ;;
     *)         die "Unknown argument: $1" ;;
   esac
 done
@@ -265,15 +346,27 @@ if [[ "$MODE" == "segment" ]]; then
     [[ -n "${data:-}" ]] || offline
   fi
 
-  case "$SEGMENT" in
-    fleet)  read_segment_fleet  "$data" ;;
-    loops)  read_segment_loops  "$data" ;;
-    cost)   read_segment_cost   "$data" ;;
-    models) read_segment_models "$data" ;;
-    repos)  read_segment_repos  "$data" ;;
-    iters)  read_segment_iters  "$data" ;;
-    *)      die "Unknown segment: $SEGMENT" ;;
-  esac
+  if [[ "$WAYBAR_MODE" = true ]]; then
+    case "$SEGMENT" in
+      fleet)  read_segment_fleet_waybar  "$data" ;;
+      loops)  read_segment_loops_waybar  "$data" ;;
+      cost)   read_segment_cost_waybar   "$data" ;;
+      models) read_segment_models_waybar "$data" ;;
+      repos)  read_segment_repos_waybar  "$data" ;;
+      iters)  read_segment_iters_waybar  "$data" ;;
+      *)      die "Unknown segment: $SEGMENT" ;;
+    esac
+  else
+    case "$SEGMENT" in
+      fleet)  read_segment_fleet  "$data" ;;
+      loops)  read_segment_loops  "$data" ;;
+      cost)   read_segment_cost   "$data" ;;
+      models) read_segment_models "$data" ;;
+      repos)  read_segment_repos  "$data" ;;
+      iters)  read_segment_iters  "$data" ;;
+      *)      die "Unknown segment: $SEGMENT" ;;
+    esac
+  fi
   exit 0
 fi
 

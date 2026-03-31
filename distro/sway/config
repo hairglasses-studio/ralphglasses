@@ -1,0 +1,115 @@
+# Sway config for ralphglasses thin client
+# 7-monitor, dual-NVIDIA-GPU setup
+#
+# Modify $mon1-$mon7 to match your output names.
+# Run `swaymsg -t get_outputs` to discover them.
+
+xwayland enable
+
+# --- NVIDIA Wayland environment ---
+exec systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
+exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
+
+# --- Input configuration ---
+input type:keyboard {
+    repeat_delay 250
+    repeat_rate 40
+}
+
+# --- Modifier key ---
+set $mod Mod4
+
+# --- Monitor assignments ---
+# Update these to match your actual swaymsg -t get_outputs names
+set $mon1 DP-1
+set $mon2 DP-2
+set $mon3 DP-3
+set $mon4 HDMI-0
+set $mon5 HDMI-1
+set $mon6 DP-4
+set $mon7 DP-5
+
+# --- Workspace → monitor mapping ---
+workspace 1 output $mon1
+workspace 2 output $mon2
+workspace 3 output $mon3
+workspace 4 output $mon4
+workspace 5 output $mon5
+workspace 6 output $mon6
+workspace 7 output $mon7
+
+# Overflow workspaces (cycle back to first monitors)
+workspace 8 output $mon1
+workspace 9 output $mon2
+workspace 10 output $mon3
+
+# --- Workspace navigation ---
+bindsym $mod+1 workspace number 1
+bindsym $mod+2 workspace number 2
+bindsym $mod+3 workspace number 3
+bindsym $mod+4 workspace number 4
+bindsym $mod+5 workspace number 5
+bindsym $mod+6 workspace number 6
+bindsym $mod+7 workspace number 7
+bindsym $mod+8 workspace number 8
+bindsym $mod+9 workspace number 9
+bindsym $mod+0 workspace number 10
+
+# Move container to workspace
+bindsym $mod+Shift+1 move container to workspace number 1
+bindsym $mod+Shift+2 move container to workspace number 2
+bindsym $mod+Shift+3 move container to workspace number 3
+bindsym $mod+Shift+4 move container to workspace number 4
+bindsym $mod+Shift+5 move container to workspace number 5
+bindsym $mod+Shift+6 move container to workspace number 6
+bindsym $mod+Shift+7 move container to workspace number 7
+
+# --- Window management ---
+bindsym $mod+Return exec alacritty
+bindsym $mod+Shift+q kill
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+l move right
+bindsym $mod+v split v
+bindsym $mod+b split h
+bindsym $mod+f fullscreen toggle
+bindsym $mod+Shift+space floating toggle
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+r restart
+
+# --- Kiosk mode for ralphglasses ---
+# Auto-start ralphglasses TUI in fullscreen on workspace 1
+exec swaymsg 'workspace 1; exec alacritty -e ralphglasses --scan-path /workspace'
+
+# Force all alacritty windows to start without title bar
+for_window [app_id="Alacritty"] border none
+
+# --- Appearance ---
+font pango:monospace 10
+default_border pixel 1
+default_floating_border pixel 1
+hide_edge_borders smart
+
+# Colors (k9s-inspired dark theme)
+# class                 border  bground text    indicator child_border
+client.focused          #4c7899 #1a1b26 #c0caf5 #7aa2f7   #4c7899
+client.focused_inactive #333333 #1a1b26 #888888 #484e50   #333333
+client.unfocused        #333333 #1a1b26 #555555 #292d2e   #222222
+client.urgent           #f7768e #f7768e #1a1b26 #f7768e   #f7768e
+
+# --- Status bar ---
+bar {
+    swaybar_command waybar
+}
+
+# --- Output configuration ---
+# Update to match swaymsg -t get_outputs
+# hw-detect.sh --wayland-only writes /etc/sway/config.d/monitors.conf
+# Uncomment and customize if not using hw-detect.sh:
+# output DP-1 resolution 3840x2160 position 0,0
+# output DP-2 resolution 3840x2160 position 3840,0

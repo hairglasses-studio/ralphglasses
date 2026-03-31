@@ -5,11 +5,12 @@ Minimal bootable Linux that starts into the ralphglasses TUI for autonomous Clau
 ## Philosophy
 
 - **In-kernel drivers preferred** — the ASUS ProArt X870E-CREATOR WIFI is fully supported by mainline Linux 6.8+
-- **NVIDIA via apt** — `nvidia-driver-550` installed at build time, not vendored `.run` files
+- **NVIDIA via pacman** — `nvidia` package installed at build time, not vendored `.run` files
 - **No binary blobs in this repo** — Windows driver archives live on Google Drive, NVIDIA `.run` files go as GitHub Release artifacts if offline install is needed
 - **No Windows drivers** — the 12GB Windows archive is irrelevant to Linux builds
 - **Wired network only for marathons** — Intel I226-V 2.5GbE (`igc` module) is reliable for 12+ hour sessions
-- **Display: i3 + RTX 4090** — NVIDIA proprietary driver for display output only (no CUDA/compute needed)
+- **Display: Sway + RTX 4090 (primary)** — NVIDIA proprietary driver on Wayland for display output only (no CUDA/compute needed)
+- **i3 legacy fallback** — Ubuntu 24.04 + i3 (X11) configs preserved in `distro/i3/` for rollback
 - **AMD iGPU fallback** — Ryzen 7950X RDNA2 iGPU via `amdgpu`, zero config, no conflict with NVIDIA
 
 ## Target Hardware
@@ -32,7 +33,7 @@ Claude Code is a CLI tool making Anthropic API calls. The thin client needs:
 |-------------|----------|
 | Network | Intel I226-V wired ethernet (in-kernel `igc`) |
 | Display | RTX 4090 via `nvidia-driver-550` for monitors |
-| Terminal | i3 + alacritty, ralphglasses TUI fullscreen |
+| Terminal | Sway + alacritty, ralphglasses TUI fullscreen (i3 legacy fallback) |
 | Storage | Local NVMe for OS, `/workspace` for repos |
 | Audio | Not needed (thin client) |
 | GPU compute | Not needed (API calls, not local inference) |
@@ -51,11 +52,13 @@ The `distro/scripts/hw-detect.sh` script runs once at first boot via `distro/sys
 
 1. Enumerates PCI devices via `lspci -nn`
 2. Identifies NVIDIA GPUs by device ID (Ada vs Pascal)
-3. Generates `/etc/X11/xorg.conf.d/20-gpu.conf` with RTX 4090 BusID
-4. Blacklists GTX 1060 PCI slot if both GPUs present
-5. Blacklists `btmtk` module (MT7927 Bluetooth — hardware HCI errors)
-6. Enables AMD iGPU as optional secondary display
-7. Logs everything to `/var/log/hw-detect.log`
+3. Generates `/etc/X11/xorg.conf.d/20-gpu.conf` with RTX 4090 BusID (X11 path)
+4. With `--wayland-only`: generates `/etc/sway/config.d/monitors.conf` (Sway path)
+5. Blacklists GTX 1060 PCI slot if both GPUs present
+6. Blacklists `btmtk` module (MT7927 Bluetooth — hardware HCI errors)
+7. Enables AMD iGPU as optional secondary display
+8. Writes `/etc/ralphglasses/monitors.env` (used by kiosk config templating)
+9. Logs everything to `/var/log/hw-detect.log`
 
 Test on WSL without making changes:
 
@@ -70,18 +73,34 @@ distro/
   README.md              # This file
   hardware/
     proart-x870e.md      # Full hardware manifest (PCI IDs, modules, issues)
+  sway/                  # Sway compositor configs (Wayland, primary)
+    config               # Normal 7-monitor config
+    kiosk-config         # Zero-chrome kiosk mode
+    waybar/
+      config.jsonc       # Waybar status bar (fleet observability modules)
+      style.css          # k9s-inspired dark theme
+    environment.d/
+      nvidia-wayland.conf # NVIDIA Wayland env vars
+  i3/                    # i3 window manager configs (X11, legacy fallback)
+    config               # Normal 7-monitor config
+    kiosk-config         # Zero-chrome kiosk mode
+    i3blocks.conf        # i3blocks status bar
   scripts/
-    hw-detect.sh         # First-boot hardware detection (testable with --dry-run)
+    hw-detect.sh         # First-boot hardware detection (--dry-run, --wayland-only)
+    kiosk-setup.sh       # i3 kiosk installer (legacy)
+    sway-kiosk-setup.sh  # Sway kiosk installer (primary)
+    rg-status-bar.sh     # Status bar segments (--segment NAME [--waybar])
   systemd/
     hw-detect.service    # Oneshot unit for first-boot detection
-    ralphglasses.service # TUI autostart after display-manager
-  Dockerfile             # OS build (Ubuntu 24.04 + i3 + NVIDIA) [future]
-  Makefile               # Build targets (iso, docker, test-vm) [future]
-  grub/                  # UEFI boot menu config [future]
-  i3/                    # i3 window manager config [future]
+    ralphglasses.service # TUI autostart after graphical session
+    watchdog.service     # Process watchdog
+  Dockerfile             # OS build (Ubuntu 24.04 + i3 + NVIDIA, legacy)
+  Dockerfile.manjaro     # OS build (Manjaro + Sway + NVIDIA, primary)
+  Makefile               # Build targets (iso, docker, test-vm)
+  grub/                  # UEFI boot menu config
   dietpi/                # Legacy DietPi config (deprecated)
   pxe/                   # PXE network boot docs
-  autorandr/             # Monitor profiles (populated after first setup)
+  autorandr/             # Monitor profiles (X11 only, populated after first setup)
 ```
 
 ## Future Phases
