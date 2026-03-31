@@ -58,7 +58,7 @@ The `Manager.Enhancer` field enables automatic prompt enhancement in `StepLoop`.
 
 ## Distro / Thin Client
 
-The `distro/` directory contains configs for a bootable Linux thin client. Primary: Manjaro Linux + Sway (Wayland) + RTX 4090. Legacy: Ubuntu 24.04 + i3 (X11). Key files: `distro/sway/` (Sway/waybar configs), `distro/i3/` (legacy i3 configs), `distro/hardware/proart-x870e.md` (hardware manifest), `distro/scripts/hw-detect.sh` (first-boot detection, `--dry-run` and `--wayland-only` flags), `distro/systemd/` (service units).
+The `distro/` directory contains configs for a bootable Linux thin client. Primary: Manjaro Linux + Sway (Wayland) + RTX 4090. Alternative: Manjaro + Hyprland. Legacy: Ubuntu 24.04 + i3 (X11). Key files: `distro/sway/` (Sway configs), `distro/hyprland/` (Hyprland configs), `distro/i3/` (legacy i3 configs), `distro/scripts/compositor-detect.sh` + `compositor-cmd.sh` (compositor abstraction layer), `distro/scripts/hw-detect.sh` (first-boot detection, writes both Sway+Hyprland configs), `distro/systemd/` (service units). The Go layer supports all three compositors via `internal/wm/` with IPC clients for Sway, Hyprland, and i3.
 
 ## Related Repos (same org)
 

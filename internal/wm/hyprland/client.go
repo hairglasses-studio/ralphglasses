@@ -191,6 +191,21 @@ func (c *Client) MoveToWorkspace(windowAddr string, workspace int) error {
 	return c.Dispatch("movetoworkspacesilent", fmt.Sprintf("%d,address:%s", workspace, windowAddr))
 }
 
+// GetVersion returns the Hyprland version tag string.
+func (c *Client) GetVersion() (string, error) {
+	data, err := c.request("j/version")
+	if err != nil {
+		return "", err
+	}
+	var v struct {
+		Tag string `json:"tag"`
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return "", fmt.Errorf("hyprland: parse version: %w", err)
+	}
+	return v.Tag, nil
+}
+
 // SocketPath returns the path to the command socket.
 func (c *Client) SocketPath() string {
 	return filepath.Join(c.socketDir, ".socket.sock")
