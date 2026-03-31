@@ -132,7 +132,7 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 		}
 	}
 
-	newSession, err := s.SessMgr.Launch(ctx, opts)
+	newSession, err := s.SessMgr.Launch(context.Background(), opts)
 	if err != nil {
 		return codedError(ErrFilesystem, fmt.Sprintf("launch handoff session: %v", err)), nil
 	}
