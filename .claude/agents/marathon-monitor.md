@@ -1,6 +1,6 @@
 ---
 description: Monitors marathon and supervisor progress — tracks agent health, detects stalls, manages retries, enforces budget and duration limits
-model: opus
+model: haiku
 tools: [Read, Bash, Grep, Glob]
 ---
 
