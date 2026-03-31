@@ -79,8 +79,23 @@ bindsym $mod+v split v
 bindsym $mod+b split h
 bindsym $mod+f fullscreen toggle
 bindsym $mod+Shift+space floating toggle
-bindsym $mod+Shift+c reload
-bindsym $mod+Shift+r restart
+# Layout cycling (from AeroSpace alt-slash)
+bindsym $mod+slash layout toggle split tabbed stacking
+
+# Quick terminal (from AeroSpace backtick)
+bindsym $mod+grave exec alacritty --class quick-terminal
+for_window [app_id="quick-terminal"] floating enable, resize set 800 500
+
+# Shader keybinds (from AeroSpace)
+bindsym $mod+Shift+s exec shader-random.sh
+bindsym $mod+Shift+n exec shader-cycle.sh next
+bindsym $mod+Shift+p exec shader-cycle.sh prev
+
+# Workspace back-and-forth (from AeroSpace alt-tab)
+bindsym $mod+Tab workspace back_and_forth
+
+# Reload config
+bindsym $mod+Shift+r reload
 
 # --- Kiosk mode for ralphglasses ---
 # Auto-start ralphglasses TUI in fullscreen on workspace 1
@@ -89,18 +104,23 @@ exec swaymsg 'workspace 1; exec alacritty -e ralphglasses --scan-path /workspace
 # Force all alacritty windows to start without title bar
 for_window [app_id="Alacritty"] border none
 
+# --- Gaps (ported from AeroSpace) ---
+gaps inner 8
+gaps outer 0
+gaps top 40
+
 # --- Appearance ---
 font pango:monospace 10
-default_border pixel 1
+default_border pixel 2
 default_floating_border pixel 1
 hide_edge_borders smart
 
-# Colors (k9s-inspired dark theme)
+# Colors (Snazzy palette — ported from AeroSpace)
 # class                 border  bground text    indicator child_border
-client.focused          #4c7899 #1a1b26 #c0caf5 #7aa2f7   #4c7899
-client.focused_inactive #333333 #1a1b26 #888888 #484e50   #333333
-client.unfocused        #333333 #1a1b26 #555555 #292d2e   #222222
-client.urgent           #f7768e #f7768e #1a1b26 #f7768e   #f7768e
+client.focused          #57c7ff #57c7ff #000000 #57c7ff #57c7ff
+client.unfocused        #686868 #1a1b26 #686868 #686868 #686868
+client.focused_inactive #686868 #1a1b26 #686868 #686868 #686868
+client.urgent           #ff5c57 #ff5c57 #000000 #ff5c57 #ff5c57
 
 # --- Status bar ---
 bar {

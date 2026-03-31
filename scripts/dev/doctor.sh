@@ -71,6 +71,39 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
   fi
 fi
 
+# Linux-specific checks
+if [[ "$(uname -s)" == "Linux" ]]; then
+  if command -v pacman >/dev/null 2>&1; then
+    check "pacman" "ok" "$(command -v pacman)"
+  else
+    check "pacman" "warn" "Package manager not found"
+  fi
+
+  if command -v sway >/dev/null 2>&1; then
+    check "sway" "ok" "$(sway --version 2>/dev/null || command -v sway)"
+  else
+    check "sway" "warn" "Sway compositor not found"
+  fi
+
+  if command -v waybar >/dev/null 2>&1; then
+    check "waybar" "ok" "$(command -v waybar)"
+  else
+    check "waybar" "warn" "Waybar status bar not found"
+  fi
+
+  if command -v alacritty >/dev/null 2>&1; then
+    check "alacritty" "ok" "$(command -v alacritty)"
+  else
+    check "alacritty" "warn" "Terminal emulator not found"
+  fi
+
+  if command -v wl-copy >/dev/null 2>&1; then
+    check "wl-copy" "ok" "$(command -v wl-copy)"
+  else
+    check "wl-copy" "warn" "Wayland clipboard (wl-copy) not found"
+  fi
+fi
+
 if command -v cc >/dev/null 2>&1 || command -v gcc >/dev/null 2>&1; then
   check "c-compiler" "ok" "$(command -v cc || command -v gcc)"
 else

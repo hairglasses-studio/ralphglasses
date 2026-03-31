@@ -85,6 +85,45 @@ window#waybar {
     color: #686868;
 }
 
+/* ── System modules ────────────────────────────────── */
+
+#battery {
+    color: #5af78e;
+}
+
+#battery.warning {
+    color: #f3f99d;
+}
+
+#battery.critical {
+    color: #ff5c57;
+}
+
+#cpu {
+    color: #686868;
+}
+
+#network {
+    color: #686868;
+}
+
+#network.disconnected {
+    color: #ff5c57;
+}
+
+#mpris {
+    color: #ff6ac1;
+}
+
+#window {
+    color: #ff6ac1;
+    font-weight: bold;
+}
+
+#custom-k8s {
+    color: #57c7ff;
+}
+
 /* Tooltip styling */
 tooltip {
     background-color: #1a1b26;
