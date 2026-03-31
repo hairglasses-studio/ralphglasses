@@ -97,7 +97,7 @@ func NewClient() (*Client, error) {
 	if sig == "" {
 		return nil, errors.New("hyprland: HYPRLAND_INSTANCE_SIGNATURE not set; is Hyprland running?")
 	}
-	dir := socketDir(sig)
+	dir := resolveSocketDir(sig)
 	if _, err := os.Stat(dir); err != nil {
 		return nil, fmt.Errorf("hyprland: socket directory not found: %w", err)
 	}
@@ -216,9 +216,25 @@ func (c *Client) EventSocketPath() string {
 	return filepath.Join(c.socketDir, ".socket2.sock")
 }
 
-// socketDir returns the socket directory for a given instance signature.
-func socketDir(signature string) string {
-	return filepath.Join("/tmp", "hypr", signature)
+// resolveSocketDir returns the socket directory for a given instance signature.
+// Hyprland >= 0.40 uses $XDG_RUNTIME_DIR/hypr/$sig; older versions use /tmp/hypr/$sig.
+// Returns the first directory that exists, preferring XDG.
+func resolveSocketDir(signature string) string {
+	if xdg := os.Getenv("XDG_RUNTIME_DIR"); xdg != "" {
+		xdgDir := filepath.Join(xdg, "hypr", signature)
+		if _, err := os.Stat(xdgDir); err == nil {
+			return xdgDir
+		}
+	}
+	tmpDir := filepath.Join("/tmp", "hypr", signature)
+	if _, err := os.Stat(tmpDir); err == nil {
+		return tmpDir
+	}
+	// Neither exists; prefer XDG if set.
+	if xdg := os.Getenv("XDG_RUNTIME_DIR"); xdg != "" {
+		return filepath.Join(xdg, "hypr", signature)
+	}
+	return tmpDir
 }
 
 // FormatCommand builds a raw IPC command string from a command and arguments.

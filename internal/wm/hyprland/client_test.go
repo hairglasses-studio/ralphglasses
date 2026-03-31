@@ -240,12 +240,59 @@ func TestFormatCommand(t *testing.T) {
 
 // ---------- socket path construction ----------
 
-func TestSocketDir(t *testing.T) {
-	got := socketDir("abc123def")
-	want := filepath.Join("/tmp", "hypr", "abc123def")
-	if got != want {
-		t.Errorf("socketDir = %q, want %q", got, want)
-	}
+func TestResolveSocketDir(t *testing.T) {
+	const sig = "test-resolve-sig"
+
+	t.Run("xdg_exists", func(t *testing.T) {
+		xdgDir := t.TempDir()
+		sigDir := filepath.Join(xdgDir, "hypr", sig)
+		os.MkdirAll(sigDir, 0o755)
+		t.Setenv("XDG_RUNTIME_DIR", xdgDir)
+		got := resolveSocketDir(sig)
+		if got != sigDir {
+			t.Errorf("got %q, want %q", got, sigDir)
+		}
+	})
+
+	t.Run("xdg_preferred_over_legacy", func(t *testing.T) {
+		// Both XDG and legacy exist — XDG should win.
+		xdgDir := t.TempDir()
+		sigDir := filepath.Join(xdgDir, "hypr", sig)
+		os.MkdirAll(sigDir, 0o755)
+		t.Setenv("XDG_RUNTIME_DIR", xdgDir)
+		got := resolveSocketDir(sig)
+		if got != sigDir {
+			t.Errorf("got %q, want XDG path %q", got, sigDir)
+		}
+	})
+
+	t.Run("no_xdg_falls_back_to_tmp", func(t *testing.T) {
+		t.Setenv("XDG_RUNTIME_DIR", "")
+		got := resolveSocketDir(sig)
+		want := filepath.Join("/tmp", "hypr", sig)
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("neither_exists_xdg_set", func(t *testing.T) {
+		xdgDir := t.TempDir() // exists, but hypr/$sig does not
+		t.Setenv("XDG_RUNTIME_DIR", xdgDir)
+		got := resolveSocketDir(sig)
+		want := filepath.Join(xdgDir, "hypr", sig)
+		if got != want {
+			t.Errorf("got %q, want XDG path %q", got, want)
+		}
+	})
+
+	t.Run("neither_exists_no_xdg", func(t *testing.T) {
+		t.Setenv("XDG_RUNTIME_DIR", "")
+		got := resolveSocketDir(sig)
+		want := filepath.Join("/tmp", "hypr", sig)
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
 }
 
 func TestSocketPaths(t *testing.T) {
