@@ -7,7 +7,7 @@ Supports **Claude Code**, **Gemini CLI**, and **OpenAI Codex CLI** as session pr
 ## Two Deliverables
 
 1. **`ralphglasses` Go binary** — Cross-platform Unix TUI (k9s-style, Charmbracelet). Manages multi-session, multi-provider LLM loops from any terminal.
-2. **Bootable Linux thin client** — Ubuntu 24.04 + i3, boots into ralphglasses TUI. 7-monitor, dual-NVIDIA-GPU.
+2. **Bootable Linux thin client** — Manjaro Linux + Sway (Wayland), boots into ralphglasses TUI. 7-monitor, dual-NVIDIA-GPU. Legacy fallback: Ubuntu 24.04 + i3.
 
 See ROADMAP.md for full plan. See docs/ for research.
 
@@ -58,7 +58,7 @@ The `Manager.Enhancer` field enables automatic prompt enhancement in `StepLoop`.
 
 ## Distro / Thin Client
 
-The `distro/` directory contains configs for a bootable Linux thin client (Ubuntu 24.04, i3, RTX 4090). Key files: `distro/hardware/proart-x870e.md` (hardware manifest), `distro/scripts/hw-detect.sh` (first-boot detection, testable with `--dry-run`), `distro/systemd/` (service units).
+The `distro/` directory contains configs for a bootable Linux thin client. Primary: Manjaro Linux + Sway (Wayland) + RTX 4090. Legacy: Ubuntu 24.04 + i3 (X11). Key files: `distro/sway/` (Sway/waybar configs), `distro/i3/` (legacy i3 configs), `distro/hardware/proart-x870e.md` (hardware manifest), `distro/scripts/hw-detect.sh` (first-boot detection, `--dry-run` and `--wayland-only` flags), `distro/systemd/` (service units).
 
 ## Related Repos (same org)
 

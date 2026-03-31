@@ -745,12 +745,21 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - [ ] 3.4.4 — Link autorandr profiles to layout presets `P2` `M`
 - **Acceptance:** monitor hot-plug triggers layout restore
 
-### 3.5 — Sway/Wayland compatibility `[PARALLEL]`
-- [ ] 3.5.1 — Abstract WM interface: `internal/wm/` with i3 and Sway backends `P2` `L`
-- [ ] 3.5.2 — Sway IPC client `P2` `M`
+### 3.5 — Sway/Wayland compatibility `[PARALLEL]` — **PRIMARY COMPOSITOR**
+- [x] 3.5.1 — Abstract WM interface: `internal/wm/` with i3 and Sway backends `P2` `L`
+- [x] 3.5.2 — Sway IPC client: `internal/wm/sway/client.go` (208 LOC, i3-ipc protocol) `P2` `M`
 - [x] 3.5.3 — Auto-detect WM at startup: check `$SWAYSOCK` vs `$I3SOCK` `P2` `S`
-- [ ] 3.5.4 — Test suite: integration tests for both backends `P2` `M`
-- **Acceptance:** layout commands work on both i3 and Sway
+- [x] 3.5.4 — Test suite: `internal/wm/sway/integration_test.go` (580 LOC) `P2` `M`
+- [x] 3.5.5 — Sway distro configs: `distro/sway/config`, `kiosk-config`, waybar `P1` `L`
+- [x] 3.5.6 — NVIDIA Wayland env: `distro/sway/environment.d/nvidia-wayland.conf` `P1` `S`
+- [x] 3.5.7 — Sway kiosk setup: `distro/scripts/sway-kiosk-setup.sh` `P1` `M`
+- [x] 3.5.8 — Waybar status bar: custom fleet modules replacing i3blocks `P1` `M`
+- [x] 3.5.9 — Extend sway.Output struct with Rect/CurrentMode for monitor layout `P1` `S`
+- [x] 3.5.10 — ParseSwayOutputs + DetectMonitors dispatcher in `internal/wm/monitors.go` `P1` `M`
+- [x] 3.5.11 — hw-detect.sh `--wayland-only` flag for Sway monitor config `P1` `S`
+- [x] 3.5.12 — Manjaro Dockerfile: `distro/Dockerfile.manjaro` (Sway + NVIDIA) `P1` `L`
+- [x] 3.5.13 — Systemd services updated for Wayland env vars `P1` `S`
+- **Acceptance:** layout commands work on both i3 and Sway; Manjaro boots into Sway kiosk
 
 ### 3.6 — Hyprland support `[PARALLEL]`
 - [ ] 3.6.1 — Hyprland IPC client: `internal/wm/hyprland/` `P2` `M`

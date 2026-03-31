@@ -127,6 +127,69 @@ For anyone coming from the Windows driver archive, here's what maps to what:
 | ASUS Armory Crate | No equivalent | ASUS-only Windows software |
 | ASUS AI Suite | No equivalent | Fan control via `lm-sensors` + `fancontrol` instead |
 
+## Sway / Wayland (Primary Compositor)
+
+The thin client uses Sway as its primary compositor on Manjaro Linux. NVIDIA on Wayland requires specific kernel params and environment variables.
+
+### Required Kernel Parameters
+
+```
+nvidia-drm.modeset=1
+```
+
+Add to `/etc/default/grub` → `GRUB_CMDLINE_LINUX_DEFAULT` and run `update-grub`.
+
+### Required Environment Variables
+
+Set via `~/.config/environment.d/nvidia-wayland.conf` (installed by `sway-kiosk-setup.sh`):
+
+```
+GBM_BACKEND=nvidia-drm
+__GLX_VENDOR_LIBRARY_NAME=nvidia
+WLR_NO_HARDWARE_CURSORS=1
+MOZ_ENABLE_WAYLAND=1
+XDG_SESSION_TYPE=wayland
+XDG_CURRENT_DESKTOP=sway
+```
+
+### Dual GPU on Wayland
+
+Sway uses `wlroots` which auto-detects DRM devices. To control GPU ordering (NVIDIA first):
+
+```bash
+export WLR_DRM_DEVICES=/dev/dri/card0:/dev/dri/card1
+```
+
+Where `card0` is the RTX 4090 and `card1` is the AMD iGPU. Check with:
+
+```bash
+ls -la /dev/dri/by-path/  # shows PCI bus → cardN mapping
+```
+
+### NVIDIA Cursor Workaround
+
+Hardware cursors may not render correctly on NVIDIA Wayland. The `WLR_NO_HARDWARE_CURSORS=1` env var forces software cursor rendering (minor CPU overhead, no visual glitch).
+
+### Validation (Sway)
+
+```bash
+# Check Sway is running on Wayland
+echo $WAYLAND_DISPLAY   # should be "wayland-1" or similar
+echo $SWAYSOCK           # should be /run/user/1000/sway-ipc.sock
+
+# Check NVIDIA driver loaded
+nvidia-smi
+
+# Check all 7 outputs detected
+swaymsg -t get_outputs | jq '.[].name'
+
+# Check DRM devices
+ls -la /dev/dri/card*
+
+# Check kernel params
+cat /proc/cmdline | grep nvidia-drm
+```
+
 ## Known Issues
 
 ### MT7927 Bluetooth HCI Errors (Hardware)

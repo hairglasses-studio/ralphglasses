@@ -1,16 +1,17 @@
 [Unit]
 Description=Ralphglasses TUI Agent Fleet Manager
-After=graphical.target
-Wants=graphical.target
+After=graphical-session.target
+Wants=graphical-session.target
 
 [Service]
 Type=simple
 User=ralph
-Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-1
+Environment=XDG_RUNTIME_DIR=/run/user/1000
 Environment=RALPHGLASSES_SCAN_PATH=/workspace
 ExecStart=/usr/local/bin/ralphglasses --scan-path /workspace
 Restart=on-failure
 RestartSec=5
 
 [Install]
-WantedBy=graphical.target
+WantedBy=graphical-session.target

@@ -1,0 +1,92 @@
+// Waybar config for ralphglasses thin client
+// Replaces i3blocks with native Wayland status bar
+// All rg-* modules read from /tmp/rg-status.json via rg-status-bar.sh
+{
+    "layer": "top",
+    "position": "top",
+
+    "modules-left": [
+        "sway/workspaces",
+        "sway/mode"
+    ],
+    "modules-center": [
+        "clock"
+    ],
+    "modules-right": [
+        "custom/rg-fleet",
+        "custom/rg-loops",
+        "custom/rg-cost",
+        "custom/rg-models",
+        "custom/rg-repos",
+        "custom/rg-iters"
+    ],
+
+    // Sway modules
+    "sway/workspaces": {
+        "disable-scroll": true,
+        "all-outputs": true,
+        "format": "{name}"
+    },
+    "sway/mode": {
+        "format": " {}"
+    },
+    "clock": {
+        "format": "{:%Y-%m-%d %H:%M:%S}",
+        "interval": 1,
+        "tooltip-format": "{:%A, %B %d, %Y}"
+    },
+
+    // Fleet status: ↻3 ✓12 ✗1 (running/completed/failed)
+    "custom/rg-fleet": {
+        "exec": "/opt/ralphglasses/distro/scripts/rg-status-bar.sh --segment fleet --waybar",
+        "return-type": "json",
+        "interval": 30,
+        "format": " {}",
+        "tooltip": true
+    },
+
+    // Loop stats: 24 runs 87%
+    "custom/rg-loops": {
+        "exec": "/opt/ralphglasses/distro/scripts/rg-status-bar.sh --segment loops --waybar",
+        "return-type": "json",
+        "interval": 30,
+        "format": " {}",
+        "tooltip": true
+    },
+
+    // Cost tracker: $14.52
+    "custom/rg-cost": {
+        "exec": "/opt/ralphglasses/distro/scripts/rg-status-bar.sh --segment cost --waybar",
+        "return-type": "json",
+        "interval": 30,
+        "format": " {}",
+        "tooltip": true
+    },
+
+    // Model distribution: o1p:8 o4m:5 son:3
+    "custom/rg-models": {
+        "exec": "/opt/ralphglasses/distro/scripts/rg-status-bar.sh --segment models --waybar",
+        "return-type": "json",
+        "interval": 30,
+        "format": "󰧑 {}",
+        "tooltip": true
+    },
+
+    // Repo scan status: 12 scan 8 tgt
+    "custom/rg-repos": {
+        "exec": "/opt/ralphglasses/distro/scripts/rg-status-bar.sh --segment repos --waybar",
+        "return-type": "json",
+        "interval": 30,
+        "format": " {}",
+        "tooltip": true
+    },
+
+    // Iteration counter: 142 iters ~5.9/run
+    "custom/rg-iters": {
+        "exec": "/opt/ralphglasses/distro/scripts/rg-status-bar.sh --segment iters --waybar",
+        "return-type": "json",
+        "interval": 30,
+        "format": "󰔚 {}",
+        "tooltip": true
+    }
+}

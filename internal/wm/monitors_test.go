@@ -3,6 +3,8 @@ package wm
 import (
 	"strings"
 	"testing"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/wm/sway"
 )
 
 // --- xrandr mock outputs ---
@@ -437,5 +439,84 @@ func TestAssignWorkspaces_MonitorSortOrder(t *testing.T) {
 	// Primary wins over area, so SMALL (primary) should get the first session.
 	if plan.Assignments[0].MonitorName != "SMALL" {
 		t.Errorf("expected primary monitor SMALL to be preferred, got %s", plan.Assignments[0].MonitorName)
+	}
+}
+
+// --- ParseSwayOutputs tests ---
+
+func TestParseSwayOutputs(t *testing.T) {
+	outputs := []sway.Output{
+		{
+			Name:             "DP-1",
+			Make:             "Dell Inc.",
+			Model:            "U2723QE",
+			Active:           true,
+			CurrentWorkspace: "1",
+			Rect:             sway.Rect{X: 0, Y: 0, Width: 3840, Height: 2160},
+			CurrentMode:      sway.OutputMode{Width: 3840, Height: 2160, Refresh: 60000},
+		},
+		{
+			Name:             "DP-2",
+			Make:             "Dell Inc.",
+			Model:            "U2723QE",
+			Active:           true,
+			CurrentWorkspace: "2",
+			Rect:             sway.Rect{X: 3840, Y: 0, Width: 3840, Height: 2160},
+			CurrentMode:      sway.OutputMode{Width: 3840, Height: 2160, Refresh: 60000},
+		},
+		{
+			Name:   "HDMI-A-1",
+			Active: false,
+		},
+	}
+
+	monitors := ParseSwayOutputs(outputs)
+
+	if len(monitors) != 2 {
+		t.Fatalf("expected 2 monitors, got %d", len(monitors))
+	}
+
+	// Check first monitor
+	if monitors[0].Name != "DP-1" {
+		t.Errorf("expected DP-1, got %s", monitors[0].Name)
+	}
+	if monitors[0].Width != 3840 || monitors[0].Height != 2160 {
+		t.Errorf("expected 3840x2160, got %dx%d", monitors[0].Width, monitors[0].Height)
+	}
+	if monitors[0].OffsetX != 0 {
+		t.Errorf("expected offset 0, got %d", monitors[0].OffsetX)
+	}
+	if monitors[0].RefreshHz != 60.0 {
+		t.Errorf("expected 60.0 Hz, got %f", monitors[0].RefreshHz)
+	}
+
+	// Check second monitor offset
+	if monitors[1].OffsetX != 3840 {
+		t.Errorf("expected offset 3840, got %d", monitors[1].OffsetX)
+	}
+
+	// Inactive monitor should be excluded
+	for _, m := range monitors {
+		if m.Name == "HDMI-A-1" {
+			t.Error("inactive monitor HDMI-A-1 should be excluded")
+		}
+	}
+}
+
+func TestParseSwayOutputs_Empty(t *testing.T) {
+	monitors := ParseSwayOutputs(nil)
+	if len(monitors) != 0 {
+		t.Errorf("expected 0 monitors for nil input, got %d", len(monitors))
+	}
+}
+
+func TestParseSwayOutputs_AllInactive(t *testing.T) {
+	outputs := []sway.Output{
+		{Name: "DP-1", Active: false},
+		{Name: "DP-2", Active: false},
+	}
+	monitors := ParseSwayOutputs(outputs)
+	if len(monitors) != 0 {
+		t.Errorf("expected 0 monitors when all inactive, got %d", len(monitors))
 	}
 }

@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/wm/sway"
 )
 
 // Monitor represents a detected physical display.
@@ -180,4 +182,48 @@ func AssignWorkspaces(monitors []Monitor, sessions []SessionInfo) MonitorPlan {
 	}
 
 	return MonitorPlan{Assignments: assignments}
+}
+
+// ParseSwayOutputs converts Sway IPC output data to the generic Monitor format.
+func ParseSwayOutputs(outputs []sway.Output) []Monitor {
+	var monitors []Monitor
+	for _, o := range outputs {
+		if !o.Active {
+			continue
+		}
+		monitors = append(monitors, Monitor{
+			Name:      o.Name,
+			Width:     o.CurrentMode.Width,
+			Height:    o.CurrentMode.Height,
+			OffsetX:   o.Rect.X,
+			OffsetY:   o.Rect.Y,
+			Connected: true,
+			RefreshHz: float64(o.CurrentMode.Refresh) / 1000.0, // Sway reports mHz
+		})
+	}
+	return monitors
+}
+
+// DetectMonitors returns the list of connected monitors using the appropriate
+// method for the detected window manager.
+func DetectMonitors() ([]Monitor, error) {
+	switch Detect() {
+	case TypeSway:
+		client, err := sway.Connect()
+		if err != nil {
+			return nil, fmt.Errorf("detect monitors (sway): %w", err)
+		}
+		defer client.Close()
+		outputs, err := client.GetOutputs()
+		if err != nil {
+			return nil, fmt.Errorf("detect monitors (sway get outputs): %w", err)
+		}
+		monitors := ParseSwayOutputs(outputs)
+		if len(monitors) == 0 {
+			return nil, fmt.Errorf("detect monitors: no active sway outputs")
+		}
+		return monitors, nil
+	default:
+		return nil, fmt.Errorf("detect monitors: unsupported WM %q (use ParseXrandrOutput for X11)", Detect())
+	}
 }

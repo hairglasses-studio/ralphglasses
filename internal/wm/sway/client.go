@@ -54,13 +54,30 @@ type Workspace struct {
 	Urgent  bool   `json:"urgent"`
 }
 
+// Rect represents a rectangular region in pixel coordinates.
+type Rect struct {
+	X      int `json:"x"`
+	Y      int `json:"y"`
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
+// OutputMode represents the current display mode of an output.
+type OutputMode struct {
+	Width   int `json:"width"`
+	Height  int `json:"height"`
+	Refresh int `json:"refresh"`
+}
+
 // Output represents a Sway output (monitor).
 type Output struct {
-	Name             string `json:"name"`
-	Make             string `json:"make"`
-	Model            string `json:"model"`
-	Active           bool   `json:"active"`
-	CurrentWorkspace string `json:"current_workspace"`
+	Name             string     `json:"name"`
+	Make             string     `json:"make"`
+	Model            string     `json:"model"`
+	Active           bool       `json:"active"`
+	CurrentWorkspace string     `json:"current_workspace"`
+	Rect             Rect       `json:"rect"`
+	CurrentMode      OutputMode `json:"current_mode"`
 }
 
 // SocketPath returns the SWAYSOCK environment variable value.
