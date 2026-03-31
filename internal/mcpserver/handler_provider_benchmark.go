@@ -85,11 +85,14 @@ func (s *Server) handleProviderBenchmark(_ context.Context, req mcp.CallToolRequ
 	}
 
 	type providerSummary struct {
-		Provider        string       `json:"provider"`
-		AvgQualityPct   float64      `json:"avg_quality_pct"`
-		AvgCostPerTask  float64      `json:"avg_cost_per_task"`
-		Tasks           []taskResult `json:"tasks"`
-		Recommendation  string       `json:"recommendation"`
+		Provider           string       `json:"provider"`
+		AvgQualityPct      float64      `json:"avg_quality_pct"`
+		AvgCostPerTask     float64      `json:"avg_cost_per_task"`
+		EstLatencyMs       int          `json:"est_latency_ms"`
+		CostEfficiency     float64      `json:"cost_efficiency"`
+		Tasks              []taskResult `json:"tasks"`
+		Recommendation     string       `json:"recommendation"`
+		HistoricalDataUsed bool         `json:"historical_data_used"`
 	}
 
 	var summaries []providerSummary
@@ -101,13 +104,21 @@ func (s *Server) handleProviderBenchmark(_ context.Context, req mcp.CallToolRequ
 		"codex":   0.010, // gpt-4o-class
 	}
 
+	// Latency estimates (P50 ms per task).
+	latencyEstimates := map[string]int{
+		"claude":  8000,  // ~8s per task (opus)
+		"gemini":  3000,  // ~3s per task (pro)
+		"codex":   5000,  // ~5s per task (gpt-4o)
+	}
+
+	// Try to load historical cost data from observations.
+	historicalCosts := s.loadHistoricalProviderCosts(repoPath)
+
 	for _, provider := range providers {
 		var tasks []taskResult
 		var totalQuality float64
 
 		for _, bt := range benchmarkTasks {
-			// Score quality based on keyword coverage (simulated).
-			// In a real benchmark, we'd call the provider API.
 			quality := scorePromptQuality(bt.Prompt, bt.Keywords, provider)
 			tasks = append(tasks, taskResult{
 				Task:       bt.Name,
@@ -118,10 +129,25 @@ func (s *Server) handleProviderBenchmark(_ context.Context, req mcp.CallToolRequ
 		}
 
 		avgQuality := totalQuality / float64(len(benchmarkTasks))
-		costPerTask := ratecards[provider] * 0.5 // ~500 tokens per response
+
+		// Use historical cost if available, otherwise use rate cards.
+		costPerTask := ratecards[provider] * 0.5
+		historicalUsed := false
+		if hc, ok := historicalCosts[provider]; ok && hc > 0 {
+			costPerTask = hc
+			historicalUsed = true
+		}
 		if costPerTask == 0 {
 			costPerTask = 0.01
 		}
+
+		latency := latencyEstimates[provider]
+		if latency == 0 {
+			latency = 5000
+		}
+
+		// Cost efficiency: quality per dollar (higher = better).
+		costEfficiency := avgQuality / (costPerTask * 100)
 
 		rec := "general purpose"
 		switch provider {
@@ -134,11 +160,14 @@ func (s *Server) handleProviderBenchmark(_ context.Context, req mcp.CallToolRequ
 		}
 
 		summaries = append(summaries, providerSummary{
-			Provider:       provider,
-			AvgQualityPct:  math.Round(avgQuality*100) / 100,
-			AvgCostPerTask: math.Round(costPerTask*10000) / 10000,
-			Tasks:          tasks,
-			Recommendation: rec,
+			Provider:           provider,
+			AvgQualityPct:      math.Round(avgQuality*100) / 100,
+			AvgCostPerTask:     math.Round(costPerTask*10000) / 10000,
+			EstLatencyMs:       latency,
+			CostEfficiency:     math.Round(costEfficiency*100) / 100,
+			Tasks:              tasks,
+			Recommendation:     rec,
+			HistoricalDataUsed: historicalUsed,
 		})
 	}
 
@@ -173,6 +202,38 @@ func (s *Server) handleProviderBenchmark(_ context.Context, req mcp.CallToolRequ
 	}
 
 	return jsonResult(resultData), nil
+}
+
+// loadHistoricalProviderCosts reads cost observations and computes per-provider averages.
+func (s *Server) loadHistoricalProviderCosts(repoPath string) map[string]float64 {
+	result := make(map[string]float64)
+
+	obsPath := filepath.Join(repoPath, ".ralph", "cost_observations.json")
+	data, err := os.ReadFile(obsPath)
+	if err != nil {
+		return result
+	}
+
+	var observations []struct {
+		Provider string  `json:"provider"`
+		Cost     float64 `json:"cost"`
+	}
+	if err := json.Unmarshal(data, &observations); err != nil {
+		return result
+	}
+
+	counts := make(map[string]int)
+	totals := make(map[string]float64)
+	for _, o := range observations {
+		if o.Provider != "" && o.Cost > 0 {
+			counts[o.Provider]++
+			totals[o.Provider] += o.Cost
+		}
+	}
+	for p, total := range totals {
+		result[p] = total / float64(counts[p])
+	}
+	return result
 }
 
 // scorePromptQuality estimates quality for a provider on a task.

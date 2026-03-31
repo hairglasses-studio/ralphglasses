@@ -22,13 +22,33 @@ func (s *Server) handleFleetCapacityPlan(_ context.Context, req mcp.CallToolRequ
 	targetHours := getNumberArg(req, "target_completion_hours", 4.0)
 	avgTaskCost := getNumberArg(req, "avg_task_cost", 0)
 	avgTaskDurationMin := getNumberArg(req, "avg_task_duration_min", 10.0)
+	utilizationFactor := getNumberArg(req, "utilization_factor", 0.8)
+
+	// Guard: clamp utilization to [0.1, 1.0].
+	if utilizationFactor < 0.1 {
+		utilizationFactor = 0.1
+	} else if utilizationFactor > 1.0 {
+		utilizationFactor = 1.0
+	}
+
+	// Guard: prevent division by zero.
+	if avgTaskDurationMin <= 0 {
+		avgTaskDurationMin = 10.0
+	}
 
 	// If avg_task_cost not provided, try to read from cost observations.
 	if avgTaskCost <= 0 {
 		avgTaskCost = s.estimateAvgTaskCost()
 	}
 
-	tasksPerWorkerPerHour := 60.0 / avgTaskDurationMin
+	// Guard: target hours must be at least one task duration.
+	minTargetHours := avgTaskDurationMin / 60.0
+	if targetHours < minTargetHours {
+		targetHours = minTargetHours
+	}
+
+	rawTasksPerWorkerPerHour := 60.0 / avgTaskDurationMin
+	tasksPerWorkerPerHour := rawTasksPerWorkerPerHour * utilizationFactor
 	estimatedCost := float64(queueDepth) * avgTaskCost
 
 	// Minimum workers needed to complete in target time.
@@ -58,12 +78,14 @@ func (s *Server) handleFleetCapacityPlan(_ context.Context, req mcp.CallToolRequ
 		"estimated_cost":              math.Round(estimatedCost*100) / 100,
 		"estimated_completion_hours":  math.Round(estimatedCompletionHours*100) / 100,
 		"budget_headroom":             math.Round(budgetHeadroom*100) / 100,
+		"cost_per_worker_hour":        math.Round(costPerWorkerHour*10000) / 10000,
 		"inputs": map[string]any{
 			"queue_depth":           queueDepth,
 			"available_budget":      availableBudget,
 			"target_hours":          targetHours,
 			"avg_task_cost":         avgTaskCost,
 			"avg_task_duration_min": avgTaskDurationMin,
+			"utilization_factor":    utilizationFactor,
 		},
 	}
 	return jsonResult(result), nil

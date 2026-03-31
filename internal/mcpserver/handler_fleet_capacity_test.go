@@ -19,14 +19,15 @@ func TestFleetCapacityPlan(t *testing.T) {
 		{
 			name: "basic_plan",
 			args: map[string]any{
-				"queue_depth":          float64(20),
-				"available_budget":     float64(10.0),
+				"queue_depth":            float64(20),
+				"available_budget":       float64(10.0),
 				"target_completion_hours": float64(2),
-				"avg_task_cost":        float64(0.10),
-				"avg_task_duration_min": float64(10),
+				"avg_task_cost":          float64(0.10),
+				"avg_task_duration_min":  float64(10),
+				"utilization_factor":     float64(1.0), // 100% utilization for predictable math
 			},
 			check: func(t *testing.T, result map[string]any) {
-				// 6 tasks/worker/hour, 2 hours = 12 tasks/worker
+				// 6 tasks/worker/hour * 1.0 util, 2 hours = 12 tasks/worker
 				// 20 tasks / 12 = ceil(1.67) = 2 workers
 				workers := result["recommended_workers"].(float64)
 				if workers != 2 {
@@ -35,6 +36,10 @@ func TestFleetCapacityPlan(t *testing.T) {
 				cost := result["estimated_cost"].(float64)
 				if cost != 2.0 { // 20 * 0.10
 					t.Errorf("expected cost 2.0, got %v", cost)
+				}
+				// Verify cost_per_worker_hour is present.
+				if _, ok := result["cost_per_worker_hour"]; !ok {
+					t.Error("missing cost_per_worker_hour in output")
 				}
 			},
 		},
