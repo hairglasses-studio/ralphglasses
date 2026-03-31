@@ -115,7 +115,8 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		}
 	}
 
-	sess, err := s.SessMgr.Launch(ctx, opts)
+	// Use background context so sessions outlive the MCP tool call.
+	sess, err := s.SessMgr.Launch(context.Background(), opts)
 	if err != nil {
 		return codedError(ErrInternal, fmt.Sprintf("launch failed: %v", err)), nil
 	}
@@ -249,7 +250,7 @@ func (s *Server) handleSessionRetry(ctx context.Context, req mcp.CallToolRequest
 		opts.MaxBudgetUSD = b
 	}
 
-	newSess, err := s.SessMgr.Launch(ctx, opts)
+	newSess, err := s.SessMgr.Launch(context.Background(), opts)
 	if err != nil {
 		return codedError(ErrLaunchFailed, fmt.Sprintf("retry failed: %v", err)), nil
 	}
