@@ -5,48 +5,46 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/wm/hyprland"
 )
 
-// HyprlandMonitor represents a Hyprland monitor.
-type HyprlandMonitor struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Width       int    `json:"width"`
-	Height      int    `json:"height"`
-	X           int    `json:"x"`
-	Y           int    `json:"y"`
-	Scale       float64 `json:"scale"`
-	Focused     bool   `json:"focused"`
-}
-
-// HyprlandMonitors returns the list of monitors via hyprctl.
-func HyprlandMonitors() ([]HyprlandMonitor, error) {
-	out, err := exec.Command("hyprctl", "monitors", "-j").Output()
+// HyprlandMonitors returns the list of monitors via the Hyprland IPC client.
+func HyprlandMonitors() ([]hyprland.Monitor, error) {
+	client, err := hyprland.NewClient()
 	if err != nil {
-		return nil, fmt.Errorf("hyprctl monitors: %w", err)
+		return nil, fmt.Errorf("hyprland monitors: %w", err)
 	}
-	var monitors []HyprlandMonitor
-	if err := json.Unmarshal(out, &monitors); err != nil {
-		return nil, fmt.Errorf("parse monitors: %w", err)
-	}
-	return monitors, nil
+	defer client.Close()
+	return client.GetMonitors()
 }
 
-// HyprlandDispatchWorkspace switches to a named workspace.
+// HyprlandDispatchWorkspace switches to a named workspace via the IPC client.
 func HyprlandDispatchWorkspace(name string) error {
-	return exec.Command("hyprctl", "dispatch", "workspace", "name:"+name).Run()
+	client, err := hyprland.NewClient()
+	if err != nil {
+		return fmt.Errorf("hyprland dispatch workspace: %w", err)
+	}
+	defer client.Close()
+	return client.Dispatch("workspace", "name:"+name)
 }
 
-// HyprlandCreateWorkspace creates a named workspace on a specific monitor.
+// HyprlandCreateWorkspace creates a named workspace on a specific monitor
+// via the IPC client.
 func HyprlandCreateWorkspace(name, monitor string) error {
-	// Move to the workspace first
-	if err := HyprlandDispatchWorkspace(name); err != nil {
+	client, err := hyprland.NewClient()
+	if err != nil {
+		return fmt.Errorf("hyprland create workspace: %w", err)
+	}
+	defer client.Close()
+
+	// Move to the workspace first.
+	if err := client.Dispatch("workspace", "name:"+name); err != nil {
 		return err
 	}
-	// Move it to the target monitor
+	// Move it to the target monitor.
 	if monitor != "" {
-		return exec.Command("hyprctl", "dispatch", "movecurrentworkspacetomonitor", monitor).Run()
+		return client.Dispatch("movecurrentworkspacetomonitor", monitor)
 	}
 	return nil
 }
@@ -57,8 +55,18 @@ func HyprlandAvailable() bool {
 	return err == nil
 }
 
-// HyprlandVersion returns the Hyprland version string.
+// HyprlandVersion returns the Hyprland version string. It tries the IPC
+// client first and falls back to exec.Command("hyprctl").
 func HyprlandVersion() string {
+	client, err := hyprland.NewClient()
+	if err == nil {
+		defer client.Close()
+		data, reqErr := client.GetVersion()
+		if reqErr == nil && data != "" {
+			return data
+		}
+	}
+	// Fallback to hyprctl exec.
 	out, err := exec.Command("hyprctl", "version", "-j").Output()
 	if err != nil {
 		return ""

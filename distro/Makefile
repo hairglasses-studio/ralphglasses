@@ -14,8 +14,9 @@
 #   make clean               Remove build artifacts
 
 SHELL := /bin/bash
-.PHONY: all iso iso-debootstrap docker rootfs rootfs-debootstrap chroot \
-        test-vm usb clean validate validate-grub install-deps check-paths
+.PHONY: all iso iso-debootstrap docker docker-sway docker-hyprland rootfs \
+        rootfs-debootstrap chroot test-vm usb clean validate validate-grub \
+        install-deps check-paths build-both
 
 # ── Variables ──────────────────────────────────────────────────────────
 DISTRO_NAME  := ralphglasses
@@ -25,6 +26,9 @@ IMAGE_NAME   := $(DISTRO_NAME)-os
 IMAGE_TAG    := latest
 OUTPUT_ISO   := $(DISTRO_NAME)-$(VERSION)-$(ARCH).iso
 ISO_NAME     := $(OUTPUT_ISO)
+# Hyprland variant
+HYPR_IMAGE   := $(DISTRO_NAME)-hyprland
+HYPR_ISO     := $(DISTRO_NAME)-hyprland-$(VERSION)-$(ARCH).iso
 ROOTFS_DIR   := build/rootfs
 ISO_DIR      := build/iso
 CHROOT_DIR   := build/chroot
@@ -38,9 +42,19 @@ all: check-paths
 # Docker-based build path (primary)
 # ════════════════════════════════════════════════════════════════════════
 
-# ── Build Docker image ───────────────────────────────────────────────
-docker:
-	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Dockerfile ..
+# ── Build Docker image (Sway, default) ───────────────────────────────
+docker: docker-sway
+
+docker-sway:
+	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Dockerfile.manjaro ..
+
+# ── Build Docker image (Hyprland) ────────────────────────────────────
+docker-hyprland:
+	docker build -t $(HYPR_IMAGE):$(IMAGE_TAG) -f Dockerfile.manjaro.hyprland ..
+
+# ── Build both compositor variants in parallel ───────────────────────
+build-both:
+	$(MAKE) docker-sway docker-hyprland -j2
 
 # ── Extract rootfs from Docker image ─────────────────────────────────
 rootfs: docker

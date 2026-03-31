@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/wm/hyprland"
 	"github.com/hairglasses-studio/ralphglasses/internal/wm/sway"
 )
 
@@ -204,6 +205,24 @@ func ParseSwayOutputs(outputs []sway.Output) []Monitor {
 	return monitors
 }
 
+// ParseHyprlandMonitors converts Hyprland IPC monitor data to the generic Monitor format.
+func ParseHyprlandMonitors(monitors []hyprland.Monitor) []Monitor {
+	var result []Monitor
+	for _, m := range monitors {
+		result = append(result, Monitor{
+			Name:      m.Name,
+			Width:     m.Width,
+			Height:    m.Height,
+			OffsetX:   m.X,
+			OffsetY:   m.Y,
+			Connected: true,
+			Primary:   m.Focused,
+			RefreshHz: m.RefreshRate,
+		})
+	}
+	return result
+}
+
 // DetectMonitors returns the list of connected monitors using the appropriate
 // method for the detected window manager.
 func DetectMonitors() ([]Monitor, error) {
@@ -221,6 +240,21 @@ func DetectMonitors() ([]Monitor, error) {
 		monitors := ParseSwayOutputs(outputs)
 		if len(monitors) == 0 {
 			return nil, fmt.Errorf("detect monitors: no active sway outputs")
+		}
+		return monitors, nil
+	case TypeHyprland:
+		client, err := hyprland.NewClient()
+		if err != nil {
+			return nil, fmt.Errorf("detect monitors (hyprland): %w", err)
+		}
+		defer client.Close()
+		hMonitors, err := client.GetMonitors()
+		if err != nil {
+			return nil, fmt.Errorf("detect monitors (hyprland get monitors): %w", err)
+		}
+		monitors := ParseHyprlandMonitors(hMonitors)
+		if len(monitors) == 0 {
+			return nil, fmt.Errorf("detect monitors: no active hyprland outputs")
 		}
 		return monitors, nil
 	default:

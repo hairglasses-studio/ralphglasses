@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/wm/hyprland"
 	"github.com/hairglasses-studio/ralphglasses/internal/wm/sway"
 )
 
@@ -507,6 +508,72 @@ func TestParseSwayOutputs_Empty(t *testing.T) {
 	monitors := ParseSwayOutputs(nil)
 	if len(monitors) != 0 {
 		t.Errorf("expected 0 monitors for nil input, got %d", len(monitors))
+	}
+}
+
+// --- ParseHyprlandMonitors tests ---
+
+func TestParseHyprlandMonitors(t *testing.T) {
+	monitors := ParseHyprlandMonitors([]hyprland.Monitor{
+		{ID: 0, Name: "DP-1", Width: 3840, Height: 2160, X: 0, Y: 0, RefreshRate: 60.0, Focused: true},
+		{ID: 1, Name: "HDMI-A-1", Width: 1920, Height: 1080, X: 3840, Y: 0, RefreshRate: 60.0, Focused: false},
+	})
+
+	if len(monitors) != 2 {
+		t.Fatalf("expected 2 monitors, got %d", len(monitors))
+	}
+
+	// First monitor should be primary (focused).
+	if monitors[0].Name != "DP-1" {
+		t.Errorf("expected DP-1, got %s", monitors[0].Name)
+	}
+	if !monitors[0].Primary {
+		t.Error("DP-1 should be primary (focused)")
+	}
+	if monitors[0].Width != 3840 || monitors[0].Height != 2160 {
+		t.Errorf("expected 3840x2160, got %dx%d", monitors[0].Width, monitors[0].Height)
+	}
+	if monitors[0].OffsetX != 0 || monitors[0].OffsetY != 0 {
+		t.Errorf("expected offset 0+0, got %d+%d", monitors[0].OffsetX, monitors[0].OffsetY)
+	}
+	if monitors[0].RefreshHz != 60.0 {
+		t.Errorf("expected 60.0 Hz, got %f", monitors[0].RefreshHz)
+	}
+	if !monitors[0].Connected {
+		t.Error("monitors should always be connected")
+	}
+
+	// Second monitor should not be primary.
+	if monitors[1].Name != "HDMI-A-1" {
+		t.Errorf("expected HDMI-A-1, got %s", monitors[1].Name)
+	}
+	if monitors[1].Primary {
+		t.Error("HDMI-A-1 should not be primary")
+	}
+	if monitors[1].OffsetX != 3840 {
+		t.Errorf("expected offset_x 3840, got %d", monitors[1].OffsetX)
+	}
+	if monitors[1].Width != 1920 || monitors[1].Height != 1080 {
+		t.Errorf("expected 1920x1080, got %dx%d", monitors[1].Width, monitors[1].Height)
+	}
+}
+
+func TestParseHyprlandMonitors_Empty(t *testing.T) {
+	monitors := ParseHyprlandMonitors(nil)
+	if len(monitors) != 0 {
+		t.Errorf("expected 0 monitors for nil input, got %d", len(monitors))
+	}
+}
+
+func TestParseHyprlandMonitors_SingleMonitor(t *testing.T) {
+	monitors := ParseHyprlandMonitors([]hyprland.Monitor{
+		{ID: 0, Name: "eDP-1", Width: 2560, Height: 1600, X: 0, Y: 0, RefreshRate: 165.0, Focused: true},
+	})
+	if len(monitors) != 1 {
+		t.Fatalf("expected 1 monitor, got %d", len(monitors))
+	}
+	if monitors[0].RefreshHz != 165.0 {
+		t.Errorf("expected 165.0 Hz, got %f", monitors[0].RefreshHz)
 	}
 }
 

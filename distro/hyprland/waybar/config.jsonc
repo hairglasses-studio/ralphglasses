@@ -1,0 +1,145 @@
+// Waybar config for ralphglasses thin client (Hyprland)
+// Replaces i3blocks with native Wayland status bar
+// All rg-* modules read from /tmp/rg-status.json via rg-status-bar.sh
+{
+    "layer": "top",
+    "position": "top",
+
+    "modules-left": [
+        "hyprland/workspaces",
+        "hyprland/submap",
+        "hyprland/window"
+    ],
+    "modules-center": [
+        "clock"
+    ],
+    "modules-right": [
+        "custom/rg-fleet",
+        "custom/rg-loops",
+        "custom/rg-cost",
+        "custom/rg-models",
+        "custom/rg-repos",
+        "custom/rg-iters",
+        "custom/k8s",
+        "mpris",
+        "network",
+        "cpu",
+        "battery"
+    ],
+
+    // Hyprland modules
+    "hyprland/workspaces": {
+        "disable-scroll": true,
+        "all-outputs": true,
+        "format": "{name}"
+    },
+    "hyprland/submap": {
+        "format": " {}"
+    },
+    "clock": {
+        "format": "{:%Y-%m-%d %H:%M:%S}",
+        "interval": 1,
+        "tooltip-format": "{:%A, %B %d, %Y}"
+    },
+
+    // Fleet status: ↻3 ✓12 ✗1 (running/completed/failed)
+    "custom/rg-fleet": {
+        "exec": "/opt/ralphglasses/distro/scripts/rg-status-bar.sh --segment fleet --waybar",
+        "return-type": "json",
+        "interval": 30,
+        "format": " {}",
+        "tooltip": true
+    },
+
+    // Loop stats: 24 runs 87%
+    "custom/rg-loops": {
+        "exec": "/opt/ralphglasses/distro/scripts/rg-status-bar.sh --segment loops --waybar",
+        "return-type": "json",
+        "interval": 30,
+        "format": " {}",
+        "tooltip": true
+    },
+
+    // Cost tracker: $14.52
+    "custom/rg-cost": {
+        "exec": "/opt/ralphglasses/distro/scripts/rg-status-bar.sh --segment cost --waybar",
+        "return-type": "json",
+        "interval": 30,
+        "format": " {}",
+        "tooltip": true
+    },
+
+    // Model distribution: o1p:8 o4m:5 son:3
+    "custom/rg-models": {
+        "exec": "/opt/ralphglasses/distro/scripts/rg-status-bar.sh --segment models --waybar",
+        "return-type": "json",
+        "interval": 30,
+        "format": "󰧑 {}",
+        "tooltip": true
+    },
+
+    // Repo scan status: 12 scan 8 tgt
+    "custom/rg-repos": {
+        "exec": "/opt/ralphglasses/distro/scripts/rg-status-bar.sh --segment repos --waybar",
+        "return-type": "json",
+        "interval": 30,
+        "format": " {}",
+        "tooltip": true
+    },
+
+    // Iteration counter: 142 iters ~5.9/run
+    "custom/rg-iters": {
+        "exec": "/opt/ralphglasses/distro/scripts/rg-status-bar.sh --segment iters --waybar",
+        "return-type": "json",
+        "interval": 30,
+        "format": "󰔚 {}",
+        "tooltip": true
+    },
+
+    // System modules
+    "battery": {
+        "interval": 30,
+        "states": {
+            "warning": 30,
+            "critical": 15
+        },
+        "format": "{icon} {capacity}%",
+        "format-icons": ["", "", "", "", ""],
+        "format-charging": " {capacity}%",
+        "format-plugged": " {capacity}%",
+        "tooltip-format": "{timeTo}\n{power}W"
+    },
+    "cpu": {
+        "interval": 5,
+        "format": " {usage}%",
+        "tooltip-format": "{avg_frequency}GHz\n{usage}% used"
+    },
+    "network": {
+        "interval": 10,
+        "format-ethernet": " {bandwidthUpBits}/{bandwidthDownBits}",
+        "format-wifi": " {signalStrength}%",
+        "format-disconnected": " offline",
+        "tooltip-format": "{ifname}\n{ipaddr}/{cidr}\n {bandwidthUpBits}  {bandwidthDownBits}"
+    },
+    "mpris": {
+        "format": "{player_icon} {title}",
+        "format-paused": "{player_icon} {status_icon} {title}",
+        "player-icons": {
+            "default": ""
+        },
+        "status-icons": {
+            "paused": ""
+        },
+        "max-length": 30
+    },
+    "hyprland/window": {
+        "max-length": 40,
+        "tooltip": false
+    },
+    "custom/k8s": {
+        "exec": "/opt/ralphglasses/distro/scripts/k8s-context.sh",
+        "return-type": "json",
+        "interval": 30,
+        "tooltip": true
+    }
+}
