@@ -1,6 +1,7 @@
 ---
 description: Executes sprint tasks end-to-end — reads task specs, creates worktrees, implements changes, validates with tests, merges results
-model: opus
+model: sonnet
+isolation: worktree
 tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 

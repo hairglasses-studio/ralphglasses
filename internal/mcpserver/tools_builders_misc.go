@@ -50,6 +50,12 @@ func (s *Server) buildRoadmapGroup() ToolGroup {
 				mcp.WithString("respect_deps", mcp.Description("Skip tasks with unmet deps (default: true)")),
 				mcp.WithString("status", mcp.Description("Filter by status: incomplete (default), complete, all")),
 			), s.handleRoadmapExport},
+			{mcp.NewTool("ralphglasses_roadmap_prioritize",
+				mcp.WithDescription("Score and rank uncompleted roadmap items by impact, effort, and dependency readiness. Returns prioritized list and recommended next sprint."),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repository name or path")),
+				mcp.WithString("weights", mcp.Description("JSON weights: {\"impact\": 0.4, \"effort\": 0.3, \"dependency\": 0.3}")),
+				mcp.WithNumber("top_n", mcp.Description("Number of items to return (default: 20)")),
+			), s.handleRoadmapPrioritize},
 		},
 	}
 }
@@ -392,6 +398,13 @@ func (s *Server) buildRdcycleGroup() ToolGroup {
 				mcp.WithString("repo", mcp.Required(), mcp.Description("Repository name or path")),
 				mcp.WithNumber("hours", mcp.Description("Hours of history to correlate (default 24)")),
 			), s.handleObservationCorrelate},
+
+			{mcp.NewTool("ralphglasses_provider_benchmark",
+				mcp.WithDescription("Compare providers using a standardized task suite (code gen, explanation, debugging, refactoring, test writing). Returns quality scores, cost estimates, and winner recommendation."),
+				mcp.WithString("providers", mcp.Description("Comma-separated providers to benchmark (default: claude,gemini)")),
+				mcp.WithNumber("iterations", mcp.Description("Number of iterations per task (default: 3, max: 10)")),
+				mcp.WithString("repo", mcp.Description("Repo for result storage")),
+			), s.handleProviderBenchmark},
 
 			// Cycle engine tools (state machine integration)
 			{mcp.NewTool("ralphglasses_cycle_create",

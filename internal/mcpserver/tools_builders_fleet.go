@@ -7,7 +7,7 @@ import (
 func (s *Server) buildFleetGroup() ToolGroup {
 	return ToolGroup{
 		Name:        "fleet",
-		Description: "Fleet operations: fleet_status, analytics, submit, budget, workers, dlq, marathon_dashboard",
+		Description: "Fleet operations: fleet_status, analytics, submit, budget, workers, dlq, marathon_dashboard, capacity_plan",
 		Tools: []ToolEntry{
 			{mcp.NewTool("ralphglasses_fleet_status",
 				mcp.WithDescription("Fleet-wide dashboard: aggregate status, costs, health, and alerts across all repos and sessions in one call"),
@@ -52,6 +52,14 @@ func (s *Server) buildFleetGroup() ToolGroup {
 				mcp.WithDescription("Compact marathon status: burn rate, stale sessions, team progress, alerts"),
 				mcp.WithNumber("stale_threshold_min", mcp.Description("Minutes idle before flagged stale (default 5)")),
 			), s.handleMarathonDashboard},
+			{mcp.NewTool("ralphglasses_fleet_capacity_plan",
+				mcp.WithDescription("Recommend worker count from queue depth and budget. Returns recommended workers, estimated cost, and completion time."),
+				mcp.WithNumber("queue_depth", mcp.Required(), mcp.Description("Number of tasks in the queue")),
+				mcp.WithNumber("available_budget", mcp.Required(), mcp.Description("Available budget in USD")),
+				mcp.WithNumber("target_completion_hours", mcp.Description("Target completion time in hours (default: 4)")),
+				mcp.WithNumber("avg_task_cost", mcp.Description("Average cost per task in USD (auto-estimated from observations if omitted)")),
+				mcp.WithNumber("avg_task_duration_min", mcp.Description("Average task duration in minutes (default: 10)")),
+			), s.handleFleetCapacityPlan},
 			{mcp.NewTool("ralphglasses_fleet_grafana",
 				mcp.WithDescription("Export a Grafana-compatible JSON dashboard for fleet metrics (session throughput, cost burn rate, provider comparison, error rate, active sessions, budget utilization). Import the output directly into Grafana."),
 				mcp.WithString("title", mcp.Description("Dashboard title (default: 'Ralphglasses Fleet Metrics')")),
