@@ -49,12 +49,18 @@ func (s *Server) handleRoadmapPrioritize(_ context.Context, req mcp.CallToolRequ
 	}
 
 	topN := int(getNumberArg(req, "top_n", 20))
+	phaseFilter := getStringArg(req, "phase_filter")
 
 	// Build a set of completed phase names for dependency scoring.
 	phaseComplete := make(map[string]bool)
+	phaseCompletionPct := make(map[string]float64)
 	for _, p := range rm.Phases {
-		if p.Stats.Total > 0 && p.Stats.Completed == p.Stats.Total {
-			phaseComplete[p.Name] = true
+		if p.Stats.Total > 0 {
+			pct := float64(p.Stats.Completed) / float64(p.Stats.Total)
+			phaseCompletionPct[p.Name] = pct
+			if p.Stats.Completed == p.Stats.Total {
+				phaseComplete[p.Name] = true
+			}
 		}
 	}
 
@@ -67,11 +73,26 @@ func (s *Server) handleRoadmapPrioritize(_ context.Context, req mcp.CallToolRequ
 		Effort      float64 `json:"effort_score"`
 		Dependency  float64 `json:"dependency_score"`
 		Total       float64 `json:"total_score"`
+		Blocked     bool    `json:"blocked,omitempty"`
 	}
 
 	var items []scoredItem
 	for _, phase := range rm.Phases {
+		// Apply phase filter.
+		if phaseFilter != "" && !strings.Contains(strings.ToLower(phase.Name), strings.ToLower(phaseFilter)) {
+			continue
+		}
+
+		// Phase momentum bonus: items in nearly-complete phases get a small boost.
+		momentum := 0.0
+		if pct, ok := phaseCompletionPct[phase.Name]; ok && pct > 0.8 {
+			momentum = 0.1 // bonus for finishing a phase
+		}
+
 		for _, section := range phase.Sections {
+			// Detect section-level blocking (e.g., "[BLOCKED BY 4.1]").
+			sectionBlocked := strings.Contains(section.Name, "BLOCKED BY")
+
 			for _, task := range section.Tasks {
 				if task.Done {
 					continue
@@ -98,16 +119,21 @@ func (s *Server) handleRoadmapPrioritize(_ context.Context, req mcp.CallToolRequ
 					effort = 0.2
 				}
 
-				// Dependency: check if task has unmet dependencies.
+				// Dependency: check task deps + section-level blocking.
 				dep := 1.0
+				blocked := sectionBlocked
+				if sectionBlocked {
+					dep = 0.1
+				}
 				for _, d := range task.DependsOn {
 					if !phaseComplete[d] {
 						dep = 0.3
+						blocked = true
 						break
 					}
 				}
 
-				total := impact*wImpact + effort*wEffort + dep*wDep
+				total := impact*wImpact + effort*wEffort + dep*wDep + momentum
 
 				items = append(items, scoredItem{
 					Phase:       phase.Name,
@@ -118,6 +144,7 @@ func (s *Server) handleRoadmapPrioritize(_ context.Context, req mcp.CallToolRequ
 					Effort:      effort,
 					Dependency:  dep,
 					Total:       total,
+					Blocked:     blocked,
 				})
 			}
 		}

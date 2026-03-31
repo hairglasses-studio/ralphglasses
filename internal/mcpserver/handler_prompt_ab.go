@@ -93,22 +93,41 @@ func (s *Server) handlePromptABTest(_ context.Context, req mcp.CallToolRequest) 
 		Dimensions:   len(scoreB.Dimensions),
 	}
 
-	// Determine winner.
+	// Determine winner. Check high thresholds first to avoid shadowing.
 	diff := scoreA.Overall - scoreB.Overall
+	absDiff := int(math.Abs(float64(diff)))
 	winner := "tie"
 	confidence := "low"
-	if diff > 5 {
-		winner = "A"
+	switch {
+	case absDiff <= 5:
+		winner = "tie"
+		confidence = "low"
+	case absDiff <= 15:
+		if diff > 0 {
+			winner = "A"
+		} else {
+			winner = "B"
+		}
 		confidence = "medium"
-	} else if diff > 15 {
-		winner = "A"
+	default: // absDiff > 15
+		if diff > 0 {
+			winner = "A"
+		} else {
+			winner = "B"
+		}
 		confidence = "high"
-	} else if diff < -5 {
-		winner = "B"
-		confidence = "medium"
-	} else if diff < -15 {
-		winner = "B"
-		confidence = "high"
+	}
+
+	// Collect suggestions from the winner's dimensions.
+	var winnerSuggestions []string
+	winnerScore := scoreB
+	if winner == "A" {
+		winnerScore = scoreA
+	}
+	if winner != "tie" {
+		for _, d := range winnerScore.Dimensions {
+			winnerSuggestions = append(winnerSuggestions, d.Suggestions...)
+		}
 	}
 
 	// Dimension comparison.
@@ -147,9 +166,10 @@ func (s *Server) handlePromptABTest(_ context.Context, req mcp.CallToolRequest) 
 		"prompt_a":        metricsA,
 		"prompt_b":        metricsB,
 		"winner":          winner,
-		"score_diff":      int(math.Abs(float64(diff))),
+		"score_diff":      absDiff,
 		"confidence":      confidence,
 		"dimensions":      dimDiffs,
+		"winner_suggestions": winnerSuggestions,
 	}
 
 	// Save results.
