@@ -265,6 +265,8 @@ func buildGeminiCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 		args = append(args, "--resume", opts.Resume)
 	}
 	args = append(args, "--approval-mode", "yolo")
+	// Disable MCP servers in headless mode to prevent recursive spawning.
+	args = append(args, "--allowed-mcp-server-names")
 
 	// -p/--prompt requires a string value; Gemini appends stdin to it.
 	if opts.Prompt != "" {
