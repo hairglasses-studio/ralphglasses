@@ -1,0 +1,9 @@
+setup:
+  - name: Setup Go
+    uses: actions/setup-go@v5
+    with:
+      go-version: 'stable'
+  - name: Install dependencies
+    run: go mod download
+  - name: Verify build
+    run: go build ./...
