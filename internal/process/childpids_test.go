@@ -26,18 +26,18 @@ func TestCollectChildPIDs_RealSubprocess(t *testing.T) {
 		t.Fatalf("expected positive PID, got %d", pid)
 	}
 
-	result := collectChildPIDs(pid)
+	result := CollectChildPIDs(pid)
 	if result == nil {
-		t.Fatal("collectChildPIDs returned nil; expected non-nil slice")
+		t.Fatal("CollectChildPIDs returned nil; expected non-nil slice")
 	}
 	// sleep typically has no children, so we just verify non-nil []int.
 	// The slice may be empty — that's fine.
 }
 
 func TestCollectChildPIDs_InvalidPID(t *testing.T) {
-	result := collectChildPIDs(999999999)
+	result := CollectChildPIDs(999999999)
 	if result == nil {
-		t.Fatal("collectChildPIDs returned nil for invalid PID; expected empty slice")
+		t.Fatal("CollectChildPIDs returned nil for invalid PID; expected empty slice")
 	}
 	if len(result) != 0 {
 		t.Errorf("expected empty slice for invalid PID, got %v", result)
@@ -46,9 +46,9 @@ func TestCollectChildPIDs_InvalidPID(t *testing.T) {
 
 func TestCollectChildPIDsFromProc_OwnPID(t *testing.T) {
 	// Our own PID should not error out.
-	result := collectChildPIDsFromProc(os.Getpid())
+	result := CollectChildPIDsFromProc(os.Getpid())
 	if result == nil {
-		t.Fatal("collectChildPIDsFromProc returned nil; expected non-nil slice")
+		t.Fatal("CollectChildPIDsFromProc returned nil; expected non-nil slice")
 	}
 }
 

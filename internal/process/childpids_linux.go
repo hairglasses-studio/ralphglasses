@@ -9,10 +9,10 @@ import (
 	"strings"
 )
 
-// collectChildPIDsFromProc enumerates children by scanning /proc/*/status for
+// CollectChildPIDsFromProc enumerates children by scanning /proc/*/status for
 // matching PPid. This is more reliable than pgid on Linux since children may
 // have their own process group.
-func collectChildPIDsFromProc(parentPid int) []int {
+func CollectChildPIDsFromProc(parentPid int) []int {
 	entries, err := os.ReadDir("/proc")
 	if err != nil {
 		return []int{}

@@ -1656,7 +1656,7 @@ func TestCollectChildPIDsByPgid_OwnProcess(t *testing.T) {
 
 	// On macOS, Getpgid succeeds but ReadDir("/proc") fails, returning
 	// an empty slice. This covers the Getpgid success + ReadDir failure path.
-	result := collectChildPIDsByPgid(os.Getpid())
+	result := CollectChildPIDsByPgid(os.Getpid())
 	if result == nil {
 		t.Fatal("expected non-nil slice")
 	}

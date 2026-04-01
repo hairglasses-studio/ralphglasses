@@ -56,7 +56,7 @@ func (m *Manager) Start(ctx context.Context, repoPath string) error {
 		slog.Warn("failed to write PID file", "repo", repoPath, "pid", pid, "error", err)
 	}
 
-	m.procs[repoPath] = &ManagedProcess{Cmd: cmd, PID: pid, ChildPids: collectChildPIDs(pid), LogFile: logFile}
+	m.procs[repoPath] = &ManagedProcess{Cmd: cmd, PID: pid, ChildPids: CollectChildPIDs(pid), LogFile: logFile}
 
 	// Publish loop started event.
 	if m.bus != nil {
@@ -178,7 +178,7 @@ func (m *Manager) reaperLoop(ctx context.Context, rp string, cmd *exec.Cmd) {
 						m.procs[rp] = &ManagedProcess{
 							Cmd:          newCmd,
 							PID:          newPID,
-							ChildPids:    collectChildPIDs(newPID),
+							ChildPids:    CollectChildPIDs(newPID),
 							RestartCount: restartCount + 1,
 							LogFile:      newLogFile,
 						}

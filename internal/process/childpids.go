@@ -8,20 +8,20 @@ import (
 	"syscall"
 )
 
-// collectChildPIDs enumerates child PIDs of the given process.
+// CollectChildPIDs enumerates child PIDs of the given process.
 // It first tries process group membership via Getpgid, then falls back to
 // /proc on Linux. Returns an empty (non-nil) slice on any failure.
-func collectChildPIDs(pid int) []int {
-	pids := collectChildPIDsByPgid(pid)
+func CollectChildPIDs(pid int) []int {
+	pids := CollectChildPIDsByPgid(pid)
 	if len(pids) > 0 {
 		return pids
 	}
-	return collectChildPIDsFromProc(pid)
+	return CollectChildPIDsFromProc(pid)
 }
 
-// collectChildPIDsByPgid finds processes sharing the same process group as pid.
+// CollectChildPIDsByPgid finds processes sharing the same process group as pid.
 // On systems without /proc this is the only mechanism available.
-func collectChildPIDsByPgid(pid int) []int {
+func CollectChildPIDsByPgid(pid int) []int {
 	pgid, err := syscall.Getpgid(pid)
 	if err != nil {
 		return []int{}
