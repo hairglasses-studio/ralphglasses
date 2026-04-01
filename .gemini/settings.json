@@ -1,5 +1,7 @@
 {
-  "model": "gemini-3-pro",
+  "model": {
+    "default": "gemini-3-pro"
+  },
   "generationConfig": {
     "thinkingConfig": {
       "thinkingBudget": -1
@@ -10,7 +12,7 @@
     "ralphglasses": {
       "command": "go",
       "args": ["run", ".", "mcp", "--scan-path", "~/hairglasses-studio"],
-      "cwd": "/home/hairglasses/Docs/hairglasses-studio/ralphglasses"
+      "cwd": "/home/hg/hairglasses-studio/ralphglasses"
     }
   }
 }

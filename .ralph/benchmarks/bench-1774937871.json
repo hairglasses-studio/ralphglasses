@@ -1,0 +1,118 @@
+{
+  "benchmark_id": "bench-1774937871",
+  "created_at": "2026-03-31T06:17:51Z",
+  "iterations": 3,
+  "note": "simulated benchmark using prompt scoring heuristics; run with live API for real measurements",
+  "providers": [
+    {
+      "provider": "claude",
+      "avg_quality_pct": 93.2,
+      "avg_cost_per_task": 0.0075,
+      "est_latency_ms": 8000,
+      "cost_efficiency": 124.27,
+      "tasks": [
+        {
+          "task": "linked_list_reverse",
+          "category": "code_generation",
+          "quality_pct": 92
+        },
+        {
+          "task": "channels_vs_mutexes",
+          "category": "explanation",
+          "quality_pct": 95
+        },
+        {
+          "task": "bug_detection",
+          "category": "debugging",
+          "quality_pct": 95
+        },
+        {
+          "task": "table_driven_refactor",
+          "category": "refactoring",
+          "quality_pct": 92
+        },
+        {
+          "task": "test_generation",
+          "category": "test_writing",
+          "quality_pct": 92
+        }
+      ],
+      "recommendation": "best for complex reasoning and code review",
+      "historical_data_used": false
+    },
+    {
+      "provider": "gemini",
+      "avg_quality_pct": 85,
+      "avg_cost_per_task": 0.0025,
+      "est_latency_ms": 3000,
+      "cost_efficiency": 340,
+      "tasks": [
+        {
+          "task": "linked_list_reverse",
+          "category": "code_generation",
+          "quality_pct": 85
+        },
+        {
+          "task": "channels_vs_mutexes",
+          "category": "explanation",
+          "quality_pct": 85
+        },
+        {
+          "task": "bug_detection",
+          "category": "debugging",
+          "quality_pct": 85
+        },
+        {
+          "task": "table_driven_refactor",
+          "category": "refactoring",
+          "quality_pct": 85
+        },
+        {
+          "task": "test_generation",
+          "category": "test_writing",
+          "quality_pct": 85
+        }
+      ],
+      "recommendation": "best for cost-efficient bulk tasks",
+      "historical_data_used": false
+    },
+    {
+      "provider": "codex",
+      "avg_quality_pct": 88.8,
+      "avg_cost_per_task": 0.005,
+      "est_latency_ms": 5000,
+      "cost_efficiency": 177.6,
+      "tasks": [
+        {
+          "task": "linked_list_reverse",
+          "category": "code_generation",
+          "quality_pct": 90
+        },
+        {
+          "task": "channels_vs_mutexes",
+          "category": "explanation",
+          "quality_pct": 88
+        },
+        {
+          "task": "bug_detection",
+          "category": "debugging",
+          "quality_pct": 88
+        },
+        {
+          "task": "table_driven_refactor",
+          "category": "refactoring",
+          "quality_pct": 88
+        },
+        {
+          "task": "test_generation",
+          "category": "test_writing",
+          "quality_pct": 90
+        }
+      ],
+      "recommendation": "best for code generation and completion",
+      "historical_data_used": false
+    }
+  ],
+  "task_count": 5,
+  "winner": "gemini"
+}
