@@ -1,0 +1,89 @@
+{
+  "confidence": "medium",
+  "dimensions": [
+    {
+      "dimension": "Clarity",
+      "score_a": 35,
+      "score_b": 55,
+      "winner": "B"
+    },
+    {
+      "dimension": "Specificity",
+      "score_a": 20,
+      "score_b": 60,
+      "winner": "B"
+    },
+    {
+      "dimension": "Context \u0026 Motivation",
+      "score_a": 30,
+      "score_b": 50,
+      "winner": "B"
+    },
+    {
+      "dimension": "Structure",
+      "score_a": 25,
+      "score_b": 50,
+      "winner": "B"
+    },
+    {
+      "dimension": "Examples",
+      "score_a": 20,
+      "score_b": 30,
+      "winner": "B"
+    },
+    {
+      "dimension": "Document Placement",
+      "score_a": 40,
+      "score_b": 40,
+      "winner": "tie"
+    },
+    {
+      "dimension": "Role Definition",
+      "score_a": 35,
+      "score_b": 70,
+      "winner": "B"
+    },
+    {
+      "dimension": "Task Focus",
+      "score_a": 50,
+      "score_b": 50,
+      "winner": "tie"
+    },
+    {
+      "dimension": "Format Specification",
+      "score_a": 20,
+      "score_b": 55,
+      "winner": "B"
+    },
+    {
+      "dimension": "Tone",
+      "score_a": 70,
+      "score_b": 70,
+      "winner": "tie"
+    }
+  ],
+  "prompt_a": {
+    "prompt_preview": "Write a Go function that validates email addresses using regex",
+    "overall_score": 32,
+    "overall_grade": "F",
+    "lint_warnings": 0,
+    "lint_errors": 0,
+    "word_count": 10,
+    "task_type": "code",
+    "dimensions_scored": 10
+  },
+  "prompt_b": {
+    "prompt_preview": "You are a Go expert. Write a production-ready function called ValidateEmail that takes a string and ...",
+    "overall_score": 53,
+    "overall_grade": "D",
+    "lint_warnings": 0,
+    "lint_errors": 0,
+    "word_count": 58,
+    "task_type": "code",
+    "dimensions_scored": 10
+  },
+  "score_diff": 21,
+  "target_provider": "claude",
+  "test_id": "ab-1774936887",
+  "winner": "B"
+}

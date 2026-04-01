@@ -1,0 +1,12 @@
+{
+  "context_size_bytes": 7360,
+  "cost_so_far": 0,
+  "handoff_at": "2026-03-31T08:19:58Z",
+  "handoff_reason": "testing handoff from completed audit session",
+  "new_session_id": "880a89fb-333a-4a67-8074-75940b7cdcd9",
+  "remaining_budget": 0.5,
+  "source_session_id": "0b441a78-7223-4bf6-bb3d-17673f889add",
+  "source_stopped": false,
+  "target_provider": "gemini",
+  "transferred_context": true
+}
