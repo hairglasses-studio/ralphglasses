@@ -315,3 +315,6 @@ plugin-example:
 	@echo ""
 	@echo "Built-in logger plugin: internal/plugin/builtin/logger.go"
 	@echo "For production plugins, see the TODO in internal/plugin/loader.go"
+
+PIPELINE_GO := ./scripts/dev/go.sh
+-include $(HOME)/hairglasses-studio/dotfiles/make/pipeline.mk
