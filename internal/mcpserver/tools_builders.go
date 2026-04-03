@@ -24,6 +24,7 @@ func defaultRegistry() *ToolGroupRegistry {
 	r.Register(NewFuncBuilder("observability", (*Server).buildObservabilityGroup))
 	r.Register(NewFuncBuilder("rdcycle", (*Server).buildRdcycleGroup))
 	r.Register(NewFuncBuilder("plugin", (*Server).buildPluginGroup))
+	r.Register(NewFuncBuilder("sweep", (*Server).buildSweepGroup))
 	return r
 }
 
@@ -81,6 +82,18 @@ func (s *Server) buildCoreGroup() ToolGroup {
 				mcp.WithString("value", mcp.Description("Value to set (omit to query)")),
 				mcp.WithString("repos", mcp.Description("Comma-separated repo names (default: all)")),
 			), s.handleConfigBulk},
+			{mcp.NewTool("ralphglasses_tasks_get",
+				mcp.WithDescription("Get status of an async task by `task_id` — poll for long-running operations (loop_start, fleet_submit, self_improve)"),
+				mcp.WithString("task_id", mcp.Required(), mcp.Description("Task ID returned from async tool invocation")),
+			), s.handleTasksGet},
+			{mcp.NewTool("ralphglasses_tasks_list",
+				mcp.WithDescription("List all async tasks with optional state filter"),
+				mcp.WithString("state", mcp.Description("Filter by state: running, completed, failed, canceled, input_required")),
+			), s.handleTasksList},
+			{mcp.NewTool("ralphglasses_tasks_cancel",
+				mcp.WithDescription("Cancel a running async task by `task_id`"),
+				mcp.WithString("task_id", mcp.Required(), mcp.Description("Task ID to cancel")),
+			), s.handleTasksCancel},
 		},
 	}
 }

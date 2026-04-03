@@ -49,6 +49,7 @@ type Session struct {
 	EnhancementPreScore int           `json:"enhancement_pre_score,omitempty"` // 0-100 quality score before enhancement
 	AgentName           string        `json:"agent,omitempty"`
 	TeamName          string        `json:"team_name,omitempty"`
+	SweepID           string        `json:"sweep_id,omitempty"`
 	BudgetUSD         float64       `json:"max_budget_usd,omitempty"`
 	SpentUSD          float64       `json:"spent_usd"`
 	TurnCount         int           `json:"turn_count"`
@@ -68,6 +69,11 @@ type Session struct {
 
 	Pid       int   `json:"pid,omitempty"`        // process PID captured at launch
 	ChildPids []int `json:"child_pids,omitempty"` // child PIDs collected at launch (best-effort)
+
+	// Fork lineage: tracks parent-child relationships for session forking.
+	ParentID  string   `json:"parent_id,omitempty"`  // ID of the session this was forked from
+	ChildIDs  []string `json:"child_ids,omitempty"`   // IDs of sessions forked from this one
+	ForkPoint int      `json:"fork_point,omitempty"`  // turn number at which the fork was created
 
 	cmd                 *exec.Cmd
 	cancel              func()
@@ -137,6 +143,9 @@ type LaunchOptions struct {
 	Betas         []string          // --betas (beta feature headers)
 	FallbackModel string            // --fallback-model (auto-fallback on overload)
 	OutputSchema  json.RawMessage   // --json-schema (Claude) / --output-schema (Codex)
+
+	PermissionMode string // --permission-mode (plan, auto, default, etc.)
+	SweepID        string // groups sessions from a single sweep operation
 
 	Batch *BatchOptions // nil means non-batch (normal) mode
 

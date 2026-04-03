@@ -238,6 +238,9 @@ func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	if opts.FallbackModel != "" {
 		args = append(args, "--fallback-model", opts.FallbackModel)
 	}
+	if opts.PermissionMode != "" {
+		args = append(args, "--permission-mode", opts.PermissionMode)
+	}
 	if len(opts.OutputSchema) > 0 {
 		args = append(args, "--json-schema", string(opts.OutputSchema))
 	}

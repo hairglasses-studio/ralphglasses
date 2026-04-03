@@ -38,6 +38,15 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_session_diff":     {Title: "Session Diff", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_session_compare":  {Title: "Compare Sessions", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_session_errors":   {Title: "Session Errors", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_session_export":   {Title: "Export Session", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_session_fork":     {Title: "Fork Session", OpenWorldHint: boolPtr(true)},
+	"ralphglasses_session_handoff":  {Title: "Session Handoff", OpenWorldHint: boolPtr(true)},
+	"ralphglasses_session_replay_diff": {Title: "Replay Diff", ReadOnlyHint: boolPtr(true)},
+
+	// ── tasks ────────────────────────────────────────────────────────────
+	"ralphglasses_tasks_get":    {Title: "Get Task", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_tasks_list":   {Title: "List Tasks", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_tasks_cancel": {Title: "Cancel Task", DestructiveHint: boolPtr(true)},
 
 	// ── loop ─────────────────────────────────────────────────────────────
 	"ralphglasses_loop_start":     {Title: "Start Dev Loop", OpenWorldHint: boolPtr(true)},
@@ -60,6 +69,13 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_prompt_should_enhance": {Title: "Should Enhance", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_prompt_templates":      {Title: "Prompt Templates", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_prompt_template_fill":  {Title: "Fill Template", ReadOnlyHint: boolPtr(true)},
+
+	// ── sweep ────────────────────────────────────────────────────────────
+	"ralphglasses_sweep_generate": {Title: "Generate Sweep Prompt", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_sweep_launch":   {Title: "Launch Sweep", OpenWorldHint: boolPtr(true)},
+	"ralphglasses_sweep_status":   {Title: "Sweep Status", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_sweep_nudge":    {Title: "Nudge Sweep", OpenWorldHint: boolPtr(true)},
+	"ralphglasses_sweep_schedule": {Title: "Schedule Sweep Monitor", OpenWorldHint: boolPtr(true)},
 
 	// ── fleet ────────────────────────────────────────────────────────────
 	"ralphglasses_fleet_status":       {Title: "Fleet Status", ReadOnlyHint: boolPtr(true)},
@@ -186,9 +202,6 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_cycle_run":        {Title: "Cycle Run", DestructiveHint: boolPtr(false)},
 
 	// ── plugin ──────────────────────────────────────────────────────────
-	// ── session export ──────────────────────────────────────────────────
-	"ralphglasses_session_export":      {Title: "Export Session", ReadOnlyHint: boolPtr(true)},
-	"ralphglasses_session_replay_diff": {Title: "Session Replay Diff", ReadOnlyHint: boolPtr(true)},
 
 	// ── eval ─────────────────────────────────────────────────────────────
 	"ralphglasses_eval_define": {Title: "Define A/B Test", ReadOnlyHint: boolPtr(true)},

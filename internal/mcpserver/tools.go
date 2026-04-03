@@ -88,6 +88,9 @@ type Server struct {
 
 	// MetricCollector collects A/B metrics from session and loop events.
 	MetricCollector *eval.MetricCollector
+
+	// Tasks is the async task registry for long-running MCP tool operations.
+	Tasks *TaskRegistry
 }
 
 // DefaultScanTTL is how long repo scan results are considered fresh before
@@ -116,6 +119,7 @@ func NewServerWithBus(scanPath string, bus *events.Bus) *Server {
 		HTTPClient:      &http.Client{Timeout: 30 * time.Second},
 		FleetAnalytics:  fleet.NewFleetAnalytics(10000, 24*time.Hour),
 		MetricCollector: eval.NewMetricCollector(bus),
+		Tasks:           NewTaskRegistry(),
 	}
 }
 
@@ -123,7 +127,7 @@ func NewServerWithBus(scanPath string, bus *events.Bus) *Server {
 var ToolGroupNames = []string{
 	"core", "session", "loop", "prompt", "fleet",
 	"repo", "roadmap", "team", "awesome", "advanced", "eval", "fleet_h",
-	"observability", "rdcycle", "plugin",
+	"observability", "rdcycle", "plugin", "sweep",
 }
 
 func (s *Server) scan() error {
