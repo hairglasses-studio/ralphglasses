@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -123,21 +124,37 @@ func (e *Engine) Run(ctx context.Context, wf *Workflow) (*WorkflowResult, error)
 		for _, name := range layer {
 			step := stepMap[name]
 
+			mu.Lock()
 			// Check if any dependency failed -> skip.
 			skip := false
-			mu.Lock()
 			for _, dep := range step.DependsOn {
 				if r, ok := results[dep]; ok && r.Status == StepFailed {
 					skip = true
 					break
 				}
 			}
+
+			// Evaluate condition expression if present.
+			if !skip && step.Condition != "" {
+				if !EvalCondition(step.Condition, results) {
+					skip = true
+				}
+			}
+
+			// Output forwarding: inject dependency outputs into step params.
+			// Steps can reference "${dep_name.output}" in their params.
+			if !skip {
+				step = injectOutputRefs(step, results)
+			}
 			mu.Unlock()
 
 			if skip {
 				mu.Lock()
 				results[name] = StepResult{Name: name, Status: StepSkipped}
-				overall = StepFailed
+				if step.Condition == "" {
+					// Only mark overall failed if skipped due to dep failure, not condition.
+					overall = StepFailed
+				}
 				mu.Unlock()
 				continue
 			}
@@ -163,6 +180,35 @@ func (e *Engine) Run(ctx context.Context, wf *Workflow) (*WorkflowResult, error)
 		Results: results,
 		Elapsed: time.Since(start),
 	}, nil
+}
+
+// injectOutputRefs replaces "${step_name.output}" references in step params
+// and command with actual outputs from completed dependency steps.
+func injectOutputRefs(step Step, results map[string]StepResult) Step {
+	// Deep-copy params to avoid mutating the original step.
+	if len(step.Params) > 0 {
+		params := make(map[string]string, len(step.Params))
+		for k, v := range step.Params {
+			params[k] = replaceOutputRefs(v, results)
+		}
+		step.Params = params
+	}
+	if step.Command != "" {
+		step.Command = replaceOutputRefs(step.Command, results)
+	}
+	return step
+}
+
+// replaceOutputRefs replaces all "${step_name.output}" patterns in s with
+// the actual output from the named step's result.
+func replaceOutputRefs(s string, results map[string]StepResult) string {
+	for name, r := range results {
+		placeholder := "${" + name + ".output}"
+		if strings.Contains(s, placeholder) {
+			s = strings.ReplaceAll(s, placeholder, r.Output)
+		}
+	}
+	return s
 }
 
 // topoSort returns step names in a valid topological order or an error if the

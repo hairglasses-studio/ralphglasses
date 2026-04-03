@@ -123,6 +123,20 @@ type CascadeRouter struct {
 		PredictConfidence(turnCount, expectedTurns int, lastOutput string, verifyPassed bool) float64
 		Stats() map[string]any
 	}
+
+	// banditRouterRef holds a reference to the BanditRouter for state persistence.
+	// Set by WireBanditRouter.
+	banditRouterRef *BanditRouter
+}
+
+// BanditRouter returns the attached BanditRouter, or nil if not configured.
+func (cr *CascadeRouter) BanditRouter() *BanditRouter {
+	if cr == nil {
+		return nil
+	}
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+	return cr.banditRouterRef
 }
 
 // NewCascadeRouter creates a cascade router, loading any persisted results.

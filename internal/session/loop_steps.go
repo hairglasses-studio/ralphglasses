@@ -463,6 +463,34 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		verification, verErr := runLoopVerification(ctx, wt, profile.VerifyCommands)
 		allVerification = append(allVerification, verification...)
 		if verErr != nil {
+			// Auto-CI-fix: attempt to fix the failure automatically.
+			maxRetries := maxAutoFixRetries(profile)
+			if maxRetries > 0 && len(verification) > 0 {
+				lastFailed := verification[len(verification)-1]
+				fixed := false
+				for attempt := 1; attempt <= maxRetries; attempt++ {
+					fixResult, fixErr := m.attemptAutoFix(ctx, run, wt, lastFailed, attempt)
+					if fixErr == nil && fixResult != nil && fixResult.FixSucceeded {
+						// Re-run full verification to update allVerification
+						allVerification = nil
+						for _, wt2 := range workerWorktrees {
+							if wt2 == "" {
+								continue
+							}
+							v2, _ := runLoopVerification(ctx, wt2, profile.VerifyCommands)
+							allVerification = append(allVerification, v2...)
+						}
+						fixed = true
+						slog.Info("auto-ci-fix: verification now passes after fix",
+							"loop", run.ID, "attempt", attempt)
+						break
+					}
+				}
+				if fixed {
+					break // exit the worktree loop — verification passed
+				}
+			}
+
 			run.updateLoopAfterVerification(index, allVerification, "failed", verErr.Error())
 
 			// WS1: Extract reflection from failed iteration for future retries.

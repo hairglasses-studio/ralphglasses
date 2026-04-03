@@ -381,4 +381,7 @@ func WireBanditRouter(cr *CascadeRouter, br *BanditRouter) {
 	}
 
 	cr.SetBanditHooks(selectFn, updateFn)
+	cr.mu.Lock()
+	cr.banditRouterRef = br
+	cr.mu.Unlock()
 }
