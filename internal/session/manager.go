@@ -56,7 +56,8 @@ type Manager struct {
 	KillTimeout        time.Duration               // SIGTERM→SIGKILL escalation timeout; 0 uses default (5s)
 	ErrorRetention     time.Duration               // how long errored sessions remain queryable; 0 uses default (5m)
 	MinSessionDuration time.Duration               // sessions younger than this are protected from reaper; 0 uses default (30s)
-	Enhancer       *enhancer.HybridEngine        // optional prompt enhancement for loop integration
+	Enhancer         *enhancer.HybridEngine      // optional prompt enhancement for loop integration
+	promptEvolution  *PromptEvolution            // tournament-based prompt variant selection
 	FleetPool      *pool.State                   // fleet-wide budget pooling and metrics aggregation
 	worktreePool   *WorktreePool                // Phase 10.5.8: reusable worktree pool
 

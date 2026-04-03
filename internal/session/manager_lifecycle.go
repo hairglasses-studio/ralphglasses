@@ -179,6 +179,9 @@ func (m *Manager) Stop(id string) error {
 	doneCh := s.doneCh
 	s.mu.Unlock()
 
+	// Write active state for starship integration (fire-and-forget).
+	_ = WriteActiveState(s)
+
 	// Kill with escalation (SIGTERM -> wait -> SIGKILL) outside the lock.
 	killTimeout := m.effectiveKillTimeout()
 	if cmd != nil && cmd.Process != nil {
@@ -488,6 +491,9 @@ func (m *Manager) RehydrateFromStore() error {
 				slog.Warn("rehydrate: failed to persist interrupted status",
 					"session_id", sess.ID, "err", err)
 			}
+
+			// Write active state for starship integration (fire-and-forget).
+			_ = WriteActiveState(sess)
 		}
 
 		m.sessions[sess.ID] = sess
