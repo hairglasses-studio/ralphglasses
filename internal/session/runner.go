@@ -105,6 +105,7 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 		Model:        opts.Model,
 		AgentName:    opts.Agent,
 		TeamName:     opts.TeamName,
+		SweepID:      opts.SweepID,
 		BudgetUSD:    opts.MaxBudgetUSD,
 		MaxTurns:     opts.MaxTurns,
 		LaunchedAt:   now,

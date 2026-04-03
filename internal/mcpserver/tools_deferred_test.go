@@ -13,7 +13,7 @@ func TestToolGroupNames(t *testing.T) {
 	expected := []string{
 		"core", "session", "loop", "prompt", "fleet",
 		"repo", "roadmap", "team", "awesome", "advanced", "eval", "fleet_h",
-		"observability", "rdcycle", "plugin",
+		"observability", "rdcycle", "plugin", "sweep",
 	}
 	if len(ToolGroupNames) != len(expected) {
 		t.Fatalf("ToolGroupNames len = %d, want %d", len(ToolGroupNames), len(expected))

@@ -4,22 +4,23 @@ package mcpserver
 // GeneratedToolCounts maps each tool group name to its current tool count.
 // Re-generate with: go generate ./internal/mcpserver/...
 var GeneratedToolCounts = map[string]int{
-	"core": 10,
-	"session": 15,
-	"loop": 10,
-	"prompt": 8,
-	"fleet": 9,
+	"core": 13,
+	"session": 16,
+	"loop": 11,
+	"prompt": 9,
+	"fleet": 10,
 	"repo": 5,
-	"roadmap": 5,
+	"roadmap": 6,
 	"team": 6,
 	"awesome": 5,
 	"advanced": 24,
 	"eval": 6,
 	"fleet_h": 5,
 	"observability": 17,
-	"rdcycle": 17,
+	"rdcycle": 18,
 	"plugin": 4,
+	"sweep": 5,
 }
 
 // GeneratedTotalTools is the sum of all tool counts across all groups.
-var GeneratedTotalTools = 146
+var GeneratedTotalTools = 160
