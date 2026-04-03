@@ -364,9 +364,26 @@ type ConfigArmSnapshot struct {
 }
 
 // MarshalJSON implements json.Marshaler for ConfigOptimizer state export.
+// Builds the snapshot inline to avoid deadlock (ArmStats also acquires co.mu).
 func (co *ConfigOptimizer) MarshalJSON() ([]byte, error) {
 	co.mu.Lock()
-	defer co.mu.Unlock()
+
+	// Build arm snapshot inline (don't call ArmStats which also locks).
+	arms := make(map[string]ConfigArmSnapshot, len(co.arms))
+	for key, arm := range co.arms {
+		arms[key] = ConfigArmSnapshot{
+			ID:          arm.ID,
+			Provider:    arm.Provider,
+			TaskType:    arm.TaskType,
+			Trials:      arm.Trials,
+			Successes:   arm.Successes,
+			SuccessRate: safeDiv(float64(arm.Successes), float64(arm.Trials)),
+			AvgCostUSD:  safeDiv(arm.TotalCostUSD, float64(arm.Trials)),
+			AvgDurSec:   safeDiv(arm.TotalDurSec, float64(arm.Trials)),
+			Score:       co.armScore(arm),
+			LastUsed:    arm.LastUsed,
+		}
+	}
 
 	export := struct {
 		Arms        map[string]ConfigArmSnapshot `json:"arms"`
@@ -374,14 +391,13 @@ func (co *ConfigOptimizer) MarshalJSON() ([]byte, error) {
 		MinTrials   int                          `json:"min_trials"`
 		Suggestions []ConfigSuggestion           `json:"pending_suggestions,omitempty"`
 	}{
-		Arms:        co.ArmStats(),
+		Arms:        arms,
 		Exploration: co.exploration,
 		MinTrials:   co.minTrials,
 		Suggestions: co.suggestions,
 	}
-	// Unlock before marshaling to avoid holding the lock during allocation.
 	co.mu.Unlock()
-	defer co.mu.Lock()
+
 	return json.Marshal(export)
 }
 
