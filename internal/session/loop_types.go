@@ -42,6 +42,12 @@ type LoopProfile struct {
 	HardBudgetCapUSD     float64       `json:"hard_budget_cap_usd,omitempty"` // absolute spend ceiling (0 = disabled)
 	NoopPlateauLimit     int           `json:"noop_plateau_limit,omitempty"`  // stop after N consecutive no-op iterations (0 = disabled)
 	MaxWorkerTurns       int           `json:"max_worker_turns,omitempty"`    // absolute cap on total iterations (0 = default 20)
+
+	// Auto-CI-fix: when verification fails, automatically generate a fix task
+	// from the failure output and route it back to a worker. Capped at
+	// MaxAutoFixRetries attempts per iteration (default 2, 0 = disabled).
+	AutoFixOnVerifyFail bool `json:"auto_fix_on_verify_fail,omitempty"`
+	MaxAutoFixRetries   int  `json:"max_auto_fix_retries,omitempty"` // 0 = disabled, default 2 when AutoFixOnVerifyFail is true
 }
 
 // LoopTask is the bounded implementation unit produced by the planner.
