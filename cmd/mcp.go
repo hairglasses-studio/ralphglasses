@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"path/filepath"
@@ -12,6 +13,8 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
 	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver"
+	"github.com/hairglasses-studio/ralphglasses/internal/observability"
+	"github.com/hairglasses-studio/ralphglasses/internal/tracing"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
 
@@ -61,6 +64,22 @@ Or with a custom scan path:
 // setupMCP creates and configures the full MCP server with middleware, tools,
 // resources, and prompts. Returns the server, a cleanup function, and any error.
 func setupMCP(sp string) (*server.MCPServer, func(), error) {
+	// Initialize OpenTelemetry provider. When OTEL_EXPORTER_OTLP_ENDPOINT is
+	// set, spans are exported to the configured collector (Jaeger, Tempo, etc.).
+	// Otherwise noop providers are used and all instrumentation is zero-cost.
+	otelProvider, otelShutdown, err := observability.NewProvider("ralphglasses", "")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Bridge the tracing.Recorder interface to the official OTel SDK so that
+	// session spans created in runner.go are exported as real OTel spans.
+	if !otelProvider.IsNoop() {
+		otelRec := tracing.NewOTelRecorder()
+		promRec := tracing.NewPrometheusRecorder(otelRec)
+		tracing.SetRecorder(promRec)
+	}
+
 	// Tool call recorder: writes to <scanPath>/.ralph/tool_benchmarks.jsonl
 	benchPath := filepath.Join(sp, ".ralph", "tool_benchmarks.jsonl")
 	toolRec := mcpserver.NewToolCallRecorder(benchPath, nil, 50)
@@ -105,6 +124,7 @@ func setupMCP(sp string) (*server.MCPServer, func(), error) {
 	cleanup := func() {
 		hookExec.Stop()
 		toolRec.Close()
+		otelShutdown(context.Background())
 	}
 
 	return srv, cleanup, nil

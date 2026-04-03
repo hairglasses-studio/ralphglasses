@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/observability"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tracing"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
@@ -197,6 +198,9 @@ func (c *Coordinator) reclaimTimedOut() {
 
 // SubmitWork adds a work item to the queue (for internal use).
 func (c *Coordinator) SubmitWork(item *WorkItem) error {
+	_, span := observability.StartFleetSpan(context.Background(), "task.submit")
+	defer span.End()
+
 	if item.ID == "" {
 		item.ID = generateID()
 	}

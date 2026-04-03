@@ -28,6 +28,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/tui"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
+	"github.com/hairglasses-studio/ralphglasses/internal/webui"
 )
 
 var (
@@ -39,6 +40,7 @@ var (
 	logFormat   string
 	scanTimeout string
 	httpAddr    string
+	webAddr     string
 	version     = "dev"
 	commit      = "unknown"
 	buildDate   = "unknown"
@@ -84,6 +86,18 @@ fleet management from any MCP-capable client.`,
 			}()
 			hsrv.SetReady()
 			slog.Info("healthz server started", "addr", httpAddr)
+		}
+
+		// Start web UI if --web-addr is set.
+		if webAddr != "" {
+			token := os.Getenv("RALPHGLASSES_WEB_TOKEN")
+			wsrv := webui.NewServer(webAddr, token)
+			go func() {
+				if err := wsrv.ListenAndServe(); err != nil {
+					slog.Warn("webui server stopped", "error", err)
+				}
+			}()
+			slog.Info("webui server started", "addr", webAddr)
 		}
 		return nil
 	},
@@ -196,6 +210,8 @@ func init() {
 		"Enable desktop notifications for critical alerts")
 	rootCmd.PersistentFlags().StringVar(&httpAddr, "http-addr", "",
 		"Enable health endpoints on this address (e.g. :9090, disabled by default)")
+	rootCmd.PersistentFlags().StringVar(&webAddr, "web-addr", "",
+		"Enable web UI on this address (e.g. :8080, disabled by default). Set RALPHGLASSES_WEB_TOKEN for auth.")
 	rootCmd.AddCommand(completionCmd)
 }
 

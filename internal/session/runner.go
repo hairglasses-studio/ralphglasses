@@ -128,6 +128,9 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 	s.Status = StatusRunning
 	s.mu.Unlock()
 
+	// Write active state for starship integration (fire-and-forget).
+	_ = WriteActiveState(s)
+
 	// Start tracing span
 	rec := tracing.Get()
 	_, span := rec.StartSessionSpan(sessionCtx, s.ID, string(provider), opts.Model, s.RepoName)
@@ -390,6 +393,11 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span 
 	// not be called while we hold it (Go mutexes are not reentrant).
 	onComplete := s.onComplete
 	s.mu.Unlock()
+
+	// Write active state for starship integration (fire-and-forget).
+	// Terminal sessions see final status; RemoveActiveState is called
+	// by the manager when the last session finishes.
+	_ = WriteActiveState(s)
 
 	// Persist final state to disk (acquires s.mu internally — safe now).
 	if onComplete != nil {

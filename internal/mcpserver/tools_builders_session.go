@@ -108,6 +108,15 @@ func (s *Server) buildSessionGroup() ToolGroup {
 				mcp.WithString("after", mcp.Description("Only include events after this RFC3339 timestamp")),
 				mcp.WithString("before", mcp.Description("Only include events before this RFC3339 timestamp")),
 			), s.handleSessionExport},
+			{mcp.NewTool("ralphglasses_session_fork",
+				mcp.WithDescription("Fork a running or completed session — creates a child session with the parent's context and optional new prompt"),
+				mcp.WithString("id", mcp.Required(), mcp.Description("Parent session ID to fork from")),
+				mcp.WithString("prompt", mcp.Description("New prompt for the forked session (inherits parent prompt if omitted)")),
+				mcp.WithString("model", mcp.Description("Override model for the fork (inherits parent model if omitted)")),
+				mcp.WithString("provider", mcp.Description("Override provider for the fork (inherits parent provider if omitted)")),
+				mcp.WithNumber("budget_usd", mcp.Description("Budget override in USD (inherits parent budget if omitted)")),
+				mcp.WithBoolean("inject_context", mcp.Description("Include parent session output history in fork prompt (default: true)")),
+			), s.handleSessionFork},
 		},
 	}
 }

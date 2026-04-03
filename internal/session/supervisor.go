@@ -258,6 +258,9 @@ func (s *Supervisor) tick(ctx context.Context) {
 	s.tickCount++
 	s.mu.Unlock()
 	s.persistState()
+
+	// Cross-subsystem feedback loop (runs every 10 ticks).
+	s.RunFeedbackLoop()
 }
 
 // shouldTerminate checks if any termination condition is met.
