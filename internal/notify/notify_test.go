@@ -1,14 +1,16 @@
 package notify
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
 
 func TestSend_SmokeTest(t *testing.T) {
 	t.Parallel()
-	// On macOS this may trigger a real notification — that is acceptable.
-	// The test verifies Send does not panic or return an unexpected error.
+	if os.Getenv("NOTIFY_LIVE_TEST") == "" {
+		t.Skip("set NOTIFY_LIVE_TEST=1 to send real desktop notifications")
+	}
 	err := Send("test title", "test body")
 	if err != nil {
 		t.Logf("Send returned error (may be expected in CI): %v", err)
@@ -17,7 +19,9 @@ func TestSend_SmokeTest(t *testing.T) {
 
 func TestSend_EmptyStrings(t *testing.T) {
 	t.Parallel()
-	// Sending empty title and body must not panic.
+	if os.Getenv("NOTIFY_LIVE_TEST") == "" {
+		t.Skip("set NOTIFY_LIVE_TEST=1 to send real desktop notifications")
+	}
 	err := Send("", "")
 	if err != nil {
 		t.Logf("Send with empty strings returned error (may be expected in CI): %v", err)
@@ -153,7 +157,9 @@ func TestSendForOS_UnknownOS(t *testing.T) {
 
 func TestSend_NoPanic(t *testing.T) {
 	t.Parallel()
-	// Verify Send never panics, even with unusual input
+	if os.Getenv("NOTIFY_LIVE_TEST") == "" {
+		t.Skip("set NOTIFY_LIVE_TEST=1 to send real desktop notifications")
+	}
 	inputs := []struct{ title, body string }{
 		{"", ""},
 		{"title", ""},
@@ -162,7 +168,6 @@ func TestSend_NoPanic(t *testing.T) {
 		{strings.Repeat("x", 10000), strings.Repeat("y", 10000)},
 	}
 	for _, in := range inputs {
-		// We don't check err since the notification command may not be available in CI
 		func() {
 			defer func() {
 				if r := recover(); r != nil {

@@ -44,7 +44,7 @@ func sendForOS(goos, title, body string) error {
 		if _, err := exec.LookPath("notify-send"); err != nil {
 			return nil // no-op if not available
 		}
-		return exec.Command("notify-send", title, body).Run()
+		return exec.Command("notify-send", "--app-name=ralphglasses", title, body).Run()
 	default:
 		return nil
 	}
