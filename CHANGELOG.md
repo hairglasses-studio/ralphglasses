@@ -2,7 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [v0.1.0] - 2026-04-03
 
 ### Features
 
@@ -56,3 +58,5 @@ All notable changes to this project will be documented in this file.
 - Add roadmap, research docs, and thin client scaffold ([1ac3626](../../commit/1ac3626ca0c4a40b3771f6532bf016d1691fe680))
 - Implement ralphglasses TUI + MCP server + marathon launcher ([6f60530](../../commit/6f60530d5f0c9018af4cd64fbbaaa11b77a02891))
 - Initial commit ([94c98ff](../../commit/94c98ffef263c6d845c6dfc3ab852617c27d7416))
+
+[v0.1.0]: https://github.com/hairglasses-studio/ralphglasses/releases/tag/v0.1.0
