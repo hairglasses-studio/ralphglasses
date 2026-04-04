@@ -81,3 +81,6 @@ session_cover.out
 .ralph/awesome/*.json
 .ralph/awesome/report.md
 internal/mcpserver/.ralph/
+
+# Ralph sweep/audit output (contains machine-specific paths and emails)
+.ralph/sweep-*/
