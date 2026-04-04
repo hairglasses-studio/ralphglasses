@@ -1,5 +1,9 @@
 # ralphglasses
 
+[![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-126-blue)](docs/MCP-TOOLS.md)
+
 Command-and-control TUI for parallel multi-LLM agent fleets.
 
 Orchestrates [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview), [Gemini CLI](https://ai.google.dev/gemini-api/docs), and [OpenAI Codex CLI](https://platform.openai.com/docs/guides/codex) sessions from a single k9s-style interface. Built with [Charmbracelet](https://github.com/charmbracelet) (BubbleTea + Lip Gloss).
