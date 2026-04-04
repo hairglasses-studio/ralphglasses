@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -130,6 +131,9 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 	budgetUSD := p.OptionalNumber("budget_usd", 5.0)
 	effort := p.OptionalString("effort", "")
 	allowedTools := p.OptionalString("allowed_tools", "")
+	maxSweepBudget := p.OptionalNumber("max_sweep_budget_usd", 100.0)
+	maxTurns := int(p.OptionalNumber("max_turns", 50))
+	sessionPersistence := p.OptionalBool("session_persistence", false)
 
 	// Ensure repos are scanned.
 	if s.reposNil() {
@@ -147,7 +151,50 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 		return codedError(ErrInvalidParams, "no repos matched"), nil
 	}
 
+	// Validate model name against known provider prefixes.
+	for _, w := range session.ValidateLoopConfig(session.LoopConfig{
+		Provider: session.ProviderClaude, Model: model,
+	}) {
+		if w.Field == "model" {
+			return codedError(ErrInvalidParams, fmt.Sprintf("model validation: %s", w.Message)), nil
+		}
+	}
+
+	// Pre-launch cost estimation.
+	repoCount := len(targetRepos)
+	estimatedPerSession := 1.0
+
+	if s.SessMgr != nil && s.SessMgr.HasCostPredictor() {
+		estimatedPerSession = s.SessMgr.GetCostPredictor().Predict("sweep", "claude")
+	}
+	if estimatedPerSession <= 1.0 {
+		pc := config.DefaultProviderCosts()
+		inRate := pc.InputPerMToken["claude_sonnet"]
+		outRate := pc.OutputPerMToken["claude_sonnet"]
+		if strings.HasPrefix(model, "opus") || strings.Contains(model, "opus") {
+			inRate = pc.InputPerMToken["claude_opus"]
+			outRate = pc.OutputPerMToken["claude_opus"]
+		}
+		estTurns := float64(maxTurns) * 0.6
+		tokPerTurn := 8000.0
+		estimatedPerSession = (tokPerTurn * estTurns / 1_000_000) * (inRate + outRate)
+	}
+
+	// Auto-size per-session budget: at least 1.5x estimate.
+	if budgetUSD < estimatedPerSession*1.5 {
+		budgetUSD = estimatedPerSession * 1.5
+	}
+
+	// Check sweep total against cap.
+	totalEstimated := estimatedPerSession * float64(repoCount)
+	if totalEstimated > maxSweepBudget {
+		return codedError(ErrInvalidParams, fmt.Sprintf(
+			"estimated sweep cost $%.2f (%d repos × $%.2f) exceeds max_sweep_budget_usd $%.2f",
+			totalEstimated, repoCount, estimatedPerSession, maxSweepBudget)), nil
+	}
+
 	sweepID := fmt.Sprintf("sweep-%s", uuid.New().String()[:8])
+	sweepPool := session.NewBudgetPool(maxSweepBudget)
 
 	// Default read-only tools for plan mode.
 	var tools []string
@@ -173,14 +220,17 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 			repoPrompt := strings.ReplaceAll(prompt, "REPO_PLACEHOLDER", r.Name)
 
 			opts := session.LaunchOptions{
-				Provider:       session.ProviderClaude,
-				RepoPath:       r.Path,
-				Prompt:         repoPrompt,
-				Model:          model,
-				MaxBudgetUSD:   budgetUSD,
-				PermissionMode: permMode,
-				SweepID:        sweepID,
-				AllowedTools:   tools,
+				Provider:             session.ProviderClaude,
+				RepoPath:             r.Path,
+				Prompt:               repoPrompt,
+				Model:                model,
+				MaxBudgetUSD:         budgetUSD,
+				MaxTurns:             maxTurns,
+				PermissionMode:       permMode,
+				SweepID:              sweepID,
+				AllowedTools:         tools,
+				NoSessionPersistence: !sessionPersistence,
+				SessionID:            fmt.Sprintf("%s-%s", sweepID, r.Name),
 			}
 			if effort != "" {
 				opts.Effort = effort
@@ -199,6 +249,12 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 				}
 			}
 
+			// Check sweep pool before launch.
+			if err := sweepPool.Allocate(r.Name, budgetUSD); err != nil {
+				errors = append(errors, fmt.Sprintf("%s: sweep budget cap reached", r.Name))
+				break
+			}
+
 			sess, err := s.SessMgr.Launch(context.Background(), opts)
 			if err != nil {
 				errors = append(errors, fmt.Sprintf("%s: %v", r.Name, err))
@@ -213,19 +269,27 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 		}
 
 		result := map[string]any{
-			"sweep_id": sweepID,
-			"launched": launched,
-			"errors":   errors,
-			"total":    len(launched),
+			"sweep_id":              sweepID,
+			"launched":              launched,
+			"errors":                errors,
+			"total":                 len(launched),
+			"estimated_per_session": estimatedPerSession,
+			"estimated_total":       totalEstimated,
+			"budget_per_session":    budgetUSD,
+			"max_sweep_budget_usd":  maxSweepBudget,
 		}
 		s.Tasks.Complete(taskID, result)
 	}()
 
 	return jsonResult(map[string]any{
-		"task_id":  taskID,
-		"sweep_id": sweepID,
-		"repos":    len(targetRepos),
-		"status":   "launching",
+		"task_id":               taskID,
+		"sweep_id":              sweepID,
+		"repos":                 len(targetRepos),
+		"status":                "launching",
+		"estimated_per_session": estimatedPerSession,
+		"estimated_total":       totalEstimated,
+		"budget_per_session":    budgetUSD,
+		"max_sweep_budget_usd":  maxSweepBudget,
 	}), nil
 }
 
@@ -404,6 +468,7 @@ func (s *Server) handleSweepSchedule(_ context.Context, req mcp.CallToolRequest)
 	intervalMin := p.OptionalNumber("interval_minutes", 5)
 	autoNudge := p.OptionalBool("auto_nudge", false)
 	maxChecks := int(p.OptionalNumber("max_checks", 0))
+	maxCostCap := p.OptionalNumber("max_sweep_budget_usd", 0)
 
 	interval := time.Duration(intervalMin) * time.Minute
 	if interval < time.Minute {
@@ -486,6 +551,25 @@ func (s *Server) handleSweepSchedule(_ context.Context, req mcp.CallToolRequest)
 					progress = float64(completed) / float64(total)
 				}
 				s.Tasks.SetProgress(taskID, progress)
+
+				// Cost cap abort: stop all sessions if total spend exceeds cap.
+				if maxCostCap > 0 && totalCost >= maxCostCap {
+					for _, sess := range sessions {
+						sess.Lock()
+						st := sess.Status
+						sid := sess.ID
+						sess.Unlock()
+						if st == session.StatusRunning || st == session.StatusLaunching {
+							_ = s.SessMgr.Stop(sid)
+						}
+					}
+					s.Tasks.Complete(taskID, map[string]any{
+						"checks_completed": checks,
+						"total_cost_usd":   totalCost,
+						"reason":           fmt.Sprintf("cost cap $%.2f reached (spent $%.2f)", maxCostCap, totalCost),
+					})
+					return
+				}
 
 				// All done?
 				if running == 0 {

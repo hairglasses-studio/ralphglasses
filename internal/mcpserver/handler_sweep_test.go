@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -223,6 +224,90 @@ func TestResolveSweepRepos_NotFound(t *testing.T) {
 	_, err := s.resolveSweepRepos(`["fake"]`, 10)
 	if err == nil {
 		t.Fatal("expected error for nonexistent repo")
+	}
+}
+
+func TestSweepLaunch_BudgetCapExceeded(t *testing.T) {
+	s := &Server{
+		Tasks:   NewTaskRegistry(),
+		SessMgr: session.NewManager(),
+		Repos:   make([]*model.Repo, 20), // 20 repos
+	}
+	for i := range s.Repos {
+		s.Repos[i] = &model.Repo{Name: fmt.Sprintf("repo-%d", i), Path: fmt.Sprintf("/tmp/repo-%d", i)}
+	}
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"prompt":               "Audit this repo",
+		"repos":                "all",
+		"limit":                float64(20),
+		"model":                "opus",
+		"budget_usd":           float64(10),
+		"max_sweep_budget_usd": float64(50), // 20 repos × $10 > $50 cap
+	}
+
+	result, err := s.handleSweepLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	text := sweepExtractText(result)
+	if !containsCI(text, "exceeds") {
+		t.Errorf("expected budget cap exceeded error, got: %s", text)
+	}
+}
+
+func TestSweepLaunch_InvalidModel(t *testing.T) {
+	s := &Server{
+		Tasks:   NewTaskRegistry(),
+		SessMgr: session.NewManager(),
+		Repos:   []*model.Repo{{Name: "test", Path: "/tmp/test"}},
+	}
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"prompt": "Audit this repo",
+		"repos":  `["test"]`,
+		"model":  "gpt-4o", // wrong provider prefix for claude
+	}
+
+	result, err := s.handleSweepLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	text := sweepExtractText(result)
+	if !containsCI(text, "model validation") {
+		t.Errorf("expected model validation error, got: %s", text)
+	}
+}
+
+func TestSweepLaunch_CostEstimateInResponse(t *testing.T) {
+	s := &Server{
+		Tasks:   NewTaskRegistry(),
+		SessMgr: session.NewManager(),
+		Repos:   []*model.Repo{{Name: "test", Path: "/tmp/test"}},
+	}
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"prompt": "Audit this repo",
+		"repos":  `["test"]`,
+		"model":  "opus",
+	}
+
+	result, err := s.handleSweepLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	text := sweepExtractText(result)
+	// Response should include cost estimation fields.
+	for _, field := range []string{"estimated_per_session", "estimated_total", "budget_per_session", "max_sweep_budget_usd"} {
+		if !containsCI(text, field) {
+			t.Errorf("response missing %q field, got: %s", field, text)
+		}
 	}
 }
 

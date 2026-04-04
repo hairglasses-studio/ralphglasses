@@ -39,7 +39,7 @@ Estimated tokens: <estimated_tokens>
 Use the generated prompt to launch across target repos:
 
 ```
-ralphglasses_sweep_launch prompt=<generated_prompt> repos=<repos> limit=<limit> model=<model> permission_mode=plan enhance_prompt=local
+ralphglasses_sweep_launch prompt=<generated_prompt> repos=<repos> limit=<limit> model=<model> permission_mode=plan enhance_prompt=local max_sweep_budget_usd=100 session_persistence=false
 ```
 
 Capture the `sweep_id` and `task_id` from the response.

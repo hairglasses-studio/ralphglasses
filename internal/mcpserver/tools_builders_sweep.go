@@ -26,6 +26,9 @@ func (s *Server) buildSweepGroup() ToolGroup {
 				mcp.WithNumber("budget_usd", mcp.Description("Per-session budget in USD (default: 5.0)")),
 				mcp.WithString("effort", mcp.Description("Effort level: low, medium, high, max")),
 				mcp.WithString("allowed_tools", mcp.Description("Comma-separated allowed tools (default: read-only tools for plan mode)")),
+				mcp.WithNumber("max_sweep_budget_usd", mcp.Description("Total sweep budget cap in USD (default 100). Rejects launch if estimated cost exceeds this.")),
+				mcp.WithNumber("max_turns", mcp.Description("Max turns per session (default 50). Prevents runaway sessions.")),
+				mcp.WithBoolean("session_persistence", mcp.Description("Persist session history to disk (default false for sweeps).")),
 			), s.handleSweepLaunch},
 			{mcp.NewTool("ralphglasses_sweep_status",
 				mcp.WithDescription("Dashboard for a sweep: per-repo status, total cost, completion percentage, stalled sessions, and optional output tails."),
@@ -44,6 +47,7 @@ func (s *Server) buildSweepGroup() ToolGroup {
 				mcp.WithNumber("interval_minutes", mcp.Description("Check interval in minutes (default 5)")),
 				mcp.WithBoolean("auto_nudge", mcp.Description("Automatically restart stalled sessions (default false)")),
 				mcp.WithNumber("max_checks", mcp.Description("Stop after N checks, 0 for unlimited (default 0)")),
+				mcp.WithNumber("max_sweep_budget_usd", mcp.Description("Abort sweep and stop all sessions if total spend exceeds this (default 0 = no cap)")),
 			), s.handleSweepSchedule},
 		},
 	}

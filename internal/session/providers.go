@@ -241,6 +241,12 @@ func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	if opts.PermissionMode != "" {
 		args = append(args, "--permission-mode", opts.PermissionMode)
 	}
+	if opts.NoSessionPersistence {
+		args = append(args, "--no-session-persistence")
+	}
+	if opts.SessionID != "" {
+		args = append(args, "--session-id", opts.SessionID)
+	}
 	if len(opts.OutputSchema) > 0 {
 		args = append(args, "--json-schema", string(opts.OutputSchema))
 	}
