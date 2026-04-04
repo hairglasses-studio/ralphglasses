@@ -1,0 +1,18 @@
+[Unit]
+Description=Ralphglasses First Boot Setup Wizard
+Documentation=https://github.com/hairglasses-studio/ralphglasses
+Before=ralphglasses.service
+ConditionPathExists=!/etc/ralphglasses/.firstboot-done
+After=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/usr/local/bin/ralphglasses firstboot
+StandardInput=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+
+[Install]
+WantedBy=multi-user.target
