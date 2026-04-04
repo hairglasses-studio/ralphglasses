@@ -144,8 +144,10 @@ type LaunchOptions struct {
 	FallbackModel string            // --fallback-model (auto-fallback on overload)
 	OutputSchema  json.RawMessage   // --json-schema (Claude) / --output-schema (Codex)
 
-	PermissionMode string // --permission-mode (plan, auto, default, etc.)
-	SweepID        string // groups sessions from a single sweep operation
+	PermissionMode       string // --permission-mode (plan, auto, default, etc.)
+	SweepID              string // groups sessions from a single sweep operation
+	NoSessionPersistence bool   // --no-session-persistence (ephemeral, no disk history)
+	SessionID            string // --session-id <uuid> for explicit correlation
 
 	Batch *BatchOptions // nil means non-batch (normal) mode
 

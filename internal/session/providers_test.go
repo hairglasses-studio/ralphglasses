@@ -1270,6 +1270,32 @@ func TestBuildClaudeCmd_WorktreeBranch(t *testing.T) {
 	}
 }
 
+func TestBuildClaudeCmd_NoSessionPersistence(t *testing.T) {
+	ctx := context.Background()
+	cmd := buildClaudeCmd(ctx, LaunchOptions{
+		RepoPath:             "/tmp/repo",
+		NoSessionPersistence: true,
+		SessionID:            "sweep-abc-myrepo",
+	})
+	cmdStr := strings.Join(cmd.Args, " ")
+	if !strings.Contains(cmdStr, "--no-session-persistence") {
+		t.Errorf("cmd %q missing --no-session-persistence", cmdStr)
+	}
+	if !strings.Contains(cmdStr, "--session-id sweep-abc-myrepo") {
+		t.Errorf("cmd %q missing --session-id", cmdStr)
+	}
+
+	// Verify flags are absent when not set.
+	cmd2 := buildClaudeCmd(ctx, LaunchOptions{RepoPath: "/tmp/repo"})
+	cmdStr2 := strings.Join(cmd2.Args, " ")
+	if strings.Contains(cmdStr2, "--no-session-persistence") {
+		t.Error("--no-session-persistence should not be set when NoSessionPersistence=false")
+	}
+	if strings.Contains(cmdStr2, "--session-id") {
+		t.Error("--session-id should not be set when SessionID is empty")
+	}
+}
+
 func TestValidateProviderEnv_GeminiAlternateKey(t *testing.T) {
 	t.Setenv("GOOGLE_API_KEY", "")
 	t.Setenv("GEMINI_API_KEY", "test-key")
