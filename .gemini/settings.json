@@ -12,7 +12,7 @@
     "ralphglasses": {
       "command": "go",
       "args": ["run", ".", "mcp", "--scan-path", "~/hairglasses-studio"],
-      "cwd": "/home/hg/hairglasses-studio/ralphglasses"
+      "cwd": "."
     }
   }
 }
