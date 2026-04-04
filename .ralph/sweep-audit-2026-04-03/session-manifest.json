@@ -1,0 +1,322 @@
+[
+  {
+    "repo": "claudekit",
+    "session_id": "fe1d6508-54e0-4c47-b9f4-c7e40c12f082",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-claudekit/fe1d6508-54e0-4c47-b9f4-c7e40c12f082.jsonl",
+    "size_bytes": 457062,
+    "message_count": 66,
+    "assistant_turns": 35
+  },
+  {
+    "repo": "cr8-cli",
+    "session_id": "b0865070-8a88-4b69-8232-d235c9e78aea",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-cr8-cli/b0865070-8a88-4b69-8232-d235c9e78aea.jsonl",
+    "size_bytes": 242000,
+    "message_count": 61,
+    "assistant_turns": 32
+  },
+  {
+    "repo": "crabravee",
+    "session_id": "f1254f1e-f8a5-4e3b-87ec-b2fef680328c",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-crabravee/f1254f1e-f8a5-4e3b-87ec-b2fef680328c.jsonl",
+    "size_bytes": 332302,
+    "message_count": 62,
+    "assistant_turns": 33
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "099c5764-daff-4df4-93f6-5dc6a2cb9a33",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/099c5764-daff-4df4-93f6-5dc6a2cb9a33.jsonl",
+    "size_bytes": 346678,
+    "message_count": 56,
+    "assistant_turns": 29
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "1aba08a7-8dbe-49e9-bb87-d4130c3fdfb2",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/1aba08a7-8dbe-49e9-bb87-d4130c3fdfb2.jsonl",
+    "size_bytes": 2835915,
+    "message_count": 822,
+    "assistant_turns": 414
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "24aed396-1b91-4b96-815d-54a4eb8cce2c",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/24aed396-1b91-4b96-815d-54a4eb8cce2c.jsonl",
+    "size_bytes": 17084625,
+    "message_count": 3010,
+    "assistant_turns": 1365
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "24ff72f6-0248-4bd8-8c5c-618f244ea8cc",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/24ff72f6-0248-4bd8-8c5c-618f244ea8cc.jsonl",
+    "size_bytes": 2275,
+    "message_count": 7,
+    "assistant_turns": 0
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "3e220b99-acb1-4788-a6f5-f03e4a6ec031",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/3e220b99-acb1-4788-a6f5-f03e4a6ec031.jsonl",
+    "size_bytes": 6072724,
+    "message_count": 860,
+    "assistant_turns": 452
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "3e4857cf-e090-44d0-8532-0fabf430db6b",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/3e4857cf-e090-44d0-8532-0fabf430db6b.jsonl",
+    "size_bytes": 598635,
+    "message_count": 222,
+    "assistant_turns": 118
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "434518ca-199d-4a80-bd2b-7ca072342b77",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/434518ca-199d-4a80-bd2b-7ca072342b77.jsonl",
+    "size_bytes": 147643,
+    "message_count": 111,
+    "assistant_turns": 52
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "47c68036-a8fc-42fb-8023-876a43c83e79",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/47c68036-a8fc-42fb-8023-876a43c83e79.jsonl",
+    "size_bytes": 11124183,
+    "message_count": 2460,
+    "assistant_turns": 1125
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "5333ae89-adf8-46d7-b7dd-0edade63081c",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/5333ae89-adf8-46d7-b7dd-0edade63081c.jsonl",
+    "size_bytes": 211848,
+    "message_count": 129,
+    "assistant_turns": 54
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "5de33e9f-9ba9-4973-9419-c3e3c96a717b",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/5de33e9f-9ba9-4973-9419-c3e3c96a717b.jsonl",
+    "size_bytes": 818542,
+    "message_count": 198,
+    "assistant_turns": 98
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "5fc3cbdb-0ae2-4d20-98b6-019c25062e86",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/5fc3cbdb-0ae2-4d20-98b6-019c25062e86.jsonl",
+    "size_bytes": 410444,
+    "message_count": 188,
+    "assistant_turns": 94
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "720bbff5-e750-4fb6-9805-64bcdf0f5d16",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/720bbff5-e750-4fb6-9805-64bcdf0f5d16.jsonl",
+    "size_bytes": 272797,
+    "message_count": 172,
+    "assistant_turns": 76
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "910caa65-df46-44ed-a9c6-5a9b1b30c1b2",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/910caa65-df46-44ed-a9c6-5a9b1b30c1b2.jsonl",
+    "size_bytes": 2381361,
+    "message_count": 787,
+    "assistant_turns": 416
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "9e161e48-d010-47aa-891a-d03d58b1909e",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/9e161e48-d010-47aa-891a-d03d58b1909e.jsonl",
+    "size_bytes": 748756,
+    "message_count": 456,
+    "assistant_turns": 255
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "9ef4bdc1-8db9-403a-8b58-e62ee05fbada",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/9ef4bdc1-8db9-403a-8b58-e62ee05fbada.jsonl",
+    "size_bytes": 458427,
+    "message_count": 174,
+    "assistant_turns": 91
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "a770f737-4fea-4417-9980-13d96b620010",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/a770f737-4fea-4417-9980-13d96b620010.jsonl",
+    "size_bytes": 5655385,
+    "message_count": 1092,
+    "assistant_turns": 491
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "b4296cf8-8a3a-4a96-a7b5-a267c010df28",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/b4296cf8-8a3a-4a96-a7b5-a267c010df28.jsonl",
+    "size_bytes": 122793,
+    "message_count": 6,
+    "assistant_turns": 1
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "bc8d81ac-e260-4ac7-a435-0d3aa89aeeeb",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/bc8d81ac-e260-4ac7-a435-0d3aa89aeeeb.jsonl",
+    "size_bytes": 99657,
+    "message_count": 71,
+    "assistant_turns": 36
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "e4f51eae-cc18-4458-915e-4a3fd45c1752",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/e4f51eae-cc18-4458-915e-4a3fd45c1752.jsonl",
+    "size_bytes": 3204577,
+    "message_count": 291,
+    "assistant_turns": 144
+  },
+  {
+    "repo": "dotfiles",
+    "session_id": "fa72b573-4d52-4dea-b1c6-21fc9bc7ce81",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-dotfiles/fa72b573-4d52-4dea-b1c6-21fc9bc7ce81.jsonl",
+    "size_bytes": 1324903,
+    "message_count": 341,
+    "assistant_turns": 170
+  },
+  {
+    "repo": "hg-mcp",
+    "session_id": "cb654ed5-5332-4260-8c50-857c7f8f20d7",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-hg-mcp/cb654ed5-5332-4260-8c50-857c7f8f20d7.jsonl",
+    "size_bytes": 304143,
+    "message_count": 114,
+    "assistant_turns": 62
+  },
+  {
+    "repo": "hgmux",
+    "session_id": "5ffeebb3-e3b2-422c-887f-5316daf4498a",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-hgmux/5ffeebb3-e3b2-422c-887f-5316daf4498a.jsonl",
+    "size_bytes": 525507,
+    "message_count": 60,
+    "assistant_turns": 32
+  },
+  {
+    "repo": "jobb",
+    "session_id": "3ed8e543-5e5b-4732-8f11-64e9cf18b098",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-jobb/3ed8e543-5e5b-4732-8f11-64e9cf18b098.jsonl",
+    "size_bytes": 924951,
+    "message_count": 241,
+    "assistant_turns": 123
+  },
+  {
+    "repo": "jobb",
+    "session_id": "95ffa38d-18cc-4025-8266-de0e6b273840",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-jobb/95ffa38d-18cc-4025-8266-de0e6b273840.jsonl",
+    "size_bytes": 15699487,
+    "message_count": 3910,
+    "assistant_turns": 1793
+  },
+  {
+    "repo": "jobb",
+    "session_id": "f1837642-50d2-434e-9e61-cd4e718abab1",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-jobb/f1837642-50d2-434e-9e61-cd4e718abab1.jsonl",
+    "size_bytes": 5979005,
+    "message_count": 720,
+    "assistant_turns": 385
+  },
+  {
+    "repo": "jobb",
+    "session_id": "fb5854fb-4403-4729-a86d-9190aeabde95",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-jobb/fb5854fb-4403-4729-a86d-9190aeabde95.jsonl",
+    "size_bytes": 278175,
+    "message_count": 53,
+    "assistant_turns": 28
+  },
+  {
+    "repo": "mcpkit",
+    "session_id": "9e1d6de6-fe2f-423c-a4a5-dd2b2a94d5c3",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-mcpkit/9e1d6de6-fe2f-423c-a4a5-dd2b2a94d5c3.jsonl",
+    "size_bytes": 290306,
+    "message_count": 52,
+    "assistant_turns": 29
+  },
+  {
+    "repo": "mesmer",
+    "session_id": "8f572f4d-9d6a-4e7b-b42a-3f16b8c17f32",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-mesmer/8f572f4d-9d6a-4e7b-b42a-3f16b8c17f32.jsonl",
+    "size_bytes": 317192,
+    "message_count": 63,
+    "assistant_turns": 35
+  },
+  {
+    "repo": "ralphglasses",
+    "session_id": "0944ecf2-9c95-40a1-9f77-8c5195828606",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-ralphglasses/0944ecf2-9c95-40a1-9f77-8c5195828606.jsonl",
+    "size_bytes": 5770723,
+    "message_count": 1930,
+    "assistant_turns": 829
+  },
+  {
+    "repo": "ralphglasses",
+    "session_id": "1edfd636-9e31-4ced-9672-c6b03c50f91c",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-ralphglasses/1edfd636-9e31-4ced-9672-c6b03c50f91c.jsonl",
+    "size_bytes": 9841,
+    "message_count": 12,
+    "assistant_turns": 5
+  },
+  {
+    "repo": "ralphglasses",
+    "session_id": "398f731a-018a-428f-b1da-71b88ff8380b",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-ralphglasses/398f731a-018a-428f-b1da-71b88ff8380b.jsonl",
+    "size_bytes": 155698,
+    "message_count": 41,
+    "assistant_turns": 15
+  },
+  {
+    "repo": "ralphglasses",
+    "session_id": "3e71236c-6600-4933-9c1d-633038117b7c",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-ralphglasses/3e71236c-6600-4933-9c1d-633038117b7c.jsonl",
+    "size_bytes": 1587,
+    "message_count": 3,
+    "assistant_turns": 0
+  },
+  {
+    "repo": "ralphglasses",
+    "session_id": "8d137bc6-8c1c-459c-a428-6f483133e3b8",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-ralphglasses/8d137bc6-8c1c-459c-a428-6f483133e3b8.jsonl",
+    "size_bytes": 1882806,
+    "message_count": 677,
+    "assistant_turns": 372
+  },
+  {
+    "repo": "ralphglasses",
+    "session_id": "b5f6b7d9-1748-408d-b083-b89120048a0c",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-ralphglasses/b5f6b7d9-1748-408d-b083-b89120048a0c.jsonl",
+    "size_bytes": 353094,
+    "message_count": 65,
+    "assistant_turns": 35
+  },
+  {
+    "repo": "ralphglasses",
+    "session_id": "d05f637a-d1db-4367-89f6-a8309e272dee",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-ralphglasses/d05f637a-d1db-4367-89f6-a8309e272dee.jsonl",
+    "size_bytes": 3896125,
+    "message_count": 999,
+    "assistant_turns": 528
+  },
+  {
+    "repo": "ralphglasses",
+    "session_id": "e0092156-9c2d-4b94-9298-d30355605904",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-ralphglasses/e0092156-9c2d-4b94-9298-d30355605904.jsonl",
+    "size_bytes": 1543,
+    "message_count": 3,
+    "assistant_turns": 0
+  },
+  {
+    "repo": "ralphglasses",
+    "session_id": "e85ac2ba-b1cb-4bc5-b026-53c1c7ffc812",
+    "jsonl_path": "/home/hg/.claude/projects/-home-hg-hairglasses-studio-ralphglasses/e85ac2ba-b1cb-4bc5-b026-53c1c7ffc812.jsonl",
+    "size_bytes": 1823,
+    "message_count": 5,
+    "assistant_turns": 1
+  }
+]
