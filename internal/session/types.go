@@ -50,6 +50,7 @@ type Session struct {
 	AgentName           string        `json:"agent,omitempty"`
 	TeamName          string        `json:"team_name,omitempty"`
 	SweepID           string        `json:"sweep_id,omitempty"`
+	PermissionMode    string        `json:"permission_mode,omitempty"`
 	BudgetUSD         float64       `json:"max_budget_usd,omitempty"`
 	SpentUSD          float64       `json:"spent_usd"`
 	TurnCount         int           `json:"turn_count"`

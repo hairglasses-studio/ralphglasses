@@ -79,6 +79,47 @@ List any sections of CLAUDE.md that are outdated or missing, with suggested corr
 Top 3 improvements ranked by effort-to-impact ratio, as actionable one-line descriptions.
 </output_format>`
 
+// Built-in fix prompt template. REPO_PLACEHOLDER is replaced per-repo.
+const sweepFixTemplate = `<role>You are a senior software engineer fixing audit findings in REPO_PLACEHOLDER. Every fix must compile, pass tests, and be committed individually.</role>
+
+<context>
+Repository: ~/hairglasses-studio/REPO_PLACEHOLDER
+Audit file: .claude/audit-2026-04-03.md contains all findings with file paths, line numbers, and fix descriptions.
+Read the audit file first, then fix every item in priority order (HIGH first, then MEDIUM, then LOW).
+</context>
+
+<instructions>
+1. Read .claude/audit-2026-04-03.md completely
+2. Read the CLAUDE.md for build/test/lint commands
+3. For each finding, in order:
+   a. Read the referenced file(s) at the specified line numbers
+   b. Apply the fix described in the audit
+   c. Run the build command (go build ./... or equivalent)
+   d. Run the test command (go test ./... -count=1 or equivalent)
+   e. If tests pass, commit with message: "fix: [finding-N] <description>"
+   f. If tests fail, diagnose and fix the test failure, then commit
+   g. If the fix requires architectural decisions beyond what the audit describes, skip it and note why
+4. After all findings are addressed, update .claude/audit-2026-04-03.md marking completed items with [x]
+5. Run the full test suite one final time to confirm no regressions
+</instructions>
+
+<constraints>
+- Every commit must compile and pass tests
+- One commit per finding (do not batch unrelated fixes)
+- Do not refactor code beyond what the finding specifies
+- Skip findings that require human judgment and document why
+- For documentation fixes (CLAUDE.md drift), verify the correction against actual code before committing
+- Do not modify test assertions to make tests pass — fix the code instead
+</constraints>
+
+<output_format>
+When finished, print a summary:
+- Total findings: N
+- Fixed: N (list commit hashes)
+- Skipped: N (list reasons)
+- Test suite: PASS/FAIL
+</output_format>`
+
 func (s *Server) handleSweepGenerate(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	p := NewParams(req)
 
@@ -89,6 +130,8 @@ func (s *Server) handleSweepGenerate(_ context.Context, req mcp.CallToolRequest)
 	var basePrompt string
 	if customPrompt != "" {
 		basePrompt = customPrompt
+	} else if taskType == "fix" {
+		basePrompt = sweepFixTemplate
 	} else {
 		basePrompt = sweepAuditTemplate
 	}
@@ -401,6 +444,7 @@ func (s *Server) handleSweepNudge(_ context.Context, req mcp.CallToolRequest) (*
 		model := sess.Model
 		sessID := sess.ID
 		budget := sess.BudgetUSD
+		permMode := sess.PermissionMode
 		sess.Unlock()
 
 		isRunning := status == session.StatusRunning || status == session.StatusLaunching
@@ -418,9 +462,8 @@ func (s *Server) handleSweepNudge(_ context.Context, req mcp.CallToolRequest) (*
 				Prompt:         prompt,
 				Model:          model,
 				MaxBudgetUSD:   budget,
-				PermissionMode: "plan",
+				PermissionMode: permMode,
 				SweepID:        sweepID,
-				AllowedTools:   []string{"Bash(readonly:true)", "Read", "Glob", "Grep"},
 			}
 			newSess, err := s.SessMgr.Launch(context.Background(), newOpts)
 			if err != nil {

@@ -19,8 +19,8 @@ var GeneratedToolCounts = map[string]int{
 	"observability": 17,
 	"rdcycle": 18,
 	"plugin": 4,
-	"sweep": 5,
+	"sweep": 8,
 }
 
 // GeneratedTotalTools is the sum of all tool counts across all groups.
-var GeneratedTotalTools = 160
+var GeneratedTotalTools = 163

@@ -76,6 +76,9 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_sweep_status":   {Title: "Sweep Status", ReadOnlyHint: boolPtr(true)},
 	"ralphglasses_sweep_nudge":    {Title: "Nudge Sweep", OpenWorldHint: boolPtr(true)},
 	"ralphglasses_sweep_schedule": {Title: "Schedule Sweep Monitor", OpenWorldHint: boolPtr(true)},
+	"ralphglasses_sweep_report":   {Title: "Sweep Report", ReadOnlyHint: boolPtr(true)},
+	"ralphglasses_sweep_retry":    {Title: "Retry Sweep", OpenWorldHint: boolPtr(true)},
+	"ralphglasses_sweep_push":     {Title: "Push Sweep Repos", OpenWorldHint: boolPtr(true), DestructiveHint: boolPtr(false)},
 
 	// ── fleet ────────────────────────────────────────────────────────────
 	"ralphglasses_fleet_status":       {Title: "Fleet Status", ReadOnlyHint: boolPtr(true)},
