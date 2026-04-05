@@ -36,6 +36,8 @@ func allBuilderSpecs() []builderSpec {
 		{"team", (*Server).buildTeamGroup, minFor("team"), true},
 		{"awesome", (*Server).buildAwesomeGroup, minFor("awesome"), true},
 		{"advanced", (*Server).buildAdvancedGroup, minFor("advanced"), true},
+		{"events", (*Server).buildEventsGroup, minFor("events"), true},
+		{"feedback", (*Server).buildFeedbackGroup, minFor("feedback"), true},
 		{"eval", (*Server).buildEvalGroup, minFor("eval"), true},
 		{"fleet_h", (*Server).buildFleetHGroup, minFor("fleet_h"), true},
 		{"observability", (*Server).buildObservabilityGroup, minFor("observability"), true},
@@ -142,8 +144,8 @@ func TestBuildGroupToolNamesGloballyUnique(t *testing.T) {
 func TestDefaultRegistryReturnsAll13Groups(t *testing.T) {
 	reg := defaultRegistry()
 
-	if reg.Len() != 23 {
-		t.Fatalf("expected 22 registered groups, got %d", reg.Len())
+	if reg.Len() != 25 {
+		t.Fatalf("expected 25 registered groups, got %d", reg.Len())
 	}
 
 	names := reg.Names()
@@ -166,8 +168,8 @@ func TestDefaultRegistryBuildAll(t *testing.T) {
 	reg := defaultRegistry()
 	groups := reg.BuildAll(srv)
 
-	if len(groups) != 23 {
-		t.Fatalf("expected 22 groups from BuildAll, got %d", len(groups))
+	if len(groups) != 25 {
+		t.Fatalf("expected 25 groups from BuildAll, got %d", len(groups))
 	}
 
 	for _, name := range ToolGroupNames {
@@ -183,8 +185,8 @@ func TestBuildToolGroupsTotalCount(t *testing.T) {
 	srv, _ := setupTestServer(t)
 	groups := srv.buildToolGroups()
 
-	if len(groups) != 23 {
-		t.Fatalf("expected 22 groups, got %d", len(groups))
+	if len(groups) != 25 {
+		t.Fatalf("expected 25 groups, got %d", len(groups))
 	}
 
 	// Count total tools.
