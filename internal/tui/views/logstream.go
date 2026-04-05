@@ -8,23 +8,47 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
+// DefaultLogCapacity is the default number of lines a LogView retains.
+const DefaultLogCapacity = 10_000
+
 // LogView is a scrollable log viewer with follow mode, backed by bubbles/viewport.
 type LogView struct {
 	vp     viewport.Model
-	Lines  []string
+	ring   *lineRing
 	Follow bool
 	Search string
 	Width  int
 	Height int
 }
 
-// NewLogView creates a log view.
+// Lines returns a snapshot of all stored lines, oldest first.
+// Callers that previously read lv.Lines directly should use this instead.
+func (lv *LogView) Lines() []string {
+	return lv.ring.slice()
+}
+
+// Len returns the number of stored lines.
+func (lv *LogView) Len() int {
+	return lv.ring.len()
+}
+
+// NewLogView creates a log view with the default line capacity.
 func NewLogView() *LogView {
+	return NewLogViewWithCapacity(DefaultLogCapacity)
+}
+
+// NewLogViewWithCapacity creates a log view with a custom line capacity.
+// A capacity of 0 uses DefaultLogCapacity.
+func NewLogViewWithCapacity(cap int) *LogView {
+	if cap <= 0 {
+		cap = DefaultLogCapacity
+	}
 	vp := viewport.New()
 	// Disable built-in key bindings — we handle keys ourselves.
 	vp.KeyMap = viewport.KeyMap{}
 	return &LogView{
 		vp:     vp,
+		ring:   newLineRing(cap),
 		Follow: true,
 	}
 }
@@ -43,13 +67,20 @@ func (lv *LogView) SetDimensions(width, height int) {
 
 // AppendLines adds new log lines and auto-scrolls if following.
 func (lv *LogView) AppendLines(lines []string) {
-	lv.Lines = append(lv.Lines, lines...)
+	before := lv.ring.evicted
+	lv.ring.pushAll(lines)
+	evictedThisBatch := lv.ring.evicted - before
 	lv.rebuildContent()
+	if !lv.Follow && evictedThisBatch > 0 {
+		// Compensate for dropped lines so the user's scroll position stays stable.
+		lv.vp.ScrollUp(evictedThisBatch)
+	}
 }
 
 // SetLines replaces all lines.
 func (lv *LogView) SetLines(lines []string) {
-	lv.Lines = lines
+	lv.ring.reset()
+	lv.ring.pushAll(lines)
 	lv.rebuildContent()
 }
 
@@ -134,12 +165,13 @@ func (lv *LogView) ToggleFollow() {
 
 // filteredLines returns lines matching the search filter, or all lines if no search is set.
 func (lv *LogView) filteredLines() []string {
+	all := lv.ring.slice()
 	if lv.Search == "" {
-		return lv.Lines
+		return all
 	}
 	needle := strings.ToLower(lv.Search)
 	var filtered []string
-	for _, line := range lv.Lines {
+	for _, line := range all {
 		if strings.Contains(strings.ToLower(line), needle) {
 			filtered = append(filtered, line)
 		}
@@ -159,15 +191,18 @@ func (lv *LogView) View() string {
 
 	var b strings.Builder
 
-	lines := lv.filteredLines()
-
 	// Header
 	followIndicator := styles.InfoStyle.Render("follow: off")
 	if lv.Follow {
 		followIndicator = styles.StatusRunning.Render("follow: on")
 	}
-	header := fmt.Sprintf("  Lines: %d  Scroll: %.0f%%  %s",
-		len(lines), lv.vp.ScrollPercent()*100, followIndicator)
+	lineCount := lv.ring.len()
+	capSuffix := ""
+	if lv.ring.isFull() {
+		capSuffix = fmt.Sprintf("/%d (capped)", lv.ring.cap)
+	}
+	header := fmt.Sprintf("  Lines: %d%s  Scroll: %.0f%%  %s",
+		lineCount, capSuffix, lv.vp.ScrollPercent()*100, followIndicator)
 	if lv.Search != "" {
 		header += fmt.Sprintf("  Search: %q", lv.Search)
 	}

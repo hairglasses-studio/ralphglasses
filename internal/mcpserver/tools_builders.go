@@ -25,6 +25,9 @@ func defaultRegistry() *ToolGroupRegistry {
 	r.Register(NewFuncBuilder("rdcycle", (*Server).buildRdcycleGroup))
 	r.Register(NewFuncBuilder("plugin", (*Server).buildPluginGroup))
 	r.Register(NewFuncBuilder("sweep", (*Server).buildSweepGroup))
+	r.Register(NewFuncBuilder("rc", (*Server).buildRCGroup))
+	r.Register(NewFuncBuilder("autonomy", (*Server).buildAutonomyGroup))
+	r.Register(NewFuncBuilder("workflow", (*Server).buildWorkflowGroup))
 	return r
 }
 
