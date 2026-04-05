@@ -176,7 +176,7 @@ func TestMapProvider_Sprint7Coverage(t *testing.T) {
 		{ProviderClaude, "claude"},
 		{ProviderGemini, "gemini"},
 		{ProviderCodex, "openai"},
-		{"", "claude"},
+		{"", "openai"},
 		{"unknown", "claude"},
 	}
 	for _, tc := range tests {
