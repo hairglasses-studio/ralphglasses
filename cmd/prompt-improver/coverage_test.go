@@ -52,19 +52,19 @@ func TestDispatch_Enhance_ModeDefaultsToLocal(t *testing.T) {
 }
 
 func TestDispatch_Improve_WithQuietFlag(t *testing.T) {
-	// runImprove calls os.Exit when OPENAI_API_KEY is not set, which kills
-	// the entire test process. Skip when the key is absent.
-	if os.Getenv("OPENAI_API_KEY") == "" {
-		t.Skip("OPENAI_API_KEY not set — skipping to avoid os.Exit in runImprove")
+	// runImprove calls os.Exit on API errors, which kills the test process.
+	// Skip unless RALPH_LIVE_API_TESTS is explicitly set (requires valid API key).
+	if os.Getenv("RALPH_LIVE_API_TESTS") == "" {
+		t.Skip("RALPH_LIVE_API_TESTS not set — skipping live API test")
 	}
 	err := dispatch([]string{"improve", "--quiet", "fix the sorting bug in the codebase"})
 	_ = err
 }
 
 func TestDispatch_Improve_WithAllFlags(t *testing.T) {
-	// runImprove calls os.Exit when OPENAI_API_KEY is not set.
-	if os.Getenv("OPENAI_API_KEY") == "" {
-		t.Skip("OPENAI_API_KEY not set — skipping to avoid os.Exit in runImprove")
+	// runImprove calls os.Exit on API errors, which kills the test process.
+	if os.Getenv("RALPH_LIVE_API_TESTS") == "" {
+		t.Skip("RALPH_LIVE_API_TESTS not set — skipping live API test")
 	}
 	err := dispatch([]string{"improve", "--type", "code", "--thinking", "--feedback", "focus on performance", "--provider", "claude", "--quiet", "fix", "the", "bug"})
 	_ = err
