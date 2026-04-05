@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
@@ -115,9 +116,8 @@ func (s *Server) handleA2AAgentCard(_ context.Context, _ mcp.CallToolRequest) (*
 	}), nil
 }
 
-var idCounter uint64
+var idCounter atomic.Uint64
 
 func (s *Server) nextID() uint64 {
-	idCounter++
-	return idCounter
+	return idCounter.Add(1)
 }
