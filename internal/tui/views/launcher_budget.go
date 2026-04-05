@@ -64,7 +64,7 @@ func (m LauncherBudgetModel) Init() tea.Cmd { return nil }
 // Update implements tea.Model.
 func (m LauncherBudgetModel) Update(msg tea.Msg) (LauncherBudgetModel, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "tab":
 			m.focused = (m.focused + 1) % fieldCount

@@ -16,7 +16,7 @@ func (s *stubHandler) Render(width, height int) string {
 	return s.rendered
 }
 
-func (s *stubHandler) HandleKey(_ tea.KeyMsg) (bool, tea.Cmd) {
+func (s *stubHandler) HandleKey(_ tea.KeyPressMsg) (bool, tea.Cmd) {
 	return true, nil
 }
 

@@ -164,7 +164,7 @@ func TestRegisteredView_Types(t *testing.T) {
 		render: func(m *Model, width, height int) string {
 			return "test-render"
 		},
-		handleKey: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+		handleKey: func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		},
 	}

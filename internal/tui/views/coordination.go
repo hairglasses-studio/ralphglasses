@@ -60,7 +60,7 @@ func (m CoordinationModel) Init() tea.Cmd {
 // Update implements tea.Model.
 func (m CoordinationModel) Update(msg tea.Msg) (CoordinationModel, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "r":
 			return m, func() tea.Msg { return CoordinationRefreshMsg{} }

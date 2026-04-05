@@ -49,7 +49,7 @@ func (k KeyMap) HelpGroups() []views.HelpGroup {
 }
 
 // KeyHandler handles a key press for the given model.
-type KeyHandler func(m *Model, msg tea.KeyMsg) (tea.Model, tea.Cmd)
+type KeyHandler func(m *Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd)
 
 // KeyDispatchEntry pairs a binding accessor with its handler.
 type KeyDispatchEntry struct {
@@ -87,7 +87,7 @@ func init() {
 	}
 }
 
-func handleQuit(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleQuit(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.ProcMgr.StopAll(m.Ctx)
 	if m.SessMgr != nil {
 		m.SessMgr.StopAll()
@@ -95,20 +95,20 @@ func handleQuit(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return *m, tea.Quit
 }
 
-func handleCmdMode(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleCmdMode(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.InputMode = ModeCommand
 	m.CommandBuf = ""
 	return *m, nil
 }
 
-func handleFilterMode(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleFilterMode(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.InputMode = ModeFilter
 	m.Filter.Active = true
 	m.Filter.Text = ""
 	return *m, nil
 }
 
-func handleHelp(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleHelp(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.Nav.CurrentView == ViewHelp {
 		return m.popView()
 	}
@@ -116,18 +116,18 @@ func handleHelp(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return *m, nil
 }
 
-func handleLoopPanel(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleLoopPanel(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.pushView(ViewLoopList, "Loops")
 	return *m, m.loopListCmd()
 }
 
-func handleLoopControlPanel(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleLoopControlPanel(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.refreshLoopControlData()
 	m.pushView(ViewLoopControl, "Loop Control")
 	return *m, nil
 }
 
-func handleObservationView(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleObservationView(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.Sel.RepoIdx < 0 || m.Sel.RepoIdx >= len(m.Repos) {
 		return *m, nil
 	}
@@ -135,7 +135,7 @@ func handleObservationView(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return *m, nil
 }
 
-func handleEventLogView(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleEventLogView(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.EventLog == nil {
 		elv := views.NewEventLogView()
 		m.EventLog = &elv
@@ -163,7 +163,7 @@ func handleEventLogView(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return *m, nil
 }
 
-func handleEscape(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleEscape(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.ShowLoopPanel {
 		m.ShowLoopPanel = false
 		return *m, nil
@@ -176,36 +176,36 @@ func handleEscape(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m.popView()
 }
 
-func handleRefresh(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleRefresh(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return *m, m.scanRepos()
 }
 
-func handleTab1(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleTab1(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.switchTab(0, ViewOverview, "Repos")
 	return *m, nil
 }
 
-func handleTab2(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleTab2(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.switchTab(1, ViewSessions, "Sessions")
 	return *m, nil
 }
 
-func handleTab3(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleTab3(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.switchTab(2, ViewTeams, "Teams")
 	return *m, nil
 }
 
-func handleTab4(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleTab4(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.switchTab(3, ViewFleet, "Fleet")
 	return *m, nil
 }
 
-func handleRDCycleView(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleRDCycleView(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.pushView(ViewRDCycle, "R&D Cycle")
 	return *m, nil
 }
 
-func handleGlobalSearch(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleGlobalSearch(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.InputMode = ModeSearch
 	m.SearchInput.Activate()
 	return *m, nil

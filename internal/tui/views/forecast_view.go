@@ -134,7 +134,7 @@ func (v ForecastView) Init() tea.Cmd { return nil }
 // Update implements tea.Model.
 func (v ForecastView) Update(msg tea.Msg) (ForecastView, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "r":
 			return v, func() tea.Msg { return ForecastRefreshMsg{} }

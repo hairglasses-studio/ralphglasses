@@ -167,7 +167,7 @@ func (v *AnalyticsView) RenderAt(width, height int) string {
 
 // HandleKey processes analytics-specific key events.
 // Returns true if the key was handled, plus an optional tea.Cmd.
-func (v *AnalyticsView) HandleKey(msg tea.KeyMsg) (bool, tea.Cmd) {
+func (v *AnalyticsView) HandleKey(msg tea.KeyPressMsg) (bool, tea.Cmd) {
 	switch msg.String() {
 	case "tab":
 		v.panel = AnalyticsPanel((int(v.panel) + 1) % analyticsPanelCount)

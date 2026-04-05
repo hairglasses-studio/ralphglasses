@@ -90,7 +90,7 @@ func TestRecoveryView_HandleKey_Tab(t *testing.T) {
 	}
 
 	// Simulate Tab key (using KeyMsg with "tab" string).
-	// We can't easily construct tea.KeyMsg, so test via panel manipulation.
+	// We can't easily construct tea.KeyPressMsg, so test via panel manipulation.
 	v.panel = RecoveryPanel((int(v.panel) + 1) % recoveryPanelCount)
 	if v.panel != PanelSessions {
 		t.Errorf("expected PanelSessions after tab, got %d", v.panel)

@@ -14,19 +14,19 @@ import (
 // --- Overview (repo list) dispatch table ---
 
 var overviewKeys = []ViewKeyEntry{
-	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.Table.MoveDown()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.Table.MoveUp()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Sort }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Sort }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.Table.CycleSort()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		row := m.Table.SelectedRow()
 		if row != nil {
 			m.Sel.RepoIdx = m.findRepoByName(row[0])
@@ -36,20 +36,20 @@ var overviewKeys = []ViewKeyEntry{
 		}
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.StartLoop }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.StartLoop }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.startSelectedLoop()
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.StopAction }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.StopAction }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.confirmStopSelectedLoop()
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PauseLoop }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PauseLoop }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.togglePauseSelected()
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Space }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Space }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.Table.ToggleSelect()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.ActionsMenu }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.ActionsMenu }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.Modals.ActionMenu = &components.ActionMenu{
 			Title:  "Actions",
 			Items:  components.OverviewActions(),
@@ -63,31 +63,31 @@ var overviewKeys = []ViewKeyEntry{
 // --- Repo detail dispatch table ---
 
 var detailKeys = []ViewKeyEntry{
-	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.RepoDetailView.Viewport.ScrollDown()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.RepoDetailView.Viewport.ScrollUp()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.RepoDetailView.Viewport.GotoBottom()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.RepoDetailView.Viewport.GotoTop()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.RepoDetailView.Viewport.PageUp()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.RepoDetailView.Viewport.PageDown()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LogOffset = 0
 		m.LogView = views.NewLogView()
 		m.LogView.SetDimensions(m.Width, m.Height)
@@ -95,7 +95,7 @@ var detailKeys = []ViewKeyEntry{
 		m.pushView(ViewLogs, "Logs")
 		return *m, loadLogCmd(repoPath)
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.EditConfig }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.EditConfig }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		repo := m.Repos[m.Sel.RepoIdx]
 		if repo.Config != nil {
 			m.ConfigEdit = views.NewConfigEditor(repo.Config)
@@ -106,10 +106,10 @@ var detailKeys = []ViewKeyEntry{
 		}
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.StartLoop }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.StartLoop }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.startLoop(m.Sel.RepoIdx)
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.StopAction }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.StopAction }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
 			m.Modals.ConfirmDialog = &components.ConfirmDialog{
 				Title:   "Confirm Stop",
@@ -122,14 +122,14 @@ var detailKeys = []ViewKeyEntry{
 		}
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PauseLoop }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PauseLoop }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.togglePause(m.Sel.RepoIdx)
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.DiffView }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.DiffView }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.pushView(ViewDiff, "Diff")
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.ActionsMenu }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.ActionsMenu }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.Modals.ActionMenu = &components.ActionMenu{
 			Title:  "Repo Actions",
 			Items:  components.RepoDetailActions(),
@@ -138,17 +138,17 @@ var detailKeys = []ViewKeyEntry{
 		}
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.LaunchSession }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.LaunchSession }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		repo := m.Repos[m.Sel.RepoIdx]
 		m.Modals.Launcher = components.NewSessionLauncher(repo.Path, repo.Name)
 		m.Modals.Launcher.Width = m.Width
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.TimelineView }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.TimelineView }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.pushView(ViewTimeline, "Timeline")
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.LoopHealth }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.LoopHealth }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.pushView(ViewLoopHealth, "Loop Health")
 		return *m, nil
 	}},
@@ -157,31 +157,31 @@ var detailKeys = []ViewKeyEntry{
 // --- Log view dispatch table ---
 
 var logKeys = []ViewKeyEntry{
-	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LogView.ScrollDown()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LogView.ScrollUp()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LogView.ScrollToEnd()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LogView.ScrollToStart()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.FollowToggle }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.FollowToggle }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LogView.ToggleFollow()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LogView.PageUp()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LogView.PageDown()
 		return *m, nil
 	}},
@@ -189,150 +189,150 @@ var logKeys = []ViewKeyEntry{
 
 // --- View-specific key handler methods ---
 
-func (m Model) handleOverviewKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleOverviewKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return dispatchViewKeys(overviewKeys, &m, msg)
 }
 
-func (m Model) handleDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleDetailKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.Sel.RepoIdx < 0 || m.Sel.RepoIdx >= len(m.Repos) {
 		return m, nil
 	}
 	return dispatchViewKeys(detailKeys, &m, msg)
 }
 
-func (m Model) handleLogKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleLogKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return dispatchViewKeys(logKeys, &m, msg)
 }
 
 // --- Help view dispatch table ---
 
 var helpKeys = []ViewKeyEntry{
-	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.HelpView.Viewport.ScrollDown()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.HelpView.Viewport.ScrollUp()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.HelpView.Viewport.GotoBottom()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.HelpView.Viewport.GotoTop()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.HelpView.Viewport.PageUp()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.HelpView.Viewport.PageDown()
 		return *m, nil
 	}},
 }
 
-func (m Model) handleHelpKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return dispatchViewKeys(helpKeys, &m, msg)
 }
 
 // --- Loop health view dispatch table ---
 
 var loopHealthKeys = []ViewKeyEntry{
-	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LoopHealthView.Viewport.ScrollDown()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LoopHealthView.Viewport.ScrollUp()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LoopHealthView.Viewport.GotoBottom()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LoopHealthView.Viewport.GotoTop()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LoopHealthView.Viewport.PageUp()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.LoopHealthView.Viewport.PageDown()
 		return *m, nil
 	}},
 }
 
-func (m Model) handleLoopHealthKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleLoopHealthKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return dispatchViewKeys(loopHealthKeys, &m, msg)
 }
 
 // --- Observation view dispatch table ---
 
 var observationKeys = []ViewKeyEntry{
-	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.ObservationViewport.Viewport.ScrollDown()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.ObservationViewport.Viewport.ScrollUp()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.ObservationViewport.Viewport.GotoBottom()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.ObservationViewport.Viewport.GotoTop()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.ObservationViewport.Viewport.PageUp()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.ObservationViewport.Viewport.PageDown()
 		return *m, nil
 	}},
 }
 
-func (m Model) handleObservationKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleObservationKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return dispatchViewKeys(observationKeys, &m, msg)
 }
 
 // --- R&D Cycle view dispatch table ---
 
 var rdCycleKeys = []ViewKeyEntry{
-	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.RDCycleView.Viewport.ScrollDown()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.RDCycleView.Viewport.ScrollUp()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoEnd }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.RDCycleView.Viewport.GotoBottom()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.GotoStart }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.RDCycleView.Viewport.GotoTop()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PageUp }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.RDCycleView.Viewport.PageUp()
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.PageDown }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.RDCycleView.Viewport.PageDown()
 		return *m, nil
 	}},
 }
 
-func (m Model) handleRDCycleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleRDCycleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return dispatchViewKeys(rdCycleKeys, &m, msg)
 }
 

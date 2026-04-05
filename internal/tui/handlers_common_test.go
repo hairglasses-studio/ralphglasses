@@ -20,7 +20,7 @@ func TestDispatchViewKeys_BindingMatch(t *testing.T) {
 	entries := []ViewKeyEntry{
 		{
 			Binding: func(km *KeyMap) key.Binding { return km.Enter },
-			Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				called = true
 				return *m, nil
 			},
@@ -38,8 +38,8 @@ func TestDispatchViewKeys_MatchFunc(t *testing.T) {
 	called := false
 	entries := []ViewKeyEntry{
 		{
-			Match: func(msg tea.KeyMsg) bool { return msg.Key().Code == tea.KeyBackspace },
-			Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			Match: func(msg tea.KeyPressMsg) bool { return msg.Key().Code == tea.KeyBackspace },
+			Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				called = true
 				return *m, nil
 			},
@@ -57,7 +57,7 @@ func TestDispatchViewKeys_NoMatch(t *testing.T) {
 	entries := []ViewKeyEntry{
 		{
 			Binding: func(km *KeyMap) key.Binding { return km.Enter },
-			Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+			Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				t.Error("handler should not be called")
 				return *m, nil
 			},
@@ -76,12 +76,12 @@ func TestDispatchViewKeys_FirstMatchWins(t *testing.T) {
 	order := ""
 	entries := []ViewKeyEntry{
 		{
-			Match:   func(msg tea.KeyMsg) bool { return true },
-			Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { order += "A"; return *m, nil },
+			Match:   func(msg tea.KeyPressMsg) bool { return true },
+			Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) { order += "A"; return *m, nil },
 		},
 		{
-			Match:   func(msg tea.KeyMsg) bool { return true },
-			Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) { order += "B"; return *m, nil },
+			Match:   func(msg tea.KeyPressMsg) bool { return true },
+			Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) { order += "B"; return *m, nil },
 		},
 	}
 	m := NewModel("/tmp/test", nil)
