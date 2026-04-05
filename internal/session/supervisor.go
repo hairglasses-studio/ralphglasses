@@ -49,6 +49,13 @@ type Supervisor struct {
 	tickCount          int
 	startedAt          time.Time
 	consecutiveFailures int
+
+	// Crash recovery: detects dead Claude Code sessions and orchestrates resume.
+	crashRecovery        *CrashRecoveryOrchestrator
+	crashCheckWindow     time.Duration // default 4h
+	crashCheckThreshold  int           // default 2
+	lastCrashCheck       time.Time
+	crashCheckInterval   time.Duration // default 5m — don't check every tick
 }
 
 // SupervisorState is persisted to .ralph/supervisor_state.json.
@@ -103,6 +110,71 @@ func (s *Supervisor) SetSprintPlanner(sp *SprintPlanner) { s.mu.Lock(); s.planne
 
 // SetBudget sets the budget envelope for real-time cost tracking.
 func (s *Supervisor) SetBudget(b *BudgetEnvelope) { s.mu.Lock(); s.budget = b; s.mu.Unlock() }
+
+// SetCrashRecovery attaches a crash recovery orchestrator to the supervisor tick loop.
+func (s *Supervisor) SetCrashRecovery(cr *CrashRecoveryOrchestrator) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.crashRecovery = cr
+	if s.crashCheckWindow == 0 {
+		s.crashCheckWindow = 4 * time.Hour
+	}
+	if s.crashCheckThreshold == 0 {
+		s.crashCheckThreshold = 2
+	}
+	if s.crashCheckInterval == 0 {
+		s.crashCheckInterval = 5 * time.Minute
+	}
+}
+
+// checkForClaudeCrash runs crash detection if enough time has passed since last check.
+func (s *Supervisor) checkForClaudeCrash(ctx context.Context) {
+	s.mu.Lock()
+	cr := s.crashRecovery
+	window := s.crashCheckWindow
+	threshold := s.crashCheckThreshold
+	interval := s.crashCheckInterval
+	lastCheck := s.lastCrashCheck
+	s.mu.Unlock()
+
+	if cr == nil {
+		return
+	}
+	if time.Since(lastCheck) < interval {
+		return
+	}
+
+	plan, err := cr.DetectCrash(ctx, window, threshold)
+	if err != nil {
+		slog.Warn("supervisor: crash detection failed", "error", err)
+		return
+	}
+
+	s.mu.Lock()
+	s.lastCrashCheck = time.Now()
+	s.mu.Unlock()
+
+	if plan.DeadCount >= threshold {
+		slog.Info("supervisor: Claude Code crash detected",
+			"dead", plan.DeadCount,
+			"alive", plan.AliveCount,
+			"severity", plan.Severity,
+			"recoverable", len(plan.SessionsToResume),
+		)
+
+		if s.bus != nil {
+			s.bus.Publish(events.Event{
+				Type:      events.SessionRecovered,
+				Timestamp: time.Now(),
+				Data: map[string]any{
+					"action":   "crash_detected",
+					"dead":     plan.DeadCount,
+					"severity": plan.Severity,
+				},
+			})
+		}
+	}
+}
 
 // Start launches the supervisor goroutine. Idempotent.
 func (s *Supervisor) Start(ctx context.Context) error {
@@ -198,6 +270,9 @@ func (s *Supervisor) tick(ctx context.Context) {
 		}
 		return
 	}
+
+	// Check for Claude Code session crashes (rate-limited internally).
+	s.checkForClaudeCrash(ctx)
 
 	// Check for stalled sessions before health evaluation.
 	s.mu.Lock()

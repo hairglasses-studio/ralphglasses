@@ -173,10 +173,11 @@ update_ralphrc_key() {
 RALPHRC="$PROJECT_DIR/.ralphrc"
 
 # --- Build command ---
-CMD=("$RALPH_CMD")
-CMD+=("--calls" "$CALLS_PER_HOUR")
-CMD+=("--timeout" "$TIMEOUT_MINUTES")
-CMD+=("--auto-reset-circuit")
+CMD=("$RALPH_CMD" "marathon")
+CMD+=("--budget" "$BUDGET")
+CMD+=("--duration" "${DURATION_HOURS}h")
+CMD+=("--checkpoint-interval" "${CHECKPOINT_HOURS}h")
+CMD+=("--repo" "$PROJECT_DIR")
 
 if $MONITOR; then
     echo "WARNING: --monitor is incompatible with marathon supervisor (tmux fork breaks PID tracking)." >&2
