@@ -634,8 +634,8 @@ func TestRunSessionOutput_CostSource(t *testing.T) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.CostSource != "api_key" {
-		t.Fatalf("expected cost_source=api_key, got %s", s.CostSource)
+	if s.CostSource != "structured" {
+		t.Fatalf("expected cost_source=structured, got %s", s.CostSource)
 	}
 	if len(s.CostHistory) != 1 {
 		t.Fatalf("expected 1 cost history entry, got %d", len(s.CostHistory))

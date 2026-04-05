@@ -48,8 +48,8 @@ func TestCollectChildPIDs_SameProcessGroup(t *testing.T) {
 // TestCollectChildPIDs_DeadPID returns nil for a PID that does not exist.
 func TestCollectChildPIDs_DeadPID(t *testing.T) {
 	pids := CollectChildPIDs(1_000_000_000)
-	if pids != nil {
-		t.Errorf("expected nil for non-existent PID, got %v", pids)
+	if len(pids) != 0 {
+		t.Errorf("expected empty for non-existent PID, got %v", pids)
 	}
 }
 
