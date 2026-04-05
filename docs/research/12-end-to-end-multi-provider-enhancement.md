@@ -352,7 +352,7 @@ Cannot parallelize:
 
 ## Appendix: Key File Paths
 
-All paths relative to `/Users/mitchnotmitchell/hairglasses-studio/ralphglasses/`:
+All paths relative to the repository root:
 
 | Purpose | Path |
 |---------|------|

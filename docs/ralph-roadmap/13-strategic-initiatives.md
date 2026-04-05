@@ -299,7 +299,7 @@ Baseline: 503/1,143 tasks complete (44.0%). 640 remaining across 30 phases. Velo
 - **03 found the cascade confidence threshold is 0.7 (heuristic)** because the `DecisionModel` needs 50+ multi-provider observations to train, and all 36 observations are Claude-only. The calibrated path is untested.
 - **08-deep-dive found L3 requires ~100 tasks across Phases 10.5, 13, 17, 14, 15** -- all currently at 0%.
 - **04 found the shared `CircuitBreaker` in `HybridEngine`** trips for all providers when one is flaky (S1 R-13).
-- **03 found the supervisor ran for 43 minutes on macOS** (state file has `/Users/mitchnotmitchell/` path) -- it has never been validated on the Manjaro workstation.
+- **03 found the supervisor ran for 43 minutes on macOS** (state file has `$HOME/` path) -- it has never been validated on the Manjaro workstation.
 
 ### Scope
 
