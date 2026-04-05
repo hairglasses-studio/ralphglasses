@@ -25,6 +25,9 @@ type ConfigOptimizer struct {
 	// considered for exploitation. Below this, the arm is always explored.
 	minTrials int
 
+	// windowSize is the sliding window size used when creating new arms.
+	windowSize int
+
 	// suggestions accumulates pending suggestions until consumed.
 	suggestions []ConfigSuggestion
 
@@ -102,6 +105,7 @@ func NewConfigOptimizer(cfg ConfigOptimizerConfig) *ConfigOptimizer {
 		arms:        make(map[string]*ConfigArm),
 		exploration: cfg.Exploration,
 		minTrials:   cfg.MinTrials,
+		windowSize:  cfg.WindowSize,
 		rng:         rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
@@ -123,7 +127,7 @@ func (co *ConfigOptimizer) RecordOutcome(provider, taskType string, success bool
 			ID:         key,
 			Provider:   provider,
 			TaskType:   taskType,
-			windowSize: 20,
+			windowSize: co.windowSize,
 		}
 		co.arms[key] = arm
 	}
@@ -257,7 +261,7 @@ func (co *ConfigOptimizer) SuggestChanges() []ConfigSuggestion {
 				bestScore = score
 				bestArm = arm
 			}
-			if arm.Trials > mostTrials {
+			if arm.Trials > mostTrials || (arm.Trials == mostTrials && mostUsedArm != nil && co.armScore(arm) < co.armScore(mostUsedArm)) {
 				mostTrials = arm.Trials
 				mostUsedArm = arm
 			}
