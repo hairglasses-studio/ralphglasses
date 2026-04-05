@@ -219,6 +219,14 @@ func (s *SQLiteStore) ListSessions(ctx context.Context, opts ListOpts) ([]*Sessi
 		query += " AND status = ?"
 		args = append(args, string(opts.Status))
 	}
+	if !opts.Since.IsZero() {
+		query += " AND created_at >= ?"
+		args = append(args, opts.Since.Format("2006-01-02 15:04:05"))
+	}
+	if !opts.Until.IsZero() {
+		query += " AND created_at <= ?"
+		args = append(args, opts.Until.Format("2006-01-02 15:04:05"))
+	}
 
 	query += " ORDER BY created_at DESC"
 

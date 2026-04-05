@@ -140,7 +140,7 @@ Note: runmylife has CLAUDE.md + AGENTS.md + Makefile + go.mod but lacks .ralphrc
 |----------------|----------|-------|------|
 | v0.1.0 (via `replace ../mcpkit`) | Relative | dotfiles-mcp, systemd-mcp, tmux-mcp, process-mcp | LOW (all resolve to HEAD) |
 | v0.0.0 (via `replace ../mcpkit`) | Relative | hg-mcp | LOW (resolves to HEAD) |
-| v0.0.0-00010101 (via `replace /home/hg/...`) | Absolute | input-mcp, shader-mcp | LOW (deprecated repos) |
+| v0.0.0-00010101 (via `replace ~/...`) | Absolute | input-mcp, shader-mcp | LOW (deprecated repos) |
 | v0.1.1 (pinned, no replace) | None | claudekit | MEDIUM (may drift behind HEAD) |
 | v0.0.0-20260402 (pseudo-version) | None | hyprland-mcp | LOW (deprecated) |
 
@@ -155,8 +155,8 @@ Note: runmylife has CLAUDE.md + AGENTS.md + Makefile + go.mod but lacks .ralphrc
 | tmux-mcp | mcpkit | `../mcpkit` | Relative (development) |
 | process-mcp | mcpkit | `../mcpkit` | Relative (development) |
 | hg-mcp | mcpkit | `../mcpkit` | Relative (development) |
-| input-mcp | mcpkit | `/home/hg/hairglasses-studio/mcpkit` | Absolute (CRITICAL: breaks portability) |
-| shader-mcp | mcpkit | `/home/hg/hairglasses-studio/mcpkit` | Absolute (CRITICAL: breaks portability) |
+| input-mcp | mcpkit | `~/hairglasses-studio/mcpkit` | Absolute (CRITICAL: breaks portability) |
+| shader-mcp | mcpkit | `~/hairglasses-studio/mcpkit` | Absolute (CRITICAL: breaks portability) |
 | webb | webb (self) | `/Users/mitch/hairglasses/webb` | Absolute macOS (CRITICAL: wrong platform) |
 | webbb | webb (self) | `/Users/mitch/hairglasses/webb` | Absolute macOS (CRITICAL: wrong platform) |
 

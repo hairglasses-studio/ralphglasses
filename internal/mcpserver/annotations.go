@@ -233,6 +233,14 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_meta_roadmap_next_task": {Title: "Meta Roadmap Next Task", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_roadmap_cross_repo":   {Title: "Cross-Repo Roadmap", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_roadmap_assign_loop":  {Title: "Assign Roadmap Loop", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+
+	// ── recovery ─────────────────────────────────────────────────────────
+	"ralphglasses_session_triage":   {Title: "Session Triage", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_session_salvage":  {Title: "Session Salvage", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_recovery_plan":    {Title: "Recovery Plan", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_recovery_execute": {Title: "Recovery Execute", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_incident_report":  {Title: "Incident Report", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_session_discover": {Title: "Session Discover", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
 }
 
 // GetAnnotation returns the ToolAnnotation for a named tool, or an empty

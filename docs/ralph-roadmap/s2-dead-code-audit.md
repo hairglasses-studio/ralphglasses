@@ -246,9 +246,9 @@ These are live handlers mixed into tool-registration files. They should be extra
 
 ## Appendix: Key File Locations
 
-- Dead code: `/home/hg/hairglasses-studio/ralphglasses/internal/tui/views/fleet_dashboard.go`
-- Convention violations: `/home/hg/hairglasses-studio/ralphglasses/internal/mcpserver/tools_fleet.go`, `tools_session.go`
-- Unreachable ViewMode: `/home/hg/hairglasses-studio/ralphglasses/internal/tui/app_init.go:47`
-- Unused ModalStack: `/home/hg/hairglasses-studio/ralphglasses/internal/tui/components/modal.go`
-- Duplicate Blackboard: `/home/hg/hairglasses-studio/ralphglasses/internal/session/blackboard.go` (vs `internal/blackboard/blackboard.go`)
-- Duplicate BudgetPool: `/home/hg/hairglasses-studio/ralphglasses/internal/session/budget_pool.go` (vs `internal/fleet/pool/budget_pool.go`)
+- Dead code: `~/hairglasses-studio/ralphglasses/internal/tui/views/fleet_dashboard.go`
+- Convention violations: `~/hairglasses-studio/ralphglasses/internal/mcpserver/tools_fleet.go`, `tools_session.go`
+- Unreachable ViewMode: `~/hairglasses-studio/ralphglasses/internal/tui/app_init.go:47`
+- Unused ModalStack: `~/hairglasses-studio/ralphglasses/internal/tui/components/modal.go`
+- Duplicate Blackboard: `~/hairglasses-studio/ralphglasses/internal/session/blackboard.go` (vs `internal/blackboard/blackboard.go`)
+- Duplicate BudgetPool: `~/hairglasses-studio/ralphglasses/internal/session/budget_pool.go` (vs `internal/fleet/pool/budget_pool.go`)
