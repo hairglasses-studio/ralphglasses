@@ -19,6 +19,8 @@ func defaultRegistry() *ToolGroupRegistry {
 	r.Register(NewFuncBuilder("team", (*Server).buildTeamGroup))
 	r.Register(NewFuncBuilder("awesome", (*Server).buildAwesomeGroup))
 	r.Register(NewFuncBuilder("advanced", (*Server).buildAdvancedGroup))
+	r.Register(NewFuncBuilder("events", (*Server).buildEventsGroup))
+	r.Register(NewFuncBuilder("feedback", (*Server).buildFeedbackGroup))
 	r.Register(NewFuncBuilder("eval", (*Server).buildEvalGroup))
 	r.Register(NewFuncBuilder("fleet_h", (*Server).buildFleetHGroup))
 	r.Register(NewFuncBuilder("observability", (*Server).buildObservabilityGroup))

@@ -243,10 +243,10 @@ func (s *Server) buildWorkflowGroup() ToolGroup {
 	}
 }
 
-func (s *Server) buildAdvancedGroup() ToolGroup {
+func (s *Server) buildEventsGroup() ToolGroup {
 	return ToolGroup{
-		Name:        "advanced",
-		Description: "Advanced: events, feedback, provider recommend, journals, tool benchmark, ML model status, circuit breaker",
+		Name:        "events",
+		Description: "Fleet event bus: query and poll for session, cost, loop, and circuit events",
 		Tools: []ToolEntry{
 			{mcp.NewTool("ralphglasses_event_list",
 				mcp.WithDescription("Query recent fleet events from the event bus"),
@@ -266,6 +266,15 @@ func (s *Server) buildAdvancedGroup() ToolGroup {
 				mcp.WithNumber("limit", mcp.Description("Max events (default 20, max 50)")),
 				mcp.WithString("type", mcp.Description("Filter by event type (e.g. session.started, cost.update)")),
 			), s.handleEventPoll},
+		},
+	}
+}
+
+func (s *Server) buildFeedbackGroup() ToolGroup {
+	return ToolGroup{
+		Name:        "feedback",
+		Description: "Provider feedback: performance profiles, recommendations, bandit stats, confidence calibration",
+		Tools: []ToolEntry{
 			{mcp.NewTool("ralphglasses_feedback_profiles",
 				mcp.WithDescription("View feedback profiles: per-task-type and per-provider performance data from journal analysis. Auto-seeds from observations when empty."),
 				mcp.WithString("action", mcp.Description("Action: 'get' (default) returns profiles, 'seed' forces re-seed from observations")),
@@ -275,6 +284,21 @@ func (s *Server) buildAdvancedGroup() ToolGroup {
 				mcp.WithDescription("Recommend best provider + model + budget for a task based on feedback profiles and cost normalization"),
 				mcp.WithString("task", mcp.Required(), mcp.Description("Task description (e.g. 'fix lint errors', 'add search feature')")),
 			), s.handleProviderRecommend},
+			{mcp.NewTool("ralphglasses_bandit_status",
+				mcp.WithDescription("View multi-armed bandit arm statistics for provider selection"),
+			), s.handleBanditStatus},
+			{mcp.NewTool("ralphglasses_confidence_calibration",
+				mcp.WithDescription("View calibrated confidence model weights, training status, and feature importances"),
+			), s.handleConfidenceCalibration},
+		},
+	}
+}
+
+func (s *Server) buildAdvancedGroup() ToolGroup {
+	return ToolGroup{
+		Name:        "advanced",
+		Description: "Advanced: journals, tool benchmark, circuit breaker reset",
+		Tools: []ToolEntry{
 			{mcp.NewTool("ralphglasses_tool_benchmark",
 				mcp.WithDescription("Per-tool performance benchmarks: latency percentiles, success rates, and regression detection"),
 				mcp.WithString("tool", mcp.Description("Filter to a specific tool name")),
@@ -300,12 +324,6 @@ func (s *Server) buildAdvancedGroup() ToolGroup {
 				mcp.WithNumber("keep", mcp.Description("Number of entries to keep (default 100)")),
 				mcp.WithString("dry_run", mcp.Description("Preview only, don't modify: true/false (default: true)")),
 			), s.handleJournalPrune},
-			{mcp.NewTool("ralphglasses_bandit_status",
-				mcp.WithDescription("View multi-armed bandit arm statistics for provider selection"),
-			), s.handleBanditStatus},
-			{mcp.NewTool("ralphglasses_confidence_calibration",
-				mcp.WithDescription("View calibrated confidence model weights, training status, and feature importances"),
-			), s.handleConfidenceCalibration},
 			{mcp.NewTool("ralphglasses_circuit_reset",
 				mcp.WithDescription("Reset circuit breaker state for a named service, re-enabling requests after failures. Use 'enhancer' for the LLM prompt enhancer circuit breaker, or a repo name for its file-based circuit breaker."),
 				mcp.WithString("service", mcp.Required(), mcp.Description("Service/circuit to reset: 'enhancer' or a repo name")),

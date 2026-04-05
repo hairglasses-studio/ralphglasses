@@ -134,7 +134,7 @@ func NewServerWithBus(scanPath string, bus *events.Bus) *Server {
 // ToolGroupNames lists all valid tool group names in registration order.
 var ToolGroupNames = []string{
 	"core", "session", "loop", "prompt", "fleet",
-	"repo", "roadmap", "team", "awesome", "advanced", "eval", "fleet_h",
+	"repo", "roadmap", "team", "awesome", "advanced", "events", "feedback", "eval", "fleet_h",
 	"observability", "rdcycle", "plugin", "sweep",
 	"rc", "autonomy", "workflow", "docs", "recovery", "promptdj", "a2a",
 }
