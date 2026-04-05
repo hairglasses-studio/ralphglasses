@@ -34,7 +34,7 @@ func TestHandleCircuitReset_MissingService(t *testing.T) {
 	}
 }
 
-func TestHandleCircuitReset_Enhancer(t *testing.T) {
+func TestHandleCircuitReset_Enhancer_NoEngine(t *testing.T) {
 	t.Parallel()
 	srv := &Server{ScanPath: t.TempDir()}
 
@@ -50,12 +50,9 @@ func TestHandleCircuitReset_Enhancer(t *testing.T) {
 	if err := json.Unmarshal([]byte(text), &body); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	// Engine always initializes (even without API key), so reset succeeds.
-	if body["status"] != "reset" {
-		t.Errorf("expected status=reset, got %v", body["status"])
-	}
-	if body["service"] != "enhancer" {
-		t.Errorf("expected service=enhancer, got %v", body["service"])
+	// Without an API key or LLM engine, reset returns provider-unavailable error.
+	if body["error_code"] != "PROVIDER_UNAVAILABLE" {
+		t.Errorf("expected error_code=PROVIDER_UNAVAILABLE, got %v", body["error_code"])
 	}
 }
 
