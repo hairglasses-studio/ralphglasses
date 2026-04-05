@@ -227,7 +227,7 @@ hoursEst = (totalBudget - totalUSD) / burnRate
 
 ### 4.3 `mcpkit/finops` + `rdcycle/profiles` -- Budget Profiles & Scoped Tracking
 
-**Repository:** Local (`/Users/mitchnotmitchell/hairglasses-studio/mcpkit`)
+**Repository:** Local (`$HOME/hairglasses-studio/mcpkit`)
 **Language:** Go
 **Relevance:** Same org, designed to compose with ralph. Budget presets, scoped budgets, windowed tracking.
 

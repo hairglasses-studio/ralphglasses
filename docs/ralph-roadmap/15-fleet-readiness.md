@@ -157,8 +157,8 @@ Note: runmylife has CLAUDE.md + AGENTS.md + Makefile + go.mod but lacks .ralphrc
 | hg-mcp | mcpkit | `../mcpkit` | Relative (development) |
 | input-mcp | mcpkit | `~/hairglasses-studio/mcpkit` | Absolute (CRITICAL: breaks portability) |
 | shader-mcp | mcpkit | `~/hairglasses-studio/mcpkit` | Absolute (CRITICAL: breaks portability) |
-| webb | webb (self) | `/Users/mitch/hairglasses/webb` | Absolute macOS (CRITICAL: wrong platform) |
-| webbb | webb (self) | `/Users/mitch/hairglasses/webb` | Absolute macOS (CRITICAL: wrong platform) |
+| webb | webb (self) | `$HOME/hairglasses/webb` | Absolute macOS (CRITICAL: wrong platform) |
+| webbb | webb (self) | `$HOME/hairglasses/webb` | Absolute macOS (CRITICAL: wrong platform) |
 
 **5 repos** use `../mcpkit` relative replaces (consistent dev-mode pattern).
 **4 repos** use absolute paths that break on any other machine (2 deprecated + 2 legacy).

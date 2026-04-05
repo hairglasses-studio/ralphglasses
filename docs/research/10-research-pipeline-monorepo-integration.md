@@ -263,7 +263,7 @@ ROADMAP items: **6.2** (R&D Cycle Orchestrator), **8.5** (Self-Improvement Engin
 | 13 | Design SQLite schema for knowledge graph | `internal/knowledge/schema.go` (new), `internal/knowledge/store.go` (new) | M | High -- storage layer for 8.6 | 8.6.2 |
 | 14 | Extract improvement patterns from journal | `internal/session/patterns.go` (new, extends journal.go) | M | High -- data for 8.5.2, 8.5.3 | 8.5.2 |
 | 15 | Add MCP tools: `ralphglasses_rdcycle_run`, `ralphglasses_rdcycle_status` | `internal/mcpserver/tools.go` | M | High -- expose R&D cycle via MCP | 6.2 |
-| 16 | Create `go.work` workspace file for hairglasses-studio | `/Users/mitchnotmitchell/hairglasses-studio/go.work` (new) | S | High -- enables cross-repo dev | Monorepo |
+| 16 | Create `go.work` workspace file for hairglasses-studio | `$HOME/hairglasses-studio/go.work` (new) | S | High -- enables cross-repo dev | Monorepo |
 
 ### 5.3 Strategic Actions (large effort, high impact, longer horizon)
 

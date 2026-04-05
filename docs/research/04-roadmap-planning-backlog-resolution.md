@@ -213,7 +213,7 @@ Tools like Apache Airflow, Prefect, and dbt demonstrate mature DAG patterns:
 ### Recommendation 1: Mark Implemented Phase 0.5 Items as Complete
 
 **Target files:**
-- `/Users/mitchnotmitchell/hairglasses-studio/ralphglasses/ROADMAP.md` (lines 41-68, 83-88)
+- `ralphglasses/ROADMAP.md` (lines 41-68, 83-88)
 
 **Effort:** Small (30 min)
 **Impact:** High -- unblocks dependency chain for Phase 1.8 and corrects analyzer output
@@ -224,7 +224,7 @@ Tools like Apache Airflow, Prefect, and dbt demonstrate mature DAG patterns:
 ### Recommendation 2: Add Section-Level Dependency Parsing to `internal/roadmap/parse.go`
 
 **Target file:**
-- `/Users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/roadmap/parse.go` (lines 96-102)
+- `ralphglasses/internal/roadmap/parse.go` (lines 96-102)
 
 **Effort:** Medium (2-4 hours)
 **Impact:** High -- fixes ~150 tasks incorrectly marked as "ready" by the analyzer
@@ -246,7 +246,7 @@ Then in `Analyze()`, when checking if a task's deps are ready, also check the en
 ### Recommendation 3: Add Phase Filtering to the Parser to Exclude Non-Phase Sections
 
 **Target file:**
-- `/Users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/roadmap/parse.go` (lines 80-93)
+- `ralphglasses/internal/roadmap/parse.go` (lines 80-93)
 
 **Effort:** Small (1 hour)
 **Impact:** Medium -- prevents "External Projects of Interest" and "Dependency Chain" from being treated as phases
@@ -265,8 +265,8 @@ if trimmed == "---" && curPhase != nil {
 ### Recommendation 4: Add DAG Validation and Missing-Edge Detection
 
 **Target files:**
-- `/Users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/roadmap/analyze.go` (new function)
-- `/Users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/roadmap/analyze_test.go` (new tests)
+- `ralphglasses/internal/roadmap/analyze.go` (new function)
+- `ralphglasses/internal/roadmap/analyze_test.go` (new tests)
 
 **Effort:** Medium (3-5 hours)
 **Impact:** High -- catches missing edges and circular dependencies before they cause planning errors
@@ -287,7 +287,7 @@ Wire this into `roadmap_analyze` MCP tool output as a new `Validation` field.
 ### Recommendation 5: Deduplicate Marathon Items Between Phase 0.5.10 and Phase 4.8
 
 **Target file:**
-- `/Users/mitchnotmitchell/hairglasses-studio/ralphglasses/ROADMAP.md` (lines 103-109 and 614-620)
+- `ralphglasses/ROADMAP.md` (lines 103-109 and 614-620)
 
 **Effort:** Small (30 min)
 **Impact:** Medium -- eliminates confusion about which phase owns marathon improvements
@@ -301,7 +301,7 @@ Wire this into `roadmap_analyze` MCP tool output as a new `Validation` field.
 ### Recommendation 6: Add Content-Level Evidence Detection to `findEvidence()`
 
 **Target file:**
-- `/Users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/roadmap/analyze.go` (lines 150-166)
+- `ralphglasses/internal/roadmap/analyze.go` (lines 150-166)
 
 **Effort:** Medium (2-3 hours)
 **Impact:** Medium -- dramatically improves staleness detection accuracy
@@ -318,8 +318,8 @@ This would have caught all the Phase 0.5 stale items automatically.
 ### Recommendation 7: Add Phase-Level Dependency Declaration Syntax
 
 **Target file:**
-- `/Users/mitchnotmitchell/hairglasses-studio/ralphglasses/ROADMAP.md` (blockquote dependency annotations)
-- `/Users/mitchnotmitchell/hairglasses-studio/ralphglasses/internal/roadmap/parse.go` (new regex)
+- `ralphglasses/ROADMAP.md` (blockquote dependency annotations)
+- `ralphglasses/internal/roadmap/parse.go` (new regex)
 
 **Effort:** Medium (2-3 hours)
 **Impact:** Medium -- makes phase dependencies machine-parseable instead of just human-readable
