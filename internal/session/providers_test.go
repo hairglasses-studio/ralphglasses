@@ -500,8 +500,8 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"candidates_token_count": float64(500),
 				},
 			},
-			// (1000/1M)*0.30 + (500/1M)*2.50 = 0.0003 + 0.00125 = 0.00155
-			wantCost: 0.00155,
+			// (1000/1M)*0.15 + (500/1M)*0.60 = 0.00015 + 0.0003 = 0.00045
+			wantCost: 0.00045,
 		},
 		{
 			name:     "codex with usage tokens",
@@ -512,8 +512,8 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"completion_tokens": float64(1000),
 				},
 			},
-			// (2000/1M)*2.50 + (1000/1M)*15.00 = 0.005 + 0.015 = 0.02
-			wantCost: 0.02,
+			// (2000/1M)*2.00 + (1000/1M)*8.00 = 0.004 + 0.008 = 0.012
+			wantCost: 0.012,
 		},
 		{
 			name:     "claude with usage input/output tokens",
@@ -544,7 +544,7 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"prompt_tokens": float64(1000),
 				},
 			},
-			wantCost: 0.0025, // (1000/1M)*2.50
+			wantCost: 0.002, // (1000/1M)*2.00
 		},
 		{
 			name:     "only output tokens",
@@ -554,7 +554,7 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"candidates_token_count": float64(1000),
 				},
 			},
-			wantCost: 0.0025, // (1000/1M)*2.50
+			wantCost: 0.0006, // (1000/1M)*0.60
 		},
 		{
 			name:     "unknown provider returns zero",
@@ -598,8 +598,8 @@ func TestNormalizeGeminiEventWithTokenCost(t *testing.T) {
 		t.Fatalf("normalizeGeminiEvent() error: %v", err)
 	}
 
-	// (1000/1M)*0.30 + (500/1M)*2.50 = 0.00155
-	want := 0.00155
+	// (1000/1M)*0.15 + (500/1M)*0.60 = 0.00015 + 0.0003 = 0.00045
+	want := 0.00045
 	if math.Abs(event.CostUSD-want) > 1e-9 {
 		t.Errorf("CostUSD = %v, want %v", event.CostUSD, want)
 	}
@@ -649,8 +649,8 @@ func TestNormalizeCodexEventWithTokenCost(t *testing.T) {
 		t.Fatalf("normalizeCodexEvent() error: %v", err)
 	}
 
-	// (2000/1M)*2.50 + (1000/1M)*15.00 = 0.02
-	want := 0.02
+	// (2000/1M)*2.00 + (1000/1M)*8.00 = 0.004 + 0.008 = 0.012
+	want := 0.012
 	if math.Abs(event.CostUSD-want) > 1e-9 {
 		t.Errorf("CostUSD = %v, want %v", event.CostUSD, want)
 	}

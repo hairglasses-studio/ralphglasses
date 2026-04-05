@@ -196,8 +196,8 @@ func TestMapSessionProvider(t *testing.T) {
 		{session.ProviderGemini, enhancer.ProviderGemini},
 		{session.ProviderCodex, enhancer.ProviderOpenAI},
 		{session.ProviderClaude, enhancer.ProviderClaude},
-		{"unknown", enhancer.ProviderClaude}, // default
-		{"", enhancer.ProviderClaude},         // empty
+		{"unknown", enhancer.ProviderClaude},  // default (unknown → claude)
+		{"", enhancer.ProviderOpenAI},          // empty → DefaultPrimaryProvider() → codex → openai
 	}
 
 	for _, tt := range tests {

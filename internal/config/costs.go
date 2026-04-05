@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
+	"log/slog"
 	"os"
+	"time"
 )
 
 // Default model cost rates per 1M tokens (USD). These serve as the single
@@ -18,7 +20,7 @@ const (
 	CostGeminiFlashOutput    float64 = 0.60
 	CostClaudeSonnetInput    float64 = 3.00
 	CostClaudeSonnetOutput   float64 = 15.00
-	CostClaudeOpusInput      float64 = 15.00
+	CostClaudeOpusInput      float64 = 5.00
 	CostClaudeOpusOutput     float64 = 75.00
 	CostCodexInput           float64 = 2.00
 	CostCodexOutput          float64 = 8.00
@@ -27,6 +29,29 @@ const (
 	CostGeminiProInput       float64 = 1.25
 	CostGeminiProOutput      float64 = 10.00
 )
+
+// CostRatesVerified is the date these rates were last verified against provider pricing pages.
+const CostRatesVerified = "2026-04-04"
+
+// CostRatesMaxAgeDays is the maximum age before a staleness warning is logged.
+const CostRatesMaxAgeDays = 60
+
+// CheckCostRateStaleness logs a warning if the compiled-in cost rates are older than CostRatesMaxAgeDays.
+func CheckCostRateStaleness() {
+	verified, err := time.Parse("2006-01-02", CostRatesVerified)
+	if err != nil {
+		slog.Warn("invalid CostRatesVerified date", "value", CostRatesVerified)
+		return
+	}
+	age := time.Since(verified)
+	if age > time.Duration(CostRatesMaxAgeDays)*24*time.Hour {
+		slog.Warn("cost rates may be stale",
+			"verified", CostRatesVerified,
+			"age_days", int(age.Hours()/24),
+			"max_age_days", CostRatesMaxAgeDays,
+		)
+	}
+}
 
 // ProviderCosts holds configurable per-model cost rates (USD per 1M tokens).
 // Keys in the maps are model/tier identifiers (e.g. "gemini_flash", "claude_sonnet").

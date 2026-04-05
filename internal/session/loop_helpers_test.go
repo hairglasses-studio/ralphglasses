@@ -116,7 +116,7 @@ func TestMapProvider(t *testing.T) {
 		{ProviderGemini, "gemini"},
 		{ProviderCodex, "openai"},
 		{ProviderClaude, "claude"},
-		{"", "claude"},
+		{"", "openai"},
 	}
 	for _, tt := range tests {
 		got := mapProvider(tt.input)

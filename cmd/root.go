@@ -64,6 +64,9 @@ fleet management from any MCP-capable client.`,
 		// Configure structured logging from flags before anything else logs.
 		slog.SetDefault(slog.New(newLogHandler(os.Stderr)))
 
+		// Warn if compiled-in cost rates are older than CostRatesMaxAgeDays.
+		config.CheckCostRateStaleness()
+
 		// Validate --scan-timeout is a valid duration.
 		if _, err := time.ParseDuration(scanTimeout); err != nil {
 			return fmt.Errorf("invalid --scan-timeout %q: %w", scanTimeout, err)
