@@ -19,12 +19,12 @@ func TestScaffold(t *testing.T) {
 		t.Fatalf("Scaffold: %v", err)
 	}
 
-	if len(result.Created) != 4 {
-		t.Errorf("expected 4 created files, got %d: %v", len(result.Created), result.Created)
+	if len(result.Created) != 6 {
+		t.Errorf("expected 6 created files, got %d: %v", len(result.Created), result.Created)
 	}
 
 	// Verify files exist
-	for _, relPath := range []string{".ralphrc", ".ralph/PROMPT.md", ".ralph/AGENT.md", ".ralph/fix_plan.md"} {
+	for _, relPath := range []string{".ralphrc", "AGENTS.md", ".codex/config.toml", ".ralph/PROMPT.md", ".ralph/AGENT.md", ".ralph/fix_plan.md"} {
 		full := filepath.Join(dir, relPath)
 		if _, err := os.Stat(full); err != nil {
 			t.Errorf("expected %s to exist", relPath)
@@ -42,8 +42,21 @@ func TestScaffold(t *testing.T) {
 	if !strings.Contains(content, "PROJECT_TYPE=\"go\"") {
 		t.Error("expected PROJECT_TYPE=go in .ralphrc")
 	}
+	if !strings.Contains(content, "PROVIDER=\"codex\"") {
+		t.Error("expected PROVIDER=codex in .ralphrc")
+	}
 	if !strings.Contains(content, "go build") {
 		t.Error("expected go build command in .ralphrc")
+	}
+
+	agents, _ := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
+	if !strings.Contains(string(agents), "Primary command-and-control provider: Codex.") {
+		t.Error("expected Codex-first AGENTS.md scaffold")
+	}
+
+	codexCfg, _ := os.ReadFile(filepath.Join(dir, ".codex", "config.toml"))
+	if !strings.Contains(string(codexCfg), "model = \"gpt-5.4\"") {
+		t.Error("expected gpt-5.4 in .codex/config.toml")
 	}
 }
 

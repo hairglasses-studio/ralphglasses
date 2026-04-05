@@ -50,7 +50,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 
 	teamProvider := session.Provider(pp.OptionalString("provider", ""))
 	if teamProvider == "" {
-		teamProvider = session.ProviderClaude
+		teamProvider = session.DefaultPrimaryProvider()
 	}
 
 	workerProvider := session.Provider(pp.String("worker_provider"))
@@ -71,7 +71,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		// preview shows effective values instead of zero/empty defaults.
 		effectiveProvider := config.Provider
 		if effectiveProvider == "" {
-			effectiveProvider = session.ProviderClaude
+			effectiveProvider = session.DefaultPrimaryProvider()
 		}
 		effectiveWorkerProvider := config.WorkerProvider
 		if effectiveWorkerProvider == "" {
@@ -83,7 +83,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 			case session.ProviderGemini:
 				effectiveModel = "gemini-2.5-flash"
 			case session.ProviderCodex:
-				effectiveModel = "gpt-5.4"
+				effectiveModel = session.ProviderDefaults(session.ProviderCodex)
 			default:
 				effectiveModel = "claude-sonnet-4-6"
 			}
@@ -104,7 +104,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 			"worker_provider": string(effectiveWorkerProvider),
 			"lead_agent":      effectiveLeadAgent,
 			"model":           effectiveModel,
-			"budget_usd":  effectiveBudget,
+			"budget_usd":      effectiveBudget,
 			"tasks":           config.Tasks,
 			"task_count":      len(config.Tasks),
 		}), nil
@@ -205,7 +205,7 @@ func (s *Server) handleAgentDefine(_ context.Context, req mcp.CallToolRequest) (
 
 	provider := session.Provider(getStringArg(req, "provider"))
 	if provider == "" {
-		provider = session.ProviderClaude
+		provider = session.DefaultPrimaryProvider()
 	}
 
 	def := session.AgentDef{
@@ -269,7 +269,7 @@ func (s *Server) handleAgentList(_ context.Context, req mcp.CallToolRequest) (*m
 	} else {
 		provider := session.Provider(providerStr)
 		if provider == "" {
-			provider = session.ProviderClaude
+			provider = session.DefaultPrimaryProvider()
 		}
 		var err error
 		agents, err = session.DiscoverAgents(r.Path, provider)
@@ -313,7 +313,7 @@ func (s *Server) handleAgentCompose(_ context.Context, req mcp.CallToolRequest) 
 
 	provider := session.Provider(getStringArg(req, "provider"))
 	if provider == "" {
-		provider = session.ProviderClaude
+		provider = session.DefaultPrimaryProvider()
 	}
 
 	var agentNames []string

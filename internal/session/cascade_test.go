@@ -122,8 +122,8 @@ func TestResolveProvider(t *testing.T) {
 		config := DefaultCascadeConfig()
 		cr := NewCascadeRouter(config, nil, nil, "")
 
-		if got := cr.ResolveProvider("feature"); got != ProviderClaude {
-			t.Errorf("expected ProviderClaude (expensive), got %s", got)
+		if got := cr.ResolveProvider("feature"); got != ProviderCodex {
+			t.Errorf("expected ProviderCodex (primary expensive lane), got %s", got)
 		}
 	})
 }
@@ -340,8 +340,8 @@ func TestDefaultModelTiers(t *testing.T) {
 
 func TestTaskTypeComplexity(t *testing.T) {
 	cases := []struct {
-		taskType   string
-		wantLevel  int
+		taskType  string
+		wantLevel int
 	}{
 		{"lint", 1},
 		{"format", 1},
@@ -475,8 +475,11 @@ func TestSelectTier_ProviderAlignment(t *testing.T) {
 		}
 	}
 
-	// Coding and reasoning should be Claude
-	for _, tt := range []string{"codegen", "architecture"} {
+	// Coding should use Codex; highest-complexity reasoning should still use Claude.
+	if tier := cr.SelectTier("codegen", 0); tier.Provider != ProviderCodex {
+		t.Errorf("SelectTier(%q): provider = %q, want codex", "codegen", tier.Provider)
+	}
+	for _, tt := range []string{"architecture"} {
 		tier := cr.SelectTier(tt, 0)
 		if tier.Provider != ProviderClaude {
 			t.Errorf("SelectTier(%q): provider = %q, want claude", tt, tier.Provider)
@@ -596,8 +599,8 @@ func TestLatencyAwareRouting_SkipsSlow(t *testing.T) {
 	}
 
 	// ResolveProvider should return expensive
-	if got := cr.ResolveProvider("feature"); got != ProviderClaude {
-		t.Errorf("expected expensive provider (claude), got %s", got)
+	if got := cr.ResolveProvider("feature"); got != ProviderCodex {
+		t.Errorf("expected expensive provider (codex), got %s", got)
 	}
 }
 
@@ -961,13 +964,13 @@ func TestRecordResult_BanditUpdateCalledWithReward(t *testing.T) {
 
 func TestComputeConfidence(t *testing.T) {
 	tests := []struct {
-		name           string
-		turnCount      int
-		expectedTurns  int
-		lastOutput     string
-		verifyPassed   bool
-		wantMin        float64
-		wantMax        float64
+		name          string
+		turnCount     int
+		expectedTurns int
+		lastOutput    string
+		verifyPassed  bool
+		wantMin       float64
+		wantMax       float64
 	}{
 		{
 			name:          "all_signals_positive",
@@ -1142,7 +1145,7 @@ func TestResolveProvider_LatencyHighSkipsCheap(t *testing.T) {
 	}
 
 	got := cr.ResolveProvider("feature")
-	if got != ProviderClaude {
+	if got != ProviderCodex {
 		t.Errorf("expected expensive provider when cheap is slow, got %s", got)
 	}
 }
@@ -1317,8 +1320,8 @@ func TestDefaultCascadeConfig(t *testing.T) {
 	if config.CheapProvider != ProviderGemini {
 		t.Errorf("CheapProvider = %s, want gemini", config.CheapProvider)
 	}
-	if config.ExpensiveProvider != ProviderClaude {
-		t.Errorf("ExpensiveProvider = %s, want claude", config.ExpensiveProvider)
+	if config.ExpensiveProvider != ProviderCodex {
+		t.Errorf("ExpensiveProvider = %s, want codex", config.ExpensiveProvider)
 	}
 	if config.ConfidenceThreshold != 0.7 {
 		t.Errorf("ConfidenceThreshold = %f, want 0.7", config.ConfidenceThreshold)
@@ -1394,8 +1397,8 @@ func TestDefaultCascadeFromConfig_EnabledDefaults(t *testing.T) {
 	if result.CheapProvider != ProviderGemini {
 		t.Errorf("CheapProvider = %q, want %q", result.CheapProvider, ProviderGemini)
 	}
-	if result.ExpensiveProvider != ProviderClaude {
-		t.Errorf("ExpensiveProvider = %q, want %q", result.ExpensiveProvider, ProviderClaude)
+	if result.ExpensiveProvider != ProviderCodex {
+		t.Errorf("ExpensiveProvider = %q, want %q", result.ExpensiveProvider, ProviderCodex)
 	}
 	if result.ConfidenceThreshold != 0.7 {
 		t.Errorf("ConfidenceThreshold = %f, want 0.7", result.ConfidenceThreshold)
@@ -1463,8 +1466,8 @@ func TestDefaultCascadeFromConfig_PartialConfig(t *testing.T) {
 	if result.CheapProvider != ProviderCodex {
 		t.Errorf("CheapProvider = %q, want codex", result.CheapProvider)
 	}
-	if result.ExpensiveProvider != ProviderClaude {
-		t.Errorf("ExpensiveProvider = %q, want claude (default)", result.ExpensiveProvider)
+	if result.ExpensiveProvider != ProviderCodex {
+		t.Errorf("ExpensiveProvider = %q, want codex (default)", result.ExpensiveProvider)
 	}
 	if result.ConfidenceThreshold != 0.7 {
 		t.Errorf("ConfidenceThreshold = %f, want 0.7 (default)", result.ConfidenceThreshold)

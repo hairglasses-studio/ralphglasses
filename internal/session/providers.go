@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"syscall"
 )
 
@@ -127,9 +128,6 @@ func UnsupportedOptionsWarnings(p Provider, opts LaunchOptions) []string {
 		if opts.Worktree != "" {
 			warnings = append(warnings, "worktree is ignored by codex provider")
 		}
-		if opts.Resume != "" {
-			warnings = append(warnings, "resume is unsupported by codex provider")
-		}
 	}
 	return warnings
 }
@@ -140,7 +138,7 @@ func ProviderDefaults(p Provider) (model string) {
 	case ProviderGemini:
 		return "gemini-2.5-pro"
 	case ProviderCodex:
-		return "o4-mini"
+		return "gpt-5.4"
 	default:
 		return "sonnet"
 	}
@@ -163,7 +161,7 @@ func providerBinary(p Provider) string {
 func buildCmdForProvider(ctx context.Context, opts LaunchOptions) (*exec.Cmd, error) {
 	p := opts.Provider
 	if p == "" {
-		p = ProviderClaude
+		p = DefaultPrimaryProvider()
 	}
 	opts.Provider = p
 	if opts.Model == "" {
@@ -294,6 +292,9 @@ func buildGeminiCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 // Codex CLI: codex exec PROMPT --json --full-auto for headless mode.
 func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	args := []string{"exec"}
+	if opts.Resume != "" {
+		args = append(args, "resume")
+	}
 
 	if opts.Model != "" {
 		args = append(args, "--model", opts.Model)
@@ -303,8 +304,10 @@ func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 		args = append(args, "--output-schema", string(opts.OutputSchema))
 	}
 
+	if opts.Resume != "" {
+		args = append(args, opts.Resume)
+	}
 	if opts.Prompt != "" {
-		// Prompt is a positional argument after flags
 		args = append(args, opts.Prompt)
 	}
 
@@ -316,10 +319,23 @@ func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 }
 
 func validateLaunchOptions(opts LaunchOptions) error {
-	if opts.Provider == ProviderCodex && opts.Resume != "" {
-		return fmt.Errorf("codex provider does not support resume")
+	if opts.Provider == ProviderCodex && opts.Resume != "" && !codexExecResumeSupported() {
+		return fmt.Errorf("codex provider on this install does not support exec resume")
 	}
 	return nil
+}
+
+var (
+	codexResumeSupportOnce sync.Once
+	codexResumeSupport     bool
+)
+
+var codexExecResumeSupported = func() bool {
+	codexResumeSupportOnce.Do(func() {
+		cmd := exec.Command("codex", "exec", "resume", "--help")
+		codexResumeSupport = cmd.Run() == nil
+	})
+	return codexResumeSupport
 }
 
 // stripNestingEnv removes env vars that cause CLI tools to detect they're running

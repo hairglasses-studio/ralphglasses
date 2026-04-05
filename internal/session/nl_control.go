@@ -31,16 +31,18 @@ type CommandHandler func(ctx context.Context, mgr *Manager, cmd *Command) error
 
 // NLController parses and executes natural language fleet control commands.
 type NLController struct {
-	mgr      *Manager
-	handlers map[string]CommandHandler
+	mgr        *Manager
+	handlers   map[string]CommandHandler
+	classifier *IntentClassifier // TF-IDF fallback for intent detection
 }
 
 // NewNLController creates a controller wired to the given Manager.
 // It registers the default set of command handlers.
 func NewNLController(mgr *Manager) *NLController {
 	c := &NLController{
-		mgr:      mgr,
-		handlers: make(map[string]CommandHandler),
+		mgr:        mgr,
+		handlers:   make(map[string]CommandHandler),
+		classifier: NewIntentClassifier(0),
 	}
 	c.registerDefaults()
 	return c
@@ -65,6 +67,15 @@ func (c *NLController) Parse(input string) (*Command, error) {
 	}
 
 	action := detectIntent(tokens)
+	if action == "" {
+		// TF-IDF classifier fallback
+		if c.classifier != nil {
+			result := c.classifier.Classify(input)
+			if result.Confidence > 0 && result.Action != "" {
+				action = result.Action
+			}
+		}
+	}
 	if action == "" {
 		return nil, fmt.Errorf("could not determine intent from: %q", input)
 	}

@@ -68,23 +68,24 @@ The `internal/session/` package uses a provider dispatch pattern:
 
 | Provider | CLI Binary | Default Model | Stream Format | Resume Support |
 |----------|-----------|---------------|---------------|----------------|
-| `claude` (default) | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
-| `gemini` | `gemini` | `gemini-3-pro` | `stream-json` | Yes (`--resume`) |
-| `codex` | `codex` | `gpt-5.4-xhigh` | `--json` (NDJSON) | No |
+| `codex` (default) | `codex` | `gpt-5.4` | `--json` (NDJSON) | Yes (`exec resume`, when supported by the installed CLI) |
+| `claude` | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
+| `gemini` | `gemini` | `gemini-2.5-pro` | `stream-json` | Yes (`--resume`) |
 
 ## Codex-Specific Notes
 
 - **Autonomous mode**: Use `codex exec --full-auto` to run without confirmations.
 - **Sandbox**: `codex --sandbox workspace-write` allows writes only within the workspace.
 - **Output format**: `codex --json` for NDJSON structured output.
-- **No resume support**: Codex CLI does not support session resume — use `ralphglasses_session_retry` to re-launch.
+- **Resume support**: Use `codex exec resume` when the installed CLI exposes it. ralphglasses probes support at runtime.
 - **No system prompt flag**: Project context comes from `AGENTS.md` (this file) — Codex walks the directory tree and reads it automatically (32 KiB max).
 - **No budget support**: Codex CLI does not have built-in budget enforcement — ralphglasses tracks costs externally.
-- **No agent definitions**: Codex CLI does not support agent definition files.
+- **Custom agents**: Project-scoped Codex subagents live in `.codex/agents/*.toml`.
+- **Native structure**: Use `AGENTS.md`, `.codex/agents/`, skills, and plugins for Codex-native repo context.
 - **MCP server**: Codex can expose itself as an MCP server via `codex mcp-server` for peer-to-peer delegation.
-- **Default model**: `gpt-5.4-xhigh` — best non-thinking model for code generation, refactoring, and implementation tasks.
-- **Thinking mode**: For complex architectural reasoning, use `codex --model o1-pro` which enables extended thinking. Higher cost but superior for design decisions and multi-step planning.
-- **Model selection**: Available models: `gpt-5.4-xhigh` (default, best non-thinking), `o1-pro` (thinking/reasoning), `gpt-4.1` (balanced), `o4-mini` (fast/cheap). Override per-session with `codex --model <model>`.
+- **Default model**: `gpt-5.4` for primary coding control-plane work.
+- **Loop defaults**: `o4-mini` planner with `codex-mini-latest` workers/verifiers for iterative autonomy.
+- **Pinned references**: See `docs/CODEX-REFERENCE.md` for current docs, local CLI baseline, and Claude cache guardrails.
 
 ## MCP Server
 
@@ -131,4 +132,5 @@ The `distro/` directory contains configs for a bootable Linux thin client (Ubunt
 - [CLAUDE.md](CLAUDE.md) — Claude Code project instructions
 - [GEMINI.md](GEMINI.md) — Gemini CLI project instructions
 - [CONTRIBUTING.md](CONTRIBUTING.md) — Multi-provider contribution guide
+- [docs/CODEX-REFERENCE.md](docs/CODEX-REFERENCE.md) — Codex docs + Claude cache protection notes
 - [ROADMAP.md](ROADMAP.md) — Full development roadmap

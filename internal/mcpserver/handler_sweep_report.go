@@ -56,12 +56,12 @@ func (s *Server) handleSweepReport(_ context.Context, req mcp.CallToolRequest) (
 		diffStat := gitDiffStat(repoPath, commits)
 
 		item := map[string]any{
-			"repo":      repo,
-			"status":    status,
-			"cost_usd":  spent,
-			"turns":     turns,
-			"commits":   commits,
-			"changes":   diffStat,
+			"repo":        repo,
+			"status":      status,
+			"cost_usd":    spent,
+			"turns":       turns,
+			"commits":     commits,
+			"changes":     diffStat,
 			"last_output": lastOut,
 		}
 		items = append(items, item)
@@ -131,6 +131,7 @@ func (s *Server) handleSweepRetry(_ context.Context, req mcp.CallToolRequest) (*
 		repo := sess.RepoName
 		prompt := sess.Prompt
 		model := sess.Model
+		provider := sess.Provider
 		budget := sess.BudgetUSD
 		permMode := sess.PermissionMode
 		noPerist := false // can't read from session, default to false for retries
@@ -146,7 +147,7 @@ func (s *Server) handleSweepRetry(_ context.Context, req mcp.CallToolRequest) (*
 		}
 
 		opts := session.LaunchOptions{
-			Provider:             session.ProviderClaude,
+			Provider:             provider,
 			RepoPath:             repoPath,
 			Prompt:               prompt,
 			Model:                model,

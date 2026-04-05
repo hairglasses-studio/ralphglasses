@@ -67,6 +67,12 @@ func normalizeClaudeEvent(line []byte) (StreamEvent, error) {
 		if event.NumTurns == 0 {
 			event.NumTurns = firstNonZeroInt(raw, "num_turns", "turns", "usage.turns")
 		}
+		if event.CacheReadTokens == 0 {
+			event.CacheReadTokens = firstNonZeroInt(raw, "usage.cache_read_input_tokens")
+		}
+		if event.CacheWriteTokens == 0 {
+			event.CacheWriteTokens = firstNonZeroInt(raw, "usage.cache_creation_input_tokens")
+		}
 		if event.Duration == 0 {
 			event.Duration = firstNonZeroFloat(raw, "duration_seconds", "duration", "metadata.duration_seconds")
 		}
@@ -133,6 +139,8 @@ func normalizeGeminiEvent(line []byte) (StreamEvent, error) {
 		}
 	}
 	event.NumTurns = firstNonZeroInt(raw, "num_turns", "turns", "usage.turns")
+	event.CacheReadTokens = firstNonZeroInt(raw, "usage.cache_read_input_tokens")
+	event.CacheWriteTokens = firstNonZeroInt(raw, "usage.cache_creation_input_tokens")
 	event.Duration = firstNonZeroFloat(raw, "duration_seconds", "duration", "metadata.duration_seconds")
 	event.IsError = firstTrueBool(raw, "is_error", "error")
 	event.Text = firstNonEmpty(event.Content, event.Result, event.Error)
@@ -338,6 +346,8 @@ func normalizeCodexEvent(line []byte) (StreamEvent, error) {
 		}
 	}
 	event.NumTurns = firstNonZeroInt(raw, "num_turns", "turns", "usage.turns")
+	event.CacheReadTokens = firstNonZeroInt(raw, "usage.cache_read_input_tokens")
+	event.CacheWriteTokens = firstNonZeroInt(raw, "usage.cache_creation_input_tokens")
 	event.IsError = firstTrueBool(raw, "is_error", "error")
 	event.Text = firstNonEmpty(event.Content, event.Result, event.Error)
 	applyEventDefaults(&event)

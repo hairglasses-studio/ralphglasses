@@ -62,12 +62,12 @@ func CodexWorkerBasic() Scenario {
 	}
 }
 
-// MultiProviderTeam: Claude lead orchestrating Gemini + Codex workers.
+// MultiProviderTeam: Codex lead orchestrating Gemini + Claude workers.
 func MultiProviderTeam() Scenario {
 	return Scenario{
 		Name:     "multi-provider-team",
 		Category: "feature",
-		Provider: session.ProviderClaude,
+		Provider: session.ProviderCodex,
 		Tags:     []string{"multi-provider", "team", "claude", "gemini", "codex"},
 		RepoSetup: func(t *testing.T) string {
 			return setupRepo(t, map[string]string{
@@ -76,7 +76,7 @@ func MultiProviderTeam() Scenario {
 			})
 		},
 		PlannerResponse: plannerJSON("Build API with multi-provider team",
-			"Claude: architect API design. Gemini: generate endpoint handlers. Codex: refactor server struct with dependency injection."),
+			"Codex: architect API design. Gemini: generate endpoint handlers. Claude: review and harden the refactor."),
 		WorkerBehavior: func(worktree string) error {
 			// Simulates output from three providers working on different files
 			files := map[string]string{

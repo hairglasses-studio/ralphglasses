@@ -19,7 +19,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/tracing"
 )
 
-// buildCmd constructs the claude CLI command from LaunchOptions.
+// buildCmd constructs the provider CLI command from LaunchOptions.
 // Kept for backward compatibility with tests; delegates to buildClaudeCmd.
 func buildCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	return buildClaudeCmd(ctx, opts)
@@ -46,7 +46,7 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 
 	provider := opts.Provider
 	if provider == "" {
-		provider = ProviderClaude
+		provider = DefaultPrimaryProvider()
 	}
 	opts.Provider = provider
 	if opts.Model == "" {
@@ -96,26 +96,27 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 
 	now := time.Now()
 	s := &Session{
-		ID:           uuid.New().String(),
-		Provider:     provider,
-		RepoPath:     opts.RepoPath,
-		RepoName:     filepath.Base(opts.RepoPath),
-		Status:       StatusLaunching,
-		Prompt:       opts.Prompt,
-		Model:        opts.Model,
-		AgentName:    opts.Agent,
-		TeamName:     opts.TeamName,
+		ID:             uuid.New().String(),
+		Provider:       provider,
+		RepoPath:       opts.RepoPath,
+		RepoName:       filepath.Base(opts.RepoPath),
+		Status:         StatusLaunching,
+		Prompt:         opts.Prompt,
+		Model:          opts.Model,
+		AgentName:      opts.Agent,
+		TeamName:       opts.TeamName,
 		SweepID:        opts.SweepID,
 		PermissionMode: opts.PermissionMode,
-		BudgetUSD:    opts.MaxBudgetUSD,
-		MaxTurns:     opts.MaxTurns,
-		LaunchedAt:   now,
-		LastActivity: now,
-		cmd:          cmd,
-		cancel:       cancel,
-		doneCh:       make(chan struct{}),
-		OutputCh:     make(chan string, 100),
-		bus:          sessionBus,
+		Resumed:        opts.Resume != "" || opts.Continue,
+		BudgetUSD:      opts.MaxBudgetUSD,
+		MaxTurns:       opts.MaxTurns,
+		LaunchedAt:     now,
+		LastActivity:   now,
+		cmd:            cmd,
+		cancel:         cancel,
+		doneCh:         make(chan struct{}),
+		OutputCh:       make(chan string, 100),
+		bus:            sessionBus,
 	}
 
 	if err := cmd.Start(); err != nil {
@@ -579,6 +580,30 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile
 							Data:      map[string]any{"spent_usd": s.SpentUSD, "budget_usd": s.BudgetUSD},
 						})
 					}
+				}
+			}
+
+			if event.CacheReadTokens > 0 {
+				s.CacheReadTokens = event.CacheReadTokens
+			}
+			if event.CacheWriteTokens > 0 {
+				s.CacheWriteTokens = event.CacheWriteTokens
+			}
+			if s.Provider == ProviderClaude && s.Resumed && s.CacheWriteTokens > 0 && s.CacheReadTokens == 0 && s.CacheAnomaly == "" {
+				s.CacheAnomaly = "resumed Claude session wrote prompt cache entries without any cache reads; treating prompt-cache savings as unsafe"
+				if s.bus != nil {
+					s.bus.Publish(events.Event{
+						Type:      events.SessionError,
+						SessionID: s.ID,
+						RepoPath:  s.RepoPath,
+						RepoName:  s.RepoName,
+						Provider:  string(s.Provider),
+						Data: map[string]any{
+							"error":              s.CacheAnomaly,
+							"cache_read_tokens":  s.CacheReadTokens,
+							"cache_write_tokens": s.CacheWriteTokens,
+						},
+					})
 				}
 			}
 

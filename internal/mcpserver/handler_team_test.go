@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 func TestHandleTeamCreate(t *testing.T) {
@@ -75,11 +78,25 @@ func TestHandleTeamCreate(t *testing.T) {
 		if err != nil {
 			t.Fatalf("scan failed: %v", err)
 		}
+		srv.SessMgr.SetHooksForTesting(
+			func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
+				return &session.Session{
+					ID:         "team-lead",
+					Provider:   opts.Provider,
+					RepoPath:   opts.RepoPath,
+					RepoName:   "test-repo",
+					Status:     session.StatusRunning,
+					LaunchedAt: time.Now(),
+				}, nil
+			},
+			func(_ context.Context, _ *session.Session) error { return nil },
+		)
 
 		result, err := srv.handleTeamCreate(context.Background(), makeRequest(map[string]any{
-			"repo":  "test-repo",
-			"name":  "my-team",
-			"tasks": "implement feature A\nwrite tests for feature A",
+			"repo":     "test-repo",
+			"name":     "my-team",
+			"tasks":    "implement feature A\nwrite tests for feature A",
+			"provider": "claude",
 		}))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -104,12 +121,12 @@ func TestHandleTeamCreate_DryRun(t *testing.T) {
 	}
 
 	result, err := srv.handleTeamCreate(context.Background(), makeRequest(map[string]any{
-		"repo":           "test-repo",
-		"name":           "dry-team",
-		"tasks":          "implement feature A\nwrite tests for feature A",
-		"provider":       "claude",
+		"repo":       "test-repo",
+		"name":       "dry-team",
+		"tasks":      "implement feature A\nwrite tests for feature A",
+		"provider":   "claude",
 		"budget_usd": 5.0,
-		"dry_run":        true,
+		"dry_run":    true,
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -193,13 +210,13 @@ func TestHandleTeamCreate_DryRunDefaults(t *testing.T) {
 		t.Fatalf("failed to parse dry_run result: %v\nraw: %s", err, text)
 	}
 
-	// provider should default to "claude", not empty
-	if prov, _ := parsed["provider"].(string); prov != "claude" {
-		t.Errorf("provider = %q, want %q", prov, "claude")
+	// provider should default to codex
+	if prov, _ := parsed["provider"].(string); prov != "codex" {
+		t.Errorf("provider = %q, want %q", prov, "codex")
 	}
 	// worker_provider should default to provider value
-	if wp, _ := parsed["worker_provider"].(string); wp != "claude" {
-		t.Errorf("worker_provider = %q, want %q", wp, "claude")
+	if wp, _ := parsed["worker_provider"].(string); wp != "codex" {
+		t.Errorf("worker_provider = %q, want %q", wp, "codex")
 	}
 	// model should show effective default, not empty
 	if m, _ := parsed["model"].(string); m == "" {
@@ -319,12 +336,26 @@ func TestHandleTeamStatus(t *testing.T) {
 		if err != nil {
 			t.Fatalf("scan failed: %v", err)
 		}
+		srv.SessMgr.SetHooksForTesting(
+			func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
+				return &session.Session{
+					ID:         "status-lead",
+					Provider:   opts.Provider,
+					RepoPath:   opts.RepoPath,
+					RepoName:   "test-repo",
+					Status:     session.StatusRunning,
+					LaunchedAt: time.Now(),
+				}, nil
+			},
+			func(_ context.Context, _ *session.Session) error { return nil },
+		)
 
 		// Create a team first
 		_, err = srv.handleTeamCreate(context.Background(), makeRequest(map[string]any{
-			"repo":  "test-repo",
-			"name":  "status-team",
-			"tasks": "task one\ntask two",
+			"repo":     "test-repo",
+			"name":     "status-team",
+			"tasks":    "task one\ntask two",
+			"provider": "claude",
 		}))
 		if err != nil {
 			t.Fatalf("create team failed: %v", err)

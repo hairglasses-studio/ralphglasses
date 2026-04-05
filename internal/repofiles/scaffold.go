@@ -41,10 +41,12 @@ func Scaffold(repoPath string, opts ScaffoldOptions) (*ScaffoldResult, error) {
 
 	// Files to create
 	files := map[string]func(string, ScaffoldOptions) string{
-		filepath.Join(repoPath, ".ralphrc"):    generateRalphRC,
-		filepath.Join(ralphDir, "PROMPT.md"):   generatePrompt,
-		filepath.Join(ralphDir, "AGENT.md"):    generateAgent,
-		filepath.Join(ralphDir, "fix_plan.md"): generateFixPlan,
+		filepath.Join(repoPath, ".ralphrc"):              generateRalphRC,
+		filepath.Join(repoPath, "AGENTS.md"):             generateAgentsMD,
+		filepath.Join(repoPath, ".codex", "config.toml"): generateCodexConfig,
+		filepath.Join(ralphDir, "PROMPT.md"):             generatePrompt,
+		filepath.Join(ralphDir, "AGENT.md"):              generateAgent,
+		filepath.Join(ralphDir, "fix_plan.md"):           generateFixPlan,
 	}
 
 	for path, generator := range files {
@@ -55,6 +57,9 @@ func Scaffold(repoPath string, opts ScaffoldOptions) (*ScaffoldResult, error) {
 			}
 		}
 
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			return nil, fmt.Errorf("create parent dir for %s: %w", relPath(repoPath, path), err)
+		}
 		content := generator(opts.ProjectName, opts)
 		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 			return nil, fmt.Errorf("write %s: %w", relPath(repoPath, path), err)
@@ -96,6 +101,8 @@ func generateRalphRC(projectName string, opts ScaffoldOptions) string {
 
 	return fmt.Sprintf(`PROJECT_NAME="%s"
 PROJECT_TYPE="%s"
+PROVIDER="codex"
+MODEL="gpt-5.4"
 MAX_CALLS_PER_HOUR=80
 CLAUDE_TIMEOUT_MINUTES=20
 CLAUDE_OUTPUT_FORMAT="json"
@@ -110,7 +117,9 @@ CB_PERMISSION_DENIAL_THRESHOLD=2
 CB_COOLDOWN_MINUTES=15
 CB_AUTO_RESET=true
 LOG_RETENTION_DAYS=7
-PRIMARY_MODEL="sonnet"
+PRIMARY_MODEL="gpt-5.4"
+CACHE_SAFE_CLAUDE_RESUME=true
+CACHE_ASSUMED_SAVINGS_CLAUDE=0.0
 BATCH_SIMILAR_TASKS=true
 MAX_TASKS_PER_BATCH=3
 MAX_LINES_PER_BATCH=600
@@ -123,6 +132,51 @@ FAST_MODE_PHASES="execution,test,docs,mechanical"
 STANDARD_MODE_PHASES="analysis,planning,debug,refactor,architecture"
 FAST_MODE_DEFAULT=false
 `, projectName, opts.ProjectType, buildCmd, testCmd, vetCmd)
+}
+
+func generateAgentsMD(projectName string, opts ScaffoldOptions) string {
+	build, test, vet := buildCommands(opts.ProjectType)
+	return fmt.Sprintf(`# %s — Codex Instructions
+
+Primary command-and-control provider: Codex.
+
+## Build
+
+`+"```bash"+`
+%s
+%s
+%s
+`+"```"+`
+
+## Working Rules
+
+- Read the codebase before changing it.
+- Prefer the smallest defensible change.
+- Run the relevant verification commands after edits.
+- Keep unrelated files untouched.
+- Treat resumed Claude sessions as cache-unsafe unless live cache reads prove otherwise.
+
+## Codex Structure
+
+- Project instructions live in this `+"`AGENTS.md`"+`.
+- Custom Codex subagents live in `+"`.codex/agents/*.toml`"+`.
+- Project Codex config lives in `+"`.codex/config.toml`"+`.
+`, projectName, build, test, vet)
+}
+
+func generateCodexConfig(projectName string, opts ScaffoldOptions) string {
+	return `model = "gpt-5.4"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+web_search = "cached"
+model_reasoning_effort = "high"
+personality = "pragmatic"
+
+[agents]
+max_threads = 6
+max_depth = 1
+job_max_runtime_seconds = 1800
+`
 }
 
 func buildCommands(projectType string) (build, test, vet string) {

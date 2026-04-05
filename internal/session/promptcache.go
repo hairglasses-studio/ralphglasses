@@ -12,10 +12,10 @@ import (
 
 // PromptCacheConfig configures prompt caching behavior.
 type PromptCacheConfig struct {
-	Enabled         bool    `json:"enabled"`
-	MinPrefixLen    int     `json:"min_prefix_len"`    // minimum cacheable prefix length (default 1024)
-	MaxCacheEntries int     `json:"max_cache_entries"` // max entries in the hit-rate tracker
-	CacheTTL        int     `json:"cache_ttl_seconds"` // how long to consider a prefix "warm" (default 300)
+	Enabled         bool `json:"enabled"`
+	MinPrefixLen    int  `json:"min_prefix_len"`    // minimum cacheable prefix length (default 1024)
+	MaxCacheEntries int  `json:"max_cache_entries"` // max entries in the hit-rate tracker
+	CacheTTL        int  `json:"cache_ttl_seconds"` // how long to consider a prefix "warm" (default 300)
 }
 
 // DefaultPromptCacheConfig returns the default caching configuration.
@@ -30,11 +30,11 @@ func DefaultPromptCacheConfig() PromptCacheConfig {
 
 // PromptCacheStats tracks cache hit rates.
 type PromptCacheStats struct {
-	TotalSessions   int     `json:"total_sessions"`
-	CacheEligible   int     `json:"cache_eligible"`   // sessions with cacheable prefixes
-	EstimatedHits   int     `json:"estimated_hits"`    // sessions that reused a warm prefix
-	HitRate         float64 `json:"hit_rate_pct"`
-	EstimatedSaved  float64 `json:"estimated_saved_usd"`
+	TotalSessions  int     `json:"total_sessions"`
+	CacheEligible  int     `json:"cache_eligible"` // sessions with cacheable prefixes
+	EstimatedHits  int     `json:"estimated_hits"` // sessions that reused a warm prefix
+	HitRate        float64 `json:"hit_rate_pct"`
+	EstimatedSaved float64 `json:"estimated_saved_usd"`
 }
 
 // PromptCacheTracker tracks cacheable prompt prefixes across sessions.
@@ -65,7 +65,7 @@ func NewPromptCacheTracker(config PromptCacheConfig) *PromptCacheTracker {
 // the optimized prompt with stable prefix first for maximum cache hits.
 // Returns the (potentially reordered) prompt and whether caching is beneficial.
 func (t *PromptCacheTracker) AnalyzePrompt(repoPath string, provider Provider, prompt string) (string, bool) {
-	if !t.config.Enabled || len(prompt) < t.config.MinPrefixLen {
+	if !t.config.Enabled || len(prompt) < t.config.MinPrefixLen || !ShouldCachePrompt(provider, len(prompt)) {
 		return prompt, false
 	}
 
@@ -88,9 +88,11 @@ func (t *PromptCacheTracker) AnalyzePrompt(repoPath string, provider Provider, p
 		entry.hitCount++
 		entry.lastSeen = time.Now()
 		t.stats.EstimatedHits++
-		// 90% savings on cached tokens at $3/M input → ~$2.70/M saved
-		estimatedTokens := float64(len(prefix)) / 4.0 // rough token estimate
-		t.stats.EstimatedSaved += estimatedTokens / 1_000_000 * 2.70
+		if savingsRate := assumedCacheSavingsRate(provider); savingsRate > 0 {
+			estimatedTokens := float64(len(prefix)) / 4.0 // rough token estimate
+			inputPrice, _ := providerTokenPricing(provider)
+			t.stats.EstimatedSaved += estimatedTokens / 1_000_000 * inputPrice * savingsRate
+		}
 	} else {
 		t.entries[hash] = &cacheEntry{
 			prefixHash: hash,
@@ -122,14 +124,13 @@ func (t *PromptCacheTracker) Stats() PromptCacheStats {
 // ShouldCachePrompt returns true if the provider supports prompt caching
 // and the prompt is likely to benefit from it.
 func ShouldCachePrompt(provider Provider, promptLen int) bool {
-	// Claude supports prompt caching natively
-	// Gemini has implicit caching
-	// Codex doesn't support it
 	switch provider {
 	case ProviderClaude:
 		return promptLen >= 1024
 	case ProviderGemini:
 		return promptLen >= 2048
+	case ProviderCodex:
+		return promptLen >= 1024
 	default:
 		return false
 	}
@@ -181,13 +182,16 @@ func splitCacheablePrefix(repoPath string, prompt string) (prefix, variable stri
 		}
 	}
 
-	// Also try to include CLAUDE.md content as stable prefix
-	claudeMDPath := filepath.Join(repoPath, "CLAUDE.md")
-	if claudeContent, err := os.ReadFile(claudeMDPath); err == nil && len(claudeContent) > 0 {
-		// If CLAUDE.md content appears in the prompt, it's already accounted for
-		// Otherwise, prepend it as stable prefix
-		if !strings.Contains(prompt, string(claudeContent[:min(100, len(claudeContent))])) {
-			stableParts = append([]string{string(claudeContent)}, stableParts...)
+	// Also try to include repo-scoped instruction files as stable prefixes.
+	for _, name := range []string{"AGENTS.md", "CLAUDE.md", "GEMINI.md"} {
+		path := filepath.Join(repoPath, name)
+		content, err := os.ReadFile(path)
+		if err != nil || len(content) == 0 {
+			continue
+		}
+		snippet := string(content[:min(100, len(content))])
+		if !strings.Contains(prompt, snippet) {
+			stableParts = append([]string{string(content)}, stableParts...)
 		}
 	}
 

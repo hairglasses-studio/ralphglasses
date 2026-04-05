@@ -17,7 +17,7 @@ func TestDefaultFailoverChain(t *testing.T) {
 		t.Fatalf("expected 3 providers, got %d", len(chain.Providers))
 	}
 
-	want := []Provider{ProviderClaude, ProviderGemini, ProviderCodex}
+	want := []Provider{ProviderCodex, ProviderGemini, ProviderClaude}
 	for i, p := range chain.Providers {
 		if p != want[i] {
 			t.Errorf("provider[%d] = %s, want %s", i, p, want[i])
@@ -178,7 +178,7 @@ func TestLaunchWithFailover_HealthyButLaunchFails(t *testing.T) {
 
 	callOrder := []Provider{}
 
-	// Launch fails for claude and gemini, succeeds for codex.
+	// With Codex first in the failover chain, the first attempt succeeds.
 	mgr.SetHooksForTesting(
 		func(_ context.Context, opts LaunchOptions) (*Session, error) {
 			callOrder = append(callOrder, opts.Provider)
@@ -208,11 +208,11 @@ func TestLaunchWithFailover_HealthyButLaunchFails(t *testing.T) {
 		t.Fatalf("wrong session ID: %s", sess.ID)
 	}
 
-	// Verify claude and gemini were tried first.
-	if len(callOrder) != 3 {
-		t.Fatalf("expected 3 launch attempts, got %d", len(callOrder))
+	// Verify the default Codex-first ordering short-circuits after the first success.
+	if len(callOrder) != 1 {
+		t.Fatalf("expected 1 launch attempt, got %d", len(callOrder))
 	}
-	if callOrder[0] != ProviderClaude || callOrder[1] != ProviderGemini || callOrder[2] != ProviderCodex {
+	if callOrder[0] != ProviderCodex {
 		t.Fatalf("unexpected call order: %v", callOrder)
 	}
 }

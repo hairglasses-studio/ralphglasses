@@ -7,8 +7,8 @@ func TestNewSessionLauncher(t *testing.T) {
 	if !l.Active {
 		t.Error("should be active")
 	}
-	if l.Fields[FieldProvider] != "claude" {
-		t.Errorf("default provider = %q, want claude", l.Fields[FieldProvider])
+	if l.Fields[FieldProvider] != "codex" {
+		t.Errorf("default provider = %q, want codex", l.Fields[FieldProvider])
 	}
 	if l.RepoName != "myrepo" {
 		t.Errorf("repo name = %q", l.RepoName)
@@ -22,11 +22,11 @@ func TestCycleProvider(t *testing.T) {
 		t.Errorf("after 1: %q", l.Fields[FieldProvider])
 	}
 	l.CycleProvider()
-	if l.Fields[FieldProvider] != "codex" {
+	if l.Fields[FieldProvider] != "claude" {
 		t.Errorf("after 2: %q", l.Fields[FieldProvider])
 	}
 	l.CycleProvider()
-	if l.Fields[FieldProvider] != "claude" {
+	if l.Fields[FieldProvider] != "codex" {
 		t.Errorf("after 3: %q", l.Fields[FieldProvider])
 	}
 }
@@ -65,7 +65,7 @@ func TestLauncher_Submit(t *testing.T) {
 	l.Fields[FieldPrompt] = "fix bug"
 
 	result := l.Submit()
-	if result.Provider != "claude" {
+	if result.Provider != "codex" {
 		t.Errorf("provider = %q", result.Provider)
 	}
 	if result.Prompt != "fix bug" {

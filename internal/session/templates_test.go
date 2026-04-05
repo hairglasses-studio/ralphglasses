@@ -55,9 +55,14 @@ func TestApplyTemplateToOptionsModifiesPrompt(t *testing.T) {
 func TestApplyTemplateToOptionsDefaultProvider(t *testing.T) {
 	opts := &LaunchOptions{Prompt: "write tests"}
 	ApplyTemplateToOptions(opts)
-	// Empty provider defaults to claude, which has no prefix/suffix
-	if opts.Prompt != "write tests" {
-		t.Errorf("default provider (claude) should not modify prompt, got %q", opts.Prompt)
+	if opts.Prompt == "write tests" {
+		t.Fatal("default provider should apply the codex prompt template")
+	}
+	if !strings.HasPrefix(opts.Prompt, "Complete") {
+		t.Errorf("default provider template missing codex prefix: %q", opts.Prompt)
+	}
+	if !strings.Contains(opts.Prompt, "write tests") {
+		t.Errorf("default provider template dropped original prompt: %q", opts.Prompt)
 	}
 }
 

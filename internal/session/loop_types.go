@@ -11,37 +11,37 @@ const defaultLoopVerifyCommand = "./scripts/dev/ci.sh"
 
 // LoopProfile configures a perpetual Codex-style planner/worker loop.
 type LoopProfile struct {
-	PlannerProvider      Provider `json:"planner_provider"`
-	PlannerModel         string   `json:"planner_model"`
-	WorkerProvider       Provider `json:"worker_provider"`
-	WorkerModel          string   `json:"worker_model"`
-	VerifierProvider     Provider `json:"verifier_provider"`
-	VerifierModel        string   `json:"verifier_model"`
-	MaxConcurrentWorkers int      `json:"max_concurrent_workers"`
-	RetryLimit           int      `json:"retry_limit"`
-	VerifyCommands       []string `json:"verify_commands,omitempty"`
-	WorktreePolicy       string   `json:"worktree_policy,omitempty"`
-	PlannerBudgetUSD     float64  `json:"planner_budget_usd,omitempty"`
-	WorkerBudgetUSD      float64  `json:"worker_budget_usd,omitempty"`
-	VerifierBudgetUSD    float64  `json:"verifier_budget_usd,omitempty"`
-	EnableReflexion      bool     `json:"enable_reflexion"`
-	EnableEpisodicMemory bool     `json:"enable_episodic_memory"`
-	EnableCascade        bool           `json:"enable_cascade"`
-	CascadeConfig        *CascadeConfig `json:"cascade_config,omitempty"`
-	EnableUncertainty    bool     `json:"enable_uncertainty"`
-	EnableCurriculum     bool     `json:"enable_curriculum"`
-	SelfImprovement      bool     `json:"self_improvement"`
-	CompactionEnabled    bool     `json:"compaction_enabled"`
-	CompactionThreshold  int      `json:"compaction_threshold,omitempty"` // iterations before enabling compaction
-	AutoMergeAll         bool     `json:"auto_merge_all"`                // bypass path classification, auto-merge if verify passes
-	EnablePlannerEnhancement bool  `json:"enable_planner_enhancement"` // run prompt enhancement before planner calls
-	EnableWorkerEnhancement  bool  `json:"enable_worker_enhancement"`  // run prompt enhancement before worker calls
-	MaxIterations        int           `json:"max_iterations,omitempty"`
-	MaxDurationSecs      int           `json:"max_duration_secs,omitempty"`
-	StallTimeout         time.Duration `json:"stall_timeout,omitempty"`      // 0 = disabled, default 10min
-	HardBudgetCapUSD     float64       `json:"hard_budget_cap_usd,omitempty"` // absolute spend ceiling (0 = disabled)
-	NoopPlateauLimit     int           `json:"noop_plateau_limit,omitempty"`  // stop after N consecutive no-op iterations (0 = disabled)
-	MaxWorkerTurns       int           `json:"max_worker_turns,omitempty"`    // absolute cap on total iterations (0 = default 20)
+	PlannerProvider          Provider       `json:"planner_provider"`
+	PlannerModel             string         `json:"planner_model"`
+	WorkerProvider           Provider       `json:"worker_provider"`
+	WorkerModel              string         `json:"worker_model"`
+	VerifierProvider         Provider       `json:"verifier_provider"`
+	VerifierModel            string         `json:"verifier_model"`
+	MaxConcurrentWorkers     int            `json:"max_concurrent_workers"`
+	RetryLimit               int            `json:"retry_limit"`
+	VerifyCommands           []string       `json:"verify_commands,omitempty"`
+	WorktreePolicy           string         `json:"worktree_policy,omitempty"`
+	PlannerBudgetUSD         float64        `json:"planner_budget_usd,omitempty"`
+	WorkerBudgetUSD          float64        `json:"worker_budget_usd,omitempty"`
+	VerifierBudgetUSD        float64        `json:"verifier_budget_usd,omitempty"`
+	EnableReflexion          bool           `json:"enable_reflexion"`
+	EnableEpisodicMemory     bool           `json:"enable_episodic_memory"`
+	EnableCascade            bool           `json:"enable_cascade"`
+	CascadeConfig            *CascadeConfig `json:"cascade_config,omitempty"`
+	EnableUncertainty        bool           `json:"enable_uncertainty"`
+	EnableCurriculum         bool           `json:"enable_curriculum"`
+	SelfImprovement          bool           `json:"self_improvement"`
+	CompactionEnabled        bool           `json:"compaction_enabled"`
+	CompactionThreshold      int            `json:"compaction_threshold,omitempty"` // iterations before enabling compaction
+	AutoMergeAll             bool           `json:"auto_merge_all"`                 // bypass path classification, auto-merge if verify passes
+	EnablePlannerEnhancement bool           `json:"enable_planner_enhancement"`     // run prompt enhancement before planner calls
+	EnableWorkerEnhancement  bool           `json:"enable_worker_enhancement"`      // run prompt enhancement before worker calls
+	MaxIterations            int            `json:"max_iterations,omitempty"`
+	MaxDurationSecs          int            `json:"max_duration_secs,omitempty"`
+	StallTimeout             time.Duration  `json:"stall_timeout,omitempty"`       // 0 = disabled, default 10min
+	HardBudgetCapUSD         float64        `json:"hard_budget_cap_usd,omitempty"` // absolute spend ceiling (0 = disabled)
+	NoopPlateauLimit         int            `json:"noop_plateau_limit,omitempty"`  // stop after N consecutive no-op iterations (0 = disabled)
+	MaxWorkerTurns           int            `json:"max_worker_turns,omitempty"`    // absolute cap on total iterations (0 = default 20)
 
 	// Auto-CI-fix: when verification fails, automatically generate a fix task
 	// from the failure output and route it back to a worker. Capped at
@@ -74,8 +74,8 @@ type LoopIteration struct {
 	Task              LoopTask           `json:"task"`
 	Tasks             []LoopTask         `json:"tasks,omitempty"` // multiple tasks for concurrent execution
 	PlannerSessionID  string             `json:"planner_session_id,omitempty"`
-	WorkerSessionID   string             `json:"worker_session_id,omitempty"`    // first/only worker (backwards compat)
-	WorkerSessionIDs  []string           `json:"worker_session_ids,omitempty"`   // all workers for concurrent execution
+	WorkerSessionID   string             `json:"worker_session_id,omitempty"`  // first/only worker (backwards compat)
+	WorkerSessionIDs  []string           `json:"worker_session_ids,omitempty"` // all workers for concurrent execution
 	VerifierSessionID string             `json:"verifier_session_id,omitempty"`
 	WorktreePath      string             `json:"worktree_path,omitempty"`
 	WorktreePaths     []string           `json:"worktree_paths,omitempty"` // per-worker worktrees
@@ -126,7 +126,7 @@ type LoopRun struct {
 
 	mu     sync.Mutex
 	cancel context.CancelFunc // set by RunLoop; called by StopLoop
-	done   chan struct{}       // closed when RunLoop exits
+	done   chan struct{}      // closed when RunLoop exits
 }
 
 // Lock locks the loop run mutex for external callers.
@@ -155,38 +155,39 @@ func DefaultLoopProfile() LoopProfile {
 }
 
 // SelfImprovementProfile returns a profile configured for autonomous self-improvement.
-// Serial execution (1 worker), all self-learning enabled, ci.sh + selftest --gate verify.
+// Codex is now the primary autonomy runtime, with a larger planner model and
+// cheaper worker/verifier defaults.
 func SelfImprovementProfile() LoopProfile {
 	return LoopProfile{
-		PlannerProvider:      ProviderClaude,
-		PlannerModel:         "claude-opus-4-6", // opus for deep research/planning
-		WorkerProvider:       ProviderClaude,
-		WorkerModel:          "claude-sonnet-4-6", // sonnet for execution (cost-effective)
-		VerifierProvider:     ProviderClaude,
-		VerifierModel:        "claude-sonnet-4-6",
-		MaxConcurrentWorkers: 1,
-		RetryLimit:           2,
-		VerifyCommands:       []string{"./scripts/dev/ci.sh", "go run . selftest --gate"},
-		WorktreePolicy:       "git",
-		PlannerBudgetUSD:     5.0,  // opus planner needs higher budget
-		WorkerBudgetUSD:      15.0, // sonnet worker budget
-		EnableReflexion:      true,
-		EnableEpisodicMemory: true,
-		EnableUncertainty:    true,
-		EnableCurriculum:     true,
-		EnableCascade:        false,
-		SelfImprovement:      true,
-		CompactionEnabled:    true,
-		AutoMergeAll:         true,  // unattended: auto-merge when ci.sh passes
-		EnablePlannerEnhancement: true,  // opus planner benefits from enhanced prompts
-		EnableWorkerEnhancement:  false, // worker prompts already well-structured by planner
-		MaxIterations:        10,
-		MaxDurationSecs:      14400, // 4 hours
+		PlannerProvider:          ProviderCodex,
+		PlannerModel:             "gpt-5.4",
+		WorkerProvider:           ProviderCodex,
+		WorkerModel:              "codex-mini-latest",
+		VerifierProvider:         ProviderCodex,
+		VerifierModel:            "codex-mini-latest",
+		MaxConcurrentWorkers:     1,
+		RetryLimit:               2,
+		VerifyCommands:           []string{"./scripts/dev/ci.sh", "go run . selftest --gate"},
+		WorktreePolicy:           "git",
+		PlannerBudgetUSD:         5.0,
+		WorkerBudgetUSD:          15.0,
+		EnableReflexion:          true,
+		EnableEpisodicMemory:     true,
+		EnableUncertainty:        true,
+		EnableCurriculum:         true,
+		EnableCascade:            false,
+		SelfImprovement:          true,
+		CompactionEnabled:        true,
+		AutoMergeAll:             true,
+		EnablePlannerEnhancement: true,
+		EnableWorkerEnhancement:  false,
+		MaxIterations:            10,
+		MaxDurationSecs:          14400,
 	}
 }
 
 // BudgetOptimizedSelfImprovementProfile returns a self-improvement profile that
-// uses Sonnet-only (no Opus) to maximize iterations per dollar. Per-session
+// uses cheaper Codex models to maximize iterations per dollar. Per-session
 // budgets are scaled from the total budget. For a $100 total budget this yields
 // ~$1.50 planner + $3.00 worker per iteration with a hard cap at 95%.
 func BudgetOptimizedSelfImprovementProfile(totalBudget float64) LoopProfile {
@@ -194,35 +195,35 @@ func BudgetOptimizedSelfImprovementProfile(totalBudget float64) LoopProfile {
 		totalBudget = 100
 	}
 	return LoopProfile{
-		PlannerProvider:      ProviderClaude,
-		PlannerModel:         "claude-sonnet-4-6",
-		WorkerProvider:       ProviderClaude,
-		WorkerModel:          "claude-sonnet-4-6",
-		VerifierProvider:     ProviderClaude,
-		VerifierModel:        "claude-sonnet-4-6",
-		MaxConcurrentWorkers: 1,
-		RetryLimit:           2,
-		VerifyCommands:       []string{"./scripts/dev/ci.sh", "go run . selftest --gate"},
-		WorktreePolicy:       "git",
-		PlannerBudgetUSD:     totalBudget * 0.015, // $1.50 per planner call at $100
-		WorkerBudgetUSD:      totalBudget * 0.030, // $3.00 per worker call at $100
-		VerifierBudgetUSD:    totalBudget * 0.005, // $0.50 per verifier call at $100
-		HardBudgetCapUSD:     totalBudget * 0.95,  // hard stop at 95%, preserves 5% buffer
-		NoopPlateauLimit:     3,
-		EnableReflexion:      true,
-		EnableEpisodicMemory: true,
-		EnableUncertainty:    true,
-		EnableCurriculum:     true,
-		EnableCascade:        true,
-		SelfImprovement:      true,
-		CompactionEnabled:    true,
-		CompactionThreshold:  5,
-		AutoMergeAll:         true,
-		EnablePlannerEnhancement: false,
+		PlannerProvider:          ProviderCodex,
+		PlannerModel:             "o4-mini",
+		WorkerProvider:           ProviderCodex,
+		WorkerModel:              "codex-mini-latest",
+		VerifierProvider:         ProviderCodex,
+		VerifierModel:            "codex-mini-latest",
+		MaxConcurrentWorkers:     1,
+		RetryLimit:               2,
+		VerifyCommands:           []string{"./scripts/dev/ci.sh", "go run . selftest --gate"},
+		WorktreePolicy:           "git",
+		PlannerBudgetUSD:         totalBudget * 0.015,
+		WorkerBudgetUSD:          totalBudget * 0.030,
+		VerifierBudgetUSD:        totalBudget * 0.005,
+		HardBudgetCapUSD:         totalBudget * 0.95,
+		NoopPlateauLimit:         3,
+		EnableReflexion:          true,
+		EnableEpisodicMemory:     true,
+		EnableUncertainty:        true,
+		EnableCurriculum:         true,
+		EnableCascade:            true,
+		SelfImprovement:          true,
+		CompactionEnabled:        true,
+		CompactionThreshold:      5,
+		AutoMergeAll:             true,
+		EnablePlannerEnhancement: true,
 		EnableWorkerEnhancement:  false,
-		MaxIterations:        int(totalBudget * 1.5), // ~150 at $100
-		MaxDurationSecs:      28800,                   // 8 hours
-		StallTimeout:         10 * time.Minute,
+		MaxIterations:            int(totalBudget * 1.5), // ~150 at $100
+		MaxDurationSecs:          28800,                  // 8 hours
+		StallTimeout:             10 * time.Minute,
 	}
 }
 

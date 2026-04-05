@@ -12,9 +12,9 @@ MAX_CALLS_PER_HOUR="120"
 # Each loop iteration starts a fresh context.
 SESSION_CONTINUITY="false"
 
-# Gemini's default model is gemini-3-pro (set by ralphglasses providers.go).
+# Gemini's default model is gemini-2.5-pro (set by ralphglasses providers.go).
 # Override here if needed:
-# PRIMARY_MODEL="gemini-3-pro"
+# PRIMARY_MODEL="gemini-2.5-pro"
 
 # Circuit breaker thresholds — be a bit more lenient since Gemini
 # can handle large context without degradation.

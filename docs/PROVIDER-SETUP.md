@@ -4,14 +4,14 @@ Sessions can target any of three providers via the `provider` parameter:
 
 | Provider | CLI Binary | Default Model | Stream Format | Resume Support |
 |----------|-----------|---------------|---------------|----------------|
-| `claude` (default) | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
-| `gemini` | `gemini` | `gemini-3-pro` | `stream-json` | Yes (`--resume`) |
-| `codex` | `codex` | `gpt-5.4-xhigh` | quiet mode | No |
+| `codex` (default) | `codex` | `gpt-5.4` | `--json` (NDJSON) | Yes (`exec resume`, when supported by the installed CLI) |
+| `claude` | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
+| `gemini` | `gemini` | `gemini-2.5-pro` | `stream-json` | Yes (`--resume`) |
 
 ## Prerequisites
 
 ```bash
-# Claude Code (primary — already installed)
+# Claude Code
 # https://docs.anthropic.com/en/docs/claude-code/overview
 
 # Gemini CLI
@@ -20,7 +20,7 @@ npm install -g @google/gemini-cli
 
 # OpenAI Codex CLI
 npm install -g @openai/codex-cli
-# https://platform.openai.com/docs/guides/codex
+# https://developers.openai.com/codex/noninteractive
 ```
 
 ## Environment Variables
@@ -36,14 +36,14 @@ OPENAI_API_KEY=sk-...           # Codex
 
 ## Orchestration Pattern
 
-Claude leads, delegates subtasks to cheaper/specialized providers:
+Codex leads by default and delegates subtasks to specialized providers:
 
 ```
 ┌──────────────────────────────────────────────┐
-│  Claude (lead)                                │
-│  ├── Gemini worker: bulk code generation      │
-│  ├── Codex worker: focused refactoring        │
-│  └── Claude worker: complex architecture      │
+│  Codex (lead)                                 │
+│  ├── Gemini worker: bulk generation / cheap   │
+│  ├── Codex worker: focused implementation     │
+│  └── Claude worker: expensive reasoning lane  │
 └──────────────────────────────────────────────┘
 ```
 
@@ -79,11 +79,14 @@ OpenAI: GPT-5.4 Codex is $2.50/$15.00 per 1M tokens (input/output).
 
 ### Prompt Caching
 
-All three providers support prompt caching for 80-90% input cost savings on repeated prefixes:
+All three providers can reuse stable prompt prefixes, but ralphglasses now treats Claude more conservatively:
 
 - **Claude**: Automatic cache_control breakpoints on system prompts and tool definitions
 - **Gemini**: Explicit `cachedContents` API with TTL-based cache entries
 - **OpenAI**: Automatic prefix caching on Responses API
+
+Guardrail:
+- Resumed Claude sessions are treated as cache-unsafe for budget estimation until live cache reads are observed. See [CODEX-REFERENCE.md](CODEX-REFERENCE.md).
 
 ### Batch API
 
@@ -103,4 +106,5 @@ Batch jobs are submitted via `ralphglasses_fleet_submit` with `batch: true`. Res
 - `.codex/config.toml` — Codex CLI project config + MCP server registration
 - See [GEMINI.md](../GEMINI.md) for Gemini-specific instructions
 - See [AGENTS.md](../AGENTS.md) for Codex-specific instructions
+- See [CODEX-REFERENCE.md](CODEX-REFERENCE.md) for pinned Codex docs and cache-risk notes
 - See [CONTRIBUTING.md](../CONTRIBUTING.md) for multi-provider contribution guide

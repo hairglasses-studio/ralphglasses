@@ -56,19 +56,19 @@ func NewSessionLauncher(repoPath, repoName string) *SessionLauncher {
 	l.Labels = [launchFieldCount]string{
 		"Provider", "Prompt", "Model", "Budget", "Agent",
 	}
-	l.Fields[FieldProvider] = "claude"
+	l.Fields[FieldProvider] = "codex"
 	return l
 }
 
-// CycleProvider cycles through claude → gemini → codex.
+// CycleProvider cycles through codex → gemini → claude.
 func (l *SessionLauncher) CycleProvider() {
 	switch l.Fields[FieldProvider] {
-	case "claude":
+	case "codex":
 		l.Fields[FieldProvider] = "gemini"
 	case "gemini":
-		l.Fields[FieldProvider] = "codex"
-	default:
 		l.Fields[FieldProvider] = "claude"
+	default:
+		l.Fields[FieldProvider] = "codex"
 	}
 }
 

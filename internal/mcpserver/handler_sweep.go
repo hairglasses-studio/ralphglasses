@@ -22,7 +22,7 @@ const sweepAuditTemplate = `<role>You are a senior software architect performing
 <context>
 Repository path: ~/hairglasses-studio/REPO_PLACEHOLDER
 Ecosystem context: This repo may depend on mcpkit (Go MCP framework), hg-mcp (tool server), claudekit (terminal customization), or ralphglasses (orchestration TUI). Check go.mod, package.json, or requirements.txt for actual dependencies.
-You have a 1M token context window. Read every source file, test file, config file, and documentation file in the repo before producing findings.
+Use the largest context window available for the selected provider. Read every source file, test file, config file, and documentation file in the repo before producing findings.
 </context>
 
 <scratchpad>
@@ -33,7 +33,7 @@ Before writing findings, answer these questions internally:
 - Where are error handling gaps (unchecked returns, swallowed errors, missing context wrapping)?
 - What test coverage patterns exist and which critical paths lack tests?
 - Are there dead code paths, unused exports, or stale dependencies?
-- How well does the CLAUDE.md reflect the actual codebase state?
+- How well do AGENTS.md, README.md, and provider-specific docs reflect the actual codebase state?
 - What cross-repo integration points could break silently?
 </scratchpad>
 
@@ -44,7 +44,7 @@ Read the entire repository contents, then produce an audit covering these areas 
 2. Reliability gaps: error handling, nil checks, race conditions, resource leaks, missing timeouts
 3. Test quality: coverage gaps on critical paths, missing edge case tests, test helpers that hide failures
 4. Code hygiene: dead code, duplicated logic, overly complex functions (cyclomatic complexity above 10), inconsistent naming
-5. Documentation drift: places where CLAUDE.md, README, or inline comments contradict the actual code
+5. Documentation drift: places where AGENTS.md, README, provider docs, or inline comments contradict the actual code
 6. Dependency health: outdated deps, unused imports, version pinning issues, local replace directives that need updating
 </instructions>
 
@@ -72,8 +72,8 @@ For each finding:
 - **Fix**: Specific code change or refactoring approach
 - **Effort**: small (< 30 min) / medium (1-3 hours) / large (half day+)
 
-### CLAUDE.md Accuracy
-List any sections of CLAUDE.md that are outdated or missing, with suggested corrections.
+### Instruction Accuracy
+List any sections of AGENTS.md or provider-specific docs that are outdated or missing, with suggested corrections.
 
 ### Recommended Next Actions
 Top 3 improvements ranked by effort-to-impact ratio, as actionable one-line descriptions.
@@ -84,13 +84,13 @@ const sweepFixTemplate = `<role>You are a senior software engineer fixing audit 
 
 <context>
 Repository: ~/hairglasses-studio/REPO_PLACEHOLDER
-Audit file: .claude/audit-2026-04-03.md contains all findings with file paths, line numbers, and fix descriptions.
+Audit file: .claude/audit-2026-04-03.md or docs-generated audit notes contain all findings with file paths, line numbers, and fix descriptions.
 Read the audit file first, then fix every item in priority order (HIGH first, then MEDIUM, then LOW).
 </context>
 
 <instructions>
 1. Read .claude/audit-2026-04-03.md completely
-2. Read the CLAUDE.md for build/test/lint commands
+2. Read AGENTS.md and project docs for build/test/lint commands
 3. For each finding, in order:
    a. Read the referenced file(s) at the specified line numbers
    b. Apply the fix described in the audit
@@ -108,7 +108,7 @@ Read the audit file first, then fix every item in priority order (HIGH first, th
 - One commit per finding (do not batch unrelated fixes)
 - Do not refactor code beyond what the finding specifies
 - Skip findings that require human judgment and document why
-- For documentation fixes (CLAUDE.md drift), verify the correction against actual code before committing
+- For documentation fixes, verify the correction against actual code before committing
 - Do not modify test assertions to make tests pass — fix the code instead
 </constraints>
 
@@ -124,7 +124,7 @@ func (s *Server) handleSweepGenerate(_ context.Context, req mcp.CallToolRequest)
 	p := NewParams(req)
 
 	taskType := p.OptionalString("task_type", "audit")
-	targetProvider := p.OptionalString("target_provider", "claude")
+	targetProvider := p.OptionalString("target_provider", "openai")
 	customPrompt := p.OptionalString("custom_prompt", "")
 
 	var basePrompt string
@@ -146,15 +146,15 @@ func (s *Server) handleSweepGenerate(_ context.Context, req mcp.CallToolRequest)
 	analysis := enhancer.Analyze(eResult.Enhanced)
 
 	return jsonResult(map[string]any{
-		"prompt":          eResult.Enhanced,
-		"quality_score":   analysis.Score,
-		"grade":           scoreGrade(analysis),
-		"task_type":       eResult.TaskType,
-		"stages_run":      eResult.StagesRun,
-		"improvements":    eResult.Improvements,
+		"prompt":           eResult.Enhanced,
+		"quality_score":    analysis.Score,
+		"grade":            scoreGrade(analysis),
+		"task_type":        eResult.TaskType,
+		"stages_run":       eResult.StagesRun,
+		"improvements":     eResult.Improvements,
 		"estimated_tokens": eResult.EstimatedTokens,
-		"cost_tier":       eResult.CostTier,
-		"source":          eResult.Source,
+		"cost_tier":        eResult.CostTier,
+		"source":           eResult.Source,
 	}), nil
 }
 
@@ -168,7 +168,7 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 
 	reposParam := p.OptionalString("repos", "active")
 	limit := int(p.OptionalNumber("limit", 10))
-	model := p.OptionalString("model", "opus")
+	model := p.OptionalString("model", session.ProviderDefaults(session.ProviderCodex))
 	permMode := p.OptionalString("permission_mode", "plan")
 	enhanceMode := p.OptionalString("enhance_prompt", "local")
 	budgetUSD := p.OptionalNumber("budget_usd", 5.0)
@@ -196,7 +196,7 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 
 	// Validate model name against known provider prefixes.
 	for _, w := range session.ValidateLoopConfig(session.LoopConfig{
-		Provider: session.ProviderClaude, Model: model,
+		Provider: session.ProviderCodex, Model: model,
 	}) {
 		if w.Field == "model" {
 			return codedError(ErrInvalidParams, fmt.Sprintf("model validation: %s", w.Message)), nil
@@ -208,16 +208,12 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 	estimatedPerSession := 1.0
 
 	if s.SessMgr != nil && s.SessMgr.HasCostPredictor() {
-		estimatedPerSession = s.SessMgr.GetCostPredictor().Predict("sweep", "claude")
+		estimatedPerSession = s.SessMgr.GetCostPredictor().Predict("sweep", "codex")
 	}
 	if estimatedPerSession <= 1.0 {
 		pc := config.DefaultProviderCosts()
-		inRate := pc.InputPerMToken["claude_sonnet"]
-		outRate := pc.OutputPerMToken["claude_sonnet"]
-		if strings.HasPrefix(model, "opus") || strings.Contains(model, "opus") {
-			inRate = pc.InputPerMToken["claude_opus"]
-			outRate = pc.OutputPerMToken["claude_opus"]
-		}
+		inRate := pc.InputPerMToken["codex"]
+		outRate := pc.OutputPerMToken["codex"]
 		estTurns := float64(maxTurns) * 0.6
 		tokPerTurn := 8000.0
 		estimatedPerSession = (tokPerTurn * estTurns / 1_000_000) * (inRate + outRate)
@@ -263,7 +259,7 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 			repoPrompt := strings.ReplaceAll(prompt, "REPO_PLACEHOLDER", r.Name)
 
 			opts := session.LaunchOptions{
-				Provider:             session.ProviderClaude,
+				Provider:             session.DefaultPrimaryProvider(),
 				RepoPath:             r.Path,
 				Prompt:               repoPrompt,
 				Model:                model,
@@ -287,7 +283,7 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 					if m == "" {
 						m = enhancer.ModeLocal
 					}
-					eResult := enhancer.EnhanceHybrid(ctx, repoPrompt, "", cfg, s.getEngine(), m, enhancer.ProviderClaude)
+					eResult := enhancer.EnhanceHybrid(ctx, repoPrompt, "", cfg, s.getEngine(), m, enhancer.ProviderOpenAI)
 					opts.Prompt = eResult.Enhanced
 				}
 			}
@@ -457,7 +453,7 @@ func (s *Server) handleSweepNudge(_ context.Context, req mcp.CallToolRequest) (*
 			_ = s.SessMgr.Stop(sessID)
 
 			newOpts := session.LaunchOptions{
-				Provider:       session.ProviderClaude,
+				Provider:       session.DefaultPrimaryProvider(),
 				RepoPath:       repoPath,
 				Prompt:         prompt,
 				Model:          model,
@@ -486,8 +482,8 @@ func (s *Server) handleSweepNudge(_ context.Context, req mcp.CallToolRequest) (*
 		case "skip":
 			skipped++
 			details = append(details, map[string]any{
-				"repo":    repo,
-				"action":  "skipped",
+				"repo":     repo,
+				"action":   "skipped",
 				"idle_min": int(idle.Minutes()),
 			})
 		}

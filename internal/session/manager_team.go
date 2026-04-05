@@ -51,7 +51,7 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 		workerProvider = config.Provider
 	}
 	if workerProvider == "" {
-		workerProvider = ProviderClaude
+		workerProvider = DefaultPrimaryProvider()
 	}
 
 	leadPrompt := fmt.Sprintf(
@@ -97,7 +97,7 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 	if m.Enhancer != nil {
 		leadProvider := config.Provider
 		if leadProvider == "" {
-			leadProvider = ProviderClaude
+			leadProvider = DefaultPrimaryProvider()
 		}
 		leadEnhance = m.enhanceForProvider(ctx, leadPrompt, leadProvider)
 		leadPrompt = leadEnhance.prompt

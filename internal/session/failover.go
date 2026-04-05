@@ -14,7 +14,7 @@ type FailoverChain struct {
 
 // DefaultFailoverChain returns the standard provider preference order.
 func DefaultFailoverChain() FailoverChain {
-	return FailoverChain{Providers: []Provider{ProviderClaude, ProviderGemini, ProviderCodex}}
+	return FailoverChain{Providers: []Provider{DefaultPrimaryProvider(), ProviderGemini, ProviderClaude}}
 }
 
 // LaunchWithFailover attempts to launch a session using the first healthy
@@ -51,7 +51,7 @@ func (m *Manager) LaunchWithFailover(ctx context.Context, opts LaunchOptions, ch
 
 // LaunchWithSmartFailover uses FeedbackAnalyzer profiles to build an optimized
 // failover chain, then falls back to the default static chain. This replaces
-// the static [claude→gemini→codex] ordering with data-driven provider selection.
+// the static default ordering with data-driven provider selection.
 func (m *Manager) LaunchWithSmartFailover(ctx context.Context, opts LaunchOptions) (*Session, Provider, error) {
 	m.configMu.RLock()
 	optimizer := m.optimizer

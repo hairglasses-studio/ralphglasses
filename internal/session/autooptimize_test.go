@@ -123,8 +123,8 @@ func TestAutoOptimizer_BuildSmartFailoverChain(t *testing.T) {
 func TestAutoOptimizer_RecommendProvider_NoData(t *testing.T) {
 	ao := NewAutoOptimizer(nil, nil, nil, nil)
 	rec := ao.RecommendProvider("fix the bug")
-	if rec.Provider != ProviderClaude {
-		t.Fatalf("expected claude default, got %s", rec.Provider)
+	if rec.Provider != ProviderCodex {
+		t.Fatalf("expected codex default, got %s", rec.Provider)
 	}
 	if rec.Confidence != "low" {
 		t.Fatalf("expected low confidence, got %s", rec.Confidence)
