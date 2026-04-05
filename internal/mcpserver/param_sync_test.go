@@ -228,6 +228,22 @@ func extractHandlerParams(file *ast.File, out map[string]map[string]bool) {
 						}
 					}
 				}
+
+				// Match Params method calls: p.RequireString("key"), p.OptionalString("key", ...),
+				// p.RequireNumber("key"), p.OptionalNumber("key", ...), p.RequireBool("key"), p.OptionalBool("key", ...)
+				if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+					methodName := sel.Sel.Name
+					if methodName == "RequireString" || methodName == "OptionalString" ||
+						methodName == "RequireNumber" || methodName == "OptionalNumber" ||
+						methodName == "RequireBool" || methodName == "OptionalBool" {
+						if len(call.Args) >= 1 {
+							if lit, ok := call.Args[0].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+								paramName := strings.Trim(lit.Value, "\"")
+								params[paramName] = true
+							}
+						}
+					}
+				}
 			}
 
 			// Match m["key"] index expressions (direct argsMap access).
