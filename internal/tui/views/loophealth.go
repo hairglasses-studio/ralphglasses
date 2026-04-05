@@ -67,7 +67,7 @@ func renderGateSummary(data LoopHealthData) string {
 	b.WriteString(fmt.Sprintf("  Overall: %s  %s\n",
 		components.GateVerdictBadge(string(data.GateReport.Overall)),
 		components.GateReportSummary(data.GateReport.Results)))
-	b.WriteString(fmt.Sprintf("  Samples: %d observations\n\n", data.GateReport.SampleCount))
+	b.WriteString(fmt.Sprintf("  Samples: %d observations\n", data.GateReport.SampleCount))
 
 	// Per-metric rows with sparklines
 	costData := extractMetricSeries(data.Observations, "cost")

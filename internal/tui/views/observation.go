@@ -46,13 +46,13 @@ func RenderObservationView(data ObservationViewData, width, height int) string {
 
 	// Sparkline width adapts to terminal width
 	sparkWidth := max(width-35, 12)
-	if sparkWidth > 60 {
-		sparkWidth = 60
+	if sparkWidth > 120 {
+		sparkWidth = 120
 	}
 
 	// Panel: Sparkline rows
 	b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Iteration Metrics (%d iterations)", styles.IconTurns, len(data.Observations))))
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	rows := []struct {
 		label  string

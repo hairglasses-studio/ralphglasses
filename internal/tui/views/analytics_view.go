@@ -247,13 +247,13 @@ func RenderAnalytics(data AnalyticsData, activePanel AnalyticsPanel, tr TimeRang
 		styles.StatBox.Render(fmt.Sprintf("%s AVG COST\n  $%.4f/sess", styles.IconCost, avgCost)),
 		styles.StatBox.Render(fmt.Sprintf("%s SUCCESS\n  %.1f%%", styles.IconCompleted, successRate)),
 	}
-	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, statBoxes...))
-	b.WriteString("\n\n")
+	b.WriteString(wrapStatBoxes(statBoxes, width))
+	b.WriteString("\n")
 
 	// Four panels — highlight the active one
-	sparkWidth := max(width/2-4, 20)
-	if sparkWidth > 60 {
-		sparkWidth = 60
+	sparkWidth := max(width-20, 8)
+	if sparkWidth > 120 {
+		sparkWidth = 120
 	}
 
 	// Panel 1: Session count over time

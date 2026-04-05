@@ -121,9 +121,9 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 
 	// Cost sparkline
 	if len(costHistory) > 1 {
-		sparkWidth := 30
-		if width > 0 && width-4 < sparkWidth {
-			sparkWidth = width - 4
+		sparkWidth := max(width-20, 8)
+		if sparkWidth > 120 {
+			sparkWidth = 120
 		}
 		points := costHistory
 		if len(points) > sparkWidth {
@@ -142,7 +142,7 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 		b.WriteString(styles.StatusFailed.Render(fmt.Sprintf("%s Error", styles.IconErrored)))
 		b.WriteString("\n")
 		b.WriteString(styles.StatusFailed.Render(fmt.Sprintf("  %s", errMsg)))
-		b.WriteString("\n\n")
+		b.WriteString("\n")
 	}
 
 	// Output history

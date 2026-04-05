@@ -11,16 +11,16 @@ import (
 
 // SessionColumns defines the sessions table structure.
 var SessionColumns = []components.Column{
-	{Title: "ID", Width: 9, Sortable: true, MinWidth: 9},
-	{Title: "Prov", Width: 8, Sortable: true, MinWidth: 6},
-	{Title: "Repo", Width: 14, Sortable: true, MinWidth: 10, Flex: 2.0},
-	{Title: "Status", Width: 10, Sortable: true, MinWidth: 8},
-	{Title: "Budget", Width: 12, Sortable: true, MinWidth: 8, Flex: 1.0},
-	{Title: "Trend", Width: 8, Sortable: false, MinWidth: 6, Flex: 0.5},
-	{Title: "Turns", Width: 8, Sortable: true, MinWidth: 6},
-	{Title: "Agent", Width: 8, Sortable: false, MinWidth: 6, Flex: 0.5},
-	{Title: "Team", Width: 8, Sortable: false, MinWidth: 6, Flex: 0.5},
-	{Title: "Dur", Width: 8, Sortable: true, MinWidth: 6},
+	{Title: "ID", Width: 9, Sortable: true, MinWidth: 9, Priority: 0},
+	{Title: "Prov", Width: 8, Sortable: true, MinWidth: 6, Priority: 0},
+	{Title: "Repo", Width: 14, Sortable: true, MinWidth: 10, Flex: 2.0, Priority: 0},
+	{Title: "Status", Width: 10, Sortable: true, MinWidth: 8, Priority: 0},
+	{Title: "Budget", Width: 12, Sortable: true, MinWidth: 8, Flex: 1.0, Priority: 1},
+	{Title: "Trend", Width: 8, Sortable: false, MinWidth: 6, Flex: 0.5, Priority: 2},
+	{Title: "Turns", Width: 8, Sortable: true, MinWidth: 6, Priority: 1},
+	{Title: "Agent", Width: 8, Sortable: false, MinWidth: 6, Flex: 0.5, Priority: 2},
+	{Title: "Team", Width: 8, Sortable: false, MinWidth: 6, Flex: 0.5, Priority: 2},
+	{Title: "Dur", Width: 8, Sortable: true, MinWidth: 6, Priority: 1},
 }
 
 // NewSessionsTable creates a table pre-configured for sessions.
