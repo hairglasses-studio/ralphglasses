@@ -255,3 +255,175 @@ func TestOptionalBoolFalseExplicit(t *testing.T) {
 		t.Fatal("expected explicit false to override default true")
 	}
 }
+
+func TestRequireIntPresent(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{"count": float64(42)}))
+	val, errResult := p.RequireInt("count")
+	if errResult != nil {
+		t.Fatalf("expected no error, got: %v", errResult)
+	}
+	if val != 42 {
+		t.Fatalf("expected 42, got %d", val)
+	}
+}
+
+func TestRequireIntMissing(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{}))
+	_, errResult := p.RequireInt("count")
+	if errResult == nil {
+		t.Fatal("expected error for missing required int")
+	}
+}
+
+func TestOptionalIntPresent(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{"n": float64(7)}))
+	got := p.OptionalInt("n", 99)
+	if got != 7 {
+		t.Fatalf("expected 7, got %d", got)
+	}
+}
+
+func TestOptionalIntMissing(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{}))
+	got := p.OptionalInt("n", 99)
+	if got != 99 {
+		t.Fatalf("expected 99, got %d", got)
+	}
+}
+
+func TestRequireEnumValid(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{"status": "running"}))
+	val, errResult := p.RequireEnum("status", []string{"pending", "running", "done"})
+	if errResult != nil {
+		t.Fatalf("expected no error, got: %v", errResult)
+	}
+	if val != "running" {
+		t.Fatalf("expected %q, got %q", "running", val)
+	}
+}
+
+func TestRequireEnumInvalid(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{"status": "bogus"}))
+	_, errResult := p.RequireEnum("status", []string{"pending", "running", "done"})
+	if errResult == nil {
+		t.Fatal("expected error for invalid enum value")
+	}
+}
+
+func TestRequireEnumMissing(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{}))
+	_, errResult := p.RequireEnum("status", []string{"pending", "running"})
+	if errResult == nil {
+		t.Fatal("expected error for missing required enum")
+	}
+}
+
+func TestOptionalEnumValid(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{"mode": "fast"}))
+	val, errResult := p.OptionalEnum("mode", []string{"fast", "slow"}, "slow")
+	if errResult != nil {
+		t.Fatalf("expected no error, got: %v", errResult)
+	}
+	if val != "fast" {
+		t.Fatalf("expected %q, got %q", "fast", val)
+	}
+}
+
+func TestOptionalEnumMissing(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{}))
+	val, errResult := p.OptionalEnum("mode", []string{"fast", "slow"}, "slow")
+	if errResult != nil {
+		t.Fatalf("expected no error, got: %v", errResult)
+	}
+	if val != "slow" {
+		t.Fatalf("expected default %q, got %q", "slow", val)
+	}
+}
+
+func TestOptionalEnumInvalid(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{"mode": "turbo"}))
+	_, errResult := p.OptionalEnum("mode", []string{"fast", "slow"}, "slow")
+	if errResult == nil {
+		t.Fatal("expected error for invalid optional enum value")
+	}
+}
+
+func TestOptionalLimitDefault(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{}))
+	got := p.OptionalLimit("limit", 50, 100)
+	if got != 50 {
+		t.Fatalf("expected 50, got %d", got)
+	}
+}
+
+func TestOptionalLimitClampHigh(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{"limit": float64(500)}))
+	got := p.OptionalLimit("limit", 50, 100)
+	if got != 100 {
+		t.Fatalf("expected clamped 100, got %d", got)
+	}
+}
+
+func TestOptionalLimitClampLow(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{"limit": float64(-5)}))
+	got := p.OptionalLimit("limit", 50, 100)
+	if got != 1 {
+		t.Fatalf("expected clamped 1, got %d", got)
+	}
+}
+
+func TestStringSlice(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{"tags": "a,b,c"}))
+	got := p.StringSlice("tags", ",")
+	if len(got) != 3 || got[0] != "a" || got[1] != "b" || got[2] != "c" {
+		t.Fatalf("expected [a b c], got %v", got)
+	}
+}
+
+func TestStringSliceEmpty(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{}))
+	got := p.StringSlice("tags", ",")
+	if got != nil {
+		t.Fatalf("expected nil, got %v", got)
+	}
+}
+
+func TestStringSliceWhitespace(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{"tags": " a , b , "}))
+	got := p.StringSlice("tags", ",")
+	if len(got) != 2 || got[0] != "a" || got[1] != "b" {
+		t.Fatalf("expected [a b], got %v", got)
+	}
+}
+
+func TestHasPresent(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{"key": "val"}))
+	if !p.Has("key") {
+		t.Fatal("expected Has to return true")
+	}
+}
+
+func TestHasMissing(t *testing.T) {
+	t.Parallel()
+	p := NewParams(makeReq("test", map[string]any{}))
+	if p.Has("key") {
+		t.Fatal("expected Has to return false")
+	}
+}

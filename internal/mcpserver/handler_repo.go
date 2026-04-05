@@ -81,9 +81,10 @@ func (s *Server) handleList(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 }
 
 func (s *Server) handleStatus(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "repo")
-	if name == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
+	p := NewParams(req)
+	name, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := ValidateRepoName(name); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
@@ -122,7 +123,7 @@ func (s *Server) handleStatus(ctx context.Context, req mcp.CallToolRequest) (*mc
 		detail["progress"] = r.Progress
 	}
 	if r.Config != nil {
-		if getBoolArg(req, "include_config") {
+		if p.OptionalBool("include_config", false) {
 			detail["config"] = r.Config.Values
 		} else {
 			detail["config_keys"] = len(r.Config.Values)
@@ -132,9 +133,10 @@ func (s *Server) handleStatus(ctx context.Context, req mcp.CallToolRequest) (*mc
 }
 
 func (s *Server) handleStart(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "repo")
-	if name == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
+	p := NewParams(req)
+	name, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := ValidateRepoName(name); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
@@ -155,9 +157,10 @@ func (s *Server) handleStart(ctx context.Context, req mcp.CallToolRequest) (*mcp
 }
 
 func (s *Server) handleStop(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "repo")
-	if name == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
+	p := NewParams(req)
+	name, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := ValidateRepoName(name); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
@@ -190,9 +193,10 @@ func (s *Server) handleStopAll(ctx context.Context, req mcp.CallToolRequest) (*m
 }
 
 func (s *Server) handlePause(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "repo")
-	if name == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
+	p := NewParams(req)
+	name, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := ValidateRepoName(name); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
@@ -220,9 +224,10 @@ func (s *Server) handlePause(_ context.Context, req mcp.CallToolRequest) (*mcp.C
 }
 
 func (s *Server) handleLogs(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "repo")
-	if name == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
+	p := NewParams(req)
+	name, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := ValidateRepoName(name); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
@@ -237,7 +242,7 @@ func (s *Server) handleLogs(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
-	maxLines := int(getNumberArg(req, "lines", 50))
+	maxLines := int(p.OptionalNumber("lines", 50))
 	if maxLines > 500 {
 		maxLines = 500
 	}
@@ -269,9 +274,10 @@ func (s *Server) handleLogs(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 }
 
 func (s *Server) handleConfig(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "repo")
-	if name == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
+	p := NewParams(req)
+	name, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := ValidateRepoName(name); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo name: %v", err)), nil
@@ -290,8 +296,8 @@ func (s *Server) handleConfig(_ context.Context, req mcp.CallToolRequest) (*mcp.
 		return codedError(ErrConfigInvalid, fmt.Sprintf("no .ralphrc found for %s", name)), nil
 	}
 
-	key := getStringArg(req, "key")
-	value := getStringArg(req, "value")
+	key := p.OptionalString("key", "")
+	value := p.OptionalString("value", "")
 
 	// List all
 	if key == "" {
@@ -316,12 +322,13 @@ func (s *Server) handleConfig(_ context.Context, req mcp.CallToolRequest) (*mcp.
 }
 
 func (s *Server) handleConfigBulk(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	key := getStringArg(req, "key")
-	if key == "" {
-		return codedError(ErrInvalidParams, "key required"), nil
+	p := NewParams(req)
+	key, errResult := p.RequireString("key")
+	if errResult != nil {
+		return errResult, nil
 	}
-	value := getStringArg(req, "value")
-	reposStr := getStringArg(req, "repos")
+	value := p.OptionalString("value", "")
+	reposStr := p.OptionalString("repos", "")
 
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
