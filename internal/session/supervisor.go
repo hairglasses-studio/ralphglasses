@@ -50,6 +50,9 @@ type Supervisor struct {
 	startedAt           time.Time
 	consecutiveFailures int
 
+	// Passive background research daemon (ticks on its own internal schedule).
+	researchDaemon *ResearchDaemon
+
 	// Crash recovery: detects dead Claude Code sessions and orchestrates resume.
 	crashRecovery       *CrashRecoveryOrchestrator
 	crashCheckWindow    time.Duration // default 4h
@@ -110,6 +113,13 @@ func (s *Supervisor) SetSprintPlanner(sp *SprintPlanner) { s.mu.Lock(); s.planne
 
 // SetBudget sets the budget envelope for real-time cost tracking.
 func (s *Supervisor) SetBudget(b *BudgetEnvelope) { s.mu.Lock(); s.budget = b; s.mu.Unlock() }
+
+// SetResearchDaemon attaches the passive research daemon to the supervisor tick loop.
+func (s *Supervisor) SetResearchDaemon(rd *ResearchDaemon) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.researchDaemon = rd
+}
 
 // SetCrashRecovery attaches a crash recovery orchestrator to the supervisor tick loop.
 func (s *Supervisor) SetCrashRecovery(cr *CrashRecoveryOrchestrator) {
@@ -397,6 +407,14 @@ func (s *Supervisor) tick(ctx context.Context) {
 				"source": "sprint_planner", "cycle": planned.Name, "objective": planned.Objective,
 			})
 		}
+	}
+
+	// Research daemon — runs on its own internal schedule (every Nth tick).
+	s.mu.Lock()
+	rd := s.researchDaemon
+	s.mu.Unlock()
+	if rd != nil {
+		rd.Tick(ctx)
 	}
 
 	s.mu.Lock()

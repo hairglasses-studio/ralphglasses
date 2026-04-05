@@ -227,6 +227,38 @@ func BudgetOptimizedSelfImprovementProfile(totalBudget float64) LoopProfile {
 	}
 }
 
+// ResearchLoopProfile returns a budget-optimized profile for the passive research
+// daemon. Uses the cheapest models available: Gemini Flash for planning, Claude
+// Haiku for execution, and Gemini Flash-Lite for verification. The dailyBudget
+// parameter controls per-phase budget allocation.
+func ResearchLoopProfile(dailyBudget float64) LoopProfile {
+	if dailyBudget <= 0 {
+		dailyBudget = 25
+	}
+	return LoopProfile{
+		PlannerProvider:      ProviderGemini,
+		PlannerModel:         "gemini-2.5-flash",
+		WorkerProvider:       ProviderClaude,
+		WorkerModel:          "claude-3-haiku-20250401",
+		VerifierProvider:     ProviderGemini,
+		VerifierModel:        "gemini-2.0-flash-lite",
+		MaxConcurrentWorkers: 3,
+		RetryLimit:           1,
+		WorktreePolicy:       "none",
+		PlannerBudgetUSD:     dailyBudget * 0.10,
+		WorkerBudgetUSD:      dailyBudget * 0.60,
+		VerifierBudgetUSD:    dailyBudget * 0.05,
+		HardBudgetCapUSD:     dailyBudget * 0.95,
+		NoopPlateauLimit:     3,
+		EnableCascade:        true,
+		CompactionEnabled:    true,
+		CompactionThreshold:  5,
+		MaxIterations:        20,
+		MaxDurationSecs:      3600, // 1 hour
+		StallTimeout:         5 * time.Minute,
+	}
+}
+
 // enhanceResult holds the enhanced prompt plus metadata for training loop capture.
 type enhanceResult struct {
 	prompt   string

@@ -191,9 +191,10 @@ func (r *TaskRegistry) Prune(maxAge time.Duration) int {
 // --- MCP Tool Handlers ---
 
 func (s *Server) handleTasksGet(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	taskID := getStringArg(req, "task_id")
-	if taskID == "" {
-		return codedError(ErrInvalidParams, "task_id required"), nil
+	p := NewParams(req)
+	taskID, errResult := p.RequireString("task_id")
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	if s.Tasks == nil {
@@ -209,11 +210,12 @@ func (s *Server) handleTasksGet(ctx context.Context, req mcp.CallToolRequest) (*
 }
 
 func (s *Server) handleTasksList(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	p := NewParams(req)
 	if s.Tasks == nil {
 		return codedError(ErrInternal, "task registry not initialized"), nil
 	}
 
-	stateFilter := TaskState(getStringArg(req, "state"))
+	stateFilter := TaskState(p.OptionalString("state", ""))
 	tasks := s.Tasks.List(stateFilter)
 
 	return jsonResult(map[string]any{
@@ -223,9 +225,10 @@ func (s *Server) handleTasksList(ctx context.Context, req mcp.CallToolRequest) (
 }
 
 func (s *Server) handleTasksCancel(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	taskID := getStringArg(req, "task_id")
-	if taskID == "" {
-		return codedError(ErrInvalidParams, "task_id required"), nil
+	p := NewParams(req)
+	taskID, errResult := p.RequireString("task_id")
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	if s.Tasks == nil {
