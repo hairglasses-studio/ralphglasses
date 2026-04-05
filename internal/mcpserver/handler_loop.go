@@ -55,6 +55,11 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 		profile.MaxConcurrentWorkers = value
 	}
 	if commands := splitLines(p.OptionalString("verify_commands", "")); len(commands) > 0 {
+		for _, cmd := range commands {
+			if err := session.ValidateVerifyCommand(cmd); err != nil {
+				return codedError(ErrInvalidParams, err.Error()), nil
+			}
+		}
 		profile.VerifyCommands = commands
 	}
 	if pp := p.OptionalString("planner_provider", ""); pp != "" {

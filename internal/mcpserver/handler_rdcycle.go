@@ -26,6 +26,9 @@ func (s *Server) handleFindingToTask(_ context.Context, req mcp.CallToolRequest)
 	if scratchpadName == "" {
 		return codedError(ErrInvalidParams, "scratchpad_name required"), nil
 	}
+	if err := validateSafePath(scratchpadName); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid scratchpad_name: %v", err)), nil
+	}
 
 	repo := getStringArg(req, "repo")
 	repoPath, errRes := s.resolveRepoPath(repo)
@@ -352,6 +355,14 @@ func (s *Server) handleCycleMerge(_ context.Context, req mcp.CallToolRequest) (*
 	}
 
 	paths := splitCSV(worktreePaths)
+
+	for i, wt := range paths {
+		wt = strings.TrimSpace(wt)
+		paths[i] = wt
+		if err := ValidatePath(wt, ""); err != nil {
+			return codedError(ErrInvalidParams, fmt.Sprintf("invalid worktree path %q: %v", wt, err)), nil
+		}
+	}
 
 	// Track which files are changed in which worktrees.
 	type fileChange struct {

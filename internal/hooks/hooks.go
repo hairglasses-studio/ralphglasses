@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -58,6 +59,17 @@ func (e *Executor) LoadConfig(repoPath string) error {
 	var cfg HookConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return fmt.Errorf("parse hooks config: %w", err)
+	}
+
+	for eventType, hooks := range cfg.Hooks {
+		for i, h := range hooks {
+			if strings.ContainsAny(h.Command, ";|&`$(){}") {
+				return fmt.Errorf("hook %q for event %s contains shell metacharacters", h.Name, eventType)
+			}
+			if h.Name == "" {
+				return fmt.Errorf("hook at index %d for event %s has empty name", i, eventType)
+			}
+		}
 	}
 
 	e.mu.Lock()
@@ -126,16 +138,25 @@ func (e *Executor) runHook(h HookDef, event events.Event, repoPath string) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
+	sanitize := func(s string) string {
+		return strings.Map(func(r rune) rune {
+			if r < 32 || r == '=' || r == '\'' || r == '"' || r == '`' || r == '$' {
+				return '_'
+			}
+			return r
+		}, s)
+	}
+
 	run := func() {
 		defer cancel()
 		cmd := exec.CommandContext(ctx, "sh", "-c", h.Command)
 		cmd.Dir = repoPath
 		cmd.Env = append(os.Environ(),
-			"RALPH_EVENT_TYPE="+string(event.Type),
-			"RALPH_REPO_NAME="+event.RepoName,
-			"RALPH_REPO_PATH="+event.RepoPath,
-			"RALPH_SESSION_ID="+event.SessionID,
-			"RALPH_PROVIDER="+event.Provider,
+			"RALPH_EVENT_TYPE="+sanitize(string(event.Type)),
+			"RALPH_REPO_NAME="+sanitize(event.RepoName),
+			"RALPH_REPO_PATH="+sanitize(event.RepoPath),
+			"RALPH_SESSION_ID="+sanitize(event.SessionID),
+			"RALPH_PROVIDER="+sanitize(event.Provider),
 		)
 		if err := cmd.Run(); err != nil {
 			slog.Error("hook failed", "hook", h.Name, "error", err)
