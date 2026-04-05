@@ -22,6 +22,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
+	"github.com/hairglasses-studio/ralphglasses/internal/enhancer/fewshot"
 	"github.com/hairglasses-studio/ralphglasses/internal/promptdj"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
@@ -95,6 +96,9 @@ type Server struct {
 
 	// djRouter is the Prompt DJ routing engine (lazy-initialized).
 	djRouter *promptdj.PromptDJRouter
+
+	// fewshotRetriever is the few-shot example retriever (lazy-initialized).
+	fewshotRetriever *fewshot.Retriever
 }
 
 // DefaultScanTTL is how long repo scan results are considered fresh before
