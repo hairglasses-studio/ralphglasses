@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 )
@@ -59,10 +60,8 @@ func TestSupervisorGatesTestFailure(t *testing.T) {
 	gates.RequireBuild = false
 	gates.RequireVet = false
 	gates.runCmd = func(ctx context.Context, dir, name string, args ...string) ([]byte, error) {
-		for _, a := range args {
-			if a == "test" {
-				return []byte("--- FAIL: TestFoo"), fmt.Errorf("exit status 1")
-			}
+		if slices.Contains(args, "test") {
+			return []byte("--- FAIL: TestFoo"), fmt.Errorf("exit status 1")
 		}
 		return nil, nil
 	}
@@ -84,10 +83,8 @@ func TestSupervisorGatesVetWarning(t *testing.T) {
 	gates.RequireBuild = false
 	gates.RequireTest = false
 	gates.runCmd = func(ctx context.Context, dir, name string, args ...string) ([]byte, error) {
-		for _, a := range args {
-			if a == "vet" {
-				return []byte("unreachable code"), fmt.Errorf("exit status 1")
-			}
+		if slices.Contains(args, "vet") {
+			return []byte("unreachable code"), fmt.Errorf("exit status 1")
 		}
 		return nil, nil
 	}

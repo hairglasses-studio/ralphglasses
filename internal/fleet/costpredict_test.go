@@ -29,7 +29,7 @@ func TestConstantRate(t *testing.T) {
 	base := time.Now()
 
 	// 10 samples, $1 each, 1 hour apart.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		p.Record(CostSample{
 			Timestamp: base.Add(time.Duration(i) * time.Hour),
 			CostUSD:   1.0,
@@ -55,7 +55,7 @@ func TestIncreasingTrend(t *testing.T) {
 	base := time.Now()
 
 	// First 5 at $0.50, next 5 at $2.00.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		cost := 0.50
 		if i >= 5 {
 			cost = 2.00
@@ -106,7 +106,7 @@ func TestAnomalyDetection(t *testing.T) {
 	base := time.Now()
 
 	// 25 uniform samples at $1, then one outlier at $100.
-	for i := 0; i < 25; i++ {
+	for i := range 25 {
 		p.Record(CostSample{
 			Timestamp: base.Add(time.Duration(i) * time.Minute),
 			CostUSD:   1.0,
@@ -143,7 +143,7 @@ func TestWindowEviction(t *testing.T) {
 	base := time.Now()
 
 	// Insert more than maxSamples.
-	for i := 0; i < defaultMaxSamples+50; i++ {
+	for i := range defaultMaxSamples + 50 {
 		p.Record(CostSample{
 			Timestamp: base.Add(time.Duration(i) * time.Second),
 			CostUSD:   0.01,
@@ -161,7 +161,7 @@ func TestCostPredictorZeroBurnRate(t *testing.T) {
 	base := time.Now()
 
 	// All zero-cost samples, 1 hour apart.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		p.Record(CostSample{
 			Timestamp: base.Add(time.Duration(i) * time.Hour),
 			CostUSD:   0.0,

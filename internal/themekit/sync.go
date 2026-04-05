@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"sync"
 	"time"
 
@@ -94,9 +95,7 @@ func (ts *ThemeSync) Apply(theme styles.Theme) error {
 	ts.mu.Lock()
 	ts.current = theme
 	appliers := make(map[string]ThemeApplier, len(ts.appliers))
-	for k, v := range ts.appliers {
-		appliers[k] = v
-	}
+	maps.Copy(appliers, ts.appliers)
 	ts.mu.Unlock()
 
 	// Update package-level styles.

@@ -313,7 +313,7 @@ func TestTracer_SamplingZero_DropsSpans(t *testing.T) {
 		t.Fatalf("NewTracer: %v", err)
 	}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		_, span := tr.StartSpan(context.Background(), "dropped")
 		span.End()
 	}
@@ -533,14 +533,12 @@ func TestTracer_ConcurrentSpans(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 20 {
+		wg.Go(func() {
 			_, span := tr.StartSpan(context.Background(), "concurrent-op")
 			span.SetAttribute("goroutine", true)
 			span.End()
-		}()
+		})
 	}
 	wg.Wait()
 

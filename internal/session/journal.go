@@ -15,22 +15,22 @@ import (
 
 // JournalEntry records what worked, failed, and suggestions from a session.
 type JournalEntry struct {
-	Timestamp   time.Time `json:"ts"`
-	SessionID   string    `json:"session_id"`
-	Provider    string    `json:"provider"`
-	RepoName    string    `json:"repo_name"`
-	Model       string    `json:"model"`
-	SpentUSD    float64   `json:"spent_usd"`
-	TurnCount   int       `json:"turn_count"`
-	DurationSec float64   `json:"duration_sec"`
-	Worked            []string `json:"worked"`
-	Failed            []string `json:"failed"`
-	Suggest           []string `json:"suggest"`
-	SignalSource      string   `json:"signal_source,omitempty"`
-	ExitReason        string   `json:"exit_reason"`
-	TaskFocus         string   `json:"task_focus"`
-	EnhancementSource string   `json:"enhancement_source,omitempty"`
-	EnhancementScore  int      `json:"enhancement_score,omitempty"`
+	Timestamp         time.Time `json:"ts"`
+	SessionID         string    `json:"session_id"`
+	Provider          string    `json:"provider"`
+	RepoName          string    `json:"repo_name"`
+	Model             string    `json:"model"`
+	SpentUSD          float64   `json:"spent_usd"`
+	TurnCount         int       `json:"turn_count"`
+	DurationSec       float64   `json:"duration_sec"`
+	Worked            []string  `json:"worked"`
+	Failed            []string  `json:"failed"`
+	Suggest           []string  `json:"suggest"`
+	SignalSource      string    `json:"signal_source,omitempty"`
+	ExitReason        string    `json:"exit_reason"`
+	TaskFocus         string    `json:"task_focus"`
+	EnhancementSource string    `json:"enhancement_source,omitempty"`
+	EnhancementScore  int       `json:"enhancement_score,omitempty"`
 }
 
 // ConsolidatedPatterns holds durable patterns extracted from journal history.
@@ -53,9 +53,9 @@ type ConsolidatedItem struct {
 // Rules require a minimum occurrence threshold to avoid noise.
 type Rule struct {
 	ID              string    `json:"id"`
-	Pattern         string    `json:"pattern"`          // what was observed
-	Action          string    `json:"action"`            // recommended action
-	Confidence      float64   `json:"confidence"`        // 0-1 based on occurrence frequency
+	Pattern         string    `json:"pattern"`    // what was observed
+	Action          string    `json:"action"`     // recommended action
+	Confidence      float64   `json:"confidence"` // 0-1 based on occurrence frequency
 	OccurrenceCount int       `json:"occurrence_count"`
 	FirstSeen       time.Time `json:"first_seen"`
 	LastSeen        time.Time `json:"last_seen"`
@@ -74,13 +74,13 @@ const (
 func WriteJournalEntry(s *Session) error {
 	s.mu.Lock()
 	entry := JournalEntry{
-		Timestamp:  time.Now(),
-		SessionID:  s.ID,
-		Provider:   string(s.Provider),
-		RepoName:   s.RepoName,
-		Model:      s.Model,
-		SpentUSD:   s.SpentUSD,
-		TurnCount:  s.TurnCount,
+		Timestamp:         time.Now(),
+		SessionID:         s.ID,
+		Provider:          string(s.Provider),
+		RepoName:          s.RepoName,
+		Model:             s.Model,
+		SpentUSD:          s.SpentUSD,
+		TurnCount:         s.TurnCount,
 		ExitReason:        s.ExitReason,
 		TaskFocus:         extractTaskFocus(s.Prompt),
 		EnhancementSource: s.EnhancementSource,
@@ -608,11 +608,11 @@ func extractSignalsFromOutput(history []string, status SessionStatus, spentUSD f
 }
 
 func extractSection(block, header string) []string {
-	idx := strings.Index(block, header)
-	if idx == -1 {
+	_, after, ok := strings.Cut(block, header)
+	if !ok {
 		return nil
 	}
-	rest := block[idx+len(header):]
+	rest := after
 	// Read until next header or end
 	for _, hdr := range []string{"WORKED:", "FAILED:", "SUGGEST:", "---"} {
 		if hdr == header {
@@ -624,7 +624,7 @@ func extractSection(block, header string) []string {
 	}
 
 	var items []string
-	for _, line := range strings.Split(rest, "\n") {
+	for line := range strings.SplitSeq(rest, "\n") {
 		line = strings.TrimSpace(line)
 		line = strings.TrimPrefix(line, "- ")
 		line = strings.TrimPrefix(line, "* ")

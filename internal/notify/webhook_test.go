@@ -1,7 +1,6 @@
 package notify
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -81,8 +80,7 @@ func TestDispatcher_BasicDelivery(t *testing.T) {
 		{URL: ts.URL, Secret: "test-secret"},
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	d.Start(ctx)
 	defer d.Stop()
 
@@ -134,8 +132,7 @@ func TestDispatcher_EventFilter(t *testing.T) {
 		},
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	d.Start(ctx)
 	defer d.Stop()
 
@@ -168,8 +165,7 @@ func TestDispatcher_HMACSignature(t *testing.T) {
 		{URL: ts.URL, Secret: secret},
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	d.Start(ctx)
 	defer d.Stop()
 
@@ -207,8 +203,7 @@ func TestDispatcher_NoSignatureWithoutSecret(t *testing.T) {
 		{URL: ts.URL}, // no secret
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	d.Start(ctx)
 	defer d.Stop()
 
@@ -244,8 +239,7 @@ func TestDispatcher_RetryOn500(t *testing.T) {
 		{URL: ts.URL, MaxRetries: 3, Timeout: 2 * time.Second},
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	d.Start(ctx)
 	defer d.Stop()
 
@@ -274,14 +268,13 @@ func TestDispatcher_CircuitBreaker(t *testing.T) {
 		{URL: ts.URL, MaxRetries: -1, Timeout: 1 * time.Second}, // no retries, fail fast
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	d.Start(ctx)
 	defer d.Stop()
 
 	// Send 5 events one at a time to trip the circuit breaker (threshold = 5).
 	// Wait between each to ensure sequential processing.
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		bus.Publish(testEvent(events.SessionStarted))
 		time.Sleep(200 * time.Millisecond)
 	}
@@ -294,7 +287,7 @@ func TestDispatcher_CircuitBreaker(t *testing.T) {
 	}
 
 	// The circuit should be open now. Send more events — they should be skipped.
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		bus.Publish(testEvent(events.SessionStarted))
 		time.Sleep(200 * time.Millisecond)
 	}
@@ -329,8 +322,7 @@ func TestDispatcher_CustomHeaders(t *testing.T) {
 		},
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	d.Start(ctx)
 	defer d.Stop()
 
@@ -364,8 +356,7 @@ func TestDispatcher_MultipleConfigs(t *testing.T) {
 		{URL: ts2.URL, Events: []string{string(events.BudgetAlert)}},
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	d.Start(ctx)
 	defer d.Stop()
 

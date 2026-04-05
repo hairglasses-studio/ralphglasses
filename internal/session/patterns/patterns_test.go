@@ -43,7 +43,7 @@ func TestMarshalDecodeEnvelope(t *testing.T) {
 func TestEnvelopeAllTypes(t *testing.T) {
 	cases := []struct {
 		name string
-		msg  interface{}
+		msg  any
 		want MessageType
 	}{
 		{"TaskAssignment", TaskAssignment{TaskID: "t"}, MsgTaskAssignment},
@@ -220,7 +220,7 @@ func TestSharedMemoryConcurrency(t *testing.T) {
 	var wg sync.WaitGroup
 	n := 100
 	wg.Add(n * 2)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(i int) {
 			defer wg.Done()
 			sm.Set("counter", "value")
@@ -582,7 +582,7 @@ func TestSkillRouterConcurrency(t *testing.T) {
 		{SessionID: "s2", SkillTags: []string{"go", "frontend"}},
 	})
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		wg.Add(2)
 		go func() {
 			defer wg.Done()
@@ -602,7 +602,7 @@ func TestArchitectConcurrency(t *testing.T) {
 		{ID: "s1"}, {ID: "s2"}, {ID: "s3"}, {ID: "s4"},
 	})
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		wg.Add(2)
 		go func() {
 			defer wg.Done()

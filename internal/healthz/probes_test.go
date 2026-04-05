@@ -133,7 +133,7 @@ func TestProbeRegistry_ConcurrentExecution(t *testing.T) {
 	r.SetTimeout(2 * time.Second)
 
 	// Two checks that each sleep 100ms. If run concurrently, total < 250ms.
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		name := fmt.Sprintf("check_%d", i)
 		r.AddLivenessCheck(name, func(ctx context.Context) error {
 			time.Sleep(100 * time.Millisecond)

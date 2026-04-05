@@ -272,7 +272,6 @@ func TestCheckLoopBudget_ZeroBudget(t *testing.T) {
 	}
 }
 
-
 func TestBudgetEnforcerWriteCostSummary(t *testing.T) {
 	root := t.TempDir()
 	b := NewBudgetEnforcer()
@@ -342,7 +341,7 @@ func TestCheckLoopBudget_ConcurrentAccess(t *testing.T) {
 	m.SetStateDir(t.TempDir())
 
 	// Create real sessions.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		sid := "conc-worker-" + string(rune('0'+i))
 		s := &Session{ID: sid, SpentUSD: 1.0}
 		m.sessionsMu.Lock()
@@ -374,26 +373,22 @@ func TestCheckLoopBudget_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// 5 goroutines reading budget concurrently.
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 5 {
+		wg.Go(func() {
 			m.checkLoopBudget(run)
-		}()
+		})
 	}
 
 	// 2 goroutines mutating Iterations concurrently.
-	for i := 0; i < 2; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 2 {
+		wg.Go(func() {
 			run.Lock()
 			run.Iterations = append(run.Iterations, LoopIteration{
 				PlannerSessionID: "conc-worker-0",
 				WorkerSessionIDs: []string{"conc-worker-1"},
 			})
 			run.Unlock()
-		}()
+		})
 	}
 
 	wg.Wait()

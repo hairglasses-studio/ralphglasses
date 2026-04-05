@@ -28,36 +28,36 @@ const (
 
 // WorkItem represents a unit of work in the fleet queue.
 type WorkItem struct {
-	ID           string             `json:"id"`
-	Type         WorkItemType       `json:"type"`
-	Status       WorkItemStatus     `json:"status"`
-	Priority     int                `json:"priority"`
-	RepoName     string             `json:"repo_name"`
-	RepoPath     string             `json:"repo_path,omitempty"`
-	Prompt       string             `json:"prompt"`
-	Provider     session.Provider   `json:"provider,omitempty"`
-	Model        string             `json:"model,omitempty"`
-	Agent        string             `json:"agent,omitempty"`
-	MaxBudgetUSD float64            `json:"max_budget_usd,omitempty"`
-	MaxTurns     int                `json:"max_turns,omitempty"`
-	Constraints  WorkConstraints    `json:"constraints,omitempty"`
-	AssignedTo   string             `json:"assigned_to,omitempty"` // worker node ID
-	SessionID    string             `json:"session_id,omitempty"` // session ID once running
-	RetryCount   int                `json:"retry_count"`
-	MaxRetries   int                `json:"max_retries"`
-	Error        string             `json:"error,omitempty"`
-	RetryAfter   *time.Time         `json:"retry_after,omitempty"`
-	SubmittedAt  time.Time          `json:"submitted_at"`
-	AssignedAt   *time.Time         `json:"assigned_at,omitempty"`
-	StartedAt    *time.Time         `json:"started_at,omitempty"`
-	CompletedAt  *time.Time         `json:"completed_at,omitempty"`
-	Result       *WorkResult        `json:"result,omitempty"`
+	ID           string           `json:"id"`
+	Type         WorkItemType     `json:"type"`
+	Status       WorkItemStatus   `json:"status"`
+	Priority     int              `json:"priority"`
+	RepoName     string           `json:"repo_name"`
+	RepoPath     string           `json:"repo_path,omitempty"`
+	Prompt       string           `json:"prompt"`
+	Provider     session.Provider `json:"provider,omitempty"`
+	Model        string           `json:"model,omitempty"`
+	Agent        string           `json:"agent,omitempty"`
+	MaxBudgetUSD float64          `json:"max_budget_usd,omitempty"`
+	MaxTurns     int              `json:"max_turns,omitempty"`
+	Constraints  WorkConstraints  `json:"constraints"`
+	AssignedTo   string           `json:"assigned_to,omitempty"` // worker node ID
+	SessionID    string           `json:"session_id,omitempty"`  // session ID once running
+	RetryCount   int              `json:"retry_count"`
+	MaxRetries   int              `json:"max_retries"`
+	Error        string           `json:"error,omitempty"`
+	RetryAfter   *time.Time       `json:"retry_after,omitempty"`
+	SubmittedAt  time.Time        `json:"submitted_at"`
+	AssignedAt   *time.Time       `json:"assigned_at,omitempty"`
+	StartedAt    *time.Time       `json:"started_at,omitempty"`
+	CompletedAt  *time.Time       `json:"completed_at,omitempty"`
+	Result       *WorkResult      `json:"result,omitempty"`
 }
 
 // WorkConstraints specifies placement constraints for work items.
 type WorkConstraints struct {
-	NodePreference string           `json:"node_preference,omitempty"` // preferred node ID
-	RequireLocal   bool             `json:"require_local,omitempty"`   // repo must exist on worker
+	NodePreference  string           `json:"node_preference,omitempty"` // preferred node ID
+	RequireLocal    bool             `json:"require_local,omitempty"`   // repo must exist on worker
 	RequireProvider session.Provider `json:"require_provider,omitempty"`
 }
 
@@ -73,19 +73,19 @@ type WorkResult struct {
 
 // WorkerInfo describes a registered worker node.
 type WorkerInfo struct {
-	ID             string              `json:"id"`
-	Hostname       string              `json:"hostname"`
-	TailscaleIP    string              `json:"tailscale_ip"`
-	Port           int                 `json:"port"`
-	Status         WorkerStatus        `json:"status"`
-	Providers      []session.Provider  `json:"providers"`
-	Repos          []string            `json:"repos"`
-	MaxSessions    int                 `json:"max_sessions"`
-	ActiveSessions int                 `json:"active_sessions"`
-	SpentUSD       float64             `json:"spent_usd"`
-	RegisteredAt   time.Time           `json:"registered_at"`
-	LastHeartbeat  time.Time           `json:"last_heartbeat"`
-	Version        string              `json:"version,omitempty"`
+	ID             string             `json:"id"`
+	Hostname       string             `json:"hostname"`
+	TailscaleIP    string             `json:"tailscale_ip"`
+	Port           int                `json:"port"`
+	Status         WorkerStatus       `json:"status"`
+	Providers      []session.Provider `json:"providers"`
+	Repos          []string           `json:"repos"`
+	MaxSessions    int                `json:"max_sessions"`
+	ActiveSessions int                `json:"active_sessions"`
+	SpentUSD       float64            `json:"spent_usd"`
+	RegisteredAt   time.Time          `json:"registered_at"`
+	LastHeartbeat  time.Time          `json:"last_heartbeat"`
+	Version        string             `json:"version,omitempty"`
 }
 
 // WorkerStatus represents the health state of a worker.
@@ -94,9 +94,9 @@ type WorkerStatus string
 const (
 	WorkerOnline       WorkerStatus = "online"
 	WorkerStale        WorkerStatus = "stale"        // no heartbeat for 90s
-	WorkerDisconnected WorkerStatus = "disconnected"  // no heartbeat for 5m
-	WorkerPaused       WorkerStatus = "paused"        // manually paused, skip for assignment
-	WorkerDraining     WorkerStatus = "draining"      // no new work, waiting for active to finish
+	WorkerDisconnected WorkerStatus = "disconnected" // no heartbeat for 5m
+	WorkerPaused       WorkerStatus = "paused"       // manually paused, skip for assignment
+	WorkerDraining     WorkerStatus = "draining"     // no new work, waiting for active to finish
 )
 
 // HeartbeatPayload is sent by workers every 30s.
@@ -136,27 +136,27 @@ type WorkCompletePayload struct {
 
 // FleetState is the coordinator's view of the entire fleet.
 type FleetState struct {
-	Workers       []WorkerInfo   `json:"workers"`
-	QueueDepth    int            `json:"queue_depth"`
-	ActiveWork    int            `json:"active_work"`
-	CompletedWork int            `json:"completed_work"`
-	FailedWork    int            `json:"failed_work"`
-	DLQDepth      int            `json:"dlq_depth"`
-	TotalSpentUSD float64       `json:"total_spent_usd"`
-	BudgetUSD     float64       `json:"budget_usd"`
-	UpdatedAt     time.Time     `json:"updated_at"`
+	Workers       []WorkerInfo `json:"workers"`
+	QueueDepth    int          `json:"queue_depth"`
+	ActiveWork    int          `json:"active_work"`
+	CompletedWork int          `json:"completed_work"`
+	FailedWork    int          `json:"failed_work"`
+	DLQDepth      int          `json:"dlq_depth"`
+	TotalSpentUSD float64      `json:"total_spent_usd"`
+	BudgetUSD     float64      `json:"budget_usd"`
+	UpdatedAt     time.Time    `json:"updated_at"`
 }
 
 // NodeStatus is returned by GET /api/v1/status for any node.
 type NodeStatus struct {
-	NodeID    string       `json:"node_id"`
-	Role      string       `json:"role"` // "coordinator", "worker", "standalone"
-	Hostname  string       `json:"hostname"`
-	Uptime    float64      `json:"uptime_seconds"`
-	Sessions  int          `json:"active_sessions"`
-	SpentUSD  float64      `json:"spent_usd"`
-	Version   string       `json:"version"`
-	StartedAt time.Time    `json:"started_at"`
+	NodeID    string    `json:"node_id"`
+	Role      string    `json:"role"` // "coordinator", "worker", "standalone"
+	Hostname  string    `json:"hostname"`
+	Uptime    float64   `json:"uptime_seconds"`
+	Sessions  int       `json:"active_sessions"`
+	SpentUSD  float64   `json:"spent_usd"`
+	Version   string    `json:"version"`
+	StartedAt time.Time `json:"started_at"`
 }
 
 // EventBatch is sent by workers to forward local events to the coordinator.
@@ -178,10 +178,10 @@ type FleetEvent struct {
 
 // GlobalBudget tracks fleet-wide spend across all workers.
 type GlobalBudget struct {
-	LimitUSD      float64   `json:"limit_usd"`
-	SpentUSD      float64   `json:"spent_usd"`
-	ReservedUSD   float64   `json:"reserved_usd"` // budget assigned to pending/active work
-	LastUpdated   time.Time `json:"last_updated"`
+	LimitUSD    float64   `json:"limit_usd"`
+	SpentUSD    float64   `json:"spent_usd"`
+	ReservedUSD float64   `json:"reserved_usd"` // budget assigned to pending/active work
+	LastUpdated time.Time `json:"last_updated"`
 }
 
 // AvailableBudget returns the budget remaining for new work.

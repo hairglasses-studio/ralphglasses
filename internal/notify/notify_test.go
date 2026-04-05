@@ -47,7 +47,7 @@ func TestEscapeOSA_LongString(t *testing.T) {
 	t.Parallel()
 	// Build a 1200-character string with a mix of safe and escapable chars.
 	var b strings.Builder
-	for i := 0; i < 1200; i++ {
+	for i := range 1200 {
 		b.WriteByte('a' + byte(i%26))
 	}
 	input := b.String()

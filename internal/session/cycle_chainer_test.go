@@ -82,7 +82,7 @@ func TestCycleChainer_ChainDepthCap(t *testing.T) {
 	for i := range ids {
 		ids[i] = NewCycleRun("x", "/tmp", "o", nil).ID
 	}
-	for i := 0; i < MaxChainDepth; i++ {
+	for i := range MaxChainDepth {
 		cc.lineage = append(cc.lineage, CycleLineage{
 			ParentID: ids[i],
 			ChildID:  ids[i+1],

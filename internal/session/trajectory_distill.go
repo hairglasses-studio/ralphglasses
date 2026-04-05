@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -440,12 +441,7 @@ func mergeStringSlices(a, b []string) []string {
 
 // containsString checks if a string slice contains a specific value.
 func containsString(slice []string, val string) bool {
-	for _, s := range slice {
-		if s == val {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, val)
 }
 
 // mapKeys returns the keys of a map[string]bool as a string slice.

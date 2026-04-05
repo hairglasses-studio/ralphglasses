@@ -50,7 +50,7 @@ func TestPromptEvolution_AddVariant_PopulationCap(t *testing.T) {
 	cfg.MaxVariants = 3
 	pe := NewPromptEvolution(cfg)
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		pe.AddVariant("test", "variant text")
 	}
 	if pe.VariantCount() > 3 {
@@ -133,7 +133,7 @@ func TestPromptEvolution_SelectBest_MultipleVariants(t *testing.T) {
 	id2 := pe.AddVariant("test", "variant B")
 
 	// Record trials to make variant B clearly better.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		pe.RecordTrial(PromptTrialResult{VariantID: id2, TaskType: "test", Success: true, CostUSD: 0.01})
 	}
 
@@ -184,7 +184,7 @@ func TestPromptEvolution_Leaderboard_Sorted(t *testing.T) {
 	id2 := pe.AddVariant("test", "good variant")
 
 	// Make id2 clearly better.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		pe.RecordTrial(PromptTrialResult{VariantID: id2, TaskType: "test", Success: true, CostUSD: 0.01})
 		pe.RecordTrial(PromptTrialResult{VariantID: id1, TaskType: "test", Success: false, CostUSD: 1.0})
 	}
@@ -201,7 +201,7 @@ func TestPromptEvolution_Leaderboard_Sorted(t *testing.T) {
 func TestPromptEvolution_Leaderboard_LimitN(t *testing.T) {
 	t.Parallel()
 	pe := NewPromptEvolution(DefaultPromptEvolutionConfig())
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		pe.AddVariant("test", "variant")
 	}
 	lb := pe.Leaderboard("test", 2)
@@ -275,7 +275,7 @@ func TestPromptEvolution_MutationStrategies(t *testing.T) {
 	template := "implement the fix carefully. ensure all tests pass. add documentation."
 
 	// Run multiple mutations to exercise different strategies.
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		pe.mu.Lock()
 		mutType, mutated := pe.applyMutation(template)
 		pe.mu.Unlock()

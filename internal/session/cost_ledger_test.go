@@ -117,7 +117,7 @@ func TestCostLedger_ConcurrentAccess(t *testing.T) {
 	cl := NewCostLedger()
 	var wg sync.WaitGroup
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()

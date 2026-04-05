@@ -49,7 +49,7 @@ func TestAddEntry(t *testing.T) {
 func TestAddEntryCapsAtMax(t *testing.T) {
 	v := NewEventLogView()
 	v.SetDimensions(80, 20)
-	for i := 0; i < maxEventLogEntries+50; i++ {
+	for range maxEventLogEntries + 50 {
 		v.AddEntry(makeEntry("loop.iterated", "iteration"))
 	}
 	if len(v.Entries()) != maxEventLogEntries {
@@ -136,7 +136,7 @@ func TestScrollBoundsDown(t *testing.T) {
 	v.SetDimensions(80, 10)
 
 	// Add fewer entries than view height — scrollDown should not move
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		v.AddEntry(makeEntry("loop.iterated", "iter"))
 	}
 
@@ -150,7 +150,7 @@ func TestScrollToBottom(t *testing.T) {
 	v := NewEventLogView()
 	v.SetDimensions(80, 10)
 
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		v.AddEntry(makeEntry("loop.iterated", "iter"))
 	}
 
@@ -163,10 +163,7 @@ func TestScrollToBottom(t *testing.T) {
 	// Go to bottom
 	v, _ = v.Update(tea.KeyPressMsg{Code: 'G', Text: "G"})
 	vh := v.viewHeight()
-	expected := len(v.Filtered()) - vh
-	if expected < 0 {
-		expected = 0
-	}
+	expected := max(len(v.Filtered())-vh, 0)
 	if v.ScrollPos() != expected {
 		t.Errorf("G should scroll to bottom, expected %d, got %d", expected, v.ScrollPos())
 	}
@@ -252,7 +249,7 @@ func TestScrollDown_Exported(t *testing.T) {
 	v.SetDimensions(80, 10)
 
 	// Add enough entries to enable scrolling (more than viewHeight)
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		v.AddEntry(makeEntry("loop.iterated", "iter"))
 	}
 
@@ -279,7 +276,7 @@ func TestScrollDown_Bounded(t *testing.T) {
 	v.SetDimensions(80, 10)
 
 	// Add only a few entries (less than viewHeight)
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		v.AddEntry(makeEntry("loop.iterated", "iter"))
 	}
 
@@ -293,7 +290,7 @@ func TestScrollUp_Exported(t *testing.T) {
 	v := NewEventLogView()
 	v.SetDimensions(80, 10)
 
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		v.AddEntry(makeEntry("loop.iterated", "iter"))
 	}
 

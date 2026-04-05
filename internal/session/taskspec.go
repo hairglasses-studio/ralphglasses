@@ -159,9 +159,9 @@ func (h taskHeap) Less(i, j int) bool {
 	// tie-break: lower estimated cost first
 	return h[i].EstimatedCost < h[j].EstimatedCost
 }
-func (h taskHeap) Swap(i, j int)       { h[i], h[j] = h[j], h[i] }
-func (h *taskHeap) Push(x interface{}) { *h = append(*h, x.(*TypedTaskSpec)) }
-func (h *taskHeap) Pop() interface{} {
+func (h taskHeap) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
+func (h *taskHeap) Push(x any)   { *h = append(*h, x.(*TypedTaskSpec)) }
+func (h *taskHeap) Pop() any {
 	old := *h
 	n := len(old)
 	item := old[n-1]

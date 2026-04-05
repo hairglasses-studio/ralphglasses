@@ -2,6 +2,7 @@ package fleet
 
 import (
 	"errors"
+	"slices"
 	"sort"
 	"sync"
 
@@ -14,55 +15,39 @@ var ErrNoMatch = errors.New("no nodes match required capabilities")
 // NodeCapabilities describes the hardware and software resources available on a
 // fleet node. It is reported during registration and updated via heartbeats.
 type NodeCapabilities struct {
-	NodeID            string             `json:"node_id"`
-	Providers         []session.Provider `json:"providers"`
-	GPUCount          int                `json:"gpu_count"`
-	MemoryGB          float64            `json:"memory_gb"`
-	MaxConcurrent     int                `json:"max_concurrent"`
-	SupportedLanguages []string          `json:"supported_languages"`
+	NodeID             string             `json:"node_id"`
+	Providers          []session.Provider `json:"providers"`
+	GPUCount           int                `json:"gpu_count"`
+	MemoryGB           float64            `json:"memory_gb"`
+	MaxConcurrent      int                `json:"max_concurrent"`
+	SupportedLanguages []string           `json:"supported_languages"`
 }
 
 // HasProvider returns true if the node supports the given provider.
 func (nc *NodeCapabilities) HasProvider(p session.Provider) bool {
-	for _, prov := range nc.Providers {
-		if prov == p {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(nc.Providers, p)
 }
 
 // HasLanguage returns true if the node supports the given language (case-sensitive).
 func (nc *NodeCapabilities) HasLanguage(lang string) bool {
-	for _, l := range nc.SupportedLanguages {
-		if l == lang {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(nc.SupportedLanguages, lang)
 }
 
 // TaskRequirements specifies the minimum capabilities a node must have to run a
 // particular task. Zero-value fields are treated as "no requirement".
 type TaskRequirements struct {
-	Providers      []session.Provider `json:"providers,omitempty"`       // node must support at least one
-	MinGPUs        int                `json:"min_gpus,omitempty"`        // minimum GPU count
-	MinMemoryGB    float64            `json:"min_memory_gb,omitempty"`   // minimum memory in GB
-	MinConcurrent  int                `json:"min_concurrent,omitempty"`  // minimum concurrent session slots
-	Languages      []string           `json:"languages,omitempty"`       // node must support all listed languages
+	Providers     []session.Provider `json:"providers,omitempty"`      // node must support at least one
+	MinGPUs       int                `json:"min_gpus,omitempty"`       // minimum GPU count
+	MinMemoryGB   float64            `json:"min_memory_gb,omitempty"`  // minimum memory in GB
+	MinConcurrent int                `json:"min_concurrent,omitempty"` // minimum concurrent session slots
+	Languages     []string           `json:"languages,omitempty"`      // node must support all listed languages
 }
 
 // Satisfies returns true if the node capabilities meet all task requirements.
 func (nc *NodeCapabilities) Satisfies(req TaskRequirements) bool {
 	// Provider check: node must support at least one required provider.
 	if len(req.Providers) > 0 {
-		found := false
-		for _, rp := range req.Providers {
-			if nc.HasProvider(rp) {
-				found = true
-				break
-			}
-		}
+		found := slices.ContainsFunc(req.Providers, nc.HasProvider)
 		if !found {
 			return false
 		}

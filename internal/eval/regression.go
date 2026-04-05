@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -74,7 +75,7 @@ type MetricRegression struct {
 	CandidateValue float64 `json:"candidate_value"`
 	AbsoluteChange float64 `json:"absolute_change"` // candidate - baseline
 	RelativeChange float64 `json:"relative_change"` // fraction, e.g. -0.15 = 15% worse
-	Direction      string  `json:"direction"`        // "degraded"
+	Direction      string  `json:"direction"`       // "degraded"
 }
 
 // NewFailure records a task that passed in the baseline but failed in the candidate.
@@ -434,12 +435,13 @@ func buildSummary(report RegressionReport) string {
 		parts = append(parts, fmt.Sprintf("%d performance regression(s): %v", n, names))
 	}
 
-	summary := "Regressions detected: "
+	var summary strings.Builder
+	summary.WriteString("Regressions detected: ")
 	for i, p := range parts {
 		if i > 0 {
-			summary += "; "
+			summary.WriteString("; ")
 		}
-		summary += p
+		summary.WriteString(p)
 	}
-	return summary
+	return summary.String()
 }

@@ -184,7 +184,7 @@ func TestLineRing_Capacity(t *testing.T) {
 func TestLogView_BoundedByCapacity(t *testing.T) {
 	lv := NewLogViewWithCapacity(5)
 	lv.SetDimensions(80, 20)
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		lv.AppendLines([]string{fmt.Sprintf("line %d", i)})
 	}
 	if lv.Len() != 5 {

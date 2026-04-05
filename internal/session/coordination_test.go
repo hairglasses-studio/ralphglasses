@@ -131,7 +131,7 @@ func TestCoordinator_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 	wins := make(chan string, goroutines)
 
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		wg.Add(1)
 		sid := "session-" + string(rune('A'+i%26)) + string(rune('0'+i/26))
 		go func(sid string) {

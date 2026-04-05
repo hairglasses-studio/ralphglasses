@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -276,13 +277,7 @@ func TestAttach_ReturnsCmd(t *testing.T) {
 		t.Fatal("Attach returned nil")
 	}
 	// Verify it's a tmux attach command.
-	found := false
-	for _, arg := range cmd.Args {
-		if arg == "attach-session" {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(cmd.Args, "attach-session")
 	if !found {
 		t.Errorf("Attach args %v don't contain 'attach-session'", cmd.Args)
 	}

@@ -163,7 +163,7 @@ func TestSearch_CaseInsensitive(t *testing.T) {
 
 func TestSearch_MaxResults(t *testing.T) {
 	var repos []*model.Repo
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		repos = append(repos, &model.Repo{
 			Name: "repo-match",
 			Path: "/tmp/repo-match",

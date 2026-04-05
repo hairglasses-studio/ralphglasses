@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -624,16 +625,16 @@ func (o *CrashRecoveryOrchestrator) VerifyRecovery(ctx context.Context, plan *Cr
 
 // VerificationResult holds post-recovery state for a single session.
 type VerificationResult struct {
-	SessionID      string `json:"session_id"`
-	RepoPath       string `json:"repo_path"`
-	RepoName       string `json:"repo_name"`
-	RalphSessionID string `json:"ralph_session_id,omitempty"`
-	RalphStatus    string `json:"ralph_status,omitempty"`
-	TotalTasks     int    `json:"total_tasks"`
-	CompletedTasks int    `json:"completed_tasks"`
-	HasUncommitted bool   `json:"has_uncommitted"`
-	UnpushedCommits int   `json:"unpushed_commits"`
-	Clean          bool   `json:"clean"` // true if all pushed, no uncommitted
+	SessionID       string `json:"session_id"`
+	RepoPath        string `json:"repo_path"`
+	RepoName        string `json:"repo_name"`
+	RalphSessionID  string `json:"ralph_session_id,omitempty"`
+	RalphStatus     string `json:"ralph_status,omitempty"`
+	TotalTasks      int    `json:"total_tasks"`
+	CompletedTasks  int    `json:"completed_tasks"`
+	HasUncommitted  bool   `json:"has_uncommitted"`
+	UnpushedCommits int    `json:"unpushed_commits"`
+	Clean           bool   `json:"clean"` // true if all pushed, no uncommitted
 }
 
 // ---------------------------------------------------------------------------
@@ -859,10 +860,8 @@ func buildResumePrompt(rs RecoverableSession) string {
 }
 
 func appendUnique(slice []string, s string) []string {
-	for _, existing := range slice {
-		if existing == s {
-			return slice
-		}
+	if slices.Contains(slice, s) {
+		return slice
 	}
 	return append(slice, s)
 }

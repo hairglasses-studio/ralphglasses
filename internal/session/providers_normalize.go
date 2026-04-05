@@ -168,7 +168,7 @@ func sanitizeStderr(provider Provider, raw string) string {
 // drops "    at " stack frames.
 func sanitizeGeminiStderr(raw string) string {
 	var kept []string
-	for _, line := range strings.Split(raw, "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" {
 			continue

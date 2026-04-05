@@ -84,7 +84,7 @@ type LLMConfig struct {
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler to track which fields were explicitly set.
-func (c *LLMConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (c *LLMConfig) UnmarshalYAML(unmarshal func(any) error) error {
 	// Use an alias to avoid infinite recursion
 	type plain LLMConfig
 	if err := unmarshal((*plain)(c)); err != nil {
@@ -92,7 +92,7 @@ func (c *LLMConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	// Detect if cache_control was explicitly present by re-parsing as a map
-	var raw map[string]interface{}
+	var raw map[string]any
 	if err := unmarshal(&raw); err == nil {
 		if _, ok := raw["cache_control"]; ok {
 			c.cacheControlSet = true

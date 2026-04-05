@@ -4,7 +4,9 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"hash/fnv"
+	"maps"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -81,7 +83,7 @@ func (h *HashShardStrategy) buildRing(workers []WorkerInfo, replicas int) []hash
 func ketamaPoints(key string, count int) []uint32 {
 	points := make([]uint32, 0, count)
 	md5Rounds := (count + 3) / 4 // each MD5 yields 4 points
-	for i := 0; i < md5Rounds; i++ {
+	for i := range md5Rounds {
 		var buf [4]byte
 		binary.LittleEndian.PutUint32(buf[:], uint32(i))
 		digest := md5.Sum(append([]byte(key), buf[:]...))
@@ -247,9 +249,7 @@ func (m *ShardMap) AllAssignments() map[string]string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	out := make(map[string]string, len(m.repoTo))
-	for k, v := range m.repoTo {
-		out[k] = v
-	}
+	maps.Copy(out, m.repoTo)
 	return out
 }
 
@@ -273,10 +273,8 @@ func (m *ShardMap) removeRepoFromWorker(workerID, repo string) {
 
 // addRepoToWorker adds a repo to a worker's list if not already present (must hold mu).
 func (m *ShardMap) addRepoToWorker(workerID, repo string) {
-	for _, r := range m.workerTo[workerID] {
-		if r == repo {
-			return
-		}
+	if slices.Contains(m.workerTo[workerID], repo) {
+		return
 	}
 	m.workerTo[workerID] = append(m.workerTo[workerID], repo)
 }
@@ -328,13 +326,13 @@ type ShardManager struct {
 
 // NodeInfo describes a node participating in the shard ring.
 type NodeInfo struct {
-	ID          string
-	Address     string // host:port
-	Capacity    int    // max concurrent sessions
-	Active      int    // current active sessions
-	JoinedAt    int64  // unix nano timestamp
-	LastSeen    int64  // unix nano timestamp
-	Draining    bool   // true if node is being removed gracefully
+	ID       string
+	Address  string // host:port
+	Capacity int    // max concurrent sessions
+	Active   int    // current active sessions
+	JoinedAt int64  // unix nano timestamp
+	LastSeen int64  // unix nano timestamp
+	Draining bool   // true if node is being removed gracefully
 }
 
 // Migration describes a session that needs to move from one node to another.

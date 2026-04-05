@@ -17,8 +17,8 @@ type fakePlugin struct {
 	onEvent func(ctx context.Context, event Event) error
 }
 
-func (f *fakePlugin) Name() string    { return f.name }
-func (f *fakePlugin) Version() string { return f.version }
+func (f *fakePlugin) Name() string                               { return f.name }
+func (f *fakePlugin) Version() string                            { return f.version }
 func (f *fakePlugin) Init(_ context.Context, _ PluginHost) error { return nil }
 func (f *fakePlugin) Shutdown() error                            { return nil }
 func (f *fakePlugin) OnEvent(ctx context.Context, event Event) error {
@@ -178,7 +178,7 @@ func TestRegistryConcurrentAccess(t *testing.T) {
 	r := NewRegistry()
 
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()

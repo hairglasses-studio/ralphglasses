@@ -13,11 +13,11 @@ import (
 // It aggregates files modified, test results, errors, git operations, and
 // token/cost usage extracted from a stream of output lines.
 type ParsedOutput struct {
-	FilesModified  []string       `json:"files_modified"`
-	TestResults    TestResults    `json:"test_results"`
-	Errors         []ParsedError  `json:"errors"`
-	GitOperations  []GitOperation `json:"git_operations"`
-	CostTokens     CostTokens    `json:"cost_tokens"`
+	FilesModified []string       `json:"files_modified"`
+	TestResults   TestResults    `json:"test_results"`
+	Errors        []ParsedError  `json:"errors"`
+	GitOperations []GitOperation `json:"git_operations"`
+	CostTokens    CostTokens     `json:"cost_tokens"`
 }
 
 // TestResults holds pass/fail/skip counts and individual test names.
@@ -39,9 +39,9 @@ type ParsedError struct {
 
 // GitOperation holds a single git operation extracted from session output.
 type GitOperation struct {
-	Command string   `json:"command"`            // "commit", "push", "branch", "merge", "checkout", "add", "reset", "stash", "rebase", "cherry-pick"
-	Args    []string `json:"args,omitempty"`      // significant arguments (branch name, file paths, commit hash)
-	Summary string   `json:"summary,omitempty"`   // human-readable summary if available
+	Command string   `json:"command"`           // "commit", "push", "branch", "merge", "checkout", "add", "reset", "stash", "rebase", "cherry-pick"
+	Args    []string `json:"args,omitempty"`    // significant arguments (branch name, file paths, commit hash)
+	Summary string   `json:"summary,omitempty"` // human-readable summary if available
 }
 
 // CostTokens holds token usage and cost extracted from session output.
@@ -58,7 +58,7 @@ type CostTokens struct {
 // Claude Code JSON streaming output and plain text fallback. Each line is fed
 // via ParseLine; the final result is retrieved with Result.
 type OutputParser struct {
-	result   ParsedOutput
+	result    ParsedOutput
 	filesSeen map[string]bool
 	gitSeen   map[string]bool
 	errSeen   map[string]bool
@@ -92,7 +92,7 @@ func (p *OutputParser) ParseLine(line string) {
 
 // ParseLines processes multiple lines of session output (newline-separated).
 func (p *OutputParser) ParseLines(text string) {
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		p.ParseLine(line)
 	}
 }
@@ -276,27 +276,27 @@ func (p *OutputParser) extractJSONContent(raw map[string]any) {
 // patterns including go test output, compilation errors, and git commands.
 var (
 	// Go test patterns.
-	goTestPassRe  = regexp.MustCompile(`(?m)^---\s+PASS:\s+(\S+)`)
-	goTestFailRe  = regexp.MustCompile(`(?m)^---\s+FAIL:\s+(\S+)`)
-	goTestSkipRe  = regexp.MustCompile(`(?m)^---\s+SKIP:\s+(\S+)`)
-	goTestOKRe    = regexp.MustCompile(`(?m)^ok\s+\S+\s+[\d.]+s`)
-	goTestFAILRe  = regexp.MustCompile(`(?m)^FAIL\s+\S+`)
-	goTestRunRe   = regexp.MustCompile(`(?m)^===\s+RUN\s+(\S+)`)
-	goTestSummRe  = regexp.MustCompile(`(?m)^(PASS|FAIL|ok)\s`)
+	goTestPassRe = regexp.MustCompile(`(?m)^---\s+PASS:\s+(\S+)`)
+	goTestFailRe = regexp.MustCompile(`(?m)^---\s+FAIL:\s+(\S+)`)
+	goTestSkipRe = regexp.MustCompile(`(?m)^---\s+SKIP:\s+(\S+)`)
+	goTestOKRe   = regexp.MustCompile(`(?m)^ok\s+\S+\s+[\d.]+s`)
+	goTestFAILRe = regexp.MustCompile(`(?m)^FAIL\s+\S+`)
+	goTestRunRe  = regexp.MustCompile(`(?m)^===\s+RUN\s+(\S+)`)
+	goTestSummRe = regexp.MustCompile(`(?m)^(PASS|FAIL|ok)\s`)
 
 	// Generic test patterns (pytest, jest, etc.).
 	// pytestSummRe requires "passed" preceded by start-of-string or === to avoid double-counting jest output.
-	pytestSummRe  = regexp.MustCompile(`(?:^|===+\s+)(\d+)\s+passed(?:.*?(\d+)\s+failed)?(?:.*?(\d+)\s+skipped)?`)
-	jestSummRe    = regexp.MustCompile(`Tests:\s+(?:(\d+)\s+failed,?\s*)?(?:(\d+)\s+skipped,?\s*)?(\d+)\s+passed`)
+	pytestSummRe = regexp.MustCompile(`(?:^|===+\s+)(\d+)\s+passed(?:.*?(\d+)\s+failed)?(?:.*?(\d+)\s+skipped)?`)
+	jestSummRe   = regexp.MustCompile(`Tests:\s+(?:(\d+)\s+failed,?\s*)?(?:(\d+)\s+skipped,?\s*)?(\d+)\s+passed`)
 
 	// File modification patterns.
-	fileWriteRe   = regexp.MustCompile(`(?i)(?:created?|writ(?:e|ten|ing)|modified|updated|edited|saved)\s+(?:file\s+)?` + "`?" + `([^\s` + "`" + `]+\.\w{1,10})` + "`?")
-	diffFileRe    = regexp.MustCompile(`(?m)^(?:---|\+\+\+)\s+[ab]/(.+)$`)
+	fileWriteRe = regexp.MustCompile(`(?i)(?:created?|writ(?:e|ten|ing)|modified|updated|edited|saved)\s+(?:file\s+)?` + "`?" + `([^\s` + "`" + `]+\.\w{1,10})` + "`?")
+	diffFileRe  = regexp.MustCompile(`(?m)^(?:---|\+\+\+)\s+[ab]/(.+)$`)
 
 	// Git operation patterns. Uses a non-greedy args capture that stops at
 	// command chaining operators (&&, ;, ||) or end of string. This lets the
 	// regex find multiple git commands in a single chained shell line.
-	gitCmdRe      = regexp.MustCompile(`git\s+(add|commit|push|pull|merge|checkout|branch|rebase|cherry-pick|stash|reset|tag|diff|log|status|switch|restore|revert|fetch|clone)\b([^&;|]*)`)
+	gitCmdRe       = regexp.MustCompile(`git\s+(add|commit|push|pull|merge|checkout|branch|rebase|cherry-pick|stash|reset|tag|diff|log|status|switch|restore|revert|fetch|clone)\b([^&;|]*)`)
 	gitCommitMsgRe = regexp.MustCompile(`(?m)\[[\w/.-]+\s+[0-9a-f]+\]\s+(.+)`)
 
 	// Error patterns.
@@ -305,10 +305,10 @@ var (
 	goVetErrRe     = regexp.MustCompile(`(?m)^#\s+\S+\n(.+\.go):(\d+):\d+:\s+(.+)$`)
 
 	// Token/cost patterns in plain text.
-	tokenUsageRe   = regexp.MustCompile(`(?i)(?:input|prompt)\s+tokens?:?\s*(\d[\d,]*)`)
-	outputTokenRe  = regexp.MustCompile(`(?i)(?:output|completion|response)\s+tokens?:?\s*(\d[\d,]*)`)
-	totalTokenRe   = regexp.MustCompile(`(?i)total\s+tokens?:?\s*(\d[\d,]*)`)
-	costTextRe     = regexp.MustCompile(`(?i)(?:total\s+)?(?:session\s+)?cost(?:_usd)?:?\s*\$?([\d]+\.[\d]+)`)
+	tokenUsageRe  = regexp.MustCompile(`(?i)(?:input|prompt)\s+tokens?:?\s*(\d[\d,]*)`)
+	outputTokenRe = regexp.MustCompile(`(?i)(?:output|completion|response)\s+tokens?:?\s*(\d[\d,]*)`)
+	totalTokenRe  = regexp.MustCompile(`(?i)total\s+tokens?:?\s*(\d[\d,]*)`)
+	costTextRe    = regexp.MustCompile(`(?i)(?:total\s+)?(?:session\s+)?cost(?:_usd)?:?\s*\$?([\d]+\.[\d]+)`)
 )
 
 // parseTextLine processes a single plain text line.

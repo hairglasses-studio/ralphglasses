@@ -111,7 +111,7 @@ func TestRunSummary_JSON(t *testing.T) {
 func TestRunSummary_PerSessionBreakdown(t *testing.T) {
 	rs := NewRunSummary()
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		rs.RecordCycle(CycleResult{
 			SessionID: "alpha",
 			Success:   true,
@@ -119,7 +119,7 @@ func TestRunSummary_PerSessionBreakdown(t *testing.T) {
 			Duration:  time.Second,
 		})
 	}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		rs.RecordCycle(CycleResult{
 			SessionID: "beta",
 			Success:   i < 2,
@@ -173,10 +173,10 @@ func TestRunSummary_ConcurrentAccess(t *testing.T) {
 	rs := NewRunSummary()
 
 	done := make(chan struct{})
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		go func(id int) {
 			defer func() { done <- struct{}{} }()
-			for j := 0; j < 50; j++ {
+			for j := range 50 {
 				rs.RecordCycle(CycleResult{
 					SessionID: "concurrent",
 					Success:   j%2 == 0,
@@ -188,7 +188,7 @@ func TestRunSummary_ConcurrentAccess(t *testing.T) {
 			}
 		}(i)
 	}
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 

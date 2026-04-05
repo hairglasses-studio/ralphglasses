@@ -169,7 +169,7 @@ func TestRecordSuccess_MultipleInSequence(t *testing.T) {
 	dir := t.TempDir()
 	em := NewEpisodicMemory(dir, 100, 0)
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		em.RecordSuccess(JournalEntry{
 			TaskFocus:   "task",
 			Provider:    "claude",

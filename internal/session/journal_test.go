@@ -67,7 +67,7 @@ func TestReadRecentJournal(t *testing.T) {
 	_ = os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
 
 	// Write 20 entries
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		entry := JournalEntry{
 			Timestamp: time.Now(),
 			SessionID: "sess-" + string(rune('A'+i)),
@@ -174,7 +174,7 @@ func TestConsolidatePatterns(t *testing.T) {
 	_ = os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
 
 	// Write entries with repeated items
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		entry := JournalEntry{
 			Timestamp: time.Now(),
 			SessionID: "sess",
@@ -238,7 +238,7 @@ func TestPruneJournal(t *testing.T) {
 	_ = os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
 
 	// Write 200 entries
-	for i := 0; i < 200; i++ {
+	for i := range 200 {
 		entry := JournalEntry{
 			Timestamp: time.Now(),
 			SessionID: "sess",
@@ -280,7 +280,7 @@ func TestPruneJournal_NoPruneNeeded(t *testing.T) {
 	dir := t.TempDir()
 	_ = os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		_ = WriteJournalEntryManual(dir, JournalEntry{Timestamp: time.Now(), SessionID: "s"})
 	}
 
@@ -403,7 +403,7 @@ func TestExtractSignalsFromOutput(t *testing.T) {
 
 	t.Run("caps_results", func(t *testing.T) {
 		var history []string
-		for i := 0; i < 20; i++ {
+		for i := range 20 {
 			history = append(history, fmt.Sprintf("error: failure %d", i))
 			history = append(history, fmt.Sprintf("created file_%d.go", i))
 		}
@@ -444,7 +444,7 @@ func TestWriteJournalEntryManual_Timestamp(t *testing.T) {
 func TestWriteJournalEntryManual_MultipleEntries(t *testing.T) {
 	dir := t.TempDir()
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		entry := JournalEntry{
 			Timestamp: time.Now(),
 			SessionID: fmt.Sprintf("sess-%d", i),
@@ -468,7 +468,7 @@ func TestWriteJournalEntryManual_MultipleEntries(t *testing.T) {
 func TestReadRecentJournal_DefaultLimit(t *testing.T) {
 	dir := t.TempDir()
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		_ = WriteJournalEntryManual(dir, JournalEntry{
 			Timestamp: time.Now(),
 			SessionID: fmt.Sprintf("s%d", i),
@@ -646,7 +646,7 @@ func TestPruneJournal_DefaultKeepN(t *testing.T) {
 	dir := t.TempDir()
 
 	// Write 150 entries
-	for i := 0; i < 150; i++ {
+	for i := range 150 {
 		_ = WriteJournalEntryManual(dir, JournalEntry{
 			Timestamp: time.Now(),
 			SessionID: "s",
@@ -693,7 +693,7 @@ func TestConcurrentJournalWrites(t *testing.T) {
 	dir := t.TempDir()
 
 	done := make(chan struct{})
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		go func(idx int) {
 			defer func() { done <- struct{}{} }()
 			entry := JournalEntry{
@@ -706,7 +706,7 @@ func TestConcurrentJournalWrites(t *testing.T) {
 		}(i)
 	}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 
@@ -722,7 +722,7 @@ func TestConcurrentJournalWrites(t *testing.T) {
 func TestSynthesizeContext_LongOutput(t *testing.T) {
 	// Create entries that would generate > 2000 chars
 	var entries []JournalEntry
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		entries = append(entries, JournalEntry{
 			Worked:  []string{fmt.Sprintf("Very long worked item number %d with extra text to make it verbose", i)},
 			Failed:  []string{fmt.Sprintf("Very long failed item number %d with extra text to make it verbose", i)},
@@ -789,7 +789,7 @@ func TestExtractRules_ProducesNonNilRules(t *testing.T) {
 	// Build enough entries so patterns exceed MinRuleOccurrences.
 	now := time.Now()
 	var entries []JournalEntry
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		entries = append(entries, JournalEntry{
 			Timestamp: now.Add(time.Duration(i) * time.Hour),
 			SessionID: fmt.Sprintf("s%d", i),
@@ -845,7 +845,7 @@ func TestExtractRules_MeaningfulConfidence(t *testing.T) {
 
 	// Pattern A: 3 occurrences (at threshold)
 	// Pattern B: 6 occurrences (double threshold, should max out at 1.0)
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		e := JournalEntry{
 			Timestamp: now.Add(time.Duration(i) * time.Hour),
 			SessionID: fmt.Sprintf("s%d", i),
@@ -914,7 +914,7 @@ func TestExtractRules_PersistedToFile(t *testing.T) {
 	_ = os.MkdirAll(filepath.Join(dir, ".ralph"), 0755)
 
 	// Write enough entries to trigger rule extraction.
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		_ = WriteJournalEntryManual(dir, JournalEntry{
 			Timestamp: time.Now(),
 			SessionID: fmt.Sprintf("s%d", i),

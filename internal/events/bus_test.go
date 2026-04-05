@@ -97,7 +97,7 @@ func TestHistorySince(t *testing.T) {
 
 func TestHistoryRingBuffer(t *testing.T) {
 	bus := NewBus(5)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		bus.Publish(Event{Type: SessionStarted, RepoName: "r"})
 	}
 	all := bus.History("", 100)
@@ -111,7 +111,7 @@ func TestOverflow(t *testing.T) {
 	_ = bus.Subscribe("slow")
 
 	// Fill the subscriber channel beyond buffer size
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		bus.Publish(Event{Type: SessionStarted})
 	}
 	// Should not panic — overflow events are dropped
@@ -119,7 +119,7 @@ func TestOverflow(t *testing.T) {
 
 func TestHistoryAfterCursor(t *testing.T) {
 	bus := NewBus(100)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		bus.Publish(Event{Type: SessionStarted, RepoName: fmt.Sprintf("r%d", i)})
 	}
 
@@ -162,7 +162,7 @@ func TestHistoryAfterCursor(t *testing.T) {
 func TestHistoryAfterCursor_RingOverflow(t *testing.T) {
 	bus := NewBus(5)
 	// Publish 10 events, ring buffer keeps last 5
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		bus.Publish(Event{Type: SessionStarted, RepoName: fmt.Sprintf("r%d", i)})
 	}
 
@@ -191,7 +191,7 @@ func TestHistoryAfterCursor_RingOverflow(t *testing.T) {
 
 func TestHistoryAfterCursor_WithLimit(t *testing.T) {
 	bus := NewBus(100)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		bus.Publish(Event{Type: SessionStarted, RepoName: fmt.Sprintf("r%d", i)})
 	}
 
@@ -264,7 +264,7 @@ func TestBusLoadEvents(t *testing.T) {
 		t.Fatalf("PersistTo: %v", err)
 	}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		bus.Publish(Event{Type: LoopIterated, Timestamp: time.Now()})
 	}
 	bus.Close()
@@ -287,7 +287,7 @@ func TestBusLoadEventsLimit(t *testing.T) {
 		t.Fatalf("PersistTo: %v", err)
 	}
 
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		bus.Publish(Event{Type: LoopIterated, Timestamp: time.Now()})
 	}
 	bus.Close()
@@ -316,10 +316,10 @@ func TestBusPersistConcurrent(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
-	for g := 0; g < goroutines; g++ {
+	for range goroutines {
 		go func() {
 			defer wg.Done()
-			for i := 0; i < eventsPerGoroutine; i++ {
+			for range eventsPerGoroutine {
 				bus.Publish(Event{Type: LoopIterated, Timestamp: time.Now()})
 			}
 		}()
@@ -351,7 +351,7 @@ func TestBusRotation(t *testing.T) {
 	bigData["payload"] = string(make([]byte, 100*1024)) // 100KB per event
 
 	// Need >100 writes (rotation check interval) and >10MB total
-	for i := 0; i < 150; i++ {
+	for range 150 {
 		bus.Publish(Event{
 			Type:      LoopIterated,
 			Timestamp: time.Now(),
@@ -442,7 +442,7 @@ func TestSubscribeFiltered_MultipleTypes(t *testing.T) {
 	bus.Publish(Event{Type: CostUpdate, RepoName: "c"})
 
 	received := 0
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		select {
 		case e := <-ch:
 			if e.Type != SessionStarted && e.Type != CostUpdate {
@@ -751,7 +751,7 @@ func TestAsyncWriteMode(t *testing.T) {
 	bus.StartAsync()
 
 	numEvents := 20
-	for i := 0; i < numEvents; i++ {
+	for i := range numEvents {
 		bus.Publish(Event{Type: LoopIterated, Data: map[string]any{"i": i}})
 	}
 
@@ -819,7 +819,7 @@ func TestAsyncDrainOnClose(t *testing.T) {
 	bus.StartAsync()
 
 	const total = 100
-	for i := 0; i < total; i++ {
+	for i := range total {
 		bus.Publish(Event{Type: LoopIterated, Data: map[string]any{"i": i}})
 	}
 
@@ -904,7 +904,7 @@ func TestCloseFlushes(t *testing.T) {
 	bus.StartAsync()
 
 	const total = 50
-	for i := 0; i < total; i++ {
+	for i := range total {
 		bus.Publish(Event{Type: LoopIterated, Data: map[string]any{"i": i}})
 	}
 
@@ -989,10 +989,10 @@ func TestSubscribeFiltered_ConcurrentPublish(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
-	for g := 0; g < goroutines; g++ {
+	for range goroutines {
 		go func() {
 			defer wg.Done()
-			for i := 0; i < eventsPerGoroutine; i++ {
+			for range eventsPerGoroutine {
 				// Alternate between matching and non-matching types
 				bus.Publish(Event{Type: LoopStarted, RepoName: "match"})
 				bus.Publish(Event{Type: LoopStopped, RepoName: "skip"})
@@ -1117,7 +1117,7 @@ func TestStartAsyncWrites_PublishDrains(t *testing.T) {
 	bus.StartAsyncWrites(64)
 
 	const total = 10
-	for i := 0; i < total; i++ {
+	for i := range total {
 		bus.Publish(Event{Type: LoopIterated, Data: map[string]any{"i": i}})
 	}
 
@@ -1178,7 +1178,7 @@ func TestStopAsyncWrites_DrainsChannel(t *testing.T) {
 	bus.StartAsyncWrites(128)
 
 	const total = 100
-	for i := 0; i < total; i++ {
+	for i := range total {
 		bus.Publish(Event{Type: LoopIterated, Data: map[string]any{"i": i}})
 	}
 

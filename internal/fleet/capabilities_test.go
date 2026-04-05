@@ -526,7 +526,7 @@ func TestCapabilityMatcher_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Concurrent registrations.
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
@@ -542,14 +542,12 @@ func TestCapabilityMatcher_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Concurrent reads interleaved.
-	for i := 0; i < 50; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 50 {
+		wg.Go(func() {
 			_ = cm.All()
 			_, _ = cm.Match(TaskRequirements{MinGPUs: 1})
 			_, _ = cm.Get("node-A")
-		}()
+		})
 	}
 
 	wg.Wait()

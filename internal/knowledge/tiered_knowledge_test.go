@@ -143,7 +143,7 @@ func TestEviction(t *testing.T) {
 	tk.maxCache = 3
 
 	// Fill cache to capacity.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		key := queryHash("query" + string(rune('a'+i)))
 		tk.mu.Lock()
 		tk.cache[key] = []graph.CodeChunk{{Name: "chunk"}}
@@ -181,7 +181,7 @@ func TestConcurrentAccess(t *testing.T) {
 	tk := NewTieredKnowledge(newStubMemory(), ci)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()

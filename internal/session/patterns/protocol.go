@@ -19,8 +19,8 @@ const (
 type Envelope struct {
 	ID        string          `json:"id"`
 	Type      MessageType     `json:"type"`
-	From      string          `json:"from"`       // source session ID
-	To        string          `json:"to"`         // destination session ID ("" = broadcast)
+	From      string          `json:"from"` // source session ID
+	To        string          `json:"to"`   // destination session ID ("" = broadcast)
 	Timestamp time.Time       `json:"timestamp"`
 	Payload   json.RawMessage `json:"payload"`
 }
@@ -29,8 +29,8 @@ type Envelope struct {
 type TaskAssignment struct {
 	TaskID      string            `json:"task_id"`
 	Description string            `json:"description"`
-	Priority    int               `json:"priority"`              // higher = more urgent
-	SkillTags   []string          `json:"skill_tags,omitempty"`  // for specialist routing
+	Priority    int               `json:"priority"`             // higher = more urgent
+	SkillTags   []string          `json:"skill_tags,omitempty"` // for specialist routing
 	Metadata    map[string]string `json:"metadata,omitempty"`
 	Deadline    *time.Time        `json:"deadline,omitempty"`
 }
@@ -67,7 +67,7 @@ type MemoryUpdate struct {
 }
 
 // MarshalEnvelope creates an Envelope from a typed message.
-func MarshalEnvelope(id, from, to string, msg interface{}) (*Envelope, error) {
+func MarshalEnvelope(id, from, to string, msg any) (*Envelope, error) {
 	payload, err := json.Marshal(msg)
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func MarshalEnvelope(id, from, to string, msg interface{}) (*Envelope, error) {
 }
 
 // DecodePayload unmarshals the envelope payload into the appropriate type.
-func (e *Envelope) DecodePayload() (interface{}, error) {
+func (e *Envelope) DecodePayload() (any, error) {
 	switch e.Type {
 	case MsgTaskAssignment:
 		var v TaskAssignment

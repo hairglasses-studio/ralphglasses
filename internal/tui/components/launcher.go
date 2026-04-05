@@ -230,7 +230,7 @@ func (l *SessionLauncher) View() string {
 	b.WriteString(styles.TitleStyle.Render(fmt.Sprintf(" Launch Session — %s ", l.RepoName)))
 	b.WriteString("\n\n")
 
-	for i := LaunchField(0); i < launchFieldCount; i++ {
+	for i := range launchFieldCount {
 		prefix := "  "
 		if i == l.Cursor {
 			prefix = "> "

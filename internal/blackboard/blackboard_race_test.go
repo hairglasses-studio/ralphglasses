@@ -13,11 +13,11 @@ func TestBlackboardConcurrentPutGet(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// 10 writer goroutines each Put 10 entries.
-	for w := 0; w < 10; w++ {
+	for w := range 10 {
 		wg.Add(1)
 		go func(writerID int) {
 			defer wg.Done()
-			for k := 0; k < 10; k++ {
+			for k := range 10 {
 				err := bb.Put(Entry{
 					Key:       fmt.Sprintf("key-%d", k),
 					Namespace: fmt.Sprintf("writer-%d", writerID),
@@ -32,11 +32,11 @@ func TestBlackboardConcurrentPutGet(t *testing.T) {
 	}
 
 	// 10 reader goroutines each Query repeatedly.
-	for r := 0; r < 10; r++ {
+	for r := range 10 {
 		wg.Add(1)
 		go func(readerID int) {
 			defer wg.Done()
-			for q := 0; q < 50; q++ {
+			for range 50 {
 				ns := fmt.Sprintf("writer-%d", readerID)
 				_ = bb.Query(ns)
 				_, _ = bb.Get(ns, "key-0")
@@ -59,7 +59,7 @@ func TestBlackboardConcurrentWatch(t *testing.T) {
 	var notified atomic.Int64
 
 	// Register watchers before starting writers.
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		bb.Watch(func(entry Entry) {
 			notified.Add(1)
 			// Access entry fields to trigger race detector if data is shared unsafely.
@@ -74,11 +74,11 @@ func TestBlackboardConcurrentWatch(t *testing.T) {
 	numWriters := 10
 	putsPerWriter := 10
 
-	for w := 0; w < numWriters; w++ {
+	for w := range numWriters {
 		wg.Add(1)
 		go func(writerID int) {
 			defer wg.Done()
-			for k := 0; k < putsPerWriter; k++ {
+			for k := range putsPerWriter {
 				err := bb.Put(Entry{
 					Key:       fmt.Sprintf("key-%d", k),
 					Namespace: fmt.Sprintf("ns-%d", writerID),

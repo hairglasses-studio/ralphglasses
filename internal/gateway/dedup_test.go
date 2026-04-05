@@ -38,7 +38,7 @@ func TestDedupMiddleware_ConcurrentDedup(t *testing.T) {
 	var wg sync.WaitGroup
 	results := make([]any, 5)
 	errs := make([]error, 5)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		wg.Add(1)
 		i := i
 		go func() {
@@ -73,7 +73,7 @@ func TestDedupMiddleware_ErrorPropagated(t *testing.T) {
 
 	var wg sync.WaitGroup
 	errs := make([]error, 4)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		wg.Add(1)
 		i := i
 		go func() {
@@ -127,7 +127,7 @@ func TestDedupMiddleware_TTLExpiry(t *testing.T) {
 	}
 
 	d.Do(context.Background(), "ttl-key", fn) //nolint:errcheck
-	time.Sleep(50 * time.Millisecond)          // wait past TTL
+	time.Sleep(50 * time.Millisecond)         // wait past TTL
 	d.Do(context.Background(), "ttl-key", fn) //nolint:errcheck
 
 	if c := atomic.LoadInt32(&calls); c != 2 {

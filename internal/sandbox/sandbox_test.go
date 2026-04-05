@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -416,7 +417,7 @@ func TestCreate_EnvKeyValidation(t *testing.T) {
 	cfg.Env = map[string]string{
 		"GOOD_KEY":     "value1",
 		"--privileged": "true",
-		"ALSO_GOOD":   "value2",
+		"ALSO_GOOD":    "value2",
 	}
 
 	args := buildCreateArgs("test-container", cfg)
@@ -1118,13 +1119,7 @@ func TestBuildCreateArgs_ReadOnly(t *testing.T) {
 	cfg.ReadOnly = true
 	args := buildCreateArgs("test", cfg)
 
-	found := false
-	for _, a := range args {
-		if a == "--read-only" {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(args, "--read-only")
 	if !found {
 		t.Error("args missing --read-only flag")
 	}

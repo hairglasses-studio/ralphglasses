@@ -177,7 +177,7 @@ func TestBudgetPool_Allocation_Missing(t *testing.T) {
 func TestBudgetPool_Unlimited_AllowsAnySize(t *testing.T) {
 	p := NewBudgetPool(0)
 	// Should not error even for large amounts.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		sid := "session-large"
 		if err := p.AllocateSession(sid, 1_000_000); err != nil {
 			t.Fatalf("unlimited pool rejected session %s: %v", sid, err)

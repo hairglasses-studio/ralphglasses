@@ -18,10 +18,7 @@ func RotateLogs(logDir string, maxBytes int64) (int, error) {
 		return 0, err
 	}
 
-	keep := maxBytes / 2
-	if keep < 0 {
-		keep = 0
-	}
+	keep := max(maxBytes/2, 0)
 
 	truncated := 0
 	for _, entry := range entries {
@@ -57,10 +54,7 @@ func truncateFile(path string, size, keepBytes int64) error {
 	}
 
 	// Seek to the tail portion we want to keep.
-	offset := size - keepBytes
-	if offset < 0 {
-		offset = 0
-	}
+	offset := max(size-keepBytes, 0)
 	if _, err := f.Seek(offset, io.SeekStart); err != nil {
 		f.Close()
 		return err

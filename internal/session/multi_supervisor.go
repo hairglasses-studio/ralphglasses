@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"sort"
 	"sync"
 	"time"
@@ -46,14 +47,14 @@ type MultiRepoSupervisor struct {
 
 // MultiRepoStatus is a snapshot of the multi-repo supervisor state.
 type MultiRepoStatus struct {
-	Running       bool                      `json:"running"`
-	RepoCount     int                       `json:"repo_count"`
-	ActiveCycles  int                       `json:"active_cycles"`
-	TotalBudget   float64                   `json:"total_budget_usd"`
-	TotalSpent    float64                   `json:"total_spent_usd"`
-	TickCount     int                       `json:"tick_count"`
-	RepoHealth    map[string]float64        `json:"repo_health"`
-	RepoStatuses  map[string]SupervisorState `json:"repo_statuses"`
+	Running      bool                       `json:"running"`
+	RepoCount    int                        `json:"repo_count"`
+	ActiveCycles int                        `json:"active_cycles"`
+	TotalBudget  float64                    `json:"total_budget_usd"`
+	TotalSpent   float64                    `json:"total_spent_usd"`
+	TickCount    int                        `json:"tick_count"`
+	RepoHealth   map[string]float64         `json:"repo_health"`
+	RepoStatuses map[string]SupervisorState `json:"repo_statuses"`
 }
 
 // NewMultiRepoSupervisor creates a coordinator for multiple repository supervisors.
@@ -180,9 +181,7 @@ func (ms *MultiRepoSupervisor) Status() MultiRepoStatus {
 	defer ms.mu.Unlock()
 
 	health := make(map[string]float64, len(ms.repoHealth))
-	for k, v := range ms.repoHealth {
-		health[k] = v
-	}
+	maps.Copy(health, ms.repoHealth)
 
 	statuses := make(map[string]SupervisorState, len(ms.supervisors))
 	for path, sup := range ms.supervisors {
@@ -292,9 +291,7 @@ func (ms *MultiRepoSupervisor) tick(ctx context.Context) {
 	if tickCount%10 == 0 {
 		ms.mu.Lock()
 		sups := make(map[string]*Supervisor, len(ms.supervisors))
-		for k, v := range ms.supervisors {
-			sups[k] = v
-		}
+		maps.Copy(sups, ms.supervisors)
 		ms.mu.Unlock()
 
 		for path, sup := range sups {

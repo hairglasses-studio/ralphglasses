@@ -275,7 +275,7 @@ func TestAutoMode_RecordAction_TrimsHistory(t *testing.T) {
 	t.Parallel()
 	am := NewAutoMode(AutoModeConfig{HistoryLimit: 5})
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		am.RecordAction(AutoAction{Name: "test"}, true, "success", "ok")
 	}
 	if len(am.History()) != 5 {

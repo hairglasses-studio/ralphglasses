@@ -2,6 +2,7 @@ package tmux
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -73,9 +74,9 @@ func TestPaneEdges(t *testing.T) {
 
 func TestGridDimensions(t *testing.T) {
 	tests := []struct {
-		n        int
-		wantR    int
-		wantC    int
+		n     int
+		wantR int
+		wantC int
 	}{
 		{0, 0, 0},
 		{1, 1, 1},
@@ -567,13 +568,7 @@ func TestApplyLayout_SplitDirections(t *testing.T) {
 	wantDirs := []string{"-h", "-v", "-h"}
 	for i, want := range wantDirs {
 		call := mc.calls[i+1] // skip display-message
-		found := false
-		for _, arg := range call {
-			if arg == want {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(call, want)
 		if !found {
 			t.Errorf("split %d: expected direction %s in args %v", i+1, want, call)
 		}

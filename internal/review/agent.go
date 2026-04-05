@@ -96,8 +96,8 @@ func (a *ReviewAgent) Analyze(diff string) *ReviewResult {
 
 	for _, line := range lines {
 		// Parse file header.
-		if strings.HasPrefix(line, "+++ b/") {
-			currentFile = strings.TrimPrefix(line, "+++ b/")
+		if after, ok := strings.CutPrefix(line, "+++ b/"); ok {
+			currentFile = after
 			files[currentFile] = struct{}{}
 			continue
 		}
@@ -227,11 +227,11 @@ func Deduplicate(findings []Finding) []Finding {
 // Input format: @@ -oldStart,oldCount +newStart,newCount @@
 func parseHunkLine(hunk string) int {
 	// Find the +N part.
-	idx := strings.Index(hunk, "+")
-	if idx < 0 {
+	_, after, ok := strings.Cut(hunk, "+")
+	if !ok {
 		return 0
 	}
-	rest := hunk[idx+1:]
+	rest := after
 	var n int
 	for _, ch := range rest {
 		if ch >= '0' && ch <= '9' {

@@ -15,7 +15,7 @@ func TestNoOpDetector_SingleNoOpDoesNotSkip(t *testing.T) {
 
 func TestNoOpDetector_ConsecutiveNoOpsTriggersSkip(t *testing.T) {
 	d := NewNoOpDetector(3)
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		skip, _ := d.RecordIteration("loop1", 0, 0)
 		if skip {
 			t.Fatalf("should not skip at count %d (threshold 3)", i+1)
@@ -32,8 +32,8 @@ func TestNoOpDetector_ConsecutiveNoOpsTriggersSkip(t *testing.T) {
 
 func TestNoOpDetector_ProductiveIterationResetsCounter(t *testing.T) {
 	d := NewNoOpDetector(2)
-	d.RecordIteration("loop1", 0, 0) // count=1
-	d.RecordIteration("loop1", 3, 10) // productive -> reset
+	d.RecordIteration("loop1", 0, 0)            // count=1
+	d.RecordIteration("loop1", 3, 10)           // productive -> reset
 	skip, _ := d.RecordIteration("loop1", 0, 0) // count=1 again
 	if skip {
 		t.Fatal("productive iteration should have reset counter")
@@ -72,7 +72,7 @@ func TestNoOpDetector_IndependentLoopIDs(t *testing.T) {
 func TestNoOpDetector_ConcurrentAccess(t *testing.T) {
 	d := NewNoOpDetector(100) // high threshold so we don't trigger skip
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()

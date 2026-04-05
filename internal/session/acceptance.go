@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 )
@@ -116,12 +117,7 @@ func isReviewPath(p string) bool {
 			return true
 		}
 	}
-	for _, exact := range selfImproveReviewExact {
-		if p == exact {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(selfImproveReviewExact, p)
 }
 
 // isGitWorktree returns true if dir is inside a git worktree (not the main
@@ -319,14 +315,15 @@ func CreateReviewPR(dir, mainBranch, title string, reviewPaths []string) (string
 	}
 
 	// Create PR
-	body := "## Auto-generated self-improvement PR\n\nReview-required paths:\n"
+	var body strings.Builder
+	body.WriteString("## Auto-generated self-improvement PR\n\nReview-required paths:\n")
 	for _, p := range reviewPaths {
-		body += fmt.Sprintf("- `%s`\n", p)
+		body.WriteString(fmt.Sprintf("- `%s`\n", p))
 	}
 
 	cmd := exec.Command("gh", "pr", "create",
 		"--title", title,
-		"--body", body,
+		"--body", body.String(),
 		"--base", mainBranch,
 		"--head", branch,
 	)

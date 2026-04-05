@@ -83,10 +83,7 @@ func CosineSimilarity(a, b []float64) float64 {
 		return 0
 	}
 
-	minLen := len(a)
-	if len(b) < minLen {
-		minLen = len(b)
-	}
+	minLen := min(len(b), len(a))
 
 	var dot, normA, normB float64
 	for i := 0; i < minLen; i++ {

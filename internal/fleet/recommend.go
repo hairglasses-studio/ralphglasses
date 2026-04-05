@@ -22,9 +22,9 @@ const (
 type Recommendation struct {
 	Type        RecommendationType `json:"type"`
 	Description string             `json:"description"`
-	Impact      float64            `json:"impact"`      // estimated savings as a fraction (0.0-1.0)
-	Confidence  float64            `json:"confidence"`   // 0.0-1.0
-	Config      map[string]any     `json:"config"`       // suggested config changes
+	Impact      float64            `json:"impact"`     // estimated savings as a fraction (0.0-1.0)
+	Confidence  float64            `json:"confidence"` // 0.0-1.0
+	Config      map[string]any     `json:"config"`     // suggested config changes
 }
 
 // RecommenderConfig tunes recommendation thresholds.
@@ -61,7 +61,7 @@ type RecommenderConfig struct {
 func DefaultRecommenderConfig() RecommenderConfig {
 	return RecommenderConfig{
 		MinSamplesPerProvider:          5,
-		AnomalyZThreshold:             2.0,
+		AnomalyZThreshold:              2.0,
 		CacheSavingsEstimate:           0.80,
 		ModelDowngradeQualityThreshold: 0.05,
 		BudgetHours:                    8,
@@ -91,12 +91,12 @@ func (r *Recommender) WithConfig(cfg RecommenderConfig) *Recommender {
 
 // providerStats holds aggregated cost statistics for a single provider.
 type providerStats struct {
-	Provider    string
-	Samples     int
-	TotalCost   float64
-	MeanCost    float64
-	StddevCost  float64
-	TaskTypes   map[string]taskStats
+	Provider   string
+	Samples    int
+	TotalCost  float64
+	MeanCost   float64
+	StddevCost float64
+	TaskTypes  map[string]taskStats
 }
 
 // taskStats holds per-task-type cost statistics within a provider.
@@ -238,10 +238,7 @@ func (r *Recommender) providerSwitchRecs(stats map[string]*providerStats) []Reco
 			}
 
 			// Confidence based on sample counts.
-			minSamples := cheapest.samples
-			if p.samples < minSamples {
-				minSamples = p.samples
-			}
+			minSamples := min(p.samples, cheapest.samples)
 			confidence := math.Min(float64(minSamples)/20.0, 1.0)
 
 			recs = append(recs, Recommendation{
@@ -257,7 +254,7 @@ func (r *Recommender) providerSwitchRecs(stats map[string]*providerStats) []Reco
 					"task_type":     taskType,
 					"from_provider": p.provider,
 					"to_provider":   cheapest.provider,
-					"savings_pct":   math.Round(savingsFrac * 1000) / 10,
+					"savings_pct":   math.Round(savingsFrac*1000) / 10,
 				},
 			})
 		}
@@ -292,10 +289,7 @@ func (r *Recommender) budgetPacingRecs(samples []CostSample) []Recommendation {
 	reductionFrac := 1.0 - (targetBurnRate / forecast.BurnRatePerHour)
 
 	// Suggest reducing concurrency proportionally.
-	newConcurrency := int(math.Ceil(float64(r.config.Concurrency) * (1.0 - reductionFrac)))
-	if newConcurrency < 1 {
-		newConcurrency = 1
-	}
+	newConcurrency := max(int(math.Ceil(float64(r.config.Concurrency)*(1.0-reductionFrac))), 1)
 	if newConcurrency >= r.config.Concurrency {
 		return nil // no change needed
 	}
@@ -413,10 +407,10 @@ func (r *Recommender) cacheOptimizeRecs(stats map[string]*providerStats) []Recom
 			Impact:     savingsFrac,
 			Confidence: confidence,
 			Config: map[string]any{
-				"provider":           ps.Provider,
-				"enable_caching":     true,
-				"estimated_savings":  math.Round(estimatedSavings*100) / 100,
-				"savings_pct":        math.Round(savingsFrac * 1000) / 10,
+				"provider":          ps.Provider,
+				"enable_caching":    true,
+				"estimated_savings": math.Round(estimatedSavings*100) / 100,
+				"savings_pct":       math.Round(savingsFrac*1000) / 10,
 			},
 		})
 	}
@@ -439,12 +433,12 @@ func (r *Recommender) modelDowngradeRecs(stats map[string]*providerStats) []Reco
 
 	// Task types generally safe for cheaper models.
 	cheapTaskTypes := map[string]bool{
-		"lint":       true,
-		"format":     true,
-		"test":       true,
-		"docs":       true,
-		"refactor":   true,
-		"simple":     true,
+		"lint":        true,
+		"format":      true,
+		"test":        true,
+		"docs":        true,
+		"refactor":    true,
+		"simple":      true,
 		"boilerplate": true,
 	}
 
@@ -479,7 +473,7 @@ func (r *Recommender) modelDowngradeRecs(stats map[string]*providerStats) []Reco
 					"task_type":     taskType,
 					"from_provider": ps.Provider,
 					"to_model":      tier.cheaper,
-					"savings_pct":   math.Round(savingsFrac * 1000) / 10,
+					"savings_pct":   math.Round(savingsFrac*1000) / 10,
 					"quality_risk":  "low",
 				},
 			})

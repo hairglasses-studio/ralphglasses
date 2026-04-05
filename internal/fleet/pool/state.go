@@ -4,6 +4,7 @@
 package pool
 
 import (
+	"maps"
 	"sync"
 	"time"
 )
@@ -175,9 +176,7 @@ func (s *State) GetSummary() Summary {
 		CostRatePerHour: s.CostRatePerHour,
 		ProviderCounts:  make(map[string]int, len(s.ProviderCounts)),
 	}
-	for k, v := range s.ProviderCounts {
-		sum.ProviderCounts[k] = v
-	}
+	maps.Copy(sum.ProviderCounts, s.ProviderCounts)
 	if s.BudgetCapUSD > 0 {
 		sum.BudgetPct = (s.TotalSpentUSD / s.BudgetCapUSD) * 100
 		sum.AtCapacity = sum.BudgetPct >= 95

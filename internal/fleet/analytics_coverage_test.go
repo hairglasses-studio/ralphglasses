@@ -62,7 +62,7 @@ func TestRecordFailureAt_Overflow(t *testing.T) {
 	fa := NewFleetAnalytics(5, time.Hour)
 
 	now := time.Now()
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		fa.recordFailureAt(now, "w", "err")
 	}
 

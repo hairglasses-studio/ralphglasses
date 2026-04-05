@@ -45,7 +45,7 @@ func firstLine(text string) string {
 
 func nonEmptyLines(text string) []string {
 	var out []string
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" {
 			out = append(out, line)
@@ -128,7 +128,7 @@ func sanitizeTaskTitle(title string) string {
 
 	// If the title looks like a JSON object, try to extract a title field.
 	if len(title) > 0 && (title[0] == '{' || title[0] == '[') {
-		var obj map[string]interface{}
+		var obj map[string]any
 		if err := json.Unmarshal([]byte(title), &obj); err == nil {
 			for _, key := range []string{"title", "Title", "task", "name", "description"} {
 				if v, ok := obj[key]; ok {

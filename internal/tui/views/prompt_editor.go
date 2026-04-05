@@ -55,16 +55,16 @@ type ScoreDimension struct {
 // It implements tea.Model and shows original vs enhanced prompts with
 // quality scores and a provider selector.
 type PromptEditorModel struct {
-	original     string
-	enhanced     string
-	activePane   PromptEditorPane
-	providers    []string
-	providerIdx  int
-	score        *QualityScore
-	scrollLeft   int
-	scrollRight  int
-	width        int
-	height       int
+	original    string
+	enhanced    string
+	activePane  PromptEditorPane
+	providers   []string
+	providerIdx int
+	score       *QualityScore
+	scrollLeft  int
+	scrollRight int
+	width       int
+	height      int
 }
 
 // NewPromptEditor creates a PromptEditorModel with the original prompt text
@@ -218,14 +218,12 @@ func (m PromptEditorModel) renderAt(width, height int) string {
 	}
 
 	// Side-by-side panes
-	paneWidth := (width - 3) / 2 // 3 chars for divider
-	if paneWidth < 10 {
-		paneWidth = 10
-	}
-	paneHeight := height - 8 // reserve for title, score, help
-	if paneHeight < 3 {
-		paneHeight = 3
-	}
+	paneWidth := max(
+		// 3 chars for divider
+		(width-3)/2, 10)
+	paneHeight := max(
+		// reserve for title, score, help
+		height-8, 3)
 
 	leftPane := m.renderPane("Original", m.original, PaneOriginal, paneWidth, paneHeight, m.scrollLeft)
 	rightPane := m.renderPane("Enhanced", m.enhanced, PaneEnhanced, paneWidth, paneHeight, m.scrollRight)
@@ -261,10 +259,7 @@ func (m PromptEditorModel) renderPane(label, content string, pane PromptEditorPa
 	}
 
 	// Clamp scroll
-	maxScroll := len(lines) - height
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
+	maxScroll := max(len(lines)-height, 0)
 	if scroll > maxScroll {
 		scroll = maxScroll
 	}
@@ -278,10 +273,9 @@ func (m PromptEditorModel) renderPane(label, content string, pane PromptEditorPa
 	}
 
 	// Wrap/truncate lines to pane width
-	contentWidth := width - 2 // border padding
-	if contentWidth < 1 {
-		contentWidth = 1
-	}
+	contentWidth := max(
+		// border padding
+		width-2, 1)
 	var rendered []string
 	for _, line := range visible {
 		if len(line) > contentWidth {

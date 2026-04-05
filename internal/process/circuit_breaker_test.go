@@ -26,9 +26,9 @@ func TestCircuitBreakerDefaults(t *testing.T) {
 
 func TestCircuitBreakerAllowSpawn(t *testing.T) {
 	tests := []struct {
-		name     string
-		setup    func(*CircuitBreaker)
-		want     bool
+		name      string
+		setup     func(*CircuitBreaker)
+		want      bool
 		wantState CircuitState
 	}{
 		{
@@ -40,7 +40,7 @@ func TestCircuitBreakerAllowSpawn(t *testing.T) {
 		{
 			name: "open refuses spawn",
 			setup: func(cb *CircuitBreaker) {
-				for i := 0; i < 3; i++ {
+				for range 3 {
 					cb.RecordFailure()
 				}
 			},
@@ -99,9 +99,9 @@ func TestCircuitBreakerRecordSuccess(t *testing.T) {
 
 func TestCircuitBreakerRecordFailure(t *testing.T) {
 	tests := []struct {
-		name       string
-		failures   int
-		wantState  CircuitState
+		name      string
+		failures  int
+		wantState CircuitState
 	}{
 		{"below threshold", 2, CircuitClosed},
 		{"at threshold", 3, CircuitOpen},
@@ -200,10 +200,10 @@ func TestCircuitBreakerWriteStateFile(t *testing.T) {
 func TestCircuitBreakerConcurrentAccess(t *testing.T) {
 	cb := NewCircuitBreaker(100, 5*time.Minute, 60*time.Second)
 	done := make(chan struct{})
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		go func() {
 			defer func() { done <- struct{}{} }()
-			for j := 0; j < 50; j++ {
+			for range 50 {
 				cb.AllowSpawn()
 				cb.RecordFailure()
 				cb.State()
@@ -211,7 +211,7 @@ func TestCircuitBreakerConcurrentAccess(t *testing.T) {
 			}
 		}()
 	}
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 	// Just verify no panics or deadlocks.

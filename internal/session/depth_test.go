@@ -266,14 +266,12 @@ func TestClampDepth(t *testing.T) {
 func TestDepthEstimator_ConcurrentSafety(t *testing.T) {
 	de := NewDepthEstimator(nil)
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 100 {
+		wg.Go(func() {
 			de.EstimateDepth(TaskInfo{FileCount: 5, LOCEstimate: 100})
 			de.ShouldEarlyStop(5, []float64{0.1, 0.05, 0.001})
 			de.ShouldExtend(10, 10, 0.2, true)
-		}()
+		})
 	}
 	wg.Wait()
 }

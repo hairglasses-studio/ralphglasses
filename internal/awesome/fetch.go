@@ -80,7 +80,7 @@ func parseAwesomeList(md string) []AwesomeEntry {
 	var entries []AwesomeEntry
 	var currentCategory string
 
-	for _, line := range strings.Split(md, "\n") {
+	for line := range strings.SplitSeq(md, "\n") {
 		trimmed := strings.TrimSpace(line)
 
 		// Detect category headers (## or ###)
@@ -127,11 +127,11 @@ func parseAwesomeList(md string) []AwesomeEntry {
 func extractRepoFromURL(url string) string {
 	// https://github.com/owner/repo or https://github.com/owner/repo/...
 	url = strings.TrimRight(url, "/")
-	idx := strings.Index(url, "github.com/")
-	if idx < 0 {
+	_, after, ok := strings.Cut(url, "github.com/")
+	if !ok {
 		return ""
 	}
-	path := url[idx+len("github.com/"):]
+	path := after
 	parts := strings.SplitN(path, "/", 3)
 	if len(parts) < 2 {
 		return ""

@@ -12,10 +12,10 @@ import (
 
 // HealthScore is the composite health assessment for a repository.
 type HealthScore struct {
-	Overall    float64                    `json:"overall"`    // 0.0-1.0
-	Dimensions map[string]DimensionScore  `json:"dimensions"` // keyed by dimension name
-	Issues     []HealthIssue              `json:"issues"`
-	Timestamp  time.Time                  `json:"timestamp"`
+	Overall    float64                   `json:"overall"`    // 0.0-1.0
+	Dimensions map[string]DimensionScore `json:"dimensions"` // keyed by dimension name
+	Issues     []HealthIssue             `json:"issues"`
+	Timestamp  time.Time                 `json:"timestamp"`
 }
 
 // DimensionScore is a single health dimension measurement.
@@ -356,8 +356,8 @@ func scoreTests(ctx context.Context, repoPath string, hs *HealthScore) Dimension
 			output := coverOut.stdout
 			// Parse "coverage: XX.X% of statements" lines
 			coverageOK := true
-			lines := strings.Split(output, "\n")
-			for _, line := range lines {
+			lines := strings.SplitSeq(output, "\n")
+			for line := range lines {
 				if idx := strings.Index(line, "coverage:"); idx >= 0 {
 					var pct float64
 					if _, err := fmt.Sscanf(line[idx:], "coverage: %f%%", &pct); err == nil {

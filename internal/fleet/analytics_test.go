@@ -10,7 +10,7 @@ import (
 func TestFleetAnalytics_RecordAndSnapshot(t *testing.T) {
 	fa := NewFleetAnalytics(1000, time.Hour)
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		provider := "claude"
 		if i%3 == 0 {
 			provider = "gemini"
@@ -64,10 +64,10 @@ func TestFleetAnalytics_FailureRate(t *testing.T) {
 	fa := NewFleetAnalytics(1000, time.Hour)
 
 	// 80 successes, 20 failures => 20% failure rate.
-	for i := 0; i < 80; i++ {
+	for range 80 {
 		fa.RecordCompletion("w1", "claude", 100*time.Millisecond, 0.01)
 	}
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		fa.RecordFailure("w1", "timeout")
 	}
 
@@ -93,7 +93,7 @@ func TestFleetAnalytics_CostForecast(t *testing.T) {
 
 	// Record 60 completions over the last 30 minutes at $0.10 each = $6.00 total.
 	// Rate = $6.00 / 30min = $0.20/min = $12.00/hr.
-	for i := 0; i < 60; i++ {
+	for i := range 60 {
 		ts := now.Add(-30*time.Minute + time.Duration(i)*30*time.Second)
 		fa.recordCompletionAt(ts, "w1", "claude", 100*time.Millisecond, 0.10)
 	}
@@ -112,20 +112,20 @@ func TestFleetAnalytics_WindowFiltering(t *testing.T) {
 	now := time.Now()
 
 	// Old samples: 2 hours ago.
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		ts := now.Add(-2 * time.Hour)
 		fa.recordCompletionAt(ts, "w-old", "gemini", 500*time.Millisecond, 1.0)
 	}
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		fa.recordFailureAt(now.Add(-2*time.Hour), "w-old", "old error")
 	}
 
 	// Recent samples: within the last 5 minutes.
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		ts := now.Add(-time.Duration(i) * time.Second)
 		fa.recordCompletionAt(ts, "w-new", "claude", 100*time.Millisecond, 0.05)
 	}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		fa.recordFailureAt(now.Add(-time.Duration(i)*time.Second), "w-new", "new error")
 	}
 
@@ -163,47 +163,43 @@ func TestFleetAnalytics_Concurrent(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Writers: record completions concurrently.
-	for g := 0; g < 10; g++ {
+	for g := range 10 {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			for i := 0; i < 100; i++ {
+			for range 100 {
 				fa.RecordCompletion(fmt.Sprintf("w-%d", id), "claude", 50*time.Millisecond, 0.001)
 			}
 		}(g)
 	}
 
 	// Writers: record failures concurrently.
-	for g := 0; g < 5; g++ {
+	for g := range 5 {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			for i := 0; i < 50; i++ {
+			for range 50 {
 				fa.RecordFailure(fmt.Sprintf("w-%d", id), "err")
 			}
 		}(g)
 	}
 
 	// Readers: take snapshots concurrently.
-	for g := 0; g < 5; g++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for i := 0; i < 20; i++ {
+	for range 5 {
+		wg.Go(func() {
+			for range 20 {
 				_ = fa.Snapshot(time.Hour)
 			}
-		}()
+		})
 	}
 
 	// Reader: cost forecast concurrently.
-	for g := 0; g < 3; g++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for i := 0; i < 20; i++ {
+	for range 3 {
+		wg.Go(func() {
+			for range 20 {
 				_ = fa.CostForecast(time.Hour)
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

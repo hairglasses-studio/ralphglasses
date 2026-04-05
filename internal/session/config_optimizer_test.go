@@ -59,7 +59,7 @@ func TestConfigOptimizer_RecordOutcome_WindowTrim(t *testing.T) {
 	cfg.WindowSize = 5
 	co := NewConfigOptimizer(cfg)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		co.RecordOutcome("claude", "test", true, 0.10, 10.0)
 	}
 
@@ -119,11 +119,11 @@ func TestConfigOptimizer_SelectProvider_ExploitsBestArm(t *testing.T) {
 	co := NewConfigOptimizer(cfg)
 
 	// Claude: 100% success, cheap.
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		co.RecordOutcome("claude", "feature", true, 0.10, 10)
 	}
 	// Gemini: 20% success, expensive.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		co.RecordOutcome("gemini", "feature", i == 0, 1.00, 60)
 	}
 
@@ -143,10 +143,10 @@ func TestConfigOptimizer_SuggestChanges(t *testing.T) {
 	co := NewConfigOptimizer(cfg)
 
 	// Create a clear winner.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		co.RecordOutcome("claude", "feature", true, 0.10, 10)
 	}
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		co.RecordOutcome("gemini", "feature", false, 2.00, 120)
 	}
 
@@ -174,7 +174,7 @@ func TestConfigOptimizer_SuggestChanges_NoSuggestionWhenSimilar(t *testing.T) {
 	co := NewConfigOptimizer(cfg)
 
 	// Both providers perform similarly.
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		co.RecordOutcome("claude", "feature", true, 0.50, 30)
 		co.RecordOutcome("gemini", "feature", true, 0.50, 30)
 	}
@@ -191,7 +191,7 @@ func TestConfigOptimizer_PendingSuggestions(t *testing.T) {
 	cfg.MinTrials = 2
 	co := NewConfigOptimizer(cfg)
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		co.RecordOutcome("claude", "fix", true, 0.10, 10)
 		co.RecordOutcome("gemini", "fix", false, 2.00, 120)
 	}

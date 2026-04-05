@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -25,23 +26,23 @@ type CostEntry struct {
 
 // ProviderBreakdown summarises spend for a single provider.
 type ProviderBreakdown struct {
-	Provider      Provider
-	TotalSpend    float64            // USD
-	ByInstance    map[string]float64 // instance-type -> USD
-	EntryCount    int
-	FirstSeen     time.Time
-	LastSeen      time.Time
+	Provider   Provider
+	TotalSpend float64            // USD
+	ByInstance map[string]float64 // instance-type -> USD
+	EntryCount int
+	FirstSeen  time.Time
+	LastSeen   time.Time
 }
 
 // CostReport is a point-in-time snapshot of aggregated cost data.
 type CostReport struct {
-	TotalSpend        float64                      // USD across all providers
+	TotalSpend        float64 // USD across all providers
 	ByProvider        map[Provider]ProviderBreakdown
-	BurnRatePerHour   float64                      // USD/hour over the observation window
-	BudgetLimit       float64                      // configured budget cap (0 = unlimited)
-	BudgetRemaining   float64                      // budgetLimit - totalSpend (negative if over)
-	ExhaustionTime    time.Time                    // projected time budget hits zero (zero value if unlimited or no burn)
-	ObservationWindow time.Duration                // wall-clock span of recorded data
+	BurnRatePerHour   float64       // USD/hour over the observation window
+	BudgetLimit       float64       // configured budget cap (0 = unlimited)
+	BudgetRemaining   float64       // budgetLimit - totalSpend (negative if over)
+	ExhaustionTime    time.Time     // projected time budget hits zero (zero value if unlimited or no burn)
+	ObservationWindow time.Duration // wall-clock span of recorded data
 	GeneratedAt       time.Time
 }
 
@@ -67,7 +68,7 @@ func withClock(fn func() time.Time) CostTrackerOption {
 type CostTracker struct {
 	mu      sync.Mutex
 	entries []CostEntry
-	budget  float64        // 0 = unlimited
+	budget  float64 // 0 = unlimited
 	now     func() time.Time
 }
 
@@ -244,23 +245,24 @@ func (ct *CostTracker) Report() CostReport {
 
 // String returns a human-readable summary of a CostReport.
 func (r CostReport) String() string {
-	s := fmt.Sprintf("Cost Report (generated %s)\n", r.GeneratedAt.Format(time.RFC3339))
-	s += fmt.Sprintf("  Total Spend:    $%.4f\n", r.TotalSpend)
-	s += fmt.Sprintf("  Burn Rate:      $%.4f/hr\n", r.BurnRatePerHour)
-	s += fmt.Sprintf("  Observation:    %s\n", r.ObservationWindow)
+	var s strings.Builder
+	s.WriteString(fmt.Sprintf("Cost Report (generated %s)\n", r.GeneratedAt.Format(time.RFC3339)))
+	s.WriteString(fmt.Sprintf("  Total Spend:    $%.4f\n", r.TotalSpend))
+	s.WriteString(fmt.Sprintf("  Burn Rate:      $%.4f/hr\n", r.BurnRatePerHour))
+	s.WriteString(fmt.Sprintf("  Observation:    %s\n", r.ObservationWindow))
 
 	if r.BudgetLimit > 0 {
-		s += fmt.Sprintf("  Budget:         $%.4f (remaining $%.4f)\n", r.BudgetLimit, r.BudgetRemaining)
+		s.WriteString(fmt.Sprintf("  Budget:         $%.4f (remaining $%.4f)\n", r.BudgetLimit, r.BudgetRemaining))
 		if !r.ExhaustionTime.IsZero() {
-			s += fmt.Sprintf("  Exhaustion:     %s\n", r.ExhaustionTime.Format(time.RFC3339))
+			s.WriteString(fmt.Sprintf("  Exhaustion:     %s\n", r.ExhaustionTime.Format(time.RFC3339)))
 		}
 	}
 
 	for prov, pb := range r.ByProvider {
-		s += fmt.Sprintf("  [%s] $%.4f (%d entries)\n", prov, pb.TotalSpend, pb.EntryCount)
+		s.WriteString(fmt.Sprintf("  [%s] $%.4f (%d entries)\n", prov, pb.TotalSpend, pb.EntryCount))
 		for inst, cost := range pb.ByInstance {
-			s += fmt.Sprintf("    %-20s $%.4f\n", inst, cost)
+			s.WriteString(fmt.Sprintf("    %-20s $%.4f\n", inst, cost))
 		}
 	}
-	return s
+	return s.String()
 }

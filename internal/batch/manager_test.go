@@ -39,11 +39,11 @@ func (m *mockClient) Submit(_ context.Context, requests []Request) (*BatchStatus
 	}
 	now := time.Now()
 	return &BatchStatus{
-		ID:          fmt.Sprintf("mock-batch-%d", len(m.submitCalls)),
-		Provider:    m.provider,
-		Status:      "processing",
-		Total:       len(requests),
-		CreatedAt:   now,
+		ID:        fmt.Sprintf("mock-batch-%d", len(m.submitCalls)),
+		Provider:  m.provider,
+		Status:    "processing",
+		Total:     len(requests),
+		CreatedAt: now,
 	}, nil
 }
 
@@ -136,7 +136,7 @@ func TestBatchManager_FlushSendsBatch(t *testing.T) {
 	ctx := context.Background()
 
 	// Queue 3 requests.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		_, err := mgr.Submit(ctx, BatchManagerRequest{
 			Request:  Request{UserPrompt: fmt.Sprintf("prompt-%d", i), MaxTokens: 100},
 			Priority: PriorityNormal,
@@ -243,7 +243,7 @@ func TestBatchManager_FlushRespectsMaxBatchSize(t *testing.T) {
 	ctx := context.Background()
 
 	// Queue 5 requests with MaxBatchSize=2.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		_, err := mgr.Submit(ctx, BatchManagerRequest{
 			Request:  Request{UserPrompt: fmt.Sprintf("p-%d", i)},
 			Priority: PriorityNormal,
@@ -485,7 +485,7 @@ func TestScheduler_AutoFlushOnSizeThreshold(t *testing.T) {
 	defer sched.Stop()
 
 	// Submit enough requests to trigger the size threshold.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		_, err := mgr.Submit(ctx, BatchManagerRequest{
 			Request:  Request{UserPrompt: fmt.Sprintf("p-%d", i)},
 			Priority: PriorityNormal,

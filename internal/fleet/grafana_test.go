@@ -83,7 +83,7 @@ func TestExportDashboard_NonOverlappingGrid(t *testing.T) {
 	}
 
 	// Check no two panels overlap.
-	for i := 0; i < len(rects); i++ {
+	for i := range rects {
 		for j := i + 1; j < len(rects); j++ {
 			a, b := rects[i], rects[j]
 			xOverlap := a.x < b.x+b.w && a.x+a.w > b.x

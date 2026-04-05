@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 )
 
@@ -54,12 +55,7 @@ type ModelCost struct {
 
 // HasCapability reports whether the model supports the given capability.
 func (m *ModelCost) HasCapability(cap Capability) bool {
-	for _, c := range m.Capabilities {
-		if c == cap {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(m.Capabilities, cap)
 }
 
 // BlendedCostPer1MTok returns the weighted average cost per 1M tokens assuming
@@ -84,21 +80,21 @@ var costTable = []ModelCost{
 	// ── Claude (Anthropic) ──────────────────────────────────────────────
 	{
 		ID: "claude-opus-4-20250514", Provider: ProviderClaude,
-		DisplayName: "Claude Opus 4",
+		DisplayName:   "Claude Opus 4",
 		InputPer1MTok: 15.00, OutputPer1MTok: 75.00,
 		ContextWindow: 200_000, MaxOutputTok: 32_000,
 		Capabilities: []Capability{CapCode, CapReasoning, CapVision, CapAgents},
 	},
 	{
 		ID: "claude-sonnet-4-20250514", Provider: ProviderClaude,
-		DisplayName: "Claude Sonnet 4",
+		DisplayName:   "Claude Sonnet 4",
 		InputPer1MTok: 3.00, OutputPer1MTok: 15.00,
 		ContextWindow: 200_000, MaxOutputTok: 16_000,
 		Capabilities: []Capability{CapCode, CapReasoning, CapVision, CapAgents},
 	},
 	{
 		ID: "claude-haiku-3-5-20241022", Provider: ProviderClaude,
-		DisplayName: "Claude Haiku 3.5",
+		DisplayName:   "Claude Haiku 3.5",
 		InputPer1MTok: 0.80, OutputPer1MTok: 4.00,
 		ContextWindow: 200_000, MaxOutputTok: 8_192,
 		Capabilities: []Capability{CapCode, CapVision},
@@ -107,21 +103,21 @@ var costTable = []ModelCost{
 	// ── Gemini (Google) ─────────────────────────────────────────────────
 	{
 		ID: "gemini-2.5-pro", Provider: ProviderGemini,
-		DisplayName: "Gemini 2.5 Pro",
+		DisplayName:   "Gemini 2.5 Pro",
 		InputPer1MTok: 1.25, OutputPer1MTok: 10.00,
 		ContextWindow: 1_000_000, MaxOutputTok: 65_536,
 		Capabilities: []Capability{CapCode, CapReasoning, CapVision},
 	},
 	{
 		ID: "gemini-2.5-flash", Provider: ProviderGemini,
-		DisplayName: "Gemini 2.5 Flash",
+		DisplayName:   "Gemini 2.5 Flash",
 		InputPer1MTok: 0.15, OutputPer1MTok: 0.60,
 		ContextWindow: 1_000_000, MaxOutputTok: 65_536,
 		Capabilities: []Capability{CapCode, CapVision},
 	},
 	{
 		ID: "gemini-2.0-flash-lite", Provider: ProviderGemini,
-		DisplayName: "Gemini 2.0 Flash Lite",
+		DisplayName:   "Gemini 2.0 Flash Lite",
 		InputPer1MTok: 0.075, OutputPer1MTok: 0.30,
 		ContextWindow: 1_000_000, MaxOutputTok: 8_192,
 		Capabilities: []Capability{CapCode},
@@ -130,35 +126,35 @@ var costTable = []ModelCost{
 	// ── OpenAI ──────────────────────────────────────────────────────────
 	{
 		ID: "gpt-4o", Provider: ProviderOpenAI,
-		DisplayName: "GPT-4o",
+		DisplayName:   "GPT-4o",
 		InputPer1MTok: 2.50, OutputPer1MTok: 10.00,
 		ContextWindow: 128_000, MaxOutputTok: 16_384,
 		Capabilities: []Capability{CapCode, CapReasoning, CapVision},
 	},
 	{
 		ID: "gpt-4o-mini", Provider: ProviderOpenAI,
-		DisplayName: "GPT-4o Mini",
+		DisplayName:   "GPT-4o Mini",
 		InputPer1MTok: 0.15, OutputPer1MTok: 0.60,
 		ContextWindow: 128_000, MaxOutputTok: 16_384,
 		Capabilities: []Capability{CapCode, CapVision},
 	},
 	{
 		ID: "o3", Provider: ProviderOpenAI,
-		DisplayName: "OpenAI o3",
+		DisplayName:   "OpenAI o3",
 		InputPer1MTok: 2.00, OutputPer1MTok: 8.00,
 		ContextWindow: 200_000, MaxOutputTok: 100_000,
 		Capabilities: []Capability{CapCode, CapReasoning},
 	},
 	{
 		ID: "o4-mini", Provider: ProviderOpenAI,
-		DisplayName: "OpenAI o4-mini",
+		DisplayName:   "OpenAI o4-mini",
 		InputPer1MTok: 1.10, OutputPer1MTok: 4.40,
 		ContextWindow: 200_000, MaxOutputTok: 100_000,
 		Capabilities: []Capability{CapCode, CapReasoning},
 	},
 	{
 		ID: "o1", Provider: ProviderOpenAI,
-		DisplayName: "OpenAI o1",
+		DisplayName:   "OpenAI o1",
 		InputPer1MTok: 15.00, OutputPer1MTok: 60.00,
 		ContextWindow: 200_000, MaxOutputTok: 100_000,
 		Capabilities: []Capability{CapCode, CapReasoning},
@@ -177,12 +173,12 @@ func init() {
 
 // CostEstimate is the result of EstimateCost.
 type CostEstimate struct {
-	Model       string  `json:"model"`
-	InputCost   float64 `json:"input_cost"`
-	OutputCost  float64 `json:"output_cost"`
-	TotalCost   float64 `json:"total_cost"`
-	InputTokens int     `json:"input_tokens"`
-	OutputTokens int    `json:"output_tokens"`
+	Model        string  `json:"model"`
+	InputCost    float64 `json:"input_cost"`
+	OutputCost   float64 `json:"output_cost"`
+	TotalCost    float64 `json:"total_cost"`
+	InputTokens  int     `json:"input_tokens"`
+	OutputTokens int     `json:"output_tokens"`
 }
 
 // EstimateCost computes the USD cost for the given model and token counts.

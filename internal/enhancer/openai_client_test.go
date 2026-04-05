@@ -288,7 +288,7 @@ func TestOpenAIClient_PreviousResponseID_Serialization(t *testing.T) {
 		t.Fatalf("failed to marshal: %v", err)
 	}
 
-	var raw map[string]interface{}
+	var raw map[string]any
 	if err := json.Unmarshal(data, &raw); err != nil {
 		t.Fatalf("failed to unmarshal: %v", err)
 	}
@@ -302,7 +302,7 @@ func TestOpenAIClient_PreviousResponseID_Serialization(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to marshal: %v", err)
 	}
-	var raw2 map[string]interface{}
+	var raw2 map[string]any
 	if err := json.Unmarshal(data, &raw2); err != nil {
 		t.Fatalf("failed to unmarshal: %v", err)
 	}

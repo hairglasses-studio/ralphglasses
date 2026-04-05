@@ -2,6 +2,7 @@ package session
 
 import (
 	"fmt"
+	"maps"
 	"sync"
 	"time"
 )
@@ -24,9 +25,7 @@ type RateLimiter struct {
 // NewRateLimiter creates a RateLimiter populated with default provider limits.
 func NewRateLimiter() *RateLimiter {
 	limits := make(map[Provider]int, len(ProviderRateLimits))
-	for p, n := range ProviderRateLimits {
-		limits[p] = n
-	}
+	maps.Copy(limits, ProviderRateLimits)
 	return &RateLimiter{
 		limits: limits,
 		calls:  make(map[Provider][]time.Time),

@@ -241,7 +241,7 @@ func TestReload_MultipleCallbacks(t *testing.T) {
 
 	var count int
 	var mu sync.Mutex
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		r.OnReload(func(_, _ []string) {
 			mu.Lock()
 			count++

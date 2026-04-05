@@ -440,14 +440,14 @@ func TestConcurrentAccess(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			cp.RecordSpend(0.01)
 			_ = cp.RemainingBudget()
 			_ = cp.Summary()
 		}
 	}()
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		workload := Workload{
 			TotalTasks:       10,
 			AvgTaskDurationS: 5,

@@ -21,13 +21,13 @@ type EventLogEntry struct {
 
 // EventLogView displays a real-time scrollable event log.
 type EventLogView struct {
-	entries  []EventLogEntry
-	filtered []EventLogEntry
-	filter   string // empty = show all, or event type prefix to filter
-	paused   bool
+	entries   []EventLogEntry
+	filtered  []EventLogEntry
+	filter    string // empty = show all, or event type prefix to filter
+	paused    bool
 	scrollPos int
-	width    int
-	height   int
+	width     int
+	height    int
 }
 
 // NewEventLogView creates a new event log view.
@@ -205,10 +205,7 @@ func (v *EventLogView) applyFilter() {
 
 // clampScrollPos ensures scrollPos is within valid bounds after filter or resize.
 func (v *EventLogView) clampScrollPos() {
-	maxPos := len(v.filtered) - v.viewHeight()
-	if maxPos < 0 {
-		maxPos = 0
-	}
+	maxPos := max(len(v.filtered)-v.viewHeight(), 0)
 	if v.scrollPos > maxPos {
 		v.scrollPos = maxPos
 	}
@@ -229,10 +226,7 @@ func (v *EventLogView) viewHeight() int {
 // scrollToBottom moves the scroll position to show the latest entries.
 func (v *EventLogView) scrollToBottom() {
 	vh := v.viewHeight()
-	v.scrollPos = len(v.filtered) - vh
-	if v.scrollPos < 0 {
-		v.scrollPos = 0
-	}
+	v.scrollPos = max(len(v.filtered)-vh, 0)
 }
 
 // scrollDown moves the scroll position down by one line, bounded.

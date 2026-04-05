@@ -171,10 +171,7 @@ func (m *LogSearchModel) scrollToMatch() {
 		viewHeight = 1
 	}
 	// Center the match in the viewport.
-	m.scrollOffset = target - viewHeight/2
-	if m.scrollOffset < 0 {
-		m.scrollOffset = 0
-	}
+	m.scrollOffset = max(target-viewHeight/2, 0)
 	maxOffset := m.maxScrollOffset()
 	if m.scrollOffset > maxOffset {
 		m.scrollOffset = maxOffset
@@ -183,10 +180,7 @@ func (m *LogSearchModel) scrollToMatch() {
 
 func (m *LogSearchModel) viewableHeight() int {
 	// Reserve 3 lines: header, separator, status bar.
-	h := m.height - 3
-	if h < 1 {
-		h = 1
-	}
+	h := max(m.height-3, 1)
 	return h
 }
 

@@ -170,7 +170,7 @@ func TestRelatedContextEmptyQuery(t *testing.T) {
 
 func TestRelatedContextMaxNodes(t *testing.T) {
 	g := NewGraph()
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		g.AddNode("pkg:test"+string(rune('a'+i)), KindPackage, map[string]string{"name": "test"})
 	}
 	nodes := g.RelatedContext("test", 3)
@@ -195,7 +195,7 @@ func TestConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Concurrent writes
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -209,7 +209,7 @@ func TestConcurrentAccess(t *testing.T) {
 	}
 
 	// Concurrent reads
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()

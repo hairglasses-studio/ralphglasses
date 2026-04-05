@@ -2,15 +2,16 @@ package patterns
 
 import (
 	"errors"
+	"maps"
 	"sync"
 )
 
 // Errors used across the patterns package.
 var (
-	ErrKeyNotFound         = errors.New("patterns: key not found")
-	ErrUnknownMessageType  = errors.New("patterns: unknown message type")
-	ErrNoExecutors         = errors.New("patterns: no executor sessions configured")
-	ErrEmptyChain          = errors.New("patterns: review chain is empty")
+	ErrKeyNotFound          = errors.New("patterns: key not found")
+	ErrUnknownMessageType   = errors.New("patterns: unknown message type")
+	ErrNoExecutors          = errors.New("patterns: no executor sessions configured")
+	ErrEmptyChain           = errors.New("patterns: review chain is empty")
 	ErrNoMatchingSpecialist = errors.New("patterns: no specialist matched the task")
 )
 
@@ -134,8 +135,6 @@ func (sm *SharedMemory) Snapshot() map[string]string {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 	snap := make(map[string]string, len(sm.data))
-	for k, v := range sm.data {
-		snap[k] = v
-	}
+	maps.Copy(snap, sm.data)
 	return snap
 }

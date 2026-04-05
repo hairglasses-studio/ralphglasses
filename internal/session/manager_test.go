@@ -475,7 +475,7 @@ func TestManagerConcurrentSessionInsert(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Concurrently insert sessions.
-	for i := 0; i < numSessions; i++ {
+	for i := range numSessions {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -485,15 +485,13 @@ func TestManagerConcurrentSessionInsert(t *testing.T) {
 	}
 
 	// Concurrently read session state while inserts are happening.
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			_ = m.List("")
 			_ = m.ListTeams()
 			_ = m.IsRunning("/tmp/repo-0")
 			_ = m.FindByRepo("test-repo")
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -510,20 +508,18 @@ func TestManagerConcurrentStopAll(t *testing.T) {
 	m.SetStateDir("")
 
 	// Inject 15 running sessions.
-	for i := 0; i < 15; i++ {
+	for i := range 15 {
 		makeTestSession(m, fmt.Sprintf("stop-sess-%d", i), "/tmp/repo", StatusRunning)
 	}
 
 	var wg sync.WaitGroup
 
 	// Concurrent StopAll + List + Get.
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		m.StopAll()
-	}()
+	})
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -547,7 +543,7 @@ func TestManagerConcurrentSessionWrite(t *testing.T) {
 	const workers = 20
 	var wg sync.WaitGroup
 
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -561,16 +557,14 @@ func TestManagerConcurrentSessionWrite(t *testing.T) {
 	}
 
 	// Concurrent readers.
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			s.mu.Lock()
 			_ = s.SpentUSD
 			_ = s.TurnCount
 			_ = len(s.OutputHistory)
 			s.mu.Unlock()
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -595,7 +589,7 @@ func TestGoroutineCleanupOnStop(t *testing.T) {
 	runtime.Gosched()
 	baseline := runtime.NumGoroutine()
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		sCtx, cancel := context.WithCancel(context.Background())
 		id := fmt.Sprintf("gc-test-%d", i)
 		s := &Session{
@@ -661,7 +655,7 @@ func TestManagerConcurrentDelegateTask(t *testing.T) {
 	var wg sync.WaitGroup
 	errs := make(chan error, n)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -676,13 +670,11 @@ func TestManagerConcurrentDelegateTask(t *testing.T) {
 	}
 
 	// Concurrent reads while tasks are being delegated.
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			_, _ = m.GetTeam("race-team")
 			_ = m.ListTeams()
-		}()
+		})
 	}
 
 	wg.Wait()

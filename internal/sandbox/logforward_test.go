@@ -146,7 +146,7 @@ func TestLogForwarder_ConcurrentAccess(t *testing.T) {
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			pw.Write([]byte("2024-01-01T00:00:00Z stdout concurrent\n"))
 		}
 	}()

@@ -18,7 +18,6 @@ func TestE2EAllScenarios(t *testing.T) {
 	scenarios := AllScenarios()
 
 	for _, s := range scenarios {
-		s := s
 		t.Run(s.Name, func(t *testing.T) {
 			h := NewHarness(t)
 			status, err := h.RunScenario(ctx, s)

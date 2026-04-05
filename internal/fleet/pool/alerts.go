@@ -1,6 +1,7 @@
 package pool
 
 import (
+	"maps"
 	"sync"
 	"time"
 )
@@ -132,9 +133,7 @@ func (w *BudgetAlertWatcher) Emitted() map[AlertLevel]bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	out := make(map[AlertLevel]bool, len(w.emitted))
-	for k, v := range w.emitted {
-		out[k] = v
-	}
+	maps.Copy(out, w.emitted)
 	return out
 }
 

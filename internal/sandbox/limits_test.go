@@ -277,7 +277,7 @@ func TestResourceLimiter_FileCountWithRealDir(t *testing.T) {
 	// Use the real fileCounter for this test.
 
 	// Create some files before the run so the baseline is established.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if err := os.WriteFile(filepath.Join(tmpDir, fmt.Sprintf("pre_%d.txt", i)), []byte("x"), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -469,7 +469,7 @@ func TestCountFiles_WithFiles(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("f%d.txt", i)), []byte("x"), 0644); err != nil {
 			t.Fatal(err)
 		}

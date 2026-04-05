@@ -251,10 +251,7 @@ func RenderAnalytics(data AnalyticsData, activePanel AnalyticsPanel, tr TimeRang
 	b.WriteString("\n\n")
 
 	// Four panels — highlight the active one
-	sparkWidth := width/2 - 4
-	if sparkWidth < 20 {
-		sparkWidth = 20
-	}
+	sparkWidth := max(width/2-4, 20)
 	if sparkWidth > 60 {
 		sparkWidth = 60
 	}
@@ -352,10 +349,7 @@ func renderProviderBars(providers []ProviderShare, barWidth int) string {
 
 	var b strings.Builder
 	for _, p := range providers {
-		filled := int(math.Round(float64(p.Count) / float64(maxCount) * float64(barWidth)))
-		if filled < 0 {
-			filled = 0
-		}
+		filled := max(int(math.Round(float64(p.Count)/float64(maxCount)*float64(barWidth))), 0)
 		if filled > barWidth {
 			filled = barWidth
 		}

@@ -93,7 +93,7 @@ func TestDecisionModelTrainAndPredict(t *testing.T) {
 	dm := NewDecisionModel()
 
 	obs := make([]LoopObservation, 100)
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		// Passing observations: high confidence, no errors.
 		obs[i] = LoopObservation{
 			Timestamp:       time.Now(),
@@ -150,7 +150,7 @@ func TestDecisionModelCalibrate(t *testing.T) {
 	dm.bias = 0.0
 
 	obs := make([]LoopObservation, 60)
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		obs[i] = LoopObservation{VerifyPassed: true, Confidence: 0.8}
 	}
 	for i := 30; i < 60; i++ {
@@ -176,7 +176,7 @@ func TestDecisionModelAdaptThreshold(t *testing.T) {
 	// Create observations where threshold 0.6 works better than 0.7.
 	// Passing observations with confidence around 0.65 (above 0.6, below 0.7).
 	obs := make([]LoopObservation, 100)
-	for i := 0; i < 60; i++ {
+	for i := range 60 {
 		obs[i] = LoopObservation{
 			VerifyPassed:    true,
 			Confidence:      0.65,
@@ -279,7 +279,7 @@ func TestDecisionModelTrainExactlyMinSamples(t *testing.T) {
 
 	// Exactly 50 observations (the minimum).
 	obs := make([]LoopObservation, 50)
-	for i := 0; i < 25; i++ {
+	for i := range 25 {
 		obs[i] = LoopObservation{
 			Timestamp:       time.Now(),
 			VerifyPassed:    true,

@@ -81,7 +81,7 @@ func TestKillSequence_AllDeadBeforeKill(t *testing.T) {
 func TestKillSequence_ConcurrentCalls(t *testing.T) {
 	// Multiple concurrent runKillSequence calls should not panic or race.
 	var wg sync.WaitGroup
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		wg.Add(1)
 		go func(base int) {
 			defer wg.Done()

@@ -14,7 +14,7 @@ type RestartStats struct {
 	RestartCount int           `json:"restart_count"`
 	MaxRestarts  int           `json:"max_restarts"`
 	NextBackoff  time.Duration `json:"next_backoff"`
-	LastRestart  time.Time     `json:"last_restart,omitempty"`
+	LastRestart  time.Time     `json:"last_restart"`
 }
 
 // RestartPolicy determines whether a marathon session should be restarted
@@ -23,14 +23,14 @@ type RestartStats struct {
 type RestartPolicy struct {
 	mu sync.Mutex
 
-	maxRestarts    int
-	baseBackoff    time.Duration
-	maxBackoff     time.Duration
-	backoffFactor  float64
-	minElapsed     time.Duration
-	restartableFn  func(exitCode int) bool
-	restartCount   int
-	lastRestartAt  time.Time
+	maxRestarts   int
+	baseBackoff   time.Duration
+	maxBackoff    time.Duration
+	backoffFactor float64
+	minElapsed    time.Duration
+	restartableFn func(exitCode int) bool
+	restartCount  int
+	lastRestartAt time.Time
 }
 
 // NewRestartPolicy creates a RestartPolicy with sensible defaults.

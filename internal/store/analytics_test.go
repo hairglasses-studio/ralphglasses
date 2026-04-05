@@ -115,7 +115,7 @@ func TestQueryTimeRange(t *testing.T) {
 	base := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
 
 	// Insert events across several days.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		ev := AnalyticsEvent{
 			Timestamp: base.Add(time.Duration(i) * 24 * time.Hour),
 			EventType: "step",
@@ -220,7 +220,7 @@ func TestAggregateBySessionID(t *testing.T) {
 	_, a := newTestAnalyticsStore(t)
 	ctx := context.Background()
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		ev := AnalyticsEvent{
 			Timestamp: time.Now().UTC(),
 			EventType: "step",
@@ -263,7 +263,7 @@ func TestTopSessions(t *testing.T) {
 	ctx := context.Background()
 
 	// Session A: 3 events, total cost 0.30
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		ev := AnalyticsEvent{
 			Timestamp: time.Now().UTC(),
 			EventType: "step",
@@ -291,7 +291,7 @@ func TestTopSessions(t *testing.T) {
 	}
 
 	// Session C: 2 events, total cost 0.02
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		ev := AnalyticsEvent{
 			Timestamp: time.Now().UTC(),
 			EventType: "step",

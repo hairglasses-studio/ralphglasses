@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os/exec"
 	"strings"
 	"time"
@@ -49,15 +50,15 @@ type awsEC2Reservation struct {
 }
 
 type awsEC2Instance struct {
-	InstanceID       string `json:"InstanceId"`
-	InstanceType     string `json:"InstanceType"`
-	State            struct{ Name string } `json:"State"`
-	PublicIPAddress  string `json:"PublicIpAddress"`
-	PrivateIPAddress string `json:"PrivateIpAddress"`
-	LaunchTime       string `json:"LaunchTime"`
-	Placement        struct{ AvailabilityZone string } `json:"Placement"`
-	InstanceLifecycle string `json:"InstanceLifecycle"` // "spot" or empty
-	Tags             []struct {
+	InstanceID        string                            `json:"InstanceId"`
+	InstanceType      string                            `json:"InstanceType"`
+	State             struct{ Name string }             `json:"State"`
+	PublicIPAddress   string                            `json:"PublicIpAddress"`
+	PrivateIPAddress  string                            `json:"PrivateIpAddress"`
+	LaunchTime        string                            `json:"LaunchTime"`
+	Placement         struct{ AvailabilityZone string } `json:"Placement"`
+	InstanceLifecycle string                            `json:"InstanceLifecycle"` // "spot" or empty
+	Tags              []struct {
 		Key   string `json:"Key"`
 		Value string `json:"Value"`
 	} `json:"Tags"`
@@ -129,18 +130,17 @@ func (a *AWSProvider) LaunchInstance(ctx context.Context, spec InstanceSpec) (*I
 
 	// Build tag specifications.
 	tags := make(map[string]string)
-	for k, v := range spec.Tags {
-		tags[k] = v
-	}
+	maps.Copy(tags, spec.Tags)
 	if spec.Name != "" {
 		tags["Name"] = spec.Name
 	}
 	if len(tags) > 0 {
-		tagSpecs := "ResourceType=instance"
+		var tagSpecs strings.Builder
+		tagSpecs.WriteString("ResourceType=instance")
 		for k, v := range tags {
-			tagSpecs += fmt.Sprintf(",Key=%s,Value=%s", k, v)
+			tagSpecs.WriteString(fmt.Sprintf(",Key=%s,Value=%s", k, v))
 		}
-		args = append(args, "--tag-specifications", tagSpecs)
+		args = append(args, "--tag-specifications", tagSpecs.String())
 	}
 
 	args = append(args, a.baseArgs(region)...)

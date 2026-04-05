@@ -11,11 +11,11 @@ import (
 type ContextualFeature int
 
 const (
-	FeatureComplexity    ContextualFeature = iota // -1.0=simple, 0.0=medium, 1.0=complex
-	FeatureBudgetPressure                         // -1.0=low remaining, 0.0=medium, 1.0=high remaining
-	FeatureTimeSensitivity                        // -1.0=batch, 0.0=normal, 1.0=interactive/urgent
-	FeatureRecentSuccess                          // -1.0=low success, 0.0=neutral, 1.0=high success
-	NumContextualFeatures                         // sentinel: total feature count
+	FeatureComplexity      ContextualFeature = iota // -1.0=simple, 0.0=medium, 1.0=complex
+	FeatureBudgetPressure                           // -1.0=low remaining, 0.0=medium, 1.0=high remaining
+	FeatureTimeSensitivity                          // -1.0=batch, 0.0=normal, 1.0=interactive/urgent
+	FeatureRecentSuccess                            // -1.0=low success, 0.0=neutral, 1.0=high success
+	NumContextualFeatures                           // sentinel: total feature count
 )
 
 // ContextualArm extends an Arm with per-feature weight tracking.
@@ -33,11 +33,11 @@ type ContextualArm struct {
 // based on context. This enables context-dependent arm selection:
 // e.g., cheaper providers are favored for simple tasks with low budget pressure.
 type ContextualThompson struct {
-	mu         sync.Mutex
-	arms       map[string]*ContextualArm
-	order      []string
-	window     int     // sliding window size (0 = infinite)
-	history    map[string][]contextualReward
+	mu           sync.Mutex
+	arms         map[string]*ContextualArm
+	order        []string
+	window       int // sliding window size (0 = infinite)
+	history      map[string][]contextualReward
 	learningRate float64 // weight update step size
 }
 
@@ -107,7 +107,7 @@ func (ct *ContextualThompson) Select(ctx []float64) Arm {
 		if len(ctx) > 0 {
 			contextScore := ca.bias
 			n := min(len(ctx), len(ca.weights))
-			for i := 0; i < n; i++ {
+			for i := range n {
 				contextScore += ca.weights[i] * ctx[i]
 			}
 			// Additive modulation: tanh keeps the bonus in [-1, 1],
@@ -148,7 +148,7 @@ func (ct *ContextualThompson) Update(reward Reward) {
 		// Compute predicted reward from context.
 		predicted := ca.bias
 		n := min(len(reward.Context), len(ca.weights))
-		for i := 0; i < n; i++ {
+		for i := range n {
 			predicted += ca.weights[i] * reward.Context[i]
 		}
 		predicted = sigmoid(predicted)
@@ -156,7 +156,7 @@ func (ct *ContextualThompson) Update(reward Reward) {
 		// Gradient: error * sigmoid_derivative * feature.
 		err := reward.Value - predicted
 		grad := err * predicted * (1.0 - predicted)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			ca.weights[i] += ct.learningRate * grad * reward.Context[i]
 		}
 		ca.bias += ct.learningRate * grad

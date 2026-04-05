@@ -17,8 +17,8 @@ import (
 
 // Sentinel errors returned by ResourceLimiter.
 var (
-	ErrCPUTimeExceeded = errors.New("cpu time limit exceeded")
-	ErrMemoryExceeded  = errors.New("memory limit exceeded")
+	ErrCPUTimeExceeded   = errors.New("cpu time limit exceeded")
+	ErrMemoryExceeded    = errors.New("memory limit exceeded")
 	ErrFileCountExceeded = errors.New("file count limit exceeded")
 )
 
@@ -184,10 +184,7 @@ func (rl *ResourceLimiter) monitor(ctx context.Context, cmd *exec.Cmd, baseFileC
 			if rl.limits.MaxFiles > 0 && rl.trackDir != "" {
 				n, err := rl.fileCounter(rl.trackDir)
 				if err == nil {
-					created := n - baseFileCount
-					if created < 0 {
-						created = 0
-					}
+					created := max(n-baseFileCount, 0)
 
 					rl.mu.Lock()
 					rl.usage.FilesCreated = created
@@ -245,7 +242,7 @@ func readRSSLinux(pid int) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("reading /proc/%d/status: %w", pid, err)
 	}
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		if strings.HasPrefix(line, "VmRSS:") {
 			fields := strings.Fields(line)
 			if len(fields) < 2 {

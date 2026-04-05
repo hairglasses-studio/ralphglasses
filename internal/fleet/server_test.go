@@ -519,7 +519,7 @@ func TestCoordinator_RetryDelay(t *testing.T) {
 	}
 
 	// Manually clear the retry delay to simulate time passing
-	retried.RetryAfter = timePtr(time.Now().Add(-1 * time.Second))
+	retried.RetryAfter = new(time.Now().Add(-1 * time.Second))
 	coord.queue.Update(retried)
 
 	// Now it should be assignable
@@ -1038,7 +1038,7 @@ func TestCoordinator_PurgeDLQ(t *testing.T) {
 	coord := newTestCoordinator()
 
 	// Add items to DLQ
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		item := &WorkItem{
 			ID:     fmt.Sprintf("dlq-%d", i),
 			Status: WorkFailed,

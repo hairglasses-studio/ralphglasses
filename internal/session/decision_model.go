@@ -68,7 +68,7 @@ func (dm *DecisionModel) Predict(features ConfidenceFeatures) float64 {
 
 	fv := featureVector(features)
 	z := dm.bias
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		z += dm.weights[i] * fv[i]
 	}
 	score := sigmoid(z)
@@ -137,26 +137,26 @@ func (dm *DecisionModel) Train(observations []LoopObservation) error {
 	epochs := 50
 	n := float64(len(samples))
 
-	for epoch := 0; epoch < epochs; epoch++ {
+	for range epochs {
 		var gradW [10]float64
 		var gradB float64
 
 		for _, s := range samples {
 			z := b
-			for j := 0; j < 10; j++ {
+			for j := range 10 {
 				z += w[j] * s.features[j]
 			}
 			pred := sigmoid(z)
 			diff := pred - s.label
 
 			gradB += diff
-			for j := 0; j < 10; j++ {
+			for j := range 10 {
 				gradW[j] += diff * s.features[j]
 			}
 		}
 
 		b -= lr * (gradB / n)
-		for j := 0; j < 10; j++ {
+		for j := range 10 {
 			w[j] -= lr * (gradW[j] / n)
 		}
 	}
@@ -205,10 +205,7 @@ func (dm *DecisionModel) Calibrate(observations []LoopObservation) error {
 	}
 
 	// Create 10 equal-frequency bins.
-	numBins := 10
-	if len(items) < numBins {
-		numBins = len(items)
-	}
+	numBins := min(len(items), 10)
 	binSize := len(items) / numBins
 
 	dm.mu.Lock()

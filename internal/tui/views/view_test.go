@@ -233,7 +233,7 @@ func TestViewportView_ScrollDown_Sequence(t *testing.T) {
 	v.SetContent(strings.Join(lines, "\n"))
 
 	// Scroll down many times — should eventually reach bottom
-	for i := 0; i < 25; i++ {
+	for range 25 {
 		v.ScrollDown()
 	}
 	if !v.AtBottom() {

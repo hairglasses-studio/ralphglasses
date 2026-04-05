@@ -41,9 +41,9 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 	}
 
 	// Build a lead prompt that instructs the lead to use agent teams
-	var taskList string
+	var taskList strings.Builder
 	for i, t := range config.Tasks {
-		taskList += fmt.Sprintf("%d. %s\n", i+1, t)
+		taskList.WriteString(fmt.Sprintf("%d. %s\n", i+1, t))
 	}
 
 	workerProvider := config.WorkerProvider
@@ -89,7 +89,7 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 
 Default worker provider: %s.
 Provider strengths: claude (complex architecture), gemini (fast bulk generation), codex (focused refactoring).`,
-		taskList, workerProvider, workerProvider,
+		taskList.String(), workerProvider, workerProvider,
 	)
 
 	// Enhance team lead prompt for its target provider

@@ -229,7 +229,7 @@ func (s *mockServer) handleConn(conn net.Conn, handler func(uint32, []byte) []by
 		}
 
 		// Validate magic bytes.
-		for i := 0; i < len(magic); i++ {
+		for i := range magic {
 			if hdr[i] != magic[i] {
 				return
 			}

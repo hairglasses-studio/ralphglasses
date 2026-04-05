@@ -30,7 +30,7 @@ func ExportBat(p Palette) (string, error) {
 	// Read existing config, filter out theme lines
 	var preserved []string
 	if data, err := os.ReadFile(configPath); err == nil {
-		for _, line := range strings.Split(string(data), "\n") {
+		for line := range strings.SplitSeq(string(data), "\n") {
 			trimmed := strings.TrimSpace(line)
 			if !strings.HasPrefix(trimmed, "--theme=") {
 				preserved = append(preserved, line)

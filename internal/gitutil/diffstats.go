@@ -235,7 +235,7 @@ func parseStatCounts(stat string) (insertions, deletions int) {
 // parseSummaryLine parses the summary line from git diff --stat, e.g.:
 // " 3 files changed, 10 insertions(+), 5 deletions(-)"
 func parseSummaryLine(summary string) (files, insertions, deletions int) {
-	for _, part := range strings.Split(summary, ",") {
+	for part := range strings.SplitSeq(summary, ",") {
 		part = strings.TrimSpace(part)
 		fields := strings.Fields(part)
 		if len(fields) < 2 {

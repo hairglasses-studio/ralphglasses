@@ -425,7 +425,7 @@ func TestTieredMemoryConcurrency(t *testing.T) {
 	tm.Put("warm-key", "warm-val", TierWarm)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		wg.Add(3)
 		go func() {
 			defer wg.Done()

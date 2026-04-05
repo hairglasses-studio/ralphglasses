@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -419,7 +420,7 @@ func TestAddTeamForTesting_Overwrite(t *testing.T) {
 func TestAddTeamForTesting_ConcurrentSafe(t *testing.T) {
 	m := NewManager()
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -756,7 +757,7 @@ func TestReflexionStore_RecentForTask_EmptyQuery(t *testing.T) {
 
 func TestReflexionStore_RecentForTask_LimitRespected(t *testing.T) {
 	rs := NewReflexionStore("")
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		rs.Store(Reflection{TaskTitle: "test task", LoopID: "l1"})
 	}
 	results := rs.RecentForTask("test task", 3)
@@ -812,10 +813,8 @@ func mustGit(t *testing.T, dir string, args ...string) {
 
 func assertContainsArg(t *testing.T, args []string, want string) {
 	t.Helper()
-	for _, a := range args {
-		if a == want {
-			return
-		}
+	if slices.Contains(args, want) {
+		return
 	}
 	t.Errorf("args %v missing %q", args, want)
 }

@@ -114,7 +114,7 @@ func TestConnectionReuse(t *testing.T) {
 	c := NewClient(srv.URL)
 	ctx := context.Background()
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if err := c.PingCoordinator(ctx); err != nil {
 			t.Fatalf("request %d failed: %v", i, err)
 		}

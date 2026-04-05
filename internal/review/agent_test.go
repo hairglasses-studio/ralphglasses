@@ -162,7 +162,7 @@ func TestReviewAgent_Analyze_LongFunction(t *testing.T) {
 	b.WriteString("+++ b/big.go\n")
 	b.WriteString("@@ -1,0 +1,100 @@\n")
 	b.WriteString("+func BigFunc() {\n")
-	for i := 0; i < 65; i++ {
+	for i := range 65 {
 		b.WriteString(fmt.Sprintf("+\tx := %d\n", i))
 	}
 	b.WriteString("+}\n")
@@ -193,7 +193,7 @@ func TestReviewAgent_Analyze_LongFunctionBelowThreshold(t *testing.T) {
 	b.WriteString("+++ b/small.go\n")
 	b.WriteString("@@ -1,0 +1,10 @@\n")
 	b.WriteString("+func SmallFunc() {\n")
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		b.WriteString(fmt.Sprintf("+\tx := %d\n", i))
 	}
 	b.WriteString("+}\n")
@@ -342,12 +342,12 @@ func TestReviewAgent_Analyze_HunkHeaderResetsFunc(t *testing.T) {
 	b.WriteString("+++ b/f.go\n")
 	b.WriteString("@@ -1,0 +1,5 @@\n")
 	b.WriteString("+func Foo() {\n")
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b.WriteString("+\tx := 1\n")
 	}
 	// New hunk resets func tracking.
 	b.WriteString("@@ -50,0 +50,5 @@\n")
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b.WriteString("+\ty := 2\n")
 	}
 

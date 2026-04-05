@@ -377,7 +377,7 @@ func TestReapPhantomRepos_QW11(t *testing.T) {
 
 	// Phantom entries — must be reaped
 	phantomCount := 5
-	for i := 0; i < phantomCount; i++ {
+	for i := range phantomCount {
 		q.Push(&WorkItem{
 			ID:          fmt.Sprintf("phantom-name-%d", i),
 			Status:      WorkPending,
@@ -427,7 +427,7 @@ func TestReapPhantomRepos_QW11(t *testing.T) {
 	}
 
 	// All phantom pending entries must be gone from main queue
-	for i := 0; i < phantomCount; i++ {
+	for i := range phantomCount {
 		id := fmt.Sprintf("phantom-name-%d", i)
 		if _, ok := q.Get(id); ok {
 			t.Errorf("phantom entry %q should have been reaped", id)
@@ -445,7 +445,7 @@ func TestReapPhantomRepos_QW11(t *testing.T) {
 	for _, item := range dlq {
 		dlqByID[item.ID] = item
 	}
-	for i := 0; i < phantomCount; i++ {
+	for i := range phantomCount {
 		id := fmt.Sprintf("phantom-name-%d", i)
 		item, ok := dlqByID[id]
 		if !ok {

@@ -69,7 +69,7 @@ func (c *Client) sendMessage(msgType uint32, payload []byte) ([]byte, error) {
 	}
 
 	// Validate magic.
-	for i := 0; i < len(magic); i++ {
+	for i := range magic {
 		if respHeader[i] != magic[i] {
 			return nil, fmt.Errorf("i3 ipc: invalid magic in response")
 		}

@@ -19,9 +19,9 @@ func TestDecisionModelConcurrentTrainPredict(t *testing.T) {
 			LoopID:          "loop-1",
 			RepoName:        "test-repo",
 			IterationNumber: i,
-			WorkerProvider:   "claude",
-			TaskType:         "coding",
-			VerifyPassed:     i%3 != 0, // 2/3 pass
+			WorkerProvider:  "claude",
+			TaskType:        "coding",
+			VerifyPassed:    i%3 != 0, // 2/3 pass
 			TotalLatencyMs:  1000,
 			WorkerLatencyMs: 500,
 			Confidence:      0.7,
@@ -33,12 +33,12 @@ func TestDecisionModelConcurrentTrainPredict(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// 5 goroutines calling Predict with random features.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		wg.Add(1)
 		go func(seed int) {
 			defer wg.Done()
 			rng := rand.New(rand.NewPCG(uint64(seed), uint64(seed+1)))
-			for j := 0; j < 100; j++ {
+			for range 100 {
 				features := ConfidenceFeatures{
 					TaskTypeHash:      rng.Float64(),
 					ProviderID:        rng.Float64(),
@@ -60,15 +60,13 @@ func TestDecisionModelConcurrentTrainPredict(t *testing.T) {
 	}
 
 	// 2 goroutines calling Train.
-	for i := 0; i < 2; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 3; j++ {
+	for range 2 {
+		wg.Go(func() {
+			for range 3 {
 				// Train may fail or succeed; we only care about no races.
 				_ = dm.Train(observations)
 			}
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -96,9 +94,9 @@ func TestDecisionModelRace_HighContention(t *testing.T) {
 			LoopID:          "loop-hc",
 			RepoName:        "test-repo",
 			IterationNumber: i,
-			WorkerProvider:   "claude",
-			TaskType:         "coding",
-			VerifyPassed:     i%3 != 0,
+			WorkerProvider:  "claude",
+			TaskType:        "coding",
+			VerifyPassed:    i%3 != 0,
 			TotalLatencyMs:  1000,
 			WorkerLatencyMs: 500,
 			Confidence:      0.7,
@@ -110,12 +108,12 @@ func TestDecisionModelRace_HighContention(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// 20 goroutines calling Predict with random features.
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		wg.Add(1)
 		go func(seed int) {
 			defer wg.Done()
 			rng := rand.New(rand.NewPCG(uint64(seed), uint64(seed+1)))
-			for j := 0; j < 100; j++ {
+			for range 100 {
 				features := ConfidenceFeatures{
 					TaskTypeHash:      rng.Float64(),
 					ProviderID:        rng.Float64(),
@@ -137,14 +135,12 @@ func TestDecisionModelRace_HighContention(t *testing.T) {
 	}
 
 	// 5 goroutines calling Train concurrently.
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 5; j++ {
+	for range 5 {
+		wg.Go(func() {
+			for range 5 {
 				_ = dm.Train(observations)
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

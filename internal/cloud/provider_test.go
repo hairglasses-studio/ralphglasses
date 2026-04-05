@@ -78,7 +78,7 @@ func TestRegistry_ConcurrentAccess(t *testing.T) {
 	// Register providers concurrently.
 	var wg sync.WaitGroup
 	errs := make([]error, 10)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
@@ -101,7 +101,7 @@ func TestRegistry_ConcurrentAccess(t *testing.T) {
 
 	// Concurrent Get calls.
 	wg = sync.WaitGroup{}
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()

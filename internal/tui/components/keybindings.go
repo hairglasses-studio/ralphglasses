@@ -2,6 +2,7 @@ package components
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -322,13 +323,7 @@ func (km *KeyMap) Conflicts() []Conflict {
 	// Build a map of key -> all actions that claim it.
 	keyActions := make(map[Key][]Action)
 	for _, b := range km.bindings {
-		found := false
-		for _, a := range keyActions[b.Key] {
-			if a == b.Action {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(keyActions[b.Key], b.Action)
 		if !found {
 			keyActions[b.Key] = append(keyActions[b.Key], b.Action)
 		}

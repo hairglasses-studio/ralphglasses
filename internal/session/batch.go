@@ -11,16 +11,16 @@ import (
 
 // SessionResult holds the outcome of a completed batch session.
 type SessionResult struct {
-	SessionID  string        `json:"session_id"`
-	Provider   Provider      `json:"provider"`
-	Status     SessionStatus `json:"status"`
-	SpentUSD   float64       `json:"spent_usd"`
-	TurnCount  int           `json:"turn_count"`
-	LastOutput string        `json:"last_output,omitempty"`
-	Error      string        `json:"error,omitempty"`
-	ExitReason string        `json:"exit_reason,omitempty"`
-	Duration   time.Duration `json:"duration"`
-	CollectedAt time.Time    `json:"collected_at"`
+	SessionID   string        `json:"session_id"`
+	Provider    Provider      `json:"provider"`
+	Status      SessionStatus `json:"status"`
+	SpentUSD    float64       `json:"spent_usd"`
+	TurnCount   int           `json:"turn_count"`
+	LastOutput  string        `json:"last_output,omitempty"`
+	Error       string        `json:"error,omitempty"`
+	ExitReason  string        `json:"exit_reason,omitempty"`
+	Duration    time.Duration `json:"duration"`
+	CollectedAt time.Time     `json:"collected_at"`
 }
 
 // BatchCollector tracks results from batch session executions.
@@ -30,10 +30,10 @@ type BatchCollector struct {
 	callbackURL   string
 	expectedCount int
 
-	mu        sync.Mutex
-	results   []SessionResult
+	mu         sync.Mutex
+	results    []SessionResult
 	pollCursor int // index of next result to return from Poll
-	completed bool
+	completed  bool
 	httpClient *http.Client
 }
 
@@ -167,7 +167,7 @@ func fireWebhook(client *http.Client, url, batchID string, results []SessionResu
 	const maxAttempts = 3
 
 	var lastErr error
-	for attempt := 0; attempt < maxAttempts; attempt++ {
+	for attempt := range maxAttempts {
 		if attempt > 0 {
 			time.Sleep(time.Duration(1<<uint(attempt-1)) * time.Second) // 1s, 2s
 		}

@@ -47,7 +47,7 @@ func TestCacheBoostDifferentWorker(t *testing.T) {
 func TestEviction(t *testing.T) {
 	cs := NewCacheScorer()
 	// Record 10 unique prompts for a worker.
-	for i := 0; i < maxRecentPrompts; i++ {
+	for i := range maxRecentPrompts {
 		cs.RecordPrompt("worker-1", fmt.Sprintf("prompt-%d", i))
 	}
 

@@ -182,7 +182,7 @@ func TestConcurrentAccess(t *testing.T) {
 	s := NewState(100.0)
 	var wg sync.WaitGroup
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -192,14 +192,12 @@ func TestConcurrentAccess(t *testing.T) {
 		}(i)
 	}
 
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			_ = s.CanSpend(1.0)
 			_ = s.CostRate(time.Hour)
 			_ = s.GetSummary()
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -209,7 +207,7 @@ func TestCostHistoryPruning(t *testing.T) {
 	s := NewState(0)
 	s.mu.Lock()
 	base := time.Now().Add(-400 * 10 * time.Second)
-	for i := 0; i < 400; i++ {
+	for i := range 400 {
 		s.CostHistory = append(s.CostHistory, CostSample{
 			Time:     base.Add(time.Duration(i) * 10 * time.Second),
 			SpentUSD: float64(i) * 0.01,

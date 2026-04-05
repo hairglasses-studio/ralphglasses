@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"time"
 )
 
@@ -23,13 +24,7 @@ func (f *ExportFilter) matches(ev ReplayEvent) bool {
 		return true
 	}
 	if len(f.EventTypes) > 0 {
-		found := false
-		for _, t := range f.EventTypes {
-			if ev.Type == t {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(f.EventTypes, ev.Type)
 		if !found {
 			return false
 		}
@@ -171,18 +166,18 @@ func eventIcon(t ReplayEventType) string {
 
 // ExportJSONDocument is the structured JSON export format.
 type ExportJSONDocument struct {
-	Version  string              `json:"version"`
-	Metadata ExportJSONMetadata  `json:"metadata"`
-	Events   []ExportJSONEvent   `json:"events"`
+	Version  string             `json:"version"`
+	Metadata ExportJSONMetadata `json:"metadata"`
+	Events   []ExportJSONEvent  `json:"events"`
 }
 
 // ExportJSONMetadata holds summary information about the exported replay.
 type ExportJSONMetadata struct {
-	SessionID  string         `json:"session_id"`
-	TotalEvents int           `json:"total_events"`
-	FirstEvent string         `json:"first_event,omitempty"`
-	LastEvent  string         `json:"last_event,omitempty"`
-	DurationMS int64          `json:"duration_ms"`
+	SessionID   string         `json:"session_id"`
+	TotalEvents int            `json:"total_events"`
+	FirstEvent  string         `json:"first_event,omitempty"`
+	LastEvent   string         `json:"last_event,omitempty"`
+	DurationMS  int64          `json:"duration_ms"`
 	EventCounts map[string]int `json:"event_counts"`
 }
 

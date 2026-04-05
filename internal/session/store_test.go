@@ -316,7 +316,7 @@ func TestSQLiteStore_ConcurrentSaveGet(t *testing.T) {
 	errs := make(chan error, numGoroutines*2)
 
 	wg.Add(numGoroutines)
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func(idx int) {
 			defer wg.Done()
 			id := fmt.Sprintf("conc-%d", idx)
@@ -369,7 +369,7 @@ func TestSQLiteStore_LargeSessionList(t *testing.T) {
 	ctx := context.Background()
 
 	// Insert 500 sessions: 200 running, 200 completed, 100 errored.
-	for i := 0; i < 500; i++ {
+	for i := range 500 {
 		var status SessionStatus
 		switch {
 		case i < 200:
@@ -423,7 +423,7 @@ func TestMemoryStore_ConcurrentOps(t *testing.T) {
 	ctx := context.Background()
 
 	// Pre-seed some sessions so Get/Delete/List have data to work with.
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		s := testSession(fmt.Sprintf("pre-%d", i), "/repos/mem", StatusRunning, 0.01)
 		if err := store.SaveSession(ctx, s); err != nil {
 			t.Fatalf("seed SaveSession: %v", err)
@@ -434,11 +434,11 @@ func TestMemoryStore_ConcurrentOps(t *testing.T) {
 	errs := make(chan error, 100)
 
 	// 3 savers
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			for j := 0; j < 50; j++ {
+			for j := range 50 {
 				id := fmt.Sprintf("save-%d-%d", idx, j)
 				s := testSession(id, "/repos/mem", StatusRunning, 0.01)
 				if err := store.SaveSession(ctx, s); err != nil {
@@ -449,11 +449,11 @@ func TestMemoryStore_ConcurrentOps(t *testing.T) {
 	}
 
 	// 3 getters
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			for j := 0; j < 50; j++ {
+			for j := range 50 {
 				id := fmt.Sprintf("pre-%d", j%20)
 				_, _ = store.GetSession(ctx, id) // may or may not find (deletes racing)
 			}
@@ -461,11 +461,11 @@ func TestMemoryStore_ConcurrentOps(t *testing.T) {
 	}
 
 	// 2 deleters
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			for j := 0; j < 50; j++ {
+			for j := range 50 {
 				id := fmt.Sprintf("pre-%d", j%20)
 				_ = store.DeleteSession(ctx, id) // idempotent
 			}
@@ -473,17 +473,15 @@ func TestMemoryStore_ConcurrentOps(t *testing.T) {
 	}
 
 	// 2 listers
-	for i := 0; i < 2; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 50; j++ {
+	for range 2 {
+		wg.Go(func() {
+			for range 50 {
 				_, err := store.ListSessions(ctx, ListOpts{})
 				if err != nil {
 					errs <- fmt.Errorf("list: %w", err)
 				}
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

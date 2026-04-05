@@ -193,7 +193,7 @@ func TestPruneTruncateLongOutput(t *testing.T) {
 
 	// Build a tool output with 100 lines.
 	var lines []string
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		lines = append(lines, fmt.Sprintf("line %d: some content here", i))
 	}
 	longOutput := strings.Join(lines, "\n")

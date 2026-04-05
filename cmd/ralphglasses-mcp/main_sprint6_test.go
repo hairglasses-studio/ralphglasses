@@ -65,7 +65,7 @@ func TestSetup_Sprint6_CleanupSafe(t *testing.T) {
 
 func TestSetup_Sprint6_RepeatedSetupTeardown(t *testing.T) {
 	dir := t.TempDir()
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		srv, cleanup, err := setup(dir)
 		if err != nil {
 			t.Fatalf("setup call %d failed: %v", i, err)

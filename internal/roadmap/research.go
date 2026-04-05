@@ -100,8 +100,8 @@ func inferTopics(repoPath string) string {
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
 			line := scanner.Text()
-			if strings.HasPrefix(line, "module ") {
-				parts := strings.Split(strings.TrimPrefix(line, "module "), "/")
+			if after, ok := strings.CutPrefix(line, "module "); ok {
+				parts := strings.Split(after, "/")
 				if len(parts) > 0 {
 					topics = append(topics, parts[len(parts)-1])
 				}
@@ -248,7 +248,7 @@ var stopWords = map[string]bool{
 // and short tokens.
 func extractQueryKeywords(text string) map[string]bool {
 	kw := make(map[string]bool)
-	for _, w := range strings.Fields(strings.ToLower(text)) {
+	for w := range strings.FieldsSeq(strings.ToLower(text)) {
 		// Strip common punctuation and path separators
 		w = strings.Trim(w, ".,;:!?\"'`()[]{}/-")
 		if len(w) < 2 || stopWords[w] {
@@ -282,7 +282,7 @@ func jaccardSimilarity(a, b map[string]bool) float64 {
 // from a query string so they don't pollute keyword extraction. (QW-10)
 func stripSearchModifiers(query string) string {
 	var words []string
-	for _, w := range strings.Fields(query) {
+	for w := range strings.FieldsSeq(query) {
 		if !strings.Contains(w, ":") {
 			words = append(words, w)
 		}

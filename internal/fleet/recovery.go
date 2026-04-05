@@ -8,6 +8,8 @@ package fleet
 import (
 	"fmt"
 	"log/slog"
+	"maps"
+	"slices"
 	"sync"
 	"time"
 
@@ -115,10 +117,8 @@ func (f *FleetRecoveryOrchestrator) FindWorkerForRepo(repoPath string) string {
 		if w.Status != WorkerOnline {
 			continue
 		}
-		for _, repo := range w.Repos {
-			if repo == repoPath {
-				return w.ID
-			}
+		if slices.Contains(w.Repos, repoPath) {
+			return w.ID
 		}
 	}
 	return ""
@@ -129,8 +129,6 @@ func (f *FleetRecoveryOrchestrator) DispatchedItems() map[string]string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	cp := make(map[string]string, len(f.dispatched))
-	for k, v := range f.dispatched {
-		cp[k] = v
-	}
+	maps.Copy(cp, f.dispatched)
 	return cp
 }

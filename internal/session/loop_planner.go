@@ -154,10 +154,7 @@ In headless mode, no human will answer. Re-task with explicit instructions to ma
 		}
 
 		// Inject recent task types for diversity steering.
-		recentCount := 3
-		if recentCount > len(prevIterations) {
-			recentCount = len(prevIterations)
-		}
+		recentCount := min(3, len(prevIterations))
 		var recentTypes []string
 		for _, iter := range prevIterations[len(prevIterations)-recentCount:] {
 			recentTypes = append(recentTypes, fmt.Sprintf("- %s (status: %s)", iter.Task.Title, iter.Status))

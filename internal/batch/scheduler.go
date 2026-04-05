@@ -13,10 +13,10 @@ type Scheduler struct {
 	manager *BatchManager
 	cfg     BatchManagerConfig
 
-	mu       sync.Mutex
-	cancel   context.CancelFunc
-	stopped  chan struct{}
-	running  bool
+	mu      sync.Mutex
+	cancel  context.CancelFunc
+	stopped chan struct{}
+	running bool
 
 	// OnFlush is called after each successful auto-flush. Optional, used for testing.
 	OnFlush func(result *BatchManagerResult)
@@ -86,10 +86,7 @@ func (s *Scheduler) loop(ctx context.Context) {
 
 	// Also check queue size at a faster rate so we flush promptly
 	// when the size threshold is hit between timer ticks.
-	checkInterval := interval / 10
-	if checkInterval < 100*time.Millisecond {
-		checkInterval = 100 * time.Millisecond
-	}
+	checkInterval := max(interval/10, 100*time.Millisecond)
 	if checkInterval > 500*time.Millisecond {
 		checkInterval = 500 * time.Millisecond
 	}

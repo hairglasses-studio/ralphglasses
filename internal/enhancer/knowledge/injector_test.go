@@ -86,7 +86,7 @@ func TestInjectContext_InjectsRelevantContext(t *testing.T) {
 func TestInjectContext_TokenBudget(t *testing.T) {
 	g := NewGraph()
 	// Add many nodes so the context block is large
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		name := strings.Repeat("x", 100) // long names to inflate size
 		g.AddNode("pkg:test."+name+string(rune('a'+i%26)), KindFunction, map[string]string{
 			"name":      "test" + name,

@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os/exec"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -17,10 +18,10 @@ import (
 
 // TailscaleStatus represents the JSON output of `tailscale status --json`.
 type TailscaleStatus struct {
-	Self             TailscalePeer            `json:"Self"`
-	Peer             map[string]TailscalePeer `json:"Peer"`
-	MagicDNSSuffix   string                   `json:"MagicDNSSuffix,omitempty"`
-	CurrentTailnet   *TailnetInfo             `json:"CurrentTailnet,omitempty"`
+	Self           TailscalePeer            `json:"Self"`
+	Peer           map[string]TailscalePeer `json:"Peer"`
+	MagicDNSSuffix string                   `json:"MagicDNSSuffix,omitempty"`
+	CurrentTailnet *TailnetInfo             `json:"CurrentTailnet,omitempty"`
 }
 
 // TailnetInfo describes the tailnet this node belongs to.
@@ -43,7 +44,7 @@ type TailscalePeer struct {
 
 // TailscaleWhoIsResponse represents the response from the Tailscale WhoIs endpoint.
 type TailscaleWhoIsResponse struct {
-	Node    TailscalePeer     `json:"Node"`
+	Node        TailscalePeer  `json:"Node"`
 	UserProfile *TailscaleUser `json:"UserProfile,omitempty"`
 }
 
@@ -387,10 +388,5 @@ func GetLocalIP() string {
 
 // HasTag returns true if the peer carries the given ACL tag (e.g. "tag:ralph-fleet").
 func (p *TailscalePeer) HasTag(tag string) bool {
-	for _, t := range p.Tags {
-		if t == tag {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(p.Tags, tag)
 }

@@ -27,8 +27,8 @@ func EvalCondition(condition string, results map[string]StepResult) bool {
 
 	// Handle AND chains: "step_a.status == succeeded && step_b.status == succeeded"
 	if strings.Contains(condition, "&&") {
-		parts := strings.Split(condition, "&&")
-		for _, part := range parts {
+		parts := strings.SplitSeq(condition, "&&")
+		for part := range parts {
 			if !evalSingleCondition(strings.TrimSpace(part), results) {
 				return false
 			}
@@ -38,8 +38,8 @@ func EvalCondition(condition string, results map[string]StepResult) bool {
 
 	// Handle OR chains: "step_a.status == succeeded || step_b.status == succeeded"
 	if strings.Contains(condition, "||") {
-		parts := strings.Split(condition, "||")
-		for _, part := range parts {
+		parts := strings.SplitSeq(condition, "||")
+		for part := range parts {
 			if evalSingleCondition(strings.TrimSpace(part), results) {
 				return true
 			}

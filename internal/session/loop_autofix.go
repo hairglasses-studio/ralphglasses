@@ -148,10 +148,9 @@ func (m *Manager) attemptAutoFix(
 		fixOpts.MaxBudgetUSD = profile.WorkerBudgetUSD / 2 // half budget for fix attempts
 	}
 	if profile.MaxWorkerTurns > 0 {
-		fixOpts.MaxTurns = profile.MaxWorkerTurns / 2 // half turns for fix attempts
-		if fixOpts.MaxTurns < 5 {
-			fixOpts.MaxTurns = 5
-		}
+		fixOpts.MaxTurns = max(
+			// half turns for fix attempts
+			profile.MaxWorkerTurns/2, 5)
 	}
 
 	fixSession, err := m.Launch(ctx, fixOpts)

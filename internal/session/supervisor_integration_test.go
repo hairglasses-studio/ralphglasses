@@ -290,7 +290,7 @@ func TestSupervisor_FullCycleLifecycle(t *testing.T) {
 	// --- Setup ---
 	s, dir := newTestSupervisor(t)
 	s.CooldownBetween = 0 // no cooldown between cycles
-	s.MaxCycles = 1        // terminate after one cycle
+	s.MaxCycles = 1       // terminate after one cycle
 
 	// Decision log at autonomy level 2 (auto-optimize).
 	dl := NewDecisionLog("", LevelAutoOptimize)
@@ -537,7 +537,7 @@ func TestSupervisor_ReflexionLoop(t *testing.T) {
 
 	// Write journal entries with recurring patterns so consolidation produces rules.
 	journalPath := filepath.Join(ralphDir, "improvement_journal.jsonl")
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		entry := JournalEntry{
 			Timestamp: time.Now().Add(-time.Duration(i) * time.Hour),
 			Worked:    []string{"use gemini for refactoring tasks"},

@@ -40,7 +40,7 @@ func TestWriteMultipleImprovementNotes(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		note := ImprovementNote{
 			ID:       "note-" + string(rune('a'+i)),
 			Category: "config",

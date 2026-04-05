@@ -113,7 +113,7 @@ func (na *neuralArm) forward(ctx []float64, numFeatures int) (float64, []float64
 	// Hidden layer: ReLU(x * W1 + B1)
 	for j := range hidden {
 		sum := na.b1[j]
-		for i := 0; i < nf; i++ {
+		for i := range nf {
 			sum += ctx[i] * na.w1[i][j]
 		}
 		hidden[j] = relu(sum)
@@ -215,7 +215,7 @@ func (n *NeuralUCB) Update(reward Reward) {
 			continue // ReLU gate is closed
 		}
 		hiddenGrad := outputGrad * na.w2[j]
-		for i := 0; i < nf; i++ {
+		for i := range nf {
 			na.w1[i][j] += n.cfg.LearningRate * hiddenGrad * features[i]
 		}
 		na.b1[j] += n.cfg.LearningRate * hiddenGrad

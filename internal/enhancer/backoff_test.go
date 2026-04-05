@@ -76,7 +76,7 @@ func TestBackoffConfig_Delay(t *testing.T) {
 
 	// Run many samples per attempt to verify statistical bounds.
 	const samples = 1000
-	for attempt := 0; attempt < 4; attempt++ {
+	for attempt := range 4 {
 		expectedCeiling := math.Min(
 			float64(cfg.BaseDelay)*math.Pow(cfg.Factor, float64(attempt)),
 			float64(cfg.MaxDelay),
@@ -85,7 +85,7 @@ func TestBackoffConfig_Delay(t *testing.T) {
 		var min, max time.Duration
 		min = time.Duration(math.MaxInt64)
 
-		for i := 0; i < samples; i++ {
+		for range samples {
 			d := cfg.delay(attempt)
 			if d < 0 {
 				t.Fatalf("attempt %d: negative delay %v", attempt, d)
@@ -121,7 +121,7 @@ func TestBackoffConfig_DelayRespectsCeiling(t *testing.T) {
 	}
 
 	// At attempt 3, base would be 1s * 10^3 = 1000s, but ceiling is 2s.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		d := cfg.delay(3)
 		if d > 2*time.Second {
 			t.Fatalf("delay %v exceeds MaxDelay 2s", d)
@@ -484,10 +484,8 @@ func TestRetryImprove_Concurrent(t *testing.T) {
 	var successCount atomic.Int32
 	var wg sync.WaitGroup
 
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			client := &mockImprover{
 				results: []*ImproveResult{nil, {Enhanced: "ok"}},
 				errors: []error{
@@ -499,7 +497,7 @@ func TestRetryImprove_Concurrent(t *testing.T) {
 			if err == nil && result.Enhanced == "ok" {
 				successCount.Add(1)
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

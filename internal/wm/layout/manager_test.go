@@ -243,7 +243,7 @@ func TestConcurrentAccess(t *testing.T) {
 	errs := make(chan error, 100)
 
 	// Concurrent assigns to different monitors.
-	for i := 0; i < 7; i++ {
+	for i := range 7 {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
@@ -261,7 +261,7 @@ func TestConcurrentAccess(t *testing.T) {
 	}
 
 	// Verify all assigned.
-	for i := 0; i < 7; i++ {
+	for i := range 7 {
 		sessionID := fmt.Sprintf("session-%d", i)
 		idx, ok := lm.GetMonitorForSession(sessionID)
 		if !ok {
@@ -274,7 +274,7 @@ func TestConcurrentAccess(t *testing.T) {
 
 	// Concurrent reads while unassigning.
 	var wg2 sync.WaitGroup
-	for i := 0; i < 7; i++ {
+	for i := range 7 {
 		wg2.Add(2)
 		go func(idx int) {
 			defer wg2.Done()

@@ -297,11 +297,11 @@ func TestSpanTree_ConcurrentUsage(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
 
-	for g := 0; g < goroutines; g++ {
+	for range goroutines {
 		go func() {
 			defer wg.Done()
 			root := tree.StartSpan("", "concurrent-root")
-			for i := 0; i < spansPerGoroutine; i++ {
+			for range spansPerGoroutine {
 				child := tree.StartSpan(root, "child")
 				tree.SetAttribute(child, "idx", "val")
 				tree.EndSpan(child, SpanStatusOK)
@@ -338,7 +338,7 @@ func TestSpanTree_ConcurrentReadWrite(t *testing.T) {
 	// Writer goroutine
 	go func() {
 		defer wg.Done()
-		for i := 0; i < iterations; i++ {
+		for range iterations {
 			id := tree.StartSpan("", "writer-span")
 			tree.SetAttribute(id, "i", "v")
 			tree.EndSpan(id, SpanStatusOK)
@@ -348,7 +348,7 @@ func TestSpanTree_ConcurrentReadWrite(t *testing.T) {
 	// Reader goroutine: RenderTree
 	go func() {
 		defer wg.Done()
-		for i := 0; i < iterations; i++ {
+		for range iterations {
 			_ = tree.RenderTree()
 		}
 	}()
@@ -356,7 +356,7 @@ func TestSpanTree_ConcurrentReadWrite(t *testing.T) {
 	// Reader goroutine: FlatList + RenderJSON
 	go func() {
 		defer wg.Done()
-		for i := 0; i < iterations; i++ {
+		for range iterations {
 			_ = tree.FlatList()
 			_, _ = tree.RenderJSON()
 		}
@@ -374,7 +374,7 @@ func TestSpanTree_UniqueIDs(t *testing.T) {
 	tree := NewSpanTree()
 	ids := make(map[string]bool)
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		id := tree.StartSpan("", "span")
 		if ids[id] {
 			t.Fatalf("duplicate span ID: %s", id)

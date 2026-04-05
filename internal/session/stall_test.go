@@ -200,16 +200,14 @@ func TestStallDetector_ThreadSafety(t *testing.T) {
 
 	var wg sync.WaitGroup
 	// Concurrent RecordActivity calls.
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 100; j++ {
+	for range 10 {
+		wg.Go(func() {
+			for range 100 {
 				sd.RecordActivity()
 				_ = sd.IsStalled()
 				_ = sd.StallCount()
 			}
-		}()
+		})
 	}
 
 	// Wait for concurrent accessors to finish, then stop and drain.

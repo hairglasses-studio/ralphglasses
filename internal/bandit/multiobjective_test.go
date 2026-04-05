@@ -15,7 +15,7 @@ func TestParetoFront_OneDominates(t *testing.T) {
 	mob := NewMultiObjectiveBandit(arms, objectives)
 
 	// "good" arm: high quality, low cost (both better).
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		mob.Update("good", map[string]float64{"quality": 0.9, "cost": 0.1})
 		mob.Update("bad", map[string]float64{"quality": 0.1, "cost": 0.9})
 	}
@@ -57,7 +57,7 @@ func TestParetoFront_NonDominatedTradeoffs(t *testing.T) {
 	// "highQ": great quality but expensive.
 	// "lowCost": cheap but lower quality.
 	// Neither dominates the other.
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		mob.Update("highQ", map[string]float64{"quality": 0.9, "cost": 0.8})
 		mob.Update("lowCost", map[string]float64{"quality": 0.3, "cost": 0.1})
 	}
@@ -83,7 +83,7 @@ func TestWeightAdjustment_ChangesPreference(t *testing.T) {
 	// "highQ": quality=0.9, cost=0.8 (expensive)
 	// "lowCost": quality=0.3, cost=0.1 (cheap)
 	trainArms := func(mob *MultiObjectiveBandit) {
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			mob.Update("highQ", map[string]float64{"quality": 0.9, "cost": 0.8})
 			mob.Update("lowCost", map[string]float64{"quality": 0.3, "cost": 0.1})
 		}
@@ -98,7 +98,7 @@ func TestWeightAdjustment_ChangesPreference(t *testing.T) {
 	trainArms(mobQ)
 
 	highQCount := 0
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		arm, _ := mobQ.Select(ContextFeatures{})
 		if arm == "highQ" {
 			highQCount++
@@ -114,7 +114,7 @@ func TestWeightAdjustment_ChangesPreference(t *testing.T) {
 	trainArms(mobC)
 
 	lowCostCount := 0
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		arm, _ := mobC.Select(ContextFeatures{})
 		if arm == "lowCost" {
 			lowCostCount++
@@ -145,7 +145,7 @@ func TestConvergence_ToParetoOptimal(t *testing.T) {
 	mob := NewMultiObjectiveBandit(arms, objectives)
 
 	// Simulate 1000 iterations: train and select.
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		mob.Update("optimal", map[string]float64{
 			"quality": 0.9, "cost": 0.1, "latency": 0.2,
 		})
@@ -159,7 +159,7 @@ func TestConvergence_ToParetoOptimal(t *testing.T) {
 
 	// Check selection frequency over next 500 trials.
 	counts := make(map[string]int)
-	for i := 0; i < 500; i++ {
+	for range 500 {
 		arm, _ := mob.Select(ContextFeatures{})
 		counts[arm]++
 	}
@@ -189,14 +189,14 @@ func TestSingleObjective_ReducesToStandard(t *testing.T) {
 	mob := NewMultiObjectiveBandit(arms, objectives)
 
 	// Arm "a" is better.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		mob.Update("a", map[string]float64{"quality": 0.9})
 		mob.Update("b", map[string]float64{"quality": 0.1})
 	}
 
 	// Arm "a" should be selected most of the time.
 	aCount := 0
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		arm, _ := mob.Select(ContextFeatures{})
 		if arm == "a" {
 			aCount++
@@ -333,7 +333,7 @@ func TestParetoFront_ThreeWayNonDominated(t *testing.T) {
 	}
 	mob := NewMultiObjectiveBandit(arms, objectives)
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		mob.Update("fast", map[string]float64{"quality": 0.3, "cost": 0.5, "latency": 0.1})
 		mob.Update("cheap", map[string]float64{"quality": 0.3, "cost": 0.1, "latency": 0.5})
 		mob.Update("quality", map[string]float64{"quality": 0.9, "cost": 0.5, "latency": 0.5})

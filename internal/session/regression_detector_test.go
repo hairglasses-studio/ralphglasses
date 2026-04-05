@@ -21,7 +21,7 @@ func TestSessionRegressionDetector_NoRegression(t *testing.T) {
 	rd := NewSessionRegressionDetector(cfg, "")
 
 	// Add 6 uniform sessions (no change between windows).
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		rd.AddPoint(SessionMetricPoint{
 			SessionID:      "sess-" + ltItoa(i),
 			Timestamp:      time.Now(),
@@ -42,7 +42,7 @@ func TestSessionRegressionDetector_SuccessRateRegression(t *testing.T) {
 	rd := NewSessionRegressionDetector(cfg, "")
 
 	// Baseline window: 90% success rate.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		rd.AddPoint(SessionMetricPoint{
 			SessionID:      "base-" + ltItoa(i),
 			Timestamp:      time.Now(),
@@ -52,7 +52,7 @@ func TestSessionRegressionDetector_SuccessRateRegression(t *testing.T) {
 		})
 	}
 	// Current window: 50% success rate (44% drop — above critical threshold).
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		rd.AddPoint(SessionMetricPoint{
 			SessionID:      "curr-" + ltItoa(i),
 			Timestamp:      time.Now(),
@@ -89,7 +89,7 @@ func TestSessionRegressionDetector_CostEfficiencyRegression(t *testing.T) {
 	rd := NewSessionRegressionDetector(cfg, "")
 
 	// Baseline: high cost efficiency.
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		rd.AddPoint(SessionMetricPoint{
 			SessionID:      "base-" + ltItoa(i),
 			Timestamp:      time.Now(),
@@ -99,7 +99,7 @@ func TestSessionRegressionDetector_CostEfficiencyRegression(t *testing.T) {
 		})
 	}
 	// Current: 50% drop in cost efficiency.
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		rd.AddPoint(SessionMetricPoint{
 			SessionID:      "curr-" + ltItoa(i),
 			Timestamp:      time.Now(),
@@ -129,7 +129,7 @@ func TestSessionRegressionDetector_TimeToCompleteRegression(t *testing.T) {
 	rd := NewSessionRegressionDetector(cfg, "")
 
 	// Baseline: fast sessions.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		rd.AddPoint(SessionMetricPoint{
 			SessionID:      "base-" + ltItoa(i),
 			Timestamp:      time.Now(),
@@ -139,7 +139,7 @@ func TestSessionRegressionDetector_TimeToCompleteRegression(t *testing.T) {
 		})
 	}
 	// Current: much slower (100% increase).
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		rd.AddPoint(SessionMetricPoint{
 			SessionID:      "curr-" + ltItoa(i),
 			Timestamp:      time.Now(),
@@ -169,7 +169,7 @@ func TestSessionRegressionDetector_WarningSeverity(t *testing.T) {
 	rd := NewSessionRegressionDetector(cfg, "")
 
 	// Baseline: 90% success.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		rd.AddPoint(SessionMetricPoint{
 			SessionID:   "base-" + ltItoa(i),
 			Timestamp:   time.Now(),
@@ -177,7 +177,7 @@ func TestSessionRegressionDetector_WarningSeverity(t *testing.T) {
 		})
 	}
 	// Current: 90% success — 10% drop (between warning and critical thresholds).
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		rd.AddPoint(SessionMetricPoint{
 			SessionID:   "curr-" + ltItoa(i),
 			Timestamp:   time.Now(),
@@ -221,7 +221,7 @@ func TestSessionRegressionDetector_Persistence(t *testing.T) {
 	dir := t.TempDir()
 	rd := NewSessionRegressionDetector(DefaultSessionRegressionConfig(), dir)
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		rd.AddPoint(SessionMetricPoint{
 			SessionID:   "sess-" + ltItoa(i),
 			Timestamp:   time.Now(),
@@ -246,7 +246,7 @@ func TestSessionRegressionDetector_ConcurrentSafety(t *testing.T) {
 	rd := NewSessionRegressionDetector(DefaultSessionRegressionConfig(), "")
 	var wg sync.WaitGroup
 
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -258,12 +258,10 @@ func TestSessionRegressionDetector_ConcurrentSafety(t *testing.T) {
 		}(i)
 	}
 
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			rd.Check()
-		}()
+		})
 	}
 
 	wg.Wait()

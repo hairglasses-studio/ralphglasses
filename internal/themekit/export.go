@@ -142,7 +142,7 @@ func ParseTOML(data []byte) (Palette, error) {
 		}
 	}
 
-	for _, rawLine := range strings.Split(string(data), "\n") {
+	for rawLine := range strings.SplitSeq(string(data), "\n") {
 		line := strings.TrimSpace(rawLine)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
@@ -154,12 +154,12 @@ func ParseTOML(data []byte) (Palette, error) {
 			continue
 		}
 
-		eqIdx := strings.Index(line, " = ")
-		if eqIdx < 0 {
+		before, after, ok := strings.Cut(line, " = ")
+		if !ok {
 			continue
 		}
-		key := line[:eqIdx]
-		val := line[eqIdx+3:]
+		key := before
+		val := after
 
 		// Unquote strings
 		val = strings.TrimPrefix(val, "\"")
@@ -226,7 +226,7 @@ func exportCSS(p Palette) ([]byte, error) {
 func ParseCSS(data []byte) (Palette, error) {
 	p := Palette{Colors: make(map[string]Color)}
 
-	for _, rawLine := range strings.Split(string(data), "\n") {
+	for rawLine := range strings.SplitSeq(string(data), "\n") {
 		line := strings.TrimSpace(rawLine)
 
 		// Extract palette name from the comment header.
@@ -247,12 +247,12 @@ func ParseCSS(data []byte) (Palette, error) {
 		// Strip trailing semicolon
 		line = strings.TrimSuffix(line, ";")
 
-		colonIdx := strings.Index(line, ":")
-		if colonIdx < 0 {
+		before, after, ok := strings.Cut(line, ":")
+		if !ok {
 			continue
 		}
-		prop := line[:colonIdx]
-		val := strings.TrimSpace(line[colonIdx+1:])
+		prop := before
+		val := strings.TrimSpace(after)
 
 		// --theme-<name>-rgb: r, g, b
 		if strings.HasSuffix(prop, "-rgb") {

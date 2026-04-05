@@ -112,7 +112,7 @@ func TestDecisionLog_RecentDefaultLimit(t *testing.T) {
 	dl := NewDecisionLog(dir, LevelFullAutonomy)
 
 	// Add a few decisions
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		dl.Propose(AutonomousDecision{Category: DecisionRestart, RequiredLevel: LevelAutoRecover, Action: "test"})
 	}
 

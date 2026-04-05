@@ -3,6 +3,7 @@ package components
 import (
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
@@ -38,10 +39,7 @@ func InlineGauge(current, max float64, width int) string {
 		pct = 1
 	}
 
-	filled := int(math.Round(pct * float64(width)))
-	if filled > width {
-		filled = width
-	}
+	filled := min(int(math.Round(pct*float64(width))), width)
 
 	bar := string(repeatRune(gaugeFilled, filled)) + string(repeatRune(gaugeEmpty, width-filled))
 
@@ -144,7 +142,7 @@ func HealthSparkline(data []float64, threshold float64, width int) string {
 		rng = 1
 	}
 
-	var result string
+	var result strings.Builder
 	for _, v := range data {
 		normalized := (v - minV) / rng
 		idx := int(normalized * float64(len(sparkBlocks)-1))
@@ -156,13 +154,13 @@ func HealthSparkline(data []float64, threshold float64, width int) string {
 		}
 		ch := string(sparkBlocks[idx])
 		if v > threshold {
-			result += styles.StatusFailed.Render(ch)
+			result.WriteString(styles.StatusFailed.Render(ch))
 		} else {
-			result += styles.StatusRunning.Render(ch)
+			result.WriteString(styles.StatusRunning.Render(ch))
 		}
 	}
 
-	return result
+	return result.String()
 }
 
 func repeatRune(r rune, n int) []rune {

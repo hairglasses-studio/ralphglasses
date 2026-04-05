@@ -97,7 +97,7 @@ func LoadBenchmarks(repoPath string) ([]SelfBenchmark, error) {
 		return nil, err
 	}
 	var results []SelfBenchmark
-	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(data)), "\n") {
 		if line == "" {
 			continue
 		}

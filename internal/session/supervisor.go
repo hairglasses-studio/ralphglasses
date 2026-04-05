@@ -43,19 +43,19 @@ type Supervisor struct {
 	MaxTotalCostUSD float64
 	MaxDuration     time.Duration
 
-	bus                *events.Bus
-	lastCycleLaunch    time.Time
-	cyclesLaunched     int
-	tickCount          int
-	startedAt          time.Time
+	bus                 *events.Bus
+	lastCycleLaunch     time.Time
+	cyclesLaunched      int
+	tickCount           int
+	startedAt           time.Time
 	consecutiveFailures int
 
 	// Crash recovery: detects dead Claude Code sessions and orchestrates resume.
-	crashRecovery        *CrashRecoveryOrchestrator
-	crashCheckWindow     time.Duration // default 4h
-	crashCheckThreshold  int           // default 2
-	lastCrashCheck       time.Time
-	crashCheckInterval   time.Duration // default 5m — don't check every tick
+	crashRecovery       *CrashRecoveryOrchestrator
+	crashCheckWindow    time.Duration // default 4h
+	crashCheckThreshold int           // default 2
+	lastCrashCheck      time.Time
+	crashCheckInterval  time.Duration // default 5m — don't check every tick
 }
 
 // SupervisorState is persisted to .ralph/supervisor_state.json.
@@ -72,7 +72,7 @@ type SupervisorState struct {
 func NewSupervisor(mgr *Manager, repoPath string) *Supervisor {
 	return &Supervisor{
 		mgr:             mgr,
-		decisions:        NewDecisionLog("", LevelAutoOptimize),
+		decisions:       NewDecisionLog("", LevelAutoOptimize),
 		RepoPath:        repoPath,
 		TickInterval:    60 * time.Second,
 		MaxConcurrent:   1,
@@ -215,9 +215,7 @@ func (s *Supervisor) checkForClaudeCrash(ctx context.Context) {
 				maxConcurrent = 1
 			}
 
-			s.wg.Add(1)
-			go func() {
-				defer s.wg.Done()
+			s.wg.Go(func() {
 				err := cr.ExecuteRecovery(ctx, plan, maxConcurrent)
 
 				outcome := DecisionOutcome{
@@ -240,7 +238,7 @@ func (s *Supervisor) checkForClaudeCrash(ctx context.Context) {
 						len(plan.SessionsToResume), budget.SpentUSD)
 				}
 				dl.RecordOutcome(decision.ID, outcome)
-			}()
+			})
 		}
 	}
 }
@@ -373,13 +371,11 @@ func (s *Supervisor) tick(ctx context.Context) {
 			slog.Warn("supervisor: chain check failed", "error", err)
 		} else if nextCycle != nil && mgr != nil {
 			chainedCycle = nextCycle
-			s.wg.Add(1)
-			go func() {
-				defer s.wg.Done()
+			s.wg.Go(func() {
 				if _, err := mgr.RunCycle(ctx, nextCycle.RepoPath, nextCycle.Name, nextCycle.Objective, nextCycle.SuccessCriteria, 3); err != nil {
 					slog.Warn("supervisor: chained cycle failed", "error", err)
 				}
-			}()
+			})
 		}
 	}
 
@@ -388,13 +384,11 @@ func (s *Supervisor) tick(ctx context.Context) {
 		if planned := planner.PlanNextSprint(repoPath); planned != nil {
 			slog.Info("supervisor: sprint planner produced cycle",
 				"name", planned.Name, "tasks", len(planned.Tasks))
-			s.wg.Add(1)
-			go func() {
-				defer s.wg.Done()
+			s.wg.Go(func() {
 				if _, err := mgr.RunCycle(ctx, planned.RepoPath, planned.Name, planned.Objective, planned.SuccessCriteria, len(planned.Tasks)); err != nil {
 					slog.Warn("supervisor: planned sprint failed", "error", err)
 				}
-			}()
+			})
 			s.mu.Lock()
 			s.lastCycleLaunch = time.Now()
 			s.cyclesLaunched++
@@ -515,9 +509,7 @@ func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal, decis
 	}
 	name := fmt.Sprintf("auto-%d", time.Now().Unix())
 	if mgr != nil {
-		s.wg.Add(1)
-		go func() {
-			defer s.wg.Done()
+		s.wg.Go(func() {
 			_, err := mgr.RunCycle(ctx, repoPath, name, objective, []string{"Tests pass", "No regressions"}, 3)
 			outcome := DecisionOutcome{
 				EvaluatedAt: time.Now(),
@@ -557,7 +549,7 @@ func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal, decis
 			if dl != nil && decisionID != "" {
 				dl.RecordOutcome(decisionID, outcome)
 			}
-		}()
+		})
 	}
 	s.mu.Lock()
 	s.lastCycleLaunch = time.Now()
@@ -592,7 +584,7 @@ func (s *Supervisor) runSelfTest(ctx context.Context) {
 	// Write coverage percentage so HealthMonitor can read it.
 	if pct, parseErr := ParseCoveragePercent(coverOut); parseErr == nil {
 		covPath := filepath.Join(s.RepoPath, ".ralph", "coverage.txt")
-		_ = os.WriteFile(covPath, []byte(fmt.Sprintf("%.1f\n", pct)), 0644)
+		_ = os.WriteFile(covPath, fmt.Appendf(nil, "%.1f\n", pct), 0644)
 		slog.Info("supervisor: coverage captured", "percent", pct)
 	}
 }

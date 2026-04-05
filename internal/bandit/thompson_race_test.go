@@ -19,27 +19,25 @@ func TestThompsonConcurrentSelectUpdate(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// 20 goroutines calling Select
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 50; j++ {
+	for range 20 {
+		wg.Go(func() {
+			for range 50 {
 				arm := ts.Select(nil)
 				if arm.ID == "" {
 					t.Error("Select returned empty arm")
 				}
 			}
-		}()
+		})
 	}
 
 	// 20 goroutines calling Update
 	armIDs := []string{"ultra-cheap", "worker", "coding", "reasoning"}
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		wg.Add(1)
 		go func(seed int) {
 			defer wg.Done()
 			rng := rand.New(rand.NewPCG(uint64(seed), uint64(seed+1)))
-			for j := 0; j < 50; j++ {
+			for range 50 {
 				ts.Update(Reward{
 					ArmID:     armIDs[rng.IntN(len(armIDs))],
 					Value:     rng.Float64(),
@@ -70,27 +68,25 @@ func TestUCB1ConcurrentSelectUpdate(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// 20 goroutines calling Select
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 50; j++ {
+	for range 20 {
+		wg.Go(func() {
+			for range 50 {
 				arm := ucb.Select(nil)
 				if arm.ID == "" {
 					t.Error("Select returned empty arm")
 				}
 			}
-		}()
+		})
 	}
 
 	// 20 goroutines calling Update
 	armIDs := []string{"ultra-cheap", "worker", "coding", "reasoning"}
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		wg.Add(1)
 		go func(seed int) {
 			defer wg.Done()
 			rng := rand.New(rand.NewPCG(uint64(seed), uint64(seed+1)))
-			for j := 0; j < 50; j++ {
+			for range 50 {
 				ucb.Update(Reward{
 					ArmID:     armIDs[rng.IntN(len(armIDs))],
 					Value:     rng.Float64(),

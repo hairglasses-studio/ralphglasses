@@ -50,7 +50,7 @@ func (e *StepExecutor) Execute(ctx context.Context, step Step) StepResult {
 	var lastErr error
 	var lastOutput string
 
-	for attempt := 0; attempt < maxAttempts; attempt++ {
+	for attempt := range maxAttempts {
 		if ctx.Err() != nil {
 			result.Status = StepFailed
 			result.Error = ctx.Err().Error()

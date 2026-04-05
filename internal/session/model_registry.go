@@ -1,15 +1,17 @@
 package session
 
+import "slices"
+
 // ModelInfo describes an LLM model's capabilities and cost profile.
 type ModelInfo struct {
-	ID            string   `json:"id"`
-	Provider      Provider `json:"provider"`
-	DisplayName   string   `json:"display_name"`
-	ContextWindow int      `json:"context_window"`
-	CostPerMTokIn float64  `json:"cost_per_mtok_in"`  // USD per 1M input tokens
-	CostPerMTokOut float64 `json:"cost_per_mtok_out"` // USD per 1M output tokens
-	MaxOutputTok  int      `json:"max_output_tok"`
-	Capabilities  []string `json:"capabilities"` // e.g. "code", "reasoning", "vision"
+	ID             string   `json:"id"`
+	Provider       Provider `json:"provider"`
+	DisplayName    string   `json:"display_name"`
+	ContextWindow  int      `json:"context_window"`
+	CostPerMTokIn  float64  `json:"cost_per_mtok_in"`  // USD per 1M input tokens
+	CostPerMTokOut float64  `json:"cost_per_mtok_out"` // USD per 1M output tokens
+	MaxOutputTok   int      `json:"max_output_tok"`
+	Capabilities   []string `json:"capabilities"` // e.g. "code", "reasoning", "vision"
 }
 
 // modelRegistry is the built-in registry of known models.
@@ -70,10 +72,5 @@ func CheapestModel(provider Provider) *ModelInfo {
 
 // HasCapability checks if a model has a specific capability.
 func (m ModelInfo) HasCapability(cap string) bool {
-	for _, c := range m.Capabilities {
-		if c == cap {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(m.Capabilities, cap)
 }

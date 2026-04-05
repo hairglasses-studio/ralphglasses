@@ -284,7 +284,7 @@ func AllowHTTPS(ns *NetworkNS, hosts []string) error {
 
 		// Parse resolved IPs (unique).
 		seen := make(map[string]bool)
-		for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
 			fields := strings.Fields(line)
 			if len(fields) == 0 {
 				continue
@@ -349,7 +349,7 @@ func ListNamespaces() ([]*NetworkNS, error) {
 	}
 
 	var result []*NetworkNS
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

@@ -273,7 +273,7 @@ func TestEstimateTokensForText(t *testing.T) {
 // buildTestMessages creates a conversation with N user/assistant turn pairs.
 func buildTestMessages(n int) []Message {
 	msgs := []Message{{Role: "system", Content: "you are a helper"}}
-	for i := 0; i < n; i++ {
+	for range n {
 		msgs = append(msgs,
 			Message{Role: "user", Content: strings.Repeat("question ", 20)},
 			Message{Role: "assistant", Content: strings.Repeat("answer ", 20)},

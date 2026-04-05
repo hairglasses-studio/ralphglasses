@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -1070,7 +1071,7 @@ func TestConcurrentStartStop(t *testing.T) {
 	m := NewManager()
 	const n = 10
 	repos := make([]string, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		repos[i] = t.TempDir()
 		writeTestScript(t, filepath.Join(repos[i], "ralph_loop.sh"), "sleep 60")
 	}
@@ -1078,12 +1079,11 @@ func TestConcurrentStartStop(t *testing.T) {
 	// Start all concurrently.
 	errs := make(chan error, n)
 	for _, r := range repos {
-		r := r
 		go func() {
 			errs <- m.Start(context.Background(), r)
 		}()
 	}
-	for i := 0; i < n; i++ {
+	for range n {
 		if err := <-errs; err != nil {
 			t.Errorf("Start error: %v", err)
 		}
@@ -1092,7 +1092,7 @@ func TestConcurrentStartStop(t *testing.T) {
 	// Query concurrently.
 	done := make(chan struct{})
 	go func() {
-		for i := 0; i < 50; i++ {
+		for range 50 {
 			_ = m.RunningPaths()
 			_ = m.IsRunning(repos[0])
 			_ = m.IsPaused(repos[0])
@@ -1104,12 +1104,11 @@ func TestConcurrentStartStop(t *testing.T) {
 	// Stop all concurrently.
 	stopErrs := make(chan error, n)
 	for _, r := range repos {
-		r := r
 		go func() {
 			stopErrs <- m.Stop(context.Background(), r)
 		}()
 	}
-	for i := 0; i < n; i++ {
+	for range n {
 		<-stopErrs // errors are acceptable (race with reaper)
 	}
 
@@ -1158,7 +1157,7 @@ func TestStopAll_MultipleProcesses_ClearsMap(t *testing.T) {
 	// process group. Instead we verify the map state directly.
 	m := NewManager()
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		m.AddProcForTesting(filepath.Join("/fake/repo", strconv.Itoa(i)), false)
 	}
 
@@ -1172,7 +1171,7 @@ func TestStopAll_MultipleProcesses_ClearsMap(t *testing.T) {
 	for _, p := range paths {
 		pathSet[p] = true
 	}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		expected := filepath.Join("/fake/repo", strconv.Itoa(i))
 		if !pathSet[expected] {
 			t.Errorf("expected %q in running paths", expected)
@@ -1750,13 +1749,7 @@ func TestStopAllGraceful_TimeoutEscalatesToSIGKILL(t *testing.T) {
 	}
 
 	// Verify SIGKILL was sent (after the initial SIGTERM from sendSignal).
-	foundKill := false
-	for _, sig := range killSignals {
-		if sig == syscall.SIGKILL {
-			foundKill = true
-			break
-		}
-	}
+	foundKill := slices.Contains(killSignals, syscall.SIGKILL)
 	if !foundKill {
 		t.Errorf("expected SIGKILL in kill signals, got %v", killSignals)
 	}

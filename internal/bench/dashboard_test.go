@@ -104,7 +104,7 @@ func TestCompareNoOverlap(t *testing.T) {
 func TestTrend(t *testing.T) {
 	d := NewDashboard()
 	// Add 5 results for the same benchmark.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		d.AddResultWithMeta("BenchmarkFoo", int64(1000-i*100), 64, 2, "run-"+string(rune('0'+i)), "commit")
 	}
 
@@ -141,7 +141,7 @@ func TestSummary(t *testing.T) {
 	d := NewDashboard()
 	d.AddResultWithMeta("BenchmarkFast", 100, 8, 1, "run-1", "aaa")
 	d.AddResultWithMeta("BenchmarkSlow", 5000, 512, 10, "run-1", "aaa")
-	d.AddResultWithMeta("BenchmarkFast", 50, 4, 1, "run-2", "bbb")   // improved
+	d.AddResultWithMeta("BenchmarkFast", 50, 4, 1, "run-2", "bbb")      // improved
 	d.AddResultWithMeta("BenchmarkSlow", 6000, 600, 12, "run-2", "bbb") // regressed
 
 	s := d.Summary()

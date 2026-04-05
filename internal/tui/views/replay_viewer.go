@@ -211,10 +211,7 @@ func (m ReplayViewerModel) View() tea.View {
 
 		// Truncate data for display
 		data := ev.Data
-		maxDataLen := m.width - 30
-		if maxDataLen < 20 {
-			maxDataLen = 20
-		}
+		maxDataLen := max(m.width-30, 20)
 		if len(data) > maxDataLen {
 			data = data[:maxDataLen-3] + "..."
 		}
@@ -391,17 +388,11 @@ func (m ReplayViewerModel) visibleRange(viewHeight int) (start, end int) {
 
 	// Keep cursor centered when possible
 	half := viewHeight / 2
-	start = m.cursor - half
-	if start < 0 {
-		start = 0
-	}
+	start = max(m.cursor-half, 0)
 	end = start + viewHeight
 	if end > total {
 		end = total
-		start = end - viewHeight
-		if start < 0 {
-			start = 0
-		}
+		start = max(end-viewHeight, 0)
 	}
 	return start, end
 }

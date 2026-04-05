@@ -19,8 +19,8 @@ type Reflection struct {
 	LoopID        string    `json:"loop_id"`
 	IterationNum  int       `json:"iteration"`
 	TaskTitle     string    `json:"task_title"`
-	Category      string    `json:"category,omitempty"`     // "self-critique" for proactive, empty for failure
-	FailureMode   string    `json:"failure_mode"`           // "verify_failed", "worker_error", "planner_error"
+	Category      string    `json:"category,omitempty"` // "self-critique" for proactive, empty for failure
+	FailureMode   string    `json:"failure_mode"`       // "verify_failed", "worker_error", "planner_error"
 	RootCause     string    `json:"root_cause"`
 	Correction    string    `json:"correction"`
 	FilesInvolved []string  `json:"files_involved"`
@@ -100,7 +100,7 @@ func (rs *ReflexionStore) ExtractSelfCritique(loopID string, iter LoopIteration)
 		if v.Output == "" {
 			continue
 		}
-		for _, line := range strings.Split(v.Output, "\n") {
+		for line := range strings.SplitSeq(v.Output, "\n") {
 			lower := strings.ToLower(line)
 			for _, signal := range []string{"warning:", "warn:", "deprecated", "skip", "regression", "flaky", "slow"} {
 				if strings.Contains(lower, signal) {
@@ -535,7 +535,7 @@ func (rs *ReflexionStore) load() {
 // toWordSet splits a string into a set of lowercased words (length >= 2).
 func toWordSet(s string) map[string]bool {
 	words := make(map[string]bool)
-	for _, w := range strings.Fields(strings.ToLower(s)) {
+	for w := range strings.FieldsSeq(strings.ToLower(s)) {
 		// Skip very short words (articles, etc.)
 		if len(w) >= 2 {
 			words[w] = true

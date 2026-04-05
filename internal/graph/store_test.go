@@ -264,17 +264,15 @@ func TestConcurrentAccess(t *testing.T) {
 	g.AddNode(&Node{ID: "b", Kind: KindFunction, Name: "b"})
 
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 50 {
+		wg.Go(func() {
 			g.GetNode("a")
 			g.Nodes()
 			g.OutEdges("a")
 			g.InEdges("b")
 			g.NodesByKind(KindFunction)
 			g.EdgesByKind(EdgeCalls)
-		}()
+		})
 	}
 	wg.Wait()
 }

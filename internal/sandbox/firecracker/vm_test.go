@@ -320,15 +320,13 @@ func TestVMConcurrentStatusAccess(t *testing.T) {
 	var wg sync.WaitGroup
 	// Read status concurrently while starting.
 	for range 10 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = vm.Status()
 			_ = vm.PID()
 			_ = vm.Name()
 			_ = vm.Config()
 			_ = vm.Err()
-		}()
+		})
 	}
 
 	_ = vm.Start(context.Background())
@@ -379,7 +377,7 @@ func TestMockSocketAPI(t *testing.T) {
 
 	ctx := context.Background()
 	err = vm.apiPut(ctx, "/machine-config", map[string]any{
-		"vcpu_count":  2,
+		"vcpu_count":   2,
 		"mem_size_mib": 1024,
 	})
 	if err != nil {

@@ -57,10 +57,7 @@ func NewLogViewWithCapacity(cap int) *LogView {
 func (lv *LogView) SetDimensions(width, height int) {
 	lv.Width = width
 	lv.Height = height
-	vpHeight := height - 3
-	if vpHeight < 1 {
-		vpHeight = 1
-	}
+	vpHeight := max(height-3, 1)
 	lv.vp.SetWidth(width)
 	lv.vp.SetHeight(vpHeight)
 }
@@ -182,10 +179,7 @@ func (lv *LogView) filteredLines() []string {
 // View renders the log view.
 func (lv *LogView) View() string {
 	// Sync viewport dimensions from Width/Height fields.
-	vpHeight := lv.Height - 3
-	if vpHeight < 1 {
-		vpHeight = 1
-	}
+	vpHeight := max(lv.Height-3, 1)
 	lv.vp.SetWidth(lv.Width)
 	lv.vp.SetHeight(vpHeight)
 

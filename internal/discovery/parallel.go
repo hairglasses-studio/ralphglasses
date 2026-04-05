@@ -64,9 +64,7 @@ func ParallelScan(ctx context.Context, root string, workers int) ([]*model.Repo,
 	// Spawn workers.
 	var wg sync.WaitGroup
 	for i := 0; i < workers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for d := range work {
 				if ctx.Err() != nil {
 					return
@@ -89,7 +87,7 @@ func ParallelScan(ctx context.Context, root string, workers int) ([]*model.Repo,
 				}
 				results <- result{repo: r}
 			}
-		}()
+		})
 	}
 
 	// Feed work, checking context between sends.

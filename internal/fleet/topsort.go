@@ -2,6 +2,7 @@ package fleet
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 )
 
@@ -15,9 +16,9 @@ type TaskNode struct {
 
 // TaskGraph holds task nodes and their dependency relationships for scheduling.
 type TaskGraph struct {
-	nodes map[string]TaskNode   // keyed by ID
-	edges map[string][]string   // adjacency: from -> []to (from depends on to)
-	order []string              // insertion order for determinism
+	nodes map[string]TaskNode // keyed by ID
+	edges map[string][]string // adjacency: from -> []to (from depends on to)
+	order []string            // insertion order for determinism
 }
 
 // NewTaskGraph creates an empty task graph.
@@ -56,10 +57,8 @@ func (g *TaskGraph) AddDependency(from, to string) error {
 }
 
 func (g *TaskGraph) addEdge(from, to string) {
-	for _, existing := range g.edges[from] {
-		if existing == to {
-			return // already present
-		}
+	if slices.Contains(g.edges[from], to) {
+		return // already present
 	}
 	g.edges[from] = append(g.edges[from], to)
 }

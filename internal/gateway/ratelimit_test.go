@@ -26,7 +26,7 @@ func TestNewRateLimiter(t *testing.T) {
 func TestRateLimiter_Allow_BurstThenDeny(t *testing.T) {
 	rl := NewRateLimiter(1.0, 3) // 1/s, burst 3
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if !rl.Allow("k") {
 			t.Fatalf("request %d should be allowed within burst", i+1)
 		}
@@ -107,7 +107,7 @@ func TestRateLimiter_Allow_ConcurrentAccess(t *testing.T) {
 	rl := NewRateLimiter(10000.0, 100)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -123,7 +123,7 @@ func TestRateLimiter_Allow_ManyKeys(t *testing.T) {
 	rl := NewRateLimiter(10.0, 1)
 
 	// Each unique key gets its own burst.
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		key := fmt.Sprintf("client-%d", i)
 		if !rl.Allow(key) {
 			t.Fatalf("first request for %s should be allowed", key)

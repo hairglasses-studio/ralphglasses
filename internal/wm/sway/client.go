@@ -35,13 +35,13 @@ type Client struct {
 
 // Node represents a node in the Sway layout tree.
 type Node struct {
-	ID             int64  `json:"id"`
-	Name           string `json:"name"`
-	Type           string `json:"type"`
-	Focused        bool   `json:"focused"`
-	Output         string `json:"output"`
-	Nodes          []Node `json:"nodes"`
-	FloatingNodes  []Node `json:"floating_nodes"`
+	ID            int64  `json:"id"`
+	Name          string `json:"name"`
+	Type          string `json:"type"`
+	Focused       bool   `json:"focused"`
+	Output        string `json:"output"`
+	Nodes         []Node `json:"nodes"`
+	FloatingNodes []Node `json:"floating_nodes"`
 }
 
 // Workspace represents a Sway workspace.
@@ -129,7 +129,7 @@ func (c *Client) sendMessage(msgType uint32, payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("sway ipc read header: %w", err)
 	}
 
-	for i := 0; i < len(magic); i++ {
+	for i := range magic {
 		if respHeader[i] != magic[i] {
 			return nil, fmt.Errorf("sway ipc: invalid magic in response")
 		}

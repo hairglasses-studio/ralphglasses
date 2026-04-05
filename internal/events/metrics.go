@@ -9,13 +9,13 @@ import (
 // metrics tracks observability counters for the event bus.
 // All fields use atomic operations for lock-free reads.
 type metrics struct {
-	totalPublished atomic.Int64
-	totalDropped   atomic.Int64
+	totalPublished  atomic.Int64
+	totalDropped    atomic.Int64
 	subscriberCount atomic.Int64
 
 	// Per-type publish counts. Protected by mu because maps are not
 	// safe for concurrent writes even with atomic value wrappers.
-	mu             sync.RWMutex
+	mu              sync.RWMutex
 	publishedByType map[EventType]*atomic.Int64
 
 	// Latency histogram — fixed buckets in microseconds.
@@ -184,7 +184,7 @@ func (m *metrics) snapshot() MetricsSnapshot {
 	s.Latency.Count = m.latencyCount.Load()
 	s.Latency.Sum = time.Duration(m.latencySum.Load())
 	s.Latency.Buckets = make([]LatencyBucket, latencyBucketCount)
-	for i := 0; i < latencyBucketCount; i++ {
+	for i := range latencyBucketCount {
 		s.Latency.Buckets[i] = LatencyBucket{
 			Le:    latencyBucketLabels[i],
 			Count: m.latencyBuckets[i].Load(),

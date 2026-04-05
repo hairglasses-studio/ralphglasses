@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"strings"
 )
 
 // SprintPlanner wraps RoadmapToTasks with priority/size-aware sprint batching.
@@ -154,12 +155,13 @@ func (sp *SprintPlanner) buildObjective(tasks []CycleTask) string {
 	for i := 0; i < len(tasks) && i < 3; i++ {
 		titles = append(titles, tasks[i].Title)
 	}
-	obj := fmt.Sprintf("Sprint (%d tasks): %s", len(tasks), titles[0])
+	var obj strings.Builder
+	obj.WriteString(fmt.Sprintf("Sprint (%d tasks): %s", len(tasks), titles[0]))
 	for i := 1; i < len(titles); i++ {
-		obj += ", " + titles[i]
+		obj.WriteString(", " + titles[i])
 	}
 	if len(tasks) > 3 {
-		obj += fmt.Sprintf(" (+%d more)", len(tasks)-3)
+		obj.WriteString(fmt.Sprintf(" (+%d more)", len(tasks)-3))
 	}
-	return obj
+	return obj.String()
 }

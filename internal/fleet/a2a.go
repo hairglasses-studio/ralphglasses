@@ -9,11 +9,11 @@ import (
 
 // Sentinel errors for A2A task offer operations.
 var (
-	ErrOfferNotFound       = errors.New("a2a: offer not found")
-	ErrOfferNotOpen        = errors.New("a2a: offer is not open")
-	ErrOfferExpired        = errors.New("a2a: offer has expired")
-	ErrInvalidTransition   = errors.New("a2a: invalid state transition")
-	ErrOfferNotAccepted    = errors.New("a2a: offer is not in an accepted/working state")
+	ErrOfferNotFound        = errors.New("a2a: offer not found")
+	ErrOfferNotOpen         = errors.New("a2a: offer is not open")
+	ErrOfferExpired         = errors.New("a2a: offer has expired")
+	ErrInvalidTransition    = errors.New("a2a: invalid state transition")
+	ErrOfferNotAccepted     = errors.New("a2a: offer is not in an accepted/working state")
 	ErrOfferAlreadyTerminal = errors.New("a2a: offer is in a terminal state")
 )
 
@@ -130,12 +130,12 @@ const (
 // Part is a single content element within a Message.
 // A2A v1.0 defines TextPart, DataPart, and FilePart.
 type Part struct {
-	Type     PartType    `json:"type"`
-	Text     string      `json:"text,omitempty"`     // for TextPart
-	Data     interface{} `json:"data,omitempty"`      // for DataPart (arbitrary JSON)
-	MimeType string      `json:"mimeType,omitempty"`  // for DataPart/FilePart
-	FileURI  string      `json:"fileUri,omitempty"`   // for FilePart (URI reference)
-	FileData string      `json:"fileData,omitempty"`  // for FilePart (base64-encoded inline data)
+	Type     PartType `json:"type"`
+	Text     string   `json:"text,omitempty"`     // for TextPart
+	Data     any      `json:"data,omitempty"`     // for DataPart (arbitrary JSON)
+	MimeType string   `json:"mimeType,omitempty"` // for DataPart/FilePart
+	FileURI  string   `json:"fileUri,omitempty"`  // for FilePart (URI reference)
+	FileData string   `json:"fileData,omitempty"` // for FilePart (base64-encoded inline data)
 }
 
 // NewTextPart creates a Part containing plain text.
@@ -144,7 +144,7 @@ func NewTextPart(text string) Part {
 }
 
 // NewDataPart creates a Part containing structured data with a MIME type.
-func NewDataPart(data interface{}, mimeType string) Part {
+func NewDataPart(data any, mimeType string) Part {
 	return Part{Type: PartTypeData, Data: data, MimeType: mimeType}
 }
 
@@ -174,11 +174,11 @@ type Message struct {
 type Artifact struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
-	Type        string `json:"type"`              // MIME type or semantic type (e.g., "text/plain", "application/json", "code")
-	Content     string `json:"content"`            // backward-compatible raw content
-	Parts       []Part `json:"parts,omitempty"`    // A2A v1.0 structured parts
-	Index       int    `json:"index"`              // ordering index for streaming
-	Append      bool   `json:"append,omitempty"`   // true if this extends a previous artifact at the same index
+	Type        string `json:"type"`                // MIME type or semantic type (e.g., "text/plain", "application/json", "code")
+	Content     string `json:"content"`             // backward-compatible raw content
+	Parts       []Part `json:"parts,omitempty"`     // A2A v1.0 structured parts
+	Index       int    `json:"index"`               // ordering index for streaming
+	Append      bool   `json:"append,omitempty"`    // true if this extends a previous artifact at the same index
 	LastChunk   bool   `json:"lastChunk,omitempty"` // true if this is the final chunk for this artifact
 	Final       bool   `json:"final,omitempty"`     // legacy: true if this is the last chunk for this artifact name
 }
@@ -196,18 +196,18 @@ type DelegationConstraints struct {
 // The Status field tracks the full A2A lifecycle: submitted -> working -> completed/failed/canceled.
 // The InputRequired state allows a working task to pause and request additional input.
 type TaskOffer struct {
-	ID           string                `json:"id"`
-	OfferingNode string                `json:"offering_node"`
-	TaskType     string                `json:"task_type"`
-	Prompt       string                `json:"prompt"`
-	Constraints  DelegationConstraints `json:"constraints"`
-	Deadline     time.Time             `json:"deadline"`
-	Status       string                `json:"status"` // "submitted", "working", "input-required", "completed", "failed", "canceled", "open", "accepted", "expired"
-	AcceptedBy   string                `json:"accepted_by,omitempty"`
-	Artifacts    []Artifact            `json:"artifacts,omitempty"`
-	StatusMessage string              `json:"status_message,omitempty"` // human-readable context for current state
-	CreatedAt    time.Time             `json:"created_at"`
-	UpdatedAt    time.Time             `json:"updated_at"`
+	ID            string                `json:"id"`
+	OfferingNode  string                `json:"offering_node"`
+	TaskType      string                `json:"task_type"`
+	Prompt        string                `json:"prompt"`
+	Constraints   DelegationConstraints `json:"constraints"`
+	Deadline      time.Time             `json:"deadline"`
+	Status        string                `json:"status"` // "submitted", "working", "input-required", "completed", "failed", "canceled", "open", "accepted", "expired"
+	AcceptedBy    string                `json:"accepted_by,omitempty"`
+	Artifacts     []Artifact            `json:"artifacts,omitempty"`
+	StatusMessage string                `json:"status_message,omitempty"` // human-readable context for current state
+	CreatedAt     time.Time             `json:"created_at"`
+	UpdatedAt     time.Time             `json:"updated_at"`
 }
 
 // A2AAdapter implements the Agent-to-Agent protocol for task delegation.

@@ -2,6 +2,7 @@ package notify
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 )
@@ -137,10 +138,8 @@ func TestNotification_Defaults(t *testing.T) {
 
 func assertContains(t *testing.T, slice []string, want string) {
 	t.Helper()
-	for _, s := range slice {
-		if s == want {
-			return
-		}
+	if slices.Contains(slice, want) {
+		return
 	}
 	t.Errorf("args %v does not contain %q", slice, want)
 }

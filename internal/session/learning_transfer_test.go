@@ -20,7 +20,7 @@ func TestLearningTransfer_RecordAndRetrieve(t *testing.T) {
 	lt := NewLearningTransfer("")
 
 	// Record 3 successful sessions with common "worked" pattern.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		lt.RecordSession(SessionLearning{
 			SessionID:   "sess-" + ltItoa(i),
 			TaskType:    "feature",
@@ -55,7 +55,7 @@ func TestLearningTransfer_RecordAndRetrieve(t *testing.T) {
 func TestLearningTransfer_FilterByFromSessions(t *testing.T) {
 	lt := NewLearningTransfer("")
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		lt.RecordSession(SessionLearning{
 			SessionID:  "sess-" + ltItoa(i),
 			TaskType:   "bug_fix",
@@ -97,7 +97,7 @@ func TestLearningTransfer_ProviderHint(t *testing.T) {
 	lt := NewLearningTransfer("")
 
 	// Record several successful sessions with the same provider + task type.
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		lt.RecordSession(SessionLearning{
 			SessionID: "sess-" + ltItoa(i),
 			TaskType:  "test",
@@ -123,7 +123,7 @@ func TestLearningTransfer_ProviderHint(t *testing.T) {
 func TestLearningTransfer_BudgetHint(t *testing.T) {
 	lt := NewLearningTransfer("")
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		lt.RecordSession(SessionLearning{
 			SessionID: "sess-" + ltItoa(i),
 			TaskType:  "refactor",
@@ -180,7 +180,7 @@ func TestLearningTransfer_Persistence(t *testing.T) {
 	dir := t.TempDir()
 	lt := NewLearningTransfer(dir)
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		lt.RecordSession(SessionLearning{
 			SessionID: "sess-" + ltItoa(i),
 			TaskType:  "docs",
@@ -209,7 +209,7 @@ func TestLearningTransfer_ConcurrentSafety(t *testing.T) {
 	lt := NewLearningTransfer("")
 	var wg sync.WaitGroup
 
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -224,12 +224,10 @@ func TestLearningTransfer_ConcurrentSafety(t *testing.T) {
 		}(i)
 	}
 
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			lt.TransferInsights(nil, "reader")
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -253,7 +251,7 @@ func TestLearningTransfer_HashStr(t *testing.T) {
 func TestLearningTransfer_FailurePatterns(t *testing.T) {
 	lt := NewLearningTransfer("")
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		lt.RecordSession(SessionLearning{
 			SessionID: "fail-" + ltItoa(i),
 			TaskType:  "config",

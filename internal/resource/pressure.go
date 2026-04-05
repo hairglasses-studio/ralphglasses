@@ -212,7 +212,7 @@ func readSystemMemory() (total, available uint64) {
 
 // parseMeminfo extracts total and available memory from /proc/meminfo content.
 func parseMeminfo(data []byte) (total, available uint64) {
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue

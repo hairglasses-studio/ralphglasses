@@ -217,10 +217,7 @@ func (em *EpisodicMemory) Prune() {
 	minPerType := 10
 	numTypes := len(byType)
 	if numTypes > 0 && minPerType*numTypes > em.maxSize {
-		minPerType = em.maxSize / numTypes
-		if minPerType < 1 {
-			minPerType = 1
-		}
+		minPerType = max(em.maxSize/numTypes, 1)
 	}
 
 	// Mark which indices to keep: at least minPerType most recent per type
@@ -256,10 +253,7 @@ func (em *EpisodicMemory) Prune() {
 		}
 	}
 
-	remaining := em.maxSize - len(protected)
-	if remaining < 0 {
-		remaining = 0
-	}
+	remaining := max(em.maxSize-len(protected), 0)
 
 	// Keep the most recent unprotected episodes
 	if len(unprotected) > remaining {
@@ -405,7 +399,7 @@ func jaccardSimilarity(a, b string) float64 {
 
 func wordSet(s string) map[string]bool {
 	set := make(map[string]bool)
-	for _, w := range strings.Fields(strings.ToLower(s)) {
+	for w := range strings.FieldsSeq(strings.ToLower(s)) {
 		set[w] = true
 	}
 	return set

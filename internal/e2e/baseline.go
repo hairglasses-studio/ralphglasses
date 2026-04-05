@@ -29,11 +29,11 @@ type BaselineStats struct {
 
 // LoopBaseline stores per-(scenario,provider) performance baselines.
 type LoopBaseline struct {
-	GeneratedAt time.Time                   `json:"generated_at"`
-	WindowHours float64                     `json:"window_hours"`
-	Entries     map[string]*BaselineStats   `json:"entries"` // key: "scenario:provider"
-	Aggregate   *BaselineStats              `json:"aggregate,omitempty"`
-	Rates       *BaselineRates              `json:"rates,omitempty"`
+	GeneratedAt time.Time                 `json:"generated_at"`
+	WindowHours float64                   `json:"window_hours"`
+	Entries     map[string]*BaselineStats `json:"entries"` // key: "scenario:provider"
+	Aggregate   *BaselineStats            `json:"aggregate,omitempty"`
+	Rates       *BaselineRates            `json:"rates,omitempty"`
 }
 
 // BaselineRates captures aggregate success/failure rates.
@@ -188,10 +188,7 @@ func percentileF(sorted []float64, p int) float64 {
 	if len(sorted) == 0 {
 		return 0
 	}
-	idx := int(math.Ceil(float64(p)/100*float64(len(sorted)))) - 1
-	if idx < 0 {
-		idx = 0
-	}
+	idx := max(int(math.Ceil(float64(p)/100*float64(len(sorted))))-1, 0)
 	if idx >= len(sorted) {
 		idx = len(sorted) - 1
 	}

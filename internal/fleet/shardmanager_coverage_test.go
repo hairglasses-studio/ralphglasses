@@ -107,7 +107,7 @@ func TestShardManager_DrainNode(t *testing.T) {
 	sm.DrainNode("n1")
 
 	// After draining n1, new sessions should only go to n2.
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		sid := sm.AssignSession("drain-test-session")
 		if sid != "n2" {
 			t.Errorf("expected drained sessions to go to n2, got %q", sid)
@@ -228,7 +228,7 @@ func TestShardManager_Distribution(t *testing.T) {
 	sm := NewShardManager()
 	sm.JoinNode(NodeInfo{ID: "n1"})
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		sm.AssignSession("s" + string(rune('0'+i)))
 	}
 
@@ -247,7 +247,7 @@ func TestShardManager_MigrationOnNodeJoin(t *testing.T) {
 	sm.JoinNode(NodeInfo{ID: "n1"})
 
 	// Assign many sessions to n1.
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		sm.AssignSession("session-" + string(rune('a'+i%26)) + string(rune('a'+i/26)))
 	}
 

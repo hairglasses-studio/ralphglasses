@@ -11,10 +11,7 @@ func ProgressBar(pct float64, width int) string {
 	if width < 1 {
 		width = 5
 	}
-	filled := int(pct / 100.0 * float64(width))
-	if filled > width {
-		filled = width
-	}
+	filled := min(int(pct/100.0*float64(width)), width)
 	if filled < 0 {
 		filled = 0
 	}

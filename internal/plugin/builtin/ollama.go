@@ -30,9 +30,9 @@ type OllamaProvider struct {
 
 // OllamaConfig configures the Ollama provider.
 type OllamaConfig struct {
-	Endpoint string `json:"endpoint" yaml:"endpoint"` // default http://localhost:11434
-	Model    string `json:"model" yaml:"model"`       // default devstral-small:24b
-	Timeout  time.Duration `json:"timeout" yaml:"timeout"` // default 5m
+	Endpoint string        `json:"endpoint" yaml:"endpoint"` // default http://localhost:11434
+	Model    string        `json:"model" yaml:"model"`       // default devstral-small:24b
+	Timeout  time.Duration `json:"timeout" yaml:"timeout"`   // default 5m
 }
 
 // NewOllamaProvider creates an Ollama provider plugin.
@@ -145,7 +145,7 @@ type ollamaRequest struct {
 	Model   string        `json:"model"`
 	Prompt  string        `json:"prompt"`
 	Stream  bool          `json:"stream"`
-	Options ollamaOptions `json:"options,omitempty"`
+	Options ollamaOptions `json:"options"`
 }
 
 type ollamaOptions struct {

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -703,8 +704,8 @@ func TestIsPlausibleFilePath(t *testing.T) {
 	}{
 		{"internal/handler.go", true},
 		{"main.go", true},
-		{"Makefile", false},        // no extension
-		{"-flag", false},           // flag
+		{"Makefile", false},           // no extension
+		{"-flag", false},              // flag
 		{"http://example.com", false}, // URL
 		{"", false},
 		{"file.go", true},
@@ -814,20 +815,16 @@ func TestResultSortsFiles(t *testing.T) {
 func assertContainsFile(t *testing.T, files []string, want string) {
 	t.Helper()
 	want = filepath.Clean(want)
-	for _, f := range files {
-		if f == want {
-			return
-		}
+	if slices.Contains(files, want) {
+		return
 	}
 	t.Errorf("files %v does not contain %q", files, want)
 }
 
 func assertContainsStr(t *testing.T, strs []string, want string) {
 	t.Helper()
-	for _, s := range strs {
-		if s == want {
-			return
-		}
+	if slices.Contains(strs, want) {
+		return
 	}
 	t.Errorf("strings %v does not contain %q", strs, want)
 }

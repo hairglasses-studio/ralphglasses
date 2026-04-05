@@ -7,6 +7,7 @@ package patterns
 
 import (
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"sync"
@@ -139,9 +140,7 @@ func (mr *MultiReflexion) Reset() {
 func (mr *MultiReflexion) FormatReport() string {
 	mr.mu.Lock()
 	reviews := make(map[string]PerspectiveReview, len(mr.reviews))
-	for k, v := range mr.reviews {
-		reviews[k] = v
-	}
+	maps.Copy(reviews, mr.reviews)
 	mr.mu.Unlock()
 
 	agg := mr.Aggregate()

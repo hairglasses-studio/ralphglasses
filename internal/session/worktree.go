@@ -257,7 +257,7 @@ func cleanupOrphanedLoopBranches(repoPath, loopID string) {
 	if err != nil {
 		return
 	}
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		branch := strings.TrimSpace(line)
 		if branch == "" || strings.HasPrefix(branch, "*") {
 			continue

@@ -45,10 +45,7 @@ func RenderObservationView(data ObservationViewData, width, height int) string {
 	}
 
 	// Sparkline width adapts to terminal width
-	sparkWidth := width - 35
-	if sparkWidth < 12 {
-		sparkWidth = 12
-	}
+	sparkWidth := max(width-35, 12)
 	if sparkWidth > 60 {
 		sparkWidth = 60
 	}

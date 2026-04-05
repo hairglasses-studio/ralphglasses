@@ -2,6 +2,7 @@ package session
 
 import (
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -169,10 +170,5 @@ func extractProject(tokens []string) string {
 
 // extractFleetKeyword returns true if "fleet" appears in the tokens.
 func extractFleetKeyword(tokens []string) bool {
-	for _, t := range tokens {
-		if t == "fleet" {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(tokens, "fleet")
 }

@@ -15,7 +15,7 @@ func BenchmarkScan(b *testing.B) {
 	root := b.TempDir()
 
 	// Create 10 realistic repo dirs with .ralph/ and .ralphrc.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		name := "repo-" + string(rune('a'+i))
 		repoPath := filepath.Join(root, name)
 		ralphDir := filepath.Join(repoPath, ".ralph")
@@ -47,7 +47,7 @@ func BenchmarkScan_Empty(b *testing.B) {
 	root := b.TempDir()
 
 	// Create dirs without .ralph/ or .ralphrc — should be skipped.
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		os.MkdirAll(filepath.Join(root, "plain-"+string(rune('a'+i))), 0755)
 	}
 

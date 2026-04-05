@@ -78,7 +78,7 @@ func TestCostHistory_ByProvider(t *testing.T) {
 func TestCostHistory_RecentRecords(t *testing.T) {
 	dir := t.TempDir()
 	ch := NewCostHistory(dir)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		ch.Add(CostRecord{CostUSD: float64(i) * 0.01})
 	}
 

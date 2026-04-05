@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -134,12 +135,8 @@ func (s *AliasStore) List() map[string]string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	m := make(map[string]string, len(builtinCommandAliases)+len(s.aliases))
-	for k, v := range builtinCommandAliases {
-		m[k] = v
-	}
-	for k, v := range s.aliases {
-		m[k] = v
-	}
+	maps.Copy(m, builtinCommandAliases)
+	maps.Copy(m, s.aliases)
 	return m
 }
 

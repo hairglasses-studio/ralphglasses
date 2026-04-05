@@ -251,7 +251,7 @@ func TestEvictor_ConcurrentSetTTLAndGC(t *testing.T) {
 	bb := NewBlackboard("")
 
 	const n = 50
-	for i := 0; i < n; i++ {
+	for i := range n {
 		_ = bb.Put(Entry{
 			Key:       fmt.Sprintf("k-%d", i),
 			Namespace: "ns",
@@ -266,11 +266,11 @@ func TestEvictor_ConcurrentSetTTLAndGC(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Writers continuously extend TTLs.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < 50; j++ {
+			for j := range 50 {
 				key := fmt.Sprintf("k-%d", j%n)
 				bb.SetTTL("ns", key, time.Minute)
 			}
@@ -278,15 +278,13 @@ func TestEvictor_ConcurrentSetTTLAndGC(t *testing.T) {
 	}
 
 	// Readers continuously query.
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 50; j++ {
+	for range 10 {
+		wg.Go(func() {
+			for j := range 50 {
 				_ = bb.Query("ns")
 				_, _ = bb.Get("ns", fmt.Sprintf("k-%d", j%n))
 			}
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -301,11 +299,11 @@ func TestEvictor_ConcurrentPutAndEviction(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Writers continuously add short-lived entries.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < 50; j++ {
+			for j := range 50 {
 				_ = bb.Put(Entry{
 					Key:       fmt.Sprintf("k-%d-%d", id, j),
 					Namespace: "ns",
@@ -317,15 +315,13 @@ func TestEvictor_ConcurrentPutAndEviction(t *testing.T) {
 	}
 
 	// Readers continuously query.
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 100; j++ {
+	for range 5 {
+		wg.Go(func() {
+			for range 100 {
 				_ = bb.Query("ns")
 				_ = bb.Len()
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

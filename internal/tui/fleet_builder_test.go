@@ -473,7 +473,7 @@ func TestFleetSectionLen(t *testing.T) {
 func TestBuildFleetDataTopExpensiveCapped(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	mgr := session.NewManager()
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		s := &session.Session{
 			ID:         fmt.Sprintf("s%d", i),
 			Provider:   "claude",

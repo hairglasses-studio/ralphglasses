@@ -1,7 +1,6 @@
 package safety
 
 import (
-	"context"
 	"sync"
 	"testing"
 	"time"
@@ -38,14 +37,13 @@ func TestCostSpikeDetection(t *testing.T) {
 		mu.Unlock()
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	det.Start(ctx)
 
 	now := time.Now()
 
 	// Build a baseline with normal costs
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		bus.Publish(events.Event{
 			Type:      events.CostUpdate,
 			Timestamp: now.Add(time.Duration(i) * time.Second),
@@ -87,21 +85,20 @@ func TestErrorStormDetection(t *testing.T) {
 		mu.Unlock()
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	det.Start(ctx)
 
 	now := time.Now()
 
 	// Produce a mix where errors dominate: 3 normal events + 5 errors = 62.5% error rate
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		bus.Publish(events.Event{
 			Type:      events.SessionStarted,
 			Timestamp: now.Add(time.Duration(i) * time.Second),
 			SessionID: "ok-" + string(rune('a'+i)),
 		})
 	}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		bus.Publish(events.Event{
 			Type:      events.SessionError,
 			Timestamp: now.Add(time.Duration(3+i) * time.Second),
@@ -138,14 +135,13 @@ func TestCascadeFailureDetection(t *testing.T) {
 		mu.Unlock()
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	det.Start(ctx)
 
 	now := time.Now()
 
 	// 3 budget-exceeded failures within the cascade window
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		bus.Publish(events.Event{
 			Type:      events.BudgetExceeded,
 			Timestamp: now.Add(time.Duration(i) * time.Second),
@@ -247,21 +243,20 @@ func TestCallbackFiresOnAnomaly(t *testing.T) {
 		mu.Unlock()
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	det.Start(ctx)
 
 	now := time.Now()
 
 	// Trigger an error storm to fire the callback
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		bus.Publish(events.Event{
 			Type:      events.SessionStarted,
 			Timestamp: now.Add(time.Duration(i) * time.Second),
 			SessionID: "s" + string(rune('a'+i)),
 		})
 	}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		bus.Publish(events.Event{
 			Type:      events.SessionError,
 			Timestamp: now.Add(time.Duration(3+i) * time.Second),
@@ -290,14 +285,13 @@ func TestNoFalsePositivesDuringNormalOperation(t *testing.T) {
 		mu.Unlock()
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	det.Start(ctx)
 
 	now := time.Now()
 
 	// Normal operation: steady costs, few errors, sessions complete on time
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		ts := now.Add(time.Duration(i) * time.Second)
 		bus.Publish(events.Event{
 			Type:      events.SessionStarted,
@@ -331,14 +325,13 @@ func TestNoFalsePositivesDuringNormalOperation(t *testing.T) {
 func TestKillSwitchAutoEngageOnCritical(t *testing.T) {
 	bus, det, ks := testDetector(t, true) // killSwitch enabled
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	det.Start(ctx)
 
 	now := time.Now()
 
 	// Trigger a cascade failure (critical severity)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		bus.Publish(events.Event{
 			Type:      events.BudgetExceeded,
 			Timestamp: now.Add(time.Duration(i) * time.Second),
@@ -357,14 +350,13 @@ func TestKillSwitchAutoEngageOnCritical(t *testing.T) {
 func TestKillSwitchNotEngagedWhenDisabled(t *testing.T) {
 	bus, det, ks := testDetector(t, false) // killSwitch disabled
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	det.Start(ctx)
 
 	now := time.Now()
 
 	// Trigger a cascade failure (critical severity)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		bus.Publish(events.Event{
 			Type:      events.BudgetExceeded,
 			Timestamp: now.Add(time.Duration(i) * time.Second),

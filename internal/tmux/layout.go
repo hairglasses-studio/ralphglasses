@@ -185,13 +185,13 @@ func computeFleet(w, h, n int) []Pane {
 	panes := make([]Pane, 0, n)
 	idx := 0
 	yOff := 0
-	for r := 0; r < rows; r++ {
+	for r := range rows {
 		cellH := baseH
 		if r < extraH {
 			cellH++
 		}
 		xOff := 0
-		for c := 0; c < cols; c++ {
+		for c := range cols {
 			if idx >= n {
 				break
 			}

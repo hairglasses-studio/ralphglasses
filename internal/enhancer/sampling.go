@@ -91,7 +91,7 @@ func extractSamplingText(result *mcp.CreateMessageResult) string {
 	switch c := result.Content.(type) {
 	case mcp.TextContent:
 		return c.Text
-	case map[string]interface{}:
+	case map[string]any:
 		if t, ok := c["text"].(string); ok {
 			return t
 		}

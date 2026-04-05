@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -73,9 +74,7 @@ func sanitizeArgs(args map[string]any) string {
 	}
 	// Drop any key that looks like it might carry secrets.
 	safe := make(map[string]any, len(args))
-	for k, v := range args {
-		safe[k] = v
-	}
+	maps.Copy(safe, args)
 	b, err := json.Marshal(safe)
 	if err != nil {
 		return "{}"

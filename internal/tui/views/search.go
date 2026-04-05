@@ -202,10 +202,3 @@ func splitWords(s string) []string {
 	}
 	return words
 }
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

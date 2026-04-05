@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -11,7 +12,7 @@ import (
 const (
 	DefaultRetentionDays     = 30
 	DefaultMaxEventLogBytes  = 50 * 1024 * 1024 // 50 MiB
-	DefaultMaxObservationAge = 90                // days
+	DefaultMaxObservationAge = 90               // days
 )
 
 // Terminal session statuses considered "completed" for archival purposes.
@@ -133,10 +134,7 @@ func (c *Compactor) Run(ctx context.Context) (*CompactionReport, error) {
 		return nil, fmt.Errorf("compaction: measure after size: %w", err)
 	}
 	report.BytesAfter = sizeAfter
-	report.BytesReclaimed = sizeBefore - sizeAfter
-	if report.BytesReclaimed < 0 {
-		report.BytesReclaimed = 0
-	}
+	report.BytesReclaimed = max(sizeBefore-sizeAfter, 0)
 
 	report.ElapsedMilliseconds = time.Since(start).Milliseconds()
 	return report, nil
@@ -150,12 +148,12 @@ func (c *Compactor) archiveSessions(ctx context.Context) (int, error) {
 
 	// Build the status placeholders.
 	args := make([]any, 0, len(terminalStatuses)+1)
-	placeholders := ""
+	var placeholders strings.Builder
 	for i, s := range terminalStatuses {
 		if i > 0 {
-			placeholders += ","
+			placeholders.WriteString(",")
 		}
-		placeholders += "?"
+		placeholders.WriteString("?")
 		args = append(args, s)
 	}
 	args = append(args, cutoffStr)
@@ -165,7 +163,7 @@ func (c *Compactor) archiveSessions(ctx context.Context) (int, error) {
 		DELETE FROM observations WHERE session_id IN (
 			SELECT id FROM sessions
 			WHERE status IN (%s) AND updated_at < ?
-		)`, placeholders)
+		)`, placeholders.String())
 	if _, err := c.store.db.ExecContext(ctx, deleteObs, args...); err != nil {
 		return 0, fmt.Errorf("delete orphan observations: %w", err)
 	}
@@ -173,7 +171,7 @@ func (c *Compactor) archiveSessions(ctx context.Context) (int, error) {
 	// Delete the sessions themselves.
 	deleteSess := fmt.Sprintf(`
 		DELETE FROM sessions
-		WHERE status IN (%s) AND updated_at < ?`, placeholders)
+		WHERE status IN (%s) AND updated_at < ?`, placeholders.String())
 	res, err := c.store.db.ExecContext(ctx, deleteSess, args...)
 	if err != nil {
 		return 0, fmt.Errorf("delete sessions: %w", err)

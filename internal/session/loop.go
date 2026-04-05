@@ -200,17 +200,10 @@ func (m *Manager) RunLoop(ctx context.Context, id string) error {
 				FileCount: run.Iterations[0].StagedFilesCount,
 			})
 			// Use the larger of adaptive estimate and configured maxTurns.
-			if estimated > maxTurns {
-				adaptiveMax = estimated
-			} else {
-				adaptiveMax = maxTurns
-			}
+			adaptiveMax = max(estimated, maxTurns)
 			slog.Info("adaptive depth estimated", "loop", id, "estimated", estimated, "effective_max", adaptiveMax)
 		}
-		effectiveMax := maxTurns
-		if adaptiveMax > effectiveMax {
-			effectiveMax = adaptiveMax
-		}
+		effectiveMax := max(adaptiveMax, maxTurns)
 		run.mu.Unlock()
 
 		if totalIters >= effectiveMax {
@@ -398,7 +391,7 @@ func (m *Manager) bootstrapLoopAutonomy(repoPath string) *AutonomyConfig {
 	if err != nil {
 		return BootstrapAutonomy(cfg)
 	}
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue

@@ -39,7 +39,7 @@ func TestContextualThompson_SelectWithoutContext(t *testing.T) {
 	ct := NewContextualThompson(contextualArms(), 0, 0.1)
 	counts := make(map[string]int)
 
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		arm := ct.Select(nil)
 		counts[arm.ID]++
 	}
@@ -62,7 +62,7 @@ func TestContextualThompson_SelectWithContext(t *testing.T) {
 	simpleCtx[FeatureRecentSuccess] = 0.6
 
 	counts := make(map[string]int)
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		arm := ct.Select(simpleCtx)
 		counts[arm.ID]++
 	}
@@ -92,7 +92,7 @@ func TestContextualThompson_LearnsCheapForSimple(t *testing.T) {
 
 	// Train: cheap succeeds on simple, fails on complex.
 	// Expensive succeeds on both but especially complex.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		ct.Update(Reward{
 			ArmID:     "cheap",
 			Value:     0.9,
@@ -121,7 +121,7 @@ func TestContextualThompson_LearnsCheapForSimple(t *testing.T) {
 
 	// After training, verify that for simple tasks the cheap arm is favored.
 	cheapCount := 0
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		arm := ct.Select(simpleCtx)
 		if arm.ID == "cheap" {
 			cheapCount++
@@ -166,12 +166,12 @@ func TestContextualThompson_SlidingWindow(t *testing.T) {
 	ct := NewContextualThompson(arms, 5, 0.1)
 
 	// 5 failures.
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		ct.Update(Reward{ArmID: "a", Value: 0.0, Timestamp: time.Now()})
 	}
 
 	// Then 5 successes — should push failures out of the window.
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		ct.Update(Reward{ArmID: "a", Value: 1.0, Timestamp: time.Now()})
 	}
 
