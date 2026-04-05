@@ -43,6 +43,8 @@ type CascadeContext struct {
 	BudgetPressure  BudgetPressure  // categorized budget pressure
 	TimeSensitivity TimeSensitivity // batch vs interactive
 	RecentSuccess   float64         // recent success rate for the considered provider (0.0-1.0)
+	PromptQuality   float64         // prompt quality score normalized to -1.0..1.0 (0 = unset)
+	CacheAffinity   float64         // cache hit probability -1.0..1.0 (0 = unset)
 }
 
 // BanditRouter wraps a contextual bandit policy for dynamic cascade routing.
@@ -278,6 +280,12 @@ func (br *BanditRouter) contextToFeatures(ctx CascadeContext) []float64 {
 
 	// Recent success rate: map [0, 1] to [-1, 1].
 	features[bandit.FeatureRecentSuccess] = 2.0*ctx.RecentSuccess - 1.0
+
+	// Prompt quality: normalized score. 0 means unset (no DJ context).
+	features[bandit.FeaturePromptQuality] = ctx.PromptQuality
+
+	// Cache affinity: warm cache signal. 0 means unset (no DJ context).
+	features[bandit.FeatureCacheAffinity] = ctx.CacheAffinity
 
 	return features
 }

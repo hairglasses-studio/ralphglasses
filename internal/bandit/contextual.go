@@ -15,6 +15,8 @@ const (
 	FeatureBudgetPressure                           // -1.0=low remaining, 0.0=medium, 1.0=high remaining
 	FeatureTimeSensitivity                          // -1.0=batch, 0.0=normal, 1.0=interactive/urgent
 	FeatureRecentSuccess                            // -1.0=low success, 0.0=neutral, 1.0=high success
+	FeaturePromptQuality                            // -1.0=F grade, 0.0=C grade, 1.0=A grade (Prompt DJ)
+	FeatureCacheAffinity                            // -1.0=no cache, 0.0=unknown, 1.0=warm cache hit (Prompt DJ)
 	NumContextualFeatures                           // sentinel: total feature count
 )
 
