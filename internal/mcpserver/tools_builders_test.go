@@ -165,8 +165,8 @@ func TestDefaultRegistryBuildAll(t *testing.T) {
 	reg := defaultRegistry()
 	groups := reg.BuildAll(srv)
 
-	if len(groups) != 20 {
-		t.Fatalf("expected 20 groups from BuildAll, got %d", len(groups))
+	if len(groups) != 21 {
+		t.Fatalf("expected 21 groups from BuildAll, got %d", len(groups))
 	}
 
 	for _, name := range ToolGroupNames {
@@ -182,8 +182,8 @@ func TestBuildToolGroupsTotalCount(t *testing.T) {
 	srv, _ := setupTestServer(t)
 	groups := srv.buildToolGroups()
 
-	if len(groups) != 20 {
-		t.Fatalf("expected 20 groups, got %d", len(groups))
+	if len(groups) != 21 {
+		t.Fatalf("expected 21 groups, got %d", len(groups))
 	}
 
 	// Count total tools.
