@@ -56,6 +56,9 @@ func NewTieredKnowledge(hot MemoryStore, injector *graph.ContextInjector) *Tiere
 // It checks the in-memory cache first, then delegates to the graph-based
 // context injector. Results are cached for subsequent lookups.
 // maxChunks limits the number of returned chunks (default 20).
+//
+// The returned slice is a defensive copy — callers may mutate it safely
+// without corrupting the cache.
 func (tk *TieredKnowledge) Query(taskDesc string, maxChunks int) ([]graph.CodeChunk, error) {
 	if maxChunks <= 0 {
 		maxChunks = 20
@@ -63,18 +66,26 @@ func (tk *TieredKnowledge) Query(taskDesc string, maxChunks int) ([]graph.CodeCh
 
 	key := queryHash(taskDesc)
 
-	// Check cache first.
-	tk.mu.Lock()
-	if cached, ok := tk.cache[key]; ok {
+	// Check cache first (read-only path uses RLock).
+	tk.mu.RLock()
+	cached, ok := tk.cache[key]
+	tk.mu.RUnlock()
+
+	if ok {
+		// Promote to write lock briefly to bump hit count.
+		tk.mu.Lock()
 		tk.hitCount[key]++
 		tk.mu.Unlock()
+
 		tk.cacheHits.Add(1)
-		if len(cached) > maxChunks {
-			return cached[:maxChunks], nil
+
+		// Return a defensive copy so callers cannot mutate cached data.
+		n := len(cached)
+		if n > maxChunks {
+			n = maxChunks
 		}
-		return cached, nil
+		return copyChunks(cached[:n]), nil
 	}
-	tk.mu.Unlock()
 
 	tk.cacheMisses.Add(1)
 
@@ -97,7 +108,8 @@ func (tk *TieredKnowledge) Query(taskDesc string, maxChunks int) ([]graph.CodeCh
 	tk.cache[key] = chunks
 	tk.hitCount[key] = 1
 
-	return chunks, nil
+	// Return a defensive copy of the newly cached data as well.
+	return copyChunks(chunks), nil
 }
 
 // Invalidate removes a cached entry by its original query string.
@@ -141,6 +153,17 @@ func (tk *TieredKnowledge) evictLocked() {
 		delete(tk.cache, minKey)
 		delete(tk.hitCount, minKey)
 	}
+}
+
+// copyChunks returns a shallow copy of a CodeChunk slice so callers cannot
+// mutate the cached backing array.
+func copyChunks(src []graph.CodeChunk) []graph.CodeChunk {
+	if src == nil {
+		return nil
+	}
+	dst := make([]graph.CodeChunk, len(src))
+	copy(dst, src)
+	return dst
 }
 
 // queryHash returns a deterministic hash for a query string, used as cache key.
