@@ -241,6 +241,11 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_recovery_execute": {Title: "Recovery Execute", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_incident_report":  {Title: "Incident Report", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_session_discover": {Title: "Session Discover", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+
+	// ── promptdj ─────────────────────────────────────────────────────────
+	"ralphglasses_promptdj_route":    {Title: "Prompt DJ Route", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_promptdj_dispatch": {Title: "Prompt DJ Dispatch", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_promptdj_feedback": {Title: "Prompt DJ Feedback", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(false)},
 }
 
 // GetAnnotation returns the ToolAnnotation for a named tool, or an empty
