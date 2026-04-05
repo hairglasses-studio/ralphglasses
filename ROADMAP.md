@@ -417,7 +417,7 @@ Reference research: `~/hairglasses-studio/docs/research/tui-design/`
 
 #### Tier 3: Enhanced Layouts
 - [x] 1.11.15 — Virtual scrolling for fleet list sections — height-based windowing, `[N-M of Total]` header `P2` `L`
-- [ ] 1.11.16 — Two-column detail views at wide terminals (>140 cols): left status/cost, right CB/config `P2` `L`
+- [x] 1.11.16 — Two-column repo detail at wide terminals (>140 cols): left status+progress, right CB+config `P2` `L`
 - [x] 1.11.17 — Fleet cost trend upgrades to streamlinechart (ntcharts) at tall terminals, sparkline fallback `P3` `M`
 
 - **Acceptance:** All views render without overflow at 80 cols; sparklines fill width at 200 cols; stat boxes wrap correctly
