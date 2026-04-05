@@ -30,12 +30,16 @@ func (s *Server) handleCircuitReset(ctx context.Context, req mcp.CallToolRequest
 		if engine == nil {
 			return codedError(ErrProviderUnavailable, "enhancer engine not available (no API key or LLM disabled)"), nil
 		}
-		prevState := engine.CB.State()
-		engine.CB.Reset()
+		// Collect previous states and reset all per-provider circuit breakers.
+		prevStates := make(map[string]string, len(engine.CBs))
+		for provider, cb := range engine.CBs {
+			prevStates[provider] = cb.State()
+			cb.Reset()
+		}
 		return jsonResult(map[string]any{
-			"status":         "reset",
-			"service":        "enhancer",
-			"previous_state": prevState,
+			"status":          "reset",
+			"service":         "enhancer",
+			"previous_states": prevStates,
 		}), nil
 	}
 

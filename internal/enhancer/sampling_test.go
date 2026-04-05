@@ -194,9 +194,11 @@ func TestSamplingEngine_FallbackInHybrid(t *testing.T) {
 	// Create a HybridEngine backed by sampling (no API keys needed)
 	engine := &HybridEngine{
 		Client: samplingEngine,
-		CB:     NewCircuitBreaker(),
-		Cache:  NewPromptCache(),
-		Cfg:    LLMConfig{Enabled: true, Provider: "sampling"},
+		CBs: map[string]*CircuitBreaker{
+			"sampling": NewCircuitBreaker(),
+		},
+		Cache: NewPromptCache(),
+		Cfg:   LLMConfig{Enabled: true, Provider: "sampling"},
 	}
 
 	result := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeAuto, "")

@@ -208,7 +208,10 @@ func (d *FleetAnomalyDetector) Check() []Anomaly {
 
 // Start begins periodic fleet anomaly checking.
 func (d *FleetAnomalyDetector) Start(ctx context.Context, interval time.Duration) {
-	ctx, d.cancel = context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(ctx)
+	d.mu.Lock()
+	d.cancel = cancel
+	d.mu.Unlock()
 	go func() {
 		defer close(d.done)
 		ticker := time.NewTicker(interval)
@@ -232,8 +235,11 @@ func (d *FleetAnomalyDetector) Start(ctx context.Context, interval time.Duration
 
 // Stop halts the periodic checking.
 func (d *FleetAnomalyDetector) Stop() {
-	if d.cancel != nil {
-		d.cancel()
+	d.mu.Lock()
+	cancel := d.cancel
+	d.mu.Unlock()
+	if cancel != nil {
+		cancel()
 	}
 	<-d.done
 }

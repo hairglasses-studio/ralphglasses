@@ -26,10 +26,10 @@ func ValidMode(s string) EnhanceMode {
 	}
 }
 
-// HybridEngine manages the LLM client, circuit breaker, and cache.
+// HybridEngine manages the LLM client, per-provider circuit breakers, and cache.
 type HybridEngine struct {
 	Client PromptImprover
-	CB     *CircuitBreaker
+	CBs    map[string]*CircuitBreaker
 	Cache  *PromptCache
 	Cfg    LLMConfig
 }
@@ -48,9 +48,14 @@ func NewHybridEngine(cfg LLMConfig) *HybridEngine {
 
 	return &HybridEngine{
 		Client: client,
-		CB:     NewCircuitBreaker(),
-		Cache:  NewPromptCache(),
-		Cfg:    cfg,
+		CBs: map[string]*CircuitBreaker{
+			string(ProviderClaude):   NewCircuitBreaker(),
+			string(ProviderGemini):   NewCircuitBreaker(),
+			string(ProviderOpenAI):   NewCircuitBreaker(),
+			string(ProviderSampling): NewCircuitBreaker(),
+		},
+		Cache: NewPromptCache(),
+		Cfg:   cfg,
 	}
 }
 
@@ -99,8 +104,9 @@ func EnhanceHybrid(ctx context.Context, prompt string, taskType TaskType, cfg Co
 		}
 	}
 
-	// Check circuit breaker
-	if !engine.CB.Allow() {
+	// Check circuit breaker (per-provider)
+	cb := engine.circuitBreaker(engine.Client.Provider())
+	if !cb.Allow() {
 		if mode == ModeLLM {
 			// LLM-only mode and circuit is open — return error result
 			return EnhanceResult{
@@ -129,7 +135,7 @@ func EnhanceHybrid(ctx context.Context, prompt string, taskType TaskType, cfg Co
 
 	llmResult, err := retryImprove(llmCtx, engine.Client, prompt, opts, DefaultBackoff())
 	if err != nil {
-		engine.CB.RecordFailure()
+		cb.RecordFailure()
 		fmt.Fprintf(os.Stderr, "prompt-improver: LLM enhancement failed: %v\n", err)
 
 		if mode == ModeLLM {
@@ -150,7 +156,7 @@ func EnhanceHybrid(ctx context.Context, prompt string, taskType TaskType, cfg Co
 	}
 
 	// Success
-	engine.CB.RecordSuccess()
+	cb.RecordSuccess()
 	engine.Cache.Put(prompt, opts, llmResult)
 
 	return EnhanceResult{
@@ -163,4 +169,16 @@ func EnhanceHybrid(ctx context.Context, prompt string, taskType TaskType, cfg Co
 		CostTier:        costTierForTokens(EstimateTokens(llmResult.Enhanced)),
 		Source:          "llm",
 	}
+}
+
+// circuitBreaker returns the per-provider CircuitBreaker, creating a default one
+// if the provider is not already in the map.
+func (e *HybridEngine) circuitBreaker(provider ProviderName) *CircuitBreaker {
+	key := string(provider)
+	if cb, ok := e.CBs[key]; ok {
+		return cb
+	}
+	cb := NewCircuitBreaker()
+	e.CBs[key] = cb
+	return cb
 }

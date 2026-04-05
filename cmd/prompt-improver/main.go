@@ -286,6 +286,11 @@ func runEnhanceWithMode(prompt, taskType, mode string, quiet bool, provider, tar
 	cfg.LLM.Enabled = true // --mode flag implies LLM should be available
 	if provider != "" {
 		cfg.LLM.Provider = provider
+		// Re-resolve TargetProvider to match the overridden LLM provider,
+		// unless the caller explicitly supplied a --target-provider flag.
+		if targetProvider == "" {
+			cfg.TargetProvider = enhancer.DefaultTargetProviderForLLM(provider)
+		}
 	}
 	if targetProvider != "" {
 		cfg.TargetProvider = enhancer.ProviderName(targetProvider)

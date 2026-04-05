@@ -53,7 +53,7 @@ Tailscale peers on the fleet port to auto-discover the coordinator.`,
 		bus, sessMgr, hostname := setupServe()
 
 		if serveCoordinator {
-			return runCoordinator(ctx, hostname, bus, sessMgr)
+			return runCoordinator(ctx, sp, hostname, bus, sessMgr)
 		}
 		return runWorker(ctx, hostname, sp, bus, sessMgr)
 	},
@@ -68,9 +68,9 @@ func setupServe() (*events.Bus, *session.Manager, string) {
 	return bus, sessMgr, hostname
 }
 
-func runCoordinator(ctx context.Context, hostname string, bus *events.Bus, sessMgr *session.Manager) error {
+func runCoordinator(ctx context.Context, scanRoot, hostname string, bus *events.Bus, sessMgr *session.Manager) error {
 	nodeID := fmt.Sprintf("coord-%s", hostname)
-	coord := fleet.NewCoordinator(nodeID, hostname, servePort, version, bus, sessMgr)
+	coord := fleet.NewCoordinatorWithPersistence(nodeID, hostname, servePort, version, bus, sessMgr, scanRoot)
 
 	if fleetBudget > 0 {
 		coord.SetBudgetLimit(fleetBudget)

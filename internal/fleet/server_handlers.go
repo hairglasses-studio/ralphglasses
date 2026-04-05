@@ -144,6 +144,16 @@ func (c *Coordinator) handleWorkComplete(w http.ResponseWriter, r *http.Request)
 			if item.AssignedTo != "" {
 				c.budgetMgr.RecordCost(item.AssignedTo, payload.Result.SpentUSD)
 			}
+
+			// Feed the cost predictor for burn-rate forecasting and anomaly detection.
+			if c.costPredictor != nil {
+				c.costPredictor.Record(CostSample{
+					Timestamp: now,
+					CostUSD:   payload.Result.SpentUSD,
+					Provider:  string(item.Provider),
+					TaskType:  string(item.Type),
+				})
+			}
 		}
 	} else {
 		retryable, delay := c.retries.RecordFailure(item.ID)

@@ -20,6 +20,12 @@ type PromptImprover interface {
 	Provider() ProviderName
 }
 
+// DefaultTargetProviderForLLM returns the TargetProvider that matches the given
+// LLM provider name. Returns ProviderOpenAI for unknown or empty values.
+func DefaultTargetProviderForLLM(provider string) ProviderName {
+	return defaultTargetProviderForLLM(provider)
+}
+
 func defaultTargetProviderForLLM(provider string) ProviderName {
 	switch provider {
 	case "claude":

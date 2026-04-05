@@ -136,7 +136,10 @@ func (d *AnomalyDetector) OnAnomaly(fn func(Anomaly)) {
 // Start begins listening for events on the bus. It blocks until Stop is
 // called or the context is cancelled.
 func (d *AnomalyDetector) Start(ctx context.Context) {
-	ctx, d.cancel = context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(ctx)
+	d.mu.Lock()
+	d.cancel = cancel
+	d.mu.Unlock()
 
 	ch := d.bus.SubscribeFiltered("safety.anomaly",
 		events.CostUpdate,
@@ -166,8 +169,11 @@ func (d *AnomalyDetector) Start(ctx context.Context) {
 
 // Stop cancels the event listener and waits for it to finish.
 func (d *AnomalyDetector) Stop() {
-	if d.cancel != nil {
-		d.cancel()
+	d.mu.Lock()
+	cancel := d.cancel
+	d.mu.Unlock()
+	if cancel != nil {
+		cancel()
 	}
 	<-d.done
 }

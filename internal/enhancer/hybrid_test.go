@@ -37,7 +37,9 @@ func newTestEngine(serverURL string) *HybridEngine {
 			effortLevel:  "medium",
 			cacheControl: true,
 		},
-		CB:    NewCircuitBreaker(),
+		CBs: map[string]*CircuitBreaker{
+			"claude": NewCircuitBreaker(),
+		},
 		Cache: NewPromptCache(),
 		Cfg:   LLMConfig{Enabled: true, Timeout: 5 * time.Second},
 	}
@@ -126,15 +128,17 @@ func TestEnhanceHybrid_CircuitBreakerOpenAutoFallback(t *testing.T) {
 			BaseURL:    "http://localhost:1", // will fail
 			HTTPClient: &http.Client{Timeout: 100 * time.Millisecond},
 		},
-		CB:    NewCircuitBreaker(),
+		CBs: map[string]*CircuitBreaker{
+			"claude": NewCircuitBreaker(),
+		},
 		Cache: NewPromptCache(),
 		Cfg:   LLMConfig{Enabled: true, Timeout: 100 * time.Millisecond},
 	}
 
 	// Trip the circuit breaker
-	engine.CB.RecordFailure()
-	engine.CB.RecordFailure()
-	engine.CB.RecordFailure()
+	engine.CBs["claude"].RecordFailure()
+	engine.CBs["claude"].RecordFailure()
+	engine.CBs["claude"].RecordFailure()
 
 	result := EnhanceHybrid(context.Background(), "fix the bug in the authentication module", "", Config{}, engine, ModeAuto, "")
 	if result.Source != "local_fallback" {
@@ -147,14 +151,16 @@ func TestEnhanceHybrid_CircuitBreakerOpenLLMMode(t *testing.T) {
 	t.Parallel()
 	engine := &HybridEngine{
 		Client: &LLMClient{APIKey: "test-key"},
-		CB:     NewCircuitBreaker(),
-		Cache:  NewPromptCache(),
-		Cfg:    LLMConfig{Enabled: true},
+		CBs: map[string]*CircuitBreaker{
+			"claude": NewCircuitBreaker(),
+		},
+		Cache: NewPromptCache(),
+		Cfg:   LLMConfig{Enabled: true},
 	}
 
-	engine.CB.RecordFailure()
-	engine.CB.RecordFailure()
-	engine.CB.RecordFailure()
+	engine.CBs["claude"].RecordFailure()
+	engine.CBs["claude"].RecordFailure()
+	engine.CBs["claude"].RecordFailure()
 
 	result := EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeLLM, "")
 	if result.Source != "error" {
@@ -220,14 +226,14 @@ func TestEnhanceHybrid_RecordsSuccessOnCircuitBreaker(t *testing.T) {
 
 	engine := newTestEngine(server.URL)
 	// Add some failures (but not enough to open)
-	engine.CB.RecordFailure()
-	engine.CB.RecordFailure()
+	engine.CBs["claude"].RecordFailure()
+	engine.CBs["claude"].RecordFailure()
 
 	EnhanceHybrid(context.Background(), "fix the bug", "", Config{}, engine, ModeAuto, "")
 
 	// After success, circuit breaker should be closed with 0 failures
-	if engine.CB.State() != "closed" {
-		t.Errorf("expected circuit breaker closed after success, got %s", engine.CB.State())
+	if engine.CBs["claude"].State() != "closed" {
+		t.Errorf("expected circuit breaker closed after success, got %s", engine.CBs["claude"].State())
 	}
 }
 
@@ -244,8 +250,8 @@ func TestEnhanceHybrid_RecordsFailureOnCircuitBreaker(t *testing.T) {
 	EnhanceHybrid(context.Background(), "another prompt for the thing", "", Config{}, engine, ModeAuto, "")
 	EnhanceHybrid(context.Background(), "third prompt to trigger breaker", "", Config{}, engine, ModeAuto, "")
 
-	if engine.CB.State() != "open" {
-		t.Errorf("expected circuit breaker open after 3 failures, got %s", engine.CB.State())
+	if engine.CBs["claude"].State() != "open" {
+		t.Errorf("expected circuit breaker open after 3 failures, got %s", engine.CBs["claude"].State())
 	}
 }
 

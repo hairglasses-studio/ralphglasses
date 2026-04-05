@@ -13,7 +13,7 @@ import (
 const (
 	CostGeminiFlashLiteInput float64 = 0.10
 	CostGeminiFlashInput     float64 = 0.30
-	CostGeminiFlashOutput    float64 = 2.50
+	CostGeminiFlashOutput    float64 = 3.50
 	CostClaudeSonnetInput    float64 = 3.00
 	CostClaudeSonnetOutput   float64 = 15.00
 	CostClaudeOpusInput      float64 = 15.00
