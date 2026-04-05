@@ -126,7 +126,7 @@ func TestToolGroupNames(t *testing.T) {
 		"core", "session", "loop", "prompt", "fleet",
 		"repo", "roadmap", "team", "awesome", "advanced", "eval", "fleet_h",
 		"observability", "rdcycle", "plugin", "sweep",
-		"rc", "autonomy", "workflow", "docs", "recovery",
+		"rc", "autonomy", "workflow", "docs", "recovery", "promptdj",
 	}
 	if len(mcpserver.ToolGroupNames) != len(expected) {
 		t.Errorf("ToolGroupNames has %d entries, want %d", len(mcpserver.ToolGroupNames), len(expected))

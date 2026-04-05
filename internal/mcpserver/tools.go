@@ -22,6 +22,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
+	"github.com/hairglasses-studio/ralphglasses/internal/promptdj"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -91,6 +92,9 @@ type Server struct {
 
 	// Tasks is the async task registry for long-running MCP tool operations.
 	Tasks *TaskRegistry
+
+	// djRouter is the Prompt DJ routing engine (lazy-initialized).
+	djRouter *promptdj.PromptDJRouter
 }
 
 // DefaultScanTTL is how long repo scan results are considered fresh before
@@ -128,7 +132,7 @@ var ToolGroupNames = []string{
 	"core", "session", "loop", "prompt", "fleet",
 	"repo", "roadmap", "team", "awesome", "advanced", "eval", "fleet_h",
 	"observability", "rdcycle", "plugin", "sweep",
-	"rc", "autonomy", "workflow", "docs", "recovery",
+	"rc", "autonomy", "workflow", "docs", "recovery", "promptdj",
 }
 
 func (s *Server) scan() error {
