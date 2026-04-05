@@ -1552,7 +1552,7 @@ func TestRunCoordinator_CancelledContext(t *testing.T) {
 	servePort = -1 // invalid port → ListenAndServe errors immediately
 	fleetBudget = 100
 
-	err := runCoordinator(ctx, hostname, bus, sessMgr)
+	err := runCoordinator(ctx, hostname, "", bus, sessMgr)
 	// Invalid port causes Start() to return an error, which is acceptable.
 	if err == nil {
 		t.Log("runCoordinator returned nil (unexpected but not fatal)")

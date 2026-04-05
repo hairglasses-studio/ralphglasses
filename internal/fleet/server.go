@@ -3,8 +3,11 @@ package fleet
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -45,8 +48,14 @@ type Coordinator struct {
 	retries    *RetryTracker
 	autoscaler *AutoScaler
 
+	// Cost prediction: sliding window burn-rate forecasting and anomaly detection.
+	costPredictor *CostPredictor
+
 	// Tailscale integration (nil-safe: auth middleware passes all when nil)
 	tsClient TailscaleClient
+
+	// queuePath is the file path used for queue persistence. Empty means no persistence.
+	queuePath string
 
 	startedAt time.Time
 	server    *http.Server
@@ -68,10 +77,34 @@ func NewCoordinator(nodeID, hostname string, port int, version string, bus *even
 		budgetMgr:  NewBudgetManager(10.0),
 		router:     &LeastLoadedRouter{},
 		retries:    NewRetryTracker(DefaultRetryPolicy()),
-		autoscaler: NewAutoScaler(DefaultAutoScalerConfig()),
-		tsClient:   DefaultTailscaleClient(),
+		autoscaler:    NewAutoScaler(DefaultAutoScalerConfig()),
+		costPredictor: NewCostPredictor(0),
+		tsClient:      DefaultTailscaleClient(),
 		startedAt:  time.Now(),
 	}
+}
+
+// NewCoordinatorWithPersistence creates a coordinator that loads the work queue
+// from dataDir/.ralph/fleet-queue.json on startup and saves it on shutdown.
+// dataDir is typically the scan-path root (e.g. ~/hairglasses-studio).
+// If the file does not exist yet the queue starts empty (not an error).
+func NewCoordinatorWithPersistence(nodeID, hostname string, port int, version string, bus *events.Bus, sessMgr *session.Manager, dataDir string) *Coordinator {
+	c := NewCoordinator(nodeID, hostname, port, version, bus, sessMgr)
+
+	ralphDir := filepath.Join(dataDir, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0755); err != nil {
+		slog.Warn("fleet: could not create .ralph dir for queue persistence", "path", ralphDir, "error", err)
+		return c
+	}
+
+	c.queuePath = filepath.Join(ralphDir, "fleet-queue.json")
+	if err := c.queue.LoadFrom(c.queuePath); err != nil {
+		slog.Debug("fleet: no saved queue to restore", "path", c.queuePath, "error", err)
+	} else {
+		slog.Info("fleet: restored queue from disk", "path", c.queuePath)
+	}
+
+	return c
 }
 
 // SetBudgetLimit sets the fleet-wide budget ceiling.
@@ -145,6 +178,13 @@ func (c *Coordinator) Start(ctx context.Context) error {
 
 // Stop gracefully shuts down the coordinator.
 func (c *Coordinator) Stop(ctx context.Context) error {
+	if c.queuePath != "" {
+		if err := c.queue.SaveTo(c.queuePath); err != nil {
+			slog.Error("fleet: failed to save queue on shutdown", "path", c.queuePath, "error", err)
+		} else {
+			slog.Info("fleet: queue saved on shutdown", "path", c.queuePath)
+		}
+	}
 	if c.server != nil {
 		return c.server.Shutdown(ctx)
 	}
@@ -166,6 +206,11 @@ func (c *Coordinator) maintenanceLoop(ctx context.Context) {
 			c.autoScaleCheck()               // Phase 10.5.4: evaluate worker pool scaling
 			c.queue.ReapStale(time.Hour)     // QW-11: clean phantom/stale tasks older than 1 hour
 			c.queue.ReapPhantomRepos()        // QW-11: purge bare "001" placeholder repo entries
+			if c.queuePath != "" {
+				if err := c.queue.SaveTo(c.queuePath); err != nil {
+					slog.Error("fleet: periodic queue checkpoint failed", "path", c.queuePath, "error", err)
+				}
+			}
 		}
 	}
 }

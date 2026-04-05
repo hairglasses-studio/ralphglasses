@@ -39,7 +39,7 @@ type Config struct {
 
 	// TargetProvider controls which model family the enhanced prompt targets.
 	// Affects pipeline stage behavior (XML vs markdown structure) and scoring suggestions.
-	// Empty defaults to "openai".
+	// Empty defaults to the LLM.Provider value (or "openai" if both are unset).
 	TargetProvider ProviderName `yaml:"target_provider"`
 }
 
@@ -48,7 +48,7 @@ type LLMConfig struct {
 	// Enabled activates LLM-backed improvement (default false — opt-in)
 	Enabled bool `yaml:"enabled"`
 
-	// Provider selects the LLM API backend: "claude" (default), "gemini", "openai"
+	// Provider selects the LLM API backend: "claude", "gemini", "openai" (default "openai")
 	Provider string `yaml:"provider"`
 
 	// ThinkingEnabled adds thinking scaffolding to the meta-prompt
@@ -233,11 +233,14 @@ func ResolveConfig(projectDir string) Config {
 		}
 	}
 
-	if cfg.LLM.Provider == "" {
-		cfg.LLM.Provider = "openai"
-	}
+	// Resolve TargetProvider first, before LLM.Provider falls back to "openai".
+	// This ensures an explicit LLM.Provider (e.g. "claude") propagates to
+	// TargetProvider when the caller has not set one explicitly.
 	if cfg.TargetProvider == "" {
 		cfg.TargetProvider = defaultTargetProviderForLLM(cfg.LLM.Provider)
+	}
+	if cfg.LLM.Provider == "" {
+		cfg.LLM.Provider = "openai"
 	}
 
 	return cfg
