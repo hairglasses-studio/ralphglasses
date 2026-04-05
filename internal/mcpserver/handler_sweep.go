@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -177,6 +178,10 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 	maxSweepBudget := p.OptionalNumber("max_sweep_budget_usd", 100.0)
 	maxTurns := int(p.OptionalNumber("max_turns", 50))
 	sessionPersistence := p.OptionalBool("session_persistence", false)
+	concurrency := int(p.OptionalNumber("sweep_concurrency", 10))
+	if concurrency <= 0 {
+		concurrency = 10
+	}
 
 	// Ensure repos are scanned.
 	if s.reposNil() {
@@ -251,71 +256,111 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 	})
 
 	go func() {
-		var launched []map[string]any
-		var errors []string
+		type sweepResult struct {
+			repoName     string
+			sess         *session.Session
+			err          error
+			budgetDenied bool
+		}
+
+		sem := make(chan struct{}, concurrency)
+		results := make(chan sweepResult, len(targetRepos))
+		var wg sync.WaitGroup
 
 		for _, r := range targetRepos {
-			// Substitute REPO_PLACEHOLDER with actual repo name.
-			repoPrompt := strings.ReplaceAll(prompt, "REPO_PLACEHOLDER", r.Name)
-
-			opts := session.LaunchOptions{
-				Provider:             session.DefaultPrimaryProvider(),
-				RepoPath:             r.Path,
-				Prompt:               repoPrompt,
-				Model:                model,
-				MaxBudgetUSD:         budgetUSD,
-				MaxTurns:             maxTurns,
-				PermissionMode:       permMode,
-				SweepID:              sweepID,
-				AllowedTools:         tools,
-				NoSessionPersistence: !sessionPersistence,
-				SessionID:            fmt.Sprintf("%s-%s", sweepID, r.Name),
-			}
-			if effort != "" {
-				opts.Effort = effort
-			}
-
-			// Auto-enhance prompt if requested.
-			if enhanceMode != "" && enhanceMode != "none" {
-				cfg := enhancer.LoadConfig(r.Path)
-				if enhancer.ShouldEnhance(repoPrompt, cfg) {
-					m := enhancer.ValidMode(enhanceMode)
-					if m == "" {
-						m = enhancer.ModeLocal
-					}
-					eResult := enhancer.EnhanceHybrid(ctx, repoPrompt, "", cfg, s.getEngine(), m, enhancer.ProviderOpenAI)
-					opts.Prompt = eResult.Enhanced
-				}
-			}
-
-			// Check sweep pool before launch.
+			// Budget pre-check: allocate before spawning the goroutine (FIFO priority).
 			if err := sweepPool.Allocate(r.Name, budgetUSD); err != nil {
-				errors = append(errors, fmt.Sprintf("%s: sweep budget cap reached", r.Name))
-				break
+				results <- sweepResult{repoName: r.Name, err: fmt.Errorf("budget cap: %w", err), budgetDenied: true}
+				continue // not break — subsequent repos may still fit
 			}
 
-			sess, err := s.SessMgr.Launch(context.Background(), opts)
-			if err != nil {
-				errors = append(errors, fmt.Sprintf("%s: %v", r.Name, err))
+			wg.Add(1)
+			go func(repo *repoRef) {
+				defer wg.Done()
+
+				// Acquire semaphore slot — blocks when concurrency limit is reached.
+				select {
+				case sem <- struct{}{}:
+				case <-ctx.Done():
+					results <- sweepResult{repoName: repo.Name, err: ctx.Err()}
+					return
+				}
+				defer func() { <-sem }()
+
+				repoPrompt := strings.ReplaceAll(prompt, "REPO_PLACEHOLDER", repo.Name)
+
+				opts := session.LaunchOptions{
+					Provider:             session.DefaultPrimaryProvider(),
+					RepoPath:             repo.Path,
+					Prompt:               repoPrompt,
+					Model:                model,
+					MaxBudgetUSD:         budgetUSD,
+					MaxTurns:             maxTurns,
+					PermissionMode:       permMode,
+					SweepID:              sweepID,
+					AllowedTools:         tools,
+					NoSessionPersistence: !sessionPersistence,
+					SessionID:            fmt.Sprintf("%s-%s", sweepID, repo.Name),
+				}
+				if effort != "" {
+					opts.Effort = effort
+				}
+
+				// Auto-enhance prompt if requested (independent per-repo LLM call).
+				if enhanceMode != "" && enhanceMode != "none" {
+					cfg := enhancer.LoadConfig(repo.Path)
+					if enhancer.ShouldEnhance(repoPrompt, cfg) {
+						m := enhancer.ValidMode(enhanceMode)
+						if m == "" {
+							m = enhancer.ModeLocal
+						}
+						eResult := enhancer.EnhanceHybrid(ctx, repoPrompt, "", cfg, s.getEngine(), m, enhancer.ProviderOpenAI)
+						opts.Prompt = eResult.Enhanced
+					}
+				}
+
+				// Launch — use sweep ctx so cancellation propagates.
+				sess, err := s.SessMgr.Launch(ctx, opts)
+				results <- sweepResult{repoName: repo.Name, sess: sess, err: err}
+			}(r)
+		}
+
+		// Close results once all goroutines finish.
+		go func() {
+			wg.Wait()
+			close(results)
+		}()
+
+		// Drain results.
+		var launched []map[string]any
+		var errors []string
+		var budgetExhaustedRepos []string
+		for res := range results {
+			if res.err != nil {
+				errors = append(errors, fmt.Sprintf("%s: %v", res.repoName, res.err))
+				if res.budgetDenied {
+					budgetExhaustedRepos = append(budgetExhaustedRepos, res.repoName)
+				}
 				continue
 			}
-
 			launched = append(launched, map[string]any{
-				"session_id": sess.ID,
-				"repo":       r.Name,
-				"status":     sess.Status,
+				"session_id": res.sess.ID,
+				"repo":       res.repoName,
+				"status":     res.sess.Status,
 			})
 		}
 
 		result := map[string]any{
-			"sweep_id":              sweepID,
-			"launched":              launched,
-			"errors":                errors,
-			"total":                 len(launched),
-			"estimated_per_session": estimatedPerSession,
-			"estimated_total":       totalEstimated,
-			"budget_per_session":    budgetUSD,
-			"max_sweep_budget_usd":  maxSweepBudget,
+			"sweep_id":               sweepID,
+			"launched":               launched,
+			"errors":                 errors,
+			"budget_exhausted_repos": budgetExhaustedRepos,
+			"concurrency":            concurrency,
+			"total":                  len(launched),
+			"estimated_per_session":  estimatedPerSession,
+			"estimated_total":        totalEstimated,
+			"budget_per_session":     budgetUSD,
+			"max_sweep_budget_usd":   maxSweepBudget,
 		}
 		s.Tasks.Complete(taskID, result)
 	}()

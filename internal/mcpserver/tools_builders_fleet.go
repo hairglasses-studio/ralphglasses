@@ -139,6 +139,16 @@ func (s *Server) buildRepoGroup() ToolGroup {
 				mcp.WithString("name", mcp.Description("Snapshot name (auto-generated if omitted)")),
 				mcp.WithString("repo", mcp.Description("Target repo name for snapshot storage (resolved from CWD if omitted)")),
 			), s.handleSnapshot},
+			{mcp.NewTool("ralphglasses_worktree_create",
+				mcp.WithDescription("Create a new git worktree for a repo under .ralph/worktrees/manual/"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithString("name", mcp.Required(), mcp.Description("Worktree name (sanitized for filesystem)")),
+			), s.handleWorktreeCreate},
+			{mcp.NewTool("ralphglasses_worktree_cleanup",
+				mcp.WithDescription("Clean up stale loop worktrees older than a given age — skips locked/active worktrees"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithNumber("max_age_hours", mcp.Description("Max age in hours before cleanup (default 24)")),
+			), s.handleWorktreeCleanup},
 		},
 	}
 }

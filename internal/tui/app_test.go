@@ -94,8 +94,8 @@ func TestLogLinesMsg(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m2, _ := m.Update(process.LogLinesMsg{Lines: []string{"hello", "world"}})
 	m = m2.(Model)
-	if len(m.LogView.Lines) != 2 {
-		t.Errorf("log lines = %d, want 2", len(m.LogView.Lines))
+	if len(m.LogView.Lines()) != 2 {
+		t.Errorf("log lines = %d, want 2", len(m.LogView.Lines()))
 	}
 }
 

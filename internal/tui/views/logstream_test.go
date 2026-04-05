@@ -1,6 +1,8 @@
 package views
 
 import (
+	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -16,12 +18,12 @@ func TestAppendLines(t *testing.T) {
 	lv := NewLogView()
 	lv.SetDimensions(80, 20)
 	lv.AppendLines([]string{"line 1", "line 2"})
-	if len(lv.Lines) != 2 {
-		t.Errorf("expected 2 lines, got %d", len(lv.Lines))
+	if len(lv.Lines()) != 2 {
+		t.Errorf("expected 2 lines, got %d", len(lv.Lines()))
 	}
 	lv.AppendLines([]string{"line 3"})
-	if len(lv.Lines) != 3 {
-		t.Errorf("expected 3 lines, got %d", len(lv.Lines))
+	if len(lv.Lines()) != 3 {
+		t.Errorf("expected 3 lines, got %d", len(lv.Lines()))
 	}
 }
 
@@ -29,12 +31,12 @@ func TestSetLines(t *testing.T) {
 	lv := NewLogView()
 	lv.SetDimensions(80, 20)
 	lv.SetLines([]string{"a", "b", "c"})
-	if len(lv.Lines) != 3 {
-		t.Errorf("expected 3, got %d", len(lv.Lines))
+	if len(lv.Lines()) != 3 {
+		t.Errorf("expected 3, got %d", len(lv.Lines()))
 	}
 	lv.SetLines([]string{"x"})
-	if len(lv.Lines) != 1 {
-		t.Errorf("after replace: expected 1, got %d", len(lv.Lines))
+	if len(lv.Lines()) != 1 {
+		t.Errorf("after replace: expected 1, got %d", len(lv.Lines()))
 	}
 }
 
@@ -160,5 +162,75 @@ func TestLogViewView(t *testing.T) {
 	view := lv.View()
 	if !strings.Contains(view, "hello") {
 		t.Error("view should contain 'hello'")
+	}
+}
+
+func TestLineRing_Capacity(t *testing.T) {
+	r := newLineRing(3)
+	r.push("a")
+	r.push("b")
+	r.push("c")
+	if !r.isFull() {
+		t.Fatal("ring should be full after 3 pushes into cap-3 ring")
+	}
+	r.push("d") // evicts "a"
+	got := r.slice()
+	want := []string{"b", "c", "d"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestLogView_BoundedByCapacity(t *testing.T) {
+	lv := NewLogViewWithCapacity(5)
+	lv.SetDimensions(80, 20)
+	for i := 0; i < 20; i++ {
+		lv.AppendLines([]string{fmt.Sprintf("line %d", i)})
+	}
+	if lv.Len() != 5 {
+		t.Errorf("expected 5 lines (capped), got %d", lv.Len())
+	}
+	lines := lv.Lines()
+	if lines[0] != "line 15" {
+		t.Errorf("expected oldest retained line to be 'line 15', got %q", lines[0])
+	}
+}
+
+func TestLogView_SetLines_Truncates(t *testing.T) {
+	lv := NewLogViewWithCapacity(3)
+	lv.SetDimensions(80, 10)
+	lv.SetLines([]string{"a", "b", "c", "d", "e"})
+	if lv.Len() != 3 {
+		t.Errorf("SetLines with more than cap should truncate, got %d", lv.Len())
+	}
+	lines := lv.Lines()
+	if lines[0] != "c" || lines[2] != "e" {
+		t.Errorf("expected [c d e], got %v", lines)
+	}
+}
+
+func TestLogView_EvictionCount(t *testing.T) {
+	r := newLineRing(3)
+	r.push("a")
+	r.push("b")
+	r.push("c")
+	r.push("d")
+	if r.evicted != 1 {
+		t.Errorf("expected 1 eviction, got %d", r.evicted)
+	}
+}
+
+func TestLineRing_Reset_ClearsEvicted(t *testing.T) {
+	r := newLineRing(3)
+	r.push("a")
+	r.push("b")
+	r.push("c")
+	r.push("d") // evicts "a"
+	r.reset()
+	if r.evicted != 0 {
+		t.Errorf("reset should clear evicted count, got %d", r.evicted)
+	}
+	if r.len() != 0 {
+		t.Errorf("reset should clear size, got %d", r.len())
 	}
 }

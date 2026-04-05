@@ -29,6 +29,7 @@ func (s *Server) buildSweepGroup() ToolGroup {
 				mcp.WithNumber("max_sweep_budget_usd", mcp.Description("Total sweep budget cap in USD (default 100). Rejects launch if estimated cost exceeds this.")),
 				mcp.WithNumber("max_turns", mcp.Description("Max turns per session (default 50). Prevents runaway sessions.")),
 				mcp.WithBoolean("session_persistence", mcp.Description("Persist session history to disk (default false for sweeps).")),
+					mcp.WithNumber("sweep_concurrency", mcp.Description("Max simultaneous session launches (default 10). Use 1 for serial, higher for large idle machines.")),
 			), s.handleSweepLaunch},
 			{mcp.NewTool("ralphglasses_sweep_status",
 				mcp.WithDescription("Dashboard for a sweep: per-repo status, total cost, completion percentage, stalled sessions, and optional output tails."),

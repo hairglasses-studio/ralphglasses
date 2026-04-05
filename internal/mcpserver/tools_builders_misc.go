@@ -151,10 +151,10 @@ func (s *Server) buildAwesomeGroup() ToolGroup {
 	}
 }
 
-func (s *Server) buildAdvancedGroup() ToolGroup {
+func (s *Server) buildRCGroup() ToolGroup {
 	return ToolGroup{
-		Name:        "advanced",
-		Description: "Advanced: RC tools, events, HITL, autonomy, feedback, provider recommend, journals, workflows, tool benchmark",
+		Name:        "rc",
+		Description: "Remote control — send prompts, read output, and act on sessions from mobile or scripted contexts",
 		Tools: []ToolEntry{
 			{mcp.NewTool("ralphglasses_rc_status",
 				mcp.WithDescription("Compact fleet overview for mobile: active sessions, costs, alerts in readable text"),
@@ -179,6 +179,75 @@ func (s *Server) buildAdvancedGroup() ToolGroup {
 				mcp.WithString("action", mcp.Required(), mcp.Description("Action: stop, stop_all, pause, resume, retry")),
 				mcp.WithString("target", mcp.Description("Session ID or repo name (required except stop_all)")),
 			), s.handleRCAct},
+		},
+	}
+}
+
+func (s *Server) buildAutonomyGroup() ToolGroup {
+	return ToolGroup{
+		Name:        "autonomy",
+		Description: "Autonomy management — view/set autonomy level, inspect supervisor status, review and override autonomous decisions, track HITL events",
+		Tools: []ToolEntry{
+			{mcp.NewTool("ralphglasses_autonomy_level",
+				mcp.WithDescription("View or set the autonomy level (0=observe, 1=auto-recover, 2=auto-optimize, 3=full-autonomy). When setting, also starts/stops the autonomous supervisor."),
+				mcp.WithString("level", mcp.Description("New level: 0-3 or name (omit to view current)")),
+				mcp.WithString("repo_path", mcp.Description("Repo path for the supervisor (used when setting level)")),
+			), s.handleAutonomyLevel},
+			{mcp.NewTool("ralphglasses_supervisor_status",
+				mcp.WithDescription("Returns the autonomous supervisor status including whether it's running, tick count, and last cycle launch time."),
+			), s.handleSupervisorStatus},
+			{mcp.NewTool("ralphglasses_autonomy_decisions",
+				mcp.WithDescription("Recent autonomous decisions with rationale, inputs, and outcomes"),
+				mcp.WithNumber("limit", mcp.Description("Max decisions (default: 20)")),
+			), s.handleAutonomyDecisions},
+			{mcp.NewTool("ralphglasses_autonomy_override",
+				mcp.WithDescription("Override/reverse an autonomous decision and record human intervention"),
+				mcp.WithString("decision_id", mcp.Required(), mcp.Description("Decision ID to override")),
+				mcp.WithString("details", mcp.Description("Why this was overridden")),
+			), s.handleAutonomyOverride},
+			{mcp.NewTool("ralphglasses_hitl_score",
+				mcp.WithDescription("Current human-in-the-loop score: manual interventions vs autonomous actions, with trend"),
+				mcp.WithNumber("hours", mcp.Description("Time window in hours (default: 24)")),
+			), s.handleHITLScore},
+			{mcp.NewTool("ralphglasses_hitl_history",
+				mcp.WithDescription("Recent HITL events: manual stops, auto-recoveries, config changes, etc."),
+				mcp.WithNumber("hours", mcp.Description("Time window in hours (default: 24)")),
+				mcp.WithNumber("limit", mcp.Description("Max events (default: 50)")),
+			), s.handleHITLHistory},
+		},
+	}
+}
+
+func (s *Server) buildWorkflowGroup() ToolGroup {
+	return ToolGroup{
+		Name:        "workflow",
+		Description: "Workflow automation — define, run, and delete multi-step YAML workflows that sequence agent sessions",
+		Tools: []ToolEntry{
+			{mcp.NewTool("ralphglasses_workflow_define",
+				mcp.WithDescription("Define a multi-step workflow as YAML"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithString("name", mcp.Required(), mcp.Description("Workflow name")),
+				mcp.WithString("yaml", mcp.Required(), mcp.Description("Workflow YAML definition")),
+			), s.handleWorkflowDefine},
+			{mcp.NewTool("ralphglasses_workflow_run",
+				mcp.WithDescription("Execute a defined workflow, launching sessions per step"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithString("name", mcp.Required(), mcp.Description("Workflow name")),
+			), s.handleWorkflowRun},
+			{mcp.NewTool("ralphglasses_workflow_delete",
+				mcp.WithDescription("Delete a workflow definition file"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithString("name", mcp.Required(), mcp.Description("Workflow name to delete")),
+			), s.handleWorkflowDelete},
+		},
+	}
+}
+
+func (s *Server) buildAdvancedGroup() ToolGroup {
+	return ToolGroup{
+		Name:        "advanced",
+		Description: "Advanced: events, feedback, provider recommend, journals, tool benchmark, ML model status, circuit breaker",
+		Tools: []ToolEntry{
 			{mcp.NewTool("ralphglasses_event_list",
 				mcp.WithDescription("Query recent fleet events from the event bus"),
 				mcp.WithString("type", mcp.Description("Filter by event type (e.g. session.started, cost.update)")),
@@ -197,32 +266,6 @@ func (s *Server) buildAdvancedGroup() ToolGroup {
 				mcp.WithNumber("limit", mcp.Description("Max events (default 20, max 50)")),
 				mcp.WithString("type", mcp.Description("Filter by event type (e.g. session.started, cost.update)")),
 			), s.handleEventPoll},
-			{mcp.NewTool("ralphglasses_hitl_score",
-				mcp.WithDescription("Current human-in-the-loop score: manual interventions vs autonomous actions, with trend"),
-				mcp.WithNumber("hours", mcp.Description("Time window in hours (default: 24)")),
-			), s.handleHITLScore},
-			{mcp.NewTool("ralphglasses_hitl_history",
-				mcp.WithDescription("Recent HITL events: manual stops, auto-recoveries, config changes, etc."),
-				mcp.WithNumber("hours", mcp.Description("Time window in hours (default: 24)")),
-				mcp.WithNumber("limit", mcp.Description("Max events (default: 50)")),
-			), s.handleHITLHistory},
-			{mcp.NewTool("ralphglasses_autonomy_level",
-				mcp.WithDescription("View or set the autonomy level (0=observe, 1=auto-recover, 2=auto-optimize, 3=full-autonomy). When setting, also starts/stops the autonomous supervisor."),
-				mcp.WithString("level", mcp.Description("New level: 0-3 or name (omit to view current)")),
-				mcp.WithString("repo_path", mcp.Description("Repo path for the supervisor (used when setting level)")),
-			), s.handleAutonomyLevel},
-			{mcp.NewTool("ralphglasses_supervisor_status",
-				mcp.WithDescription("Returns the autonomous supervisor status including whether it's running, tick count, and last cycle launch time."),
-			), s.handleSupervisorStatus},
-			{mcp.NewTool("ralphglasses_autonomy_decisions",
-				mcp.WithDescription("Recent autonomous decisions with rationale, inputs, and outcomes"),
-				mcp.WithNumber("limit", mcp.Description("Max decisions (default: 20)")),
-			), s.handleAutonomyDecisions},
-			{mcp.NewTool("ralphglasses_autonomy_override",
-				mcp.WithDescription("Override/reverse an autonomous decision and record human intervention"),
-				mcp.WithString("decision_id", mcp.Required(), mcp.Description("Decision ID to override")),
-				mcp.WithString("details", mcp.Description("Why this was overridden")),
-			), s.handleAutonomyOverride},
 			{mcp.NewTool("ralphglasses_feedback_profiles",
 				mcp.WithDescription("View feedback profiles: per-task-type and per-provider performance data from journal analysis. Auto-seeds from observations when empty."),
 				mcp.WithString("action", mcp.Description("Action: 'get' (default) returns profiles, 'seed' forces re-seed from observations")),
@@ -257,22 +300,6 @@ func (s *Server) buildAdvancedGroup() ToolGroup {
 				mcp.WithNumber("keep", mcp.Description("Number of entries to keep (default 100)")),
 				mcp.WithString("dry_run", mcp.Description("Preview only, don't modify: true/false (default: true)")),
 			), s.handleJournalPrune},
-			{mcp.NewTool("ralphglasses_workflow_define",
-				mcp.WithDescription("Define a multi-step workflow as YAML"),
-				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
-				mcp.WithString("name", mcp.Required(), mcp.Description("Workflow name")),
-				mcp.WithString("yaml", mcp.Required(), mcp.Description("Workflow YAML definition")),
-			), s.handleWorkflowDefine},
-			{mcp.NewTool("ralphglasses_workflow_run",
-				mcp.WithDescription("Execute a defined workflow, launching sessions per step"),
-				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
-				mcp.WithString("name", mcp.Required(), mcp.Description("Workflow name")),
-			), s.handleWorkflowRun},
-			{mcp.NewTool("ralphglasses_workflow_delete",
-				mcp.WithDescription("Delete a workflow definition file"),
-				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
-				mcp.WithString("name", mcp.Required(), mcp.Description("Workflow name to delete")),
-			), s.handleWorkflowDelete},
 			{mcp.NewTool("ralphglasses_bandit_status",
 				mcp.WithDescription("View multi-armed bandit arm statistics for provider selection"),
 			), s.handleBanditStatus},
@@ -335,6 +362,12 @@ func (s *Server) buildEvalGroup() ToolGroup {
 				mcp.WithDescription("Validate and parse an A/B test definition from YAML content. Returns the parsed definition or validation errors."),
 				mcp.WithString("yaml_content", mcp.Required(), mcp.Description("YAML content defining the A/B test (name, variants, metrics, sample_size, timeout)")),
 			), s.handleEvalDefine},
+			{mcp.NewTool("ralphglasses_provider_benchmark",
+				mcp.WithDescription("Compare providers using a standardized task suite (code gen, explanation, debugging, refactoring, test writing). Returns quality scores, cost estimates, and winner recommendation."),
+				mcp.WithString("providers", mcp.Description("Comma-separated providers to benchmark (default: codex,gemini,claude)")),
+				mcp.WithNumber("iterations", mcp.Description("Number of iterations per task (default: 3, max: 10)")),
+				mcp.WithString("repo", mcp.Description("Repo for result storage")),
+			), s.handleProviderBenchmark},
 		},
 	}
 }
@@ -394,19 +427,6 @@ func (s *Server) buildRdcycleGroup() ToolGroup {
 				mcp.WithString("name", mcp.Required(), mcp.Description("Scratchpad name (e.g., 'tool_improvement')")),
 				mcp.WithString("repo", mcp.Description("Repo name (auto-detected if omitted)")),
 			), s.handleFindingReason},
-			{mcp.NewTool("ralphglasses_observation_correlate",
-				mcp.WithDescription("Link observations to git commits by timestamp proximity"),
-				mcp.WithString("repo", mcp.Required(), mcp.Description("Repository name or path")),
-				mcp.WithNumber("hours", mcp.Description("Hours of history to correlate (default 24)")),
-			), s.handleObservationCorrelate},
-
-			{mcp.NewTool("ralphglasses_provider_benchmark",
-				mcp.WithDescription("Compare providers using a standardized task suite (code gen, explanation, debugging, refactoring, test writing). Returns quality scores, cost estimates, and winner recommendation."),
-				mcp.WithString("providers", mcp.Description("Comma-separated providers to benchmark (default: codex,gemini,claude)")),
-				mcp.WithNumber("iterations", mcp.Description("Number of iterations per task (default: 3, max: 10)")),
-				mcp.WithString("repo", mcp.Description("Repo for result storage")),
-			), s.handleProviderBenchmark},
-
 			// Cycle engine tools (state machine integration)
 			{mcp.NewTool("ralphglasses_cycle_create",
 				mcp.WithDescription("Create a new R&D cycle with objective and success criteria"),
@@ -534,20 +554,6 @@ func (s *Server) buildObservabilityGroup() ToolGroup {
 				mcp.WithString("repo", mcp.Description("Repo name (auto-detected from CWD; required when multiple repos are scanned)")),
 			), s.handleScratchpadReason},
 
-			// Loop wait/poll tools
-			{mcp.NewTool("ralphglasses_loop_await",
-				mcp.WithDescription("Block until a session or loop completes (replaces sleep anti-pattern)"),
-				mcp.WithString("id", mcp.Required(), mcp.Description("Session or loop ID to wait for")),
-				mcp.WithString("type", mcp.Required(), mcp.Description("'session' or 'loop'")),
-				mcp.WithNumber("timeout_seconds", mcp.Description("Max wait time in seconds (default 300)")),
-				mcp.WithNumber("poll_interval_seconds", mcp.Description("Poll interval in seconds (default 10, min 5)")),
-			), s.handleLoopAwait},
-			{mcp.NewTool("ralphglasses_loop_poll",
-				mcp.WithDescription("Non-blocking single status check for a session or loop"),
-				mcp.WithString("id", mcp.Required(), mcp.Description("Session or loop ID")),
-				mcp.WithString("type", mcp.Required(), mcp.Description("'session' or 'loop'")),
-			), s.handleLoopPoll},
-
 			// Coverage report
 			{mcp.NewTool("ralphglasses_coverage_report",
 				mcp.WithDescription("Run go test -coverprofile and report per-package coverage vs threshold"),
@@ -579,19 +585,12 @@ func (s *Server) buildObservabilityGroup() ToolGroup {
 				mcp.WithBoolean("race", mcp.Description("Enable -race detector (default true)")),
 			), s.handleMergeVerify},
 
-			// Worktree create
-			{mcp.NewTool("ralphglasses_worktree_create",
-				mcp.WithDescription("Create a new git worktree for a repo under .ralph/worktrees/manual/"),
-				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
-				mcp.WithString("name", mcp.Required(), mcp.Description("Worktree name (sanitized for filesystem)")),
-			), s.handleWorktreeCreate},
-
-			// Worktree cleanup
-			{mcp.NewTool("ralphglasses_worktree_cleanup",
-				mcp.WithDescription("Clean up stale loop worktrees older than a given age — skips locked/active worktrees"),
-				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
-				mcp.WithNumber("max_age_hours", mcp.Description("Max age in hours before cleanup (default 24)")),
-			), s.handleWorktreeCleanup},
+			// Observation correlation (link observations to git commits)
+			{mcp.NewTool("ralphglasses_observation_correlate",
+				mcp.WithDescription("Link observations to git commits by timestamp proximity"),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repository name or path")),
+				mcp.WithNumber("hours", mcp.Description("Hours of history to correlate (default 24)")),
+			), s.handleObservationCorrelate},
 		},
 	}
 }

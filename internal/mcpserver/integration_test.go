@@ -505,9 +505,9 @@ func TestIntegration_ToolGroups(t *testing.T) {
 		}
 	}
 
-	// Verify exactly 16 groups are listed.
-	if len(ToolGroupNames) != 16 {
-		t.Fatalf("tool_groups: expected 16 group names, got %d", len(ToolGroupNames))
+	// Verify exactly 19 groups are listed.
+	if len(ToolGroupNames) != 19 {
+		t.Fatalf("tool_groups: expected 19 group names, got %d", len(ToolGroupNames))
 	}
 
 	// Step 2: Only core should be loaded initially.
