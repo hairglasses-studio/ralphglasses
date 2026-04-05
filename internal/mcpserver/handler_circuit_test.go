@@ -35,7 +35,11 @@ func TestHandleCircuitReset_MissingService(t *testing.T) {
 }
 
 func TestHandleCircuitReset_Enhancer_NoEngine(t *testing.T) {
-	t.Parallel()
+	// Clear all API keys so getEngine() returns nil (sync.Once not yet called).
+	for _, key := range []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY", "GEMINI_API_KEY"} {
+		t.Setenv(key, "")
+	}
+
 	srv := &Server{ScanPath: t.TempDir()}
 
 	req := mcp.CallToolRequest{}
@@ -50,7 +54,7 @@ func TestHandleCircuitReset_Enhancer_NoEngine(t *testing.T) {
 	if err := json.Unmarshal([]byte(text), &body); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	// Without an API key or LLM engine, reset returns provider-unavailable error.
+	// Without an API key, getEngine() returns nil → provider-unavailable error.
 	if body["error_code"] != "PROVIDER_UNAVAILABLE" {
 		t.Errorf("expected error_code=PROVIDER_UNAVAILABLE, got %v", body["error_code"])
 	}
