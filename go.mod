@@ -12,7 +12,7 @@ require (
 	github.com/charmbracelet/x/exp/golden v0.0.0-20260329003944-7eda8903d971
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/google/uuid v1.6.0
-	github.com/hairglasses-studio/mcpkit v0.0.0-00010101000000-000000000000
+	github.com/hairglasses-studio/mcpkit v0.3.0
 	github.com/mark3labs/mcp-go v0.47.0
 	github.com/nats-io/nats.go v1.50.0
 	github.com/prometheus/client_golang v1.23.2
@@ -110,5 +110,3 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
-
-replace github.com/hairglasses-studio/mcpkit => ../mcpkit
