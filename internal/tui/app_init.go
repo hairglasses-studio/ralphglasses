@@ -44,7 +44,6 @@ const (
 	ViewEventLog
 	ViewRDCycle
 	ViewTeamOrchestration
-	ViewSearch
 )
 
 // InputMode tracks the current input capture mode.

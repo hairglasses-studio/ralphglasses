@@ -552,7 +552,7 @@ func TestTruncateStr_Coverage(t *testing.T) {
 	}{
 		{"short", 10, "short"},
 		{"exactly10!", 10, "exactly10!"},
-		{"this is longer than five", 5, "five"},
+		{"this is longer than five", 5, " five"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
