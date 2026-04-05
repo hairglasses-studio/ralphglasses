@@ -108,8 +108,8 @@ func (m CoordinationModel) View() tea.View {
 		styles.StatBox.Render(fmt.Sprintf("%s DONE\n  %d", styles.IconCompleted, completed)),
 		styles.StatBox.Render(fmt.Sprintf("%s COST\n  $%.2f", styles.IconBudget, totalCost)),
 	}
-	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, statBoxes...))
-	b.WriteString("\n\n")
+	b.WriteString(wrapStatBoxes(statBoxes, m.width))
+	b.WriteString("\n")
 
 	// Resource contention warnings
 	if len(contentions) > 0 {

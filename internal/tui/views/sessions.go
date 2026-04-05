@@ -2,8 +2,10 @@ package views
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
@@ -28,6 +30,17 @@ func NewSessionsTable() *components.Table {
 	t := components.NewTable(SessionColumns)
 	t.EmptyMessage = "No sessions — launch via MCP"
 	t.StatusColumn = 3
+	// Dim completed/stopped sessions.
+	t.RowStyleFunc = func(row components.Row, selected bool) lipgloss.Style {
+		if selected || len(row) <= 3 {
+			return lipgloss.Style{}
+		}
+		status := components.StripAnsi(row[3])
+		if strings.Contains(status, "complet") || strings.Contains(status, "stopped") || strings.Contains(status, "failed") {
+			return styles.DimStyle
+		}
+		return lipgloss.Style{}
+	}
 	return t
 }
 

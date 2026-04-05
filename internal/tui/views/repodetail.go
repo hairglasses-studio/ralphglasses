@@ -202,7 +202,8 @@ func RenderRepoDetail(r *model.Repo, width int, health *RepoDetailHealth) string
 
 		// Cost trend sparkline
 		if len(costs) > 2 {
-			spark := components.InlineSparkline(costs, 20)
+			trendWidth := max(min(width-20, 60), 8)
+			spark := components.InlineSparkline(costs, trendWidth)
 			b.WriteString(fmt.Sprintf("  Cost Trend:  %s\n", spark))
 		}
 	}

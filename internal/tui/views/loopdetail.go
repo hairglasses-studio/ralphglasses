@@ -107,7 +107,7 @@ func RenderLoopDetail(l *session.LoopRun, width, height int) string {
 		b.WriteString(styles.StatusFailed.Render(fmt.Sprintf("%s Loop Error", styles.IconErrored)))
 		b.WriteString("\n")
 		b.WriteString(styles.StatusFailed.Render(fmt.Sprintf("  %s", lastError)))
-		b.WriteString("\n\n")
+		b.WriteString("\n")
 	}
 
 	b.WriteString(styles.HelpStyle.Render("  s step  r run/stop  p pause/resume  Esc back"))

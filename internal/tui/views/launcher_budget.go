@@ -109,7 +109,7 @@ func (m LauncherBudgetModel) View() tea.View {
 	} else {
 		b.WriteString(fmt.Sprintf("  %s  %s", budgetLabel, styles.InfoStyle.Render(budgetValue)))
 	}
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Session Limit field
 	limitLabel := "  Session Limit:"
@@ -119,7 +119,7 @@ func (m LauncherBudgetModel) View() tea.View {
 	} else {
 		b.WriteString(fmt.Sprintf("  %s  %s", limitLabel, styles.InfoStyle.Render(limitValue)))
 	}
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Model selection field
 	modelLabel := "  Model:"

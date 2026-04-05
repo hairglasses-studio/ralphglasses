@@ -162,7 +162,7 @@ func (v *RecoveryView) renderContent() string {
 		}
 		b.WriteString(" ")
 	}
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Panel content.
 	switch v.panel {
@@ -186,7 +186,7 @@ func (v *RecoveryView) renderPlanPanel(b *strings.Builder) {
 
 	if plan == nil {
 		b.WriteString(styles.InfoStyle.Render("No active recovery plan. Fleet is healthy."))
-		b.WriteString("\n\n")
+		b.WriteString("\n")
 		v.renderPolicySummary(b)
 		return
 	}
@@ -203,7 +203,7 @@ func (v *RecoveryView) renderPlanPanel(b *strings.Builder) {
 	default:
 		b.WriteString(styles.InfoStyle.Render(severityStr))
 	}
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Stat boxes.
 	statBoxes := []string{
@@ -212,20 +212,20 @@ func (v *RecoveryView) renderPlanPanel(b *strings.Builder) {
 		styles.StatBox.Render(fmt.Sprintf("%s TOTAL\n  %d sessions", styles.IconSession, plan.TotalSessions)),
 		styles.StatBox.Render(fmt.Sprintf("%s TO RESUME\n  %d sessions", styles.IconAlert, len(plan.SessionsToResume))),
 	}
-	b.WriteString(strings.Join(statBoxes, "  "))
-	b.WriteString("\n\n")
+	b.WriteString(wrapStatBoxes(statBoxes, v.width))
+	b.WriteString("\n")
 
 	// Budget gauge.
 	if v.data.BudgetTotal > 0 {
 		b.WriteString(styles.HeaderStyle.Render("Recovery Budget"))
 		b.WriteString("\n")
 		gauge := components.InlineGauge(v.data.BudgetSpent, v.data.BudgetTotal, 30)
-		b.WriteString(fmt.Sprintf("  %s $%.2f / $%.2f\n\n", gauge, v.data.BudgetSpent, v.data.BudgetTotal))
+		b.WriteString(fmt.Sprintf("  %s $%.2f / $%.2f\n", gauge, v.data.BudgetSpent, v.data.BudgetTotal))
 	}
 
 	// Detected time.
 	b.WriteString(styles.InfoStyle.Render(fmt.Sprintf("Detected: %s", plan.DetectedAt.Format("2006-01-02 15:04:05"))))
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Priority queue preview (top 5).
 	b.WriteString(styles.HeaderStyle.Render("Priority Queue (top 5)"))

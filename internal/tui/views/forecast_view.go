@@ -7,7 +7,6 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
 )
 
@@ -162,40 +161,40 @@ func (v ForecastView) Render() string {
 	b.WriteString(styles.TitleStyle.Render(fmt.Sprintf("  %s Cost Forecast", styles.IconCost)))
 	b.WriteString("\n")
 	b.WriteString(styles.InfoStyle.Render(strings.Repeat("\u2500", v.effectiveWidth())))
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Summary stat boxes
 	b.WriteString(v.renderSummaryBoxes())
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Budget projection bar
 	b.WriteString(v.renderBudgetBar())
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Budget alerts
 	alerts := v.renderBudgetAlerts()
 	if alerts != "" {
 		b.WriteString(alerts)
-		b.WriteString("\n\n")
+		b.WriteString("\n")
 	}
 
 	// Sparkline chart with anomaly markers
 	b.WriteString(v.renderEnhancedSparkline())
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Burn rate + trend + exhaustion ETA
 	b.WriteString(v.renderBurnRateSection())
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Provider breakdown
 	b.WriteString(v.renderProviderBreakdown())
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Recommendations
 	recs := v.renderRecommendations()
 	if recs != "" {
 		b.WriteString(recs)
-		b.WriteString("\n\n")
+		b.WriteString("\n")
 	}
 
 	// Footer
@@ -390,7 +389,7 @@ func (v ForecastView) renderSummaryBoxes() string {
 		styles.StatBox.Render(fmt.Sprintf("%s REMAINING\n  $%.2f", styles.IconBudget, remaining)),
 		styles.StatBox.Render(fmt.Sprintf("%s PER SESSION\n  $%.4f", styles.IconSession, perSession)),
 	}
-	return lipgloss.JoinHorizontal(lipgloss.Top, boxes...)
+	return wrapStatBoxes(boxes, v.width)
 }
 
 func (v ForecastView) renderBudgetAlerts() string {
