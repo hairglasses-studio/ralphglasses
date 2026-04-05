@@ -1,0 +1,12 @@
+# greetd config for ralphglasses thin client
+# Auto-login as 'rg' user and launch Sway which starts ralphglasses
+#
+# Install: cp config.toml /etc/greetd/config.toml
+# Enable: systemctl enable greetd
+
+[terminal]
+vt = 1
+
+[default_session]
+command = "sway --config /etc/sway/config"
+user = "rg"
