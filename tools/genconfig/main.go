@@ -66,7 +66,7 @@ func main() {
 	fmt.Fprintln(w, "```json")
 	fmt.Fprintln(w, `{`)
 	fmt.Fprintln(w, `  "scan_paths": ["~/hairglasses-studio"],`)
-	fmt.Fprintln(w, `  "default_provider": "claude",`)
+	fmt.Fprintln(w, `  "default_provider": "codex",`)
 	fmt.Fprintln(w, `  "worker_provider": "gemini",`)
 	fmt.Fprintln(w, `  "max_workers": 4,`)
 	fmt.Fprintln(w, `  "default_budget_usd": 5.00,`)
@@ -203,9 +203,9 @@ func main() {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "```sh")
 	fmt.Fprintln(w, `PROJECT_NAME="my-service"`)
-	fmt.Fprintln(w, `MODEL="sonnet"`)
+	fmt.Fprintln(w, `MODEL="gpt-5.4"`)
 	fmt.Fprintln(w, `BUDGET="10.00"`)
-	fmt.Fprintln(w, `PROVIDER="claude"`)
+	fmt.Fprintln(w, `PROVIDER="codex"`)
 	fmt.Fprintln(w, `MAX_CALLS_PER_HOUR="120"`)
 	fmt.Fprintln(w, `CASCADE_ENABLED="true"`)
 	fmt.Fprintln(w, `CASCADE_CHEAP_PROVIDER="gemini"`)
@@ -325,7 +325,7 @@ func structFieldDescription(f reflect.StructField) string {
 func structFieldDefault(f reflect.StructField) string {
 	defaults := map[string]string{
 		"ScanPaths":           "--",
-		"DefaultProvider":     "`\"\"`",
+		"DefaultProvider":     "`codex`",
 		"WorkerProvider":      "`\"\"`",
 		"MaxWorkers":          "`0`",
 		"DefaultBudgetUSD":    "`0`",

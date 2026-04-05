@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test-session-handoff.sh — End-to-end test of session_handoff MCP tool.
-# Run in a separate terminal (outside Claude Code) to avoid nesting issues.
+# Run in a separate terminal (outside Codex or Claude) to avoid nesting issues.
 #
 # Usage:
 #   ./scripts/dev/test-session-handoff.sh
@@ -25,11 +25,11 @@ echo "==> Building ralphglasses..."
 go build -o /tmp/rg-test ./...
 
 echo "==> Starting session via direct API call..."
-# Launch a quick Claude session.
+# Launch a quick Codex session.
 SESSION_JSON=$(/tmp/rg-test mcp-call ralphglasses_session_launch \
   --repo ralphglasses \
   --prompt "Run: echo hello from handoff test" \
-  --provider claude \
+  --provider codex \
   --budget_usd 1 \
   --max_turns 2 2>&1 || true)
 
@@ -44,9 +44,9 @@ if [ -z "${SESSION_ID}" ]; then
   echo "Alternative: use the standalone MCP server in another terminal:"
   echo "  ./scripts/dev/run-mcp-standalone.sh --scan-path ~/hairglasses-studio"
   echo ""
-  echo "Then from a Claude Code MCP client, call:"
-  echo "  session_launch(repo=ralphglasses, prompt='say hello', provider=claude)"
-  echo "  session_handoff(source_session_id=<id>, target_provider=claude)"
+  echo "Then from a Codex or Claude MCP client, call:"
+  echo "  session_launch(repo=ralphglasses, prompt='say hello', provider=codex)"
+  echo "  session_handoff(source_session_id=<id>, target_provider=codex)"
   exit 1
 fi
 

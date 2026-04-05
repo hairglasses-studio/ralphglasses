@@ -7,7 +7,7 @@ import (
 
 // builderSpec describes expectations for a single build*Group method.
 type builderSpec struct {
-	name        string                // expected group Name
+	name        string // expected group Name
 	buildFn     func(s *Server) ToolGroup
 	minTools    int  // minimum number of tools expected
 	wantNonZero bool // always true; here for clarity
@@ -184,7 +184,7 @@ func TestBuildToolGroupsTotalCount(t *testing.T) {
 		total += len(g.Tools)
 	}
 
-	// The CLAUDE.md says 110 tools. Allow a small tolerance for additions.
+	// The operator docs now describe 126 MCP tools. Allow a small tolerance for additions.
 	if total < 100 {
 		t.Fatalf("expected at least 100 tools total, got %d", total)
 	}

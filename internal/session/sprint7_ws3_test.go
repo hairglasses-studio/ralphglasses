@@ -325,13 +325,15 @@ func TestManagerInit_PrunesStaleLoops(t *testing.T) {
 func TestResume_DefaultProvider(t *testing.T) {
 	// Resume builds LaunchOptions and delegates to Launch. Since Launch
 	// validates binaries on PATH, we test the option construction logic
-	// directly by verifying Resume sets provider=claude when empty.
+	// directly by verifying Resume resolves an empty provider to the
+	// repo-wide primary provider.
 
-	// Test that empty provider defaults to claude
+	// Test that empty provider defaults to codex
 	m := NewManager()
 	m.SetStateDir(t.TempDir())
 
-	// Resume will fail because claude binary isn't real, but we can verify
+	// Resume will fail because the provider binary isn't real in this test
+	// environment, but we can verify
 	// that the method at least defaults provider correctly by observing that
 	// it does NOT return "unknown provider" error.
 	_, err := m.Resume(context.Background(), t.TempDir(), "", "old-session-id", "continue task")
@@ -344,7 +346,7 @@ func TestResume_DefaultProvider(t *testing.T) {
 	if errStr == "" {
 		t.Error("expected non-empty error")
 	}
-	// Should not complain about unknown provider — claude is valid
+	// Should not complain about unknown provider — codex is valid
 	if contains(errStr, "unknown provider") {
 		t.Errorf("Resume with empty provider produced unknown provider error: %v", err)
 	}

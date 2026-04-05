@@ -10,7 +10,7 @@ import (
 type Scenario struct {
 	Name            string                      // unique scenario identifier
 	Category        string                      // bug_fix, refactor, test, docs, feature, multi_provider, stress, cost
-	Provider        session.Provider            // primary provider (empty = claude default)
+	Provider        session.Provider            // primary provider (empty = codex default)
 	Tags            []string                    // searchable tags (e.g. "multi-provider", "stress", "cost")
 	RepoSetup       func(t *testing.T) string   // creates temp repo, returns path
 	PlannerResponse string                      // JSON the mock planner returns
