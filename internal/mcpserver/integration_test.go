@@ -506,7 +506,7 @@ func TestIntegration_ToolGroups(t *testing.T) {
 	}
 
 	// Verify exactly 22 groups are listed.
-	if len(ToolGroupNames) != 22 {
+	if len(ToolGroupNames) != 23 {
 		t.Fatalf("tool_groups: expected 22 group names, got %d", len(ToolGroupNames))
 	}
 

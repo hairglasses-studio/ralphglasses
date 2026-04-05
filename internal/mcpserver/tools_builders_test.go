@@ -142,7 +142,7 @@ func TestBuildGroupToolNamesGloballyUnique(t *testing.T) {
 func TestDefaultRegistryReturnsAll13Groups(t *testing.T) {
 	reg := defaultRegistry()
 
-	if reg.Len() != 22 {
+	if reg.Len() != 23 {
 		t.Fatalf("expected 22 registered groups, got %d", reg.Len())
 	}
 
@@ -166,7 +166,7 @@ func TestDefaultRegistryBuildAll(t *testing.T) {
 	reg := defaultRegistry()
 	groups := reg.BuildAll(srv)
 
-	if len(groups) != 22 {
+	if len(groups) != 23 {
 		t.Fatalf("expected 22 groups from BuildAll, got %d", len(groups))
 	}
 
@@ -183,7 +183,7 @@ func TestBuildToolGroupsTotalCount(t *testing.T) {
 	srv, _ := setupTestServer(t)
 	groups := srv.buildToolGroups()
 
-	if len(groups) != 22 {
+	if len(groups) != 23 {
 		t.Fatalf("expected 22 groups, got %d", len(groups))
 	}
 
