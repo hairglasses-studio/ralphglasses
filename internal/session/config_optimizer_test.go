@@ -98,7 +98,7 @@ func TestConfigOptimizer_SelectProvider_Empty(t *testing.T) {
 func TestConfigOptimizer_SelectProvider_ExploresUnderMinTrials(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfigOptimizerConfig()
-	cfg.Exploration = 0 // no random exploration
+	cfg.Exploration = 0.0001 // near-zero to suppress random exploration (0 is overridden to 0.15 by constructor)
 	co := NewConfigOptimizer(cfg)
 
 	// Record fewer than minTrials for one provider.
@@ -114,7 +114,7 @@ func TestConfigOptimizer_SelectProvider_ExploresUnderMinTrials(t *testing.T) {
 func TestConfigOptimizer_SelectProvider_ExploitsBestArm(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfigOptimizerConfig()
-	cfg.Exploration = 0 // no random exploration
+	cfg.Exploration = 0.0001 // near-zero to suppress random exploration (0 is overridden to 0.15 by constructor)
 	cfg.MinTrials = 2
 	co := NewConfigOptimizer(cfg)
 
