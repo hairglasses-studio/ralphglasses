@@ -132,6 +132,16 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 		profile.MaxDurationSecs = int(durationHours * 3600)
 	}
 
+	if provider, reason := s.rerouteClaudeProviderForCacheHealth(r.Path, profile.PlannerProvider, p.OptionalString("planner_provider", "") != ""); reason != "" {
+		profile.PlannerProvider = provider
+	}
+	if provider, reason := s.rerouteClaudeProviderForCacheHealth(r.Path, profile.WorkerProvider, p.OptionalString("worker_provider", "") != ""); reason != "" {
+		profile.WorkerProvider = provider
+	}
+	if provider, reason := s.rerouteClaudeProviderForCacheHealth(r.Path, profile.VerifierProvider, p.OptionalString("verifier_provider", "") != ""); reason != "" {
+		profile.VerifierProvider = provider
+	}
+
 	run, err := s.SessMgr.StartLoop(ctx, r.Path, profile)
 	if err != nil {
 		return codedError(ErrLoopStart, fmt.Sprintf("start loop: %v", err)), nil

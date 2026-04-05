@@ -39,7 +39,7 @@ type Config struct {
 
 	// TargetProvider controls which model family the enhanced prompt targets.
 	// Affects pipeline stage behavior (XML vs markdown structure) and scoring suggestions.
-	// Empty defaults to "claude".
+	// Empty defaults to "openai".
 	TargetProvider ProviderName `yaml:"target_provider"`
 }
 
@@ -231,6 +231,13 @@ func ResolveConfig(projectDir string) Config {
 			cfg.LLM.CacheControl = false
 			cfg.LLM.cacheControlSet = true
 		}
+	}
+
+	if cfg.LLM.Provider == "" {
+		cfg.LLM.Provider = "openai"
+	}
+	if cfg.TargetProvider == "" {
+		cfg.TargetProvider = defaultTargetProviderForLLM(cfg.LLM.Provider)
 	}
 
 	return cfg

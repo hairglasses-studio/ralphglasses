@@ -55,7 +55,7 @@ var benchmarkTasks = []struct {
 func (s *Server) handleProviderBenchmark(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	providersCSV := getStringArg(req, "providers")
 	if providersCSV == "" {
-		providersCSV = "claude,gemini"
+		providersCSV = "codex,gemini,claude"
 	}
 	providers := strings.Split(providersCSV, ",")
 	for i := range providers {
@@ -99,16 +99,16 @@ func (s *Server) handleProviderBenchmark(_ context.Context, req mcp.CallToolRequ
 
 	// Rate cards for cost estimation (per 1K output tokens).
 	ratecards := map[string]float64{
-		"claude":  0.015, // opus-class
-		"gemini":  0.005, // pro-class
-		"codex":   0.010, // gpt-4o-class
+		"claude": 0.015, // opus-class
+		"gemini": 0.005, // pro-class
+		"codex":  0.010, // gpt-4o-class
 	}
 
 	// Latency estimates (P50 ms per task).
 	latencyEstimates := map[string]int{
-		"claude":  8000,  // ~8s per task (opus)
-		"gemini":  3000,  // ~3s per task (pro)
-		"codex":   5000,  // ~5s per task (gpt-4o)
+		"claude": 8000, // ~8s per task (opus)
+		"gemini": 3000, // ~3s per task (pro)
+		"codex":  5000, // ~5s per task (gpt-4o)
 	}
 
 	// Try to load historical cost data from observations.
@@ -241,9 +241,9 @@ func (s *Server) loadHistoricalProviderCosts(repoPath string) map[string]float64
 func scorePromptQuality(prompt string, keywords []string, provider string) float64 {
 	// Base quality by provider (empirical estimates).
 	base := map[string]float64{
-		"claude":  0.92,
-		"gemini":  0.85,
-		"codex":   0.88,
+		"claude": 0.92,
+		"gemini": 0.85,
+		"codex":  0.88,
 	}
 	b := base[provider]
 	if b == 0 {

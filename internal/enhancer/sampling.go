@@ -43,7 +43,7 @@ func (e *SamplingEngine) Provider() ProviderName { return ProviderSampling }
 
 // Improve sends the prompt to the host client via MCP Sampling for enhancement.
 func (e *SamplingEngine) Improve(ctx context.Context, prompt string, opts ImproveOptions) (*ImproveResult, error) {
-	systemPrompt := MetaPromptFor(ProviderClaude, opts.ThinkingEnabled)
+	systemPrompt := MetaPromptFor(normalizeTargetProvider(opts.Provider), opts.ThinkingEnabled)
 
 	userContent := prompt
 	if opts.Feedback != "" {

@@ -8,9 +8,9 @@ import (
 // DimensionScore represents a single scoring dimension with its evaluation.
 type DimensionScore struct {
 	Name        string   `json:"name"`
-	Score       int      `json:"score"`       // 0-100
-	Weight      float64  `json:"weight"`      // sums to 1.0
-	Grade       string   `json:"grade"`       // A/B/C/D/F
+	Score       int      `json:"score"`  // 0-100
+	Weight      float64  `json:"weight"` // sums to 1.0
+	Grade       string   `json:"grade"`  // A/B/C/D/F
 	Suggestions []string `json:"suggestions"`
 }
 
@@ -696,7 +696,7 @@ func scoreTone(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult, t
 	}
 
 	if ar.HasAggressiveCaps {
-		if targetProvider == "" || targetProvider == ProviderClaude {
+		if targetProvider == ProviderClaude {
 			score -= 25
 			suggestions = append(suggestions, "Downgrade ALL-CAPS emphasis — Claude 4.x overtriggers on aggressive language")
 		} else {
@@ -706,7 +706,7 @@ func scoreTone(text string, _ TaskType, lints []LintResult, ar *AnalyzeResult, t
 	}
 
 	if ar.HasNegativeFrames {
-		if targetProvider == "" || targetProvider == ProviderClaude {
+		if targetProvider == ProviderClaude {
 			score -= 20
 			suggestions = append(suggestions, "Reframe negative instructions as positive — Claude 4.x can reverse-psychology on negatives")
 		} else {

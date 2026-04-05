@@ -20,9 +20,39 @@ type PromptImprover interface {
 	Provider() ProviderName
 }
 
+func defaultTargetProviderForLLM(provider string) ProviderName {
+	switch provider {
+	case "claude":
+		return ProviderClaude
+	case "gemini":
+		return ProviderGemini
+	default:
+		return ProviderOpenAI
+	}
+}
+
+func normalizeTargetProvider(provider ProviderName) ProviderName {
+	switch provider {
+	case ProviderClaude, ProviderGemini, ProviderOpenAI:
+		return provider
+	default:
+		return ProviderOpenAI
+	}
+}
+
 // NewPromptImprover creates the appropriate client for the configured provider.
 // Returns nil if no API key is available.
 func NewPromptImprover(cfg LLMConfig) PromptImprover {
+	if cfg.Provider == "" {
+		for _, provider := range []string{"openai", "gemini", "claude"} {
+			cfg.Provider = provider
+			if client := NewPromptImprover(cfg); client != nil {
+				return client
+			}
+		}
+		return nil
+	}
+
 	switch cfg.Provider {
 	case "gemini":
 		c := NewGeminiClient(cfg)
@@ -36,11 +66,13 @@ func NewPromptImprover(cfg LLMConfig) PromptImprover {
 			return nil
 		}
 		return c
-	default:
+	case "claude":
 		c := NewLLMClient(cfg)
 		if c == nil {
 			return nil
 		}
 		return c
+	default:
+		return nil
 	}
 }

@@ -149,26 +149,34 @@ func (s *Server) handleSessionStatus(_ context.Context, req mcp.CallToolRequest)
 	}
 
 	sess.Lock()
+	cacheRatio := 0.0
+	if sess.CacheWriteTokens > 0 {
+		cacheRatio = float64(sess.CacheReadTokens) / float64(sess.CacheWriteTokens)
+	}
 	detail := map[string]any{
-		"id":                  sess.ID,
-		"provider":            sess.Provider,
-		"provider_session_id": sess.ProviderSessionID,
-		"repo":                sess.RepoName,
-		"repo_path":           sess.RepoPath,
-		"status":              sess.Status,
-		"prompt":              sess.Prompt,
-		"model":               sess.Model,
-		"agent":               sess.AgentName,
-		"team":                sess.TeamName,
-		"budget_usd":          sess.BudgetUSD,
-		"spent_usd":           sess.SpentUSD,
-		"turns":               sess.TurnCount,
-		"max_turns":           sess.MaxTurns,
-		"launched_at":         sess.LaunchedAt,
-		"last_activity":       sess.LastActivity,
-		"exit_reason":         sess.ExitReason,
-		"last_output":         sess.LastOutput,
-		"error":               sess.Error,
+		"id":                     sess.ID,
+		"provider":               sess.Provider,
+		"provider_session_id":    sess.ProviderSessionID,
+		"repo":                   sess.RepoName,
+		"repo_path":              sess.RepoPath,
+		"status":                 sess.Status,
+		"prompt":                 sess.Prompt,
+		"model":                  sess.Model,
+		"agent":                  sess.AgentName,
+		"team":                   sess.TeamName,
+		"budget_usd":             sess.BudgetUSD,
+		"spent_usd":              sess.SpentUSD,
+		"turns":                  sess.TurnCount,
+		"max_turns":              sess.MaxTurns,
+		"launched_at":            sess.LaunchedAt,
+		"last_activity":          sess.LastActivity,
+		"exit_reason":            sess.ExitReason,
+		"last_output":            sess.LastOutput,
+		"error":                  sess.Error,
+		"cache_read_tokens":      sess.CacheReadTokens,
+		"cache_write_tokens":     sess.CacheWriteTokens,
+		"cache_read_write_ratio": cacheRatio,
+		"cache_anomaly":          sess.CacheAnomaly,
 	}
 	if sess.EndedAt != nil {
 		detail["ended_at"] = sess.EndedAt

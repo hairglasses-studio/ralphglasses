@@ -10,24 +10,24 @@ import (
 
 // SprintUnit represents a single parallelizable unit of work in a batch sprint.
 type SprintUnit struct {
-	ID          string  `json:"id"`
-	Title       string  `json:"title"`
-	Phase       string  `json:"phase"`
-	Section     string  `json:"section"`
-	Prompt      string  `json:"prompt"`
-	Provider    string  `json:"suggested_provider"`
-	BudgetUSD   float64 `json:"estimated_budget_usd"`
-	Size        string  `json:"size"` // S, M, L
-	DependsOn   []string `json:"depends_on,omitempty"`
+	ID        string   `json:"id"`
+	Title     string   `json:"title"`
+	Phase     string   `json:"phase"`
+	Section   string   `json:"section"`
+	Prompt    string   `json:"prompt"`
+	Provider  string   `json:"suggested_provider"`
+	BudgetUSD float64  `json:"estimated_budget_usd"`
+	Size      string   `json:"size"` // S, M, L
+	DependsOn []string `json:"depends_on,omitempty"`
 }
 
 // SprintResult is the outcome of executing a SprintUnit.
 type SprintResult struct {
-	UnitID    string `json:"unit_id"`
-	Status    string `json:"status"` // "success", "failed", "blocked"
-	SessionID string `json:"session_id,omitempty"`
-	Error     string `json:"error,omitempty"`
-	FilesChanged int `json:"files_changed"`
+	UnitID       string `json:"unit_id"`
+	Status       string `json:"status"` // "success", "failed", "blocked"
+	SessionID    string `json:"session_id,omitempty"`
+	Error        string `json:"error,omitempty"`
+	FilesChanged int    `json:"files_changed"`
 }
 
 // DecomposeToSprints converts uncompleted roadmap items into parallelizable sprint units.
@@ -43,7 +43,7 @@ func DecomposeToSprints(rm *roadmap.Roadmap, maxUnits int) []SprintUnit {
 
 				size := "M"
 				budgetUSD := 2.0
-				provider := "claude"
+				provider := string(DefaultPrimaryProvider())
 				desc := task.Description
 
 				// Extract size from tags.
@@ -56,9 +56,17 @@ func DecomposeToSprints(rm *roadmap.Roadmap, maxUnits int) []SprintUnit {
 					budgetUSD = 5.0
 				}
 
-				// Extract priority — P1 items get Claude, P2 can use Gemini.
+				// Smaller operational work can stay on Gemini; Codex is the
+				// default lead lane and Claude is reserved for reasoning-heavy work.
 				if strings.Contains(desc, "P2") && size != "L" {
 					provider = "gemini"
+				}
+				lowerDesc := strings.ToLower(desc)
+				if size == "L" && (strings.Contains(lowerDesc, "architecture") ||
+					strings.Contains(lowerDesc, "research") ||
+					strings.Contains(lowerDesc, "design") ||
+					strings.Contains(lowerDesc, "planning")) {
+					provider = "claude"
 				}
 
 				prompt := fmt.Sprintf("Implement ROADMAP item %s from phase %q, section %q:\n\n%s\n\nRun tests after changes. Commit with a descriptive message.",

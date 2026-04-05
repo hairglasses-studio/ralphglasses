@@ -2,7 +2,9 @@ package mcpserver
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/bandit"
 	"github.com/hairglasses-studio/ralphglasses/internal/blackboard"
@@ -11,15 +13,53 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
+const (
+	claudeCacheRerouteThreshold = 2
+	claudeCacheRerouteWindow    = time.Hour
+)
+
 // DefaultProviderArms returns bandit arms for each available provider,
 // independent of cascade tier configuration.
 func DefaultProviderArms() []bandit.Arm {
 	return []bandit.Arm{
 		{ID: "ultra-cheap", Provider: "gemini", Model: "gemini-2.0-flash-lite"},
 		{ID: "worker", Provider: "gemini", Model: "gemini-2.5-flash"},
-		{ID: "coding", Provider: "claude", Model: "claude-sonnet"},
+		{ID: "coding", Provider: "codex", Model: "gpt-5.4"},
 		{ID: "reasoning", Provider: "claude", Model: "claude-opus"},
 	}
+}
+
+func (s *Server) shouldRerouteClaudeForCacheHealth(repoPath string) (bool, int) {
+	if s == nil || s.SessMgr == nil {
+		return false, 0
+	}
+
+	cutoff := time.Now().Add(-claudeCacheRerouteWindow)
+	count := 0
+	for _, sess := range s.SessMgr.List(repoPath) {
+		sess.Lock()
+		cacheUnhealthy := sess.Provider == session.ProviderClaude &&
+			sess.Resumed &&
+			sess.CacheWriteTokens > 0 &&
+			sess.CacheReadTokens == 0 &&
+			sess.LastActivity.After(cutoff)
+		sess.Unlock()
+		if cacheUnhealthy {
+			count++
+		}
+	}
+	return count >= claudeCacheRerouteThreshold, count
+}
+
+func (s *Server) rerouteClaudeProviderForCacheHealth(repoPath string, provider session.Provider, explicit bool) (session.Provider, string) {
+	if explicit || provider != session.ProviderClaude {
+		return provider, ""
+	}
+	if ok, count := s.shouldRerouteClaudeForCacheHealth(repoPath); ok {
+		target := session.DefaultPrimaryProvider()
+		return target, fmt.Sprintf("rerouted from claude to %s after %d recent resumed-session cache anomalies", target, count)
+	}
+	return provider, ""
 }
 
 // wireSubsystems initializes self-learning subsystem singletons on the session

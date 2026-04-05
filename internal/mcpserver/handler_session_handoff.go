@@ -30,6 +30,7 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 	}
 
 	targetProvider := getStringArg(req, "target_provider")
+	explicitTargetProvider := targetProvider != ""
 	// Default include_context to true.
 	includeContext := true
 	if getBoolArg(req, "include_context") {
@@ -105,11 +106,16 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 	if tp == "" {
 		tp = session.DefaultPrimaryProvider()
 	}
+	rerouteReason := ""
+	tp, rerouteReason = s.rerouteClaudeProviderForCacheHealth(repoPath, tp, explicitTargetProvider)
 
 	// Build enriched prompt.
 	handoffPrompt := prompt
 	if contextPayload != "" {
 		handoffPrompt = contextPayload + "\n\n---\n\n" + prompt
+	}
+	if rerouteReason != "" {
+		handoffPrompt = rerouteReason + "\n\n---\n\n" + handoffPrompt
 	}
 
 	remaining := budgetUSD - spentUSD
@@ -141,16 +147,17 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 	}
 
 	result := map[string]any{
-		"new_session_id":      newSession.ID,
-		"source_session_id":   sourceID,
-		"source_stopped":      sourceStopped,
-		"target_provider":     string(tp),
-		"transferred_context": includeContext,
-		"context_size_bytes":  len(contextPayload),
-		"remaining_budget":    remaining,
-		"cost_so_far":         spentUSD,
-		"handoff_reason":      handoffReason,
-		"handoff_at":          time.Now().UTC().Format(time.RFC3339),
+		"new_session_id":       newSession.ID,
+		"source_session_id":    sourceID,
+		"source_stopped":       sourceStopped,
+		"target_provider":      string(tp),
+		"transferred_context":  includeContext,
+		"context_size_bytes":   len(contextPayload),
+		"remaining_budget":     remaining,
+		"cost_so_far":          spentUSD,
+		"handoff_reason":       handoffReason,
+		"handoff_at":           time.Now().UTC().Format(time.RFC3339),
+		"cache_reroute_reason": rerouteReason,
 	}
 
 	// Save handoff record.

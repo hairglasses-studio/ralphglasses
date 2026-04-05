@@ -315,12 +315,14 @@ func runImprove(prompt, taskType string, thinking bool, feedback string, quiet b
 	}
 	engine := getOrCreateEngine(cfg.LLM)
 	if engine == nil {
-		apiHint := "ANTHROPIC_API_KEY"
+		apiHint := "OPENAI_API_KEY"
 		switch cfg.LLM.Provider {
+		case "", "openai":
+			apiHint = "OPENAI_API_KEY"
 		case "gemini":
 			apiHint = "GOOGLE_API_KEY"
-		case "openai":
-			apiHint = "OPENAI_API_KEY"
+		case "claude":
+			apiHint = "ANTHROPIC_API_KEY"
 		}
 		fmt.Fprintf(os.Stderr, "error: %s not set — cannot use LLM improvement\n", apiHint)
 		os.Exit(1)
@@ -612,7 +614,7 @@ func parseFlags(args []string) map[string]string {
 }
 
 func printHelp() {
-	fmt.Printf("prompt-improver %s — Claude-specific prompt optimization CLI\n", version)
+	fmt.Printf("prompt-improver %s — multi-provider prompt optimization CLI\n", version)
 	fmt.Print(`
 USAGE:
   prompt-improver <prompt>                      Enhance a prompt (default, local pipeline)
@@ -691,17 +693,18 @@ LLM-POWERED IMPROVEMENT (v2.0.0):
   prompt-improver enhance "fix this" --mode llm    # LLM only (fail if unavailable)
   prompt-improver enhance "fix this" --mode local  # deterministic pipeline only
 
-  Requires ANTHROPIC_API_KEY environment variable.
+  Requires the provider-specific API key environment variable.
   Configure in .prompt-improver.yaml:
 
     llm:
       enabled: true             # enable LLM in hook mode (default: false)
       thinking_enabled: true    # add thinking scaffolding
-      model: claude-sonnet-4-6  # model for meta-prompting
+      provider: openai          # default LLM improver backend
+      model: gpt-5.4            # model for meta-prompting
       timeout: 15s              # API call timeout
-      api_key_env: ANTHROPIC_API_KEY
+      api_key_env: OPENAI_API_KEY
 
-  The LLM mode sends your prompt to Claude with a meta-prompt that adds:
+  The LLM mode sends your prompt to the selected provider with a meta-prompt that adds:
   - Domain-specific role definition
   - Template variables for external data
   - Structured output sections (custom XML tags)

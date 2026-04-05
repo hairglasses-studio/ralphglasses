@@ -2,7 +2,9 @@ package mcpserver
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/blackboard"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -87,5 +89,32 @@ func TestWireSubsystemsWithFeedbackAnalyzer(t *testing.T) {
 	// CurriculumSorter should be wired (B4 verified by this existing).
 	if !srv.SessMgr.HasCurriculumSorter() {
 		t.Error("expected CurriculumSorter to be wired even with FeedbackAnalyzer set")
+	}
+}
+
+func TestRerouteClaudeProviderForCacheHealth(t *testing.T) {
+	t.Parallel()
+
+	srv := NewServer(t.TempDir())
+	repoPath := t.TempDir()
+	now := time.Now()
+
+	for i := 0; i < claudeCacheRerouteThreshold; i++ {
+		injectTestSession(t, srv, repoPath, func(s *session.Session) {
+			s.ID = fmt.Sprintf("sess-%d", i)
+			s.Provider = session.ProviderClaude
+			s.Status = session.StatusCompleted
+			s.Resumed = true
+			s.CacheWriteTokens = 1200
+			s.LastActivity = now
+		})
+	}
+
+	got, reason := srv.rerouteClaudeProviderForCacheHealth(repoPath, session.ProviderClaude, false)
+	if got != session.ProviderCodex {
+		t.Fatalf("rerouted provider = %q, want %q", got, session.ProviderCodex)
+	}
+	if reason == "" {
+		t.Fatal("expected reroute reason")
 	}
 }

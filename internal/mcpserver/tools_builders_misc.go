@@ -402,7 +402,7 @@ func (s *Server) buildRdcycleGroup() ToolGroup {
 
 			{mcp.NewTool("ralphglasses_provider_benchmark",
 				mcp.WithDescription("Compare providers using a standardized task suite (code gen, explanation, debugging, refactoring, test writing). Returns quality scores, cost estimates, and winner recommendation."),
-				mcp.WithString("providers", mcp.Description("Comma-separated providers to benchmark (default: claude,gemini)")),
+				mcp.WithString("providers", mcp.Description("Comma-separated providers to benchmark (default: codex,gemini,claude)")),
 				mcp.WithNumber("iterations", mcp.Description("Number of iterations per task (default: 3, max: 10)")),
 				mcp.WithString("repo", mcp.Description("Repo for result storage")),
 			), s.handleProviderBenchmark},
