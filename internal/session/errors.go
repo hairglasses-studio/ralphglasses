@@ -59,4 +59,10 @@ var (
 
 	// ErrRepoNotGit indicates the repo path is not a git repository.
 	ErrRepoNotGit = errors.New("repo path is not a git repository")
+
+	// ErrRecoveryOpNotFound indicates the requested recovery operation ID does not exist.
+	ErrRecoveryOpNotFound = errors.New("recovery operation not found")
+
+	// ErrRecoveryActionNotFound indicates the requested recovery action ID does not exist.
+	ErrRecoveryActionNotFound = errors.New("recovery action not found")
 )

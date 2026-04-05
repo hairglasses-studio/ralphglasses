@@ -113,6 +113,48 @@ CREATE TABLE IF NOT EXISTS cost_ledger (
 CREATE INDEX IF NOT EXISTS idx_cost_ledger_session ON cost_ledger(session_id);
 CREATE INDEX IF NOT EXISTS idx_cost_ledger_loop ON cost_ledger(loop_id);
 CREATE INDEX IF NOT EXISTS idx_cost_ledger_provider ON cost_ledger(provider);
+
+CREATE TABLE IF NOT EXISTS recovery_ops (
+	id             TEXT PRIMARY KEY,
+	severity       TEXT NOT NULL DEFAULT 'none',
+	status         TEXT NOT NULL DEFAULT 'detected',
+	total_sessions INTEGER NOT NULL DEFAULT 0,
+	alive_count    INTEGER NOT NULL DEFAULT 0,
+	dead_count     INTEGER NOT NULL DEFAULT 0,
+	resumed_count  INTEGER NOT NULL DEFAULT 0,
+	failed_count   INTEGER NOT NULL DEFAULT 0,
+	total_cost_usd REAL NOT NULL DEFAULT 0,
+	budget_cap_usd REAL NOT NULL DEFAULT 0,
+	trigger_source TEXT NOT NULL DEFAULT '',
+	decision_id    TEXT NOT NULL DEFAULT '',
+	error_msg      TEXT NOT NULL DEFAULT '',
+	detected_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	started_at     DATETIME,
+	completed_at   DATETIME
+);
+
+CREATE INDEX IF NOT EXISTS idx_recovery_ops_status ON recovery_ops(status);
+CREATE INDEX IF NOT EXISTS idx_recovery_ops_detected ON recovery_ops(detected_at);
+
+CREATE TABLE IF NOT EXISTS recovery_actions (
+	id                TEXT PRIMARY KEY,
+	recovery_op_id    TEXT NOT NULL,
+	claude_session_id TEXT NOT NULL DEFAULT '',
+	ralph_session_id  TEXT NOT NULL DEFAULT '',
+	repo_path         TEXT NOT NULL DEFAULT '',
+	repo_name         TEXT NOT NULL DEFAULT '',
+	priority          INTEGER NOT NULL DEFAULT 0,
+	status            TEXT NOT NULL DEFAULT 'pending',
+	cost_usd          REAL NOT NULL DEFAULT 0,
+	error_msg         TEXT NOT NULL DEFAULT '',
+	created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	started_at        DATETIME,
+	completed_at      DATETIME,
+	FOREIGN KEY (recovery_op_id) REFERENCES recovery_ops(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_recovery_actions_op ON recovery_actions(recovery_op_id);
+CREATE INDEX IF NOT EXISTS idx_recovery_actions_status ON recovery_actions(status);
 `
 	_, err := s.db.Exec(ddl)
 	return err
@@ -580,4 +622,216 @@ func (s *SQLiteStore) AggregateCostByProvider(ctx context.Context, since time.Ti
 		result[provider] = total
 	}
 	return result, rows.Err()
+}
+
+// ---------- Recovery persistence ----------
+
+func (s *SQLiteStore) SaveRecoveryOp(ctx context.Context, op *RecoveryOp) error {
+	if op == nil || op.ID == "" {
+		return fmt.Errorf("save recovery op: nil op or empty ID")
+	}
+
+	var startedAt, completedAt *string
+	if op.StartedAt != nil {
+		t := op.StartedAt.Format(time.RFC3339)
+		startedAt = &t
+	}
+	if op.CompletedAt != nil {
+		t := op.CompletedAt.Format(time.RFC3339)
+		completedAt = &t
+	}
+
+	const query = `
+INSERT INTO recovery_ops (
+	id, severity, status, total_sessions, alive_count, dead_count,
+	resumed_count, failed_count, total_cost_usd, budget_cap_usd,
+	trigger_source, decision_id, error_msg, detected_at, started_at, completed_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+	severity=excluded.severity, status=excluded.status,
+	total_sessions=excluded.total_sessions, alive_count=excluded.alive_count,
+	dead_count=excluded.dead_count, resumed_count=excluded.resumed_count,
+	failed_count=excluded.failed_count, total_cost_usd=excluded.total_cost_usd,
+	budget_cap_usd=excluded.budget_cap_usd, trigger_source=excluded.trigger_source,
+	decision_id=excluded.decision_id, error_msg=excluded.error_msg,
+	started_at=excluded.started_at, completed_at=excluded.completed_at
+`
+	_, err := s.db.ExecContext(ctx, query,
+		op.ID, op.Severity, string(op.Status),
+		op.TotalSessions, op.AliveCount, op.DeadCount,
+		op.ResumedCount, op.FailedCount, op.TotalCostUSD, op.BudgetCapUSD,
+		op.TriggerSource, op.DecisionID, op.ErrorMsg,
+		op.DetectedAt.Format(time.RFC3339), startedAt, completedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("save recovery op %s: %w", op.ID, err)
+	}
+	return nil
+}
+
+func (s *SQLiteStore) GetRecoveryOp(ctx context.Context, id string) (*RecoveryOp, error) {
+	const query = `
+SELECT id, severity, status, total_sessions, alive_count, dead_count,
+	resumed_count, failed_count, total_cost_usd, budget_cap_usd,
+	trigger_source, decision_id, error_msg, detected_at, started_at, completed_at
+FROM recovery_ops WHERE id = ?
+`
+	row := s.db.QueryRowContext(ctx, query, id)
+
+	var op RecoveryOp
+	var status string
+	var detectedAt string
+	var startedAt, completedAt sql.NullString
+
+	err := row.Scan(
+		&op.ID, &op.Severity, &status,
+		&op.TotalSessions, &op.AliveCount, &op.DeadCount,
+		&op.ResumedCount, &op.FailedCount, &op.TotalCostUSD, &op.BudgetCapUSD,
+		&op.TriggerSource, &op.DecisionID, &op.ErrorMsg,
+		&detectedAt, &startedAt, &completedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, ErrRecoveryOpNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get recovery op %s: %w", id, err)
+	}
+
+	op.Status = RecoveryOpStatus(status)
+	op.DetectedAt, _ = time.Parse(time.RFC3339, detectedAt)
+	if startedAt.Valid {
+		t, _ := time.Parse(time.RFC3339, startedAt.String)
+		op.StartedAt = &t
+	}
+	if completedAt.Valid {
+		t, _ := time.Parse(time.RFC3339, completedAt.String)
+		op.CompletedAt = &t
+	}
+
+	return &op, nil
+}
+
+func (s *SQLiteStore) ListRecoveryOps(ctx context.Context, filter RecoveryOpFilter) ([]*RecoveryOp, error) {
+	query := `SELECT id, severity, status, total_sessions, alive_count, dead_count,
+		resumed_count, failed_count, total_cost_usd, budget_cap_usd,
+		trigger_source, decision_id, error_msg, detected_at, started_at, completed_at
+	FROM recovery_ops WHERE 1=1`
+	var args []any
+
+	if filter.Status != "" {
+		query += " AND status = ?"
+		args = append(args, string(filter.Status))
+	}
+	if !filter.Since.IsZero() {
+		query += " AND detected_at >= ?"
+		args = append(args, filter.Since.Format(time.RFC3339))
+	}
+	query += " ORDER BY detected_at DESC"
+	if filter.Limit > 0 {
+		query += fmt.Sprintf(" LIMIT %d", filter.Limit)
+	}
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list recovery ops: %w", err)
+	}
+	defer rows.Close()
+
+	var result []*RecoveryOp
+	for rows.Next() {
+		var op RecoveryOp
+		var status, detectedAt string
+		var startedAt, completedAt sql.NullString
+
+		if err := rows.Scan(
+			&op.ID, &op.Severity, &status,
+			&op.TotalSessions, &op.AliveCount, &op.DeadCount,
+			&op.ResumedCount, &op.FailedCount, &op.TotalCostUSD, &op.BudgetCapUSD,
+			&op.TriggerSource, &op.DecisionID, &op.ErrorMsg,
+			&detectedAt, &startedAt, &completedAt,
+		); err != nil {
+			return nil, fmt.Errorf("list recovery ops: scan: %w", err)
+		}
+
+		op.Status = RecoveryOpStatus(status)
+		op.DetectedAt, _ = time.Parse(time.RFC3339, detectedAt)
+		if startedAt.Valid {
+			t, _ := time.Parse(time.RFC3339, startedAt.String)
+			op.StartedAt = &t
+		}
+		if completedAt.Valid {
+			t, _ := time.Parse(time.RFC3339, completedAt.String)
+			op.CompletedAt = &t
+		}
+
+		result = append(result, &op)
+	}
+	return result, rows.Err()
+}
+
+func (s *SQLiteStore) SaveRecoveryAction(ctx context.Context, action *RecoveryAction) error {
+	if action == nil || action.ID == "" {
+		return fmt.Errorf("save recovery action: nil action or empty ID")
+	}
+
+	var startedAt, completedAt *string
+	if action.StartedAt != nil {
+		t := action.StartedAt.Format(time.RFC3339)
+		startedAt = &t
+	}
+	if action.CompletedAt != nil {
+		t := action.CompletedAt.Format(time.RFC3339)
+		completedAt = &t
+	}
+
+	const query = `
+INSERT INTO recovery_actions (
+	id, recovery_op_id, claude_session_id, ralph_session_id,
+	repo_path, repo_name, priority, status, cost_usd, error_msg,
+	created_at, started_at, completed_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+	ralph_session_id=excluded.ralph_session_id,
+	status=excluded.status, cost_usd=excluded.cost_usd,
+	error_msg=excluded.error_msg,
+	started_at=excluded.started_at, completed_at=excluded.completed_at
+`
+	_, err := s.db.ExecContext(ctx, query,
+		action.ID, action.RecoveryOpID, action.ClaudeSessionID, action.RalphSessionID,
+		action.RepoPath, action.RepoName, action.Priority,
+		string(action.Status), action.CostUSD, action.ErrorMsg,
+		action.CreatedAt.Format(time.RFC3339), startedAt, completedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("save recovery action %s: %w", action.ID, err)
+	}
+	return nil
+}
+
+func (s *SQLiteStore) UpdateRecoveryActionStatus(ctx context.Context, id string, status RecoveryActionStatus, errMsg string) error {
+	now := time.Now().Format(time.RFC3339)
+	var query string
+	var args []any
+
+	switch status {
+	case ActionExecuting:
+		query = `UPDATE recovery_actions SET status = ?, error_msg = ?, started_at = ? WHERE id = ?`
+		args = []any{string(status), errMsg, now, id}
+	case ActionSucceeded, ActionFailed, ActionSkipped:
+		query = `UPDATE recovery_actions SET status = ?, error_msg = ?, completed_at = ? WHERE id = ?`
+		args = []any{string(status), errMsg, now, id}
+	default:
+		query = `UPDATE recovery_actions SET status = ?, error_msg = ? WHERE id = ?`
+		args = []any{string(status), errMsg, id}
+	}
+
+	res, err := s.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("update recovery action %s: %w", id, err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrRecoveryActionNotFound
+	}
+	return nil
 }
