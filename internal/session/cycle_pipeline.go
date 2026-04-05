@@ -33,7 +33,7 @@ func ObservationsToTasks(observations []LoopObservation) []CycleTask {
 		switch obs.Status {
 		case "failed":
 			title := fmt.Sprintf("Fix failure: %s", cycleTruncate(obs.TaskTitle, 80))
-			prompt := fmt.Sprintf("Fix the failing task %q. Error: %s", obs.TaskTitle, obs.Error)
+			prompt := buildFailedTaskPrompt(obs)
 			priority := 0.8
 			if count := errorCounts[obs.Error]; count > 1 {
 				priority += float64(count) * 0.05
@@ -49,8 +49,7 @@ func ObservationsToTasks(observations []LoopObservation) []CycleTask {
 
 		case "noop":
 			title := fmt.Sprintf("Investigate no-op: %s", cycleTruncate(obs.TaskTitle, 80))
-			prompt := fmt.Sprintf("Investigate why task %q produced no changes. Loop ID: %s, iteration: %d",
-				obs.TaskTitle, obs.LoopID, obs.IterationNumber)
+			prompt := buildNoopTaskPrompt(obs)
 			task = &CycleTask{
 				Title:    title,
 				Prompt:   prompt,
@@ -61,8 +60,7 @@ func ObservationsToTasks(observations []LoopObservation) []CycleTask {
 
 		case "regressed":
 			title := fmt.Sprintf("Fix regression: %s", cycleTruncate(obs.TaskTitle, 80))
-			prompt := fmt.Sprintf("Fix regression in task %q. The verification previously passed but now fails. Error: %s",
-				obs.TaskTitle, obs.Error)
+			prompt := buildRegressedTaskPrompt(obs)
 			priority := 0.9
 			if count := errorCounts[obs.Error]; count > 1 {
 				priority += float64(count) * 0.05
@@ -77,7 +75,7 @@ func ObservationsToTasks(observations []LoopObservation) []CycleTask {
 
 		case "stalled":
 			title := fmt.Sprintf("Unstall: %s", cycleTruncate(obs.TaskTitle, 80))
-			prompt := fmt.Sprintf("Investigate and fix stalled task %q in loop %s", obs.TaskTitle, obs.LoopID)
+			prompt := buildStalledTaskPrompt(obs)
 			task = &CycleTask{
 				Title:    title,
 				Prompt:   prompt,
@@ -172,6 +170,115 @@ func RoadmapToTasks(roadmapPath string, maxTasks int) ([]CycleTask, error) {
 	}
 
 	return tasks, nil
+}
+
+// buildFailedTaskPrompt creates a structured prompt for a failed observation.
+func buildFailedTaskPrompt(obs LoopObservation) string {
+	var b strings.Builder
+	b.WriteString("<context>\n")
+	fmt.Fprintf(&b, "A %s-provider session in repo %q failed.\n", obs.WorkerProvider, obs.RepoName)
+	if obs.Error != "" {
+		b.WriteString("\nError output:\n```\n")
+		b.WriteString(obs.Error)
+		b.WriteString("\n```\n")
+	}
+	if len(obs.DiffPaths) > 0 {
+		b.WriteString("\nFiles touched before failure: ")
+		b.WriteString(strings.Join(obs.DiffPaths, ", "))
+		b.WriteString("\n")
+	}
+	b.WriteString("</context>\n\n")
+
+	b.WriteString("<instructions>\n")
+	fmt.Fprintf(&b, "1. Diagnose the root cause of the failure in task %q\n", obs.TaskTitle)
+	b.WriteString("2. Apply a minimal fix targeting only the root cause\n")
+	b.WriteString("3. Verify the fix resolves the error\n")
+	b.WriteString("</instructions>\n\n")
+
+	b.WriteString("<constraints>\n")
+	b.WriteString("- Make the smallest change that fixes the issue\n")
+	b.WriteString("- Do not refactor unrelated code\n")
+	b.WriteString("</constraints>\n\n")
+
+	b.WriteString("<verification>\n")
+	b.WriteString("- go vet ./...\n")
+	b.WriteString("- go test ./... -count=1\n")
+	b.WriteString("</verification>")
+	return b.String()
+}
+
+// buildNoopTaskPrompt creates a structured prompt for a no-op observation.
+func buildNoopTaskPrompt(obs LoopObservation) string {
+	var b strings.Builder
+	b.WriteString("<context>\n")
+	fmt.Fprintf(&b, "A %s-provider session in repo %q completed but produced zero file changes.\n",
+		obs.WorkerProvider, obs.RepoName)
+	fmt.Fprintf(&b, "Loop ID: %s, iteration: %d\n", obs.LoopID, obs.IterationNumber)
+	b.WriteString("</context>\n\n")
+
+	b.WriteString("<instructions>\n")
+	fmt.Fprintf(&b, "1. Read the original task: %q\n", obs.TaskTitle)
+	b.WriteString("2. Determine why no files were changed — was the task already done, was the prompt unclear, or was there a blocker?\n")
+	b.WriteString("3. If work is still needed, implement it. If the task is already complete, confirm with a verification check.\n")
+	b.WriteString("</instructions>\n\n")
+
+	b.WriteString("<verification>\n")
+	b.WriteString("- go test ./... -count=1\n")
+	b.WriteString("</verification>")
+	return b.String()
+}
+
+// buildRegressedTaskPrompt creates a structured prompt for a regressed observation.
+func buildRegressedTaskPrompt(obs LoopObservation) string {
+	var b strings.Builder
+	b.WriteString("<context>\n")
+	fmt.Fprintf(&b, "A previously-passing task in repo %q has regressed — verification now fails.\n", obs.RepoName)
+	if obs.Error != "" {
+		b.WriteString("\nRegression error:\n```\n")
+		b.WriteString(obs.Error)
+		b.WriteString("\n```\n")
+	}
+	if len(obs.DiffPaths) > 0 {
+		b.WriteString("\nFiles changed in the regressing session: ")
+		b.WriteString(strings.Join(obs.DiffPaths, ", "))
+		b.WriteString("\n")
+	}
+	b.WriteString("</context>\n\n")
+
+	b.WriteString("<instructions>\n")
+	fmt.Fprintf(&b, "1. Identify what changed to cause the regression in task %q\n", obs.TaskTitle)
+	b.WriteString("2. Fix the regression while preserving the original intended behavior\n")
+	b.WriteString("3. Verify both the original task and the regression fix pass\n")
+	b.WriteString("</instructions>\n\n")
+
+	b.WriteString("<verification>\n")
+	b.WriteString("- go vet ./...\n")
+	b.WriteString("- go test ./... -count=1\n")
+	b.WriteString("</verification>")
+	return b.String()
+}
+
+// buildStalledTaskPrompt creates a structured prompt for a stalled observation.
+func buildStalledTaskPrompt(obs LoopObservation) string {
+	var b strings.Builder
+	b.WriteString("<context>\n")
+	fmt.Fprintf(&b, "A session in repo %q stalled — it stopped making progress.\n", obs.RepoName)
+	fmt.Fprintf(&b, "Loop ID: %s, provider: %s\n", obs.LoopID, obs.WorkerProvider)
+	if obs.TotalLatencyMs > 0 {
+		fmt.Fprintf(&b, "Elapsed before stall: %.0fs\n", float64(obs.TotalLatencyMs)/1000)
+	}
+	b.WriteString("</context>\n\n")
+
+	b.WriteString("<instructions>\n")
+	fmt.Fprintf(&b, "1. Investigate why task %q stalled\n", obs.TaskTitle)
+	b.WriteString("2. Check for infinite loops, missing inputs, or blocked dependencies\n")
+	b.WriteString("3. Apply a fix and verify the task can complete\n")
+	b.WriteString("</instructions>\n\n")
+
+	b.WriteString("<verification>\n")
+	b.WriteString("- go test ./... -count=1\n")
+	b.WriteString("</verification>")
+	return b.String()
 }
 
 // cycleTruncate shortens s to maxLen, appending "..." if truncated.
