@@ -135,6 +135,7 @@ func TestWaitForLoops_UnknownIDsConsidered(t *testing.T) {
 
 func TestRunCycle_NoTasksPlanned(t *testing.T) {
 	t.Parallel()
+	disableCycleSafety(t)
 
 	dir := t.TempDir()
 	initGitRepoForCycle(t, dir)
