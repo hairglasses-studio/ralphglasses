@@ -3,19 +3,28 @@ package gateway
 import (
 	"bytes"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
 
 // AuditLogger logs request and response metadata for every proxied call.
 type AuditLogger struct {
-	Logger *log.Logger
+	Logger *slog.Logger
 }
 
 // NewAuditLogger creates an audit logger that writes to the given writer.
 func NewAuditLogger(w io.Writer) *AuditLogger {
-	return &AuditLogger{Logger: log.New(w, "[audit] ", log.LstdFlags)}
+	h := slog.NewTextHandler(w, &slog.HandlerOptions{
+		// Remove time key so tests don't depend on timestamps.
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.TimeKey || a.Key == slog.LevelKey {
+				return slog.Attr{}
+			}
+			return a
+		},
+	})
+	return &AuditLogger{Logger: slog.New(h).With("component", "audit")}
 }
 
 // Wrap returns middleware that logs each request's method, path, API key
@@ -38,9 +47,14 @@ func (al *AuditLogger) Wrap(next http.Handler) http.Handler {
 
 		next.ServeHTTP(rec, r)
 
-		key := maskKey(r.Header.Get("X-API-Key"))
-		al.Logger.Printf("method=%s path=%s key=%s status=%d duration=%s body_prefix=%q",
-			r.Method, r.URL.Path, key, rec.status, time.Since(start).Round(time.Microsecond), truncate(bodySnippet, 128))
+		al.Logger.Info("request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"key", maskKey(r.Header.Get("X-API-Key")),
+			"status", rec.status,
+			"duration", time.Since(start).Round(time.Microsecond).String(),
+			"body_prefix", truncate(bodySnippet, 128),
+		)
 	})
 }
 

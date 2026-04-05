@@ -2,7 +2,7 @@ package batch
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -121,7 +121,7 @@ func (s *Scheduler) tryFlush(ctx context.Context) {
 		if s.OnError != nil {
 			s.OnError(err)
 		} else {
-			log.Printf("batch scheduler: flush error: %v", err)
+			slog.Error("batch scheduler: flush error", "error", err)
 		}
 		return
 	}
