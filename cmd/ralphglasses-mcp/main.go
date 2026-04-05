@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hairglasses-studio/mcpkit/registry"
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
@@ -24,7 +25,7 @@ func resolveScanPath() string {
 // setup creates and configures the MCP server with all tools registered.
 // It returns the server, a cleanup function, and any error.
 func setup(scanPath string) (*server.MCPServer, func(), error) {
-	srv := server.NewMCPServer(
+	srv := registry.NewMCPServer(
 		"ralphglasses",
 		"0.1.0",
 		server.WithToolCapabilities(true),
@@ -54,7 +55,7 @@ func main() {
 	}
 	defer cleanup()
 
-	if err := server.ServeStdio(srv); err != nil {
+	if err := registry.ServeAuto(srv); err != nil {
 		fmt.Fprintf(os.Stderr, "mcp server error: %v\n", err)
 		os.Exit(1)
 	}
