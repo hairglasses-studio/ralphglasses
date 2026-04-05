@@ -534,6 +534,31 @@ func TestValidateModelProviderMatch(t *testing.T) {
 	}
 }
 
+func TestCheckModelRegistry(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider Provider
+		model    string
+		wantWarn bool
+	}{
+		{"known model", ProviderGemini, "gemini-2.5-pro", false},
+		{"unknown model with valid prefix", ProviderGemini, "gemini-3-pro", true},
+		{"known claude model", ProviderClaude, "claude-opus-4-20250514", false},
+		{"unknown claude model", ProviderClaude, "claude-unknown-99", true},
+		{"prefix mismatch returns empty", ProviderGemini, "claude-sonnet-4-6", false},
+		{"empty provider", "", "gemini-2.5-pro", false},
+		{"empty model", ProviderGemini, "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CheckModelRegistry(tt.provider, tt.model)
+			if (got != "") != tt.wantWarn {
+				t.Errorf("CheckModelRegistry(%q, %q) = %q, wantWarn=%v", tt.provider, tt.model, got, tt.wantWarn)
+			}
+		})
+	}
+}
+
 func TestLoopValidationWarning_String(t *testing.T) {
 	w := LoopValidationWarning{Field: "model", Message: "mismatch"}
 	got := w.String()
