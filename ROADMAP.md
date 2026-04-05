@@ -326,7 +326,7 @@ Implements MCP spec features: structured output schemas, logging notifications.
 - **Acceptance:** no data races under `go test -race`, structured JSON log output
 
 ### 1.2.5 — MCP Handler Framework
-- [ ] 1.2.5.1 — Extract ParamParser helper: type-safe parameter extraction with validation, replacing manual `getStringArg`/`getNumberArg` calls across 81 handlers `P1` `L`
+- [x] 1.2.5.1 — Extract ParamParser helper: type-safe parameter extraction with validation, replacing manual `getStringArg`/`getNumberArg` calls across 81 handlers `P1` `L`
 - [x] 1.2.5.2 — Standardize error codes across all handlers: migrate from `errResult()` to `errCode()` with consistent error_code values (invalid_params, not_found, internal_error) `P1` `L`
 - [x] 1.2.5.3 — Handler test harness: mock Server with mock providers for table-driven tests, reducing per-handler test boilerplate `P1` `M`
 - [ ] 1.2.5.4 — Handler generator: codegen tool for new MCP tool scaffolding (registration + handler + test stub) `[BLOCKED BY 1.2.5.1, 1.2.5.2]` `P2` `M`
@@ -496,9 +496,9 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** docs site live at `hairglasses-studio.github.io/ralphglasses`
 
 ### 1.5.10 — Charmbracelet v2 migration
-- [ ] 1.5.10.1 — Migrate to Bubble Tea v2 (`charm.land/bubbletea/v2`): synchronized rendering (eliminates tearing), clipboard (OSC52), GraphicsMode, declarative Views API `P1` `XL`
-- [ ] 1.5.10.2 — Migrate to Lip Gloss v2 (`charm.land/lipgloss/v2`): deterministic styles (explicit `isDark` bool), explicit I/O control, SSH/Wish compat `P1` `L`
-- [ ] 1.5.10.3 — Update bubbles components for v2 API changes (table, viewport, list, textinput) `P1` `L`
+- [x] 1.5.10.1 — Migrate to Bubble Tea v2 (`charm.land/bubbletea/v2`): synchronized rendering (eliminates tearing), clipboard (OSC52), GraphicsMode, declarative Views API `P1` `XL`
+- [x] 1.5.10.2 — Migrate to Lip Gloss v2 (`charm.land/lipgloss/v2`): deterministic styles (explicit `isDark` bool), explicit I/O control, SSH/Wish compat `P1` `L`
+- [x] 1.5.10.3 — Update bubbles components for v2 API changes (table, viewport, list, textinput) `P1` `L`
 - [ ] 1.5.10.4 — Adopt Lip Gloss v2 `table`, `tree`, `list` packages for fleet dashboard `P2` `M`
 - [ ] 1.5.10.5 — Evaluate ntcharts streaming charts for real-time fleet health graphs `P2` `M`
 - **Acceptance:** All 18 TUI views render without tearing; clipboard copy works; `go build ./...` clean
