@@ -7,32 +7,31 @@ import (
 	"log/slog"
 	"os"
 	"time"
+
+	"github.com/hairglasses-studio/mcpkit/finops"
 )
 
-// Default model cost rates per 1M tokens (USD). These serve as the single
-// source of truth for all cost-aware subsystems. Update here when provider
-// pricing changes.
-//
-// Last verified: 2026-04-05 (sources: platform.claude.com, ai.google.dev, openai.com/api/pricing)
-const (
-	CostGeminiFlashLiteInput  float64 = 0.075
-	CostGeminiFlashLiteOutput float64 = 0.30
-	CostGeminiFlashInput      float64 = 0.30  // Gemini 2.5 Flash (was 0.15 for 2.0 Flash)
-	CostGeminiFlashOutput     float64 = 2.50  // Gemini 2.5 Flash (was 0.60 for 2.0 Flash)
-	CostClaudeSonnetInput     float64 = 3.00
-	CostClaudeSonnetOutput    float64 = 15.00
-	CostClaudeOpusInput       float64 = 5.00
-	CostClaudeOpusOutput      float64 = 25.00 // Opus 4.6 output (was 75.00 — 3x overstated)
-	CostCodexInput            float64 = 2.00  // GPT-4.1/o3 default tier
-	CostCodexOutput           float64 = 8.00  // GPT-4.1/o3 default tier
-	CostClaudeHaikuInput      float64 = 0.80
-	CostClaudeHaikuOutput     float64 = 4.00
-	CostGeminiProInput        float64 = 1.25
-	CostGeminiProOutput       float64 = 10.00
+// Default model cost rates per 1M tokens (USD). Sourced from the canonical
+// mcpkit/finops pricing table. Re-exported here for backward compatibility.
+var (
+	CostGeminiFlashLiteInput  = finops.DefaultPricing["gemini-2.0-flash-lite"].InputPerMToken
+	CostGeminiFlashLiteOutput = finops.DefaultPricing["gemini-2.0-flash-lite"].OutputPerMToken
+	CostGeminiFlashInput      = finops.DefaultPricing["gemini-2.5-flash"].InputPerMToken
+	CostGeminiFlashOutput     = finops.DefaultPricing["gemini-2.5-flash"].OutputPerMToken
+	CostClaudeSonnetInput     = finops.DefaultPricing["claude-sonnet-4-6"].InputPerMToken
+	CostClaudeSonnetOutput    = finops.DefaultPricing["claude-sonnet-4-6"].OutputPerMToken
+	CostClaudeOpusInput       = finops.DefaultPricing["claude-opus-4-6"].InputPerMToken
+	CostClaudeOpusOutput      = finops.DefaultPricing["claude-opus-4-6"].OutputPerMToken
+	CostCodexInput            = finops.DefaultPricing["codex-mini-latest"].InputPerMToken
+	CostCodexOutput           = finops.DefaultPricing["codex-mini-latest"].OutputPerMToken
+	CostClaudeHaikuInput      = finops.DefaultPricing["claude-haiku-4-5"].InputPerMToken
+	CostClaudeHaikuOutput     = finops.DefaultPricing["claude-haiku-4-5"].OutputPerMToken
+	CostGeminiProInput        = finops.DefaultPricing["gemini-2.5-pro"].InputPerMToken
+	CostGeminiProOutput       = finops.DefaultPricing["gemini-2.5-pro"].OutputPerMToken
 )
 
 // CostRatesVerified is the date these rates were last verified against provider pricing pages.
-const CostRatesVerified = "2026-04-04"
+const CostRatesVerified = "2026-04-05"
 
 // CostRatesMaxAgeDays is the maximum age before a staleness warning is logged.
 const CostRatesMaxAgeDays = 60
