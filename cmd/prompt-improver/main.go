@@ -660,7 +660,7 @@ LINT CHECKS:
   overtrigger-phrase, over-specification, decomposition-needed, injection-risk,
   thinking-mode-redundant, example-quality, compaction-readiness
 
-CLAUDE CODE HOOK INTEGRATION:
+HOOK INTEGRATION:
   Quick setup (recommended):
     prompt-improver install --global       # hook + MCP for all projects
     prompt-improver install                # hook + MCP for current project only
@@ -676,13 +676,13 @@ CLAUDE CODE HOOK INTEGRATION:
       min_word_count: 5          # skip prompts shorter than this
 
   Exit code 0 = proceed, exit code 2 = block the prompt.
+  The install command can target Codex, Claude, or both depending on your provider setup.
 
-MCP SERVER (on-demand tools for Claude Code):
+MCP SERVER (on-demand prompt tools):
   Add to project .mcp.json:
     { "mcpServers": { "prompt-improver": { "type": "stdio", "command": "prompt-improver", "args": ["mcp"] } } }
 
-  Or register globally:
-    claude mcp add --transport stdio prompt-improver --scope user -- prompt-improver mcp
+  Or register globally with your preferred MCP client or via prompt-improver install --global.
 
   Tools exposed: analyze_prompt, enhance_prompt, lint_prompt, improve_prompt
 

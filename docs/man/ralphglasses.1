@@ -67,12 +67,11 @@ The \fB\-\-scan-path\fR flag is inherited from the root command.
 Alternatively, set the \fBRALPHGLASSES_SCAN_PATH\fR environment variable.
 .PP
 Codex-first repo-local MCP/client setup is already configured via \fB.codex/config.toml\fR and \fB.mcp.json\fR.
-Claude users can also register the server explicitly:
+Other MCP clients can register the same command explicitly if needed:
 .PP
 .RS 4
 .nf
-claude mcp add ralphglasses \\
-  -- go run . mcp --scan-path ~/projects
+go run . mcp --scan-path ~/projects
 .fi
 .RE
 .PP
@@ -293,11 +292,9 @@ ralphglasses --scan-path ~/projects --theme dracula
 .nf
 ralphglasses mcp --scan-path ~/projects
 .fi
-.SS Register MCP server for Claude Code
+.SS Run MCP server with explicit scan path
 .nf
-claude mcp add ralphglasses \\
-  -e RALPHGLASSES_SCAN_PATH=~/projects \\
-  -- go run /path/to/ralphglasses mcp
+RALPHGLASSES_SCAN_PATH=~/projects go run /path/to/ralphglasses mcp
 .fi
 .SS Generate bash completions
 .nf

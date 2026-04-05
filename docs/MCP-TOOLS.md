@@ -6,17 +6,10 @@ Ralphglasses is an installable MCP server exposing 126 tools (124 namespace tool
 
 ```bash
 # Codex-first repo-local MCP/client setup is already configured via .codex/config.toml and .mcp.json.
-# Claude users can also register the server explicitly:
-claude mcp add ralphglasses -- go run . mcp
-
-# Or with custom scan path
-claude mcp add ralphglasses -e RALPHGLASSES_SCAN_PATH=~/hairglasses-studio -- go run . mcp
-
-# Or via the Cobra subcommand
 go run . mcp --scan-path ~/hairglasses-studio
 ```
 
-A `.mcp.json` and `.codex/config.toml` are also included in the repo root for automatic local discovery.
+A `.mcp.json` and `.codex/config.toml` are also included in the repo root for automatic local discovery. Other MCP clients can register `go run . mcp` directly and set `RALPHGLASSES_SCAN_PATH=~/hairglasses-studio` if they need an explicit client-level config.
 
 ## Deferred Loading
 
@@ -250,7 +243,8 @@ Use the meta-tools below to discover and load tool groups at runtime.
 The MCP server is a long-lived process compiled and run via `go run . mcp`. After making code changes to ralphglasses, you must restart the server for them to take effect:
 
 ```bash
-claude mcp remove ralphglasses && claude mcp add ralphglasses -- go run . mcp
+pkill -f "go run . mcp" || true
+go run . mcp --scan-path ~/hairglasses-studio
 ```
 
-If using a `.mcp.json`-based setup, simply restart your MCP client (e.g., re-open Claude Code) to pick up the changes.
+If using a `.mcp.json`-based setup, simply restart your MCP client to pick up the changes.
