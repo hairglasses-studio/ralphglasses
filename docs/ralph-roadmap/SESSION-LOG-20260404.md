@@ -45,29 +45,61 @@ Produced 24 research documents (784K) in `docs/ralph-roadmap/`:
 - ROADMAP.md metrics updated (126→166 tools, Phase 3.5.5→3.5.6, Phase 9.5 note)
 - Load tool group description updated (13→16 namespaces)
 
-## Remaining High-Value Work (not done this session)
+### Sprint 2: Cost Model & Fleet Hardening (COMPLETE)
 
-### Immediate (next session, 2-3 days)
-1. Fix remaining 5 failing test packages (knowledge, process, session, cmd/*)
-2. Wire fleet CostPredictor.Record() to handleWorkComplete
-3. Update compiled-in provider cost rates to April 2026 pricing
-4. Collect 50+ multi-provider observations for DecisionModel
+- Gemini Flash output cost rate $2.50 → $3.50 (40% underestimate fixed)
+- Enhancer TargetProvider: fixed resolution ordering + CLI override re-resolution
+  (prompts targeting Claude now correctly get XML structure)
+- R-11/R-12: anomaly cancel races fixed (mutex-protect d.cancel in Start/Stop)
+- Fleet CostPredictor wired into Coordinator + handleWorkComplete
+- Fleet queue persistence: SaveTo on shutdown, LoadFrom on startup, 30s checkpoint
+- Per-provider circuit breakers: shared CB → per-provider map in HybridEngine
+
+### Supplementary Research Phase 2 (3 design docs)
+
+- **s5-sweep-parallel-design.md**: Semaphore fan-out (default 10), budget gate fix,
+  context propagation fix. Found 2 bugs (silent budget skip, context.Background)
+- **s6-logview-ringbuffer-design.md**: 10K-line ring buffer design, O(1) push,
+  scroll compensation, ~4MB cap vs unbounded 150-600MB after 12h
+- **s7-namespace-restructure-plan.md**: Split advanced(24) → rc(4)/autonomy(6)/
+  workflow(3)/residual(11), plus 7 misplaced tools mapped with correct namespaces
+
+## Session Totals
+
+| Metric | Count |
+|--------|-------|
+| Research agents launched | 27 (24 original + 3 supplementary design) |
+| Implementation agents launched | 19 |
+| Research documents produced | 28 (25 analysis + 3 design docs) |
+| Commits pushed | 6 |
+| Files changed | 39 |
+| Lines inserted | ~600 |
+| Lines deleted | ~700 |
+| Race conditions fixed | 10 (2 CRITICAL + 4 HIGH + 4 MEDIUM) |
+| Budget gaps closed | 3 |
+| Path traversal fixes | 9 call sites |
+| MCP tools fully annotated | 166/166 (was 0/166) |
+
+## Remaining High-Value Work
+
+### Next session (highest priority)
+1. Fix remaining failing test packages (knowledge, process, cmd/*)
+2. Implement sweep parallelization (design ready in s5)
+3. Implement LogView ring buffer (design ready in s6)
+4. Execute namespace restructure (plan ready in s7)
+5. Collect 50+ multi-provider observations for DecisionModel
 
 ### Medium-term (1-2 weeks)
-5. Split `advanced` namespace (24 tools → 4 sub-namespaces)
 6. Migrate to official MCP Go SDK (modelcontextprotocol/go-sdk v1.4+)
-7. LogView ring buffer (10K max-lines)
-8. TUI tick optimization (2s polling → event-driven)
-9. Per-provider circuit breakers (replace shared CB)
+7. TUI tick optimization (2s polling → event-driven)
+8. Codex cost rates may be stale (o3 pricing: $10/$40 vs compiled $2.50/$15)
 
 ### L2 Gate (8 weeks)
-10. 24-hour supervisor run on Manjaro
-11. Per-hour spend circuit breaker ($50/hr)
-12. Fleet queue persistence (auto-save 30s)
-13. Sweep parallelization (serial → semaphore 10)
+9. 24-hour supervisor run on Manjaro
+10. Per-hour spend circuit breaker ($50/hr)
 
 ### L3 Gate (20 weeks)
-14. 72-hour unattended validation
-15. Self-healing runtime (Phase 13.1)
-16. A2A protocol adoption
-17. Bootable thin client ISO
+11. 72-hour unattended validation
+12. Self-healing runtime (Phase 13.1)
+13. A2A protocol adoption
+14. Bootable thin client ISO
