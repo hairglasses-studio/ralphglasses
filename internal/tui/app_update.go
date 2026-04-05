@@ -63,28 +63,53 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.TickFrame++
 		var cmds []tea.Cmd
+		// Drift correction: re-read all repos (fsnotify may miss .ralphrc edits).
 		cmds = append(cmds, m.refreshAllRepos()...)
-		// Load sessions persisted by other processes (e.g. MCP server)
+		// Load sessions persisted by other processes (e.g. MCP server).
 		if m.SessMgr != nil {
 			m.SessMgr.LoadExternalSessions()
 		}
-		// Refresh loop observation and gate caches (TTL-gated, not every tick)
+		// Refresh loop observation and gate caches (TTL-gated, not every tick).
 		m.refreshObsCache()
 		m.refreshGateCache()
 		m.drainRegressionEvents()
-		m.refreshLoopView()
-		m.refreshLoopControlData()
+		// Loop panel and loop control view: only refresh when visible.
+		if m.ShowLoopPanel {
+			m.refreshLoopView()
+		}
+		if m.Nav.CurrentView == ViewLoopControl {
+			m.refreshLoopControlData()
+		}
 		cmds = append(cmds, m.loopListCmd())
-		m.updateTable()
-		m.updateSessionTable()
-		m.updateTeamTable()
+		// Per-view conditional table updates: skip rebuilding tables that are not
+		// visible on the current view.  The slow tick (30 s) handles full refreshes
+		// for background views.  The status bar counts are always updated.
+		if m.needsRepoTable() {
+			m.updateTable()
+		} else {
+			m.refreshStatusBarCounts()
+		}
+		if m.needsSessionTable() {
+			m.updateSessionTable()
+		}
+		if m.needsTeamTable() {
+			m.updateTeamTable()
+		}
 		m.LastRefresh = components.NowFunc()
 		cmds = append(cmds, m.tickCmd())
-		// If viewing logs, tail the log
+		// If viewing logs, tail the log.
 		if m.Nav.CurrentView == ViewLogs && m.Sel.RepoIdx < len(m.Repos) {
 			cmds = append(cmds, process.TailLog(m.Repos[m.Sel.RepoIdx].Path, &m.LogOffset))
 		}
 		return m, tea.Batch(cmds...)
+
+	case slowTickMsg:
+		// Full unconditional refresh every 30 s.  Ensures that tables for views
+		// not currently active never drift more than one slow-tick interval.
+		m.updateTable()
+		m.updateSessionTable()
+		m.updateTeamTable()
+		return m, m.slowTickCmd()
 
 	case LoopListMsg:
 		rows := views.LoopRunsToRows([]*session.LoopRun(msg), m.TickFrame)

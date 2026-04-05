@@ -72,6 +72,12 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 		}
 	}
 
+	// Hourly spend circuit breaker gate: reject launch if rolling hourly rate exceeds threshold.
+	if m.spendMonitor != nil && m.spendMonitor.Tripped() {
+		return nil, fmt.Errorf("hourly spend limit exceeded (%.2f/hr, threshold $%.2f)",
+			m.spendMonitor.HourlyRate(), m.spendMonitor.threshold)
+	}
+
 	// Level 2+ auto-optimization: consult FeedbackAnalyzer for provider/budget
 	m.configMu.RLock()
 	optimizer := m.optimizer
