@@ -59,6 +59,100 @@ type CrashRecoveryPlan struct {
 	TotalSessions    int                  `json:"total_sessions"`
 	AliveCount       int                  `json:"alive_count"`
 	DeadCount        int                  `json:"dead_count"`
+	RecoveryOpID     string               `json:"recovery_op_id,omitempty"`
+}
+
+// ---------------------------------------------------------------------------
+// RecoveryBudgetEnvelope
+// ---------------------------------------------------------------------------
+
+// RecoveryBudgetEnvelope constrains spending on crash recovery operations.
+type RecoveryBudgetEnvelope struct {
+	TotalBudgetUSD float64
+	SpentUSD       float64
+	PerSessionCap  float64
+	mu             sync.Mutex
+}
+
+// NewRecoveryBudgetEnvelope creates a recovery budget with the given limits.
+func NewRecoveryBudgetEnvelope(totalBudget, perSessionCap float64) *RecoveryBudgetEnvelope {
+	return &RecoveryBudgetEnvelope{
+		TotalBudgetUSD: totalBudget,
+		PerSessionCap:  perSessionCap,
+	}
+}
+
+// CanSpend returns true if the remaining budget can accommodate the cost.
+func (rb *RecoveryBudgetEnvelope) CanSpend(cost float64) bool {
+	rb.mu.Lock()
+	defer rb.mu.Unlock()
+	return rb.TotalBudgetUSD-rb.SpentUSD >= cost
+}
+
+// CanSpendSession returns true if per-session cap and total budget allow the cost.
+func (rb *RecoveryBudgetEnvelope) CanSpendSession(cost float64) bool {
+	rb.mu.Lock()
+	defer rb.mu.Unlock()
+	if rb.PerSessionCap > 0 && cost > rb.PerSessionCap {
+		return false
+	}
+	return rb.TotalBudgetUSD-rb.SpentUSD >= cost
+}
+
+// RecordSpend adds cost to the spent total.
+func (rb *RecoveryBudgetEnvelope) RecordSpend(amount float64) {
+	rb.mu.Lock()
+	defer rb.mu.Unlock()
+	rb.SpentUSD += amount
+}
+
+// Remaining returns remaining budget.
+func (rb *RecoveryBudgetEnvelope) Remaining() float64 {
+	rb.mu.Lock()
+	defer rb.mu.Unlock()
+	return rb.TotalBudgetUSD - rb.SpentUSD
+}
+
+// ---------------------------------------------------------------------------
+// CrashRecoveryPolicy
+// ---------------------------------------------------------------------------
+
+// CrashRecoveryPolicy controls when and how crash recovery is automatically executed.
+type CrashRecoveryPolicy struct {
+	Enabled               bool            `json:"enabled"`
+	AutoExecuteOnSeverity map[string]bool `json:"auto_execute_on_severity"`
+	MaxAutoRecoveryCost   float64         `json:"max_auto_recovery_cost"`
+	PerSessionBudget      float64         `json:"per_session_budget"`
+	EscalationThreshold   int             `json:"escalation_threshold"`
+	MaxConcurrent         int             `json:"max_concurrent"`
+	CooldownAfterRecovery time.Duration   `json:"cooldown_after_recovery"`
+}
+
+// DefaultCrashRecoveryPolicy returns a conservative default policy (opt-in).
+func DefaultCrashRecoveryPolicy() CrashRecoveryPolicy {
+	return CrashRecoveryPolicy{
+		Enabled: false,
+		AutoExecuteOnSeverity: map[string]bool{
+			"none":         false,
+			"minor":        false,
+			"major":        true,
+			"catastrophic": true,
+		},
+		MaxAutoRecoveryCost:   5.00,
+		PerSessionBudget:      1.00,
+		EscalationThreshold:   3,
+		MaxConcurrent:         1,
+		CooldownAfterRecovery: 10 * time.Minute,
+	}
+}
+
+// ShouldAutoExecute returns true if the policy allows auto-execution for the given severity.
+func (p CrashRecoveryPolicy) ShouldAutoExecute(severity string) bool {
+	if !p.Enabled {
+		return false
+	}
+	allowed, ok := p.AutoExecuteOnSeverity[severity]
+	return ok && allowed
 }
 
 // RecoverableSession holds enriched metadata for a dead Claude Code session.
@@ -87,11 +181,15 @@ type CrashRecoveryOrchestrator struct {
 	bus   *events.Bus
 	store Store
 
-	mu              sync.Mutex
-	lastCheck       time.Time
-	lastPlan        *CrashRecoveryPlan
-	recoveryActive  bool
-	resumedSessions map[string]string // claude session ID -> ralph session ID
+	mu               sync.Mutex
+	lastCheck        time.Time
+	lastPlan         *CrashRecoveryPlan
+	recoveryActive   bool
+	resumedSessions  map[string]string // claude session ID -> ralph session ID
+	budget           *RecoveryBudgetEnvelope
+	policy           CrashRecoveryPolicy
+	failedRecoveries int
+	lastRecovery     time.Time
 }
 
 // NewCrashRecoveryOrchestrator creates a new recovery orchestrator.
@@ -102,6 +200,41 @@ func NewCrashRecoveryOrchestrator(mgr *Manager, bus *events.Bus, store Store) *C
 		store:           store,
 		resumedSessions: make(map[string]string),
 	}
+}
+
+// SetBudget attaches a recovery budget envelope.
+func (o *CrashRecoveryOrchestrator) SetBudget(b *RecoveryBudgetEnvelope) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.budget = b
+}
+
+// SetPolicy sets the crash recovery policy.
+func (o *CrashRecoveryOrchestrator) SetPolicy(p CrashRecoveryPolicy) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.policy = p
+}
+
+// Policy returns the current crash recovery policy.
+func (o *CrashRecoveryOrchestrator) Policy() CrashRecoveryPolicy {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.policy
+}
+
+// LastRecovery returns the time of the last recovery execution.
+func (o *CrashRecoveryOrchestrator) LastRecovery() time.Time {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.lastRecovery
+}
+
+// FailedRecoveries returns the count of consecutive failed recovery attempts.
+func (o *CrashRecoveryOrchestrator) FailedRecoveries() int {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.failedRecoveries
 }
 
 // ---------------------------------------------------------------------------
@@ -207,6 +340,29 @@ func (o *CrashRecoveryOrchestrator) DetectCrash(ctx context.Context, window time
 		plan.Severity = "none"
 	}
 
+	// Persist recovery op if crash detected.
+	if plan.DeadCount >= threshold && o.store != nil {
+		op := &RecoveryOp{
+			ID:            fmt.Sprintf("rec-%d", time.Now().UnixNano()),
+			Severity:      plan.Severity,
+			Status:        RecoveryOpDetected,
+			TotalSessions: plan.TotalSessions,
+			AliveCount:    plan.AliveCount,
+			DeadCount:     plan.DeadCount,
+			TriggerSource: "supervisor",
+			DetectedAt:    plan.DetectedAt,
+		}
+		o.mu.Lock()
+		if o.budget != nil {
+			op.BudgetCapUSD = o.budget.TotalBudgetUSD
+		}
+		o.mu.Unlock()
+		if err := o.store.SaveRecoveryOp(ctx, op); err != nil {
+			slog.Warn("crash_recovery: failed to persist recovery op", "error", err)
+		}
+		plan.RecoveryOpID = op.ID
+	}
+
 	o.mu.Lock()
 	o.lastCheck = time.Now()
 	o.lastPlan = plan
@@ -265,6 +421,16 @@ func (o *CrashRecoveryOrchestrator) ExecuteRecovery(ctx context.Context, plan *C
 		"max_concurrent", maxConcurrent,
 	)
 
+	// Update recovery op to executing.
+	if plan.RecoveryOpID != "" && o.store != nil {
+		if op, err := o.store.GetRecoveryOp(ctx, plan.RecoveryOpID); err == nil {
+			now := time.Now()
+			op.Status = RecoveryOpExecuting
+			op.StartedAt = &now
+			_ = o.store.SaveRecoveryOp(ctx, op)
+		}
+	}
+
 	if o.bus != nil {
 		o.bus.Publish(events.Event{
 			Type:      events.SessionRecovered,
@@ -281,19 +447,53 @@ func (o *CrashRecoveryOrchestrator) ExecuteRecovery(ctx context.Context, plan *C
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var errs []error
+	var resumedCount, failedCount int
 
 	for _, rs := range plan.SessionsToResume {
 		if ctx.Err() != nil {
 			break
 		}
 
+		// Budget check.
+		o.mu.Lock()
+		budget := o.budget
+		o.mu.Unlock()
+		if budget != nil && !budget.CanSpend(0.10) { // minimum viable cost
+			slog.Warn("crash_recovery: budget exhausted, stopping recovery",
+				"remaining", budget.Remaining())
+			break
+		}
+
 		rs := rs
+
+		// Create recovery action.
+		var actionID string
+		if plan.RecoveryOpID != "" && o.store != nil {
+			action := &RecoveryAction{
+				ID:              fmt.Sprintf("act-%d", time.Now().UnixNano()),
+				RecoveryOpID:    plan.RecoveryOpID,
+				ClaudeSessionID: rs.SessionID,
+				RepoPath:        rs.RepoPath,
+				RepoName:        rs.RepoName,
+				Priority:        rs.Priority,
+				Status:          ActionPending,
+				CreatedAt:       time.Now(),
+			}
+			_ = o.store.SaveRecoveryAction(ctx, action)
+			actionID = action.ID
+		}
+
 		wg.Add(1)
 		sem <- struct{}{}
 
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
+
+			// Mark executing.
+			if actionID != "" && o.store != nil {
+				_ = o.store.UpdateRecoveryActionStatus(ctx, actionID, ActionExecuting, "")
+			}
 
 			sess, err := o.resumeSession(ctx, rs)
 			if err != nil {
@@ -302,8 +502,12 @@ func (o *CrashRecoveryOrchestrator) ExecuteRecovery(ctx context.Context, plan *C
 					"repo", rs.RepoName,
 					"error", err,
 				)
+				if actionID != "" && o.store != nil {
+					_ = o.store.UpdateRecoveryActionStatus(ctx, actionID, ActionFailed, err.Error())
+				}
 				mu.Lock()
 				errs = append(errs, fmt.Errorf("%s (%s): %w", rs.RepoName, rs.SessionID, err))
+				failedCount++
 				mu.Unlock()
 				return
 			}
@@ -314,13 +518,49 @@ func (o *CrashRecoveryOrchestrator) ExecuteRecovery(ctx context.Context, plan *C
 				"repo", rs.RepoName,
 			)
 
+			if actionID != "" && o.store != nil {
+				_ = o.store.UpdateRecoveryActionStatus(ctx, actionID, ActionSucceeded, "")
+			}
+
 			o.mu.Lock()
 			o.resumedSessions[rs.SessionID] = sess.ID
 			o.mu.Unlock()
+			mu.Lock()
+			resumedCount++
+			mu.Unlock()
 		}()
 	}
 
 	wg.Wait()
+
+	// Update recovery op with final counts.
+	if plan.RecoveryOpID != "" && o.store != nil {
+		if op, err := o.store.GetRecoveryOp(ctx, plan.RecoveryOpID); err == nil {
+			now := time.Now()
+			op.CompletedAt = &now
+			op.ResumedCount = resumedCount
+			op.FailedCount = failedCount
+			if failedCount > 0 && resumedCount == 0 {
+				op.Status = RecoveryOpFailed
+			} else {
+				op.Status = RecoveryOpCompleted
+			}
+			if len(errs) > 0 {
+				op.ErrorMsg = errs[0].Error()
+			}
+			_ = o.store.SaveRecoveryOp(ctx, op)
+		}
+	}
+
+	// Update recovery tracking.
+	o.mu.Lock()
+	o.lastRecovery = time.Now()
+	if failedCount > 0 && resumedCount == 0 {
+		o.failedRecoveries++
+	} else {
+		o.failedRecoveries = 0
+	}
+	o.mu.Unlock()
 
 	if len(errs) > 0 {
 		return fmt.Errorf("recovery completed with %d errors: %v", len(errs), errs[0])

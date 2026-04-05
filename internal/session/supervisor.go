@@ -173,6 +173,75 @@ func (s *Supervisor) checkForClaudeCrash(ctx context.Context) {
 				},
 			})
 		}
+
+		// Auto-execute recovery if policy allows.
+		policy := cr.Policy()
+		if !policy.ShouldAutoExecute(plan.Severity) {
+			slog.Info("supervisor: crash recovery policy does not allow auto-execute",
+				"severity", plan.Severity, "policy_enabled", policy.Enabled)
+			return
+		}
+
+		// Check cooldown.
+		if policy.CooldownAfterRecovery > 0 && time.Since(cr.LastRecovery()) < policy.CooldownAfterRecovery {
+			slog.Info("supervisor: crash recovery cooldown active")
+			return
+		}
+
+		// Propose decision via DecisionLog.
+		s.mu.Lock()
+		dl := s.decisions
+		s.mu.Unlock()
+
+		if dl != nil {
+			decision := AutonomousDecision{
+				ID:            fmt.Sprintf("rec-%d", time.Now().UnixNano()),
+				Category:      DecisionRestart,
+				RequiredLevel: LevelAutoRecover,
+				Rationale:     fmt.Sprintf("crash detected: %d dead sessions, severity=%s", plan.DeadCount, plan.Severity),
+				Action:        fmt.Sprintf("auto-recover %d sessions", len(plan.SessionsToResume)),
+			}
+			if !dl.Propose(decision) {
+				slog.Info("supervisor: crash recovery decision not approved by autonomy level")
+				return
+			}
+
+			// Create budget envelope and execute.
+			budget := NewRecoveryBudgetEnvelope(policy.MaxAutoRecoveryCost, policy.PerSessionBudget)
+			cr.SetBudget(budget)
+
+			maxConcurrent := policy.MaxConcurrent
+			if maxConcurrent <= 0 {
+				maxConcurrent = 1
+			}
+
+			s.wg.Add(1)
+			go func() {
+				defer s.wg.Done()
+				err := cr.ExecuteRecovery(ctx, plan, maxConcurrent)
+
+				outcome := DecisionOutcome{
+					EvaluatedAt: time.Now(),
+					Success:     err == nil,
+				}
+				if err != nil {
+					outcome.Details = err.Error()
+					if cr.FailedRecoveries() >= policy.EscalationThreshold {
+						slog.Error("supervisor: crash recovery escalation threshold reached",
+							"failures", cr.FailedRecoveries(),
+							"threshold", policy.EscalationThreshold)
+						s.publishEvent(events.EmergencyStop, map[string]any{
+							"source": "crash_recovery",
+							"reason": "escalation_threshold",
+						})
+					}
+				} else {
+					outcome.Details = fmt.Sprintf("recovered %d sessions, spent $%.2f",
+						len(plan.SessionsToResume), budget.SpentUSD)
+				}
+				dl.RecordOutcome(decision.ID, outcome)
+			}()
+		}
 	}
 }
 
