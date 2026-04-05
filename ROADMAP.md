@@ -750,7 +750,7 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - [x] 3.1.2 — Workspace CRUD: create named workspace, move to output, rename, close `P1` `M`
 - [x] 3.1.3 — Window management: focus, move-to-workspace, set layout (splitv/splith/tabbed/stacked) `P1` `M`
 - [x] 3.1.4 — Monitor enumeration: list outputs via i3 IPC (name, resolution, position) `P1` `S`
-- [ ] 3.1.5 — Event listener: workspace focus, window create/close, output connect/disconnect `P1` `M`
+- [x] 3.1.5 — Event listener: workspace focus, window create/close, output connect/disconnect `P1` `M`
 - **Acceptance:** programmatic workspace creation and window placement from Go
 
 ### 3.2 — Monitor layout manager `[BLOCKED BY 3.1]`
@@ -792,7 +792,7 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - **Acceptance:** layout commands work on both i3 and Sway; Manjaro boots into Sway kiosk
 
 ### 3.6 — Hyprland support `[PARALLEL]`
-- [ ] 3.6.1 — Hyprland IPC client: `internal/wm/hyprland/` `P2` `M`
+- [x] 3.6.1 — Hyprland IPC client: `internal/wm/hyprland/` `P2` `M`
 - [x] 3.6.2 — Workspace dispatch: `hyprctl dispatch workspace` `P2` `S`
 - [x] 3.6.3 — Monitor configuration: `hyprctl monitors` `P2` `S`
 - [ ] 3.6.4 — Dynamic workspaces: leverage Hyprland's per-monitor model `P2` `M`
@@ -878,10 +878,10 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 **Remaining:**
 - [x] 4.1.1 — `distro/Makefile` target `build`: `docker build` with build args `P1` `M`
 - [x] 4.1.2 — `distro/Makefile` target `squashfs`: extract rootfs, `mksquashfs` with xz `P1` `M`
-- [ ] 4.1.3 — `distro/Makefile` target `iso`: `grub-mkrescue` with EFI + BIOS `P1` `M`
-- [ ] 4.1.4 — QEMU smoke test script: boot ISO, verify TUI starts `P1` `M`
+- [x] 4.1.3 — `distro/Makefile` target `iso`: `grub-mkrescue` with EFI + BIOS `P1` `M`
+- [x] 4.1.4 — QEMU smoke test script: boot ISO, verify TUI starts `P1` `M`
 - [ ] 4.1.5 — CI integration: build ISO in GitHub Actions, upload as artifact `P2` `L`
-- [ ] 4.1.6 — Fix Xorg config: remove hardcoded PCI `BusID`, use hw-detect.sh output `P1` `S`
+- [x] 4.1.6 — Fix Xorg config: remove hardcoded PCI `BusID`, use hw-detect.sh output `P1` `S`
 - [ ] 4.1.7 — Fix networking priority: align Dockerfile with docs (Intel I226-V primary) `P1` `S`
 - **Acceptance:** `make iso` produces bootable image, boots in QEMU
 
@@ -971,7 +971,7 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 - **Acceptance:** session runs inside container, cleanup on stop
 
 ### 5.2 — Incus/LXD containers
-- [ ] 5.2.1 — `internal/sandbox/incus/` package: Incus client, profile management `P2` `L`
+- [x] 5.2.1 — `internal/sandbox/incus/` package: Incus client, profile management `P2` `L`
 - [ ] 5.2.2 — Per-container credential isolation `P2` `M`
 - [ ] 5.2.3 — Workspace persistence: bind-mount + snapshot `P2` `M`
 - [ ] 5.2.4 — Threat detection: suspicious file access, network, resource spikes `P2` `L`
@@ -979,10 +979,10 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 - **Acceptance:** session runs in Incus container with isolated credentials
 
 ### 5.3 — MCP gateway `[PARALLEL]`
-- [ ] 5.3.1 — Central MCP hub service `P1` `L`
-- [ ] 5.3.2 — Per-session tool authorization `P1` `M`
-- [ ] 5.3.3 — Audit logging `P1` `M`
-- [ ] 5.3.4 — Rate limiting `P1` `M`
+- [x] 5.3.1 — Central MCP hub service `P1` `L`
+- [x] 5.3.2 — Per-session tool authorization `P1` `M`
+- [x] 5.3.3 — Audit logging `P1` `M`
+- [x] 5.3.4 — Rate limiting `P1` `M`
 - [ ] 5.3.5 — Deploy to UNRAID `P2` `M`
 - **Acceptance:** agent tool calls routed through gateway with audit trail
 
@@ -994,7 +994,7 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 - **Acceptance:** sandboxed session cannot reach unauthorized endpoints
 
 ### 5.5 — Budget federation `[BLOCKED BY 2.3]`
-- [ ] 5.5.1 — Global budget pool `P1` `M`
+- [x] 5.5.1 — Global budget pool `P1` `M`
 - [ ] 5.5.2 — Per-session limits with carry-over `P1` `M`
 - [ ] 5.5.3 — Budget dashboard view `P1` `M`
 - [ ] 5.5.4 — Anthropic billing API integration `P2` `L`
@@ -1002,8 +1002,8 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 - **Acceptance:** global pool enforced across all active sessions
 
 ### 5.6 — Secret management `[PARALLEL]`
-- [ ] 5.6.1 — Secret provider interface: `internal/secrets/` `P2` `M`
-- [ ] 5.6.2 — SOPS backend `P2` `M`
+- [x] 5.6.1 — Secret provider interface: `internal/secrets/` `P2` `M`
+- [x] 5.6.2 — SOPS backend `P2` `M`
 - [ ] 5.6.3 — Vault backend `P2` `L`
 - [ ] 5.6.4 — Secret rotation `P2` `M`
 - [ ] 5.6.5 — Audit: log secret access per session `P2` `S`
@@ -1013,10 +1013,10 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 
 > **Research:** E2B achieves ~150ms cold start with Firecracker. Daytona achieves ~90ms with Docker. Industry consensus: Firecracker for untrusted code, gVisor for trusted agents needing syscall-level isolation.
 
-- [ ] 5.7.1 — `internal/sandbox/firecracker/` package `P2` `L`
+- [x] 5.7.1 — `internal/sandbox/firecracker/` package `P2` `L`
 - [ ] 5.7.2 — Boot kernel + rootfs (target: <200ms cold start, <5MiB RAM per sandbox) `P2` `L`
 - [ ] 5.7.3 — virtio-fs workspace mount `P2` `M`
-- [ ] 5.7.4 — Resource limits (CPU, memory, network, disk I/O) `P2` `M`
+- [x] 5.7.4 — Resource limits (CPU, memory, network, disk I/O) `P2` `M`
 - [ ] 5.7.5 — Snapshot/restore (24h sandbox lifetime for marathon sessions) `P2` `L`
 - [ ] 5.7.6 — E2B-compatible sandbox API: `Create()`, `Execute()`, `Filesystem()`, `Terminate()` `P2` `M`
 - **Acceptance:** session runs in Firecracker microVM with <200ms boot time
@@ -1025,8 +1025,8 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 
 > **Research:** gVisor provides syscall-level isolation with 10-30% I/O overhead (acceptable for CPU/network-bound agents). Google's kubernetes-sigs/agent-sandbox uses gVisor + Kata. Sweet spot for thin client's trusted-but-isolated agents.
 
-- [ ] 5.8.1 — Configure `runsc` as OCI runtime alternative `P2` `M`
-- [ ] 5.8.2 — gVisor sandbox profile (seccomp + AppArmor for defense-in-depth) `P2` `M`
+- [x] 5.8.1 — Configure `runsc` as OCI runtime alternative `P2` `M`
+- [x] 5.8.2 — gVisor sandbox profile (seccomp + AppArmor for defense-in-depth) `P2` `M`
 - [ ] 5.8.3 — Performance benchmarking vs Docker `runc` (target: <30% overhead) `P2` `M`
 - [ ] 5.8.4 — Fallback logic: detect gVisor, fall back to runc `P2` `S`
 - [ ] 5.8.5 — Add gVisor runtime to `distro/` thin client config `P1` `S`
@@ -1068,7 +1068,7 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 ### 6.4 — Analytics & observability `[PARALLEL]`
 - [x] 6.4.1 — Historical data model: SQLite `P1` `M`
 - [x] 6.4.2 — TUI analytics view `P1` `L`
-- [ ] 6.4.3 — OpenTelemetry traces `P1` `L`
+- [x] 6.4.3 — OpenTelemetry traces `P1` `L`
 - [x] 6.4.4 — Prometheus metrics endpoint `P1` `M`
 - [x] 6.4.5 — Grafana dashboard JSON `P2` `M`
 - **Acceptance:** Grafana dashboard shows session metrics over time
@@ -1106,9 +1106,9 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - **Acceptance:** `ralphglasses ab-test --model-a opus --model-b sonnet` produces comparison
 
 ### 6.9 — Natural language fleet control `[PARALLEL]`
-- [ ] 6.9.1 — MCP sampling integration `P2` `L`
-- [ ] 6.9.2 — Command parser `P2` `L`
-- [ ] 6.9.3 — Intent classifier `P2` `M`
+- [x] 6.9.1 — MCP sampling integration `P2` `L`
+- [x] 6.9.2 — Command parser `P2` `L`
+- [x] 6.9.3 — Intent classifier `P2` `M`
 - [ ] 6.9.4 — Confirmation flow `P2` `M`
 - [x] 6.9.5 — History: persist and replay commands `P2` `S`
 - **Acceptance:** natural language commands execute fleet operations
@@ -1130,15 +1130,15 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 > **Parallel workstreams:** 7.1 (K8s operator) is the foundation. 7.2 (autoscaling) depends on 7.1. 7.3 (multi-cloud) is independent. 7.4 (cost management) depends on 7.1. 7.5 (GitOps) is independent.
 
 ### 7.1 — Kubernetes operator
-- [ ] 7.1.1 — CRD definition: `RalphSession` custom resource `P2` `L`
-- [ ] 7.1.2 — Controller: reconcile loop `P2` `XL`
-- [ ] 7.1.3 — Pod template `P2` `M`
+- [x] 7.1.1 — CRD definition: `RalphSession` custom resource `P2` `L`
+- [x] 7.1.2 — Controller: reconcile loop `P2` `XL`
+- [x] 7.1.3 — Pod template `P2` `M`
 - [ ] 7.1.4 — Status subresource `P2` `M`
-- [ ] 7.1.5 — RBAC: minimal permissions `P2` `S`
+- [x] 7.1.5 — RBAC: minimal permissions `P2` `S`
 - **Acceptance:** `kubectl apply -f session.yaml` creates and manages a ralph session
 
 ### 7.2 — Autoscaling `[BLOCKED BY 7.1]`
-- [ ] 7.2.1 — HPA integration `P2` `M`
+- [x] 7.2.1 — HPA integration `P2` `M`
 - [ ] 7.2.2 — Node autoscaler hints `P2` `M`
 - [ ] 7.2.3 — Budget-aware scaling `P2` `M`
 - [ ] 7.2.4 — Scale-to-zero `P2` `M`
@@ -1146,9 +1146,9 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - **Acceptance:** session count auto-adjusts within budget
 
 ### 7.3 — Multi-cloud support `[PARALLEL]`
-- [ ] 7.3.1 — AWS provider `P2` `L`
-- [ ] 7.3.2 — GCP provider `P2` `L`
-- [ ] 7.3.3 — Provider interface: `internal/cloud/` `P2` `M`
+- [x] 7.3.1 — AWS provider `P2` `L`
+- [x] 7.3.2 — GCP provider `P2` `L`
+- [x] 7.3.3 — Provider interface: `internal/cloud/` `P2` `M`
 - [ ] 7.3.4 — Cross-cloud fleet view `P2` `M`
 - [ ] 7.3.5 — Cost comparison `P2` `M`
 - **Acceptance:** sessions can launch on AWS or GCP from same TUI
@@ -1178,11 +1178,11 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 > **Parallel workstreams:** All sections are independent unless noted.
 
 ### 8.1 — Multi-agent collaboration patterns
-- [ ] 8.1.1 — Architect/worker pattern `P1` `L`
-- [ ] 8.1.2 — Review chain: code -> review -> fix `P1` `L`
-- [ ] 8.1.3 — Specialist routing `P1` `M`
-- [ ] 8.1.4 — Shared memory: cross-session knowledge base `P1` `L`
-- [ ] 8.1.5 — Communication protocol: structured messages via SQLite queue `P1` `M`
+- [x] 8.1.1 — Architect/worker pattern `P1` `L`
+- [x] 8.1.2 — Review chain: code -> review -> fix `P1` `L`
+- [x] 8.1.3 — Specialist routing `P1` `M`
+- [x] 8.1.4 — Shared memory: cross-session knowledge base `P1` `L`
+- [x] 8.1.5 — Communication protocol: structured messages via SQLite queue `P1` `M`
 - **Acceptance:** architect/worker pattern produces PRs with automated code review
 
 ### 8.2 — Prompt management `[PARALLEL]`
@@ -1194,17 +1194,17 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - **Acceptance:** prompt templates configurable per task type
 
 ### 8.3 — Workflow engine `[BLOCKED BY 6.1]`
-- [ ] 8.3.1 — YAML workflow definitions `P1` `L`
+- [x] 8.3.1 — YAML workflow definitions `P1` `L`
 - [ ] 8.3.2 — Built-in workflows: "fix-all-lint", "increase-coverage", "migrate-dependency" `P1` `M`
-- [ ] 8.3.3 — Workflow executor: parse YAML -> build DAG -> assign `P1` `XL`
-- [ ] 8.3.4 — Conditional logic `P1` `M`
-- [ ] 8.3.5 — Workflow marketplace `P2` `L`
+- [x] 8.3.3 — Workflow executor: parse YAML -> build DAG -> assign `P1` `XL`
+- [x] 8.3.4 — Conditional logic `P1` `M`
+- [x] 8.3.5 — Workflow marketplace `P2` `L`
 - **Acceptance:** YAML workflow runs multi-step, multi-session task to completion
 
 ### 8.4 — Code review automation `[PARALLEL]`
-- [ ] 8.4.1 — PR review agent `P2` `L`
-- [ ] 8.4.2 — Review criteria `P2` `M`
-- [ ] 8.4.3 — GitHub integration `P2` `M`
+- [x] 8.4.1 — PR review agent `P2` `L`
+- [x] 8.4.2 — Review criteria `P2` `M`
+- [x] 8.4.3 — GitHub integration `P2` `M`
 - [ ] 8.4.4 — Auto-approve `P2` `M`
 - [ ] 8.4.5 — Review dashboard `P2` `M`
 - **Acceptance:** agent-created PRs automatically reviewed
@@ -1217,17 +1217,17 @@ Partially complete: `internal/session/reflexion.go`, `episodic.go`, `cascade.go`
 - [x] 8.5.4 — Curriculum sorter: difficulty scoring for task ordering `[reconciled 2026-03-27]`
 - [x] 8.5.5 — Meta-agent: session that monitors other sessions' effectiveness `P1` `XL` `[reconciled 2026-03-29]`
   - Implemented as Supervisor in `internal/session/supervisor.go` — HealthMonitor evaluates metrics, CycleChainer feeds synthesis into next cycle
-- [ ] 8.5.6 — Config optimization: suggest `.ralphrc` changes based on observed patterns `P1` `L`
-- [ ] 8.5.7 — Prompt evolution: mutate and test prompts, keep highest-performing variants `P2` `L`
-- [ ] 8.5.8 — Report generation: weekly summary of fleet performance, trends, recommendations `P2` `M`
+- [x] 8.5.6 — Config optimization: suggest `.ralphrc` changes based on observed patterns `P1` `L`
+- [x] 8.5.7 — Prompt evolution: mutate and test prompts, keep highest-performing variants `P2` `L`
+- [x] 8.5.8 — Report generation: weekly summary of fleet performance, trends, recommendations `P2` `M`
 - **Acceptance:** meta-agent produces actionable configuration improvements
 
 ### 8.6 — Codebase knowledge graph `[PARALLEL]`
-- [ ] 8.6.1 — Parse codebase: packages, types, functions, dependencies `P2` `L`
-- [ ] 8.6.2 — Store in SQLite `P2` `M`
-- [ ] 8.6.3 — Query API `P2` `M`
+- [x] 8.6.1 — Parse codebase: packages, types, functions, dependencies `P2` `L`
+- [x] 8.6.2 — Store in SQLite `P2` `M`
+- [x] 8.6.3 — Query API `P2` `M`
 - [ ] 8.6.4 — TUI graph view `P2` `XL`
-- [ ] 8.6.5 — Context injection: provide graph context to agents `P2` `L`
+- [x] 8.6.5 — Context injection: provide graph context to agents `P2` `L`
 - **Acceptance:** knowledge graph queries return accurate code relationships
 
 ---
@@ -1393,7 +1393,7 @@ Cross-reference observations with git commits.
 
 ### 10.1 — Sprint Executor Agent & Batch Integration
 - [x] 10.1.1 — Create `.claude/agents/sprint-executor.md` with `isolation: worktree`, `permissionMode: dontAsk`, `model: sonnet` `P1` `S`
-- [ ] 10.1.2 — Create `.claude/agents/marathon-monitor.md` with `model: haiku` for cheap status polling `P2` `S`
+- [x] 10.1.2 — Create `.claude/agents/marathon-monitor.md` with `model: haiku` for cheap status polling `P2` `S`
 - [ ] 10.1.3 — Integrate `/batch` decomposition for parallel sprint execution (5 ROADMAP items → 5 batch units) `P1` `M`
 - [ ] 10.1.4 — Add batch result merging to `cycle_merge.go` for worktree outputs `P1` `M`
 - **Acceptance:** `/batch "Implement next 5 ROADMAP items"` produces 5 parallel agents that each implement 1 item
@@ -1401,19 +1401,19 @@ Cross-reference observations with git commits.
 ### 10.2 — Cloud Scheduled Tasks & Durable Marathons
 - [ ] 10.2.1 — Add cloud scheduled task support for durable marathon execution (replaces `marathon.sh`) `P1` `M`
 - [ ] 10.2.2 — Implement session continuation via `--resume` for multi-sprint chains `P1` `M`
-- [ ] 10.2.3 — Add `supervisor_state.json` restoration for cross-invocation continuity `P1` `S`
+- [x] 10.2.3 — Add `supervisor_state.json` restoration for cross-invocation continuity `P1` `S`
 - **Acceptance:** Cloud scheduled marathon runs unattended, resumes state across invocations
 
 ### 10.3 — Hook-Based Automation
-- [ ] 10.3.1 — Add PostToolUse hooks for auto-`go vet` / auto-lint on Write/Edit `P2` `S`
-- [ ] 10.3.2 — Add PreToolUse hooks for Bash safety rules (block `rm -rf`, force push) `P2` `S`
-- [ ] 10.3.3 — Add Stop hook to force continuation during marathon sessions `P2` `S`
+- [x] 10.3.1 — Add PostToolUse hooks for auto-`go vet` / auto-lint on Write/Edit `P2` `S`
+- [x] 10.3.2 — Add PreToolUse hooks for Bash safety rules (block `rm -rf`, force push) `P2` `S`
+- [x] 10.3.3 — Add Stop hook to force continuation during marathon sessions `P2` `S`
 - **Acceptance:** Hooks fire on tool use, enforcing code quality and safety gates automatically
 
 ### 10.4 — Permission & Context Management
 - [ ] 10.4.1 — Integrate Auto Mode permission level for L2 marathon sessions `P1` `S`
 - [ ] 10.4.2 — Add Compact Instructions to CLAUDE.md for marathon context preservation `P1` `S`
-- [ ] 10.4.3 — Wire `CompactionEnabled` in loop profile to trigger `/compact` between sprints `P1` `M`
+- [x] 10.4.3 — Wire `CompactionEnabled` in loop profile to trigger `/compact` between sprints `P1` `M`
 - **Acceptance:** Marathon sessions use Auto Mode, compact cleanly between sprints preserving critical state
 
 ### 10.5 — Cost Optimization
