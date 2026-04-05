@@ -1,0 +1,67 @@
+# ── rEFInd Boot Manager — Cyberpunk Config ──────────
+# Install: sudo cp refind.conf /boot/efi/EFI/refind/refind.conf
+
+# ── Timeouts ─────────────────────────────────────────
+# 5 seconds to select, then boot default (Manjaro)
+timeout 5
+screensaver 300
+
+# ── UI Options ───────────────────────────────────────
+# Clean minimal UI
+hideui singleuser,arrows,badges,hints,safemode,hwtest
+
+# Use graphical boot for clean NVIDIA handoff
+use_graphics_for osx,linux,windows,grub
+
+# Manual stanzas only — no auto-scanning of internal partitions
+scanfor manual
+
+# Suppress auto-detected entries that duplicate our manual stanzas
+dont_scan_files vmlinuz-6.12-x86_64,vmlinuz-6.1-x86_64,vmlinuz-linux
+
+# ── Resolution ───────────────────────────────────────
+# NVIDIA GOP doesn't expose 2560x1440 or 5120x1440; use highest available
+resolution max
+
+# ── Default OS ───────────────────────────────────────
+# Boot Manjaro by default
+default_selection "Manjaro"
+
+# ── NVIDIA ───────────────────────────────────────────
+# Enable graphics console for NVIDIA
+enable_touch
+enable_mouse
+
+# ── Filesystem Drivers ───────────────────────────────
+# DISABLED: btrfs/ext2 EFI drivers were hanging during partition probe
+# (60+ btrfs snapshots + 2 empty partitions = driver freeze).
+# All entries now chainload their own bootloaders instead, so no
+# filesystem drivers are needed on the ESP.
+# dont_scan_dirs EFI/refind/drivers_x64
+
+# ── Manual Boot Stanzas ─────────────────────────────
+
+# Manjaro Linux (default) — chainloads GRUB, which has native btrfs support
+menuentry "Manjaro Linux" {
+    icon     /EFI/refind/themes/matrix/icons/os_manjaro.png
+    loader   /EFI/Manjaro/grubx64.efi
+}
+
+# Archlet (headless Arch) — partition not yet provisioned
+# Uncomment when nvme0n1p4 has a bootloader installed
+# menuentry "Archlet" {
+#     icon     /EFI/refind/themes/matrix/icons/os_arch.png
+#     loader   /EFI/archlet/grubx64.efi
+# }
+
+# Windows 11
+menuentry "Windows 11" {
+    icon     /EFI/refind/themes/matrix/icons/os_win.png
+    loader   /EFI/Microsoft/Boot/bootmgfw.efi
+}
+
+# ── Tools ────────────────────────────────────────────
+showtools shutdown,reboot,firmware,hidden_tags
+
+# ── Theme ────────────────────────────────────────────
+include themes/matrix/theme.conf

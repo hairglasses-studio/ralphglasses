@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "runmylife": {
+      "command": "./bin/runmylife-mcp",
+      "args": [],
+      "env": {}
+    }
+  }
+}
