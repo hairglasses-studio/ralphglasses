@@ -39,6 +39,14 @@ func allBuilderSpecs() []builderSpec {
 		{"eval", (*Server).buildEvalGroup, minFor("eval"), true},
 		{"fleet_h", (*Server).buildFleetHGroup, minFor("fleet_h"), true},
 		{"observability", (*Server).buildObservabilityGroup, minFor("observability"), true},
+		{"rdcycle", (*Server).buildRdcycleGroup, minFor("rdcycle"), true},
+		{"plugin", (*Server).buildPluginGroup, minFor("plugin"), true},
+		{"sweep", (*Server).buildSweepGroup, minFor("sweep"), true},
+		{"rc", (*Server).buildRCGroup, minFor("rc"), true},
+		{"autonomy", (*Server).buildAutonomyGroup, minFor("autonomy"), true},
+		{"workflow", (*Server).buildWorkflowGroup, minFor("workflow"), true},
+		{"docs", (*Server).buildDocsGroup, minFor("docs"), true},
+		{"recovery", (*Server).buildRecoveryGroup, minFor("recovery"), true},
 	}
 }
 
@@ -133,8 +141,8 @@ func TestBuildGroupToolNamesGloballyUnique(t *testing.T) {
 func TestDefaultRegistryReturnsAll13Groups(t *testing.T) {
 	reg := defaultRegistry()
 
-	if reg.Len() != 20 {
-		t.Fatalf("expected 20 registered groups, got %d", reg.Len())
+	if reg.Len() != 21 {
+		t.Fatalf("expected 21 registered groups, got %d", reg.Len())
 	}
 
 	names := reg.Names()
