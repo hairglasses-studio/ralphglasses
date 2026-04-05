@@ -224,8 +224,9 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 		estimatedPerSession = (tokPerTurn * estTurns / 1_000_000) * (inRate + outRate)
 	}
 
-	// Auto-size per-session budget: at least 1.5x estimate.
-	if budgetUSD < estimatedPerSession*1.5 {
+	// Auto-size per-session budget: at least 1.5x estimate, but only when
+	// the caller did not explicitly provide budget_usd (prevents silent inflation).
+	if !p.Has("budget_usd") && budgetUSD < estimatedPerSession*1.5 {
 		budgetUSD = estimatedPerSession * 1.5
 	}
 

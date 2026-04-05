@@ -27,6 +27,16 @@ func (p *Params) RequireString(key string) (string, *mcp.CallToolResult) {
 	return val, nil
 }
 
+// Has returns true if the parameter key exists in the request arguments.
+func (p *Params) Has(key string) bool {
+	m := argsMap(p.req)
+	if m == nil {
+		return false
+	}
+	_, ok := m[key]
+	return ok
+}
+
 // OptionalString returns the string parameter or defaultVal if empty.
 func (p *Params) OptionalString(key, defaultVal string) string {
 	val := getStringArg(p.req, key)
