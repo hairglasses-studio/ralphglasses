@@ -32,6 +32,16 @@ func (s *Server) buildPromptDJGroup() ToolGroup {
 				mcp.WithString("notes", mcp.Description("Outcome notes")),
 				mcp.WithString("correct_provider", mcp.Description("Correct provider if DJ chose wrong")),
 			), s.handlePromptDJFeedback},
+			{mcp.NewTool("ralphglasses_promptdj_similar",
+				mcp.WithDescription("Find similar high-quality prompts from the registry for few-shot context injection. Uses BM25-lite keyword similarity, Jaccard tag overlap, and MMR diversity re-ranking."),
+				mcp.WithString("prompt", mcp.Required(), mcp.Description("Prompt to find similar examples for")),
+				mcp.WithString("repo", mcp.Description("Repository context for relevance boosting")),
+			), s.handlePromptDJSimilar},
+			{mcp.NewTool("ralphglasses_promptdj_suggest",
+				mcp.WithDescription("Get routing-aware improvement suggestions for a prompt. Shows where it would route, quality score, and actionable suggestions by category (quality, structure, cost, provider_fit)."),
+				mcp.WithString("prompt", mcp.Required(), mcp.Description("Prompt to analyze")),
+				mcp.WithString("repo", mcp.Description("Repository context")),
+			), s.handlePromptDJSuggest},
 		},
 	}
 }
