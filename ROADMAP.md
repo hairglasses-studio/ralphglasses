@@ -887,10 +887,10 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 
 ### 4.2 — i3 kiosk configuration `[BLOCKED BY 4.1]`
 - [ ] 4.2.1 — `distro/i3/config` — workspace-to-output mapping for 7 monitors `P1` `M`
-- [ ] 4.2.2 — Strip WM chrome: `default_border none`, no desktop, no dmenu `P1` `S`
-- [ ] 4.2.3 — Keybindings: workspace navigation, TUI focus, emergency shell `P1` `S`
-- [ ] 4.2.4 — Auto-start: launch ralphglasses fullscreen on workspace 1 `P1` `S`
-- [ ] 4.2.5 — Lock screen: disable screen blanking, DPMS off (24/7 operation) `P1` `S`
+- [x] 4.2.2 — Strip WM chrome: `default_border none`, no desktop, no dmenu `P1` `S`
+- [x] 4.2.3 — Keybindings: workspace navigation, TUI focus, emergency shell `P1` `S`
+- [x] 4.2.4 — Auto-start: launch ralphglasses fullscreen on workspace 1 `P1` `S`
+- [x] 4.2.5 — Lock screen: disable screen blanking, DPMS off (24/7 operation) `P1` `S`
 - [ ] 4.2.6 — Template monitor names: replace hardcoded DP-1/DP-2 with hw-detect.sh values `P1` `S`
 - **Acceptance:** boots to fullscreen TUI, no visible WM chrome
 
