@@ -68,24 +68,22 @@ func (r *Renderer) Render(state *State) {
 	r.buf.WriteString(CursorHome)
 	r.buf.WriteString(CursorHide)
 
-	// Header (2 lines)
+	// Header (1 line + separator)
 	r.renderHeader(state, w)
+	r.writeHeavySep(w)
 
-	// Separator
-	r.writeSep(w)
-
-	// Table (adaptive rows)
-	tableRows := h - 8 // header(2) + sep(1) + footer(1) + sep(2) + log area
-	logRows := 6
-	if h > 40 {
-		tableRows = (h - 6) / 2
-		logRows = h - 6 - tableRows
+	// Calculate layout: give table exactly enough for repos, rest to logs
+	repoCount := len(state.Repos)
+	if repoCount > 20 {
+		repoCount = 20 // Cap table at 20 rows
+	}
+	tableRows := repoCount + 1 // +1 for column header
+	logRows := h - tableRows - 7 // header(1) + hsep(1) + sep(1) + logheader(1) + sep(1) + cost(1) + padding(1)
+	if logRows < 4 {
+		logRows = 4
 	}
 	if tableRows < 3 {
 		tableRows = 3
-	}
-	if logRows < 2 {
-		logRows = 2
 	}
 	r.renderTable(state, w, tableRows)
 
@@ -95,8 +93,8 @@ func (r *Renderer) Render(state *State) {
 	// Live output area
 	r.renderLiveOutput(state, w, logRows)
 
-	// Separator
-	r.writeSep(w)
+	// Heavy separator before cost
+	r.writeHeavySep(w)
 
 	// Cost footer (1 line)
 	r.renderCostBar(state, w)
@@ -107,36 +105,38 @@ func (r *Renderer) Render(state *State) {
 func (r *Renderer) renderHeader(s *State, w int) {
 	now := time.Now().Format("15:04:05")
 
-	// Line 1: summary
+	// Single header line — bold, high contrast
 	r.buf.WriteString(ClearLine)
-	fmt.Fprintf(r.buf, "%s RALPH GODVIEW%s │ ", Header, Reset)
-	fmt.Fprintf(r.buf, "%s■%s %d repos  ", Bold, Reset, s.TotalRepos)
-	fmt.Fprintf(r.buf, "%s✓%s%d ok  ", StatusOK, Reset, s.ReposOK)
+	fmt.Fprintf(r.buf, "%s%s ⚡ RALPH GODVIEW %s", Reverse, Header, Reset)
+	fmt.Fprintf(r.buf, "  %s%d%s repos ", Bold, s.TotalRepos, Reset)
+	fmt.Fprintf(r.buf, "%s✓%d%s ", StatusOK, s.ReposOK, Reset)
 	if s.ReposWarn > 0 {
-		fmt.Fprintf(r.buf, "%s⚠%s%d warn  ", StatusWarn, Reset, s.ReposWarn)
+		fmt.Fprintf(r.buf, "%s⚠%d%s ", StatusWarn, s.ReposWarn, Reset)
 	}
 	if s.ReposErr > 0 {
-		fmt.Fprintf(r.buf, "%s✗%s%d err  ", StatusErr, Reset, s.ReposErr)
+		fmt.Fprintf(r.buf, "%s✗%d%s ", StatusErr, s.ReposErr, Reset)
 	}
-	fmt.Fprintf(r.buf, "│ %d agents ", s.ActiveAgents)
+	fmt.Fprintf(r.buf, " │  %s%d%s agents ", Bold, s.ActiveAgents, Reset)
 	for prov, count := range s.AgentsByProvider {
 		if count > 0 {
 			fmt.Fprintf(r.buf, "%s%d×%s%s ", ProviderColor(prov), count, prov, Reset)
 		}
 	}
-	fmt.Fprintf(r.buf, "│ %s%s%s │ %s\n",
-		costColor(s.TotalCost), FormatCost(s.TotalCost), Reset, now)
+	fmt.Fprintf(r.buf, " │  %s%s%s%s",
+		Bold, costColor(s.TotalCost), FormatCost(s.TotalCost), Reset)
+	// Right-align time
+	fmt.Fprintf(r.buf, "  %s%s%s\n", Dim, now, Reset)
 }
 
 func (r *Renderer) renderTable(s *State, w, maxRows int) {
-	// Header row
+	// Column header row — dim, underlined feel
 	r.buf.WriteString(ClearLine)
-	fmt.Fprintf(r.buf, "%s%-16s %-8s %-7s %5s %7s %7s %-30s %s%s\n",
-		Dim, "REPO", "AGENT", "STATUS", "TURNS", "$/HR", "COST", "TASK", "PROGRESS", Reset)
+	fmt.Fprintf(r.buf, " %s%-18s %-8s  %-3s %5s %8s %8s  %-28s %s%s\n",
+		Dim, "REPO", "AGENT", "ST", "TURN", "RATE", "COST", "TASK", "PROGRESS", Reset)
 
 	shown := 0
 	for _, repo := range s.Repos {
-		if shown >= maxRows {
+		if shown >= maxRows-1 { // -1 for header
 			break
 		}
 		r.buf.WriteString(ClearLine)
@@ -147,38 +147,49 @@ func (r *Renderer) renderTable(s *State, w, maxRows int) {
 
 		provider := repo.Provider
 		if provider == "" {
-			provider = "--"
+			provider = "·"
 			provCol = StatusIdle
 		}
 
-		turns := "--"
+		turns := "  ·"
 		if repo.Turns > 0 {
-			turns = fmt.Sprintf("%d", repo.Turns)
+			turns = fmt.Sprintf("%3d", repo.Turns)
 		}
 
 		rate := FormatRate(repo.CostPerHr)
 		cost := FormatCost(repo.TotalCost)
-		task := Truncate(repo.CurrentTask, 30)
+		taskWidth := 28
+		if w > 120 {
+			taskWidth = w - 85 // Scale task column with terminal width
+		}
+		task := Truncate(repo.CurrentTask, taskWidth)
 		if task == "" {
-			task = "--"
+			task = Dim + "·" + Reset
 		}
 
-		progress := "--"
+		progress := "   ·"
 		if repo.Progress > 0 {
-			progress = fmt.Sprintf("%s %3.0f%%", ProgressBar(repo.Progress, 5), repo.Progress)
+			barWidth := 8
+			if w > 120 {
+				barWidth = 12
+			}
+			progress = fmt.Sprintf("%s %3.0f%%", ProgressBar(repo.Progress, barWidth), repo.Progress)
 		}
 		if repo.Status == "completed" || repo.Status == "done" {
-			progress = StatusDone + "done" + Reset
+			progress = StatusDone + "✓done" + Reset
+		}
+		if repo.Status == "error" || repo.Status == "failed" || repo.Status == "errored" {
+			progress = StatusErr + "✗fail" + Reset
 		}
 
-		fmt.Fprintf(r.buf, "%-16s %s%-8s%s %s%s%-6s%s %5s %7s %7s %-30s %s\n",
-			Truncate(repo.Name, 16),
+		fmt.Fprintf(r.buf, " %-18s %s%-8s%s %s%s%s  %5s %8s %8s  %-*s %s\n",
+			Truncate(repo.Name, 18),
 			provCol, PadRight(provider, 8), Reset,
-			statCol, icon, PadRight(repo.Status, 6), Reset,
-			PadLeft(turns, 5),
-			PadLeft(rate, 7),
-			PadLeft(cost, 7),
-			task,
+			statCol, icon, Reset,
+			turns,
+			PadLeft(rate, 8),
+			PadLeft(cost, 8),
+			taskWidth, task,
 			progress,
 		)
 		shown++
@@ -193,7 +204,7 @@ func (r *Renderer) renderTable(s *State, w, maxRows int) {
 
 func (r *Renderer) renderLiveOutput(s *State, w, maxLines int) {
 	r.buf.WriteString(ClearLine)
-	fmt.Fprintf(r.buf, "%sLIVE OUTPUT%s\n", Dim, Reset)
+	fmt.Fprintf(r.buf, " %s%s▸ LIVE OUTPUT%s\n", Bold, Header, Reset)
 
 	start := len(s.LiveLines) - maxLines + 1
 	if start < 0 {
@@ -222,7 +233,7 @@ func (r *Renderer) renderLiveOutput(s *State, w, maxLines int) {
 
 func (r *Renderer) renderCostBar(s *State, w int) {
 	r.buf.WriteString(ClearLine)
-	fmt.Fprintf(r.buf, "%sCOST:%s ", Dim, Reset)
+	fmt.Fprintf(r.buf, " %s%sCOST%s ", Bold, Header, Reset)
 
 	for prov, cost := range s.CostByProvider {
 		if cost > 0 {
@@ -243,6 +254,14 @@ func (r *Renderer) writeSep(w int) {
 	r.buf.WriteString(ClearLine)
 	r.buf.WriteString(Border)
 	r.buf.WriteString(strings.Repeat("─", w))
+	r.buf.WriteString(Reset)
+	r.buf.WriteByte('\n')
+}
+
+func (r *Renderer) writeHeavySep(w int) {
+	r.buf.WriteString(ClearLine)
+	r.buf.WriteString(Header)
+	r.buf.WriteString(strings.Repeat("━", w))
 	r.buf.WriteString(Reset)
 	r.buf.WriteByte('\n')
 }
