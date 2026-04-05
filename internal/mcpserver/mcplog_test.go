@@ -20,7 +20,7 @@ func captureLog(t *testing.T) *bytes.Buffer {
 }
 
 func TestMCPLoggerLevels(t *testing.T) {
-	t.Parallel()
+	// Not parallel: captureLog sets slog.SetDefault which is global state.
 
 	levels := []struct {
 		name   string
@@ -53,7 +53,7 @@ func TestMCPLoggerLevels(t *testing.T) {
 }
 
 func TestMCPLoggerData(t *testing.T) {
-	t.Parallel()
+	// Not parallel: captureLog sets slog.SetDefault which is global state.
 	buf := captureLog(t)
 
 	logger := NewMCPLogger(nil, "ralphglasses")
@@ -72,7 +72,7 @@ func TestMCPLoggerData(t *testing.T) {
 }
 
 func TestMCPLoggerNilData(t *testing.T) {
-	t.Parallel()
+	// Not parallel: captureLog sets slog.SetDefault which is global state.
 	buf := captureLog(t)
 
 	logger := NewMCPLogger(nil, "test")
