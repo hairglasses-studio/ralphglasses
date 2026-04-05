@@ -33,9 +33,10 @@ func filterChangepointBurnIn(cps []eval.Changepoint, burnIn int) []eval.Changepo
 }
 
 func (s *Server) handleEvalCounterfactual(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoName := getStringArg(req, "repo")
-	if repoName == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
+	p := NewParams(req)
+	repoName, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	if s.reposNil() {
@@ -48,7 +49,7 @@ func (s *Server) handleEvalCounterfactual(_ context.Context, req mcp.CallToolReq
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
-	hours := getNumberArg(req, "hours", 168)
+	hours := p.OptionalNumber("hours", 168)
 	since := time.Now().Add(-time.Duration(hours) * time.Hour)
 
 	obsPath := session.ObservationPath(r.Path)
@@ -61,16 +62,16 @@ func (s *Server) handleEvalCounterfactual(_ context.Context, req mcp.CallToolReq
 		return emptyResult("counterfactuals"), nil
 	}
 
-	policy := getStringArg(req, "policy")
+	policy := p.OptionalString("policy", "")
 	var policyFn eval.PolicyFunc
 
 	switch policy {
 	case "cascade_threshold":
-		threshold := getNumberArg(req, "threshold", 0.6)
+		threshold := p.OptionalNumber("threshold", 0.6)
 		policyFn = eval.CascadeThresholdPolicy(threshold)
 	case "provider_routing":
-		taskType := getStringArg(req, "task_type")
-		provider := getStringArg(req, "provider")
+		taskType := p.OptionalString("task_type", "")
+		provider := p.OptionalString("provider", "")
 		if taskType == "" || provider == "" {
 			return codedError(ErrInvalidParams, "provider_routing policy requires task_type and provider"), nil
 		}
@@ -95,9 +96,10 @@ func (s *Server) handleEvalCounterfactual(_ context.Context, req mcp.CallToolReq
 }
 
 func (s *Server) handleEvalABTest(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoName := getStringArg(req, "repo")
-	if repoName == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
+	p := NewParams(req)
+	repoName, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	if s.reposNil() {
@@ -110,7 +112,7 @@ func (s *Server) handleEvalABTest(_ context.Context, req mcp.CallToolRequest) (*
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
-	hours := getNumberArg(req, "hours", 168)
+	hours := p.OptionalNumber("hours", 168)
 	since := time.Now().Add(-time.Duration(hours) * time.Hour)
 
 	obsPath := session.ObservationPath(r.Path)
@@ -123,12 +125,12 @@ func (s *Server) handleEvalABTest(_ context.Context, req mcp.CallToolRequest) (*
 		return emptyResult("ab_tests"), nil
 	}
 
-	mode := getStringArg(req, "mode")
+	mode := p.OptionalString("mode", "")
 
 	switch mode {
 	case "providers":
-		providerA := getStringArg(req, "provider_a")
-		providerB := getStringArg(req, "provider_b")
+		providerA := p.OptionalString("provider_a", "")
+		providerB := p.OptionalString("provider_b", "")
 		if providerA == "" || providerB == "" {
 			return codedError(ErrInvalidParams, "providers mode requires provider_a and provider_b"), nil
 		}
@@ -169,7 +171,7 @@ func (s *Server) handleEvalABTest(_ context.Context, req mcp.CallToolRequest) (*
 		}), nil
 
 	case "periods":
-		splitHoursAgo := getNumberArg(req, "split_hours_ago", 0)
+		splitHoursAgo := p.OptionalNumber("split_hours_ago", 0)
 		if splitHoursAgo <= 0 {
 			return codedError(ErrInvalidParams, "periods mode requires split_hours_ago > 0"), nil
 		}
@@ -219,9 +221,10 @@ func (s *Server) handleEvalABTest(_ context.Context, req mcp.CallToolRequest) (*
 }
 
 func (s *Server) handleEvalChangepoints(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoName := getStringArg(req, "repo")
-	if repoName == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
+	p := NewParams(req)
+	repoName, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	if s.reposNil() {
@@ -234,7 +237,7 @@ func (s *Server) handleEvalChangepoints(_ context.Context, req mcp.CallToolReque
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
-	hours := getNumberArg(req, "hours", 168)
+	hours := p.OptionalNumber("hours", 168)
 	since := time.Now().Add(-time.Duration(hours) * time.Hour)
 
 	obsPath := session.ObservationPath(r.Path)
@@ -247,7 +250,7 @@ func (s *Server) handleEvalChangepoints(_ context.Context, req mcp.CallToolReque
 		return emptyResult("changepoints"), nil
 	}
 
-	metricName := getStringArg(req, "metric")
+	metricName := p.OptionalString("metric", "")
 
 	if metricName != "" {
 		metrics := eval.StandardMetrics()
@@ -287,9 +290,10 @@ func (s *Server) handleEvalChangepoints(_ context.Context, req mcp.CallToolReque
 }
 
 func (s *Server) handleEvalSignificance(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoName := getStringArg(req, "repo")
-	if repoName == "" {
-		return codedError(ErrInvalidParams, "repo name required"), nil
+	p := NewParams(req)
+	repoName, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	if s.reposNil() {
@@ -302,7 +306,7 @@ func (s *Server) handleEvalSignificance(_ context.Context, req mcp.CallToolReque
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
-	hours := getNumberArg(req, "hours", 168)
+	hours := p.OptionalNumber("hours", 168)
 	since := time.Now().Add(-time.Duration(hours) * time.Hour)
 
 	obsPath := session.ObservationPath(r.Path)
@@ -315,12 +319,12 @@ func (s *Server) handleEvalSignificance(_ context.Context, req mcp.CallToolReque
 		return emptyResult("significance"), nil
 	}
 
-	mode := getStringArg(req, "mode")
+	mode := p.OptionalString("mode", "")
 
 	switch mode {
 	case "providers":
-		providerA := getStringArg(req, "provider_a")
-		providerB := getStringArg(req, "provider_b")
+		providerA := p.OptionalString("provider_a", "")
+		providerB := p.OptionalString("provider_b", "")
 		if providerA == "" || providerB == "" {
 			return codedError(ErrInvalidParams, "providers mode requires provider_a and provider_b"), nil
 		}
@@ -366,7 +370,7 @@ func (s *Server) handleEvalSignificance(_ context.Context, req mcp.CallToolReque
 		}), nil
 
 	case "periods":
-		splitHoursAgo := getNumberArg(req, "split_hours_ago", 0)
+		splitHoursAgo := p.OptionalNumber("split_hours_ago", 0)
 		if splitHoursAgo <= 0 {
 			return codedError(ErrInvalidParams, "periods mode requires split_hours_ago > 0"), nil
 		}
@@ -407,8 +411,8 @@ func (s *Server) handleEvalSignificance(_ context.Context, req mcp.CallToolReque
 		}), nil
 
 	case "cost":
-		providerA := getStringArg(req, "provider_a")
-		providerB := getStringArg(req, "provider_b")
+		providerA := p.OptionalString("provider_a", "")
+		providerB := p.OptionalString("provider_b", "")
 		if providerA == "" || providerB == "" {
 			return codedError(ErrInvalidParams, "cost mode requires provider_a and provider_b"), nil
 		}
@@ -511,9 +515,10 @@ func (s *Server) handleBanditStatus(_ context.Context, _ mcp.CallToolRequest) (*
 
 // handleEvalDefine validates and parses an A/B test definition from YAML content.
 func (s *Server) handleEvalDefine(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	yamlContent := getStringArg(req, "yaml_content")
-	if yamlContent == "" {
-		return codedError(ErrInvalidParams, "yaml_content is required"), nil
+	p := NewParams(req)
+	yamlContent, errResult := p.RequireString("yaml_content")
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	def, err := eval.ParseTestDefinition([]byte(yamlContent))

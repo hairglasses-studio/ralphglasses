@@ -42,16 +42,17 @@ func hasAPIKeyForProvider(provider string) bool {
 }
 
 func (s *Server) handlePromptAnalyze(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	prompt := getStringArg(req, "prompt")
-	if prompt == "" {
-		return codedError(ErrInvalidParams, "prompt required"), nil
+	p := NewParams(req)
+	prompt, errResult := p.RequireString("prompt")
+	if errResult != nil {
+		return errResult, nil
 	}
 	result := enhancer.Analyze(prompt)
-	if tt := enhancer.ValidTaskType(getStringArg(req, "task_type")); tt != "" {
+	if tt := enhancer.ValidTaskType(p.OptionalString("task_type", "")); tt != "" {
 		result.TaskType = tt
 	}
 	// Re-score with target provider if specified
-	if tp := getStringArg(req, "target_provider"); tp != "" {
+	if tp := p.OptionalString("target_provider", ""); tp != "" {
 		targetProvider := enhancer.ProviderName(tp)
 		lints := enhancer.Lint(prompt)
 		report := enhancer.Score(prompt, result.TaskType, lints, &result, targetProvider)
@@ -69,27 +70,25 @@ func (s *Server) handlePromptAnalyze(_ context.Context, req mcp.CallToolRequest)
 }
 
 func (s *Server) handlePromptEnhance(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	prompt := getStringArg(req, "prompt")
-	if prompt == "" {
-		return codedError(ErrInvalidParams, "prompt required"), nil
+	p := NewParams(req)
+	prompt, errResult := p.RequireString("prompt")
+	if errResult != nil {
+		return errResult, nil
 	}
-	taskType := enhancer.ValidTaskType(getStringArg(req, "task_type"))
-	modeStr := getStringArg(req, "mode")
-	traceLevel := getStringArg(req, "trace_level")
-	if traceLevel == "" {
-		traceLevel = "summary"
-	}
+	taskType := enhancer.ValidTaskType(p.OptionalString("task_type", ""))
+	modeStr := p.OptionalString("mode", "")
+	traceLevel := p.OptionalString("trace_level", "summary")
 
 	// Load config from repo if specified
 	var cfg enhancer.Config
-	if repoName := getStringArg(req, "repo"); repoName != "" {
+	if repoName := p.OptionalString("repo", ""); repoName != "" {
 		if r := s.findRepo(repoName); r != nil {
 			cfg = enhancer.LoadConfig(r.Path)
 		}
 	}
 
 	// Apply target provider if specified
-	if tp := getStringArg(req, "target_provider"); tp != "" {
+	if tp := p.OptionalString("target_provider", ""); tp != "" {
 		cfg.TargetProvider = enhancer.ProviderName(tp)
 	}
 
@@ -131,9 +130,10 @@ func (s *Server) handlePromptEnhance(ctx context.Context, req mcp.CallToolReques
 }
 
 func (s *Server) handlePromptLint(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	prompt := getStringArg(req, "prompt")
-	if prompt == "" {
-		return codedError(ErrInvalidParams, "prompt required"), nil
+	p := NewParams(req)
+	prompt, errResult := p.RequireString("prompt")
+	if errResult != nil {
+		return errResult, nil
 	}
 	results := enhancer.Lint(prompt)
 	cacheResults := enhancer.VerifyCacheFriendlyOrder(prompt)
@@ -145,13 +145,14 @@ func (s *Server) handlePromptLint(_ context.Context, req mcp.CallToolRequest) (*
 }
 
 func (s *Server) handlePromptImprove(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	prompt := getStringArg(req, "prompt")
-	if prompt == "" {
-		return codedError(ErrInvalidParams, "prompt required"), nil
+	p := NewParams(req)
+	prompt, errResult := p.RequireString("prompt")
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	// If a specific provider is requested, create a one-off client for it
-	providerStr := getStringArg(req, "provider")
+	providerStr := p.OptionalString("provider", "")
 	var client enhancer.PromptImprover
 	if providerStr != "" && providerStr != "openai" {
 		client = enhancer.NewPromptImprover(enhancer.LLMConfig{
@@ -178,9 +179,9 @@ func (s *Server) handlePromptImprove(ctx context.Context, req mcp.CallToolReques
 		return codedError(ErrProviderUnavailable, fmt.Sprintf("LLM not available: set %s", apiHint)), nil
 	}
 
-	taskType := enhancer.ValidTaskType(getStringArg(req, "task_type"))
-	thinking := getBoolArg(req, "thinking_enabled")
-	feedback := getStringArg(req, "feedback")
+	taskType := enhancer.ValidTaskType(p.OptionalString("task_type", ""))
+	thinking := p.OptionalBool("thinking_enabled", false)
+	feedback := p.OptionalString("feedback", "")
 
 	result, err := client.Improve(ctx, prompt, enhancer.ImproveOptions{
 		ThinkingEnabled: thinking,
@@ -200,13 +201,14 @@ func (s *Server) handlePromptTemplates(_ context.Context, req mcp.CallToolReques
 }
 
 func (s *Server) handlePromptTemplateFill(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "name")
-	if name == "" {
-		return codedError(ErrInvalidParams, "name required"), nil
+	p := NewParams(req)
+	name, errResult := p.RequireString("name")
+	if errResult != nil {
+		return errResult, nil
 	}
-	varsJSON := getStringArg(req, "vars")
-	if varsJSON == "" {
-		return codedError(ErrInvalidParams, "vars required"), nil
+	varsJSON, errResult := p.RequireString("vars")
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	var parsedVars map[string]string
@@ -224,9 +226,10 @@ func (s *Server) handlePromptTemplateFill(_ context.Context, req mcp.CallToolReq
 }
 
 func (s *Server) handleClaudeMDCheck(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoName := getStringArg(req, "repo")
-	if repoName == "" {
-		return codedError(ErrInvalidParams, "repo required"), nil
+	p := NewParams(req)
+	repoName, errResult := p.RequireString("repo")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if s.reposNil() {
 		if err := s.scan(); err != nil {
@@ -251,9 +254,10 @@ func (s *Server) handleClaudeMDCheck(_ context.Context, req mcp.CallToolRequest)
 }
 
 func (s *Server) handlePromptClassify(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	prompt := getStringArg(req, "prompt")
-	if prompt == "" {
-		return codedError(ErrInvalidParams, "prompt required"), nil
+	p := NewParams(req)
+	prompt, errResult := p.RequireString("prompt")
+	if errResult != nil {
+		return errResult, nil
 	}
 	best, alts := enhancer.ClassifyDetailed(prompt)
 
@@ -273,13 +277,14 @@ func (s *Server) handlePromptClassify(_ context.Context, req mcp.CallToolRequest
 }
 
 func (s *Server) handlePromptShouldEnhance(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	prompt := getStringArg(req, "prompt")
-	if prompt == "" {
-		return codedError(ErrInvalidParams, "prompt required"), nil
+	p := NewParams(req)
+	prompt, errResult := p.RequireString("prompt")
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	var cfg enhancer.Config
-	if repoName := getStringArg(req, "repo"); repoName != "" {
+	if repoName := p.OptionalString("repo", ""); repoName != "" {
 		if s.reposNil() {
 			_ = s.scan()
 		}

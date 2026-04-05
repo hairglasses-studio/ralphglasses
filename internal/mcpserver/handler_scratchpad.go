@@ -100,15 +100,16 @@ func (s *Server) gitToplevel() (string, error) {
 }
 
 func (s *Server) handleScratchpadRead(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "name")
-	if name == "" {
-		return codedError(ErrInvalidParams, "name is required"), nil
+	p := NewParams(req)
+	name, errResult := p.RequireString("name")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := validateSafePath(name); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid name: %v", err)), nil
 	}
 
-	repoPath, errRes := s.resolveRepoPath(getStringArg(req, "repo"))
+	repoPath, errRes := s.resolveRepoPath(p.OptionalString("repo", ""))
 	if errRes != nil {
 		return errRes, nil
 	}
@@ -177,7 +178,8 @@ func (s *Server) handleScratchpadAppend(_ context.Context, req mcp.CallToolReque
 }
 
 func (s *Server) handleScratchpadList(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	repoPath, errRes := s.resolveRepoPath(getStringArg(req, "repo"))
+	p := NewParams(req)
+	repoPath, errRes := s.resolveRepoPath(p.OptionalString("repo", ""))
 	if errRes != nil {
 		return errRes, nil
 	}
@@ -207,19 +209,20 @@ func (s *Server) handleScratchpadList(_ context.Context, req mcp.CallToolRequest
 }
 
 func (s *Server) handleScratchpadDelete(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "scratchpad")
-	if name == "" {
-		return codedError(ErrInvalidParams, "scratchpad is required"), nil
+	p := NewParams(req)
+	name, errResult := p.RequireString("scratchpad")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := validateSafePath(name); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid scratchpad name: %v", err)), nil
 	}
-	findingID := getStringArg(req, "finding_id")
-	if findingID == "" {
-		return codedError(ErrInvalidParams, "finding_id is required"), nil
+	findingID, errResult := p.RequireString("finding_id")
+	if errResult != nil {
+		return errResult, nil
 	}
 
-	repoPath, errRes := s.resolveRepoPath(getStringArg(req, "repo"))
+	repoPath, errRes := s.resolveRepoPath(p.OptionalString("repo", ""))
 	if errRes != nil {
 		return errRes, nil
 	}
@@ -259,20 +262,22 @@ func (s *Server) handleScratchpadDelete(_ context.Context, req mcp.CallToolReque
 }
 
 func (s *Server) handleScratchpadResolve(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := getStringArg(req, "name")
-	if name == "" {
-		return codedError(ErrInvalidParams, "name is required"), nil
+	p := NewParams(req)
+	name, errResult := p.RequireString("name")
+	if errResult != nil {
+		return errResult, nil
 	}
 	if err := validateSafePath(name); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid name: %v", err)), nil
 	}
-	itemNum := int(getNumberArg(req, "item_number", 0))
-	if itemNum == 0 {
-		return codedError(ErrInvalidParams, "item_number is required"), nil
+	itemNumF, errResult := p.RequireNumber("item_number")
+	if errResult != nil {
+		return errResult, nil
 	}
-	resolution := getStringArg(req, "resolution")
+	itemNum := int(itemNumF)
+	resolution := p.OptionalString("resolution", "")
 
-	repoPath, errRes := s.resolveRepoPath(getStringArg(req, "repo"))
+	repoPath, errRes := s.resolveRepoPath(p.OptionalString("repo", ""))
 	if errRes != nil {
 		return errRes, nil
 	}

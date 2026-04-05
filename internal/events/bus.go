@@ -82,6 +82,13 @@ const (
 	// Recording
 	RecordingStarted EventType = "session.recording.started" // Session replay recording began
 	RecordingEnded   EventType = "session.recording.ended"   // Session replay recording finished
+
+	// Research daemon events.
+	ResearchQueued         EventType = "research.queued"          // Topic enqueued for background research
+	ResearchStarted        EventType = "research.started"         // Daemon began processing a topic
+	ResearchCompleted      EventType = "research.completed"       // Topic researched and written to docs
+	ResearchFailed         EventType = "research.failed"          // Topic processing failed
+	ResearchBatchSubmitted EventType = "research.batch_submitted" // Batch of research prompts submitted
 )
 
 // knownEventTypes is the set of all declared EventType constants.
@@ -120,6 +127,11 @@ var knownEventTypes = map[EventType]struct{}{
 	EmergencyResume:       {},
 	RecordingStarted:      {},
 	RecordingEnded:        {},
+	ResearchQueued:         {},
+	ResearchStarted:        {},
+	ResearchCompleted:      {},
+	ResearchFailed:         {},
+	ResearchBatchSubmitted: {},
 }
 
 // ValidEventType returns true if the given EventType is a known constant.
