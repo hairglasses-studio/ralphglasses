@@ -28,6 +28,7 @@ func defaultRegistry() *ToolGroupRegistry {
 	r.Register(NewFuncBuilder("rc", (*Server).buildRCGroup))
 	r.Register(NewFuncBuilder("autonomy", (*Server).buildAutonomyGroup))
 	r.Register(NewFuncBuilder("workflow", (*Server).buildWorkflowGroup))
+	r.Register(NewFuncBuilder("docs", (*Server).buildDocsGroup))
 	return r
 }
 
