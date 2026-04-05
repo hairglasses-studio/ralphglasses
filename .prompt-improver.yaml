@@ -1,0 +1,19 @@
+preamble: |
+  Context: Multi-LLM agent orchestration TUI + fleet manager in Go.
+  Uses Bubble Tea for TUI, mcpkit for MCP tools, multi-provider session management.
+
+rules:
+  - match: "session|provider|cost"
+    prepend: "Session manager handles Claude/Gemini/Codex. Cost tracking per provider. Budget enforcement."
+  - match: "enhance|prompt|lint|score"
+    prepend: "Enhancer pipeline in internal/enhancer/. 13 stages, 10 scoring dimensions, 11 lint categories."
+  - match: "fleet|a2a|dispatch"
+    prepend: "Fleet uses HTTP coordinator, A2A dispatch, blackboard coordination, cascade routing."
+  - match: "gateway|route"
+    prepend: "HTTP gateway with namespace routing. Middleware: rate limit, auth, audit, circuit breaker."
+
+hook:
+  skip_score_threshold: 70
+  min_word_count: 5
+
+default_task_type: code
