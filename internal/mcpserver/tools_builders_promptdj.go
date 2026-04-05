@@ -42,6 +42,16 @@ func (s *Server) buildPromptDJGroup() ToolGroup {
 				mcp.WithString("prompt", mcp.Required(), mcp.Description("Prompt to analyze")),
 				mcp.WithString("repo", mcp.Description("Repository context")),
 			), s.handlePromptDJSuggest},
+			{mcp.NewTool("ralphglasses_promptdj_history",
+				mcp.WithDescription("View routing decision history with optional summary. Filter by repo, provider, task type, status, and time window."),
+				mcp.WithString("repo", mcp.Description("Filter by repo")),
+				mcp.WithString("provider", mcp.Description("Filter by provider")),
+				mcp.WithString("task_type", mcp.Description("Filter by task type")),
+				mcp.WithString("status", mcp.Description("Filter: routed, dispatched, succeeded, failed, all")),
+				mcp.WithString("since", mcp.Description("Time window: RFC3339 or duration ('24h', '7d')")),
+				mcp.WithNumber("limit", mcp.Description("Max results (default 50)")),
+				mcp.WithBoolean("summary", mcp.Description("If true, return aggregate stats instead of individual decisions")),
+			), s.handlePromptDJHistory},
 		},
 	}
 }

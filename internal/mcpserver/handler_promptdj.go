@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer/fewshot"
@@ -207,6 +208,72 @@ func (s *Server) handlePromptDJSuggest(_ context.Context, req mcp.CallToolReques
 		"task_type":     taskType,
 		"suggestions":   suggestions,
 		"would_route_to": routeInfo,
+	}), nil
+}
+
+// handlePromptDJHistory returns routing decision history with optional summary mode.
+func (s *Server) handlePromptDJHistory(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	router := s.getOrCreateDJRouter()
+	if router == nil {
+		return codedError(ErrInternal, "Prompt DJ router not initialized"), nil
+	}
+	log := router.GetDecisionLog()
+	if log == nil {
+		return codedError(ErrInternal, "decision log not available"), nil
+	}
+
+	filter := promptdj.DecisionFilter{
+		Repo:     getStringArg(req, "repo"),
+		Provider: getStringArg(req, "provider"),
+		TaskType: getStringArg(req, "task_type"),
+		Status:   getStringArg(req, "status"),
+		Limit:    int(getNumberArg(req, "limit", 50)),
+	}
+
+	// Parse time window
+	if since := getStringArg(req, "since"); since != "" {
+		if d, err := time.ParseDuration(since); err == nil {
+			filter.Since = time.Now().Add(-d)
+		} else if t, err := time.Parse(time.RFC3339, since); err == nil {
+			filter.Since = t
+		}
+	}
+
+	decisions := log.QueryDecisions(filter)
+	summary := getBoolArg(req, "summary")
+
+	if summary {
+		// Aggregate summary
+		var totalCost, successCount float64
+		byProvider := map[string]int{}
+		byTaskType := map[string]int{}
+		byStatus := map[string]int{}
+		for _, d := range decisions {
+			totalCost += d.ActualCost
+			byProvider[d.Provider]++
+			byTaskType[d.TaskType]++
+			byStatus[d.Status]++
+			if d.Status == "succeeded" {
+				successCount++
+			}
+		}
+		var successRate float64
+		if len(decisions) > 0 {
+			successRate = successCount / float64(len(decisions))
+		}
+		return jsonResult(map[string]any{
+			"total_decisions": len(decisions),
+			"success_rate":    successRate,
+			"total_cost_usd":  totalCost,
+			"by_provider":     byProvider,
+			"by_task_type":    byTaskType,
+			"by_status":       byStatus,
+		}), nil
+	}
+
+	return jsonResult(map[string]any{
+		"decisions": decisions,
+		"total":     len(decisions),
 	}), nil
 }
 
