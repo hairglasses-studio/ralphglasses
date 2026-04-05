@@ -546,9 +546,8 @@ func (m *Manager) LoadExternalSessions() {
 		// but don't overwrite in-memory state.
 		if existing, ok := m.sessions[id]; ok {
 			// Re-persist in-process sessions so disk stays current (best-effort).
-			go func(s *Session) {
-				m.persistOrWarn(s, "re-persist on load")
-			}(existing)
+			// Done synchronously to avoid goroutine leaks in tests.
+			m.persistOrWarn(existing, "re-persist on load")
 			continue
 		}
 
