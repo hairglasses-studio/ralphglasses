@@ -14,10 +14,49 @@ import (
 
 // Checkpoint captures marathon state at a point in time for resumability.
 type Checkpoint struct {
-	Timestamp       time.Time                `json:"timestamp"`
-	CyclesCompleted int                      `json:"cycles_completed"`
-	SpentUSD        float64                  `json:"spent_usd"`
-	SupervisorState session.SupervisorState  `json:"supervisor_state"`
+	Timestamp       time.Time               `json:"timestamp"`
+	CyclesCompleted int                     `json:"cycles_completed"`
+	SpentUSD        float64                 `json:"spent_usd"`
+	SupervisorState session.SupervisorState `json:"supervisor_state"`
+	MarathonID      string                  `json:"marathon_id,omitempty"`
+}
+
+// CheckpointStore abstracts checkpoint persistence. The default implementation
+// uses JSON files on disk; an opt-in SQLite backend is also available.
+type CheckpointStore interface {
+	// Save persists a checkpoint. Implementations must set Timestamp if zero.
+	Save(cp *Checkpoint) error
+
+	// Latest returns the most recent checkpoint, or an error if none exist.
+	Latest() (*Checkpoint, error)
+
+	// List returns all checkpoints sorted by timestamp ascending (oldest first).
+	List() ([]*Checkpoint, error)
+}
+
+// FileCheckpointStore implements CheckpointStore using JSON files in a directory.
+type FileCheckpointStore struct {
+	Dir string
+}
+
+// NewFileCheckpointStore returns a file-backed checkpoint store rooted at dir.
+func NewFileCheckpointStore(dir string) *FileCheckpointStore {
+	return &FileCheckpointStore{Dir: dir}
+}
+
+// Save writes a checkpoint as a JSON file. The filename includes the timestamp.
+func (fs *FileCheckpointStore) Save(cp *Checkpoint) error {
+	return SaveCheckpoint(fs.Dir, cp)
+}
+
+// Latest returns the most recent checkpoint from the directory.
+func (fs *FileCheckpointStore) Latest() (*Checkpoint, error) {
+	return LoadLatestCheckpoint(fs.Dir)
+}
+
+// List returns all checkpoints in the directory, sorted ascending by timestamp.
+func (fs *FileCheckpointStore) List() ([]*Checkpoint, error) {
+	return ListCheckpoints(fs.Dir)
 }
 
 // SaveCheckpoint writes a checkpoint to the given directory.
