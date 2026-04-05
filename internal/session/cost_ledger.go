@@ -17,9 +17,10 @@ type CostLedgerEntry struct {
 // CostLedger tracks per-session cost entries with timestamps. It is safe for
 // concurrent use.
 type CostLedger struct {
-	mu      sync.RWMutex
-	entries []CostLedgerEntry
-	byID    map[string][]int // sessionID → indices into entries
+	mu          sync.RWMutex
+	entries     []CostLedgerEntry
+	byID        map[string][]int // sessionID → indices into entries
+	eventWriter *CostEventWriter // optional external event emitter
 }
 
 // NewCostLedger creates an empty CostLedger ready for use.
@@ -35,6 +36,15 @@ func (cl *CostLedger) Record(sessionID string, amount float64, provider string) 
 	cl.RecordAt(sessionID, amount, provider, time.Now())
 }
 
+// SetEventWriter attaches an optional CostEventWriter. When set, every
+// RecordAt call also emits a CostEvent to the writer for external consumption
+// (e.g., docs-mcp ingestion). Pass nil to disable.
+func (cl *CostLedger) SetEventWriter(w *CostEventWriter) {
+	cl.mu.Lock()
+	defer cl.mu.Unlock()
+	cl.eventWriter = w
+}
+
 // RecordAt adds a cost entry with an explicit timestamp. This is useful for
 // tests and back-filling historical data.
 func (cl *CostLedger) RecordAt(sessionID string, amount float64, provider string, ts time.Time) {
@@ -42,13 +52,24 @@ func (cl *CostLedger) RecordAt(sessionID string, amount float64, provider string
 	defer cl.mu.Unlock()
 
 	idx := len(cl.entries)
-	cl.entries = append(cl.entries, CostLedgerEntry{
+	entry := CostLedgerEntry{
 		SessionID: sessionID,
 		Amount:    amount,
 		Provider:  provider,
 		Timestamp: ts,
-	})
+	}
+	cl.entries = append(cl.entries, entry)
 	cl.byID[sessionID] = append(cl.byID[sessionID], idx)
+
+	// Emit cost event if a writer is attached (best-effort, errors are silent).
+	if cl.eventWriter != nil {
+		_ = cl.eventWriter.Write(CostEvent{
+			SessionID: sessionID,
+			Provider:  provider,
+			CostUSD:   amount,
+			Timestamp: ts,
+		})
+	}
 }
 
 // Total returns the sum of all recorded costs across every session.
