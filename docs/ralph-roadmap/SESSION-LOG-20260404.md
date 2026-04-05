@@ -95,16 +95,14 @@ Produced 24 research documents (784K) in `docs/ralph-roadmap/`:
 - RunSessionOutput: cost_source "api_key"→"structured" (json:"-" tag)
 - CollectChildPIDs: nil→len check for empty slice
 
-### Supplementary Research Phases 2-3 (6 design docs)
+### Supplementary Research Phase 3 (3 design docs)
 
-- **s5**: Sweep parallelization design (semaphore fan-out, 2 bug fixes)
-- **s6**: LogView ring buffer design (10K cap, scroll compensation)
-- **s7**: Namespace restructure plan (advanced→4 sub-namespaces)
-- **s8**: TUI tick optimization (event-driven, 60% I/O reduction)
-- **s9**: Per-hour spend circuit breaker ($50/hr rolling cap for L3)
-- **s10**: Cost rate audit (all rates verified, cascade tier confirmed)
-- **s11**: Remaining test failures (5 classified, 4 fixed)
-- **s12**: CircuitBreaker consolidation (4 copies→shared package)
+- **s8-tui-tick-optimization.md**: Event-driven updates replacing 2s polling,
+  per-view conditional rendering, 60% I/O reduction
+- **s9-hourly-spend-breaker.md**: Rolling $50/hr cap for L3 autonomy, based on
+  existing FleetAnomalyDetector pattern promoted to hard gate
+- **s10-cost-rate-audit.md**: Full provider rate audit with sources, found cascade
+  tier inversion (Opus cheaper than Codex at current pricing)
 
 ## Session Totals
 
@@ -112,10 +110,10 @@ Produced 24 research documents (784K) in `docs/ralph-roadmap/`:
 |--------|-------|
 | Research agents launched | 32 (24 original + 8 supplementary) |
 | Implementation agents launched | 27 |
-| Research documents produced | 33 (25 analysis + 8 design/research docs) |
-| Commits pushed | 15 |
-| Files changed | ~75 |
-| Lines inserted | ~3,100 |
+| Research documents produced | 33 (25 analysis + 8 design docs) |
+| Commits pushed | 14 |
+| Files changed | ~70 |
+| Lines inserted | ~3,000 |
 | Lines deleted | ~1,000 |
 | Race conditions fixed | 10 (2 CRITICAL + 4 HIGH + 4 MEDIUM) |
 | Budget gaps closed | 3 |
