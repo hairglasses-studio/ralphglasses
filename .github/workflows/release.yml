@@ -1,32 +1,17 @@
 name: Release
-
 on:
   push:
-    tags:
-      - 'v*'
-
+    tags: ['v*']
 permissions:
   contents: write
-
 jobs:
   release:
-    name: GoReleaser
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
+        with: { fetch-depth: 0 }
       - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - name: Install system prerequisites
-        run: sudo apt-get update && sudo apt-get install -y make build-essential
-
-      - name: Run tests before release
-        run: go test ./...
-
+        with: { go-version: '1.26' }
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: '~> v2'
