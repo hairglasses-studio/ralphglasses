@@ -13,21 +13,22 @@ import (
 // source of truth for all cost-aware subsystems. Update here when provider
 // pricing changes.
 //
-// Last verified: 2026-04-04 (sources: platform.claude.com, ai.google.dev, openai.com/api/pricing)
+// Last verified: 2026-04-05 (sources: platform.claude.com, ai.google.dev, openai.com/api/pricing)
 const (
-	CostGeminiFlashLiteInput float64 = 0.075
-	CostGeminiFlashInput     float64 = 0.15
-	CostGeminiFlashOutput    float64 = 0.60
-	CostClaudeSonnetInput    float64 = 3.00
-	CostClaudeSonnetOutput   float64 = 15.00
-	CostClaudeOpusInput      float64 = 5.00
-	CostClaudeOpusOutput     float64 = 75.00
-	CostCodexInput           float64 = 2.00
-	CostCodexOutput          float64 = 8.00
-	CostClaudeHaikuInput     float64 = 0.80
-	CostClaudeHaikuOutput    float64 = 4.00
-	CostGeminiProInput       float64 = 1.25
-	CostGeminiProOutput      float64 = 10.00
+	CostGeminiFlashLiteInput  float64 = 0.075
+	CostGeminiFlashLiteOutput float64 = 0.30
+	CostGeminiFlashInput      float64 = 0.30  // Gemini 2.5 Flash (was 0.15 for 2.0 Flash)
+	CostGeminiFlashOutput     float64 = 2.50  // Gemini 2.5 Flash (was 0.60 for 2.0 Flash)
+	CostClaudeSonnetInput     float64 = 3.00
+	CostClaudeSonnetOutput    float64 = 15.00
+	CostClaudeOpusInput       float64 = 5.00
+	CostClaudeOpusOutput      float64 = 25.00 // Opus 4.6 output (was 75.00 — 3x overstated)
+	CostCodexInput            float64 = 2.00  // GPT-4.1/o3 default tier
+	CostCodexOutput           float64 = 8.00  // GPT-4.1/o3 default tier
+	CostClaudeHaikuInput      float64 = 0.80
+	CostClaudeHaikuOutput     float64 = 4.00
+	CostGeminiProInput        float64 = 1.25
+	CostGeminiProOutput       float64 = 10.00
 )
 
 // CostRatesVerified is the date these rates were last verified against provider pricing pages.
@@ -73,8 +74,9 @@ func DefaultProviderCosts() *ProviderCosts {
 			"codex":             CostCodexInput,
 		},
 		OutputPerMToken: map[string]float64{
-			"gemini_flash":  CostGeminiFlashOutput,
-			"gemini_pro":    CostGeminiProOutput,
+			"gemini_flash_lite": CostGeminiFlashLiteOutput,
+			"gemini_flash":      CostGeminiFlashOutput,
+			"gemini_pro":        CostGeminiProOutput,
 			"claude_haiku":  CostClaudeHaikuOutput,
 			"claude_sonnet": CostClaudeSonnetOutput,
 			"claude_opus":   CostClaudeOpusOutput,
