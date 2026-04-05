@@ -246,6 +246,9 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_promptdj_route":    {Title: "Prompt DJ Route", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_promptdj_dispatch": {Title: "Prompt DJ Dispatch", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_promptdj_feedback": {Title: "Prompt DJ Feedback", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_promptdj_similar":  {Title: "Prompt DJ Similar", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_promptdj_suggest":  {Title: "Prompt DJ Suggest", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_promptdj_history":  {Title: "Prompt DJ History", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 }
 
 // GetAnnotation returns the ToolAnnotation for a named tool, or an empty
