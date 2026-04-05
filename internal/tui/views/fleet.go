@@ -283,12 +283,22 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 	}
 	b.WriteString("\n")
 
-	// Repo + session + team lists with selection markers
+	// Repo + session + team lists with virtual scrolling
+	maxPanelRows := max((height-30)/2, 5) // rows per panel based on available height
 	var repoList, sessionList, teamList strings.Builder
 
 	repoList.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Repos", styles.IconRepo)))
+	if len(data.Repos) > maxPanelRows {
+		repoList.WriteString(styles.InfoStyle.Render(fmt.Sprintf(" [%d-%d of %d]",
+			fleetWindowStart(data.SelectedSection == "repos", data.SelectedCursor, len(data.Repos), maxPanelRows)+1,
+			min(fleetWindowStart(data.SelectedSection == "repos", data.SelectedCursor, len(data.Repos), maxPanelRows)+maxPanelRows, len(data.Repos)),
+			len(data.Repos))))
+	}
 	repoList.WriteString("\n")
-	for i, r := range data.Repos {
+	repoStart := fleetWindowStart(data.SelectedSection == "repos", data.SelectedCursor, len(data.Repos), maxPanelRows)
+	repoEnd := min(repoStart+maxPanelRows, len(data.Repos))
+	for i := repoStart; i < repoEnd; i++ {
+		r := data.Repos[i]
 		status := r.StatusDisplay()
 		budgetStr := ""
 		if r.Status != nil && r.Status.SessionSpendUSD > 0 {
@@ -303,32 +313,39 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 	}
 
 	sessionList.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Sessions", styles.IconSession)))
-	sessionList.WriteString("\n")
-	hasSessions := false
-	for i, s := range data.Sessions {
-		s.Lock()
-		id := s.ID
-		if len(id) > 8 {
-			id = id[:8]
-		}
-		provider := string(s.Provider)
-		repo := s.RepoName
-		spent := s.SpentUSD
-		status := string(s.Status)
-		s.Unlock()
-		sessionList.WriteString(fmt.Sprintf("%s %-8s %s %-7s %-10s $%.2f %s\n",
-			fleetMarker(data.SelectedSection == "sessions" && data.SelectedCursor == i),
-			id,
-			styles.ProviderIcon(provider),
-			provider,
-			truncateLabel(repo, 10),
-			spent,
-			styles.StatusStyle(status).Render(status)))
-		hasSessions = true
+	if len(data.Sessions) > maxPanelRows {
+		sessStart := fleetWindowStart(data.SelectedSection == "sessions", data.SelectedCursor, len(data.Sessions), maxPanelRows)
+		sessionList.WriteString(styles.InfoStyle.Render(fmt.Sprintf(" [%d-%d of %d]",
+			sessStart+1, min(sessStart+maxPanelRows, len(data.Sessions)), len(data.Sessions))))
 	}
-	if !hasSessions {
+	sessionList.WriteString("\n")
+	if len(data.Sessions) == 0 {
 		sessionList.WriteString(styles.InfoStyle.Render("  None"))
 		sessionList.WriteString("\n")
+	} else {
+		sessStart := fleetWindowStart(data.SelectedSection == "sessions", data.SelectedCursor, len(data.Sessions), maxPanelRows)
+		sessEnd := min(sessStart+maxPanelRows, len(data.Sessions))
+		for i := sessStart; i < sessEnd; i++ {
+			s := data.Sessions[i]
+			s.Lock()
+			id := s.ID
+			if len(id) > 8 {
+				id = id[:8]
+			}
+			provider := string(s.Provider)
+			repo := s.RepoName
+			spent := s.SpentUSD
+			status := string(s.Status)
+			s.Unlock()
+			sessionList.WriteString(fmt.Sprintf("%s %-8s %s %-7s %-10s $%.2f %s\n",
+				fleetMarker(data.SelectedSection == "sessions" && data.SelectedCursor == i),
+				id,
+				styles.ProviderIcon(provider),
+				provider,
+				truncateLabel(repo, 10),
+				spent,
+				styles.StatusStyle(status).Render(status)))
+		}
 	}
 
 	teamList.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Teams", styles.IconTeam)))
@@ -337,7 +354,10 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 		teamList.WriteString(styles.InfoStyle.Render("  None"))
 		teamList.WriteString("\n")
 	} else {
-		for i, team := range data.Teams {
+		teamStart := fleetWindowStart(data.SelectedSection == "teams", data.SelectedCursor, len(data.Teams), maxPanelRows)
+		teamEnd := min(teamStart+maxPanelRows, len(data.Teams))
+		for i := teamStart; i < teamEnd; i++ {
+			team := data.Teams[i]
 			teamList.WriteString(fmt.Sprintf("%s %-12s %s %d tasks\n",
 				fleetMarker(data.SelectedSection == "teams" && data.SelectedCursor == i),
 				truncateLabel(team.Name, 12),
