@@ -200,6 +200,10 @@ type Model struct {
 
 type tickMsg time.Time
 
+// slowTickMsg is sent by the slow 30-second heartbeat ticker that forces a
+// full table refresh regardless of which view is active.
+type slowTickMsg time.Time
+
 // LoopListMsg carries a refreshed snapshot of active loop runs for the loop list view.
 type LoopListMsg []*session.LoopRun
 
@@ -262,19 +266,29 @@ func loadLogCmd(repoPath string) tea.Cmd {
 	}
 }
 
-// Init returns the initial set of commands: repo scan, tick timer, spinner, and process exit watcher.
+// Init returns the initial set of commands: repo scan, tick timer, slow tick timer, spinner, and process exit watcher.
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.scanRepos(),
 		m.tickCmd(),
+		m.slowTickCmd(),
 		m.Spinner.Tick,
 		process.WaitForProcessExit(m.ProcMgr.ExitChan()),
 	)
 }
 
+// tickCmd returns a fast 5-second heartbeat tick for drift correction.
 func (m Model) tickCmd() tea.Cmd {
-	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+	return tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
 		return tickMsg(t)
+	})
+}
+
+// slowTickCmd returns a slow 30-second tick that forces a full table refresh
+// regardless of active view, preventing stale data in background views.
+func (m Model) slowTickCmd() tea.Cmd {
+	return tea.Tick(30*time.Second, func(t time.Time) tea.Msg {
+		return slowTickMsg(t)
 	})
 }
 
@@ -499,6 +513,78 @@ func (m *Model) updateTeamTable() {
 	teams := m.SessMgr.ListTeams()
 	rows := views.TeamsToRows(teams)
 	m.TeamTable.SetRows(rows)
+}
+
+// needsRepoTable reports whether the current view renders the repo overview table.
+func (m *Model) needsRepoTable() bool {
+	switch m.Nav.CurrentView {
+	case ViewOverview, ViewRepoDetail, ViewLoopHealth, ViewDiff, ViewTimeline, ViewObservation:
+		return true
+	}
+	return false
+}
+
+// needsSessionTable reports whether the current view renders the session table.
+func (m *Model) needsSessionTable() bool {
+	switch m.Nav.CurrentView {
+	case ViewSessions, ViewSessionDetail, ViewFleet:
+		return true
+	}
+	return false
+}
+
+// needsTeamTable reports whether the current view renders the team table.
+func (m *Model) needsTeamTable() bool {
+	switch m.Nav.CurrentView {
+	case ViewTeams, ViewTeamDetail, ViewTeamOrchestration, ViewFleet:
+		return true
+	}
+	return false
+}
+
+// refreshStatusBarCounts updates only the status bar session and loop count
+// fields derived from in-memory data.  It is cheap (no disk I/O, no row
+// rebuilds) and is safe to call unconditionally on every tick so the status
+// bar always shows current numbers regardless of which view is active.
+func (m *Model) refreshStatusBarCounts() {
+	m.StatusBar.RepoCount = len(m.Repos)
+	m.StatusBar.RunningCount = len(m.ProcMgr.RunningPaths())
+	m.StatusBar.LastRefresh = m.LastRefresh
+	m.StatusBar.TickFrame = m.TickFrame
+	if m.SessMgr == nil {
+		return
+	}
+	sessions := m.SessMgr.List("")
+	m.StatusBar.SessionCount = len(sessions)
+	var totalSpend, totalBudget float64
+	providerCounts := make(map[string]int)
+	for _, s := range sessions {
+		s.Lock()
+		totalSpend += s.SpentUSD
+		totalBudget += s.BudgetUSD
+		if s.Status == session.StatusRunning || s.Status == session.StatusLaunching {
+			providerCounts[string(s.Provider)]++
+		}
+		s.Unlock()
+	}
+	m.StatusBar.TotalSpendUSD = totalSpend
+	m.StatusBar.ProviderCounts = providerCounts
+	if totalBudget > 0 {
+		m.StatusBar.FleetBudgetPct = totalSpend / totalBudget
+	} else {
+		m.StatusBar.FleetBudgetPct = 0
+	}
+	loops := m.SessMgr.ListLoops()
+	var activeLoops int
+	for _, l := range loops {
+		l.Lock()
+		if l.Status == "running" && !l.Paused {
+			activeLoops++
+		}
+		l.Unlock()
+	}
+	m.StatusBar.ActiveLoopCount = activeLoops
+	m.StatusBar.Uptime = time.Since(m.StartedAt)
 }
 
 // loopListCmd fetches active loops and returns them as a LoopListMsg.

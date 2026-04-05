@@ -61,6 +61,8 @@ type Manager struct {
 	FleetPool          *pool.State            // fleet-wide budget pooling and metrics aggregation
 	worktreePool       *WorktreePool          // Phase 10.5.8: reusable worktree pool
 
+	spendMonitor *SpendRateMonitor // hourly spend circuit breaker (nil = disabled)
+
 	DefaultBudgetUSD float64 // from RALPH_SESSION_BUDGET; applied when Launch opts has no budget
 
 	// WS-7: Loop engine hygiene — auto-prune and journal consolidation config.
@@ -226,6 +228,17 @@ func (m *Manager) ApplyConfig(cfg *model.RalphConfig) {
 				m.FleetPool.SetBudgetCap(f)
 				slog.Info("fleet budget cap configured", "cap_usd", f)
 			}
+		}
+	}
+
+	// Hourly spend circuit breaker.
+	if raw := cfg.Get("HOURLY_SPEND_THRESHOLD_USD", ""); raw != "" {
+		if f, err := strconv.ParseFloat(raw, 64); err == nil && f > 0 {
+			m.spendMonitor = NewSpendRateMonitor(f)
+			if m.bus != nil {
+				m.spendMonitor.SubscribeToBus(context.Background(), m.bus)
+			}
+			slog.Info("hourly spend breaker configured", "threshold_usd", f)
 		}
 	}
 
