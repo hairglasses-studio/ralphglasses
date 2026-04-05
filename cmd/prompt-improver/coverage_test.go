@@ -52,15 +52,20 @@ func TestDispatch_Enhance_ModeDefaultsToLocal(t *testing.T) {
 }
 
 func TestDispatch_Improve_WithQuietFlag(t *testing.T) {
-	// Test that the improve parser handles --quiet flag; will os.Exit due to
-	// no API key, but exercises the flag parsing branch.
+	// runImprove calls os.Exit when OPENAI_API_KEY is not set, which kills
+	// the entire test process. Skip when the key is absent.
+	if os.Getenv("OPENAI_API_KEY") == "" {
+		t.Skip("OPENAI_API_KEY not set — skipping to avoid os.Exit in runImprove")
+	}
 	err := dispatch([]string{"improve", "--quiet", "fix the sorting bug in the codebase"})
-	// os.Exit happens in runImprove, dispatch itself returns nil
 	_ = err
 }
 
 func TestDispatch_Improve_WithAllFlags(t *testing.T) {
-	// Exercise all improve flag parsing paths
+	// runImprove calls os.Exit when OPENAI_API_KEY is not set.
+	if os.Getenv("OPENAI_API_KEY") == "" {
+		t.Skip("OPENAI_API_KEY not set — skipping to avoid os.Exit in runImprove")
+	}
 	err := dispatch([]string{"improve", "--type", "code", "--thinking", "--feedback", "focus on performance", "--provider", "claude", "--quiet", "fix", "the", "bug"})
 	_ = err
 }
