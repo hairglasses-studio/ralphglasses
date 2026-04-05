@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/NimbleMarkets/ntcharts/linechart/streamlinechart"
 	"github.com/NimbleMarkets/ntcharts/sparkline"
 	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
@@ -117,19 +118,11 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 	b.WriteString(wrapStatBoxes(statBoxes, width))
 	b.WriteString("\n")
 
-	// Cost sparkline
+	// Cost chart — use linechart at tall terminals, sparkline otherwise
 	if len(data.CostHistory) > 1 {
-		sparkWidth := max(width-20, 8)
-		if sparkWidth > 120 {
-			sparkWidth = 120
-		}
-		points := data.CostHistory
-		if len(points) > sparkWidth {
-			points = points[len(points)-sparkWidth:]
-		}
-		sl := sparkline.New(sparkWidth, 3)
-		for _, v := range points {
-			sl.Push(v)
+		chartWidth := max(width-20, 8)
+		if chartWidth > 120 {
+			chartWidth = 120
 		}
 		title := fmt.Sprintf("%s Cost Trend", styles.IconCost)
 		if data.CostWindowLabel != "" {
@@ -137,7 +130,30 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 		}
 		b.WriteString(styles.HeaderStyle.Render(title))
 		b.WriteString("\n")
-		b.WriteString(sl.View())
+
+		points := data.CostHistory
+		if height >= 20 && len(points) >= 3 {
+			// Use streamlinechart for detailed view when terminal is tall enough
+			chartHeight := min(height/5, 8)
+			if chartHeight < 4 {
+				chartHeight = 4
+			}
+			lc := streamlinechart.New(chartWidth, chartHeight)
+			for _, v := range points {
+				lc.Push(v)
+			}
+			b.WriteString(lc.View())
+		} else {
+			// Fall back to sparkline for compact view
+			if len(points) > chartWidth {
+				points = points[len(points)-chartWidth:]
+			}
+			sl := sparkline.New(chartWidth, 3)
+			for _, v := range points {
+				sl.Push(v)
+			}
+			b.WriteString(sl.View())
+		}
 		b.WriteString("\n")
 	}
 
@@ -459,6 +475,26 @@ func (v *FleetView) Render() string {
 func (v *FleetView) regenerate() {
 	content := RenderFleetDashboard(v.data, v.width, v.height)
 	v.Viewport.SetContent(content)
+}
+
+// fleetWindowStart calculates the scroll offset for a virtual-scrolled panel.
+// Keeps the cursor centered in the visible window.
+func fleetWindowStart(isActive bool, cursor, total, windowSize int) int {
+	if total <= windowSize {
+		return 0
+	}
+	if !isActive {
+		return 0 // non-active panels show from top
+	}
+	// Center cursor in window
+	start := cursor - windowSize/2
+	if start < 0 {
+		start = 0
+	}
+	if start+windowSize > total {
+		start = total - windowSize
+	}
+	return start
 }
 
 // wrapStatBoxes lays out stat boxes horizontally, wrapping to the next row
