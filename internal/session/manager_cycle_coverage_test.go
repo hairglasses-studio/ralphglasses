@@ -98,7 +98,7 @@ func TestWaitForLoops_EmptyIDs(t *testing.T) {
 }
 
 func TestWaitForLoops_ContextCancelled(t *testing.T) {
-	t.Parallel()
+	// Not parallel: mutates package-level cyclePollInterval.
 	m := NewManager()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -116,7 +116,7 @@ func TestWaitForLoops_ContextCancelled(t *testing.T) {
 }
 
 func TestWaitForLoops_UnknownIDsConsidered(t *testing.T) {
-	t.Parallel()
+	// Not parallel: mutates package-level cyclePollInterval.
 	m := NewManager()
 
 	old := cyclePollInterval
@@ -134,7 +134,7 @@ func TestWaitForLoops_UnknownIDsConsidered(t *testing.T) {
 }
 
 func TestRunCycle_NoTasksPlanned(t *testing.T) {
-	t.Parallel()
+	// Not parallel: mutates package-level cyclePollInterval.
 	disableCycleSafety(t)
 
 	dir := t.TempDir()
@@ -162,7 +162,7 @@ func TestRunCycle_NoTasksPlanned(t *testing.T) {
 }
 
 func TestCycleSafetyConfig_NilUseDefault(t *testing.T) {
-	t.Parallel()
+	// Not parallel: mutates package-level CycleSafety.
 	old := CycleSafety
 	CycleSafety = nil
 	defer func() { CycleSafety = old }()
@@ -174,7 +174,7 @@ func TestCycleSafetyConfig_NilUseDefault(t *testing.T) {
 }
 
 func TestCycleSafetyConfig_Custom(t *testing.T) {
-	t.Parallel()
+	// Not parallel: mutates package-level CycleSafety.
 	custom := CycleSafetyConfig{MaxConcurrentCycles: 99}
 	old := CycleSafety
 	CycleSafety = &custom
