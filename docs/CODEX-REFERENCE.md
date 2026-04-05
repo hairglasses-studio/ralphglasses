@@ -2,6 +2,8 @@
 
 Codex is now the default command-and-control provider for ralphglasses when callers omit a provider.
 
+Current parity status: see `docs/CODEX-PARITY-STATUS.md` for the durable closeout state and future-session rules.
+
 ## Local baseline
 
 - Verified locally on 2026-04-04: `codex-cli 0.118.0`
@@ -42,6 +44,7 @@ Codex is now the default command-and-control provider for ralphglasses when call
 - Resumed Claude sessions are treated as cache-unsafe until live cache reads are observed.
 - ralphglasses no longer assumes Claude prompt-cache savings by default in shared cache accounting.
 - Runtime anomaly: if a resumed Claude session writes cache entries but reports zero cache reads, the session records a cache anomaly and emits a `session.error` event.
+- Repeated resumed-Claude cache anomalies trigger reroute of implicit long-running orchestration back to Codex.
 
 ## Research notes
 
