@@ -28,6 +28,8 @@ A `.mcp.json` is also included in the repo root for automatic local discovery. S
 
 Tools use **deferred loading** — only the `core` namespace (10 tools) is loaded at startup. Use the `ralphglasses_tool_groups` meta-tool to list namespaces and `ralphglasses_load_tool_group` to load them on demand.
 
+> **Note**: Standalone MCP server repos (dotfiles-mcp, hg-mcp, systemd-mcp, tmux-mcp, process-mcp) no longer exist as separate repos. All MCP tools are consolidated in `dotfiles/mcp/` (7 Go modules + 3 JS servers via `go.work`).
+
 ## Prompt Enhancement
 
 The `internal/enhancer/` package provides multi-provider prompt improvement and scoring:
@@ -60,13 +62,14 @@ The `Manager.Enhancer` field enables automatic prompt enhancement in `StepLoop`.
 
 The `distro/` directory contains configs for a bootable Linux thin client. Primary: Manjaro Linux + Sway (Wayland) + RTX 4090. Alternative: Manjaro + Hyprland. Legacy: Ubuntu 24.04 + i3 (X11). Key files: `distro/sway/` (Sway configs), `distro/hyprland/` (Hyprland configs), `distro/i3/` (legacy i3 configs), `distro/scripts/compositor-detect.sh` + `compositor-cmd.sh` (compositor abstraction layer), `distro/scripts/hw-detect.sh` (first-boot detection, writes both Sway+Hyprland configs), `distro/systemd/` (service units). The Go layer supports all three compositors via `internal/wm/` with IPC clients for Sway, Hyprland, and i3.
 
-## Related Repos (same org)
+## Related Repos (same org, 14 total)
 
 - **mcpkit**: Go MCP framework — ralph loop engine, finops, sampling, workflow, gateway
-- **hg-mcp**: Go MCP server with modular tool pattern (500+ tools)
+- **dotfiles**: Desktop config + ALL MCP servers (1,300+ tools across 7 Go + 3 JS modules in `dotfiles/mcp/`). Standalone MCP server repos (dotfiles-mcp, hg-mcp, systemd-mcp, tmux-mcp, process-mcp) no longer exist as separate repos — they live in `dotfiles/mcp/`.
 - **claudekit**: Go MCP with rdcycle perpetual loop, budget profiles
+- **docs**: Research knowledge base, 1,734+ files, infrastructure docs
+- **mesmer**: Multi-cloud ops platform (Go, 432K LOC, potential SaaS)
 - **shielddd**: Go + pure SQLite (modernc.org/sqlite) + MCP, audit logs
-- **mesmer**: Go MCP server with ralph integration
 
 ## See Also
 
