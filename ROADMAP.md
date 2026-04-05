@@ -749,7 +749,7 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - [x] 3.1.1 — Create `internal/i3/` package wrapping go-i3: connect to i3 socket, subscribe to events `P1` `M`
 - [x] 3.1.2 — Workspace CRUD: create named workspace, move to output, rename, close `P1` `M`
 - [x] 3.1.3 — Window management: focus, move-to-workspace, set layout (splitv/splith/tabbed/stacked) `P1` `M`
-- [ ] 3.1.4 — Monitor enumeration: list outputs via i3 IPC (name, resolution, position) `P1` `S`
+- [x] 3.1.4 — Monitor enumeration: list outputs via i3 IPC (name, resolution, position) `P1` `S`
 - [ ] 3.1.5 — Event listener: workspace focus, window create/close, output connect/disconnect `P1` `M`
 - **Acceptance:** programmatic workspace creation and window placement from Go
 
@@ -998,7 +998,7 @@ Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026
 - [ ] 5.5.2 — Per-session limits with carry-over `P1` `M`
 - [ ] 5.5.3 — Budget dashboard view `P1` `M`
 - [ ] 5.5.4 — Anthropic billing API integration `P2` `L`
-- [ ] 5.5.5 — Budget alerts `P1` `S`
+- [x] 5.5.5 — Budget alerts `P1` `S`
 - **Acceptance:** global pool enforced across all active sessions
 
 ### 5.6 — Secret management `[PARALLEL]`
@@ -1392,7 +1392,7 @@ Cross-reference observations with git commits.
 > **Depends on:** Phase 9.5 (supervisor), Phase 2.75 (event bus)
 
 ### 10.1 — Sprint Executor Agent & Batch Integration
-- [ ] 10.1.1 — Create `.claude/agents/sprint-executor.md` with `isolation: worktree`, `permissionMode: dontAsk`, `model: sonnet` `P1` `S`
+- [x] 10.1.1 — Create `.claude/agents/sprint-executor.md` with `isolation: worktree`, `permissionMode: dontAsk`, `model: sonnet` `P1` `S`
 - [ ] 10.1.2 — Create `.claude/agents/marathon-monitor.md` with `model: haiku` for cheap status polling `P2` `S`
 - [ ] 10.1.3 — Integrate `/batch` decomposition for parallel sprint execution (5 ROADMAP items → 5 batch units) `P1` `M`
 - [ ] 10.1.4 — Add batch result merging to `cycle_merge.go` for worktree outputs `P1` `M`
