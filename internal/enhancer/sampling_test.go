@@ -167,6 +167,22 @@ func TestSamplingEngine_ImproveSystemPrompt(t *testing.T) {
 	assertContains(t, mock.req.SystemPrompt, "Thinking mode addendum")
 }
 
+func TestSamplingEngine_DefaultSystemPromptTargetsOpenAI(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockSamplingClient{
+		result: newMockSamplingResult("improved"),
+	}
+	engine := NewSamplingEngine(mock)
+
+	_, err := engine.Improve(context.Background(), "test prompt", ImproveOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	assertContains(t, mock.req.SystemPrompt, "optimized for OpenAI models")
+}
+
 func TestSamplingEngine_FallbackInHybrid(t *testing.T) {
 	t.Parallel()
 

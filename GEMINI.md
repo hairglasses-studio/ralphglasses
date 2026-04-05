@@ -77,19 +77,19 @@ The `internal/session/` package uses a provider dispatch pattern:
 
 | Provider | CLI Binary | Default Model | Stream Format | Resume Support |
 |----------|-----------|---------------|---------------|----------------|
-| `claude` (default) | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
-| `gemini` | `gemini` | `gemini-3-pro` | `stream-json` | Yes (`--resume`) |
-| `codex` | `codex` | `gpt-5.4-xhigh` | quiet mode | No |
+| `codex` (default) | `codex` | `gpt-5.4` | `--json` (NDJSON) | Yes (`exec resume`, when supported by the installed CLI) |
+| `claude` | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
+| `gemini` | `gemini` | `gemini-2.5-pro` | `stream-json` | Yes (`--resume`) |
 
 ## Gemini-Specific Notes
 
 - **Autonomous mode**: Use `gemini --yolo` to skip all confirmations.
 - **Output format**: `gemini --output-format stream-json` for structured streaming output.
 - **Resume**: `gemini --resume <session-id>` to continue a previous session.
-- **Default model**: `gemini-3-pro` with max thinking budget (`thinkingBudget: -1`) and `temperature: 0.0` for maximum effort and attention. Configured in `.gemini/settings.json`.
+- **Default model**: `gemini-2.5-pro`. Configured in `.gemini/settings.json`.
 - **No budget support**: Gemini CLI does not have built-in budget enforcement — ralphglasses tracks costs externally.
 - **No system prompt flag**: Project context comes from `GEMINI.md` (this file), not a CLI flag.
-- **No agent definitions**: Gemini CLI does not support `.claude/agents/` — use MCP tools for delegation.
+- **Custom agents**: Project-scoped Gemini agents live in `.gemini/agents/*.md`.
 - **No worktree isolation**: Gemini CLI does not support git worktree isolation — use standard branching.
 
 ## MCP Server

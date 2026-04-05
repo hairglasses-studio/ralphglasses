@@ -253,6 +253,9 @@ func (m *Manager) enhanceForProvider(ctx context.Context, prompt string, provide
 
 // mapProvider converts a session Provider to the enhancer's ProviderName.
 func mapProvider(p Provider) enhancer.ProviderName {
+	if p == "" {
+		p = DefaultPrimaryProvider()
+	}
 	switch p {
 	case ProviderGemini:
 		return enhancer.ProviderGemini

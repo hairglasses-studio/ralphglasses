@@ -84,7 +84,10 @@ func ValidateProviderEnv(p Provider) error {
 // UnsupportedOptionsWarnings returns warnings for LaunchOptions fields that are
 // set but ignored by the given provider. Returns nil for Claude (supports all).
 func UnsupportedOptionsWarnings(p Provider, opts LaunchOptions) []string {
-	if p == ProviderClaude || p == "" {
+	if p == "" {
+		p = DefaultPrimaryProvider()
+	}
+	if p == ProviderClaude {
 		return nil
 	}
 
@@ -146,7 +149,9 @@ func ProviderDefaults(p Provider) (model string) {
 
 func providerBinary(p Provider) string {
 	switch p {
-	case ProviderClaude, "":
+	case "":
+		return providerBinary(DefaultPrimaryProvider())
+	case ProviderClaude:
 		return "claude"
 	case ProviderGemini:
 		return "gemini"

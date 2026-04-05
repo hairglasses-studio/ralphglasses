@@ -4,14 +4,14 @@ import (
 	"testing"
 )
 
-func TestNewPromptImprover_Claude(t *testing.T) {
-	t.Setenv("ANTHROPIC_API_KEY", "test-key")
+func TestNewPromptImprover_DefaultsToOpenAI(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "test-openai-key")
 	client := NewPromptImprover(LLMConfig{Enabled: true})
 	if client == nil {
-		t.Fatal("expected non-nil client for claude")
+		t.Fatal("expected non-nil client for default provider")
 	}
-	if client.Provider() != ProviderClaude {
-		t.Errorf("expected provider %q, got %q", ProviderClaude, client.Provider())
+	if client.Provider() != ProviderOpenAI {
+		t.Errorf("expected provider %q, got %q", ProviderOpenAI, client.Provider())
 	}
 }
 

@@ -110,7 +110,7 @@ func (br *BanditRouter) RestoreFromState(state *BanditState) {
 func ObservationToBanditReward(obs LoopObservation) (provider, model string, success bool, cost, quality float64, ctx CascadeContext) {
 	provider = obs.WorkerProvider
 	if provider == "" {
-		provider = "claude"
+		provider = string(DefaultPrimaryProvider())
 	}
 	model = obs.WorkerModelUsed
 

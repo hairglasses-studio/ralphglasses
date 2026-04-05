@@ -803,7 +803,7 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - [x] 3.5.4.2 — Include YAML frontmatter with allowed-tools `P1` `S`
 - [x] 3.5.4.3 — Auto-update skill on `ralphglasses mcp` server start `P1` `S`
 - [x] 3.5.4.4 — Mirror generated skill to `.agents/skills/ralphglasses/SKILL.md` for Codex-native skill discovery `P1` `S`
-- [ ] 3.5.4.5 — Add Codex plugin bundle generation for repo-local MCP affordances `P1` `M`
+- [x] 3.5.4.5 — Add Codex plugin bundle generation for repo-local MCP affordances `P1` `M`
 - **Acceptance:** provider-native skill surfaces exist for both Claude Code and Codex
 
 ### 3.5.5 — Codex-primary command/control parity `[NEW]`
@@ -811,7 +811,15 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - [x] 3.5.5.2 — Move self-improvement and sweep defaults to Codex-first planner/worker profiles `P0` `M`
 - [x] 3.5.5.3 — Update failover and cascade defaults so Codex is the primary control-plane lane and Claude is the expensive reasoning specialist `P1` `M`
 - [x] 3.5.5.4 — Pin Codex developer docs and local CLI capability notes in-repo for future sessions `P1` `S`
-- [ ] 3.5.5.5 — Add Codex plugin/subagent export flows alongside AGENTS.md skill export `P1` `M`
+- [x] 3.5.5.5 — Add Codex plugin/subagent export flows alongside AGENTS.md skill export `P1` `M`
+- [x] 3.5.5.6 — Remove remaining Claude-biased defaults from `internal/enhancer/` and `cmd/prompt-improver/` when provider/target is omitted `P0` `M`
+- [x] 3.5.5.7 — Make MCP Sampling and hybrid enhancement paths derive target prompt style from Codex/OpenAI-first runtime defaults instead of implicit Claude behavior `P1` `M`
+- [x] 3.5.5.8 — Add targeted regression tests proving omitted-provider prompt improvement paths prefer OpenAI/Codex semantics over Claude-specific scoring/tone rules `P1` `S`
+- **Implementation notes (2026-04-04):**
+  - Control-plane defaults are now largely Codex-first in session/team/fleet/runtime code, but the prompt enhancement stack still contains several "empty means Claude" assumptions.
+  - Known remaining hotspots: `internal/enhancer/config.go`, `internal/enhancer/provider.go`, `internal/enhancer/sampling.go`, `internal/enhancer/scoring.go`, and `cmd/prompt-improver/main.go`.
+  - The key risk is silent drift: Codex-led workflows can still receive Claude-optimized tone penalties, XML-first structure, or Anthropic-first LLM selection when the caller omits `provider` or `target_provider`.
+  - If a future session genuinely needs Claude Code to unblock a parity item, do not switch ad hoc. Write a focused Claude Code prompt, copy it to the paste buffer, record the reason in the roadmap/session notes, and keep the Codex-led branch as the source of truth.
 - **Acceptance:** omitted-provider control paths default to Codex and repo docs match runtime behavior
 
 ### 3.5.5 — Theme export to terminal (like claudekit themekit)
@@ -1382,8 +1390,11 @@ Cross-reference observations with git commits.
 - [x] 10.5.3.1 — Track stable repo instruction prefixes from `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` in prompt-cache analysis `P1` `S`
 - [x] 10.5.3.2 — Stop assuming Claude prompt-cache savings by default in shared cache accounting `P0` `S`
 - [x] 10.5.3.3 — Detect resumed-Claude cache anomalies when cache writes occur without cache reads `P0` `S`
-- [ ] 10.5.3.4 — Surface cache-read/cache-write ratios in fleet analytics and session status `P1` `M`
-- [ ] 10.5.3.5 — Add automatic reroute from Claude to Codex when repeated Claude cache anomalies are detected in long-running orchestration `P1` `M`
+- [x] 10.5.3.4 — Surface cache-read/cache-write ratios in fleet analytics and session status `P1` `M`
+- [x] 10.5.3.5 — Add automatic reroute from Claude to Codex when repeated Claude cache anomalies are detected in long-running orchestration `P1` `M`
+- **Implementation notes (2026-04-04):**
+  - Claude resumed-session cache safety is now treated as suspect by default in orchestration paths unless live cache reads are actually observed.
+  - Follow-on work should prefer observable cache-health metrics over theoretical savings, and any Claude-specific optimization should preserve a clean reroute path back to Codex.
 - **Acceptance:** Marathon cost per sprint reduced 50-80% vs naive execution
 
 ---

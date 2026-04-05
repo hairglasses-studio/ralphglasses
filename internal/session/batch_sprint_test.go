@@ -19,6 +19,7 @@ func TestDecomposeToSprints(t *testing.T) {
 							{ID: "1.1", Description: "Task one `P1` `S`", Done: false},
 							{ID: "1.2", Description: "Task two `P2` `M`", Done: true},
 							{ID: "1.3", Description: "Task three `P1` `L`", Done: false},
+							{ID: "1.4", Description: "Architecture review `P1` `L`", Done: false},
 						},
 					},
 				},
@@ -27,8 +28,8 @@ func TestDecomposeToSprints(t *testing.T) {
 	}
 
 	units := DecomposeToSprints(rm, 10)
-	if len(units) != 2 {
-		t.Fatalf("expected 2 units (1 done), got %d", len(units))
+	if len(units) != 3 {
+		t.Fatalf("expected 3 units (1 done), got %d", len(units))
 	}
 
 	// Sorted by budget: S first.
@@ -41,8 +42,11 @@ func TestDecomposeToSprints(t *testing.T) {
 	if units[1].Size != "L" {
 		t.Errorf("expected second unit to be L, got %s", units[1].Size)
 	}
-	if units[1].Provider != "claude" {
-		t.Errorf("expected L/P1 → claude, got %s", units[1].Provider)
+	if units[1].Provider != string(DefaultPrimaryProvider()) {
+		t.Errorf("expected generic L/P1 → %s, got %s", DefaultPrimaryProvider(), units[1].Provider)
+	}
+	if units[2].Provider != "claude" {
+		t.Errorf("expected architecture L/P1 → claude, got %s", units[2].Provider)
 	}
 }
 

@@ -76,7 +76,7 @@ func (s *Server) handleFindingToTask(_ context.Context, req mcp.CallToolRequest)
 		providerHint = "gemini"
 	case wordCount < 150:
 		difficulty = 0.5
-		providerHint = "claude"
+		providerHint = "codex"
 	default:
 		difficulty = 0.8
 		providerHint = "claude"
@@ -85,14 +85,14 @@ func (s *Server) handleFindingToTask(_ context.Context, req mcp.CallToolRequest)
 	estimatedCost := difficulty * 0.20
 
 	result := map[string]any{
-		"finding_id":      findingID,
-		"scratchpad":      scratchpadName,
-		"title":           title,
-		"description":     description,
+		"finding_id":       findingID,
+		"scratchpad":       scratchpadName,
+		"title":            title,
+		"description":      description,
 		"difficulty_score": difficulty,
-		"provider_hint":   providerHint,
-		"estimated_cost":  estimatedCost,
-		"status":          "ready",
+		"provider_hint":    providerHint,
+		"estimated_cost":   estimatedCost,
+		"status":           "ready",
 	}
 	return jsonResult(result), nil
 }
@@ -185,10 +185,10 @@ func (s *Server) handleCycleBaseline(_ context.Context, req mcp.CallToolRequest)
 
 	capturedAt := time.Now().UTC().Format(time.RFC3339)
 	baselineData := map[string]any{
-		"baseline_id": baselineID,
-		"repo":        repo,
-		"metrics":     snapshot,
-		"captured_at": capturedAt,
+		"baseline_id":  baselineID,
+		"repo":         repo,
+		"metrics":      snapshot,
+		"captured_at":  capturedAt,
 		"build_output": truncate(string(buildOut), 500),
 		"test_output":  truncate(testOutput, 1000),
 	}
@@ -230,10 +230,10 @@ func (s *Server) handleCyclePlan(_ context.Context, req mcp.CallToolRequest) (*m
 	}
 
 	type planItem struct {
-		Text       string  `json:"text"`
-		Source     string  `json:"source"`
-		Score      float64 `json:"score"`
-		WordCount  int     `json:"word_count"`
+		Text      string  `json:"text"`
+		Source    string  `json:"source"`
+		Score     float64 `json:"score"`
+		WordCount int     `json:"word_count"`
 		CostEst   float64 `json:"cost_estimate"`
 	}
 
@@ -1298,4 +1298,3 @@ func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
-

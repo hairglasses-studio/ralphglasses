@@ -1139,10 +1139,10 @@ func TestUnsupportedOptionsWarnings_AllFields(t *testing.T) {
 		t.Errorf("codex warnings count = %d, want 6: %v", len(cw), cw)
 	}
 
-	// Empty provider treated as Claude
+	// Empty provider is resolved to the primary provider (currently Codex).
 	ew := UnsupportedOptionsWarnings("", opts)
-	if len(ew) != 0 {
-		t.Errorf("empty provider warnings = %v, want none", ew)
+	if len(ew) != 6 {
+		t.Errorf("empty provider warnings count = %d, want 6: %v", len(ew), ew)
 	}
 }
 

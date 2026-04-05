@@ -67,6 +67,8 @@ func EnhanceHybrid(ctx context.Context, prompt string, taskType TaskType, cfg Co
 	// Apply target provider to config for pipeline stage behavior
 	if targetProvider != "" {
 		cfg.TargetProvider = targetProvider
+	} else if cfg.TargetProvider == "" && engine != nil {
+		cfg.TargetProvider = normalizeTargetProvider(engine.Client.Provider())
 	}
 
 	// Local mode or no engine available

@@ -109,6 +109,16 @@ func TestConfig_LoadConfig_Missing(t *testing.T) {
 	}
 }
 
+func TestResolveConfig_DefaultsToOpenAI(t *testing.T) {
+	cfg := ResolveConfig(t.TempDir())
+	if cfg.LLM.Provider != "openai" {
+		t.Errorf("LLM.Provider = %q, want %q", cfg.LLM.Provider, "openai")
+	}
+	if cfg.TargetProvider != ProviderOpenAI {
+		t.Errorf("TargetProvider = %q, want %q", cfg.TargetProvider, ProviderOpenAI)
+	}
+}
+
 func TestConfig_LoadConfig_ValidYAML(t *testing.T) {
 	cfg := Config{
 		Preamble:        "Test project preamble.",

@@ -91,15 +91,22 @@ func (s *Server) handleFleetAnalytics(_ context.Context, req mcp.CallToolRequest
 	sessions := s.SessMgr.List("")
 
 	type providerStats struct {
-		Sessions    int     `json:"sessions"`
-		Running     int     `json:"running"`
-		TotalSpend  float64 `json:"total_spend_usd"`
-		AvgCostTurn float64 `json:"avg_cost_per_turn"`
-		TotalTurns  int     `json:"total_turns"`
+		Sessions            int     `json:"sessions"`
+		Running             int     `json:"running"`
+		TotalSpend          float64 `json:"total_spend_usd"`
+		AvgCostTurn         float64 `json:"avg_cost_per_turn"`
+		TotalTurns          int     `json:"total_turns"`
+		CacheReadTokens     int     `json:"cache_read_tokens"`
+		CacheWriteTokens    int     `json:"cache_write_tokens"`
+		CacheReadWriteRatio float64 `json:"cache_read_write_ratio"`
+		CacheAnomalies      int     `json:"cache_anomaly_sessions"`
 	}
 
 	providers := make(map[string]*providerStats)
 	repos := make(map[string]float64)
+	totalCacheRead := 0
+	totalCacheWrite := 0
+	cacheAnomalySessions := 0
 
 	for _, sess := range sessions {
 		sess.Lock()
@@ -108,6 +115,9 @@ func (s *Server) handleFleetAnalytics(_ context.Context, req mcp.CallToolRequest
 		spent := sess.SpentUSD
 		turns := sess.TurnCount
 		status := sess.Status
+		cacheRead := sess.CacheReadTokens
+		cacheWrite := sess.CacheWriteTokens
+		cacheAnomaly := sess.CacheAnomaly
 		sess.Unlock()
 
 		if repoFilter != "" && repoName != repoFilter {
@@ -125,9 +135,17 @@ func (s *Server) handleFleetAnalytics(_ context.Context, req mcp.CallToolRequest
 		ps.Sessions++
 		ps.TotalSpend += spent
 		ps.TotalTurns += turns
+		ps.CacheReadTokens += cacheRead
+		ps.CacheWriteTokens += cacheWrite
 		if status == session.StatusRunning || status == session.StatusLaunching {
 			ps.Running++
 		}
+		if cacheAnomaly != "" {
+			ps.CacheAnomalies++
+			cacheAnomalySessions++
+		}
+		totalCacheRead += cacheRead
+		totalCacheWrite += cacheWrite
 		repos[repoName] += spent
 	}
 
@@ -135,12 +153,24 @@ func (s *Server) handleFleetAnalytics(_ context.Context, req mcp.CallToolRequest
 		if ps.TotalTurns > 0 {
 			ps.AvgCostTurn = ps.TotalSpend / float64(ps.TotalTurns)
 		}
+		if ps.CacheWriteTokens > 0 {
+			ps.CacheReadWriteRatio = float64(ps.CacheReadTokens) / float64(ps.CacheWriteTokens)
+		}
+	}
+
+	cacheRatio := 0.0
+	if totalCacheWrite > 0 {
+		cacheRatio = float64(totalCacheRead) / float64(totalCacheWrite)
 	}
 
 	result := map[string]any{
-		"providers":      providers,
-		"repos":          repos,
-		"total_sessions": len(sessions),
+		"providers":              providers,
+		"repos":                  repos,
+		"total_sessions":         len(sessions),
+		"cache_read_tokens":      totalCacheRead,
+		"cache_write_tokens":     totalCacheWrite,
+		"cache_read_write_ratio": cacheRatio,
+		"cache_anomaly_sessions": cacheAnomalySessions,
 	}
 
 	// Parse window for metrics.
@@ -156,10 +186,10 @@ func (s *Server) handleFleetAnalytics(_ context.Context, req mcp.CallToolRequest
 	if s.FleetAnalytics != nil {
 		snap := s.FleetAnalytics.Snapshot(window)
 		result["metrics"] = map[string]any{
-			"window":              window.String(),
-			"completions":         snap.TotalCompletions,
-			"failures":            snap.TotalFailures,
-			"failure_rate":        snap.FailureRate,
+			"window":             window.String(),
+			"completions":        snap.TotalCompletions,
+			"failures":           snap.TotalFailures,
+			"failure_rate":       snap.FailureRate,
 			"latency_p50_ms":     snap.LatencyP50Ms,
 			"latency_p95_ms":     snap.LatencyP95Ms,
 			"latency_p99_ms":     snap.LatencyP99Ms,
@@ -221,10 +251,10 @@ func (s *Server) aggregateObservationMetrics(window time.Duration, repoFilter, p
 
 	if len(allObs) == 0 {
 		return map[string]any{
-			"window":             window.String(),
-			"completions":        0,
-			"failures":           0,
-			"failure_rate":       0.0,
+			"window":            window.String(),
+			"completions":       0,
+			"failures":          0,
+			"failure_rate":      0.0,
 			"latency_p50_ms":    0.0,
 			"latency_p95_ms":    0.0,
 			"latency_p99_ms":    0.0,
@@ -234,11 +264,11 @@ func (s *Server) aggregateObservationMetrics(window time.Duration, repoFilter, p
 	}
 
 	var (
-		completions   int
-		failures      int
-		totalCostUSD  float64
-		costByProv    = make(map[string]float64)
-		latencies     []float64
+		completions  int
+		failures     int
+		totalCostUSD float64
+		costByProv   = make(map[string]float64)
+		latencies    []float64
 	)
 
 	for _, obs := range allObs {
@@ -283,10 +313,10 @@ func (s *Server) aggregateObservationMetrics(window time.Duration, repoFilter, p
 	}
 
 	metrics := map[string]any{
-		"window":             window.String(),
-		"completions":        completions,
-		"failures":           failures,
-		"failure_rate":       failureRate,
+		"window":            window.String(),
+		"completions":       completions,
+		"failures":          failures,
+		"failure_rate":      failureRate,
 		"latency_p50_ms":    p50,
 		"latency_p95_ms":    p95,
 		"latency_p99_ms":    p99,
@@ -321,8 +351,8 @@ func (s *Server) handleMarathonDashboard(_ context.Context, req mcp.CallToolRequ
 		runningCount int
 		staleCount   int
 		erroredCount int
-		staleList = make([]map[string]any, 0)
-		alerts    = make([]map[string]any, 0)
+		staleList    = make([]map[string]any, 0)
+		alerts       = make([]map[string]any, 0)
 		byProvider   = make(map[string]float64)
 	)
 

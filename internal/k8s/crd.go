@@ -52,7 +52,7 @@ type ObjectMeta struct {
 // Condition describes the state of a resource at a certain point.
 type Condition struct {
 	Type               string    `json:"type"`
-	Status             string    `json:"status"`                        // "True", "False", "Unknown"
+	Status             string    `json:"status"` // "True", "False", "Unknown"
 	LastTransitionTime time.Time `json:"lastTransitionTime,omitempty"`
 	Reason             string    `json:"reason,omitempty"`
 	Message            string    `json:"message,omitempty"`
@@ -82,7 +82,7 @@ type RalphSession struct {
 type RalphSessionSpec struct {
 	// Provider selects the LLM backend: "claude", "gemini", or "codex".
 	// +kubebuilder:validation:Enum=claude;gemini;codex
-	// +kubebuilder:default=claude
+	// +kubebuilder:default=codex
 	Provider string `json:"provider"`
 
 	// Model is the specific model identifier (e.g. "claude-opus-4-20250514").

@@ -369,6 +369,9 @@ func hasXMLStructure(s string) bool {
 
 // mapSessionProvider maps a session provider to an enhancer provider name.
 func mapSessionProvider(p session.Provider) enhancer.ProviderName {
+	if p == "" {
+		p = session.DefaultPrimaryProvider()
+	}
 	switch p {
 	case session.ProviderGemini:
 		return enhancer.ProviderGemini

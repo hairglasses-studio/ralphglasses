@@ -51,7 +51,7 @@ func (s *SQLiteStore) migrate() error {
 	const ddl = `
 CREATE TABLE IF NOT EXISTS sessions (
 	id               TEXT PRIMARY KEY,
-	provider         TEXT NOT NULL DEFAULT 'claude',
+	provider         TEXT NOT NULL DEFAULT 'codex',
 	provider_session TEXT NOT NULL DEFAULT '',
 	repo_path        TEXT NOT NULL DEFAULT '',
 	repo_name        TEXT NOT NULL DEFAULT '',
@@ -295,13 +295,13 @@ type scanner interface {
 
 func scanSessionFromScanner(sc scanner) (*Session, error) {
 	var (
-		sess              Session
-		provider          string
-		status            string
-		createdAt         string
-		updatedAt         string
-		endedAt           *string
-		costHistoryJSON   string
+		sess            Session
+		provider        string
+		status          string
+		createdAt       string
+		updatedAt       string
+		endedAt         *string
+		costHistoryJSON string
 	)
 
 	err := sc.Scan(
@@ -475,13 +475,13 @@ func (s *SQLiteStore) UpdateLoopRunStatus(ctx context.Context, id string, status
 
 func scanLoopRunFromScanner(sc scanner) (*LoopRun, error) {
 	var (
-		run           LoopRun
-		profileJSON   string
-		iterJSON      string
-		paused        int
-		createdAt     string
-		updatedAt     string
-		deadline      *string
+		run         LoopRun
+		profileJSON string
+		iterJSON    string
+		paused      int
+		createdAt   string
+		updatedAt   string
+		deadline    *string
 	)
 
 	err := sc.Scan(
