@@ -816,9 +816,9 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - [x] 3.5.5.7 — Make MCP Sampling and hybrid enhancement paths derive target prompt style from Codex/OpenAI-first runtime defaults instead of implicit Claude behavior `P1` `M`
 - [x] 3.5.5.8 — Add targeted regression tests proving omitted-provider prompt improvement paths prefer OpenAI/Codex semantics over Claude-specific scoring/tone rules `P1` `S`
 - **Implementation notes (2026-04-04):**
-  - Control-plane defaults are now largely Codex-first in session/team/fleet/runtime code, but the prompt enhancement stack still contains several "empty means Claude" assumptions.
-  - Known remaining hotspots: `internal/enhancer/config.go`, `internal/enhancer/provider.go`, `internal/enhancer/sampling.go`, `internal/enhancer/scoring.go`, and `cmd/prompt-improver/main.go`.
-  - The key risk is silent drift: Codex-led workflows can still receive Claude-optimized tone penalties, XML-first structure, or Anthropic-first LLM selection when the caller omits `provider` or `target_provider`.
+  - Codex-primary parity is complete for the currently shipped control-plane workflows: sessions, resume, RC, teams, fleet worker discovery, loops, sweeps, self-improve, prompt enhancement, skill/plugin export, and operator docs.
+  - Remaining roadmap work beyond this section is general platform work, not a Codex parity blocker, unless a new shipped workflow regresses to Claude-first behavior.
+  - The key ongoing risk is silent drift: future provider-default edits can reintroduce Claude-biased copy or omitted-provider behavior if code and docs are not updated together.
   - If a future session genuinely needs Claude Code to unblock a parity item, do not switch ad hoc. Write a focused Claude Code prompt, copy it to the paste buffer, record the reason in the roadmap/session notes, and keep the Codex-led branch as the source of truth.
 - **Acceptance:** omitted-provider control paths default to Codex and repo docs match runtime behavior
 
@@ -1394,6 +1394,7 @@ Cross-reference observations with git commits.
 - [x] 10.5.3.5 — Add automatic reroute from Claude to Codex when repeated Claude cache anomalies are detected in long-running orchestration `P1` `M`
 - **Implementation notes (2026-04-04):**
   - Claude resumed-session cache safety is now treated as suspect by default in orchestration paths unless live cache reads are actually observed.
+  - Session status and fleet analytics expose cache-read/cache-write health so reroute decisions are inspectable rather than implicit.
   - Follow-on work should prefer observable cache-health metrics over theoretical savings, and any Claude-specific optimization should preserve a clean reroute path back to Codex.
 - **Acceptance:** Marathon cost per sprint reduced 50-80% vs naive execution
 
