@@ -408,12 +408,17 @@ Reference research: `~/hairglasses-studio/docs/research/tui-design/`
 - [x] 1.11.6 — Fleet stat box wrapping: `wrapStatBoxes()` breaks to multiple rows when exceeding width `P1` `M`
 - [x] 1.11.7 — Fleet panel vertical stacking: repo/session/team lists stack vertically below 90 cols `P2` `M`
 - [x] 1.11.8 — Sessions table column priorities: Trend/Agent/Team hidden below 140 cols `P1` `S`
-- [ ] 1.11.9 — Dynamic table height propagation to all view wrappers (ensure `SetDimensions()` correct) `P1` `M`
+- [x] 1.11.9 — Dim inactive repos (idle/unknown) in overview table with DimStyle `P1` `S`
+- [x] 1.11.10 — Dim completed/stopped/failed sessions in sessions table `P1` `S`
+- [x] 1.11.11 — Stat box wrapping in recovery, forecast, coordination views `P2` `S`
+- [x] 1.11.12 — Godview adaptive layout: LIVE OUTPUT shrinks when sparse, more table space `P1` `M`
+- [x] 1.11.13 — Double blank line cleanup across 10+ secondary views (analytics, forecast, recovery, etc.) `P2` `S`
+- [x] 1.11.14 — Responsive fleet budget gauges and repo detail cost sparkline `P1` `S`
 
 #### Tier 3: Enhanced Layouts
-- [ ] 1.11.10 — Virtual scrolling for fleet list sections — only render visible window, show `[1-N of M]` `P2` `L`
-- [ ] 1.11.11 — Two-column detail views at wide terminals (>140 cols): left status/cost, right CB/config `P2` `L`
-- [ ] 1.11.12 — ntcharts linechart migration for fleet cost trend when height >= 5 rows `P3` `M`
+- [ ] 1.11.15 — Virtual scrolling for fleet list sections — only render visible window, show `[1-N of M]` `P2` `L`
+- [ ] 1.11.16 — Two-column detail views at wide terminals (>140 cols): left status/cost, right CB/config `P2` `L`
+- [ ] 1.11.17 — ntcharts linechart migration for fleet cost trend when height >= 5 rows `P3` `M`
 
 - **Acceptance:** All views render without overflow at 80 cols; sparklines fill width at 200 cols; stat boxes wrap correctly
 
