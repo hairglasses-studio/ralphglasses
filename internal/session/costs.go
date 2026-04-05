@@ -4,10 +4,9 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/config"
 )
 
-// Model cost rates per 1M tokens (USD). These are re-exported from the config
-// package for backward compatibility. The canonical source of truth is now
-// internal/config/costs.go — update rates there when provider pricing changes.
-const (
+// Model cost rates per 1M tokens (USD). Re-exported from config for backward
+// compatibility. The canonical source is mcpkit/finops via internal/config/costs.go.
+var (
 	CostGeminiFlashLiteInput = config.CostGeminiFlashLiteInput
 	CostGeminiFlashInput     = config.CostGeminiFlashInput
 	CostGeminiFlashOutput    = config.CostGeminiFlashOutput
