@@ -392,6 +392,31 @@ Implements MCP spec features: structured output schemas, logging notifications.
 - [x] 1.10.5 — Zero-height terminal guard: shows "Terminal too small" for width/height < 3 `P1` `S`
 - **Acceptance:** no panics on edge-case terminal sizes or empty data
 
+### 1.11 — TUI Visual Polish Marathon
+
+Iterative capture→analyze→fix→verify cycle across all 20 views. Eliminates wasted whitespace, improves information density, makes layouts responsive to terminal width.
+Reference research: `~/hairglasses-studio/docs/research/tui-design/`
+
+#### Tier 1: Quick Wins
+- [x] 1.11.1 — Reduce double blank lines to single between sections in fleet/detail views `P2` `S`
+- [x] 1.11.2 — Compact status bar separators (3-char ` │ ` to 1-char `│`) — recovers ~12 chars `P2` `S`
+- [x] 1.11.3 — Dynamic event/session row counts in fleet dashboard (height-aware instead of hardcoded 10) `P1` `S`
+- [x] 1.11.4 — Responsive sparkline widths — remove hardcoded caps (30/60), scale to terminal width up to 120 `P1` `M`
+
+#### Tier 2: Responsive Layout
+- [x] 1.11.5 — Column priority hiding: Priority field on Column struct, overview hides Calls/Progress/CB below 140 cols `P1` `M`
+- [x] 1.11.6 — Fleet stat box wrapping: `wrapStatBoxes()` breaks to multiple rows when exceeding width `P1` `M`
+- [x] 1.11.7 — Fleet panel vertical stacking: repo/session/team lists stack vertically below 90 cols `P2` `M`
+- [x] 1.11.8 — Sessions table column priorities: Trend/Agent/Team hidden below 140 cols `P1` `S`
+- [ ] 1.11.9 — Dynamic table height propagation to all view wrappers (ensure `SetDimensions()` correct) `P1` `M`
+
+#### Tier 3: Enhanced Layouts
+- [ ] 1.11.10 — Virtual scrolling for fleet list sections — only render visible window, show `[1-N of M]` `P2` `L`
+- [ ] 1.11.11 — Two-column detail views at wide terminals (>140 cols): left status/cost, right CB/config `P2` `L`
+- [ ] 1.11.12 — ntcharts linechart migration for fleet cost trend when height >= 5 rows `P3` `M`
+
+- **Acceptance:** All views render without overflow at 80 cols; sparklines fill width at 200 cols; stat boxes wrap correctly
+
 ## Phase 1.5: Developer Experience
 
 Tooling, release automation, and contributor workflow. All items independent of Phase 1.
