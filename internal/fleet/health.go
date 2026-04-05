@@ -130,6 +130,17 @@ func (ht *HealthTracker) Remove(workerID string) {
 	delete(ht.workers, workerID)
 }
 
+// WorkerIDs returns the IDs of all tracked workers regardless of state.
+func (ht *HealthTracker) WorkerIDs() []string {
+	ht.mu.RLock()
+	defer ht.mu.RUnlock()
+	ids := make([]string, 0, len(ht.workers))
+	for id := range ht.workers {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
 // HealthyWorkers returns IDs of all healthy workers.
 func (ht *HealthTracker) HealthyWorkers() []string {
 	ht.mu.RLock()

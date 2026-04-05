@@ -62,7 +62,8 @@ const (
 	ContextConflict  EventType = "context.conflict"  // Cross-session file conflict
 
 	// Provider health
-	ProviderHealthChanged EventType = "provider.health" // Provider health state transition
+	ProviderHealthChanged    EventType = "provider.health"            // Provider health state transition
+	WorkerHealthTransitioned EventType = "worker.health.transitioned" // Worker health state change
 
 	// Self-improvement acceptance
 	SelfImproveMerged EventType = "self_improve.merged"     // Safe changes auto-merged
@@ -107,7 +108,8 @@ var knownEventTypes = map[EventType]struct{}{
 	ProviderSelected:      {},
 	SessionRecovered:      {},
 	ContextConflict:       {},
-	ProviderHealthChanged: {},
+	ProviderHealthChanged:    {},
+	WorkerHealthTransitioned: {},
 	SelfImproveMerged:     {},
 	SelfImprovePR:         {},
 	WorkerDeregistered:    {},
