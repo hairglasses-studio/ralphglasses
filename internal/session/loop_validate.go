@@ -140,6 +140,34 @@ func validateModelProviderMatch(role string, provider Provider, model string) er
 		role, model, role, provider, strings.Join(prefixes, ", "))
 }
 
+// CheckModelRegistry returns a warning message if the model passes prefix
+// validation but is not found in the known model registry. Returns "" if
+// the model is in the registry, has no matching prefix, or either argument
+// is empty. This is a soft check — the registry is not exhaustive.
+func CheckModelRegistry(provider Provider, model string) string {
+	if provider == "" || model == "" {
+		return ""
+	}
+	prefixes, known := knownModelPrefixes[provider]
+	if !known {
+		return ""
+	}
+	matched := false
+	for _, p := range prefixes {
+		if strings.HasPrefix(model, p) {
+			matched = true
+			break
+		}
+	}
+	if !matched {
+		return "" // prefix mismatch is handled by validateModelProviderMatch
+	}
+	if LookupModel(model) == nil {
+		return fmt.Sprintf("model %q is not in the known registry for %s — verify it exists with the provider", model, provider)
+	}
+	return ""
+}
+
 // ValidateLoopProfile checks a LoopProfile for invalid settings before loop execution.
 // Returns an error describing the first invalid field found, or nil if valid.
 func ValidateLoopProfile(p LoopProfile) error {
