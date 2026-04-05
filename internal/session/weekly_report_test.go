@@ -181,7 +181,11 @@ func TestWeeklyReport_Anomalies_Duration(t *testing.T) {
 		{ID: "s2", Status: "completed", DurSec: 12, StartedAt: now.Add(-2 * time.Hour)},
 		{ID: "s3", Status: "completed", DurSec: 11, StartedAt: now.Add(-3 * time.Hour)},
 		{ID: "s4", Status: "completed", DurSec: 10, StartedAt: now.Add(-4 * time.Hour)},
-		{ID: "slow", Status: "completed", DurSec: 1000, StartedAt: now.Add(-5 * time.Hour)},
+		{ID: "s5", Status: "completed", DurSec: 13, StartedAt: now.Add(-5 * time.Hour)},
+		{ID: "s6", Status: "completed", DurSec: 10, StartedAt: now.Add(-6 * time.Hour)},
+		{ID: "s7", Status: "completed", DurSec: 11, StartedAt: now.Add(-7 * time.Hour)},
+		{ID: "s8", Status: "completed", DurSec: 12, StartedAt: now.Add(-8 * time.Hour)},
+		{ID: "slow", Status: "completed", DurSec: 1000, StartedAt: now.Add(-9 * time.Hour)},
 	}
 
 	report := g.Generate(ReportInput{Sessions: sessions, Now: now})

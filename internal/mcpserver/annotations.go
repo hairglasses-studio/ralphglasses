@@ -223,6 +223,16 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_plugin_info":    {Title: "Plugin Info", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_plugin_enable":  {Title: "Enable Plugin", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_plugin_disable": {Title: "Disable Plugin", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+
+	// ── docs ─────────────────────────────────────────────────────────────
+	"ralphglasses_docs_search":          {Title: "Search Docs", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_docs_check_existing":  {Title: "Check Existing Docs", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_docs_write_finding":   {Title: "Write Finding", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_docs_push":            {Title: "Push Docs", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_meta_roadmap_status":  {Title: "Meta Roadmap Status", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_meta_roadmap_next_task": {Title: "Meta Roadmap Next Task", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_roadmap_cross_repo":   {Title: "Cross-Repo Roadmap", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_roadmap_assign_loop":  {Title: "Assign Roadmap Loop", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
 }
 
 // GetAnnotation returns the ToolAnnotation for a named tool, or an empty

@@ -244,7 +244,7 @@ func TestSweepLaunch_BudgetCapExceeded(t *testing.T) {
 		"limit":                float64(20),
 		"model":                "gpt-5.4",
 		"budget_usd":           float64(10),
-		"max_sweep_budget_usd": float64(50), // 20 repos × $10 > $50 cap
+		"max_sweep_budget_usd": float64(40), // 20 repos × ~$2.40 estimated = $48 > $40 cap
 	}
 
 	result, err := s.handleSweepLaunch(context.Background(), req)
