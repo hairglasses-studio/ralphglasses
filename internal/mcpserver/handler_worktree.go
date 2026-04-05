@@ -15,9 +15,15 @@ func (s *Server) handleWorktreeCreate(_ context.Context, req mcp.CallToolRequest
 	if repoName == "" {
 		return codedError(ErrInvalidParams, "repo name required"), nil
 	}
+	if err := ValidateRepoName(repoName); err != nil {
+		return codedError(ErrInvalidParams, err.Error()), nil
+	}
 	name := getStringArg(req, "name")
 	if name == "" {
 		return codedError(ErrInvalidParams, "worktree name required"), nil
+	}
+	if err := validateSafePath(name); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("worktree name: %v", err)), nil
 	}
 
 	if s.reposNil() {
@@ -47,6 +53,9 @@ func (s *Server) handleWorktreeCleanup(_ context.Context, req mcp.CallToolReques
 	repoName := getStringArg(req, "repo")
 	if repoName == "" {
 		return codedError(ErrInvalidParams, "repo name required"), nil
+	}
+	if err := ValidateRepoName(repoName); err != nil {
+		return codedError(ErrInvalidParams, err.Error()), nil
 	}
 
 	if s.reposNil() {
