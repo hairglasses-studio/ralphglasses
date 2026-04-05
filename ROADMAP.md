@@ -416,9 +416,9 @@ Reference research: `~/hairglasses-studio/docs/research/tui-design/`
 - [x] 1.11.14 — Responsive fleet budget gauges and repo detail cost sparkline `P1` `S`
 
 #### Tier 3: Enhanced Layouts
-- [ ] 1.11.15 — Virtual scrolling for fleet list sections — only render visible window, show `[1-N of M]` `P2` `L`
+- [x] 1.11.15 — Virtual scrolling for fleet list sections — height-based windowing, `[N-M of Total]` header `P2` `L`
 - [ ] 1.11.16 — Two-column detail views at wide terminals (>140 cols): left status/cost, right CB/config `P2` `L`
-- [ ] 1.11.17 — ntcharts linechart migration for fleet cost trend when height >= 5 rows `P3` `M`
+- [x] 1.11.17 — Fleet cost trend upgrades to streamlinechart (ntcharts) at tall terminals, sparkline fallback `P3` `M`
 
 - **Acceptance:** All views render without overflow at 80 cols; sparklines fill width at 200 cols; stat boxes wrap correctly
 
