@@ -148,3 +148,7 @@ The `distro/` directory contains configs for a bootable Linux thin client (Ubunt
 - [AGENTS.md](AGENTS.md) — Codex CLI project instructions
 - [CONTRIBUTING.md](CONTRIBUTING.md) — Multi-provider contribution guide
 - [ROADMAP.md](ROADMAP.md) — Full development roadmap
+
+## Shared Research Repository
+
+Cross-project research lives at `~/hairglasses-studio/docs/` (git: hairglasses-studio/docs). When launching research agents, check existing docs first and write reusable research outputs back to the shared repo rather than local docs/.
