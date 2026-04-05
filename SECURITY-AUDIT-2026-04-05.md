@@ -18,7 +18,7 @@ Pre-release security audit for ralphglasses Wave 3 public release.
 
 **841 commits** use `mitch@galileo.ai` as the author email. This leaks an employer association.
 
-An additional **6 commits** use `mixellburk@gmail.com` (GitHub merge commits via web UI).
+An additional **6 commits** use `<redacted-email>` (GitHub merge commits via web UI).
 
 Only recent commits use the correct `mitch@hairglasses.studio` email.
 
@@ -49,7 +49,7 @@ Commit `c48fc6f` ("chore: add billing analysis data for support ticket") added:
 - `.ralph/sweep-audit-2026-04-03/usage-evidence.jsonl`
 - `.ralph/sweep-audit-2026-04-03/usage-summary.json`
 
-These files are **no longer tracked** (gitignored via `.ralph/sweep-*/`), but they remain in git history. The usage-summary JSON files contain `mixellburk@gmail.com` as the account identifier.
+These files are **no longer tracked** (gitignored via `.ralph/sweep-*/`), but they remain in git history. The usage-summary JSON files contain `<redacted-email>` as the account identifier.
 
 **Remediation:** If the billing dispute data and personal email must not be public, history rewriting is required for this commit.
 

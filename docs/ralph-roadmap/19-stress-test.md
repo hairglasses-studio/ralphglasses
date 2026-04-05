@@ -154,7 +154,7 @@ and has never run on the target Manjaro machine. `ResumeFromState()`
 (supervisor.go:517) restores `tickCount` and `lastCycleLaunch` from the state
 file but does not validate `RepoPath` against the current machine's filesystem.
 
-If the state file contains `/Users/hg/hairglasses-studio/mcpkit` (macOS path)
+If the state file contains `~/hairglasses-studio/mcpkit` (macOS path)
 and `ResumeFromState` is called on Manjaro (where the path is
 `~/hairglasses-studio/mcpkit`), the restored state is for a
 nonexistent path. The supervisor then runs with `s.RepoPath` from the
