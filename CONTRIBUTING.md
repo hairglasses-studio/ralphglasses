@@ -180,15 +180,7 @@ Closes #42
 
 ## MCP Server Setup
 
-Each provider has its own MCP configuration:
-
-### Claude Code
-
-```bash
-claude mcp add ralphglasses -- ./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio
-```
-
-Or use the `.mcp.json` in the repo root (auto-discovered).
+Use the repo-local `.mcp.json` as the source of truth. Codex is already configured via `.codex/config.toml`; other clients can register the same `./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio` command manually if needed.
 
 ### Gemini CLI
 

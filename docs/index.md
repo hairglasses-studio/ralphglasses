@@ -35,11 +35,9 @@ go build ./...
 ```bash
 # Launch the TUI, scanning a workspace for repos
 ralphglasses --scan-path ~/hairglasses-studio
-
-# Codex-first repo-local MCP setup is already configured via .codex/config.toml and .mcp.json.
-# Claude users can also register the server explicitly:
-claude mcp add ralphglasses -- go run . mcp
 ```
+
+Repo-local Codex MCP discovery is already configured via `.codex/config.toml` and `.mcp.json`. Other MCP clients can register `go run . mcp` or `./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio` manually if needed.
 
 ## Documentation
 

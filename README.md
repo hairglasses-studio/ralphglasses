@@ -29,11 +29,9 @@ Orchestrates [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overvi
 
 # Launch TUI
 ./scripts/dev/go.sh run . --scan-path ~/hairglasses-studio
-
-# Codex-first MCP setup is already wired in this repo via .codex/config.toml and .mcp.json
-# Claude users can also add the server explicitly:
-claude mcp add ralphglasses -- ./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio
 ```
+
+Repo-local Codex MCP discovery is already wired in via `.codex/config.toml` and `.mcp.json`. Other MCP clients can register the same `./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio` entrypoint manually if needed.
 
 ## Multi-LLM Provider Support
 

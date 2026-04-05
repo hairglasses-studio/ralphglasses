@@ -19,21 +19,18 @@ import (
 )
 
 // mcpCmd runs as a long-lived MCP server on stdio. Code changes require
-// restarting the server:
-//   claude mcp remove ralphglasses && claude mcp add ralphglasses -- go run . mcp
+// restarting any client registration that points at this command.
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
 	Short: "Run as an MCP server on stdio",
 	Long: `Start ralphglasses as a Model Context Protocol (MCP) server on stdio.
 
 This exposes 80+ tools for managing ralph loops and multi-provider LLM sessions
-programmatically from any MCP-capable client (e.g., Claude Code).
+programmatically from any MCP-capable client (for example Codex, Claude, or Gemini).
 
-Install via claude CLI:
-  claude mcp add ralphglasses -- go run . mcp
-
-Or with a custom scan path:
-  claude mcp add ralphglasses -e RALPHGLASSES_SCAN_PATH=~/hairglasses-studio -- go run . mcp`,
+Codex repo-local registration is already configured via .codex/config.toml and .mcp.json.
+Other MCP clients can register this command directly, optionally setting
+RALPHGLASSES_SCAN_PATH=~/hairglasses-studio for a custom scan path.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// In MCP mode, stderr IS the transport — any writes corrupt the
 		// protocol. Immediately silence the default slog handler (which
