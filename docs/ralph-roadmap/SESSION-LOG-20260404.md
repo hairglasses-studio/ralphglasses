@@ -95,7 +95,15 @@ Produced 24 research documents (784K) in `docs/ralph-roadmap/`:
 - RunSessionOutput: cost_source "api_key"→"structured" (json:"-" tag)
 - CollectChildPIDs: nil→len check for empty slice
 
-### Supplementary Research Phase 3 (3 design docs)
+### Sprint 7: TUI Tick Optimization + Spend Circuit Breaker (COMPLETE)
+
+- TUI tick: 2s→5s fast tick + 30s slow tick, conditional table rendering,
+  extracted refreshStatusBarCounts(). ~60% I/O reduction.
+- Per-hour spend circuit breaker: SpendRateMonitor with 60 one-minute
+  rolling buckets, $50/hr default, blocks launches when tripped, feeds
+  from CostUpdate events, manual reset only. 8 tests. L3 gate satisfied.
+
+### Supplementary Research (8 design/research docs)
 
 - **s8-tui-tick-optimization.md**: Event-driven updates replacing 2s polling,
   per-view conditional rendering, 60% I/O reduction
@@ -109,12 +117,12 @@ Produced 24 research documents (784K) in `docs/ralph-roadmap/`:
 | Metric | Count |
 |--------|-------|
 | Research agents launched | 32 (24 original + 8 supplementary) |
-| Implementation agents launched | 27 |
-| Research documents produced | 33 (25 analysis + 8 design docs) |
-| Commits pushed | 14 |
-| Files changed | ~70 |
-| Lines inserted | ~3,000 |
-| Lines deleted | ~1,000 |
+| Implementation agents launched | 29 |
+| Research documents produced | 34 (25 analysis + 8 design + RECOMMENDATIONS.md) |
+| Commits pushed | 19 |
+| Files changed | ~80 |
+| Lines inserted | ~3,500 |
+| Lines deleted | ~1,100 |
 | Race conditions fixed | 10 (2 CRITICAL + 4 HIGH + 4 MEDIUM) |
 | Budget gaps closed | 3 |
 | Path traversal fixes | 9 call sites |
@@ -123,13 +131,15 @@ Produced 24 research documents (784K) in `docs/ralph-roadmap/`:
 | Sweep parallelized | serial → semaphore(10) |
 | LogView bounded | 10K lines (~4MB cap) |
 | Cost rates updated | 9 constants + 4 new entries |
+| TUI tick optimized | 2s→5s + conditional rendering |
+| Spend circuit breaker | $50/hr rolling cap (L3 gate) |
 
 ## Remaining High-Value Work
 
 ### Next session (highest priority, designs ready)
-1. TUI tick optimization (design in s8 — event-driven, ~290 lines)
-2. Per-hour spend circuit breaker (design in s9 — L3 gate requirement)
-3. CircuitBreaker consolidation (design in s12 — 4 copies → 1 shared package)
+1. TUI event bus integration (Step 3 of s8 — reactive updates, sub-ms latency)
+2. CircuitBreaker consolidation (design in s12 — 4 copies → 1 shared package)
+3. Official MCP Go SDK migration (research in Agent 10)
 
 ### Medium-term (1-2 weeks)
 5. Migrate to official MCP Go SDK (modelcontextprotocol/go-sdk v1.4+)
