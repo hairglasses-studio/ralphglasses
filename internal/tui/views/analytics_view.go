@@ -228,7 +228,7 @@ func RenderAnalytics(data AnalyticsData, activePanel AnalyticsPanel, tr TimeRang
 
 	// Time range selector
 	b.WriteString(renderTimeRangeSelector(tr))
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Summary stat boxes
 	avgCost := 0.0
@@ -270,7 +270,7 @@ func RenderAnalytics(data AnalyticsData, activePanel AnalyticsPanel, tr TimeRang
 	} else {
 		b.WriteString(styles.InfoStyle.Render("  (no data)"))
 	}
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Panel 2: Cost per session
 	b.WriteString(renderPanelHeader("Cost Per Session", PanelCostPerSession, activePanel))
@@ -283,7 +283,7 @@ func RenderAnalytics(data AnalyticsData, activePanel AnalyticsPanel, tr TimeRang
 	} else {
 		b.WriteString(styles.InfoStyle.Render("  (no data)"))
 	}
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	// Panel 3: Provider distribution (horizontal bar chart)
 	b.WriteString(renderPanelHeader("Provider Distribution", PanelProviderDist, activePanel))

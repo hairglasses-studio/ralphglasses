@@ -197,7 +197,8 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 			if rb.BudgetUSD > 0 {
 				pct = rb.SpendUSD / rb.BudgetUSD * 100
 			}
-			gauge := components.InlineGauge(rb.SpendUSD, rb.BudgetUSD, 20)
+			gaugeWidth := max(min(width/4, 30), 8)
+			gauge := components.InlineGauge(rb.SpendUSD, rb.BudgetUSD, gaugeWidth)
 			b.WriteString(fmt.Sprintf("  %-16s %s %.0f%% %s\n",
 				rb.Name, gauge, pct, label))
 		}

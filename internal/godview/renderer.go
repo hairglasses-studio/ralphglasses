@@ -72,17 +72,20 @@ func (r *Renderer) Render(state *State) {
 	r.renderHeader(state, w)
 	r.writeHeavySep(w)
 
-	// Calculate layout: give table exactly enough for repos, rest to logs
-	repoCount := min(len(state.Repos),
-		// Cap table at 20 rows
-		20)
-	tableRows := repoCount + 1 // +1 for column header
-	logRows := max(
-		// header(1) + hsep(1) + sep(1) + logheader(1) + sep(1) + cost(1) + padding(1)
-		h-tableRows-7, 4)
+	// Adaptive layout: live output gets only what it needs, table gets the rest.
+	// Chrome: header(1) + heavysep(1) + sep(1) + heavysep(1) + costbar(1) = 5 lines
+	// Plus live output header(1) = 6 total chrome.
+	repoCount := len(state.Repos)
+	liveContent := len(state.LiveLines)
+	minLogRows := max(min(liveContent+1, 10), 3) // content + header, cap 10, min 3
+	tableRows := h - minLogRows - 6
+	if tableRows > repoCount+1 {
+		tableRows = repoCount + 1
+	}
 	if tableRows < 3 {
 		tableRows = 3
 	}
+	logRows := max(h-tableRows-6, 3)
 	r.renderTable(state, w, tableRows)
 
 	// Separator
@@ -127,10 +130,14 @@ func (r *Renderer) renderHeader(s *State, w int) {
 }
 
 func (r *Renderer) renderTable(s *State, w, maxRows int) {
-	// Column header row — dim, underlined feel
+	// Column header row — dim, responsive task column
+	taskHdrWidth := 28
+	if w > 120 {
+		taskHdrWidth = w - 85
+	}
 	r.buf.WriteString(ClearLine)
-	fmt.Fprintf(r.buf, " %s%-18s %-8s  %-3s %5s %8s %8s  %-28s %s%s\n",
-		Dim, "REPO", "AGENT", "ST", "TURN", "RATE", "COST", "TASK", "PROGRESS", Reset)
+	fmt.Fprintf(r.buf, " %s%-18s %-8s  %-3s %5s %8s %8s  %-*s %s%s\n",
+		Dim, "REPO", "AGENT", "ST", "TURN", "RATE", "COST", taskHdrWidth, "TASK", "PROGRESS", Reset)
 
 	shown := 0
 	for _, repo := range s.Repos {

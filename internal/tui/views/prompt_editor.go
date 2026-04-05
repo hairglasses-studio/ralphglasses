@@ -214,7 +214,7 @@ func (m PromptEditorModel) renderAt(width, height int) string {
 	// Score bar
 	if m.score != nil {
 		sb.WriteString(m.renderScoreBar())
-		sb.WriteString("\n\n")
+		sb.WriteString("\n")
 	}
 
 	// Side-by-side panes
@@ -233,7 +233,7 @@ func (m PromptEditorModel) renderAt(width, height int) string {
 	joined := lipgloss.JoinHorizontal(lipgloss.Top, leftPane, " ", rightPane)
 	_ = divider // divider is conceptual; join handles alignment
 	sb.WriteString(joined)
-	sb.WriteString("\n\n")
+	sb.WriteString("\n")
 
 	// Help line
 	sb.WriteString(m.renderHelp())

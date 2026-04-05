@@ -2,7 +2,9 @@ package views
 
 import (
 	"fmt"
+	"strings"
 
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
@@ -26,6 +28,20 @@ func NewOverviewTable() *components.Table {
 	t := components.NewTable(OverviewColumns)
 	t.EmptyMessage = "No repos found — press r to scan"
 	t.StatusColumn = 1
+	// Dim inactive repos so active ones stand out.
+	t.RowStyleFunc = func(row components.Row, selected bool) lipgloss.Style {
+		if selected {
+			return lipgloss.Style{}
+		}
+		// Check status column (index 1) for activity.
+		if len(row) > 1 {
+			status := components.StripAnsi(row[1])
+			if strings.Contains(status, "idle") || strings.Contains(status, "unknown") {
+				return styles.DimStyle
+			}
+		}
+		return lipgloss.Style{}
+	}
 	return t
 }
 

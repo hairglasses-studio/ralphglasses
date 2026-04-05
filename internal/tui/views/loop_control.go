@@ -95,7 +95,7 @@ func RenderLoopControlPanel(data []LoopControlData, selectedIdx, width, height i
 
 	if len(data) == 0 {
 		b.WriteString(styles.InfoStyle.Render("  No active loops — start a loop from the Repos tab (S)"))
-		b.WriteString("\n\n")
+		b.WriteString("\n")
 		b.WriteString(styles.HelpStyle.Render("  Esc back"))
 		return b.String()
 	}

@@ -54,6 +54,7 @@ var (
 
 	HelpStyle = lipgloss.NewStyle().Foreground(ColorDarkGray)
 	InfoStyle = lipgloss.NewStyle().Foreground(ColorGray)
+	DimStyle  = lipgloss.NewStyle().Foreground(ColorDarkGray)
 
 	BreadcrumbStyle = lipgloss.NewStyle().
 			Foreground(ColorSecondary).
