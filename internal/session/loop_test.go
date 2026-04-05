@@ -709,8 +709,8 @@ func TestRecentGitLog(t *testing.T) {
 
 func TestSelfImprovementProfile(t *testing.T) {
 	p := SelfImprovementProfile()
-	if p.PlannerProvider != ProviderClaude {
-		t.Errorf("PlannerProvider = %q, want claude", p.PlannerProvider)
+	if p.PlannerProvider != ProviderCodex {
+		t.Errorf("PlannerProvider = %q, want codex", p.PlannerProvider)
 	}
 	if p.MaxConcurrentWorkers != 1 {
 		t.Error("MaxConcurrentWorkers should be 1 for serial self-modification")
@@ -733,11 +733,11 @@ func TestSelfImprovementProfile(t *testing.T) {
 	if p.MaxIterations != 10 {
 		t.Errorf("MaxIterations = %d, want 10", p.MaxIterations)
 	}
-	if p.PlannerModel != "claude-opus-4-6" {
-		t.Errorf("PlannerModel = %q, want claude-opus-4-6", p.PlannerModel)
+	if p.PlannerModel != "gpt-5.4" {
+		t.Errorf("PlannerModel = %q, want gpt-5.4", p.PlannerModel)
 	}
-	if p.WorkerModel != "claude-sonnet-4-6" {
-		t.Errorf("WorkerModel = %q, want claude-sonnet-4-6", p.WorkerModel)
+	if p.WorkerModel != "codex-mini-latest" {
+		t.Errorf("WorkerModel = %q, want codex-mini-latest", p.WorkerModel)
 	}
 	if p.MaxDurationSecs != 14400 {
 		t.Errorf("MaxDurationSecs = %d, want 14400", p.MaxDurationSecs)
@@ -1091,10 +1091,10 @@ func TestStepLoopSelectTierSetsWorkerModel(t *testing.T) {
 	for _, opts := range workerOpts {
 		if strings.HasSuffix(opts.SessionName, "-cheap") {
 			found = true
-			// SelectTier("test", 0) -> complexity 3 -> "coding" tier -> claude-sonnet.
+			// SelectTier("test", 0) -> complexity 3 -> "coding" tier -> gpt-5.4.
 			// CheapLaunchOpts overrides provider to gemini, but model comes from SelectTier.
-			if opts.Model != "claude-sonnet" {
-				t.Errorf("cheap worker model = %q, want %q (set by SelectTier)", opts.Model, "claude-sonnet")
+			if opts.Model != "gpt-5.4" {
+				t.Errorf("cheap worker model = %q, want %q (set by SelectTier)", opts.Model, "gpt-5.4")
 			}
 			// CheapLaunchOpts should have overridden provider to gemini.
 			if opts.Provider != ProviderGemini {
@@ -1217,4 +1217,3 @@ func TestLoopIterationSubPhaseTiming(t *testing.T) {
 		})
 	}
 }
-

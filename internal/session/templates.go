@@ -50,7 +50,7 @@ func ApplyTemplateToOptions(opts *LaunchOptions) {
 	}
 	p := opts.Provider
 	if p == "" {
-		p = ProviderClaude
+		p = DefaultPrimaryProvider()
 	}
 	tmpl := ProviderPromptTemplate(p)
 	if tmpl.Prefix != "" || tmpl.Suffix != "" {

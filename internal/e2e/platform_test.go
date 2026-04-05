@@ -1,6 +1,9 @@
 package e2e
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,8 +18,8 @@ func TestCascadeRouterDefaultConfig(t *testing.T) {
 	if cfg.CheapProvider != session.ProviderGemini {
 		t.Errorf("CheapProvider = %q, want %q", cfg.CheapProvider, session.ProviderGemini)
 	}
-	if cfg.ExpensiveProvider != session.ProviderClaude {
-		t.Errorf("ExpensiveProvider = %q, want %q", cfg.ExpensiveProvider, session.ProviderClaude)
+	if cfg.ExpensiveProvider != session.ProviderCodex {
+		t.Errorf("ExpensiveProvider = %q, want %q", cfg.ExpensiveProvider, session.ProviderCodex)
 	}
 	if cfg.ConfidenceThreshold != 0.7 {
 		t.Errorf("ConfidenceThreshold = %f, want 0.7", cfg.ConfidenceThreshold)
@@ -33,7 +36,7 @@ func TestCascadeRouterResolveProviderWithOverrides(t *testing.T) {
 	cfg := session.DefaultCascadeConfig()
 	cfg.TaskTypeOverrides = map[string]session.Provider{
 		"lint":         session.ProviderGemini,
-		"architecture": session.ProviderClaude,
+		"architecture": session.ProviderCodex,
 	}
 
 	cr := session.NewCascadeRouter(cfg, nil, nil, "")
@@ -42,8 +45,8 @@ func TestCascadeRouterResolveProviderWithOverrides(t *testing.T) {
 	if got := cr.ResolveProvider("lint"); got != session.ProviderGemini {
 		t.Errorf("ResolveProvider(lint) = %q, want %q", got, session.ProviderGemini)
 	}
-	if got := cr.ResolveProvider("architecture"); got != session.ProviderClaude {
-		t.Errorf("ResolveProvider(architecture) = %q, want %q", got, session.ProviderClaude)
+	if got := cr.ResolveProvider("architecture"); got != session.ProviderCodex {
+		t.Errorf("ResolveProvider(architecture) = %q, want %q", got, session.ProviderCodex)
 	}
 }
 
@@ -60,7 +63,7 @@ func TestCascadeRouterShouldCascadeDefault(t *testing.T) {
 func TestCascadeRouterShouldCascadeOverridedSkips(t *testing.T) {
 	cfg := session.DefaultCascadeConfig()
 	cfg.TaskTypeOverrides = map[string]session.Provider{
-		"codegen": session.ProviderClaude,
+		"codegen": session.ProviderCodex,
 	}
 	cr := session.NewCascadeRouter(cfg, nil, nil, "")
 
@@ -115,7 +118,7 @@ func TestCascadeRouterRecordAndStats(t *testing.T) {
 	cr.RecordResult(session.CascadeResult{
 		Timestamp:    time.Now(),
 		TaskType:     "codegen",
-		UsedProvider: session.ProviderClaude,
+		UsedProvider: session.ProviderCodex,
 		Escalated:    true,
 		CheapCostUSD: 0.20,
 		TotalCostUSD: 1.50,
@@ -257,7 +260,7 @@ func TestShouldCachePromptByProvider(t *testing.T) {
 		{session.ProviderClaude, 500, false},
 		{session.ProviderGemini, 3000, true},
 		{session.ProviderGemini, 1000, false},
-		{session.ProviderCodex, 5000, false},  // Codex doesn't support caching
+		{session.ProviderCodex, 5000, true},
 		{session.ProviderCodex, 100, false},
 	}
 	for _, tt := range tests {
@@ -273,24 +276,23 @@ func TestPromptCacheTrackerHitAndMiss(t *testing.T) {
 	cfg := session.DefaultPromptCacheConfig()
 	cfg.MinPrefixLen = 50 // lower for testing
 	tracker := session.NewPromptCacheTracker(cfg)
+	repoDir := t.TempDir()
+	agentsContent := "# Repo Instructions\nUse Codex for coding tasks.\nKeep edits focused, validate relevant paths, and avoid unrelated churn.\n"
+	if err := os.WriteFile(filepath.Join(repoDir, "AGENTS.md"), []byte(agentsContent), 0o644); err != nil {
+		t.Fatalf("write AGENTS.md: %v", err)
+	}
 
-	longPrompt := "## System Instructions\n" +
-		"- Follow all rules below.\n" +
-		"- Be concise and correct.\n" +
-		"- Do not hallucinate.\n\n" +
-		"## Constraints:\n" +
-		"- Maximum 100 lines of code.\n" +
-		"- No external dependencies.\n\n" +
+	longPrompt := strings.Repeat("## System Instructions\n- Follow all rules below.\n- Be concise and correct.\n- Do not hallucinate.\n\n## Constraints:\n- Maximum 100 lines of code.\n- No external dependencies.\n\n", 8) +
 		"Now implement the feature X for the project."
 
 	// First call: cache miss (creates entry).
-	_, cacheable1 := tracker.AnalyzePrompt("/repo", session.ProviderClaude, longPrompt)
+	_, cacheable1 := tracker.AnalyzePrompt(repoDir, session.ProviderCodex, longPrompt)
 	if !cacheable1 {
 		t.Error("first call: cacheable = false, want true")
 	}
 
 	// Second call with same prompt: cache hit.
-	_, cacheable2 := tracker.AnalyzePrompt("/repo", session.ProviderClaude, longPrompt)
+	_, cacheable2 := tracker.AnalyzePrompt(repoDir, session.ProviderCodex, longPrompt)
 	if !cacheable2 {
 		t.Error("second call: cacheable = false, want true")
 	}
@@ -321,9 +323,9 @@ func TestCascadeCustomTierOverrides(t *testing.T) {
 	cfg := session.DefaultCascadeConfig()
 	cfg.TaskTypeOverrides = map[string]session.Provider{
 		"lint":         session.ProviderGemini,
-		"codegen":      session.ProviderClaude,
+		"codegen":      session.ProviderCodex,
 		"test":         session.ProviderGemini,
-		"architecture": session.ProviderClaude,
+		"architecture": session.ProviderCodex,
 	}
 
 	cr := session.NewCascadeRouter(cfg, nil, nil, "")
@@ -334,9 +336,9 @@ func TestCascadeCustomTierOverrides(t *testing.T) {
 		want     session.Provider
 	}{
 		{"lint", session.ProviderGemini},
-		{"codegen", session.ProviderClaude},
+		{"codegen", session.ProviderCodex},
 		{"test", session.ProviderGemini},
-		{"architecture", session.ProviderClaude},
+		{"architecture", session.ProviderCodex},
 	}
 	for _, tc := range cases {
 		got := cr.ResolveProvider(tc.taskType)
@@ -346,8 +348,8 @@ func TestCascadeCustomTierOverrides(t *testing.T) {
 	}
 
 	// Unknown task type without feedback falls through to expensive.
-	if got := cr.ResolveProvider("unknown"); got != session.ProviderClaude {
-		t.Errorf("ResolveProvider(unknown) = %q, want %q (expensive fallback)", got, session.ProviderClaude)
+	if got := cr.ResolveProvider("unknown"); got != session.ProviderCodex {
+		t.Errorf("ResolveProvider(unknown) = %q, want %q (expensive fallback)", got, session.ProviderCodex)
 	}
 }
 

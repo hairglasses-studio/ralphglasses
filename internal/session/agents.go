@@ -10,6 +10,8 @@ import (
 // agentDir returns the agent definition directory for a given provider.
 func agentDir(repoPath string, provider Provider) string {
 	switch provider {
+	case ProviderCodex:
+		return filepath.Join(repoPath, ".codex", "agents")
 	case ProviderGemini:
 		return filepath.Join(repoPath, ".gemini", "agents")
 	default:
@@ -18,26 +20,24 @@ func agentDir(repoPath string, provider Provider) string {
 }
 
 // ListAgents reads agent definitions from a repo for a given provider.
-// Claude: .claude/agents/*.md, Gemini: .gemini/agents/*.md, Codex: AGENTS.md sections.
-// If provider is empty, defaults to claude.
+// Claude: .claude/agents/*.md, Gemini: .gemini/agents/*.md, Codex: .codex/agents/*.toml.
+// If provider is empty, defaults to the primary provider.
 func ListAgents(repoPath string) ([]AgentDef, error) {
-	return DiscoverAgents(repoPath, ProviderClaude)
+	return DiscoverAgents(repoPath, DefaultPrimaryProvider())
 }
 
 // DiscoverAgents returns agent definitions for the specified provider.
 func DiscoverAgents(repoPath string, provider Provider) ([]AgentDef, error) {
 	if provider == "" {
-		provider = ProviderClaude
+		provider = DefaultPrimaryProvider()
 	}
 
-	if provider == ProviderCodex {
-		return discoverCodexAgents(repoPath)
-	}
-
-	// Claude and Gemini both use .{provider}/agents/*.md
 	dir := agentDir(repoPath, provider)
 	entries, err := os.ReadDir(dir)
 	if os.IsNotExist(err) {
+		if provider == ProviderCodex {
+			return discoverLegacyCodexAgents(repoPath)
+		}
 		return nil, nil
 	}
 	if err != nil {
@@ -46,7 +46,13 @@ func DiscoverAgents(repoPath string, provider Provider) ([]AgentDef, error) {
 
 	var agents []AgentDef
 	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
+		if e.IsDir() {
+			continue
+		}
+		if provider == ProviderCodex && !strings.HasSuffix(e.Name(), ".toml") {
+			continue
+		}
+		if provider != ProviderCodex && !strings.HasSuffix(e.Name(), ".md") {
 			continue
 		}
 
@@ -55,16 +61,48 @@ func DiscoverAgents(repoPath string, provider Provider) ([]AgentDef, error) {
 			continue
 		}
 
-		def := parseAgentMd(e.Name(), string(data))
+		var def AgentDef
+		if provider == ProviderCodex {
+			def = parseCodexAgentToml(e.Name(), string(data))
+		} else {
+			def = parseAgentMd(e.Name(), string(data))
+		}
 		def.Provider = provider
 		agents = append(agents, def)
 	}
 	return agents, nil
 }
 
-// discoverCodexAgents parses AGENTS.md in the repo root.
-// Each ## heading becomes an agent name; content until next ## is the prompt.
+// discoverLegacyCodexAgents parses legacy AGENTS.md custom-agent sections.
+// This is retained as a fallback for repos created before Codex adopted
+// .codex/agents/*.toml for project-scoped custom agents.
 func discoverCodexAgents(repoPath string) ([]AgentDef, error) {
+	dir := agentDir(repoPath, ProviderCodex)
+	entries, err := os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		return discoverLegacyCodexAgents(repoPath)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read codex agents dir: %w", err)
+	}
+
+	var agents []AgentDef
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".toml") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			continue
+		}
+		def := parseCodexAgentToml(e.Name(), string(data))
+		def.Provider = ProviderCodex
+		agents = append(agents, def)
+	}
+	return agents, nil
+}
+
+func discoverLegacyCodexAgents(repoPath string) ([]AgentDef, error) {
 	data, err := os.ReadFile(filepath.Join(repoPath, "AGENTS.md"))
 	if os.IsNotExist(err) {
 		return nil, nil
@@ -124,42 +162,13 @@ func WriteAgent(repoPath string, def AgentDef) error {
 	return os.WriteFile(filepath.Join(dir, filename), []byte(content), 0644)
 }
 
-// writeCodexAgent appends or updates an agent section in AGENTS.md.
+// writeCodexAgent writes a Codex custom agent TOML file under .codex/agents/.
 func writeCodexAgent(repoPath string, def AgentDef) error {
-	agentsFile := filepath.Join(repoPath, "AGENTS.md")
-
-	var existing string
-	data, err := os.ReadFile(agentsFile)
-	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("read AGENTS.md: %w", err)
+	dir := agentDir(repoPath, ProviderCodex)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("create codex agents dir: %w", err)
 	}
-	if err == nil {
-		existing = string(data)
-	}
-
-	// Build the new section
-	section := fmt.Sprintf("## %s\n\n%s\n", def.Name, def.Prompt)
-
-	// Check if agent already exists — replace its section
-	header := fmt.Sprintf("## %s", def.Name)
-	if idx := strings.Index(existing, header); idx >= 0 {
-		// Find the next ## or end of file
-		rest := existing[idx+len(header):]
-		nextIdx := strings.Index(rest, "\n## ")
-		if nextIdx >= 0 {
-			existing = existing[:idx] + section + rest[nextIdx+1:]
-		} else {
-			existing = existing[:idx] + section
-		}
-	} else {
-		// Append
-		if existing != "" && !strings.HasSuffix(existing, "\n") {
-			existing += "\n"
-		}
-		existing += section
-	}
-
-	return os.WriteFile(agentsFile, []byte(existing), 0644)
+	return os.WriteFile(filepath.Join(dir, def.Name+".toml"), []byte(renderCodexAgentToml(def)), 0644)
 }
 
 // parseAgentMd parses a .claude/agents/*.md or .gemini/agents/*.md file into an AgentDef.
@@ -223,6 +232,97 @@ func parseYAMLList(value string) []string {
 	return result
 }
 
+func parseCodexAgentToml(filename, content string) AgentDef {
+	name := strings.TrimSuffix(filename, ".toml")
+	def := AgentDef{Name: name, Provider: ProviderCodex}
+
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(line)
+		switch {
+		case strings.HasPrefix(trimmed, "name = "):
+			def.Name = parseQuotedTomlValue(trimmed)
+		case strings.HasPrefix(trimmed, "description = "):
+			def.Description = parseQuotedTomlValue(trimmed)
+		case strings.HasPrefix(trimmed, "model = "):
+			def.Model = parseQuotedTomlValue(trimmed)
+		case strings.HasPrefix(trimmed, "# ralphglasses_tools = "):
+			def.Tools = parseTomlStringArray(strings.TrimSpace(strings.TrimPrefix(trimmed, "# ralphglasses_tools = ")))
+		case strings.HasPrefix(trimmed, "# ralphglasses_max_turns = "):
+			_, _ = fmt.Sscanf(strings.TrimSpace(strings.TrimPrefix(trimmed, "# ralphglasses_max_turns = ")), "%d", &def.MaxTurns)
+		}
+	}
+
+	if start := strings.Index(content, "developer_instructions = \"\"\""); start >= 0 {
+		body := content[start+len("developer_instructions = \"\"\""):]
+		if end := strings.Index(body, "\"\"\""); end >= 0 {
+			def.Prompt = strings.TrimSpace(body[:end])
+		}
+	}
+
+	return def
+}
+
+func renderCodexAgentToml(def AgentDef) string {
+	var b strings.Builder
+	name := def.Name
+	if name == "" {
+		name = "agent"
+	}
+	description := def.Description
+	if description == "" {
+		description = "Custom Codex agent exported by ralphglasses."
+	}
+
+	b.WriteString(fmt.Sprintf("name = %q\n", name))
+	b.WriteString(fmt.Sprintf("description = %q\n", description))
+	if def.Model != "" {
+		b.WriteString(fmt.Sprintf("model = %q\n", def.Model))
+	}
+	if len(def.Tools) > 0 {
+		b.WriteString("# ralphglasses_tools = [")
+		for i, tool := range def.Tools {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(fmt.Sprintf("%q", tool))
+		}
+		b.WriteString("]\n")
+	}
+	if def.MaxTurns > 0 {
+		b.WriteString(fmt.Sprintf("# ralphglasses_max_turns = %d\n", def.MaxTurns))
+	}
+	b.WriteString("developer_instructions = \"\"\"\n")
+	b.WriteString(strings.TrimSpace(def.Prompt))
+	b.WriteString("\n\"\"\"\n")
+	return b.String()
+}
+
+func parseQuotedTomlValue(line string) string {
+	_, value, ok := strings.Cut(line, "=")
+	if !ok {
+		return ""
+	}
+	return strings.Trim(strings.TrimSpace(value), "\"")
+}
+
+func parseTomlStringArray(value string) []string {
+	value = strings.TrimSpace(value)
+	value = strings.TrimPrefix(value, "[")
+	value = strings.TrimSuffix(value, "]")
+	if value == "" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		item := strings.Trim(strings.TrimSpace(part), "\"")
+		if item != "" {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
 // ComposeAgents creates a composite agent by merging multiple existing agent definitions.
 // It concatenates prompts with section headers, uses the first agent's model/tools as defaults
 // (overridable via the output AgentDef fields), and writes the result.
@@ -234,7 +334,7 @@ func ComposeAgents(repoPath string, agentNames []string, provider Provider, name
 		return AgentDef{}, fmt.Errorf("composite agent name required")
 	}
 	if provider == "" {
-		provider = ProviderClaude
+		provider = DefaultPrimaryProvider()
 	}
 
 	agents, err := DiscoverAgents(repoPath, provider)

@@ -14,11 +14,11 @@ import (
 
 // WorkerAgent runs on each worker node, handling registration, heartbeat, and work execution.
 type WorkerAgent struct {
-	nodeID    string
-	hostname  string
-	port      int
-	version   string
-	scanPath  string
+	nodeID   string
+	hostname string
+	port     int
+	version  string
+	scanPath string
 
 	client    *Client
 	sessMgr   *session.Manager
@@ -147,7 +147,7 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 	}
 
 	if opts.Provider == "" {
-		opts.Provider = session.ProviderClaude
+		opts.Provider = session.DefaultPrimaryProvider()
 	}
 
 	sess, err := w.sessMgr.Launch(ctx, opts)

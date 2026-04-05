@@ -2,7 +2,7 @@
 
 Command-and-control TUI + bootable thin client for parallel multi-LLM agent fleets.
 
-**Last updated:** 2026-03-30
+**Last updated:** 2026-04-04
 **Codebase:** 73 packages, 126 MCP tools (124 namespace + 2 meta), 19 TUI views
 **Status:** 1,115 tasks, 442 complete (39.6%), 673 remaining
 **Key deps:** Go 1.26.1, mcp-go v0.45.0, bubbletea v1.3.10, anthropic-sdk-go v1.27.1
@@ -638,13 +638,13 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [x] 2.5.3.2 — Generate provider-aware delegation prompts for lead sessions
 - [x] 2.5.3.3 — Update `team_create` with `worker_provider` default param
 - [x] 2.5.3.4 — Update `team_delegate` with optional `provider` param
-- **Acceptance:** Claude lead delegates tasks to Gemini/Codex workers
+- **Acceptance:** provider-aware team lead delegates tasks across Gemini/Codex/Claude workers
 
 ### 2.5.4 — Provider-specific resume support (COMPLETE)
-- [x] 2.5.4.1 — Document Codex resume as unsupported and route retries through `session_retry`
+- [x] 2.5.4.1 — Probe Codex CLI resume support and allow `codex exec resume` when available
 - [x] 2.5.4.2 — Verify Gemini `--resume` flag works with `stream-json`
-- [x] 2.5.4.3 — Add resume tests per provider, including explicit Codex rejection
-- **Acceptance:** `session_resume` works for Claude/Gemini and returns an explicit validation error for Codex
+- [x] 2.5.4.3 — Add resume tests per provider, including install-dependent Codex capability fallback
+- **Acceptance:** `session_resume` works for Claude/Gemini and for Codex installs that expose `exec resume`
 
 ### 2.5.5 — Unified cost normalization `[BLOCKED BY 2.5.1]`
 - [x] 2.5.5.1 — Verify Codex `--json` cost output fields, update normalizer
@@ -802,7 +802,17 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - [x] 3.5.4.1 — Generate `.claude/skills/ralphglasses/SKILL.md` from MCP tool descriptions `P1` `M`
 - [x] 3.5.4.2 — Include YAML frontmatter with allowed-tools `P1` `S`
 - [x] 3.5.4.3 — Auto-update skill on `ralphglasses mcp` server start `P1` `S`
-- **Acceptance:** Claude Code auto-discovers ralphglasses skill when MCP server is connected
+- [x] 3.5.4.4 — Mirror generated skill to `.agents/skills/ralphglasses/SKILL.md` for Codex-native skill discovery `P1` `S`
+- [ ] 3.5.4.5 — Add Codex plugin bundle generation for repo-local MCP affordances `P1` `M`
+- **Acceptance:** provider-native skill surfaces exist for both Claude Code and Codex
+
+### 3.5.5 — Codex-primary command/control parity `[NEW]`
+- [x] 3.5.5.1 — Make Codex the default provider for session launch/resume, teams, RC, workflow launches, and fleet worker execution `P0` `M`
+- [x] 3.5.5.2 — Move self-improvement and sweep defaults to Codex-first planner/worker profiles `P0` `M`
+- [x] 3.5.5.3 — Update failover and cascade defaults so Codex is the primary control-plane lane and Claude is the expensive reasoning specialist `P1` `M`
+- [x] 3.5.5.4 — Pin Codex developer docs and local CLI capability notes in-repo for future sessions `P1` `S`
+- [ ] 3.5.5.5 — Add Codex plugin/subagent export flows alongside AGENTS.md skill export `P1` `M`
+- **Acceptance:** omitted-provider control paths default to Codex and repo docs match runtime behavior
 
 ### 3.5.5 — Theme export to terminal (like claudekit themekit)
 Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026-03-27]`
@@ -1369,7 +1379,11 @@ Cross-reference observations with git commits.
 ### 10.5 — Cost Optimization
 - [ ] 10.5.1 — Integrate token counting API for accurate pre-cycle budget forecasting `P2` `S`
 - [ ] 10.5.2 — Add Batch API support for non-interactive marathon workloads (50% discount) `P2` `M`
-- [ ] 10.5.3 — Wire prompt caching for stable CLAUDE.md/system prompts across iterations `P1` `S`
+- [x] 10.5.3.1 — Track stable repo instruction prefixes from `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` in prompt-cache analysis `P1` `S`
+- [x] 10.5.3.2 — Stop assuming Claude prompt-cache savings by default in shared cache accounting `P0` `S`
+- [x] 10.5.3.3 — Detect resumed-Claude cache anomalies when cache writes occur without cache reads `P0` `S`
+- [ ] 10.5.3.4 — Surface cache-read/cache-write ratios in fleet analytics and session status `P1` `M`
+- [ ] 10.5.3.5 — Add automatic reroute from Claude to Codex when repeated Claude cache anomalies are detected in long-running orchestration `P1` `M`
 - **Acceptance:** Marathon cost per sprint reduced 50-80% vs naive execution
 
 ---
@@ -1466,10 +1480,10 @@ Cost comparison (March 2026, per 1M tokens, input/output):
 | Streaming | Yes | Yes (stream-json) | Yes (Responses API) |
 | Prompt caching | cache_control (90% reads, 1.25x writes) | cachedContents ($1-4.50/hr storage) | Auto prefix (75-90%) |
 | Batch API | Messages Batches (50% off) | BatchGenerateContent | POST /v1/batches (JSONL) |
-| Resume | --resume | --resume | Not supported |
+| Resume | --resume | --resume | `exec resume` (install-dependent) |
 | Headless mode | --print, -p | --yolo | --full-auto |
 | Agent file | CLAUDE.md | .gemini/agents/*.md | AGENTS.md |
-| ralphglasses support | Full | Launch + output | Launch only |
+| ralphglasses support | Full specialist lane | Full worker lane | Full primary control plane |
 
 > **Routing research:** FrugalGPT/RouteLLM papers show 2-4x cost reduction with learned routers. Current cascade in `cascade.go` uses static thresholds — upgrade to confidence-based escalation (Phase 6.2).
 

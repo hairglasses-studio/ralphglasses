@@ -43,8 +43,9 @@ func TestShouldCachePrompt(t *testing.T) {
 		{"gemini above threshold", ProviderGemini, 5000, true},
 		{"gemini below threshold", ProviderGemini, 2047, false},
 		{"gemini zero", ProviderGemini, 0, false},
-		{"codex always false small", ProviderCodex, 100, false},
-		{"codex always false large", ProviderCodex, 10000, false},
+		{"codex below threshold", ProviderCodex, 100, false},
+		{"codex at threshold", ProviderCodex, 1024, true},
+		{"codex above threshold", ProviderCodex, 10000, true},
 		{"unknown provider", Provider("unknown"), 10000, false},
 	}
 
@@ -166,8 +167,8 @@ func TestPromptCacheTracker_CacheHit(t *testing.T) {
 	if stats.HitRate == 0 {
 		t.Error("expected non-zero hit rate after cache hit")
 	}
-	if stats.EstimatedSaved <= 0 {
-		t.Error("expected positive EstimatedSaved after cache hit")
+	if stats.EstimatedSaved != 0 {
+		t.Errorf("expected no assumed savings for Claude without live cache-read evidence, got %f", stats.EstimatedSaved)
 	}
 }
 
@@ -243,5 +244,28 @@ func TestPromptCacheTracker_CLAUDEmdPrefix(t *testing.T) {
 	}
 	if !strings.Contains(result, "# Project") {
 		t.Error("expected CLAUDE.md content to appear in result")
+	}
+}
+
+func TestPromptCacheTracker_AGENTSmdPrefixForCodex(t *testing.T) {
+	t.Parallel()
+
+	cfg := DefaultPromptCacheConfig()
+	tracker := NewPromptCacheTracker(cfg)
+
+	repoDir := t.TempDir()
+	agentsContent := "# Codex Instructions\n" + strings.Repeat("- keep plans concise\n", 200)
+	err := os.WriteFile(filepath.Join(repoDir, "AGENTS.md"), []byte(agentsContent), 0644)
+	if err != nil {
+		t.Fatalf("failed to write AGENTS.md: %v", err)
+	}
+
+	prompt := "## Task\n" + strings.Repeat("- implement carefully\n", 200) + "\nfinish the work"
+	result, cacheable := tracker.AnalyzePrompt(repoDir, ProviderCodex, prompt)
+	if !cacheable {
+		t.Error("expected cacheable=true with AGENTS.md prefix for codex")
+	}
+	if !strings.Contains(result, "# Codex Instructions") {
+		t.Error("expected AGENTS.md content to appear in result")
 	}
 }

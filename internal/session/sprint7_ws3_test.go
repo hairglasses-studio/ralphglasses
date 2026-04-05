@@ -216,8 +216,8 @@ func TestBudgetOptimizedSelfImprovementProfile_Defaults(t *testing.T) {
 	if p.NoopPlateauLimit != 3 {
 		t.Errorf("NoopPlateauLimit = %d, want 3", p.NoopPlateauLimit)
 	}
-	if p.PlannerProvider != ProviderClaude {
-		t.Errorf("PlannerProvider = %q, want claude", p.PlannerProvider)
+	if p.PlannerProvider != ProviderCodex {
+		t.Errorf("PlannerProvider = %q, want codex", p.PlannerProvider)
 	}
 	if !p.SelfImprovement {
 		t.Error("SelfImprovement should be true")
@@ -252,17 +252,16 @@ func TestBudgetOptimizedSelfImprovementProfile_CustomBudget(t *testing.T) {
 	}
 }
 
-func TestBudgetOptimizedSelfImprovementProfile_Sonnet(t *testing.T) {
+func TestBudgetOptimizedSelfImprovementProfile_CodexDefaults(t *testing.T) {
 	p := BudgetOptimizedSelfImprovementProfile(50)
-	// All three roles should use Sonnet (cost-optimized)
-	if p.PlannerModel != "claude-sonnet-4-6" {
-		t.Errorf("PlannerModel = %q, want claude-sonnet-4-6", p.PlannerModel)
+	if p.PlannerModel != "o4-mini" {
+		t.Errorf("PlannerModel = %q, want o4-mini", p.PlannerModel)
 	}
-	if p.WorkerModel != "claude-sonnet-4-6" {
-		t.Errorf("WorkerModel = %q, want claude-sonnet-4-6", p.WorkerModel)
+	if p.WorkerModel != "codex-mini-latest" {
+		t.Errorf("WorkerModel = %q, want codex-mini-latest", p.WorkerModel)
 	}
-	if p.VerifierModel != "claude-sonnet-4-6" {
-		t.Errorf("VerifierModel = %q, want claude-sonnet-4-6", p.VerifierModel)
+	if p.VerifierModel != "codex-mini-latest" {
+		t.Errorf("VerifierModel = %q, want codex-mini-latest", p.VerifierModel)
 	}
 	if p.CompactionThreshold != 5 {
 		t.Errorf("CompactionThreshold = %d, want 5", p.CompactionThreshold)
@@ -531,7 +530,7 @@ func TestBuildGeminiCmd_AllFlags(t *testing.T) {
 		Provider: ProviderGemini,
 		RepoPath: "/tmp/repo",
 		Prompt:   "test prompt",
-		Model:    "gemini-3-pro",
+		Model:    "gemini-2.5-pro",
 	}
 	cmd := buildGeminiCmd(context.Background(), opts)
 
@@ -548,7 +547,7 @@ func TestBuildCodexCmd_AllFlags(t *testing.T) {
 		Provider: ProviderCodex,
 		RepoPath: "/tmp/repo",
 		Prompt:   "test prompt",
-		Model:    "gpt-5.4-xhigh",
+		Model:    "gpt-5.4",
 	}
 	cmd := buildCodexCmd(context.Background(), opts)
 

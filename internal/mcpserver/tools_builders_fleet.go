@@ -26,7 +26,7 @@ func (s *Server) buildFleetGroup() ToolGroup {
 				mcp.WithDescription("Submit work for `repo` with `prompt` to the distributed fleet queue. Requires fleet server mode (ralphglasses mcp --fleet)."),
 				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
 				mcp.WithString("prompt", mcp.Required(), mcp.Description("Task prompt")),
-				mcp.WithString("provider", mcp.Description("claude (default), gemini, codex")),
+				mcp.WithString("provider", mcp.Description("codex (default), claude, gemini")),
 				mcp.WithNumber("budget_usd", mcp.Description("Budget in USD (default: 5.0)")),
 				mcp.WithNumber("priority", mcp.Description("Priority 0-10 (default: 5, higher = first)")),
 			), s.handleFleetSubmit},

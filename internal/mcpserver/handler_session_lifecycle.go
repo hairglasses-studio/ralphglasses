@@ -44,7 +44,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 
 	provider := session.Provider(p.OptionalString("provider", ""))
 	if provider == "" {
-		provider = session.ProviderClaude
+		provider = session.DefaultPrimaryProvider()
 	}
 	if err := session.ValidateProvider(provider); err != nil {
 		return codedError(ErrProviderUnavailable, fmt.Sprintf("invalid provider %q: %v", provider, err)), nil
@@ -202,7 +202,7 @@ func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolReques
 
 	provider := session.Provider(getStringArg(req, "provider"))
 	if provider == "" {
-		provider = session.ProviderClaude
+		provider = session.DefaultPrimaryProvider()
 	}
 	prompt := getStringArg(req, "prompt")
 	sess, err := s.SessMgr.Resume(ctx, r.Path, provider, sessionID, prompt)

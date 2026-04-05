@@ -6,7 +6,7 @@
 
 Command-and-control TUI for parallel multi-LLM agent fleets.
 
-Orchestrates [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview), [Gemini CLI](https://ai.google.dev/gemini-api/docs), and [OpenAI Codex CLI](https://platform.openai.com/docs/guides/codex) sessions from a single k9s-style interface. Built with [Charmbracelet](https://github.com/charmbracelet) (BubbleTea + Lip Gloss).
+Orchestrates [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview), [Gemini CLI](https://ai.google.dev/gemini-api/docs), and [OpenAI Codex CLI](https://developers.openai.com/codex/noninteractive) sessions from a single k9s-style interface. Built with [Charmbracelet](https://github.com/charmbracelet) (BubbleTea + Lip Gloss).
 
 ## What It Does
 
@@ -40,9 +40,9 @@ Launch sessions against any supported provider:
 
 | Provider | CLI | Default Model | Install |
 |----------|-----|---------------|---------|
-| `claude` (default) | [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) | `sonnet` | Pre-installed |
-| `gemini` | [Gemini CLI](https://ai.google.dev/gemini-api/docs) | `gemini-3-pro` | `npm i -g @google/gemini-cli` |
-| `codex` | [Codex CLI](https://platform.openai.com/docs/guides/codex) | `gpt-5.4-xhigh` | `npm i -g @openai/codex-cli` |
+| `codex` (default) | [Codex CLI](https://developers.openai.com/codex/noninteractive) | `gpt-5.4` | `npm i -g @openai/codex-cli` |
+| `claude` | [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) | `sonnet` | Pre-installed |
+| `gemini` | [Gemini CLI](https://ai.google.dev/gemini-api/docs) | `gemini-2.5-pro` | `npm i -g @google/gemini-cli` |
 
 ### Usage via MCP
 
@@ -52,9 +52,9 @@ Launch sessions against any supported provider:
     "repo": "my-project", "prompt": "Refactor the API layer", "provider": "gemini"
 }}
 
-// Create a multi-provider team (Claude leads, delegates to Gemini/Codex workers)
+// Create a multi-provider team (Codex leads, delegates to Gemini/Claude workers)
 { "tool": "ralphglasses_team_create", "arguments": {
-    "repo": "my-project", "name": "refactor-team", "provider": "claude",
+    "repo": "my-project", "name": "refactor-team", "provider": "codex",
     "tasks": "Rewrite auth middleware\nAdd integration tests\nUpdate API docs"
 }}
 
@@ -100,13 +100,13 @@ See [ROADMAP.md](ROADMAP.md) for the full plan.
 ### Multi-Provider Session Management
 | Tool | Description |
 |------|-------------|
-| `ralphglasses_session_launch` | Launch a headless session (`provider`: claude/gemini/codex) |
+| `ralphglasses_session_launch` | Launch a headless session (`provider`: codex/claude/gemini) |
 | `ralphglasses_session_list` | List sessions (filter by `provider`, repo, status) |
 | `ralphglasses_session_status` | Detailed session info (provider, cost, turns, model) |
-| `ralphglasses_session_resume` | Resume a previous session (`claude`/`gemini`; Codex unsupported) |
+| `ralphglasses_session_resume` | Resume a previous session (`codex`/`claude`/`gemini`, if the installed CLI supports resume) |
 | `ralphglasses_session_stop` | Stop a running session |
 | `ralphglasses_session_budget` | Get/update budget for a session |
-| `ralphglasses_loop_start` | Create a Codex `o1-pro` planner + `gpt-5.4-xhigh` worker loop |
+| `ralphglasses_loop_start` | Create a Codex `o4-mini` planner + `codex-mini-latest` worker loop |
 | `ralphglasses_loop_status` | Inspect persisted loop status and iteration history |
 | `ralphglasses_loop_step` | Run one planner/worker/verifier iteration in a git worktree |
 | `ralphglasses_loop_stop` | Stop a loop and block future iterations |
@@ -179,6 +179,7 @@ main.go → cmd/root.go (Cobra CLI)
 ## Docs
 
 - [ROADMAP.md](ROADMAP.md) — Full development roadmap
+- [docs/CODEX-REFERENCE.md](docs/CODEX-REFERENCE.md) — Codex-first runtime notes, pinned docs, Claude cache guardrails
 - [docs/RESEARCH.md](docs/RESEARCH.md) — Agent OS & sandboxing research
 - [docs/MULTI-SESSION.md](docs/MULTI-SESSION.md) — Multi-session tool comparison
 - [CLAUDE.md](CLAUDE.md) — Claude Code project instructions

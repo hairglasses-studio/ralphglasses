@@ -29,38 +29,38 @@ type ConfigKeySpec struct {
 	Type        ConfigKeyType
 	Default     string
 	Description string
-	MinInt      int    // for ConfigTypeInt
-	MaxInt      int    // for ConfigTypeInt (0 means no upper bound)
+	MinInt      int     // for ConfigTypeInt
+	MaxInt      int     // for ConfigTypeInt (0 means no upper bound)
 	MinFloat    float64 // for ConfigTypeFloat
 	MaxFloat    float64 // for ConfigTypeFloat (0 means no upper bound)
 }
 
 // KnownKeys is the canonical registry of valid .ralphrc config keys.
 var KnownKeys = map[string]ConfigKeySpec{
-	"PROJECT_NAME":          {Type: ConfigTypeString, Description: "project display name"},
-	"MODEL":                 {Type: ConfigTypeString, Default: "sonnet", Description: "LLM model to use"},
-	"MAX_CALLS_PER_HOUR":   {Type: ConfigTypeInt, Default: "120", MinInt: 1, MaxInt: 1000, Description: "rate limit per hour"},
-	"CLAUDE_TIMEOUT_MINUTES": {Type: ConfigTypeInt, Default: "30", MinInt: 1, MaxInt: 480, Description: "session timeout in minutes"},
-	"BUDGET":                {Type: ConfigTypeFloat, Default: "5.00", MinFloat: 0.01, MaxFloat: 1000, Description: "session budget in USD"},
-	"RALPH_SESSION_BUDGET":  {Type: ConfigTypeFloat, Default: "100.00", MinFloat: 0.01, MaxFloat: 10000, Description: "marathon budget in USD"},
-	"MARATHON_DURATION_HOURS": {Type: ConfigTypeInt, Default: "12", MinInt: 1, MaxInt: 168, Description: "marathon duration limit"},
-	"CHECKPOINT_HOURS":      {Type: ConfigTypeInt, Default: "3", MinInt: 1, MaxInt: 24, Description: "checkpoint interval in hours"},
-	"CB_FAIL_THRESHOLD":     {Type: ConfigTypeInt, Default: "5", MinInt: 1, MaxInt: 100, Description: "circuit breaker failure threshold"},
-	"CB_RESET_TIMEOUT":      {Type: ConfigTypeInt, Default: "300", MinInt: 10, MaxInt: 3600, Description: "circuit breaker reset timeout in seconds"},
-	"CB_HALF_OPEN_MAX":      {Type: ConfigTypeInt, Default: "2", MinInt: 1, MaxInt: 20, Description: "circuit breaker half-open max attempts"},
-	"SPEC_FILE":             {Type: ConfigTypeString, Default: "spec.md", Description: "spec file path"},
-	"PLAN_FILE":             {Type: ConfigTypeString, Default: "plan.md", Description: "plan file path"},
-	"FIX_PLAN_FILE":         {Type: ConfigTypeString, Default: "fix_plan.md", Description: "fix plan file path"},
-	"PROVIDER":              {Type: ConfigTypeString, Default: "claude", Description: "default session provider (claude/gemini/codex)"},
-	"AUTO_ENHANCE":          {Type: ConfigTypeBool, Default: "false", Description: "auto-enhance prompts before session launch"},
-	"AUTONOMY_LEVEL":              {Type: ConfigTypeInt, Default: "0", MinInt: 0, MaxInt: 3, Description: "autonomy level (0=observe, 3=full)"},
-	"AUTONOMY_AUTO_RECOVER":       {Type: ConfigTypeBool, Default: "false", Description: "enable auto-recovery for failed loops"},
-	"AUTONOMY_AUTO_RECOVER_MAX":   {Type: ConfigTypeInt, Default: "3", MinInt: 1, MaxInt: 20, Description: "max auto-recoveries per loop"},
+	"PROJECT_NAME":                 {Type: ConfigTypeString, Description: "project display name"},
+	"MODEL":                        {Type: ConfigTypeString, Default: "gpt-5.4", Description: "LLM model to use"},
+	"MAX_CALLS_PER_HOUR":           {Type: ConfigTypeInt, Default: "120", MinInt: 1, MaxInt: 1000, Description: "rate limit per hour"},
+	"CLAUDE_TIMEOUT_MINUTES":       {Type: ConfigTypeInt, Default: "30", MinInt: 1, MaxInt: 480, Description: "session timeout in minutes"},
+	"BUDGET":                       {Type: ConfigTypeFloat, Default: "5.00", MinFloat: 0.01, MaxFloat: 1000, Description: "session budget in USD"},
+	"RALPH_SESSION_BUDGET":         {Type: ConfigTypeFloat, Default: "100.00", MinFloat: 0.01, MaxFloat: 10000, Description: "marathon budget in USD"},
+	"MARATHON_DURATION_HOURS":      {Type: ConfigTypeInt, Default: "12", MinInt: 1, MaxInt: 168, Description: "marathon duration limit"},
+	"CHECKPOINT_HOURS":             {Type: ConfigTypeInt, Default: "3", MinInt: 1, MaxInt: 24, Description: "checkpoint interval in hours"},
+	"CB_FAIL_THRESHOLD":            {Type: ConfigTypeInt, Default: "5", MinInt: 1, MaxInt: 100, Description: "circuit breaker failure threshold"},
+	"CB_RESET_TIMEOUT":             {Type: ConfigTypeInt, Default: "300", MinInt: 10, MaxInt: 3600, Description: "circuit breaker reset timeout in seconds"},
+	"CB_HALF_OPEN_MAX":             {Type: ConfigTypeInt, Default: "2", MinInt: 1, MaxInt: 20, Description: "circuit breaker half-open max attempts"},
+	"SPEC_FILE":                    {Type: ConfigTypeString, Default: "spec.md", Description: "spec file path"},
+	"PLAN_FILE":                    {Type: ConfigTypeString, Default: "plan.md", Description: "plan file path"},
+	"FIX_PLAN_FILE":                {Type: ConfigTypeString, Default: "fix_plan.md", Description: "fix plan file path"},
+	"PROVIDER":                     {Type: ConfigTypeString, Default: "codex", Description: "default session provider (claude/gemini/codex)"},
+	"AUTO_ENHANCE":                 {Type: ConfigTypeBool, Default: "false", Description: "auto-enhance prompts before session launch"},
+	"AUTONOMY_LEVEL":               {Type: ConfigTypeInt, Default: "0", MinInt: 0, MaxInt: 3, Description: "autonomy level (0=observe, 3=full)"},
+	"AUTONOMY_AUTO_RECOVER":        {Type: ConfigTypeBool, Default: "false", Description: "enable auto-recovery for failed loops"},
+	"AUTONOMY_AUTO_RECOVER_MAX":    {Type: ConfigTypeInt, Default: "3", MinInt: 1, MaxInt: 20, Description: "max auto-recoveries per loop"},
 	"CASCADE_ENABLED":              {Type: ConfigTypeBool, Default: "true", Description: "enable cheap-then-expensive cascade routing"},
 	"CASCADE_CHEAP_PROVIDER":       {Type: ConfigTypeString, Default: "gemini", Description: "cheap provider for cascade routing"},
 	"CASCADE_CHEAP_MODEL":          {Type: ConfigTypeString, Default: "gemini-2.5-flash", Description: "cheap model for cascade routing"},
-	"CASCADE_EXPENSIVE_PROVIDER":   {Type: ConfigTypeString, Default: "claude", Description: "expensive provider for cascade routing"},
-	"CASCADE_EXPENSIVE_MODEL":      {Type: ConfigTypeString, Default: "claude-sonnet-4-6", Description: "expensive model for cascade routing"},
+	"CASCADE_EXPENSIVE_PROVIDER":   {Type: ConfigTypeString, Default: "codex", Description: "expensive provider for cascade routing"},
+	"CASCADE_EXPENSIVE_MODEL":      {Type: ConfigTypeString, Default: "gpt-5.4", Description: "expensive model for cascade routing"},
 	"CASCADE_CONFIDENCE_THRESHOLD": {Type: ConfigTypeFloat, Default: "0.7", MinFloat: 0, MaxFloat: 1, Description: "confidence threshold for cascade escalation"},
 	"CASCADE_MAX_CHEAP_BUDGET":     {Type: ConfigTypeFloat, Default: "2.00", MinFloat: 0.01, MaxFloat: 100, Description: "max budget for cheap cascade tier in USD"},
 	"CASCADE_DIFFICULTY_THRESHOLD": {Type: ConfigTypeFloat, Default: "0.4", MinFloat: 0, MaxFloat: 1, Description: "difficulty threshold for bypassing cheap tier"},

@@ -18,7 +18,8 @@ type CacheManagerConfig struct {
 	// TTL is how long a prefix stays "warm" without being reused.
 	TTL time.Duration `json:"ttl"`
 	// SavingsRate is the fraction of input cost saved on a cache hit (0.0-1.0).
-	// Claude: ~0.90, Gemini: ~0.75, Codex: ~0.50
+	// Keep this conservative. Claude resumed-session cache reads have regressed
+	// in the field, so default assumed savings are disabled until live reads are observed.
 	SavingsRate map[Provider]float64 `json:"savings_rate"`
 }
 
@@ -29,7 +30,7 @@ func DefaultCacheManagerConfig() CacheManagerConfig {
 		MaxEntries:   200,
 		TTL:          5 * time.Minute,
 		SavingsRate: map[Provider]float64{
-			ProviderClaude: 0.90,
+			ProviderClaude: 0.0,
 			ProviderGemini: 0.75,
 			ProviderCodex:  0.50,
 		},
@@ -40,8 +41,8 @@ func DefaultCacheManagerConfig() CacheManagerConfig {
 type CachedPrefix struct {
 	Hash       string    `json:"hash"`
 	Provider   Provider  `json:"provider"`
-	Length     int       `json:"length"`       // character length of the prefix
-	TokenCount int64     `json:"token_count"`  // estimated tokens
+	Length     int       `json:"length"`      // character length of the prefix
+	TokenCount int64     `json:"token_count"` // estimated tokens
 	HitCount   int       `json:"hit_count"`
 	FirstSeen  time.Time `json:"first_seen"`
 	LastHit    time.Time `json:"last_hit"`
@@ -65,6 +66,17 @@ type CacheManager struct {
 	config   CacheManagerConfig
 	prefixes map[string]*CachedPrefix // hash -> prefix
 	stats    CacheManagerStats
+}
+
+func assumedCacheSavingsRate(provider Provider) float64 {
+	switch provider {
+	case ProviderGemini:
+		return 0.75
+	case ProviderCodex:
+		return 0.50
+	default:
+		return 0.0
+	}
 }
 
 // NewCacheManager creates a new cross-session cache manager.
@@ -103,9 +115,6 @@ func (cm *CacheManager) LookupPrefix(provider Provider, prompt string) (prefixLe
 
 		// Estimate savings.
 		rate := cm.config.SavingsRate[provider]
-		if rate == 0 {
-			rate = 0.50
-		}
 		inputPrice, _ := providerTokenPricing(provider)
 		savedTokens := entry.TokenCount
 		cm.stats.EstimatedSavings += float64(savedTokens) / 1_000_000 * inputPrice * rate
@@ -203,9 +212,6 @@ func (cm *CacheManager) TopPrefixes(n int) []CachedPrefix {
 // the given token count hits the cache for the specified provider.
 func (cm *CacheManager) EstimateSavings(provider Provider, tokenCount int64) float64 {
 	rate := cm.config.SavingsRate[provider]
-	if rate == 0 {
-		rate = 0.50
-	}
 	inputPrice, _ := providerTokenPricing(provider)
 	return float64(tokenCount) / 1_000_000 * inputPrice * rate
 }

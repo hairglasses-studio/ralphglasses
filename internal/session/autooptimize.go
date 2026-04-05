@@ -89,8 +89,9 @@ func (ao *AutoOptimizer) OptimizedLaunchOptions(opts LaunchOptions) (LaunchOptio
 	taskType := classifyTask(opts.Prompt)
 	changed := false
 
-	// Provider selection: use FeedbackAnalyzer.SuggestProvider if no explicit provider
-	if opts.Provider == "" || opts.Provider == ProviderClaude {
+	// Provider selection: use FeedbackAnalyzer.SuggestProvider only when the caller
+	// omitted a provider. Explicit provider choices should be preserved.
+	if opts.Provider == "" {
 		if suggested, ok := ao.feedback.SuggestProvider(taskType); ok && suggested != "" {
 			decision := AutonomousDecision{
 				Category:      DecisionProviderSelect,
@@ -182,7 +183,7 @@ func (ao *AutoOptimizer) BuildSmartFailoverChain(prompt string) FailoverChain {
 		score    float64
 	}
 
-	candidates := []Provider{ProviderClaude, ProviderGemini, ProviderCodex}
+	candidates := []Provider{DefaultPrimaryProvider(), ProviderGemini, ProviderClaude}
 	var scores []scored
 
 	for _, p := range candidates {
@@ -267,8 +268,8 @@ func (ao *AutoOptimizer) RecommendProvider(prompt string) ProviderRecommendation
 	taskType := classifyTask(prompt)
 
 	rec := ProviderRecommendation{
-		Provider:   ProviderClaude,
-		Model:      ProviderDefaults(ProviderClaude),
+		Provider:   DefaultPrimaryProvider(),
+		Model:      ProviderDefaults(DefaultPrimaryProvider()),
 		TaskType:   taskType,
 		Confidence: "low",
 		Rationale:  "default: no feedback data available",
@@ -322,7 +323,7 @@ type GatedChange struct {
 	ChangeType string         `json:"change_type"` // "provider", "budget", "config"
 	Before     map[string]any `json:"before"`
 	After      map[string]any `json:"after"`
-	Verdict    string         `json:"verdict"`     // "pass", "warn", "fail", "skip"
+	Verdict    string         `json:"verdict"` // "pass", "warn", "fail", "skip"
 	RolledBack bool           `json:"rolled_back"`
 }
 
@@ -399,13 +400,13 @@ func (ao *AutoOptimizer) GateChange(repoRoot string, change GatedChange) GatedCh
 type ImprovementNote struct {
 	ID          string    `json:"id"`
 	Timestamp   time.Time `json:"ts"`
-	Category    string    `json:"category"`    // "config", "prompt", "code"
-	Priority    int       `json:"priority"`    // 1-4 (1=highest)
+	Category    string    `json:"category"` // "config", "prompt", "code"
+	Priority    int       `json:"priority"` // 1-4 (1=highest)
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
-	Source      string    `json:"source"`      // "pattern_consolidation", "gate_failure", "cost_anomaly"
+	Source      string    `json:"source"` // "pattern_consolidation", "gate_failure", "cost_anomaly"
 	AutoApply   bool      `json:"auto_apply"`
-	Status      string    `json:"status"`      // "pending", "applied", "rejected"
+	Status      string    `json:"status"` // "pending", "applied", "rejected"
 	DecisionID  string    `json:"decision_id,omitempty"`
 }
 

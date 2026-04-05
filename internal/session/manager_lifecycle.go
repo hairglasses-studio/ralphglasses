@@ -42,10 +42,10 @@ func (m *Manager) InitPIDFiles() {
 	}
 }
 
-// Launch starts a new Claude Code session via claude -p.
+// Launch starts a new provider session via the configured CLI.
 func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
 	if opts.Provider == "" {
-		opts.Provider = ProviderClaude
+		opts.Provider = DefaultPrimaryProvider()
 	}
 	if opts.Model == "" {
 		opts.Model = ProviderDefaults(opts.Provider)
@@ -136,7 +136,7 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 // Resume resumes a previous session by its provider session ID.
 func (m *Manager) Resume(ctx context.Context, repoPath string, provider Provider, sessionID, prompt string) (*Session, error) {
 	if provider == "" {
-		provider = ProviderClaude
+		provider = DefaultPrimaryProvider()
 	}
 	opts := LaunchOptions{
 		Provider: provider,
@@ -537,8 +537,8 @@ func (m *Manager) LoadExternalSessions() {
 		if existing, ok := m.sessions[id]; ok {
 			// Re-persist in-process sessions so disk stays current (best-effort).
 			go func(s *Session) {
-			m.persistOrWarn(s, "re-persist on load")
-		}(existing)
+				m.persistOrWarn(s, "re-persist on load")
+			}(existing)
 			continue
 		}
 

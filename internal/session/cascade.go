@@ -11,10 +11,10 @@ import (
 // CascadeConfig configures the cheap-then-expensive routing strategy.
 type CascadeConfig struct {
 	Enabled              bool                `json:"enabled"` // when false, cascade routing is disabled
-	CheapProvider       Provider            `json:"cheap_provider"`
-	ExpensiveProvider   Provider            `json:"expensive_provider"`
-	ConfidenceThreshold float64             `json:"confidence_threshold"` // 0.0-1.0, default 0.7
-	MaxCheapBudgetUSD   float64             `json:"max_cheap_budget_usd"`
+	CheapProvider        Provider            `json:"cheap_provider"`
+	ExpensiveProvider    Provider            `json:"expensive_provider"`
+	ConfidenceThreshold  float64             `json:"confidence_threshold"` // 0.0-1.0, default 0.7
+	MaxCheapBudgetUSD    float64             `json:"max_cheap_budget_usd"`
 	MaxCheapTurns        int                 `json:"max_cheap_turns"`
 	TaskTypeOverrides    map[string]Provider `json:"task_type_overrides"`
 	SpeculativeExecution bool                `json:"speculative_execution"`
@@ -26,7 +26,7 @@ func DefaultCascadeConfig() CascadeConfig {
 	return CascadeConfig{
 		Enabled:             true,
 		CheapProvider:       ProviderGemini,
-		ExpensiveProvider:   ProviderClaude,
+		ExpensiveProvider:   DefaultPrimaryProvider(),
 		ConfidenceThreshold: 0.7,
 		MaxCheapBudgetUSD:   2.00,
 		MaxCheapTurns:       15,

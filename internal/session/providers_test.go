@@ -24,8 +24,8 @@ func TestProviderDefaults(t *testing.T) {
 		wantModel string
 	}{
 		{ProviderClaude, "sonnet"},
-		{ProviderGemini, "gemini-3-pro"},
-		{ProviderCodex, "gpt-5.4-xhigh"},
+		{ProviderGemini, "gemini-2.5-pro"},
+		{ProviderCodex, "gpt-5.4"},
 	}
 	for _, tt := range tests {
 		got := ProviderDefaults(tt.provider)
@@ -205,7 +205,7 @@ func TestNormalizeGeminiEvent(t *testing.T) {
 }
 
 func TestNormalizeGeminiEventNested(t *testing.T) {
-	line := []byte(`{"event":"message","message":{"parts":[{"text":"Working tree ready"}]},"usage":{"total_cost_usd":0.4,"turns":3},"session":{"id":"gem-456"},"metadata":{"model":"gemini-3-pro"}}`)
+	line := []byte(`{"event":"message","message":{"parts":[{"text":"Working tree ready"}]},"usage":{"total_cost_usd":0.4,"turns":3},"session":{"id":"gem-456"},"metadata":{"model":"gemini-2.5-pro"}}`)
 	event, err := normalizeEvent(ProviderGemini, line)
 	if err != nil {
 		t.Fatal(err)
@@ -245,7 +245,7 @@ func TestNormalizeCodexEvent(t *testing.T) {
 }
 
 func TestNormalizeCodexEventNested(t *testing.T) {
-	line := []byte(`{"event":"message","message":{"content":"Refactor complete"},"usage":{"total_cost_usd":0.12,"turns":2},"session":{"id":"cx-123"},"metadata":{"model":"gpt-5.4-xhigh"}}`)
+	line := []byte(`{"event":"message","message":{"content":"Refactor complete"},"usage":{"total_cost_usd":0.12,"turns":2},"session":{"id":"cx-123"},"metadata":{"model":"gpt-5.4"}}`)
 	event, err := normalizeEvent(ProviderCodex, line)
 	if err != nil {
 		t.Fatal(err)
@@ -289,27 +289,33 @@ func TestNormalizeEventInvalidJSON(t *testing.T) {
 }
 
 func TestValidateLaunchOptionsCodexResume(t *testing.T) {
+	orig := codexExecResumeSupported
+	t.Cleanup(func() { codexExecResumeSupported = orig })
+	codexExecResumeSupported = func() bool { return true }
+
+	err := validateLaunchOptions(LaunchOptions{
+		Provider: ProviderCodex,
+		Resume:   "sess-123",
+	})
+	if err != nil {
+		t.Fatalf("expected codex resume to validate when CLI support is present, got %v", err)
+	}
+}
+
+func TestValidateLaunchOptionsCodexResumeUnsupportedInstall(t *testing.T) {
+	orig := codexExecResumeSupported
+	t.Cleanup(func() { codexExecResumeSupported = orig })
+	codexExecResumeSupported = func() bool { return false }
+
 	err := validateLaunchOptions(LaunchOptions{
 		Provider: ProviderCodex,
 		Resume:   "sess-123",
 	})
 	if err == nil {
-		t.Fatal("expected error for codex resume")
+		t.Fatal("expected error when local codex install lacks exec resume")
 	}
-	if !strings.Contains(err.Error(), "does not support resume") {
+	if !strings.Contains(err.Error(), "does not support exec resume") {
 		t.Errorf("error = %q", err)
-	}
-}
-
-func TestUnsupportedOptionsWarningsCodexResume(t *testing.T) {
-	warnings := UnsupportedOptionsWarnings(ProviderCodex, LaunchOptions{
-		Resume: "sess-123",
-	})
-	if len(warnings) == 0 {
-		t.Fatal("expected warning")
-	}
-	if !strings.Contains(warnings[0], "unsupported") {
-		t.Fatalf("warning = %q", warnings[0])
 	}
 }
 
@@ -1095,6 +1101,13 @@ func TestValidateLaunchOptions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			orig := codexExecResumeSupported
+			t.Cleanup(func() { codexExecResumeSupported = orig })
+			codexExecResumeSupported = func() bool { return false }
+			if tt.name == "codex_with_resume" {
+				codexExecResumeSupported = func() bool { return true }
+				tt.wantErr = false
+			}
 			err := validateLaunchOptions(tt.opts)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateLaunchOptions() error = %v, wantErr %v", err, tt.wantErr)
@@ -1120,10 +1133,10 @@ func TestUnsupportedOptionsWarnings_AllFields(t *testing.T) {
 		t.Errorf("gemini warnings count = %d, want 6: %v", len(gw), gw)
 	}
 
-	// Codex: system_prompt, max_budget, agent, max_turns, allowed_tools, worktree, resume
+	// Codex: system_prompt, max_budget, agent, max_turns, allowed_tools, worktree
 	cw := UnsupportedOptionsWarnings(ProviderCodex, opts)
-	if len(cw) != 7 {
-		t.Errorf("codex warnings count = %d, want 7: %v", len(cw), cw)
+	if len(cw) != 6 {
+		t.Errorf("codex warnings count = %d, want 6: %v", len(cw), cw)
 	}
 
 	// Empty provider treated as Claude

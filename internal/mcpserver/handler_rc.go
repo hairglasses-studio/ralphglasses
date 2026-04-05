@@ -369,7 +369,7 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 
 	provider := session.Provider(pp.StringOpt("provider", ""))
 	if provider == "" {
-		provider = session.ProviderClaude
+		provider = session.DefaultPrimaryProvider()
 	}
 	if err := session.ValidateProvider(provider); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid provider: %v", err)), nil

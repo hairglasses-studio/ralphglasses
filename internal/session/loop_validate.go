@@ -10,14 +10,14 @@ import (
 // consolidating fields from LoopProfile and LaunchOptions that benefit
 // from pre-flight validation.
 type LoopConfig struct {
-	Provider        Provider      `json:"provider"`
-	Model           string        `json:"model"`
-	BudgetUSD       float64       `json:"budget_usd,omitempty"`
-	EnhancePrompt   bool          `json:"enhance_prompt,omitempty"`
-	EnhancerProvider string       `json:"enhancer_provider,omitempty"` // provider configured for enhancement
-	WorkerProvider   Provider     `json:"worker_provider,omitempty"`   // worker session provider
-	EnableWorkerEnhancement bool  `json:"enable_worker_enhancement,omitempty"` // prompt enhancement before worker calls
-	Timeout         time.Duration `json:"timeout,omitempty"`
+	Provider                Provider      `json:"provider"`
+	Model                   string        `json:"model"`
+	BudgetUSD               float64       `json:"budget_usd,omitempty"`
+	EnhancePrompt           bool          `json:"enhance_prompt,omitempty"`
+	EnhancerProvider        string        `json:"enhancer_provider,omitempty"`         // provider configured for enhancement
+	WorkerProvider          Provider      `json:"worker_provider,omitempty"`           // worker session provider
+	EnableWorkerEnhancement bool          `json:"enable_worker_enhancement,omitempty"` // prompt enhancement before worker calls
+	Timeout                 time.Duration `json:"timeout,omitempty"`
 }
 
 // LoopValidationWarning describes a single validation issue with a loop config.
@@ -86,15 +86,6 @@ func ValidateLoopConfig(cfg LoopConfig) []LoopValidationWarning {
 		warnings = append(warnings, LoopValidationWarning{
 			Field:   "enhance_prompt",
 			Message: "prompt enhancement enabled but no enhancer provider is configured",
-		})
-	}
-
-	// 3b. Worker enhancement with non-Claude worker: enhancement has no effect
-	// because only Claude supports prompt caching and structured enhancement.
-	if cfg.EnableWorkerEnhancement && cfg.WorkerProvider != "" && cfg.WorkerProvider != ProviderClaude {
-		warnings = append(warnings, LoopValidationWarning{
-			Field:   "enable_worker_enhancement",
-			Message: fmt.Sprintf("worker enhancement enabled but worker provider is %q — enhancement only has effect with Claude workers", cfg.WorkerProvider),
 		})
 	}
 
@@ -201,11 +192,6 @@ func ValidateLoopProfile(p LoopProfile) error {
 
 	if p.StallTimeout < 0 {
 		return fmt.Errorf("stall_timeout must be non-negative, got %s", p.StallTimeout)
-	}
-
-	// Worker enhancement with non-Claude worker has no effect.
-	if p.EnableWorkerEnhancement && p.WorkerProvider != "" && p.WorkerProvider != ProviderClaude {
-		return fmt.Errorf("enable_worker_enhancement has no effect with non-Claude worker provider %q", p.WorkerProvider)
 	}
 
 	if p.HardBudgetCapUSD < 0 {

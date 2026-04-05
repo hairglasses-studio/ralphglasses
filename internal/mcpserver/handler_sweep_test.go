@@ -242,7 +242,7 @@ func TestSweepLaunch_BudgetCapExceeded(t *testing.T) {
 		"prompt":               "Audit this repo",
 		"repos":                "all",
 		"limit":                float64(20),
-		"model":                "opus",
+		"model":                "gpt-5.4",
 		"budget_usd":           float64(10),
 		"max_sweep_budget_usd": float64(50), // 20 repos × $10 > $50 cap
 	}
@@ -269,7 +269,7 @@ func TestSweepLaunch_InvalidModel(t *testing.T) {
 	req.Params.Arguments = map[string]any{
 		"prompt": "Audit this repo",
 		"repos":  `["test"]`,
-		"model":  "gpt-4o", // wrong provider prefix for claude
+		"model":  "claude-opus", // wrong provider prefix for codex
 	}
 
 	result, err := s.handleSweepLaunch(context.Background(), req)
@@ -294,7 +294,7 @@ func TestSweepLaunch_CostEstimateInResponse(t *testing.T) {
 	req.Params.Arguments = map[string]any{
 		"prompt": "Audit this repo",
 		"repos":  `["test"]`,
-		"model":  "opus",
+		"model":  "gpt-5.4",
 	}
 
 	result, err := s.handleSweepLaunch(context.Background(), req)

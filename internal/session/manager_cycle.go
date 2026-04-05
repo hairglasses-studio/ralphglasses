@@ -322,7 +322,7 @@ func (m *Manager) RunCycle(ctx context.Context, repoPath, name, objective string
 			continue
 		}
 		opts := LaunchOptions{
-			Provider:     ProviderClaude,
+			Provider:     DefaultPrimaryProvider(),
 			RepoPath:     repoPath,
 			SessionName:  fmt.Sprintf("%s-task-%d", name, i),
 			MaxTurns:     20,
@@ -465,4 +465,3 @@ func buildSynthesisFromFindings(cycle *CycleRun) CycleSynthesis {
 
 // timeNow is a package-level function for testability.
 var timeNow = func() time.Time { return time.Now() }
-

@@ -18,7 +18,7 @@ func (s *Server) getEngine() *enhancer.HybridEngine {
 	s.engineOnce.Do(func() {
 		provider := os.Getenv("PROMPT_IMPROVER_PROVIDER")
 		if provider == "" {
-			provider = "claude"
+			provider = "openai"
 		}
 		s.Engine = enhancer.NewHybridEngine(enhancer.LLMConfig{
 			Enabled:  hasAPIKeyForProvider(provider),
@@ -153,7 +153,7 @@ func (s *Server) handlePromptImprove(ctx context.Context, req mcp.CallToolReques
 	// If a specific provider is requested, create a one-off client for it
 	providerStr := getStringArg(req, "provider")
 	var client enhancer.PromptImprover
-	if providerStr != "" && providerStr != "claude" {
+	if providerStr != "" && providerStr != "openai" {
 		client = enhancer.NewPromptImprover(enhancer.LLMConfig{
 			Enabled:  true,
 			Provider: providerStr,
@@ -166,12 +166,14 @@ func (s *Server) handlePromptImprove(ctx context.Context, req mcp.CallToolReques
 	}
 
 	if client == nil {
-		apiHint := "ANTHROPIC_API_KEY"
+		apiHint := "OPENAI_API_KEY"
 		switch providerStr {
+		case "", "openai":
+			apiHint = "OPENAI_API_KEY"
 		case "gemini":
 			apiHint = "GOOGLE_API_KEY"
-		case "openai":
-			apiHint = "OPENAI_API_KEY"
+		case "claude":
+			apiHint = "ANTHROPIC_API_KEY"
 		}
 		return codedError(ErrProviderUnavailable, fmt.Sprintf("LLM not available: set %s", apiHint)), nil
 	}

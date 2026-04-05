@@ -24,7 +24,7 @@ type ModelTier struct {
 	Model         string   `json:"model"`
 	MaxComplexity int      `json:"max_complexity"` // 1-4 scale
 	CostPer1M     float64  `json:"cost_per_1m"`    // input cost per 1M tokens
-	Label         string   `json:"label"`           // e.g. "ultra-cheap", "worker", "coding", "reasoning"
+	Label         string   `json:"label"`          // e.g. "ultra-cheap", "worker", "coding", "reasoning"
 }
 
 // DefaultModelTiers returns the built-in tier list ordered by cost.
@@ -32,7 +32,7 @@ func DefaultModelTiers() []ModelTier {
 	return []ModelTier{
 		{Provider: ProviderGemini, Model: "gemini-2.0-flash-lite", MaxComplexity: 1, CostPer1M: CostGeminiFlashLiteInput, Label: "ultra-cheap"},
 		{Provider: ProviderGemini, Model: "gemini-2.5-flash", MaxComplexity: 2, CostPer1M: CostGeminiFlashInput, Label: "worker"},
-		{Provider: ProviderClaude, Model: "claude-sonnet", MaxComplexity: 3, CostPer1M: CostClaudeSonnetInput, Label: "coding"},
+		{Provider: ProviderCodex, Model: "gpt-5.4", MaxComplexity: 3, CostPer1M: CostCodexInput, Label: "coding"},
 		{Provider: ProviderClaude, Model: "claude-opus", MaxComplexity: 4, CostPer1M: CostClaudeOpusInput, Label: "reasoning"},
 	}
 }

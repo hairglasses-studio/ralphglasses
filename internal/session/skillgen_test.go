@@ -51,4 +51,32 @@ func TestGenerateSkillFile(t *testing.T) {
 	if !strings.Contains(content, "**ralphglasses_status**: Get server status") {
 		t.Error("expected tool description")
 	}
+
+	agentsPath := filepath.Join(dir, ".agents", "skills", "ralphglasses", "SKILL.md")
+	agentsData, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read codex skill file: %v", err)
+	}
+	if string(agentsData) != content {
+		t.Error("expected Claude and Codex skill exports to match")
+	}
+
+	pluginSkillPath := filepath.Join(dir, "plugins", "ralphglasses", "skills", "ralphglasses", "SKILL.md")
+	pluginSkillData, err := os.ReadFile(pluginSkillPath)
+	if err != nil {
+		t.Fatalf("read codex plugin skill file: %v", err)
+	}
+	if string(pluginSkillData) != content {
+		t.Error("expected plugin bundle skill export to match primary skill content")
+	}
+
+	pluginManifestPath := filepath.Join(dir, "plugins", "ralphglasses", ".codex-plugin", "plugin.json")
+	if _, err := os.Stat(pluginManifestPath); err != nil {
+		t.Fatalf("expected plugin manifest to exist: %v", err)
+	}
+
+	marketplacePath := filepath.Join(dir, ".agents", "plugins", "marketplace.json")
+	if _, err := os.Stat(marketplacePath); err != nil {
+		t.Fatalf("expected marketplace manifest to exist: %v", err)
+	}
 }

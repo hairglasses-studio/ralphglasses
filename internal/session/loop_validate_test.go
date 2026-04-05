@@ -120,18 +120,17 @@ func TestValidateLoopConfig_EnhancementWithoutProvider(t *testing.T) {
 	}
 }
 
-func TestValidateLoopConfig_WorkerEnhancementNonClaude(t *testing.T) {
+func TestValidateLoopConfig_WorkerEnhancementProviderAgnostic(t *testing.T) {
 	tests := []struct {
 		name           string
 		workerProvider Provider
 		enableEnhance  bool
-		wantWarn       bool
 	}{
-		{"claude worker with enhancement: no warn", ProviderClaude, true, false},
-		{"gemini worker with enhancement: warn", ProviderGemini, true, true},
-		{"codex worker with enhancement: warn", ProviderCodex, true, true},
-		{"gemini worker no enhancement: no warn", ProviderGemini, false, false},
-		{"empty provider with enhancement: no warn", "", true, false},
+		{"claude worker with enhancement: no warn", ProviderClaude, true},
+		{"gemini worker with enhancement: no warn", ProviderGemini, true},
+		{"codex worker with enhancement: no warn", ProviderCodex, true},
+		{"gemini worker no enhancement: no warn", ProviderGemini, false},
+		{"empty provider with enhancement: no warn", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -146,20 +145,20 @@ func TestValidateLoopConfig_WorkerEnhancementNonClaude(t *testing.T) {
 					hasWarn = true
 				}
 			}
-			if hasWarn != tt.wantWarn {
-				t.Errorf("worker enhancement warning: got %v, want %v (warnings: %v)", hasWarn, tt.wantWarn, warnings)
+			if hasWarn {
+				t.Errorf("unexpected worker enhancement warning for provider %q: %v", tt.workerProvider, warnings)
 			}
 		})
 	}
 }
 
-func TestValidateLoopProfile_WorkerEnhancementNonClaude(t *testing.T) {
+func TestValidateLoopProfile_WorkerEnhancementProviderAgnostic(t *testing.T) {
 	p := validProfile()
 	p.EnableWorkerEnhancement = true
 	p.WorkerProvider = ProviderGemini
 	p.WorkerModel = "gemini-2.5-pro"
-	if err := ValidateLoopProfile(p); err == nil {
-		t.Error("expected error for worker enhancement with non-Claude provider")
+	if err := ValidateLoopProfile(p); err != nil {
+		t.Errorf("unexpected error for gemini worker enhancement: %v", err)
 	}
 
 	// Claude worker + enhancement should be fine.
@@ -170,12 +169,21 @@ func TestValidateLoopProfile_WorkerEnhancementNonClaude(t *testing.T) {
 		t.Errorf("unexpected error for Claude worker with enhancement: %v", err)
 	}
 
-	// Enhancement disabled with non-Claude: no error.
+	// Codex worker + enhancement should also be fine.
 	p3 := validProfile()
-	p3.EnableWorkerEnhancement = false
-	p3.WorkerProvider = ProviderGemini
-	p3.WorkerModel = "gemini-2.5-pro"
+	p3.EnableWorkerEnhancement = true
+	p3.WorkerProvider = ProviderCodex
+	p3.WorkerModel = "gpt-5.4"
 	if err := ValidateLoopProfile(p3); err != nil {
+		t.Errorf("unexpected error for Codex worker with enhancement: %v", err)
+	}
+
+	// Enhancement disabled with non-Claude: no error.
+	p4 := validProfile()
+	p4.EnableWorkerEnhancement = false
+	p4.WorkerProvider = ProviderGemini
+	p4.WorkerModel = "gemini-2.5-pro"
+	if err := ValidateLoopProfile(p4); err != nil {
 		t.Errorf("unexpected error for disabled enhancement: %v", err)
 	}
 }

@@ -12,7 +12,7 @@ func (s *Server) buildSweepGroup() ToolGroup {
 			{mcp.NewTool("ralphglasses_sweep_generate",
 				mcp.WithDescription("Generate an optimized audit prompt using the 13-stage enhancer pipeline. Returns enhanced prompt text, quality score, and stages applied."),
 				mcp.WithString("task_type", mcp.Description("Task type for prompt template: audit (default), fix, review, improve")),
-				mcp.WithString("target_provider", mcp.Description("Target model provider for structure style: claude (default), gemini, openai")),
+				mcp.WithString("target_provider", mcp.Description("Target model provider for structure style: openai (default), claude, gemini")),
 				mcp.WithString("custom_prompt", mcp.Description("Custom base prompt instead of built-in template. Will be enhanced through the pipeline.")),
 			), s.handleSweepGenerate},
 			{mcp.NewTool("ralphglasses_sweep_launch",

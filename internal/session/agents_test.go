@@ -11,6 +11,7 @@ func TestWriteAndListAgents(t *testing.T) {
 
 	def := AgentDef{
 		Name:        "reviewer",
+		Provider:    ProviderClaude,
 		Description: "Code reviewer agent",
 		Model:       "sonnet",
 		Tools:       []string{"Read", "Grep", "Glob"},
@@ -47,7 +48,7 @@ func TestWriteAndListAgents(t *testing.T) {
 	}
 
 	// List agents
-	agents, err := ListAgents(root)
+	agents, err := DiscoverAgents(root, ProviderClaude)
 	if err != nil {
 		t.Fatalf("ListAgents: %v", err)
 	}
@@ -195,7 +196,7 @@ func TestComposeAgents_NotFound(t *testing.T) {
 func TestComposeAgents_DefaultProvider(t *testing.T) {
 	root := t.TempDir()
 
-	if err := WriteAgent(root, AgentDef{Name: "a", Prompt: "hello"}); err != nil {
+	if err := WriteAgent(root, AgentDef{Name: "a", Provider: ProviderCodex, Prompt: "hello"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -203,8 +204,8 @@ func TestComposeAgents_DefaultProvider(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ComposeAgents: %v", err)
 	}
-	if composite.Provider != ProviderClaude {
-		t.Errorf("Provider = %q, want claude (default)", composite.Provider)
+	if composite.Provider != ProviderCodex {
+		t.Errorf("Provider = %q, want codex (default)", composite.Provider)
 	}
 }
 
@@ -253,7 +254,7 @@ func TestParseAgentsMd_Empty(t *testing.T) {
 func TestDiscoverCodexAgents(t *testing.T) {
 	root := t.TempDir()
 
-	// No AGENTS.md — returns nil
+	// No .codex/agents or AGENTS.md — returns nil
 	agents, err := discoverCodexAgents(root)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -262,9 +263,19 @@ func TestDiscoverCodexAgents(t *testing.T) {
 		t.Errorf("expected nil agents, got %v", agents)
 	}
 
-	// Create AGENTS.md
-	content := "## CodeReview\nReview all pull requests.\n"
-	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte(content), 0644); err != nil {
+	// Create .codex/agents/reviewer.toml
+	dir := filepath.Join(root, ".codex", "agents")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	content := `name = "CodeReview"
+description = "Review code changes"
+model = "gpt-5.4"
+developer_instructions = """
+Review all pull requests.
+"""
+`
+	if err := os.WriteFile(filepath.Join(dir, "reviewer.toml"), []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -277,6 +288,25 @@ func TestDiscoverCodexAgents(t *testing.T) {
 	}
 	if agents[0].Name != "CodeReview" {
 		t.Errorf("name = %q, want CodeReview", agents[0].Name)
+	}
+	if agents[0].Prompt != "Review all pull requests." {
+		t.Errorf("prompt = %q", agents[0].Prompt)
+	}
+}
+
+func TestDiscoverCodexAgents_LegacyAGENTSFallback(t *testing.T) {
+	root := t.TempDir()
+	content := "## CodeReview\nReview all pull requests.\n"
+	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	agents, err := discoverCodexAgents(root)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(agents) != 1 {
+		t.Fatalf("expected 1 agent, got %d", len(agents))
 	}
 }
 
@@ -293,15 +323,15 @@ func TestWriteCodexAgent(t *testing.T) {
 		t.Fatalf("writeCodexAgent: %v", err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(root, "AGENTS.md"))
+	data, err := os.ReadFile(filepath.Join(root, ".codex", "agents", "TestAgent.toml"))
 	if err != nil {
-		t.Fatalf("read AGENTS.md: %v", err)
+		t.Fatalf("read Codex agent file: %v", err)
 	}
-	if !contains(string(data), "## TestAgent") {
-		t.Error("AGENTS.md missing agent header")
+	if !contains(string(data), `name = "TestAgent"`) {
+		t.Error("Codex agent file missing name")
 	}
-	if !contains(string(data), "Do test things") {
-		t.Error("AGENTS.md missing agent prompt")
+	if !contains(string(data), "developer_instructions = \"\"\"") {
+		t.Error("Codex agent file missing developer instructions block")
 	}
 
 	// Update existing agent
@@ -310,12 +340,12 @@ func TestWriteCodexAgent(t *testing.T) {
 		t.Fatalf("writeCodexAgent update: %v", err)
 	}
 
-	data, err = os.ReadFile(filepath.Join(root, "AGENTS.md"))
+	data, err = os.ReadFile(filepath.Join(root, ".codex", "agents", "TestAgent.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !contains(string(data), "Updated prompt") {
-		t.Error("AGENTS.md not updated with new prompt")
+		t.Error("Codex agent file not updated with new prompt")
 	}
 }
 

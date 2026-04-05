@@ -2,7 +2,7 @@
 
 **Command-and-control TUI + bootable thin client for parallel multi-LLM agent fleets.**
 
-ralphglasses is a k9s-style terminal UI built with Go and [Charmbracelet](https://charm.sh/) that manages multi-session, multi-provider LLM loops from any terminal. It supports **Claude Code**, **Gemini CLI**, and **OpenAI Codex CLI** as session providers, with Claude serving as the primary orchestrator.
+ralphglasses is a k9s-style terminal UI built with Go and [Charmbracelet](https://charm.sh/) that manages multi-session, multi-provider LLM loops from any terminal. It supports **Claude Code**, **Gemini CLI**, and **OpenAI Codex CLI** as session providers, with Codex now serving as the default command-and-control runtime.
 
 ---
 
@@ -48,6 +48,7 @@ claude mcp add ralphglasses -- go run . mcp
 | [Architecture](ARCHITECTURE.md) | Package layout, provider dispatch, middleware, fleet, tiered routing |
 | [MCP Tools](MCP-TOOLS.md) | Full 126-tool table with descriptions and deferred loading |
 | [Provider Setup](PROVIDER-SETUP.md) | Multi-provider prerequisites, env vars, orchestration pattern |
+| [Codex Reference](CODEX-REFERENCE.md) | Codex-first defaults, pinned docs, Claude cache guardrails |
 | [Marathon](MARATHON.md) | Marathon supervisor, RC tools, environment setup |
 | [Autonomy](AUTONOMY.md) | Autonomy levels, self-improvement subsystems |
 | [Self-Learning](SELF-LEARNING.md) | 9 self-learning subsystems, task discovery, cascade routing |

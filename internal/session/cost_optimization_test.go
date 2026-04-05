@@ -365,16 +365,21 @@ func TestCacheManager_LookupHit(t *testing.T) {
 func TestCacheManager_EstimateSavings(t *testing.T) {
 	cm := NewCacheManager(DefaultCacheManagerConfig())
 
-	// Claude: $3/M input, 90% savings → $2.70/M saved.
+	// Claude savings are now pessimistic by default until live cache reads are observed.
 	savings := cm.EstimateSavings(ProviderClaude, 1_000_000)
-	if savings < 2.69 || savings > 2.71 {
-		t.Errorf("Claude savings for 1M tokens: got $%.2f, want ~$2.70", savings)
+	if savings != 0 {
+		t.Errorf("Claude savings for 1M tokens: got $%.2f, want $0.00 by default", savings)
 	}
 
 	// Gemini: $0.50/M input, 75% savings → $0.375/M saved.
 	savings = cm.EstimateSavings(ProviderGemini, 1_000_000)
 	if savings < 0.37 || savings > 0.38 {
 		t.Errorf("Gemini savings for 1M tokens: got $%.3f, want ~$0.375", savings)
+	}
+
+	savings = cm.EstimateSavings(ProviderCodex, 1_000_000)
+	if savings <= 0 {
+		t.Errorf("Codex savings for 1M tokens: got $%.3f, want positive savings", savings)
 	}
 }
 
@@ -383,17 +388,17 @@ func TestCacheManager_SavingsAccumulate(t *testing.T) {
 		MinPrefixLen: 20,
 		MaxEntries:   100,
 		TTL:          5 * time.Minute,
-		SavingsRate:  map[Provider]float64{ProviderClaude: 0.90},
+		SavingsRate:  map[Provider]float64{ProviderCodex: 0.50},
 	})
 
 	prompt := "## Instructions\nYou are a helpful coding assistant.\nPlease write clean Go code."
 
 	// Register prefix.
-	cm.LookupPrefix(ProviderClaude, prompt)
+	cm.LookupPrefix(ProviderCodex, prompt)
 	// Hit it multiple times.
-	cm.LookupPrefix(ProviderClaude, prompt)
-	cm.LookupPrefix(ProviderClaude, prompt)
-	cm.LookupPrefix(ProviderClaude, prompt)
+	cm.LookupPrefix(ProviderCodex, prompt)
+	cm.LookupPrefix(ProviderCodex, prompt)
+	cm.LookupPrefix(ProviderCodex, prompt)
 
 	stats := cm.Stats()
 	if stats.EstimatedSavings <= 0 {
@@ -531,15 +536,15 @@ func TestIntegration_TokenCountingWithCacheSavings(t *testing.T) {
 		MinPrefixLen: 20,
 		MaxEntries:   100,
 		TTL:          5 * time.Minute,
-		SavingsRate:  map[Provider]float64{ProviderClaude: 0.90},
+		SavingsRate:  map[Provider]float64{ProviderCodex: 0.50},
 	})
 
 	prompt := "## Instructions\nYou are a helpful coding assistant.\nPlease implement the feature described below.\nFeature: add retry logic"
 
 	// Simulate two sessions with the same system prompt prefix.
 	for i, sid := range []string{"s1", "s2"} {
-		tokens := tc.RecordInput(sid, ProviderClaude, prompt)
-		_, hit := cm.LookupPrefix(ProviderClaude, prompt)
+		tokens := tc.RecordInput(sid, ProviderCodex, prompt)
+		_, hit := cm.LookupPrefix(ProviderCodex, prompt)
 
 		if i == 0 && hit {
 			t.Error("first session should not be a cache hit")

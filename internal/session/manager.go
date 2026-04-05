@@ -19,54 +19,54 @@ import (
 // DefaultStateDir is the shared directory for session state persistence.
 const DefaultStateDir = "~/.ralphglasses/sessions"
 
-// Manager tracks all active Claude Code sessions and teams.
+// Manager tracks all active provider sessions and teams.
 type Manager struct {
-	sessionsMu    sync.RWMutex
-	sessions      map[string]*Session     // keyed by session ID
-	statusCache   sync.Map                // hot-read path: session ID -> SessionStatus (Phase 10.5.1)
+	sessionsMu  sync.RWMutex
+	sessions    map[string]*Session // keyed by session ID
+	statusCache sync.Map            // hot-read path: session ID -> SessionStatus (Phase 10.5.1)
 
-	workersMu     sync.RWMutex
-	teams         map[string]*TeamStatus  // keyed by team name
-	workflowRuns  map[string]*WorkflowRun // keyed by workflow run ID
-	loops         map[string]*LoopRun     // keyed by loop run ID
-	totalPrunedThisSession int             // counter for pruned runs this session
+	workersMu              sync.RWMutex
+	teams                  map[string]*TeamStatus  // keyed by team name
+	workflowRuns           map[string]*WorkflowRun // keyed by workflow run ID
+	loops                  map[string]*LoopRun     // keyed by loop run ID
+	totalPrunedThisSession int                     // counter for pruned runs this session
 
-	configMu      sync.RWMutex
-	bus           *events.Bus
-	stateDir      string // directory for persisted session JSON files
-	optimizer     *AutoOptimizer          // Level 2+ self-improvement engine
-	reflexion     *ReflexionStore         // WS1: failure reflection extraction
-	episodic      *EpisodicMemory         // WS2: successful trajectory memory
-	cascade       *CascadeRouter          // WS3: cheap-then-expensive provider routing
-	curriculum    *CurriculumSorter       // WS5: task difficulty scoring and ordering
-	banditSelect func() (string, string) // bandit-based provider selection hook
-	banditUpdate func(string, float64)   // bandit reward recording hook
-	blackboard   *Blackboard             // Phase H: shared inter-subsystem state
-	costPredictor *CostPredictor         // Phase H: task cost prediction
-	noopDetector    *NoOpDetector          // WS2-noop: consecutive no-op iteration detection
-	budgetEnforcer  *BudgetEnforcer        // WS5: secondary budget enforcement for loops
-	depthEstimator  *DepthEstimator        // Phase 10.5.5: adaptive iteration depth
-	store           Store                  // pluggable session persistence (default: MemoryStore)
+	configMu       sync.RWMutex
+	bus            *events.Bus
+	stateDir       string                  // directory for persisted session JSON files
+	optimizer      *AutoOptimizer          // Level 2+ self-improvement engine
+	reflexion      *ReflexionStore         // WS1: failure reflection extraction
+	episodic       *EpisodicMemory         // WS2: successful trajectory memory
+	cascade        *CascadeRouter          // WS3: cheap-then-expensive provider routing
+	curriculum     *CurriculumSorter       // WS5: task difficulty scoring and ordering
+	banditSelect   func() (string, string) // bandit-based provider selection hook
+	banditUpdate   func(string, float64)   // bandit reward recording hook
+	blackboard     *Blackboard             // Phase H: shared inter-subsystem state
+	costPredictor  *CostPredictor          // Phase H: task cost prediction
+	noopDetector   *NoOpDetector           // WS2-noop: consecutive no-op iteration detection
+	budgetEnforcer *BudgetEnforcer         // WS5: secondary budget enforcement for loops
+	depthEstimator *DepthEstimator         // Phase 10.5.5: adaptive iteration depth
+	store          Store                   // pluggable session persistence (default: MemoryStore)
 	launchSession  func(context.Context, LaunchOptions) (*Session, error)
 	waitSession    func(context.Context, *Session) error
 	healthCheck    func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
 	supervisor     *Supervisor                   // autonomous R&D supervisor, runs at level >= 2
 
-	SessionTimeout     time.Duration               // timeout for waitForSession; 0 uses default (10m)
-	KillTimeout        time.Duration               // SIGTERM→SIGKILL escalation timeout; 0 uses default (5s)
-	ErrorRetention     time.Duration               // how long errored sessions remain queryable; 0 uses default (5m)
-	MinSessionDuration time.Duration               // sessions younger than this are protected from reaper; 0 uses default (30s)
-	Enhancer         *enhancer.HybridEngine      // optional prompt enhancement for loop integration
-	promptEvolution  *PromptEvolution            // tournament-based prompt variant selection
-	FleetPool      *pool.State                   // fleet-wide budget pooling and metrics aggregation
-	worktreePool   *WorktreePool                // Phase 10.5.8: reusable worktree pool
+	SessionTimeout     time.Duration          // timeout for waitForSession; 0 uses default (10m)
+	KillTimeout        time.Duration          // SIGTERM→SIGKILL escalation timeout; 0 uses default (5s)
+	ErrorRetention     time.Duration          // how long errored sessions remain queryable; 0 uses default (5m)
+	MinSessionDuration time.Duration          // sessions younger than this are protected from reaper; 0 uses default (30s)
+	Enhancer           *enhancer.HybridEngine // optional prompt enhancement for loop integration
+	promptEvolution    *PromptEvolution       // tournament-based prompt variant selection
+	FleetPool          *pool.State            // fleet-wide budget pooling and metrics aggregation
+	worktreePool       *WorktreePool          // Phase 10.5.8: reusable worktree pool
 
 	DefaultBudgetUSD float64 // from RALPH_SESSION_BUDGET; applied when Launch opts has no budget
 
 	// WS-7: Loop engine hygiene — auto-prune and journal consolidation config.
-	PruneRetention   time.Duration // max age for stale loop runs; 0 uses default (7 days)
-	PruneMaxRuns     int           // unused currently; reserved for max run cap
-	JournalMaxEntries int          // auto-consolidation threshold; 0 uses default (100)
+	PruneRetention    time.Duration // max age for stale loop runs; 0 uses default (7 days)
+	PruneMaxRuns      int           // unused currently; reserved for max run cap
+	JournalMaxEntries int           // auto-consolidation threshold; 0 uses default (100)
 }
 
 // DefaultEstimatedSessionCost is the conservative per-launch cost estimate
@@ -503,7 +503,7 @@ func (m *Manager) runWorkflowParallelGroup(ctx context.Context, run *WorkflowRun
 func (m *Manager) runWorkflowStep(ctx context.Context, run *WorkflowRun, repoPath string, step WorkflowStep) workflowStepOutcome {
 	provider := Provider(step.Provider)
 	if provider == "" {
-		provider = ProviderClaude
+		provider = DefaultPrimaryProvider()
 	}
 
 	started := time.Now()
@@ -606,4 +606,3 @@ func (m *Manager) SnapshotSessions() []pool.SessionSnapshot {
 	}
 	return snaps
 }
-

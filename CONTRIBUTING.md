@@ -225,9 +225,9 @@ codex exec --full-auto "Read AGENTS.md, then fix the failing test in internal/se
 
 | Feature | Claude Code | Gemini CLI | Codex CLI |
 |---------|------------|------------|-----------|
-| Resume session | Yes | Yes | No |
+| Resume session | Yes | Yes | Yes (`codex exec resume`, install-dependent) |
 | Budget enforcement | Yes (external) | No | No |
-| Agent definitions | Yes (`.claude/agents/`) | No | No |
+| Agent definitions | Yes (`.claude/agents/`) | No | Yes (`.codex/agents/*.toml`, plus `AGENTS.md` project instructions) |
 | Worktree isolation | Yes | No | No |
 | System prompt flag | Yes (`-s`) | No | No |
 | MCP client | Yes | Yes | Yes |
@@ -235,11 +235,12 @@ codex exec --full-auto "Read AGENTS.md, then fix the failing test in internal/se
 | Autonomous mode | `--allowedTools` | `--yolo` | `--full-auto` |
 | Streaming output | `stream-json` | `stream-json` | `--json` (NDJSON) |
 | Project instructions | `CLAUDE.md` | `GEMINI.md` | `AGENTS.md` |
+| Skills/plugins | Skills only | Limited | Skills + plugins + subagents |
 
 Codex loops:
-- Planner default: `o1-pro`
-- Worker/verifier default: `gpt-5.4-xhigh`
-- Session resume remains unsupported; use `ralphglasses_session_retry` instead.
+- Planner default: `o4-mini`
+- Worker/verifier default: `codex-mini-latest`
+- Session resume is supported when the installed Codex CLI exposes `exec resume`.
 
 ## Cost Optimization
 
@@ -247,9 +248,9 @@ Codex loops:
 |-----------|---------------------|-----|
 | Complex architecture | Claude | Best reasoning, agent support |
 | Bulk code generation | Gemini | Fast, large context |
-| Implementation | Codex (gpt-5.4-xhigh) | Best non-thinking, default |
-| Deep reasoning | Codex (o1-pro) | Extended thinking for architecture |
-| Balanced tasks | Codex (gpt-4.1) | Good quality, moderate cost |
+| Implementation | Codex (gpt-5.4) | Default primary control-plane model |
+| Deep reasoning | Claude or frontier Codex override | Use the expensive lane intentionally |
+| Balanced tasks | Codex (o4-mini) | Good quality, moderate cost |
 | Bulk/cheap tasks | Codex (o4-mini) | Fast, lowest cost |
 | Test writing | Codex or Gemini | High volume, lower complexity |
 | Code review | Claude or Gemini | Nuanced feedback |

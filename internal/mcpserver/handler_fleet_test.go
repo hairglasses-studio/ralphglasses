@@ -85,11 +85,11 @@ func TestHandleFleetSubmit_ValidCoordinator(t *testing.T) {
 	srv.FleetCoordinator = coord
 
 	result, err := srv.handleFleetSubmit(context.Background(), makeRequest(map[string]any{
-		"repo":     "test-repo",
-		"prompt":   "implement feature X",
-		"provider": "claude",
-		"budget_usd":   float64(10),
-		"priority": float64(3),
+		"repo":       "test-repo",
+		"prompt":     "implement feature X",
+		"provider":   "claude",
+		"budget_usd": float64(10),
+		"priority":   float64(3),
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -785,7 +785,8 @@ func TestHandleProviderRecommend_ColdStartBootstrap(t *testing.T) {
 		t.Errorf("expected confidence=low, got: %s", text)
 	}
 
-	// Complex task (architecture/planning) should pick Claude.
+	// Complex cold-start routing now defaults to the Codex control-plane lane
+	// unless feedback data has established a stronger Claude preference.
 	result2, err := srv.handleProviderRecommend(context.Background(), makeRequest(map[string]any{
 		"task": "plan the system architecture for the new module",
 	}))
@@ -793,8 +794,8 @@ func TestHandleProviderRecommend_ColdStartBootstrap(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	text2 := getResultText(result2)
-	if !strings.Contains(text2, `"provider":"claude"`) {
-		t.Errorf("expected provider=claude for architecture task, got: %s", text2)
+	if !strings.Contains(text2, `"provider":"codex"`) {
+		t.Errorf("expected provider=codex for architecture task during cold start, got: %s", text2)
 	}
 	if !strings.Contains(text2, `"data_source":"heuristic"`) {
 		t.Errorf("expected data_source=heuristic for architecture task, got: %s", text2)

@@ -29,9 +29,8 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repoName)), nil
 	}
 
-	// For larger budgets (>$20), use the cost-optimized Sonnet-only profile
-	// which maximizes iterations per dollar. Smaller budgets use the default
-	// Opus planner profile for higher per-iteration quality.
+	// Larger budgets use the cheaper Codex planner profile for longer unattended
+	// runs. Smaller budgets use the stronger Codex-first planner profile.
 	budgetUSD := getNumberArg(req, "budget_usd", 0)
 	var profile session.LoopProfile
 	if budgetUSD > 20 {

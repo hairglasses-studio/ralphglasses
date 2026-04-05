@@ -104,11 +104,11 @@ func (h *Harness) RunScenario(ctx context.Context, s Scenario) (string, error) {
 
 	// Configure profile with scenario's verify commands
 	profile := session.LoopProfile{
-		PlannerProvider:      session.ProviderClaude,
+		PlannerProvider:      session.DefaultPrimaryProvider(),
 		PlannerModel:         "mock",
-		WorkerProvider:       session.ProviderClaude,
+		WorkerProvider:       session.DefaultPrimaryProvider(),
 		WorkerModel:          "mock",
-		VerifierProvider:     session.ProviderClaude,
+		VerifierProvider:     session.DefaultPrimaryProvider(),
 		VerifierModel:        "mock",
 		MaxConcurrentWorkers: 1,
 		RetryLimit:           1,
@@ -165,13 +165,13 @@ type ScenarioResult struct {
 // ObservationJSON returns the JSONL observation written during the scenario.
 func (r *ScenarioResult) ObservationJSON() string {
 	obs := session.LoopObservation{
-		Timestamp:   time.Now(),
-		RepoName:    "e2e-" + r.Scenario.Name,
-		Status:      r.Status,
-		TaskType:    r.Scenario.Category,
-		TaskTitle:   r.Scenario.Name,
+		Timestamp:    time.Now(),
+		RepoName:     "e2e-" + r.Scenario.Name,
+		Status:       r.Status,
+		TaskType:     r.Scenario.Category,
+		TaskTitle:    r.Scenario.Name,
 		TotalCostUSD: r.Scenario.MockCostUSD * 2, // planner + worker
-		Mode:        "mock",
+		Mode:         "mock",
 	}
 	data, _ := json.Marshal(obs)
 	return string(data)
