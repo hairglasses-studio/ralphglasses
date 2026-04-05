@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/hairglasses-studio/mcpkit/registry"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 
@@ -54,7 +55,7 @@ RALPHGLASSES_SCAN_PATH=~/hairglasses-studio for a custom scan path.`,
 		}
 		defer cleanup()
 
-		return server.ServeStdio(srv)
+		return registry.ServeAuto(srv)
 	},
 }
 
@@ -83,7 +84,7 @@ func setupMCP(sp string) (*server.MCPServer, func(), error) {
 
 	bus := events.NewBus(1000)
 
-	srv := server.NewMCPServer(
+	srv := registry.NewMCPServer(
 		"ralphglasses",
 		version+" ("+commit+")",
 		server.WithToolCapabilities(true),
