@@ -10,16 +10,22 @@ import (
 // Default model cost rates per 1M tokens (USD). These serve as the single
 // source of truth for all cost-aware subsystems. Update here when provider
 // pricing changes.
+//
+// Last verified: 2026-04-04 (sources: platform.claude.com, ai.google.dev, openai.com/api/pricing)
 const (
-	CostGeminiFlashLiteInput float64 = 0.10
-	CostGeminiFlashInput     float64 = 0.30
-	CostGeminiFlashOutput    float64 = 3.50
+	CostGeminiFlashLiteInput float64 = 0.075
+	CostGeminiFlashInput     float64 = 0.15
+	CostGeminiFlashOutput    float64 = 0.60
 	CostClaudeSonnetInput    float64 = 3.00
 	CostClaudeSonnetOutput   float64 = 15.00
 	CostClaudeOpusInput      float64 = 15.00
 	CostClaudeOpusOutput     float64 = 75.00
-	CostCodexInput           float64 = 2.50
-	CostCodexOutput          float64 = 15.00
+	CostCodexInput           float64 = 2.00
+	CostCodexOutput          float64 = 8.00
+	CostClaudeHaikuInput     float64 = 0.80
+	CostClaudeHaikuOutput    float64 = 4.00
+	CostGeminiProInput       float64 = 1.25
+	CostGeminiProOutput      float64 = 10.00
 )
 
 // ProviderCosts holds configurable per-model cost rates (USD per 1M tokens).
@@ -35,12 +41,16 @@ func DefaultProviderCosts() *ProviderCosts {
 		InputPerMToken: map[string]float64{
 			"gemini_flash_lite": CostGeminiFlashLiteInput,
 			"gemini_flash":      CostGeminiFlashInput,
+			"gemini_pro":        CostGeminiProInput,
+			"claude_haiku":      CostClaudeHaikuInput,
 			"claude_sonnet":     CostClaudeSonnetInput,
 			"claude_opus":       CostClaudeOpusInput,
 			"codex":             CostCodexInput,
 		},
 		OutputPerMToken: map[string]float64{
-			"gemini_flash": CostGeminiFlashOutput,
+			"gemini_flash":  CostGeminiFlashOutput,
+			"gemini_pro":    CostGeminiProOutput,
+			"claude_haiku":  CostClaudeHaikuOutput,
 			"claude_sonnet": CostClaudeSonnetOutput,
 			"claude_opus":   CostClaudeOpusOutput,
 			"codex":         CostCodexOutput,
