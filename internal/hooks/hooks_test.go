@@ -282,3 +282,93 @@ func TestLoadConfig_MissingFile(t *testing.T) {
 		t.Error("config should not be stored when hooks.yaml is missing")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Security: Vuln 4 — shell metacharacter rejection in LoadConfig
+// ---------------------------------------------------------------------------
+
+func TestLoadConfig_RejectsShellMetacharacters(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		command string
+	}{
+		{"semicolon", "echo hello; rm -rf /"},
+		{"pipe", "echo hello | cat"},
+		{"ampersand", "echo hello && rm -rf /"},
+		{"backtick", "echo `whoami`"},
+		{"dollar-paren", "echo $(id)"},
+		{"curly-braces", "echo ${PATH}"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			ralphDir := filepath.Join(dir, ".ralph")
+			_ = os.MkdirAll(ralphDir, 0755)
+
+			hooksYaml := `hooks:
+  session.started:
+    - name: bad-hook
+      command: "` + tc.command + `"
+`
+			_ = os.WriteFile(filepath.Join(ralphDir, "hooks.yaml"), []byte(hooksYaml), 0644)
+
+			bus := events.NewBus(100)
+			e := NewExecutor(bus)
+			err := e.LoadConfig(dir)
+			if err == nil {
+				t.Fatalf("expected error for metacharacter command %q, got nil", tc.command)
+			}
+			if !strings.Contains(err.Error(), "metacharacters") {
+				t.Errorf("error should contain 'metacharacters', got: %v", err)
+			}
+		})
+	}
+}
+
+func TestLoadConfig_RejectsEmptyHookName(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	ralphDir := filepath.Join(dir, ".ralph")
+	_ = os.MkdirAll(ralphDir, 0755)
+
+	hooksYaml := `hooks:
+  session.started:
+    - name: ""
+      command: "echo hello"
+`
+	_ = os.WriteFile(filepath.Join(ralphDir, "hooks.yaml"), []byte(hooksYaml), 0644)
+
+	bus := events.NewBus(100)
+	e := NewExecutor(bus)
+	err := e.LoadConfig(dir)
+	if err == nil {
+		t.Fatal("expected error for empty hook name, got nil")
+	}
+	if !strings.Contains(err.Error(), "empty name") {
+		t.Errorf("error should contain 'empty name', got: %v", err)
+	}
+}
+
+func TestLoadConfig_AllowsCleanCommand(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	ralphDir := filepath.Join(dir, ".ralph")
+	_ = os.MkdirAll(ralphDir, 0755)
+
+	hooksYaml := `hooks:
+  session.started:
+    - name: safe-hook
+      command: "echo started"
+      sync: true
+`
+	_ = os.WriteFile(filepath.Join(ralphDir, "hooks.yaml"), []byte(hooksYaml), 0644)
+
+	bus := events.NewBus(100)
+	e := NewExecutor(bus)
+	if err := e.LoadConfig(dir); err != nil {
+		t.Fatalf("expected clean command to pass, got: %v", err)
+	}
+}

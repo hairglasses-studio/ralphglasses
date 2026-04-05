@@ -1498,3 +1498,83 @@ func TestComputeNextCronRuns(t *testing.T) {
 		t.Errorf("first run = %v, expected 06:00", runs[0])
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Security: Vuln 1 — scratchpad_name path traversal
+// ---------------------------------------------------------------------------
+
+func TestHandleFindingToTask_PathTraversal(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	cases := []struct {
+		name           string
+		scratchpadName string
+	}{
+		{"dot-dot-etc-passwd", "../../etc/passwd"},
+		{"dot-dot-secrets", "../secrets"},
+		{"nested-slash", "foo/bar"},
+		{"absolute-path", "/absolute/path"},
+		{"backslash-traversal", "..\\..\\windows\\system32"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := srv.handleFindingToTask(context.Background(), makeRequest(map[string]any{
+				"finding_id":      "FINDING-1",
+				"scratchpad_name": tc.scratchpadName,
+				"repo":            "test-repo",
+			}))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !result.IsError {
+				t.Fatalf("expected error for traversal input %q", tc.scratchpadName)
+			}
+			text := getResultText(result)
+			if !strings.Contains(text, string(ErrInvalidParams)) {
+				t.Errorf("expected INVALID_PARAMS for %q, got: %s", tc.scratchpadName, text)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Security: Vuln 2 — worktree_paths path traversal
+// ---------------------------------------------------------------------------
+
+func TestHandleCycleMerge_PathTraversal(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	cases := []struct {
+		name          string
+		worktreePaths string
+	}{
+		{"dot-dot-outside", "../../outside"},
+		{"null-byte", "/tmp/safe\x00/etc/shadow"},
+		{"shell-metachar-semicolon", "/tmp/foo;rm -rf /"},
+		{"shell-metachar-pipe", "/tmp/foo|cat /etc/passwd"},
+		{"shell-metachar-backtick", "/tmp/`whoami`"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := srv.handleCycleMerge(context.Background(), makeRequest(map[string]any{
+				"worktree_paths": tc.worktreePaths,
+			}))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !result.IsError {
+				t.Fatalf("expected error for traversal input %q", tc.worktreePaths)
+			}
+			text := getResultText(result)
+			if !strings.Contains(text, string(ErrInvalidParams)) {
+				t.Errorf("expected INVALID_PARAMS for %q, got: %s", tc.worktreePaths, text)
+			}
+		})
+	}
+}
