@@ -512,8 +512,8 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"completion_tokens": float64(1000),
 				},
 			},
-			// (2000/1M)*2.00 + (1000/1M)*8.00 = 0.004 + 0.008 = 0.012
-			wantCost: 0.012,
+			// (2000/1M)*1.50 + (1000/1M)*6.00 = 0.003 + 0.006 = 0.009
+			wantCost: 0.009,
 		},
 		{
 			name:     "claude with usage input/output tokens",
@@ -544,7 +544,7 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"prompt_tokens": float64(1000),
 				},
 			},
-			wantCost: 0.002, // (1000/1M)*2.00
+			wantCost: 0.0015, // (1000/1M)*1.50
 		},
 		{
 			name:     "only output tokens",
@@ -649,8 +649,8 @@ func TestNormalizeCodexEventWithTokenCost(t *testing.T) {
 		t.Fatalf("normalizeCodexEvent() error: %v", err)
 	}
 
-	// (2000/1M)*2.00 + (1000/1M)*8.00 = 0.004 + 0.008 = 0.012
-	want := 0.012
+	// (2000/1M)*1.50 + (1000/1M)*6.00 = 0.003 + 0.006 = 0.009
+	want := 0.009
 	if math.Abs(event.CostUSD-want) > 1e-9 {
 		t.Errorf("CostUSD = %v, want %v", event.CostUSD, want)
 	}
