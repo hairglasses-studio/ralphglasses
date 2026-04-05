@@ -92,3 +92,5 @@ internal/mcpserver/.ralph/
 .env.*
 !.env.example
 !.env.*.example
+ralphglasses-godview
+.cache/
