@@ -84,3 +84,11 @@ internal/mcpserver/.ralph/
 
 # Ralph sweep/audit output (contains machine-specific paths and emails)
 .ralph/sweep-*/
+
+# Local env files
+.env
+.env.local
+.envrc
+.env.*
+!.env.example
+!.env.*.example
