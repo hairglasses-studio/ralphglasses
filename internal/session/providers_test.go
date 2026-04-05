@@ -500,8 +500,8 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"candidates_token_count": float64(500),
 				},
 			},
-			// (1000/1M)*0.15 + (500/1M)*0.60 = 0.00015 + 0.0003 = 0.00045
-			wantCost: 0.00045,
+			// (1000/1M)*0.30 + (500/1M)*2.50 = 0.0003 + 0.00125 = 0.00155
+			wantCost: 0.00155,
 		},
 		{
 			name:     "codex with usage tokens",
@@ -554,7 +554,7 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"candidates_token_count": float64(1000),
 				},
 			},
-			wantCost: 0.0006, // (1000/1M)*0.60
+			wantCost: 0.0025, // (1000/1M)*2.50
 		},
 		{
 			name:     "unknown provider returns zero",
@@ -598,8 +598,8 @@ func TestNormalizeGeminiEventWithTokenCost(t *testing.T) {
 		t.Fatalf("normalizeGeminiEvent() error: %v", err)
 	}
 
-	// (1000/1M)*0.15 + (500/1M)*0.60 = 0.00015 + 0.0003 = 0.00045
-	want := 0.00045
+	// (1000/1M)*0.30 + (500/1M)*2.50 = 0.0003 + 0.00125 = 0.00155
+	want := 0.00155
 	if math.Abs(event.CostUSD-want) > 1e-9 {
 		t.Errorf("CostUSD = %v, want %v", event.CostUSD, want)
 	}
