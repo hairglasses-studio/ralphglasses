@@ -3,6 +3,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -136,7 +137,9 @@ func (e *Executor) runHook(h HookDef, event events.Event, repoPath string) {
 			"RALPH_SESSION_ID="+event.SessionID,
 			"RALPH_PROVIDER="+event.Provider,
 		)
-		_ = cmd.Run()
+		if err := cmd.Run(); err != nil {
+			slog.Error("hook failed", "hook", h.Name, "error", err)
+		}
 	}
 
 	if h.Sync {

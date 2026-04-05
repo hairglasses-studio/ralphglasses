@@ -171,7 +171,7 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 	model := p.OptionalString("model", session.ProviderDefaults(session.ProviderCodex))
 	permMode := p.OptionalString("permission_mode", "plan")
 	enhanceMode := p.OptionalString("enhance_prompt", "local")
-	budgetUSD := p.OptionalNumber("budget_usd", 5.0)
+	budgetUSD := p.OptionalNumber("budget_usd", 0.50)
 	effort := p.OptionalString("effort", "")
 	allowedTools := p.OptionalString("allowed_tools", "")
 	maxSweepBudget := p.OptionalNumber("max_sweep_budget_usd", 100.0)
@@ -592,6 +592,7 @@ func (s *Server) handleSweepSchedule(_ context.Context, req mcp.CallToolRequest)
 				s.Tasks.SetProgress(taskID, progress)
 
 				// Cost cap abort: stop all sessions if total spend exceeds cap.
+				// TODO: replace polling with event-driven cost check
 				if maxCostCap > 0 && totalCost >= maxCostCap {
 					for _, sess := range sessions {
 						sess.Lock()

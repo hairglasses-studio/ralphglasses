@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"strings"
 	"time"
@@ -149,7 +150,11 @@ func (s *Server) handleLoopStart(ctx context.Context, req mcp.CallToolRequest) (
 
 	// Auto-drive the loop when self-improvement is enabled.
 	if profile.SelfImprovement {
-		go s.SessMgr.RunLoop(context.Background(), run.ID)
+		go func() {
+			if err := s.SessMgr.RunLoop(context.Background(), run.ID); err != nil {
+				slog.Error("self-improve RunLoop failed", "error", err, "loop_id", run.ID)
+			}
+		}()
 	}
 
 	return jsonResult(loopResult(run)), nil

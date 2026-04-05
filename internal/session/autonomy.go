@@ -188,7 +188,12 @@ func (dl *DecisionLog) SetLevel(level AutonomyLevel) {
 	dl.mu.Unlock()
 	if stateDir != "" {
 		if err := SaveAutonomyLevel(stateDir, int(level)); err != nil {
-			slog.Warn("failed to persist autonomy level", "level", level, "error", err)
+			slog.Error("failed to persist autonomy level", "level", level, "error", err)
+			// Retry once after 100ms before giving up.
+			time.Sleep(100 * time.Millisecond)
+			if retryErr := SaveAutonomyLevel(stateDir, int(level)); retryErr != nil {
+				slog.Error("failed to persist autonomy level after retry", "level", level, "error", retryErr)
+			}
 		}
 	}
 }

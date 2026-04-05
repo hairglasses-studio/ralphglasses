@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -68,7 +69,9 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 
 	// Drive the loop to completion in a background goroutine.
 	go func() {
-		_ = s.SessMgr.RunLoop(context.Background(), run.ID)
+		if err := s.SessMgr.RunLoop(context.Background(), run.ID); err != nil {
+			slog.Error("self-improve RunLoop failed", "error", err, "loop_id", run.ID)
+		}
 	}()
 
 	appliedBudget := profile.PlannerBudgetUSD + profile.WorkerBudgetUSD

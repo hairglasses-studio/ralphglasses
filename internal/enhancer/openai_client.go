@@ -9,11 +9,13 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
 // OpenAIClient calls the OpenAI Responses API to improve prompts using a meta-prompt.
 type OpenAIClient struct {
+	mu             sync.Mutex
 	APIKey         string
 	Model          string
 	BaseURL        string
@@ -130,11 +132,15 @@ func (c *OpenAIClient) Improve(ctx context.Context, prompt string, opts ImproveO
 
 	effort := reasoningEffort(opts.TaskType)
 
+	c.mu.Lock()
+	prevResponseID := c.LastResponseID
+	c.mu.Unlock()
+
 	reqBody := responsesRequest{
 		Model:              c.Model,
 		Instructions:       instructions,
 		Input:              userContent,
-		PreviousResponseID: c.LastResponseID,
+		PreviousResponseID: prevResponseID,
 		MaxOutputTokens:    4096,
 		Reasoning:          &reasoningConfig{Effort: effort},
 	}
@@ -178,7 +184,9 @@ func (c *OpenAIClient) Improve(ctx context.Context, prompt string, opts ImproveO
 
 	// Track the response ID for multi-turn chaining via previous_response_id.
 	if apiResp.ID != "" {
+		c.mu.Lock()
 		c.LastResponseID = apiResp.ID
+		c.mu.Unlock()
 	}
 
 	enhanced := extractResponseText(apiResp.Output)

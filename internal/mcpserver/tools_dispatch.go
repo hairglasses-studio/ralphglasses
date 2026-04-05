@@ -79,9 +79,11 @@ func (s *Server) RegisterToolGroup(srv *server.MCPServer, group string) error {
 			for _, entry := range g.Tools {
 				addToolWithMetadata(srv, entry)
 			}
+			s.mu.Lock()
 			if s.loadedGroups != nil {
 				s.loadedGroups[group] = true
 			}
+			s.mu.Unlock()
 			return nil
 		}
 	}
@@ -139,11 +141,14 @@ func (s *Server) handleToolGroups(_ context.Context, _ mcp.CallToolRequest) (*mc
 		for j, t := range g.Tools {
 			tools[j] = t.Tool.Name
 		}
+		s.mu.RLock()
+		loaded := s.loadedGroups[g.Name]
+		s.mu.RUnlock()
 		out[i] = groupInfo{
 			Name:        g.Name,
 			Description: g.Description,
 			ToolCount:   len(g.Tools),
-			Loaded:      s.loadedGroups[g.Name],
+			Loaded:      loaded,
 			Tools:       tools,
 		}
 	}
@@ -157,7 +162,10 @@ func (s *Server) handleLoadToolGroup(_ context.Context, req mcp.CallToolRequest)
 		return codedError(ErrInvalidParams, "group is required"), nil
 	}
 
-	if s.loadedGroups[group] {
+	s.mu.RLock()
+	alreadyLoaded := s.loadedGroups[group]
+	s.mu.RUnlock()
+	if alreadyLoaded {
 		return jsonResult(map[string]any{
 			"group":   group,
 			"status":  "already_loaded",

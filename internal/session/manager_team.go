@@ -182,58 +182,74 @@ func (m *Manager) DelegateTask(teamName string, task TeamTask) (int, error) {
 	return len(team.Tasks), nil
 }
 
+// workerSnapshot holds a snapshot of session fields needed by GetTeam.
+type workerSnapshot struct {
+	prompt string
+	status SessionStatus
+}
+
 // GetTeam returns team status by name.
 // It also correlates task statuses from worker sessions.
+//
+// Two-phase locking: sessionsMu is acquired and released before workersMu is
+// acquired, so the two locks are never held simultaneously.
 func (m *Manager) GetTeam(name string) (*TeamStatus, bool) {
-	m.sessionsMu.RLock()
-	defer m.sessionsMu.RUnlock()
-	m.workersMu.Lock()
-	defer m.workersMu.Unlock()
-
+	// Phase 1: collect everything we need from sessions while holding sessionsMu.
+	// We must look up the team's LeadID first, so we peek at workersMu briefly,
+	// but we do NOT hold both locks at the same time.
+	m.workersMu.RLock()
 	team, ok := m.teams[name]
+	m.workersMu.RUnlock()
 	if !ok {
 		return nil, false
 	}
 
-	// Update team status based on lead session
+	// Now snapshot the session data we need (lead status + worker snapshots).
+	var leadStatus SessionStatus
+	var hasLead bool
+	var workers []workerSnapshot
+
+	m.sessionsMu.RLock()
 	if s, sOk := m.sessions[team.LeadID]; sOk {
 		s.mu.Lock()
-		team.Status = s.Status
+		leadStatus = s.Status
 		s.mu.Unlock()
+		hasLead = true
 	}
-
-	// Correlate task statuses from worker sessions.
-	// Workers launched by the lead have TeamName set and their prompt
-	// contains the task description as a substring.
-	m.correlateTaskStatuses(team)
-
-	return team, true
-}
-
-// correlateTaskStatuses updates task statuses by matching worker sessions.
-// Must be called with m.sessionsMu and m.workersMu held.
-func (m *Manager) correlateTaskStatuses(team *TeamStatus) {
-	// Collect worker sessions for this team (excluding the lead)
-	var workers []*Session
 	for _, s := range m.sessions {
 		if s.TeamName == team.Name && s.ID != team.LeadID {
-			workers = append(workers, s)
+			s.mu.Lock()
+			workers = append(workers, workerSnapshot{prompt: s.Prompt, status: s.Status})
+			s.mu.Unlock()
 		}
 	}
+	m.sessionsMu.RUnlock()
 
+	// Phase 2: apply the snapshots under workersMu only.
+	m.workersMu.Lock()
+	defer m.workersMu.Unlock()
+
+	// Re-fetch team in case it was removed between the two phases.
+	team, ok = m.teams[name]
+	if !ok {
+		return nil, false
+	}
+
+	if hasLead {
+		team.Status = leadStatus
+	}
+
+	// Correlate task statuses from worker session snapshots.
 	for i := range team.Tasks {
 		task := &team.Tasks[i]
 		if task.Status == "completed" || task.Status == "errored" {
 			continue // terminal states don't change
 		}
 		for _, w := range workers {
-			if !strings.Contains(w.Prompt, task.Description) {
+			if !strings.Contains(w.prompt, task.Description) {
 				continue
 			}
-			w.mu.Lock()
-			ws := w.Status
-			w.mu.Unlock()
-			switch ws {
+			switch w.status {
 			case StatusRunning, StatusLaunching:
 				task.Status = "in-progress"
 			case StatusCompleted:
@@ -246,6 +262,8 @@ func (m *Manager) correlateTaskStatuses(team *TeamStatus) {
 			break // first match wins
 		}
 	}
+
+	return team, true
 }
 
 // updateTeamOnSessionEnd checks if the completed session is a team lead

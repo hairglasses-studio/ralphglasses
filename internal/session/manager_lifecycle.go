@@ -54,6 +54,10 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	if opts.MaxBudgetUSD <= 0 && m.DefaultBudgetUSD > 0 {
 		opts.MaxBudgetUSD = m.DefaultBudgetUSD
 	}
+	// Hard floor: if no budget is set from any source, cap at $5 to prevent uncapped spending.
+	if opts.MaxBudgetUSD <= 0 && m.DefaultBudgetUSD <= 0 {
+		opts.MaxBudgetUSD = 5.0
+	}
 
 	// Fleet budget gate: reject launch if spending would exceed fleet cap.
 	if m.FleetPool != nil {

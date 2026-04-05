@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -329,12 +330,35 @@ type GatedChange struct {
 
 // GateEnabled controls whether the auto-optimizer runs E2E gates before applying changes.
 // When true, Level 2+ changes are validated against the test suite.
-var GateEnabled bool
+var GateEnabled atomic.Bool
 
-// RunTestGate is a pluggable function that runs the E2E gate.
-// It's a variable so tests can replace it with a mock.
-// Default implementation runs `go test ./... -count=1` with a 60s timeout.
-var RunTestGate = defaultTestGate
+// testGateFunc is the function type for RunTestGate.
+type testGateFunc func(string) (string, error)
+
+// runTestGateAtomic holds the current RunTestGate function as an atomic.Value.
+var runTestGateAtomic atomic.Value
+
+func init() {
+	runTestGateAtomic.Store(testGateFunc(defaultTestGate))
+}
+
+// RunTestGate returns the currently configured test gate function.
+// Use SetRunTestGate to replace it (e.g. in tests).
+func RunTestGate(repoRoot string) (string, error) {
+	return runTestGateAtomic.Load().(testGateFunc)(repoRoot)
+}
+
+// SetRunTestGate replaces the test gate function atomically.
+// This is safe for concurrent use and intended for use in tests.
+func SetRunTestGate(f testGateFunc) {
+	runTestGateAtomic.Store(f)
+}
+
+// GetRunTestGate returns the currently configured test gate function.
+// Intended for use in tests to save and restore the function.
+func GetRunTestGate() testGateFunc {
+	return runTestGateAtomic.Load().(testGateFunc)
+}
 
 func defaultTestGate(repoRoot string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -351,7 +375,7 @@ func defaultTestGate(repoRoot string) (string, error) {
 // GateChange evaluates a proposed change against the E2E test gate.
 // Returns a GatedChange with verdict. If the gate fails, the change is marked for rollback.
 func (ao *AutoOptimizer) GateChange(repoRoot string, change GatedChange) GatedChange {
-	if !GateEnabled {
+	if !GateEnabled.Load() {
 		change.Verdict = "skip"
 		return change
 	}
