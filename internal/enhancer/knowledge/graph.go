@@ -3,6 +3,7 @@
 package knowledge
 
 import (
+	"maps"
 	"sort"
 	"strings"
 	"sync"
@@ -68,16 +69,12 @@ func (g *Graph) AddNode(id string, kind NodeKind, metadata map[string]string) {
 	defer g.mu.Unlock()
 
 	if existing, ok := g.nodes[id]; ok {
-		for k, v := range metadata {
-			existing.Metadata[k] = v
-		}
+		maps.Copy(existing.Metadata, metadata)
 		return
 	}
 
 	md := make(map[string]string, len(metadata))
-	for k, v := range metadata {
-		md[k] = v
-	}
+	maps.Copy(md, metadata)
 	g.nodes[id] = &Node{
 		ID:       id,
 		Kind:     kind,
@@ -121,9 +118,7 @@ func (g *Graph) GetNode(id string) *Node {
 	// Return a copy to avoid data races
 	cp := *n
 	cp.Metadata = make(map[string]string, len(n.Metadata))
-	for k, v := range n.Metadata {
-		cp.Metadata[k] = v
-	}
+	maps.Copy(cp.Metadata, n.Metadata)
 	return &cp
 }
 
@@ -316,8 +311,6 @@ func (g *Graph) AllNodes() []Node {
 func copyNode(n *Node) *Node {
 	cp := *n
 	cp.Metadata = make(map[string]string, len(n.Metadata))
-	for k, v := range n.Metadata {
-		cp.Metadata[k] = v
-	}
+	maps.Copy(cp.Metadata, n.Metadata)
 	return &cp
 }

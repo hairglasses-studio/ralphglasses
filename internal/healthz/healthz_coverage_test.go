@@ -111,7 +111,7 @@ func TestHealthzResponseShape(t *testing.T) {
 	req := httptest.NewRequest("GET", "/healthz", nil)
 	s.srv.Handler.ServeHTTP(rr, req)
 
-	var body map[string]interface{}
+	var body map[string]any
 	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}

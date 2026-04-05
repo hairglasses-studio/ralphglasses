@@ -155,7 +155,7 @@ func TestListSessions(t *testing.T) {
 	s := newTestStore(t)
 	ctx := context.Background()
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		repo := "repo-a"
 		status := "running"
 		if i >= 3 {
@@ -413,7 +413,7 @@ func TestConcurrentWrites(t *testing.T) {
 
 	// Concurrent session writes.
 	wg.Add(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(i int) {
 			defer wg.Done()
 			row := &SessionRow{
@@ -431,7 +431,7 @@ func TestConcurrentWrites(t *testing.T) {
 
 	// Concurrent observation writes.
 	wg.Add(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(i int) {
 			defer wg.Done()
 			obs := &ObservationRow{
@@ -448,7 +448,7 @@ func TestConcurrentWrites(t *testing.T) {
 
 	// Concurrent fleet state writes.
 	wg.Add(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(i int) {
 			defer wg.Done()
 			key := fmt.Sprintf("key-%03d", i%10) // deliberate key collisions for upsert

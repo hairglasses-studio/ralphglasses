@@ -24,7 +24,7 @@ func TestSendQueuesEvents(t *testing.T) {
 	defer c.Close()
 
 	ctx := context.Background()
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		if err := c.Send(ctx, Event{Type: EventSessionStart}); err != nil {
 			t.Fatalf("Send: %v", err)
 		}
@@ -114,7 +114,7 @@ func TestBatchFlushOnFull(t *testing.T) {
 	defer c.Close()
 
 	ctx := context.Background()
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		_ = c.Send(ctx, Event{Type: EventCrash})
 	}
 
@@ -228,7 +228,7 @@ func TestCloseFlushesRemaining(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		_ = c.Send(ctx, Event{Type: EventSessionStop})
 	}
 

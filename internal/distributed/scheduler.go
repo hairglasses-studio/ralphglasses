@@ -3,6 +3,7 @@ package distributed
 import (
 	"fmt"
 	"log/slog"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -10,12 +11,12 @@ import (
 
 // WorkerCapability describes what a worker node can do.
 type WorkerCapability struct {
-	NodeID      string   `json:"node_id"`
-	Providers   []string `json:"providers"`    // e.g. ["claude", "gemini"]
-	MaxSessions int      `json:"max_sessions"` // concurrent session capacity
-	Active      int      `json:"active"`       // currently running sessions
-	HealthScore float64  `json:"health_score"` // 0-1, higher = healthier
-	CostRateUSD float64  `json:"cost_rate_usd"` // estimated $/hour
+	NodeID      string    `json:"node_id"`
+	Providers   []string  `json:"providers"`     // e.g. ["claude", "gemini"]
+	MaxSessions int       `json:"max_sessions"`  // concurrent session capacity
+	Active      int       `json:"active"`        // currently running sessions
+	HealthScore float64   `json:"health_score"`  // 0-1, higher = healthier
+	CostRateUSD float64   `json:"cost_rate_usd"` // estimated $/hour
 	LastSeen    time.Time `json:"last_seen"`
 }
 
@@ -75,13 +76,7 @@ func (s *Scheduler) AvailableWorkers(provider string) []WorkerCapability {
 			continue // stale
 		}
 		if provider != "" {
-			found := false
-			for _, p := range w.Providers {
-				if p == provider {
-					found = true
-					break
-				}
-			}
+			found := slices.Contains(w.Providers, provider)
 			if !found {
 				continue
 			}
@@ -214,13 +209,6 @@ type FleetCapacityStats struct {
 	TotalActive    int     `json:"total_active"`
 	AvailableSlots int     `json:"available_slots"`
 	UtilizationPct float64 `json:"utilization_pct"`
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 // RecommendScale suggests whether to scale up or down based on queue depth.

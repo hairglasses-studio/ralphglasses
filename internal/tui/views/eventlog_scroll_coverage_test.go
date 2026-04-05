@@ -18,7 +18,7 @@ func TestEventLogView_ScrollDown(t *testing.T) {
 	v.height = 5
 	now := time.Now()
 	// Add enough entries to scroll.
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		v.AddEntry(EventLogEntry{Timestamp: now, Type: "info", Message: "msg"})
 	}
 	startPos := v.scrollPos
@@ -31,7 +31,7 @@ func TestEventLogView_ScrollUpAndDown(t *testing.T) {
 	v := NewEventLogView()
 	v.height = 3
 	now := time.Now()
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		v.AddEntry(EventLogEntry{Timestamp: now, Type: "info", Message: "msg"})
 	}
 	// Scroll up (should stay at 0 if already there).
@@ -59,4 +59,3 @@ func TestEventLogView_LoadHistory(t *testing.T) {
 		t.Errorf("LoadHistory: len(entries) = %d, want 2", len(v.entries))
 	}
 }
-

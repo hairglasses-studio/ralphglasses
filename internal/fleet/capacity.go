@@ -19,23 +19,23 @@ type ProviderRateLimit struct {
 
 // Workload describes an incoming batch of work to plan capacity for.
 type Workload struct {
-	TotalTasks        int
-	AvgTaskDurationS  float64            // estimated seconds per task
-	MaxLatencyS       float64            // SLO: max acceptable queue wait + execution time
-	ProviderMix       map[session.Provider]float64 // provider -> fraction of tasks (sums to 1.0)
-	AvgTaskCostUSD    float64            // estimated cost per task if provider mix unknown
+	TotalTasks       int
+	AvgTaskDurationS float64                      // estimated seconds per task
+	MaxLatencyS      float64                      // SLO: max acceptable queue wait + execution time
+	ProviderMix      map[session.Provider]float64 // provider -> fraction of tasks (sums to 1.0)
+	AvgTaskCostUSD   float64                      // estimated cost per task if provider mix unknown
 }
 
 // CapacityPlan is the output of a capacity planning evaluation.
 type CapacityPlan struct {
-	RecommendedWorkers int                         `json:"recommended_workers"`
-	WorkersPerProvider map[session.Provider]int     `json:"workers_per_provider"`
-	EstimatedCostUSD   float64                     `json:"estimated_cost_usd"`
-	EstimatedDurationS float64                     `json:"estimated_duration_seconds"`
-	BudgetFeasible     bool                        `json:"budget_feasible"`
-	RateLimitFeasible  bool                        `json:"rate_limit_feasible"`
-	Bottleneck         string                      `json:"bottleneck,omitempty"`
-	Warnings           []string                    `json:"warnings,omitempty"`
+	RecommendedWorkers int                      `json:"recommended_workers"`
+	WorkersPerProvider map[session.Provider]int `json:"workers_per_provider"`
+	EstimatedCostUSD   float64                  `json:"estimated_cost_usd"`
+	EstimatedDurationS float64                  `json:"estimated_duration_seconds"`
+	BudgetFeasible     bool                     `json:"budget_feasible"`
+	RateLimitFeasible  bool                     `json:"rate_limit_feasible"`
+	Bottleneck         string                   `json:"bottleneck,omitempty"`
+	Warnings           []string                 `json:"warnings,omitempty"`
 }
 
 // CapacityPlanner models fleet capacity based on available workers, provider
@@ -131,19 +131,13 @@ func (cp *CapacityPlanner) Plan(workload Workload, currentWorkers []WorkerSnapsh
 	workersFromParallelism := cp.workersFromParallelism(workload)
 
 	// Take the max of all constraints.
-	plan.RecommendedWorkers = max3(totalFromRateLimits, workersFromLatency, workersFromParallelism)
-	if plan.RecommendedWorkers < 1 {
-		plan.RecommendedWorkers = 1
-	}
+	plan.RecommendedWorkers = max(max3(totalFromRateLimits, workersFromLatency, workersFromParallelism), 1)
 
 	// Budget-constrain: cap workers if budget is tight.
 	if plan.EstimatedCostUSD > 0 && remaining > 0 {
 		budgetCapWorkers := cp.budgetConstrainedWorkers(workload, remaining)
 		if budgetCapWorkers < plan.RecommendedWorkers {
-			plan.RecommendedWorkers = budgetCapWorkers
-			if budgetCapWorkers < 1 {
-				plan.RecommendedWorkers = 1
-			}
+			plan.RecommendedWorkers = max(budgetCapWorkers, 1)
 			plan.Bottleneck = "budget"
 			plan.BudgetFeasible = false
 		}
@@ -234,10 +228,7 @@ func (cp *CapacityPlanner) workersFromRateLimits(w Workload) map[session.Provide
 
 		// Workers bounded by concurrent session limit.
 		if rl.ConcurrentSessions > 0 {
-			needed := int(math.Ceil(float64(tasks) / float64(rl.ConcurrentSessions)))
-			if needed > tasks {
-				needed = tasks
-			}
+			needed := min(int(math.Ceil(float64(tasks)/float64(rl.ConcurrentSessions))), tasks)
 			result[provider] = needed
 		} else {
 			result[provider] = 1
@@ -268,10 +259,7 @@ func (cp *CapacityPlanner) workersFromParallelism(w Workload) int {
 	}
 	// Square root heuristic: balance between 1 worker and TotalTasks workers.
 	// This avoids over-provisioning for large batches.
-	sqrtN := int(math.Ceil(math.Sqrt(float64(w.TotalTasks))))
-	if sqrtN < 1 {
-		sqrtN = 1
-	}
+	sqrtN := max(int(math.Ceil(math.Sqrt(float64(w.TotalTasks)))), 1)
 	return sqrtN
 }
 
@@ -446,20 +434,14 @@ func (cp *CapacityPlanner) OptimalMix(totalTasks int, maxLatencyS float64, avgTa
 
 		// If latency SLO matters, cap by what fits in the time window.
 		if maxLatencyS > 0 && avgTaskDurationS > 0 {
-			tasksInWindow := int(maxLatencyS / avgTaskDurationS)
-			if tasksInWindow < 1 {
-				tasksInWindow = 1
-			}
+			tasksInWindow := max(int(maxLatencyS/avgTaskDurationS), 1)
 			maxByTime := tasksInWindow * capacity
 			if maxByTime < capacity {
 				capacity = maxByTime
 			}
 		}
 
-		assigned := remaining
-		if assigned > capacity {
-			assigned = capacity
-		}
+		assigned := min(remaining, capacity)
 		mix[rl.Provider] = float64(assigned) / float64(totalTasks)
 		remaining -= assigned
 	}
@@ -478,20 +460,17 @@ func (cp *CapacityPlanner) Summary() map[string]any {
 	}
 
 	return map[string]any{
-		"budget_usd":      cp.budgetUSD,
-		"spent_usd":       cp.spentUSD,
-		"remaining_usd":   cp.budgetUSD - cp.spentUSD,
-		"rate_limits":     limits,
-		"provider_count":  len(cp.rateLimits),
-		"updated_at":      time.Now(),
+		"budget_usd":     cp.budgetUSD,
+		"spent_usd":      cp.spentUSD,
+		"remaining_usd":  cp.budgetUSD - cp.spentUSD,
+		"rate_limits":    limits,
+		"provider_count": len(cp.rateLimits),
+		"updated_at":     time.Now(),
 	}
 }
 
 func max3(a, b, c int) int {
-	m := a
-	if b > m {
-		m = b
-	}
+	m := max(b, a)
 	if c > m {
 		m = c
 	}

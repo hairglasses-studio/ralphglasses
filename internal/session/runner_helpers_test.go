@@ -105,7 +105,7 @@ func TestAppendSessionOutput_HistoryOverflow(t *testing.T) {
 		OutputCh: make(chan string, 200),
 	}
 	// Add 110 entries — should be capped to 100
-	for i := 0; i < 110; i++ {
+	for range 110 {
 		appendSessionOutput(s, "line", nil)
 	}
 	if len(s.OutputHistory) != 100 {
@@ -133,11 +133,11 @@ func TestTruncateStr_ExtendedCases(t *testing.T) {
 		max   int
 		want  string
 	}{
-		{"hello", 10, "hello"},          // shorter than max
-		{"hello world", 5, "world"},     // keeps tail
-		{"", 5, ""},                     // empty
-		{"ab", 1, "b"},                  // single char tail
-		{"abcdef", 3, "def"},            // exact truncation
+		{"hello", 10, "hello"},      // shorter than max
+		{"hello world", 5, "world"}, // keeps tail
+		{"", 5, ""},                 // empty
+		{"ab", 1, "b"},              // single char tail
+		{"abcdef", 3, "def"},        // exact truncation
 		{strings.Repeat("x", 100), 50, strings.Repeat("x", 50)}, // large input
 	}
 	for _, tt := range tests {

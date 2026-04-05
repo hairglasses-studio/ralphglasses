@@ -196,7 +196,7 @@ func TestFleetBridge_ConcurrentAccess(t *testing.T) {
 	const goroutines = 20
 
 	// Half poll, half read.
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		wg.Add(1)
 		if i%2 == 0 {
 			go func() {

@@ -43,8 +43,7 @@ func TestWatcher_DetectsFileChange(t *testing.T) {
 		}
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	if err := w.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
@@ -107,8 +106,7 @@ func TestWatcher_Debounce(t *testing.T) {
 		}
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	if err := w.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
@@ -160,8 +158,7 @@ func TestWatcher_InvalidConfigKeepsOld(t *testing.T) {
 		callbackCalled.Store(true)
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	if err := w.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
@@ -220,8 +217,7 @@ func TestWatcher_CallbackReceivesNewConfig(t *testing.T) {
 		}
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	if err := w.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
@@ -274,8 +270,7 @@ func TestWatcher_StopStopsWatching(t *testing.T) {
 		callbackCalled.Store(true)
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	if err := w.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
@@ -361,8 +356,7 @@ func TestWatcher_MultipleCallbacks(t *testing.T) {
 		}
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	if err := w.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
@@ -410,8 +404,7 @@ func TestWatcher_MissingFileAtStart(t *testing.T) {
 		}
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	if err := w.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)

@@ -32,7 +32,7 @@ func TestHashShardStrategy_Consistent(t *testing.T) {
 	}
 
 	// Verify 100 calls return the same result.
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		got := strategy.Assign(repo, workers)
 		if got != first {
 			t.Fatalf("iteration %d: got %q, want %q", i, got, first)
@@ -50,7 +50,7 @@ func TestHashShardStrategy_EvenDistribution(t *testing.T) {
 
 	counts := make(map[string]int)
 	numRepos := 5000
-	for i := 0; i < numRepos; i++ {
+	for i := range numRepos {
 		repo := fmt.Sprintf("/home/dev/repos/project-%05d", i)
 		wid := strategy.Assign(repo, workers)
 		counts[wid]++
@@ -192,8 +192,8 @@ func TestExplicitShardStrategy_BasicMatch(t *testing.T) {
 func TestExplicitShardStrategy_GlobPatterns(t *testing.T) {
 	strategy := &ExplicitShardStrategy{
 		Rules: []ShardRule{
-			{Pattern: "ralph*", WorkerID: "w1"},     // matches ralphglasses
-			{Pattern: "hg-*", WorkerID: "w2"},       // matches hg-mcp, hg-tools
+			{Pattern: "ralph*", WorkerID: "w1"}, // matches ralphglasses
+			{Pattern: "hg-*", WorkerID: "w2"},   // matches hg-mcp, hg-tools
 		},
 	}
 	workers := makeWorkers("w1", "w2")
@@ -385,7 +385,7 @@ func TestShardMap_RebalanceOnWorkerAdd(t *testing.T) {
 
 	// Assign 50 repos to 3 workers.
 	workers3 := makeWorkers("w1", "w2", "w3")
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		repo := fmt.Sprintf("/repos/project-%03d", i)
 		wid := strategy.Assign(repo, workers3)
 		sm.Assign(repo, wid)
@@ -419,7 +419,7 @@ func TestShardMap_RebalanceOnWorkerRemove(t *testing.T) {
 
 	// Assign 50 repos to 4 workers.
 	workers4 := makeWorkers("w1", "w2", "w3", "w4")
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		repo := fmt.Sprintf("/repos/project-%03d", i)
 		wid := strategy.Assign(repo, workers4)
 		sm.Assign(repo, wid)

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -64,23 +65,23 @@ type Coordinator struct {
 // NewCoordinator creates a coordinator node.
 func NewCoordinator(nodeID, hostname string, port int, version string, bus *events.Bus, sessMgr *session.Manager) *Coordinator {
 	return &Coordinator{
-		nodeID:     nodeID,
-		hostname:   hostname,
-		port:       port,
-		version:    version,
-		workers:    make(map[string]*WorkerInfo),
-		queue:      NewWorkQueue(),
-		budget:     GlobalBudget{LimitUSD: 500},
-		bus:        bus,
-		sessMgr:    sessMgr,
-		health:     NewHealthTracker(DefaultHealthConfig()),
-		budgetMgr:  NewBudgetManager(10.0),
-		router:     &LeastLoadedRouter{},
-		retries:    NewRetryTracker(DefaultRetryPolicy()),
+		nodeID:        nodeID,
+		hostname:      hostname,
+		port:          port,
+		version:       version,
+		workers:       make(map[string]*WorkerInfo),
+		queue:         NewWorkQueue(),
+		budget:        GlobalBudget{LimitUSD: 500},
+		bus:           bus,
+		sessMgr:       sessMgr,
+		health:        NewHealthTracker(DefaultHealthConfig()),
+		budgetMgr:     NewBudgetManager(10.0),
+		router:        &LeastLoadedRouter{},
+		retries:       NewRetryTracker(DefaultRetryPolicy()),
 		autoscaler:    NewAutoScaler(DefaultAutoScalerConfig()),
 		costPredictor: NewCostPredictor(0),
 		tsClient:      DefaultTailscaleClient(),
-		startedAt:  time.Now(),
+		startedAt:     time.Now(),
 	}
 }
 
@@ -203,9 +204,9 @@ func (c *Coordinator) maintenanceLoop(ctx context.Context) {
 		case <-ticker.C:
 			c.expireWorkers()
 			c.reclaimTimedOut()
-			c.autoScaleCheck()               // Phase 10.5.4: evaluate worker pool scaling
-			c.queue.ReapStale(time.Hour)     // QW-11: clean phantom/stale tasks older than 1 hour
-			c.queue.ReapPhantomRepos()        // QW-11: purge bare "001" placeholder repo entries
+			c.autoScaleCheck()           // Phase 10.5.4: evaluate worker pool scaling
+			c.queue.ReapStale(time.Hour) // QW-11: clean phantom/stale tasks older than 1 hour
+			c.queue.ReapPhantomRepos()   // QW-11: purge bare "001" placeholder repo entries
 			if c.queuePath != "" {
 				if err := c.queue.SaveTo(c.queuePath); err != nil {
 					slog.Error("fleet: periodic queue checkpoint failed", "path", c.queuePath, "error", err)
@@ -440,11 +441,9 @@ var tailscaleAuthExemptPaths = []string{
 func TailscaleAuthMiddleware(tsClient TailscaleClient, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Always allow exempt paths (health checks, metrics, agent card).
-		for _, path := range tailscaleAuthExemptPaths {
-			if r.URL.Path == path {
-				next.ServeHTTP(w, r)
-				return
-			}
+		if slices.Contains(tailscaleAuthExemptPaths, r.URL.Path) {
+			next.ServeHTTP(w, r)
+			return
 		}
 
 		// If no Tailscale client is configured, pass through (backward compatible).

@@ -3,6 +3,7 @@ package telemetry
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"sync"
@@ -14,9 +15,9 @@ import (
 type SpanStatus string
 
 const (
-	SpanStatusRunning  SpanStatus = "running"
-	SpanStatusOK       SpanStatus = "ok"
-	SpanStatusError    SpanStatus = "error"
+	SpanStatusRunning SpanStatus = "running"
+	SpanStatusOK      SpanStatus = "ok"
+	SpanStatusError   SpanStatus = "error"
 )
 
 // Span is a single unit of work within a SpanTree.
@@ -26,7 +27,7 @@ type Span struct {
 	Name       string            `json:"name"`
 	Status     SpanStatus        `json:"status"`
 	StartTime  time.Time         `json:"start_time"`
-	EndTime    time.Time         `json:"end_time,omitempty"`
+	EndTime    time.Time         `json:"end_time"`
 	Duration   time.Duration     `json:"duration,omitempty"`
 	Attributes map[string]string `json:"attributes,omitempty"`
 
@@ -40,7 +41,7 @@ type spanJSON struct {
 	Name       string            `json:"name"`
 	Status     SpanStatus        `json:"status"`
 	StartTime  time.Time         `json:"start_time"`
-	EndTime    time.Time         `json:"end_time,omitempty"`
+	EndTime    time.Time         `json:"end_time"`
 	Duration   string            `json:"duration,omitempty"`
 	Attributes map[string]string `json:"attributes,omitempty"`
 	Children   []*spanJSON       `json:"children,omitempty"`
@@ -129,9 +130,7 @@ func (t *SpanTree) Span(id string) *Span {
 	}
 	cp := *span
 	cp.Attributes = make(map[string]string, len(span.Attributes))
-	for k, v := range span.Attributes {
-		cp.Attributes[k] = v
-	}
+	maps.Copy(cp.Attributes, span.Attributes)
 	return &cp
 }
 
@@ -151,9 +150,7 @@ func (t *SpanTree) FlatList() []*Span {
 	for _, s := range t.spans {
 		cp := *s
 		cp.Attributes = make(map[string]string, len(s.Attributes))
-		for k, v := range s.Attributes {
-			cp.Attributes[k] = v
-		}
+		maps.Copy(cp.Attributes, s.Attributes)
 		list = append(list, &cp)
 	}
 
@@ -171,9 +168,7 @@ func (t *SpanTree) buildChildren() []*Span {
 	for id, s := range t.spans {
 		cp := *s
 		cp.Attributes = make(map[string]string, len(s.Attributes))
-		for k, v := range s.Attributes {
-			cp.Attributes[k] = v
-		}
+		maps.Copy(cp.Attributes, s.Attributes)
 		cp.children = nil
 		all[id] = &cp
 	}

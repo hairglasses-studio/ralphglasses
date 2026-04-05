@@ -154,7 +154,7 @@ func (rp RestartPolicy) BackoffDuration(restartCount int) time.Duration {
 	}
 	// Exponential backoff: base * 2^restartCount, capped at cooldown.
 	backoff := time.Duration(base) * time.Second
-	for i := 0; i < restartCount; i++ {
+	for range restartCount {
 		backoff *= 2
 		if rp.CooldownSecs > 0 && backoff > time.Duration(rp.CooldownSecs)*time.Second {
 			backoff = time.Duration(rp.CooldownSecs) * time.Second
@@ -171,7 +171,7 @@ func (rp RestartPolicy) CooldownDuration() time.Duration {
 
 // healthCheckState tracks the state of a running health check loop.
 type healthCheckState struct {
-	mu              sync.Mutex
+	mu               sync.Mutex
 	consecutiveFails int
 	totalChecks      int
 	totalFailures    int

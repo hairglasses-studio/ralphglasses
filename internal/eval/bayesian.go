@@ -160,7 +160,7 @@ func monteCarloCompare(alphaA, betaA, alphaB, betaB float64, src rand.Source) (p
 	distB := distuv.Beta{Alpha: alphaB, Beta: betaB, Src: srcB}
 
 	aWins, bWins := 0, 0
-	for i := 0; i < monteCarloDraws; i++ {
+	for range monteCarloDraws {
 		sA := distA.Rand()
 		sB := distB.Rand()
 		if sA > sB {

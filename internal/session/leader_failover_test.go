@@ -258,7 +258,7 @@ func TestLeaderFailover_ConcurrentElectionSafety(t *testing.T) {
 	dones := make([]chan error, n)
 	var wg sync.WaitGroup
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		instances[i] = NewLeaderFailover(dir,
 			WithHeartbeatInterval(interval),
 			WithInstanceID(fmt.Sprintf("inst-%d", i)),
@@ -278,7 +278,7 @@ func TestLeaderFailover_ConcurrentElectionSafety(t *testing.T) {
 	// Exactly one instance should be leader.
 	leaderCount := 0
 	var leaderID string
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if instances[i].IsLeader() {
 			leaderCount++
 			leaderID = instances[i].LeaderID()
@@ -290,7 +290,7 @@ func TestLeaderFailover_ConcurrentElectionSafety(t *testing.T) {
 	}
 
 	// All followers should agree on who the leader is.
-	for i := 0; i < n; i++ {
+	for i := range n {
 		id := instances[i].LeaderID()
 		if id != leaderID {
 			t.Fatalf("instance %d sees leader %s, expected %s", i, id, leaderID)

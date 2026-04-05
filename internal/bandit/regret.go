@@ -18,8 +18,8 @@ type ArmRegret struct {
 	Pulls          int     `json:"pulls"`
 	TotalReward    float64 `json:"total_reward"`
 	MeanReward     float64 `json:"mean_reward"`
-	RegretContrib  float64 `json:"regret_contribution"`  // sum of (optimal_mean - arm_mean) over pulls
-	RegretFraction float64 `json:"regret_fraction"`       // fraction of total regret from this arm
+	RegretContrib  float64 `json:"regret_contribution"` // sum of (optimal_mean - arm_mean) over pulls
+	RegretFraction float64 `json:"regret_fraction"`     // fraction of total regret from this arm
 }
 
 // RegretReport contains visualization-ready regret data.
@@ -179,10 +179,7 @@ func (rt *RegretTracker) convergenceRate(cumRegret []float64) float64 {
 		return 0
 	}
 
-	window := 100
-	if n < window {
-		window = n
-	}
+	window := min(n, 100)
 	tail := cumRegret[n-window:]
 
 	// OLS: slope = (n*sum(x*y) - sum(x)*sum(y)) / (n*sum(x^2) - sum(x)^2)

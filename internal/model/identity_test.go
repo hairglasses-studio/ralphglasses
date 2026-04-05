@@ -37,7 +37,7 @@ func TestGenerateIdentityDeterministic(t *testing.T) {
 
 func TestGenerateIdentityUniqueness(t *testing.T) {
 	seeds := make(map[string]bool)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		id := GenerateIdentity("run1", i, 5, "task1")
 		if seeds[id.SeedHash] {
 			t.Errorf("duplicate seed hash at index %d: %s", i, id.SeedHash)
@@ -47,7 +47,7 @@ func TestGenerateIdentityUniqueness(t *testing.T) {
 }
 
 func TestPersonaRotation(t *testing.T) {
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		id := GenerateIdentity("run1", i, 10, "task1")
 		expected := Personas[i%len(Personas)].Name
 		if id.Persona != expected {

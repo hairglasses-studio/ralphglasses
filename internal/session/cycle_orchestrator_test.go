@@ -136,7 +136,7 @@ func TestCycleOrchestrator_MaxConcurrent(t *testing.T) {
 	}
 
 	// Complete c1 to free a slot.
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		if err := orch.Advance("c1"); err != nil {
 			t.Fatalf("advance c1 step %d: %v", i, err)
 		}
@@ -206,7 +206,7 @@ func TestCycleOrchestrator_ConcurrentAccess(t *testing.T) {
 	errs := make(chan error, 200)
 
 	// Spawn 50 goroutines creating cycles.
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
@@ -219,7 +219,7 @@ func TestCycleOrchestrator_ConcurrentAccess(t *testing.T) {
 	wg.Wait()
 
 	// Spawn goroutines doing reads and advances concurrently.
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		wg.Add(3)
 		go func(idx int) {
 			defer wg.Done()
@@ -248,4 +248,3 @@ func TestCycleOrchestrator_ConcurrentAccess(t *testing.T) {
 		t.Errorf("expected 50 cycles, got %d", len(orch.List()))
 	}
 }
-

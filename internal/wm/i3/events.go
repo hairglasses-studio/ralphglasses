@@ -255,10 +255,7 @@ func (el *EventListener) reconnect(ctx context.Context) error {
 
 		conn, err := net.Dial("unix", el.socketPath)
 		if err != nil {
-			delay = delay * 2
-			if delay > el.maxReconnect {
-				delay = el.maxReconnect
-			}
+			delay = min(delay*2, el.maxReconnect)
 			continue
 		}
 
@@ -326,7 +323,7 @@ func readMessage(conn net.Conn) ([]byte, uint32, error) {
 	}
 
 	// Validate magic bytes.
-	for i := 0; i < len(magic); i++ {
+	for i := range magic {
 		if hdr[i] != magic[i] {
 			return nil, 0, fmt.Errorf("i3 ipc: invalid magic in response")
 		}

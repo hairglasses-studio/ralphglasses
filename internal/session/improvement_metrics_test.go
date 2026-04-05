@@ -30,7 +30,7 @@ func TestImprovementMetrics_LearningVelocity(t *testing.T) {
 	lt := NewLearningTransfer("")
 
 	// 6 sessions with common patterns generate insights.
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		lt.RecordSession(SessionLearning{
 			SessionID: "sess-" + ltItoa(i),
 			TaskType:  "feature",
@@ -56,7 +56,7 @@ func TestImprovementMetrics_InsightsByType(t *testing.T) {
 	lt := NewLearningTransfer("")
 
 	// 4 sessions with same provider+task type should generate a provider_hint.
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		lt.RecordSession(SessionLearning{
 			SessionID: "sess-" + ltItoa(i),
 			TaskType:  "test",
@@ -96,14 +96,14 @@ func TestImprovementMetrics_RegressionFrequencyWithDetector(t *testing.T) {
 	rd := NewSessionRegressionDetector(cfg, "")
 
 	// Baseline: 90% success.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		rd.AddPoint(SessionMetricPoint{
 			SessionID:   "base-" + ltItoa(i),
 			SuccessRate: 90.0,
 		})
 	}
 	// Current: 50% success (regression).
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		rd.AddPoint(SessionMetricPoint{
 			SessionID:   "curr-" + ltItoa(i),
 			SuccessRate: 50.0,
@@ -174,7 +174,7 @@ func TestImprovementMetrics_OptimizationEffectiveness(t *testing.T) {
 	lt := NewLearningTransfer("")
 
 	// Generate enough sessions to trigger provider_hint and budget_hint.
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		lt.RecordSession(SessionLearning{
 			SessionID: "sess-" + ltItoa(i),
 			TaskType:  "feature",
@@ -233,7 +233,7 @@ func TestImprovementMetrics_ConcurrentSafety(t *testing.T) {
 	im := NewImprovementMetrics(nil, nil)
 	var wg sync.WaitGroup
 
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -241,20 +241,16 @@ func TestImprovementMetrics_ConcurrentSafety(t *testing.T) {
 		}(i)
 	}
 
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			im.RecordCheck()
-		}()
+		})
 	}
 
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			im.Summary()
-		}()
+		})
 	}
 
 	wg.Wait()

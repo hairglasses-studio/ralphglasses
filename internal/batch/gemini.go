@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -52,9 +53,9 @@ type geminiBatchRequest struct {
 }
 
 type geminiInlineRequest struct {
-	Contents         []geminiContent       `json:"contents"`
+	Contents          []geminiContent      `json:"contents"`
 	SystemInstruction *geminiContent       `json:"systemInstruction,omitempty"`
-	GenerationConfig *geminiGenerationCfg  `json:"generationConfig,omitempty"`
+	GenerationConfig  *geminiGenerationCfg `json:"generationConfig,omitempty"`
 }
 
 type geminiContent struct {
@@ -75,9 +76,9 @@ type geminiBatchResponse struct {
 }
 
 type geminiInlineResponse struct {
-	Candidates   []geminiCandidate    `json:"candidates"`
+	Candidates    []geminiCandidate    `json:"candidates"`
 	UsageMetadata *geminiUsageMetadata `json:"usageMetadata,omitempty"`
-	Error        *geminiError          `json:"error,omitempty"`
+	Error         *geminiError         `json:"error,omitempty"`
 }
 
 type geminiCandidate struct {
@@ -202,12 +203,12 @@ func (g *geminiClient) Poll(_ context.Context, batchID string) (*BatchStatus, er
 	}
 
 	return &BatchStatus{
-		ID:          batchID,
-		Provider:    ProviderGemini,
-		Status:      "completed",
-		Total:       len(stored),
-		Completed:   len(stored),
-		CreatedAt:   time.Now(),
+		ID:        batchID,
+		Provider:  ProviderGemini,
+		Status:    "completed",
+		Total:     len(stored),
+		Completed: len(stored),
+		CreatedAt: time.Now(),
 	}, nil
 }
 
@@ -243,11 +244,11 @@ func (g *geminiClient) storeResults(batchID string, requests []Request, resp *ge
 		if r.Error != nil {
 			res.Error = r.Error.Message
 		} else if len(r.Candidates) > 0 {
-			var text string
+			var text strings.Builder
 			for _, p := range r.Candidates[0].Content.Parts {
-				text += p.Text
+				text.WriteString(p.Text)
 			}
-			res.Content = text
+			res.Content = text.String()
 		}
 		if r.UsageMetadata != nil {
 			res.InputTokens = r.UsageMetadata.PromptTokenCount

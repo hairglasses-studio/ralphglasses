@@ -147,9 +147,9 @@ func detectNvidiaDevices() ([]string, error) {
 				continue
 			}
 			// Parse "Model: <name>" line.
-			for _, l := range strings.Split(string(info), "\n") {
-				if strings.HasPrefix(l, "Model:") {
-					name := strings.TrimSpace(strings.TrimPrefix(l, "Model:"))
+			for l := range strings.SplitSeq(string(info), "\n") {
+				if after, ok := strings.CutPrefix(l, "Model:"); ok {
+					name := strings.TrimSpace(after)
 					lines = append(lines, name)
 					break
 				}
@@ -169,7 +169,7 @@ func detectNvidiaDevices() ([]string, error) {
 	}
 
 	var lines []string
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
 		if line != "" {
 			lines = append(lines, line)
 		}

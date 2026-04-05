@@ -57,11 +57,11 @@ type WebhookPayload struct {
 
 // circuitState tracks consecutive failures for a single webhook.
 type circuitState struct {
-	mu                sync.Mutex
-	consecutiveFails  int
-	openUntil         time.Time
-	failThreshold     int
-	cooldownDuration  time.Duration
+	mu               sync.Mutex
+	consecutiveFails int
+	openUntil        time.Time
+	failThreshold    int
+	cooldownDuration time.Duration
 }
 
 func newCircuitState() *circuitState {
@@ -158,11 +158,9 @@ func (d *Dispatcher) Start(ctx context.Context) {
 		d.eventCh = d.bus.SubscribeFiltered(subID, allTypes...)
 	}
 
-	d.wg.Add(1)
-	go func() {
-		defer d.wg.Done()
+	d.wg.Go(func() {
 		d.run(ctx, subID)
-	}()
+	})
 }
 
 // Stop cancels the dispatcher and waits for all in-flight deliveries.

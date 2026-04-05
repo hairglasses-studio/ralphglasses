@@ -22,7 +22,7 @@ func GitDiffPaths(dir string) ([]string, error) {
 	}
 
 	var paths []string
-	for _, line := range strings.Split(trimmed, "\n") {
+	for line := range strings.SplitSeq(trimmed, "\n") {
 		if p := strings.TrimSpace(line); p != "" {
 			paths = append(paths, p)
 		}
@@ -46,7 +46,7 @@ func GitDiffStats(dir string) (files, added, removed int) {
 	}
 	// Summary line looks like: " 3 files changed, 10 insertions(+), 5 deletions(-)"
 	summary := lines[len(lines)-1]
-	for _, part := range strings.Split(summary, ",") {
+	for part := range strings.SplitSeq(summary, ",") {
 		part = strings.TrimSpace(part)
 		fields := strings.Fields(part)
 		if len(fields) < 2 {

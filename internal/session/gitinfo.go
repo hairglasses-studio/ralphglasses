@@ -27,7 +27,7 @@ func GitLogSince(repoPath string, since, until time.Time) ([]map[string]string, 
 	}
 
 	var commits []map[string]string
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
 		if line == "" {
 			continue
 		}
@@ -82,7 +82,7 @@ func GitDiffWindow(repoPath string, since, until time.Time, statOnly bool, maxLi
 	statOut, _ := statCmd.Output()
 
 	stat := map[string]int{"files_changed": 0, "insertions": 0, "deletions": 0}
-	for _, line := range strings.Split(strings.TrimSpace(string(statOut)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(statOut)), "\n") {
 		if line == "" {
 			continue
 		}

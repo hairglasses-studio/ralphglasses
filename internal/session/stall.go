@@ -63,10 +63,7 @@ func (sd *StallDetector) Start() <-chan bool {
 	}
 
 	// Check interval: 1/20th of the timeout, clamped to [100ms, 30s].
-	interval := sd.timeout / 20
-	if interval < 100*time.Millisecond {
-		interval = 100 * time.Millisecond
-	}
+	interval := max(sd.timeout/20, 100*time.Millisecond)
 	if interval > 30*time.Second {
 		interval = 30 * time.Second
 	}

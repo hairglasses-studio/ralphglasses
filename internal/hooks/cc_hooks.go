@@ -3,6 +3,7 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 )
@@ -12,9 +13,9 @@ type CCHookEvent string
 
 const (
 	// Pre-tool events (can block/modify).
-	CCPreToolUse    CCHookEvent = "PreToolUse"
-	CCPostToolUse   CCHookEvent = "PostToolUse"
-	CCNotification  CCHookEvent = "Notification"
+	CCPreToolUse   CCHookEvent = "PreToolUse"
+	CCPostToolUse  CCHookEvent = "PostToolUse"
+	CCNotification CCHookEvent = "Notification"
 
 	// Prompt lifecycle events.
 	CCUserPromptSubmit CCHookEvent = "UserPromptSubmit"
@@ -231,12 +232,7 @@ func (o *CCHookOutput) JSON() ([]byte, error) {
 // --- internal helpers ---
 
 func isValidCCHookEvent(e CCHookEvent) bool {
-	for _, valid := range AllCCHookEvents() {
-		if e == valid {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(AllCCHookEvents(), e)
 }
 
 func chainKey(def CCHookDef) string {

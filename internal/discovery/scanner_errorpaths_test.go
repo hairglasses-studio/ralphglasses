@@ -15,7 +15,7 @@ func TestScan_CancelledDuringIteration(t *testing.T) {
 
 	dir := t.TempDir()
 	// Create many repos so the cancellation has a chance to fire mid-loop.
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		name := filepath.Join(dir, "repo-"+string(rune('a'+i)))
 		if err := os.MkdirAll(filepath.Join(name, ".ralph"), 0755); err != nil {
 			t.Fatal(err)

@@ -281,7 +281,7 @@ func TestBlackboardPutNilValue(t *testing.T) {
 
 func countLines(data []byte) int {
 	n := 0
-	for _, line := range bytes.Split(data, []byte("\n")) {
+	for line := range bytes.SplitSeq(data, []byte("\n")) {
 		if len(bytes.TrimSpace(line)) > 0 {
 			n++
 		}

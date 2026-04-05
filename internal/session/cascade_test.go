@@ -53,7 +53,7 @@ func TestShouldCascade_ReliableCheapProvider(t *testing.T) {
 
 	// Ingest enough successful journal entries for the cheap provider
 	var entries []JournalEntry
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		entries = append(entries, JournalEntry{
 			Timestamp:  time.Now(),
 			SessionID:  "sess-" + string(rune('a'+i)),
@@ -96,7 +96,7 @@ func TestResolveProvider(t *testing.T) {
 		fa := NewFeedbackAnalyzer(dir, 3)
 
 		var entries []JournalEntry
-		for i := 0; i < 6; i++ {
+		for i := range 6 {
 			entries = append(entries, JournalEntry{
 				Timestamp:  time.Now(),
 				SessionID:  "s-" + string(rune('a'+i)),
@@ -589,7 +589,7 @@ func TestLatencyAwareRouting_SkipsSlow(t *testing.T) {
 	cr := NewCascadeRouter(config, nil, nil, "")
 
 	// Record high latencies for cheap provider (gemini)
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		cr.RecordLatency("gemini", 800*time.Millisecond)
 	}
 
@@ -610,7 +610,7 @@ func TestLatencyAwareRouting_UsesCheapWhenFast(t *testing.T) {
 	cr := NewCascadeRouter(config, nil, nil, "")
 
 	// Record low latencies for cheap provider
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		cr.RecordLatency("gemini", 100*time.Millisecond)
 	}
 
@@ -626,7 +626,7 @@ func TestLatencyAwareRouting_Disabled(t *testing.T) {
 	cr := NewCascadeRouter(config, nil, nil, "")
 
 	// Record extremely high latencies
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		cr.RecordLatency("gemini", 5*time.Second)
 	}
 
@@ -641,7 +641,7 @@ func TestRecordLatency_SlidingWindow(t *testing.T) {
 	cr := NewCascadeRouter(config, nil, nil, "")
 
 	// Fill window with 100 low-latency samples
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		cr.RecordLatency("gemini", 50*time.Millisecond)
 	}
 
@@ -654,7 +654,7 @@ func TestRecordLatency_SlidingWindow(t *testing.T) {
 	}
 
 	// Add 100 more high-latency samples — old ones should be evicted
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		cr.RecordLatency("gemini", 900*time.Millisecond)
 	}
 
@@ -692,7 +692,7 @@ func TestSetBanditHooks(t *testing.T) {
 		func() (string, string) { return "gemini", "gemini-2.5-flash" },
 		func(provider string, reward float64) { called = true },
 	)
-	for i := 0; i < 12; i++ {
+	for range 12 {
 		cr2.RecordResult(CascadeResult{
 			Timestamp:    time.Now(),
 			UsedProvider: ProviderGemini,
@@ -824,7 +824,7 @@ func TestSelectTier_BanditFallback(t *testing.T) {
 	)
 
 	// Add enough results for bandit to be consulted
-	for i := 0; i < 12; i++ {
+	for range 12 {
 		cr.mu.Lock()
 		cr.results = append(cr.results, CascadeResult{})
 		cr.mu.Unlock()
@@ -846,7 +846,7 @@ func TestSelectTier_BanditEmptyProvider(t *testing.T) {
 		func(string, float64) {},
 	)
 
-	for i := 0; i < 12; i++ {
+	for range 12 {
 		cr.mu.Lock()
 		cr.results = append(cr.results, CascadeResult{})
 		cr.mu.Unlock()
@@ -879,7 +879,7 @@ func TestRecentResults_LimitZero(t *testing.T) {
 	config := DefaultCascadeConfig()
 	cr := NewCascadeRouter(config, nil, nil, "")
 
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		cr.mu.Lock()
 		cr.results = append(cr.results, CascadeResult{TaskTitle: "task"})
 		cr.mu.Unlock()
@@ -1140,7 +1140,7 @@ func TestResolveProvider_LatencyHighSkipsCheap(t *testing.T) {
 	cr := NewCascadeRouter(config, nil, nil, "")
 
 	// Record high latencies
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		cr.RecordLatency("gemini", 500*time.Millisecond)
 	}
 
@@ -1154,7 +1154,7 @@ func TestCascadeStats_AllEscalated(t *testing.T) {
 	config := DefaultCascadeConfig()
 	cr := NewCascadeRouter(config, nil, nil, "")
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		cr.mu.Lock()
 		cr.results = append(cr.results, CascadeResult{
 			Escalated:    true,
@@ -1180,7 +1180,7 @@ func TestCascadeStats_NoneEscalated(t *testing.T) {
 	config := DefaultCascadeConfig()
 	cr := NewCascadeRouter(config, nil, nil, "")
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		cr.mu.Lock()
 		cr.results = append(cr.results, CascadeResult{
 			Escalated:    false,
@@ -1235,7 +1235,7 @@ func TestRecordResult_PersistenceIntegrity(t *testing.T) {
 	cr := NewCascadeRouter(config, nil, nil, dir)
 
 	// Record multiple results with varying fields
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		cr.RecordResult(CascadeResult{
 			Timestamp:       time.Now(),
 			TaskType:        "feature",
@@ -1273,7 +1273,7 @@ func TestSelectTier_BanditNotEnoughHistory(t *testing.T) {
 	)
 
 	// Only 5 results (< 10 minimum)
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		cr.mu.Lock()
 		cr.results = append(cr.results, CascadeResult{})
 		cr.mu.Unlock()
@@ -1522,11 +1522,11 @@ func TestCascadeRouter_ConcurrentShouldCascade(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// 10 goroutines calling ShouldCascade and SelectTier concurrently
-	for i := 0; i < N; i++ {
+	for i := range N {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			for j := 0; j < 50; j++ {
+			for j := range 50 {
 				taskTypes := []string{"feature", "docs", "refactor", "lint", "test"}
 				tt := taskTypes[j%len(taskTypes)]
 				_ = cr.ShouldCascade(tt, "do some work")
@@ -1536,14 +1536,12 @@ func TestCascadeRouter_ConcurrentShouldCascade(t *testing.T) {
 	}
 
 	// 1 goroutine modifying state: recording latencies and results
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for j := 0; j < 100; j++ {
+	wg.Go(func() {
+		for j := range 100 {
 			cr.RecordLatency("gemini", time.Duration(j+100)*time.Millisecond)
 			cr.RecordLatency("claude", time.Duration(j+200)*time.Millisecond)
 		}
-	}()
+	})
 
 	wg.Wait()
 

@@ -3,6 +3,7 @@ package session
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -61,7 +62,7 @@ func TestCurriculumWithEpisodicMemory(t *testing.T) {
 	em := NewEpisodicMemory(dir, 100, 0)
 
 	// Record some episodes with high turn counts (suggesting difficulty)
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		em.RecordSuccess(JournalEntry{
 			TaskFocus:   "debug memory leak in server",
 			Provider:    "claude",
@@ -205,14 +206,14 @@ func TestReflexion_EmptyErrorString(t *testing.T) {
 func TestReflexion_LongErrorOutput(t *testing.T) {
 	rs := NewReflexionStore(t.TempDir())
 	// 20KB error output
-	longErr := ""
-	for i := 0; i < 200; i++ {
-		longErr += "error: something went wrong at line " + string(rune('0'+i%10)) + "\n"
+	var longErr strings.Builder
+	for i := range 200 {
+		longErr.WriteString("error: something went wrong at line " + string(rune('0'+i%10)) + "\n")
 	}
 	iter := LoopIteration{
 		Status:       "failed",
-		Error:        longErr,
-		WorkerOutput: longErr,
+		Error:        longErr.String(),
+		WorkerOutput: longErr.String(),
 	}
 	r := rs.ExtractReflection("loop-1", iter)
 	if r == nil {
@@ -276,7 +277,7 @@ func TestEpisodicMemory_AllSameType(t *testing.T) {
 	dir := t.TempDir()
 	em := NewEpisodicMemory(dir, 5, 0)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		em.RecordSuccess(JournalEntry{
 			TaskFocus: "add test", Provider: "claude", TurnCount: 3,
 			Worked: []string{"added"}, ExitReason: "completed",
@@ -326,8 +327,8 @@ func TestCascade_ThresholdOne(t *testing.T) {
 
 	// Session with some hedging language should not reach 1.0
 	sess := &Session{
-		Status:    StatusCompleted,
-		TurnCount: 5,
+		Status:     StatusCompleted,
+		TurnCount:  5,
 		LastOutput: "I think this might work but I'm not sure",
 	}
 	verify := []LoopVerification{{Status: "passed", ExitCode: 0}}
@@ -425,7 +426,7 @@ func TestReflexionStore_ConcurrentAccess(t *testing.T) {
 	rs := NewReflexionStore(dir)
 
 	done := make(chan bool, 10)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		go func(n int) {
 			rs.Store(Reflection{
 				Timestamp:   time.Now(),
@@ -438,7 +439,7 @@ func TestReflexionStore_ConcurrentAccess(t *testing.T) {
 			done <- true
 		}(i)
 	}
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 
@@ -540,9 +541,9 @@ func TestProperty_ExtractConfidence(t *testing.T) {
 				verification = []LoopVerification{{ExitCode: 1}}
 			}
 			signals := ExtractConfidence(&Session{
-				Status:    StatusCompleted,
-				TurnCount: tc.turns,
-				Error:     tc.errMsg,
+				Status:     StatusCompleted,
+				TurnCount:  tc.turns,
+				Error:      tc.errMsg,
 				LastOutput: tc.output,
 			}, 5, verification)
 
@@ -570,8 +571,8 @@ func TestProperty_ScoreTaskDifficulty(t *testing.T) {
 	cs := NewCurriculumSorter(nil, nil)
 
 	cases := []struct {
-		name  string
-		title string
+		name   string
+		title  string
 		prompt string
 	}{
 		{"simple_test", "Add test for utils", "Write a unit test"},

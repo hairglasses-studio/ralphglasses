@@ -38,7 +38,7 @@ func TestThompsonSelect(t *testing.T) {
 	ts := NewThompsonSampling(testArms(), 0)
 	counts := make(map[string]int)
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		arm := ts.Select(nil)
 		counts[arm.ID]++
 	}
@@ -54,13 +54,13 @@ func TestThompsonUpdate(t *testing.T) {
 	ts := NewThompsonSampling(testArms(), 0)
 
 	// Arm "a" gets 10 successes, arm "b" gets 10 failures.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		ts.Update(Reward{ArmID: "a", Value: 1.0, Timestamp: time.Now()})
 		ts.Update(Reward{ArmID: "b", Value: 0.0, Timestamp: time.Now()})
 	}
 
 	counts := make(map[string]int)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		arm := ts.Select(nil)
 		counts[arm.ID]++
 	}
@@ -74,12 +74,12 @@ func TestThompsonSlidingWindow(t *testing.T) {
 	ts := NewThompsonSampling(testArms(), 5)
 
 	// 5 failures for arm "a".
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		ts.Update(Reward{ArmID: "a", Value: 0.0, Timestamp: time.Now()})
 	}
 
 	// Then 5 successes — should push failures out of the window.
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		ts.Update(Reward{ArmID: "a", Value: 1.0, Timestamp: time.Now()})
 	}
 
@@ -170,7 +170,7 @@ func TestBanditWithoutCascade(t *testing.T) {
 	// First 4 selections should explore each arm once (UCB1 guarantees this).
 	seen := make(map[int]bool)
 	sel2 := NewSelector(arms)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		idx := sel2.Select()
 		if idx < 0 || idx >= 4 {
 			t.Fatalf("selection %d: got index %d, expected 0-3", i, idx)
@@ -216,7 +216,7 @@ func TestBanditUpdate(t *testing.T) {
 	sel.Update(idx, 0.5)
 
 	// After several rounds with arm 1 having higher reward, it should be selected.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		sel.Update(0, 0.1)
 		sel.Update(1, 0.9)
 	}
@@ -248,7 +248,7 @@ func TestThompsonSingleArm(t *testing.T) {
 	ts := NewThompsonSampling(arms, 0)
 
 	// With a single arm, Select must always return it.
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		arm := ts.Select(nil)
 		if arm.ID != "only" {
 			t.Fatalf("expected arm 'only', got %q", arm.ID)

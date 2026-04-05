@@ -3,6 +3,7 @@ package session
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -316,13 +317,7 @@ func TestExtractFilePathsTruePositives(t *testing.T) {
 	for _, tc := range cases {
 		iter := LoopIteration{Error: tc.input}
 		paths := extractFilePaths(iter)
-		found := false
-		for _, p := range paths {
-			if p == tc.expected {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(paths, tc.expected)
 		if !found {
 			t.Errorf("expected %q to be extracted from %q, got %v", tc.expected, tc.input, paths)
 		}

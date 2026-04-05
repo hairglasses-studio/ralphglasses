@@ -20,8 +20,8 @@ type mockMsg struct {
 	mu      sync.Mutex
 }
 
-func (m *mockMsg) Data() []byte    { return m.data }
-func (m *mockMsg) Subject() string { return m.subject }
+func (m *mockMsg) Data() []byte     { return m.data }
+func (m *mockMsg) Subject() string  { return m.subject }
 func (m *mockMsg) Sequence() uint64 { return m.seq }
 
 func (m *mockMsg) Ack() error {
@@ -332,7 +332,7 @@ func TestNATSBus_ReplayFromSequence(t *testing.T) {
 
 	seen := make(map[string]bool)
 	timeout := time.After(2 * time.Second)
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		select {
 		case e := <-ch:
 			seen[e.SessionID] = true

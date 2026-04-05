@@ -44,10 +44,9 @@ func RenderTimeline(entries []TimelineEntry, repoName string, width, height int)
 		totalDur = time.Second
 	}
 
-	barWidth := width - 30 // leave room for labels
-	if barWidth < 20 {
-		barWidth = 20
-	}
+	barWidth := max(
+		// leave room for labels
+		width-30, 20)
 
 	// Time axis header
 	b.WriteString(fmt.Sprintf("  %-20s", ""))
@@ -62,10 +61,7 @@ func RenderTimeline(entries []TimelineEntry, repoName string, width, height int)
 	b.WriteString("\n")
 
 	// Render each entry
-	maxEntries := height - 8
-	if maxEntries < 5 {
-		maxEntries = 5
-	}
+	maxEntries := max(height-8, 5)
 	shown := entries
 	if len(shown) > maxEntries {
 		shown = shown[len(shown)-maxEntries:]

@@ -3,6 +3,7 @@ package v2
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -154,9 +155,7 @@ func (r *AliasRegistry) All() map[string]*AliasDef {
 	defer r.mu.RUnlock()
 
 	out := make(map[string]*AliasDef, len(r.aliases))
-	for k, v := range r.aliases {
-		out[k] = v
-	}
+	maps.Copy(out, r.aliases)
 	return out
 }
 

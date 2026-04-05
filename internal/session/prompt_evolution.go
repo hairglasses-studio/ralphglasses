@@ -31,10 +31,10 @@ type PromptEvolution struct {
 
 // PromptPopulation holds all variants for a given task type.
 type PromptPopulation struct {
-	TaskType string           `json:"task_type"`
-	Variants []PromptVariant  `json:"variants"`
-	BestID   string           `json:"best_id,omitempty"`
-	Generation int            `json:"generation"`
+	TaskType   string          `json:"task_type"`
+	Variants   []PromptVariant `json:"variants"`
+	BestID     string          `json:"best_id,omitempty"`
+	Generation int             `json:"generation"`
 }
 
 // PromptVariant is a single prompt variant with tracked performance.
@@ -192,10 +192,7 @@ func (pe *PromptEvolution) tournamentSelect(pop *PromptPopulation) *PromptVarian
 		return nil
 	}
 
-	k := pe.tournamentSize
-	if k > n {
-		k = n
-	}
+	k := min(pe.tournamentSize, n)
 
 	// Sample k distinct indices.
 	indices := pe.rng.Perm(n)[:k]

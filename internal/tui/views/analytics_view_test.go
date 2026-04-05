@@ -436,8 +436,8 @@ func TestRenderAnalytics_ActivePanelMarker(t *testing.T) {
 	out := RenderAnalytics(data, PanelProviderDist, TimeRange24h, 120, 40)
 	// The ">" marker is rendered with SelectedStyle, so look for the header text with ">" nearby.
 	// Since lipgloss adds ANSI codes, we check the raw output contains ">" before "Provider Distribution".
-	idx := strings.Index(out, "Provider Distribution")
-	if idx < 0 {
+	found := strings.Contains(out, "Provider Distribution")
+	if !found {
 		t.Fatal("output should contain Provider Distribution header")
 	}
 	// The marker is rendered a few chars before the header; just verify it appears somewhere.

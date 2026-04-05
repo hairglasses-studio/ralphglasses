@@ -112,10 +112,10 @@ func TestMemTransport_ConcurrentPublish(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
-	for g := 0; g < goroutines; g++ {
+	for range goroutines {
 		go func() {
 			defer wg.Done()
-			for i := 0; i < perGoroutine; i++ {
+			for range perGoroutine {
 				tr.Publish(context.Background(), Event{Type: LoopIterated, Timestamp: time.Now(), Version: 1})
 			}
 		}()

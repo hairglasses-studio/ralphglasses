@@ -145,7 +145,7 @@ func TestBudgetPool_ConcurrentAccess(t *testing.T) {
 
 	var wg sync.WaitGroup
 	// Concurrent allocations.
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
@@ -154,7 +154,7 @@ func TestBudgetPool_ConcurrentAccess(t *testing.T) {
 		}(i)
 	}
 	// Concurrent records.
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
@@ -163,14 +163,12 @@ func TestBudgetPool_ConcurrentAccess(t *testing.T) {
 		}(i)
 	}
 	// Concurrent reads.
-	for i := 0; i < 50; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 50 {
+		wg.Go(func() {
 			_ = bp.Remaining()
 			_ = bp.Summary()
 			_ = bp.ShouldPause("sA")
-		}()
+		})
 	}
 
 	wg.Wait()

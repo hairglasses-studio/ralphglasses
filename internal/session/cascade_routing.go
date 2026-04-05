@@ -2,7 +2,7 @@ package session
 
 import (
 	"math"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 )
@@ -249,12 +249,9 @@ func computePercentile(samples []time.Duration, p int) time.Duration {
 	}
 	sorted := make([]time.Duration, len(samples))
 	copy(sorted, samples)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+	slices.Sort(sorted)
 
-	rank := int(math.Ceil(float64(p)/100.0*float64(len(sorted)))) - 1
-	if rank < 0 {
-		rank = 0
-	}
+	rank := max(int(math.Ceil(float64(p)/100.0*float64(len(sorted))))-1, 0)
 	if rank >= len(sorted) {
 		rank = len(sorted) - 1
 	}

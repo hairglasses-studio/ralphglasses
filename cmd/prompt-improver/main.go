@@ -394,10 +394,7 @@ func runAnalyze(prompt string, targetProvider string) {
 		lints := enhancer.Lint(prompt)
 		report := enhancer.Score(prompt, result.TaskType, lints, &result, tp)
 		result.ScoreReport = report
-		legacyScore := report.Overall / 10
-		if legacyScore < 1 {
-			legacyScore = 1
-		}
+		legacyScore := max(report.Overall/10, 1)
 		if legacyScore > 10 {
 			legacyScore = 10
 		}

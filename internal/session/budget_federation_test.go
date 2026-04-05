@@ -289,7 +289,7 @@ func TestFederatedBudget_ConcurrentAccess(t *testing.T) {
 	fb := NewFederatedBudget(1000.0)
 
 	// Pre-allocate sessions.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		id := fmt.Sprintf("s%d", i)
 		if err := fb.Allocate(id, 100); err != nil {
 			t.Fatalf("Allocate %s: %v", id, err)
@@ -304,24 +304,24 @@ func TestFederatedBudget_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Concurrent spends.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
 			id := fmt.Sprintf("s%d", idx)
-			for j := 0; j < 100; j++ {
+			for range 100 {
 				_ = fb.Spend(id, 1.0)
 			}
 		}(i)
 	}
 
 	// Concurrent reads.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
 			id := fmt.Sprintf("s%d", idx)
-			for j := 0; j < 50; j++ {
+			for range 50 {
 				_ = fb.Remaining(id)
 				_ = fb.TotalRemaining()
 				_ = fb.Summary()

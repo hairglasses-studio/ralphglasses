@@ -32,7 +32,7 @@ func TestContextualThompson_ArmBias_AfterUpdate(t *testing.T) {
 
 	// Record positive reward for "fast" arm.
 	ctx := make([]float64, int(NumContextualFeatures))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		ct.Update(Reward{ArmID: "fast", Value: 1.0, Context: ctx})
 	}
 

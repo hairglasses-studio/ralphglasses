@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 )
 
@@ -54,19 +55,19 @@ type PodStatus struct {
 // PodSpec is a minimal pod specification used by CreatePod.
 // See pod_template.go for the builder that produces these.
 type PodSpec struct {
-	Name         string            `json:"name"`
-	Namespace    string            `json:"namespace"`
-	Labels       map[string]string `json:"labels,omitempty"`
-	Annotations  map[string]string `json:"annotations,omitempty"`
-	Image        string            `json:"image"`
-	Command      []string          `json:"command,omitempty"`
-	Args         []string          `json:"args,omitempty"`
-	Env          []EnvVar          `json:"env,omitempty"`
-	EnvFrom      []EnvFromSource   `json:"envFrom,omitempty"`
+	Name         string                `json:"name"`
+	Namespace    string                `json:"namespace"`
+	Labels       map[string]string     `json:"labels,omitempty"`
+	Annotations  map[string]string     `json:"annotations,omitempty"`
+	Image        string                `json:"image"`
+	Command      []string              `json:"command,omitempty"`
+	Args         []string              `json:"args,omitempty"`
+	Env          []EnvVar              `json:"env,omitempty"`
+	EnvFrom      []EnvFromSource       `json:"envFrom,omitempty"`
 	Resources    *ResourceRequirements `json:"resources,omitempty"`
-	VolumeMounts []VolumeMount     `json:"volumeMounts,omitempty"`
-	Volumes      []Volume          `json:"volumes,omitempty"`
-	OwnerRef     *OwnerReference   `json:"ownerRef,omitempty"`
+	VolumeMounts []VolumeMount         `json:"volumeMounts,omitempty"`
+	Volumes      []Volume              `json:"volumes,omitempty"`
+	OwnerRef     *OwnerReference       `json:"ownerRef,omitempty"`
 }
 
 // EnvVar represents a single environment variable.
@@ -316,12 +317,7 @@ func podNameForSession(session *RalphSession) string {
 
 // hasFinalizer returns true if the session's metadata includes the given finalizer.
 func hasFinalizer(session *RalphSession, finalizer string) bool {
-	for _, f := range session.Finalizers {
-		if f == finalizer {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(session.Finalizers, finalizer)
 }
 
 // setCondition updates or appends a condition. Returns true if the condition changed.

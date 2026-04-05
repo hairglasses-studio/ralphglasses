@@ -15,7 +15,7 @@ type A2ATaskSendRequest struct {
 	Message Message `json:"message"`
 
 	// Optional fields for task routing and budget control.
-	Metadata A2ATaskMetadata `json:"metadata,omitempty"`
+	Metadata A2ATaskMetadata `json:"metadata"`
 }
 
 // A2ATaskMetadata carries optional routing hints for a task submission.
@@ -28,12 +28,12 @@ type A2ATaskMetadata struct {
 
 // A2ATaskResponse is the standard A2A v1.0 task response envelope.
 type A2ATaskResponse struct {
-	ID        string      `json:"id"`
-	Status    TaskState   `json:"status"`
-	Message   *Message    `json:"message,omitempty"`
-	Artifacts []Artifact  `json:"artifacts,omitempty"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
+	ID        string     `json:"id"`
+	Status    TaskState  `json:"status"`
+	Message   *Message   `json:"message,omitempty"`
+	Artifacts []Artifact `json:"artifacts,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
 }
 
 // handleA2ATaskSend accepts a task from another agent, converts it to a

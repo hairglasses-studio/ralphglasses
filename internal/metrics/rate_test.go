@@ -54,7 +54,7 @@ func TestRateCalculator_MultipleRecords(t *testing.T) {
 	r := NewRateCalculator(withClock(clock))
 
 	// Record 10 each second for 10 seconds.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		r.Record(10)
 		advance(time.Second)
 	}
@@ -172,10 +172,10 @@ func TestRateCalculator_ConcurrentSafety(t *testing.T) {
 	recordsPerWriter := 100
 
 	wg.Add(writers)
-	for i := 0; i < writers; i++ {
+	for range writers {
 		go func() {
 			defer wg.Done()
-			for j := 0; j < recordsPerWriter; j++ {
+			for range recordsPerWriter {
 				r.Record(1)
 			}
 		}()
@@ -214,7 +214,7 @@ func TestTokenRateCalculator(t *testing.T) {
 	tr := NewTokenRateCalculator(WithWindow(10*time.Second), withClock(clock))
 
 	// Simulate 500 tokens over 5 seconds.
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		tr.RecordTokens(100)
 		advance(time.Second)
 	}
@@ -253,11 +253,11 @@ func TestEventRateCalculator(t *testing.T) {
 	clock, advance := fakeClock(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
 	er := NewEventRateCalculator(WithWindow(10*time.Second), withClock(clock))
 
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		er.RecordEvent()
 	}
 	advance(5 * time.Second)
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		er.RecordEvent()
 	}
 
@@ -284,7 +284,7 @@ func TestErrorRateCalculator_AllSuccess(t *testing.T) {
 	clock, _ := fakeClock(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
 	er := NewErrorRateCalculator(withClock(clock))
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		er.RecordSuccess()
 	}
 
@@ -299,10 +299,10 @@ func TestErrorRateCalculator_MixedErrors(t *testing.T) {
 	er := NewErrorRateCalculator(withClock(clock))
 
 	// 80 successes + 20 errors = 100 total, 20% error rate.
-	for i := 0; i < 80; i++ {
+	for range 80 {
 		er.RecordSuccess()
 	}
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		er.RecordError()
 	}
 
@@ -318,13 +318,13 @@ func TestErrorRateCalculator_WindowRollover(t *testing.T) {
 	er := NewErrorRateCalculator(WithWindow(5*time.Second), withClock(clock))
 
 	// Record errors at t=0.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		er.RecordError()
 	}
 
 	// Record successes at t=3.
 	advance(3 * time.Second)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		er.RecordSuccess()
 	}
 
@@ -348,7 +348,7 @@ func TestErrorRateCalculator_AllErrors(t *testing.T) {
 	clock, _ := fakeClock(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
 	er := NewErrorRateCalculator(withClock(clock))
 
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		er.RecordError()
 	}
 

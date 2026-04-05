@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -173,10 +174,8 @@ func validateString(key string, val any, spec keySpec) []ValidationWarning {
 		}}
 	}
 	if spec.AllowedStr != nil {
-		for _, a := range spec.AllowedStr {
-			if s == a {
-				return nil
-			}
+		if slices.Contains(spec.AllowedStr, s) {
+			return nil
 		}
 		return []ValidationWarning{{
 			Key:      key,

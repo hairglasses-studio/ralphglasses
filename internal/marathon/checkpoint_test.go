@@ -188,7 +188,7 @@ func TestLoadLatestCheckpoint_ReturnsNewest(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "checkpoints")
 
 	base := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		cp := &Checkpoint{
 			Timestamp:       base.Add(time.Duration(i) * time.Hour),
 			CyclesCompleted: i + 1,
@@ -263,7 +263,7 @@ func TestCheckpoint_FullJSONRoundtrip(t *testing.T) {
 func TestMultipleCheckpoints_SaveLoadAll(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "checkpoints")
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		cp := &Checkpoint{
 			Timestamp:       time.Date(2026, 1, 1, i, 0, 0, 0, time.UTC),
 			CyclesCompleted: i * 10,
@@ -307,7 +307,7 @@ func TestListCheckpoints_AllCorrupted(t *testing.T) {
 	}
 
 	// Write only corrupted files.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		name := filepath.Join(dir, "cp-corrupt"+string(rune('0'+i))+".json")
 		if err := os.WriteFile(name, []byte("not json "+string(rune('0'+i))), 0644); err != nil {
 			t.Fatal(err)

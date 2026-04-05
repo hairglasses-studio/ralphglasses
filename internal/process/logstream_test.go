@@ -70,11 +70,11 @@ func TestReadFullLog_MissingFile(t *testing.T) {
 func TestReadFullLog_LargeLines(t *testing.T) {
 	dir := setupLogDir(t)
 	// Create a file with lines under the buffer limit
-	var content string
-	for i := 0; i < 100; i++ {
-		content += "log line number " + string(rune('A'+i%26)) + "\n"
+	var content strings.Builder
+	for i := range 100 {
+		content.WriteString("log line number " + string(rune('A'+i%26)) + "\n")
 	}
-	writeLogFile(t, dir, content)
+	writeLogFile(t, dir, content.String())
 
 	lines, err := ReadFullLog(dir)
 	if err != nil {

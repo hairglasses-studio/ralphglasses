@@ -121,7 +121,7 @@ func TestFileProvider_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 	errCh := make(chan error, 20)
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -133,12 +133,10 @@ func TestFileProvider_ConcurrentAccess(t *testing.T) {
 		}(i)
 	}
 
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			_, _ = p.List()
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -225,10 +223,8 @@ func TestRegistry_ConcurrentGet(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 20 {
+		wg.Go(func() {
 			v, err := r.Get("k")
 			if err != nil {
 				t.Errorf("Get: %v", err)
@@ -237,7 +233,7 @@ func TestRegistry_ConcurrentGet(t *testing.T) {
 			if v != "v" {
 				t.Errorf("expected 'v', got %q", v)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"sync"
 	"time"
 )
@@ -38,11 +39,11 @@ const (
 
 // AlertRule defines a threshold-based alerting rule.
 type AlertRule struct {
-	Name      string     `json:"name"`
-	Metric    MetricType `json:"metric"`
-	Condition Condition  `json:"condition"`
-	Threshold float64    `json:"threshold"`
-	Severity  Severity   `json:"severity"`
+	Name      string        `json:"name"`
+	Metric    MetricType    `json:"metric"`
+	Condition Condition     `json:"condition"`
+	Threshold float64       `json:"threshold"`
+	Severity  Severity      `json:"severity"`
 	Cooldown  time.Duration `json:"cooldown"`
 
 	// Targets lists notification target names registered with the AlertManager.
@@ -99,11 +100,11 @@ func (t *ChannelTarget) Notify(_ context.Context, a Alert) error {
 // AlertManager evaluates rules against metric values, enforces cooldowns,
 // and dispatches alerts to registered notification targets.
 type AlertManager struct {
-	mu       sync.RWMutex
-	rules    []AlertRule
-	targets  map[string]NotificationTarget
-	cooldowns map[string]time.Time // rule name -> earliest next fire time
-	history   []Alert
+	mu         sync.RWMutex
+	rules      []AlertRule
+	targets    map[string]NotificationTarget
+	cooldowns  map[string]time.Time // rule name -> earliest next fire time
+	history    []Alert
 	maxHistory int
 }
 
@@ -261,9 +262,7 @@ func (am *AlertManager) ResetAllCooldowns() {
 func (am *AlertManager) dispatch(ctx context.Context, a Alert) {
 	am.mu.RLock()
 	targets := make(map[string]NotificationTarget, len(am.targets))
-	for k, v := range am.targets {
-		targets[k] = v
-	}
+	maps.Copy(targets, am.targets)
 	am.mu.RUnlock()
 
 	if len(a.Rule.Targets) == 0 {

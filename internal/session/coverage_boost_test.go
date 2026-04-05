@@ -177,7 +177,7 @@ func TestDecisionLog_RecentTruncation(t *testing.T) {
 	dl := NewDecisionLog(dir, LevelAutoRecover)
 
 	// Add more decisions than the limit
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		dl.Propose(AutonomousDecision{
 			Category:      DecisionRestart,
 			RequiredLevel: LevelAutoRecover,
@@ -209,7 +209,7 @@ func TestDecisionLog_RecentNegativeLimit(t *testing.T) {
 	dir := t.TempDir()
 	dl := NewDecisionLog(dir, LevelAutoRecover)
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		dl.Propose(AutonomousDecision{
 			Category:      DecisionRestart,
 			RequiredLevel: LevelAutoRecover,

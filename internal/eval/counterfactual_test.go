@@ -133,7 +133,7 @@ func TestProviderRoutingPolicy(t *testing.T) {
 func TestCounterfactualWithSyntheticData(t *testing.T) {
 	// 100 observations: 50 passed (conf=0.8), 50 failed (conf=0.4).
 	var observations []session.LoopObservation
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		observations = append(observations, session.LoopObservation{
 			VerifyPassed:     true,
 			Confidence:       0.8,
@@ -141,7 +141,7 @@ func TestCounterfactualWithSyntheticData(t *testing.T) {
 			TotalCostUSD:     0.05,
 		})
 	}
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		observations = append(observations, session.LoopObservation{
 			VerifyPassed:     false,
 			Confidence:       0.4,

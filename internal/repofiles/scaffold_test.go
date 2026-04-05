@@ -3,6 +3,7 @@ package repofiles
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -74,13 +75,7 @@ func TestScaffold_SkipsExisting(t *testing.T) {
 	}
 
 	// .ralphrc should be skipped
-	found := false
-	for _, s := range result.Skipped {
-		if s == ".ralphrc" {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(result.Skipped, ".ralphrc")
 	if !found {
 		t.Error("expected .ralphrc to be skipped")
 	}

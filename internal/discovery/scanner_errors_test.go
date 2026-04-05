@@ -115,7 +115,7 @@ func TestScan_ManyRepos(t *testing.T) {
 
 	dir := t.TempDir()
 	count := 50
-	for i := 0; i < count; i++ {
+	for i := range count {
 		name := filepath.Join(dir, fmt.Sprintf("repo-%03d", i))
 		if err := os.MkdirAll(filepath.Join(name, ".ralph"), 0755); err != nil {
 			t.Fatal(err)
@@ -182,7 +182,7 @@ func TestScan_CancelledContext(t *testing.T) {
 
 	dir := t.TempDir()
 	// Create some repos.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		name := filepath.Join(dir, fmt.Sprintf("repo-%d", i))
 		if err := os.MkdirAll(filepath.Join(name, ".ralph"), 0755); err != nil {
 			t.Fatal(err)

@@ -153,7 +153,7 @@ func TestMessageQueueReceiveAllLimit(t *testing.T) {
 	}
 	defer mq.Close()
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		env, _ := MarshalEnvelope("id", "orch", "w1", TaskAssignment{TaskID: "t"})
 		mq.Send(env)
 	}
@@ -184,7 +184,7 @@ func TestMessageQueuePending(t *testing.T) {
 	}
 
 	// Send 3 messages: 2 to worker-1, 1 broadcast.
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		env, _ := MarshalEnvelope("id", "orch", "worker-1", TaskAssignment{TaskID: "t"})
 		mq.Send(env)
 	}
@@ -214,7 +214,7 @@ func TestMessageQueueReceiveLimit(t *testing.T) {
 	}
 	defer mq.Close()
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		env, _ := MarshalEnvelope("id", "orch", "w1", TaskAssignment{TaskID: "t"})
 		mq.Send(env)
 	}
@@ -271,7 +271,7 @@ func TestMessageQueueAllMessageTypes(t *testing.T) {
 
 	cases := []struct {
 		name string
-		msg  interface{}
+		msg  any
 		want MessageType
 	}{
 		{"TaskAssignment", TaskAssignment{TaskID: "t1"}, MsgTaskAssignment},

@@ -28,7 +28,7 @@ func TestRegretTracker_Empty(t *testing.T) {
 func TestRegretTracker_SingleArm(t *testing.T) {
 	rt := NewRegretTracker()
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		rt.RecordPull("only", 0.8)
 	}
 
@@ -58,7 +58,7 @@ func TestRegretTracker_TwoArms_OptimalTracking(t *testing.T) {
 	rt := NewRegretTracker()
 
 	// Arm "a" has mean reward 0.9, arm "b" has mean reward 0.3.
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		rt.RecordPull("a", 0.9)
 		rt.RecordPull("b", 0.3)
 	}
@@ -91,7 +91,7 @@ func TestRegretTracker_PerArmContribution(t *testing.T) {
 	rt := NewRegretTracker()
 
 	// Arm "a" mean=0.9 (optimal), "b" mean=0.5, "c" mean=0.1.
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		rt.RecordPull("a", 0.9)
 		rt.RecordPull("b", 0.5)
 		rt.RecordPull("c", 0.1)
@@ -140,7 +140,7 @@ func TestRegretTracker_BayesianBound(t *testing.T) {
 	rt := NewRegretTracker()
 
 	// 2 arms, 1000 pulls.
-	for i := 0; i < 500; i++ {
+	for range 500 {
 		rt.RecordPull("a", 0.8)
 		rt.RecordPull("b", 0.2)
 	}
@@ -171,7 +171,7 @@ func TestRegretTracker_ConvergenceRate(t *testing.T) {
 	rt.RecordPull("bad", 0.1)
 
 	// 200 suboptimal pulls: regret grows linearly.
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		rt.RecordPull("bad", 0.1)
 	}
 
@@ -179,7 +179,7 @@ func TestRegretTracker_ConvergenceRate(t *testing.T) {
 	rate1 := report1.ConvergenceRate
 
 	// Phase 2: switch entirely to optimal arm; regret flattens.
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		rt.RecordPull("good", 0.9)
 	}
 
@@ -203,7 +203,7 @@ func TestRegretTracker_CumulativeRegretMonotonic(t *testing.T) {
 	rewards := map[string]float64{"a": 0.9, "b": 0.5, "c": 0.2}
 	arms := []string{"a", "b", "c"}
 
-	for i := 0; i < 300; i++ {
+	for i := range 300 {
 		arm := arms[i%3]
 		rt.RecordPull(arm, rewards[arm])
 	}
@@ -239,7 +239,7 @@ func TestRegretSublinear_ThompsonSampling(t *testing.T) {
 
 	totalSteps := 10000
 
-	for step := 0; step < totalSteps; step++ {
+	for range totalSteps {
 		arm := ts.Select(nil)
 
 		// Bernoulli reward with true mean.
@@ -304,7 +304,7 @@ func TestRegretSublinear_ThompsonVsRandom(t *testing.T) {
 
 	totalSteps := 5000
 
-	for step := 0; step < totalSteps; step++ {
+	for step := range totalSteps {
 		// Thompson Sampling selection.
 		tsArm := ts.Select(nil)
 		tsMean := trueMeans[tsArm.ID]

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -181,12 +182,7 @@ func (c *NLController) registerDefaults() {
 
 // containsToken returns true if tok appears in tokens.
 func containsToken(tokens []string, tok string) bool {
-	for _, t := range tokens {
-		if t == tok {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(tokens, tok)
 }
 
 // --- default handlers ---

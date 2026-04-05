@@ -56,10 +56,10 @@ const (
 	SessionError EventType = "session.error" // Non-fatal session-level error
 
 	// Self-improvement
-	AutoOptimized    EventType = "auto.optimized"     // Level 2+ decision executed
-	ProviderSelected EventType = "provider.selected"   // Smart provider selection
-	SessionRecovered EventType = "session.recovered"   // Auto-recovery restart
-	ContextConflict  EventType = "context.conflict"    // Cross-session file conflict
+	AutoOptimized    EventType = "auto.optimized"    // Level 2+ decision executed
+	ProviderSelected EventType = "provider.selected" // Smart provider selection
+	SessionRecovered EventType = "session.recovered" // Auto-recovery restart
+	ContextConflict  EventType = "context.conflict"  // Cross-session file conflict
 
 	// Provider health
 	ProviderHealthChanged EventType = "provider.health" // Provider health state transition
@@ -74,9 +74,9 @@ const (
 	WorkerResumed      EventType = "worker.resumed"
 
 	// Safety
-	AnomalyDetected EventType = "anomaly.detected"   // Fleet anomaly detector triggered
-	EmergencyStop   EventType = "emergency.stop"      // Kill switch engaged
-	EmergencyResume EventType = "emergency.resume"     // Kill switch disengaged
+	AnomalyDetected EventType = "anomaly.detected" // Fleet anomaly detector triggered
+	EmergencyStop   EventType = "emergency.stop"   // Kill switch engaged
+	EmergencyResume EventType = "emergency.resume" // Kill switch disengaged
 
 	// Recording
 	RecordingStarted EventType = "session.recording.started" // Session replay recording began
@@ -456,10 +456,7 @@ func (b *Bus) HistoryAfterCursor(cursor, limit int) ([]Event, int) {
 	dropped := b.totalCount - len(b.history)
 
 	// Where in the history slice does the cursor land?
-	startIdx := cursor - dropped
-	if startIdx < 0 {
-		startIdx = 0
-	}
+	startIdx := max(cursor-dropped, 0)
 	if startIdx >= len(b.history) {
 		return nil, b.totalCount
 	}

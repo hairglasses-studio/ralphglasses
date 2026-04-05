@@ -17,17 +17,17 @@ const AgentCardDiscoveryPath = "/.well-known/agent-card.json"
 // AgentCard describes an A2A agent's identity, capabilities, and endpoint
 // following Google's Agent-to-Agent protocol v1.0 specification.
 type AgentCard struct {
-	Name                string              `json:"name"`
-	Description         string              `json:"description"`
-	URL                 string              `json:"url"`
-	Version             string              `json:"version"`
-	DocumentationURL    string              `json:"documentationUrl,omitempty"`
-	SupportedInterfaces []string            `json:"supportedInterfaces,omitempty"`
-	Capabilities        AgentCapabilities   `json:"capabilities"`
-	Skills              []AgentSkill        `json:"skills"`
+	Name                string                    `json:"name"`
+	Description         string                    `json:"description"`
+	URL                 string                    `json:"url"`
+	Version             string                    `json:"version"`
+	DocumentationURL    string                    `json:"documentationUrl,omitempty"`
+	SupportedInterfaces []string                  `json:"supportedInterfaces,omitempty"`
+	Capabilities        AgentCapabilities         `json:"capabilities"`
+	Skills              []AgentSkill              `json:"skills"`
 	SecuritySchemes     map[string]SecurityScheme `json:"securitySchemes,omitempty"`
 	Security            []map[string][]string     `json:"security,omitempty"`
-	Provider            AgentProvider       `json:"provider,omitempty"`
+	Provider            AgentProvider             `json:"provider"`
 
 	// SupportsA2A is a convenience field for backward compatibility;
 	// it lists string tags like "task_delegation", "provider:claude", etc.
@@ -37,8 +37,8 @@ type AgentCard struct {
 
 // AgentCapabilities describes what protocol features the agent supports.
 type AgentCapabilities struct {
-	Streaming         bool `json:"streaming"`
-	PushNotifications bool `json:"pushNotifications"`
+	Streaming              bool `json:"streaming"`
+	PushNotifications      bool `json:"pushNotifications"`
 	StateTransitionHistory bool `json:"stateTransitionHistory"`
 }
 
@@ -116,10 +116,10 @@ func BuildAgentCard(c *Coordinator) AgentCard {
 	agentURL := fmt.Sprintf("http://%s:%d", c.hostname, c.port)
 
 	return AgentCard{
-		Name:        "ralphglasses-" + c.nodeID,
-		Description: "Ralphglasses fleet coordinator managing multi-LLM agent sessions",
-		URL:         agentURL,
-		Version:     c.version,
+		Name:                "ralphglasses-" + c.nodeID,
+		Description:         "Ralphglasses fleet coordinator managing multi-LLM agent sessions",
+		URL:                 agentURL,
+		Version:             c.version,
 		SupportedInterfaces: []string{"a2a/v1"},
 		Capabilities: AgentCapabilities{
 			Streaming:              true,

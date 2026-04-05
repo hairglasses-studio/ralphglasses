@@ -209,7 +209,7 @@ func TestAdaptiveDepth_SignalWindowCap(t *testing.T) {
 	ad := NewAdaptiveDepth(DefaultAdaptiveDepthConfig())
 
 	// Record 25 signals — should be capped at 20.
-	for i := 0; i < 25; i++ {
+	for range 25 {
 		ad.RecordSignal("cap", ProgressSignal{
 			Iteration:    5,
 			TotalDepth:   10,

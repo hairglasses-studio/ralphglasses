@@ -260,7 +260,7 @@ func TestListCheckpoints_Ordering(t *testing.T) {
 
 	// Save three checkpoints with different timestamps (spaced 1s apart).
 	base := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		cp := &Checkpoint{
 			Timestamp:       base.Add(time.Duration(i) * time.Second),
 			CyclesCompleted: i + 1,

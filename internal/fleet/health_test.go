@@ -84,7 +84,7 @@ func TestHealthyWorkers(t *testing.T) {
 	ht.RecordHeartbeat("w3")
 
 	// Degrade w2.
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		ht.RecordMiss("w2")
 	}
 
@@ -122,10 +122,10 @@ func TestTransitionHistory_Capped(t *testing.T) {
 
 	// Generate many transitions by cycling through states.
 	// Each heartbeat+miss cycle generates transitions.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		ht.RecordHeartbeat("w1") // -> healthy
-		ht.RecordMiss("w1")     // -> degraded (1 miss)
-		ht.RecordMiss("w1")     // -> unhealthy (2 misses)
+		ht.RecordMiss("w1")      // -> degraded (1 miss)
+		ht.RecordMiss("w1")      // -> unhealthy (2 misses)
 	}
 
 	h, ok := ht.GetHealth("w1")

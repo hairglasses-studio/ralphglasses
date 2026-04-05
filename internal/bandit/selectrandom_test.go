@@ -13,7 +13,7 @@ func TestSelectRandom_Empty(t *testing.T) {
 func TestSelectRandom_SingleArm(t *testing.T) {
 	t.Parallel()
 	sel := NewSelector([]Arm{{ID: "only", Provider: "claude", Model: "opus"}})
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		idx := sel.SelectRandom()
 		if idx != 0 {
 			t.Fatalf("expected 0 for single arm, got %d", idx)
@@ -32,7 +32,7 @@ func TestSelectRandom_MultipleArms(t *testing.T) {
 
 	// Over 300 trials, each arm should be selected at least once.
 	counts := make(map[int]int)
-	for i := 0; i < 300; i++ {
+	for range 300 {
 		idx := sel.SelectRandom()
 		if idx < 0 || idx >= len(arms) {
 			t.Fatalf("SelectRandom returned out-of-range index %d", idx)

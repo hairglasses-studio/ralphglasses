@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/bubbles/v2/progress"
 	lipgloss "charm.land/lipgloss/v2"
 	"github.com/NimbleMarkets/ntcharts/sparkline"
-	"charm.land/bubbles/v2/progress"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
@@ -153,10 +153,7 @@ func RenderSessionDetail(s *session.Session, width, height int) string {
 		if len(lines) == 0 && lastOutput != "" {
 			lines = strings.Split(lastOutput, "\n")
 		}
-		maxLines := height - 32
-		if maxLines < 5 {
-			maxLines = 5
-		}
+		maxLines := max(height-32, 5)
 		if len(lines) > maxLines {
 			lines = lines[len(lines)-maxLines:]
 		}

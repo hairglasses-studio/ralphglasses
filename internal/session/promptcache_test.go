@@ -181,7 +181,7 @@ func TestPromptCacheTracker_StatsAccumulate(t *testing.T) {
 	repoDir := t.TempDir()
 
 	// Three different long prompts with stable headers
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		stableBlock := "## Instructions\n" + strings.Repeat("- rule line\n", 200)
 		variable := strings.Repeat("x", i+1) // different variable content each time
 		prompt := stableBlock + "\n" + variable

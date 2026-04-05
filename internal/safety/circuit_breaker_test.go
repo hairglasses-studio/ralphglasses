@@ -117,7 +117,7 @@ func TestClosed_TripsAfterFailureThreshold(t *testing.T) {
 	cfg := Config{FailureThreshold: 3, ResetTimeout: time.Minute, SuccessThreshold: 1}
 	cb := MustNew(cfg)
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		cb.Execute(func() error { return errSynthetic })
 	}
 
@@ -130,7 +130,7 @@ func TestClosed_DoesNotTripBelowThreshold(t *testing.T) {
 	cfg := Config{FailureThreshold: 5, ResetTimeout: time.Minute, SuccessThreshold: 1}
 	cb := MustNew(cfg)
 
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		cb.Execute(func() error { return errSynthetic })
 	}
 
@@ -225,7 +225,7 @@ func TestHalfOpen_ClosesAfterSuccessThreshold(t *testing.T) {
 	advance(6 * time.Second)
 
 	// Need 3 consecutive successes
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if err := cb.Execute(func() error { return nil }); err != nil {
 			t.Fatalf("success %d: unexpected error: %v", i+1, err)
 		}
@@ -336,7 +336,7 @@ func TestMetrics_TotalCalls(t *testing.T) {
 	cfg := Config{FailureThreshold: 100, ResetTimeout: time.Minute, SuccessThreshold: 1}
 	cb := MustNew(cfg)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		cb.Execute(func() error { return nil })
 	}
 
@@ -464,10 +464,10 @@ func TestConcurrent_NoRace(t *testing.T) {
 	const callsPerGoroutine = 100
 
 	wg.Add(goroutines)
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < callsPerGoroutine; j++ {
+			for j := range callsPerGoroutine {
 				if j%3 == 0 {
 					cb.Execute(func() error { return errSynthetic })
 				} else {
@@ -496,7 +496,7 @@ func TestConcurrent_ResetDuringExecution(t *testing.T) {
 	// Goroutine 1: continuously execute
 	go func() {
 		defer wg.Done()
-		for i := 0; i < 200; i++ {
+		for i := range 200 {
 			cb.Execute(func() error {
 				if i%2 == 0 {
 					return errSynthetic
@@ -509,7 +509,7 @@ func TestConcurrent_ResetDuringExecution(t *testing.T) {
 	// Goroutine 2: continuously reset
 	go func() {
 		defer wg.Done()
-		for i := 0; i < 200; i++ {
+		for range 200 {
 			cb.Reset()
 		}
 	}()
@@ -565,7 +565,7 @@ func TestEdge_ThresholdOfOne(t *testing.T) {
 func TestEdge_MultipleResets(t *testing.T) {
 	cb := defaultCB(t)
 	// Multiple resets from closed should be safe no-ops.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		cb.Reset()
 	}
 	if cb.State() != StateClosed {

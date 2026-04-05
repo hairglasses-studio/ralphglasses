@@ -348,7 +348,7 @@ func TestCompactionBetaSetAfterThreshold(t *testing.T) {
 	// Pre-populate 2 completed iterations with acceptance results to avoid
 	// convergence detection (which fires when 2 idle iterations have no changes).
 	run.Lock()
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		run.Iterations = append(run.Iterations, LoopIteration{
 			Number: i + 1,
 			Status: "idle",

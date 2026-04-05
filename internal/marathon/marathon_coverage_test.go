@@ -338,7 +338,7 @@ func TestHandleCostEvent_Concurrent(t *testing.T) {
 	})
 
 	var wg sync.WaitGroup
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		wg.Add(1)
 		go func(v float64) {
 			defer wg.Done()
@@ -456,15 +456,13 @@ func TestConcurrentStatsAndSupervisorDuringRun(t *testing.T) {
 	time.Sleep(30 * time.Millisecond)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 20; j++ {
+	for range 5 {
+		wg.Go(func() {
+			for range 20 {
 				_ = m.CurrentStats()
 				_ = m.Supervisor()
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	cancel()

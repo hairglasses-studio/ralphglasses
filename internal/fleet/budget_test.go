@@ -7,9 +7,9 @@ import (
 
 func TestWorkerBudget_Remaining(t *testing.T) {
 	tests := []struct {
-		name  string
-		wb    WorkerBudget
-		want  float64
+		name string
+		wb   WorkerBudget
+		want float64
 	}{
 		{"full budget", WorkerBudget{Limit: 100, Spent: 0}, 100},
 		{"partial spend", WorkerBudget{Limit: 100, Spent: 40}, 60},
@@ -121,7 +121,7 @@ func TestBudgetManager_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 	n := 100
 	wg.Add(n)
-	for i := 0; i < n; i++ {
+	for range n {
 		go func() {
 			defer wg.Done()
 			bm.RecordCost("worker-1", 1.0)

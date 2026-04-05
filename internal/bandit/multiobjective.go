@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand/v2"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -42,11 +43,11 @@ type ContextFeatures struct {
 
 // MOArmStats holds per-arm summary statistics across all objectives.
 type MOArmStats struct {
-	Arm            string                       `json:"arm"`
-	Objectives     map[string]ObjectiveStats    `json:"objectives"`
-	Selections     int                          `json:"selections"`
-	ParetoRank     int                          `json:"pareto_rank"` // 0 = Pareto-optimal (non-dominated)
-	ScalarizedMean float64                      `json:"scalarized_mean"`
+	Arm            string                    `json:"arm"`
+	Objectives     map[string]ObjectiveStats `json:"objectives"`
+	Selections     int                       `json:"selections"`
+	ParetoRank     int                       `json:"pareto_rank"` // 0 = Pareto-optimal (non-dominated)
+	ScalarizedMean float64                   `json:"scalarized_mean"`
 }
 
 // ObjectiveStats holds per-objective statistics for a single arm.
@@ -67,11 +68,11 @@ type moArm struct {
 
 // moObjState holds the Beta posterior for one objective of one arm.
 type moObjState struct {
-	alpha   float64   // successes + 1 (prior)
-	beta    float64   // failures + 1 (prior)
-	sum     float64   // sum of normalized rewards
-	sumSq   float64   // sum of squared normalized rewards
-	count   int
+	alpha float64 // successes + 1 (prior)
+	beta  float64 // failures + 1 (prior)
+	sum   float64 // sum of normalized rewards
+	sumSq float64 // sum of squared normalized rewards
+	count int
 }
 
 // MultiObjectiveBandit optimizes across multiple reward dimensions using
@@ -80,10 +81,10 @@ type moObjState struct {
 // weighted sum of Thompson samples, with minimization objectives flipped
 // so that lower raw values produce higher scalarized scores.
 type MultiObjectiveBandit struct {
-	mu         sync.Mutex
-	arms       map[string]*moArm
-	order      []string
-	objectives []Objective
+	mu          sync.Mutex
+	arms        map[string]*moArm
+	order       []string
+	objectives  []Objective
 	normWeights []float64 // normalized objective weights (sum to 1)
 }
 
@@ -202,7 +203,8 @@ func (mob *MultiObjectiveBandit) buildRationale(arm string, samples map[string]f
 	if arm == "" {
 		return "no arms available"
 	}
-	parts := fmt.Sprintf("selected %s:", arm)
+	var parts strings.Builder
+	parts.WriteString(fmt.Sprintf("selected %s:", arm))
 	for _, obj := range mob.objectives {
 		s, ok := samples[obj.Name]
 		if !ok {
@@ -212,9 +214,9 @@ func (mob *MultiObjectiveBandit) buildRationale(arm string, samples map[string]f
 		if obj.Direction == Minimize {
 			dir = "min"
 		}
-		parts += fmt.Sprintf(" %s=%.2f(%s)", obj.Name, s, dir)
+		parts.WriteString(fmt.Sprintf(" %s=%.2f(%s)", obj.Name, s, dir))
 	}
-	return parts
+	return parts.String()
 }
 
 // Update records observed rewards for an arm across one or more objectives.
@@ -369,12 +371,12 @@ func assignParetoRanks(stats []MOArmStats, objectives []Objective) {
 
 	for {
 		front := make([]int, 0)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			if ranked[i] {
 				continue
 			}
 			dominated := false
-			for j := 0; j < n; j++ {
+			for j := range n {
 				if i == j || ranked[j] {
 					continue
 				}

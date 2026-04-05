@@ -5,17 +5,18 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func BenchmarkLoadConfig(b *testing.B) {
 	b.ReportAllocs()
 	dir := b.TempDir()
-	var content string
-	for i := 0; i < 20; i++ {
-		content += "KEY_" + string(rune('A'+i)) + "=\"value_" + string(rune('A'+i)) + "\"\n"
+	var content strings.Builder
+	for i := range 20 {
+		content.WriteString("KEY_" + string(rune('A'+i)) + "=\"value_" + string(rune('A'+i)) + "\"\n")
 	}
-	_ = os.WriteFile(filepath.Join(dir, ".ralphrc"), []byte(content), 0644)
+	_ = os.WriteFile(filepath.Join(dir, ".ralphrc"), []byte(content.String()), 0644)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = LoadConfig(context.Background(), dir)

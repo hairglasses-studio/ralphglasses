@@ -117,7 +117,7 @@ func retryImprove(ctx context.Context, client PromptImprover, prompt string, opt
 	totalAttempts := 1 + cfg.MaxRetries
 
 	var lastErr error
-	for attempt := 0; attempt < totalAttempts; attempt++ {
+	for attempt := range totalAttempts {
 		result, err := client.Improve(ctx, prompt, opts)
 		if err == nil {
 			return result, nil

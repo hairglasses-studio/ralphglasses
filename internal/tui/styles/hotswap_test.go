@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	lipgloss "charm.land/lipgloss/v2"
+	"github.com/fsnotify/fsnotify"
 )
 
 const testThemeYAML = `name: hotswap-test
@@ -41,7 +41,7 @@ func writeThemeFile(t *testing.T, path, content string) {
 
 func TestThemeChangedMsg_ImplementsTeaMsg(t *testing.T) {
 	// ThemeChangedMsg must satisfy tea.Msg (any empty interface).
-	var msg interface{} = ThemeChangedMsg{
+	var msg any = ThemeChangedMsg{
 		Theme: &Theme{Name: "test"},
 		Path:  "/tmp/test.yaml",
 	}
@@ -61,7 +61,7 @@ func TestThemeChangedMsg_ImplementsTeaMsg(t *testing.T) {
 }
 
 func TestThemeWatcherErrorMsg_ImplementsTeaMsg(t *testing.T) {
-	var msg interface{} = ThemeWatcherErrorMsg{Err: os.ErrNotExist}
+	var msg any = ThemeWatcherErrorMsg{Err: os.ErrNotExist}
 	if msg == nil {
 		t.Fatal("ThemeWatcherErrorMsg should not be nil")
 	}
@@ -87,7 +87,7 @@ func TestWatchThemeFile_DetectsChange(t *testing.T) {
 		writeThemeFile(t, path, updatedThemeYAML)
 	}()
 
-	done := make(chan interface{}, 1)
+	done := make(chan any, 1)
 	go func() {
 		done <- cmd()
 	}()
@@ -127,7 +127,7 @@ func TestWatchThemeFile_AppliesTheme(t *testing.T) {
 		writeThemeFile(t, path, updatedThemeYAML)
 	}()
 
-	done := make(chan interface{}, 1)
+	done := make(chan any, 1)
 	go func() {
 		done <- cmd()
 	}()
@@ -164,7 +164,7 @@ func TestWatchThemeFile_InvalidYAML(t *testing.T) {
 		writeThemeFile(t, path, "{{{{ not valid yaml")
 	}()
 
-	done := make(chan interface{}, 1)
+	done := make(chan any, 1)
 	go func() {
 		done <- cmd()
 	}()
@@ -310,7 +310,7 @@ func TestWatchThemeFile_MultipleWrites_LastWins(t *testing.T) {
 		writeThemeFile(t, path, updatedThemeYAML)
 	}()
 
-	done := make(chan interface{}, 1)
+	done := make(chan any, 1)
 	go func() {
 		done <- cmd()
 	}()

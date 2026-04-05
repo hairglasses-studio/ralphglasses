@@ -33,7 +33,7 @@ func TestShouldRetry_BelowMax(t *testing.T) {
 		JitterFraction: 0, // no jitter for deterministic test
 	}
 
-	for attempt := 0; attempt < 3; attempt++ {
+	for attempt := range 3 {
 		retry, _ := p.ShouldRetry(attempt)
 		if !retry {
 			t.Errorf("ShouldRetry(%d) = false, want true", attempt)
@@ -189,7 +189,7 @@ func TestShouldRetry_JitterBounded(t *testing.T) {
 	}
 
 	// Run many times to check jitter stays within bounds
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		retry, delay := p.ShouldRetry(0)
 		if !retry {
 			t.Fatal("ShouldRetry(0) = false")

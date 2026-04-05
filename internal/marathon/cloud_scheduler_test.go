@@ -13,17 +13,17 @@ import (
 type mockVMProvider struct {
 	mu sync.Mutex
 
-	provisionFn  func(ctx context.Context, spec VMSpec) (*VMInfo, error)
-	statusFn     func(ctx context.Context, vmID string) (*VMInfo, error)
-	executeFn    func(ctx context.Context, vmID string, command string) ([]byte, error)
-	terminateFn  func(ctx context.Context, vmID string) error
-	costSoFarFn  func(ctx context.Context, vmID string) (float64, error)
+	provisionFn func(ctx context.Context, spec VMSpec) (*VMInfo, error)
+	statusFn    func(ctx context.Context, vmID string) (*VMInfo, error)
+	executeFn   func(ctx context.Context, vmID string, command string) ([]byte, error)
+	terminateFn func(ctx context.Context, vmID string) error
+	costSoFarFn func(ctx context.Context, vmID string) (float64, error)
 
-	provisionCount  int
-	terminateCount  int
-	executeCount    int
-	terminatedVMs   []string
-	executedCmds    []string
+	provisionCount int
+	terminateCount int
+	executeCount   int
+	terminatedVMs  []string
+	executedCmds   []string
 }
 
 func newMockVMProvider() *mockVMProvider {
@@ -366,8 +366,7 @@ func TestCloudScheduler_ConcurrencyLimit(t *testing.T) {
 		PollInterval:  50 * time.Millisecond,
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	// First task should succeed.
 	id1, err := cs.Schedule(ctx, validMarathonConfig(), validVMSpec())

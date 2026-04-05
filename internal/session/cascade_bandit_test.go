@@ -52,7 +52,7 @@ func TestBanditRouter_SelectProvider_AfterMinSamples(t *testing.T) {
 	})
 
 	// Record enough samples to pass the threshold.
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		ctx := BuildCascadeContext("lint", 0.8, TimeBatch, 0.9)
 		br.RecordOutcome("gemini", "gemini-2.0-flash-lite", true, 0.01, 0.8, ctx)
 	}
@@ -89,7 +89,7 @@ func TestBanditRouter_CheapForSimpleTasks(t *testing.T) {
 
 	// Train: cheap succeeds on simple tasks, fails on complex.
 	// Expensive succeeds on complex, mediocre on simple.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		br.RecordOutcome("gemini", "gemini-2.0-flash-lite", true, 0.01, 0.85, simpleCtx)
 		br.RecordOutcome("gemini", "gemini-2.0-flash-lite", false, 0.01, 0.2, complexCtx)
 		br.RecordOutcome("claude", "claude-opus", true, 2.00, 0.95, complexCtx)
@@ -98,7 +98,7 @@ func TestBanditRouter_CheapForSimpleTasks(t *testing.T) {
 
 	// For simple tasks, the bandit should favor the cheap provider.
 	cheapCount := 0
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		arm := br.SelectProvider(simpleCtx)
 		if arm.Provider == "gemini" {
 			cheapCount++
@@ -142,10 +142,10 @@ func TestBanditRouter_SuccessRateTracking(t *testing.T) {
 	ctx := BuildCascadeContext("lint", 0.8, TimeBatch, 0.8)
 
 	// Record 8 successes and 2 failures for gemini.
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		br.RecordOutcome("gemini", "gemini-2.0-flash-lite", true, 0.01, 0.8, ctx)
 	}
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		br.RecordOutcome("gemini", "gemini-2.0-flash-lite", false, 0.01, 0.3, ctx)
 	}
 
@@ -329,12 +329,12 @@ func TestWireBanditRouter_UsesContextAfterTraining(t *testing.T) {
 
 	// Seed enough data for the bandit to be ready.
 	ctx := BuildCascadeContext("lint", 0.8, TimeBatch, 0.9)
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		br.RecordOutcome("gemini", "gemini-2.0-flash-lite", true, 0.01, 0.8, ctx)
 	}
 
 	// Also need enough cascade results for SelectTier to consult bandit.
-	for i := 0; i < 15; i++ {
+	for range 15 {
 		cr.RecordResult(CascadeResult{
 			UsedProvider: ProviderGemini,
 			Escalated:    false,

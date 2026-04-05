@@ -86,10 +86,8 @@ func TestSemaphore_ConcurrencyLimit(t *testing.T) {
 	var maxObserved int32
 	var wg sync.WaitGroup
 
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 20 {
+		wg.Go(func() {
 			s.Acquire(context.Background()) //nolint:errcheck
 			defer s.Release()
 
@@ -102,7 +100,7 @@ func TestSemaphore_ConcurrencyLimit(t *testing.T) {
 			}
 			time.Sleep(5 * time.Millisecond)
 			atomic.AddInt32(&active, -1)
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -113,13 +111,13 @@ func TestSemaphore_ConcurrencyLimit(t *testing.T) {
 
 func TestSemaphore_Available_AfterPartialAcquire(t *testing.T) {
 	s := NewSemaphore(5)
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		s.Acquire(context.Background()) //nolint:errcheck
 	}
 	if got := s.Available(); got != 2 {
 		t.Fatalf("expected 2 available, got %d", got)
 	}
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		s.Release()
 	}
 }

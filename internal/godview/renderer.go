@@ -73,15 +73,13 @@ func (r *Renderer) Render(state *State) {
 	r.writeHeavySep(w)
 
 	// Calculate layout: give table exactly enough for repos, rest to logs
-	repoCount := len(state.Repos)
-	if repoCount > 20 {
-		repoCount = 20 // Cap table at 20 rows
-	}
+	repoCount := min(len(state.Repos),
+		// Cap table at 20 rows
+		20)
 	tableRows := repoCount + 1 // +1 for column header
-	logRows := h - tableRows - 7 // header(1) + hsep(1) + sep(1) + logheader(1) + sep(1) + cost(1) + padding(1)
-	if logRows < 4 {
-		logRows = 4
-	}
+	logRows := max(
+		// header(1) + hsep(1) + sep(1) + logheader(1) + sep(1) + cost(1) + padding(1)
+		h-tableRows-7, 4)
 	if tableRows < 3 {
 		tableRows = 3
 	}
@@ -206,10 +204,7 @@ func (r *Renderer) renderLiveOutput(s *State, w, maxLines int) {
 	r.buf.WriteString(ClearLine)
 	fmt.Fprintf(r.buf, " %s%s▸ LIVE OUTPUT%s\n", Bold, Header, Reset)
 
-	start := len(s.LiveLines) - maxLines + 1
-	if start < 0 {
-		start = 0
-	}
+	start := max(len(s.LiveLines)-maxLines+1, 0)
 	shown := 0
 	for i := start; i < len(s.LiveLines) && shown < maxLines-1; i++ {
 		line := s.LiveLines[i]

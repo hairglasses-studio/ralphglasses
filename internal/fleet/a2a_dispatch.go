@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -50,11 +51,11 @@ type DispatchRequest struct {
 
 // DispatchResult captures the outcome of a dispatch operation.
 type DispatchResult struct {
-	AgentName  string    `json:"agent_name"`
-	AgentURL   string    `json:"agent_url"`
-	TaskID     string    `json:"task_id"`
-	RemoteID   string    `json:"remote_id"`
-	Status     TaskState `json:"status"`
+	AgentName    string    `json:"agent_name"`
+	AgentURL     string    `json:"agent_url"`
+	TaskID       string    `json:"task_id"`
+	RemoteID     string    `json:"remote_id"`
+	Status       TaskState `json:"status"`
 	DispatchedAt time.Time `json:"dispatched_at"`
 }
 
@@ -113,10 +114,8 @@ func (d *A2ADispatcher) AddAgent(baseURL string) {
 	baseURL = strings.TrimRight(baseURL, "/")
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	for _, u := range d.agents {
-		if u == baseURL {
-			return
-		}
+	if slices.Contains(d.agents, baseURL) {
+		return
 	}
 	d.agents = append(d.agents, baseURL)
 }

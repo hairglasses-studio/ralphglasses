@@ -302,11 +302,9 @@ func TestWorktreePool_ConcurrentAcquireRelease(t *testing.T) {
 	const iterations = 3
 	var wg sync.WaitGroup
 
-	for i := 0; i < goroutines; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < iterations; j++ {
+	for range goroutines {
+		wg.Go(func() {
+			for range iterations {
 				path, _, err := pool.Acquire(ctx, repo)
 				if err != nil {
 					t.Errorf("concurrent Acquire failed: %v", err)
@@ -316,7 +314,7 @@ func TestWorktreePool_ConcurrentAcquireRelease(t *testing.T) {
 				_ = os.WriteFile(filepath.Join(path, "work.txt"), []byte("work"), 0644)
 				pool.Release(ctx, repo, path)
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

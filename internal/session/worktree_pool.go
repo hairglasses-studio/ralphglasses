@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -48,7 +50,7 @@ type WorktreePool struct {
 type repoPool struct {
 	mu       sync.Mutex
 	idle     []poolEntry // available worktrees ready for checkout
-	repoRoot string     // canonical git toplevel path
+	repoRoot string      // canonical git toplevel path
 }
 
 // poolEntry represents a single pooled worktree.
@@ -223,9 +225,7 @@ func (wp *WorktreePool) CleanupStale(olderThan time.Duration) int {
 
 	wp.mu.Lock()
 	reposCopy := make(map[string]*repoPool, len(wp.repos))
-	for k, v := range wp.repos {
-		reposCopy[k] = v
-	}
+	maps.Copy(reposCopy, wp.repos)
 	wp.mu.Unlock()
 
 	cutoff := time.Now().Add(-olderThan)
@@ -510,12 +510,7 @@ func installMergePreventionHook(wtPath string) error {
 // IsProtectedBranch returns true if the given branch name is protected from
 // merges in pool worktrees.
 func IsProtectedBranch(branch string) bool {
-	for _, b := range protectedBranches {
-		if branch == b {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(protectedBranches, branch)
 }
 
 // resetWorktree resets a worktree to HEAD, discarding all local changes.

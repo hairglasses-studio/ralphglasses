@@ -15,6 +15,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 )
@@ -22,12 +23,12 @@ import (
 // Modification represents a proposed or applied self-modification.
 type Modification struct {
 	ID         string          `json:"id"`
-	Target     string          `json:"target"`      // e.g. "prompt_template:plan", "cascade:threshold"
+	Target     string          `json:"target"` // e.g. "prompt_template:plan", "cascade:threshold"
 	OldValue   json.RawMessage `json:"old_value"`
 	NewValue   json.RawMessage `json:"new_value"`
 	Reason     string          `json:"reason"`
-	Confidence float64         `json:"confidence"`  // 0.0-1.0
-	Status     string          `json:"status"`      // "proposed", "applied", "rolled_back", "rejected"
+	Confidence float64         `json:"confidence"` // 0.0-1.0
+	Status     string          `json:"status"`     // "proposed", "applied", "rolled_back", "rejected"
 	AppliedAt  *time.Time      `json:"applied_at,omitempty"`
 	RevertedAt *time.Time      `json:"reverted_at,omitempty"`
 	CreatedAt  time.Time       `json:"created_at"`
@@ -72,10 +73,8 @@ func (h *HyperagentEngine) Propose(target string, oldValue, newValue json.RawMes
 	defer h.mu.Unlock()
 
 	// Check forbidden targets
-	for _, ft := range h.ForbiddenTargets {
-		if target == ft {
-			return "", fmt.Errorf("hyperagent: target %q is forbidden", target)
-		}
+	if slices.Contains(h.ForbiddenTargets, target) {
+		return "", fmt.Errorf("hyperagent: target %q is forbidden", target)
 	}
 
 	mod := Modification{

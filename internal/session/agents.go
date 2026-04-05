@@ -120,7 +120,7 @@ func parseAgentsMd(content string) []AgentDef {
 	var current *AgentDef
 	var body strings.Builder
 
-	for _, line := range strings.Split(content, "\n") {
+	for line := range strings.SplitSeq(content, "\n") {
 		if strings.HasPrefix(line, "## ") {
 			// Flush previous agent
 			if current != nil {
@@ -187,7 +187,7 @@ func parseAgentMd(filename, content string) AgentDef {
 
 	// Parse frontmatter (simple key: value parsing, no YAML dep)
 	frontmatter := parts[1]
-	for _, line := range strings.Split(frontmatter, "\n") {
+	for line := range strings.SplitSeq(frontmatter, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
@@ -236,7 +236,7 @@ func parseCodexAgentToml(filename, content string) AgentDef {
 	name := strings.TrimSuffix(filename, ".toml")
 	def := AgentDef{Name: name, Provider: ProviderCodex}
 
-	for _, line := range strings.Split(content, "\n") {
+	for line := range strings.SplitSeq(content, "\n") {
 		trimmed := strings.TrimSpace(line)
 		switch {
 		case strings.HasPrefix(trimmed, "name = "):
@@ -252,10 +252,10 @@ func parseCodexAgentToml(filename, content string) AgentDef {
 		}
 	}
 
-	if start := strings.Index(content, "developer_instructions = \"\"\""); start >= 0 {
-		body := content[start+len("developer_instructions = \"\"\""):]
-		if end := strings.Index(body, "\"\"\""); end >= 0 {
-			def.Prompt = strings.TrimSpace(body[:end])
+	if _, after, ok := strings.Cut(content, "developer_instructions = \"\"\""); ok {
+		body := after
+		if before, _, ok := strings.Cut(body, "\"\"\""); ok {
+			def.Prompt = strings.TrimSpace(before)
 		}
 	}
 

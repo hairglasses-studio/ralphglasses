@@ -53,10 +53,7 @@ func NewRateCalculator(opts ...RateOption) *RateCalculator {
 		o(r)
 	}
 	// Pre-allocate buckets slice with capacity for the full window.
-	cap := int(r.window.Seconds())
-	if cap < 1 {
-		cap = 1
-	}
+	cap := max(int(r.window.Seconds()), 1)
 	r.buckets = make([]bucket, 0, cap)
 	return r
 }

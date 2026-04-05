@@ -17,7 +17,7 @@ func seedSessions(t *testing.T, s *Store, n int, status string, ageOffset time.D
 	ctx := context.Background()
 	ids := make([]string, n)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		id := fmt.Sprintf("%s-%04d", prefix, i)
 		ids[i] = id
 		ts := time.Now().UTC().Add(-ageOffset)
@@ -43,7 +43,7 @@ func seedObservations(t *testing.T, s *Store, n int, sessionID string, ageOffset
 	t.Helper()
 	ctx := context.Background()
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		ts := time.Now().UTC().Add(-ageOffset)
 		obs := &ObservationRow{
 			ID:        fmt.Sprintf("%s-%04d", prefix, i),
@@ -258,7 +258,7 @@ func TestVacuumReclaimsSpace(t *testing.T) {
 
 	// Insert a meaningful amount of data.
 	seedSessions(t, s, 50, "completed", 60*24*time.Hour, "bulk")
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		seedObservations(t, s, 20, fmt.Sprintf("bulk-%04d", i), 60*24*time.Hour, fmt.Sprintf("bulk-obs-%04d", i))
 	}
 
@@ -413,7 +413,7 @@ func TestBeforeAfterSizeReport(t *testing.T) {
 	ctx := context.Background()
 
 	// Seed bulk data: 30 completed sessions, each with 50 observations.
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		id := fmt.Sprintf("size-sess-%04d", i)
 		ts := time.Now().UTC().Add(-90 * 24 * time.Hour)
 		row := &SessionRow{
@@ -428,7 +428,7 @@ func TestBeforeAfterSizeReport(t *testing.T) {
 		if err := s.SaveSession(ctx, row); err != nil {
 			t.Fatalf("seed session: %v", err)
 		}
-		for j := 0; j < 50; j++ {
+		for j := range 50 {
 			obs := &ObservationRow{
 				ID:        fmt.Sprintf("size-obs-%04d-%04d", i, j),
 				SessionID: id,

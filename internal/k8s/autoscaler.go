@@ -11,25 +11,25 @@ import (
 type MetricType string
 
 const (
-	MetricQueueDepth    MetricType = "queue_depth"
-	MetricCostRate      MetricType = "cost_rate_usd_per_min"
-	MetricSessionCount  MetricType = "session_count"
+	MetricQueueDepth   MetricType = "queue_depth"
+	MetricCostRate     MetricType = "cost_rate_usd_per_min"
+	MetricSessionCount MetricType = "session_count"
 )
 
 // MetricTarget defines a threshold for a single metric that triggers scaling.
 type MetricTarget struct {
-	Metric           MetricType `json:"metric"`
-	TargetValue      float64    `json:"target_value"`       // desired per-pod average
-	ScaleUpThreshold float64    `json:"scale_up_threshold"`  // scale up when value exceeds this
-	ScaleDownThreshold float64  `json:"scale_down_threshold"` // scale down when value drops below this
+	Metric             MetricType `json:"metric"`
+	TargetValue        float64    `json:"target_value"`         // desired per-pod average
+	ScaleUpThreshold   float64    `json:"scale_up_threshold"`   // scale up when value exceeds this
+	ScaleDownThreshold float64    `json:"scale_down_threshold"` // scale down when value drops below this
 }
 
 // ScalePolicy configures the HPA-like autoscaler behavior.
 type ScalePolicy struct {
-	MinReplicas       int           `json:"min_replicas"`
-	MaxReplicas       int           `json:"max_replicas"`
-	CooldownScaleUp   time.Duration `json:"cooldown_scale_up"`
-	CooldownScaleDown time.Duration `json:"cooldown_scale_down"`
+	MinReplicas       int            `json:"min_replicas"`
+	MaxReplicas       int            `json:"max_replicas"`
+	CooldownScaleUp   time.Duration  `json:"cooldown_scale_up"`
+	CooldownScaleDown time.Duration  `json:"cooldown_scale_down"`
 	Targets           []MetricTarget `json:"targets"`
 }
 
@@ -123,12 +123,12 @@ func (d ScaleDirection) String() string {
 
 // ScaleEvent records a scaling decision for observability.
 type ScaleEvent struct {
-	Direction   ScaleDirection `json:"direction"`
-	FromReplicas int           `json:"from_replicas"`
-	ToReplicas   int           `json:"to_replicas"`
-	Reason       string        `json:"reason"`
-	Timestamp    time.Time     `json:"timestamp"`
-	Metrics      FleetMetrics  `json:"metrics"`
+	Direction    ScaleDirection `json:"direction"`
+	FromReplicas int            `json:"from_replicas"`
+	ToReplicas   int            `json:"to_replicas"`
+	Reason       string         `json:"reason"`
+	Timestamp    time.Time      `json:"timestamp"`
+	Metrics      FleetMetrics   `json:"metrics"`
 }
 
 // Autoscaler watches fleet metrics and scales RalphSession pods up or down,
@@ -313,10 +313,7 @@ func (a *Autoscaler) desiredReplicas(fm FleetMetrics, current int, dir ScaleDire
 		}
 		// Compute how many replicas we would need for this metric to hit its target value.
 		// replicas = ceil(metricValue / targetValue)
-		metricReplicas := int(fm.Value(t.Metric)/t.TargetValue) + 1
-		if metricReplicas < 1 {
-			metricReplicas = 1
-		}
+		metricReplicas := max(int(fm.Value(t.Metric)/t.TargetValue)+1, 1)
 
 		if dir == ScaleUp && metricReplicas > desired {
 			desired = metricReplicas

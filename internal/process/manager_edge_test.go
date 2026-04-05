@@ -294,7 +294,7 @@ func TestStop_ReaperRace(t *testing.T) {
 	setSleepFn(func(d time.Duration) {})
 	t.Cleanup(func() { setSleepFn(origSleep) })
 
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		t.Run("", func(t *testing.T) {
 			m := NewManager()
 			repoPath := t.TempDir()
@@ -340,7 +340,7 @@ func TestStop_ReaperRace_WithAutoRestart(t *testing.T) {
 	setSleepFn(func(d time.Duration) {})
 	t.Cleanup(func() { setSleepFn(origSleep) })
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		t.Run("", func(t *testing.T) {
 			m := NewManager()
 			m.AutoRestart = true

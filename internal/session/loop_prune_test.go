@@ -250,7 +250,7 @@ func TestPruneLoopRuns_ConcurrentAccess(t *testing.T) {
 	dir := t.TempDir()
 
 	old := time.Now().Add(-96 * time.Hour)
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		id := "loop-" + string(rune('a'+i))
 		writeLoopRunFile(t, dir, id, "pending", old)
 	}
@@ -259,15 +259,13 @@ func TestPruneLoopRuns_ConcurrentAccess(t *testing.T) {
 	errs := make(chan error, 5)
 
 	// Run concurrent dry-run prunes — these should all succeed without data races.
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 5 {
+		wg.Go(func() {
 			_, err := PruneLoopRuns(dir, 72*time.Hour, []string{"pending"}, true)
 			if err != nil {
 				errs <- err
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	close(errs)

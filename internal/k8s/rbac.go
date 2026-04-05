@@ -218,8 +218,8 @@ func SessionRoleBinding(serviceAccountName, namespace string) *RoleBinding {
 
 // AllRBACManifests returns the complete set of RBAC objects needed for
 // a standard ralphglasses operator deployment.
-func AllRBACManifests(operatorSA, sessionSA, namespace string) []interface{} {
-	return []interface{}{
+func AllRBACManifests(operatorSA, sessionSA, namespace string) []any {
+	return []any{
 		OperatorClusterRole(),
 		OperatorClusterRoleBinding(operatorSA, namespace),
 		SessionRole(namespace),

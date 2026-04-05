@@ -32,7 +32,7 @@ func (a ScaleAction) String() string {
 // ScaleDecision is the output of an autoscaler evaluation.
 type ScaleDecision struct {
 	Action  ScaleAction `json:"action"`
-	Delta   int         `json:"delta"`   // positive = add workers, negative = remove
+	Delta   int         `json:"delta"` // positive = add workers, negative = remove
 	Reason  string      `json:"reason"`
 	Current int         `json:"current"` // current active worker count
 	Target  int         `json:"target"`  // desired worker count after scaling
@@ -131,10 +131,10 @@ func NewAutoScaler(cfg AutoScalerConfig) *AutoScaler {
 
 // AutoScalerSnapshot is the fleet state snapshot passed into Evaluate.
 type AutoScalerSnapshot struct {
-	Workers       []WorkerSnapshot
-	QueueDepth    int     // pending items
-	BudgetTotal   float64 // total budget limit
-	BudgetSpent   float64 // total spent so far
+	Workers        []WorkerSnapshot
+	QueueDepth     int     // pending items
+	BudgetTotal    float64 // total budget limit
+	BudgetSpent    float64 // total spent so far
 	BudgetReserved float64 // reserved for in-flight work
 }
 
@@ -194,10 +194,7 @@ func (as *AutoScaler) Evaluate(snap AutoScalerSnapshot) ScaleDecision {
 		}
 
 		// Calculate how many workers to add: aim for queue/multiplier ratio.
-		desired := snap.QueueDepth / int(as.config.QueueDepthMultiplier)
-		if desired < active+1 {
-			desired = active + 1
-		}
+		desired := max(snap.QueueDepth/int(as.config.QueueDepthMultiplier), active+1)
 		if desired > as.config.MaxWorkers {
 			desired = as.config.MaxWorkers
 		}
@@ -233,10 +230,7 @@ func (as *AutoScaler) Evaluate(snap AutoScalerSnapshot) ScaleDecision {
 		idleFraction := float64(idle) / float64(active)
 		if idleFraction > as.config.IdleWorkerThreshold && snap.QueueDepth == 0 {
 			// Scale down by the number of excess idle workers, but respect MinWorkers.
-			desired := active - idle
-			if desired < as.config.MinWorkers {
-				desired = as.config.MinWorkers
-			}
+			desired := max(active-idle, as.config.MinWorkers)
 			delta := active - desired
 			if delta <= 0 {
 				decision.Reason = "at minimum workers"

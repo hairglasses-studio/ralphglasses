@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -14,9 +15,9 @@ func TestSnapshotRestoreRoundTrip(t *testing.T) {
 
 	// Write test config files
 	files := map[string]string{
-		".config/starship.toml":    "format = \"$directory\"\n",
-		".config/ghostty/config":   "font-family = MonaspiceNe Nerd Font\n",
-		".config/bat/config":       "--theme=Catppuccin Mocha\n",
+		".config/starship.toml":  "format = \"$directory\"\n",
+		".config/ghostty/config": "font-family = MonaspiceNe Nerd Font\n",
+		".config/bat/config":     "--theme=Catppuccin Mocha\n",
 	}
 
 	for rel, content := range files {
@@ -222,12 +223,7 @@ func TestManagedPathsNotEmpty(t *testing.T) {
 	}
 	// Cross-platform paths should always be present
 	has := func(needle string) bool {
-		for _, p := range paths {
-			if p == needle {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(paths, needle)
 	}
 	if !has(".config/starship.toml") {
 		t.Error("managedPaths missing cross-platform path .config/starship.toml")
@@ -237,12 +233,7 @@ func TestManagedPathsNotEmpty(t *testing.T) {
 func TestManagedPathsPlatformSpecific(t *testing.T) {
 	paths := managedPaths()
 	has := func(needle string) bool {
-		for _, p := range paths {
-			if p == needle {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(paths, needle)
 	}
 
 	switch runtime.GOOS {

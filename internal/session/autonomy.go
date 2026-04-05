@@ -97,7 +97,7 @@ func (ac *AutonomyConfig) ShouldRecover(recoveryCount int) bool {
 // (0-indexed). The schedule is 30s, 60s, 120s, etc. (exponential with base 30s, factor 2).
 func RecoveryBackoff(attempt int) time.Duration {
 	base := 30 * time.Second
-	for i := 0; i < attempt; i++ {
+	for range attempt {
 		base *= 2
 	}
 	return base
@@ -107,13 +107,13 @@ func RecoveryBackoff(attempt int) time.Duration {
 type DecisionCategory string
 
 const (
-	DecisionRestart       DecisionCategory = "restart"
-	DecisionFailover      DecisionCategory = "failover"
-	DecisionBudgetAdjust  DecisionCategory = "budget_adjust"
+	DecisionRestart        DecisionCategory = "restart"
+	DecisionFailover       DecisionCategory = "failover"
+	DecisionBudgetAdjust   DecisionCategory = "budget_adjust"
 	DecisionProviderSelect DecisionCategory = "provider_select"
-	DecisionConfigChange  DecisionCategory = "config_change"
-	DecisionLaunch        DecisionCategory = "launch"
-	DecisionScale         DecisionCategory = "scale"
+	DecisionConfigChange   DecisionCategory = "config_change"
+	DecisionLaunch         DecisionCategory = "launch"
+	DecisionScale          DecisionCategory = "scale"
 	DecisionSelfTest       DecisionCategory = "self_test"
 	DecisionReflexion      DecisionCategory = "reflexion"
 	DecisionEpisodicReplay DecisionCategory = "episodic_replay"
@@ -128,10 +128,10 @@ type AutonomousDecision struct {
 	Category      DecisionCategory `json:"category"`
 	RequiredLevel AutonomyLevel    `json:"required_level"`
 	ActualLevel   AutonomyLevel    `json:"actual_level"`
-	Executed      bool             `json:"executed"`   // true if action was taken
-	Rationale     string           `json:"rationale"`  // why the system made this decision
-	Inputs        map[string]any   `json:"inputs"`     // data that informed the decision
-	Action        string           `json:"action"`     // what was (or would be) done
+	Executed      bool             `json:"executed"`  // true if action was taken
+	Rationale     string           `json:"rationale"` // why the system made this decision
+	Inputs        map[string]any   `json:"inputs"`    // data that informed the decision
+	Action        string           `json:"action"`    // what was (or would be) done
 	SessionID     string           `json:"session_id,omitempty"`
 	RepoName      string           `json:"repo_name,omitempty"`
 	Outcome       *DecisionOutcome `json:"outcome,omitempty"`
@@ -290,13 +290,13 @@ func (dl *DecisionLog) Stats() map[string]any {
 	}
 
 	return map[string]any{
-		"total_decisions":  total,
-		"executed":         executed,
-		"would_have_done":  total - executed,
-		"succeeded":        succeeded,
-		"overridden":       overridden,
-		"current_level":    dl.level,
-		"level_name":       dl.level.String(),
+		"total_decisions": total,
+		"executed":        executed,
+		"would_have_done": total - executed,
+		"succeeded":       succeeded,
+		"overridden":      overridden,
+		"current_level":   dl.level,
+		"level_name":      dl.level.String(),
 	}
 }
 

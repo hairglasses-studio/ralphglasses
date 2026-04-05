@@ -110,7 +110,7 @@ func TestCoordinator_AutoScaleCheck_WithIdleWorkers(t *testing.T) {
 
 	// Add several idle workers above minimum.
 	coord.mu.Lock()
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		wid := fmt.Sprintf("worker-%d", i)
 		coord.workers[wid] = &WorkerInfo{
 			ID:             wid,
@@ -193,7 +193,7 @@ func TestRecordCompletion_Overflow(t *testing.T) {
 	fa := NewFleetAnalytics(5, time.Hour)
 
 	// Add more than maxSamples completions.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		fa.RecordCompletion("w1", "claude", 100*time.Millisecond, 0.10)
 	}
 
@@ -208,7 +208,7 @@ func TestRecordFailure_Overflow_ViaPublicAPI(t *testing.T) {
 	t.Parallel()
 	fa := NewFleetAnalytics(5, time.Hour)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		fa.RecordFailure("w1", "err")
 	}
 
@@ -228,7 +228,7 @@ func TestRecordCompletionAt_Overflow(t *testing.T) {
 	fa := NewFleetAnalytics(5, time.Hour)
 
 	now := time.Now()
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		fa.recordCompletionAt(now, "w1", "claude", 50*time.Millisecond, 0.05)
 	}
 

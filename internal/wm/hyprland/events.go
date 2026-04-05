@@ -170,13 +170,13 @@ func (el *EventListener) listenOnce(ctx context.Context, handler func(Event)) er
 // ParseEvent parses a single Hyprland event line ("EVENT>>DATA") into an Event.
 // Returns false if the line does not contain the ">>" separator.
 func ParseEvent(line string) (Event, bool) {
-	idx := strings.Index(line, ">>")
-	if idx < 0 {
+	before, after, ok := strings.Cut(line, ">>")
+	if !ok {
 		return Event{}, false
 	}
 	return Event{
-		Type: EventType(line[:idx]),
-		Data: line[idx+2:],
+		Type: EventType(before),
+		Data: after,
 	}, true
 }
 
@@ -199,10 +199,7 @@ func (el *EventListener) reconnect(ctx context.Context) error {
 
 		conn, err := net.Dial("unix", el.client.EventSocketPath())
 		if err != nil {
-			delay = delay * 2
-			if delay > el.maxReconnect {
-				delay = el.maxReconnect
-			}
+			delay = min(delay*2, el.maxReconnect)
 			continue
 		}
 

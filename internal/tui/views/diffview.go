@@ -41,7 +41,7 @@ func RenderDiffView(repoPath string, fromRef string, width, height int) string {
 	if len(statOut) > 0 {
 		b.WriteString(styles.HeaderStyle.Render("Summary"))
 		b.WriteString("\n")
-		for _, line := range strings.Split(strings.TrimSpace(string(statOut)), "\n") {
+		for line := range strings.SplitSeq(strings.TrimSpace(string(statOut)), "\n") {
 			b.WriteString("  " + line + "\n")
 		}
 		b.WriteString("\n")
@@ -57,10 +57,7 @@ func RenderDiffView(repoPath string, fromRef string, width, height int) string {
 		b.WriteString("\n")
 	} else {
 		lines := strings.Split(string(diffOut), "\n")
-		maxLines := height - 15
-		if maxLines < 20 {
-			maxLines = 20
-		}
+		maxLines := max(height-15, 20)
 		if len(lines) > maxLines {
 			lines = lines[:maxLines]
 		}

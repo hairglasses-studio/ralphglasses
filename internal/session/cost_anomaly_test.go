@@ -4,7 +4,7 @@ import "testing"
 
 func TestCostAnomalyDetector_NoAnomalyWithStableRates(t *testing.T) {
 	d := NewCostAnomalyDetector()
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		if d.Record("s1", 0.05) {
 			t.Errorf("unexpected anomaly at iteration %d", i)
 		}
@@ -18,7 +18,7 @@ func TestCostAnomalyDetector_NoAnomalyWithStableRates(t *testing.T) {
 func TestCostAnomalyDetector_DetectsSpike(t *testing.T) {
 	d := NewCostAnomalyDetector()
 	// Build baseline
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		d.Record("s1", 0.05)
 	}
 	// Spike: 3x the normal rate

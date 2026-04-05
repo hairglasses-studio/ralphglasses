@@ -15,22 +15,22 @@ type GrafanaDashboard struct {
 	GeneratedAt time.Time `json:"-"`
 
 	// Dashboard model fields.
-	ID            *int64              `json:"id"`
-	UID           string              `json:"uid,omitempty"`
-	Title         string              `json:"title"`
-	Description   string              `json:"description,omitempty"`
-	Tags          []string            `json:"tags"`
-	Timezone      string              `json:"timezone"`
-	SchemaVersion int                 `json:"schemaVersion"`
-	Version       int                 `json:"version"`
-	Editable      bool                `json:"editable"`
-	Refresh       string              `json:"refresh"`
-	Time          GrafanaTimeRange    `json:"time"`
-	Templating    GrafanaTemplating   `json:"templating"`
-	Panels        []GrafanaPanel      `json:"panels"`
-	Annotations   GrafanaAnnotations  `json:"annotations"`
-	FiscalYearStartMonth int          `json:"fiscalYearStartMonth"`
-	LiveNow       bool                `json:"liveNow"`
+	ID                   *int64             `json:"id"`
+	UID                  string             `json:"uid,omitempty"`
+	Title                string             `json:"title"`
+	Description          string             `json:"description,omitempty"`
+	Tags                 []string           `json:"tags"`
+	Timezone             string             `json:"timezone"`
+	SchemaVersion        int                `json:"schemaVersion"`
+	Version              int                `json:"version"`
+	Editable             bool               `json:"editable"`
+	Refresh              string             `json:"refresh"`
+	Time                 GrafanaTimeRange   `json:"time"`
+	Templating           GrafanaTemplating  `json:"templating"`
+	Panels               []GrafanaPanel     `json:"panels"`
+	Annotations          GrafanaAnnotations `json:"annotations"`
+	FiscalYearStartMonth int                `json:"fiscalYearStartMonth"`
+	LiveNow              bool               `json:"liveNow"`
 }
 
 // GrafanaTimeRange defines the dashboard time window.
@@ -46,17 +46,17 @@ type GrafanaTemplating struct {
 
 // GrafanaTemplateVar is a single template variable.
 type GrafanaTemplateVar struct {
-	Name       string              `json:"name"`
-	Label      string              `json:"label,omitempty"`
-	Type       string              `json:"type"`
-	Datasource *GrafanaDatasource  `json:"datasource,omitempty"`
-	Query      string              `json:"query,omitempty"`
-	Current    map[string]any      `json:"current,omitempty"`
-	Options    []map[string]any    `json:"options,omitempty"`
-	Multi      bool                `json:"multi"`
-	IncludeAll bool                `json:"includeAll"`
-	Refresh    int                 `json:"refresh"`
-	Sort       int                 `json:"sort"`
+	Name       string             `json:"name"`
+	Label      string             `json:"label,omitempty"`
+	Type       string             `json:"type"`
+	Datasource *GrafanaDatasource `json:"datasource,omitempty"`
+	Query      string             `json:"query,omitempty"`
+	Current    map[string]any     `json:"current,omitempty"`
+	Options    []map[string]any   `json:"options,omitempty"`
+	Multi      bool               `json:"multi"`
+	IncludeAll bool               `json:"includeAll"`
+	Refresh    int                `json:"refresh"`
+	Sort       int                `json:"sort"`
 }
 
 // GrafanaAnnotations holds annotation list for the dashboard.
@@ -66,13 +66,13 @@ type GrafanaAnnotations struct {
 
 // GrafanaAnnotation is a single annotation definition.
 type GrafanaAnnotation struct {
-	BuiltIn    int                `json:"builtIn"`
-	Datasource GrafanaDatasource  `json:"datasource"`
-	Enable     bool               `json:"enable"`
-	Hide       bool               `json:"hide"`
-	IconColor  string             `json:"iconColor"`
-	Name       string             `json:"name"`
-	Type       string             `json:"type"`
+	BuiltIn    int               `json:"builtIn"`
+	Datasource GrafanaDatasource `json:"datasource"`
+	Enable     bool              `json:"enable"`
+	Hide       bool              `json:"hide"`
+	IconColor  string            `json:"iconColor"`
+	Name       string            `json:"name"`
+	Type       string            `json:"type"`
 }
 
 // GrafanaDatasource identifies a Grafana data source.
@@ -118,16 +118,16 @@ type GrafanaFieldConfig struct {
 
 // GrafanaFieldDefaults holds default field settings.
 type GrafanaFieldDefaults struct {
-	Color      map[string]any            `json:"color,omitempty"`
-	Custom     map[string]any            `json:"custom,omitempty"`
-	Thresholds *GrafanaThresholdConfig   `json:"thresholds,omitempty"`
-	Unit       string                    `json:"unit,omitempty"`
+	Color      map[string]any          `json:"color,omitempty"`
+	Custom     map[string]any          `json:"custom,omitempty"`
+	Thresholds *GrafanaThresholdConfig `json:"thresholds,omitempty"`
+	Unit       string                  `json:"unit,omitempty"`
 }
 
 // GrafanaThresholdConfig defines thresholds for a panel.
 type GrafanaThresholdConfig struct {
-	Mode  string               `json:"mode"`
-	Steps []GrafanaThreshold   `json:"steps"`
+	Mode  string             `json:"mode"`
+	Steps []GrafanaThreshold `json:"steps"`
 }
 
 // GrafanaThreshold is a single threshold step.
@@ -197,18 +197,18 @@ func ExportDashboard(title string, metrics []string, datasource string) *Grafana
 	}
 
 	return &GrafanaDashboard{
-		GeneratedAt:   time.Now(),
-		ID:            nil,
-		Title:         title,
-		Description:   fmt.Sprintf("Ralphglasses fleet metrics dashboard — generated %s", time.Now().UTC().Format(time.RFC3339)),
-		Tags:          []string{"ralphglasses", "fleet", "llm"},
-		Timezone:      "browser",
-		SchemaVersion: 39,
-		Version:       1,
-		Editable:      true,
-		Refresh:       "30s",
+		GeneratedAt:          time.Now(),
+		ID:                   nil,
+		Title:                title,
+		Description:          fmt.Sprintf("Ralphglasses fleet metrics dashboard — generated %s", time.Now().UTC().Format(time.RFC3339)),
+		Tags:                 []string{"ralphglasses", "fleet", "llm"},
+		Timezone:             "browser",
+		SchemaVersion:        39,
+		Version:              1,
+		Editable:             true,
+		Refresh:              "30s",
 		FiscalYearStartMonth: 0,
-		LiveNow:       false,
+		LiveNow:              false,
 		Time: GrafanaTimeRange{
 			From: "now-1h",
 			To:   "now",
@@ -375,14 +375,14 @@ func buildProviderComparisonPanel(id, y int, ds *GrafanaDatasource) GrafanaPanel
 			Overrides: []any{},
 		},
 		Options: map[string]any{
-			"orientation":   "horizontal",
+			"orientation":        "horizontal",
 			"xTickLabelRotation": 0,
-			"showValue":     "auto",
-			"groupWidth":    0.7,
-			"barWidth":      0.97,
-			"stacking":      map[string]any{"mode": "none"},
-			"tooltip":       map[string]any{"mode": "single", "sort": "none"},
-			"legend":        map[string]any{"displayMode": "list", "placement": "bottom"},
+			"showValue":          "auto",
+			"groupWidth":         0.7,
+			"barWidth":           0.97,
+			"stacking":           map[string]any{"mode": "none"},
+			"tooltip":            map[string]any{"mode": "single", "sort": "none"},
+			"legend":             map[string]any{"displayMode": "list", "placement": "bottom"},
 		},
 	}
 }
@@ -417,8 +417,8 @@ func buildErrorRatePanel(id, y int, ds *GrafanaDatasource) GrafanaPanel {
 					Mode: "absolute",
 					Steps: []GrafanaThreshold{
 						{Color: "green", Value: nil},
-						{Color: "yellow", Value: float64Ptr(0.05)},
-						{Color: "red", Value: float64Ptr(0.2)},
+						{Color: "yellow", Value: new(0.05)},
+						{Color: "red", Value: new(0.2)},
 					},
 				},
 			},
@@ -505,8 +505,8 @@ func buildBudgetUtilizationPanel(id, y int, ds *GrafanaDatasource) GrafanaPanel 
 					Mode: "absolute",
 					Steps: []GrafanaThreshold{
 						{Color: "green", Value: nil},
-						{Color: "yellow", Value: float64Ptr(0.7)},
-						{Color: "red", Value: float64Ptr(0.9)},
+						{Color: "yellow", Value: new(0.7)},
+						{Color: "red", Value: new(0.9)},
 					},
 				},
 			},
@@ -527,6 +527,7 @@ func buildBudgetUtilizationPanel(id, y int, ds *GrafanaDatasource) GrafanaPanel 
 	}
 }
 
+//go:fix inline
 func float64Ptr(v float64) *float64 {
-	return &v
+	return new(v)
 }

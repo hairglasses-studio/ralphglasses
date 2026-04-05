@@ -102,7 +102,7 @@ func TestGenerateIDs_Unique(t *testing.T) {
 
 func TestNewSampler_AlwaysTrue(t *testing.T) {
 	s := newSampler(1.0)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		if !s() {
 			t.Error("newSampler(1.0) should always return true")
 		}
@@ -111,7 +111,7 @@ func TestNewSampler_AlwaysTrue(t *testing.T) {
 
 func TestNewSampler_AlwaysFalse(t *testing.T) {
 	s := newSampler(0.0)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		if s() {
 			t.Error("newSampler(0.0) should always return false")
 		}
@@ -120,7 +120,7 @@ func TestNewSampler_AlwaysFalse(t *testing.T) {
 
 func TestNewSampler_GreaterThanOne(t *testing.T) {
 	s := newSampler(2.0)
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		if !s() {
 			t.Error("newSampler(2.0) should always return true")
 		}
@@ -130,7 +130,7 @@ func TestNewSampler_GreaterThanOne(t *testing.T) {
 func TestNewSampler_Fractional(t *testing.T) {
 	// With rate=0.5, we just verify no panic and it returns bool values.
 	s := newSampler(0.5)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		_ = s()
 	}
 }

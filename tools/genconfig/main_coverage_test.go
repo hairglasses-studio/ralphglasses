@@ -13,11 +13,11 @@ func TestFriendlyType_Primitives(t *testing.T) {
 		typ  reflect.Type
 		want string
 	}{
-		{reflect.TypeOf(""), "string"},
-		{reflect.TypeOf(0), "int"},
-		{reflect.TypeOf(int64(0)), "int64"},
-		{reflect.TypeOf(float64(0)), "float64"},
-		{reflect.TypeOf(true), "bool"},
+		{reflect.TypeFor[string](), "string"},
+		{reflect.TypeFor[int](), "int"},
+		{reflect.TypeFor[int64](), "int64"},
+		{reflect.TypeFor[float64](), "float64"},
+		{reflect.TypeFor[bool](), "bool"},
 	}
 	for _, tt := range tests {
 		got := friendlyType(tt.typ)
@@ -28,21 +28,21 @@ func TestFriendlyType_Primitives(t *testing.T) {
 }
 
 func TestFriendlyType_Duration(t *testing.T) {
-	got := friendlyType(reflect.TypeOf(time.Duration(0)))
+	got := friendlyType(reflect.TypeFor[time.Duration]())
 	if got != "duration" {
 		t.Errorf("friendlyType(time.Duration) = %q, want duration", got)
 	}
 }
 
 func TestFriendlyType_Slice(t *testing.T) {
-	got := friendlyType(reflect.TypeOf([]string{}))
+	got := friendlyType(reflect.TypeFor[[]string]())
 	if got != "[]string" {
 		t.Errorf("friendlyType([]string) = %q, want []string", got)
 	}
 }
 
 func TestFriendlyType_Ptr(t *testing.T) {
-	got := friendlyType(reflect.TypeOf((*string)(nil)))
+	got := friendlyType(reflect.TypeFor[*string]())
 	if got != "*string" {
 		t.Errorf("friendlyType(*string) = %q, want *string", got)
 	}
@@ -50,7 +50,7 @@ func TestFriendlyType_Ptr(t *testing.T) {
 
 func TestFriendlyType_Struct(t *testing.T) {
 	type MyStruct struct{}
-	got := friendlyType(reflect.TypeOf(MyStruct{}))
+	got := friendlyType(reflect.TypeFor[MyStruct]())
 	if got != "MyStruct" {
 		t.Errorf("friendlyType(MyStruct) = %q, want MyStruct", got)
 	}
@@ -62,7 +62,7 @@ func TestStructFieldDescription_Known(t *testing.T) {
 		DefaultProvider string
 		MaxWorkers      int
 	}
-	ts := reflect.TypeOf(testStruct{})
+	ts := reflect.TypeFor[testStruct]()
 
 	tests := []struct {
 		fieldName string
@@ -107,7 +107,7 @@ func TestStructFieldDescription_Unknown(t *testing.T) {
 	type testStruct struct {
 		UnknownField string
 	}
-	ts := reflect.TypeOf(testStruct{})
+	ts := reflect.TypeFor[testStruct]()
 	f, _ := ts.FieldByName("UnknownField")
 	got := structFieldDescription(f)
 	// Unknown fields return their name.
@@ -118,11 +118,11 @@ func TestStructFieldDescription_Unknown(t *testing.T) {
 
 func TestStructFieldDefault_Known(t *testing.T) {
 	type testStruct struct {
-		MaxWorkers     int
-		ScanPaths      []string
+		MaxWorkers      int
+		ScanPaths       []string
 		DefaultProvider string
 	}
-	ts := reflect.TypeOf(testStruct{})
+	ts := reflect.TypeFor[testStruct]()
 
 	knownFields := []string{"MaxWorkers", "ScanPaths", "DefaultProvider"}
 	for _, name := range knownFields {
@@ -141,7 +141,7 @@ func TestStructFieldDefault_Unknown(t *testing.T) {
 	type testStruct struct {
 		SomeOtherField string
 	}
-	ts := reflect.TypeOf(testStruct{})
+	ts := reflect.TypeFor[testStruct]()
 	f, _ := ts.FieldByName("SomeOtherField")
 	got := structFieldDefault(f)
 	if got != "--" {

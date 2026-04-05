@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/NimbleMarkets/ntcharts/sparkline"
 	"charm.land/lipgloss/v2"
+	"github.com/NimbleMarkets/ntcharts/sparkline"
 	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
@@ -119,10 +119,7 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 
 	// Cost sparkline
 	if len(data.CostHistory) > 1 {
-		sparkWidth := width / 2
-		if sparkWidth < 20 {
-			sparkWidth = 20
-		}
+		sparkWidth := max(width/2, 20)
 		if sparkWidth > 60 {
 			sparkWidth = 60
 		}
@@ -344,10 +341,7 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 		}
 	}
 
-	panelWidth := width/3 - 2
-	if panelWidth < 24 {
-		panelWidth = 24
-	}
+	panelWidth := max(width/3-2, 24)
 	leftPanel := lipgloss.NewStyle().Width(panelWidth).Render(repoList.String())
 	midPanel := lipgloss.NewStyle().Width(panelWidth).Render(sessionList.String())
 	rightPanel := lipgloss.NewStyle().Width(panelWidth).Render(teamList.String())
@@ -479,4 +473,3 @@ func eventTypeLabel(t events.EventType) string {
 	}
 	return styles.HeaderStyle.Render(parts[0]) + "." + parts[1]
 }
-

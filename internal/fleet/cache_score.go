@@ -2,6 +2,7 @@ package fleet
 
 import (
 	"hash/fnv"
+	"slices"
 	"sync"
 )
 
@@ -48,10 +49,8 @@ func (cs *CacheScorer) CacheBoost(workerID string, prompt string) float64 {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	for _, stored := range cs.recentPrompts[workerID] {
-		if stored == h {
-			return 2.0
-		}
+	if slices.Contains(cs.recentPrompts[workerID], h) {
+		return 2.0
 	}
 	return 1.0
 }

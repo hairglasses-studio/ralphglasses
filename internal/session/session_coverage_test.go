@@ -159,7 +159,7 @@ func TestReflexionStore_Rules_BelowThreshold(t *testing.T) {
 	rs := NewReflexionStore(dir)
 
 	// Add fewer than 5 reflections -- should return empty.
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		rs.Store(Reflection{
 			FailureMode: "verify_failed",
 			RootCause:   "test error",
@@ -177,7 +177,7 @@ func TestReflexionStore_Rules_ExtractsPatterns(t *testing.T) {
 	rs := NewReflexionStore(dir)
 
 	// Add 5+ reflections with 3+ of the same failure mode.
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		rs.Store(Reflection{
 			FailureMode: "verify_failed",
 			RootCause:   "test assertion failed",

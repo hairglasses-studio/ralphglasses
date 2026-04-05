@@ -2,6 +2,7 @@ package session
 
 import (
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"sync"
@@ -93,9 +94,7 @@ func (c *Coordinator) AllClaims() map[string]string {
 	defer c.mu.Unlock()
 
 	snapshot := make(map[string]string, len(c.claims))
-	for k, v := range c.claims {
-		snapshot[k] = v
-	}
+	maps.Copy(snapshot, c.claims)
 	return snapshot
 }
 

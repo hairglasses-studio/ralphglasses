@@ -201,7 +201,7 @@ func cgroupUsageReadImpl(sessionID string) (CgroupUsage, error) {
 	if err != nil {
 		return usage, fmt.Errorf("cgroup: read cpu.stat for %s: %w", sessionID, err)
 	}
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		if strings.HasPrefix(line, "usage_usec ") {
 			parts := strings.Fields(line)
 			if len(parts) == 2 {

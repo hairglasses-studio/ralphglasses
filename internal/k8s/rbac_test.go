@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"encoding/json"
+	"slices"
 	"testing"
 )
 
@@ -88,20 +89,18 @@ func TestOperatorClusterRole_CRDRuleVerbs(t *testing.T) {
 
 	// Find the CRD rule.
 	for _, rule := range cr.Rules {
-		for _, g := range rule.APIGroups {
-			if g == GroupName {
-				expectedVerbs := map[string]bool{
-					"get": true, "list": true, "watch": true,
-					"create": true, "update": true, "patch": true, "delete": true,
-				}
-				for _, v := range rule.Verbs {
-					delete(expectedVerbs, v)
-				}
-				if len(expectedVerbs) > 0 {
-					t.Errorf("CRD rule missing verbs: %v", expectedVerbs)
-				}
-				return
+		if slices.Contains(rule.APIGroups, GroupName) {
+			expectedVerbs := map[string]bool{
+				"get": true, "list": true, "watch": true,
+				"create": true, "update": true, "patch": true, "delete": true,
 			}
+			for _, v := range rule.Verbs {
+				delete(expectedVerbs, v)
+			}
+			if len(expectedVerbs) > 0 {
+				t.Errorf("CRD rule missing verbs: %v", expectedVerbs)
+			}
+			return
 		}
 	}
 	t.Fatal("CRD rule not found")
@@ -111,13 +110,7 @@ func TestOperatorClusterRole_SecretsReadOnly(t *testing.T) {
 	cr := OperatorClusterRole()
 
 	for _, rule := range cr.Rules {
-		hasSecrets := false
-		for _, r := range rule.Resources {
-			if r == "secrets" {
-				hasSecrets = true
-				break
-			}
-		}
+		hasSecrets := slices.Contains(rule.Resources, "secrets")
 		if !hasSecrets {
 			continue
 		}

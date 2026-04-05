@@ -140,7 +140,7 @@ func TestSmartRouter_ConcurrentDecide(t *testing.T) {
 		"research caching approaches",
 	}
 
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		for _, desc := range descriptions {
 			wg.Add(1)
 			go func(d string) {

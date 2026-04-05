@@ -63,7 +63,7 @@ func TestNeuralUCB_ExploresUnpulledFirst(t *testing.T) {
 	n := NewNeuralUCB(neuralArms, int(NumContextualFeatures), NeuralUCBConfig{})
 	seen := map[string]bool{}
 
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		arm := n.Select(nil)
 		if seen[arm.ID] {
 			t.Fatalf("arm %s selected twice during exploration", arm.ID)
@@ -153,7 +153,7 @@ func TestNeuralUCB_SGDReducesError(t *testing.T) {
 	initialErr := math.Abs(target - initialPred)
 
 	// Train for 200 steps on a fixed (context, reward) pair.
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		n.Update(Reward{
 			ArmID:     "a",
 			Value:     target,
@@ -189,7 +189,7 @@ func TestNeuralUCB_LearnsContextDifference(t *testing.T) {
 
 	// Train: cheap arm good on simple, bad on complex.
 	// Expensive arm good on complex, mediocre on simple.
-	for i := 0; i < 300; i++ {
+	for range 300 {
 		n.Update(Reward{ArmID: "cheap", Value: 0.9, Timestamp: time.Now(), Context: simpleCtx})
 		n.Update(Reward{ArmID: "cheap", Value: 0.1, Timestamp: time.Now(), Context: complexCtx})
 		n.Update(Reward{ArmID: "expensive", Value: 0.9, Timestamp: time.Now(), Context: complexCtx})
@@ -227,7 +227,7 @@ func TestNeuralUCB_ConvergesOnBestArm(t *testing.T) {
 	ctx := []float64{0.5, 0.5, 0.5, 0.5}
 
 	// Train phase: good arm always returns high reward.
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		arm := n.Select(ctx)
 		val := 0.1
 		if arm.ID == "good" {
@@ -238,7 +238,7 @@ func TestNeuralUCB_ConvergesOnBestArm(t *testing.T) {
 
 	// Evaluation: good arm should be selected most of the time.
 	goodCount := 0
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		arm := n.Select(ctx)
 		if arm.ID == "good" {
 			goodCount++
@@ -301,7 +301,7 @@ func TestNeuralUCB_ArmStatsAfterUpdates(t *testing.T) {
 	arms := []Arm{{ID: "a", Provider: "p", Model: "m"}}
 	n := NewNeuralUCB(arms, 4, NeuralUCBConfig{})
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		n.Update(Reward{ArmID: "a", Value: 0.8, Timestamp: time.Now()})
 	}
 
@@ -347,27 +347,25 @@ func TestNeuralUCB_ConcurrentSelectUpdate(t *testing.T) {
 	armIDs := []string{"cheap", "worker", "coding", "reasoning"}
 
 	// 20 goroutines selecting.
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 20 {
+		wg.Go(func() {
 			ctx := []float64{0.1, -0.1, 0.5, 0.0}
-			for j := 0; j < 50; j++ {
+			for range 50 {
 				arm := n.Select(ctx)
 				if arm.ID == "" {
 					t.Error("Select returned empty arm")
 				}
 			}
-		}()
+		})
 	}
 
 	// 20 goroutines updating.
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		wg.Add(1)
 		go func(seed int) {
 			defer wg.Done()
 			rng := rand.New(rand.NewPCG(uint64(seed), uint64(seed+1)))
-			for j := 0; j < 50; j++ {
+			for range 50 {
 				n.Update(Reward{
 					ArmID:     armIDs[rng.IntN(len(armIDs))],
 					Value:     rng.Float64(),

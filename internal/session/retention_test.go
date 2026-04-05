@@ -45,7 +45,7 @@ func TestApplyRetention_MaxFiles(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create 5 files with staggered times
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		f := filepath.Join(dir, filepath.Base(t.Name())+string(rune('a'+i))+".json")
 		os.WriteFile(f, []byte("{}"), 0644)
 		mt := time.Now().Add(time.Duration(-i) * time.Hour)

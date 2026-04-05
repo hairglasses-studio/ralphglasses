@@ -142,10 +142,7 @@ Focus on nil pointer dereferences and unchecked errors.</instructions>
 		t.Fatal("ScoreReport should be populated")
 	}
 	// Legacy score should roughly be overall/10
-	expected := ar.ScoreReport.Overall / 10
-	if expected < 1 {
-		expected = 1
-	}
+	expected := max(ar.ScoreReport.Overall/10, 1)
 	if ar.Score != expected {
 		t.Errorf("Legacy score %d != overall/10 (%d)", ar.Score, expected)
 	}
@@ -514,7 +511,6 @@ func TestScore_NoCoherenceBonus(t *testing.T) {
 	}
 
 	for _, tc := range prompts {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ar := Analyze(tc.prompt)
@@ -528,10 +524,7 @@ func TestScore_NoCoherenceBonus(t *testing.T) {
 			for _, d := range report.Dimensions {
 				weightedSum += float64(d.Score) * d.Weight
 			}
-			expectedOverall := int(weightedSum + 0.5)
-			if expectedOverall > 100 {
-				expectedOverall = 100
-			}
+			expectedOverall := min(int(weightedSum+0.5), 100)
 			if expectedOverall < 0 {
 				expectedOverall = 0
 			}
@@ -552,9 +545,9 @@ func TestScore_NoCoherenceBonus(t *testing.T) {
 func TestScore_TrivialPromptInflation(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name     string
-		prompt   string
-		maxLegacy int
+		name       string
+		prompt     string
+		maxLegacy  int
 		maxOverall int
 	}{
 		{"hello", "hello", 3, 35},
@@ -584,11 +577,11 @@ func TestScore_TrivialPromptInflation(t *testing.T) {
 func TestScore_DistributionSpan(t *testing.T) {
 	t.Parallel()
 	prompts := map[string]string{
-		"trivial":    "hello",
-		"short":      "fix this bug",
-		"medium":     "Write a Go function that parses JSON and returns a User struct with error handling",
-		"good":       "<role>You are an expert Go developer.</role>\n<instructions>Review this function for error handling issues.\nFocus on nil pointer dereferences.</instructions>\n<context>Payment API service.</context>",
-		"excellent":  "<role>You are an expert Go developer with 10 years of experience.</role>\n<context>Building a user management API in Go using chi router.</context>\n<instructions>Review for error handling. Return exactly 5 issues sorted by severity.</instructions>\n<examples>\n<example index=\"1\">Missing nil check.</example>\n<example index=\"2\">Ignored error.</example>\n<example index=\"3\">Defer before check.</example>\n</examples>\n<output_format>Numbered list with code, risk, fix.</output_format>",
+		"trivial":   "hello",
+		"short":     "fix this bug",
+		"medium":    "Write a Go function that parses JSON and returns a User struct with error handling",
+		"good":      "<role>You are an expert Go developer.</role>\n<instructions>Review this function for error handling issues.\nFocus on nil pointer dereferences.</instructions>\n<context>Payment API service.</context>",
+		"excellent": "<role>You are an expert Go developer with 10 years of experience.</role>\n<context>Building a user management API in Go using chi router.</context>\n<instructions>Review for error handling. Return exactly 5 issues sorted by severity.</instructions>\n<examples>\n<example index=\"1\">Missing nil check.</example>\n<example index=\"2\">Ignored error.</example>\n<example index=\"3\">Defer before check.</example>\n</examples>\n<output_format>Numbered list with code, risk, fix.</output_format>",
 	}
 
 	scores := make(map[string]int)

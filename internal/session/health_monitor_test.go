@@ -65,7 +65,7 @@ func TestHealthMonitor_LowCompletionRate(t *testing.T) {
 
 	// Write 10 observations, only 3 passed.
 	var obs []LoopObservation
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		obs = append(obs, LoopObservation{
 			Timestamp:    time.Now().Add(-time.Duration(i) * time.Minute),
 			VerifyPassed: i < 3,
@@ -98,7 +98,7 @@ func TestHealthMonitor_HighCostRate(t *testing.T) {
 
 	// 100 observations, all recent, $1 each = very high rate.
 	var obs []LoopObservation
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		obs = append(obs, LoopObservation{
 			Timestamp:    time.Now().Add(-time.Duration(i) * time.Second),
 			VerifyPassed: true,
@@ -128,7 +128,7 @@ func TestHealthMonitor_NoSignalsWhenHealthy(t *testing.T) {
 
 	// All passing, cheap, recent.
 	var obs []LoopObservation
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		obs = append(obs, LoopObservation{
 			Timestamp:    time.Now().Add(-time.Duration(i) * time.Minute),
 			VerifyPassed: true,
@@ -194,7 +194,7 @@ func TestHealthMonitor_HITLRate(t *testing.T) {
 
 	// Write HITL events: 3 manual, 7 automatic → rate = 0.30 > 0.10 threshold.
 	hitlPath := filepath.Join(ralphDir, "hitl_events.jsonl")
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		trigger := TriggerAutomatic
 		if i < 3 {
 			trigger = TriggerManual
@@ -322,7 +322,7 @@ func TestHealthMonitor_MeanCycleCost(t *testing.T) {
 	// 3 observations, $3 each → mean = $3 > $2 threshold.
 	obsPath := filepath.Join(ralphDir, "cost_observations.json")
 	var obs []LoopObservation
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		obs = append(obs, LoopObservation{
 			Timestamp:    time.Now().Add(-time.Duration(i) * time.Minute),
 			VerifyPassed: true,

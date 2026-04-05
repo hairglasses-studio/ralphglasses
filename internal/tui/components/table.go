@@ -11,7 +11,7 @@ import (
 // Column defines a table column.
 type Column struct {
 	Title    string
-	Width    int     // base/min width (kept for backward compat)
+	Width    int // base/min width (kept for backward compat)
 	Sortable bool
 	Grow     bool    // if true, this column expands to fill remaining width (legacy; prefer Flex)
 	MinWidth int     // minimum width (0 = use Width as min)
@@ -33,11 +33,11 @@ type Table struct {
 	Height       int
 	Offset       int // scroll offset
 	Filter       string
-	filtered     []int        // indices into Rows matching filter
-	EmptyMessage string       // shown when no rows match
-	StatusColumn int          // column index for status-prefix filtering (-1 = disabled)
-	MultiSelect  bool         // enable multi-select mode
-	Selected     map[int]bool // selected row indices (into Rows)
+	filtered     []int                                       // indices into Rows matching filter
+	EmptyMessage string                                      // shown when no rows match
+	StatusColumn int                                         // column index for status-prefix filtering (-1 = disabled)
+	MultiSelect  bool                                        // enable multi-select mode
+	Selected     map[int]bool                                // selected row indices (into Rows)
 	RowStyleFunc func(row Row, selected bool) lipgloss.Style // optional per-row styling
 }
 
@@ -293,7 +293,7 @@ func (t *Table) effectiveWidths() []int {
 	// 3. Distribute remaining space proportionally by flex weight.
 	//    Iterate to handle MaxWidth caps and redistribute overflow.
 	capped := make([]bool, n)
-	for round := 0; round < n; round++ {
+	for range n {
 		totalFlex := 0.0
 		for i, fw := range flexWeights {
 			if fw > 0 && !capped[i] {
@@ -384,10 +384,7 @@ func (t *Table) View() string {
 
 	// Rows
 	visible := t.visibleRows()
-	end := t.Offset + visible
-	if end > len(t.filtered) {
-		end = len(t.filtered)
-	}
+	end := min(t.Offset+visible, len(t.filtered))
 
 	for vi := t.Offset; vi < end; vi++ {
 		idx := t.filtered[vi]
@@ -467,13 +464,6 @@ func visualPad(s string, width int) string {
 		s += strings.Repeat(" ", width-vw)
 	}
 	return s
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 // HandleMouse processes a mouse event for the table.

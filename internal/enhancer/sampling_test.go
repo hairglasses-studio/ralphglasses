@@ -220,7 +220,7 @@ func TestExtractSamplingText_MapContent(t *testing.T) {
 	result := &mcp.CreateMessageResult{
 		SamplingMessage: mcp.SamplingMessage{
 			Role: mcp.RoleAssistant,
-			Content: map[string]interface{}{
+			Content: map[string]any{
 				"type": "text",
 				"text": "from map",
 			},

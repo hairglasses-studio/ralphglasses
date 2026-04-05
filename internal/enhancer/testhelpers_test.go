@@ -3,6 +3,7 @@ package enhancer
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -61,11 +62,9 @@ func assertImprovementMentions(t *testing.T, improvements []string, keyword stri
 // assertStageNotRun asserts that the given stage does NOT appear in the stages list.
 func assertStageNotRun(t *testing.T, stages []string, stage string) {
 	t.Helper()
-	for _, s := range stages {
-		if s == stage {
-			t.Errorf("expected stage %q NOT to be run, but it was", stage)
-			return
-		}
+	if slices.Contains(stages, stage) {
+		t.Errorf("expected stage %q NOT to be run, but it was", stage)
+		return
 	}
 }
 

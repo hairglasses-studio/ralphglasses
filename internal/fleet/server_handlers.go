@@ -164,7 +164,7 @@ func (c *Coordinator) handleWorkComplete(w http.ResponseWriter, r *http.Request)
 			item.AssignedTo = ""
 			item.AssignedAt = nil
 			item.Error = payload.Error
-			item.RetryAfter = timePtr(time.Now().Add(delay))
+			item.RetryAfter = new(time.Now().Add(delay))
 		} else {
 			item.Status = WorkFailed
 		}
@@ -375,9 +375,9 @@ func (c *Coordinator) handleSessions(w http.ResponseWriter, r *http.Request) {
 
 // HealthCheckResponse is returned by GET /healthz.
 type HealthCheckResponse struct {
-	Status  string            `json:"status"`
-	Checks  map[string]string `json:"checks"`
-	Uptime  float64           `json:"uptime_seconds,omitempty"`
+	Status string            `json:"status"`
+	Checks map[string]string `json:"checks"`
+	Uptime float64           `json:"uptime_seconds,omitempty"`
 }
 
 func (c *Coordinator) handleHealthz(w http.ResponseWriter, r *http.Request) {
@@ -438,5 +438,3 @@ func (c *Coordinator) handleAgentCard(w http.ResponseWriter, r *http.Request) {
 // handleA2ATaskStatus is kept as a deprecated alias for backward compatibility.
 // New code should use handleA2ATaskGet in a2a_handler.go.
 // This stub is retained only in case external code references it directly.
-
-

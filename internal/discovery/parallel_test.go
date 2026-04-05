@@ -80,7 +80,7 @@ func TestParallelScan_WorkerCountLimitsConcurrency(t *testing.T) {
 
 	root := t.TempDir()
 	// Create enough repos that we'd see contention.
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		makeRepo(t, root, fmt.Sprintf("repo-%03d", i), true, false)
 	}
 
@@ -117,7 +117,7 @@ func TestParallelScan_ContextCancellation(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		makeRepo(t, root, fmt.Sprintf("repo-%03d", i), true, false)
 	}
 
@@ -201,7 +201,7 @@ func TestParallelScan_ManyRepos(t *testing.T) {
 
 	root := t.TempDir()
 	count := 100
-	for i := 0; i < count; i++ {
+	for i := range count {
 		makeRepo(t, root, fmt.Sprintf("repo-%04d", i), true, false)
 	}
 
@@ -242,7 +242,7 @@ func BenchmarkParallelScan(b *testing.B) {
 	b.ReportAllocs()
 	root := b.TempDir()
 
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		name := fmt.Sprintf("repo-%03d", i)
 		repoPath := filepath.Join(root, name)
 		os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755)

@@ -97,7 +97,7 @@ func TestSupervisorStallHandler_RetryLimit(t *testing.T) {
 	sessionID := "retry-me"
 
 	// Simulate 3 stall detections. First 2 should trigger retries, 3rd should not.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		injectSession(mgr, &Session{
 			ID:           sessionID,
 			Status:       StatusRunning,
@@ -170,12 +170,10 @@ func TestSupervisorStallHandler_ConcurrentSafe(t *testing.T) {
 
 	// Run concurrent CheckAndHandle calls to verify no races.
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			_ = h.CheckAndHandle(context.Background(), mgr, bus, "/tmp/test")
-		}()
+		})
 	}
 	wg.Wait()
 }

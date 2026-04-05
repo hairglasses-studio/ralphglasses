@@ -140,7 +140,7 @@ func TestRestartPolicy_BackoffCap(t *testing.T) {
 	)
 
 	// Record many restarts to exceed the cap.
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		rp.RecordRestart()
 	}
 
@@ -179,10 +179,10 @@ func TestRestartPolicy_ConcurrentAccess(t *testing.T) {
 	rp := NewRestartPolicy(WithMaxRestarts(1000))
 
 	done := make(chan struct{})
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		go func() {
 			defer func() { done <- struct{}{} }()
-			for j := 0; j < 100; j++ {
+			for range 100 {
 				rp.ShouldRestart(1, time.Minute)
 				rp.RecordRestart()
 				rp.Backoff()
@@ -190,7 +190,7 @@ func TestRestartPolicy_ConcurrentAccess(t *testing.T) {
 			}
 		}()
 	}
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 

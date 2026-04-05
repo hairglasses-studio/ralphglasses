@@ -101,7 +101,7 @@ func (f *Flash) listDevicesLinux(ctx context.Context) ([]BlockDevice, error) {
 // parseLsblk parses the columnar output from lsblk -dno NAME,SIZE,RM,MOUNTPOINT --bytes.
 func parseLsblk(output string) ([]BlockDevice, error) {
 	var devices []BlockDevice
-	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(output), "\n") {
 		if line == "" {
 			continue
 		}
@@ -151,7 +151,7 @@ func (f *Flash) listDevicesDarwin(ctx context.Context) ([]BlockDevice, error) {
 // diskutil list output. It returns devices marked as external/removable.
 func parseDiskutil(output string) ([]BlockDevice, error) {
 	var devices []BlockDevice
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.HasPrefix(line, "/dev/disk") {
 			continue
@@ -359,7 +359,7 @@ func (f *Flash) checkDeviceLinux(devicePath string) (removable, mounted bool, er
 		// /proc/mounts may not exist in containers; don't fail.
 		return removable, false, nil
 	}
-	for _, line := range strings.Split(string(mounts), "\n") {
+	for line := range strings.SplitSeq(string(mounts), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) >= 1 && strings.HasPrefix(fields[0], devicePath) {
 			mounted = true
@@ -377,7 +377,7 @@ func (f *Flash) checkDeviceDarwin(ctx context.Context, devicePath string) (remov
 		return false, false, fmt.Errorf("flash: diskutil info: %w", err)
 	}
 	output := string(out)
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "Removable Media:") {
 			removable = strings.Contains(line, "Removable")

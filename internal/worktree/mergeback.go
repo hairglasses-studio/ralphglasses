@@ -24,10 +24,10 @@ type MergeBackResult struct {
 type MergeOption func(*mergeConfig)
 
 type mergeConfig struct {
-	squash         bool
-	message        string
+	squash          bool
+	message         string
 	abortOnConflict bool
-	dryRun         bool
+	dryRun          bool
 }
 
 // WithSquash causes the merge to squash all commits into a single change set
@@ -263,9 +263,9 @@ func DiffSummaryFn(ctx context.Context, wt *Worktree) (*DiffSummaryResult, error
 		status := line[0]
 		name := strings.TrimSpace(line[1:])
 		// Handle tab-separated format.
-		if idx := strings.IndexByte(line, '\t'); idx >= 0 {
+		if _, after, ok := strings.Cut(line, "\t"); ok {
 			status = line[0]
-			name = line[idx+1:]
+			name = after
 		}
 
 		switch status {

@@ -1,6 +1,7 @@
 package components
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -38,47 +39,47 @@ func TestInlineGauge(t *testing.T) {
 		wantContains  string // substring that must appear (rune-level)
 	}{
 		{
-			name: "normal 50 pct",
+			name:    "normal 50 pct",
 			current: 50, max: 100, width: 40,
 			wantFilled: 20, wantEmptyChar: 20,
 		},
 		{
-			name: "current exceeds max clamps to 100 pct",
+			name:    "current exceeds max clamps to 100 pct",
 			current: 150, max: 100, width: 10,
 			wantFilled: 10, wantEmptyChar: 0,
 		},
 		{
-			name: "max is zero returns empty gauge",
+			name:    "max is zero returns empty gauge",
 			current: 50, max: 0, width: 10,
 			wantFilled: 0, wantEmptyChar: 10,
 		},
 		{
-			name:      "width is zero returns empty string",
-			current:   50, max: 100, width: 0,
+			name:    "width is zero returns empty string",
+			current: 50, max: 100, width: 0,
 			wantEmpty: true,
 		},
 		{
-			name: "green zone pct below 0.7",
+			name:    "green zone pct below 0.7",
 			current: 60, max: 100, width: 10,
 			wantFilled: 6, wantEmptyChar: 4,
 		},
 		{
-			name: "yellow zone pct 0.7",
+			name:    "yellow zone pct 0.7",
 			current: 70, max: 100, width: 10,
 			wantFilled: 7, wantEmptyChar: 3,
 		},
 		{
-			name: "yellow zone pct 0.85",
+			name:    "yellow zone pct 0.85",
 			current: 85, max: 100, width: 20,
 			wantFilled: 17, wantEmptyChar: 3,
 		},
 		{
-			name: "red zone pct 0.9",
+			name:    "red zone pct 0.9",
 			current: 90, max: 100, width: 10,
 			wantFilled: 9, wantEmptyChar: 1,
 		},
 		{
-			name: "red zone pct 1.0",
+			name:    "red zone pct 1.0",
 			current: 100, max: 100, width: 10,
 			wantFilled: 10, wantEmptyChar: 0,
 		},
@@ -178,11 +179,8 @@ func TestInlineSparklineDataTruncation(t *testing.T) {
 	// Count how many sparkline block chars appear
 	count := 0
 	for _, r := range got {
-		for _, b := range sparkBlocks {
-			if r == b {
-				count++
-				break
-			}
+		if slices.Contains(sparkBlocks, r) {
+			count++
 		}
 	}
 	if count != width {
@@ -235,20 +233,20 @@ func TestActivityDot(t *testing.T) {
 
 func TestGaugeWithLabel(t *testing.T) {
 	tests := []struct {
-		name             string
-		current, max     float64
-		barWidth         int
-		label            string
-		wantLabelSuffix  string
-		wantFilledCount  int
+		name            string
+		current, max    float64
+		barWidth        int
+		label           string
+		wantLabelSuffix string
+		wantFilledCount int
 	}{
 		{
-			name: "basic label",
+			name:    "basic label",
 			current: 50, max: 100, barWidth: 20, label: "50/100",
 			wantLabelSuffix: "50/100", wantFilledCount: 10,
 		},
 		{
-			name: "empty label",
+			name:    "empty label",
 			current: 0, max: 100, barWidth: 10, label: "",
 			wantFilledCount: 0,
 		},
@@ -336,11 +334,8 @@ func TestHealthSparklineTruncation(t *testing.T) {
 	got := HealthSparkline(data, 5, width)
 	count := 0
 	for _, r := range got {
-		for _, b := range sparkBlocks {
-			if r == b {
-				count++
-				break
-			}
+		if slices.Contains(sparkBlocks, r) {
+			count++
 		}
 	}
 	if count != width {

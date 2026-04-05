@@ -82,7 +82,7 @@ func TestMetrics_DroppedEvents(t *testing.T) {
 	// Publish 150 events without reading — should drop at least some.
 	bus.Subscribe("slow")
 
-	for i := 0; i < 150; i++ {
+	for range 150 {
 		bus.Publish(Event{Type: SessionStarted})
 	}
 
@@ -102,7 +102,7 @@ func TestMetrics_DroppedFilteredEvents(t *testing.T) {
 	// Filtered subscriber with buffer 100.
 	bus.SubscribeFiltered("slow-filtered", SessionStarted)
 
-	for i := 0; i < 150; i++ {
+	for range 150 {
 		bus.Publish(Event{Type: SessionStarted})
 	}
 
@@ -115,7 +115,7 @@ func TestMetrics_DroppedFilteredEvents(t *testing.T) {
 func TestMetrics_LatencyHistogram(t *testing.T) {
 	bus := NewBus(100)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		bus.Publish(Event{Type: SessionStarted})
 	}
 
@@ -222,10 +222,10 @@ func TestMetrics_ConcurrentPublish(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
-	for g := 0; g < goroutines; g++ {
+	for range goroutines {
 		go func() {
 			defer wg.Done()
-			for i := 0; i < perGoroutine; i++ {
+			for range perGoroutine {
 				bus.Publish(Event{Type: SessionStarted})
 			}
 		}()
@@ -253,7 +253,7 @@ func TestMetrics_ConcurrentSubscribeUnsubscribe(t *testing.T) {
 	wg.Add(goroutines * 2)
 
 	// Subscribe goroutines
-	for g := 0; g < goroutines; g++ {
+	for g := range goroutines {
 		id := string(rune('A' + g))
 		go func(id string) {
 			defer wg.Done()
@@ -262,7 +262,7 @@ func TestMetrics_ConcurrentSubscribeUnsubscribe(t *testing.T) {
 	}
 
 	// Filtered subscribe goroutines
-	for g := 0; g < goroutines; g++ {
+	for g := range goroutines {
 		id := "f-" + string(rune('A'+g))
 		go func(id string) {
 			defer wg.Done()
@@ -278,14 +278,14 @@ func TestMetrics_ConcurrentSubscribeUnsubscribe(t *testing.T) {
 
 	// Unsubscribe all
 	wg.Add(goroutines * 2)
-	for g := 0; g < goroutines; g++ {
+	for g := range goroutines {
 		id := string(rune('A' + g))
 		go func(id string) {
 			defer wg.Done()
 			bus.Unsubscribe(id)
 		}(id)
 	}
-	for g := 0; g < goroutines; g++ {
+	for g := range goroutines {
 		id := "f-" + string(rune('A'+g))
 		go func(id string) {
 			defer wg.Done()
@@ -362,7 +362,7 @@ func TestMetrics_WithTransportSubscribe(t *testing.T) {
 func TestMetrics_NoDropsWhenNoSubscribers(t *testing.T) {
 	bus := NewBus(100)
 
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		bus.Publish(Event{Type: SessionStarted})
 	}
 
@@ -413,7 +413,7 @@ func TestMetrics_recordLatency_unit(t *testing.T) {
 	s = m.snapshot()
 
 	// Buckets below 5ms boundary: 10us, 50us, 100us, 500us, 1ms (indices 0-4) should still be 1.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if s.Latency.Buckets[i].Count != 1 {
 			t.Errorf("bucket[%d] (%s) = %d, want 1 after 2ms observation", i, s.Latency.Buckets[i].Le, s.Latency.Buckets[i].Count)
 		}
@@ -463,20 +463,20 @@ func TestMetrics_ConcurrentPublishAndMetrics(t *testing.T) {
 	wg.Add(publishers + readers)
 
 	// Publishers
-	for g := 0; g < publishers; g++ {
+	for range publishers {
 		go func() {
 			defer wg.Done()
-			for i := 0; i < iterations; i++ {
+			for range iterations {
 				bus.Publish(Event{Type: SessionStarted})
 			}
 		}()
 	}
 
 	// Concurrent readers of Metrics()
-	for g := 0; g < readers; g++ {
+	for range readers {
 		go func() {
 			defer wg.Done()
-			for i := 0; i < iterations; i++ {
+			for range iterations {
 				m := bus.Metrics()
 				// Sanity: totals should never be negative.
 				if m.TotalPublished < 0 {

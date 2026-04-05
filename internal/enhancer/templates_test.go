@@ -46,7 +46,6 @@ func TestTemplateListSummary(t *testing.T) {
 func TestFillTemplate_AllTemplates(t *testing.T) {
 	t.Parallel()
 	for _, tmpl := range ListTemplates() {
-		tmpl := tmpl
 		t.Run(tmpl.Name, func(t *testing.T) {
 			t.Parallel()
 			filled := FillTemplate(&tmpl, map[string]string{})
@@ -76,7 +75,6 @@ func TestGetTemplate_AllNames(t *testing.T) {
 	t.Parallel()
 	names := []string{"troubleshoot", "code_review", "workflow_create", "data_analysis", "code", "creative_brief"}
 	for _, name := range names {
-		name := name
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			tmpl := GetTemplate(name)

@@ -30,7 +30,7 @@ func ListSessions() ([]Session, error) {
 	}
 
 	var sessions []Session
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
 		parts := strings.SplitN(line, "\t", 3)
 		if len(parts) < 3 {
 			continue

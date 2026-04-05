@@ -36,10 +36,10 @@ func TestFleetAnomalyDetector_ProviderDegradation(t *testing.T) {
 	d := NewFleetAnomalyDetector(nil, DefaultFleetAnomalyConfig(), nil)
 
 	// Record 10 outcomes: 2 successes, 8 failures (20% success rate)
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		d.RecordProviderOutcome("claude", true)
 	}
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		d.RecordProviderOutcome("claude", false)
 	}
 
@@ -62,7 +62,7 @@ func TestFleetAnomalyDetector_ProviderDegradation_Healthy(t *testing.T) {
 	d := NewFleetAnomalyDetector(nil, DefaultFleetAnomalyConfig(), nil)
 
 	// Record 10 outcomes: 9 successes, 1 failure (90% success rate)
-	for i := 0; i < 9; i++ {
+	for range 9 {
 		d.RecordProviderOutcome("gemini", true)
 	}
 	d.RecordProviderOutcome("gemini", false)

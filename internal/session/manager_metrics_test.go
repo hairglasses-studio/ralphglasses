@@ -152,11 +152,11 @@ func TestManagerMetrics_ConcurrentUpdates(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
 
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		go func(id int) {
 			defer wg.Done()
 			p := []Provider{ProviderClaude, ProviderGemini, ProviderCodex}[id%3]
-			for j := 0; j < opsPerGoroutine; j++ {
+			for j := range opsPerGoroutine {
 				m.RecordLaunch(p)
 				m.RecordContention(time.Microsecond)
 				m.RecordLaunchLatency(time.Microsecond)
@@ -211,13 +211,13 @@ func TestManagerMetrics_PeakWatermark(t *testing.T) {
 	m := NewManagerMetrics()
 
 	// Launch 5, complete 3, launch 2 more — peak should be 5.
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		m.RecordLaunch(ProviderClaude)
 	}
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		m.RecordComplete(ProviderClaude)
 	}
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		m.RecordLaunch(ProviderGemini)
 	}
 

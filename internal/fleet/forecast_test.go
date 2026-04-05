@@ -13,7 +13,7 @@ func TestForecaster_ConstantBurnRate(t *testing.T) {
 
 	// $0.50 every minute for 120 minutes => 120 points, $60 total.
 	// Dense enough that windowed rates converge for trend stability.
-	for i := 0; i < 120; i++ {
+	for i := range 120 {
 		f.RecordSpend(base.Add(time.Duration(i)*time.Minute), 0.50)
 	}
 
@@ -40,11 +40,11 @@ func TestForecaster_AcceleratingTrend(t *testing.T) {
 	base := time.Now().Add(-2 * time.Hour)
 
 	// First hour: $0.10 every minute (60 points, $6 total).
-	for i := 0; i < 60; i++ {
+	for i := range 60 {
 		f.RecordSpend(base.Add(time.Duration(i)*time.Minute), 0.10)
 	}
 	// Last 15 minutes: $1.00 every minute (15 points, $15 total).
-	for i := 0; i < 15; i++ {
+	for i := range 15 {
 		ts := base.Add(time.Hour + time.Duration(i)*time.Minute)
 		f.RecordSpend(ts, 1.0)
 	}
@@ -60,11 +60,11 @@ func TestForecaster_DeceleratingTrend(t *testing.T) {
 	base := time.Now().Add(-2 * time.Hour)
 
 	// First hour: $1.00 every minute (60 points, $60 total).
-	for i := 0; i < 60; i++ {
+	for i := range 60 {
 		f.RecordSpend(base.Add(time.Duration(i)*time.Minute), 1.0)
 	}
 	// Last 15 minutes: $0.05 every minute (15 points, $0.75 total).
-	for i := 0; i < 15; i++ {
+	for i := range 15 {
 		ts := base.Add(time.Hour + time.Duration(i)*time.Minute)
 		f.RecordSpend(ts, 0.05)
 	}
@@ -152,14 +152,14 @@ func TestForecaster_ConfidenceIntervalWidensWithVariableSpend(t *testing.T) {
 	// Constant spend: narrow CI.
 	fConst := NewForecaster()
 	base := time.Now().Add(-time.Hour)
-	for i := 0; i < 60; i++ {
+	for i := range 60 {
 		fConst.RecordSpend(base.Add(time.Duration(i)*time.Minute), 1.0)
 	}
 	rConst := fConst.Forecast(100.0, 4*time.Hour)
 
 	// Variable spend: wider CI.
 	fVar := NewForecaster()
-	for i := 0; i < 60; i++ {
+	for i := range 60 {
 		amount := 0.5
 		if i%2 == 0 {
 			amount = 5.0
@@ -181,7 +181,7 @@ func TestForecaster_ProjectedSpend(t *testing.T) {
 	base := time.Now().Add(-time.Hour)
 
 	// $5 every 10 minutes for 1 hour => 6 points, $30 total over ~50min.
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		f.RecordSpend(base.Add(time.Duration(i)*10*time.Minute), 5.0)
 	}
 
@@ -199,11 +199,11 @@ func TestForecaster_WindowedBurnRate(t *testing.T) {
 	base := time.Now().Add(-2 * time.Hour)
 
 	// First hour: $1 every 10 minutes (6 points, $6).
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		f.RecordSpend(base.Add(time.Duration(i)*10*time.Minute), 1.0)
 	}
 	// Second hour: $10 every 10 minutes (6 points, $60).
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		f.RecordSpend(base.Add(time.Hour+time.Duration(i)*10*time.Minute), 10.0)
 	}
 
@@ -227,7 +227,7 @@ func TestForecaster_ConcurrentAccess(t *testing.T) {
 	// Concurrent writers.
 	n := 100
 	wg.Add(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(idx int) {
 			defer wg.Done()
 			f.RecordSpend(base.Add(time.Duration(idx)*time.Second), 0.01)
@@ -236,7 +236,7 @@ func TestForecaster_ConcurrentAccess(t *testing.T) {
 
 	// Concurrent readers.
 	wg.Add(n)
-	for i := 0; i < n; i++ {
+	for range n {
 		go func() {
 			defer wg.Done()
 			f.BurnRate(time.Hour)

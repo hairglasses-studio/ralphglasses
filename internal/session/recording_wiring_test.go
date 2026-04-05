@@ -42,8 +42,7 @@ func TestRecordingWiring_RunSessionOutput(t *testing.T) {
 	}
 	input := strings.Join(lines, "\n") + "\n"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	stdout := io.NopCloser(strings.NewReader(input))
 	runSessionOutput(ctx, s, stdout, nil)
@@ -105,8 +104,7 @@ func TestRecordingWiring_NoRecorder(t *testing.T) {
 	}
 	input := strings.Join(lines, "\n") + "\n"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	stdout := io.NopCloser(strings.NewReader(input))
 	runSessionOutput(ctx, s, stdout, nil)

@@ -328,12 +328,10 @@ func TestCheck_ConcurrentAccess(t *testing.T) {
 
 	var wg sync.WaitGroup
 	// 20 goroutines all checking at 100% — only 4 alerts total should fire
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 20 {
+		wg.Go(func() {
 			w.Check(100.0, 100.0)
-		}()
+		})
 	}
 	wg.Wait()
 

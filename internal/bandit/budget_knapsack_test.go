@@ -277,7 +277,7 @@ func TestSolveBudgetKnapsack_IntegrationWithNeuralUCB(t *testing.T) {
 	complexCtx := make([]float64, NumContextualFeatures)
 	complexCtx[FeatureComplexity] = 1.0
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		n.Update(Reward{ArmID: "cheap", Value: 0.8, Context: simpleCtx})
 		n.Update(Reward{ArmID: "cheap", Value: 0.2, Context: complexCtx})
 		n.Update(Reward{ArmID: "expensive", Value: 0.9, Context: complexCtx})

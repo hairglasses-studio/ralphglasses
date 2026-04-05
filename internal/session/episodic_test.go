@@ -223,7 +223,7 @@ func TestPrune(t *testing.T) {
 	now := time.Now()
 
 	em.mu.Lock()
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		taskType := "feature"
 		if i >= 5 {
 			taskType = "bug_fix"

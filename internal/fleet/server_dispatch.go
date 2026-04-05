@@ -3,6 +3,7 @@ package fleet
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"time"
 
@@ -133,8 +134,9 @@ func (c *Coordinator) assignWork(workerID string, worker *WorkerInfo) *WorkItem 
 
 // helper functions
 
+//go:fix inline
 func timePtr(t time.Time) *time.Time {
-	return &t
+	return new(t)
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
@@ -144,12 +146,8 @@ func writeJSON(w http.ResponseWriter, v any) {
 
 func mergeData(base, extra map[string]any) map[string]any {
 	merged := make(map[string]any, len(base)+len(extra))
-	for k, v := range base {
-		merged[k] = v
-	}
-	for k, v := range extra {
-		merged[k] = v
-	}
+	maps.Copy(merged, base)
+	maps.Copy(merged, extra)
 	return merged
 }
 

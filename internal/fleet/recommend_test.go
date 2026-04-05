@@ -46,7 +46,7 @@ func TestAnalyze_ProviderSwitch(t *testing.T) {
 	now := time.Now()
 
 	// Claude is expensive for "lint" tasks.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		p.Record(CostSample{
 			Timestamp: now.Add(time.Duration(i) * time.Minute),
 			CostUSD:   0.50,
@@ -56,7 +56,7 @@ func TestAnalyze_ProviderSwitch(t *testing.T) {
 	}
 
 	// Gemini is cheap for "lint" tasks.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		p.Record(CostSample{
 			Timestamp: now.Add(time.Duration(10+i) * time.Minute),
 			CostUSD:   0.05,
@@ -103,7 +103,7 @@ func TestAnalyze_ProviderSwitch_MinSamples(t *testing.T) {
 	now := time.Now()
 
 	// Only 2 samples per provider (below default threshold of 5).
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		p.Record(CostSample{
 			Timestamp: now.Add(time.Duration(i) * time.Minute),
 			CostUSD:   1.0,
@@ -131,7 +131,7 @@ func TestAnalyze_BudgetPacing(t *testing.T) {
 
 	now := time.Now()
 	// High burn rate: $10/hour.
-	for i := 0; i < 60; i++ {
+	for i := range 60 {
 		p.Record(CostSample{
 			Timestamp: now.Add(time.Duration(i) * time.Minute),
 			CostUSD:   10.0 / 60.0, // ~$0.167/min
@@ -142,11 +142,11 @@ func TestAnalyze_BudgetPacing(t *testing.T) {
 
 	r := NewRecommender(p).WithConfig(RecommenderConfig{
 		MinSamplesPerProvider: 5,
-		AnomalyZThreshold:    2.0,
+		AnomalyZThreshold:     2.0,
 		CacheSavingsEstimate:  0.80,
-		BudgetRemaining:       20.0,   // only $20 left
+		BudgetRemaining:       20.0, // only $20 left
 		Concurrency:           4,
-		BudgetHours:           8,      // want 8 hours runway
+		BudgetHours:           8, // want 8 hours runway
 	})
 
 	recs := r.Analyze()
@@ -181,7 +181,7 @@ func TestAnalyze_BudgetPacing_OnTrack(t *testing.T) {
 
 	now := time.Now()
 	// Low burn rate: $1/hour.
-	for i := 0; i < 60; i++ {
+	for i := range 60 {
 		p.Record(CostSample{
 			Timestamp: now.Add(time.Duration(i) * time.Minute),
 			CostUSD:   1.0 / 60.0,
@@ -192,7 +192,7 @@ func TestAnalyze_BudgetPacing_OnTrack(t *testing.T) {
 
 	r := NewRecommender(p).WithConfig(RecommenderConfig{
 		MinSamplesPerProvider: 5,
-		AnomalyZThreshold:    2.0,
+		AnomalyZThreshold:     2.0,
 		CacheSavingsEstimate:  0.80,
 		BudgetRemaining:       100.0, // plenty
 		Concurrency:           4,
@@ -213,7 +213,7 @@ func TestAnalyze_AnomalyResponse(t *testing.T) {
 	now := time.Now()
 
 	// 25 normal samples around $0.10 each for claude.
-	for i := 0; i < 25; i++ {
+	for i := range 25 {
 		p.Record(CostSample{
 			Timestamp: now.Add(time.Duration(i) * time.Minute),
 			CostUSD:   0.10,
@@ -223,7 +223,7 @@ func TestAnalyze_AnomalyResponse(t *testing.T) {
 	}
 
 	// Then spike: 5 samples at $5.00 each (50x normal).
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		p.Record(CostSample{
 			Timestamp: now.Add(time.Duration(25+i) * time.Minute),
 			CostUSD:   5.00,
@@ -260,7 +260,7 @@ func TestAnalyze_CacheOptimize(t *testing.T) {
 	now := time.Now()
 
 	// Enough samples for claude to trigger cache recommendation.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		p.Record(CostSample{
 			Timestamp: now.Add(time.Duration(i) * time.Minute),
 			CostUSD:   1.00,
@@ -297,7 +297,7 @@ func TestAnalyze_CacheOptimize_UnknownProvider(t *testing.T) {
 	r := NewRecommender(p)
 
 	now := time.Now()
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		p.Record(CostSample{
 			Timestamp: now.Add(time.Duration(i) * time.Minute),
 			CostUSD:   1.00,
@@ -321,7 +321,7 @@ func TestAnalyze_ModelDowngrade(t *testing.T) {
 	now := time.Now()
 
 	// Claude doing "lint" tasks (eligible for downgrade).
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		p.Record(CostSample{
 			Timestamp: now.Add(time.Duration(i) * time.Minute),
 			CostUSD:   0.50,
@@ -360,7 +360,7 @@ func TestAnalyze_ModelDowngrade_ComplexTask(t *testing.T) {
 	now := time.Now()
 
 	// "architecture" tasks should not be downgraded.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		p.Record(CostSample{
 			Timestamp: now.Add(time.Duration(i) * time.Minute),
 			CostUSD:   2.00,
@@ -383,7 +383,7 @@ func TestAnalyze_SortedByImpact(t *testing.T) {
 	now := time.Now()
 
 	// Create data that triggers multiple recommendation types.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		p.Record(CostSample{
 			Timestamp: now.Add(time.Duration(i) * time.Minute),
 			CostUSD:   1.00,
@@ -461,7 +461,7 @@ func TestAnalyze_ProviderSwitch_TrivialSavings(t *testing.T) {
 	now := time.Now()
 
 	// Providers with nearly identical costs (< 5% difference).
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		p.Record(CostSample{
 			Timestamp: now.Add(time.Duration(i) * time.Minute),
 			CostUSD:   1.00,

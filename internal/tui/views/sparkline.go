@@ -63,10 +63,7 @@ func (s SparklineModel) Render() string {
 		barIdx := 3 // default mid-height for equal values
 		if spread > 0 {
 			normalized := (val - mn) / spread
-			barIdx = int(math.Round(normalized * 7))
-			if barIdx < 0 {
-				barIdx = 0
-			}
+			barIdx = max(int(math.Round(normalized*7)), 0)
 			if barIdx > 7 {
 				barIdx = 7
 			}
@@ -113,7 +110,7 @@ func (s SparklineModel) resample() []float64 {
 
 	result := make([]float64, w)
 	bucketSize := float64(n) / float64(w)
-	for i := 0; i < w; i++ {
+	for i := range w {
 		start := int(float64(i) * bucketSize)
 		end := int(float64(i+1) * bucketSize)
 		if end > n {
@@ -164,9 +161,9 @@ func (s SparklineModel) anomalyIndexSet(resampledLen int) map[int]struct{} {
 type BurnRateTrend int
 
 const (
-	TrendStable      BurnRateTrend = iota // ->
-	TrendRising                            // upward
-	TrendFalling                           // downward
+	TrendStable  BurnRateTrend = iota // ->
+	TrendRising                       // upward
+	TrendFalling                      // downward
 )
 
 // TrendIndicator returns a styled arrow string for the burn rate trend.
@@ -188,10 +185,7 @@ func BudgetProjectionBar(pct float64, width int) string {
 		width = 20
 	}
 
-	filled := int(math.Round(pct / 100 * float64(width)))
-	if filled < 0 {
-		filled = 0
-	}
+	filled := max(int(math.Round(pct/100*float64(width))), 0)
 	if filled > width {
 		filled = width
 	}

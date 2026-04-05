@@ -305,7 +305,7 @@ func TestWorktreeManager_ConcurrentCreateAndCleanup(t *testing.T) {
 	errs := make([]error, n)
 
 	// Create n sessions concurrently.
-	for i := 0; i < n; i++ {
+	for i := range n {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
@@ -327,7 +327,7 @@ func TestWorktreeManager_ConcurrentCreateAndCleanup(t *testing.T) {
 	}
 
 	// Cleanup all concurrently.
-	for i := 0; i < n; i++ {
+	for i := range n {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()

@@ -69,8 +69,8 @@ func NewRegistry(storeDir string) *Registry {
 	}
 
 	r := &Registry{
-		commands:  make(map[string]*Command),
-		storeDir:  storeDir,
+		commands: make(map[string]*Command),
+		storeDir: storeDir,
 	}
 
 	r.register(&Command{
@@ -332,7 +332,7 @@ func AutoArrange(monitorCount, windowCount int) *Layout {
 	// Distribute windows across monitors round-robin, then tile each
 	// monitor's windows in a grid.
 	perMonitor := make([]int, monitorCount)
-	for i := 0; i < windowCount; i++ {
+	for i := range windowCount {
 		perMonitor[i%monitorCount]++
 	}
 
@@ -347,7 +347,7 @@ func AutoArrange(monitorCount, windowCount int) *Layout {
 		cellW := screenW / cols
 		cellH := screenH / rows
 
-		for i := 0; i < n; i++ {
+		for i := range n {
 			col := i % cols
 			row := i / cols
 			placements = append(placements, WindowPlacement{

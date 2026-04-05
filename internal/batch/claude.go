@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -50,15 +51,15 @@ type claudeBatchRequest struct {
 }
 
 type claudeBatchItem struct {
-	CustomID string              `json:"custom_id"`
+	CustomID string             `json:"custom_id"`
 	Params   claudeMessageParam `json:"params"`
 }
 
 type claudeMessageParam struct {
-	Model     string         `json:"model"`
-	MaxTokens int            `json:"max_tokens"`
-	System    string         `json:"system,omitempty"`
-	Messages  []claudeMsg    `json:"messages"`
+	Model     string      `json:"model"`
+	MaxTokens int         `json:"max_tokens"`
+	System    string      `json:"system,omitempty"`
+	Messages  []claudeMsg `json:"messages"`
 }
 
 type claudeMsg struct {
@@ -67,12 +68,12 @@ type claudeMsg struct {
 }
 
 type claudeBatchResponse struct {
-	ID              string     `json:"id"`
-	Type            string     `json:"type"`
-	ProcessingStatus string   `json:"processing_status"`
-	RequestCounts   claudeCounts `json:"request_counts"`
-	CreatedAt       time.Time  `json:"created_at"`
-	EndedAt         *time.Time `json:"ended_at,omitempty"`
+	ID               string       `json:"id"`
+	Type             string       `json:"type"`
+	ProcessingStatus string       `json:"processing_status"`
+	RequestCounts    claudeCounts `json:"request_counts"`
+	CreatedAt        time.Time    `json:"created_at"`
+	EndedAt          *time.Time   `json:"ended_at,omitempty"`
 }
 
 type claudeCounts struct {
@@ -89,9 +90,9 @@ type claudeResultLine struct {
 }
 
 type claudeResultDetail struct {
-	Type    string              `json:"type"`
-	Message *claudeResultMsg    `json:"message,omitempty"`
-	Error   *claudeResultError  `json:"error,omitempty"`
+	Type    string             `json:"type"`
+	Message *claudeResultMsg   `json:"message,omitempty"`
+	Error   *claudeResultError `json:"error,omitempty"`
 }
 
 type claudeResultMsg struct {
@@ -248,13 +249,13 @@ func (c *claudeClient) Results(ctx context.Context, batchID string) ([]Result, e
 			r.Error = line.Result.Error.Message
 		}
 		if line.Result.Message != nil {
-			var text string
+			var text strings.Builder
 			for _, block := range line.Result.Message.Content {
 				if block.Type == "text" {
-					text += block.Text
+					text.WriteString(block.Text)
 				}
 			}
-			r.Content = text
+			r.Content = text.String()
 			r.InputTokens = line.Result.Message.Usage.InputTokens
 			r.OutputTokens = line.Result.Message.Usage.OutputTokens
 		}

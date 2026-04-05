@@ -343,15 +343,15 @@ func TestKeybindRegistry_ConcurrentAccess(t *testing.T) {
 	// Writer goroutine.
 	go func() {
 		defer close(done)
-		for i := 0; i < 100; i++ {
+		for i := range 100 {
 			_ = r.Register("scope", string(rune('a'+i%26))+string(rune('0'+i/26)), "action", "plugin")
 		}
 	}()
 
 	// Reader goroutines.
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		go func() {
-			for j := 0; j < 100; j++ {
+			for range 100 {
 				r.Lookup("scope", "a0")
 				r.AllForScope("scope")
 				r.All()

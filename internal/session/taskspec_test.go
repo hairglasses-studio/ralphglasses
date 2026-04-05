@@ -297,7 +297,7 @@ func TestTaskQueue_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Push 100 tasks concurrently
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -323,16 +323,14 @@ func TestTaskQueue_ConcurrentAccess(t *testing.T) {
 	// Pop all concurrently
 	var popped int64
 	var mu sync.Mutex
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 100 {
+		wg.Go(func() {
 			if q.Pop() != nil {
 				mu.Lock()
 				popped++
 				mu.Unlock()
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -343,4 +341,3 @@ func TestTaskQueue_ConcurrentAccess(t *testing.T) {
 		t.Errorf("Len() after drain = %d, want 0", q.Len())
 	}
 }
-

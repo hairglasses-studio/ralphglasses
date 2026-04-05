@@ -46,9 +46,9 @@ func main() {
 	fmt.Fprintln(w, "| Field | JSON Key | Type | Default | Description |")
 	fmt.Fprintln(w, "|-------|----------|------|---------|-------------|")
 
-	t := reflect.TypeOf(config.Config{})
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
+	t := reflect.TypeFor[config.Config]()
+	for f := range t.Fields() {
+		f := f
 		jsonTag := f.Tag.Get("json")
 		jsonKey := strings.Split(jsonTag, ",")[0]
 		if jsonKey == "" || jsonKey == "-" {
@@ -286,13 +286,13 @@ func main() {
 // friendlyType converts a reflect.Type to a human-readable string.
 func friendlyType(t reflect.Type) string {
 	// time.Duration is an int64 alias, check before kind switch.
-	if t == reflect.TypeOf(time.Duration(0)) {
+	if t == reflect.TypeFor[time.Duration]() {
 		return "duration"
 	}
 	switch t.Kind() {
 	case reflect.Slice:
 		return "[]" + friendlyType(t.Elem())
-	case reflect.Ptr:
+	case reflect.Pointer:
 		return "*" + friendlyType(t.Elem())
 	case reflect.Struct:
 		return t.Name()

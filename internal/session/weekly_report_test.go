@@ -260,7 +260,7 @@ func TestWeeklyReport_Recommendations_HighCost(t *testing.T) {
 	now := time.Date(2026, 3, 30, 12, 0, 0, 0, time.UTC)
 
 	sessions := make([]SessionSummary, 0, 5)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		sessions = append(sessions, SessionSummary{
 			ID:        "s",
 			Status:    "completed",

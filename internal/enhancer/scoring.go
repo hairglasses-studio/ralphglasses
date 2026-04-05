@@ -59,11 +59,11 @@ func Score(text string, taskType TaskType, lints []LintResult, ar *AnalyzeResult
 	for _, d := range dims {
 		weighted += float64(d.Score) * d.Weight
 	}
-	overall := int(weighted + 0.5) // round
-
-	if overall > 95 {
-		overall = 95 // nothing is perfect
-	}
+	overall := min(
+		// round
+		int(weighted+0.5),
+		// nothing is perfect
+		95)
 	if overall < 5 {
 		overall = 5
 	}
@@ -80,7 +80,7 @@ func Score(text string, taskType TaskType, lints []LintResult, ar *AnalyzeResult
 // hasMarkdownStructure checks if a prompt uses markdown header sections for structure.
 func hasMarkdownStructure(text string) bool {
 	headers := 0
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "## ") {
 			headers++
 		}

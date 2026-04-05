@@ -46,12 +46,12 @@ func TestOptimizer_UpdateWeightsWithFeedback(t *testing.T) {
 	fa := session.NewFeedbackAnalyzer("", 3)
 
 	// Ingest enough samples to trigger weight updates
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		fa.Ingest([]session.JournalEntry{
 			{
-				Provider:  string(session.ProviderClaude),
-				SpentUSD:  0.50,
-				TurnCount: 10,
+				Provider:   string(session.ProviderClaude),
+				SpentUSD:   0.50,
+				TurnCount:  10,
 				ExitReason: "success",
 			},
 		})
@@ -71,12 +71,12 @@ func TestOptimizer_SetBanditStats(t *testing.T) {
 	fa := session.NewFeedbackAnalyzer("", 3)
 
 	// Ingest samples
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		fa.Ingest([]session.JournalEntry{
 			{
-				Provider:  string(session.ProviderClaude),
-				SpentUSD:  0.50,
-				TurnCount: 10,
+				Provider:   string(session.ProviderClaude),
+				SpentUSD:   0.50,
+				TurnCount:  10,
 				ExitReason: "success",
 			},
 		})
@@ -107,9 +107,9 @@ func TestOptimizer_IngestCrossWorkerJournals(t *testing.T) {
 	entries := make([]session.JournalEntry, 5)
 	for i := range entries {
 		entries[i] = session.JournalEntry{
-			Provider:  string(session.ProviderGemini),
-			SpentUSD:  0.10,
-			TurnCount: 5,
+			Provider:   string(session.ProviderGemini),
+			SpentUSD:   0.10,
+			TurnCount:  5,
 			ExitReason: "success",
 		}
 	}

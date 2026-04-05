@@ -25,8 +25,7 @@ func TestRunSessionOutput_ParseError(t *testing.T) {
 
 	// Feed invalid JSON.
 	input := "this is not json\n"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 
@@ -53,8 +52,7 @@ func TestRunSessionOutput_SystemEvent(t *testing.T) {
 	}
 
 	input := `{"type":"system","session_id":"abc123","content":"initialized"}` + "\n"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 
@@ -81,8 +79,7 @@ func TestRunSessionOutput_AssistantEvent(t *testing.T) {
 	}
 
 	input := `{"type":"assistant","content":"hello world"}` + "\n"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 
@@ -106,8 +103,7 @@ func TestRunSessionOutput_ResultEvent(t *testing.T) {
 	}
 
 	input := `{"type":"result","result":"done","num_turns":5,"session_id":"sess-1","cost_usd":0.42}` + "\n"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 
@@ -140,8 +136,7 @@ func TestRunSessionOutput_ResultError(t *testing.T) {
 	}
 
 	input := `{"type":"result","is_error":true,"error":"something broke","session_id":"bad-id"}` + "\n"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 
@@ -172,8 +167,7 @@ func TestRunSessionOutput_CostTracking_Gemini(t *testing.T) {
 	input := `{"type":"result","text":"ok","cost_usd":0.10}` + "\n" +
 		`{"type":"result","text":"ok2","cost_usd":0.20}` + "\n"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 
@@ -200,8 +194,7 @@ func TestRunSessionOutput_CostTracking_Claude(t *testing.T) {
 	input := `{"type":"result","result":"r1","cost_usd":0.10}` + "\n" +
 		`{"type":"result","result":"r2","cost_usd":0.30}` + "\n"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 
@@ -231,8 +224,7 @@ func TestRunSessionOutput_WithLogFile(t *testing.T) {
 	}
 
 	input := `{"type":"assistant","content":"logged output"}` + "\n"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), logFile)
 	logFile.Close()
@@ -289,8 +281,7 @@ func TestRunSessionOutput_EmptyLines(t *testing.T) {
 	}
 
 	input := "\n\n\n"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 
@@ -318,8 +309,7 @@ func TestRunSessionOutput_BudgetAlerts(t *testing.T) {
 
 	// Cost that triggers 90% threshold.
 	input := `{"type":"result","result":"r1","cost_usd":0.95}` + "\n"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 
@@ -356,8 +346,7 @@ func TestRunSessionOutput_BudgetExceeded(t *testing.T) {
 	}
 
 	input := `{"type":"result","result":"r1","cost_usd":0.60}` + "\n"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 }
@@ -375,8 +364,7 @@ func TestRunSessionOutput_DefaultEventType(t *testing.T) {
 
 	// An event with an unknown type.
 	input := `{"type":"custom_event","content":"custom data"}` + "\n"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 
@@ -400,8 +388,7 @@ func TestRunSessionOutput_DefaultEventTypeError(t *testing.T) {
 	}
 
 	input := `{"type":"custom_event","is_error":true,"error":"bad"}` + "\n"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 
@@ -431,8 +418,7 @@ func TestRunSessionOutput_ReplayRecorder(t *testing.T) {
 	input := `{"type":"system","content":"init"}` + "\n" +
 		`{"type":"assistant","content":"reply"}` + "\n" +
 		`{"type":"tool_use","content":"tool output"}` + "\n"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 	_ = recorder.Close()
@@ -457,7 +443,7 @@ func TestAppendSessionOutput_HistoryCap(t *testing.T) {
 	t.Parallel()
 	s := &Session{OutputCh: make(chan string, 200)}
 
-	for i := 0; i < 150; i++ {
+	for range 150 {
 		appendSessionOutput(s, "line", nil)
 	}
 
@@ -509,9 +495,9 @@ func TestAppendSessionOutput_WithLogFile(t *testing.T) {
 func TestIsExtraUsageExhausted(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name   string
-		sess   *Session
-		want   bool
+		name string
+		sess *Session
+		want bool
 	}{
 		{
 			"not exhausted",
@@ -626,8 +612,7 @@ func TestRunSessionOutput_CostSource(t *testing.T) {
 	}
 
 	input := `{"type":"result","result":"ok","cost_usd":0.50,"cost_source":"api_key"}` + "\n"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	runSessionOutput(ctx, s, strings.NewReader(input), nil)
 

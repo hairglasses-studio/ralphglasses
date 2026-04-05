@@ -87,7 +87,7 @@ func TestDispatchHook(t *testing.T) {
 	})
 
 	// Wait for hook to execute
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		if _, err := os.Stat(markerFile); err == nil {
 			return // success
 		}
@@ -205,7 +205,7 @@ func TestDispatchHook_EnvironmentVariables(t *testing.T) {
 
 	// Wait for hook to execute
 	var envData []byte
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		var err error
 		envData, err = os.ReadFile(envFile)
 		if err == nil {

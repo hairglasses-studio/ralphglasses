@@ -33,7 +33,7 @@ func TestNewDiscountedUCB1(t *testing.T) {
 func TestUCB1ExploresFirst(t *testing.T) {
 	d := NewDiscountedUCB1(ucbTestArms, 0.99)
 	seen := map[string]bool{}
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		arm := d.Select(nil)
 		if seen[arm.ID] {
 			t.Fatalf("arm %s selected twice during exploration", arm.ID)
@@ -56,7 +56,7 @@ func TestUCB1ConvergesOnBest(t *testing.T) {
 	}
 
 	// Train for 100 steps.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		arm := d.Select(nil)
 		val := 0.1
 		if arm.ID == "a" {
@@ -67,7 +67,7 @@ func TestUCB1ConvergesOnBest(t *testing.T) {
 
 	// Check next 100 selections.
 	aCount := 0
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		arm := d.Select(nil)
 		if arm.ID == "a" {
 			aCount++
@@ -88,7 +88,7 @@ func TestUCB1DiscountAdapts(t *testing.T) {
 	d := NewDiscountedUCB1(arms, 0.95)
 
 	// Phase 1: arm "a" is best.
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		arm := d.Select(nil)
 		val := 0.1
 		if arm.ID == "a" {
@@ -98,7 +98,7 @@ func TestUCB1DiscountAdapts(t *testing.T) {
 	}
 
 	// Phase 2: arm "b" becomes best.
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		arm := d.Select(nil)
 		val := 0.1
 		if arm.ID == "b" {
@@ -109,7 +109,7 @@ func TestUCB1DiscountAdapts(t *testing.T) {
 
 	// After adaptation, "b" should dominate next 50 selections.
 	bCount := 0
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		arm := d.Select(nil)
 		if arm.ID == "b" {
 			bCount++

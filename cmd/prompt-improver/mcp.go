@@ -124,11 +124,11 @@ func mcpHandleDiff(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolRes
 
 	var sb strings.Builder
 	sb.WriteString("--- original\n+++ enhanced\n\n")
-	for _, line := range strings.Split(prompt, "\n") {
+	for line := range strings.SplitSeq(prompt, "\n") {
 		fmt.Fprintf(&sb, "- %s\n", line)
 	}
 	sb.WriteString("\n")
-	for _, line := range strings.Split(result.Enhanced, "\n") {
+	for line := range strings.SplitSeq(result.Enhanced, "\n") {
 		fmt.Fprintf(&sb, "+ %s\n", line)
 	}
 	if len(result.Improvements) > 0 {

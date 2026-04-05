@@ -176,10 +176,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.Notify.Show(fmt.Sprintf("⚠ Watcher error: %v", msg.Err), 4*time.Second)
 		// Exponential backoff: 1s, 2s, 4s, 8s, 16s, capped at 30s
-		delay := time.Duration(1<<uint(m.WatcherFails-1)) * time.Second
-		if delay > 30*time.Second {
-			delay = 30 * time.Second
-		}
+		delay := min(time.Duration(1<<uint(m.WatcherFails-1))*time.Second, 30*time.Second)
 		return m, tea.Tick(delay, func(time.Time) tea.Msg {
 			return watcherBackoffMsg{}
 		})

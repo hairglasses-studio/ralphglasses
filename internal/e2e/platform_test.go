@@ -145,7 +145,7 @@ func TestCascadeRouterRecentResults(t *testing.T) {
 	cfg := session.DefaultCascadeConfig()
 	cr := session.NewCascadeRouter(cfg, nil, nil, "")
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		cr.RecordResult(session.CascadeResult{
 			Timestamp: time.Now(),
 			TaskType:  "test",

@@ -199,7 +199,7 @@ func TestRenderRDCycleDashboard_FindingsWithEmptyCategory(t *testing.T) {
 
 func TestRenderRDCycleDashboard_CycleHistoryTruncatesTo5(t *testing.T) {
 	var cycles []*session.CycleRun
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		cycles = append(cycles, &session.CycleRun{
 			ID:    "c" + string(rune('0'+i)),
 			Name:  "cycle-" + string(rune('A'+i)),
@@ -209,7 +209,7 @@ func TestRenderRDCycleDashboard_CycleHistoryTruncatesTo5(t *testing.T) {
 
 	out := RenderRDCycleDashboard(cycles, 100, 40)
 	// First 5 should be present
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		name := "cycle-" + string(rune('A'+i))
 		if !strings.Contains(out, name) {
 			t.Errorf("expected %q in truncated history", name)

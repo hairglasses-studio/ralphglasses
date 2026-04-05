@@ -34,7 +34,7 @@ func TestWatchStatusFiles_DetectsWrite(t *testing.T) {
 	}()
 
 	// Run the watcher command with a timeout
-	done := make(chan interface{})
+	done := make(chan any)
 	go func() {
 		msg := cmd()
 		done <- msg
@@ -76,7 +76,7 @@ func TestWatchStatusFiles_DetectsCircuitBreakerWrite(t *testing.T) {
 		_ = os.WriteFile(cbPath, []byte(`{"state":"OPEN"}`), 0644)
 	}()
 
-	done := make(chan interface{})
+	done := make(chan any)
 	go func() {
 		msg := cmd()
 		done <- msg
@@ -118,7 +118,7 @@ func TestWatchStatusFiles_DetectsProgressWrite(t *testing.T) {
 		_ = os.WriteFile(progPath, []byte(`{"iteration":2}`), 0644)
 	}()
 
-	done := make(chan interface{})
+	done := make(chan any)
 	go func() {
 		msg := cmd()
 		done <- msg
@@ -155,7 +155,7 @@ func TestWatchStatusFiles_IgnoresUnrelatedFiles(t *testing.T) {
 		_ = os.WriteFile(filepath.Join(ralphDir, "status.json"), []byte(`{}`), 0644)
 	}()
 
-	done := make(chan interface{})
+	done := make(chan any)
 	go func() {
 		msg := cmd()
 		done <- msg
@@ -187,7 +187,7 @@ func TestWatchStatusFiles_TimeoutReturnsWatcherErrorMsg(t *testing.T) {
 
 	// No writes — should return WatcherErrorMsg (idle timeout) after ~2s,
 	// signalling the TUI to fall back to polling.
-	done := make(chan interface{})
+	done := make(chan any)
 	go func() {
 		msg := cmd()
 		done <- msg
@@ -251,7 +251,7 @@ func TestWatchStatusFiles_EmptyPaths(t *testing.T) {
 
 	// With no paths, the watcher will block forever since nothing can happen.
 	// We just verify it doesn't panic immediately.
-	done := make(chan interface{})
+	done := make(chan any)
 	go func() {
 		msg := cmd()
 		done <- msg
@@ -269,7 +269,7 @@ func TestWatchStatusFiles_NonexistentPathReturnsError(t *testing.T) {
 	// Watch a path that doesn't exist — all watches fail, should return WatcherErrorMsg
 	cmd := WatchStatusFiles([]string{"/nonexistent/path/that/does/not/exist"})
 
-	done := make(chan interface{})
+	done := make(chan any)
 	go func() {
 		msg := cmd()
 		done <- msg

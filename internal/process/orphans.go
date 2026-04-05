@@ -91,7 +91,7 @@ func scanRalphLoopProcessesPS() []int {
 		return nil
 	}
 	var pids []int
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue

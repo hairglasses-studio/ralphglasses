@@ -317,7 +317,7 @@ func TestCreateListRemoveLifecycle(t *testing.T) {
 
 	// Create multiple worktrees.
 	paths := make([]string, 3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		paths[i] = filepath.Join(t.TempDir(), "wt-lifecycle")
 		branch := "lifecycle-" + strings.Repeat("a", i+1) // lifecycle-a, lifecycle-aa, lifecycle-aaa
 		if err := Create(ctx, repo, paths[i], branch); err != nil {

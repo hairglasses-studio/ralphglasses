@@ -376,9 +376,6 @@ func FormatReport(r *CoverageReport) string {
 
 // coverageBar renders a simple ASCII progress bar.
 func coverageBar(pct float64, width int) string {
-	filled := int(pct / 100.0 * float64(width))
-	if filled > width {
-		filled = width
-	}
+	filled := min(int(pct/100.0*float64(width)), width)
 	return "[" + strings.Repeat("#", filled) + strings.Repeat("-", width-filled) + "]"
 }

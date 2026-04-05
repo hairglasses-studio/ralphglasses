@@ -87,10 +87,10 @@ func TestRegressionDetector_CheckAll(t *testing.T) {
 	rd.SetBaseline("memory", 500.0)
 
 	results := rd.CheckAll(map[string]float64{
-		"coverage": 78.0, // 2.5% drop — ok
-		"speed":    85.0, // 15% drop — regression
+		"coverage": 78.0,  // 2.5% drop — ok
+		"speed":    85.0,  // 15% drop — regression
 		"memory":   440.0, // 12% drop — regression
-		"unknown":  42.0, // no baseline — ignored
+		"unknown":  42.0,  // no baseline — ignored
 	})
 
 	if len(results) != 2 {
@@ -114,7 +114,7 @@ func TestRegressionDetector_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Concurrent writers.
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -123,7 +123,7 @@ func TestRegressionDetector_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Concurrent readers.
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -132,12 +132,10 @@ func TestRegressionDetector_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Concurrent CheckAll.
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 20 {
+		wg.Go(func() {
 			rd.CheckAll(map[string]float64{"metric": 50.0})
-		}()
+		})
 	}
 
 	wg.Wait()

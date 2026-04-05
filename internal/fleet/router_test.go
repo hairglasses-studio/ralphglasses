@@ -18,7 +18,7 @@ func TestRoundRobinDistributes(t *testing.T) {
 	workers := healthyWorkers()
 
 	counts := map[string]int{}
-	for i := 0; i < 9; i++ {
+	for range 9 {
 		id, err := r.SelectWorker(workers)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -187,7 +187,7 @@ func TestRoundRobinSingleWorker(t *testing.T) {
 		{ID: "w1", HealthState: HealthHealthy},
 	}
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		id, err := r.SelectWorker(workers)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

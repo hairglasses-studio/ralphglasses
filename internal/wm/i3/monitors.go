@@ -182,7 +182,7 @@ func ArrangeForFleet(monitors []Monitor, sessionCount int) []MonitorAssignment {
 	slots := make([]int, len(sorted))
 	assignments := make([]MonitorAssignment, sessionCount)
 
-	for s := 0; s < sessionCount; s++ {
+	for s := range sessionCount {
 		bestIdx := 0
 		for i := 1; i < len(sorted); i++ {
 			if slots[i] < slots[bestIdx] {

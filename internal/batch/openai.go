@@ -47,16 +47,16 @@ func newOpenAIClient(apiKey string, opts ...Option) *openaiClient {
 // OpenAI batch API types.
 
 type openaiJSONLRequest struct {
-	CustomID string              `json:"custom_id"`
-	Method   string              `json:"method"`
-	URL      string              `json:"url"`
-	Body     openaiChatRequest   `json:"body"`
+	CustomID string            `json:"custom_id"`
+	Method   string            `json:"method"`
+	URL      string            `json:"url"`
+	Body     openaiChatRequest `json:"body"`
 }
 
 type openaiChatRequest struct {
-	Model     string           `json:"model"`
-	Messages  []openaiMessage  `json:"messages"`
-	MaxTokens int              `json:"max_tokens,omitempty"`
+	Model     string          `json:"model"`
+	Messages  []openaiMessage `json:"messages"`
+	MaxTokens int             `json:"max_tokens,omitempty"`
 }
 
 type openaiMessage struct {
@@ -75,14 +75,14 @@ type openaiBatchCreateRequest struct {
 }
 
 type openaiBatchResponse struct {
-	ID               string              `json:"id"`
-	Status           string              `json:"status"`
-	InputFileID      string              `json:"input_file_id"`
-	OutputFileID     string              `json:"output_file_id,omitempty"`
-	ErrorFileID      string              `json:"error_file_id,omitempty"`
-	RequestCounts    *openaiRequestCounts `json:"request_counts,omitempty"`
-	CreatedAt        int64               `json:"created_at"`
-	CompletedAt      *int64              `json:"completed_at,omitempty"`
+	ID            string               `json:"id"`
+	Status        string               `json:"status"`
+	InputFileID   string               `json:"input_file_id"`
+	OutputFileID  string               `json:"output_file_id,omitempty"`
+	ErrorFileID   string               `json:"error_file_id,omitempty"`
+	RequestCounts *openaiRequestCounts `json:"request_counts,omitempty"`
+	CreatedAt     int64                `json:"created_at"`
+	CompletedAt   *int64               `json:"completed_at,omitempty"`
 }
 
 type openaiRequestCounts struct {
@@ -92,15 +92,15 @@ type openaiRequestCounts struct {
 }
 
 type openaiResultLine struct {
-	ID       string              `json:"id"`
-	CustomID string              `json:"custom_id"`
-	Response *openaiResultBody   `json:"response,omitempty"`
-	Error    *openaiResultError  `json:"error,omitempty"`
+	ID       string             `json:"id"`
+	CustomID string             `json:"custom_id"`
+	Response *openaiResultBody  `json:"response,omitempty"`
+	Error    *openaiResultError `json:"error,omitempty"`
 }
 
 type openaiResultBody struct {
-	StatusCode int                  `json:"status_code"`
-	Body       openaiChatResponse   `json:"body"`
+	StatusCode int                `json:"status_code"`
+	Body       openaiChatResponse `json:"body"`
 }
 
 type openaiChatResponse struct {
@@ -375,7 +375,7 @@ func (o *openaiClient) downloadResults(ctx context.Context, fileID string) ([]Re
 	}
 
 	var results []Result
-	for _, line := range strings.Split(strings.TrimSpace(string(body)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(body)), "\n") {
 		if line == "" {
 			continue
 		}

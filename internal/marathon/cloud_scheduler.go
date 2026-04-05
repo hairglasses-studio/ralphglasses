@@ -12,10 +12,10 @@ import (
 // VMSpec describes the virtual machine configuration for a cloud marathon run.
 type VMSpec struct {
 	Provider    string            `json:"provider"`     // "aws" or "gcp"
-	MachineType string           `json:"machine_type"`  // e.g. "n2-standard-8", "m5.2xlarge"
-	Region      string           `json:"region"`
-	Image       string           `json:"image"`         // AMI ID or GCP image family
-	DiskGB      int              `json:"disk_gb"`
+	MachineType string            `json:"machine_type"` // e.g. "n2-standard-8", "m5.2xlarge"
+	Region      string            `json:"region"`
+	Image       string            `json:"image"` // AMI ID or GCP image family
+	DiskGB      int               `json:"disk_gb"`
 	Labels      map[string]string `json:"labels,omitempty"`
 }
 
@@ -50,13 +50,13 @@ type VMProvider interface {
 type CloudTaskState string
 
 const (
-	CloudTaskPending    CloudTaskState = "pending"
+	CloudTaskPending      CloudTaskState = "pending"
 	CloudTaskProvisioning CloudTaskState = "provisioning"
-	CloudTaskRunning    CloudTaskState = "running"
-	CloudTaskCollecting CloudTaskState = "collecting"
-	CloudTaskCompleted  CloudTaskState = "completed"
-	CloudTaskFailed     CloudTaskState = "failed"
-	CloudTaskCancelled  CloudTaskState = "cancelled"
+	CloudTaskRunning      CloudTaskState = "running"
+	CloudTaskCollecting   CloudTaskState = "collecting"
+	CloudTaskCompleted    CloudTaskState = "completed"
+	CloudTaskFailed       CloudTaskState = "failed"
+	CloudTaskCancelled    CloudTaskState = "cancelled"
 )
 
 // CloudTask represents a scheduled marathon run on a cloud VM.
@@ -69,8 +69,8 @@ type CloudTask struct {
 	Result      *CloudResult   `json:"result,omitempty"`
 	Error       string         `json:"error,omitempty"`
 	ScheduledAt time.Time      `json:"scheduled_at"`
-	StartedAt   time.Time      `json:"started_at,omitempty"`
-	FinishedAt  time.Time      `json:"finished_at,omitempty"`
+	StartedAt   time.Time      `json:"started_at"`
+	FinishedAt  time.Time      `json:"finished_at"`
 
 	cancel context.CancelFunc
 }

@@ -29,9 +29,9 @@ func CollectChildPIDsFromProc(parentPid int) []int {
 		if err != nil {
 			continue
 		}
-		for _, line := range strings.Split(string(data), "\n") {
-			if strings.HasPrefix(line, "PPid:\t") {
-				ppid := strings.TrimSpace(strings.TrimPrefix(line, "PPid:\t"))
+		for line := range strings.SplitSeq(string(data), "\n") {
+			if after, ok := strings.CutPrefix(line, "PPid:\t"); ok {
+				ppid := strings.TrimSpace(after)
 				if ppid == parentStr {
 					if childPid, err := strconv.Atoi(entry.Name()); err == nil {
 						children = append(children, childPid)

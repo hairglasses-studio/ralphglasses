@@ -16,9 +16,9 @@ type ForecastRange int
 
 const (
 	ForecastRange1H  ForecastRange = iota // 1 hour
-	ForecastRange4H                   // 4 hours
-	ForecastRange12H                  // 12 hours
-	ForecastRange24H                  // 24 hours
+	ForecastRange4H                       // 4 hours
+	ForecastRange12H                      // 12 hours
+	ForecastRange24H                      // 24 hours
 )
 
 // String returns a human-readable label for the time range.
@@ -283,10 +283,9 @@ func (v ForecastView) renderBudgetBar() string {
 	b.WriteString("\n")
 
 	pct := v.BudgetPercent()
-	barWidth := v.effectiveWidth() - 20 // leave room for percentage label
-	if barWidth < 20 {
-		barWidth = 20
-	}
+	barWidth := max(
+		// leave room for percentage label
+		v.effectiveWidth()-20, 20)
 	b.WriteString("  ")
 	b.WriteString(BudgetProjectionBar(pct, barWidth))
 	b.WriteString("\n")
@@ -516,10 +515,7 @@ func (v ForecastView) generateRecommendations() []string {
 	if claudeSessions > 0 && claudeCost > 0 {
 		// Gemini is roughly 3x cheaper per token on average
 		perClaudeSession := claudeCost / float64(claudeSessions)
-		switchable := claudeSessions / 3
-		if switchable < 1 {
-			switchable = 1
-		}
+		switchable := max(claudeSessions/3, 1)
 		if switchable > 0 && claudeSessions > 1 {
 			savings := float64(switchable) * perClaudeSession * 0.66 // ~66% savings per shifted session
 			recs = append(recs, fmt.Sprintf(
@@ -582,10 +578,7 @@ func SparklineFromValues(values []float64) string {
 	var b strings.Builder
 	for _, val := range values {
 		normalized := (val - minVal) / spread
-		idx := int(math.Round(normalized * 7))
-		if idx < 0 {
-			idx = 0
-		}
+		idx := max(int(math.Round(normalized*7)), 0)
 		if idx > 7 {
 			idx = 7
 		}

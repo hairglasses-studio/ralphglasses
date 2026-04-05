@@ -171,7 +171,7 @@ func TestToolDeduplicatorMaxHistory(t *testing.T) {
 	d := NewToolDeduplicator()
 	d.maxHistory = 5
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		d.Record("tool", map[string]any{"i": i}, "result")
 	}
 

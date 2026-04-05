@@ -502,9 +502,9 @@ func TestLoopPanelHidden(t *testing.T) {
 // that KeyDispatch contains a matching entry for each one.
 func TestKeyDispatchCoversGlobalBindings(t *testing.T) {
 	km := DefaultKeyMap()
-	rt := reflect.TypeOf(km)
+	rt := reflect.TypeFor[KeyMap]()
 	rv := reflect.ValueOf(km)
-	bindingType := reflect.TypeOf(key.Binding{})
+	bindingType := reflect.TypeFor[key.Binding]()
 
 	// globalFields are the KeyMap fields that were in the original switch/case
 	// block in handleKey and must therefore appear in KeyDispatch.

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -124,7 +125,7 @@ func (sl *SkillLibrary) FindApplicable(taskDesc, taskType string, limit int) []*
 		if typeLower != "" && strings.Contains(nameLower, typeLower) {
 			score += 1.0
 		}
-		for _, word := range strings.Fields(descLower) {
+		for word := range strings.FieldsSeq(descLower) {
 			if len(word) > 3 && strings.Contains(nameLower, word) {
 				score += 0.5
 			}
@@ -315,10 +316,5 @@ func skillNameFromTask(taskType, taskTitle string) string {
 }
 
 func containsStr(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, s)
 }

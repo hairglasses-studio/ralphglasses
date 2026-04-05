@@ -9,7 +9,7 @@ func TestRateLimiterAllowUnderLimit(t *testing.T) {
 	r := NewRateLimiter()
 	r.SetLimit(ProviderClaude, 5)
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if err := r.Allow(ProviderClaude); err != nil {
 			t.Fatalf("call %d: unexpected error: %v", i+1, err)
 		}
@@ -20,7 +20,7 @@ func TestRateLimiterBlocksAtLimit(t *testing.T) {
 	r := NewRateLimiter()
 	r.SetLimit(ProviderClaude, 3)
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		_ = r.Allow(ProviderClaude)
 	}
 	if err := r.Allow(ProviderClaude); err == nil {
@@ -32,7 +32,7 @@ func TestRateLimiterZeroLimitMeansUnlimited(t *testing.T) {
 	r := NewRateLimiter()
 	r.SetLimit(ProviderGemini, 0)
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		if err := r.Allow(ProviderGemini); err != nil {
 			t.Fatalf("unlimited provider blocked at call %d: %v", i+1, err)
 		}

@@ -16,7 +16,7 @@ func TestCircuitBreaker_InitiallyClosed(t *testing.T) {
 
 func TestCircuitBreaker_OpensAfterThreshold(t *testing.T) {
 	cb := NewCircuitBreaker(CircuitBreakerConfig{FailureThreshold: 3})
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		cb.Allow() //nolint:errcheck
 		cb.RecordFailure()
 	}

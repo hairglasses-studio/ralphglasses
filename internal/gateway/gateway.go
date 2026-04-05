@@ -216,8 +216,8 @@ func (g *Gateway) findBackend(method string) *url.URL {
 	defer g.mu.RUnlock()
 
 	// Try "ralphglasses_<namespace>_..." format.
-	if strings.HasPrefix(method, "ralphglasses_") {
-		rest := strings.TrimPrefix(method, "ralphglasses_")
+	if after, ok := strings.CutPrefix(method, "ralphglasses_"); ok {
+		rest := after
 		if idx := strings.Index(rest, "_"); idx > 0 {
 			ns := rest[:idx]
 			if u, ok := g.backends[ns]; ok {
