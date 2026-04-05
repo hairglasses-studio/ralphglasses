@@ -36,7 +36,8 @@ go build ./...
 # Launch the TUI, scanning a workspace for repos
 ralphglasses --scan-path ~/hairglasses-studio
 
-# Register as an MCP server for Claude Code
+# Codex-first repo-local MCP setup is already configured via .codex/config.toml and .mcp.json.
+# Claude users can also register the server explicitly:
 claude mcp add ralphglasses -- go run . mcp
 ```
 

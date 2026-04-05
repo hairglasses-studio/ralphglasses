@@ -135,7 +135,7 @@ A ralph-enabled repo needs a `.ralphrc` file and a `.ralph/` directory. The fast
 ### Via MCP tool
 
 ```bash
-# From Claude Code with the MCP server running:
+# From Codex, Claude Code, or another MCP client with the MCP server running:
 ralphglasses_repo_scaffold {"repo_path": "/path/to/your/repo"}
 ```
 
@@ -279,19 +279,20 @@ The fleet data refreshes via fsnotify (file system events from `.ralph/` directo
 
 ## Using the MCP Server
 
-Ralphglasses exposes all its functionality as an MCP server, letting Claude (or other LLM clients) orchestrate it programmatically.
+Ralphglasses exposes all its functionality as an MCP server, letting Codex, Claude, Gemini, or other MCP clients orchestrate it programmatically.
 
-### Install for Claude Code
+### Codex-first setup
 
 ```bash
-# Recommended — use the wrapper script
+# Open the repo in Codex — .codex/config.toml and .mcp.json are already configured.
+# Claude users can also register the server explicitly with the wrapper script:
 claude mcp add ralphglasses -- ./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio
 
 # Or directly
 claude mcp add ralphglasses -- go run . mcp --scan-path ~/hairglasses-studio
 ```
 
-A `.mcp.json` is included in the repo root for automatic local discovery when you open Claude Code from the ralphglasses directory.
+A `.mcp.json` and `.codex/config.toml` are included in the repo root for automatic local discovery when you open Codex or another compatible MCP client from the ralphglasses directory.
 
 ### Start the MCP server manually
 
@@ -299,14 +300,14 @@ A `.mcp.json` is included in the repo root for automatic local discovery when yo
 go run . mcp --scan-path ~/projects
 ```
 
-The server uses stdio transport (JSON-RPC over stdin/stdout). It exposes 110 tools — see [CLAUDE.md](../CLAUDE.md) for the full tool list.
+The server uses stdio transport (JSON-RPC over stdin/stdout). It exposes 126 tools — see [MCP Tools](MCP-TOOLS.md) for the full tool list.
 
 ### Example: launch a session via MCP
 
 ```
 ralphglasses_session_launch {
   "repo_path": "/path/to/repo",
-  "provider": "claude",
+  "provider": "codex",
   "prompt": "Fix the failing tests in internal/session/"
 }
 ```

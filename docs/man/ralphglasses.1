@@ -29,7 +29,7 @@ Ralphglasses scans a directory tree for ralph-enabled repositories
 then presents a live dashboard of their status.
 Loops can be started, stopped, and paused without leaving the TUI.
 .PP
-Ralphglasses is also an MCP server (see \fBmcp\fR subcommand) exposing 110 tools
+Ralphglasses is also an MCP server (see \fBmcp\fR subcommand) exposing 126 tools
 for programmatic orchestration by an LLM.
 .
 .SH OPTIONS
@@ -60,13 +60,14 @@ Show help text and exit.
 [\fB\-\-scan\-path\fR \fIDIR\fR]
 .PP
 Run ralphglasses as an MCP (Model Context Protocol) server over stdio.
-The server exposes 110 tools for managing ralph loops and LLM sessions.
+The server exposes 126 tools for managing ralph loops and LLM sessions.
 Clients connect via JSON-RPC over stdin/stdout.
 .PP
 The \fB\-\-scan-path\fR flag is inherited from the root command.
 Alternatively, set the \fBRALPHGLASSES_SCAN_PATH\fR environment variable.
 .PP
-To install for Claude Code:
+Codex-first repo-local MCP/client setup is already configured via \fB.codex/config.toml\fR and \fB.mcp.json\fR.
+Claude users can also register the server explicitly:
 .PP
 .RS 4
 .nf
@@ -75,8 +76,8 @@ claude mcp add ralphglasses \\
 .fi
 .RE
 .PP
-A \fB.mcp.json\fR in the repo root enables automatic local discovery
-when Claude Code is opened from the ralphglasses directory.
+A \fB.mcp.json\fR and \fB.codex/config.toml\fR in the repo root enable automatic local discovery
+when Codex or another compatible MCP client is opened from the ralphglasses directory.
 .
 .SS completion
 .B ralphglasses completion
@@ -292,7 +293,7 @@ ralphglasses --scan-path ~/projects --theme dracula
 .nf
 ralphglasses mcp --scan-path ~/projects
 .fi
-.SS Install MCP server for Claude Code
+.SS Register MCP server for Claude Code
 .nf
 claude mcp add ralphglasses \\
   -e RALPHGLASSES_SCAN_PATH=~/projects \\
@@ -304,7 +305,7 @@ ralphglasses completion bash > /etc/bash_completion.d/ralphglasses
 .fi
 .SS Scaffold a new repo for ralph
 .nf
-# Via MCP (in Claude Code):
+# Via MCP (for Codex, Claude Code, or another MCP client):
 # ralphglasses_repo_scaffold {"repo_path": "/path/to/repo"}
 .fi
 .

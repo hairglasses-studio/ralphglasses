@@ -30,7 +30,8 @@ Orchestrates [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overvi
 # Launch TUI
 ./scripts/dev/go.sh run . --scan-path ~/hairglasses-studio
 
-# Or install the MCP server for Claude Code
+# Codex-first MCP setup is already wired in this repo via .codex/config.toml and .mcp.json
+# Claude users can also add the server explicitly:
 claude mcp add ralphglasses -- ./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio
 ```
 
@@ -65,9 +66,9 @@ Launch sessions against any supported provider:
 ### Required Environment Variables
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...    # Claude Code
-GOOGLE_API_KEY=AIza...          # Gemini CLI
 OPENAI_API_KEY=sk-...           # Codex CLI
+GOOGLE_API_KEY=AIza...          # Gemini CLI
+ANTHROPIC_API_KEY=sk-ant-...    # Claude Code (optional if using OAuth)
 ```
 
 ## Two Deliverables
@@ -82,7 +83,7 @@ See [ROADMAP.md](ROADMAP.md) for the full plan.
 
 ## MCP Server
 
-47 tools for programmatic control across all providers:
+126 tools for programmatic control across all providers:
 
 ### Core Loop Management
 | Tool | Description |
@@ -148,7 +149,7 @@ main.go → cmd/root.go (Cobra CLI)
 │   ├── manager.go         Session/team registry
 │   ├── budget.go          Per-provider cost tracking + enforcement
 │   └── types.go           Provider enum, Session, LaunchOptions, TeamConfig
-├── internal/mcpserver/    MCP tool handlers (47 tools, stdio)
+├── internal/mcpserver/    MCP tool handlers (126 tools, stdio)
 ├── internal/roadmap/      Roadmap parsing, analysis, research, export
 ├── internal/repofiles/    Ralph config scaffolding and optimization
 ├── internal/tui/          BubbleTea app, keymap, commands, filter
