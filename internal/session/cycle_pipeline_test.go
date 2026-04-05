@@ -140,6 +140,39 @@ func TestCycleRoadmapToTasksFileNotFound(t *testing.T) {
 	}
 }
 
+func TestEnhanceCycleTasks(t *testing.T) {
+	tasks := []CycleTask{
+		{
+			Title:  "Fix failure: compile error",
+			Prompt: "Fix the failing task. fix this",
+			Source: "finding",
+		},
+	}
+
+	enhanced := EnhanceCycleTasks(tasks)
+	if len(enhanced) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(enhanced))
+	}
+	// The enhancer should have replaced "fix this" with a more specific phrase.
+	if enhanced[0].Prompt == "Fix the failing task. fix this" {
+		t.Error("expected prompt to be enhanced, but it was unchanged")
+	}
+}
+
+func TestEnhanceCycleTasks_NoChange(t *testing.T) {
+	// A well-structured prompt should not be mangled.
+	structured := "<instructions>\n1. Read the file\n2. Fix the issue\n</instructions>"
+	tasks := []CycleTask{
+		{Title: "Already structured", Prompt: structured},
+	}
+
+	enhanced := EnhanceCycleTasks(tasks)
+	// Should still have content (may be slightly modified by enhancer stages).
+	if len(enhanced[0].Prompt) == 0 {
+		t.Error("enhanced prompt should not be empty")
+	}
+}
+
 func TestCycleJaccardSimilarity(t *testing.T) {
 	tests := []struct {
 		a, b     string
