@@ -25,8 +25,8 @@ func TestHandleEvalCounterfactual_MissingRepo(t *testing.T) {
 		t.Fatal("expected error result for missing repo")
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "repo name required") {
-		t.Errorf("expected 'repo name required' in error, got: %s", text)
+	if !strings.Contains(text, "repo required") {
+		t.Errorf("expected 'repo required' in error, got: %s", text)
 	}
 }
 
@@ -63,8 +63,8 @@ func TestHandleEvalABTest_MissingRepo(t *testing.T) {
 		t.Fatal("expected error result for missing repo")
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "repo name required") {
-		t.Errorf("expected 'repo name required' in error, got: %s", text)
+	if !strings.Contains(text, "repo required") {
+		t.Errorf("expected 'repo required' in error, got: %s", text)
 	}
 }
 
@@ -97,8 +97,8 @@ func TestHandleEvalChangepoints_MissingRepo(t *testing.T) {
 		t.Fatal("expected error result for missing repo")
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "repo name required") {
-		t.Errorf("expected 'repo name required' in error, got: %s", text)
+	if !strings.Contains(text, "repo required") {
+		t.Errorf("expected 'repo required' in error, got: %s", text)
 	}
 }
 
