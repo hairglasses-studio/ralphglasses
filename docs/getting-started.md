@@ -285,14 +285,11 @@ Ralphglasses exposes all its functionality as an MCP server, letting Codex, Clau
 
 ```bash
 # Open the repo in Codex — .codex/config.toml and .mcp.json are already configured.
-# Claude users can also register the server explicitly with the wrapper script:
-claude mcp add ralphglasses -- ./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio
-
-# Or directly
-claude mcp add ralphglasses -- go run . mcp --scan-path ~/hairglasses-studio
+# To run the server manually:
+go run . mcp --scan-path ~/hairglasses-studio
 ```
 
-A `.mcp.json` and `.codex/config.toml` are included in the repo root for automatic local discovery when you open Codex or another compatible MCP client from the ralphglasses directory.
+A `.mcp.json` and `.codex/config.toml` are included in the repo root for automatic local discovery when you open Codex or another compatible MCP client from the ralphglasses directory. If you prefer an explicit client-level registration, point your MCP client at `./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio` or `go run . mcp --scan-path ~/hairglasses-studio`.
 
 ### Start the MCP server manually
 
