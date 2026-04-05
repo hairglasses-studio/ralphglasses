@@ -106,6 +106,20 @@ func ValidatePath(p, scanRoot string) error {
 	return nil
 }
 
+// validateSafePath checks that a path component doesn't contain directory
+// traversal sequences, path separators, or absolute path indicators. It is
+// intended for single-component names (e.g. scratchpad name, session ID) that
+// will be embedded in filepath.Join calls.
+func validateSafePath(name string) error {
+	if name == "" {
+		return fmt.Errorf("path must not be empty")
+	}
+	if strings.Contains(name, "..") || strings.ContainsAny(name, "/\\") || filepath.IsAbs(name) {
+		return fmt.Errorf("invalid path: must not contain directory traversal")
+	}
+	return nil
+}
+
 // Common length limits for MCP tool string parameters.
 const (
 	// MaxPromptLength is the maximum allowed length for prompt fields (200KB).

@@ -64,17 +64,17 @@ func (tk *TieredKnowledge) Query(taskDesc string, maxChunks int) ([]graph.CodeCh
 	key := queryHash(taskDesc)
 
 	// Check cache first.
-	tk.mu.RLock()
+	tk.mu.Lock()
 	if cached, ok := tk.cache[key]; ok {
 		tk.hitCount[key]++
-		tk.mu.RUnlock()
+		tk.mu.Unlock()
 		tk.cacheHits.Add(1)
 		if len(cached) > maxChunks {
 			return cached[:maxChunks], nil
 		}
 		return cached, nil
 	}
-	tk.mu.RUnlock()
+	tk.mu.Unlock()
 
 	tk.cacheMisses.Add(1)
 

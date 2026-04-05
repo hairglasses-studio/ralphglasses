@@ -104,6 +104,9 @@ func (s *Server) handleScratchpadRead(_ context.Context, req mcp.CallToolRequest
 	if name == "" {
 		return codedError(ErrInvalidParams, "name is required"), nil
 	}
+	if err := validateSafePath(name); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid name: %v", err)), nil
+	}
 
 	repoPath, errRes := s.resolveRepoPath(getStringArg(req, "repo"))
 	if errRes != nil {
@@ -127,6 +130,9 @@ func (s *Server) handleScratchpadAppend(_ context.Context, req mcp.CallToolReque
 	name, errResult := p.RequireString("name")
 	if errResult != nil {
 		return errResult, nil
+	}
+	if err := validateSafePath(name); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid name: %v", err)), nil
 	}
 	content, errResult := p.RequireString("content")
 	if errResult != nil {
@@ -205,6 +211,9 @@ func (s *Server) handleScratchpadDelete(_ context.Context, req mcp.CallToolReque
 	if name == "" {
 		return codedError(ErrInvalidParams, "scratchpad is required"), nil
 	}
+	if err := validateSafePath(name); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid scratchpad name: %v", err)), nil
+	}
 	findingID := getStringArg(req, "finding_id")
 	if findingID == "" {
 		return codedError(ErrInvalidParams, "finding_id is required"), nil
@@ -253,6 +262,9 @@ func (s *Server) handleScratchpadResolve(_ context.Context, req mcp.CallToolRequ
 	name := getStringArg(req, "name")
 	if name == "" {
 		return codedError(ErrInvalidParams, "name is required"), nil
+	}
+	if err := validateSafePath(name); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid name: %v", err)), nil
 	}
 	itemNum := int(getNumberArg(req, "item_number", 0))
 	if itemNum == 0 {

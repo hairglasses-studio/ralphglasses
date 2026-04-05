@@ -31,6 +31,7 @@ type Supervisor struct {
 	running bool
 	cancel  context.CancelFunc
 	done    chan struct{}
+	wg      sync.WaitGroup
 
 	RepoPath        string
 	TickInterval    time.Duration // default 60s
@@ -42,11 +43,12 @@ type Supervisor struct {
 	MaxTotalCostUSD float64
 	MaxDuration     time.Duration
 
-	bus             *events.Bus
-	lastCycleLaunch time.Time
-	cyclesLaunched  int
-	tickCount       int
-	startedAt       time.Time
+	bus                *events.Bus
+	lastCycleLaunch    time.Time
+	cyclesLaunched     int
+	tickCount          int
+	startedAt          time.Time
+	consecutiveFailures int
 }
 
 // SupervisorState is persisted to .ralph/supervisor_state.json.
@@ -119,7 +121,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	s.done = make(chan struct{})
 
 	// Enable the E2E test gate at L2+ so auto-optimizer changes are validated.
-	GateEnabled = true
+	GateEnabled.Store(true)
 
 	go s.run(childCtx)
 	return nil
@@ -144,6 +146,7 @@ func (s *Supervisor) Stop() {
 			slog.Warn("supervisor: stop timed out")
 		}
 	}
+	s.wg.Wait()
 	s.mu.Lock()
 	s.running = false
 	s.mu.Unlock()
@@ -226,7 +229,9 @@ func (s *Supervisor) tick(ctx context.Context) {
 			slog.Warn("supervisor: chain check failed", "error", err)
 		} else if nextCycle != nil && mgr != nil {
 			chainedCycle = nextCycle
+			s.wg.Add(1)
 			go func() {
+				defer s.wg.Done()
 				if _, err := mgr.RunCycle(ctx, nextCycle.RepoPath, nextCycle.Name, nextCycle.Objective, nextCycle.SuccessCriteria, 3); err != nil {
 					slog.Warn("supervisor: chained cycle failed", "error", err)
 				}
@@ -239,7 +244,9 @@ func (s *Supervisor) tick(ctx context.Context) {
 		if planned := planner.PlanNextSprint(repoPath); planned != nil {
 			slog.Info("supervisor: sprint planner produced cycle",
 				"name", planned.Name, "tasks", len(planned.Tasks))
+			s.wg.Add(1)
 			go func() {
+				defer s.wg.Done()
 				if _, err := mgr.RunCycle(ctx, planned.RepoPath, planned.Name, planned.Objective, planned.SuccessCriteria, len(planned.Tasks)); err != nil {
 					slog.Warn("supervisor: planned sprint failed", "error", err)
 				}
@@ -364,7 +371,9 @@ func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal, decis
 	}
 	name := fmt.Sprintf("auto-%d", time.Now().Unix())
 	if mgr != nil {
+		s.wg.Add(1)
 		go func() {
+			defer s.wg.Done()
 			_, err := mgr.RunCycle(ctx, repoPath, name, objective, []string{"Tests pass", "No regressions"}, 3)
 			outcome := DecisionOutcome{
 				EvaluatedAt: time.Now(),
@@ -372,10 +381,19 @@ func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal, decis
 			}
 			if err != nil {
 				outcome.Details = err.Error()
-				slog.Warn("supervisor: RunCycle failed", "error", err)
-			} else {
-				// Run acceptance gates after successful cycle.
 				s.mu.Lock()
+				s.consecutiveFailures++
+				failures := s.consecutiveFailures
+				s.mu.Unlock()
+				slog.Error("supervisor: RunCycle failed", "error", err, "consecutive_failures", failures)
+				if failures >= 3 {
+					slog.Error("supervisor: 3 consecutive RunCycle failures — consider demoting autonomy level",
+						"consecutive_failures", failures)
+				}
+			} else {
+				// Reset consecutive failure counter on success.
+				s.mu.Lock()
+				s.consecutiveFailures = 0
 				gates := s.gates
 				s.mu.Unlock()
 				if gates != nil {

@@ -36,6 +36,9 @@ func (s *Server) handleScratchpadValidate(_ context.Context, req mcp.CallToolReq
 	if name == "" {
 		return codedError(ErrInvalidParams, "name is required"), nil
 	}
+	if err := validateSafePath(name); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid name: %v", err)), nil
+	}
 	check := getStringArg(req, "check")
 	if check == "" {
 		return codedError(ErrInvalidParams, "check is required (scores, paths, budget, noops, all)"), nil
@@ -236,6 +239,9 @@ func (s *Server) handleScratchpadContext(_ context.Context, req mcp.CallToolRequ
 	name := getStringArg(req, "name")
 	if name == "" {
 		return codedError(ErrInvalidParams, "name is required"), nil
+	}
+	if err := validateSafePath(name); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid name: %v", err)), nil
 	}
 	sectionsStr := getStringArg(req, "sections")
 	if sectionsStr == "" {
@@ -463,6 +469,9 @@ func (s *Server) handleScratchpadReason(_ context.Context, req mcp.CallToolReque
 	name := getStringArg(req, "name")
 	if name == "" {
 		return codedError(ErrInvalidParams, "name is required"), nil
+	}
+	if err := validateSafePath(name); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid name: %v", err)), nil
 	}
 	topic := getStringArg(req, "topic")
 	if topic == "" {

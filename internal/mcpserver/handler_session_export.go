@@ -19,6 +19,9 @@ func (s *Server) handleSessionExport(_ context.Context, req mcp.CallToolRequest)
 	if sessionID == "" {
 		return codedError(ErrInvalidParams, "session_id is required"), nil
 	}
+	if err := validateSafePath(sessionID); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid session_id: %v", err)), nil
+	}
 	format := getStringArg(req, "format")
 	if format == "" {
 		format = "markdown"

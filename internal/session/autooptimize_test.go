@@ -213,9 +213,9 @@ func TestAutoOptimizer_HandleSessionComplete_Recovery(t *testing.T) {
 func TestAutoOptimizer_GateChange(t *testing.T) {
 	t.Run("gate_disabled", func(t *testing.T) {
 		ao := NewAutoOptimizer(nil, nil, nil, nil)
-		oldGate := GateEnabled
-		GateEnabled = false
-		defer func() { GateEnabled = oldGate }()
+		oldGate := GateEnabled.Load()
+		GateEnabled.Store(false)
+		defer func() { GateEnabled.Store(oldGate) }()
 
 		change := GatedChange{ChangeType: "config"}
 		result := ao.GateChange("/tmp", change)
@@ -226,11 +226,11 @@ func TestAutoOptimizer_GateChange(t *testing.T) {
 
 	t.Run("gate_pass", func(t *testing.T) {
 		ao := NewAutoOptimizer(nil, nil, nil, nil)
-		oldGate := GateEnabled
-		oldRunner := RunTestGate
-		GateEnabled = true
-		RunTestGate = func(string) (string, error) { return "pass", nil }
-		defer func() { GateEnabled = oldGate; RunTestGate = oldRunner }()
+		oldGate := GateEnabled.Load()
+		oldRunner := GetRunTestGate()
+		GateEnabled.Store(true)
+		SetRunTestGate(func(string) (string, error) { return "pass", nil })
+		defer func() { GateEnabled.Store(oldGate); SetRunTestGate(oldRunner) }()
 
 		change := GatedChange{ChangeType: "config"}
 		result := ao.GateChange("/tmp", change)
@@ -244,11 +244,11 @@ func TestAutoOptimizer_GateChange(t *testing.T) {
 
 	t.Run("gate_fail_verdict", func(t *testing.T) {
 		ao := NewAutoOptimizer(nil, nil, nil, nil)
-		oldGate := GateEnabled
-		oldRunner := RunTestGate
-		GateEnabled = true
-		RunTestGate = func(string) (string, error) { return "fail", nil }
-		defer func() { GateEnabled = oldGate; RunTestGate = oldRunner }()
+		oldGate := GateEnabled.Load()
+		oldRunner := GetRunTestGate()
+		GateEnabled.Store(true)
+		SetRunTestGate(func(string) (string, error) { return "fail", nil })
+		defer func() { GateEnabled.Store(oldGate); SetRunTestGate(oldRunner) }()
 
 		change := GatedChange{ChangeType: "config"}
 		result := ao.GateChange("/tmp", change)
@@ -264,13 +264,13 @@ func TestAutoOptimizer_GateChange(t *testing.T) {
 		dir := t.TempDir()
 		dl := NewDecisionLog(dir, LevelAutoOptimize)
 		ao := NewAutoOptimizer(nil, dl, nil, nil)
-		oldGate := GateEnabled
-		oldRunner := RunTestGate
-		GateEnabled = true
-		RunTestGate = func(string) (string, error) {
+		oldGate := GateEnabled.Load()
+		oldRunner := GetRunTestGate()
+		GateEnabled.Store(true)
+		SetRunTestGate(func(string) (string, error) {
 			return "", fmt.Errorf("test gate error")
-		}
-		defer func() { GateEnabled = oldGate; RunTestGate = oldRunner }()
+		})
+		defer func() { GateEnabled.Store(oldGate); SetRunTestGate(oldRunner) }()
 
 		change := GatedChange{ChangeType: "config"}
 		result := ao.GateChange("/tmp", change)
@@ -404,9 +404,9 @@ func TestAutoOptimizer_ApplyPendingNotes(t *testing.T) {
 
 	ao := NewAutoOptimizer(nil, nil, nil, nil)
 	// Gate disabled — notes should be applied
-	oldGate := GateEnabled
-	GateEnabled = false
-	defer func() { GateEnabled = oldGate }()
+	oldGate := GateEnabled.Load()
+	GateEnabled.Store(false)
+	defer func() { GateEnabled.Store(oldGate) }()
 
 	applied, rejected, err := ao.ApplyPendingNotes(dir)
 	if err != nil {

@@ -996,6 +996,9 @@ func (s *Server) handleFindingReason(_ context.Context, req mcp.CallToolRequest)
 	if name == "" {
 		return codedError(ErrInvalidParams, "name is required"), nil
 	}
+	if err := validateSafePath(name); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid name: %v", err)), nil
+	}
 
 	repo := getStringArg(req, "repo")
 	repoPath, errRes := s.resolveRepoPath(repo)
