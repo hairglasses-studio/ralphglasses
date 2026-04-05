@@ -259,7 +259,7 @@ func (s *Server) handleAgentList(_ context.Context, req mcp.CallToolRequest) (*m
 	var agents []session.AgentDef
 	if providerStr == "all" {
 		// Discover agents for all providers
-		for _, p := range []session.Provider{session.ProviderClaude, session.ProviderGemini, session.ProviderCodex} {
+		for _, p := range []session.Provider{session.ProviderCodex, session.ProviderGemini, session.ProviderClaude} {
 			found, err := session.DiscoverAgents(r.Path, p)
 			if err != nil {
 				continue

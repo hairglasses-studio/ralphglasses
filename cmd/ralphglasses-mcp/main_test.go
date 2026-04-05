@@ -125,7 +125,7 @@ func TestToolGroupNames(t *testing.T) {
 	expected := []string{
 		"core", "session", "loop", "prompt", "fleet",
 		"repo", "roadmap", "team", "awesome", "advanced", "eval", "fleet_h",
-		"observability", "rdcycle", "plugin",
+		"observability", "rdcycle", "plugin", "sweep",
 	}
 	if len(mcpserver.ToolGroupNames) != len(expected) {
 		t.Errorf("ToolGroupNames has %d entries, want %d", len(mcpserver.ToolGroupNames), len(expected))
@@ -261,7 +261,7 @@ func TestMain_JSONRPCInitialize(t *testing.T) {
 		"method":  "initialize",
 		"params": map[string]any{
 			"protocolVersion": "2024-11-05",
-			"capabilities":   map[string]any{},
+			"capabilities":    map[string]any{},
 			"clientInfo": map[string]any{
 				"name":    "test-client",
 				"version": "1.0.0",

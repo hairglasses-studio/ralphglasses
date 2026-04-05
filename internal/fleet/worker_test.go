@@ -115,16 +115,8 @@ func TestWorkerAgent_DiscoverProviders(t *testing.T) {
 	if len(providers) == 0 {
 		t.Fatal("discoverProviders should return at least one provider")
 	}
-	// Should always have at least claude as fallback
-	found := false
-	for _, p := range providers {
-		if p == session.ProviderClaude {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Error("discoverProviders should include ProviderClaude")
+	if providers[0] != session.DefaultPrimaryProvider() {
+		t.Errorf("discoverProviders first provider = %q, want %q", providers[0], session.DefaultPrimaryProvider())
 	}
 }
 

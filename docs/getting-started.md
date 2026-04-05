@@ -12,14 +12,17 @@ Ralphglasses is a command-and-control TUI for managing parallel LLM agent loops 
 ### Provider CLIs
 
 ```bash
-# Claude Code (primary — install via Anthropic)
+# OpenAI Codex CLI (primary)
+npm install -g @openai/codex-cli
+
+# Claude Code (optional — install via Anthropic)
 # https://docs.anthropic.com/en/docs/claude-code/overview
 
 # Gemini CLI (optional)
 npm install -g @google/gemini-cli
 
-# OpenAI Codex CLI (optional)
-npm install -g @openai/codex-cli
+# Codex CLI
+# already installed above
 ```
 
 ### API Keys

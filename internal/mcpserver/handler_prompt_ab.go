@@ -27,7 +27,7 @@ func (s *Server) handlePromptABTest(_ context.Context, req mcp.CallToolRequest) 
 
 	targetProvider := getStringArg(req, "target_provider")
 	if targetProvider == "" {
-		targetProvider = "claude"
+		targetProvider = "openai"
 	}
 
 	repo := getStringArg(req, "repo")
@@ -46,7 +46,7 @@ func (s *Server) handlePromptABTest(_ context.Context, req mcp.CallToolRequest) 
 	case "openai", "codex":
 		tp = enhancer.ProviderOpenAI
 	default:
-		tp = enhancer.ProviderClaude
+		tp = enhancer.ProviderOpenAI
 	}
 
 	// Score both prompts.
@@ -61,14 +61,14 @@ func (s *Server) handlePromptABTest(_ context.Context, req mcp.CallToolRequest) 
 	scoreB := enhancer.Score(promptB, taskTypeB, lintsB, &arB, tp)
 
 	type promptMetrics struct {
-		Prompt        string  `json:"prompt_preview"`
-		OverallScore  int     `json:"overall_score"`
-		OverallGrade  string  `json:"overall_grade"`
-		LintWarnings  int     `json:"lint_warnings"`
-		LintErrors    int     `json:"lint_errors"`
-		WordCount     int     `json:"word_count"`
-		TaskType      string  `json:"task_type"`
-		Dimensions    int     `json:"dimensions_scored"`
+		Prompt       string `json:"prompt_preview"`
+		OverallScore int    `json:"overall_score"`
+		OverallGrade string `json:"overall_grade"`
+		LintWarnings int    `json:"lint_warnings"`
+		LintErrors   int    `json:"lint_errors"`
+		WordCount    int    `json:"word_count"`
+		TaskType     string `json:"task_type"`
+		Dimensions   int    `json:"dimensions_scored"`
 	}
 
 	metricsA := promptMetrics{
@@ -161,14 +161,14 @@ func (s *Server) handlePromptABTest(_ context.Context, req mcp.CallToolRequest) 
 	testID := fmt.Sprintf("ab-%d", time.Now().Unix())
 
 	result := map[string]any{
-		"test_id":         testID,
-		"target_provider": targetProvider,
-		"prompt_a":        metricsA,
-		"prompt_b":        metricsB,
-		"winner":          winner,
-		"score_diff":      absDiff,
-		"confidence":      confidence,
-		"dimensions":      dimDiffs,
+		"test_id":            testID,
+		"target_provider":    targetProvider,
+		"prompt_a":           metricsA,
+		"prompt_b":           metricsB,
+		"winner":             winner,
+		"score_diff":         absDiff,
+		"confidence":         confidence,
+		"dimensions":         dimDiffs,
 		"winner_suggestions": winnerSuggestions,
 	}
 

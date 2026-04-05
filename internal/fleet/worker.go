@@ -269,13 +269,13 @@ func (w *WorkerAgent) discoverRepos(ctx context.Context) []string {
 
 func (w *WorkerAgent) discoverProviders() []session.Provider {
 	var providers []session.Provider
-	for _, p := range []session.Provider{session.ProviderClaude, session.ProviderGemini, session.ProviderCodex} {
+	for _, p := range []session.Provider{session.ProviderCodex, session.ProviderGemini, session.ProviderClaude} {
 		if err := session.ValidateProvider(p); err == nil {
 			providers = append(providers, p)
 		}
 	}
 	if len(providers) == 0 {
-		providers = []session.Provider{session.ProviderClaude}
+		providers = []session.Provider{session.DefaultPrimaryProvider()}
 	}
 	return providers
 }

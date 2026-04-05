@@ -776,8 +776,8 @@ func TestHandleRCSend_DefaultProvider(t *testing.T) {
 	// Trigger scan so test-repo is found
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
-	// No provider specified — should default to claude, then attempt launch
-	// Launch will fail (no real claude CLI) but we exercise the provider default + stop existing + launch paths
+	// No provider specified — should default to codex, then attempt launch.
+	// Launch will fail in test mode, but we still exercise the provider default + stop existing + launch paths.
 	result, err := srv.handleRCSend(context.Background(), makeRequest(map[string]any{
 		"repo":   "test-repo",
 		"prompt": "do something",
@@ -819,8 +819,8 @@ func TestHandleRCSend_WithBudget(t *testing.T) {
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleRCSend(context.Background(), makeRequest(map[string]any{
-		"repo":   "test-repo",
-		"prompt": "do something",
+		"repo":       "test-repo",
+		"prompt":     "do something",
 		"budget_usd": float64(20),
 	}))
 	if err != nil {

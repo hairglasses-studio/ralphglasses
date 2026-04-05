@@ -47,14 +47,14 @@ make ci                 # vet + test + build (required before every commit)
 - At least one LLM provider CLI installed:
 
 ```bash
-# Claude Code (primary)
+# OpenAI Codex CLI (primary)
+npm install -g @openai/codex-cli
+
+# Claude Code (optional)
 # Already installed if you're reading this in Claude
 
 # Gemini CLI
 npm install -g @google/gemini-cli
-
-# OpenAI Codex CLI
-npm install -g @openai/codex-cli
 ```
 
 - API keys in `.env`:
