@@ -592,6 +592,12 @@ func (s *Server) handleSessionReplayDiff(_ context.Context, req mcp.CallToolRequ
 	if pathA == "" || pathB == "" {
 		return codedError(ErrInvalidParams, "both path_a and path_b are required"), nil
 	}
+	if err := ValidatePath(pathA, s.ScanPath); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("path_a: %v", err)), nil
+	}
+	if err := ValidatePath(pathB, s.ScanPath); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("path_b: %v", err)), nil
+	}
 
 	playerA, err := session.NewPlayer(pathA)
 	if err != nil {
