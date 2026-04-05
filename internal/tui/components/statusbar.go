@@ -60,8 +60,8 @@ type segment struct {
 
 // View renders the status bar with priority-based segment collapse.
 func (s *StatusBar) View() string {
-	sep := styles.InfoStyle.Render(" │ ")
-	sepWidth := 3
+	sep := styles.InfoStyle.Render("│")
+	sepWidth := 1
 
 	segments := []segment{
 		{0, s.renderMode()},

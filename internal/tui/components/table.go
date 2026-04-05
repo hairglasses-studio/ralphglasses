@@ -17,6 +17,7 @@ type Column struct {
 	MinWidth int     // minimum width (0 = use Width as min)
 	MaxWidth int     // maximum width (0 = unlimited)
 	Flex     float64 // flex weight for proportional sizing (0 = fixed)
+	Priority int     // 0 = always shown, 1 = hide when width < 100, 2 = hide when width < 140
 }
 
 // Row is a slice of styled cell strings.
@@ -247,10 +248,42 @@ func (t *Table) sortRows() {
 	t.applyFilter()
 }
 
+// visibleColumnIndices returns the indices of columns visible at the current width.
+// Columns with Priority 0 (default) are always shown. Priority 1 columns hide
+// below 100 cols, Priority 2 columns hide below 140 cols.
+func (t *Table) visibleColumnIndices() []int {
+	var indices []int
+	for i, col := range t.Columns {
+		switch col.Priority {
+		case 2:
+			if t.Width >= 140 {
+				indices = append(indices, i)
+			}
+		case 1:
+			if t.Width >= 100 {
+				indices = append(indices, i)
+			}
+		default:
+			indices = append(indices, i)
+		}
+	}
+	// Fallback: if all columns hidden, show priority-0 columns at minimum.
+	if len(indices) == 0 {
+		for i, col := range t.Columns {
+			if col.Priority == 0 {
+				indices = append(indices, i)
+			}
+		}
+	}
+	return indices
+}
+
 // effectiveWidths computes effective column widths based on Flex weights,
 // MinWidth/MaxWidth constraints, and the table's available Width.
+// Only visible columns (based on Priority) are included.
 func (t *Table) effectiveWidths() []int {
-	n := len(t.Columns)
+	vis := t.visibleColumnIndices()
+	n := len(vis)
 	if n == 0 {
 		return nil
 	}
@@ -258,20 +291,20 @@ func (t *Table) effectiveWidths() []int {
 	widths := make([]int, n)
 	flexWeights := make([]float64, n)
 
-	// 1. Determine base width and flex weight for each column.
-	for i, col := range t.Columns {
+	// 1. Determine base width and flex weight for each visible column.
+	for vi, ci := range vis {
+		col := t.Columns[ci]
 		base := col.Width
 		if col.MinWidth > 0 && col.MinWidth > base {
 			base = col.MinWidth
 		}
-		widths[i] = base
+		widths[vi] = base
 
 		flex := col.Flex
-		// Backward compat: Grow:true with no explicit Flex → Flex 1.0
 		if col.Grow && flex == 0 {
 			flex = 1.0
 		}
-		flexWeights[i] = flex
+		flexWeights[vi] = flex
 	}
 
 	if t.Width <= 0 {
@@ -291,12 +324,11 @@ func (t *Table) effectiveWidths() []int {
 	}
 
 	// 3. Distribute remaining space proportionally by flex weight.
-	//    Iterate to handle MaxWidth caps and redistribute overflow.
 	capped := make([]bool, n)
 	for range n {
 		totalFlex := 0.0
-		for i, fw := range flexWeights {
-			if fw > 0 && !capped[i] {
+		for vi, fw := range flexWeights {
+			if fw > 0 && !capped[vi] {
 				totalFlex += fw
 			}
 		}
@@ -306,51 +338,59 @@ func (t *Table) effectiveWidths() []int {
 
 		overflow := 0
 		allFit := true
-		for i, fw := range flexWeights {
-			if fw <= 0 || capped[i] {
+		for vi, fw := range flexWeights {
+			if fw <= 0 || capped[vi] {
 				continue
 			}
 			extra := int(float64(remaining) * fw / totalFlex)
-			proposed := widths[i] + extra
+			proposed := widths[vi] + extra
 
-			if t.Columns[i].MaxWidth > 0 && proposed > t.Columns[i].MaxWidth {
-				overflow += proposed - t.Columns[i].MaxWidth
-				widths[i] = t.Columns[i].MaxWidth
-				capped[i] = true
+			col := t.Columns[vis[vi]]
+			if col.MaxWidth > 0 && proposed > col.MaxWidth {
+				overflow += proposed - col.MaxWidth
+				widths[vi] = col.MaxWidth
+				capped[vi] = true
 				allFit = false
 			} else {
-				widths[i] = proposed
+				widths[vi] = proposed
 			}
 		}
 
 		if allFit || overflow == 0 {
 			break
 		}
-		// Recalculate remaining for the next round with overflow.
 		remaining = overflow
 	}
 
 	return widths
 }
 
-// effectiveColumns returns columns with widths resolved via effectiveWidths.
-func (t *Table) effectiveColumns() []Column {
-	cols := make([]Column, len(t.Columns))
-	copy(cols, t.Columns)
-
+// effectiveColumns returns visible columns with widths resolved via effectiveWidths.
+// The returned colMap maps visible column index → original Columns index (for row cell lookup).
+func (t *Table) effectiveColumnsWithMap() ([]Column, []int) {
+	vis := t.visibleColumnIndices()
 	widths := t.effectiveWidths()
-	for i := range cols {
-		if i < len(widths) {
-			cols[i].Width = widths[i]
+
+	cols := make([]Column, len(vis))
+	for vi, ci := range vis {
+		cols[vi] = t.Columns[ci]
+		if vi < len(widths) {
+			cols[vi].Width = widths[vi]
 		}
 	}
+	return cols, vis
+}
+
+// effectiveColumns returns columns with widths resolved via effectiveWidths.
+func (t *Table) effectiveColumns() []Column {
+	cols, _ := t.effectiveColumnsWithMap()
 	return cols
 }
 
 // View renders the table.
 func (t *Table) View() string {
 	var b strings.Builder
-	cols := t.effectiveColumns()
+	cols, colMap := t.effectiveColumnsWithMap()
 
 	// Clamp SortCol to valid range before rendering.
 	if len(t.Columns) > 0 && t.SortCol >= len(t.Columns) {
@@ -359,9 +399,10 @@ func (t *Table) View() string {
 
 	// Header
 	var hdr []string
-	for i, col := range cols {
+	for vi, col := range cols {
 		title := col.Title
-		if i == t.SortCol && i < len(t.Columns) && t.Columns[i].Sortable {
+		origIdx := colMap[vi]
+		if origIdx == t.SortCol && origIdx < len(t.Columns) && t.Columns[origIdx].Sortable {
 			if t.SortAsc {
 				title += " ▲"
 			} else {
@@ -408,10 +449,11 @@ func (t *Table) View() string {
 		}
 
 		var cells []string
-		for ci, col := range cols {
+		for vi, col := range cols {
+			origIdx := colMap[vi]
 			cell := ""
-			if ci < len(row) {
-				cell = row[ci]
+			if origIdx < len(row) {
+				cell = row[origIdx]
 			}
 			padded := visualPad(cell, col.Width)
 			if isSelected {

@@ -10,15 +10,15 @@ import (
 
 // OverviewColumns defines the overview table structure.
 var OverviewColumns = []components.Column{
-	{Title: "Name", Width: 18, Sortable: true, MinWidth: 12, Flex: 2.0},
-	{Title: "Status", Width: 10, Sortable: true, MinWidth: 8},
-	{Title: "Loop", Width: 6, Sortable: true, MinWidth: 5},
-	{Title: "Calls", Width: 12, Sortable: true, MinWidth: 5, Flex: 0.5},
-	{Title: "Budget", Width: 12, Sortable: true, MinWidth: 8, Flex: 1.0},
-	{Title: "Progress", Width: 10, Sortable: true, MinWidth: 8, Flex: 0.5},
-	{Title: "CB", Width: 10, Sortable: true, MinWidth: 8},
-	{Title: "Health", Width: 12, Sortable: true, MinWidth: 6},
-	{Title: "Updated", Width: 8, Sortable: true, MinWidth: 8, Flex: 0.5},
+	{Title: "Name", Width: 18, Sortable: true, MinWidth: 12, Flex: 2.0, Priority: 0},
+	{Title: "Status", Width: 10, Sortable: true, MinWidth: 8, Priority: 0},
+	{Title: "Loop", Width: 6, Sortable: true, MinWidth: 5, Priority: 1},
+	{Title: "Calls", Width: 12, Sortable: true, MinWidth: 5, Flex: 0.5, Priority: 2},
+	{Title: "Budget", Width: 12, Sortable: true, MinWidth: 8, Flex: 1.0, Priority: 1},
+	{Title: "Progress", Width: 10, Sortable: true, MinWidth: 8, Flex: 0.5, Priority: 2},
+	{Title: "CB", Width: 10, Sortable: true, MinWidth: 8, Priority: 2},
+	{Title: "Health", Width: 12, Sortable: true, MinWidth: 6, Priority: 1},
+	{Title: "Updated", Width: 8, Sortable: true, MinWidth: 8, Flex: 0.5, Priority: 1},
 }
 
 // NewOverviewTable creates a table pre-configured for the overview.

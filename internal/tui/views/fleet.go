@@ -114,14 +114,14 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 	statBoxes = append(statBoxes, styles.StatBox.Render(
 		fmt.Sprintf("%s AUTONOMY\n  L%d %s", styles.IconConfig, data.AutonomyLevel, data.AutonomyLevel.String())))
 
-	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, statBoxes...))
-	b.WriteString("\n\n")
+	b.WriteString(wrapStatBoxes(statBoxes, width))
+	b.WriteString("\n")
 
 	// Cost sparkline
 	if len(data.CostHistory) > 1 {
-		sparkWidth := max(width/2, 20)
-		if sparkWidth > 60 {
-			sparkWidth = 60
+		sparkWidth := max(width-20, 8)
+		if sparkWidth > 120 {
+			sparkWidth = 120
 		}
 		points := data.CostHistory
 		if len(points) > sparkWidth {
@@ -138,7 +138,7 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 		b.WriteString(styles.HeaderStyle.Render(title))
 		b.WriteString("\n")
 		b.WriteString(sl.View())
-		b.WriteString("\n\n")
+		b.WriteString("\n")
 	}
 
 	// Provider breakdown with mini gauges
@@ -234,8 +234,12 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Recent Events", styles.IconAlert)))
 		b.WriteString("\n")
 		shown := data.Events
-		if len(shown) > 10 {
-			shown = shown[len(shown)-10:]
+		maxEvents := max((height-40)/2, 3)
+		if maxEvents < 3 {
+			maxEvents = 3
+		}
+		if len(shown) > maxEvents {
+			shown = shown[len(shown)-maxEvents:]
 		}
 		for _, ev := range shown {
 			ts := ev.Timestamp.Format("15:04:05")
@@ -341,12 +345,19 @@ func RenderFleetDashboard(data FleetData, width, height int) string {
 		}
 	}
 
-	panelWidth := max(width/3-2, 24)
-	leftPanel := lipgloss.NewStyle().Width(panelWidth).Render(repoList.String())
-	midPanel := lipgloss.NewStyle().Width(panelWidth).Render(sessionList.String())
-	rightPanel := lipgloss.NewStyle().Width(panelWidth).Render(teamList.String())
-	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, midPanel, rightPanel))
-	b.WriteString("\n\n")
+	if width < 90 {
+		// Stack panels vertically at narrow widths
+		b.WriteString(repoList.String())
+		b.WriteString(sessionList.String())
+		b.WriteString(teamList.String())
+	} else {
+		panelWidth := max(width/3-2, 24)
+		leftPanel := lipgloss.NewStyle().Width(panelWidth).Render(repoList.String())
+		midPanel := lipgloss.NewStyle().Width(panelWidth).Render(sessionList.String())
+		rightPanel := lipgloss.NewStyle().Width(panelWidth).Render(teamList.String())
+		b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, midPanel, rightPanel))
+	}
+	b.WriteString("\n")
 	b.WriteString(styles.HelpStyle.Render("  Tab/←/→: section  j/k: move  Enter: open  X: stop  d: diff  t: timeline  [ ]: time window"))
 
 	return b.String()
@@ -427,6 +438,31 @@ func (v *FleetView) Render() string {
 func (v *FleetView) regenerate() {
 	content := RenderFleetDashboard(v.data, v.width, v.height)
 	v.Viewport.SetContent(content)
+}
+
+// wrapStatBoxes lays out stat boxes horizontally, wrapping to the next row
+// when the total width would exceed maxWidth.
+func wrapStatBoxes(boxes []string, maxWidth int) string {
+	if maxWidth <= 0 {
+		return lipgloss.JoinHorizontal(lipgloss.Top, boxes...)
+	}
+	var rows []string
+	var currentRow []string
+	currentWidth := 0
+	for _, box := range boxes {
+		bw := lipgloss.Width(box)
+		if currentWidth+bw > maxWidth && len(currentRow) > 0 {
+			rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, currentRow...))
+			currentRow = nil
+			currentWidth = 0
+		}
+		currentRow = append(currentRow, box)
+		currentWidth += bw
+	}
+	if len(currentRow) > 0 {
+		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, currentRow...))
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, rows...)
 }
 
 func fleetMarker(selected bool) string {
