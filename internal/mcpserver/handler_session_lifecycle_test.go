@@ -811,8 +811,8 @@ func TestHandleSessionRetry_WithOverrides(t *testing.T) {
 	// Retry should accept the session even if the launch itself will fail
 	// (since test manager doesn't actually spawn processes)
 	result, err := srv.handleSessionRetry(context.Background(), makeRequest(map[string]any{
-		"id":             id,
-		"model":          "opus",
+		"id":         id,
+		"model":      "opus",
 		"budget_usd": float64(20),
 	}))
 	if err != nil {
@@ -842,7 +842,7 @@ func TestHandleSessionLaunch_DefaultProvider(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
 
-	// No provider specified, should default to claude
+	// No provider specified, should default to codex.
 	result, err := srv.handleSessionLaunch(context.Background(), makeRequest(map[string]any{
 		"repo":   "test-repo",
 		"prompt": "do something",

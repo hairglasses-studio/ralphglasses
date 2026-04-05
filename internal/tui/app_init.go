@@ -120,28 +120,28 @@ type Model struct {
 	Repos []*model.Repo
 
 	// Components
-	Table         *components.Table
-	SessionTable  *components.Table
-	TeamTable     *components.Table
-	LoopListTable *components.Table
-	TabBar       components.TabBar
-	StatusBar    components.StatusBar
-	Notify       components.NotificationManager
-	LogView        *views.LogView
-	ConfigEdit     *views.ConfigEditor
-	HelpView          *views.HelpView
-	RepoDetailView    *views.RepoDetailView
-	LoopHealthView    *views.LoopHealthView
-	SessionDetailView *views.SessionDetailView
-	TeamDetailView    *views.TeamDetailView
-	FleetView         *views.FleetView
-	DiffViewport         *views.DiffViewport
-	TimelineViewport     *views.TimelineViewport
-	LoopDetailView       *views.LoopDetailView
-	LoopControlView      *views.LoopControlView
-	ObservationViewport  *views.ObservationViewport
-	RDCycleView              *views.RDCycleView
-	TeamOrchestrationView    *views.TeamOrchestrationView
+	Table                 *components.Table
+	SessionTable          *components.Table
+	TeamTable             *components.Table
+	LoopListTable         *components.Table
+	TabBar                components.TabBar
+	StatusBar             components.StatusBar
+	Notify                components.NotificationManager
+	LogView               *views.LogView
+	ConfigEdit            *views.ConfigEditor
+	HelpView              *views.HelpView
+	RepoDetailView        *views.RepoDetailView
+	LoopHealthView        *views.LoopHealthView
+	SessionDetailView     *views.SessionDetailView
+	TeamDetailView        *views.TeamDetailView
+	FleetView             *views.FleetView
+	DiffViewport          *views.DiffViewport
+	TimelineViewport      *views.TimelineViewport
+	LoopDetailView        *views.LoopDetailView
+	LoopControlView       *views.LoopControlView
+	ObservationViewport   *views.ObservationViewport
+	RDCycleView           *views.RDCycleView
+	TeamOrchestrationView *views.TeamOrchestrationView
 
 	// Bubbles components
 	Keys    KeyMap
@@ -471,7 +471,7 @@ func (m *Model) updateTable() {
 
 		// Provider health
 		healthMap := make(map[string]bool)
-		for _, p := range []session.Provider{session.ProviderClaude, session.ProviderGemini, session.ProviderCodex} {
+		for _, p := range []session.Provider{session.ProviderCodex, session.ProviderGemini, session.ProviderClaude} {
 			h := session.CheckProviderHealth(p)
 			healthMap[string(p)] = h.Healthy()
 		}

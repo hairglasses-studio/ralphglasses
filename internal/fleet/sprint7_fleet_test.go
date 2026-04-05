@@ -56,10 +56,10 @@ func TestRemoteA2AAdapter_Discover_MockServer(t *testing.T) {
 	t.Parallel()
 
 	card := AgentCard{
-		Name:        "test-agent",
-		Description: "A test agent",
-		URL:         "http://test:9473",
-		Version:     "v1.0",
+		Name:         "test-agent",
+		Description:  "A test agent",
+		URL:          "http://test:9473",
+		Version:      "v1.0",
 		Capabilities: AgentCapabilities{Streaming: true},
 		Skills: []AgentSkill{
 			{ID: "work_submit", Name: "Submit Work"},
@@ -273,15 +273,8 @@ func TestWorkerAgent_DiscoverProviders_Sprint7(t *testing.T) {
 	if len(providers) == 0 {
 		t.Fatal("expected at least one provider")
 	}
-	// Should always include claude as fallback.
-	found := false
-	for _, p := range providers {
-		if p == session.ProviderClaude {
-			found = true
-		}
-	}
-	if !found {
-		t.Error("expected ProviderClaude in providers")
+	if providers[0] != session.DefaultPrimaryProvider() {
+		t.Errorf("first provider = %q, want %q", providers[0], session.DefaultPrimaryProvider())
 	}
 }
 

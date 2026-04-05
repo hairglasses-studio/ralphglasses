@@ -102,6 +102,9 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 	} else {
 		tp = provider // same provider
 	}
+	if tp == "" {
+		tp = session.DefaultPrimaryProvider()
+	}
 
 	// Build enriched prompt.
 	handoffPrompt := prompt
@@ -138,16 +141,16 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 	}
 
 	result := map[string]any{
-		"new_session_id":         newSession.ID,
-		"source_session_id":      sourceID,
-		"source_stopped":         sourceStopped,
-		"target_provider":        string(tp),
-		"transferred_context":    includeContext,
-		"context_size_bytes":     len(contextPayload),
-		"remaining_budget":       remaining,
-		"cost_so_far":            spentUSD,
-		"handoff_reason":         handoffReason,
-		"handoff_at":             time.Now().UTC().Format(time.RFC3339),
+		"new_session_id":      newSession.ID,
+		"source_session_id":   sourceID,
+		"source_stopped":      sourceStopped,
+		"target_provider":     string(tp),
+		"transferred_context": includeContext,
+		"context_size_bytes":  len(contextPayload),
+		"remaining_budget":    remaining,
+		"cost_so_far":         spentUSD,
+		"handoff_reason":      handoffReason,
+		"handoff_at":          time.Now().UTC().Format(time.RFC3339),
 	}
 
 	// Save handoff record.

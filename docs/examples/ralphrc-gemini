@@ -1,6 +1,6 @@
 # .ralphrc tuned for Gemini provider
 # Use when launching sessions with provider=gemini via ralphglasses_session_launch.
-# Gemini has a larger context window but does not support session resume.
+# Gemini has a larger context window and supports session resume.
 
 PROJECT_NAME="my-project"
 PROJECT_TYPE="go"
@@ -8,8 +8,7 @@ PROJECT_TYPE="go"
 # Gemini can handle higher call rates; its API is generally faster.
 MAX_CALLS_PER_HOUR="120"
 
-# Gemini sessions have no resume support, so continuity is irrelevant.
-# Each loop iteration starts a fresh context.
+# Gemini sessions can resume, but many teams still prefer fresh-context loops.
 SESSION_CONTINUITY="false"
 
 # Gemini's default model is gemini-2.5-pro (set by ralphglasses providers.go).

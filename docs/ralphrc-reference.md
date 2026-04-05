@@ -19,7 +19,7 @@ Format: JSON. The config watcher auto-reloads on file change with a 500ms deboun
 | Field | JSON Key | Type | Default | Description |
 |-------|----------|------|---------|-------------|
 | `ScanPaths` | `scan_paths` | `[]string` | -- | Directories to scan for ralph-enabled repos |
-| `DefaultProvider` | `default_provider` | `string` | `""` | Default LLM provider (claude, gemini, codex, openai, ollama) |
+| `DefaultProvider` | `default_provider` | `string` | `codex` | Default LLM provider (claude, gemini, codex, openai, ollama) |
 | `WorkerProvider` | `worker_provider` | `string` | `""` | Default provider for worker/delegate tasks |
 | `MaxWorkers` | `max_workers` | `int` | `0` | Maximum concurrent worker sessions (0-50) |
 | `DefaultBudgetUSD` | `default_budget_usd` | `float64` | `0` | Default per-session budget in USD (0-10000) |
@@ -33,7 +33,7 @@ Format: JSON. The config watcher auto-reloads on file change with a 500ms deboun
 ```json
 {
   "scan_paths": ["~/hairglasses-studio"],
-  "default_provider": "claude",
+  "default_provider": "codex",
   "worker_provider": "gemini",
   "max_workers": 4,
   "default_budget_usd": 5.00,
@@ -111,8 +111,8 @@ Keys must match `[A-Z_][A-Z0-9_]*`.
 | `CASCADE_CONFIDENCE_THRESHOLD` | float | `0.7` | confidence threshold for cascade escalation (range: 0--1) |
 | `CASCADE_DIFFICULTY_THRESHOLD` | float | `0.4` | difficulty threshold for bypassing cheap tier (range: 0--1) |
 | `CASCADE_ENABLED` | bool | `true` | enable cheap-then-expensive cascade routing |
-| `CASCADE_EXPENSIVE_MODEL` | string | `claude-sonnet-4-6` | expensive model for cascade routing |
-| `CASCADE_EXPENSIVE_PROVIDER` | string | `claude` | expensive provider for cascade routing |
+| `CASCADE_EXPENSIVE_MODEL` | string | `gpt-5.4` | expensive model for cascade routing |
+| `CASCADE_EXPENSIVE_PROVIDER` | string | `codex` | expensive provider for cascade routing |
 | `CASCADE_MAX_CHEAP_BUDGET` | float | `2.00` | max budget for cheap cascade tier in USD (range: 0.01--100) |
 | `CB_FAIL_THRESHOLD` | int | `5` | circuit breaker failure threshold (range: 1--100) |
 | `CB_HALF_OPEN_MAX` | int | `2` | circuit breaker half-open max attempts (range: 1--20) |
@@ -123,10 +123,10 @@ Keys must match `[A-Z_][A-Z0-9_]*`.
 | `KILL_ESCALATION_TIMEOUT` | int | `5` | kill escalation timeout in seconds (range: 1--60) |
 | `MARATHON_DURATION_HOURS` | int | `12` | marathon duration limit (range: 1--168) |
 | `MAX_CALLS_PER_HOUR` | int | `120` | rate limit per hour (range: 1--1000) |
-| `MODEL` | string | `sonnet` | LLM model to use |
+| `MODEL` | string | `gpt-5.4` | LLM model to use |
 | `PLAN_FILE` | string | `plan.md` | plan file path |
 | `PROJECT_NAME` | string | -- | project display name |
-| `PROVIDER` | string | `claude` | default session provider (claude/gemini/codex) |
+| `PROVIDER` | string | `codex` | default session provider (claude/gemini/codex) |
 | `RALPH_SESSION_BUDGET` | float | `100.00` | marathon budget in USD (range: 0.01--10000) |
 | `SPEC_FILE` | string | `spec.md` | spec file path |
 
@@ -134,9 +134,9 @@ Keys must match `[A-Z_][A-Z0-9_]*`.
 
 ```sh
 PROJECT_NAME="my-service"
-MODEL="sonnet"
+MODEL="gpt-5.4"
 BUDGET="10.00"
-PROVIDER="claude"
+PROVIDER="codex"
 MAX_CALLS_PER_HOUR="120"
 CASCADE_ENABLED="true"
 CASCADE_CHEAP_PROVIDER="gemini"
@@ -193,4 +193,3 @@ Both config layers are validated on load:
 - **Runtime config**: `ValidateStruct()` runs 7 rules (budget range, cost rate, provider names, scan paths, duration formats, worker count, conflicting flags).
 - **Per-repo `.ralphrc`**: `ValidateConfig()` checks types, ranges, enum membership, and flags deprecated/unknown keys.
 - **Config watcher**: Auto-reloads on file change; invalid JSON is rejected (old config preserved), validation warnings are logged but applied.
-
