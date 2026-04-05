@@ -142,6 +142,27 @@ func (m *Manager) GetBlackboard() *Blackboard {
 	return m.blackboard
 }
 
+// SetPromptRouter attaches the Prompt DJ quality-aware routing engine.
+func (m *Manager) SetPromptRouter(pr PromptRouter) {
+	m.configMu.Lock()
+	defer m.configMu.Unlock()
+	m.promptRouter = pr
+}
+
+// HasPromptRouter returns true if a PromptRouter is attached.
+func (m *Manager) HasPromptRouter() bool {
+	m.configMu.RLock()
+	defer m.configMu.RUnlock()
+	return m.promptRouter != nil
+}
+
+// GetPromptRouter returns the attached PromptRouter, or nil.
+func (m *Manager) GetPromptRouter() PromptRouter {
+	m.configMu.RLock()
+	defer m.configMu.RUnlock()
+	return m.promptRouter
+}
+
 // SetCostPredictor attaches the cost prediction subsystem.
 func (m *Manager) SetCostPredictor(cp *CostPredictor) {
 	m.configMu.Lock()

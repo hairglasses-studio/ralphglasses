@@ -204,6 +204,15 @@ func (r *PromptDJRouter) Route(ctx context.Context, req RoutingRequest) (*Routin
 	return d, nil
 }
 
+// RoutePrompt satisfies the session.PromptRouter interface, enabling the
+// Manager to call the DJ router without an import cycle.
+func (r *PromptDJRouter) RoutePrompt(ctx context.Context, prompt, repo string, score int) (any, error) {
+	return r.Route(ctx, RoutingRequest{Prompt: prompt, Repo: repo, Score: score})
+}
+
+// Compile-time check that PromptDJRouter satisfies session.PromptRouter.
+var _ session.PromptRouter = (*PromptDJRouter)(nil)
+
 // GetDecisionLog returns the decision log (may be nil if logging disabled).
 func (r *PromptDJRouter) GetDecisionLog() *DecisionLog {
 	return r.log
