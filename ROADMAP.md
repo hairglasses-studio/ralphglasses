@@ -3,8 +3,8 @@
 Command-and-control TUI + bootable thin client for parallel multi-LLM agent fleets.
 
 **Last updated:** 2026-04-04
-**Codebase:** 73 packages, 126 MCP tools (124 namespace + 2 meta), 19 TUI views
-**Status:** 1,115 tasks, 442 complete (39.6%), 673 remaining
+**Codebase:** 73 packages, 166 MCP tools (164 namespace + 2 meta), 19 TUI views
+**Status:** 1,143 tasks, 503 complete (44.0%), 640 remaining
 **Key deps:** Go 1.26.1, mcp-go v0.45.0, bubbletea v1.3.10, anthropic-sdk-go v1.27.1
 **Autonomy target:** Level 3 — fully autonomous fleet operation with self-improvement, self-healing, self-optimizing
 
@@ -480,7 +480,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 1.5.11.2 — Migrate `internal/mcpserver/` tool registration from mcp-go to official SDK `P1` `XL`
 - [ ] 1.5.11.3 — Migrate transport layer (stdio + add streamable HTTP support) `P1` `L`
 - [ ] 1.5.11.4 — Add OAuth support for remote MCP server mode `P2` `L`
-- **Acceptance:** All 115 tools register and pass integration tests with official SDK
+- **Acceptance:** All 166 tools register and pass integration tests with official SDK
 
 ### 1.5.12 — Benchmarking infrastructure
 - [x] 1.5.12.1 — Add Go benchmarks for hot paths: `RefreshRepo`, `Scan`, `LoadStatus`, table rendering `P1` `M`
@@ -822,12 +822,12 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
   - If a future session genuinely needs Claude Code to unblock a parity item, do not switch ad hoc. Write a focused Claude Code prompt, copy it to the paste buffer, record the reason in the roadmap/session notes, and keep the Codex-led branch as the source of truth.
 - **Acceptance:** omitted-provider control paths default to Codex and repo docs match runtime behavior
 
-### 3.5.5 — Theme export to terminal (like claudekit themekit)
+### 3.5.6 — Theme export to terminal (like claudekit themekit)
 Partially complete: `internal/themekit/` ported from claudekit `[reconciled 2026-03-27]`
-- [x] 3.5.5.1 — `ralphglasses theme export ghostty` -> generate Ghostty palette config `P2` `S`
-- [x] 3.5.5.2 — `ralphglasses theme export starship` -> generate Starship color overrides `P2` `S`
-- [x] 3.5.5.3 — `ralphglasses theme export k9s` -> generate k9s skin.yml `P2` `S`
-- [x] 3.5.5.4 — `ralphglasses theme sync` -> export to all supported tools simultaneously `P2` `M`
+- [x] 3.5.6.1 — `ralphglasses theme export ghostty` -> generate Ghostty palette config `P2` `S`
+- [x] 3.5.6.2 — `ralphglasses theme export starship` -> generate Starship color overrides `P2` `S`
+- [x] 3.5.6.3 — `ralphglasses theme export k9s` -> generate k9s skin.yml `P2` `S`
+- [x] 3.5.6.4 — `ralphglasses theme sync` -> export to all supported tools simultaneously `P2` `M`
 - **Acceptance:** `ralphglasses theme sync` updates Ghostty, Starship, and k9s to match TUI theme
 
 ---
@@ -1346,6 +1346,8 @@ Cross-reference observations with git commits.
 
 ## Phase 9.5: Autonomous R&D Supervisor (COMPLETE)
 
+> **Note**: 5 Tier 1 tool implementations (finding_to_task, cycle_merge, cycle_plan, cycle_schedule, cycle_baseline) have no corresponding source files. Effective completion: ~50%.
+
 - [x] 9.5.1 — Supervisor core: persistent goroutine, 60s tick, decision dispatch via DecisionLog
 - [x] 9.5.2 — Health monitor: 5-threshold evaluator (completion rate, cost rate, verify rate, idle time, iteration velocity)
 - [x] 9.5.3 — Cycle chainer: synthesis → next cycle, lineage tracking, depth cap (10)
@@ -1454,7 +1456,7 @@ Claude Code supports **24 hook events**, SKILL.md framework, Agent Teams (resear
 
 | Feature | Component | Status | Notes |
 |---------|-----------|--------|-------|
-| MCP Server (stdio) | `internal/mcpserver/` | Implemented | 115 tools (113 namespace + 2 meta), 13 namespaces |
+| MCP Server (stdio) | `internal/mcpserver/` | Implemented | 166 tools (164 namespace + 2 meta), 16 namespaces |
 | Deferred tool loading | `internal/mcpserver/tools_dispatch.go` | Implemented | Only core loaded at startup; 85% token reduction |
 | Hooks (internal) | `.ralph/hooks.yaml` | Implemented | Internal hook system, not CC hooks |
 | CC hooks integration | - | Not started | 24 events: PreToolUse, PostToolUse, Stop, SessionStart, TeammateIdle, TaskCreated/Completed, WorktreeCreate, etc. |
@@ -1734,7 +1736,7 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 
 ### 10.5.2 MCP Server Concurrent Handler Limits `P1` `M`
 
-**Bottleneck:** No concurrency limit on MCP tool handlers — 126 tools with no semaphore means unbounded goroutine creation under load.
+**Bottleneck:** No concurrency limit on MCP tool handlers — 166 tools with no semaphore means unbounded goroutine creation under load.
 
 - [x] Add `semaphore.Weighted` (golang.org/x/sync) to `internal/mcpserver/middleware.go`
 - [x] Default limit: 32 concurrent handlers, configurable via `MCP_MAX_CONCURRENT`
@@ -2702,7 +2704,7 @@ Deep codebase analysis (2026-03-30) identified these performance bottlenecks wit
 | Metric | Value |
 |--------|-------|
 | Total packages | 37 |
-| MCP tools | 126 (124 namespace + 2 meta), 14 namespaces |
+| MCP tools | 166 (164 namespace + 2 meta), 16 namespaces |
 | TUI views | 19 (11% migrated to Phase 2 View interface) |
 | Test files | 427 (114K LOC) |
 | Coverage | 84.5% (target 90%) |

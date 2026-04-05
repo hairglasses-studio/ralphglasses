@@ -112,6 +112,7 @@ func setupMCP(sp string) (*server.MCPServer, func(), error) {
 	srv.EnableSampling()
 
 	rg := mcpserver.NewServerWithBus(sp, bus)
+	rg.DeferredLoading = true
 	rg.ToolRecorder = toolRec
 	rg.InitSelfImprovement(filepath.Join(sp, ".ralph"), 0)
 	rg.Register(srv)
