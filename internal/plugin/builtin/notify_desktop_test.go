@@ -108,25 +108,26 @@ func TestNotifyDesktopPlugin_Execute_InvalidUrgency(t *testing.T) {
 	}
 }
 
-func TestNotifyDesktopPlugin_Execute_ValidParams(t *testing.T) {
-	t.Parallel()
-
-	// Skip if we can't send notifications (CI environments, etc.).
+func skipIfNoDesktopNotifications(t *testing.T) {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("skipping live notification test in short mode")
+	}
 	switch runtime.GOOS {
 	case "linux":
 		if _, err := exec.LookPath("notify-send"); err != nil {
 			t.Skip("notify-send not available, skipping live notification test")
 		}
-		// Even with notify-send present, skip if no display.
-		// DISPLAY or WAYLAND_DISPLAY needed for notification daemons.
-		// In headless CI, notify-send may still fail.
 	case "darwin":
 		if _, err := exec.LookPath("osascript"); err != nil {
 			t.Skip("osascript not available, skipping live notification test")
 		}
-	default:
-		// On other platforms, Execute falls back to log — always works.
 	}
+}
+
+func TestNotifyDesktopPlugin_Execute_ValidParams(t *testing.T) {
+	t.Parallel()
+	skipIfNoDesktopNotifications(t)
 
 	p := NewNotifyDesktopPlugin()
 	p.Init(context.Background(), nil)
@@ -151,6 +152,7 @@ func TestNotifyDesktopPlugin_Execute_ValidParams(t *testing.T) {
 
 func TestNotifyDesktopPlugin_Execute_ValidUrgencyLevels(t *testing.T) {
 	t.Parallel()
+	skipIfNoDesktopNotifications(t)
 
 	p := NewNotifyDesktopPlugin()
 	p.Init(context.Background(), nil)
