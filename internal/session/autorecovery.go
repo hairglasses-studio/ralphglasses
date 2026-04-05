@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
@@ -51,6 +52,7 @@ type AutoRecovery struct {
 	manager     *Manager
 	decisions   *DecisionLog
 	hitl        *HITLTracker
+	mu          sync.Mutex
 	retryState  map[string]*retryInfo // session ID → retry state
 }
 
@@ -100,6 +102,7 @@ func (ar *AutoRecovery) HandleSessionError(ctx context.Context, s *Session) *Ses
 	}
 
 	// Check retry limits
+	ar.mu.Lock()
 	state, ok := ar.retryState[sessionID]
 	if !ok {
 		state = &retryInfo{}
@@ -107,6 +110,7 @@ func (ar *AutoRecovery) HandleSessionError(ctx context.Context, s *Session) *Ses
 	}
 
 	if state.count >= ar.config.MaxRetries {
+		ar.mu.Unlock()
 		util.Debug.Debugf("session %s exceeded max retries (%d)", sessionID, ar.config.MaxRetries)
 		return nil
 	}
@@ -117,8 +121,10 @@ func (ar *AutoRecovery) HandleSessionError(ctx context.Context, s *Session) *Ses
 		cooldown = time.Duration(float64(cooldown) * ar.config.BackoffFactor)
 	}
 	if time.Since(state.lastRetry) < cooldown {
+		ar.mu.Unlock()
 		return nil
 	}
+	ar.mu.Unlock()
 
 	// Propose the decision
 	decision := AutonomousDecision{
@@ -171,8 +177,10 @@ func (ar *AutoRecovery) HandleSessionError(ctx context.Context, s *Session) *Ses
 		return nil
 	}
 
+	ar.mu.Lock()
 	state.count++
 	state.lastRetry = time.Now()
+	ar.mu.Unlock()
 
 	if ar.hitl != nil {
 		ar.hitl.RecordAuto(MetricAutoRecovery, newSess.ID, repoName,
@@ -201,5 +209,7 @@ func isTransientError(errMsg string) bool {
 
 // ClearRetryState removes retry tracking for a session (e.g., after successful completion).
 func (ar *AutoRecovery) ClearRetryState(sessionID string) {
+	ar.mu.Lock()
 	delete(ar.retryState, sessionID)
+	ar.mu.Unlock()
 }

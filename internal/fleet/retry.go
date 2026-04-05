@@ -3,6 +3,7 @@ package fleet
 import (
 	"math"
 	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -46,6 +47,7 @@ func (p RetryPolicy) ShouldRetry(attempt int) (bool, time.Duration) {
 
 // RetryTracker tracks retry state for work items.
 type RetryTracker struct {
+	mu       sync.Mutex
 	attempts map[string]int // work ID -> attempt count
 	policy   RetryPolicy
 }
@@ -60,16 +62,24 @@ func NewRetryTracker(policy RetryPolicy) *RetryTracker {
 
 // RecordFailure increments the attempt count and returns whether to retry.
 func (rt *RetryTracker) RecordFailure(workID string) (retry bool, delay time.Duration) {
+	rt.mu.Lock()
 	rt.attempts[workID]++
-	return rt.policy.ShouldRetry(rt.attempts[workID] - 1)
+	count := rt.attempts[workID]
+	rt.mu.Unlock()
+	return rt.policy.ShouldRetry(count - 1)
 }
 
 // RecordSuccess clears the retry state for a work item.
 func (rt *RetryTracker) RecordSuccess(workID string) {
+	rt.mu.Lock()
 	delete(rt.attempts, workID)
+	rt.mu.Unlock()
 }
 
 // Attempts returns the current attempt count for a work item.
 func (rt *RetryTracker) Attempts(workID string) int {
-	return rt.attempts[workID]
+	rt.mu.Lock()
+	count := rt.attempts[workID]
+	rt.mu.Unlock()
+	return count
 }
