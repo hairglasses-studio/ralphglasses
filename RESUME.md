@@ -54,11 +54,12 @@ Ralphglasses is a command-and-control TUI + MCP server for managing parallel ral
 ## MCP Server Installation
 
 ```bash
-# Install for Claude Code
-claude mcp add ralphglasses -- go run ./cmd/ralphglasses-mcp
+# Codex-first repo-local discovery is already wired in via .codex/config.toml and .mcp.json.
+# To run the MCP server manually:
+go run ./cmd/ralphglasses-mcp
 
 # Or with env override
-claude mcp add ralphglasses -e RALPHGLASSES_SCAN_PATH=~/hairglasses-studio -- go run ./cmd/ralphglasses-mcp
+RALPHGLASSES_SCAN_PATH=~/hairglasses-studio go run ./cmd/ralphglasses-mcp
 ```
 
 ## File Layout
