@@ -165,30 +165,35 @@ func (r *Renderer) renderTable(s *State, w, maxRows int) {
 			task = Dim + "·" + Reset
 		}
 
-		progress := "   ·"
+		progress := ""
 		if repo.Progress > 0 {
-			barWidth := 8
-			if w > 120 {
-				barWidth = 12
-			}
-			progress = fmt.Sprintf("%s %3.0f%%", ProgressBar(repo.Progress, barWidth), repo.Progress)
-		}
-		if repo.Status == "completed" || repo.Status == "done" {
-			progress = StatusDone + "✓done" + Reset
-		}
-		if repo.Status == "error" || repo.Status == "failed" || repo.Status == "errored" {
-			progress = StatusErr + "✗fail" + Reset
+			barWidth := 5
+			progress = fmt.Sprintf("%s%3.0f%%", ProgressBar(repo.Progress, barWidth), repo.Progress)
+		} else if repo.Status == "completed" || repo.Status == "done" {
+			progress = StatusDone + "done" + Reset
+		} else if repo.Status == "error" || repo.Status == "failed" || repo.Status == "errored" {
+			progress = StatusErr + "fail" + Reset
 		}
 
-		fmt.Fprintf(r.buf, " %-18s %s%-8s%s %s%s%s  %5s %8s %8s  %-*s %s\n",
+		// Dim entire row for idle repos
+		rowDim := ""
+		rowReset := ""
+		if repo.Status == "idle" || repo.Status == "pending" || repo.Status == "unknown" {
+			rowDim = Dim
+			rowReset = Reset
+		}
+
+		fmt.Fprintf(r.buf, " %s%-18s %s%-8s%s %s%s%s %5s %8s %8s  %-*s  %s%s\n",
+			rowDim,
 			Truncate(repo.Name, 18),
-			provCol, PadRight(provider, 8), Reset,
-			statCol, icon, Reset,
+			provCol, PadRight(provider, 8), Reset+rowDim,
+			statCol, icon, Reset+rowDim,
 			turns,
 			PadLeft(rate, 8),
 			PadLeft(cost, 8),
-			taskWidth, task,
+			taskWidth, PadRight(task, taskWidth),
 			progress,
+			rowReset,
 		)
 		shown++
 	}
@@ -247,7 +252,7 @@ func (r *Renderer) renderCostBar(s *State, w int) {
 
 func (r *Renderer) writeSep(w int) {
 	r.buf.WriteString(ClearLine)
-	r.buf.WriteString(Border)
+	r.buf.WriteString("\033[38;5;238m") // Slightly brighter than Dim
 	r.buf.WriteString(strings.Repeat("─", w))
 	r.buf.WriteString(Reset)
 	r.buf.WriteByte('\n')
