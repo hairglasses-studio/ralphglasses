@@ -87,7 +87,7 @@ Ratings on a 1–5 scale. Criteria:
 
 ## 4. Annotation Completeness
 
-Analyzed from `/home/hg/hairglasses-studio/ralphglasses/internal/mcpserver/annotations.go`.
+Analyzed from `~/hairglasses-studio/ralphglasses/internal/mcpserver/annotations.go`.
 
 **Total annotated tools:** 166 (perfect sync with registered tool count — no gaps between `ToolAnnotations` map and builder registrations).
 

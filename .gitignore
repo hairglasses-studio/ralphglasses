@@ -94,3 +94,13 @@ internal/mcpserver/.ralph/
 !.env.*.example
 ralphglasses-godview
 .cache/
+
+# Ralph runtime state (not source)
+.ralph/worktrees/
+.ralph/cycles/
+.ralph/logs/
+.ralph/*.json
+.ralph/improvement_journal.jsonl
+.ralph/internal/
+!.ralph/PROMPT.md
+!.ralph/SCRATCHPAD.md

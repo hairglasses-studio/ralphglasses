@@ -106,7 +106,7 @@ Critical subsystems with tests:
 **Failing test:**
 - `TestHandleCircuitReset_Enhancer` — expects `status=reset` in response but gets `nil`.
   The enhancer circuit breaker state is not populated in the test server setup.
-  File: `/home/hg/hairglasses-studio/ralphglasses/internal/mcpserver/handler_circuit_test.go`
+  File: `~/hairglasses-studio/ralphglasses/internal/mcpserver/handler_circuit_test.go`
 
 **Untested handler files (no `_test.go` counterpart) — from Wave 1:**
 - `handler_sweep_report.go` (302 lines) — `sweep_report` handler has no test. This is
@@ -379,16 +379,16 @@ Ranked by blast radius × severity of gap.
 
 | File | Relevance |
 |------|-----------|
-| `/home/hg/hairglasses-studio/ralphglasses/internal/e2e/harness.go` | Mock harness for StepLoop e2e |
-| `/home/hg/hairglasses-studio/ralphglasses/internal/e2e/catalog.go` | 6 core scenarios |
-| `/home/hg/hairglasses-studio/ralphglasses/internal/e2e/catalog_cost.go` | 2 cost scenarios |
-| `/home/hg/hairglasses-studio/ralphglasses/internal/e2e/catalog_provider.go` | 4 multi-provider scenarios |
-| `/home/hg/hairglasses-studio/ralphglasses/internal/e2e/catalog_stress.go` | 5 stress scenarios |
-| `/home/hg/hairglasses-studio/ralphglasses/internal/e2e/catalog_learning.go` | 8 self-learning + integration scenarios |
-| `/home/hg/hairglasses-studio/ralphglasses/internal/e2e/gates.go` | Regression gate system (P50/P95) |
-| `/home/hg/hairglasses-studio/ralphglasses/internal/e2e/baseline.go` | Baseline computation |
-| `/home/hg/hairglasses-studio/ralphglasses/internal/mcpserver/handler_sweep_report.go` | 302-line untested handler (priority #4) |
-| `/home/hg/hairglasses-studio/ralphglasses/internal/mcpserver/handler_circuit_test.go` | Failing circuit reset test (priority #3) |
-| `/home/hg/hairglasses-studio/ralphglasses/internal/session/autorecovery.go` | Unprotected retryState map (priority #2) |
-| `/home/hg/hairglasses-studio/ralphglasses/internal/marathon/restart_test.go` | Failing BackoffCap test (priority #5) |
-| `/home/hg/hairglasses-studio/ralphglasses/Makefile` | CI pipeline: `test`, `test-cover`, `smoke`, `fuzz` targets |
+| `~/hairglasses-studio/ralphglasses/internal/e2e/harness.go` | Mock harness for StepLoop e2e |
+| `~/hairglasses-studio/ralphglasses/internal/e2e/catalog.go` | 6 core scenarios |
+| `~/hairglasses-studio/ralphglasses/internal/e2e/catalog_cost.go` | 2 cost scenarios |
+| `~/hairglasses-studio/ralphglasses/internal/e2e/catalog_provider.go` | 4 multi-provider scenarios |
+| `~/hairglasses-studio/ralphglasses/internal/e2e/catalog_stress.go` | 5 stress scenarios |
+| `~/hairglasses-studio/ralphglasses/internal/e2e/catalog_learning.go` | 8 self-learning + integration scenarios |
+| `~/hairglasses-studio/ralphglasses/internal/e2e/gates.go` | Regression gate system (P50/P95) |
+| `~/hairglasses-studio/ralphglasses/internal/e2e/baseline.go` | Baseline computation |
+| `~/hairglasses-studio/ralphglasses/internal/mcpserver/handler_sweep_report.go` | 302-line untested handler (priority #4) |
+| `~/hairglasses-studio/ralphglasses/internal/mcpserver/handler_circuit_test.go` | Failing circuit reset test (priority #3) |
+| `~/hairglasses-studio/ralphglasses/internal/session/autorecovery.go` | Unprotected retryState map (priority #2) |
+| `~/hairglasses-studio/ralphglasses/internal/marathon/restart_test.go` | Failing BackoffCap test (priority #5) |
+| `~/hairglasses-studio/ralphglasses/Makefile` | CI pipeline: `test`, `test-cover`, `smoke`, `fuzz` targets |

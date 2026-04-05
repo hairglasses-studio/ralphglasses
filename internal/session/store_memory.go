@@ -60,6 +60,12 @@ func (m *MemoryStore) ListSessions(_ context.Context, opts ListOpts) ([]*Session
 		if opts.Status != "" && s.Status != opts.Status {
 			continue
 		}
+		if !opts.Since.IsZero() && s.LaunchedAt.Before(opts.Since) {
+			continue
+		}
+		if !opts.Until.IsZero() && s.LaunchedAt.After(opts.Until) {
+			continue
+		}
 		result = append(result, s)
 		if opts.Limit > 0 && len(result) >= opts.Limit {
 			break

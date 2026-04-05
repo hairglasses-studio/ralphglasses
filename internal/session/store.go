@@ -11,6 +11,8 @@ type ListOpts struct {
 	RepoName string        // filter by repo name (empty = all)
 	Status   SessionStatus // filter by status (empty = all)
 	Limit    int           // max results (0 = unlimited)
+	Since    time.Time     // filter: launched_at >= since (zero = no filter)
+	Until    time.Time     // filter: launched_at <= until (zero = no filter)
 }
 
 // LoopRunFilter controls filtering for loop run queries.
