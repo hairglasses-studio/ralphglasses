@@ -235,6 +235,7 @@ func (r *Renderer) renderCostBar(s *State, w int) {
 	r.buf.WriteString(ClearLine)
 	fmt.Fprintf(r.buf, " %s%sCOST%s ", Bold, Header, Reset)
 
+	// Per-provider cost with proportion bar
 	for prov, cost := range s.CostByProvider {
 		if cost > 0 {
 			pct := 0.0
@@ -242,11 +243,28 @@ func (r *Renderer) renderCostBar(s *State, w int) {
 				pct = cost / s.TotalCost * 100
 			}
 			col := ProviderColor(prov)
-			fmt.Fprintf(r.buf, "%s%s %s (%.0f%%)%s │ ", col, prov, FormatCost(cost), pct, Reset)
+			barLen := int(pct / 100.0 * 10)
+			if barLen < 1 && cost > 0 {
+				barLen = 1
+			}
+			bar := strings.Repeat("█", barLen)
+			fmt.Fprintf(r.buf, "%s%s%s %s (%.0f%%)%s │ ", col, bar, prov, FormatCost(cost), pct, Reset)
 		}
 	}
-	fmt.Fprintf(r.buf, "rate: %s │ cap: %s",
-		FormatRate(s.CostRatePerHr), FormatCost(s.BudgetCap))
+
+	// Budget gauge
+	if s.BudgetCap > 0 {
+		budgetPct := s.TotalCost / s.BudgetCap * 100
+		gaugeCol := CostLo
+		if budgetPct > 75 {
+			gaugeCol = CostHi
+		} else if budgetPct > 50 {
+			gaugeCol = CostMid
+		}
+		fmt.Fprintf(r.buf, "%s%.0f%%%s of %s │ ", gaugeCol, budgetPct, Reset, FormatCost(s.BudgetCap))
+	}
+
+	fmt.Fprintf(r.buf, "rate: %s", FormatRate(s.CostRatePerHr))
 	r.buf.WriteByte('\n')
 }
 
