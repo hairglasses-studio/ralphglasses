@@ -55,7 +55,7 @@ func (v EventLogView) Init() tea.Cmd { return nil }
 // Update implements tea.Model.
 func (v EventLogView) Update(msg tea.Msg) (EventLogView, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "f":
 			v.cycleFilter()

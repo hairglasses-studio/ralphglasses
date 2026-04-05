@@ -262,7 +262,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		return m.handleMouse(msg)
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 	}
 
@@ -283,7 +283,7 @@ func applyProcessExit(msg process.ProcessExitMsg, repos []*model.Repo) {
 	}
 }
 
-func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// Modal overlays take priority
 	if m.Modals.ConfirmDialog != nil && m.Modals.ConfirmDialog.Active {
 		return m.handleConfirmKey(msg)

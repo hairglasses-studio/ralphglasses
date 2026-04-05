@@ -19,13 +19,13 @@ import (
 // If Binding is non-nil it is checked via key.Matches; otherwise Match is used.
 type ViewKeyEntry struct {
 	Binding func(km *KeyMap) key.Binding
-	Match   func(msg tea.KeyMsg) bool
+	Match   func(msg tea.KeyPressMsg) bool
 	Handler KeyHandler
 }
 
 // dispatchViewKeys iterates entries in order; first match wins.
 // Returns the matched handler's result, or (*m, nil) if nothing matched.
-func dispatchViewKeys(entries []ViewKeyEntry, m *Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func dispatchViewKeys(entries []ViewKeyEntry, m *Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	for _, e := range entries {
 		if e.Binding != nil {
 			if key.Matches(msg, e.Binding(&m.Keys)) {
@@ -41,24 +41,24 @@ func dispatchViewKeys(entries []ViewKeyEntry, m *Model, msg tea.KeyMsg) (tea.Mod
 // --- Command/filter input dispatch tables ---
 
 var commandInputKeys = []ViewKeyEntry{
-	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		cmd := ParseCommand(m.CommandBuf)
 		m.InputMode = ModeNormal
 		m.CommandBuf = ""
 		return m.execCommand(cmd)
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Escape }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Escape }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.InputMode = ModeNormal
 		m.CommandBuf = ""
 		return *m, nil
 	}},
-	{Match: func(msg tea.KeyMsg) bool { return msg.Key().Code == tea.KeyBackspace }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Match: func(msg tea.KeyPressMsg) bool { return msg.Key().Code == tea.KeyBackspace }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if len(m.CommandBuf) > 0 {
 			m.CommandBuf = m.CommandBuf[:len(m.CommandBuf)-1]
 		}
 		return *m, nil
 	}},
-	{Match: func(msg tea.KeyMsg) bool { return true }, Handler: func(m *Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Match: func(msg tea.KeyPressMsg) bool { return true }, Handler: func(m *Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		k := msg.Key()
 		if k.Text != "" {
 			runes := []rune(k.Text)
@@ -71,11 +71,11 @@ var commandInputKeys = []ViewKeyEntry{
 }
 
 var filterInputKeys = []ViewKeyEntry{
-	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Enter }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.InputMode = ModeNormal
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Escape }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Escape }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.InputMode = ModeNormal
 		m.Filter.Clear()
 		if tbl := m.activeTable(); tbl != nil {
@@ -83,14 +83,14 @@ var filterInputKeys = []ViewKeyEntry{
 		}
 		return *m, nil
 	}},
-	{Match: func(msg tea.KeyMsg) bool { return msg.Key().Code == tea.KeyBackspace }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Match: func(msg tea.KeyPressMsg) bool { return msg.Key().Code == tea.KeyBackspace }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.Filter.Backspace()
 		if tbl := m.activeTable(); tbl != nil {
 			tbl.SetFilter(m.Filter.Text)
 		}
 		return *m, nil
 	}},
-	{Match: func(msg tea.KeyMsg) bool { return true }, Handler: func(m *Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Match: func(msg tea.KeyPressMsg) bool { return true }, Handler: func(m *Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		k := msg.Key()
 		if k.Text != "" {
 			runes := []rune(k.Text)
@@ -105,11 +105,11 @@ var filterInputKeys = []ViewKeyEntry{
 	}},
 }
 
-func (m Model) handleCommandInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleCommandInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return dispatchViewKeys(commandInputKeys, &m, msg)
 }
 
-func (m Model) handleFilterInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleFilterInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return dispatchViewKeys(filterInputKeys, &m, msg)
 }
 
@@ -212,7 +212,7 @@ func (m Model) execCommand(cmd Command) (tea.Model, tea.Cmd) {
 
 // --- Modal overlay key handlers ---
 
-func (m Model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleConfirmKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	keyType := "rune"
 	k := msg.Key()
 	switch {
@@ -238,7 +238,7 @@ func (m Model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleActionMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleActionMenuKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	keyType := "rune"
 	var r rune
 	k := msg.Key()
@@ -267,7 +267,7 @@ func (m Model) handleActionMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleLauncherKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleLauncherKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	keyType := "rune"
 	var r rune
 	k := msg.Key()
@@ -573,13 +573,13 @@ func (m *Model) findFullSessionID(prefix string) string {
 // --- Event log view dispatch table ---
 
 var eventLogKeys = []ViewKeyEntry{
-	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Down }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.EventLog != nil {
 			m.EventLog.ScrollDown()
 		}
 		return *m, nil
 	}},
-	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+	{Binding: func(km *KeyMap) key.Binding { return km.Up }, Handler: func(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.EventLog != nil {
 			m.EventLog.ScrollUp()
 		}
@@ -587,6 +587,6 @@ var eventLogKeys = []ViewKeyEntry{
 	}},
 }
 
-func (m Model) handleEventLogKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleEventLogKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return dispatchViewKeys(eventLogKeys, &m, msg)
 }

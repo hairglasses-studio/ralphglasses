@@ -10,7 +10,7 @@ import (
 type modelRenderFunc func(m *Model, width, height int) string
 
 // modelKeyFunc handles a key event for a view, returning the updated model and command.
-type modelKeyFunc func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd)
+type modelKeyFunc func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd)
 
 // registeredView bundles the render and key-handling functions for a single view.
 type registeredView struct {
@@ -36,7 +36,7 @@ func initViewRegistry() *views.Registry {
 				m.HelpView.SetDimensions(width, height)
 				return m.HelpView.Render()
 			},
-			handleKey: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			handleKey: func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m.handleHelpKey(msg)
 			},
 		},
@@ -44,7 +44,7 @@ func initViewRegistry() *views.Registry {
 			render: func(m *Model, _, _ int) string {
 				return m.LogView.View()
 			},
-			handleKey: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			handleKey: func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m.handleLogKey(msg)
 			},
 		},
@@ -53,7 +53,7 @@ func initViewRegistry() *views.Registry {
 				return m.LoopListTable.View() + "\n" +
 					styles.HelpStyle.Render("  s start loop  x/d stop loop  p pause/resume  Enter detail  j/k navigate  Esc back")
 			},
-			handleKey: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			handleKey: func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m.handleLoopListKey(msg)
 			},
 		},
@@ -61,7 +61,7 @@ func initViewRegistry() *views.Registry {
 			render: func(m *Model, _, _ int) string {
 				return m.SessionTable.View()
 			},
-			handleKey: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			handleKey: func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m.handleSessionsKey(msg)
 			},
 		},
@@ -69,7 +69,7 @@ func initViewRegistry() *views.Registry {
 			render: func(m *Model, _, _ int) string {
 				return m.TeamTable.View()
 			},
-			handleKey: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			handleKey: func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m.handleTeamsKey(msg)
 			},
 		},
@@ -80,7 +80,7 @@ func initViewRegistry() *views.Registry {
 				m.RDCycleView.SetDimensions(width, height)
 				return m.RDCycleView.Render()
 			},
-			handleKey: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			handleKey: func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m.handleRDCycleKey(msg)
 			},
 		},
@@ -104,7 +104,7 @@ func initViewRegistry() *views.Registry {
 				}
 				return ""
 			},
-			handleKey: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			handleKey: func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m.handleDetailKey(msg)
 			},
 		},
@@ -120,7 +120,7 @@ func initViewRegistry() *views.Registry {
 				}
 				return ""
 			},
-			handleKey: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			handleKey: func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m.handleSessionDetailKey(msg)
 			},
 		},
@@ -137,7 +137,7 @@ func initViewRegistry() *views.Registry {
 				}
 				return ""
 			},
-			handleKey: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			handleKey: func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m.handleTeamDetailKey(msg)
 			},
 		},
@@ -148,7 +148,7 @@ func initViewRegistry() *views.Registry {
 				m.FleetView.SetDimensions(width, height)
 				return m.FleetView.Render()
 			},
-			handleKey: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			handleKey: func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m.handleFleetKey(msg)
 			},
 		},
@@ -161,7 +161,7 @@ func initViewRegistry() *views.Registry {
 				}
 				return ""
 			},
-			handleKey: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			handleKey: func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m.handleDiffKey(msg)
 			},
 		},
@@ -176,7 +176,7 @@ func initViewRegistry() *views.Registry {
 				m.TimelineViewport.SetDimensions(width, height)
 				return m.TimelineViewport.Render()
 			},
-			handleKey: func(m Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			handleKey: func(m Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m.handleTimelineKey(msg)
 			},
 		},

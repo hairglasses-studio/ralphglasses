@@ -18,7 +18,7 @@ import (
 
 // handleFleetSessionStart launches a new session for the repo associated
 // with the selected fleet session table row.
-func handleFleetSessionStart(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleFleetSessionStart(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.SessMgr == nil {
 		m.Notify.Show("No session manager", 3*time.Second)
 		return *m, nil
@@ -52,7 +52,7 @@ func handleFleetSessionStart(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleFleetSessionStop stops the selected session with a confirmation dialog.
-func handleFleetSessionStop(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleFleetSessionStop(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.SessMgr == nil {
 		m.Notify.Show("No session manager", 3*time.Second)
 		return *m, nil
@@ -81,7 +81,7 @@ func handleFleetSessionStop(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleFleetSessionPause pauses (SIGSTOP) the selected session's process.
-func handleFleetSessionPause(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleFleetSessionPause(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.SessMgr == nil {
 		m.Notify.Show("No session manager", 3*time.Second)
 		return *m, nil
@@ -102,7 +102,7 @@ func handleFleetSessionPause(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleFleetSessionResume resumes (SIGCONT) the selected session's process.
-func handleFleetSessionResume(m *Model, _ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleFleetSessionResume(m *Model, _ tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.SessMgr == nil {
 		m.Notify.Show("No session manager", 3*time.Second)
 		return *m, nil

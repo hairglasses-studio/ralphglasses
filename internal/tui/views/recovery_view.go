@@ -94,7 +94,7 @@ func (v *RecoveryView) RenderAt(width, height int) string {
 }
 
 // HandleKey processes recovery-specific key events.
-func (v *RecoveryView) HandleKey(msg tea.KeyMsg) (bool, tea.Cmd) {
+func (v *RecoveryView) HandleKey(msg tea.KeyPressMsg) (bool, tea.Cmd) {
 	switch msg.String() {
 	case "tab":
 		v.panel = RecoveryPanel((int(v.panel) + 1) % recoveryPanelCount)

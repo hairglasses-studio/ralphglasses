@@ -11,7 +11,7 @@ type ViewHandler interface {
 	// Render returns the view's content string for the given dimensions.
 	Render(width, height int) string
 	// HandleKey processes view-specific key events. Returns true if handled.
-	HandleKey(msg tea.KeyMsg) (handled bool, cmd tea.Cmd)
+	HandleKey(msg tea.KeyPressMsg) (handled bool, cmd tea.Cmd)
 	// SetDimensions updates the view's available space.
 	SetDimensions(width, height int)
 }
@@ -50,7 +50,7 @@ func (r *Registry) Render(mode, width, height int) string {
 
 // HandleKey delegates to the registered handler's HandleKey method.
 // Returns (false, nil) if no handler is registered for the mode.
-func (r *Registry) HandleKey(mode int, msg tea.KeyMsg) (bool, tea.Cmd) {
+func (r *Registry) HandleKey(mode int, msg tea.KeyPressMsg) (bool, tea.Cmd) {
 	if h, ok := r.handlers[mode]; ok {
 		return h.HandleKey(msg)
 	}

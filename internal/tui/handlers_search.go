@@ -8,12 +8,8 @@ import (
 )
 
 // handleSearchInput processes keys while the global search overlay is active.
-func (m Model) handleSearchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	press, ok := msg.(tea.KeyPressMsg)
-	if !ok {
-		return m, nil
-	}
-	result, confirmed := m.SearchInput.HandleKey(press)
+func (m Model) handleSearchInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	result, confirmed := m.SearchInput.HandleKey(msg)
 
 	if confirmed {
 		// Navigate to the selected result's target view.

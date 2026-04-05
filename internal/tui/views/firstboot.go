@@ -58,7 +58,7 @@ func (m FirstBootModel) Init() tea.Cmd { return nil }
 
 func (m FirstBootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			if m.step == 0 { // only quit from first step
