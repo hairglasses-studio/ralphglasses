@@ -160,6 +160,9 @@ func (s *Server) handleDocsWriteFinding(_ context.Context, req mcp.CallToolReque
 	if domain == "" || filename == "" || content == "" {
 		return codedError(ErrInvalidParams, "domain, filename, and content required"), nil
 	}
+	if err := validateSafePath(filename); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid filename: %v", err)), nil
+	}
 
 	validDomains := map[string]bool{
 		"mcp": true, "agents": true, "orchestration": true,
