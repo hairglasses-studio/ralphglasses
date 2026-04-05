@@ -1,8 +1,8 @@
-model = "gpt-5.4"
+model = "o4-mini"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 web_search = "cached"
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"
 personality = "pragmatic"
 
 [agents]

@@ -18,7 +18,7 @@ func TestRenderSessionDetailIncludesProviderMetadata(t *testing.T) {
 		RepoName:          "repo",
 		RepoPath:          "/tmp/repo",
 		Status:            session.StatusRunning,
-		Model:             "gpt-5.4-xhigh",
+		Model:             "codex-mini-latest",
 		LastActivity:      now,
 		LaunchedAt:        now.Add(-time.Minute),
 		LastEventType:     "assistant",

@@ -93,7 +93,7 @@ func Prepare(ctx context.Context, config SelfTestConfig) (*SelfTestRunner, error
 		}
 
 		snapshotPath := filepath.Join(binDir, "ralphglasses-snapshot")
-		cmd := exec.CommandContext(ctx, "go", "build", "-o", snapshotPath, "./...")
+		cmd := exec.CommandContext(ctx, "go", "build", "-o", snapshotPath, "./cmd/ralphglasses")
 		cmd.Dir = config.RepoPath
 		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 		if output, err := cmd.CombinedOutput(); err != nil {
