@@ -6,9 +6,9 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
-// validProviders lists all recognized provider values (empty string = claude default).
+// validProviders lists all recognized provider values (empty string = codex default).
 var validProviders = map[session.Provider]bool{
-	"":                     true, // default = claude
+	"":                     true, // default = codex
 	session.ProviderClaude: true,
 	session.ProviderGemini: true,
 	session.ProviderCodex:  true,
@@ -55,7 +55,7 @@ func TestAllScenariosHaveValidFields(t *testing.T) {
 				t.Errorf("unrecognized category %q", s.Category)
 			}
 
-			// Valid Provider (empty is OK — means claude default)
+			// Valid Provider (empty is OK — means codex default)
 			if !validProviders[s.Provider] {
 				t.Errorf("invalid provider %q", s.Provider)
 			}

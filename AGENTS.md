@@ -28,7 +28,7 @@ main.go → cmd/root.go (Cobra CLI)
 │   ├── manager.go         Session/team registry
 │   ├── budget.go          Per-provider cost tracking + enforcement
 │   └── types.go           Provider enum, Session, LaunchOptions, TeamConfig
-├── internal/mcpserver/    MCP tool handlers (47 tools, stdio)
+├── internal/mcpserver/    MCP tool handlers (126 tools, stdio)
 ├── internal/roadmap/      Roadmap parsing, analysis, research, export
 ├── internal/repofiles/    Ralph config scaffolding and optimization
 ├── internal/tui/          BubbleTea app, keymap, commands, filter
@@ -89,7 +89,7 @@ The `internal/session/` package uses a provider dispatch pattern:
 
 ## MCP Server
 
-Ralphglasses exposes 47 MCP tools. Codex accesses them via `.codex/config.toml` (already configured in this repo).
+Ralphglasses exposes 126 MCP tools. Codex accesses them via `.codex/config.toml` (already configured in this repo).
 
 Key tools for Codex-led development:
 
