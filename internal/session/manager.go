@@ -62,6 +62,7 @@ type Manager struct {
 	worktreePool       *WorktreePool          // Phase 10.5.8: reusable worktree pool
 
 	spendMonitor *SpendRateMonitor // hourly spend circuit breaker (nil = disabled)
+	promptRouter PromptRouter     // Prompt DJ quality-aware routing (nil = disabled)
 
 	DefaultBudgetUSD float64 // from RALPH_SESSION_BUDGET; applied when Launch opts has no budget
 
