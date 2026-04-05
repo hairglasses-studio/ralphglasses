@@ -12,6 +12,7 @@ exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DE
 
 # --- Input configuration ---
 input type:keyboard {
+    xkb_layout us
     repeat_delay 250
     repeat_rate 40
 }
@@ -65,7 +66,7 @@ bindsym $mod+Shift+6 move container to workspace number 6
 bindsym $mod+Shift+7 move container to workspace number 7
 
 # --- Window management ---
-bindsym $mod+Return exec alacritty
+bindsym $mod+Return exec foot
 bindsym $mod+Shift+q kill
 bindsym $mod+h focus left
 bindsym $mod+j focus down
@@ -83,8 +84,11 @@ bindsym $mod+Shift+space floating toggle
 bindsym $mod+slash layout toggle split tabbed stacking
 
 # Quick terminal (from AeroSpace backtick)
-bindsym $mod+grave exec alacritty --class quick-terminal
+bindsym $mod+grave exec foot --app-id quick-terminal
 for_window [app_id="quick-terminal"] floating enable, resize set 800 500
+
+# Emergency shell (Ctrl+Alt+T)
+bindsym Ctrl+Alt+t exec foot
 
 # Shader keybinds (from AeroSpace)
 bindsym $mod+Shift+s exec shader-random.sh
@@ -99,10 +103,14 @@ bindsym $mod+Shift+r reload
 
 # --- Kiosk mode for ralphglasses ---
 # Auto-start ralphglasses TUI in fullscreen on workspace 1
-exec swaymsg 'workspace 1; exec alacritty -e ralphglasses --scan-path /workspace'
+exec swaymsg 'workspace 1; exec foot -e ralphglasses --scan-path $HOME/hairglasses-studio'
 
-# Force all alacritty windows to start without title bar
-for_window [app_id="Alacritty"] border none
+# Force foot windows to start without title bar
+for_window [app_id="foot"] border none
+
+# --- 24/7 operation: disable screen blanking and DPMS ---
+exec swaymsg 'output * dpms on'
+exec swayidle -w timeout 0 '' before-sleep ''
 
 # --- Gaps (ported from AeroSpace) ---
 gaps inner 8
