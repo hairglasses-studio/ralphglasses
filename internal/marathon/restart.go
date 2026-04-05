@@ -142,9 +142,12 @@ func (rp *RestartPolicy) backoffLocked() time.Duration {
 		return rp.baseBackoff
 	}
 	exp := math.Pow(rp.backoffFactor, float64(rp.restartCount-1))
+	if math.IsInf(exp, 1) || math.IsNaN(exp) {
+		return rp.maxBackoff
+	}
 	d := time.Duration(float64(rp.baseBackoff) * exp)
-	if d > rp.maxBackoff {
-		d = rp.maxBackoff
+	if d > rp.maxBackoff || d < 0 {
+		return rp.maxBackoff
 	}
 	return d
 }
