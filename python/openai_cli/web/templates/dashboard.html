@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - OAI Archive{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Archive Dashboard</h2>
+        <p class="text-gray-600">Monitor your OpenAI content archive in real-time</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white rounded-lg shadow p-6 card-hover">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Total Images</p>
+                    <p class="text-2xl font-semibold text-gray-900" data-stat="total_images">{{ stats.total_images }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 card-hover">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Total Videos</p>
+                    <p class="text-2xl font-semibold text-gray-900" data-stat="total_videos">{{ stats.total_videos }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 card-hover">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Total Chats</p>
+                    <p class="text-2xl font-semibold text-gray-900" data-stat="total_chats">{{ stats.total_chats }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 card-hover">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Recent (24h)</p>
+                    <p class="text-2xl font-semibold text-gray-900">
+                        {{ stats.recent_images + stats.recent_videos + stats.recent_chats }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex space-x-4">
+            <input type="text" id="searchInput" placeholder="Search images, videos, and chats..." 
+                   class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <select id="searchType" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="all">All Content</option>
+                <option value="images">Images Only</option>
+                <option value="videos">Videos Only</option>
+                <option value="chats">Chats Only</option>
+            </select>
+            <button onclick="performSearch()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                Search
+            </button>
+        </div>
+        <div id="searchResults" class="mt-4 hidden"></div>
+    </div>
+
+    <!-- Recent Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Recent Images -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Recent Images</h3>
+            </div>
+            <div class="p-6">
+                {% if recent_images %}
+                    <div class="space-y-4">
+                        {% for image in recent_images %}
+                        <div class="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                            <div class="flex-shrink-0">
+                                <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">{{ image.filename }}</p>
+                                <p class="text-sm text-gray-500">{{ image.created_at }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-500 text-center py-4">No recent images found</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Videos -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Recent Videos</h3>
+            </div>
+            <div class="p-6">
+                {% if recent_videos %}
+                    <div class="space-y-4">
+                        {% for video in recent_videos %}
+                        <div class="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                            <div class="flex-shrink-0">
+                                <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">{{ video.title or video.filename }}</p>
+                                <p class="text-sm text-gray-500">{{ video.created_at }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-500 text-center py-4">No recent videos found</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Chats -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Recent Chats</h3>
+            </div>
+            <div class="p-6">
+                {% if recent_chats %}
+                    <div class="space-y-4">
+                        {% for chat in recent_chats %}
+                        <div class="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                            <div class="flex-shrink-0">
+                                <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">{{ chat.title or chat.filename }}</p>
+                                <p class="text-sm text-gray-500">{{ chat.message_count }} messages • {{ chat.created_at }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-500 text-center py-4">No recent chats found</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function performSearch() {
+    const query = document.getElementById('searchInput').value;
+    const type = document.getElementById('searchType').value;
+    const resultsDiv = document.getElementById('searchResults');
+    
+    if (!query.trim()) {
+        alert('Please enter a search term');
+        return;
+    }
+    
+    resultsDiv.innerHTML = '<div class="text-center py-4"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div></div>';
+    resultsDiv.classList.remove('hidden');
+    
+    fetch(`/api/search?q=${encodeURIComponent(query)}&type=${type}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                resultsDiv.innerHTML = `<div class="text-red-600 text-center py-4">${data.error}</div>`;
+                return;
+            }
+            
+            let html = '<div class="space-y-4">';
+            
+            if (data.images && data.images.length > 0) {
+                html += '<h4 class="font-semibold text-gray-900">Images</h4>';
+                data.images.forEach(image => {
+                    html += `
+                        <div class="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                            <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">${image.filename}</p>
+                                <p class="text-sm text-gray-500">${image.created_at}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (data.videos && data.videos.length > 0) {
+                html += '<h4 class="font-semibold text-gray-900 mt-4">Videos</h4>';
+                data.videos.forEach(video => {
+                    html += `
+                        <div class="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                            <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">${video.title || video.filename}</p>
+                                <p class="text-sm text-gray-500">${video.created_at}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (data.chats && data.chats.length > 0) {
+                html += '<h4 class="font-semibold text-gray-900 mt-4">Chats</h4>';
+                data.chats.forEach(chat => {
+                    html += `
+                        <div class="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                            <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">${chat.title || chat.filename}</p>
+                                <p class="text-sm text-gray-500">${chat.message_count} messages • ${chat.created_at}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            if ((!data.images || data.images.length === 0) && 
+                (!data.videos || data.videos.length === 0) && 
+                (!data.chats || data.chats.length === 0)) {
+                html = '<div class="text-gray-500 text-center py-4">No results found</div>';
+            }
+            
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Search failed:', error);
+            resultsDiv.innerHTML = '<div class="text-red-600 text-center py-4">Search failed. Please try again.</div>';
+        });
+}
+
+// Allow Enter key to trigger search
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        performSearch();
+    }
+});
+</script>
+{% endblock %} 

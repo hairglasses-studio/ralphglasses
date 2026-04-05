@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  oai_cli:
+    build: .
+    container_name: oai_archive
+    environment:
+      - PG_CONN_STR=postgresql://oai_user:oai_password@db:5432/oai_archive
+      - DOWNLOAD_DIR=/app/downloads
+      - IMAGES_DIR=/app/downloads/images
+      - VIDEOS_DIR=/app/downloads/videos
+      - CHATS_DIR=/app/downloads/chats
+      - WEB_HOST=0.0.0.0
+      - WEB_PORT=8080
+      - CHROME_HEADLESS=true
+      - MAX_RETRIES=3
+      - BATCH_SIZE=50
+      - CHAT_SCROLL_PAUSE=2.0
+      - CHAT_MAX_MESSAGES=1000
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./downloads:/app/downloads
+      - ./logs:/app/logs
+      - ./backups:/app/backups
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      - oai_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: postgres:15-alpine
+    container_name: oai_postgres
+    environment:
+      - POSTGRES_DB=oai_archive
+      - POSTGRES_USER=oai_user
+      - POSTGRES_PASSWORD=oai_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sora_archive_schema.sql:/docker-entrypoint-initdb.d/01-init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - oai_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oai_user -d oai_archive"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: Redis for caching (uncomment if needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: oai_redis
+  #   ports:
+  #     - "6379:6379"
+  #   restart: unless-stopped
+  #   networks:
+  #     - oai_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  oai_network:
+    driver: bridge 

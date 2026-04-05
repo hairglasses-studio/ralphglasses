@@ -1,0 +1,17 @@
+PROJECT_TYPE="python"
+PROJECT_NAME="openai_cli"
+CLAUDE_TIMEOUT_MINUTES=15
+PRIMARY_MODEL="sonnet"
+MAX_CALLS_PER_HOUR=60
+QG_GO_BUILD="false"
+QG_GO_TEST="false"
+QG_GO_VET="false"
+CASCADE_ENABLED="true"
+AUTONOMY_LEVEL=1
+MARATHON_MODE="true"
+MARATHON_DURATION_HOURS="6"
+CB_SAME_ERROR_THRESHOLD="5"
+CB_COOLDOWN_MINUTES="15"
+CB_AUTO_RESET="true"
+RALPH_SESSION_BUDGET="50"
+ALLOWED_TOOLS="Write,Read,Edit,Grep,Glob,Bash(python *),Bash(pip *),Bash(pytest *),Bash(ruff *),Bash(git *),Bash(make *)"

@@ -105,3 +105,12 @@ ralphglasses-godview
 .ralph/internal/
 !.ralph/PROMPT.md
 !.ralph/SCRATCHPAD.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+my_env/
+*.egg-info/
