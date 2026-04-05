@@ -389,12 +389,19 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		return m.failLoopIteration(run, index, fmt.Errorf("worker(s) failed: %s", errMsg))
 	}
 
-	// QW-1: JSON pre-validation of worker outputs — log warnings for non-JSON
-	// outputs so downstream processing can handle raw text gracefully.
+	// QW-1: JSON pre-validation of worker outputs — attempt repair on
+	// malformed JSON to prevent silent data loss downstream.
 	for i, output := range workerOutputs {
-		if output != "" && looksLikeJSON(output) && !json.Valid([]byte(output)) {
-			slog.Warn("worker output looks like JSON but is not valid",
-				"loop", run.ID, "worker", i)
+		if output != "" && looksLikeJSONOrFenced(output) && !json.Valid([]byte(output)) {
+			repaired := jsonRepair(output)
+			if json.Valid([]byte(repaired)) {
+				workerOutputs[i] = repaired
+				slog.Info("worker output repaired from malformed JSON",
+					"loop", run.ID, "worker", i)
+			} else {
+				slog.Warn("worker output looks like JSON but could not be repaired",
+					"loop", run.ID, "worker", i)
+			}
 		}
 	}
 

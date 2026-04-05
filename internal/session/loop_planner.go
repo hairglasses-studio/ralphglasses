@@ -1,7 +1,6 @@
 package session
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -210,16 +209,18 @@ func plannerTasksFromSession(s *Session, maxTasks int) ([]LoopTask, string, erro
 }
 
 // parsePlannerTasks tries to parse a JSON array of tasks from planner output.
+// It applies JSON repair (strip fences, trailing commas, Python booleans)
+// before each unmarshal attempt.
 func parsePlannerTasks(text string) ([]LoopTask, error) {
 	text = strings.TrimSpace(text)
 	if text == "" {
 		return nil, errors.New("empty output")
 	}
 
-	// Try direct parse
+	// Try direct parse with repair on each candidate
 	var tasks []LoopTask
 	for _, candidate := range plannerJSONArrayCandidates(text) {
-		if err := json.Unmarshal([]byte(candidate), &tasks); err == nil && len(tasks) > 0 {
+		if _, err := tryUnmarshalWithRepair(candidate, &tasks); err == nil && len(tasks) > 0 {
 			valid := make([]LoopTask, 0, len(tasks))
 			for _, t := range tasks {
 				t.Title = sanitizeTaskTitle(t.Title)
@@ -282,7 +283,7 @@ func parsePlannerTask(text string) (LoopTask, error) {
 
 	var task LoopTask
 	for _, candidate := range plannerJSONCandidates(text) {
-		if err := json.Unmarshal([]byte(candidate), &task); err == nil {
+		if _, err := tryUnmarshalWithRepair(candidate, &task); err == nil {
 			task.Title = sanitizeTaskTitle(task.Title)
 			task.Prompt = strings.TrimSpace(task.Prompt)
 			if task.Title == "" && task.Prompt != "" {

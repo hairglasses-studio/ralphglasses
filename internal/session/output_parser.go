@@ -74,15 +74,15 @@ func NewOutputParser() *OutputParser {
 }
 
 // ParseLine processes a single line of session output. It first attempts
-// to parse the line as Claude Code JSON streaming output, then falls back
-// to plain text regex extraction.
+// to parse the line as Claude Code JSON streaming output (including
+// markdown-fenced JSON), then falls back to plain text regex extraction.
 func (p *OutputParser) ParseLine(line string) {
 	line = strings.TrimSpace(line)
 	if line == "" {
 		return
 	}
 
-	if looksLikeJSON(line) {
+	if looksLikeJSONOrFenced(line) {
 		p.parseJSONLine(line)
 		return
 	}
@@ -110,10 +110,12 @@ func (p *OutputParser) Result() ParsedOutput {
 }
 
 // parseJSONLine handles a single JSON line from Claude Code stream-json output.
+// It applies JSON repair (strip fences, normalize booleans, strip trailing
+// commas) before unmarshaling, preventing silent data loss on malformed output.
 func (p *OutputParser) parseJSONLine(line string) {
 	var raw map[string]any
-	if err := json.Unmarshal([]byte(line), &raw); err != nil {
-		// Not valid JSON despite looking like it; fall back to text.
+	if _, err := tryUnmarshalWithRepair(line, &raw); err != nil {
+		// Not valid JSON even after repair; fall back to text.
 		p.parseTextLine(line)
 		return
 	}
