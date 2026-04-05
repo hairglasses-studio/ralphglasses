@@ -5,7 +5,8 @@ Ralphglasses is an installable MCP server exposing 126 tools (124 namespace tool
 ## Install
 
 ```bash
-# Via claude CLI (recommended)
+# Codex-first repo-local MCP/client setup is already configured via .codex/config.toml and .mcp.json.
+# Claude users can also register the server explicitly:
 claude mcp add ralphglasses -- go run . mcp
 
 # Or with custom scan path
@@ -15,7 +16,7 @@ claude mcp add ralphglasses -e RALPHGLASSES_SCAN_PATH=~/hairglasses-studio -- go
 go run . mcp --scan-path ~/hairglasses-studio
 ```
 
-A `.mcp.json` is also included in the repo root for automatic local discovery.
+A `.mcp.json` and `.codex/config.toml` are also included in the repo root for automatic local discovery.
 
 ## Deferred Loading
 
