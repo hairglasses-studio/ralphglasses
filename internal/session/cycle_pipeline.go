@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 )
 
 // ObservationsToTasks converts recent loop observations into prioritized cycle tasks.
@@ -364,6 +366,19 @@ func parseRoadmapAnnotations(line string) (float64, string) {
 	}
 
 	return priority, size
+}
+
+// EnhanceCycleTasks runs the local deterministic enhancement pipeline on each
+// task's prompt. This applies specificity, structure, self-check injection, and
+// other stages from the enhancer package (~100ms per prompt, no LLM calls).
+func EnhanceCycleTasks(tasks []CycleTask) []CycleTask {
+	for i := range tasks {
+		result := enhancer.Enhance(tasks[i].Prompt, enhancer.TaskTypeTroubleshooting)
+		if result.Enhanced != tasks[i].Prompt && len(result.StagesRun) > 0 {
+			tasks[i].Prompt = result.Enhanced
+		}
+	}
+	return tasks
 }
 
 // deduplicateTasks removes tasks whose titles are too similar (above threshold).

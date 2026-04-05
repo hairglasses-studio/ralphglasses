@@ -102,6 +102,9 @@ func (m *Manager) PlanCycleTasks(cycle *CycleRun, observations []LoopObservation
 	// Deduplicate across both sources.
 	all = deduplicateTasks(all, 0.7)
 
+	// Enhance task prompts with the local deterministic pipeline.
+	all = EnhanceCycleTasks(all)
+
 	// Cap to maxTasks.
 	if maxTasks > 0 && len(all) > maxTasks {
 		all = all[:maxTasks]
