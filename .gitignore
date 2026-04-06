@@ -114,3 +114,8 @@ __pycache__/
 venv/
 my_env/
 *.egg-info/
+
+# Development artifacts
+.claude-audit-report*
+.claude-fix-report*
+.claude/
