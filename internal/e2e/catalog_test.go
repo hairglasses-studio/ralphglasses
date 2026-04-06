@@ -12,6 +12,7 @@ var validProviders = map[session.Provider]bool{
 	session.ProviderClaude: true,
 	session.ProviderGemini: true,
 	session.ProviderCodex:  true,
+	session.ProviderA2A:    true,
 }
 
 // validCategories lists all recognized scenario categories.
