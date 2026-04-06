@@ -19,6 +19,8 @@ func normalizeEvent(provider Provider, line []byte) (StreamEvent, error) {
 		return normalizeGeminiEvent(line)
 	case ProviderCodex:
 		return normalizeCodexEvent(line)
+	case ProviderA2A:
+		return normalizeA2AEvent(line)
 	default:
 		return normalizeClaudeEvent(line)
 	}
@@ -160,6 +162,8 @@ func sanitizeStderr(provider Provider, raw string) string {
 		return sanitizeGeminiStderr(raw)
 	case ProviderGoose:
 		return sanitizeGooseStderr(raw)
+	case ProviderA2A:
+		return raw // A2A is HTTP-based; no stderr noise to filter
 	default:
 		return raw
 	}
@@ -242,7 +246,7 @@ func ParseProviderCostFromStderr(provider Provider, stderr string) (float64, boo
 		return parseGeminiStderrCost(cleaned)
 	case ProviderCodex:
 		return parseCodexStderrCost(cleaned)
-	case ProviderCrush, ProviderGoose, ProviderAmp:
+	case ProviderCrush, ProviderGoose, ProviderAmp, ProviderA2A:
 		return 0, false
 	}
 

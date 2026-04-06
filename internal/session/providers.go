@@ -46,9 +46,13 @@ func estimateCostFromTokens(provider Provider, raw map[string]any) float64 {
 
 // ValidateProvider checks that a provider's CLI binary is available on PATH.
 func ValidateProvider(p Provider) error {
+	// A2A is HTTP-based, not a CLI binary — always valid.
+	if p == ProviderA2A {
+		return nil
+	}
 	bin := providerBinary(p)
 	if bin == "" {
-		return fmt.Errorf("unknown provider: %q (valid: claude, gemini, codex, crush, goose, amp)", p)
+		return fmt.Errorf("unknown provider: %q (valid: claude, gemini, codex, crush, goose, amp, a2a)", p)
 	}
 	if _, err := exec.LookPath(bin); err != nil {
 		return fmt.Errorf("%s binary not found on PATH: %w", bin, err)
@@ -69,6 +73,8 @@ func providerEnvVar(p Provider) string {
 		return "GOOSE_API_KEY"
 	case ProviderAmp:
 		return "AMP_ACCESS_TOKEN"
+	case ProviderA2A:
+		return "A2A_AGENT_URL" // Not a secret, but used for configuration
 	default:
 		return "ANTHROPIC_API_KEY"
 	}
@@ -76,6 +82,10 @@ func providerEnvVar(p Provider) string {
 
 // ValidateProviderEnv checks that the required API key environment variable is set.
 func ValidateProviderEnv(p Provider) error {
+	// A2A is HTTP-based; agent URL is passed at session launch, not via env var.
+	if p == ProviderA2A {
+		return nil
+	}
 	envVar := providerEnvVar(p)
 	if os.Getenv(envVar) == "" {
 		// Gemini also accepts GEMINI_API_KEY
@@ -165,6 +175,28 @@ func UnsupportedOptionsWarnings(p Provider, opts LaunchOptions) []string {
 		if opts.Worktree != "" {
 			warnings = append(warnings, "worktree is ignored by "+name+" provider")
 		}
+	case ProviderA2A:
+		if opts.SystemPrompt != "" {
+			warnings = append(warnings, "system_prompt is ignored by a2a provider (use agent's own system prompt)")
+		}
+		if opts.MaxBudgetUSD > 0 {
+			warnings = append(warnings, "max_budget_usd is ignored by a2a provider (budget managed by remote agent)")
+		}
+		if opts.Agent != "" {
+			warnings = append(warnings, "agent is ignored by a2a provider (use agent_url instead)")
+		}
+		if opts.MaxTurns > 0 {
+			warnings = append(warnings, "max_turns is ignored by a2a provider")
+		}
+		if len(opts.AllowedTools) > 0 {
+			warnings = append(warnings, "allowed_tools is ignored by a2a provider (tools managed by remote agent)")
+		}
+		if opts.Worktree != "" {
+			warnings = append(warnings, "worktree is ignored by a2a provider")
+		}
+		if opts.Resume != "" {
+			warnings = append(warnings, "resume is ignored by a2a provider (use task_id for continuation)")
+		}
 	}
 	return warnings
 }
@@ -182,6 +214,8 @@ func ProviderDefaults(p Provider) (model string) {
 		return "claude-sonnet-4-6"
 	case ProviderAmp:
 		return "amp-default"
+	case ProviderA2A:
+		return "a2a-remote"
 	default:
 		return "sonnet"
 	}
@@ -209,6 +243,7 @@ func providerBinary(p Provider) string {
 }
 
 // buildCmdForProvider dispatches to the correct per-provider command builder.
+// Returns an error for A2A since it uses HTTP, not CLI subprocesses.
 func buildCmdForProvider(ctx context.Context, opts LaunchOptions) (*exec.Cmd, error) {
 	p := opts.Provider
 	if p == "" {
@@ -217,6 +252,9 @@ func buildCmdForProvider(ctx context.Context, opts LaunchOptions) (*exec.Cmd, er
 	opts.Provider = p
 	if opts.Model == "" {
 		opts.Model = ProviderDefaults(p)
+	}
+	if p == ProviderA2A {
+		return nil, fmt.Errorf("a2a provider does not use CLI commands; use launchA2A instead")
 	}
 	if err := ValidateProvider(p); err != nil {
 		return nil, err

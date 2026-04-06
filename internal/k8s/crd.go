@@ -320,6 +320,7 @@ var ValidProviders = map[string]bool{
 	"claude": true,
 	"gemini": true,
 	"codex":  true,
+	"a2a":    true,
 }
 
 // Validate checks that required fields are present and values are within bounds.
@@ -328,7 +329,7 @@ func (s *RalphSessionSpec) Validate() []string {
 	if s.Provider == "" {
 		errs = append(errs, "spec.provider is required")
 	} else if !ValidProviders[s.Provider] {
-		errs = append(errs, "spec.provider must be one of: claude, gemini, codex")
+		errs = append(errs, "spec.provider must be one of: claude, gemini, codex, a2a")
 	}
 	if s.Prompt == "" {
 		errs = append(errs, "spec.prompt is required")

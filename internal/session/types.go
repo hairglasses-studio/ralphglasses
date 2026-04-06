@@ -19,6 +19,7 @@ const (
 	ProviderCrush  Provider = "crush"
 	ProviderGoose  Provider = "goose"
 	ProviderAmp    Provider = "amp"
+	ProviderA2A    Provider = "a2a"
 )
 
 // SessionStatus represents the lifecycle state of a managed CLI session.
