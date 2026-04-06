@@ -179,6 +179,16 @@ func (s *Server) buildRCGroup() ToolGroup {
 				mcp.WithString("action", mcp.Required(), mcp.Description("Action: stop, stop_all, pause, resume, retry")),
 				mcp.WithString("target", mcp.Description("Session ID or repo name (required except stop_all)")),
 			), s.handleRCAct},
+			{mcp.NewTool("ralphglasses_dispatch",
+				mcp.WithDescription("Unified cross-provider dispatch for mobile RC. Sends prompts, stops, pauses, resumes, or retries sessions with auto provider selection."),
+				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
+				mcp.WithString("action", mcp.Required(), mcp.Description("Action: send, stop, pause, resume, retry")),
+				mcp.WithString("prompt", mcp.Description("Prompt text (required for send action)")),
+				mcp.WithString("provider", mcp.Description("Provider: claude, codex, gemini, or auto (default: auto)")),
+			), s.handleDispatch},
+			{mcp.NewTool("ralphglasses_fleet_summary",
+				mcp.WithDescription("One-call fleet overview: total sessions, active/stopped counts, total cost, per-repo status. Compact text for mobile."),
+			), s.handleFleetSummary},
 		},
 	}
 }

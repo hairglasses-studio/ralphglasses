@@ -1,0 +1,91 @@
+name: Ralph Trigger
+on:
+  workflow_dispatch:
+    inputs:
+      event:
+        description: 'Event type to trigger (e.g. deploy, audit, sweep)'
+        required: true
+        type: string
+      payload:
+        description: 'JSON payload for the trigger'
+        required: false
+        type: string
+        default: '{}'
+      endpoint:
+        description: 'Ralph trigger endpoint URL'
+        required: false
+        type: string
+        default: 'http://localhost:9474'
+
+  # Can also be triggered by other workflows via workflow_call.
+  workflow_call:
+    inputs:
+      event:
+        description: 'Event type to trigger'
+        required: true
+        type: string
+      payload:
+        description: 'JSON payload for the trigger'
+        required: false
+        type: string
+        default: '{}'
+      endpoint:
+        description: 'Ralph trigger endpoint URL'
+        required: false
+        type: string
+        default: 'http://localhost:9474'
+    secrets:
+      RALPH_TRIGGER_TOKEN:
+        description: 'Optional auth token for the trigger endpoint'
+        required: false
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Ralph session
+        env:
+          ENDPOINT: ${{ inputs.endpoint }}
+          EVENT: ${{ inputs.event }}
+          PAYLOAD: ${{ inputs.payload }}
+          TOKEN: ${{ secrets.RALPH_TRIGGER_TOKEN }}
+        run: |
+          # Build the trigger request body.
+          BODY=$(jq -n \
+            --arg source "github-actions" \
+            --arg event "$EVENT" \
+            --argjson payload "$PAYLOAD" \
+            '{source: $source, event: $event, payload: $payload}')
+
+          echo "Triggering Ralph: $BODY"
+
+          # Build auth header if token is set.
+          AUTH_HEADER=""
+          if [ -n "$TOKEN" ]; then
+            AUTH_HEADER="-H \"Authorization: Bearer $TOKEN\""
+          fi
+
+          # Fire the trigger.
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            $AUTH_HEADER \
+            -d "$BODY" \
+            "${ENDPOINT}/api/trigger")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY_RESPONSE=$(echo "$RESPONSE" | head -n -1)
+
+          echo "Response ($HTTP_CODE): $BODY_RESPONSE"
+
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "::error::Trigger failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          # Extract run_id for downstream use.
+          RUN_ID=$(echo "$BODY_RESPONSE" | jq -r '.run_id // empty')
+          if [ -n "$RUN_ID" ]; then
+            echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+            echo "Launched run: $RUN_ID"
+          fi

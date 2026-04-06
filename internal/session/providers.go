@@ -48,7 +48,7 @@ func estimateCostFromTokens(provider Provider, raw map[string]any) float64 {
 func ValidateProvider(p Provider) error {
 	bin := providerBinary(p)
 	if bin == "" {
-		return fmt.Errorf("unknown provider: %q (valid: claude, gemini, codex)", p)
+		return fmt.Errorf("unknown provider: %q (valid: claude, gemini, codex, crush, goose, amp)", p)
 	}
 	if _, err := exec.LookPath(bin); err != nil {
 		return fmt.Errorf("%s binary not found on PATH: %w", bin, err)
@@ -63,6 +63,12 @@ func providerEnvVar(p Provider) string {
 		return "GOOGLE_API_KEY"
 	case ProviderCodex:
 		return "OPENAI_API_KEY"
+	case ProviderCrush:
+		return "ANTHROPIC_API_KEY"
+	case ProviderGoose:
+		return "GOOSE_API_KEY"
+	case ProviderAmp:
+		return "AMP_ACCESS_TOKEN"
 	default:
 		return "ANTHROPIC_API_KEY"
 	}
@@ -74,6 +80,14 @@ func ValidateProviderEnv(p Provider) error {
 	if os.Getenv(envVar) == "" {
 		// Gemini also accepts GEMINI_API_KEY
 		if p == ProviderGemini && os.Getenv("GEMINI_API_KEY") != "" {
+			return nil
+		}
+		// Goose accepts ANTHROPIC_API_KEY or OPENAI_API_KEY as fallbacks
+		if p == ProviderGoose && (os.Getenv("ANTHROPIC_API_KEY") != "" || os.Getenv("OPENAI_API_KEY") != "") {
+			return nil
+		}
+		// Crush accepts OPENAI_API_KEY or GOOGLE_API_KEY as fallbacks
+		if p == ProviderCrush && (os.Getenv("OPENAI_API_KEY") != "" || os.Getenv("GOOGLE_API_KEY") != "") {
 			return nil
 		}
 		return fmt.Errorf("%s not set (required for provider %q)", envVar, p)
@@ -131,6 +145,26 @@ func UnsupportedOptionsWarnings(p Provider, opts LaunchOptions) []string {
 		if opts.Worktree != "" {
 			warnings = append(warnings, "worktree is ignored by codex provider")
 		}
+	case ProviderCrush, ProviderGoose, ProviderAmp:
+		name := string(p)
+		if opts.SystemPrompt != "" && p != ProviderCrush {
+			warnings = append(warnings, "system_prompt is ignored by "+name+" provider")
+		}
+		if opts.MaxBudgetUSD > 0 {
+			warnings = append(warnings, "max_budget_usd is ignored by "+name+" provider")
+		}
+		if opts.Agent != "" {
+			warnings = append(warnings, "agent is ignored by "+name+" provider")
+		}
+		if opts.MaxTurns > 0 {
+			warnings = append(warnings, "max_turns is ignored by "+name+" provider")
+		}
+		if len(opts.AllowedTools) > 0 {
+			warnings = append(warnings, "allowed_tools is ignored by "+name+" provider")
+		}
+		if opts.Worktree != "" {
+			warnings = append(warnings, "worktree is ignored by "+name+" provider")
+		}
 	}
 	return warnings
 }
@@ -142,6 +176,12 @@ func ProviderDefaults(p Provider) (model string) {
 		return "gemini-2.5-pro"
 	case ProviderCodex:
 		return "gpt-5.4"
+	case ProviderCrush:
+		return "sonnet"
+	case ProviderGoose:
+		return "claude-sonnet-4-6"
+	case ProviderAmp:
+		return "amp-default"
 	default:
 		return "sonnet"
 	}
@@ -157,6 +197,12 @@ func providerBinary(p Provider) string {
 		return "gemini"
 	case ProviderCodex:
 		return "codex"
+	case ProviderCrush:
+		return "crush"
+	case ProviderGoose:
+		return "goose"
+	case ProviderAmp:
+		return "amp"
 	default:
 		return ""
 	}
@@ -187,6 +233,12 @@ func buildCmdForProvider(ctx context.Context, opts LaunchOptions) (*exec.Cmd, er
 		return buildGeminiCmd(ctx, opts), nil
 	case ProviderCodex:
 		return buildCodexCmd(ctx, opts), nil
+	case ProviderCrush:
+		return buildCrushCmd(ctx, opts), nil
+	case ProviderGoose:
+		return buildGooseCmd(ctx, opts), nil
+	case ProviderAmp:
+		return buildAmpCmd(ctx, opts), nil
 	default:
 		return buildClaudeCmd(ctx, opts), nil
 	}
