@@ -127,6 +127,69 @@ func TestRoute_FallbackChain(t *testing.T) {
 	}
 }
 
+func TestRoute_CascadeTierRouting(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Enabled = true
+	cfg.EnhanceThreshold = 0
+	cfg.CascadeTiersEnabled = true
+
+	router := NewPromptDJRouter(nil, nil, nil, nil, nil, cfg, t.TempDir())
+
+	// Simple workflow prompt should route to Tier 1 (fast/cheap).
+	req := RoutingRequest{
+		Prompt:   "Format this JSON file",
+		TaskType: enhancer.TaskTypeWorkflow,
+		Score:    85,
+	}
+	d, err := router.Route(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Route failed: %v", err)
+	}
+	if d.CascadeTierResult == nil {
+		t.Fatal("expected non-nil cascade tier result when CascadeTiersEnabled")
+	}
+	if d.CascadeTierResult.InitialTier != 1 {
+		t.Errorf("expected Tier 1 for simple workflow, got tier %d", d.CascadeTierResult.InitialTier)
+	}
+
+	// Complex analysis prompt should route to Tier 3 (powerful).
+	req2 := RoutingRequest{
+		Prompt:   "Analyze the system architecture and evaluate trade-offs between microservices and monolith for our distributed platform with 10M users",
+		TaskType: enhancer.TaskTypeAnalysis,
+		Score:    90,
+	}
+	d2, err := router.Route(context.Background(), req2)
+	if err != nil {
+		t.Fatalf("Route failed: %v", err)
+	}
+	if d2.CascadeTierResult == nil {
+		t.Fatal("expected non-nil cascade tier result")
+	}
+	if d2.CascadeTierResult.FinalTier != 3 {
+		t.Errorf("expected Tier 3 for complex analysis, got tier %d", d2.CascadeTierResult.FinalTier)
+	}
+}
+
+func TestRoute_CascadeTierDisabledByDefault(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Enabled = true
+	cfg.EnhanceThreshold = 0
+	// CascadeTiersEnabled defaults to false
+
+	router := NewPromptDJRouter(nil, nil, nil, nil, nil, cfg, t.TempDir())
+
+	d, err := router.Route(context.Background(), RoutingRequest{
+		Prompt: "Write a function",
+		Score:  70,
+	})
+	if err != nil {
+		t.Fatalf("Route failed: %v", err)
+	}
+	if d.CascadeTierResult != nil {
+		t.Error("expected nil cascade tier result when CascadeTiersEnabled is false")
+	}
+}
+
 func TestRoute_DecisionLogging(t *testing.T) {
 	dir := t.TempDir()
 	cfg := DefaultConfig()

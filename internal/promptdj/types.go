@@ -51,6 +51,9 @@ type RoutingDecision struct {
 	EstimatedCostUSD float64 `json:"estimated_cost_usd"`
 	CostTier         string  `json:"cost_tier"`
 
+	// Multi-model cascade tier (when CascadeTiersEnabled)
+	CascadeTierResult *CascadeTierResult `json:"cascade_tier_result,omitempty"`
+
 	// Fallback
 	FallbackChain []FallbackRoute `json:"fallback_chain,omitempty"`
 
