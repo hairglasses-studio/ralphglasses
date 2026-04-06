@@ -119,7 +119,6 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 			effectiveWorkerModel = session.ProviderDefaults(effectiveWorkerProvider)
 		}
 		return jsonResult(map[string]any{
-<<<<<<< Updated upstream
 			"dry_run":           true,
 			"runtime":           teamRuntimeForProvider(effectiveProvider),
 			"name":              config.Name,
@@ -132,33 +131,6 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 			"budget_usd":        effectiveBudget,
 			"max_concurrency":   maxInt(config.MaxConcurrency, 2),
 			"max_retries":       maxInt(config.MaxRetries, 2),
-||||||| Stash base
-			"dry_run":         true,
-			"runtime":         teamRuntimeForProvider(effectiveProvider),
-			"name":            config.Name,
-			"repo":            repoName,
-			"provider":        string(effectiveProvider),
-			"worker_provider": string(effectiveWorkerProvider),
-			"lead_agent":      config.LeadAgent,
-			"model":           effectiveModel,
-			"worker_model":    effectiveWorkerModel,
-			"budget_usd":      effectiveBudget,
-			"max_concurrency": maxInt(config.MaxConcurrency, 2),
-			"max_retries":     maxInt(config.MaxRetries, 2),
-=======
-			"dry_run":           true,
-			"runtime":           teamRuntimeForProvider(effectiveProvider),
-			"name":              config.Name,
-			"repo":              repoName,
-			"provider":          string(effectiveProvider),
-			"worker_provider":   string(effectiveWorkerProvider),
-			"lead_agent":        config.LeadAgent,
-			"model":             effectiveModel,
-			"worker_model":      effectiveWorkerModel,
-			"budget_usd":        effectiveBudget,
-			"max_concurrency":   maxInt(config.MaxConcurrency, 2),
-			"max_retries":       maxInt(config.MaxRetries, 2),
->>>>>>> Stashed changes
 			"execution_backend": firstNonBlank(config.ExecutionBackend, session.TeamExecutionBackendLocal),
 			"worktree_policy":   firstNonBlank(config.WorktreePolicy, session.TeamWorktreePolicyPerWorker),
 			"target_branch":     firstNonBlank(config.TargetBranch, "main"),
