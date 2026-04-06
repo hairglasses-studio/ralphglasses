@@ -136,7 +136,7 @@ var ToolGroupNames = []string{
 	"core", "session", "loop", "prompt", "fleet",
 	"repo", "roadmap", "team", "awesome", "advanced", "events", "feedback", "eval", "fleet_h",
 	"observability", "rdcycle", "plugin", "sweep",
-	"rc", "autonomy", "workflow", "docs", "recovery", "promptdj", "a2a",
+	"rc", "autonomy", "workflow", "docs", "recovery", "promptdj", "a2a", "trigger",
 }
 
 func (s *Server) scan() error {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -240,10 +241,14 @@ func (bb *Blackboard) appendToFile(e *Entry) {
 	if bb.stateDir == "" {
 		return
 	}
-	_ = os.MkdirAll(bb.stateDir, 0755)
+	if err := os.MkdirAll(bb.stateDir, 0755); err != nil {
+		slog.Error("blackboard: create state dir", "path", bb.stateDir, "err", err)
+		return
+	}
 
 	data, err := json.Marshal(e)
 	if err != nil {
+		slog.Error("blackboard: marshal entry", "key", e.Key, "err", err)
 		return
 	}
 	data = append(data, '\n')
@@ -251,10 +256,13 @@ func (bb *Blackboard) appendToFile(e *Entry) {
 	path := filepath.Join(bb.stateDir, "blackboard.jsonl")
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
+		slog.Error("blackboard: open file", "path", path, "err", err)
 		return
 	}
 	defer f.Close()
-	_, _ = f.Write(data)
+	if _, err := f.Write(data); err != nil {
+		slog.Error("blackboard: write entry", "path", path, "err", err)
+	}
 }
 
 func (bb *Blackboard) load() {
@@ -264,6 +272,9 @@ func (bb *Blackboard) load() {
 	path := filepath.Join(bb.stateDir, "blackboard.jsonl")
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if !os.IsNotExist(err) {
+			slog.Warn("blackboard: load failed", "path", path, "err", err)
+		}
 		return
 	}
 

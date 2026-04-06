@@ -1558,6 +1558,8 @@ func TestHandleCycleMerge_PathTraversal(t *testing.T) {
 		{"shell-metachar-semicolon", "/tmp/foo;rm -rf /"},
 		{"shell-metachar-pipe", "/tmp/foo|cat /etc/passwd"},
 		{"shell-metachar-backtick", "/tmp/`whoami`"},
+		{"absolute-outside-scanroot", "/etc/passwd"},
+		{"absolute-tmp-escape", "/tmp/malicious-repo"},
 	}
 
 	for _, tc := range cases {
@@ -1574,6 +1576,39 @@ func TestHandleCycleMerge_PathTraversal(t *testing.T) {
 			text := getResultText(result)
 			if !strings.Contains(text, string(ErrInvalidParams)) {
 				t.Errorf("expected INVALID_PARAMS for %q, got: %s", tc.worktreePaths, text)
+			}
+		})
+	}
+}
+
+func TestHandleLoopReplay_PathTraversal(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	cases := []struct {
+		name   string
+		loopID string
+	}{
+		{"dot-dot", "../../../etc/passwd"},
+		{"slash", "foo/bar"},
+		{"backslash", "foo\\bar"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := srv.handleLoopReplay(context.Background(), makeRequest(map[string]any{
+				"loop_id":   tc.loopID,
+				"iteration": 0,
+			}))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !result.IsError {
+				t.Fatalf("expected error for loopID %q", tc.loopID)
+			}
+			text := getResultText(result)
+			if !strings.Contains(text, string(ErrInvalidParams)) {
+				t.Errorf("expected INVALID_PARAMS for loopID %q, got: %s", tc.loopID, text)
 			}
 		})
 	}
