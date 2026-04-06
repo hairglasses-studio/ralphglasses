@@ -1,86 +1,226 @@
 package session
 
-import "testing"
+import (
+	"sync"
+	"testing"
+)
 
-func TestContextBudget_DefaultClaude(t *testing.T) {
+func TestContextBudget_NewDefaults(t *testing.T) {
 	t.Parallel()
-	b := DefaultContextBudget(ProviderClaude)
-	if b.MaxTokens != 200000 {
-		t.Errorf("expected 200000, got %d", b.MaxTokens)
+	b := NewContextBudget(200000)
+	if b.ModelLimit != 200000 {
+		t.Errorf("ModelLimit = %d, want 200000", b.ModelLimit)
 	}
-	if b.ResponseReserve != 20000 {
-		t.Errorf("expected 20000 reserve, got %d", b.ResponseReserve)
+	if b.UsedTokens != 0 {
+		t.Errorf("UsedTokens = %d, want 0", b.UsedTokens)
 	}
-	if b.Available() != 180000 {
-		t.Errorf("expected 180000 available, got %d", b.Available())
+	if b.WarningThreshold != 0.8 {
+		t.Errorf("WarningThreshold = %f, want 0.8", b.WarningThreshold)
+	}
+	if b.CriticalThreshold != 0.95 {
+		t.Errorf("CriticalThreshold = %f, want 0.95", b.CriticalThreshold)
 	}
 }
 
-func TestContextBudget_Allocate(t *testing.T) {
+func TestContextBudget_Record(t *testing.T) {
 	t.Parallel()
-	b := DefaultContextBudget(ProviderClaude)
-
-	if err := b.Allocate("system_prompt", 5000); err != nil {
-		t.Fatalf("allocate system_prompt: %v", err)
+	b := NewContextBudget(100000)
+	b.Record(5000)
+	if b.UsedTokens != 5000 {
+		t.Errorf("UsedTokens = %d, want 5000", b.UsedTokens)
 	}
-	if b.SystemPrompt != 5000 {
-		t.Errorf("expected 5000, got %d", b.SystemPrompt)
-	}
-	if b.Used() != 5000 {
-		t.Errorf("expected 5000 used, got %d", b.Used())
-	}
-	if b.Available() != 175000 {
-		t.Errorf("expected 175000 available, got %d", b.Available())
+	b.Record(3000)
+	if b.UsedTokens != 8000 {
+		t.Errorf("UsedTokens = %d, want 8000", b.UsedTokens)
 	}
 }
 
-func TestContextBudget_ExceedsFails(t *testing.T) {
+func TestContextBudget_Usage(t *testing.T) {
 	t.Parallel()
-	b := ContextBudget{MaxTokens: 1000, ResponseReserve: 200}
-	if err := b.Allocate("history", 801); err == nil {
-		t.Error("expected error when exceeding budget")
+	b := NewContextBudget(200000)
+	b.Record(100000)
+
+	used, limit, pct := b.Usage()
+	if used != 100000 {
+		t.Errorf("used = %d, want 100000", used)
 	}
-	if err := b.Allocate("history", 800); err != nil {
-		t.Errorf("expected 800 to fit: %v", err)
+	if limit != 200000 {
+		t.Errorf("limit = %d, want 200000", limit)
+	}
+	if pct != 0.5 {
+		t.Errorf("percent = %f, want 0.5", pct)
 	}
 }
 
-func TestContextBudget_Fits(t *testing.T) {
+func TestContextBudget_UsageZeroLimit(t *testing.T) {
 	t.Parallel()
-	b := ContextBudget{MaxTokens: 1000, ResponseReserve: 100}
-	if !b.Fits(900) {
-		t.Error("900 should fit in 900 available")
-	}
-	if b.Fits(901) {
-		t.Error("901 should not fit in 900 available")
-	}
-}
-
-func TestContextBudget_Utilization(t *testing.T) {
-	t.Parallel()
-	b := ContextBudget{MaxTokens: 1000, ResponseReserve: 0}
-	_ = b.Allocate("history", 500)
-	pct := b.UtilizationPct()
-	if pct != 50.0 {
-		t.Errorf("expected 50%%, got %.1f%%", pct)
+	b := NewContextBudget(0)
+	b.Record(100)
+	_, _, pct := b.Usage()
+	if pct != 0 {
+		t.Errorf("percent = %f, want 0 for zero limit", pct)
 	}
 }
 
-func TestContextBudget_UnknownSection(t *testing.T) {
+func TestContextBudget_IsWarning(t *testing.T) {
 	t.Parallel()
-	b := DefaultContextBudget(ProviderGemini)
-	if err := b.Allocate("bogus", 100); err == nil {
-		t.Error("expected error for unknown section")
+	b := NewContextBudget(100)
+
+	b.Record(80)
+	if b.IsWarning() {
+		t.Error("80/100 should not be warning (threshold is > 0.8)")
+	}
+
+	b.Record(1) // now 81/100 = 0.81
+	if !b.IsWarning() {
+		t.Error("81/100 should be warning")
 	}
 }
 
-func TestContextBudget_Summary(t *testing.T) {
+func TestContextBudget_IsCritical(t *testing.T) {
 	t.Parallel()
-	b := DefaultContextBudget(ProviderCodex)
-	_ = b.Allocate("system_prompt", 3000)
-	_ = b.Allocate("history", 7000)
-	s := b.Summary()
-	if s["used"].(int64) != 10000 {
-		t.Errorf("expected 10000 used, got %v", s["used"])
+	b := NewContextBudget(100)
+
+	b.Record(95)
+	if b.IsCritical() {
+		t.Error("95/100 should not be critical (threshold is > 0.95)")
+	}
+
+	b.Record(1) // now 96/100 = 0.96
+	if !b.IsCritical() {
+		t.Error("96/100 should be critical")
+	}
+}
+
+func TestContextBudget_IsWarningZeroLimit(t *testing.T) {
+	t.Parallel()
+	b := NewContextBudget(0)
+	b.Record(100)
+	if b.IsWarning() {
+		t.Error("should not be warning with zero limit")
+	}
+	if b.IsCritical() {
+		t.Error("should not be critical with zero limit")
+	}
+}
+
+func TestContextBudget_Reset(t *testing.T) {
+	t.Parallel()
+	b := NewContextBudget(100000)
+	b.Record(50000)
+	if b.UsedTokens != 50000 {
+		t.Fatalf("UsedTokens = %d, want 50000", b.UsedTokens)
+	}
+	b.Reset()
+	if b.UsedTokens != 0 {
+		t.Errorf("UsedTokens after Reset = %d, want 0", b.UsedTokens)
+	}
+}
+
+func TestContextBudget_Remaining(t *testing.T) {
+	t.Parallel()
+	b := NewContextBudget(1000)
+	b.Record(300)
+	if r := b.Remaining(); r != 700 {
+		t.Errorf("Remaining = %d, want 700", r)
+	}
+}
+
+func TestContextBudget_RemainingOverflow(t *testing.T) {
+	t.Parallel()
+	b := NewContextBudget(100)
+	b.Record(150)
+	if r := b.Remaining(); r != 0 {
+		t.Errorf("Remaining = %d, want 0 when over limit", r)
+	}
+}
+
+func TestContextBudget_Status(t *testing.T) {
+	t.Parallel()
+
+	t.Run("ok", func(t *testing.T) {
+		t.Parallel()
+		b := NewContextBudget(100)
+		b.Record(50)
+		if s := b.Status(); s != "ok" {
+			t.Errorf("Status = %q, want ok", s)
+		}
+	})
+
+	t.Run("warning", func(t *testing.T) {
+		t.Parallel()
+		b := NewContextBudget(100)
+		b.Record(85)
+		if s := b.Status(); s != "warning" {
+			t.Errorf("Status = %q, want warning", s)
+		}
+	})
+
+	t.Run("critical", func(t *testing.T) {
+		t.Parallel()
+		b := NewContextBudget(100)
+		b.Record(96)
+		if s := b.Status(); s != "critical" {
+			t.Errorf("Status = %q, want critical", s)
+		}
+	})
+}
+
+func TestContextBudget_ProviderDefaults(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		provider Provider
+		limit    int
+	}{
+		{ProviderClaude, DefaultClaudeLimit},
+		{ProviderGemini, DefaultGeminiLimit},
+		{ProviderCodex, DefaultCodexLimit},
+		{Provider("unknown"), DefaultCodexLimit},
+	}
+
+	for _, tt := range tests {
+		if got := ModelLimitForProvider(tt.provider); got != tt.limit {
+			t.Errorf("ModelLimitForProvider(%q) = %d, want %d", tt.provider, got, tt.limit)
+		}
+	}
+}
+
+func TestContextBudget_ConcurrentAccess(t *testing.T) {
+	t.Parallel()
+	b := NewContextBudget(1000000)
+
+	var wg sync.WaitGroup
+	const goroutines = 100
+	const tokensPerGoroutine = 1000
+
+	// Concurrent writers.
+	for range goroutines {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			b.Record(tokensPerGoroutine)
+		}()
+	}
+
+	// Concurrent readers.
+	for range goroutines {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			b.Usage()
+			b.IsWarning()
+			b.IsCritical()
+			b.Remaining()
+			b.Status()
+		}()
+	}
+
+	wg.Wait()
+
+	used, _, _ := b.Usage()
+	expected := goroutines * tokensPerGoroutine
+	if used != expected {
+		t.Errorf("used = %d, want %d after concurrent writes", used, expected)
 	}
 }

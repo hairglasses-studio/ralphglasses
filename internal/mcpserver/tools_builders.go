@@ -35,6 +35,9 @@ func defaultRegistry() *ToolGroupRegistry {
 	r.Register(NewFuncBuilder("promptdj", (*Server).buildPromptDJGroup))
 	r.Register(NewFuncBuilder("a2a", (*Server).buildA2AGroup))
 	r.Register(NewFuncBuilder("trigger", (*Server).buildTriggerGroup))
+	r.Register(NewFuncBuilder("approval", (*Server).buildApprovalGroup))
+	r.Register(NewFuncBuilder("context", (*Server).buildContextGroup))
+	r.Register(NewFuncBuilder("prefetch", (*Server).buildPrefetchGroup))
 	return r
 }
 

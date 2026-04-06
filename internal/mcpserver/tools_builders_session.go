@@ -126,6 +126,10 @@ func (s *Server) buildSessionGroup() ToolGroup {
 				mcp.WithNumber("context_lines", mcp.Description("Number of recent observations to include (default: 5)")),
 				mcp.WithString("handoff_reason", mcp.Description("Reason for handoff (tracked in handoff record)")),
 			), s.handleSessionHandoff},
+			{mcp.NewTool("ralphglasses_error_context",
+				mcp.WithDescription("Get error context for a session — consecutive errors, escalation status, and formatted recent errors for LLM context injection (12-Factor Agents Factor 9)"),
+				mcp.WithString("session_id", mcp.Required(), mcp.Description("Session ID")),
+			), s.handleErrorContext},
 		},
 	}
 }
