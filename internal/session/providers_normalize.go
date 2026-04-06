@@ -158,6 +158,8 @@ func sanitizeStderr(provider Provider, raw string) string {
 	switch provider {
 	case ProviderGemini:
 		return sanitizeGeminiStderr(raw)
+	case ProviderGoose:
+		return sanitizeGooseStderr(raw)
 	default:
 		return raw
 	}
@@ -240,6 +242,8 @@ func ParseProviderCostFromStderr(provider Provider, stderr string) (float64, boo
 		return parseGeminiStderrCost(cleaned)
 	case ProviderCodex:
 		return parseCodexStderrCost(cleaned)
+	case ProviderCrush, ProviderGoose, ProviderAmp:
+		return 0, false
 	}
 
 	return 0, false
@@ -302,7 +306,10 @@ func parseCodexStderrCost(cleaned string) (float64, bool) {
 // For Codex, strips ANSI codes and returns the last non-empty line
 // (typically the summary). For other providers, returns empty string.
 func cleanProviderOutput(provider Provider, raw string) string {
-	if provider != ProviderCodex || raw == "" {
+	if raw == "" {
+		return ""
+	}
+	if provider != ProviderCodex && provider != ProviderGoose {
 		return ""
 	}
 	cleaned := ansiRe.ReplaceAllString(raw, "")
@@ -591,3 +598,4 @@ func firstNonEmpty(values ...string) string {
 	}
 	return ""
 }
+

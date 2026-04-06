@@ -162,6 +162,15 @@ func (pc *ProviderCosts) CostRateForProvider(provider string) (inputPer1M, outpu
 	case "codex", "openai":
 		return pc.InputRate("codex", CostCodexInput),
 			pc.OutputRate("codex", CostCodexOutput)
+	case "crush":
+		return pc.InputRate("crush", CostClaudeSonnetInput),
+			pc.OutputRate("crush", CostClaudeSonnetOutput)
+	case "goose":
+		return pc.InputRate("goose", CostClaudeSonnetInput),
+			pc.OutputRate("goose", CostClaudeSonnetOutput)
+	case "amp":
+		return pc.InputRate("amp", CostClaudeSonnetInput),
+			pc.OutputRate("amp", CostClaudeSonnetOutput)
 	default:
 		// Unknown provider: return Claude rates as a safe default.
 		return pc.InputRate("claude_sonnet", CostClaudeSonnetInput),
