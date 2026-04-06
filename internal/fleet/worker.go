@@ -2,6 +2,7 @@ package fleet
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"path/filepath"
 	"time"
@@ -98,7 +99,7 @@ func (w *WorkerAgent) heartbeatLoop(ctx context.Context, repos []string, provide
 				s.Unlock()
 			}
 
-			_ = w.client.Heartbeat(ctx, HeartbeatPayload{
+			if err := w.client.Heartbeat(ctx, HeartbeatPayload{
 				WorkerID:       w.nodeID,
 				ActiveSessions: active,
 				SpentUSD:       spent,
@@ -106,7 +107,9 @@ func (w *WorkerAgent) heartbeatLoop(ctx context.Context, repos []string, provide
 				Repos:          repos,
 				Providers:      providers,
 				Load:           float64(active) / 4.0,
-			})
+			}); err != nil {
+				slog.Error("fleet worker: heartbeat failed", "worker", w.nodeID, "err", err)
+			}
 		}
 	}
 }
@@ -152,11 +155,13 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 
 	sess, err := w.sessMgr.Launch(ctx, opts)
 	if err != nil {
-		_ = w.client.CompleteWork(ctx, WorkCompletePayload{
+		if cErr := w.client.CompleteWork(ctx, WorkCompletePayload{
 			WorkItemID: item.ID,
 			Status:     WorkFailed,
 			Error:      err.Error(),
-		})
+		}); cErr != nil {
+			slog.Error("fleet worker: complete-work (launch fail) failed", "item", item.ID, "err", cErr)
+		}
 		return
 	}
 
@@ -180,7 +185,7 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 
 			switch status {
 			case session.StatusCompleted:
-				_ = w.client.CompleteWork(ctx, WorkCompletePayload{
+				if cErr := w.client.CompleteWork(ctx, WorkCompletePayload{
 					WorkItemID: item.ID,
 					Status:     WorkCompleted,
 					Result: &WorkResult{
@@ -191,10 +196,12 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 						ExitReason: exitReason,
 						Output:     lastOutput,
 					},
-				})
+				}); cErr != nil {
+					slog.Error("fleet worker: complete-work (success) failed", "item", item.ID, "err", cErr)
+				}
 				return
 			case session.StatusErrored, session.StatusStopped:
-				_ = w.client.CompleteWork(ctx, WorkCompletePayload{
+				if cErr := w.client.CompleteWork(ctx, WorkCompletePayload{
 					WorkItemID: item.ID,
 					Status:     WorkFailed,
 					Error:      exitReason,
@@ -205,7 +212,9 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 						DurationS:  time.Since(launched).Seconds(),
 						ExitReason: exitReason,
 					},
-				})
+				}); cErr != nil {
+					slog.Error("fleet worker: complete-work (error) failed", "item", item.ID, "err", cErr)
+				}
 				return
 			}
 		}
@@ -247,7 +256,9 @@ func (w *WorkerAgent) eventForwardLoop(ctx context.Context) {
 					Data:      e.Data,
 				}
 			}
-			_ = w.client.SendEvents(ctx, batch)
+			if err := w.client.SendEvents(ctx, batch); err != nil {
+				slog.Error("fleet worker: send events failed", "worker", w.nodeID, "events", len(batch.Events), "err", err)
+			}
 		}
 	}
 }

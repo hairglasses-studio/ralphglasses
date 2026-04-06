@@ -359,7 +359,7 @@ func (s *Server) handleCycleMerge(_ context.Context, req mcp.CallToolRequest) (*
 	for i, wt := range paths {
 		wt = strings.TrimSpace(wt)
 		paths[i] = wt
-		if err := ValidatePath(wt, ""); err != nil {
+		if err := ValidatePath(wt, s.ScanPath); err != nil {
 			return codedError(ErrInvalidParams, fmt.Sprintf("invalid worktree path %q: %v", wt, err)), nil
 		}
 	}
@@ -652,6 +652,9 @@ func (s *Server) handleLoopReplay(_ context.Context, req mcp.CallToolRequest) (*
 	loopID := getStringArg(req, "loop_id")
 	if loopID == "" {
 		return codedError(ErrInvalidParams, "loop_id is required"), nil
+	}
+	if err := validateSafePath(loopID); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid loop_id: %v", err)), nil
 	}
 	iteration := int(getNumberArg(req, "iteration", -1))
 	if iteration < 0 {
