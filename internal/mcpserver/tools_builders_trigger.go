@@ -1,0 +1,36 @@
+package mcpserver
+
+import (
+	"github.com/mark3labs/mcp-go/mcp"
+)
+
+func (s *Server) buildTriggerGroup() ToolGroup {
+	return ToolGroup{
+		Name:        "trigger",
+		Description: "External agent triggering and cron-based scheduling",
+		Tools: []ToolEntry{
+			{mcp.NewTool("ralphglasses_trigger_webhook",
+				mcp.WithDescription("Trigger an agent session from an external source (webhook, API, or another agent). Creates a trigger record and optionally launches immediately."),
+				mcp.WithString("prompt", mcp.Required(), mcp.Description("Task prompt for the agent session")),
+				mcp.WithString("agent_type", mcp.Required(), mcp.Description("Agent type to trigger"),
+					mcp.Enum("ralph", "loop", "cycle"),
+				),
+				mcp.WithNumber("priority", mcp.Description("Priority 1-10, higher = more urgent (default: 5)")),
+				mcp.WithString("model", mcp.Description("Model override for the session")),
+				mcp.WithNumber("budget_usd", mcp.Description("Budget in USD for the session")),
+				mcp.WithNumber("max_turns", mcp.Description("Maximum conversation turns")),
+				mcp.WithBoolean("launch", mcp.Description("Launch the session immediately (default: false, just queue)")),
+				mcp.WithString("repo", mcp.Description("Repo name (required when launch=true)")),
+			), s.handleTriggerWebhook},
+			{mcp.NewTool("ralphglasses_schedule_create",
+				mcp.WithDescription("Create, list, enable, or disable cron-based agent schedules. Schedules are persisted to ~/.ralph/schedules.json."),
+				mcp.WithString("action", mcp.Description("Action: create (default), list, enable, disable")),
+				mcp.WithString("prompt", mcp.Description("Task prompt (required for create)")),
+				mcp.WithString("cron_expression", mcp.Description("Cron expression e.g. '0 */6 * * *' (required for create)")),
+				mcp.WithString("agent_type", mcp.Description("Agent type: ralph (default), loop, cycle")),
+				mcp.WithBoolean("enabled", mcp.Description("Whether the schedule is active (default: true)")),
+				mcp.WithString("id", mcp.Description("Schedule ID (required for enable/disable)")),
+			), s.handleScheduleCreate},
+		},
+	}
+}
