@@ -34,6 +34,7 @@ func defaultRegistry() *ToolGroupRegistry {
 	r.Register(NewFuncBuilder("recovery", (*Server).buildRecoveryGroup))
 	r.Register(NewFuncBuilder("promptdj", (*Server).buildPromptDJGroup))
 	r.Register(NewFuncBuilder("a2a", (*Server).buildA2AGroup))
+	r.Register(NewFuncBuilder("trigger", (*Server).buildTriggerGroup))
 	return r
 }
 
