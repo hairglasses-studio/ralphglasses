@@ -276,6 +276,99 @@ func injectTraceID(result *mcp.CallToolResult, traceID string) {
 	})
 }
 
+// DefaultMaxResponseSize is the default maximum response size in bytes (4KB).
+// Responses exceeding this are truncated to reduce JSON parse failures in
+// downstream LLM consumers (root cause #1 of the 25.7% retry rate).
+const DefaultMaxResponseSize = 4096
+
+// ResponseSizeLimitMiddleware truncates tool responses that exceed maxBytes.
+// When a response is truncated, the original content is replaced with a
+// truncated version plus a metadata note indicating the original size.
+// This addresses the #1 root cause (35%) of JSON retry failures: responses
+// over 4KB causing parse failures in LLM consumers.
+func ResponseSizeLimitMiddleware(maxBytes int) server.ToolHandlerMiddleware {
+	if maxBytes <= 0 {
+		maxBytes = DefaultMaxResponseSize
+	}
+	return func(next server.ToolHandlerFunc) server.ToolHandlerFunc {
+		return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			result, err := next(ctx, req)
+			if err != nil || result == nil {
+				return result, err
+			}
+
+			// Measure total text content size.
+			totalSize := 0
+			for _, c := range result.Content {
+				if tc, ok := c.(mcp.TextContent); ok {
+					totalSize += len(tc.Text)
+				}
+			}
+
+			if totalSize <= maxBytes {
+				return result, nil
+			}
+
+			slog.WarnContext(ctx, "mcp.response.truncated",
+				"tool", req.Params.Name,
+				"original_bytes", totalSize,
+				"max_bytes", maxBytes,
+			)
+
+			// Truncate text content to fit within the budget.
+			truncated := truncateResponseContent(result.Content, maxBytes, totalSize)
+			result.Content = truncated
+			return result, nil
+		}
+	}
+}
+
+// truncateResponseContent reduces text content to fit within maxBytes,
+// preserving as much of the first content block as possible and appending
+// a truncation notice with the original size.
+func truncateResponseContent(content []mcp.Content, maxBytes, originalSize int) []mcp.Content {
+	notice := fmt.Sprintf("\n[TRUNCATED: response was %d bytes, showing first %d]", originalSize, maxBytes)
+	budget := maxBytes - len(notice)
+	if budget < 0 {
+		budget = 0
+	}
+
+	var result []mcp.Content
+	remaining := budget
+
+	for _, c := range content {
+		tc, ok := c.(mcp.TextContent)
+		if !ok {
+			// Preserve non-text content (images, etc.) as-is.
+			result = append(result, c)
+			continue
+		}
+
+		if remaining <= 0 {
+			// Budget exhausted; skip remaining text blocks.
+			continue
+		}
+
+		text := tc.Text
+		if len(text) > remaining {
+			text = text[:remaining]
+		}
+		remaining -= len(text)
+		result = append(result, mcp.TextContent{
+			Type: "text",
+			Text: text,
+		})
+	}
+
+	// Append truncation notice as a separate content block.
+	result = append(result, mcp.TextContent{
+		Type: "text",
+		Text: notice,
+	})
+
+	return result
+}
+
 // RecordToolCallPrometheus pushes a tool call metric to Prometheus.
 func RecordToolCallPrometheus(prom *tracing.PrometheusRecorder, toolName string, latencyMs int64, success bool) {
 	if prom == nil {
