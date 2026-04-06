@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
@@ -54,44 +55,12 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 	}
 
 	workerProvider := session.Provider(pp.String("worker_provider"))
+	leadAgent := pp.String("lead_agent")
+	if err := session.ValidateLaunchAgent(teamProvider, leadAgent); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("lead_agent: %v", err)), nil
+	}
 
 	config := session.TeamConfig{
-<<<<<<< Updated upstream
-		Name:           teamName,
-		Provider:       teamProvider,
-		WorkerProvider: workerProvider,
-		RepoPath:       r.Path,
-		LeadAgent:      pp.String("lead_agent"),
-		Tasks:          tasks,
-		Model:          pp.String("model"),
-		MaxBudgetUSD:   pp.FloatOr("budget_usd", 0),
-||||||| Stash base
-		Name:           teamName,
-		Provider:       teamProvider,
-		WorkerProvider: workerProvider,
-		RepoPath:       r.Path,
-		LeadAgent:      leadAgent,
-		Tasks:          tasks,
-		Model:          pp.String("model"),
-		WorkerModel:    pp.String("worker_model"),
-		MaxBudgetUSD:   pp.FloatOr("budget_usd", 0),
-		MaxConcurrency: int(pp.FloatOr("max_concurrency", 0)),
-		MaxRetries:     int(pp.FloatOr("max_retries", 0)),
-		ExecutionBackend: strings.TrimSpace(pp.String("execution_backend")),
-		WorktreePolicy:   strings.TrimSpace(pp.String("worktree_policy")),
-		TargetBranch:     strings.TrimSpace(pp.String("target_branch")),
-		AutoStart:        pp.Bool("autostart"),
-	}
-	if config.ExecutionBackend == "" && teamProvider == session.ProviderCodex {
-		if s.FleetCoordinator != nil || s.FleetClient != nil {
-			config.ExecutionBackend = session.TeamExecutionBackendFleet
-		} else {
-			config.ExecutionBackend = session.TeamExecutionBackendLocal
-		}
-	}
-	if config.WorktreePolicy == "" && teamProvider == session.ProviderCodex {
-		config.WorktreePolicy = session.TeamWorktreePolicyPerWorker
-=======
 		Name:             teamName,
 		Provider:         teamProvider,
 		WorkerProvider:   workerProvider,
@@ -117,7 +86,6 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 	}
 	if config.WorktreePolicy == "" && teamProvider == session.ProviderCodex {
 		config.WorktreePolicy = session.TeamWorktreePolicyPerWorker
->>>>>>> Stashed changes
 	}
 
 	if pp.Bool("dry_run") {
@@ -142,46 +110,15 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 				effectiveModel = "claude-sonnet-4-6"
 			}
 		}
-		effectiveLeadAgent := config.LeadAgent
-		if effectiveLeadAgent == "" {
-			effectiveLeadAgent = "team-lead"
-		}
 		effectiveBudget := config.MaxBudgetUSD
 		if effectiveBudget <= 0 {
 			effectiveBudget = 5.0
 		}
+		effectiveWorkerModel := config.WorkerModel
+		if effectiveWorkerModel == "" {
+			effectiveWorkerModel = session.ProviderDefaults(effectiveWorkerProvider)
+		}
 		return jsonResult(map[string]any{
-<<<<<<< Updated upstream
-			"dry_run":         true,
-			"name":            config.Name,
-			"repo":            repoName,
-			"provider":        string(effectiveProvider),
-			"worker_provider": string(effectiveWorkerProvider),
-			"lead_agent":      effectiveLeadAgent,
-			"model":           effectiveModel,
-			"budget_usd":      effectiveBudget,
-			"tasks":           config.Tasks,
-			"task_count":      len(config.Tasks),
-||||||| Stash base
-			"dry_run":         true,
-			"runtime":         teamRuntimeForProvider(effectiveProvider),
-			"name":            config.Name,
-			"repo":            repoName,
-			"provider":        string(effectiveProvider),
-			"worker_provider": string(effectiveWorkerProvider),
-			"lead_agent":      config.LeadAgent,
-			"model":           effectiveModel,
-			"worker_model":    effectiveWorkerModel,
-			"budget_usd":      effectiveBudget,
-			"max_concurrency": maxInt(config.MaxConcurrency, 2),
-			"max_retries":     maxInt(config.MaxRetries, 2),
-			"execution_backend": firstNonBlank(config.ExecutionBackend, session.TeamExecutionBackendLocal),
-			"worktree_policy":   firstNonBlank(config.WorktreePolicy, session.TeamWorktreePolicyPerWorker),
-			"target_branch":     firstNonBlank(config.TargetBranch, "main"),
-			"autostart":         config.AutoStart,
-			"tasks":           config.Tasks,
-			"task_count":      len(config.Tasks),
-=======
 			"dry_run":           true,
 			"runtime":           teamRuntimeForProvider(effectiveProvider),
 			"name":              config.Name,
@@ -200,7 +137,6 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 			"autostart":         config.AutoStart,
 			"tasks":             config.Tasks,
 			"task_count":        len(config.Tasks),
->>>>>>> Stashed changes
 		}), nil
 	}
 
@@ -224,36 +160,6 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 
 	// Enrich with lead session info
 	result := map[string]any{
-<<<<<<< Updated upstream
-		"name":    team.Name,
-		"repo":    team.RepoPath,
-		"status":  team.Status,
-		"tasks":   team.Tasks,
-		"created": team.CreatedAt,
-||||||| Stash base
-		"name":                 team.Name,
-		"repo":                 team.RepoPath,
-		"provider":             team.Provider,
-		"worker_provider":      team.WorkerProvider,
-		"status":               team.Status,
-		"run_state":            team.RunState,
-		"runtime":              team.Runtime,
-		"tasks":                team.Tasks,
-		"created":              team.CreatedAt,
-		"updated":              team.UpdatedAt,
-		"planner_session_id":   team.PlannerSessionID,
-		"last_planner_summary": team.LastPlannerSummary,
-		"pending_question":     team.PendingQuestion,
-		"step_count":           team.StepCount,
-		"execution_backend":    team.ExecutionBackend,
-		"worktree_policy":      team.WorktreePolicy,
-		"autostart":            team.AutoStart,
-		"controller_running":   team.ControllerRunning,
-		"last_controller_error": team.LastControllerError,
-		"target_branch":        team.TargetBranch,
-		"integration_branch":   team.IntegrationBranch,
-		"integration_path":     team.IntegrationPath,
-=======
 		"name":                  team.Name,
 		"repo":                  team.RepoPath,
 		"provider":              team.Provider,
@@ -276,8 +182,21 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 		"target_branch":         team.TargetBranch,
 		"integration_branch":    team.IntegrationBranch,
 		"integration_path":      team.IntegrationPath,
->>>>>>> Stashed changes
 	}
+
+	activeWorkers := 0
+	completedTasks := 0
+	for _, task := range team.Tasks {
+		if task.Status == session.TeamTaskInProgress {
+			activeWorkers++
+		}
+		if task.Status == session.TeamTaskCompleted {
+			completedTasks++
+		}
+	}
+	result["active_workers"] = activeWorkers
+	result["completed_tasks"] = completedTasks
+	result["task_count"] = len(team.Tasks)
 
 	if lead, ok := s.SessMgr.Get(team.LeadID); ok {
 		lead.Lock()
@@ -294,6 +213,95 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 	return jsonResult(result), nil
 }
 
+func (s *Server) handleTeamStep(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "name")
+	if name == "" {
+		return codedError(ErrInvalidParams, "team name required"), nil
+	}
+
+	result, err := s.SessMgr.StepTeam(ctx, name)
+	if err != nil {
+		if err == session.ErrTeamNotFound {
+			return codedError(ErrTeamNotFound, fmt.Sprintf("team not found: %s", name)), nil
+		}
+		return codedError(ErrInternal, fmt.Sprintf("team step failed: %v", err)), nil
+	}
+	return jsonResult(result), nil
+}
+
+func (s *Server) handleTeamAnswer(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "name")
+	if name == "" {
+		return codedError(ErrInvalidParams, "team name required"), nil
+	}
+	answer := getStringArg(req, "answer")
+	if answer == "" {
+		return codedError(ErrInvalidParams, "answer required"), nil
+	}
+
+	team, err := s.SessMgr.AnswerTeam(name, answer, getStringArg(req, "task_id"))
+	if err != nil {
+		if err == session.ErrTeamNotFound {
+			return codedError(ErrTeamNotFound, fmt.Sprintf("team not found: %s", name)), nil
+		}
+		return codedError(ErrInvalidParams, err.Error()), nil
+	}
+	return jsonResult(team), nil
+}
+
+func (s *Server) handleTeamStart(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "name")
+	if name == "" {
+		return codedError(ErrInvalidParams, "team name required"), nil
+	}
+	team, err := s.SessMgr.StartTeam(ctx, name)
+	if err != nil {
+		if err == session.ErrTeamNotFound {
+			return codedError(ErrTeamNotFound, fmt.Sprintf("team not found: %s", name)), nil
+		}
+		return codedError(ErrInternal, fmt.Sprintf("team start failed: %v", err)), nil
+	}
+	return jsonResult(team), nil
+}
+
+func (s *Server) handleTeamStop(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "name")
+	if name == "" {
+		return codedError(ErrInvalidParams, "team name required"), nil
+	}
+	team, err := s.SessMgr.StopTeam(name)
+	if err != nil {
+		if err == session.ErrTeamNotFound {
+			return codedError(ErrTeamNotFound, fmt.Sprintf("team not found: %s", name)), nil
+		}
+		return codedError(ErrInternal, fmt.Sprintf("team stop failed: %v", err)), nil
+	}
+	return jsonResult(team), nil
+}
+
+func (s *Server) handleTeamAwait(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := getStringArg(req, "name")
+	if name == "" {
+		return codedError(ErrInvalidParams, "team name required"), nil
+	}
+	timeoutSeconds := getNumberArg(req, "timeout_seconds", 0)
+	pollSeconds := getNumberArg(req, "poll_seconds", 2)
+	awaitCtx := ctx
+	var cancel context.CancelFunc
+	if timeoutSeconds > 0 {
+		awaitCtx, cancel = context.WithTimeout(ctx, time.Duration(timeoutSeconds*float64(time.Second)))
+		defer cancel()
+	}
+	team, err := s.SessMgr.AwaitTeam(awaitCtx, name, time.Duration(pollSeconds*float64(time.Second)))
+	if err != nil {
+		if err == session.ErrTeamNotFound {
+			return codedError(ErrTeamNotFound, fmt.Sprintf("team not found: %s", name)), nil
+		}
+		return codedError(ErrInternal, fmt.Sprintf("team await failed: %v", err)), nil
+	}
+	return jsonResult(team), nil
+}
+
 func (s *Server) handleTeamDelegate(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := getStringArg(req, "name")
 	if name == "" {
@@ -308,13 +316,39 @@ func (s *Server) handleTeamDelegate(_ context.Context, req mcp.CallToolRequest) 
 	count, err := s.SessMgr.DelegateTask(name, session.TeamTask{
 		Description: task,
 		Provider:    taskProvider,
-		Status:      "pending",
+		Status:      session.TeamTaskPending,
 	})
 	if err != nil {
 		return codedError(ErrTeamNotFound, err.Error()), nil
 	}
 
 	return textResult(fmt.Sprintf("Added task to team %s (%d total tasks)", name, count)), nil
+}
+
+func teamRuntimeForProvider(provider session.Provider) string {
+	if provider == session.ProviderCodex {
+		return session.TeamRuntimeStructuredCodex
+	}
+	return session.TeamRuntimeLegacyLead
+}
+
+func maxInt(values ...int) int {
+	maxValue := 0
+	for _, value := range values {
+		if value > maxValue {
+			maxValue = value
+		}
+	}
+	return maxValue
+}
+
+func firstNonBlank(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 // Agent handlers
@@ -371,7 +405,7 @@ func (s *Server) handleAgentDefine(_ context.Context, req mcp.CallToolRequest) (
 	case session.ProviderGemini:
 		location = fmt.Sprintf("%s/.gemini/agents/%s.md", r.Path, agentName)
 	case session.ProviderCodex:
-		location = fmt.Sprintf("%s/AGENTS.md (## %s)", r.Path, agentName)
+		location = fmt.Sprintf("%s/.codex/agents/%s.toml", r.Path, agentName)
 	default:
 		location = fmt.Sprintf("%s/.claude/agents/%s.md", r.Path, agentName)
 	}

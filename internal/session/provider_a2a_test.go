@@ -284,7 +284,7 @@ func TestRepoNameFromPath(t *testing.T) {
 		path string
 		want string
 	}{
-		{"/home/hg/hairglasses-studio/ralphglasses", "ralphglasses"},
+		{"/home/user/projects/ralphglasses", "ralphglasses"},
 		{"/tmp/repo", "repo"},
 		{"/tmp/repo/", "repo"},
 		{"", ""},
