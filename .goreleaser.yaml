@@ -8,31 +8,101 @@ before:
 builds:
   - id: ralphglasses
     binary: ralphglasses
-    main: ./cmd/ralphglasses
-    goos: [linux, darwin]
-    goarch: [amd64, arm64]
+    main: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
     ldflags:
       - -s -w
       - -X github.com/hairglasses-studio/ralphglasses/cmd.version={{.Version}}
       - -X github.com/hairglasses-studio/ralphglasses/cmd.commit={{.ShortCommit}}
+
   - id: ralphglasses-godview
     binary: ralphglasses-godview
     main: ./cmd/ralphglasses-godview
-    goos: [linux, darwin]
-    goarch: [amd64, arm64]
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+  - id: ralphglasses-mcp
+    binary: ralphglasses-mcp
+    main: ./cmd/ralphglasses-mcp
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+  - id: prompt-improver
+    binary: prompt-improver
+    main: ./cmd/prompt-improver
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
     ldflags:
       - -s -w
 
 archives:
   - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
         formats: [zip]
 
 checksum:
+  name_template: checksums.txt
   algorithm: sha256
+
+changelog:
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 100
+    - title: Bug Fixes
+      regexp: '^.*?(fix|refactor)(\(.+\))??!?:.+$'
+      order: 200
+    - title: Dependencies
+      regexp: '^.*?(.+)\(deps\)!?:.+$'
+      order: 300
+    - title: Other
+      order: 9999
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
 
 release:
   github:
     owner: hairglasses-studio
     name: ralphglasses
+  draft: false
+  prerelease: auto
