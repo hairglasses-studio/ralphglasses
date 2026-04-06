@@ -220,7 +220,7 @@ hoursEst = (totalBudget - totalUSD) / burnRate
 4. **Cost data source:** Reads from Claude Code stdin JSON: `cost_usd`, `total_tokens`, `max_tokens`, `duration_ms`, `model`.
 
 **Applicability to ralphglasses:**
-- The SQLite schema pattern maps directly to ROADMAP 5.5.1 (global budget pool stored in SQLite). Using `modernc.org/sqlite` (pure Go, already used by sibling project shielddd) avoids CGo.
+- The SQLite schema pattern maps directly to ROADMAP 5.5.1 (global budget pool stored in SQLite). Using `modernc.org/sqlite` (pure Go, already used by internal SQLite project) avoids CGo.
 - The active_time burn-rate mode is superior to the current instantaneous calculation in `handleMarathonDashboard`. Ralph should use inter-event timestamps to exclude idle periods.
 - The daily/monthly aggregation pattern enables ROADMAP 5.5.3 (budget dashboard) and 6.10.1 (historical cost model).
 - The auto_reset pattern maps to marathon checkpoint semantics -- archive costs at each checkpoint, start fresh counters.
@@ -397,7 +397,7 @@ Wire into `Manager.Launch()` to check pool availability before starting, and int
 **Impact:** Medium -- enables historical queries, forecasting, and restart survival
 **ROADMAP:** 5.5.1, 5.5.3, 6.10.1
 
-Use `modernc.org/sqlite` (pure Go, no CGo -- already proven in sibling project shielddd) for persistent cost storage:
+Use `modernc.org/sqlite` (pure Go, no CGo -- already proven in internal SQLite project) for persistent cost storage:
 
 ```sql
 CREATE TABLE cost_events (
@@ -692,7 +692,7 @@ Load from `.ralphrc` or `~/.ralphglasses/profiles/` JSON files, with `LoadProfil
 
 **Risk:** Multiple concurrent sessions writing to the same SQLite database.
 
-**Mitigation:** Use WAL mode (`PRAGMA journal_mode=WAL`) which allows concurrent reads during writes. Batch writes using a buffered channel pattern (write every N events or every T seconds, whichever comes first). The shielddd sibling project already demonstrates this pattern with `modernc.org/sqlite`.
+**Mitigation:** Use WAL mode (`PRAGMA journal_mode=WAL`) which allows concurrent reads during writes. Batch writes using a buffered channel pattern (write every N events or every T seconds, whichever comes first). The internal SQLite project project already demonstrates this pattern with `modernc.org/sqlite`.
 
 ### 6.4 Global Pool Deadlocks (Medium Risk)
 

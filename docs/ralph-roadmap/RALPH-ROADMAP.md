@@ -712,12 +712,12 @@ For a typical 10-turn session with 15K-token stable prefix: ~$0.085 cached vs $0
 
 | Tier | Count | % | Description | Repos |
 |------|-------|---|-------------|-------|
-| **T1 (Fleet-Ready)** | 19 | 25% | CLAUDE.md + go.mod + Makefile -- sweepable now | claudekit, dotfiles-mcp, hg-mcp, mcpkit, ralphglasses, systemd-mcp, tmux-mcp, process-mcp, jobb, jobbb, mesmer, webb, webbb, shielddd, hyprland-mcp, input-mcp, shader-mcp, prompt-improver, crabrave-old |
+| **T1 (Fleet-Ready)** | 19 | 25% | CLAUDE.md + go.mod + Makefile -- sweepable now | claudekit, dotfiles-mcp, hg-mcp, mcpkit, ralphglasses, systemd-mcp, tmux-mcp, process-mcp, [private-ops], [private-ops-2], mesmer, webb, webbb, [private-audit], hyprland-mcp, input-mcp, shader-mcp, prompt-improver, [private]-old |
 | **T2 (Partially Ready)** | 5 | 6% | Has build infra but missing agent context | gh-dash, pinecone-canopy, runmylife, terraform-docs, whiteclaw |
-| **T3 (Needs Setup)** | 44 | 57% | Missing core fleet infrastructure | cr8-cli, dotfiles, archlet, crabrave, and 40 others |
+| **T3 (Needs Setup)** | 44 | 57% | Missing core fleet infrastructure | cr8-cli, dotfiles, archlet, [private], and 40 others |
 | **T4 (Not Applicable)** | 8 | 10% | Forks, dormant, non-git | cmatrix, lnav, makima, etc. |
 
-**Inner ring** (7 repos with `.ralphrc` + `.ralph/`): claudekit, hg-mcp, jobb, mcpkit, mesmer, ralphglasses, whiteclaw [Agent 15].
+**Inner ring** (7 repos with `.ralphrc` + `.ralph/`): claudekit, hg-mcp, [private-ops], mcpkit, mesmer, ralphglasses, whiteclaw [Agent 15].
 
 **Dependency health**: 9 repos depend on mcpkit. 5 active repos use `../mcpkit` relative replace directives (consistent dev-mode pattern). 4 repos use absolute paths that break portability (2 deprecated, 2 legacy macOS paths). claudekit is the only active mcpkit consumer that builds from fresh clone. All 20 org-owned Go repos are on Go 1.26.1 [Agent 15].
 
@@ -730,7 +730,7 @@ Based on fleet readiness, test coverage, and strategic importance:
 | Priority | Repos | Rationale |
 |----------|-------|-----------|
 | **Wave 1** (now) | mcpkit, claudekit, dotfiles-mcp, systemd-mcp, tmux-mcp, process-mcp | Core frameworks + public MCP servers. All T1-ready. |
-| **Wave 2** | hg-mcp, mesmer, shielddd, jobb | Active T1 repos with .ralph/ integration. |
+| **Wave 2** | hg-mcp, mesmer, [private-audit], [private-ops] | Active T1 repos with .ralph/ integration. |
 | **Wave 3** | ralphglasses (self), prompt-improver | Self-improvement and prompt tooling. |
 | **Wave 4** | cr8-cli, dotfiles, runmylife | Non-Go or partially-ready repos needing CLAUDE.md or Makefile. |
 

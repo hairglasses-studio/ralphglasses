@@ -63,5 +63,5 @@ ralphglasses is part of the **hairglasses-studio** ecosystem:
 - **mcpkit** — Go MCP framework with ralph loop engine, finops, sampling, workflow, gateway
 - **hg-mcp** — Go MCP server with modular tool pattern (500+ tools)
 - **claudekit** — Go MCP with rdcycle perpetual loop, budget profiles
-- **shielddd** — Go + pure SQLite + MCP, audit logs
+- **[private]** — Go + pure SQLite + MCP, audit logs
 - **mesmer** — Go MCP server with ralph integration

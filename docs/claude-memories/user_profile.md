@@ -6,7 +6,7 @@ type: user
 
 Senior developer building the hairglasses-studio ecosystem on macOS. Maintains 9+ Go/Bash repos focused on autonomous AI development with Claude Code.
 
-**Key repos:** ralphglasses (TUI fleet control), mcpkit (Go MCP framework), claudekit (rdcycle perpetual loop), hg-mcp (500+ tools), mesmer (Go MCP platform), shielddd (SQLite + audit), ralph-claude-code (bash loop framework)
+**Key repos:** ralphglasses (TUI fleet control), mcpkit (Go MCP framework), claudekit (rdcycle perpetual loop), hg-mcp (500+ tools), mesmer (Go MCP platform), [private] (SQLite + audit), ralph-claude-code (bash loop framework)
 
 **Technical profile:** Deep Go expertise (Charmbracelet BubbleTea, Cobra, MCP protocol). Comfortable with complex parallel workstreams. Runs ambitious multi-file improvement batches.
 

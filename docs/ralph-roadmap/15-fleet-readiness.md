@@ -17,20 +17,20 @@ These repos have full agent context, Go build infrastructure, and a Makefile -- 
 | Repo | CLAUDE.md | AGENTS.md | .ralphrc | .ralph/ | Makefile | go.mod | .mcp.json | Tier |
 |------|-----------|-----------|----------|---------|----------|--------|-----------|------|
 | claudekit | Y | Y | Y | Y | Y | Y | Y | **T1** |
-| crabrave-old | Y | Y | - | - | Y | Y | - | **T1** |
+| [private-1] | Y | Y | - | - | Y | Y | - | **T1** |
 | dotfiles-mcp | Y | Y | - | - | Y | Y | - | **T1** |
 | hg-mcp | Y | Y | Y | Y | Y | Y | - | **T1** |
 | hyprland-mcp | Y | Y | - | - | Y | Y | - | **T1** |
 | input-mcp | Y | Y | - | - | Y | Y | - | **T1** |
-| jobb | Y | Y | Y | Y | Y | Y | Y | **T1** |
-| jobbb | Y | Y | - | - | Y | Y | - | **T1** |
+| [private-ops] | Y | Y | Y | Y | Y | Y | Y | **T1** |
+| [private-ops-2] | Y | Y | - | - | Y | Y | - | **T1** |
 | mcpkit | Y | Y | Y | Y | Y | Y | Y | **T1** |
 | mesmer | Y | Y | Y | Y | Y | Y | - | **T1** |
 | process-mcp | Y | Y | - | - | Y | Y | - | **T1** |
 | prompt-improver | - | Y | - | - | Y | Y | Y | **T1** |
 | ralphglasses | Y | Y | Y | Y | Y | Y | Y | **T1** |
 | shader-mcp | Y | Y | - | - | Y | Y | - | **T1** |
-| shielddd | Y | Y | - | - | Y | Y | - | **T1** |
+| [private-audit] | Y | Y | - | - | Y | Y | - | **T1** |
 | systemd-mcp | Y | Y | - | - | Y | Y | - | **T1** |
 | tmux-mcp | Y | Y | - | - | Y | Y | - | **T1** |
 | webb | Y | Y | - | - | Y | Y | - | **T1** |
@@ -64,13 +64,13 @@ Note: runmylife has CLAUDE.md + AGENTS.md + Makefile + go.mod but lacks .ralphrc
 | claude-skills | - | - | - | - | - | - | - | Skills repo |
 | comfyui-hairglasses-mix | - | - | - | - | - | - | - | ComfyUI |
 | cr8-cli | Y | Y | - | - | Y | - | Y | Python, not Go |
-| crabrave | Y | Y | - | - | - | - | Y | Python MCP |
-| crabravee | Y | Y | - | - | - | - | Y | Duplicate of crabrave |
+| [private-3] | Y | Y | - | - | - | - | Y | Python MCP |
+| [private-2] | Y | Y | - | - | - | - | Y | Duplicate of [private-3] |
 | dj-archive | Y | Y | - | - | - | - | - | Archive |
 | dotfile-museum | Y | Y | - | - | - | - | - | Reference |
 | dotfiles | Y | Y | - | - | - | - | Y | Config/shaders |
 | dotfiles-arch | - | - | - | - | - | - | - | Archive |
-| dotfiles-work | Y | Y | - | - | - | - | - | Private |
+| [private-dotfiles] | Y | Y | - | - | - | - | - | Private |
 | gaming-projects | Y | Y | - | - | - | - | - | Projects list |
 | gh-repo-star-archive | - | Y | - | - | - | - | - | Data repo |
 | github-stars-catalog | - | - | - | - | - | - | - | Data repo |
@@ -182,7 +182,7 @@ No version drift in org-owned Go repos.
 |------|----------|---------|------|------|
 | claudekit | Y | Y | T1-Framework | Terminal customization |
 | hg-mcp | Y | Y | T1-Active | 1,190-tool MCP server |
-| jobb | Y | Y | Private | Job search platform |
+| [private-ops] | Y | Y | Private | Job search platform |
 | mcpkit | Y | Y | T1-Framework | Core Go MCP framework |
 | mesmer | Y | Y | Legal-review | Platform ops (1,790 tools) |
 | ralphglasses | Y | Y | T1-Orchestrator | Fleet manager itself |
@@ -293,8 +293,8 @@ Priority weighted by: (1) dependency centrality, (2) development velocity, (3) c
 
 | Priority | Repo | Velocity (7d commits) | Gap Score | Rationale |
 |----------|------|-----------------------|-----------|-----------|
-| P2 | jobb | 115 | 10/10 | Highest velocity after ralphglasses. Already fleet-integrated. Private. |
-| P2 | shielddd | 14 | 10/10 | Perfect gap score. Private but production-grade. |
+| P2 | [private-ops] | 115 | 10/10 | Highest velocity after ralphglasses. Already fleet-integrated. Private. |
+| P2 | [private-audit] | 14 | 10/10 | Perfect gap score. Private but production-grade. |
 | P2 | cr8-cli | 26 | 9/10 | Python project, high velocity. Needs Makefile for Go sweep (or Python-specific sweep template). |
 | P2 | dotfiles | 171 | 7/10 | Extremely high velocity. Config repo, not Go, but benefits from sweep audits. |
 
@@ -384,7 +384,7 @@ Level 3 autonomy (as defined in ralphglasses ROADMAP.md) requires the fleet to i
 
 1. **19 of 77 repos (25%) are fleet-ready today.** They have CLAUDE.md, go.mod, and Makefile -- the minimum for an automated sweep.
 
-2. **7 repos form the inner ring** with .ralphrc + .ralph/ directories, indicating prior fleet interaction: claudekit, hg-mcp, jobb, mcpkit, mesmer, ralphglasses, whiteclaw.
+2. **7 repos form the inner ring** with .ralphrc + .ralph/ directories, indicating prior fleet interaction: claudekit, hg-mcp, [private-ops], mcpkit, mesmer, ralphglasses, whiteclaw.
 
 3. **No effective mcpkit version skew** across active repos. All 5 active consumers resolve to HEAD via replace directives. claudekit is the sole pinned-version exception at v0.1.1.
 
@@ -394,7 +394,7 @@ Level 3 autonomy (as defined in ralphglasses ROADMAP.md) requires the fleet to i
 
 6. **Critical blocking issues for production sweeps:** RetryTracker data race (no mutex), queue not persisted (lost on restart), scale-up has no actuator (advisory only).
 
-7. **Onboard in order:** mcpkit + Wave 1 servers first (dependency centrality), then high-velocity repos (dotfiles-mcp, claudekit, hg-mcp), then application layer (jobb, shielddd), then T3 batch expansion.
+7. **Onboard in order:** mcpkit + Wave 1 servers first (dependency centrality), then high-velocity repos (dotfiles-mcp, claudekit, hg-mcp), then application layer ([private-ops], [private-audit]), then T3 batch expansion.
 
 8. **L3 autonomy for 75+ repos requires:** queue persistence, parallel fan-out, local worker spawner, thread-safe RetryTracker, event-driven budget enforcement, and 100% CLAUDE.md coverage. Estimated 2-3 weeks of fleet infrastructure work.
 

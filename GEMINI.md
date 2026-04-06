@@ -139,7 +139,7 @@ The `distro/` directory contains configs for a bootable Linux thin client (Ubunt
 - **mcpkit**: Go MCP framework — ralph loop engine, finops, sampling, workflow, gateway
 - **hg-mcp**: Go MCP server with modular tool pattern (500+ tools)
 - **claudekit**: Go MCP with rdcycle perpetual loop, budget profiles
-- **shielddd**: Go + pure SQLite (modernc.org/sqlite) + MCP, audit logs
+- **[private]**: Go + pure SQLite (modernc.org/sqlite) + MCP, audit logs
 - **mesmer**: Go MCP server with ralph integration
 
 ## See Also

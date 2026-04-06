@@ -433,7 +433,7 @@ CREATE INDEX idx_file_edits_session ON file_edits(session_id);
 CREATE INDEX idx_file_edits_path_time ON file_edits(file_path, created_at);
 ```
 
-Use `modernc.org/sqlite` (pure Go, no CGO) as specified in ROADMAP 2.1.2. WAL mode for concurrent readers (TUI + MCP server). The existing `shielddd` repo in the same org already uses this library -- reuse patterns from there.
+Use `modernc.org/sqlite` (pure Go, no CGO) as specified in ROADMAP 2.1.2. WAL mode for concurrent readers (TUI + MCP server). The existing internal SQLite project repo in the same org already uses this library -- reuse patterns from there.
 
 Migration strategy:
 - `internal/session/migrations/001_initial.sql` with the schema above.
@@ -532,7 +532,7 @@ func (s *Session) TransitionTo(next SessionStatus) error {
 - Implement dual-write (JSON + SQLite) before cutting over.
 - Add a `ralphglasses migrate` subcommand that reads existing JSON files and inserts into SQLite.
 - Keep JSON files as backup for one release cycle.
-- The `shielddd` repo in the same org already uses `modernc.org/sqlite` -- reuse its connection setup patterns.
+- The internal SQLite project repo in the same org already uses `modernc.org/sqlite` -- reuse its connection setup patterns.
 
 ### Risk 2: Worktree Accumulation Disk Exhaustion (MEDIUM)
 

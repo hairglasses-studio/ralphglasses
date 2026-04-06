@@ -8,9 +8,9 @@ ROADMAP items: **6.2** (R&D Cycle Orchestrator), **8.5** (Self-Improvement Engin
 
 - **The R&D cycle orchestrator (6.2) has strong foundational pieces already built** -- `internal/model/benchmark.go` provides JSONL benchmark logging/summary, `internal/roadmap/` provides parse/analyze/export to rdcycle specs, and `claudekit/rdcycle/` contains the reference perpetual loop implementation with 8+ cycle specs. The gap is orchestration glue: benchmark comparison across iterations, regression detection, and auto-task-generation from regressions.
 - **The self-improvement engine (8.5) requires the R&D cycle (6.2) as its foundation**, but the existing `internal/session/journal.go` (401 lines, improvement journal + pattern consolidation) and `internal/enhancer/` (7,363 lines, prompt mutation/scoring) provide substantial building blocks for pattern mining and prompt evolution.
-- **The codebase knowledge graph (8.6) is a greenfield effort** with zero existing code. However, the `go/ast` + `go/types` standard library packages make Go codebase parsing straightforward, and `modernc.org/sqlite` (already proven in sibling repo `shielddd`) is the clear storage choice for a pure-Go SQLite graph store.
+- **The codebase knowledge graph (8.6) is a greenfield effort** with zero existing code. However, the `go/ast` + `go/types` standard library packages make Go codebase parsing straightforward, and `modernc.org/sqlite` (already proven in internal SQLite project) is the clear storage choice for a pure-Go SQLite graph store.
 - **The awesome-list research pipeline (`internal/awesome/`, 1,176 lines)** is the most mature research automation subsystem: fetch, diff, analyze, report, sync -- all working and tested. It should serve as the template for R&D cycle pipeline design.
-- **Monorepo integration across the hairglasses-studio ecosystem (10 repos)** currently relies on ad-hoc cross-references in CLAUDE.md. A `go.work` workspace file or shared module pattern would formalize dependency management and enable code sharing between `ralphglasses`, `mcpkit`, `claudekit`, `hg-mcp`, and `shielddd`.
+- **Monorepo integration across the hairglasses-studio ecosystem (10 repos)** currently relies on ad-hoc cross-references in CLAUDE.md. A `go.work` workspace file or shared module pattern would formalize dependency management and enable code sharing between `ralphglasses`, `mcpkit`, `claudekit`, `hg-mcp`, and internal SQLite project.
 
 ---
 
@@ -135,7 +135,7 @@ ROADMAP items: **6.2** (R&D Cycle Orchestrator), **8.5** (Self-Improvement Engin
 
 1. **Go standard library AST integration**: `go/ast`, `go/parser`, `go/types` are unused. These are required for 8.6.1 and would also benefit `roadmap/analyze.go` (currently uses filesystem checks only, missing function-level evidence).
 
-2. **SQLite storage**: No SQLite dependency in `go.mod`. Required for knowledge graph (8.6.2), analytics history (6.4.1), and cross-session coordination (6.3.1). The sibling repo `shielddd` uses `modernc.org/sqlite` -- a pure-Go implementation with no CGo requirement.
+2. **SQLite storage**: No SQLite dependency in `go.mod`. Required for knowledge graph (8.6.2), analytics history (6.4.1), and cross-session coordination (6.3.1). The internal SQLite project uses `modernc.org/sqlite` -- a pure-Go implementation with no CGo requirement.
 
 3. **Cross-iteration benchmark comparison**: `model/benchmark.go` writes individual entries and computes per-session summaries but has no cross-session comparison or trend analysis.
 
@@ -178,7 +178,7 @@ ROADMAP items: **6.2** (R&D Cycle Orchestrator), **8.5** (Self-Improvement Engin
 
 **Applicable to ralph**: Study their per-agent performance tracking for pattern mining (8.5.2). Their profile system is a reference for prompt evolution variant management (8.5.4).
 
-#### 3. shielddd (internal, Go, pure SQLite)
+#### 3. internal-sqlite-project (internal, Go, pure SQLite)
 **Relevance to 8.6**: Same organization. Uses `modernc.org/sqlite` for pure-Go SQLite with audit logging. Proven pattern for embedding SQLite in a Go binary without CGo.
 
 **Key patterns**: Schema migration at startup, WAL mode for concurrent reads, JSON columns for flexible metadata, audit trail with timestamps.
@@ -205,7 +205,7 @@ ROADMAP items: **6.2** (R&D Cycle Orchestrator), **8.5** (Self-Improvement Engin
 
 2. **JSONL append-only telemetry** (from `model/benchmark.go`): Append-only logs with periodic summary generation. No coordination overhead. Works across concurrent sessions. Apply to all R&D cycle metrics.
 
-3. **Pure-Go SQLite** (from `shielddd`): `modernc.org/sqlite` avoids CGo, simplifies cross-compilation, and works on all Go-supported platforms. Use for knowledge graph and analytics history.
+3. **Pure-Go SQLite** (from internal SQLite project): `modernc.org/sqlite` avoids CGo, simplifies cross-compilation, and works on all Go-supported platforms. Use for knowledge graph and analytics history.
 
 4. **AST visitor pattern** (from `go/ast`): `ast.Walk` + `ast.Visitor` interface for traversing Go source code. Use for knowledge graph population (8.6.1).
 
@@ -408,7 +408,7 @@ hairglasses-studio/
   claudekit/       -- rdcycle, themekit, statusline, skills
   hg-mcp/          -- 500+ tool Go MCP server
   hgmux/           -- (purpose TBD)
-  jobb/             -- (purpose TBD)
+  internal-ops/             -- (purpose TBD)
   mcpkit/           -- Go MCP framework, ralph loop engine, finops
   mesmer/           -- Go MCP with ralph integration
   prompt-improver/  -- archived, migrated to ralphglasses/internal/enhancer/

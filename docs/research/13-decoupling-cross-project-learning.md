@@ -63,7 +63,7 @@
 
 4. **Cost tracking duplication** — Three separate cost systems: `budget.go` (BudgetEnforcer, LedgerEntry, CostSummary), `costnorm.go` (NormalizeProviderCost with hardcoded rates), and marathon.sh's shell-based budget check reading `status.json`. mcpkit's `finops/` has token-level tracking, dollar-cost estimation, scoped budgets, time-windowed tracking, and Prometheus export. Cross-refs: ROADMAP 2.3.5, 5.5.
 
-5. **No SQLite** — Session state uses JSON files in `~/.ralphglasses/sessions/`. Loop state uses JSON files in `~/.ralphglasses/sessions/loops/`. ROADMAP 2.1.2 calls for SQLite via `modernc.org/sqlite`. The shielddd, jobb, mesmer, and webb repos already use it. Cross-refs: ROADMAP 2.1.2, 3.3.1.
+5. **No SQLite** — Session state uses JSON files in `~/.ralphglasses/sessions/`. Loop state uses JSON files in `~/.ralphglasses/sessions/loops/`. ROADMAP 2.1.2 calls for SQLite via `modernc.org/sqlite`. The internal SQLite project, internal-ops, mesmer, and webb repos already use it. Cross-refs: ROADMAP 2.1.2, 3.3.1.
 
 6. **Workflow engine reimplementation** — `workflow.go` (265 lines) implements DAG validation, topological execution, and parallel groups. mcpkit's `workflow/` package provides cyclical graph engine with conditional branching, checkpoints, state machines, node middleware, fork nodes, and compensation/saga rollback. Cross-refs: ROADMAP 8.3.
 
@@ -79,7 +79,7 @@
 | 6.2 — R&D cycle orchestrator | Port claudekit rdcycle perpetual loop | No rdcycle concept exists | claudekit's rdcycle has scan/plan/verify/commit/report/schedule/notes/improve tools + budget profiles + model tiers |
 | 2.3.5 — Port budget from mcpkit/finops | Token-level cost tracking, scoped budgets | File-based JSONL ledger with simple headroom check | mcpkit finops has 17 files: Tracker, CostPolicy, ScopedBudget, WindowedTracker, dollar-cost estimation |
 | 6.4 — Analytics & observability | OpenTelemetry traces, Prometheus /metrics | Custom events.Bus (192 lines), no OTel/Prometheus | mcpkit/observability ready to use |
-| 2.1.2 — SQLite session store | modernc.org/sqlite with WAL mode | JSON file persistence (~50 lines in manager.go) | shielddd pattern available for reference |
+| 2.1.2 — SQLite session store | modernc.org/sqlite with WAL mode | JSON file persistence (~50 lines in manager.go) | internal-sqlite-project pattern available for reference |
 | 6.9 — Natural language fleet control | mcpkit/sampling for NL commands | No sampling integration | mcpkit/sampling has request builders, middleware, context injection |
 | 8.3 — Workflow engine | YAML workflows with conditionals, error handlers | Basic DAG executor (265 lines) | mcpkit/workflow has state machines, checkpoints, fork nodes, compensation |
 | 5.3 — MCP gateway | Central hub with per-session auth, audit | Direct MCP server (tools.go) | mcpkit/gateway has dynamic upstream registration, per-upstream resilience |
@@ -148,7 +148,7 @@
 - **PluginKit** (`pluginkit/`): YAML plugin loading, subprocess handler, ToolModule bridge. Provides the extensibility ralphglasses Phase 3.5.2 needs.
 - **SkillKit** (`skillkit/`): Claude Code skill marketplace — discovery, install, remove. Maps to Phase 3.5.4 MCP skill export.
 
-#### shielddd — Go + SQLite + MCP + Audit Logs
+#### internal-sqlite-project — Go + SQLite + MCP + Audit Logs
 
 **Key patterns to adopt**:
 - **Pure-Go SQLite** via `modernc.org/sqlite`: No CGO, cross-compiles to all platforms. WAL mode for concurrent reads. This is the pattern ROADMAP 2.1.2 should follow.

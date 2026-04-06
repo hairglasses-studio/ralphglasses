@@ -25,7 +25,7 @@ Migration session bundling all uncommitted work, secrets, configs, and legacy sc
 ### Git Work (10 repos)
 - Committed all untracked/modified files across all hairglasses-studio repos
 - Merged worktree branches into main (ralphglasses)
-- Popped and committed stashes (jobb, ralphglasses)
+- Popped and committed stashes ([private-ops], ralphglasses)
 - Pushed all branches to GitHub
 - Bundled Claude Code memories into `docs/claude-memories/` per repo
 

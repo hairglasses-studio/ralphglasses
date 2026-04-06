@@ -51,30 +51,30 @@ Files that appear in EVERY source repo and conflict with target repos:
 
 ---
 
-## Migration 1: crabrave -> jobb
+## Migration 1: [private] -> [private]
 
-**Source:** `~/hairglasses-studio/crabrave/`
-**Target:** `~/hairglasses-studio/jobb/python/crabrave/`
-**Conflicts:** None (jobb/python/ does not exist)
+**Source:** `~/hairglasses-studio/[private]/`
+**Target:** `~/hairglasses-studio/[private]/python/[private]/`
+**Conflicts:** None ([private]/python/ does not exist)
 
 ### Copy command
 
 ```bash
-mkdir -p ~/hairglasses-studio/jobb/python/crabrave
+mkdir -p ~/hairglasses-studio/[private]/python/[private]
 rsync -av --exclude='.git/' --exclude='__pycache__/' --exclude='*.pyc' \
   --exclude='.venv/' --exclude='venv/' --exclude='.ralph/' --exclude='.ralphrc' \
   --exclude='.claude/' --exclude='.codex/' --exclude='.gemini/' \
   --exclude='.github/' --exclude='.editorconfig' --exclude='.envrc' \
   --exclude='AGENTS.md' --exclude='GEMINI.md' --exclude='CONTRIBUTING.md' \
   --exclude='LICENSE' --exclude='.mcp.json' --exclude='.env' \
-  ~/hairglasses-studio/crabrave/ \
-  ~/hairglasses-studio/jobb/python/crabrave/
+  ~/hairglasses-studio/[private]/ \
+  ~/hairglasses-studio/[private]/python/[private]/
 ```
 
 ### Destination layout
 
 ```
-jobb/python/crabrave/
+[private]/python/[private]/
   CLAUDE.md                  (keep as-is in subdir)
   README.md
   ROADMAP.md
@@ -82,21 +82,21 @@ jobb/python/crabrave/
   pyproject.toml
   uv.lock
   .python-version
-  .gitignore                 -> MERGE into jobb/.gitignore
+  .gitignore                 -> MERGE into [private]/.gitignore
   data/                      (application data, cover letters, evidence)
     gdrive/
   resume/                    (PDFs, CSS, build scripts)
-  src/crabrave/              (Python MCP server code)
+  src/[private]/              (Python MCP server code)
     ashby.py, config.py, greenhouse.py, models.py, prompts.py, ...
     services/                (achievement_extractor, ats_scorer, cache, etc.)
     tools/                   (compare, insights, interactive, interview, etc.)
     utils/
 ```
 
-### .gitignore additions for jobb
+### .gitignore additions for [private]
 
 ```
-# Python (crabrave, crabravee)
+# Python ([private], crabravee)
 python/**/__pycache__/
 python/**/*.pyc
 python/**/.venv/
@@ -106,21 +106,21 @@ python/**/uv.lock
 
 ### SENSITIVE DATA WARNING
 
-crabrave/data/ contains personal job search data (cover letters, salary info,
-referral emails, resumes). jobb is already marked NEVER PUBLISH so this is fine.
+[private]/data/ contains personal job search data (cover letters, salary info,
+referral emails, resumes). [private] is already marked NEVER PUBLISH so this is fine.
 
 ---
 
-## Migration 2: crabravee -> jobb
+## Migration 2: crabravee -> [private]
 
 **Source:** `~/hairglasses-studio/crabravee/`
-**Target:** `~/hairglasses-studio/jobb/python/crabravee/`
-**Conflicts:** Near-identical data/ and resume/ dirs as crabrave (same files, likely newer versions in crabravee)
+**Target:** `~/hairglasses-studio/[private]/python/crabravee/`
+**Conflicts:** Near-identical data/ and resume/ dirs as [private] (same files, likely newer versions in crabravee)
 
 ### Copy command
 
 ```bash
-mkdir -p ~/hairglasses-studio/jobb/python/crabravee
+mkdir -p ~/hairglasses-studio/[private]/python/crabravee
 rsync -av --exclude='.git/' --exclude='__pycache__/' --exclude='*.pyc' \
   --exclude='.venv/' --exclude='venv/' --exclude='.pytest_cache/' \
   --exclude='.ralph/' --exclude='.ralphrc' \
@@ -130,13 +130,13 @@ rsync -av --exclude='.git/' --exclude='__pycache__/' --exclude='*.pyc' \
   --exclude='LICENSE' --exclude='.mcp.json' --exclude='.env' \
   --exclude='.claude-audit-report.md' --exclude='.claude-fix-report.md' \
   ~/hairglasses-studio/crabravee/ \
-  ~/hairglasses-studio/jobb/python/crabravee/
+  ~/hairglasses-studio/[private]/python/crabravee/
 ```
 
 ### Destination layout
 
 ```
-jobb/python/crabravee/
+[private]/python/crabravee/
   CLAUDE.md
   README.md
   ROADMAP.md
@@ -144,9 +144,9 @@ jobb/python/crabravee/
   pyproject.toml
   uv.lock
   .python-version
-  data/                      (same structure as crabrave, likely newer)
+  data/                      (same structure as [private], likely newer)
   resume/
-  src/crabrave/              (same package name as crabrave)
+  src/[private]/              (same package name as [private])
     services/
     tools/
     utils/
@@ -155,7 +155,7 @@ jobb/python/crabravee/
 
 ### Conflict note
 
-crabrave and crabravee have overlapping data/ and resume/ dirs with identical
+[private] and crabravee have overlapping data/ and resume/ dirs with identical
 filenames. Keep BOTH under separate subdirs. crabravee appears to be the
 evolved version with tests/ dir and audit reports.
 
@@ -1281,10 +1281,10 @@ NOTE: Contains UEFI/OVMF binary images (.fd, .img). Consider Git LFS.
 
 ## Summary: .gitignore Additions by Target Repo
 
-### jobb/.gitignore (add)
+### [private]/.gitignore (add)
 
 ```
-# Python (crabrave, crabravee)
+# Python ([private], crabravee)
 python/**/__pycache__/
 python/**/*.pyc
 python/**/.venv/
@@ -1360,8 +1360,8 @@ research/claude-code-analysis/archives/
 Recommended order (independent migrations can run in parallel):
 
 ### Phase 1: No conflicts (parallel-safe)
-1. crabrave -> jobb/python/crabrave/
-2. crabravee -> jobb/python/crabravee/
+1. [private] -> [private]/python/[private]/
+2. crabravee -> [private]/python/crabravee/
 3. openai_cli -> ralphglasses/python/openai_cli/
 8. github-stars-catalog -> docs/tools/
 9. sway-mcp -> dotfiles/mcp/sway/

@@ -82,7 +82,7 @@ From peer projects and industry patterns:
 
 | Capability | Where It Exists | Gap in ralphglasses |
 |-----------|----------------|---------------------|
-| Structured event logging (JSONL) | ROADMAP 2.12 (telemetry), `shielddd` audit logs | No append-only event log file |
+| Structured event logging (JSONL) | ROADMAP 2.12 (telemetry), internal SQLite project audit logs | No append-only event log file |
 | Webhook with HMAC signing | Discord/GitHub webhooks | No request signing for security |
 | Event filtering per subscriber | NATS, Redis Pub/Sub | Bus broadcasts all events to all subscribers |
 | Backpressure / flow control | Go channel patterns | Overflow silently drops (by design, but no metrics on drops) |
@@ -112,7 +112,7 @@ From peer projects and industry patterns:
 | Project | URL | Relevance | Key Pattern |
 |---------|-----|-----------|-------------|
 | **mcpkit** (sibling) | `github.com/hairglasses-studio/mcpkit` | High -- same org, has `observability` package with OpenTelemetry, `finops` package with cost tracking | Port OTel span creation from `mcpkit/observability`; reuse cost model patterns |
-| **shielddd** (sibling) | `github.com/hairglasses-studio/shielddd` | High -- pure SQLite (`modernc.org/sqlite`), audit log pattern | Adopt `modernc.org/sqlite` (no CGo) for event persistence; mirror audit log table schema |
+| **internal-sqlite-project** (sibling) | `github.com/hairglasses-studio/internal-sqlite-project` | High -- pure SQLite (`modernc.org/sqlite`), audit log pattern | Adopt `modernc.org/sqlite` (no CGo) for event persistence; mirror audit log table schema |
 | **Grafana Agent / Alloy** | `github.com/grafana/alloy` | Medium -- Go-native Prometheus + OTel pipeline | Study `prometheus/client_golang` integration pattern for Go metrics endpoint |
 | **Watermill** | `github.com/ThreeDotsLabs/watermill` | Medium -- Go pub/sub with pluggable backends (NATS, Kafka, in-process) | Fan-out pattern, middleware (dedup, throttle, retry), subscriber groups |
 | **CloudEvents Go SDK** | `github.com/cloudevents/sdk-go` | Medium -- standardized event envelope | Event schema with `specversion`, `source`, `type`, `id` fields; industry-standard interop |
@@ -120,7 +120,7 @@ From peer projects and industry patterns:
 
 ### 4.2 Patterns Worth Adopting
 
-**1. SQLite event sink (from shielddd)**
+**1. SQLite event sink (from internal-sqlite-project)**
 - Write all events to a `fleet_events` table with the same schema as `events.Event` plus auto-increment ID, indexed by `type` and `timestamp`.
 - Use `modernc.org/sqlite` (pure Go, no CGo) to avoid build complexity.
 - Target: new `internal/events/store.go` with `EventStore` interface.

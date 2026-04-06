@@ -19,7 +19,7 @@ func TestSearch_EmptyQuery(t *testing.T) {
 func TestSearch_ExactMatch(t *testing.T) {
 	repos := []*model.Repo{
 		{Name: "ralphglasses", Path: "/home/user/ralphglasses"},
-		{Name: "shielddd", Path: "/home/user/shielddd"},
+		{Name: "internal-audit", Path: "/home/user/internal-audit"},
 	}
 	results := Search("ralphglasses", repos, nil, nil)
 	if len(results) == 0 {
@@ -39,7 +39,7 @@ func TestSearch_ExactMatch(t *testing.T) {
 func TestSearch_PrefixMatch(t *testing.T) {
 	repos := []*model.Repo{
 		{Name: "ralphglasses", Path: "/home/user/ralphglasses"},
-		{Name: "shielddd", Path: "/home/user/shielddd"},
+		{Name: "internal-audit", Path: "/home/user/internal-audit"},
 	}
 	results := Search("ralph", repos, nil, nil)
 	if len(results) == 0 {
