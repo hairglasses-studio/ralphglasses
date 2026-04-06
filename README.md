@@ -1,7 +1,10 @@
 # ralphglasses
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/hairglasses-studio/ralphglasses.svg)](https://pkg.go.dev/github.com/hairglasses-studio/ralphglasses)
+[![Go Report Card](https://goreportcard.com/badge/github.com/hairglasses-studio/ralphglasses)](https://goreportcard.com/report/github.com/hairglasses-studio/ralphglasses)
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/hairglasses-studio/ralphglasses/actions/workflows/ci.yml/badge.svg)](https://github.com/hairglasses-studio/ralphglasses/actions/workflows/ci.yml)
 [![MCP Tools](https://img.shields.io/badge/MCP_Tools-126-blue)](docs/MCP-TOOLS.md)
 
 Command-and-control TUI for parallel multi-LLM agent fleets.
@@ -21,6 +24,15 @@ Orchestrates [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overvi
 ## Quick Start
 
 ```bash
+go install github.com/hairglasses-studio/ralphglasses@latest
+```
+
+Or build from source:
+
+```bash
+git clone https://github.com/hairglasses-studio/ralphglasses.git
+cd ralphglasses
+
 # Bootstrap local tooling if needed
 ./scripts/bootstrap-toolchain.sh
 
