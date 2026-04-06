@@ -170,31 +170,92 @@ type LaunchOptions struct {
 
 // TeamConfig holds agent team configuration.
 type TeamConfig struct {
-	Name           string   `json:"name"`
-	Provider       Provider `json:"provider,omitempty"`        // lead session provider
-	WorkerProvider Provider `json:"worker_provider,omitempty"` // default provider for worker tasks
-	RepoPath       string   `json:"repo_path"`
-	LeadAgent      string   `json:"lead_agent,omitempty"`
-	Tasks          []string `json:"tasks"`
-	Model          string   `json:"model,omitempty"`
-	MaxBudgetUSD   float64  `json:"max_budget_usd,omitempty"`
+	Name             string   `json:"name"`
+	Provider         Provider `json:"provider,omitempty"`        // lead session provider
+	WorkerProvider   Provider `json:"worker_provider,omitempty"` // default provider for worker tasks
+	RepoPath         string   `json:"repo_path"`
+	LeadAgent        string   `json:"lead_agent,omitempty"`
+	Tasks            []string `json:"tasks"`
+	Model            string   `json:"model,omitempty"`
+	WorkerModel      string   `json:"worker_model,omitempty"`
+	MaxBudgetUSD     float64  `json:"max_budget_usd,omitempty"`
+	MaxConcurrency   int      `json:"max_concurrency,omitempty"`
+	MaxRetries       int      `json:"max_retries,omitempty"`
+	AutoStart        bool     `json:"auto_start,omitempty"`
+	ExecutionBackend string   `json:"execution_backend,omitempty"` // "local" or "fleet"
+	WorktreePolicy   string   `json:"worktree_policy,omitempty"`   // "per_worker"
+	TargetBranch     string   `json:"target_branch,omitempty"`
+}
+
+// TeamQuestion represents a question posed by the team runtime to a human.
+type TeamQuestion struct {
+	ID         string     `json:"id"`
+	TaskID     string     `json:"task_id,omitempty"`
+	Question   string     `json:"question"`
+	Answer     string     `json:"answer,omitempty"`
+	AskedAt    time.Time  `json:"asked_at"`
+	AnsweredAt *time.Time `json:"answered_at,omitempty"`
 }
 
 // TeamStatus holds team state information.
 type TeamStatus struct {
-	Name      string        `json:"name"`
-	RepoPath  string        `json:"repo_path"`
-	LeadID    string        `json:"lead_session_id"`
-	Status    SessionStatus `json:"status"`
-	Tasks     []TeamTask    `json:"tasks"`
-	CreatedAt time.Time     `json:"created_at"`
+	Name               string        `json:"name"`
+	RepoPath           string        `json:"repo_path"`
+	LeadID             string        `json:"lead_session_id"`
+	Status             SessionStatus `json:"status"`
+	Tasks              []TeamTask    `json:"tasks"`
+	CreatedAt          time.Time     `json:"created_at"`
+	Provider           Provider      `json:"provider,omitempty"`
+	WorkerProvider     Provider      `json:"worker_provider,omitempty"`
+	Model              string        `json:"model,omitempty"`
+	WorkerModel        string        `json:"worker_model,omitempty"`
+	RunState           string        `json:"run_state,omitempty"`
+	Runtime            string        `json:"runtime,omitempty"`
+	ExecutionBackend   string        `json:"execution_backend,omitempty"`
+	WorktreePolicy     string        `json:"worktree_policy,omitempty"`
+	TargetBranch       string        `json:"target_branch,omitempty"`
+	IntegrationBranch  string        `json:"integration_branch,omitempty"`
+	IntegrationPath    string        `json:"integration_path,omitempty"`
+	MaxBudgetUSD       float64       `json:"max_budget_usd,omitempty"`
+	MaxConcurrency     int           `json:"max_concurrency,omitempty"`
+	MaxTaskRetries     int           `json:"max_task_retries,omitempty"`
+	StepCount          int           `json:"step_count,omitempty"`
+	LastStepAt         time.Time     `json:"last_step_at,omitempty"`
+	UpdatedAt          time.Time     `json:"updated_at,omitempty"`
+	AutoStart          bool          `json:"auto_start,omitempty"`
+	ControllerRunning  bool          `json:"controller_running,omitempty"`
+	LastControllerError string       `json:"last_controller_error,omitempty"`
+	PendingQuestion    *TeamQuestion `json:"pending_question,omitempty"`
+	ResolvedQuestions  []TeamQuestion `json:"resolved_questions,omitempty"`
+	PlannerSessionID   string        `json:"planner_session_id,omitempty"`
+	LastPlannerSummary string        `json:"last_planner_summary,omitempty"`
 }
 
 // TeamTask represents a task assigned to a team.
 type TeamTask struct {
-	Description string   `json:"description"`
-	Provider    Provider `json:"provider,omitempty"` // override team default for this task
-	Status      string   `json:"status"`             // pending, in-progress, completed
+	ID              string    `json:"id,omitempty"`
+	Title           string    `json:"title,omitempty"`
+	Description     string    `json:"description"`
+	Provider        Provider  `json:"provider,omitempty"`
+	Status          string    `json:"status"`
+	WorkItemID      string    `json:"work_item_id,omitempty"`
+	WorkerSessionID string    `json:"worker_session_id,omitempty"`
+	WorkerNodeID    string    `json:"worker_node_id,omitempty"`
+	WorktreePath    string    `json:"worktree_path,omitempty"`
+	WorktreeBranch  string    `json:"worktree_branch,omitempty"`
+	HeadSHA         string    `json:"head_sha,omitempty"`
+	MergeBaseSHA    string    `json:"merge_base_sha,omitempty"`
+	Summary         string    `json:"summary,omitempty"`
+	LastError       string    `json:"last_error,omitempty"`
+	BlockedQuestion string    `json:"blocked_question,omitempty"`
+	ChangedFiles    []string  `json:"changed_files,omitempty"`
+	HumanContext    []string  `json:"human_context,omitempty"`
+	ConflictFiles   []string  `json:"conflict_files,omitempty"`
+	Attempt         int       `json:"attempt,omitempty"`
+	MergeStatus     string    `json:"merge_status,omitempty"`
+	StartedAt       *time.Time `json:"started_at,omitempty"`
+	EndedAt         *time.Time `json:"ended_at,omitempty"`
+	UpdatedAt       time.Time `json:"updated_at,omitempty"`
 }
 
 // AgentDef represents an agent definition file.

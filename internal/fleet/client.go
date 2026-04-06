@@ -105,6 +105,27 @@ func (c *Client) SubmitWork(ctx context.Context, item WorkItem) (string, error) 
 	return resp.WorkItemID, nil
 }
 
+// WorkStatus fetches the status of a work item from the coordinator.
+func (c *Client) WorkStatus(ctx context.Context, workItemID string) (*WorkItem, error) {
+	var item WorkItem
+	if err := c.get(ctx, "/api/v1/work/"+workItemID, &item); err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+// StartWork notifies the coordinator that a work item has started.
+func (c *Client) StartWork(ctx context.Context, payload WorkStartPayload) error {
+	var resp struct{}
+	return c.post(ctx, "/api/v1/work/start", payload, &resp)
+}
+
+// CancelWork cancels a work item on the coordinator.
+func (c *Client) CancelWork(ctx context.Context, workItemID string) error {
+	var resp struct{}
+	return c.post(ctx, "/api/v1/work/cancel", map[string]string{"work_item_id": workItemID}, &resp)
+}
+
 // SendEvents forwards a batch of events to the coordinator.
 func (c *Client) SendEvents(ctx context.Context, batch EventBatch) error {
 	var resp struct{}

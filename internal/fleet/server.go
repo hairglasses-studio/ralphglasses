@@ -415,6 +415,23 @@ func (c *Coordinator) DLQDepth() int {
 	return c.queue.DLQDepth()
 }
 
+// WorkItem returns a work item by ID from the queue.
+func (c *Coordinator) WorkItem(id string) (*WorkItem, bool) {
+	return c.queue.Get(id)
+}
+
+// CancelWork cancels a work item by ID, marking it as failed.
+func (c *Coordinator) CancelWork(id string) error {
+	item, ok := c.queue.Get(id)
+	if !ok {
+		return fmt.Errorf("work item %s not found", id)
+	}
+	item.Status = WorkFailed
+	item.Error = "cancelled"
+	c.queue.Update(item)
+	return nil
+}
+
 // SetTSClient replaces the coordinator's Tailscale client (useful for testing).
 func (c *Coordinator) SetTSClient(tc TailscaleClient) {
 	c.tsClient = tc

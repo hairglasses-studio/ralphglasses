@@ -31,6 +31,9 @@ type Manager struct {
 	loops                  map[string]*LoopRun     // keyed by loop run ID
 	totalPrunedThisSession int                     // counter for pruned runs this session
 
+	teamBackend     StructuredTeamBackend          // structured team execution backend (fleet)
+	teamControllers map[string]*teamController     // active team controllers keyed by team name
+
 	configMu       sync.RWMutex
 	bus            *events.Bus
 	stateDir       string                  // directory for persisted session JSON files

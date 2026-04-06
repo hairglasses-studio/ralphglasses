@@ -19,6 +19,19 @@ func agentDir(repoPath string, provider Provider) string {
 	}
 }
 
+// ValidateLaunchAgent checks that an agent name is syntactically valid for the given provider.
+// An empty agent name is always valid (uses the default).
+func ValidateLaunchAgent(provider Provider, agent string) error {
+	agent = strings.TrimSpace(agent)
+	if agent == "" {
+		return nil
+	}
+	if strings.ContainsAny(agent, "/\\:*?\"<>|") {
+		return fmt.Errorf("agent name %q contains invalid characters", agent)
+	}
+	return nil
+}
+
 // ListAgents reads agent definitions from a repo for a given provider.
 // Claude: .claude/agents/*.md, Gemini: .gemini/agents/*.md, Codex: .codex/agents/*.toml.
 // If provider is empty, defaults to the primary provider.
