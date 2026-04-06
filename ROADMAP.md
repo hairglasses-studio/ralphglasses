@@ -2,8 +2,8 @@
 
 Command-and-control TUI + bootable thin client for parallel multi-LLM agent fleets.
 
-**Last updated:** 2026-04-04
-**Codebase:** 73 packages, 166 MCP tools (164 namespace + 2 meta), 19 TUI views
+**Last updated:** 2026-04-06
+**Codebase:** 73 packages, 200 total MCP tools (197 grouped + 3 management), 19 TUI views
 **Status:** 1,143 tasks, 503 complete (44.0%), 640 remaining
 **Key deps:** Go 1.26.1, mcp-go v0.45.0, bubbletea v1.3.10, anthropic-sdk-go v1.27.1
 **Autonomy target:** Level 3 — fully autonomous fleet operation with self-improvement, self-healing, self-optimizing
@@ -85,7 +85,7 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
 - [x] Process manager — launch/stop/pause ralph loops via os/exec with process groups
 - [x] File watcher — fsnotify with 2s polling fallback
 - [x] Log streamer — tail `.ralph/live.log`
-- [x] MCP server — 10 core tools + 105 deferred (115 total across 13 namespaces + 2 meta-tools)
+- [x] MCP server — 13 core tools + 184 additional grouped tools via deferred loading, plus 3 management tools (200 total across 29 tool groups)
 - [x] Standalone MCP binary (`cmd/ralphglasses-mcp/`)
 - [x] TUI shell — BubbleTea app with k9s-style keymap
 - [x] TUI views — overview table, repo detail, log stream, config editor, help
@@ -510,7 +510,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [ ] 1.5.11.2 — Migrate `internal/mcpserver/` tool registration from mcp-go to official SDK `P1` `XL`
 - [ ] 1.5.11.3 — Migrate transport layer (stdio + add streamable HTTP support) `P1` `L`
 - [ ] 1.5.11.4 — Add OAuth support for remote MCP server mode `P2` `L`
-- **Acceptance:** All 166 tools register and pass integration tests with official SDK
+- **Acceptance:** The full MCP tool surface registers and passes integration tests with the official SDK
 
 ### 1.5.12 — Benchmarking infrastructure
 - [x] 1.5.12.1 — Add Go benchmarks for hot paths: `RefreshRepo`, `Scan`, `LoadStatus`, table rendering `P1` `M`
@@ -1474,7 +1474,7 @@ Current spec: **2025-11-25** (latest stable). Official Go SDK: `modelcontextprot
 | Resource subscriptions | 2025-06-18 | Not started | 6.4 | Push notifications on resource changes |
 | OAuth/Auth | 2025-11-25 | Not started | 5.3 | OAuth 2.0 for remote MCP servers (required for Streamable HTTP) |
 | Roots | 2025-06-18 | Not started | - | Workspace root discovery |
-| Sampling | 2024-11-05 | Not started | 6.9 | NL fleet control |
+| Sampling | 2024-11-05 | Partial | 6.9 | MCP sampling capability is enabled; higher-level NL fleet control workflows remain roadmap work |
 
 > **Migration note:** `mark3labs/mcp-go` v0.45.0 is current but v0.x (unstable API). GitHub MCP Server has already migrated to the official SDK. Plan migration path in Phase 1.5.
 
@@ -1486,11 +1486,11 @@ Claude Code supports **24 hook events**, SKILL.md framework, Agent Teams (resear
 
 | Feature | Component | Status | Notes |
 |---------|-----------|--------|-------|
-| MCP Server (stdio) | `internal/mcpserver/` | Implemented | 166 tools (164 namespace + 2 meta), 16 namespaces |
-| Deferred tool loading | `internal/mcpserver/tools_dispatch.go` | Implemented | Only core loaded at startup; 85% token reduction |
+| MCP Server (stdio) | `internal/mcpserver/` | Implemented | 200 total tools (197 grouped + 3 management), 29 deferred-load tool groups |
+| Deferred tool loading | `internal/mcpserver/tools_dispatch.go` | Implemented | Core + management startup surface only; on-demand group loading keeps initial tool context compact |
 | Hooks (internal) | `.ralph/hooks.yaml` | Implemented | Internal hook system, not CC hooks |
 | CC hooks integration | - | Not started | 24 events: PreToolUse, PostToolUse, Stop, SessionStart, TeammateIdle, TaskCreated/Completed, WorktreeCreate, etc. |
-| Skills export (.claude/skills/) | - | Not started | Phase 3.5.4; SKILL.md supports `context: fork`, `agent:`, MCP deps |
+| Skills export (.claude/skills/, .agents/skills/, plugin bundle) | `internal/session/skillgen.go` | Implemented | Generated on MCP startup; provider-native skill/plugin surfaces stay aligned from the live registry |
 | Agent SDK bridge | - | Not started | No native Go SDK; requires sidecar/bridge pattern (Python/TS only) |
 | Agent Teams | - | Not started | Research preview; teammates share findings, direct messaging; `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` |
 | Prompt caching (`cache_control`) | `internal/enhancer/` | Partial | Enhancer has 3-provider caching; MCP handlers not cached yet |
@@ -1745,7 +1745,7 @@ The self-improvement pipeline operates as a closed loop:
 
 ### From Go MCP servers (reuse patterns)
 - `hg-mcp/` — Modular tool registration pattern
-- `shielddd/` — Pure-Go SQLite (modernc.org/sqlite), audit logs
+- Pure-Go SQLite (modernc.org/sqlite) audit log patterns
 - `claudekit/` — rdcycle perpetual loop, budget profiles
 
 ---
@@ -1766,7 +1766,7 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 
 ### 10.5.2 MCP Server Concurrent Handler Limits `P1` `M`
 
-**Bottleneck:** No concurrency limit on MCP tool handlers — 166 tools with no semaphore means unbounded goroutine creation under load.
+**Bottleneck:** Large MCP tool surface with no concurrency limit on handlers means unbounded goroutine creation under load.
 
 - [x] Add `semaphore.Weighted` (golang.org/x/sync) to `internal/mcpserver/middleware.go`
 - [x] Default limit: 32 concurrent handlers, configurable via `MCP_MAX_CONCURRENT`
@@ -1846,7 +1846,7 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 - [ ] State sharding by repo for parallel writes
 - [ ] Observation partitioning: time-based partitions for efficient queries
 - [ ] Migration path from JSON files to SQLite (dual-write during transition)
-- Deps: `modernc.org/sqlite` (pure Go, already used in shielddd)
+- Deps: `modernc.org/sqlite` (pure Go)
 - Files: new `internal/store/sqlite.go`, `internal/fleet/coordinator.go`
 
 ### 10.5.10 Monitoring & Observability Stack `P2` `L`
@@ -2450,7 +2450,7 @@ Plugin marketplace, tool registries, agent templates, community contributions, a
 - [ ] **WD-2** — Compile and publish a TinyGo guest SDK (`internal/plugin/wasm/sdk/`) exporting `RegisterPlugin(name, version, init)` — acceptance: `GOOS=wasip1 GOARCH=wasm tinygo build` produces valid `.wasm` loadable by wazero backend
 - [ ] **WD-3** — Define WASI capability policy in `plugin.json` manifests with explicit allow-lists for `fs_paths`, `env_vars`, `network` (default: deny-all) — acceptance: plugin requesting `os.ReadFile` outside granted path receives permission error from runtime
 - [ ] **WD-4** — WASM Component Model via WIT definitions (`internal/plugin/wit/ralphglasses.wit`) with `import ralphglasses:host/events`, `export ralphglasses:plugin/lifecycle` — acceptance: TinyGo compiles WASI P2 component against bindings; existing gRPC and raw WASM paths unchanged
-- [ ] **WD-5** — Add `ralphglasses_plugin_*` MCP tool group: `plugin_list`, `plugin_reload`, `plugin_sandbox_status` — acceptance: `ralphglasses_load_tool_group plugins` loads namespace without restart
+- [ ] **WD-5** — Add `ralphglasses_plugin_*` MCP tool group: `plugin_list`, `plugin_reload`, `plugin_sandbox_status` — acceptance: `ralphglasses_load_tool_group plugin` loads namespace without restart
 - [ ] **WD-6** — WASM sandbox security hardening guide and threat model (`docs/WASM-PLUGINS.md`) with worked attack scenario (env var exfiltration) — acceptance: CI lint step `TestWASMSandboxPolicy` verifies deny-all defaults
 - Files: `internal/plugin/wasm/`, `internal/plugin/wit/`, `docs/WASM-PLUGINS.md`
 
@@ -2641,7 +2641,7 @@ Mixture-of-Experts routing strategies adapted to multi-provider fleet dispatch. 
 ### 24.1 Task Classification & Stratified Routing `P0` `XL`
 - [ ] **MR-1** — Task complexity classifier: assign each prompt a category from {code, math, creative, research, refactor, debug, infra, multilingual} — acceptance: classifier assigns category to ≥95% of prompts; category persisted on Session; surfaced in fleet_analytics
 - [ ] **MR-2** — Per-task-type bandit arms (stratified UCB1): each (provider, task_type) pair is a distinct arm — acceptance: `bandit_status` reports per-task-type reward means; Gemini code-task arm converges differently than creative arm
-- [ ] **MR-3** — Shared provider lane (DeepSeekMoE pattern): Claude as always-on orchestrator, Gemini/Codex as routed specialists — acceptance: role=orchestrator always dispatches to Claude; role=worker through bandit
+- [ ] **MR-3** — Shared provider lane (DeepSeekMoE pattern): current primary control-plane provider as always-on orchestrator, secondary providers as routed specialists — acceptance: role=orchestrator always dispatches to the configured control-plane provider (currently Codex); role=worker through bandit
 - [ ] **MR-4** — Expert load balancing with capacity factors (GShard pattern): per-provider concurrency caps, overflow to next-best — acceptance: `gemini_capacity=2` prevents >2 concurrent; fleet_analytics reports utilization%
 - [ ] **MR-5** — Cascade cost-quality threshold as first-class config knob (0.0=cheapest, 1.0=best) — acceptance: threshold=0.2 routes ≥70% to Gemini/Codex; threshold=0.9 routes ≥70% to Claude
 - Files: `internal/fleet/moe_router.go`, `internal/fleet/task_classifier.go`, `internal/fleet/capacity.go`
@@ -2734,7 +2734,7 @@ Deep codebase analysis (2026-03-30) identified these performance bottlenecks wit
 | Metric | Value |
 |--------|-------|
 | Total packages | 37 |
-| MCP tools | 166 (164 namespace + 2 meta), 16 namespaces |
+| MCP tools | 200 total (197 grouped + 3 management), 29 deferred-load tool groups |
 | TUI views | 19 (11% migrated to Phase 2 View interface) |
 | Test files | 427 (114K LOC) |
 | Coverage | 84.5% (target 90%) |

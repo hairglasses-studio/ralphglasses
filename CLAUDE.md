@@ -18,7 +18,7 @@ go build ./...
 go run . --scan-path ~/hairglasses-studio
 ```
 
-## MCP Server (126 tools, 14 namespaces)
+## MCP Server (200 total tools, 29 deferred-load groups)
 
 ```bash
 claude mcp add ralphglasses -- go run . mcp
@@ -26,7 +26,7 @@ claude mcp add ralphglasses -- go run . mcp
 
 A `.mcp.json` is also included in the repo root for automatic local discovery. See [docs/MCP-TOOLS.md](docs/MCP-TOOLS.md) for the full tool table.
 
-Tools use **deferred loading** — only the `core` namespace (10 tools) is loaded at startup. Use the `ralphglasses_tool_groups` meta-tool to list namespaces and `ralphglasses_load_tool_group` to load them on demand.
+Tools use **deferred loading** — only the `core` group is loaded at startup. Use the `ralphglasses_tool_groups` meta-tool to list groups and `ralphglasses_load_tool_group` to load them on demand.
 
 > **Note**: Standalone MCP server repos (dotfiles-mcp, hg-mcp, systemd-mcp, tmux-mcp, process-mcp) no longer exist as separate repos. All MCP tools are consolidated in `dotfiles/mcp/` (7 Go modules + 3 JS servers via `go.work`).
 
@@ -69,12 +69,11 @@ The `distro/` directory contains configs for a bootable Linux thin client. Prima
 - **claudekit**: Go MCP with rdcycle perpetual loop, budget profiles
 - **docs**: Research knowledge base, 1,734+ files, infrastructure docs
 - **mesmer**: Multi-cloud ops platform (Go, 432K LOC, potential SaaS)
-- **shielddd**: Go + pure SQLite (modernc.org/sqlite) + MCP, audit logs
 
 ## See Also
 
 - [docs/PROVIDER-SETUP.md](docs/PROVIDER-SETUP.md) — Multi-provider prerequisites, env vars, orchestration pattern
-- [docs/MCP-TOOLS.md](docs/MCP-TOOLS.md) — Full 115-tool table with descriptions, deferred loading
+- [docs/MCP-TOOLS.md](docs/MCP-TOOLS.md) — Live-inventory workflow and deferred-loading MCP overview
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Package layout, provider dispatch, middleware, fleet, tiered routing, prompt caching
 - [docs/MARATHON.md](docs/MARATHON.md) — Marathon supervisor, RC tools, environment setup
 - [docs/AUTONOMY.md](docs/AUTONOMY.md) — Autonomy levels, self-improvement subsystems
