@@ -140,6 +140,7 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 	util.Debug.Debugf("executing work %s: %s", item.ID, item.RepoName)
 
 	opts := session.LaunchOptions{
+<<<<<<< Updated upstream
 		Provider:     item.Provider,
 		RepoPath:     item.RepoPath,
 		Prompt:       item.Prompt,
@@ -147,6 +148,35 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 		Agent:        item.Agent,
 		MaxBudgetUSD: item.MaxBudgetUSD,
 		MaxTurns:     item.MaxTurns,
+||||||| Stash base
+		Provider:     item.Provider,
+		RepoPath:     worktreePath,
+		Prompt:       item.Prompt,
+		Model:        item.Model,
+		Agent:        item.Agent,
+		MaxBudgetUSD: item.MaxBudgetUSD,
+		MaxTurns:     item.MaxTurns,
+		SessionName:  item.SessionName,
+		TeamName:     item.TeamName,
+		OutputSchema: item.OutputSchema,
+		PermissionMode: item.PermissionMode,
+		Sandbox:      item.Sandbox,
+		SandboxImage: item.SandboxImage,
+=======
+		Provider:       item.Provider,
+		RepoPath:       worktreePath,
+		Prompt:         item.Prompt,
+		Model:          item.Model,
+		Agent:          item.Agent,
+		MaxBudgetUSD:   item.MaxBudgetUSD,
+		MaxTurns:       item.MaxTurns,
+		SessionName:    item.SessionName,
+		TeamName:       item.TeamName,
+		OutputSchema:   item.OutputSchema,
+		PermissionMode: item.PermissionMode,
+		Sandbox:        item.Sandbox,
+		SandboxImage:   item.SandboxImage,
+>>>>>>> Stashed changes
 	}
 
 	if opts.Provider == "" {
@@ -278,6 +308,393 @@ func (w *WorkerAgent) discoverRepos(ctx context.Context) []string {
 	return names
 }
 
+<<<<<<< Updated upstream
+||||||| Stash base
+func (w *WorkerAgent) resolveRepoPath(ctx context.Context, repoName string) (string, error) {
+	if repoName == "" {
+		return "", fmt.Errorf("repo name required")
+	}
+	if w.scanPath == "" {
+		return "", fmt.Errorf("scan path not configured for worker")
+	}
+	repos, err := discovery.Scan(ctx, w.scanPath)
+	if err != nil {
+		return "", err
+	}
+	for _, repo := range repos {
+		if filepath.Base(repo.Path) == repoName {
+			return repo.Path, nil
+		}
+	}
+	return "", fmt.Errorf("repo %s not found on worker", repoName)
+}
+
+func (w *WorkerAgent) prepareWorktree(ctx context.Context, repoPath string, item *WorkItem) (string, string, error) {
+	branch := sanitizeWorktreeLabel(fmt.Sprintf("ralph-team-%s-%s-%s", item.TeamName, item.TeamTaskID, item.ID))
+	worktreePath := filepath.Join(filepath.Dir(repoPath), ".ralph-worktrees", filepath.Base(repoPath), sanitizeWorktreeLabel(item.TeamName), sanitizeWorktreeLabel(item.TeamTaskID), item.ID)
+	if err := os.MkdirAll(filepath.Dir(worktreePath), 0o755); err != nil {
+		return "", "", err
+	}
+	if _, err := os.Stat(worktreePath); err == nil {
+		return worktreePath, branch, nil
+	}
+	if _, err := worktree.CreateWorktree(ctx, repoPath, branch, worktree.WithBaseBranch(item.TargetBranch), worktree.WithPath(worktreePath)); err != nil {
+		if createRefErr := worktree.CreateFromRef(ctx, repoPath, worktreePath, branch); createRefErr != nil {
+			return "", "", err
+		}
+	}
+	return worktreePath, branch, nil
+}
+
+func populateStructuredResult(ctx context.Context, result *WorkResult, item *WorkItem, workerNodeID, repoPath, worktreePath, worktreeBranch, output string) {
+	result.WorkerNodeID = workerNodeID
+	result.WorktreePath = emptyIfSame(worktreePath, repoPath)
+	result.WorktreeBranch = worktreeBranch
+
+	workerResult, err := parseStructuredWorkerResult(output)
+	if err != nil {
+		result.TaskStatus = session.TeamTaskNeedsRetry
+		result.Summary = "worker output did not match structured contract"
+		return
+	}
+
+	result.TaskStatus = workerResult.Status
+	result.Summary = workerResult.Summary
+	result.Question = workerResult.Question
+	result.ChangedFiles = append([]string(nil), workerResult.ChangedFiles...)
+
+	if worktreePath != "" && worktreePath != repoPath {
+		if err := finalizeWorktree(ctx, worktreePath, repoPath, item, result); err != nil {
+			result.TaskStatus = session.TeamTaskNeedsRetry
+			if result.Summary == "" {
+				result.Summary = err.Error()
+			}
+		}
+	}
+}
+
+func finalizeWorktree(ctx context.Context, worktreePath, repoPath string, item *WorkItem, result *WorkResult) error {
+	if err := gitRun(ctx, worktreePath, "add", "-A"); err != nil {
+		return err
+	}
+	if gitHasStagedChanges(ctx, worktreePath) {
+		if err := gitRun(ctx, worktreePath, "commit", "-m", fmt.Sprintf("ralphglasses: %s %s", item.TeamName, item.TeamTaskID)); err != nil {
+			return err
+		}
+	}
+	headSHA, _ := gitOutput(ctx, worktreePath, "rev-parse", "HEAD")
+	result.HeadSHA = strings.TrimSpace(headSHA)
+	if item.TargetBranch != "" && result.WorktreeBranch != "" {
+		mergeBaseSHA, _ := gitOutput(ctx, repoPath, "merge-base", item.TargetBranch, result.WorktreeBranch)
+		result.MergeBaseSHA = strings.TrimSpace(mergeBaseSHA)
+	}
+	if len(result.ChangedFiles) == 0 {
+		diffBase := result.MergeBaseSHA
+		if diffBase == "" {
+			diffBase = strings.TrimSpace(headSHA)
+		}
+		files, err := gitChangedFiles(ctx, worktreePath, diffBase, strings.TrimSpace(headSHA))
+		if err == nil {
+			result.ChangedFiles = files
+		}
+	}
+	return nil
+}
+
+func parseStructuredWorkerResult(output string) (session.TeamWorkerResult, error) {
+	var result session.TeamWorkerResult
+	candidate := strings.TrimSpace(output)
+	if strings.HasPrefix(candidate, "{") && strings.HasSuffix(candidate, "}") {
+		if err := json.Unmarshal([]byte(candidate), &result); err == nil && result.TaskID != "" {
+			return result, nil
+		}
+	}
+	start := strings.Index(candidate, "{")
+	end := strings.LastIndex(candidate, "}")
+	if start >= 0 && end > start {
+		if err := json.Unmarshal([]byte(candidate[start:end+1]), &result); err == nil && result.TaskID != "" {
+			return result, nil
+		}
+	}
+	return session.TeamWorkerResult{}, fmt.Errorf("structured worker result not found")
+}
+
+func structuredFailureResult(item *WorkItem, workerNodeID, taskStatus, message, worktreePath string) *WorkResult {
+	if item.Source != WorkSourceStructuredCodexTeam {
+		return nil
+	}
+	return &WorkResult{
+		TaskStatus:   taskStatus,
+		Summary:      message,
+		WorkerNodeID: workerNodeID,
+		WorktreePath: worktreePath,
+	}
+}
+
+func sanitizeWorktreeLabel(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	replacer := strings.NewReplacer("/", "-", " ", "-", "_", "-", ".", "-")
+	value = replacer.Replace(value)
+	value = strings.Trim(value, "-")
+	if value == "" {
+		return "work"
+	}
+	return value
+}
+
+func gitRun(ctx context.Context, dir string, args ...string) error {
+	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func gitOutput(ctx context.Context, dir string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...)
+	out, err := cmd.CombinedOutput()
+	return strings.TrimSpace(string(out)), err
+}
+
+func gitHasStagedChanges(ctx context.Context, dir string) bool {
+	cmd := exec.CommandContext(ctx, "git", "-C", dir, "diff", "--cached", "--quiet")
+	err := cmd.Run()
+	if err == nil {
+		return false
+	}
+	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+		return true
+	}
+	return false
+}
+
+func gitChangedFiles(ctx context.Context, dir, baseRef, headRef string) ([]string, error) {
+	if baseRef == "" {
+		out, err := gitOutput(ctx, dir, "diff", "--cached", "--name-only")
+		if err != nil {
+			return nil, err
+		}
+		return compactNonEmpty(strings.Split(out, "\n")), nil
+	}
+	out, err := gitOutput(ctx, dir, "diff", "--name-only", baseRef, headRef)
+	if err != nil {
+		return nil, err
+	}
+	return compactNonEmpty(strings.Split(out, "\n")), nil
+}
+
+func compactNonEmpty(values []string) []string {
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
+func emptyIfSame(value, repoPath string) string {
+	if value == repoPath {
+		return ""
+	}
+	return value
+}
+
+
+=======
+func (w *WorkerAgent) resolveRepoPath(ctx context.Context, repoName string) (string, error) {
+	if repoName == "" {
+		return "", fmt.Errorf("repo name required")
+	}
+	if w.scanPath == "" {
+		return "", fmt.Errorf("scan path not configured for worker")
+	}
+	repos, err := discovery.Scan(ctx, w.scanPath)
+	if err != nil {
+		return "", err
+	}
+	for _, repo := range repos {
+		if filepath.Base(repo.Path) == repoName {
+			return repo.Path, nil
+		}
+	}
+	return "", fmt.Errorf("repo %s not found on worker", repoName)
+}
+
+func (w *WorkerAgent) prepareWorktree(ctx context.Context, repoPath string, item *WorkItem) (string, string, error) {
+	branch := sanitizeWorktreeLabel(fmt.Sprintf("ralph-team-%s-%s-%s", item.TeamName, item.TeamTaskID, item.ID))
+	worktreePath := filepath.Join(filepath.Dir(repoPath), ".ralph-worktrees", filepath.Base(repoPath), sanitizeWorktreeLabel(item.TeamName), sanitizeWorktreeLabel(item.TeamTaskID), item.ID)
+	if err := os.MkdirAll(filepath.Dir(worktreePath), 0o755); err != nil {
+		return "", "", err
+	}
+	if _, err := os.Stat(worktreePath); err == nil {
+		return worktreePath, branch, nil
+	}
+	if _, err := worktree.CreateWorktree(ctx, repoPath, branch, worktree.WithBaseBranch(item.TargetBranch), worktree.WithPath(worktreePath)); err != nil {
+		if createRefErr := worktree.CreateFromRef(ctx, repoPath, worktreePath, branch); createRefErr != nil {
+			return "", "", err
+		}
+	}
+	return worktreePath, branch, nil
+}
+
+func populateStructuredResult(ctx context.Context, result *WorkResult, item *WorkItem, workerNodeID, repoPath, worktreePath, worktreeBranch, output string) {
+	result.WorkerNodeID = workerNodeID
+	result.WorktreePath = emptyIfSame(worktreePath, repoPath)
+	result.WorktreeBranch = worktreeBranch
+
+	workerResult, err := parseStructuredWorkerResult(output)
+	if err != nil {
+		result.TaskStatus = session.TeamTaskNeedsRetry
+		result.Summary = "worker output did not match structured contract"
+		return
+	}
+
+	result.TaskStatus = workerResult.Status
+	result.Summary = workerResult.Summary
+	result.Question = workerResult.Question
+	result.ChangedFiles = append([]string(nil), workerResult.ChangedFiles...)
+
+	if worktreePath != "" && worktreePath != repoPath {
+		if err := finalizeWorktree(ctx, worktreePath, repoPath, item, result); err != nil {
+			result.TaskStatus = session.TeamTaskNeedsRetry
+			if result.Summary == "" {
+				result.Summary = err.Error()
+			}
+		}
+	}
+}
+
+func finalizeWorktree(ctx context.Context, worktreePath, repoPath string, item *WorkItem, result *WorkResult) error {
+	if err := gitRun(ctx, worktreePath, "add", "-A"); err != nil {
+		return err
+	}
+	if gitHasStagedChanges(ctx, worktreePath) {
+		if err := gitRun(ctx, worktreePath, "commit", "-m", fmt.Sprintf("ralphglasses: %s %s", item.TeamName, item.TeamTaskID)); err != nil {
+			return err
+		}
+	}
+	headSHA, _ := gitOutput(ctx, worktreePath, "rev-parse", "HEAD")
+	result.HeadSHA = strings.TrimSpace(headSHA)
+	if item.TargetBranch != "" && result.WorktreeBranch != "" {
+		mergeBaseSHA, _ := gitOutput(ctx, repoPath, "merge-base", item.TargetBranch, result.WorktreeBranch)
+		result.MergeBaseSHA = strings.TrimSpace(mergeBaseSHA)
+	}
+	if len(result.ChangedFiles) == 0 {
+		diffBase := result.MergeBaseSHA
+		if diffBase == "" {
+			diffBase = strings.TrimSpace(headSHA)
+		}
+		files, err := gitChangedFiles(ctx, worktreePath, diffBase, strings.TrimSpace(headSHA))
+		if err == nil {
+			result.ChangedFiles = files
+		}
+	}
+	return nil
+}
+
+func parseStructuredWorkerResult(output string) (session.TeamWorkerResult, error) {
+	var result session.TeamWorkerResult
+	candidate := strings.TrimSpace(output)
+	if strings.HasPrefix(candidate, "{") && strings.HasSuffix(candidate, "}") {
+		if err := json.Unmarshal([]byte(candidate), &result); err == nil && result.TaskID != "" {
+			return result, nil
+		}
+	}
+	start := strings.Index(candidate, "{")
+	end := strings.LastIndex(candidate, "}")
+	if start >= 0 && end > start {
+		if err := json.Unmarshal([]byte(candidate[start:end+1]), &result); err == nil && result.TaskID != "" {
+			return result, nil
+		}
+	}
+	return session.TeamWorkerResult{}, fmt.Errorf("structured worker result not found")
+}
+
+func structuredFailureResult(item *WorkItem, workerNodeID, taskStatus, message, worktreePath string) *WorkResult {
+	if item.Source != WorkSourceStructuredCodexTeam {
+		return nil
+	}
+	return &WorkResult{
+		TaskStatus:   taskStatus,
+		Summary:      message,
+		WorkerNodeID: workerNodeID,
+		WorktreePath: worktreePath,
+	}
+}
+
+func sanitizeWorktreeLabel(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	replacer := strings.NewReplacer("/", "-", " ", "-", "_", "-", ".", "-")
+	value = replacer.Replace(value)
+	value = strings.Trim(value, "-")
+	if value == "" {
+		return "work"
+	}
+	return value
+}
+
+func gitRun(ctx context.Context, dir string, args ...string) error {
+	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func gitOutput(ctx context.Context, dir string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...)
+	out, err := cmd.CombinedOutput()
+	return strings.TrimSpace(string(out)), err
+}
+
+func gitHasStagedChanges(ctx context.Context, dir string) bool {
+	cmd := exec.CommandContext(ctx, "git", "-C", dir, "diff", "--cached", "--quiet")
+	err := cmd.Run()
+	if err == nil {
+		return false
+	}
+	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+		return true
+	}
+	return false
+}
+
+func gitChangedFiles(ctx context.Context, dir, baseRef, headRef string) ([]string, error) {
+	if baseRef == "" {
+		out, err := gitOutput(ctx, dir, "diff", "--cached", "--name-only")
+		if err != nil {
+			return nil, err
+		}
+		return compactNonEmpty(strings.Split(out, "\n")), nil
+	}
+	out, err := gitOutput(ctx, dir, "diff", "--name-only", baseRef, headRef)
+	if err != nil {
+		return nil, err
+	}
+	return compactNonEmpty(strings.Split(out, "\n")), nil
+}
+
+func compactNonEmpty(values []string) []string {
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
+func emptyIfSame(value, repoPath string) string {
+	if value == repoPath {
+		return ""
+	}
+	return value
+}
+
+>>>>>>> Stashed changes
 func (w *WorkerAgent) discoverProviders() []session.Provider {
 	var providers []session.Provider
 	for _, p := range []session.Provider{session.ProviderCodex, session.ProviderGemini, session.ProviderClaude} {

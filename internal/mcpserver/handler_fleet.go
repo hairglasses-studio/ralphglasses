@@ -494,9 +494,9 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 		rates := session.DefaultCostRates()
 		est := estimateSessionCost(
 			string(rec.Provider), rec.Model,
-			5000,  // default prompt tokens
-			2000,  // default output tokens per turn
-			5,     // default turns
+			5000, // default prompt tokens
+			2000, // default output tokens per turn
+			5,    // default turns
 			"session", 1,
 			rates, nil,
 		)
@@ -607,7 +607,7 @@ func (s *Server) handleFleetSchedule(_ context.Context, req mcp.CallToolRequest)
 func fleetJSON(v any) (*mcp.CallToolResult, error) {
 	data, err := json.Marshal(v)
 	if err != nil {
-		return codedError(ErrInternal, "marshal error: " + err.Error()), nil
+		return codedError(ErrInternal, "marshal error: "+err.Error()), nil
 	}
 	return textResult(string(data)), nil
 }

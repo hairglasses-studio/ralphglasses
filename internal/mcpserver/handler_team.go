@@ -56,6 +56,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 	workerProvider := session.Provider(pp.String("worker_provider"))
 
 	config := session.TeamConfig{
+<<<<<<< Updated upstream
 		Name:           teamName,
 		Provider:       teamProvider,
 		WorkerProvider: workerProvider,
@@ -64,6 +65,59 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		Tasks:          tasks,
 		Model:          pp.String("model"),
 		MaxBudgetUSD:   pp.FloatOr("budget_usd", 0),
+||||||| Stash base
+		Name:           teamName,
+		Provider:       teamProvider,
+		WorkerProvider: workerProvider,
+		RepoPath:       r.Path,
+		LeadAgent:      leadAgent,
+		Tasks:          tasks,
+		Model:          pp.String("model"),
+		WorkerModel:    pp.String("worker_model"),
+		MaxBudgetUSD:   pp.FloatOr("budget_usd", 0),
+		MaxConcurrency: int(pp.FloatOr("max_concurrency", 0)),
+		MaxRetries:     int(pp.FloatOr("max_retries", 0)),
+		ExecutionBackend: strings.TrimSpace(pp.String("execution_backend")),
+		WorktreePolicy:   strings.TrimSpace(pp.String("worktree_policy")),
+		TargetBranch:     strings.TrimSpace(pp.String("target_branch")),
+		AutoStart:        pp.Bool("autostart"),
+	}
+	if config.ExecutionBackend == "" && teamProvider == session.ProviderCodex {
+		if s.FleetCoordinator != nil || s.FleetClient != nil {
+			config.ExecutionBackend = session.TeamExecutionBackendFleet
+		} else {
+			config.ExecutionBackend = session.TeamExecutionBackendLocal
+		}
+	}
+	if config.WorktreePolicy == "" && teamProvider == session.ProviderCodex {
+		config.WorktreePolicy = session.TeamWorktreePolicyPerWorker
+=======
+		Name:             teamName,
+		Provider:         teamProvider,
+		WorkerProvider:   workerProvider,
+		RepoPath:         r.Path,
+		LeadAgent:        leadAgent,
+		Tasks:            tasks,
+		Model:            pp.String("model"),
+		WorkerModel:      pp.String("worker_model"),
+		MaxBudgetUSD:     pp.FloatOr("budget_usd", 0),
+		MaxConcurrency:   int(pp.FloatOr("max_concurrency", 0)),
+		MaxRetries:       int(pp.FloatOr("max_retries", 0)),
+		ExecutionBackend: strings.TrimSpace(pp.String("execution_backend")),
+		WorktreePolicy:   strings.TrimSpace(pp.String("worktree_policy")),
+		TargetBranch:     strings.TrimSpace(pp.String("target_branch")),
+		AutoStart:        pp.Bool("autostart"),
+	}
+	if config.ExecutionBackend == "" && teamProvider == session.ProviderCodex {
+		if s.FleetCoordinator != nil || s.FleetClient != nil {
+			config.ExecutionBackend = session.TeamExecutionBackendFleet
+		} else {
+			config.ExecutionBackend = session.TeamExecutionBackendLocal
+		}
+	}
+	if config.WorktreePolicy == "" && teamProvider == session.ProviderCodex {
+		config.WorktreePolicy = session.TeamWorktreePolicyPerWorker
+>>>>>>> Stashed changes
 	}
 
 	if pp.Bool("dry_run") {
@@ -97,6 +151,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 			effectiveBudget = 5.0
 		}
 		return jsonResult(map[string]any{
+<<<<<<< Updated upstream
 			"dry_run":         true,
 			"name":            config.Name,
 			"repo":            repoName,
@@ -107,6 +162,45 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 			"budget_usd":      effectiveBudget,
 			"tasks":           config.Tasks,
 			"task_count":      len(config.Tasks),
+||||||| Stash base
+			"dry_run":         true,
+			"runtime":         teamRuntimeForProvider(effectiveProvider),
+			"name":            config.Name,
+			"repo":            repoName,
+			"provider":        string(effectiveProvider),
+			"worker_provider": string(effectiveWorkerProvider),
+			"lead_agent":      config.LeadAgent,
+			"model":           effectiveModel,
+			"worker_model":    effectiveWorkerModel,
+			"budget_usd":      effectiveBudget,
+			"max_concurrency": maxInt(config.MaxConcurrency, 2),
+			"max_retries":     maxInt(config.MaxRetries, 2),
+			"execution_backend": firstNonBlank(config.ExecutionBackend, session.TeamExecutionBackendLocal),
+			"worktree_policy":   firstNonBlank(config.WorktreePolicy, session.TeamWorktreePolicyPerWorker),
+			"target_branch":     firstNonBlank(config.TargetBranch, "main"),
+			"autostart":         config.AutoStart,
+			"tasks":           config.Tasks,
+			"task_count":      len(config.Tasks),
+=======
+			"dry_run":           true,
+			"runtime":           teamRuntimeForProvider(effectiveProvider),
+			"name":              config.Name,
+			"repo":              repoName,
+			"provider":          string(effectiveProvider),
+			"worker_provider":   string(effectiveWorkerProvider),
+			"lead_agent":        config.LeadAgent,
+			"model":             effectiveModel,
+			"worker_model":      effectiveWorkerModel,
+			"budget_usd":        effectiveBudget,
+			"max_concurrency":   maxInt(config.MaxConcurrency, 2),
+			"max_retries":       maxInt(config.MaxRetries, 2),
+			"execution_backend": firstNonBlank(config.ExecutionBackend, session.TeamExecutionBackendLocal),
+			"worktree_policy":   firstNonBlank(config.WorktreePolicy, session.TeamWorktreePolicyPerWorker),
+			"target_branch":     firstNonBlank(config.TargetBranch, "main"),
+			"autostart":         config.AutoStart,
+			"tasks":             config.Tasks,
+			"task_count":        len(config.Tasks),
+>>>>>>> Stashed changes
 		}), nil
 	}
 
@@ -130,11 +224,59 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 
 	// Enrich with lead session info
 	result := map[string]any{
+<<<<<<< Updated upstream
 		"name":    team.Name,
 		"repo":    team.RepoPath,
 		"status":  team.Status,
 		"tasks":   team.Tasks,
 		"created": team.CreatedAt,
+||||||| Stash base
+		"name":                 team.Name,
+		"repo":                 team.RepoPath,
+		"provider":             team.Provider,
+		"worker_provider":      team.WorkerProvider,
+		"status":               team.Status,
+		"run_state":            team.RunState,
+		"runtime":              team.Runtime,
+		"tasks":                team.Tasks,
+		"created":              team.CreatedAt,
+		"updated":              team.UpdatedAt,
+		"planner_session_id":   team.PlannerSessionID,
+		"last_planner_summary": team.LastPlannerSummary,
+		"pending_question":     team.PendingQuestion,
+		"step_count":           team.StepCount,
+		"execution_backend":    team.ExecutionBackend,
+		"worktree_policy":      team.WorktreePolicy,
+		"autostart":            team.AutoStart,
+		"controller_running":   team.ControllerRunning,
+		"last_controller_error": team.LastControllerError,
+		"target_branch":        team.TargetBranch,
+		"integration_branch":   team.IntegrationBranch,
+		"integration_path":     team.IntegrationPath,
+=======
+		"name":                  team.Name,
+		"repo":                  team.RepoPath,
+		"provider":              team.Provider,
+		"worker_provider":       team.WorkerProvider,
+		"status":                team.Status,
+		"run_state":             team.RunState,
+		"runtime":               team.Runtime,
+		"tasks":                 team.Tasks,
+		"created":               team.CreatedAt,
+		"updated":               team.UpdatedAt,
+		"planner_session_id":    team.PlannerSessionID,
+		"last_planner_summary":  team.LastPlannerSummary,
+		"pending_question":      team.PendingQuestion,
+		"step_count":            team.StepCount,
+		"execution_backend":     team.ExecutionBackend,
+		"worktree_policy":       team.WorktreePolicy,
+		"autostart":             team.AutoStart,
+		"controller_running":    team.ControllerRunning,
+		"last_controller_error": team.LastControllerError,
+		"target_branch":         team.TargetBranch,
+		"integration_branch":    team.IntegrationBranch,
+		"integration_path":      team.IntegrationPath,
+>>>>>>> Stashed changes
 	}
 
 	if lead, ok := s.SessMgr.Get(team.LeadID); ok {

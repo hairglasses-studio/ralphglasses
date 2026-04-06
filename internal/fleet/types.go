@@ -28,6 +28,7 @@ const (
 
 // WorkItem represents a unit of work in the fleet queue.
 type WorkItem struct {
+<<<<<<< Updated upstream
 	ID           string           `json:"id"`
 	Type         WorkItemType     `json:"type"`
 	Status       WorkItemStatus   `json:"status"`
@@ -52,6 +53,81 @@ type WorkItem struct {
 	StartedAt    *time.Time       `json:"started_at,omitempty"`
 	CompletedAt  *time.Time       `json:"completed_at,omitempty"`
 	Result       *WorkResult      `json:"result,omitempty"`
+||||||| Stash base
+	ID           string           `json:"id"`
+	Type         WorkItemType     `json:"type"`
+	Source       string           `json:"source,omitempty"`
+	Status       WorkItemStatus   `json:"status"`
+	Priority     int              `json:"priority"`
+	RepoName     string           `json:"repo_name"`
+	RepoPath     string           `json:"repo_path,omitempty"`
+	Prompt       string           `json:"prompt"`
+	Provider     session.Provider `json:"provider,omitempty"`
+	Model        string           `json:"model,omitempty"`
+	Agent        string           `json:"agent,omitempty"`
+	TeamName     string           `json:"team_name,omitempty"`
+	TeamTaskID   string           `json:"team_task_id,omitempty"`
+	PlannerSessionID string       `json:"planner_session_id,omitempty"`
+	SessionName  string           `json:"session_name,omitempty"`
+	PermissionMode string         `json:"permission_mode,omitempty"`
+	OutputSchema json.RawMessage  `json:"output_schema,omitempty"`
+	WorktreePolicy string         `json:"worktree_policy,omitempty"`
+	Sandbox      bool             `json:"sandbox,omitempty"`
+	SandboxImage string           `json:"sandbox_image,omitempty"`
+	TargetBranch string           `json:"target_branch,omitempty"`
+	HumanContext []string         `json:"human_context,omitempty"`
+	MaxBudgetUSD float64          `json:"max_budget_usd,omitempty"`
+	MaxTurns     int              `json:"max_turns,omitempty"`
+	Constraints  WorkConstraints  `json:"constraints"`
+	AssignedTo   string           `json:"assigned_to,omitempty"` // worker node ID
+	SessionID    string           `json:"session_id,omitempty"`  // session ID once running
+	RetryCount   int              `json:"retry_count"`
+	MaxRetries   int              `json:"max_retries"`
+	Error        string           `json:"error,omitempty"`
+	RetryAfter   *time.Time       `json:"retry_after,omitempty"`
+	SubmittedAt  time.Time        `json:"submitted_at"`
+	AssignedAt   *time.Time       `json:"assigned_at,omitempty"`
+	StartedAt    *time.Time       `json:"started_at,omitempty"`
+	CompletedAt  *time.Time       `json:"completed_at,omitempty"`
+	Result       *WorkResult      `json:"result,omitempty"`
+=======
+	ID               string           `json:"id"`
+	Type             WorkItemType     `json:"type"`
+	Source           string           `json:"source,omitempty"`
+	Status           WorkItemStatus   `json:"status"`
+	Priority         int              `json:"priority"`
+	RepoName         string           `json:"repo_name"`
+	RepoPath         string           `json:"repo_path,omitempty"`
+	Prompt           string           `json:"prompt"`
+	Provider         session.Provider `json:"provider,omitempty"`
+	Model            string           `json:"model,omitempty"`
+	Agent            string           `json:"agent,omitempty"`
+	TeamName         string           `json:"team_name,omitempty"`
+	TeamTaskID       string           `json:"team_task_id,omitempty"`
+	PlannerSessionID string           `json:"planner_session_id,omitempty"`
+	SessionName      string           `json:"session_name,omitempty"`
+	PermissionMode   string           `json:"permission_mode,omitempty"`
+	OutputSchema     json.RawMessage  `json:"output_schema,omitempty"`
+	WorktreePolicy   string           `json:"worktree_policy,omitempty"`
+	Sandbox          bool             `json:"sandbox,omitempty"`
+	SandboxImage     string           `json:"sandbox_image,omitempty"`
+	TargetBranch     string           `json:"target_branch,omitempty"`
+	HumanContext     []string         `json:"human_context,omitempty"`
+	MaxBudgetUSD     float64          `json:"max_budget_usd,omitempty"`
+	MaxTurns         int              `json:"max_turns,omitempty"`
+	Constraints      WorkConstraints  `json:"constraints"`
+	AssignedTo       string           `json:"assigned_to,omitempty"` // worker node ID
+	SessionID        string           `json:"session_id,omitempty"`  // session ID once running
+	RetryCount       int              `json:"retry_count"`
+	MaxRetries       int              `json:"max_retries"`
+	Error            string           `json:"error,omitempty"`
+	RetryAfter       *time.Time       `json:"retry_after,omitempty"`
+	SubmittedAt      time.Time        `json:"submitted_at"`
+	AssignedAt       *time.Time       `json:"assigned_at,omitempty"`
+	StartedAt        *time.Time       `json:"started_at,omitempty"`
+	CompletedAt      *time.Time       `json:"completed_at,omitempty"`
+	Result           *WorkResult      `json:"result,omitempty"`
+>>>>>>> Stashed changes
 }
 
 // WorkConstraints specifies placement constraints for work items.
@@ -63,12 +139,46 @@ type WorkConstraints struct {
 
 // WorkResult captures the outcome of a completed work item.
 type WorkResult struct {
+<<<<<<< Updated upstream
 	SessionID  string  `json:"session_id"`
 	SpentUSD   float64 `json:"spent_usd"`
 	TurnCount  int     `json:"turn_count"`
 	DurationS  float64 `json:"duration_seconds"`
 	ExitReason string  `json:"exit_reason,omitempty"`
 	Output     string  `json:"output,omitempty"`
+||||||| Stash base
+	SessionID    string   `json:"session_id"`
+	SpentUSD     float64  `json:"spent_usd"`
+	TurnCount    int      `json:"turn_count"`
+	DurationS    float64  `json:"duration_seconds"`
+	ExitReason   string   `json:"exit_reason,omitempty"`
+	Output       string   `json:"output,omitempty"`
+	TaskStatus   string   `json:"task_status,omitempty"`
+	Summary      string   `json:"summary,omitempty"`
+	Question     string   `json:"question,omitempty"`
+	ChangedFiles []string `json:"changed_files,omitempty"`
+	WorkerNodeID string   `json:"worker_node_id,omitempty"`
+	WorktreePath string   `json:"worktree_path,omitempty"`
+	WorktreeBranch string `json:"worktree_branch,omitempty"`
+	HeadSHA      string   `json:"head_sha,omitempty"`
+	MergeBaseSHA string   `json:"merge_base_sha,omitempty"`
+=======
+	SessionID      string   `json:"session_id"`
+	SpentUSD       float64  `json:"spent_usd"`
+	TurnCount      int      `json:"turn_count"`
+	DurationS      float64  `json:"duration_seconds"`
+	ExitReason     string   `json:"exit_reason,omitempty"`
+	Output         string   `json:"output,omitempty"`
+	TaskStatus     string   `json:"task_status,omitempty"`
+	Summary        string   `json:"summary,omitempty"`
+	Question       string   `json:"question,omitempty"`
+	ChangedFiles   []string `json:"changed_files,omitempty"`
+	WorkerNodeID   string   `json:"worker_node_id,omitempty"`
+	WorktreePath   string   `json:"worktree_path,omitempty"`
+	WorktreeBranch string   `json:"worktree_branch,omitempty"`
+	HeadSHA        string   `json:"head_sha,omitempty"`
+	MergeBaseSHA   string   `json:"merge_base_sha,omitempty"`
+>>>>>>> Stashed changes
 }
 
 // WorkerInfo describes a registered worker node.
