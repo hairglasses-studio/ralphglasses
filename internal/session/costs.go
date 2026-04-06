@@ -75,6 +75,15 @@ func (cr *CostRates) ProviderCostRateFrom(p Provider) CostRate {
 	case ProviderCodex:
 		rate.InputPer1M = cr.lookupInput("codex", CostCodexInput)
 		rate.OutputPer1M = cr.lookupOutput("codex", CostCodexOutput)
+	case ProviderCrush:
+		rate.InputPer1M = cr.lookupInput("crush", CostClaudeSonnetInput)
+		rate.OutputPer1M = cr.lookupOutput("crush", CostClaudeSonnetOutput)
+	case ProviderGoose:
+		rate.InputPer1M = cr.lookupInput("goose", CostClaudeSonnetInput)
+		rate.OutputPer1M = cr.lookupOutput("goose", CostClaudeSonnetOutput)
+	case ProviderAmp:
+		rate.InputPer1M = cr.lookupInput("amp", CostClaudeSonnetInput)
+		rate.OutputPer1M = cr.lookupOutput("amp", CostClaudeSonnetOutput)
 	}
 
 	return rate
