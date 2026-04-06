@@ -61,8 +61,9 @@ type Manager struct {
 	FleetPool          *pool.State            // fleet-wide budget pooling and metrics aggregation
 	worktreePool       *WorktreePool          // Phase 10.5.8: reusable worktree pool
 
-	spendMonitor *SpendRateMonitor // hourly spend circuit breaker (nil = disabled)
-	promptRouter PromptRouter     // Prompt DJ quality-aware routing (nil = disabled)
+	spendMonitor  *SpendRateMonitor        // hourly spend circuit breaker (nil = disabled)
+	promptRouter  PromptRouter             // Prompt DJ quality-aware routing (nil = disabled)
+	errorContexts map[string]*ErrorContext // per-session error context for LLM injection
 
 	DefaultBudgetUSD float64 // from RALPH_SESSION_BUDGET; applied when Launch opts has no budget
 

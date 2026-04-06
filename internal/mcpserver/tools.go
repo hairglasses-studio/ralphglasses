@@ -94,11 +94,18 @@ type Server struct {
 	// Tasks is the async task registry for long-running MCP tool operations.
 	Tasks *TaskRegistry
 
+	// approvalStore holds in-memory approval records for HITL workflows.
+	approvalStore *ApprovalStore
+
 	// djRouter is the Prompt DJ routing engine (lazy-initialized).
 	djRouter *promptdj.PromptDJRouter
 
 	// fewshotRetriever is the few-shot example retriever (lazy-initialized).
 	fewshotRetriever *fewshot.Retriever
+
+	// PrefetchRunnerInstance is the deterministic context pre-fetch runner
+	// (lazy-initialized via prefetchRunner()).
+	PrefetchRunnerInstance *session.PrefetchRunner
 }
 
 // DefaultScanTTL is how long repo scan results are considered fresh before
@@ -136,7 +143,8 @@ var ToolGroupNames = []string{
 	"core", "session", "loop", "prompt", "fleet",
 	"repo", "roadmap", "team", "awesome", "advanced", "events", "feedback", "eval", "fleet_h",
 	"observability", "rdcycle", "plugin", "sweep",
-	"rc", "autonomy", "workflow", "docs", "recovery", "promptdj", "a2a", "trigger",
+	"rc", "autonomy", "workflow", "docs", "recovery", "promptdj", "a2a", "trigger", "approval",
+	"context", "prefetch",
 }
 
 func (s *Server) scan() error {
