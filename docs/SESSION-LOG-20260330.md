@@ -31,7 +31,7 @@ Migration session bundling all uncommitted work, secrets, configs, and legacy sc
 
 ### Secrets & Keys
 - Scanned all `.env` files across repos, stored in 1Password Personal vault
-- Located 4 unique Anthropic API keys (local .env, settings.json, file-history, Galileo vault)
+- Located 4 unique Anthropic API keys (local .env, settings.json, file-history, work vault)
 - Exported GPG secret key (`DBA0A26180A4ED19`)
 - Saved GitHub repo secrets via `gh secret set`
 
