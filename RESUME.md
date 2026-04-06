@@ -15,9 +15,9 @@ go build ./...
 go vet ./...
 
 # 4. Get your API key from 1Password
-#    Item: "Anthropic API Key (Work - 10K credits)" in Personal vault
-#    Or: op read "op://Personal/Anthropic API Key (Work - 10K credits)/credential" --account my.1password.com
-export ANTHROPIC_API_KEY="$(op read 'op://Personal/Anthropic API Key (Work - 10K credits)/credential' --account my.1password.com)"
+# Set your API key (via 1Password CLI, env var, or .env file)
+#    op read "op://<vault>/<item>/credential"
+export ANTHROPIC_API_KEY="<your-anthropic-api-key>"
 
 # 5. Launch the marathon
 ./marathon.sh -b 100 -d 12 -c 80 -v -m
