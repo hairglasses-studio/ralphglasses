@@ -80,6 +80,8 @@ type Session struct {
 	ChildIDs  []string `json:"child_ids,omitempty"`  // IDs of sessions forked from this one
 	ForkPoint int      `json:"fork_point,omitempty"` // turn number at which the fork was created
 
+	CtxBudget *ContextBudget `json:"-"` // per-session context window budget monitor
+
 	cmd                 *exec.Cmd
 	cancel              func()
 	mu                  sync.Mutex

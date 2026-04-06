@@ -1,4 +1,14 @@
+# CI — calls the org-wide reusable Go test workflow.
+#
+# Replaces inline test steps with:
+#   hairglasses-studio/.github/.github/workflows/go-test.yml@main
+#
+# Repo-specific workflows preserved separately:
+#   - claude-review.yml, claude-security.yml (AI PR review)
+#   - dependabot-auto-merge.yml
+
 name: CI
+
 on:
   push:
     branches: [main]
@@ -7,14 +17,9 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.26.1"
-          cache: true
-      - run: go mod download
-      - run: go vet ./...
-      - run: go test ./... -count=1 -timeout 10m
-      - run: go build ./...
+    uses: hairglasses-studio/.github/.github/workflows/go-test.yml@main
+    with:
+      go-version: "1.26.1"
+      test-flags: "-count=1 -race"
+      coverage-threshold: 0
+      timeout: "10m"

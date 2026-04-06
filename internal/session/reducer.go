@@ -6,6 +6,7 @@ import "time"
 type SessionEventType string
 
 const (
+	// Reducer lifecycle events (used by Reduce/FoldEvents).
 	EventCreated        SessionEventType = "created"
 	EventStarted        SessionEventType = "started"
 	EventPaused         SessionEventType = "paused"
@@ -19,15 +20,36 @@ const (
 	EventStopped        SessionEventType = "stopped"
 	EventCrashed        SessionEventType = "crashed"
 	EventConfigChanged  SessionEventType = "config_changed"
+
+	// Event-sourced session log events (used by SessionEventLog).
+	EventSessionCreated   SessionEventType = "session.created"
+	EventSessionStarted   SessionEventType = "session.started"
+	EventSessionPaused    SessionEventType = "session.paused"
+	EventSessionResumed   SessionEventType = "session.resumed"
+	EventSessionCompleted SessionEventType = "session.completed"
+	EventSessionErrored   SessionEventType = "session.errored"
+	EventSessionStopped   SessionEventType = "session.stopped"
+	EventToolCall         SessionEventType = "tool.call"
+	EventToolResult       SessionEventType = "tool.result"
+	EventCostUpdate       SessionEventType = "cost.update"
+	EventLayerChange      SessionEventType = "layer.change"
+	EventProviderSwitch   SessionEventType = "provider.switch"
+	EventHumanContact     SessionEventType = "human.contact"
 )
 
 // SessionEvent is an immutable record of something that happened to a session.
 type SessionEvent struct {
+	// Core fields (always present).
 	Type      SessionEventType `json:"type"`
 	Timestamp time.Time        `json:"timestamp"`
 	SessionID string           `json:"session_id"`
 
-	// Optional fields populated depending on event type.
+	// Event-sourced log fields (used by SessionEventLog).
+	ID        string         `json:"id,omitempty"`
+	Data      map[string]any `json:"data,omitempty"`
+	Iteration int            `json:"iteration,omitempty"`
+
+	// Reducer-specific fields populated depending on event type.
 	Status     SessionStatus `json:"status,omitempty"`
 	SpentUSD   float64       `json:"spent_usd,omitempty"`
 	TurnCount  int           `json:"turn_count,omitempty"`
