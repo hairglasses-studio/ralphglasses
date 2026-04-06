@@ -88,6 +88,7 @@ var validProviders = map[string]bool{
 	"codex":  true,
 	"openai": true,
 	"ollama": true,
+	"a2a":    true,
 }
 
 // validModelPrefixes maps each provider to accepted model name prefixes.
