@@ -17,6 +17,13 @@ type PromptDJConfig struct {
 	LogDecisions       bool    `json:"log_decisions"`        // persist decisions to JSONL (default true)
 	LearnFromOutcomes  bool    `json:"learn_from_outcomes"`  // update weights from feedback (default true)
 	LearningRate       float64 `json:"learning_rate"`        // EMA learning rate (default 0.05)
+
+	// CascadeTiersEnabled activates the 3-tier model cascade (Tier 1: fast/cheap,
+	// Tier 2: balanced, Tier 3: powerful). When enabled, prompt classification
+	// determines the initial tier and confidence-based escalation promotes to
+	// higher tiers as needed.
+	CascadeTiersEnabled bool              `json:"cascade_tiers_enabled"`
+	CascadeTierConfig   *CascadeTierConfig `json:"cascade_tier_config,omitempty"`
 }
 
 // DefaultConfig returns sensible defaults.
@@ -66,6 +73,9 @@ func ConfigFromEnv() PromptDJConfig {
 	}
 	if v := os.Getenv("PROMPT_ROUTER_LOG_DECISIONS"); v != "" {
 		cfg.LogDecisions = strings.EqualFold(v, "true") || v == "1"
+	}
+	if v := os.Getenv("PROMPT_ROUTER_CASCADE_TIERS"); v != "" {
+		cfg.CascadeTiersEnabled = strings.EqualFold(v, "true") || v == "1"
 	}
 
 	return cfg

@@ -174,6 +174,27 @@ func (r *PromptDJRouter) Route(ctx context.Context, req RoutingRequest) (*Routin
 	d.Confidence = conf
 	d.ConfidenceLevel = ConfidenceLevelFromScore(conf)
 
+	// ── Phase 7.5: Multi-Model Cascade Tier Routing ───────────────────
+	// When cascade tiers are enabled, classify the prompt into a 3-tier
+	// model cascade (fast/balanced/powerful) and use confidence-based
+	// escalation. This overrides the standard Phase 6 provider/model
+	// selection when it produces a result.
+	if r.config.CascadeTiersEnabled {
+		tierCfg := DefaultCascadeTierConfig()
+		if r.config.CascadeTierConfig != nil {
+			tierCfg = *r.config.CascadeTierConfig
+		}
+		tierResult := RouteCascadeTier(
+			taskType, complexity, score, req.Prompt,
+			conf, d.Provider, domainTags, tierCfg,
+		)
+		d.CascadeTierResult = &tierResult
+		// Override provider/model with the cascade tier selection.
+		d.Provider = tierResult.SelectedModel.Provider
+		d.Model = tierResult.SelectedModel.Model
+		d.CostTier = tierResult.FinalTier.String()
+	}
+
 	// If confidence is too low, escalate to highest tier
 	if conf < r.config.MinConfidence {
 		d.Provider = session.ProviderClaude
