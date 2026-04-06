@@ -1,5 +1,7 @@
 # Ralphglasses
 
+This repo uses [AGENTS.md](AGENTS.md) as the canonical instruction file.
+
 Command-and-control TUI + bootable thin client for parallel multi-LLM agent fleets.
 
 Supports **Claude Code**, **Gemini CLI**, and **OpenAI Codex CLI** as session providers. Codex now serves as the default command-and-control runtime; Claude remains available as the higher-cost reasoning and fallback lane when a task genuinely needs it.

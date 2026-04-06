@@ -1,4 +1,5 @@
 # Ralphglasses — Codex CLI Instructions
+> Canonical instructions: AGENTS.md
 
 Command-and-control TUI + bootable thin client for parallel multi-LLM agent fleets.
 
