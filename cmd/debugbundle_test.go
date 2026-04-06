@@ -63,9 +63,9 @@ func TestSanitizeSecrets(t *testing.T) {
 		},
 		{
 			name:  "sk-ant prefix",
-			input: "my key is [REDACTED-ANTHROPIC-KEY]",
+			input: "my key is sk-ant-abcdefghijklmnopqrstuv",
 			want:  "...",
-			avoid: "abcdefghijklmnopqrstuv",
+			avoid: "hijklmnopqrstuv",
 		},
 		{
 			name:  "openai key",

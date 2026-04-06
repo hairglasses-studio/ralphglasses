@@ -393,11 +393,18 @@ func TestHandleCyclePlan_DefaultParams(t *testing.T) {
 
 func TestHandleCycleMerge_HappyPath(t *testing.T) {
 	t.Parallel()
-	srv, _ := setupTestServer(t)
+	srv, root := setupTestServer(t)
 
-	// Create two temp "worktree" directories with git repos and changed files.
-	wt1 := t.TempDir()
-	wt2 := t.TempDir()
+	// Create two "worktree" directories inside the scan root so they pass
+	// ValidatePath's scan-root check.
+	wt1 := filepath.Join(root, "wt1")
+	wt2 := filepath.Join(root, "wt2")
+	if err := os.MkdirAll(wt1, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(wt2, 0755); err != nil {
+		t.Fatal(err)
+	}
 
 	// Write initial files so initGitRepo has something to commit.
 	if err := os.WriteFile(filepath.Join(wt1, "file_a.go"), []byte("package main\n"), 0644); err != nil {
@@ -473,8 +480,8 @@ func TestHandleCycleMerge_NonexistentPath(t *testing.T) {
 		t.Fatal("expected error for nonexistent worktree path")
 	}
 	text := getResultText(result)
-	if !strings.Contains(text, "does not exist") {
-		t.Errorf("expected 'does not exist' in error, got: %s", text)
+	if !strings.Contains(text, "path escapes scan root") && !strings.Contains(text, "does not exist") {
+		t.Errorf("expected 'path escapes scan root' or 'does not exist' in error, got: %s", text)
 	}
 }
 

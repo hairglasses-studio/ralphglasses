@@ -125,7 +125,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 			"repo":              repoName,
 			"provider":          string(effectiveProvider),
 			"worker_provider":   string(effectiveWorkerProvider),
-			"lead_agent":        config.LeadAgent,
+			"lead_agent":        firstNonBlank(config.LeadAgent, "default"),
 			"model":             effectiveModel,
 			"worker_model":      effectiveWorkerModel,
 			"budget_usd":        effectiveBudget,

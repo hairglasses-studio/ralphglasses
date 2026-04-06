@@ -124,9 +124,10 @@ func TestSetup_RegistersMetaTools(t *testing.T) {
 func TestToolGroupNames(t *testing.T) {
 	expected := []string{
 		"core", "session", "loop", "prompt", "fleet",
-		"repo", "roadmap", "team", "awesome", "advanced", "eval", "fleet_h",
+		"repo", "roadmap", "team", "awesome", "advanced", "events", "feedback", "eval", "fleet_h",
 		"observability", "rdcycle", "plugin", "sweep",
-		"rc", "autonomy", "workflow", "docs", "recovery", "promptdj", "a2a",
+		"rc", "autonomy", "workflow", "docs", "recovery", "promptdj", "a2a", "trigger", "approval",
+		"context", "prefetch",
 	}
 	if len(mcpserver.ToolGroupNames) != len(expected) {
 		t.Errorf("ToolGroupNames has %d entries, want %d", len(mcpserver.ToolGroupNames), len(expected))
