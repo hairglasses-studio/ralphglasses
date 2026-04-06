@@ -375,29 +375,6 @@ func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	return cmd
 }
 
-// buildCrushCmd constructs the Crush CLI command.
-// Crush (Charmbracelet) is a BubbleTea v2-based AI agent TUI with headless mode.
-func buildCrushCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
-	args := []string{"--headless", "--json-output"}
-	if opts.Model != "" {
-		args = append(args, "--model", opts.Model)
-	}
-	if opts.SystemPrompt != "" {
-		args = append(args, "--system-prompt", opts.SystemPrompt)
-	}
-	if opts.Resume != "" {
-		args = append(args, "--resume", opts.Resume)
-	}
-	if opts.Prompt != "" {
-		args = append(args, opts.Prompt)
-	}
-	cmd := exec.CommandContext(ctx, "crush", args...)
-	cmd.Dir = opts.RepoPath
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Env = stripNestingEnv(os.Environ())
-	return cmd
-}
-
 func validateLaunchOptions(opts LaunchOptions) error {
 	if opts.Provider == ProviderCodex && opts.Resume != "" && !codexExecResumeSupported() {
 		return fmt.Errorf("codex provider on this install does not support exec resume")
