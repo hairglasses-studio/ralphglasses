@@ -1,12 +1,15 @@
 ## Summary
-Brief description of changes.
 
-## Changes
-- 
+- What changed
+- Why it changed
 
-## Testing
-- [ ] Tests pass (`go test ./...`)
-- [ ] Linting passes (`go vet ./...`)
+## Validation
 
-## Related Issues
-Closes #
+- [ ] Relevant tests/builds passed
+- [ ] Docs updated when behavior, interfaces, or repo topology changed
+- [ ] Sensitive data and local artifacts were not committed
+
+## Risk
+
+- Operational or rollout risk:
+- Follow-up work:
