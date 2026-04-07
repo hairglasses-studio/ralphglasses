@@ -159,6 +159,14 @@ fleet management from any MCP-capable client.`,
 		m := tui.NewModel(scanPath, sessMgr)
 		m.Ctx = ctx
 		m.EventBus = bus
+		m.EventBusCh = bus.SubscribeFiltered("tui",
+			events.SessionStarted, events.SessionEnded, events.SessionStopped,
+			events.CostUpdate, events.BudgetAlert, events.BudgetExceeded,
+			events.LoopStarted, events.LoopStopped, events.LoopRestarted, events.LoopIterated,
+			events.LoopRegression,
+			events.TeamCreated,
+			events.AnomalyDetected, events.EmergencyStop, events.EmergencyResume,
+		)
 		m.NotifyEnabled = notifyFlag
 
 		p := tea.NewProgram(m)
