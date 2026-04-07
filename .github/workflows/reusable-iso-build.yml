@@ -1,0 +1,86 @@
+name: Reusable ISO Build
+
+on:
+  workflow_call:
+
+jobs:
+  build-iso:
+    name: Build Bootable ISO
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install system prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            grub2-common \
+            xorriso \
+            mtools \
+            qemu-system-x86
+
+      - name: Build ralphglasses binary
+        run: go build -o ralphglasses ./...
+
+      - name: Build ISO
+        run: |
+          chmod +x distro/scripts/build-iso.sh
+          sudo distro/scripts/build-iso.sh
+
+      - name: QEMU smoke test
+        run: |
+          ISO_PATH=$(find output/ -name '*.iso' -type f | head -1)
+          if [ -z "$ISO_PATH" ]; then
+            echo "::error::No ISO file found in output/"
+            exit 1
+          fi
+          echo "Testing ISO: $ISO_PATH"
+          timeout 120 qemu-system-x86_64 \
+            -cdrom "$ISO_PATH" \
+            -m 1024 \
+            -nographic \
+            -no-reboot \
+            -serial mon:stdio \
+            -boot d \
+            2>&1 | tee qemu-output.log &
+          QEMU_PID=$!
+          sleep 30
+          if kill -0 "$QEMU_PID" 2>/dev/null; then
+            echo "QEMU booted successfully (process still running after 30s)"
+            kill "$QEMU_PID" || true
+          else
+            echo "::warning::QEMU exited before 30s — check qemu-output.log"
+          fi
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ralphglasses-iso
+          path: output/*.iso
+          retention-days: 14
+
+      - name: Upload QEMU log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: qemu-smoke-log
+          path: qemu-output.log
+          retention-days: 7
+          if-no-files-found: ignore

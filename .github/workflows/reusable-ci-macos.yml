@@ -1,0 +1,56 @@
+name: Reusable macOS Bootstrap Validation
+
+on:
+  workflow_call:
+
+jobs:
+  macos-validate:
+    name: macOS Bootstrap Validation
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: macos-go-mod-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            macos-go-mod-
+
+      - name: Doctor check (pre-bootstrap)
+        shell: bash
+        run: |
+          # Without --strict, doctor.sh exits 0 on warnings, 1 only on hard failures.
+          ./scripts/dev/doctor.sh
+
+      - name: Bootstrap toolchain
+        shell: bash
+        env:
+          CI: "true"
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+          NONINTERACTIVE: "1"
+        run: ./scripts/bootstrap-toolchain.sh
+
+      - name: Doctor check (post-bootstrap)
+        shell: bash
+        run: ./scripts/dev/doctor.sh
+
+      - name: Build
+        shell: bash
+        run: go build ./...
+
+      - name: Test
+        shell: bash
+        run: go test -race ./...
+
+      - name: Vet
+        shell: bash
+        run: go vet ./...

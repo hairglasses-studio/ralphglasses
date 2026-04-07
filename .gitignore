@@ -120,3 +120,4 @@ my_env/
 .claude-fix-report*
 .ralph/ab_tests/
 .ralph/benchmarks/
+site/
