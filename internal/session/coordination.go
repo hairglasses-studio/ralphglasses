@@ -9,13 +9,12 @@ import (
 	"time"
 )
 
-// Coordinator provides cross-session task coordination so that multiple
-// concurrent sessions do not work on the same task. Claims are held in an
-// in-memory map protected by a mutex; optional file-backed persistence
-// allows claims to survive process restarts.
+// Coordinator provides file-backed resource coordination so concurrent
+// sessions or team tasks do not claim the same resource simultaneously.
+// Claims are held in-memory behind a mutex and optionally persisted.
 type Coordinator struct {
 	mu       sync.Mutex
-	claims   map[string]string // taskID -> sessionID
+	claims   map[string]string // resource -> owner
 	filePath string            // empty means no persistence
 }
 
@@ -40,56 +39,87 @@ func NewCoordinatorWithPersistence(path string) (*Coordinator, error) {
 	return c, nil
 }
 
-// ClaimTask attempts to assign taskID to sessionID. It returns true if the
-// claim was successful or if the same session already owns the task. It
-// returns false (without error) if another session already claimed it.
-func (c *Coordinator) ClaimTask(sessionID, taskID string) (bool, error) {
+// ClaimResource attempts to assign resource to owner. It returns true if the
+// claim was successful or if the same owner already holds it.
+func (c *Coordinator) ClaimResource(owner, resource string) (bool, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if owner, ok := c.claims[taskID]; ok {
-		if owner == sessionID {
+	if current, ok := c.claims[resource]; ok {
+		if current == owner {
 			return true, nil // idempotent
 		}
 		return false, nil
 	}
 
-	c.claims[taskID] = sessionID
+	c.claims[resource] = owner
 	if err := c.persist(); err != nil {
-		delete(c.claims, taskID)
+		delete(c.claims, resource)
 		return false, err
 	}
 	return true, nil
 }
 
-// ReleaseTask removes the claim on taskID held by sessionID. If the task
-// is not claimed by that session (or not claimed at all), it is a no-op.
-func (c *Coordinator) ReleaseTask(sessionID, taskID string) {
+// ClaimResources atomically claims a set of resources for owner. The optional
+// conflicts callback can reject claims based on overlapping existing/requested
+// resources even when the resource keys differ.
+func (c *Coordinator) ClaimResources(owner string, resources []string, conflicts func(existing, requested string) bool) (bool, string, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if owner, ok := c.claims[taskID]; ok && owner == sessionID {
-		delete(c.claims, taskID)
-		_ = c.persist() // best-effort
-	}
-}
-
-// ActiveClaims returns all task IDs currently claimed by sessionID.
-func (c *Coordinator) ActiveClaims(sessionID string) []string {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	var tasks []string
-	for taskID, owner := range c.claims {
-		if owner == sessionID {
-			tasks = append(tasks, taskID)
+	for _, requested := range resources {
+		for existing, current := range c.claims {
+			if current == owner {
+				continue
+			}
+			if existing == requested || (conflicts != nil && conflicts(existing, requested)) {
+				return false, existing, nil
+			}
 		}
 	}
-	return tasks
+
+	for _, resource := range resources {
+		c.claims[resource] = owner
+	}
+	if err := c.persist(); err != nil {
+		for _, resource := range resources {
+			if current, ok := c.claims[resource]; ok && current == owner {
+				delete(c.claims, resource)
+			}
+		}
+		return false, "", err
+	}
+	return true, "", nil
 }
 
-// AllClaims returns a snapshot of all current claims (taskID -> sessionID).
-func (c *Coordinator) AllClaims() map[string]string {
+// ReleaseResource removes the claim on resource held by owner. If the resource
+// is not claimed by that owner, it is a no-op.
+func (c *Coordinator) ReleaseResource(owner, resource string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if current, ok := c.claims[resource]; ok && current == owner {
+		delete(c.claims, resource)
+		_ = c.persist()
+	}
+}
+
+// ActiveResources returns all resources currently claimed by owner.
+func (c *Coordinator) ActiveResources(owner string) []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var resources []string
+	for resource, current := range c.claims {
+		if current == owner {
+			resources = append(resources, resource)
+		}
+	}
+	return resources
+}
+
+// AllResources returns a snapshot of all current claims (resource -> owner).
+func (c *Coordinator) AllResources() map[string]string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -98,18 +128,46 @@ func (c *Coordinator) AllClaims() map[string]string {
 	return snapshot
 }
 
-// ReleaseAll removes every claim held by sessionID. This is useful when a
-// session terminates and its tasks should become available for others.
-func (c *Coordinator) ReleaseAll(sessionID string) {
+// ReleaseAll removes every claim held by owner.
+func (c *Coordinator) ReleaseAll(owner string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	for taskID, owner := range c.claims {
-		if owner == sessionID {
-			delete(c.claims, taskID)
+	for resource, current := range c.claims {
+		if current == owner {
+			delete(c.claims, resource)
 		}
 	}
 	_ = c.persist()
+}
+
+// ClaimTask is a backwards-compatible alias for ClaimResource.
+func (c *Coordinator) ClaimTask(sessionID, taskID string) (bool, error) {
+	return c.ClaimResource(sessionID, taskID)
+}
+
+// ReleaseTask is a backwards-compatible alias for ReleaseResource.
+func (c *Coordinator) ReleaseTask(sessionID, taskID string) {
+	c.ReleaseResource(sessionID, taskID)
+}
+
+// ActiveClaims is a backwards-compatible alias for ActiveResources.
+func (c *Coordinator) ActiveClaims(sessionID string) []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var tasks []string
+	for taskID, current := range c.claims {
+		if current == sessionID {
+			tasks = append(tasks, taskID)
+		}
+	}
+	return tasks
+}
+
+// AllClaims is a backwards-compatible alias for AllResources.
+func (c *Coordinator) AllClaims() map[string]string {
+	return c.AllResources()
 }
 
 // coordinatorSnapshot is the JSON representation written to disk.

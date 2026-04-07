@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/simplecron"
 )
 
 // ---------------------------------------------------------------------------
@@ -34,9 +36,9 @@ Description: minor issue
 	}
 
 	result, err := srv.handleFindingToTask(context.Background(), makeRequest(map[string]any{
-		"finding_id":     "FINDING-1",
+		"finding_id":      "FINDING-1",
 		"scratchpad_name": "tool_improvement",
-		"repo":           "test-repo",
+		"repo":            "test-repo",
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -73,7 +75,7 @@ func TestHandleFindingToTask_MissingFindingID(t *testing.T) {
 
 	result, err := srv.handleFindingToTask(context.Background(), makeRequest(map[string]any{
 		"scratchpad_name": "tool_improvement",
-		"repo":           "test-repo",
+		"repo":            "test-repo",
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -122,9 +124,9 @@ Description: test finding
 	}
 
 	result, err := srv.handleFindingToTask(context.Background(), makeRequest(map[string]any{
-		"finding_id":     "FINDING-999",
+		"finding_id":      "FINDING-999",
 		"scratchpad_name": "tool_improvement",
-		"repo":           "test-repo",
+		"repo":            "test-repo",
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -144,9 +146,9 @@ func TestHandleFindingToTask_ScratchpadNotExist(t *testing.T) {
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
 	result, err := srv.handleFindingToTask(context.Background(), makeRequest(map[string]any{
-		"finding_id":     "FINDING-1",
+		"finding_id":      "FINDING-1",
 		"scratchpad_name": "nonexistent",
-		"repo":           "test-repo",
+		"repo":            "test-repo",
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -1483,18 +1485,21 @@ func TestCronFieldMatch(t *testing.T) {
 		{"5", 3, false},
 	}
 	for _, tt := range tests {
-		got := cronFieldMatch(tt.field, tt.value)
+		got := simplecron.FieldMatchesToken(tt.field, tt.value)
 		if got != tt.want {
-			t.Errorf("cronFieldMatch(%q, %d) = %v, want %v", tt.field, tt.value, got, tt.want)
+			t.Errorf("FieldMatchesToken(%q, %d) = %v, want %v", tt.field, tt.value, got, tt.want)
 		}
 	}
 }
 
 func TestComputeNextCronRuns(t *testing.T) {
 	t.Parallel()
-	fields := []string{"0", "*/6", "*", "*", "*"}
+	fields, err := simplecron.Parse("0 */6 * * *")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
 	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	runs := computeNextCronRuns(fields, from, 3)
+	runs := simplecron.NextRuns(fields, from, 3)
 	if len(runs) != 3 {
 		t.Fatalf("expected 3 runs, got %d", len(runs))
 	}

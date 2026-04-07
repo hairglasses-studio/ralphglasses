@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 func (s *Server) handleFindingToTask(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -475,6 +477,15 @@ func (s *Server) handleCycleSchedule(_ context.Context, req mcp.CallToolRequest)
 		return codedError(ErrInvalidParams, "cron_expr required"), nil
 	}
 	cycleConfig := getStringArg(req, "cycle_config")
+	jobKind := strings.TrimSpace(getStringArg(req, "job_kind"))
+	name := strings.TrimSpace(getStringArg(req, "name"))
+	objective := strings.TrimSpace(getStringArg(req, "objective"))
+	criteria := strings.TrimSpace(getStringArg(req, "criteria"))
+	maxTasks := int(getNumberArg(req, "max_tasks", 0))
+	enabled := true
+	if _, ok := argsMap(req)["enabled"]; ok {
+		enabled = getBoolArg(req, "enabled")
+	}
 
 	repo := getStringArg(req, "repo")
 	repoPath, errRes := s.resolveRepoPath(repo)
@@ -482,54 +493,48 @@ func (s *Server) handleCycleSchedule(_ context.Context, req mcp.CallToolRequest)
 		return errRes, nil
 	}
 
-	// Validate cron expression (5 fields: min hour dom month dow).
-	cronFields := strings.Fields(cronExpr)
-	if len(cronFields) != 5 {
-		return codedError(ErrInvalidParams, "cron_expr must have exactly 5 fields (min hour dom month dow)"), nil
-	}
-
-	cronFieldRe := regexp.MustCompile(`^(\*|\d+|\*/\d+)$`)
-	for i, field := range cronFields {
-		if !cronFieldRe.MatchString(field) {
-			return codedError(ErrInvalidParams, fmt.Sprintf("invalid cron field %d: %q", i, field)), nil
-		}
+	if err := session.ValidateAutomationCron(cronExpr); err != nil {
+		return codedError(ErrInvalidParams, err.Error()), nil
 	}
 
 	scheduleID := fmt.Sprintf("sched-%d", time.Now().Unix())
-
-	// Compute next 3 run times.
-	nextRuns := computeNextCronRuns(cronFields, time.Now().UTC(), 3)
-	nextRunStrs := make([]string, len(nextRuns))
-	for i, t := range nextRuns {
-		nextRunStrs[i] = t.Format(time.RFC3339)
+	if cycleConfig == "" {
+		config := map[string]any{
+			"job_kind":  firstNonEmptyString(jobKind, "cycle"),
+			"name":      name,
+			"objective": firstNonEmptyString(objective, fmt.Sprintf("Run the scheduled R&D cycle for %s", filepath.Base(repoPath))),
+		}
+		if maxTasks > 0 {
+			config["max_tasks"] = maxTasks
+		}
+		if criteria != "" {
+			config["criteria"] = splitCSV(criteria)
+		}
+		data, _ := json.Marshal(config)
+		cycleConfig = string(data)
 	}
 
-	// Write schedule to disk.
-	schedDir := filepath.Join(repoPath, ".ralph", "schedules")
-	if err := os.MkdirAll(schedDir, 0o755); err != nil {
-		return codedError(ErrFilesystem, fmt.Sprintf("cannot create schedules dir: %v", err)), nil
+	schedData := repoScheduleEntry{
+		ScheduleID:  scheduleID,
+		CronExpr:    cronExpr,
+		CycleConfig: cycleConfig,
+		CreatedAt:   time.Now().UTC().Format(time.RFC3339),
+		Enabled:     defaultEnabledPointer(enabled),
 	}
-
-	createdAt := time.Now().UTC().Format(time.RFC3339)
-	schedData := map[string]any{
-		"schedule_id":  scheduleID,
-		"cron_expr":    cronExpr,
-		"cycle_config": cycleConfig,
-		"created_at":   createdAt,
-		"next_runs":    nextRunStrs,
-	}
-	schedJSON, _ := json.MarshalIndent(schedData, "", "  ")
-	schedPath := filepath.Join(schedDir, scheduleID+".json")
-	if err := os.WriteFile(schedPath, schedJSON, 0o644); err != nil {
+	schedPath, err := writeRepoScheduleEntry(repoPath, schedData)
+	if err != nil {
 		return codedError(ErrFilesystem, fmt.Sprintf("cannot write schedule: %v", err)), nil
 	}
+	schedData.NextRuns, _ = computeScheduleNextRuns(cronExpr, 3)
 
 	result := map[string]any{
 		"schedule_id":  scheduleID,
 		"cron_expr":    cronExpr,
 		"cycle_config": cycleConfig,
-		"created_at":   createdAt,
-		"next_runs":    nextRunStrs,
+		"created_at":   schedData.CreatedAt,
+		"next_runs":    schedData.NextRuns,
+		"job_kind":     firstNonEmptyString(jobKind, "cycle"),
+		"enabled":      enabled,
 		"path":         schedPath,
 		"status":       "created",
 	}
@@ -591,59 +596,6 @@ func findMainRepo(worktreePath string) string {
 		dir = parent
 	}
 	return ""
-}
-
-// computeNextCronRuns computes the next N run times from a parsed cron expression.
-// Supports: *, specific numbers, */N for each of the 5 fields.
-func computeNextCronRuns(fields []string, from time.Time, count int) []time.Time {
-	var runs []time.Time
-	// Start from the next minute.
-	t := from.Truncate(time.Minute).Add(time.Minute)
-
-	maxIter := 525600 // scan up to 1 year of minutes
-	for i := 0; i < maxIter && len(runs) < count; i++ {
-		if cronMatch(fields, t) {
-			runs = append(runs, t)
-		}
-		t = t.Add(time.Minute)
-	}
-	return runs
-}
-
-// cronMatch checks if a time matches a 5-field cron expression.
-func cronMatch(fields []string, t time.Time) bool {
-	values := []int{
-		t.Minute(),
-		t.Hour(),
-		t.Day(),
-		int(t.Month()),
-		int(t.Weekday()), // 0=Sunday
-	}
-	for i, field := range fields {
-		if !cronFieldMatch(field, values[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-// cronFieldMatch checks if a single cron field matches a value.
-func cronFieldMatch(field string, value int) bool {
-	if field == "*" {
-		return true
-	}
-	if strings.HasPrefix(field, "*/") {
-		n, err := strconv.Atoi(strings.TrimPrefix(field, "*/"))
-		if err != nil || n <= 0 {
-			return false
-		}
-		return value%n == 0
-	}
-	n, err := strconv.Atoi(field)
-	if err != nil {
-		return false
-	}
-	return value == n
 }
 
 // --- Tier 2 rdcycle tools ---

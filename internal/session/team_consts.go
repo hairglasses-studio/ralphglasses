@@ -18,10 +18,12 @@ const (
 const (
 	TeamExecutionBackendLocal = "local"
 	TeamExecutionBackendFleet = "fleet"
+	TeamExecutionBackendA2A   = "a2a"
 )
 
 // Team worktree policies.
 const (
+	TeamWorktreePolicyShared    = "shared"
 	TeamWorktreePolicyPerWorker = "per_worker"
 )
 

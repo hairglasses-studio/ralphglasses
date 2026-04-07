@@ -78,6 +78,9 @@ func (s *Server) handleAutomationPolicy(_ context.Context, req mcp.CallToolReque
 		if _, ok := args["default_task_max_turns"]; ok {
 			policy.DefaultTaskMaxTurns = int(getNumberArg(req, "default_task_max_turns", float64(policy.DefaultTaskMaxTurns)))
 		}
+		if _, ok := args["max_concurrent_sessions"]; ok {
+			policy.MaxConcurrentSessions = int(getNumberArg(req, "max_concurrent_sessions", float64(policy.MaxConcurrentSessions)))
+		}
 
 		if err := ctrl.SetPolicy(policy); err != nil {
 			return codedError(ErrInvalidParams, fmt.Sprintf("invalid automation policy: %v", err)), nil
@@ -115,24 +118,39 @@ func (s *Server) handleAutomationQueue(_ context.Context, req mcp.CallToolReques
 
 	switch action {
 	case "list":
+		queue := ctrl.ListQueue()
 		return fleetJSON(map[string]any{
-			"queue":  ctrl.ListQueue(),
-			"count":  len(ctrl.ListQueue()),
+			"queue":  queue,
+			"count":  len(queue),
 			"status": ctrl.Status(),
 		})
 	case "enqueue":
-		prompt, errResult := pp.StringErr("prompt")
-		if errResult != nil {
-			return errResult, nil
+		jobKind := session.AutomationJobKind(pp.OptionalString("job_kind", string(session.AutomationJobSession)))
+		prompt := pp.OptionalString("prompt", "")
+		if jobKind == session.AutomationJobSession && prompt == "" {
+			prompt, errResult = pp.StringErr("prompt")
+			if errResult != nil {
+				return errResult, nil
+			}
 		}
+		objective := pp.OptionalString("objective", "")
 		item, err := ctrl.Enqueue(session.AutomationQueueItem{
-			Prompt:    prompt,
-			Provider:  session.Provider(pp.OptionalString("provider", string(session.ProviderCodex))),
-			Model:     pp.OptionalString("model", ""),
-			BudgetUSD: getNumberArg(req, "budget_usd", 0),
-			MaxTurns:  int(getNumberArg(req, "max_turns", 0)),
-			Priority:  int(getNumberArg(req, "priority", 5)),
-			Source:    pp.OptionalString("source", "manual"),
+			JobKind:           jobKind,
+			Prompt:            prompt,
+			Provider:          session.Provider(pp.OptionalString("provider", string(session.ProviderCodex))),
+			Model:             pp.OptionalString("model", ""),
+			BudgetUSD:         getNumberArg(req, "budget_usd", 0),
+			MaxTurns:          int(getNumberArg(req, "max_turns", 0)),
+			Priority:          int(getNumberArg(req, "priority", 5)),
+			Source:            pp.OptionalString("source", "manual"),
+			CycleName:         pp.OptionalString("name", ""),
+			Objective:         objective,
+			SuccessCriteria:   splitCSV(pp.OptionalString("criteria", "")),
+			MaxTasks:          int(getNumberArg(req, "max_tasks", 0)),
+			ResearchTopic:     firstNonEmptyString(objective, prompt),
+			ResearchDomain:    pp.OptionalString("research_domain", ""),
+			ResearchModelTier: pp.OptionalString("research_model_tier", ""),
+			ResearchPriority:  getNumberArg(req, "research_priority_score", 0),
 		})
 		if err != nil {
 			return codedError(ErrInternal, fmt.Sprintf("enqueue failed: %v", err)), nil

@@ -182,9 +182,10 @@ type TeamConfig struct {
 	MaxConcurrency   int      `json:"max_concurrency,omitempty"`
 	MaxRetries       int      `json:"max_retries,omitempty"`
 	AutoStart        bool     `json:"auto_start,omitempty"`
-	ExecutionBackend string   `json:"execution_backend,omitempty"` // "local" or "fleet"
-	WorktreePolicy   string   `json:"worktree_policy,omitempty"`   // "per_worker"
+	ExecutionBackend string   `json:"execution_backend,omitempty"`
+	WorktreePolicy   string   `json:"worktree_policy,omitempty"`
 	TargetBranch     string   `json:"target_branch,omitempty"`
+	A2AAgentURL      string   `json:"a2a_agent_url,omitempty"`
 }
 
 // TeamQuestion represents a question posed by the team runtime to a human.
@@ -216,6 +217,7 @@ type TeamStatus struct {
 	TargetBranch       string        `json:"target_branch,omitempty"`
 	IntegrationBranch  string        `json:"integration_branch,omitempty"`
 	IntegrationPath    string        `json:"integration_path,omitempty"`
+	PromotionStatus    string        `json:"promotion_status,omitempty"`
 	MaxBudgetUSD       float64       `json:"max_budget_usd,omitempty"`
 	MaxConcurrency     int           `json:"max_concurrency,omitempty"`
 	MaxTaskRetries     int           `json:"max_task_retries,omitempty"`
@@ -229,6 +231,7 @@ type TeamStatus struct {
 	ResolvedQuestions  []TeamQuestion `json:"resolved_questions,omitempty"`
 	PlannerSessionID   string        `json:"planner_session_id,omitempty"`
 	LastPlannerSummary string        `json:"last_planner_summary,omitempty"`
+	A2AAgentURL        string        `json:"a2a_agent_url,omitempty"`
 }
 
 // TeamTask represents a task assigned to a team.
@@ -239,6 +242,7 @@ type TeamTask struct {
 	Provider        Provider  `json:"provider,omitempty"`
 	Status          string    `json:"status"`
 	WorkItemID      string    `json:"work_item_id,omitempty"`
+	A2AAgentURL     string    `json:"a2a_agent_url,omitempty"`
 	WorkerSessionID string    `json:"worker_session_id,omitempty"`
 	WorkerNodeID    string    `json:"worker_node_id,omitempty"`
 	WorktreePath    string    `json:"worktree_path,omitempty"`
@@ -250,9 +254,18 @@ type TeamTask struct {
 	BlockedQuestion string    `json:"blocked_question,omitempty"`
 	ChangedFiles    []string  `json:"changed_files,omitempty"`
 	HumanContext    []string  `json:"human_context,omitempty"`
+	OwnedPaths      []string  `json:"owned_paths,omitempty"`
+	OwnershipDrift  string    `json:"ownership_drift,omitempty"`
 	ConflictFiles   []string  `json:"conflict_files,omitempty"`
 	Attempt         int       `json:"attempt,omitempty"`
 	MergeStatus     string    `json:"merge_status,omitempty"`
+	ArtifactType      string    `json:"artifact_type,omitempty"`
+	ArtifactPath      string    `json:"artifact_path,omitempty"`
+	ArtifactHash      string    `json:"artifact_hash,omitempty"`
+	ArtifactSizeBytes int64     `json:"artifact_size_bytes,omitempty"`
+	ArtifactBaseRef   string    `json:"artifact_base_ref,omitempty"`
+	ArtifactTipRef    string    `json:"artifact_tip_ref,omitempty"`
+	ArtifactStatus    string    `json:"artifact_status,omitempty"`
 	StartedAt       *time.Time `json:"started_at,omitempty"`
 	EndedAt         *time.Time `json:"ended_at,omitempty"`
 	UpdatedAt       time.Time `json:"updated_at,omitempty"`
