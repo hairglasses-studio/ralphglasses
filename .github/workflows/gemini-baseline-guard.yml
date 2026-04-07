@@ -130,7 +130,7 @@ jobs:
           for profile in readonly_quiet review workspace_auto ci_json; do
             require_match "^\\[profiles\\.${profile}\\]" .codex/config.toml
           done
-          codex_cwd_count="$(awk '$0 == "cwd = \".\"" { count++ } END { print count + 0 }' .codex/config.toml)"
+          codex_cwd_count="$(awk '{ line = $0; sub(/\r$/, "", line); if (line == "cwd = \".\"") count++ } END { print count + 0 }' .codex/config.toml)"
           [[ "$codex_cwd_count" -ge 3 ]] || \
             fail ".codex/config.toml must keep cwd=. for all repo MCP servers (found ${codex_cwd_count})"
 
