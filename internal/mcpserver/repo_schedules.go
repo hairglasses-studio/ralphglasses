@@ -100,7 +100,13 @@ func writeRepoScheduleEntry(repoPath string, entry repoScheduleEntry) (string, e
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	// Atomic write: write to temp file then rename to avoid corruption on crash.
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return "", err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		os.Remove(tmp) // best-effort cleanup
 		return "", err
 	}
 	return path, nil
