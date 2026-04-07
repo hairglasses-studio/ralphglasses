@@ -79,14 +79,29 @@ func (p *ResearchPopulator) PopulateFromFreshness(ctx context.Context) (int, err
 	}
 	defer rows.Close()
 
-	count := 0
+	type queuedTopic struct {
+		topic  string
+		domain string
+	}
+	var topics []queuedTopic
 	for rows.Next() {
 		var topic, domain string
 		if err := rows.Scan(&topic, &domain); err != nil {
 			continue
 		}
-		if err := p.enqueue(ctx, topic, domain, "freshness", 0.3, "haiku"); err != nil {
-			slog.Debug("populator: freshness enqueue failed", "topic", topic, "error", err)
+		topics = append(topics, queuedTopic{topic: topic, domain: domain})
+	}
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("freshness scan: %w", err)
+	}
+	if err := rows.Close(); err != nil {
+		return 0, fmt.Errorf("freshness close: %w", err)
+	}
+
+	count := 0
+	for _, item := range topics {
+		if err := p.enqueue(ctx, item.topic, item.domain, "freshness", 0.3, "haiku"); err != nil {
+			slog.Debug("populator: freshness enqueue failed", "topic", item.topic, "error", err)
 			continue
 		}
 		count++
@@ -201,6 +216,12 @@ func (p *ResearchPopulator) Rebalance(ctx context.Context) (int, error) {
 		if rows.Scan(&domain, &total, &completed) == nil {
 			underCovered = append(underCovered, domain)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("rebalance scan: %w", err)
+	}
+	if err := rows.Close(); err != nil {
+		return 0, fmt.Errorf("rebalance close: %w", err)
 	}
 
 	if len(underCovered) == 0 {

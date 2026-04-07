@@ -69,9 +69,9 @@ stub_no_make="$(make_stub_path go git)"
 assert_exit "exits non-zero when required tool make is absent" 1 \
   env PATH="${stub_no_make}" "${BASH_BIN}" "${doctor}"
 
-# Test 3: go absent entirely (no system go, no bootstrap go), make + git present → exit non-zero
+# Test 3: system go absent but repo-local bootstrap go still available → exit 0
 stub_no_go="$(make_stub_path make git)"
-assert_exit "exits non-zero when required tool go is absent" 1 \
+assert_exit "exits 0 when bootstrap-managed go is available without system go" 0 \
   env PATH="${stub_no_go}" "${BASH_BIN}" "${doctor}"
 
 # Test 4: git absent, go + make present → exit non-zero

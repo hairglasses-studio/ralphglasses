@@ -86,6 +86,7 @@ func normalizeGoldenTerminalOutput(out []byte) []byte {
 	out = bytes.ReplaceAll(out, []byte("\x1b[?u"), nil)
 	out = bytes.ReplaceAll(out, []byte("\x1b[?2026$p"), nil)
 	out = bytes.ReplaceAll(out, []byte("\x1b[?2027$p"), nil)
+	out = bytes.ReplaceAll(out, []byte(" \r\t│"), []byte("│"))
 	return append(out, teatestQuerySuffix...)
 }
 

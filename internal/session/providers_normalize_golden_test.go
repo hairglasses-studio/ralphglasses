@@ -7,19 +7,19 @@ import (
 
 // TestGoldenCostExtraction is a table-driven golden-file test that verifies the
 // three-tier cost extraction pipeline across providers and auth modes:
-//   1. Direct cost_usd field (flat or nested in usage)
-//   2. Token-based estimation via estimateCostFromTokens
-//   3. Stderr regex fallback via ParseProviderCostFromStderr
+//  1. Direct cost_usd field (flat or nested in usage)
+//  2. Token-based estimation via estimateCostFromTokens
+//  3. Stderr regex fallback via ParseProviderCostFromStderr
 func TestGoldenCostExtraction(t *testing.T) {
 	const tolerance = 1e-9
 
 	tests := []struct {
-		name      string
-		provider  Provider
-		input     string
-		wantCost  float64
-		wantType  string
-		wantSID   string
+		name     string
+		provider Provider
+		input    string
+		wantCost float64
+		wantType string
+		wantSID  string
 	}{
 		{
 			name:     "claude/api_key_nested_usage_cost",
@@ -98,6 +98,7 @@ func TestGoldenCostExtraction(t *testing.T) {
 // output using ParseProviderCostFromStderr.
 func TestGoldenStderrCostFallback(t *testing.T) {
 	const tolerance = 1e-9
+	codexRate := currentTestProviderRate(t, ProviderCodex)
 
 	tests := []struct {
 		name     string
@@ -159,7 +160,7 @@ func TestGoldenStderrCostFallback(t *testing.T) {
 			name:     "codex/token_count_stderr",
 			provider: ProviderCodex,
 			stderr:   "5000 input tokens, 1000 output tokens used",
-			wantCost: (5000.0/1_000_000)*CostCodexInput + (1000.0/1_000_000)*CostCodexOutput,
+			wantCost: (5000.0/1_000_000)*codexRate.InputPer1M + (1000.0/1_000_000)*codexRate.OutputPer1M,
 			wantOK:   true,
 		},
 	}
