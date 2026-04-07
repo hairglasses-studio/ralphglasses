@@ -5,7 +5,6 @@ description: Go coding conventions for hairglasses-studio projects. Use when rev
 
 # Go Conventions — hairglasses-studio
 
-Standards enforced across mcpkit, hg-mcp, mesmer, webb, claudekit, and ralphglasses.
 
 ## Error Handling
 

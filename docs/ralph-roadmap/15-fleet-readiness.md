@@ -33,7 +33,6 @@ These repos have full agent context, Go build infrastructure, and a Makefile -- 
 | [private-audit] | Y | Y | - | - | Y | Y | - | **T1** |
 | systemd-mcp | Y | Y | - | - | Y | Y | - | **T1** |
 | tmux-mcp | Y | Y | - | - | Y | Y | - | **T1** |
-| webb | Y | Y | - | - | Y | Y | - | **T1** |
 | webbb | Y | Y | - | - | Y | Y | - | **T1** |
 
 **Count: 19 repos** -- can be swept today with full agent context.
@@ -157,8 +156,6 @@ Note: runmylife has CLAUDE.md + AGENTS.md + Makefile + go.mod but lacks .ralphrc
 | hg-mcp | mcpkit | `../mcpkit` | Relative (development) |
 | input-mcp | mcpkit | `~/hairglasses-studio/mcpkit` | Absolute (CRITICAL: breaks portability) |
 | shader-mcp | mcpkit | `~/hairglasses-studio/mcpkit` | Absolute (CRITICAL: breaks portability) |
-| webb | webb (self) | `$HOME/hairglasses/webb` | Absolute macOS (CRITICAL: wrong platform) |
-| webbb | webb (self) | `$HOME/hairglasses/webb` | Absolute macOS (CRITICAL: wrong platform) |
 
 **5 repos** use `../mcpkit` relative replaces (consistent dev-mode pattern).
 **4 repos** use absolute paths that break on any other machine (2 deprecated + 2 legacy).

@@ -63,7 +63,6 @@
 
 4. **Cost tracking duplication** — Three separate cost systems: `budget.go` (BudgetEnforcer, LedgerEntry, CostSummary), `costnorm.go` (NormalizeProviderCost with hardcoded rates), and marathon.sh's shell-based budget check reading `status.json`. mcpkit's `finops/` has token-level tracking, dollar-cost estimation, scoped budgets, time-windowed tracking, and Prometheus export. Cross-refs: ROADMAP 2.3.5, 5.5.
 
-5. **No SQLite** — Session state uses JSON files in `~/.ralphglasses/sessions/`. Loop state uses JSON files in `~/.ralphglasses/sessions/loops/`. ROADMAP 2.1.2 calls for SQLite via `modernc.org/sqlite`. The internal SQLite project, internal-ops, mesmer, and webb repos already use it. Cross-refs: ROADMAP 2.1.2, 3.3.1.
 
 6. **Workflow engine reimplementation** — `workflow.go` (265 lines) implements DAG validation, topological execution, and parallel groups. mcpkit's `workflow/` package provides cyclical graph engine with conditional branching, checkpoints, state machines, node middleware, fork nodes, and compensation/saga rollback. Cross-refs: ROADMAP 8.3.
 

@@ -414,7 +414,6 @@ hairglasses-studio/
   prompt-improver/  -- archived, migrated to ralphglasses/internal/enhancer/
   ralph-claude-code/ -- (legacy)
   ralphglasses/     -- this repo
-  webb/             -- (purpose TBD)
 ```
 
 Recommended `go.work` for local development:

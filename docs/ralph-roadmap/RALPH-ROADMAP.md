@@ -712,7 +712,6 @@ For a typical 10-turn session with 15K-token stable prefix: ~$0.085 cached vs $0
 
 | Tier | Count | % | Description | Repos |
 |------|-------|---|-------------|-------|
-| **T1 (Fleet-Ready)** | 19 | 25% | CLAUDE.md + go.mod + Makefile -- sweepable now | claudekit, dotfiles-mcp, hg-mcp, mcpkit, ralphglasses, systemd-mcp, tmux-mcp, process-mcp, [private-ops], [private-ops-2], mesmer, webb, webbb, [private-audit], hyprland-mcp, input-mcp, shader-mcp, prompt-improver, [private]-old |
 | **T2 (Partially Ready)** | 5 | 6% | Has build infra but missing agent context | gh-dash, pinecone-canopy, runmylife, terraform-docs, whiteclaw |
 | **T3 (Needs Setup)** | 44 | 57% | Missing core fleet infrastructure | cr8-cli, dotfiles, archlet, [private], and 40 others |
 | **T4 (Not Applicable)** | 8 | 10% | Forks, dormant, non-git | cmatrix, lnav, makima, etc. |
