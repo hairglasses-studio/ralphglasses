@@ -132,9 +132,15 @@ func BuildAgentCard(c *Coordinator) AgentCard {
 				Type:   "http",
 				Scheme: "bearer",
 			},
+			"apiKey": {
+				Type: "apiKey",
+				In:   "header",
+				Name: "X-API-Key",
+			},
 		},
 		Security: []map[string][]string{
 			{"bearer": {}},
+			{"apiKey": {}},
 		},
 		Tags: tags,
 		Provider: AgentProvider{

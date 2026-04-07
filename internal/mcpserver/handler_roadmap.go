@@ -9,7 +9,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/hairglasses-studio/ralphglasses/internal/roadmap"
+	"github.com/hairglasses-studio/docs/pkg/roadmap"
 )
 
 // Roadmap handlers

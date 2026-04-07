@@ -13,7 +13,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/hairglasses-studio/ralphglasses/internal/roadmap"
+	"github.com/hairglasses-studio/docs/pkg/roadmap"
 )
 
 // Docs + Meta-Roadmap handlers — enable agents to read/write docs repo and

@@ -88,6 +88,9 @@ var validProviders = map[string]bool{
 	"codex":  true,
 	"openai": true,
 	"ollama": true,
+	"crush":  true,
+	"goose":  true,
+	"amp":    true,
 	"a2a":    true,
 }
 

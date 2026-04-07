@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hairglasses-studio/ralphglasses/internal/roadmap"
+	"github.com/hairglasses-studio/docs/pkg/roadmap"
 )
 
 // buildLoopPlannerPromptN builds a planner prompt requesting N parallel tasks.

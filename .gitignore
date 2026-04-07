@@ -122,3 +122,4 @@ my_env/
 .ralph/benchmarks/
 site/
 gendoc
+.env
