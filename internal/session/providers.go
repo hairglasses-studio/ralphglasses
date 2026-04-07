@@ -155,6 +155,9 @@ func UnsupportedOptionsWarnings(p Provider, opts LaunchOptions) []string {
 		if opts.Worktree != "" {
 			warnings = append(warnings, "worktree is ignored by codex provider")
 		}
+		if opts.SandboxImage != "" {
+			warnings = append(warnings, "sandbox_image is ignored by codex provider (uses --sandbox mode instead)")
+		}
 	case ProviderCrush, ProviderGoose, ProviderAmp:
 		name := string(p)
 		if opts.SystemPrompt != "" && p != ProviderCrush {
@@ -395,6 +398,11 @@ func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 		args = append(args, "--model", opts.Model)
 	}
 	args = append(args, "--json", "--full-auto")
+	if opts.Sandbox {
+		args = append(args, "--sandbox", "workspace-write")
+	} else if opts.PermissionMode != "" {
+		args = append(args, "--sandbox", opts.PermissionMode)
+	}
 	if len(opts.OutputSchema) > 0 {
 		args = append(args, "--output-schema", string(opts.OutputSchema))
 	}

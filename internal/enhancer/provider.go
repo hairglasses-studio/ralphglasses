@@ -32,6 +32,8 @@ func defaultTargetProviderForLLM(provider string) ProviderName {
 		return ProviderClaude
 	case "gemini":
 		return ProviderGemini
+	case "codex", "openai":
+		return ProviderOpenAI
 	default:
 		return ProviderOpenAI
 	}
