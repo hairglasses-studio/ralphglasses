@@ -3,9 +3,11 @@
     "ralphglasses": {
       "command": "bash",
       "args": [
-        "-lc",
-        "exec \"$HOME/hairglasses-studio/ralphglasses/scripts/dev/run-mcp.sh\" --scan-path \"$HOME/hairglasses-studio\""
-      ]
+        "./scripts/dev/run-mcp.sh",
+        "--scan-path",
+        "~/hairglasses-studio"
+      ],
+      "cwd": "."
     }
   }
 }
