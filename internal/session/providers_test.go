@@ -1540,3 +1540,156 @@ func TestBatchOptionsJSON(t *testing.T) {
 		t.Error("zero priority should be omitted")
 	}
 }
+
+func TestBuildCodexCmdSandbox(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("sandbox flag", func(t *testing.T) {
+		cmd := buildCodexCmd(ctx, LaunchOptions{
+			RepoPath: "/tmp/repo",
+			Prompt:   "Fix it",
+			Sandbox:  true,
+		})
+		cmdStr := strings.Join(cmd.Args, " ")
+		if !strings.Contains(cmdStr, "--sandbox workspace-write") {
+			t.Errorf("codex cmd %q missing --sandbox workspace-write", cmdStr)
+		}
+	})
+
+	t.Run("permission mode maps to sandbox", func(t *testing.T) {
+		cmd := buildCodexCmd(ctx, LaunchOptions{
+			RepoPath:       "/tmp/repo",
+			Prompt:         "Fix it",
+			PermissionMode: "workspace-write",
+		})
+		cmdStr := strings.Join(cmd.Args, " ")
+		if !strings.Contains(cmdStr, "--sandbox workspace-write") {
+			t.Errorf("codex cmd %q missing --sandbox workspace-write", cmdStr)
+		}
+	})
+
+	t.Run("no sandbox without flags", func(t *testing.T) {
+		cmd := buildCodexCmd(ctx, LaunchOptions{
+			RepoPath: "/tmp/repo",
+			Prompt:   "Fix it",
+		})
+		cmdStr := strings.Join(cmd.Args, " ")
+		if strings.Contains(cmdStr, "--sandbox") {
+			t.Errorf("codex cmd %q should not contain --sandbox when not requested", cmdStr)
+		}
+	})
+}
+
+func TestNormalizeCodexEventDuration(t *testing.T) {
+	raw := map[string]any{
+		"type":             "result",
+		"content":          "done",
+		"duration_seconds": 12.5,
+	}
+	line, err := json.Marshal(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	event, err := normalizeCodexEvent(line)
+	if err != nil {
+		t.Fatalf("normalizeCodexEvent() error: %v", err)
+	}
+	if event.Duration != 12.5 {
+		t.Errorf("Duration = %v, want 12.5", event.Duration)
+	}
+}
+
+func TestSanitizeCodexStderr(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "strips debug lines",
+			input: "[debug] loading config\nActual error message\n[trace] exiting",
+			want:  "Actual error message",
+		},
+		{
+			name:  "strips pip warnings",
+			input: "WARNING: pip is configured with locations\nRate limit exceeded",
+			want:  "Rate limit exceeded",
+		},
+		{
+			name:  "strips npm warnings",
+			input: "npm WARN deprecated some-pkg\nTask completed",
+			want:  "Task completed",
+		},
+		{
+			name:  "strips stack frames",
+			input: "Error: something\n    at Object.run (/usr/lib/index.js:1:2)\nat Session.exec",
+			want:  "Error: something",
+		},
+		{
+			name:  "all noise returns raw",
+			input: "[debug] a\n[trace] b",
+			want:  "[debug] a\n[trace] b",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sanitizeCodexStderr(tt.input)
+			if got != tt.want {
+				t.Errorf("sanitizeCodexStderr() =\n%q\nwant\n%q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCleanProviderOutputSkipsNoise(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider Provider
+		input    string
+		want     string
+	}{
+		{
+			name:     "codex skips exit code line",
+			provider: ProviderCodex,
+			input:    "Refactored 3 files\nExit code: 0\n",
+			want:     "Refactored 3 files",
+		},
+		{
+			name:     "codex skips pip warning at end",
+			provider: ProviderCodex,
+			input:    "All tests pass\nWARNING: pip is configured\n",
+			want:     "All tests pass",
+		},
+		{
+			name:     "codex skips debug lines at end",
+			provider: ProviderCodex,
+			input:    "Done\n[debug] cleanup\n[trace] exit\n",
+			want:     "Done",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := cleanProviderOutput(tt.provider, tt.input)
+			if got != tt.want {
+				t.Errorf("cleanProviderOutput(%q, ...) = %q, want %q", tt.provider, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUnsupportedOptionsWarningsCodexSandboxImage(t *testing.T) {
+	opts := LaunchOptions{
+		SandboxImage: "custom:latest",
+	}
+	warnings := UnsupportedOptionsWarnings(ProviderCodex, opts)
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w, "sandbox_image") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected sandbox_image warning for codex provider")
+	}
+}
