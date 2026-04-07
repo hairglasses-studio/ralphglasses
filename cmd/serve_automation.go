@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/bootstrap"
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -86,6 +87,5 @@ func (r *serveAutomationRuntime) Stop() {
 }
 
 func defaultServeDocsRoot(scanRoot string) string {
-	parent := filepath.Dir(scanRoot)
-	return filepath.Join(parent, "docs")
+	return bootstrap.DefaultDocsRoot(scanRoot)
 }

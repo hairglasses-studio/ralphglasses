@@ -9,6 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
+	"github.com/hairglasses-studio/ralphglasses/internal/testutil/tenanttest"
 )
 
 const (
@@ -320,6 +323,65 @@ func TestRuns_TracksLaunches(t *testing.T) {
 	runs := s.Runs()
 	if _, ok := runs["tracked-run"]; !ok {
 		t.Error("run 'tracked-run' not tracked")
+	}
+}
+
+func TestHandleTrigger_PersistedTenantAppearsInLeaderboard(t *testing.T) {
+	fx := tenanttest.NewFixture(t)
+	store, err := session.NewSQLiteStore(fx.StorePath)
+	if err != nil {
+		t.Fatalf("NewSQLiteStore: %v", err)
+	}
+	defer store.Close()
+
+	ctx := context.Background()
+	mgr := session.NewManagerWithStore(store, nil)
+	if _, err := mgr.SaveTenant(ctx, &session.Tenant{ID: testTenant, DisplayName: "Tenant Alpha"}); err != nil {
+		t.Fatalf("SaveTenant: %v", err)
+	}
+
+	now := time.Now().UTC()
+	s := NewServer(":0", func(ctx context.Context, req TriggerRequest) (string, error) {
+		if err := store.SaveSession(ctx, &session.Session{
+			ID:           "trigger-run",
+			TenantID:     req.TenantID,
+			Provider:     session.ProviderCodex,
+			RepoPath:     fx.ScanRoot,
+			RepoName:     "scan-root",
+			Status:       session.StatusRunning,
+			Prompt:       "Launch reviewer from trigger",
+			Model:        "gpt-5.4",
+			AgentName:    "reviewer",
+			SpentUSD:     1.5,
+			TurnCount:    4,
+			LaunchedAt:   now,
+			LastActivity: now,
+		}); err != nil {
+			return "", err
+		}
+		return "trigger-run", nil
+	}, nil, testAuthorizer(map[string]string{testToken: testTenant}))
+
+	req := authRequest("POST", "/api/trigger", `{"source":"github","event":"push"}`)
+	w := httptest.NewRecorder()
+	s.handleTrigger(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	board, err := mgr.BuildRoleLeaderboard(ctx, testTenant, session.RoleLeaderboardOptions{
+		IncludeEnded: true,
+		Limit:        10,
+	})
+	if err != nil {
+		t.Fatalf("BuildRoleLeaderboard: %v", err)
+	}
+	if board.TotalSessions != 1 || len(board.Roles) != 1 {
+		t.Fatalf("board = %+v, want one persisted trigger session", board)
+	}
+	if board.Roles[0].Role != "reviewer" || board.Roles[0].Sessions != 1 {
+		t.Fatalf("top role = %+v, want reviewer/1", board.Roles[0])
 	}
 }
 

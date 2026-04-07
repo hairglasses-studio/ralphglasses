@@ -11,6 +11,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 // ---------------------------------------------------------------------------
@@ -47,6 +48,30 @@ func TestHandleSupervisorStatus_NoSupervisor(t *testing.T) {
 	}
 	if !strings.Contains(text, `"running":false`) && !strings.Contains(text, `"running": false`) {
 		t.Errorf("expected running=false in result, got: %s", text)
+	}
+	if !strings.Contains(text, `"productivity"`) {
+		t.Errorf("expected productivity block in result, got: %s", text)
+	}
+}
+
+func TestHandleSupervisorStatus_WithSupervisorProductivity(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+
+	srv.SessMgr.SetAutonomyLevel(session.LevelAutoOptimize, repoPath)
+	defer srv.SessMgr.SetAutonomyLevel(session.LevelObserve, repoPath)
+
+	result, err := srv.handleSupervisorStatus(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, `"productivity"`) {
+		t.Fatalf("expected productivity block, got: %s", text)
+	}
+	if !strings.Contains(text, `"running":true`) && !strings.Contains(text, `"running": true`) {
+		t.Fatalf("expected running=true, got: %s", text)
 	}
 }
 

@@ -114,3 +114,10 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"PASS"* ]]
 }
+
+@test "productive pressure stack reports durable research and development output" {
+    REPO_ROOT="$BATS_TEST_DIRNAME/../.."
+    run "$REPO_ROOT/scripts/dev/go.sh" test -v -run TestProductivePressureFullStack ./internal/e2e/... -count=1
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"PASS"* ]]
+}

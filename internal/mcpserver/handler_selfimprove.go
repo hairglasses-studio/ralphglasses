@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
@@ -82,6 +83,7 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 		"repo":               repoName,
 		"applied_budget_usd": appliedBudget,
 		"max_iterations":     profile.MaxIterations,
+		"productivity":       s.SessMgr.ProductivitySnapshot(r.Path, time.Time{}),
 	}
 
 	if traceLevel != "none" {

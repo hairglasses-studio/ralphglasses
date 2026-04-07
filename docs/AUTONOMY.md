@@ -55,6 +55,19 @@ autonomy_level set=2 repo=/path/to/repo
 | HITL intervention rate | ≤ 10% |
 | Open critical findings | ≤ 3 |
 
+## Productive R&D Signal
+
+Pressure tests and autonomy status surfaces use one composite productivity score rather than treating any completed cycle as useful work.
+
+- Research: 35 points only when the research daemon both writes durable research output and completes at least one queue topic
+- Development: 35 points only when loops or cycles produce concrete development output (accepted changes, staged-file work, or accomplished cycle tasks)
+- Verification: 20 points only when verifier failures stay at zero
+- Anti-stall: 10 points only when the run stays below the no-op plateau threshold and does not converge on noop churn
+
+A run is marked `productive=true` only when the score is at least 80, research and development outputs are both non-zero, verifier failures stay at zero, and the run does not end in a no-op plateau.
+
+Dedup skips, autonomy-gated research rejections, and noop-only loop iterations are reported, but they do not contribute productivity credit.
+
 **Cycle Chaining**
 
 Each launched cycle carries `parent_cycle_id` and `chain_depth` in its metadata. The chainer refuses to start a new cycle if `chain_depth ≥ 10` (hard cap), preventing runaway chains. Lineage is queryable via `cycle_status` and `observation_query`.

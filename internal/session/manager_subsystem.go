@@ -3,7 +3,6 @@ package session
 import (
 	"context"
 	"log/slog"
-	"path/filepath"
 	"time"
 )
 
@@ -321,13 +320,16 @@ func (m *Manager) GetAutonomyLevel() AutonomyLevel {
 // decision log if one is configured.
 func (m *Manager) RestoreAutonomyLevel() {
 	m.configMu.RLock()
-	stateDir := m.stateDir
 	opt := m.optimizer
 	m.configMu.RUnlock()
 	if opt == nil || opt.decisions == nil {
 		return
 	}
-	if level, err := LoadAutonomyLevel(filepath.Dir(stateDir)); err == nil && level > 0 {
+	stateDir := opt.decisions.stateDir
+	if stateDir == "" {
+		return
+	}
+	if level, err := LoadAutonomyLevel(stateDir); err == nil && level > 0 {
 		opt.decisions.RestoreLevel(AutonomyLevel(level))
 		slog.Info("restored persisted autonomy level", "level", level)
 	}

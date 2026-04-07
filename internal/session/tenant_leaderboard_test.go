@@ -148,3 +148,122 @@ func TestBuildRoleLeaderboards_AllTenants(t *testing.T) {
 		t.Fatalf("boards[2].TenantID = %q, want tenant-b", boards[2].TenantID)
 	}
 }
+
+func TestBuildRoleLeaderboard_ExcludesStoredEndedWhenDisabled(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mgr := NewManagerWithStore(store, nil)
+
+	if _, err := mgr.SaveTenant(ctx, &Tenant{ID: "tenant-a", DisplayName: "Tenant A"}); err != nil {
+		t.Fatalf("SaveTenant: %v", err)
+	}
+
+	now := time.Now()
+	mgr.AddSessionForTesting(&Session{
+		ID:           "live-reviewer",
+		TenantID:     "tenant-a",
+		AgentName:    "reviewer",
+		Status:       StatusRunning,
+		RepoPath:     "/tmp/repo",
+		RepoName:     "repo",
+		SpentUSD:     2.5,
+		TurnCount:    6,
+		LaunchedAt:   now,
+		LastActivity: now,
+	})
+	if err := store.SaveSession(ctx, &Session{
+		ID:           "store-only-ended",
+		TenantID:     "tenant-a",
+		AgentName:    "implementer",
+		Status:       StatusCompleted,
+		RepoPath:     "/tmp/repo",
+		RepoName:     "repo",
+		SpentUSD:     9.0,
+		TurnCount:    12,
+		LaunchedAt:   now.Add(-time.Hour),
+		LastActivity: now.Add(-30 * time.Minute),
+	}); err != nil {
+		t.Fatalf("SaveSession store-only-ended: %v", err)
+	}
+
+	board, err := mgr.BuildRoleLeaderboard(ctx, "tenant-a", RoleLeaderboardOptions{
+		IncludeEnded: false,
+		Limit:        10,
+	})
+	if err != nil {
+		t.Fatalf("BuildRoleLeaderboard: %v", err)
+	}
+	if board.TotalSessions != 1 {
+		t.Fatalf("TotalSessions = %d, want 1", board.TotalSessions)
+	}
+	if len(board.Roles) != 1 || board.Roles[0].Role != "reviewer" {
+		t.Fatalf("Roles = %+v, want reviewer only", board.Roles)
+	}
+}
+
+func TestBuildRoleLeaderboard_SortsAndLimitsRoles(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mgr := NewManagerWithStore(store, nil)
+
+	if _, err := mgr.SaveTenant(ctx, &Tenant{ID: "tenant-a", DisplayName: "Tenant A"}); err != nil {
+		t.Fatalf("SaveTenant: %v", err)
+	}
+
+	now := time.Now()
+	for _, sess := range []*Session{
+		{ID: "reviewer-1", TenantID: "tenant-a", AgentName: "reviewer", Status: StatusCompleted, RepoPath: "/tmp/repo", RepoName: "repo", SpentUSD: 2.0, TurnCount: 5, LaunchedAt: now, LastActivity: now},
+		{ID: "reviewer-2", TenantID: "tenant-a", AgentName: "reviewer", Status: StatusRunning, RepoPath: "/tmp/repo", RepoName: "repo", SpentUSD: 1.0, TurnCount: 3, LaunchedAt: now, LastActivity: now},
+		{ID: "planner-1", TenantID: "tenant-a", AgentName: "planner", Status: StatusCompleted, RepoPath: "/tmp/repo", RepoName: "repo", SpentUSD: 1.0, TurnCount: 9, LaunchedAt: now, LastActivity: now},
+		{ID: "implementer-1", TenantID: "tenant-a", AgentName: "implementer", Status: StatusCompleted, RepoPath: "/tmp/repo", RepoName: "repo", SpentUSD: 1.0, TurnCount: 4, LaunchedAt: now, LastActivity: now},
+	} {
+		if err := store.SaveSession(ctx, sess); err != nil {
+			t.Fatalf("SaveSession %s: %v", sess.ID, err)
+		}
+	}
+
+	board, err := mgr.BuildRoleLeaderboard(ctx, "tenant-a", RoleLeaderboardOptions{
+		IncludeEnded: true,
+		Limit:        2,
+	})
+	if err != nil {
+		t.Fatalf("BuildRoleLeaderboard: %v", err)
+	}
+	if len(board.Roles) != 2 {
+		t.Fatalf("len(Roles) = %d, want 2", len(board.Roles))
+	}
+	if board.Roles[0].Role != "reviewer" {
+		t.Fatalf("top role = %q, want reviewer", board.Roles[0].Role)
+	}
+	if board.Roles[1].Role != "planner" {
+		t.Fatalf("second role = %q, want planner (higher turns tie-break)", board.Roles[1].Role)
+	}
+}
+
+func TestBuildRoleLeaderboard_DefaultTenantFallback(t *testing.T) {
+	mgr := NewManager()
+	now := time.Now()
+	mgr.AddSessionForTesting(&Session{
+		ID:           "default-reviewer",
+		AgentName:    "reviewer",
+		Status:       StatusRunning,
+		RepoPath:     "/tmp/repo",
+		RepoName:     "repo",
+		LaunchedAt:   now,
+		LastActivity: now,
+	})
+
+	board, err := mgr.BuildRoleLeaderboard(context.Background(), "", RoleLeaderboardOptions{
+		IncludeEnded: false,
+		Limit:        10,
+	})
+	if err != nil {
+		t.Fatalf("BuildRoleLeaderboard: %v", err)
+	}
+	if board.TenantID != DefaultTenantID {
+		t.Fatalf("TenantID = %q, want %q", board.TenantID, DefaultTenantID)
+	}
+	if board.TotalSessions != 1 || len(board.Roles) != 1 || board.Roles[0].Role != "reviewer" {
+		t.Fatalf("board = %+v, want default reviewer leaderboard", board)
+	}
+}

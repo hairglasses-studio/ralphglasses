@@ -16,11 +16,11 @@ type ResearchDaemonConfig struct {
 	Enabled         bool    `json:"enabled"`
 	BudgetPerRunUSD float64 `json:"budget_per_run_usd"` // max spend per daemon run (default $10)
 	BudgetDailyUSD  float64 `json:"budget_daily_usd"`   // daily ceiling (default $25)
-	MaxComplexity   int     `json:"max_complexity"`      // max autonomous complexity 1-4 (default 3)
-	TickInterval    int     `json:"tick_interval"`       // run every Nth supervisor tick (default 5 = ~5min)
-	ClaimTTLSecs    int     `json:"claim_ttl_secs"`      // how long a topic claim lasts (default 7200 = 2h)
-	AgentID         string  `json:"agent_id"`            // identifier for queue claims
-	MaxTopicsPerRun int     `json:"max_topics_per_run"`  // topics to process per tick (default 1)
+	MaxComplexity   int     `json:"max_complexity"`     // max autonomous complexity 1-4 (default 3)
+	TickInterval    int     `json:"tick_interval"`      // run every Nth supervisor tick (default 5 = ~5min)
+	ClaimTTLSecs    int     `json:"claim_ttl_secs"`     // how long a topic claim lasts (default 7200 = 2h)
+	AgentID         string  `json:"agent_id"`           // identifier for queue claims
+	MaxTopicsPerRun int     `json:"max_topics_per_run"` // topics to process per tick (default 1)
 }
 
 // DefaultResearchDaemonConfig returns sensible defaults for passive research.
@@ -89,12 +89,26 @@ type ResearchDaemon struct {
 
 	tickCount       int
 	topicsProcessed int
+	topicsCompleted int
 	topicsFailed    int
+	researchOutputs int
+	dedupSkips      int
+	autonomyRejects int
 	dailySpentUSD   float64
 	dailyResetAt    time.Time
 	lastRunAt       time.Time
 	pendingCommits  int // writes since last commit
 }
+
+type researchTopicOutcome string
+
+const (
+	researchTopicWritten          researchTopicOutcome = "written"
+	researchTopicDedupSkipped     researchTopicOutcome = "dedup_skipped"
+	researchTopicAutonomyRejected researchTopicOutcome = "autonomy_rejected"
+	researchTopicComplexityReject researchTopicOutcome = "complexity_rejected"
+	researchTopicBudgetRejected   researchTopicOutcome = "budget_rejected"
+)
 
 // NewResearchDaemon creates a daemon with the given gateway and config.
 func NewResearchDaemon(gw ResearchGateway, cfg ResearchDaemonConfig) *ResearchDaemon {
@@ -219,7 +233,7 @@ func (rd *ResearchDaemon) run(ctx context.Context) {
 			break
 		}
 
-		cost, err := rd.processTopic(ctx, entry)
+		outcome, cost, err := rd.processTopic(ctx, entry)
 		if err != nil {
 			slog.Warn("research-daemon: topic failed",
 				"topic", entry.Topic, "domain", entry.Domain, "error", err)
@@ -228,7 +242,16 @@ func (rd *ResearchDaemon) run(ctx context.Context) {
 			rd.mu.Unlock()
 		} else {
 			rd.mu.Lock()
-			rd.topicsProcessed++
+			switch outcome {
+			case researchTopicWritten:
+				rd.topicsProcessed++
+				rd.topicsCompleted++
+				rd.researchOutputs++
+			case researchTopicDedupSkipped:
+				rd.dedupSkips++
+			case researchTopicAutonomyRejected:
+				rd.autonomyRejects++
+			}
 			rd.mu.Unlock()
 			runSpent += cost
 		}
@@ -250,7 +273,7 @@ func (rd *ResearchDaemon) run(ctx context.Context) {
 // processTopic runs the full pipeline for a single research topic:
 // classify → gate → dedup → route → execute → write → complete.
 // Returns the cost incurred.
-func (rd *ResearchDaemon) processTopic(ctx context.Context, entry *ResearchEntry) (float64, error) {
+func (rd *ResearchDaemon) processTopic(ctx context.Context, entry *ResearchEntry) (researchTopicOutcome, float64, error) {
 	// Step 3: Dedup check.
 	confidence, recommendation, err := rd.gateway.DedupCheck(ctx, entry.Topic, entry.Domain)
 	if err != nil {
@@ -267,7 +290,7 @@ func (rd *ResearchDaemon) processTopic(ctx context.Context, entry *ResearchEntry
 		if err := rd.gateway.Complete(ctx, entry.Topic, entry.Domain); err != nil {
 			slog.Warn("research-daemon: complete (dedup skip) failed", "error", err)
 		}
-		return 0, nil
+		return researchTopicDedupSkipped, 0, nil
 	}
 
 	// Step 4: Classify complexity.
@@ -278,7 +301,7 @@ func (rd *ResearchDaemon) processTopic(ctx context.Context, entry *ResearchEntry
 		slog.Info("research-daemon: complexity exceeds max, abandoning",
 			"topic", entry.Topic, "complexity", complexity, "max", rd.config.MaxComplexity)
 		rd.gateway.Abandon(ctx, entry.Topic, entry.Domain, "complexity_exceeds_max")
-		return 0, nil
+		return researchTopicComplexityReject, 0, nil
 	}
 
 	rd.mu.Lock()
@@ -308,7 +331,7 @@ func (rd *ResearchDaemon) processTopic(ctx context.Context, entry *ResearchEntry
 			slog.Info("research-daemon: autonomy gate rejected",
 				"topic", entry.Topic, "complexity", complexity)
 			rd.gateway.Abandon(ctx, entry.Topic, entry.Domain, "autonomy_gate_rejected")
-			return 0, nil
+			return researchTopicAutonomyRejected, 0, nil
 		}
 	}
 
@@ -319,14 +342,14 @@ func (rd *ResearchDaemon) processTopic(ctx context.Context, entry *ResearchEntry
 	if rd.dailySpentUSD+topicBudget > rd.config.BudgetDailyUSD {
 		rd.mu.Unlock()
 		rd.gateway.Abandon(ctx, entry.Topic, entry.Domain, "daily_budget_exhausted")
-		return 0, fmt.Errorf("daily budget would be exceeded")
+		return researchTopicBudgetRejected, 0, fmt.Errorf("daily budget would be exceeded")
 	}
 	budget := rd.budget
 	rd.mu.Unlock()
 
 	if budget != nil && !budget.CanSpend(topicBudget) {
 		rd.gateway.Abandon(ctx, entry.Topic, entry.Domain, "global_budget_exhausted")
-		return 0, fmt.Errorf("global budget exhausted")
+		return researchTopicBudgetRejected, 0, fmt.Errorf("global budget exhausted")
 	}
 
 	// Step 7: Route model via cascade.
@@ -365,7 +388,7 @@ func (rd *ResearchDaemon) processTopic(ctx context.Context, entry *ResearchEntry
 			"error":  err.Error(),
 		})
 		rd.gateway.Abandon(ctx, entry.Topic, entry.Domain, fmt.Sprintf("write_failed: %v", err))
-		return 0, fmt.Errorf("write research: %w", err)
+		return researchTopicWritten, 0, fmt.Errorf("write research: %w", err)
 	}
 
 	// Step 10: Record spend.
@@ -394,7 +417,7 @@ func (rd *ResearchDaemon) processTopic(ctx context.Context, entry *ResearchEntry
 		"topic", entry.Topic, "domain", entry.Domain,
 		"complexity", complexity, "mode", mode, "cost", topicBudget)
 
-	return topicBudget, nil
+	return researchTopicWritten, topicBudget, nil
 }
 
 // classifyResearchComplexity returns 1-4 based on max(scope, novelty, impact).
@@ -536,14 +559,18 @@ func nextMidnight() time.Time {
 
 // ResearchDaemonStats holds observable daemon metrics.
 type ResearchDaemonStats struct {
-	Enabled         bool      `json:"enabled"`
-	TickCount       int       `json:"tick_count"`
-	TopicsProcessed int       `json:"topics_processed"`
-	TopicsFailed    int       `json:"topics_failed"`
-	DailySpentUSD   float64   `json:"daily_spent_usd"`
-	DailyBudgetUSD  float64   `json:"daily_budget_usd"`
-	PendingCommits  int       `json:"pending_commits"`
-	LastRunAt       time.Time `json:"last_run_at,omitempty"`
+	Enabled            bool      `json:"enabled"`
+	TickCount          int       `json:"tick_count"`
+	TopicsProcessed    int       `json:"topics_processed"`
+	TopicsCompleted    int       `json:"topics_completed"`
+	TopicsFailed       int       `json:"topics_failed"`
+	ResearchOutputs    int       `json:"research_outputs"`
+	DedupSkips         int       `json:"dedup_skips"`
+	AutonomyRejections int       `json:"autonomy_rejections"`
+	DailySpentUSD      float64   `json:"daily_spent_usd"`
+	DailyBudgetUSD     float64   `json:"daily_budget_usd"`
+	PendingCommits     int       `json:"pending_commits"`
+	LastRunAt          time.Time `json:"last_run_at,omitempty"`
 }
 
 // Stats returns current daemon metrics. Thread-safe.
@@ -551,13 +578,17 @@ func (rd *ResearchDaemon) Stats() ResearchDaemonStats {
 	rd.mu.Lock()
 	defer rd.mu.Unlock()
 	return ResearchDaemonStats{
-		Enabled:         rd.config.Enabled,
-		TickCount:       rd.tickCount,
-		TopicsProcessed: rd.topicsProcessed,
-		TopicsFailed:    rd.topicsFailed,
-		DailySpentUSD:   rd.dailySpentUSD,
-		DailyBudgetUSD:  rd.config.BudgetDailyUSD,
-		PendingCommits:  rd.pendingCommits,
-		LastRunAt:       rd.lastRunAt,
+		Enabled:            rd.config.Enabled,
+		TickCount:          rd.tickCount,
+		TopicsProcessed:    rd.topicsProcessed,
+		TopicsCompleted:    rd.topicsCompleted,
+		TopicsFailed:       rd.topicsFailed,
+		ResearchOutputs:    rd.researchOutputs,
+		DedupSkips:         rd.dedupSkips,
+		AutonomyRejections: rd.autonomyRejects,
+		DailySpentUSD:      rd.dailySpentUSD,
+		DailyBudgetUSD:     rd.config.BudgetDailyUSD,
+		PendingCommits:     rd.pendingCommits,
+		LastRunAt:          rd.lastRunAt,
 	}
 }
