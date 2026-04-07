@@ -757,6 +757,26 @@ func TestPersistSession_Success(t *testing.T) {
 	}
 }
 
+func TestPersistSessionDoesNotMutateLiveSession(t *testing.T) {
+	m := NewManager()
+	tmpDir := t.TempDir()
+	m.SetStateDir(tmpDir)
+
+	s := &Session{
+		ID:       "normalize-test",
+		TenantID: "",
+		Provider: ProviderClaude,
+		Status:   StatusRunning,
+	}
+
+	if err := m.PersistSession(s); err != nil {
+		t.Fatalf("PersistSession: %v", err)
+	}
+	if s.TenantID != "" {
+		t.Fatalf("live session tenant mutated to %q, want empty string", s.TenantID)
+	}
+}
+
 func TestPersistSession_EmptyStateDir(t *testing.T) {
 	m := NewManager()
 	m.SetStateDir("")

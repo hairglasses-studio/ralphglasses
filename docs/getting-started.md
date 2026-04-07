@@ -297,7 +297,7 @@ A `.mcp.json` and `.codex/config.toml` are included in the repo root for automat
 go run . mcp --scan-path ~/projects
 ```
 
-The server uses stdio transport (JSON-RPC over stdin/stdout). It exposes 203 tools — see [MCP Tools](MCP-TOOLS.md) for the full tool list.
+The server uses stdio transport (JSON-RPC over stdin/stdout). It exposes 204 tools — see [MCP Tools](MCP-TOOLS.md) for the full tool list.
 
 If you are running a shared host, read [Multi-Tenant Operations](MULTI-TENANT.md) before exposing MCP or trigger HTTP surfaces to multiple users or workspaces.
 

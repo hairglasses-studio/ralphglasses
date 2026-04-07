@@ -48,6 +48,7 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_tenant_create":               {Title: "Create Tenant", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_tenant_status":               {Title: "Tenant Status", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_tenant_rotate_trigger_token": {Title: "Rotate Tenant Trigger Token", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_tenant_role_leaderboards":    {Title: "Tenant Role Leaderboards", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 
 	// ── tasks ────────────────────────────────────────────────────────────
 	"ralphglasses_tasks_get":    {Title: "Get Task", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},

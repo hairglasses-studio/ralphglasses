@@ -450,15 +450,17 @@ func (m *Manager) persistOrWarn(s *Session, context string) {
 // if a Store is configured, also saves to the store.
 // Safe to call from any goroutine; acquires the session lock.
 func (m *Manager) PersistSession(s *Session) error {
-	s.TenantID = NormalizeTenantID(s.TenantID)
+	snap := cloneSession(s)
+	if snap == nil {
+		return fmt.Errorf("persist session: nil session")
+	}
+	snap.TenantID = NormalizeTenantID(snap.TenantID)
+
 	// Write to Store if configured.
 	if m.store != nil {
-		s.mu.Lock()
-		// SaveSession reads exported fields; lock protects concurrent mutation.
-		err := m.store.SaveSession(context.Background(), s)
-		s.mu.Unlock()
+		err := m.store.SaveSession(context.Background(), snap)
 		if err != nil {
-			slog.Warn("store save failed, falling back to JSON", "session_id", s.ID, "err", err)
+			slog.Warn("store save failed, falling back to JSON", "session_id", snap.ID, "err", err)
 		}
 	}
 
@@ -466,7 +468,7 @@ func (m *Manager) PersistSession(s *Session) error {
 	if m.stateDir == "" {
 		return nil
 	}
-	dir := m.sessionStateDirForTenant(s.TenantID)
+	dir := m.sessionStateDirForTenant(snap.TenantID)
 	if dir == "" {
 		return nil
 	}
@@ -474,18 +476,16 @@ func (m *Manager) PersistSession(s *Session) error {
 		return fmt.Errorf("persist session: mkdir: %w", err)
 	}
 
-	s.mu.Lock()
-	data, err := json.Marshal(s)
-	s.mu.Unlock()
+	data, err := json.Marshal(snap)
 	if err != nil {
 		return fmt.Errorf("persist session: marshal: %w", err)
 	}
 
-	path := m.sessionStatePath(s.TenantID, s.ID)
+	path := m.sessionStatePath(snap.TenantID, snap.ID)
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("persist session: write %s: %w", path, err)
 	}
-	if legacyPath := m.legacySessionStatePath(s.ID); legacyPath != "" && legacyPath != path {
+	if legacyPath := m.legacySessionStatePath(snap.ID); legacyPath != "" && legacyPath != path {
 		_ = os.Remove(legacyPath)
 	}
 	return nil

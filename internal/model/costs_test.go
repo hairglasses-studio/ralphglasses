@@ -399,8 +399,8 @@ func TestModelCostsByProvider(t *testing.T) {
 	}
 
 	openai := ModelCostsByProvider(ProviderOpenAI)
-	if len(openai) != 5 {
-		t.Errorf("OpenAI models = %d, want 5", len(openai))
+	if len(openai) != 6 {
+		t.Errorf("OpenAI models = %d, want 6", len(openai))
 	}
 }
 
