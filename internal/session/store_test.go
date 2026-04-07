@@ -161,7 +161,7 @@ func runStoreTests(t *testing.T, store Store) {
 	})
 
 	t.Run("AggregateSpend", func(t *testing.T) {
-		total, err := store.AggregateSpend(ctx, "/repos/beta")
+		total, err := store.AggregateSpend(ctx, "", "/repos/beta")
 		if err != nil {
 			t.Fatalf("AggregateSpend: %v", err)
 		}
@@ -171,7 +171,7 @@ func runStoreTests(t *testing.T, store Store) {
 	})
 
 	t.Run("AggregateSpendAll", func(t *testing.T) {
-		total, err := store.AggregateSpend(ctx, "")
+		total, err := store.AggregateSpend(ctx, "", "")
 		if err != nil {
 			t.Fatalf("AggregateSpend: %v", err)
 		}
@@ -501,7 +501,7 @@ func TestSQLiteStore_AggregateSpend_EmptyDB(t *testing.T) {
 	defer store.Close()
 
 	ctx := context.Background()
-	total, err := store.AggregateSpend(ctx, "")
+	total, err := store.AggregateSpend(ctx, "", "")
 	if err != nil {
 		t.Fatalf("AggregateSpend: %v", err)
 	}
@@ -510,7 +510,7 @@ func TestSQLiteStore_AggregateSpend_EmptyDB(t *testing.T) {
 	}
 
 	// Also test with a specific repo filter on empty DB.
-	total, err = store.AggregateSpend(ctx, "/repos/nonexistent")
+	total, err = store.AggregateSpend(ctx, "", "/repos/nonexistent")
 	if err != nil {
 		t.Fatalf("AggregateSpend(repo): %v", err)
 	}

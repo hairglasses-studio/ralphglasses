@@ -77,6 +77,7 @@ func (m *Manager) teamExecutor() teamExecutor {
 }
 
 func normalizeTeamConfig(config TeamConfig) TeamConfig {
+	config.TenantID = NormalizeTenantID(config.TenantID)
 	if config.Provider == "" {
 		config.Provider = DefaultPrimaryProvider()
 	}
@@ -123,6 +124,7 @@ func newStructuredCodexTeam(config TeamConfig) *TeamStatus {
 	}
 	return &TeamStatus{
 		Name:              config.Name,
+		TenantID:          config.TenantID,
 		RepoPath:          config.RepoPath,
 		Provider:          config.Provider,
 		WorkerProvider:    config.WorkerProvider,
@@ -184,7 +186,7 @@ func structuredTeamIntegrationPath(team *TeamStatus) string {
 	if team == nil || team.RepoPath == "" {
 		return ""
 	}
-	return filepath.Join(filepath.Dir(team.RepoPath), ".ralph-integrations", filepath.Base(team.RepoPath), sanitizeLoopName(team.Name))
+	return filepath.Join(filepath.Dir(team.RepoPath), ".ralph-integrations", filepath.Base(team.RepoPath), sanitizeTenantPathSegment(team.TenantID), sanitizeLoopName(team.Name))
 }
 
 func structuredTeamTaskBranch(team *TeamStatus, task *TeamTask) string {
@@ -203,7 +205,7 @@ func structuredTeamTaskWorktreePath(team *TeamStatus, task *TeamTask) string {
 	if attempt <= 0 {
 		attempt = 1
 	}
-	return filepath.Join(filepath.Dir(team.RepoPath), ".ralph-worktrees", filepath.Base(team.RepoPath), sanitizeLoopName(team.Name), sanitizeLoopName(task.ID), fmt.Sprintf("attempt-%d", attempt))
+	return filepath.Join(filepath.Dir(team.RepoPath), ".ralph-worktrees", filepath.Base(team.RepoPath), sanitizeTenantPathSegment(team.TenantID), sanitizeLoopName(team.Name), sanitizeLoopName(task.ID), fmt.Sprintf("attempt-%d", attempt))
 }
 
 func teamUsesFleetBackend(team *TeamStatus) bool {
@@ -216,29 +218,22 @@ func teamUsesRemoteArtifactBackend(team *TeamStatus) bool {
 
 func taskHandle(task TeamTask) TeamWorkerHandle {
 	return TeamWorkerHandle{
-		WorkItemID:     task.WorkItemID,
-		A2AAgentURL:    task.A2AAgentURL,
-		SessionID:      task.WorkerSessionID,
-		WorkerNodeID:   task.WorkerNodeID,
-		WorktreePath:   task.WorktreePath,
-		WorktreeBranch: task.WorktreeBranch,
-		HeadSHA:        task.HeadSHA,
-		MergeBaseSHA:   task.MergeBaseSHA,
-		ArtifactType:   task.ArtifactType,
-		ArtifactPath:   task.ArtifactPath,
-		ArtifactHash:   task.ArtifactHash,
+		WorkItemID:        task.WorkItemID,
+		A2AAgentURL:       task.A2AAgentURL,
+		SessionID:         task.WorkerSessionID,
+		WorkerNodeID:      task.WorkerNodeID,
+		WorktreePath:      task.WorktreePath,
+		WorktreeBranch:    task.WorktreeBranch,
+		HeadSHA:           task.HeadSHA,
+		MergeBaseSHA:      task.MergeBaseSHA,
+		ArtifactType:      task.ArtifactType,
+		ArtifactPath:      task.ArtifactPath,
+		ArtifactHash:      task.ArtifactHash,
 		ArtifactSizeBytes: task.ArtifactSizeBytes,
-		ArtifactBaseRef: task.ArtifactBaseRef,
-		ArtifactTipRef: task.ArtifactTipRef,
-		ArtifactStatus: task.ArtifactStatus,
+		ArtifactBaseRef:   task.ArtifactBaseRef,
+		ArtifactTipRef:    task.ArtifactTipRef,
+		ArtifactStatus:    task.ArtifactStatus,
 	}
-}
-
-func (m *Manager) teamStateDir() string {
-	if m.stateDir == "" {
-		return ""
-	}
-	return filepath.Join(filepath.Dir(m.stateDir), "teams")
 }
 
 func teamStateFilename(name string) string {
@@ -259,7 +254,8 @@ func (m *Manager) writeTeamSnapshot(team *TeamStatus) error {
 	if team == nil || team.Name == "" {
 		return nil
 	}
-	dir := m.teamStateDir()
+	team.TenantID = NormalizeTenantID(team.TenantID)
+	dir := m.teamStateDirForTenant(team.TenantID)
 	if dir == "" {
 		return nil
 	}
@@ -270,9 +266,12 @@ func (m *Manager) writeTeamSnapshot(team *TeamStatus) error {
 	if err != nil {
 		return fmt.Errorf("persist team: marshal: %w", err)
 	}
-	path := filepath.Join(dir, teamStateFilename(team.Name))
+	path := m.teamStatePath(team.TenantID, team.Name)
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("persist team: write %s: %w", path, err)
+	}
+	if legacyPath := filepath.Join(m.teamStateRootDir(), teamStateFilename(team.Name)); legacyPath != path {
+		_ = os.Remove(legacyPath)
 	}
 	return nil
 }
@@ -288,27 +287,24 @@ func (m *Manager) persistTeamOrWarn(name string, reason string) {
 }
 
 func (m *Manager) RehydrateTeams() error {
-	dir := m.teamStateDir()
-	if dir == "" {
+	root := m.teamStateRootDir()
+	if root == "" {
 		return nil
 	}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
+	if _, err := os.Stat(root); err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
-		return fmt.Errorf("rehydrate teams: read dir: %w", err)
+		return fmt.Errorf("rehydrate teams: stat dir: %w", err)
 	}
+	files := m.discoverTeamStateFiles()
 
 	var autoStart []string
 
 	m.workersMu.Lock()
 
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
-			continue
-		}
-		data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+	for _, file := range files {
+		data, err := os.ReadFile(file.Path)
 		if err != nil {
 			continue
 		}
@@ -319,7 +315,12 @@ func (m *Manager) RehydrateTeams() error {
 		if team.Name == "" {
 			continue
 		}
-		if _, exists := m.teams[team.Name]; exists {
+		team.TenantID = NormalizeTenantID(team.TenantID)
+		if file.Legacy {
+			team.TenantID = DefaultTenantID
+		}
+		key := m.teamKey(team.Name, team.TenantID)
+		if _, exists := m.teams[key]; exists {
 			continue
 		}
 		if team.Runtime == "" {
@@ -347,9 +348,9 @@ func (m *Manager) RehydrateTeams() error {
 		if team.IntegrationBranch == "" && isStructuredCodexTeam(&team) {
 			team.IntegrationBranch = structuredTeamIntegrationBranch(team.Name)
 		}
-		m.teams[team.Name] = &team
+		m.teams[key] = &team
 		if isStructuredCodexTeam(&team) && team.AutoStart && team.RunState == TeamRunStateRunning {
-			autoStart = append(autoStart, team.Name)
+			autoStart = append(autoStart, key)
 		}
 	}
 	m.workersMu.Unlock()
@@ -554,7 +555,7 @@ func (m *Manager) buildStructuredTeamPlannerPrompt(team *TeamStatus) string {
 		availableSlots = 0
 	}
 
-	activeClaims := m.teamPathClaimsForRepo(team.RepoPath)
+	activeClaims := m.teamPathClaimsForRepo(team.TenantID, team.RepoPath)
 
 	var b strings.Builder
 	b.WriteString("You are the planner for a harness-owned Codex team run.\n\n")
@@ -955,6 +956,7 @@ func (m *Manager) applyPlannerActions(ctx context.Context, teamName string, plan
 				task       TeamTask
 				ok         bool
 				repoPath   string
+				tenantID   string
 				ownedPaths []string
 			)
 
@@ -994,10 +996,11 @@ func (m *Manager) applyPlannerActions(ctx context.Context, teamName string, plan
 				return applied, fmt.Errorf("task %s is %s, not retryable", action.TaskID, task.Status)
 			}
 			repoPath = team.RepoPath
+			tenantID = team.TenantID
 			ownedPaths = normalizeOwnedPaths(action.OwnedPaths)
 			m.workersMu.Unlock()
 
-			claimed, conflict, claimErr := m.claimTeamTaskPaths(teamName, repoPath, action.TaskID, ownedPaths)
+			claimed, conflict, claimErr := m.claimTeamTaskPaths(teamName, tenantID, repoPath, action.TaskID, ownedPaths)
 			if claimErr != nil {
 				return applied, fmt.Errorf("claim owned_paths for %s: %w", action.TaskID, claimErr)
 			}
@@ -1088,6 +1091,7 @@ func (m *Manager) applyPlannerActions(ctx context.Context, teamName string, plan
 				}
 				handle, err := backend.Submit(ctx, TeamBackendSubmitRequest{
 					TeamName:         teamSnapshot.Name,
+					TenantID:         teamSnapshot.TenantID,
 					TaskID:           task.ID,
 					RepoPath:         teamSnapshot.RepoPath,
 					RepoName:         filepath.Base(teamSnapshot.RepoPath),
@@ -1121,6 +1125,7 @@ func (m *Manager) applyPlannerActions(ctx context.Context, teamName string, plan
 					}
 				}
 				sess, err := exec.Launch(ctx, LaunchOptions{
+					TenantID:     teamSnapshot.TenantID,
 					Provider:     provider,
 					RepoPath:     launchRepoPath,
 					Prompt:       prompt,
@@ -1261,6 +1266,14 @@ func firstNonZeroProvider(values ...Provider) Provider {
 }
 
 func (m *Manager) StepTeam(ctx context.Context, name string) (*TeamStepResult, error) {
+	return m.StepTeamForTenant(ctx, DefaultTenantID, name)
+}
+
+func (m *Manager) StepTeamForTenant(ctx context.Context, tenantID, name string) (*TeamStepResult, error) {
+	return m.stepTeamByKey(ctx, m.teamKey(name, tenantID))
+}
+
+func (m *Manager) stepTeamByKey(ctx context.Context, name string) (*TeamStepResult, error) {
 	m.workersMu.Lock()
 	team, ok := m.teams[name]
 	if !ok {
@@ -1308,6 +1321,7 @@ func (m *Manager) StepTeam(ctx context.Context, name string) (*TeamStepResult, e
 
 	plannerPrompt := m.buildStructuredTeamPlannerPrompt(snapshot)
 	plannerSession, err := m.teamExecutor().Launch(ctx, LaunchOptions{
+		TenantID:     snapshot.TenantID,
 		Provider:     snapshot.Provider,
 		RepoPath:     snapshot.RepoPath,
 		Prompt:       plannerPrompt,
@@ -1399,6 +1413,14 @@ func (m *Manager) StepTeam(ctx context.Context, name string) (*TeamStepResult, e
 }
 
 func (m *Manager) AnswerTeam(name, answer, taskID string) (*TeamStatus, error) {
+	return m.AnswerTeamForTenant(DefaultTenantID, name, answer, taskID)
+}
+
+func (m *Manager) AnswerTeamForTenant(tenantID, name, answer, taskID string) (*TeamStatus, error) {
+	return m.answerTeamByKey(m.teamKey(name, tenantID), answer, taskID)
+}
+
+func (m *Manager) answerTeamByKey(name, answer, taskID string) (*TeamStatus, error) {
 	m.workersMu.Lock()
 	team, ok := m.teams[name]
 	if !ok {
@@ -1444,7 +1466,7 @@ func (m *Manager) AnswerTeam(name, answer, taskID string) (*TeamStatus, error) {
 		slog.Warn("failed to persist team answer", "team", name, "error", err)
 	}
 	if snapshot.AutoStart {
-		if started, err := m.StartTeam(context.Background(), name); err == nil {
+		if started, err := m.startTeamByKey(context.Background(), name); err == nil {
 			return started, nil
 		}
 	}
@@ -1574,7 +1596,7 @@ func (m *Manager) ensureStructuredTeamIntegrationWorkspace(ctx context.Context, 
 		return "", fmt.Errorf("integration path unavailable")
 	}
 	if _, err := os.Stat(path); err == nil {
-		m.setTeamIntegrationPath(team.Name, path)
+		m.setTeamIntegrationPath(team.TenantID, team.Name, path)
 		return path, nil
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -1585,14 +1607,14 @@ func (m *Manager) ensureStructuredTeamIntegrationWorkspace(ctx context.Context, 
 			return "", err
 		}
 	}
-	m.setTeamIntegrationPath(team.Name, path)
+	m.setTeamIntegrationPath(team.TenantID, team.Name, path)
 	return path, nil
 }
 
-func (m *Manager) setTeamIntegrationPath(name, path string) {
+func (m *Manager) setTeamIntegrationPath(tenantID, name, path string) {
 	m.workersMu.Lock()
 	defer m.workersMu.Unlock()
-	if team, ok := m.teams[name]; ok {
+	if team, ok := m.teams[m.teamKey(name, tenantID)]; ok {
 		team.IntegrationPath = path
 		team.UpdatedAt = time.Now()
 	}
@@ -1760,8 +1782,8 @@ func normalizeOwnedPaths(values []string) []string {
 	return normalized
 }
 
-func teamPathClaimKey(repoPath, ownedPath string) string {
-	return filepath.ToSlash(filepath.Join("repo", filepath.Base(repoPath), "path", ownedPath))
+func teamPathClaimKey(tenantID, repoPath, ownedPath string) string {
+	return filepath.ToSlash(filepath.Join("tenant", sanitizeTenantPathSegment(tenantID), "repo", filepath.Base(repoPath), "path", ownedPath))
 }
 
 func teamPathClaimOwner(teamName, taskID string) string {
@@ -1776,12 +1798,12 @@ func teamPathClaimOverlap(existing, requested string) bool {
 		strings.HasPrefix(requested, existing+"/")
 }
 
-func (m *Manager) teamPathClaimsForRepo(repoPath string) []string {
+func (m *Manager) teamPathClaimsForRepo(tenantID, repoPath string) []string {
 	coord, err := m.teamPathClaimCoordinator()
 	if err != nil {
 		return nil
 	}
-	prefix := filepath.ToSlash(filepath.Join("repo", filepath.Base(repoPath), "path")) + "/"
+	prefix := filepath.ToSlash(filepath.Join("tenant", sanitizeTenantPathSegment(tenantID), "repo", filepath.Base(repoPath), "path")) + "/"
 	all := coord.AllResources()
 	var claims []string
 	for resource, owner := range all {
@@ -1793,14 +1815,14 @@ func (m *Manager) teamPathClaimsForRepo(repoPath string) []string {
 	return claims
 }
 
-func (m *Manager) claimTeamTaskPaths(teamName, repoPath, taskID string, ownedPaths []string) (bool, string, error) {
+func (m *Manager) claimTeamTaskPaths(teamName, tenantID, repoPath, taskID string, ownedPaths []string) (bool, string, error) {
 	coord, err := m.teamPathClaimCoordinator()
 	if err != nil {
 		return false, "", err
 	}
 	keys := make([]string, 0, len(ownedPaths))
 	for _, owned := range ownedPaths {
-		keys = append(keys, teamPathClaimKey(repoPath, owned))
+		keys = append(keys, teamPathClaimKey(tenantID, repoPath, owned))
 	}
 	return coord.ClaimResources(teamPathClaimOwner(teamName, taskID), keys, teamPathClaimOverlap)
 }

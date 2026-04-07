@@ -178,7 +178,7 @@ func runLoopRunStoreTests(t *testing.T, store Store) {
 			}
 		}
 
-		agg, err := store.AggregateCostByProvider(ctx, now.Add(-1*time.Minute))
+		agg, err := store.AggregateCostByProvider(ctx, "", now.Add(-1*time.Minute))
 		if err != nil {
 			t.Fatalf("AggregateCostByProvider: %v", err)
 		}
@@ -193,7 +193,7 @@ func runLoopRunStoreTests(t *testing.T, store Store) {
 
 	t.Run("AggregateCostEmpty", func(t *testing.T) {
 		// Query with a future time should return empty map.
-		agg, err := store.AggregateCostByProvider(ctx, time.Now().Add(1*time.Hour))
+		agg, err := store.AggregateCostByProvider(ctx, "", time.Now().Add(1*time.Hour))
 		if err != nil {
 			t.Fatalf("AggregateCostByProvider: %v", err)
 		}
@@ -318,7 +318,7 @@ func TestCostRecordingToStore(t *testing.T) {
 		t.Fatalf("RecordCost: %v", err)
 	}
 
-	agg, err := store.AggregateCostByProvider(ctx, time.Now().Add(-1*time.Minute))
+	agg, err := store.AggregateCostByProvider(ctx, "", time.Now().Add(-1*time.Minute))
 	if err != nil {
 		t.Fatalf("AggregateCostByProvider: %v", err)
 	}

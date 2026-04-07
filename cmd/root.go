@@ -55,7 +55,7 @@ It scans a directory tree for ralph-enabled repos (containing .ralphrc or .ralph
 and provides a live dashboard to start, stop, monitor, and configure LLM coding loops
 across Claude, Gemini, and Codex providers.
 
-It also runs as an MCP server (ralphglasses mcp) exposing 110 tools for programmatic
+It also runs as an MCP server (ralphglasses mcp) exposing 203 tools for programmatic
 fleet management from any MCP-capable client.`,
 	Version: version,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -155,7 +155,7 @@ fleet management from any MCP-capable client.`,
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		sessMgr := initManagerWithStore(bus)
+		sessMgr := initManagerRuntime(scanPath, bus)
 		m := tui.NewModel(scanPath, sessMgr)
 		m.Ctx = ctx
 		m.EventBus = bus

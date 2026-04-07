@@ -85,7 +85,7 @@ The `internal/session/` package uses a provider dispatch pattern:
 - **Native structure**: Use `AGENTS.md`, `.codex/agents/`, skills, and plugins for Codex-native repo context.
 - **MCP server**: Codex can expose itself as an MCP server via `codex mcp-server` for peer-to-peer delegation.
 - **Default model**: `gpt-5.4` for primary coding control-plane work.
-- **Loop defaults**: `o4-mini` planner with `codex-mini-latest` workers/verifiers for iterative autonomy.
+- **Loop defaults**: `gpt-5.4` for planner, worker, and verifier lanes unless you intentionally override them.
 - **Pinned references**: See `docs/CODEX-REFERENCE.md` for current docs, local CLI baseline, and Claude cache guardrails.
 
 ## MCP Server

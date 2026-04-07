@@ -65,4 +65,7 @@ var (
 
 	// ErrRecoveryActionNotFound indicates the requested recovery action ID does not exist.
 	ErrRecoveryActionNotFound = errors.New("recovery action not found")
+
+	// ErrTenantNotFound indicates the requested tenant does not exist.
+	ErrTenantNotFound = errors.New("tenant not found")
 )

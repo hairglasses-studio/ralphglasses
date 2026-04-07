@@ -112,6 +112,7 @@ type LoopIteration struct {
 // LoopRun is persisted state for a perpetual development loop.
 type LoopRun struct {
 	ID         string          `json:"id"`
+	TenantID   string          `json:"tenant_id,omitempty"`
 	RepoPath   string          `json:"repo_path"`
 	RepoName   string          `json:"repo_name"`
 	Status     string          `json:"status"`
@@ -136,16 +137,16 @@ func (r *LoopRun) Lock() { r.mu.Lock() }
 func (r *LoopRun) Unlock() { r.mu.Unlock() }
 
 // DefaultLoopProfile returns the repo-default Codex-only planner/worker setup.
-// FINDING-186: Use available models (o4-mini, codex-mini-latest) instead of
-// unavailable ones (o1-pro, gpt-5.4-xhigh) that cause immediate launch failures.
+// Keep this aligned with ProviderDefaults(ProviderCodex) so every runtime path
+// uses the same canonical Codex default model.
 func DefaultLoopProfile() LoopProfile {
 	return LoopProfile{
 		PlannerProvider:      ProviderCodex,
-		PlannerModel:         "o4-mini",
+		PlannerModel:         ProviderDefaults(ProviderCodex),
 		WorkerProvider:       ProviderCodex,
-		WorkerModel:          "codex-mini-latest",
+		WorkerModel:          ProviderDefaults(ProviderCodex),
 		VerifierProvider:     ProviderCodex,
-		VerifierModel:        "codex-mini-latest",
+		VerifierModel:        ProviderDefaults(ProviderCodex),
 		MaxConcurrentWorkers: 1,
 		RetryLimit:           1,
 		VerifyCommands:       []string{defaultLoopVerifyCommand},
@@ -160,11 +161,11 @@ func DefaultLoopProfile() LoopProfile {
 func SelfImprovementProfile() LoopProfile {
 	return LoopProfile{
 		PlannerProvider:          ProviderCodex,
-		PlannerModel:             "gpt-5.4",
+		PlannerModel:             ProviderDefaults(ProviderCodex),
 		WorkerProvider:           ProviderCodex,
-		WorkerModel:              "codex-mini-latest",
+		WorkerModel:              ProviderDefaults(ProviderCodex),
 		VerifierProvider:         ProviderCodex,
-		VerifierModel:            "codex-mini-latest",
+		VerifierModel:            ProviderDefaults(ProviderCodex),
 		MaxConcurrentWorkers:     1,
 		RetryLimit:               2,
 		VerifyCommands:           []string{"./scripts/dev/ci.sh", "go run . selftest --gate"},
@@ -196,11 +197,11 @@ func BudgetOptimizedSelfImprovementProfile(totalBudget float64) LoopProfile {
 	}
 	return LoopProfile{
 		PlannerProvider:          ProviderCodex,
-		PlannerModel:             "o4-mini",
+		PlannerModel:             ProviderDefaults(ProviderCodex),
 		WorkerProvider:           ProviderCodex,
-		WorkerModel:              "codex-mini-latest",
+		WorkerModel:              ProviderDefaults(ProviderCodex),
 		VerifierProvider:         ProviderCodex,
-		VerifierModel:            "codex-mini-latest",
+		VerifierModel:            ProviderDefaults(ProviderCodex),
 		MaxConcurrentWorkers:     1,
 		RetryLimit:               2,
 		VerifyCommands:           []string{"./scripts/dev/ci.sh", "go run . selftest --gate"},

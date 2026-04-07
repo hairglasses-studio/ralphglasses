@@ -17,6 +17,7 @@ func defaultRegistry() *ToolGroupRegistry {
 	r.Register(NewFuncBuilder("repo", (*Server).buildRepoGroup))
 	r.Register(NewFuncBuilder("roadmap", (*Server).buildRoadmapGroup))
 	r.Register(NewFuncBuilder("team", (*Server).buildTeamGroup))
+	r.Register(NewFuncBuilder("tenant", (*Server).buildTenantGroup))
 	r.Register(NewFuncBuilder("awesome", (*Server).buildAwesomeGroup))
 	r.Register(NewFuncBuilder("advanced", (*Server).buildAdvancedGroup))
 	r.Register(NewFuncBuilder("events", (*Server).buildEventsGroup))

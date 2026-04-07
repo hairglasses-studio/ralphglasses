@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -49,8 +50,19 @@ func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
 // migrate creates tables if they don't exist.
 func (s *SQLiteStore) migrate() error {
 	const ddl = `
+CREATE TABLE IF NOT EXISTS tenants (
+	id TEXT PRIMARY KEY,
+	display_name TEXT NOT NULL DEFAULT '',
+	allowed_repo_roots TEXT NOT NULL DEFAULT '[]',
+	budget_cap_usd REAL NOT NULL DEFAULT 0,
+	trigger_token_hash TEXT NOT NULL DEFAULT '',
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
 	id               TEXT PRIMARY KEY,
+	tenant_id        TEXT NOT NULL DEFAULT '_default',
 	provider         TEXT NOT NULL DEFAULT 'codex',
 	provider_session TEXT NOT NULL DEFAULT '',
 	repo_path        TEXT NOT NULL DEFAULT '',
@@ -80,9 +92,12 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_repo ON sessions(repo_path);
 CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
 CREATE INDEX IF NOT EXISTS idx_sessions_repo_name ON sessions(repo_name);
+CREATE INDEX IF NOT EXISTS idx_sessions_tenant_repo ON sessions(tenant_id, repo_path);
+CREATE INDEX IF NOT EXISTS idx_sessions_tenant_status ON sessions(tenant_id, status);
 
 CREATE TABLE IF NOT EXISTS loop_runs (
 	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL DEFAULT '_default',
 	repo_path TEXT NOT NULL DEFAULT '',
 	repo_name TEXT NOT NULL DEFAULT '',
 	status TEXT NOT NULL DEFAULT 'pending',
@@ -97,9 +112,12 @@ CREATE TABLE IF NOT EXISTS loop_runs (
 
 CREATE INDEX IF NOT EXISTS idx_loop_runs_repo ON loop_runs(repo_path);
 CREATE INDEX IF NOT EXISTS idx_loop_runs_status ON loop_runs(status);
+CREATE INDEX IF NOT EXISTS idx_loop_runs_tenant_repo ON loop_runs(tenant_id, repo_path);
+CREATE INDEX IF NOT EXISTS idx_loop_runs_tenant_status ON loop_runs(tenant_id, status);
 
 CREATE TABLE IF NOT EXISTS cost_ledger (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	tenant_id TEXT NOT NULL DEFAULT '_default',
 	session_id TEXT,
 	loop_id TEXT,
 	provider TEXT NOT NULL DEFAULT '',
@@ -113,9 +131,11 @@ CREATE TABLE IF NOT EXISTS cost_ledger (
 CREATE INDEX IF NOT EXISTS idx_cost_ledger_session ON cost_ledger(session_id);
 CREATE INDEX IF NOT EXISTS idx_cost_ledger_loop ON cost_ledger(loop_id);
 CREATE INDEX IF NOT EXISTS idx_cost_ledger_provider ON cost_ledger(provider);
+CREATE INDEX IF NOT EXISTS idx_cost_ledger_tenant_recorded ON cost_ledger(tenant_id, recorded_at);
 
 CREATE TABLE IF NOT EXISTS recovery_ops (
 	id             TEXT PRIMARY KEY,
+	tenant_id      TEXT NOT NULL DEFAULT '_default',
 	severity       TEXT NOT NULL DEFAULT 'none',
 	status         TEXT NOT NULL DEFAULT 'detected',
 	total_sessions INTEGER NOT NULL DEFAULT 0,
@@ -135,9 +155,11 @@ CREATE TABLE IF NOT EXISTS recovery_ops (
 
 CREATE INDEX IF NOT EXISTS idx_recovery_ops_status ON recovery_ops(status);
 CREATE INDEX IF NOT EXISTS idx_recovery_ops_detected ON recovery_ops(detected_at);
+CREATE INDEX IF NOT EXISTS idx_recovery_ops_tenant_status ON recovery_ops(tenant_id, status);
 
 CREATE TABLE IF NOT EXISTS recovery_actions (
 	id                TEXT PRIMARY KEY,
+	tenant_id         TEXT NOT NULL DEFAULT '_default',
 	recovery_op_id    TEXT NOT NULL,
 	claude_session_id TEXT NOT NULL DEFAULT '',
 	ralph_session_id  TEXT NOT NULL DEFAULT '',
@@ -155,15 +177,82 @@ CREATE TABLE IF NOT EXISTS recovery_actions (
 
 CREATE INDEX IF NOT EXISTS idx_recovery_actions_op ON recovery_actions(recovery_op_id);
 CREATE INDEX IF NOT EXISTS idx_recovery_actions_status ON recovery_actions(status);
+CREATE INDEX IF NOT EXISTS idx_recovery_actions_tenant_status ON recovery_actions(tenant_id, status);
 `
-	_, err := s.db.Exec(ddl)
-	return err
+	if _, err := s.db.Exec(ddl); err != nil {
+		return err
+	}
+	for _, change := range []struct {
+		table      string
+		columnName string
+		definition string
+	}{
+		{"sessions", "tenant_id", "tenant_id TEXT NOT NULL DEFAULT '_default'"},
+		{"loop_runs", "tenant_id", "tenant_id TEXT NOT NULL DEFAULT '_default'"},
+		{"cost_ledger", "tenant_id", "tenant_id TEXT NOT NULL DEFAULT '_default'"},
+		{"recovery_ops", "tenant_id", "tenant_id TEXT NOT NULL DEFAULT '_default'"},
+		{"recovery_actions", "tenant_id", "tenant_id TEXT NOT NULL DEFAULT '_default'"},
+	} {
+		if err := s.ensureColumn(change.table, change.columnName, change.definition); err != nil {
+			return err
+		}
+	}
+	return s.seedDefaultTenant()
+}
+
+func (s *SQLiteStore) ensureColumn(table, columnName, definition string) error {
+	rows, err := s.db.Query(fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return fmt.Errorf("pragma table_info(%s): %w", table, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			cid       int
+			name      string
+			typ       string
+			notNull   int
+			defaultV  sql.NullString
+			primaryPK int
+		)
+		if err := rows.Scan(&cid, &name, &typ, &notNull, &defaultV, &primaryPK); err != nil {
+			return fmt.Errorf("scan pragma table_info(%s): %w", table, err)
+		}
+		if name == columnName {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate pragma table_info(%s): %w", table, err)
+	}
+
+	if _, err := s.db.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s", table, definition)); err != nil {
+		return fmt.Errorf("alter table %s add column %s: %w", table, columnName, err)
+	}
+	return nil
+}
+
+func (s *SQLiteStore) seedDefaultTenant() error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := s.db.Exec(`
+INSERT INTO tenants (id, display_name, allowed_repo_roots, budget_cap_usd, trigger_token_hash, created_at, updated_at)
+VALUES (?, ?, '[]', 0, '', ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+	display_name = excluded.display_name,
+	updated_at = excluded.updated_at
+`, DefaultTenantID, "Default", now, now)
+	if err != nil {
+		return fmt.Errorf("seed default tenant: %w", err)
+	}
+	return nil
 }
 
 func (s *SQLiteStore) SaveSession(ctx context.Context, sess *Session) error {
 	if sess == nil || sess.ID == "" {
 		return fmt.Errorf("save session: nil session or empty ID")
 	}
+	sess.TenantID = NormalizeTenantID(sess.TenantID)
 
 	costJSON, _ := json.Marshal(sess.CostHistory)
 	if costJSON == nil {
@@ -178,19 +267,20 @@ func (s *SQLiteStore) SaveSession(ctx context.Context, sess *Session) error {
 
 	const query = `
 INSERT INTO sessions (
-	id, provider, provider_session, repo_path, repo_name, status, prompt, model,
+	id, tenant_id, provider, provider_session, repo_path, repo_name, status, prompt, model,
 	agent_name, team_name, budget_usd, spend_usd, turn_count, max_turns,
 	error_msg, exit_reason, last_output, last_event_type, pid,
 	enhancement_source, enhancement_pre_score, cost_history,
 	created_at, updated_at, ended_at
 ) VALUES (
-	?, ?, ?, ?, ?, ?, ?, ?,
+	?, ?, ?, ?, ?, ?, ?, ?, ?,
 	?, ?, ?, ?, ?, ?,
 	?, ?, ?, ?, ?,
 	?, ?, ?,
 	?, ?, ?
 )
 ON CONFLICT(id) DO UPDATE SET
+	tenant_id=excluded.tenant_id,
 	provider=excluded.provider, provider_session=excluded.provider_session,
 	repo_path=excluded.repo_path, repo_name=excluded.repo_name,
 	status=excluded.status, prompt=excluded.prompt, model=excluded.model,
@@ -206,7 +296,7 @@ ON CONFLICT(id) DO UPDATE SET
 	updated_at=excluded.updated_at, ended_at=excluded.ended_at
 `
 	_, err := s.db.ExecContext(ctx, query,
-		sess.ID, string(sess.Provider), sess.ProviderSessionID,
+		sess.ID, sess.TenantID, string(sess.Provider), sess.ProviderSessionID,
 		sess.RepoPath, sess.RepoName, string(sess.Status),
 		sess.Prompt, sess.Model,
 		sess.AgentName, sess.TeamName,
@@ -227,7 +317,7 @@ ON CONFLICT(id) DO UPDATE SET
 
 func (s *SQLiteStore) GetSession(ctx context.Context, id string) (*Session, error) {
 	const query = `
-SELECT id, provider, provider_session, repo_path, repo_name, status, prompt, model,
+SELECT id, tenant_id, provider, provider_session, repo_path, repo_name, status, prompt, model,
 	agent_name, team_name, budget_usd, spend_usd, turn_count, max_turns,
 	error_msg, exit_reason, last_output, last_event_type, pid,
 	enhancement_source, enhancement_pre_score, cost_history,
@@ -246,9 +336,13 @@ FROM sessions WHERE id = ?
 }
 
 func (s *SQLiteStore) ListSessions(ctx context.Context, opts ListOpts) ([]*Session, error) {
-	query := "SELECT id, provider, provider_session, repo_path, repo_name, status, prompt, model, agent_name, team_name, budget_usd, spend_usd, turn_count, max_turns, error_msg, exit_reason, last_output, last_event_type, pid, enhancement_source, enhancement_pre_score, cost_history, created_at, updated_at, ended_at FROM sessions WHERE 1=1"
+	query := "SELECT id, tenant_id, provider, provider_session, repo_path, repo_name, status, prompt, model, agent_name, team_name, budget_usd, spend_usd, turn_count, max_turns, error_msg, exit_reason, last_output, last_event_type, pid, enhancement_source, enhancement_pre_score, cost_history, created_at, updated_at, ended_at FROM sessions WHERE 1=1"
 	var args []any
 
+	if opts.TenantID != "" {
+		query += " AND tenant_id = ?"
+		args = append(args, NormalizeTenantID(opts.TenantID))
+	}
 	if opts.RepoPath != "" {
 		query += " AND repo_path = ?"
 		args = append(args, opts.RepoPath)
@@ -316,12 +410,20 @@ func (s *SQLiteStore) UpdateSessionStatus(ctx context.Context, id string, status
 	return nil
 }
 
-func (s *SQLiteStore) AggregateSpend(ctx context.Context, repo string) (float64, error) {
+func (s *SQLiteStore) AggregateSpend(ctx context.Context, tenantID, repo string) (float64, error) {
 	query := "SELECT COALESCE(SUM(spend_usd), 0) FROM sessions"
 	var args []any
+	var filters []string
+	if tenantID != "" {
+		filters = append(filters, "tenant_id = ?")
+		args = append(args, NormalizeTenantID(tenantID))
+	}
 	if repo != "" {
-		query += " WHERE repo_path = ?"
+		filters = append(filters, "repo_path = ?")
 		args = append(args, repo)
+	}
+	if len(filters) > 0 {
+		query += " WHERE " + strings.Join(filters, " AND ")
 	}
 
 	var total float64
@@ -346,6 +448,7 @@ type scanner interface {
 func scanSessionFromScanner(sc scanner) (*Session, error) {
 	var (
 		sess            Session
+		tenantID        string
 		provider        string
 		status          string
 		createdAt       string
@@ -355,7 +458,7 @@ func scanSessionFromScanner(sc scanner) (*Session, error) {
 	)
 
 	err := sc.Scan(
-		&sess.ID, &provider, &sess.ProviderSessionID,
+		&sess.ID, &tenantID, &provider, &sess.ProviderSessionID,
 		&sess.RepoPath, &sess.RepoName, &status,
 		&sess.Prompt, &sess.Model,
 		&sess.AgentName, &sess.TeamName,
@@ -370,6 +473,7 @@ func scanSessionFromScanner(sc scanner) (*Session, error) {
 		return nil, err
 	}
 
+	sess.TenantID = NormalizeTenantID(tenantID)
 	sess.Provider = Provider(provider)
 	sess.Status = SessionStatus(status)
 
@@ -406,6 +510,7 @@ func (s *SQLiteStore) SaveLoopRun(ctx context.Context, run *LoopRun) error {
 	if run == nil || run.ID == "" {
 		return fmt.Errorf("save loop run: nil run or empty ID")
 	}
+	run.TenantID = NormalizeTenantID(run.TenantID)
 
 	profileJSON, err := json.Marshal(run.Profile)
 	if err != nil {
@@ -430,17 +535,18 @@ func (s *SQLiteStore) SaveLoopRun(ctx context.Context, run *LoopRun) error {
 
 	const query = `
 INSERT INTO loop_runs (
-	id, repo_path, repo_name, status, profile, iterations,
+	id, tenant_id, repo_path, repo_name, status, profile, iterations,
 	last_error, paused, created_at, updated_at, deadline
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
+	tenant_id=excluded.tenant_id,
 	repo_path=excluded.repo_path, repo_name=excluded.repo_name,
 	status=excluded.status, profile=excluded.profile, iterations=excluded.iterations,
 	last_error=excluded.last_error, paused=excluded.paused,
 	updated_at=excluded.updated_at, deadline=excluded.deadline
 `
 	_, err = s.db.ExecContext(ctx, query,
-		run.ID, run.RepoPath, run.RepoName, run.Status,
+		run.ID, run.TenantID, run.RepoPath, run.RepoName, run.Status,
 		string(profileJSON), string(iterJSON),
 		run.LastError, paused,
 		run.CreatedAt.Format(time.RFC3339),
@@ -455,7 +561,7 @@ ON CONFLICT(id) DO UPDATE SET
 
 func (s *SQLiteStore) GetLoopRun(ctx context.Context, id string) (*LoopRun, error) {
 	const query = `
-SELECT id, repo_path, repo_name, status, profile, iterations,
+SELECT id, tenant_id, repo_path, repo_name, status, profile, iterations,
 	last_error, paused, created_at, updated_at, deadline
 FROM loop_runs WHERE id = ?
 `
@@ -471,11 +577,15 @@ FROM loop_runs WHERE id = ?
 }
 
 func (s *SQLiteStore) ListLoopRuns(ctx context.Context, filter LoopRunFilter) ([]*LoopRun, error) {
-	query := `SELECT id, repo_path, repo_name, status, profile, iterations,
+	query := `SELECT id, tenant_id, repo_path, repo_name, status, profile, iterations,
 		last_error, paused, created_at, updated_at, deadline
 		FROM loop_runs WHERE 1=1`
 	var args []any
 
+	if filter.TenantID != "" {
+		query += " AND tenant_id = ?"
+		args = append(args, NormalizeTenantID(filter.TenantID))
+	}
 	if filter.RepoPath != "" {
 		query += " AND repo_path = ?"
 		args = append(args, filter.RepoPath)
@@ -526,6 +636,7 @@ func (s *SQLiteStore) UpdateLoopRunStatus(ctx context.Context, id string, status
 func scanLoopRunFromScanner(sc scanner) (*LoopRun, error) {
 	var (
 		run         LoopRun
+		tenantID    string
 		profileJSON string
 		iterJSON    string
 		paused      int
@@ -535,7 +646,7 @@ func scanLoopRunFromScanner(sc scanner) (*LoopRun, error) {
 	)
 
 	err := sc.Scan(
-		&run.ID, &run.RepoPath, &run.RepoName, &run.Status,
+		&run.ID, &tenantID, &run.RepoPath, &run.RepoName, &run.Status,
 		&profileJSON, &iterJSON,
 		&run.LastError, &paused,
 		&createdAt, &updatedAt, &deadline,
@@ -544,6 +655,7 @@ func scanLoopRunFromScanner(sc scanner) (*LoopRun, error) {
 		return nil, err
 	}
 
+	run.TenantID = NormalizeTenantID(tenantID)
 	run.Paused = paused != 0
 
 	if profileJSON != "" && profileJSON != "{}" {
@@ -582,10 +694,11 @@ func (s *SQLiteStore) RecordCost(ctx context.Context, entry *CostEntry) error {
 	if entry == nil {
 		return fmt.Errorf("record cost: nil entry")
 	}
+	entry.TenantID = NormalizeTenantID(entry.TenantID)
 
 	const query = `
-INSERT INTO cost_ledger (session_id, loop_id, provider, model, spend_usd, turn_count, elapsed_sec, recorded_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO cost_ledger (tenant_id, session_id, loop_id, provider, model, spend_usd, turn_count, elapsed_sec, recorded_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 	recordedAt := entry.RecordedAt
 	if recordedAt.IsZero() {
@@ -593,7 +706,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	}
 
 	res, err := s.db.ExecContext(ctx, query,
-		entry.SessionID, entry.LoopID, entry.Provider, entry.Model,
+		entry.TenantID, entry.SessionID, entry.LoopID, entry.Provider, entry.Model,
 		entry.SpendUSD, entry.TurnCount, entry.ElapsedSec,
 		recordedAt.Format(time.RFC3339),
 	)
@@ -604,9 +717,15 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	return nil
 }
 
-func (s *SQLiteStore) AggregateCostByProvider(ctx context.Context, since time.Time) (map[string]float64, error) {
-	const query = `SELECT provider, COALESCE(SUM(spend_usd), 0) FROM cost_ledger WHERE recorded_at >= ? GROUP BY provider`
-	rows, err := s.db.QueryContext(ctx, query, since.Format(time.RFC3339))
+func (s *SQLiteStore) AggregateCostByProvider(ctx context.Context, tenantID string, since time.Time) (map[string]float64, error) {
+	query := `SELECT provider, COALESCE(SUM(spend_usd), 0) FROM cost_ledger WHERE recorded_at >= ?`
+	args := []any{since.Format(time.RFC3339)}
+	if tenantID != "" {
+		query += ` AND tenant_id = ?`
+		args = append(args, NormalizeTenantID(tenantID))
+	}
+	query += ` GROUP BY provider`
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("aggregate cost by provider: %w", err)
 	}
@@ -630,6 +749,7 @@ func (s *SQLiteStore) SaveRecoveryOp(ctx context.Context, op *RecoveryOp) error 
 	if op == nil || op.ID == "" {
 		return fmt.Errorf("save recovery op: nil op or empty ID")
 	}
+	op.TenantID = NormalizeTenantID(op.TenantID)
 
 	var startedAt, completedAt *string
 	if op.StartedAt != nil {
@@ -643,11 +763,12 @@ func (s *SQLiteStore) SaveRecoveryOp(ctx context.Context, op *RecoveryOp) error 
 
 	const query = `
 INSERT INTO recovery_ops (
-	id, severity, status, total_sessions, alive_count, dead_count,
+	id, tenant_id, severity, status, total_sessions, alive_count, dead_count,
 	resumed_count, failed_count, total_cost_usd, budget_cap_usd,
 	trigger_source, decision_id, error_msg, detected_at, started_at, completed_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
+	tenant_id=excluded.tenant_id,
 	severity=excluded.severity, status=excluded.status,
 	total_sessions=excluded.total_sessions, alive_count=excluded.alive_count,
 	dead_count=excluded.dead_count, resumed_count=excluded.resumed_count,
@@ -657,7 +778,7 @@ ON CONFLICT(id) DO UPDATE SET
 	started_at=excluded.started_at, completed_at=excluded.completed_at
 `
 	_, err := s.db.ExecContext(ctx, query,
-		op.ID, op.Severity, string(op.Status),
+		op.ID, op.TenantID, op.Severity, string(op.Status),
 		op.TotalSessions, op.AliveCount, op.DeadCount,
 		op.ResumedCount, op.FailedCount, op.TotalCostUSD, op.BudgetCapUSD,
 		op.TriggerSource, op.DecisionID, op.ErrorMsg,
@@ -671,7 +792,7 @@ ON CONFLICT(id) DO UPDATE SET
 
 func (s *SQLiteStore) GetRecoveryOp(ctx context.Context, id string) (*RecoveryOp, error) {
 	const query = `
-SELECT id, severity, status, total_sessions, alive_count, dead_count,
+SELECT id, tenant_id, severity, status, total_sessions, alive_count, dead_count,
 	resumed_count, failed_count, total_cost_usd, budget_cap_usd,
 	trigger_source, decision_id, error_msg, detected_at, started_at, completed_at
 FROM recovery_ops WHERE id = ?
@@ -679,12 +800,13 @@ FROM recovery_ops WHERE id = ?
 	row := s.db.QueryRowContext(ctx, query, id)
 
 	var op RecoveryOp
+	var tenantID string
 	var status string
 	var detectedAt string
 	var startedAt, completedAt sql.NullString
 
 	err := row.Scan(
-		&op.ID, &op.Severity, &status,
+		&op.ID, &tenantID, &op.Severity, &status,
 		&op.TotalSessions, &op.AliveCount, &op.DeadCount,
 		&op.ResumedCount, &op.FailedCount, &op.TotalCostUSD, &op.BudgetCapUSD,
 		&op.TriggerSource, &op.DecisionID, &op.ErrorMsg,
@@ -697,6 +819,7 @@ FROM recovery_ops WHERE id = ?
 		return nil, fmt.Errorf("get recovery op %s: %w", id, err)
 	}
 
+	op.TenantID = NormalizeTenantID(tenantID)
 	op.Status = RecoveryOpStatus(status)
 	op.DetectedAt, _ = time.Parse(time.RFC3339, detectedAt)
 	if startedAt.Valid {
@@ -712,12 +835,16 @@ FROM recovery_ops WHERE id = ?
 }
 
 func (s *SQLiteStore) ListRecoveryOps(ctx context.Context, filter RecoveryOpFilter) ([]*RecoveryOp, error) {
-	query := `SELECT id, severity, status, total_sessions, alive_count, dead_count,
+	query := `SELECT id, tenant_id, severity, status, total_sessions, alive_count, dead_count,
 		resumed_count, failed_count, total_cost_usd, budget_cap_usd,
 		trigger_source, decision_id, error_msg, detected_at, started_at, completed_at
 	FROM recovery_ops WHERE 1=1`
 	var args []any
 
+	if filter.TenantID != "" {
+		query += " AND tenant_id = ?"
+		args = append(args, NormalizeTenantID(filter.TenantID))
+	}
 	if filter.Status != "" {
 		query += " AND status = ?"
 		args = append(args, string(filter.Status))
@@ -740,11 +867,11 @@ func (s *SQLiteStore) ListRecoveryOps(ctx context.Context, filter RecoveryOpFilt
 	var result []*RecoveryOp
 	for rows.Next() {
 		var op RecoveryOp
-		var status, detectedAt string
+		var tenantID, status, detectedAt string
 		var startedAt, completedAt sql.NullString
 
 		if err := rows.Scan(
-			&op.ID, &op.Severity, &status,
+			&op.ID, &tenantID, &op.Severity, &status,
 			&op.TotalSessions, &op.AliveCount, &op.DeadCount,
 			&op.ResumedCount, &op.FailedCount, &op.TotalCostUSD, &op.BudgetCapUSD,
 			&op.TriggerSource, &op.DecisionID, &op.ErrorMsg,
@@ -753,6 +880,7 @@ func (s *SQLiteStore) ListRecoveryOps(ctx context.Context, filter RecoveryOpFilt
 			return nil, fmt.Errorf("list recovery ops: scan: %w", err)
 		}
 
+		op.TenantID = NormalizeTenantID(tenantID)
 		op.Status = RecoveryOpStatus(status)
 		op.DetectedAt, _ = time.Parse(time.RFC3339, detectedAt)
 		if startedAt.Valid {
@@ -773,6 +901,7 @@ func (s *SQLiteStore) SaveRecoveryAction(ctx context.Context, action *RecoveryAc
 	if action == nil || action.ID == "" {
 		return fmt.Errorf("save recovery action: nil action or empty ID")
 	}
+	action.TenantID = NormalizeTenantID(action.TenantID)
 
 	var startedAt, completedAt *string
 	if action.StartedAt != nil {
@@ -786,18 +915,19 @@ func (s *SQLiteStore) SaveRecoveryAction(ctx context.Context, action *RecoveryAc
 
 	const query = `
 INSERT INTO recovery_actions (
-	id, recovery_op_id, claude_session_id, ralph_session_id,
+	id, tenant_id, recovery_op_id, claude_session_id, ralph_session_id,
 	repo_path, repo_name, priority, status, cost_usd, error_msg,
 	created_at, started_at, completed_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
+	tenant_id=excluded.tenant_id,
 	ralph_session_id=excluded.ralph_session_id,
 	status=excluded.status, cost_usd=excluded.cost_usd,
 	error_msg=excluded.error_msg,
 	started_at=excluded.started_at, completed_at=excluded.completed_at
 `
 	_, err := s.db.ExecContext(ctx, query,
-		action.ID, action.RecoveryOpID, action.ClaudeSessionID, action.RalphSessionID,
+		action.ID, action.TenantID, action.RecoveryOpID, action.ClaudeSessionID, action.RalphSessionID,
 		action.RepoPath, action.RepoName, action.Priority,
 		string(action.Status), action.CostUSD, action.ErrorMsg,
 		action.CreatedAt.Format(time.RFC3339), startedAt, completedAt,
@@ -834,4 +964,85 @@ func (s *SQLiteStore) UpdateRecoveryActionStatus(ctx context.Context, id string,
 		return ErrRecoveryActionNotFound
 	}
 	return nil
+}
+
+func (s *SQLiteStore) SaveTenant(ctx context.Context, tenant *Tenant) error {
+	if tenant == nil {
+		return fmt.Errorf("save tenant: nil tenant")
+	}
+	cp := *tenant
+	cp.Normalize()
+	rootsJSON, err := json.Marshal(cp.AllowedRepoRoots)
+	if err != nil {
+		return fmt.Errorf("save tenant %s: marshal repo roots: %w", cp.ID, err)
+	}
+	_, err = s.db.ExecContext(ctx, `
+INSERT INTO tenants (id, display_name, allowed_repo_roots, budget_cap_usd, trigger_token_hash, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+	display_name = excluded.display_name,
+	allowed_repo_roots = excluded.allowed_repo_roots,
+	budget_cap_usd = excluded.budget_cap_usd,
+	trigger_token_hash = excluded.trigger_token_hash,
+	updated_at = excluded.updated_at
+`, cp.ID, cp.DisplayName, string(rootsJSON), cp.BudgetCapUSD, cp.TriggerTokenHash, cp.CreatedAt.Format(time.RFC3339), cp.UpdatedAt.Format(time.RFC3339))
+	if err != nil {
+		return fmt.Errorf("save tenant %s: %w", cp.ID, err)
+	}
+	return nil
+}
+
+func (s *SQLiteStore) GetTenant(ctx context.Context, id string) (*Tenant, error) {
+	id = NormalizeTenantID(id)
+	row := s.db.QueryRowContext(ctx, `
+SELECT id, display_name, allowed_repo_roots, budget_cap_usd, trigger_token_hash, created_at, updated_at
+FROM tenants WHERE id = ?
+`, id)
+	var tenant Tenant
+	var rootsJSON string
+	var createdAt, updatedAt string
+	if err := row.Scan(&tenant.ID, &tenant.DisplayName, &rootsJSON, &tenant.BudgetCapUSD, &tenant.TriggerTokenHash, &createdAt, &updatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrTenantNotFound
+		}
+		return nil, fmt.Errorf("get tenant %s: %w", id, err)
+	}
+	if rootsJSON != "" && rootsJSON != "[]" {
+		_ = json.Unmarshal([]byte(rootsJSON), &tenant.AllowedRepoRoots)
+	}
+	tenant.AllowedRepoRoots = normalizeRepoRoots(tenant.AllowedRepoRoots)
+	tenant.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+	tenant.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+	tenant.ID = NormalizeTenantID(tenant.ID)
+	return &tenant, nil
+}
+
+func (s *SQLiteStore) ListTenants(ctx context.Context) ([]*Tenant, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT id, display_name, allowed_repo_roots, budget_cap_usd, trigger_token_hash, created_at, updated_at
+FROM tenants ORDER BY id
+`)
+	if err != nil {
+		return nil, fmt.Errorf("list tenants: %w", err)
+	}
+	defer rows.Close()
+
+	var result []*Tenant
+	for rows.Next() {
+		var tenant Tenant
+		var rootsJSON string
+		var createdAt, updatedAt string
+		if err := rows.Scan(&tenant.ID, &tenant.DisplayName, &rootsJSON, &tenant.BudgetCapUSD, &tenant.TriggerTokenHash, &createdAt, &updatedAt); err != nil {
+			return nil, fmt.Errorf("list tenants: scan: %w", err)
+		}
+		if rootsJSON != "" && rootsJSON != "[]" {
+			_ = json.Unmarshal([]byte(rootsJSON), &tenant.AllowedRepoRoots)
+		}
+		tenant.AllowedRepoRoots = normalizeRepoRoots(tenant.AllowedRepoRoots)
+		tenant.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+		tenant.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		tenant.ID = NormalizeTenantID(tenant.ID)
+		result = append(result, &tenant)
+	}
+	return result, rows.Err()
 }

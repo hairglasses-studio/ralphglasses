@@ -9,6 +9,14 @@ import (
 const defaultTeamControllerInterval = 2 * time.Second
 
 func (m *Manager) StartTeam(ctx context.Context, name string) (*TeamStatus, error) {
+	return m.StartTeamForTenant(ctx, DefaultTenantID, name)
+}
+
+func (m *Manager) StartTeamForTenant(ctx context.Context, tenantID, name string) (*TeamStatus, error) {
+	return m.startTeamByKey(ctx, m.teamKey(name, tenantID))
+}
+
+func (m *Manager) startTeamByKey(ctx context.Context, name string) (*TeamStatus, error) {
 	m.configMu.Lock()
 	m.ensureTeamControllersLocked()
 	if existing, ok := m.teamControllers[name]; ok && existing != nil {
@@ -76,7 +84,7 @@ func (m *Manager) StartTeam(ctx context.Context, name string) (*TeamStatus, erro
 		defer ticker.Stop()
 
 		for {
-			if _, err := m.StepTeam(runCtx, name); err != nil {
+			if _, err := m.stepTeamByKey(runCtx, name); err != nil {
 				m.workersMu.Lock()
 				if team, ok := m.teams[name]; ok {
 					team.LastControllerError = err.Error()
@@ -110,6 +118,14 @@ func (m *Manager) StartTeam(ctx context.Context, name string) (*TeamStatus, erro
 }
 
 func (m *Manager) StopTeam(name string) (*TeamStatus, error) {
+	return m.StopTeamForTenant(DefaultTenantID, name)
+}
+
+func (m *Manager) StopTeamForTenant(tenantID, name string) (*TeamStatus, error) {
+	return m.stopTeamByKey(m.teamKey(name, tenantID))
+}
+
+func (m *Manager) stopTeamByKey(name string) (*TeamStatus, error) {
 	m.configMu.Lock()
 	controller := m.teamControllers[name]
 	if controller != nil {
@@ -141,6 +157,14 @@ func (m *Manager) StopTeam(name string) (*TeamStatus, error) {
 }
 
 func (m *Manager) AwaitTeam(ctx context.Context, name string, pollInterval time.Duration) (*TeamStatus, error) {
+	return m.AwaitTeamForTenant(ctx, DefaultTenantID, name, pollInterval)
+}
+
+func (m *Manager) AwaitTeamForTenant(ctx context.Context, tenantID, name string, pollInterval time.Duration) (*TeamStatus, error) {
+	return m.awaitTeamByKey(ctx, m.teamKey(name, tenantID), pollInterval)
+}
+
+func (m *Manager) awaitTeamByKey(ctx context.Context, name string, pollInterval time.Duration) (*TeamStatus, error) {
 	if pollInterval <= 0 {
 		pollInterval = defaultTeamControllerInterval
 	}

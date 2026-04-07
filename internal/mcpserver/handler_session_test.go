@@ -994,8 +994,11 @@ func TestFleetToolsNotRunning(t *testing.T) {
 			if !strings.Contains(text, `"fleet_mode":false`) {
 				t.Errorf("expected fleet_mode:false, got: %s", text)
 			}
-			if !strings.Contains(text, "ralphglasses mcp --fleet") {
-				t.Errorf("expected guidance to start fleet, got: %s", text)
+			if !strings.Contains(text, "ralphglasses serve --coordinator --port 9473") {
+				t.Errorf("expected coordinator startup guidance, got: %s", text)
+			}
+			if !strings.Contains(text, "RALPH_FLEET_URL=http://") {
+				t.Errorf("expected remote coordinator guidance, got: %s", text)
 			}
 		})
 	}

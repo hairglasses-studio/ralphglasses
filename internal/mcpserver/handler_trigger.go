@@ -17,6 +17,7 @@ import (
 // TriggerRecord represents a request to trigger an agent session externally.
 type TriggerRecord struct {
 	ID        string        `json:"id"`
+	TenantID  string        `json:"tenant_id,omitempty"`
 	Prompt    string        `json:"prompt"`
 	AgentType string        `json:"agent_type"`
 	Priority  int           `json:"priority"`
@@ -80,8 +81,10 @@ func (s *Server) handleTriggerWebhook(ctx context.Context, req mcp.CallToolReque
 	cfg.MaxTurns = p.OptionalInt("max_turns", 0)
 
 	triggerID := fmt.Sprintf("trig-%d", time.Now().UnixNano())
+	tenantID := session.NormalizeTenantID(p.OptionalString("tenant_id", ""))
 	record := TriggerRecord{
 		ID:        triggerID,
+		TenantID:  tenantID,
 		Prompt:    prompt,
 		AgentType: agentType,
 		Priority:  priority,
@@ -123,7 +126,7 @@ func (s *Server) handleTriggerWebhook(ctx context.Context, req mcp.CallToolReque
 				profile.PlannerBudgetUSD = cfg.BudgetUSD / 3
 				profile.WorkerBudgetUSD = cfg.BudgetUSD * 2 / 3
 			}
-			run, err := s.SessMgr.StartLoop(ctx, r.Path, profile)
+			run, err := s.SessMgr.StartLoopForTenant(ctx, tenantID, r.Path, profile)
 			if err != nil {
 				record.Status = "failed"
 				return codedError(ErrLoopStart, fmt.Sprintf("trigger launch failed: %v", err)), nil
@@ -132,6 +135,7 @@ func (s *Server) handleTriggerWebhook(ctx context.Context, req mcp.CallToolReque
 			record.SessionID = run.ID
 		case "cycle":
 			opts := session.LaunchOptions{
+				TenantID:     tenantID,
 				Provider:     session.DefaultPrimaryProvider(),
 				RepoPath:     r.Path,
 				Prompt:       prompt,
@@ -151,6 +155,7 @@ func (s *Server) handleTriggerWebhook(ctx context.Context, req mcp.CallToolReque
 
 	return jsonResult(map[string]any{
 		"trigger_id": record.ID,
+		"tenant_id":  record.TenantID,
 		"status":     record.Status,
 		"agent_type": record.AgentType,
 		"priority":   record.Priority,

@@ -425,6 +425,27 @@ func validateLaunchOptions(opts LaunchOptions) error {
 	if opts.Provider == ProviderCodex && opts.Resume != "" && !codexExecResumeSupported() {
 		return fmt.Errorf("codex provider on this install does not support exec resume")
 	}
+	if opts.Provider == ProviderCodex && opts.StrictProviderContract {
+		var unsupported []string
+		if opts.SystemPrompt != "" {
+			unsupported = append(unsupported, "system_prompt")
+		}
+		if opts.Agent != "" {
+			unsupported = append(unsupported, "agent")
+		}
+		if opts.MaxTurns > 0 {
+			unsupported = append(unsupported, "max_turns")
+		}
+		if len(opts.AllowedTools) > 0 {
+			unsupported = append(unsupported, "allowed_tools")
+		}
+		if opts.Worktree != "" {
+			unsupported = append(unsupported, "worktree")
+		}
+		if len(unsupported) > 0 {
+			return fmt.Errorf("codex provider does not support %s", strings.Join(unsupported, ", "))
+		}
+	}
 	return nil
 }
 

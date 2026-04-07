@@ -20,7 +20,7 @@ Go TUI (BubbleTea/Lip Gloss) + bootable thin client for orchestrating Claude Cod
 |----------|-----|-------|-------|
 | Claude | `claude` | opus/sonnet/haiku | Primary orchestrator |
 | Gemini | `gemini` | gemini-2.5-pro | Google AI Ultra sub |
-| Codex | `codex` | gpt-5.4-xhigh | Thinking mode via o1-pro |
+| Codex | `codex` | gpt-5.4 | Canonical default Codex model |
 
 ## Session Management
 

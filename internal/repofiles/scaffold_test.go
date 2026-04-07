@@ -56,8 +56,8 @@ func TestScaffold(t *testing.T) {
 	}
 
 	codexCfg, _ := os.ReadFile(filepath.Join(dir, ".codex", "config.toml"))
-	if !strings.Contains(string(codexCfg), "model = \"o4-mini\"") {
-		t.Error("expected o4-mini in .codex/config.toml")
+	if !strings.Contains(string(codexCfg), "model = \"gpt-5.4\"") {
+		t.Error("expected gpt-5.4 in .codex/config.toml")
 	}
 }
 

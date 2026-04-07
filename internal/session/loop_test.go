@@ -18,11 +18,10 @@ func TestDefaultLoopProfile(t *testing.T) {
 	if profile.PlannerProvider != ProviderCodex {
 		t.Fatalf("planner provider = %q", profile.PlannerProvider)
 	}
-	// FINDING-186: updated from o1-pro/gpt-5.4-xhigh to available models
-	if profile.PlannerModel != "o4-mini" {
+	if profile.PlannerModel != ProviderDefaults(ProviderCodex) {
 		t.Fatalf("planner model = %q", profile.PlannerModel)
 	}
-	if profile.WorkerModel != "codex-mini-latest" {
+	if profile.WorkerModel != ProviderDefaults(ProviderCodex) {
 		t.Fatalf("worker model = %q", profile.WorkerModel)
 	}
 	if len(profile.VerifyCommands) != 1 || profile.VerifyCommands[0] != "./scripts/dev/ci.sh" {
@@ -65,7 +64,7 @@ func TestLoopStepSuccess(t *testing.T) {
 				OutputCh:   make(chan string, 1),
 				LaunchedAt: time.Now(),
 			}
-			if opts.Model == "o4-mini" {
+			if strings.HasPrefix(opts.SessionName, "loop-plan-") {
 				sess.LastOutput = `{"title":"Add README note","prompt":"Append a loop-generated marker comment to README.md."}`
 				sess.OutputHistory = []string{sess.LastOutput}
 			} else {
@@ -161,7 +160,7 @@ func TestStepLoop_EmptyPlannerTasks(t *testing.T) {
 			}
 			// Planner returns empty output, which should trigger an error
 			// rather than a panic on tasks[0].
-			if opts.Model == "o4-mini" {
+			if strings.HasPrefix(opts.SessionName, "loop-plan-") {
 				sess.LastOutput = ""
 				sess.OutputHistory = []string{}
 			}
@@ -222,7 +221,7 @@ func TestLoopStepVerificationFailure(t *testing.T) {
 				OutputCh:   make(chan string, 1),
 				LaunchedAt: time.Now(),
 			}
-			if opts.Model == "o4-mini" {
+			if strings.HasPrefix(opts.SessionName, "loop-plan-") {
 				sess.LastOutput = `{"title":"Break verify","prompt":"Do some work that will fail verification."}`
 			}
 			return sess, nil
@@ -315,7 +314,7 @@ func TestCompactionBetaSetAfterThreshold(t *testing.T) {
 				OutputCh:   make(chan string, 1),
 				LaunchedAt: time.Now(),
 			}
-			if opts.Model == "o4-mini" {
+			if strings.HasPrefix(opts.SessionName, "loop-plan-") {
 				sess.LastOutput = fmt.Sprintf(`{"title":"Task %d","prompt":"Do work %d."}`, n, n)
 				sess.OutputHistory = []string{sess.LastOutput}
 			} else {
@@ -733,11 +732,11 @@ func TestSelfImprovementProfile(t *testing.T) {
 	if p.MaxIterations != 10 {
 		t.Errorf("MaxIterations = %d, want 10", p.MaxIterations)
 	}
-	if p.PlannerModel != "gpt-5.4" {
-		t.Errorf("PlannerModel = %q, want gpt-5.4", p.PlannerModel)
+	if p.PlannerModel != ProviderDefaults(ProviderCodex) {
+		t.Errorf("PlannerModel = %q, want %q", p.PlannerModel, ProviderDefaults(ProviderCodex))
 	}
-	if p.WorkerModel != "codex-mini-latest" {
-		t.Errorf("WorkerModel = %q, want codex-mini-latest", p.WorkerModel)
+	if p.WorkerModel != ProviderDefaults(ProviderCodex) {
+		t.Errorf("WorkerModel = %q, want %q", p.WorkerModel, ProviderDefaults(ProviderCodex))
 	}
 	if p.MaxDurationSecs != 14400 {
 		t.Errorf("MaxDurationSecs = %d, want 14400", p.MaxDurationSecs)
@@ -939,7 +938,7 @@ func TestSubPhaseTimingPopulated(t *testing.T) {
 				OutputCh:   make(chan string, 1),
 				LaunchedAt: time.Now(),
 			}
-			if opts.Model == "o4-mini" {
+			if strings.HasPrefix(opts.SessionName, "loop-plan-") {
 				sess.LastOutput = `{"title":"Timing test task","prompt":"Do work for timing test."}`
 				sess.OutputHistory = []string{sess.LastOutput}
 			} else {
@@ -1045,7 +1044,7 @@ func TestStepLoopSelectTierSetsWorkerModel(t *testing.T) {
 				LaunchedAt: time.Now(),
 			}
 			// Planner returns a task with "test" in the title.
-			if opts.Model == "o4-mini" {
+			if strings.HasPrefix(opts.SessionName, "loop-plan-") {
 				sess.LastOutput = `{"title":"Add test for parser","prompt":"Write unit tests for the parser module."}`
 				sess.OutputHistory = []string{sess.LastOutput}
 			} else {

@@ -18,9 +18,15 @@ const DefaultMaxRestarts = 5
 
 // StartLoop registers a new loop run for a repo.
 func (m *Manager) StartLoop(ctx context.Context, repoPath string, profile LoopProfile) (*LoopRun, error) {
+	return m.StartLoopForTenant(ctx, DefaultTenantID, repoPath, profile)
+}
+
+// StartLoopForTenant registers a new loop run for a repo within the given tenant.
+func (m *Manager) StartLoopForTenant(ctx context.Context, tenantID, repoPath string, profile LoopProfile) (*LoopRun, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("start loop: %w", err)
 	}
+	tenantID = NormalizeTenantID(tenantID)
 	if strings.TrimSpace(repoPath) == "" {
 		return nil, ErrRepoPathRequired
 	}
@@ -32,7 +38,15 @@ func (m *Manager) StartLoop(ctx context.Context, repoPath string, profile LoopPr
 		return nil, fmt.Errorf("invalid loop profile: %w", err)
 	}
 
-	profile, err := normalizeLoopProfile(profile)
+	tenant, err := m.resolveTenant(ctx, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("resolve tenant %s: %w", tenantID, err)
+	}
+	if !tenant.AllowsRepoPath(repoPath) {
+		return nil, fmt.Errorf("tenant %s cannot access repo path %s", tenant.ID, repoPath)
+	}
+
+	profile, err = normalizeLoopProfile(profile)
 	if err != nil {
 		return nil, err
 	}
@@ -43,6 +57,7 @@ func (m *Manager) StartLoop(ctx context.Context, repoPath string, profile LoopPr
 	now := time.Now()
 	run := &LoopRun{
 		ID:         uuid.NewString(),
+		TenantID:   tenantID,
 		RepoPath:   repoPath,
 		RepoName:   filepath.Base(repoPath),
 		Status:     "pending",

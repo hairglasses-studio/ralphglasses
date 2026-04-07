@@ -297,12 +297,15 @@ A `.mcp.json` and `.codex/config.toml` are included in the repo root for automat
 go run . mcp --scan-path ~/projects
 ```
 
-The server uses stdio transport (JSON-RPC over stdin/stdout). It exposes 126 tools — see [MCP Tools](MCP-TOOLS.md) for the full tool list.
+The server uses stdio transport (JSON-RPC over stdin/stdout). It exposes 203 tools — see [MCP Tools](MCP-TOOLS.md) for the full tool list.
+
+If you are running a shared host, read [Multi-Tenant Operations](MULTI-TENANT.md) before exposing MCP or trigger HTTP surfaces to multiple users or workspaces.
 
 ### Example: launch a session via MCP
 
 ```
 ralphglasses_session_launch {
+  "tenant_id": "acme",
   "repo_path": "/path/to/repo",
   "provider": "codex",
   "prompt": "Fix the failing tests in internal/session/"
@@ -312,7 +315,9 @@ ralphglasses_session_launch {
 ### Example: check fleet status
 
 ```
-ralphglasses_fleet_status {}
+ralphglasses_fleet_status {
+  "tenant_id": "acme"
+}
 ```
 
 ---

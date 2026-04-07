@@ -205,7 +205,6 @@ func TestHandleTriggerWebhook_LaunchLoop(t *testing.T) {
 }
 
 func TestHandleScheduleCreate_CreateAndList(t *testing.T) {
-	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	// Override the schedules path to use a temp directory.
@@ -261,7 +260,6 @@ func TestHandleScheduleCreate_CreateAndList(t *testing.T) {
 }
 
 func TestHandleScheduleCreate_DisableEnable(t *testing.T) {
-	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	tmpDir := t.TempDir()
@@ -366,7 +364,6 @@ func TestHandleScheduleCreate_MissingPrompt(t *testing.T) {
 }
 
 func TestHandleScheduleCreate_DisableNotFound(t *testing.T) {
-	t.Parallel()
 	srv, _ := setupTestServer(t)
 
 	tmpDir := t.TempDir()

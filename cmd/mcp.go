@@ -28,7 +28,7 @@ var mcpCmd = &cobra.Command{
 	SilenceUsage: true,
 	Long: `Start ralphglasses as a Model Context Protocol (MCP) server on stdio.
 
-This exposes 80+ tools for managing ralph loops and multi-provider LLM sessions
+This exposes 203 tools for managing ralph loops and multi-provider LLM sessions
 programmatically from any MCP-capable client (for example Codex, Claude, or Gemini).
 
 Codex repo-local registration is already configured via .codex/config.toml and .mcp.json.
@@ -128,12 +128,13 @@ func setupMCP(sp string) (*server.MCPServer, func(), error) {
 	rg := mcpserver.NewServerWithBus(sp, bus)
 	rg.DeferredLoading = true
 	rg.ToolRecorder = toolRec
-	rg.InitSelfImprovement(filepath.Join(sp, ".ralph"), 0)
+	runtimeCleanup := configureMCPRuntime(sp, bus, rg)
 	rg.Register(srv)
 	mcpserver.RegisterResources(srv, rg)
 	mcpserver.RegisterPrompts(srv, rg)
 
 	cleanup := func() {
+		runtimeCleanup()
 		hookExec.Stop()
 		toolRec.Close()
 		otelShutdown(context.Background())

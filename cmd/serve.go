@@ -73,7 +73,7 @@ Tailscale peers on the fleet port to auto-discover the coordinator.`,
 // for fleet communication.
 func setupServe() (*events.Bus, *session.Manager, string) {
 	bus := events.NewBus(1000)
-	sessMgr := initManagerWithStore(bus)
+	sessMgr := initManagerRuntime(util.ExpandHome(scanPath), bus)
 	hostname := fleet.GetHostname()
 	return bus, sessMgr, hostname
 }

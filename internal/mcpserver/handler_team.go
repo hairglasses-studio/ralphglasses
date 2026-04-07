@@ -56,12 +56,16 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 
 	workerProvider := session.Provider(pp.String("worker_provider"))
 	leadAgent := pp.String("lead_agent")
+	if teamProvider == session.ProviderCodex && strings.TrimSpace(leadAgent) != "" {
+		return codedError(ErrInvalidParams, "lead_agent is not supported for codex teams"), nil
+	}
 	if err := session.ValidateLaunchAgent(teamProvider, leadAgent); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("lead_agent: %v", err)), nil
 	}
 
 	config := session.TeamConfig{
 		Name:             teamName,
+		TenantID:         session.NormalizeTenantID(pp.String("tenant_id")),
 		Provider:         teamProvider,
 		WorkerProvider:   workerProvider,
 		RepoPath:         r.Path,
@@ -84,6 +88,12 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		} else {
 			config.ExecutionBackend = session.TeamExecutionBackendLocal
 		}
+	}
+	if config.ExecutionBackend == session.TeamExecutionBackendA2A {
+		return codedError(ErrInvalidParams, "execution_backend=a2a is not supported yet"), nil
+	}
+	if config.ExecutionBackend == session.TeamExecutionBackendFleet && s.FleetCoordinator == nil && s.FleetClient == nil {
+		return fleetNotConfiguredResult(), nil
 	}
 	if config.WorktreePolicy == "" && teamProvider == session.ProviderCodex {
 		config.WorktreePolicy = session.TeamWorktreePolicyPerWorker
@@ -123,10 +133,11 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 			"dry_run":           true,
 			"runtime":           teamRuntimeForProvider(effectiveProvider),
 			"name":              config.Name,
+			"tenant_id":         config.TenantID,
 			"repo":              repoName,
 			"provider":          string(effectiveProvider),
 			"worker_provider":   string(effectiveWorkerProvider),
-			"lead_agent":        firstNonBlank(config.LeadAgent, "default"),
+			"lead_agent":        config.LeadAgent,
 			"model":             effectiveModel,
 			"worker_model":      effectiveWorkerModel,
 			"budget_usd":        effectiveBudget,
@@ -154,8 +165,9 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 	if name == "" {
 		return codedError(ErrInvalidParams, "team name required"), nil
 	}
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
 
-	team, ok := s.SessMgr.GetTeam(name)
+	team, ok := s.SessMgr.GetTeamForTenant(name, tenantID)
 	if !ok {
 		return codedError(ErrTeamNotFound, fmt.Sprintf("team not found: %s", name)), nil
 	}
@@ -163,6 +175,7 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 	// Enrich with lead session info
 	result := map[string]any{
 		"name":                  team.Name,
+		"tenant_id":             team.TenantID,
 		"repo":                  team.RepoPath,
 		"provider":              team.Provider,
 		"worker_provider":       team.WorkerProvider,
@@ -202,7 +215,7 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 	result["completed_tasks"] = completedTasks
 	result["task_count"] = len(team.Tasks)
 
-	if lead, ok := s.SessMgr.Get(team.LeadID); ok {
+	if lead, ok := s.SessMgr.GetForTenant(team.LeadID, tenantID); ok {
 		lead.Lock()
 		result["lead_session"] = map[string]any{
 			"id":        lead.ID,
@@ -222,8 +235,9 @@ func (s *Server) handleTeamStep(ctx context.Context, req mcp.CallToolRequest) (*
 	if name == "" {
 		return codedError(ErrInvalidParams, "team name required"), nil
 	}
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
 
-	result, err := s.SessMgr.StepTeam(ctx, name)
+	result, err := s.SessMgr.StepTeamForTenant(ctx, tenantID, name)
 	if err != nil {
 		if err == session.ErrTeamNotFound {
 			return codedError(ErrTeamNotFound, fmt.Sprintf("team not found: %s", name)), nil
@@ -242,8 +256,9 @@ func (s *Server) handleTeamAnswer(_ context.Context, req mcp.CallToolRequest) (*
 	if answer == "" {
 		return codedError(ErrInvalidParams, "answer required"), nil
 	}
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
 
-	team, err := s.SessMgr.AnswerTeam(name, answer, getStringArg(req, "task_id"))
+	team, err := s.SessMgr.AnswerTeamForTenant(tenantID, name, answer, getStringArg(req, "task_id"))
 	if err != nil {
 		if err == session.ErrTeamNotFound {
 			return codedError(ErrTeamNotFound, fmt.Sprintf("team not found: %s", name)), nil
@@ -258,7 +273,8 @@ func (s *Server) handleTeamStart(ctx context.Context, req mcp.CallToolRequest) (
 	if name == "" {
 		return codedError(ErrInvalidParams, "team name required"), nil
 	}
-	team, err := s.SessMgr.StartTeam(ctx, name)
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
+	team, err := s.SessMgr.StartTeamForTenant(ctx, tenantID, name)
 	if err != nil {
 		if err == session.ErrTeamNotFound {
 			return codedError(ErrTeamNotFound, fmt.Sprintf("team not found: %s", name)), nil
@@ -273,7 +289,8 @@ func (s *Server) handleTeamStop(_ context.Context, req mcp.CallToolRequest) (*mc
 	if name == "" {
 		return codedError(ErrInvalidParams, "team name required"), nil
 	}
-	team, err := s.SessMgr.StopTeam(name)
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
+	team, err := s.SessMgr.StopTeamForTenant(tenantID, name)
 	if err != nil {
 		if err == session.ErrTeamNotFound {
 			return codedError(ErrTeamNotFound, fmt.Sprintf("team not found: %s", name)), nil
@@ -288,6 +305,7 @@ func (s *Server) handleTeamAwait(ctx context.Context, req mcp.CallToolRequest) (
 	if name == "" {
 		return codedError(ErrInvalidParams, "team name required"), nil
 	}
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
 	timeoutSeconds := getNumberArg(req, "timeout_seconds", 0)
 	pollSeconds := getNumberArg(req, "poll_seconds", 2)
 	awaitCtx := ctx
@@ -296,7 +314,7 @@ func (s *Server) handleTeamAwait(ctx context.Context, req mcp.CallToolRequest) (
 		awaitCtx, cancel = context.WithTimeout(ctx, time.Duration(timeoutSeconds*float64(time.Second)))
 		defer cancel()
 	}
-	team, err := s.SessMgr.AwaitTeam(awaitCtx, name, time.Duration(pollSeconds*float64(time.Second)))
+	team, err := s.SessMgr.AwaitTeamForTenant(awaitCtx, tenantID, name, time.Duration(pollSeconds*float64(time.Second)))
 	if err != nil {
 		if err == session.ErrTeamNotFound {
 			return codedError(ErrTeamNotFound, fmt.Sprintf("team not found: %s", name)), nil
@@ -317,7 +335,8 @@ func (s *Server) handleTeamDelegate(_ context.Context, req mcp.CallToolRequest) 
 	}
 
 	taskProvider := session.Provider(getStringArg(req, "provider"))
-	count, err := s.SessMgr.DelegateTask(name, session.TeamTask{
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
+	count, err := s.SessMgr.DelegateTaskForTenant(tenantID, name, session.TeamTask{
 		Description: task,
 		Provider:    taskProvider,
 		Status:      session.TeamTaskPending,

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
@@ -22,6 +23,7 @@ func teamSafetyConfig() TeamSafetyConfig {
 
 // LaunchTeam creates an agent team by launching a lead session with team env vars.
 func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatus, error) {
+	config.TenantID = NormalizeTenantID(config.TenantID)
 	if config.Name == "" {
 		return nil, ErrTeamNameRequired
 	}
@@ -34,10 +36,19 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 
 	// Safety: enforce team creation limits.
 	m.workersMu.RLock()
-	existingCount := len(m.teams)
+	existingCount := 0
+	for _, team := range m.teams {
+		if NormalizeTenantID(team.TenantID) == config.TenantID {
+			existingCount++
+		}
+	}
 	m.workersMu.RUnlock()
 	if err := ValidateTeamCreate(config.Name, len(config.Tasks), existingCount, teamSafetyConfig()); err != nil {
 		return nil, err
+	}
+
+	if config.Provider == ProviderCodex {
+		return m.launchStructuredCodexTeam(ctx, config)
 	}
 
 	// Build a lead prompt that instructs the lead to use agent teams
@@ -106,6 +117,7 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 	}
 
 	opts := LaunchOptions{
+		TenantID:     config.TenantID,
 		Provider:     config.Provider,
 		RepoPath:     config.RepoPath,
 		Prompt:       leadPrompt,
@@ -132,15 +144,24 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 	}
 
 	team := &TeamStatus{
-		Name:     config.Name,
-		RepoPath: config.RepoPath,
-		LeadID:   s.ID,
-		Status:   StatusRunning,
-		Tasks:    tasks,
+		Name:           config.Name,
+		TenantID:       config.TenantID,
+		RepoPath:       config.RepoPath,
+		LeadID:         s.ID,
+		Status:         StatusRunning,
+		Tasks:          tasks,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+		Provider:       config.Provider,
+		WorkerProvider: workerProvider,
+		Model:          config.Model,
+		WorkerModel:    config.WorkerModel,
+		MaxBudgetUSD:   config.MaxBudgetUSD,
 	}
+	key := m.teamKey(config.Name, config.TenantID)
 
 	m.workersMu.Lock()
-	m.teams[config.Name] = team
+	m.teams[key] = team
 	m.workersMu.Unlock()
 
 	if m.bus != nil {
@@ -155,6 +176,39 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 	}
 
 	return team, nil
+}
+
+func (m *Manager) launchStructuredCodexTeam(ctx context.Context, config TeamConfig) (*TeamStatus, error) {
+	team := newStructuredCodexTeam(config)
+	key := m.teamKey(config.Name, config.TenantID)
+
+	m.workersMu.Lock()
+	m.teams[key] = team
+	m.workersMu.Unlock()
+	m.persistTeamOrWarn(key, "create structured team")
+
+	if m.bus != nil {
+		m.bus.PublishCtx(ctx, events.Event{
+			Type:     events.TeamCreated,
+			RepoPath: config.RepoPath,
+			RepoName: filepath.Base(config.RepoPath),
+			Provider: string(config.Provider),
+			Data: map[string]any{
+				"team":    config.Name,
+				"runtime": team.Runtime,
+				"tasks":   len(config.Tasks),
+			},
+		})
+	}
+
+	if team.AutoStart {
+		started, err := m.StartTeamForTenant(ctx, config.TenantID, config.Name)
+		if err != nil {
+			return nil, fmt.Errorf("start structured team: %w", err)
+		}
+		return started, nil
+	}
+	return cloneTeamStatus(team), nil
 }
 
 // teamLeadAllowedTools returns the MCP tools a team lead session needs
@@ -172,9 +226,13 @@ func teamLeadAllowedTools() []string {
 // DelegateTask appends a task to a team under the manager mutex.
 // Returns the updated task count.
 func (m *Manager) DelegateTask(teamName string, task TeamTask) (int, error) {
+	return m.DelegateTaskForTenant(DefaultTenantID, teamName, task)
+}
+
+func (m *Manager) DelegateTaskForTenant(tenantID, teamName string, task TeamTask) (int, error) {
 	m.workersMu.Lock()
 	defer m.workersMu.Unlock()
-	team, ok := m.teams[teamName]
+	team, ok := m.teams[m.teamKey(teamName, tenantID)]
 	if !ok {
 		return 0, fmt.Errorf("team %s: %w", teamName, ErrTeamNotFound)
 	}
@@ -194,11 +252,15 @@ type workerSnapshot struct {
 // Two-phase locking: sessionsMu is acquired and released before workersMu is
 // acquired, so the two locks are never held simultaneously.
 func (m *Manager) GetTeam(name string) (*TeamStatus, bool) {
+	return m.GetTeamForTenant(name, DefaultTenantID)
+}
+
+func (m *Manager) getTeamByKey(key string) (*TeamStatus, bool) {
 	// Phase 1: collect everything we need from sessions while holding sessionsMu.
 	// We must look up the team's LeadID first, so we peek at workersMu briefly,
 	// but we do NOT hold both locks at the same time.
 	m.workersMu.RLock()
-	team, ok := m.teams[name]
+	team, ok := m.teams[key]
 	m.workersMu.RUnlock()
 	if !ok {
 		return nil, false
@@ -217,7 +279,7 @@ func (m *Manager) GetTeam(name string) (*TeamStatus, bool) {
 		hasLead = true
 	}
 	for _, s := range m.sessions {
-		if s.TeamName == team.Name && s.ID != team.LeadID {
+		if s.TeamName == team.Name && NormalizeTenantID(s.TenantID) == NormalizeTenantID(team.TenantID) && s.ID != team.LeadID {
 			s.mu.Lock()
 			workers = append(workers, workerSnapshot{prompt: s.Prompt, status: s.Status})
 			s.mu.Unlock()
@@ -230,7 +292,7 @@ func (m *Manager) GetTeam(name string) (*TeamStatus, bool) {
 	defer m.workersMu.Unlock()
 
 	// Re-fetch team in case it was removed between the two phases.
-	team, ok = m.teams[name]
+	team, ok = m.teams[key]
 	if !ok {
 		return nil, false
 	}
@@ -263,7 +325,7 @@ func (m *Manager) GetTeam(name string) (*TeamStatus, bool) {
 		}
 	}
 
-	return team, true
+	return cloneTeamStatus(team), true
 }
 
 // updateTeamOnSessionEnd checks if the completed session is a team lead
@@ -273,7 +335,7 @@ func (m *Manager) updateTeamOnSessionEnd(sess *Session) {
 	defer m.workersMu.Unlock()
 
 	for _, team := range m.teams {
-		if team.LeadID != sess.ID {
+		if team.LeadID != sess.ID || NormalizeTenantID(team.TenantID) != NormalizeTenantID(sess.TenantID) {
 			continue
 		}
 		sess.mu.Lock()
@@ -294,12 +356,5 @@ func (m *Manager) updateTeamOnSessionEnd(sess *Session) {
 
 // ListTeams returns all teams.
 func (m *Manager) ListTeams() []*TeamStatus {
-	m.workersMu.RLock()
-	defer m.workersMu.RUnlock()
-
-	result := make([]*TeamStatus, 0, len(m.teams))
-	for _, t := range m.teams {
-		result = append(result, t)
-	}
-	return result
+	return m.ListTeamsForTenant(DefaultTenantID)
 }

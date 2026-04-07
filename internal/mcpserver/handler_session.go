@@ -19,6 +19,7 @@ func (s *Server) handleSessionList(ctx context.Context, req mcp.CallToolRequest)
 	providerFilter := pp.String("provider")
 	statusFilter := pp.String("status")
 	includeEnded := pp.Bool("include_ended")
+	tenantID := session.NormalizeTenantID(pp.String("tenant_id"))
 
 	var repoPath string
 	if repoFilter != "" {
@@ -33,10 +34,11 @@ func (s *Server) handleSessionList(ctx context.Context, req mcp.CallToolRequest)
 		}
 	}
 
-	sessions := s.SessMgr.List(repoPath)
+	sessions := s.SessMgr.ListByTenant(repoPath, tenantID)
 
 	type sessionSummary struct {
 		ID       string  `json:"id"`
+		TenantID string  `json:"tenant_id,omitempty"`
 		Provider string  `json:"provider"`
 		Repo     string  `json:"repo"`
 		Status   string  `json:"status"`
@@ -77,6 +79,7 @@ func (s *Server) handleSessionList(ctx context.Context, req mcp.CallToolRequest)
 		liveIDs[sess.ID] = true
 		summaries = append(summaries, sessionSummary{
 			ID:       sess.ID,
+			TenantID: sess.TenantID,
 			Provider: provider,
 			Repo:     sess.RepoName,
 			Status:   status,
@@ -93,6 +96,7 @@ func (s *Server) handleSessionList(ctx context.Context, req mcp.CallToolRequest)
 	// When include_ended=true and a Store is available, merge historical sessions.
 	if includeEnded && s.SessMgr.Store() != nil {
 		opts := session.ListOpts{
+			TenantID: tenantID,
 			RepoPath: repoPath,
 		}
 		if statusFilter != "" {
@@ -117,6 +121,7 @@ func (s *Server) handleSessionList(ctx context.Context, req mcp.CallToolRequest)
 
 				summaries = append(summaries, sessionSummary{
 					ID:       sess.ID,
+					TenantID: sess.TenantID,
 					Provider: provider,
 					Repo:     sess.RepoName,
 					Status:   status,
@@ -142,8 +147,9 @@ func (s *Server) handleSessionStatus(_ context.Context, req mcp.CallToolRequest)
 	if id == "" {
 		return codedError(ErrInvalidParams, "session id required"), nil
 	}
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
 
-	sess, ok := s.SessMgr.Get(id)
+	sess, ok := s.SessMgr.GetForTenant(id, tenantID)
 	if !ok {
 		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
@@ -155,6 +161,7 @@ func (s *Server) handleSessionStatus(_ context.Context, req mcp.CallToolRequest)
 	}
 	detail := map[string]any{
 		"id":                     sess.ID,
+		"tenant_id":              sess.TenantID,
 		"provider":               sess.Provider,
 		"provider_session_id":    sess.ProviderSessionID,
 		"repo":                   sess.RepoName,
@@ -196,7 +203,8 @@ func (s *Server) handleSessionOutput(_ context.Context, req mcp.CallToolRequest)
 		lines = 100
 	}
 
-	sess, ok := s.SessMgr.Get(id)
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
+	sess, ok := s.SessMgr.GetForTenant(id, tenantID)
 	if !ok {
 		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
@@ -212,6 +220,7 @@ func (s *Server) handleSessionOutput(_ context.Context, req mcp.CallToolRequest)
 
 	return jsonResult(map[string]any{
 		"session_id": id,
+		"tenant_id":  tenantID,
 		"lines":      len(history),
 		"output":     history,
 	}), nil
@@ -222,8 +231,9 @@ func (s *Server) handleSessionBudget(ctx context.Context, req mcp.CallToolReques
 	if id == "" {
 		return codedError(ErrInvalidParams, "session id required"), nil
 	}
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
 
-	sess, ok := s.SessMgr.Get(id)
+	sess, ok := s.SessMgr.GetForTenant(id, tenantID)
 	if !ok {
 		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
@@ -238,6 +248,7 @@ func (s *Server) handleSessionBudget(ctx context.Context, req mcp.CallToolReques
 	sess.Lock()
 	info := map[string]any{
 		"session_id": sess.ID,
+		"tenant_id":  sess.TenantID,
 		"budget_usd": sess.BudgetUSD,
 		"spent_usd":  sess.SpentUSD,
 		"remaining":  sess.BudgetUSD - sess.SpentUSD,
@@ -249,7 +260,7 @@ func (s *Server) handleSessionBudget(ctx context.Context, req mcp.CallToolReques
 	// Add historical cost breakdown if Store is available.
 	if store := s.SessMgr.Store(); store != nil {
 		since := time.Now().Add(-24 * time.Hour) // last 24 hours
-		if costByProvider, err := store.AggregateCostByProvider(ctx, since); err == nil && len(costByProvider) > 0 {
+		if costByProvider, err := store.AggregateCostByProvider(ctx, tenantID, since); err == nil && len(costByProvider) > 0 {
 			info["historical_cost"] = costByProvider
 		}
 	}
@@ -263,9 +274,10 @@ func (s *Server) handleSessionCompare(_ context.Context, req mcp.CallToolRequest
 	if id1 == "" || id2 == "" {
 		return codedError(ErrInvalidParams, "both id1 and id2 are required"), nil
 	}
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
 
-	s1, ok1 := s.SessMgr.Get(id1)
-	s2, ok2 := s.SessMgr.Get(id2)
+	s1, ok1 := s.SessMgr.GetForTenant(id1, tenantID)
+	s2, ok2 := s.SessMgr.GetForTenant(id2, tenantID)
 	if !ok1 || !ok2 {
 		if !ok1 {
 			return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id1)), nil
@@ -290,6 +302,7 @@ func (s *Server) handleSessionCompare(_ context.Context, req mcp.CallToolRequest
 		}
 		return map[string]any{
 			"id":            sess.ID,
+			"tenant_id":     sess.TenantID,
 			"provider":      string(sess.Provider),
 			"status":        string(sess.Status),
 			"model":         sess.Model,
@@ -320,7 +333,8 @@ func (s *Server) handleSessionTail(_ context.Context, req mcp.CallToolRequest) (
 		lines = 30
 	}
 
-	sess, ok := s.SessMgr.Get(id)
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
+	sess, ok := s.SessMgr.GetForTenant(id, tenantID)
 	if !ok {
 		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
@@ -369,6 +383,7 @@ func (s *Server) handleSessionTail(_ context.Context, req mcp.CallToolRequest) (
 
 	return jsonResult(map[string]any{
 		"session_id":     id,
+		"tenant_id":      tenantID,
 		"status":         string(status),
 		"output":         output,
 		"lines_returned": len(output),
@@ -383,8 +398,9 @@ func (s *Server) handleSessionDiff(_ context.Context, req mcp.CallToolRequest) (
 	if id == "" {
 		return codedError(ErrInvalidParams, "session id required"), nil
 	}
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
 
-	sess, ok := s.SessMgr.Get(id)
+	sess, ok := s.SessMgr.GetForTenant(id, tenantID)
 	if !ok {
 		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
@@ -418,6 +434,7 @@ func (s *Server) handleSessionDiff(_ context.Context, req mcp.CallToolRequest) (
 
 	result := map[string]any{
 		"session_id": id,
+		"tenant_id":  tenantID,
 		"repo":       repoName,
 		"window": map[string]any{
 			"started":  launchedAt.Format(time.RFC3339),
@@ -438,15 +455,17 @@ func (s *Server) handleSessionDiff(_ context.Context, req mcp.CallToolRequest) (
 func (s *Server) handleSessionErrors(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoFilter := getStringArg(req, "repo")
 	severityFilter := getStringArg(req, "severity")
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
 	limit := int(getNumberArg(req, "limit", 50))
 	if limit < 1 {
 		limit = 50
 	}
 
-	allSessions := s.SessMgr.List("")
+	allSessions := s.SessMgr.ListByTenant("", tenantID)
 
 	type errorEntry struct {
 		SessionID string `json:"session_id"`
+		TenantID  string `json:"tenant_id,omitempty"`
 		Repo      string `json:"repo"`
 		Provider  string `json:"provider"`
 		Severity  string `json:"severity"`
@@ -479,6 +498,7 @@ func (s *Server) handleSessionErrors(_ context.Context, req mcp.CallToolRequest)
 			hasError = true
 			e := errorEntry{
 				SessionID: sess.ID,
+				TenantID:  sess.TenantID,
 				Repo:      repo,
 				Provider:  provider,
 				Severity:  "critical",
@@ -496,6 +516,7 @@ func (s *Server) handleSessionErrors(_ context.Context, req mcp.CallToolRequest)
 			hasError = true
 			e := errorEntry{
 				SessionID: sess.ID,
+				TenantID:  sess.TenantID,
 				Repo:      repo,
 				Provider:  provider,
 				Severity:  "warning",
@@ -513,6 +534,7 @@ func (s *Server) handleSessionErrors(_ context.Context, req mcp.CallToolRequest)
 			hasError = true
 			e := errorEntry{
 				SessionID: sess.ID,
+				TenantID:  sess.TenantID,
 				Repo:      repo,
 				Provider:  provider,
 				Severity:  "warning",
