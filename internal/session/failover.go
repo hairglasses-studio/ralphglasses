@@ -14,7 +14,7 @@ type FailoverChain struct {
 
 // DefaultFailoverChain returns the standard provider preference order.
 func DefaultFailoverChain() FailoverChain {
-	return FailoverChain{Providers: []Provider{DefaultPrimaryProvider(), ProviderGemini, ProviderClaude}}
+	return FailoverChain{Providers: []Provider{DefaultPrimaryProvider(), ProviderClaude, ProviderGemini}}
 }
 
 // LaunchWithFailover attempts to launch a session using the first healthy

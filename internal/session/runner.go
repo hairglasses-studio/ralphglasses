@@ -586,6 +586,15 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile
 							Provider:  string(s.Provider),
 							Data:      map[string]any{"spent_usd": s.SpentUSD, "budget_usd": s.BudgetUSD},
 						})
+						// Claude enforces budget via --max-budget-usd CLI flag.
+						// Non-Claude providers lack CLI budget enforcement, so
+						// kill the session here to prevent runaway spend.
+						if s.Provider != ProviderClaude {
+							s.Status = StatusStopped
+							s.ExitReason = fmt.Sprintf("budget exceeded: $%.2f of $%.2f", s.SpentUSD, s.BudgetUSD)
+							s.mu.Unlock()
+							return
+						}
 					}
 				}
 			}

@@ -32,6 +32,42 @@ func TestIsTransientError(t *testing.T) {
 	}
 }
 
+func TestIsTransientError_CodexPatterns(t *testing.T) {
+	// New Codex-specific transient patterns
+	codexTransient := []string{
+		"model_overloaded: try again later",
+		"server_error: internal failure",
+	}
+	for _, msg := range codexTransient {
+		if !isTransientError(msg) {
+			t.Errorf("expected transient: %q", msg)
+		}
+	}
+}
+
+func TestIsTransientError_NonTransientOverride(t *testing.T) {
+	// Non-transient patterns must override transient even if both match.
+	// "quota exhausted" contains no transient pattern, so it's non-transient.
+	nonTransient := []string{
+		"subscription_usage_exhausted",
+		"extra_usage_exhausted",
+		"context_length_exceeded: max 128000 tokens",
+		"budget exceeded: $5.00 of $5.00",
+		"quota exhausted for codex",
+	}
+	for _, msg := range nonTransient {
+		if isTransientError(msg) {
+			t.Errorf("expected non-transient (should not retry): %q", msg)
+		}
+	}
+
+	// Edge case: "overloaded" is transient, but "quota exhausted" takes priority
+	mixed := "server overloaded and quota exhausted"
+	if isTransientError(mixed) {
+		t.Errorf("non-transient should override transient for: %q", mixed)
+	}
+}
+
 func TestNewAutoRecovery(t *testing.T) {
 	dir := t.TempDir()
 	dl := NewDecisionLog(dir, LevelAutoRecover)

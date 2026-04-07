@@ -127,3 +127,44 @@ func TestFleetRecoveryOrchestrator_PriorityMapping(t *testing.T) {
 		}
 	}
 }
+
+func TestFleetRecoveryOrchestrator_UsesOriginalProvider(t *testing.T) {
+	coord := newTestCoordinator()
+	coord.SetBudgetLimit(100.0)
+	fro := NewFleetRecoveryOrchestrator(coord, nil)
+
+	plan := &session.CrashRecoveryPlan{
+		DetectedAt: time.Now(),
+		Severity:   "minor",
+		DeadCount:  2,
+		SessionsToResume: []session.RecoverableSession{
+			{SessionID: "s1", RepoPath: "/tmp/r1", RepoName: "r1", Priority: 1, Provider: session.ProviderCodex, ResumePrompt: "p1"},
+			{SessionID: "s2", RepoPath: "/tmp/r2", RepoName: "r2", Priority: 2, Provider: session.ProviderGemini, ResumePrompt: "p2"},
+			{SessionID: "s3", RepoPath: "/tmp/r3", RepoName: "r3", Priority: 3, ResumePrompt: "p3"}, // empty provider → default
+		},
+	}
+
+	n, err := fro.DistributeRecoveryPlan(plan, 2.00)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if n != 3 {
+		t.Errorf("expected 3 submitted, got %d", n)
+	}
+
+	// Verify providers on submitted work items
+	items := coord.queue.All()
+	providersByRepo := make(map[string]session.Provider)
+	for _, item := range items {
+		providersByRepo[item.RepoName] = item.Provider
+	}
+	if providersByRepo["r1"] != session.ProviderCodex {
+		t.Errorf("r1: expected codex, got %s", providersByRepo["r1"])
+	}
+	if providersByRepo["r2"] != session.ProviderGemini {
+		t.Errorf("r2: expected gemini, got %s", providersByRepo["r2"])
+	}
+	if providersByRepo["r3"] != session.DefaultPrimaryProvider() {
+		t.Errorf("r3: expected %s (default), got %s", session.DefaultPrimaryProvider(), providersByRepo["r3"])
+	}
+}

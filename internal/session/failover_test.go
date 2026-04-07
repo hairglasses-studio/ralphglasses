@@ -17,7 +17,7 @@ func TestDefaultFailoverChain(t *testing.T) {
 		t.Fatalf("expected 3 providers, got %d", len(chain.Providers))
 	}
 
-	want := []Provider{ProviderCodex, ProviderGemini, ProviderClaude}
+	want := []Provider{ProviderCodex, ProviderClaude, ProviderGemini}
 	for i, p := range chain.Providers {
 		if p != want[i] {
 			t.Errorf("provider[%d] = %s, want %s", i, p, want[i])
