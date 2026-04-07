@@ -1126,6 +1126,9 @@ func TestHandleMarathonDashboardEmpty(t *testing.T) {
 	if !strings.Contains(text, `"total_usd":0`) {
 		t.Errorf("expected 0 total cost, got: %s", text)
 	}
+	if !strings.Contains(text, `"productivity"`) {
+		t.Errorf("expected productivity block, got: %s", text)
+	}
 }
 
 func TestHandleMarathonDashboardStale(t *testing.T) {

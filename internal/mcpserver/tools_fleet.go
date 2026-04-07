@@ -345,6 +345,12 @@ func (s *Server) handleMarathonDashboard(_ context.Context, req mcp.CallToolRequ
 
 	allSessions := s.SessMgr.List("")
 	allTeams := s.SessMgr.ListTeams()
+	productivity := session.EmptyProductivitySnapshot()
+	if status := s.SessMgr.SupervisorStatus(); status != nil {
+		productivity = status.Productivity
+	} else {
+		productivity = s.SessMgr.ProductivitySnapshot("", time.Time{})
+	}
 
 	var (
 		totalUSD     float64
@@ -445,7 +451,8 @@ func (s *Server) handleMarathonDashboard(_ context.Context, req mcp.CallToolRequ
 	}
 
 	return jsonResult(map[string]any{
-		"timestamp": now.Format(time.RFC3339),
+		"timestamp":    now.Format(time.RFC3339),
+		"productivity": productivity,
 		"cost": map[string]any{
 			"total_usd":   totalUSD,
 			"burn_rate":   burnRate,

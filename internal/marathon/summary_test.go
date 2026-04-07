@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 func TestRunSummary_Empty(t *testing.T) {
@@ -26,6 +28,10 @@ func TestRunSummary_RecordCycle(t *testing.T) {
 		Success:   true,
 		CostUSD:   0.05,
 		Duration:  10 * time.Second,
+		Productivity: &session.ProductivitySnapshot{
+			Productive: true,
+			Score:      100,
+		},
 	})
 	rs.RecordCycle(CycleResult{
 		SessionID: "sess-1",
@@ -33,12 +39,20 @@ func TestRunSummary_RecordCycle(t *testing.T) {
 		CostUSD:   0.03,
 		Duration:  5 * time.Second,
 		ExitCode:  1,
+		Productivity: &session.ProductivitySnapshot{
+			Productive: false,
+			Score:      45,
+		},
 	})
 	rs.RecordCycle(CycleResult{
 		SessionID: "sess-2",
 		Success:   true,
 		CostUSD:   0.10,
 		Duration:  20 * time.Second,
+		Productivity: &session.ProductivitySnapshot{
+			Productive: true,
+			Score:      90,
+		},
 	})
 
 	out := rs.Render()
@@ -57,6 +71,12 @@ func TestRunSummary_RecordCycle(t *testing.T) {
 	if !strings.Contains(out, "$0.1800") {
 		t.Fatalf("expected total cost $0.18, got:\n%s", out)
 	}
+	if !strings.Contains(out, "Productive:   2") {
+		t.Fatalf("expected productive cycle count, got:\n%s", out)
+	}
+	if !strings.Contains(out, "Unproductive:1") {
+		t.Fatalf("expected unproductive cycle count, got:\n%s", out)
+	}
 	if !strings.Contains(out, "sess-1") || !strings.Contains(out, "sess-2") {
 		t.Fatalf("expected per-session breakdown, got:\n%s", out)
 	}
@@ -70,6 +90,10 @@ func TestRunSummary_JSON(t *testing.T) {
 		Success:   true,
 		CostUSD:   0.25,
 		Duration:  30 * time.Second,
+		Productivity: &session.ProductivitySnapshot{
+			Productive: true,
+			Score:      100,
+		},
 	})
 	rs.RecordCycle(CycleResult{
 		SessionID: "s1",
@@ -77,6 +101,10 @@ func TestRunSummary_JSON(t *testing.T) {
 		CostUSD:   0.10,
 		Duration:  15 * time.Second,
 		ExitCode:  2,
+		Productivity: &session.ProductivitySnapshot{
+			Productive: false,
+			Score:      60,
+		},
 	})
 
 	data, err := rs.JSON()
@@ -97,6 +125,12 @@ func TestRunSummary_JSON(t *testing.T) {
 	}
 	if int(parsed["failures"].(float64)) != 1 {
 		t.Fatalf("expected failures=1 in JSON, got %v", parsed["failures"])
+	}
+	if int(parsed["productive_cycles"].(float64)) != 1 {
+		t.Fatalf("expected productive_cycles=1 in JSON, got %v", parsed["productive_cycles"])
+	}
+	if int(parsed["unproductive_cycles"].(float64)) != 1 {
+		t.Fatalf("expected unproductive_cycles=1 in JSON, got %v", parsed["unproductive_cycles"])
 	}
 	if parsed["total_cost_usd"].(float64) != 0.35 {
 		t.Fatalf("expected total_cost_usd=0.35 in JSON, got %v", parsed["total_cost_usd"])

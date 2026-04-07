@@ -159,6 +159,13 @@ func TestResearchDaemonDedupSkip(t *testing.T) {
 	if len(gw.written) != 0 {
 		t.Error("expected no writes for dedup-skipped topic")
 	}
+	stats := rd.Stats()
+	if stats.TopicsProcessed != 0 {
+		t.Errorf("expected 0 processed writes, got %d", stats.TopicsProcessed)
+	}
+	if stats.DedupSkips != 1 {
+		t.Errorf("expected 1 dedup skip, got %d", stats.DedupSkips)
+	}
 }
 
 func TestResearchDaemonComplexityGate(t *testing.T) {
@@ -183,6 +190,10 @@ func TestResearchDaemonComplexityGate(t *testing.T) {
 	}
 	if gw.abandoned[0] != "complex-topic:complexity_exceeds_max" {
 		t.Errorf("unexpected abandon reason: %s", gw.abandoned[0])
+	}
+	stats := rd.Stats()
+	if stats.AutonomyRejections != 0 {
+		t.Errorf("expected 0 autonomy rejections, got %d", stats.AutonomyRejections)
 	}
 }
 
@@ -216,6 +227,9 @@ func TestResearchDaemonSuccessfulProcessing(t *testing.T) {
 	stats := rd.Stats()
 	if stats.TopicsProcessed != 1 {
 		t.Errorf("expected 1 processed, got %d", stats.TopicsProcessed)
+	}
+	if stats.ResearchOutputs != 1 || stats.TopicsCompleted != 1 {
+		t.Errorf("expected 1 output/completion, got %+v", stats)
 	}
 	if stats.DailySpentUSD == 0 {
 		t.Error("expected non-zero daily spend")
@@ -416,6 +430,9 @@ func TestResearchDaemonStats(t *testing.T) {
 	}
 	if stats.DailyBudgetUSD != 25.0 {
 		t.Errorf("expected daily budget 25.0, got %v", stats.DailyBudgetUSD)
+	}
+	if stats.ResearchOutputs != 0 || stats.DedupSkips != 0 || stats.AutonomyRejections != 0 {
+		t.Errorf("expected zeroed productivity counters, got %+v", stats)
 	}
 }
 

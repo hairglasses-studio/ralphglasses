@@ -293,11 +293,19 @@ func (s *Server) handleAutonomyLevel(_ context.Context, req mcp.CallToolRequest)
 
 func (s *Server) handleSupervisorStatus(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.SessMgr == nil {
-		return fleetJSON(map[string]any{"running": false, "error": "no manager"})
+		return fleetJSON(map[string]any{
+			"running":      false,
+			"error":        "no manager",
+			"productivity": session.EmptyProductivitySnapshot(),
+		})
 	}
 	status := s.SessMgr.SupervisorStatus()
 	if status == nil {
-		return fleetJSON(map[string]any{"running": false, "message": "supervisor not active"})
+		return fleetJSON(map[string]any{
+			"running":      false,
+			"message":      "supervisor not active",
+			"productivity": s.SessMgr.ProductivitySnapshot("", time.Time{}),
+		})
 	}
 	return fleetJSON(map[string]any{
 		"running":                status.Running,
@@ -307,8 +315,10 @@ func (s *Server) handleSupervisorStatus(_ context.Context, _ mcp.CallToolRequest
 		"started_at":             status.StartedAt,
 		"automation":             status.Automation,
 		"research_daemon_active": status.ResearchDaemonActive,
+		"research_daemon":        status.ResearchDaemonStats,
 		"crash_recovery_active":  status.CrashRecoveryActive,
 		"crash_recovery_policy":  status.CrashRecoveryPolicy,
+		"productivity":           status.Productivity,
 	})
 }
 

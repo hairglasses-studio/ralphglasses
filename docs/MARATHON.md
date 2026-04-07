@@ -17,6 +17,16 @@ bash marathon.sh -b 50 -d 6 -c 60                  # Custom budget/duration
 - **Signal handling**: SIGINT/SIGTERM → graceful SIGTERM to ralph → 30s window → SIGKILL
 - **Logging**: All supervisor events → `.ralph/logs/marathon-*.log`
 
+## Productive pressure runs
+
+Marathon summaries now distinguish productive cycles from clean-but-empty cycles.
+
+- A productive cycle must produce durable research output and concrete development progress
+- Verifier failures and no-op plateaus downgrade the cycle even if work was attempted
+- Dedup-skipped research topics and autonomy-gated rejects are surfaced as activity, not progress
+
+The JSON and text summaries include productive/unproductive cycle counts plus the latest composite productivity snapshot so shell-level pressure tests can validate actual R&D output rather than only success/failure and cost.
+
 ## Flags ralph actually reads from .ralphrc
 
 Only `MAX_CALLS_PER_HOUR` and `CLAUDE_TIMEOUT_MINUTES` are used by ralph_loop.sh. Other marathon-specific keys (MARATHON_DURATION_HOURS, RALPH_SESSION_BUDGET, etc.) are only for documentation/reference — the supervisor enforces them externally.

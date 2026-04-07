@@ -1,13 +1,8 @@
 package cmd
 
 import (
-	"context"
-	"log/slog"
-	"os"
-	"path/filepath"
-
+	"github.com/hairglasses-studio/ralphglasses/internal/bootstrap"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
-	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -15,46 +10,17 @@ import (
 // On failure it logs a warning and returns a MemoryStore so the process can
 // still start without persistence.
 func initStore() session.Store {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		slog.Warn("sqlite store: cannot resolve home dir, using memory store", "error", err)
-		return session.NewMemoryStore()
-	}
-	dbPath := filepath.Join(home, ".ralphglasses", "state.db")
-	store, err := session.NewSQLiteStore(dbPath)
-	if err != nil {
-		slog.Warn("sqlite store: falling back to memory store", "path", dbPath, "error", err)
-		return session.NewMemoryStore()
-	}
-	return store
+	return bootstrap.InitStore()
 }
 
 // initManagerWithStore creates a session manager backed by SQLite persistence.
 // If bus is nil, the manager will operate without event publishing.
 func initManagerWithStore(bus *events.Bus) *session.Manager {
-	store := initStore()
-	if bus != nil {
-		return session.NewManagerWithStore(store, bus)
-	}
-	mgr := session.NewManager()
-	mgr.SetStore(store)
-	return mgr
+	return bootstrap.InitManagerWithStore(bus)
 }
 
 // initManagerRuntime returns a fully initialized manager with store-backed
 // persistence, optional scan-root config applied, and startup hygiene completed.
 func initManagerRuntime(scanRoot string, bus *events.Bus) *session.Manager {
-	mgr := initManagerWithStore(bus)
-	if scanRoot != "" {
-		if _, err := os.Stat(filepath.Join(scanRoot, ".ralphrc")); err == nil {
-			cfg, cfgErr := model.LoadConfig(context.Background(), scanRoot)
-			if cfgErr != nil {
-				slog.Warn("manager bootstrap: failed to load scan-root config", "path", scanRoot, "error", cfgErr)
-			} else {
-				mgr.ApplyConfig(cfg)
-			}
-		}
-	}
-	mgr.Init()
-	return mgr
+	return bootstrap.InitManagerRuntime(scanRoot, bus)
 }

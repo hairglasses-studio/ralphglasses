@@ -224,6 +224,21 @@ func TestSetup_RegistersDeferredTools(t *testing.T) {
 	}
 }
 
+func TestSetup_RegistersTenantLeaderboardTool(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("HOME", t.TempDir())
+
+	srv, cleanup, err := setup(tmpDir)
+	if err != nil {
+		t.Fatalf("setup() error: %v", err)
+	}
+	defer cleanup()
+
+	if srv.GetTool("ralphglasses_tenant_role_leaderboards") == nil {
+		t.Fatal("tenant role leaderboards tool not registered")
+	}
+}
+
 // --- Binary-level tests to cover main() ---
 
 func TestMain_StdinClosed(t *testing.T) {

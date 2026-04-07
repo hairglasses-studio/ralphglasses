@@ -72,8 +72,10 @@ type SupervisorState struct {
 	StartedAt            time.Time                 `json:"started_at"`
 	Automation           *AutomationStatusSnapshot `json:"automation,omitempty"`
 	ResearchDaemonActive bool                      `json:"research_daemon_active,omitempty"`
+	ResearchDaemonStats  *ResearchDaemonStats      `json:"research_daemon,omitempty"`
 	CrashRecoveryActive  bool                      `json:"crash_recovery_active,omitempty"`
 	CrashRecoveryPolicy  *CrashRecoveryPolicy      `json:"crash_recovery_policy,omitempty"`
+	Productivity         ProductivitySnapshot      `json:"productivity"`
 }
 
 // NewSupervisor creates a Supervisor with sensible defaults.
@@ -331,9 +333,13 @@ func (s *Supervisor) Status() SupervisorState {
 		StartedAt:            s.startedAt,
 		ResearchDaemonActive: s.researchDaemon != nil,
 		CrashRecoveryActive:  s.crashRecovery != nil,
+		Productivity:         EmptyProductivitySnapshot(),
 	}
 	automation := s.automation
 	crashRecovery := s.crashRecovery
+	researchDaemon := s.researchDaemon
+	startedAt := s.startedAt
+	repoPath := s.RepoPath
 	s.mu.Unlock()
 	if budget != nil {
 		st.BudgetSpentUSD = budget.Spent()
@@ -345,6 +351,13 @@ func (s *Supervisor) Status() SupervisorState {
 	if crashRecovery != nil {
 		policy := crashRecovery.Policy()
 		st.CrashRecoveryPolicy = &policy
+	}
+	if researchDaemon != nil {
+		stats := researchDaemon.Stats()
+		st.ResearchDaemonStats = &stats
+	}
+	if s.mgr != nil {
+		st.Productivity = s.mgr.productivitySnapshot(repoPath, startedAt, researchDaemon)
 	}
 	return st
 }
@@ -694,17 +707,8 @@ func (s *Supervisor) runConsolidation() {
 }
 
 func (s *Supervisor) persistState() {
-	s.mu.Lock()
-	state := SupervisorState{
-		Running: s.running, RepoPath: s.RepoPath,
-		LastCycleLaunch: s.lastCycleLaunch, TickCount: s.tickCount, StartedAt: s.startedAt,
-	}
-	budget := s.budget
-	repoPath := s.RepoPath
-	s.mu.Unlock()
-	if budget != nil {
-		state.BudgetSpentUSD = budget.Spent()
-	}
+	state := s.Status()
+	repoPath := state.RepoPath
 	if repoPath == "" {
 		return
 	}

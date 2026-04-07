@@ -69,6 +69,9 @@ func TestHandleSelfImprove_ValidRepo(t *testing.T) {
 	if !strings.Contains(text, `"trace"`) {
 		t.Errorf("expected trace in default response, got: %s", text)
 	}
+	if !strings.Contains(text, `"productivity"`) {
+		t.Errorf("expected productivity block in response, got: %s", text)
+	}
 }
 
 func TestHandleSelfImprove_CustomBudget(t *testing.T) {

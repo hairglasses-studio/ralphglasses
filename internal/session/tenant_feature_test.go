@@ -2,13 +2,12 @@ package session
 
 import (
 	"context"
-	"database/sql"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	_ "modernc.org/sqlite"
+	"github.com/hairglasses-studio/ralphglasses/internal/testutil/tenanttest"
 )
 
 func TestMemoryStore_ListSessionsFiltersByTenant(t *testing.T) {
@@ -125,104 +124,7 @@ func TestSQLiteStore_TenantRoundTrip(t *testing.T) {
 
 func TestSQLiteStore_MigratesLegacyTenantColumnsBeforeIndexes(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "legacy-state.db")
-
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		t.Fatalf("sql.Open: %v", err)
-	}
-	legacyDDL := `
-CREATE TABLE sessions (
-	id TEXT PRIMARY KEY,
-	provider TEXT NOT NULL DEFAULT 'codex',
-	provider_session TEXT NOT NULL DEFAULT '',
-	repo_path TEXT NOT NULL DEFAULT '',
-	repo_name TEXT NOT NULL DEFAULT '',
-	status TEXT NOT NULL DEFAULT 'launching',
-	prompt TEXT NOT NULL DEFAULT '',
-	model TEXT NOT NULL DEFAULT '',
-	agent_name TEXT NOT NULL DEFAULT '',
-	team_name TEXT NOT NULL DEFAULT '',
-	budget_usd REAL NOT NULL DEFAULT 0,
-	spend_usd REAL NOT NULL DEFAULT 0,
-	turn_count INTEGER NOT NULL DEFAULT 0,
-	max_turns INTEGER NOT NULL DEFAULT 0,
-	error_msg TEXT NOT NULL DEFAULT '',
-	exit_reason TEXT NOT NULL DEFAULT '',
-	last_output TEXT NOT NULL DEFAULT '',
-	last_event_type TEXT NOT NULL DEFAULT '',
-	pid INTEGER NOT NULL DEFAULT 0,
-	enhancement_source TEXT NOT NULL DEFAULT '',
-	enhancement_pre_score INTEGER NOT NULL DEFAULT 0,
-	cost_history TEXT NOT NULL DEFAULT '[]',
-	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	ended_at DATETIME
-);
-CREATE TABLE loop_runs (
-	id TEXT PRIMARY KEY,
-	repo_path TEXT NOT NULL DEFAULT '',
-	repo_name TEXT NOT NULL DEFAULT '',
-	status TEXT NOT NULL DEFAULT 'pending',
-	profile TEXT NOT NULL DEFAULT '{}',
-	iterations TEXT NOT NULL DEFAULT '[]',
-	last_error TEXT NOT NULL DEFAULT '',
-	paused INTEGER NOT NULL DEFAULT 0,
-	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	deadline DATETIME
-);
-CREATE TABLE cost_ledger (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	session_id TEXT,
-	loop_id TEXT,
-	provider TEXT NOT NULL DEFAULT '',
-	model TEXT NOT NULL DEFAULT '',
-	spend_usd REAL NOT NULL DEFAULT 0,
-	turn_count INTEGER NOT NULL DEFAULT 0,
-	elapsed_sec REAL NOT NULL DEFAULT 0,
-	recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE recovery_ops (
-	id TEXT PRIMARY KEY,
-	severity TEXT NOT NULL DEFAULT 'none',
-	status TEXT NOT NULL DEFAULT 'detected',
-	total_sessions INTEGER NOT NULL DEFAULT 0,
-	alive_count INTEGER NOT NULL DEFAULT 0,
-	dead_count INTEGER NOT NULL DEFAULT 0,
-	resumed_count INTEGER NOT NULL DEFAULT 0,
-	failed_count INTEGER NOT NULL DEFAULT 0,
-	total_cost_usd REAL NOT NULL DEFAULT 0,
-	budget_cap_usd REAL NOT NULL DEFAULT 0,
-	trigger_source TEXT NOT NULL DEFAULT '',
-	decision_id TEXT NOT NULL DEFAULT '',
-	error_msg TEXT NOT NULL DEFAULT '',
-	detected_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	started_at DATETIME,
-	completed_at DATETIME
-);
-CREATE TABLE recovery_actions (
-	id TEXT PRIMARY KEY,
-	recovery_op_id TEXT NOT NULL,
-	claude_session_id TEXT NOT NULL DEFAULT '',
-	ralph_session_id TEXT NOT NULL DEFAULT '',
-	repo_path TEXT NOT NULL DEFAULT '',
-	repo_name TEXT NOT NULL DEFAULT '',
-	priority INTEGER NOT NULL DEFAULT 0,
-	status TEXT NOT NULL DEFAULT 'pending',
-	cost_usd REAL NOT NULL DEFAULT 0,
-	error_msg TEXT NOT NULL DEFAULT '',
-	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	started_at DATETIME,
-	completed_at DATETIME
-);
-`
-	if _, err := db.Exec(legacyDDL); err != nil {
-		db.Close()
-		t.Fatalf("seed legacy schema: %v", err)
-	}
-	if err := db.Close(); err != nil {
-		t.Fatalf("close legacy db: %v", err)
-	}
+	tenanttest.SeedLegacySQLiteSchema(t, dbPath)
 
 	store, err := NewSQLiteStore(dbPath)
 	if err != nil {
