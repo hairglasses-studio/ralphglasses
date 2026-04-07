@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"path/filepath"
@@ -24,6 +25,7 @@ import (
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
 	Short: "Run as an MCP server on stdio",
+	SilenceUsage: true,
 	Long: `Start ralphglasses as a Model Context Protocol (MCP) server on stdio.
 
 This exposes 80+ tools for managing ralph loops and multi-provider LLM sessions
@@ -55,9 +57,20 @@ RALPHGLASSES_SCAN_PATH=~/hairglasses-studio for a custom scan path.`,
 		}
 		defer cleanup()
 
-		return registry.ServeAuto(srv)
+		if err := serveMCP(srv); err != nil {
+			// MCP clients routinely cancel stdio transports during shutdown or
+			// capability probing. Treat those as clean exits so Cobra does not
+			// print usage/help text to stderr and confuse the client.
+			if errors.Is(err, context.Canceled) || errors.Is(err, io.EOF) {
+				return nil
+			}
+			return err
+		}
+		return nil
 	},
 }
+
+var serveMCP = registry.ServeAuto
 
 // setupMCP creates and configures the full MCP server with middleware, tools,
 // resources, and prompts. Returns the server, a cleanup function, and any error.

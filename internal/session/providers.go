@@ -444,8 +444,18 @@ var codexExecResumeSupported = func() bool {
 // stripNestingEnv removes env vars that cause CLI tools to detect they're running
 // inside another CLI session and refuse to start or behave differently.
 func stripNestingEnv(env []string) []string {
-	env = filterEnv(env, "CLAUDECODE")
-	env = filterEnv(env, "CLAUDE_CODE_ENTRYPOINT")
+	// Preserve CODEX_HOME so callers can intentionally select a profile, but
+	// drop parent-session markers that can cause child CLIs to attach to the
+	// wrong thread or inherit the parent's sandbox/runtime mode.
+	for _, key := range []string{
+		"CLAUDECODE",
+		"CLAUDE_CODE_ENTRYPOINT",
+		"CODEX_THREAD_ID",
+		"CODEX_CI",
+		"CODEX_SANDBOX_NETWORK_DISABLED",
+	} {
+		env = filterEnv(env, key)
+	}
 	return env
 }
 

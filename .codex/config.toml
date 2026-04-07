@@ -4,7 +4,8 @@ sandbox_mode = "workspace-write"
 web_search = "cached"
 model_reasoning_effort = "xhigh"
 plan_mode_reasoning_effort = "xhigh"
-service_tier = "flex"
+# Leave service_tier unset here. Some Codex accounts reject "flex", which
+# breaks interactive `/resume` in this repo.
 personality = "pragmatic"
 
 [features]
