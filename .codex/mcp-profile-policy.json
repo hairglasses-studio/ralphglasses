@@ -10,6 +10,7 @@
       "enabled_tools": [
         "ralphglasses_tool_groups",
         "ralphglasses_load_tool_group",
+        "ralphglasses_server_health",
         "ralphglasses_skill_export",
         "ralphglasses_scan",
         "ralphglasses_list",
@@ -32,6 +33,7 @@
       "enabled_tools": [
         "ralphglasses_tool_groups",
         "ralphglasses_load_tool_group",
+        "ralphglasses_server_health",
         "ralphglasses_skill_export",
         "ralphglasses_scan",
         "ralphglasses_list",
@@ -72,6 +74,7 @@
       "enabled_tools": [
         "ralphglasses_tool_groups",
         "ralphglasses_load_tool_group",
+        "ralphglasses_server_health",
         "ralphglasses_skill_export",
         "ralphglasses_scan",
         "ralphglasses_list",

@@ -142,7 +142,7 @@ func newStructuredCodexTeam(config TeamConfig) *TeamStatus {
 		AutoStart:         config.AutoStart,
 		TargetBranch:      config.TargetBranch,
 		IntegrationBranch: structuredTeamIntegrationBranch(config.Name),
-		PromotionStatus:   TeamMergeStatusPending,
+		PromotionStatus:   TeamPromotionStatusPending,
 		A2AAgentURL:       config.A2AAgentURL,
 	}
 }
@@ -216,21 +216,21 @@ func teamUsesRemoteArtifactBackend(team *TeamStatus) bool {
 
 func taskHandle(task TeamTask) TeamWorkerHandle {
 	return TeamWorkerHandle{
-		WorkItemID:     task.WorkItemID,
-		A2AAgentURL:    task.A2AAgentURL,
-		SessionID:      task.WorkerSessionID,
-		WorkerNodeID:   task.WorkerNodeID,
-		WorktreePath:   task.WorktreePath,
-		WorktreeBranch: task.WorktreeBranch,
-		HeadSHA:        task.HeadSHA,
-		MergeBaseSHA:   task.MergeBaseSHA,
-		ArtifactType:   task.ArtifactType,
-		ArtifactPath:   task.ArtifactPath,
-		ArtifactHash:   task.ArtifactHash,
+		WorkItemID:        task.WorkItemID,
+		A2AAgentURL:       task.A2AAgentURL,
+		SessionID:         task.WorkerSessionID,
+		WorkerNodeID:      task.WorkerNodeID,
+		WorktreePath:      task.WorktreePath,
+		WorktreeBranch:    task.WorktreeBranch,
+		HeadSHA:           task.HeadSHA,
+		MergeBaseSHA:      task.MergeBaseSHA,
+		ArtifactType:      task.ArtifactType,
+		ArtifactPath:      task.ArtifactPath,
+		ArtifactHash:      task.ArtifactHash,
 		ArtifactSizeBytes: task.ArtifactSizeBytes,
-		ArtifactBaseRef: task.ArtifactBaseRef,
-		ArtifactTipRef: task.ArtifactTipRef,
-		ArtifactStatus: task.ArtifactStatus,
+		ArtifactBaseRef:   task.ArtifactBaseRef,
+		ArtifactTipRef:    task.ArtifactTipRef,
+		ArtifactStatus:    task.ArtifactStatus,
 	}
 }
 
@@ -680,7 +680,11 @@ func recalculateTeamLocked(team *TeamStatus) {
 	hasFailure := false
 	for _, task := range team.Tasks {
 		switch task.Status {
-		case TeamTaskCompleted, TeamTaskCancelled:
+		case TeamTaskCompleted:
+			if task.MergeStatus != TeamMergeStatusMerged {
+				allDone = false
+			}
+		case TeamTaskCancelled:
 		case TeamTaskFailed:
 			hasFailure = true
 		default:
@@ -689,7 +693,7 @@ func recalculateTeamLocked(team *TeamStatus) {
 	}
 
 	switch {
-	case allDone && !hasFailure:
+	case allDone && !hasFailure && team.PromotionStatus == TeamPromotionStatusPromoted:
 		team.Status = StatusCompleted
 		team.RunState = TeamRunStateCompleted
 	case allDone && hasFailure:
@@ -1608,41 +1612,245 @@ func (m *Manager) reconcileStructuredTeamTasks(ctx context.Context, name string)
 		if task.Status != TeamTaskCompleted || task.MergeStatus != TeamMergeStatusPending {
 			continue
 		}
-		if task.WorktreePath == "" {
-			m.markTaskMergeUnavailable(name, task.ID, "no worker worktree available for reconcile")
-			updates = append(updates, fmt.Sprintf("%s merge unavailable: no worktree", task.ID))
-			continue
+		var (
+			update string
+			err    error
+		)
+		if teamUsesRemoteArtifactBackend(team) {
+			update, err = m.reconcileStructuredTeamArtifactTask(ctx, team, task)
+		} else {
+			update, err = m.reconcileStructuredTeamLocalTask(ctx, team, task)
 		}
-		if _, err := os.Stat(task.WorktreePath); err != nil {
-			m.markTaskMergeUnavailable(name, task.ID, "worker worktree is not locally accessible for reconcile")
-			updates = append(updates, fmt.Sprintf("%s merge unavailable: worktree not accessible", task.ID))
-			continue
-		}
-		integrationPath, err := m.ensureStructuredTeamIntegrationWorkspace(ctx, team)
 		if err != nil {
 			return updates, err
 		}
-		wt := &worktree.Worktree{
-			Path:     task.WorktreePath,
-			RepoPath: integrationPath,
+		if update != "" {
+			updates = append(updates, update)
 		}
-		dryRun, err := worktree.MergeBackFn(ctx, wt, team.IntegrationBranch, worktree.WithDryRun())
-		if err != nil {
-			return updates, err
-		}
-		if !dryRun.Success {
-			m.markTaskMergeConflict(name, task.ID, dryRun.ConflictFiles)
-			updates = append(updates, fmt.Sprintf("%s merge conflict", task.ID))
-			continue
-		}
-		merged, err := worktree.MergeBackFn(ctx, wt, team.IntegrationBranch, worktree.WithAbortOnConflict(), worktree.WithMessage(fmt.Sprintf("ralphglasses: merge %s", task.ID)))
-		if err != nil {
-			return updates, err
-		}
-		m.markTaskMerged(name, task.ID, merged.MergedFiles)
-		updates = append(updates, fmt.Sprintf("%s merged into %s", task.ID, team.IntegrationBranch))
+	}
+
+	promotionUpdate, err := m.promoteStructuredTeamIfReady(ctx, name)
+	if err != nil {
+		return updates, err
+	}
+	if promotionUpdate != "" {
+		updates = append(updates, promotionUpdate)
 	}
 	return updates, nil
+}
+
+func (m *Manager) reconcileStructuredTeamLocalTask(ctx context.Context, team *TeamStatus, task TeamTask) (string, error) {
+	if task.WorktreePath == "" {
+		m.markTaskMergeUnavailable(team.Name, task.ID, "no worker worktree available for reconcile")
+		return fmt.Sprintf("%s merge unavailable: no worktree", task.ID), nil
+	}
+	if _, err := os.Stat(task.WorktreePath); err != nil {
+		m.markTaskMergeUnavailable(team.Name, task.ID, "worker worktree is not locally accessible for reconcile")
+		return fmt.Sprintf("%s merge unavailable: worktree not accessible", task.ID), nil
+	}
+	integrationPath, err := m.ensureStructuredTeamIntegrationWorkspace(ctx, team)
+	if err != nil {
+		return "", err
+	}
+	m.setTeamPromotionStatus(team.Name, TeamPromotionStatusReconciling, "")
+	wt := &worktree.Worktree{Path: task.WorktreePath, RepoPath: integrationPath}
+	dryRun, err := worktree.MergeBackFn(ctx, wt, team.IntegrationBranch, worktree.WithDryRun())
+	if err != nil {
+		return "", err
+	}
+	if !dryRun.Success {
+		m.markTaskMergeConflict(team.Name, task.ID, dryRun.ConflictFiles)
+		return fmt.Sprintf("%s merge conflict", task.ID), nil
+	}
+	merged, err := worktree.MergeBackFn(ctx, wt, team.IntegrationBranch, worktree.WithAbortOnConflict(), worktree.WithMessage(fmt.Sprintf("ralphglasses: merge %s", task.ID)))
+	if err != nil {
+		return "", err
+	}
+	m.markTaskMerged(team.Name, task.ID, merged.MergedFiles)
+	return fmt.Sprintf("%s merged into %s", task.ID, team.IntegrationBranch), nil
+}
+
+func (m *Manager) reconcileStructuredTeamArtifactTask(ctx context.Context, team *TeamStatus, task TeamTask) (string, error) {
+	if task.ArtifactStatus == "not_needed" || (task.ArtifactPath == "" && task.HeadSHA != "" && task.HeadSHA == task.MergeBaseSHA) {
+		m.markTaskMerged(team.Name, task.ID, task.ChangedFiles)
+		return fmt.Sprintf("%s had no mergeable delta", task.ID), nil
+	}
+	if task.ArtifactPath == "" {
+		m.markTaskMergeUnavailable(team.Name, task.ID, "worker artifact is not available for reconcile")
+		return fmt.Sprintf("%s merge unavailable: artifact missing", task.ID), nil
+	}
+	if _, err := os.Stat(task.ArtifactPath); err != nil {
+		m.markTaskMergeUnavailable(team.Name, task.ID, "worker artifact is not locally accessible for reconcile")
+		return fmt.Sprintf("%s merge unavailable: artifact not accessible", task.ID), nil
+	}
+
+	integrationPath, err := m.ensureStructuredTeamIntegrationWorkspace(ctx, team)
+	if err != nil {
+		return "", err
+	}
+	m.setTeamPromotionStatus(team.Name, TeamPromotionStatusReconciling, "")
+
+	if err := teamGitRun(ctx, integrationPath, "reset", "--hard", "HEAD"); err != nil {
+		return "", err
+	}
+	if err := teamGitRun(ctx, integrationPath, "bundle", "verify", task.ArtifactPath); err != nil {
+		m.markTaskMergeUnavailable(team.Name, task.ID, fmt.Sprintf("artifact verify failed: %v", err))
+		return fmt.Sprintf("%s merge unavailable: artifact verify failed", task.ID), nil
+	}
+	m.setTaskArtifactStatus(team.Name, task.ID, "verified")
+
+	refName := fmt.Sprintf("refs/ralph/work/%s", sanitizeLoopName(firstNonBlank(task.WorkItemID, task.ID)))
+	if err := teamGitRun(ctx, integrationPath, "fetch", "--force", task.ArtifactPath, fmt.Sprintf("HEAD:%s", refName)); err != nil {
+		m.markTaskMergeUnavailable(team.Name, task.ID, fmt.Sprintf("artifact fetch failed: %v", err))
+		return fmt.Sprintf("%s merge unavailable: artifact fetch failed", task.ID), nil
+	}
+	if err := teamGitRun(ctx, integrationPath, "merge", "--no-commit", "--no-ff", refName); err != nil {
+		conflicts, _ := teamGitConflictFiles(ctx, integrationPath)
+		_ = abortTeamMerge(ctx, integrationPath)
+		m.markTaskMergeConflict(team.Name, task.ID, conflicts)
+		return fmt.Sprintf("%s merge conflict", task.ID), nil
+	}
+	if err := abortTeamMerge(ctx, integrationPath); err != nil {
+		return "", err
+	}
+	if err := teamGitRun(ctx, integrationPath, "merge", "--no-ff", "-m", fmt.Sprintf("ralphglasses: merge %s", task.ID), refName); err != nil {
+		conflicts, _ := teamGitConflictFiles(ctx, integrationPath)
+		_ = abortTeamMerge(ctx, integrationPath)
+		m.markTaskMergeConflict(team.Name, task.ID, conflicts)
+		return fmt.Sprintf("%s merge conflict", task.ID), nil
+	}
+	m.setTaskArtifactStatus(team.Name, task.ID, "applied")
+	m.markTaskMerged(team.Name, task.ID, task.ChangedFiles)
+	return fmt.Sprintf("%s merged into %s", task.ID, team.IntegrationBranch), nil
+}
+
+func (m *Manager) promoteStructuredTeamIfReady(ctx context.Context, name string) (string, error) {
+	team, ok := m.teamSnapshot(name)
+	if !ok || !isStructuredCodexTeam(team) {
+		return "", nil
+	}
+	if team.PendingQuestion != nil || team.RunState == TeamRunStateFailed {
+		return "", nil
+	}
+
+	allTasksReady := len(team.Tasks) > 0
+	for _, task := range team.Tasks {
+		switch task.Status {
+		case TeamTaskCompleted:
+			if task.MergeStatus != TeamMergeStatusMerged {
+				allTasksReady = false
+			}
+		case TeamTaskCancelled:
+		case TeamTaskFailed:
+			return "", nil
+		default:
+			allTasksReady = false
+		}
+	}
+	if !allTasksReady || team.PromotionStatus == TeamPromotionStatusPromoted {
+		return "", nil
+	}
+
+	integrationPath, err := m.ensureStructuredTeamIntegrationWorkspace(ctx, team)
+	if err != nil {
+		return "", err
+	}
+	m.setTeamPromotionStatus(name, TeamPromotionStatusVerifying, "")
+
+	if _, err := teamGitOutput(ctx, integrationPath, "rev-parse", "--verify", team.IntegrationBranch); err != nil {
+		m.failStructuredTeamPromotion(name, fmt.Sprintf("integration branch verify failed: %v", err))
+		return fmt.Sprintf("%s promotion failed", team.Name), nil
+	}
+	statusOut, err := teamGitOutput(ctx, team.RepoPath, "status", "--porcelain")
+	if err != nil {
+		m.failStructuredTeamPromotion(name, fmt.Sprintf("target branch status failed: %v", err))
+		return fmt.Sprintf("%s promotion failed", team.Name), nil
+	}
+	if strings.TrimSpace(statusOut) != "" {
+		m.failStructuredTeamPromotion(name, "target repo has local modifications; refusing promotion")
+		return fmt.Sprintf("%s promotion failed", team.Name), nil
+	}
+	currentBranch, err := teamGitOutput(ctx, team.RepoPath, "branch", "--show-current")
+	if err != nil {
+		m.failStructuredTeamPromotion(name, fmt.Sprintf("target branch resolve failed: %v", err))
+		return fmt.Sprintf("%s promotion failed", team.Name), nil
+	}
+	if strings.TrimSpace(currentBranch) != strings.TrimSpace(team.TargetBranch) {
+		m.failStructuredTeamPromotion(name, fmt.Sprintf("target repo is on %s, expected %s", strings.TrimSpace(currentBranch), team.TargetBranch))
+		return fmt.Sprintf("%s promotion failed", team.Name), nil
+	}
+	if err := teamGitRun(ctx, team.RepoPath, "merge", "--ff-only", team.IntegrationBranch); err != nil {
+		m.failStructuredTeamPromotion(name, fmt.Sprintf("fast-forward target branch failed: %v", err))
+		return fmt.Sprintf("%s promotion failed", team.Name), nil
+	}
+	m.setTeamPromotionStatus(name, TeamPromotionStatusPromoted, "")
+
+	m.workersMu.Lock()
+	if current, ok := m.teams[name]; ok {
+		recalculateTeamLocked(current)
+	}
+	m.workersMu.Unlock()
+	m.persistTeamOrWarn(name, "team promotion")
+	return fmt.Sprintf("%s promoted to %s", team.Name, team.TargetBranch), nil
+}
+
+func abortTeamMerge(ctx context.Context, dir string) error {
+	if err := teamGitRun(ctx, dir, "merge", "--abort"); err == nil {
+		return nil
+	}
+	return teamGitRun(ctx, dir, "reset", "--hard", "HEAD")
+}
+
+func teamGitConflictFiles(ctx context.Context, dir string) ([]string, error) {
+	out, err := teamGitOutput(ctx, dir, "diff", "--name-only", "--diff-filter=U")
+	if err != nil {
+		return nil, err
+	}
+	return teamCompactNonEmpty(strings.Split(out, "\n")), nil
+}
+
+func (m *Manager) setTaskArtifactStatus(name, taskID, status string) {
+	m.workersMu.Lock()
+	defer m.workersMu.Unlock()
+	team, ok := m.teams[name]
+	if !ok {
+		return
+	}
+	idx := findTaskIndex(team.Tasks, taskID)
+	if idx < 0 {
+		return
+	}
+	team.Tasks[idx].ArtifactStatus = status
+	team.Tasks[idx].UpdatedAt = time.Now()
+	team.UpdatedAt = time.Now()
+}
+
+func (m *Manager) setTeamPromotionStatus(name, status, message string) {
+	m.workersMu.Lock()
+	defer m.workersMu.Unlock()
+	team, ok := m.teams[name]
+	if !ok {
+		return
+	}
+	team.PromotionStatus = status
+	if message != "" {
+		team.LastControllerError = message
+	}
+	team.UpdatedAt = time.Now()
+}
+
+func (m *Manager) failStructuredTeamPromotion(name, message string) {
+	m.workersMu.Lock()
+	defer m.workersMu.Unlock()
+	team, ok := m.teams[name]
+	if !ok {
+		return
+	}
+	team.PromotionStatus = TeamPromotionStatusFailed
+	team.Status = StatusErrored
+	team.RunState = TeamRunStateFailed
+	team.LastControllerError = message
+	team.UpdatedAt = time.Now()
 }
 
 func (m *Manager) markTaskMerged(name, taskID string, mergedFiles []string) {

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 func TestA2ATaskSend_CreatesWorkItem(t *testing.T) {
@@ -414,5 +416,66 @@ func TestA2ATaskGet_IncludesMessage(t *testing.T) {
 	}
 	if len(resp.Message.Parts) != 1 || resp.Message.Parts[0].Text != "original prompt text" {
 		t.Errorf("message parts mismatch")
+	}
+}
+
+func TestA2ATaskSend_StructuredMetadataMapsToWorkItem(t *testing.T) {
+	coord := newTestCoordinator()
+
+	payload := `{
+		"id": "task-structured-001",
+		"message": {
+			"role": "user",
+			"parts": [{"type": "text", "text": "patch the auth flow"}]
+		},
+		"metadata": {
+			"source": "structured_codex_team",
+			"repo_name": "test-repo",
+			"provider": "codex",
+			"model": "gpt-5.4",
+			"team_name": "team-auth",
+			"team_task_id": "task-7",
+			"planner_session_id": "planner-1",
+			"session_name": "worker-auth-1",
+			"permission_mode": "full-auto",
+			"worktree_policy": "per_worker",
+			"target_branch": "main",
+			"human_context": ["follow existing tests"],
+			"owned_paths": ["internal/auth", "cmd/auth.go"]
+		}
+	}`
+
+	req := httptest.NewRequest("POST", "/api/v1/a2a/task/send", strings.NewReader(payload))
+	w := httptest.NewRecorder()
+	coord.handleA2ATaskSend(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	item, ok := coord.queue.Get("task-structured-001")
+	if !ok {
+		t.Fatal("work item not found in queue")
+	}
+	if item.Source != WorkSourceStructuredCodexTeam {
+		t.Fatalf("source = %q, want %q", item.Source, WorkSourceStructuredCodexTeam)
+	}
+	if item.Provider != session.ProviderCodex {
+		t.Fatalf("provider = %q, want %q", item.Provider, session.ProviderCodex)
+	}
+	if item.TeamName != "team-auth" || item.TeamTaskID != "task-7" {
+		t.Fatalf("team metadata = (%q, %q), want (team-auth, task-7)", item.TeamName, item.TeamTaskID)
+	}
+	if item.SessionName != "worker-auth-1" {
+		t.Fatalf("session_name = %q, want worker-auth-1", item.SessionName)
+	}
+	if item.WorktreePolicy != session.TeamWorktreePolicyPerWorker {
+		t.Fatalf("worktree_policy = %q, want %q", item.WorktreePolicy, session.TeamWorktreePolicyPerWorker)
+	}
+	if item.TargetBranch != "main" {
+		t.Fatalf("target_branch = %q, want main", item.TargetBranch)
+	}
+	if len(item.OwnedPaths) != 2 {
+		t.Fatalf("owned_paths len = %d, want 2", len(item.OwnedPaths))
 	}
 }

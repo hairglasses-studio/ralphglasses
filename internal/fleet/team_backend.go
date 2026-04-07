@@ -24,6 +24,15 @@ func (b *StructuredTeamBackend) Name() string {
 }
 
 func (b *StructuredTeamBackend) Submit(ctx context.Context, req session.TeamBackendSubmitRequest) (session.TeamWorkerHandle, error) {
+	if req.A2AAgentURL != "" {
+		adapter := NewRemoteA2AAdapter(req.A2AAgentURL)
+		id, err := adapter.SubmitStructuredTask(req)
+		if err != nil {
+			return session.TeamWorkerHandle{}, err
+		}
+		return session.TeamWorkerHandle{WorkItemID: id, A2AAgentURL: req.A2AAgentURL}, nil
+	}
+
 	item := WorkItem{
 		Type:             WorkTypeSession,
 		Source:           WorkSourceStructuredCodexTeam,
@@ -69,6 +78,71 @@ func (b *StructuredTeamBackend) Submit(ctx context.Context, req session.TeamBack
 func (b *StructuredTeamBackend) Poll(ctx context.Context, handle session.TeamWorkerHandle) (*session.TeamBackendPollResult, error) {
 	if handle.WorkItemID == "" {
 		return nil, fmt.Errorf("missing work item id")
+	}
+	if handle.A2AAgentURL != "" {
+		adapter := NewRemoteA2AAdapter(handle.A2AAgentURL)
+		resp, err := adapter.GetTaskResponse(handle.WorkItemID)
+		if err != nil {
+			return nil, err
+		}
+		result := &session.TeamBackendPollResult{
+			Handle: session.TeamWorkerHandle{
+				WorkItemID:        handle.WorkItemID,
+				A2AAgentURL:       handle.A2AAgentURL,
+				SessionID:         resp.Metadata.SessionID,
+				WorkerNodeID:      resp.Metadata.WorkerNodeID,
+				WorktreePath:      resp.Metadata.WorktreePath,
+				WorktreeBranch:    resp.Metadata.WorktreeBranch,
+				HeadSHA:           resp.Metadata.HeadSHA,
+				MergeBaseSHA:      resp.Metadata.MergeBaseSHA,
+				ArtifactType:      resp.Metadata.ArtifactType,
+				ArtifactPath:      resp.Metadata.ArtifactPath,
+				ArtifactHash:      resp.Metadata.ArtifactHash,
+				ArtifactSizeBytes: resp.Metadata.ArtifactSizeBytes,
+				ArtifactBaseRef:   resp.Metadata.ArtifactBaseRef,
+				ArtifactTipRef:    resp.Metadata.ArtifactTipRef,
+				ArtifactStatus:    resp.Metadata.ArtifactStatus,
+			},
+		}
+		switch resp.Status {
+		case TaskStateQueued, TaskStateWorking:
+			result.SessionStatus = session.StatusRunning
+			return result, nil
+		case TaskStateInputRequired:
+			result.Terminal = true
+			result.WorkerResult = &session.TeamWorkerResult{
+				TaskID:       resp.Metadata.TeamTaskID,
+				Status:       session.TeamTaskBlocked,
+				Summary:      resp.Metadata.Summary,
+				Question:     resp.Metadata.Question,
+				ChangedFiles: append([]string(nil), resp.Metadata.ChangedFiles...),
+			}
+			return result, nil
+		case TaskStateCompleted:
+			result.Terminal = true
+			result.WorkerResult = &session.TeamWorkerResult{
+				TaskID:       resp.Metadata.TeamTaskID,
+				Status:       firstNonEmpty(resp.Metadata.TaskStatus, session.TeamTaskCompleted),
+				Summary:      resp.Metadata.Summary,
+				Question:     resp.Metadata.Question,
+				ChangedFiles: append([]string(nil), resp.Metadata.ChangedFiles...),
+			}
+			return result, nil
+		case TaskStateFailed, TaskStateCanceled:
+			result.Terminal = true
+			result.Error = resp.Metadata.Summary
+			result.WorkerResult = &session.TeamWorkerResult{
+				TaskID:       resp.Metadata.TeamTaskID,
+				Status:       firstNonEmpty(resp.Metadata.TaskStatus, session.TeamTaskNeedsRetry),
+				Summary:      resp.Metadata.Summary,
+				Question:     resp.Metadata.Question,
+				ChangedFiles: append([]string(nil), resp.Metadata.ChangedFiles...),
+				Error:        resp.Metadata.Summary,
+			}
+			return result, nil
+		default:
+			return result, nil
+		}
 	}
 
 	var (
@@ -151,6 +225,10 @@ func (b *StructuredTeamBackend) Poll(ctx context.Context, handle session.TeamWor
 func (b *StructuredTeamBackend) Stop(ctx context.Context, handle session.TeamWorkerHandle) error {
 	if handle.WorkItemID == "" {
 		return fmt.Errorf("missing work item id")
+	}
+	if handle.A2AAgentURL != "" {
+		adapter := NewRemoteA2AAdapter(handle.A2AAgentURL)
+		return adapter.CancelTask(handle.WorkItemID)
 	}
 	if b.coord != nil {
 		return b.coord.CancelWork(handle.WorkItemID)

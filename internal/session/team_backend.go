@@ -8,21 +8,21 @@ import (
 
 // TeamWorkerHandle identifies an in-flight backend worker.
 type TeamWorkerHandle struct {
-	WorkItemID     string `json:"work_item_id,omitempty"`
-	A2AAgentURL    string `json:"a2a_agent_url,omitempty"`
-	SessionID      string `json:"session_id,omitempty"`
-	WorkerNodeID   string `json:"worker_node_id,omitempty"`
-	WorktreePath   string `json:"worktree_path,omitempty"`
-	WorktreeBranch string `json:"worktree_branch,omitempty"`
-	HeadSHA        string `json:"head_sha,omitempty"`
-	MergeBaseSHA   string `json:"merge_base_sha,omitempty"`
-	ArtifactType   string `json:"artifact_type,omitempty"`
-	ArtifactPath   string `json:"artifact_path,omitempty"`
-	ArtifactHash   string `json:"artifact_hash,omitempty"`
-	ArtifactSizeBytes int64 `json:"artifact_size_bytes,omitempty"`
-	ArtifactBaseRef string `json:"artifact_base_ref,omitempty"`
-	ArtifactTipRef string `json:"artifact_tip_ref,omitempty"`
-	ArtifactStatus string `json:"artifact_status,omitempty"`
+	WorkItemID        string `json:"work_item_id,omitempty"`
+	A2AAgentURL       string `json:"a2a_agent_url,omitempty"`
+	SessionID         string `json:"session_id,omitempty"`
+	WorkerNodeID      string `json:"worker_node_id,omitempty"`
+	WorktreePath      string `json:"worktree_path,omitempty"`
+	WorktreeBranch    string `json:"worktree_branch,omitempty"`
+	HeadSHA           string `json:"head_sha,omitempty"`
+	MergeBaseSHA      string `json:"merge_base_sha,omitempty"`
+	ArtifactType      string `json:"artifact_type,omitempty"`
+	ArtifactPath      string `json:"artifact_path,omitempty"`
+	ArtifactHash      string `json:"artifact_hash,omitempty"`
+	ArtifactSizeBytes int64  `json:"artifact_size_bytes,omitempty"`
+	ArtifactBaseRef   string `json:"artifact_base_ref,omitempty"`
+	ArtifactTipRef    string `json:"artifact_tip_ref,omitempty"`
+	ArtifactStatus    string `json:"artifact_status,omitempty"`
 }
 
 // TeamBackendSubmitRequest describes one structured worker launch request.

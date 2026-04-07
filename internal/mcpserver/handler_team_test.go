@@ -230,6 +230,49 @@ func TestHandleTeamCreate_DryRunDefaults(t *testing.T) {
 	if budget, _ := parsed["budget_usd"].(float64); budget <= 0 {
 		t.Errorf("max_budget_usd = %f, want > 0", budget)
 	}
+	// Codex structured teams should autostart by default.
+	if autostart, ok := parsed["autostart"].(bool); !ok || !autostart {
+		t.Errorf("autostart = %v, want true", parsed["autostart"])
+	}
+}
+
+func TestHandleTeamCreate_DryRunA2AConfig(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, err := srv.handleScan(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("scan failed: %v", err)
+	}
+
+	result, err := srv.handleTeamCreate(context.Background(), makeRequest(map[string]any{
+		"repo":              "test-repo",
+		"name":              "a2a-team",
+		"tasks":             "task one",
+		"dry_run":           true,
+		"execution_backend": "a2a",
+		"a2a_agent_url":     "http://remote-agent:9473",
+		"autostart":         false,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success, got error: %s", getResultText(result))
+	}
+
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &parsed); err != nil {
+		t.Fatalf("parse dry run JSON: %v", err)
+	}
+	if backend, _ := parsed["execution_backend"].(string); backend != "a2a" {
+		t.Fatalf("execution_backend = %q, want a2a", backend)
+	}
+	if url, _ := parsed["a2a_agent_url"].(string); url != "http://remote-agent:9473" {
+		t.Fatalf("a2a_agent_url = %q, want remote URL", url)
+	}
+	if autostart, _ := parsed["autostart"].(bool); autostart {
+		t.Fatalf("autostart = true, want explicit false")
+	}
 }
 
 func TestHandleTeamDelegate(t *testing.T) {
