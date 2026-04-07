@@ -657,7 +657,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** codex and gemini sessions launchable via MCP tools
 
 ### 2.5.2 — Per-provider agent discovery (COMPLETE)
-- [x] 2.5.2.1 — Discover `.gemini/agents/*.md` for Gemini provider
+- [x] 2.5.2.1 — Discover `.gemini/commands/*.toml` for Gemini provider
 - [x] 2.5.2.2 — Parse `AGENTS.md` sections for Codex provider
 - [x] 2.5.2.3 — Add `Provider` field to `AgentDef` type
 - [x] 2.5.2.4 — Wire provider param into `agent_list` and `agent_define` MCP tools
@@ -1526,7 +1526,7 @@ Cost comparison (March 2026, per 1M tokens, input/output):
 | Batch API | Messages Batches (50% off) | BatchGenerateContent | POST /v1/batches (JSONL) |
 | Resume | --resume | --resume | `exec resume` (install-dependent) |
 | Headless mode | --print, -p | --yolo | --full-auto |
-| Agent file | CLAUDE.md | .gemini/agents/*.md | AGENTS.md |
+| Agent file | CLAUDE.md | .gemini/commands/*.toml | AGENTS.md |
 | ralphglasses support | Full specialist lane | Full worker lane | Full primary control plane |
 
 > **Routing research:** FrugalGPT/RouteLLM papers show 2-4x cost reduction with learned routers. Current cascade in `cascade.go` uses static thresholds — upgrade to confidence-based escalation (Phase 6.2).

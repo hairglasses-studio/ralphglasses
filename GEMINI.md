@@ -91,7 +91,7 @@ The `internal/session/` package uses a provider dispatch pattern:
 - **Default model**: `gemini-2.5-pro`. Configured in `.gemini/settings.json`.
 - **No budget support**: Gemini CLI does not have built-in budget enforcement — ralphglasses tracks costs externally.
 - **No system prompt flag**: Project context comes from `GEMINI.md` (this file), not a CLI flag.
-- **Custom agents**: Project-scoped Gemini agents live in `.gemini/agents/*.md`.
+- **Custom commands**: Project-scoped Gemini reusable workflows live in `.gemini/commands/*.toml`.
 - **No worktree isolation**: Gemini CLI does not support git worktree isolation — use standard branching.
 
 ## MCP Server

@@ -125,7 +125,7 @@ func UnsupportedOptionsWarnings(p Provider, opts LaunchOptions) []string {
 			warnings = append(warnings, "max_budget_usd is ignored by gemini provider")
 		}
 		if opts.Agent != "" {
-			warnings = append(warnings, "agent is ignored by gemini provider (use .gemini/agents/ instead)")
+			warnings = append(warnings, "agent is ignored by gemini provider (use GEMINI.md and .gemini/commands/*.toml instead)")
 		}
 		if opts.MaxTurns > 0 {
 			warnings = append(warnings, "max_turns is ignored by gemini provider")

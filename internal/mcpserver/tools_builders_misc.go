@@ -104,7 +104,7 @@ func (s *Server) buildTeamGroup() ToolGroup {
 				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
 				mcp.WithString("name", mcp.Required(), mcp.Description("Agent name")),
 				mcp.WithString("prompt", mcp.Required(), mcp.Description("Agent system prompt / instructions (markdown)")),
-				mcp.WithString("provider", mcp.Description("Target provider: codex (default, .codex/agents/*.toml), claude (.claude/agents/), gemini (.gemini/agents/)")),
+				mcp.WithString("provider", mcp.Description("Target provider: codex (default, .codex/agents/*.toml), claude (.claude/agents/), gemini (.gemini/commands/*.toml)")),
 				mcp.WithString("description", mcp.Description("Agent description")),
 				mcp.WithString("model", mcp.Description("Model override (sonnet, opus, haiku)")),
 				mcp.WithString("tools", mcp.Description("Comma-separated allowed tools")),

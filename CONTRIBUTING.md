@@ -219,7 +219,7 @@ codex exec --full-auto "Read AGENTS.md, then fix the failing test in internal/se
 |---------|------------|------------|-----------|
 | Resume session | Yes | Yes | Yes (`codex exec resume`, install-dependent) |
 | Budget enforcement | Yes (external) | No | No |
-| Agent definitions | Yes (`.claude/agents/`) | Yes (`.gemini/agents/*.md`) | Yes (`.codex/agents/*.toml`, plus `AGENTS.md` project instructions) |
+| Agent definitions | Yes (`.claude/agents/`) | Yes (`.gemini/commands/*.toml`) | Yes (`.codex/agents/*.toml`, plus `AGENTS.md` project instructions) |
 | Worktree isolation | Yes | No | No |
 | System prompt flag | Yes (`-s`) | No | No |
 | MCP client | Yes | Yes | Yes |

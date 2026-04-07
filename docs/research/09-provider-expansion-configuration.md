@@ -48,7 +48,7 @@ Covers ROADMAP items **2.5** (Multi-LLM Agent Orchestration) and **6.6** (Model 
 
 **Rate limiting** (`ratelimit.go:17-99`): Per-provider sliding-window rate limiter with configurable limits and `Remaining()` introspection. Thread-safe and well-tested.
 
-**Agent discovery** (`agents.go:28-63`): Provider-aware agent discovery supporting three different formats: Claude `.claude/agents/*.md`, Gemini `.gemini/agents/*.md`, and Codex `AGENTS.md` sections.
+**Agent discovery** (`agents.go:28-63`): Provider-aware reusable workflow discovery supporting three formats: Claude `.claude/agents/*.md`, Gemini `.gemini/commands/*.toml`, and Codex `AGENTS.md` sections.
 
 **Prompt templates** (`templates.go:15-43`): Per-provider prompt wrapping that adds agentic context for Gemini/Codex while leaving Claude prompts unmodified.
 

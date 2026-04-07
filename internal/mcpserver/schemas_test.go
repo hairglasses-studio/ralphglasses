@@ -998,7 +998,7 @@ func TestToolDescriptionsMatchHandlers(t *testing.T) {
 						".ralph/": true, ".ralphrc": true, "ROADMAP.md": true,
 						"PROMPT.md": true, "AGENT.md": true, "fix_plan.md": true,
 						"CLAUDE.md": true, ".claude/agents/": true,
-						".gemini/agents/": true, "AGENTS.md": true,
+						".gemini/commands/": true, "AGENTS.md": true,
 						"go.mod": true, "package.json": true,
 						".ralph/logs/loop_observations.jsonl": true,
 						"-short": true, "-race": true,
