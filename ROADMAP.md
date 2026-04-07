@@ -1739,7 +1739,7 @@ The self-improvement pipeline operates as a closed loop:
 
 ### From shell scripts (port to Go)
 - `ralphglasses/marathon.sh` — 12h marathon launcher
-- `hg-mcp/.ralph/start_session.sh` — Session launcher with budget reset
+- `dotfiles/mcp/hg-mcp/.ralph/start_session.sh` — Session launcher with budget reset
 - `mesmer/.ralph/start-12hr.sh` — Pre-flight checks, budget projection
 - `claudekit/scripts/perpetual-loop.sh` — Perpetual R&D cycle
 
