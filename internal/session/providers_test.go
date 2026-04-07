@@ -1072,6 +1072,37 @@ func TestFilterEnv(t *testing.T) {
 	}
 }
 
+func TestStripNestingEnv_RemovesCodexAndClaudeMarkers(t *testing.T) {
+	env := []string{
+		"HOME=/home/user",
+		"PATH=/usr/bin",
+		"CLAUDECODE=1",
+		"CLAUDE_CODE_ENTRYPOINT=cli",
+		"CODEX_THREAD_ID=thread-123",
+		"CODEX_CI=1",
+		"CODEX_SANDBOX_NETWORK_DISABLED=1",
+		"CODEX_HOME=/tmp/codex-home",
+	}
+
+	filtered := stripNestingEnv(env)
+	got := strings.Join(filtered, "\n")
+
+	for _, unwanted := range []string{
+		"CLAUDECODE=",
+		"CLAUDE_CODE_ENTRYPOINT=",
+		"CODEX_THREAD_ID=",
+		"CODEX_CI=",
+		"CODEX_SANDBOX_NETWORK_DISABLED=",
+	} {
+		if strings.Contains(got, unwanted) {
+			t.Errorf("stripNestingEnv() should remove %s, got %v", unwanted, filtered)
+		}
+	}
+	if !strings.Contains(got, "CODEX_HOME=/tmp/codex-home") {
+		t.Errorf("stripNestingEnv() should preserve CODEX_HOME, got %v", filtered)
+	}
+}
+
 func TestValidateLaunchOptions(t *testing.T) {
 	tests := []struct {
 		name    string

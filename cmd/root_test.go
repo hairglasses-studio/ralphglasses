@@ -11,6 +11,7 @@ import (
 
 	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/mark3labs/mcp-go/server"
 )
 
 // --- parseLogLevel tests ---
@@ -1356,6 +1357,22 @@ func TestMcpCmd_RunE_BadScanPath(t *testing.T) {
 	err := mcpCmd.RunE(mcpCmd, nil)
 	if err == nil {
 		t.Error("mcpCmd.RunE with invalid scan-path should fail")
+	}
+}
+
+func TestMcpCmd_RunE_ContextCanceledIgnored(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	origScanPath := scanPath
+	defer func() { scanPath = origScanPath }()
+	scanPath = tmpDir
+
+	origServe := serveMCP
+	defer func() { serveMCP = origServe }()
+	serveMCP = func(*server.MCPServer) error { return context.Canceled }
+
+	if err := mcpCmd.RunE(mcpCmd, nil); err != nil {
+		t.Fatalf("mcpCmd.RunE() error = %v, want nil for context cancellation", err)
 	}
 }
 
