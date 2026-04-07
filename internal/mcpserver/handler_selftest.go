@@ -19,6 +19,11 @@ func (s *Server) handleSelfTest(_ context.Context, req mcp.CallToolRequest) (*mc
 		return codedError(ErrInvalidParams, "repo is required"), nil
 	}
 
+	// Validate path before use — reject traversal and escapes.
+	if err := ValidatePath(repo, s.ScanPath); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo path: %v", err)), nil
+	}
+
 	// Validate repo path exists on disk
 	info, err := os.Stat(repo)
 	if err != nil {

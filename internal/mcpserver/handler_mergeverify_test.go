@@ -35,6 +35,41 @@ func TestHandleMergeVerifyNoRepo(t *testing.T) {
 	}
 }
 
+func TestHandleMergeVerify_PathTraversal(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	cases := []struct {
+		name string
+		repo string
+	}{
+		{"dot-dot-etc-passwd", "../../etc/passwd"},
+		{"absolute-outside-scanroot", "/etc/passwd"},
+		{"null-byte", "/tmp/safe\x00/etc/shadow"},
+		{"shell-metachar-semicolon", "/tmp/foo;rm -rf /"},
+		{"shell-metachar-pipe", "/tmp/foo|cat /etc/passwd"},
+		{"shell-metachar-backtick", "/tmp/`whoami`"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := srv.handleMergeVerify(context.Background(), makeRequest(map[string]any{
+				"repo": tc.repo,
+			}))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !result.IsError {
+				t.Fatalf("expected error for traversal input %q", tc.repo)
+			}
+			text := getResultText(result)
+			if !strings.Contains(text, string(ErrInvalidParams)) {
+				t.Errorf("expected INVALID_PARAMS for %q, got: %s", tc.repo, text)
+			}
+		})
+	}
+}
+
 func TestRunVerifyStepSuccess(t *testing.T) {
 	t.Parallel()
 
