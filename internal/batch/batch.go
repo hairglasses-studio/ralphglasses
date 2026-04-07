@@ -14,6 +14,7 @@ const (
 	ProviderClaude Provider = "claude"
 	ProviderGemini Provider = "gemini"
 	ProviderOpenAI Provider = "openai"
+	ProviderCodex  Provider = "codex"
 )
 
 // Request represents a single item in a batch.
@@ -74,7 +75,7 @@ func NewClient(provider Provider, apiKey string, opts ...Option) (Client, error)
 		return newClaudeClient(apiKey, opts...), nil
 	case ProviderGemini:
 		return newGeminiClient(apiKey, opts...), nil
-	case ProviderOpenAI, "codex":
+	case ProviderOpenAI, ProviderCodex:
 		return newOpenAIClient(apiKey, opts...), nil
 	default:
 		return nil, fmt.Errorf("unsupported batch provider: %s", provider)

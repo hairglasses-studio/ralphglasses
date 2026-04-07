@@ -288,7 +288,9 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span 
 
 	if err != nil {
 		if s.Status == StatusStopped {
-			s.ExitReason = "stopped by user"
+			if s.ExitReason == "" {
+				s.ExitReason = "stopped by user"
+			}
 		} else {
 			s.Status = StatusErrored
 			// Classify kill signals for better observability and retry decisions.
@@ -590,6 +592,7 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile
 						// Non-Claude providers lack CLI budget enforcement, so
 						// kill the session here to prevent runaway spend.
 						if s.Provider != ProviderClaude {
+							s.cancel() // terminate the underlying CLI process immediately
 							s.Status = StatusStopped
 							s.ExitReason = fmt.Sprintf("budget exceeded: $%.2f of $%.2f", s.SpentUSD, s.BudgetUSD)
 							s.mu.Unlock()

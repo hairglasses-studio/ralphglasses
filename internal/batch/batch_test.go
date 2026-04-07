@@ -21,7 +21,7 @@ func TestNewClient(t *testing.T) {
 		{ProviderClaude, ProviderClaude, "*batch.claudeClient"},
 		{ProviderGemini, ProviderGemini, "*batch.geminiClient"},
 		{ProviderOpenAI, ProviderOpenAI, "*batch.openaiClient"},
-		{"codex", ProviderOpenAI, "*batch.openaiClient"},
+		{ProviderCodex, ProviderOpenAI, "*batch.openaiClient"},
 	}
 
 	for _, tt := range tests {
