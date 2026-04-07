@@ -156,13 +156,14 @@ func (p CrashRecoveryPolicy) ShouldAutoExecute(severity string) bool {
 	return ok && allowed
 }
 
-// RecoverableSession holds enriched metadata for a dead Claude Code session.
+// RecoverableSession holds enriched metadata for a dead CLI session.
 type RecoverableSession struct {
 	SessionID       string    `json:"session_id"`
 	RepoPath        string    `json:"repo_path"`
 	RepoName        string    `json:"repo_name"`
 	SessionName     string    `json:"session_name,omitempty"`
-	Priority        int       `json:"priority"` // 1 = highest
+	Provider        Provider  `json:"provider,omitempty"` // original provider; empty defaults to DefaultPrimaryProvider()
+	Priority        int       `json:"priority"`           // 1 = highest
 	OpenTasks       int       `json:"open_tasks"`
 	TotalTasks      int       `json:"total_tasks"`
 	LastActivity    time.Time `json:"last_activity"`
@@ -571,7 +572,11 @@ func (o *CrashRecoveryOrchestrator) ExecuteRecovery(ctx context.Context, plan *C
 
 // resumeSession launches a single recovery session via Manager.Resume.
 func (o *CrashRecoveryOrchestrator) resumeSession(ctx context.Context, rs RecoverableSession) (*Session, error) {
-	return o.mgr.Resume(ctx, rs.RepoPath, ProviderClaude, rs.SessionID, rs.ResumePrompt)
+	provider := rs.Provider
+	if provider == "" {
+		provider = DefaultPrimaryProvider()
+	}
+	return o.mgr.Resume(ctx, rs.RepoPath, provider, rs.SessionID, rs.ResumePrompt)
 }
 
 // ---------------------------------------------------------------------------

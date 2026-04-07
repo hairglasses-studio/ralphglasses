@@ -12,10 +12,15 @@ func TestNewOptimizer(t *testing.T) {
 		t.Fatal("expected non-nil optimizer")
 	}
 
-	// Default weights should all be 1.0
-	for _, p := range []session.Provider{session.ProviderClaude, session.ProviderGemini, session.ProviderCodex} {
-		if w := opt.ProviderWeight(p); w != 1.0 {
-			t.Errorf("default weight for %s: got %f, want 1.0", p, w)
+	// Default weights: Claude=1.0, Gemini=1.0, Codex=1.2 (cost-efficient default)
+	wantWeights := map[session.Provider]float64{
+		session.ProviderClaude: 1.0,
+		session.ProviderGemini: 1.0,
+		session.ProviderCodex:  1.2,
+	}
+	for p, want := range wantWeights {
+		if w := opt.ProviderWeight(p); w != want {
+			t.Errorf("default weight for %s: got %f, want %f", p, w, want)
 		}
 	}
 }
