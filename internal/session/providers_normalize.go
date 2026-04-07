@@ -160,6 +160,8 @@ func sanitizeStderr(provider Provider, raw string) string {
 	switch provider {
 	case ProviderGemini:
 		return sanitizeGeminiStderr(raw)
+	case ProviderCodex:
+		return sanitizeCodexStderr(raw)
 	case ProviderGoose:
 		return sanitizeGooseStderr(raw)
 	case ProviderA2A:
@@ -181,6 +183,36 @@ func sanitizeGeminiStderr(raw string) string {
 		}
 		// Skip JS stack trace frames
 		if strings.HasPrefix(trimmed, "at ") {
+			continue
+		}
+		kept = append(kept, trimmed)
+	}
+	if len(kept) == 0 {
+		return raw
+	}
+	return strings.Join(kept, "\n")
+}
+
+// sanitizeCodexStderr strips noise from Codex CLI stderr output.
+// Drops debug/trace prefixes, pip/npm warnings, JS stack frames, and ANSI escapes.
+func sanitizeCodexStderr(raw string) string {
+	var kept []string
+	for line := range strings.SplitSeq(raw, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		// Skip JS stack trace frames
+		if strings.HasPrefix(trimmed, "at ") {
+			continue
+		}
+		// Skip debug/trace lines
+		if strings.HasPrefix(trimmed, "[debug]") || strings.HasPrefix(trimmed, "[trace]") {
+			continue
+		}
+		// Skip pip/npm warnings
+		lower := strings.ToLower(trimmed)
+		if strings.HasPrefix(lower, "warning: pip") || strings.HasPrefix(lower, "npm warn") {
 			continue
 		}
 		kept = append(kept, trimmed)
@@ -318,14 +350,45 @@ func cleanProviderOutput(provider Provider, raw string) string {
 	}
 	cleaned := ansiRe.ReplaceAllString(raw, "")
 	lines := strings.Split(cleaned, "\n")
-	// Walk backwards to find the last non-empty line
+	// Walk backwards to find the last non-empty, non-noise line
 	for i := len(lines) - 1; i >= 0; i-- {
 		trimmed := strings.TrimSpace(lines[i])
-		if trimmed != "" {
-			return trimmed
+		if trimmed == "" {
+			continue
 		}
+		if isProviderOutputNoise(provider, trimmed) {
+			continue
+		}
+		return trimmed
 	}
 	return ""
+}
+
+// isProviderOutputNoise returns true if a line is known CLI noise that should
+// be skipped when extracting meaningful output from stderr/stdout fallback.
+func isProviderOutputNoise(provider Provider, line string) bool {
+	lower := strings.ToLower(line)
+	switch provider {
+	case ProviderCodex:
+		noisePatterns := []string{
+			"exit code:",
+			"warning: pip",
+			"npm warn",
+			"[debug]",
+			"[trace]",
+			"deprecationwarning:",
+		}
+		for _, p := range noisePatterns {
+			if strings.HasPrefix(lower, p) {
+				return true
+			}
+		}
+	case ProviderGoose:
+		if strings.HasPrefix(lower, "exit code:") {
+			return true
+		}
+	}
+	return false
 }
 
 // normalizeCodexEvent parses Codex quiet-mode output into StreamEvent.
@@ -359,6 +422,7 @@ func normalizeCodexEvent(line []byte) (StreamEvent, error) {
 	event.NumTurns = firstNonZeroInt(raw, "num_turns", "turns", "usage.turns")
 	event.CacheReadTokens = firstNonZeroInt(raw, "usage.cache_read_input_tokens")
 	event.CacheWriteTokens = firstNonZeroInt(raw, "usage.cache_creation_input_tokens")
+	event.Duration = firstNonZeroFloat(raw, "duration_seconds", "duration", "metadata.duration_seconds")
 	event.IsError = firstTrueBool(raw, "is_error", "error")
 	event.Text = firstNonEmpty(event.Content, event.Result, event.Error)
 	applyEventDefaults(&event)

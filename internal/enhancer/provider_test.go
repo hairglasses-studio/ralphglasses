@@ -75,3 +75,14 @@ func TestCacheKeyDiffersAcrossProviders(t *testing.T) {
 		t.Error("cache keys for gemini and openai should differ")
 	}
 }
+
+func TestDefaultTargetProviderForLLM_Codex(t *testing.T) {
+	got := defaultTargetProviderForLLM("codex")
+	if got != ProviderOpenAI {
+		t.Errorf("defaultTargetProviderForLLM(codex) = %q, want %q", got, ProviderOpenAI)
+	}
+	got = defaultTargetProviderForLLM("openai")
+	if got != ProviderOpenAI {
+		t.Errorf("defaultTargetProviderForLLM(openai) = %q, want %q", got, ProviderOpenAI)
+	}
+}
