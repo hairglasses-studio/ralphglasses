@@ -57,6 +57,8 @@ type Coordinator struct {
 
 	// queuePath is the file path used for queue persistence. Empty means no persistence.
 	queuePath string
+	artifactDir string
+	syncer      *WorktreeSync
 
 	startedAt time.Time
 	server    *http.Server
@@ -99,6 +101,12 @@ func NewCoordinatorWithPersistence(nodeID, hostname string, port int, version st
 	}
 
 	c.queuePath = filepath.Join(ralphDir, "fleet-queue.json")
+	c.artifactDir = filepath.Join(ralphDir, "fleet-artifacts")
+	if err := os.MkdirAll(c.artifactDir, 0755); err != nil {
+		slog.Warn("fleet: could not create artifact dir", "path", c.artifactDir, "error", err)
+	} else {
+		c.syncer = NewWorktreeSync(c.artifactDir)
+	}
 	if err := c.queue.LoadFrom(c.queuePath); err != nil {
 		slog.Debug("fleet: no saved queue to restore", "path", c.queuePath, "error", err)
 	} else {
@@ -131,8 +139,13 @@ func (c *Coordinator) Start(ctx context.Context) error {
 	mux.HandleFunc("POST /api/v1/register", c.handleRegister)
 	mux.HandleFunc("POST /api/v1/heartbeat", c.handleHeartbeat)
 	mux.HandleFunc("POST /api/v1/work/poll", c.handleWorkPoll)
+	mux.HandleFunc("POST /api/v1/work/start", c.handleWorkStart)
 	mux.HandleFunc("POST /api/v1/work/complete", c.handleWorkComplete)
 	mux.HandleFunc("POST /api/v1/work/submit", c.handleWorkSubmit)
+	mux.HandleFunc("GET /api/v1/work/{workID}", c.handleWorkStatus)
+	mux.HandleFunc("POST /api/v1/work/{workID}/cancel", c.handleWorkCancel)
+	mux.HandleFunc("POST /api/v1/work/{workID}/artifact", c.handleWorkArtifactUpload)
+	mux.HandleFunc("GET /api/v1/work/{workID}/artifact", c.handleWorkArtifactGet)
 	mux.HandleFunc("POST /api/v1/events/batch", c.handleEventBatch)
 	mux.HandleFunc("GET /api/v1/events", c.handleEventStream)
 	mux.HandleFunc("GET /api/v1/status", c.handleStatus)

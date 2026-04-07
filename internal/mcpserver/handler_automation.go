@@ -125,18 +125,32 @@ func (s *Server) handleAutomationQueue(_ context.Context, req mcp.CallToolReques
 			"status": ctrl.Status(),
 		})
 	case "enqueue":
-		prompt, errResult := pp.StringErr("prompt")
-		if errResult != nil {
-			return errResult, nil
+		jobKind := session.AutomationJobKind(pp.OptionalString("job_kind", string(session.AutomationJobSession)))
+		prompt := pp.OptionalString("prompt", "")
+		if jobKind == session.AutomationJobSession && prompt == "" {
+			prompt, errResult = pp.StringErr("prompt")
+			if errResult != nil {
+				return errResult, nil
+			}
 		}
+		objective := pp.OptionalString("objective", "")
 		item, err := ctrl.Enqueue(session.AutomationQueueItem{
-			Prompt:    prompt,
-			Provider:  session.Provider(pp.OptionalString("provider", string(session.ProviderCodex))),
-			Model:     pp.OptionalString("model", ""),
-			BudgetUSD: getNumberArg(req, "budget_usd", 0),
-			MaxTurns:  int(getNumberArg(req, "max_turns", 0)),
-			Priority:  int(getNumberArg(req, "priority", 5)),
-			Source:    pp.OptionalString("source", "manual"),
+			JobKind:           jobKind,
+			Prompt:            prompt,
+			Provider:          session.Provider(pp.OptionalString("provider", string(session.ProviderCodex))),
+			Model:             pp.OptionalString("model", ""),
+			BudgetUSD:         getNumberArg(req, "budget_usd", 0),
+			MaxTurns:          int(getNumberArg(req, "max_turns", 0)),
+			Priority:          int(getNumberArg(req, "priority", 5)),
+			Source:            pp.OptionalString("source", "manual"),
+			CycleName:         pp.OptionalString("name", ""),
+			Objective:         objective,
+			SuccessCriteria:   splitCSV(pp.OptionalString("criteria", "")),
+			MaxTasks:          int(getNumberArg(req, "max_tasks", 0)),
+			ResearchTopic:     firstNonEmptyString(objective, prompt),
+			ResearchDomain:    pp.OptionalString("research_domain", ""),
+			ResearchModelTier: pp.OptionalString("research_model_tier", ""),
+			ResearchPriority:  getNumberArg(req, "research_priority_score", 0),
 		})
 		if err != nil {
 			return codedError(ErrInternal, fmt.Sprintf("enqueue failed: %v", err)), nil
