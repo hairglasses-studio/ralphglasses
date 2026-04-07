@@ -8,6 +8,15 @@ import (
 	"testing"
 )
 
+func currentTestProviderRate(t *testing.T, provider Provider) CostRate {
+	t.Helper()
+	rate, ok := getProviderCostRate(provider)
+	if !ok {
+		t.Fatalf("provider %q missing from ProviderCostRates", provider)
+	}
+	return rate
+}
+
 func TestValidateProviderUnknown(t *testing.T) {
 	err := ValidateProvider(Provider("unknown"))
 	if err == nil {
@@ -485,6 +494,8 @@ func TestUnsupportedOptionsWarnings(t *testing.T) {
 }
 
 func TestEstimateCostFromTokens(t *testing.T) {
+	codexRate := currentTestProviderRate(t, ProviderCodex)
+
 	tests := []struct {
 		name     string
 		provider Provider
@@ -512,8 +523,7 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"completion_tokens": float64(1000),
 				},
 			},
-			// (2000/1M)*1.50 + (1000/1M)*6.00 = 0.003 + 0.006 = 0.009
-			wantCost: 0.009,
+			wantCost: (2000.0/1_000_000)*codexRate.InputPer1M + (1000.0/1_000_000)*codexRate.OutputPer1M,
 		},
 		{
 			name:     "claude with usage input/output tokens",
@@ -544,7 +554,7 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"prompt_tokens": float64(1000),
 				},
 			},
-			wantCost: 0.0015, // (1000/1M)*1.50
+			wantCost: (1000.0 / 1_000_000) * codexRate.InputPer1M,
 		},
 		{
 			name:     "only output tokens",
@@ -631,6 +641,7 @@ func TestNormalizeGeminiEventExplicitCostTakesPrecedence(t *testing.T) {
 }
 
 func TestNormalizeCodexEventWithTokenCost(t *testing.T) {
+	codexRate := currentTestProviderRate(t, ProviderCodex)
 	raw := map[string]any{
 		"type":    "result",
 		"content": "done",
@@ -649,8 +660,7 @@ func TestNormalizeCodexEventWithTokenCost(t *testing.T) {
 		t.Fatalf("normalizeCodexEvent() error: %v", err)
 	}
 
-	// (2000/1M)*1.50 + (1000/1M)*6.00 = 0.003 + 0.006 = 0.009
-	want := 0.009
+	want := (2000.0/1_000_000)*codexRate.InputPer1M + (1000.0/1_000_000)*codexRate.OutputPer1M
 	if math.Abs(event.CostUSD-want) > 1e-9 {
 		t.Errorf("CostUSD = %v, want %v", event.CostUSD, want)
 	}
@@ -1374,6 +1384,8 @@ func TestValueAtPath(t *testing.T) {
 }
 
 func TestParseProviderCostFromStderr(t *testing.T) {
+	codexRate := currentTestProviderRate(t, ProviderCodex)
+
 	tests := []struct {
 		name     string
 		provider Provider
@@ -1451,14 +1463,14 @@ func TestParseProviderCostFromStderr(t *testing.T) {
 			name:     "codex_input_output_tokens",
 			provider: ProviderCodex,
 			stderr:   "Used 5000 input tokens, 1000 output tokens",
-			wantCost: (5000.0/1_000_000)*CostCodexInput + (1000.0/1_000_000)*CostCodexOutput,
+			wantCost: (5000.0/1_000_000)*codexRate.InputPer1M + (1000.0/1_000_000)*codexRate.OutputPer1M,
 			wantOK:   true,
 		},
 		{
 			name:     "codex_tokens_format2",
 			provider: ProviderCodex,
 			stderr:   "Tokens: 3000 input / 800 output",
-			wantCost: (3000.0/1_000_000)*CostCodexInput + (800.0/1_000_000)*CostCodexOutput,
+			wantCost: (3000.0/1_000_000)*codexRate.InputPer1M + (800.0/1_000_000)*codexRate.OutputPer1M,
 			wantOK:   true,
 		},
 		{
