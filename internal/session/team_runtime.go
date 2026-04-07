@@ -217,6 +217,7 @@ func teamUsesRemoteArtifactBackend(team *TeamStatus) bool {
 func taskHandle(task TeamTask) TeamWorkerHandle {
 	return TeamWorkerHandle{
 		WorkItemID:     task.WorkItemID,
+		A2AAgentURL:    task.A2AAgentURL,
 		SessionID:      task.WorkerSessionID,
 		WorkerNodeID:   task.WorkerNodeID,
 		WorktreePath:   task.WorktreePath,
@@ -1049,6 +1050,7 @@ func (m *Manager) applyPlannerActions(ctx context.Context, teamName string, plan
 			taskPtr.Provider = firstNonZeroProvider(action.Provider, taskPtr.Provider)
 			taskPtr.WorkerSessionID = ""
 			taskPtr.WorkItemID = ""
+			taskPtr.A2AAgentURL = team.A2AAgentURL
 			taskPtr.WorkerNodeID = ""
 			taskPtr.WorktreePath = ""
 			taskPtr.WorktreeBranch = ""
@@ -1486,6 +1488,7 @@ func (m *Manager) updateTaskHandle(name, taskID string, handle TeamWorkerHandle)
 	}
 	task := &team.Tasks[idx]
 	task.WorkItemID = firstNonBlank(handle.WorkItemID, task.WorkItemID)
+	task.A2AAgentURL = firstNonBlank(handle.A2AAgentURL, task.A2AAgentURL)
 	task.WorkerSessionID = firstNonBlank(handle.SessionID, task.WorkerSessionID)
 	task.WorkerNodeID = firstNonBlank(handle.WorkerNodeID, task.WorkerNodeID)
 	task.WorktreePath = firstNonBlank(handle.WorktreePath, task.WorktreePath)
