@@ -845,6 +845,59 @@ func TestHandleProviderRecommend_WithFeedbackData(t *testing.T) {
 	if !strings.Contains(text, `"data_source":"feedback_data"`) {
 		t.Errorf("expected data_source=feedback_data, got: %s", text)
 	}
+	if !strings.Contains(text, `"fallback_chain"`) {
+		t.Errorf("expected fallback_chain in response, got: %s", text)
+	}
+	if !strings.Contains(text, `"capability_constraints"`) {
+		t.Errorf("expected capability_constraints in response, got: %s", text)
+	}
+}
+
+func TestHandleProviderCapabilities(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleProviderCapabilities(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	for _, want := range []string{`"provider":"claude"`, `"provider":"codex"`, `"provider":"gemini"`} {
+		if !strings.Contains(text, want) {
+			t.Errorf("expected %s in response, got: %s", want, text)
+		}
+	}
+}
+
+func TestHandleProviderCompare(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+
+	stateDir := filepath.Join(root, ".session-state")
+	srv.InitSelfImprovement(stateDir, 1)
+	srv.FeedbackAnalyzer.Ingest([]session.JournalEntry{
+		{Provider: "gemini", TaskFocus: "lint code", SpentUSD: 0.01, TurnCount: 2, ExitReason: "completed"},
+		{Provider: "claude", TaskFocus: "lint code", SpentUSD: 0.20, TurnCount: 3, ExitReason: "completed"},
+	})
+
+	result, err := srv.handleProviderCompare(context.Background(), makeRequest(map[string]any{
+		"task": "lint the project",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	for _, want := range []string{`"task_type":"general"`, `"recommendation"`, `"feedback_profile"`, `"constraints"`, `"capabilities"`} {
+		if !strings.Contains(text, want) {
+			t.Errorf("expected %s in response, got: %s", want, text)
+		}
+	}
 }
 
 // --- handleFleetDLQ ---

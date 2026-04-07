@@ -129,6 +129,12 @@ func TestAutoOptimizer_RecommendProvider_NoData(t *testing.T) {
 	if rec.Confidence != "low" {
 		t.Fatalf("expected low confidence, got %s", rec.Confidence)
 	}
+	if len(rec.FallbackChain) == 0 {
+		t.Fatal("expected fallback chain to be populated")
+	}
+	if rec.DataSource != "default" {
+		t.Fatalf("expected default data source, got %s", rec.DataSource)
+	}
 }
 
 func TestAutoOptimizer_RecommendProvider_WithData(t *testing.T) {
@@ -148,6 +154,12 @@ func TestAutoOptimizer_RecommendProvider_WithData(t *testing.T) {
 	}
 	if rec.EstimatedBudget <= 0 {
 		t.Fatal("expected positive budget estimate")
+	}
+	if rec.DataSource != "feedback_data" {
+		t.Fatalf("expected feedback_data, got %s", rec.DataSource)
+	}
+	if len(rec.CapabilityConstraints) == 0 {
+		t.Fatal("expected capability constraints for selected provider")
 	}
 }
 

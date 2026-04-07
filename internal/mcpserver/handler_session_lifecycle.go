@@ -50,9 +50,6 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 	if err := ValidateStringLength(systemPrompt, MaxPromptLength, "system_prompt"); err != nil {
 		return codedError(ErrInvalidParams, err.Error()), nil
 	}
-	if provider == session.ProviderCodex && p.Has("budget_usd") {
-		return codedError(ErrInvalidParams, "budget_usd is not supported for codex sessions"), nil
-	}
 
 	opts := session.LaunchOptions{
 		TenantID:               session.NormalizeTenantID(p.OptionalString("tenant_id", "")),

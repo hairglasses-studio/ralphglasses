@@ -11,23 +11,23 @@ const (
 )
 
 const (
-	CapabilityBudgetUSD          = "budget_usd"
-	CapabilityMaxTurns           = "max_turns"
-	CapabilityAgent              = "agent"
-	CapabilityAllowedTools       = "allowed_tools"
-	CapabilitySystemPrompt       = "system_prompt"
-	CapabilityResume             = "resume"
-	CapabilityWorktree           = "worktree"
-	CapabilityPermissionMode     = "permission_mode"
-	CapabilityOutputSchema       = "output_schema"
-	CapabilitySandboxImage       = "sandbox_image"
+	CapabilityBudgetUSD           = "budget_usd"
+	CapabilityMaxTurns            = "max_turns"
+	CapabilityAgent               = "agent"
+	CapabilityAllowedTools        = "allowed_tools"
+	CapabilitySystemPrompt        = "system_prompt"
+	CapabilityResume              = "resume"
+	CapabilityWorktree            = "worktree"
+	CapabilityPermissionMode      = "permission_mode"
+	CapabilityOutputSchema        = "output_schema"
+	CapabilitySandboxImage        = "sandbox_image"
 	CapabilityProjectInstructions = "project_instructions"
-	CapabilityMCPClient          = "mcp_client"
-	CapabilityMCPServer          = "mcp_server"
-	CapabilitySkills             = "skills"
-	CapabilityPlugins            = "plugins"
-	CapabilitySubagents          = "subagents"
-	CapabilityHooks              = "hooks"
+	CapabilityMCPClient           = "mcp_client"
+	CapabilityMCPServer           = "mcp_server"
+	CapabilitySkills              = "skills"
+	CapabilityPlugins             = "plugins"
+	CapabilitySubagents           = "subagents"
+	CapabilityHooks               = "hooks"
 )
 
 // ProviderCapability describes one feature for a provider.
@@ -41,13 +41,13 @@ type ProviderCapability struct {
 // ProviderCapabilityMatrix is the provider-facing capability summary exposed
 // through runtime APIs and used internally for validation/warnings.
 type ProviderCapabilityMatrix struct {
-	Provider            Provider                       `json:"provider"`
-	Binary              string                         `json:"binary"`
-	DefaultModel        string                         `json:"default_model"`
-	ProjectInstructions string                         `json:"project_instructions"`
-	RepoConfigPath      string                         `json:"repo_config_path,omitempty"`
-	AgentConfigPath     string                         `json:"agent_config_path,omitempty"`
-	Capabilities        map[string]ProviderCapability  `json:"capabilities"`
+	Provider            Provider                      `json:"provider"`
+	Binary              string                        `json:"binary"`
+	DefaultModel        string                        `json:"default_model"`
+	ProjectInstructions string                        `json:"project_instructions"`
+	RepoConfigPath      string                        `json:"repo_config_path,omitempty"`
+	AgentConfigPath     string                        `json:"agent_config_path,omitempty"`
+	Capabilities        map[string]ProviderCapability `json:"capabilities"`
 }
 
 // PrimaryProviders returns the primary interactive providers in comparison order.
