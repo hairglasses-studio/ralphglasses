@@ -130,3 +130,37 @@ func TestDocsRoot(t *testing.T) {
 		t.Errorf("docsRoot() = %q, want path containing 'docs'", got)
 	}
 }
+
+func TestHandleDocsSearch_DomainPathTraversal(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	cases := []struct {
+		name   string
+		domain string
+	}{
+		{"dot-dot-traversal", "../../etc"},
+		{"slash-traversal", "foo/bar"},
+		{"backslash-traversal", "foo\\bar"},
+		{"absolute-path", "/etc/passwd"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := srv.handleDocsSearch(context.Background(), makeRequest(map[string]any{
+				"query":  "test",
+				"domain": tc.domain,
+			}))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !result.IsError {
+				t.Fatalf("expected error for domain traversal input %q", tc.domain)
+			}
+			text := getResultText(result)
+			if !strings.Contains(text, string(ErrInvalidParams)) {
+				t.Errorf("expected INVALID_PARAMS for %q, got: %s", tc.domain, text)
+			}
+		})
+	}
+}
