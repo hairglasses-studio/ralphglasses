@@ -3,6 +3,7 @@ site_description: Command-and-control TUI for parallel multi-LLM agent fleets
 site_url: https://hairglasses-studio.github.io/ralphglasses/
 repo_url: https://github.com/hairglasses-studio/ralphglasses
 repo_name: hairglasses-studio/ralphglasses
+docs_dir: .
 
 theme:
   name: material
@@ -32,6 +33,7 @@ nav:
   - Architecture: architecture-diagrams.md
   - MCP Tools: MCP-TOOLS.md
   - Provider Setup: PROVIDER-SETUP.md
+  - Multi-Tenant: MULTI-TENANT.md
   - Marathon: MARATHON.md
   - Autonomy: AUTONOMY.md
 
