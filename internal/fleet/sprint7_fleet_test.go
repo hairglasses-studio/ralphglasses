@@ -273,8 +273,14 @@ func TestWorkerAgent_DiscoverProviders_Sprint7(t *testing.T) {
 	if len(providers) == 0 {
 		t.Fatal("expected at least one provider")
 	}
-	if providers[0] != session.DefaultPrimaryProvider() {
-		t.Errorf("first provider = %q, want %q", providers[0], session.DefaultPrimaryProvider())
+	// First provider depends on which CLI binaries are installed on PATH.
+	known := map[session.Provider]bool{
+		session.ProviderCodex:  true,
+		session.ProviderGemini: true,
+		session.ProviderClaude: true,
+	}
+	if !known[providers[0]] {
+		t.Errorf("first provider = %q, want one of codex/gemini/claude", providers[0])
 	}
 }
 
