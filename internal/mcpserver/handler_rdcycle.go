@@ -781,7 +781,7 @@ func percentileFloat(sorted []float64, p float64) float64 {
 	return sorted[lower]*(1-frac) + sorted[upper]*frac
 }
 
-func (s *Server) handleDiffReview(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleDiffReview(reqCtx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	repoArg := getStringArg(req, "repo")
 	if repoArg == "" {
 		return codedError(ErrInvalidParams, "repo is required"), nil

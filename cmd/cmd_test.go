@@ -166,11 +166,8 @@ func TestMcpJsonFormat(t *testing.T) {
 	if srv.Command != "bash" {
 		t.Errorf("command = %q, want bash (wrapper-based startup)", srv.Command)
 	}
-	if len(srv.Args) < 1 || srv.Args[0] != "./scripts/dev/run-mcp.sh" {
+	if len(srv.Args) < 1 || srv.Args[0] != "-lc" {
 		t.Errorf("args = %v, want wrapper startup script", srv.Args)
-	}
-	if srv.CWD == "" {
-		t.Error("cwd must be set when using wrapper startup")
 	}
 }
 

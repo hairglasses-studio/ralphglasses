@@ -139,25 +139,14 @@ func runVerifyStep(ctx context.Context, dir, name string, args []string) StepRes
 }
 
 // parseCoverageTotal reads a coverage profile and extracts the total percentage.
-func parseCoverageTotal(profilePath string) (float64, error) {
-	data, err := os.ReadFile(profilePath)
-	if err != nil {
-		return 0, err
-	}
-
-	// Use go tool cover -func to parse, but as a fallback parse the profile directly.
-	// The profile format has lines like: "ok  pkg  1.234s  coverage: 78.5% of statements"
-	// But that's stdout from go test. The profile itself needs `go tool cover -func`.
-	// Since the test output may contain coverage info, try to extract from test output first.
-	// This function is called separately, so we run go tool cover.
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+func parseCoverageTotal(ctx context.Context, profilePath string) (float64, error) {
+	// Use go tool cover -func to parse the profile.
+	cmdCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "go", "tool", "cover", "-func", profilePath)
+	cmd := exec.CommandContext(cmdCtx, "go", "tool", "cover", "-func", profilePath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		// Fallback: try to find percentage in the raw profile data.
-		_ = data
 		return 0, fmt.Errorf("go tool cover: %w: %s", err, string(out))
 	}
 
@@ -279,7 +268,7 @@ func (s *Server) handleMergeVerify(ctx context.Context, req mcp.CallToolRequest)
 
 		// Parse coverage if requested and test passed.
 		if coverage && coverProfile != "" && testResult.Status == "pass" {
-			if cov, err := parseCoverageTotal(coverProfile); err == nil {
+			if cov, err := parseCoverageTotal(ctx, coverProfile); err == nil {
 				testResult.Coverage = &cov
 			}
 		}
