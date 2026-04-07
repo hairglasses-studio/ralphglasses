@@ -16,14 +16,14 @@ import (
 
 // TriggerRecord represents a request to trigger an agent session externally.
 type TriggerRecord struct {
-	ID        string    `json:"id"`
-	Prompt    string    `json:"prompt"`
-	AgentType string    `json:"agent_type"`
-	Priority  int       `json:"priority"`
+	ID        string        `json:"id"`
+	Prompt    string        `json:"prompt"`
+	AgentType string        `json:"agent_type"`
+	Priority  int           `json:"priority"`
 	Config    TriggerConfig `json:"config,omitempty"`
-	Status    string    `json:"status"`
-	SessionID string    `json:"session_id,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	Status    string        `json:"status"`
+	SessionID string        `json:"session_id,omitempty"`
+	CreatedAt time.Time     `json:"created_at"`
 }
 
 // TriggerConfig holds optional configuration overrides for a trigger.
@@ -261,6 +261,7 @@ func (s *Server) handleScheduleCreate(_ context.Context, req mcp.CallToolRequest
 			if err != nil {
 				return codedError(ErrInternal, fmt.Sprintf("save repo schedule: %v", err)), nil
 			}
+			entry.NextRuns, _ = computeScheduleNextRuns(cronExpr, 3)
 			presentation := repoSchedulePresentation(entry)
 			presentation["repo"] = repo
 			presentation["path"] = path

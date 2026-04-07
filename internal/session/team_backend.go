@@ -9,6 +9,7 @@ import (
 // TeamWorkerHandle identifies an in-flight backend worker.
 type TeamWorkerHandle struct {
 	WorkItemID     string `json:"work_item_id,omitempty"`
+	A2AAgentURL    string `json:"a2a_agent_url,omitempty"`
 	SessionID      string `json:"session_id,omitempty"`
 	WorkerNodeID   string `json:"worker_node_id,omitempty"`
 	WorktreePath   string `json:"worktree_path,omitempty"`

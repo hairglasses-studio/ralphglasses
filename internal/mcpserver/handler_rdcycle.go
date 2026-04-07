@@ -482,7 +482,10 @@ func (s *Server) handleCycleSchedule(_ context.Context, req mcp.CallToolRequest)
 	objective := strings.TrimSpace(getStringArg(req, "objective"))
 	criteria := strings.TrimSpace(getStringArg(req, "criteria"))
 	maxTasks := int(getNumberArg(req, "max_tasks", 0))
-	enabled := getBoolArg(req, "enabled", true)
+	enabled := true
+	if _, ok := argsMap(req)["enabled"]; ok {
+		enabled = getBoolArg(req, "enabled")
+	}
 
 	repo := getStringArg(req, "repo")
 	repoPath, errRes := s.resolveRepoPath(repo)
@@ -522,6 +525,7 @@ func (s *Server) handleCycleSchedule(_ context.Context, req mcp.CallToolRequest)
 	if err != nil {
 		return codedError(ErrFilesystem, fmt.Sprintf("cannot write schedule: %v", err)), nil
 	}
+	schedData.NextRuns, _ = computeScheduleNextRuns(cronExpr, 3)
 
 	result := map[string]any{
 		"schedule_id":  scheduleID,

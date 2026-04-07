@@ -430,18 +430,60 @@ func (c *Coordinator) DLQDepth() int {
 
 // WorkItem returns a work item by ID from the queue.
 func (c *Coordinator) WorkItem(id string) (*WorkItem, bool) {
-	return c.queue.Get(id)
+	return c.queue.Lookup(id)
 }
 
 // CancelWork cancels a work item by ID, marking it as failed.
 func (c *Coordinator) CancelWork(id string) error {
-	item, ok := c.queue.Get(id)
+	item, ok := c.queue.Lookup(id)
 	if !ok {
 		return fmt.Errorf("work item %s not found", id)
 	}
+	if item.Status == WorkCompleted || item.Status == WorkFailed {
+		return nil
+	}
+
+	now := time.Now()
 	item.Status = WorkFailed
 	item.Error = "cancelled"
+	item.CompletedAt = &now
+	item.AssignedTo = ""
+	item.AssignedAt = nil
+	if item.Source == WorkSourceStructuredCodexTeam {
+		if item.Result == nil {
+			item.Result = &WorkResult{}
+		}
+		if item.Result.TaskStatus == "" {
+			item.Result.TaskStatus = session.TeamTaskCancelled
+		}
+		if item.Result.Summary == "" {
+			item.Result.Summary = "cancelled"
+		}
+		if item.Result.ExitReason == "" {
+			item.Result.ExitReason = "cancelled"
+		}
+	}
 	c.queue.Update(item)
+
+	if item.MaxBudgetUSD > 0 {
+		c.mu.Lock()
+		c.budget.ReservedUSD -= item.MaxBudgetUSD
+		if c.budget.ReservedUSD < 0 {
+			c.budget.ReservedUSD = 0
+		}
+		c.budget.LastUpdated = now
+		c.mu.Unlock()
+	}
+
+	if c.bus != nil {
+		c.bus.Publish(events.Event{
+			Type:      "fleet.work_cancelled",
+			SessionID: item.SessionID,
+			RepoName:  item.RepoName,
+			Data:      map[string]any{"work_item_id": item.ID},
+		})
+	}
+
 	return nil
 }
 

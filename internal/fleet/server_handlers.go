@@ -107,6 +107,61 @@ func (c *Coordinator) handleWorkPoll(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, WorkPollResponse{Item: item})
 }
 
+func (c *Coordinator) handleWorkStart(w http.ResponseWriter, r *http.Request) {
+	var payload WorkStartPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if payload.WorkItemID == "" {
+		http.Error(w, "work item id required", http.StatusBadRequest)
+		return
+	}
+
+	item, ok := c.queue.Get(payload.WorkItemID)
+	if !ok {
+		http.Error(w, "work item not found", http.StatusNotFound)
+		return
+	}
+	if item.Status == WorkCompleted || item.Status == WorkFailed {
+		http.Error(w, "work item is already in a terminal state", http.StatusConflict)
+		return
+	}
+
+	now := time.Now()
+	item.Status = WorkRunning
+	if item.AssignedAt == nil {
+		item.AssignedAt = &now
+	}
+	item.StartedAt = &now
+	item.SessionID = firstNonEmpty(payload.SessionID, item.SessionID)
+	item.AssignedTo = firstNonEmpty(payload.WorkerNodeID, item.AssignedTo)
+	if item.Result == nil {
+		item.Result = &WorkResult{}
+	}
+	item.Result.SessionID = firstNonEmpty(payload.SessionID, item.Result.SessionID, item.SessionID)
+	item.Result.WorkerNodeID = firstNonEmpty(payload.WorkerNodeID, item.Result.WorkerNodeID, item.AssignedTo)
+	item.Result.WorktreePath = firstNonEmpty(payload.WorktreePath, item.Result.WorktreePath)
+	item.Result.WorktreeBranch = firstNonEmpty(payload.WorktreeBranch, item.Result.WorktreeBranch)
+	item.Result.HeadSHA = firstNonEmpty(payload.HeadSHA, item.Result.HeadSHA)
+	item.Result.MergeBaseSHA = firstNonEmpty(payload.MergeBaseSHA, item.Result.MergeBaseSHA)
+	c.queue.Update(item)
+
+	if c.bus != nil {
+		c.bus.Publish(events.Event{
+			Type:      "fleet.work_started",
+			SessionID: item.SessionID,
+			RepoName:  item.RepoName,
+			Data: map[string]any{
+				"work_item_id": item.ID,
+				"worker":       item.AssignedTo,
+			},
+		})
+	}
+
+	writeJSON(w, map[string]any{"status": "ok", "work_item_id": item.ID})
+}
+
 func (c *Coordinator) handleWorkComplete(w http.ResponseWriter, r *http.Request) {
 	var payload WorkCompletePayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -200,6 +255,36 @@ func (c *Coordinator) handleWorkComplete(w http.ResponseWriter, r *http.Request)
 	}
 
 	writeJSON(w, map[string]string{"status": "ok"})
+}
+
+func (c *Coordinator) handleWorkStatus(w http.ResponseWriter, r *http.Request) {
+	workID := r.PathValue("workID")
+	if workID == "" {
+		http.Error(w, "work id required", http.StatusBadRequest)
+		return
+	}
+
+	item, ok := c.queue.Lookup(workID)
+	if !ok {
+		http.Error(w, "work item not found", http.StatusNotFound)
+		return
+	}
+
+	writeJSON(w, item)
+}
+
+func (c *Coordinator) handleWorkCancel(w http.ResponseWriter, r *http.Request) {
+	workID := r.PathValue("workID")
+	if workID == "" {
+		http.Error(w, "work id required", http.StatusBadRequest)
+		return
+	}
+	if err := c.CancelWork(workID); err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	writeJSON(w, map[string]any{"status": "ok", "work_item_id": workID})
 }
 
 func (c *Coordinator) handleWorkSubmit(w http.ResponseWriter, r *http.Request) {
