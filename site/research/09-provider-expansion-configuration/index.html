@@ -1,0 +1,1747 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/research/09-provider-expansion-configuration/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Phase 9 Research: Provider Expansion & Configuration - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#phase-9-research-provider-expansion-configuration" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Phase 9 Research: Provider Expansion &amp; Configuration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-current-state-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Current State Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Current State Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-what-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 What Exists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-what-works-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 What Works Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-what-doesnt-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 What Doesn't Work
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-gap-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Gap Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Gap Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-roadmap-target-vs-current-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 ROADMAP Target vs Current State
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-missing-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Missing Capabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-technical-debt-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Technical Debt Inventory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-external-landscape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. External Landscape
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. External Landscape">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-competitorpeer-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Competitor/Peer Projects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-patterns-worth-adopting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Patterns Worth Adopting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-anti-patterns-to-avoid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Anti-Patterns to Avoid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-academic-industry-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Academic &amp; Industry References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-actionable-recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Actionable Recommendations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Actionable Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-immediate-actions-next-sprint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Immediate Actions (next sprint)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-near-term-actions-1-3-sprints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Near-Term Actions (1-3 sprints)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-strategic-actions-3-sprints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Strategic Actions (3+ sprints)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-risk-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Risk Assessment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-implementation-priority-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Implementation Priority Ordering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Implementation Priority Ordering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#71-critical-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 Critical Path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-recommended-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 Recommended Sequence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#73-parallelization-opportunities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3 Parallelization Opportunities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="phase-9-research-provider-expansion-configuration">Phase 9 Research: Provider Expansion &amp; Configuration</h1>
+<p>Covers ROADMAP items <strong>2.5</strong> (Multi-LLM Agent Orchestration) and <strong>6.6</strong> (Model Routing).</p>
+<hr />
+<h2 id="1-executive-summary">1. Executive Summary</h2>
+<ul>
+<li><strong>Phase 2.5 is mostly complete</strong> (2.5.1-2.5.4 done, 2.5.5 at 2/3, 2.5.6 unstarted): the three-provider architecture (Claude/Gemini/Codex) works end-to-end with command builders, event normalizers, agent discovery, team delegation, resume validation, and cost normalization. The remaining gaps are provider-specific cost fallback parsing (2.5.5.3) and batch API integration (2.5.6).</li>
+<li><strong>Phase 6.6 is entirely unstarted</strong>: no model registry, task-type classifier, routing rules, dynamic routing, or cost-optimization suggestion logic exists in the codebase today.</li>
+<li><strong>The provider dispatch pattern in <code>providers.go</code> is well-designed</strong> but adding a fourth provider requires touching 6-7 functions and all test files; a registry-based approach would reduce this to config-only additions.</li>
+<li><strong>Batch API integration (2.5.6) offers the single highest ROI</strong>: all three providers support batch modes at ~50% cost reduction, and the existing <code>LaunchOptions</code> struct can be extended without breaking changes.</li>
+<li><strong>Model routing (6.6) depends on data that does not yet exist</strong>: the <code>.ralphrc</code> parser handles arbitrary keys but has no typed model-routing schema, and the <code>costnorm.go</code> cost rates are hardcoded rather than registry-driven.</li>
+</ul>
+<hr />
+<h2 id="2-current-state-analysis">2. Current State Analysis</h2>
+<h3 id="21-what-exists">2.1 What Exists</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th style="text-align: right;">Lines</th>
+<th>Test File</th>
+<th style="text-align: right;">Test Lines</th>
+<th>Coverage</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/session/providers.go</code></td>
+<td style="text-align: right;">682</td>
+<td><code>providers_test.go</code></td>
+<td style="text-align: right;">390</td>
+<td>~70%</td>
+<td>Active, provider dispatch hub</td>
+</tr>
+<tr>
+<td><code>internal/session/health.go</code></td>
+<td style="text-align: right;">100</td>
+<td><code>health_test.go</code></td>
+<td style="text-align: right;">64</td>
+<td>~85%</td>
+<td>Active, parallel health checks</td>
+</tr>
+<tr>
+<td><code>internal/session/failover.go</code></td>
+<td style="text-align: right;">50</td>
+<td>(via manager_test)</td>
+<td style="text-align: right;">--</td>
+<td>~60%</td>
+<td>Active, chain-based failover</td>
+</tr>
+<tr>
+<td><code>internal/session/types.go</code></td>
+<td style="text-align: right;">147</td>
+<td>--</td>
+<td style="text-align: right;">--</td>
+<td>N/A</td>
+<td>Active, core type definitions</td>
+</tr>
+<tr>
+<td><code>internal/session/costnorm.go</code></td>
+<td style="text-align: right;">81</td>
+<td><code>costnorm_test.go</code></td>
+<td style="text-align: right;">63</td>
+<td>~90%</td>
+<td>Active, cross-provider cost normalization</td>
+</tr>
+<tr>
+<td><code>internal/session/ratelimit.go</code></td>
+<td style="text-align: right;">99</td>
+<td><code>ratelimit_test.go</code></td>
+<td style="text-align: right;">80</td>
+<td>~95%</td>
+<td>Active, sliding-window rate limiter</td>
+</tr>
+<tr>
+<td><code>internal/session/templates.go</code></td>
+<td style="text-align: right;">62</td>
+<td><code>templates_test.go</code></td>
+<td style="text-align: right;">61</td>
+<td>~90%</td>
+<td>Active, per-provider prompt templates</td>
+</tr>
+<tr>
+<td><code>internal/session/agents.go</code></td>
+<td style="text-align: right;">321</td>
+<td><code>agents_test.go</code></td>
+<td style="text-align: right;">232</td>
+<td>~80%</td>
+<td>Active, multi-provider agent discovery</td>
+</tr>
+<tr>
+<td><code>internal/session/budget.go</code></td>
+<td style="text-align: right;">131</td>
+<td><code>budget_test.go</code></td>
+<td style="text-align: right;">95</td>
+<td>~85%</td>
+<td>Active, budget enforcement + ledger</td>
+</tr>
+<tr>
+<td><code>internal/session/loop.go</code></td>
+<td style="text-align: right;">870</td>
+<td><code>loop_test.go</code></td>
+<td style="text-align: right;">227</td>
+<td>~50%</td>
+<td>Active, planner/worker/verifier loop</td>
+</tr>
+<tr>
+<td><code>internal/session/runner.go</code></td>
+<td style="text-align: right;">380</td>
+<td><code>runner_test.go</code></td>
+<td style="text-align: right;">221</td>
+<td>~65%</td>
+<td>Active, provider-agnostic session lifecycle</td>
+</tr>
+<tr>
+<td><code>internal/session/manager.go</code></td>
+<td style="text-align: right;">846</td>
+<td><code>manager_test.go</code></td>
+<td style="text-align: right;">690</td>
+<td>~70%</td>
+<td>Active, session/team/workflow management</td>
+</tr>
+<tr>
+<td><strong>Package total</strong></td>
+<td style="text-align: right;"><strong>3769</strong> (src)</td>
+<td></td>
+<td style="text-align: right;"><strong>2123</strong> (test)</td>
+<td><strong>64.5%</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-what-works-well">2.2 What Works Well</h3>
+<p><strong>Provider dispatch pattern</strong> (<code>providers.go:131-159</code>): The <code>buildCmdForProvider()</code> function cleanly dispatches to per-provider command builders with shared validation. Each provider has its own <code>buildXxxCmd()</code> and <code>normalizeXxxEvent()</code> function, keeping provider-specific logic isolated.</p>
+<p><strong>Flexible event normalization</strong> (<code>providers.go:263-481</code>): The <code>normalizeGeminiEvent()</code> and <code>normalizeCodexEvent()</code> functions use path-based field extraction (<code>firstNonEmptyString</code>, <code>firstText</code>, <code>valueAtPath</code>) that gracefully handles varying JSON schemas across providers without tight coupling to any specific format.</p>
+<p><strong>Health check parallelism</strong> (<code>health.go:69-89</code>): <code>CheckAllProviderHealth()</code> runs all three provider health checks concurrently via goroutines with a buffered channel, completing in the time of the slowest check rather than their sum.</p>
+<p><strong>Failover chain</strong> (<code>failover.go:23-50</code>): <code>LaunchWithFailover()</code> pre-checks health before attempting launch, avoiding the cost of failed process spawns. The chain-based approach is extensible to N providers.</p>
+<p><strong>Cost normalization</strong> (<code>costnorm.go:36-72</code>): <code>NormalizeProviderCost()</code> supports both exact (token-based) and estimated (blended-rate) normalization, with Claude as the baseline. This enables apples-to-apples cost comparison across providers.</p>
+<p><strong>Rate limiting</strong> (<code>ratelimit.go:17-99</code>): Per-provider sliding-window rate limiter with configurable limits and <code>Remaining()</code> introspection. Thread-safe and well-tested.</p>
+<p><strong>Agent discovery</strong> (<code>agents.go:28-63</code>): Provider-aware agent discovery supporting three different formats: Claude <code>.claude/agents/*.md</code>, Gemini <code>.gemini/agents/*.md</code>, and Codex <code>AGENTS.md</code> sections.</p>
+<p><strong>Prompt templates</strong> (<code>templates.go:15-43</code>): Per-provider prompt wrapping that adds agentic context for Gemini/Codex while leaving Claude prompts unmodified.</p>
+<p><strong>Loop engine</strong> (<code>loop.go:191-338</code>): The <code>StepLoop()</code> function supports per-role provider configuration (planner, worker, verifier can each use different providers/models) and integrates prompt enhancement via <code>enhanceForProvider()</code>.</p>
+<h3 id="23-what-doesnt-work">2.3 What Doesn't Work</h3>
+<p><strong>No batch API support</strong> (ROADMAP 2.5.6): The codebase has zero batch-related code. <code>LaunchOptions</code> has no <code>BatchOptions</code> field, and there is no batch submission or result polling mechanism for any provider.</p>
+<p><strong>Incomplete cost fallback</strong> (ROADMAP 2.5.5.3): When providers do not report <code>cost_usd</code> in their JSON stream, there is no stderr-based cost parsing fallback. The <code>cleanProviderOutput()</code> function in <code>providers.go:404-418</code> extracts text from stderr for Codex but does not attempt cost extraction.</p>
+<p><strong>No model registry</strong> (ROADMAP 6.6.1): Available models are defined only as defaults in <code>ProviderDefaults()</code> (<code>providers.go:107-116</code>). There is no structured registry of model capabilities, context windows, or per-model pricing.</p>
+<p><strong>No task-type classifier</strong> (ROADMAP 6.6.2): There is no mechanism to classify tasks (code, review, test, docs) and route them to appropriate models. The prompt classifier in <code>internal/enhancer/</code> classifies task types for enhancement purposes but is not wired to model selection.</p>
+<p><strong>No routing rules</strong> (ROADMAP 6.6.3): The <code>.ralphrc</code> parser (<code>internal/model/config.go</code>) is a generic key-value store that could hold <code>MODEL_ROUTE_CODE=opus</code> style entries, but nothing reads or interprets such keys.</p>
+<p><strong>No dynamic model switching</strong> (ROADMAP 6.6.4): Sessions are launched with a fixed model and cannot switch mid-session. This is architecturally limited by the CLI subprocess model -- changing the model requires launching a new session.</p>
+<p><strong>Hardcoded cost rates</strong> (<code>costnorm.go:12-16</code>): <code>ProviderCostRates</code> is a package-level <code>var</code> with hardcoded prices. Adding a model or updating pricing requires a code change and rebuild. These should be configuration-driven.</p>
+<p><strong>Provider addition requires 7 code changes</strong> (CONTRIBUTING.md:127-136): Adding a new provider requires editing <code>types.go</code>, <code>providers.go</code> (4 functions + 2 switch statements), and <code>providers_test.go</code>. No plugin or registry mechanism exists.</p>
+<hr />
+<h2 id="3-gap-analysis">3. Gap Analysis</h2>
+<h3 id="31-roadmap-target-vs-current-state">3.1 ROADMAP Target vs Current State</h3>
+<table>
+<thead>
+<tr>
+<th>ROADMAP Item</th>
+<th>Target</th>
+<th>Current State</th>
+<th>Gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2.5.1 — Fix provider CLI command builders</td>
+<td>All three providers launchable</td>
+<td><strong>COMPLETE</strong></td>
+<td>None</td>
+</tr>
+<tr>
+<td>2.5.2 — Per-provider agent discovery</td>
+<td>Provider-specific agent definitions</td>
+<td><strong>COMPLETE</strong></td>
+<td>None</td>
+</tr>
+<tr>
+<td>2.5.3 — Cross-provider team delegation</td>
+<td>Claude lead delegates to Gemini/Codex workers</td>
+<td><strong>COMPLETE</strong></td>
+<td>None</td>
+</tr>
+<tr>
+<td>2.5.4 — Provider-specific resume support</td>
+<td>Resume works for Claude/Gemini, rejects Codex</td>
+<td><strong>COMPLETE</strong></td>
+<td>None</td>
+</tr>
+<tr>
+<td>2.5.5.1-2 — Cost normalization verification</td>
+<td>Cost tracked accurately for all providers</td>
+<td><strong>COMPLETE</strong></td>
+<td>None</td>
+</tr>
+<tr>
+<td>2.5.5.3 — Provider-specific cost fallback</td>
+<td>Parse stderr for cost when JSON omits it</td>
+<td><strong>NOT STARTED</strong></td>
+<td>No stderr cost parsing</td>
+</tr>
+<tr>
+<td>2.5.6 — Batch API integration</td>
+<td>Batch tasks for at least one provider</td>
+<td><strong>NOT STARTED</strong></td>
+<td>No batch code exists</td>
+</tr>
+<tr>
+<td>6.6.1 — Model registry</td>
+<td>Available models with capabilities/pricing</td>
+<td><strong>NOT STARTED</strong></td>
+<td>Only default model strings</td>
+</tr>
+<tr>
+<td>6.6.2 — Task-type classifier</td>
+<td>Map task types to preferred models</td>
+<td><strong>NOT STARTED</strong></td>
+<td>No classifier in session pkg</td>
+</tr>
+<tr>
+<td>6.6.3 — Routing rules in <code>.ralphrc</code></td>
+<td><code>MODEL_ROUTE_CODE=opus</code> style config</td>
+<td><strong>NOT STARTED</strong></td>
+<td>Config parser exists, no routing keys</td>
+</tr>
+<tr>
+<td>6.6.4 — Dynamic routing</td>
+<td>Switch model mid-session by task type</td>
+<td><strong>NOT STARTED</strong></td>
+<td>Requires native loop engine (6.1)</td>
+</tr>
+<tr>
+<td>6.6.5 — Cost optimization suggestions</td>
+<td>Suggest cheaper model below complexity threshold</td>
+<td><strong>NOT STARTED</strong></td>
+<td>No complexity assessment</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-missing-capabilities">3.2 Missing Capabilities</h3>
+<ol>
+<li>
+<p><strong>Provider registry / plugin system</strong>: No way to add a provider without code changes. A <code>ProviderConfig</code> struct + registration function would reduce new-provider effort from 7 edits to 1 config entry + 2 functions.</p>
+</li>
+<li>
+<p><strong>Model metadata database</strong>: No structured data on available models (context window, modality, cost/token, strengths). The <code>costnorm.go</code> rates and <code>ProviderDefaults()</code> are separate, disconnected data sources.</p>
+</li>
+<li>
+<p><strong>Batch execution pipeline</strong>: The entire batch lifecycle (submit, poll, collect results) is missing. This is a significant feature gap given the ~50% cost savings batch APIs offer.</p>
+</li>
+<li>
+<p><strong>Configuration-driven model selection</strong>: The <code>.ralphrc</code> infrastructure exists but is not extended with typed model-routing keys. No validation, no defaults, no per-task-type model preferences.</p>
+</li>
+<li>
+<p><strong>Provider capability negotiation</strong>: <code>UnsupportedOptionsWarnings()</code> (<code>providers.go:54-103</code>) returns warnings for unsupported options but does not prevent their use or suggest alternatives. This is informational only.</p>
+</li>
+<li>
+<p><strong>Stderr cost extraction</strong>: Gemini and Codex CLIs may report cost information in stderr or in different JSON fields than expected. No fallback parsing exists.</p>
+</li>
+</ol>
+<h3 id="33-technical-debt-inventory">3.3 Technical Debt Inventory</h3>
+<table>
+<thead>
+<tr>
+<th>Debt Item</th>
+<th>Location</th>
+<th>Severity</th>
+<th>Effort to Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hardcoded cost rates</td>
+<td><code>costnorm.go:12-16</code></td>
+<td>Medium</td>
+<td>S -- move to config/registry</td>
+</tr>
+<tr>
+<td>Hardcoded default models</td>
+<td><code>providers.go:107-116</code></td>
+<td>Low</td>
+<td>S -- derive from registry</td>
+</tr>
+<tr>
+<td>Hardcoded provider list in health check</td>
+<td><code>health.go:70</code></td>
+<td>Low</td>
+<td>S -- iterate registry</td>
+</tr>
+<tr>
+<td>Provider binary names in switch</td>
+<td><code>providers.go:118-129</code></td>
+<td>Low</td>
+<td>S -- move to registry</td>
+</tr>
+<tr>
+<td>Env var names in switch</td>
+<td><code>providers.go:28-37</code></td>
+<td>Low</td>
+<td>S -- move to registry</td>
+</tr>
+<tr>
+<td>Rate limits hardcoded</td>
+<td><code>ratelimit.go:10-14</code></td>
+<td>Medium</td>
+<td>S -- read from config</td>
+</tr>
+<tr>
+<td>No provider-specific timeout tuning</td>
+<td><code>health.go:57</code></td>
+<td>Low</td>
+<td>S -- 5s timeout for all</td>
+</tr>
+<tr>
+<td>Duplicate provider validation logic</td>
+<td><code>providers.go:16-25</code> vs <code>health.go:44-48</code></td>
+<td>Low</td>
+<td>S -- consolidate</td>
+</tr>
+<tr>
+<td>No test for <code>LaunchWithFailover</code></td>
+<td><code>failover.go</code></td>
+<td>Medium</td>
+<td>M -- requires mock providers</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-external-landscape">4. External Landscape</h2>
+<h3 id="41-competitorpeer-projects">4.1 Competitor/Peer Projects</h3>
+<p><strong>1. LiteLLM (github.com/BerriAI/litellm)</strong>
+- Python proxy supporting 100+ LLM APIs via a unified interface
+- Model registry with pricing, context windows, supported features
+- Fallback chains, load balancing, budget limits, rate limiting
+- Router with model-group aliasing and priority-based routing
+- <strong>Relevance to ralphglasses</strong>: Their model registry data structure and routing configuration patterns are directly applicable. LiteLLM's <code>model_list</code> config with <code>model_info</code> (max_tokens, pricing, supports_function_calling) maps to the 6.6.1 model registry requirement.</p>
+<p><strong>2. aisuite (github.com/andrewyng/aisuite)</strong>
+- Python library providing a unified interface across multiple LLM providers
+- Provider abstraction with standard interface; adding new providers requires only implementing a simple adapter
+- Supports OpenAI, Anthropic, Google, Mistral, and others
+- <strong>Relevance</strong>: Demonstrates the minimal adapter pattern -- each provider implements a thin shim rather than requiring deep switch-statement integration. Validates the registry approach recommended for ralphglasses.</p>
+<p><strong>3. OpenRouter (openrouter.ai)</strong>
+- API gateway routing across 200+ models from multiple providers
+- Automatic fallback when a model is unavailable
+- Cost-based routing: select cheapest model meeting capability requirements
+- Per-model pricing database with real-time availability
+- <strong>Relevance</strong>: Their routing-rules model (provider preference, fallback chains, cost constraints) aligns closely with 6.6.3 routing rules and 6.6.5 cost optimization.</p>
+<p><strong>4. Cursor / Windsurf IDE integrations</strong>
+- Multi-model support within a single IDE session
+- Automatic model selection based on task type (tab completion vs chat vs agent)
+- Seamless provider switching without user intervention
+- <strong>Relevance</strong>: Demonstrates practical task-type-to-model routing in a developer tool. Their approach of automatic model selection based on interaction type (quick completion vs deep reasoning) validates 6.6.2.</p>
+<h3 id="42-patterns-worth-adopting">4.2 Patterns Worth Adopting</h3>
+<p><strong>Model registry as data, not code</strong> (from LiteLLM): Define models in a YAML/JSON/Go file with structured fields (provider, model_id, cost_input, cost_output, context_window, capabilities, aliases). All dispatch functions read from the registry instead of hardcoded switches.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// Target pattern</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">ModelInfo</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">Provider</span><span class="w">      </span><span class="nx">Provider</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">ModelID</span><span class="w">       </span><span class="kt">string</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nx">Aliases</span><span class="w">       </span><span class="p">[]</span><span class="kt">string</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nx">InputPer1M</span><span class="w">    </span><span class="kt">float64</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nx">OutputPer1M</span><span class="w">   </span><span class="kt">float64</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nx">ContextWindow</span><span class="w"> </span><span class="kt">int</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nx">Capabilities</span><span class="w">  </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="c1">// &quot;code&quot;, &quot;vision&quot;, &quot;tools&quot;, &quot;long-context&quot;</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Adapter registration</strong> (from aisuite): Instead of 7 edits per provider, define a <code>ProviderAdapter</code> interface and register implementations at init time. The core dispatch reads from the adapter registry.</p>
+<p><strong>Cost-aware routing</strong> (from OpenRouter): When multiple models can serve a request, prefer the cheapest one that meets capability requirements. Fall back to more expensive models only when cheaper ones are unavailable or lack required capabilities.</p>
+<p><strong>Config-driven routing rules</strong> (from LiteLLM): Allow <code>.ralphrc</code> to specify model preferences per task type, with inheritance from global defaults:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>MODEL_ROUTE_DEFAULT=&quot;sonnet&quot;
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>MODEL_ROUTE_CODE=&quot;opus&quot;
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>MODEL_ROUTE_REVIEW=&quot;sonnet&quot;
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>MODEL_ROUTE_TEST=&quot;gemini-3-pro&quot;
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>MODEL_ROUTE_DOCS=&quot;gpt-5.4-xhigh&quot;
+</code></pre></div>
+<h3 id="43-anti-patterns-to-avoid">4.3 Anti-Patterns to Avoid</h3>
+<p><strong>Over-abstraction before multiple providers exist</strong>: The current 3-provider setup does not justify a full plugin system with dynamic loading. A static registry with registration functions is sufficient.</p>
+<p><strong>API-level provider abstraction</strong>: Ralphglasses wraps CLI binaries, not API clients. An abstraction layer that pretends all providers have identical capabilities (like LiteLLM does for APIs) would fight the fundamental difference between CLI tools. Keep provider-specific quirks explicit.</p>
+<p><strong>Automatic model switching in active sessions</strong>: The CLI subprocess model means switching models requires launching a new process. Do not attempt hot-swapping -- instead, make model selection a planning-time decision in the loop engine.</p>
+<p><strong>Real-time pricing APIs</strong>: Fetching live pricing from provider APIs adds latency, failure modes, and network dependencies. Use a local registry updated periodically (via a CLI command or config file).</p>
+<h3 id="44-academic-industry-references">4.4 Academic &amp; Industry References</h3>
+<ul>
+<li>
+<p><strong>Multi-armed bandit for model selection</strong>: Thompson Sampling or Upper Confidence Bound algorithms could optimize model selection based on historical cost/quality data. Applicable to 6.6.5 cost optimization once historical data exists (depends on 6.4 analytics).</p>
+</li>
+<li>
+<p><strong>"Routing to the Expert" (Jiang et al., 2024)</strong>: Research on routing prompts to the best-performing LLM based on prompt characteristics. Validates the task-type classifier approach in 6.6.2.</p>
+</li>
+<li>
+<p><strong>FrugalGPT (Chen et al., 2023)</strong>: Cascade approach where cheaper models attempt a task first; expensive models are invoked only when the cheap model's confidence is low. Applicable to cost optimization (6.6.5).</p>
+</li>
+<li>
+<p><strong>LMSYS Chatbot Arena</strong>: Crowdsourced model quality rankings. Their Elo ratings could inform default model preferences in the registry.</p>
+</li>
+</ul>
+<hr />
+<h2 id="5-actionable-recommendations">5. Actionable Recommendations</h2>
+<h3 id="51-immediate-actions-next-sprint">5.1 Immediate Actions (next sprint)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Target File(s)</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Add stderr cost extraction for Gemini/Codex</td>
+<td><code>internal/session/providers.go</code> (new <code>parseStderrCost()</code>)</td>
+<td>S</td>
+<td>Medium</td>
+<td>2.5.5.3</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Extract cost rates to model registry file</td>
+<td><code>internal/session/registry.go</code> (new), <code>internal/session/costnorm.go</code></td>
+<td>M</td>
+<td>High</td>
+<td>6.6.1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Make rate limits configurable via <code>.ralphrc</code></td>
+<td><code>internal/session/ratelimit.go</code>, <code>internal/model/config.go</code></td>
+<td>S</td>
+<td>Medium</td>
+<td>2.5</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Add <code>LaunchWithFailover</code> unit test</td>
+<td><code>internal/session/failover_test.go</code> (new)</td>
+<td>S</td>
+<td>Medium</td>
+<td>2.5</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Consolidate provider validation (remove duplication)</td>
+<td><code>internal/session/providers.go</code>, <code>internal/session/health.go</code></td>
+<td>S</td>
+<td>Low</td>
+<td>2.5</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-near-term-actions-1-3-sprints">5.2 Near-Term Actions (1-3 sprints)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Target File(s)</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6</td>
+<td>Build model registry with capabilities/pricing/context window</td>
+<td><code>internal/session/registry.go</code> (new)</td>
+<td>M</td>
+<td>High</td>
+<td>6.6.1</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Implement task-type classifier reusing enhancer's <code>TaskType</code></td>
+<td><code>internal/session/routing.go</code> (new), <code>internal/enhancer/classify.go</code></td>
+<td>M</td>
+<td>High</td>
+<td>6.6.2</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Add <code>MODEL_ROUTE_*</code> keys to <code>.ralphrc</code> with parsing + validation</td>
+<td><code>internal/session/routing.go</code> (new), <code>internal/model/config.go</code></td>
+<td>M</td>
+<td>High</td>
+<td>6.6.3</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Implement batch submission for Claude Messages Batches API</td>
+<td><code>internal/session/batch.go</code> (new)</td>
+<td>L</td>
+<td>High</td>
+<td>2.5.6.3</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Research and document batch API endpoints for all three providers</td>
+<td><code>docs/research/batch-api-reference.md</code> (new)</td>
+<td>M</td>
+<td>Medium</td>
+<td>2.5.6.1</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Add <code>BatchOptions</code> to <code>LaunchOptions</code></td>
+<td><code>internal/session/types.go</code>, <code>internal/session/runner.go</code></td>
+<td>M</td>
+<td>Medium</td>
+<td>2.5.6.2</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Wire routing rules into loop engine's planner/worker model selection</td>
+<td><code>internal/session/loop.go</code></td>
+<td>M</td>
+<td>High</td>
+<td>6.6.3</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-strategic-actions-3-sprints">5.3 Strategic Actions (3+ sprints)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Target File(s)</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>13</td>
+<td>Provider adapter registration pattern (reduce 7-edit to 2-edit for new providers)</td>
+<td><code>internal/session/providers.go</code>, <code>internal/session/registry.go</code></td>
+<td>L</td>
+<td>High</td>
+<td>2.5</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Dynamic model routing in native loop engine</td>
+<td><code>internal/session/loop.go</code>, <code>internal/session/routing.go</code></td>
+<td>XL</td>
+<td>High</td>
+<td>6.6.4</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Cost optimization suggestions (FrugalGPT-style cascade)</td>
+<td><code>internal/session/routing.go</code></td>
+<td>L</td>
+<td>High</td>
+<td>6.6.5</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Batch API for Gemini (Batch Prediction API)</td>
+<td><code>internal/session/batch.go</code></td>
+<td>L</td>
+<td>Medium</td>
+<td>2.5.6.4</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Batch polling/webhook for result collection</td>
+<td><code>internal/session/batch.go</code></td>
+<td>L</td>
+<td>Medium</td>
+<td>2.5.6.5</td>
+</tr>
+<tr>
+<td>18</td>
+<td>Provider plugin system with Go interface + factory</td>
+<td><code>internal/session/provider_iface.go</code> (new)</td>
+<td>XL</td>
+<td>Medium</td>
+<td>2.5</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-risk-assessment">6. Risk Assessment</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Risk</th>
+<th>Probability</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Batch API semantics differ significantly across providers, making a unified interface impractical</td>
+<td>Medium</td>
+<td>High</td>
+<td>Research all three APIs first (2.5.6.1) before designing the abstraction. Accept provider-specific batch code behind a common result type.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Provider CLI output formats change between versions, breaking event normalizers</td>
+<td>Medium</td>
+<td>High</td>
+<td>Pin CLI versions in CI, add integration tests with version detection, maintain fallback parsing in <code>fallbackTextEvent()</code>.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Model registry becomes stale as providers add/deprecate models</td>
+<td>High</td>
+<td>Medium</td>
+<td>Add a <code>ralphglasses registry update</code> CLI command that fetches current model lists from provider APIs (or bundled JSON). Include <code>last_updated</code> timestamp and staleness warnings.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Task-type classifier accuracy is too low for reliable model routing</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Start with simple keyword/heuristic classification, validate against historical session data before adding ML-based classification. Allow manual override via <code>MODEL_ROUTE_*</code> config.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Dynamic model switching mid-session is impossible with CLI subprocess model</td>
+<td>Low (expected)</td>
+<td>Low</td>
+<td>Accept this limitation. Route at session-launch time. Mid-session routing deferred to 6.6.4 which explicitly requires native loop engine (6.1).</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Hardcoded rate limits become inaccurate as providers change their limits</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Make rate limits configurable via <code>.ralphrc</code> (action #3). Add health-check response header parsing to auto-detect limits.</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Adding batch API creates orphaned batch jobs on crash/restart</td>
+<td>Medium</td>
+<td>High</td>
+<td>Implement batch job persistence (similar to session persistence in <code>manager.go:719-734</code>). Add cleanup on startup.</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Over-engineering the model registry delays delivery of simpler routing features</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Ship registry as a Go map literal first (like current <code>ProviderCostRates</code>). Migrate to config file only when model count exceeds what is comfortable in code.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-implementation-priority-ordering">7. Implementation Priority Ordering</h2>
+<h3 id="71-critical-path">7.1 Critical Path</h3>
+<p>The critical path for completing ROADMAP 2.5 and 6.6:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>2.5.5.3 (cost fallback) ──────────────────────────────────────┐
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>                                                                ├── 2.5 COMPLETE
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>2.5.6.1 (batch research) → 2.5.6.2 (BatchOptions) ──┐        │
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>                                                       ├── 2.5.6.3 (Claude batch) ──┤
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>                                                       └── 2.5.6.4 (Gemini batch) ──┘
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>                                                              ↓
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>                                                        2.5.6.5 (batch polling)
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>6.6.1 (model registry) → 6.6.2 (task classifier) → 6.6.3 (routing rules) ──┐
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>                                                                              ├── 6.6 COMPLETE
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>6.6.4 (dynamic routing -- BLOCKED BY 6.1) ──────────────────────────────────┤
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>                                                                              │
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>6.6.5 (cost optimization -- needs 6.4 analytics data) ─────────────────────┘
+</code></pre></div>
+<h3 id="72-recommended-sequence">7.2 Recommended Sequence</h3>
+<p><strong>Sprint 1: Close Phase 2.5 gaps</strong>
+1. Implement stderr cost extraction (<code>providers.go</code>) -- 2.5.5.3
+2. Add failover test (<code>failover_test.go</code>) -- quality debt
+3. Consolidate provider validation -- tech debt
+4. Make rate limits configurable -- tech debt</p>
+<p><strong>Sprint 2: Model registry foundation</strong>
+5. Build model registry with capabilities/pricing (<code>registry.go</code>) -- 6.6.1
+6. Migrate <code>ProviderCostRates</code> and <code>ProviderDefaults</code> to use registry -- 6.6.1
+7. Migrate <code>ProviderRateLimits</code> to use registry -- 6.6.1</p>
+<p><strong>Sprint 3: Routing rules</strong>
+8. Implement task-type classifier reusing <code>enhancer.TaskType</code> -- 6.6.2
+9. Add <code>MODEL_ROUTE_*</code> keys to <code>.ralphrc</code> with parsing -- 6.6.3
+10. Wire routing into loop engine model selection -- 6.6.3</p>
+<p><strong>Sprint 4: Batch API (Phase 1)</strong>
+11. Research batch APIs for all providers -- 2.5.6.1
+12. Add <code>BatchOptions</code> to <code>LaunchOptions</code> -- 2.5.6.2
+13. Implement Claude Messages Batches API submission -- 2.5.6.3</p>
+<p><strong>Sprint 5: Batch API (Phase 2) + Cost optimization</strong>
+14. Implement Gemini batch submission -- 2.5.6.4
+15. Implement batch polling/result collection -- 2.5.6.5
+16. Implement cost optimization suggestions -- 6.6.5</p>
+<h3 id="73-parallelization-opportunities">7.3 Parallelization Opportunities</h3>
+<p>The following work items are independent and can be assigned to different contributors simultaneously:</p>
+<table>
+<thead>
+<tr>
+<th>Stream A (Provider)</th>
+<th>Stream B (Routing)</th>
+<th>Stream C (Batch)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2.5.5.3 cost fallback</td>
+<td>6.6.1 model registry</td>
+<td>2.5.6.1 batch research</td>
+</tr>
+<tr>
+<td>Failover tests</td>
+<td>6.6.2 task classifier</td>
+<td>2.5.6.2 BatchOptions</td>
+</tr>
+<tr>
+<td>Provider validation cleanup</td>
+<td>6.6.3 routing rules</td>
+<td>2.5.6.3 Claude batch</td>
+</tr>
+<tr>
+<td>Rate limit config</td>
+<td>6.6.3 loop integration</td>
+<td>2.5.6.4 Gemini batch</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Stream A</strong> and <strong>Stream B</strong> are fully independent until Stream B's 6.6.3 loop integration, which needs the registry from Stream B step 1.</p>
+<p><strong>Stream C</strong> is fully independent of Streams A and B.</p>
+<p>Within Stream B, items 6.6.4 (dynamic routing) and 6.6.5 (cost optimization) have external dependencies: 6.6.4 requires the native loop engine (ROADMAP 6.1, a separate phase), and 6.6.5 benefits from historical analytics data (ROADMAP 6.4). Both can be stubbed but not fully implemented until those dependencies land.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

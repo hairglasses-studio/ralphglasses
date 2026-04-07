@@ -7,7 +7,7 @@ LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSIO
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke smoke-arm64 fuzz bench bench-compare bench-dashboard build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap skill-doc update-tool-counts
+.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke fuzz bench bench-compare bench-dashboard build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap skill-doc update-tool-counts
 
 # Install pre-commit hook (idempotent)
 hooks:
@@ -67,12 +67,6 @@ smoke:
 	@echo "=== smoke: event bus concurrency ==="
 	$(GO) test -race -count=3 -timeout 30s -run "ConcurrentPublish" ./internal/events/...
 	@echo "=== smoke: all passed ==="
-
-# Smoke test: arm64 cross-compilation (build + --help)
-smoke-arm64:
-	@echo "=== arm64 cross-compile ==="
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 $(GO) build -o /dev/null .
-	@echo "=== arm64 build OK ==="
 
 # Run fuzz tests (30s each)
 fuzz:

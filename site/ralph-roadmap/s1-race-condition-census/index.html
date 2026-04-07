@@ -1,0 +1,1424 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ralph-roadmap/s1-race-condition-census/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>ralphglasses Race Condition Census - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ralphglasses-race-condition-census" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ralphglasses Race Condition Census
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-summary-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Summary Table
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-detailed-findings-critical-and-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Detailed Findings: CRITICAL and HIGH
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Detailed Findings: CRITICAL and HIGH">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#r-01-internalsessionautorecoverygo-retrystate-map-unprotected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R-01 — internal/session/autorecovery.go: retryState map unprotected
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r-02-internalfleetretrygo-server_handlersgo-retrytrackerattempts-unprotected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R-02 — internal/fleet/retry.go + server_handlers.go: RetryTracker.attempts unprotected
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r-03-internalsessionautooptimizego-unprotected-global-gateenabled-runtestgate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R-03 — internal/session/autooptimize.go: Unprotected global GateEnabled + RunTestGate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r-04-internalenhanceropenai_clientgo-lastresponseid-not-mutex-protected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R-04 — internal/enhancer/openai_client.go: LastResponseID not mutex-protected
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r-05-internalsessionmanager_teamgogetteam-inconsistent-lock-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R-05 — internal/session/manager_team.go:GetTeam: Inconsistent lock ordering
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r-06-internalmcpservertoolsgo-tools_dispatchgo-loadedgroups-map-accessed-without-smu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R-06 — internal/mcpserver/tools.go + tools_dispatch.go: loadedGroups map accessed without s.mu
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-package-risk-heat-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Package Risk Heat Map
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Recommendations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#before-l2-autonomy-must-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Before L2 Autonomy (Must Fix)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#before-l3-autonomy-should-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Before L3 Autonomy (Should Fix)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#patterns-correctly-implemented-do-not-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Patterns Correctly Implemented (Do Not Change)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-testing-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Testing Gaps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="ralphglasses-race-condition-census">ralphglasses Race Condition Census</h1>
+<p><strong>Scope</strong>: <code>internal/</code> (all packages, excluding vendor/, .git/)
+<strong>Method</strong>: Static analysis via grep + manual code review of goroutine patterns, shared state, and lock discipline
+<strong>Date</strong>: 2026-04-04
+<strong>Analyst</strong>: Claude (wave 3 research agent, self-improve-review branch)</p>
+<hr />
+<h2 id="1-summary-table">1. Summary Table</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>File</th>
+<th>Type</th>
+<th>Severity</th>
+<th>Fix Effort</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R-01</td>
+<td><code>internal/session/autorecovery.go</code></td>
+<td>Unprotected map</td>
+<td>CRITICAL</td>
+<td>S</td>
+<td><code>retryState</code> map and <code>ClearRetryState</code> accessed from multiple callers with no mutex</td>
+</tr>
+<tr>
+<td>R-02</td>
+<td><code>internal/fleet/retry.go</code> + <code>internal/fleet/server_handlers.go</code></td>
+<td>Unprotected map</td>
+<td>CRITICAL</td>
+<td>S</td>
+<td><code>RetryTracker.attempts</code> map read/written without any lock while HTTP handlers run concurrently</td>
+</tr>
+<tr>
+<td>R-03</td>
+<td><code>internal/session/autooptimize.go</code></td>
+<td>Global mutable state</td>
+<td>HIGH</td>
+<td>S</td>
+<td><code>GateEnabled</code> and <code>RunTestGate</code> are unprotected package-level vars written by supervisor and read under concurrency</td>
+</tr>
+<tr>
+<td>R-04</td>
+<td><code>internal/enhancer/openai_client.go</code></td>
+<td>Unprotected field</td>
+<td>HIGH</td>
+<td>S</td>
+<td><code>OpenAIClient.LastResponseID</code> written in <code>Improve()</code> and read in next call; no mutex if client is shared</td>
+</tr>
+<tr>
+<td>R-05</td>
+<td><code>internal/session/manager_team.go:GetTeam</code></td>
+<td>Lock ordering</td>
+<td>HIGH</td>
+<td>M</td>
+<td>Acquires <code>sessionsMu.RLock</code> then <code>workersMu.Lock</code>; other methods use only one; inconsistent ordering is deadlock-prone</td>
+</tr>
+<tr>
+<td>R-06</td>
+<td><code>internal/mcpserver/tools.go</code> + <code>tools_dispatch.go</code></td>
+<td>Unprotected map</td>
+<td>HIGH</td>
+<td>S</td>
+<td><code>Server.loadedGroups</code> map is accessed via concurrent MCP tool calls with only partial <code>s.mu</code> coverage</td>
+</tr>
+<tr>
+<td>R-07</td>
+<td><code>internal/session/supervisor.go:tick</code></td>
+<td>Goroutine leak / no WaitGroup</td>
+<td>MEDIUM</td>
+<td>M</td>
+<td>Two <code>go func()</code> launches in <code>tick()</code> (RunCycle, RunCycle from planner) have no WaitGroup or context propagation from supervisor's <code>done</code> channel</td>
+</tr>
+<tr>
+<td>R-08</td>
+<td><code>internal/knowledge/tiered_knowledge.go</code></td>
+<td>Read-modify-write in RLock</td>
+<td>MEDIUM</td>
+<td>S</td>
+<td><code>hitCount[key]++</code> executed while holding only <code>RLock</code> — concurrent writers will corrupt the map</td>
+</tr>
+<tr>
+<td>R-09</td>
+<td><code>internal/session/manager_stall.go:killWithEscalation</code></td>
+<td>Goroutine lifecycle</td>
+<td>MEDIUM</td>
+<td>S</td>
+<td>Spawns <code>cmd.Wait()</code> goroutine when <code>done==nil</code>; if caller also calls <code>Wait()</code>, both race on the same cmd</td>
+</tr>
+<tr>
+<td>R-10</td>
+<td><code>internal/session/stall.go</code></td>
+<td>Channel send in goroutine</td>
+<td>MEDIUM</td>
+<td>S</td>
+<td>StallDetector goroutine may outlive its parent if <code>Stop()</code> is never called — the <code>done</code> channel pattern is correct but <code>closeCh</code> is never closed in the watcher path</td>
+</tr>
+<tr>
+<td>R-11</td>
+<td><code>internal/safety/anomaly_fleet.go:Start</code></td>
+<td>Cancel field race</td>
+<td>MEDIUM</td>
+<td>S</td>
+<td><code>d.cancel = context.WithCancel(ctx)</code> written in <code>Start()</code> without holding <code>d.mu</code>; <code>Stop()</code> reads <code>d.cancel</code> also without lock</td>
+</tr>
+<tr>
+<td>R-12</td>
+<td><code>internal/safety/anomaly.go:Start</code></td>
+<td>Same cancel field race</td>
+<td>MEDIUM</td>
+<td>S</td>
+<td>Same pattern as R-11 in <code>AnomalyDetector</code></td>
+</tr>
+<tr>
+<td>R-13</td>
+<td><code>internal/enhancer/hybrid.go</code></td>
+<td>Shared circuit breaker design</td>
+<td>MEDIUM</td>
+<td>M</td>
+<td><code>HybridEngine.CB</code> is a single <code>CircuitBreaker</code> shared across all concurrent calls; the CB itself is mutex-protected but all three provider-specific LLM clients (<code>claude</code>, <code>gemini</code>, <code>openai</code>) share one CB instance — one flaky provider trips for all</td>
+</tr>
+<tr>
+<td>R-14</td>
+<td><code>internal/session/runner.go:runSession</code></td>
+<td>Double <code>cmd.Wait()</code> risk</td>
+<td>MEDIUM</td>
+<td>M</td>
+<td><code>runSession</code> calls <code>s.cmd.Wait()</code> at line 276; <code>killWithEscalation</code> spawns its own <code>cmd.Wait()</code> goroutine when <code>done==nil</code>; if kill path is invoked while <code>runSession</code> is also waiting, both race on <code>cmd.Wait()</code></td>
+</tr>
+<tr>
+<td>R-15</td>
+<td><code>internal/session/manager.go:executeWorkflow</code></td>
+<td>Local maps not shared</td>
+<td>LOW</td>
+<td>—</td>
+<td><code>completed</code> and <code>terminal</code> maps are goroutine-local in <code>executeWorkflow</code>; parallel steps go through a channel, so this is safe</td>
+</tr>
+<tr>
+<td>R-16</td>
+<td><code>internal/mcpserver/handler_sweep.go</code></td>
+<td>Goroutine with closure captures</td>
+<td>LOW</td>
+<td>S</td>
+<td>Background <code>go func()</code> captures <code>ctx</code> derived from <code>context.WithCancel</code>; cancel is registered to <code>taskID</code> correctly — low risk but leak window if task registry is not drained</td>
+</tr>
+<tr>
+<td>R-17</td>
+<td><code>internal/session/manager.go</code></td>
+<td>Unguarded <code>teams</code> field (test helpers)</td>
+<td>LOW</td>
+<td>S</td>
+<td><code>AddTeamForTesting</code> and direct <code>m.teams[...]</code> in test files bypass <code>workersMu</code> in some tests; not a production race</td>
+</tr>
+<tr>
+<td>R-18</td>
+<td><code>internal/tui/view_adapters.go</code></td>
+<td>Package-level mutable map</td>
+<td>LOW</td>
+<td>S</td>
+<td><code>viewDispatch</code> is a package-level <code>map[ViewMode]registeredView</code> written at init time and read concurrently. Safe if <code>initViewRegistry</code> is called exactly once before any concurrent read — confirmed single-call pattern in practice</td>
+</tr>
+<tr>
+<td>R-19</td>
+<td><code>internal/session/costnorm.go</code></td>
+<td>Package-level map with mutex</td>
+<td>SAFE</td>
+<td>—</td>
+<td><code>ProviderCostRates</code> and <code>claudeBaseRate</code> are protected by <code>costRateMu</code> — correctly implemented</td>
+</tr>
+<tr>
+<td>R-20</td>
+<td><code>internal/knowledge/tiered_knowledge.go</code></td>
+<td>Mixed atomic + mutex</td>
+<td>SAFE</td>
+<td>—</td>
+<td><code>cacheHits</code>/<code>cacheMisses</code> atomics are correct; <code>cache</code> + <code>hitCount</code> maps are under <code>mu</code> — design is safe except for R-08</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-detailed-findings-critical-and-high">2. Detailed Findings: CRITICAL and HIGH</h2>
+<h3 id="r-01-internalsessionautorecoverygo-retrystate-map-unprotected">R-01 — <code>internal/session/autorecovery.go</code>: <code>retryState</code> map unprotected</h3>
+<p><strong>Lines</strong>: 54, 103–121, 174–175, 203–205</p>
+<p><strong>Problematic pattern</strong>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">AutoRecovery</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nx">retryState</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">retryInfo</span><span class="w">  </span><span class="c1">// no mutex</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">}</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">ar</span><span class="w"> </span><span class="o">*</span><span class="nx">AutoRecovery</span><span class="p">)</span><span class="w"> </span><span class="nx">HandleSessionError</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Session</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="nx">Session</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nx">state</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">ar</span><span class="p">.</span><span class="nx">retryState</span><span class="p">[</span><span class="nx">sessionID</span><span class="p">]</span><span class="w">  </span><span class="c1">// line 103 — unprotected read</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">ok</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">        </span><span class="nx">state</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">retryInfo</span><span class="p">{}</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">        </span><span class="nx">ar</span><span class="p">.</span><span class="nx">retryState</span><span class="p">[</span><span class="nx">sessionID</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">state</span><span class="w">   </span><span class="c1">// line 106 — unprotected write</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="o">...</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="nx">state</span><span class="p">.</span><span class="nx">count</span><span class="o">++</span><span class="w">          </span><span class="c1">// line 174 — unprotected write</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nx">state</span><span class="p">.</span><span class="nx">lastRetry</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">()</span><span class="w">  </span><span class="c1">// line 175</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">}</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">ar</span><span class="w"> </span><span class="o">*</span><span class="nx">AutoRecovery</span><span class="p">)</span><span class="w"> </span><span class="nx">ClearRetryState</span><span class="p">(</span><span class="nx">sessionID</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="nb">delete</span><span class="p">(</span><span class="nx">ar</span><span class="p">.</span><span class="nx">retryState</span><span class="p">,</span><span class="w"> </span><span class="nx">sessionID</span><span class="p">)</span><span class="w">  </span><span class="c1">// line 204 — unprotected delete</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Why unsafe</strong>: <code>HandleSessionError</code> is called by the supervisor's <code>tick()</code> goroutine. <code>ClearRetryState</code> may be called by session completion handlers also running concurrently. Go's map type is not safe for concurrent read+write — this is a fatal concurrent map write.</p>
+<p><strong>Recommended fix</strong>: Add <code>sync.Mutex mu</code> to <code>AutoRecovery</code>. Wrap all <code>retryState</code> accesses with <code>ar.mu.Lock()/Unlock()</code>.</p>
+<hr />
+<h3 id="r-02-internalfleetretrygo-server_handlersgo-retrytrackerattempts-unprotected">R-02 — <code>internal/fleet/retry.go</code> + <code>server_handlers.go</code>: <code>RetryTracker.attempts</code> unprotected</h3>
+<p><strong>Lines</strong>: retry.go:49–74; server_handlers.go:130, 149</p>
+<p><strong>Problematic pattern</strong>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">// fleet/retry.go</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">RetryTracker</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">attempts</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="w">  </span><span class="c1">// no mutex</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">policy</span><span class="w">   </span><span class="nx">RetryPolicy</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">}</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">rt</span><span class="w"> </span><span class="o">*</span><span class="nx">RetryTracker</span><span class="p">)</span><span class="w"> </span><span class="nx">RecordFailure</span><span class="p">(</span><span class="nx">workID</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">bool</span><span class="p">,</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nx">rt</span><span class="p">.</span><span class="nx">attempts</span><span class="p">[</span><span class="nx">workID</span><span class="p">]</span><span class="o">++</span><span class="w">  </span><span class="c1">// write without lock</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="o">...</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">}</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c1">// fleet/server_handlers.go — called from HTTP handlers (concurrent)</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nx">c</span><span class="p">.</span><span class="nx">retries</span><span class="p">.</span><span class="nx">RecordSuccess</span><span class="p">(</span><span class="nx">item</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span><span class="w">   </span><span class="c1">// map write, no c.mu held</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="nx">retryable</span><span class="p">,</span><span class="w"> </span><span class="nx">delay</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">c</span><span class="p">.</span><span class="nx">retries</span><span class="p">.</span><span class="nx">RecordFailure</span><span class="p">(</span><span class="nx">item</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span><span class="w">  </span><span class="c1">// map read+write, no c.mu held</span>
+</code></pre></div></p>
+<p><strong>Why unsafe</strong>: The <code>Coordinator</code>'s HTTP handlers run concurrently. Both <code>handleWorkComplete</code> and <code>handleWorkPoll</code> access <code>c.retries</code> (the <code>RetryTracker</code>) without holding <code>c.mu</code>. Multiple concurrent work completions will race on <code>attempts</code> map.</p>
+<p><strong>Recommended fix</strong>: Either add <code>sync.Mutex</code> to <code>RetryTracker</code>, or always access it under <code>c.mu</code> in server handlers (currently the budget section acquires <code>c.mu</code> separately, but <code>c.retries</code> calls straddle those lock sections).</p>
+<hr />
+<h3 id="r-03-internalsessionautooptimizego-unprotected-global-gateenabled-runtestgate">R-03 — <code>internal/session/autooptimize.go</code>: Unprotected global <code>GateEnabled</code> + <code>RunTestGate</code></h3>
+<p><strong>Lines</strong>: autooptimize.go:332, 337; supervisor.go:122</p>
+<p><strong>Problematic pattern</strong>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// autooptimize.go</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kd">var</span><span class="w"> </span><span class="nx">GateEnabled</span><span class="w"> </span><span class="kt">bool</span><span class="w">      </span><span class="c1">// written in supervisor.Start, read in GateChange</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kd">var</span><span class="w"> </span><span class="nx">RunTestGate</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">defaultTestGate</span><span class="w">  </span><span class="c1">// written by tests, read during auto-optimization</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1">// supervisor.go:122 — written from supervisor goroutine</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nx">GateEnabled</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1">// autooptimize.go:354 — read from AutoOptimizer goroutine</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">GateEnabled</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="o">...</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Why unsafe</strong>: <code>GateEnabled</code> is written by <code>supervisor.Start()</code> (which runs under a mutex) but then read by <code>GateChange()</code> without any synchronization. <code>RunTestGate</code> is replaced in tests but could also be replaced at runtime without synchronization. Under the race detector (<code>-race</code>), this is a data race.</p>
+<p><strong>Recommended fix</strong>: Use <code>sync/atomic</code> (<code>atomic.Bool</code> for <code>GateEnabled</code>) or protect both vars with a dedicated mutex. For <code>RunTestGate</code>, an <code>atomic.Value</code> suffices.</p>
+<hr />
+<h3 id="r-04-internalenhanceropenai_clientgo-lastresponseid-not-mutex-protected">R-04 — <code>internal/enhancer/openai_client.go</code>: <code>LastResponseID</code> not mutex-protected</h3>
+<p><strong>Lines</strong>: 22, 181</p>
+<p><strong>Problematic pattern</strong>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">OpenAIClient</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="o">...</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nx">LastResponseID</span><span class="w"> </span><span class="kt">string</span><span class="w">  </span><span class="c1">// no mutex — written in Improve(), visible to callers</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">}</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">c</span><span class="w"> </span><span class="o">*</span><span class="nx">OpenAIClient</span><span class="p">)</span><span class="w"> </span><span class="nx">Improve</span><span class="p">(</span><span class="o">...</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">ImproveResult</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="o">...</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">apiResp</span><span class="p">.</span><span class="nx">ID</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">        </span><span class="nx">c</span><span class="p">.</span><span class="nx">LastResponseID</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">apiResp</span><span class="p">.</span><span class="nx">ID</span><span class="w">  </span><span class="c1">// write from potentially concurrent Improve() call</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="o">...</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="nx">reqBody</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">responsesRequest</span><span class="p">{</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">        </span><span class="o">...</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">        </span><span class="nx">PreviousResponseID</span><span class="p">:</span><span class="w"> </span><span class="nx">c</span><span class="p">.</span><span class="nx">LastResponseID</span><span class="p">,</span><span class="w">  </span><span class="c1">// read while another Improve() may be writing</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Why unsafe</strong>: If the same <code>OpenAIClient</code> is used in concurrent goroutines (e.g., batch prompt improvement or concurrent enhancer calls from the MCP server), <code>LastResponseID</code> will be read and written simultaneously. The field is exported, meaning callers can also read/write it directly.</p>
+<p><strong>Recommended fix</strong>: Add <code>mu sync.Mutex</code> to <code>OpenAIClient</code>. Wrap <code>LastResponseID</code> accesses. Alternatively, make <code>LastResponseID</code> unexported and thread-safe via atomic string.</p>
+<hr />
+<h3 id="r-05-internalsessionmanager_teamgogetteam-inconsistent-lock-ordering">R-05 — <code>internal/session/manager_team.go:GetTeam</code>: Inconsistent lock ordering</h3>
+<p><strong>Lines</strong>: manager_team.go:188–191</p>
+<p><strong>Problematic pattern</strong>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Manager</span><span class="p">)</span><span class="w"> </span><span class="nx">GetTeam</span><span class="p">(</span><span class="nx">name</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">TeamStatus</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">sessionsMu</span><span class="p">.</span><span class="nx">RLock</span><span class="p">()</span><span class="w">     </span><span class="c1">// FIRST: sessionsMu</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">sessionsMu</span><span class="p">.</span><span class="nx">RUnlock</span><span class="p">()</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">workersMu</span><span class="p">.</span><span class="nx">Lock</span><span class="p">()</span><span class="w">       </span><span class="c1">// SECOND: workersMu</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">workersMu</span><span class="p">.</span><span class="nx">Unlock</span><span class="p">()</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="o">...</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
+</code></pre></div></p>
+<p>Other code paths acquire <code>workersMu</code> alone (e.g., <code>DelegateTask</code>, <code>updateTeamOnSessionEnd</code>) and <code>sessionsMu</code> alone (e.g., <code>Launch</code>, <code>Stop</code>). If any code path acquires <code>workersMu</code> and then tries to acquire <code>sessionsMu</code>, a deadlock can occur with <code>GetTeam</code>.</p>
+<p><strong>Why unsafe</strong>: Holding two mutexes with inconsistent ordering across goroutines is the classic deadlock recipe. Even without an existing inverse ordering today, adding it later (or through the <code>correlateTaskStatuses</code> path which acquires <code>w.mu</code> while both are held) creates a 3-mutex ordering issue.</p>
+<p><strong>Recommended fix</strong>: Establish a strict lock hierarchy: <code>sessionsMu</code> must always be acquired before <code>workersMu</code>. Audit all acquisition sites and enforce via comments. Consider whether <code>GetTeam</code> can do a two-phase read: take <code>workersMu</code>, copy team data, release, then take <code>sessionsMu</code> to look up session.</p>
+<hr />
+<h3 id="r-06-internalmcpservertoolsgo-tools_dispatchgo-loadedgroups-map-accessed-without-smu">R-06 — <code>internal/mcpserver/tools.go</code> + <code>tools_dispatch.go</code>: <code>loadedGroups</code> map accessed without <code>s.mu</code></h3>
+<p><strong>Lines</strong>: tools.go:61; tools_dispatch.go:47, 70, 82–83, 94, 116, 146, 160</p>
+<p><strong>Problematic pattern</strong>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// Server.mu is sync.RWMutex (for Repos/lastScanAt), but loadedGroups is:</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Server</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">mu</span><span class="w">           </span><span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span><span class="w">  </span><span class="c1">// protects Repos, lastScanAt</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">loadedGroups</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">bool</span><span class="w">  </span><span class="c1">// accessed WITHOUT mu in handler context</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="o">...</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">}</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Server</span><span class="p">)</span><span class="w"> </span><span class="nx">handleLoadToolGroup</span><span class="p">(</span><span class="o">...</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">loadedGroups</span><span class="p">[</span><span class="nx">group</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w">  </span><span class="c1">// read without s.mu</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">        </span><span class="o">...</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="nx">s</span><span class="p">.</span><span class="nx">RegisterToolGroup</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">mcpSrv</span><span class="p">,</span><span class="w"> </span><span class="nx">group</span><span class="p">)</span><span class="w">  </span><span class="c1">// also sets loadedGroups[group]=true inside without s.mu</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="p">}</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Server</span><span class="p">)</span><span class="w"> </span><span class="nx">handleToolGroups</span><span class="p">(</span><span class="o">...</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">    </span><span class="o">...</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">    </span><span class="nx">Loaded</span><span class="p">:</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">loadedGroups</span><span class="p">[</span><span class="nx">g</span><span class="p">.</span><span class="nx">Name</span><span class="p">],</span><span class="w">  </span><span class="c1">// read without s.mu</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">    </span><span class="o">...</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Why unsafe</strong>: MCP tool calls are dispatched concurrently (one goroutine per call). Two simultaneous <code>ralphglasses_load_tool_group</code> calls for different groups will race on <code>loadedGroups</code> map reads and writes. <code>RegisterToolGroup</code> sets <code>loadedGroups[group] = true</code> also without holding <code>s.mu</code>.</p>
+<p><strong>Recommended fix</strong>: Either protect <code>loadedGroups</code> with <code>s.mu</code> in all handlers, or use a <code>sync.Map</code> for <code>loadedGroups</code>.</p>
+<hr />
+<h2 id="3-package-risk-heat-map">3. Package Risk Heat Map</h2>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Risk Level</th>
+<th>Reasoning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>session</code></td>
+<td><strong>Risky</strong></td>
+<td>Very large package with complex multi-mutex discipline. <code>sessionsMu</code>/<code>workersMu</code> ordering inconsistency in <code>GetTeam</code>. <code>autorecovery.go</code> CRITICAL race. <code>autooptimize.go</code> global var races. Background goroutines in supervisor tick lack lifecycle tracking. Session itself is well-protected (per-session <code>mu</code>).</td>
+</tr>
+<tr>
+<td><code>fleet</code></td>
+<td><strong>Risky</strong></td>
+<td><code>RetryTracker.attempts</code> is a CRITICAL unprotected map. <code>Coordinator</code> acquires <code>c.mu</code> for budget but not for <code>c.retries</code>. HTTP handlers are inherently concurrent. Remaining structures (<code>workers</code> map, <code>budget</code>) properly guarded.</td>
+</tr>
+<tr>
+<td><code>enhancer</code></td>
+<td><strong>Mostly Safe</strong></td>
+<td><code>CircuitBreaker</code> properly mutex-guarded. <code>HybridEngine</code> is only risky if shared across goroutines (currently per-call). <code>OpenAIClient.LastResponseID</code> is an unprotected field (HIGH, R-04). <code>PromptCache</code> has its own mutex.</td>
+</tr>
+<tr>
+<td><code>knowledge</code></td>
+<td><strong>Risky</strong></td>
+<td><code>TieredKnowledge.hitCount[key]++</code> inside <code>RLock</code> is a read-modify-write race (R-08). Otherwise the structure is properly designed.</td>
+</tr>
+<tr>
+<td><code>mcpserver</code></td>
+<td><strong>Risky</strong></td>
+<td><code>loadedGroups</code> map accessed without locking (R-06). MCP server receives concurrent calls. <code>Server.mu</code> covers only <code>Repos</code>/<code>lastScanAt</code>. Task registry needs audit.</td>
+</tr>
+<tr>
+<td><code>safety</code></td>
+<td><strong>Mostly Safe</strong></td>
+<td><code>AnomalyDetector</code> and <code>FleetAnomalyDetector</code> both have <code>cancel</code> field set without mutex in <code>Start()</code> (R-11, R-12). All other state properly guarded by <code>d.mu</code>. Circuit breaker in <code>safety</code> package is exemplary.</td>
+</tr>
+<tr>
+<td><code>bandit</code></td>
+<td><strong>Safe</strong></td>
+<td>Has dedicated race tests (<code>thompson_race_test.go</code>, <code>neural_ucb_test.go</code>). All bandit algorithms guarded with <code>sync.Mutex</code>.</td>
+</tr>
+<tr>
+<td><code>blackboard</code></td>
+<td><strong>Safe</strong></td>
+<td>Has dedicated race test. Uses <code>sync.RWMutex</code> correctly throughout. LRU eviction is properly locked.</td>
+</tr>
+<tr>
+<td><code>distributed</code></td>
+<td><strong>Safe</strong></td>
+<td><code>DistributedQueue</code> uses <code>sync.Mutex</code> for all map accesses. Background reclaim goroutine uses context properly.</td>
+</tr>
+<tr>
+<td><code>events</code></td>
+<td><strong>Safe</strong></td>
+<td><code>Bus</code> uses <code>sync.RWMutex</code>. Subscriber maps protected. Transport implementations use channels correctly.</td>
+</tr>
+<tr>
+<td><code>gateway</code></td>
+<td><strong>Safe</strong></td>
+<td><code>CircuitBreaker</code>, <code>RateLimiter</code>, <code>DedupCache</code> all have proper mutex discipline. Dedup has race test.</td>
+</tr>
+<tr>
+<td><code>tui</code></td>
+<td><strong>Mostly Safe</strong></td>
+<td><code>viewDispatch</code> package-level map is write-once at init time. <code>ThemeWatcher</code> uses mutex. <code>tui/styles.ThemeMu</code> is a package-level <code>sync.RWMutex</code> used correctly.</td>
+</tr>
+<tr>
+<td><code>workflow</code></td>
+<td><strong>Mostly Safe</strong></td>
+<td><code>engine.go</code> fans out steps via goroutines + channel collect pattern (safe). No shared mutable state between workers.</td>
+</tr>
+<tr>
+<td><code>marathon</code></td>
+<td><strong>Safe</strong></td>
+<td><code>marathon.go</code> uses channels and proper locking. Cloud scheduler's <code>jsonUnmarshal</code> is a package-level var for testability — harmless in production since it's written only during test init.</td>
+</tr>
+<tr>
+<td><code>process</code></td>
+<td><strong>Mostly Safe</strong></td>
+<td><code>Manager</code> uses <code>sync.RWMutex</code>. <code>PIDFile</code> uses atomic ops. <code>CircuitBreaker</code> in <code>process</code> uses mutex. <code>killWithEscalation</code> spawning its own <code>cmd.Wait()</code> is a latent double-wait risk (R-09, R-14).</td>
+</tr>
+<tr>
+<td><code>wm</code></td>
+<td><strong>Safe</strong></td>
+<td>Hyprland/Sway/i3 event listeners all use proper channel/goroutine patterns with context cancellation. Layout manager uses <code>sync.RWMutex</code>.</td>
+</tr>
+<tr>
+<td><code>sandbox</code></td>
+<td><strong>Mostly Safe</strong></td>
+<td><code>limits.go</code> atomic counters correct. <code>logforward.go</code> uses channels. Firecracker VM uses <code>sync.Mutex</code>.</td>
+</tr>
+<tr>
+<td><code>plugin</code></td>
+<td><strong>Safe</strong></td>
+<td>Registry uses <code>sync.RWMutex</code>. Plugin lifecycle uses channels for graceful shutdown.</td>
+</tr>
+<tr>
+<td><code>batch</code></td>
+<td><strong>Safe</strong></td>
+<td><code>manager.go</code> uses <code>sync.Mutex</code>. <code>scheduler.go</code> uses <code>sync.Mutex</code>. All batch state protected.</td>
+</tr>
+<tr>
+<td><code>supervisor (session)</code></td>
+<td><strong>Risky</strong></td>
+<td>Supervisor tick fires goroutines for <code>RunCycle</code> with no WaitGroup tracking (R-07). <code>GateEnabled</code> global var race (R-03).</td>
+</tr>
+<tr>
+<td><code>e2e</code></td>
+<td><strong>Safe</strong></td>
+<td>Read-only test infrastructure; no shared mutable production state.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-recommendations">4. Recommendations</h2>
+<h3 id="before-l2-autonomy-must-fix">Before L2 Autonomy (Must Fix)</h3>
+<p>These races can corrupt retry state, cause concurrent map panics, or allow the supervisor to make decisions based on stale/corrupt data:</p>
+<p><strong>Priority 1 — Crash-risk races (could cause <code>fatal error: concurrent map read and map write</code>):</strong></p>
+<ol>
+<li><strong>R-01</strong> (CRITICAL): Add <code>sync.Mutex</code> to <code>AutoRecovery.retryState</code>. ~5 lines of change.</li>
+<li>File: <code>internal/session/autorecovery.go</code></li>
+<li>
+<p>Add <code>mu sync.Mutex</code> field; wrap all <code>retryState</code> accesses.</p>
+</li>
+<li>
+<p><strong>R-02</strong> (CRITICAL): Add <code>sync.Mutex</code> to <code>RetryTracker</code> in <code>fleet/retry.go</code>. ~5 lines.</p>
+</li>
+<li>File: <code>internal/fleet/retry.go</code></li>
+<li>
+<p>Add <code>mu sync.Mutex</code>; wrap <code>RecordFailure</code>, <code>RecordSuccess</code>, <code>Attempts</code>.</p>
+</li>
+<li>
+<p><strong>R-08</strong> (MEDIUM): Move <code>hitCount[key]++</code> inside write lock in <code>TieredKnowledge.Query</code>.</p>
+</li>
+<li>File: <code>internal/knowledge/tiered_knowledge.go:69</code></li>
+<li>Upgrade the <code>RLock</code> section to a full <code>Lock</code> when a cache hit occurs and hitCount needs updating, OR promote hitCount to <code>atomic.Int32</code> values inside the map.</li>
+</ol>
+<p><strong>Priority 2 — Correctness races that affect supervisor decisions:</strong></p>
+<ol>
+<li><strong>R-03</strong> (HIGH): Make <code>GateEnabled</code> an <code>atomic.Bool</code>; make <code>RunTestGate</code> an <code>atomic.Value</code>.</li>
+<li>Files: <code>internal/session/autooptimize.go</code></li>
+<li>
+<p>~3-line change per variable.</p>
+</li>
+<li>
+<p><strong>R-06</strong> (HIGH): Protect <code>loadedGroups</code> map with <code>s.mu</code> in <code>Server</code>.</p>
+</li>
+<li>Files: <code>internal/mcpserver/tools_dispatch.go</code>, <code>tools.go</code></li>
+<li>Add <code>s.mu.Lock()/Unlock()</code> around all <code>loadedGroups</code> reads/writes.</li>
+</ol>
+<p><strong>Priority 3 — Field races in shared clients:</strong></p>
+<ol>
+<li><strong>R-04</strong> (HIGH): Add <code>mu sync.Mutex</code> to <code>OpenAIClient</code>; protect <code>LastResponseID</code>.</li>
+<li>File: <code>internal/enhancer/openai_client.go</code></li>
+<li>~8-line change.</li>
+</ol>
+<hr />
+<h3 id="before-l3-autonomy-should-fix">Before L3 Autonomy (Should Fix)</h3>
+<p>L3 involves recursive self-modification across multiple repos concurrently. These issues become amplified at that scale:</p>
+<ol>
+<li><strong>R-05</strong> (HIGH): Establish and document mutex ordering contract for <code>Manager</code>.</li>
+<li>Files: <code>internal/session/manager_team.go</code>, <code>manager.go</code></li>
+<li>
+<p>Define: <code>sessionsMu</code> &gt; <code>workersMu</code> &gt; per-session <code>mu</code>. Refactor <code>GetTeam</code> to comply.</p>
+</li>
+<li>
+<p><strong>R-07</strong> (MEDIUM): Track goroutines spawned in <code>Supervisor.tick()</code>.</p>
+</li>
+<li>File: <code>internal/session/supervisor.go:229, 242, 367</code></li>
+<li>
+<p>Add a <code>sync.WaitGroup</code> to <code>Supervisor</code>; <code>wg.Add(1)</code> before each <code>go func()</code>, <code>wg.Done()</code> at completion. <code>Stop()</code> should call <code>wg.Wait()</code> after cancelling context.</p>
+</li>
+<li>
+<p><strong>R-11 + R-12</strong> (MEDIUM): Protect <code>cancel</code> field in anomaly detectors.</p>
+</li>
+<li>Files: <code>internal/safety/anomaly.go:139</code>, <code>anomaly_fleet.go:211</code></li>
+<li>
+<p>Assign <code>d.cancel</code> while holding <code>d.mu</code>, or use an <code>atomic.Value</code> wrapper.</p>
+</li>
+<li>
+<p><strong>R-09 + R-14</strong> (MEDIUM): Audit double <code>cmd.Wait()</code> in kill/runner goroutines.</p>
+<ul>
+<li>Files: <code>internal/session/manager_stall.go:53</code>, <code>runner.go:265</code></li>
+<li>Document that <code>runSession</code> always provides <code>s.doneCh</code> so <code>killWithEscalation</code> never spawns its own <code>Wait()</code> goroutine while <code>runSession</code> is active.</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h3 id="patterns-correctly-implemented-do-not-change">Patterns Correctly Implemented (Do Not Change)</h3>
+<ul>
+<li><code>session.Manager</code> <code>sessions</code> map: properly guarded by <code>sessionsMu</code>.</li>
+<li><code>session.Manager</code> <code>teams</code>/<code>loops</code>/<code>workflowRuns</code>: properly guarded by <code>workersMu</code>.</li>
+<li><code>session.Manager</code> config fields: properly guarded by <code>configMu</code>.</li>
+<li><code>ProviderCostRates</code> in <code>costnorm.go</code>: properly guarded by <code>costRateMu</code>.</li>
+<li><code>blackboard.Blackboard</code>: exemplary <code>sync.RWMutex</code> usage, has dedicated race test.</li>
+<li><code>bandit.*</code>: all algorithms have race tests and consistent mutex discipline.</li>
+<li><code>enhancer.CircuitBreaker</code>: mutex-protected, all methods take <code>cb.mu.Lock()</code>.</li>
+<li><code>safety.CircuitBreaker</code>: properly uses <code>sync.Mutex</code> + <code>sync/atomic</code> <code>Metrics</code>.</li>
+<li><code>events.Bus</code>: <code>sync.RWMutex</code> subscriber map, channel-based delivery — correct.</li>
+<li><code>gateway.DedupFilter</code>: has dedicated race test, channel-based dedup.</li>
+</ul>
+<hr />
+<h2 id="5-testing-gaps">5. Testing Gaps</h2>
+<p>The following packages have goroutine-heavy code but no dedicated <code>_race_test.go</code> files:</p>
+<ul>
+<li><code>internal/session/</code> — has <code>decision_model_race_test.go</code> but not for <code>autorecovery</code>, <code>supervisor</code>, or <code>stall</code></li>
+<li><code>internal/fleet/</code> — <code>costpredict_race_test.go</code> exists but does not cover <code>RetryTracker</code> or <code>Coordinator.handleWorkComplete</code></li>
+<li><code>internal/mcpserver/</code> — <code>tools_race_test.go</code> exists but does not cover <code>loadedGroups</code> concurrent load</li>
+</ul>
+<p><strong>Recommended</strong>: Run <code>go test -race ./internal/session/ ./internal/fleet/ ./internal/mcpserver/ ./internal/knowledge/ -count=5</code> to surface these races in CI. Adding dedicated race tests for <code>AutoRecovery</code>, <code>RetryTracker</code>, and <code>Server.handleLoadToolGroup</code> would catch regressions.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -440,7 +440,7 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - **Acceptance:** `ralphglasses <tab>` completes subcommands and repo names
 
 ### 1.5.2 — Release automation `[BLOCKED BY 0.5.7]`
-- [x] 1.5.2.1 — Add `.goreleaser.yaml`: multi-arch builds (linux/amd64, linux/arm64, darwin/amd64, darwin/arm64) `[reconciled 2026-03-26]`
+- [x] 1.5.2.1 — Add `.goreleaser.yaml`: supported builds (linux/amd64, darwin/amd64, darwin/arm64, windows/amd64) `[reconciled 2026-03-26, narrowed 2026-04-07]`
 - [x] 1.5.2.2 — GitHub Actions release workflow: tag push -> goreleaser -> GitHub Release with binaries — `.github/workflows/release.yml` `[reconciled 2026-03-26]`
 - [x] 1.5.2.3 — Add changelog generation: `goreleaser` changelog from conventional commits `P2` `S`
 - [x] 1.5.2.4 — Add Docker image build: `ghcr.io/hairglasses-studio/ralphglasses` multi-arch manifest `P2` `M`
@@ -469,12 +469,12 @@ Tooling, release automation, and contributor workflow. All items independent of 
 - [x] 1.5.5.3 — Add `make install-man` target: copy to `/usr/local/share/man/man1/` `P2` `S`
 - **Acceptance:** `man ralphglasses` works after install
 
-### 1.5.6 — Multi-arch builds
-- [x] 1.5.6.1 — Add arm64 cross-compilation to CI matrix (linux/arm64 for Raspberry Pi) `P2` `M`
-- [x] 1.5.6.2 — Test arm64 binary in QEMU user-mode emulation in CI `P2` `M`
-- [x] 1.5.6.3 — Add `GOARCH=arm64` smoke test: build + run `--help` + exit `P2` `S`
-- [x] 1.5.6.4 — Document Raspberry Pi thin client setup in `docs/raspberry-pi.md` `P2` `S`
-- **Acceptance:** arm64 binary runs on Raspberry Pi 4/5
+### 1.5.6 — Platform builds
+- [x] 1.5.6.1 — Add supported cross-compilation coverage for release targets `P2` `M`
+- [x] 1.5.6.2 — Keep darwin/arm64 release support for Apple Silicon `P2` `S`
+- [x] 1.5.6.3 — Add amd64 smoke build coverage for Linux releases `P2` `S`
+- [x] 1.5.6.4 — Remove unsupported Linux ARM/Raspberry Pi release paths and CI `P2` `S`
+- **Acceptance:** supported binaries build for linux/amd64, darwin/amd64, darwin/arm64, and windows/amd64
 
 ### 1.5.7 — Nix flake (optional)
 - [x] 1.5.7.1 — Add `flake.nix` with `buildGoModule` + dev shell (Go, golangci-lint, shellcheck) `P2` `M`
@@ -1720,7 +1720,7 @@ The self-improvement pipeline operates as a closed loop:
 | Distro | Size | Notes |
 |--------|------|-------|
 | **Ubuntu 24.04 HWE** | ~2GB | Current choice. NVIDIA 550 via apt, kernel 6.12+ |
-| **DietPi** | ~130MB | Debian, i3 in catalog, thin client proven (legacy option) |
+| **Manjaro** | ~3-5GB | Current supported kiosk path with NVIDIA-friendly packaging |
 | Tiny Core Linux | 16-21MB | Ultra-minimal, runs in RAM |
 | ThinStation | ~50MB | PXE-native, RDP/VNC/SSH |
 
@@ -2216,7 +2216,7 @@ Run agents on edge devices, local hardware, and hybrid cloud-edge configurations
 - Files: `internal/session/offline.go`, `internal/session/request_queue.go`
 
 ### 16.3 Edge Fleet Management `P2` `L`
-- [ ] **EF-1** — Edge node registration: lightweight enrollment for Raspberry Pi, Jetson, and similar devices
+- [ ] **EF-1** — Edge node registration: lightweight enrollment for x86_64 mini PCs, lab nodes, and appliance-class coordinators
 - [ ] **EF-2** — Bandwidth-aware communication: compress fleet messages, batch status updates (delta encoding)
 - [ ] **EF-3** — Split inference: run embedding/tokenization on edge, send to cloud for generation
 - [ ] **EF-4** — Edge-specific task assignment: route hardware-appropriate tasks to edge devices

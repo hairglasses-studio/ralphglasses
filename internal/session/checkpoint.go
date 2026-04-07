@@ -40,6 +40,18 @@ func CreateCheckpoint(repoPath string, count int, spendUSD float64, turnCount in
 	ctx, cancel := context.WithTimeout(context.Background(), gitCmdTimeout)
 	defer cancel()
 	gitEnv := append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GIT_EDITOR=true")
+	if os.Getenv("GIT_AUTHOR_NAME") == "" {
+		gitEnv = append(gitEnv, "GIT_AUTHOR_NAME=ralphglasses")
+	}
+	if os.Getenv("GIT_AUTHOR_EMAIL") == "" {
+		gitEnv = append(gitEnv, "GIT_AUTHOR_EMAIL=ralphglasses@local.invalid")
+	}
+	if os.Getenv("GIT_COMMITTER_NAME") == "" {
+		gitEnv = append(gitEnv, "GIT_COMMITTER_NAME=ralphglasses")
+	}
+	if os.Getenv("GIT_COMMITTER_EMAIL") == "" {
+		gitEnv = append(gitEnv, "GIT_COMMITTER_EMAIL=ralphglasses@local.invalid")
+	}
 
 	// Check if working tree is dirty
 	statusCmd := exec.CommandContext(ctx, "git", "status", "--porcelain")

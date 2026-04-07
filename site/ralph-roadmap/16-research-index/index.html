@@ -1,0 +1,3057 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ralph-roadmap/16-research-index/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>16 -- Research Sweep Master Index - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#16-research-sweep-master-index" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              16 -- Research Sweep Master Index
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-finding-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Finding Index
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Finding Index">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#critical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CRITICAL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MEDIUM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        INFO
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-key-metrics-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Key Metrics Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-contradiction-register" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Contradiction Register
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-gap-register" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Gap Register
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-cross-reference-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Cross-Reference Matrix
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-research-urls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Research URLs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Research URLs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mcp-protocol-and-sdks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP Protocol and SDKs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mcp-gateways" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP Gateways
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-frameworks-and-sdks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Frameworks and SDKs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llm-provider-pricing-and-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLM Provider Pricing and Capabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benchmarks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#thin-client-and-distro" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Thin Client and Distro
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#secrets-and-boot-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secrets and Boot Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ota-updates-and-fleet-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OTA Updates and Fleet Deployment
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-missing-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Missing Data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Missing Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cost-and-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost and Operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#distro-and-thin-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Distro and Thin Client
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#roadmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roadmap
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="16-research-sweep-master-index">16 -- Research Sweep Master Index</h1>
+<p>Generated: 2026-04-04
+Sources: 16 agent reports (01-12, s1-s4) + meta-roadmap/08-ralph-deep-dive.md</p>
+<p>This document is the master lookup table for all findings from the ralphglasses research sweep.</p>
+<hr />
+<h2 id="1-finding-index">1. Finding Index</h2>
+<h3 id="critical">CRITICAL</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Source</th>
+<th>Summary</th>
+<th>Affected Packages/Phases</th>
+<th>Cross-Refs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F-001</td>
+<td>s1-race-condition-census (R-01)</td>
+<td><code>AutoRecovery.retryState</code> map accessed from concurrent goroutines with no mutex -- fatal concurrent map write</td>
+<td><code>internal/session/autorecovery.go</code> / Phase 10.5</td>
+<td>F-002, F-028</td>
+</tr>
+<tr>
+<td>F-002</td>
+<td>s1-race-condition-census (R-02)</td>
+<td><code>RetryTracker.attempts</code> map in fleet package has no lock; HTTP handlers race on it</td>
+<td><code>internal/fleet/retry.go</code>, <code>server_handlers.go</code> / Phase 10.5</td>
+<td>F-001, F-015</td>
+</tr>
+<tr>
+<td>F-003</td>
+<td>01-roadmap-matrix (Section 3.1)</td>
+<td>Phase 3.5.5 numbering collision -- two sections share identical sub-IDs for completely different tasks (Codex parity vs theme export)</td>
+<td>ROADMAP.md / Phase 3.5</td>
+<td>F-039</td>
+</tr>
+<tr>
+<td>F-004</td>
+<td>01-roadmap-matrix (Finding B)</td>
+<td><code>tools_loop_test.go</code> exists without <code>tools_loop.go</code> -- Phase 9 tier-1 tools have test expectations but no implementations</td>
+<td><code>internal/mcpserver/</code> / Phase 9</td>
+<td>F-005, F-037</td>
+</tr>
+<tr>
+<td>F-005</td>
+<td>01-roadmap-matrix (Section 6.3)</td>
+<td>Phase 9 marked 100% complete but tier-1 tool files (<code>merge.go</code>, <code>cycle_plan.go</code>, <code>scheduler.go</code>, <code>baseline.go</code>) do not exist on disk</td>
+<td><code>internal/session/</code> / Phase 9</td>
+<td>F-004, F-037</td>
+</tr>
+<tr>
+<td>F-006</td>
+<td>08-ralph-deep-dive (Sprint 7)</td>
+<td>5 BLOCKER path traversal vulnerabilities in MCP handlers -- <code>scratchpadName</code>, <code>name</code>, <code>worktree_paths</code>, <code>hooks.yaml command</code>, <code>verify_commands</code> bypass <code>ValidatePath</code></td>
+<td><code>internal/mcpserver/</code> / Phase 1</td>
+<td>F-029</td>
+</tr>
+</tbody>
+</table>
+<h3 id="high">HIGH</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Source</th>
+<th>Summary</th>
+<th>Affected Packages/Phases</th>
+<th>Cross-Refs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F-007</td>
+<td>s1-race-condition-census (R-03)</td>
+<td><code>GateEnabled</code> and <code>RunTestGate</code> are unprotected package-level vars written by supervisor, read concurrently</td>
+<td><code>internal/session/autooptimize.go</code> / Phase 9.5</td>
+<td>F-001</td>
+</tr>
+<tr>
+<td>F-008</td>
+<td>s1-race-condition-census (R-04)</td>
+<td><code>OpenAIClient.LastResponseID</code> written and read without mutex in concurrent <code>Improve()</code> calls</td>
+<td><code>internal/enhancer/openai_client.go</code> / Phase 23</td>
+<td>F-013</td>
+</tr>
+<tr>
+<td>F-009</td>
+<td>s1-race-condition-census (R-05)</td>
+<td><code>GetTeam</code> acquires <code>sessionsMu</code> then <code>workersMu</code> -- inconsistent lock ordering is deadlock-prone</td>
+<td><code>internal/session/manager_team.go</code> / Phase 10.5</td>
+<td>F-001</td>
+</tr>
+<tr>
+<td>F-010</td>
+<td>s1-race-condition-census (R-06)</td>
+<td><code>Server.loadedGroups</code> map accessed via concurrent MCP tool calls without <code>s.mu</code> protection</td>
+<td><code>internal/mcpserver/tools.go</code>, <code>tools_dispatch.go</code> / Phase 1</td>
+<td>F-006</td>
+</tr>
+<tr>
+<td>F-011</td>
+<td>06-fleet-sweep (Risk 1)</td>
+<td>Unbounded in-memory <code>WorkQueue</code> -- no capacity limit; can grow to OOM under heavy sweep load</td>
+<td><code>internal/fleet/queue.go</code> / Phase 10.5</td>
+<td>F-015</td>
+</tr>
+<tr>
+<td>F-012</td>
+<td>06-fleet-sweep (Risk 2)</td>
+<td>Fleet coordinator queue is in-memory only; restart loses all pending/assigned work and orphans in-flight results</td>
+<td><code>internal/fleet/</code> / Phase 10.5</td>
+<td>F-011</td>
+</tr>
+<tr>
+<td>F-013</td>
+<td>04-enhancer-pipeline (Section 5)</td>
+<td>Circuit breaker shared across all 3 LLM providers -- one flaky provider trips the CB for all</td>
+<td><code>internal/enhancer/circuit.go</code>, <code>hybrid.go</code> / Phase 23</td>
+<td>F-008, F-043</td>
+</tr>
+<tr>
+<td>F-014</td>
+<td>06-fleet-sweep (Risk 4)</td>
+<td>Autoscaler scale-up is advisory only -- publishes event but no actuator spawns new workers</td>
+<td><code>internal/fleet/autoscaler.go</code> / Phase 10.5</td>
+<td>F-011</td>
+</tr>
+<tr>
+<td>F-015</td>
+<td>06-fleet-sweep (Risk 3)</td>
+<td><code>RetryTracker</code> has no mutex -- same as R-02 but found independently in fleet audit</td>
+<td><code>internal/fleet/retry.go</code> / Phase 10.5</td>
+<td>F-002</td>
+</tr>
+<tr>
+<td>F-016</td>
+<td>s4-error-handling (Swallowed #1)</td>
+<td><code>_ = s.SessMgr.RunLoop(context.Background(), run.ID)</code> -- self-improvement loop error silently discarded</td>
+<td><code>internal/mcpserver/handler_selfimprove.go</code> / Phase 8</td>
+<td>F-017</td>
+</tr>
+<tr>
+<td>F-017</td>
+<td>s4-error-handling (Silent #1)</td>
+<td>Supervisor silently swallows <code>RunCycle</code> failures at Warn level -- at L2/L3, cycles fail invisibly</td>
+<td><code>internal/session/supervisor.go:375</code> / Phase 9.5, 13</td>
+<td>F-016, F-018</td>
+</tr>
+<tr>
+<td>F-018</td>
+<td>s4-error-handling (Silent #2-3)</td>
+<td>Chained cycle and sprint-planner failures also warn-logged and swallowed in supervisor tick</td>
+<td><code>internal/session/supervisor.go:231,244</code> / Phase 9.5, 13</td>
+<td>F-017</td>
+</tr>
+<tr>
+<td>F-019</td>
+<td>s4-error-handling (Swallowed #2)</td>
+<td><code>_ = cmd.Run()</code> in hooks -- hook command exit codes entirely discarded; safety gates invisible</td>
+<td><code>internal/hooks/hooks.go:139</code> / Phase 1</td>
+<td>F-006</td>
+</tr>
+<tr>
+<td>F-020</td>
+<td>s3-cost-model (Gap A)</td>
+<td><code>MaxBudgetUSD == 0</code> path allows sessions to launch with no spend cap when <code>DefaultBudgetUSD</code> is also zero</td>
+<td><code>internal/session/manager_lifecycle.go</code> / Phase 10.5</td>
+<td>F-021</td>
+</tr>
+<tr>
+<td>F-021</td>
+<td>s3-cost-model (Gap B)</td>
+<td>Active sessions are not stopped when <code>GlobalBudget</code> is exhausted; overspend silently accepted</td>
+<td><code>internal/fleet/</code> / Phase 10.5</td>
+<td>F-020, F-022</td>
+</tr>
+<tr>
+<td>F-022</td>
+<td>s3-cost-model (Gap D)</td>
+<td>Sweep <code>handleSweepSchedule</code> cost cap is reactive (5-min polling); overspend within polling interval</td>
+<td><code>internal/mcpserver/handler_sweep.go</code> / Phase 10.5</td>
+<td>F-021</td>
+</tr>
+<tr>
+<td>F-023</td>
+<td>05-test-coverage</td>
+<td><code>internal/knowledge</code> fatal concurrent map writes in <code>TieredKnowledge.Query</code> -- active race condition</td>
+<td><code>internal/enhancer/knowledge/</code> / Phase 0.6</td>
+<td>F-001</td>
+</tr>
+<tr>
+<td>F-024</td>
+<td>03-session-architecture (Risk 1)</td>
+<td><code>AutoRecovery.retryState</code> lacks mutex -- confirmed independently from session architecture review</td>
+<td><code>internal/session/autorecovery.go</code> / Phase 10.5</td>
+<td>F-001</td>
+</tr>
+</tbody>
+</table>
+<h3 id="medium">MEDIUM</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Source</th>
+<th>Summary</th>
+<th>Affected Packages/Phases</th>
+<th>Cross-Refs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F-025</td>
+<td>02-mcp-tool-audit (Section 5)</td>
+<td>Deferred loading not activated in production binary -- all 166 tools loaded eagerly despite documented deferred model</td>
+<td><code>cmd/mcp.go</code>, <code>internal/mcpserver/tools.go</code> / Phase 1.5</td>
+<td>F-039</td>
+</tr>
+<tr>
+<td>F-026</td>
+<td>02-mcp-tool-audit (Section 7)</td>
+<td><code>advanced</code> namespace too broad (24 tools, 7+ domains) -- should be split into rc, autonomy, workflow</td>
+<td><code>internal/mcpserver/tools_builders_misc.go</code> / Phase 1.5</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-027</td>
+<td>02-mcp-tool-audit (Section 3)</td>
+<td>8 handler files without dedicated test files; <code>handler_sweep_report.go</code> (302 lines) is highest risk</td>
+<td><code>internal/mcpserver/</code> / Phase 1</td>
+<td>F-033</td>
+</tr>
+<tr>
+<td>F-028</td>
+<td>s1-race-condition-census (R-07)</td>
+<td>Supervisor <code>tick()</code> launches goroutines for <code>RunCycle</code> with no WaitGroup or context propagation from <code>done</code> channel</td>
+<td><code>internal/session/supervisor.go</code> / Phase 9.5</td>
+<td>F-017</td>
+</tr>
+<tr>
+<td>F-029</td>
+<td>02-mcp-tool-audit (Section 5.3)</td>
+<td><code>ValidationMiddleware</code> only validates <code>repo</code> and <code>path</code> params; free-text fields (<code>prompt</code> up to 200KB) unchecked</td>
+<td><code>internal/mcpserver/middleware.go</code> / Phase 1</td>
+<td>F-006</td>
+</tr>
+<tr>
+<td>F-030</td>
+<td>s1-race-condition-census (R-08)</td>
+<td><code>hitCount[key]++</code> in <code>TieredKnowledge</code> executed under <code>RLock</code> -- concurrent writers corrupt the map</td>
+<td><code>internal/knowledge/tiered_knowledge.go</code> / Phase 0.6</td>
+<td>F-023</td>
+</tr>
+<tr>
+<td>F-031</td>
+<td>s1-race-condition-census (R-13)</td>
+<td>Shared <code>CircuitBreaker</code> across all 3 enhancer providers; one provider failure blocks all</td>
+<td><code>internal/enhancer/hybrid.go</code> / Phase 23</td>
+<td>F-013</td>
+</tr>
+<tr>
+<td>F-032</td>
+<td>s3-cost-model (Section 3)</td>
+<td>Gemini Flash output rate understated by ~40% ($2.50 compiled-in vs ~$3.50 actual for 2.5 Flash)</td>
+<td><code>internal/config/costs.go</code> / Phase 24</td>
+<td>F-041</td>
+</tr>
+<tr>
+<td>F-033</td>
+<td>05-test-coverage</td>
+<td>7 packages actively failing tests; <code>internal/session</code> has 6 failing tests including critical knowledge race</td>
+<td><code>internal/session</code>, <code>internal/mcpserver</code>, <code>internal/knowledge</code> / Phase 1</td>
+<td>F-023, F-027</td>
+</tr>
+<tr>
+<td>F-034</td>
+<td>05-test-coverage</td>
+<td>80 coverage-padding files (807 Test* functions); ~6% are genuine call-and-ignore padding</td>
+<td>All packages / Phase 1</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-035</td>
+<td>07-tui-audit (Critical #1)</td>
+<td>LogView unbounded line growth -- long-running sessions with verbose output exhaust memory</td>
+<td><code>internal/tui/views/</code> / Phase 1.5</td>
+<td>F-036</td>
+</tr>
+<tr>
+<td>F-036</td>
+<td>07-tui-audit (Critical #2)</td>
+<td>LoopRun.Iterations O(n) computed per 2s tick via <code>SnapshotLoopControl</code> -- performance degrades with 500+ iterations</td>
+<td><code>internal/tui/</code> / Phase 1.5</td>
+<td>F-035</td>
+</tr>
+<tr>
+<td>F-037</td>
+<td>s2-dead-code-audit (Section 1a)</td>
+<td>5 completed tasks reference files that do not exist (QW-7, QW-11, 0.5.7.1, 0.5.11.1, 1.8.4)</td>
+<td>ROADMAP.md / Phase 0-1</td>
+<td>F-004, F-005</td>
+</tr>
+<tr>
+<td>F-038</td>
+<td>06-fleet-sweep (Risk 5)</td>
+<td>Worker <code>executeWork</code> polls session status every 2s with no upper-bound timeout; stuck sessions consume worker slots forever</td>
+<td><code>internal/fleet/worker.go</code> / Phase 10.5</td>
+<td>F-014</td>
+</tr>
+<tr>
+<td>F-039</td>
+<td>01-roadmap-matrix (Finding E)</td>
+<td>ROADMAP.md header says "1,115 tasks, 442 complete" but live count is 1,143 / 503 -- metrics are stale</td>
+<td>ROADMAP.md / All phases</td>
+<td>F-003</td>
+</tr>
+<tr>
+<td>F-040</td>
+<td>04-enhancer-pipeline (Section 2)</td>
+<td>Default target provider resolves to OpenAI (markdown structure), not Claude (XML) -- potentially surprising default</td>
+<td><code>internal/enhancer/config.go</code> / Phase 23</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-041</td>
+<td>s3-cost-model (Section 3)</td>
+<td>Opus rate in compiled-in costs is $15/$75 (pre-4.6 pricing) while actual Opus 4.6 is $5/$25 -- 67% overestimate</td>
+<td><code>internal/config/costs.go</code> / Phase 24</td>
+<td>F-032</td>
+</tr>
+<tr>
+<td>F-042</td>
+<td>s3-cost-model (Section 6)</td>
+<td>Fleet <code>CostPredictor</code> instantiated but not auto-wired from <code>handleWorkComplete</code>; starts empty on every restart</td>
+<td><code>internal/fleet/costpredict.go</code> / Phase 10.5</td>
+<td>F-020</td>
+</tr>
+<tr>
+<td>F-043</td>
+<td>s2-dead-code-audit (Section 5)</td>
+<td>4 independent <code>CircuitBreaker</code> implementations across enhancer, gateway, process, safety packages</td>
+<td>Multiple packages / Phase 1</td>
+<td>F-013, F-031</td>
+</tr>
+<tr>
+<td>F-044</td>
+<td>03-session-architecture (Section 7.6)</td>
+<td><code>GetLoop</code>/<code>ListLoops</code> use write lock (<code>Lock()</code>) instead of read lock (<code>RLock()</code>) -- serializes all concurrent readers</td>
+<td><code>internal/session/loop.go</code> / Phase 10.5</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-045</td>
+<td>s4-error-handling (Swallowed #9-10)</td>
+<td>Fleet worker <code>CompleteWork</code> and <code>Heartbeat</code> errors silently discarded; coordinator retains items indefinitely</td>
+<td><code>internal/fleet/worker.go</code> / Phase 10.5</td>
+<td>F-012</td>
+</tr>
+<tr>
+<td>F-046</td>
+<td>08-distro-audit (Section 2)</td>
+<td>hw-detect.sh PCI IDs hardcoded for single RTX 4090; cannot detect dual GPU or enumerate multiple cards</td>
+<td><code>distro/scripts/hw-detect.sh</code> / Phase 4</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-047</td>
+<td>s1-race-condition-census (R-11, R-12)</td>
+<td><code>cancel</code> field in both <code>AnomalyDetector</code> and <code>FleetAnomalyDetector</code> written/read without lock</td>
+<td><code>internal/safety/anomaly.go</code>, <code>anomaly_fleet.go</code> / Phase 17</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-048</td>
+<td>03-session-architecture (Section 7)</td>
+<td>JSON format enforcement is the system's top failure mode -- 25.7% retry rate vs target &lt;5%</td>
+<td><code>internal/session/loop_steps.go</code> / Phase 6</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-049</td>
+<td>s4-error-handling (Silent #4)</td>
+<td>Autonomy level persist failure is Warn-logged; L2/L3 resets to default on restart</td>
+<td><code>internal/session/autonomy.go</code> / Phase 13</td>
+<td>F-017</td>
+</tr>
+</tbody>
+</table>
+<h3 id="low">LOW</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Source</th>
+<th>Summary</th>
+<th>Affected Packages/Phases</th>
+<th>Cross-Refs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F-050</td>
+<td>02-mcp-tool-audit (Section 7)</td>
+<td><code>handleLoadToolGroup</code> description string missing 3 namespaces (rdcycle, plugin, sweep)</td>
+<td><code>internal/mcpserver/tools_dispatch.go</code> / Phase 1</td>
+<td>F-025</td>
+</tr>
+<tr>
+<td>F-051</td>
+<td>02-mcp-tool-audit (Section 4)</td>
+<td>Zero tools have all 4 MCP spec annotations simultaneously; 83% have only 1 hint</td>
+<td><code>internal/mcpserver/annotations.go</code> / Phase 1</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-052</td>
+<td>02-mcp-tool-audit (Section 6)</td>
+<td>11 handler functions defined in non-<code>handler_*.go</code> files (tools_fleet.go, tools_session.go)</td>
+<td><code>internal/mcpserver/</code> / Phase 1</td>
+<td>F-043</td>
+</tr>
+<tr>
+<td>F-053</td>
+<td>02-mcp-tool-audit (Section 7)</td>
+<td><code>worktree_create/cleanup</code> misplaced in <code>observability</code> namespace; <code>loop_await/poll</code> also misplaced</td>
+<td><code>internal/mcpserver/</code> / Phase 1.5</td>
+<td>F-026</td>
+</tr>
+<tr>
+<td>F-054</td>
+<td>s2-dead-code-audit (Section 2)</td>
+<td><code>FleetDashboardModel</code> in <code>fleet_dashboard.go</code> is dead code (207 lines + 236 line test) -- never instantiated</td>
+<td><code>internal/tui/views/fleet_dashboard.go</code> / Phase 1.5</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-055</td>
+<td>s2-dead-code-audit (Section 2)</td>
+<td><code>ModalStack</code> defined but never instantiated; root model uses concrete <code>ModalState</code> struct instead</td>
+<td><code>internal/tui/components/modal.go</code> / Phase 1.5</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-056</td>
+<td>s2-dead-code-audit (Section 2)</td>
+<td><code>ViewSearch</code> iota value defined but has no handler in <code>handleKey</code> switch and no <code>viewDispatch</code> entry</td>
+<td><code>internal/tui/app_init.go</code> / Phase 1.5</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-057</td>
+<td>07-tui-audit (Section 8)</td>
+<td>No mouse scroll support -- wheel events not dispatched; viewports scroll only via keyboard</td>
+<td><code>internal/tui/handlers_mouse.go</code> / Phase 1.5</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-058</td>
+<td>07-tui-audit (Section 2)</td>
+<td><code>RefreshAllRepos</code> is synchronous on the 2s UI tick -- 69+ repos cause latency spikes</td>
+<td><code>internal/tui/</code> / Phase 1.5</td>
+<td>F-035</td>
+</tr>
+<tr>
+<td>F-059</td>
+<td>04-enhancer-pipeline (Section 4)</td>
+<td>Rule 14 (<code>cache-no-structure</code>) conflicts with default pipeline: flags markdown-structured prompts targeting OpenAI</td>
+<td><code>internal/enhancer/context.go</code> / Phase 23</td>
+<td>F-040</td>
+</tr>
+<tr>
+<td>F-060</td>
+<td>04-enhancer-pipeline (Section 5)</td>
+<td>Gemini <code>CreateCachedContent()</code> never called automatically; prompt caching is opt-in at operator level</td>
+<td><code>internal/enhancer/gemini_client.go</code> / Phase 23</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-061</td>
+<td>04-enhancer-pipeline (Section 7)</td>
+<td><code>PromptCache</code> eviction is O(n) map scan vs <code>EnhancerCache</code> O(1) LRU -- latent performance gap</td>
+<td><code>internal/enhancer/cache.go</code> / Phase 23</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-062</td>
+<td>01-roadmap-matrix (Section 3.2)</td>
+<td>Phase 6 and Phase 15 both named "Advanced Fleet Intelligence" -- confusing duplicate names</td>
+<td>ROADMAP.md / Phase 6, 15</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-063</td>
+<td>08-distro-audit (Section 7)</td>
+<td>Tailscale auth key stored as plain file at <code>/etc/ralphglasses/ts-authkey</code> before enrollment</td>
+<td><code>distro/scripts/ts-enroll.sh</code> / Phase 4, 12</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-064</td>
+<td>s3-cost-model (Section 5)</td>
+<td>Sweep auto-sizes per-session budget to <code>estimatedPerSession * 1.5</code> even if caller passed lower cap</td>
+<td><code>internal/mcpserver/handler_sweep.go</code> / Phase 10.5</td>
+<td>F-022</td>
+</tr>
+<tr>
+<td>F-065</td>
+<td>s2-dead-code-audit (Section 1)</td>
+<td>158 phantom file references in ROADMAP.md (5 in completed tasks, 153 in open future tasks)</td>
+<td>ROADMAP.md / Phases 0-25</td>
+<td>F-037</td>
+</tr>
+<tr>
+<td>F-066</td>
+<td>s4-error-handling (Section 4)</td>
+<td><code>mcpserver</code> package has worst <code>%w</code> error wrapping ratio at 25%</td>
+<td><code>internal/mcpserver/</code> / Phase 1</td>
+<td>--</td>
+</tr>
+</tbody>
+</table>
+<h3 id="info">INFO</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Source</th>
+<th>Summary</th>
+<th>Affected Packages/Phases</th>
+<th>Cross-Refs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F-067</td>
+<td>05-test-coverage</td>
+<td>Overall reported coverage is 84.5%; 745 test files, 9,267 Test* functions</td>
+<td>All packages</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-068</td>
+<td>s2-dead-code-audit</td>
+<td>Zero genuine stale TODOs in production code; all 7 occurrences are intentional patterns</td>
+<td>All packages</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-069</td>
+<td>s2-dead-code-audit</td>
+<td>187 orphaned test files (~39,436 lines) predominantly coverage-boost tests with meaningful assertions</td>
+<td>All packages</td>
+<td>F-034</td>
+</tr>
+<tr>
+<td>F-070</td>
+<td>09-orchestration-landscape</td>
+<td>ralphglasses occupies unique position: only Go-native multi-provider orchestrator with MCP, TUI, fleet, cascade routing</td>
+<td>Architecture assessment</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-071</td>
+<td>10-mcp-ecosystem</td>
+<td>MCP spec at v2025-11-25 with Tasks primitive, Extensions framework, OAuth Client ID Metadata</td>
+<td>Protocol tracking</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-072</td>
+<td>11-llm-capabilities</td>
+<td>Gemini 3.1 Pro best cost/performance on SWE-bench Verified (80.6% at $2.00 vs Opus 80.8% at $5.00)</td>
+<td>Cost optimization / Phase 24</td>
+<td>F-032</td>
+</tr>
+<tr>
+<td>F-073</td>
+<td>11-llm-capabilities</td>
+<td>Opus 4.6 price dropped 67% ($15/$75 to $5/$25); only frontier model with flat pricing across 1M context</td>
+<td>Cost optimization / Phase 24</td>
+<td>F-041</td>
+</tr>
+<tr>
+<td>F-074</td>
+<td>12-thin-client-patterns</td>
+<td>NixOS recommended for medium-term fleet deployment; Manjaro retained short-term for Phase 4 completion</td>
+<td><code>distro/</code> / Phase 4-5</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-075</td>
+<td>12-thin-client-patterns</td>
+<td>Cage compositor recommended for fleet worker thin clients (single maximized application)</td>
+<td><code>distro/</code> / Phase 4</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-076</td>
+<td>12-thin-client-patterns</td>
+<td>systemd-creds + TPM2 recommended for secrets management on thin clients</td>
+<td><code>distro/</code> / Phase 4</td>
+<td>F-063</td>
+</tr>
+<tr>
+<td>F-077</td>
+<td>s2-dead-code-audit</td>
+<td>Maximum cleanable code: ~42,000 lines across ~200 files; safe immediate: ~500 lines across 3 files</td>
+<td>All packages</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-078</td>
+<td>s4-error-handling</td>
+<td>Zero handler contract violations; all 44 MCP handlers return <code>(*CallToolResult, nil)</code> correctly</td>
+<td><code>internal/mcpserver/</code></td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-079</td>
+<td>s4-error-handling</td>
+<td>Only 2 production panics -- both justified (<code>BlendedCostPer1MTok</code> range check, <code>MustNew</code> constructor)</td>
+<td><code>internal/model/</code>, <code>internal/safety/</code></td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-080</td>
+<td>03-session-architecture</td>
+<td>Lock hierarchy is sound -- three-mutex Manager model consistently applied with no cycles observed</td>
+<td><code>internal/session/</code></td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-081</td>
+<td>03-session-architecture</td>
+<td>Bootstrap clamps autonomy to L1 -- <code>.ralphrc</code> cannot activate L2/L3; correct safety design</td>
+<td><code>internal/session/</code> / Phase 13</td>
+<td>--</td>
+</tr>
+<tr>
+<td>F-082</td>
+<td>01-roadmap-matrix</td>
+<td>Critical path to L3 autonomy: ~100 tasks across 6 unstarted phases, all L or XL sized</td>
+<td>ROADMAP.md / Phase 13</td>
+<td>--</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-key-metrics-summary">2. Key Metrics Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Roadmap total tasks</strong></td>
+<td>1,143 (live grep count)</td>
+<td>01-roadmap-matrix</td>
+</tr>
+<tr>
+<td><strong>Roadmap done tasks</strong></td>
+<td>503</td>
+<td>01-roadmap-matrix</td>
+</tr>
+<tr>
+<td><strong>Roadmap completion %</strong></td>
+<td>44.0%</td>
+<td>01-roadmap-matrix</td>
+</tr>
+<tr>
+<td><strong>Phases complete (100%)</strong></td>
+<td>10</td>
+<td>01-roadmap-matrix</td>
+</tr>
+<tr>
+<td><strong>Phases in progress</strong></td>
+<td>10 (6 per 01, 10 per 08)</td>
+<td>01-roadmap-matrix, 08-deep-dive</td>
+</tr>
+<tr>
+<td><strong>Phases fully planned (0%)</strong></td>
+<td>10-11</td>
+<td>01-roadmap-matrix</td>
+</tr>
+<tr>
+<td><strong>MCP tool count (actual)</strong></td>
+<td>166 across 16 namespaces</td>
+<td>02-mcp-tool-audit</td>
+</tr>
+<tr>
+<td><strong>MCP annotation completeness (all 4 hints)</strong></td>
+<td>0 tools (0%)</td>
+<td>02-mcp-tool-audit</td>
+</tr>
+<tr>
+<td><strong>MCP annotation completeness (2 hints)</strong></td>
+<td>26 tools (16%)</td>
+<td>02-mcp-tool-audit</td>
+</tr>
+<tr>
+<td><strong>MCP annotation completeness (1 hint)</strong></td>
+<td>138 tools (83%)</td>
+<td>02-mcp-tool-audit</td>
+</tr>
+<tr>
+<td><strong>Test file count</strong></td>
+<td>745</td>
+<td>05-test-coverage</td>
+</tr>
+<tr>
+<td><strong>Test function count (Test*)</strong></td>
+<td>9,267</td>
+<td>05-test-coverage</td>
+</tr>
+<tr>
+<td><strong>Overall reported coverage</strong></td>
+<td>84.5%</td>
+<td>05-test-coverage</td>
+</tr>
+<tr>
+<td><strong>Failing packages</strong></td>
+<td>7</td>
+<td>05-test-coverage</td>
+</tr>
+<tr>
+<td><strong>Coverage-padding files</strong></td>
+<td>80 (807 Test* functions)</td>
+<td>05-test-coverage</td>
+</tr>
+<tr>
+<td><strong>Fuzz test count</strong></td>
+<td>15 Fuzz* functions</td>
+<td>05-test-coverage</td>
+</tr>
+<tr>
+<td><strong>Benchmark test count</strong></td>
+<td>20 functions, 6 files</td>
+<td>05-test-coverage</td>
+</tr>
+<tr>
+<td><strong>Race-targeted test count</strong></td>
+<td>52 functions</td>
+<td>05-test-coverage</td>
+</tr>
+<tr>
+<td><strong>Race conditions found (CRITICAL)</strong></td>
+<td>2 (R-01, R-02)</td>
+<td>s1-race-condition-census</td>
+</tr>
+<tr>
+<td><strong>Race conditions found (HIGH)</strong></td>
+<td>4 (R-03 to R-06)</td>
+<td>s1-race-condition-census</td>
+</tr>
+<tr>
+<td><strong>Race conditions found (MEDIUM)</strong></td>
+<td>8 (R-07 to R-14)</td>
+<td>s1-race-condition-census</td>
+</tr>
+<tr>
+<td><strong>Race conditions found (LOW)</strong></td>
+<td>4 (R-15 to R-18)</td>
+<td>s1-race-condition-census</td>
+</tr>
+<tr>
+<td><strong>Race conditions found (SAFE)</strong></td>
+<td>2 (R-19, R-20)</td>
+<td>s1-race-condition-census</td>
+</tr>
+<tr>
+<td><strong>Dead code (FleetDashboardModel)</strong></td>
+<td>443 lines</td>
+<td>s2-dead-code-audit</td>
+</tr>
+<tr>
+<td><strong>Phantom ROADMAP references (total)</strong></td>
+<td>158</td>
+<td>s2-dead-code-audit</td>
+</tr>
+<tr>
+<td><strong>Phantom references in completed tasks</strong></td>
+<td>5</td>
+<td>s2-dead-code-audit</td>
+</tr>
+<tr>
+<td><strong>Orphaned test files</strong></td>
+<td>187 (~39,436 lines)</td>
+<td>s2-dead-code-audit</td>
+</tr>
+<tr>
+<td><strong>Duplicate CircuitBreaker impls</strong></td>
+<td>4</td>
+<td>s2-dead-code-audit</td>
+</tr>
+<tr>
+<td><strong>Stale TODOs in production code</strong></td>
+<td>0</td>
+<td>s2-dead-code-audit</td>
+</tr>
+<tr>
+<td><strong>Budget enforcement layers</strong></td>
+<td>5 (Global, Worker, Pool, Sweep, Session)</td>
+<td>s3-cost-model</td>
+</tr>
+<tr>
+<td><strong>Budget gaps identified</strong></td>
+<td>4 (Gaps A-D)</td>
+<td>s3-cost-model</td>
+</tr>
+<tr>
+<td><strong>Max theoretical L3 spend (unlimited)</strong></td>
+<td>Unbounded -- sessions can launch with $0 cap</td>
+<td>s3-cost-model (Gap A)</td>
+</tr>
+<tr>
+<td><strong>Average task cost</strong></td>
+<td>$0.17</td>
+<td>08-deep-dive</td>
+</tr>
+<tr>
+<td><strong>Total observed spend</strong></td>
+<td>$6.21 across 36 tasks</td>
+<td>08-deep-dive</td>
+</tr>
+<tr>
+<td><strong>Provider distribution</strong></td>
+<td>100% Claude</td>
+<td>08-deep-dive</td>
+</tr>
+<tr>
+<td><strong>Cost optimization potential</strong></td>
+<td>$0.17 avg to $0.03-0.05 (70-85% reduction)</td>
+<td>11-llm-capabilities</td>
+</tr>
+<tr>
+<td><strong>Swallowed errors (top 20)</strong></td>
+<td>1 critical, 4 high, 10 medium, 5 low</td>
+<td>s4-error-handling</td>
+</tr>
+<tr>
+<td><strong>Error wrapping ratio (<code>%w</code>)</strong></td>
+<td>65% global; worst: mcpserver 25%; best: store 93%</td>
+<td>s4-error-handling</td>
+</tr>
+<tr>
+<td><strong>Production panics</strong></td>
+<td>2 (both justified)</td>
+<td>s4-error-handling</td>
+</tr>
+<tr>
+<td><strong>Handler contract violations</strong></td>
+<td>0</td>
+<td>s4-error-handling</td>
+</tr>
+<tr>
+<td><strong>L3 critical path tasks remaining</strong></td>
+<td>~100 (all 0% done, all L/XL)</td>
+<td>01-roadmap-matrix</td>
+</tr>
+<tr>
+<td><strong>Parallelizable backlog (no L3 dependency)</strong></td>
+<td>~138 tasks</td>
+<td>01-roadmap-matrix</td>
+</tr>
+<tr>
+<td><strong>Enhancer pipeline stages</strong></td>
+<td>13 (Stage 0-12)</td>
+<td>04-enhancer-pipeline</td>
+</tr>
+<tr>
+<td><strong>Lint rules</strong></td>
+<td>14 (11 per-line + 3 cache)</td>
+<td>04-enhancer-pipeline</td>
+</tr>
+<tr>
+<td><strong>Scoring dimensions</strong></td>
+<td>10 (weights sum to 1.00)</td>
+<td>04-enhancer-pipeline</td>
+</tr>
+<tr>
+<td><strong>Supervisor observed tick interval</strong></td>
+<td>~27s (vs 60s default)</td>
+<td>08-deep-dive</td>
+</tr>
+<tr>
+<td><strong>JSON format retry rate</strong></td>
+<td>25.7% (25 occurrences across 15 cycles)</td>
+<td>08-deep-dive</td>
+</tr>
+<tr>
+<td><strong>Max fleet concurrency</strong></td>
+<td>128 sessions (32 workers x 4 sessions)</td>
+<td>06-fleet-sweep</td>
+</tr>
+<tr>
+<td><strong>A2A implementation completeness</strong></td>
+<td>Core protocol working; streaming/auth/input-resume are stubs</td>
+<td>06-fleet-sweep</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-contradiction-register">3. Contradiction Register</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Topic</th>
+<th>Report A</th>
+<th>Report B</th>
+<th>Contradiction</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C-01</td>
+<td>MCP tool count</td>
+<td>CLAUDE.md says 126 tools / 14 namespaces</td>
+<td>02-mcp-tool-audit counts 166 tools / 16 namespaces</td>
+<td>40-tool / 2-namespace discrepancy</td>
+<td>CLAUDE.md is stale. <code>plugin</code> and <code>sweep</code> namespaces were added; several existing namespaces grew. True count is 166.</td>
+</tr>
+<tr>
+<td>C-02</td>
+<td>Roadmap task count</td>
+<td>ROADMAP.md header says "1,115 tasks, 442 complete"</td>
+<td>01-roadmap-matrix live grep counts 1,143 tasks / 503 complete</td>
+<td>28-task and 61-completion discrepancy</td>
+<td>Header predates recent phase additions. Live count is authoritative.</td>
+</tr>
+<tr>
+<td>C-03</td>
+<td>Phase 3.5 completion</td>
+<td>08-deep-dive says 28/30 (93%)</td>
+<td>01-roadmap-matrix says 24/30 (80%)</td>
+<td>4-task discrepancy</td>
+<td>Likely different counting methods for the duplicate 3.5.5 section. The 01 report recounted from checkboxes and is more reliable.</td>
+</tr>
+<tr>
+<td>C-04</td>
+<td>In-progress phases count</td>
+<td>08-deep-dive says 10 in progress</td>
+<td>01-roadmap-matrix says 6 in progress (15-96%)</td>
+<td>Different threshold for "in progress"</td>
+<td>08 counts any phase with &gt;0% and &lt;100% as in-progress; 01 excludes phases at exactly 0% which some docs round differently.</td>
+</tr>
+<tr>
+<td>C-05</td>
+<td>Deferred loading status</td>
+<td>CLAUDE.md says tools use deferred loading</td>
+<td>02-mcp-tool-audit confirms deferred loading is NOT activated in production</td>
+<td>Documentation disagrees with code</td>
+<td>Production <code>cmd/mcp.go</code> does not set <code>DeferredLoading = true</code>. The documented behavior only applies in tests.</td>
+</tr>
+<tr>
+<td>C-06</td>
+<td>Opus pricing in code vs reality</td>
+<td><code>config/costs.go</code> uses $15/$75 for Opus</td>
+<td>11-llm-capabilities reports Opus 4.6 at $5/$25</td>
+<td>Compiled-in rate 3x higher than actual</td>
+<td>Code has not been updated for the Opus 4.6 price drop. Cost normalization overestimates by 67%.</td>
+</tr>
+<tr>
+<td>C-07</td>
+<td>Phase 9 completion</td>
+<td>ROADMAP.md marks Phase 9 as 100% complete</td>
+<td>01-roadmap-matrix and s2-dead-code-audit show tier-1 implementation files missing</td>
+<td>Phase declared complete but code incomplete</td>
+<td>The "5 tasks" counted as complete correspond only to tier-3 sub-items. Tier-1 tools lack implementations.</td>
+</tr>
+<tr>
+<td>C-08</td>
+<td>Gemini Flash output rate</td>
+<td><code>config/costs.go</code> uses $2.50/1M</td>
+<td>11-llm-capabilities says actual Gemini 2.5 Flash is ~$3.50/1M</td>
+<td>40% underestimate</td>
+<td>Code needs rate update.</td>
+</tr>
+<tr>
+<td>C-09</td>
+<td>Default sweep budget</td>
+<td>User convention says $0.50/session</td>
+<td>Handler default is $5.00/session</td>
+<td>10x discrepancy</td>
+<td>The $0.50 cap is a caller convention only; the handler does not enforce it without explicit parameter.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-gap-register">4. Gap Register</h2>
+<p>Topics that no agent covered adequately despite being in the original task scope.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Gap</th>
+<th>Expected Coverage</th>
+<th>Actual Coverage</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G-01</td>
+<td>Plugin system architecture</td>
+<td>Full audit of <code>internal/plugin/</code></td>
+<td>Only mentioned as dead-code items; no deep analysis of gRPC interface, marketplace, or plugin lifecycle</td>
+<td>Low -- plugin is Phase 20 (0% done)</td>
+</tr>
+<tr>
+<td>G-02</td>
+<td>Sandbox infrastructure</td>
+<td>Full audit of <code>internal/sandbox/</code></td>
+<td>Mentioned in passing (Phase 5 status); no analysis of Docker, Firecracker, gVisor, or Incus implementations</td>
+<td>Medium -- Phase 5 is 12% done</td>
+</tr>
+<tr>
+<td>G-03</td>
+<td>Store/SQLite migration path</td>
+<td>Detailed store layer analysis</td>
+<td>03-session-architecture covers MemoryStore and notes dual-write; no analysis of <code>internal/store/sqlite.go</code> implementation details</td>
+<td>Medium -- store migration is Phase 10.5</td>
+</tr>
+<tr>
+<td>G-04</td>
+<td>Kubernetes controller</td>
+<td>Audit of <code>internal/k8s/</code></td>
+<td>Only one swallowed error noted (s4); no architectural analysis of pod lifecycle, CRD, or controller logic</td>
+<td>Low -- Phase 7 is 0% done</td>
+</tr>
+<tr>
+<td>G-05</td>
+<td>Marathon subsystem depth</td>
+<td>Deep audit of marathon supervisor</td>
+<td>05-test-coverage notes 1 failing test; s4 notes checkpoint issues; no deep architectural analysis of marathon loop, restart policies, or cloud scheduler</td>
+<td>Medium -- marathon is used in L2+ autonomy</td>
+</tr>
+<tr>
+<td>G-06</td>
+<td>Event bus architecture</td>
+<td>Analysis of <code>internal/events/</code></td>
+<td>s4 notes publish errors silently discarded; no analysis of NATS integration, event bus capacity, or subscriber patterns</td>
+<td>Medium -- events drive supervisor decisions</td>
+</tr>
+<tr>
+<td>G-07</td>
+<td>Bandit/UCB cascade details</td>
+<td>Analysis of <code>internal/bandit/</code></td>
+<td>03-session-architecture mentions bandit hooks in cascade; no deep analysis of Thompson sampling, UCB, or exploration/exploitation tuning</td>
+<td>Low -- Phase 24 is 0% done</td>
+</tr>
+<tr>
+<td>G-08</td>
+<td>First-boot wizard</td>
+<td>Analysis of <code>firstboot.go</code> TUI view</td>
+<td>08-distro-audit mentions firstboot service; 07-tui-audit notes <code>FirstBootView</code> is not wired; no analysis of wizard steps</td>
+<td>Low -- Phase 4 item</td>
+</tr>
+<tr>
+<td>G-09</td>
+<td>Workflow engine depth</td>
+<td>Analysis of workflow define/run/delete</td>
+<td>06-fleet-sweep mentions workflow handlers; no deep analysis of YAML schema, executor, step isolation</td>
+<td>Low -- Phase 8.3 is 0%</td>
+</tr>
+<tr>
+<td>G-10</td>
+<td>Cross-repo tool interaction</td>
+<td>How tools in different namespaces compose</td>
+<td>No report analyzed tool composition patterns or cross-namespace dependencies</td>
+<td>Medium -- affects tool design</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-cross-reference-matrix">5. Cross-Reference Matrix</h2>
+<p>Findings mapped to roadmap phases they affect. Columns show phases with active findings; empty phases omitted.</p>
+<table>
+<thead>
+<tr>
+<th>Finding</th>
+<th>Ph 0.6</th>
+<th>Ph 1</th>
+<th>Ph 1.5</th>
+<th>Ph 3.5</th>
+<th>Ph 4</th>
+<th>Ph 6</th>
+<th>Ph 8</th>
+<th>Ph 9</th>
+<th>Ph 9.5</th>
+<th>Ph 10.5</th>
+<th>Ph 13</th>
+<th>Ph 17</th>
+<th>Ph 23</th>
+<th>Ph 24</th>
+<th>ROADMAP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F-001</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-002</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-003</td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>F-004</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>F-005</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>F-006</td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-007</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-008</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-009</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-010</td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-011</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-012</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-013</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-014</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-016</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-017</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-020</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-021</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-022</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-023</td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-025</td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-026</td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-027</td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-029</td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-032</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td>F-033</td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-035</td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-037</td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>F-039</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>F-041</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td>F-042</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-046</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-047</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-048</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-049</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-054</td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-058</td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F-063</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Count</strong></td>
+<td><strong>1</strong></td>
+<td><strong>6</strong></td>
+<td><strong>6</strong></td>
+<td><strong>1</strong></td>
+<td><strong>2</strong></td>
+<td><strong>1</strong></td>
+<td><strong>1</strong></td>
+<td><strong>2</strong></td>
+<td><strong>2</strong></td>
+<td><strong>12</strong></td>
+<td><strong>2</strong></td>
+<td><strong>1</strong></td>
+<td><strong>3</strong></td>
+<td><strong>2</strong></td>
+<td><strong>5</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Phase 10.5 (Horizontal &amp; Vertical Scaling) has the highest concentration of findings (12), followed by Phase 1 and Phase 1.5 (6 each).</p>
+<hr />
+<h2 id="6-research-urls">6. Research URLs</h2>
+<p>All external URLs from Wave 3 research agents (09-orchestration-landscape, 10-mcp-ecosystem, 11-llm-capabilities, 12-thin-client-patterns), categorized by topic.</p>
+<h3 id="mcp-protocol-and-sdks">MCP Protocol and SDKs</h3>
+<ul>
+<li>MCP Specification (2025-11-25): https://modelcontextprotocol.io/specification/2025-11-25</li>
+<li>MCP First Anniversary: https://blog.modelcontextprotocol.io/posts/2025-11-25-first-mcp-anniversary/</li>
+<li>MCP Changelog: https://modelcontextprotocol.io/specification/2025-11-25/changelog</li>
+<li>MCP 2026 Roadmap: http://blog.modelcontextprotocol.io/posts/2026-mcp-roadmap/</li>
+<li>MCP Official Roadmap: https://modelcontextprotocol.io/development/roadmap</li>
+<li>MCP Transports Spec: https://modelcontextprotocol.io/specification/2025-03-26/basic/transports</li>
+<li>MCP Auth Tutorial: https://modelcontextprotocol.io/docs/tutorials/security/authorization</li>
+<li>MCP 2025-06-18 Spec Update: https://forgecode.dev/blog/mcp-spec-updates/</li>
+<li>MCP Go SDK (official): https://github.com/modelcontextprotocol/go-sdk</li>
+<li>MCP Go SDK v1.0.0: https://github.com/modelcontextprotocol/go-sdk/releases/tag/v1.0.0</li>
+<li>MCP Go SDK pkg.go.dev: https://pkg.go.dev/github.com/modelcontextprotocol/go-sdk/mcp</li>
+<li>mcp-go (community): https://github.com/mark3labs/mcp-go</li>
+<li>MCP Go SDK Design Discussion: https://github.com/orgs/modelcontextprotocol/discussions/364</li>
+<li>Agentic AI Foundation: https://www.anthropic.com/news/donating-the-model-context-protocol-and-establishing-of-the-agentic-ai-foundation</li>
+<li>Linux Foundation AAIF: https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation</li>
+<li>Why MCP Deprecated SSE: https://blog.fka.dev/blog/2025-06-06-why-mcp-deprecated-sse-and-go-with-streamable-http/</li>
+<li>Socket.dev MCP Update: https://socket.dev/blog/mcp-spec-updated-to-add-structured-tool-output-and-improved-oauth-2-1-compliance</li>
+<li>WorkOS MCP Spec Update: https://workos.com/blog/mcp-2025-11-25-spec-update</li>
+<li>Auth0 MCP Auth: https://auth0.com/blog/mcp-specs-update-all-about-auth/</li>
+<li>Den.dev MCP Auth: https://den.dev/blog/mcp-november-authorization-spec/</li>
+<li>Aaron Parecki MCP Client Registration: https://aaronparecki.com/2025/11/25/1/mcp-authorization-spec-update</li>
+<li>Stack Overflow MCP Auth: https://stackoverflow.blog/2026/01/21/is-that-allowed-authentication-and-authorization-in-model-context-protocol/</li>
+<li>MCP vs A2A Comparison: https://apigene.ai/blog/mcp-vs-a2a-when-to-use-each-protocol</li>
+<li>AI Agent Protocol Ecosystem Map 2026: https://www.digitalapplied.com/blog/ai-agent-protocol-ecosystem-map-2026-mcp-a2a-acp-ucp</li>
+</ul>
+<h3 id="mcp-gateways">MCP Gateways</h3>
+<ul>
+<li>5 Best MCP Gateways: https://www.getmaxim.ai/articles/5-best-mcp-gateways-for-developers-in-2026-2/</li>
+<li>Composio MCP Gateways Guide: https://composio.dev/content/mcp-gateways-guide</li>
+<li>Microsoft MCP Gateway: https://github.com/microsoft/mcp-gateway</li>
+<li>Envoy AI Gateway MCP: https://aigateway.envoyproxy.io/blog/mcp-implementation/</li>
+<li>Traefik Hub MCP: https://doc.traefik.io/traefik-hub/mcp-gateway/mcp</li>
+<li>MCP Gateway Registry: https://github.com/agentic-community/mcp-gateway-registry</li>
+<li>MCP OAuth Implementation: https://www.mcpserverspot.com/learn/architecture/mcp-oauth-implementation-guide</li>
+<li>SAP MCP Enterprise Pain Points: https://community.sap.com/t5/artificial-intelligence-blogs-posts/8-critical-pain-points-of-mcp-in-an-enterprise/ba-p/14303370</li>
+<li>New Stack MCP Production: https://thenewstack.io/model-context-protocol-roadmap-2026/</li>
+<li>WorkOS Enterprise MCP: https://workos.com/blog/2026-mcp-roadmap-enterprise-readiness</li>
+<li>Cloudflare MCP Transport: https://developers.cloudflare.com/agents/model-context-protocol/transport/</li>
+<li>Sunpeak SSE to Streamable HTTP: https://sunpeak.ai/blogs/claude-connector-sse-to-streamable-http/</li>
+<li>Auth0 Streamable HTTP Security: https://auth0.com/blog/mcp-streamable-http/</li>
+</ul>
+<h3 id="agent-frameworks-and-sdks">Agent Frameworks and SDKs</h3>
+<ul>
+<li>Claude Agent SDK Overview: https://platform.claude.com/docs/en/agent-sdk/overview</li>
+<li>Building Agents with Claude Agent SDK: https://www.anthropic.com/engineering/building-agents-with-the-claude-agent-sdk</li>
+<li>Claude Code Agent Teams: https://code.claude.com/docs/en/agent-teams</li>
+<li>TeammateTool Discovery: https://paddo.dev/blog/claude-code-hidden-swarm/</li>
+<li>Claude Agent Teams Guide: https://www.nxcode.io/resources/news/claude-agent-teams-parallel-ai-development-guide-2026</li>
+<li>Google A2A Announcement: https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/</li>
+<li>A2A Go SDK: https://github.com/a2aproject/a2a-go</li>
+<li>Google ADK Go 1.0: https://developers.googleblog.com/adk-go-10-arrives/</li>
+<li>ADK Go Announcement: https://developers.googleblog.com/announcing-the-agent-development-kit-for-go-build-powerful-ai-agents-with-your-favorite-languages/</li>
+<li>OpenAI Agents SDK: https://openai.github.io/openai-agents-python/</li>
+<li>OpenAI Handoffs: https://openai.github.io/openai-agents-python/handoffs/</li>
+<li>OpenAI Guardrails: https://openai.github.io/openai-agents-python/guardrails/</li>
+<li>OpenAI Codex CLI: https://github.com/openai/codex</li>
+<li>LangGraph: https://github.com/langchain-ai/langgraph</li>
+<li>LangGraph 2026: https://dev.to/ottoaria/langgraph-in-2026-build-multi-agent-ai-systems-that-actually-work-3h5</li>
+<li>LangChain Multi-Agent: https://docs.langchain.com/oss/python/langchain/multi-agent</li>
+<li>deepagents: https://github.com/langchain-ai/deepagents</li>
+<li>CrewAI: https://github.com/crewAIInc/crewAI</li>
+<li>CrewAI Stars Analysis: https://theagenttimes.com/articles/44335-stars-and-counting-crewais-github-surge-maps-the-rise-of-the-multi-agent-e</li>
+<li>CrewAI Deep Dive: https://qubittool.com/blog/crewai-multi-agent-workflow-guide</li>
+<li>AutoGen: https://github.com/microsoft/autogen</li>
+<li>AG2: https://github.com/ag2ai/ag2</li>
+<li>Microsoft Agent Framework: https://learn.microsoft.com/en-us/agent-framework/overview/</li>
+<li>Microsoft Agent Framework Announcement: https://devblogs.microsoft.com/foundry/introducing-microsoft-agent-framework-the-open-source-engine-for-agentic-ai-apps/</li>
+<li>Agent Framework Migration: https://devblogs.microsoft.com/agent-framework/migrate-your-semantic-kernel-and-autogen-projects-to-microsoft-agent-framework-release-candidate/</li>
+<li>AutoGen Split Analysis: https://dev.to/maximsaplin/microsoft-autogen-has-split-in-2-wait-3-no-4-parts-2p58</li>
+<li>smolagents: https://github.com/huggingface/smolagents</li>
+<li>smolagents Analysis: https://www.decisioncrafters.com/smolagents-build-powerful-ai-agents-in-1-000-lines-of-code-with-26-3k-github-stars/</li>
+<li>MCP Adapter for smolagents: https://grll.github.io/mcpadapt/guide/smolagents/</li>
+<li>PydanticAI: https://ai.pydantic.dev/</li>
+<li>PydanticAI GitHub: https://github.com/pydantic/pydantic-ai</li>
+<li>PydanticAI MCP: https://ai.pydantic.dev/mcp/overview/</li>
+<li>PydanticAI Analysis: https://www.decisioncrafters.com/pydanticai-type-safe-ai-agent-framework-with-16k-github-stars/</li>
+<li>agency-swarm: https://github.com/VRSEN/agency-swarm</li>
+<li>CAMEL-AI: https://github.com/camel-ai/camel</li>
+<li>CAMEL NeurIPS Paper: https://openreview.net/forum?id=3IyL2XWDkG</li>
+</ul>
+<h3 id="llm-provider-pricing-and-capabilities">LLM Provider Pricing and Capabilities</h3>
+<ul>
+<li>Anthropic Pricing: https://platform.claude.com/docs/en/about-claude/pricing</li>
+<li>Google Gemini Pricing: https://ai.google.dev/gemini-api/docs/pricing</li>
+<li>OpenAI Pricing: https://developers.openai.com/api/docs/pricing</li>
+<li>Claude 1M Context GA: https://claude.com/blog/1m-context-ga</li>
+<li>Claude Extended Thinking: https://platform.claude.com/docs/en/build-with-claude/extended-thinking</li>
+<li>Claude Prompt Caching: https://platform.claude.com/docs/en/build-with-claude/prompt-caching</li>
+<li>Claude Code Subagents: https://code.claude.com/docs/en/sub-agents</li>
+<li>Claude 4.6 What's New: https://platform.claude.com/docs/en/about-claude/models/whats-new-claude-4-6</li>
+<li>Claude Code Q1 2026: https://www.mindstudio.ai/blog/claude-code-q1-2026-update-roundup</li>
+<li>Claude Caching Guide: https://blog.wentuo.ai/en/claude-code-prompt-caching-ttl-pricing-guide-en.html</li>
+<li>Gemini Caching: https://ai.google.dev/gemini-api/docs/caching</li>
+<li>Gemini Implicit Caching: https://developers.googleblog.com/en/gemini-2-5-models-now-support-implicit-caching/</li>
+<li>Gemini CLI MCP: https://geminicli.com/docs/tools/mcp-server/</li>
+<li>OpenAI Prompt Caching: https://developers.openai.com/api/docs/guides/prompt-caching</li>
+<li>OpenAI Prompt Caching Announcement: https://openai.com/index/api-prompt-caching/</li>
+<li>Codex CLI Features: https://developers.openai.com/codex/cli/features</li>
+<li>Codex Noninteractive: https://developers.openai.com/codex/noninteractive</li>
+<li>Confidence-Based Escalation Paper: https://arxiv.org/abs/2410.10347</li>
+<li>Claude Worktrees Productivity: https://botmonster.com/posts/claude-md-productivity-stack-custom-commands-git-worktrees-agent-rules/</li>
+</ul>
+<h3 id="benchmarks">Benchmarks</h3>
+<ul>
+<li>SWE-bench Verified: https://www.vals.ai/benchmarks/swebench</li>
+<li>marc0.dev Leaderboard: https://www.marc0.dev/en/leaderboard</li>
+<li>LLM Coding Benchmark Comparison 2026: https://smartscope.blog/en/generative-ai/chatgpt/llm-coding-benchmark-comparison-2026/</li>
+</ul>
+<h3 id="thin-client-and-distro">Thin Client and Distro</h3>
+<ul>
+<li>NixOS.org: https://nixos.org/</li>
+<li>NixOS AI Infrastructure: https://medium.com/@mehtacharu0215/nixos-powered-ai-infrastructure-reproducible-immutable-deployable-anywhere-d3e225fc9b5a</li>
+<li>NixOS Most Powerful 2026: https://allthingsopen.org/articles/nixos-most-powerful-linux-distro-2026</li>
+<li>Nixiosk: https://github.com/matthewbauer/nixiosk</li>
+<li>NixOS Kiosk with Cage: https://github.com/matthewbauer/nixos-kiosk</li>
+<li>Fedora Kinoite: https://fedoraproject.org/atomic-desktops/kinoite/</li>
+<li>Fedora Atomic: https://fedoramagazine.org/introducing-fedora-atomic-desktops/</li>
+<li>Fedora Silverblue Review: https://www.xda-developers.com/replaced-my-linux-desktop-fedora-silverblue-feels-futuristic/</li>
+<li>Arch Installer Compositors: https://9to5linux.com/arch-linux-installer-now-supports-labwc-niri-and-river-wayland-compositors</li>
+<li>Arch vs NixOS 2026: https://www.slant.co/versus/2690/2700/~arch-linux_vs_nixos</li>
+<li>Manjaro ARM Wiki: https://wiki.manjaro.org/index.php/Manjaro-ARM</li>
+<li>Hyprland vs Sway 2025: https://gigasblade.blogspot.com/2025/10/hyprland-vs-swaywm-2025-dazzling.html</li>
+<li>Hyprland vs Sway Landscape: https://www.oreateai.com/blog/hyprland-vs-sway-navigating-the-wayland-tiling-window-manager-landscape-in-2025/</li>
+<li>Tiling WMs Productivity: https://dasroot.net/posts/2026/01/tiling-window-managers-i3-sway-hyprland-productivity/</li>
+<li>Sway ArchWiki: https://wiki.archlinux.org/title/Sway</li>
+<li>Cage GitHub: https://github.com/cage-kiosk/cage</li>
+<li>Cage 0.2: https://www.phoronix.com/news/Cage-0.2-Released</li>
+<li>niri: https://github.com/niri-wm/niri</li>
+<li>niri v25.01: https://www.phoronix.com/news/Niri-25.01-Tiling-Wayland-Comp</li>
+<li>wlroots Multi-GPU Issue: https://github.com/swaywm/wlroots/issues/934</li>
+<li>Multiple NVIDIA GPUs Wayland: https://bbs.archlinux.org/viewtopic.php?id=303372</li>
+<li>NVIDIA open-gpu Issue: https://github.com/NVIDIA/open-gpu-kernel-modules/issues/318</li>
+<li>RTX 4090 Cursor Lag: https://github.com/basecamp/omarchy/discussions/4702</li>
+<li>Hyprland WLR_DRM_DEVICES: https://github.com/hyprwm/hyprland-wiki/issues/694</li>
+<li>Wayland Multi-Monitor 2026: https://copyprogramming.com/howto/multi-monitor-issues-with-xorg-nvidia-wayland</li>
+</ul>
+<h3 id="secrets-and-boot-security">Secrets and Boot Security</h3>
+<ul>
+<li>systemd-creds ArchWiki: https://wiki.archlinux.org/title/Systemd-creds</li>
+<li>systemd-creds Magic: https://smallstep.com/blog/systemd-creds-hardware-protected-secrets/</li>
+<li>systemd.io Credentials: https://systemd.io/CREDENTIALS/</li>
+<li>systemd-creds RHEL: https://oneuptime.com/blog/post/2026-03-04-systemd-credentials-secret-injection-rhel-9/view</li>
+<li>1Password CLI: https://developer.1password.com/docs/cli/get-started/</li>
+<li>1Password Secrets in Scripts: https://developer.1password.com/docs/cli/secrets-scripts/</li>
+<li>1Password systemd: https://1password.community/discussion/128572/how-to-inject-a-secret-into-the-environment-via-a-systemd-service-definition</li>
+<li>UEFI Secure Boot ArchWiki: https://wiki.archlinux.org/title/Unified_Extensible_Firmware_Interface/Secure_Boot</li>
+<li>TPM 2.0 and Secure Boot: https://servermall.com/blog/tpm-2-0-and-secure-boot-on-the-server/</li>
+<li>NSA UEFI Guidance: https://media.defense.gov/2025/Dec/11/2003841096/-1/-1/0/CSI_UEFI_SECURE_BOOT.PDF</li>
+<li>NVIDIA DKMS Signing: https://gist.github.com/lijikun/22be09ec9b178e745758a29c7a147cc9</li>
+<li>NVIDIA r595 Guide: https://docs.nvidia.com/datacenter/tesla/pdf/Driver_Installation_Guide.pdf</li>
+<li>TPM2 LUKS systemd-cryptenroll: https://gierdo.astounding.technology/blog/2025/07/05/tpm2-luks-systemd</li>
+</ul>
+<h3 id="ota-updates-and-fleet-deployment">OTA Updates and Fleet Deployment</h3>
+<ul>
+<li>Rugix OTA Compared: https://rugix.org/blog/2026-02-28-ota-update-engines-compared/</li>
+<li>RAUC: https://rauc.io/</li>
+<li>SWUpdate vs Mender vs RAUC: https://32blog.com/en/yocto/yocto-ota-update-comparison</li>
+<li>FOSDEM 2025 A/B Updates: https://archive.fosdem.org/2025/events/attachments/fosdem-2025-6299-exploring-open-source-dual-a-b-update-solutions-for-embedded-linux/slides/237879/leon-anav_pyytRpX.pdf</li>
+<li>Torizon OTA Guide: https://www.torizon.io/blog/ota-best-linux-os-image-update-model</li>
+<li>greetd ArchWiki: https://wiki.archlinux.org/title/Greetd</li>
+<li>tuigreet: https://github.com/apognu/tuigreet</li>
+<li>greetd SourceHut: https://sr.ht/~kennylevinsen/greetd/</li>
+<li>Cage Website: https://www.hjdskes.nl/projects/cage/</li>
+</ul>
+<hr />
+<h2 id="7-missing-data">7. Missing Data</h2>
+<p>Questions that remain unanswered after this sweep.</p>
+<h3 id="architecture">Architecture</h3>
+<ol>
+<li><strong>SQLite store implementation details</strong> -- The <code>internal/store/sqlite.go</code> exists but no agent analyzed its schema, migration path, or WAL mode configuration in detail.</li>
+<li><strong>NATS JetStream integration</strong> -- Phase 10.5 references NATS for event bus transport; no agent analyzed the <code>internal/events/</code> NATS subscriber/publisher implementation.</li>
+<li><strong>Worktree pool lifecycle</strong> -- <code>WorktreePool</code> is mentioned in loop engine flow but no agent analyzed pool sizing, cleanup, or stale worktree handling.</li>
+<li><strong>Session rehydration correctness</strong> -- When <code>RehydrateFromStore</code> runs on restart, what happens to sessions that were mid-turn? No analysis of partial-state recovery.</li>
+</ol>
+<h3 id="testing">Testing</h3>
+<ol>
+<li><strong>Actual <code>go test -race ./...</code> results</strong> -- No agent ran the race detector; findings are from static analysis only. Actual race detector output would confirm or refute R-01 through R-20.</li>
+<li><strong>Coverage delta from padding removal</strong> -- If the ~5% call-and-ignore padding tests were removed, what would the real coverage number be?</li>
+<li><strong>E2E scenario pass rate</strong> -- No agent ran the e2e scenarios. The 24 scenarios are documented but not validated against current code.</li>
+</ol>
+<h3 id="cost-and-operations">Cost and Operations</h3>
+<ol>
+<li><strong>Actual Gemini/Codex cost data</strong> -- All observed cost data is 100% Claude. No real-world cost observations exist for multi-provider cascade routing.</li>
+<li><strong>DecisionModel training data volume</strong> -- How many <code>LoopObservation</code> records actually exist? Is the 50-sample threshold close to being met?</li>
+<li><strong>Fleet coordinator stress test</strong> -- No load testing data. The theoretical max of 128 concurrent sessions has never been validated.</li>
+</ol>
+<h3 id="distro-and-thin-client">Distro and Thin Client</h3>
+<ol>
+<li><strong>Bootable ISO test results</strong> -- No agent tested whether <code>make iso</code> produces a bootable image in QEMU. Phase 4.1.3 and 4.1.4 remain unvalidated.</li>
+<li><strong>Dual RTX 4090 Sway compatibility</strong> -- 12-thin-client-patterns flags the DMA-BUF interop problem but no validation on actual hardware.</li>
+<li><strong>hw-detect.sh on target hardware</strong> -- The script has only been analyzed statically. No run on ProArt X870E hardware.</li>
+</ol>
+<h3 id="security">Security</h3>
+<ol>
+<li><strong>Full path traversal exploit verification</strong> -- The 5 Sprint 7 BLOCKERs are identified but no agent verified exploitability with concrete payloads.</li>
+<li><strong>Tailscale ACL policy audit</strong> -- The policy JSON was read but not analyzed for over-permissive rules or tag escalation paths.</li>
+</ol>
+<h3 id="roadmap">Roadmap</h3>
+<ol>
+<li><strong>Phase 13 feasibility with current architecture</strong> -- The L3 autonomy target (72-hour unattended) requires self-healing, but no analysis of whether the current supervisor architecture can support it without fundamental redesign.</li>
+<li><strong>Phase 7 (Kubernetes) CRD design</strong> -- The <code>internal/k8s/</code> package exists but no agent analyzed whether the CRD design is compatible with the A2A protocol integration in Phase 11.</li>
+<li><strong>WASM plugin runtime selection</strong> -- Phase 20 requires embedded WASM; no analysis of which Go WASM runtime (wazero, wasmtime, wasmer) fits the mcpkit architecture.</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

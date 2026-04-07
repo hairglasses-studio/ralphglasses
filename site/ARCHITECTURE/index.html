@@ -1,0 +1,1698 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ARCHITECTURE/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Architecture - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#package-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Package Layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#provider-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Provider Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-new-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a New Provider
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#middleware-instrumentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Middleware &amp; Instrumentation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Middleware &amp; Instrumentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tool-benchmarking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool Benchmarking
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#distributed-fleet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Distributed Fleet
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tiered-model-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tiered Model Routing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-caching-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prompt Caching Strategy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#event-bus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Event Bus
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#process-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#session-sentinel-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Sentinel Errors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#self-improvement-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self-Improvement Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcp-namespaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP Namespaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#provider-cost-normalization-stderr-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider Cost Normalization &amp; Stderr Fallback
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Provider Cost Normalization &amp; Stderr Fallback">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#provider-event-normalizers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider Event Normalizers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cost-extraction-cascade" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost Extraction Cascade
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stderr-cost-fallback-parsecostfromstderr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stderr Cost Fallback (ParseCostFromStderr)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cross-provider-cost-normalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Provider Cost Normalization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-flow-raw-output-sessionspentusd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow: Raw Output → Session.SpentUSD
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tui-loop-interaction-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TUI Loop Interaction Surface
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TUI Loop Interaction Surface">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#loop-views" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loop Views
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Loop Views">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#loop-list-internaltuiviewsloop_listgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loop List (internal/tui/views/loop_list.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loop-control-panel-internaltuiviewsloop_controlgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loop Control Panel (internal/tui/views/loop_control.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loop-detail-internaltuiviewsloopdetailgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loop Detail (internal/tui/views/loopdetail.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loop-health-internaltuiviewsloophealthgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loop Health (internal/tui/views/loophealth.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keybindings-and-dispatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keybindings and Dispatch
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Keybindings and Dispatch">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#loop-key-bindings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loop Key Bindings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#message-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Message Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#processexitmsg-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProcessExitMsg Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status-bar-loop-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Bar Loop Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#file-schemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Schemas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#developer-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Developer References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="architecture">Architecture</h1>
+<h2 id="package-layout">Package Layout</h2>
+<ul>
+<li><strong>main.go</strong> → <strong>cmd/root.go</strong>: Cobra CLI with <code>--scan-path</code> flag</li>
+<li><strong>internal/discovery/</strong>: Scans directories for <code>.ralph/</code> and <code>.ralphrc</code></li>
+<li><strong>internal/model/</strong>: Data types and parsers for status.json, progress.json, circuit breaker state, .ralphrc</li>
+<li><strong>internal/process/</strong>: Process management (launch/stop/pause via os/exec), fsnotify file watcher, log tailing</li>
+<li><strong>internal/session/</strong>: Multi-provider LLM session management (claude/gemini/codex), agent teams, budget enforcement, provider dispatch, concurrent worker fan-out, autonomy levels, auto-optimization, auto-recovery, context store, HITL metrics, feedback profiling, prompt caching, self-improvement pipeline (reflexion, episodic memory, cascade routing, curriculum sorting, bandit-based provider selection), supervisor (session lifecycle orchestration, health monitor, cycle chainer), sentinel errors, acceptance testing</li>
+<li><strong>internal/batch/</strong>: Batch API support for Claude, Gemini, and OpenAI — submit non-interactive workloads at 50% discount</li>
+<li><strong>internal/wsclient/</strong>: WebSocket transport client for OpenAI Responses API (40% faster for multi-turn tool chains)</li>
+<li><strong>internal/mcpserver/</strong>: MCP tool handlers (126 tools in 14 namespaces, deferred loading, stdio transport via mcp-go)</li>
+<li><code>tools.go</code> — Server struct, constructors, Register()</li>
+<li><code>tools_builders.go</code> — Tool definition builders for all namespaces</li>
+<li><code>tools_dispatch.go</code> — Dispatch table routing tool names to handlers</li>
+<li><code>handler_prompt.go</code> — Multi-provider prompt enhancement handlers</li>
+<li><code>handler_fleet.go</code> — Distributed fleet, HITL, autonomy, and feedback profile handlers</li>
+<li><code>handler_fleet_h.go</code> — Fleet intelligence: blackboard coordination, A2A offers, cost forecasting</li>
+<li><code>handler_session.go</code> — Session lifecycle handlers (launch, list, status, stop, etc.)</li>
+<li><code>handler_loop.go</code> — Loop lifecycle and control handlers</li>
+<li><code>handler_loopbench.go</code> — Loop benchmarking and baseline handlers</li>
+<li><code>handler_loopwait.go</code> — Loop await/poll handlers (replaces sleep anti-pattern)</li>
+<li><code>handler_eval.go</code> — Offline evaluation: counterfactual, A/B test, changepoints</li>
+<li><code>handler_anomaly.go</code> — Anomaly detection via sliding-window z-score analysis</li>
+<li><code>handler_observation.go</code> — Observation query and summary handlers</li>
+<li><code>handler_scratchpad.go</code> — Scratchpad read/append/list/resolve handlers</li>
+<li><code>handler_selftest.go</code> — Recursive self-test handler</li>
+<li><code>handler_selfimprove.go</code> — Self-improvement loop handler</li>
+<li><code>handler_rc.go</code> — Remote control (mobile-friendly) handlers</li>
+<li><code>handler_repo.go</code> — Repo health, optimize, scaffold, claudemd_check, snapshot</li>
+<li><code>handler_roadmap.go</code> — Roadmap parse, analyze, research, expand, export</li>
+<li><code>handler_team.go</code> — Agent team create, delegate, status, agent definitions</li>
+<li><code>handler_awesome.go</code> — Awesome-list fetch, analyze, diff, report, sync</li>
+<li><code>handler_circuit.go</code> — Circuit breaker reset handler</li>
+<li><code>handler_costestimate.go</code> — Pre-launch cost estimation</li>
+<li><code>handler_coverage.go</code> — Go test coverage reporting</li>
+<li><code>handler_mergeverify.go</code> — Build+vet+test merge verification</li>
+<li><code>middleware.go</code> — Composable middleware: InstrumentationMiddleware, EventBusMiddleware, ValidationMiddleware</li>
+<li><code>timeout.go</code> — TimeoutMiddleware with per-tool overrides and exemptions</li>
+<li><code>toolbench.go</code> — Auto-benchmarking with JSONL logging, P50/P95 latencies, regression detection</li>
+<li><code>annotations.go</code> — MCP tool annotation helpers</li>
+<li><code>errors.go</code> — Coded error helpers and error constants</li>
+<li><code>validate.go</code> — Path and repo name validation</li>
+<li><code>schemas.go</code> — Shared JSON schema definitions</li>
+<li><code>helpers.go</code> — Common handler helper functions</li>
+<li><code>mcplog.go</code> — MCP-aware structured logging</li>
+<li><strong>internal/events/</strong>: Typed publish-subscribe event bus with <code>PublishCtx(ctx, Event)</code>, filtered subscriptions, history ring buffer, event query, and schema migration</li>
+<li><strong>internal/enhancer/</strong>: Prompt enhancement pipeline (13-stage), scoring, lint, multi-provider LLM improvement</li>
+<li><strong>internal/roadmap/</strong>: Roadmap parsing, analysis, research, expansion, export</li>
+<li><strong>internal/repofiles/</strong>: Ralph config file scaffolding and optimization</li>
+<li><strong>internal/fleet/</strong>: Distributed fleet coordination — HTTP coordinator/worker nodes, priority queue, cost optimizer, Tailscale-based discovery</li>
+<li><strong>internal/sandbox/</strong>: Docker container isolation for sessions (create, start, exec, stop, cleanup)</li>
+<li><strong>internal/tracing/</strong>: OpenTelemetry GenAI semantic tracing + Prometheus metrics recorder</li>
+<li><strong>internal/plugin/</strong>: Plugin system — registry, file-based loader, builtin logger plugin</li>
+<li><strong>internal/e2e/</strong>: E2E scenario test harness with mock launch/wait hooks</li>
+<li><strong>cmd/mcp.go</strong>: MCP server subcommand (<code>go run . mcp</code>)</li>
+<li><strong>cmd/doctor.go</strong>: Environment verification (required binaries, API keys, scan-path accessibility)</li>
+<li><strong>cmd/serve.go</strong>: Fleet node (<code>--coordinator</code> for leader, <code>--coordinator-url</code> for worker)</li>
+<li><strong>cmd/validate.go</strong>: Validate all <code>.ralphrc</code> configs across scan-path repos</li>
+<li><strong>internal/tui/</strong>: Bubble Tea app model, keymap, command/filter modes</li>
+<li><strong>internal/tui/styles/</strong>: Lipgloss theme (k9s-inspired, no other package imports this)</li>
+<li><strong>internal/tui/components/</strong>: Reusable widgets (sortable table, breadcrumb, status bar, notifications)</li>
+<li><strong>internal/tui/views/</strong>: View renderers (overview, repo detail, log stream, config editor, help)</li>
+</ul>
+<h2 id="provider-architecture">Provider Architecture</h2>
+<p>The <code>internal/session/</code> package uses a provider dispatch pattern:</p>
+<ul>
+<li><strong><code>providers.go</code></strong>: <code>buildCmdForProvider()</code> dispatches to <code>buildClaudeCmd()</code>, <code>buildGeminiCmd()</code>, or <code>buildCodexCmd()</code>. <code>normalizeEvent()</code> dispatches to per-provider event normalizers. <code>ValidateProvider()</code> checks CLI binary availability.</li>
+<li><strong><code>runner.go</code></strong>: Provider-agnostic session lifecycle. Calls <code>buildCmdForProvider()</code> for command construction and <code>normalizeEvent()</code> for stream parsing.</li>
+<li><strong><code>types.go</code></strong>: <code>Provider</code> type (<code>claude</code>|<code>gemini</code>|<code>codex</code>) used in <code>Session</code>, <code>LaunchOptions</code>, <code>TeamConfig</code>.</li>
+<li><strong><code>budget.go</code></strong>: <code>LedgerEntry</code> and <code>CostSummary</code> include <code>Provider</code> field for per-provider cost tracking.</li>
+</ul>
+<h3 id="adding-a-new-provider">Adding a New Provider</h3>
+<ol>
+<li>Add constant to <code>Provider</code> in <code>types.go</code></li>
+<li>Add binary name in <code>providerBinary()</code> in <code>providers.go</code></li>
+<li>Add <code>buildXxxCmd()</code> function in <code>providers.go</code></li>
+<li>Add <code>normalizeXxxEvent()</code> function in <code>providers.go</code></li>
+<li>Add default model in <code>ProviderDefaults()</code> in <code>providers.go</code></li>
+<li>Add cases in <code>buildCmdForProvider()</code> and <code>normalizeEvent()</code> switch statements</li>
+<li>Add tests in <code>providers_test.go</code></li>
+</ol>
+<h2 id="middleware-instrumentation">Middleware &amp; Instrumentation</h2>
+<p>The MCP server supports composable middleware (<code>internal/mcpserver/middleware.go</code>, <code>internal/mcpserver/timeout.go</code>):</p>
+<ul>
+<li><strong>InstrumentationMiddleware</strong>: Records timing, success/fail, input/output size for every tool call. Emits structured <code>slog</code> logs (<code>mcp.tool.call</code>) with tool name, duration, success status, repo correlation, and error details. Pushes counters to Prometheus when a <code>PrometheusRecorder</code> is configured.</li>
+<li><strong>TimeoutMiddleware</strong>: Wraps each handler with a <code>context.WithTimeout</code> deadline. Supports per-tool overrides via a <code>map[string]time.Duration</code> — a positive duration sets a custom timeout, a zero duration exempts the tool entirely from timeout enforcement.</li>
+<li><strong>EventBusMiddleware</strong>: Publishes <code>tool.called</code> events to the fleet event bus via <code>bus.PublishCtx(ctx, ...)</code> for real-time monitoring, respecting context cancellation.</li>
+<li><strong>ValidationMiddleware</strong>: Pre-validates common parameters (<code>repo</code>, <code>path</code>) before handler execution. Validates absolute paths against the scan root and relative repo names against naming rules.</li>
+</ul>
+<h3 id="tool-benchmarking">Tool Benchmarking</h3>
+<p><code>internal/mcpserver/toolbench.go</code> provides auto-benchmarking applied to all 126 tools:</p>
+<ul>
+<li><strong>JSONL recording</strong>: All tool calls logged with latency, success, error, sizes</li>
+<li><strong>Percentile summaries</strong>: P50, P95, max latency per tool</li>
+<li><strong>Regression detection</strong>: Compares current metrics against baseline, flags degradations by severity</li>
+<li><strong>MCP tool</strong>: <code>ralphglasses_tool_benchmark</code> exposes metrics and regression analysis</li>
+</ul>
+<h2 id="distributed-fleet">Distributed Fleet</h2>
+<p>The <code>internal/fleet/</code> package enables multi-machine workload distribution:</p>
+<ul>
+<li><strong><code>server.go</code></strong>: HTTP coordinator — accepts work submissions, tracks workers via heartbeats, enforces fleet-wide budget</li>
+<li><strong><code>worker.go</code></strong>: Polls coordinator for work, executes sessions locally, reports results</li>
+<li><strong><code>queue.go</code></strong>: Priority queue with cost-aware scheduling and provider affinity</li>
+<li><strong><code>optimizer.go</code></strong>: Cost optimizer — routes tasks to cheapest capable provider/worker</li>
+<li><strong><code>discovery.go</code></strong>: Tailscale-based fleet discovery (automatic peer detection)</li>
+<li><strong><code>client.go</code></strong>: HTTP client for worker-to-coordinator communication</li>
+</ul>
+<p>Start with <code>ralphglasses serve --coordinator</code> (one node) and <code>ralphglasses serve --coordinator-url &lt;url&gt;</code> (worker nodes).</p>
+<h2 id="tiered-model-routing">Tiered Model Routing</h2>
+<p>The cost optimizer uses 4-tier routing to balance cost and capability:</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Model</th>
+<th>Cost (input/1M)</th>
+<th>Routed Tasks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ultra-cheap</td>
+<td>Gemini Flash-Lite</td>
+<td>$0.10</td>
+<td>Classification, routing, simple extraction</td>
+</tr>
+<tr>
+<td>Worker</td>
+<td>Gemini Flash</td>
+<td>$0.30</td>
+<td>Bulk codegen, tests, docs</td>
+</tr>
+<tr>
+<td>Coding</td>
+<td>Claude Sonnet</td>
+<td>$3.00</td>
+<td>Architecture, complex refactoring</td>
+</tr>
+<tr>
+<td>Reasoning</td>
+<td>Claude Opus</td>
+<td>$15.00</td>
+<td>Planning, multi-step reasoning</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>--effort</code> CLI flag influences tier selection: <code>low</code> prefers ultra-cheap/worker tiers, <code>max</code> allows reasoning tier. The <code>ralphglasses_provider_recommend</code> tool uses feedback profiles to suggest the best tier for a given task.</p>
+<h2 id="prompt-caching-strategy">Prompt Caching Strategy</h2>
+<p>All three providers support prompt caching for 80-90% input cost savings:</p>
+<ul>
+<li><strong>Claude (Anthropic SDK)</strong>: Automatic <code>cache_control</code> breakpoints on system prompts and tool definitions. The SDK handles cache key generation and TTL.</li>
+<li><strong>Gemini</strong>: Explicit <code>cachedContents</code> API — the session manager creates cache entries with configurable TTL for system instructions and large context windows. Thinking budget control via <code>thinkingConfig</code>.</li>
+<li><strong>OpenAI</strong>: Automatic prefix caching on the Responses API. Structured output via <code>OutputSchema</code> for JSON schema validation.</li>
+</ul>
+<p>Cache hit rates are tracked in the cost ledger and surfaced via <code>ralphglasses_fleet_analytics</code>.</p>
+<h2 id="event-bus">Event Bus</h2>
+<p>The <code>internal/events/</code> package provides a typed publish-subscribe event bus for system-wide coordination:</p>
+<ul>
+<li><strong><code>bus.go</code></strong>: <code>Bus</code> struct with <code>PublishCtx(ctx, Event)</code> (context-aware, returns error on cancellation) and backward-compatible <code>Publish(Event)</code> wrapper. Supports <code>Subscribe(id)</code> for all events and <code>SubscribeFiltered(id, ...EventType)</code> for selective subscription. Maintains a configurable history ring buffer with <code>History(filter, limit)</code> and optional retention TTL.</li>
+<li><strong><code>query.go</code></strong>: <code>EventQuery</code> struct for filtering events by type, time range, and other criteria.</li>
+<li><strong><code>migration.go</code></strong>: Event schema migration for backward compatibility.</li>
+<li><strong>30+ event types</strong>: Session lifecycle (<code>session.started</code>, <code>session.ended</code>), cost (<code>cost.update</code>, <code>budget.exceeded</code>), loop lifecycle (<code>loop.started</code>, <code>loop.iterated</code>, <code>loop.regression</code>), self-improvement (<code>auto.optimized</code>, <code>provider.selected</code>, <code>session.recovered</code>), tool instrumentation (<code>tool.called</code>), worker lifecycle (<code>worker.deregistered</code>, <code>worker.paused</code>, <code>worker.resumed</code>), and more.</li>
+</ul>
+<h2 id="process-management">Process Management</h2>
+<p>The <code>internal/process/</code> package manages OS processes with full <code>context.Context</code> threading:</p>
+<ul>
+<li><strong><code>manager.go</code></strong>: <code>Manager.Start(ctx, repoPath)</code> uses <code>exec.CommandContext</code> so context cancellation kills the launched process and prevents auto-restarts. <code>Manager.Stop(ctx, repoPath)</code> and <code>Manager.StopAll(ctx)</code> also accept contexts for deadline-aware shutdown. The reaper goroutine (<code>reaperLoop(ctx, ...)</code>) handles process exit, exponential backoff auto-restart, and re-arm of the exit channel listener.</li>
+<li><strong><code>errors.go</code></strong>: Sentinel errors — <code>ErrAlreadyRunning</code>, <code>ErrNoLoopScript</code>, <code>ErrNotRunning</code>.</li>
+<li><strong><code>orphans.go</code></strong>: Orphan process detection and cleanup.</li>
+<li><strong><code>childpids.go</code></strong> / <strong><code>childpids_linux.go</code></strong>: Platform-specific child PID enumeration (Linux reads <code>/proc</code>, other platforms use <code>pgrep</code>).</li>
+<li><strong><code>logstream.go</code></strong>: Log file tailing with <code>fsnotify</code>.</li>
+<li><strong><code>watcher.go</code></strong>: File system watcher for <code>.ralph/</code> directories.</li>
+</ul>
+<h2 id="session-sentinel-errors">Session Sentinel Errors</h2>
+<p>The <code>internal/session/errors.go</code> file defines sentinel errors for consistent error handling across the session package:</p>
+<p><code>ErrSessionTimeout</code>, <code>ErrWorkerStalled</code>, <code>ErrInvalidProfile</code>, <code>ErrSessionNotFound</code>, <code>ErrSessionNotRunning</code>, <code>ErrSessionErrored</code>, <code>ErrSessionStopped</code>, <code>ErrTeamNotFound</code>, <code>ErrTeamNameRequired</code>, <code>ErrRepoPathRequired</code>, <code>ErrNoTasks</code>, <code>ErrAlreadyOnProvider</code>, <code>ErrWaitTimeout</code>, <code>ErrUnexpectedExit</code>.</p>
+<p>Additionally, <code>internal/session/acceptance.go</code> defines <code>ErrRebaseConflict</code> for merge conflict detection.</p>
+<h2 id="self-improvement-pipeline">Self-Improvement Pipeline</h2>
+<p>The <code>internal/session/</code> package implements a five-component self-improvement pipeline that learns from loop execution history:</p>
+<ul>
+<li><strong>Reflexion</strong> (<code>reflexion.go</code>): <code>ReflexionStore</code> classifies failed iterations and generates corrections. <code>ExtractReflection()</code> creates a <code>Reflection</code> from a failed <code>LoopIteration</code>. <code>RecentForTask()</code> retrieves relevant past reflections. <code>FormatForPrompt()</code> renders them as markdown for LLM injection — enabling the planner to avoid repeating mistakes.</li>
+<li><strong>Episodic Memory</strong> (<code>episodic.go</code>): <code>EpisodicMemory</code> stores successful session trajectories. <code>RecordSuccess()</code> captures journal entries with positive signals. <code>FindSimilar()</code> uses Jaccard similarity (or optional cosine similarity via <code>SetEmbedder()</code>) to find relevant past successes. <code>FormatExamples()</code> renders examples for in-context learning. <code>Prune()</code> prevents unbounded growth while preserving per-task-type diversity.</li>
+<li><strong>Cascade Router</strong> (<code>cascade.go</code>): <code>CascadeRouter</code> implements try-cheap-then-escalate provider routing. <code>ShouldCascade()</code> checks whether a task should use the cheap-first strategy. <code>EvaluateCheapResult()</code> decides whether to escalate based on session output, turn count, and an optional calibrated <code>DecisionModel</code>. <code>SelectTier()</code> integrates bandit policy for dynamic tier selection. Persists results as JSONL for offline analysis.</li>
+<li><strong>Curriculum Sorter</strong> (<code>curriculum.go</code>): <code>CurriculumSorter</code> scores tasks by estimated difficulty (0.0-1.0) using multi-signal analysis from feedback profiles and episodic memory. <code>SortTasks()</code> orders tasks easy-first. <code>ShouldDecompose()</code> flags overly complex tasks. <code>DecompositionPrompt()</code> generates an LLM prompt to break tasks into sub-tasks.</li>
+<li><strong>Bandit-Based Provider Selection</strong>: Integrated into <code>CascadeRouter</code> via <code>SetBanditHooks()</code> — a <code>selectFn</code> returns (provider, model) and <code>updateFn</code> records rewards (0.0-1.0). The <code>Manager.SetBanditHooks()</code> forwards to the cascade router. The <code>ralphglasses_bandit_status</code> tool exposes arm statistics.</li>
+</ul>
+<h2 id="mcp-namespaces">MCP Namespaces</h2>
+<p>The MCP server organizes 126 tools (124 namespace tools + 2 meta-tools) across 14 namespaces with deferred loading:</p>
+<table>
+<thead>
+<tr>
+<th>Namespace</th>
+<th>Tools</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>core</code></td>
+<td>10</td>
+<td>Scan, list, status, start, stop, stop_all, pause, logs, config, config_bulk (always loaded)</td>
+</tr>
+<tr>
+<td><code>session</code></td>
+<td>13</td>
+<td>Session lifecycle: launch, list, status, resume, stop, stop_all, budget, retry, output, tail, diff, compare, errors</td>
+</tr>
+<tr>
+<td><code>loop</code></td>
+<td>10</td>
+<td>Perpetual dev loops: start, status, step, stop, benchmark, baseline, gates, self_test, self_improve, prune</td>
+</tr>
+<tr>
+<td><code>prompt</code></td>
+<td>8</td>
+<td>Prompt enhancement: analyze, enhance, lint, improve, classify, should_enhance, templates, template_fill</td>
+</tr>
+<tr>
+<td><code>fleet</code></td>
+<td>7</td>
+<td>Fleet ops: fleet_status, analytics, submit, budget, workers, marathon_dashboard, dlq</td>
+</tr>
+<tr>
+<td><code>repo</code></td>
+<td>5</td>
+<td>Repo management: health, optimize, scaffold, claudemd_check, snapshot</td>
+</tr>
+<tr>
+<td><code>roadmap</code></td>
+<td>5</td>
+<td>Roadmap automation: parse, analyze, research, expand, export</td>
+</tr>
+<tr>
+<td><code>team</code></td>
+<td>6</td>
+<td>Agent teams: team_create, team_status, team_delegate, agent_define, agent_list, agent_compose</td>
+</tr>
+<tr>
+<td><code>awesome</code></td>
+<td>5</td>
+<td>Awesome-list research: fetch, analyze, diff, report, sync</td>
+</tr>
+<tr>
+<td><code>advanced</code></td>
+<td>24</td>
+<td>RC tools, events, HITL, autonomy, feedback, journals, workflows, bandit, circuit breaker</td>
+</tr>
+<tr>
+<td><code>eval</code></td>
+<td>4</td>
+<td>Offline evaluation: counterfactual, A/B test, changepoints, anomaly detection</td>
+</tr>
+<tr>
+<td><code>fleet_h</code></td>
+<td>4</td>
+<td>Fleet intelligence: blackboard coordination, A2A offers, cost forecasting</td>
+</tr>
+<tr>
+<td><code>observability</code></td>
+<td>15</td>
+<td>Observations, scratchpad, loop wait/poll, coverage, cost estimation, merge verification</td>
+</tr>
+<tr>
+<td><code>rdcycle</code></td>
+<td>10</td>
+<td>R&amp;D cycle automation: finding_to_task, cycle_baseline, cycle_plan, cycle_merge, cycle_schedule, loop_replay, budget_forecast, diff_review, finding_reason, observation_correlate</td>
+</tr>
+</tbody>
+</table>
+<p>See <a href="../MCP-TOOLS/">docs/MCP-TOOLS.md</a> for the full tool table with descriptions.</p>
+<h2 id="provider-cost-normalization-stderr-fallback">Provider Cost Normalization &amp; Stderr Fallback</h2>
+<h3 id="provider-event-normalizers">Provider Event Normalizers</h3>
+<p>Each provider has a dedicated normalizer that parses streaming NDJSON into the unified <code>StreamEvent</code> struct (<code>internal/session/types.go</code>):</p>
+<ul>
+<li><strong><code>normalizeClaudeEvent(line []byte) (StreamEvent, error)</code></strong> — JSON-unmarshals directly into <code>StreamEvent</code>, then does a secondary raw parse to extract nested cost fields</li>
+<li><strong><code>normalizeGeminiEvent(line []byte) (StreamEvent, error)</code></strong> — Parses raw JSON map, probes multiple field paths (<code>type</code>/<code>event</code>/<code>event_type</code>, <code>content</code>/<code>message</code>/<code>text</code>/<code>delta</code>, etc.), calls <code>applyEventDefaults()</code></li>
+<li><strong><code>normalizeCodexEvent(line []byte) (StreamEvent, error)</code></strong> — Same map-probe pattern as Gemini, with Codex-specific paths (<code>item.type</code>, <code>output_text</code>)</li>
+</ul>
+<p>All three are dispatched by <code>normalizeEvent(provider Provider, line []byte)</code> in <code>internal/session/providers.go</code>, called from <code>runSessionOutput()</code> in <code>internal/session/runner.go</code>.</p>
+<h3 id="cost-extraction-cascade">Cost Extraction Cascade</h3>
+<p>Each normalizer applies a three-tier cost extraction:</p>
+<ol>
+<li><strong>Explicit cost field</strong> — <code>firstNonZeroFloat(raw, "cost_usd", "usage.cost_usd", "usage.total_cost_usd")</code></li>
+<li><strong>Token-based estimation</strong> — <code>estimateCostFromTokens(provider, raw)</code> computes <code>(inputTokens/1M) × rate.InputPer1M + (outputTokens/1M) × rate.OutputPer1M</code> using <code>ProviderCostRates</code> from <code>internal/session/costnorm.go</code></li>
+<li>Input token paths tried: <code>usage.input_tokens</code>, <code>usage_metadata.prompt_token_count</code>, <code>usage.prompt_tokens</code></li>
+<li>Output token paths tried: <code>usage.output_tokens</code>, <code>usage_metadata.candidates_token_count</code>, <code>usage.completion_tokens</code></li>
+<li><strong>Stderr fallback</strong> — <code>ParseCostFromStderr(stderr string) float64</code> (defined in <code>providers.go:479</code>)</li>
+</ol>
+<p>Reference rates in <code>internal/session/costs.go</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nx">CostClaudeSonnetInput</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="mf">3.00</span><span class="w">   </span><span class="c1">// USD per 1M tokens</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nx">CostClaudeSonnetOutput</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">15.00</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nx">CostGeminiFlashInput</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="mf">0.30</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nx">CostGeminiFlashOutput</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="mf">2.50</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nx">CostCodexInput</span><span class="w">         </span><span class="p">=</span><span class="w"> </span><span class="mf">2.50</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nx">CostCodexOutput</span><span class="w">        </span><span class="p">=</span><span class="w"> </span><span class="mf">15.00</span>
+</code></pre></div>
+<h3 id="stderr-cost-fallback-parsecostfromstderr">Stderr Cost Fallback (<code>ParseCostFromStderr</code>)</h3>
+<p><strong>Trigger condition</strong>: <code>StreamEvent.CostUSD == 0</code> after both explicit field lookup and token-based estimation return zero. This function is available for callers (e.g. loop orchestrator, MCP handlers) when structured cost data is absent from the provider's stdout JSON stream.</p>
+<p><strong>Parsing logic</strong> (<code>providers.go:469-496</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">var</span><span class="w"> </span><span class="nx">stderrCostRe</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">regexp</span><span class="p">.</span><span class="nx">MustCompile</span><span class="p">(</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="s">`(?i)(?:total\s+)?(?:session\s+)?cost(?:_usd)?:\s*\$?([\d]+\.[\d]+)`</span><span class="p">)</span>
+</code></pre></div>
+<ul>
+<li>Strips ANSI escape codes via <code>ansiRe</code> before matching</li>
+<li>Matches patterns like <code>Cost: $0.0023</code>, <code>Total cost: 0.0023</code>, <code>cost_usd: $1.23</code>, <code>Session cost: $0.05</code></li>
+<li>Uses <code>FindAllStringSubmatch</code> and takes the <strong>last</strong> match (final/total cost)</li>
+<li>Validates: returns <code>0</code> if parse fails or value is negative</li>
+</ul>
+<p><strong>Stderr collection</strong>: <code>runSession()</code> in <code>runner.go</code> reads stderr into a <code>strings.Builder</code> via a background goroutine. After process exit, stderr is used for error reporting (<code>sanitizeStderr</code>) and output fallback (<code>cleanProviderOutput</code>). <code>ParseCostFromStderr</code> operates on this same buffer.</p>
+<h3 id="cross-provider-cost-normalization">Cross-Provider Cost Normalization</h3>
+<p><code>NormalizeProviderCost(p Provider, rawCostUSD float64, inputTokens, outputTokens int) NormalizedCost</code> in <code>internal/session/costnorm.go</code> normalizes any provider's cost to Claude-equivalent rates:</p>
+<ul>
+<li><strong>With token counts</strong>: recomputes cost at <code>claudeBaseRate</code> (Claude Sonnet input/output rates)</li>
+<li><strong>Without token counts</strong>: scales raw cost by <code>claudeBlended / providerBlended</code> (50/50 input/output heuristic)</li>
+<li>Returns <code>NormalizedCost</code> with <code>RawCostUSD</code>, <code>NormalizedUSD</code>, <code>EfficiencyPct</code> (raw/normalized × 100)</li>
+</ul>
+<h3 id="data-flow-raw-output-sessionspentusd">Data Flow: Raw Output → <code>Session.SpentUSD</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Provider CLI (stdout NDJSON)
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  │
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  ▼
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>runSessionOutput()                     # runner.go — line-by-line scanner
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  │
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  ▼
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>normalizeEvent(provider, line)         # providers.go — dispatches to per-provider normalizer
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  │
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>  ├─ normalizeClaudeEvent(line)        # JSON unmarshal → secondary raw parse
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>  ├─ normalizeGeminiEvent(line)        # raw map probe → applyEventDefaults()
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>  └─ normalizeCodexEvent(line)         # raw map probe → applyEventDefaults()
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>  │
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>  │  Cost extracted via:
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>  │    1. firstNonZeroFloat(raw, &quot;cost_usd&quot;, &quot;usage.cost_usd&quot;, ...)
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>  │    2. estimateCostFromTokens(provider, raw)  [if step 1 = 0]
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>  │
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>  ▼
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>StreamEvent.CostUSD                    # types.go:82
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>  │
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>  ▼
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>runSession() event loop                # runner.go:327 — on &quot;result&quot; events:
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>  │  Claude:  s.SpentUSD = event.CostUSD   (cumulative)
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>  │  Others:  s.SpentUSD += event.CostUSD  (incremental)
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>  │  → s.CostHistory append
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>  │  → tracing.RecordTurnMetric()
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>  │  → events.CostUpdate published
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>  │
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a>  ▼
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a>Session.SpentUSD                       # types.go:47
+<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>  │
+<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a>  ▼
+<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a>Loop orchestrator (loop.go)            # reads SpentUSD from planner + worker sessions
+<a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a>  │  totalCost = planner.SpentUSD + Σ worker.SpentUSD
+<a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a>  │  → CostPredictor.Record(CostObservation{CostUSD: totalCost})
+<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a>  │
+<a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a>  ▼
+<a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a>NormalizeProviderCost()                # costnorm.go — for cross-provider comparison
+<a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a>  └─ NormalizedCost{RawCostUSD, NormalizedUSD, EfficiencyPct}
+</code></pre></div>
+<h2 id="tui-loop-interaction-surface">TUI Loop Interaction Surface</h2>
+<p>The TUI exposes four loop-related views, a table-driven key dispatch system, and a status bar health summary. This section traces data flow from the loop engine (see <a href="#provider-architecture">Provider Architecture</a> for session dispatch and <a href="#data-flow-raw-output--sessionspentusd">Data Flow: Raw Output → Session.SpentUSD</a> for cost propagation) through the Bubble Tea update cycle to the rendered UI.</p>
+<h3 id="loop-views">Loop Views</h3>
+<p>Four <code>ViewMode</code> constants control loop navigation (<code>internal/tui/app.go</code>):</p>
+<table>
+<thead>
+<tr>
+<th>ViewMode</th>
+<th>Purpose</th>
+<th>Entry Key</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ViewLoopList</code></td>
+<td>Tabular list of all active loops</td>
+<td><code>l</code></td>
+</tr>
+<tr>
+<td><code>ViewLoopDetail</code></td>
+<td>Single loop deep-dive (iterations, output, errors)</td>
+<td><code>Enter</code> from loop list</td>
+</tr>
+<tr>
+<td><code>ViewLoopControl</code></td>
+<td>Multi-loop control panel with expanded selection</td>
+<td><code>C</code></td>
+</tr>
+<tr>
+<td><code>ViewLoopHealth</code></td>
+<td>Regression gates, sparklines, task distribution</td>
+<td><code>h</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="loop-list-internaltuiviewsloop_listgo">Loop List (<code>internal/tui/views/loop_list.go</code>)</h4>
+<p><code>LoopListColumns</code> defines the table schema (ID, Repo, Phase, Iters, Status). The <code>LoopRunsToRows()</code> function converts <code>[]*session.LoopRun</code> into <code>[]components.Row</code>:</p>
+<ol>
+<li>Locks each <code>LoopRun.mu</code> for thread-safe field access</li>
+<li>Extracts <code>ID</code> (truncated to 8 chars), <code>RepoName</code>, phase (from last iteration status), <code>IterCount</code>, and status</li>
+<li>Renders status with <code>components.ActivityDot()</code> and <code>styles.StatusIcon()</code></li>
+<li>Overrides status to <code>"paused"</code> when <code>l.Paused &amp;&amp; status == "running"</code></li>
+</ol>
+<p>The table is created by <code>NewLoopListTable()</code> with empty message <code>"No active loops"</code> and <code>StatusColumn=4</code>.</p>
+<h4 id="loop-control-panel-internaltuiviewsloop_controlgo">Loop Control Panel (<code>internal/tui/views/loop_control.go</code>)</h4>
+<p><code>LoopControlData</code> aggregates per-loop metrics: <code>ID</code>, <code>RepoName</code>, <code>Status</code>, <code>Paused</code>, <code>IterCount</code>, <code>LastIterStatus</code>, <code>LastIterTask</code>, <code>LastIterError</code>, <code>AvgIterDuration</code>, and a computed <code>NextEstimate</code> (e.g. <code>"paused"</code>, <code>"imminent"</code>, <code>"~30s"</code>). <code>RenderLoopControlPanel()</code> renders a title bar with running/paused/other counts, loop rows with next-iteration estimates, and expanded details for the selected loop.</p>
+<h4 id="loop-detail-internaltuiviewsloopdetailgo">Loop Detail (<code>internal/tui/views/loopdetail.go</code>)</h4>
+<p><code>RenderLoopDetail()</code> shows a single <code>LoopRun</code>: header (ID, repo, status), iteration metrics, last iteration details (task, error), and truncated planner output / worker result (500 chars each).</p>
+<h4 id="loop-health-internaltuiviewsloophealthgo">Loop Health (<code>internal/tui/views/loophealth.go</code>)</h4>
+<p><code>LoopHealthData</code> holds <code>Observations []session.LoopObservation</code>, a <code>*e2e.GateReport</code>, <code>*e2e.Summary</code>, and <code>*e2e.LoopBaseline</code>. Rendered sections: gate summary with sparklines and per-metric verdicts (pass/warn/fail with delta% and baseline), recent iterations table (last 15), and task type distribution bar chart.</p>
+<h3 id="keybindings-and-dispatch">Keybindings and Dispatch</h3>
+<p>Key dispatch uses a <strong>table-driven pattern</strong> in <code>internal/tui/handlers.go</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">ViewKeyEntry</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nx">Binding</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">km</span><span class="w"> </span><span class="o">*</span><span class="nx">KeyMap</span><span class="p">)</span><span class="w"> </span><span class="nx">key</span><span class="p">.</span><span class="nx">Binding</span><span class="w">  </span><span class="c1">// key matcher (optional)</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nx">Match</span><span class="w">   </span><span class="kd">func</span><span class="p">(</span><span class="nx">msg</span><span class="w"> </span><span class="nx">tea</span><span class="p">.</span><span class="nx">KeyMsg</span><span class="p">)</span><span class="w"> </span><span class="kt">bool</span><span class="w">     </span><span class="c1">// custom matcher (optional)</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nx">Handler</span><span class="w"> </span><span class="nx">KeyHandler</span><span class="w">                     </span><span class="c1">// func(m *Model, msg tea.KeyMsg) (tea.Model, tea.Cmd)</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>dispatchViewKeys()</code> iterates entries in order; <strong>first match wins</strong>. Each view has its own entry slice (<code>loopListKeys</code>, <code>loopControlKeys</code>, <code>loopDetailKeys</code>).</p>
+<h4 id="loop-key-bindings">Loop Key Bindings</h4>
+<p><strong>Overview / Repo Detail</strong> (global bindings in <code>handlers.go</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>KeyMap Field</th>
+<th>Handler</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>S</code></td>
+<td><code>StartLoop</code></td>
+<td><code>m.startSelectedLoop()</code> / <code>m.startLoop(idx)</code></td>
+<td>Launch loop for selected repo</td>
+</tr>
+<tr>
+<td><code>X</code></td>
+<td><code>StopAction</code></td>
+<td><code>m.stopSelectedLoop()</code> / <code>m.stopLoop(idx)</code></td>
+<td>Stop selected loop</td>
+</tr>
+<tr>
+<td><code>P</code></td>
+<td><code>PauseLoop</code></td>
+<td><code>m.togglePauseSelected()</code> / <code>m.togglePause(idx)</code></td>
+<td>Toggle pause/resume</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Loop List</strong> (<code>loopListKeys</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>j</code>/<code>k</code> or <code>↓</code>/<code>↑</code></td>
+<td><code>m.LoopListTable.MoveDown()</code>/<code>MoveUp()</code></td>
+</tr>
+<tr>
+<td><code>Enter</code></td>
+<td>Push <code>ViewLoopDetail</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Loop Control / Detail</strong> (<code>loopControlKeys</code>, <code>loopDetailKeys</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>KeyMap Field</th>
+<th>Command Emitted</th>
+<th>Message Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>s</code></td>
+<td><code>LoopCtrlStep</code> / <code>LoopDetailStep</code></td>
+<td><code>sessMgr.StepLoop()</code></td>
+<td><code>LoopStepResultMsg</code></td>
+</tr>
+<tr>
+<td><code>r</code></td>
+<td><code>LoopCtrlToggle</code> / <code>LoopDetailToggle</code></td>
+<td><code>sessMgr.StartLoop()</code> or <code>StopLoop()</code></td>
+<td><code>LoopToggleResultMsg</code></td>
+</tr>
+<tr>
+<td><code>p</code></td>
+<td><code>LoopCtrlPause</code> / <code>LoopDetailPause</code></td>
+<td><code>sessMgr.PauseLoop()</code> or <code>ResumeLoop()</code></td>
+<td><code>LoopPauseResultMsg</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="message-types">Message Types</h3>
+<p>Loop operations produce typed messages handled in <code>Update()</code> (<code>internal/tui/app.go</code>):</p>
+<ul>
+<li><strong><code>LoopListMsg</code></strong> (<code>[]*session.LoopRun</code>) — refreshes loop table rows</li>
+<li><strong><code>LoopStepResultMsg</code></strong> (<code>LoopID</code>, <code>Err</code>) — shows notification, re-fetches loop list</li>
+<li><strong><code>LoopToggleResultMsg</code></strong> (<code>LoopID</code>, <code>Started</code>, <code>Err</code>) — shows "Started"/"Stopped" notification, re-fetches</li>
+<li><strong><code>LoopPauseResultMsg</code></strong> (<code>LoopID</code>, <code>Paused</code>, <code>Err</code>) — shows "Paused"/"Resumed" notification, re-fetches</li>
+</ul>
+<h3 id="processexitmsg-flow"><code>ProcessExitMsg</code> Flow</h3>
+<p><code>ProcessExitMsg</code> bridges the process manager to Bubble Tea's message loop, triggering repo status updates when a managed process terminates.</p>
+<p><strong>Definition</strong> (<code>internal/process/manager.go</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">ProcessExitMsg</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nx">RepoPath</span><span class="w"> </span><span class="kt">string</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nx">ExitCode</span><span class="w"> </span><span class="kt">int</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">Error</span><span class="w">    </span><span class="kt">error</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Data flow:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>process.Manager reaper goroutine          # manager.go — Start()
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  │  waitErr := cmd.Wait()
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  │
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  ▼
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>m.exitCh &lt;- ProcessExitMsg{…}            # buffered channel (size 16), non-blocking send
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>  │
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  ▼
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>WaitForProcessExit(ch) tea.Cmd           # manager.go — blocks on &lt;-ch, returns ProcessExitMsg
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>  │
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>  ▼
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>Model.Update() case process.ProcessExitMsg   # app.go — main update switch
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>  │
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>  ├─ applyProcessExit(msg, m.Repos)      # finds repo by msg.RepoPath,
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>  │    └─ r.Status.Status = model.RepoStatusFromExitCode(msg.ExitCode, msg.Error)
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>  │
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>  └─ return m, process.WaitForProcessExit(m.ProcMgr.ExitChan())
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>       └─ re-arms listener for next exit
+</code></pre></div>
+<p><code>WaitForProcessExit()</code> is a <code>tea.Cmd</code> factory that blocks on <code>Manager.ExitChan()</code>. The <code>Update()</code> handler calls <code>applyProcessExit()</code> to update the matching repo's status via <code>model.RepoStatusFromExitCode()</code>, then immediately re-arms the listener by returning a new <code>WaitForProcessExit</code> command.</p>
+<h3 id="status-bar-loop-health">Status Bar Loop Health</h3>
+<p>The <code>StatusBar</code> component (<code>internal/tui/components/statusbar.go</code>) surfaces aggregated loop metrics:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">StatusBar</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nx">RunningCount</span><span class="w">         </span><span class="kt">int</span><span class="w">              </span><span class="c1">// active loop/process count</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nx">SessionCount</span><span class="w">         </span><span class="kt">int</span><span class="w">              </span><span class="c1">// total sessions</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nx">TotalSpendUSD</span><span class="w">        </span><span class="kt">float64</span><span class="w">          </span><span class="c1">// cumulative cost</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nx">ProviderCounts</span><span class="w">       </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="w">   </span><span class="c1">// running sessions per provider</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nx">FleetBudgetPct</span><span class="w">       </span><span class="kt">float64</span><span class="w">          </span><span class="c1">// spend / total budget</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="nx">AlertCount</span><span class="w">           </span><span class="kt">int</span><span class="w">              </span><span class="c1">// active alerts</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nx">HighestAlertSeverity</span><span class="w"> </span><span class="kt">string</span><span class="w">           </span><span class="c1">// worst alert level</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="c1">// … Mode, Filter, Width, SpinnerFrame, TickFrame, etc.</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Update trigger</strong>: <code>m.updateTable()</code> is called on every <code>tickMsg</code> (2-second polling interval, <code>internal/tui/app.go</code>). It populates:</p>
+<ul>
+<li><code>RunningCount</code> ← <code>len(m.ProcMgr.RunningPaths())</code></li>
+<li><code>SessionCount</code> ← total active sessions from the session manager</li>
+<li><code>TotalSpendUSD</code> ← sum of <code>Session.SpentUSD</code> across all sessions (see <a href="#data-flow-raw-output--sessionspentusd">Data Flow: Raw Output → Session.SpentUSD</a>)</li>
+<li><code>ProviderCounts</code> ← per-provider breakdown of running sessions</li>
+<li><code>FleetBudgetPct</code> ← <code>totalSpend / totalBudget</code></li>
+<li><code>AlertCount</code> / <code>HighestAlertSeverity</code> ← <code>m.countAlerts()</code></li>
+</ul>
+<p><code>StatusBar.View()</code> renders left-aligned: mode badge, repo count, running count (with animated spinner from <code>TickFrame</code>), session count, spend, provider counts, fleet budget gauge, and alert indicator. Right-aligned: last refresh timestamp (relative, e.g. <code>"5s"</code>, <code>"2m"</code>, <code>"never"</code>).</p>
+<h2 id="file-schemas">File Schemas</h2>
+<ul>
+<li><code>.ralph/status.json</code>: LoopStatus (timestamp, loop_count, calls_made_this_hour, status, model, etc.)</li>
+<li><code>.ralph/.circuit_breaker_state</code>: CircuitBreakerState (state: CLOSED/HALF_OPEN/OPEN, counters, reason)</li>
+<li><code>.ralph/progress.json</code>: Progress (iteration, completed_ids, log entries, status)</li>
+<li><code>.ralphrc</code>: Shell-style KEY="value" config (PROJECT_NAME, MAX_CALLS_PER_HOUR, CB thresholds, etc.)</li>
+<li><code>.ralph/improvement_journal.jsonl</code>: Append-only JSONL, one entry per session (worked/failed/suggest)</li>
+<li><code>.ralph/improvement_patterns.json</code>: Consolidated durable patterns from journal (survives pruning)</li>
+<li><code>.ralph/decisions.jsonl</code>: Autonomous decision log (level, category, rationale, inputs, outcome)</li>
+<li><code>.ralph/hitl_events.jsonl</code>: Human-in-the-loop events (metric type, trigger, session/repo)</li>
+<li><code>.ralph/context_store.json</code>: Active session context entries for file conflict detection</li>
+</ul>
+<h2 id="developer-references">Developer References</h2>
+<ul>
+<li><strong>Claude Code</strong>: <a href="https://docs.anthropic.com/en/docs/claude-code/overview">Overview</a> | <a href="https://docs.anthropic.com/en/docs/claude-code/cli-reference">CLI Reference</a> | <a href="https://docs.anthropic.com/en/docs/claude-code/sdk">SDK</a></li>
+<li><strong>Anthropic API</strong>: <a href="https://docs.anthropic.com/en/api">API Reference</a> | <a href="https://docs.anthropic.com/en/docs/build-with-claude/tool-use">Tool Use</a></li>
+<li><strong>Gemini</strong>: <a href="https://ai.google.dev/gemini-api/docs">API Overview</a> | <a href="https://github.com/google-gemini/gemini-cli">Gemini CLI</a></li>
+<li><strong>OpenAI</strong>: <a href="https://platform.openai.com/docs/api-reference">API Reference</a> | <a href="https://github.com/openai/codex">Codex CLI</a></li>
+<li><strong>MCP</strong>: <a href="https://modelcontextprotocol.io/">Specification</a> | <a href="https://github.com/mark3labs/mcp-go">Go SDK (mcp-go)</a>. Migration target: <code>modelcontextprotocol/go-sdk</code> v1.4.1 (official MCP Go SDK, supersedes <code>mark3labs/mcp-go</code>)</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

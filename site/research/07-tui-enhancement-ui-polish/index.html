@@ -1,0 +1,2143 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/research/07-tui-enhancement-ui-polish/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Phase 7 Research: TUI Enhancement & UI Polish - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#phase-7-research-tui-enhancement-ui-polish" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Phase 7 Research: TUI Enhancement &amp; UI Polish
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-current-state-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Current State Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Current State Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-what-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 What Exists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-what-works-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 What Works Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-what-doesnt-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 What Doesn't Work
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-gap-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Gap Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Gap Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-roadmap-target-vs-current-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 ROADMAP Target vs Current State
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-missing-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Missing Capabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-technical-debt-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Technical Debt Inventory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-external-landscape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. External Landscape
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. External Landscape">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-competitorpeer-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Competitor/Peer Projects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-theme-ecosystem-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Theme Ecosystem Analysis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-charmbracelet-ecosystem-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Charmbracelet Ecosystem Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-patterns-worth-adopting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Patterns Worth Adopting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-anti-patterns-to-avoid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 Anti-Patterns to Avoid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#46-accessibility-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.6 Accessibility Considerations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#47-academic-industry-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.7 Academic &amp; Industry References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-actionable-recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Actionable Recommendations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Actionable Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-immediate-actions-this-sprint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Immediate Actions (This Sprint)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-near-term-actions-next-2-sprints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Near-Term Actions (Next 2 Sprints)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-strategic-actions-next-quarter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Strategic Actions (Next Quarter)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-risk-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Risk Assessment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-implementation-priority-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Implementation Priority Ordering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Implementation Priority Ordering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#71-critical-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 Critical Path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-recommended-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 Recommended Sequence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#73-parallelization-opportunities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3 Parallelization Opportunities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="phase-7-research-tui-enhancement-ui-polish">Phase 7 Research: TUI Enhancement &amp; UI Polish</h1>
+<p><strong>ROADMAP Items:</strong> 1.3 (TUI polish), 1.10 (TUI bounds safety), 2.4 (Fleet dashboard TUI view)
+<strong>Date:</strong> 2026-03-22
+<strong>Scope:</strong> <code>internal/tui/</code> tree (app, handlers, keymap, filter, fleet_builder, command) + <code>internal/tui/styles/</code> + <code>internal/tui/components/</code> + <code>internal/tui/views/</code></p>
+<hr />
+<h2 id="1-executive-summary">1. Executive Summary</h2>
+<ul>
+<li><strong>Confirm dialog (1.3.1, 1.3.2) is already implemented</strong> -- <code>components/confirm.go</code> exists with full HandleKey/View cycle, and <code>handlers.go</code> wires it to stop, stopAll, and stopSession actions. These ROADMAP items can be marked complete.</li>
+<li><strong>Bounds safety (1.10) is the highest-priority gap</strong>: <code>table.go:200</code> does not clamp <code>SortCol</code>, <code>LogView</code> has no search UI (1.10.2), empty-slice and zero-height guards are incomplete, and there are no fuzz tests. These are crash-path risks in production marathon sessions.</li>
+<li><strong>Fleet dashboard (2.4) is already implemented</strong> in full: <code>ViewFleet</code> exists in the view stack, <code>fleet.go</code> renders aggregate session tables with sorting, live-update via ticks, inline actions, and a fleet summary bar with cost sparklines. All 2.4.x sub-items are done.</li>
+<li><strong>Signal handling (1.3.3) is partially done</strong>: <code>q</code>/<code>Ctrl+C</code> stops all processes, but there is no <code>os.Signal</code> handler for SIGTERM/SIGINT from outside the TUI (e.g., systemd stop). This is a reliability gap for the thin-client use case.</li>
+<li><strong>Test coverage is critically low</strong>: <code>tui</code> package at 23%, <code>styles</code> at 13.3%. The target from ROADMAP 1.6 is 70% for tui. Achieving this requires focused test investment alongside the polish work.</li>
+</ul>
+<hr />
+<h2 id="2-current-state-analysis">2. Current State Analysis</h2>
+<h3 id="21-what-exists">2.1 What Exists</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th style="text-align: right;">Lines</th>
+<th>Has Tests</th>
+<th>Coverage</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tui/app.go</code></td>
+<td style="text-align: right;">716</td>
+<td>Yes (app_test.go, 403 lines)</td>
+<td>23.0% (pkg)</td>
+<td>Active, core model</td>
+</tr>
+<tr>
+<td><code>tui/handlers.go</code></td>
+<td style="text-align: right;">829</td>
+<td>Via app_test.go</td>
+<td>(included above)</td>
+<td>Active, all view handlers</td>
+</tr>
+<tr>
+<td><code>tui/keymap.go</code></td>
+<td style="text-align: right;">350</td>
+<td>No</td>
+<td>-</td>
+<td>Active, 11 view contexts</td>
+</tr>
+<tr>
+<td><code>tui/fleet_builder.go</code></td>
+<td style="text-align: right;">480</td>
+<td>No</td>
+<td>-</td>
+<td>Active, fleet data aggregation</td>
+</tr>
+<tr>
+<td><code>tui/command.go</code></td>
+<td style="text-align: right;">21</td>
+<td>Yes (71 lines)</td>
+<td>-</td>
+<td>Active, <code>:</code> command parser</td>
+</tr>
+<tr>
+<td><code>tui/filter.go</code></td>
+<td style="text-align: right;">25</td>
+<td>Yes (53 lines)</td>
+<td>-</td>
+<td>Active, <code>/</code> filter state</td>
+</tr>
+<tr>
+<td><code>styles/styles.go</code></td>
+<td style="text-align: right;">181</td>
+<td>Yes (25 lines)</td>
+<td>13.3%</td>
+<td>Active, 30+ style vars</td>
+</tr>
+<tr>
+<td><code>styles/theme.go</code></td>
+<td style="text-align: right;">142</td>
+<td>Via styles_test.go</td>
+<td>(included above)</td>
+<td>Active, 5 built-in themes</td>
+</tr>
+<tr>
+<td><code>styles/icons.go</code></td>
+<td style="text-align: right;">108</td>
+<td>No</td>
+<td>-</td>
+<td>Active, 25+ Nerd Font icons</td>
+</tr>
+<tr>
+<td><code>components/table.go</code></td>
+<td style="text-align: right;">372</td>
+<td>Yes (138 lines)</td>
+<td>65.3% (pkg)</td>
+<td>Active, sortable/filterable</td>
+</tr>
+<tr>
+<td><code>components/statusbar.go</code></td>
+<td style="text-align: right;">94</td>
+<td>Yes (38 lines)</td>
+<td>(included above)</td>
+<td>Active, 12+ data fields</td>
+</tr>
+<tr>
+<td><code>components/breadcrumb.go</code></td>
+<td style="text-align: right;">43</td>
+<td>Yes (42 lines)</td>
+<td>(included above)</td>
+<td>Active, push/pop nav</td>
+</tr>
+<tr>
+<td><code>components/notification.go</code></td>
+<td style="text-align: right;">47</td>
+<td>Yes (48 lines)</td>
+<td>(included above)</td>
+<td>Active, timed toast</td>
+</tr>
+<tr>
+<td><code>components/confirm.go</code></td>
+<td style="text-align: right;">108</td>
+<td>Yes (76 lines)</td>
+<td>(included above)</td>
+<td>Active, y/n/cancel modal</td>
+</tr>
+<tr>
+<td><code>components/actionmenu.go</code></td>
+<td style="text-align: right;">133</td>
+<td>Yes (88 lines)</td>
+<td>(included above)</td>
+<td>Active, shortcut-key menu</td>
+</tr>
+<tr>
+<td><code>components/launcher.go</code></td>
+<td style="text-align: right;">214</td>
+<td>Yes (99 lines)</td>
+<td>(included above)</td>
+<td>Active, session launch form</td>
+</tr>
+<tr>
+<td><code>components/gauge.go</code></td>
+<td style="text-align: right;">127</td>
+<td>No</td>
+<td>-</td>
+<td>Active, sparklines/dots</td>
+</tr>
+<tr>
+<td><code>components/tabbar.go</code></td>
+<td style="text-align: right;">27</td>
+<td>No</td>
+<td>-</td>
+<td>Active, tab rendering</td>
+</tr>
+<tr>
+<td><code>components/width.go</code></td>
+<td style="text-align: right;">26</td>
+<td>No</td>
+<td>-</td>
+<td>Active, ANSI-aware width</td>
+</tr>
+<tr>
+<td><code>views/overview.go</code></td>
+<td style="text-align: right;">110</td>
+<td>Yes (72 lines)</td>
+<td>58.5% (pkg)</td>
+<td>Active, repo table builder</td>
+</tr>
+<tr>
+<td><code>views/repodetail.go</code></td>
+<td style="text-align: right;">155</td>
+<td>Yes (89 lines)</td>
+<td>(included above)</td>
+<td>Active, full detail render</td>
+</tr>
+<tr>
+<td><code>views/logstream.go</code></td>
+<td style="text-align: right;">186</td>
+<td>Yes (164 lines)</td>
+<td>(included above)</td>
+<td>Active, viewport-based</td>
+</tr>
+<tr>
+<td><code>views/configeditor.go</code></td>
+<td style="text-align: right;">148</td>
+<td>Yes (131 lines)</td>
+<td>(included above)</td>
+<td>Active, key-value editor</td>
+</tr>
+<tr>
+<td><code>views/fleet.go</code></td>
+<td style="text-align: right;">373</td>
+<td>Yes (85 lines)</td>
+<td>(included above)</td>
+<td>Active, full dashboard</td>
+</tr>
+<tr>
+<td><code>views/sessiondetail.go</code></td>
+<td style="text-align: right;">205</td>
+<td>No</td>
+<td>-</td>
+<td>Active, session deep-view</td>
+</tr>
+<tr>
+<td><code>views/sessions.go</code></td>
+<td style="text-align: right;">114</td>
+<td>No</td>
+<td>-</td>
+<td>Active, session table builder</td>
+</tr>
+<tr>
+<td><code>views/teams.go</code></td>
+<td style="text-align: right;">73</td>
+<td>No</td>
+<td>-</td>
+<td>Active, team table builder</td>
+</tr>
+<tr>
+<td><code>views/teamdetail.go</code></td>
+<td style="text-align: right;">118</td>
+<td>No</td>
+<td>-</td>
+<td>Active, team deep-view</td>
+</tr>
+<tr>
+<td><code>views/diffview.go</code></td>
+<td style="text-align: right;">100</td>
+<td>No</td>
+<td>-</td>
+<td>Active, git diff rendering</td>
+</tr>
+<tr>
+<td><code>views/timeline.go</code></td>
+<td style="text-align: right;">154</td>
+<td>No</td>
+<td>-</td>
+<td>Active, session Gantt chart</td>
+</tr>
+<tr>
+<td><code>views/help.go</code></td>
+<td style="text-align: right;">71</td>
+<td>Yes (72 lines)</td>
+<td>(included above)</td>
+<td>Active, help overlay</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total: 48 files, ~10,492 lines</strong> across the TUI tree (including tests).</p>
+<h3 id="22-what-works-well">2.2 What Works Well</h3>
+<ol>
+<li><strong>View stack navigation</strong> (<code>app.go:460-477</code>): Clean push/pop with breadcrumb sync. No stack corruption paths observed.</li>
+<li><strong>Modal overlay layering</strong> (<code>app.go:356-365</code>, <code>app.go:667-679</code>): ConfirmDialog, ActionMenu, and Launcher correctly take priority over normal keys.</li>
+<li><strong>Theme system</strong> (<code>styles/theme.go</code>): 5 built-in themes, YAML loadable, <code>ApplyTheme()</code> rebuilds all styles. Ready for Phase 3.5 expansion.</li>
+<li><strong>ANSI-aware rendering</strong> (<code>components/width.go</code>): Delegates to <code>charmbracelet/x/ansi</code> for correct CJK/emoji width handling.</li>
+<li><strong>Fleet dashboard richness</strong> (<code>views/fleet.go</code>): Stat boxes, cost sparkline (ntcharts), provider breakdown, budget gauges, event feed, alerts, 3-panel repo/session/team list with selection markers.</li>
+<li><strong>Component library</strong> is well-factored: each component is self-contained, imports only <code>styles</code>, and has a clear <code>View()</code> + <code>HandleKey()</code> contract.</li>
+<li><strong>Reactive updates</strong> (<code>app.go:296-320</code>): fsnotify watcher with exponential backoff and polling fallback is production-hardened.</li>
+<li><strong>Prompt quality scoring</strong> in launcher (<code>components/launcher.go:81-94</code>): Real-time <code>enhancer.Analyze()</code> score after prompt editing -- a standout UX feature.</li>
+</ol>
+<h3 id="23-what-doesnt-work">2.3 What Doesn't Work</h3>
+<ol>
+<li>
+<p><strong>SortCol out-of-bounds</strong> (<code>components/table.go:200</code>): <code>CycleSort()</code> modulo wraps on <code>len(t.Columns)</code> but never validates that <code>SortCol</code> is still valid after a <code>SetRows()</code> call with different column count. Panics possible when switching between overview/session/team tables. <strong>[ROADMAP 1.10.1]</strong></p>
+</li>
+<li>
+<p><strong>No search UI in LogView</strong> (<code>views/logstream.go</code>): The <code>Search</code> field exists (line 16) and <code>filteredLines()</code> works (line 136-148), but there is no key binding to enter search mode, no <code>/</code> handler, and no <code>n</code>/<code>N</code> next/prev match navigation. <strong>[ROADMAP 1.10.2]</strong></p>
+</li>
+<li>
+<p><strong>Empty-slice panics not fully audited</strong> (<code>components/table.go:293</code>): <code>t.filtered[vi]</code> can panic if <code>filtered</code> is nil and <code>end &gt; 0</code> due to race between <code>SetRows</code> and <code>View</code>. <code>sortRows()</code> at line 217 indexes <code>t.Rows[i][col]</code> without checking row length vs column count. <strong>[ROADMAP 1.10.3]</strong></p>
+</li>
+<li>
+<p><strong>No fuzz tests</strong> for table rendering. <strong>[ROADMAP 1.10.4]</strong></p>
+</li>
+<li>
+<p><strong>Zero-height terminal not handled</strong> (<code>components/table.go:189-193</code>): <code>visibleRows()</code> returns 5 when <code>Height &lt;= 3</code>, but the caller at line 287 (<code>end = t.Offset + visible</code>) can produce out-of-range access when <code>filtered</code> has fewer than 5 rows and offset is nonzero. <strong>[ROADMAP 1.10.5]</strong></p>
+</li>
+<li>
+<p><strong>No SIGINT/SIGTERM handler</strong> (<code>app.go</code>): Only <code>tea.KeyMsg</code> for <code>q</code>/<code>Ctrl+C</code> triggers cleanup. If the process receives <code>SIGTERM</code> from systemd or a marathon supervisor, managed processes are orphaned. <strong>[ROADMAP 1.3.3]</strong></p>
+</li>
+<li>
+<p><strong>Scroll bounds audit incomplete</strong> (<code>views/logstream.go:36-38</code>): <code>SetDimensions</code> clamps <code>vpHeight</code> to minimum 1, but does not re-validate scroll position. On terminal shrink, viewport may reference content offsets beyond bounds. <strong>[ROADMAP 1.3.4]</strong></p>
+</li>
+<li>
+<p><strong>Diff view is not scrollable</strong> (<code>views/diffview.go</code>): Truncates to <code>height - 15</code> lines and has no viewport/scroll. Long diffs are cut off with a "truncated" message.</p>
+</li>
+<li>
+<p><strong>Timeline view is not scrollable</strong> (<code>views/timeline.go</code>): Truncates to <code>height - 8</code> entries. No cursor or scroll navigation.</p>
+</li>
+<li>
+<p><strong>Config map iteration is non-deterministic</strong> (<code>views/repodetail.go:103</code>): <code>for k, v := range r.Config.Values</code> renders config keys in random order per frame. The config editor (<code>configeditor.go:26-29</code>) correctly sorts keys.</p>
+</li>
+</ol>
+<hr />
+<h2 id="3-gap-analysis">3. Gap Analysis</h2>
+<h3 id="31-roadmap-target-vs-current-state">3.1 ROADMAP Target vs Current State</h3>
+<table>
+<thead>
+<tr>
+<th>ROADMAP Item</th>
+<th>Target</th>
+<th>Current State</th>
+<th>Gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.3.1</td>
+<td>ConfirmDialog component</td>
+<td><strong>DONE</strong> -- <code>components/confirm.go</code> (108 lines)</td>
+<td>None</td>
+</tr>
+<tr>
+<td>1.3.2</td>
+<td>Wire confirm to destructive actions</td>
+<td><strong>DONE</strong> -- wired to stop, stopAll, stopSession in <code>handlers.go</code></td>
+<td>None</td>
+</tr>
+<tr>
+<td>1.3.3</td>
+<td>SIGINT/SIGTERM shutdown handler</td>
+<td><strong>NOT DONE</strong> -- only <code>tea.KeyMsg</code> quit, no <code>os.Signal</code></td>
+<td>Full gap</td>
+</tr>
+<tr>
+<td>1.3.4</td>
+<td>Audit scroll bounds</td>
+<td><strong>PARTIAL</strong> -- logstream has min-height clamp, no resize re-validation</td>
+<td>Moderate gap</td>
+</tr>
+<tr>
+<td>1.10.1</td>
+<td>SortCol bounds clamping</td>
+<td><strong>NOT DONE</strong> -- modulo wrap only, no post-SetRows validation</td>
+<td>Full gap</td>
+</tr>
+<tr>
+<td>1.10.2</td>
+<td>LogView search UI</td>
+<td><strong>NOT DONE</strong> -- backend filtering exists, no UI</td>
+<td>Full gap</td>
+</tr>
+<tr>
+<td>1.10.3</td>
+<td>Empty-slice panic audit</td>
+<td><strong>NOT DONE</strong> -- several unguarded slice accesses found</td>
+<td>Full gap</td>
+</tr>
+<tr>
+<td>1.10.4</td>
+<td>Fuzz tests for table</td>
+<td><strong>NOT DONE</strong> -- no fuzz tests exist</td>
+<td>Full gap</td>
+</tr>
+<tr>
+<td>1.10.5</td>
+<td>Zero-height terminal handling</td>
+<td><strong>NOT DONE</strong> -- <code>visibleRows()</code> returns hardcoded 5 on small terminals</td>
+<td>Full gap</td>
+</tr>
+<tr>
+<td>2.4.1</td>
+<td>ViewFleet in view stack</td>
+<td><strong>DONE</strong> -- <code>ViewFleet</code> constant, <code>switchTab(3, ViewFleet, "Fleet")</code></td>
+<td>None</td>
+</tr>
+<tr>
+<td>2.4.2</td>
+<td>Sortable aggregate session table</td>
+<td><strong>DONE</strong> -- <code>fleet.go</code> renders sessions with provider/repo/status/spend</td>
+<td>None</td>
+</tr>
+<tr>
+<td>2.4.3</td>
+<td>Live-update via watcher ticks</td>
+<td><strong>DONE</strong> -- <code>tickMsg</code> refreshes all tables including fleet data</td>
+<td>None</td>
+</tr>
+<tr>
+<td>2.4.4</td>
+<td>Inline actions from fleet view</td>
+<td><strong>DONE</strong> -- <code>handleFleetKey</code> supports stop, diff, timeline, enter</td>
+<td>None</td>
+</tr>
+<tr>
+<td>2.4.5</td>
+<td>Fleet summary bar</td>
+<td><strong>DONE</strong> -- stat boxes with repos/loops/sessions/spend/turns/circuits</td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-missing-capabilities">3.2 Missing Capabilities</h3>
+<ol>
+<li><strong>Signal handler for graceful shutdown</strong>: Required for systemd integration (thin client) and marathon supervisor. Must call <code>ProcMgr.StopAll()</code> and <code>SessMgr.StopAll()</code> before exit.</li>
+<li><strong>LogView search UI</strong>: Filter backend exists but has no entry point. Needs <code>/</code> key binding, search mode indicator, <code>n</code>/<code>N</code> navigation, and match highlighting.</li>
+<li><strong>Scrollable diff view</strong>: Current truncation is inadequate for real diffs (hundreds of lines). Needs viewport backing like LogView.</li>
+<li><strong>Scrollable timeline view</strong>: Same truncation issue. Needs viewport or cursor navigation.</li>
+<li><strong>"Terminal too small" guard</strong>: No minimum-size enforcement. Should display a centered message when terminal is below e.g. 40x10.</li>
+<li><strong>Config key ordering in repo detail</strong>: Non-deterministic map iteration causes key flicker on refresh.</li>
+</ol>
+<h3 id="33-technical-debt-inventory">3.3 Technical Debt Inventory</h3>
+<table>
+<thead>
+<tr>
+<th>Debt Item</th>
+<th>Location</th>
+<th>Severity</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SortCol</code> not clamped after column changes</td>
+<td><code>components/table.go:200</code></td>
+<td>High (crash)</td>
+<td>S</td>
+</tr>
+<tr>
+<td><code>sortRows()</code> no row-length guard</td>
+<td><code>components/table.go:217</code></td>
+<td>High (crash)</td>
+<td>S</td>
+</tr>
+<tr>
+<td><code>filtered</code> nil check missing in View</td>
+<td><code>components/table.go:293</code></td>
+<td>Medium (crash)</td>
+<td>S</td>
+</tr>
+<tr>
+<td>Config map random order in detail view</td>
+<td><code>views/repodetail.go:103</code></td>
+<td>Low (visual flicker)</td>
+<td>S</td>
+</tr>
+<tr>
+<td>DiffView not scrollable</td>
+<td><code>views/diffview.go</code></td>
+<td>Medium (truncation)</td>
+<td>M</td>
+</tr>
+<tr>
+<td>Timeline not scrollable</td>
+<td><code>views/timeline.go</code></td>
+<td>Medium (truncation)</td>
+<td>M</td>
+</tr>
+<tr>
+<td>No <code>os.Signal</code> shutdown handler</td>
+<td><code>tui/app.go</code></td>
+<td>High (orphans)</td>
+<td>S</td>
+</tr>
+<tr>
+<td>Test coverage 23% (tui pkg)</td>
+<td><code>tui/app_test.go</code></td>
+<td>High (regression risk)</td>
+<td>L</td>
+</tr>
+<tr>
+<td>Test coverage 13.3% (styles pkg)</td>
+<td><code>styles/styles_test.go</code></td>
+<td>Medium</td>
+<td>S</td>
+</tr>
+<tr>
+<td><code>fleet_builder.go</code> untested (480 lines)</td>
+<td><code>tui/fleet_builder.go</code></td>
+<td>High (regression risk)</td>
+<td>M</td>
+</tr>
+<tr>
+<td><code>keymap.go</code> untested (350 lines)</td>
+<td><code>tui/keymap.go</code></td>
+<td>Medium</td>
+<td>S</td>
+</tr>
+<tr>
+<td><code>gauge.go</code> untested (127 lines)</td>
+<td><code>components/gauge.go</code></td>
+<td>Medium</td>
+<td>S</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-external-landscape">4. External Landscape</h2>
+<h3 id="41-competitorpeer-projects">4.1 Competitor/Peer Projects</h3>
+<table>
+<thead>
+<tr>
+<th>Project</th>
+<th>Language</th>
+<th>Key UI Patterns</th>
+<th>Relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>k9s</strong></td>
+<td>Go (tview)</td>
+<td>Skins system (YAML themes), plugin system (YAML commands), resource aliases, consistent panel layout, xray drill-down, pulse view (sparklines), bench command</td>
+<td>Direct inspiration. ralphglasses already mirrors skins (theme.go) and panel layout. k9s's plugin.yml pattern is targeted in ROADMAP 3.5.2.</td>
+</tr>
+<tr>
+<td><strong>lazygit</strong></td>
+<td>Go (gocui)</td>
+<td>Fixed panel layout with always-visible state, tab-within-panel, undo stack, interactive rebase, diff staging, consistent keybinds across panels</td>
+<td>lazygit's "state -&gt; action -&gt; new state" loop and spatial consistency principle directly applies. The undo buffer concept maps to ROADMAP 1.5.4.</td>
+</tr>
+<tr>
+<td><strong>lazydocker</strong></td>
+<td>Go (gocui)</td>
+<td>Container/image/volume panels, log streaming with follow, resource graphs, custom commands, bulk operations</td>
+<td>Log streaming with follow is already implemented. lazydocker's container lifecycle maps well to session lifecycle.</td>
+</tr>
+<tr>
+<td><strong>btop++</strong></td>
+<td>C++</td>
+<td>Responsive layout (adapts to terminal size), GPU monitoring, mouse support, multiple themes, process tree view</td>
+<td>Responsive layout is the key lesson -- btop++ gracefully degrades sections when width/height shrinks. ralphglasses does not do this.</td>
+</tr>
+<tr>
+<td><strong>Ratatui</strong> (Rust)</td>
+<td>Rust</td>
+<td>Constraint-based layout, flex layout, widget trait system, built-in scrollbar widget, responsive breakpoints</td>
+<td>Ratatui's constraint layout system is more sophisticated than BubbleTea's string-concat approach. The scrollbar widget pattern would benefit LogView.</td>
+</tr>
+<tr>
+<td><strong>phiat/claude-esp</strong></td>
+<td>Go (BubbleTea)</td>
+<td>Real-time Claude Code session monitoring via JSONL parsing, tree-view session hierarchy, event streaming with follow, terminal-native session inspector</td>
+<td>Directly comparable architecture -- Go + BubbleTea for Claude Code monitoring. claude-esp's JSONL parsing approach for live session output is more robust than ralphglasses' line-based tail. Tree view for session hierarchy is a pattern worth evaluating for team detail views.</td>
+</tr>
+<tr>
+<td><strong>NimbleMarkets/ntcharts</strong></td>
+<td>Go</td>
+<td>Sparkline, bar chart, heatmap, line chart, streaming line, time series, candlestick, waveline, scatter. All implement <code>bubbletea.Model</code> with <code>Update()</code>/<code>View()</code>. Canvas-based rendering with braille/block character sets.</td>
+<td>Already used in ralphglasses (<code>views/sessiondetail.go</code>, <code>views/fleet.go</code> for cost sparkline). Additional chart types (heatmap for session activity, time series for cost over time, bar chart for provider comparison) could enrich the fleet dashboard.</td>
+</tr>
+<tr>
+<td><strong>Ghostty</strong></td>
+<td>Zig</td>
+<td>Theme system: <code>ghostty +list-themes</code> command, <code>~/.config/ghostty/themes/</code> directory for custom themes, system light/dark auto-switching, theme preview in terminal</td>
+<td>Ghostty's theme discovery pattern (CLI command to list available themes + directory for user themes) maps directly to a <code>ralphglasses themes list</code> subcommand and <code>~/.ralphglasses/themes/</code> directory. System light/dark switching is relevant for the thin client auto-boot scenario.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-theme-ecosystem-analysis">4.2 Theme Ecosystem Analysis</h3>
+<p>The research identified three mature theme specification systems relevant to ralphglasses:</p>
+<p><strong>Catppuccin</strong>: 4 flavors (Mocha, Frappe, Macchiato, Latte), 26 named colors per flavor, 300+ application ports. The specification defines semantic color roles (base, surface, overlay, text, subtext, rosewater, flamingo, pink, mauve, red, maroon, peach, yellow, green, teal, sapphire, blue, lavender) that map well to ralphglasses' 8-color Theme struct. Adding Catppuccin support would require expanding Theme to ~14 colors or mapping Catppuccin's 26 to the existing 8 semantically.</p>
+<p><strong>Tokyo Night</strong>: 3 variants (Storm, Night, Day) with specific hex palettes. Simpler than Catppuccin -- maps almost 1:1 to the existing Theme struct (primary, accent, green, yellow, red, gray, dark_bg, bright_fg).</p>
+<p><strong>k9s skins</strong>: Hierarchical YAML with per-resource-type style overrides (e.g., <code>k9s.body.fgColor</code>, <code>k9s.frame.title.fgColor</code>, <code>k9s.views.table.header.fgColor</code>). More granular than ralphglasses' flat 8-color model. k9s supports env-specific themes (different colors per Kubernetes context) and live file watching for hot-reload. The hierarchical approach is overkill for ralphglasses Phase 1 but worth considering for Phase 3.5.</p>
+<p><strong>Current ralphglasses theme gaps</strong>: The existing 5 built-in themes (k9s, dracula, gruvbox, nord, snazzy) use a mix of ANSI-256 color numbers and hex strings. The <code>snazzy</code> theme uses hex (<code>#57c7ff</code>) while others use ANSI numbers (<code>"39"</code>). Lipgloss handles both, but consistency would improve maintainability. Adding Catppuccin Mocha and Tokyo Night Storm as built-in themes requires only new entries in <code>DefaultThemes()</code>.</p>
+<h3 id="43-charmbracelet-ecosystem-findings">4.3 Charmbracelet Ecosystem Findings</h3>
+<p><strong>Lipgloss v2 compositing API</strong>: Lipgloss v2 introduces a compositing/layering system with X, Y, Z positioning for rendering overlays. This would simplify modal rendering in <code>app.go</code> -- instead of concatenating the confirm dialog or action menu as a string override, use <code>lipgloss.Place()</code> with Z-layering. However, lipgloss v2 also changes <code>lipgloss.Color</code> to <code>color.Color</code> (standard library type), which would require updating all color constants in <code>styles/styles.go</code>. This is a breaking migration that should be deferred until Phase 3.5.</p>
+<p><strong>Bubbles display components</strong>: The <code>charmbracelet/bubbles</code> library provides several components not yet used by ralphglasses:
+- <code>table</code> -- official table widget with header/row styling, but ralphglasses' custom <code>components/table.go</code> is more feature-rich (sorting, filtering, multi-select, ANSI-aware padding). No migration recommended.
+- <code>list</code> -- filterable list with fuzzy matching. Could replace the fleet dashboard's session/repo/team panels for more consistent filtering UX.
+- <code>viewport</code> -- already used in <code>views/logstream.go</code>. Could be applied to DiffView and Timeline to make them scrollable.
+- <code>progress</code> -- already used in <code>views/sessiondetail.go</code> for budget progress bar.
+- <code>spinner</code> -- could replace the custom <code>ActivityDot</code> braille spinner in <code>components/gauge.go</code> for more animation options.
+- <code>textinput</code> -- could replace the manual <code>EditBuf</code> + cursor rendering in <code>components/launcher.go</code> for proper cursor movement, selection, and clipboard support.</p>
+<p><strong>BubbleTea high-performance rendering</strong>: For views with heavy ANSI content (fleet dashboard sparklines, colored tables), BubbleTea supports <code>tea.WithAltScreen()</code> and <code>tea.WithMouseCellMotion()</code>. The key optimization is to use <code>viewport</code> for any content that exceeds the terminal height, avoiding full-screen re-renders. The <code>logstream.go</code> already does this correctly; <code>fleet.go</code> does not and re-renders the entire dashboard string on every tick.</p>
+<h3 id="44-patterns-worth-adopting">4.4 Patterns Worth Adopting</h3>
+<ol>
+<li>
+<p><strong>Minimum terminal size guard</strong> (btop++, lazygit): Display a centered "Terminal too small (need 80x24, have WxH)" message. Prevents layout corruption and panics. Directly addresses ROADMAP 1.10.5.</p>
+</li>
+<li>
+<p><strong>Responsive section collapsing</strong> (btop++): When terminal width drops below thresholds, hide lower-priority sections (e.g., fleet dashboard drops provider breakdown, then budget gauges, then events). Prevents text wrapping and overflow.</p>
+</li>
+<li>
+<p><strong>Search in scrollable views</strong> (k9s, lazygit): <code>/</code> enters search mode, matches are highlighted with a distinct background, <code>n</code>/<code>N</code> cycle through matches. Directly addresses ROADMAP 1.10.2.</p>
+</li>
+<li>
+<p><strong>YAML-driven custom commands</strong> (k9s plugins.yml): User-defined shortcuts that run shell commands with variable substitution. ROADMAP 3.5.2 already plans this. Worth noting that k9s plugins scope to specific resource types -- ralphglasses should scope to view types (repos/sessions/teams/fleet).</p>
+</li>
+<li>
+<p><strong>Undo/redo in editors</strong> (lazygit): Single-level undo for config edits. ROADMAP 1.5.4 plans this.</p>
+</li>
+<li>
+<p><strong>Scrollbar indicator</strong> (Ratatui, VS Code terminal): A visual scrollbar on the right edge of scrollable views (LogView, DiffView). Provides spatial awareness in long content.</p>
+</li>
+<li>
+<p><strong>Theme discovery CLI</strong> (Ghostty): A <code>ralphglasses themes list</code> subcommand that prints available themes with color previews. Combined with <code>~/.ralphglasses/themes/</code> directory for user-defined YAML themes and <code>--theme</code> flag for startup selection.</p>
+</li>
+<li>
+<p><strong>JSONL session streaming</strong> (claude-esp): Parse Claude Code's JSONL output directly rather than line-based log tailing. Provides structured access to tool calls, costs, model switches, and errors. This would improve the accuracy of session detail views.</p>
+</li>
+<li>
+<p><strong>Heatmap visualization</strong> (ntcharts): Use ntcharts heatmap for session activity over time (x-axis = hours, y-axis = repos, color = cost or API call density). Would add a high-information-density view to the fleet dashboard.</p>
+</li>
+<li>
+<p><strong>bubbles/textinput for form fields</strong> (Bubbles): Replace the manual <code>EditBuf</code> + cursor rendering in <code>components/launcher.go</code> with <code>bubbles/textinput</code> for proper cursor movement (Home/End/arrow keys), clipboard support (Ctrl+V), and word-level operations (Ctrl+W, Alt+Backspace).</p>
+</li>
+</ol>
+<h3 id="45-anti-patterns-to-avoid">4.5 Anti-Patterns to Avoid</h3>
+<ol>
+<li>
+<p><strong>Mouse-first design in TUI</strong>: Some TUIs prioritize mouse interaction over keyboard. For a marathon-mode fleet controller, keyboard-first is correct. Mouse support can be added later but should never be required.</p>
+</li>
+<li>
+<p><strong>Deep modal nesting</strong>: More than 2 levels of modal overlays (e.g., confirm inside action menu inside launcher) creates confusion. ralphglasses correctly prevents this by dismissing modals before opening new ones.</p>
+</li>
+<li>
+<p><strong>Blocking I/O in View()</strong>: Never call <code>exec.Command</code> in View(). <code>diffview.go:31-53</code> calls <code>git diff</code> synchronously inside <code>RenderDiffView()</code>. This blocks the TUI event loop. Should be moved to a <code>tea.Cmd</code> that sends the result as a message.</p>
+</li>
+<li>
+<p><strong>Unbounded string building</strong>: The <code>View()</code> method in <code>app.go</code> concatenates all sections without height budgeting. On very small terminals, the output exceeds the terminal height and causes scrolling artifacts.</p>
+</li>
+<li>
+<p><strong>Global mutable style variables</strong>: <code>styles/styles.go</code> uses package-level <code>var</code> for all styles. While <code>ApplyTheme()</code> is thread-safe during init, applying a theme at runtime while <code>View()</code> is rendering could produce inconsistent styling. Should be atomic or applied between frames.</p>
+</li>
+<li>
+<p><strong>Compiled Go plugins (.so)</strong>: ROADMAP 2.13.2 plans scanning for Go plugin <code>.so</code> files. Go's <code>plugin</code> package is notoriously brittle -- plugins must be compiled with the exact same Go version, toolchain, and dependency set as the host binary. k9s abandoned compiled plugins for YAML-driven command plugins. HashiCorp's <code>go-plugin</code> (RPC over stdin/stdout) is more robust but heavier. For ralphglasses, a YAML command plugin system (like k9s) is recommended for Phase 3.5, with compiled plugins deferred or dropped.</p>
+</li>
+</ol>
+<h3 id="46-accessibility-considerations">4.6 Accessibility Considerations</h3>
+<p>Terminal accessibility is an emerging concern for production TUIs:</p>
+<ul>
+<li><strong>Screen reader support</strong>: BubbleTea does not currently emit ARIA-like attributes. The Charmbracelet team has an <a href="https://github.com/charmbracelet/bubbletea/issues/780">open discussion</a> about accessibility. For now, ensure all views have text-only representations (no information conveyed solely by color).</li>
+<li><strong>High contrast mode</strong>: The existing theme system can support a "high-contrast" theme (bright foreground on black, no dim/gray text). This is a trivial addition to <code>DefaultThemes()</code>.</li>
+<li><strong>Keyboard-only navigation</strong>: ralphglasses is already keyboard-first. Ensure all interactive elements are reachable via tab/arrow keys without mouse -- currently satisfied.</li>
+<li><strong>Color-blind safety</strong>: Avoid red/green as the sole distinguisher. ralphglasses uses both color AND text/icons for status (e.g., <code>StatusIcon()</code> returns distinct Unicode characters per state), which is correct.</li>
+</ul>
+<h3 id="47-academic-industry-references">4.7 Academic &amp; Industry References</h3>
+<ol>
+<li>
+<p><strong>The Elm Architecture (TEA)</strong>: BubbleTea's foundation. Key principle: Update is the only place state changes, View is a pure function of state. ralphglasses follows this correctly.</p>
+</li>
+<li>
+<p><strong>"Don't Make Me Think" (Krug, 2014)</strong>: Discoverability principle -- every view should show its available actions in a help footer. ralphglasses does this in all views (e.g., <code>repodetail.go:152</code>, <code>logstream.go:183</code>).</p>
+</li>
+<li>
+<p><strong>Synchronized Output (Mode 2027)</strong>: BubbleTea v2 supports Mode 2027 (DEC private mode for synchronized rendering). Reduces flicker on terminals like Ghostty, iTerm2, and Windows Terminal. Already handled by the framework.</p>
+</li>
+<li>
+<p><strong>Nielsen's 10 Usability Heuristics</strong>: Relevant heuristics: Visibility of system status (status bar covers this), Error prevention (confirm dialogs cover this), Recognition over recall (help overlay covers this).</p>
+</li>
+<li>
+<p><strong>Lazygit: 5 Years Retrospective</strong> (Jesse Duffield, 2025): Key takeaways -- (a) spatial consistency matters more than feature density, (b) the undo stack is the most underrated feature, (c) keyboard shortcuts should be discoverable in-context not in a separate help page. ralphglasses already follows (c) via help footers in each view.</p>
+</li>
+</ol>
+<hr />
+<h2 id="5-actionable-recommendations">5. Actionable Recommendations</h2>
+<h3 id="51-immediate-actions-this-sprint">5.1 Immediate Actions (This Sprint)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Target File(s)</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Clamp <code>SortCol</code> in <code>SetRows()</code> and <code>CycleSort()</code> to <code>0..len(Columns)-1</code></td>
+<td><code>components/table.go:50-56, 196-211</code></td>
+<td>S</td>
+<td>High -- prevents crash</td>
+<td>1.10.1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Guard <code>sortRows()</code> against row-length mismatch</td>
+<td><code>components/table.go:213-224</code></td>
+<td>S</td>
+<td>High -- prevents crash</td>
+<td>1.10.3</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Add nil-check for <code>filtered</code> slice in <code>View()</code></td>
+<td><code>components/table.go:286-295</code></td>
+<td>S</td>
+<td>High -- prevents crash</td>
+<td>1.10.3</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Add "terminal too small" guard in <code>app.go:View()</code></td>
+<td><code>tui/app.go:601</code></td>
+<td>S</td>
+<td>High -- prevents panic</td>
+<td>1.10.5</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Add <code>os.Signal</code> handler (SIGTERM/SIGINT) with graceful shutdown</td>
+<td><code>tui/app.go</code> or <code>cmd/root.go</code></td>
+<td>S</td>
+<td>High -- prevents orphans</td>
+<td>1.3.3</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Sort config keys in <code>RenderRepoDetail</code></td>
+<td><code>views/repodetail.go:103</code></td>
+<td>S</td>
+<td>Low -- fixes flicker</td>
+<td>1.3.4</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Mark ROADMAP 1.3.1, 1.3.2, 2.4.1-2.4.5 as complete</td>
+<td><code>ROADMAP.md</code></td>
+<td>S</td>
+<td>-</td>
+<td>1.3, 2.4</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-near-term-actions-next-2-sprints">5.2 Near-Term Actions (Next 2 Sprints)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Target File(s)</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8</td>
+<td>Implement LogView search UI: <code>/</code> key binding, <code>n</code>/<code>N</code> navigation, match highlighting</td>
+<td><code>views/logstream.go</code>, <code>tui/handlers.go</code>, <code>tui/keymap.go</code></td>
+<td>M</td>
+<td>High -- key UX feature</td>
+<td>1.10.2</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Make DiffView scrollable (viewport-backed, like LogView)</td>
+<td><code>views/diffview.go</code></td>
+<td>M</td>
+<td>Medium -- usability</td>
+<td>1.3.4</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Make Timeline view scrollable with cursor navigation</td>
+<td><code>views/timeline.go</code>, <code>tui/handlers.go</code></td>
+<td>M</td>
+<td>Medium -- usability</td>
+<td>1.3.4</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Move <code>git diff</code> exec from <code>RenderDiffView</code> to a <code>tea.Cmd</code></td>
+<td><code>views/diffview.go</code>, <code>tui/handlers.go</code></td>
+<td>M</td>
+<td>Medium -- unblocks event loop</td>
+<td>1.3.4</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Add fuzz tests for table rendering</td>
+<td><code>components/table_test.go</code></td>
+<td>M</td>
+<td>Medium -- crash prevention</td>
+<td>1.10.4</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Add resize re-validation in LogView.SetDimensions</td>
+<td><code>views/logstream.go:33-42</code></td>
+<td>S</td>
+<td>Medium -- prevents OOB</td>
+<td>1.3.4</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Audit all remaining slice accesses in components/views</td>
+<td>All TUI files</td>
+<td>M</td>
+<td>High -- crash prevention</td>
+<td>1.10.3</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Add tests for <code>fleet_builder.go</code> (480 untested lines)</td>
+<td><code>tui/fleet_builder_test.go</code> (new)</td>
+<td>M</td>
+<td>High -- regression risk</td>
+<td>1.6.1</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Add tests for <code>keymap.go</code> (350 untested lines)</td>
+<td><code>tui/keymap_test.go</code> (new)</td>
+<td>S</td>
+<td>Medium -- regression risk</td>
+<td>1.6.1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-strategic-actions-next-quarter">5.3 Strategic Actions (Next Quarter)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Target File(s)</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>17</td>
+<td>Responsive layout: collapse fleet sections on narrow terminals</td>
+<td><code>views/fleet.go</code></td>
+<td>L</td>
+<td>Medium -- multi-monitor UX</td>
+<td>3.1-3.2</td>
+</tr>
+<tr>
+<td>18</td>
+<td>Add scrollbar indicators to all scrollable views</td>
+<td><code>components/</code> (new scrollbar component)</td>
+<td>M</td>
+<td>Low -- visual polish</td>
+<td>3.5.1</td>
+</tr>
+<tr>
+<td>19</td>
+<td>Add <code>--theme</code> CLI flag, <code>:theme</code> command, <code>~/.ralphglasses/themes/</code> discovery</td>
+<td><code>cmd/root.go</code>, <code>tui/command.go</code>, <code>styles/theme.go</code></td>
+<td>M</td>
+<td>Medium -- personalization</td>
+<td>3.5.1.6-7</td>
+</tr>
+<tr>
+<td>20</td>
+<td>Add Catppuccin Mocha and Tokyo Night Storm as built-in themes</td>
+<td><code>styles/theme.go</code> (new entries in <code>DefaultThemes()</code>)</td>
+<td>S</td>
+<td>Low -- community themes</td>
+<td>3.5.1</td>
+</tr>
+<tr>
+<td>21</td>
+<td>YAML command plugin system (not compiled .so -- see anti-patterns)</td>
+<td><code>internal/plugins/</code> (new pkg)</td>
+<td>L</td>
+<td>Medium -- extensibility</td>
+<td>2.13</td>
+</tr>
+<tr>
+<td>22</td>
+<td>Resource aliases (<code>:rp</code>, <code>:ss</code>, <code>:tm</code>, <code>:fl</code>)</td>
+<td><code>tui/command.go</code></td>
+<td>S</td>
+<td>Low -- convenience</td>
+<td>3.5.3</td>
+</tr>
+<tr>
+<td>23</td>
+<td>Height budgeting in <code>View()</code>: allocate terminal rows to sections</td>
+<td><code>tui/app.go:601-716</code></td>
+<td>L</td>
+<td>Medium -- prevents overflow</td>
+<td>1.3.4</td>
+</tr>
+<tr>
+<td>24</td>
+<td>Raise tui package test coverage from 23% to 70%</td>
+<td><code>tui/app_test.go</code>, new test files</td>
+<td>XL</td>
+<td>High -- ROADMAP target</td>
+<td>1.6.1</td>
+</tr>
+<tr>
+<td>25</td>
+<td>Replace <code>launcher.go</code> EditBuf with <code>bubbles/textinput</code></td>
+<td><code>components/launcher.go</code></td>
+<td>M</td>
+<td>Medium -- proper cursor/clipboard</td>
+<td>1.3</td>
+</tr>
+<tr>
+<td>26</td>
+<td>Add high-contrast accessibility theme to <code>DefaultThemes()</code></td>
+<td><code>styles/theme.go</code></td>
+<td>S</td>
+<td>Low -- accessibility</td>
+<td>3.5.1</td>
+</tr>
+<tr>
+<td>27</td>
+<td>Add ntcharts heatmap for session activity in fleet dashboard</td>
+<td><code>views/fleet.go</code></td>
+<td>M</td>
+<td>Medium -- information density</td>
+<td>2.4</td>
+</tr>
+<tr>
+<td>28</td>
+<td>Wrap fleet dashboard in viewport for scroll on small terminals</td>
+<td><code>views/fleet.go</code>, <code>tui/app.go</code></td>
+<td>M</td>
+<td>Medium -- prevents clipping</td>
+<td>1.3.4</td>
+</tr>
+<tr>
+<td>29</td>
+<td>Mouse support for clickable tabs and table rows</td>
+<td><code>tui/app.go</code>, <code>components/table.go</code></td>
+<td>L</td>
+<td>Low -- secondary input</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-risk-assessment">6. Risk Assessment</h2>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Probability</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Table panic on empty data during marathon</td>
+<td>High</td>
+<td>High -- TUI crash, orphaned processes</td>
+<td>Fix items 1-3 (SortCol clamp, row guard, nil check) immediately</td>
+</tr>
+<tr>
+<td>SIGTERM kills TUI without process cleanup</td>
+<td>High</td>
+<td>High -- orphaned ralph/claude processes consume API budget</td>
+<td>Fix item 5 (os.Signal handler) immediately</td>
+</tr>
+<tr>
+<td>Zero-height terminal crash on i3 workspace switch</td>
+<td>Medium</td>
+<td>High -- TUI restart needed</td>
+<td>Fix item 4 (min-size guard)</td>
+</tr>
+<tr>
+<td>DiffView blocks event loop on large repos</td>
+<td>Medium</td>
+<td>Medium -- TUI freezes for seconds</td>
+<td>Fix item 11 (move to tea.Cmd)</td>
+</tr>
+<tr>
+<td>Theme switching during View() causes inconsistent render</td>
+<td>Low</td>
+<td>Low -- visual glitch for one frame</td>
+<td>Defer; apply themes between frames only</td>
+</tr>
+<tr>
+<td>Fleet dashboard performance with 50+ sessions</td>
+<td>Medium</td>
+<td>Medium -- slow render, high CPU</td>
+<td>Profile and cache <code>buildFleetData()</code> result; skip rebuild if no tick changes</td>
+</tr>
+<tr>
+<td>Nerd Font icons render as boxes on non-patched terminals</td>
+<td>Medium</td>
+<td>Low -- functional but ugly</td>
+<td>Add <code>--ascii</code> flag to fall back to ASCII icons</td>
+</tr>
+<tr>
+<td>Config key flicker in repo detail</td>
+<td>High</td>
+<td>Low -- visual annoyance</td>
+<td>Fix item 6 (sort keys)</td>
+</tr>
+<tr>
+<td>Lipgloss v2 migration breaks all color constants</td>
+<td>Medium</td>
+<td>Medium -- significant refactor</td>
+<td>Defer to Phase 3.5; all colors in <code>styles/styles.go</code> need <code>lipgloss.Color</code> -&gt; <code>color.Color</code></td>
+</tr>
+<tr>
+<td>Compiled Go plugins (.so) fragile across versions</td>
+<td>High</td>
+<td>Medium -- broken plugin ecosystem</td>
+<td>Use YAML command plugins (k9s pattern) instead per recommendation #21</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-implementation-priority-ordering">7. Implementation Priority Ordering</h2>
+<h3 id="71-critical-path">7.1 Critical Path</h3>
+<p>The critical path focuses on crash prevention and process safety:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>1.10.1 (SortCol clamp) ──┐
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>1.10.3 (slice guards)  ──┼── All S effort, can be done in 1 PR
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>1.10.5 (min-size guard) ──┘
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>     │
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>     ▼
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>1.3.3 (SIGTERM handler) ── S effort, independent PR
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>     │
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>     ▼
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>1.10.2 (LogView search) ── M effort, depends on stable view system
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>     │
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>     ▼
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>1.3.4 (scroll bounds audit + DiffView/Timeline scrollable) ── M effort
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>     │
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>     ▼
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>1.10.4 (fuzz tests) ── M effort, validates all above fixes
+</code></pre></div>
+<h3 id="72-recommended-sequence">7.2 Recommended Sequence</h3>
+<p><strong>Week 1: Crash Prevention (items 1-6)</strong>
+- PR 1: Table bounds safety (<code>SortCol</code> clamp, row-length guard, nil-filtered check)
+- PR 2: Terminal minimum-size guard + config key sort fix
+- PR 3: <code>os.Signal</code> shutdown handler</p>
+<p><strong>Week 2: Scrollable Views (items 8-11, 13)</strong>
+- PR 4: LogView search UI (<code>/</code>, <code>n</code>/<code>N</code>, highlighting)
+- PR 5: DiffView -&gt; viewport-backed + async git diff via <code>tea.Cmd</code>
+- PR 6: Timeline -&gt; cursor navigation + scrollable</p>
+<p><strong>Week 3: Testing (items 12, 14-16)</strong>
+- PR 7: Fuzz tests for table
+- PR 8: <code>fleet_builder_test.go</code> + <code>keymap_test.go</code>
+- PR 9: Slice access audit across all components/views</p>
+<p><strong>Week 4+: Polish (items 17-24)</strong>
+- Theme CLI flag, responsive layout, scrollbar component
+- Plugin system, aliases
+- Coverage push toward 70%</p>
+<h3 id="73-parallelization-opportunities">7.3 Parallelization Opportunities</h3>
+<p>The following workstreams can proceed in parallel:</p>
+<table>
+<thead>
+<tr>
+<th>Stream A (Bounds Safety)</th>
+<th>Stream B (Scroll/Search)</th>
+<th>Stream C (Testing)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.10.1 SortCol clamp</td>
+<td>1.10.2 LogView search</td>
+<td>1.10.4 Fuzz tests</td>
+</tr>
+<tr>
+<td>1.10.3 Slice guards</td>
+<td>1.3.4 DiffView scrollable</td>
+<td>fleet_builder tests</td>
+</tr>
+<tr>
+<td>1.10.5 Min-size guard</td>
+<td>1.3.4 Timeline scrollable</td>
+<td>keymap tests</td>
+</tr>
+<tr>
+<td>1.3.3 Signal handler</td>
+<td>Async git diff cmd</td>
+<td>gauge tests</td>
+</tr>
+</tbody>
+</table>
+<p>All three streams are independent -- they touch different files and different concerns. A three-developer team could complete weeks 1-3 simultaneously.</p>
+<p><strong>ROADMAP items to mark DONE:</strong>
+- 1.3.1 -- ConfirmDialog component exists at <code>components/confirm.go</code>
+- 1.3.2 -- Wired to stop/stopAll/stopSession in <code>handlers.go:582-612, 626-703</code>
+- 2.4.1 -- <code>ViewFleet</code> exists in view stack at <code>app.go:36</code>
+- 2.4.2 -- Aggregate session table in <code>views/fleet.go:242-311</code>
+- 2.4.3 -- Live-update via <code>tickMsg</code> handler at <code>app.go:226-243</code>
+- 2.4.4 -- Inline actions in <code>handlers.go:473-501</code> and <code>fleet_builder.go:301-411</code>
+- 2.4.5 -- Fleet summary bar at <code>views/fleet.go:78-93</code></p>
+<hr />
+<p><em>Sources consulted:</em>
+- <a href="https://github.com/charmbracelet/bubbletea">Charmbracelet BubbleTea</a> -- Elm-architecture TUI framework
+- <a href="https://github.com/charmbracelet/bubbles">Charmbracelet Bubbles</a> -- Display/input component library (table, list, viewport, progress, spinner, textinput)
+- <a href="https://github.com/charmbracelet/lipgloss">Charmbracelet Lipgloss</a> -- Terminal styling; v2 compositing API analysis
+- <a href="https://github.com/NimbleMarkets/ntcharts">NimbleMarkets/ntcharts</a> -- Terminal charts (sparkline, bar, heatmap, line, streaming, time series, candlestick, waveline, scatter)
+- <a href="https://github.com/phiat/claude-esp">phiat/claude-esp</a> -- Go BubbleTea TUI for Claude Code session monitoring via JSONL
+- <a href="https://k9scli.io/topics/skins/">k9s skins documentation</a> -- YAML theme system with hierarchical style structure, env/context/global priority, live file watching
+- <a href="https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md">lazygit themes</a> -- Config-based theme with <code>selectedLineBgColor</code>, file merging
+- <a href="https://jesseduffield.com/Lazygit-5-Years-On/">Lazygit: 5 Years Retrospective</a> -- Spatial consistency, undo stack, discoverability
+- <a href="https://ghostty.org/docs/config">Ghostty theme system</a> -- <code>ghostty +list-themes</code>, <code>~/.config/ghostty/themes/</code>, system light/dark switching
+- <a href="https://github.com/catppuccin/catppuccin">Catppuccin theme specification</a> -- 4 flavors, 26 colors, 300+ ports
+- <a href="https://github.com/enkia/tokyo-night-vscode-theme">Tokyo Night theme</a> -- Storm/Night/Day variants
+- <a href="https://github.com/hashicorp/go-plugin">HashiCorp go-plugin</a> -- RPC-based plugin system (alternative to Go .so plugins)
+- <a href="https://github.com/charmbracelet/bubbletea/issues/780">BubbleTea accessibility discussion</a> -- Screen reader support, ARIA-like attributes
+- <a href="https://zackproser.com/blog/bubbletea-state-machine">BubbleTea State Machine Pattern</a>
+- <a href="https://www.glukhov.org/post/2026/02/tui-frameworks-bubbletea-go-vs-ratatui-rust/">TUI Frameworks: BubbleTea vs Ratatui</a>
+- <a href="https://dasroot.net/posts/2026/03/build-tui-apps-go-bubbletea/">Build TUI Apps with Go and BubbleTea (2026)</a>
+- <a href="https://github.com/rothgar/awesome-tuis">awesome-tuis</a> -- TUI project catalog</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -71,12 +71,29 @@ rg_download_go() {
       ;;
   esac
 
-  case "$(uname -m)" in
-    x86_64|amd64) arch="amd64" ;;
-    arm64|aarch64) arch="arm64" ;;
-    *)
-      echo "unsupported architecture for local Go bootstrap: $(uname -m)" >&2
-      return 1
+  case "$os" in
+    linux)
+      case "$(uname -m)" in
+        x86_64|amd64) arch="amd64" ;;
+        arm64|aarch64)
+          echo "linux arm64 is no longer supported for local Go bootstrap" >&2
+          return 1
+          ;;
+        *)
+          echo "unsupported architecture for local Go bootstrap: $(uname -m)" >&2
+          return 1
+          ;;
+      esac
+      ;;
+    darwin)
+      case "$(uname -m)" in
+        x86_64|amd64) arch="amd64" ;;
+        arm64|aarch64) arch="arm64" ;;
+        *)
+          echo "unsupported architecture for local Go bootstrap: $(uname -m)" >&2
+          return 1
+          ;;
+      esac
       ;;
   esac
 

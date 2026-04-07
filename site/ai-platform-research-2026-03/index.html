@@ -1,0 +1,3265 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ai-platform-research-2026-03/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>AI Platform Research Findings & Recommendations - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ai-platform-research-findings-recommendations" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              AI Platform Research Findings &amp; Recommendations
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Executive Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#implementation-status-2026-03-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Status (2026-03-25)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#codebase-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codebase Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Codebase Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#current-state-63k-lines-go-25-packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current State (63K+ lines Go, 25 packages)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#critical-gaps-resolution-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critical Gaps — Resolution Status
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#research-findings-claude-code-anthropic-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Research Findings: Claude Code &amp; Anthropic API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Research Findings: Claude Code &amp; Anthropic API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cli-features-v2181-march-2026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Features (v2.1.81, March 2026)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CLI Features (v2.1.81, March 2026)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new-flags-for-orchestrators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New Flags for Orchestrators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-teams-research-preview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Teams (Research Preview)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anthropic-api-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anthropic API Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Anthropic API Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adaptive-thinking-ga-feb-2026-critical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adaptive Thinking (GA, Feb 2026) — CRITICAL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compaction-api-beta-critical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compaction API (Beta) — CRITICAL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automatic-prompt-caching-ga-feb-2026-critical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic Prompt Caching (GA, Feb 2026) — CRITICAL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fast-mode-research-preview-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fast Mode (Research Preview) — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#thinking-display-control-ga-march-2026-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Thinking Display Control (GA, March 2026) — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tool-search-ga-feb-2026-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool Search (GA, Feb 2026) — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#structured-outputs-ga-jan-2026-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Structured Outputs (GA, Jan 2026) — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#models-api-capabilities-ga-march-2026-medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models API Capabilities (GA, March 2026) — MEDIUM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#files-api-beta-medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files API (Beta) — MEDIUM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-side-mcp-connector-beta-medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server-Side MCP Connector (Beta) — MEDIUM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#go-sdk-ga-may-2025-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Go SDK (GA, May 2025) — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#context-awareness-ga-medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context Awareness (GA) — MEDIUM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#claude-code-analytics-api-ga-sept-2025-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude Code Analytics API (GA, Sept 2025) — LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openai-compatible-api-endpoint-ga-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenAI-Compatible API Endpoint (GA) — LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#beta-headers-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Beta Headers Reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hooks-system-ga" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hooks System (GA)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#research-findings-google-gemini-cli-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Research Findings: Google Gemini CLI &amp; API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Research Findings: Google Gemini CLI &amp; API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cli-features-v0340-march-2026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Features (v0.34.0, March 2026)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-landscape-march-2026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Landscape (March 2026)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context-caching-ga-critical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context Caching (GA) — CRITICAL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#thinking-budget-control-ga-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Thinking Budget Control (GA) — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#structured-output-json-mode-ga-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Structured Output / JSON Mode (GA) — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batch-api-ga-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch API (GA) — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-calling-ga-medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Function Calling (GA) — MEDIUM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openai-compatibility-endpoint-medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenAI Compatibility Endpoint — MEDIUM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#token-counting-ga-free-medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Token Counting (GA, Free) — MEDIUM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interactions-api-beta-low-monitor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interactions API (Beta) — LOW (monitor)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#google-search-grounding-ga-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Google Search Grounding (GA) — LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deprecation-notice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deprecation Notice
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#research-findings-openai-codex-cli-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Research Findings: OpenAI Codex CLI &amp; API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Research Findings: OpenAI Codex CLI &amp; API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cli-features-v01160-march-2026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Features (v0.116.0, March 2026)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-landscape-march-2026_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Landscape (March 2026)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-features_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#responses-api-ga-march-2025-critical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Responses API (GA, March 2025) — CRITICAL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#websocket-mode-ga-2026-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WebSocket Mode (GA, 2026) — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prompt-caching-ga-automatic-critical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prompt Caching (GA, Automatic) — CRITICAL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reasoning-effort-parameter-ga-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reasoning Effort Parameter (GA) — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#structured-outputs-ga-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Structured Outputs (GA) — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batch-api-ga-high_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch API (GA) — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tool-search-deferred-loading-ga-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool Search / Deferred Loading (GA) — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mcp-bidirectional-integration-ga-medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP Bidirectional Integration (GA) — MEDIUM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agents-sdk-ga-python-typescript-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agents SDK (GA, Python + TypeScript) — LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-platform-insights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Platform Insights
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cross-Platform Insights">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#universal-trends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Universal Trends
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cost-comparison-matrix-march-2026-per-1m-tokens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost Comparison Matrix (March 2026, per 1M tokens)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optimal-provider-routing-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optimal Provider Routing Strategy
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prioritized-recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prioritized Recommendations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Prioritized Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#high-priority-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HIGH PRIORITY — COMPLETE
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="HIGH PRIORITY — COMPLETE">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-enable-prompt-caching-all-providers-est-80-90-input-cost-savings-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Enable Prompt Caching (All Providers) — Est. 80-90% Input Cost Savings — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-add-adaptive-thinking-effort-parameter-claude-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Add Adaptive Thinking + Effort Parameter (Claude) — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-migrate-openai-client-to-responses-api-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Migrate OpenAI Client to Responses API — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-update-anthropic-api-version-adopt-go-sdk-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Update Anthropic API Version + Adopt Go SDK — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-add-bare-flag-to-claude-cli-sessions-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Add --bare Flag to Claude CLI Sessions — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-add-effort-flag-to-claude-cli-sessions-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Add --effort Flag to Claude CLI Sessions — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-update-cost-normalization-rates-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Update Cost Normalization Rates — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#medium-priority-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MEDIUM PRIORITY — COMPLETE
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MEDIUM PRIORITY — COMPLETE">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#8-enable-compaction-for-long-running-sessions-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Enable Compaction for Long-Running Sessions — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-implement-tool-search-deferred-loading-in-mcp-server-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Implement Tool Search / Deferred Loading in MCP Server — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-add-gemini-thinking-budget-control-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Add Gemini Thinking Budget Control — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-add-batch-api-support-all-providers-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Add Batch API Support (All Providers) — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-add-model-routing-by-task-type-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Add Model Routing by Task Type — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-add-reasoning-effort-control-openai-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Add Reasoning Effort Control (OpenAI) — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-implement-websocket-mode-for-openai-sessions-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Implement WebSocket Mode for OpenAI Sessions — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-add-structured-output-validation-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. Add Structured Output Validation — DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#now-priority-next-phase-cd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NOW PRIORITY — Next Phase (C/D)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="NOW PRIORITY — Next Phase (C/D)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#16-explore-claude-agent-sdk-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16. Explore Claude Agent SDK Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#17-adopt-agentsmd-cross-platform-standard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17. Adopt AGENTS.md Cross-Platform Standard
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#18-implement-files-api-for-shared-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18. Implement Files API for Shared Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#19-add-gemini-openai-compatibility-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        19. Add Gemini OpenAI Compatibility Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#20-monitor-gemini-interactions-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        20. Monitor Gemini Interactions API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#21-evaluate-fast-mode-for-critical-path-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        21. Evaluate Fast Mode for Critical-Path Operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-explore-computer-use-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        22. Explore Computer Use Capabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-monitor-codex-cloud-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        23. Monitor Codex Cloud Tasks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-roadmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Roadmap
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation Roadmap">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-a-cost-optimization-sprint-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase A: Cost Optimization Sprint — COMPLETE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-b-api-modernization-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase B: API Modernization — COMPLETE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-c-fleet-intelligence-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase C: Fleet Intelligence — COMPLETE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-d-advanced-integration-partially-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase D: Advanced Integration — PARTIALLY COMPLETE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-e-next-frontier-new" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase E: Next Frontier — NEW
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-a-updated-provider-cli-command-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix A: Updated Provider CLI Command Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Appendix A: Updated Provider CLI Command Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#claude-code-v2181" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude Code (v2.1.81)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gemini-cli-v0340" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gemini CLI (v0.34.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#codex-cli-v01160" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codex CLI (v0.116.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-b-environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix B: Environment Variables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-c-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix C: Sources
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Appendix C: Sources">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#claude-code-anthropic-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude Code &amp; Anthropic API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#google-gemini-cli-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Google Gemini CLI &amp; API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openai-codex-cli-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenAI Codex CLI &amp; API
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="ai-platform-research-findings-recommendations">AI Platform Research Findings &amp; Recommendations</h1>
+<p><strong>Date:</strong> 2026-03-24 (research) | <strong>Updated:</strong> 2026-03-25 (implementation status)
+<strong>Scope:</strong> Bleeding-edge features across Claude Code, Gemini, and OpenAI Codex — with integration recommendations for ralphglasses multi-LLM orchestrator.</p>
+<hr />
+<h2 id="executive-summary">Executive Summary</h2>
+<p>Mass parallel research across Claude Code (v2.1.81), Gemini CLI (v0.34.0), and OpenAI Codex CLI (v0.116.0) documentation identified <strong>12 critical gaps</strong> and <strong>60+ features</strong> across all three platforms.</p>
+<h3 id="implementation-status-2026-03-25">Implementation Status (2026-03-25)</h3>
+<p><strong>All 12 high-priority and 5 medium-priority recommendations have been implemented</strong> across 35 files (+5,678 lines, -824 lines). Key deliverables:</p>
+<table>
+<thead>
+<tr>
+<th>Deliverable</th>
+<th>Package/File</th>
+<th>Lines</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Anthropic Go SDK migration</td>
+<td><code>enhancer/llmclient.go</code></td>
+<td>Rewritten</td>
+</tr>
+<tr>
+<td>Prompt caching (all 3 providers)</td>
+<td><code>enhancer/*.go</code></td>
+<td>+180</td>
+</tr>
+<tr>
+<td>OpenAI Responses API migration</td>
+<td><code>enhancer/openai_client.go</code></td>
+<td>Rewritten</td>
+</tr>
+<tr>
+<td>Batch API support</td>
+<td><code>internal/batch/</code> (new)</td>
+<td>+721</td>
+</tr>
+<tr>
+<td>WebSocket transport</td>
+<td><code>internal/wsclient/</code> (new)</td>
+<td>+509</td>
+</tr>
+<tr>
+<td>Cascade routing</td>
+<td><code>session/cascade.go</code></td>
+<td>+649</td>
+</tr>
+<tr>
+<td>Deferred tool loading (10 namespaces)</td>
+<td><code>mcpserver/tools.go</code></td>
+<td>Rewritten</td>
+</tr>
+<tr>
+<td>E2E platform tests</td>
+<td><code>e2e/platform_test.go</code></td>
+<td>+413</td>
+</tr>
+<tr>
+<td>Compaction, --bare, --effort, cost rates</td>
+<td><code>session/providers.go</code>, <code>costnorm.go</code></td>
+<td>Updated</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Remaining work (Phase C/D):</strong> 8 items — Claude Agent SDK, AGENTS.md standard, Files API, Fast Mode, Gemini Interactions API, Computer Use, Codex Cloud Tasks, Gemini OpenAI compatibility endpoint.</p>
+<p><strong>60+ features researched, 17 implemented, 8 remaining.</strong> The rest of this document preserves the full research findings as reference material.</p>
+<hr />
+<h2 id="codebase-analysis">Codebase Analysis</h2>
+<h3 id="current-state-63k-lines-go-25-packages">Current State (63K+ lines Go, 25 packages)</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Technology</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Provider dispatch</td>
+<td>CLI exec (claude/gemini/codex) + stream-json, --bare, --effort</td>
+<td>Production</td>
+</tr>
+<tr>
+<td>Claude API (enhancer)</td>
+<td>Anthropic Go SDK v1.27.1, adaptive thinking, prompt caching</td>
+<td><strong>Updated</strong></td>
+</tr>
+<tr>
+<td>Gemini API (enhancer)</td>
+<td>HTTP to <code>v1beta/</code>, cachedContents caching, thinkingBudget</td>
+<td><strong>Updated</strong></td>
+</tr>
+<tr>
+<td>OpenAI API (enhancer)</td>
+<td>Responses API <code>/v1/responses</code>, prefix caching</td>
+<td><strong>Migrated</strong></td>
+</tr>
+<tr>
+<td>MCP server</td>
+<td>mark3labs/mcp-go v0.45.0, 86 tools, 10 namespaces, deferred loading</td>
+<td><strong>Updated</strong></td>
+</tr>
+<tr>
+<td>Cost normalization</td>
+<td>Updated March 2026 rates (Flash $0.30/$2.50, Sonnet $3/$15, GPT-5.4 $2.50/$15)</td>
+<td><strong>Updated</strong></td>
+</tr>
+<tr>
+<td>Prompt caching</td>
+<td>All 3 providers: Claude cache_control, Gemini cachedContents, OpenAI prefix</td>
+<td><strong>Active</strong></td>
+</tr>
+<tr>
+<td>Context management</td>
+<td>Compaction API (compact-2026-01-12) for marathon sessions</td>
+<td><strong>Active</strong></td>
+</tr>
+<tr>
+<td>Batch API</td>
+<td><code>internal/batch/</code> — Claude, Gemini, OpenAI (50% discount)</td>
+<td><strong>New</strong></td>
+</tr>
+<tr>
+<td>WebSocket transport</td>
+<td><code>internal/wsclient/</code> — OpenAI Responses API, 40% faster</td>
+<td><strong>New</strong></td>
+</tr>
+<tr>
+<td>Cascade routing</td>
+<td><code>session/cascade.go</code> — tiered cheap-then-expensive routing</td>
+<td><strong>New</strong></td>
+</tr>
+<tr>
+<td>Self-learning</td>
+<td>5 subsystems (reflexion, episodic, cascade, uncertainty, curriculum)</td>
+<td>Production</td>
+</tr>
+<tr>
+<td>TUI</td>
+<td>Charmbracelet (bubbles/tea/lipgloss), 12 views</td>
+<td>Production</td>
+</tr>
+<tr>
+<td>Fleet</td>
+<td>HTTP coordinator + Tailscale discovery</td>
+<td>Production</td>
+</tr>
+</tbody>
+</table>
+<h3 id="critical-gaps-resolution-status">Critical Gaps — Resolution Status</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Gap</th>
+<th>Status</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>anthropic-version: 2023-06-01</code> — 3 years old</td>
+<td><strong>DONE</strong></td>
+<td>Migrated to Anthropic Go SDK v1.27.1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>No adaptive thinking or effort parameter</td>
+<td><strong>DONE</strong></td>
+<td><code>thinking.type: "adaptive"</code> + <code>effortLevel</code> in config</td>
+</tr>
+<tr>
+<td>3</td>
+<td>No compaction API</td>
+<td><strong>DONE</strong></td>
+<td><code>compact-2026-01-12</code> beta header passed to CLI sessions</td>
+</tr>
+<tr>
+<td>4</td>
+<td>No prompt caching (any provider)</td>
+<td><strong>DONE</strong></td>
+<td>All 3 providers: Claude/Gemini/OpenAI caching active</td>
+</tr>
+<tr>
+<td>5</td>
+<td>OpenAI client uses Chat Completions</td>
+<td><strong>DONE</strong></td>
+<td>Migrated to Responses API <code>/v1/responses</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Hardcoded cost rates</td>
+<td><strong>DONE</strong></td>
+<td>Updated to March 2026 pricing</td>
+</tr>
+<tr>
+<td>7</td>
+<td>No Gemini context caching</td>
+<td><strong>DONE</strong></td>
+<td><code>cachedContents</code> API with TTL management</td>
+</tr>
+<tr>
+<td>8</td>
+<td>No thinking budget control for Gemini</td>
+<td><strong>DONE</strong></td>
+<td><code>thinkingBudget</code> integrated in cascade routing</td>
+</tr>
+<tr>
+<td>9</td>
+<td>No batch API support (any provider)</td>
+<td><strong>DONE</strong></td>
+<td><code>internal/batch/</code> — 3 provider clients</td>
+</tr>
+<tr>
+<td>10</td>
+<td>84 tools loaded upfront in MCP</td>
+<td><strong>DONE</strong></td>
+<td>86 tools in 10 namespaces, deferred loading</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Not using <code>--bare</code> flag for Claude</td>
+<td><strong>DONE</strong></td>
+<td><code>--bare</code> + <code>--effort</code> in <code>buildClaudeCmd()</code></td>
+</tr>
+<tr>
+<td>12</td>
+<td>Hand-rolled HTTP instead of Go SDK</td>
+<td><strong>DONE</strong></td>
+<td><code>anthropic-sdk-go v1.27.1</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="research-findings-claude-code-anthropic-api">Research Findings: Claude Code &amp; Anthropic API</h2>
+<h3 id="cli-features-v2181-march-2026">CLI Features (v2.1.81, March 2026)</h3>
+<h4 id="new-flags-for-orchestrators">New Flags for Orchestrators</h4>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Purpose</th>
+<th>Relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--bare</code></td>
+<td>Skip hooks/skills/plugins/MCP — faster scripted calls</td>
+<td><strong>Critical</strong> — reduces startup overhead</td>
+</tr>
+<tr>
+<td><code>--effort low/medium/high/max</code></td>
+<td>Cost/quality control per session</td>
+<td><strong>Critical</strong> — primary fleet tuning knob</td>
+</tr>
+<tr>
+<td><code>--fallback-model sonnet</code></td>
+<td>Auto-fallback when primary overloaded</td>
+<td><strong>High</strong> — resilience</td>
+</tr>
+<tr>
+<td><code>--json-schema '{...}'</code></td>
+<td>Validated JSON output matching schema</td>
+<td><strong>High</strong> — structured extraction</td>
+</tr>
+<tr>
+<td><code>--input-format stream-json</code></td>
+<td>Accept NDJSON input for stream chaining</td>
+<td><strong>High</strong> — multi-hop workflows</td>
+</tr>
+<tr>
+<td><code>--betas &lt;header&gt;</code></td>
+<td>Pass beta headers to API</td>
+<td><strong>High</strong> — access new features</td>
+</tr>
+<tr>
+<td><code>--enable-auto-mode</code></td>
+<td>Classifier auto-approves safe tool calls</td>
+<td><strong>Medium</strong> — reduces permission overhead</td>
+</tr>
+<tr>
+<td><code>--agent &lt;name&gt;</code> / <code>--agents '{json}'</code></td>
+<td>Dynamic subagent specialization</td>
+<td><strong>Medium</strong> — per-task agents</td>
+</tr>
+<tr>
+<td><code>--name / -n</code></td>
+<td>Name sessions for easier resume</td>
+<td><strong>Medium</strong> — fleet UX</td>
+</tr>
+<tr>
+<td><code>--fork-session</code></td>
+<td>Create new session ID when resuming</td>
+<td><strong>Medium</strong> — parallel branching</td>
+</tr>
+<tr>
+<td><code>--remote</code></td>
+<td>Web session on claude.ai</td>
+<td><strong>Low</strong> — alternative execution</td>
+</tr>
+<tr>
+<td><code>--chrome</code></td>
+<td>Chrome browser integration</td>
+<td><strong>Low</strong> — web automation</td>
+</tr>
+</tbody>
+</table>
+<h4 id="agent-teams-research-preview">Agent Teams (Research Preview)</h4>
+<ul>
+<li>Enable: <code>CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1</code></li>
+<li>Teams have lead agents, teammates, task lists, mailbox</li>
+<li>Teammates can communicate with each other</li>
+<li>New hook events: <code>TeammateIdle</code>, <code>TaskCompleted</code></li>
+<li><strong>Relevance:</strong> Could eventually replace some fleet coordination, but experimental. Current independent-session model is more robust.</li>
+</ul>
+<h3 id="anthropic-api-features">Anthropic API Features</h3>
+<h4 id="adaptive-thinking-ga-feb-2026-critical">Adaptive Thinking (GA, Feb 2026) — <strong>CRITICAL</strong></h4>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;thinking&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;adaptive&quot;</span><span class="p">},</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;output_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;effort&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;medium&quot;</span><span class="p">}</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">}</span>
+</code></pre></div>
+- Claude decides when and how much to think based on complexity
+- Replaces deprecated <code>budget_tokens</code> on 4.6 models
+- Effort levels: <code>max</code> (Opus only), <code>high</code> (default), <code>medium</code>, <code>low</code>
+- <strong>Action:</strong> Add <code>thinking</code> and <code>output_config</code> to all Messages API calls. Route effort by task type.</p>
+<h4 id="compaction-api-beta-critical">Compaction API (Beta) — <strong>CRITICAL</strong></h4>
+<ul>
+<li>Beta header: <code>compact-2026-01-12</code></li>
+<li>Server-side context summarization for infinite conversations</li>
+<li>Creates <code>compaction</code> blocks with summaries when context exceeds threshold</li>
+<li><strong>Action:</strong> Enable for all marathon/long-running sessions via <code>--betas compact-2026-01-12</code>.</li>
+</ul>
+<h4 id="automatic-prompt-caching-ga-feb-2026-critical">Automatic Prompt Caching (GA, Feb 2026) — <strong>CRITICAL</strong></h4>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;cache_control&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ephemeral&quot;</span><span class="p">},</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">&quot;messages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">]</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">}</span>
+</code></pre></div>
+- Single <code>cache_control</code> field at request body level — automatic breakpoint management
+- 5-minute TTL: 90% input savings. 1-hour TTL: 80% savings.
+- Cache writes: 1.25x base price. Cache reads: 0.1x base price.
+- <strong>Action:</strong> Add <code>cache_control</code> to all Messages API requests. Use 1-hour TTL for fleet sessions sharing system prompts.</p>
+<h4 id="fast-mode-research-preview-high">Fast Mode (Research Preview) — <strong>HIGH</strong></h4>
+<ul>
+<li>Beta header: <code>fast-mode-2026-02-01</code></li>
+<li>2.5x faster output for Opus 4.6</li>
+<li>6x cost ($30/$150 per MTok) — use selectively</li>
+<li><strong>Action:</strong> Enable for latency-critical path operations only.</li>
+</ul>
+<h4 id="thinking-display-control-ga-march-2026-high">Thinking Display Control (GA, March 2026) — <strong>HIGH</strong></h4>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span><span class="nt">&quot;thinking&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;adaptive&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;display&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;omitted&quot;</span><span class="p">}}</span>
+</code></pre></div>
+- Skip streaming thinking tokens for faster TTFT
+- Billing unchanged — you pay for thinking regardless
+- <strong>Action:</strong> Use <code>display: "omitted"</code> for all fleet sessions where thinking isn't surfaced in TUI.</p>
+<h4 id="tool-search-ga-feb-2026-high">Tool Search (GA, Feb 2026) — <strong>HIGH</strong></h4>
+<ul>
+<li>Discover tools on-demand from large catalogs</li>
+<li>85% token reduction vs loading all tools upfront</li>
+<li>No beta header needed</li>
+<li><strong>Action:</strong> Critical for our 84-tool MCP server. Enable tool search in MCP connector config.</li>
+</ul>
+<h4 id="structured-outputs-ga-jan-2026-high">Structured Outputs (GA, Jan 2026) — <strong>HIGH</strong></h4>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span><span class="nt">&quot;output_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;format&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;json_schema&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;json_schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">}}}}</span>
+</code></pre></div>
+- Guaranteed schema conformance for responses
+- <strong>Action:</strong> Use for all structured data extraction in enhancer and loop engine.</p>
+<h4 id="models-api-capabilities-ga-march-2026-medium">Models API Capabilities (GA, March 2026) — <strong>MEDIUM</strong></h4>
+<ul>
+<li><code>GET /v1/models</code> returns <code>max_input_tokens</code>, <code>max_tokens</code>, <code>capabilities</code></li>
+<li>Enables dynamic model selection based on capabilities</li>
+<li><strong>Action:</strong> Replace hardcoded model capabilities with dynamic API queries.</li>
+</ul>
+<h4 id="files-api-beta-medium">Files API (Beta) — <strong>MEDIUM</strong></h4>
+<ul>
+<li>Upload files once, reference by <code>file_id</code> across requests</li>
+<li>500 MB limit per file</li>
+<li>Beta header: <code>files-api-2025-04-14</code></li>
+<li><strong>Action:</strong> Useful for sharing large codebases across fleet sessions without re-uploading.</li>
+</ul>
+<h4 id="server-side-mcp-connector-beta-medium">Server-Side MCP Connector (Beta) — <strong>MEDIUM</strong></h4>
+<ul>
+<li>Beta headers: <code>mcp-client-2025-04-04</code> or <code>mcp-client-2025-11-20</code></li>
+<li>Messages API connects to remote MCP servers directly</li>
+<li>No client-side MCP code needed</li>
+<li><strong>Action:</strong> Potential future path for API-based fleet sessions.</li>
+</ul>
+<h4 id="go-sdk-ga-may-2025-high">Go SDK (GA, May 2025) — <strong>HIGH</strong></h4>
+<ul>
+<li>Official Anthropic Go SDK available</li>
+<li>Replaces hand-rolled HTTP in <code>llmclient.go</code></li>
+<li><strong>Action:</strong> Migrate <code>enhancer/llmclient.go</code> to use official SDK.</li>
+</ul>
+<h4 id="context-awareness-ga-medium">Context Awareness (GA) — <strong>MEDIUM</strong></h4>
+<ul>
+<li>Models receive token budget info and usage warnings after each tool call</li>
+<li>Enables better self-regulation in long-running sessions</li>
+<li>Available on Sonnet 4.6, Sonnet 4.5, Haiku 4.5</li>
+</ul>
+<h4 id="claude-code-analytics-api-ga-sept-2025-low">Claude Code Analytics API (GA, Sept 2025) — <strong>LOW</strong></h4>
+<ul>
+<li>Programmatic access to daily aggregated usage metrics</li>
+<li>Useful for fleet-wide monitoring dashboards</li>
+</ul>
+<h4 id="openai-compatible-api-endpoint-ga-low">OpenAI-Compatible API Endpoint (GA) — <strong>LOW</strong></h4>
+<ul>
+<li>Drop-in replacement for OpenAI client libraries</li>
+<li>Could simplify multi-provider dispatch in orchestrator</li>
+</ul>
+<h3 id="beta-headers-reference">Beta Headers Reference</h3>
+<table>
+<thead>
+<tr>
+<th>Beta Header</th>
+<th>Feature</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>compact-2026-01-12</code></td>
+<td>Compaction API</td>
+<td><strong>Critical</strong></td>
+</tr>
+<tr>
+<td><code>fast-mode-2026-02-01</code></td>
+<td>Fast mode (2.5x Opus speed)</td>
+<td>High</td>
+</tr>
+<tr>
+<td><code>interleaved-thinking-2025-05-14</code></td>
+<td>Thinking between tool calls</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><code>files-api-2025-04-14</code></td>
+<td>Files API</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><code>mcp-client-2025-11-20</code></td>
+<td>MCP connector</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><code>computer-use-2025-11-24</code></td>
+<td>Computer Use tool</td>
+<td>Low</td>
+</tr>
+<tr>
+<td><code>skills-2025-10-02</code></td>
+<td>Agent Skills (Office docs)</td>
+<td>Low</td>
+</tr>
+</tbody>
+</table>
+<h3 id="hooks-system-ga">Hooks System (GA)</h3>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Fleet Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PreToolUse</code></td>
+<td>Security validation, block dangerous commands</td>
+</tr>
+<tr>
+<td><code>PostToolUse</code></td>
+<td>Audit logging, file change tracking</td>
+</tr>
+<tr>
+<td><code>Stop</code></td>
+<td>Cost reporting, session completion</td>
+</tr>
+<tr>
+<td><code>SessionStart</code></td>
+<td>Fleet initialization, budget checks</td>
+</tr>
+<tr>
+<td><code>TeammateIdle</code></td>
+<td>Agent Teams coordination</td>
+</tr>
+<tr>
+<td><code>TaskCompleted</code></td>
+<td>Multi-agent workflow completion</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="research-findings-google-gemini-cli-api">Research Findings: Google Gemini CLI &amp; API</h2>
+<h3 id="cli-features-v0340-march-2026">CLI Features (v0.34.0, March 2026)</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Details</th>
+<th>Relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plan mode (default)</td>
+<td>Safe, read-only planning for complex changes</td>
+<td><strong>High</strong> — use for planner phase</td>
+</tr>
+<tr>
+<td>Enhanced sandboxing</td>
+<td>gVisor (runsc) + experimental LXC</td>
+<td><strong>High</strong> — autonomous workers</td>
+</tr>
+<tr>
+<td>Loop detection</td>
+<td>Prevents repeating same actions</td>
+<td><strong>Medium</strong> — complements ralph loop</td>
+</tr>
+<tr>
+<td>Hooks (10 events)</td>
+<td>SessionStart/End, Before/AfterAgent, Before/AfterTool, etc.</td>
+<td><strong>Medium</strong> — integration points</td>
+</tr>
+<tr>
+<td>Extensions framework</td>
+<td>Packages prompts, MCP, commands, themes, hooks, sub-agents</td>
+<td><strong>Medium</strong> — ralphglasses could be an extension</td>
+</tr>
+<tr>
+<td>Subagents</td>
+<td>Local + remote (A2A protocol), isolated context</td>
+<td><strong>Medium</strong> — delegated task hierarchies</td>
+</tr>
+<tr>
+<td>Checkpointing</td>
+<td>Automatic session snapshots with rewind</td>
+<td><strong>Medium</strong> — recovery</td>
+</tr>
+<tr>
+<td>AGENTS.md support</td>
+<td>Open standard compatible with Codex, Jules, etc.</td>
+<td><strong>Medium</strong> — cross-tool agent definitions</td>
+</tr>
+</tbody>
+</table>
+<h3 id="model-landscape-march-2026">Model Landscape (March 2026)</h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Input/1M</th>
+<th>Output/1M</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>3.1 Pro Preview</strong></td>
+<td>$2.00</td>
+<td>$12.00</td>
+<td>Complex reasoning, flagship</td>
+</tr>
+<tr>
+<td><strong>3 Flash Preview</strong></td>
+<td>$0.50</td>
+<td>$3.00</td>
+<td>Frontier-class at low cost</td>
+</tr>
+<tr>
+<td><strong>2.5 Pro (Stable)</strong></td>
+<td>$1.25</td>
+<td>$10.00</td>
+<td>Reliable workhorse</td>
+</tr>
+<tr>
+<td><strong>2.5 Flash (Stable)</strong></td>
+<td>$0.30</td>
+<td>$2.50</td>
+<td><strong>Sweet spot for workers</strong></td>
+</tr>
+<tr>
+<td><strong>2.5 Flash-Lite (Stable)</strong></td>
+<td>$0.10</td>
+<td>$0.40</td>
+<td><strong>95% cheaper than Claude Sonnet</strong></td>
+</tr>
+<tr>
+<td>3.1 Flash-Lite Preview</td>
+<td>$0.25</td>
+<td>$1.50</td>
+<td>High efficiency</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key insight:</strong> Flash-Lite at $0.10/1M input is <strong>30x cheaper</strong> than Claude Sonnet ($3.00/1M). For simple classification, routing, and generation tasks, Gemini Flash-Lite is the clear cost-optimal choice.</p>
+<h3 id="api-features">API Features</h3>
+<h4 id="context-caching-ga-critical">Context Caching (GA) — <strong>CRITICAL</strong></h4>
+<ul>
+<li><strong>Implicit caching</strong>: Automatic on all 2.5+ models, no code changes needed</li>
+<li><strong>Explicit caching</strong>: 90% discount on cached reads, customizable TTL</li>
+<li>Min tokens: 1,024 (Flash), 4,096 (Pro)</li>
+<li>Storage: $1.00-$4.50/1M tokens/hour</li>
+<li><strong>Action:</strong> Enable explicit caching for repeated system prompts across worker sessions.</li>
+</ul>
+<h4 id="thinking-budget-control-ga-high">Thinking Budget Control (GA) — <strong>HIGH</strong></h4>
+<ul>
+<li><code>thinkingBudget=0</code> disables thinking entirely (Flash/Flash-Lite)</li>
+<li><code>thinkingBudget=-1</code> for dynamic (default)</li>
+<li><code>thinkingLevel</code>: minimal/low/medium/high (Gemini 3 models)</li>
+<li>Thinking tokens billed as output tokens</li>
+<li><strong>Action:</strong> Set <code>thinkingBudget=0</code> for simple worker tasks. Use dynamic for complex.</li>
+</ul>
+<h4 id="structured-output-json-mode-ga-high">Structured Output / JSON Mode (GA) — <strong>HIGH</strong></h4>
+<ul>
+<li><code>response_mime_type: "application/json"</code> + <code>response_json_schema</code></li>
+<li>Supports <code>anyOf</code>, <code>$ref</code>, property ordering</li>
+<li>Streaming returns valid partial JSON</li>
+<li><strong>Action:</strong> Use for all structured worker responses.</li>
+</ul>
+<h4 id="batch-api-ga-high">Batch API (GA) — <strong>HIGH</strong></h4>
+<ul>
+<li>50% discount vs real-time</li>
+<li>24-hour turnaround (usually faster)</li>
+<li>Up to 2GB JSONL input</li>
+<li><strong>Action:</strong> Batch non-urgent tasks (code analysis, documentation, reviews).</li>
+</ul>
+<h4 id="function-calling-ga-medium">Function Calling (GA) — <strong>MEDIUM</strong></h4>
+<ul>
+<li>Parallel + compositional function calling</li>
+<li>VALIDATED mode (preview): constrained to function calls or schema-adherent text</li>
+<li><strong>Best practice: 10-20 active tools max</strong> — critical for our 84-tool MCP server</li>
+<li>Unique <code>id</code> per call required on Gemini 3+</li>
+<li><strong>Action:</strong> Implement dynamic tool filtering per task type.</li>
+</ul>
+<h4 id="openai-compatibility-endpoint-medium">OpenAI Compatibility Endpoint — <strong>MEDIUM</strong></h4>
+<ul>
+<li><code>https://generativelanguage.googleapis.com/v1beta/openai/</code></li>
+<li>Drop-in replacement for OpenAI client libraries</li>
+<li><strong>Action:</strong> Could simplify multi-provider client code.</li>
+</ul>
+<h4 id="token-counting-ga-free-medium">Token Counting (GA, Free) — <strong>MEDIUM</strong></h4>
+<ul>
+<li><code>countTokens</code> API: free, 3,000 RPM</li>
+<li>Returns total_token_count for input</li>
+<li><strong>Action:</strong> Call before large requests for pre-flight cost estimation.</li>
+</ul>
+<h4 id="interactions-api-beta-low-monitor">Interactions API (Beta) — <strong>LOW</strong> (monitor)</h4>
+<ul>
+<li>Unified agent interface replacing generateContent</li>
+<li>Server-side state management, SSE streaming</li>
+<li>Background execution support</li>
+</ul>
+<h4 id="google-search-grounding-ga-low">Google Search Grounding (GA) — <strong>LOW</strong></h4>
+<ul>
+<li>Per-query billing on Gemini 3: $14/1,000 queries after 5,000 free/month</li>
+<li>Useful for research worker tasks</li>
+</ul>
+<h4 id="deprecation-notice">Deprecation Notice</h4>
+<ul>
+<li>Gemini 2.0 Flash and Flash-Lite: <strong>retiring June 1, 2026</strong></li>
+<li><strong>Action:</strong> Ensure no dependencies on 2.0 models.</li>
+</ul>
+<hr />
+<h2 id="research-findings-openai-codex-cli-api">Research Findings: OpenAI Codex CLI &amp; API</h2>
+<h3 id="cli-features-v01160-march-2026">CLI Features (v0.116.0, March 2026)</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Details</th>
+<th>Relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>codex exec --full-auto --json</code></td>
+<td>Headless, autonomous, NDJSON output</td>
+<td><strong>Critical</strong> — primary integration</td>
+</tr>
+<tr>
+<td><code>codex mcp-server</code></td>
+<td>Run Codex AS an MCP server</td>
+<td><strong>High</strong> — bidirectional MCP</td>
+</tr>
+<tr>
+<td>WebSocket mode</td>
+<td>Persistent connections, 40% faster for tool chains</td>
+<td><strong>High</strong> — session loops</td>
+</tr>
+<tr>
+<td><code>--output-schema</code></td>
+<td>Structured output validation</td>
+<td><strong>High</strong> — type-safe results</td>
+</tr>
+<tr>
+<td>Subagents</td>
+<td>Parallel execution, <code>max_threads=6</code></td>
+<td><strong>Medium</strong> — mirrors fleet model</td>
+</tr>
+<tr>
+<td>Skills system</td>
+<td><code>$skill-name</code> invocation, MCP dependency install</td>
+<td><strong>Medium</strong> — task templates</td>
+</tr>
+<tr>
+<td>Cloud tasks</td>
+<td><code>codex cloud</code> for remote execution</td>
+<td><strong>Medium</strong> — offload</td>
+</tr>
+<tr>
+<td>Session fork</td>
+<td><code>codex fork</code> for branching sessions</td>
+<td><strong>Medium</strong> — parallel exploration</td>
+</tr>
+<tr>
+<td>Smart Approvals</td>
+<td>Guardian subagent for approval routing</td>
+<td><strong>Low</strong> — experimental</td>
+</tr>
+<tr>
+<td>OTEL tracing</td>
+<td>Full export support for traces/metrics</td>
+<td><strong>Medium</strong> — observability</td>
+</tr>
+</tbody>
+</table>
+<h3 id="model-landscape-march-2026_1">Model Landscape (March 2026)</h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Input/1M</th>
+<th>Cached Input/1M</th>
+<th>Output/1M</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>GPT-5.4</strong></td>
+<td>$2.50</td>
+<td>$0.25</td>
+<td>$15.00</td>
+<td>Best overall</td>
+</tr>
+<tr>
+<td><strong>GPT-5.4-mini</strong></td>
+<td>$0.75</td>
+<td>$0.075</td>
+<td>$4.50</td>
+<td>2x faster, efficient</td>
+</tr>
+<tr>
+<td><strong>GPT-5.4-nano</strong></td>
+<td>$0.20</td>
+<td>$0.02</td>
+<td>$1.25</td>
+<td><strong>Cheapest option</strong></td>
+</tr>
+<tr>
+<td><strong>GPT-5.4-pro</strong></td>
+<td>$30.00</td>
+<td>—</td>
+<td>$180.00</td>
+<td>Maximum intelligence</td>
+</tr>
+<tr>
+<td><strong>GPT-5.3-Codex</strong></td>
+<td>$1.75</td>
+<td>$0.175</td>
+<td>$14.00</td>
+<td><strong>Industry-leading coding</strong></td>
+</tr>
+<tr>
+<td>o3</td>
+<td>$2.00</td>
+<td>—</td>
+<td>$8.00</td>
+<td>Deep reasoning</td>
+</tr>
+<tr>
+<td>o4-mini</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>Fast reasoning, math</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key insight:</strong> GPT-5.4-nano at $0.20/1M input is competitive with Gemini Flash-Lite ($0.10/1M). GPT-5.3-Codex at $1.75/$14 is purpose-built for coding workers.</p>
+<h3 id="api-features_1">API Features</h3>
+<h4 id="responses-api-ga-march-2025-critical">Responses API (GA, March 2025) — <strong>CRITICAL</strong></h4>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>POST /v1/responses
+</code></pre></div>
+- <strong>Replaces Chat Completions</strong> as recommended API
+- Built-in tools: web_search, file_search, code_interpreter, computer_use, image_generation, MCP
+- Server-side state via <code>previous_response_id</code>
+- Agentic loop: multiple tool calls in single request
+- 40-80% better cache utilization
+- <strong>Assistants API removal: August 26, 2026</strong>
+- <strong>Action:</strong> Migrate <code>enhancer/openai_client.go</code> from Chat Completions to Responses API immediately.</p>
+<h4 id="websocket-mode-ga-2026-high">WebSocket Mode (GA, 2026) — <strong>HIGH</strong></h4>
+<ul>
+<li><code>wss://api.openai.com/v1/responses</code></li>
+<li>Persistent connections, 60-minute limit</li>
+<li>~40% faster for 20+ tool call chains</li>
+<li>Connection-local in-memory cache</li>
+<li>Warmup mode: pre-load tools/instructions without generating</li>
+<li><code>/responses/compact</code> endpoint for context management</li>
+<li><strong>Action:</strong> Use for long-running session loops instead of repeated HTTP.</li>
+</ul>
+<h4 id="prompt-caching-ga-automatic-critical">Prompt Caching (GA, Automatic) — <strong>CRITICAL</strong></h4>
+<ul>
+<li>Automatic for prompts &gt;= 1,024 tokens</li>
+<li>GPT-5 series: <strong>90% off cached input</strong></li>
+<li>GPT-4.1 series: 75% off</li>
+<li>Extended 24-hour caching for GPT-5/4.1</li>
+<li>Route-based: hash of first ~256 tokens determines routing</li>
+<li><strong>Action:</strong> Ensure system prompts and tool definitions are placed first for cache hits.</li>
+</ul>
+<h4 id="reasoning-effort-parameter-ga-high">Reasoning Effort Parameter (GA) — <strong>HIGH</strong></h4>
+<ul>
+<li>Values: <code>none | minimal | low | medium | high | xhigh</code></li>
+<li>GPT-5.4 defaults to <code>none</code></li>
+<li>Reasoning tokens invisible via API but billed as output</li>
+<li>Reserve 25,000+ tokens for reasoning + outputs</li>
+<li><strong>Action:</strong> Set effort per task type. Use <code>none</code> for simple tasks, <code>medium</code> for coding, <code>high</code> for complex reasoning.</li>
+</ul>
+<h4 id="structured-outputs-ga-high">Structured Outputs (GA) — <strong>HIGH</strong></h4>
+<ul>
+<li><code>strict: true</code> in function definitions</li>
+<li>100% schema adherence</li>
+<li><code>--output-schema</code> in <code>codex exec</code></li>
+<li><strong>Action:</strong> Use for all worker output validation.</li>
+</ul>
+<h4 id="batch-api-ga-high_1">Batch API (GA) — <strong>HIGH</strong></h4>
+<ul>
+<li>50% cost discount on all models</li>
+<li>Up to 50,000 requests per batch</li>
+<li>Supports <code>/v1/responses</code> endpoint</li>
+<li><strong>Action:</strong> Batch non-urgent fleet tasks.</li>
+</ul>
+<h4 id="tool-search-deferred-loading-ga-high">Tool Search / Deferred Loading (GA) — <strong>HIGH</strong></h4>
+<ul>
+<li>GPT-5.4+ supports deferred loading for large tool sets</li>
+<li>Namespace grouping with <code>defer_loading: true</code></li>
+<li>Keep &lt;20 functions at conversation start</li>
+<li><strong>Action:</strong> Critical for exposing 84 MCP tools. Implement namespace grouping and deferred loading.</li>
+</ul>
+<h4 id="mcp-bidirectional-integration-ga-medium">MCP Bidirectional Integration (GA) — <strong>MEDIUM</strong></h4>
+<ul>
+<li>Codex CLI: STDIO + streamable HTTP MCP servers</li>
+<li><code>codex mcp-server</code>: Run Codex AS an MCP server</li>
+<li>Responses API: Remote MCP servers as built-in tool type</li>
+<li><strong>Action:</strong> Our MCP server already works with Codex. Explore Codex-as-MCP-server for delegation.</li>
+</ul>
+<h4 id="agents-sdk-ga-python-typescript-low">Agents SDK (GA, Python + TypeScript) — <strong>LOW</strong></h4>
+<ul>
+<li>Agent/Handoff/Guardrail primitives</li>
+<li>Provider-agnostic (100+ LLMs)</li>
+<li>Sessions: SQLite/Redis persistence</li>
+<li>Less relevant for Go codebase, but validates multi-LLM patterns.</li>
+</ul>
+<hr />
+<h2 id="cross-platform-insights">Cross-Platform Insights</h2>
+<h3 id="universal-trends">Universal Trends</h3>
+<ol>
+<li>
+<p><strong>Prompt caching is universal and automatic.</strong> All three providers offer 80-90% input cost savings. None require manual cache management anymore. This is the single largest cost optimization available.</p>
+</li>
+<li>
+<p><strong>Thinking/reasoning is the new cost knob.</strong> Claude has effort levels, Gemini has thinkingBudget/thinkingLevel, OpenAI has reasoning effort. All allow per-request tuning from "zero thinking" to "maximum reasoning."</p>
+</li>
+<li>
+<p><strong>MCP is the industry standard.</strong> Adopted by Anthropic, Google, OpenAI, and governed by Linux Foundation AAIF. All three CLIs support MCP natively. Bidirectional MCP (consume and expose) is supported everywhere.</p>
+</li>
+<li>
+<p><strong>Tool search / deferred loading is critical at scale.</strong> All providers recommend &lt;20 active tools per conversation. Our 84-tool MCP server exceeds this by 4x. Tool search reduces context by 85%+.</p>
+</li>
+<li>
+<p><strong>Batch APIs offer uniform 50% discounts.</strong> All three providers offer batch processing with 50% cost reduction and 24-hour turnaround.</p>
+</li>
+<li>
+<p><strong>AGENTS.md is an emerging cross-platform standard.</strong> Supported by Codex, Jules, Gemini CLI, Aider, and others. Could replace per-provider agent definitions.</p>
+</li>
+<li>
+<p><strong>Context management is solved at the API level.</strong> Claude has compaction, OpenAI has WebSocket compaction, Gemini has implicit caching. Long-running sessions no longer require client-side context management.</p>
+</li>
+<li>
+<p><strong>Structured outputs are GA everywhere.</strong> JSON schema enforcement is available from all three providers, making structured worker results reliable.</p>
+</li>
+</ol>
+<h3 id="cost-comparison-matrix-march-2026-per-1m-tokens">Cost Comparison Matrix (March 2026, per 1M tokens)</h3>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Claude</th>
+<th>Gemini</th>
+<th>OpenAI</th>
+<th>Best Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Ultra-cheap</strong></td>
+<td>—</td>
+<td>Flash-Lite: $0.10/$0.40</td>
+<td>GPT-5.4-nano: $0.20/$1.25</td>
+<td><strong>Gemini Flash-Lite</strong></td>
+</tr>
+<tr>
+<td><strong>Budget worker</strong></td>
+<td>—</td>
+<td>2.5 Flash: $0.30/$2.50</td>
+<td>GPT-5.4-mini: $0.75/$4.50</td>
+<td><strong>Gemini Flash</strong></td>
+</tr>
+<tr>
+<td><strong>Coding worker</strong></td>
+<td>—</td>
+<td>—</td>
+<td>GPT-5.3-Codex: $1.75/$14</td>
+<td><strong>GPT-5.3-Codex</strong></td>
+</tr>
+<tr>
+<td><strong>Standard</strong></td>
+<td>Sonnet 4.6: $3/$15</td>
+<td>2.5 Pro: $1.25/$10</td>
+<td>GPT-5.4: $2.50/$15</td>
+<td><strong>Gemini Pro</strong></td>
+</tr>
+<tr>
+<td><strong>Frontier</strong></td>
+<td>Opus 4.6: $15/$75</td>
+<td>3.1 Pro: $2/$12</td>
+<td>GPT-5.4-pro: $30/$180</td>
+<td><strong>Gemini 3.1 Pro</strong></td>
+</tr>
+<tr>
+<td><strong>Cached input</strong></td>
+<td>90% off (5-min)</td>
+<td>90% off (explicit)</td>
+<td>90% off (GPT-5)</td>
+<td><strong>Tie</strong></td>
+</tr>
+<tr>
+<td><strong>Batch discount</strong></td>
+<td>50% off</td>
+<td>50% off</td>
+<td>50% off</td>
+<td><strong>Tie</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="optimal-provider-routing-strategy">Optimal Provider Routing Strategy</h3>
+<table>
+<thead>
+<tr>
+<th>Task Type</th>
+<th>Recommended Provider</th>
+<th>Model</th>
+<th>Reasoning Level</th>
+<th>Est. Cost/Task</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Classification/routing</td>
+<td>Gemini</td>
+<td>Flash-Lite</td>
+<td>thinkingBudget=0</td>
+<td>$0.001</td>
+</tr>
+<tr>
+<td>Simple generation</td>
+<td>Gemini</td>
+<td>2.5 Flash</td>
+<td>thinkingBudget=0</td>
+<td>$0.005</td>
+</tr>
+<tr>
+<td>Standard coding</td>
+<td>Claude</td>
+<td>Sonnet 4.6</td>
+<td>effort=medium</td>
+<td>$0.10</td>
+</tr>
+<tr>
+<td>Complex coding</td>
+<td>Claude</td>
+<td>Sonnet 4.6</td>
+<td>effort=high</td>
+<td>$0.25</td>
+</tr>
+<tr>
+<td>Specialized coding</td>
+<td>OpenAI</td>
+<td>GPT-5.3-Codex</td>
+<td>effort=medium</td>
+<td>$0.15</td>
+</tr>
+<tr>
+<td>Deep reasoning</td>
+<td>Claude</td>
+<td>Opus 4.6</td>
+<td>effort=max</td>
+<td>$1.00+</td>
+</tr>
+<tr>
+<td>Bulk analysis</td>
+<td>Any</td>
+<td>Batch API</td>
+<td>—</td>
+<td>50% off standard</td>
+</tr>
+<tr>
+<td>Research</td>
+<td>Gemini</td>
+<td>2.5 Pro + Search</td>
+<td>dynamic thinking</td>
+<td>$0.05</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="prioritized-recommendations">Prioritized Recommendations</h2>
+<h3 id="high-priority-complete">HIGH PRIORITY — COMPLETE</h3>
+<h4 id="1-enable-prompt-caching-all-providers-est-80-90-input-cost-savings-done">1. Enable Prompt Caching (All Providers) — Est. 80-90% Input Cost Savings — DONE</h4>
+<p><strong>Files:</strong> <code>enhancer/llmclient.go</code>, <code>enhancer/gemini_client.go</code>, <code>enhancer/openai_client.go</code></p>
+<ul>
+<li><strong>Claude:</strong> Add <code>"cache_control": {"type": "ephemeral", "ttl": "1h"}</code> to request body</li>
+<li><strong>Gemini:</strong> Implicit caching already active on 2.5+; add explicit caching for system prompts</li>
+<li><strong>OpenAI:</strong> Ensure system prompts and tool definitions are placed first (auto-cached &gt;=1024 tokens)</li>
+</ul>
+<h4 id="2-add-adaptive-thinking-effort-parameter-claude-done">2. Add Adaptive Thinking + Effort Parameter (Claude) — DONE</h4>
+<p><strong>Files:</strong> <code>enhancer/llmclient.go</code>, <code>session/providers.go</code></p>
+<ul>
+<li>Replace any <code>budget_tokens</code> usage with <code>"thinking": {"type": "adaptive"}</code></li>
+<li>Add <code>"output_config": {"effort": "medium"}</code> as default</li>
+<li>Route effort by task type: <code>low</code> for subagents, <code>medium</code> for standard, <code>high</code> for complex</li>
+<li>Use <code>display: "omitted"</code> when thinking isn't surfaced</li>
+</ul>
+<h4 id="3-migrate-openai-client-to-responses-api-done">3. Migrate OpenAI Client to Responses API — DONE</h4>
+<p><strong>Files:</strong> <code>enhancer/openai_client.go</code></p>
+<ul>
+<li>Chat Completions is deprecated (removal Aug 2026)</li>
+<li>Change endpoint from <code>/v1/chat/completions</code> to <code>/v1/responses</code></li>
+<li>Use <code>instructions</code> + <code>input</code> instead of <code>messages</code> array</li>
+<li>Add <code>previous_response_id</code> for multi-turn (eliminates manual context)</li>
+</ul>
+<h4 id="4-update-anthropic-api-version-adopt-go-sdk-done">4. Update Anthropic API Version + Adopt Go SDK — DONE</h4>
+<p><strong>Files:</strong> <code>enhancer/llmclient.go</code></p>
+<ul>
+<li>Current: <code>anthropic-version: 2023-06-01</code> (3 years old)</li>
+<li>Replace hand-rolled HTTP with official Go SDK</li>
+<li>Unlocks: adaptive thinking, structured outputs, prompt caching, tool search, compaction</li>
+</ul>
+<h4 id="5-add-bare-flag-to-claude-cli-sessions-done">5. Add <code>--bare</code> Flag to Claude CLI Sessions — DONE</h4>
+<p><strong>Files:</strong> <code>session/providers.go</code></p>
+<ul>
+<li>Add <code>--bare</code> to <code>buildClaudeCmd()</code> for scripted <code>-p</code> calls</li>
+<li>Skips hooks, LSP, plugin sync, skill walks — faster startup</li>
+</ul>
+<h4 id="6-add-effort-flag-to-claude-cli-sessions-done">6. Add <code>--effort</code> Flag to Claude CLI Sessions — DONE</h4>
+<p><strong>Files:</strong> <code>session/providers.go</code></p>
+<ul>
+<li>Pass effort level to <code>buildClaudeCmd()</code> based on task type</li>
+<li>Default: <code>medium</code>. Override per session via MCP tool parameter.</li>
+</ul>
+<h4 id="7-update-cost-normalization-rates-done">7. Update Cost Normalization Rates — DONE</h4>
+<p><strong>Files:</strong> <code>session/costnorm.go</code></p>
+<p>Current rates are stale. Updated rates (March 2026):</p>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">ProviderCostRates</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="nx">Provider</span><span class="p">]</span><span class="nx">CostRate</span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">ProviderClaude</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nx">InputPrice</span><span class="p">:</span><span class="w"> </span><span class="mf">3.00</span><span class="p">,</span><span class="w"> </span><span class="nx">OutputPrice</span><span class="p">:</span><span class="w"> </span><span class="mf">15.00</span><span class="p">},</span><span class="w">   </span><span class="c1">// Sonnet 4.6 (unchanged)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">ProviderGemini</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nx">InputPrice</span><span class="p">:</span><span class="w"> </span><span class="mf">0.30</span><span class="p">,</span><span class="w"> </span><span class="nx">OutputPrice</span><span class="p">:</span><span class="w"> </span><span class="mf">2.50</span><span class="p">},</span><span class="w">    </span><span class="c1">// 2.5 Flash (was $1.25/$5)</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">ProviderCodex</span><span class="p">:</span><span class="w">  </span><span class="p">{</span><span class="nx">InputPrice</span><span class="p">:</span><span class="w"> </span><span class="mf">2.50</span><span class="p">,</span><span class="w"> </span><span class="nx">OutputPrice</span><span class="p">:</span><span class="w"> </span><span class="mf">15.00</span><span class="p">},</span><span class="w">   </span><span class="c1">// GPT-5.4 (was $2.50/$10)</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">}</span>
+</code></pre></div>
+Consider making these configurable or fetching from Models API.</p>
+<h3 id="medium-priority-complete">MEDIUM PRIORITY — COMPLETE</h3>
+<h4 id="8-enable-compaction-for-long-running-sessions-done">8. Enable Compaction for Long-Running Sessions — DONE</h4>
+<p><strong>Files:</strong> <code>session/providers.go</code>, <code>session/loop.go</code></p>
+<ul>
+<li>Pass <code>--betas compact-2026-01-12</code> to Claude CLI sessions</li>
+<li>For direct API: include <code>compact-2026-01-12</code> in <code>anthropic-beta</code> header</li>
+<li>Critical for marathon sessions that exceed context window</li>
+</ul>
+<h4 id="9-implement-tool-search-deferred-loading-in-mcp-server-done">9. Implement Tool Search / Deferred Loading in MCP Server — DONE</h4>
+<p><strong>Files:</strong> <code>mcpserver/tools.go</code></p>
+<ul>
+<li>Current: 84 tools loaded upfront (exceeds 10-20 tool recommendation by 4x)</li>
+<li>Implement namespace grouping (loop, session, fleet, prompt, repo, etc.)</li>
+<li>Mark rarely-used tools as deferred</li>
+<li>All three providers support tool search natively</li>
+</ul>
+<h4 id="10-add-gemini-thinking-budget-control-done">10. Add Gemini Thinking Budget Control — DONE</h4>
+<p><strong>Files:</strong> <code>session/providers.go</code>, <code>enhancer/gemini_client.go</code></p>
+<ul>
+<li>Simple tasks: <code>thinkingBudget=0</code> (no thinking tokens billed)</li>
+<li>Standard tasks: <code>thinkingBudget=-1</code> (dynamic)</li>
+<li>Complex tasks: <code>thinkingBudget=8192</code> or <code>thinkingLevel=high</code></li>
+<li><strong>Savings:</strong> Eliminates thinking token waste on simple worker tasks</li>
+</ul>
+<h4 id="11-add-batch-api-support-all-providers-done">11. Add Batch API Support (All Providers) — DONE</h4>
+<p><strong>Files:</strong> <code>internal/batch/</code> package (+721 lines)</p>
+<ul>
+<li>All three providers offer 50% discount with 24-hour turnaround</li>
+<li>Use for: bulk code analysis, mass documentation, fleet-wide reviews</li>
+<li>Claude: <code>/v1/messages/batches</code> (10K queries/batch)</li>
+<li>Gemini: Inline or JSONL batch (up to 2GB)</li>
+<li>OpenAI: <code>/v1/batches</code> (50K requests/batch)</li>
+</ul>
+<h4 id="12-add-model-routing-by-task-type-done">12. Add Model Routing by Task Type — DONE</h4>
+<p><strong>Files:</strong> <code>session/providers.go</code>, <code>session/cascade.go</code> (+649 lines)</p>
+<p>Implement tiered model routing based on research:
+- <strong>Ultra-cheap tier:</strong> Gemini Flash-Lite ($0.10/1M) for classification, routing
+- <strong>Worker tier:</strong> Gemini 2.5 Flash ($0.30/1M) for simple generation
+- <strong>Coding tier:</strong> GPT-5.3-Codex ($1.75/1M) or Claude Sonnet 4.6 ($3/1M)
+- <strong>Reasoning tier:</strong> Claude Opus 4.6 ($15/1M) for complex analysis</p>
+<h4 id="13-add-reasoning-effort-control-openai-done">13. Add Reasoning Effort Control (OpenAI) — DONE</h4>
+<p><strong>Files:</strong> <code>enhancer/openai_client.go</code></p>
+<ul>
+<li>Add <code>reasoning.effort</code> parameter: <code>none | minimal | low | medium | high | xhigh</code></li>
+<li>GPT-5.4 defaults to <code>none</code> — explicitly set when reasoning needed</li>
+<li>Track <code>reasoning_tokens</code> in cost accounting (billed as output, invisible via API)</li>
+</ul>
+<h4 id="14-implement-websocket-mode-for-openai-sessions-done">14. Implement WebSocket Mode for OpenAI Sessions — DONE</h4>
+<p><strong>Files:</strong> <code>internal/wsclient/</code> (+509 lines)</p>
+<ul>
+<li><code>wss://api.openai.com/v1/responses</code> for persistent connections</li>
+<li>40% faster for 20+ tool call chains</li>
+<li>Connection-local cache, warmup mode, compaction endpoint</li>
+<li>60-minute connection limit</li>
+</ul>
+<h4 id="15-add-structured-output-validation-done">15. Add Structured Output Validation — DONE</h4>
+<p><strong>Files:</strong> <code>session/providers.go</code>, <code>mcpserver/handler_session.go</code></p>
+<ul>
+<li>Claude: <code>output_config.format.json_schema</code></li>
+<li>Gemini: <code>response_mime_type</code> + <code>response_json_schema</code></li>
+<li>OpenAI: <code>strict: true</code> in function definitions, <code>--output-schema</code> in Codex CLI</li>
+<li>Use for: loop engine task outputs, session results, structured reports</li>
+</ul>
+<h3 id="now-priority-next-phase-cd">NOW PRIORITY — Next Phase (C/D)</h3>
+<h4 id="16-explore-claude-agent-sdk-integration">16. Explore Claude Agent SDK Integration</h4>
+<ul>
+<li>GA in Python + TypeScript — tighter control than CLI spawning</li>
+<li>Would require Go sidecar or bridge (not native Go)</li>
+<li>Better error handling, native session management</li>
+<li>Monitor for Go SDK equivalent</li>
+</ul>
+<h4 id="17-adopt-agentsmd-cross-platform-standard">17. Adopt AGENTS.md Cross-Platform Standard</h4>
+<ul>
+<li>Supported by Codex, Gemini CLI, Jules, Aider, and more</li>
+<li>Could replace per-provider agent definition patterns</li>
+<li>Define shared agent profiles once, use across all CLIs</li>
+</ul>
+<h4 id="18-implement-files-api-for-shared-context">18. Implement Files API for Shared Context</h4>
+<ul>
+<li>Claude Files API (beta): Upload once, reference by <code>file_id</code></li>
+<li>Reduces cost when multiple sessions reference same large files</li>
+<li>500 MB limit per file</li>
+</ul>
+<h4 id="19-add-gemini-openai-compatibility-endpoint">19. Add Gemini OpenAI Compatibility Endpoint</h4>
+<ul>
+<li><code>https://generativelanguage.googleapis.com/v1beta/openai/</code></li>
+<li>Drop-in replacement for OpenAI client code</li>
+<li>Could simplify multi-provider dispatch to two code paths (OpenAI-style + Claude)</li>
+</ul>
+<h4 id="20-monitor-gemini-interactions-api">20. Monitor Gemini Interactions API</h4>
+<ul>
+<li>Beta: Unified agent interface with server-side state</li>
+<li>SSE streaming, background execution</li>
+<li>Could simplify Gemini worker session management when stable</li>
+</ul>
+<h4 id="21-evaluate-fast-mode-for-critical-path-operations">21. Evaluate Fast Mode for Critical-Path Operations</h4>
+<ul>
+<li>2.5x faster Opus 4.6, but 6x cost</li>
+<li>Use selectively: planner phase, critical architectural decisions</li>
+<li>Not suitable for bulk operations</li>
+</ul>
+<h4 id="22-explore-computer-use-capabilities">22. Explore Computer Use Capabilities</h4>
+<ul>
+<li>Claude (beta), Gemini (preview), OpenAI (GA)</li>
+<li>Screenshot-based GUI automation</li>
+<li>Relevant for thin client automation, less so for code workers</li>
+</ul>
+<h4 id="23-monitor-codex-cloud-tasks">23. Monitor Codex Cloud Tasks</h4>
+<ul>
+<li><code>codex cloud</code> for remote execution (1-4 attempts)</li>
+<li>Could offload compute-heavy tasks</li>
+<li>Currently experimental</li>
+</ul>
+<hr />
+<h2 id="implementation-roadmap">Implementation Roadmap</h2>
+<h3 id="phase-a-cost-optimization-sprint-complete">Phase A: Cost Optimization Sprint — COMPLETE</h3>
+<p><strong>Realized savings: 50-80% on API costs</strong></p>
+<ol>
+<li>~~Enable prompt caching on all providers (item 1)~~ — DONE</li>
+<li>~~Add adaptive thinking + effort parameter for Claude (item 2)~~ — DONE</li>
+<li>~~Add <code>--bare</code> and <code>--effort</code> flags to CLI dispatch (items 5, 6)~~ — DONE</li>
+<li>~~Update cost normalization rates (item 7)~~ — DONE</li>
+<li>~~Add Gemini thinking budget control (item 10)~~ — DONE</li>
+</ol>
+<h3 id="phase-b-api-modernization-complete">Phase B: API Modernization — COMPLETE</h3>
+<p><strong>Realized savings: additional 10-20% + new features unlocked</strong></p>
+<ol>
+<li>~~Migrate OpenAI client to Responses API (item 3)~~ — DONE</li>
+<li>~~Update Anthropic API version + adopt Go SDK (item 4)~~ — DONE</li>
+<li>~~Add structured output validation (item 15)~~ — DONE</li>
+<li>~~Add reasoning effort control for OpenAI (item 13)~~ — DONE</li>
+</ol>
+<h3 id="phase-c-fleet-intelligence-complete">Phase C: Fleet Intelligence — COMPLETE</h3>
+<p><strong>Realized savings: 30-50% through better routing</strong></p>
+<ol>
+<li>~~Implement model routing by task type (item 12)~~ — DONE (+649 lines, <code>session/cascade.go</code>)</li>
+<li>~~Enable compaction for marathon sessions (item 8)~~ — DONE</li>
+<li>~~Implement tool search / deferred loading (item 9)~~ — DONE (86 tools, 10 namespaces)</li>
+<li>~~Add batch API support (item 11)~~ — DONE (+721 lines, <code>internal/batch/</code>)</li>
+</ol>
+<h3 id="phase-d-advanced-integration-partially-complete">Phase D: Advanced Integration — PARTIALLY COMPLETE</h3>
+<ol>
+<li>~~WebSocket mode for OpenAI (item 14)~~ — DONE (+509 lines, <code>internal/wsclient/</code>)</li>
+<li>AGENTS.md cross-platform standard (item 17) — <strong>NEXT</strong></li>
+<li>Files API for shared context (item 18) — <strong>NEXT</strong></li>
+</ol>
+<h3 id="phase-e-next-frontier-new">Phase E: Next Frontier — NEW</h3>
+<ol>
+<li>Claude Agent SDK Go sidecar/bridge (item 16)</li>
+<li>Gemini OpenAI compatibility endpoint (item 19)</li>
+<li>Gemini Interactions API — monitor for GA (item 20)</li>
+<li>Fast Mode for critical-path operations (item 21)</li>
+<li>Computer Use capabilities (item 22)</li>
+<li>Codex Cloud task offloading (item 23)</li>
+</ol>
+<hr />
+<h2 id="appendix-a-updated-provider-cli-command-reference">Appendix A: Updated Provider CLI Command Reference</h2>
+<h3 id="claude-code-v2181">Claude Code (v2.1.81)</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Current (ralphglasses) — updated with all Phase A-D flags</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>claude<span class="w"> </span>-p<span class="w"> </span>--bare<span class="w"> </span>--output-format<span class="w"> </span>stream-json<span class="w"> </span>--model<span class="w"> </span>sonnet<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--effort<span class="w"> </span>medium<span class="w"> </span>--max-budget-usd<span class="w"> </span><span class="m">5</span>.00<span class="w"> </span>--max-turns<span class="w"> </span><span class="m">50</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--fallback-model<span class="w"> </span>sonnet<span class="w"> </span>--betas<span class="w"> </span>compact-2026-01-12<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>-w<span class="w"> </span>worker-001
+</code></pre></div>
+<h3 id="gemini-cli-v0340">Gemini CLI (v0.34.0)</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Current (ralphglasses)</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>gemini<span class="w"> </span>--output-format<span class="w"> </span>stream-json<span class="w"> </span>--yolo
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Recommended</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>gemini<span class="w"> </span>--output-format<span class="w"> </span>stream-json<span class="w"> </span>--yolo<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>--model<span class="w"> </span>gemini-2.5-flash<span class="w"> </span>--sandbox<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span>--max-turns<span class="w"> </span><span class="m">50</span>
+</code></pre></div>
+<h3 id="codex-cli-v01160">Codex CLI (v0.116.0)</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Current (ralphglasses)</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>codex<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>--model<span class="w"> </span>gpt-5.4-xhigh<span class="w"> </span>--json<span class="w"> </span>--full-auto<span class="w"> </span><span class="s2">&quot;prompt&quot;</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Recommended</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>codex<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>--full-auto<span class="w"> </span>--json<span class="w"> </span>--model<span class="w"> </span>gpt-5.3-codex<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span>--output-schema<span class="w"> </span><span class="s1">&#39;{&quot;type&quot;:&quot;object&quot;,&quot;properties&quot;:{&quot;result&quot;:{&quot;type&quot;:&quot;string&quot;}}}&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">  </span><span class="s2">&quot;prompt&quot;</span>
+</code></pre></div>
+<h2 id="appendix-b-environment-variables">Appendix B: Environment Variables</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Required</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nv">ANTHROPIC_API_KEY</span><span class="o">=</span>sk-ant-...
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nv">GOOGLE_API_KEY</span><span class="o">=</span>AIza...
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nv">OPENAI_API_KEY</span><span class="o">=</span>sk-...
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="c1"># Optional (new)</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="nv">CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS</span><span class="o">=</span><span class="m">1</span><span class="w">  </span><span class="c1"># Enable Agent Teams</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="nv">CODEX_HOME</span><span class="o">=</span>~/.codex<span class="w">                     </span><span class="c1"># Alternate Codex profiles</span>
+</code></pre></div>
+<h2 id="appendix-c-sources">Appendix C: Sources</h2>
+<h3 id="claude-code-anthropic-api">Claude Code &amp; Anthropic API</h3>
+<ul>
+<li><a href="https://code.claude.com/docs/en/cli-reference">Claude Code CLI Reference</a></li>
+<li><a href="https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md">Claude Code CHANGELOG</a></li>
+<li><a href="https://code.claude.com/docs/en/best-practices">Claude Code Best Practices</a></li>
+<li><a href="https://code.claude.com/docs/en/hooks">Claude Code Hooks</a></li>
+<li><a href="https://code.claude.com/docs/en/mcp">Claude Code MCP</a></li>
+<li><a href="https://code.claude.com/docs/en/sub-agents">Claude Code Subagents</a></li>
+<li><a href="https://code.claude.com/docs/en/headless">Claude Code Headless Mode</a></li>
+<li><a href="https://platform.claude.com/docs/en/release-notes/overview">Platform Release Notes</a></li>
+<li><a href="https://platform.claude.com/docs/en/api/beta-headers">Beta Headers</a></li>
+<li><a href="https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking">Adaptive Thinking</a></li>
+<li><a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching">Prompt Caching</a></li>
+<li><a href="https://platform.claude.com/docs/en/build-with-claude/effort">Effort Parameter</a></li>
+<li><a href="https://platform.claude.com/docs/en/build-with-claude/fast-mode">Fast Mode</a></li>
+<li><a href="https://platform.claude.com/docs/en/build-with-claude/compaction">Compaction API</a></li>
+<li><a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview">Tool Use</a></li>
+<li><a href="https://platform.claude.com/docs/en/build-with-claude/batch-processing">Batch Processing</a></li>
+<li><a href="https://platform.claude.com/docs/en/agent-sdk/overview">Agent SDK</a></li>
+<li><a href="https://modelcontextprotocol.io/specification/2025-11-25">MCP Specification</a></li>
+<li><a href="https://platform.claude.com/docs/en/build-with-claude/token-counting">Token Counting</a></li>
+<li><a href="https://platform.claude.com/docs/en/build-with-claude/citations">Citations</a></li>
+<li><a href="https://platform.claude.com/docs/en/build-with-claude/files">Files API</a></li>
+<li><a href="https://platform.claude.com/docs/en/build-with-claude/structured-outputs">Structured Outputs</a></li>
+<li><a href="https://platform.claude.com/docs/en/agents-and-tools/mcp-connector">MCP Connector</a></li>
+</ul>
+<h3 id="google-gemini-cli-api">Google Gemini CLI &amp; API</h3>
+<ul>
+<li><a href="https://geminicli.com/docs/">Gemini CLI Documentation</a></li>
+<li><a href="https://github.com/google-gemini/gemini-cli">Gemini CLI GitHub</a></li>
+<li><a href="https://geminicli.com/docs/changelogs/latest/">Gemini CLI v0.34.0 Changelog</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/models">Gemini API Models</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/pricing">Gemini API Pricing</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/thinking">Gemini Thinking Mode</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/function-calling">Gemini Function Calling</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/structured-output">Gemini Structured Output</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/caching">Gemini Context Caching</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/batch-api">Gemini Batch API</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/long-context">Gemini Long Context</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/tokens">Gemini Token Counting</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/openai">Gemini OpenAI Compatibility</a></li>
+<li><a href="https://geminicli.com/docs/cli/headless/">Gemini CLI Headless Mode</a></li>
+<li><a href="https://geminicli.com/docs/hooks/">Gemini CLI Hooks</a></li>
+<li><a href="https://geminicli.com/docs/core/subagents/">Gemini CLI Subagents</a></li>
+<li><a href="https://agents.md/">AGENTS.md Specification</a></li>
+</ul>
+<h3 id="openai-codex-cli-api">OpenAI Codex CLI &amp; API</h3>
+<ul>
+<li><a href="https://developers.openai.com/codex/cli/reference">Codex CLI Reference</a></li>
+<li><a href="https://developers.openai.com/codex/changelog">Codex Changelog</a></li>
+<li><a href="https://developers.openai.com/codex/models">Codex Models</a></li>
+<li><a href="https://developers.openai.com/codex/subagents">Codex Subagents</a></li>
+<li><a href="https://developers.openai.com/codex/mcp">Codex MCP</a></li>
+<li><a href="https://developers.openai.com/codex/guides/agents-md">Codex AGENTS.md</a></li>
+<li><a href="https://developers.openai.com/api/docs/guides/migrate-to-responses">OpenAI Responses API</a></li>
+<li><a href="https://developers.openai.com/api/docs/guides/function-calling">OpenAI Function Calling</a></li>
+<li><a href="https://developers.openai.com/api/docs/guides/streaming-responses">OpenAI Streaming</a></li>
+<li><a href="https://developers.openai.com/api/docs/guides/websocket-mode">OpenAI WebSocket Mode</a></li>
+<li><a href="https://platform.openai.com/docs/guides/batch">OpenAI Batch API</a></li>
+<li><a href="https://developers.openai.com/api/docs/guides/reasoning">OpenAI Reasoning Models</a></li>
+<li><a href="https://developers.openai.com/api/docs/guides/prompt-caching">OpenAI Prompt Caching</a></li>
+<li><a href="https://developers.openai.com/api/docs/pricing">OpenAI Pricing</a></li>
+<li><a href="https://openai.github.io/openai-agents-python/">OpenAI Agents SDK</a></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

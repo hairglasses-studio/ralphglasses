@@ -16,13 +16,24 @@ done
 # Detect OS and arch
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 ARCH="$(uname -m)"
-case "$ARCH" in
-  x86_64)  ARCH="amd64" ;;
-  aarch64|arm64) ARCH="arm64" ;;
-  *) echo "Unsupported architecture: $ARCH" >&2; exit 1 ;;
-esac
 case "$OS" in
-  linux|darwin) ;;
+  linux)
+    case "$ARCH" in
+      x86_64|amd64) ARCH="amd64" ;;
+      aarch64|arm64)
+        echo "Linux arm64 is no longer supported for ${BINARY}." >&2
+        exit 1
+        ;;
+      *) echo "Unsupported architecture: $ARCH" >&2; exit 1 ;;
+    esac
+    ;;
+  darwin)
+    case "$ARCH" in
+      x86_64|amd64) ARCH="amd64" ;;
+      aarch64|arm64) ARCH="arm64" ;;
+      *) echo "Unsupported architecture: $ARCH" >&2; exit 1 ;;
+    esac
+    ;;
   *) echo "Unsupported OS: $OS" >&2; exit 1 ;;
 esac
 

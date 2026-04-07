@@ -1,0 +1,2033 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/research/03-cost-management-cross-repo/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Research Phase 3: Cost Management & Cross-Repo - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#research-phase-3-cost-management-cross-repo" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Research Phase 3: Cost Management &amp; Cross-Repo
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-current-state-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Current State Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Current State Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-budget-enforcement-internalsessionbudgetgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Budget Enforcement (internal/session/budget.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-cost-normalization-internalsessioncostnormgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Cost Normalization (internal/session/costnorm.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-marathon-supervisor-marathonsh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Marathon Supervisor (marathon.sh)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-fleet-analytics-internalmcpservertoolsgohandlemarathondashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 Fleet Analytics (internal/mcpserver/tools.go:handleMarathonDashboard)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-gap-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Gap Analysis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-external-landscape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. External Landscape
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. External Landscape">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-ryoppippiccusage-jsonl-cost-parsing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 ryoppippi/ccusage -- JSONL Cost Parsing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-haganclaudia-statusline-sqlite-cost-schema-burn-rate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 hagan/claudia-statusline -- SQLite Cost Schema &amp; Burn Rate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-mcpkitfinops-rdcycleprofiles-budget-profiles-scoped-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 mcpkit/finops + rdcycle/profiles -- Budget Profiles &amp; Scoped Tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-anthropic-pricing-reference-current-as-of-2026-03-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Anthropic Pricing Reference (Current as of 2026-03-22)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-actionable-recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Actionable Recommendations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Actionable Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#r1-add-per-model-pricing-table-with-cache-token-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R1: Add Per-Model Pricing Table with Cache Token Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r2-implement-global-budget-pool-with-carry-over" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R2: Implement Global Budget Pool with Carry-Over
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r3-sqlite-backed-cost-persistence-with-burn-rate-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R3: SQLite-Backed Cost Persistence with Burn-Rate History
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r4-cost-forecasting-with-exponential-moving-average" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R4: Cost Forecasting with Exponential Moving Average
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r5-multi-tier-budget-alerts-with-tui-notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R5: Multi-Tier Budget Alerts with TUI Notifications
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r6-token-level-cost-extraction-from-provider-streams" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R6: Token-Level Cost Extraction from Provider Streams
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r7-fleet-budget-profiles-marathon-sprint-overnight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R7: Fleet Budget Profiles (Marathon / Sprint / Overnight)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-risk-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Risk Assessment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Risk Assessment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-cost-data-accuracy-high-risk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 Cost Data Accuracy (High Risk)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-pricing-staleness-medium-risk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Pricing Staleness (Medium Risk)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#63-sqlite-contention-low-risk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 SQLite Contention (Low Risk)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#64-global-pool-deadlocks-medium-risk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.4 Global Pool Deadlocks (Medium Risk)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#65-provider-cost-asymmetry-low-risk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.5 Provider Cost Asymmetry (Low Risk)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-implementation-priority-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Implementation Priority Ordering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Implementation Priority Ordering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dependency-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency Graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase Mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-a-pricing-formula-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix A: Pricing Formula Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Appendix A: Pricing Formula Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#full-cost-calculation-with-all-token-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full cost calculation (with all token types):
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tiered-pricing-for-sonnet-454-with-1m-context-beta-200k-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tiered pricing (for Sonnet 4.5/4 with 1M context beta, &gt;200K input):
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fast-mode-opus-46-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fast mode (Opus 4.6 only):
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cross-provider-normalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-provider normalization:
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#burn-rate-ema-smoothed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Burn rate (EMA-smoothed):
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-b-claude-code-jsonl-usage-file-locations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix B: Claude Code JSONL Usage File Locations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="research-phase-3-cost-management-cross-repo">Research Phase 3: Cost Management &amp; Cross-Repo</h1>
+<p><strong>Date:</strong> 2026-03-22
+<strong>ROADMAP Items:</strong> 2.3, 5.5, 6.10, 7.4
+<strong>Status:</strong> Research Complete</p>
+<hr />
+<h2 id="1-executive-summary">1. Executive Summary</h2>
+<p>Ralphglasses has a solid foundation for per-session cost tracking: <code>BudgetEnforcer</code> with headroom-based checks, JSONL cost ledger writes, and cross-provider cost normalization via <code>NormalizeProviderCost()</code>. The marathon supervisor adds budget-ceiling enforcement at the process level. However, fleet-scale cost management has significant gaps: no persistent global budget pool, no token-level cost breakdown, no cache-aware pricing, no burn-rate forecasting, and no reconciliation with actual billing data.</p>
+<p>This document analyzes three external projects (<code>ryoppippi/ccusage</code>, <code>hagan/claudia-statusline</code>, <code>mcpkit/finops</code> + <code>rdcycle/profiles</code>) and maps their patterns to five concrete gaps across ROADMAP items 2.3, 5.5, 6.10, and 7.4. The primary recommendations are: (1) adopt token-level JSONL parsing from ccusage for ground-truth cost calculation, (2) port mcpkit/finops scoped budgets and windowed tracking for fleet-scale pool management, (3) implement SQLite-backed cost persistence with burn-rate math from claudia-statusline, (4) update the pricing table to match current Anthropic rates including cache token tiers, and (5) add cost forecasting via exponential moving average on ledger history.</p>
+<hr />
+<h2 id="2-current-state-analysis">2. Current State Analysis</h2>
+<h3 id="21-budget-enforcement-internalsessionbudgetgo">2.1 Budget Enforcement (<code>internal/session/budget.go</code>)</h3>
+<p>The <code>BudgetEnforcer</code> provides secondary budget enforcement with a configurable headroom threshold (default 90%):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>threshold = BudgetUSD * Headroom
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>exceeded  = SpentUSD &gt;= threshold
+</code></pre></div>
+<p><strong>Strengths:</strong>
+- Thread-safe via <code>Session.mu</code> lock on every check
+- Per-session cost ledger writes to <code>.ralph/logs/cost_ledger.jsonl</code> (append-only JSONL)
+- Cost summary JSON output to <code>.ralph/cost_summary.json</code>
+- <code>LedgerEntry</code> includes provider, model, turn count, elapsed time</p>
+<p><strong>Gaps:</strong>
+- No token-level breakdown (only aggregate <code>spend_usd</code>)
+- No cache token tracking (cache write vs. cache read pricing differs 12.5x)
+- Headroom is hardcoded to 0.90; not configurable per session or fleet
+- No global budget pool across sessions
+- No time-windowed tracking (hourly/daily caps)
+- Ledger entries written only at checkpoints, not continuously</p>
+<h3 id="22-cost-normalization-internalsessioncostnormgo">2.2 Cost Normalization (<code>internal/session/costnorm.go</code>)</h3>
+<p><code>NormalizeProviderCost()</code> normalizes cross-provider costs to a Claude-sonnet baseline:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>NormalizedUSD = (inputTokens/1M * ClaudeInputRate) + (outputTokens/1M * ClaudeOutputRate)
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>EfficiencyPct = (RawCostUSD / NormalizedUSD) * 100
+</code></pre></div>
+<p>When token counts are unavailable, it estimates via blended-rate scaling:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>providerBlended = (InputPer1M + OutputPer1M) / 2
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>claudeBlended   = (3.00 + 15.00) / 2 = 9.00
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>NormalizedUSD   = rawCostUSD * (claudeBlended / providerBlended)
+</code></pre></div>
+<p><strong>Current pricing table:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Input/MTok</th>
+<th>Output/MTok</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Claude (sonnet)</td>
+<td>$3.00</td>
+<td>$15.00</td>
+<td>Correct for Sonnet 4.6</td>
+</tr>
+<tr>
+<td>Gemini</td>
+<td>$1.25</td>
+<td>$5.00</td>
+<td>Estimate for gemini-2.5-pro</td>
+</tr>
+<tr>
+<td>Codex</td>
+<td>$2.50</td>
+<td>$10.00</td>
+<td>Estimate for gpt-5</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Gaps:</strong>
+- No per-model pricing within providers (Opus 4.6 is $5/$25, Haiku 4.5 is $1/$5)
+- No cache token pricing (cache hits are 0.1x base input = $0.30/MTok for Sonnet)
+- No batch API pricing (50% discount)
+- No extended thinking pricing
+- 50/50 blended rate heuristic is inaccurate for agentic workloads (typically 30/70 input/output)
+- <code>NormalizeSessionCost()</code> always passes <code>0, 0</code> for token counts, forcing blended estimation</p>
+<h3 id="23-marathon-supervisor-marathonsh">2.3 Marathon Supervisor (<code>marathon.sh</code>)</h3>
+<p>Budget enforcement in the supervisor layer:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">budget_ceiling</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>BUDGET<span class="w"> </span>*<span class="w"> </span>BUDGET_HEADROOM<span class="w">      </span><span class="c1"># e.g., $100 * 0.90 = $90</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">spend</span><span class="w">          </span><span class="o">=</span><span class="w"> </span>read_status_field<span class="w"> </span><span class="s2">&quot;session_spend_usd&quot;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Fallback: loop_count * COST_PER_CALL (default $0.15)</span>
+</code></pre></div>
+<p>The supervisor also writes to <code>cost_ledger.jsonl</code> on each poll cycle (every 30s) when loop count changes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span><span class="nt">&quot;ts&quot;</span><span class="p">:</span><span class="s2">&quot;...&quot;</span><span class="p">,</span><span class="nt">&quot;loop&quot;</span><span class="p">:</span><span class="err">N</span><span class="p">,</span><span class="nt">&quot;spend_usd&quot;</span><span class="p">:</span><span class="err">X</span><span class="p">,</span><span class="nt">&quot;elapsed_s&quot;</span><span class="p">:</span><span class="err">Y</span><span class="p">,</span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="s2">&quot;sonnet&quot;</span><span class="p">,</span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="s2">&quot;running&quot;</span><span class="p">}</span>
+</code></pre></div>
+<p><strong>Gaps:</strong>
+- Cost-per-call fallback ($0.15) is a rough estimate with no model awareness
+- No burn-rate calculation in the supervisor (only in the MCP handler)
+- No budget carry-over between marathon sessions
+- No multi-session budget coordination</p>
+<h3 id="24-fleet-analytics-internalmcpservertoolsgohandlemarathondashboard">2.4 Fleet Analytics (<code>internal/mcpserver/tools.go:handleMarathonDashboard</code>)</h3>
+<p>The marathon dashboard calculates burn rate:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>burnRate = sum(session.SpentUSD / session.ElapsedHours)  // for running sessions
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>hoursEst = (totalBudget - totalUSD) / burnRate
+</code></pre></div>
+<p><code>handleFleetAnalytics</code> provides per-provider and per-repo cost breakdowns with average cost per turn.</p>
+<p><strong>Gaps:</strong>
+- Burn rate is instantaneous (no smoothing, no history)
+- No cost projection beyond simple linear extrapolation
+- All data is in-memory only; lost on restart
+- No per-model cost analytics (only per-provider)</p>
+<hr />
+<h2 id="3-gap-analysis">3. Gap Analysis</h2>
+<table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Current State</th>
+<th>Needed State</th>
+<th>ROADMAP Item</th>
+<th>Severity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>G1: No global budget pool</strong></td>
+<td>Each session has independent <code>BudgetUSD</code></td>
+<td>Shared pool with per-session allocation and carry-over</td>
+<td>2.3.2, 5.5.1, 5.5.2</td>
+<td>High</td>
+</tr>
+<tr>
+<td><strong>G2: No token-level cost breakdown</strong></td>
+<td>Only aggregate <code>SpentUSD</code> from stream events</td>
+<td>Per-turn token counts (input, output, cache_write, cache_read)</td>
+<td>2.3.1, 2.5.5.3</td>
+<td>High</td>
+</tr>
+<tr>
+<td><strong>G3: No persistent cost storage</strong></td>
+<td>In-memory <code>Session.SpentUSD</code>, JSONL ledger on disk</td>
+<td>SQLite with queryable history, aggregations, time-range queries</td>
+<td>5.5.1, 6.10.1</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><strong>G4: No cost forecasting</strong></td>
+<td>Linear burn rate extrapolation</td>
+<td>Historical regression, anomaly detection, exhaustion prediction</td>
+<td>6.10.1-6.10.5</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><strong>G5: No cloud cost integration</strong></td>
+<td>API costs only</td>
+<td>Combined API + compute costs in unified budget</td>
+<td>7.4.1-7.4.5</td>
+<td>Low (Phase 7)</td>
+</tr>
+<tr>
+<td><strong>G6: Stale pricing table</strong></td>
+<td>Single rate per provider</td>
+<td>Per-model rates including Opus/Sonnet/Haiku, cache tiers, batch</td>
+<td>2.5.5.3</td>
+<td>High</td>
+</tr>
+<tr>
+<td><strong>G7: No threshold alerts</strong></td>
+<td>Budget exceeded event only at 100%</td>
+<td>Alerts at 50%, 75%, 90% with TUI notification</td>
+<td>2.3.3</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><strong>G8: No windowed tracking</strong></td>
+<td>Cumulative only</td>
+<td>Hourly/daily/weekly spend windows with caps</td>
+<td>5.5.3</td>
+<td>Medium</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-external-landscape">4. External Landscape</h2>
+<h3 id="41-ryoppippiccusage-jsonl-cost-parsing">4.1 <code>ryoppippi/ccusage</code> -- JSONL Cost Parsing</h3>
+<p><strong>Repository:</strong> https://github.com/ryoppippi/ccusage
+<strong>Language:</strong> TypeScript (pnpm monorepo)
+<strong>Relevance:</strong> Ground-truth cost calculation from Claude Code's local JSONL files</p>
+<p><strong>Key findings:</strong></p>
+<ol>
+<li>
+<p><strong>JSONL Discovery:</strong> Reads from <code>~/.config/claude/projects/**/usage.jsonl</code> and <code>~/.claude/projects/**/usage.jsonl</code>. Uses <code>CLAUDE_CONFIG_DIR</code> env var override. This is the canonical source of per-request token usage that Claude Code itself writes.</p>
+</li>
+<li>
+<p><strong>Usage Record Schema:</strong>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>timestamp              ISO 8601
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>message.usage.input_tokens
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>message.usage.output_tokens
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>message.usage.cache_creation_input_tokens
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>message.usage.cache_read_input_tokens
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>message.usage.speed     &quot;standard&quot; | &quot;fast&quot;
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>message.model
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>message.id              deduplication key
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>requestId               deduplication key
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>costUSD                 pre-calculated (when available)
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>sessionId
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>version                 Claude Code version
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Three cost modes:</strong></p>
+</li>
+<li><strong>Auto (default):</strong> Uses pre-calculated <code>costUSD</code> when available, falls back to token-based calculation</li>
+<li><strong>Calculate:</strong> Always compute from tokens, ignoring <code>costUSD</code> (useful for consistent historical comparison)</li>
+<li>
+<p><strong>Display:</strong> Only show pre-calculated costs (for billing verification)</p>
+</li>
+<li>
+<p><strong>Cost formula with tiered pricing:</strong>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>calculateTieredCost(tokens, basePrice, tieredPrice, threshold=200_000):
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  if tokens &lt;= threshold:
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    return tokens * basePrice
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  return (threshold * basePrice) + ((tokens - threshold) * tieredPrice)
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>totalCost = inputCost + outputCost + cacheCreationCost + cacheReadCost
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Session block grouping:</strong> Groups entries into 5-hour billing windows (configurable). Detects gaps for idle period tracking. Calculates per-block burn rates (tokens/min, $/hr).</p>
+</li>
+<li>
+<p><strong>Pricing source:</strong> Fetches from LiteLLM's pricing database at runtime; falls back to prefetched Claude pricing for offline mode. Model matching uses provider prefix candidates (<code>anthropic/</code>, <code>openai/</code>, etc.).</p>
+</li>
+<li>
+<p><strong>Deduplication:</strong> Uses combined <code>messageId:requestId</code> hash to prevent double-counting across files.</p>
+</li>
+</ol>
+<p><strong>Applicability to ralphglasses:</strong>
+- The JSONL usage file path discovery is directly portable. Ralph sessions could read <code>~/.claude/projects/</code> to get ground-truth token costs retroactively (reconciliation).
+- The four-token-type schema (input, output, cache_write, cache_read) should replace the current single <code>SpentUSD</code> field.
+- The tiered pricing formula handles the 200k-token long-context pricing boundary that ralphglasses currently ignores.
+- Session block grouping by 5-hour billing windows aligns with Anthropic's actual billing periods.</p>
+<h3 id="42-haganclaudia-statusline-sqlite-cost-schema-burn-rate">4.2 <code>hagan/claudia-statusline</code> -- SQLite Cost Schema &amp; Burn Rate</h3>
+<p><strong>Repository:</strong> https://github.com/hagan/claudia-statusline
+<strong>Language:</strong> Rust
+<strong>Relevance:</strong> Persistent cost storage, burn-rate calculation modes, status display format</p>
+<p><strong>Key findings:</strong></p>
+<ol>
+<li>
+<p><strong>SQLite schema:</strong>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">sessions</span><span class="w"> </span><span class="p">(</span><span class="n">start_time</span><span class="p">,</span><span class="w"> </span><span class="n">cost</span><span class="p">,</span><span class="w"> </span><span class="n">lines_added</span><span class="p">,</span><span class="w"> </span><span class="n">lines_removed</span><span class="p">,</span><span class="w"> </span><span class="n">duration</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">daily_stats</span><span class="w"> </span><span class="p">(</span><span class="nb">date</span><span class="p">,</span><span class="w"> </span><span class="n">total_cost</span><span class="p">,</span><span class="w"> </span><span class="n">total_lines_added</span><span class="p">,</span><span class="w"> </span><span class="n">total_lines_removed</span><span class="p">,</span><span class="w"> </span><span class="n">session_count</span><span class="p">)</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">monthly_stats</span><span class="w"> </span><span class="p">(</span><span class="k">month</span><span class="p">,</span><span class="w"> </span><span class="n">total_cost</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">session_archive</span><span class="w"> </span><span class="p">(</span><span class="n">archived</span><span class="w"> </span><span class="k">session</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">auto_reset</span><span class="w"> </span><span class="k">mode</span><span class="p">)</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">context_learning</span><span class="w"> </span><span class="p">(</span><span class="n">observed</span><span class="w"> </span><span class="n">context</span><span class="w"> </span><span class="k">usage</span><span class="w"> </span><span class="n">patterns</span><span class="p">)</span>
+</code></pre></div>
+   Daily/monthly stats are rebuilt from session history:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">daily_stats</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="k">SELECT</span><span class="w"> </span><span class="nb">date</span><span class="p">(</span><span class="n">start_time</span><span class="p">),</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">cost</span><span class="p">),</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">lines_added</span><span class="p">),</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">lines_removed</span><span class="p">),</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">FROM</span><span class="w"> </span><span class="n">sessions</span><span class="w"> </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="nb">date</span><span class="p">(</span><span class="n">start_time</span><span class="p">)</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Three burn-rate modes:</strong></p>
+</li>
+<li><strong>wall_clock (default):</strong> <code>total_cost / wall_clock_duration</code> -- simple but includes idle time</li>
+<li><strong>active_time:</strong> Excludes idle periods (configurable threshold, default 60 min gap). Tracks inter-message timestamps. More accurate for intermittent usage.</li>
+<li>
+<p><strong>auto_reset:</strong> Archives sessions after inactivity, resets counters. Useful for distinct work periods. Daily/monthly aggregations survive resets.</p>
+</li>
+<li>
+<p><strong>Status display format:</strong>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>~/project [main +2 ~1] * 45% [====------] Sonnet * 1h 23m * +150 -42 * $3.50 ($2.54/h)
+</code></pre></div>
+   Cost shown as: total spend + hourly burn rate. Multiple layout presets (compact, detailed, minimal, power).</p>
+</li>
+<li>
+<p><strong>Cost data source:</strong> Reads from Claude Code stdin JSON: <code>cost_usd</code>, <code>total_tokens</code>, <code>max_tokens</code>, <code>duration_ms</code>, <code>model</code>.</p>
+</li>
+</ol>
+<p><strong>Applicability to ralphglasses:</strong>
+- The SQLite schema pattern maps directly to ROADMAP 5.5.1 (global budget pool stored in SQLite). Using <code>modernc.org/sqlite</code> (pure Go, already used by internal SQLite project) avoids CGo.
+- The active_time burn-rate mode is superior to the current instantaneous calculation in <code>handleMarathonDashboard</code>. Ralph should use inter-event timestamps to exclude idle periods.
+- The daily/monthly aggregation pattern enables ROADMAP 5.5.3 (budget dashboard) and 6.10.1 (historical cost model).
+- The auto_reset pattern maps to marathon checkpoint semantics -- archive costs at each checkpoint, start fresh counters.</p>
+<h3 id="43-mcpkitfinops-rdcycleprofiles-budget-profiles-scoped-tracking">4.3 <code>mcpkit/finops</code> + <code>rdcycle/profiles</code> -- Budget Profiles &amp; Scoped Tracking</h3>
+<p><strong>Repository:</strong> Local (<code>$HOME/hairglasses-studio/mcpkit</code>)
+<strong>Language:</strong> Go
+<strong>Relevance:</strong> Same org, designed to compose with ralph. Budget presets, scoped budgets, windowed tracking.</p>
+<p><strong>Key findings:</strong></p>
+<ol>
+<li>
+<p><strong>CostPolicy:</strong> Dollar-cost estimation with per-model pricing:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nx">EstimateCost</span><span class="p">(</span><span class="nx">model</span><span class="p">,</span><span class="w"> </span><span class="nx">inputTokens</span><span class="p">,</span><span class="w"> </span><span class="nx">outputTokens</span><span class="p">)</span><span class="w"> </span><span class="kt">float64</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="nx">inputCost</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="nb">float64</span><span class="p">(</span><span class="nx">inputTokens</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1000.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">InputPer1KTokens</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nx">outputCost</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">float64</span><span class="p">(</span><span class="nx">outputTokens</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1000.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">OutputPer1KTokens</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">inputCost</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">outputCost</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="p">}</span>
+</code></pre></div>
+   Thread-safe <code>RecordCost()</code> with budget enforcement. <code>RemainingBudget()</code> returns <code>math.MaxFloat64</code> when no budget set.</p>
+</li>
+<li>
+<p><strong>ScopedTracker:</strong> Per-tenant/user/session budget scoping:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nx">BudgetScope</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">TenantID</span><span class="p">,</span><span class="w"> </span><span class="nx">UserID</span><span class="p">,</span><span class="w"> </span><span class="nx">SessionID</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nx">ScopedBudget</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">MaxTokens</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="nx">MaxDollars</span><span class="w"> </span><span class="kt">float64</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+   Maintains both global and per-scope trackers. ScopedMiddleware resolves identity from context, records to both trackers, checks scoped budgets post-execution.</p>
+</li>
+<li>
+<p><strong>WindowedTracker:</strong> Time-windowed usage tracking with lazy rotation:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nx">ResetInterval</span><span class="p">:</span><span class="w"> </span><span class="nx">ResetHourly</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">ResetDaily</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">ResetWeekly</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">ResetMonthly</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nx">WindowSummary</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Start</span><span class="p">,</span><span class="w"> </span><span class="nx">End</span><span class="p">,</span><span class="w"> </span><span class="nx">TotalInput</span><span class="p">,</span><span class="w"> </span><span class="nx">TotalOutput</span><span class="p">,</span><span class="w"> </span><span class="nx">TotalCost</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+   History retention with configurable max. Rotation happens on next access after window expiry.</p>
+</li>
+<li>
+<p><strong>BudgetProfile presets (<code>rdcycle/profiles.go</code>):</strong>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nx">PersonalProfile</span><span class="p">:</span><span class="w"> </span><span class="err">$</span><span class="mi">5</span><span class="o">/</span><span class="nx">cycle</span><span class="p">,</span><span class="w"> </span><span class="err">$</span><span class="mi">20</span><span class="o">/</span><span class="nx">day</span><span class="p">,</span><span class="w"> </span><span class="mi">500</span><span class="nx">K</span><span class="w"> </span><span class="nx">tokens</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="w"> </span><span class="nx">iterations</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nx">WorkAPIProfile</span><span class="p">:</span><span class="w">  </span><span class="err">$</span><span class="mi">50</span><span class="o">/</span><span class="nx">cycle</span><span class="p">,</span><span class="w"> </span><span class="err">$</span><span class="mi">200</span><span class="o">/</span><span class="nx">day</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="nx">M</span><span class="w"> </span><span class="nx">tokens</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="w"> </span><span class="nx">iterations</span>
+</code></pre></div>
+   <code>BuildFinOpsStack()</code> composes Tracker + CostPolicy + WindowedTracker from a profile.</p>
+</li>
+<li>
+<p><strong>Model pricing (from rdcycle):</strong>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nx">claude</span><span class="o">-</span><span class="nx">opus</span><span class="o">-</span><span class="mi">4</span><span class="o">-</span><span class="mi">6</span><span class="p">:</span><span class="w">   </span><span class="err">$</span><span class="mf">0.015</span><span class="o">/</span><span class="mi">1</span><span class="nx">K</span><span class="w"> </span><span class="nx">input</span><span class="p">,</span><span class="w"> </span><span class="err">$</span><span class="mf">0.075</span><span class="o">/</span><span class="mi">1</span><span class="nx">K</span><span class="w"> </span><span class="nx">output</span><span class="w">  </span><span class="p">(</span><span class="err">$</span><span class="mi">15</span><span class="o">/</span><span class="err">$</span><span class="mi">75</span><span class="w"> </span><span class="nx">per</span><span class="w"> </span><span class="nx">MTok</span><span class="p">)</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nx">claude</span><span class="o">-</span><span class="nx">sonnet</span><span class="o">-</span><span class="mi">4</span><span class="o">-</span><span class="mi">6</span><span class="p">:</span><span class="w"> </span><span class="err">$</span><span class="mf">0.003</span><span class="o">/</span><span class="mi">1</span><span class="nx">K</span><span class="w"> </span><span class="nx">input</span><span class="p">,</span><span class="w"> </span><span class="err">$</span><span class="mf">0.015</span><span class="o">/</span><span class="mi">1</span><span class="nx">K</span><span class="w"> </span><span class="nx">output</span><span class="w">  </span><span class="p">(</span><span class="err">$</span><span class="mi">3</span><span class="o">/</span><span class="err">$</span><span class="mi">15</span><span class="w"> </span><span class="nx">per</span><span class="w"> </span><span class="nx">MTok</span><span class="p">)</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="nx">claude</span><span class="o">-</span><span class="nx">haiku</span><span class="o">-</span><span class="mi">4</span><span class="o">-</span><span class="mi">5</span><span class="p">:</span><span class="w">  </span><span class="err">$</span><span class="mf">0.0008</span><span class="o">/</span><span class="mi">1</span><span class="nx">K</span><span class="w"> </span><span class="nx">input</span><span class="p">,</span><span class="w"> </span><span class="err">$</span><span class="mf">0.004</span><span class="o">/</span><span class="mi">1</span><span class="nx">K</span><span class="w"> </span><span class="nx">output</span><span class="w"> </span><span class="p">(</span><span class="err">$</span><span class="mf">0.80</span><span class="o">/</span><span class="err">$</span><span class="mi">4</span><span class="w"> </span><span class="nx">per</span><span class="w"> </span><span class="nx">MTok</span><span class="p">)</span>
+</code></pre></div>
+   <strong>Note:</strong> These rates are for Opus 4.1-era pricing. Opus 4.6 is $5/$25 per MTok.</p>
+</li>
+</ol>
+<p><strong>Applicability to ralphglasses:</strong>
+- <code>ScopedTracker</code> maps directly to ROADMAP 5.5.1-5.5.2 (global pool + per-session limits). The <code>BudgetScope{TenantID, SessionID}</code> pattern translates to <code>BudgetScope{FleetID, SessionID}</code>.
+- <code>WindowedTracker</code> provides ROADMAP 5.5.3 (daily/weekly spend windows) out of the box. Ralph could import mcpkit/finops directly or port the pattern.
+- <code>BudgetProfile</code> presets map to ROADMAP 2.3.5. Ralph should define fleet-scale profiles (Marathon, Sprint, Overnight) alongside the existing Personal/WorkAPI.
+- <code>BuildFinOpsStack()</code> is the composition pattern Ralph needs: profile -&gt; (tracker, cost_policy, windowed_tracker).</p>
+<h3 id="44-anthropic-pricing-reference-current-as-of-2026-03-22">4.4 Anthropic Pricing Reference (Current as of 2026-03-22)</h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Input/MTok</th>
+<th>Output/MTok</th>
+<th>Cache Write 5m</th>
+<th>Cache Write 1h</th>
+<th>Cache Hit</th>
+<th>Batch Input</th>
+<th>Batch Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Opus 4.6</td>
+<td>$5.00</td>
+<td>$25.00</td>
+<td>$6.25</td>
+<td>$10.00</td>
+<td>$0.50</td>
+<td>$2.50</td>
+<td>$12.50</td>
+</tr>
+<tr>
+<td>Sonnet 4.6</td>
+<td>$3.00</td>
+<td>$15.00</td>
+<td>$3.75</td>
+<td>$6.00</td>
+<td>$0.30</td>
+<td>$1.50</td>
+<td>$7.50</td>
+</tr>
+<tr>
+<td>Haiku 4.5</td>
+<td>$1.00</td>
+<td>$5.00</td>
+<td>$1.25</td>
+<td>$2.00</td>
+<td>$0.10</td>
+<td>$0.50</td>
+<td>$2.50</td>
+</tr>
+<tr>
+<td>Opus 4.5</td>
+<td>$5.00</td>
+<td>$25.00</td>
+<td>$6.25</td>
+<td>$10.00</td>
+<td>$0.50</td>
+<td>$2.50</td>
+<td>$12.50</td>
+</tr>
+<tr>
+<td>Sonnet 4.5</td>
+<td>$3.00</td>
+<td>$15.00</td>
+<td>$3.75</td>
+<td>$6.00</td>
+<td>$0.30</td>
+<td>$1.50</td>
+<td>$7.50</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Additional pricing dimensions:</strong>
+- <strong>Fast mode (Opus 4.6):</strong> 6x standard = $30/$150 per MTok
+- <strong>Long context (Sonnet 4.5/4, &gt;200K input):</strong> 2x input = $6/MTok, 1.5x output = $22.50/MTok
+- <strong>Data residency (US-only):</strong> 1.1x multiplier on all token categories
+- <strong>Cache pricing formula:</strong> Write = base * 1.25 (5m) or base * 2.0 (1h); Hit = base * 0.1</p>
+<hr />
+<h2 id="5-actionable-recommendations">5. Actionable Recommendations</h2>
+<h3 id="r1-add-per-model-pricing-table-with-cache-token-support">R1: Add Per-Model Pricing Table with Cache Token Support</h3>
+<p><strong>Target:</strong> <code>internal/session/costnorm.go</code>
+<strong>Effort:</strong> Small (1-2 days)
+<strong>Impact:</strong> High -- fixes incorrect cost normalization for Opus and Haiku sessions
+<strong>ROADMAP:</strong> 2.5.5.3</p>
+<p>Replace the single-rate-per-provider <code>ProviderCostRates</code> map with a per-model pricing structure:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">ModelCostRate</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">    </span><span class="nx">InputPer1M</span><span class="w">       </span><span class="kt">float64</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="nx">OutputPer1M</span><span class="w">      </span><span class="kt">float64</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="nx">CacheWritePer1M</span><span class="w">  </span><span class="kt">float64</span><span class="w">  </span><span class="c1">// 5-minute cache write rate</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="nx">CacheReadPer1M</span><span class="w">   </span><span class="kt">float64</span><span class="w">  </span><span class="c1">// cache hit rate (0.1x input)</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="p">}</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="kd">var</span><span class="w"> </span><span class="nx">ModelCostRates</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="nx">ModelCostRate</span><span class="p">{</span>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">    </span><span class="s">&quot;claude-opus-4-6&quot;</span><span class="p">:</span><span class="w">   </span><span class="p">{</span><span class="mf">5.00</span><span class="p">,</span><span class="w"> </span><span class="mf">25.00</span><span class="p">,</span><span class="w"> </span><span class="mf">6.25</span><span class="p">,</span><span class="w"> </span><span class="mf">0.50</span><span class="p">},</span>
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">    </span><span class="s">&quot;claude-sonnet-4-6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="mf">3.00</span><span class="p">,</span><span class="w"> </span><span class="mf">15.00</span><span class="p">,</span><span class="w"> </span><span class="mf">3.75</span><span class="p">,</span><span class="w"> </span><span class="mf">0.30</span><span class="p">},</span>
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">    </span><span class="s">&quot;claude-haiku-4-5&quot;</span><span class="p">:</span><span class="w">  </span><span class="p">{</span><span class="mf">1.00</span><span class="p">,</span><span class="w"> </span><span class="mf">5.00</span><span class="p">,</span><span class="w"> </span><span class="mf">1.25</span><span class="p">,</span><span class="w"> </span><span class="mf">0.10</span><span class="p">},</span>
+<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="w">    </span><span class="s">&quot;gemini-3-pro&quot;</span><span class="p">:</span><span class="w">      </span><span class="p">{</span><span class="mf">1.25</span><span class="p">,</span><span class="w"> </span><span class="mf">5.00</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">},</span>
+<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="w">    </span><span class="s">&quot;gpt-5.4-xhigh&quot;</span><span class="p">:</span><span class="w">    </span><span class="p">{</span><span class="mf">2.50</span><span class="p">,</span><span class="w"> </span><span class="mf">10.00</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">},</span>
+<a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="p">}</span>
+</code></pre></div>
+<p>Update <code>NormalizedCost</code> to include token breakdown:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">NormalizedCost</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">    </span><span class="nx">Provider</span><span class="w">           </span><span class="nx">Provider</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nx">Model</span><span class="w">              </span><span class="kt">string</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nx">RawCostUSD</span><span class="w">         </span><span class="kt">float64</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">    </span><span class="nx">InputTokens</span><span class="w">        </span><span class="kt">int</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">    </span><span class="nx">OutputTokens</span><span class="w">       </span><span class="kt">int</span>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">    </span><span class="nx">CacheWriteTokens</span><span class="w">   </span><span class="kt">int</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">    </span><span class="nx">CacheReadTokens</span><span class="w">    </span><span class="kt">int</span>
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="w">    </span><span class="nx">NormalizedUSD</span><span class="w">      </span><span class="kt">float64</span>
+<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="w">    </span><span class="nx">EfficiencyPct</span><span class="w">      </span><span class="kt">float64</span>
+<a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a><span class="p">}</span>
+</code></pre></div>
+<p>Add a <code>LookupModelRate(provider Provider, model string) ModelCostRate</code> function that falls back to provider defaults when the exact model is unknown.</p>
+<h3 id="r2-implement-global-budget-pool-with-carry-over">R2: Implement Global Budget Pool with Carry-Over</h3>
+<p><strong>Target:</strong> New file <code>internal/session/budgetpool.go</code> + modifications to <code>internal/session/manager.go</code>
+<strong>Effort:</strong> Medium (3-5 days)
+<strong>Impact:</strong> High -- enables fleet-scale cost management
+<strong>ROADMAP:</strong> 2.3.2, 5.5.1, 5.5.2</p>
+<p>Implement a global budget pool inspired by mcpkit/finops <code>ScopedTracker</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">BudgetPool</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span><span class="nx">mu</span><span class="w">              </span><span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nx">GlobalCeiling</span><span class="w">   </span><span class="kt">float64</span><span class="w">                    </span><span class="c1">// total fleet budget</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="nx">Allocations</span><span class="w">     </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">float64</span><span class="w">          </span><span class="c1">// session_id -&gt; allocated budget</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">    </span><span class="nx">Spent</span><span class="w">           </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">float64</span><span class="w">          </span><span class="c1">// session_id -&gt; actual spend</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">    </span><span class="nx">Headroom</span><span class="w">        </span><span class="kt">float64</span><span class="w">                     </span><span class="c1">// stop threshold (default 0.90)</span>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">    </span><span class="nx">CarryOverPolicy</span><span class="w"> </span><span class="nx">CarryOverPolicy</span>
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="p">}</span>
+<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>
+<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="kd">type</span><span class="w"> </span><span class="nx">CarryOverPolicy</span><span class="w"> </span><span class="kt">int</span>
+<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="kd">const</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a><span class="w">    </span><span class="nx">CarryOverNone</span><span class="w">       </span><span class="nx">CarryOverPolicy</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">iota</span><span class="w">  </span><span class="c1">// unused budget returns to pool</span>
+<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="w">    </span><span class="nx">CarryOverRedistribute</span><span class="w">                        </span><span class="c1">// redistribute to active sessions</span>
+<a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a><span class="w">    </span><span class="nx">CarryOverAccumulate</span><span class="w">                          </span><span class="c1">// carry forward to next period</span>
+<a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a><span class="p">)</span>
+<a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a>
+<a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">BudgetPool</span><span class="p">)</span><span class="w"> </span><span class="nx">Allocate</span><span class="p">(</span><span class="nx">sessionID</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">requested</span><span class="w"> </span><span class="kt">float64</span><span class="p">)</span><span class="w"> </span><span class="kt">float64</span>
+<a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">BudgetPool</span><span class="p">)</span><span class="w"> </span><span class="nx">RecordSpend</span><span class="p">(</span><span class="nx">sessionID</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">amount</span><span class="w"> </span><span class="kt">float64</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">BudgetPool</span><span class="p">)</span><span class="w"> </span><span class="nx">Remaining</span><span class="p">()</span><span class="w"> </span><span class="kt">float64</span>
+<a id="__codelineno-18-20" name="__codelineno-18-20" href="#__codelineno-18-20"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">BudgetPool</span><span class="p">)</span><span class="w"> </span><span class="nx">ReclaimUnused</span><span class="p">(</span><span class="nx">sessionID</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span>
+</code></pre></div>
+<p>Allocation formula:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>available    = GlobalCeiling * Headroom - sum(Spent)
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>allocated    = min(requested, available / activeSessionCount)
+</code></pre></div></p>
+<p>Carry-over on session completion:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>unused       = Allocations[sessionID] - Spent[sessionID]
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>redistributed = unused / len(activeSessions)
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>for _, sid := range activeSessions:
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>    Allocations[sid] += redistributed
+</code></pre></div></p>
+<p>Wire into <code>Manager.Launch()</code> to check pool availability before starting, and into <code>Runner.handleEvent()</code> to call <code>RecordSpend()</code> on cost update events.</p>
+<h3 id="r3-sqlite-backed-cost-persistence-with-burn-rate-history">R3: SQLite-Backed Cost Persistence with Burn-Rate History</h3>
+<p><strong>Target:</strong> New file <code>internal/session/costdb.go</code>
+<strong>Effort:</strong> Medium (3-5 days)
+<strong>Impact:</strong> Medium -- enables historical queries, forecasting, and restart survival
+<strong>ROADMAP:</strong> 5.5.1, 5.5.3, 6.10.1</p>
+<p>Use <code>modernc.org/sqlite</code> (pure Go, no CGo -- already proven in internal SQLite project) for persistent cost storage:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">cost_events</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">    </span><span class="n">id</span><span class="w">              </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="n">AUTOINCREMENT</span><span class="p">,</span>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">    </span><span class="k">timestamp</span><span class="w">       </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">       </span><span class="c1">-- ISO 8601</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="n">session_id</span><span class="w">      </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">    </span><span class="n">provider</span><span class="w">        </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">    </span><span class="n">model</span><span class="w">           </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="w">    </span><span class="n">input_tokens</span><span class="w">    </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="w">    </span><span class="n">output_tokens</span><span class="w">   </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="w">    </span><span class="n">cache_write_tokens</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a><span class="w">    </span><span class="n">cache_read_tokens</span><span class="w">  </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="w">    </span><span class="n">cost_usd</span><span class="w">        </span><span class="nb">REAL</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="w">    </span><span class="n">turn_number</span><span class="w">     </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a><span class="w">    </span><span class="n">elapsed_seconds</span><span class="w"> </span><span class="nb">REAL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a><span class="p">);</span>
+<a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a>
+<a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">cost_daily</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a><span class="w">    </span><span class="nb">date</span><span class="w">            </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">       </span><span class="c1">-- YYYY-MM-DD</span>
+<a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a><span class="w">    </span><span class="n">provider</span><span class="w">        </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a><span class="w">    </span><span class="n">model</span><span class="w">           </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-21-20" name="__codelineno-21-20" href="#__codelineno-21-20"></a><span class="w">    </span><span class="n">total_cost</span><span class="w">      </span><span class="nb">REAL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-21-21" name="__codelineno-21-21" href="#__codelineno-21-21"></a><span class="w">    </span><span class="n">total_input</span><span class="w">     </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-21-22" name="__codelineno-21-22" href="#__codelineno-21-22"></a><span class="w">    </span><span class="n">total_output</span><span class="w">    </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-21-23" name="__codelineno-21-23" href="#__codelineno-21-23"></a><span class="w">    </span><span class="n">session_count</span><span class="w">   </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-21-24" name="__codelineno-21-24" href="#__codelineno-21-24"></a><span class="w">    </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="nb">date</span><span class="p">,</span><span class="w"> </span><span class="n">provider</span><span class="p">,</span><span class="w"> </span><span class="n">model</span><span class="p">)</span>
+<a id="__codelineno-21-25" name="__codelineno-21-25" href="#__codelineno-21-25"></a><span class="p">);</span>
+<a id="__codelineno-21-26" name="__codelineno-21-26" href="#__codelineno-21-26"></a>
+<a id="__codelineno-21-27" name="__codelineno-21-27" href="#__codelineno-21-27"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">budget_pools</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-21-28" name="__codelineno-21-28" href="#__codelineno-21-28"></a><span class="w">    </span><span class="n">pool_id</span><span class="w">         </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<a id="__codelineno-21-29" name="__codelineno-21-29" href="#__codelineno-21-29"></a><span class="w">    </span><span class="n">ceiling_usd</span><span class="w">     </span><span class="nb">REAL</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-21-30" name="__codelineno-21-30" href="#__codelineno-21-30"></a><span class="w">    </span><span class="n">spent_usd</span><span class="w">       </span><span class="nb">REAL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-21-31" name="__codelineno-21-31" href="#__codelineno-21-31"></a><span class="w">    </span><span class="n">created_at</span><span class="w">      </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-21-32" name="__codelineno-21-32" href="#__codelineno-21-32"></a><span class="w">    </span><span class="n">updated_at</span><span class="w">      </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+<a id="__codelineno-21-33" name="__codelineno-21-33" href="#__codelineno-21-33"></a><span class="p">);</span>
+<a id="__codelineno-21-34" name="__codelineno-21-34" href="#__codelineno-21-34"></a>
+<a id="__codelineno-21-35" name="__codelineno-21-35" href="#__codelineno-21-35"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_cost_events_session</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">cost_events</span><span class="p">(</span><span class="n">session_id</span><span class="p">);</span>
+<a id="__codelineno-21-36" name="__codelineno-21-36" href="#__codelineno-21-36"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_cost_events_ts</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">cost_events</span><span class="p">(</span><span class="k">timestamp</span><span class="p">);</span>
+<a id="__codelineno-21-37" name="__codelineno-21-37" href="#__codelineno-21-37"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_cost_daily_date</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">cost_daily</span><span class="p">(</span><span class="nb">date</span><span class="p">);</span>
+</code></pre></div>
+<p>Daily aggregation query (matching claudia-statusline pattern):
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="k">INSERT</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">cost_daily</span><span class="w"> </span><span class="p">(</span><span class="nb">date</span><span class="p">,</span><span class="w"> </span><span class="n">provider</span><span class="p">,</span><span class="w"> </span><span class="n">model</span><span class="p">,</span><span class="w"> </span><span class="n">total_cost</span><span class="p">,</span><span class="w"> </span><span class="n">total_input</span><span class="p">,</span><span class="w"> </span><span class="n">total_output</span><span class="p">,</span><span class="w"> </span><span class="n">session_count</span><span class="p">)</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="k">SELECT</span><span class="w"> </span><span class="nb">date</span><span class="p">(</span><span class="k">timestamp</span><span class="p">),</span><span class="w"> </span><span class="n">provider</span><span class="p">,</span><span class="w"> </span><span class="n">model</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">cost_usd</span><span class="p">),</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">input_tokens</span><span class="p">),</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">output_tokens</span><span class="p">),</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">session_id</span><span class="p">)</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="k">FROM</span><span class="w"> </span><span class="n">cost_events</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="k">WHERE</span><span class="w"> </span><span class="nb">date</span><span class="p">(</span><span class="k">timestamp</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">?</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="nb">date</span><span class="p">(</span><span class="k">timestamp</span><span class="p">),</span><span class="w"> </span><span class="n">provider</span><span class="p">,</span><span class="w"> </span><span class="n">model</span><span class="p">;</span>
+</code></pre></div></p>
+<p>Burn-rate query with active-time calculation:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">session_id</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">cost_usd</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">total</span><span class="p">,</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">       </span><span class="p">(</span><span class="n">julianday</span><span class="p">(</span><span class="k">MAX</span><span class="p">(</span><span class="k">timestamp</span><span class="p">))</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">julianday</span><span class="p">(</span><span class="k">MIN</span><span class="p">(</span><span class="k">timestamp</span><span class="p">)))</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">24</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">hours</span><span class="p">,</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">       </span><span class="k">SUM</span><span class="p">(</span><span class="n">cost_usd</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="k">NULLIF</span><span class="p">((</span><span class="n">julianday</span><span class="p">(</span><span class="k">MAX</span><span class="p">(</span><span class="k">timestamp</span><span class="p">))</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">julianday</span><span class="p">(</span><span class="k">MIN</span><span class="p">(</span><span class="k">timestamp</span><span class="p">)))</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">24</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">burn_rate</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="k">FROM</span><span class="w"> </span><span class="n">cost_events</span>
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="k">WHERE</span><span class="w"> </span><span class="k">timestamp</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">datetime</span><span class="p">(</span><span class="s1">&#39;now&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;-24 hours&#39;</span><span class="p">)</span>
+<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">session_id</span><span class="p">;</span>
+</code></pre></div></p>
+<p>DB location: <code>~/.ralphglasses/costs.db</code> (global) or <code>.ralph/costs.db</code> (per-repo).</p>
+<h3 id="r4-cost-forecasting-with-exponential-moving-average">R4: Cost Forecasting with Exponential Moving Average</h3>
+<p><strong>Target:</strong> New file <code>internal/session/forecast.go</code>
+<strong>Effort:</strong> Medium (3-5 days)
+<strong>Impact:</strong> Medium -- enables proactive budget management
+<strong>ROADMAP:</strong> 6.10.1, 6.10.2, 6.10.3, 6.10.4, 6.10.5</p>
+<p>Implement cost forecasting using exponential moving average (EMA) on the cost ledger:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">CostForecast</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">    </span><span class="nx">BurnRateEMA</span><span class="w">     </span><span class="kt">float64</span><span class="w">   </span><span class="c1">// $/hour, smoothed</span>
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">    </span><span class="nx">Alpha</span><span class="w">           </span><span class="kt">float64</span><span class="w">   </span><span class="c1">// EMA decay factor (default 0.3)</span>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">    </span><span class="nx">HoursRemaining</span><span class="w">  </span><span class="kt">float64</span><span class="w">   </span><span class="c1">// at current burn rate</span>
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">    </span><span class="nx">ProjectedTotal</span><span class="w">  </span><span class="kt">float64</span><span class="w">   </span><span class="c1">// if session runs to budget</span>
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="w">    </span><span class="nx">AnomalyFactor</span><span class="w">   </span><span class="kt">float64</span><span class="w">   </span><span class="c1">// current_rate / EMA_rate (&gt;2.0 = anomaly)</span>
+<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="w">    </span><span class="nx">Confidence</span><span class="w">      </span><span class="kt">float64</span><span class="w">   </span><span class="c1">// 0-1, based on sample count</span>
+<a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="p">}</span>
+<a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a>
+<a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a><span class="kd">func</span><span class="w"> </span><span class="nx">ComputeForecast</span><span class="p">(</span><span class="nx">history</span><span class="w"> </span><span class="p">[]</span><span class="nx">CostSnapshot</span><span class="p">,</span><span class="w"> </span><span class="nx">budget</span><span class="w"> </span><span class="kt">float64</span><span class="p">)</span><span class="w"> </span><span class="nx">CostForecast</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a><span class="w">    </span><span class="c1">// EMA burn rate: weight recent data more heavily</span>
+<a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a><span class="w">    </span><span class="c1">// alpha = 2 / (N + 1), where N = smoothing period</span>
+<a id="__codelineno-24-13" name="__codelineno-24-13" href="#__codelineno-24-13"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">ema</span><span class="w"> </span><span class="kt">float64</span>
+<a id="__codelineno-24-14" name="__codelineno-24-14" href="#__codelineno-24-14"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="p">,</span><span class="w"> </span><span class="nx">snap</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">history</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-24-15" name="__codelineno-24-15" href="#__codelineno-24-15"></a><span class="w">        </span><span class="nx">rate</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">snap</span><span class="p">.</span><span class="nx">DeltaCost</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nx">snap</span><span class="p">.</span><span class="nx">DeltaHours</span>
+<a id="__codelineno-24-16" name="__codelineno-24-16" href="#__codelineno-24-16"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-24-17" name="__codelineno-24-17" href="#__codelineno-24-17"></a><span class="w">            </span><span class="nx">ema</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">rate</span>
+<a id="__codelineno-24-18" name="__codelineno-24-18" href="#__codelineno-24-18"></a><span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-24-19" name="__codelineno-24-19" href="#__codelineno-24-19"></a><span class="w">            </span><span class="nx">ema</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">alpha</span><span class="o">*</span><span class="nx">rate</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="nx">alpha</span><span class="p">)</span><span class="o">*</span><span class="nx">ema</span>
+<a id="__codelineno-24-20" name="__codelineno-24-20" href="#__codelineno-24-20"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-24-21" name="__codelineno-24-21" href="#__codelineno-24-21"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-24-22" name="__codelineno-24-22" href="#__codelineno-24-22"></a>
+<a id="__codelineno-24-23" name="__codelineno-24-23" href="#__codelineno-24-23"></a><span class="w">    </span><span class="nx">spent</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">history</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nx">history</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">].</span><span class="nx">CumulativeCost</span>
+<a id="__codelineno-24-24" name="__codelineno-24-24" href="#__codelineno-24-24"></a><span class="w">    </span><span class="nx">remaining</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">budget</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">spent</span>
+<a id="__codelineno-24-25" name="__codelineno-24-25" href="#__codelineno-24-25"></a><span class="w">    </span><span class="nx">hoursEst</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">remaining</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nx">ema</span><span class="w">  </span><span class="c1">// if ema &gt; 0</span>
+<a id="__codelineno-24-26" name="__codelineno-24-26" href="#__codelineno-24-26"></a>
+<a id="__codelineno-24-27" name="__codelineno-24-27" href="#__codelineno-24-27"></a><span class="w">    </span><span class="c1">// Anomaly: current interval rate vs EMA</span>
+<a id="__codelineno-24-28" name="__codelineno-24-28" href="#__codelineno-24-28"></a><span class="w">    </span><span class="nx">currentRate</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">history</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nx">history</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">].</span><span class="nx">DeltaCost</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nx">history</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="nx">history</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">].</span><span class="nx">DeltaHours</span>
+<a id="__codelineno-24-29" name="__codelineno-24-29" href="#__codelineno-24-29"></a><span class="w">    </span><span class="nx">anomaly</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">currentRate</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nx">ema</span><span class="w">  </span><span class="c1">// &gt;2.0 triggers alert (ROADMAP 6.10.4)</span>
+<a id="__codelineno-24-30" name="__codelineno-24-30" href="#__codelineno-24-30"></a>
+<a id="__codelineno-24-31" name="__codelineno-24-31" href="#__codelineno-24-31"></a><span class="w">    </span><span class="c1">// Confidence: f(sample_count) using sigmoid</span>
+<a id="__codelineno-24-32" name="__codelineno-24-32" href="#__codelineno-24-32"></a><span class="w">    </span><span class="nx">confidence</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mf">1.0</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="p">(</span><span class="mf">1.0</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="mf">1.0</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">float64</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nx">history</span><span class="p">))</span><span class="o">/</span><span class="mf">10.0</span><span class="p">))</span>
+<a id="__codelineno-24-33" name="__codelineno-24-33" href="#__codelineno-24-33"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Anomaly detection formula (ROADMAP 6.10.4):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>anomaly_score = current_burn_rate / ema_burn_rate
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>if anomaly_score &gt; 2.0:
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>    emit BudgetAnomaly event
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>    // &quot;Session X spending 3.2x its predicted rate ($4.50/hr vs $1.40/hr EMA)&quot;
+</code></pre></div></p>
+<p><strong>TUI forecast widget (ROADMAP 6.10.3):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>Budget: $45.00 / $100.00 (45%)  |  Burn: $2.30/hr  |  ETA: ~23.9h remaining
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>[=============================-----------]
+</code></pre></div></p>
+<p>Wire into <code>handleMarathonDashboard</code> to replace the current instantaneous <code>burnRate</code> with the EMA-smoothed value.</p>
+<h3 id="r5-multi-tier-budget-alerts-with-tui-notifications">R5: Multi-Tier Budget Alerts with TUI Notifications</h3>
+<p><strong>Target:</strong> <code>internal/session/budget.go</code> + <code>internal/events/bus.go</code> + <code>internal/tui/views/fleet.go</code>
+<strong>Effort:</strong> Small (1-2 days)
+<strong>Impact:</strong> Medium -- enables proactive budget awareness
+<strong>ROADMAP:</strong> 2.3.3, 5.5.5</p>
+<p>Add threshold-based alerts at configurable percentages:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">BudgetAlert</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="w">    </span><span class="nx">Threshold</span><span class="w"> </span><span class="kt">float64</span><span class="w">  </span><span class="c1">// 0.50, 0.75, 0.90</span>
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="w">    </span><span class="nx">Fired</span><span class="w">     </span><span class="kt">bool</span><span class="w">     </span><span class="c1">// prevent duplicate alerts</span>
+<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="p">}</span>
+<a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>
+<a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">b</span><span class="w"> </span><span class="o">*</span><span class="nx">BudgetEnforcer</span><span class="p">)</span><span class="w"> </span><span class="nx">CheckAlerts</span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Session</span><span class="p">)</span><span class="w"> </span><span class="p">[]</span><span class="nx">BudgetAlert</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a><span class="w">    </span><span class="nx">thresholds</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[]</span><span class="kt">float64</span><span class="p">{</span><span class="mf">0.50</span><span class="p">,</span><span class="w"> </span><span class="mf">0.75</span><span class="p">,</span><span class="w"> </span><span class="mf">0.90</span><span class="p">}</span>
+<a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a><span class="w">    </span><span class="nx">pct</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">SpentUSD</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">BudgetUSD</span>
+<a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">alerts</span><span class="w"> </span><span class="p">[]</span><span class="nx">BudgetAlert</span>
+<a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">t</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">thresholds</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">pct</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nx">t</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="p">!</span><span class="nx">b</span><span class="p">.</span><span class="nx">alertFired</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span><span class="w"> </span><span class="nx">t</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a><span class="w">            </span><span class="nx">alerts</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">alerts</span><span class="p">,</span><span class="w"> </span><span class="nx">BudgetAlert</span><span class="p">{</span><span class="nx">Threshold</span><span class="p">:</span><span class="w"> </span><span class="nx">t</span><span class="p">})</span>
+<a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a><span class="w">            </span><span class="nx">b</span><span class="p">.</span><span class="nx">markFired</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span><span class="w"> </span><span class="nx">t</span><span class="p">)</span>
+<a id="__codelineno-27-14" name="__codelineno-27-14" href="#__codelineno-27-14"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-27-15" name="__codelineno-27-15" href="#__codelineno-27-15"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-27-16" name="__codelineno-27-16" href="#__codelineno-27-16"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">alerts</span>
+<a id="__codelineno-27-17" name="__codelineno-27-17" href="#__codelineno-27-17"></a><span class="p">}</span>
+</code></pre></div>
+<p>Add new event types to <code>internal/events/bus.go</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="nx">BudgetWarning50</span><span class="w">  </span><span class="nx">EventType</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;budget.warning.50&quot;</span>
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="nx">BudgetWarning75</span><span class="w">  </span><span class="nx">EventType</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;budget.warning.75&quot;</span>
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="nx">BudgetWarning90</span><span class="w">  </span><span class="nx">EventType</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;budget.warning.90&quot;</span>
+</code></pre></div>
+<p>Emit as BubbleTea messages via the existing notification component in <code>internal/tui/components/notification.go</code>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>[!] Session abc123 at 75% budget ($7.50 / $10.00) -- 2.3h remaining at $1.08/hr
+</code></pre></div></p>
+<h3 id="r6-token-level-cost-extraction-from-provider-streams">R6: Token-Level Cost Extraction from Provider Streams</h3>
+<p><strong>Target:</strong> <code>internal/session/providers.go</code> (normalizers) + <code>internal/session/types.go</code> (StreamEvent)
+<strong>Effort:</strong> Medium (2-3 days)
+<strong>Impact:</strong> High -- enables accurate per-turn cost calculation
+<strong>ROADMAP:</strong> 2.3.1, 2.5.5.3</p>
+<p>Extend <code>StreamEvent</code> with token-level fields:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">StreamEvent</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="w">    </span><span class="c1">// ... existing fields ...</span>
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="w">    </span><span class="nx">InputTokens</span><span class="w">        </span><span class="kt">int</span><span class="w">     </span><span class="s">`json:&quot;input_tokens,omitempty&quot;`</span>
+<a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a><span class="w">    </span><span class="nx">OutputTokens</span><span class="w">       </span><span class="kt">int</span><span class="w">     </span><span class="s">`json:&quot;output_tokens,omitempty&quot;`</span>
+<a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a><span class="w">    </span><span class="nx">CacheWriteTokens</span><span class="w">   </span><span class="kt">int</span><span class="w">     </span><span class="s">`json:&quot;cache_creation_input_tokens,omitempty&quot;`</span>
+<a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a><span class="w">    </span><span class="nx">CacheReadTokens</span><span class="w">    </span><span class="kt">int</span><span class="w">     </span><span class="s">`json:&quot;cache_read_input_tokens,omitempty&quot;`</span>
+<a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a><span class="p">}</span>
+</code></pre></div>
+<p>Update <code>normalizeClaudeEvent</code> to extract from the <code>usage</code> object in Claude's stream-json <code>result</code> events:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="c1">// Claude stream-json result events include:</span>
+<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="c1">// &quot;usage&quot;: {&quot;input_tokens&quot;: N, &quot;output_tokens&quot;: N, &quot;cache_creation_input_tokens&quot;: N, &quot;cache_read_input_tokens&quot;: N}</span>
+<a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="k">if</span><span class="w"> </span><span class="nx">raw</span><span class="p">[</span><span class="s">&quot;usage&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a><span class="w">    </span><span class="nx">usage</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">raw</span><span class="p">[</span><span class="s">&quot;usage&quot;</span><span class="p">].(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">any</span><span class="p">)</span>
+<a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="w">    </span><span class="nx">event</span><span class="p">.</span><span class="nx">InputTokens</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">firstNonZeroInt</span><span class="p">(</span><span class="nx">usage</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;input_tokens&quot;</span><span class="p">)</span>
+<a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a><span class="w">    </span><span class="nx">event</span><span class="p">.</span><span class="nx">OutputTokens</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">firstNonZeroInt</span><span class="p">(</span><span class="nx">usage</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;output_tokens&quot;</span><span class="p">)</span>
+<a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a><span class="w">    </span><span class="nx">event</span><span class="p">.</span><span class="nx">CacheWriteTokens</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">firstNonZeroInt</span><span class="p">(</span><span class="nx">usage</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;cache_creation_input_tokens&quot;</span><span class="p">)</span>
+<a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a><span class="w">    </span><span class="nx">event</span><span class="p">.</span><span class="nx">CacheReadTokens</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">firstNonZeroInt</span><span class="p">(</span><span class="nx">usage</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;cache_read_input_tokens&quot;</span><span class="p">)</span>
+<a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a><span class="p">}</span>
+</code></pre></div>
+<p>Similarly update <code>normalizeGeminiEvent</code> and <code>normalizeCodexEvent</code> for their respective token usage fields. Gemini uses <code>usage.input_tokens</code>/<code>usage.output_tokens</code>; Codex uses <code>usage.total_tokens</code> or <code>usage.input_tokens</code>/<code>usage.output_tokens</code>.</p>
+<p>In <code>runner.go</code>, pass token counts to <code>NormalizeProviderCost()</code> instead of <code>0, 0</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">event</span><span class="p">.</span><span class="nx">CostUSD</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a><span class="w">    </span><span class="nx">s</span><span class="p">.</span><span class="nx">SpentUSD</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">event</span><span class="p">.</span><span class="nx">CostUSD</span>
+<a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a><span class="w">    </span><span class="c1">// Also record token-level data</span>
+<a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a><span class="w">    </span><span class="nx">norm</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">NormalizeProviderCost</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">Provider</span><span class="p">,</span><span class="w"> </span><span class="nx">event</span><span class="p">.</span><span class="nx">CostUSD</span><span class="p">,</span>
+<a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a><span class="w">        </span><span class="nx">event</span><span class="p">.</span><span class="nx">InputTokens</span><span class="p">,</span><span class="w"> </span><span class="nx">event</span><span class="p">.</span><span class="nx">OutputTokens</span><span class="p">)</span>
+<a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a><span class="w">    </span><span class="c1">// Store norm.NormalizedUSD for cross-provider comparison</span>
+<a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="r7-fleet-budget-profiles-marathon-sprint-overnight">R7: Fleet Budget Profiles (Marathon / Sprint / Overnight)</h3>
+<p><strong>Target:</strong> New file <code>internal/session/profiles.go</code>
+<strong>Effort:</strong> Small (1 day)
+<strong>Impact:</strong> Medium -- standardized budget presets for common fleet patterns
+<strong>ROADMAP:</strong> 2.3.5</p>
+<p>Port and extend the <code>rdcycle/profiles.go</code> pattern for fleet-scale use:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">FleetBudgetProfile</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a><span class="w">    </span><span class="nx">Name</span><span class="w">              </span><span class="kt">string</span>
+<a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a><span class="w">    </span><span class="nx">GlobalCeilingUSD</span><span class="w">  </span><span class="kt">float64</span>
+<a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a><span class="w">    </span><span class="nx">PerSessionDefault</span><span class="w"> </span><span class="kt">float64</span>
+<a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a><span class="w">    </span><span class="nx">HeadroomPct</span><span class="w">       </span><span class="kt">float64</span>
+<a id="__codelineno-33-6" name="__codelineno-33-6" href="#__codelineno-33-6"></a><span class="w">    </span><span class="nx">DailyCap</span><span class="w">          </span><span class="kt">float64</span>
+<a id="__codelineno-33-7" name="__codelineno-33-7" href="#__codelineno-33-7"></a><span class="w">    </span><span class="nx">MaxConcurrent</span><span class="w">     </span><span class="kt">int</span>
+<a id="__codelineno-33-8" name="__codelineno-33-8" href="#__codelineno-33-8"></a><span class="w">    </span><span class="nx">DefaultModel</span><span class="w">      </span><span class="kt">string</span>
+<a id="__codelineno-33-9" name="__codelineno-33-9" href="#__codelineno-33-9"></a><span class="w">    </span><span class="nx">ModelPricing</span><span class="w">      </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="nx">ModelCostRate</span>
+<a id="__codelineno-33-10" name="__codelineno-33-10" href="#__codelineno-33-10"></a><span class="p">}</span>
+<a id="__codelineno-33-11" name="__codelineno-33-11" href="#__codelineno-33-11"></a>
+<a id="__codelineno-33-12" name="__codelineno-33-12" href="#__codelineno-33-12"></a><span class="kd">func</span><span class="w"> </span><span class="nx">MarathonProfile</span><span class="p">()</span><span class="w"> </span><span class="nx">FleetBudgetProfile</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-33-13" name="__codelineno-33-13" href="#__codelineno-33-13"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">FleetBudgetProfile</span><span class="p">{</span>
+<a id="__codelineno-33-14" name="__codelineno-33-14" href="#__codelineno-33-14"></a><span class="w">        </span><span class="nx">Name</span><span class="p">:</span><span class="w">              </span><span class="s">&quot;marathon&quot;</span><span class="p">,</span>
+<a id="__codelineno-33-15" name="__codelineno-33-15" href="#__codelineno-33-15"></a><span class="w">        </span><span class="nx">GlobalCeilingUSD</span><span class="p">:</span><span class="w">  </span><span class="mf">100.0</span><span class="p">,</span>
+<a id="__codelineno-33-16" name="__codelineno-33-16" href="#__codelineno-33-16"></a><span class="w">        </span><span class="nx">PerSessionDefault</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span>
+<a id="__codelineno-33-17" name="__codelineno-33-17" href="#__codelineno-33-17"></a><span class="w">        </span><span class="nx">HeadroomPct</span><span class="p">:</span><span class="w">       </span><span class="mf">0.90</span><span class="p">,</span>
+<a id="__codelineno-33-18" name="__codelineno-33-18" href="#__codelineno-33-18"></a><span class="w">        </span><span class="nx">DailyCap</span><span class="p">:</span><span class="w">          </span><span class="mf">100.0</span><span class="p">,</span>
+<a id="__codelineno-33-19" name="__codelineno-33-19" href="#__codelineno-33-19"></a><span class="w">        </span><span class="nx">MaxConcurrent</span><span class="p">:</span><span class="w">     </span><span class="mi">8</span><span class="p">,</span>
+<a id="__codelineno-33-20" name="__codelineno-33-20" href="#__codelineno-33-20"></a><span class="w">        </span><span class="nx">DefaultModel</span><span class="p">:</span><span class="w">      </span><span class="s">&quot;claude-sonnet-4-6&quot;</span><span class="p">,</span>
+<a id="__codelineno-33-21" name="__codelineno-33-21" href="#__codelineno-33-21"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-33-22" name="__codelineno-33-22" href="#__codelineno-33-22"></a><span class="p">}</span>
+<a id="__codelineno-33-23" name="__codelineno-33-23" href="#__codelineno-33-23"></a>
+<a id="__codelineno-33-24" name="__codelineno-33-24" href="#__codelineno-33-24"></a><span class="kd">func</span><span class="w"> </span><span class="nx">SprintProfile</span><span class="p">()</span><span class="w"> </span><span class="nx">FleetBudgetProfile</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-33-25" name="__codelineno-33-25" href="#__codelineno-33-25"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">FleetBudgetProfile</span><span class="p">{</span>
+<a id="__codelineno-33-26" name="__codelineno-33-26" href="#__codelineno-33-26"></a><span class="w">        </span><span class="nx">Name</span><span class="p">:</span><span class="w">              </span><span class="s">&quot;sprint&quot;</span><span class="p">,</span>
+<a id="__codelineno-33-27" name="__codelineno-33-27" href="#__codelineno-33-27"></a><span class="w">        </span><span class="nx">GlobalCeilingUSD</span><span class="p">:</span><span class="w">  </span><span class="mf">25.0</span><span class="p">,</span>
+<a id="__codelineno-33-28" name="__codelineno-33-28" href="#__codelineno-33-28"></a><span class="w">        </span><span class="nx">PerSessionDefault</span><span class="p">:</span><span class="w"> </span><span class="mf">5.0</span><span class="p">,</span>
+<a id="__codelineno-33-29" name="__codelineno-33-29" href="#__codelineno-33-29"></a><span class="w">        </span><span class="nx">HeadroomPct</span><span class="p">:</span><span class="w">       </span><span class="mf">0.85</span><span class="p">,</span>
+<a id="__codelineno-33-30" name="__codelineno-33-30" href="#__codelineno-33-30"></a><span class="w">        </span><span class="nx">DailyCap</span><span class="p">:</span><span class="w">          </span><span class="mf">25.0</span><span class="p">,</span>
+<a id="__codelineno-33-31" name="__codelineno-33-31" href="#__codelineno-33-31"></a><span class="w">        </span><span class="nx">MaxConcurrent</span><span class="p">:</span><span class="w">     </span><span class="mi">4</span><span class="p">,</span>
+<a id="__codelineno-33-32" name="__codelineno-33-32" href="#__codelineno-33-32"></a><span class="w">        </span><span class="nx">DefaultModel</span><span class="p">:</span><span class="w">      </span><span class="s">&quot;claude-sonnet-4-6&quot;</span><span class="p">,</span>
+<a id="__codelineno-33-33" name="__codelineno-33-33" href="#__codelineno-33-33"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-33-34" name="__codelineno-33-34" href="#__codelineno-33-34"></a><span class="p">}</span>
+<a id="__codelineno-33-35" name="__codelineno-33-35" href="#__codelineno-33-35"></a>
+<a id="__codelineno-33-36" name="__codelineno-33-36" href="#__codelineno-33-36"></a><span class="kd">func</span><span class="w"> </span><span class="nx">OvernightProfile</span><span class="p">()</span><span class="w"> </span><span class="nx">FleetBudgetProfile</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-33-37" name="__codelineno-33-37" href="#__codelineno-33-37"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">FleetBudgetProfile</span><span class="p">{</span>
+<a id="__codelineno-33-38" name="__codelineno-33-38" href="#__codelineno-33-38"></a><span class="w">        </span><span class="nx">Name</span><span class="p">:</span><span class="w">              </span><span class="s">&quot;overnight&quot;</span><span class="p">,</span>
+<a id="__codelineno-33-39" name="__codelineno-33-39" href="#__codelineno-33-39"></a><span class="w">        </span><span class="nx">GlobalCeilingUSD</span><span class="p">:</span><span class="w">  </span><span class="mf">50.0</span><span class="p">,</span>
+<a id="__codelineno-33-40" name="__codelineno-33-40" href="#__codelineno-33-40"></a><span class="w">        </span><span class="nx">PerSessionDefault</span><span class="p">:</span><span class="w"> </span><span class="mf">5.0</span><span class="p">,</span>
+<a id="__codelineno-33-41" name="__codelineno-33-41" href="#__codelineno-33-41"></a><span class="w">        </span><span class="nx">HeadroomPct</span><span class="p">:</span><span class="w">       </span><span class="mf">0.95</span><span class="p">,</span>
+<a id="__codelineno-33-42" name="__codelineno-33-42" href="#__codelineno-33-42"></a><span class="w">        </span><span class="nx">DailyCap</span><span class="p">:</span><span class="w">          </span><span class="mf">50.0</span><span class="p">,</span>
+<a id="__codelineno-33-43" name="__codelineno-33-43" href="#__codelineno-33-43"></a><span class="w">        </span><span class="nx">MaxConcurrent</span><span class="p">:</span><span class="w">     </span><span class="mi">6</span><span class="p">,</span>
+<a id="__codelineno-33-44" name="__codelineno-33-44" href="#__codelineno-33-44"></a><span class="w">        </span><span class="nx">DefaultModel</span><span class="p">:</span><span class="w">      </span><span class="s">&quot;claude-haiku-4-5&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// cheaper for overnight</span>
+<a id="__codelineno-33-45" name="__codelineno-33-45" href="#__codelineno-33-45"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-33-46" name="__codelineno-33-46" href="#__codelineno-33-46"></a><span class="p">}</span>
+</code></pre></div>
+<p>Load from <code>.ralphrc</code> or <code>~/.ralphglasses/profiles/</code> JSON files, with <code>LoadProfile()</code>/<code>SaveProfile()</code> matching the rdcycle pattern.</p>
+<hr />
+<h2 id="6-risk-assessment">6. Risk Assessment</h2>
+<h3 id="61-cost-data-accuracy-high-risk">6.1 Cost Data Accuracy (High Risk)</h3>
+<p><strong>Risk:</strong> Claude Code's <code>stream-json</code> cost reporting may lag, be absent for certain event types, or use different rounding than billing.</p>
+<p><strong>Mitigation:</strong> Implement the dual-source pattern from ccusage: use stream-reported <code>costUSD</code> as primary, but also read <code>~/.claude/projects/**/usage.jsonl</code> for ground-truth reconciliation. Add a <code>reconcile</code> command or MCP tool that compares local ledger totals against JSONL-derived totals.</p>
+<p><strong>Evidence:</strong> ccusage's <code>auto</code> cost mode exists precisely because <code>costUSD</code> is not always present in older Claude Code versions. The <code>calculate</code> mode from token counts is the fallback.</p>
+<h3 id="62-pricing-staleness-medium-risk">6.2 Pricing Staleness (Medium Risk)</h3>
+<p><strong>Risk:</strong> Hardcoded pricing tables become incorrect when providers change pricing.</p>
+<p><strong>Mitigation:</strong> (a) Add a <code>pricing_updated_at</code> timestamp to the rate table and log a warning if older than 30 days. (b) Add a <code>ralphglasses_pricing_update</code> MCP tool that fetches from LiteLLM or a pinned config URL. (c) Allow override via <code>.ralphrc</code> key <code>CUSTOM_PRICING_FILE=path/to/pricing.json</code>.</p>
+<h3 id="63-sqlite-contention-low-risk">6.3 SQLite Contention (Low Risk)</h3>
+<p><strong>Risk:</strong> Multiple concurrent sessions writing to the same SQLite database.</p>
+<p><strong>Mitigation:</strong> Use WAL mode (<code>PRAGMA journal_mode=WAL</code>) which allows concurrent reads during writes. Batch writes using a buffered channel pattern (write every N events or every T seconds, whichever comes first). The internal SQLite project project already demonstrates this pattern with <code>modernc.org/sqlite</code>.</p>
+<h3 id="64-global-pool-deadlocks-medium-risk">6.4 Global Pool Deadlocks (Medium Risk)</h3>
+<p><strong>Risk:</strong> Budget pool allocation/reclaimation during high-concurrency fleet operations could cause contention.</p>
+<p><strong>Mitigation:</strong> Use <code>sync.RWMutex</code> with short critical sections (read lock for checks, write lock only for allocation/spend recording). The mcpkit/finops <code>ScopedTracker</code> pattern already handles this correctly.</p>
+<h3 id="65-provider-cost-asymmetry-low-risk">6.5 Provider Cost Asymmetry (Low Risk)</h3>
+<p><strong>Risk:</strong> Gemini and Codex may not report costs in their stream output, making normalization inaccurate.</p>
+<p><strong>Mitigation:</strong> For providers that do not report <code>costUSD</code> in their stream, calculate from token counts using the <code>ModelCostRates</code> table. Add stderr parsing fallback (ROADMAP 2.5.5.3) as a secondary source. Flag sessions with "estimated" vs "reported" cost confidence levels.</p>
+<hr />
+<h2 id="7-implementation-priority-ordering">7. Implementation Priority Ordering</h2>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Rec</th>
+<th>Target File</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>P0</strong></td>
+<td>R1</td>
+<td><code>internal/session/costnorm.go</code></td>
+<td>Small</td>
+<td>High</td>
+<td>2.5.5.3</td>
+<td>Foundation: accurate per-model pricing unblocks all other cost features</td>
+</tr>
+<tr>
+<td><strong>P0</strong></td>
+<td>R6</td>
+<td><code>internal/session/providers.go</code>, <code>types.go</code></td>
+<td>Medium</td>
+<td>High</td>
+<td>2.3.1, 2.5.5.3</td>
+<td>Foundation: token-level data required for cache-aware pricing</td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td>R5</td>
+<td><code>internal/session/budget.go</code>, <code>internal/events/bus.go</code></td>
+<td>Small</td>
+<td>Medium</td>
+<td>2.3.3, 5.5.5</td>
+<td>Quick win: threshold alerts with minimal code change</td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td>R7</td>
+<td><code>internal/session/profiles.go</code> (new)</td>
+<td>Small</td>
+<td>Medium</td>
+<td>2.3.5</td>
+<td>Quick win: reusable fleet profiles, ports existing mcpkit pattern</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td>R2</td>
+<td><code>internal/session/budgetpool.go</code> (new), <code>manager.go</code></td>
+<td>Medium</td>
+<td>High</td>
+<td>2.3.2, 5.5.1, 5.5.2</td>
+<td>Core: global pool is prerequisite for fleet-scale cost management</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td>R3</td>
+<td><code>internal/session/costdb.go</code> (new)</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>5.5.1, 5.5.3, 6.10.1</td>
+<td>Persistence: enables historical queries, forecasting, restart survival</td>
+</tr>
+<tr>
+<td><strong>P3</strong></td>
+<td>R4</td>
+<td><code>internal/session/forecast.go</code> (new)</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>6.10.1-6.10.5</td>
+<td>Advanced: requires R3 data for meaningful forecasting</td>
+</tr>
+</tbody>
+</table>
+<h3 id="dependency-graph">Dependency Graph</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>R1 (pricing table) ──┐
+<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>                     ├──&gt; R6 (token extraction) ──&gt; R3 (SQLite) ──&gt; R4 (forecasting)
+<a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>R5 (alerts) ─────────┘                               │
+<a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a>R7 (profiles) ───────────────────────────&gt; R2 (pool) ─┘
+</code></pre></div>
+<h3 id="phase-mapping">Phase Mapping</h3>
+<ul>
+<li><strong>Phase 2.3 (Budget Tracking):</strong> R1, R5, R6, R7 -- all P0/P1, can start immediately</li>
+<li><strong>Phase 5.5 (Budget Federation):</strong> R2, R3 -- P2, blocked by 2.1 (session model)</li>
+<li><strong>Phase 6.10 (Cost Forecasting):</strong> R4 -- P3, blocked by R3 (needs historical data)</li>
+<li><strong>Phase 7.4 (Cloud Cost Management):</strong> Not addressed here; requires K8s operator (7.1). Cloud cost API integration (AWS Cost Explorer <code>ce:GetCostAndUsage</code>, GCP <code>cloudbilling.googleapis.com</code>) should be a separate research phase after 7.1 is complete.</li>
+</ul>
+<hr />
+<h2 id="appendix-a-pricing-formula-reference">Appendix A: Pricing Formula Reference</h2>
+<h3 id="full-cost-calculation-with-all-token-types">Full cost calculation (with all token types):</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>cost = (input_tokens / 1M * input_rate)
+<a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>     + (output_tokens / 1M * output_rate)
+<a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>     + (cache_write_tokens / 1M * cache_write_rate)
+<a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a>     + (cache_read_tokens / 1M * cache_read_rate)
+</code></pre></div>
+<h3 id="tiered-pricing-for-sonnet-454-with-1m-context-beta-200k-input">Tiered pricing (for Sonnet 4.5/4 with 1M context beta, &gt;200K input):</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>if total_input_tokens &gt; 200_000:
+<a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a>    input_rate  = base_input_rate * 2.0   # e.g., $3 -&gt; $6 for Sonnet
+<a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a>    output_rate = base_output_rate * 1.5  # e.g., $15 -&gt; $22.50 for Sonnet
+</code></pre></div>
+<h3 id="fast-mode-opus-46-only">Fast mode (Opus 4.6 only):</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>fast_input_rate  = base_input_rate * 6.0   # $5 -&gt; $30
+<a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a>fast_output_rate = base_output_rate * 6.0  # $25 -&gt; $150
+</code></pre></div>
+<h3 id="cross-provider-normalization">Cross-provider normalization:</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>normalized_usd = (input_tokens / 1M * claude_sonnet_input_rate)
+<a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>               + (output_tokens / 1M * claude_sonnet_output_rate)
+<a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a>efficiency_pct = (raw_cost / normalized_usd) * 100
+<a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a># &lt;100% = cheaper than Claude Sonnet, &gt;100% = more expensive
+</code></pre></div>
+<h3 id="burn-rate-ema-smoothed">Burn rate (EMA-smoothed):</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>ema[0] = rate[0]
+<a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a>ema[i] = alpha * rate[i] + (1 - alpha) * ema[i-1]
+<a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a># alpha = 0.3 gives ~10-sample half-life
+<a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a># rate[i] = delta_cost[i] / delta_hours[i]
+</code></pre></div>
+<h2 id="appendix-b-claude-code-jsonl-usage-file-locations">Appendix B: Claude Code JSONL Usage File Locations</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>Primary:   ~/.config/claude/projects/**/usage.jsonl
+<a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a>Legacy:    ~/.claude/projects/**/usage.jsonl
+<a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a>Override:  $CLAUDE_CONFIG_DIR (comma-separated paths)
+</code></pre></div>
+<p>Per-line schema (from ccusage analysis):
+<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a><span class="p">{</span>
+<a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a><span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-03-22T10:30:00Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-41-3" name="__codelineno-41-3" href="#__codelineno-41-3"></a><span class="w">  </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-41-4" name="__codelineno-41-4" href="#__codelineno-41-4"></a><span class="w">    </span><span class="nt">&quot;usage&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-41-5" name="__codelineno-41-5" href="#__codelineno-41-5"></a><span class="w">      </span><span class="nt">&quot;input_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1500</span><span class="p">,</span>
+<a id="__codelineno-41-6" name="__codelineno-41-6" href="#__codelineno-41-6"></a><span class="w">      </span><span class="nt">&quot;output_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">800</span><span class="p">,</span>
+<a id="__codelineno-41-7" name="__codelineno-41-7" href="#__codelineno-41-7"></a><span class="w">      </span><span class="nt">&quot;cache_creation_input_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-41-8" name="__codelineno-41-8" href="#__codelineno-41-8"></a><span class="w">      </span><span class="nt">&quot;cache_read_input_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12000</span>
+<a id="__codelineno-41-9" name="__codelineno-41-9" href="#__codelineno-41-9"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-41-10" name="__codelineno-41-10" href="#__codelineno-41-10"></a><span class="w">    </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;claude-sonnet-4-6&quot;</span><span class="p">,</span>
+<a id="__codelineno-41-11" name="__codelineno-41-11" href="#__codelineno-41-11"></a><span class="w">    </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;msg_...&quot;</span>
+<a id="__codelineno-41-12" name="__codelineno-41-12" href="#__codelineno-41-12"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-41-13" name="__codelineno-41-13" href="#__codelineno-41-13"></a><span class="w">  </span><span class="nt">&quot;requestId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;req_...&quot;</span><span class="p">,</span>
+<a id="__codelineno-41-14" name="__codelineno-41-14" href="#__codelineno-41-14"></a><span class="w">  </span><span class="nt">&quot;costUSD&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0165</span><span class="p">,</span>
+<a id="__codelineno-41-15" name="__codelineno-41-15" href="#__codelineno-41-15"></a><span class="w">  </span><span class="nt">&quot;sessionId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session_...&quot;</span><span class="p">,</span>
+<a id="__codelineno-41-16" name="__codelineno-41-16" href="#__codelineno-41-16"></a><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1.0&quot;</span>
+<a id="__codelineno-41-17" name="__codelineno-41-17" href="#__codelineno-41-17"></a><span class="p">}</span>
+</code></pre></div></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

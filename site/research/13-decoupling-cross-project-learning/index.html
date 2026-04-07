@@ -1,0 +1,1817 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/research/13-decoupling-cross-project-learning/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Phase 13 Research: Decoupling & Cross-Project Learning - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#phase-13-research-decoupling-cross-project-learning" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Phase 13 Research: Decoupling &amp; Cross-Project Learning
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-current-state-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Current State Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Current State Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-what-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 What Exists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-what-works-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 What Works Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-what-doesnt-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 What Doesn't Work
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-gap-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Gap Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Gap Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-roadmap-target-vs-current-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 ROADMAP Target vs Current State
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-missing-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Missing Capabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-technical-debt-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Technical Debt Inventory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-external-landscape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. External Landscape
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. External Landscape">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-competitorpeer-projects-sister-repos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Competitor/Peer Projects (Sister Repos)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4.1 Competitor/Peer Projects (Sister Repos)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mcpkit-go-mcp-framework-35-packages-100-mcp-spec-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mcpkit — Go MCP Framework (35+ packages, 100% MCP spec coverage)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hg-mcp-go-mcp-server-1190-tools-119-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        hg-mcp — Go MCP Server (1,190+ tools, 119 modules)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#claudekit-go-mcp-with-rdcycle-budget-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        claudekit — Go MCP with rdcycle + budget profiles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internal-sqlite-project-go-sqlite-mcp-audit-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        internal-sqlite-project — Go + SQLite + MCP + Audit Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mesmer-go-mcp-server-with-ralph-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mesmer — Go MCP Server with Ralph Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-patterns-worth-adopting-with-specific-patterns-from-sister-repos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Patterns Worth Adopting (with specific patterns from sister repos)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-anti-patterns-to-avoid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Anti-Patterns to Avoid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-academic-industry-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Academic &amp; Industry References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-actionable-recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Actionable Recommendations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Actionable Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-immediate-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Immediate Actions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-near-term-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Near-Term Actions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-strategic-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Strategic Actions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-risk-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Risk Assessment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-implementation-priority-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Implementation Priority Ordering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Implementation Priority Ordering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#71-critical-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 Critical Path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-recommended-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 Recommended Sequence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#73-parallelization-opportunities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3 Parallelization Opportunities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="phase-13-research-decoupling-cross-project-learning">Phase 13 Research: Decoupling &amp; Cross-Project Learning</h1>
+<h2 id="1-executive-summary">1. Executive Summary</h2>
+<ul>
+<li><strong>ralphglasses re-implements capabilities that already exist in mcpkit</strong> (ralph loop engine, finops, workflow engine, session management, resilience) — the two codebases share zero Go imports despite mcpkit being explicitly listed as the upstream framework in ROADMAP.md section "Internal Ecosystem Integration."</li>
+<li><strong>The <code>internal/session/</code> package (7,271 lines) is a monolith</strong> combining loop orchestration, budget enforcement, provider dispatch, workflow execution, failover, cost normalization, journaling, agents, templates, health checks, and rate limiting — all in one package with a single <code>Manager</code> god-struct that holds six maps and a mutex.</li>
+<li><strong>Sister repos (hg-mcp, claudekit) have already solved the decoupling problem</strong> via a shim pattern: thin adapter layers (<code>internal/mcp/tools/helpers.go</code>, <code>compat.go</code>, <code>registry.go</code>) that delegate to mcpkit without exposing it to business-logic modules. ralphglasses should adopt this pattern for its Phase 6.1 native loop engine work.</li>
+<li><strong>Budget/cost tracking is duplicated three ways</strong>: ralphglasses <code>budget.go</code> + <code>costnorm.go</code> (131+81 lines), mcpkit <code>finops/</code> (17 files, production-grade with scoped budgets, time windows, cost estimation), and the shell-based marathon.sh budget check. Consolidating onto mcpkit's finops would eliminate ~200 lines and gain token-level tracking.</li>
+<li><strong>The event bus (<code>internal/events/bus.go</code>, 192 lines) is a minimal reimplementation</strong> of patterns available in mcpkit's registry middleware and observer infrastructure. Wiring it into mcpkit's observability layer would enable OpenTelemetry spans, Prometheus metrics, and audit logging for free.</li>
+</ul>
+<h2 id="2-current-state-analysis">2. Current State Analysis</h2>
+<h3 id="21-what-exists">2.1 What Exists</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Lines</th>
+<th>Tests</th>
+<th>Coverage</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/session/manager.go</code></td>
+<td>846</td>
+<td>690</td>
+<td>~70%</td>
+<td>Monolith: sessions + teams + workflows + loops</td>
+</tr>
+<tr>
+<td><code>internal/session/loop.go</code></td>
+<td>870</td>
+<td>227</td>
+<td>~65%</td>
+<td>Planner/worker/verifier loop, worktree mgmt</td>
+</tr>
+<tr>
+<td><code>internal/session/providers.go</code></td>
+<td>682</td>
+<td>390</td>
+<td>~80%</td>
+<td>Multi-provider dispatch, event normalization</td>
+</tr>
+<tr>
+<td><code>internal/session/workflow.go</code></td>
+<td>265</td>
+<td>193</td>
+<td>~75%</td>
+<td>YAML workflow DAG execution</td>
+</tr>
+<tr>
+<td><code>internal/session/budget.go</code></td>
+<td>131</td>
+<td>95</td>
+<td>~70%</td>
+<td>Cost ledger, budget enforcement</td>
+</tr>
+<tr>
+<td><code>internal/session/costnorm.go</code></td>
+<td>81</td>
+<td>63</td>
+<td>~80%</td>
+<td>Cross-provider cost normalization</td>
+</tr>
+<tr>
+<td><code>internal/session/journal.go</code></td>
+<td>401</td>
+<td>305</td>
+<td>~75%</td>
+<td>Improvement journal JSONL persistence</td>
+</tr>
+<tr>
+<td><code>internal/session/agents.go</code></td>
+<td>321</td>
+<td>232</td>
+<td>~70%</td>
+<td>Agent definition discovery per provider</td>
+</tr>
+<tr>
+<td><code>internal/session/runner.go</code></td>
+<td>380</td>
+<td>221</td>
+<td>~65%</td>
+<td>Session lifecycle, stream parsing</td>
+</tr>
+<tr>
+<td><code>internal/session/types.go</code></td>
+<td>147</td>
+<td>-</td>
+<td>N/A</td>
+<td>Type definitions only</td>
+</tr>
+<tr>
+<td><code>internal/session/failover.go</code></td>
+<td>50</td>
+<td>-</td>
+<td>~90%</td>
+<td>Provider failover chain</td>
+</tr>
+<tr>
+<td><code>internal/session/health.go</code></td>
+<td>100</td>
+<td>64</td>
+<td>~70%</td>
+<td>Provider health checking</td>
+</tr>
+<tr>
+<td><code>internal/session/ratelimit.go</code></td>
+<td>99</td>
+<td>80</td>
+<td>~80%</td>
+<td>Token bucket rate limiter</td>
+</tr>
+<tr>
+<td><code>internal/session/costnorm.go</code></td>
+<td>81</td>
+<td>63</td>
+<td>~80%</td>
+<td>Provider cost normalization</td>
+</tr>
+<tr>
+<td><code>internal/session/templates.go</code></td>
+<td>62</td>
+<td>61</td>
+<td>~90%</td>
+<td>Session prompt templates</td>
+</tr>
+<tr>
+<td><code>internal/session/checkpoint.go</code></td>
+<td>50</td>
+<td>-</td>
+<td>0%</td>
+<td>Git checkpoint tagging</td>
+</tr>
+<tr>
+<td><code>internal/session/gitinfo.go</code></td>
+<td>128</td>
+<td>-</td>
+<td>0%</td>
+<td>Git metadata extraction</td>
+</tr>
+<tr>
+<td><code>internal/session/question.go</code></td>
+<td>37</td>
+<td>-</td>
+<td>0%</td>
+<td>Worker question detection</td>
+</tr>
+<tr>
+<td><code>internal/events/bus.go</code></td>
+<td>192</td>
+<td>219</td>
+<td>~85%</td>
+<td>In-process pub/sub with ring buffer</td>
+</tr>
+<tr>
+<td><code>internal/enhancer/enhancer.go</code></td>
+<td>836</td>
+<td>463</td>
+<td>~70%</td>
+<td>13-stage prompt enhancement pipeline</td>
+</tr>
+<tr>
+<td><code>internal/mcpserver/tools.go</code></td>
+<td>3,992</td>
+<td>2,263</td>
+<td>~65%</td>
+<td>57 MCP tool handlers in one file</td>
+</tr>
+<tr>
+<td><code>go.mod</code></td>
+<td>48</td>
+<td>-</td>
+<td>N/A</td>
+<td>Zero mcpkit dependency</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total internal/session/</strong>: 7,271 lines (4,650 non-test) across 18 files. <strong>Total internal/enhancer/</strong>: 7,363 lines (3,711 non-test) across 36 files.</p>
+<h3 id="22-what-works-well">2.2 What Works Well</h3>
+<ol>
+<li>
+<p><strong>Provider dispatch pattern</strong> (<code>providers.go:131-159</code>): Clean <code>buildCmdForProvider()</code> switch with per-provider builders and <code>normalizeEvent()</code> normalizers. Adding a new provider is a documented 7-step process (CLAUDE.md lines 268-276). This is well-isolated and testable.</p>
+</li>
+<li>
+<p><strong>Loop planner prompt construction</strong> (<code>loop.go:393-452</code>): Integrates roadmap analysis, journal context, issue ledger, and previous iteration feedback into the planner prompt. Context-aware and well-structured with <code>buildLoopPlannerPrompt()</code>.</p>
+</li>
+<li>
+<p><strong>Prompt enhancement integration</strong> (<code>loop.go:243-245, 283-285</code>): The <code>Enhancer</code> field on Manager and <code>enhanceForProvider()</code> method cleanly inject prompt improvement into StepLoop without coupling the loop logic to the enhancement pipeline.</p>
+</li>
+<li>
+<p><strong>Event bus cursor-based polling</strong> (<code>events/bus.go:149-178</code>): <code>HistoryAfterCursor()</code> provides efficient incremental updates for mobile RC tools. Ring buffer with monotonic counter is simple and correct.</p>
+</li>
+<li>
+<p><strong>Provider failover</strong> (<code>failover.go:22-50</code>): Clean health-check-first failover with structured error collection. Small, focused, testable.</p>
+</li>
+<li>
+<p><strong>Session persistence</strong> (<code>manager.go:719-846</code>): JSON-file-based persistence with cross-process discovery (<code>LoadExternalSessions()</code>) enables TUI and MCP server to share state. 24-hour TTL cleanup is pragmatic.</p>
+</li>
+</ol>
+<h3 id="23-what-doesnt-work">2.3 What Doesn't Work</h3>
+<ol>
+<li>
+<p><strong>Manager god-struct</strong> — <code>Manager</code> in <code>manager.go</code> holds <code>sessions</code>, <code>teams</code>, <code>workflowRuns</code>, <code>loops</code> maps plus <code>bus</code>, <code>stateDir</code>, <code>Enhancer</code>, and two hook functions. It handles session lifecycle, team coordination, workflow execution, loop management, and persistence — violating single responsibility. Cross-refs: ROADMAP 2.1 (session data model), 6.1 (native loop engine).</p>
+</li>
+<li>
+<p><strong>No mcpkit dependency</strong> — Despite ROADMAP explicitly listing 7 mcpkit packages to port/embed (lines 998-1006), <code>go.mod</code> has zero mcpkit imports. The loop engine (<code>loop.go</code>, 870 lines), workflow engine (<code>workflow.go</code>, 265 lines), budget tracking (<code>budget.go</code>, 131 lines), and resilience patterns (circuit breaker references in model/) are all hand-rolled. Cross-refs: ROADMAP 6.1 (embed mcpkit/ralph), 2.3.5 (port from mcpkit/finops).</p>
+</li>
+<li>
+<p><strong>tools.go monolith</strong> — <code>internal/mcpserver/tools.go</code> is 3,992 lines containing all 57 tool handlers, the Server struct, constructors, Register(), and dozens of helpers. hg-mcp's modular pattern (one package per domain, <code>init()</code> auto-registration) handles 1,190+ tools cleanly. Cross-refs: ROADMAP 2.8 (MCP server expansion).</p>
+</li>
+<li>
+<p><strong>Cost tracking duplication</strong> — Three separate cost systems: <code>budget.go</code> (BudgetEnforcer, LedgerEntry, CostSummary), <code>costnorm.go</code> (NormalizeProviderCost with hardcoded rates), and marathon.sh's shell-based budget check reading <code>status.json</code>. mcpkit's <code>finops/</code> has token-level tracking, dollar-cost estimation, scoped budgets, time-windowed tracking, and Prometheus export. Cross-refs: ROADMAP 2.3.5, 5.5.</p>
+</li>
+<li>
+<p><strong>Workflow engine reimplementation</strong> — <code>workflow.go</code> (265 lines) implements DAG validation, topological execution, and parallel groups. mcpkit's <code>workflow/</code> package provides cyclical graph engine with conditional branching, checkpoints, state machines, node middleware, fork nodes, and compensation/saga rollback. Cross-refs: ROADMAP 8.3.</p>
+</li>
+<li>
+<p><strong>No observability</strong> — No OpenTelemetry traces, no Prometheus metrics, no structured audit logging. mcpkit's <code>observability/</code> provides all three as middleware. The event bus (<code>events/bus.go</code>) is a custom lightweight solution with no integration to standard observability infrastructure. Cross-refs: ROADMAP 6.4.</p>
+</li>
+</ol>
+<h2 id="3-gap-analysis">3. Gap Analysis</h2>
+<h3 id="31-roadmap-target-vs-current-state">3.1 ROADMAP Target vs Current State</h3>
+<table>
+<thead>
+<tr>
+<th>ROADMAP Item</th>
+<th>Target</th>
+<th>Current State</th>
+<th>Gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6.1 — Native ralph loop engine</td>
+<td>Embed mcpkit/ralph as Go dependency with DAG, specs, progress</td>
+<td>Custom loop.go (870 lines) with ad-hoc planner/worker/verifier</td>
+<td>Full rewrite needed: mcpkit/ralph has DAG enforcement, YAML specs, templates, checkpointing, cost governor, stuck detection, observability hooks</td>
+</tr>
+<tr>
+<td>6.2 — R&amp;D cycle orchestrator</td>
+<td>Port claudekit rdcycle perpetual loop</td>
+<td>No rdcycle concept exists</td>
+<td>claudekit's rdcycle has scan/plan/verify/commit/report/schedule/notes/improve tools + budget profiles + model tiers</td>
+</tr>
+<tr>
+<td>2.3.5 — Port budget from mcpkit/finops</td>
+<td>Token-level cost tracking, scoped budgets</td>
+<td>File-based JSONL ledger with simple headroom check</td>
+<td>mcpkit finops has 17 files: Tracker, CostPolicy, ScopedBudget, WindowedTracker, dollar-cost estimation</td>
+</tr>
+<tr>
+<td>6.4 — Analytics &amp; observability</td>
+<td>OpenTelemetry traces, Prometheus /metrics</td>
+<td>Custom events.Bus (192 lines), no OTel/Prometheus</td>
+<td>mcpkit/observability ready to use</td>
+</tr>
+<tr>
+<td>2.1.2 — SQLite session store</td>
+<td>modernc.org/sqlite with WAL mode</td>
+<td>JSON file persistence (~50 lines in manager.go)</td>
+<td>internal-sqlite-project pattern available for reference</td>
+</tr>
+<tr>
+<td>6.9 — Natural language fleet control</td>
+<td>mcpkit/sampling for NL commands</td>
+<td>No sampling integration</td>
+<td>mcpkit/sampling has request builders, middleware, context injection</td>
+</tr>
+<tr>
+<td>8.3 — Workflow engine</td>
+<td>YAML workflows with conditionals, error handlers</td>
+<td>Basic DAG executor (265 lines)</td>
+<td>mcpkit/workflow has state machines, checkpoints, fork nodes, compensation</td>
+</tr>
+<tr>
+<td>5.3 — MCP gateway</td>
+<td>Central hub with per-session auth, audit</td>
+<td>Direct MCP server (tools.go)</td>
+<td>mcpkit/gateway has dynamic upstream registration, per-upstream resilience</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-missing-capabilities">3.2 Missing Capabilities</h3>
+<ol>
+<li>
+<p><strong>No shared type library</strong> — ralphglasses, mcpkit, hg-mcp, claudekit, and mesmer all define their own session/task/budget types. A shared <code>types</code> package (or Go interface contracts) would enable cross-project interop without tight coupling.</p>
+</li>
+<li>
+<p><strong>No interface-based decoupling</strong> — The Manager struct directly owns all behavior. No interfaces for <code>SessionStore</code>, <code>BudgetTracker</code>, <code>LoopEngine</code>, <code>WorkflowRunner</code>. This makes it impossible to swap implementations (e.g., switch from file-based to SQLite persistence without rewriting Manager).</p>
+</li>
+<li>
+<p><strong>No plugin/middleware architecture</strong> — Unlike mcpkit's <code>registry.Middleware</code> pattern and hg-mcp's <code>ToolModule</code> interface, ralphglasses has no extension points. Adding a new tool requires editing the 3,992-line <code>tools.go</code> file.</p>
+</li>
+<li>
+<p><strong>No cross-repo session discovery</strong> — Each repo in the org manages its own ralph loops independently. There is no mechanism for ralphglasses to discover or manage sessions running in other repos via their respective MCP servers.</p>
+</li>
+<li>
+<p><strong>No model tier awareness</strong> — mcpkit's <code>rdcycle/models.go</code> provides <code>ModelTierConfig</code> with task-phase-aware model selection. ralphglasses hardcodes default models per provider in <code>ProviderDefaults()</code>.</p>
+</li>
+</ol>
+<h3 id="33-technical-debt-inventory">3.3 Technical Debt Inventory</h3>
+<table>
+<thead>
+<tr>
+<th>Debt Item</th>
+<th>Location</th>
+<th>Impact</th>
+<th>Effort to Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Manager god-struct</td>
+<td><code>session/manager.go</code></td>
+<td>High — blocks testing, extension</td>
+<td>L — extract interfaces, split into sub-managers</td>
+</tr>
+<tr>
+<td>tools.go monolith</td>
+<td><code>mcpserver/tools.go</code> (3,992 lines)</td>
+<td>High — merge conflicts, cognitive load</td>
+<td>XL — migrate to module pattern</td>
+</tr>
+<tr>
+<td>Hardcoded cost rates</td>
+<td><code>session/costnorm.go:12-16</code></td>
+<td>Medium — stale pricing</td>
+<td>S — load from config or mcpkit/finops</td>
+</tr>
+<tr>
+<td>JSON file persistence</td>
+<td><code>session/manager.go:719-846</code></td>
+<td>Medium — no queries, no transactions</td>
+<td>L — migrate to SQLite</td>
+</tr>
+<tr>
+<td>No context propagation</td>
+<td>Multiple files (ROADMAP 1.9)</td>
+<td>Medium — can't cancel long ops</td>
+<td>M — thread ctx through all paths</td>
+</tr>
+<tr>
+<td>Duplicated budget logic</td>
+<td><code>budget.go</code> + marathon.sh</td>
+<td>Low — inconsistent enforcement</td>
+<td>S — consolidate</td>
+</tr>
+<tr>
+<td>No structured logging</td>
+<td><code>mcpserver/</code>, <code>process/</code></td>
+<td>Low — hard to debug production</td>
+<td>M — migrate to slog</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-external-landscape">4. External Landscape</h2>
+<h3 id="41-competitorpeer-projects-sister-repos">4.1 Competitor/Peer Projects (Sister Repos)</h3>
+<h4 id="mcpkit-go-mcp-framework-35-packages-100-mcp-spec-coverage">mcpkit — Go MCP Framework (35+ packages, 100% MCP spec coverage)</h4>
+<p><strong>Architecture pattern</strong>: Layered dependency graph with 4 layers. Lower layers never import upper layers. Every package has <code>doc.go</code>, <code>_test.go</code>, and example functions. 90%+ coverage across all packages.</p>
+<p><strong>Key packages ralphglasses should consume</strong>:
+- <code>ralph/</code> (36 files): Autonomous loop runner with DAG enforcement, YAML specs, templates, checkpoints, cost governor, stuck detection, observability hooks, and workflow integration. This directly replaces <code>internal/session/loop.go</code>.
+- <code>finops/</code> (17 files): Token accounting, CostPolicy, ScopedBudget, WindowedTracker, dollar-cost estimation with model pricing, Prometheus export. Replaces <code>budget.go</code> + <code>costnorm.go</code>.
+- <code>workflow/</code> (14 files): Cyclical graph engine with conditional branching, checkpoints, state machines, fork nodes, compensation/saga rollback. Replaces <code>workflow.go</code>.
+- <code>session/</code> (8 files): Session/SessionStore interfaces, in-memory store, middleware, TTL/eviction. Provides the interface contract Manager needs.
+- <code>resilience/</code> (8 files): CircuitBreaker, RateLimiter, CacheEntry generics. Replaces <code>ratelimit.go</code>.
+- <code>observability/</code> (6 files): OpenTelemetry tracing/metrics middleware. Fills the analytics gap.
+- <code>sampling/</code> (14 files): LLM sampling client with request builders. Needed for Phase 6.9 NL fleet control.</p>
+<p><strong>Integration model</strong>: <code>go.mod</code> <code>require</code> + <code>replace ../mcpkit</code> (same as claudekit and hg-mcp).</p>
+<h4 id="hg-mcp-go-mcp-server-1190-tools-119-modules">hg-mcp — Go MCP Server (1,190+ tools, 119 modules)</h4>
+<p><strong>Architecture pattern</strong>: Thin shim layer (<code>internal/mcp/tools/helpers.go</code>, <code>compat.go</code>, <code>registry.go</code>) delegates to mcpkit. All 119 tool modules import from the shim, not mcpkit directly. This means mcpkit upgrades require changing only 3 files, not 119.</p>
+<p><strong>Key patterns to adopt</strong>:
+- <strong>Module auto-registration via <code>init()</code></strong>: Each tool domain is a separate package with <code>init()</code> that calls <code>tools.GetRegistry().RegisterModule(&amp;Module{})</code>. No central registration file to maintain.
+- <strong>Runtime groups</strong>: Tools auto-assigned to groups based on category. <code>ListToolsByRuntimeGroup()</code> and <code>GetRuntimeGroupStats()</code> for programmatic access.
+- <strong>Rate limit per-service defaults</strong>: Each module declares its own rate limit via <code>CircuitBreakerGroup</code> field.
+- <strong>Shim insulation</strong>: <code>helpers.go</code> wraps <code>TextResult</code>, <code>ErrorResult</code>, <code>JSONResult</code>, param getters. <code>compat.go</code> re-exports MCP SDK types. Business logic modules never see mcpkit.</p>
+<p><strong>What ralphglasses would gain</strong>: Decomposing the 3,992-line <code>tools.go</code> into ~15 module packages (fleet, session, loop, team, workflow, roadmap, agent, journal, event, awesome, prompt, claudemd, rc, marathon, snapshot) with auto-registration.</p>
+<h4 id="claudekit-go-mcp-with-rdcycle-budget-profiles">claudekit — Go MCP with rdcycle + budget profiles</h4>
+<p><strong>Architecture pattern</strong>: Direct mcpkit dependency via <code>replace ../mcpkit</code>. 10 modules (fontkit, themekit, envkit, statusline, pluginkit, skillkit, mcpserver, rdcycle, cmd).</p>
+<p><strong>Key patterns to adopt</strong>:
+- <strong>rdcycle perpetual loop</strong> (<code>rdcycle/</code>): scan -&gt; plan -&gt; verify -&gt; commit -&gt; report -&gt; schedule -&gt; notes -&gt; improve cycle. <code>BudgetProfile</code> presets (Personal/WorkAPI). <code>ModelTierConfig</code> with task-phase-aware model selection. Self-improvement via <code>rdcycle_improve</code> that analyzes patterns and suggests budget adjustments.
+- <strong>PluginKit</strong> (<code>pluginkit/</code>): YAML plugin loading, subprocess handler, ToolModule bridge. Provides the extensibility ralphglasses Phase 3.5.2 needs.
+- <strong>SkillKit</strong> (<code>skillkit/</code>): Claude Code skill marketplace — discovery, install, remove. Maps to Phase 3.5.4 MCP skill export.</p>
+<h4 id="internal-sqlite-project-go-sqlite-mcp-audit-logs">internal-sqlite-project — Go + SQLite + MCP + Audit Logs</h4>
+<p><strong>Key patterns to adopt</strong>:
+- <strong>Pure-Go SQLite</strong> via <code>modernc.org/sqlite</code>: No CGO, cross-compiles to all platforms. WAL mode for concurrent reads. This is the pattern ROADMAP 2.1.2 should follow.
+- <strong>Audit log pattern</strong>: Append-only audit trail with structured events. Maps to Phase 6.7 replay/audit trail.</p>
+<h4 id="mesmer-go-mcp-server-with-ralph-integration">mesmer — Go MCP Server with Ralph Integration</h4>
+<p><strong>Key patterns</strong>: Uses <code>mcp-go</code> directly (not mcpkit). Has its own <code>internal/</code> structure with research, SLO, prometheus, workflows directories. Demonstrates the pattern of a large Go MCP server with infrastructure tooling.</p>
+<h3 id="42-patterns-worth-adopting-with-specific-patterns-from-sister-repos">4.2 Patterns Worth Adopting (with specific patterns from sister repos)</h3>
+<ol>
+<li>
+<p><strong>Shim Layer Pattern (from hg-mcp)</strong>: Create <code>internal/mcp/compat.go</code> and <code>internal/mcp/helpers.go</code> that re-export mcpkit types and handler helpers. All tool modules import from the shim. mcpkit upgrades require changing 2-3 files, not touching business logic.</p>
+</li>
+<li>
+<p><strong>Module Auto-Registration (from hg-mcp)</strong>: Each tool domain in its own package with <code>init()</code> registration. Eliminates the 3,992-line <code>tools.go</code> monolith. Pattern: <code>internal/mcpserver/tools/&lt;domain&gt;/module.go</code> with <code>Module</code> interface (<code>Name()</code>, <code>Description()</code>, <code>Tools()</code>).</p>
+</li>
+<li>
+<p><strong>Interface-Based Manager Decomposition (from mcpkit/session)</strong>: Define <code>SessionStore</code>, <code>LoopRunner</code>, <code>WorkflowEngine</code>, <code>BudgetTracker</code> interfaces. Manager becomes a coordinator that holds interface implementations, not concrete logic. Implementations can be swapped (file-based -&gt; SQLite -&gt; mcpkit backends).</p>
+</li>
+<li>
+<p><strong>Budget Profiles (from claudekit/rdcycle)</strong>: Named budget presets (Personal: $5/cycle, WorkAPI: $50/cycle) with model tier selection per task phase. Replaces the single <code>BudgetEnforcer.Headroom</code> field.</p>
+</li>
+<li>
+<p><strong>Local Replace Directive (from claudekit/hg-mcp)</strong>: <code>replace github.com/hairglasses-studio/mcpkit =&gt; ../mcpkit</code> in <code>go.mod</code>. Zero-cost for local development, enables real dependency once mcpkit gets a release tag.</p>
+</li>
+<li>
+<p><strong>Middleware Chain (from mcpkit/registry)</strong>: <code>func(name string, td ToolDefinition, next ToolHandlerFunc) ToolHandlerFunc</code> signature. Enables composable observability, rate limiting, circuit breaking, audit logging on every tool invocation.</p>
+</li>
+</ol>
+<h3 id="43-anti-patterns-to-avoid">4.3 Anti-Patterns to Avoid</h3>
+<ol>
+<li>
+<p><strong>Full mcpkit coupling on day one</strong>: Do NOT import mcpkit into every internal package. Use the shim pattern (hg-mcp's approach) so business logic is insulated from framework churn. Import mcpkit only in the shim and adapter layers.</p>
+</li>
+<li>
+<p><strong>Big-bang migration</strong>: Do NOT rewrite loop.go, workflow.go, and budget.go simultaneously. Instead, extract interfaces first, then swap implementations one at a time behind the interface boundary. The shim pattern enables this incremental approach.</p>
+</li>
+<li>
+<p><strong>Ignoring the <code>official_sdk</code> build tag</strong>: mcpkit supports both <code>mcp-go</code> and the official <code>modelcontextprotocol/go-sdk</code> via build tags (<code>//go:build !official_sdk</code>). ralphglasses currently uses only <code>mcp-go</code>. Any mcpkit integration must maintain compatibility with the <code>mcp-go</code> path.</p>
+</li>
+<li>
+<p><strong>Shared SQLite across network</strong>: ROADMAP 3.3.1 suggests sharing SQLite across instances via WAL mode. This works for local multi-process but breaks over NFS/network filesystems. Use SQLite per-instance with a sync layer if cross-machine coordination is needed.</p>
+</li>
+<li>
+<p><strong>Premature abstraction of provider dispatch</strong>: The current <code>buildCmdForProvider()</code> pattern is clean and direct. Do NOT over-abstract it into a plugin system before there is a real fourth provider to support.</p>
+</li>
+</ol>
+<h3 id="44-academic-industry-references">4.4 Academic &amp; Industry References</h3>
+<ol>
+<li>
+<p><strong>Conway's Law and Module Boundaries</strong>: The sister repo structure (mcpkit = framework, hg-mcp = tools, claudekit = CLI experience, ralphglasses = fleet management) reflects Conway's Law. Decoupling should respect these organizational boundaries by importing, not forking, shared code.</p>
+</li>
+<li>
+<p><strong>Hexagonal Architecture (Ports and Adapters)</strong>: The proposed interface extraction (<code>SessionStore</code>, <code>LoopRunner</code>, etc.) follows the ports-and-adapters pattern. Core business logic (loop orchestration, budget decisions) defines ports; adapters (file-based, SQLite, mcpkit backends) implement them.</p>
+</li>
+<li>
+<p><strong>Strangler Fig Pattern</strong>: Rather than rewriting the monolithic Manager, wrap it behind interfaces and gradually replace internal implementations with mcpkit-backed ones. The <code>SetHooksForTesting()</code> method on Manager already demonstrates this pattern for test mocks.</p>
+</li>
+<li>
+<p><strong>MCP Server Best Practices (mark3labs/mcp-go)</strong>: The mcp-go library encourages tool registration via method chaining. mcpkit's <code>registry.ToolRegistry</code> builds on this with middleware support. ralphglasses should adopt mcpkit's registry rather than maintaining its own <code>Register()</code> in <code>tools.go</code>.</p>
+</li>
+</ol>
+<h2 id="5-actionable-recommendations">5. Actionable Recommendations</h2>
+<h3 id="51-immediate-actions">5.1 Immediate Actions</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Files</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP Item</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Define <code>SessionStore</code> interface in <code>internal/session/store.go</code> with <code>Create</code>, <code>Get</code>, <code>List</code>, <code>Update</code>, <code>Delete</code> methods. Extract current JSON-file logic into <code>FileSessionStore</code>.</td>
+<td><code>internal/session/store.go</code> (new), <code>internal/session/store_file.go</code> (new), <code>internal/session/manager.go</code> (refactor)</td>
+<td>M</td>
+<td>High — enables SQLite swap, testability</td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Define <code>LoopRunner</code> interface in <code>internal/session/looprunner.go</code> with <code>Start</code>, <code>Step</code>, <code>Stop</code>, <code>Get</code>, <code>List</code> methods. Manager delegates to interface.</td>
+<td><code>internal/session/looprunner.go</code> (new), <code>internal/session/loop.go</code> (extract), <code>internal/session/manager.go</code> (refactor)</td>
+<td>M</td>
+<td>High — decouples loop engine from session manager</td>
+<td>6.1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Define <code>BudgetTracker</code> interface in <code>internal/session/budgettracker.go</code> with <code>Check</code>, <code>Record</code>, <code>Summary</code> methods. Current <code>BudgetEnforcer</code> implements it.</td>
+<td><code>internal/session/budgettracker.go</code> (new), <code>internal/session/budget.go</code> (implement interface)</td>
+<td>S</td>
+<td>Medium — prepares for mcpkit/finops swap</td>
+<td>2.3.5</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Add <code>mcpkit</code> to <code>go.mod</code> with <code>replace ../mcpkit</code> directive. Import nothing yet — just verify build compatibility.</td>
+<td><code>go.mod</code>, <code>go.sum</code></td>
+<td>S</td>
+<td>Low (prep) — validates that the dependency can be added without breakage</td>
+<td>6.1</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Move hardcoded <code>ProviderCostRates</code> from <code>costnorm.go:12-16</code> to a YAML/JSON config file loaded at startup.</td>
+<td><code>internal/session/costnorm.go</code>, <code>configs/cost_rates.yaml</code> (new)</td>
+<td>S</td>
+<td>Medium — rates can be updated without code changes</td>
+<td>2.5.5</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-near-term-actions">5.2 Near-Term Actions</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Files</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP Item</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6</td>
+<td>Create <code>internal/mcpserver/compat.go</code> shim re-exporting mcpkit registry types and handler helpers. Migrate <code>tools.go</code> handlers to use shim helpers instead of direct mcp-go types.</td>
+<td><code>internal/mcpserver/compat.go</code> (new), <code>internal/mcpserver/helpers.go</code> (new), <code>internal/mcpserver/tools.go</code> (refactor)</td>
+<td>L</td>
+<td>High — insulates from SDK changes, prepares for module split</td>
+<td>2.8</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Split <code>tools.go</code> (3,992 lines) into domain-specific handler files: <code>handler_fleet.go</code>, <code>handler_session.go</code>, <code>handler_loop.go</code>, <code>handler_team.go</code>, <code>handler_workflow.go</code>, <code>handler_roadmap.go</code>, <code>handler_agent.go</code>, <code>handler_journal.go</code>, <code>handler_event.go</code>, <code>handler_awesome.go</code>, <code>handler_rc.go</code>, <code>handler_marathon.go</code>, <code>handler_snapshot.go</code>. Keep <code>tools.go</code> as the registrar calling each handler file's registration function.</td>
+<td><code>internal/mcpserver/handler_*.go</code> (13 new files), <code>internal/mcpserver/tools.go</code> (reduce to ~200 lines)</td>
+<td>L</td>
+<td>High — eliminates merge conflicts, improves navigability</td>
+<td>2.8</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Implement <code>SQLiteSessionStore</code> behind the <code>SessionStore</code> interface using <code>modernc.org/sqlite</code>. Schema: sessions table, events table, WAL mode.</td>
+<td><code>internal/session/store_sqlite.go</code> (new), <code>internal/session/migrations.go</code> (new), <code>go.mod</code> (add modernc.org/sqlite)</td>
+<td>L</td>
+<td>High — enables queryable sessions, survives restart, Phase 3.3 multi-instance</td>
+<td>2.1.2</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Wire mcpkit's <code>observability.Init()</code> into <code>cmd/mcp.go</code> and <code>cmd/root.go</code>. Add OpenTelemetry span creation for session launch, loop step, and budget check.</td>
+<td><code>cmd/mcp.go</code>, <code>cmd/root.go</code>, <code>internal/session/manager.go</code> (add span creation)</td>
+<td>M</td>
+<td>High — immediate Prometheus metrics and tracing</td>
+<td>6.4</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Replace <code>ratelimit.go</code> (99 lines) with mcpkit <code>resilience.RateLimiter</code>. The interface is compatible: both provide <code>Allow() bool</code> semantics.</td>
+<td><code>internal/session/ratelimit.go</code> (delete), <code>internal/session/manager.go</code> (use mcpkit)</td>
+<td>S</td>
+<td>Medium — eliminates duplicated rate limiter</td>
+<td>N/A (tech debt)</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Create adapter that wraps mcpkit <code>ralph.Loop</code> to implement the <code>LoopRunner</code> interface. Keep current loop.go as the default until adapter is battle-tested.</td>
+<td><code>internal/session/loop_mcpkit.go</code> (new)</td>
+<td>M</td>
+<td>High — enables feature flag switch between native and mcpkit loop engine</td>
+<td>6.1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-strategic-actions">5.3 Strategic Actions</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Files</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP Item</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>12</td>
+<td>Port budget tracking to mcpkit <code>finops.Tracker</code> + <code>finops.CostPolicy</code>. Map session provider+model to mcpkit's <code>ModelPricing</code> table. Remove <code>budget.go</code>, <code>costnorm.go</code>.</td>
+<td><code>internal/session/budget.go</code> (delete), <code>internal/session/costnorm.go</code> (delete), <code>internal/session/budget_finops.go</code> (new adapter)</td>
+<td>L</td>
+<td>High — gains token-level tracking, scoped budgets, time windows, Prometheus export</td>
+<td>2.3.5, 5.5, 6.10</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Replace <code>workflow.go</code> (265 lines) with mcpkit <code>workflow.Engine</code>. Map <code>WorkflowDef</code> -&gt; mcpkit <code>workflow.Graph</code>, <code>WorkflowStep</code> -&gt; mcpkit workflow nodes. Keep YAML parsing.</td>
+<td><code>internal/session/workflow.go</code> (delete), <code>internal/session/workflow_mcpkit.go</code> (new adapter)</td>
+<td>L</td>
+<td>High — gains conditional branching, checkpoints, state machines, fork nodes, compensation</td>
+<td>8.3</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Extract <code>internal/enhancer/</code> into a standalone Go module <code>github.com/hairglasses-studio/enhancerkit</code>. Other sister repos (claudekit, hg-mcp) can import it for prompt improvement without depending on all of ralphglasses.</td>
+<td><code>internal/enhancer/</code> (move to separate module), update <code>go.mod</code></td>
+<td>XL</td>
+<td>High — cross-project reuse of prompt enhancement</td>
+<td>N/A (ecosystem)</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Migrate <code>tools.go</code> handler packages to hg-mcp's <code>ToolModule</code> auto-registration pattern. Each domain package has <code>init()</code> calling <code>RegisterModule()</code>. Main entry imports with <code>_</code>.</td>
+<td><code>internal/mcpserver/tools/fleet/</code>, <code>internal/mcpserver/tools/session/</code>, etc. (15+ new packages)</td>
+<td>XL</td>
+<td>High — enables independent development of tool domains, eliminates 3,992-line file</td>
+<td>2.8, 3.5.2</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Integrate claudekit's rdcycle pattern for self-improving ralph loops. Implement <code>rdcycle_scan</code> -&gt; <code>rdcycle_plan</code> -&gt; <code>rdcycle_verify</code> -&gt; <code>rdcycle_commit</code> -&gt; <code>rdcycle_report</code> cycle as a loop profile option.</td>
+<td><code>internal/session/rdcycle.go</code> (new), MCP tools (5 new)</td>
+<td>XL</td>
+<td>High — autonomous self-improvement loops</td>
+<td>6.2, 8.5</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Create shared <code>github.com/hairglasses-studio/ralphtypes</code> module defining canonical types: <code>Session</code>, <code>LoopSpec</code>, <code>BudgetPolicy</code>, <code>Provider</code>, <code>EventType</code>. ralphglasses, mcpkit, claudekit import this instead of defining their own.</td>
+<td>New repo or module</td>
+<td>XL</td>
+<td>High — eliminates type duplication across 5 repos</td>
+<td>N/A (ecosystem)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-risk-assessment">6. Risk Assessment</h2>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Probability</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mcpkit API churn breaks ralphglasses builds</td>
+<td>Medium</td>
+<td>High</td>
+<td>Use shim/compat layer (hg-mcp pattern). Only 2-3 files need updates on mcpkit changes. Pin mcpkit to known-good commit in <code>replace</code> directive.</td>
+</tr>
+<tr>
+<td>SQLite migration loses existing session data</td>
+<td>Low</td>
+<td>Medium</td>
+<td>Write one-time migration script that reads JSON files and imports into SQLite. Keep JSON fallback for 2 releases.</td>
+</tr>
+<tr>
+<td>Interface extraction creates regression bugs</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Extract interfaces without changing behavior first. Run full test suite after each extraction. Use <code>SetHooksForTesting</code> pattern already in Manager.</td>
+</tr>
+<tr>
+<td>tools.go split breaks MCP tool registration</td>
+<td>Low</td>
+<td>High</td>
+<td>Validate tool count before/after split. Add <code>TestAllToolsRegistered</code> that asserts expected tool count matches actual registered count.</td>
+</tr>
+<tr>
+<td>Performance regression from mcpkit middleware overhead</td>
+<td>Low</td>
+<td>Medium</td>
+<td>Benchmark hot paths (session launch, event normalization, budget check) before and after mcpkit integration. mcpkit's own benchmarks show &lt;1ms middleware overhead.</td>
+</tr>
+<tr>
+<td>Enhancer extraction breaks internal imports</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Use <code>replace</code> directive during transition. Keep <code>internal/enhancer/</code> as a thin wrapper that re-exports from the extracted module.</td>
+</tr>
+<tr>
+<td>Cross-repo type library creates coordination tax</td>
+<td>High</td>
+<td>Medium</td>
+<td>Start minimal: only <code>Provider</code>, <code>SessionStatus</code>, <code>EventType</code> enums. Add types only when two or more repos demonstrably need the same type.</td>
+</tr>
+<tr>
+<td>Parallel development on tools.go during split</td>
+<td>High</td>
+<td>Medium</td>
+<td>Split tools.go first, before any feature work. Use a feature branch, merge quickly. Communicate to all agents.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-implementation-priority-ordering">7. Implementation Priority Ordering</h2>
+<h3 id="71-critical-path">7.1 Critical Path</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Interface extraction (5.1 #1-3)
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    |
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    v
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>Add mcpkit to go.mod (5.1 #4)
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    |
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    v
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>Create shim layer (5.2 #6)
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    |
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    v
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>Split tools.go (5.2 #7)
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    |
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    +---&gt; SQLite store (5.2 #8) ---&gt; mcpkit finops (5.3 #12) ---&gt; rdcycle (5.3 #16)
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    |
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    +---&gt; mcpkit loop adapter (5.2 #11) ---&gt; Replace workflow (5.3 #13)
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    |
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    +---&gt; Wire observability (5.2 #9) ---&gt; Prometheus/OTel dashboards
+</code></pre></div>
+<h3 id="72-recommended-sequence">7.2 Recommended Sequence</h3>
+<p><strong>Sprint 1 (1-2 weeks): Interface Foundation</strong>
+1. Define <code>SessionStore</code>, <code>LoopRunner</code>, <code>BudgetTracker</code> interfaces (5.1 #1-3)
+2. Extract current implementations behind interfaces
+3. Add mcpkit to <code>go.mod</code> with <code>replace</code> (5.1 #4)
+4. Move cost rates to config file (5.1 #5)</p>
+<p><strong>Sprint 2 (2-3 weeks): Shim + Split</strong>
+5. Create mcpserver shim layer (5.2 #6)
+6. Split tools.go into domain handler files (5.2 #7)
+7. Replace ratelimit.go with mcpkit resilience (5.2 #10)</p>
+<p><strong>Sprint 3 (2-3 weeks): Storage + Observability</strong>
+8. Implement SQLiteSessionStore (5.2 #8)
+9. Wire mcpkit observability (5.2 #9)</p>
+<p><strong>Sprint 4 (3-4 weeks): Engine Swap</strong>
+10. Create mcpkit ralph loop adapter (5.2 #11)
+11. Port budget to mcpkit finops (5.3 #12)
+12. Replace workflow engine (5.3 #13)</p>
+<p><strong>Sprint 5 (4+ weeks): Ecosystem</strong>
+13. Extract enhancer module (5.3 #14)
+14. Migrate to ToolModule pattern (5.3 #15)
+15. Integrate rdcycle (5.3 #16)
+16. Create shared types module (5.3 #17)</p>
+<h3 id="73-parallelization-opportunities">7.3 Parallelization Opportunities</h3>
+<p>The following work streams can proceed simultaneously:</p>
+<ul>
+<li><strong>Stream A</strong>: Interface extraction (#1-3) + shim layer (#6) + tools.go split (#7)</li>
+<li><strong>Stream B</strong>: SQLite store (#8) — independent of Stream A once <code>SessionStore</code> interface is defined</li>
+<li><strong>Stream C</strong>: Observability (#9) — independent of all other streams</li>
+<li><strong>Stream D</strong>: Cost config (#5) + ratelimit swap (#10) — independent, small items</li>
+</ul>
+<p>After Sprint 1 completes:
+- <strong>Stream E</strong>: mcpkit loop adapter (#11) + workflow swap (#13) — depends on <code>LoopRunner</code> interface from #2
+- <strong>Stream F</strong>: mcpkit finops swap (#12) — depends on <code>BudgetTracker</code> interface from #3
+- <strong>Stream G</strong>: Enhancer extraction (#14) — independent of all other streams</p>
+<p>The key constraint is that interface extraction (Sprint 1) must complete before any mcpkit adapter work begins, because the interfaces define the contract that adapters implement.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

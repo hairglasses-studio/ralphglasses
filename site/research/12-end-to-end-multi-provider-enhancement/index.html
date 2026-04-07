@@ -1,0 +1,2155 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/research/12-end-to-end-multi-provider-enhancement/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Phase 12 Research: End-to-End Multi-Provider Enhancement - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#phase-12-research-end-to-end-multi-provider-enhancement" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Phase 12 Research: End-to-End Multi-Provider Enhancement
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-current-state-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Current State Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Current State Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-what-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 What Exists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-what-works-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 What Works Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-what-doesnt-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 What Doesn't Work
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-gap-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Gap Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Gap Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-roadmap-target-vs-current-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 ROADMAP Target vs Current State
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-missing-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Missing Capabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-technical-debt-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Technical Debt Inventory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-external-landscape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. External Landscape
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. External Landscape">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-competitorpeer-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Competitor/Peer Projects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-patterns-worth-adopting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Patterns Worth Adopting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-anti-patterns-to-avoid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Anti-Patterns to Avoid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-academic-industry-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Academic &amp; Industry References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-actionable-recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Actionable Recommendations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Actionable Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-immediate-actions-current-sprint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Immediate Actions (Current Sprint)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-near-term-actions-next-2-4-sprints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Near-Term Actions (Next 2-4 Sprints)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-strategic-actions-future-sprints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Strategic Actions (Future Sprints)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-risk-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Risk Assessment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-implementation-priority-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Implementation Priority Ordering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Implementation Priority Ordering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#71-critical-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 Critical Path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-recommended-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 Recommended Sequence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#73-parallelization-opportunities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3 Parallelization Opportunities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-key-file-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix: Key File Paths
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="phase-12-research-end-to-end-multi-provider-enhancement">Phase 12 Research: End-to-End Multi-Provider Enhancement</h1>
+<p>Covers ROADMAP items <strong>8.2</strong> (Prompt Management), <strong>8.4</strong> (Code Review Automation), and <strong>6.8</strong> (Multi-Model A/B Testing).</p>
+<hr />
+<h2 id="1-executive-summary">1. Executive Summary</h2>
+<ul>
+<li>The <code>internal/enhancer/</code> package (4,069 non-test lines, 3,294 test lines across 19 source files) already implements a complete multi-provider prompt enhancement pipeline with Claude, Gemini, and OpenAI API clients, circuit breaker, caching, and 13 deterministic stages. This is a strong foundation for all three ROADMAP items.</li>
+<li><strong>Prompt management (8.2)</strong> is partially addressed: 5 builtin templates exist in <code>templates.go</code>, variable interpolation works via <code>{{var}}</code> syntax, and config loading supports project/home-directory fallback. Missing: persistent prompt library (<code>~/.ralphglasses/prompts/</code>), versioning/rollback, A/B testing of prompts, and TUI prompt editor.</li>
+<li><strong>Code review automation (8.4)</strong> has zero implementation today. The <code>code_review</code> template in <code>templates.go</code> and the lint/scoring infrastructure provide scoring primitives, but PR review agents, GitHub API integration, auto-approve logic, and the review dashboard are entirely absent.</li>
+<li><strong>Multi-model A/B testing (6.8)</strong> has zero implementation. The multi-provider client infrastructure (<code>provider.go</code>, <code>llmclient.go</code>, <code>gemini_client.go</code>, <code>openai_client.go</code>) and the hybrid engine with cache/circuit breaker provide the API layer, but no A/B test orchestration, metric collection, comparison reporting, or auto-promotion logic exists.</li>
+<li>The critical path is: prompt library persistence (8.2.1-8.2.2) first, then A/B testing framework (6.8.1-6.8.3 + 8.2.4) which shares infrastructure, then code review automation (8.4) which consumes both.</li>
+</ul>
+<hr />
+<h2 id="2-current-state-analysis">2. Current State Analysis</h2>
+<h3 id="21-what-exists">2.1 What Exists</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Lines</th>
+<th>Test Lines</th>
+<th>Test File</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enhancer.go</code></td>
+<td>836</td>
+<td>463</td>
+<td><code>enhancer_test.go</code></td>
+<td>Production-ready, 13-stage pipeline</td>
+</tr>
+<tr>
+<td><code>scoring.go</code></td>
+<td>536</td>
+<td>377</td>
+<td><code>scoring_test.go</code></td>
+<td>Production-ready, 10-dimension scoring</td>
+</tr>
+<tr>
+<td><code>lint.go</code></td>
+<td>356</td>
+<td>241</td>
+<td><code>lint_test.go</code></td>
+<td>Production-ready, 11+ lint rules</td>
+</tr>
+<tr>
+<td><code>templates.go</code></td>
+<td>276</td>
+<td>110</td>
+<td><code>templates_test.go</code></td>
+<td>Working, 5 builtin templates</td>
+</tr>
+<tr>
+<td><code>config.go</code></td>
+<td>262</td>
+<td>200</td>
+<td><code>config_test.go</code></td>
+<td>Production-ready, YAML + env overrides</td>
+</tr>
+<tr>
+<td><code>context.go</code></td>
+<td>244</td>
+<td>223</td>
+<td><code>context_test.go</code></td>
+<td>Production-ready, cache-friendly checks</td>
+</tr>
+<tr>
+<td><code>examples.go</code></td>
+<td>198</td>
+<td>96</td>
+<td><code>examples_test.go</code></td>
+<td>Production-ready, 3 detection strategies</td>
+</tr>
+<tr>
+<td><code>metaprompt.go</code></td>
+<td>191</td>
+<td>--</td>
+<td>(const-only)</td>
+<td>Complete, 3 providers x 2 modes</td>
+</tr>
+<tr>
+<td><code>llmclient.go</code></td>
+<td>177</td>
+<td>193</td>
+<td><code>llmclient_test.go</code></td>
+<td>Production-ready, Claude Messages API</td>
+</tr>
+<tr>
+<td><code>gemini_client.go</code></td>
+<td>166</td>
+<td>159</td>
+<td><code>gemini_client_test.go</code></td>
+<td>Production-ready, Gemini generateContent</td>
+</tr>
+<tr>
+<td><code>hybrid.go</code></td>
+<td>164</td>
+<td>248</td>
+<td><code>hybrid_test.go</code></td>
+<td>Production-ready, auto/local/llm modes</td>
+</tr>
+<tr>
+<td><code>openai_client.go</code></td>
+<td>152</td>
+<td>136</td>
+<td><code>openai_client_test.go</code></td>
+<td>Production-ready, Chat Completions API</td>
+</tr>
+<tr>
+<td><code>claudemd.go</code></td>
+<td>126</td>
+<td>105</td>
+<td><code>claudemd_test.go</code></td>
+<td>Production-ready, 6 health checks</td>
+</tr>
+<tr>
+<td><code>circuit.go</code></td>
+<td>93</td>
+<td>118</td>
+<td><code>circuit_test.go</code></td>
+<td>Production-ready, 3-failure threshold</td>
+</tr>
+<tr>
+<td><code>cache.go</code></td>
+<td>103</td>
+<td>104</td>
+<td><code>cache_test.go</code></td>
+<td>Production-ready, SHA-256 keyed, 100 entries</td>
+</tr>
+<tr>
+<td><code>classifier.go</code></td>
+<td>80</td>
+<td>--</td>
+<td>(via enhancer_test)</td>
+<td>Production-ready, 6 task types</td>
+</tr>
+<tr>
+<td><code>filter.go</code></td>
+<td>63</td>
+<td>--</td>
+<td>(via handler_prompt)</td>
+<td>Production-ready, skip gates</td>
+</tr>
+<tr>
+<td><code>provider.go</code></td>
+<td>46</td>
+<td>76</td>
+<td><code>provider_test.go</code></td>
+<td>Production-ready, factory pattern</td>
+</tr>
+<tr>
+<td><code>mcpserver/handler_prompt.go</code></td>
+<td>309</td>
+<td>--</td>
+<td>(via tools_test)</td>
+<td>Production-ready, 9 MCP tool handlers</td>
+</tr>
+<tr>
+<td><code>session/templates.go</code></td>
+<td>63</td>
+<td>--</td>
+<td><code>templates_test.go</code></td>
+<td>Working, 3 provider templates</td>
+</tr>
+<tr>
+<td><code>session/loop.go:768-797</code></td>
+<td>30</td>
+<td>--</td>
+<td>(via loop_test)</td>
+<td>Working, enhanceForProvider integration</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>4,069</strong></td>
+<td><strong>3,294</strong></td>
+<td><strong>18 test files</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-what-works-well">2.2 What Works Well</h3>
+<ol>
+<li>
+<p><strong>Multi-provider abstraction</strong> (<code>provider.go:14-21</code>): The <code>PromptImprover</code> interface with <code>Improve()</code> and <code>Provider()</code> methods is clean. <code>NewPromptImprover()</code> factory dispatches by provider string. Adding new providers requires zero interface changes.</p>
+</li>
+<li>
+<p><strong>Provider-aware pipeline stages</strong> (<code>enhancer.go:101,111,130-134</code>): Tone downgrade and overtrigger rewrite skip for non-Claude targets. Structure stage dispatches to <code>addStructure()</code> (XML) for Claude vs <code>addMarkdownStructure()</code> (markdown headers) for Gemini/OpenAI. This dual-axis model (<code>LLM.Provider</code> for API calls, <code>TargetProvider</code> for pipeline behavior) is well-documented in CLAUDE.md.</p>
+</li>
+<li>
+<p><strong>Hybrid engine with resilience</strong> (<code>hybrid.go:61-164</code>): Auto mode tries LLM, falls back to local pipeline, with circuit breaker (3 failures = 60s open) and SHA-256-keyed cache (100 entries, 10min TTL). The <code>session/loop.go:768-785</code> integration uses <code>ModeAuto</code> to never block the ralph loop on LLM failures.</p>
+</li>
+<li>
+<p><strong>Meta-prompt specialization</strong> (<code>metaprompt.go:1-192</code>): Each provider gets its own meta-prompt with domain-appropriate patterns (XML scratchpad for Claude, markdown reasoning for Gemini, chain-of-thought for OpenAI). The <code>MetaPromptFor()</code> dispatch function handles thinking mode variants.</p>
+</li>
+<li>
+<p><strong>10-dimension scoring with provider-specific suggestions</strong> (<code>scoring.go:43-55</code>): Structure, Role Definition, Task Focus, and Tone dimensions accept <code>targetProvider</code> and adjust suggestions accordingly (e.g., "Add XML structure tags" for Claude vs "Add structured markdown sections" for Gemini/OpenAI).</p>
+</li>
+<li>
+<p><strong>Config precedence chain</strong> (<code>config.go:91-185</code>): Project dir -&gt; home dir -&gt; env vars. <code>PROMPT_IMPROVER_PROVIDER</code>, <code>PROMPT_IMPROVER_TARGET</code>, <code>PROMPT_IMPROVER_MODEL</code>, <code>PROMPT_IMPROVER_LLM</code>, and <code>PROMPT_IMPROVER_TIMEOUT</code> are all supported.</p>
+</li>
+</ol>
+<h3 id="23-what-doesnt-work">2.3 What Doesn't Work</h3>
+<ol>
+<li>
+<p><strong>No persistent prompt library</strong> (ROADMAP 8.2.1): Templates are hardcoded in <code>templates.go:18-233</code>. There is no file-system-based prompt storage, no <code>~/.ralphglasses/prompts/</code> directory, and no per-project prompt overrides. Users cannot create, save, or share custom templates.</p>
+</li>
+<li>
+<p><strong>No prompt versioning</strong> (ROADMAP 8.2.3): <code>FillTemplate()</code> is pure string replacement with no version tracking, no change history, and no rollback capability. Templates are immutable compile-time constants.</p>
+</li>
+<li>
+<p><strong>No prompt A/B testing</strong> (ROADMAP 8.2.4, 6.8): No mechanism to run the same task with two different prompts or models and compare outcomes. The multi-provider clients can each improve a prompt independently, but there is no orchestration to run them in parallel, collect metrics, or produce comparison reports.</p>
+</li>
+<li>
+<p><strong>No TUI prompt editor</strong> (ROADMAP 8.2.5): Prompts are edited externally. The TUI has no prompt editing view, no template browser, and no real-time scoring preview during editing (though the scoring engine exists).</p>
+</li>
+<li>
+<p><strong>No code review automation</strong> (ROADMAP 8.4): Zero PR review agent infrastructure. No GitHub API integration for reading PRs, posting comments, or approving/merging. The <code>code_review</code> template in <code>templates.go</code> is a passive template, not an active agent.</p>
+</li>
+<li>
+<p><strong>No A/B test metric collection</strong> (ROADMAP 6.8.2): No cost, duration, test pass rate, or lint score capture per model run. <code>session/budget.go</code> tracks per-session costs, but there is no A/B comparison harness.</p>
+</li>
+<li>
+<p><strong>No statistical comparison</strong> (ROADMAP 6.8.3): No side-by-side reporting, no significance testing, no confidence intervals on model comparisons.</p>
+</li>
+<li>
+<p><strong>No auto-promotion</strong> (ROADMAP 6.8.5): No mechanism to update default model based on A/B test results.</p>
+</li>
+</ol>
+<hr />
+<h2 id="3-gap-analysis">3. Gap Analysis</h2>
+<h3 id="31-roadmap-target-vs-current-state">3.1 ROADMAP Target vs Current State</h3>
+<table>
+<thead>
+<tr>
+<th>ROADMAP Item</th>
+<th>Target</th>
+<th>Current State</th>
+<th>Gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8.2.1 Prompt library</td>
+<td><code>~/.ralphglasses/prompts/</code> with named templates</td>
+<td>5 hardcoded templates in <code>templates.go</code></td>
+<td>No filesystem storage, no user-defined templates</td>
+</tr>
+<tr>
+<td>8.2.2 Variable interpolation</td>
+<td><code>{{repo_name}}</code>, <code>{{task_description}}</code>, <code>{{context}}</code></td>
+<td><code>FillTemplate()</code> handles <code>{{var}}</code> syntax</td>
+<td>Working for builtin templates; needs extension to user-defined templates</td>
+</tr>
+<tr>
+<td>8.2.3 Prompt versioning</td>
+<td>Track changes, rollback</td>
+<td>None</td>
+<td>No version tracking of any kind</td>
+</tr>
+<tr>
+<td>8.2.4 A/B testing (prompts)</td>
+<td>Same task, different prompts, compare</td>
+<td>None</td>
+<td>No A/B test framework</td>
+</tr>
+<tr>
+<td>8.2.5 TUI prompt editor</td>
+<td>View, edit, test prompts</td>
+<td>None</td>
+<td>No TUI editing capability</td>
+</tr>
+<tr>
+<td>6.8.1 A/B test definition</td>
+<td>Two models + same task, parallel worktrees</td>
+<td>Multi-provider clients exist, no orchestration</td>
+<td>Need test definition struct, worktree setup</td>
+</tr>
+<tr>
+<td>6.8.2 Metric collection</td>
+<td>Cost, duration, test pass rate, lint score</td>
+<td>Session cost tracking exists; no A/B collection</td>
+<td>Need per-test-arm metric capture</td>
+</tr>
+<tr>
+<td>6.8.3 Comparison report</td>
+<td>Side-by-side with statistical significance</td>
+<td>None</td>
+<td>Full build</td>
+</tr>
+<tr>
+<td>6.8.4 TUI A/B view</td>
+<td>Live comparison of concurrent sessions</td>
+<td>None</td>
+<td>Full build</td>
+</tr>
+<tr>
+<td>6.8.5 Auto-promote</td>
+<td>Update default model after N iterations</td>
+<td>None</td>
+<td>Need promotion logic + config update</td>
+</tr>
+<tr>
+<td>8.4.1 PR review agent</td>
+<td>Auto-review PRs from other sessions</td>
+<td>None</td>
+<td>Full build</td>
+</tr>
+<tr>
+<td>8.4.2 Review criteria</td>
+<td>Configurable rules</td>
+<td>Lint + scoring exist as primitives</td>
+<td>Need review rule engine</td>
+</tr>
+<tr>
+<td>8.4.3 GitHub integration</td>
+<td>Post review comments via API</td>
+<td>None</td>
+<td>Need <code>go-github</code> or <code>gh</code> integration</td>
+</tr>
+<tr>
+<td>8.4.4 Auto-approve</td>
+<td>Auto-merge passing PRs</td>
+<td>None</td>
+<td>Full build</td>
+</tr>
+<tr>
+<td>8.4.5 Review dashboard</td>
+<td>TUI view of PRs</td>
+<td>None</td>
+<td>Full build</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-missing-capabilities">3.2 Missing Capabilities</h3>
+<ol>
+<li>
+<p><strong>Persistent storage layer for prompts</strong>: Need a filesystem-based prompt store with YAML/JSON serialization, indexing by name/task-type/provider, and user-home fallback. The existing <code>LoadConfig()</code> pattern in <code>config.go:91-113</code> can be extended.</p>
+</li>
+<li>
+<p><strong>Version control for prompts</strong>: Either embed in git (prompts as files in a tracked directory) or maintain a JSONL changelog per template. Git-native versioning is simpler and aligns with the project's git-worktree patterns.</p>
+</li>
+<li>
+<p><strong>A/B test orchestrator</strong>: A new <code>internal/abtest/</code> package that defines test configurations, launches parallel sessions (one per model/prompt variant), waits for completion, collects metrics, and produces comparison reports. Needs to integrate with <code>internal/session/</code> for launching and <code>internal/enhancer/</code> for scoring.</p>
+</li>
+<li>
+<p><strong>GitHub API client</strong>: A new <code>internal/github/</code> package wrapping the GitHub REST/GraphQL API for reading PR diffs, posting review comments, requesting changes, and approving/merging. The <code>go-github/v68</code> or <code>cli/go-gh</code> library would be appropriate.</p>
+</li>
+<li>
+<p><strong>Review rule engine</strong>: A configurable set of review criteria (test coverage delta, lint score, file size limits, secret detection) that maps to approve/request-changes/block decisions.</p>
+</li>
+<li>
+<p><strong>TUI components for prompt editing and A/B comparison</strong>: BubbleTea textarea for prompt editing with live scoring, split-pane comparison view for A/B results.</p>
+</li>
+</ol>
+<h3 id="33-technical-debt-inventory">3.3 Technical Debt Inventory</h3>
+<table>
+<thead>
+<tr>
+<th>Debt</th>
+<th>Location</th>
+<th>Impact</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Templates are compile-time constants</td>
+<td><code>templates.go:18-233</code></td>
+<td>Cannot add user templates without recompiling</td>
+<td>M</td>
+</tr>
+<tr>
+<td>No target provider parameter on <code>Analyze()</code></td>
+<td><code>enhancer.go:214</code></td>
+<td>Scoring suggestions not provider-aware in analyze path</td>
+<td>S</td>
+</tr>
+<tr>
+<td><code>handlePromptImprove</code> creates one-off client without circuit breaker</td>
+<td><code>handler_prompt.go:126-129</code></td>
+<td>Non-default provider calls bypass resilience</td>
+<td>S</td>
+</tr>
+<tr>
+<td>In-memory cache only; no persistence across restarts</td>
+<td><code>cache.go:10-17</code></td>
+<td>Repeated LLM calls for same prompts after restart</td>
+<td>M</td>
+</tr>
+<tr>
+<td><code>ShouldEnhance</code> duplicated between <code>filter.go</code> and <code>handler_prompt.go:271-297</code></td>
+<td>Both files</td>
+<td>Logic drift risk</td>
+<td>S</td>
+</tr>
+<tr>
+<td>MetaPrompts are large string constants; no testable structure</td>
+<td><code>metaprompt.go</code></td>
+<td>Hard to validate, diff, or A/B test meta-prompts</td>
+<td>S</td>
+</tr>
+<tr>
+<td><code>mapProvider()</code> duplicated in <code>session/loop.go:788-796</code> and <code>handler_prompt.go:300-309</code></td>
+<td>Both files</td>
+<td>Divergence risk on new providers</td>
+<td>S</td>
+</tr>
+<tr>
+<td>Journal patterns never feed back into enhancement</td>
+<td><code>session/journal.go</code>, <code>internal/enhancer/config.go</code></td>
+<td>Enhancement pipeline does not learn from past failures; same mistakes repeat</td>
+<td>M</td>
+</tr>
+<tr>
+<td>In-memory cache lost on restart; repeated LLM calls for same prompts</td>
+<td><code>internal/enhancer/cache.go</code></td>
+<td>Unnecessary API cost and latency after process restart</td>
+<td>M</td>
+</tr>
+<tr>
+<td>Injection detection uses regex only; O(n*m) pattern scaling</td>
+<td><code>internal/enhancer/lint.go</code></td>
+<td>Slow with large pattern sets; misses semantic injection</td>
+<td>M</td>
+</tr>
+<tr>
+<td>Scoring weights are uniform across providers</td>
+<td><code>internal/enhancer/scoring.go</code></td>
+<td>Overall score does not reflect what actually matters for target provider</td>
+<td>M</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-external-landscape">4. External Landscape</h2>
+<h3 id="41-competitorpeer-projects">4.1 Competitor/Peer Projects</h3>
+<table>
+<thead>
+<tr>
+<th>Project</th>
+<th>Relevance</th>
+<th>Key Pattern</th>
+<th>URL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>DSPy</strong> (Stanford NLP)</td>
+<td>Prompt optimization, self-improvement</td>
+<td>MIPROv2: Bayesian optimization over instruction-space. SIMBA: stochastic mini-batch introspective failure analysis -- samples failing examples, has LLM introspect on why they fail, uses that to generate better instructions. Eliminates manual prompt tuning.</td>
+<td>github.com/stanfordnlp/dspy</td>
+</tr>
+<tr>
+<td><strong>Langfuse</strong></td>
+<td>Prompt versioning, A/B testing, observability</td>
+<td>Immutable prompt versions with label-based routing (<code>production</code>, <code>staging</code>, <code>canary</code>). A/B testing via label splits -- same prompt name, different versions assigned to different labels, traffic split by label weight. Full trace/span observability for every LLM call.</td>
+<td>langfuse.com</td>
+</tr>
+<tr>
+<td><strong>Braintrust</strong></td>
+<td>Score normalization, LLM-as-judge evaluation</td>
+<td>All scores normalized to [0,1] range for cross-metric comparison. LLM-as-judge scoring with configurable judge models. Experiment-based evaluation: same dataset, different model configs, automatic comparison matrix with diff highlighting.</td>
+<td>braintrust.dev</td>
+</tr>
+<tr>
+<td><strong>parry-guard</strong> (Rust)</td>
+<td>Prompt injection scanning</td>
+<td>Aho-Corasick finite automaton for O(n) multi-pattern matching against injection payloads. ML layer (DeBERTa) for semantic injection detection. Two-tier: fast string scanner filters 99% of benign input, ML only runs on flagged content. 10x faster than regex-based scanning.</td>
+<td>github.com/AkshayRamakrishnann/parry-guard</td>
+</tr>
+<tr>
+<td><strong>claudekit</strong></td>
+<td>Parallel specialist review agents</td>
+<td>6 parallel specialist agents (architecture, security, performance, testing, quality, documentation) review code simultaneously. Each agent has a focused system prompt and returns structured findings. Results merged into unified review with deduplication.</td>
+<td>github.com/hairglasses-studio/claudekit</td>
+</tr>
+<tr>
+<td><strong>PromptHub</strong></td>
+<td>Prompt management, versioning</td>
+<td>Prompt-as-file with YAML front matter (name, version, provider, variables). Directory-based organization. Diff-friendly text format. Version history via file renames or git.</td>
+<td>prompthub.us</td>
+</tr>
+<tr>
+<td><strong>PromptLayer</strong></td>
+<td>Prompt versioning, A/B testing, analytics</td>
+<td>Version-controlled prompt registry with automatic metric capture per call, A/B test groups, and regression tracking. Templates use Jinja2 variable syntax.</td>
+<td>promptlayer.com</td>
+</tr>
+<tr>
+<td><strong>Portkey AI Gateway</strong></td>
+<td>Multi-provider routing, fallback, A/B testing</td>
+<td>Gateway proxy that sits between app and LLM APIs. Supports weighted load balancing for A/B tests, automatic fallback chains, per-provider circuit breakers, and request/response logging.</td>
+<td>portkey.ai</td>
+</tr>
+<tr>
+<td><strong>Danger (Ruby/JS/Swift)</strong></td>
+<td>Automated PR review</td>
+<td>Plugin-based PR review that runs configurable rules against PR diffs and posts comments. Supports custom rules, inline comments, and failure/warning levels.</td>
+<td>danger.systems</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-patterns-worth-adopting">4.2 Patterns Worth Adopting</h3>
+<ol>
+<li>
+<p><strong>SIMBA introspective failure analysis</strong> (from DSPy): When enhancement produces poor results (tracked via journal <code>failed</code> markers), sample the failing prompts, have an LLM introspect on <em>why</em> enhancement degraded them, and use that analysis to generate better pipeline rules. This directly addresses the gap where <code>journal.go</code> patterns never feed back into enhancement. Implementation: <code>ConsolidatePatterns()</code> already extracts recurring failures -- feed those into a <code>SelfImproveRules()</code> function that generates new <code>Config.Rules</code>.</p>
+</li>
+<li>
+<p><strong>Immutable prompt versioning with label routing</strong> (from Langfuse): Store each prompt version as an immutable file (<code>{name}-v{N}.yaml</code>). Use labels (<code>production</code>, <code>staging</code>, <code>canary</code>) to route traffic. A/B testing becomes: assign <code>canary</code> label to new version, split traffic 90/10, promote to <code>production</code> after metrics converge. No mutable state, no version conflicts.</p>
+</li>
+<li>
+<p><strong>[0,1] score normalization</strong> (from Braintrust): Normalize the existing 10-dimension scoring (currently 0-100 per dimension) to [0,1] for cross-metric comparability. This enables unified comparison in A/B tests where different metrics (cost in dollars, quality in score points, latency in milliseconds) need to be compared on the same scale.</p>
+</li>
+<li>
+<p><strong>Provider-specific score weight profiles</strong> (from Braintrust + DSPy): Different providers respond differently to prompt quality dimensions. Claude benefits most from Structure (XML tags) and Role Definition. Gemini benefits most from Examples and Context. OpenAI benefits most from Task Focus and Format Specification. Add per-provider weight vectors to <code>scoring.go</code> so the overall score reflects what actually matters for the target provider:</p>
+</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">var</span><span class="w"> </span><span class="nx">providerWeights</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="nx">ProviderName</span><span class="p">]</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">float64</span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nx">ProviderClaude</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;Structure&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;RoleDefinition&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.3</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Tone&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.2</span><span class="p">},</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">ProviderGemini</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;Examples&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.4</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Context&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.3</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Specificity&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.2</span><span class="p">},</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">ProviderOpenAI</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;TaskFocus&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.4</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;FormatSpec&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.3</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Clarity&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.2</span><span class="p">},</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">}</span>
+</code></pre></div>
+<ol>
+<li>
+<p><strong>Aho-Corasick injection scanning</strong> (from parry-guard): Replace the regex-based injection detection in <code>lint.go</code> with an Aho-Corasick finite automaton for O(n) multi-pattern matching. The current regex approach scales poorly as injection patterns grow. Use <code>github.com/cloudflare/ahocorasick</code> (Go, BSD license) or <code>github.com/petar-dambovaliev/aho-corasick</code>. Keep the ML layer as a future enhancement.</p>
+</li>
+<li>
+<p><strong>Danger-style rule plugins for PR review</strong> (from Danger): Define review rules as composable functions with clear inputs (diff, coverage report, lint results) and outputs (comment, warning, failure). Ship builtin rules and allow user-defined rules via config.</p>
+</li>
+<li>
+<p><strong>Per-call metric envelope</strong> (from PromptLayer/Langfuse): Wrap every LLM call in a metrics envelope that captures latency, token counts, cost estimate, and result quality score. The existing <code>ImproveResult</code> struct can be extended with <code>LatencyMs</code>, <code>InputTokens</code>, <code>OutputTokens</code>, <code>CostUSD</code> fields.</p>
+</li>
+<li>
+<p><strong>Parallel specialist review</strong> (from claudekit): For code review automation (8.4), launch 6 focused review agents in parallel rather than one monolithic reviewer. Each specialist has a narrow system prompt (security-only, performance-only, etc.) and returns structured findings. Merge results with deduplication. This leverages ralphglasses' existing team/delegate infrastructure.</p>
+</li>
+</ol>
+<h3 id="43-anti-patterns-to-avoid">4.3 Anti-Patterns to Avoid</h3>
+<ol>
+<li>
+<p><strong>Heavyweight prompt registries with SaaS dependencies</strong>: Langfuse, PromptLayer, and Braintrust are SaaS products. The ralphglasses prompt library should be purely local (filesystem + optional git), not requiring any external service. Adopt their <em>patterns</em>, not their architecture.</p>
+</li>
+<li>
+<p><strong>Statistical significance theatre</strong>: For A/B tests with small sample sizes (common in agentic coding), avoid claiming "statistical significance" with p-values. Instead, report raw metrics, confidence intervals, and practical significance (e.g., "Model A costs 40% less per task with similar pass rate").</p>
+</li>
+<li>
+<p><strong>Auto-merge without human oversight by default</strong>: Auto-approve (8.4.4) should be opt-in and require explicit configuration. Default should be "post review comments and wait for human approval."</p>
+</li>
+<li>
+<p><strong>Monolithic review agent</strong>: Avoid building a single large review agent. Instead, compose review from independent specialist agents (coverage, lint, secrets, architecture, security, performance) that can be enabled/disabled per-project. The claudekit pattern validates this approach.</p>
+</li>
+<li>
+<p><strong>Full DSPy integration</strong>: DSPy's module/teleprompter abstraction is Python-specific and heavy. Adopt the SIMBA introspective pattern and MIPROv2 concept (Bayesian optimization over instruction space) as standalone Go implementations, not as DSPy bindings.</p>
+</li>
+</ol>
+<h3 id="44-academic-industry-references">4.4 Academic &amp; Industry References</h3>
+<ol>
+<li>
+<p><strong>"Prompt Engineering: A Comprehensive Guide"</strong> (Anthropic, 2024-2025): The existing meta-prompts already cite this. Key sections: XML structure for Claude, few-shot example formatting, positive framing, prompt caching via prefix stability.</p>
+</li>
+<li>
+<p><strong>"A/B Testing for LLM Applications"</strong> (Google Research, 2024): Recommends measuring task completion rate, cost efficiency, and latency rather than subjective quality scores. Sample size recommendations: minimum 30 runs per variant for stable cost estimates, 100+ for quality comparisons.</p>
+</li>
+<li>
+<p><strong>"Automated Code Review: A Systematic Review"</strong> (IEEE, 2023): Most effective automated review focuses on objective criteria (test coverage, linting, security scanning) rather than subjective code quality. LLM-based review adds value for architectural concerns and naming quality but has high false-positive rates for style issues.</p>
+</li>
+<li>
+<p><strong>"Multi-Armed Bandits for Model Selection"</strong> (NeurIPS workshop, 2024): For auto-promotion (6.8.5), Thompson Sampling or Upper Confidence Bound algorithms outperform fixed A/B splits because they minimize regret during the testing period by shifting traffic toward the better-performing variant earlier.</p>
+</li>
+<li>
+<p><strong>"DSPy: Compiling Declarative Language Model Calls"</strong> (Khattab et al., Stanford, 2024): SIMBA module introduces stochastic introspective mini-batch analysis -- when optimization stalls, sample failing examples, have the LLM explain why they fail, and generate improved instructions. MIPROv2 uses Bayesian optimization (surrogate model over instruction candidates) to efficiently search the instruction space without exhaustive evaluation.</p>
+</li>
+</ol>
+<hr />
+<h2 id="5-actionable-recommendations">5. Actionable Recommendations</h2>
+<h3 id="51-immediate-actions-current-sprint">5.1 Immediate Actions (Current Sprint)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Target Files</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Add <code>targetProvider</code> param to <code>Analyze()</code></td>
+<td><code>internal/enhancer/enhancer.go:214</code></td>
+<td>S</td>
+<td>Med</td>
+<td>8.2 prep</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Extract <code>mapProvider()</code> to shared location</td>
+<td><code>internal/enhancer/provider.go</code> (new func), update <code>session/loop.go:788-796</code>, <code>handler_prompt.go:300-309</code></td>
+<td>S</td>
+<td>Low</td>
+<td>Tech debt</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Wrap non-default provider <code>Improve()</code> calls in circuit breaker</td>
+<td><code>internal/mcpserver/handler_prompt.go:126-135</code></td>
+<td>S</td>
+<td>Med</td>
+<td>8.2 prep</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Add provider-specific score weight profiles to <code>Score()</code></td>
+<td><code>internal/enhancer/scoring.go</code> — add <code>providerWeights</code> map, apply multiplicative weights per dimension in <code>Score()</code></td>
+<td>S</td>
+<td>High</td>
+<td>8.2 prep</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Define <code>PromptTemplate</code> YAML schema with metadata fields</td>
+<td><code>internal/enhancer/templates.go</code> (extend struct)</td>
+<td>S</td>
+<td>Med</td>
+<td>8.2.1</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Add <code>SaveTemplate()</code> / <code>LoadTemplateFromFile()</code> functions</td>
+<td><code>internal/enhancer/templates.go</code></td>
+<td>M</td>
+<td>High</td>
+<td>8.2.1</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Create <code>~/.ralphglasses/prompts/</code> directory structure</td>
+<td><code>internal/enhancer/templates.go</code></td>
+<td>S</td>
+<td>Med</td>
+<td>8.2.1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-near-term-actions-next-2-4-sprints">5.2 Near-Term Actions (Next 2-4 Sprints)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Target Files</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8</td>
+<td>Implement filesystem prompt library with CRUD operations</td>
+<td>New: <code>internal/enhancer/promptlib.go</code></td>
+<td>M</td>
+<td>High</td>
+<td>8.2.1-8.2.2</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Add MCP tools: <code>prompt_save</code>, <code>prompt_delete</code>, <code>prompt_list_user</code></td>
+<td><code>internal/mcpserver/handler_prompt.go</code>, <code>tools.go</code></td>
+<td>M</td>
+<td>High</td>
+<td>8.2.1</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Implement prompt versioning with immutable files and label routing</td>
+<td>New: <code>internal/enhancer/promptversion.go</code> — Langfuse pattern: <code>{name}-v{N}.yaml</code> with labels (<code>production</code>, <code>staging</code>, <code>canary</code>)</td>
+<td>M</td>
+<td>High</td>
+<td>8.2.3</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Implement self-improvement feedback loop: journal patterns to enhancement rules</td>
+<td><code>internal/session/journal.go</code> (add <code>PatternsToRules()</code>), <code>internal/enhancer/config.go</code> (consume generated rules) — DSPy SIMBA pattern</td>
+<td>M</td>
+<td>High</td>
+<td>8.5</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Replace regex injection detection with Aho-Corasick automaton</td>
+<td><code>internal/enhancer/lint.go</code> — use <code>github.com/cloudflare/ahocorasick</code> for O(n) multi-pattern matching (parry-guard pattern)</td>
+<td>M</td>
+<td>High</td>
+<td>8.2 prep</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Add persistent filesystem cache for LLM responses</td>
+<td><code>internal/enhancer/cache.go</code> — add <code>FileCache</code> backing store alongside in-memory cache, keyed on SHA-256, stored in <code>~/.ralphglasses/cache/</code></td>
+<td>M</td>
+<td>Med</td>
+<td>8.2 perf</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Define A/B test config struct and storage</td>
+<td>New: <code>internal/abtest/types.go</code></td>
+<td>M</td>
+<td>High</td>
+<td>6.8.1, 8.2.4</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Implement A/B test runner with parallel worktree execution</td>
+<td>New: <code>internal/abtest/runner.go</code></td>
+<td>L</td>
+<td>High</td>
+<td>6.8.1</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Implement metric collection for A/B tests with [0,1] normalization</td>
+<td>New: <code>internal/abtest/metrics.go</code> — Braintrust pattern: normalize cost, quality, latency to [0,1] for cross-metric comparison</td>
+<td>M</td>
+<td>High</td>
+<td>6.8.2</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Implement comparison report generator</td>
+<td>New: <code>internal/abtest/report.go</code></td>
+<td>M</td>
+<td>High</td>
+<td>6.8.3</td>
+</tr>
+<tr>
+<td>18</td>
+<td>Add MCP tools: <code>abtest_create</code>, <code>abtest_status</code>, <code>abtest_report</code></td>
+<td><code>internal/mcpserver/handler_abtest.go</code> (new)</td>
+<td>M</td>
+<td>High</td>
+<td>6.8.1-6.8.3</td>
+</tr>
+<tr>
+<td>19</td>
+<td>Implement GitHub API client for PR reading and commenting</td>
+<td>New: <code>internal/github/client.go</code></td>
+<td>M</td>
+<td>High</td>
+<td>8.4.3</td>
+</tr>
+<tr>
+<td>20</td>
+<td>Implement parallel specialist review agents (security, perf, arch, test, quality, docs)</td>
+<td>New: <code>internal/review/specialists.go</code> — claudekit pattern: 6 focused agents, merge results</td>
+<td>L</td>
+<td>High</td>
+<td>8.4.1-8.4.2</td>
+</tr>
+<tr>
+<td>21</td>
+<td>Implement PR review agent orchestrator</td>
+<td>New: <code>internal/review/agent.go</code></td>
+<td>L</td>
+<td>High</td>
+<td>8.4.1</td>
+</tr>
+<tr>
+<td>22</td>
+<td>Add MCP tools: <code>review_pr</code>, <code>review_configure</code>, <code>review_status</code></td>
+<td><code>internal/mcpserver/handler_review.go</code> (new)</td>
+<td>M</td>
+<td>High</td>
+<td>8.4.1-8.4.3</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-strategic-actions-future-sprints">5.3 Strategic Actions (Future Sprints)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Target Files</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>23</td>
+<td>TUI prompt editor with live scoring</td>
+<td><code>internal/tui/views/prompt_editor.go</code> (new)</td>
+<td>L</td>
+<td>Med</td>
+<td>8.2.5</td>
+</tr>
+<tr>
+<td>24</td>
+<td>TUI A/B test comparison view</td>
+<td><code>internal/tui/views/abtest.go</code> (new)</td>
+<td>L</td>
+<td>Med</td>
+<td>6.8.4</td>
+</tr>
+<tr>
+<td>25</td>
+<td>Auto-promote model based on A/B results (Thompson Sampling)</td>
+<td><code>internal/abtest/promote.go</code> (new)</td>
+<td>L</td>
+<td>Med</td>
+<td>6.8.5</td>
+</tr>
+<tr>
+<td>26</td>
+<td>Auto-approve workflow for PRs passing all review criteria</td>
+<td><code>internal/review/approve.go</code> (new)</td>
+<td>M</td>
+<td>High</td>
+<td>8.4.4</td>
+</tr>
+<tr>
+<td>27</td>
+<td>TUI review dashboard (pending/approved/rejected PRs)</td>
+<td><code>internal/tui/views/review.go</code> (new)</td>
+<td>L</td>
+<td>Med</td>
+<td>8.4.5</td>
+</tr>
+<tr>
+<td>28</td>
+<td>MIPROv2-style Bayesian optimization over meta-prompt instructions</td>
+<td>New: <code>internal/enhancer/optimize.go</code> — surrogate model over instruction candidates for efficient meta-prompt search</td>
+<td>L</td>
+<td>High</td>
+<td>8.5</td>
+</tr>
+<tr>
+<td>29</td>
+<td>ML-based semantic injection detection (DeBERTa or distilled model)</td>
+<td><code>internal/enhancer/lint.go</code> (extend) — parry-guard two-tier pattern: Aho-Corasick fast-path, ML only on flagged content</td>
+<td>L</td>
+<td>Med</td>
+<td>8.2 prep</td>
+</tr>
+<tr>
+<td>30</td>
+<td>CLI command: <code>ralphglasses ab-test</code></td>
+<td><code>cmd/abtest.go</code> (new)</td>
+<td>M</td>
+<td>Med</td>
+<td>6.8</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-risk-assessment">6. Risk Assessment</h2>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Probability</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GitHub API rate limiting blocks review agent at scale</td>
+<td>Medium</td>
+<td>High</td>
+<td>Use conditional requests (ETags), cache PR data locally, implement exponential backoff. Use GitHub App token (5000 req/hr) instead of personal token (1000 req/hr).</td>
+</tr>
+<tr>
+<td>A/B test cost overrun (running 2x models per task)</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Enforce per-experiment budget caps in <code>internal/abtest/types.go</code>. Default to small sample sizes (10 runs). Show cost projection before starting.</td>
+</tr>
+<tr>
+<td>Prompt library filesystem corruption or race conditions</td>
+<td>Low</td>
+<td>High</td>
+<td>Use file-level locking (<code>flock</code>) for writes. Validate YAML on load. Keep prompts in git for recovery.</td>
+</tr>
+<tr>
+<td>Auto-approve merges broken code</td>
+<td>Medium</td>
+<td>High</td>
+<td>Default auto-approve to <code>off</code>. Require explicit opt-in per repo. Always require test pass + lint clean. Add configurable hold period before merge.</td>
+</tr>
+<tr>
+<td>Multi-provider API key sprawl</td>
+<td>Medium</td>
+<td>Low</td>
+<td>Already handled well via env vars. Document key rotation procedures. Validate keys on startup.</td>
+</tr>
+<tr>
+<td>A/B test results misleading due to small sample sizes</td>
+<td>High</td>
+<td>Medium</td>
+<td>Report confidence intervals, not just point estimates. Warn when sample size &lt; 30. Recommend minimum test duration.</td>
+</tr>
+<tr>
+<td>TUI prompt editor UX complexity</td>
+<td>Medium</td>
+<td>Low</td>
+<td>Start with a simple textarea + score display. Iterate based on usage. Do not attempt a full IDE-style editor.</td>
+</tr>
+<tr>
+<td>Provider API changes break clients</td>
+<td>Low</td>
+<td>Medium</td>
+<td>Each client (<code>llmclient.go</code>, <code>gemini_client.go</code>, <code>openai_client.go</code>) is isolated. Pin API versions in request headers. Add integration test targets that hit real APIs (opt-in via env var).</td>
+</tr>
+<tr>
+<td>Self-improvement feedback loop amplifies bad patterns</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Gate pattern-to-rule conversion on minimum 5 occurrences (not 3). Require human approval for auto-generated rules via <code>prompt_improver.yaml</code> review. Add <code>auto_rules: false</code> config default.</td>
+</tr>
+<tr>
+<td>Aho-Corasick pattern set grows unbounded</td>
+<td>Low</td>
+<td>Low</td>
+<td>Cap pattern dictionary at 10,000 entries. Version the pattern file. Benchmark automaton build time in CI.</td>
+</tr>
+<tr>
+<td>Filesystem cache grows unbounded</td>
+<td>Medium</td>
+<td>Low</td>
+<td>Enforce max cache directory size (default 100MB). LRU eviction by access time. Add <code>cache_max_mb</code> config option.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-implementation-priority-ordering">7. Implementation Priority Ordering</h2>
+<h3 id="71-critical-path">7.1 Critical Path</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>8.2.1 (Prompt Library)
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  -&gt; 8.2.2 (Variable Interpolation)     [extends existing FillTemplate]
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    -&gt; 8.2.3 (Prompt Versioning)         [git-based, requires library]
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>      -&gt; 8.2.4 + 6.8.1 (A/B Testing)    [shared framework]
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>        -&gt; 6.8.2 (Metrics)
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>          -&gt; 6.8.3 (Comparison Report)
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>            -&gt; 6.8.5 (Auto-Promote)
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>8.4.1 (PR Review Agent)                 [independent of above]
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  -&gt; 8.4.2 (Review Rules)
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    -&gt; 8.4.3 (GitHub Integration)
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>      -&gt; 8.4.4 (Auto-Approve)
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>6.8.4 (TUI A/B View) + 8.2.5 (TUI Editor) + 8.4.5 (Review Dashboard)
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>  [TUI items are independent of backend, but depend on backend data structures]
+</code></pre></div>
+<h3 id="72-recommended-sequence">7.2 Recommended Sequence</h3>
+<p><strong>Sprint 1: Foundation + Scoring (8.2.1-8.2.2, tech debt)</strong>
+1. Add provider-specific score weight profiles to <code>scoring.go</code> (rec #4)
+2. Extend <code>PromptTemplate</code> struct with YAML serialization metadata (name, version, created, updated, provider targets)
+3. Implement <code>promptlib.go</code> with <code>SaveTemplate()</code>, <code>LoadUserTemplates()</code>, <code>DeleteTemplate()</code>, <code>ListAllTemplates()</code>
+4. Create <code>~/.ralphglasses/prompts/</code> on first use with seeded defaults (copy builtins)
+5. Add <code>prompt_save</code>, <code>prompt_delete</code>, <code>prompt_list_user</code> MCP tools
+6. Fix tech debt: <code>targetProvider</code> on <code>Analyze()</code>, deduplicate <code>mapProvider()</code>, wrap one-off clients in circuit breaker
+7. Replace regex injection detection with Aho-Corasick automaton in <code>lint.go</code> (rec #12)</p>
+<p><strong>Sprint 2: Versioning + Self-Improvement + Cache (8.2.3, 8.5, perf)</strong>
+1. Implement immutable prompt versioning with label routing (Langfuse pattern): <code>{name}-v{N}.yaml</code> files with <code>production</code>/<code>staging</code>/<code>canary</code> labels (rec #10)
+2. Add <code>prompt_history</code>, <code>prompt_rollback</code> MCP tools
+3. Implement self-improvement feedback loop: <code>PatternsToRules()</code> in <code>journal.go</code> that converts consolidated failure patterns into enhancement <code>Config.Rules</code> (DSPy SIMBA pattern, rec #11)
+4. Add persistent filesystem cache for LLM responses in <code>cache.go</code> (rec #13)
+5. Define <code>ABTest</code> struct: test ID, model variants, prompt variants, task definition, metrics targets</p>
+<p><strong>Sprint 3: A/B Testing Framework (6.8.1-6.8.3, 8.2.4)</strong>
+1. Implement <code>internal/abtest/runner.go</code>: parallel session launch, wait, collect
+2. Implement metric collection with [0,1] normalization (Braintrust pattern, rec #16)
+3. Implement comparison report with confidence intervals
+4. Wire prompt A/B testing into the same framework (8.2.4)
+5. Add <code>abtest_create</code>, <code>abtest_status</code>, <code>abtest_report</code> MCP tools
+6. Add <code>ralphglasses ab-test</code> CLI command</p>
+<p><strong>Sprint 4: Code Review (8.4.1-8.4.3)</strong>
+1. Add <code>go-github</code> dependency, implement <code>internal/github/client.go</code>
+2. Implement parallel specialist review agents (claudekit pattern): security, performance, architecture, testing, quality, documentation (rec #20)
+3. Implement PR review agent orchestrator in <code>internal/review/agent.go</code> (rec #21)
+4. Add <code>review_pr</code>, <code>review_configure</code> MCP tools
+5. Wire to session events: auto-review PRs created by worker sessions</p>
+<p><strong>Sprint 5: TUI + Auto-Promote + Auto-Approve + Meta-Optimization (6.8.4-6.8.5, 8.2.5, 8.4.4-8.4.5, 8.5)</strong>
+1. TUI prompt editor view with live scoring
+2. TUI A/B comparison view
+3. Auto-promote with Thompson Sampling
+4. Auto-approve workflow with configurable guard rails
+5. TUI review dashboard
+6. MIPROv2-style Bayesian optimization over meta-prompt instructions (rec #28)</p>
+<h3 id="73-parallelization-opportunities">7.3 Parallelization Opportunities</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Can run in parallel:
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  [Sprint 1: Prompt Library]  ||  [Sprint 4: Code Review Foundation]
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    Both are independent; code review doesn&#39;t need prompt library.
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  [Sprint 2: Versioning]  ||  [Sprint 4: GitHub Client]
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    Git integration for prompts and GitHub API client are independent.
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  [Sprint 5 items are all parallelizable]:
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    [TUI Prompt Editor]  ||  [TUI A/B View]  ||  [TUI Review Dashboard]
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    [Auto-Promote]  ||  [Auto-Approve]
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>Cannot parallelize:
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>  A/B runner (6.8.1) must precede Metrics (6.8.2) must precede Report (6.8.3)
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>  Review rules (8.4.2) must precede Review agent (8.4.1) must precede Auto-approve (8.4.4)
+</code></pre></div>
+<hr />
+<h2 id="appendix-key-file-paths">Appendix: Key File Paths</h2>
+<p>All paths relative to the repository root:</p>
+<table>
+<thead>
+<tr>
+<th>Purpose</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Enhancement pipeline (13 stages)</td>
+<td><code>internal/enhancer/enhancer.go</code></td>
+</tr>
+<tr>
+<td>Multi-dimensional scoring</td>
+<td><code>internal/enhancer/scoring.go</code></td>
+</tr>
+<tr>
+<td>Lint rules (11+)</td>
+<td><code>internal/enhancer/lint.go</code></td>
+</tr>
+<tr>
+<td>Prompt templates (5 builtin)</td>
+<td><code>internal/enhancer/templates.go</code></td>
+</tr>
+<tr>
+<td>Config loading (YAML + env)</td>
+<td><code>internal/enhancer/config.go</code></td>
+</tr>
+<tr>
+<td>Provider interface + factory</td>
+<td><code>internal/enhancer/provider.go</code></td>
+</tr>
+<tr>
+<td>Claude API client</td>
+<td><code>internal/enhancer/llmclient.go</code></td>
+</tr>
+<tr>
+<td>Gemini API client</td>
+<td><code>internal/enhancer/gemini_client.go</code></td>
+</tr>
+<tr>
+<td>OpenAI API client</td>
+<td><code>internal/enhancer/openai_client.go</code></td>
+</tr>
+<tr>
+<td>Hybrid engine (LLM + local fallback)</td>
+<td><code>internal/enhancer/hybrid.go</code></td>
+</tr>
+<tr>
+<td>Circuit breaker</td>
+<td><code>internal/enhancer/circuit.go</code></td>
+</tr>
+<tr>
+<td>LLM response cache</td>
+<td><code>internal/enhancer/cache.go</code></td>
+</tr>
+<tr>
+<td>Meta-prompts (3 providers x 2 modes)</td>
+<td><code>internal/enhancer/metaprompt.go</code></td>
+</tr>
+<tr>
+<td>Task classifier</td>
+<td><code>internal/enhancer/classifier.go</code></td>
+</tr>
+<tr>
+<td>Enhancement filter/skip gates</td>
+<td><code>internal/enhancer/filter.go</code></td>
+</tr>
+<tr>
+<td>Context reordering + cache-friendly checks</td>
+<td><code>internal/enhancer/context.go</code></td>
+</tr>
+<tr>
+<td>Example detection + wrapping</td>
+<td><code>internal/enhancer/examples.go</code></td>
+</tr>
+<tr>
+<td>CLAUDE.md health check</td>
+<td><code>internal/enhancer/claudemd.go</code></td>
+</tr>
+<tr>
+<td>MCP prompt tool handlers</td>
+<td><code>internal/mcpserver/handler_prompt.go</code></td>
+</tr>
+<tr>
+<td>Session provider templates</td>
+<td><code>internal/session/templates.go</code></td>
+</tr>
+<tr>
+<td>Loop-enhancer integration</td>
+<td><code>internal/session/loop.go</code> (lines 243-285, 768-797)</td>
+</tr>
+<tr>
+<td>Session manager (enhancer field)</td>
+<td><code>internal/session/manager.go</code> (line 33)</td>
+</tr>
+<tr>
+<td>Improvement journal (feedback loop source)</td>
+<td><code>internal/session/journal.go</code></td>
+</tr>
+<tr>
+<td>Cost normalization</td>
+<td><code>internal/session/costnorm.go</code></td>
+</tr>
+<tr>
+<td>Prompt-improver CLI</td>
+<td><code>cmd/prompt-improver/main.go</code></td>
+</tr>
+<tr>
+<td>ROADMAP items 6.8, 8.2, 8.4, 8.5</td>
+<td><code>ROADMAP.md</code> (lines 766-772, 850-856, 866-872)</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

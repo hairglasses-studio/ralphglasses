@@ -1,0 +1,1780 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ralph-roadmap/09-orchestration-landscape/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>09 -- Multi-Agent Orchestration Landscape (April 2026) - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#09-multi-agent-orchestration-landscape-april-2026" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              09 -- Multi-Agent Orchestration Landscape (April 2026)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-claude-agent-sdk-anthropic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Claude Agent SDK (Anthropic)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-google-a2a-protocol-agent-to-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Google A2A Protocol (Agent-to-Agent)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-openai-agents-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. OpenAI Agents SDK
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-langgraph-langchain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. LangGraph / LangChain
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-crewai" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. CrewAI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-autogen-ag2-microsoft-agent-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. AutoGen / AG2 / Microsoft Agent Framework
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-anthropic-mcp-model-context-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Anthropic MCP (Model Context Protocol)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-smolagents-hugging-face" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. smolagents (Hugging Face)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-pydanticai" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. PydanticAI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-agency-swarm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. agency-swarm
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-camel-ai" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. CAMEL-AI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#competitive-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Competitive Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Competitive Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#landscape-summary-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Landscape Summary Table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ralphglasses-competitive-moat" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ralphglasses Competitive Moat
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adopt-adapt-ignore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adopt / Adapt / Ignore
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Adopt / Adapt / Ignore">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adopt-incorporate-directly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adopt -- incorporate directly
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adapt-modify-to-fit-ralphglasses-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapt -- modify to fit ralphglasses patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ignore-not-relevant-to-ralphglasses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ignore -- not relevant to ralphglasses
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#protocol-convergence-outlook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protocol Convergence Outlook
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="09-multi-agent-orchestration-landscape-april-2026">09 -- Multi-Agent Orchestration Landscape (April 2026)</h1>
+<p>Research survey of frameworks, protocols, and SDKs relevant to ralphglasses positioning.</p>
+<p><strong>Scope</strong>: Frameworks that orchestrate multiple LLM agents, inter-agent protocols, and agent SDKs with tool-use support. Evaluated against ralphglasses capabilities: Go-native, multi-provider (Claude/Gemini/Codex), MCP-first, TUI-based, cost-optimized cascade routing, 166 MCP tools, L0-L3 autonomy, fleet coordination.</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#1-claude-agent-sdk-anthropic">Claude Agent SDK (Anthropic)</a></li>
+<li><a href="#2-google-a2a-protocol-agent-to-agent">Google A2A Protocol</a></li>
+<li><a href="#3-openai-agents-sdk">OpenAI Agents SDK</a></li>
+<li><a href="#4-langgraph--langchain">LangGraph / LangChain</a></li>
+<li><a href="#5-crewai">CrewAI</a></li>
+<li><a href="#6-autogen--ag2--microsoft-agent-framework">AutoGen / AG2 / Microsoft Agent Framework</a></li>
+<li><a href="#7-anthropic-mcp-model-context-protocol">Anthropic MCP (Model Context Protocol)</a></li>
+<li><a href="#8-smolagents-hugging-face">smolagents (Hugging Face)</a></li>
+<li><a href="#9-pydanticai">PydanticAI</a></li>
+<li><a href="#10-agency-swarm">agency-swarm</a></li>
+<li><a href="#11-camel-ai">CAMEL-AI</a></li>
+<li><a href="#competitive-analysis">Competitive Analysis</a></li>
+<li><a href="#adopt--adapt--ignore">Adopt / Adapt / Ignore</a></li>
+</ol>
+<hr />
+<h2 id="1-claude-agent-sdk-anthropic">1. Claude Agent SDK (Anthropic)</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repo</strong></td>
+<td><a href="https://github.com/anthropics/claude-agent-sdk-python">anthropics/claude-agent-sdk-python</a>, <a href="https://github.com/anthropics/claude-agent-sdk-typescript">anthropics/claude-agent-sdk-typescript</a></td>
+</tr>
+<tr>
+<td><strong>Docs</strong></td>
+<td><a href="https://platform.claude.com/docs/en/agent-sdk/overview">platform.claude.com/docs/en/agent-sdk/overview</a></td>
+</tr>
+<tr>
+<td><strong>Architecture</strong></td>
+<td>Coordinator + teammate peer-to-peer (TeammateTool)</td>
+</tr>
+<tr>
+<td><strong>Go support</strong></td>
+<td>Community ports only -- <a href="https://github.com/severity1/claude-agent-sdk-go">severity1/claude-agent-sdk-go</a>, <a href="https://github.com/schlunsen/claude-agent-sdk-go">schlunsen/claude-agent-sdk-go</a>, <a href="https://github.com/connerohnesorge/claude-agent-sdk-go">connerohnesorge/claude-agent-sdk-go</a>. No official Go SDK from Anthropic.</td>
+</tr>
+<tr>
+<td><strong>MCP compatibility</strong></td>
+<td>Native -- MCP is a first-class primitive in the SDK</td>
+</tr>
+<tr>
+<td><strong>Adoption</strong></td>
+<td>Python v0.1.48, TypeScript v0.2.71. Official SDKs in two languages. Multiple community Go ports.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architecture pattern</strong>: Renamed from Claude Code SDK in late 2025. The V2 Session API supports multi-turn conversation with separate <code>send()</code>/<code>stream()</code> methods. TeammateTool (discovered in Claude Code binary v2.1.29, January 2026) enables agent teams: one team lead coordinates while teammates work in independent context windows with shared task lists and peer-to-peer messaging (<a href="https://paddo.dev/blog/claude-code-hidden-swarm/">source</a>). Officially launched alongside Opus 4.6 on February 6, 2026 (<a href="https://www.nxcode.io/resources/news/claude-agent-teams-parallel-ai-development-guide-2026">source</a>).</p>
+<p><strong>Strengths vs ralphglasses</strong>: First-party integration with Claude models. TeammateTool provides built-in agent coordination without external plumbing. Subagent primitives and hooks are deeply integrated into the runtime.</p>
+<p><strong>Weaknesses vs ralphglasses</strong>: Python/TypeScript only (community Go ports are thin wrappers around the CLI). Single-provider -- no native Gemini or Codex dispatch. No cost-aware cascade routing. No TUI. No fleet-level coordination across machines.</p>
+<p><strong>Sources</strong>:
+- <a href="https://platform.claude.com/docs/en/agent-sdk/overview">Agent SDK overview</a>
+- <a href="https://www.anthropic.com/engineering/building-agents-with-the-claude-agent-sdk">Building agents with the Claude Agent SDK</a>
+- <a href="https://code.claude.com/docs/en/agent-teams">Claude Code Agent Teams guide</a>
+- <a href="https://paddo.dev/blog/claude-code-hidden-swarm/">TeammateTool discovery</a></p>
+<hr />
+<h2 id="2-google-a2a-protocol-agent-to-agent">2. Google A2A Protocol (Agent-to-Agent)</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repo</strong></td>
+<td><a href="https://github.com/a2aproject/A2A">a2aproject/A2A</a></td>
+</tr>
+<tr>
+<td><strong>Spec</strong></td>
+<td>JSON-RPC over HTTP, Agent Card at <code>/.well-known/agent-card.json</code></td>
+</tr>
+<tr>
+<td><strong>Architecture</strong></td>
+<td>Peer-to-peer agent delegation via task abstraction</td>
+</tr>
+<tr>
+<td><strong>Go support</strong></td>
+<td>Official Go SDK: <a href="https://github.com/a2aproject/a2a-go">a2aproject/a2a-go</a> (updated April 3, 2026). Supports gRPC, JSON-RPC, and REST handlers.</td>
+</tr>
+<tr>
+<td><strong>MCP compatibility</strong></td>
+<td>Complementary -- A2A handles agent-to-agent delegation, MCP handles agent-to-tool calls. Community bridges exist (<a href="https://github.com/TheApeMachine/a2a-go">TheApeMachine/a2a-go</a> includes MCP interop).</td>
+</tr>
+<tr>
+<td><strong>Adoption</strong></td>
+<td>50+ technology partners (Atlassian, Salesforce, SAP, ServiceNow, PayPal). Hosted by the Linux Foundation.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architecture pattern</strong>: Each agent publishes an Agent Card describing capabilities and endpoints. Communication uses JSON-RPC over HTTP. The core abstraction is the "task" -- a client creates a task, a remote agent fulfills it. Unlike MCP (tool = passive capability), A2A peers have their own reasoning and autonomy (<a href="https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/">source</a>).</p>
+<p>Closely related: <strong>Google ADK (Agent Development Kit)</strong> reached Go 1.0 in 2026 with A2A support, OpenTelemetry integration, YAML agent definitions, and support for 30+ databases via MCP Toolbox (<a href="https://developers.googleblog.com/adk-go-10-arrives/">source</a>).</p>
+<p><strong>Strengths vs ralphglasses</strong>: Open standard with broad industry backing. Official Go SDK. Designed for cross-organization agent interop -- something ralphglasses does not address. Agent Card discovery pattern is elegant.</p>
+<p><strong>Weaknesses vs ralphglasses</strong>: Protocol only, not a runtime -- does not manage processes, costs, or loops. No autonomy levels, no cascade routing, no cost tracking. Requires building all orchestration logic on top.</p>
+<p><strong>Sources</strong>:
+- <a href="https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/">A2A announcement</a>
+- <a href="https://github.com/a2aproject/a2a-go">A2A Go SDK</a>
+- <a href="https://developers.googleblog.com/adk-go-10-arrives/">ADK Go 1.0</a>
+- <a href="https://developers.googleblog.com/announcing-the-agent-development-kit-for-go-build-powerful-ai-agents-with-your-favorite-languages/">ADK Go announcement</a>
+- <a href="https://apigene.ai/blog/mcp-vs-a2a-when-to-use-each-protocol">MCP vs A2A comparison</a>
+- <a href="https://www.digitalapplied.com/blog/ai-agent-protocol-ecosystem-map-2026-mcp-a2a-acp-ucp">AI Agent Protocol Ecosystem Map 2026</a></p>
+<hr />
+<h2 id="3-openai-agents-sdk">3. OpenAI Agents SDK</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repo</strong></td>
+<td><a href="https://github.com/openai/openai-agents-python">openai/openai-agents-python</a>, <a href="https://github.com/openai/openai-agents-js">openai/openai-agents-js</a></td>
+</tr>
+<tr>
+<td><strong>Docs</strong></td>
+<td><a href="https://openai.github.io/openai-agents-python/">openai.github.io/openai-agents-python</a></td>
+</tr>
+<tr>
+<td><strong>Architecture</strong></td>
+<td>Centralized coordinator with handoffs</td>
+</tr>
+<tr>
+<td><strong>Go support</strong></td>
+<td>Community port: <a href="https://github.com/nlpodyssey/openai-agents-go">nlpodyssey/openai-agents-go</a>. No official Go SDK.</td>
+</tr>
+<tr>
+<td><strong>MCP compatibility</strong></td>
+<td>Via Responses API tool_use. Not MCP-native.</td>
+</tr>
+<tr>
+<td><strong>Adoption</strong></td>
+<td>Python + JS official. Provider-agnostic (100+ LLMs via Chat Completions).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architecture pattern</strong>: Lightweight framework for multi-agent workflows. Agents are defined with instructions and tools. <strong>Handoffs</strong> allow delegation -- represented as tool calls (e.g., <code>transfer_to_refund_agent</code>). <strong>Guardrails</strong> run in parallel with agent execution for input/output validation; tripwires can block execution before tokens are consumed (<a href="https://openai.github.io/openai-agents-python/guardrails/">source</a>). Works with both Responses API and Chat Completions API.</p>
+<p>Also relevant: <strong>OpenAI Codex CLI</strong> (67K GitHub stars, 640 releases, Rust-based) is the terminal agent ralphglasses wraps as a provider (<a href="https://github.com/openai/codex">source</a>).</p>
+<p><strong>Strengths vs ralphglasses</strong>: Guardrails pattern (parallel validation) is well-designed. Handoffs provide clean delegation semantics. Provider-agnostic by design.</p>
+<p><strong>Weaknesses vs ralphglasses</strong>: No process management, no fleet coordination, no cost tracking, no TUI. Handoffs are single-hop -- no cascade routing with try-cheap-then-escalate. No autonomy levels. Python/JS only (community Go port exists but trails).</p>
+<p><strong>Sources</strong>:
+- <a href="https://openai.github.io/openai-agents-python/">OpenAI Agents SDK docs</a>
+- <a href="https://openai.github.io/openai-agents-python/handoffs/">Handoffs</a>
+- <a href="https://openai.github.io/openai-agents-python/guardrails/">Guardrails</a>
+- <a href="https://github.com/openai/codex">OpenAI Codex CLI</a></p>
+<hr />
+<h2 id="4-langgraph-langchain">4. LangGraph / LangChain</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repo</strong></td>
+<td><a href="https://github.com/langchain-ai/langgraph">langchain-ai/langgraph</a> (~28.3K stars)</td>
+</tr>
+<tr>
+<td><strong>Docs</strong></td>
+<td><a href="https://www.langchain.com/langgraph">langchain.com/langgraph</a></td>
+</tr>
+<tr>
+<td><strong>Architecture</strong></td>
+<td>Graph-based state machines with cycles</td>
+</tr>
+<tr>
+<td><strong>Go support</strong></td>
+<td>None. Python and TypeScript (LangGraph.js) only.</td>
+</tr>
+<tr>
+<td><strong>MCP compatibility</strong></td>
+<td>Via LangChain tool adapters. Not MCP-native.</td>
+</tr>
+<tr>
+<td><strong>Adoption</strong></td>
+<td>~28.3K stars. LangChain ecosystem is the largest agent framework ecosystem. LangGraph Cloud available for hosted execution.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architecture pattern</strong>: Agents as stateful graph nodes with edges defining transitions. Supports single-agent, multi-agent, and hierarchical topologies. Graphs can be cyclic (unlike DAG-only frameworks), enabling iterative refinement loops. LangGraph Cloud provides hosted execution with monitoring. <code>deepagents</code> project (<a href="https://github.com/langchain-ai/deepagents">langchain-ai/deepagents</a>) adds planning tools and subagent spawning (<a href="https://dev.to/ottoaria/langgraph-in-2026-build-multi-agent-ai-systems-that-actually-work-3h5">source</a>).</p>
+<p><strong>Strengths vs ralphglasses</strong>: Mature graph abstraction for complex workflows. LangGraph Cloud handles persistence and monitoring out of the box. Largest community and ecosystem of pre-built components. Hierarchical agent patterns with dynamic subagent spawning.</p>
+<p><strong>Weaknesses vs ralphglasses</strong>: No Go support at all -- fundamental blocker. Heavy abstraction layer adds latency and complexity. No native process management (agents are in-process, not CLI subprocesses). No cost-aware routing. No TUI. Python-centric ecosystem with significant dependency overhead.</p>
+<p><strong>Sources</strong>:
+- <a href="https://github.com/langchain-ai/langgraph">LangGraph GitHub</a>
+- <a href="https://dev.to/ottoaria/langgraph-in-2026-build-multi-agent-ai-systems-that-actually-work-3h5">LangGraph in 2026</a>
+- <a href="https://docs.langchain.com/oss/python/langchain/multi-agent">Multi-agent docs</a>
+- <a href="https://github.com/langchain-ai/deepagents">deepagents</a></p>
+<hr />
+<h2 id="5-crewai">5. CrewAI</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repo</strong></td>
+<td><a href="https://github.com/crewAIInc/crewAI">crewAIInc/crewAI</a> (~45.9K stars)</td>
+</tr>
+<tr>
+<td><strong>Docs</strong></td>
+<td><a href="https://docs.crewai.com/">docs.crewai.com</a></td>
+</tr>
+<tr>
+<td><strong>Architecture</strong></td>
+<td>Role-based agents with hierarchical delegation</td>
+</tr>
+<tr>
+<td><strong>Go support</strong></td>
+<td>None. Python only.</td>
+</tr>
+<tr>
+<td><strong>MCP compatibility</strong></td>
+<td>Via tool adapters. Not MCP-native.</td>
+</tr>
+<tr>
+<td><strong>Adoption</strong></td>
+<td>~45.9K stars. 100K+ certified developers. Rapid growth in 2025-2026.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architecture pattern</strong>: Agents defined by role, goal, and backstory (human-centric natural language configuration). Tasks are assigned to agents. Supports sequential and hierarchical processes -- hierarchical mode auto-assigns a manager agent for delegation and result validation. Agents can autonomously delegate when they encounter tasks outside their competence (<a href="https://github.com/crewAIInc/crewAI">source</a>).</p>
+<p><strong>Strengths vs ralphglasses</strong>: Role-based agent definition is intuitive and accessible. Largest star count in the multi-agent space. Hierarchical delegation with manager agents is well-implemented. Low barrier to entry.</p>
+<p><strong>Weaknesses vs ralphglasses</strong>: Python only. No CLI subprocess management -- agents are in-process function calls. No cost tracking or cascade routing. No fleet distribution. No process isolation. No TUI. The role/goal/backstory abstraction, while intuitive, does not map well to the "launch real CLI tools as subprocesses" pattern ralphglasses uses.</p>
+<p><strong>Sources</strong>:
+- <a href="https://github.com/crewAIInc/crewAI">CrewAI GitHub</a>
+- <a href="https://theagenttimes.com/articles/44335-stars-and-counting-crewais-github-surge-maps-the-rise-of-the-multi-agent-e">CrewAI 44K stars analysis</a>
+- <a href="https://qubittool.com/blog/crewai-multi-agent-workflow-guide">CrewAI Deep Dive</a></p>
+<hr />
+<h2 id="6-autogen-ag2-microsoft-agent-framework">6. AutoGen / AG2 / Microsoft Agent Framework</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repo</strong></td>
+<td><a href="https://github.com/microsoft/autogen">microsoft/autogen</a> (~50.4K stars), <a href="https://github.com/ag2ai/ag2">ag2ai/ag2</a></td>
+</tr>
+<tr>
+<td><strong>Docs</strong></td>
+<td><a href="https://learn.microsoft.com/en-us/agent-framework/overview/">learn.microsoft.com/en-us/agent-framework</a></td>
+</tr>
+<tr>
+<td><strong>Architecture</strong></td>
+<td>Conversation-based multi-agent (GroupChat, swarms, nested chats)</td>
+</tr>
+<tr>
+<td><strong>Go support</strong></td>
+<td>None. Python and .NET only.</td>
+</tr>
+<tr>
+<td><strong>MCP compatibility</strong></td>
+<td>Not MCP-native. Tool use via function calling.</td>
+</tr>
+<tr>
+<td><strong>Adoption</strong></td>
+<td>~50.4K stars (AutoGen). 559 contributors. Microsoft Agent Framework RC shipped Feb 2026, GA targeting Q1 2026.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architecture pattern</strong>: The landscape here has fragmented significantly. AutoGen v0.2 used conversable agents with dynamic conversation flows. In late 2024, the community forked as AG2 under open governance with an event-driven, async-first rewrite. Meanwhile, Microsoft merged AutoGen + Semantic Kernel into the <strong>Microsoft Agent Framework</strong> (public preview Oct 2025, RC Feb 2026) which combines AutoGen's multi-agent patterns with Semantic Kernel's enterprise features (state management, type safety, telemetry) (<a href="https://devblogs.microsoft.com/foundry/introducing-microsoft-agent-framework-the-open-source-engine-for-agentic-ai-apps/">source</a>).</p>
+<p>GroupChat is the primary coordination pattern: multiple agents in a shared conversation with a selector determining speaker order. Also supports swarms, nested chats, and sequential chats (<a href="https://microsoft.github.io/autogen/0.2/docs/Use-Cases/agent_chat/">source</a>).</p>
+<p><strong>Strengths vs ralphglasses</strong>: Strongest enterprise backing (Microsoft). GroupChat pattern is well-researched. The Agent Framework merger gives access to Semantic Kernel's production features (session state, telemetry, filters). .NET support (unique in this landscape).</p>
+<p><strong>Weaknesses vs ralphglasses</strong>: No Go support. Fragmented ecosystem (AutoGen v0.2, AG2, Agent Framework -- three codebases). Conversation-centric model assumes agents share a chat context, which conflicts with ralphglasses' independent subprocess model. No cost-aware provider routing. No TUI.</p>
+<p><strong>Sources</strong>:
+- <a href="https://learn.microsoft.com/en-us/agent-framework/overview/">Microsoft Agent Framework overview</a>
+- <a href="https://devblogs.microsoft.com/foundry/introducing-microsoft-agent-framework-the-open-source-engine-for-agentic-ai-apps/">Agent Framework announcement</a>
+- <a href="https://devblogs.microsoft.com/agent-framework/migrate-your-semantic-kernel-and-autogen-projects-to-microsoft-agent-framework-release-candidate/">Migration guide</a>
+- <a href="https://dev.to/maximsaplin/microsoft-autogen-has-split-in-2-wait-3-no-4-parts-2p58">AutoGen split analysis</a>
+- <a href="https://github.com/ag2ai/ag2">AG2 GitHub</a></p>
+<hr />
+<h2 id="7-anthropic-mcp-model-context-protocol">7. Anthropic MCP (Model Context Protocol)</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Spec</strong></td>
+<td><a href="https://modelcontextprotocol.io/specification/2025-11-25">modelcontextprotocol.io/specification/2025-11-25</a> (latest stable); 2025-06-18 draft with elicitation + structured output</td>
+</tr>
+<tr>
+<td><strong>Go SDK</strong></td>
+<td>Official: <a href="https://github.com/modelcontextprotocol/go-sdk">modelcontextprotocol/go-sdk</a> (maintained with Google). Community: <a href="https://github.com/mark3labs/mcp-go">mark3labs/mcp-go</a>.</td>
+</tr>
+<tr>
+<td><strong>Governance</strong></td>
+<td>Donated to the <strong>Agentic AI Foundation</strong> (Linux Foundation) in Dec 2025. Co-founded by Anthropic, OpenAI, Block.</td>
+</tr>
+<tr>
+<td><strong>Architecture</strong></td>
+<td>Client-server, JSON-RPC 2.0, agent-to-tool</td>
+</tr>
+<tr>
+<td><strong>Adoption</strong></td>
+<td>97M+ monthly SDK downloads. 10,000+ active servers. First-class support in ChatGPT, Claude, Cursor, Gemini, VS Code, Copilot.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recent spec evolution</strong> (2025-06-18 draft):</p>
+<ul>
+<li><strong>Structured output</strong>: Tools can declare <code>outputSchema</code> (JSON Schema). Servers return <code>structuredContent</code> that validates against the schema (<a href="https://forgecode.dev/blog/mcp-spec-updates/">source</a>).</li>
+<li><strong>Elicitation</strong>: Servers can pause execution and request user input via <code>elicitation/create</code> with a JSON schema -- e.g., a booking tool requesting travel dates (<a href="https://forgecode.dev/blog/mcp-spec-updates/">source</a>).</li>
+<li><strong>OAuth 2.0 Resource Servers</strong>: MCP servers classified as OAuth 2.0 Resource Servers with RFC 8707 resource binding, Dynamic Client Registration (RFC 7591), and PKCE (<a href="https://socket.dev/blog/mcp-spec-updated-to-add-structured-tool-output-and-improved-oauth-2-1-compliance">source</a>).</li>
+<li><strong>Streamable HTTP transport</strong>: Replaces the older SSE transport.</li>
+</ul>
+<p><strong>Governance milestone</strong>: MCP was donated to the Agentic AI Foundation (AAIF) under the Linux Foundation on December 9, 2025, alongside goose (Block) and AGENTS.md (OpenAI). Founding members include Anthropic, OpenAI, Block, Google, Microsoft, AWS, Cloudflare, and Bloomberg (<a href="https://www.anthropic.com/news/donating-the-model-context-protocol-and-establishing-of-the-agentic-ai-foundation">source</a>).</p>
+<p><strong>Relevance to ralphglasses</strong>: MCP is the protocol substrate ralphglasses builds on. The 166 tools are served via mcp-go (migration target: official <code>modelcontextprotocol/go-sdk</code>). Elicitation maps to ralphglasses' HITL subsystem. Structured output enables type-safe tool results.</p>
+<p><strong>Sources</strong>:
+- <a href="https://modelcontextprotocol.io/specification/2025-11-25">MCP specification</a>
+- <a href="https://forgecode.dev/blog/mcp-spec-updates/">MCP 2025-06-18 spec update</a>
+- <a href="https://www.anthropic.com/news/donating-the-model-context-protocol-and-establishing-of-the-agentic-ai-foundation">Agentic AI Foundation announcement</a>
+- <a href="https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation">Linux Foundation AAIF press release</a>
+- <a href="https://github.com/modelcontextprotocol/go-sdk">MCP Go SDK (official)</a>
+- <a href="https://github.com/mark3labs/mcp-go">mcp-go (community)</a></p>
+<hr />
+<h2 id="8-smolagents-hugging-face">8. smolagents (Hugging Face)</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repo</strong></td>
+<td><a href="https://github.com/huggingface/smolagents">huggingface/smolagents</a> (~26K stars)</td>
+</tr>
+<tr>
+<td><strong>Docs</strong></td>
+<td><a href="https://huggingface.co/docs/smolagents/en/index">huggingface.co/docs/smolagents</a></td>
+</tr>
+<tr>
+<td><strong>Architecture</strong></td>
+<td>Code-generating agents (actions as Python snippets)</td>
+</tr>
+<tr>
+<td><strong>Go support</strong></td>
+<td>None. Python only.</td>
+</tr>
+<tr>
+<td><strong>MCP compatibility</strong></td>
+<td>Yes -- can use tools from any MCP server via adapter (<a href="https://grll.github.io/mcpadapt/guide/smolagents/">source</a>).</td>
+</tr>
+<tr>
+<td><strong>Adoption</strong></td>
+<td>~26K stars. Backed by Hugging Face. Grew from 3K to 26K stars in ~1 year.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architecture pattern</strong>: Agent logic fits in ~1,000 lines of code. Two agent types: <code>CodeAgent</code> (writes Python code snippets as actions, ~30% fewer LLM calls than tool-calling) and <code>ToolCallingAgent</code> (standard function calling). Supports sandboxed execution via E2B, Docker, Pyodide+Deno. Hub integration for sharing tools and agents (<a href="https://github.com/huggingface/smolagents">source</a>).</p>
+<p><strong>Strengths vs ralphglasses</strong>: Minimalism -- the entire agent loop is auditable in 1K lines. Code-as-action pattern is more expressive than JSON tool calls for complex logic. MCP integration exists. Hub sharing for community tools.</p>
+<p><strong>Weaknesses vs ralphglasses</strong>: Single-agent focus -- no native multi-agent coordination. Python only. No process management, fleet distribution, cost tracking, or cascade routing. No TUI.</p>
+<p><strong>Sources</strong>:
+- <a href="https://github.com/huggingface/smolagents">smolagents GitHub</a>
+- <a href="https://www.decisioncrafters.com/smolagents-build-powerful-ai-agents-in-1-000-lines-of-code-with-26-3k-github-stars/">smolagents 26K stars analysis</a>
+- <a href="https://grll.github.io/mcpadapt/guide/smolagents/">MCP adapter for smolagents</a></p>
+<hr />
+<h2 id="9-pydanticai">9. PydanticAI</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repo</strong></td>
+<td><a href="https://github.com/pydantic/pydantic-ai">pydantic/pydantic-ai</a> (~16K stars)</td>
+</tr>
+<tr>
+<td><strong>Docs</strong></td>
+<td><a href="https://ai.pydantic.dev/">ai.pydantic.dev</a></td>
+</tr>
+<tr>
+<td><strong>Architecture</strong></td>
+<td>Type-safe single-agent with dependency injection</td>
+</tr>
+<tr>
+<td><strong>Go support</strong></td>
+<td>None. Python only.</td>
+</tr>
+<tr>
+<td><strong>MCP compatibility</strong></td>
+<td>Native -- built-in MCP server support (<a href="https://ai.pydantic.dev/mcp/overview/">source</a>).</td>
+</tr>
+<tr>
+<td><strong>Adoption</strong></td>
+<td>~16K stars. Built by the Pydantic team (validation layer used by OpenAI, Google, Anthropic, LangChain).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architecture pattern</strong>: Applies the FastAPI ergonomic philosophy to agent development. Type-safe structured outputs via Pydantic models. Dependency injection for passing data/connections to agents. Built-in MCP support -- agents can use MCP servers directly. Multi-step reasoning with graph-based workflows on the roadmap (<a href="https://ai.pydantic.dev/">source</a>).</p>
+<p><strong>Strengths vs ralphglasses</strong>: Type safety and structured output validation are best-in-class. Dependency injection pattern is clean. MCP is a first-class citizen. Strong testing story via Pydantic's validation.</p>
+<p><strong>Weaknesses vs ralphglasses</strong>: Python only. Single-agent focused (no multi-agent coordination). No process management, fleet distribution, cost tracking, or cascade routing. No TUI.</p>
+<p><strong>Sources</strong>:
+- <a href="https://ai.pydantic.dev/">PydanticAI docs</a>
+- <a href="https://github.com/pydantic/pydantic-ai">PydanticAI GitHub</a>
+- <a href="https://ai.pydantic.dev/mcp/overview/">PydanticAI MCP overview</a>
+- <a href="https://www.decisioncrafters.com/pydanticai-type-safe-ai-agent-framework-with-16k-github-stars/">PydanticAI 16K stars</a></p>
+<hr />
+<h2 id="10-agency-swarm">10. agency-swarm</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repo</strong></td>
+<td><a href="https://github.com/VRSEN/agency-swarm">VRSEN/agency-swarm</a></td>
+</tr>
+<tr>
+<td><strong>Docs</strong></td>
+<td><a href="https://vrsen.github.io/agency-swarm/">vrsen.github.io/agency-swarm</a></td>
+</tr>
+<tr>
+<td><strong>Architecture</strong></td>
+<td>Organizational hierarchy (CEO/VA/Developer roles)</td>
+</tr>
+<tr>
+<td><strong>Go support</strong></td>
+<td>None. Python only.</td>
+</tr>
+<tr>
+<td><strong>MCP compatibility</strong></td>
+<td>Not MCP-native. Built on OpenAI Agents SDK.</td>
+</tr>
+<tr>
+<td><strong>Adoption</strong></td>
+<td>Active development. MIT licensed. Extends OpenAI Agents SDK.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architecture pattern</strong>: Models automation as real-world organizational structures -- agents are defined with roles like CEO, Virtual Assistant, Developer. Communication flows through an organizational chart. Built on top of the OpenAI Agents SDK (formerly OpenAI Assistants API), providing a higher-level abstraction for swarm coordination (<a href="https://github.com/VRSEN/agency-swarm">source</a>).</p>
+<p><strong>Strengths vs ralphglasses</strong>: Organizational metaphor makes complex agent hierarchies intuitive. Direct integration with OpenAI's agent infrastructure.</p>
+<p><strong>Weaknesses vs ralphglasses</strong>: Tightly coupled to OpenAI -- no multi-provider support. Python only. No Go support. No MCP. No cost tracking. No fleet distribution. The organizational metaphor is a UX choice, not a technical advantage.</p>
+<p><strong>Sources</strong>:
+- <a href="https://github.com/VRSEN/agency-swarm">agency-swarm GitHub</a>
+- <a href="https://vrsen.github.io/agency-swarm/">agency-swarm docs</a></p>
+<hr />
+<h2 id="11-camel-ai">11. CAMEL-AI</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repo</strong></td>
+<td><a href="https://github.com/camel-ai/camel">camel-ai/camel</a> (~15.2K stars)</td>
+</tr>
+<tr>
+<td><strong>Docs</strong></td>
+<td><a href="https://www.camel-ai.org/">camel-ai.org</a></td>
+</tr>
+<tr>
+<td><strong>Architecture</strong></td>
+<td>Communicative agents with role-playing</td>
+</tr>
+<tr>
+<td><strong>Go support</strong></td>
+<td>None. Python only.</td>
+</tr>
+<tr>
+<td><strong>MCP compatibility</strong></td>
+<td>Not MCP-native.</td>
+</tr>
+<tr>
+<td><strong>Adoption</strong></td>
+<td>~15.2K stars. 100+ researchers. Academic origin (NeurIPS 2023).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architecture pattern</strong>: Research-oriented framework focused on finding scaling laws for agents. Core concept is role-playing communicative agents that negotiate and collaborate. Three scaling dimensions: number of agents (CAMEL framework), environments (CRAB benchmark, OWL for computer operations), and evolution (RAG, synthetic data). OASIS project simulates millions of social agents (<a href="https://github.com/camel-ai/camel">source</a>).</p>
+<p><strong>Strengths vs ralphglasses</strong>: Strongest research foundation. Million-agent simulation capability. Benchmark suites (CRAB, OASIS) for systematic evaluation. Academic rigor in measuring agent scaling laws.</p>
+<p><strong>Weaknesses vs ralphglasses</strong>: Research-oriented, not production-oriented. Python only. No process management, fleet coordination, or cost tracking. Not designed for orchestrating real CLI tools. No TUI. Role-playing communication pattern assumes cooperative LLM-to-LLM dialogue, not CLI subprocess orchestration.</p>
+<p><strong>Sources</strong>:
+- <a href="https://github.com/camel-ai/camel">CAMEL-AI GitHub</a>
+- <a href="https://www.camel-ai.org/">CAMEL-AI website</a>
+- <a href="https://openreview.net/forum?id=3IyL2XWDkG">CAMEL NeurIPS paper</a></p>
+<hr />
+<h2 id="competitive-analysis">Competitive Analysis</h2>
+<h3 id="landscape-summary-table">Landscape Summary Table</h3>
+<table>
+<thead>
+<tr>
+<th>Framework</th>
+<th style="text-align: right;">Stars</th>
+<th style="text-align: center;">Go</th>
+<th style="text-align: center;">MCP</th>
+<th style="text-align: center;">Multi-Provider</th>
+<th style="text-align: center;">Cost Routing</th>
+<th style="text-align: center;">Fleet</th>
+<th style="text-align: center;">TUI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AutoGen/MAF</td>
+<td style="text-align: right;">50.4K</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+</tr>
+<tr>
+<td>Codex CLI</td>
+<td style="text-align: right;">67K</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+</tr>
+<tr>
+<td>CrewAI</td>
+<td style="text-align: right;">45.9K</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+</tr>
+<tr>
+<td>LangGraph</td>
+<td style="text-align: right;">28.3K</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">partial</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">cloud</td>
+<td style="text-align: center;">--</td>
+</tr>
+<tr>
+<td>smolagents</td>
+<td style="text-align: right;">26K</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">adapter</td>
+<td style="text-align: center;">partial</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+</tr>
+<tr>
+<td>PydanticAI</td>
+<td style="text-align: right;">16K</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">native</td>
+<td style="text-align: center;">partial</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+</tr>
+<tr>
+<td>CAMEL-AI</td>
+<td style="text-align: right;">15.2K</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+</tr>
+<tr>
+<td>Claude Agent SDK</td>
+<td style="text-align: right;">n/a</td>
+<td style="text-align: center;">community</td>
+<td style="text-align: center;">native</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+</tr>
+<tr>
+<td>OpenAI Agents SDK</td>
+<td style="text-align: right;">n/a</td>
+<td style="text-align: center;">community</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">partial</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+</tr>
+<tr>
+<td>A2A Protocol</td>
+<td style="text-align: right;">n/a</td>
+<td style="text-align: center;">official</td>
+<td style="text-align: center;">complementary</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+</tr>
+<tr>
+<td>Google ADK</td>
+<td style="text-align: right;">n/a</td>
+<td style="text-align: center;">official 1.0</td>
+<td style="text-align: center;">via A2A</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+</tr>
+<tr>
+<td>agency-swarm</td>
+<td style="text-align: right;">n/a</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+</tr>
+<tr>
+<td><strong>ralphglasses</strong></td>
+<td style="text-align: right;"><strong>--</strong></td>
+<td style="text-align: center;"><strong>native</strong></td>
+<td style="text-align: center;"><strong>native (166 tools)</strong></td>
+<td style="text-align: center;"><strong>3 providers</strong></td>
+<td style="text-align: center;"><strong>4-tier cascade</strong></td>
+<td style="text-align: center;"><strong>Tailscale</strong></td>
+<td style="text-align: center;"><strong>k9s-style</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="ralphglasses-competitive-moat">ralphglasses Competitive Moat</h3>
+<p>ralphglasses occupies a unique position in this landscape. No other framework combines all of these:</p>
+<ol>
+<li>
+<p><strong>Go-native</strong>: Written in Go with no Python/Node.js runtime dependency. The only production multi-agent orchestrator in Go. Google ADK Go is the closest comparable, but it is an agent SDK, not an orchestrator with fleet management.</p>
+</li>
+<li>
+<p><strong>Multi-provider by design</strong>: Dispatches to Claude Code, Gemini CLI, and OpenAI Codex CLI as real OS subprocesses. Every other framework either locks you to one provider or wraps API calls in-process. ralphglasses wraps full CLI agents with their own tool ecosystems.</p>
+</li>
+<li>
+<p><strong>MCP-first</strong>: 166 tools across 14 namespaces with deferred loading. Built on mcp-go, migrating to the official <code>modelcontextprotocol/go-sdk</code>. MCP is the tool substrate, not an afterthought adapter.</p>
+</li>
+<li>
+<p><strong>Cost-optimized cascade routing</strong>: 4-tier model routing (Gemini Flash-Lite $0.10 through Claude Opus $15.00/M input tokens) with try-cheap-then-escalate logic, bandit-based provider selection, and feedback-driven optimization. No other framework in this survey implements cost-aware tiered routing at this level.</p>
+</li>
+<li>
+<p><strong>Fleet distribution</strong>: Tailscale-based multi-machine coordination with coordinator/worker topology, priority queues, and fleet-wide budget enforcement. LangGraph Cloud is the only comparable, but it is a hosted service, not self-hosted infrastructure.</p>
+</li>
+<li>
+<p><strong>L0-L3 autonomy with safety model</strong>: Graduated autonomy from observe-only to full self-improvement with budget gates, chain depth caps, cooldowns, and HITL tracking. No other framework provides this graduated trust model.</p>
+</li>
+<li>
+<p><strong>TUI</strong>: k9s-style terminal UI with loop views, health dashboards, sparklines, and real-time cost tracking. Every other framework is either API-only or requires a separate web UI.</p>
+</li>
+<li>
+<p><strong>Self-improvement pipeline</strong>: Reflexion, episodic memory, cascade routing, curriculum sorting, and bandit-based selection form a closed learning loop. This is closer to reinforcement learning infrastructure than any competing framework offers.</p>
+</li>
+</ol>
+<hr />
+<h2 id="adopt-adapt-ignore">Adopt / Adapt / Ignore</h2>
+<h3 id="adopt-incorporate-directly">Adopt -- incorporate directly</h3>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Source</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A2A Agent Card</strong></td>
+<td>Google A2A</td>
+<td>Publish <code>/.well-known/agent-card.json</code> for ralphglasses fleet nodes. Enables external agent discovery without custom protocols. The official Go SDK (<a href="https://github.com/a2aproject/a2a-go">a2aproject/a2a-go</a>) makes this low-cost to integrate.</td>
+</tr>
+<tr>
+<td><strong>Guardrails (parallel validation)</strong></td>
+<td>OpenAI Agents SDK</td>
+<td>Run input/output validation in parallel with agent execution. Tripwire pattern (block before tokens consumed) maps to ralphglasses' budget gates. Implement as middleware in <code>internal/mcpserver/</code>.</td>
+</tr>
+<tr>
+<td><strong>MCP structured output</strong></td>
+<td>MCP 2025-06-18 spec</td>
+<td>Declare <code>outputSchema</code> on tools, return <code>structuredContent</code>. Improves type safety for tool results consumed by cascade routing decisions.</td>
+</tr>
+<tr>
+<td><strong>MCP elicitation</strong></td>
+<td>MCP 2025-06-18 spec</td>
+<td>Map <code>elicitation/create</code> to the existing HITL subsystem. Enables MCP clients to trigger human-in-the-loop flows natively instead of through custom tool calls.</td>
+</tr>
+<tr>
+<td><strong>Official Go MCP SDK migration</strong></td>
+<td>modelcontextprotocol/go-sdk</td>
+<td>Already a stated migration target. Prioritize for spec compliance, especially OAuth 2.0 resource server classification and streamable HTTP transport.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="adapt-modify-to-fit-ralphglasses-patterns">Adapt -- modify to fit ralphglasses patterns</h3>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Source</th>
+<th>Adaptation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>TeammateTool coordination</strong></td>
+<td>Claude Agent SDK</td>
+<td>Adapt the shared-task-list + peer messaging model for ralphglasses agent teams (<code>internal/session/teams.go</code>). Instead of Claude-only teammates, use the pattern across providers -- a Claude team lead can delegate to Gemini workers via the same task-list abstraction.</td>
+</tr>
+<tr>
+<td><strong>Graph-based workflow definition</strong></td>
+<td>LangGraph</td>
+<td>Adapt the stateful graph model for complex multi-step workflows in <code>internal/mcpserver/handler_workflow.go</code>. Keep the current imperative loop engine for simple cases but allow graph definitions for branching/merging flows. Do not adopt the full LangGraph runtime or Python dependency.</td>
+</tr>
+<tr>
+<td><strong>Code-as-action</strong></td>
+<td>smolagents</td>
+<td>Adapt the concept for the verifier step in loops. Instead of fixed <code>VerifyCommands</code>, allow the planner to emit verification code snippets that are sandboxed and executed. Already partially covered by <code>internal/sandbox/</code>.</td>
+</tr>
+<tr>
+<td><strong>Role-based agent definition</strong></td>
+<td>CrewAI</td>
+<td>Adapt the role/goal/backstory pattern for <code>agent_define</code> and <code>agent_compose</code> tools. Natural language role definitions are more ergonomic than raw provider+model configurations for non-technical users. Keep the underlying provider dispatch unchanged.</td>
+</tr>
+<tr>
+<td><strong>GroupChat selector</strong></td>
+<td>AutoGen/AG2</td>
+<td>Adapt the "who speaks next" selector pattern for blackboard coordination in <code>handler_fleet_h.go</code>. The current blackboard is key-value; adding a selector function that determines which agent should act next based on blackboard state would improve coordination.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ignore-not-relevant-to-ralphglasses">Ignore -- not relevant to ralphglasses</h3>
+<table>
+<thead>
+<tr>
+<th>Trend</th>
+<th>Source</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Python-only frameworks as dependencies</strong></td>
+<td>CrewAI, LangChain, smolagents, PydanticAI, CAMEL-AI</td>
+<td>ralphglasses is Go-native with zero Python runtime dependency. Adding Python frameworks as dependencies would break the single-binary deployment model and add significant operational complexity.</td>
+</tr>
+<tr>
+<td><strong>In-process agent execution</strong></td>
+<td>All Python frameworks</td>
+<td>ralphglasses orchestrates real CLI subprocesses (Claude Code, Gemini CLI, Codex CLI) with process groups, signals, and independent context windows. In-process function-calling agents solve a different problem.</td>
+</tr>
+<tr>
+<td><strong>Conversation-centric coordination</strong></td>
+<td>AutoGen GroupChat, CAMEL role-playing</td>
+<td>ralphglasses agents work independently in isolated subprocesses and coordinate via file system artifacts (<code>.ralph/</code>, git worktrees) and the event bus. Shared conversation context is neither possible nor desirable when agents are separate OS processes.</td>
+</tr>
+<tr>
+<td><strong>Hub/marketplace model</strong></td>
+<td>smolagents Hub, CrewAI templates</td>
+<td>ralphglasses tools are defined in Go code with compile-time type safety. A runtime marketplace for dynamically loaded tools conflicts with the static binary + MCP server model.</td>
+</tr>
+<tr>
+<td><strong>Million-agent simulation</strong></td>
+<td>CAMEL-AI OASIS</td>
+<td>Research concern, not production concern. ralphglasses manages tens of concurrent sessions across a fleet, not millions of simulated agents.</td>
+</tr>
+<tr>
+<td><strong>.NET ecosystem</strong></td>
+<td>Microsoft Agent Framework</td>
+<td>No .NET in the hairglasses-studio stack. The Agent Framework's enterprise features (telemetry, filters) are already covered by ralphglasses' middleware and OpenTelemetry integration.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="protocol-convergence-outlook">Protocol Convergence Outlook</h2>
+<p>The April 2026 landscape shows clear convergence around two complementary protocols:</p>
+<ul>
+<li><strong>MCP</strong> for agent-to-tool communication (97M+ monthly SDK downloads, AAIF governance, universal client support)</li>
+<li><strong>A2A</strong> for agent-to-agent delegation (50+ partners, Linux Foundation, official Go SDK)</li>
+</ul>
+<p>ralphglasses is well-positioned on MCP (166 native tools) but has no A2A surface. The fleet coordinator (<code>internal/fleet/server.go</code>) uses a custom HTTP protocol for worker coordination. Adopting A2A Agent Cards for fleet node discovery and task delegation would align with the emerging standard without replacing the existing coordinator/worker architecture.</p>
+<p>The four-protocol stack predicted by industry analysts -- MCP (tools) + A2A (agents) + ACP/UCP (commerce) -- suggests ralphglasses should treat A2A as the next protocol integration after completing the official MCP Go SDK migration (<a href="https://www.digitalapplied.com/blog/ai-agent-protocol-ecosystem-map-2026-mcp-a2a-acp-ucp">source</a>).</p>
+<hr />
+<p><em>Generated 2026-04-04. All URLs verified at time of research.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

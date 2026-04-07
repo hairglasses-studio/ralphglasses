@@ -1,0 +1,2234 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ralph-roadmap/04-enhancer-pipeline/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Enhancer Pipeline — Deep Audit - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#enhancer-pipeline-deep-audit" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Enhancer Pipeline — Deep Audit
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-stage-inventory-all-13-pipeline-stages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Stage Inventory — All 13 Pipeline Stages
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Stage Inventory — All 13 Pipeline Stages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stage-0-config-rules-config_rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 0 — Config Rules (config_rules)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-1-specificity-specificity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 1 — Specificity (specificity)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-2-positive-reframing-positive_reframe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 2 — Positive Reframing (positive_reframe)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-3-tone-downgrade-tone_downgrade" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 3 — Tone Downgrade (tone_downgrade)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-4-overtrigger-rewrite-overtrigger_rewrite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 4 — Overtrigger Rewrite (overtrigger_rewrite)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-5-example-wrapping-example_wrapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 5 — Example Wrapping (example_wrapping)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-6-structure-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 6 — Structure (structure)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-7-context-reorder-context_reorder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 7 — Context Reorder (context_reorder)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-8-format-enforcement-format_enforcement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 8 — Format Enforcement (format_enforcement)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-9-quote-grounding-quote_grounding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 9 — Quote Grounding (quote_grounding)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-10-self-check-self_check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 10 — Self-Check (self_check)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-11-overengineering-guard-overengineering_guard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 11 — Overengineering Guard (overengineering_guard)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-12-preamble-suppression-preamble_suppression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 12 — Preamble Suppression (preamble_suppression)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#post-pipeline-config-preamble" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Post-pipeline: Config Preamble
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-provider-aware-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Provider-Aware Behavior
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Provider-Aware Behavior">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stage-level-provider-gating" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage-level provider gating
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scoring-provider-awareness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scoring provider-awareness
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#meta-prompt-provider-awareness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Meta-prompt provider-awareness
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#knowledge-injector-provider-awareness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Knowledge injector provider-awareness
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-target-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default target provider
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-scoring-calibration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Scoring Calibration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Scoring Calibration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dimension-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dimension table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#score-inflation-fix-finding-240" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Score inflation fix — FINDING-240
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#qw-4-trivial-prompt-penalty" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        QW-4 trivial prompt penalty
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-lint-rule-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Lint Rule Inventory
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Lint Rule Inventory">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#per-line-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-line rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#whole-prompt-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Whole-prompt rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cache-rules-from-verifycachefriendlyorder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cache rules (from VerifyCacheFriendlyOrder)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rule-overlaps-and-conflicts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rule overlaps and conflicts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-llm-client-parity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. LLM Client Parity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. LLM Client Parity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#side-by-side-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Side-by-side comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#circuit-breaker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Circuit breaker
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retrybackoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retry/backoff
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timeout-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeout handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-handling-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error handling patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-hybrid-engine-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Hybrid Engine Flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Hybrid Engine Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decision-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision tree
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision controls
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#samplingengine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SamplingEngine
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-prompt-caching-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Prompt Caching Strategy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Prompt Caching Strategy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#claude-sdk-cache_control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude — SDK cache_control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gemini-cachedcontents-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gemini — cachedContents API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openai-automatic-prefix-caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenAI — automatic prefix caching
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#in-process-llm-result-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-process LLM result cache
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-ab-testing-infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. A/B Testing Infrastructure
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. A/B Testing Infrastructure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ralphglasses_eval_ab_test-mcp-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ralphglasses_eval_ab_test (MCP tool)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ralphglasses_eval_significance-mcp-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ralphglasses_eval_significance (MCP tool)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#statistical-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Statistical methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prompt-level-ab-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prompt-level A/B testing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-gaps-and-risks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Gaps and Risks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Gaps and Risks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gap-no-code-specific-optimization-beyond-basic-guards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap: No code-specific optimization beyond basic guards
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-gemini-caching-is-not-auto-activated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap: Gemini caching is not auto-activated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-shared-circuit-breaker-across-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap: Shared circuit breaker across providers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-half-open-state-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap: Half-open state behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-promptcache-eviction-is-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap: PromptCache eviction is O(n)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scoring-blind-spot-document-placement-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scoring blind spot: Document Placement baseline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scoring-blind-spot-tone-dimension-baseline-asymmetry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scoring blind spot: Tone dimension baseline asymmetry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-safetynegativepattern-applies-to-entire-prompt-not-per-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk: safetyNegativePattern applies to entire prompt, not per-line
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-default-target-provider-is-openai-not-claude" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk: Default target provider is OpenAI, not Claude
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-thinkingenabled-propagation-gap-for-openai" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk: ThinkingEnabled propagation gap for OpenAI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-wrapinputoutputpairs-requires-exactly-adjacent-pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk: wrapInputOutputPairs() requires exactly adjacent pairs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-knowledgeinjectorgo-injectcontext-always-uses-xml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk: knowledge/injector.go — InjectContext() always uses XML
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-openaiclientlastresponseid-is-not-thread-safe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk: OpenAIClient.LastResponseID is not thread-safe
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-enforceoutputformat-uses-xml-output_format-for-all-targets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk: enforceOutputFormat() uses XML &lt;output_format&gt; for all targets
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-file-reference-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. File Reference Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="enhancer-pipeline-deep-audit">Enhancer Pipeline — Deep Audit</h1>
+<p><strong>Scope</strong>: <code>internal/enhancer/</code> in <code>ralphglasses</code>
+<strong>Date</strong>: 2026-04-04
+<strong>Source files audited</strong>: enhancer.go, pipeline.go, pipeline_format.go, scoring.go, lint.go, config.go, hybrid.go, provider.go, llmclient.go, gemini_client.go, openai_client.go, circuit.go, cache.go, classifier.go, context.go, filter.go, sampling.go, templates.go, metaprompt.go, claudemd.go, examples.go, knowledge/graph.go, knowledge/injector.go</p>
+<hr />
+<h2 id="1-stage-inventory-all-13-pipeline-stages">1. Stage Inventory — All 13 Pipeline Stages</h2>
+<p>The pipeline entry point is <code>EnhanceWithConfig()</code> in <code>enhancer.go</code>. Stages execute sequentially on the same mutable text string. Every stage records itself in <code>EnhanceResult.StagesRun</code> (if it ran) or <code>EnhanceResult.SkippedStages</code> (with a reason). A pre-stage labelled Stage 0 exists for config rules.</p>
+<h3 id="stage-0-config-rules-config_rules">Stage 0 — Config Rules (<code>config_rules</code>)</h3>
+<p><strong>File</strong>: <code>enhancer.go:79</code>, <code>config.go:297</code>
+<strong>Function</strong>: <code>Config.ApplyRules()</code></p>
+<p>Applies pattern-matched augmentation rules loaded from <code>.prompt-improver.yaml</code> in the project or home directory. Each rule is a simple substring match (<code>strings.Contains</code>, case-insensitive) that optionally prepends or appends text. The match is substring-only (not regex) for safety.</p>
+<p><strong>Skipped when</strong>: <code>cfg.Rules</code> is empty.</p>
+<p><strong>Input → Output</strong>: Raw prompt may have project-specific preambles prepended or context blocks appended.</p>
+<hr />
+<h3 id="stage-1-specificity-specificity">Stage 1 — Specificity (<code>specificity</code>)</h3>
+<p><strong>File</strong>: <code>pipeline.go:9</code>
+<strong>Function</strong>: <code>improveSpecificity()</code></p>
+<p>Replaces vague phrases with concrete instructions via a static lookup table (<code>vagueReplacements</code>, 22 entries). Matches are case-insensitive, replaces the first occurrence of each match. Example: <code>"be concise"</code> → <code>"Limit each point to one sentence. Use 5 bullets maximum"</code>.</p>
+<p><strong>Skipped when</strong>: Stage disabled in config via <code>DisabledStages</code>, or no vague phrases are detected.</p>
+<p><strong>Input → Output</strong>: Vague imperative phrases replaced with quantified, specific equivalents.</p>
+<hr />
+<h3 id="stage-2-positive-reframing-positive_reframe">Stage 2 — Positive Reframing (<code>positive_reframe</code>)</h3>
+<p><strong>File</strong>: <code>pipeline.go:49</code>
+<strong>Function</strong>: <code>reframeNegatives()</code></p>
+<p>Rewrites known negative instructions into positive equivalents using a 17-entry static table (<code>negativeReframings</code>). Safety bypass: if the prompt contains negatives about truly sensitive actions (e.g., "never disclose credentials"), the entire stage is skipped via <code>safetyNegativePattern</code>. The safety regex is conservative and checks for the combination of a negative modal plus a dangerous verb plus a sensitive data keyword.</p>
+<p><strong>Skipped when</strong>: Disabled in config, no negative patterns detected, or <code>safetyNegativePattern</code> matches (entire prompt bypassed — not just the matched line).</p>
+<p><strong>Input → Output</strong>: Negative-framed instructions rewritten as positive instructions.</p>
+<hr />
+<h3 id="stage-3-tone-downgrade-tone_downgrade">Stage 3 — Tone Downgrade (<code>tone_downgrade</code>)</h3>
+<p><strong>File</strong>: <code>pipeline.go:96</code>
+<strong>Function</strong>: <code>downgradeTone()</code></p>
+<p>Downgrades ALL-CAPS emphasis words (<code>CRITICAL</code>, <code>IMPORTANT</code>, <code>MUST</code>, <code>ALWAYS</code>, <code>NEVER</code>, <code>WARNING</code>, <code>REQUIRED</code>, <code>MANDATORY</code>, <code>ABSOLUTELY</code>, <code>ESSENTIAL</code>) to lowercase equivalents. A 43-entry acronym whitelist (<code>acronymWhitelist</code>) prevents legitimate acronyms (API, URL, JSON, MCP, etc.) from being modified. <code>ABSOLUTELY</code> maps to an empty string and its neighboring space is stripped.</p>
+<p><strong>Skipped when</strong>: Disabled in config, <strong>or <code>cfg.TargetProvider</code> is set to anything other than <code>"claude"</code> (including Gemini and OpenAI)</strong>. This is a Claude-only optimization — the comment notes other models do not overtrigger on aggressive language.</p>
+<p><strong>Input → Output</strong>: Aggressive ALL-CAPS words normalized to lowercase.</p>
+<hr />
+<h3 id="stage-4-overtrigger-rewrite-overtrigger_rewrite">Stage 4 — Overtrigger Rewrite (<code>overtrigger_rewrite</code>)</h3>
+<p><strong>File</strong>: <code>pipeline_format.go:9</code>
+<strong>Function</strong>: <code>rewriteOvertriggerPhrases()</code></p>
+<p>Targets aggressive anti-laziness prefixes of the form <code>CRITICAL: You MUST</code>, <code>IMPORTANT! ALWAYS</code>, etc. (matched by <code>overtriggerPattern</code>). The rewrite strips the aggressive prefix and keeps only the action, converting <code>MUST do X</code> → <code>do X</code>, <code>NEVER do X</code> → <code>Avoid: do X</code>, <code>ALWAYS do X</code> → <code>do X</code>.</p>
+<p><strong>Skipped when</strong>: Disabled in config, <strong>or <code>cfg.TargetProvider</code> is set to anything other than <code>"claude"</code></strong>. Claude-only optimization.</p>
+<p><strong>Input → Output</strong>: <code>CRITICAL: You MUST use X</code> → <code>use X</code>.</p>
+<hr />
+<h3 id="stage-5-example-wrapping-example_wrapping">Stage 5 — Example Wrapping (<code>example_wrapping</code>)</h3>
+<p><strong>File</strong>: <code>enhancer.go:170</code>, <code>examples.go</code>
+<strong>Function</strong>: <code>DetectAndWrapExamples()</code></p>
+<p>Detects bare examples in the prompt and wraps them in <code>&lt;examples&gt;&lt;example&gt;</code> tags. Three detection strategies are tried in order:
+1. Input:/Output: pairs (or Query:/Answer:, Question:/Response:, Prompt:/Result:)
+2. <code>Example N:</code> header sections (regex match on markdown headers)
+3. Arrow transformation patterns (<code>A -&gt; B</code>, <code>A =&gt; B</code>, <code>A → B</code>)</p>
+<p>Requires at least 2 examples for any strategy to fire. Skips if <code>&lt;example</code> tags already exist.</p>
+<p><strong>Skipped when</strong>: Disabled in config, or no bare examples detected.</p>
+<p><strong>Input → Output</strong>: Bare examples wrapped in <code>&lt;examples&gt;&lt;example index="N"&gt;</code> XML structure.</p>
+<hr />
+<h3 id="stage-6-structure-structure">Stage 6 — Structure (<code>structure</code>)</h3>
+<p><strong>File</strong>: <code>pipeline.go:164</code>
+<strong>Function</strong>: <code>addStructure()</code> (Claude) or <code>addMarkdownStructure()</code> (Gemini/OpenAI)</p>
+<p><strong>This is the primary provider-aware stage.</strong> Wraps the prompt in structural markup.</p>
+<ul>
+<li><strong>Claude target</strong> (<code>addStructure</code>): Adds <code>&lt;role&gt;</code>, <code>&lt;instructions&gt;</code>, optional <code>&lt;context&gt;</code> (if a code block is detected), and <code>&lt;constraints&gt;</code> XML tags. Roles and constraints are task-type-specific (6 task types).</li>
+<li><strong>Gemini/OpenAI target</strong> (<code>addMarkdownStructure</code>): Adds <code>## Role</code>, <code>## Instructions</code> or <code>## Context</code>, and <code>## Constraints</code> markdown sections.</li>
+</ul>
+<p>Over-tagging prevention (<code>shouldAddStructure</code>): skips if prompt is under 15 words, or already contains <code>&lt;instructions</code> or <code>&lt;role</code> tags.</p>
+<p>Code block separation: <code>extractCodeBlock()</code> detects backtick-fenced code and moves it into a separate <code>&lt;context&gt;</code> or <code>## Context</code> section, placing the rest in <code>&lt;instructions&gt;</code>.</p>
+<p><strong>Skipped when</strong>: Disabled in config. Unlike other stages, when active, this stage <strong>always</strong> records itself as run (even if no changes were made due to over-tagging prevention — the improvement message records the skip reason).</p>
+<p><strong>Input → Output</strong>: Prompt wrapped in provider-appropriate structural markup.</p>
+<hr />
+<h3 id="stage-7-context-reorder-context_reorder">Stage 7 — Context Reorder (<code>context_reorder</code>)</h3>
+<p><strong>File</strong>: <code>context.go:30</code>
+<strong>Function</strong>: <code>ReorderLongContext()</code></p>
+<p>Moves large context blocks before the query in long prompts. Only activates when the prompt exceeds ~20,000 characters (LongContextChars = 80,000 chars, but checked at 1/4 of that). Splits on double-newlines to find paragraphs, identifies the longest paragraph as "context" and the last short paragraph with a question mark or imperative verb as the "query". Only reorders if context appears after query and context is at least 3x larger than query.</p>
+<p>Skips if the prompt already has <code>&lt;context&gt;</code> or <code>&lt;documents&gt;</code> XML tags.</p>
+<p><strong>Skipped when</strong>: Disabled in config, prompt is too short (&lt; 20,000 chars), already has XML context structure, or the heuristic can't find a clear context/query split.</p>
+<p><strong>Input → Output</strong>: Bulk context block moved before the query paragraph.</p>
+<hr />
+<h3 id="stage-8-format-enforcement-format_enforcement">Stage 8 — Format Enforcement (<code>format_enforcement</code>)</h3>
+<p><strong>File</strong>: <code>pipeline_format.go:128</code>
+<strong>Function</strong>: <code>enforceOutputFormat()</code></p>
+<p>Detects output format requests in the prompt and injects an <code>&lt;output_format&gt;</code> block with strict format instructions. Four formats detected:
+- JSON: injects "Your entire response must be valid JSON..."
+- YAML: injects "Your entire response must be valid YAML..."
+- CSV: injects CSV header row requirement
+- Code: injects "Return only the code..." (matched on prompts starting with <code>write/create/implement/generate a function/class/method/script/program/module</code>)</p>
+<p>Skips if <code>&lt;output_format&gt;</code> or <code>output_format</code> already appears in the prompt.</p>
+<p><strong>Skipped when</strong>: Disabled in config, no format request detected, or already has format specification.</p>
+<p><strong>Input → Output</strong>: <code>&lt;output_format&gt;</code> block appended with format-specific strictness instructions.</p>
+<hr />
+<h3 id="stage-9-quote-grounding-quote_grounding">Stage 9 — Quote Grounding (<code>quote_grounding</code>)</h3>
+<p><strong>File</strong>: <code>context.go:101</code>
+<strong>Function</strong>: <code>InjectQuoteGrounding()</code></p>
+<p>For long analysis prompts, injects an instruction to "find and quote the specific passages... before answering" and wrap them in <code>&lt;quotes&gt;</code> tags. Only fires for <code>TaskTypeAnalysis</code> or <code>TaskTypeGeneral</code>, and only for prompts &gt;= 5,000 tokens (~20,000 chars).</p>
+<p><strong>Skipped when</strong>: Disabled in config, task type is not analysis/general, prompt is too short, or prompt already contains quote/cite/reference instructions.</p>
+<p><strong>Input → Output</strong>: Quote-grounding instruction appended to prompt.</p>
+<hr />
+<h3 id="stage-10-self-check-self_check">Stage 10 — Self-Check (<code>self_check</code>)</h3>
+<p><strong>File</strong>: <code>pipeline_format.go:167</code>
+<strong>Function</strong>: <code>injectSelfCheck()</code></p>
+<p>Appends a <code>&lt;verification&gt;</code> block with task-type-specific pre-completion checklists:
+- Code: check compilation, edge cases (nil/empty/zero), descriptive error messages
+- Analysis: evidence support, fact vs inference distinction, alternative interpretations
+- Troubleshooting: root cause vs symptom, rollback steps, side effects</p>
+<p>Only fires for <code>TaskTypeCode</code>, <code>TaskTypeAnalysis</code>, and <code>TaskTypeTroubleshooting</code>. Skips if the prompt already contains "verify", "double-check", "self-check", or "before you finish".</p>
+<p><strong>Skipped when</strong>: Disabled in config, task type is creative/workflow/general, or verification language already present.</p>
+<p><strong>Input → Output</strong>: <code>&lt;verification&gt;</code> checklist appended.</p>
+<hr />
+<h3 id="stage-11-overengineering-guard-overengineering_guard">Stage 11 — Overengineering Guard (<code>overengineering_guard</code>)</h3>
+<p><strong>File</strong>: <code>pipeline_format.go:61</code>
+<strong>Function</strong>: <code>injectOverengineeringGuard()</code></p>
+<p>Appends a guard instruction: "Only make changes that are directly requested or clearly necessary. Prefer editing existing files to creating new ones. Do not add abstractions, helpers, or defensive code for scenarios that cannot happen."</p>
+<p>Only fires for <code>TaskTypeCode</code> prompts. Exempt if the prompt explicitly requests new scaffolding (create new, scaffold, generate boilerplate, set up a new, initialize a new).</p>
+<p><strong>Skipped when</strong>: Disabled in config, task type is not code, prompt requests new creation, or guard language already present.</p>
+<p><strong>Input → Output</strong>: Anti-overengineering instruction appended.</p>
+<hr />
+<h3 id="stage-12-preamble-suppression-preamble_suppression">Stage 12 — Preamble Suppression (<code>preamble_suppression</code>)</h3>
+<p><strong>File</strong>: <code>pipeline_format.go:192</code>
+<strong>Function</strong>: <code>suppressPreamble()</code></p>
+<p>Appends: "Respond directly without preamble. Do not start with phrases like 'Here is...', 'Sure,...', or 'Based on...'." Only for <code>TaskTypeCode</code> and <code>TaskTypeWorkflow</code>.</p>
+<p><strong>Skipped when</strong>: Disabled in config, task type is not code/workflow, or preamble suppression language already present.</p>
+<p><strong>Input → Output</strong>: Direct-response instruction appended.</p>
+<hr />
+<h3 id="post-pipeline-config-preamble">Post-pipeline: Config Preamble</h3>
+<p><strong>File</strong>: <code>enhancer.go:319</code></p>
+<p>After all 13 stages, if <code>cfg.Preamble</code> is set, it is prepended to the entire enhanced text. This runs unconditionally (not tracked as a stage, not skippable via <code>DisabledStages</code>).</p>
+<hr />
+<h2 id="2-provider-aware-behavior">2. Provider-Aware Behavior</h2>
+<p>The <code>cfg.TargetProvider</code> field (type <code>ProviderName</code>) controls pipeline adaptation for the <strong>target</strong> model (the model that will receive the enhanced prompt), distinct from the LLM provider used to call the improvement API.</p>
+<h3 id="stage-level-provider-gating">Stage-level provider gating</h3>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Claude</th>
+<th>Gemini</th>
+<th>OpenAI</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tone_downgrade</code> (Stage 3)</td>
+<td>Runs</td>
+<td><strong>Skipped</strong></td>
+<td><strong>Skipped</strong></td>
+<td><code>cfg.TargetProvider != "" &amp;&amp; cfg.TargetProvider != ProviderClaude</code> at <code>enhancer.go:131</code></td>
+</tr>
+<tr>
+<td><code>overtrigger_rewrite</code> (Stage 4)</td>
+<td>Runs</td>
+<td><strong>Skipped</strong></td>
+<td><strong>Skipped</strong></td>
+<td>Same condition at <code>enhancer.go:153</code></td>
+</tr>
+<tr>
+<td><code>structure</code> (Stage 6)</td>
+<td>XML (<code>addStructure</code>)</td>
+<td>Markdown (<code>addMarkdownStructure</code>)</td>
+<td>Markdown (<code>addMarkdownStructure</code>)</td>
+<td><code>pipeline.go:192-199</code></td>
+</tr>
+</tbody>
+</table>
+<p>The structure stage condition is <code>if cfg.TargetProvider != "" &amp;&amp; cfg.TargetProvider != ProviderClaude</code> — meaning if <code>TargetProvider</code> is empty, it defaults to Claude XML behavior.</p>
+<h3 id="scoring-provider-awareness">Scoring provider-awareness</h3>
+<p>The <code>scoreStructure()</code> dimension scorer (<code>scoring.go:383</code>) provides different suggestions based on <code>targetProvider</code>:
+- Claude target: suggests XML structure tags
+- Gemini/OpenAI target: suggests <code>## Role, ## Instructions, ## Constraints</code> markdown sections</p>
+<p>The <code>scoreTone()</code> dimension (<code>scoring.go:673</code>) applies heavier penalties for aggressive caps and negative framing when <code>targetProvider == ProviderClaude</code> (-25/-20) vs other providers (-10/-10).</p>
+<h3 id="meta-prompt-provider-awareness">Meta-prompt provider-awareness</h3>
+<p><code>MetaPromptFor()</code> in <code>metaprompt.go:172</code> dispatches to one of three distinct meta-prompts:
+- <code>MetaPrompt</code> / <code>MetaPromptWithThinking</code> — Claude: uses XML <code>&lt;scratchpad&gt;</code>, <code>&lt;role&gt;</code>, custom XML output tags
+- <code>GeminiMetaPrompt</code> / <code>GeminiMetaPromptWithThinking</code> — Gemini: uses <code>## Reasoning</code> markdown section, structured markdown output headers
+- <code>OpenAIMetaPrompt</code> / <code>OpenAIMetaPromptWithThinking</code> — OpenAI: uses <code>Think step by step:</code> section, markdown headers</p>
+<h3 id="knowledge-injector-provider-awareness">Knowledge injector provider-awareness</h3>
+<p><code>knowledge/injector.go</code> has two formatters: <code>formatContextBlock()</code> (XML, for Claude) and <code>FormatContextBlockMarkdown()</code> (markdown, for Gemini/OpenAI), though the <code>InjectContext()</code> method always uses XML. This is a latent inconsistency — <code>FormatContextBlockMarkdown</code> is defined but not called from the pipeline.</p>
+<h3 id="default-target-provider">Default target provider</h3>
+<p><code>config.go:239</code>: if <code>TargetProvider</code> is empty after resolution, it defaults to <code>defaultTargetProviderForLLM(cfg.LLM.Provider)</code> which maps the LLM call provider to the target. If <code>LLM.Provider</code> is empty, it defaults to <code>"openai"</code> (<code>config.go:236</code>). This means the default pipeline behavior uses OpenAI-style markdown structure, not Claude XML — a potentially surprising default for users who don't set <code>PROMPT_IMPROVER_TARGET</code>.</p>
+<hr />
+<h2 id="3-scoring-calibration">3. Scoring Calibration</h2>
+<p>The scoring system (<code>scoring.go</code>) produces a <code>ScoreReport</code> with 10 dimensions. Each has a 0-100 score, a weight, and a letter grade.</p>
+<h3 id="dimension-table">Dimension table</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Dimension</th>
+<th>Function</th>
+<th>Weight</th>
+<th>Baseline</th>
+<th>Grade thresholds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Clarity</td>
+<td><code>scoreClarity</code></td>
+<td>0.15</td>
+<td>30</td>
+<td>A≥90, B≥80, C≥65, D≥50, F&lt;50</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Specificity</td>
+<td><code>scoreSpecificity</code></td>
+<td>0.12</td>
+<td>25</td>
+<td>same</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Context &amp; Motivation</td>
+<td><code>scoreContextMotivation</code></td>
+<td>0.10</td>
+<td>30</td>
+<td>same</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Structure</td>
+<td><code>scoreStructure</code></td>
+<td>0.15</td>
+<td>25</td>
+<td>same</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Examples</td>
+<td><code>scoreExamples</code></td>
+<td>0.10</td>
+<td>20</td>
+<td>same</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Document Placement</td>
+<td><code>scoreDocumentPlacement</code></td>
+<td>0.08</td>
+<td>40</td>
+<td>same</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Role Definition</td>
+<td><code>scoreRoleDefinition</code></td>
+<td>0.08</td>
+<td>35</td>
+<td>same</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Task Focus</td>
+<td><code>scoreTaskFocus</code></td>
+<td>0.07</td>
+<td>30</td>
+<td>same</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Format Specification</td>
+<td><code>scoreFormatSpec</code></td>
+<td>0.08</td>
+<td>20</td>
+<td>same</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Tone</td>
+<td><code>scoreTone</code></td>
+<td>0.07</td>
+<td>70</td>
+<td>same</td>
+</tr>
+</tbody>
+</table>
+<p>Weights sum to 1.00 exactly (0.15+0.12+0.10+0.15+0.10+0.08+0.08+0.07+0.08+0.07 = 1.00).</p>
+<p>The overall score is capped to [5, 95] — "nothing is perfect" (comment at <code>scoring.go:64</code>).</p>
+<h3 id="score-inflation-fix-finding-240">Score inflation fix — FINDING-240</h3>
+<p>Multiple baselines carry an explicit comment <code>// FINDING-240: lowered from X to prevent score inflation</code>:
+- Clarity: baseline lowered from 50 → 30 (<code>scoring.go:173</code>)
+- Specificity: lowered from 50 → 25 (<code>scoring.go:259</code>)
+- Structure: baseline is 25 with comment "no structure signals → low score" (<code>scoring.go:384</code>)
+- Document Placement: lowered from 60 → 40 (<code>scoring.go:503</code>)
+- Task Focus: comment "must earn score from actual task signals" (<code>scoring.go:582</code>)
+- Tone: baseline set to 70 "neutral tone is the expected baseline; only penalize actual problems" (<code>scoring.go:674</code>)</p>
+<p>The CLAUDE.md states a calibration target of <code>&lt;1.2x</code>. No explicit test enforcing this ratio was found in the audited source files — the fix is applied through baseline constants rather than a runtime calibration check.</p>
+<h3 id="qw-4-trivial-prompt-penalty">QW-4 trivial prompt penalty</h3>
+<p>Dimensions that apply a "trivial prompt" penalty when <code>ar.WordCount &lt;= 3</code>:
+- Clarity: <code>-20</code> score
+- Specificity: <code>-15</code> score
+- Task Focus: <code>-15</code> score</p>
+<p>This prevents single-word prompts from scoring above D.</p>
+<hr />
+<h2 id="4-lint-rule-inventory">4. Lint Rule Inventory</h2>
+<p><code>Lint()</code> in <code>lint.go:31</code> runs per-line and whole-prompt checks. <code>VerifyCacheFriendlyOrder()</code> in <code>context.go:128</code> provides 3 additional cache-related rules. Both are called together in <code>Analyze()</code>.</p>
+<h3 id="per-line-rules">Per-line rules</h3>
+<p><strong>Rule 1: Unmotivated Rule</strong> (<code>unmotivated-rule</code>)
+- <strong>Catches</strong>: Imperative directives (always/never/must/should/ensure lines) without a "because/since/so that/in order to" motivation clause.
+- <strong>Severity</strong>: info
+- <strong>Auto-fixable</strong>: false
+- <strong>False positive risk</strong>: Medium-high. Many legitimate short constraints ("Always use UTC timestamps") are flagged. The minimum-4-words guard reduces but doesn't eliminate it.</p>
+<p><strong>Rule 2: Negative Framing</strong> (<code>negative-framing</code>)
+- <strong>Catches</strong>: Lines matching <code>negativePattern</code> (NEVER, DO NOT, DON'T, MUST NOT, SHOULD NOT, CANNOT, CAN'T) that are not safety-critical and not already covered by the reframing table.
+- <strong>Severity</strong>: warn
+- <strong>Auto-fixable</strong>: false
+- <strong>False positive risk</strong>: Medium. The safety bypass and reframing table exclusions help, but legitimate technical negatives ("Don't use deprecated API X") are flagged.</p>
+<p><strong>Rule 3: Aggressive Emphasis</strong> (<code>aggressive-emphasis</code>)
+- <strong>Catches</strong>: ALL-CAPS words from <code>aggressiveCapsPattern</code> not in the 43-entry <code>acronymWhitelist</code>.
+- <strong>Severity</strong>: info
+- <strong>Auto-fixable</strong>: true
+- <strong>False positive risk</strong>: Low. The acronym whitelist is comprehensive. Domain-specific acronyms not in the whitelist (e.g., <code>MIDI</code> is actually in the list) could be flagged.</p>
+<p><strong>Rule 4: Vague Quantifiers</strong> (<code>vague-quantifier</code>)
+- <strong>Catches</strong>: Words like "a few", "some", "several", "many", "a lot", "a bit", "enough", "various", "appropriate", "suitable", "proper", "good", "nice", "decent".
+- <strong>Severity</strong>: info
+- <strong>Auto-fixable</strong>: false
+- <strong>False positive risk</strong>: Medium. "good" and "nice" are extremely common and will flag benign uses ("good error messages", "nice formatting"). "appropriate" in "appropriate response" is legitimate hedging.</p>
+<p><strong>Rule 5: Overtrigger Phrase</strong> (<code>overtrigger-phrase</code>)
+- <strong>Catches</strong>: <code>CRITICAL|IMPORTANT|REQUIRED|WARNING : You MUST|ALWAYS|NEVER|SHOULD</code> patterns.
+- <strong>Severity</strong>: warn
+- <strong>Auto-fixable</strong>: true
+- <strong>False positive risk</strong>: Low. Pattern is specific enough.</p>
+<p><strong>Rule 6: Injection Vulnerability</strong> (<code>injection-risk</code>)
+- <strong>Catches</strong>: Template variables (<code>${...}</code> or <code>{{...}}</code>) whose names match untrusted input patterns (user_input, user_query, user_message, raw_input, untrusted, external, request_body, form_data, query_string, params).
+- <strong>Severity</strong>: error
+- <strong>Auto-fixable</strong>: false
+- <strong>False positive risk</strong>: Low. The combination of template syntax + suspicious variable name is a strong signal.</p>
+<p><strong>Rule 7: Thinking Mode Redundant</strong> (<code>thinking-mode-redundant</code>)
+- <strong>Catches</strong>: "think step by step", "let's think", "chain of thought", "reason through this", "think carefully".
+- <strong>Severity</strong>: info
+- <strong>Auto-fixable</strong>: false
+- <strong>False positive risk</strong>: Low for Claude 4.x. Accurate for the target environment. May be wrong if targeting Gemini or GPT-4o which do benefit from CoT.</p>
+<h3 id="whole-prompt-rules">Whole-prompt rules</h3>
+<p><strong>Rule 8: Over-Specification</strong> (<code>over-specification</code>)
+- <strong>Catches</strong>: Prompts with more than 5 numbered steps (<code>1.</code>, <code>2)</code>, etc.).
+- <strong>Severity</strong>: info
+- <strong>Auto-fixable</strong>: false
+- <strong>False positive risk</strong>: Low. More than 5 enumerated steps genuinely indicates over-specification for most use cases.</p>
+<p><strong>Rule 9: Decomposition Needed</strong> (<code>decomposition-needed</code>)
+- <strong>Catches</strong>: Prompts with 3+ distinct imperative verbs (create, build, implement, write, fix, debug, refactor, analyze, review, design, test, deploy, configure, set up, migrate, update, delete, remove) after deduplication.
+- <strong>Severity</strong>: info
+- <strong>Auto-fixable</strong>: false
+- <strong>False positive risk</strong>: Medium. Complex but legitimately single-task prompts (e.g., "refactor the module, fix the bug it introduced, and add tests") will be flagged. The deduplication helps but 3 unique verbs is a low threshold.</p>
+<p><strong>Rule 10: Example Quality</strong> (<code>example-quality</code>)
+- <strong>Catches</strong>: Prompts with <code>&lt;example</code> tags that have fewer than 3 or more than 5 examples.
+- <strong>Severity</strong>: info
+- <strong>Auto-fixable</strong>: false
+- <strong>False positive risk</strong>: Low. Fires only when examples are already present. Flagging &lt;3 examples as "not enough" is generally correct.</p>
+<p><strong>Rule 11: Compaction Readiness</strong> (<code>compaction-readiness</code>)
+- <strong>Catches</strong>: Prompts estimated at &gt;= 50,000 tokens that lack compaction guidance keywords.
+- <strong>Severity</strong>: warn
+- <strong>Auto-fixable</strong>: false
+- <strong>False positive risk</strong>: Low. 50K tokens is a high bar.</p>
+<h3 id="cache-rules-from-verifycachefriendlyorder">Cache rules (from <code>VerifyCacheFriendlyOrder</code>)</h3>
+<p><strong>Rule 12: Cache-Unfriendly Order</strong> (<code>cache-unfriendly-order</code>)
+- <strong>Catches</strong>: Prompts where a dynamic section (with <code>{{...}}</code> or <code>${...}</code> variables) appears before a static section (<code>&lt;role&gt;</code>, <code>&lt;constraints&gt;</code>, <code>&lt;examples&gt;</code>, <code>&lt;output_format&gt;</code>).
+- <strong>Severity</strong>: warn
+- <strong>False positive risk</strong>: Low.</p>
+<p><strong>Rule 13: Cache-Unfriendly Variable</strong> (<code>cache-unfriendly-variable</code>)
+- <strong>Catches</strong>: Template variables in the first third of the prompt text.
+- <strong>Severity</strong>: info
+- <strong>False positive risk</strong>: Low.</p>
+<p><strong>Rule 14: Cache No Structure</strong> (<code>cache-no-structure</code>)
+- <strong>Catches</strong>: Prompts over 1,000 tokens with no XML tags whatsoever.
+- <strong>Severity</strong>: info
+- <strong>False positive risk</strong>: Medium. Markdown-structured prompts for Gemini/OpenAI targets will be flagged as lacking XML, even though their structure is appropriate for the target.</p>
+<h3 id="rule-overlaps-and-conflicts">Rule overlaps and conflicts</h3>
+<ul>
+<li><strong>Rules 1 and 7 can conflict</strong>: A prompt with "Think step by step because it helps me understand the reasoning" would pass Rule 1 (motivated) but still fire Rule 7 (thinking-mode-redundant).</li>
+<li><strong>Rules 2 and 6 can overlap</strong>: A safety-critical negative with an injection variable will have Rule 6 bypass the safety check in Rule 2, since they are independent checkers.</li>
+<li><strong>Rule 14 conflicts with the default pipeline behavior</strong>: The pipeline produces markdown structure for the OpenAI default target, but Rule 14 in <code>VerifyCacheFriendlyOrder</code> checks for XML tags only. Markdown-structured prompts targeting OpenAI will always trigger <code>cache-no-structure</code>.</li>
+</ul>
+<hr />
+<h2 id="5-llm-client-parity">5. LLM Client Parity</h2>
+<p>Three clients implement <code>PromptImprover</code>: <code>LLMClient</code> (Claude), <code>GeminiClient</code> (Gemini), <code>OpenAIClient</code> (OpenAI). A fourth client, <code>SamplingEngine</code>, uses MCP Sampling (host-client completion).</p>
+<h3 id="side-by-side-comparison">Side-by-side comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Claude (<code>llmclient.go</code>)</th>
+<th>Gemini (<code>gemini_client.go</code>)</th>
+<th>OpenAI (<code>openai_client.go</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Default model</td>
+<td><code>claude-sonnet-4-6</code></td>
+<td><code>gemini-2.5-pro</code></td>
+<td><code>o3</code></td>
+</tr>
+<tr>
+<td>Default timeout</td>
+<td>30s</td>
+<td>30s</td>
+<td>30s</td>
+</tr>
+<tr>
+<td>API style</td>
+<td>Anthropic Go SDK</td>
+<td>Raw HTTP (REST)</td>
+<td>Raw HTTP (Responses API)</td>
+</tr>
+<tr>
+<td>API key env</td>
+<td><code>ANTHROPIC_API_KEY</code></td>
+<td><code>GOOGLE_API_KEY</code> or <code>GEMINI_API_KEY</code></td>
+<td><code>OPENAI_API_KEY</code></td>
+</tr>
+<tr>
+<td>Custom base URL</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Max output tokens</td>
+<td>4096</td>
+<td>4096</td>
+<td>4096</td>
+</tr>
+<tr>
+<td>Circuit breaker</td>
+<td>Shared via <code>HybridEngine.CB</code></td>
+<td>Shared via <code>HybridEngine.CB</code></td>
+<td>Shared via <code>HybridEngine.CB</code></td>
+</tr>
+<tr>
+<td>Retry/backoff</td>
+<td>Via <code>retryImprove()</code> in <code>backoff.go</code></td>
+<td>Via <code>retryImprove()</code></td>
+<td>Via <code>retryImprove()</code></td>
+</tr>
+<tr>
+<td>Thinking mode</td>
+<td>Yes (<code>AdaptiveThinking</code>, display omitted by default)</td>
+<td>Yes (<code>thinkingBudget: -1</code> = dynamic)</td>
+<td>Yes (per spec, but not surfaced as <code>ThinkingEnabled</code> maps to reasoning effort)</td>
+</tr>
+<tr>
+<td>Prompt caching</td>
+<td>Yes — <code>CacheControl</code> param on SDK (<code>cache_control</code> ephemeral, default enabled)</td>
+<td>Yes — <code>CreateCachedContent()</code> creates a <code>cachedContents</code> resource with 1h TTL</td>
+<td>No — prefix caching is automatic on the Responses API; no explicit control needed</td>
+</tr>
+<tr>
+<td>Effort/reasoning</td>
+<td><code>OutputConfig.Effort</code> ("low"/"medium"/"high"/"max")</td>
+<td>Not supported in current <code>Improve()</code></td>
+<td><code>Reasoning.Effort</code> ("none"/"low"/"medium"/"high") per task type</td>
+</tr>
+<tr>
+<td>Multi-turn</td>
+<td>Not used</td>
+<td>Not used</td>
+<td><code>PreviousResponseID</code> tracked via <code>c.LastResponseID</code> — <strong>unique to OpenAI client</strong></td>
+</tr>
+<tr>
+<td>Error extraction</td>
+<td>SDK wraps errors with status codes</td>
+<td>HTTP status code + JSON body</td>
+<td>HTTP status code + JSON body</td>
+</tr>
+</tbody>
+</table>
+<h3 id="circuit-breaker">Circuit breaker</h3>
+<p>All three clients share the <strong>same</strong> <code>CircuitBreaker</code> instance per <code>HybridEngine</code>. Parameters: <code>maxFailures=3</code>, <code>cooldown=60s</code>. Recovery: after 60s, state transitions to <code>half-open</code>; one probe request is allowed. On success, immediately resets to <code>closed</code>. On failure in <code>half-open</code>, state stays <code>half-open</code> (the <code>Allow()</code> method returns <code>false</code> for <code>half-open</code> — meaning only one probe ever escapes, but there's no explicit re-open timer for subsequent half-open failures; the <code>RecordFailure</code> counter increments and will set <code>openUntil</code> again since <code>failures &gt;= maxFailures</code>).</p>
+<p>The circuit is not per-provider — if Gemini starts failing, it trips the shared circuit and also blocks Claude attempts until reset. This is likely unintentional.</p>
+<h3 id="retrybackoff">Retry/backoff</h3>
+<p>All three clients use identical retry policy via <code>retryImprove()</code> in <code>backoff.go</code>: base 500ms, max 30s, factor 2.0, 3 retries. Full jitter (uniform random in [0, ceiling]) via <code>math/rand/v2</code>. Context cancellation and deadline exceeded errors are non-retryable. Rate limits (429), server errors (5xx), and transient network errors are retryable. Auth errors (401/403) and bad requests (400) are non-retryable.</p>
+<p>The Gemini client uses the Gemini-specific error code <code>RESOURCE_EXHAUSTED</code> in the retryable detection string, which is correctly handled by the <code>isRetryableError</code> function.</p>
+<h3 id="timeout-handling">Timeout handling</h3>
+<p>Timeout is set on the <code>http.Client</code> at construction time. The <code>HybridEngine</code> also applies a context deadline via <code>context.WithTimeout(ctx, timeout)</code> in <code>hybrid.go:128</code>. The Claude SDK client has its own <code>http.Client{Timeout: timeout}</code> wired through <code>option.WithHTTPClient</code>. This means the timeout is enforced twice for Claude (once by context, once by HTTP client), which is harmless — the shorter deadline wins.</p>
+<h3 id="error-handling-patterns">Error handling patterns</h3>
+<ul>
+<li><strong>Claude</strong>: SDK returns typed errors. The <code>Improve()</code> method wraps with <code>fmt.Errorf("api call: %w", err)</code>.</li>
+<li><strong>Gemini/OpenAI</strong>: Raw HTTP clients check <code>resp.StatusCode != http.StatusOK</code> and return <code>fmt.Errorf("api error (status %d): %s", ...)</code>. Additionally, Gemini checks <code>apiResp.Error != nil</code> after JSON parse; OpenAI checks <code>apiResp.Error != nil</code>. Error message format differs between providers — Gemini uses <code>Status: Message</code>, OpenAI uses <code>Type: Message</code>.</li>
+</ul>
+<hr />
+<h2 id="6-hybrid-engine-flow">6. Hybrid Engine Flow</h2>
+<p><code>EnhanceHybrid()</code> in <code>hybrid.go:61</code> orchestrates the decision between local-only and LLM-assisted enhancement.</p>
+<h3 id="decision-tree">Decision tree</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>EnhanceHybrid(mode, engine)
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── mode==&quot;&quot; → coerce to ModeAuto
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├── mode==ModeLocal OR engine==nil
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   └── EnhanceWithConfig() [local pipeline]
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│       result.Source = &quot;local&quot;
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>└── mode==ModeLLM or ModeAuto
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    │
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    ├── Check PromptCache.Get(prompt, opts)
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    │   └── HIT → return cached result, Source=&quot;llm_cached&quot;
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    │
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    ├── Check CircuitBreaker.Allow()
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    │   ├── OPEN + mode==ModeLLM → return original prompt, Source=&quot;error&quot;
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    │   └── OPEN + mode==ModeAuto → EnhanceWithConfig() fallback
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    │                                Source=&quot;local_fallback&quot;
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    │
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    ├── retryImprove(client, prompt, opts, DefaultBackoff())
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    │   ├── ERROR + mode==ModeLLM → return original prompt, Source=&quot;error&quot;
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    │   ├── ERROR + mode==ModeAuto → EnhanceWithConfig() fallback
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    │   │                            Source=&quot;local_fallback&quot;
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    │   └── SUCCESS
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>    │       ├── CB.RecordSuccess()
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>    │       ├── Cache.Put(prompt, opts, result)
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>    │       └── return result, Source=&quot;llm&quot;
+</code></pre></div>
+<h3 id="decision-controls">Decision controls</h3>
+<p>The decision is controlled by:
+1. <strong><code>mode</code> parameter</strong> (<code>ModeLocal</code>, <code>ModeLLM</code>, <code>ModeAuto</code>, <code>ModeSampling</code>)
+2. <strong><code>engine == nil</code></strong> — engine is nil if LLM is not enabled in config or no API key is available
+3. <strong>Circuit breaker state</strong> — open circuit forces fallback in Auto mode, hard-fails in LLM-only mode
+4. <strong>Cache hit</strong> — bypasses both circuit check and LLM call</p>
+<p>There is no <strong>cost budget</strong> gate in the hybrid engine itself. Cost enforcement happens upstream in the session manager (<code>session/budget.go</code>), not in the enhancer.</p>
+<h3 id="samplingengine"><code>SamplingEngine</code></h3>
+<p>A fourth mode (<code>ModeSampling</code>) is defined in <code>sampling.go</code>. It routes through MCP Sampling (<code>sampling/createMessage</code>) to let the host client (e.g., Claude Code) perform the LLM call. This is the only mode that does not go through <code>HybridEngine</code> — it implements <code>PromptImprover</code> directly. The <code>ValidMode()</code> function in <code>hybrid.go:20</code> accepts <code>"sampling"</code> as a valid mode.</p>
+<hr />
+<h2 id="7-prompt-caching-strategy">7. Prompt Caching Strategy</h2>
+<h3 id="claude-sdk-cache_control">Claude — SDK cache_control</h3>
+<p><strong>File</strong>: <code>llmclient.go:136</code></p>
+<p>When <code>c.cacheControl == true</code> (default unless explicitly disabled), the SDK call includes:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">params</span><span class="p">.</span><span class="nx">CacheControl</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">anthropic</span><span class="p">.</span><span class="nx">NewCacheControlEphemeralParam</span><span class="p">()</span>
+</code></pre></div>
+This applies a top-level <code>cache_control</code> to the last cacheable block (the system message). The ephemeral cache has a 5-minute TTL per Anthropic's documentation. Cache hits are reflected in token usage as <code>cache_read_input_tokens</code>.</p>
+<p>Default is <code>true</code> unless <code>CacheControl: false</code> is explicitly set in config or via <code>PROMPT_IMPROVER_CACHE=0</code>. The <code>cacheControlSet</code> bool tracks whether the field was explicitly provided in YAML (via custom <code>UnmarshalYAML</code>), preventing the zero-value false from disabling caching.</p>
+<p><strong>Estimated savings</strong>: 80-90% on system prompt tokens for repeated calls with the same meta-prompt.</p>
+<h3 id="gemini-cachedcontents-api">Gemini — cachedContents API</h3>
+<p><strong>File</strong>: <code>gemini_client.go:209</code></p>
+<p><code>CreateCachedContent()</code> creates a server-side cache entry via <code>POST /v1beta/cachedContents</code> with a 1-hour TTL (<code>"ttl": "3600s"</code>). The returned cache name (e.g., <code>cachedContents/abc123</code>) is stored in <code>c.CacheName</code>. Subsequent <code>Improve()</code> calls use <code>reqBody.CachedContent = c.CacheName</code> instead of inlining the system instruction.</p>
+<p><strong>Critical gap</strong>: <code>CreateCachedContent()</code> is <strong>never called automatically</strong>. It must be called by the operator and the cache name manually stored. The <code>HybridEngine</code> does not call it. This means Gemini prompt caching is opt-in at the operator level and is not activated by default, unlike Claude where caching is on by default.</p>
+<p><strong>Estimated savings</strong>: 90% on system instruction tokens when cache is active.</p>
+<h3 id="openai-automatic-prefix-caching">OpenAI — automatic prefix caching</h3>
+<p><strong>File</strong>: <code>openai_client.go</code> (implicit)</p>
+<p>OpenAI's Responses API provides automatic prefix caching on inputs exceeding 1,024 tokens. No explicit action is required. <code>PreviousResponseID</code> is tracked via <code>c.LastResponseID</code> for multi-turn chaining, which allows the API to cache the entire conversation prefix. This is the most automatic of the three implementations.</p>
+<p><strong>Estimated savings</strong>: 50% on cached input tokens (OpenAI's standard prefix caching discount).</p>
+<h3 id="in-process-llm-result-cache">In-process LLM result cache</h3>
+<p><strong>File</strong>: <code>cache.go:14</code> — <code>PromptCache</code></p>
+<p>Separate from API-level caching. SHA-256 keyed on <code>provider + prompt + thinkingEnabled + taskType + feedback</code>. Max 100 entries, 10-minute TTL, oldest-entry eviction (not LRU — the eviction scans all entries).</p>
+<p><strong>File</strong>: <code>cache.go:128</code> — <code>EnhancerCache</code></p>
+<p>LRU cache for the deterministic (local) pipeline results. SHA-256 keyed on normalized prompt + provider. Max 256 entries (configurable), 10-minute TTL (configurable), proper LRU via <code>container/list</code>. Normalizes prompts by trimming and collapsing whitespace. <code>Invalidate()</code> removes entries across all 3 providers for a given prompt.</p>
+<p>The <code>PromptCache</code> eviction is O(n) (map scan), while <code>EnhancerCache</code> eviction is O(1) (doubly-linked list tail). This is a latent performance gap for the LLM result cache at high volume.</p>
+<hr />
+<h2 id="8-ab-testing-infrastructure">8. A/B Testing Infrastructure</h2>
+<p>The A/B testing in ralphglasses operates on <strong>session observation data</strong> (loop iteration outcomes), not on prompt variants themselves. It is implemented in <code>internal/eval/</code> and exposed via <code>handler_eval.go</code>.</p>
+<h3 id="ralphglasses_eval_ab_test-mcp-tool"><code>ralphglasses_eval_ab_test</code> (MCP tool)</h3>
+<p><strong>File</strong>: <code>handler_eval.go:97</code></p>
+<p>Two modes:
+- <strong>providers</strong>: Compares two providers (e.g., <code>claude</code> vs <code>gemini</code>) by splitting <code>LoopObservation</code> records by <code>WorkerProvider</code>. Uses <code>eval.CompareProviders()</code>.
+- <strong>periods</strong>: Compares observations before and after a split timestamp. Uses <code>eval.ComparePeriods()</code>.</p>
+<p>Minimum group size: <code>abTestMinGroupSize = 5</code> observations per group. Below this threshold, returns <code>status: "insufficient_data"</code> without computing posteriors.</p>
+<p>Data source: <code>session.ObservationPath(r.Path)</code> → <code>.ralph/observations.jsonl</code> (JSONL, one observation per session iteration). The time window is configurable (<code>hours</code> param, default 168h = 7 days).</p>
+<h3 id="ralphglasses_eval_significance-mcp-tool"><code>ralphglasses_eval_significance</code> (MCP tool)</h3>
+<p><strong>File</strong>: <code>handler_eval.go:289</code></p>
+<p>Three modes:
+- <strong>providers</strong>: Uses <code>eval.GenerateReport()</code> on binary success vectors (1.0/0.0 from <code>VerifyPassed</code>)
+- <strong>periods</strong>: Same as providers but split by time
+- <strong>cost</strong>: Uses <code>eval.WelchTTest()</code> on cost vectors — Welch's t-test for unequal-variance groups</p>
+<h3 id="statistical-methods">Statistical methods</h3>
+<p>From <code>handler_eval.go</code> references to <code>internal/eval</code>:
+- <code>eval.CompareProviders()</code>: Bayesian posterior comparison
+- <code>eval.ComparePeriods()</code>: Bayesian comparison by time split
+- <code>eval.GenerateReport()</code>: Full significance report including confidence intervals
+- <code>eval.WelchTTest()</code>: Welch's t-test for cost comparison
+- <code>eval.DetectChangepoints()</code>: Sliding-window changepoint detection with <code>changepointBurnIn = 5</code> to suppress early false positives</p>
+<h3 id="storage">Storage</h3>
+<p>Results are stored in <code>.ralph/observations.jsonl</code> (append-only JSONL per repo). The eval tools read this file directly. There is no centralized results store — each repo has its own observation history.</p>
+<h3 id="prompt-level-ab-testing">Prompt-level A/B testing</h3>
+<p>There is no dedicated prompt variant A/B infrastructure in the enhancer. The <code>prompt_ab_test</code> MCP tool (listed in the namespace table) routes through the prompt namespace handler. However, the actual <code>handlePromptAnalyze</code> and <code>handlePromptEnhance</code> handlers don't persist variants or outcomes — any A/B comparison of prompt variants would need to be done by the caller comparing two <code>Analyze</code> or <code>Enhance</code> results. The session-level A/B infrastructure is more mature than the prompt-level A/B infrastructure.</p>
+<hr />
+<h2 id="9-gaps-and-risks">9. Gaps and Risks</h2>
+<h3 id="gap-no-code-specific-optimization-beyond-basic-guards">Gap: No code-specific optimization beyond basic guards</h3>
+<p>The pipeline has no language-specific stages. A Go prompt and a Python prompt get identical treatment (except the classifier may route to <code>TaskTypeCode</code>). No detection of:
+- Missing test framework specification
+- Missing type annotation requirements
+- Language-specific idiom enforcement (Go error wrapping, Python type hints)</p>
+<p>The <code>code_review</code> template (<code>templates.go</code>) partially addresses this by using <code>{{language}}</code> placeholders, but the pipeline stages themselves are language-agnostic.</p>
+<h3 id="gap-gemini-caching-is-not-auto-activated">Gap: Gemini caching is not auto-activated</h3>
+<p><code>CreateCachedContent()</code> must be called manually. The <code>HybridEngine</code> constructor does not call it. Gemini users get no prompt caching without operator intervention, despite the CLAUDE.md advertising "80-90% input cost savings."</p>
+<h3 id="gap-shared-circuit-breaker-across-providers">Gap: Shared circuit breaker across providers</h3>
+<p>A single <code>CircuitBreaker</code> in <code>HybridEngine</code> gates all three providers. If one provider's API is rate-limiting, the shared circuit trips and also blocks the other providers. Should be per-provider.</p>
+<h3 id="gap-half-open-state-behavior">Gap: Half-open state behavior</h3>
+<p>When the circuit is in <code>half-open</code>, <code>Allow()</code> returns <code>false</code> immediately. This means only the first probe request that transitioned from <code>open</code> → <code>half-open</code> gets through. If that probe fails, <code>RecordFailure()</code> increments the counter and re-opens (since <code>failures &gt;= maxFailures</code> is still true). The circuit will re-open for another 60s and then probe again. This is correct behavior but means recovery can be slow under repeated probe failures.</p>
+<h3 id="gap-promptcache-eviction-is-on">Gap: <code>PromptCache</code> eviction is O(n)</h3>
+<p>The LLM result cache (<code>PromptCache</code>) uses a map scan for eviction. At max size (100 entries) this is negligible, but the <code>EnhancerCache</code> has proper LRU with O(1) eviction. The inconsistency is a latent performance issue if <code>maxSize</code> is increased.</p>
+<h3 id="scoring-blind-spot-document-placement-baseline">Scoring blind spot: Document Placement baseline</h3>
+<p><code>scoreDocumentPlacement()</code> starts at 40 and notes "For short prompts, placement is less important — neutral score. However, if the prompt already has XML structure, placement is demonstrated." For short prompts without XML, the score stays exactly at 40 (grade D). This means essentially every short prompt without structure scores D on Document Placement, inflating the "has weak dimensions" count in <code>ShouldEnhance()</code> and causing unnecessary enhancement recommendations for short, valid prompts.</p>
+<h3 id="scoring-blind-spot-tone-dimension-baseline-asymmetry">Scoring blind spot: Tone dimension baseline asymmetry</h3>
+<p><code>scoreTone()</code> starts at 70 (grade C baseline) and awards bonuses for polite markers. This means a prompt with zero tone issues starts with a C, not a D/F. The rationale (neutral tone is fine) is sound, but it creates a systematic score inflation in the Tone dimension relative to others that start at 25-30 and must earn their way up.</p>
+<h3 id="risk-safetynegativepattern-applies-to-entire-prompt-not-per-line">Risk: <code>safetyNegativePattern</code> applies to entire prompt, not per-line</h3>
+<p>In <code>reframeNegatives()</code> (<code>pipeline.go:77</code>), if <code>safetyNegativePattern</code> matches anywhere in the prompt, the <strong>entire Stage 2 is skipped</strong> for the whole prompt. A prompt that combines a safety-critical negative ("never disclose credentials") with benign negatives ("never use bullet points") will skip reframing for all of them. The per-line <code>Lint()</code> checker (<code>checkNegativeFraming</code>) does apply the safety bypass per-line, making Lint more accurate than the pipeline stage.</p>
+<h3 id="risk-default-target-provider-is-openai-not-claude">Risk: Default target provider is OpenAI, not Claude</h3>
+<p><code>config.go:239</code> defaults <code>TargetProvider</code> to <code>ProviderOpenAI</code> (via <code>defaultTargetProviderForLLM("openai")</code>) when no target is specified and the LLM provider defaults to "openai". This means the pipeline produces markdown structure instead of XML by default, and skips tone_downgrade and overtrigger_rewrite for Claude targets. Users who are sending prompts to Claude but haven't set <code>PROMPT_IMPROVER_TARGET=claude</code> get the wrong pipeline behavior silently.</p>
+<h3 id="risk-thinkingenabled-propagation-gap-for-openai">Risk: <code>ThinkingEnabled</code> propagation gap for OpenAI</h3>
+<p>In <code>openai_client.go:130-131</code>, <code>opts.ThinkingEnabled</code> is passed as <code>ImproveOptions.ThinkingEnabled</code> but the <code>reasoningEffort()</code> function ignores it — it only maps <code>taskType</code> to effort level. Enabling thinking does change the meta-prompt (via <code>MetaPromptFor</code> selecting <code>OpenAIMetaPromptWithThinking</code>), but the API call does not change its reasoning effort based on <code>ThinkingEnabled</code>. For OpenAI, <code>ThinkingEnabled</code> only affects the meta-prompt, not the model's reasoning behavior.</p>
+<h3 id="risk-wrapinputoutputpairs-requires-exactly-adjacent-pairs">Risk: <code>wrapInputOutputPairs()</code> requires exactly adjacent pairs</h3>
+<p><code>examples.go:53</code> requires <code>Input:</code> and <code>Output:</code> on consecutive lines. Any blank line between them breaks detection. This means most human-written examples with a blank line for readability will not be detected.</p>
+<h3 id="risk-knowledgeinjectorgo-injectcontext-always-uses-xml">Risk: <code>knowledge/injector.go</code> — <code>InjectContext()</code> always uses XML</h3>
+<p><code>InjectContext()</code> calls <code>formatContextBlock()</code> (XML format) regardless of <code>TargetProvider</code>. The <code>FormatContextBlockMarkdown()</code> method exists but is unreachable from the main pipeline. If the pipeline is targeting Gemini/OpenAI, injected codebase context will be in XML format while the rest of the structure is markdown — a formatting inconsistency.</p>
+<h3 id="risk-openaiclientlastresponseid-is-not-thread-safe">Risk: <code>OpenAIClient.LastResponseID</code> is not thread-safe</h3>
+<p><code>openai_client.go:22</code> declares <code>LastResponseID string</code> as a plain field on <code>OpenAIClient</code>. If a single client is used concurrently (which could happen if the same <code>HybridEngine</code> is shared across goroutines), <code>LastResponseID</code> reads/writes are unprotected. The <code>HybridEngine</code> itself has no mutex. This is a data race risk under concurrent use.</p>
+<h3 id="risk-enforceoutputformat-uses-xml-output_format-for-all-targets">Risk: <code>enforceOutputFormat()</code> uses XML <code>&lt;output_format&gt;</code> for all targets</h3>
+<p><code>pipeline_format.go:148</code> injects <code>&lt;output_format&gt;</code> XML tags even when the target provider is Gemini or OpenAI. These XML tags are unlikely to be problematic, but they create inconsistency with the markdown-structured output of Stage 6 for non-Claude targets.</p>
+<hr />
+<h2 id="10-file-reference-summary">10. File Reference Summary</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enhancer.go</code></td>
+<td>Pipeline orchestrator (<code>EnhanceWithConfig</code>), <code>Analyze()</code>, <code>WrapWithExamples()</code></td>
+</tr>
+<tr>
+<td><code>pipeline.go</code></td>
+<td>Stages 1–3, Stage 6 (XML/markdown structure, <code>roleForTaskType</code>, <code>constraintsForTaskType</code>)</td>
+</tr>
+<tr>
+<td><code>pipeline_format.go</code></td>
+<td>Stages 4, 8, 10, 11, 12 (overtrigger, format enforcement, self-check, overengineering guard, preamble suppression)</td>
+</tr>
+<tr>
+<td><code>scoring.go</code></td>
+<td>10-dimension <code>Score()</code>, <code>ScoreReport</code>, <code>DimensionScore</code>, grading thresholds</td>
+</tr>
+<tr>
+<td><code>lint.go</code></td>
+<td>11 lint rules (Rules 1–11), <code>Lint()</code>, <code>VerifyCacheFriendlyOrder()</code> partially</td>
+</tr>
+<tr>
+<td><code>context.go</code></td>
+<td>Stage 7 (<code>ReorderLongContext</code>), Stage 9 (<code>InjectQuoteGrounding</code>), cache rules, <code>EstimateTokens</code></td>
+</tr>
+<tr>
+<td><code>filter.go</code></td>
+<td><code>ShouldEnhance()</code>, <code>hasWeakDimensions()</code>, conversational/structured/filepath gates</td>
+</tr>
+<tr>
+<td><code>config.go</code></td>
+<td><code>Config</code>, <code>LLMConfig</code>, <code>LoadConfig</code>, <code>ResolveConfig</code>, stage disable, rules engine</td>
+</tr>
+<tr>
+<td><code>hybrid.go</code></td>
+<td><code>HybridEngine</code>, <code>EnhanceHybrid()</code>, mode dispatch, circuit/cache integration</td>
+</tr>
+<tr>
+<td><code>provider.go</code></td>
+<td><code>PromptImprover</code> interface, <code>NewPromptImprover()</code>, provider constants, <code>defaultTargetProviderForLLM</code></td>
+</tr>
+<tr>
+<td><code>llmclient.go</code></td>
+<td>Claude Anthropic SDK client, <code>LLMClient.Improve()</code>, prompt caching via <code>cache_control</code></td>
+</tr>
+<tr>
+<td><code>gemini_client.go</code></td>
+<td>Gemini REST client, <code>GeminiClient.Improve()</code>, <code>CreateCachedContent()</code></td>
+</tr>
+<tr>
+<td><code>openai_client.go</code></td>
+<td>OpenAI Responses API client, <code>OpenAIClient.Improve()</code>, <code>LastResponseID</code> multi-turn</td>
+</tr>
+<tr>
+<td><code>circuit.go</code></td>
+<td><code>CircuitBreaker</code> (3 failures → 60s cooldown), <code>Allow()</code>, <code>RecordSuccess/Failure()</code>, <code>Reset()</code></td>
+</tr>
+<tr>
+<td><code>cache.go</code></td>
+<td><code>PromptCache</code> (100 entries, O(n) eviction), <code>EnhancerCache</code> (LRU, O(1) eviction)</td>
+</tr>
+<tr>
+<td><code>classifier.go</code></td>
+<td><code>Classify()</code>, <code>ClassifyDetailed()</code>, 6 task types, keyword + phrase scoring</td>
+</tr>
+<tr>
+<td><code>sampling.go</code></td>
+<td><code>SamplingEngine</code> (MCP Sampling mode), <code>SamplingScore()</code></td>
+</tr>
+<tr>
+<td><code>backoff.go</code></td>
+<td><code>DefaultBackoff()</code>, <code>retryImprove()</code>, <code>isRetryableError()</code>, full-jitter exponential backoff</td>
+</tr>
+<tr>
+<td><code>metaprompt.go</code></td>
+<td>3 provider-specific meta-prompts + thinking variants, <code>MetaPromptFor()</code></td>
+</tr>
+<tr>
+<td><code>templates.go</code></td>
+<td>6 builtin templates (troubleshoot, code_review, workflow_create, data_analysis, code, creative_brief)</td>
+</tr>
+<tr>
+<td><code>examples.go</code></td>
+<td>Stage 5: <code>DetectAndWrapExamples()</code>, 3 detection strategies</td>
+</tr>
+<tr>
+<td><code>claudemd.go</code></td>
+<td><code>CheckClaudeMD()</code>: 6 CLAUDE.md health checks</td>
+</tr>
+<tr>
+<td><code>knowledge/graph.go</code></td>
+<td>In-memory directed code entity graph, <code>RelatedContext()</code> keyword matching</td>
+</tr>
+<tr>
+<td><code>knowledge/injector.go</code></td>
+<td><code>InjectContext()</code> (XML) + <code>FormatContextBlockMarkdown()</code> (unused)</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

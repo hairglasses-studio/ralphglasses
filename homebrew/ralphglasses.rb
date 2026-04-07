@@ -19,8 +19,7 @@ class Ralphglasses < Formula
 
   on_linux do
     if Hardware::CPU.arm?
-      url "https://github.com/hairglasses-studio/ralphglasses/releases/download/v#{version}/ralphglasses_#{version}_linux_arm64.tar.gz"
-      sha256 "PLACEHOLDER"
+      raise "Linux arm64 is no longer supported for ralphglasses"
     else
       url "https://github.com/hairglasses-studio/ralphglasses/releases/download/v#{version}/ralphglasses_#{version}_linux_amd64.tar.gz"
       sha256 "PLACEHOLDER"

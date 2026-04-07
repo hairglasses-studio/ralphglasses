@@ -115,7 +115,6 @@ distro/
   Dockerfile.manjaro.hyprland # OS build (Manjaro + Hyprland + NVIDIA)
   Makefile               # Build targets (docker-sway, docker-hyprland, build-both)
   grub/                  # UEFI boot menu config
-  dietpi/                # Legacy DietPi config (deprecated)
   pxe/                   # PXE network boot docs
   autorandr/             # Monitor profiles (X11 only, populated after first setup)
 ```

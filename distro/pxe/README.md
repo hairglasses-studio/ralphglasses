@@ -5,7 +5,7 @@ Network boot the ralphglasses thin client from your UNRAID or Proxmox server.
 ## Overview
 
 PXE boot eliminates local storage — the thin client boots entirely from the network.
-The server serves the DietPi image + ralphglasses customizations.
+The server serves an x86_64 thin-client image + ralphglasses customizations.
 
 ## Setup
 
@@ -32,7 +32,7 @@ ThinStation is purpose-built for PXE thin clients (~50MB).
 
 ## TODO
 
-- [ ] Build LTSP image from DietPi + ralphglasses customizations
+- [ ] Build LTSP image from the supported x86_64 thin-client rootfs
 - [ ] Create ThinStation build config
 - [ ] Test with actual thin client hardware
 - [ ] Document UNRAID Docker container for PXE server

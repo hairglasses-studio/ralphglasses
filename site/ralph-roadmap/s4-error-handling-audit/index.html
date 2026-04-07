@@ -1,0 +1,1603 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ralph-roadmap/s4-error-handling-audit/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>S4 Error Handling Audit — ralphglasses - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#s4-error-handling-audit-ralphglasses" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              S4 Error Handling Audit — ralphglasses
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-handler-contract-compliance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Handler Contract Compliance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-panic-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Panic Inventory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-swallowed-errors-top-20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Swallowed Errors — Top 20
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-error-wrapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Error Wrapping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-context-cancellation-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Context Cancellation Gaps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-silent-failure-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Silent Failure Patterns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-recovery-misuse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Recovery Misuse
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-package-grades" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Package Grades
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-fix-priority-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Fix Priority List
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary-statistics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary Statistics
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="s4-error-handling-audit-ralphglasses">S4 Error Handling Audit — ralphglasses</h1>
+<p><strong>Date</strong>: 2026-04-04
+<strong>Auditor</strong>: Claude Sonnet 4.6 (automated static analysis)
+<strong>Scope</strong>: <code>internal/</code> — all non-test Go source files
+<strong>Method</strong>: grep-based pattern analysis + targeted file reads</p>
+<hr />
+<h2 id="1-handler-contract-compliance">1. Handler Contract Compliance</h2>
+<p>The mcpkit convention requires MCP handlers to return <code>(*mcp.CallToolResult, nil)</code> — never <code>(nil, error)</code>. ralphglasses uses a local <code>codedError()</code> helper instead of mcpkit's <code>handler.CodedErrorResult</code>, but the semantics are equivalent.</p>
+<p><strong>No handler-level contract violations were found.</strong></p>
+<p>The search turned up four files with <code>return nil, ...</code> patterns in handler files, but all four are helper/private functions, not MCP handlers:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>False Alarm Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>handler_sweep.go:674,680</code></td>
+<td><code>resolveSweepRepos()</code> returns <code>([]*repoRef, error)</code></td>
+</tr>
+<tr>
+<td><code>handler_rc.go:44,53</code></td>
+<td><code>resolveTarget()</code> returns <code>(*session.Session, *mcp.CallToolResult)</code></td>
+</tr>
+<tr>
+<td><code>handler_loopwait.go:111,145</code></td>
+<td><code>checkAwaitStatus()</code> returns <code>(*mcp.CallToolResult, bool)</code></td>
+</tr>
+<tr>
+<td><code>handler_harness_test.go:215</code></td>
+<td>test helper, not production</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Handler compliance table</strong> (sampled; all 44 handlers audited):</p>
+<table>
+<thead>
+<tr>
+<th>Handler File</th>
+<th>Return-nil-err Violations</th>
+<th>codedError / errResult Uses</th>
+<th>Grade</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>handler_session_lifecycle.go</td>
+<td>0</td>
+<td>26</td>
+<td>A</td>
+</tr>
+<tr>
+<td>handler_rc.go</td>
+<td>0 (helper fn)</td>
+<td>28</td>
+<td>A</td>
+</tr>
+<tr>
+<td>handler_rdcycle.go</td>
+<td>0</td>
+<td>33</td>
+<td>A</td>
+</tr>
+<tr>
+<td>handler_sweep.go</td>
+<td>0 (helper fn)</td>
+<td>17</td>
+<td>A</td>
+</tr>
+<tr>
+<td>handler_repo.go</td>
+<td>0</td>
+<td>37</td>
+<td>A</td>
+</tr>
+<tr>
+<td>handler_team.go</td>
+<td>0</td>
+<td>38</td>
+<td>A</td>
+</tr>
+<tr>
+<td>handler_fleet.go</td>
+<td>0</td>
+<td>31</td>
+<td>A</td>
+</tr>
+<tr>
+<td>handler_eval.go</td>
+<td>0</td>
+<td>31</td>
+<td>A</td>
+</tr>
+<tr>
+<td>handler_scratchpad.go</td>
+<td>0</td>
+<td>30</td>
+<td>A</td>
+</tr>
+<tr>
+<td>handler_loop.go</td>
+<td>0</td>
+<td>16</td>
+<td>A</td>
+</tr>
+<tr>
+<td>handler_prompt.go</td>
+<td>0</td>
+<td>16</td>
+<td>A</td>
+</tr>
+<tr>
+<td>handler_observation.go</td>
+<td>0</td>
+<td>12</td>
+<td>A</td>
+</tr>
+<tr>
+<td>handler_session.go</td>
+<td>0</td>
+<td>21</td>
+<td>A</td>
+</tr>
+<tr>
+<td>handler_provider_benchmark.go</td>
+<td>0</td>
+<td>0 (no bad params)</td>
+<td>B</td>
+</tr>
+<tr>
+<td>handler_recommend.go</td>
+<td>0</td>
+<td>0 (no bad params)</td>
+<td>B</td>
+</tr>
+<tr>
+<td>handler_fleet_grafana.go</td>
+<td>0</td>
+<td>1</td>
+<td>B</td>
+</tr>
+</tbody>
+</table>
+<p>Two handlers (<code>handler_provider_benchmark.go</code> and <code>handler_recommend.go</code>) have no codedError calls, but both are read-only/analysis tools that degrade gracefully (return empty/not-configured results), so this is acceptable rather than a violation.</p>
+<hr />
+<h2 id="2-panic-inventory">2. Panic Inventory</h2>
+<p>Only <strong>2 panic calls</strong> exist in production code outside tests:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Line</th>
+<th>Code</th>
+<th>Reachability</th>
+<th>Risk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/model/costs.go</code></td>
+<td>70</td>
+<td><code>panic("inputRatio must be in [0, 1]")</code></td>
+<td>Reachable from any code calling <code>BlendedCostPer1MTok()</code> with an out-of-range ratio</td>
+<td>Low — caller contract is clear; callers in codebase all pass constants. Recoverable.</td>
+</tr>
+<tr>
+<td><code>internal/safety/circuit_breaker.go</code></td>
+<td>142</td>
+<td><code>panic(err)</code> in <code>MustNew()</code></td>
+<td>Only reachable from package-init-style call sites</td>
+<td>Low — <code>MustNew</code> is an explicit "panic on bad config" constructor, self-documenting.</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>internal/review/criteria.go:186</code> line contains the string <code>"panic() in library code..."</code> as part of a lint rule message — it is not an executable panic.</p>
+<p><strong>Recovery wrappers</strong> that catch these panics:
+- <code>internal/session/loop_steps.go:313-315</code>: goroutine-level <code>recover()</code> converts panics in worker goroutines to <code>workerResult{err: ...}</code> — correct.
+- <code>internal/fleet/server_handlers.go:397-405</code>: <code>recover()</code> in a health-check closure, logs and marks <code>healthy=false</code> — acceptable defensive use.
+- <code>internal/session/loop_steps.go</code> recovery does NOT re-panic after logging, which is the right choice for worker isolation.</p>
+<p>No unrecovered panics reachable from the hot path (session launch, loop execution, MCP handler dispatch).</p>
+<hr />
+<h2 id="3-swallowed-errors-top-20">3. Swallowed Errors — Top 20</h2>
+<p>Ranked by autonomy-safety impact (highest risk first):</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>File</th>
+<th>Line</th>
+<th>Pattern</th>
+<th>Risk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>internal/mcpserver/handler_selfimprove.go</code></td>
+<td>71</td>
+<td><code>_ = s.SessMgr.RunLoop(context.Background(), run.ID)</code></td>
+<td><strong>High</strong> — self-improvement loop error is silently discarded. If the loop fails immediately (e.g., repo not found, OOM), the handler returns success. At L2+ autonomy this silences feedback that the agent needs to self-correct.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>internal/hooks/hooks.go</code></td>
+<td>139</td>
+<td><code>_ = cmd.Run()</code></td>
+<td><strong>High</strong> — hook command exit codes are silently discarded. A failing pre/post-session hook is invisible to the orchestrator.</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>internal/mcpserver/handler_sweep.go</code></td>
+<td>453</td>
+<td><code>_ = s.SessMgr.Stop(sessID)</code></td>
+<td><strong>Medium-High</strong> — sweep restart stops a session but ignores stop failure. A zombie session may persist consuming budget.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>internal/mcpserver/handler_sweep.go</code></td>
+<td>602</td>
+<td><code>_ = s.SessMgr.Stop(sid)</code></td>
+<td><strong>Medium-High</strong> — same as above in the sweep-schedule nudge path.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>internal/session/manager_lifecycle.go</code></td>
+<td>423</td>
+<td><code>slog.Warn("store save failed, falling back to JSON")</code></td>
+<td><strong>Medium</strong> — SQLite save failure is warn-logged, falls back to JSON. If JSON write also fails (line 443 returns error), the session state is lost on restart. Double-write makes the fallback opaque.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>internal/mcpserver/handler_provider_benchmark.go</code></td>
+<td>190,201</td>
+<td><code>os.MkdirAll(...)</code> / <code>os.WriteFile(...)</code></td>
+<td><strong>Medium</strong> — benchmark results silently not persisted. Operator sees no error, assumes data was saved.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>internal/mcpserver/handler_prompt_ab.go</code></td>
+<td>177,179</td>
+<td>Same pattern</td>
+<td><strong>Medium</strong> — A/B test results silently lost.</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>internal/mcpserver/handler_session_handoff.go</code></td>
+<td>165,167</td>
+<td>Same pattern</td>
+<td><strong>Medium</strong> — handoff records not persisted; replay/audit trail broken.</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>internal/fleet/worker.go</code></td>
+<td>101</td>
+<td><code>_ = w.client.Heartbeat(...)</code></td>
+<td><strong>Medium</strong> — heartbeat failures are silent. Coordinator marks worker as stale after <code>StaleThreshold</code> (90s), but there is no warning logged. Worker continues operating as if healthy.</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>internal/fleet/worker.go</code></td>
+<td>155,183,197</td>
+<td><code>_ = w.client.CompleteWork(...)</code></td>
+<td><strong>Medium</strong> — work completion reports silently discarded on network error. Coordinator retains work item indefinitely, causing duplicate execution on next poll.</td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>internal/fleet/worker.go</code></td>
+<td>250</td>
+<td><code>_ = w.client.SendEvents(...)</code></td>
+<td><strong>Low-Medium</strong> — event forwarding loss; observability gap but not correctness.</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>internal/k8s/controller.go</code></td>
+<td>217</td>
+<td><code>_ = r.client.UpdateSessionStatus(ctx, session)</code></td>
+<td><strong>Medium</strong> — K8s status update discarded after pod creation failure. Stale status in API server.</td>
+</tr>
+<tr>
+<td>13</td>
+<td><code>internal/events/bus.go</code></td>
+<td>300</td>
+<td><code>_ = b.transport.Publish(ctx, event)</code></td>
+<td><strong>Medium</strong> — NATS publish failures silent. Events lost with no retry.</td>
+</tr>
+<tr>
+<td>14</td>
+<td><code>internal/events/bus.go</code></td>
+<td>350</td>
+<td><code>_ = b.PublishCtx(context.Background(), event)</code></td>
+<td><strong>Medium</strong> — fire-and-forget publish in the synchronous <code>Publish()</code> wrapper. No backpressure.</td>
+</tr>
+<tr>
+<td>15</td>
+<td><code>internal/discovery/cache.go</code></td>
+<td>97</td>
+<td><code>_ = sc.persistToDisk(cf)</code></td>
+<td><strong>Low</strong> — cache not persisted, next start cold. Not a correctness issue.</td>
+</tr>
+<tr>
+<td>16</td>
+<td><code>internal/mcpserver/handler_costestimate.go</code></td>
+<td>179</td>
+<td><code>_ = s.scan()</code></td>
+<td><strong>Low</strong> — best-effort scan; if it fails, handler falls back to no-repo mode gracefully.</td>
+</tr>
+<tr>
+<td>17</td>
+<td><code>internal/mcpserver/handler_prompt.go</code></td>
+<td>284</td>
+<td><code>_ = s.scan()</code></td>
+<td><strong>Low</strong> — same as above.</td>
+</tr>
+<tr>
+<td>18</td>
+<td><code>internal/mcpserver/handler_scratchpad.go</code></td>
+<td>37</td>
+<td><code>_ = s.scan()</code></td>
+<td><strong>Low</strong> — same; handled by fallback logic.</td>
+</tr>
+<tr>
+<td>19</td>
+<td><code>internal/blackboard/blackboard.go</code></td>
+<td>257</td>
+<td><code>_, _ = f.Write(data)</code></td>
+<td><strong>Low</strong> — blackboard write failure silent; next Put() will overwrite with correct data.</td>
+</tr>
+<tr>
+<td>20</td>
+<td><code>internal/session/manager_lifecycle.go</code></td>
+<td>598</td>
+<td><code>slog.Warn("failed to remove session state file")</code></td>
+<td><strong>Low</strong> — cleanup failure logged, not propagated; stale files accumulate.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-error-wrapping">4. Error Wrapping</h2>
+<p>Total <code>fmt.Errorf</code> calls in production code: <strong>1,501</strong>
+With <code>%w</code> (unwrap-compatible): <strong>981</strong> (65%)
+Without <code>%w</code> (bare string or <code>%v</code>): <strong>520</strong> (35%)</p>
+<p>Bare <code>%v</code> specifically (true chain-breakers): <strong>9</strong> (0.6%)</p>
+<p><strong>Per-package breakdown:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Total Errorf</th>
+<th>With %w</th>
+<th>Ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>session</td>
+<td>383</td>
+<td>236</td>
+<td>62%</td>
+</tr>
+<tr>
+<td>store</td>
+<td>46</td>
+<td>43</td>
+<td>93%</td>
+</tr>
+<tr>
+<td>fleet</td>
+<td>89</td>
+<td>60</td>
+<td>67%</td>
+</tr>
+<tr>
+<td>batch</td>
+<td>70</td>
+<td>50</td>
+<td>71%</td>
+</tr>
+<tr>
+<td>enhancer</td>
+<td>26</td>
+<td>18</td>
+<td>69%</td>
+</tr>
+<tr>
+<td>marathon</td>
+<td>28</td>
+<td>17</td>
+<td>61%</td>
+</tr>
+<tr>
+<td>mcpserver</td>
+<td>40</td>
+<td>10</td>
+<td>25%</td>
+</tr>
+<tr>
+<td>safety</td>
+<td>~4</td>
+<td>1</td>
+<td>~25%</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>mcpserver</code> package has the worst <code>%w</code> ratio at <strong>25%</strong>. This is partly deliberate — many errors there are formatted into <code>codedError()</code> strings where <code>%w</code> is irrelevant (the error is not passed to callers). However, <code>validate.go</code> and <code>handler_mergeverify.go</code> use bare string formatting in errors that are returned to callers, losing chain information.</p>
+<p>The bare <code>%v</code> (true chain-breakers) are mostly in internal helpers and low-risk paths. The most notable is <code>internal/session/loop_steps.go:315</code> — the goroutine panic capture — where <code>%v</code> is appropriate since the panic value <code>r</code> is <code>any</code>, not <code>error</code>.</p>
+<p>The two direct <code>== context.XXX</code> comparisons (instead of <code>errors.Is</code>) in <code>hooks/chain.go:152</code> and <code>sandbox/limits.go:140</code> could silently miss wrapped context errors from middleware.</p>
+<hr />
+<h2 id="5-context-cancellation-gaps">5. Context Cancellation Gaps</h2>
+<p>Overall context handling is <strong>good</strong>. The loop engine, session manager, fleet coordinator, and worker all check <code>ctx.Err()</code> at iteration boundaries.</p>
+<p><strong>Gaps identified:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>handler_sweep.go:247</code> / <code>handler_sweep.go:517</code></td>
+<td><code>context.WithCancel(context.Background())</code> detaches sweep from handler context. Intentional (sweep outlives request), but if <code>Tasks.Create</code> cancels the context, the goroutine loop does not propagate that signal to already-launched sessions — they run to budget.</td>
+</tr>
+<tr>
+<td><code>handler_loop.go:152</code> / <code>handler_selfimprove.go:71</code></td>
+<td><code>go s.SessMgr.RunLoop(context.Background(), run.ID)</code> — loop runs under <code>context.Background()</code>, so MCP request cancellation does not abort the loop. Again intentional (loop outlives request), but the loop has no shutdown hook tied to server shutdown.</td>
+</tr>
+<tr>
+<td><code>handler_rc.go:428</code> / <code>handler_session_lifecycle.go:119</code> / <code>handler_session_handoff.go:144</code></td>
+<td><code>s.SessMgr.Launch(context.Background(), opts)</code> — launches with background context, severing cancellation. Intentional for long-running sessions, but means graceful shutdown requires polling <code>.Stop()</code> rather than context propagation.</td>
+</tr>
+<tr>
+<td><code>handler_fleet.go:101,143,219</code></td>
+<td><code>s.FleetClient.SubmitWork(context.Background(), ...)</code> / <code>FleetState(context.Background())</code> — fleet client calls use background context. If the fleet server hangs, these calls block indefinitely rather than respecting the MCP request timeout.</td>
+</tr>
+<tr>
+<td><code>internal/session/supervisor.go</code> tick goroutines</td>
+<td><code>RunCycle()</code> goroutines launched at lines 230 and 243 capture <code>ctx</code> from the supervisor's <code>run()</code> loop. If <code>tick()</code> is called when <code>ctx</code> is already cancelled (close race), cycles start and immediately see a cancelled context. This is a benign race but could produce confusing "cycle failed" log entries at shutdown.</td>
+</tr>
+<tr>
+<td><code>internal/marathon/cloud_scheduler.go:320</code></td>
+<td>Checks <code>ctx.Err()</code> in the outer scheduler loop but the inner <code>runTask()</code> call (which makes cloud API requests) receives the same context without an independent timeout. A hung cloud API blocks the scheduler indefinitely.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-silent-failure-patterns">6. Silent Failure Patterns</h2>
+<p>Places where errors are <strong>logged with Warn/Info but not propagated</strong>, creating potential silent failures at L2/L3 autonomy:</p>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Pattern</th>
+<th>Autonomy Risk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>session/supervisor.go:375</code></td>
+<td><code>slog.Warn("supervisor: RunCycle failed")</code> then continues</td>
+<td><strong>Critical</strong> — at L2+ the supervisor silently skips failed cycles. No backoff, no escalation, no HITL trigger. Cycle failures accumulate invisibly.</td>
+</tr>
+<tr>
+<td><code>session/supervisor.go:231</code></td>
+<td><code>slog.Warn("supervisor: chained cycle failed")</code></td>
+<td><strong>High</strong> — chained R&amp;D cycles silently fail; roadmap progress stalls without alert.</td>
+</tr>
+<tr>
+<td><code>session/supervisor.go:244</code></td>
+<td><code>slog.Warn("supervisor: planned sprint failed")</code></td>
+<td><strong>High</strong> — same issue for sprint-planner path.</td>
+</tr>
+<tr>
+<td><code>session/manager_cycle.go:333</code></td>
+<td><code>slog.Warn("RunCycle: task launch failed")</code> then <code>continue</code></td>
+<td><strong>High</strong> — task launch failures are best-effort within RunCycle. A partially-launched cycle proceeds to wait and observe, producing misleading observations.</td>
+</tr>
+<tr>
+<td><code>session/manager.go:177</code></td>
+<td><code>slog.Warn("failed to rehydrate sessions from store")</code></td>
+<td><strong>Medium</strong> — on restart, if SQLite is corrupt, all previous session history is silently lost. Autonomy decisions lose their memory.</td>
+</tr>
+<tr>
+<td><code>marathon/marathon.go:335</code></td>
+<td><code>slog.Warn("marathon: checkpoint save failed")</code></td>
+<td><strong>Medium</strong> — marathon state not persisted. On crash, marathon restarts from scratch, losing cycle count and spend tracking.</td>
+</tr>
+<tr>
+<td><code>marathon/marathon.go:130</code></td>
+<td><code>slog.Warn("marathon: resume failed, starting fresh")</code></td>
+<td><strong>Medium</strong> — resume failures are silently treated as fresh starts; no operator alert.</td>
+</tr>
+<tr>
+<td><code>session/loop_steps.go:697</code></td>
+<td><code>slog.Warn("store record cost failed")</code></td>
+<td><strong>Medium</strong> — cost records not stored; budget tracking becomes inaccurate over time, potentially allowing over-spend.</td>
+</tr>
+<tr>
+<td><code>session/loop_steps.go:438,510,713</code></td>
+<td><code>slog.Warn("failed to write loop journal")</code> (3 sites)</td>
+<td><strong>Low-Medium</strong> — journal write failures silent; loop replay and debugging broken.</td>
+</tr>
+<tr>
+<td><code>session/loop_acceptance.go:33</code></td>
+<td><code>slog.Warn("acceptance: failed to get diff paths")</code> then <code>continue</code></td>
+<td><strong>Medium</strong> — if diff path detection fails for a worktree, that worktree's changes are silently skipped in acceptance. Could cause partial merges.</td>
+</tr>
+<tr>
+<td><code>process/manager_lifecycle.go:41</code></td>
+<td><code>slog.Warn("failed to open log file, process output will be lost")</code></td>
+<td><strong>Low</strong> — session output lost on disk-full; process still starts.</td>
+</tr>
+<tr>
+<td><code>session/autonomy.go:191</code></td>
+<td><code>slog.Warn("failed to persist autonomy level")</code></td>
+<td><strong>Medium</strong> — autonomy level changes not persisted; L2/L3 resets to default on restart.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-recovery-misuse">7. Recovery Misuse</h2>
+<p>Three <code>recover()</code> call sites identified:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Line</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>session/loop_steps.go:313-315</code></td>
+<td>Wraps goroutine worker in recover, converts panic to <code>workerResult{err: ...}</code></td>
+<td><strong>Correct</strong> — isolates individual worker panics, continues other workers. Error surfaces in loop output.</td>
+</tr>
+<tr>
+<td><code>fleet/server_handlers.go:397-405</code></td>
+<td>Wraps <code>queue.Counts()</code> call in recover, logs as <code>checks["queue"] = "error"</code></td>
+<td><strong>Acceptable</strong> — defensive health check. Queue.Counts() shouldn't panic, but the protection prevents health endpoint crashes. Does not mask bugs; the <code>queue_error</code> field captures the panic value.</td>
+</tr>
+<tr>
+<td><code>tui/view_adapters_test.go:84,104</code></td>
+<td>Test-only</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td><code>notify/notify_test.go:173</code></td>
+<td>Test-only</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td><code>model/costs_test.go:496</code></td>
+<td>Test-only, expects panic</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td><code>safety/circuit_breaker_test.go:57</code></td>
+<td>Test-only, expects panic</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<p><strong>No production recover() calls mask bugs.</strong> Both production recovery sites convert panics into structured error values that surface through normal result channels.</p>
+<p>The <code>internal/session/loop_steps.go</code> recovery notably does NOT re-panic, which is appropriate here — re-panicking would crash the entire process, not just the worker goroutine.</p>
+<hr />
+<h2 id="8-package-grades">8. Package Grades</h2>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Grade</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mcpserver</code></td>
+<td><strong>B+</strong></td>
+<td>Zero handler contract violations, rich codedError taxonomy. Weak <code>%w</code> wrapping (25%) and several <code>_ = s.scan()</code> swallows are acceptable (they have fallback logic). <code>context.Background()</code> use in session launches is intentional.</td>
+</tr>
+<tr>
+<td><code>session</code></td>
+<td><strong>B</strong></td>
+<td>Strong context cancellation throughout loops and workers. <code>%w</code> wrapping at 62% is adequate. Main weakness: supervisor silently swallows cycle failures (critical for L2/L3). Autonomy level not persisted on failure.</td>
+</tr>
+<tr>
+<td><code>fleet</code></td>
+<td><strong>B-</strong></td>
+<td>Worker heartbeat and <code>CompleteWork</code> errors silently discarded. Fleet client calls use <code>context.Background()</code> (no request timeout). Queue health recovered defensively.</td>
+</tr>
+<tr>
+<td><code>marathon</code></td>
+<td><strong>C+</strong></td>
+<td>Checkpoint save failures silent, resume failures treated as silent fresh-starts. No alerting path for marathon-level failures. Cloud scheduler lacks per-task timeout.</td>
+</tr>
+<tr>
+<td><code>safety</code></td>
+<td><strong>A</strong></td>
+<td><code>MustNew</code> panic is documented and justified. Circuit breaker wraps errors cleanly. <code>%w</code> used consistently.</td>
+</tr>
+<tr>
+<td><code>store</code></td>
+<td><strong>A-</strong></td>
+<td>93% <code>%w</code> wrapping — best in codebase. Clean error propagation throughout SQLite layer.</td>
+</tr>
+<tr>
+<td><code>enhancer</code></td>
+<td><strong>B+</strong></td>
+<td>69% <code>%w</code> wrapping. LLM client errors properly propagated. Backoff error wrapping clean.</td>
+</tr>
+<tr>
+<td><code>batch</code></td>
+<td><strong>B+</strong></td>
+<td>71% <code>%w</code> wrapping. API error messages include status codes. Some bare <code>%v</code> in status-code-only paths.</td>
+</tr>
+<tr>
+<td><code>events</code></td>
+<td><strong>C+</strong></td>
+<td>Bus <code>Publish()</code> silently discards transport errors. NATS message ack/nak errors silently discarded. Fire-and-forget publish is architecturally intentional but creates observability gaps.</td>
+</tr>
+<tr>
+<td><code>hooks</code></td>
+<td><strong>C</strong></td>
+<td><code>_ = cmd.Run()</code> discards hook exit codes entirely. Post-session hooks cannot signal failure back to orchestrator.</td>
+</tr>
+<tr>
+<td><code>process</code></td>
+<td><strong>B</strong></td>
+<td>PID file write failure is logged (non-fatal). Log file open failure is logged and process continues. Good context cancellation in reaper.</td>
+</tr>
+<tr>
+<td><code>workflow</code></td>
+<td><strong>B+</strong></td>
+<td>Executor checks <code>ctx.Err()</code> at step boundaries. Engine propagates errors cleanly.</td>
+</tr>
+<tr>
+<td><code>k8s</code></td>
+<td><strong>C+</strong></td>
+<td><code>UpdateSessionStatus</code> after pod creation failure is silently discarded. Stale API state.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-fix-priority-list">9. Fix Priority List</h2>
+<p>Ordered by autonomy-safety impact (most critical first):</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Fix</th>
+<th>File(s)</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Surface supervisor cycle failures</strong> — Log <code>RunCycle</code> failures at Error level, emit an event, and after N consecutive failures trigger a HITL interrupt or autonomy level demotion.</td>
+<td><code>session/supervisor.go:375</code></td>
+<td>Prevents L2/L3 from silently spinning on broken R&amp;D cycles.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Propagate RunLoop error in background goroutines</strong> — Send the error to a channel or use <code>mcplog.Error</code> so it appears in the tool response or session journal. Currently <code>_ = s.SessMgr.RunLoop(context.Background(), run.ID)</code> buries the error completely.</td>
+<td><code>handler_selfimprove.go:71</code>, <code>handler_loop.go:152</code></td>
+<td>At L2 autonomy, a self-improvement loop that starts and immediately fails is invisible.</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Log or retry fleet worker report failures</strong> — <code>CompleteWork</code> network failures cause the coordinator to retain work items indefinitely, leading to duplicate execution. Add retry with exponential backoff or at minimum log at Error level.</td>
+<td><code>fleet/worker.go:155,183,197</code></td>
+<td>Prevents duplicate work execution and wasted budget in fleet mode.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Persist autonomy level changes</strong> — Wrap persist failure in a returned error, or retry with backoff. Autonomy level resetting to L0 on restart silently reduces agent capability and breaks operator intent.</td>
+<td><code>session/autonomy.go:191</code></td>
+<td>Autonomy level stability is a safety property.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Fix silent supervisor task-launch continuation</strong> — After <code>LaunchCycleTask</code> fails, log the failure at Error level and mark the cycle task as failed rather than skipping silently. Current <code>continue</code> produces partially-executed cycles with misleading observations.</td>
+<td><code>session/manager_cycle.go:333</code></td>
+<td>Partial cycle execution produces false-positive observations that corrupt the R&amp;D signal.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Add hook exit code handling</strong> — Surface non-zero hook exit codes to the caller (at minimum log at Error level). Hooks are used for pre/post session gates; silent failures break the gate contract.</td>
+<td><code>hooks/hooks.go:139</code></td>
+<td>Hook-based safety gates are invisible failures.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Add timeout to fleet client calls</strong> — Replace <code>context.Background()</code> with <code>context.WithTimeout(ctx, 30*time.Second)</code> for <code>SubmitWork</code> and <code>FleetState</code>. A hung coordinator blocks the handler indefinitely.</td>
+<td><code>handler_fleet.go:101,143,219</code></td>
+<td>Prevents fleet handlers from hanging under network partition.</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Wrap <code>%w</code> in mcpserver validate.go</strong> — <code>validate.go</code> returns leaf errors without <code>%w</code>, preventing <code>errors.Is</code> checks on validation errors by callers.</td>
+<td><code>mcpserver/validate.go</code></td>
+<td>Low-risk but improves debuggability for automated error classification.</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Use <code>errors.Is</code> for context comparisons</strong> — Replace direct <code>== context.DeadlineExceeded</code> with <code>errors.Is(err, context.DeadlineExceeded)</code> to handle wrapped contexts.</td>
+<td><code>hooks/chain.go:152</code>, <code>sandbox/limits.go:140</code></td>
+<td>Correctness under middleware wrapping.</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Surface marathon checkpoint failure</strong> — After <code>SaveCheckpoint</code> fails, emit an event or set a health flag. Currently marathon can run indefinitely without durable state, losing budget accounting on crash.</td>
+<td><code>marathon/marathon.go:335</code></td>
+<td>Budget overrun risk in long-running marathon sessions.</td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Make <code>os.MkdirAll</code> + <code>os.WriteFile</code> errors visible in handlers</strong> — The pattern appears in 3 handlers (benchmark, A/B test, handoff). Log at Warn and include <code>"persist_failed": true</code> in the response so callers know the record was not saved.</td>
+<td><code>handler_provider_benchmark.go:190,201</code>, <code>handler_prompt_ab.go:177,179</code>, <code>handler_session_handoff.go:165,167</code></td>
+<td>Audit trail gaps; operator assumes data was persisted.</td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Add per-task timeout to marathon cloud scheduler</strong> — Wrap <code>runTask()</code> in <code>context.WithTimeout</code> independent of the scheduler's outer context. Cloud API hangs block the entire scheduler.</td>
+<td><code>marathon/cloud_scheduler.go</code></td>
+<td>Liveness for cloud-hosted agent workers.</td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Log sweep Stop failures</strong> — <code>_ = s.SessMgr.Stop(sessID)</code> in sweep restart/nudge paths should log failures. A zombie session consuming budget is hard to detect.</td>
+<td><code>handler_sweep.go:453,602</code></td>
+<td>Budget waste in large sweeps.</td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>Add context-aware NATS publish retry</strong> — <code>events/bus.go</code> silently discards transport publish errors. Add at minimum a counter metric and a log at Warn level so event loss is observable.</td>
+<td><code>events/bus.go:300,350</code></td>
+<td>Observability gap; events are the primary signal for the supervisor.</td>
+</tr>
+<tr>
+<td>15</td>
+<td><strong>Surface <code>rehydrate</code> failures</strong> — If <code>RehydrateFromStore</code> fails, current code logs at Warn and returns. Consider returning the error to startup so the operator can decide whether to abort. Silently losing session history on startup breaks L2 memory continuity.</td>
+<td><code>session/manager.go:177</code></td>
+<td>On bad SQLite state, entire session history is silently dropped at startup.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="summary-statistics">Summary Statistics</h2>
+<ul>
+<li><strong>Handler contract violations</strong>: 0 confirmed (all <code>nil, ...</code> patterns are in helper functions with non-handler signatures)</li>
+<li><strong>Production panics</strong>: 2 (both justified, both recoverable)</li>
+<li><strong>Swallowed errors (top 20)</strong>: 1 critical (RunLoop), 4 high, 10 medium, 5 low</li>
+<li><strong>Error wrapping ratio</strong>: 65% globally (<code>%w</code>); worst: mcpserver 25%; best: store 93%</li>
+<li><strong>Context cancellation</strong>: Generally good in hot path; gaps in fleet client calls and background goroutines (intentional by design, but fleet calls need timeouts)</li>
+<li><strong>Recovery misuse</strong>: None — both production <code>recover()</code> sites are correct</li>
+<li><strong>Silent supervisor failures</strong>: The most systemic risk — cycle/sprint failures are warn-logged and swallowed at all levels of the supervisor tick loop, which directly undermines L2/L3 autonomy safety</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

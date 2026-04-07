@@ -1,0 +1,1614 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ralph-roadmap/02-mcp-tool-audit/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>02 — MCP Tool Layer Audit (ralphglasses) - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#02-mcp-tool-layer-audit-ralphglasses" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              02 — MCP Tool Layer Audit (ralphglasses)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-tool-inventory-by-namespace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Tool Inventory by Namespace
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-handler-quality-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Handler Quality Matrix
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-test-coverage-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Test Coverage Gaps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Test Coverage Gaps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#known-untested-handler-files-no-_testgo-counterpart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known untested handler files (no _test.go counterpart)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-annotation-completeness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Annotation Completeness
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-middleware-chain-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Middleware Chain Analysis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-dispatch-table-completeness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Dispatch Table Completeness
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-namespace-organization-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Namespace Organization Assessment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Namespace Organization Assessment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#oversized-namespaces-15-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Oversized namespaces (&gt;15 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misplaced-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Misplaced tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#undersized-namespaces-45-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Undersized namespaces (4–5 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#toolgroupnames-vs-defaultregistry-consistency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ToolGroupNames vs defaultRegistry() consistency
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-findings-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Findings Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="02-mcp-tool-layer-audit-ralphglasses">02 — MCP Tool Layer Audit (ralphglasses)</h1>
+<p>Generated: 2026-04-04
+Source: <code>internal/mcpserver/</code> — all files read directly from source.</p>
+<hr />
+<h2 id="1-tool-inventory-by-namespace">1. Tool Inventory by Namespace</h2>
+<p>163 tools registered across 16 namespaces, plus 3 meta-tools (<code>tool_groups</code>, <code>load_tool_group</code>, <code>skill_export</code>) always registered in dispatch. Total exposed surface: <strong>166 tools</strong>.</p>
+<blockquote>
+<p>Note: baseline doc (04-mcp-inventory.md) cited 126 tools across 14 namespaces. Actual count is 166 across 16 namespaces. The discrepancy is explained by: (a) the <code>plugin</code> and <code>sweep</code> namespaces were added after the baseline was written, and (b) several namespaces grew — <code>core</code> gained 3 task-management tools, <code>session</code> gained 3 (fork, handoff, replay_diff), <code>rdcycle</code> grew from 10 to 18, <code>observability</code> from 15 to 17.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Namespace</th>
+<th>Tool Count</th>
+<th>Primary Builder File(s)</th>
+<th>Handler File(s)</th>
+<th>Loading</th>
+<th>Line Count (builder)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>core</strong></td>
+<td>13</td>
+<td><code>tools_builders.go</code></td>
+<td><code>tools.go</code>, <code>handler_tasks.go</code></td>
+<td>Eager (always loaded)</td>
+<td>123</td>
+</tr>
+<tr>
+<td><strong>session</strong></td>
+<td>16</td>
+<td><code>tools_builders_session.go</code></td>
+<td><code>handler_session.go</code>, <code>handler_session_export.go</code>, <code>handler_session_fork.go</code>, <code>handler_session_handoff.go</code>, <code>handler_session_lifecycle.go</code></td>
+<td>Deferred</td>
+<td>275</td>
+</tr>
+<tr>
+<td><strong>loop</strong></td>
+<td>11</td>
+<td><code>tools_builders_session.go</code></td>
+<td><code>handler_loop.go</code>, <code>handler_loopbench.go</code>, <code>handler_loopwait.go</code>, <code>handler_selfimprove.go</code>, <code>handler_selftest.go</code></td>
+<td>Deferred</td>
+<td>275 (shared with session)</td>
+</tr>
+<tr>
+<td><strong>prompt</strong></td>
+<td>9</td>
+<td><code>tools_builders_session.go</code></td>
+<td><code>handler_prompt.go</code>, <code>handler_prompt_ab.go</code></td>
+<td>Deferred</td>
+<td>275 (shared)</td>
+</tr>
+<tr>
+<td><strong>fleet</strong></td>
+<td>10</td>
+<td><code>tools_builders_fleet.go</code></td>
+<td><code>handler_fleet.go</code>, <code>handler_fleet_capacity.go</code>, <code>handler_fleet_grafana.go</code>, <code>tools_fleet.go</code></td>
+<td>Deferred</td>
+<td>144</td>
+</tr>
+<tr>
+<td><strong>repo</strong></td>
+<td>5</td>
+<td><code>tools_builders_fleet.go</code></td>
+<td><code>handler_repo.go</code>, <code>handler_repo_fleet.go</code>, <code>handler_repo_health.go</code>, <code>handler_repo_scaffold.go</code></td>
+<td>Deferred</td>
+<td>144 (shared)</td>
+</tr>
+<tr>
+<td><strong>roadmap</strong></td>
+<td>6</td>
+<td><code>tools_builders_misc.go</code></td>
+<td><code>handler_roadmap.go</code>, <code>handler_roadmap_prioritize.go</code></td>
+<td>Deferred</td>
+<td>597</td>
+</tr>
+<tr>
+<td><strong>team</strong></td>
+<td>6</td>
+<td><code>tools_builders_misc.go</code></td>
+<td><code>handler_team.go</code></td>
+<td>Deferred</td>
+<td>597 (shared)</td>
+</tr>
+<tr>
+<td><strong>awesome</strong></td>
+<td>5</td>
+<td><code>tools_builders_misc.go</code></td>
+<td><code>handler_awesome.go</code></td>
+<td>Deferred</td>
+<td>597 (shared)</td>
+</tr>
+<tr>
+<td><strong>advanced</strong></td>
+<td>24</td>
+<td><code>tools_builders_misc.go</code></td>
+<td><code>handler_rc.go</code>, <code>handler_circuit.go</code>, <code>handler_selfimprove.go</code>, <code>tools_fleet.go</code>, <code>tools_session.go</code></td>
+<td>Deferred</td>
+<td>597 (shared)</td>
+</tr>
+<tr>
+<td><strong>eval</strong></td>
+<td>6</td>
+<td><code>tools_builders_misc.go</code></td>
+<td><code>handler_eval.go</code>, <code>handler_anomaly.go</code></td>
+<td>Deferred</td>
+<td>597 (shared)</td>
+</tr>
+<tr>
+<td><strong>fleet_h</strong></td>
+<td>5</td>
+<td><code>tools_builders_fleet.go</code></td>
+<td><code>handler_fleet_h.go</code>, <code>handler_recommend.go</code></td>
+<td>Deferred</td>
+<td>144 (shared)</td>
+</tr>
+<tr>
+<td><strong>observability</strong></td>
+<td>17</td>
+<td><code>tools_session.go</code></td>
+<td><code>handler_observation.go</code>, <code>handler_scratchpad.go</code>, <code>handler_scratchpad_advanced.go</code>, <code>handler_loopwait.go</code>, <code>handler_coverage.go</code>, <code>handler_costestimate.go</code>, <code>handler_mergeverify.go</code>, <code>handler_worktree.go</code></td>
+<td>Deferred</td>
+<td>434</td>
+</tr>
+<tr>
+<td><strong>rdcycle</strong></td>
+<td>18</td>
+<td><code>tools_builders_misc.go</code>, <code>tools_session.go</code></td>
+<td><code>handler_rdcycle.go</code>, <code>handler_cycle_engine.go</code></td>
+<td>Deferred</td>
+<td>597 (shared) + 434</td>
+</tr>
+<tr>
+<td><strong>plugin</strong></td>
+<td>4</td>
+<td><code>tools_builders.go</code></td>
+<td><code>handler_plugin.go</code></td>
+<td>Deferred</td>
+<td>123 (shared)</td>
+</tr>
+<tr>
+<td><strong>sweep</strong></td>
+<td>8</td>
+<td><code>tools_builders_sweep.go</code></td>
+<td><code>handler_sweep.go</code>, <code>handler_sweep_report.go</code></td>
+<td>Deferred</td>
+<td>69</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Deferred loading default:</strong> <code>DeferredLoading</code> field on <code>Server</code> is <code>false</code> by default. The production <code>cmd/mcp.go</code> calls <code>rg.Register(srv)</code> without setting <code>DeferredLoading = true</code>, so <strong>all 166 tools are registered eagerly at startup</strong>. The <code>tool_groups</code> / <code>load_tool_group</code> meta-tools are present but the deferred model is not activated in the default binary. Only tests explicitly set <code>DeferredLoading = true</code>.</p>
+<hr />
+<h2 id="2-handler-quality-matrix">2. Handler Quality Matrix</h2>
+<p>Ratings on a 1–5 scale. Criteria:
+- <strong>Input validation</strong>: does the handler check required params, lengths, formats, and use <code>codedError</code>?
+- <strong>Error handling</strong>: structured <code>codedError</code> used consistently? All error paths handled? No swallowed errors?
+- <strong>Test coverage</strong>: does a <code>_test.go</code> exist? How many <code>Test*</code> functions?
+- <strong>Annotation completeness</strong>: from <code>annotations.go</code> — are all 4 MCP spec hints set (<code>ReadOnlyHint</code>, <code>DestructiveHint</code>, <code>IdempotentHint</code>, <code>OpenWorldHint</code>)?</p>
+<table>
+<thead>
+<tr>
+<th>Handler File</th>
+<th>Lines</th>
+<th>Input Validation (1–5)</th>
+<th>Error Handling (1–5)</th>
+<th>Test Coverage (1–5)</th>
+<th>Annotation Completeness (1–5)</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>handler_session.go</code></td>
+<td>664</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td>Uses <code>NewParamParserFromRequest</code> + <code>RequireString</code> pattern. Good codedError usage. 14 tests in <code>handler_session_test.go</code> + 5 in lifecycle + 3 in export = ~22 total. Annotation: only <code>ReadOnlyHint</code> on read tools, missing <code>IdempotentHint</code> on <code>session_budget</code></td>
+</tr>
+<tr>
+<td><code>handler_fleet.go</code></td>
+<td>613</td>
+<td>5</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td><code>NewParams</code> + <code>RequireString</code> / <code>RequireNumber</code> pattern. Fleet-not-configured returns structured JSON instead of error — good UX, not a bug. 49 tests in <code>handler_fleet_test.go</code>. Missing <code>OpenWorldHint</code> on <code>fleet_submit</code></td>
+</tr>
+<tr>
+<td><code>handler_loop.go</code></td>
+<td>298</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td><code>ValidateRepoName</code> called explicitly before lookup. Good scan/findRepo error chain. 14 tests in <code>handler_loop_test.go</code> + bench tests. <code>session_handoff</code> is defined in this file despite living in <code>loop</code> group — slight placement oddity</td>
+</tr>
+<tr>
+<td><code>handler_sweep.go</code></td>
+<td>724</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td>4</td>
+<td>Budget cap enforcement (<code>max_sweep_budget_usd</code>) is validated inline. 14 tests in <code>handler_sweep_test.go</code>. <code>sweep_report</code> has no dedicated test. Sweep annotations are thorough (4 of 8 tools have 2 hints, rest have 1)</td>
+</tr>
+<tr>
+<td><code>handler_prompt.go</code></td>
+<td>380</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td>3</td>
+<td><code>handlePromptAnalyze</code> uses raw <code>getStringArg</code> (not <code>NewParams</code>). <code>handlePromptImprove</code> doesn't validate prompt length against <code>MaxPromptLength</code> (200KB). 13 tests in <code>handler_prompt_test.go</code>. <code>handlePromptABTest</code> has no test file</td>
+</tr>
+<tr>
+<td><code>handler_roadmap.go</code></td>
+<td>384</td>
+<td>5</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td><code>ValidatePath</code> called at every handler entry. All error paths return <code>codedError</code>. 26 tests in <code>handler_roadmap_test.go</code>. <code>handler_roadmap_prioritize.go</code> has no test file</td>
+</tr>
+<tr>
+<td><code>handler_eval.go</code></td>
+<td>579</td>
+<td>4</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td><code>abTestMinGroupSize</code> and <code>changepointBurnIn</code> constants provide clear semantic intent. <code>filterChangepointBurnIn</code> is a well-isolated helper. 20 tests in <code>handler_eval_test.go</code>. Missing <code>IdempotentHint</code> on all eval tools (all are read-only deterministic)</td>
+</tr>
+<tr>
+<td><code>handler_scratchpad.go</code></td>
+<td>304</td>
+<td>4</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td><code>resolveRepoPath</code> helper centralizes scan/find/error logic across all scratchpad handlers. 14 tests in <code>handler_scratchpad_test.go</code> + <code>scratchpad_advanced_test.go</code>. Annotation: <code>scratchpad_append</code> and <code>scratchpad_resolve</code> have <code>DestructiveHint: false</code> but no <code>IdempotentHint</code></td>
+</tr>
+<tr>
+<td><code>handler_team.go</code></td>
+<td>348</td>
+<td>4</td>
+<td>4</td>
+<td>2</td>
+<td>3</td>
+<td><code>ValidateRepoName</code> applied. Good dry-run mode. Only 5 tests in <code>handler_team_test.go</code> — the lowest coverage of sampled handlers. <code>handleTeamDelegate</code> and <code>handleAgentCompose</code> lack direct test cases</td>
+</tr>
+<tr>
+<td><code>handler_observation.go</code></td>
+<td>217</td>
+<td>4</td>
+<td>4</td>
+<td>2</td>
+<td>3</td>
+<td><code>parseTimeBound</code> helper is clean. <code>filterByUntil</code> is a pure function. 8 tests in <code>handler_observation_test.go</code>. No test for <code>handleObservationSummary</code> or <code>handleObservationCorrelate</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Summary of scoring:</strong> No handler scores below 3 on any axis. The weakest area is <strong>test coverage</strong> — not from absent test files, but from shallow test counts (5–14 tests covering handlers that implement 3–8 different sub-operations each). Annotation completeness is uniformly 3/5: all tools have at least <code>ReadOnlyHint</code> or <code>DestructiveHint</code>, but no tool has all 4 hints simultaneously.</p>
+<hr />
+<h2 id="3-test-coverage-gaps">3. Test Coverage Gaps</h2>
+<h3 id="known-untested-handler-files-no-_testgo-counterpart">Known untested handler files (no <code>_test.go</code> counterpart)</h3>
+<table>
+<thead>
+<tr>
+<th>Handler File</th>
+<th>Lines</th>
+<th>Tools Covered</th>
+<th>Risk Level</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>handler_fleet_grafana.go</code></td>
+<td>37</td>
+<td><code>ralphglasses_fleet_grafana</code></td>
+<td>Low — pure transform (calls <code>fleet.ExportDashboard</code>, no state mutations)</td>
+</tr>
+<tr>
+<td><code>handler_prompt_ab.go</code></td>
+<td>200</td>
+<td><code>ralphglasses_prompt_ab_test</code></td>
+<td>Medium — complex scoring + file I/O (writes results to <code>.ralph/prompt_ab/</code>)</td>
+</tr>
+<tr>
+<td><code>handler_provider_benchmark.go</code></td>
+<td>268</td>
+<td><code>ralphglasses_provider_benchmark</code></td>
+<td>Medium — complex math (percentile calc, keyword scoring), no external deps</td>
+</tr>
+<tr>
+<td><code>handler_recommend.go</code></td>
+<td>73</td>
+<td><code>ralphglasses_cost_recommend</code></td>
+<td>Low — delegates to <code>fleet.NewRecommender</code>, thin wrapper</td>
+</tr>
+<tr>
+<td><code>handler_roadmap_prioritize.go</code></td>
+<td>178</td>
+<td><code>ralphglasses_roadmap_prioritize</code></td>
+<td>Medium — scoring algorithm with weights, no test for edge cases</td>
+</tr>
+<tr>
+<td><code>handler_session_fork.go</code></td>
+<td>50</td>
+<td><code>ralphglasses_session_fork</code></td>
+<td>Medium — new capability (fork sessions), calls <code>SessMgr.Fork</code></td>
+</tr>
+<tr>
+<td><code>handler_skill_export.go</code></td>
+<td>59</td>
+<td><code>ralphglasses_skill_export</code></td>
+<td>Low — tested indirectly via <code>skill_export_test.go</code> (5 tests found)</td>
+</tr>
+<tr>
+<td><code>handler_sweep_report.go</code></td>
+<td>302</td>
+<td><code>ralphglasses_sweep_report</code></td>
+<td>High — 302 lines, complex Markdown/JSON rendering, no coverage at all</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Additional under-tested handlers (test file exists but shallow):</strong>
+- <code>handler_team_test.go</code> — 5 tests for 6 tools (3 handlers have no direct test)
+- <code>handler_observation_test.go</code> — 8 tests; <code>handleObservationSummary</code> and <code>handleObservationCorrelate</code> lack tests</p>
+<p><strong>Well-tested handlers (for reference):</strong>
+- <code>handler_fleet_test.go</code> — 49 tests
+- <code>handler_roadmap_test.go</code> — 26 tests
+- <code>handler_eval_test.go</code> — 20 tests</p>
+<hr />
+<h2 id="4-annotation-completeness">4. Annotation Completeness</h2>
+<p>Analyzed from <code>~/hairglasses-studio/ralphglasses/internal/mcpserver/annotations.go</code>.</p>
+<p><strong>Total annotated tools:</strong> 166 (perfect sync with registered tool count — no gaps between <code>ToolAnnotations</code> map and builder registrations).</p>
+<table>
+<thead>
+<tr>
+<th>Completeness Level</th>
+<th>Count</th>
+<th>%</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>All 4 hints (<code>ReadOnly</code> + <code>Destructive</code> + <code>Idempotent</code> + <code>OpenWorld</code>)</td>
+<td>0</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>2 hints (most common: <code>ReadOnly</code> + <code>OpenWorld</code>, or <code>Destructive</code> + <code>OpenWorld</code>)</td>
+<td>26</td>
+<td>16%</td>
+</tr>
+<tr>
+<td>1 hint only</td>
+<td>138</td>
+<td>83%</td>
+</tr>
+<tr>
+<td>Title only (no behavioral hints)</td>
+<td>2</td>
+<td>1%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tools with no behavioral hints (title only):</strong>
+- <code>ralphglasses_fleet_workers</code> (line 90) — no hint at all; it can mutate worker state via <code>action</code> param
+- <code>ralphglasses_worktree_create</code> (line 185) — creates a git worktree, should have <code>DestructiveHint: false, OpenWorldHint: true</code></p>
+<p><strong>Key annotation gaps:</strong>
+1. No tool has <code>IdempotentHint</code> paired with <code>ReadOnlyHint</code> — but many read-only tools (scan, list, status) are already idempotent and should declare it.
+2. <code>ralphglasses_config</code> and <code>ralphglasses_config_bulk</code> set <code>IdempotentHint: true</code> but omit <code>ReadOnlyHint</code> — config-get is read-only, config-set is not; the dual get/set pattern makes annotation ambiguous.
+3. The <code>session_stop_all</code> and <code>stop_all</code> tools correctly set <code>DestructiveHint: true</code> but omit <code>OpenWorldHint</code> — stopping external processes is an open-world side effect.
+4. <code>ralphglasses_prompt_enhance</code> is annotated <code>ReadOnlyHint: true</code> but in <code>llm</code> or <code>auto</code> mode it calls external APIs — should have <code>OpenWorldHint: true</code> conditionally.</p>
+<hr />
+<h2 id="5-middleware-chain-analysis">5. Middleware Chain Analysis</h2>
+<p><strong>Composition order</strong> (outermost to innermost, from <code>cmd/mcp.go</code> lines 97–108):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>ConcurrencyMiddleware(32)
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  → TraceMiddleware()
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    → TimeoutMiddleware(30s, with per-tool overrides)
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>      → InstrumentationMiddleware(toolRec)
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        → EventBusMiddleware(bus)
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>          → ValidationMiddleware(scanPath)
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>            → handler
+</code></pre></div>
+<p><strong>What each layer does:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ConcurrencyMiddleware</code></td>
+<td><code>middleware.go:29</code></td>
+<td>Weighted semaphore (default 32 slots); configurable via <code>RG_MCP_MAX_CONCURRENT</code>. Returns <code>ErrRateLimited</code> on context cancellation</td>
+</tr>
+<tr>
+<td><code>TraceMiddleware</code></td>
+<td><code>middleware.go:60</code></td>
+<td>Generates/propagates trace IDs via <code>context</code>. Injects <code>_trace_id</code> into JSON responses</td>
+</tr>
+<tr>
+<td><code>TimeoutMiddleware</code></td>
+<td><code>timeout.go</code></td>
+<td>Per-tool timeout overrides: <code>loop_step</code>=10m, <code>coverage_report</code>=5m, <code>merge_verify</code>=5m; <code>self_test</code> and <code>self_improve</code> are exempt (0 = no timeout)</td>
+</tr>
+<tr>
+<td><code>InstrumentationMiddleware</code></td>
+<td><code>middleware.go:86</code></td>
+<td>Records latency, success/failure, input/output size to <code>ToolCallRecorder</code>. Emits structured <code>mcp.tool.call</code> log events</td>
+</tr>
+<tr>
+<td><code>EventBusMiddleware</code></td>
+<td><code>middleware.go:179</code></td>
+<td>Publishes <code>tool.called</code> events to the event bus for every invocation</td>
+</tr>
+<tr>
+<td><code>ValidationMiddleware</code></td>
+<td><code>middleware.go:205</code></td>
+<td>Validates <code>repo</code> and <code>path</code> parameters if present: <code>ValidateRepoName</code> for bare names, <code>ValidatePath</code> for absolute paths</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Identified gaps:</strong></p>
+<ol>
+<li>
+<p><strong>No rate-per-tool limiting.</strong> <code>ConcurrencyMiddleware</code> is a global semaphore. A single slow tool (e.g., <code>self_improve</code>) can consume all 32 slots. There is no per-tool or per-namespace concurrency cap.</p>
+</li>
+<li>
+<p><strong>No panic recovery at middleware level.</strong> The MCP SDK's <code>WithRecovery()</code> option is set at the server level (<code>cmd/mcp.go:95</code>), so panics are caught — but the recovery is external to the middleware chain and does not emit structured error events to the event bus.</p>
+</li>
+<li>
+<p><strong>ValidationMiddleware only validates <code>repo</code> and <code>path</code> parameters.</strong> Free-text fields like <code>prompt</code> (up to 200KB per <code>MaxPromptLength</code>) and <code>yaml</code> (workflow definitions) are not length-checked in the middleware layer. Each handler is responsible for its own length validation — and not all handlers call <code>ValidateStringLength</code>.</p>
+</li>
+<li>
+<p><strong><code>DeferredLoading</code> is never activated in production.</strong> <code>Server.DeferredLoading</code> defaults to <code>false</code>. <code>cmd/mcp.go</code> calls <code>rg.Register(srv)</code> which falls into <code>RegisterAllTools</code>. The entire 166-tool surface is loaded eagerly. The documented deferred loading model is only exercised in tests. This means the startup cost savings described in CLAUDE.md are not realized in production.</p>
+</li>
+<li>
+<p><strong>Tracing is not end-to-end.</strong> <code>TraceMiddleware</code> generates trace IDs and injects them into responses, but there is no correlation between the trace ID in the MCP response and any outgoing LLM API calls made by handlers. The OpenTelemetry provider is initialized in <code>setupMCP</code> but only used if <code>OTEL_EXPORTER_OTLP_ENDPOINT</code> is set.</p>
+</li>
+</ol>
+<hr />
+<h2 id="6-dispatch-table-completeness">6. Dispatch Table Completeness</h2>
+<p>The dispatch system uses a builder pattern (<code>ToolGroupRegistry</code> in <code>registry.go</code>) rather than a central dispatch table. Each <code>buildXGroup()</code> method returns <code>ToolEntry{Tool, Handler}</code> pairs, so handler-tool linkage is done at registration time rather than via a lookup map.</p>
+<p><strong>Cross-check methodology:</strong> extracted all <code>s.handleXxx</code> references from builder files and compared against all <code>func (s *Server) handleXxx</code> definitions in handler files.</p>
+<p><strong>Result: All handlers referenced in builders are defined. No phantom references.</strong></p>
+<p>However, 11 handlers referenced in builders are defined outside <code>handler_*.go</code> files:</p>
+<table>
+<thead>
+<tr>
+<th>Handler</th>
+<th>Defined In</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>handleEventList</code></td>
+<td><code>tools_fleet.go:16</code></td>
+<td>Mixed file: tools + handler in same file</td>
+</tr>
+<tr>
+<td><code>handleMarathonDashboard</code></td>
+<td><code>tools_fleet.go:312</code></td>
+<td>Same pattern</td>
+</tr>
+<tr>
+<td><code>handleToolBenchmark</code></td>
+<td><code>tools_fleet.go:442</code></td>
+<td>Same pattern</td>
+</tr>
+<tr>
+<td><code>handleWorkflowDefine</code></td>
+<td><code>tools_session.go:74</code></td>
+<td>Mixed file</td>
+</tr>
+<tr>
+<td><code>handleWorkflowRun</code></td>
+<td><code>tools_session.go:111</code></td>
+<td>Same pattern</td>
+</tr>
+<tr>
+<td><code>handleWorkflowDelete</code></td>
+<td><code>tools_session.go:156</code></td>
+<td>Same pattern</td>
+</tr>
+<tr>
+<td><code>handleSnapshot</code></td>
+<td><code>tools_session.go:186</code></td>
+<td>Same pattern</td>
+</tr>
+<tr>
+<td><code>handleJournalRead</code></td>
+<td><code>tools_session.go:300</code></td>
+<td>Same pattern</td>
+</tr>
+<tr>
+<td><code>handleJournalWrite</code></td>
+<td><code>tools_session.go:334</code></td>
+<td>Same pattern</td>
+</tr>
+<tr>
+<td><code>handleJournalPrune</code></td>
+<td><code>tools_session.go:386</code></td>
+<td>Same pattern</td>
+</tr>
+<tr>
+<td><code>handleEventPoll</code></td>
+<td><code>handler_rc.go:526</code></td>
+<td>RC handler file contains an event handler</td>
+</tr>
+</tbody>
+</table>
+<p>These are functional — the code compiles and runs — but the convention of <code>handler_*.go</code> for handlers is violated. <code>tools_fleet.go</code> and <code>tools_session.go</code> mix tool definitions (builders) with handler implementations, making grep-based auditing harder.</p>
+<p><strong>3 handlers defined in dispatch/meta layer (not in builders, by design):</strong>
+- <code>handleToolGroups</code> (<code>tools_dispatch.go:126</code>) — meta-tool
+- <code>handleLoadToolGroup</code> (<code>tools_dispatch.go:154</code>) — meta-tool
+- <code>handleSkillExport</code> (<code>handler_skill_export.go</code>) — registered in dispatch, not builder</p>
+<hr />
+<h2 id="7-namespace-organization-assessment">7. Namespace Organization Assessment</h2>
+<h3 id="oversized-namespaces-15-tools">Oversized namespaces (&gt;15 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Namespace</th>
+<th>Tool Count</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>advanced</strong></td>
+<td>24</td>
+<td>Too broad. Contains RC tools (4), events (2), HITL (2), autonomy (4), feedback (3), provider selection (2), journals (3), workflows (3), bandit (1), confidence (1), circuit (1). At least 3 coherent sub-namespaces could be extracted: <code>rc</code>, <code>autonomy</code>, <code>workflow</code></td>
+</tr>
+<tr>
+<td><strong>rdcycle</strong></td>
+<td>18</td>
+<td>Reasonable given R&amp;D cycle is a coherent domain, but contains two distinct sub-systems: the classic rdcycle tools (finding_to_task, cycle_baseline, cycle_plan, cycle_merge, cycle_schedule, loop_replay, budget_forecast, diff_review, finding_reason, observation_correlate) and the new cycle state machine (cycle_create, cycle_advance, cycle_status, cycle_fail, cycle_list, cycle_synthesize, cycle_run, provider_benchmark). The state machine tools deserve their own namespace</td>
+</tr>
+<tr>
+<td><strong>observability</strong></td>
+<td>17</td>
+<td>Reasonable — scratchpad (8), observations (3), loop_wait/poll (2), coverage (1), cost_estimate (1), merge_verify (1), worktree (2). Worktree tools (<code>worktree_create</code>, <code>worktree_cleanup</code>) are misplaced here — they are development workflow tools, not observability tools</td>
+</tr>
+<tr>
+<td><strong>session</strong></td>
+<td>16</td>
+<td>Borderline. Contains session lifecycle (launch, list, status, resume, stop, stop_all, budget, retry) + output tools (output, tail, diff, compare, errors, export) + session_fork + session_replay_diff + session_handoff. The handoff tool might fit better in <code>loop</code> or <code>team</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="misplaced-tools">Misplaced tools</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Current Namespace</th>
+<th>Should Be In</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_session_handoff</code></td>
+<td><code>loop</code> (in <code>tools_builders_session.go</code>)</td>
+<td><code>session</code></td>
+<td>It is a session lifecycle operation, not a loop concept</td>
+</tr>
+<tr>
+<td><code>ralphglasses_worktree_create</code></td>
+<td><code>observability</code></td>
+<td>New <code>dev</code> namespace or <code>repo</code></td>
+<td>Worktrees are development workflow tools, not observability</td>
+</tr>
+<tr>
+<td><code>ralphglasses_worktree_cleanup</code></td>
+<td><code>observability</code></td>
+<td>Same</td>
+<td>Same reason</td>
+</tr>
+<tr>
+<td><code>ralphglasses_loop_await</code></td>
+<td><code>observability</code></td>
+<td><code>loop</code></td>
+<td>It awaits a loop; belongs with loop controls</td>
+</tr>
+<tr>
+<td><code>ralphglasses_loop_poll</code></td>
+<td><code>observability</code></td>
+<td><code>loop</code></td>
+<td>Same — these are loop polling tools, not observation tools</td>
+</tr>
+<tr>
+<td><code>ralphglasses_event_list</code></td>
+<td><code>advanced</code></td>
+<td>New <code>events</code> namespace or <code>observability</code></td>
+<td>Events are an observability concern, not an "advanced" one</td>
+</tr>
+<tr>
+<td><code>ralphglasses_event_poll</code></td>
+<td><code>advanced</code></td>
+<td>Same</td>
+<td>Same reason</td>
+</tr>
+</tbody>
+</table>
+<h3 id="undersized-namespaces-45-tools">Undersized namespaces (4–5 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Namespace</th>
+<th>Tool Count</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>plugin</code></td>
+<td>4</td>
+<td>Appropriate — plugin management is a small, distinct domain</td>
+</tr>
+<tr>
+<td><code>awesome</code></td>
+<td>5</td>
+<td>Appropriate — self-contained research workflow</td>
+</tr>
+<tr>
+<td><code>fleet_h</code></td>
+<td>5</td>
+<td>Reasonable, though <code>cost_recommend</code> and <code>cost_forecast</code> could merge with <code>fleet</code></td>
+</tr>
+<tr>
+<td><code>repo</code></td>
+<td>5</td>
+<td>Appropriate — repo ops are bounded</td>
+</tr>
+</tbody>
+</table>
+<h3 id="toolgroupnames-vs-defaultregistry-consistency"><code>ToolGroupNames</code> vs <code>defaultRegistry()</code> consistency</h3>
+<p><code>ToolGroupNames</code> (in <code>tools.go:127</code>) lists 16 namespaces: <code>core, session, loop, prompt, fleet, repo, roadmap, team, awesome, advanced, eval, fleet_h, observability, rdcycle, plugin, sweep</code>.</p>
+<p><code>defaultRegistry()</code> (in <code>tools_builders.go:10–29</code>) registers 16 builders in the same order.</p>
+<p><strong>These are in sync.</strong> No namespace is in one list but not the other.</p>
+<p>However, <code>handleLoadToolGroup</code> in <code>tools_dispatch.go:56</code> hardcodes the description string as <code>"(core, session, loop, prompt, fleet, repo, roadmap, team, awesome, advanced, eval, fleet_h, observability)"</code> — missing <code>rdcycle</code>, <code>plugin</code>, and <code>sweep</code>. This description is stale and would mislead users calling the meta-tool.</p>
+<hr />
+<h2 id="key-findings-summary">Key Findings Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Finding</th>
+<th>Severity</th>
+<th>File(s)</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deferred loading not activated in production binary</td>
+<td>Medium</td>
+<td><code>cmd/mcp.go:120</code>, <code>tools.go:58</code></td>
+<td>Set <code>rg.DeferredLoading = true</code> before <code>rg.Register(srv)</code> to realize startup cost savings</td>
+</tr>
+<tr>
+<td><code>handleLoadToolGroup</code> description string missing 3 namespaces</td>
+<td>Low</td>
+<td><code>tools_dispatch.go:55–57</code></td>
+<td>Update description to include <code>rdcycle</code>, <code>plugin</code>, <code>sweep</code></td>
+</tr>
+<tr>
+<td>8 handler files without dedicated test files</td>
+<td>Medium</td>
+<td><code>handler_sweep_report.go</code>, <code>handler_prompt_ab.go</code>, <code>handler_provider_benchmark.go</code>, <code>handler_roadmap_prioritize.go</code>, <code>handler_session_fork.go</code>, <code>handler_fleet_grafana.go</code>, <code>handler_recommend.go</code>, <code>handler_skill_export.go</code></td>
+<td><code>handler_sweep_report.go</code> (302 lines) is highest risk — add tests first</td>
+</tr>
+<tr>
+<td>Zero tools have all 4 MCP spec annotations</td>
+<td>Low</td>
+<td><code>annotations.go</code></td>
+<td>Add <code>IdempotentHint</code> to pure read-only tools; add <code>OpenWorldHint</code> to tools that call external APIs or spawn processes</td>
+</tr>
+<tr>
+<td>11 handler functions defined in non-<code>handler_*.go</code> files</td>
+<td>Low</td>
+<td><code>tools_fleet.go</code>, <code>tools_session.go</code>, <code>handler_rc.go</code></td>
+<td>Move handlers to dedicated files or add comment convention to distinguish builder-only vs builder+handler files</td>
+</tr>
+<tr>
+<td><code>advanced</code> namespace too broad (24 tools, 7+ distinct domains)</td>
+<td>Medium</td>
+<td><code>tools_builders_misc.go:154–288</code></td>
+<td>Extract <code>rc</code> (4 tools), <code>autonomy</code> (4 tools), <code>workflow</code> (3 tools) into their own namespaces</td>
+</tr>
+<tr>
+<td><code>worktree_create/cleanup</code> misplaced in <code>observability</code></td>
+<td>Low</td>
+<td><code>tools_session.go:583–597</code></td>
+<td>Move to <code>repo</code> namespace or new <code>dev</code> namespace</td>
+</tr>
+<tr>
+<td><code>loop_await</code> and <code>loop_poll</code> misplaced in <code>observability</code></td>
+<td>Low</td>
+<td><code>tools_session.go:538–551</code></td>
+<td>Move to <code>loop</code> namespace</td>
+</tr>
+<tr>
+<td><code>prompt_improve</code> doesn't validate prompt length</td>
+<td>Low</td>
+<td><code>handler_prompt.go</code></td>
+<td>Add <code>ValidateStringLength(prompt, MaxPromptLength, "prompt")</code></td>
+</tr>
+<tr>
+<td><code>ValidationMiddleware</code> does not cover free-text fields</td>
+<td>Low</td>
+<td><code>middleware.go:205</code></td>
+<td>Consider length validation for <code>prompt</code>, <code>yaml</code>, <code>content</code> in middleware</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

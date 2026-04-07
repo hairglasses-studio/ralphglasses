@@ -1,0 +1,1757 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/research/06-fleet-monitoring-event-infrastructure/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Phase 6 Research: Fleet Monitoring & Event Infrastructure - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#phase-6-research-fleet-monitoring-event-infrastructure" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Phase 6 Research: Fleet Monitoring &amp; Event Infrastructure
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-current-state-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Current State Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Current State Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-what-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 What Exists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-what-works-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 What Works Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-what-doesnt-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 What Doesn't Work
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-gap-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Gap Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Gap Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-roadmap-target-vs-current-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 ROADMAP Target vs Current State
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-missing-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Missing Capabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-technical-debt-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Technical Debt Inventory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-external-landscape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. External Landscape
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. External Landscape">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-competitorpeer-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Competitor/Peer Projects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-patterns-worth-adopting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Patterns Worth Adopting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-anti-patterns-to-avoid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Anti-Patterns to Avoid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-academic-industry-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Academic &amp; Industry References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-actionable-recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Actionable Recommendations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Actionable Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-immediate-actions-week-1-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Immediate Actions (Week 1-2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-near-term-actions-week-3-6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Near-Term Actions (Week 3-6)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-strategic-actions-week-7-12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Strategic Actions (Week 7-12)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-risk-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Risk Assessment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-implementation-priority-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Implementation Priority Ordering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Implementation Priority Ordering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#71-critical-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 Critical Path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-recommended-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 Recommended Sequence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#73-parallelization-opportunities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3 Parallelization Opportunities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="phase-6-research-fleet-monitoring-event-infrastructure">Phase 6 Research: Fleet Monitoring &amp; Event Infrastructure</h1>
+<p>Covers ROADMAP Phase 2.75 (complete), items 6.4 (Analytics &amp; Observability), 6.5 (External Notifications), and 6.7 (Replay/Audit Trail).</p>
+<hr />
+<h2 id="1-executive-summary">1. Executive Summary</h2>
+<ul>
+<li><strong>Phase 2.75 event bus is production-ready</strong> (95.1% test coverage, ring buffer, cursor-based polling, 12 event types) and serves as the foundation for all three target items.</li>
+<li><strong>6.4 (Analytics)</strong> requires a SQLite persistence layer, OpenTelemetry integration, and a Prometheus <code>/metrics</code> endpoint; the in-memory <code>fleet_analytics</code> MCP handler already computes per-provider/repo stats but has no historical storage.</li>
+<li><strong>6.5 (External Notifications)</strong> needs a webhook dispatcher, Discord/Slack formatters, rate-limiting, and templates; the existing <code>internal/notify/</code> package (39 lines) handles only desktop OS notifications and has no retry, dedup, or HTTP capability.</li>
+<li><strong>6.7 (Replay/Audit Trail)</strong> is blocked by 6.4; it requires session recording at the tool-call level, a TUI replay viewer, Markdown/JSON export, and retention policies -- none of which exist today.</li>
+<li><strong>Immediate high-value wins</strong>: (1) add SQLite event sink to the bus (unlocks 6.4 and 6.7), (2) build webhook dispatcher with backoff/dedup (6.5.1 + 6.5.5), (3) wire Prometheus counters into the existing 2.11 HTTP stub.</li>
+</ul>
+<hr />
+<h2 id="2-current-state-analysis">2. Current State Analysis</h2>
+<h3 id="21-what-exists">2.1 What Exists</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th style="text-align: right;">Lines</th>
+<th>Tests</th>
+<th>Coverage</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/events/bus.go</code></td>
+<td style="text-align: right;">192</td>
+<td><code>bus_test.go</code> (219 lines, 9 tests)</td>
+<td>95.1%</td>
+<td>Solid; ring buffer + cursor API</td>
+</tr>
+<tr>
+<td><code>internal/hooks/hooks.go</code></td>
+<td style="text-align: right;">147</td>
+<td><code>hooks_test.go</code> (101 lines, 4 tests)</td>
+<td>82.7%</td>
+<td>Working; sync/async dispatch, YAML config</td>
+</tr>
+<tr>
+<td><code>internal/notify/notify.go</code></td>
+<td style="text-align: right;">39</td>
+<td>none</td>
+<td>0%</td>
+<td>Minimal; OS-only, no dedup/retry</td>
+</tr>
+<tr>
+<td><code>internal/session/manager.go</code></td>
+<td style="text-align: right;">846</td>
+<td><code>manager_test.go</code></td>
+<td>64.5% (package)</td>
+<td>Publishes 3 event types (SessionStarted, TeamCreated, session persistence)</td>
+</tr>
+<tr>
+<td><code>internal/session/runner.go</code></td>
+<td style="text-align: right;">380</td>
+<td><code>runner_test.go</code></td>
+<td>(included in session 64.5%)</td>
+<td>Publishes SessionEnded, CostUpdate, BudgetExceeded, JournalWritten</td>
+</tr>
+<tr>
+<td><code>internal/session/loop.go</code></td>
+<td style="text-align: right;">870</td>
+<td><code>loop_test.go</code></td>
+<td>(included in session 64.5%)</td>
+<td>Publishes PromptEnhanced</td>
+</tr>
+<tr>
+<td><code>internal/session/budget.go</code></td>
+<td style="text-align: right;">131</td>
+<td><code>budget_test.go</code></td>
+<td>(included in session 64.5%)</td>
+<td>BudgetEnforcer + LedgerEntry, no event-driven alerts</td>
+</tr>
+<tr>
+<td><code>internal/process/manager.go</code></td>
+<td style="text-align: right;">356</td>
+<td>none directly</td>
+<td>untested for events</td>
+<td>Publishes LoopStarted, LoopStopped</td>
+</tr>
+<tr>
+<td><code>internal/mcpserver/tools.go</code></td>
+<td style="text-align: right;">3992</td>
+<td><code>tools_test.go</code></td>
+<td>partial</td>
+<td>handleEventList, handleEventPoll, handleFleetAnalytics, handleSessionCompare, summarizeEvent</td>
+</tr>
+<tr>
+<td><code>internal/tui/components/notification.go</code></td>
+<td style="text-align: right;">47</td>
+<td><code>notification_test.go</code> (48 lines)</td>
+<td>full</td>
+<td>Toast-style TUI notifications</td>
+</tr>
+<tr>
+<td><code>internal/tui/fleet_builder.go</code></td>
+<td style="text-align: right;">480</td>
+<td>none</td>
+<td>untested</td>
+<td>Desktop notify for critical alerts via <code>notify.Send()</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-what-works-well">2.2 What Works Well</h3>
+<ul>
+<li><strong>Event bus design</strong> (<code>internal/events/bus.go:50-57</code>): The <code>Bus</code> struct uses a simple, correct pattern -- <code>sync.RWMutex</code>, non-blocking publish with dropped overflow, ring buffer with configurable max history. The cursor-based <code>HistoryAfterCursor()</code> (line 149) enables efficient incremental polling (used by <code>event_poll</code> MCP tool).</li>
+<li><strong>Event type taxonomy</strong> (<code>internal/events/bus.go:11-37</code>): 12 well-defined event types covering session lifecycle, cost, loops, teams, journal, config, scan, and prompt enhancement. Covers the full system lifecycle.</li>
+<li><strong>Hook system</strong> (<code>internal/hooks/hooks.go:30-36</code>): The <code>Executor</code> cleanly subscribes to the bus and dispatches to per-repo hooks defined in YAML. Supports both sync (blocking) and async execution with configurable timeouts. Environment variables expose event context to shell commands.</li>
+<li><strong>Cursor-based polling</strong> (<code>internal/mcpserver/tools.go:3816-3880</code>): The <code>handleEventPoll</code> handler returns a cursor string + <code>has_more</code> flag, enabling efficient mobile/remote polling without duplicate delivery.</li>
+<li><strong>Fleet analytics</strong> (<code>internal/mcpserver/tools.go:2071-2130</code>): Per-provider and per-repo cost aggregation computed on the fly from in-memory sessions. Good foundation for persistent analytics.</li>
+<li><strong>Desktop notification integration</strong> (<code>internal/tui/fleet_builder.go:234-241</code>): Critical alerts trigger <code>notify.Send()</code> asynchronously. Simple, low-overhead.</li>
+</ul>
+<h3 id="23-what-doesnt-work">2.3 What Doesn't Work</h3>
+<ul>
+<li><strong>No persistent event storage</strong> -- all event history is lost on process restart. The ring buffer (1000 events max) is in-memory only. Blocks 6.4.1, 6.7.1.</li>
+<li><strong>No external notification channels</strong> -- <code>internal/notify/</code> only handles OS desktop notifications. No HTTP webhooks, Discord, Slack, or email. Blocks all of 6.5.</li>
+<li><strong>No notification dedup/throttle</strong> -- <code>fleet_builder.go:234-241</code> fires desktop notifications for every critical alert with no dedup window. Relates to ROADMAP 2.6.4.</li>
+<li><strong>No OpenTelemetry or Prometheus</strong> -- no structured traces, no metrics endpoint. Blocks 6.4.3, 6.4.4.</li>
+<li><strong>No session recording at tool-call granularity</strong> -- <code>runner.go</code> captures cost/turn/output but not individual tool calls or LLM responses. Blocks 6.7.1.</li>
+<li><strong>Hooks don't capture output or errors</strong> -- <code>hooks.go:139</code> discards <code>cmd.Run()</code> error. No way to know if a hook failed or what it produced.</li>
+<li><strong>Notify package has no tests</strong> -- 0% coverage on <code>internal/notify/notify.go</code>. AppleScript injection possible via <code>escapeOSA()</code> edge cases.</li>
+<li><strong>Session package coverage at 64.5%</strong> -- event publishing paths in <code>runner.go</code> and <code>loop.go</code> are partially covered but manager event paths (Launch, LaunchTeam) lack targeted event assertion tests.</li>
+</ul>
+<hr />
+<h2 id="3-gap-analysis">3. Gap Analysis</h2>
+<h3 id="31-roadmap-target-vs-current-state">3.1 ROADMAP Target vs Current State</h3>
+<table>
+<thead>
+<tr>
+<th>ROADMAP Item</th>
+<th>Target</th>
+<th>Current State</th>
+<th>Gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6.4.1</td>
+<td>SQLite historical data model</td>
+<td>In-memory only (<code>events.Bus.history</code>)</td>
+<td>No persistence layer</td>
+</tr>
+<tr>
+<td>6.4.2</td>
+<td>TUI analytics view</td>
+<td><code>fleet_builder.go</code> computes live stats</td>
+<td>No historical time-series, no dedicated view</td>
+</tr>
+<tr>
+<td>6.4.3</td>
+<td>OpenTelemetry traces</td>
+<td>None</td>
+<td>No tracing infrastructure</td>
+</tr>
+<tr>
+<td>6.4.4</td>
+<td>Prometheus <code>/metrics</code></td>
+<td>2.11.4 has <code>/metrics</code> stub planned</td>
+<td>No HTTP server, no metrics</td>
+</tr>
+<tr>
+<td>6.4.5</td>
+<td>Grafana dashboard JSON</td>
+<td>None</td>
+<td>Depends on 6.4.4</td>
+</tr>
+<tr>
+<td>6.5.1</td>
+<td>Webhook dispatcher</td>
+<td>None</td>
+<td>No HTTP POST capability</td>
+</tr>
+<tr>
+<td>6.5.2</td>
+<td>Discord integration</td>
+<td>None</td>
+<td>No Discord webhook formatting</td>
+</tr>
+<tr>
+<td>6.5.3</td>
+<td>Slack integration</td>
+<td>None</td>
+<td>No Slack blocks formatting</td>
+</tr>
+<tr>
+<td>6.5.4</td>
+<td>Notification templates</td>
+<td>None</td>
+<td>No template system</td>
+</tr>
+<tr>
+<td>6.5.5</td>
+<td>Rate limiting and retry</td>
+<td>None</td>
+<td>No dedup, no backoff</td>
+</tr>
+<tr>
+<td>6.7.1</td>
+<td>Session recording</td>
+<td><code>runner.go</code> captures aggregates only</td>
+<td>No tool-call-level recording</td>
+</tr>
+<tr>
+<td>6.7.2</td>
+<td>Replay viewer</td>
+<td>None</td>
+<td>No TUI view</td>
+</tr>
+<tr>
+<td>6.7.3</td>
+<td>Export to Markdown/JSON</td>
+<td>None</td>
+<td>No export</td>
+</tr>
+<tr>
+<td>6.7.4</td>
+<td>Diff view (A/B)</td>
+<td><code>session_compare</code> MCP tool exists</td>
+<td>Compare is live-only, no replay</td>
+</tr>
+<tr>
+<td>6.7.5</td>
+<td>Retention policy</td>
+<td><code>LoadExternalSessions()</code> cleans up 24h+ sessions</td>
+<td>No configurable retention</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-missing-capabilities">3.2 Missing Capabilities</h3>
+<p>From peer projects and industry patterns:</p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Where It Exists</th>
+<th>Gap in ralphglasses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Structured event logging (JSONL)</td>
+<td>ROADMAP 2.12 (telemetry), internal SQLite project audit logs</td>
+<td>No append-only event log file</td>
+</tr>
+<tr>
+<td>Webhook with HMAC signing</td>
+<td>Discord/GitHub webhooks</td>
+<td>No request signing for security</td>
+</tr>
+<tr>
+<td>Event filtering per subscriber</td>
+<td>NATS, Redis Pub/Sub</td>
+<td>Bus broadcasts all events to all subscribers</td>
+</tr>
+<tr>
+<td>Backpressure / flow control</td>
+<td>Go channel patterns</td>
+<td>Overflow silently drops (by design, but no metrics on drops)</td>
+</tr>
+<tr>
+<td>Event schema versioning</td>
+<td>Protobuf, CloudEvents</td>
+<td>No schema version field on <code>Event</code> struct</td>
+</tr>
+<tr>
+<td>Distributed event bus</td>
+<td>NATS, Redis Streams</td>
+<td>In-process only (single binary)</td>
+</tr>
+<tr>
+<td>Metric cardinality control</td>
+<td>Prometheus best practices</td>
+<td>N/A (no metrics yet)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33-technical-debt-inventory">3.3 Technical Debt Inventory</h3>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Severity</th>
+<th>Issue</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hooks/hooks.go:139</code></td>
+<td>Medium</td>
+<td><code>_ = cmd.Run()</code> discards hook execution errors</td>
+<td>Capture error, log via slog, publish <code>hook.failed</code> event</td>
+</tr>
+<tr>
+<td><code>notify/notify.go:13</code></td>
+<td>Low</td>
+<td>String concatenation in AppleScript could break on edge cases</td>
+<td>Use <code>fmt.Sprintf</code> with proper escaping or switch to <code>terminal-notifier</code></td>
+</tr>
+<tr>
+<td><code>notify/notify.go</code></td>
+<td>Medium</td>
+<td>No tests at all (0% coverage)</td>
+<td>Add unit tests with mock exec</td>
+</tr>
+<tr>
+<td><code>events/bus.go:95-97</code></td>
+<td>Low</td>
+<td>Dropped events on subscriber overflow are silent</td>
+<td>Add <code>droppedCount</code> metric per subscriber</td>
+</tr>
+<tr>
+<td><code>events/bus.go:39-48</code></td>
+<td>Low</td>
+<td><code>Event.Data</code> is <code>map[string]any</code> -- no type safety</td>
+<td>Consider typed event payloads or at minimum document expected keys</td>
+</tr>
+<tr>
+<td><code>fleet_builder.go:236-238</code></td>
+<td>Medium</td>
+<td>Desktop notifications fire without dedup</td>
+<td>Add throttle map: <code>event_type+session_id -&gt; last_sent</code></td>
+</tr>
+<tr>
+<td><code>mcpserver/tools.go:2071-2130</code></td>
+<td>Medium</td>
+<td><code>handleFleetAnalytics</code> recomputes from scratch each call</td>
+<td>Cache or persist aggregates</td>
+</tr>
+<tr>
+<td><code>session/runner.go:210-220</code></td>
+<td>Low</td>
+<td>Journal write is fire-and-forget with goroutine leak risk</td>
+<td>Add timeout context or track goroutine</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-external-landscape">4. External Landscape</h2>
+<h3 id="41-competitorpeer-projects">4.1 Competitor/Peer Projects</h3>
+<table>
+<thead>
+<tr>
+<th>Project</th>
+<th>URL</th>
+<th>Relevance</th>
+<th>Key Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>mcpkit</strong> (sibling)</td>
+<td><code>github.com/hairglasses-studio/mcpkit</code></td>
+<td>High -- same org, has <code>observability</code> package with OpenTelemetry, <code>finops</code> package with cost tracking</td>
+<td>Port OTel span creation from <code>mcpkit/observability</code>; reuse cost model patterns</td>
+</tr>
+<tr>
+<td><strong>internal-sqlite-project</strong> (sibling)</td>
+<td><code>github.com/hairglasses-studio/internal-sqlite-project</code></td>
+<td>High -- pure SQLite (<code>modernc.org/sqlite</code>), audit log pattern</td>
+<td>Adopt <code>modernc.org/sqlite</code> (no CGo) for event persistence; mirror audit log table schema</td>
+</tr>
+<tr>
+<td><strong>Grafana Agent / Alloy</strong></td>
+<td><code>github.com/grafana/alloy</code></td>
+<td>Medium -- Go-native Prometheus + OTel pipeline</td>
+<td>Study <code>prometheus/client_golang</code> integration pattern for Go metrics endpoint</td>
+</tr>
+<tr>
+<td><strong>Watermill</strong></td>
+<td><code>github.com/ThreeDotsLabs/watermill</code></td>
+<td>Medium -- Go pub/sub with pluggable backends (NATS, Kafka, in-process)</td>
+<td>Fan-out pattern, middleware (dedup, throttle, retry), subscriber groups</td>
+</tr>
+<tr>
+<td><strong>CloudEvents Go SDK</strong></td>
+<td><code>github.com/cloudevents/sdk-go</code></td>
+<td>Medium -- standardized event envelope</td>
+<td>Event schema with <code>specversion</code>, <code>source</code>, <code>type</code>, <code>id</code> fields; industry-standard interop</td>
+</tr>
+<tr>
+<td><strong>ntfy</strong></td>
+<td><code>github.com/binwiederhier/ntfy</code></td>
+<td>Medium -- HTTP-based push notifications to phones</td>
+<td>Simple webhook + topic model; mobile push without app store dependency</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-patterns-worth-adopting">4.2 Patterns Worth Adopting</h3>
+<p><strong>1. SQLite event sink (from internal-sqlite-project)</strong>
+- Write all events to a <code>fleet_events</code> table with the same schema as <code>events.Event</code> plus auto-increment ID, indexed by <code>type</code> and <code>timestamp</code>.
+- Use <code>modernc.org/sqlite</code> (pure Go, no CGo) to avoid build complexity.
+- Target: new <code>internal/events/store.go</code> with <code>EventStore</code> interface.
+- Ref: <code>internal/events/bus.go:71</code> (Publish) -- add <code>store.Write(event)</code> call after history append.</p>
+<p><strong>2. Webhook dispatcher with exponential backoff (from Watermill)</strong>
+- <code>internal/webhook/dispatcher.go</code>: subscribe to event bus, POST to configured URLs.
+- Use <code>net/http.Client</code> with per-URL retry queue, exponential backoff (1s, 2s, 4s, 8s, max 60s).
+- Dedup: track <code>(event_type, session_id, 60s_window)</code> to suppress duplicates.
+- Ref: <code>internal/hooks/hooks.go:68-87</code> (Start/Subscribe pattern) -- webhook dispatcher follows same lifecycle.</p>
+<p><strong>3. Prometheus client_golang counters (from Grafana/alloy)</strong>
+- <code>internal/metrics/prometheus.go</code>: register counters (<code>ralphglasses_events_total</code>, <code>ralphglasses_sessions_active</code>, <code>ralphglasses_cost_usd_total</code>).
+- Wire into existing 2.11 HTTP server plan.
+- Subscribe to event bus, increment counters on each event.</p>
+<p><strong>4. CloudEvents envelope (from CloudEvents SDK)</strong>
+- Add <code>specversion</code>, <code>id</code> (UUID), <code>source</code> fields to <code>events.Event</code>.
+- Enables interop with external systems expecting CloudEvents format.
+- Can be a wrapper layer for webhook payloads without changing internal Event struct.</p>
+<h3 id="43-anti-patterns-to-avoid">4.3 Anti-Patterns to Avoid</h3>
+<ul>
+<li><strong>Fat event bus</strong>: Do not add filtering, routing, or transformation logic to the bus itself. Keep <code>Bus</code> as a simple broadcast mechanism; put intelligence in subscribers.</li>
+<li><strong>Synchronous persistence in Publish()</strong>: SQLite writes should be buffered/batched, not inline in the Publish hot path. Use a dedicated goroutine consuming from a channel.</li>
+<li><strong>Unbounded webhook queues</strong>: Cap retry queues per URL (e.g., 1000 pending). Drop oldest if full, log the drop.</li>
+<li><strong>High-cardinality Prometheus labels</strong>: Do not use <code>session_id</code> as a label (unbounded). Use <code>provider</code>, <code>repo</code>, <code>status</code> (bounded).</li>
+<li><strong>Recording everything for replay</strong>: Do not store full LLM response bodies in SQLite (too large). Store tool call names, costs, timing, and truncated summaries. Full output stays in session JSON files.</li>
+</ul>
+<h3 id="44-academic-industry-references">4.4 Academic &amp; Industry References</h3>
+<ul>
+<li><strong>Event Sourcing pattern</strong> (Martin Fowler): Store state changes as immutable event log. Relevant for 6.7 replay -- rebuild session state from events rather than snapshotting.</li>
+<li><strong>CQRS (Command Query Responsibility Segregation)</strong>: Separate write path (event bus) from read path (analytics queries). The existing <code>handleFleetAnalytics</code> already follows this implicitly.</li>
+<li><strong>Prometheus naming conventions</strong> (<code>https://prometheus.io/docs/practices/naming/</code>): Use <code>_total</code> suffix for counters, <code>_seconds</code> for durations, <code>_bytes</code> for sizes.</li>
+<li><strong>CloudEvents specification v1.0</strong> (<code>https://cloudevents.io/</code>): Industry standard for event metadata. Adopting the envelope format improves interoperability.</li>
+<li><strong>SQLite as application file format</strong> (<code>https://www.sqlite.org/appfileformat.html</code>): SQLite is ideal for local-first analytics storage; WAL mode supports concurrent readers.</li>
+</ul>
+<hr />
+<h2 id="5-actionable-recommendations">5. Actionable Recommendations</h2>
+<h3 id="51-immediate-actions-week-1-2">5.1 Immediate Actions (Week 1-2)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Files</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP Item</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Create <code>internal/events/store.go</code> -- SQLite event persistence with <code>modernc.org/sqlite</code></td>
+<td><code>internal/events/store.go</code>, <code>internal/events/store_test.go</code></td>
+<td>M</td>
+<td>High -- unlocks 6.4 and 6.7</td>
+<td>6.4.1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Wire event store into <code>Bus.Publish()</code> as async sink (buffered channel + writer goroutine)</td>
+<td><code>internal/events/bus.go:71-99</code></td>
+<td>S</td>
+<td>High -- all events automatically persisted</td>
+<td>6.4.1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Create <code>internal/webhook/dispatcher.go</code> -- HTTP POST with backoff, dedup, HMAC signing</td>
+<td><code>internal/webhook/dispatcher.go</code>, <code>internal/webhook/dispatcher_test.go</code></td>
+<td>M</td>
+<td>High -- core of 6.5</td>
+<td>6.5.1, 6.5.5</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Add notification dedup to <code>fleet_builder.go</code> -- throttle map with 60s window</td>
+<td><code>internal/tui/fleet_builder.go:234-241</code></td>
+<td>S</td>
+<td>Medium -- fixes existing spam issue</td>
+<td>2.6.4</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Add tests for <code>internal/notify/notify.go</code> using exec mock</td>
+<td><code>internal/notify/notify_test.go</code></td>
+<td>S</td>
+<td>Low -- closes 0% coverage gap</td>
+<td>2.75.1</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Capture hook execution errors in <code>hooks.go:139</code></td>
+<td><code>internal/hooks/hooks.go:128-146</code></td>
+<td>S</td>
+<td>Medium -- enables hook failure alerting</td>
+<td>2.75.2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-near-term-actions-week-3-6">5.2 Near-Term Actions (Week 3-6)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Files</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP Item</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>7</td>
+<td>Discord webhook formatter -- embed builder for session events</td>
+<td><code>internal/webhook/discord.go</code>, <code>internal/webhook/discord_test.go</code></td>
+<td>S</td>
+<td>Medium -- first external integration</td>
+<td>6.5.2</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Slack webhook formatter -- Block Kit builder for session events</td>
+<td><code>internal/webhook/slack.go</code>, <code>internal/webhook/slack_test.go</code></td>
+<td>S</td>
+<td>Medium -- enterprise integration</td>
+<td>6.5.3</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Notification templates -- Go <code>text/template</code> with event context vars</td>
+<td><code>internal/webhook/templates.go</code>, <code>internal/webhook/templates_test.go</code></td>
+<td>M</td>
+<td>Medium -- user-customizable messages</td>
+<td>6.5.4</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Prometheus metrics endpoint -- <code>client_golang</code> counters and gauges</td>
+<td><code>internal/metrics/prometheus.go</code>, <code>internal/metrics/prometheus_test.go</code></td>
+<td>M</td>
+<td>High -- standard observability</td>
+<td>6.4.4</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Wire Prometheus into 2.11 HTTP server (create if needed)</td>
+<td><code>internal/http/server.go</code> (new), <code>cmd/root.go</code> (add <code>--http-addr</code>)</td>
+<td>M</td>
+<td>High -- exposes metrics to Grafana</td>
+<td>6.4.4, 2.11</td>
+</tr>
+<tr>
+<td>12</td>
+<td>TUI analytics view -- historical cost chart using ntcharts</td>
+<td><code>internal/tui/views/analytics.go</code></td>
+<td>L</td>
+<td>Medium -- visual cost tracking</td>
+<td>6.4.2</td>
+</tr>
+<tr>
+<td>13</td>
+<td>SQLite query layer for analytics -- time-bucketed aggregations</td>
+<td><code>internal/events/store.go</code> (extend)</td>
+<td>M</td>
+<td>Medium -- powers TUI analytics</td>
+<td>6.4.1, 6.4.2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-strategic-actions-week-7-12">5.3 Strategic Actions (Week 7-12)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Files</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>ROADMAP Item</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>14</td>
+<td>OpenTelemetry traces -- port from <code>mcpkit/observability</code>, span per session/task</td>
+<td><code>internal/telemetry/otel.go</code>, <code>internal/telemetry/otel_test.go</code></td>
+<td>L</td>
+<td>Medium -- distributed tracing</td>
+<td>6.4.3</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Grafana dashboard JSON -- pre-built panels for session metrics</td>
+<td><code>distro/grafana/fleet-dashboard.json</code></td>
+<td>M</td>
+<td>Medium -- out-of-box monitoring</td>
+<td>6.4.5</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Session recording -- capture tool calls, state transitions in event store</td>
+<td><code>internal/session/recorder.go</code>, <code>internal/session/recorder_test.go</code></td>
+<td>L</td>
+<td>High -- enables replay</td>
+<td>6.7.1</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Replay viewer -- TUI view with forward/backward/seek through session events</td>
+<td><code>internal/tui/views/replay.go</code></td>
+<td>XL</td>
+<td>Medium -- post-mortem analysis</td>
+<td>6.7.2</td>
+</tr>
+<tr>
+<td>18</td>
+<td>Session export -- Markdown/JSON report generator from recorded events</td>
+<td><code>internal/session/export.go</code>, <code>internal/session/export_test.go</code></td>
+<td>M</td>
+<td>Medium -- shareable reports</td>
+<td>6.7.3</td>
+</tr>
+<tr>
+<td>19</td>
+<td>Replay diff view -- side-by-side comparison of two session recordings</td>
+<td><code>internal/tui/views/replay_diff.go</code></td>
+<td>L</td>
+<td>Low -- A/B model testing UX</td>
+<td>6.7.4</td>
+</tr>
+<tr>
+<td>20</td>
+<td>Retention policy -- auto-archive/delete events and sessions older than N days</td>
+<td><code>internal/events/store.go</code> (extend), <code>.ralphrc</code> config key</td>
+<td>S</td>
+<td>Low -- storage management</td>
+<td>6.7.5</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-risk-assessment">6. Risk Assessment</h2>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Probability</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite write contention during high event throughput</td>
+<td>Medium</td>
+<td>High -- blocks event publishing</td>
+<td>Use WAL mode + <code>PRAGMA busy_timeout=5000</code>; buffer writes in channel with batch inserts (100ms flush interval)</td>
+</tr>
+<tr>
+<td>Webhook failures causing event backlog OOM</td>
+<td>Low</td>
+<td>High -- memory exhaustion</td>
+<td>Cap per-URL retry queue at 1000 events; drop oldest with <code>dropped_webhook_events</code> counter</td>
+</tr>
+<tr>
+<td>Prometheus high-cardinality explosion</td>
+<td>Medium</td>
+<td>Medium -- Grafana/Prometheus OOM</td>
+<td>Use only bounded labels (provider, repo_name, event_type, status); never use session_id as label</td>
+</tr>
+<tr>
+<td>OpenTelemetry SDK overhead on hot path</td>
+<td>Low</td>
+<td>Medium -- latency increase</td>
+<td>Use async span exporter; benchmark before/after; make OTel opt-in via flag</td>
+</tr>
+<tr>
+<td>Session recording disk usage growth</td>
+<td>Medium</td>
+<td>Medium -- fills disk on marathon runs</td>
+<td>Implement 6.7.5 retention policy early; default 7-day retention; monitor disk in fleet dashboard</td>
+</tr>
+<tr>
+<td>CGo dependency from sqlite3 driver</td>
+<td>Low</td>
+<td>High -- breaks cross-compilation</td>
+<td>Use <code>modernc.org/sqlite</code> (pure Go) exclusively; add CI cross-compile check</td>
+</tr>
+<tr>
+<td>Breaking change to Event struct</td>
+<td>Medium</td>
+<td>Medium -- downstream consumers break</td>
+<td>Add <code>Version int</code> field now; document migration path; use optional fields</td>
+</tr>
+<tr>
+<td>Discord/Slack API rate limiting</td>
+<td>Medium</td>
+<td>Low -- notifications delayed</td>
+<td>Implement client-side rate limiter (30 req/min Discord, 1 req/sec Slack); queue excess</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-implementation-priority-ordering">7. Implementation Priority Ordering</h2>
+<h3 id="71-critical-path">7.1 Critical Path</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>6.4.1 (SQLite store) --&gt; 6.4.2 (TUI analytics) --&gt; 6.7.1 (session recording) --&gt; 6.7.2 (replay viewer)
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                    \--&gt; 6.4.4 (Prometheus)    --&gt; 6.4.5 (Grafana dashboard)
+</code></pre></div>
+<p>The SQLite event store is the single most important enabler. It unblocks both the analytics stack (6.4) and the replay/audit trail (6.7). Prometheus is a parallel track that shares the 2.11 HTTP server dependency.</p>
+<h3 id="72-recommended-sequence">7.2 Recommended Sequence</h3>
+<p><strong>Sprint 1 (Week 1-2): Storage + Webhook Foundation</strong>
+1. <code>internal/events/store.go</code> -- SQLite event persistence (6.4.1)
+2. Wire store into <code>Bus.Publish()</code> as async sink (6.4.1)
+3. <code>internal/webhook/dispatcher.go</code> -- HTTP POST + backoff + dedup (6.5.1, 6.5.5)
+4. Fix hook error handling in <code>hooks.go:139</code> (tech debt)
+5. Add notify tests (tech debt)
+6. Add dedup to desktop notifications (2.6.4)</p>
+<p><strong>Sprint 2 (Week 3-4): External Integrations</strong>
+7. Discord formatter (6.5.2)
+8. Slack formatter (6.5.3)
+9. Notification templates (6.5.4)
+10. Webhook config in <code>.ralphrc</code> (6.5.1)</p>
+<p><strong>Sprint 3 (Week 5-6): Observability</strong>
+11. Prometheus metrics (6.4.4)
+12. HTTP server + <code>--http-addr</code> flag (2.11.1-2.11.4)
+13. SQLite time-bucketed queries (6.4.1)
+14. TUI analytics view (6.4.2)</p>
+<p><strong>Sprint 4 (Week 7-8): Traces + Grafana</strong>
+15. OpenTelemetry traces (6.4.3)
+16. Grafana dashboard JSON (6.4.5)</p>
+<p><strong>Sprint 5 (Week 9-12): Replay</strong>
+17. Session recording infrastructure (6.7.1)
+18. Session export (6.7.3)
+19. Retention policy (6.7.5)
+20. Replay viewer (6.7.2)
+21. Replay diff view (6.7.4)</p>
+<h3 id="73-parallelization-opportunities">7.3 Parallelization Opportunities</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Track A (Analytics):     6.4.1 --&gt; 6.4.2 --&gt; 6.4.3
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Track B (Notifications): 6.5.1 --&gt; 6.5.2 + 6.5.3 (parallel) --&gt; 6.5.4 + 6.5.5
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Track C (Observability): 2.11 --&gt; 6.4.4 --&gt; 6.4.5
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Track D (Replay):        [blocked by 6.4.1] --&gt; 6.7.1 --&gt; 6.7.2 + 6.7.3 (parallel) --&gt; 6.7.4
+</code></pre></div>
+<ul>
+<li><strong>Tracks A and B</strong> are fully independent and can be worked in parallel from day one.</li>
+<li><strong>Track C</strong> depends only on the 2.11 HTTP server, not on Track A's SQLite store.</li>
+<li><strong>Track D</strong> depends on Track A's SQLite store (6.4.1) being complete.</li>
+<li>Within 6.5, Discord (6.5.2) and Slack (6.5.3) formatters are independent of each other.</li>
+<li>Within 6.7, export (6.7.3) and replay viewer (6.7.2) can proceed in parallel once recording (6.7.1) is done.</li>
+<li>Tech debt items (hook error handling, notify tests, notification dedup) can be interleaved into any sprint as filler tasks.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

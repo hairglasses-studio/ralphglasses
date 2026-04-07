@@ -1,0 +1,1987 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/MCP-TOOLS/">
+      
+      
+        <link rel="prev" href="../architecture-diagrams/">
+      
+      
+        <link rel="next" href="../PROVIDER-SETUP/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>MCP Tools - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#mcp-server-tools" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              MCP Tools
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deferred-loading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deferred Loading
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#meta-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Meta-Tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tools
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tools">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-10-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        core (10 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#session-13-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        session (13 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loop-10-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        loop (10 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prompt-8-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        prompt (8 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fleet-7-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fleet (7 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#repo-5-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        repo (5 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#roadmap-5-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        roadmap (5 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#team-6-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        team (6 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#awesome-5-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        awesome (5 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-24-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        advanced (24 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eval-4-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        eval (4 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fleet_h-4-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fleet_h (4 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#observability-15-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        observability (15 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rdcycle-10-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rdcycle (10 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#restarting-after-code-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restarting After Code Changes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deferred-loading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deferred Loading
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#meta-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Meta-Tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tools
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tools">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-10-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        core (10 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#session-13-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        session (13 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loop-10-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        loop (10 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prompt-8-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        prompt (8 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fleet-7-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fleet (7 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#repo-5-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        repo (5 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#roadmap-5-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        roadmap (5 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#team-6-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        team (6 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#awesome-5-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        awesome (5 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-24-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        advanced (24 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eval-4-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        eval (4 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fleet_h-4-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fleet_h (4 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#observability-15-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        observability (15 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rdcycle-10-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rdcycle (10 tools)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#restarting-after-code-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restarting After Code Changes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="mcp-server-tools">MCP Server &amp; Tools</h1>
+<p>Ralphglasses is an installable MCP server exposing 126 tools (124 namespace tools + 2 meta-tools) in 14 namespaces for managing ralph loops, multi-provider LLM sessions, fleet orchestration, and self-improvement subsystems programmatically.</p>
+<h2 id="install">Install</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Codex-first repo-local MCP/client setup is already configured via .codex/config.toml and .mcp.json.</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>go<span class="w"> </span>run<span class="w"> </span>.<span class="w"> </span>mcp<span class="w"> </span>--scan-path<span class="w"> </span>~/hairglasses-studio
+</code></pre></div>
+<p>A <code>.mcp.json</code> and <code>.codex/config.toml</code> are also included in the repo root for automatic local discovery. Other MCP clients can register <code>go run . mcp</code> directly and set <code>RALPHGLASSES_SCAN_PATH=~/hairglasses-studio</code> if they need an explicit client-level config.</p>
+<h2 id="deferred-loading">Deferred Loading</h2>
+<p>To minimize startup latency and memory usage, only core tools are loaded upfront. The remaining tools are organized into 14 namespaces and loaded on demand via meta-tools:</p>
+<table>
+<thead>
+<tr>
+<th>Namespace</th>
+<th>Tools</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>core</code></td>
+<td>10</td>
+<td>Scan, list, status, start, stop, stop_all, pause, logs, config, config_bulk (always loaded)</td>
+</tr>
+<tr>
+<td><code>session</code></td>
+<td>13</td>
+<td>Session lifecycle: launch, list, status, resume, stop, stop_all, budget, retry, output, tail, diff, compare, errors</td>
+</tr>
+<tr>
+<td><code>loop</code></td>
+<td>10</td>
+<td>Perpetual dev loops: start, status, step, stop, benchmark, baseline, gates, self_test, self_improve, prune</td>
+</tr>
+<tr>
+<td><code>prompt</code></td>
+<td>8</td>
+<td>Prompt enhancement: analyze, enhance, lint, improve, classify, should_enhance, templates, template_fill</td>
+</tr>
+<tr>
+<td><code>fleet</code></td>
+<td>7</td>
+<td>Fleet ops: fleet_status, analytics, submit, budget, workers, marathon_dashboard, dlq</td>
+</tr>
+<tr>
+<td><code>repo</code></td>
+<td>5</td>
+<td>Repo management: health, optimize, scaffold, claudemd_check, snapshot</td>
+</tr>
+<tr>
+<td><code>roadmap</code></td>
+<td>5</td>
+<td>Roadmap automation: parse, analyze, research, expand, export</td>
+</tr>
+<tr>
+<td><code>team</code></td>
+<td>6</td>
+<td>Agent teams: team_create, team_status, team_delegate, agent_define, agent_list, agent_compose</td>
+</tr>
+<tr>
+<td><code>awesome</code></td>
+<td>5</td>
+<td>Awesome-list research: fetch, analyze, diff, report, sync</td>
+</tr>
+<tr>
+<td><code>advanced</code></td>
+<td>24</td>
+<td>RC tools, events, HITL, autonomy, feedback, journals, workflows, bandit, circuit breaker</td>
+</tr>
+<tr>
+<td><code>eval</code></td>
+<td>4</td>
+<td>Offline evaluation: counterfactual, A/B test, changepoints, anomaly detection</td>
+</tr>
+<tr>
+<td><code>fleet_h</code></td>
+<td>4</td>
+<td>Fleet intelligence: blackboard coordination, A2A offers, cost forecasting</td>
+</tr>
+<tr>
+<td><code>observability</code></td>
+<td>15</td>
+<td>Observations, scratchpad, loop wait/poll, coverage, cost estimation, merge verification</td>
+</tr>
+<tr>
+<td><code>rdcycle</code></td>
+<td>10</td>
+<td>R&amp;D cycle automation: finding_to_task, cycle_baseline, cycle_plan, cycle_merge, cycle_schedule, loop_replay, budget_forecast, diff_review, finding_reason, observation_correlate</td>
+</tr>
+</tbody>
+</table>
+<p>Use the meta-tools below to discover and load tool groups at runtime.</p>
+<h2 id="meta-tools">Meta-Tools</h2>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_tool_groups</code></td>
+<td>List available tool groups for deferred loading</td>
+</tr>
+<tr>
+<td><code>ralphglasses_load_tool_group</code></td>
+<td>Load a tool namespace on demand (e.g., <code>{"group": "session"}</code>)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="tools">Tools</h2>
+<h3 id="core-10-tools">core (10 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_scan</code></td>
+<td>Scan for ralph-enabled repos and return their current status</td>
+</tr>
+<tr>
+<td><code>ralphglasses_list</code></td>
+<td>List all discovered repos with status summary</td>
+</tr>
+<tr>
+<td><code>ralphglasses_status</code></td>
+<td>Get detailed status for a specific repo including loop status, circuit breaker, progress, and config</td>
+</tr>
+<tr>
+<td><code>ralphglasses_start</code></td>
+<td>Start a ralph loop for a repo</td>
+</tr>
+<tr>
+<td><code>ralphglasses_stop</code></td>
+<td>Stop a running ralph loop for a repo</td>
+</tr>
+<tr>
+<td><code>ralphglasses_stop_all</code></td>
+<td>Stop all running ralph loops</td>
+</tr>
+<tr>
+<td><code>ralphglasses_pause</code></td>
+<td>Pause or resume a running ralph loop</td>
+</tr>
+<tr>
+<td><code>ralphglasses_logs</code></td>
+<td>Get recent log lines from a repo's ralph log</td>
+</tr>
+<tr>
+<td><code>ralphglasses_config</code></td>
+<td>Get or set .ralphrc config values for a repo</td>
+</tr>
+<tr>
+<td><code>ralphglasses_config_bulk</code></td>
+<td>Get/set .ralphrc values across multiple repos</td>
+</tr>
+</tbody>
+</table>
+<h3 id="session-13-tools">session (13 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_session_launch</code></td>
+<td>Launch a headless LLM CLI session (claude/gemini/codex) for a repo</td>
+</tr>
+<tr>
+<td><code>ralphglasses_session_list</code></td>
+<td>List all tracked LLM sessions with status, cost, and turns</td>
+</tr>
+<tr>
+<td><code>ralphglasses_session_status</code></td>
+<td>Get detailed status for a session including output, cost, and turns</td>
+</tr>
+<tr>
+<td><code>ralphglasses_session_resume</code></td>
+<td>Resume a previous LLM CLI session</td>
+</tr>
+<tr>
+<td><code>ralphglasses_session_stop</code></td>
+<td>Stop a running session</td>
+</tr>
+<tr>
+<td><code>ralphglasses_session_stop_all</code></td>
+<td>Stop all running LLM sessions (emergency cost cutoff)</td>
+</tr>
+<tr>
+<td><code>ralphglasses_session_budget</code></td>
+<td>Get cost/budget info for a session, or update budget</td>
+</tr>
+<tr>
+<td><code>ralphglasses_session_retry</code></td>
+<td>Re-launch a failed session with same params, optional overrides</td>
+</tr>
+<tr>
+<td><code>ralphglasses_session_output</code></td>
+<td>Get recent output from a session's output history</td>
+</tr>
+<tr>
+<td><code>ralphglasses_session_tail</code></td>
+<td>Tail session output with cursor — returns only new lines since last call</td>
+</tr>
+<tr>
+<td><code>ralphglasses_session_diff</code></td>
+<td>Git changes made during a session's execution window</td>
+</tr>
+<tr>
+<td><code>ralphglasses_session_compare</code></td>
+<td>Compare two sessions by ID: cost, turns, duration, provider efficiency</td>
+</tr>
+<tr>
+<td><code>ralphglasses_session_errors</code></td>
+<td>Aggregated error view: parse failures, API errors, budget warnings</td>
+</tr>
+</tbody>
+</table>
+<h3 id="loop-10-tools">loop (10 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_loop_start</code></td>
+<td>Create a multi-provider planner/worker perpetual development loop for a repo</td>
+</tr>
+<tr>
+<td><code>ralphglasses_loop_status</code></td>
+<td>Get status for a perpetual development loop</td>
+</tr>
+<tr>
+<td><code>ralphglasses_loop_step</code></td>
+<td>Execute one planner/worker/verifier iteration for a loop</td>
+</tr>
+<tr>
+<td><code>ralphglasses_loop_stop</code></td>
+<td>Stop a perpetual development loop</td>
+</tr>
+<tr>
+<td><code>ralphglasses_loop_benchmark</code></td>
+<td>P50/P95 metrics from recent loop observations for a repo</td>
+</tr>
+<tr>
+<td><code>ralphglasses_loop_baseline</code></td>
+<td>Generate, view, or pin loop performance baseline for a repo</td>
+</tr>
+<tr>
+<td><code>ralphglasses_loop_gates</code></td>
+<td>Evaluate regression gates — returns pass/warn/fail report</td>
+</tr>
+<tr>
+<td><code>ralphglasses_self_test</code></td>
+<td>Run recursive self-test iterations against a repository using the loop engine</td>
+</tr>
+<tr>
+<td><code>ralphglasses_self_improve</code></td>
+<td>Start a self-improvement loop that autonomously improves a repository</td>
+</tr>
+<tr>
+<td><code>ralphglasses_loop_prune</code></td>
+<td>Prune stale loop run files by status and age</td>
+</tr>
+</tbody>
+</table>
+<h3 id="prompt-8-tools">prompt (8 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_prompt_analyze</code></td>
+<td>Score a prompt across 10 quality dimensions with letter grades and suggestions</td>
+</tr>
+<tr>
+<td><code>ralphglasses_prompt_enhance</code></td>
+<td>Run the 13-stage prompt enhancement pipeline</td>
+</tr>
+<tr>
+<td><code>ralphglasses_prompt_lint</code></td>
+<td>Deep-lint a prompt for anti-patterns: unmotivated rules, negative framing, injection risks, etc.</td>
+</tr>
+<tr>
+<td><code>ralphglasses_prompt_improve</code></td>
+<td>LLM-powered prompt improvement using Claude, Gemini, or OpenAI</td>
+</tr>
+<tr>
+<td><code>ralphglasses_prompt_classify</code></td>
+<td>Classify a prompt's task type (code, troubleshooting, analysis, creative, workflow, general)</td>
+</tr>
+<tr>
+<td><code>ralphglasses_prompt_should_enhance</code></td>
+<td>Check whether a prompt would benefit from enhancement</td>
+</tr>
+<tr>
+<td><code>ralphglasses_prompt_templates</code></td>
+<td>List available prompt templates with descriptions and required variables</td>
+</tr>
+<tr>
+<td><code>ralphglasses_prompt_template_fill</code></td>
+<td>Fill a prompt template with variable values</td>
+</tr>
+</tbody>
+</table>
+<h3 id="fleet-7-tools">fleet (7 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_fleet_status</code></td>
+<td>Fleet-wide dashboard: aggregate status, costs, health, and alerts across all repos</td>
+</tr>
+<tr>
+<td><code>ralphglasses_fleet_analytics</code></td>
+<td>Cost breakdown by provider/repo/time-period with trend analysis</td>
+</tr>
+<tr>
+<td><code>ralphglasses_fleet_submit</code></td>
+<td>Submit work to the distributed fleet queue for execution on any worker</td>
+</tr>
+<tr>
+<td><code>ralphglasses_fleet_budget</code></td>
+<td>View or set the fleet-wide budget (spent, remaining, active work)</td>
+</tr>
+<tr>
+<td><code>ralphglasses_fleet_workers</code></td>
+<td>List registered fleet workers with status, capacity, and spend</td>
+</tr>
+<tr>
+<td><code>ralphglasses_marathon_dashboard</code></td>
+<td>Compact marathon status: burn rate, stale sessions, team progress, alerts</td>
+</tr>
+<tr>
+<td><code>ralphglasses_fleet_dlq</code></td>
+<td>Dead letter queue management for permanently failed fleet work items</td>
+</tr>
+</tbody>
+</table>
+<h3 id="repo-5-tools">repo (5 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_repo_health</code></td>
+<td>Composite health check: circuit breaker, budget, staleness, errors, active sessions</td>
+</tr>
+<tr>
+<td><code>ralphglasses_repo_optimize</code></td>
+<td>Analyze and optimize ralph config files — detect misconfigs, missing settings, stale plans</td>
+</tr>
+<tr>
+<td><code>ralphglasses_repo_scaffold</code></td>
+<td>Create/initialize ralph config files for a repo</td>
+</tr>
+<tr>
+<td><code>ralphglasses_claudemd_check</code></td>
+<td>Health-check a repo's CLAUDE.md for common issues</td>
+</tr>
+<tr>
+<td><code>ralphglasses_snapshot</code></td>
+<td>Save or list fleet state snapshots</td>
+</tr>
+</tbody>
+</table>
+<h3 id="roadmap-5-tools">roadmap (5 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_roadmap_parse</code></td>
+<td>Parse ROADMAP.md into structured JSON (phases, sections, tasks, deps, completion stats)</td>
+</tr>
+<tr>
+<td><code>ralphglasses_roadmap_analyze</code></td>
+<td>Compare roadmap vs codebase — find gaps, stale checkboxes, ready tasks, orphaned code</td>
+</tr>
+<tr>
+<td><code>ralphglasses_roadmap_research</code></td>
+<td>Search GitHub for relevant repos and tools that unlock new capabilities</td>
+</tr>
+<tr>
+<td><code>ralphglasses_roadmap_expand</code></td>
+<td>Generate proposed roadmap expansions from analysis gaps and research findings</td>
+</tr>
+<tr>
+<td><code>ralphglasses_roadmap_export</code></td>
+<td>Export roadmap items as structured task specs for ralph loop consumption</td>
+</tr>
+</tbody>
+</table>
+<h3 id="team-6-tools">team (6 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_team_create</code></td>
+<td>Create an agent team with a lead session that delegates tasks to teammates</td>
+</tr>
+<tr>
+<td><code>ralphglasses_team_status</code></td>
+<td>Get team status including lead session, tasks, and progress</td>
+</tr>
+<tr>
+<td><code>ralphglasses_team_delegate</code></td>
+<td>Add a new task to an existing team</td>
+</tr>
+<tr>
+<td><code>ralphglasses_agent_define</code></td>
+<td>Create or update an agent definition for a repo (supports all providers)</td>
+</tr>
+<tr>
+<td><code>ralphglasses_agent_list</code></td>
+<td>List available agent definitions for a repo (supports all providers)</td>
+</tr>
+<tr>
+<td><code>ralphglasses_agent_compose</code></td>
+<td>Create a composite agent by layering multiple existing agent definitions</td>
+</tr>
+</tbody>
+</table>
+<h3 id="awesome-5-tools">awesome (5 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_awesome_fetch</code></td>
+<td>Fetch and parse an awesome-list README into structured entries with categories</td>
+</tr>
+<tr>
+<td><code>ralphglasses_awesome_analyze</code></td>
+<td>Deep-analyze repos: fetch READMEs, score value/complexity vs ralph capabilities</td>
+</tr>
+<tr>
+<td><code>ralphglasses_awesome_diff</code></td>
+<td>Compare current awesome-list against previous fetch (new/removed entries)</td>
+</tr>
+<tr>
+<td><code>ralphglasses_awesome_report</code></td>
+<td>Generate formatted report from saved analysis results</td>
+</tr>
+<tr>
+<td><code>ralphglasses_awesome_sync</code></td>
+<td>Full pipeline: fetch awesome-list, diff, analyze new entries, report, save</td>
+</tr>
+</tbody>
+</table>
+<h3 id="advanced-24-tools">advanced (24 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_rc_status</code></td>
+<td>Compact fleet overview for mobile: active sessions, costs, alerts</td>
+</tr>
+<tr>
+<td><code>ralphglasses_rc_send</code></td>
+<td>Send prompt to repo — auto-stops existing session, launches new</td>
+</tr>
+<tr>
+<td><code>ralphglasses_rc_read</code></td>
+<td>Read recent output from most active session with cursor</td>
+</tr>
+<tr>
+<td><code>ralphglasses_rc_act</code></td>
+<td>Quick fleet action: stop, stop_all, pause, resume, retry</td>
+</tr>
+<tr>
+<td><code>ralphglasses_event_list</code></td>
+<td>Query recent fleet events from the event bus</td>
+</tr>
+<tr>
+<td><code>ralphglasses_event_poll</code></td>
+<td>Poll for new fleet events since last check (cursor-based)</td>
+</tr>
+<tr>
+<td><code>ralphglasses_hitl_score</code></td>
+<td>Current human-in-the-loop score: manual interventions vs autonomous actions</td>
+</tr>
+<tr>
+<td><code>ralphglasses_hitl_history</code></td>
+<td>Recent HITL events: manual stops, auto-recoveries, config changes</td>
+</tr>
+<tr>
+<td><code>ralphglasses_autonomy_level</code></td>
+<td>View or set the autonomy level (0-3)</td>
+</tr>
+<tr>
+<td><code>ralphglasses_autonomy_decisions</code></td>
+<td>Recent autonomous decisions with rationale, inputs, and outcomes</td>
+</tr>
+<tr>
+<td><code>ralphglasses_autonomy_override</code></td>
+<td>Override/reverse an autonomous decision and record human intervention</td>
+</tr>
+<tr>
+<td><code>ralphglasses_feedback_profiles</code></td>
+<td>Per-task-type and per-provider performance data from journal analysis</td>
+</tr>
+<tr>
+<td><code>ralphglasses_provider_recommend</code></td>
+<td>Recommend best provider + model + budget for a task based on feedback profiles</td>
+</tr>
+<tr>
+<td><code>ralphglasses_tool_benchmark</code></td>
+<td>Per-tool performance benchmarks: latency percentiles, success rates</td>
+</tr>
+<tr>
+<td><code>ralphglasses_journal_read</code></td>
+<td>Read improvement journal entries with synthesized context</td>
+</tr>
+<tr>
+<td><code>ralphglasses_journal_write</code></td>
+<td>Manually write an improvement note to a repo's journal</td>
+</tr>
+<tr>
+<td><code>ralphglasses_journal_prune</code></td>
+<td>Compact improvement journal to prevent unbounded growth</td>
+</tr>
+<tr>
+<td><code>ralphglasses_workflow_define</code></td>
+<td>Define a multi-step workflow as YAML</td>
+</tr>
+<tr>
+<td><code>ralphglasses_workflow_run</code></td>
+<td>Execute a defined workflow, launching sessions per step</td>
+</tr>
+<tr>
+<td><code>ralphglasses_bandit_status</code></td>
+<td>View multi-armed bandit arm statistics for provider selection</td>
+</tr>
+<tr>
+<td><code>ralphglasses_confidence_calibration</code></td>
+<td>View calibrated confidence model weights, training status, and feature importances</td>
+</tr>
+<tr>
+<td><code>ralphglasses_circuit_reset</code></td>
+<td>Reset circuit breaker state for a named service</td>
+</tr>
+<tr>
+<td><code>ralphglasses_supervisor_status</code></td>
+<td>Get supervisor status: active sessions, health monitor state, cycle chainer progress, and recovery actions</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eval-4-tools">eval (4 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_eval_counterfactual</code></td>
+<td>Estimate outcomes under hypothetical policy changes using inverse propensity scoring</td>
+</tr>
+<tr>
+<td><code>ralphglasses_eval_ab_test</code></td>
+<td>Bayesian A/B test comparing providers or time periods using Beta-Bernoulli model</td>
+</tr>
+<tr>
+<td><code>ralphglasses_eval_changepoints</code></td>
+<td>Detect performance shifts using CUSUM changepoint detection on loop observations</td>
+</tr>
+<tr>
+<td><code>ralphglasses_anomaly_detect</code></td>
+<td>Detect anomalies in metric streams using sliding-window z-score analysis</td>
+</tr>
+</tbody>
+</table>
+<h3 id="fleet_h-4-tools">fleet_h (4 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_blackboard_query</code></td>
+<td>Query blackboard entries by namespace for fleet worker coordination</td>
+</tr>
+<tr>
+<td><code>ralphglasses_blackboard_put</code></td>
+<td>Write an entry to the blackboard for fleet coordination</td>
+</tr>
+<tr>
+<td><code>ralphglasses_a2a_offers</code></td>
+<td>List open agent-to-agent task delegation offers</td>
+</tr>
+<tr>
+<td><code>ralphglasses_cost_forecast</code></td>
+<td>Cost burn rate, anomaly detection, and budget exhaustion ETA</td>
+</tr>
+</tbody>
+</table>
+<h3 id="observability-15-tools">observability (15 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_observation_query</code></td>
+<td>Filter and paginate loop observations from .ralph/logs/loop_observations.jsonl</td>
+</tr>
+<tr>
+<td><code>ralphglasses_observation_summary</code></td>
+<td>Aggregate observation stats with p50/p95/p99 percentiles</td>
+</tr>
+<tr>
+<td><code>ralphglasses_scratchpad_read</code></td>
+<td>Read a .ralph/{name}_scratchpad.md file</td>
+</tr>
+<tr>
+<td><code>ralphglasses_scratchpad_append</code></td>
+<td>Append a markdown note to a scratchpad file</td>
+</tr>
+<tr>
+<td><code>ralphglasses_scratchpad_list</code></td>
+<td>List all scratchpad files in .ralph/</td>
+</tr>
+<tr>
+<td><code>ralphglasses_scratchpad_resolve</code></td>
+<td>Mark a numbered scratchpad item as resolved</td>
+</tr>
+<tr>
+<td><code>ralphglasses_loop_await</code></td>
+<td>Block until a session or loop completes (replaces sleep anti-pattern)</td>
+</tr>
+<tr>
+<td><code>ralphglasses_loop_poll</code></td>
+<td>Non-blocking single status check for a session or loop</td>
+</tr>
+<tr>
+<td><code>ralphglasses_coverage_report</code></td>
+<td>Run go test -coverprofile and report per-package coverage vs threshold</td>
+</tr>
+<tr>
+<td><code>ralphglasses_cost_estimate</code></td>
+<td>Pre-launch cost estimate for a session or loop</td>
+</tr>
+<tr>
+<td><code>ralphglasses_merge_verify</code></td>
+<td>Run build+vet+test sequence to verify a merge</td>
+</tr>
+<tr>
+<td><code>ralphglasses_scratchpad_delete</code></td>
+<td>Delete a numbered finding from a scratchpad file</td>
+</tr>
+<tr>
+<td><code>ralphglasses_scratchpad_validate</code></td>
+<td>Validate scratchpad entries against expected constraints</td>
+</tr>
+<tr>
+<td><code>ralphglasses_scratchpad_context</code></td>
+<td>Auto-enrich scratchpad with current system context</td>
+</tr>
+<tr>
+<td><code>ralphglasses_scratchpad_reason</code></td>
+<td>Record intermediate reasoning between tool calls</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rdcycle-10-tools">rdcycle (10 tools)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ralphglasses_finding_to_task</code></td>
+<td>Convert a scratchpad finding into an actionable task spec</td>
+</tr>
+<tr>
+<td><code>ralphglasses_cycle_baseline</code></td>
+<td>Capture repo metrics baseline (build, test, coverage, vet)</td>
+</tr>
+<tr>
+<td><code>ralphglasses_cycle_plan</code></td>
+<td>Generate prioritized task list from unresolved findings</td>
+</tr>
+<tr>
+<td><code>ralphglasses_cycle_merge</code></td>
+<td>Merge worktree changes with conflict detection</td>
+</tr>
+<tr>
+<td><code>ralphglasses_cycle_schedule</code></td>
+<td>Schedule recurring R&amp;D cycles via cron expressions</td>
+</tr>
+<tr>
+<td><code>ralphglasses_loop_replay</code></td>
+<td>Replay a failed loop iteration with modified parameters</td>
+</tr>
+<tr>
+<td><code>ralphglasses_budget_forecast</code></td>
+<td>Predict cost of N more iterations from historical data</td>
+</tr>
+<tr>
+<td><code>ralphglasses_diff_review</code></td>
+<td>Auto-review git diff for scope creep, missing tests, TODOs</td>
+</tr>
+<tr>
+<td><code>ralphglasses_finding_reason</code></td>
+<td>Analyze scratchpad findings for root causes and patterns</td>
+</tr>
+<tr>
+<td><code>ralphglasses_observation_correlate</code></td>
+<td>Link observations to git commits by timestamp</td>
+</tr>
+</tbody>
+</table>
+<h2 id="restarting-after-code-changes">Restarting After Code Changes</h2>
+<p>The MCP server is a long-lived process compiled and run via <code>go run . mcp</code>. After making code changes to ralphglasses, you must restart the server for them to take effect:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pkill<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;go run . mcp&quot;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>go<span class="w"> </span>run<span class="w"> </span>.<span class="w"> </span>mcp<span class="w"> </span>--scan-path<span class="w"> </span>~/hairglasses-studio
+</code></pre></div>
+<p>If using a <code>.mcp.json</code>-based setup, simply restart your MCP client to pick up the changes.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

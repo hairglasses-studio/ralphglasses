@@ -1,0 +1,1740 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ralph-roadmap/06-fleet-sweep/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>06 -- Fleet and Sweep Subsystems - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#06-fleet-and-sweep-subsystems" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              06 -- Fleet and Sweep Subsystems
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-job-processing-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Job Processing Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Job Processing Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#full-flow-submit-queue-dispatch-worker-result" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Flow: submit → queue → dispatch → worker → result
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#queue-data-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Queue Data Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-dlq-dead-letter-queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. DLQ (Dead Letter Queue)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. DLQ (Dead Letter Queue)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#items-enter-dlq-via-three-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Items Enter DLQ Via Three Paths
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retry-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retry Policy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dlq-replay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DLQ Replay
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-budget-enforcement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Budget Enforcement
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Budget Enforcement">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#three-budget-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three Budget Layers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-happens-when-budget-exhausted-mid-job" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Happens When Budget Exhausted Mid-Job
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-worker-turn-limits-maxworkerturns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Worker Turn Limits (MaxWorkerTurns)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-a2a-protocol-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. A2A Protocol Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. A2A Protocol Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-stubplaceholder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Is Stub/Placeholder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mapping-to-google-a2a-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mapping to Google A2A Spec
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-autoscaler-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Autoscaler Behavior
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Autoscaler Behavior">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Algorithm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scale-up-action-advisory-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scale-Up Action: Advisory Only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scale-down-action-draining-idle-workers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scale-Down Action: Draining Idle Workers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#max-concurrency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Max Concurrency
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-sweep-orchestration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Sweep Orchestration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Sweep Orchestration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dispatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dispatch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Aggregation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#budget-enforcement-in-sweep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Budget Enforcement in Sweep
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-cost-prediction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Cost Prediction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Cost Prediction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#costpredictor-fleet-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CostPredictor (fleet layer)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#session-layer-predictor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session-Layer Predictor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calibration-accuracy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calibration Accuracy
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-topology-and-sharding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Topology and Sharding
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Topology and Sharding">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#multi-node-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Node Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tailscale-network-topology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tailscale Network Topology
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-risk-areas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Risk Areas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. Risk Areas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#risk-1-unbounded-in-memory-queue-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 1: Unbounded In-Memory Queue — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-2-queue-not-persisted-across-restart-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 2: Queue Not Persisted Across Restart — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-3-retrytracker-has-no-mutex-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 3: RetryTracker Has No Mutex — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-4-scale-up-is-advisory-with-no-actuator-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 4: Scale-Up Is Advisory with No Actuator — HIGH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-5-worker-executework-has-no-session-timeout-medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 5: Worker executeWork Has No Session Timeout — MEDIUM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-6-sweep-cost-cap-is-reactive-not-proactive-medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 6: Sweep Cost Cap is Reactive, Not Proactive — MEDIUM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-7-sweep-fan-out-is-serial-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 7: Sweep Fan-Out Is Serial — LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-8-a2a-adapter-and-coordinator-are-parallel-not-integrated-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 8: A2A Adapter and Coordinator Are Parallel, Not Integrated — LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-9-grafana-metrics-are-declared-but-not-emitted-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 9: Grafana Metrics Are Declared but Not Emitted — LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-10-coordination-uses-tmp-without-cleanup-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 10: Coordination Uses /tmp Without Cleanup — LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary Table
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="06-fleet-and-sweep-subsystems">06 -- Fleet and Sweep Subsystems</h1>
+<p>Generated: 2026-04-04</p>
+<h2 id="1-job-processing-pipeline">1. Job Processing Pipeline</h2>
+<h3 id="full-flow-submit-queue-dispatch-worker-result">Full Flow: submit → queue → dispatch → worker → result</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>[Caller: MCP handler or Coordinator.SubmitWork]
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  │
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  ├── Budget pre-check: item.MaxBudgetUSD &lt;= GlobalBudget.AvailableBudget()
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  ├── WorkQueue.Push(item)              -- in-memory map[string]*WorkItem
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  └── GlobalBudget.ReservedUSD += item.MaxBudgetUSD
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>                ▼
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>[WorkerAgent.pollLoop -- every 5s]
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  └── Client.PollWork(ctx, workerID)
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        └── POST /api/v1/work/poll
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>              └── Coordinator.assignWork(workerID, worker)
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>                    ├── buildCandidates()         -- Router.SelectWorker for healthy workers
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>                    └── WorkQueue.AssignBest(scorer, workerID)
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>                          │  scoring fn: routerBoost + repoLocalityBoost + constraintBoost
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                          └── item.Status = WorkAssigned, AssignedTo = workerID
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>                │
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>                ▼
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>[WorkerAgent.executeWork(ctx, item)]
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>  ├── session.Manager.Launch(ctx, LaunchOptions{...item fields})
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>  └── Ticker 2s polling loop:
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>        ├── sess.Status == StatusCompleted →
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>        │     Client.CompleteWork(WorkCompleted, WorkResult)
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>        └── sess.Status == StatusErrored/Stopped →
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>              Client.CompleteWork(WorkFailed, error message)
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>                │
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>                ▼
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>[Coordinator.handleWorkComplete]
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>  ├── RetryTracker.RecordFailure / RecordSuccess
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>  ├── GlobalBudget.ReservedUSD -= item.MaxBudgetUSD
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>  ├── GlobalBudget.SpentUSD += result.SpentUSD
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>  └── BudgetManager.RecordCost(workerID, result.SpentUSD)
+</code></pre></div>
+<h3 id="queue-data-structure">Queue Data Structure</h3>
+<p><code>WorkQueue</code> is an in-memory <code>map[string]*WorkItem</code> protected by a single <code>sync.Mutex</code>. There is no separate backing store — all queue state is lost on process restart. <code>SaveTo/LoadFrom</code> provide optional JSON file serialization, but the coordinator does not call these automatically; persistence is manual.</p>
+<p>The queue is <strong>not bounded</strong>: <code>Push</code> appends without capacity enforcement. A burst of sweep submissions can grow the queue to any size until OOM.</p>
+<p><strong>Priority</strong>: <code>AssignBest</code> iterates the full pending set and picks the highest-score item. The <code>Pending()</code> helper sorts by <code>item.Priority</code> descending, but the scoring function used in <code>assignWork</code> applies additional locality and constraint bonuses on top of the base priority field.</p>
+<p><strong>FIFO vs Priority</strong>: Effective ordering is priority-first (via int <code>Priority</code> field) but not FIFO within the same priority level because map iteration order is random in Go. Items submitted at the same priority are non-deterministically ordered.</p>
+<hr />
+<h2 id="2-dlq-dead-letter-queue">2. DLQ (Dead Letter Queue)</h2>
+<p>The <code>WorkQueue</code> struct contains a separate <code>dlq map[string]*WorkItem</code> map alongside the main <code>items</code> map. Both share the same <code>sync.Mutex</code>.</p>
+<h3 id="items-enter-dlq-via-three-paths">Items Enter DLQ Via Three Paths</h3>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Trigger</th>
+<th>Error Set</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ReapStale(maxAge)</code></td>
+<td>Pending item older than maxAge (default 1h) OR repo path no longer exists</td>
+<td><code>"reaped: stale task"</code></td>
+</tr>
+<tr>
+<td><code>ReapPhantomRepos()</code></td>
+<td>Pending item with RepoName == "001" or RepoPath base == "001"</td>
+<td><code>"reaped: phantom repo placeholder"</code></td>
+</tr>
+<tr>
+<td><code>MoveToDLQ(itemID)</code></td>
+<td>Explicit call after <code>RetryTracker</code> says no more retries</td>
+<td>Item retains its last error string</td>
+</tr>
+</tbody>
+</table>
+<p>The maintenance loop runs every 30s and calls <code>ReapStale(time.Hour)</code> and <code>ReapPhantomRepos()</code>. Manual <code>MoveToDLQ</code> is called from <code>handleWorkComplete</code> when <code>RetryTracker.RecordFailure</code> returns <code>retry=false</code>.</p>
+<h3 id="retry-policy">Retry Policy</h3>
+<p><code>DefaultRetryPolicy()</code>:
+- MaxRetries: 3
+- BaseDelay: 1s
+- MaxDelay: 30s
+- Multiplier: 2.0 (exponential backoff)
+- JitterFraction: 0.1 (±10% jitter)</p>
+<p>Retry sequence: attempt 0 → 1s, attempt 1 → 2s, attempt 2 → 4s, then DLQ on attempt 3.</p>
+<p><code>WorkItem.MaxRetries</code> field (default 2 from <code>SubmitWork</code>) is a separate per-item override. Both the <code>RetryPolicy.MaxRetries</code> and <code>WorkItem.MaxRetries</code> must be checked: the tracker uses <code>policy.MaxRetries</code> while item-level cap is an orthogonal guard.</p>
+<h3 id="dlq-replay">DLQ Replay</h3>
+<p><code>RetryFromDLQ(itemID)</code> resets status to WorkPending, clears RetryCount/Error/timestamps, and moves the item back to the main queue. This is exposed via <code>Coordinator.RetryFromDLQ</code> and the MCP <code>fleet_dlq</code> tool. The DLQ is also purgeable via <code>PurgeDLQ</code>. There is no automatic replay or scheduling — replay requires explicit operator action.</p>
+<hr />
+<h2 id="3-budget-enforcement">3. Budget Enforcement</h2>
+<h3 id="three-budget-layers">Three Budget Layers</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Layer 1: GlobalBudget (fleet-wide ceiling)
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  ├── LimitUSD:    500.0 (default, adjustable via SetBudgetLimit)
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  ├── SpentUSD:    running total of completed work
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  └── ReservedUSD: sum of MaxBudgetUSD for pending/active items
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>Layer 2: BudgetManager (per-worker tracking)
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  ├── defaultLimit: $10.00 per worker
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>  └── budgets map: workerID → WorkerBudget{Limit, Spent}
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>Layer 3: BudgetPool (sweep-level, per sweep_launch call)
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>  ├── globalLimit:  max_sweep_budget_usd (default $100.00)
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>  └── allocations:  repoName → allocatedUSD
+</code></pre></div>
+<h3 id="interaction">Interaction</h3>
+<ol>
+<li>On <code>SubmitWork</code>: checked against <code>GlobalBudget.AvailableBudget()</code> = <code>LimitUSD - SpentUSD - ReservedUSD</code>. Items with <code>MaxBudgetUSD &gt; available</code> are rejected with an error.</li>
+<li>On work assignment in <code>assignWork</code>: <code>GlobalBudget.AvailableBudget()</code> is read again; if depleted, no item is assigned.</li>
+<li>On completion: <code>ReservedUSD</code> decreases by <code>item.MaxBudgetUSD</code>, <code>SpentUSD</code> increases by <code>result.SpentUSD</code>. If <code>result.SpentUSD &gt; item.MaxBudgetUSD</code>, the reservation was insufficient and global spend exceeds reservation.</li>
+<li>Worker-level: <code>BudgetManager.CanAcceptWork(workerID, estimatedCost)</code> is consulted during candidate scoring. Workers over their per-worker limit receive a lower score but are not hard-blocked.</li>
+<li>Sweep-level: <code>BudgetPool.Allocate(repoName, budgetUSD)</code> returns an error when the sweep total would exceed <code>max_sweep_budget_usd</code>. This stops the fan-out loop and records the remaining repos as errors.</li>
+</ol>
+<h3 id="what-happens-when-budget-exhausted-mid-job">What Happens When Budget Exhausted Mid-Job</h3>
+<ul>
+<li><strong>Global budget hit</strong>: <code>assignWork</code> stops assigning new work. Active sessions already executing continue to completion (no SIGTERM). Spend can temporarily exceed the limit for already-running work if sessions spend more than their <code>MaxBudgetUSD</code>.</li>
+<li><strong>Session-level cap</strong>: <code>MaxBudgetUSD</code> is passed to <code>session.LaunchOptions</code>, which triggers extra-usage detection in the runner. The session is marked <code>StatusErrored</code> when its per-session cap is exhausted.</li>
+<li><strong>Sweep budget cap</strong>: The <code>handleSweepSchedule</code> cost-cap check polls every <code>interval_minutes</code> and calls <code>Stop</code> on all running sessions when <code>totalCost &gt;= maxCostCap</code>. This is a reactive check, not a proactive gate, so spend may slightly exceed the cap within a polling interval.</li>
+</ul>
+<hr />
+<h2 id="4-worker-turn-limits-maxworkerturns">4. Worker Turn Limits (MaxWorkerTurns)</h2>
+<p><code>MaxWorkerTurns</code> is a loop-engine concept, not a fleet-level concept. It lives in the session loop layer (<code>session.LoopConfig.MaxWorkerTurns</code>, capped at 20 in Phase 0.9). In the fleet layer, the analogous field is <code>WorkItem.MaxTurns</code>, which is forwarded to <code>session.LaunchOptions.MaxTurns</code>.</p>
+<p>The fleet worker's <code>executeWork</code> function passes <code>item.MaxTurns</code> directly to the session manager. Turn limit enforcement happens inside the session runner:</p>
+<ul>
+<li>When <code>MaxTurns</code> is reached, the session exits with a specific exit reason (e.g., <code>"max_turns_reached"</code>).</li>
+<li>The session status becomes <code>StatusCompleted</code> (not <code>StatusErrored</code>) — the session is not killed, it self-terminates.</li>
+<li><code>executeWork</code> polls session status every 2 seconds and calls <code>CompleteWork</code> with <code>WorkCompleted</code> when it sees <code>StatusCompleted</code>, regardless of exit reason.</li>
+</ul>
+<p><strong>Hard kill</strong>: Sessions that exceed <code>MaxTurns</code> are not hard-killed. The LLM CLI subprocess receives the turn count as a flag and exits cleanly when the limit is hit. There is no SIGKILL fallback for turn exhaustion in the fleet layer.</p>
+<p><strong>MaxWorkerTurns (loop engine, default 20)</strong>: In the loop engine (<code>RunLoop</code>), <code>MaxWorkerTurns</code> gates the number of <code>StepLoop</code> iterations. When the limit is reached, <code>RunLoop</code> sets the loop run status to <code>"completed"</code> and returns. This is a separate counter from per-session <code>MaxTurns</code>.</p>
+<hr />
+<h2 id="5-a2a-protocol-integration">5. A2A Protocol Integration</h2>
+<h3 id="what-works">What Works</h3>
+<p>The A2A implementation is <strong>substantially complete</strong> for the core protocol surface:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Agent card serving (<code>.well-known/agent-card.json</code>)</td>
+<td>Working</td>
+<td><code>BuildAgentCard</code> + <code>handleAgentCard</code></td>
+</tr>
+<tr>
+<td>Task state machine</td>
+<td>Working</td>
+<td>All 6 states: queued, working, input-required, completed, failed, canceled</td>
+</tr>
+<tr>
+<td>Task offer lifecycle</td>
+<td>Working</td>
+<td><code>A2AAdapter</code>: Offer → Accept → StartWorking → Complete/Fail/Cancel</td>
+</tr>
+<tr>
+<td>Artifact attachment</td>
+<td>Working</td>
+<td><code>AddArtifact</code> with streaming index support</td>
+</tr>
+<tr>
+<td>Negotiation (counter-proposals)</td>
+<td>Working</td>
+<td><code>Negotiate</code> updates <code>DelegationConstraints</code> on open offers</td>
+</tr>
+<tr>
+<td>Skill-based dispatch</td>
+<td>Working</td>
+<td><code>A2ADispatcher</code>: card discovery, TTL cache (5min), strategy (first/round-robin/best-fit)</td>
+</tr>
+<tr>
+<td>HTTP task submission (<code>/api/v1/a2a/task/send</code>)</td>
+<td>Working</td>
+<td><code>handleA2ATaskSend</code> creates a fleet work item</td>
+</tr>
+<tr>
+<td>HTTP task status (<code>GET /api/v1/a2a/task/{taskID}</code>)</td>
+<td>Working</td>
+<td>Returns current offer state</td>
+</tr>
+<tr>
+<td>Task cancellation</td>
+<td>Working</td>
+<td><code>handleA2ATaskCancel</code></td>
+</tr>
+<tr>
+<td>Push notifications (SSE/streaming)</td>
+<td>Stub</td>
+<td><code>AgentCapabilities.Streaming: true</code> is advertised but no SSE stream is implemented</td>
+</tr>
+<tr>
+<td>Authentication (security schemes)</td>
+<td>Stub</td>
+<td><code>SecuritySchemes</code> field is populated in card but not enforced</td>
+</tr>
+<tr>
+<td>Multi-turn input-required → resume</td>
+<td>Partial</td>
+<td>State transition is tracked, but no HTTP endpoint to submit additional input exists</td>
+</tr>
+</tbody>
+</table>
+<h3 id="what-is-stubplaceholder">What Is Stub/Placeholder</h3>
+<ol>
+<li><strong>Streaming/push notifications</strong>: The agent card advertises <code>streaming: true</code> and <code>pushNotifications: false</code>. There is no SSE or WebSocket implementation. The SSE endpoint in <code>server.go</code> (<code>GET /api/v1/events</code>) emits fleet events, not A2A task events.</li>
+<li><strong>Authentication</strong>: The <code>SecuritySchemes</code> map in the agent card is populated (Tailscale bearer), but <code>handleA2ATaskSend</code> does not validate any A2A-level auth token — it relies on Tailscale network-level auth only.</li>
+<li><strong>Input injection for input-required</strong>: <code>RequestInput</code> transitions state and records a message, but no HTTP endpoint exists for an external agent to submit the required input and resume execution.</li>
+<li><strong>Coordinator integration</strong>: <code>A2AAdapter</code> has an optional <code>coordinator *Coordinator</code> field (<code>NewA2AAdapterWithCoordinator</code>), but <code>handleA2ATaskSend</code> creates a <code>WorkItem</code> directly via <code>coordinator.SubmitWork</code> without going through the <code>A2AAdapter</code> offer lifecycle. The two systems are parallel, not integrated.</li>
+</ol>
+<h3 id="mapping-to-google-a2a-spec">Mapping to Google A2A Spec</h3>
+<p>The implementation aligns with Google's A2A v1.0 protocol:
+- Well-known card path changed from <code>/agent.json</code> (legacy) to <code>/.well-known/agent-card.json</code> (spec-compliant).
+- <code>TaskState</code> constants match the spec wire values.
+- <code>Message</code> + <code>Part</code> structure matches the spec's TextPart/DataPart/FilePart model.
+- <code>A2ATaskSendRequest</code> and <code>A2ATaskResponse</code> types follow the spec's task/send endpoint contract.</p>
+<hr />
+<h2 id="6-autoscaler-behavior">6. Autoscaler Behavior</h2>
+<h3 id="algorithm">Algorithm</h3>
+<p><code>AutoScaler.Evaluate(AutoScalerSnapshot)</code> runs on every maintenance tick (every 30s). The decision logic:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>if cooldown active (within 60s of last action):
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  → ScaleNone (reason: &quot;cooldown active&quot;)
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>Scale-up check:
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  if active &gt; 0 AND queueDepth &gt; 2.0 * active:
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    if (budgetRemaining / budgetTotal) &lt; 0.10:
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>      → ScaleNone (scale-up suppressed: budget below floor)
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    target = max(queueDepth / 2, active + 1) capped at MaxWorkers (32)
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    → ScaleUp, delta = target - active
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>  if active == 0 AND queueDepth &gt; 0:
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    → ScaleUp, delta = MinWorkers (2)
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>Scale-down check:
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>  if active &gt; MinWorkers AND (idle / active) &gt; 0.50 AND queueDepth == 0:
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    target = active - idle, clamped to MinWorkers
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>    → ScaleDown, delta = -(active - target)
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>default:
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>  → ScaleNone (reason: &quot;fleet is balanced&quot;)
+</code></pre></div>
+<h3 id="scale-up-action-advisory-only">Scale-Up Action: Advisory Only</h3>
+<p>Scale-up is <strong>advisory, not actuating</strong>. When <code>ScaleUp</code> is decided, the coordinator publishes a <code>fleet.autoscale</code> event to the event bus. No new worker processes are spawned. An external orchestration layer (provisioner, K8s HPA, or manual operator action) must watch for this event and spin up new worker nodes. This is a significant gap for single-machine deployments.</p>
+<h3 id="scale-down-action-draining-idle-workers">Scale-Down Action: Draining Idle Workers</h3>
+<p>Scale-down is actuated: <code>applyScaleDown</code> marks idle workers as <code>WorkerDraining</code>, preventing new work assignment. Workers are not terminated — they continue running until they are deregistered or a heartbeat times out. There is no forced termination signal.</p>
+<h3 id="max-concurrency">Max Concurrency</h3>
+<ul>
+<li><code>MaxWorkers</code>: 32 (configurable via <code>AutoScalerConfig.MaxWorkers</code>)</li>
+<li>Per-worker <code>MaxSessions</code>: 4 (hardcoded in <code>WorkerAgent.Run</code> RegisterPayload)</li>
+<li>Theoretical max fleet concurrency: 32 × 4 = 128 concurrent sessions</li>
+</ul>
+<hr />
+<h2 id="7-sweep-orchestration">7. Sweep Orchestration</h2>
+<h3 id="dispatch">Dispatch</h3>
+<p><code>handleSweepLaunch</code> fans out sessions in a <strong>serial for-loop</strong> inside a goroutine, not concurrently. Sessions for repos [0..N-1] are launched one at a time in order. A failed launch for repo K does not stop the loop; it records an error and continues to K+1.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>goroutine:
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  for _, r := range targetRepos:
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    sweepPool.Allocate(r.Name, budgetUSD)   -- if cap reached, break (remaining repos skipped)
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    s.SessMgr.Launch(ctx, opts)             -- blocking call, may take seconds
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    launched = append(...)
+</code></pre></div>
+<p>The goroutine returns immediately to the MCP caller via a task ID. The caller polls <code>ralphglasses_tasks_get</code> or <code>sweep_status</code> to observe progress.</p>
+<h3 id="status-aggregation">Status Aggregation</h3>
+<p><code>handleSweepStatus</code> calls <code>s.sweepSessions(sweepID)</code>, which does a linear scan of all sessions matching <code>sess.SweepID == sweepID</code>. For each session it computes:
+- Status counts (running/completed/errored)
+- Total cost
+- Stall detection (via <code>s.SessMgr.DetectStalls</code>)
+- Per-session <code>idle_sec</code> from <code>sess.LastActivity</code></p>
+<p>The result is aggregated in memory — no database or file query. All sessions must still be in-memory for accurate status.</p>
+<h3 id="budget-enforcement-in-sweep">Budget Enforcement in Sweep</h3>
+<p>Two layers:</p>
+<ol>
+<li>
+<p><strong>Pre-launch cost estimate</strong>: <code>handleSweepLaunch</code> estimates <code>estimatedPerSession</code> from <code>CostPredictor.Predict()</code> or a formula (<code>estTurns * tokPerTurn * (inRate + outRate)</code>). If <code>totalEstimated &gt; max_sweep_budget_usd</code>, the launch is rejected before any session starts.</p>
+</li>
+<li>
+<p><strong>Per-repo allocation</strong>: <code>session.NewBudgetPool(maxSweepBudget)</code> (from the sweep-layer <code>pool</code> package, which is actually the <code>session.BudgetPool</code> — note the sweep handler uses <code>session.NewBudgetPool</code>, not <code>fleet/pool.NewBudgetPool</code>). <code>sweepPool.Allocate(r.Name, budgetUSD)</code> is called before each launch. When the pool is exhausted, the loop breaks and remaining repos are skipped.</p>
+</li>
+<li>
+<p><strong>Runtime cap</strong>: <code>handleSweepSchedule</code> with <code>max_sweep_budget_usd</code> checks total spend on every polling interval and calls <code>Stop</code> on all running sessions when exceeded.</p>
+</li>
+</ol>
+<p><strong>The $0.50 cap and --no-session-persistence</strong>: These are caller conventions documented in feedback (memory file: <code>feedback_sweep_cost_control.md</code>), not enforced in the handler. The caller must pass <code>budget_usd=0.50</code> and <code>session_persistence=false</code>. The handler defaults are <code>budget_usd=5.0</code> and <code>session_persistence=false</code>. So <code>--no-session-persistence</code> is the default in the handler; the budget cap requires explicit override.</p>
+<hr />
+<h2 id="8-cost-prediction">8. Cost Prediction</h2>
+<h3 id="costpredictor-fleet-layer">CostPredictor (fleet layer)</h3>
+<p><code>CostPredictor</code> in <code>fleet/costpredict.go</code> maintains a sliding window of up to 1,000 <code>CostSample</code> records. It computes:</p>
+<ul>
+<li><strong>Burn rate</strong>: total cost / time span of window ($/hour)</li>
+<li><strong>Trend direction</strong>: compare first-half avg vs second-half avg (±10% threshold = stable/increasing/decreasing)</li>
+<li><strong>Exhaustion ETA</strong>: remaining budget / burn rate</li>
+<li><strong>Anomalies</strong>: per-sample z-score against preceding 20 samples, flagged if z &gt; 2.5</li>
+</ul>
+<p><strong>Data feed</strong>: <code>CostPredictor.Record(CostSample)</code> must be called by callers. Inspection of the fleet package shows the predictor is instantiated but the integration with <code>handleWorkComplete</code> is not wired — the coordinator does not automatically call <code>predictor.Record</code> after each completed work item. The predictor appears to be populated manually or from the MCP handler layer.</p>
+<h3 id="session-layer-predictor">Session-Layer Predictor</h3>
+<p><code>s.SessMgr.GetCostPredictor()</code> is used in <code>handleSweepLaunch</code> to estimate per-session cost. This is a separate predictor on the session manager, trained from session-level cost observations.</p>
+<h3 id="calibration-accuracy">Calibration Accuracy</h3>
+<p>Accuracy depends entirely on sample population. With a fresh installation (no history), the fallback formula is used:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>estimatedPerSession = (tokPerTurn * estTurns / 1_000_000) * (inRate + outRate)
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  = (8000 * 0.6 * maxTurns / 1_000_000) * (codexInRate + codexOutRate)
+</code></pre></div>
+<p>With default <code>maxTurns=50</code>: <code>(8000 * 30 / 1e6) * rates = 0.24 * rates</code>. Using Codex rates from <code>config.DefaultProviderCosts()</code>, this gives a rough estimate that likely understates actual cost for complex tasks (sessions that hit more turns).</p>
+<p>There is no feedback loop from actual spend back into the formula calibration — the formula is static. The <code>CostPredictor</code> window-based approach will improve accuracy once sufficient samples are collected, but there is no minimum sample threshold before it is used (it returns 0 with &lt; 2 samples, at which point the static formula applies).</p>
+<hr />
+<h2 id="9-topology-and-sharding">9. Topology and Sharding</h2>
+<h3 id="multi-node-architecture">Multi-Node Architecture</h3>
+<p>The fleet is <strong>distributed-ready at the protocol level but single-machine in practice</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HTTP coordinator protocol</td>
+<td>Implemented; worker polls over HTTP</td>
+</tr>
+<tr>
+<td>Tailscale network auth</td>
+<td>Implemented; <code>TailscaleAuthMiddleware</code> with CGNAT detection</td>
+</tr>
+<tr>
+<td>Consistent hash ring (ShardManager)</td>
+<td>Implemented; Ketama MD5 with 128 virtual nodes</td>
+</tr>
+<tr>
+<td>Worker node migration on join/leave</td>
+<td>Implemented; <code>rebalanceLocked</code> + <code>MigrationCallback</code></td>
+</tr>
+<tr>
+<td>Scale-up provisioning</td>
+<td><strong>Not implemented</strong>; scale-up is advisory only</td>
+</tr>
+<tr>
+<td>Coordinator HA / failover</td>
+<td><strong>Not implemented</strong>; single coordinator node</td>
+</tr>
+<tr>
+<td>Queue persistence across coordinator restart</td>
+<td><strong>Not implemented</strong>; queue is in-memory only</td>
+</tr>
+<tr>
+<td>Cross-node session discovery</td>
+<td><strong>Not implemented</strong>; session state is local to each worker</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>ShardManager</code> and <code>ShardMap</code> with <code>HashShardStrategy</code> / <code>ExplicitShardStrategy</code> provide the data structures for multi-node session affinity. The <code>TopologyOptimizer</code> compares round-robin, affinity, and load-balanced strategies using simulation. These are correct and well-tested, but the coordinator wires <code>LeastLoadedRouter</code> (not the topology optimizer) for actual work assignment.</p>
+<p>The <code>topology.go</code> optimizer is advisory — it produces <code>SimulationResult</code> and <code>Assignment</code> recommendations but is not connected to the coordinator's <code>assignWork</code> path.</p>
+<h3 id="tailscale-network-topology">Tailscale Network Topology</h3>
+<p>Discovery of Tailscale IP uses <code>GetTailscaleStatus()</code> (polling Tailscale local API or CLI). Workers advertise their Tailscale IP at registration time. The coordinator stores <code>TailscaleIP</code> in <code>WorkerInfo</code> but does not use it for routing — routing goes through the coordinator's HTTP server URL, not direct worker-to-worker. This means all work submission must go through the single coordinator node.</p>
+<hr />
+<h2 id="10-risk-areas">10. Risk Areas</h2>
+<h3 id="risk-1-unbounded-in-memory-queue-high">Risk 1: Unbounded In-Memory Queue — HIGH</h3>
+<p><code>WorkQueue</code> uses an unbounded <code>map[string]*WorkItem</code>. A sweep of 74 repos with large prompts submits 74+ items with no capacity limit. The maintenance loop reaps stale items after 1 hour, but items assigned to workers (status WorkAssigned) are not reaped. If workers disconnect after assignment, items are reclaimed to pending after <code>ClaimTimeout</code> (5 minutes), but this still allows unbounded accumulation during normal operation.</p>
+<p><strong>Impact</strong>: Memory exhaustion under heavy sweep load. No backpressure to sweep launcher.
+<strong>Fix</strong>: Add a <code>MaxDepth</code> parameter to <code>WorkQueue</code> with rejection on overflow.</p>
+<h3 id="risk-2-queue-not-persisted-across-restart-high">Risk 2: Queue Not Persisted Across Restart — HIGH</h3>
+<p>The coordinator's <code>WorkQueue</code> is in-memory with no automatic persistence. A coordinator restart loses all pending and assigned work. Sessions already running on workers continue executing, but their work items are gone — <code>CompleteWork</code> calls from workers will receive HTTP 404 ("work item not found"). The fleet enters an inconsistent state where workers complete work the coordinator has no record of.</p>
+<p><strong>Impact</strong>: Any coordinator restart during active sweeps loses all pending work and orphans in-flight results.
+<strong>Fix</strong>: Wire <code>SaveTo/LoadFrom</code> in the maintenance loop (30s interval) and on <code>Stop</code>.</p>
+<h3 id="risk-3-retrytracker-has-no-mutex-high">Risk 3: RetryTracker Has No Mutex — HIGH</h3>
+<p><code>RetryTracker.attempts</code> is a plain <code>map[string]int</code> with no mutex:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">RetryTracker</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">attempts</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">policy</span><span class="w">   </span><span class="nx">RetryPolicy</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>RecordFailure</code> and <code>RecordSuccess</code> are called from HTTP request goroutines (one per <code>handleWorkComplete</code> request). These goroutines run concurrently and can race on the <code>attempts</code> map.</p>
+<p><strong>Impact</strong>: Data race detected by <code>go test -race</code>. Map concurrent write panic in production under high load.
+<strong>Fix</strong>: Add <code>sync.Mutex</code> to <code>RetryTracker</code>.</p>
+<h3 id="risk-4-scale-up-is-advisory-with-no-actuator-high">Risk 4: Scale-Up Is Advisory with No Actuator — HIGH</h3>
+<p>When the autoscaler decides <code>ScaleUp</code>, it publishes an event to the in-process event bus. Nothing consumes this event to spawn new workers. In a single-machine deployment, there is no way to add worker capacity automatically. The event is logged and dropped.</p>
+<p><strong>Impact</strong>: Under sustained load, the queue depth exceeds <code>QueueDepthMultiplier * active</code> indefinitely. The autoscaler keeps recommending scale-up every cooldown period (60s), but capacity never increases.
+<strong>Fix</strong>: Add a local worker spawner that can <code>exec</code> additional ralphglasses worker instances on the same machine, or document clearly that scale-up requires external orchestration.</p>
+<h3 id="risk-5-worker-executework-has-no-session-timeout-medium">Risk 5: Worker executeWork Has No Session Timeout — MEDIUM</h3>
+<p><code>executeWork</code> polls session status every 2 seconds with no upper bound on how long it will wait:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">ticker</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">NewTicker</span><span class="p">(</span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="k">select</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nx">Done</span><span class="p">():</span><span class="w"> </span><span class="k">return</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">ticker</span><span class="p">.</span><span class="nx">C</span><span class="p">:</span><span class="w"> </span><span class="o">...</span><span class="w"> </span><span class="nx">check</span><span class="w"> </span><span class="nx">status</span><span class="w"> </span><span class="o">...</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">}</span>
+</code></pre></div>
+<p>If a session enters a state that never becomes terminal (e.g., stuck in <code>StatusLaunching</code> due to a hung subprocess), <code>executeWork</code> will block that goroutine indefinitely. The worker's <code>MaxSessions=4</code> slots are consumed by these stuck goroutines.</p>
+<p><strong>Impact</strong>: Worker capacity exhaustion. Up to 4 goroutines stuck forever per worker node.
+<strong>Fix</strong>: Add a <code>context.WithTimeout</code> wrapper around the polling loop. A reasonable timeout is <code>2 * session.DefaultStallThreshold</code> (currently ~15 minutes).</p>
+<h3 id="risk-6-sweep-cost-cap-is-reactive-not-proactive-medium">Risk 6: Sweep Cost Cap is Reactive, Not Proactive — MEDIUM</h3>
+<p><code>handleSweepSchedule</code>'s cost cap check runs every <code>interval_minutes</code> (default 5). A session can spend beyond <code>max_sweep_budget_usd / n_repos</code> during one polling interval before the cap triggers. With expensive sessions and a 5-minute interval, overspend can be significant.</p>
+<p><strong>Impact</strong>: Sweep budgets can be exceeded by up to <code>(n_sessions_running * budget_per_session)</code> before the cap fires.
+<strong>Fix</strong>: Subscribe to session cost events and trigger cap enforcement immediately when threshold is crossed, rather than on a polling interval.</p>
+<h3 id="risk-7-sweep-fan-out-is-serial-low">Risk 7: Sweep Fan-Out Is Serial — LOW</h3>
+<p><code>handleSweepLaunch</code> launches sessions in a for-loop without goroutine fan-out. With 74 repos, each <code>s.SessMgr.Launch</code> call takes time (process spawn + startup probe up to 5 seconds). Total launch time could exceed 6 minutes before all sessions are running.</p>
+<p><strong>Impact</strong>: Slow sweep startup. Sessions launched first may complete before last sessions even start, distorting cost/completion estimates.
+<strong>Fix</strong>: Parallelize the launch loop with a bounded goroutine pool (e.g., semaphore of size 10).</p>
+<h3 id="risk-8-a2a-adapter-and-coordinator-are-parallel-not-integrated-low">Risk 8: A2A Adapter and Coordinator Are Parallel, Not Integrated — LOW</h3>
+<p><code>handleA2ATaskSend</code> creates work items via <code>coordinator.SubmitWork</code> directly, bypassing the <code>A2AAdapter</code> lifecycle entirely. The <code>A2AAdapter</code> offer map and the coordinator work queue are two separate state stores for "the same" A2A task.</p>
+<p><strong>Impact</strong>: A2A task status queries (<code>GET /api/v1/a2a/task/{taskID}</code>) reflect offer state in <code>A2AAdapter</code>, which is not updated as the work item progresses through the coordinator queue. A task submitted via A2A appears stuck in "submitted" state even after the coordinator assigns and completes the work.
+<strong>Fix</strong>: Wire <code>handleWorkComplete</code> to call <code>adapter.CompleteOffer</code> or <code>adapter.FailOffer</code> when the corresponding work item finishes.</p>
+<h3 id="risk-9-grafana-metrics-are-declared-but-not-emitted-low">Risk 9: Grafana Metrics Are Declared but Not Emitted — LOW</h3>
+<p><code>grafana.go</code> generates a valid Grafana dashboard JSON referencing Prometheus metrics like <code>ralphglasses_session_completions_total</code>, <code>ralphglasses_cost_usd_total</code>, <code>ralphglasses_budget_spent_usd</code>. These metric names are referenced in PromQL queries but there is no Prometheus client instrumentation in the fleet package that actually emits these counters. The <code>tracing</code> package provides a <code>PrometheusRecorder</code>, but its metric names are not confirmed to match the dashboard's expected names.</p>
+<p><strong>Impact</strong>: Dashboard panels show "No data" unless metric names are aligned with what the tracing layer actually exports.
+<strong>Fix</strong>: Audit the <code>tracing/observability</code> packages and ensure metric names match, or update the dashboard template to use the actual emitted names.</p>
+<h3 id="risk-10-coordination-uses-tmp-without-cleanup-low">Risk 10: Coordination Uses /tmp Without Cleanup — LOW</h3>
+<p><code>fleet/coordination.go</code> writes claim files to <code>/tmp/ralphglasses-coordination/claims/</code>. Claim files are removed by <code>ReleaseClaim</code>, but this requires explicit caller cleanup. A crashed process leaves orphaned claim files that block re-claiming resources indefinitely (no TTL on claims).</p>
+<p><strong>Impact</strong>: Stale claim files survive process crashes and prevent resource acquisition on restart.
+<strong>Fix</strong>: Add a <code>Timestamp</code> to <code>Claim</code> (already present) and enforce a TTL in <code>IsResourceClaimed</code> (e.g., reject claims older than 10 minutes).</p>
+<hr />
+<h2 id="summary-table">Summary Table</h2>
+<table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>Current State</th>
+<th>Key Gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Queue structure</td>
+<td>In-memory map, priority-scored, JSON-persistable manually</td>
+<td>Unbounded, not auto-persisted</td>
+</tr>
+<tr>
+<td>DLQ</td>
+<td>Inline in WorkQueue, 3-retry default with exponential backoff</td>
+<td>Retry replay requires manual operator action</td>
+</tr>
+<tr>
+<td>Budget</td>
+<td>3-layer (global/worker/sweep), reservation accounting</td>
+<td>Sweep cap is reactive (polling), not proactive</td>
+</tr>
+<tr>
+<td>MaxWorkerTurns</td>
+<td>Loop engine: 20 iterations; fleet: MaxTurns forwarded to session</td>
+<td>Graceful exit (not SIGKILL) when limit hit</td>
+</tr>
+<tr>
+<td>A2A</td>
+<td>Core protocol complete; streaming and auth enforcement are stubs</td>
+<td>Adapter and coordinator queue are not integrated</td>
+</tr>
+<tr>
+<td>Autoscaler</td>
+<td>Full algorithm implemented; scale-down actuated; scale-up advisory</td>
+<td>No actuator for scale-up; purely event/advisory</td>
+</tr>
+<tr>
+<td>Sweep dispatch</td>
+<td>Serial fan-out; pool pre-allocation; cost estimate gates</td>
+<td>Serial launch adds ~5s latency per repo</td>
+</tr>
+<tr>
+<td>Cost prediction</td>
+<td>Sliding window CostPredictor + static formula fallback</td>
+<td>Predictor not auto-fed from fleet completions</td>
+</tr>
+<tr>
+<td>Topology</td>
+<td>Consistent hash ring, topology optimizer, multi-strategy routing</td>
+<td>Optimizer not connected to assignWork path</td>
+</tr>
+<tr>
+<td>Distributed readiness</td>
+<td>Protocol-complete; Tailscale auth; ShardManager</td>
+<td>Single coordinator SPOF; no HA; queue not durable</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

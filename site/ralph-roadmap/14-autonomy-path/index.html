@@ -1,0 +1,2434 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ralph-roadmap/14-autonomy-path/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>14 -- Autonomy Path: L0 through L3 - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#14-autonomy-path-l0-through-l3" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              14 -- Autonomy Path: L0 through L3
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-current-state-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Current State Assessment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Current State Assessment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#l0-observe-functional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L0 (Observe) -- Functional
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l1-autorecover-partially-functional-not-safe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L1 (AutoRecover) -- Partially Functional, Not Safe
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l2-autooptimize-not-ready" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L2 (AutoOptimize) -- Not Ready
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l3-fullautonomy-not-ready" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L3 (FullAutonomy) -- Not Ready
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-gate-criteria-l0-to-l1-auto-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Gate Criteria: L0 to L1 (Auto-Recovery)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Gate Criteria: L0 to L1 (Auto-Recovery)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#must-fix-hard-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Must Fix (Hard Gate)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#must-verify-soft-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Must Verify (Soft Gate)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exit-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exit Criteria
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-gate-criteria-l1-to-l2-auto-optimize" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Gate Criteria: L1 to L2 (Auto-Optimize)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Gate Criteria: L1 to L2 (Auto-Optimize)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#must-fix-hard-gate_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Must Fix (Hard Gate)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#must-complete-functional-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Must Complete (Functional Gate)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#training-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Training Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exit-criteria_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exit Criteria
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-gate-criteria-l2-to-l3-full-autonomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Gate Criteria: L2 to L3 (Full Autonomy)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Gate Criteria: L2 to L3 (Full Autonomy)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#must-fix-hard-gate_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Must Fix (Hard Gate)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#must-complete-functional-gate_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Must Complete (Functional Gate)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exit-criteria_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exit Criteria
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-safety-interlocks-at-each-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Safety Interlocks at Each Level
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Safety Interlocks at Each Level">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#l0-observe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L0 -- Observe
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l1-auto-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L1 -- Auto-Recovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l2-auto-optimize" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L2 -- Auto-Optimize
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l3-full-autonomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L3 -- Full Autonomy
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-minimum-viable-l3-72-hour-unattended-operation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Minimum Viable L3: 72-Hour Unattended Operation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Minimum Viable L3: 72-Hour Unattended Operation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#must-have-non-negotiable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Must Have (non-negotiable)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#should-have-important-but-deferrable-to-l31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Should Have (important but deferrable to L3.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#can-defer-l32" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Can Defer (L3.2+)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hardened-configuration-for-72-hour-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hardened Configuration for 72-Hour Run
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-risk-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Risk Matrix
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Risk Matrix">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#l1-risks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L1 Risks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l2-risks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L2 Risks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l3-risks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L3 Risks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-timeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Timeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Timeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-l1-ready-2-weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: L1 Ready (2 weeks)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-l2-ready-4-6-weeks-after-l1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: L2 Ready (4-6 weeks after L1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-l3-ready-6-8-weeks-after-l2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: L3 Ready (6-8 weeks after L2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-l3-with-automerge-2-4-weeks-after-phase-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: L3 with AutoMerge (2-4 weeks after Phase 3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#summary-timeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary Timeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-cross-reference-to-research-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix: Cross-Reference to Research Documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="14-autonomy-path-l0-through-l3">14 -- Autonomy Path: L0 through L3</h1>
+<p>Generated: 2026-04-04</p>
+<p>Critical-path analysis for graduated autonomy in ralphglasses. This document defines
+what must be true at each level transition, what safety interlocks exist (and what is
+missing), and the realistic timeline for reaching 72-hour unattended operation.</p>
+<hr />
+<h2 id="1-current-state-assessment">1. Current State Assessment</h2>
+<h3 id="l0-observe-functional">L0 (Observe) -- Functional</h3>
+<p>L0 is the default and works correctly today. All autonomous decisions are logged as
+"would have done" entries in <code>decisions.jsonl</code>. The <code>DecisionLog.Propose()</code> flow
+(autonomy.go:213-229) correctly gates on <code>dl.level &gt;= d.RequiredLevel</code> and records
+blocked proposals with full audit trail. <code>BootstrapAutonomy</code> clamps <code>.ralphrc</code> values
+above L1 back to L1, preventing accidental L2/L3 activation (autonomy.go:65).</p>
+<p><strong>What works:</strong>
+- Decision audit log with JSONL persistence (decisions.jsonl)
+- Bootstrap clamping (L0/L1 only from config)
+- Health monitoring (5 metrics with configurable thresholds)
+- HITL tracking (manual vs autonomous action counts, trend scoring)
+- Session lifecycle state machine (6 states, clean terminal detection)</p>
+<p><strong>What is incomplete:</strong>
+- Autonomy level persistence fails silently (s4 fix #4: <code>slog.Warn</code> on persist failure
+  in autonomy.go:191, level resets to L0 on restart)
+- Decision outcome loop is not closed for most decisions (only <code>HandleSessionCompleteWithOutcome</code>
+  closes outcomes; supervisor cycle decisions and fleet decisions do not)</p>
+<h3 id="l1-autorecover-partially-functional-not-safe">L1 (AutoRecover) -- Partially Functional, Not Safe</h3>
+<p>L1 enables <code>DecisionRestart</code> (auto-restart on transient error) and <code>DecisionFailover</code>
+(provider failover). The <code>AutoRecovery</code> struct (autorecovery.go) implements retry with
+exponential backoff and transient error pattern matching.</p>
+<p><strong>What works:</strong>
+- Transient error detection (13 patterns: connection reset, timeout, 429, 503, signal:killed)
+- Exponential backoff with configurable cooldown (default 30s base, 2x factor)
+- Max retry limit (default 3)
+- Decision log integration (restart proposals go through <code>DecisionLog.Propose</code>)
+- Remaining budget calculation for relaunched sessions</p>
+<p><strong>What is broken:</strong>
+- <strong>R-01 (CRITICAL)</strong>: <code>AutoRecovery.retryState</code> map has no mutex (s1). <code>HandleSessionError</code>
+  and <code>ClearRetryState</code> are called from concurrent goroutines (supervisor tick vs session
+  completion callbacks). This is a fatal concurrent map write that will crash under <code>-race</code>
+  and potentially in production.
+- <strong>Supervisor swallows RunCycle errors</strong> (s4 fix #1): supervisor.go:375 logs <code>RunCycle</code>
+  failures at Warn level and continues. A chain of failing L1 recovery attempts generates
+  no escalation signal, no HITL interrupt, no autonomy level demotion. The system silently
+  retries broken cycles forever.
+- <strong>RunLoop error buried</strong> (s4 fix #2): <code>handler_selfimprove.go:71</code> discards the RunLoop
+  error entirely (<code>_ = s.SessMgr.RunLoop(...)</code>). A self-improvement loop that starts and
+  immediately fails is invisible to the operator and to the autonomy system.
+- <strong>Hook exit codes discarded</strong> (s4 fix #6): <code>hooks/hooks.go:139</code> uses <code>_ = cmd.Run()</code>.
+  Pre/post-session hooks are intended as safety gates, but silent failure makes them
+  decorative. At L1 where hooks control auto-recovery behavior, this breaks the gate
+  contract.</p>
+<h3 id="l2-autooptimize-not-ready">L2 (AutoOptimize) -- Not Ready</h3>
+<p>L2 enables auto-adjustment of budgets, providers, and rate limits via <code>AutoOptimizer</code>.
+The supervisor starts at L2+ and runs a 60-second tick loop that evaluates health metrics
+and chains R&amp;D cycles.</p>
+<p><strong>What works:</strong>
+- <code>AutoOptimizer.OptimizedLaunchOptions</code> adjusts provider and budget from FeedbackAnalyzer
+  profiles, gated through <code>DecisionLog.Propose</code>
+- <code>GateChange</code> validates L2 changes against the test suite before applying
+- <code>ImprovementNote</code> generation and auto-application pipeline with rollback on gate failure
+- Supervisor tick architecture: health monitor, cycle chainer, sprint planner, stall handler
+- Budget envelope with per-cycle cap and termination conditions (MaxCycles, MaxDuration, cost)
+- Cooldown enforcement (5-minute minimum between cycle launches)</p>
+<p><strong>What is broken or incomplete:</strong>
+- <strong>3 budget gaps</strong> (s3 gaps A/B/C): (A) Sessions can launch with no budget cap when
+  <code>DefaultBudgetUSD == 0</code> and caller omits <code>budget_usd</code>. (B) Active sessions continue
+  spending after GlobalBudget is exhausted. (C) <code>pool.State.CanSpend()</code> reads stale totals.
+- <strong>Gemini Flash output rate 40% off</strong> (s3 section 3): Compiled-in rate is $2.50/1M output;
+  actual 2.5 Flash rate is ~$3.50. Cost normalization systematically underestimates Gemini
+  sessions, corrupting cascade routing decisions.
+- <strong>DecisionModel untrained</strong> (03 section 4, s3 section 7): Requires 50+ multi-provider
+  observations. Current data is 100% Claude. Heuristic fallback operates at hardcoded
+  confidence threshold 0.7, not calibrated to actual performance.
+- <strong>Supervisor has not run on Manjaro</strong> (03 finding 5): Supervisor state file shows 95
+  ticks from a macOS run. The supervisor has never executed on the target deployment machine.
+  Unknown integration issues with Manjaro-specific paths, process management, GPU detection.
+- <strong>R-03 (HIGH)</strong>: <code>GateEnabled</code> and <code>RunTestGate</code> are unprotected package-level vars
+  (s1). <code>GateEnabled</code> is written by <code>supervisor.Start()</code> and read concurrently by
+  <code>GateChange()</code>. Race detector will flag this.
+- <strong>R-05 (HIGH)</strong>: <code>GetTeam</code> acquires <code>sessionsMu.RLock</code> then <code>workersMu.Lock</code>,
+  inconsistent with other code paths. Deadlock-prone under concurrent team operations.
+- <strong>R-06 (HIGH)</strong>: <code>Server.loadedGroups</code> map accessed without mutex in concurrent MCP
+  tool calls. Two simultaneous <code>load_tool_group</code> calls race on the map.
+- <strong>Sweep default $5 vs $0.50 convention</strong> (s3 scenario C): An autonomous L2 agent
+  calling <code>sweep_launch</code> without explicit <code>budget_usd</code> runs at 10x the intended cost.</p>
+<h3 id="l3-fullautonomy-not-ready">L3 (FullAutonomy) -- Not Ready</h3>
+<p>L3 enables <code>DecisionLaunch</code> (roadmap-driven cycle launch), <code>DecisionScale</code> (team
+scaling), and HyperagentEngine modifications with confidence &gt;= 0.8 and rate limit of
+3/hour.</p>
+<p><strong>What works:</strong>
+- <code>AutoMergeAll</code> mode for fully unattended self-improvement (loop.go profile)
+- Cycle chaining with depth cap of 10 and lineage tracking
+- Sprint planner for roadmap-driven task generation
+- Acceptance gates for post-cycle validation</p>
+<p><strong>What is broken or incomplete:</strong>
+- All L1 and L2 issues above, amplified by scale
+- <strong>6 total race conditions</strong> (s1): 2 CRITICAL + 4 HIGH. At L3 concurrency (up to 128
+  sessions), these become crash risks, not theoretical concerns
+- <strong>$1,280/hr theoretical maximum spend</strong> (s3 scenario E): 32 workers x 4 sessions x $5
+  cap x 2 rotations/hour. No fleet-level hard ceiling prevents this.
+- <strong>Sweep is serial</strong> (06 risk 7): 74-repo sweep takes 6+ minutes to launch all sessions.
+  At L3 scale this serialization bottleneck means the first sessions finish before the
+  last ones start.
+- <strong>Autoscaler is advisory-only</strong> (06 risk 4): Scale-up publishes an event; nothing
+  consumes it to spawn workers. L3 fleet scaling has no actuator.
+- <strong>Queue not persisted</strong> (06 risk 2): Coordinator restart loses all pending work. At L3,
+  a coordinator crash during a fleet sweep orphans results and loses budget tracking.
+- <strong>Supervisor tick goroutines untracked</strong> (s1 R-07): <code>RunCycle</code> goroutines launched in
+  <code>tick()</code> have no WaitGroup. <code>Stop()</code> cannot wait for in-flight cycles to complete.
+  At L3, stopping the supervisor may leave orphaned cycles with no cleanup.</p>
+<hr />
+<h2 id="2-gate-criteria-l0-to-l1-auto-recovery">2. Gate Criteria: L0 to L1 (Auto-Recovery)</h2>
+<p><strong>Objective</strong>: Reliable auto-restart for transient errors without human intervention.</p>
+<h3 id="must-fix-hard-gate">Must Fix (Hard Gate)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Issue</th>
+<th>Source</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G1.1</td>
+<td>Add <code>sync.Mutex</code> to <code>AutoRecovery.retryState</code></td>
+<td>s1 R-01 (CRITICAL)</td>
+<td>S (5 lines)</td>
+</tr>
+<tr>
+<td>G1.2</td>
+<td>Surface supervisor cycle failures at Error level; emit event; demote autonomy after N consecutive failures</td>
+<td>s4 fix #1</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G1.3</td>
+<td>Propagate RunLoop error in background goroutines (channel or structured log)</td>
+<td>s4 fix #2</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G1.4</td>
+<td>Fix autonomy level persistence failure (retry with backoff or return error to caller)</td>
+<td>s4 fix #4</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G1.5</td>
+<td>Add hook exit code handling (log at Error, surface to orchestrator)</td>
+<td>s4 fix #6</td>
+<td>S</td>
+</tr>
+</tbody>
+</table>
+<h3 id="must-verify-soft-gate">Must Verify (Soft Gate)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Verification</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V1.1</td>
+<td><code>go test -race ./internal/session/ -count=5</code> passes with R-01 fix applied</td>
+<td>s1</td>
+</tr>
+<tr>
+<td>V1.2</td>
+<td>Auto-recovery integration test: inject transient error, verify retry, verify max-retry exhaustion</td>
+<td>autorecovery.go</td>
+</tr>
+<tr>
+<td>V1.3</td>
+<td>Decision log correctly records "would have done" entries at L0, executed entries at L1</td>
+<td>autonomy.go</td>
+</tr>
+<tr>
+<td>V1.4</td>
+<td>Provider failover integration test: primary fails, secondary succeeds</td>
+<td>autorecovery.go:171</td>
+</tr>
+<tr>
+<td>V1.5</td>
+<td>Autonomy level survives process restart (save + load roundtrip)</td>
+<td>autooptimize.go:21-54</td>
+</tr>
+</tbody>
+</table>
+<h3 id="exit-criteria">Exit Criteria</h3>
+<p>L1 is gated open when:
+1. All G1.x fixes are merged and tests pass
+2. All V1.x verifications pass on Manjaro
+3. A 4-hour unattended L1 session completes with at least one auto-recovery event
+   and no crashes, no silent failures, no orphaned sessions</p>
+<hr />
+<h2 id="3-gate-criteria-l1-to-l2-auto-optimize">3. Gate Criteria: L1 to L2 (Auto-Optimize)</h2>
+<p><strong>Objective</strong>: The system adjusts its own providers, budgets, and configuration based
+on feedback profiles, validated by test gates, without human tuning.</p>
+<h3 id="must-fix-hard-gate_1">Must Fix (Hard Gate)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Issue</th>
+<th>Source</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G2.1</td>
+<td>Enforce mandatory default budget ($5 hard floor when <code>DefaultBudgetUSD == 0</code>)</td>
+<td>s3 R1, Gap A</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G2.2</td>
+<td>Change sweep handler default from <code>$5.00</code> to <code>$0.50</code> per session</td>
+<td>s3 R3, Gap C</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G2.3</td>
+<td>Wire <code>fleet/CostPredictor.Record()</code> to <code>handleWorkComplete</code></td>
+<td>s3 R2</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G2.4</td>
+<td>Update Gemini 2.5 Flash output rate from $2.50 to $3.50 in <code>config/costs.go</code></td>
+<td>s3 section 3</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G2.5</td>
+<td>Make <code>GateEnabled</code> an <code>atomic.Bool</code></td>
+<td>s1 R-03 (HIGH)</td>
+<td>S (3 lines)</td>
+</tr>
+<tr>
+<td>G2.6</td>
+<td>Protect <code>loadedGroups</code> map with <code>s.mu</code> in MCP server</td>
+<td>s1 R-06 (HIGH)</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G2.7</td>
+<td>Add <code>sync.Mutex</code> to <code>RetryTracker.attempts</code> in fleet</td>
+<td>s1 R-02 (CRITICAL)</td>
+<td>S (5 lines)</td>
+</tr>
+<tr>
+<td>G2.8</td>
+<td>Fix <code>GetTeam</code> lock ordering (two-phase read or single-lock)</td>
+<td>s1 R-05 (HIGH)</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G2.9</td>
+<td>Add <code>mu sync.Mutex</code> to <code>OpenAIClient</code> for <code>LastResponseID</code></td>
+<td>s1 R-04 (HIGH)</td>
+<td>S</td>
+</tr>
+</tbody>
+</table>
+<h3 id="must-complete-functional-gate">Must Complete (Functional Gate)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F2.1</td>
+<td>Run supervisor on Manjaro for 24+ hours with no crashes</td>
+<td>03 finding 5</td>
+</tr>
+<tr>
+<td>F2.2</td>
+<td>Collect 50+ multi-provider loop observations for DecisionModel training</td>
+<td>03 section 4, s3 section 7</td>
+</tr>
+<tr>
+<td>F2.3</td>
+<td>Validate cascade routing accuracy: cheap-provider completion rate &gt;= 70% on routed tasks</td>
+<td>03 section 3</td>
+</tr>
+<tr>
+<td>F2.4</td>
+<td>BudgetEnforcer.Check 90% headroom alert triggers a fleet-level event (not just a log)</td>
+<td>s3 R5</td>
+</tr>
+<tr>
+<td>F2.5</td>
+<td>Proactive sweep cost check (event-driven, not 5-minute polling)</td>
+<td>s3 Gap D, 06 risk 6</td>
+</tr>
+<tr>
+<td>F2.6</td>
+<td><code>go test -race ./internal/... -count=3</code> passes with all G2.x fixes</td>
+<td>s1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="training-requirements">Training Requirements</h3>
+<p>The DecisionModel (decision_model.go) needs calibration data before L2 can make
+informed cascade routing decisions:</p>
+<ul>
+<li><strong>50 observations minimum</strong> (configured at <code>minSamples = 50</code>)</li>
+<li><strong>Multi-provider</strong>: current data is 100% Claude. Need observations from Gemini and
+  Codex sessions to calibrate the ProviderID feature</li>
+<li><strong>Calibration bin quality</strong>: At 50 samples with 10 bins, each bin has 5 observations.
+  Isotonic calibration is unreliable at this density. Recommend increasing <code>minSamples</code>
+  to 100 for production L2 (s3 R7)</li>
+<li><strong>Threshold adaptation</strong>: The 0.7 hardcoded confidence threshold should be replaced by
+  <code>AdaptThreshold()</code> once trained, which searches [0.30, 0.90] with 2x penalty on
+  false negatives</li>
+</ul>
+<p><strong>Collection plan</strong>: Run 25 Gemini Flash sessions, 15 Codex sessions, and 10 Claude
+sessions on real tasks (sweep across 5-10 repos with VerifyCommands) to build a
+balanced training set. Each session generates 1+ LoopObservation records.</p>
+<h3 id="exit-criteria_1">Exit Criteria</h3>
+<p>L2 is gated open when:
+1. All G2.x fixes and F2.x requirements are met
+2. DecisionModel is trained on 50+ multi-provider observations
+3. Cascade routing has been validated with real tasks (70%+ cheap-provider completion)
+4. Supervisor has run 24+ hours on Manjaro with no silent failures
+5. Fleet CostPredictor correctly forecasts burn rate (within 30% of actual)</p>
+<hr />
+<h2 id="4-gate-criteria-l2-to-l3-full-autonomy">4. Gate Criteria: L2 to L3 (Full Autonomy)</h2>
+<p><strong>Objective</strong>: The system operates for 72+ hours without human intervention, launching
+from roadmap, scaling teams, and merging its own PRs via AutoMergeAll.</p>
+<h3 id="must-fix-hard-gate_2">Must Fix (Hard Gate)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Issue</th>
+<th>Source</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G3.1</td>
+<td>All 6 races from s1 fixed (R-01 through R-06)</td>
+<td>s1</td>
+<td>M (aggregate)</td>
+</tr>
+<tr>
+<td>G3.2</td>
+<td>Fleet budget ceiling enforced: <code>FleetBudgetCapUSD</code> in <code>NewManager()</code> path</td>
+<td>s3 R6</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G3.3</td>
+<td>Supervisor tick goroutines tracked with WaitGroup</td>
+<td>s1 R-07 (MEDIUM)</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G3.4</td>
+<td>Sweep launch parallelized with bounded goroutine pool (semaphore, size 10)</td>
+<td>06 risk 7</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G3.5</td>
+<td>Queue persistence (auto-save every 30s, restore on startup)</td>
+<td>06 risk 2</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G3.6</td>
+<td>Worker executeWork timeout (2x DefaultStallThreshold, ~15 min)</td>
+<td>06 risk 5</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G3.7</td>
+<td>Anomaly detector cancel field races fixed</td>
+<td>s1 R-11, R-12</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G3.8</td>
+<td>Double <code>cmd.Wait()</code> in kill/runner path documented and prevented</td>
+<td>s1 R-09, R-14</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G3.9</td>
+<td>Fleet worker <code>CompleteWork</code> retry with exponential backoff</td>
+<td>s4 fix #3</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G3.10</td>
+<td>Marathon checkpoint persistence failure surfaced as event</td>
+<td>s4 fix #10</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G3.11</td>
+<td>Session rehydration failure at startup returned as error, not swallowed</td>
+<td>s4 fix #15</td>
+<td>S</td>
+</tr>
+</tbody>
+</table>
+<h3 id="must-complete-functional-gate_1">Must Complete (Functional Gate)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F3.1</td>
+<td>Autoscaler has a local actuator (spawn worker instances on same machine)</td>
+<td>06 risk 4</td>
+</tr>
+<tr>
+<td>F3.2</td>
+<td>Proactive per-session cost events trigger fleet-level cap enforcement</td>
+<td>s3 R5</td>
+</tr>
+<tr>
+<td>F3.3</td>
+<td><code>FederatedBudget</code> wired to sweep path for surplus redistribution</td>
+<td>s3 section 8</td>
+</tr>
+<tr>
+<td>F3.4</td>
+<td>Coordinator graceful restart preserves queue and spend tracking</td>
+<td>06 risk 2, s3 scenario E</td>
+</tr>
+<tr>
+<td>F3.5</td>
+<td>Context-aware NATS publish retry or at minimum counter metrics</td>
+<td>s4 fix #14</td>
+</tr>
+<tr>
+<td>F3.6</td>
+<td>DecisionModel trained on 100+ observations with per-bin count &gt;= 10</td>
+<td>s3 R7</td>
+</tr>
+<tr>
+<td>F3.7</td>
+<td>Sweep concurrent (not serial) with backpressure (queue depth limit)</td>
+<td>06 risks 1, 7</td>
+</tr>
+<tr>
+<td>F3.8</td>
+<td>48-hour unattended L2 run completes with no human intervention required</td>
+<td>Integration test</td>
+</tr>
+<tr>
+<td>F3.9</td>
+<td><code>hitCount[key]++</code> race in TieredKnowledge fixed (promote to atomic or full Lock)</td>
+<td>s1 R-08</td>
+</tr>
+</tbody>
+</table>
+<h3 id="exit-criteria_2">Exit Criteria</h3>
+<p>L3 is gated open when:
+1. All G3.x fixes and F3.x requirements are met
+2. <code>go test -race ./... -count=5</code> passes across all packages
+3. Fleet budget ceiling limits spend to a configured $/hr rate
+4. A 48-hour unattended L2 run completes successfully (prerequisite experience)
+5. Autoscaler can both scale up (spawn) and scale down (drain) workers
+6. Queue survives coordinator restart with zero work items lost
+7. All supervisor failure paths produce Error-level logs and events (no silent Warn-and-continue)</p>
+<hr />
+<h2 id="5-safety-interlocks-at-each-level">5. Safety Interlocks at Each Level</h2>
+<h3 id="l0-observe">L0 -- Observe</h3>
+<table>
+<thead>
+<tr>
+<th>Interlock</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bootstrap clamp</td>
+<td>Working</td>
+<td><code>.ralphrc</code> cannot set level &gt; 1</td>
+</tr>
+<tr>
+<td>Decision audit</td>
+<td>Working</td>
+<td>All proposals logged as "would have done"</td>
+</tr>
+<tr>
+<td>No side effects</td>
+<td>Working</td>
+<td><code>Propose()</code> returns false; no actions taken</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Missing:</strong> Nothing critical. L0 is passive by design.</p>
+<h3 id="l1-auto-recovery">L1 -- Auto-Recovery</h3>
+<table>
+<thead>
+<tr>
+<th>Interlock</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Max retry limit</td>
+<td>Working</td>
+<td>Default 3 retries, configurable via <code>AutoRecoveryConfig</code></td>
+</tr>
+<tr>
+<td>Exponential backoff</td>
+<td>Working</td>
+<td>30s -&gt; 60s -&gt; 120s between retries</td>
+</tr>
+<tr>
+<td>Transient-only retry</td>
+<td>Working</td>
+<td>Only 13 known transient patterns trigger retry</td>
+</tr>
+<tr>
+<td>Remaining budget cap</td>
+<td>Working</td>
+<td>Relaunch uses <code>budget - spent</code>, not full original budget</td>
+</tr>
+<tr>
+<td>Category blocklist</td>
+<td>Working</td>
+<td><code>DecisionLog.Block(DecisionRestart)</code> disables recovery</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Missing:</strong>
+- <strong>Autonomy demotion circuit breaker</strong>: If auto-recovery fails N times consecutively,
+  the system should demote from L1 to L0 and alert the operator. Currently it exhausts
+  retries silently and stops retrying, but stays at L1.
+- <strong>Retry state mutex</strong> (R-01): Without the fix, concurrent retries corrupt the map.</p>
+<h3 id="l2-auto-optimize">L2 -- Auto-Optimize</h3>
+<table>
+<thead>
+<tr>
+<th>Interlock</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Test gate (GateChange)</td>
+<td>Working</td>
+<td>Changes validated against <code>go test ./...</code> before applying</td>
+</tr>
+<tr>
+<td>Budget envelope</td>
+<td>Working</td>
+<td>Per-cycle cap and total spend ceiling in supervisor</td>
+</tr>
+<tr>
+<td>Cooldown</td>
+<td>Working</td>
+<td>5-minute minimum between cycle launches</td>
+</tr>
+<tr>
+<td>Chain depth cap</td>
+<td>Working</td>
+<td>Hard limit of 10 chained cycles</td>
+</tr>
+<tr>
+<td>Concurrency cap</td>
+<td>Working</td>
+<td>MaxConcurrent = 1 supervisor-launched cycle per repo</td>
+</tr>
+<tr>
+<td>Decision log</td>
+<td>Working</td>
+<td>Every tick writes a decision record with rationale and metrics</td>
+</tr>
+<tr>
+<td>Termination conditions</td>
+<td>Working</td>
+<td>MaxCycles, MaxDuration, MaxTotalCostUSD all checked per tick</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Missing:</strong>
+- <strong>Fleet-level hard budget ceiling</strong>: <code>GlobalBudget.LimitUSD</code> prevents new assignments
+  but does not stop running sessions. There is no "kill all sessions" circuit breaker
+  when spend exceeds a threshold.
+- <strong>Cascade routing confidence floor</strong>: The heuristic threshold (0.7) is not backed by
+  data. An untrained model routing 70%+ of tasks to cheap providers may produce
+  unacceptable quality. Need a minimum sample gate before cascade routing activates.
+- <strong>Supervisor health self-check</strong>: The supervisor monitors repo health but does not
+  monitor its own health (tick latency, error rate, goroutine count). A degraded
+  supervisor continues making decisions.
+- <strong>Cost rate staleness alert</strong>: Compiled-in provider rates can diverge from actual billing.
+  The Gemini Flash output rate is already 40% off. No mechanism alerts the operator.</p>
+<h3 id="l3-full-autonomy">L3 -- Full Autonomy</h3>
+<table>
+<thead>
+<tr>
+<th>Interlock</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AutoMergeAll guard</td>
+<td>Partial</td>
+<td>Gated on VerifyCommands passing, but no human review</td>
+</tr>
+<tr>
+<td>Chain depth 10</td>
+<td>Working</td>
+<td>Prevents infinite recursive cycles</td>
+</tr>
+<tr>
+<td>L3 rate limit</td>
+<td>Designed</td>
+<td>HyperagentEngine modifications limited to 3/hour at confidence &gt;= 0.8</td>
+</tr>
+<tr>
+<td>L3 requires API call</td>
+<td>Working</td>
+<td>Cannot be set from <code>.ralphrc</code>; requires <code>SetAutonomyLevel</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Missing (critical for 72-hour unattended):</strong>
+- <strong>Per-hour spend circuit breaker</strong>: Must hard-kill all sessions if spend rate exceeds
+  a configurable $/hr threshold (e.g., $100/hr). Currently no such mechanism exists.
+  The $1,280/hr theoretical maximum is unacceptable for unattended operation.
+- <strong>Watchdog process</strong>: The supervisor runs inside the same process. If the process
+  crashes, all safety interlocks are gone. A separate watchdog (systemd unit or cron)
+  must monitor the supervisor and alert/restart on failure.
+- <strong>Network isolation for L3</strong>: <code>AutoMergeAll</code> merges PRs without human review. At L3,
+  the system must run in an isolated environment (container, VM, dedicated machine)
+  where a catastrophic merge can be reverted without affecting production.
+- <strong>Git revert capability</strong>: If an AutoMerge'd PR breaks the test suite on the next
+  iteration, the system must be able to revert the merge automatically. Currently there
+  is no auto-revert mechanism.
+- <strong>Rollback on autonomy escalation failure</strong>: If L3 is set and the first action fails,
+  there is no automatic demotion. The system should fall back to L2 (or L1) if L3-specific
+  operations fail consecutively.</p>
+<hr />
+<h2 id="6-minimum-viable-l3-72-hour-unattended-operation">6. Minimum Viable L3: 72-Hour Unattended Operation</h2>
+<p>The smallest subset of work for safe 72-hour unattended operation, assuming a single
+machine (Manjaro, dual RTX 4090) targeting 3-5 repos.</p>
+<h3 id="must-have-non-negotiable">Must Have (non-negotiable)</h3>
+<table>
+<thead>
+<tr>
+<th>Subsystem</th>
+<th>Requirement</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Budget</strong></td>
+<td>Per-hour spend circuit breaker at $50/hr</td>
+<td>Prevents $1,280/hr worst case</td>
+</tr>
+<tr>
+<td><strong>Budget</strong></td>
+<td>Mandatory $5 default on all sessions (Gap A closed)</td>
+<td>No uncapped sessions</td>
+</tr>
+<tr>
+<td><strong>Budget</strong></td>
+<td>Sweep default $0.50/session (Gap C closed)</td>
+<td>No 10x cost surprise</td>
+</tr>
+<tr>
+<td><strong>Races</strong></td>
+<td>R-01 and R-02 fixed (CRITICAL map races)</td>
+<td>Process crash prevention</td>
+</tr>
+<tr>
+<td><strong>Races</strong></td>
+<td>R-03 through R-06 fixed (HIGH races)</td>
+<td>Correct autonomous decisions</td>
+</tr>
+<tr>
+<td><strong>Supervisor</strong></td>
+<td>Cycle failure escalation (not just Warn)</td>
+<td>Prevents silent spin</td>
+</tr>
+<tr>
+<td><strong>Supervisor</strong></td>
+<td>RunLoop error propagation</td>
+<td>Self-improvement failures visible</td>
+</tr>
+<tr>
+<td><strong>Supervisor</strong></td>
+<td>48-hour successful L2 run as prerequisite</td>
+<td>Proven stability</td>
+</tr>
+<tr>
+<td><strong>Watchdog</strong></td>
+<td>systemd unit monitoring supervisor process</td>
+<td>Restart on crash</td>
+</tr>
+<tr>
+<td><strong>Compaction</strong></td>
+<td>Claude compaction enabled for marathon sessions</td>
+<td>Context window not exhausted</td>
+</tr>
+<tr>
+<td><strong>Queue</strong></td>
+<td>Persistence every 30s</td>
+<td>Survives coordinator restart</td>
+</tr>
+</tbody>
+</table>
+<h3 id="should-have-important-but-deferrable-to-l31">Should Have (important but deferrable to L3.1)</h3>
+<table>
+<thead>
+<tr>
+<th>Subsystem</th>
+<th>Requirement</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Autoscaler</strong></td>
+<td>Local worker spawner</td>
+<td>Dynamic capacity</td>
+</tr>
+<tr>
+<td><strong>Sweep</strong></td>
+<td>Parallel launch with semaphore</td>
+<td>Faster 74-repo sweeps</td>
+</tr>
+<tr>
+<td><strong>A2A</strong></td>
+<td>Agent card publishing</td>
+<td>External discoverability</td>
+</tr>
+<tr>
+<td><strong>FederatedBudget</strong></td>
+<td>Surplus redistribution in sweeps</td>
+<td>Better budget utilization</td>
+</tr>
+<tr>
+<td><strong>Git</strong></td>
+<td>Auto-revert on test regression</td>
+<td>Self-healing on bad merges</td>
+</tr>
+</tbody>
+</table>
+<h3 id="can-defer-l32">Can Defer (L3.2+)</h3>
+<table>
+<thead>
+<tr>
+<th>Subsystem</th>
+<th>Requirement</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Topology</strong></td>
+<td>Multi-machine fleet</td>
+<td>Single machine is sufficient for 3-5 repos</td>
+</tr>
+<tr>
+<td><strong>A2A</strong></td>
+<td>Full task lifecycle integration</td>
+<td>Single-org usage does not need A2A</td>
+</tr>
+<tr>
+<td><strong>K8s</strong></td>
+<td>Kubernetes fleet deployment</td>
+<td>Manjaro thin client is the target platform</td>
+</tr>
+<tr>
+<td><strong>Batch API</strong></td>
+<td>Default batch mode for sweeps</td>
+<td>Optimization, not safety</td>
+</tr>
+</tbody>
+</table>
+<h3 id="hardened-configuration-for-72-hour-run">Hardened Configuration for 72-Hour Run</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>autonomy_level:       3
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>max_duration:         72h
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>max_total_cost_usd:   500.00
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>per_hour_cap_usd:     50.00     # circuit breaker (new)
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>per_session_budget:   5.00      # hard default
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>sweep_budget_usd:     0.50      # per-session in sweeps
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>max_concurrent:       1          # supervisor cycles
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>max_workers:          4          # fleet workers (single machine)
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>max_sessions_per_worker: 2      # conservative for dual GPU
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>chain_depth_cap:      5          # reduced from 10 for first 72h run
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>cooldown:             10m        # increased from 5m for safety
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>tick_interval:        60s
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>compaction:           true
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>auto_merge_all:       false      # first 72h: create PRs but require manual merge
+</code></pre></div>
+<p>Note: <code>auto_merge_all: false</code> for the first 72-hour run. Fully unattended merging
+(AutoMergeAll) is a separate gate after proving the system does not produce regressions
+over 72 hours of PR creation.</p>
+<hr />
+<h2 id="7-risk-matrix">7. Risk Matrix</h2>
+<h3 id="l1-risks">L1 Risks</h3>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Probability</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Concurrent map crash (R-01)</td>
+<td>High (under race detector; possible in production if two sessions share retry path)</td>
+<td>Critical -- process crash, all sessions lost</td>
+<td>Fix R-01 before L1 activation</td>
+</tr>
+<tr>
+<td>Infinite silent retry</td>
+<td>Medium (transient error that recurs: e.g., persistent rate limit)</td>
+<td>Medium -- budget consumed on doomed retries</td>
+<td>Max retry limit (3) exists; add autonomy demotion after exhaustion</td>
+</tr>
+<tr>
+<td>Recovery launches uncapped session</td>
+<td>Low (remaining budget calculation is correct)</td>
+<td>High -- unbounded spend</td>
+<td>Verify remaining budget is passed to <code>--max-budget-usd</code> flag in all providers</td>
+</tr>
+<tr>
+<td>Autonomy level resets on restart</td>
+<td>High (persist failure is swallowed)</td>
+<td>Medium -- drops to L0, loses auto-recovery capability</td>
+<td>Fix persist failure handling</td>
+</tr>
+</tbody>
+</table>
+<h3 id="l2-risks">L2 Risks</h3>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Probability</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Uncapped session launch (Gap A)</td>
+<td>High (any caller omitting <code>budget_usd</code>)</td>
+<td>Critical -- unbounded spend</td>
+<td>G2.1: mandatory $5 default</td>
+</tr>
+<tr>
+<td>Stale cost rates underestimate Gemini</td>
+<td>Certain (Gemini Flash output 40% off)</td>
+<td>High -- cascade routes too aggressively to Gemini, actual spend 40% higher than predicted</td>
+<td>G2.4: update rates; add staleness alert</td>
+</tr>
+<tr>
+<td>Untrained DecisionModel routes badly</td>
+<td>High (no multi-provider data yet)</td>
+<td>Medium -- quality regression on cheap-provider tasks</td>
+<td>Heuristic fallback is conservative (0.7 threshold); collect data before enabling cascade</td>
+</tr>
+<tr>
+<td>Sweep 10x cost overrun</td>
+<td>High (autonomous agent uses default $5, not $0.50)</td>
+<td>High -- $50 vs $5 per sweep</td>
+<td>G2.2: change handler default</td>
+</tr>
+<tr>
+<td>Supervisor tick race on GateEnabled</td>
+<td>Medium (only if L2 start and GateChange overlap)</td>
+<td>Low -- wrong gate decision</td>
+<td>G2.5: atomic.Bool</td>
+</tr>
+<tr>
+<td>GetTeam deadlock</td>
+<td>Low (requires specific concurrent call pattern)</td>
+<td>Critical -- process hangs</td>
+<td>G2.8: fix lock ordering</td>
+</tr>
+</tbody>
+</table>
+<h3 id="l3-risks">L3 Risks</h3>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Probability</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>$1,280/hr worst-case spend</td>
+<td>Low (requires 128 concurrent sessions at $5 each)</td>
+<td>Critical -- financial damage</td>
+<td>Per-hour circuit breaker; FleetBudgetCapUSD</td>
+</tr>
+<tr>
+<td>Queue loss on coordinator restart</td>
+<td>Medium (any process crash)</td>
+<td>High -- orphaned sessions, lost budget tracking, duplicate work</td>
+<td>G3.5: queue persistence</td>
+</tr>
+<tr>
+<td>Supervisor goroutine leak on stop</td>
+<td>Medium (RunCycle goroutines untracked)</td>
+<td>Medium -- orphaned cycles continue running</td>
+<td>G3.3: WaitGroup tracking</td>
+</tr>
+<tr>
+<td>AutoMerge introduces regression</td>
+<td>Medium (VerifyCommands may not catch all regressions)</td>
+<td>High -- production code broken</td>
+<td>Disable AutoMergeAll for first 72h; add auto-revert</td>
+</tr>
+<tr>
+<td>Fleet worker capacity exhaustion</td>
+<td>Medium (stuck sessions consume slots)</td>
+<td>Medium -- queue grows, no work executed</td>
+<td>G3.6: executeWork timeout</td>
+</tr>
+<tr>
+<td>Coordinator single point of failure</td>
+<td>High (single process, no HA)</td>
+<td>High -- fleet inoperable</td>
+<td>Watchdog + queue persistence; HA is L3.2+</td>
+</tr>
+<tr>
+<td>Event bus publish failures silent</td>
+<td>Medium (NATS connection issues)</td>
+<td>Medium -- supervisor loses observability signals</td>
+<td>F3.5: retry or counter metrics</td>
+</tr>
+<tr>
+<td>Self-improvement loop corrupts codebase</td>
+<td>Low (test gates exist)</td>
+<td>Critical -- repo damaged</td>
+<td>Container isolation for L3; git worktrees for isolation; auto-revert</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-timeline">8. Timeline</h2>
+<p>Based on current velocity (1 developer + multi-agent fleet, ~20 tasks/week throughput)
+and the dependency chain of fixes required at each level.</p>
+<h3 id="phase-1-l1-ready-2-weeks">Phase 1: L1 Ready (2 weeks)</h3>
+<p><strong>Week 1: Race fixes and error handling</strong>
+- Day 1-2: Fix R-01 (retryState mutex, 5 lines) + R-02 (RetryTracker mutex, 5 lines)
+- Day 3: Fix autonomy level persistence (s4 fix #4), hook exit codes (s4 fix #6)
+- Day 4: Surface supervisor cycle failures at Error level (s4 fix #1)
+- Day 5: Propagate RunLoop errors in background goroutines (s4 fix #2)</p>
+<p><strong>Week 2: Integration testing</strong>
+- Day 1-2: Write auto-recovery integration tests (transient error injection, max retry)
+- Day 3: Write provider failover integration test
+- Day 4: Run <code>go test -race ./internal/session/ -count=5</code> on Manjaro, fix any new races
+- Day 5: 4-hour unattended L1 validation run</p>
+<p><strong>Deliverable</strong>: L1 gate open. Auto-recovery works reliably.</p>
+<h3 id="phase-2-l2-ready-4-6-weeks-after-l1">Phase 2: L2 Ready (4-6 weeks after L1)</h3>
+<p><strong>Week 3-4: Budget hardening and rate fixes</strong>
+- Mandatory default budget (G2.1), sweep default $0.50 (G2.2)
+- Wire CostPredictor (G2.3), update Gemini rates (G2.4)
+- Fix remaining HIGH races: R-03 (atomic.Bool), R-04 (OpenAI mutex), R-05 (lock ordering), R-06 (loadedGroups)
+- Proactive sweep cost events (F2.5)</p>
+<p><strong>Week 5-6: DecisionModel training and supervisor validation</strong>
+- Run 50+ multi-provider sessions (25 Gemini, 15 Codex, 10 Claude) with VerifyCommands
+- Train DecisionModel, validate cascade routing accuracy
+- First 24-hour supervisor run on Manjaro (F2.1)
+- Validate fleet CostPredictor forecasting accuracy</p>
+<p><strong>Week 7-8 (buffer): Iteration on cascade routing</strong>
+- Tune confidence threshold via AdaptThreshold
+- Increase minSamples to 100 if calibration bins are noisy
+- Second 24-hour supervisor run to confirm stability</p>
+<p><strong>Deliverable</strong>: L2 gate open. Supervisor runs stably on Manjaro, cascade routing
+validated, budget enforcement hardened.</p>
+<h3 id="phase-3-l3-ready-6-8-weeks-after-l2">Phase 3: L3 Ready (6-8 weeks after L2)</h3>
+<p><strong>Week 9-10: Fleet hardening</strong>
+- Queue persistence (G3.5), worker timeout (G3.6)
+- Fleet budget ceiling (G3.2), per-hour circuit breaker
+- Sweep parallelization (G3.4)
+- CompleteWork retry (G3.9)</p>
+<p><strong>Week 11-12: Supervisor hardening</strong>
+- WaitGroup for tick goroutines (G3.3)
+- Anomaly detector races (G3.7), cmd.Wait races (G3.8)
+- Rehydration error surfacing (G3.11)
+- Event bus reliability (F3.5)</p>
+<p><strong>Week 13-14: Local autoscaler and 48-hour L2 validation</strong>
+- Local worker spawner for autoscaler (F3.1)
+- FederatedBudget wiring (F3.3)
+- Coordinator graceful restart (F3.4)
+- 48-hour unattended L2 run (F3.8)</p>
+<p><strong>Week 15-16: First 72-hour L3 run</strong>
+- Systemd watchdog unit for supervisor process
+- Configure hardened 72-hour profile (section 6 above)
+- Run with <code>auto_merge_all: false</code> (PRs created but not merged)
+- Monitor spend, review PRs, verify no regressions</p>
+<p><strong>Deliverable</strong>: L3 gate open (with AutoMerge disabled). System operates 72 hours
+unattended, creating PRs for human review.</p>
+<h3 id="phase-4-l3-with-automerge-2-4-weeks-after-phase-3">Phase 4: L3 with AutoMerge (2-4 weeks after Phase 3)</h3>
+<ul>
+<li>Review all PRs from first 72-hour run</li>
+<li>Implement auto-revert on test regression</li>
+<li>Enable AutoMergeAll on a single repo (low-risk, high-test-coverage)</li>
+<li>72-hour run with full autonomy including auto-merge</li>
+<li>Expand to additional repos after validation</li>
+</ul>
+<p><strong>Deliverable</strong>: Full L3 with AutoMergeAll. Truly unattended self-improvement.</p>
+<h3 id="summary-timeline">Summary Timeline</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Week 0        Week 2         Week 8         Week 16        Week 20
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  |              |              |               |              |
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  v              v              v               v              v
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  L0 -----&gt; L1 ready ---&gt; L2 ready -----&gt; L3 ready ----&gt; L3+AutoMerge
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  (today)   (race fixes,   (budget,        (fleet,         (auto-revert,
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>             error          cascade,        watchdog,       full autonomy)
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>             handling)      supervisor)     72h run)
+</code></pre></div>
+<p><strong>Total elapsed time from today to L3 with AutoMerge: approximately 20 weeks (5 months).</strong></p>
+<p>This timeline assumes focused effort on autonomy-path work. Competing priorities
+(open-source release waves, MCP SDK migration, TUI polish) will extend the timeline.
+The critical path is: race fixes (week 1-2) -&gt; budget hardening (week 3-4) -&gt;
+DecisionModel training data (week 5-8) -&gt; fleet hardening (week 9-14) -&gt;
+validation runs (week 15-20).</p>
+<hr />
+<h2 id="appendix-cross-reference-to-research-documents">Appendix: Cross-Reference to Research Documents</h2>
+<table>
+<thead>
+<tr>
+<th>Finding</th>
+<th>Source Document</th>
+<th>Section</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AutoRecovery.retryState race (CRITICAL)</td>
+<td>s1-race-condition-census.md</td>
+<td>R-01</td>
+</tr>
+<tr>
+<td>RetryTracker.attempts race (CRITICAL)</td>
+<td>s1-race-condition-census.md</td>
+<td>R-02</td>
+</tr>
+<tr>
+<td>GateEnabled/RunTestGate race (HIGH)</td>
+<td>s1-race-condition-census.md</td>
+<td>R-03</td>
+</tr>
+<tr>
+<td>OpenAIClient.LastResponseID race (HIGH)</td>
+<td>s1-race-condition-census.md</td>
+<td>R-04</td>
+</tr>
+<tr>
+<td>GetTeam lock ordering (HIGH)</td>
+<td>s1-race-condition-census.md</td>
+<td>R-05</td>
+</tr>
+<tr>
+<td>loadedGroups map race (HIGH)</td>
+<td>s1-race-condition-census.md</td>
+<td>R-06</td>
+</tr>
+<tr>
+<td>Supervisor tick goroutine leak (MEDIUM)</td>
+<td>s1-race-condition-census.md</td>
+<td>R-07</td>
+</tr>
+<tr>
+<td>TieredKnowledge hitCount race (MEDIUM)</td>
+<td>s1-race-condition-census.md</td>
+<td>R-08</td>
+</tr>
+<tr>
+<td>Uncapped session launch (Gap A)</td>
+<td>s3-cost-model-analysis.md</td>
+<td>Section 2, Gap A</td>
+</tr>
+<tr>
+<td>Active sessions bypass GlobalBudget (Gap B)</td>
+<td>s3-cost-model-analysis.md</td>
+<td>Section 2, Gap B</td>
+</tr>
+<tr>
+<td>pool.State stale total (Gap C)</td>
+<td>s3-cost-model-analysis.md</td>
+<td>Section 2, Gap C</td>
+</tr>
+<tr>
+<td>Sweep $5 vs $0.50 convention (Gap C)</td>
+<td>s3-cost-model-analysis.md</td>
+<td>Scenario C</td>
+</tr>
+<tr>
+<td>$1,280/hr maximum theoretical spend</td>
+<td>s3-cost-model-analysis.md</td>
+<td>Scenario E</td>
+</tr>
+<tr>
+<td>Gemini Flash rate 40% off</td>
+<td>s3-cost-model-analysis.md</td>
+<td>Section 3</td>
+</tr>
+<tr>
+<td>DecisionModel 50-sample requirement</td>
+<td>s3-cost-model-analysis.md</td>
+<td>Section 7</td>
+</tr>
+<tr>
+<td>Supervisor swallows cycle failures</td>
+<td>s4-error-handling-audit.md</td>
+<td>Fix #1</td>
+</tr>
+<tr>
+<td>RunLoop error buried</td>
+<td>s4-error-handling-audit.md</td>
+<td>Fix #2</td>
+</tr>
+<tr>
+<td>Fleet worker CompleteWork silent</td>
+<td>s4-error-handling-audit.md</td>
+<td>Fix #3</td>
+</tr>
+<tr>
+<td>Autonomy persist failure silent</td>
+<td>s4-error-handling-audit.md</td>
+<td>Fix #4</td>
+</tr>
+<tr>
+<td>Hook exit codes discarded</td>
+<td>s4-error-handling-audit.md</td>
+<td>Fix #6</td>
+</tr>
+<tr>
+<td>Rehydration failure swallowed</td>
+<td>s4-error-handling-audit.md</td>
+<td>Fix #15</td>
+</tr>
+<tr>
+<td>Queue not persisted</td>
+<td>06-fleet-sweep.md</td>
+<td>Risk 2</td>
+</tr>
+<tr>
+<td>Autoscaler advisory only</td>
+<td>06-fleet-sweep.md</td>
+<td>Risk 4</td>
+</tr>
+<tr>
+<td>Worker no session timeout</td>
+<td>06-fleet-sweep.md</td>
+<td>Risk 5</td>
+</tr>
+<tr>
+<td>Sweep cost cap reactive</td>
+<td>06-fleet-sweep.md</td>
+<td>Risk 6</td>
+</tr>
+<tr>
+<td>Sweep fan-out serial</td>
+<td>06-fleet-sweep.md</td>
+<td>Risk 7</td>
+</tr>
+<tr>
+<td>Supervisor never run on Manjaro</td>
+<td>03-session-architecture.md</td>
+<td>Finding 5</td>
+</tr>
+<tr>
+<td>DecisionModel needs multi-provider data</td>
+<td>03-session-architecture.md</td>
+<td>Finding 4</td>
+</tr>
+<tr>
+<td>Cascade heuristic vs calibrated model</td>
+<td>03-session-architecture.md</td>
+<td>Section 3</td>
+</tr>
+<tr>
+<td>Competitive safety patterns</td>
+<td>09-orchestration-landscape.md</td>
+<td>Guardrails (OpenAI)</td>
+</tr>
+<tr>
+<td>Opus 4.6 price reduction enables L3 cost viability</td>
+<td>11-llm-capabilities.md</td>
+<td>Section 1</td>
+</tr>
+<tr>
+<td>Compaction for marathon sessions</td>
+<td>11-llm-capabilities.md</td>
+<td>Section 7, item 4</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

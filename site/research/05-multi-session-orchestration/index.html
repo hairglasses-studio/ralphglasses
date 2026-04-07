@@ -1,0 +1,1914 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/research/05-multi-session-orchestration/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Research Phase 5: Multi-Session Orchestration - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#research-phase-5-multi-session-orchestration" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Research Phase 5: Multi-Session Orchestration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-current-state-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Current State Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Current State Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-session-manager-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Session Manager Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-team-delegation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Team Delegation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-workflow-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Workflow Execution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-perpetual-loop-plannerworkerverifier" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 Perpetual Loop (Planner/Worker/Verifier)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-supporting-infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 Supporting Infrastructure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#26-concurrency-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.6 Concurrency Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-gap-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Gap Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Gap Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gap-1-file-based-persistence-vs-roadmap-21-sqlite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap 1: File-Based Persistence vs. ROADMAP 2.1 (SQLite)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-2-worktree-isolation-limited-to-loops-roadmap-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap 2: Worktree Isolation Limited to Loops (ROADMAP 2.2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-3-single-global-mutex-scalability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap 3: Single Global Mutex (Scalability)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-4-no-cross-session-file-collision-detection-roadmap-63" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap 4: No Cross-Session File Collision Detection (ROADMAP 6.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-5-maxconcurrentworkers-1-hardcoded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap 5: MaxConcurrentWorkers == 1 Hardcoded
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-external-landscape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. External Landscape
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. External Landscape">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-smtg-aiclaude-squad-worktree-isolation-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 smtg-ai/claude-squad -- Worktree Isolation Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-aannoohcom-multi-agent-collision-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 aannoo/hcom -- Multi-Agent Collision Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-dtormoentsk-container-sandboxed-parallel-workers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 dtormoen/tsk -- Container-Sandboxed Parallel Workers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-mikeyobrienralph-orchestrator-hat-system-personas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 mikeyobrien/ralph-orchestrator -- Hat System Personas
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-actionable-recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Actionable Recommendations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Actionable Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#recommendation-1-extract-internalworktree-package-from-loop-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendation 1: Extract internal/worktree/ Package from Loop Code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommendation-2-add-file-collision-detection-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendation 2: Add File Collision Detection Layer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommendation-3-replace-single-mutex-with-rwmutex-per-map-granularity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendation 3: Replace Single Mutex with RWMutex + Per-Map Granularity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommendation-4-implement-sqlite-session-store" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendation 4: Implement SQLite Session Store
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommendation-5-lift-maxconcurrentworkers-constraint-in-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendation 5: Lift MaxConcurrentWorkers Constraint in Loop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommendation-6-structured-task-assignment-for-teams" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendation 6: Structured Task Assignment for Teams
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommendation-7-add-session-lifecycle-state-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendation 7: Add Session Lifecycle State Machine
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-risk-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Risk Assessment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Risk Assessment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#risk-1-sqlite-migration-data-loss-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 1: SQLite Migration Data Loss (HIGH)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-2-worktree-accumulation-disk-exhaustion-medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 2: Worktree Accumulation Disk Exhaustion (MEDIUM)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-3-lock-ordering-violation-in-parallel-workers-medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 3: Lock Ordering Violation in Parallel Workers (MEDIUM)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-4-collision-detection-false-positives-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 4: Collision Detection False Positives (LOW)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-5-planner-multi-task-output-parsing-fragility-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 5: Planner Multi-Task Output Parsing Fragility (LOW)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-implementation-priority-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Implementation Priority Ordering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-a-external-project-reference-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix A: External Project Reference Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-b-key-source-files-referenced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix B: Key Source Files Referenced
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="research-phase-5-multi-session-orchestration">Research Phase 5: Multi-Session Orchestration</h1>
+<p>Research date: 2026-03-22</p>
+<p>Covers fleet management, session lifecycle, worktree isolation, and team delegation.
+Maps to ROADMAP Phases 2 (Multi-Session Fleet Management), 6.1 (Native ralph loop engine), and 6.3 (Cross-session coordination).</p>
+<hr />
+<h2 id="1-executive-summary">1. Executive Summary</h2>
+<p>Ralphglasses already has a functional multi-session orchestration layer: the <code>Manager</code> in <code>internal/session/manager.go</code> tracks concurrent sessions, teams, workflow runs, and perpetual loops. Team delegation (<code>LaunchTeam</code>), workflow execution with dependency DAGs (<code>executeWorkflow</code>), and the planner/worker/verifier loop (<code>StepLoop</code>) are operational. However, the system has five critical gaps that block ROADMAP Phases 2 and 6:</p>
+<ol>
+<li><strong>Persistence is file-based JSON</strong> -- no transactional guarantees, no queryable history, no crash recovery beyond 24-hour session files. ROADMAP 2.1 calls for SQLite with WAL mode.</li>
+<li><strong>Worktree isolation is loop-only</strong> -- <code>createLoopWorktree</code> in <code>loop.go</code> creates worktrees for loop iterations but regular sessions and team workers share the repo working directory. ROADMAP 2.2 calls for a general <code>internal/worktree/</code> package.</li>
+<li><strong>Single global mutex</strong> -- <code>Manager.mu</code> serializes all operations. At scale (10+ concurrent sessions), this creates contention on launch, status polling, team correlation, and persistence.</li>
+<li><strong>No cross-session file collision detection</strong> -- two sessions targeting the same repo can silently clobber each other's changes. ROADMAP 6.3 calls for dedup and conflict resolution.</li>
+<li><strong>MaxConcurrentWorkers hardcoded to 1</strong> -- the loop profile explicitly rejects <code>&gt; 1</code> workers (loop.go:373-375), blocking parallel worker execution.</li>
+</ol>
+<p>External projects (claude-squad, hcom, tsk) have solved several of these problems with patterns directly applicable to ralphglasses.</p>
+<hr />
+<h2 id="2-current-state-analysis">2. Current State Analysis</h2>
+<h3 id="21-session-manager-architecture">2.1 Session Manager Architecture</h3>
+<p><strong>File:</strong> <code>internal/session/manager.go</code></p>
+<p>The <code>Manager</code> struct is the central orchestration point:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Manager</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nx">mu</span><span class="w">            </span><span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">sessions</span><span class="w">      </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">Session</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">teams</span><span class="w">         </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">TeamStatus</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nx">workflowRuns</span><span class="w">  </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">WorkflowRun</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nx">loops</span><span class="w">         </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">LoopRun</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nx">bus</span><span class="w">           </span><span class="o">*</span><span class="nx">events</span><span class="p">.</span><span class="nx">Bus</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nx">stateDir</span><span class="w">      </span><span class="kt">string</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nx">launchSession</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">LaunchOptions</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">Session</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nx">waitSession</span><span class="w">   </span><span class="kd">func</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="nx">Session</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nx">Enhancer</span><span class="w">      </span><span class="o">*</span><span class="nx">enhancer</span><span class="p">.</span><span class="nx">HybridEngine</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">}</span>
+</code></pre></div>
+<p>Key characteristics:
+- <strong>Single <code>sync.Mutex</code></strong> guards all four maps plus <code>stateDir</code>. Every <code>Launch</code>, <code>Stop</code>, <code>List</code>, <code>Get</code>, <code>GetTeam</code>, <code>LaunchTeam</code>, and <code>LoadExternalSessions</code> acquires this lock.
+- <strong>Session launch is non-blocking</strong> -- <code>launch()</code> in <code>runner.go</code> starts a goroutine and returns immediately. The background goroutine (<code>runSession</code>) parses streaming output and updates session state under <code>s.mu</code>.
+- <strong>Persistence is fire-and-forget</strong> -- <code>PersistSession</code> writes JSON to <code>~/.ralphglasses/sessions/&lt;id&gt;.json</code>. Errors are silently discarded (<code>_ = os.WriteFile</code>).
+- <strong>Cross-process discovery</strong> via <code>LoadExternalSessions()</code> reads JSON files written by the MCP server (separate process), merging unknown sessions into memory with a 24-hour TTL.</p>
+<h3 id="22-team-delegation">2.2 Team Delegation</h3>
+<p><strong>File:</strong> <code>internal/session/manager.go</code> (lines 263-395)</p>
+<p><code>LaunchTeam</code> creates a "lead" session with an MCP-tool-aware prompt instructing it to delegate work via <code>ralphglasses_session_launch</code>. Worker sessions are launched by the lead agent at runtime -- ralphglasses does not directly launch workers. Task correlation happens via string matching (<code>strings.Contains(w.Prompt, task.Description)</code>) in <code>correlateTaskStatuses</code>.</p>
+<p>Limitations:
+- Correlation is fragile -- if the lead rewrites the task description, the match fails.
+- No structured task assignment ID links lead tasks to worker sessions.
+- <code>DelegateTask</code> appends tasks but has no mechanism to assign them to specific workers.
+- Worker provider is suggested in the lead prompt but not enforced.</p>
+<h3 id="23-workflow-execution">2.3 Workflow Execution</h3>
+<p><strong>File:</strong> <code>internal/session/workflow.go</code></p>
+<p>The workflow engine supports:
+- YAML-defined multi-step workflows with <code>depends_on</code> edges.
+- Topological sort with cycle detection (<code>ValidateWorkflow</code>).
+- Parallel execution of independent steps via <code>runWorkflowParallelGroup</code> using <code>sync.WaitGroup</code>.
+- Step blocking on failed dependencies (cascade failure).</p>
+<p>The workflow engine is well-structured but not connected to worktree isolation -- all steps run in the same repo directory.</p>
+<h3 id="24-perpetual-loop-plannerworkerverifier">2.4 Perpetual Loop (Planner/Worker/Verifier)</h3>
+<p><strong>File:</strong> <code>internal/session/loop.go</code></p>
+<p>The loop creates isolated worktrees per iteration:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">createLoopWorktree</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">repoPath</span><span class="p">,</span><span class="w"> </span><span class="nx">loopID</span><span class="p">,</span><span class="w"> </span><span class="nx">iteration</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">worktreePath</span><span class="p">,</span><span class="w"> </span><span class="nx">branch</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1">// Path: .ralph/worktrees/loops/&lt;sanitized-loop-id&gt;/&lt;iteration-number&gt;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1">// Branch: ralph/&lt;sanitized-loop-id&gt;/&lt;iteration-number&gt;</span>
+</code></pre></div>
+<p>Each iteration:
+1. Planner session produces a <code>LoopTask</code> (title + prompt).
+2. Worker session runs in an isolated worktree.
+3. Verification commands execute in the worktree.
+4. State persists to <code>~/.ralphglasses/sessions/loops/&lt;id&gt;.json</code>.</p>
+<p>The loop enforces <code>MaxConcurrentWorkers == 1</code> (line 373-375), preventing parallel workers even when the profile requests more.</p>
+<h3 id="25-supporting-infrastructure">2.5 Supporting Infrastructure</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rate limiter</td>
+<td><code>ratelimit.go</code></td>
+<td>Per-provider sliding-window (1-min) rate limiting</td>
+</tr>
+<tr>
+<td>Budget enforcer</td>
+<td><code>budget.go</code></td>
+<td>Secondary budget check (90% headroom), cost ledger JSONL</td>
+</tr>
+<tr>
+<td>Health checks</td>
+<td><code>health.go</code></td>
+<td>Binary availability + env var checks per provider</td>
+</tr>
+<tr>
+<td>Failover</td>
+<td><code>failover.go</code></td>
+<td>Ordered provider chain with health pre-checks</td>
+</tr>
+<tr>
+<td>Checkpoints</td>
+<td><code>checkpoint.go</code></td>
+<td>Git commit + tag on session boundaries</td>
+</tr>
+<tr>
+<td>Git info</td>
+<td><code>gitinfo.go</code></td>
+<td><code>git log</code> and <code>git diff</code> within time windows</td>
+</tr>
+</tbody>
+</table>
+<h3 id="26-concurrency-model">2.6 Concurrency Model</h3>
+<p>The current concurrency model has two layers of mutexes:</p>
+<ol>
+<li><strong><code>Manager.mu</code></strong> -- protects the four maps (sessions, teams, workflowRuns, loops).</li>
+<li><strong><code>Session.mu</code></strong> -- protects individual session state (status, output, cost).</li>
+</ol>
+<p>Potential deadlock vectors:
+- <code>Stop()</code> acquires <code>Manager.mu</code>, releases it, then acquires <code>Session.mu</code>. This is safe because the lock ordering is always Manager -&gt; Session.
+- <code>correlateTaskStatuses</code> is called with <code>Manager.mu</code> held and acquires <code>Session.mu</code> for each worker. This is safe under current lock ordering but creates contention with long-running session status updates.
+- <code>LoadExternalSessions</code> holds <code>Manager.mu</code> while reading disk and unmarshaling JSON. Under heavy I/O load, this can stall all session operations.
+- <code>PersistSession</code> acquires <code>Session.mu</code> for marshaling -- correctly released before file I/O. However, it fires inside <code>LoadExternalSessions</code> via <code>go m.PersistSession(existing)</code> while <code>Manager.mu</code> is held, creating a goroutine that will compete for <code>Session.mu</code>.</p>
+<hr />
+<h2 id="3-gap-analysis">3. Gap Analysis</h2>
+<h3 id="gap-1-file-based-persistence-vs-roadmap-21-sqlite">Gap 1: File-Based Persistence vs. ROADMAP 2.1 (SQLite)</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Current State</th>
+<th>ROADMAP 2.1 Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Storage</td>
+<td>JSON files in <code>~/.ralphglasses/sessions/</code></td>
+<td>SQLite with WAL mode</td>
+</tr>
+<tr>
+<td>Crash recovery</td>
+<td>24-hour TTL, no transactional writes</td>
+<td>ACID transactions</td>
+</tr>
+<tr>
+<td>Queryability</td>
+<td>None (full scan of JSON files)</td>
+<td>SQL queries with indexes</td>
+</tr>
+<tr>
+<td>Event log</td>
+<td>Event bus (in-memory ring buffer)</td>
+<td>Persistent event log table</td>
+</tr>
+<tr>
+<td>State machine</td>
+<td>Implicit in code flow</td>
+<td>Enforced transition table</td>
+</tr>
+<tr>
+<td>Cross-process</td>
+<td>File polling in <code>LoadExternalSessions</code></td>
+<td>WAL-mode concurrent readers</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Effort to close:</strong> Large. Requires schema design, migration system, connection pool, CRUD layer, and replacing all <code>PersistSession</code>/<code>LoadExternalSessions</code> calls.</p>
+<h3 id="gap-2-worktree-isolation-limited-to-loops-roadmap-22">Gap 2: Worktree Isolation Limited to Loops (ROADMAP 2.2)</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Current State</th>
+<th>ROADMAP 2.2 Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Loop iterations</td>
+<td>Isolated via <code>createLoopWorktree</code></td>
+<td>Same</td>
+</tr>
+<tr>
+<td>Regular sessions</td>
+<td>Run in original repo directory</td>
+<td>Isolated worktree per session</td>
+</tr>
+<tr>
+<td>Team workers</td>
+<td>Run in original repo directory</td>
+<td>Isolated worktree per worker</td>
+</tr>
+<tr>
+<td>Workflow steps</td>
+<td>Run in original repo directory</td>
+<td>Isolated worktree per step</td>
+</tr>
+<tr>
+<td>Merge-back</td>
+<td>Not implemented</td>
+<td><code>git merge --no-ff</code> with conflict detection</td>
+</tr>
+<tr>
+<td>Cleanup</td>
+<td>Not implemented (worktrees accumulate)</td>
+<td>Auto-cleanup on session stop/archive</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Effort to close:</strong> Medium. The <code>createLoopWorktree</code> function already demonstrates the pattern. Need to generalize into <code>internal/worktree/</code> and wire it into <code>Launch</code>, <code>LaunchTeam</code>, and <code>executeWorkflow</code>.</p>
+<h3 id="gap-3-single-global-mutex-scalability">Gap 3: Single Global Mutex (Scalability)</h3>
+<p>The <code>Manager.mu</code> serializes all operations. With 10+ concurrent sessions (ROADMAP Phase 2 target), this creates:
+- Launch contention: every <code>Launch</code> holds the lock for map insert + event publish.
+- Polling contention: <code>waitForSession</code> polls every 200ms, and <code>GetTeam</code> holds the lock while correlating task statuses across all workers.
+- I/O under lock: <code>LoadExternalSessions</code> holds the lock while reading disk.</p>
+<p><strong>Effort to close:</strong> Medium. Replace the single <code>sync.Mutex</code> with <code>sync.RWMutex</code> and consider sharding sessions by repo or using a concurrent map.</p>
+<h3 id="gap-4-no-cross-session-file-collision-detection-roadmap-63">Gap 4: No Cross-Session File Collision Detection (ROADMAP 6.3)</h3>
+<p>When multiple sessions target the same repo without worktree isolation, concurrent edits to the same files are undetected. The <code>correlateTaskStatuses</code> function matches tasks by prompt substring but never checks for file-level conflicts.</p>
+<p><strong>Effort to close:</strong> Medium-Large. Requires: (a) tracking files modified per session (git diff), (b) collision detection window (like hcom's 30-second rule), (c) notification/pause mechanism.</p>
+<h3 id="gap-5-maxconcurrentworkers-1-hardcoded">Gap 5: MaxConcurrentWorkers == 1 Hardcoded</h3>
+<p>The loop profile validation rejects <code>MaxConcurrentWorkers &gt; 1</code>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">profile</span><span class="p">.</span><span class="nx">MaxConcurrentWorkers</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">profile</span><span class="p">,</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;max concurrent workers &gt; 1 not implemented yet&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">}</span>
+</code></pre></div></p>
+<p>This blocks parallel worker execution in the perpetual loop, which is a Phase 6.1 target.</p>
+<p><strong>Effort to close:</strong> Medium. Requires parallel worker launch with worktree isolation per worker, result aggregation, and conflict resolution on merge-back.</p>
+<hr />
+<h2 id="4-external-landscape">4. External Landscape</h2>
+<h3 id="41-smtg-aiclaude-squad-worktree-isolation-model">4.1 smtg-ai/claude-squad -- Worktree Isolation Model</h3>
+<p><strong>Architecture:</strong> Each agent instance gets a dedicated <code>GitWorktree</code> struct with its own branch and directory. Sessions are managed through tmux, with one pane per agent.</p>
+<p><strong>Key patterns applicable to ralphglasses:</strong></p>
+<ol>
+<li><strong>Worktree lifecycle tied to session state:</strong></li>
+<li><code>NewGitWorktree()</code> creates a fresh worktree with branch <code>{prefix}{sessionName}</code>.</li>
+<li><code>Pause()</code> commits changes, removes worktree, preserves branch.</li>
+<li><code>Resume()</code> recreates worktree from preserved branch.</li>
+<li>
+<p><code>Kill()</code> cleans up both worktree and branch (unless <code>isExistingBranch</code>).</p>
+</li>
+<li>
+<p><strong>Branch naming with collision avoidance:</strong></p>
+</li>
+<li>Path: <code>{configDir}/worktrees/{sanitized_branch_name}_{nanosecond_timestamp}</code></li>
+<li>
+<p>Nanosecond timestamps prevent collisions when multiple sessions use the same branch prefix.</p>
+</li>
+<li>
+<p><strong>Serializable worktree state:</strong></p>
+</li>
+<li><code>ToInstanceData()</code> / <code>FromInstanceData()</code> persist worktree metadata for crash recovery.</li>
+<li>Enables session survival across process restarts.</li>
+</ol>
+<p><strong>Applicability:</strong> The pause/resume pattern (commit + remove worktree + preserve branch) is directly applicable to ralphglasses' session lifecycle. The current <code>createLoopWorktree</code> function should be generalized to follow this pattern.</p>
+<h3 id="42-aannoohcom-multi-agent-collision-detection">4.2 aannoo/hcom -- Multi-Agent Collision Detection</h3>
+<p><strong>Architecture:</strong> A hook-based pub/sub system with SQLite as the message broker. Agents communicate through <code>agent -&gt; hooks -&gt; db -&gt; hooks -&gt; other agent</code>.</p>
+<p><strong>Key patterns applicable to ralphglasses:</strong></p>
+<ol>
+<li><strong>File collision detection with 30-second window:</strong></li>
+<li>Hooks intercept file write events and store them with timestamps in SQLite.</li>
+<li>If two agents edit the same file within 30 seconds, both receive collision notifications.</li>
+<li>
+<p>Configurable via <code>--collision</code> event subscription.</p>
+</li>
+<li>
+<p><strong>Event subscription system:</strong></p>
+</li>
+<li>Agents subscribe to events: <code>hcom events sub "SQL WHERE"</code>.</li>
+<li>Built-in presets: <code>collision</code>, <code>created</code>, <code>stopped</code>, <code>blocked</code>.</li>
+<li>
+<p>Auto-subscription at startup via <code>HCOM_AUTO_SUBSCRIBE</code> config.</p>
+</li>
+<li>
+<p><strong>SQLite event schema:</strong></p>
+</li>
+<li>Events table with type classifications: <code>message</code>, <code>status</code>, <code>life</code>.</li>
+<li>Message scoping: <code>broadcast</code>, <code>mentions</code>.</li>
+<li>Status contexts: <code>tool:X</code>, <code>deliver:X</code>, <code>approval</code>, <code>prompt</code>, <code>exit:X</code>.</li>
+<li>
+<p>JSON arrays for multi-target delivery.</p>
+</li>
+<li>
+<p><strong>Structured handoffs:</strong></p>
+</li>
+<li>Messages carry bundles: title, description, events, files, transcript ranges.</li>
+<li>Intent types: <code>request</code> (expect response), <code>inform</code> (FYI), <code>ack</code> (reply).</li>
+<li>Thread grouping for related coordination messages.</li>
+</ol>
+<p><strong>Applicability:</strong> The collision detection pattern (time-windowed file edit tracking) maps directly to ROADMAP 6.3 requirements. The SQLite event schema provides a model for ROADMAP 2.1.5 (session event log table). The subscription system aligns with the existing <code>events.Bus</code> but adds persistence and queryability.</p>
+<h3 id="43-dtormoentsk-container-sandboxed-parallel-workers">4.3 dtormoen/tsk -- Container-Sandboxed Parallel Workers</h3>
+<p><strong>Architecture:</strong> Docker/Podman containers provide filesystem, network, and resource isolation per task. A server daemon manages worker concurrency.</p>
+<p><strong>Key patterns applicable to ralphglasses:</strong></p>
+<ol>
+<li><strong>Worker pool with configurable concurrency:</strong></li>
+<li><code>tsk server start --workers 4</code> sets parallel capacity.</li>
+<li>Tasks queue when all workers are busy.</li>
+<li>
+<p>Automatic cleanup of old tasks (configurable retention).</p>
+</li>
+<li>
+<p><strong>Container lifecycle per task:</strong></p>
+</li>
+<li>Copy repo + create git branch -&gt; start proxy -&gt; build container -&gt; execute -&gt; save branch.</li>
+<li>Each task produces a new branch in the original repo.</li>
+<li>
+<p>Network isolation via proxy sidecar with domain allowlists.</p>
+</li>
+<li>
+<p><strong>Task dependency chains:</strong></p>
+</li>
+<li><code>tsk add --parent &lt;taskid&gt;</code> creates sequential dependencies.</li>
+<li>
+<p>Child tasks "start from where parent left off" -- inheriting branch state.</p>
+</li>
+<li>
+<p><strong>Resource limits per container:</strong></p>
+</li>
+<li><code>memory_gb</code> and <code>cpu</code> settings per task.</li>
+<li>Separate proxy containers for different network configurations.</li>
+</ol>
+<p><strong>Applicability:</strong> The worker pool pattern (configurable concurrency + queue) applies to lifting the <code>MaxConcurrentWorkers == 1</code> constraint. The task dependency chain pattern (<code>--parent</code>) maps to workflow step dependencies. Container isolation is a Phase 5 concern but the worker pool pattern is Phase 2.</p>
+<h3 id="44-mikeyobrienralph-orchestrator-hat-system-personas">4.4 mikeyobrien/ralph-orchestrator -- Hat System Personas</h3>
+<p><strong>Architecture:</strong> Rust-based RPC orchestrator with a Hat System for specialized agent personas. MCP server integration with multiple backend CLI tools.</p>
+<p><strong>Key patterns applicable to ralphglasses:</strong></p>
+<ol>
+<li><strong>Built-in persona presets:</strong></li>
+<li>Five builtins: <code>code-assist</code>, <code>debug</code>, <code>research</code>, <code>review</code>, <code>pdd-to-code-assist</code>.</li>
+<li>Each persona has specific instructions and tool permissions.</li>
+<li>
+<p>Configuration via <code>ralph.yml</code> variants (<code>ralph.bot.yml</code>, <code>ralph.reviewer.yml</code>).</p>
+</li>
+<li>
+<p><strong>Backpressure and quality gates:</strong></p>
+</li>
+<li>Rejects incomplete work via automated checks (tests, lint, typecheck).</li>
+<li>
+<p>Continues iterations until <code>LOOP_COMPLETE</code> or configured limits.</p>
+</li>
+<li>
+<p><strong>Human-in-the-loop integration:</strong></p>
+</li>
+<li>Telegram integration for blocking agent questions until human response.</li>
+<li>Event-driven coordination where personas emit and respond to events.</li>
+</ol>
+<p><strong>Applicability:</strong> The persona/preset pattern aligns with ralphglasses' <code>AgentDef</code> system but adds runtime behavior constraints (backpressure). The quality gate pattern (reject incomplete work) complements the loop's <code>VerifyCommands</code>.</p>
+<hr />
+<h2 id="5-actionable-recommendations">5. Actionable Recommendations</h2>
+<h3 id="recommendation-1-extract-internalworktree-package-from-loop-code">Recommendation 1: Extract <code>internal/worktree/</code> Package from Loop Code</h3>
+<p><strong>Target file:</strong> <code>internal/worktree/worktree.go</code> (new), refactor <code>internal/session/loop.go</code>
+<strong>Effort:</strong> Medium (3-5 days)
+<strong>Impact:</strong> High -- unblocks ROADMAP 2.2, enables worktree isolation for all session types
+<strong>ROADMAP item:</strong> 2.2.1, 2.2.2, 2.2.3, 2.2.4, 2.2.5</p>
+<p>Extract <code>createLoopWorktree</code> and <code>gitTopLevel</code> from <code>loop.go</code> into a standalone <code>internal/worktree/</code> package. Generalize the interface:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">package</span><span class="w"> </span><span class="nx">worktree</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Worktree</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nx">SessionID</span><span class="w">    </span><span class="kt">string</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nx">RepoRoot</span><span class="w">     </span><span class="kt">string</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nx">WorktreePath</span><span class="w"> </span><span class="kt">string</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nx">Branch</span><span class="w">       </span><span class="kt">string</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nx">IsExisting</span><span class="w">   </span><span class="kt">bool</span><span class="w"> </span><span class="c1">// from claude-squad: controls cleanup behavior</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nx">CreatedAt</span><span class="w">    </span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="p">}</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="kd">func</span><span class="w"> </span><span class="nx">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">repoRoot</span><span class="p">,</span><span class="w"> </span><span class="nx">sessionID</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">opts</span><span class="w"> </span><span class="nx">CreateOpts</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">Worktree</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="kd">func</span><span class="w"> </span><span class="nx">Remove</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">wt</span><span class="w"> </span><span class="o">*</span><span class="nx">Worktree</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="kd">func</span><span class="w"> </span><span class="nx">MergeBack</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">wt</span><span class="w"> </span><span class="o">*</span><span class="nx">Worktree</span><span class="p">,</span><span class="w"> </span><span class="nx">targetBranch</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="kd">func</span><span class="w"> </span><span class="nx">List</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">repoRoot</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">([]</span><span class="o">*</span><span class="nx">Worktree</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="kd">func</span><span class="w"> </span><span class="nx">Cleanup</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">repoRoot</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">olderThan</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+</code></pre></div>
+<p>Adopt claude-squad patterns:
+- <strong>Branch naming:</strong> <code>ralph/{session-id}</code> (already used in loops).
+- <strong>Path structure:</strong> <code>.ralph/worktrees/{session-type}/{session-id}</code> with nanosecond suffix for collision avoidance.
+- <strong>Pause/Resume:</strong> On pause, commit WIP + remove worktree + preserve branch. On resume, recreate worktree from branch.
+- <strong>Cleanup policy:</strong> Remove worktree + optionally delete branch on session archive.</p>
+<p>Wire into <code>Manager.Launch()</code>: when <code>opts.Worktree != ""</code>, create a worktree before spawning the CLI process, set <code>cmd.Dir = worktreePath</code>.</p>
+<h3 id="recommendation-2-add-file-collision-detection-layer">Recommendation 2: Add File Collision Detection Layer</h3>
+<p><strong>Target file:</strong> <code>internal/session/collision.go</code> (new)
+<strong>Effort:</strong> Medium (2-3 days)
+<strong>Impact:</strong> High -- addresses ROADMAP 6.3.4 (conflict resolution)
+<strong>ROADMAP item:</strong> 6.3.2, 6.3.4</p>
+<p>Adopt hcom's time-windowed collision detection pattern:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">package</span><span class="w"> </span><span class="nx">session</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kd">type</span><span class="w"> </span><span class="nx">FileEdit</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">SessionID</span><span class="w"> </span><span class="kt">string</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nx">FilePath</span><span class="w">  </span><span class="kt">string</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nx">Timestamp</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="kd">type</span><span class="w"> </span><span class="nx">CollisionDetector</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="nx">mu</span><span class="w">      </span><span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="nx">window</span><span class="w">  </span><span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="w"> </span><span class="c1">// default 30s, from hcom</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="nx">edits</span><span class="w">   </span><span class="p">[]</span><span class="nx">FileEdit</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="nx">bus</span><span class="w">     </span><span class="o">*</span><span class="nx">events</span><span class="p">.</span><span class="nx">Bus</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="p">}</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">d</span><span class="w"> </span><span class="o">*</span><span class="nx">CollisionDetector</span><span class="p">)</span><span class="w"> </span><span class="nx">RecordEdit</span><span class="p">(</span><span class="nx">sessionID</span><span class="p">,</span><span class="w"> </span><span class="nx">filePath</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">d</span><span class="w"> </span><span class="o">*</span><span class="nx">CollisionDetector</span><span class="p">)</span><span class="w"> </span><span class="nx">Check</span><span class="p">(</span><span class="nx">sessionID</span><span class="p">,</span><span class="w"> </span><span class="nx">filePath</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">[]</span><span class="nx">FileEdit</span><span class="w"> </span><span class="c1">// returns conflicting edits</span>
+</code></pre></div>
+<p>Integration points:
+- Hook into session output parsing: when <code>runSessionOutput</code> detects file modification events (tool use results mentioning file paths), call <code>RecordEdit</code>.
+- On collision detection, publish <code>events.FileCollision</code> event and optionally pause the later session.
+- For worktree-isolated sessions, collision detection is less critical (conflicts surface at merge-back time), but for shared-directory sessions it is essential.</p>
+<h3 id="recommendation-3-replace-single-mutex-with-rwmutex-per-map-granularity">Recommendation 3: Replace Single Mutex with RWMutex + Per-Map Granularity</h3>
+<p><strong>Target file:</strong> <code>internal/session/manager.go</code>
+<strong>Effort:</strong> Small (1-2 days)
+<strong>Impact:</strong> Medium -- reduces contention at scale, prerequisite for 10+ sessions
+<strong>ROADMAP item:</strong> 2.1 (prerequisite)</p>
+<p>Current state: single <code>sync.Mutex</code> for all operations.</p>
+<p>Proposed changes:
+1. Replace <code>sync.Mutex</code> with <code>sync.RWMutex</code> for the manager. Read-heavy operations (<code>Get</code>, <code>List</code>, <code>FindByRepo</code>, <code>IsRunning</code>, <code>GetTeam</code>, <code>ListTeams</code>, <code>GetWorkflowRun</code>, <code>ListLoops</code>) use <code>RLock</code>. Write operations (<code>Launch</code>, <code>Stop</code>, <code>DelegateTask</code>) use full <code>Lock</code>.
+2. Move <code>LoadExternalSessions</code> disk I/O outside the lock: read files first, then acquire lock only for map updates.
+3. Consider splitting into per-map mutexes (<code>sessionsMu</code>, <code>teamsMu</code>, <code>workflowsMu</code>, <code>loopsMu</code>) if profiling shows cross-map contention.</p>
+<p>Critical constraint: maintain lock ordering <code>Manager.mu</code> -&gt; <code>Session.mu</code> to prevent deadlocks. The current <code>correlateTaskStatuses</code> acquires <code>Session.mu</code> while holding <code>Manager.mu</code> -- this is safe but must remain consistent.</p>
+<h3 id="recommendation-4-implement-sqlite-session-store">Recommendation 4: Implement SQLite Session Store</h3>
+<p><strong>Target file:</strong> <code>internal/session/store.go</code> (new), <code>internal/session/migrations/</code> (new)
+<strong>Effort:</strong> Large (5-8 days)
+<strong>Impact:</strong> High -- core enabler for ROADMAP 2.1, crash recovery, queryable history
+<strong>ROADMAP item:</strong> 2.1.2, 2.1.3, 2.1.4, 2.1.5</p>
+<p>Schema design (informed by hcom's event schema):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">-- Core session table</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">sessions</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="n">id</span><span class="w">            </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="n">provider</span><span class="w">      </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="n">provider_sid</span><span class="w">  </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="n">repo_path</span><span class="w">     </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="n">repo_name</span><span class="w">     </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="n">status</span><span class="w">        </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">CHECK</span><span class="p">(</span><span class="n">status</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;launching&#39;</span><span class="p">,</span><span class="s1">&#39;running&#39;</span><span class="p">,</span><span class="s1">&#39;completed&#39;</span><span class="p">,</span><span class="s1">&#39;stopped&#39;</span><span class="p">,</span><span class="s1">&#39;errored&#39;</span><span class="p">)),</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="n">prompt</span><span class="w">        </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="n">model</span><span class="w">         </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="n">agent_name</span><span class="w">    </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="n">team_name</span><span class="w">     </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="n">worktree_path</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="n">branch</span><span class="w">        </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">    </span><span class="n">budget_usd</span><span class="w">    </span><span class="nb">REAL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">    </span><span class="n">spent_usd</span><span class="w">     </span><span class="nb">REAL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">    </span><span class="n">turn_count</span><span class="w">    </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">    </span><span class="n">max_turns</span><span class="w">     </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">    </span><span class="n">launched_at</span><span class="w">   </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">    </span><span class="n">last_activity</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">    </span><span class="n">ended_at</span><span class="w">      </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">    </span><span class="n">exit_reason</span><span class="w">   </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">    </span><span class="n">last_output</span><span class="w">   </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">    </span><span class="n">error</span><span class="w">         </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="w">    </span><span class="n">created_at</span><span class="w">    </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="p">(</span><span class="n">datetime</span><span class="p">(</span><span class="s1">&#39;now&#39;</span><span class="p">)),</span>
+<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="w">    </span><span class="n">updated_at</span><span class="w">    </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="p">(</span><span class="n">datetime</span><span class="p">(</span><span class="s1">&#39;now&#39;</span><span class="p">))</span>
+<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="p">);</span>
+<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a>
+<a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a><span class="c1">-- State transition log (from hcom&#39;s event model)</span>
+<a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">session_events</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a><span class="w">    </span><span class="n">id</span><span class="w">         </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="n">AUTOINCREMENT</span><span class="p">,</span>
+<a id="__codelineno-5-32" name="__codelineno-5-32" href="#__codelineno-5-32"></a><span class="w">    </span><span class="n">session_id</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">sessions</span><span class="p">(</span><span class="n">id</span><span class="p">),</span>
+<a id="__codelineno-5-33" name="__codelineno-5-33" href="#__codelineno-5-33"></a><span class="w">    </span><span class="n">event_type</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-5-34" name="__codelineno-5-34" href="#__codelineno-5-34"></a><span class="w">    </span><span class="n">old_status</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-5-35" name="__codelineno-5-35" href="#__codelineno-5-35"></a><span class="w">    </span><span class="n">new_status</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-5-36" name="__codelineno-5-36" href="#__codelineno-5-36"></a><span class="w">    </span><span class="k">data</span><span class="w">       </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"> </span><span class="c1">-- JSON</span>
+<a id="__codelineno-5-37" name="__codelineno-5-37" href="#__codelineno-5-37"></a><span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="p">(</span><span class="n">datetime</span><span class="p">(</span><span class="s1">&#39;now&#39;</span><span class="p">))</span>
+<a id="__codelineno-5-38" name="__codelineno-5-38" href="#__codelineno-5-38"></a><span class="p">);</span>
+<a id="__codelineno-5-39" name="__codelineno-5-39" href="#__codelineno-5-39"></a>
+<a id="__codelineno-5-40" name="__codelineno-5-40" href="#__codelineno-5-40"></a><span class="c1">-- File edit tracking (from hcom&#39;s collision detection)</span>
+<a id="__codelineno-5-41" name="__codelineno-5-41" href="#__codelineno-5-41"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">file_edits</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-5-42" name="__codelineno-5-42" href="#__codelineno-5-42"></a><span class="w">    </span><span class="n">id</span><span class="w">         </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="n">AUTOINCREMENT</span><span class="p">,</span>
+<a id="__codelineno-5-43" name="__codelineno-5-43" href="#__codelineno-5-43"></a><span class="w">    </span><span class="n">session_id</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">sessions</span><span class="p">(</span><span class="n">id</span><span class="p">),</span>
+<a id="__codelineno-5-44" name="__codelineno-5-44" href="#__codelineno-5-44"></a><span class="w">    </span><span class="n">file_path</span><span class="w">  </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-5-45" name="__codelineno-5-45" href="#__codelineno-5-45"></a><span class="w">    </span><span class="n">edit_type</span><span class="w">  </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"> </span><span class="c1">-- create, modify, delete</span>
+<a id="__codelineno-5-46" name="__codelineno-5-46" href="#__codelineno-5-46"></a><span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="p">(</span><span class="n">datetime</span><span class="p">(</span><span class="s1">&#39;now&#39;</span><span class="p">))</span>
+<a id="__codelineno-5-47" name="__codelineno-5-47" href="#__codelineno-5-47"></a><span class="p">);</span>
+<a id="__codelineno-5-48" name="__codelineno-5-48" href="#__codelineno-5-48"></a>
+<a id="__codelineno-5-49" name="__codelineno-5-49" href="#__codelineno-5-49"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_sessions_status</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">sessions</span><span class="p">(</span><span class="n">status</span><span class="p">);</span>
+<a id="__codelineno-5-50" name="__codelineno-5-50" href="#__codelineno-5-50"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_sessions_repo</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">sessions</span><span class="p">(</span><span class="n">repo_path</span><span class="p">);</span>
+<a id="__codelineno-5-51" name="__codelineno-5-51" href="#__codelineno-5-51"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_session_events_session</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">session_events</span><span class="p">(</span><span class="n">session_id</span><span class="p">);</span>
+<a id="__codelineno-5-52" name="__codelineno-5-52" href="#__codelineno-5-52"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_file_edits_session</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">file_edits</span><span class="p">(</span><span class="n">session_id</span><span class="p">);</span>
+<a id="__codelineno-5-53" name="__codelineno-5-53" href="#__codelineno-5-53"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_file_edits_path_time</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">file_edits</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">);</span>
+</code></pre></div>
+<p>Use <code>modernc.org/sqlite</code> (pure Go, no CGO) as specified in ROADMAP 2.1.2. WAL mode for concurrent readers (TUI + MCP server). The existing internal SQLite project repo in the same org already uses this library -- reuse patterns from there.</p>
+<p>Migration strategy:
+- <code>internal/session/migrations/001_initial.sql</code> with the schema above.
+- <code>Store.Migrate()</code> called on startup.
+- Dual-write during transition: persist to both JSON files and SQLite, read from SQLite.
+- Remove JSON persistence after one release cycle.</p>
+<h3 id="recommendation-5-lift-maxconcurrentworkers-constraint-in-loop">Recommendation 5: Lift MaxConcurrentWorkers Constraint in Loop</h3>
+<p><strong>Target file:</strong> <code>internal/session/loop.go</code>
+<strong>Effort:</strong> Medium (3-4 days)
+<strong>Impact:</strong> Medium -- enables parallel workers in perpetual loop, prerequisite for ROADMAP 6.1
+<strong>ROADMAP item:</strong> 6.1.4</p>
+<p>Current blocker (loop.go:373-375):
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">profile</span><span class="p">.</span><span class="nx">MaxConcurrentWorkers</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">profile</span><span class="p">,</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;max concurrent workers &gt; 1 not implemented yet&quot;</span><span class="p">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="p">}</span>
+</code></pre></div></p>
+<p>Implementation plan:
+1. Remove the <code>!= 1</code> guard.
+2. In <code>StepLoop</code>, after the planner produces tasks, use a semaphore-gated worker pool (from tsk's pattern):
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">sem</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">chan</span><span class="w"> </span><span class="kd">struct</span><span class="p">{},</span><span class="w"> </span><span class="nx">profile</span><span class="p">.</span><span class="nx">MaxConcurrentWorkers</span><span class="p">)</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kd">var</span><span class="w"> </span><span class="nx">wg</span><span class="w"> </span><span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">task</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">tasks</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nx">sem</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="kd">struct</span><span class="p">{}{}</span><span class="w"> </span><span class="c1">// acquire slot</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nx">wg</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="k">go</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">task</span><span class="w"> </span><span class="nx">LoopTask</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">        </span><span class="k">defer</span><span class="w"> </span><span class="nx">wg</span><span class="p">.</span><span class="nx">Done</span><span class="p">()</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">        </span><span class="k">defer</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">sem</span><span class="w"> </span><span class="p">}()</span><span class="w"> </span><span class="c1">// release slot</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">        </span><span class="c1">// create worktree, launch worker, wait, verify</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">    </span><span class="p">}(</span><span class="nx">task</span><span class="p">)</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="p">}</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="nx">wg</span><span class="p">.</span><span class="nx">Wait</span><span class="p">()</span>
+</code></pre></div>
+3. Each parallel worker gets its own worktree (using Recommendation 1's <code>worktree.Create</code>).
+4. After all workers complete, merge results back sequentially with conflict detection.
+5. Planner must produce multiple tasks per iteration (currently produces exactly one). Extend the planner prompt to request a JSON array of tasks when <code>MaxConcurrentWorkers &gt; 1</code>.</p>
+<h3 id="recommendation-6-structured-task-assignment-for-teams">Recommendation 6: Structured Task Assignment for Teams</h3>
+<p><strong>Target file:</strong> <code>internal/session/manager.go</code>, <code>internal/session/types.go</code>
+<strong>Effort:</strong> Small (1-2 days)
+<strong>Impact:</strong> Medium -- fixes fragile string-matching correlation in <code>correlateTaskStatuses</code>
+<strong>ROADMAP item:</strong> 2.5.3 (extension)</p>
+<p>Current problem: <code>correlateTaskStatuses</code> matches workers to tasks via <code>strings.Contains(w.Prompt, task.Description)</code>. This breaks when the lead agent paraphrases the task.</p>
+<p>Solution:
+1. Add <code>TaskID string</code> field to <code>TeamTask</code> and <code>LaunchOptions</code>.
+2. When the lead launches a worker via MCP, include a <code>task_id</code> parameter that gets stored on the <code>Session</code>.
+3. Replace string matching with <code>w.TaskID == task.ID</code> in <code>correlateTaskStatuses</code>.
+4. Generate task IDs deterministically: <code>{team_name}-{task_index}</code>.</p>
+<h3 id="recommendation-7-add-session-lifecycle-state-machine">Recommendation 7: Add Session Lifecycle State Machine</h3>
+<p><strong>Target file:</strong> <code>internal/session/types.go</code>, <code>internal/session/manager.go</code>
+<strong>Effort:</strong> Small (1 day)
+<strong>Impact:</strong> Medium -- prevents invalid state transitions, enables ROADMAP 2.1.4
+<strong>ROADMAP item:</strong> 2.1.4</p>
+<p>Current state: status is set ad-hoc in <code>runner.go</code> and <code>manager.go</code> without transition validation.</p>
+<p>Add a transition table:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kd">var</span><span class="w"> </span><span class="nx">validTransitions</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="nx">SessionStatus</span><span class="p">][]</span><span class="nx">SessionStatus</span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="nx">StatusLaunching</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nx">StatusRunning</span><span class="p">,</span><span class="w"> </span><span class="nx">StatusErrored</span><span class="p">,</span><span class="w"> </span><span class="nx">StatusStopped</span><span class="p">},</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nx">StatusRunning</span><span class="p">:</span><span class="w">   </span><span class="p">{</span><span class="nx">StatusCompleted</span><span class="p">,</span><span class="w"> </span><span class="nx">StatusErrored</span><span class="p">,</span><span class="w"> </span><span class="nx">StatusStopped</span><span class="p">},</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nx">StatusCompleted</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w"> </span><span class="c1">// terminal</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nx">StatusStopped</span><span class="p">:</span><span class="w">   </span><span class="p">{</span><span class="nx">StatusLaunching</span><span class="p">},</span><span class="w"> </span><span class="c1">// resume</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nx">StatusErrored</span><span class="p">:</span><span class="w">   </span><span class="p">{</span><span class="nx">StatusLaunching</span><span class="p">},</span><span class="w"> </span><span class="c1">// retry</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">}</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Session</span><span class="p">)</span><span class="w"> </span><span class="nx">TransitionTo</span><span class="p">(</span><span class="nx">next</span><span class="w"> </span><span class="nx">SessionStatus</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">    </span><span class="nx">allowed</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">validTransitions</span><span class="p">[</span><span class="nx">s</span><span class="p">.</span><span class="nx">Status</span><span class="p">]</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">allowed</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">next</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">Status</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">next</span><span class="p">;</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;invalid transition: %s -&gt; %s&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">Status</span><span class="p">,</span><span class="w"> </span><span class="nx">next</span><span class="p">)</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="6-risk-assessment">6. Risk Assessment</h2>
+<h3 id="risk-1-sqlite-migration-data-loss-high">Risk 1: SQLite Migration Data Loss (HIGH)</h3>
+<p><strong>Description:</strong> Transitioning from JSON files to SQLite requires a dual-write period. If the migration has bugs, sessions could be lost or duplicated.</p>
+<p><strong>Mitigation:</strong>
+- Implement dual-write (JSON + SQLite) before cutting over.
+- Add a <code>ralphglasses migrate</code> subcommand that reads existing JSON files and inserts into SQLite.
+- Keep JSON files as backup for one release cycle.
+- The internal SQLite project repo in the same org already uses <code>modernc.org/sqlite</code> -- reuse its connection setup patterns.</p>
+<h3 id="risk-2-worktree-accumulation-disk-exhaustion-medium">Risk 2: Worktree Accumulation Disk Exhaustion (MEDIUM)</h3>
+<p><strong>Description:</strong> Each loop iteration creates a worktree (~full repo copy). With parallel workers and long-running loops, disk space can be exhausted.</p>
+<p><strong>Mitigation:</strong>
+- Implement <code>worktree.Cleanup</code> with configurable retention (default: 24 hours for completed, immediate for failed).
+- Add disk space check before worktree creation (from tsk's pattern).
+- Monitor <code>.ralph/worktrees/</code> size in health checks.
+- Consider shallow worktrees (<code>git worktree add --detach</code>) for read-heavy verification tasks.</p>
+<h3 id="risk-3-lock-ordering-violation-in-parallel-workers-medium">Risk 3: Lock Ordering Violation in Parallel Workers (MEDIUM)</h3>
+<p><strong>Description:</strong> When <code>MaxConcurrentWorkers &gt; 1</code>, multiple goroutines will call <code>Manager.Launch</code> and <code>waitForSession</code> concurrently. If lock ordering is violated (e.g., a new code path acquires <code>Session.mu</code> before <code>Manager.mu</code>), deadlocks will occur.</p>
+<p><strong>Mitigation:</strong>
+- Document lock ordering: <code>Manager.mu</code> -&gt; <code>Session.mu</code> -&gt; <code>LoopRun.mu</code> -&gt; <code>WorkflowRun.mu</code>.
+- Add <code>go test -race</code> to CI (ROADMAP 0.5.9.2 already calls for this).
+- Consider replacing <code>Session.mu</code> with atomic operations for frequently-read fields (Status, SpentUSD, TurnCount).</p>
+<h3 id="risk-4-collision-detection-false-positives-low">Risk 4: Collision Detection False Positives (LOW)</h3>
+<p><strong>Description:</strong> Time-windowed collision detection (from hcom) may fire false positives for files that are legitimately edited by multiple agents (e.g., shared config files, go.sum).</p>
+<p><strong>Mitigation:</strong>
+- Add an ignore list in <code>.ralphrc</code>: <code>COLLISION_IGNORE=go.sum,go.mod,package-lock.json</code>.
+- Allow collision events to be acknowledged/dismissed without pausing.
+- Only enforce hard pauses for non-generated source files.</p>
+<h3 id="risk-5-planner-multi-task-output-parsing-fragility-low">Risk 5: Planner Multi-Task Output Parsing Fragility (LOW)</h3>
+<p><strong>Description:</strong> Lifting the single-task constraint requires the planner to output a JSON array of tasks. LLM output parsing is already fragile (<code>parsePlannerTask</code> has multiple fallback strategies).</p>
+<p><strong>Mitigation:</strong>
+- Extend <code>parsePlannerTask</code> to handle both <code>{title, prompt}</code> and <code>[{title, prompt}, ...]</code> formats.
+- Keep the single-task fallback: if the planner returns one task and <code>MaxConcurrentWorkers &gt; 1</code>, run it with a single worker.
+- Add structured output schema constraints to the planner prompt.</p>
+<hr />
+<h2 id="7-implementation-priority-ordering">7. Implementation Priority Ordering</h2>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Recommendation</th>
+<th>ROADMAP ID</th>
+<th>Effort</th>
+<th>Impact</th>
+<th>Dependencies</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>P0</strong></td>
+<td>R3: RWMutex + granular locking</td>
+<td>2.1 prereq</td>
+<td>Small</td>
+<td>Medium</td>
+<td>None</td>
+</tr>
+<tr>
+<td><strong>P0</strong></td>
+<td>R7: Session lifecycle state machine</td>
+<td>2.1.4</td>
+<td>Small</td>
+<td>Medium</td>
+<td>None</td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td>R1: Extract <code>internal/worktree/</code> package</td>
+<td>2.2.1-2.2.5</td>
+<td>Medium</td>
+<td>High</td>
+<td>None</td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td>R6: Structured task assignment for teams</td>
+<td>2.5.3 ext</td>
+<td>Small</td>
+<td>Medium</td>
+<td>None</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td>R4: SQLite session store</td>
+<td>2.1.2-2.1.5</td>
+<td>Large</td>
+<td>High</td>
+<td>R7 (state machine)</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td>R2: File collision detection</td>
+<td>6.3.2, 6.3.4</td>
+<td>Medium</td>
+<td>High</td>
+<td>R1 (worktrees reduce need)</td>
+</tr>
+<tr>
+<td><strong>P3</strong></td>
+<td>R5: Parallel workers in loop</td>
+<td>6.1.4</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>R1 (worktree isolation)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Suggested implementation order:</strong>
+1. <strong>Sprint 1 (P0):</strong> R3 (RWMutex) + R7 (state machine) -- foundational improvements, low risk, can be done in parallel.
+2. <strong>Sprint 2 (P1):</strong> R1 (worktree package) + R6 (task assignment) -- generalize existing patterns, unblock session isolation.
+3. <strong>Sprint 3 (P2):</strong> R4 (SQLite store) -- major persistence overhaul, requires R7 for state machine enforcement.
+4. <strong>Sprint 4 (P2):</strong> R2 (collision detection) -- important but partially mitigated by worktree isolation from R1.
+5. <strong>Sprint 5 (P3):</strong> R5 (parallel workers) -- depends on R1 for worktree isolation per worker.</p>
+<hr />
+<h2 id="appendix-a-external-project-reference-summary">Appendix A: External Project Reference Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Project</th>
+<th>Language</th>
+<th>Key Pattern</th>
+<th>Relevance to ralphglasses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/smtg-ai/claude-squad">smtg-ai/claude-squad</a></td>
+<td>Go</td>
+<td>Worktree per session, pause/resume via commit+remove, nanosecond path suffixes</td>
+<td>Direct model for <code>internal/worktree/</code> (R1)</td>
+</tr>
+<tr>
+<td><a href="https://github.com/aannoo/hcom">aannoo/hcom</a></td>
+<td>Python</td>
+<td>30s collision window, SQLite event schema, hook-based pub/sub, structured handoffs</td>
+<td>Direct model for collision detection (R2), SQLite schema (R4)</td>
+</tr>
+<tr>
+<td><a href="https://github.com/dtormoen/tsk">dtormoen/tsk</a></td>
+<td>Go</td>
+<td>Container sandbox, semaphore worker pool, task dependency chains, auto-cleanup</td>
+<td>Worker pool pattern for parallel loop workers (R5)</td>
+</tr>
+<tr>
+<td><a href="https://github.com/mikeyobrien/ralph-orchestrator">mikeyobrien/ralph-orchestrator</a></td>
+<td>Rust</td>
+<td>Hat System personas, backpressure quality gates, event-driven coordination</td>
+<td>Persona pattern enhances AgentDef system</td>
+</tr>
+</tbody>
+</table>
+<h2 id="appendix-b-key-source-files-referenced">Appendix B: Key Source Files Referenced</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/session/manager.go</code></td>
+<td>Session/team/workflow/loop lifecycle management</td>
+</tr>
+<tr>
+<td><code>internal/session/runner.go</code></td>
+<td>Session launch, streaming output parsing, process lifecycle</td>
+</tr>
+<tr>
+<td><code>internal/session/types.go</code></td>
+<td>Session, LaunchOptions, TeamConfig, TeamStatus, AgentDef types</td>
+</tr>
+<tr>
+<td><code>internal/session/loop.go</code></td>
+<td>Perpetual planner/worker/verifier loop with worktree creation</td>
+</tr>
+<tr>
+<td><code>internal/session/workflow.go</code></td>
+<td>Multi-step workflow DAG execution</td>
+</tr>
+<tr>
+<td><code>internal/session/agents.go</code></td>
+<td>Agent definition discovery (Claude, Gemini, Codex)</td>
+</tr>
+<tr>
+<td><code>internal/session/templates.go</code></td>
+<td>Provider-specific prompt templates</td>
+</tr>
+<tr>
+<td><code>internal/session/failover.go</code></td>
+<td>Provider failover chain</td>
+</tr>
+<tr>
+<td><code>internal/session/checkpoint.go</code></td>
+<td>Git checkpoint (commit + tag)</td>
+</tr>
+<tr>
+<td><code>internal/session/budget.go</code></td>
+<td>Budget enforcement, cost ledger</td>
+</tr>
+<tr>
+<td><code>internal/session/ratelimit.go</code></td>
+<td>Per-provider rate limiting</td>
+</tr>
+<tr>
+<td><code>internal/session/health.go</code></td>
+<td>Provider health checks</td>
+</tr>
+<tr>
+<td><code>internal/session/gitinfo.go</code></td>
+<td>Git log/diff queries</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -45,7 +45,7 @@ printf '# Test Roadmap\n## Phase 1\n- [ ] Task 1\n- [x] Task 2\n' > "$REPO_DIR/R
 
 **A5.** `GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /dev/null .` — Expected: exit 0 (cross-compiles).
 
-**A6.** `GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o /dev/null .` — Expected: exit 0.
+**A6.** `GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o /dev/null .` — Expected: exit 0.
 
 **A7.** `go mod tidy && git diff --exit-code go.mod go.sum` — Expected: exit 0, no diff.
 

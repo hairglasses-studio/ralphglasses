@@ -1,0 +1,1916 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ralph-roadmap/05-test-coverage/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>05 — Test Coverage Audit (ralphglasses) - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#05-test-coverage-audit-ralphglasses" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              05 — Test Coverage Audit (ralphglasses)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-coverage-by-blast-radius" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Coverage by Blast Radius
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Coverage by Blast Radius">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1-highest-blast-radius" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1 — Highest Blast Radius
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t2-medium-blast-radius" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T2 — Medium Blast Radius
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t3-lower-blast-radius" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T3 — Lower Blast Radius
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-gap-analysis-t1-package-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Gap Analysis — T1 Package Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Gap Analysis — T1 Package Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#internalsession-831-6-failing-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        internal/session (83.1%, 6 failing tests)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internalmcpserver-741-1-failing-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        internal/mcpserver (74.1%, 1 failing test)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internalfleet-778-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        internal/fleet (77.8%, PASS)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-test-type-distribution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Test Type Distribution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-coverage-padding-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Coverage Padding Assessment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-failing-packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Failing Packages
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-skipped-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Skipped Tests
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Skipped Tests">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cmd-5-skips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cmd/ — 5 skips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internaldiscovery-6-skips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        internal/discovery/ — 6 skips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internale2e-5-skips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        internal/e2e/ — 5 skips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internalenhancer-2-skips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        internal/enhancer/ — 2 skips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internalfleet-3-skips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        internal/fleet/ — 3 skips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internalsession-15-skips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        internal/session/ — 15 skips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internalsandbox-14-skips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        internal/sandbox/ — 14 skips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internalwmsway-1-skip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        internal/wm/sway/ — 1 skip
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internalworktree-22-skips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        internal/worktree/ — ~22 skips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#toolsgenmcpdocs-1-skip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        tools/genmcpdocs/ — 1 skip
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-e2e-harness-quality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. E2E Harness Quality
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. E2E Harness Quality">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#harness-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Harness Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scenario-catalog-24-scenarios-total" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scenario Catalog — 24 Scenarios Total
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strengths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strengths
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#weaknesses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Weaknesses
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-priority-fix-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Priority Fix List
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Priority Fix List">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#secondary-gaps-not-in-top-10-but-worth-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secondary gaps not in top 10 but worth tracking:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-key-file-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix: Key File Paths
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="05-test-coverage-audit-ralphglasses">05 — Test Coverage Audit (ralphglasses)</h1>
+<p>Generated: 2026-04-04
+Source: direct file reads + grep analysis of ralphglasses codebase</p>
+<hr />
+<h2 id="executive-summary">Executive Summary</h2>
+<p>Overall reported coverage is <strong>84.5%</strong> (from <code>.ralph/coverage.txt</code>). The test corpus is large
+(745 test files, 9,267 <code>Test*</code> functions across the project), but that volume masks structural
+weaknesses: 7 packages are actively failing, 80 coverage-padding files inflate numbers without
+always exercising real invariants, and the highest-blast-radius package (<code>internal/session</code>,
+2,203 test functions) has 6 failing tests including the critical <code>knowledge</code> race condition.</p>
+<hr />
+<h2 id="1-coverage-by-blast-radius">1. Coverage by Blast Radius</h2>
+<h3 id="t1-highest-blast-radius">T1 — Highest Blast Radius</h3>
+<p>A bug here breaks every session, MCP tool call, or fleet dispatch. These packages are in the
+critical path for all agent orchestration.</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Test Files</th>
+<th><code>Test*</code> Functions</th>
+<th>Reported Coverage</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/session</code></td>
+<td>193</td>
+<td>2,203</td>
+<td>83.1%</td>
+<td>FAIL — 6 failing tests</td>
+</tr>
+<tr>
+<td><code>internal/mcpserver</code></td>
+<td>76</td>
+<td>1,084</td>
+<td>74.1%</td>
+<td>FAIL — 1 failing test</td>
+</tr>
+<tr>
+<td><code>internal/fleet</code></td>
+<td>48</td>
+<td>625</td>
+<td>77.8%</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>internal/fleet/pool</code></td>
+<td>4</td>
+<td>~60</td>
+<td>97.9%</td>
+<td>PASS</td>
+</tr>
+</tbody>
+</table>
+<p>T1 combined: ~3,972 test functions. Coverage floor: 74.1% (<code>mcpserver</code>). Both failing packages
+are in this tier, making the current <code>go test ./...</code> run non-green.</p>
+<h3 id="t2-medium-blast-radius">T2 — Medium Blast Radius</h3>
+<p>Bugs here degrade prompt quality, display fidelity, or compositor integration but do not
+immediately break session dispatch.</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Test Files</th>
+<th><code>Test*</code> Functions</th>
+<th>Reported Coverage</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/enhancer</code></td>
+<td>30</td>
+<td>314</td>
+<td>93.8%</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>internal/enhancer/knowledge</code></td>
+<td>~3</td>
+<td>~40</td>
+<td>90.5%</td>
+<td>FAIL — race condition</td>
+</tr>
+<tr>
+<td><code>internal/tui</code> (all sub-packages)</td>
+<td>86</td>
+<td>1,148</td>
+<td>70.1–90.2% range</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>internal/wm</code> (all sub-packages)</td>
+<td>11</td>
+<td>156</td>
+<td>52.4–90.2% range</td>
+<td>PASS</td>
+</tr>
+</tbody>
+</table>
+<p>T2 combined: ~1,658 test functions. <code>wm</code> coverage is bimodal: <code>wm/layout</code> reaches 90.2% but
+<code>wm</code> root is 52.4%, and <code>wm/hyprland</code> is 58.5%.</p>
+<h3 id="t3-lower-blast-radius">T3 — Lower Blast Radius</h3>
+<p>Everything else: tooling, plugins, process monitoring, store, e2e harness, cmd entrypoints.</p>
+<table>
+<thead>
+<tr>
+<th>Key Package(s)</th>
+<th>Test Files</th>
+<th>Coverage</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/e2e</code></td>
+<td>14</td>
+<td>91.2%</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>internal/process</code></td>
+<td>19</td>
+<td>88.3%</td>
+<td>FAIL — 1 test</td>
+</tr>
+<tr>
+<td><code>internal/marathon</code></td>
+<td>6</td>
+<td>88.3%</td>
+<td>FAIL — 1 test</td>
+</tr>
+<tr>
+<td><code>internal/knowledge</code> (session sub)</td>
+<td>—</td>
+<td>—</td>
+<td>FAIL — fatal race</td>
+</tr>
+<tr>
+<td><code>cmd/ralphglasses-mcp</code></td>
+<td>10</td>
+<td>59.1%</td>
+<td>FAIL — count mismatch</td>
+</tr>
+<tr>
+<td><code>cmd/prompt-improver</code></td>
+<td>6</td>
+<td>N/A</td>
+<td>FAIL — API key</td>
+</tr>
+<tr>
+<td><code>internal/flash</code></td>
+<td>~2</td>
+<td>32.3%</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>internal/plugin/builtin</code></td>
+<td>~3</td>
+<td>35.5%</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>cmd</code> (root)</td>
+<td>10</td>
+<td>46.8%</td>
+<td>PASS</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-gap-analysis-t1-package-details">2. Gap Analysis — T1 Package Details</h2>
+<h3 id="internalsession-831-6-failing-tests">internal/session (83.1%, 6 failing tests)</h3>
+<p>Critical subsystems with tests:
+- <code>AutoRecovery.HandleSessionError</code> — has 7 tests in <code>autorecovery_lifecycle_test.go</code>
+- <code>ClearRetryState</code> — tested in <code>autorecovery_test.go</code>
+- <code>RunCycle</code> — tested in <code>manager_cycle_test.go</code> (3 tests)
+- <code>RunSessionOutput</code> — tested in <code>runner_test.go</code> and <code>runner_coverage_test.go</code>
+- <code>TruncateStr</code> — tested in <code>runner_test.go</code> and <code>runner_helpers_test.go</code>
+- <code>ConfigOptimizer</code> — tested in <code>config_optimizer_test.go</code>
+- Cascade routing — <code>ShouldCascade</code>, <code>SelectTier</code>, <code>EvaluateCheapResult</code> have dedicated unit tests
+- Supervisor lifecycle — <code>supervisor_integration_test.go</code> + <code>supervisor_integration2_test.go</code>
+- Loop engine — <code>loop_test.go</code>, <code>loop_steps_test.go</code> cover <code>StepLoop</code> path</p>
+<p><strong>Failing tests (still active per baseline):</strong>
+- <code>WeeklyReport</code> — generator is in <code>weekly_report.go</code>; tests exist but assertions fail on
+  anomalous data inputs (likely boundary conditions in <code>Generate()</code>)
+- <code>TruncateStr</code> — boundary condition in runner helper
+- <code>RunSessionOutput</code> — cost extraction assertion fails
+- <code>RunCycle</code> — context/timeout handling edge case
+- <code>ConfigOptimizer</code> x2 — optimizer suggestion logic returns unexpected values</p>
+<p><strong>Critical unprotected path (from Wave 3):</strong>
+- <code>AutoRecovery.retryState</code> — map with no mutex. Tests exercise this path under
+  <code>autorecovery_lifecycle_test.go</code> but none run with <code>-race</code> targeting concurrent
+  <code>onComplete</code> callbacks on different sessions sharing state. The <code>smoke</code> Makefile target
+  runs race detection on supervisor/loop tests but not specifically on
+  <code>HandleSessionError</code> concurrent paths.</p>
+<h3 id="internalmcpserver-741-1-failing-test">internal/mcpserver (74.1%, 1 failing test)</h3>
+<p>Critical subsystems with tests:
+- Sweep handlers — <code>handler_sweep_test.go</code> has 13 tests covering <code>sweep_generate</code>,
+  <code>sweep_launch</code>, <code>sweep_status</code>, <code>sweep_nudge</code>, <code>resolveSweepRepos</code>, budget cap enforcement
+- Cascade config — <code>TestCascadeConfigFromRepo_*</code> in <code>handler_coverage_boost2_test.go</code>
+- Supervisor status — <code>TestHandleSupervisorStatus_*</code> in <code>handler_coverage_boost2_test.go</code>
+- Circuit breaker — <code>handler_circuit_test.go</code> has 4 tests</p>
+<p><strong>Failing test:</strong>
+- <code>TestHandleCircuitReset_Enhancer</code> — expects <code>status=reset</code> in response but gets <code>nil</code>.
+  The enhancer circuit breaker state is not populated in the test server setup.
+  File: <code>~/hairglasses-studio/ralphglasses/internal/mcpserver/handler_circuit_test.go</code></p>
+<p><strong>Untested handler files (no <code>_test.go</code> counterpart) — from Wave 1:</strong>
+- <code>handler_sweep_report.go</code> (302 lines) — <code>sweep_report</code> handler has no test. This is
+  the highest-risk gap: complex Markdown/JSON rendering, multi-section output, no assertions.
+- <code>handler_prompt_ab.go</code> (200 lines) — A/B test result writing, file I/O, no test.
+- <code>handler_provider_benchmark.go</code> (268 lines) — percentile math, keyword scoring, no test.
+- <code>handler_roadmap_prioritize.go</code> (178 lines) — weighted scoring algorithm, no test.
+- <code>handler_session_fork.go</code> (50 lines) — <code>SessMgr.Fork</code> call path, no dedicated test.</p>
+<p><strong>Under-tested handlers (shallow test counts):</strong>
+- <code>handler_team_test.go</code> — 5 tests for 6 tools; <code>handleTeamDelegate</code> and <code>handleAgentCompose</code>
+  lack direct test cases
+- <code>handler_observation_test.go</code> — 8 tests; <code>handleObservationSummary</code> and
+  <code>handleObservationCorrelate</code> not directly tested</p>
+<h3 id="internalfleet-778-pass">internal/fleet (77.8%, PASS)</h3>
+<p>Well-covered areas:
+- Worker dispatch, capacity planning, coordinator logic — <code>handler_fleet_test.go</code> has 49 tests
+- A2A dispatch — <code>a2a_coverage_test.go</code>, <code>a2a_dispatch_coverage_test.go</code>
+- Autoscaler — <code>autoscaler_coverage_test.go</code>, <code>coverage_boost3_test.go</code></p>
+<p>Coverage gaps:
+- <code>fleet_grafana</code> handler — only 37 lines, pure transform, no test (Low risk)
+- <code>handler_recommend.go</code> — thin wrapper around <code>fleet.NewRecommender</code>, no dedicated test (Low)
+- Fleet analytics worker interaction paths — <code>analytics_coverage_test.go</code> exists but
+  worker-level tests focus on state machines, not end-to-end cost aggregation</p>
+<hr />
+<h2 id="3-test-type-distribution">3. Test Type Distribution</h2>
+<table>
+<thead>
+<tr>
+<th>Test Type</th>
+<th>Total Count</th>
+<th>Packages</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unit tests</td>
+<td>~7,800</td>
+<td>All packages</td>
+</tr>
+<tr>
+<td>Coverage-padding tests</td>
+<td>~807 (<code>Test*</code> in <code>*coverage*test*</code> files)</td>
+<td>80 files across 25 packages</td>
+</tr>
+<tr>
+<td>Integration tests</td>
+<td>~44 (<code>*integration*test*</code> files)</td>
+<td>session, mcpserver, wm/sway, internal</td>
+</tr>
+<tr>
+<td>E2E tests (mock harness)</td>
+<td>24 scenarios + ~60 functions</td>
+<td><code>internal/e2e</code></td>
+</tr>
+<tr>
+<td>Fuzz tests</td>
+<td>15 <code>Fuzz*</code> functions</td>
+<td>mcpserver, model, session, tui/components</td>
+</tr>
+<tr>
+<td>Benchmark tests</td>
+<td>20 functions, 6 files</td>
+<td>session, fleet, mcpserver</td>
+</tr>
+<tr>
+<td>Race-targeted tests</td>
+<td>52 functions with "race/concurrent/parallel" in name</td>
+<td>session (all)</td>
+</tr>
+<tr>
+<td>Live fire tests</td>
+<td>2 (skipped without API key)</td>
+<td><code>internal/e2e/live_test.go</code></td>
+</tr>
+</tbody>
+</table>
+<p>The <code>smoke</code> Makefile target runs a meaningful race-detected subset: supervisor, cost extraction
+goldens, event bus concurrency — but this is a hand-curated list, not the full suite.</p>
+<p>The main <code>test</code> target (<code>go test -race ./...</code>) runs everything with the race detector, which is
+correct and consistent. The CI pipeline (<code>Makefile:test-cover</code>) uses race detection too.</p>
+<hr />
+<h2 id="4-coverage-padding-assessment">4. Coverage Padding Assessment</h2>
+<p><strong>Padding file count:</strong> 80 files matching <code>*coverage*test*</code> or <code>*coverage_boost*</code> patterns,
+contributing approximately 807 <code>Test*</code> functions.</p>
+<p><strong>Quality breakdown:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Quality Level</th>
+<th>File Count</th>
+<th>Characteristics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Real behavioral tests</td>
+<td>~65 (81%)</td>
+<td>Verify return values, file contents, state mutations, error conditions with <code>t.Fatal</code>/<code>t.Error</code></td>
+</tr>
+<tr>
+<td>Structural invocations only</td>
+<td>~10 (13%)</td>
+<td>Call the function, verify no panic, skip edge cases</td>
+</tr>
+<tr>
+<td>Call-and-ignore</td>
+<td>~5 (6%)</td>
+<td>Call function, assert non-nil but nothing about the return value</td>
+</tr>
+</tbody>
+</table>
+<p>Sampled examples:
+- <code>internal/fleet/coverage_boost3_test.go</code> — Tests <code>SetAutoScalerConfig</code> and <code>autoScaleCheck</code>
+  with real assertions on config values and return types. Quality: <strong>real tests</strong>.
+- <code>internal/session/session_coverage4_test.go</code> — Tests <code>Supervisor.recordGateFindings</code> with
+  file I/O verification and JSON round-trip assertion. Quality: <strong>real tests</strong>.
+- <code>internal/session/coverage_boost_test.go</code> — Tests <code>FeedbackAnalyzer.SuggestProvider</code> with
+  boundary conditions (insufficient samples). Quality: <strong>real tests</strong>.
+- <code>internal/mcpserver/handler_coverage_boost_test.go</code> — Tests <code>InitSelfImprovement</code> idempotency
+  and <code>WireAutoOptimizer</code> nil safety. Quality: <strong>real tests</strong>.</p>
+<p><strong>Verdict:</strong> The coverage padding files are predominantly real tests that happen to be named
+with <code>_coverage</code> suffixes. They were generated to reach coverage targets but the overwhelming
+majority contain meaningful assertions. The naming convention is misleading but not indicative
+of test-padding abuse. The ~6% call-and-ignore category (roughly 5 files) is genuine padding.</p>
+<hr />
+<h2 id="5-failing-packages">5. Failing Packages</h2>
+<p>Per the baseline from <code>meta-roadmap/06-test-coverage.md</code>, 7 ralphglasses packages fail:</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Failure</th>
+<th>Still Active?</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/knowledge</code></td>
+<td>Fatal concurrent map writes in <code>TieredKnowledge.Query</code></td>
+<td><strong>Yes</strong> — no mutex added</td>
+<td><code>knowledge/graph.go</code> has <code>mu sync.RWMutex</code> on <code>KnowledgeGraph</code>, but <code>TieredKnowledge</code> query path appears to bypass it</td>
+</tr>
+<tr>
+<td><code>internal/marathon</code></td>
+<td><code>TestRestartPolicy_BackoffCap</code> — expects <code>30s</code>, gets negative duration</td>
+<td><strong>Yes</strong> — test still exists as written</td>
+<td><code>Backoff()</code> overflows when factor=10 and restarts=20 (exponential integer overflow before cap)</td>
+</tr>
+<tr>
+<td><code>internal/mcpserver</code></td>
+<td><code>TestHandleCircuitReset_Enhancer</code> — expected <code>status=reset</code>, got nil</td>
+<td><strong>Yes</strong> — enhancer CB not initialized in test harness</td>
+<td>Missing <code>srv.Enhancer.CircuitBreaker</code> init in <code>setupTestServer</code></td>
+</tr>
+<tr>
+<td><code>internal/process</code></td>
+<td><code>TestCollectChildPIDs_DeadPID</code> — expected nil, got <code>[]</code></td>
+<td><strong>Yes</strong> — <code>[]</code> vs <code>nil</code> slice semantic</td>
+<td>Minor: return type distinction between nil and empty slice</td>
+</tr>
+<tr>
+<td><code>internal/session</code></td>
+<td>6 tests (WeeklyReport, TruncateStr, RunSessionOutput, RunCycle, ConfigOptimizer x2)</td>
+<td><strong>Yes</strong> — all exist in current test files</td>
+<td>Mix of boundary conditions and assertion mismatches</td>
+</tr>
+<tr>
+<td><code>cmd/ralphglasses-mcp</code></td>
+<td><code>TestToolGroupNames</code> — 16 entries, want 15</td>
+<td><strong>Yes</strong> — <code>sweep</code> namespace was added without updating test expectation</td>
+<td>Test in <code>main_test.go</code> hardcodes 16 names but expects <code>len == 15</code>; off-by-one in expected slice</td>
+</tr>
+<tr>
+<td><code>cmd/prompt-improver</code></td>
+<td><code>ANTHROPIC_API_KEY</code> not set</td>
+<td><strong>Yes</strong> — environment-gated, always fails in CI without key</td>
+<td>Tests call live API without skip guard on key absence</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The <code>TestToolGroupNames</code> failure deserves special attention:</strong> both <code>cmd/ralphglasses-mcp/main_test.go</code>
+and <code>internal/mcpserver/tools_deferred_test.go</code> have a <code>TestToolGroupNames</code> function. The
+<code>main_test.go</code> version checks <code>len(mcpserver.ToolGroupNames) != len(expected)</code> where <code>expected</code>
+has 16 entries, but the failure message says "16 entries, want 15" — meaning the hardcoded
+<code>len(expected)</code> was never updated when <code>sweep</code> was added. This is a stale test expectation, not
+a real regression.</p>
+<hr />
+<h2 id="6-skipped-tests">6. Skipped Tests</h2>
+<p>Grouped by package and reason:</p>
+<h3 id="cmd-5-skips"><code>cmd/</code> — 5 skips</h3>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Skip Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cmd/cmd_test.go</code> (×3)</td>
+<td>Short mode: Makefile integration, build integration</td>
+</tr>
+<tr>
+<td><code>cmd/prompt-improver/coverage_test.go</code></td>
+<td><code>runCacheCheck</code> calls <code>os.Exit</code>, cannot test in-process</td>
+</tr>
+<tr>
+<td><code>cmd/prompt-improver/main_test.go</code> (×3)</td>
+<td>Slow hook/MCP integration tests</td>
+</tr>
+<tr>
+<td><code>cmd/ralphglasses-mcp/main_test.go</code> (×2)</td>
+<td>Test binary not built</td>
+</tr>
+</tbody>
+</table>
+<h3 id="internaldiscovery-6-skips"><code>internal/discovery/</code> — 6 skips</h3>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Skip Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>discovery_test.go</code>, <code>scanner_errors_test.go</code></td>
+<td>Requires non-root user (×2 each)</td>
+</tr>
+<tr>
+<td>Both files</td>
+<td>Symlinks not supported on this filesystem (×2 each)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="internale2e-5-skips"><code>internal/e2e/</code> — 5 skips</h3>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Skip Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>e2e_test.go</code> (×3)</td>
+<td>Short mode gate</td>
+</tr>
+<tr>
+<td><code>live_test.go</code></td>
+<td><code>ANTHROPIC_API_KEY</code> not set; "live-fire not yet wired to real providers"</td>
+</tr>
+<tr>
+<td><code>platform_test.go</code> (×2)</td>
+<td>Short mode; no scenarios available</td>
+</tr>
+</tbody>
+</table>
+<h3 id="internalenhancer-2-skips"><code>internal/enhancer/</code> — 2 skips</h3>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Skip Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>edge_test.go</code></td>
+<td>Large input test in short mode</td>
+</tr>
+<tr>
+<td><code>knowledge/builder_test.go</code></td>
+<td><code>internal/model</code> directory not found</td>
+</tr>
+</tbody>
+</table>
+<h3 id="internalfleet-3-skips"><code>internal/fleet/</code> — 3 skips</h3>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Skip Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>discovery_test.go</code> (×3)</td>
+<td>Tailscale installed/not installed conditional (negative test)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="internalsession-15-skips"><code>internal/session/</code> — 15 skips</h3>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Skip Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>loop_test.go</code>, <code>sprint7_ws3_test.go</code> (×2)</td>
+<td><code>git</code> not on PATH</td>
+</tr>
+<tr>
+<td><code>template_test.go</code></td>
+<td><code>UserHomeDir</code> failed — likely CI without HOME</td>
+</tr>
+<tr>
+<td><code>worktree_integration_test.go</code> (×6)</td>
+<td><code>git</code> not found</td>
+</tr>
+<tr>
+<td><code>worktree_pool_test.go</code> (×8)</td>
+<td><code>git</code> not found</td>
+</tr>
+<tr>
+<td><code>worktree_test.go</code> (×1)</td>
+<td><code>git</code> not found</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>git not found</code> skips are significant: at least 15 worktree tests are silently skipped
+in environments without <code>git</code> on PATH. The e2e harness itself has a <code>git.LookPath</code> guard in
+<code>setupRepo</code>, so these tests are only live when <code>git</code> is available.</p>
+<h3 id="internalsandbox-14-skips"><code>internal/sandbox/</code> — 14 skips</h3>
+<p>Network namespace tests require Linux + root. Appropriate for CI isolation.</p>
+<h3 id="internalwmsway-1-skip"><code>internal/wm/sway/</code> — 1 skip</h3>
+<p>Integration test requires Sway compositor running.</p>
+<h3 id="internalworktree-22-skips"><code>internal/worktree/</code> — ~22 skips</h3>
+<p>All require <code>git</code> to be found. Same pattern as session worktree tests.</p>
+<h3 id="toolsgenmcpdocs-1-skip"><code>tools/genmcpdocs/</code> — 1 skip</h3>
+<p>Builder files not found for real AST integration test.</p>
+<p><strong>Summary:</strong> The largest skip cluster is <code>git not found</code> (37+ skips across session and worktree
+packages). On a machine where git is available (including this Manjaro host), these would run.
+The live e2e tests (2 skips) permanently require real API keys and are the only truly unreachable
+test group in normal development.</p>
+<hr />
+<h2 id="7-e2e-harness-quality">7. E2E Harness Quality</h2>
+<h3 id="harness-architecture">Harness Architecture</h3>
+<p><code>internal/e2e/harness.go</code> wraps <code>session.Manager</code> with mock hooks for <code>LaunchOptions</code> and
+<code>waitForSession</code>. It routes the first launch as the planner and subsequent launches as workers,
+setting pre-determined <code>LastOutput</code>, <code>SpentUSD</code>, <code>TurnCount</code>, and optionally <code>StatusErrored</code> via
+<code>MockFailure</code>. This allows <code>StepLoop</code> to execute its full path (planner parse → worker fan-out →
+verify → noop detection) without spawning real processes.</p>
+<h3 id="scenario-catalog-24-scenarios-total">Scenario Catalog — 24 Scenarios Total</h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Count</th>
+<th>Scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Core (basic loop types)</td>
+<td>6</td>
+<td>TrivialFix, MultiFileRefactor, TestAddition, DocsUpdate, FeatureAddition, VerifyFailure</td>
+</tr>
+<tr>
+<td>Multi-provider</td>
+<td>4</td>
+<td>GeminiWorkerBasic, CodexWorkerBasic, MultiProviderTeam, ProviderFailover</td>
+</tr>
+<tr>
+<td>Stress/edge</td>
+<td>5</td>
+<td>BudgetExhaustion, TimeoutCascade, CircuitBreakerTrip, ConcurrentFileConflict, CheckpointRecovery</td>
+</tr>
+<tr>
+<td>Cost tracking</td>
+<td>2</td>
+<td>CostTrackingAccuracy, FleetBudgetEnforcement</td>
+</tr>
+<tr>
+<td>Self-learning</td>
+<td>5</td>
+<td>ReflexionRetry, CascadeEscalation, CascadeCheapSuccess, EpisodicInjection, CurriculumOrdering</td>
+</tr>
+<tr>
+<td>Cross-subsystem integration</td>
+<td>3</td>
+<td>BanditCascadeIntegration, EpisodicWithEmbedder, FullSubsystemPipeline</td>
+</tr>
+</tbody>
+</table>
+<h3 id="strengths">Strengths</h3>
+<ul>
+<li><strong>Subsystem wiring coverage:</strong> The <code>ManagerSetup</code> hook pattern allows injecting real
+  <code>CascadeRouter</code>, <code>EpisodicMemory</code>, <code>ReflexionStore</code>, <code>CurriculumSorter</code>, and <code>BanditHooks</code>
+  objects into the manager before each scenario. <code>FullSubsystemPipeline</code> exercises all five
+  simultaneously, which is the closest to a true integration test without live LLMs.</li>
+<li><strong>Failure path coverage:</strong> Five scenarios explicitly test failure modes (<code>VerifyFailure</code>,
+  <code>BudgetExhaustion</code>, <code>TimeoutCascade</code>, <code>CircuitBreakerTrip</code>, <code>ConcurrentFileConflict</code>) and
+  assert <code>ExpectedStatus == "failed"</code>.</li>
+<li><strong>Constraint system:</strong> Each scenario defines <code>Constraints{MaxCostUSD, MaxDurationSec,
+  MinCompletionRate}</code> for regression gate validation.</li>
+<li><strong>Tag-based selection:</strong> <code>ScenariosByTag()</code> enables targeted test runs (e.g., only <code>stress</code>
+  scenarios).</li>
+<li><strong>Baseline + gate system:</strong> <code>baseline.go</code> + <code>gates.go</code> form a complete P50/P95 regression
+  detection system with <code>VerdictPass/Warn/Fail/Skip</code> verdicts. <code>RunE2EGate()</code> in <code>gates.go</code>
+  is the autonomous test gate entry point, callable from the <code>ralphglasses_loop_gates</code> MCP tool.</li>
+</ul>
+<h3 id="weaknesses">Weaknesses</h3>
+<ul>
+<li><strong>No multi-worker fan-out test:</strong> All scenarios set <code>MaxConcurrentWorkers: 1</code>. The goroutine
+  fan-out in <code>StepLoop</code> (up to N parallel workers) is not exercised by any e2e scenario. Race
+  conditions in the worker collection loop are only exercised by unit tests with explicit
+  <code>t.Parallel()</code>.</li>
+<li><strong>No real git operations in most scenarios:</strong> <code>setupRepo</code> creates a git repo and does an
+  initial commit. But <code>WorkerBehavior</code> only writes files — it does not commit them. Scenarios
+  that test <code>VerifyCommands</code> using <code>git tag -l</code> (CheckpointRecovery) work because the tag was
+  pre-created in <code>RepoSetup</code>, not by the worker. The worktree commit flow is untested in e2e.</li>
+<li><strong>MockFailure is simplistic:</strong> <code>MockFailure</code> sets the session to <code>StatusErrored</code> with a fixed
+  error string. It does not simulate the actual error detection paths in the runner (e.g.,
+  extra-usage exhaustion, startup probe failure, SIGTERM handling). These paths are tested in
+  unit tests but not in the e2e harness.</li>
+<li><strong>Live fire scenarios are stubs:</strong> <code>live_test.go</code> has two tests gated on <code>ANTHROPIC_API_KEY</code>
+  with a <code>t.Skip("live-fire not yet wired to real providers")</code> inside — meaning even with an API
+  key, the tests skip. The live e2e path is not yet implemented.</li>
+<li><strong>Provider failover scenario is partially mocked:</strong> <code>ProviderFailover</code> simulates the secondary
+  provider succeeding, but does not inject a <code>LaunchWithFailover</code> path or <code>FailoverChain</code> config.
+  The mock just sets <code>WorkerBehavior</code> to the "successful" result without exercising the actual
+  failover dispatch logic in <code>LaunchWithFailover</code>.</li>
+<li><strong>No fleet-level e2e:</strong> All scenarios exercise a single-repo loop. Fleet coordination
+  (multi-repo, coordinator dispatch, worker pool dequeue) has no e2e coverage.</li>
+<li><strong><code>selftest.go</code> is infrastructure-only:</strong> The <code>SelfTestRunner</code> uses <code>exec.CommandContext</code> to
+  invoke the binary with <code>RALPH_SELF_TEST=1</code>. There is no test verifying that the binary
+  actually handles this flag — it is exercised only via <code>internal/e2e/selftest_test.go</code>'s
+  dry-run path.</li>
+</ul>
+<hr />
+<h2 id="8-priority-fix-list">8. Priority Fix List</h2>
+<p>Ranked by blast radius × severity of gap.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Priority</th>
+<th>Package</th>
+<th>Gap</th>
+<th>Specific Function/File</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>CRITICAL</strong></td>
+<td><code>internal/knowledge</code></td>
+<td>Fatal race: <code>TieredKnowledge.Query</code> concurrent map writes</td>
+<td><code>enhancer/knowledge/graph.go</code> — <code>TieredKnowledge</code> lacks mutex on <code>Query</code> path</td>
+<td>Low — add <code>sync.RWMutex</code> to struct, wrap reads with <code>RLock</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>HIGH</strong></td>
+<td><code>internal/session</code></td>
+<td><code>AutoRecovery.retryState</code> map has no mutex (Wave 3 finding)</td>
+<td><code>autorecovery.go:AutoRecovery</code> struct</td>
+<td>Low — add <code>sync.Mutex</code>, wrap all <code>retryState</code> access</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>HIGH</strong></td>
+<td><code>internal/mcpserver</code></td>
+<td><code>TestHandleCircuitReset_Enhancer</code> fails: enhancer CB not initialized in test harness</td>
+<td><code>handler_circuit_test.go</code> + <code>test_helpers_test.go:setupTestServer</code></td>
+<td>Low — wire <code>srv.Enhancer</code> with a real <code>EnhancerClient</code> in test setup</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>HIGH</strong></td>
+<td><code>internal/mcpserver</code></td>
+<td><code>handler_sweep_report.go</code> (302 lines) has zero test coverage</td>
+<td><code>handler_sweep_report.go</code> — Markdown/JSON multi-section output</td>
+<td>Medium — add <code>handler_sweep_report_test.go</code> with 5–8 tests covering empty/partial/full sweep data</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>HIGH</strong></td>
+<td><code>internal/marathon</code></td>
+<td><code>TestRestartPolicy_BackoffCap</code> fails: exponential overflow before cap applies</td>
+<td><code>restart.go:Backoff()</code> — <code>base * factor^count</code> overflows <code>int64</code> when count=20, factor=10</td>
+<td>Low — apply cap before exponentiation or use <code>math.Min</code> with float conversion</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>MEDIUM</strong></td>
+<td><code>cmd/ralphglasses-mcp</code></td>
+<td><code>TestToolGroupNames</code> expects 15 entries, actual is 16 (sweep added)</td>
+<td><code>cmd/ralphglasses-mcp/main_test.go:TestToolGroupNames</code> — stale expected count</td>
+<td>Trivial — update <code>len(expected)</code> check to 16 or remove hardcoded count</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>MEDIUM</strong></td>
+<td><code>internal/mcpserver</code></td>
+<td><code>handler_prompt_ab.go</code> (200 lines), <code>handler_provider_benchmark.go</code> (268 lines) untested</td>
+<td>Both files: file I/O + percentile math with no assertions</td>
+<td>Medium — add test files for each; mock file writes for prompt_ab, use table tests for provider_benchmark percentile logic</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>MEDIUM</strong></td>
+<td><code>internal/session</code></td>
+<td>6 failing tests in runner/optimizer (WeeklyReport, TruncateStr, RunSessionOutput, RunCycle, ConfigOptimizer ×2)</td>
+<td><code>runner_test.go</code>, <code>weekly_report_test.go</code>, <code>config_optimizer_test.go</code>, <code>manager_cycle_test.go</code></td>
+<td>Low-Medium — boundary condition fixes in each; ConfigOptimizer likely needs mock input data update</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>MEDIUM</strong></td>
+<td><code>internal/e2e</code></td>
+<td>No multi-worker fan-out scenario</td>
+<td><code>catalog.go</code> — all scenarios use <code>MaxConcurrentWorkers: 1</code></td>
+<td>Low — add one scenario with <code>ProfilePatch</code> setting workers=3 and a planner response with 3 tasks; assert all results collected</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>LOW</strong></td>
+<td><code>internal/wm</code></td>
+<td><code>wm</code> root at 52.4%, <code>wm/hyprland</code> at 58.5%</td>
+<td><code>wm.go</code> compositor dispatch, <code>hyprland/client.go</code> IPC parsing</td>
+<td>Medium — add unit tests for IPC message parsing and compositor detection; Sway integration test already exists, need Hyprland equivalent</td>
+</tr>
+</tbody>
+</table>
+<h3 id="secondary-gaps-not-in-top-10-but-worth-tracking">Secondary gaps not in top 10 but worth tracking:</h3>
+<ul>
+<li><code>handler_roadmap_prioritize.go</code> (178 lines, scoring algorithm) — no test</li>
+<li><code>handler_session_fork.go</code> (50 lines, <code>SessMgr.Fork</code>) — no test</li>
+<li><code>internal/flash</code> (32.3%) — Flash attention/memory primitive used in context window management</li>
+<li><code>internal/plugin/builtin</code> (35.5%) — default plugin experience has thin test coverage</li>
+<li><code>cmd</code> entrypoint (46.8%) — CLI flag parsing and subcommand dispatch lightly tested</li>
+<li><code>cmd/prompt-improver</code> — all tests fail without <code>ANTHROPIC_API_KEY</code>; needs skip guards</li>
+</ul>
+<hr />
+<h2 id="appendix-key-file-paths">Appendix: Key File Paths</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/hairglasses-studio/ralphglasses/internal/e2e/harness.go</code></td>
+<td>Mock harness for StepLoop e2e</td>
+</tr>
+<tr>
+<td><code>~/hairglasses-studio/ralphglasses/internal/e2e/catalog.go</code></td>
+<td>6 core scenarios</td>
+</tr>
+<tr>
+<td><code>~/hairglasses-studio/ralphglasses/internal/e2e/catalog_cost.go</code></td>
+<td>2 cost scenarios</td>
+</tr>
+<tr>
+<td><code>~/hairglasses-studio/ralphglasses/internal/e2e/catalog_provider.go</code></td>
+<td>4 multi-provider scenarios</td>
+</tr>
+<tr>
+<td><code>~/hairglasses-studio/ralphglasses/internal/e2e/catalog_stress.go</code></td>
+<td>5 stress scenarios</td>
+</tr>
+<tr>
+<td><code>~/hairglasses-studio/ralphglasses/internal/e2e/catalog_learning.go</code></td>
+<td>8 self-learning + integration scenarios</td>
+</tr>
+<tr>
+<td><code>~/hairglasses-studio/ralphglasses/internal/e2e/gates.go</code></td>
+<td>Regression gate system (P50/P95)</td>
+</tr>
+<tr>
+<td><code>~/hairglasses-studio/ralphglasses/internal/e2e/baseline.go</code></td>
+<td>Baseline computation</td>
+</tr>
+<tr>
+<td><code>~/hairglasses-studio/ralphglasses/internal/mcpserver/handler_sweep_report.go</code></td>
+<td>302-line untested handler (priority #4)</td>
+</tr>
+<tr>
+<td><code>~/hairglasses-studio/ralphglasses/internal/mcpserver/handler_circuit_test.go</code></td>
+<td>Failing circuit reset test (priority #3)</td>
+</tr>
+<tr>
+<td><code>~/hairglasses-studio/ralphglasses/internal/session/autorecovery.go</code></td>
+<td>Unprotected retryState map (priority #2)</td>
+</tr>
+<tr>
+<td><code>~/hairglasses-studio/ralphglasses/internal/marathon/restart_test.go</code></td>
+<td>Failing BackoffCap test (priority #5)</td>
+</tr>
+<tr>
+<td><code>~/hairglasses-studio/ralphglasses/Makefile</code></td>
+<td>CI pipeline: <code>test</code>, <code>test-cover</code>, <code>smoke</code>, <code>fuzz</code> targets</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

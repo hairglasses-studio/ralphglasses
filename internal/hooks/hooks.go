@@ -149,7 +149,8 @@ func (e *Executor) runHook(h HookDef, event events.Event, repoPath string) {
 
 	run := func() {
 		defer cancel()
-		cmd := exec.CommandContext(ctx, "sh", "-c", h.Command)
+		cmd := exec.Command("sh", "-c", h.Command)
+		setCommandProcessGroup(cmd)
 		cmd.Dir = repoPath
 		cmd.Env = append(os.Environ(),
 			"RALPH_EVENT_TYPE="+sanitize(string(event.Type)),
@@ -158,8 +159,27 @@ func (e *Executor) runHook(h HookDef, event events.Event, repoPath string) {
 			"RALPH_SESSION_ID="+sanitize(event.SessionID),
 			"RALPH_PROVIDER="+sanitize(event.Provider),
 		)
-		if err := cmd.Run(); err != nil {
+		if err := cmd.Start(); err != nil {
 			slog.Error("hook failed", "hook", h.Name, "error", err)
+			return
+		}
+		done := make(chan error, 1)
+		go func() {
+			done <- cmd.Wait()
+		}()
+		select {
+		case err := <-done:
+			if err != nil {
+				slog.Error("hook failed", "hook", h.Name, "error", err)
+			}
+		case <-ctx.Done():
+			_ = killCommandProcessGroup(cmd)
+			<-done
+			if ctx.Err() == context.DeadlineExceeded {
+				slog.Error("hook failed", "hook", h.Name, "error", fmt.Errorf("hook %q timed out after %s: %w", h.Name, timeout, ctx.Err()))
+				return
+			}
+			slog.Error("hook failed", "hook", h.Name, "error", ctx.Err())
 		}
 	}
 

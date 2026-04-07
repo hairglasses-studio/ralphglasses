@@ -1,0 +1,1865 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ralph-roadmap/03-session-architecture/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>03 -- Session Architecture - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#03-session-architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              03 -- Session Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-session-lifecycle-state-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Session Lifecycle State Machine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Session Lifecycle State Machine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#states-from-typesgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        States (from types.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        State Diagram
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transition-triggers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transition Triggers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-manager-concurrency-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Manager Concurrency Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Manager Concurrency Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#three-lock-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three-Lock Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lock-acquisition-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lock Acquisition Order
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#statuscache-hot-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        statusCache Hot Path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#team-management-locking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Team Management Locking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deadlock-risk-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deadlock Risk Assessment
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-cascade-routing-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Cascade Routing Flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Cascade Routing Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#config-and-defaults" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config and Defaults
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provider-selection-logic-shouldcascade-resolveprovider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider Selection Logic (ShouldCascade / ResolveProvider)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#confidence-thresholds-and-escalation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confidence Thresholds and Escalation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#all-providers-fail-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All-Providers-Fail Behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-loop-engine-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Loop Engine Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Loop Engine Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#call-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Call Chain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gate-evaluation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gate Evaluation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pruning-no-op-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pruning / No-Op Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-supervisor-control-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Supervisor Control Loop
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Supervisor Control Loop">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tick-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tick Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#health-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Health Assessment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cycle-chaining-and-depth-cap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cycle Chaining and Depth Cap
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cooldown-period" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cooldown Period
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unhealthy-session-response" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unhealthy Session Response
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feedback-loop-every-10-ticks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feedback Loop (every 10 ticks)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-autonomy-level-gating" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Autonomy Level Gating
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Autonomy Level Gating">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decisionlogpropose-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DecisionLog.Propose Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#actions-by-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Actions by Level
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supervisor-activation-threshold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supervisor Activation Threshold
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-race-condition-risks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Race Condition Risks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Race Condition Risks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-3-grep-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3 Grep Findings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 3 Grep Findings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#risk-1-autorecoveryretrystate-medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 1: AutoRecovery.retryState — MEDIUM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-2-loopiterationprogressdelta-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 2: Loop.iterationProgressDelta — low
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-3-cascadeshouldcascade-with-feedbackanalyzer-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 3: Cascade.ShouldCascade with FeedbackAnalyzer — LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-4-goroutine-fan-out-in-steploop-without-context-propagation-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 4: goroutine fan-out in StepLoop without context propagation — LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-5-supervisor-goroutine-leak-on-stop-timeout-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 5: supervisor goroutine leak on Stop timeout — LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-6-getloop-uses-workersmulock-not-rlock-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 6: GetLoop uses workersMu.Lock() not RLock — LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-7-writejournalentry-goroutine-low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 7: WriteJournalEntry goroutine — LOW
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-store-abstraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Store Abstraction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Store Abstraction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#store-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Store Interface
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memorystore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MemoryStore
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sqlite-store-sharedstate-implicit-sqlite-store" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SQLite Store (SharedState / implicit SQLite store)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-persists-across-restarts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Persists Across Restarts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migration-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Path
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary-of-key-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary of Key Findings
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="03-session-architecture">03 -- Session Architecture</h1>
+<p>Generated: 2026-04-04</p>
+<h2 id="1-session-lifecycle-state-machine">1. Session Lifecycle State Machine</h2>
+<h3 id="states-from-typesgo">States (from types.go)</h3>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Value</th>
+<th>Terminal?</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>StatusLaunching</code></td>
+<td><code>"launching"</code></td>
+<td>No</td>
+<td>Process started, startup probe running</td>
+</tr>
+<tr>
+<td><code>StatusRunning</code></td>
+<td><code>"running"</code></td>
+<td>No</td>
+<td>Process alive, streaming output</td>
+</tr>
+<tr>
+<td><code>StatusCompleted</code></td>
+<td><code>"completed"</code></td>
+<td>Yes</td>
+<td>Process exited 0, parsed result event</td>
+</tr>
+<tr>
+<td><code>StatusStopped</code></td>
+<td><code>"stopped"</code></td>
+<td>Yes</td>
+<td>User or StopAll called; SIGTERM/SIGKILL sent</td>
+</tr>
+<tr>
+<td><code>StatusErrored</code></td>
+<td><code>"errored"</code></td>
+<td>Yes</td>
+<td>Process exited non-0, or extra-usage exhausted</td>
+</tr>
+<tr>
+<td><code>StatusInterrupted</code></td>
+<td><code>"interrupted"</code></td>
+<td>Yes</td>
+<td>Rehydrated from store; process no longer exists</td>
+</tr>
+</tbody>
+</table>
+<p><code>IsTerminal()</code> returns true for all four terminal states and is the canonical test for "is this session done?".</p>
+<h3 id="state-diagram">State Diagram</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>                  ┌──────────────┐
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                  │  (not yet)   │
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                  └──────┬───────┘
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                         │ Manager.Launch → runner.launch()
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>                         ▼
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                  ┌──────────────┐
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>            ┌────&gt;│  LAUNCHING   │&lt;──────────────────────────────┐
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>            │     └──────┬───────┘                               │
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>            │            │ cmd.Start() succeeds                  │
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>            │            │ startup probe passes                  │
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>            │            ▼                                       │
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>            │     ┌──────────────┐                               │
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>            │     │   RUNNING    │──────── user Stop() ─────────&gt;│
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>            │     └──────┬───────┘                     ┌─────────┴──────────┐
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>            │            │                             │      STOPPED        │
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>            │            │ process exit 0              └─────────────────────┘
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>            │            ▼
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>            │     ┌──────────────┐
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>            │     │  COMPLETED   │  (terminal)
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>            │     └──────────────┘
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>            │
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>            │     process exit != 0, or extra-usage
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>            │            ▼
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>            │     ┌──────────────┐
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>            │     │   ERRORED    │  (terminal)
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>            │     └──────────────┘
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>            │
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>            │     RehydrateFromStore on restart
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>            │            ▼
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>            │     ┌──────────────┐
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>            └─────│ INTERRUPTED  │  (terminal)
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>                  └──────────────┘
+</code></pre></div>
+<h3 id="transition-triggers">Transition Triggers</h3>
+<ul>
+<li><code>LAUNCHING → RUNNING</code>: <code>cmd.Start()</code> succeeds; <code>s.mu.Lock()</code> used to set <code>Status = StatusRunning</code> and capture PID.</li>
+<li><code>RUNNING → COMPLETED</code>: <code>runSession</code> detects <code>cmd.Wait()</code> returns <code>nil</code>; sets status under <code>s.mu</code>.</li>
+<li><code>RUNNING → ERRORED</code>: <code>cmd.Wait()</code> returns non-nil error; also triggered by <code>isExtraUsageExhausted()</code> detection post-exit.</li>
+<li><code>RUNNING → STOPPED</code>: <code>Manager.Stop()</code> sets <code>Status = StatusStopped</code> under <code>s.mu</code>, then sends SIGTERM/SIGKILL.</li>
+<li>Any non-terminal → <code>INTERRUPTED</code>: <code>RehydrateFromStore()</code> on process restart; previous runner goroutine is dead.</li>
+</ul>
+<p>Startup probe (5-second window): if the process exits in the 5-second probe window, <code>launch()</code> returns an error and the caller never sees a LAUNCHING session — the session object is discarded.</p>
+<hr />
+<h2 id="2-manager-concurrency-model">2. Manager Concurrency Model</h2>
+<h3 id="three-lock-hierarchy">Three-Lock Hierarchy</h3>
+<p>Manager carries three distinct <code>sync.RWMutex</code> fields, each guarding a different scope:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Manager.sessionsMu  -- guards sessions map[string]*Session
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Manager.workersMu   -- guards teams, workflowRuns, loops maps + totalPrunedThisSession
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Manager.configMu    -- guards stateDir, optimizer, cascade, supervisor, store, worktreePool
+</code></pre></div>
+<p>Additionally, <code>Manager.statusCache</code> is a <code>sync.Map</code> (Phase 10.5.1) for hot-read path lookups
+that bypass <code>sessionsMu</code>.</p>
+<h3 id="lock-acquisition-order">Lock Acquisition Order</h3>
+<p>The code consistently reads <code>configMu</code> (or <code>sessionsMu</code>) before accessing session-level locks.
+The canonical read pattern is:</p>
+<ol>
+<li><code>m.configMu.RLock()</code> — read config field (optimizer, cascade, etc.)</li>
+<li><code>m.configMu.RUnlock()</code></li>
+<li>Operate on retrieved reference (no Manager lock held while calling into session or supervisor)</li>
+</ol>
+<p>The session map read pattern:</p>
+<ol>
+<li><code>m.sessionsMu.RLock()</code> — read sessions map</li>
+<li><code>m.sessionsMu.RUnlock()</code></li>
+<li><code>s.Lock()</code> / <code>s.Unlock()</code> — lock individual session</li>
+</ol>
+<p>This correctly avoids holding the map lock while acquiring session-level locks.</p>
+<h3 id="statuscache-hot-path">statusCache Hot Path</h3>
+<p><code>updateStatusCache(id, status)</code> writes to the <code>sync.Map</code> whenever a session status changes.
+<code>evictStatusCache(id)</code> deletes entries during cleanup in <code>LoadExternalSessions</code>.
+This allows status reads without acquiring <code>sessionsMu</code>, reducing contention for high-frequency
+TUI polling. There is no ordering guarantee between the <code>sync.Map</code> update and the <code>sessions</code> map
+update, but since <code>statusCache</code> is always written immediately after <code>sessions</code>, the brief
+inconsistency window is acceptable for a display-only fast path.</p>
+<h3 id="team-management-locking">Team Management Locking</h3>
+<p>Teams are stored under <code>workersMu</code> alongside workflows and loops. The manager acquires
+<code>workersMu.Lock()</code> to insert/update/delete teams. However, <code>updateTeamOnSessionEnd</code> (called
+from <code>s.onComplete</code>) acquires <code>m.workersMu.Lock()</code> from within the runner goroutine — this
+is safe because the runner goroutine does not hold any Manager locks when invoking <code>onComplete</code>.</p>
+<h3 id="deadlock-risk-assessment">Deadlock Risk Assessment</h3>
+<p>No direct deadlock risk observed. The Manager never holds two of its own mutexes simultaneously.
+<code>configMu</code>, <code>sessionsMu</code>, and <code>workersMu</code> are never held concurrently within a single call frame.
+The only notable nesting is Manager lock → session lock (always in that order), which is
+consistent throughout the codebase.</p>
+<p>One subtle pattern: <code>GetLoop</code> calls <code>LoadExternalLoops()</code> and then acquires <code>workersMu.Lock()</code>
+(not RLock). If the go routine holding workersMu calls GetLoop recursively, this would deadlock.
+Inspection shows <code>LoadExternalLoops</code> does not call <code>GetLoop</code>, so this path is safe.</p>
+<hr />
+<h2 id="3-cascade-routing-flow">3. Cascade Routing Flow</h2>
+<h3 id="config-and-defaults">Config and Defaults</h3>
+<p><code>DefaultCascadeConfig()</code> returns:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>CheapProvider:       ProviderGemini
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>ExpensiveProvider:   DefaultPrimaryProvider()  (Codex as of current config)
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>ConfidenceThreshold: 0.7
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>MaxCheapBudgetUSD:   $2.00
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>MaxCheapTurns:       15
+</code></pre></div>
+<p>The router is constructed in <code>NewManager*</code> constructors and attached to <code>m.cascade</code>.</p>
+<h3 id="provider-selection-logic-shouldcascade-resolveprovider">Provider Selection Logic (ShouldCascade / ResolveProvider)</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ShouldCascade(taskType, prompt):
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  1. Check TaskTypeOverrides — if override exists, skip cascade (use override directly)
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  2. Check latency gate — if cheap provider&#39;s P95 latency &gt; LatencyThresholdMs, skip
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>  3. Check FeedbackAnalyzer profile — if cheap provider has &gt;90% completion on 5+ samples, skip
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  4. Otherwise: cascade
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>SelectTier(taskType, complexity):
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>  1. If bandit hooks configured and enough history: consult bandit selector
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>  2. Otherwise: find tier matching task complexity from DefaultModelTiers()
+</code></pre></div>
+<h3 id="confidence-thresholds-and-escalation">Confidence Thresholds and Escalation</h3>
+<p>After the cheap session completes, <code>EvaluateCheapResult</code> decides whether to escalate:</p>
+<ol>
+<li>If <code>s.Error != ""</code> → escalate with <code>reason="error"</code></li>
+<li>If any <code>LoopVerification.ExitCode != 0</code> → escalate with <code>reason="verify_failed"</code></li>
+<li>Compute confidence (heuristic or calibrated DecisionModel):</li>
+<li>Heuristic: <code>0.30*verifyPassed + 0.25*(1-hedgeCount) + 0.20*turnRatio + 0.15*errorFree + 0.10*(1-questionCount)</code></li>
+<li>Calibrated (when DecisionModel.IsTrained()): logistic regression on 10 features</li>
+<li>If <code>confidence &lt; ConfidenceThreshold (0.7)</code> → escalate with <code>reason="low_confidence"</code></li>
+<li>Otherwise → accept cheap result, skip expensive launch</li>
+</ol>
+<h3 id="all-providers-fail-behavior">All-Providers-Fail Behavior</h3>
+<p><code>LaunchWithFailover</code> iterates the FailoverChain. For each provider:
+- Quick health pre-check (<code>CheckProviderHealth</code>)
+- If healthy: attempt launch
+- If launch fails: record error, continue to next provider</p>
+<p>If all providers fail, returns <code>fmt.Errorf("all providers failed: &lt;errors joined with '; '&gt;")</code>.
+The cascade router does not itself retry; retry logic lives in <code>RunLoop</code>'s auto-recovery layer.</p>
+<hr />
+<h2 id="4-loop-engine-architecture">4. Loop Engine Architecture</h2>
+<h3 id="call-chain">Call Chain</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>RunLoop (loop.go)
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  └── StepLoop (loop_steps.go)          -- one planner/worker/verify iteration
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        ├── buildLoopPlannerPromptN      -- (loop_planner.go) builds prompt from ROADMAP, journal, prev iters
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>        │     └── buildLoopPlannerPrompt
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>        ├── launchWorkflowSession        -- planner session
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        ├── waitForSession               -- blocks until planner done
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        ├── plannerTasksFromSession      -- (loop_planner.go) parse JSON task(s) from output
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        ├── [JSON retry loop, max 2]     -- retry if planner emits freeform text
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        ├── [dedup filters]              -- near-duplicate and content-overlap rejection
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        ├── [curriculum sort]            -- easy-first ordering if enabled
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>        ├── [goroutine fan-out]          -- one goroutine per task
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        │     └── runWorkerTask          -- (loop_worker.go)
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        │           ├── WorktreePool.Acquire or createLoopWorktree
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>        │           ├── [episodic + reflexion injection]
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>        │           ├── [cascade routing: cheap → evaluate → expensive]
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>        │           ├── launchWorkflowSession  -- worker session
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>        │           └── waitForSession
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>        ├── [collect results, 15-min timeout]
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>        ├── [noop detection]
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>        ├── runLoopVerification          -- bash commands in worktree
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>        ├── [auto-CI-fix, max retries]
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>        └── [acceptance gate + self-improvement routing]
+</code></pre></div>
+<h3 id="gate-evaluation">Gate Evaluation</h3>
+<p>Convergence gates in <code>StepLoop</code> (evaluated before launching planner):</p>
+<ul>
+<li><code>consecutiveLoopFailures &gt; run.Profile.RetryLimit</code> → fail with ErrRetryLimitExceeded</li>
+<li><code>run.Profile.MaxIterations &gt; 0 &amp;&amp; len(run.Iterations) &gt;= MaxIterations</code> → status=completed</li>
+<li><code>run.Deadline != nil &amp;&amp; time.Now().After(*run.Deadline)</code> → status=completed</li>
+<li><code>detectConvergence(run.Iterations)</code> → status=converged if 3+ recent identical no-ops or same error</li>
+</ul>
+<p>Post-worker gates (in <code>RunLoop</code>, wrapping <code>StepLoop</code>):</p>
+<ul>
+<li><code>checkLoopBudget</code> — aggregate planner+worker spend vs <code>(budget * Headroom)</code> — soft cap</li>
+<li><code>HardBudgetCapUSD</code> — absolute spend ceiling (checked before each step)</li>
+<li><code>MaxWorkerTurns</code> (default 20) — total iteration count ceiling</li>
+<li><code>NoopPlateauLimit</code> — N consecutive no-op iterations triggers status=converged</li>
+<li><code>depthEst.ShouldEarlyStop</code> — adaptive early stop on diminishing returns</li>
+</ul>
+<h3 id="pruning-no-op-detection">Pruning / No-Op Detection</h3>
+<p><code>NoOpDetector</code> (loop_noop.go) tracks consecutive no-change iterations per loop ID. When
+<code>noopFilesChanged == 0 &amp;&amp; noopLinesAdded == 0</code> on 2+ consecutive iterations (default),
+the detector signals skip, the iteration is marked <code>"idle"</code>, and <code>RunLoop</code> increments its
+<code>consecutiveNoops</code> counter toward <code>NoopPlateauLimit</code>.</p>
+<hr />
+<h2 id="5-supervisor-control-loop">5. Supervisor Control Loop</h2>
+<h3 id="tick-architecture">Tick Architecture</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Supervisor.Start(ctx)
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  └── goroutine: run(ctx)
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>        └── ticker := time.NewTicker(TickInterval)  // default 60s
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>              for each tick:
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>                └── tick(ctx)
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>                      ├── shouldTerminate()          // check MaxCycles, MaxDuration, budget
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>                      ├── stallHandler.CheckAndHandle // kill stalled sessions
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>                      ├── monitor.Evaluate()          // health signals
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>                      │     └── executeDecision()    // per signal
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>                      │           └── Propose() → launchCycle / runSelfTest / runConsolidation
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>                      ├── chainer.CheckAndChain()    // cycle chaining
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>                      ├── planner.PlanNextSprint()   // sprint planning fallback
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>                      ├── tickCount++
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>                      └── persistState()             // .ralph/supervisor_state.json
+</code></pre></div>
+<h3 id="health-assessment">Health Assessment</h3>
+<p><code>HealthMonitor.Evaluate(repoPath)</code> reads metrics from disk files in <code>.ralph/</code>:
+- <code>cost_observations.json</code> → completion rate signal
+- <code>coverage.txt</code> → coverage regression signal
+- Emits <code>HealthSignal</code> structs with <code>Category</code>, <code>Metric</code>, <code>Value</code>, <code>Threshold</code>, <code>SuggestedAction</code></p>
+<h3 id="cycle-chaining-and-depth-cap">Cycle Chaining and Depth Cap</h3>
+<p><code>CycleChainer.CheckAndChain</code> inspects the last completed cycle's outcomes. If criteria are met,
+it returns a next cycle. The supervisor launches it in a goroutine via <code>mgr.RunCycle(ctx, ..., depth=3)</code>.
+Depth cap: <code>RunCycle</code> is called with a fixed depth of 3 in all supervisor paths, preventing
+unbounded recursive chaining.</p>
+<h3 id="cooldown-period">Cooldown Period</h3>
+<p><code>CooldownBetween</code> (default 5 minutes). <code>launchCycle</code> checks <code>time.Since(s.lastCycleLaunch) &lt; cooldown</code>
+before launching. The first cycle (when <code>lastCycleLaunch.IsZero()</code>) is exempt from cooldown.</p>
+<h3 id="unhealthy-session-response">Unhealthy Session Response</h3>
+<p>When <code>stallHandler.CheckAndHandle</code> detects a stalled session (exceeding <code>profile.StallTimeout</code>),
+it kills the session and logs the event. The supervisor does not relaunch stalled sessions directly;
+relaunching is delegated to the auto-recovery layer (<code>AutoRecovery.HandleSessionError</code>) which fires
+from <code>onComplete</code> when the session ends with <code>StatusErrored</code>.</p>
+<h3 id="feedback-loop-every-10-ticks">Feedback Loop (every 10 ticks)</h3>
+<p><code>RunFeedbackLoop()</code> is called at the end of each tick. It runs pattern consolidation and note
+generation as a cross-subsystem feedback pass.</p>
+<hr />
+<h2 id="6-autonomy-level-gating">6. Autonomy Level Gating</h2>
+<h3 id="levels">Levels</h3>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Name</th>
+<th>Value</th>
+<th>Bootstrap-eligible?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>observe</code></td>
+<td><code>LevelObserve</code></td>
+<td>Yes (default)</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>auto-recover</code></td>
+<td><code>LevelAutoRecover</code></td>
+<td>Yes (max for bootstrap)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>auto-optimize</code></td>
+<td><code>LevelAutoOptimize</code></td>
+<td>No (requires explicit SetAutonomyLevel)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>full-autonomy</code></td>
+<td><code>LevelFullAutonomy</code></td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>Bootstrap (<code>BootstrapAutonomy</code>) clamps levels &gt; 1 to 1, preventing L2/L3 from activating
+via <code>.ralphrc</code> alone — they require programmatic <code>SetAutonomyLevel</code> calls.</p>
+<h3 id="decisionlogpropose-flow">DecisionLog.Propose Flow</h3>
+<p>Every autonomous action passes through <code>DecisionLog.Propose(decision)</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Propose(d AutonomousDecision):
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  1. Check d.RequiredLevel &lt;= dl.level
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  2. Check dl.blocklist[d.Category] is false
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  3. If both pass → d.Executed = true, append to in-memory log, append to decisions.jsonl
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  4. Return allowed bool
+</code></pre></div>
+<p>If <code>Propose</code> returns false, the decision is recorded as "would have done" — full audit trail
+with no side effects.</p>
+<h3 id="actions-by-level">Actions by Level</h3>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Allowed Actions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L0</td>
+<td>No execution; all proposals logged as "would have done"</td>
+</tr>
+<tr>
+<td>L1</td>
+<td><code>DecisionRestart</code> (session auto-restart); <code>DecisionFailover</code> (provider failover)</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>L1 + <code>DecisionBudgetAdjust</code>, <code>DecisionProviderSelect</code>, <code>DecisionConfigChange</code>, <code>DecisionSelfTest</code>, <code>DecisionReflexion</code>, <code>DecisionCascadeRoute</code>, <code>DecisionCurriculum</code>, <code>DecisionEpisodicReplay</code></td>
+</tr>
+<tr>
+<td>L3</td>
+<td>L2 + <code>DecisionLaunch</code> (roadmap-driven cycle launch), <code>DecisionScale</code> + HyperagentEngine modifications (confidence &gt;= 0.8, rate-limited to 3/hour)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="supervisor-activation-threshold">Supervisor Activation Threshold</h3>
+<p><code>SetAutonomyLevel(level &gt;= LevelAutoOptimize, repoPath)</code> starts the supervisor goroutine.
+<code>SetAutonomyLevel(level &lt; LevelAutoOptimize)</code> calls <code>stopSupervisor()</code>. The supervisor requires
+L2 minimum and is where <code>DecisionLaunch</code> signals actually run cycles.</p>
+<hr />
+<h2 id="7-race-condition-risks">7. Race Condition Risks</h2>
+<h3 id="tier-3-grep-findings">Tier 3 Grep Findings</h3>
+<p>The package has 70+ distinct mutexes across 60+ files. The conventions are largely followed:
+<code>sync.RWMutex</code> with <code>RLock</code> for reads and <code>Lock</code> for writes. Below are the notable risks.</p>
+<h4 id="risk-1-autorecoveryretrystate-medium">Risk 1: AutoRecovery.retryState — MEDIUM</h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">// autorecovery.go</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">AutoRecovery</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nx">retryState</span><span class="w">  </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">retryInfo</span><span class="w"> </span><span class="c1">// session ID → retry state</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="c1">// no mutex protecting retryState</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>HandleSessionError</code> reads and writes <code>retryState</code> without a lock. It is called from
+<code>optimizer.HandleSessionComplete</code>, which is invoked from <code>s.onComplete</code> — a goroutine
+spawned per session in <code>runSession</code>. If two sessions for the same session ID (e.g.,
+a retry relaunched under the same original ID for tracking) call <code>HandleSessionError</code>
+concurrently, the map access is a data race. In practice the original session ID is
+unique, but <code>ClearRetryState</code> is called from a different goroutine path (successful
+completion callback) and could race with <code>HandleSessionError</code> on a failing session.</p>
+<p><strong>Rating: MEDIUM</strong> — likely benign in typical single-session-per-ID usage, but will
+fail under <code>-race</code> detection if two sessions share a retry tracking path.</p>
+<h4 id="risk-2-loopiterationprogressdelta-low">Risk 2: Loop.iterationProgressDelta — low</h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1">// loop.go</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kd">func</span><span class="w"> </span><span class="nx">iterationProgressDelta</span><span class="p">(</span><span class="nx">run</span><span class="w"> </span><span class="o">*</span><span class="nx">LoopRun</span><span class="p">,</span><span class="w"> </span><span class="nx">iterCount</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="kt">float64</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nx">run</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nx">Lock</span><span class="p">()</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">run</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nx">Unlock</span><span class="p">()</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="o">...</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="p">}</span>
+</code></pre></div>
+<p>This function is called from <code>RunLoop</code> (the main loop goroutine) immediately after reading
+<code>iterCount</code> outside the lock. The <code>iterCount</code> value could be stale by the time the lock is
+acquired, but since <code>RunLoop</code> is the only goroutine that appends to <code>run.Iterations</code> after
+startup, this is safe in practice.</p>
+<p><strong>Rating: LOW</strong></p>
+<h4 id="risk-3-cascadeshouldcascade-with-feedbackanalyzer-low">Risk 3: Cascade.ShouldCascade with FeedbackAnalyzer — LOW</h4>
+<p><code>ShouldCascade</code> calls <code>cr.feedback.GetProviderProfile()</code> without holding <code>cr.mu</code>. The
+<code>FeedbackAnalyzer</code> has its own <code>sync.Mutex</code>, so the call is safe. However, the combined
+"slow check then profile check" sequence is not atomic — the latency state and feedback
+profile could diverge between the two checks. This is a TOCTOU issue but with no
+safety-critical consequences (worst case: occasionally incorrect routing decision).</p>
+<p><strong>Rating: LOW</strong></p>
+<h4 id="risk-4-goroutine-fan-out-in-steploop-without-context-propagation-low">Risk 4: goroutine fan-out in StepLoop without context propagation — LOW</h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1">// loop_steps.go</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="p">,</span><span class="w"> </span><span class="nx">task</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">tasks</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="k">go</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">workerIdx</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="nx">t</span><span class="w"> </span><span class="nx">LoopTask</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">        </span><span class="k">defer</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">recover</span><span class="p">();</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">                </span><span class="nx">resultCh</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nx">workerResult</span><span class="p">{</span><span class="o">...</span><span class="p">}</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">        </span><span class="p">}()</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">        </span><span class="nx">resultCh</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">runWorkerTask</span><span class="p">(</span><span class="nx">workerParams</span><span class="p">{</span><span class="nx">ctx</span><span class="p">:</span><span class="w"> </span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">...</span><span class="p">})</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">    </span><span class="p">}(</span><span class="nx">i</span><span class="p">,</span><span class="w"> </span><span class="nx">task</span><span class="p">)</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="p">}</span>
+</code></pre></div>
+<p>The <code>recover()</code> panic guard is present. Worker goroutines respect <code>ctx.Done()</code> via
+<code>p.ctx.Err()</code> checks before expensive operations. However, the 15-minute
+<code>workerCollectTimeout</code> is a wall-clock timer, not a context-derived deadline. If the
+parent context is cancelled (e.g., <code>StopLoop</code>), the workers will eventually detect
+<code>ctx.Done()</code> but the collector select may block until <code>workerCollectTimeout</code> fires
+if workers are stuck in a blocking call that doesn't check context. This is mitigated
+by <code>waitForSession</code> which itself polls context.</p>
+<p><strong>Rating: LOW</strong></p>
+<h4 id="risk-5-supervisor-goroutine-leak-on-stop-timeout-low">Risk 5: supervisor goroutine leak on Stop timeout — LOW</h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1">// supervisor.go Stop():</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="k">select</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="k">case</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">done</span><span class="p">:</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="k">case</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">time</span><span class="p">.</span><span class="nx">After</span><span class="p">(</span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">):</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nx">slog</span><span class="p">.</span><span class="nx">Warn</span><span class="p">(</span><span class="s">&quot;supervisor: stop timed out&quot;</span><span class="p">)</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="p">}</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="nx">s</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nx">Lock</span><span class="p">()</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="nx">s</span><span class="p">.</span><span class="nx">running</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="nx">s</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nx">Unlock</span><span class="p">()</span>
+</code></pre></div>
+<p>If the supervisor tick is blocked (e.g., waiting on a cycle that itself is waiting), <code>Stop</code>
+returns after 5 seconds but the <code>run</code> goroutine may still be executing. <code>s.running = false</code>
+is set, but the goroutine continues until <code>ctx.Done()</code> fires. Since <code>cancel()</code> is called
+before the timeout wait, the goroutine will exit at its next <code>select</code> point. The window
+between timeout and actual exit is bounded.</p>
+<p><strong>Rating: LOW</strong></p>
+<h4 id="risk-6-getloop-uses-workersmulock-not-rlock-low">Risk 6: GetLoop uses workersMu.Lock() not RLock — LOW</h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1">// loop.go</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Manager</span><span class="p">)</span><span class="w"> </span><span class="nx">GetLoop</span><span class="p">(</span><span class="nx">id</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">LoopRun</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">LoadExternalLoops</span><span class="p">()</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">workersMu</span><span class="p">.</span><span class="nx">Lock</span><span class="p">()</span><span class="w">  </span><span class="c1">// write lock for a read operation</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">workersMu</span><span class="p">.</span><span class="nx">Unlock</span><span class="p">()</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="nx">run</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">loops</span><span class="p">[</span><span class="nx">id</span><span class="p">]</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">run</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>GetLoop</code> acquires a write lock (<code>Lock()</code>) instead of a read lock (<code>RLock()</code>). This is
+unnecessarily exclusive and causes all concurrent <code>GetLoop</code> calls (from different goroutines
+during parallel worker collection) to serialize. It also prevents <code>ListLoops</code> from running
+concurrently with <code>GetLoop</code>. No correctness issue, but this is a performance regression
+and deviates from the <code>sync.RWMutex</code> convention.</p>
+<p><code>ListLoops</code> has the same pattern.</p>
+<p><strong>Rating: LOW</strong> (correctness), <strong>MEDIUM</strong> (performance under concurrent loop access)</p>
+<h4 id="risk-7-writejournalentry-goroutine-low">Risk 7: WriteJournalEntry goroutine — LOW</h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1">// runner.go</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="k">go</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nx">writeCtx</span><span class="p">,</span><span class="w"> </span><span class="nx">writeCancel</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">WithTimeout</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">(),</span><span class="w"> </span><span class="mi">10</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">writeCancel</span><span class="p">()</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="k">select</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">writeCtx</span><span class="p">.</span><span class="nx">Done</span><span class="p">():</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">        </span><span class="k">return</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="k">default</span><span class="p">:</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">WriteJournalEntry</span><span class="p">(</span><span class="nx">s</span><span class="p">);</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">bus</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">        </span><span class="nx">s</span><span class="p">.</span><span class="nx">bus</span><span class="p">.</span><span class="nx">Publish</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="p">}()</span>
+</code></pre></div>
+<p><code>WriteJournalEntry(s)</code> is called from a detached goroutine after <code>s.mu</code> is released. If
+<code>WriteJournalEntry</code> internally acquires <code>s.mu</code>, there is no deadlock risk. If it reads
+session fields without the lock, there could be a data race — this depends on
+<code>WriteJournalEntry</code>'s implementation (not in the tier-1/2 files reviewed). The context
+timeout (10s) bounds the goroutine lifetime.</p>
+<p><strong>Rating: LOW</strong> — bounded, but warrants verifying <code>WriteJournalEntry</code> uses <code>s.mu</code>.</p>
+<hr />
+<h2 id="8-store-abstraction">8. Store Abstraction</h2>
+<h3 id="store-interface">Store Interface</h3>
+<p>Defined in <code>store.go</code>, the interface covers:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>SaveSession / GetSession / ListSessions / DeleteSession / UpdateSessionStatus
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>AggregateSpend
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>SaveLoopRun / GetLoopRun / ListLoopRuns / UpdateLoopRunStatus
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>RecordCost / AggregateCostByProvider
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>Close
+</code></pre></div>
+<h3 id="memorystore">MemoryStore</h3>
+<p><code>store_memory.go</code> — in-memory implementation using <code>sync.RWMutex</code>. Fully thread-safe.
+Uses <code>RLock</code> for read operations and <code>Lock</code> for writes. Correct convention.</p>
+<p>The <code>AggregateSpend</code> method reads <code>s.SpentUSD</code> directly from <code>*Session</code> pointer without
+acquiring the session's own <code>s.mu</code>. This is a minor inconsistency — <code>SpentUSD</code> could
+be concurrently mutated by the runner goroutine. For the MemoryStore, the map and session
+pointer are the same objects the Manager holds, so this is a design coupling.</p>
+<h3 id="sqlite-store-sharedstate-implicit-sqlite-store">SQLite Store (SharedState / implicit SQLite store)</h3>
+<p><code>shared_state.go</code> implements the key-value and distributed lock surface backed by SQLite WAL
+mode with <code>MaxOpenConns(1)</code> to serialize writes. This is used for the multi-session
+coordination blackboard, not the primary session persistence store.</p>
+<p>The primary SQLite session store (referenced by <code>NewManagerWithStore</code>) is a separate implementation
+not in the tier-1/2 files. Its existence is confirmed by <code>RehydrateFromStore()</code> which calls
+<code>m.store.ListSessions()</code> and <code>m.store.SaveSession()</code>. Based on the Store interface, the SQLite
+store would need <code>modernc.org/sqlite</code> (no CGo) matching the pattern from <code>shared_state.go</code>.</p>
+<h3 id="what-persists-across-restarts">What Persists Across Restarts</h3>
+<p>With SQLite store configured:
+- Session records (all exported fields including status, spend, turn count, error, exit reason)
+- Loop run records and their iteration history (via <code>SaveLoopRun</code>)
+- Cost ledger entries (via <code>RecordCost</code>)
+- Supervisor state (via <code>.ralph/supervisor_state.json</code> flat file, not Store)
+- Autonomy level (via <code>.ralph/autonomy.json</code> flat file, not Store)
+- Decision log (via <code>.ralph/decisions.jsonl</code> flat file, not Store)
+- Improvement patterns (via <code>.ralph/improvement_patterns.json</code>)</p>
+<p>Without SQLite store (MemoryStore or no store):
+- All session and loop run state is lost on restart
+- On restart, sessions that were running are marked <code>StatusInterrupted</code> by <code>RehydrateFromStore</code>
+  (which is a no-op without a store, so they simply disappear)</p>
+<h3 id="migration-path">Migration Path</h3>
+<p>The current architecture runs dual persistence: Store (when configured) and legacy JSON
+files in <code>~/.ralphglasses/sessions/&lt;id&gt;.json</code>. <code>PersistSession</code> writes to both. The JSON
+files serve as the fallback discovery path for <code>LoadExternalSessions</code> (multi-process scenario:
+TUI discovers sessions launched by MCP server).</p>
+<p>Migration to SQLite-only is planned (Phase 10.5 tasks) but not yet complete. The migration
+path is clear: once <code>ListSessions</code> returns all sessions from SQLite, <code>LoadExternalSessions</code>
+can be removed and the JSON file writes in <code>PersistSession</code> can be gated behind a feature flag.
+The blocker is that <code>LoadExternalSessions</code> is the cross-process discovery mechanism (TUI ↔ MCP
+server share a filesystem, not a process), which would need to be replaced by a shared SQLite
+WAL file or a local IPC socket.</p>
+<hr />
+<h2 id="summary-of-key-findings">Summary of Key Findings</h2>
+<ol>
+<li>
+<p><strong>Lock hierarchy is sound</strong>: Three-mutex Manager model (<code>sessionsMu</code>, <code>workersMu</code>, <code>configMu</code>)
+   is consistently applied. No cycles observed. The <code>statusCache sync.Map</code> hot path is correctly
+   maintained alongside the primary map.</p>
+</li>
+<li>
+<p><strong>GetLoop/ListLoops use write locks unnecessarily</strong>: These methods should use <code>RLock</code> for the
+   map read. Under concurrent loop access this serializes all readers. Low correctness risk, medium
+   performance impact. Trivial fix.</p>
+</li>
+<li>
+<p><strong>AutoRecovery.retryState lacks a mutex</strong>: Unprotected map accessed from concurrent <code>onComplete</code>
+   callbacks. Fix by adding <code>sync.Mutex</code> to <code>AutoRecovery</code> struct.</p>
+</li>
+<li>
+<p><strong>Cascade confidence threshold is 0.7 (heuristic) or calibrated (requires 50+ samples)</strong>:
+   With only Claude data (100% of observed sessions), the DecisionModel will not be trained
+   (needs 50+ observations with multi-provider data). All cascade decisions currently use the
+   heuristic path.</p>
+</li>
+<li>
+<p><strong>Supervisor tick interval is 60s in code, but observed at ~27s</strong>: The state file shows 95
+   ticks in 43 minutes (~27s/tick). <code>TickInterval</code> defaults to 60s but was likely overridden
+   during the macOS run. The macOS path anomaly in the state file confirms the supervisor has
+   not run on this Manjaro machine.</p>
+</li>
+<li>
+<p><strong>Store dual-write is transitional</strong>: JSON file persistence and SQLite store coexist.
+   Cross-process session discovery (TUI ↔ MCP) depends on JSON files and has no SQLite-backed
+   replacement yet.</p>
+</li>
+<li>
+<p><strong>Bootstrap clamps autonomy to L1</strong>: <code>.ralphrc</code> can enable auto-recovery but cannot enable
+   L2 (auto-optimize) or L3 (full-autonomy) — those require explicit API calls. This is a
+   correct safety design.</p>
+</li>
+<li>
+<p><strong>JSON format enforcement is the system's top failure mode</strong>: 25 occurrences across 15 cycles.
+   The JSON retry loop in <code>StepLoop</code> (max 2 retries) addresses this, but the system still fails
+   hard if both retries produce freeform text. The planner prompt has been refined, but the
+   observed 25.7% retry rate vs the target &lt;5% indicates the prompt engineering gap is not closed.</p>
+</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

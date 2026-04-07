@@ -1,0 +1,1239 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ralph-roadmap/s10-cost-rate-audit/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>S10 — Cost Rate Audit (April 2026) - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#s10-cost-rate-audit-april-2026" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              S10 — Cost Rate Audit (April 2026)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-current-compiled-in-rates-vs-actual-rates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Current Compiled-in Rates vs Actual Rates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Current Compiled-in Rates vs Actual Rates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#anthropic-claude" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anthropic Claude
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#google-gemini" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Google Gemini
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openai-codex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenAI / Codex
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-discrepancies-and-their-impact-on-cascade-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Discrepancies and Their Impact on Cascade Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Discrepancies and Their Impact on Cascade Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cascade-tier-ordering-in-defaultmodeltiers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cascade tier ordering in DefaultModelTiers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-recommended-constant-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Recommended Constant Updates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-whether-providers_normalizego-needs-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Whether providers_normalize.go Needs Changes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-cost-rate-staleness-alerting-mechanism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Cost-Rate Staleness Alerting Mechanism
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Cost-Rate Staleness Alerting Mechanism">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommended-mechanism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended Mechanism
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary-of-changes-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary of Changes Required
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="s10-cost-rate-audit-april-2026">S10 — Cost Rate Audit (April 2026)</h1>
+<p><strong>Date</strong>: 2026-04-04<br />
+<strong>Branch</strong>: self-improve-review-20260404-165828<br />
+<strong>Scope</strong>: All compiled-in cost constants in <code>internal/config/costs.go</code>, their aliases in
+<code>internal/session/costs.go</code>, and downstream usage in <code>internal/session/costnorm.go</code> and
+<code>internal/session/cascade_routing.go</code>.</p>
+<hr />
+<h2 id="1-current-compiled-in-rates-vs-actual-rates">1. Current Compiled-in Rates vs Actual Rates</h2>
+<p>All prices are USD per 1M tokens. "Compiled-in" refers to the constants in
+<code>internal/config/costs.go</code>. "Actual" reflects verified April 2026 provider pricing.</p>
+<h3 id="anthropic-claude">Anthropic Claude</h3>
+<table>
+<thead>
+<tr>
+<th>Constant</th>
+<th>Model</th>
+<th>Compiled-in Input</th>
+<th>Actual Input</th>
+<th>Compiled-in Output</th>
+<th>Actual Output</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CostClaudeOpusInput</code> / <code>CostClaudeOpusOutput</code></td>
+<td>Claude Opus 4.6</td>
+<td>$15.00</td>
+<td><strong>$5.00</strong></td>
+<td>$75.00</td>
+<td><strong>$25.00</strong></td>
+<td>WRONG — 3x overstated</td>
+</tr>
+<tr>
+<td><code>CostClaudeSonnetInput</code> / <code>CostClaudeSonnetOutput</code></td>
+<td>Claude Sonnet 4.6</td>
+<td>$3.00</td>
+<td>$3.00</td>
+<td>$15.00</td>
+<td>$15.00</td>
+<td>Correct</td>
+</tr>
+<tr>
+<td><em>(not tracked)</em></td>
+<td>Claude Haiku 4.5</td>
+<td>—</td>
+<td>$1.00 in / $5.00 out</td>
+<td>—</td>
+<td>—</td>
+<td>Missing entry</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Notes</strong>:
+- Opus 4.6 launched at $5/$25 per 1M, a 67% price reduction from the former Opus 3 rates
+  ($15/$75) that are still hardcoded. The old constants match Claude 3 Opus, not Claude 4.6.
+- Haiku 4.5 is not tracked at all. The <code>DefaultModelTiers</code> in <code>cascade_routing.go</code> has no
+  Haiku tier; it jumps from Gemini Flash (worker) directly to Codex gpt-5.4 (coding). Haiku
+  could serve as a cost-effective intermediate Claude tier at $1/$5.
+- Sonnet 4.6 rates have a context-length surcharge: inputs &gt;200K tokens are billed at
+  $6.00/$22.50. The current code has no context-length aware pricing.</p>
+<h3 id="google-gemini">Google Gemini</h3>
+<table>
+<thead>
+<tr>
+<th>Constant</th>
+<th>Model</th>
+<th>Compiled-in Input</th>
+<th>Actual Input</th>
+<th>Compiled-in Output</th>
+<th>Actual Output</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CostGeminiFlashLiteInput</code></td>
+<td>Gemini 2.0 Flash-Lite</td>
+<td>$0.10</td>
+<td>$0.075</td>
+<td><em>(no output const)</em></td>
+<td>$0.30</td>
+<td>Input overstated; output missing</td>
+</tr>
+<tr>
+<td><code>CostGeminiFlashInput</code> / <code>CostGeminiFlashOutput</code></td>
+<td>Gemini 2.5 Flash</td>
+<td>$0.30</td>
+<td>$0.30</td>
+<td>$3.50</td>
+<td><strong>$2.50</strong></td>
+<td>Output overstated by $1.00</td>
+</tr>
+<tr>
+<td><em>(not tracked)</em></td>
+<td>Gemini 2.5 Pro</td>
+<td>—</td>
+<td>$1.25 in (≤200K) / $10.00 out</td>
+<td>—</td>
+<td>—</td>
+<td>Missing entry</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Notes</strong>:
+- The Flash-Lite output rate was never added as a constant (<code>DefaultProviderCosts</code> only
+  tracks Flash-Lite input). The actual output rate for 2.0 Flash-Lite is $0.30/1M. The
+  compiled-in input constant ($0.10) is also stale — 2.0 Flash-Lite is $0.075 and 2.5
+  Flash-Lite (the newer replacement) is $0.10. The constant label matches 2.5 Flash-Lite
+  but <code>cascade_routing.go</code> uses model string <code>"gemini-2.0-flash-lite"</code>, creating a
+  model-to-constant mismatch.
+- Gemini 2.5 Flash output was recently corrected from $1.25 to $3.50 in the codebase
+  (per commit history), but the actual current rate is <strong>$2.50/1M</strong> — the correction
+  overshot by $1.00.
+- Gemini 2.5 Pro is entirely absent from the cost table despite being the documented
+  default model for the <code>gemini</code> provider in <code>docs/PROVIDER-SETUP.md</code>.</p>
+<h3 id="openai-codex">OpenAI / Codex</h3>
+<table>
+<thead>
+<tr>
+<th>Constant</th>
+<th>Model</th>
+<th>Compiled-in Input</th>
+<th>Actual Input</th>
+<th>Compiled-in Output</th>
+<th>Actual Output</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CostCodexInput</code> / <code>CostCodexOutput</code></td>
+<td>gpt-5.4 (Codex CLI default)</td>
+<td>$2.50</td>
+<td><strong>$10.00</strong></td>
+<td>$15.00</td>
+<td><strong>$30.00</strong></td>
+<td>WRONG — 4x under on input, 2x under on output</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Notes</strong>:
+- The <code>CostCodexInput</code>/<code>CostCodexOutput</code> constants ($2.50/$15.00) match GPT-4o or older
+  GPT-4 pricing, not gpt-5.4. gpt-5.4 is priced at $10/$30 per 1M tokens.
+- The <code>PROVIDER-SETUP.md</code> documents the Codex CLI default as <code>gpt-5.4</code>. The constants
+  have not been updated to reflect this model.
+- o3 is $2.00/$8.00, o4-mini is $1.10/$4.40, and GPT-4.1 is $2.00/$8.00. These are not
+  tracked in the cost table and are not used as Codex CLI models, but are relevant if the
+  Codex CLI provider flag is ever set to a non-default model.</p>
+<hr />
+<h2 id="2-discrepancies-and-their-impact-on-cascade-routing">2. Discrepancies and Their Impact on Cascade Routing</h2>
+<h3 id="cascade-tier-ordering-in-defaultmodeltiers">Cascade tier ordering in <code>DefaultModelTiers</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Tier 1 (ultra-cheap): gemini-2.0-flash-lite   CostPer1M = $0.10   [actual $0.075]
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Tier 2 (worker):      gemini-2.5-flash         CostPer1M = $0.30   [actual $0.30 ✓]
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Tier 3 (coding):      gpt-5.4                  CostPer1M = $2.50   [actual $10.00]
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>Tier 4 (reasoning):   claude-opus              CostPer1M = $15.00  [actual $5.00]
+</code></pre></div>
+<p><strong>Critical ordering inversion</strong>: With the stale constants, Tier 3 (Codex/gpt-5.4) appears
+cheaper than Tier 4 (Claude Opus) by a factor of 6x in the compiled-in cost table. In
+reality, gpt-5.4 at $10.00/1M is <strong>twice as expensive</strong> as Claude Opus 4.6 at $5.00/1M.
+<code>SelectTier</code> orders by <code>CostPer1M</code> ascending to find the cheapest viable tier; the correct
+ordering should be:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Tier 1 (ultra-cheap): gemini-2.0-flash-lite   $0.075
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Tier 2 (worker):      gemini-2.5-flash         $0.30
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Tier 3 (reasoning):   claude-opus-4.6          $5.00
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Tier 4 (coding):      gpt-5.4                  $10.00
+</code></pre></div>
+<p>This inversion means <code>SelectTier</code> is currently routing architecture/analysis/planning tasks
+(complexity=4) to Claude Opus when it should route them there, which accidentally produces
+the right outcome — but for the wrong reason and the wrong cost estimate. Budget forecasts
+and <code>EfficiencyPct</code> in <code>NormalizedCost</code> are computed against Claude Sonnet rates ($3/$15),
+making Codex sessions appear 83% cheaper than Claude when they are actually 3.3x more
+expensive.</p>
+<p><strong>Flash output overshoot</strong>: The Gemini Flash output constant was corrected from $1.25 to
+$3.50 but overshot. The actual rate is $2.50. Overstatement means ralphglasses
+over-estimates Gemini session costs, making Gemini appear less efficient than it is. This
+biases the Thompson Sampling bandit toward Claude and Codex sessions when comparing
+cumulative spend across providers.</p>
+<p><strong>Opus input overstatement</strong>: The Claude Opus input is compiled in at $15.00 when the
+actual rate is $5.00. This over-charges every Opus session in the cost ledger by 3x and
+causes <code>NormalizedCost.EfficiencyPct</code> for Opus sessions to read ~33% (appears expensive)
+when Opus is actually on par with gpt-5.4 in cost.</p>
+<p><strong>Missing Gemini Pro</strong>: The <code>gemini</code> provider's default model in <code>PROVIDER-SETUP.md</code> is
+<code>gemini-2.5-pro</code>, but there is no <code>gemini_pro</code> key in the cost table and no tier entry.
+The normalization fallback uses <code>gemini_flash</code> rates ($0.30/$3.50) for what is actually a
+$1.25/$10.00 model — undercharging Gemini Pro sessions by roughly 3-4x in the cost ledger.</p>
+<hr />
+<h2 id="3-recommended-constant-updates">3. Recommended Constant Updates</h2>
+<p>Update <code>internal/config/costs.go</code> as follows:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">const</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="c1">// Gemini — verified April 2026</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nx">CostGeminiFlashLiteInput</span><span class="w">  </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">0.075</span><span class="w">  </span><span class="c1">// was 0.10; Gemini 2.0 Flash-Lite</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nx">CostGeminiFlashLiteOutput</span><span class="w"> </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">0.30</span><span class="w">   </span><span class="c1">// new constant; was missing</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nx">CostGeminiFlashInput</span><span class="w">      </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">0.30</span><span class="w">   </span><span class="c1">// correct</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nx">CostGeminiFlashOutput</span><span class="w">     </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">2.50</span><span class="w">   </span><span class="c1">// was 3.50; overshot by $1.00</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="nx">CostGeminiProInput</span><span class="w">        </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">1.25</span><span class="w">   </span><span class="c1">// new; Gemini 2.5 Pro ≤200K ctx</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nx">CostGeminiProOutput</span><span class="w">       </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">10.00</span><span class="w">  </span><span class="c1">// new; Gemini 2.5 Pro</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="c1">// Claude — verified April 2026</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="nx">CostClaudeHaikuInput</span><span class="w">      </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">1.00</span><span class="w">   </span><span class="c1">// new; Claude Haiku 4.5</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="nx">CostClaudeHaikuOutput</span><span class="w">     </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">5.00</span><span class="w">   </span><span class="c1">// new; Claude Haiku 4.5</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="nx">CostClaudeSonnetInput</span><span class="w">     </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">3.00</span><span class="w">   </span><span class="c1">// correct</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="nx">CostClaudeSonnetOutput</span><span class="w">    </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">15.00</span><span class="w">  </span><span class="c1">// correct</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">    </span><span class="nx">CostClaudeOpusInput</span><span class="w">       </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">5.00</span><span class="w">   </span><span class="c1">// was 15.00; Claude Opus 4.6</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">    </span><span class="nx">CostClaudeOpusOutput</span><span class="w">      </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">25.00</span><span class="w">  </span><span class="c1">// was 75.00; Claude Opus 4.6</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">    </span><span class="c1">// OpenAI / Codex CLI — verified April 2026</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">    </span><span class="nx">CostCodexInput</span><span class="w">            </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">10.00</span><span class="w">  </span><span class="c1">// was 2.50; gpt-5.4 actual rate</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">    </span><span class="nx">CostCodexOutput</span><span class="w">           </span><span class="kt">float64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">30.00</span><span class="w">  </span><span class="c1">// was 15.00; gpt-5.4 actual rate</span>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="p">)</span>
+</code></pre></div>
+<p>Corresponding <code>DefaultProviderCosts()</code> additions:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">InputPerMToken</span><span class="p">:</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">float64</span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="s">&quot;gemini_flash_lite&quot;</span><span class="p">:</span><span class="w"> </span><span class="nx">CostGeminiFlashLiteInput</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="s">&quot;gemini_flash&quot;</span><span class="p">:</span><span class="w">      </span><span class="nx">CostGeminiFlashInput</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="s">&quot;gemini_pro&quot;</span><span class="p">:</span><span class="w">        </span><span class="nx">CostGeminiProInput</span><span class="p">,</span><span class="w">      </span><span class="c1">// add</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="s">&quot;claude_haiku&quot;</span><span class="p">:</span><span class="w">      </span><span class="nx">CostClaudeHaikuInput</span><span class="p">,</span><span class="w">    </span><span class="c1">// add</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="s">&quot;claude_sonnet&quot;</span><span class="p">:</span><span class="w">     </span><span class="nx">CostClaudeSonnetInput</span><span class="p">,</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="s">&quot;claude_opus&quot;</span><span class="p">:</span><span class="w">       </span><span class="nx">CostClaudeOpusInput</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="s">&quot;codex&quot;</span><span class="p">:</span><span class="w">             </span><span class="nx">CostCodexInput</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">},</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="nx">OutputPerMToken</span><span class="p">:</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">float64</span><span class="p">{</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="s">&quot;gemini_flash_lite&quot;</span><span class="p">:</span><span class="w"> </span><span class="nx">CostGeminiFlashLiteOutput</span><span class="p">,</span><span class="w">  </span><span class="c1">// add</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="s">&quot;gemini_flash&quot;</span><span class="p">:</span><span class="w">      </span><span class="nx">CostGeminiFlashOutput</span><span class="p">,</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="s">&quot;gemini_pro&quot;</span><span class="p">:</span><span class="w">        </span><span class="nx">CostGeminiProOutput</span><span class="p">,</span><span class="w">         </span><span class="c1">// add</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">    </span><span class="s">&quot;claude_haiku&quot;</span><span class="p">:</span><span class="w">      </span><span class="nx">CostClaudeHaikuOutput</span><span class="p">,</span><span class="w">       </span><span class="c1">// add</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">    </span><span class="s">&quot;claude_sonnet&quot;</span><span class="p">:</span><span class="w">     </span><span class="nx">CostClaudeSonnetOutput</span><span class="p">,</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">    </span><span class="s">&quot;claude_opus&quot;</span><span class="p">:</span><span class="w">       </span><span class="nx">CostClaudeOpusOutput</span><span class="p">,</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">    </span><span class="s">&quot;codex&quot;</span><span class="p">:</span><span class="w">             </span><span class="nx">CostCodexOutput</span><span class="p">,</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="p">},</span>
+</code></pre></div>
+<p><code>DefaultModelTiers()</code> in <code>cascade_routing.go</code> needs a corrected tier list with accurate
+<code>CostPer1M</code> values and the correct ordering (Opus is now cheaper than Codex):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">DefaultModelTiers</span><span class="p">()</span><span class="w"> </span><span class="p">[]</span><span class="nx">ModelTier</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">[]</span><span class="nx">ModelTier</span><span class="p">{</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">        </span><span class="p">{</span><span class="nx">Provider</span><span class="p">:</span><span class="w"> </span><span class="nx">ProviderGemini</span><span class="p">,</span><span class="w"> </span><span class="nx">Model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gemini-2.0-flash-lite&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">MaxComplexity</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nx">CostPer1M</span><span class="p">:</span><span class="w"> </span><span class="nx">CostGeminiFlashLiteInput</span><span class="p">,</span><span class="w"> </span><span class="nx">Label</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ultra-cheap&quot;</span><span class="p">},</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="p">{</span><span class="nx">Provider</span><span class="p">:</span><span class="w"> </span><span class="nx">ProviderGemini</span><span class="p">,</span><span class="w"> </span><span class="nx">Model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gemini-2.5-flash&quot;</span><span class="p">,</span><span class="w">      </span><span class="nx">MaxComplexity</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nx">CostPer1M</span><span class="p">:</span><span class="w"> </span><span class="nx">CostGeminiFlashInput</span><span class="p">,</span><span class="w">     </span><span class="nx">Label</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;worker&quot;</span><span class="p">},</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="p">{</span><span class="nx">Provider</span><span class="p">:</span><span class="w"> </span><span class="nx">ProviderClaude</span><span class="p">,</span><span class="w"> </span><span class="nx">Model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;claude-opus&quot;</span><span class="p">,</span><span class="w">            </span><span class="nx">MaxComplexity</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nx">CostPer1M</span><span class="p">:</span><span class="w"> </span><span class="nx">CostClaudeOpusInput</span><span class="p">,</span><span class="w">      </span><span class="nx">Label</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;reasoning&quot;</span><span class="p">},</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="p">{</span><span class="nx">Provider</span><span class="p">:</span><span class="w"> </span><span class="nx">ProviderCodex</span><span class="p">,</span><span class="w">  </span><span class="nx">Model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-5.4&quot;</span><span class="p">,</span><span class="w">               </span><span class="nx">MaxComplexity</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nx">CostPer1M</span><span class="p">:</span><span class="w"> </span><span class="nx">CostCodexInput</span><span class="p">,</span><span class="w">           </span><span class="nx">Label</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;coding&quot;</span><span class="p">},</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">}</span>
+</code></pre></div>
+<p>Note: Haiku 4.5 and Gemini 2.5 Pro are good candidates for additional tiers but require
+new provider dispatch logic (the session package currently treats <code>ProviderClaude</code> as a
+single model, routing is done via CLI flags, not model selection). Adding those tiers is a
+separate feature, not a cost-rate fix.</p>
+<hr />
+<h2 id="4-whether-providers_normalizego-needs-changes">4. Whether providers_normalize.go Needs Changes</h2>
+<p><code>providers_normalize.go</code> itself does not hardcode any cost rates — it delegates entirely to
+<code>estimateCostFromTokens</code> (in <code>providers.go</code>) and <code>getProviderCostRate</code> (in <code>costnorm.go</code>),
+which both read from <code>ProviderCostRates</code>. As long as <code>ProviderCostRates</code> is updated via the
+corrected constants (done in <code>costnorm.go</code> which aliases from <code>config</code>), the normalization
+logic requires no changes.</p>
+<p>However, three behavioral notes:</p>
+<ol>
+<li>
+<p><strong><code>NormalizeProviderCost</code> blended-rate path</strong>: When token counts are absent, it uses a
+   50/50 blended rate to scale from one provider to another. With gpt-5.4 at $10/$30, the
+   blended rate is $20/1M vs Claude Sonnet's $9/1M. This is a valid heuristic but the 50/50
+   split is a rough approximation; gpt-5.4 sessions tend to be output-heavy (reasoning
+   tokens). Consider a 30/70 input/output split for Codex as a follow-on improvement.</p>
+</li>
+<li>
+<p><strong><code>claudeBaseRate</code> pinned to Sonnet</strong>: <code>NormalizedCost.NormalizedUSD</code> normalizes
+   everything to Claude Sonnet rates. This is a correct and stable baseline — Sonnet pricing
+   has not changed. No change needed.</p>
+</li>
+<li>
+<p><strong>Missing <code>gemini_pro</code> in <code>ProviderCostRateFrom</code></strong>: In <code>internal/session/costs.go</code>, the
+   <code>ProviderCostRateFrom</code> switch has no <code>gemini_pro</code> case. Any <code>.ralph/cost_rates.json</code>
+   override of <code>gemini_pro</code> would silently be ignored for the <code>ProviderGemini</code> rate lookup.
+   This is a latent bug independent of the constant corrections, worth a follow-up fix.</p>
+</li>
+</ol>
+<hr />
+<h2 id="5-cost-rate-staleness-alerting-mechanism">5. Cost-Rate Staleness Alerting Mechanism</h2>
+<h3 id="problem">Problem</h3>
+<p>Provider pricing changed materially (Opus dropped 67%, Codex gpt-5.4 is 4x more expensive
+than the constant) without triggering any alert. The codebase has no mechanism to detect
+when compiled-in rates diverge from reality.</p>
+<h3 id="recommended-mechanism">Recommended Mechanism</h3>
+<p><strong>Option A — Compile-time version tag with CLI warning (low effort)</strong></p>
+<p>Add a <code>CostRatesVersion</code> string constant and <code>CostRatesDate</code> to <code>costs.go</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">const</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">CostRatesVersion</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;2026-04-04&quot;</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">CostRatesMaxAgedays</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">60</span><span class="w">  </span><span class="c1">// warn if binary is older than 60 days</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">)</span>
+</code></pre></div>
+<p>On startup, <code>LoadCostRatesFromDir</code> computes <code>time.Since(parsedCostRatesDate)</code> and logs a
+<code>slog.Warn</code> if the age exceeds <code>CostRatesMaxAgeDays</code>. The TUI can surface this as a status
+badge ("cost rates may be stale").</p>
+<p><strong>Option B — <code>.ralph/cost_rates.json</code> override with version field (medium effort)</strong></p>
+<p>Extend the <code>ProviderCosts</code> JSON schema with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-04-04&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">&quot;input_per_m_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">&quot;output_per_m_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>LoadProviderCosts</code> compares the file's version date against the compiled-in
+<code>CostRatesVersion</code>. If the file is older than the binary, emit a warning prompting the user
+to update their override file. If the file is newer, trust it silently (the user has already
+updated).</p>
+<p><strong>Option C — Weekly scheduled sweep (medium effort, fits existing infrastructure)</strong></p>
+<p>Add a <code>ralphglasses_cost_rate_check</code> tool (or a <code>schedule</code> entry in <code>.ralph/schedule.yaml</code>)
+that runs weekly, fetches a pinned YAML from a known URL (e.g., a <code>cost-rates.yaml</code> in the
+ralphglasses repo), diffs it against compiled-in constants, and posts a journal entry if any
+rate has drifted by &gt;10%. This leverages the existing <code>journal_write</code> / <code>journal_read</code>
+infrastructure and requires no new subsystems.</p>
+<p><strong>Recommendation</strong>: Implement Option A immediately (it's a two-line change that surfaces the
+problem in every ralphglasses binary) and plan Option C as a follow-on once the sweep
+infrastructure is more mature. Option B adds schema complexity for marginal benefit over A.</p>
+<hr />
+<h2 id="summary-of-changes-required">Summary of Changes Required</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/config/costs.go</code></td>
+<td>Update 4 constants (Opus, Codex input/output, Flash output, Flash-Lite input); add 6 new constants (Flash-Lite output, Gemini Pro input/output, Haiku input/output)</td>
+</tr>
+<tr>
+<td><code>internal/config/costs.go</code></td>
+<td>Add <code>CostRatesVersion</code> + <code>CostRatesMaxAgeDays</code> staleness tag</td>
+</tr>
+<tr>
+<td><code>internal/session/cascade_routing.go</code></td>
+<td>Swap Tier 3/4 ordering (Opus now cheaper than Codex); update <code>CostPer1M</code> values</td>
+</tr>
+<tr>
+<td><code>internal/session/costnorm.go</code></td>
+<td>No changes needed — aliases follow <code>config</code> constants automatically</td>
+</tr>
+<tr>
+<td><code>internal/session/providers_normalize.go</code></td>
+<td>No changes needed</td>
+</tr>
+<tr>
+<td><code>internal/session/costs.go</code></td>
+<td>Add aliases for 6 new constants from <code>config</code></td>
+</tr>
+<tr>
+<td><code>internal/mcpserver/</code> (startup)</td>
+<td>Add staleness warning log on <code>LoadCostRatesFromDir</code></td>
+</tr>
+</tbody>
+</table>
+<p>Tests in <code>internal/config/costs_test.go</code>, <code>internal/session/costs_test.go</code>, and
+<code>internal/session/costnorm_test.go</code> will need numeric updates for the changed constants.
+The golden tests in <code>providers_normalize_golden_test.go</code> will also need updating since
+expected costs are computed from the constants.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

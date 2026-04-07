@@ -1,0 +1,5319 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ralph-roadmap/RALPH-ROADMAP/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>RALPH-ROADMAP: Strategic Development Plan - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ralph-roadmap-strategic-development-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              RALPH-ROADMAP: Strategic Development Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-1-codebase-health-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Part 1: Codebase Health Dashboard
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 1: Codebase Health Dashboard">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-package-statistics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Package Statistics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-mcp-tool-health-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 MCP Tool Health Matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-mcp-middleware-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 MCP Middleware Chain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-test-coverage-by-blast-radius" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 Test Coverage by Blast Radius
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-failing-test-packages-detail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.5 Failing Test Packages Detail
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#16-e2e-harness-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.6 E2E Harness Assessment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#17-test-type-distribution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.7 Test Type Distribution
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-2-critical-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Part 2: Critical Findings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 2: Critical Findings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-critical-findings-6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 CRITICAL Findings (6)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-high-findings-18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 HIGH Findings (18)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-medium-findings-top-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 MEDIUM Findings (Top 25)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-race-condition-heat-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 Race Condition Heat Map
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-budget-enforcement-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 Budget Enforcement Gaps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#26-error-handling-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.6 Error Handling Gaps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#27-low-findings-17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.7 LOW Findings (17)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#28-info-findings-selected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.8 INFO Findings (Selected)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#29-architecture-deep-dive-session-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.9 Architecture Deep Dive: Session Lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#210-architecture-deep-dive-enhancer-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.10 Architecture Deep Dive: Enhancer Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#211-architecture-deep-dive-mcp-ecosystem-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.11 Architecture Deep Dive: MCP Ecosystem Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#212-architecture-deep-dive-fleet-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.12 Architecture Deep Dive: Fleet Operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#213-architecture-deep-dive-tui-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.13 Architecture Deep Dive: TUI Layer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#214-distro-layer-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.14 Distro Layer Status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#215-dead-code-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.15 Dead Code Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-3-strategic-initiatives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Part 3: Strategic Initiatives
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 3: Strategic Initiatives">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-initiative-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Initiative Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-initiative-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Initiative Details
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-dependency-dag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Dependency DAG
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-quarter-level-timeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Quarter-Level Timeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-4-autonomy-progression-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Part 4: Autonomy Progression Plan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 4: Autonomy Progression Plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-current-state-per-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Current State per Level
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-gate-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Gate Criteria
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4.2 Gate Criteria">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#l0-to-l1-auto-recovery-hard-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L0 to L1 (Auto-Recovery) -- Hard Gates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l1-to-l2-auto-optimize-hard-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L1 to L2 (Auto-Optimize) -- Hard Gates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l2-to-l3-full-autonomy-hard-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L2 to L3 (Full Autonomy) -- Hard Gates
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-safety-interlocks-required-at-each-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Safety Interlocks Required at Each Level
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-minimum-viable-l3-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Minimum Viable L3 Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-risk-matrix-for-l3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 Risk Matrix for L3
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#46-timeline-to-l3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.6 Timeline to L3
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-5-external-landscape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Part 5: External Landscape
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 5: External Landscape">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-multi-agent-orchestration-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Multi-Agent Orchestration Comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-mcp-ecosystem-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 MCP Ecosystem Status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-provider-capability-matrix-and-cost-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Provider Capability Matrix and Cost Optimization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54-thin-client-recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 Thin Client Recommendations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-6-fleet-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Part 6: Fleet Operations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 6: Fleet Operations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-fleet-readiness-tiers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 Fleet Readiness Tiers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-recommended-onboarding-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Recommended Onboarding Order
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#63-fleet-scaling-requirements-for-l3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 Fleet Scaling Requirements for L3
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-7-recommended-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Part 7: Recommended Actions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 7: Recommended Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#71-immediate-actions-next-2-weeks-critical-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 Immediate Actions (Next 2 Weeks) -- CRITICAL Fixes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-medium-term-actions-next-quarter-l2-enablement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 Medium-Term Actions (Next Quarter) -- L2 Enablement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#73-long-term-investments-next-6-months-l3-and-fleet-scaling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3 Long-Term Investments (Next 6 Months) -- L3 and Fleet Scaling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-a-finding-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix A: Finding Index
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Appendix A: Finding Index">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#contradiction-register" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contradiction Register
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#research-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Research Gaps
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-b-metric-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix B: Metric Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-c-phase-status-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix C: Phase Status Matrix
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Appendix C: Phase Status Matrix">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#roadmap-structural-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roadmap Structural Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phases-with-unrealistic-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phases with Unrealistic Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#critical-path-to-l3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critical Path to L3
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parallelizable-backlog-independent-of-l3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parallelizable Backlog (Independent of L3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-d-research-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix D: Research Index
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Appendix D: Research Index">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#report-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Report Inventory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#report-statistics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Report Statistics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-external-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key External References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="ralph-roadmap-strategic-development-plan">RALPH-ROADMAP: Strategic Development Plan</h1>
+<p><em>Generated 2026-04-04 by 24-agent cascading research sweep</em></p>
+<hr />
+<h2 id="executive-summary">Executive Summary</h2>
+<p>Ralphglasses is a Go-native multi-provider (Claude, Gemini, Codex) agent orchestration TUI and fleet manager with 166 MCP tools across 16 namespaces, currently at 44% roadmap completion (503/1,143 tasks) [Agent 1]. Six CRITICAL findings -- including two fatal concurrent map write races (R-01, R-02) and a $1,280/hr worst-case uncontrolled spend scenario -- block safe progression beyond L1 autonomy [S1, S3]. The platform occupies a unique competitive position as the only Go-native, MCP-first, multi-provider orchestrator with TUI, fleet distribution, and cost-aware cascade routing [Agent 9]. A 10-initiative strategic plan spanning Q2 2026 through Q1 2027 charts the path from current state through L3 full autonomy (72-hour unattended operation) in approximately 20 weeks of focused development [Agent 13, Agent 14].</p>
+<hr />
+<h2 id="part-1-codebase-health-dashboard">Part 1: Codebase Health Dashboard</h2>
+<h3 id="11-package-statistics">1.1 Package Statistics</h3>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Role</th>
+<th>Test Files</th>
+<th>Test Functions</th>
+<th>Coverage</th>
+<th>Status</th>
+<th>Blast Radius</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/session</code></td>
+<td>Session lifecycle, loop engine, supervisor</td>
+<td>193</td>
+<td>2,203</td>
+<td>83.1%</td>
+<td>FAIL (6 tests)</td>
+<td>T1-Critical</td>
+</tr>
+<tr>
+<td><code>internal/mcpserver</code></td>
+<td>MCP tool handlers, dispatch, middleware</td>
+<td>76</td>
+<td>1,084</td>
+<td>74.1%</td>
+<td>FAIL (1 test)</td>
+<td>T1-Critical</td>
+</tr>
+<tr>
+<td><code>internal/fleet</code></td>
+<td>Worker dispatch, coordination, autoscaler</td>
+<td>48</td>
+<td>625</td>
+<td>77.8%</td>
+<td>PASS</td>
+<td>T1-Critical</td>
+</tr>
+<tr>
+<td><code>internal/fleet/pool</code></td>
+<td>Budget pool, worker pool</td>
+<td>4</td>
+<td>~60</td>
+<td>97.9%</td>
+<td>PASS</td>
+<td>T1-Critical</td>
+</tr>
+<tr>
+<td><code>internal/enhancer</code></td>
+<td>13-stage prompt pipeline, scoring, lint</td>
+<td>30</td>
+<td>314</td>
+<td>93.8%</td>
+<td>PASS</td>
+<td>T2-Medium</td>
+</tr>
+<tr>
+<td><code>internal/enhancer/knowledge</code></td>
+<td>Tiered knowledge graph</td>
+<td>~3</td>
+<td>~40</td>
+<td>90.5%</td>
+<td>FAIL (race)</td>
+<td>T2-Medium</td>
+</tr>
+<tr>
+<td><code>internal/tui</code> (all)</td>
+<td>BubbleTea TUI, 21 views, 38 view files</td>
+<td>86</td>
+<td>1,148</td>
+<td>70-90%</td>
+<td>PASS</td>
+<td>T2-Medium</td>
+</tr>
+<tr>
+<td><code>internal/wm</code> (all)</td>
+<td>Compositor IPC (Sway, Hyprland, i3)</td>
+<td>11</td>
+<td>156</td>
+<td>52-90%</td>
+<td>PASS</td>
+<td>T2-Medium</td>
+</tr>
+<tr>
+<td><code>internal/e2e</code></td>
+<td>Mock harness, 24 scenarios</td>
+<td>14</td>
+<td>~84</td>
+<td>91.2%</td>
+<td>PASS</td>
+<td>T3-Lower</td>
+</tr>
+<tr>
+<td><code>internal/process</code></td>
+<td>Process management</td>
+<td>19</td>
+<td>—</td>
+<td>88.3%</td>
+<td>FAIL (1 test)</td>
+<td>T3-Lower</td>
+</tr>
+<tr>
+<td><code>internal/marathon</code></td>
+<td>Marathon supervisor, restart policy</td>
+<td>6</td>
+<td>—</td>
+<td>88.3%</td>
+<td>FAIL (1 test)</td>
+<td>T3-Lower</td>
+</tr>
+<tr>
+<td><code>cmd/ralphglasses-mcp</code></td>
+<td>MCP binary entrypoint</td>
+<td>10</td>
+<td>—</td>
+<td>59.1%</td>
+<td>FAIL (count)</td>
+<td>T3-Lower</td>
+</tr>
+<tr>
+<td><code>cmd/prompt-improver</code></td>
+<td>Prompt improvement CLI</td>
+<td>6</td>
+<td>—</td>
+<td>N/A</td>
+<td>FAIL (API key)</td>
+<td>T3-Lower</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Totals</strong>: 745 test files, 9,267 <code>Test*</code> functions, 84.5% reported coverage, <strong>7 actively failing packages</strong> [Agent 5].</p>
+<h3 id="12-mcp-tool-health-matrix">1.2 MCP Tool Health Matrix</h3>
+<table>
+<thead>
+<tr>
+<th>Namespace</th>
+<th>Tools</th>
+<th>Loading</th>
+<th>Handler Quality (1-5)</th>
+<th>Test Coverage (1-5)</th>
+<th>Annotation (1-5)</th>
+<th>Key Issues</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>core</strong></td>
+<td>13</td>
+<td>Eager</td>
+<td>4.5</td>
+<td>4</td>
+<td>3</td>
+<td>--</td>
+</tr>
+<tr>
+<td><strong>session</strong></td>
+<td>16</td>
+<td>Deferred*</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td><code>session_handoff</code> misplaced in <code>loop</code> [Agent 2]</td>
+</tr>
+<tr>
+<td><strong>loop</strong></td>
+<td>11</td>
+<td>Deferred*</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td>--</td>
+</tr>
+<tr>
+<td><strong>prompt</strong></td>
+<td>9</td>
+<td>Deferred*</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td>No prompt length validation [Agent 2]</td>
+</tr>
+<tr>
+<td><strong>fleet</strong></td>
+<td>10</td>
+<td>Deferred*</td>
+<td>5</td>
+<td>4</td>
+<td>3</td>
+<td>--</td>
+</tr>
+<tr>
+<td><strong>repo</strong></td>
+<td>5</td>
+<td>Deferred*</td>
+<td>5</td>
+<td>4</td>
+<td>3</td>
+<td>--</td>
+</tr>
+<tr>
+<td><strong>roadmap</strong></td>
+<td>6</td>
+<td>Deferred*</td>
+<td>5</td>
+<td>4</td>
+<td>3</td>
+<td><code>roadmap_prioritize</code> untested [Agent 2]</td>
+</tr>
+<tr>
+<td><strong>team</strong></td>
+<td>6</td>
+<td>Deferred*</td>
+<td>4</td>
+<td>2</td>
+<td>3</td>
+<td>Only 5 tests for 6 tools [Agent 2]</td>
+</tr>
+<tr>
+<td><strong>awesome</strong></td>
+<td>5</td>
+<td>Deferred*</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td>--</td>
+</tr>
+<tr>
+<td><strong>advanced</strong></td>
+<td>24</td>
+<td>Deferred*</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td>Too broad -- 7+ domains [Agent 2]</td>
+</tr>
+<tr>
+<td><strong>eval</strong></td>
+<td>6</td>
+<td>Deferred*</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td>Missing <code>IdempotentHint</code> [Agent 2]</td>
+</tr>
+<tr>
+<td><strong>fleet_h</strong></td>
+<td>5</td>
+<td>Deferred*</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td>--</td>
+</tr>
+<tr>
+<td><strong>observability</strong></td>
+<td>17</td>
+<td>Deferred*</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td>Worktree tools misplaced [Agent 2]</td>
+</tr>
+<tr>
+<td><strong>rdcycle</strong></td>
+<td>18</td>
+<td>Deferred*</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td>State machine tools deserve split [Agent 2]</td>
+</tr>
+<tr>
+<td><strong>plugin</strong></td>
+<td>4</td>
+<td>Deferred*</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td>--</td>
+</tr>
+<tr>
+<td><strong>sweep</strong></td>
+<td>8</td>
+<td>Deferred*</td>
+<td>4</td>
+<td>3</td>
+<td>4</td>
+<td><code>sweep_report</code> untested (302 lines) [Agent 2]</td>
+</tr>
+</tbody>
+</table>
+<p><em>Deferred loading is documented but </em><em>not activated in production</em>* -- all 166 tools load eagerly [Agent 2].</p>
+<p><strong>Annotation completeness</strong>: 0 tools have all 4 MCP spec hints; 83% have only 1 hint; 2 tools have zero behavioral hints [Agent 2].</p>
+<h3 id="13-mcp-middleware-chain">1.3 MCP Middleware Chain</h3>
+<p>The middleware stack processes every tool call in this order (outermost to innermost) [Agent 2]:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>ConcurrencyMiddleware(32 slots)
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  -&gt; TraceMiddleware(trace ID generation)
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    -&gt; TimeoutMiddleware(30s default; loop_step=10m, coverage_report=5m, self_test/self_improve=exempt)
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>      -&gt; InstrumentationMiddleware(latency, success/failure recording)
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        -&gt; EventBusMiddleware(tool.called events)
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>          -&gt; ValidationMiddleware(repo/path param validation)
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>            -&gt; handler
+</code></pre></div>
+<p><strong>Identified gaps in middleware</strong> [Agent 2]:
+1. <strong>No per-tool rate limiting</strong> -- global 32-slot semaphore only. One slow tool can consume all slots.
+2. <strong>No panic recovery at middleware level</strong> -- SDK-level <code>WithRecovery()</code> catches panics but does not emit structured error events to the event bus.
+3. <strong>Free-text fields unchecked</strong> -- <code>ValidationMiddleware</code> only validates <code>repo</code> and <code>path</code>. Prompt (up to 200KB), YAML workflow definitions, and content fields are not length-checked in middleware.
+4. <strong>Tracing not end-to-end</strong> -- <code>TraceMiddleware</code> generates trace IDs but there is no correlation with outgoing LLM API calls. OTel only used if <code>OTEL_EXPORTER_OTLP_ENDPOINT</code> is set.</p>
+<h3 id="14-test-coverage-by-blast-radius">1.4 Test Coverage by Blast Radius</h3>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Description</th>
+<th>Test Functions</th>
+<th>Coverage Floor</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1 (Critical)</td>
+<td>Session, MCP, Fleet</td>
+<td>~3,972</td>
+<td>74.1%</td>
+<td>2 packages FAILING</td>
+</tr>
+<tr>
+<td>T2 (Medium)</td>
+<td>Enhancer, TUI, WM</td>
+<td>~1,658</td>
+<td>52.4%</td>
+<td>1 package FAILING (knowledge race)</td>
+</tr>
+<tr>
+<td>T3 (Lower)</td>
+<td>E2E, process, marathon, cmd</td>
+<td>~500+</td>
+<td>32.3%</td>
+<td>4 packages FAILING</td>
+</tr>
+</tbody>
+</table>
+<h3 id="15-failing-test-packages-detail">1.5 Failing Test Packages Detail</h3>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Failure</th>
+<th>Root Cause</th>
+<th>Fix Effort</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/knowledge</code></td>
+<td>Fatal concurrent map writes in <code>TieredKnowledge.Query</code></td>
+<td>No mutex on <code>hitCount</code> map under <code>RLock</code></td>
+<td>S -- add <code>sync.RWMutex</code></td>
+<td>Agent 5, S1 R-08</td>
+</tr>
+<tr>
+<td><code>internal/marathon</code></td>
+<td><code>TestRestartPolicy_BackoffCap</code> expects 30s, gets negative</td>
+<td>Exponential overflow (<code>base * factor^count</code> overflows int64 at count=20, factor=10)</td>
+<td>S -- cap before exponentiation</td>
+<td>Agent 5</td>
+</tr>
+<tr>
+<td><code>internal/mcpserver</code></td>
+<td><code>TestHandleCircuitReset_Enhancer</code> expects <code>status=reset</code>, gets nil</td>
+<td>Enhancer circuit breaker not initialized in test harness</td>
+<td>S -- wire <code>srv.Enhancer.CircuitBreaker</code> in setup</td>
+<td>Agent 5</td>
+</tr>
+<tr>
+<td><code>internal/process</code></td>
+<td><code>TestCollectChildPIDs_DeadPID</code> expects nil, gets <code>[]</code></td>
+<td><code>nil</code> vs empty slice semantic mismatch</td>
+<td>Trivial</td>
+<td>Agent 5</td>
+</tr>
+<tr>
+<td><code>internal/session</code></td>
+<td>6 tests (WeeklyReport, TruncateStr, RunSessionOutput, RunCycle, ConfigOptimizer x2)</td>
+<td>Mix of boundary conditions and assertion mismatches</td>
+<td>S-M per test</td>
+<td>Agent 5</td>
+</tr>
+<tr>
+<td><code>cmd/ralphglasses-mcp</code></td>
+<td><code>TestToolGroupNames</code> expects 15 entries, actual 16</td>
+<td><code>sweep</code> namespace added without updating test expectation</td>
+<td>Trivial</td>
+<td>Agent 5</td>
+</tr>
+<tr>
+<td><code>cmd/prompt-improver</code></td>
+<td><code>ANTHROPIC_API_KEY</code> not set</td>
+<td>Tests call live API without skip guard</td>
+<td>S -- add key check</td>
+<td>Agent 5</td>
+</tr>
+</tbody>
+</table>
+<h3 id="16-e2e-harness-assessment">1.6 E2E Harness Assessment</h3>
+<p>24 scenarios across 6 categories: core (6), multi-provider (4), stress/edge (5), cost tracking (2), self-learning (5), cross-subsystem (3) [Agent 5].</p>
+<p><strong>Strengths</strong>: Full subsystem wiring coverage (<code>CascadeRouter</code>, <code>EpisodicMemory</code>, <code>ReflexionStore</code>, <code>CurriculumSorter</code>, <code>BanditHooks</code> injected per scenario). 5 explicit failure path scenarios. Tag-based selection. Baseline + gate regression detection system [Agent 5].</p>
+<p><strong>Weaknesses</strong>:
+- <strong>No multi-worker fan-out test</strong> -- all scenarios use <code>MaxConcurrentWorkers: 1</code>. Goroutine race conditions in worker collection loop untested in E2E [Agent 5].
+- <strong>No real git operations</strong> -- workers write files but do not commit. Worktree commit flow untested [Agent 5].
+- <strong>Live fire scenarios are stubs</strong> -- <code>live_test.go</code> has <code>t.Skip("live-fire not yet wired to real providers")</code> even with API key present [Agent 5].
+- <strong>No fleet-level E2E</strong> -- all scenarios exercise single-repo loop. Fleet coordination has no E2E coverage [Agent 5].
+- <strong>Provider failover partially mocked</strong> -- <code>ProviderFailover</code> scenario does not inject <code>LaunchWithFailover</code> path or <code>FailoverChain</code> config [Agent 5].</p>
+<h3 id="17-test-type-distribution">1.7 Test Type Distribution</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Count</th>
+<th>Packages</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unit tests</td>
+<td>~7,800</td>
+<td>All</td>
+</tr>
+<tr>
+<td>Coverage-padding tests</td>
+<td>~807 in 80 files</td>
+<td>25 packages (81% are real behavioral tests)</td>
+</tr>
+<tr>
+<td>Integration tests</td>
+<td>~44</td>
+<td>session, mcpserver, wm/sway</td>
+</tr>
+<tr>
+<td>E2E (mock harness)</td>
+<td>24 scenarios, ~60 functions</td>
+<td><code>internal/e2e</code></td>
+</tr>
+<tr>
+<td>Fuzz tests</td>
+<td>15 <code>Fuzz*</code> functions</td>
+<td>mcpserver, model, session, tui/components</td>
+</tr>
+<tr>
+<td>Benchmarks</td>
+<td>20 functions, 6 files</td>
+<td>session, fleet, mcpserver</td>
+</tr>
+<tr>
+<td>Race-targeted</td>
+<td>52 functions</td>
+<td>session</td>
+</tr>
+<tr>
+<td>Live fire</td>
+<td>2 (always skipped)</td>
+<td><code>internal/e2e/live_test.go</code></td>
+</tr>
+</tbody>
+</table>
+<p>[Agent 5]</p>
+<hr />
+<h2 id="part-2-critical-findings">Part 2: Critical Findings</h2>
+<h3 id="21-critical-findings-6">2.1 CRITICAL Findings (6)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Finding</th>
+<th>Source</th>
+<th>Fix Effort</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F-001</td>
+<td><code>AutoRecovery.retryState</code> race</td>
+<td>S1 R-01</td>
+<td>S (5 lines)</td>
+<td>Unprotected <code>map[string]*retryInfo</code> accessed from concurrent <code>HandleSessionError</code> and <code>ClearRetryState</code> callbacks. Fatal <code>concurrent map write</code> panic.</td>
+</tr>
+<tr>
+<td>F-002</td>
+<td><code>RetryTracker.attempts</code> race</td>
+<td>S1 R-02</td>
+<td>S (5 lines)</td>
+<td>Fleet <code>RetryTracker</code> map with no mutex; HTTP handlers <code>RecordFailure</code>/<code>RecordSuccess</code> race concurrently.</td>
+</tr>
+<tr>
+<td>F-003</td>
+<td>Phase 3.5.5 numbering collision</td>
+<td>Agent 1</td>
+<td>Trivial</td>
+<td>Two sections share identical sub-IDs (Codex parity vs theme export) -- any tool addressing tasks by ID has undefined behavior.</td>
+</tr>
+<tr>
+<td>F-004</td>
+<td><code>tools_loop_test.go</code> without implementation</td>
+<td>Agent 1</td>
+<td>M</td>
+<td>Phase 9 tier-1 tools have test expectations but no Go implementations -- test file exists, source does not.</td>
+</tr>
+<tr>
+<td>F-005</td>
+<td>Phase 9 marked complete but files missing</td>
+<td>Agent 1</td>
+<td>M</td>
+<td><code>merge.go</code>, <code>cycle_plan.go</code>, <code>scheduler.go</code>, <code>baseline.go</code> do not exist despite Phase 9 showing 100%.</td>
+</tr>
+<tr>
+<td>F-006</td>
+<td>5 path traversal vulnerabilities</td>
+<td>Agent 8</td>
+<td>S-M</td>
+<td><code>scratchpadName</code>, <code>name</code>, <code>worktree_paths</code>, <code>hooks.yaml command</code>, <code>verify_commands</code> bypass <code>ValidatePath</code> in MCP handlers.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-high-findings-18">2.2 HIGH Findings (18)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Finding</th>
+<th>Source</th>
+<th>Package</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F-007</td>
+<td><code>GateEnabled</code> unprotected global var</td>
+<td>S1 R-03</td>
+<td><code>session/autooptimize.go</code></td>
+</tr>
+<tr>
+<td>F-008</td>
+<td><code>OpenAIClient.LastResponseID</code> unprotected</td>
+<td>S1 R-04</td>
+<td><code>enhancer/openai_client.go</code></td>
+</tr>
+<tr>
+<td>F-009</td>
+<td><code>GetTeam</code> inconsistent lock ordering</td>
+<td>S1 R-05</td>
+<td><code>session/manager_team.go</code></td>
+</tr>
+<tr>
+<td>F-010</td>
+<td><code>loadedGroups</code> map unprotected in MCP dispatch</td>
+<td>S1 R-06</td>
+<td><code>mcpserver/tools.go</code></td>
+</tr>
+<tr>
+<td>F-011</td>
+<td>Unbounded in-memory work queue</td>
+<td>Agent 6</td>
+<td><code>fleet/queue.go</code></td>
+</tr>
+<tr>
+<td>F-012</td>
+<td>Queue lost on coordinator restart</td>
+<td>Agent 6</td>
+<td><code>fleet/</code></td>
+</tr>
+<tr>
+<td>F-013</td>
+<td>Shared circuit breaker across all 3 LLM providers</td>
+<td>Agent 4</td>
+<td><code>enhancer/circuit.go</code></td>
+</tr>
+<tr>
+<td>F-014</td>
+<td>Autoscaler scale-up is advisory only (no actuator)</td>
+<td>Agent 6</td>
+<td><code>fleet/autoscaler.go</code></td>
+</tr>
+<tr>
+<td>F-015</td>
+<td><code>RetryTracker</code> no mutex (independent finding)</td>
+<td>Agent 6</td>
+<td><code>fleet/retry.go</code></td>
+</tr>
+<tr>
+<td>F-016</td>
+<td>Self-improvement <code>RunLoop</code> error silently discarded</td>
+<td>S4</td>
+<td><code>mcpserver/handler_selfimprove.go</code></td>
+</tr>
+<tr>
+<td>F-017</td>
+<td>Supervisor swallows <code>RunCycle</code> failures</td>
+<td>S4</td>
+<td><code>session/supervisor.go</code></td>
+</tr>
+<tr>
+<td>F-018</td>
+<td>Chained cycle and sprint-planner failures swallowed</td>
+<td>S4</td>
+<td><code>session/supervisor.go</code></td>
+</tr>
+<tr>
+<td>F-019</td>
+<td>Hook exit codes entirely discarded</td>
+<td>S4</td>
+<td><code>hooks/hooks.go</code></td>
+</tr>
+<tr>
+<td>F-020</td>
+<td><code>MaxBudgetUSD == 0</code> allows uncapped sessions</td>
+<td>S3</td>
+<td><code>session/manager_lifecycle.go</code></td>
+</tr>
+<tr>
+<td>F-021</td>
+<td>Active sessions not stopped when <code>GlobalBudget</code> exhausted</td>
+<td>S3</td>
+<td><code>fleet/</code></td>
+</tr>
+<tr>
+<td>F-022</td>
+<td>Sweep cost cap is reactive (5-min polling)</td>
+<td>S3</td>
+<td><code>mcpserver/handler_sweep.go</code></td>
+</tr>
+<tr>
+<td>F-023</td>
+<td><code>TieredKnowledge.Query</code> fatal concurrent map writes</td>
+<td>Agent 5</td>
+<td><code>enhancer/knowledge/</code></td>
+</tr>
+<tr>
+<td>F-024</td>
+<td><code>AutoRecovery.retryState</code> confirmed independently</td>
+<td>Agent 3</td>
+<td><code>session/autorecovery.go</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-medium-findings-top-25">2.3 MEDIUM Findings (Top 25)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Finding</th>
+<th>Source</th>
+<th>Package</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F-025</td>
+<td>Deferred loading not activated in production binary</td>
+<td>Agent 2</td>
+<td><code>cmd/mcp.go</code></td>
+</tr>
+<tr>
+<td>F-026</td>
+<td><code>advanced</code> namespace too broad (24 tools, 7+ domains)</td>
+<td>Agent 2</td>
+<td><code>mcpserver/tools_builders_misc.go</code></td>
+</tr>
+<tr>
+<td>F-027</td>
+<td>8 handler files without test counterparts</td>
+<td>Agent 2, Agent 5</td>
+<td><code>mcpserver/</code></td>
+</tr>
+<tr>
+<td>F-028</td>
+<td>Supervisor tick launches goroutines with no WaitGroup</td>
+<td>S1 R-07</td>
+<td><code>session/supervisor.go</code></td>
+</tr>
+<tr>
+<td>F-029</td>
+<td><code>ValidationMiddleware</code> only covers <code>repo</code>/<code>path</code> params</td>
+<td>Agent 2</td>
+<td><code>mcpserver/middleware.go</code></td>
+</tr>
+<tr>
+<td>F-030</td>
+<td><code>hitCount[key]++</code> in TieredKnowledge under <code>RLock</code></td>
+<td>S1 R-08</td>
+<td><code>knowledge/tiered_knowledge.go</code></td>
+</tr>
+<tr>
+<td>F-031</td>
+<td>Shared CircuitBreaker across 3 enhancer providers</td>
+<td>S1 R-13</td>
+<td><code>enhancer/hybrid.go</code></td>
+</tr>
+<tr>
+<td>F-032</td>
+<td>Gemini Flash output rate understated by ~40%</td>
+<td>S3</td>
+<td><code>config/costs.go</code></td>
+</tr>
+<tr>
+<td>F-033</td>
+<td>7 packages actively failing tests</td>
+<td>Agent 5</td>
+<td>Multiple</td>
+</tr>
+<tr>
+<td>F-034</td>
+<td>80 coverage-padding files (807 functions, ~6% genuine padding)</td>
+<td>Agent 5</td>
+<td>All</td>
+</tr>
+<tr>
+<td>F-035</td>
+<td>LogView unbounded line growth</td>
+<td>Agent 7</td>
+<td><code>tui/views/</code></td>
+</tr>
+<tr>
+<td>F-036</td>
+<td>LoopRun.Iterations O(n) per 2s tick</td>
+<td>Agent 7</td>
+<td><code>tui/</code></td>
+</tr>
+<tr>
+<td>F-037</td>
+<td>5 completed tasks reference nonexistent files</td>
+<td>S2</td>
+<td>ROADMAP.md</td>
+</tr>
+<tr>
+<td>F-038</td>
+<td>Worker <code>executeWork</code> no timeout on status polling</td>
+<td>Agent 6</td>
+<td><code>fleet/worker.go</code></td>
+</tr>
+<tr>
+<td>F-039</td>
+<td>ROADMAP.md header task count stale (1,115 vs 1,143)</td>
+<td>Agent 1</td>
+<td>ROADMAP.md</td>
+</tr>
+<tr>
+<td>F-040</td>
+<td>Default target provider resolves to OpenAI, not Claude</td>
+<td>Agent 4</td>
+<td><code>enhancer/config.go</code></td>
+</tr>
+<tr>
+<td>F-041</td>
+<td>Opus rate in code $15/$75 vs actual $5/$25 (67% overestimate)</td>
+<td>S3</td>
+<td><code>config/costs.go</code></td>
+</tr>
+<tr>
+<td>F-042</td>
+<td>Fleet <code>CostPredictor</code> not auto-wired from <code>handleWorkComplete</code></td>
+<td>S3</td>
+<td><code>fleet/costpredict.go</code></td>
+</tr>
+<tr>
+<td>F-043</td>
+<td>4 independent <code>CircuitBreaker</code> implementations</td>
+<td>S2</td>
+<td>Multiple packages</td>
+</tr>
+<tr>
+<td>F-044</td>
+<td><code>GetLoop</code>/<code>ListLoops</code> use write lock instead of read lock</td>
+<td>Agent 3</td>
+<td><code>session/loop.go</code></td>
+</tr>
+<tr>
+<td>F-045</td>
+<td>Fleet worker <code>CompleteWork</code>/<code>Heartbeat</code> errors silently discarded</td>
+<td>S4</td>
+<td><code>fleet/worker.go</code></td>
+</tr>
+<tr>
+<td>F-046</td>
+<td><code>hw-detect.sh</code> cannot detect dual GPU or enumerate multiple cards</td>
+<td>Agent 8</td>
+<td><code>distro/scripts/</code></td>
+</tr>
+<tr>
+<td>F-047</td>
+<td><code>cancel</code> field in both anomaly detectors written/read without lock</td>
+<td>S1 R-11,R-12</td>
+<td><code>safety/anomaly*.go</code></td>
+</tr>
+<tr>
+<td>F-048</td>
+<td>JSON format enforcement 25.7% retry rate (target &lt;5%)</td>
+<td>Agent 3</td>
+<td><code>session/loop_steps.go</code></td>
+</tr>
+<tr>
+<td>F-049</td>
+<td>Autonomy level persist failure Warn-logged; resets to L0 on restart</td>
+<td>S4</td>
+<td><code>session/autonomy.go</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="24-race-condition-heat-map">2.4 Race Condition Heat Map</h3>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>CRITICAL</th>
+<th>HIGH</th>
+<th>MEDIUM</th>
+<th>LOW</th>
+<th>SAFE</th>
+<th>Total</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/session</code></td>
+<td>1 (R-01)</td>
+<td>1 (R-05)</td>
+<td>4 (R-07,R-09,R-10,R-14)</td>
+<td>1 (R-17)</td>
+<td>--</td>
+<td>7</td>
+</tr>
+<tr>
+<td><code>internal/fleet</code></td>
+<td>1 (R-02)</td>
+<td>--</td>
+<td>--</td>
+<td>1 (R-16)</td>
+<td>--</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>internal/mcpserver</code></td>
+<td>--</td>
+<td>1 (R-06)</td>
+<td>--</td>
+<td>1 (R-18)</td>
+<td>--</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>internal/enhancer</code></td>
+<td>--</td>
+<td>1 (R-04)</td>
+<td>2 (R-13,R-31)</td>
+<td>--</td>
+<td>--</td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>internal/knowledge</code></td>
+<td>--</td>
+<td>--</td>
+<td>1 (R-08)</td>
+<td>--</td>
+<td>1 (R-20)</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>internal/safety</code></td>
+<td>--</td>
+<td>--</td>
+<td>2 (R-11,R-12)</td>
+<td>--</td>
+<td>--</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>internal/session/costnorm</code></td>
+<td>--</td>
+<td>--</td>
+<td>--</td>
+<td>--</td>
+<td>1 (R-19)</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total: 2 CRITICAL + 4 HIGH + 8 MEDIUM + 4 LOW + 2 SAFE = 20 findings</strong> [S1].</p>
+<h3 id="25-budget-enforcement-gaps">2.5 Budget Enforcement Gaps</h3>
+<table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Description</th>
+<th>Risk</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Gap A</strong></td>
+<td><code>MaxBudgetUSD == 0</code> launches uncapped sessions when <code>DefaultBudgetUSD</code> is also zero</td>
+<td>Critical -- unbounded spend</td>
+<td>S3</td>
+</tr>
+<tr>
+<td><strong>Gap B</strong></td>
+<td>Active sessions continue after <code>GlobalBudget</code> exhausted; overspend silently accepted</td>
+<td>High -- budget exceeded</td>
+<td>S3</td>
+</tr>
+<tr>
+<td><strong>Gap C</strong></td>
+<td><code>pool.State.CanSpend()</code> uses stale total between refresh intervals</td>
+<td>Medium -- temporary over-budget</td>
+<td>S3</td>
+</tr>
+<tr>
+<td><strong>Gap D</strong></td>
+<td>Sweep cost cap polled every 5 minutes; overspend within interval</td>
+<td>Medium -- reactive, not proactive</td>
+<td>S3, Agent 6</td>
+</tr>
+<tr>
+<td><strong>$1,280/hr</strong></td>
+<td>32 workers x 4 sessions x $10 default x 2 rotations/hr with no fleet ceiling</td>
+<td>Critical -- theoretical maximum</td>
+<td>S3</td>
+</tr>
+<tr>
+<td><strong>Sweep 10x</strong></td>
+<td>Handler default $5.00/session vs user convention $0.50/session</td>
+<td>High -- cost surprise</td>
+<td>S3</td>
+</tr>
+</tbody>
+</table>
+<h3 id="26-error-handling-gaps">2.6 Error Handling Gaps</h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Count</th>
+<th>Key Examples</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Swallowed critical errors</td>
+<td>4</td>
+<td>RunLoop discarded, hook exit codes ignored, supervisor cycle failures silent, sweep stop failures ignored</td>
+<td>S4</td>
+</tr>
+<tr>
+<td>Swallowed medium errors</td>
+<td>10</td>
+<td>Fleet worker heartbeat/completion, store save fallback, file persistence, event bus publish</td>
+<td>S4</td>
+</tr>
+<tr>
+<td>Silent failure patterns</td>
+<td>6</td>
+<td>Autonomy persist failure, marathon checkpoint, NATS publish, session rehydration</td>
+<td>S4</td>
+</tr>
+<tr>
+<td>Error wrapping ratio</td>
+<td>65% global</td>
+<td>Worst: <code>mcpserver</code> at 25%; best: <code>store</code> at 93%</td>
+<td>S4</td>
+</tr>
+<tr>
+<td>Production panics</td>
+<td>2</td>
+<td>Both justified (<code>BlendedCostPer1MTok</code> range, <code>MustNew</code> constructor)</td>
+<td>S4</td>
+</tr>
+<tr>
+<td>Handler contract violations</td>
+<td><strong>0</strong></td>
+<td>All 44 MCP handlers correctly return <code>(*CallToolResult, nil)</code></td>
+<td>S4</td>
+</tr>
+</tbody>
+</table>
+<h3 id="27-low-findings-17">2.7 LOW Findings (17)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Finding</th>
+<th>Source</th>
+<th>Package</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F-050</td>
+<td><code>handleLoadToolGroup</code> description missing 3 namespaces</td>
+<td>Agent 2</td>
+<td><code>mcpserver/tools_dispatch.go</code></td>
+</tr>
+<tr>
+<td>F-051</td>
+<td>0/166 tools have all 4 MCP spec annotations</td>
+<td>Agent 2</td>
+<td><code>mcpserver/annotations.go</code></td>
+</tr>
+<tr>
+<td>F-052</td>
+<td>11 handlers defined in non-<code>handler_*.go</code> files</td>
+<td>Agent 2</td>
+<td><code>mcpserver/</code></td>
+</tr>
+<tr>
+<td>F-053</td>
+<td>Worktree/loop tools misplaced in <code>observability</code> namespace</td>
+<td>Agent 2</td>
+<td><code>mcpserver/</code></td>
+</tr>
+<tr>
+<td>F-054</td>
+<td><code>FleetDashboardModel</code> dead code (207+236 lines)</td>
+<td>S2</td>
+<td><code>tui/views/fleet_dashboard.go</code></td>
+</tr>
+<tr>
+<td>F-055</td>
+<td><code>ModalStack</code> defined but never instantiated</td>
+<td>S2</td>
+<td><code>tui/components/modal.go</code></td>
+</tr>
+<tr>
+<td>F-056</td>
+<td><code>ViewSearch</code> iota defined but no handler exists</td>
+<td>S2, Agent 7</td>
+<td><code>tui/app_init.go</code></td>
+</tr>
+<tr>
+<td>F-057</td>
+<td>No mouse scroll support in viewports</td>
+<td>Agent 7</td>
+<td><code>tui/handlers_mouse.go</code></td>
+</tr>
+<tr>
+<td>F-058</td>
+<td><code>RefreshAllRepos</code> synchronous on 2s UI tick (69+ repos)</td>
+<td>Agent 7</td>
+<td><code>tui/</code></td>
+</tr>
+<tr>
+<td>F-059</td>
+<td>Lint rule 14 conflicts with default pipeline (markdown for OpenAI flagged as no XML)</td>
+<td>Agent 4</td>
+<td><code>enhancer/context.go</code></td>
+</tr>
+<tr>
+<td>F-060</td>
+<td>Gemini <code>CreateCachedContent()</code> never called automatically</td>
+<td>Agent 4</td>
+<td><code>enhancer/gemini_client.go</code></td>
+</tr>
+<tr>
+<td>F-061</td>
+<td><code>PromptCache</code> O(n) eviction vs <code>EnhancerCache</code> O(1) LRU</td>
+<td>Agent 4</td>
+<td><code>enhancer/cache.go</code></td>
+</tr>
+<tr>
+<td>F-062</td>
+<td>Phase 6 and Phase 15 both named "Advanced Fleet Intelligence"</td>
+<td>Agent 1</td>
+<td>ROADMAP.md</td>
+</tr>
+<tr>
+<td>F-063</td>
+<td>Tailscale auth key stored as plain file before enrollment</td>
+<td>Agent 8</td>
+<td><code>distro/scripts/ts-enroll.sh</code></td>
+</tr>
+<tr>
+<td>F-064</td>
+<td>Sweep auto-sizes budget to 1.5x estimate even if caller passed lower</td>
+<td>S3</td>
+<td><code>mcpserver/handler_sweep.go</code></td>
+</tr>
+<tr>
+<td>F-065</td>
+<td>158 phantom file references in ROADMAP.md</td>
+<td>S2</td>
+<td>ROADMAP.md</td>
+</tr>
+<tr>
+<td>F-066</td>
+<td><code>mcpserver</code> has worst <code>%w</code> error wrapping ratio at 25%</td>
+<td>S4</td>
+<td><code>mcpserver/</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="28-info-findings-selected">2.8 INFO Findings (Selected)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Finding</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F-067</td>
+<td>Overall coverage 84.5%; 745 test files, 9,267 functions</td>
+<td>Agent 5</td>
+</tr>
+<tr>
+<td>F-068</td>
+<td>Zero genuine stale TODOs in production code</td>
+<td>S2</td>
+</tr>
+<tr>
+<td>F-070</td>
+<td>Unique competitive position: only Go-native multi-provider MCP orchestrator</td>
+<td>Agent 9</td>
+</tr>
+<tr>
+<td>F-071</td>
+<td>MCP spec at v2025-11-25 with Tasks, Extensions, OAuth</td>
+<td>Agent 10</td>
+</tr>
+<tr>
+<td>F-072</td>
+<td>Gemini 3.1 Pro: SWE-bench 80.6% at $2.00 vs Opus 80.8% at $5.00</td>
+<td>Agent 11</td>
+</tr>
+<tr>
+<td>F-073</td>
+<td>Opus 4.6 price dropped 67%; only flat-pricing frontier model across 1M context</td>
+<td>Agent 11</td>
+</tr>
+<tr>
+<td>F-074</td>
+<td>NixOS recommended for fleet deployment; Manjaro retained short-term</td>
+<td>Agent 12</td>
+</tr>
+<tr>
+<td>F-078</td>
+<td>Zero handler contract violations across all 44 MCP handlers</td>
+<td>S4</td>
+</tr>
+<tr>
+<td>F-080</td>
+<td>Three-mutex Manager lock hierarchy is sound; no cycles observed</td>
+<td>Agent 3</td>
+</tr>
+<tr>
+<td>F-081</td>
+<td>Bootstrap correctly clamps autonomy to L1 from <code>.ralphrc</code></td>
+<td>Agent 3</td>
+</tr>
+<tr>
+<td>F-082</td>
+<td>L3 critical path: ~100 tasks across 6 unstarted phases, all L/XL</td>
+<td>Agent 1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="29-architecture-deep-dive-session-lifecycle">2.9 Architecture Deep Dive: Session Lifecycle</h3>
+<p>The session manager uses a <strong>three-mutex hierarchy</strong> (<code>sessionsMu</code>, <code>workersMu</code>, <code>configMu</code>) with a <code>statusCache sync.Map</code> hot path for TUI polling. No direct deadlock risk observed -- the manager never holds two of its own mutexes simultaneously [Agent 3].</p>
+<p><strong>State machine</strong>: 6 states (<code>launching</code>, <code>running</code>, <code>completed</code>, <code>stopped</code>, <code>errored</code>, <code>interrupted</code>). Transition triggers are well-defined. <code>IsTerminal()</code> is the canonical completion test [Agent 3].</p>
+<p><strong>Cascade routing</strong>: Default config uses Gemini as cheap provider and Codex as expensive provider with 0.7 confidence threshold. The confidence heuristic combines 5 factors: <code>verifyPassed (0.30)</code>, <code>hedgeCount (0.25)</code>, <code>turnRatio (0.20)</code>, <code>errorFree (0.15)</code>, <code>questionCount (0.10)</code>. The calibrated <code>DecisionModel</code> (logistic regression on 10 features) requires 50+ samples to activate -- currently untrained due to 100% Claude observation distribution [Agent 3].</p>
+<p><strong>Loop engine architecture</strong>: <code>RunLoop</code> calls <code>StepLoop</code> per iteration with convergence gates (retry limit, max iterations, deadline, consecutive no-ops). Workers fan out in goroutines with <code>recover()</code> guards and a 15-minute collection timeout. Key subsystems: planner JSON parsing (25.7% retry rate), near-duplicate detection, curriculum sorting, episodic memory injection, cascade routing per worker [Agent 3].</p>
+<p><strong>Supervisor control loop</strong>: 60-second tick (observed at ~27s in prior run). Each tick: <code>shouldTerminate()</code>, <code>stallHandler.CheckAndHandle()</code>, <code>monitor.Evaluate()</code>, <code>chainer.CheckAndChain()</code>, <code>planner.PlanNextSprint()</code>, <code>persistState()</code>. Feedback loop runs every 10 ticks. Cooldown between cycle launches: 5 minutes [Agent 3].</p>
+<p><strong>Store dual-write</strong>: JSON file persistence and SQLite store coexist. Cross-process session discovery (TUI to MCP server) depends on JSON files. Migration to SQLite-only is planned but blocked by the shared-filesystem discovery pattern [Agent 3].</p>
+<h3 id="210-architecture-deep-dive-enhancer-pipeline">2.10 Architecture Deep Dive: Enhancer Pipeline</h3>
+<p>13 deterministic pipeline stages executing sequentially on mutable text [Agent 4]:</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Name</th>
+<th>Provider-Aware?</th>
+<th>Key Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Config rules</td>
+<td>No</td>
+<td>Substring-match augmentation from <code>.prompt-improver.yaml</code></td>
+</tr>
+<tr>
+<td>1</td>
+<td>Specificity</td>
+<td>No</td>
+<td>22-entry vague phrase replacement table</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Positive reframe</td>
+<td>No</td>
+<td>17-entry negative-to-positive rewriting (safety bypass for credentials)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Tone downgrade</td>
+<td><strong>Claude-only</strong></td>
+<td>ALL-CAPS normalization (43-entry acronym whitelist)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Overtrigger rewrite</td>
+<td><strong>Claude-only</strong></td>
+<td><code>CRITICAL: You MUST</code> prefix stripping</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Example wrapping</td>
+<td>No</td>
+<td>Detects bare examples, wraps in <code>&lt;examples&gt;</code> XML</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Structure</td>
+<td><strong>Provider-adapted</strong></td>
+<td>XML tags (Claude) or markdown headers (Gemini/OpenAI)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Context reorder</td>
+<td>No</td>
+<td>Moves large context blocks before query in 20K+ char prompts</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Format enforcement</td>
+<td>No</td>
+<td>Detects JSON/YAML/CSV/code requests, injects <code>&lt;output_format&gt;</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td>Quote grounding</td>
+<td>No</td>
+<td>Injects quote-grounding instruction for analysis prompts &gt;= 5K tokens</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Self-check</td>
+<td>No</td>
+<td>Appends <code>&lt;verification&gt;</code> checklist (code/analysis/troubleshooting)</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Overengineering guard</td>
+<td>No</td>
+<td>Appends anti-overengineering instruction for code tasks</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Preamble suppression</td>
+<td>No</td>
+<td>Appends direct-response instruction for code/workflow tasks</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Scoring</strong>: 10 dimensions (clarity 0.15, specificity 0.12, context 0.10, structure 0.15, examples 0.10, placement 0.08, role 0.08, focus 0.07, format 0.08, tone 0.07). Score capped to [5, 95]. FINDING-240 baselines lowered to prevent inflation [Agent 4].</p>
+<p><strong>Key gaps</strong>:
+- Default target provider resolves to OpenAI (markdown), not Claude (XML) [Agent 4]
+- Shared circuit breaker across all 3 providers -- one flaky provider trips for all [Agent 4, S1]
+- Gemini <code>CreateCachedContent()</code> never called automatically [Agent 4]
+- <code>FormatContextBlockMarkdown()</code> defined but unreachable from pipeline [Agent 4]
+- <code>PromptCache</code> eviction is O(n) vs <code>EnhancerCache</code> O(1) LRU [Agent 4]</p>
+<h3 id="211-architecture-deep-dive-mcp-ecosystem-integration">2.11 Architecture Deep Dive: MCP Ecosystem Integration</h3>
+<p><strong>Spec compliance gap</strong>: ralphglasses targets spec ~2025-03-26. The 2025-11-25 spec adds features worth adopting [Agent 10]:</p>
+<ol>
+<li><strong>Tasks primitive</strong> -- async call-now-fetch-later model. Maps naturally to sweep/fleet operations where tool calls initiate long-running work and callers poll for results.</li>
+<li><strong>Extensions framework</strong> -- custom protocol extensions for fleet-specific capabilities (cost tracking, autonomy levels).</li>
+<li><strong>Structured output</strong> -- tools declare <code>outputSchema</code> (JSON Schema) and return <code>structuredContent</code>. Would improve the 25.7% JSON retry rate by allowing MCP-layer output validation.</li>
+</ol>
+<p><strong>Go SDK migration path</strong>: Official <code>modelcontextprotocol/go-sdk</code> v1.4+ provides semver stability that mcp-go v0.46.0 (pre-1.0) does not. mcpkit provides ToolModule pattern, DynamicRegistry, middleware chain, and gateway on top of mcp-go. Migration updates the transport layer in mcpkit, not individual tool handlers [Agent 10].</p>
+<p><strong>Gateway landscape</strong>: Bifrost (Go, open-source), Microsoft MCP Gateway (K8s-native), Envoy AI Gateway, Traefik Hub all aggregate upstream servers. mcpkit's <code>DynamicRegistry</code> serves as a built-in gateway. The 16-namespace deferred loading model effectively mirrors the gateway aggregation pattern [Agent 10].</p>
+<h3 id="212-architecture-deep-dive-fleet-operations">2.12 Architecture Deep Dive: Fleet Operations</h3>
+<p><strong>Job processing pipeline</strong>: <code>SubmitWork</code> -&gt; <code>WorkQueue.Push</code> (in-memory map) -&gt; <code>WorkerAgent.pollLoop</code> (5s interval) -&gt; <code>assignWork</code> (locality + constraint scoring) -&gt; <code>executeWork</code> (2s status polling) -&gt; <code>CompleteWork</code> -&gt; <code>RetryTracker</code>/<code>GlobalBudget</code> update [Agent 6].</p>
+<p><strong>Three budget layers</strong>: (1) GlobalBudget fleet ceiling ($500 default), (2) BudgetManager per-worker tracking ($10 default), (3) BudgetPool per-sweep allocation [Agent 6].</p>
+<p><strong>Autoscaler</strong>: Full algorithm implemented. Scale-up triggers when <code>queueDepth &gt; 2x active</code> (budget floor: 10% remaining). Scale-down when <code>idle/active &gt; 0.50</code> and queue empty. <strong>Scale-up is advisory only</strong> -- publishes event but spawns nothing. Scale-down is actuated via worker draining [Agent 6].</p>
+<p><strong>A2A protocol</strong>: Core task lifecycle working (6 states). Agent card serving, task offers, negotiation, skill dispatch all functional. <strong>Stubs</strong>: SSE streaming, authentication enforcement, multi-turn input-required resume. <strong>Gap</strong>: <code>A2AAdapter</code> and <code>Coordinator</code> queue are parallel systems, not integrated [Agent 6].</p>
+<p><strong>Topology</strong>: Consistent hash ring (Ketama MD5, 128 virtual nodes), multi-strategy routing optimizer (simulation-based). <strong>Not connected</strong> to actual <code>assignWork</code> path -- optimizer is advisory. Single coordinator SPOF with no HA [Agent 6].</p>
+<h3 id="213-architecture-deep-dive-tui-layer">2.13 Architecture Deep Dive: TUI Layer</h3>
+<p><strong>Navigation</strong>: <code>CurrentView</code> + <code>ViewStack</code> push/pop model with breadcrumb. 21 named ViewModes, 38 view files. Tab switching (1-4) clears entire stack [Agent 7].</p>
+<p><strong>Tick architecture</strong>: 2-second <code>tea.Tick</code> performs synchronous I/O for every repo (69+ file reads), rebuilds all tables regardless of current view, aggregates cost history. At 100+ repos, tick duration grows linearly and blocks the render loop [Agent 7].</p>
+<p><strong>Memory risks</strong>:
+- <code>LogView.Lines</code> unbounded -- hours of verbose output exhausts memory [Agent 7]
+- <code>LoopRun.Iterations</code> grows indefinitely; <code>SnapshotLoopControl</code> iterates all per tick at O(n) [Agent 7]
+- <code>CostHistory</code> aggregation creates large intermediate slice every 2 seconds [Agent 7]</p>
+<p><strong>Dead code</strong>: <code>FleetDashboardModel</code> (207 lines + 236-line test) never instantiated. <code>ModalStack</code> defined but unused. <code>ViewSearch</code> iota has no handler [S2, Agent 7].</p>
+<p><strong>Reactive path</strong>: fsnotify watches <code>.ralph/</code> dirs with one-shot re-arm pattern. Failure handling: 5 consecutive failures disables watcher, falls back to 2s polling [Agent 7].</p>
+<h3 id="214-distro-layer-status">2.14 Distro Layer Status</h3>
+<p><strong>Compositor abstraction</strong>: 9 commands across Sway/Hyprland/i3 with detection priority matching <code>internal/wm/detect.go</code>. Self-tests exist for all three compositors [Agent 8].</p>
+<p><strong>GPU detection</strong>: <code>hw-detect.sh</code> hardcodes PCI IDs for ProArt X870E hardware. Handles single RTX 4090 + AMD iGPU. <strong>Does not</strong> handle dual RTX 4090. GTX 1060 blacklisted via <code>NVreg_ExcludedGpus</code> [Agent 8].</p>
+<p><strong>Boot chain</strong>: UEFI -&gt; GRUB -&gt; kernel -&gt; systemd -&gt; hw-detect.service -&gt; getty@tty1 (autologin) -&gt; Sway/Hyprland/i3 -&gt; kiosk config -&gt; 7x alacritty -&gt; ralphglasses [Agent 8].</p>
+<p><strong>Critical gaps</strong>: No disk encryption (LUKS). No secrets management (API keys in env vars). Autorandr tasks 3.4.1-3.4.4 incomplete. <code>hw-detect.sh</code> not idempotent. <code>nvidia-drm.modeset=1</code> checked but only warned (not auto-added) [Agent 8].</p>
+<h3 id="215-dead-code-summary">2.15 Dead Code Summary</h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Item</th>
+<th>Lines</th>
+<th>Action</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unused struct</td>
+<td><code>FleetDashboardModel</code> + test</td>
+<td>443</td>
+<td>Delete</td>
+<td>S2</td>
+</tr>
+<tr>
+<td>Unused struct</td>
+<td><code>ModalStack</code></td>
+<td>~75</td>
+<td>Flag for removal</td>
+<td>S2</td>
+</tr>
+<tr>
+<td>Unreachable iota</td>
+<td><code>ViewSearch</code></td>
+<td>1</td>
+<td>Remove or implement</td>
+<td>S2</td>
+</tr>
+<tr>
+<td>Convention violation</td>
+<td>11 handlers in non-<code>handler_*.go</code> files</td>
+<td>964</td>
+<td>Move to handler files</td>
+<td>S2, Agent 2</td>
+</tr>
+<tr>
+<td>Duplicate impls</td>
+<td>4 <code>CircuitBreaker</code> copies</td>
+<td>varies</td>
+<td>Consolidate to <code>safety/</code></td>
+<td>S2</td>
+</tr>
+<tr>
+<td>Duplicate impls</td>
+<td>2 <code>BudgetPool</code> copies (fleet + session)</td>
+<td>varies</td>
+<td>Evaluate merge</td>
+<td>S2</td>
+</tr>
+<tr>
+<td>Phantom ROADMAP refs</td>
+<td>5 in completed tasks, 153 in future tasks</td>
+<td>N/A</td>
+<td>Fix 5 completed, accept 153</td>
+<td>S2</td>
+</tr>
+<tr>
+<td>Stale comments</td>
+<td>0 genuine (7 intentional regex/lint patterns)</td>
+<td>N/A</td>
+<td>None needed</td>
+<td>S2</td>
+</tr>
+<tr>
+<td>Orphaned test files</td>
+<td>187 files (~39,436 lines)</td>
+<td>~39,436</td>
+<td>Keep -- predominantly real tests</td>
+<td>S2</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="part-3-strategic-initiatives">Part 3: Strategic Initiatives</h2>
+<h3 id="31-initiative-summary">3.1 Initiative Summary</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Initiative</th>
+<th>Tasks</th>
+<th>Weeks</th>
+<th>Prerequisites</th>
+<th>Risk</th>
+<th>Gate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Concurrency &amp; Safety Hardening</td>
+<td>~35</td>
+<td>2</td>
+<td>None</td>
+<td>HIGH</td>
+<td>Race-free, budget-enforced</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Test Green &amp; Coverage Integrity</td>
+<td>~40</td>
+<td>2</td>
+<td>I1</td>
+<td>MEDIUM</td>
+<td>Green CI, Phase 1 complete</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Cost Control &amp; Multi-Provider Cascade</td>
+<td>~50</td>
+<td>3</td>
+<td>I1</td>
+<td>MEDIUM</td>
+<td>$0.05/task avg, 3-provider active</td>
+</tr>
+<tr>
+<td>4</td>
+<td>MCP Tool Layer Modernization</td>
+<td>~45</td>
+<td>3</td>
+<td>I2</td>
+<td>HIGH</td>
+<td>Official SDK, deferred loading</td>
+</tr>
+<tr>
+<td>5</td>
+<td>TUI Performance &amp; Fleet Dashboard</td>
+<td>~55</td>
+<td>3</td>
+<td>I2</td>
+<td>MEDIUM</td>
+<td>Sub-100ms at 100+ sessions</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Bootable Thin Client</td>
+<td>~50</td>
+<td>3</td>
+<td>I5</td>
+<td>HIGH</td>
+<td>Bootable ISO with Sway kiosk</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Fleet Scaling &amp; A2A Protocol</td>
+<td>~75</td>
+<td>4</td>
+<td>I1, I3</td>
+<td>HIGH</td>
+<td>Multi-node fleet, A2A live</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Sandboxing &amp; Security</td>
+<td>~55</td>
+<td>3</td>
+<td>I1, I7</td>
+<td>HIGH</td>
+<td>Sandboxed multi-tenant</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Autonomous R&amp;D (L2)</td>
+<td>~65</td>
+<td>4</td>
+<td>I1, I2, I3</td>
+<td>HIGH</td>
+<td>Multi-hour unattended R&amp;D</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Prompt Enhancement &amp; Observability</td>
+<td>~55</td>
+<td>3</td>
+<td>I3</td>
+<td>LOW</td>
+<td>OTel e2e, prompt caching</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Total</strong></td>
+<td><strong>~525</strong></td>
+<td><strong>~30</strong></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Remaining ~115 tasks (Phases 14-25: memory, swarm, edge, world models, marketplace, federated learning) are deferred to post-L3 [Agent 13].</p>
+<h3 id="32-initiative-details">3.2 Initiative Details</h3>
+<p><strong>I1 -- Concurrency &amp; Safety Hardening</strong> (Foundation for everything):
+Fix all 6 CRITICAL+HIGH race conditions [S1 R-01 through R-06]. Close 3 budget enforcement gaps [S3]. Surface supervisor cycle failures and propagate RunLoop errors [S4]. Fix 7 failing test packages [Agent 5]. Delete confirmed dead code (443 lines) [S2]. This is the prerequisite for L1 activation and all downstream initiatives.</p>
+<p><strong>I2 -- Test Green &amp; Coverage Integrity</strong>:
+Achieve green <code>go test -race ./...</code> across all packages. Complete Phase 1 (2 tasks remaining: ParamParser extraction, handler generator) [Agent 1]. Add tests for 5 highest-risk untested handlers (<code>handler_sweep_report.go</code> at 302 lines is priority #1) [Agent 2, Agent 5]. Activate deferred loading. Complete all 166 tool annotations to 4/4 MCP spec hints [Agent 2].</p>
+<p><strong>I3 -- Cost Control &amp; Multi-Provider Cascade</strong>:
+Update compiled-in rates to April 2026 pricing (Opus $5/$25 vs $15/$75 coded, Gemini Flash $3.50 vs $2.50 coded) [S3, Agent 11]. Implement Tier 0 classifier (GPT-4.1-nano at $0.05/1M). Activate Gemini Flash as Tier 1 worker. Target: $0.17/task average down to $0.03-0.05 [Agent 11]. Wire fleet CostPredictor auto-feed [S3].</p>
+<p><strong>I4 -- MCP Tool Layer Modernization</strong>:
+Migrate from mcp-go v0.46.0 to official <code>modelcontextprotocol/go-sdk</code> v1.4+ (XL task touching all registration paths) [Agent 10]. Split <code>advanced</code> namespace (24 tools spanning 7+ domains) into <code>rc</code> (4), <code>autonomy</code> (4), <code>workflow</code> (3), and residual [Agent 2]. Move 7 misplaced tools. Add per-namespace concurrency caps [Agent 2].</p>
+<p><strong>I5 -- TUI Performance &amp; Fleet Dashboard</strong>:
+Replace 2-second polling tick with event bus subscription [Agent 7]. Add max-lines cap to <code>LogView.Lines</code> (ring buffer) [Agent 7]. Skip table rebuilds when view is not active. Virtual scrolling for 100+ sessions. Charm Bubble Tea v2 migration (XL) [Agent 13]. Implement or remove <code>ViewSearch</code> [Agent 7, S2].</p>
+<p><strong>I6 -- Bootable Thin Client</strong>:
+Complete ISO build pipeline (task 4.1.3 blocks 4.2/4.5/4.10) [Agent 1]. Add LUKS disk encryption [Agent 8]. Integrate 1Password CLI for secrets [Agent 8]. Drop i3 support, archive <code>distro/i3/</code> [Agent 12]. Extend <code>hw-detect.sh</code> for dual RTX 4090. Implement greetd boot-to-TUI pipeline [Agent 12].</p>
+<p><strong>I7 -- Fleet Scaling &amp; A2A Protocol</strong>:
+Complete Phase 10.5: NATS transport, multi-node coordination, SQLite WAL migration [Agent 1]. Bound work queue (capacity limit + persistent backing) [Agent 6]. Parallelize sweep fan-out [Agent 6]. Adopt official A2A Go SDK, implement SSE streaming, A2A-level auth [Agent 9]. Begin Tailscale fleet networking [Agent 13].</p>
+<p><strong>I8 -- Sandboxing &amp; Security</strong>:
+Fix 5 BLOCKER path traversal vulnerabilities [Agent 8]. Complete Phase 5 network isolation. Implement Firecracker/gVisor sandboxing for untrusted sessions [Agent 1]. Budget federation across sandboxed sessions. Begin Phase 17.1 safety boundaries [Agent 13].</p>
+<p><strong>I9 -- Autonomous R&amp;D (L2) &amp; Self-Improvement</strong>:
+Fix planner JSON reliability to &lt;5% retry rate (currently 25.7%) [Agent 8]. Surface supervisor failures as errors with HITL interrupts [S4]. Implement per-provider circuit breakers [Agent 4, S1]. Ship self-test CI gate and self-improvement acceptance pipeline [Agent 13]. Begin Phase 13.1 self-healing runtime [Agent 14].</p>
+<p><strong>I10 -- Prompt Enhancement &amp; Observability</strong>:
+Fix default target provider to match LLM provider [Agent 4]. Wire <code>FormatContextBlockMarkdown()</code> into pipeline [Agent 4]. Complete OTel integration (correlate MCP traces with LLM API spans) [Agent 2]. Activate prompt caching for all 3 providers [Agent 4, Agent 11]. Begin evaluation harness (SWE-bench, tau-bench) [Agent 13].</p>
+<h3 id="33-dependency-dag">3.3 Dependency DAG</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>I1 Concurrency &amp; Safety Hardening
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a> |
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a> +---&gt; I2 Test Green &amp; Coverage Integrity
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a> |      |
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a> |      +---&gt; I4 MCP Tool Layer Modernization
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a> |      |
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a> |      +---&gt; I5 TUI Performance &amp; Fleet Dashboard
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a> |      |      |
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a> |      |      +---&gt; I6 Bootable Thin Client
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a> |      |
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a> |      +---&gt; I9 Autonomous R&amp;D (L2) &amp; Self-Improvement
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a> |
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a> +---&gt; I3 Cost Control &amp; Multi-Provider Cascade
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a> |      |
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a> |      +---&gt; I9 (also depends on I1, I2)
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a> |      |
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a> |      +---&gt; I10 Prompt Enhancement &amp; Observability
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a> |      |
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a> |      +---&gt; I7 Fleet Scaling &amp; A2A Protocol
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a> |             |
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a> |             +---&gt; I8 Sandboxing &amp; Security
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a> |
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a> +---&gt; I7 (also depends on I1)
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a> +---&gt; I8 (also depends on I1)
+</code></pre></div>
+<p>Edge list: <code>I1 --&gt; I2, I3, I7, I8, I9</code> | <code>I2 --&gt; I4, I5, I9</code> | <code>I3 --&gt; I7, I9, I10</code> | <code>I5 --&gt; I6</code> | <code>I7 --&gt; I8</code> [Agent 13].</p>
+<h3 id="34-quarter-level-timeline">3.4 Quarter-Level Timeline</h3>
+<table>
+<thead>
+<tr>
+<th>Quarter</th>
+<th>Initiatives</th>
+<th>Key Milestones</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Q2 2026</strong> (Apr-Jun)</td>
+<td>I1, I2, I3, I4 start, I5 start</td>
+<td>All CRITICAL/HIGH races fixed. Green CI. Multi-provider cascade active. Official MCP SDK adopted. L1 autonomy stable.</td>
+</tr>
+<tr>
+<td><strong>Q3 2026</strong> (Jul-Sep)</td>
+<td>I5 complete, I9, I6, I10</td>
+<td>Self-improvement pipeline shipping. Bootable ISO with Sway kiosk. OTel tracing end-to-end. L2 autonomy validated.</td>
+</tr>
+<tr>
+<td><strong>Q4 2026</strong> (Oct-Dec)</td>
+<td>I7, I8</td>
+<td>Multi-node fleet over Tailscale. A2A protocol live. Sandboxing complete. L3 readiness assessment.</td>
+</tr>
+<tr>
+<td><strong>Q1 2027</strong> (Jan-Mar)</td>
+<td>Phase 13, 14, 17</td>
+<td>Self-healing runtime. Persistent agent memory. Safety guardrails. 72-hour unattended L3 operation.</td>
+</tr>
+</tbody>
+</table>
+<p>[Agent 13]</p>
+<hr />
+<h2 id="part-4-autonomy-progression-plan">Part 4: Autonomy Progression Plan</h2>
+<h3 id="41-current-state-per-level">4.1 Current State per Level</h3>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Name</th>
+<th>Status</th>
+<th>Key Finding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>L0</strong> (Observe)</td>
+<td>Default</td>
+<td>Functional</td>
+<td>Decision audit log works. Bootstrap clamps to L1 max from <code>.ralphrc</code>. No side effects. [Agent 14]</td>
+</tr>
+<tr>
+<td><strong>L1</strong> (Auto-Recover)</td>
+<td>Partially functional</td>
+<td><strong>Not safe</strong></td>
+<td>R-01 CRITICAL race in <code>retryState</code>. Supervisor swallows cycle failures. Hook exit codes discarded. [Agent 14, S1, S4]</td>
+</tr>
+<tr>
+<td><strong>L2</strong> (Auto-Optimize)</td>
+<td>Not ready</td>
+<td><strong>Blocked</strong></td>
+<td>3 budget gaps. Gemini rates 40% off. DecisionModel untrained (0 multi-provider data). Supervisor never run on Manjaro. [Agent 14, S3]</td>
+</tr>
+<tr>
+<td><strong>L3</strong> (Full Autonomy)</td>
+<td>Not ready</td>
+<td><strong>Blocked</strong></td>
+<td>All L1/L2 issues amplified. $1,280/hr worst-case. Queue not persisted. Autoscaler advisory-only. [Agent 14, S3, Agent 6]</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-gate-criteria">4.2 Gate Criteria</h3>
+<h4 id="l0-to-l1-auto-recovery-hard-gates">L0 to L1 (Auto-Recovery) -- Hard Gates</h4>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Fix</th>
+<th>Source</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G1.1</td>
+<td>Add <code>sync.Mutex</code> to <code>AutoRecovery.retryState</code></td>
+<td>S1 R-01</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G1.2</td>
+<td>Surface supervisor cycle failures at Error level; demote autonomy after N consecutive failures</td>
+<td>S4</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G1.3</td>
+<td>Propagate RunLoop error in background goroutines</td>
+<td>S4</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G1.4</td>
+<td>Fix autonomy level persistence failure</td>
+<td>S4</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G1.5</td>
+<td>Add hook exit code handling</td>
+<td>S4</td>
+<td>S</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Exit</strong>: 4-hour unattended L1 session with at least one auto-recovery event, no crashes, no orphaned sessions [Agent 14].</p>
+<h4 id="l1-to-l2-auto-optimize-hard-gates">L1 to L2 (Auto-Optimize) -- Hard Gates</h4>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Fix</th>
+<th>Source</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G2.1</td>
+<td>Enforce mandatory $5 default budget</td>
+<td>S3 Gap A</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G2.2</td>
+<td>Change sweep handler default from $5.00 to $0.50</td>
+<td>S3</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G2.3</td>
+<td>Wire <code>CostPredictor.Record()</code> to <code>handleWorkComplete</code></td>
+<td>S3</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G2.4</td>
+<td>Update Gemini 2.5 Flash output rate ($2.50 to $3.50)</td>
+<td>S3</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G2.5</td>
+<td>Make <code>GateEnabled</code> an <code>atomic.Bool</code></td>
+<td>S1 R-03</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G2.6</td>
+<td>Protect <code>loadedGroups</code> map with mutex</td>
+<td>S1 R-06</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G2.7</td>
+<td>Add <code>sync.Mutex</code> to <code>RetryTracker.attempts</code></td>
+<td>S1 R-02</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G2.8</td>
+<td>Fix <code>GetTeam</code> lock ordering</td>
+<td>S1 R-05</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G2.9</td>
+<td>Add mutex to <code>OpenAIClient.LastResponseID</code></td>
+<td>S1 R-04</td>
+<td>S</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Functional requirements</strong>: 50+ multi-provider observations for DecisionModel. 24+ hour supervisor run on Manjaro. Cascade routing 70%+ cheap-provider completion rate [Agent 14].</p>
+<h4 id="l2-to-l3-full-autonomy-hard-gates">L2 to L3 (Full Autonomy) -- Hard Gates</h4>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Fix</th>
+<th>Source</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G3.1</td>
+<td>All 6 CRITICAL+HIGH races fixed</td>
+<td>S1</td>
+<td>M (aggregate)</td>
+</tr>
+<tr>
+<td>G3.2</td>
+<td>Fleet budget ceiling enforced (<code>FleetBudgetCapUSD</code>)</td>
+<td>S3</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G3.3</td>
+<td>Supervisor tick goroutines tracked with WaitGroup</td>
+<td>S1 R-07</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G3.4</td>
+<td>Sweep launch parallelized (semaphore, size 10)</td>
+<td>Agent 6</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G3.5</td>
+<td>Queue persistence (auto-save every 30s)</td>
+<td>Agent 6</td>
+<td>M</td>
+</tr>
+<tr>
+<td>G3.6</td>
+<td>Worker <code>executeWork</code> timeout</td>
+<td>Agent 6</td>
+<td>S</td>
+</tr>
+<tr>
+<td>G3.7-G3.11</td>
+<td>Anomaly detector, cmd.Wait, fleet retry, marathon checkpoint, rehydration fixes</td>
+<td>S1, S4</td>
+<td>S-M each</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Functional requirements</strong>: Local autoscaler actuator. Proactive cost events. 48-hour unattended L2 run. <code>go test -race ./... -count=5</code> green [Agent 14].</p>
+<h3 id="43-safety-interlocks-required-at-each-level">4.3 Safety Interlocks Required at Each Level</h3>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Existing Interlocks</th>
+<th>Missing Interlocks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>L0</strong></td>
+<td>Bootstrap clamp, decision audit, no side effects</td>
+<td>None critical</td>
+</tr>
+<tr>
+<td><strong>L1</strong></td>
+<td>Max retry limit (3), exponential backoff, transient-only retry, remaining budget cap, category blocklist</td>
+<td>Autonomy demotion circuit breaker. Retry state mutex (R-01).</td>
+</tr>
+<tr>
+<td><strong>L2</strong></td>
+<td>Test gate (<code>GateChange</code>), budget envelope, cooldown (5m), chain depth cap (10), concurrency cap, termination conditions</td>
+<td>Fleet-level hard budget ceiling. Cascade confidence floor with minimum sample gate. Supervisor self-health check. Cost rate staleness alert.</td>
+</tr>
+<tr>
+<td><strong>L3</strong></td>
+<td>AutoMergeAll guard (partial), chain depth 10, rate limit (3/hr at confidence &gt;= 0.8), requires API call (not <code>.ralphrc</code>)</td>
+<td>Per-hour spend circuit breaker ($50/hr). Watchdog process (systemd). Network isolation. Git auto-revert. Rollback on autonomy escalation failure.</td>
+</tr>
+</tbody>
+</table>
+<p>[Agent 14]</p>
+<h3 id="44-minimum-viable-l3-configuration">4.4 Minimum Viable L3 Configuration</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">autonomy_level</span><span class="p">:</span><span class="w">           </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">max_duration</span><span class="p">:</span><span class="w">             </span><span class="l l-Scalar l-Scalar-Plain">72h</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">max_total_cost_usd</span><span class="p">:</span><span class="w">       </span><span class="l l-Scalar l-Scalar-Plain">500.00</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">per_hour_cap_usd</span><span class="p">:</span><span class="w">         </span><span class="l l-Scalar l-Scalar-Plain">50.00</span><span class="w">      </span><span class="c1"># circuit breaker (new)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nt">per_session_budget</span><span class="p">:</span><span class="w">       </span><span class="l l-Scalar l-Scalar-Plain">5.00</span><span class="w">       </span><span class="c1"># hard default</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nt">sweep_budget_usd</span><span class="p">:</span><span class="w">         </span><span class="l l-Scalar l-Scalar-Plain">0.50</span><span class="w">       </span><span class="c1"># per-session in sweeps</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nt">max_concurrent</span><span class="p">:</span><span class="w">           </span><span class="l l-Scalar l-Scalar-Plain">1</span><span class="w">          </span><span class="c1"># supervisor cycles</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="nt">max_workers</span><span class="p">:</span><span class="w">              </span><span class="l l-Scalar l-Scalar-Plain">4</span><span class="w">          </span><span class="c1"># fleet workers (single machine)</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nt">max_sessions_per_worker</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">2</span><span class="w">          </span><span class="c1"># conservative for dual GPU</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nt">chain_depth_cap</span><span class="p">:</span><span class="w">          </span><span class="l l-Scalar l-Scalar-Plain">5</span><span class="w">          </span><span class="c1"># reduced from 10 for first 72h run</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nt">cooldown</span><span class="p">:</span><span class="w">                 </span><span class="l l-Scalar l-Scalar-Plain">10m</span><span class="w">        </span><span class="c1"># increased from 5m for safety</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="nt">tick_interval</span><span class="p">:</span><span class="w">            </span><span class="l l-Scalar l-Scalar-Plain">60s</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="nt">compaction</span><span class="p">:</span><span class="w">               </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="nt">auto_merge_all</span><span class="p">:</span><span class="w">           </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">      </span><span class="c1"># first 72h: create PRs, don&#39;t merge</span>
+</code></pre></div>
+<p><strong>Note</strong>: <code>auto_merge_all: false</code> for the initial 72-hour run. Full AutoMergeAll is a separate gate requiring auto-revert capability [Agent 14].</p>
+<h3 id="45-risk-matrix-for-l3">4.5 Risk Matrix for L3</h3>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Probability</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>$1,280/hr worst-case spend</td>
+<td>Low (requires 128 concurrent sessions)</td>
+<td>Critical -- financial damage</td>
+<td>Per-hour circuit breaker; <code>FleetBudgetCapUSD</code> [S3]</td>
+</tr>
+<tr>
+<td>Queue loss on coordinator restart</td>
+<td>Medium (any process crash)</td>
+<td>High -- orphaned sessions, duplicate work</td>
+<td>Queue persistence (G3.5) [Agent 6]</td>
+</tr>
+<tr>
+<td>AutoMerge introduces regression</td>
+<td>Medium (VerifyCommands may miss regressions)</td>
+<td>High -- production code broken</td>
+<td>Disable AutoMergeAll for first 72h; auto-revert [Agent 14]</td>
+</tr>
+<tr>
+<td>Coordinator single point of failure</td>
+<td>High (single process, no HA)</td>
+<td>High -- fleet inoperable</td>
+<td>Watchdog + queue persistence; HA deferred to L3.2+ [Agent 14]</td>
+</tr>
+<tr>
+<td>Self-improvement loop corrupts codebase</td>
+<td>Low (test gates exist)</td>
+<td>Critical -- repo damaged</td>
+<td>Container isolation; git worktrees; auto-revert [Agent 14]</td>
+</tr>
+<tr>
+<td>Concurrent map crash (R-01, R-02)</td>
+<td>High (under race detector)</td>
+<td>Critical -- process crash, all sessions lost</td>
+<td>Must fix before L1 activation [S1]</td>
+</tr>
+<tr>
+<td>Sweep 10x cost overrun</td>
+<td>High (autonomous agent uses default $5)</td>
+<td>High -- $50 vs $5 per sweep</td>
+<td>Change handler default to $0.50 (G2.2) [S3]</td>
+</tr>
+<tr>
+<td>Untrained DecisionModel routes badly</td>
+<td>High (no multi-provider data)</td>
+<td>Medium -- quality regression</td>
+<td>Heuristic fallback at 0.7 threshold; collect data [Agent 14]</td>
+</tr>
+</tbody>
+</table>
+<p>[Agent 14]</p>
+<h3 id="46-timeline-to-l3">4.6 Timeline to L3</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Week 0        Week 2         Week 8         Week 16        Week 20
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  |              |              |               |              |
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  v              v              v               v              v
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>  L0 -----&gt; L1 ready ---&gt; L2 ready -----&gt; L3 ready ----&gt; L3+AutoMerge
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  (today)   (race fixes,   (budget,        (fleet,         (auto-revert,
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>             error          cascade,        watchdog,       full autonomy)
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>             handling)      supervisor)     72h run)
+</code></pre></div>
+<p><strong>Total elapsed time: approximately 20 weeks (5 months)</strong> [Agent 14].</p>
+<hr />
+<h2 id="part-5-external-landscape">Part 5: External Landscape</h2>
+<h3 id="51-multi-agent-orchestration-comparison">5.1 Multi-Agent Orchestration Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Framework</th>
+<th>Stars</th>
+<th>Go Support</th>
+<th>MCP</th>
+<th>Multi-Provider</th>
+<th>Cost Routing</th>
+<th>Fleet</th>
+<th>TUI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ralphglasses</strong></td>
+<td>--</td>
+<td>Native</td>
+<td>Native (166 tools)</td>
+<td>Claude+Gemini+Codex</td>
+<td>4-tier cascade</td>
+<td>Multi-node (proto)</td>
+<td>BubbleTea</td>
+</tr>
+<tr>
+<td>Claude Agent SDK</td>
+<td>--</td>
+<td>Community ports</td>
+<td>Native</td>
+<td>Claude only</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Google A2A + ADK</td>
+<td>--</td>
+<td>Official SDK</td>
+<td>Complementary</td>
+<td>Multi</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>OpenAI Agents SDK</td>
+<td>--</td>
+<td>Community port</td>
+<td>Via tool_use</td>
+<td>100+ LLMs</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>LangGraph</td>
+<td>28.3K</td>
+<td>None</td>
+<td>Adapters</td>
+<td>Multi</td>
+<td>No</td>
+<td>Cloud option</td>
+<td>No</td>
+</tr>
+<tr>
+<td>CrewAI</td>
+<td>45.9K</td>
+<td>None</td>
+<td>Adapters</td>
+<td>Multi</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>AutoGen/MS Agent Framework</td>
+<td>50.4K</td>
+<td>None</td>
+<td>No</td>
+<td>Multi</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Unique position</strong>: ralphglasses is the only Go-native, multi-provider, MCP-first orchestrator with process management, cost-aware cascade routing, fleet distribution, and a TUI [Agent 9].</p>
+<p><strong>Key framework details</strong>:</p>
+<ul>
+<li><strong>Claude Agent SDK</strong> (Python/TS): TeammateTool enables peer-to-peer agent coordination. V2 Session API with multi-turn. Community Go ports exist but are thin CLI wrappers. Single-provider limitation is fundamental [Agent 9].</li>
+<li><strong>Google A2A</strong> (Protocol): JSON-RPC over HTTP with Agent Card discovery. 50+ technology partners. Official Go SDK (<code>a2a-go/v2</code>) supports gRPC, JSON-RPC, REST. ADK Go reached 1.0 with OTel integration. Protocol-only -- no runtime, costs, or loops [Agent 9].</li>
+<li><strong>OpenAI Agents SDK</strong> (Python/JS): Handoffs for delegation, guardrails for parallel validation (tripwires block before token consumption). Provider-agnostic via Chat Completions. No fleet or cost tracking [Agent 9].</li>
+<li><strong>LangGraph</strong> (~28.3K stars): Graph-based state machines with cycles. LangGraph Cloud for hosted execution. <code>deepagents</code> adds planning + subagent spawning. <strong>No Go support</strong> -- fundamental blocker [Agent 9].</li>
+<li><strong>CrewAI</strong> (~45.9K stars): Role-based agents (role/goal/backstory). Hierarchical delegation with auto-manager. Largest star count. Python only, no process management [Agent 9].</li>
+<li><strong>AutoGen/MS Agent Framework</strong> (~50.4K stars): Fragmented into AutoGen v0.2, AG2 (fork), and Microsoft Agent Framework (RC Feb 2026). GroupChat coordination pattern. Python/.NET only [Agent 9].</li>
+</ul>
+<p><strong>Recommended adoptions</strong>:
+- <strong>Adopt</strong>: Google A2A protocol (official Go SDK at <code>a2aproject/a2a-go/v2</code>), official MCP Go SDK (<code>modelcontextprotocol/go-sdk</code> v1.4+)
+- <strong>Adapt</strong>: OpenAI guardrails pattern (parallel validation), Claude Agent SDK TeammateTool peer-to-peer patterns
+- <strong>Ignore</strong>: LangGraph (no Go), CrewAI (no Go), AutoGen (no Go, fragmented ecosystem)</p>
+<p>[Agent 9]</p>
+<h3 id="52-mcp-ecosystem-status">5.2 MCP Ecosystem Status</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Spec version</strong></td>
+<td>2025-11-25 (4th release). Tasks primitive, Extensions framework, OAuth Client ID Metadata, JSON Schema 2020-12 default [Agent 10]</td>
+</tr>
+<tr>
+<td><strong>Governance</strong></td>
+<td>Agentic AI Foundation (Linux Foundation). Co-founded by Anthropic, OpenAI, Google, Microsoft, AWS, Block [Agent 10]</td>
+</tr>
+<tr>
+<td><strong>Adoption</strong></td>
+<td>97M+ monthly SDK downloads. 10,000+ active servers. First-class in ChatGPT, Claude, Cursor, Gemini, VS Code [Agent 10]</td>
+</tr>
+<tr>
+<td><strong>Go SDK</strong></td>
+<td>Official: <code>modelcontextprotocol/go-sdk</code> v1.4+ (semver stable). Community: <code>mark3labs/mcp-go</code> v0.46.0 (ralphglasses current). mcpkit: internal framework [Agent 10]</td>
+</tr>
+<tr>
+<td><strong>Transport</strong></td>
+<td>stdio (recommended for local), Streamable HTTP (replaces SSE), HTTP+SSE (deprecated) [Agent 10]</td>
+</tr>
+<tr>
+<td><strong>2026 roadmap</strong></td>
+<td>Transport evolution, Tasks primitive maturity, enterprise readiness, governance model [Agent 10]</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recommended action</strong>: Migrate from mcp-go v0.46.0 to official <code>modelcontextprotocol/go-sdk</code> for semver stability. No HTTP transport needed now -- plan for it when multi-host fleet ships [Agent 10].</p>
+<h3 id="53-provider-capability-matrix-and-cost-optimization">5.3 Provider Capability Matrix and Cost Optimization</h3>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Model</th>
+<th>Tier</th>
+<th>Input $/1M</th>
+<th>Output $/1M</th>
+<th>Cached Input</th>
+<th>Context</th>
+<th>Max Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Anthropic</td>
+<td>Opus 4.6</td>
+<td>Reasoning</td>
+<td>$5.00</td>
+<td>$25.00</td>
+<td>$0.50 (90% off)</td>
+<td>1M</td>
+<td>128K</td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td>Sonnet 4.6</td>
+<td>Coding</td>
+<td>$3.00</td>
+<td>$15.00</td>
+<td>$0.30 (90% off)</td>
+<td>1M</td>
+<td>64K</td>
+</tr>
+<tr>
+<td>Google</td>
+<td>Gemini 3.1 Pro</td>
+<td>Reasoning</td>
+<td>$2.00</td>
+<td>$12.00</td>
+<td>$0.20 (90% off)</td>
+<td>1M</td>
+<td>65K</td>
+</tr>
+<tr>
+<td>Google</td>
+<td>Gemini 3 Flash</td>
+<td>Coding</td>
+<td>$0.50</td>
+<td>$3.00</td>
+<td>$0.05 (90% off)</td>
+<td>1M</td>
+<td>65K</td>
+</tr>
+<tr>
+<td>Google</td>
+<td>Gemini 2.5 Flash</td>
+<td>Worker</td>
+<td>$0.30</td>
+<td>$2.50</td>
+<td>$0.03 (90% off)</td>
+<td>1M</td>
+<td>65K</td>
+</tr>
+<tr>
+<td>Google</td>
+<td>Gemini 2.5 Flash-Lite</td>
+<td>Ultra-cheap</td>
+<td>$0.10</td>
+<td>$0.40</td>
+<td>$0.01 (90% off)</td>
+<td>1M</td>
+<td>65K</td>
+</tr>
+<tr>
+<td>OpenAI</td>
+<td>GPT-5.4</td>
+<td>Reasoning</td>
+<td>$2.50</td>
+<td>$15.00</td>
+<td>$0.25 (90% off)</td>
+<td>1M</td>
+<td>33K</td>
+</tr>
+<tr>
+<td>OpenAI</td>
+<td>codex-mini-latest</td>
+<td>Coding</td>
+<td>$1.50</td>
+<td>$6.00</td>
+<td>$0.375 (75% off)</td>
+<td>200K</td>
+<td>16K</td>
+</tr>
+<tr>
+<td>OpenAI</td>
+<td>GPT-4.1-nano</td>
+<td>Classifier</td>
+<td>$0.05</td>
+<td>$0.20</td>
+<td>$0.025 (50% off)</td>
+<td>1M</td>
+<td>16K</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Opus 4.6</strong>: Only frontier model with flat pricing across full 1M context (no long-context surcharge). Price dropped 67% from $15/$75 to $5/$25 [Agent 11].</p>
+<p><strong>Gemini 3.1 Pro</strong>: SWE-bench Verified 80.6% vs Opus 80.8% at 60% lower cost -- viable Opus alternative for planning tasks [Agent 11].</p>
+<p><strong>Recommended cascade</strong>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Tier 0: GPT-4.1-nano ($0.05/$0.20)     -- classification, routing
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>Tier 1: Gemini 2.5 Flash ($0.30/$2.50)  -- bulk work, docs, tests
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>Tier 2: Sonnet 4.6 ($3.00/$15.00)       -- complex coding, architecture
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>Tier 3: Opus 4.6 ($5.00/$25.00)         -- multi-step reasoning, planning
+</code></pre></div>
+<p><strong>Cost reduction projection</strong>: $0.17 avg task cost to $0.03-0.05 (70-85% reduction) via combined prompt caching + 4-tier cascade + batch API [Agent 11].</p>
+<p><strong>Stale compiled-in rates</strong>: Opus at $15/$75 (3x actual), Gemini Flash output at $2.50 (~40% below actual $3.50) [S3].</p>
+<p><strong>Prompt caching savings by provider</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Mechanism</th>
+<th>TTL</th>
+<th>Cache Read Discount</th>
+<th>Auto-Activated?</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Claude</td>
+<td><code>cache_control</code> breakpoints</td>
+<td>5min (1.25x write) / 1hr (2x write)</td>
+<td>90%</td>
+<td>Yes (default on)</td>
+<td>Agent 4, Agent 11</td>
+</tr>
+<tr>
+<td>Gemini</td>
+<td><code>CreateCachedContent()</code> REST API</td>
+<td>1hr</td>
+<td>90%</td>
+<td><strong>No</strong> -- operator must call manually</td>
+<td>Agent 4</td>
+</tr>
+<tr>
+<td>OpenAI</td>
+<td>Automatic prefix caching (Responses API)</td>
+<td>Automatic</td>
+<td>50%</td>
+<td>Yes (no config needed)</td>
+<td>Agent 4, Agent 11</td>
+</tr>
+</tbody>
+</table>
+<p>For a typical 10-turn session with 15K-token stable prefix: ~$0.085 cached vs $0.45 uncached = <strong>81% input savings</strong> on Claude [Agent 11].</p>
+<p><strong>CLI feature comparison</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Claude Code</th>
+<th>Gemini CLI</th>
+<th>Codex CLI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MCP Support</td>
+<td>Native</td>
+<td>Native (stdio + SSE)</td>
+<td>Native (stdio)</td>
+</tr>
+<tr>
+<td>Subagents</td>
+<td>Built-in (Explore, Plan, General)</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Worktrees</td>
+<td><code>--worktree</code> flag</td>
+<td>No</td>
+<td>Workspace sandbox</td>
+</tr>
+<tr>
+<td>Hooks</td>
+<td>PreToolUse, PostToolUse, etc.</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Session Resume</td>
+<td><code>--resume</code></td>
+<td><code>--resume</code></td>
+<td><code>exec resume</code></td>
+</tr>
+<tr>
+<td>Sandbox Modes</td>
+<td>Permission-based</td>
+<td>N/A</td>
+<td>suggest / auto-edit / full-auto</td>
+</tr>
+<tr>
+<td>Max Context</td>
+<td>1M tokens</td>
+<td>2M tokens</td>
+<td>1M (model-dependent)</td>
+</tr>
+<tr>
+<td>Compaction</td>
+<td>Server-side auto-summarization</td>
+<td>N/A</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<p>[Agent 11]</p>
+<h3 id="54-thin-client-recommendations">5.4 Thin Client Recommendations</h3>
+<table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Recommendation</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Distro base (short-term)</strong></td>
+<td>Stay Manjaro -- existing <code>Dockerfile.manjaro</code> works for Phase 4 completion</td>
+<td>Agent 12</td>
+</tr>
+<tr>
+<td><strong>Distro base (medium-term)</strong></td>
+<td>Migrate to NixOS -- declarative model eliminates drift across 10+ thin clients</td>
+<td>Agent 12</td>
+</tr>
+<tr>
+<td><strong>Primary compositor</strong></td>
+<td>Sway -- most stable wlroots compositor for NVIDIA multi-monitor</td>
+<td>Agent 12</td>
+</tr>
+<tr>
+<td><strong>Secondary compositor</strong></td>
+<td>Hyprland -- opt-in alternative, best-effort parity</td>
+<td>Agent 12</td>
+</tr>
+<tr>
+<td><strong>Drop</strong></td>
+<td>i3 -- X11 is end-of-life; archive <code>distro/i3/</code>, <code>distro/xorg/</code></td>
+<td>Agent 12</td>
+</tr>
+<tr>
+<td><strong>Fleet workers</strong></td>
+<td>Evaluate Cage -- zero-config kiosk compositor for single maximized app</td>
+<td>Agent 12</td>
+</tr>
+<tr>
+<td><strong>Boot pipeline</strong></td>
+<td>greetd + tuigreet -- 4-step chain (kernel -&gt; systemd -&gt; greetd -&gt; Sway) vs current 6-step</td>
+<td>Agent 12</td>
+</tr>
+<tr>
+<td><strong>Secrets</strong></td>
+<td>systemd-creds + TPM2 for API keys on thin clients</td>
+<td>Agent 12</td>
+</tr>
+<tr>
+<td><strong>Dual GPU</strong></td>
+<td>Sway renders on single GPU; use one RTX 4090 for display + one for compute</td>
+<td>Agent 12</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="part-6-fleet-operations">Part 6: Fleet Operations</h2>
+<h3 id="61-fleet-readiness-tiers">6.1 Fleet Readiness Tiers</h3>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Count</th>
+<th>%</th>
+<th>Description</th>
+<th>Repos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>T2 (Partially Ready)</strong></td>
+<td>5</td>
+<td>6%</td>
+<td>Has build infra but missing agent context</td>
+<td>gh-dash, pinecone-canopy, runmylife, terraform-docs, whiteclaw</td>
+</tr>
+<tr>
+<td><strong>T3 (Needs Setup)</strong></td>
+<td>44</td>
+<td>57%</td>
+<td>Missing core fleet infrastructure</td>
+<td>cr8-cli, dotfiles, archlet, [private], and 40 others</td>
+</tr>
+<tr>
+<td><strong>T4 (Not Applicable)</strong></td>
+<td>8</td>
+<td>10%</td>
+<td>Forks, dormant, non-git</td>
+<td>cmatrix, lnav, makima, etc.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Inner ring</strong> (7 repos with <code>.ralphrc</code> + <code>.ralph/</code>): claudekit, hg-mcp, [private-ops], mcpkit, mesmer, ralphglasses, whiteclaw [Agent 15].</p>
+<p><strong>Dependency health</strong>: 9 repos depend on mcpkit. 5 active repos use <code>../mcpkit</code> relative replace directives (consistent dev-mode pattern). 4 repos use absolute paths that break portability (2 deprecated, 2 legacy macOS paths). claudekit is the only active mcpkit consumer that builds from fresh clone. All 20 org-owned Go repos are on Go 1.26.1 [Agent 15].</p>
+<p><strong>Sweep cost economics</strong>: At 19 T1-ready repos with $0.50/session budget, a full sweep costs approximately $9.50. With 4-tier cascade routing achieving 70% Gemini Flash routing, estimated sweep cost drops to $3.23. A 74-repo sweep (future T1+T2+upgraded T3) at optimized rates: ~$12-15 per run [Agent 15, Agent 11].</p>
+<h3 id="62-recommended-onboarding-order">6.2 Recommended Onboarding Order</h3>
+<p>Based on fleet readiness, test coverage, and strategic importance:</p>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Repos</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Wave 1</strong> (now)</td>
+<td>mcpkit, claudekit, dotfiles-mcp, systemd-mcp, tmux-mcp, process-mcp</td>
+<td>Core frameworks + public MCP servers. All T1-ready.</td>
+</tr>
+<tr>
+<td><strong>Wave 2</strong></td>
+<td>hg-mcp, mesmer, [private-audit], [private-ops]</td>
+<td>Active T1 repos with .ralph/ integration.</td>
+</tr>
+<tr>
+<td><strong>Wave 3</strong></td>
+<td>ralphglasses (self), prompt-improver</td>
+<td>Self-improvement and prompt tooling.</td>
+</tr>
+<tr>
+<td><strong>Wave 4</strong></td>
+<td>cr8-cli, dotfiles, runmylife</td>
+<td>Non-Go or partially-ready repos needing CLAUDE.md or Makefile.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63-fleet-scaling-requirements-for-l3">6.3 Fleet Scaling Requirements for L3</h3>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Current State</th>
+<th>L3 Need</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Queue persistence</td>
+<td>In-memory only</td>
+<td>Auto-save every 30s, restore on startup</td>
+<td>Agent 6</td>
+</tr>
+<tr>
+<td>Queue bounding</td>
+<td>Unbounded map</td>
+<td>MaxDepth with rejection on overflow</td>
+<td>Agent 6</td>
+</tr>
+<tr>
+<td>Sweep parallelism</td>
+<td>Serial for-loop</td>
+<td>Bounded goroutine pool (size 10)</td>
+<td>Agent 6</td>
+</tr>
+<tr>
+<td>Autoscaler</td>
+<td>Advisory only (event, no actuator)</td>
+<td>Local worker spawner for single-machine</td>
+<td>Agent 6</td>
+</tr>
+<tr>
+<td>Worker timeout</td>
+<td>No upper bound on status polling</td>
+<td><code>2 * DefaultStallThreshold</code> (~15 min)</td>
+<td>Agent 6</td>
+</tr>
+<tr>
+<td>Budget ceiling</td>
+<td>No fleet-level hard cap</td>
+<td><code>FleetBudgetCapUSD</code> + per-hour circuit breaker</td>
+<td>S3</td>
+</tr>
+<tr>
+<td>Cost predictor</td>
+<td>Not auto-fed from coordinator</td>
+<td>Wire <code>Record()</code> to <code>handleWorkComplete</code></td>
+<td>S3</td>
+</tr>
+<tr>
+<td>A2A integration</td>
+<td>Adapter and coordinator not integrated</td>
+<td>Wire <code>CompleteWork</code> to <code>adapter.CompleteOffer</code></td>
+<td>Agent 6</td>
+</tr>
+<tr>
+<td>Multi-node</td>
+<td>Protocol-ready, single coordinator SPOF</td>
+<td>Queue persistence + Tailscale networking</td>
+<td>Agent 6, Agent 15</td>
+</tr>
+<tr>
+<td>Max fleet concurrency</td>
+<td>128 sessions (32 workers x 4 sessions)</td>
+<td>Sufficient for single-machine L3</td>
+<td>Agent 6</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="part-7-recommended-actions">Part 7: Recommended Actions</h2>
+<h3 id="71-immediate-actions-next-2-weeks-critical-fixes">7.1 Immediate Actions (Next 2 Weeks) -- CRITICAL Fixes</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Source</th>
+<th>Effort</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Add <code>sync.Mutex</code> to <code>AutoRecovery.retryState</code></td>
+<td>S1 R-01</td>
+<td>S (5 lines)</td>
+<td>Eliminates fatal crash risk at L1+</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Add <code>sync.Mutex</code> to <code>RetryTracker.attempts</code></td>
+<td>S1 R-02</td>
+<td>S (5 lines)</td>
+<td>Eliminates fleet crash risk</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Fix 5 path traversal vulnerabilities in MCP handlers</td>
+<td>Agent 8</td>
+<td>S-M</td>
+<td>Blocks any public MCP exposure</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Surface supervisor cycle failures at Error level</td>
+<td>S4</td>
+<td>M</td>
+<td>Prevents silent L1/L2 spin</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Propagate RunLoop errors in background goroutines</td>
+<td>S4</td>
+<td>S</td>
+<td>Makes self-improvement failures visible</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Add hook exit code handling</td>
+<td>S4</td>
+<td>S</td>
+<td>Safety gates become functional</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Make <code>GateEnabled</code> an <code>atomic.Bool</code></td>
+<td>S1 R-03</td>
+<td>S (3 lines)</td>
+<td>Fixes HIGH race</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Protect <code>loadedGroups</code> map with mutex</td>
+<td>S1 R-06</td>
+<td>S</td>
+<td>Fixes HIGH MCP dispatch race</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Enforce mandatory $5 default budget floor</td>
+<td>S3 Gap A</td>
+<td>S</td>
+<td>Eliminates uncapped sessions</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Fix autonomy level persistence failure</td>
+<td>S4</td>
+<td>S</td>
+<td>L2/L3 survives restart</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72-medium-term-actions-next-quarter-l2-enablement">7.2 Medium-Term Actions (Next Quarter) -- L2 Enablement</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Source</th>
+<th>Effort</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Fix all 7 failing test packages to achieve green CI</td>
+<td>Agent 5</td>
+<td>M</td>
+<td>Establishes autonomous operation gate</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Update compiled-in provider cost rates to April 2026 pricing</td>
+<td>S3, Agent 11</td>
+<td>S</td>
+<td>Accurate cascade routing decisions</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Activate deferred loading in production binary</td>
+<td>Agent 2</td>
+<td>S</td>
+<td>Halves MCP startup latency</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Wire <code>fleet/CostPredictor.Record()</code> to <code>handleWorkComplete</code></td>
+<td>S3</td>
+<td>S</td>
+<td>Fleet-level cost forecasting</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Activate 4-tier cascade routing with Gemini Flash as Tier 1</td>
+<td>Agent 11</td>
+<td>M</td>
+<td>70-85% cost reduction</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Migrate to official <code>modelcontextprotocol/go-sdk</code></td>
+<td>Agent 10</td>
+<td>XL</td>
+<td>Semver stability, spec compliance</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Split <code>advanced</code> namespace (24 tools) into rc/autonomy/workflow/residual</td>
+<td>Agent 2</td>
+<td>M</td>
+<td>Cleaner tool organization</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Add max-lines cap to <code>LogView.Lines</code> (ring buffer, 10K default)</td>
+<td>Agent 7</td>
+<td>S</td>
+<td>Prevents memory exhaustion</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Collect 50+ multi-provider observations for DecisionModel training</td>
+<td>Agent 14</td>
+<td>M</td>
+<td>Enables calibrated cascade routing</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Run 24-hour supervisor session on Manjaro</td>
+<td>Agent 14, Agent 3</td>
+<td>M</td>
+<td>Validates L2 readiness</td>
+</tr>
+</tbody>
+</table>
+<h3 id="73-long-term-investments-next-6-months-l3-and-fleet-scaling">7.3 Long-Term Investments (Next 6 Months) -- L3 and Fleet Scaling</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Source</th>
+<th>Effort</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Implement per-hour spend circuit breaker ($50/hr)</td>
+<td>Agent 14, S3</td>
+<td>M</td>
+<td>Prevents $1,280/hr worst case</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Persist work queue (auto-save 30s, restore on startup)</td>
+<td>Agent 6</td>
+<td>M</td>
+<td>Queue survives coordinator restart</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Parallelize sweep fan-out (semaphore, size 10)</td>
+<td>Agent 6</td>
+<td>M</td>
+<td>74-repo sweep in seconds, not minutes</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Add local autoscaler actuator (spawn worker instances)</td>
+<td>Agent 6</td>
+<td>M</td>
+<td>Dynamic capacity for L3</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Complete ISO build pipeline for Manjaro thin client</td>
+<td>Agent 12</td>
+<td>L</td>
+<td>Bootable agent workstations</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Implement Phase 13.1 self-healing runtime (heartbeat, crash recovery)</td>
+<td>Agent 1, Agent 14</td>
+<td>XL</td>
+<td>L3 foundation</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Adopt A2A protocol via official Go SDK</td>
+<td>Agent 9, Agent 10</td>
+<td>L</td>
+<td>Cross-agent interop</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Implement per-provider circuit breakers (replace shared CB)</td>
+<td>Agent 4, S1 R-13</td>
+<td>M</td>
+<td>Provider isolation</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Add systemd watchdog for supervisor process</td>
+<td>Agent 14</td>
+<td>M</td>
+<td>Restart-on-crash for 72h runs</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Validate 72-hour L3 unattended operation (AutoMerge disabled)</td>
+<td>Agent 14</td>
+<td>L</td>
+<td>Full autonomy gate</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="appendix-a-finding-index">Appendix A: Finding Index</h2>
+<p>Full finding index with 82 cataloged findings is available in <a href="../16-research-index/">16-research-index.md</a>.</p>
+<p><strong>Distribution</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Severity</th>
+<th>Count</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CRITICAL</td>
+<td>6</td>
+<td>F-001 through F-006</td>
+</tr>
+<tr>
+<td>HIGH</td>
+<td>18</td>
+<td>F-007 through F-024</td>
+</tr>
+<tr>
+<td>MEDIUM</td>
+<td>25</td>
+<td>F-025 through F-049</td>
+</tr>
+<tr>
+<td>LOW</td>
+<td>17</td>
+<td>F-050 through F-066</td>
+</tr>
+<tr>
+<td>INFO</td>
+<td>16</td>
+<td>F-067 through F-082</td>
+</tr>
+</tbody>
+</table>
+<h3 id="contradiction-register">Contradiction Register</h3>
+<p>9 contradictions resolved between research reports [Agent 16]:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Topic</th>
+<th>Report A</th>
+<th>Report B</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C-01</td>
+<td>MCP tool count</td>
+<td>CLAUDE.md: 126/14</td>
+<td>Agent 2: 166/16</td>
+<td>CLAUDE.md stale. <code>plugin</code> and <code>sweep</code> namespaces added; several grew. True: 166/16.</td>
+</tr>
+<tr>
+<td>C-02</td>
+<td>Roadmap task count</td>
+<td>ROADMAP.md header: 1,115/442</td>
+<td>Agent 1: 1,143/503</td>
+<td>Header predates recent phases. Live count authoritative.</td>
+</tr>
+<tr>
+<td>C-03</td>
+<td>Phase 3.5 completion</td>
+<td>Agent 8: 28/30 (93%)</td>
+<td>Agent 1: 24/30 (80%)</td>
+<td>Different counting of duplicate 3.5.5 section. Agent 1 more reliable.</td>
+</tr>
+<tr>
+<td>C-04</td>
+<td>In-progress phases</td>
+<td>Agent 8: 10</td>
+<td>Agent 1: 6</td>
+<td>Different thresholds for "in progress" -- both valid by their definitions.</td>
+</tr>
+<tr>
+<td>C-05</td>
+<td>Deferred loading</td>
+<td>CLAUDE.md: active</td>
+<td>Agent 2: inactive in production</td>
+<td>Production <code>cmd/mcp.go</code> does not set <code>DeferredLoading = true</code>. Tests only.</td>
+</tr>
+<tr>
+<td>C-06</td>
+<td>Opus pricing</td>
+<td><code>config/costs.go</code>: $15/$75</td>
+<td>Agent 11: $5/$25</td>
+<td>Code not updated for Opus 4.6 price drop. 67% overestimate.</td>
+</tr>
+<tr>
+<td>C-07</td>
+<td>Phase 9 completion</td>
+<td>ROADMAP.md: 100%</td>
+<td>Agent 1, S2: files missing</td>
+<td>"5 tasks" are tier-3 only. Tier-1 tool implementations absent.</td>
+</tr>
+<tr>
+<td>C-08</td>
+<td>Gemini Flash rate</td>
+<td><code>config/costs.go</code>: $2.50/1M output</td>
+<td>Agent 11: ~$3.50/1M</td>
+<td>40% underestimate in compiled-in rate.</td>
+</tr>
+<tr>
+<td>C-09</td>
+<td>Sweep budget</td>
+<td>User convention: $0.50/session</td>
+<td>Handler default: $5.00/session</td>
+<td>$0.50 is caller convention only; handler does not enforce without explicit param.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="research-gaps">Research Gaps</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Gap</th>
+<th>Expected</th>
+<th>Actual</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G-01</td>
+<td>Plugin system</td>
+<td>Full audit of <code>internal/plugin/</code></td>
+<td>Mentioned as dead-code only</td>
+<td>Low -- Phase 20 is 0% done</td>
+</tr>
+<tr>
+<td>G-02</td>
+<td>Sandbox infrastructure</td>
+<td>Full audit of <code>internal/sandbox/</code></td>
+<td>Mentioned in passing</td>
+<td>Medium -- Phase 5 is 12% done</td>
+</tr>
+<tr>
+<td>G-03</td>
+<td>Store layer</td>
+<td>Full SQLite audit</td>
+<td>Covered architecturally, not schema-level</td>
+<td>Medium -- migration planned</td>
+</tr>
+<tr>
+<td>G-04</td>
+<td>K8s controller</td>
+<td>Analysis of <code>internal/k8s/</code></td>
+<td>Only touched in S4 error audit</td>
+<td>Low -- Phase 7 is 0% done</td>
+</tr>
+<tr>
+<td>G-05</td>
+<td>Batch API integration</td>
+<td>Cost optimization via batch</td>
+<td>Mentioned; no code audit</td>
+<td>Low -- optimization tier</td>
+</tr>
+</tbody>
+</table>
+<p>[Agent 16]</p>
+<hr />
+<h2 id="appendix-b-metric-summary">Appendix B: Metric Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Roadmap total tasks</td>
+<td>1,143</td>
+<td>Agent 1</td>
+</tr>
+<tr>
+<td>Roadmap done tasks</td>
+<td>503 (44.0%)</td>
+<td>Agent 1</td>
+</tr>
+<tr>
+<td>Phases complete (100%)</td>
+<td>10</td>
+<td>Agent 1</td>
+</tr>
+<tr>
+<td>Phases in progress</td>
+<td>6-10</td>
+<td>Agent 1</td>
+</tr>
+<tr>
+<td>Phases fully planned (0%)</td>
+<td>10-11</td>
+<td>Agent 1</td>
+</tr>
+<tr>
+<td>MCP tool count</td>
+<td>166 across 16 namespaces</td>
+<td>Agent 2</td>
+</tr>
+<tr>
+<td>Test file count</td>
+<td>745</td>
+<td>Agent 5</td>
+</tr>
+<tr>
+<td>Test function count</td>
+<td>9,267</td>
+<td>Agent 5</td>
+</tr>
+<tr>
+<td>Overall coverage</td>
+<td>84.5%</td>
+<td>Agent 5</td>
+</tr>
+<tr>
+<td>Failing packages</td>
+<td>7</td>
+<td>Agent 5</td>
+</tr>
+<tr>
+<td>Race conditions (CRITICAL+HIGH)</td>
+<td>6 (2+4)</td>
+<td>S1</td>
+</tr>
+<tr>
+<td>Race conditions (total)</td>
+<td>20</td>
+<td>S1</td>
+</tr>
+<tr>
+<td>Dead code (confirmed)</td>
+<td>443 lines</td>
+<td>S2</td>
+</tr>
+<tr>
+<td>Phantom ROADMAP references</td>
+<td>158 (5 in completed tasks)</td>
+<td>S2</td>
+</tr>
+<tr>
+<td>Duplicate CircuitBreaker impls</td>
+<td>4</td>
+<td>S2</td>
+</tr>
+<tr>
+<td>Budget enforcement gaps</td>
+<td>4 (Gaps A-D)</td>
+<td>S3</td>
+</tr>
+<tr>
+<td>Max theoretical L3 spend</td>
+<td>$1,280/hr (uncapped)</td>
+<td>S3</td>
+</tr>
+<tr>
+<td>Average task cost</td>
+<td>$0.17</td>
+<td>Agent 8</td>
+</tr>
+<tr>
+<td>Cost optimization potential</td>
+<td>$0.03-0.05/task (70-85% reduction)</td>
+<td>Agent 11</td>
+</tr>
+<tr>
+<td>Swallowed errors (top 20)</td>
+<td>4 high, 10 medium, 6 low</td>
+<td>S4</td>
+</tr>
+<tr>
+<td>Error wrapping ratio</td>
+<td>65% global</td>
+<td>S4</td>
+</tr>
+<tr>
+<td>Handler contract violations</td>
+<td>0</td>
+<td>S4</td>
+</tr>
+<tr>
+<td>Production panics</td>
+<td>2 (both justified)</td>
+<td>S4</td>
+</tr>
+<tr>
+<td>Enhancer pipeline stages</td>
+<td>13</td>
+<td>Agent 4</td>
+</tr>
+<tr>
+<td>Lint rules</td>
+<td>14</td>
+<td>Agent 4</td>
+</tr>
+<tr>
+<td>Scoring dimensions</td>
+<td>10 (weights sum to 1.00)</td>
+<td>Agent 4</td>
+</tr>
+<tr>
+<td>E2E test scenarios</td>
+<td>24</td>
+<td>Agent 5</td>
+</tr>
+<tr>
+<td>Fleet-ready repos</td>
+<td>19/77 (25%)</td>
+<td>Agent 15</td>
+</tr>
+<tr>
+<td>Max fleet concurrency</td>
+<td>128 sessions</td>
+<td>Agent 6</td>
+</tr>
+<tr>
+<td>L3 critical path tasks</td>
+<td>~100 (all 0% done)</td>
+<td>Agent 1</td>
+</tr>
+<tr>
+<td>Time to L3+AutoMerge</td>
+<td>~20 weeks</td>
+<td>Agent 14</td>
+</tr>
+<tr>
+<td>Provider distribution</td>
+<td>100% Claude (no multi-provider data)</td>
+<td>Agent 8</td>
+</tr>
+<tr>
+<td>JSON format retry rate</td>
+<td>25.7% (target &lt;5%)</td>
+<td>Agent 8</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="appendix-c-phase-status-matrix">Appendix C: Phase Status Matrix</h2>
+<p>Condensed from <a href="../01-roadmap-matrix/">01-roadmap-matrix.md</a>. 36 phases total.</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Name</th>
+<th>Total</th>
+<th>Done</th>
+<th>%</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Foundation</td>
+<td>16</td>
+<td>16</td>
+<td>100%</td>
+<td>Complete</td>
+</tr>
+<tr>
+<td>0.5</td>
+<td>Critical Fixes</td>
+<td>45</td>
+<td>45</td>
+<td>100%</td>
+<td>Complete</td>
+</tr>
+<tr>
+<td>0.6</td>
+<td>Code Quality &amp; Observability</td>
+<td>39</td>
+<td>39</td>
+<td>100%</td>
+<td>Complete</td>
+</tr>
+<tr>
+<td>0.8</td>
+<td>MCP Observability &amp; Scratchpad</td>
+<td>20</td>
+<td>20</td>
+<td>100%</td>
+<td>Complete</td>
+</tr>
+<tr>
+<td>0.9</td>
+<td>Quick Wins</td>
+<td>12</td>
+<td>12</td>
+<td>100%</td>
+<td>Complete</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Harden &amp; Test</td>
+<td>55</td>
+<td>53</td>
+<td>96%</td>
+<td>In Progress</td>
+</tr>
+<tr>
+<td>1.5</td>
+<td>Developer Experience</td>
+<td>52</td>
+<td>43</td>
+<td>83%</td>
+<td>In Progress</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Multi-Session Fleet</td>
+<td>70</td>
+<td>70</td>
+<td>100%</td>
+<td>Complete</td>
+</tr>
+<tr>
+<td>2.5</td>
+<td>Multi-LLM Orchestration</td>
+<td>27</td>
+<td>27</td>
+<td>100%</td>
+<td>Complete</td>
+</tr>
+<tr>
+<td>2.75</td>
+<td>Architecture Extensions</td>
+<td>33</td>
+<td>33</td>
+<td>100%</td>
+<td>Complete</td>
+</tr>
+<tr>
+<td>3</td>
+<td>i3 Multi-Monitor Integration</td>
+<td>35</td>
+<td>24</td>
+<td>69%</td>
+<td>In Progress</td>
+</tr>
+<tr>
+<td>3.5</td>
+<td>Theme &amp; Plugin Ecosystem</td>
+<td>30</td>
+<td>24</td>
+<td>80%</td>
+<td>In Progress</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Bootable Thin Client</td>
+<td>53</td>
+<td>11</td>
+<td>21%</td>
+<td>In Progress</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Agent Sandboxing</td>
+<td>40</td>
+<td>5</td>
+<td>12%</td>
+<td>In Progress</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Advanced Fleet Intelligence</td>
+<td>50</td>
+<td>42</td>
+<td>84%</td>
+<td>In Progress</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Kubernetes &amp; Cloud Fleet</td>
+<td>25</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Advanced Orchestration &amp; AI-Native</td>
+<td>33</td>
+<td>8</td>
+<td>24%</td>
+<td>In Progress</td>
+</tr>
+<tr>
+<td>9</td>
+<td>R&amp;D Cycle Automation</td>
+<td>5</td>
+<td>5</td>
+<td>100%</td>
+<td>Complete*</td>
+</tr>
+<tr>
+<td>9.5</td>
+<td>Autonomous R&amp;D Supervisor</td>
+<td>5</td>
+<td>5</td>
+<td>100%</td>
+<td>Complete</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Claude Code Native Integration</td>
+<td>20</td>
+<td>3</td>
+<td>15%</td>
+<td>In Progress</td>
+</tr>
+<tr>
+<td>10.5</td>
+<td>Horizontal &amp; Vertical Scaling</td>
+<td>48</td>
+<td>14</td>
+<td>29%</td>
+<td>In Progress</td>
+</tr>
+<tr>
+<td>11</td>
+<td>A2A Protocol Integration</td>
+<td>21</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Tailscale Fleet Networking</td>
+<td>26</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Level 3 Autonomy Core</td>
+<td>40</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Agent Memory &amp; Meta-Learning</td>
+<td>31</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Advanced Fleet Intelligence v2</td>
+<td>32</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Edge &amp; Embedded Agents</td>
+<td>23</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>17</td>
+<td>AI Safety &amp; Governance</td>
+<td>37</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>18</td>
+<td>World Models &amp; Predictive</td>
+<td>28</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>19</td>
+<td>Cross-Repository Orchestration</td>
+<td>29</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>20</td>
+<td>Agent Marketplace &amp; Ecosystem</td>
+<td>43</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>21</td>
+<td>Observability &amp; Evaluation</td>
+<td>30</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>22</td>
+<td>DevOps &amp; Infrastructure</td>
+<td>45</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>23</td>
+<td>Advanced Prompt Engineering</td>
+<td>23</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>24</td>
+<td>MoE-Inspired Provider Routing</td>
+<td>10</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>25</td>
+<td>Federated Fleet Learning</td>
+<td>9</td>
+<td>0</td>
+<td>0%</td>
+<td>Planned</td>
+</tr>
+</tbody>
+</table>
+<p>*Phase 9 marked 100% but tier-1 implementation files are missing [Agent 1, S2].</p>
+<p><strong>Summary</strong>: 10 phases complete, 10 in progress (12-96%), 16 planned at 0%.</p>
+<h3 id="roadmap-structural-issues">Roadmap Structural Issues</h3>
+<p><strong>Numbering collision (CRITICAL)</strong>: Phase 3.5.5 has two sections with identical sub-IDs -- "Codex-primary command/control parity" (4 open P0/P1 tasks) and "Theme export to terminal" (4 done P2 tasks). Any tooling addressing tasks by ID has undefined behavior. <strong>Recommendation</strong>: Renumber Codex parity to 3.5.6 [Agent 1].</p>
+<p><strong>Duplicate phase name</strong>: Phase 6 and Phase 15 are both named "Advanced Fleet Intelligence" covering different scope. <strong>Recommendation</strong>: Rename Phase 15 to "Distributed Swarm Intelligence &amp; Scheduling" [Agent 1].</p>
+<p><strong>Stale header</strong>: ROADMAP.md header says "1,115 tasks, 442 complete" but live checkbox count is 1,143 / 503. Metrics tracking uses the wrong baseline [Agent 1].</p>
+<p><strong>Phantom file references</strong>: 158 total phantom references in ROADMAP.md. 5 are in completed tasks (highest priority to reconcile): QW-7 (<code>snapshot.go</code>), QW-11 (<code>coordinator.go</code>), 0.5.7.1 (<code>version.go</code>), 0.5.11.1 (<code>config_schema.go</code>), 1.8.4 (<code>internal/errors/</code> package) [S2].</p>
+<p><strong>Orphaned tasks with missing code</strong>: Phase 9 tier-1 tools (<code>finding_to_task</code>, <code>cycle_merge</code>, <code>cycle_plan</code>, <code>cycle_schedule</code>, <code>cycle_baseline</code>) have <code>tools_loop_test.go</code> but no <code>tools_loop.go</code>. If the supervisor calls these tools autonomously, they may not have working handlers [Agent 1, S2].</p>
+<h3 id="phases-with-unrealistic-scope">Phases with Unrealistic Scope</h3>
+<p><strong>Phase 13 (L3 Autonomy Core)</strong>: 40 tasks, 0% done, 3 XL sections, all implementation files missing. The L3 target (72-hour unattended operation) requires <code>self_heal.go</code> + <code>decision_engine.go</code> + <code>unattended.go</code> + <code>param_tuner.go</code> to all work correctly together. Highest-risk scope in the roadmap [Agent 1].</p>
+<p><strong>Phase 10.5 (Scaling)</strong>: 18% XL fraction, all blocking L3. Multi-node marathon (10.5.6) and autonomy scaling (10.5.11) are both XL with external infrastructure dependencies (NATS, multi-machine coordination) [Agent 1].</p>
+<p><strong>Phases 17, 24-25</strong>: Phase 17 (Safety) has <code>XL</code> gate; Phases 17.3-17.4 (PRMs, adversarial testing) require fine-tuning infrastructure not in the stack. Phase 25 (Federated Learning with DP-SGD, Shamir secret sharing) is the most academically ambitious item with no realistic production path before L3 is stable [Agent 1].</p>
+<h3 id="critical-path-to-l3">Critical Path to L3</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Phase 10.5 (29% done, ~34 tasks remaining)
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  --&gt; Phase 13.1 Self-Healing Runtime (0%, 10 tasks)
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    --&gt; Phase 13.3 Autonomous Decision Engine (0%, 8 tasks)
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>      --&gt; Phase 13.5 Unattended Operation (0%, 8 tasks)
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        --&gt; Phase 17.1 Safety Guardrails (0%, 10 tasks)
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>          --&gt; Phase 14.1 Persistent Memory (0%, 10 tasks)
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>            --&gt; Phase 15.1 Intelligent Router (0%, 10 tasks)
+</code></pre></div>
+<p><strong>Critical path: ~100 tasks, all L/XL sized, all at 0%</strong> [Agent 1].</p>
+<h3 id="parallelizable-backlog-independent-of-l3">Parallelizable Backlog (Independent of L3)</h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Tasks</th>
+<th>Why Independent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>19 (Cross-Repo)</td>
+<td>29</td>
+<td>Only needs existing fleet package</td>
+</tr>
+<tr>
+<td>22 (DevOps)</td>
+<td>45</td>
+<td>CI/CD, security scanning are standalone</td>
+</tr>
+<tr>
+<td>23 (Prompt Engineering)</td>
+<td>23</td>
+<td>Builds on existing enhancer</td>
+</tr>
+<tr>
+<td>16.1 (Edge/Ollama)</td>
+<td>~10</td>
+<td>Provider additions</td>
+</tr>
+<tr>
+<td>11 (A2A)</td>
+<td>21</td>
+<td>Partial impl exists; SDK independent</td>
+</tr>
+<tr>
+<td>24 (MoE Routing)</td>
+<td>10</td>
+<td>Extends existing cascade + bandit</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>~138</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>[Agent 1]</p>
+<hr />
+<h2 id="appendix-d-research-index">Appendix D: Research Index</h2>
+<p>Full research sweep covered 20 reports by 24 agents. Source documents with key URLs are indexed in <a href="../16-research-index/">16-research-index.md</a>.</p>
+<h3 id="report-inventory">Report Inventory</h3>
+<table>
+<thead>
+<tr>
+<th>Report</th>
+<th>Agent</th>
+<th>Focus</th>
+<th>Key Deliverable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01-roadmap-matrix.md</td>
+<td>Agent 1</td>
+<td>ROADMAP.md analysis</td>
+<td>36 phases, 503/1143 tasks, dependency DAG</td>
+</tr>
+<tr>
+<td>02-mcp-tool-audit.md</td>
+<td>Agent 2</td>
+<td>MCP tool layer</td>
+<td>166 tools, annotation gaps, namespace issues</td>
+</tr>
+<tr>
+<td>03-session-architecture.md</td>
+<td>Agent 3</td>
+<td>Session internals</td>
+<td>State machine, 3-lock hierarchy, 7 race risks</td>
+</tr>
+<tr>
+<td>04-enhancer-pipeline.md</td>
+<td>Agent 4</td>
+<td>Prompt enhancement</td>
+<td>13 stages, 14 lint rules, shared CB gap</td>
+</tr>
+<tr>
+<td>05-test-coverage.md</td>
+<td>Agent 5</td>
+<td>Test health</td>
+<td>9,267 tests, 7 failing packages, priority fix list</td>
+</tr>
+<tr>
+<td>06-fleet-sweep.md</td>
+<td>Agent 6</td>
+<td>Fleet subsystems</td>
+<td>Unbounded queue, advisory autoscaler, serial sweep</td>
+</tr>
+<tr>
+<td>07-tui-audit.md</td>
+<td>Agent 7</td>
+<td>TUI architecture</td>
+<td>21 views, unbounded LogView, O(n) tick</td>
+</tr>
+<tr>
+<td>08-distro-audit.md</td>
+<td>Agent 8</td>
+<td>Thin client distro</td>
+<td>No encryption, no secrets, decoupled GPU profiles</td>
+</tr>
+<tr>
+<td>09-orchestration-landscape.md</td>
+<td>Agent 9</td>
+<td>Competitive analysis</td>
+<td>Unique Go-native position, A2A/MCP SDK adoption</td>
+</tr>
+<tr>
+<td>10-mcp-ecosystem.md</td>
+<td>Agent 10</td>
+<td>MCP protocol</td>
+<td>Official Go SDK v1.4+, 10K+ servers, AAIF governance</td>
+</tr>
+<tr>
+<td>11-llm-capabilities.md</td>
+<td>Agent 11</td>
+<td>Provider pricing</td>
+<td>$0.17 to $0.03 possible, Opus price drop 67%</td>
+</tr>
+<tr>
+<td>12-thin-client-patterns.md</td>
+<td>Agent 12</td>
+<td>Boot architecture</td>
+<td>Manjaro short-term, NixOS medium-term, drop i3</td>
+</tr>
+<tr>
+<td>13-strategic-initiatives.md</td>
+<td>Agent 13</td>
+<td>Strategic plan</td>
+<td>10 initiatives, Q2 2026 to Q1 2027</td>
+</tr>
+<tr>
+<td>14-autonomy-path.md</td>
+<td>Agent 14</td>
+<td>Autonomy progression</td>
+<td>L1 2wk, L2 8wk, L3 16-20wk, safety gates</td>
+</tr>
+<tr>
+<td>15-fleet-readiness.md</td>
+<td>Agent 15</td>
+<td>Cross-repo readiness</td>
+<td>19/77 repos fleet-ready, $3.23 sweep cost</td>
+</tr>
+<tr>
+<td>16-research-index.md</td>
+<td>Agent 16</td>
+<td>Master index</td>
+<td>82 findings, 9 contradictions, metrics</td>
+</tr>
+<tr>
+<td>s1-race-condition-census.md</td>
+<td>S1</td>
+<td>Race conditions</td>
+<td>2 CRITICAL + 4 HIGH + 8 MEDIUM races</td>
+</tr>
+<tr>
+<td>s2-dead-code-audit.md</td>
+<td>S2</td>
+<td>Dead code</td>
+<td>443 lines dead, 4 CB copies, 158 phantoms</td>
+</tr>
+<tr>
+<td>s3-cost-model-analysis.md</td>
+<td>S3</td>
+<td>Cost model</td>
+<td>4 budget gaps, $1,280/hr max, stale rates</td>
+</tr>
+<tr>
+<td>s4-error-handling-audit.md</td>
+<td>S4</td>
+<td>Error handling</td>
+<td>Supervisor swallows errors, 0 handler violations</td>
+</tr>
+</tbody>
+</table>
+<h3 id="report-statistics">Report Statistics</h3>
+<table>
+<thead>
+<tr>
+<th>Report</th>
+<th>Word Count (est.)</th>
+<th>Findings</th>
+<th>Key Tables</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01-roadmap-matrix</td>
+<td>~4,500</td>
+<td>7</td>
+<td>36-phase status matrix, dependency DAG, task size distribution</td>
+</tr>
+<tr>
+<td>02-mcp-tool-audit</td>
+<td>~3,800</td>
+<td>11</td>
+<td>16-namespace inventory, handler quality matrix, annotation gaps</td>
+</tr>
+<tr>
+<td>03-session-architecture</td>
+<td>~5,000</td>
+<td>8</td>
+<td>State machine, lock hierarchy, cascade routing, supervisor tick</td>
+</tr>
+<tr>
+<td>04-enhancer-pipeline</td>
+<td>~5,500</td>
+<td>15</td>
+<td>13-stage pipeline, 14 lint rules, 10 scoring dimensions, 3 LLM clients</td>
+</tr>
+<tr>
+<td>05-test-coverage</td>
+<td>~3,500</td>
+<td>10</td>
+<td>Coverage by blast radius, 7 failing packages, priority fix list</td>
+</tr>
+<tr>
+<td>06-fleet-sweep</td>
+<td>~4,200</td>
+<td>10</td>
+<td>Job pipeline, 3 budget layers, autoscaler, A2A status, topology</td>
+</tr>
+<tr>
+<td>07-tui-audit</td>
+<td>~3,000</td>
+<td>8</td>
+<td>View stack, tick bottleneck, memory model, component inventory</td>
+</tr>
+<tr>
+<td>08-distro-audit</td>
+<td>~3,500</td>
+<td>6</td>
+<td>Compositor abstraction, GPU detection, boot pipeline, WM comparison</td>
+</tr>
+<tr>
+<td>09-orchestration-landscape</td>
+<td>~4,000</td>
+<td>1</td>
+<td>11-framework comparison, adopt/adapt/ignore matrix</td>
+</tr>
+<tr>
+<td>10-mcp-ecosystem</td>
+<td>~3,000</td>
+<td>1</td>
+<td>Spec timeline, Go SDK comparison, gateway landscape</td>
+</tr>
+<tr>
+<td>11-llm-capabilities</td>
+<td>~3,500</td>
+<td>3</td>
+<td>Provider pricing matrix, cascade config, cost projections</td>
+</tr>
+<tr>
+<td>12-thin-client-patterns</td>
+<td>~3,800</td>
+<td>3</td>
+<td>5-distro comparison, compositor strategy, multi-GPU, boot pipeline</td>
+</tr>
+<tr>
+<td>13-strategic-initiatives</td>
+<td>~4,500</td>
+<td>0</td>
+<td>10 initiatives, dependency DAG, quarterly timeline</td>
+</tr>
+<tr>
+<td>14-autonomy-path</td>
+<td>~5,000</td>
+<td>0</td>
+<td>Gate criteria L0-L3, safety interlocks, risk matrix, 20-week timeline</td>
+</tr>
+<tr>
+<td>15-fleet-readiness</td>
+<td>~3,200</td>
+<td>0</td>
+<td>77-repo tier inventory, dependency health, sweep readiness</td>
+</tr>
+<tr>
+<td>16-research-index</td>
+<td>~3,500</td>
+<td>82 (index)</td>
+<td>Master finding table, contradiction register, gap register</td>
+</tr>
+<tr>
+<td>s1-race-condition-census</td>
+<td>~3,000</td>
+<td>20</td>
+<td>Race severity table, detailed CRITICAL/HIGH analysis</td>
+</tr>
+<tr>
+<td>s2-dead-code-audit</td>
+<td>~2,800</td>
+<td>6</td>
+<td>Phantom references, dead code inventory, orphan test analysis</td>
+</tr>
+<tr>
+<td>s3-cost-model-analysis</td>
+<td>~3,200</td>
+<td>7</td>
+<td>Cost tracking architecture, budget enforcement map, rate accuracy</td>
+</tr>
+<tr>
+<td>s4-error-handling-audit</td>
+<td>~2,800</td>
+<td>20</td>
+<td>Handler compliance, panic inventory, top-20 swallowed errors</td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-external-references">Key External References</h3>
+<table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>URL</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MCP Spec 2025-11-25</td>
+<td>modelcontextprotocol.io/specification/2025-11-25</td>
+<td>Agent 10</td>
+</tr>
+<tr>
+<td>Official MCP Go SDK</td>
+<td>github.com/modelcontextprotocol/go-sdk</td>
+<td>Agent 10</td>
+</tr>
+<tr>
+<td>A2A Go SDK</td>
+<td>github.com/a2aproject/a2a-go</td>
+<td>Agent 9</td>
+</tr>
+<tr>
+<td>Anthropic Pricing</td>
+<td>platform.claude.com/docs/en/about-claude/pricing</td>
+<td>Agent 11</td>
+</tr>
+<tr>
+<td>Google Pricing</td>
+<td>ai.google.dev/gemini-api/docs/pricing</td>
+<td>Agent 11</td>
+</tr>
+<tr>
+<td>OpenAI Pricing</td>
+<td>developers.openai.com/api/docs/pricing</td>
+<td>Agent 11</td>
+</tr>
+<tr>
+<td>AAIF Formation</td>
+<td>linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation</td>
+<td>Agent 10</td>
+</tr>
+<tr>
+<td>Claude Agent SDK</td>
+<td>platform.claude.com/docs/en/agent-sdk/overview</td>
+<td>Agent 9</td>
+</tr>
+<tr>
+<td>Confidence-Based Cascading</td>
+<td>arxiv.org/abs/2410.10347</td>
+<td>Agent 11</td>
+</tr>
+<tr>
+<td>NixOS Kiosk</td>
+<td>github.com/matthewbauer/nixiosk</td>
+<td>Agent 12</td>
+</tr>
+<tr>
+<td>Cage Compositor</td>
+<td>github.com/cage-kiosk/cage</td>
+<td>Agent 12</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

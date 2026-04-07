@@ -1,0 +1,1549 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Command-and-control TUI for parallel multi-LLM agent fleets">
+      
+      
+      
+        <link rel="canonical" href="https://hairglasses-studio.github.io/ralphglasses/ralph-roadmap/s6-logview-ringbuffer-design/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>S6 LogView Ring Buffer Design — ralphglasses - ralphglasses</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#s6-logview-ring-buffer-design-ralphglasses" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ralphglasses" class="md-header__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ralphglasses
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              S6 LogView Ring Buffer Design — ralphglasses
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="pink"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture-diagrams/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MCP-TOOLS/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  MCP Tools
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../PROVIDER-SETUP/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Provider Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MULTI-TENANT/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Multi-Tenant
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../MARATHON/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Marathon
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../AUTONOMY/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Autonomy
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ralphglasses" class="md-nav__button md-logo" aria-label="ralphglasses" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ralphglasses
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hairglasses-studio/ralphglasses" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hairglasses-studio/ralphglasses
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-diagrams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP-TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER-SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MULTI-TENANT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MARATHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marathon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTONOMY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-problem-unbounded-lines-string" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Problem: Unbounded Lines []string
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Problem: Unbounded Lines []string">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where it lives
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-lines-enter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How lines enter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#growth-rate-estimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Growth rate estimate
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-no-existing-ring-buffer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. No Existing Ring Buffer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-design-linering-a-fixed-capacity-string-ring-buffer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Design: lineRing — a Fixed-Capacity String Ring Buffer
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Design: lineRing — a Fixed-Capacity String Ring Buffer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-implementation-sketch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Implementation sketch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-capacity-and-configurability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Capacity and configurability
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-integration-with-existing-view-rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Integration with Existing View Rendering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Integration with Existing View Rendering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-logview-struct-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 LogView struct change
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-appendlines-and-setlines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 AppendLines and SetLines
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-filteredlines-and-rebuildcontent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 filteredLines and rebuildContent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-header-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Header display
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-scroll-position-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Scroll Position Handling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Scroll Position Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#follow-mode-lvfollow-true" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Follow mode (lv.Follow == true)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user-scrolled-up-lvfollow-false" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User scrolled up (lv.Follow == false)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handling-wrap-induced-drift" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handling wrap-induced drift
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-memory-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Memory Impact
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Memory Impact">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#before-unbounded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Before (unbounded)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#after-ring-buffer-10k-cap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        After (ring buffer, 10K cap)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calculation-basis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calculation basis
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-test-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Test Updates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-files-to-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Files to Change
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-estimated-effort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Estimated Effort
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-deferred-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Deferred Decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="s6-logview-ring-buffer-design-ralphglasses">S6 LogView Ring Buffer Design — ralphglasses</h1>
+<p><strong>Date</strong>: 2026-04-04
+<strong>Author</strong>: Claude Sonnet 4.6 (automated design)
+<strong>Scope</strong>: <code>internal/tui/views/logstream.go</code>, <code>internal/process/logstream.go</code>, <code>internal/tui/app_update.go</code>
+<strong>Status</strong>: Design — ready for implementation</p>
+<hr />
+<h2 id="1-problem-unbounded-lines-string">1. Problem: Unbounded <code>Lines []string</code></h2>
+<h3 id="where-it-lives">Where it lives</h3>
+<p><code>internal/tui/views/logstream.go</code>, lines 13–18:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">LogView</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nx">vp</span><span class="w">     </span><span class="nx">viewport</span><span class="p">.</span><span class="nx">Model</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">Lines</span><span class="w">  </span><span class="p">[]</span><span class="kt">string</span><span class="w">   </span><span class="c1">// grows without bound</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">Follow</span><span class="w"> </span><span class="kt">bool</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nx">Search</span><span class="w"> </span><span class="kt">string</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nx">Width</span><span class="w">  </span><span class="kt">int</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nx">Height</span><span class="w"> </span><span class="kt">int</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="how-lines-enter">How lines enter</h3>
+<p>Two distinct ingestion paths both call into <code>LogView</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Source</th>
+<th>Handler in <code>app_update.go</code></th>
+<th>LogView method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initial load</td>
+<td><code>loadLogCmd</code> → <code>process.ReadFullLog</code></td>
+<td><code>LogLoadedMsg</code> (line 198–204)</td>
+<td><code>SetLines</code></td>
+</tr>
+<tr>
+<td>Tail polling</td>
+<td><code>process.TailLog</code> (every 2-second tick)</td>
+<td><code>process.LogLinesMsg</code> (line 206–209)</td>
+<td><code>AppendLines</code></td>
+</tr>
+<tr>
+<td>Session stream</td>
+<td><code>streamSessionOutput</code></td>
+<td><code>SessionOutputMsg</code> (line 229–233)</td>
+<td><code>AppendLines</code> on <code>Stream.OutputView</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>AppendLines</code> (logstream.go line 45–48) is the hot path:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">lv</span><span class="w"> </span><span class="o">*</span><span class="nx">LogView</span><span class="p">)</span><span class="w"> </span><span class="nx">AppendLines</span><span class="p">(</span><span class="nx">lines</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nx">lv</span><span class="p">.</span><span class="nx">Lines</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">lv</span><span class="p">.</span><span class="nx">Lines</span><span class="p">,</span><span class="w"> </span><span class="nx">lines</span><span class="o">...</span><span class="p">)</span><span class="w">  </span><span class="c1">// no cap check, grows forever</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">lv</span><span class="p">.</span><span class="nx">rebuildContent</span><span class="p">()</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">}</span>
+</code></pre></div>
+<p>After every <code>AppendLines</code>, <code>rebuildContent</code> (line 56–72) iterates the full <code>Lines</code> slice, builds one large string, and hands it to <code>viewport.SetContent</code>. That means every render is O(N) in the total number of lines accumulated since the view was opened.</p>
+<h3 id="growth-rate-estimate">Growth rate estimate</h3>
+<p>A busy Ralph loop emitting ~10 lines/second (JSON output, tool calls) produces:
+- 600 lines/min
+- 36K lines/hour
+- ~432K lines in a 12-hour session</p>
+<p>At ~200 bytes average per line, that is ~86 MB of retained strings — plus the equivalent-sized rendered content string the viewport holds. Both grow simultaneously. After a few hours of heavy use <code>LogView</code> can easily hold hundreds of megabytes.</p>
+<hr />
+<h2 id="2-no-existing-ring-buffer">2. No Existing Ring Buffer</h2>
+<p>A codebase-wide search for <code>ring</code>, <code>circular</code>, <code>RingBuffer</code>, <code>ringbuf</code> found no matching implementations in production Go files. The term appears only in non-TUI packages as part of unrelated patterns (circuit breaker, routing). There is nothing to reuse; the ring buffer must be written fresh.</p>
+<hr />
+<h2 id="3-design-linering-a-fixed-capacity-string-ring-buffer">3. Design: <code>lineRing</code> — a Fixed-Capacity String Ring Buffer</h2>
+<h3 id="31-implementation-sketch">3.1 Implementation sketch</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// lineRing is a fixed-capacity circular buffer of strings.</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1">// When full, new writes overwrite the oldest entries.</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1">// All methods are not safe for concurrent use; callers must hold LogView&#39;s lock</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1">// (or rely on the single-goroutine Bubble Tea model).</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="kd">type</span><span class="w"> </span><span class="nx">lineRing</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nx">buf</span><span class="w">  </span><span class="p">[]</span><span class="kt">string</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="nx">cap</span><span class="w">  </span><span class="kt">int</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nx">head</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="c1">// index of the oldest entry</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="nx">size</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="c1">// number of valid entries (0..cap)</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">}</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1">// newLineRing allocates a ring with the given capacity.</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1">// Panics if cap &lt; 1.</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="kd">func</span><span class="w"> </span><span class="nx">newLineRing</span><span class="p">(</span><span class="nx">cap</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="nx">lineRing</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">cap</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">        </span><span class="nb">panic</span><span class="p">(</span><span class="s">&quot;lineRing: capacity must be &gt;= 1&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">lineRing</span><span class="p">{</span><span class="nx">buf</span><span class="p">:</span><span class="w"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">cap</span><span class="p">),</span><span class="w"> </span><span class="nx">cap</span><span class="p">:</span><span class="w"> </span><span class="nx">cap</span><span class="p">}</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="p">}</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="c1">// push adds a line. When full, the oldest line is silently dropped.</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">lineRing</span><span class="p">)</span><span class="w"> </span><span class="nx">push</span><span class="p">(</span><span class="nx">line</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">size</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">cap</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">buf</span><span class="p">[(</span><span class="nx">r</span><span class="p">.</span><span class="nx">head</span><span class="o">+</span><span class="nx">r</span><span class="p">.</span><span class="nx">size</span><span class="p">)</span><span class="o">%</span><span class="nx">r</span><span class="p">.</span><span class="nx">cap</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">line</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">size</span><span class="o">++</span>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">        </span><span class="c1">// Overwrite the oldest slot and advance head.</span>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">buf</span><span class="p">[</span><span class="nx">r</span><span class="p">.</span><span class="nx">head</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">line</span>
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">head</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">head</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">cap</span>
+<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="p">}</span>
+<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a>
+<a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="c1">// pushAll appends a batch of lines efficiently.</span>
+<a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">lineRing</span><span class="p">)</span><span class="w"> </span><span class="nx">pushAll</span><span class="p">(</span><span class="nx">lines</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">l</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">lines</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">l</span><span class="p">)</span>
+<a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="p">}</span>
+<a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a>
+<a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="c1">// reset clears all entries without reallocating the backing slice.</span>
+<a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">lineRing</span><span class="p">)</span><span class="w"> </span><span class="nx">reset</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="w">    </span><span class="nx">r</span><span class="p">.</span><span class="nx">head</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="w">    </span><span class="nx">r</span><span class="p">.</span><span class="nx">size</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-2-44" name="__codelineno-2-44" href="#__codelineno-2-44"></a><span class="p">}</span>
+<a id="__codelineno-2-45" name="__codelineno-2-45" href="#__codelineno-2-45"></a>
+<a id="__codelineno-2-46" name="__codelineno-2-46" href="#__codelineno-2-46"></a><span class="c1">// len returns the number of valid entries.</span>
+<a id="__codelineno-2-47" name="__codelineno-2-47" href="#__codelineno-2-47"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">lineRing</span><span class="p">)</span><span class="w"> </span><span class="nb">len</span><span class="p">()</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">size</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-2-48" name="__codelineno-2-48" href="#__codelineno-2-48"></a>
+<a id="__codelineno-2-49" name="__codelineno-2-49" href="#__codelineno-2-49"></a><span class="c1">// isFull reports whether the buffer has reached capacity.</span>
+<a id="__codelineno-2-50" name="__codelineno-2-50" href="#__codelineno-2-50"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">lineRing</span><span class="p">)</span><span class="w"> </span><span class="nx">isFull</span><span class="p">()</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">size</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">cap</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-2-51" name="__codelineno-2-51" href="#__codelineno-2-51"></a>
+<a id="__codelineno-2-52" name="__codelineno-2-52" href="#__codelineno-2-52"></a><span class="c1">// get returns the i-th oldest entry (0 = oldest, len-1 = newest).</span>
+<a id="__codelineno-2-53" name="__codelineno-2-53" href="#__codelineno-2-53"></a><span class="c1">// Panics if i is out of range.</span>
+<a id="__codelineno-2-54" name="__codelineno-2-54" href="#__codelineno-2-54"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">lineRing</span><span class="p">)</span><span class="w"> </span><span class="nx">get</span><span class="p">(</span><span class="nx">i</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-55" name="__codelineno-2-55" href="#__codelineno-2-55"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">size</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-56" name="__codelineno-2-56" href="#__codelineno-2-56"></a><span class="w">        </span><span class="nb">panic</span><span class="p">(</span><span class="s">&quot;lineRing: index out of range&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-57" name="__codelineno-2-57" href="#__codelineno-2-57"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-58" name="__codelineno-2-58" href="#__codelineno-2-58"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">buf</span><span class="p">[(</span><span class="nx">r</span><span class="p">.</span><span class="nx">head</span><span class="o">+</span><span class="nx">i</span><span class="p">)</span><span class="o">%</span><span class="nx">r</span><span class="p">.</span><span class="nx">cap</span><span class="p">]</span>
+<a id="__codelineno-2-59" name="__codelineno-2-59" href="#__codelineno-2-59"></a><span class="p">}</span>
+<a id="__codelineno-2-60" name="__codelineno-2-60" href="#__codelineno-2-60"></a>
+<a id="__codelineno-2-61" name="__codelineno-2-61" href="#__codelineno-2-61"></a><span class="c1">// slice returns all valid entries in order from oldest to newest.</span>
+<a id="__codelineno-2-62" name="__codelineno-2-62" href="#__codelineno-2-62"></a><span class="c1">// The returned slice is a copy — safe to hold across mutations.</span>
+<a id="__codelineno-2-63" name="__codelineno-2-63" href="#__codelineno-2-63"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">lineRing</span><span class="p">)</span><span class="w"> </span><span class="nx">slice</span><span class="p">()</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-64" name="__codelineno-2-64" href="#__codelineno-2-64"></a><span class="w">    </span><span class="nx">out</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">size</span><span class="p">)</span>
+<a id="__codelineno-2-65" name="__codelineno-2-65" href="#__codelineno-2-65"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">out</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-66" name="__codelineno-2-66" href="#__codelineno-2-66"></a><span class="w">        </span><span class="nx">out</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">buf</span><span class="p">[(</span><span class="nx">r</span><span class="p">.</span><span class="nx">head</span><span class="o">+</span><span class="nx">i</span><span class="p">)</span><span class="o">%</span><span class="nx">r</span><span class="p">.</span><span class="nx">cap</span><span class="p">]</span>
+<a id="__codelineno-2-67" name="__codelineno-2-67" href="#__codelineno-2-67"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-68" name="__codelineno-2-68" href="#__codelineno-2-68"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">out</span>
+<a id="__codelineno-2-69" name="__codelineno-2-69" href="#__codelineno-2-69"></a><span class="p">}</span>
+</code></pre></div>
+<p>All operations are O(1) except <code>pushAll</code> (O(k) for k new lines) and <code>slice</code> (O(N) for N stored lines). Memory is allocated once at construction.</p>
+<h3 id="32-capacity-and-configurability">3.2 Capacity and configurability</h3>
+<p>Default capacity: <strong>10,000 lines</strong>.</p>
+<p>This should be configurable. The natural hook is <code>NewLogView</code>. Add an optional constructor and a package-level default:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">DefaultLogCapacity</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">10</span><span class="nx">_000</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1">// NewLogView creates a log view with the default line capacity.</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kd">func</span><span class="w"> </span><span class="nx">NewLogView</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="nx">LogView</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">NewLogViewWithCapacity</span><span class="p">(</span><span class="nx">DefaultLogCapacity</span><span class="p">)</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">}</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1">// NewLogViewWithCapacity creates a log view with a custom line capacity.</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1">// A capacity of 0 uses DefaultLogCapacity.</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="kd">func</span><span class="w"> </span><span class="nx">NewLogViewWithCapacity</span><span class="p">(</span><span class="nx">cap</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="nx">LogView</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">cap</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">        </span><span class="nx">cap</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">DefaultLogCapacity</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">    </span><span class="nx">vp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">viewport</span><span class="p">.</span><span class="nx">New</span><span class="p">()</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">    </span><span class="nx">vp</span><span class="p">.</span><span class="nx">KeyMap</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">viewport</span><span class="p">.</span><span class="nx">KeyMap</span><span class="p">{}</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">LogView</span><span class="p">{</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">        </span><span class="nx">vp</span><span class="p">:</span><span class="w">     </span><span class="nx">vp</span><span class="p">,</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">        </span><span class="nx">ring</span><span class="p">:</span><span class="w">   </span><span class="nx">newLineRing</span><span class="p">(</span><span class="nx">cap</span><span class="p">),</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">        </span><span class="nx">Follow</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="p">}</span>
+</code></pre></div>
+<p>Exposing capacity through ralphglasses config (<code>.ralph/config.yaml</code>) is a logical follow-on. For now, callers that need a different size (e.g. <code>Stream.OutputView</code> for session streaming) use <code>NewLogViewWithCapacity</code>.</p>
+<hr />
+<h2 id="4-integration-with-existing-view-rendering">4. Integration with Existing View Rendering</h2>
+<h3 id="41-logview-struct-change">4.1 <code>LogView</code> struct change</h3>
+<p>Replace <code>Lines []string</code> with <code>ring *lineRing</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">LogView</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nx">vp</span><span class="w">     </span><span class="nx">viewport</span><span class="p">.</span><span class="nx">Model</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nx">ring</span><span class="w">   </span><span class="o">*</span><span class="nx">lineRing</span><span class="w">  </span><span class="c1">// was: Lines []string</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">Follow</span><span class="w"> </span><span class="kt">bool</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nx">Search</span><span class="w"> </span><span class="kt">string</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nx">Width</span><span class="w">  </span><span class="kt">int</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nx">Height</span><span class="w"> </span><span class="kt">int</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>Lines</code> is a public field accessed in tests. The cleanest migration is:</p>
+<ol>
+<li>Make <code>ring</code> the source of truth.</li>
+<li>Add a read-only <code>Lines()</code> method for tests and any external callers.</li>
+<li>Update tests to use the method.</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// Lines returns a snapshot of all stored lines, oldest first.</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1">// Callers that previously read lv.Lines directly should use this instead.</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">lv</span><span class="w"> </span><span class="o">*</span><span class="nx">LogView</span><span class="p">)</span><span class="w"> </span><span class="nx">Lines</span><span class="p">()</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">ring</span><span class="p">.</span><span class="nx">slice</span><span class="p">()</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">}</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1">// Len returns the number of stored lines.</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">lv</span><span class="w"> </span><span class="o">*</span><span class="nx">LogView</span><span class="p">)</span><span class="w"> </span><span class="nx">Len</span><span class="p">()</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">ring</span><span class="p">.</span><span class="nb">len</span><span class="p">()</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="42-appendlines-and-setlines">4.2 <code>AppendLines</code> and <code>SetLines</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">lv</span><span class="w"> </span><span class="o">*</span><span class="nx">LogView</span><span class="p">)</span><span class="w"> </span><span class="nx">AppendLines</span><span class="p">(</span><span class="nx">lines</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nx">lv</span><span class="p">.</span><span class="nx">ring</span><span class="p">.</span><span class="nx">pushAll</span><span class="p">(</span><span class="nx">lines</span><span class="p">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nx">lv</span><span class="p">.</span><span class="nx">rebuildContent</span><span class="p">()</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="p">}</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">lv</span><span class="w"> </span><span class="o">*</span><span class="nx">LogView</span><span class="p">)</span><span class="w"> </span><span class="nx">SetLines</span><span class="p">(</span><span class="nx">lines</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="nx">lv</span><span class="p">.</span><span class="nx">ring</span><span class="p">.</span><span class="nx">reset</span><span class="p">()</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nx">lv</span><span class="p">.</span><span class="nx">ring</span><span class="p">.</span><span class="nx">pushAll</span><span class="p">(</span><span class="nx">lines</span><span class="p">)</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="nx">lv</span><span class="p">.</span><span class="nx">rebuildContent</span><span class="p">()</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>SetLines</code> is called from <code>LogLoadedMsg</code> with the full log file content read by <code>process.ReadFullLog</code>. If the file has more than <code>cap</code> lines, only the most recent <code>cap</code> will be stored (the <code>pushAll</code> loop naturally evicts from the front). This is the correct behavior — users want to see recent output.</p>
+<h3 id="43-filteredlines-and-rebuildcontent">4.3 <code>filteredLines</code> and <code>rebuildContent</code></h3>
+<p><code>filteredLines</code> currently ranges over <code>lv.Lines</code>. After the change it ranges over <code>lv.ring.slice()</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">lv</span><span class="w"> </span><span class="o">*</span><span class="nx">LogView</span><span class="p">)</span><span class="w"> </span><span class="nx">filteredLines</span><span class="p">()</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nx">all</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">ring</span><span class="p">.</span><span class="nx">slice</span><span class="p">()</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">Search</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">all</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nx">needle</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">strings</span><span class="p">.</span><span class="nx">ToLower</span><span class="p">(</span><span class="nx">lv</span><span class="p">.</span><span class="nx">Search</span><span class="p">)</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">filtered</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">line</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">all</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">strings</span><span class="p">.</span><span class="nx">Contains</span><span class="p">(</span><span class="nx">strings</span><span class="p">.</span><span class="nx">ToLower</span><span class="p">(</span><span class="nx">line</span><span class="p">),</span><span class="w"> </span><span class="nx">needle</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">            </span><span class="nx">filtered</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">filtered</span><span class="p">,</span><span class="w"> </span><span class="nx">line</span><span class="p">)</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">filtered</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>rebuildContent</code> is unchanged structurally — it calls <code>filteredLines()</code> already.</p>
+<h3 id="44-header-display">4.4 Header display</h3>
+<p>The <code>View()</code> method currently shows <code>len(lines)</code> (line 169):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">header</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;  Lines: %d  Scroll: %.0f%%  %s&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="nb">len</span><span class="p">(</span><span class="nx">lines</span><span class="p">),</span><span class="w"> </span><span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+<p>After the ring buffer change, <code>lines</code> is <code>lv.filteredLines()</code> — this already reflects the bounded count. No header change needed. Optionally add a "cap" indicator when the ring is full:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">lineCount</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">ring</span><span class="p">.</span><span class="nb">len</span><span class="p">()</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nx">capSuffix</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">if</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">ring</span><span class="p">.</span><span class="nx">isFull</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nx">capSuffix</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;/%d (capped)&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">ring</span><span class="p">.</span><span class="nx">cap</span><span class="p">)</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="p">}</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="nx">header</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;  Lines: %d%s  Scroll: %.0f%%  %s&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="nx">lineCount</span><span class="p">,</span><span class="w"> </span><span class="nx">capSuffix</span><span class="p">,</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">vp</span><span class="p">.</span><span class="nx">ScrollPercent</span><span class="p">()</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="nx">followIndicator</span><span class="p">)</span>
+</code></pre></div>
+<p>This tells the user that older lines have been dropped.</p>
+<hr />
+<h2 id="5-scroll-position-handling">5. Scroll Position Handling</h2>
+<p>The current scroll semantics are already correct and survive the ring buffer change without modification.</p>
+<h3 id="follow-mode-lvfollow-true">Follow mode (<code>lv.Follow == true</code>)</h3>
+<p><code>rebuildContent</code> calls <code>lv.vp.GotoBottom()</code> when <code>Follow</code> is true (logstream.go line 69–71). When new lines arrive and are pushed into the ring, <code>rebuildContent</code> is called, and the viewport jumps to the new bottom. This behavior is unchanged.</p>
+<h3 id="user-scrolled-up-lvfollow-false">User scrolled up (<code>lv.Follow == false</code>)</h3>
+<p><code>ScrollUp()</code> sets <code>Follow = false</code>. The viewport position is managed by <code>viewport.Model</code> internally as a pixel/line offset into the rendered content string. When new lines arrive, <code>rebuildContent</code> calls <code>SetContent</code> with the new string. The <code>viewport.Model</code> from charmbracelet preserves the absolute offset, which means:</p>
+<ul>
+<li>If the user is scrolled up by N pixels, new lines appended at the bottom do not move the viewport.</li>
+<li><strong>When the ring wraps and oldest lines are dropped</strong>, the content string shrinks by the number of evicted lines. This shifts the user's position by exactly one rendered line per evicted line, which causes drift.</li>
+</ul>
+<h3 id="handling-wrap-induced-drift">Handling wrap-induced drift</h3>
+<p>When <code>Follow</code> is false and new lines cause a wrap (eviction), the viewport needs to be nudged up by the number of evicted lines to maintain the user's apparent position.</p>
+<p>Track evictions in <code>lineRing</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">lineRing</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="nx">buf</span><span class="w">      </span><span class="p">[]</span><span class="kt">string</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nx">cap</span><span class="w">      </span><span class="kt">int</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nx">head</span><span class="w">     </span><span class="kt">int</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nx">size</span><span class="w">     </span><span class="kt">int</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="nx">evicted</span><span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="c1">// total lines dropped since last reset</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="p">}</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">lineRing</span><span class="p">)</span><span class="w"> </span><span class="nx">push</span><span class="p">(</span><span class="nx">line</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">size</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">cap</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">buf</span><span class="p">[(</span><span class="nx">r</span><span class="p">.</span><span class="nx">head</span><span class="o">+</span><span class="nx">r</span><span class="p">.</span><span class="nx">size</span><span class="p">)</span><span class="o">%</span><span class="nx">r</span><span class="p">.</span><span class="nx">cap</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">line</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">size</span><span class="o">++</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">buf</span><span class="p">[</span><span class="nx">r</span><span class="p">.</span><span class="nx">head</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">line</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">head</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">head</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">cap</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">evicted</span><span class="o">++</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="p">}</span>
+</code></pre></div>
+<p>In <code>AppendLines</code>, after <code>ring.pushAll</code>, if the user is not following and evictions occurred:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">lv</span><span class="w"> </span><span class="o">*</span><span class="nx">LogView</span><span class="p">)</span><span class="w"> </span><span class="nx">AppendLines</span><span class="p">(</span><span class="nx">lines</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="nx">before</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">ring</span><span class="p">.</span><span class="nx">evicted</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nx">lv</span><span class="p">.</span><span class="nx">ring</span><span class="p">.</span><span class="nx">pushAll</span><span class="p">(</span><span class="nx">lines</span><span class="p">)</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="nx">evictedThisBatch</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">ring</span><span class="p">.</span><span class="nx">evicted</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">before</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="nx">lv</span><span class="p">.</span><span class="nx">rebuildContent</span><span class="p">()</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">lv</span><span class="p">.</span><span class="nx">Follow</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">evictedThisBatch</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">        </span><span class="c1">// Scroll up by evictedThisBatch lines to compensate for dropped content.</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">        </span><span class="c1">// This prevents the viewport from sliding forward into new content</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">        </span><span class="c1">// when the user has intentionally scrolled back.</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">        </span><span class="nx">lv</span><span class="p">.</span><span class="nx">vp</span><span class="p">.</span><span class="nx">ScrollUp</span><span class="p">(</span><span class="nx">evictedThisBatch</span><span class="p">)</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="p">}</span>
+</code></pre></div>
+<p>This is a best-effort compensation. At high eviction rates (e.g. 1,000 lines/second) the adjustment may over-correct slightly, but for typical log rates (10–50 lines/second) the correction is precise.</p>
+<p>An alternative simpler approach: when the ring first becomes full and the user is not following, show a fixed notification rather than adjusting the offset. This trades position accuracy for simplicity. The scroll-compensation approach above is preferred.</p>
+<hr />
+<h2 id="6-memory-impact">6. Memory Impact</h2>
+<h3 id="before-unbounded">Before (unbounded)</h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Lines accumulated</th>
+<th>String memory</th>
+<th>Viewport content string</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 hour at 10 lines/sec</td>
+<td>36,000</td>
+<td>~7 MB</td>
+<td>~7 MB</td>
+</tr>
+<tr>
+<td>8 hours at 10 lines/sec</td>
+<td>288,000</td>
+<td>~58 MB</td>
+<td>~58 MB</td>
+</tr>
+<tr>
+<td>8 hours at 50 lines/sec</td>
+<td>1,440,000</td>
+<td>~288 MB</td>
+<td>~288 MB</td>
+</tr>
+<tr>
+<td>12 hours at 10 lines/sec</td>
+<td>432,000</td>
+<td>~86 MB</td>
+<td>~86 MB</td>
+</tr>
+</tbody>
+</table>
+<p>Both the <code>[]string</code> slice and the viewport content string grow together. After ~12 hours the TUI can hold 150–600 MB just from one log view. Sessions open multiple <code>LogView</code> instances (<code>LogView</code> for the global log and <code>Stream.OutputView</code> per session).</p>
+<h3 id="after-ring-buffer-10k-cap">After (ring buffer, 10K cap)</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lineRing.buf</code> backing array</td>
+<td>10,000 × ~200 bytes = ~2 MB</td>
+</tr>
+<tr>
+<td><code>[]string</code> slice headers</td>
+<td>10,000 × 16 bytes = 160 KB</td>
+</tr>
+<tr>
+<td>Viewport content string (worst case, all filtered)</td>
+<td>~2 MB</td>
+</tr>
+<tr>
+<td>Total per LogView instance</td>
+<td>~4 MB</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Upper bound is constant and independent of session duration.</strong></p>
+<p>For 5 concurrent session output views (a typical fleet scenario), worst-case memory from log views is ~20 MB — down from potentially gigabytes in a long sweep run.</p>
+<h3 id="calculation-basis">Calculation basis</h3>
+<ul>
+<li>Average log line: ~200 bytes (timestamp + level + message)</li>
+<li>Go string header: 16 bytes (pointer + length)</li>
+<li>Viewport content string: approximately 1× the stored lines text (colorize adds ANSI escapes, roughly +20%)</li>
+<li>Buffer allocated once at construction; no GC pressure from append growth</li>
+</ul>
+<hr />
+<h2 id="7-test-updates">7. Test Updates</h2>
+<p>The existing tests in <code>logstream_test.go</code> access <code>lv.Lines</code> directly:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1">// logstream_test.go line 19</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">lv</span><span class="p">.</span><span class="nx">Lines</span><span class="p">)</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">{</span>
+</code></pre></div>
+<p>These must be updated to use the new <code>Lines()</code> method:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">lv</span><span class="p">.</span><span class="nx">Lines</span><span class="p">())</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">{</span>
+</code></pre></div>
+<p>New tests to add in the same file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestLineRing_Capacity</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span><span class="nx">r</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">newLineRing</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="nx">r</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="s">&quot;a&quot;</span><span class="p">);</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="s">&quot;b&quot;</span><span class="p">);</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="s">&quot;c&quot;</span><span class="p">)</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">r</span><span class="p">.</span><span class="nx">isFull</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">        </span><span class="nx">t</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="s">&quot;ring should be full after 3 pushes into cap-3 ring&quot;</span><span class="p">)</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">    </span><span class="nx">r</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="s">&quot;d&quot;</span><span class="p">)</span><span class="w"> </span><span class="c1">// evicts &quot;a&quot;</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">    </span><span class="nx">got</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">slice</span><span class="p">()</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">    </span><span class="nx">want</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;c&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;d&quot;</span><span class="p">}</span>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">DeepEqual</span><span class="p">(</span><span class="nx">got</span><span class="p">,</span><span class="w"> </span><span class="nx">want</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">        </span><span class="nx">t</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;got %v, want %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">got</span><span class="p">,</span><span class="w"> </span><span class="nx">want</span><span class="p">)</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="p">}</span>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a>
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestLogView_BoundedByCapacity</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a><span class="w">    </span><span class="nx">lv</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">NewLogViewWithCapacity</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a><span class="w">    </span><span class="nx">lv</span><span class="p">.</span><span class="nx">SetDimensions</span><span class="p">(</span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">)</span>
+<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="o">++</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a><span class="w">        </span><span class="nx">lv</span><span class="p">.</span><span class="nx">AppendLines</span><span class="p">([]</span><span class="kt">string</span><span class="p">{</span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;line %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">i</span><span class="p">)})</span>
+<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">Len</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a><span class="w">        </span><span class="nx">t</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;expected 5 lines (capped), got %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">Len</span><span class="p">())</span>
+<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a><span class="w">    </span><span class="nx">lines</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">Lines</span><span class="p">()</span>
+<a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s">&quot;line 15&quot;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-26" name="__codelineno-14-26" href="#__codelineno-14-26"></a><span class="w">        </span><span class="nx">t</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;expected oldest retained line to be &#39;line 15&#39;, got %q&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-14-27" name="__codelineno-14-27" href="#__codelineno-14-27"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-28" name="__codelineno-14-28" href="#__codelineno-14-28"></a><span class="p">}</span>
+<a id="__codelineno-14-29" name="__codelineno-14-29" href="#__codelineno-14-29"></a>
+<a id="__codelineno-14-30" name="__codelineno-14-30" href="#__codelineno-14-30"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestLogView_SetLines_Truncates</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-31" name="__codelineno-14-31" href="#__codelineno-14-31"></a><span class="w">    </span><span class="nx">lv</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">NewLogViewWithCapacity</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<a id="__codelineno-14-32" name="__codelineno-14-32" href="#__codelineno-14-32"></a><span class="w">    </span><span class="nx">lv</span><span class="p">.</span><span class="nx">SetDimensions</span><span class="p">(</span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-14-33" name="__codelineno-14-33" href="#__codelineno-14-33"></a><span class="w">    </span><span class="nx">lv</span><span class="p">.</span><span class="nx">SetLines</span><span class="p">([]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;c&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;e&quot;</span><span class="p">})</span>
+<a id="__codelineno-14-34" name="__codelineno-14-34" href="#__codelineno-14-34"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">Len</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-35" name="__codelineno-14-35" href="#__codelineno-14-35"></a><span class="w">        </span><span class="nx">t</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;SetLines with more than cap should truncate, got %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">Len</span><span class="p">())</span>
+<a id="__codelineno-14-36" name="__codelineno-14-36" href="#__codelineno-14-36"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-37" name="__codelineno-14-37" href="#__codelineno-14-37"></a><span class="w">    </span><span class="nx">lines</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">lv</span><span class="p">.</span><span class="nx">Lines</span><span class="p">()</span>
+<a id="__codelineno-14-38" name="__codelineno-14-38" href="#__codelineno-14-38"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s">&quot;c&quot;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">lines</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s">&quot;e&quot;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-39" name="__codelineno-14-39" href="#__codelineno-14-39"></a><span class="w">        </span><span class="nx">t</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;expected [c d e], got %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">lines</span><span class="p">)</span>
+<a id="__codelineno-14-40" name="__codelineno-14-40" href="#__codelineno-14-40"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-41" name="__codelineno-14-41" href="#__codelineno-14-41"></a><span class="p">}</span>
+<a id="__codelineno-14-42" name="__codelineno-14-42" href="#__codelineno-14-42"></a>
+<a id="__codelineno-14-43" name="__codelineno-14-43" href="#__codelineno-14-43"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestLogView_EvictionCount</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-44" name="__codelineno-14-44" href="#__codelineno-14-44"></a><span class="w">    </span><span class="nx">r</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">newLineRing</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<a id="__codelineno-14-45" name="__codelineno-14-45" href="#__codelineno-14-45"></a><span class="w">    </span><span class="nx">r</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="s">&quot;a&quot;</span><span class="p">);</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="s">&quot;b&quot;</span><span class="p">);</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="s">&quot;c&quot;</span><span class="p">);</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="s">&quot;d&quot;</span><span class="p">)</span>
+<a id="__codelineno-14-46" name="__codelineno-14-46" href="#__codelineno-14-46"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">evicted</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-47" name="__codelineno-14-47" href="#__codelineno-14-47"></a><span class="w">        </span><span class="nx">t</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;expected 1 eviction, got %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">evicted</span><span class="p">)</span>
+<a id="__codelineno-14-48" name="__codelineno-14-48" href="#__codelineno-14-48"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-49" name="__codelineno-14-49" href="#__codelineno-14-49"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="8-files-to-change">8. Files to Change</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/tui/views/logstream.go</code></td>
+<td>Replace <code>Lines []string</code> with <code>ring *lineRing</code>; add <code>Lines()</code>, <code>Len()</code>, <code>NewLogViewWithCapacity</code>; update <code>AppendLines</code>, <code>SetLines</code>, <code>filteredLines</code>, <code>View</code></td>
+</tr>
+<tr>
+<td><code>internal/tui/views/logstream.go</code></td>
+<td>Add <code>lineRing</code> type and methods (can live in same file or a new <code>internal/tui/views/ringbuffer.go</code>)</td>
+</tr>
+<tr>
+<td><code>internal/tui/views/logstream_test.go</code></td>
+<td>Update <code>lv.Lines</code> field accesses to <code>lv.Lines()</code> method calls</td>
+</tr>
+<tr>
+<td><code>internal/tui/views/logstream_test.go</code></td>
+<td>Add <code>TestLineRing_*</code> and <code>TestLogView_BoundedByCapacity</code> tests</td>
+</tr>
+<tr>
+<td><code>internal/tui/views/logstream_extra_test.go</code></td>
+<td>No changes needed (only tests scroll behavior, not Lines length)</td>
+</tr>
+<tr>
+<td><code>internal/tui/app_init.go</code></td>
+<td>No changes needed (no direct <code>lv.Lines</code> access)</td>
+</tr>
+<tr>
+<td><code>internal/tui/app_update.go</code></td>
+<td>No changes needed (calls <code>AppendLines</code>/<code>SetLines</code> only)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-estimated-effort">9. Estimated Effort</h2>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Implement <code>lineRing</code> + unit tests</td>
+<td>1–2 hours</td>
+</tr>
+<tr>
+<td>Update <code>LogView</code> struct, constructors, and methods</td>
+<td>1 hour</td>
+</tr>
+<tr>
+<td>Update existing tests (field → method calls)</td>
+<td>30 minutes</td>
+</tr>
+<tr>
+<td>Add new ring-specific tests</td>
+<td>1 hour</td>
+</tr>
+<tr>
+<td>Verify build + race detector clean</td>
+<td>30 minutes</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>4–5 hours</strong></td>
+</tr>
+</tbody>
+</table>
+<p>This is a contained, low-risk refactor. The ring buffer is self-contained with no external dependencies. The <code>viewport.Model</code> API is unchanged — the ring only affects what string is handed to <code>SetContent</code>. The scroll-compensation heuristic for eviction-while-scrolled is the only non-trivial behavioral decision, and it degrades gracefully (worst case: viewport drifts slightly during a burst; the user can press <code>G</code> to re-anchor).</p>
+<hr />
+<h2 id="10-deferred-decisions">10. Deferred Decisions</h2>
+<ol>
+<li><strong>Config integration</strong>: expose <code>log_capacity</code> in <code>.ralph/config.yaml</code> so power users can raise or lower the cap. Low priority — 10K is a reasonable default for all practical use cases.</li>
+<li><strong>Per-session vs shared cap</strong>: <code>Stream.OutputView</code> instances live for the duration of one session output stream and are typically short-lived. They could use a smaller cap (e.g. 2K) to reduce memory further.</li>
+<li><strong><code>LogSearchModel</code></strong>: <code>internal/tui/views/logstream_search.go</code> has its own <code>[]LogLine lines</code> field, which has the same unbounded-growth risk when populated from a full log. That model is a separate tea.Model used from a different code path and should be addressed in a follow-on task (S7 or equivalent).</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
