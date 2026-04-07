@@ -216,11 +216,6 @@ func TestRetryImprove_SuccessOnFirstAttempt(t *testing.T) {
 func TestRetryImprove_SuccessAfterRetries(t *testing.T) {
 	t.Parallel()
 
-	// Override sleep to avoid real delays in tests.
-	origSleep := sleepFunc
-	sleepFunc = func(_ context.Context, _ time.Duration) error { return nil }
-	t.Cleanup(func() { sleepFunc = origSleep })
-
 	client := &mockImprover{
 		results: []*ImproveResult{nil, nil, {Enhanced: "recovered"}},
 		errors: []error{
@@ -230,7 +225,10 @@ func TestRetryImprove_SuccessAfterRetries(t *testing.T) {
 		},
 	}
 
-	result, err := retryImprove(context.Background(), client, "test", ImproveOptions{}, DefaultBackoff())
+	cfg := DefaultBackoff()
+	cfg.SleepFunc = func(_ context.Context, _ time.Duration) error { return nil }
+
+	result, err := retryImprove(context.Background(), client, "test", ImproveOptions{}, cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -245,16 +243,15 @@ func TestRetryImprove_SuccessAfterRetries(t *testing.T) {
 func TestRetryImprove_NonRetryableErrorStopsImmediately(t *testing.T) {
 	t.Parallel()
 
-	origSleep := sleepFunc
-	sleepFunc = func(_ context.Context, _ time.Duration) error { return nil }
-	t.Cleanup(func() { sleepFunc = origSleep })
-
 	client := &mockImprover{
 		results: []*ImproveResult{nil},
 		errors:  []error{fmt.Errorf("api error (status 401): unauthorized")},
 	}
 
-	_, err := retryImprove(context.Background(), client, "test", ImproveOptions{}, DefaultBackoff())
+	cfg := DefaultBackoff()
+	cfg.SleepFunc = func(_ context.Context, _ time.Duration) error { return nil }
+
+	_, err := retryImprove(context.Background(), client, "test", ImproveOptions{}, cfg)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -266,10 +263,6 @@ func TestRetryImprove_NonRetryableErrorStopsImmediately(t *testing.T) {
 func TestRetryImprove_ExhaustsAllRetries(t *testing.T) {
 	t.Parallel()
 
-	origSleep := sleepFunc
-	sleepFunc = func(_ context.Context, _ time.Duration) error { return nil }
-	t.Cleanup(func() { sleepFunc = origSleep })
-
 	client := &mockImprover{
 		results: []*ImproveResult{nil, nil, nil, nil},
 		errors: []error{
@@ -280,7 +273,10 @@ func TestRetryImprove_ExhaustsAllRetries(t *testing.T) {
 		},
 	}
 
-	_, err := retryImprove(context.Background(), client, "test", ImproveOptions{}, DefaultBackoff())
+	cfg := DefaultBackoff()
+	cfg.SleepFunc = func(_ context.Context, _ time.Duration) error { return nil }
+
+	_, err := retryImprove(context.Background(), client, "test", ImproveOptions{}, cfg)
 	if err == nil {
 		t.Fatal("expected error after exhausting retries")
 	}
@@ -314,13 +310,6 @@ func TestRetryImprove_ZeroRetriesNoRetry(t *testing.T) {
 func TestRetryImprove_ContextCancelledDuringSleep(t *testing.T) {
 	t.Parallel()
 
-	// Simulate context cancellation during sleep.
-	origSleep := sleepFunc
-	sleepFunc = func(ctx context.Context, _ time.Duration) error {
-		return ctx.Err()
-	}
-	t.Cleanup(func() { sleepFunc = origSleep })
-
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately
 
@@ -329,7 +318,13 @@ func TestRetryImprove_ContextCancelledDuringSleep(t *testing.T) {
 		errors:  []error{fmt.Errorf("api error (status 500): server error"), nil},
 	}
 
-	_, err := retryImprove(ctx, client, "test", ImproveOptions{}, DefaultBackoff())
+	cfg := DefaultBackoff()
+	// Simulate context cancellation during sleep.
+	cfg.SleepFunc = func(ctx context.Context, _ time.Duration) error {
+		return ctx.Err()
+	}
+
+	_, err := retryImprove(ctx, client, "test", ImproveOptions{}, cfg)
 	if err == nil {
 		t.Fatal("expected error when context is cancelled")
 	}
@@ -341,18 +336,9 @@ func TestRetryImprove_ContextCancelledDuringSleep(t *testing.T) {
 func TestRetryImprove_BackoffTimingProgression(t *testing.T) {
 	t.Parallel()
 
-	// Record the delay durations passed to sleepFunc.
+	// Record the delay durations passed to SleepFunc.
 	var delays []time.Duration
 	var delayMu sync.Mutex
-
-	origSleep := sleepFunc
-	sleepFunc = func(_ context.Context, d time.Duration) error {
-		delayMu.Lock()
-		delays = append(delays, d)
-		delayMu.Unlock()
-		return nil
-	}
-	t.Cleanup(func() { sleepFunc = origSleep })
 
 	client := &mockImprover{
 		results: []*ImproveResult{nil, nil, nil, {Enhanced: "ok"}},
@@ -365,6 +351,13 @@ func TestRetryImprove_BackoffTimingProgression(t *testing.T) {
 	}
 
 	cfg := DefaultBackoff()
+	cfg.SleepFunc = func(_ context.Context, d time.Duration) error {
+		delayMu.Lock()
+		delays = append(delays, d)
+		delayMu.Unlock()
+		return nil
+	}
+
 	result, err := retryImprove(context.Background(), client, "test", ImproveOptions{}, cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -404,20 +397,17 @@ func TestRetryImprove_BackoffCeilingsCapAtMaxDelay(t *testing.T) {
 	var delays []time.Duration
 	var delayMu sync.Mutex
 
-	origSleep := sleepFunc
-	sleepFunc = func(_ context.Context, d time.Duration) error {
-		delayMu.Lock()
-		delays = append(delays, d)
-		delayMu.Unlock()
-		return nil
-	}
-	t.Cleanup(func() { sleepFunc = origSleep })
-
 	cfg := BackoffConfig{
 		BaseDelay:  1 * time.Second,
 		MaxDelay:   3 * time.Second,
 		Factor:     4.0,
 		MaxRetries: 5,
+		SleepFunc: func(_ context.Context, d time.Duration) error {
+			delayMu.Lock()
+			delays = append(delays, d)
+			delayMu.Unlock()
+			return nil
+		},
 	}
 
 	client := &mockImprover{
@@ -452,10 +442,6 @@ func TestRetryImprove_BackoffCeilingsCapAtMaxDelay(t *testing.T) {
 func TestRetryImprove_LastErrorReturned(t *testing.T) {
 	t.Parallel()
 
-	origSleep := sleepFunc
-	sleepFunc = func(_ context.Context, _ time.Duration) error { return nil }
-	t.Cleanup(func() { sleepFunc = origSleep })
-
 	client := &mockImprover{
 		results: []*ImproveResult{nil, nil, nil, nil},
 		errors: []error{
@@ -466,7 +452,10 @@ func TestRetryImprove_LastErrorReturned(t *testing.T) {
 		},
 	}
 
-	_, err := retryImprove(context.Background(), client, "test", ImproveOptions{}, DefaultBackoff())
+	cfg := DefaultBackoff()
+	cfg.SleepFunc = func(_ context.Context, _ time.Duration) error { return nil }
+
+	_, err := retryImprove(context.Background(), client, "test", ImproveOptions{}, cfg)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -476,9 +465,7 @@ func TestRetryImprove_LastErrorReturned(t *testing.T) {
 func TestRetryImprove_Concurrent(t *testing.T) {
 	t.Parallel()
 
-	origSleep := sleepFunc
-	sleepFunc = func(_ context.Context, _ time.Duration) error { return nil }
-	t.Cleanup(func() { sleepFunc = origSleep })
+	noSleep := func(_ context.Context, _ time.Duration) error { return nil }
 
 	// Verify retryImprove is safe to call concurrently.
 	var successCount atomic.Int32
@@ -493,7 +480,9 @@ func TestRetryImprove_Concurrent(t *testing.T) {
 					nil,
 				},
 			}
-			result, err := retryImprove(context.Background(), client, "test", ImproveOptions{}, DefaultBackoff())
+			cfg := DefaultBackoff()
+			cfg.SleepFunc = noSleep
+			result, err := retryImprove(context.Background(), client, "test", ImproveOptions{}, cfg)
 			if err == nil && result.Enhanced == "ok" {
 				successCount.Add(1)
 			}
