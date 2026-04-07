@@ -78,6 +78,9 @@ func (s *Server) handleAutomationPolicy(_ context.Context, req mcp.CallToolReque
 		if _, ok := args["default_task_max_turns"]; ok {
 			policy.DefaultTaskMaxTurns = int(getNumberArg(req, "default_task_max_turns", float64(policy.DefaultTaskMaxTurns)))
 		}
+		if _, ok := args["max_concurrent_sessions"]; ok {
+			policy.MaxConcurrentSessions = int(getNumberArg(req, "max_concurrent_sessions", float64(policy.MaxConcurrentSessions)))
+		}
 
 		if err := ctrl.SetPolicy(policy); err != nil {
 			return codedError(ErrInvalidParams, fmt.Sprintf("invalid automation policy: %v", err)), nil
@@ -115,9 +118,10 @@ func (s *Server) handleAutomationQueue(_ context.Context, req mcp.CallToolReques
 
 	switch action {
 	case "list":
+		queue := ctrl.ListQueue()
 		return fleetJSON(map[string]any{
-			"queue":  ctrl.ListQueue(),
-			"count":  len(ctrl.ListQueue()),
+			"queue":  queue,
+			"count":  len(queue),
 			"status": ctrl.Status(),
 		})
 	case "enqueue":
