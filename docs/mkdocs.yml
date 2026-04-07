@@ -3,6 +3,7 @@ site_description: Command-and-control TUI for parallel multi-LLM agent fleets
 site_url: https://hairglasses-studio.github.io/ralphglasses/
 repo_url: https://github.com/hairglasses-studio/ralphglasses
 repo_name: hairglasses-studio/ralphglasses
+# Keep docs config in docs/ so the workflow can invoke mkdocs with --config-file docs/mkdocs.yml.
 docs_dir: .
 
 theme:
