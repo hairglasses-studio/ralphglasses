@@ -13,8 +13,7 @@ personality = "pragmatic"
 # Discovery-first Ralph review surface for repo, fleet, and session triage.
 [mcp_servers.ralphglasses_review]
 command = "bash"
-args = ["./scripts/dev/run-mcp.sh", "--scan-path", "~/hairglasses-studio"]
-cwd = "."
+args = ["-c", "exec bash \"$HOME/hairglasses-studio/ralphglasses/scripts/run-ralphglasses-mcp.sh\""]
 enabled_tools = [
   "ralphglasses_tool_groups",
   "ralphglasses_load_tool_group",
@@ -35,8 +34,7 @@ enabled_tools = [
 # Curated Ralph workspace surface for session, team, and repo operations.
 [mcp_servers.ralphglasses_workspace]
 command = "bash"
-args = ["./scripts/dev/run-mcp.sh", "--scan-path", "~/hairglasses-studio"]
-cwd = "."
+args = ["-c", "exec bash \"$HOME/hairglasses-studio/ralphglasses/scripts/run-ralphglasses-mcp.sh\""]
 enabled_tools = [
   "ralphglasses_tool_groups",
   "ralphglasses_load_tool_group",
@@ -74,8 +72,7 @@ enabled_tools = [
 # Ralph roadmap and prompt research surface for planning-heavy sessions.
 [mcp_servers.ralphglasses_research]
 command = "bash"
-args = ["./scripts/dev/run-mcp.sh", "--scan-path", "~/hairglasses-studio"]
-cwd = "."
+args = ["-c", "exec bash \"$HOME/hairglasses-studio/ralphglasses/scripts/run-ralphglasses-mcp.sh\""]
 enabled_tools = [
   "ralphglasses_tool_groups",
   "ralphglasses_load_tool_group",

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "ralphglasses": {
+      "args": [
+        "./scripts/dev/run-mcp.sh",
+        "--scan-path",
+        "~/hairglasses-studio"
+      ],
+      "command": "bash",
+      "cwd": "."
+    }
+  }
+}

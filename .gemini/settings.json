@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
+  "context": {
+    "fileName": [
+      "AGENTS.md",
+      "GEMINI.md"
+    ]
+  },
+  "general": {
+    "defaultApprovalMode": "default"
+  },
+  "mcp": {
+    "allowed": [
+      "ralphglasses"
+    ]
+  },
+  "mcpServers": {
+    "ralphglasses": {
+      "args": [
+        "./scripts/dev/run-mcp.sh",
+        "--scan-path",
+        "~/hairglasses-studio"
+      ],
+      "command": "bash",
+      "cwd": "."
+    }
+  }
+}
