@@ -13,7 +13,7 @@ jobs:
   codex-baseline-guard:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Validate Codex repo baseline
         shell: bash
