@@ -47,6 +47,10 @@ func (f *FleetRecoveryOrchestrator) DistributeRecoveryPlan(plan *session.CrashRe
 	var firstErr error
 
 	for _, rs := range plan.SessionsToResume {
+		provider := rs.Provider
+		if provider == "" {
+			provider = session.DefaultPrimaryProvider()
+		}
 		item := &WorkItem{
 			Type:         WorkTypeSession,
 			Status:       WorkPending,
@@ -54,7 +58,7 @@ func (f *FleetRecoveryOrchestrator) DistributeRecoveryPlan(plan *session.CrashRe
 			RepoName:     rs.RepoName,
 			RepoPath:     rs.RepoPath,
 			Prompt:       rs.ResumePrompt,
-			Provider:     session.ProviderClaude,
+			Provider:     provider,
 			MaxBudgetUSD: budgetPerSession,
 			Constraints: WorkConstraints{
 				RequireLocal: true, // repo must exist on assigned worker

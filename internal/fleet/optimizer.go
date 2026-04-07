@@ -29,7 +29,7 @@ func NewOptimizer(feedback *session.FeedbackAnalyzer) *Optimizer {
 		providerWeights: map[session.Provider]float64{
 			session.ProviderClaude: 1.0,
 			session.ProviderGemini: 1.0,
-			session.ProviderCodex:  1.0,
+			session.ProviderCodex:  1.2, // higher default weight: Codex is cost-efficient default provider
 		},
 		repoWeights: make(map[string]float64),
 	}

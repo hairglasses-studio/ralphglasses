@@ -115,8 +115,15 @@ func TestWorkerAgent_DiscoverProviders(t *testing.T) {
 	if len(providers) == 0 {
 		t.Fatal("discoverProviders should return at least one provider")
 	}
-	if providers[0] != session.DefaultPrimaryProvider() {
-		t.Errorf("discoverProviders first provider = %q, want %q", providers[0], session.DefaultPrimaryProvider())
+	// First provider should be one of the known providers.
+	// The exact order depends on which CLI binaries are installed on PATH.
+	known := map[session.Provider]bool{
+		session.ProviderCodex:  true,
+		session.ProviderGemini: true,
+		session.ProviderClaude: true,
+	}
+	if !known[providers[0]] {
+		t.Errorf("discoverProviders first provider = %q, want one of codex/gemini/claude", providers[0])
 	}
 }
 

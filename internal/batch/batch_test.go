@@ -14,12 +14,14 @@ import (
 
 func TestNewClient(t *testing.T) {
 	tests := []struct {
-		provider Provider
-		wantType string
+		provider     Provider
+		wantProvider Provider
+		wantType     string
 	}{
-		{ProviderClaude, "*batch.claudeClient"},
-		{ProviderGemini, "*batch.geminiClient"},
-		{ProviderOpenAI, "*batch.openaiClient"},
+		{ProviderClaude, ProviderClaude, "*batch.claudeClient"},
+		{ProviderGemini, ProviderGemini, "*batch.geminiClient"},
+		{ProviderOpenAI, ProviderOpenAI, "*batch.openaiClient"},
+		{ProviderCodex, ProviderOpenAI, "*batch.openaiClient"},
 	}
 
 	for _, tt := range tests {
@@ -31,8 +33,8 @@ func TestNewClient(t *testing.T) {
 			if c == nil {
 				t.Fatalf("NewClient(%s) returned nil", tt.provider)
 			}
-			if c.Provider() != tt.provider {
-				t.Errorf("Provider() = %s, want %s", c.Provider(), tt.provider)
+			if c.Provider() != tt.wantProvider {
+				t.Errorf("Provider() = %s, want %s", c.Provider(), tt.wantProvider)
 			}
 		})
 	}

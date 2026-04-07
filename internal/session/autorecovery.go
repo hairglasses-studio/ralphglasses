@@ -28,6 +28,19 @@ var TransientErrorPatterns = []string{
 	"temporary failure",
 	"internal server error",
 	"signal: killed",
+	"model_overloaded",
+	"server_error",
+}
+
+// NonTransientErrorPatterns are errors that should never be retried.
+// Quota exhaustion and context limits indicate structural problems
+// that won't resolve with backoff.
+var NonTransientErrorPatterns = []string{
+	"quota exhausted",
+	"subscription_usage_exhausted",
+	"extra_usage_exhausted",
+	"context_length_exceeded",
+	"budget exceeded",
 }
 
 // AutoRecoveryConfig configures the auto-recovery behavior.
@@ -197,8 +210,15 @@ func (ar *AutoRecovery) HandleSessionError(ctx context.Context, s *Session) *Ses
 }
 
 // isTransientError checks if an error message matches known transient patterns.
+// Returns false for errors that match NonTransientErrorPatterns, even if they
+// also match a transient pattern.
 func isTransientError(errMsg string) bool {
 	lower := strings.ToLower(errMsg)
+	for _, pattern := range NonTransientErrorPatterns {
+		if strings.Contains(lower, strings.ToLower(pattern)) {
+			return false
+		}
+	}
 	for _, pattern := range TransientErrorPatterns {
 		if strings.Contains(lower, strings.ToLower(pattern)) {
 			return true
