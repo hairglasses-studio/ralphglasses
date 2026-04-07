@@ -317,13 +317,20 @@ func runSession(ctx context.Context, s *Session, stdout, stderr io.Reader, span 
 		}
 	}
 
-	// Detect Extra Usage quota exhaustion (Claude-specific).
-	// CLI may exit 0 but the session is useless — stop retrying.
-	if s.Provider == ProviderClaude && isExtraUsageExhausted(s) {
+	// Detect provider quota exhaustion. The CLI may exit 0 while still
+	// being unable to continue, so classify these as terminal errors.
+	if signal := detectQuotaSignal(s.Provider, s.OutputHistory, s.LastOutput, s.Error, time.Now(), time.Local); signal.Exhausted {
 		s.Status = StatusErrored
-		s.ExitReason = "extra_usage_exhausted"
+		s.ExitReason = signal.Reason
 		if s.Error == "" {
-			s.Error = "Claude Extra Usage quota exhausted"
+			switch s.Provider {
+			case ProviderClaude:
+				s.Error = "Claude Extra Usage quota exhausted"
+			case ProviderCodex:
+				s.Error = "Codex subscription usage exhausted"
+			default:
+				s.Error = "provider quota exhausted"
+			}
 		}
 	}
 

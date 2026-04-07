@@ -309,6 +309,7 @@ func (s *Server) handleSupervisorStatus(_ context.Context, _ mcp.CallToolRequest
 		"tick_count":        status.TickCount,
 		"last_cycle_launch": status.LastCycleLaunch,
 		"started_at":        status.StartedAt,
+		"automation":        status.Automation,
 	})
 }
 

@@ -52,6 +52,7 @@ type Supervisor struct {
 
 	// Passive background research daemon (ticks on its own internal schedule).
 	researchDaemon *ResearchDaemon
+	automation     *SubscriptionAutomationController
 
 	// Crash recovery: detects dead Claude Code sessions and orchestrates resume.
 	crashRecovery       *CrashRecoveryOrchestrator
@@ -63,12 +64,13 @@ type Supervisor struct {
 
 // SupervisorState is persisted to .ralph/supervisor_state.json.
 type SupervisorState struct {
-	Running         bool      `json:"running"`
-	BudgetSpentUSD  float64   `json:"budget_spent_usd,omitempty"`
-	RepoPath        string    `json:"repo_path"`
-	LastCycleLaunch time.Time `json:"last_cycle_launch"`
-	TickCount       int       `json:"tick_count"`
-	StartedAt       time.Time `json:"started_at"`
+	Running         bool                      `json:"running"`
+	BudgetSpentUSD  float64                   `json:"budget_spent_usd,omitempty"`
+	RepoPath        string                    `json:"repo_path"`
+	LastCycleLaunch time.Time                 `json:"last_cycle_launch"`
+	TickCount       int                       `json:"tick_count"`
+	StartedAt       time.Time                 `json:"started_at"`
+	Automation      *AutomationStatusSnapshot `json:"automation,omitempty"`
 }
 
 // NewSupervisor creates a Supervisor with sensible defaults.
@@ -119,6 +121,13 @@ func (s *Supervisor) SetResearchDaemon(rd *ResearchDaemon) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.researchDaemon = rd
+}
+
+// SetSubscriptionAutomation attaches the subscription-window automation controller.
+func (s *Supervisor) SetSubscriptionAutomation(ctrl *SubscriptionAutomationController) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.automation = ctrl
 }
 
 // SetCrashRecovery attaches a crash recovery orchestrator to the supervisor tick loop.
@@ -315,9 +324,14 @@ func (s *Supervisor) Status() SupervisorState {
 		Running: s.running, RepoPath: s.RepoPath,
 		LastCycleLaunch: s.lastCycleLaunch, TickCount: s.tickCount, StartedAt: s.startedAt,
 	}
+	automation := s.automation
 	s.mu.Unlock()
 	if budget != nil {
 		st.BudgetSpentUSD = budget.Spent()
+	}
+	if automation != nil {
+		snapshot := automation.Status()
+		st.Automation = &snapshot
 	}
 	return st
 }
@@ -415,6 +429,13 @@ func (s *Supervisor) tick(ctx context.Context) {
 	s.mu.Unlock()
 	if rd != nil {
 		rd.Tick(ctx)
+	}
+
+	s.mu.Lock()
+	automation := s.automation
+	s.mu.Unlock()
+	if automation != nil {
+		automation.Tick(ctx)
 	}
 
 	s.mu.Lock()

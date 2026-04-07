@@ -132,6 +132,8 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_hitl_history":           {Title: "HITL History", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_autonomy_level":         {Title: "Autonomy Level", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_supervisor_status":      {Title: "Supervisor Status", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_automation_policy":      {Title: "Automation Policy", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_automation_queue":       {Title: "Automation Queue", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_autonomy_decisions":     {Title: "Autonomy Decisions", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_autonomy_override":      {Title: "Override Autonomy", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_feedback_profiles":      {Title: "Feedback Profiles", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
@@ -225,14 +227,14 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_plugin_disable": {Title: "Disable Plugin", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 
 	// ── docs ─────────────────────────────────────────────────────────────
-	"ralphglasses_docs_search":          {Title: "Search Docs", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_docs_check_existing":  {Title: "Check Existing Docs", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_docs_write_finding":   {Title: "Write Finding", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_docs_push":            {Title: "Push Docs", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_meta_roadmap_status":  {Title: "Meta Roadmap Status", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_docs_search":            {Title: "Search Docs", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_docs_check_existing":    {Title: "Check Existing Docs", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_docs_write_finding":     {Title: "Write Finding", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_docs_push":              {Title: "Push Docs", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_meta_roadmap_status":    {Title: "Meta Roadmap Status", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_meta_roadmap_next_task": {Title: "Meta Roadmap Next Task", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_roadmap_cross_repo":   {Title: "Cross-Repo Roadmap", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_roadmap_assign_loop":  {Title: "Assign Roadmap Loop", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_roadmap_cross_repo":     {Title: "Cross-Repo Roadmap", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_roadmap_assign_loop":    {Title: "Assign Roadmap Loop", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
 
 	// ── recovery ─────────────────────────────────────────────────────────
 	"ralphglasses_session_triage":   {Title: "Session Triage", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
@@ -250,10 +252,10 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_promptdj_suggest":  {Title: "Prompt DJ Suggest", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_promptdj_history":  {Title: "Prompt DJ History", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	// A2A tools.
-	"ralphglasses_a2a_discover":    {Title: "A2A Discover", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_a2a_send":        {Title: "A2A Send Task", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_a2a_status":      {Title: "A2A Task Status", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_a2a_agent_card":  {Title: "A2A Agent Card", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_a2a_discover":   {Title: "A2A Discover", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_a2a_send":       {Title: "A2A Send Task", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_a2a_status":     {Title: "A2A Task Status", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_a2a_agent_card": {Title: "A2A Agent Card", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 
 	// ── dispatch & orchestration ────────────────────────────────────────
 	"ralphglasses_error_context":    {Title: "Error Context", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},

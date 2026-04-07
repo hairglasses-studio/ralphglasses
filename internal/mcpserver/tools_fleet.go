@@ -465,7 +465,8 @@ func (s *Server) handleMarathonDashboard(_ context.Context, req mcp.CallToolRequ
 			"tasks_completed": tasksCompleted,
 			"tasks_total":     tasksTotal,
 		},
-		"alerts": alerts,
+		"alerts":     alerts,
+		"automation": s.SessMgr.SubscriptionAutomationStatus(""),
 	}), nil
 }
 

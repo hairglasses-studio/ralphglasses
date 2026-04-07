@@ -31,8 +31,8 @@ type Manager struct {
 	loops                  map[string]*LoopRun     // keyed by loop run ID
 	totalPrunedThisSession int                     // counter for pruned runs this session
 
-	teamBackend     StructuredTeamBackend          // structured team execution backend (fleet)
-	teamControllers map[string]*teamController     // active team controllers keyed by team name
+	teamBackend     StructuredTeamBackend      // structured team execution backend (fleet)
+	teamControllers map[string]*teamController // active team controllers keyed by team name
 
 	configMu       sync.RWMutex
 	bus            *events.Bus
@@ -63,6 +63,7 @@ type Manager struct {
 	promptEvolution    *PromptEvolution       // tournament-based prompt variant selection
 	FleetPool          *pool.State            // fleet-wide budget pooling and metrics aggregation
 	worktreePool       *WorktreePool          // Phase 10.5.8: reusable worktree pool
+	automation         map[string]*SubscriptionAutomationController
 
 	spendMonitor  *SpendRateMonitor        // hourly spend circuit breaker (nil = disabled)
 	promptRouter  PromptRouter             // Prompt DJ quality-aware routing (nil = disabled)
@@ -93,6 +94,7 @@ func NewManager() *Manager {
 		budgetEnforcer: NewBudgetEnforcer(),
 		cascade:        NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
 		FleetPool:      pool.NewState(0), // 0 = unlimited by default
+		automation:     make(map[string]*SubscriptionAutomationController),
 	}
 }
 
@@ -110,6 +112,7 @@ func NewManagerWithBus(bus *events.Bus) *Manager {
 		budgetEnforcer: NewBudgetEnforcer(),
 		cascade:        NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
 		FleetPool:      pool.NewState(0),
+		automation:     make(map[string]*SubscriptionAutomationController),
 	}
 }
 
@@ -129,6 +132,7 @@ func NewManagerWithStore(store Store, bus *events.Bus) *Manager {
 		noopDetector: NewNoOpDetector(2),
 		cascade:      NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
 		FleetPool:    pool.NewState(0),
+		automation:   make(map[string]*SubscriptionAutomationController),
 	}
 }
 
@@ -356,6 +360,7 @@ func (m *Manager) startSupervisor(repoPath string) {
 	m.supervisor.monitor = NewHealthMonitor(DefaultHealthThresholds())
 	m.supervisor.chainer = NewCycleChainer()
 	m.supervisor.bus = m.bus
+	m.supervisor.SetSubscriptionAutomation(m.ensureSubscriptionAutomationLocked(repoPath))
 	if m.optimizer != nil {
 		m.supervisor.decisions = m.optimizer.decisions
 		m.supervisor.optimizer = m.optimizer
@@ -382,6 +387,46 @@ func (m *Manager) SupervisorStatus() *SupervisorState {
 	}
 	state := m.supervisor.Status()
 	return &state
+}
+
+func (m *Manager) ensureSubscriptionAutomationLocked(repoPath string) *SubscriptionAutomationController {
+	if repoPath == "" {
+		return nil
+	}
+	if m.automation == nil {
+		m.automation = make(map[string]*SubscriptionAutomationController)
+	}
+	if ctrl, ok := m.automation[repoPath]; ok {
+		return ctrl
+	}
+	ctrl := NewSubscriptionAutomationController(m, repoPath)
+	m.automation[repoPath] = ctrl
+	return ctrl
+}
+
+func (m *Manager) EnsureSubscriptionAutomation(repoPath string) *SubscriptionAutomationController {
+	m.configMu.Lock()
+	defer m.configMu.Unlock()
+	return m.ensureSubscriptionAutomationLocked(repoPath)
+}
+
+func (m *Manager) SubscriptionAutomationStatus(repoPath string) *AutomationStatusSnapshot {
+	if repoPath == "" {
+		m.configMu.RLock()
+		if m.supervisor != nil {
+			repoPath = m.supervisor.RepoPath
+		}
+		m.configMu.RUnlock()
+	}
+	if repoPath == "" {
+		return nil
+	}
+	ctrl := m.EnsureSubscriptionAutomation(repoPath)
+	if ctrl == nil {
+		return nil
+	}
+	snapshot := ctrl.Status()
+	return &snapshot
 }
 
 // RunWorkflow validates and starts a workflow asynchronously.

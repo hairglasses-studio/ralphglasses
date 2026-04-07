@@ -1,6 +1,6 @@
-# Webb MCP Server Architecture Reference
+# Cobb MCP Server Architecture Reference
 
-Salvaged from the `webb` repository before deletion. This document captures all
+Salvaged from the `cobb` repository before deletion. This document captures all
 reusable patterns and architecture decisions from a production MCP server with
 1,790 tools across 70 modules, an autonomous research swarm with 23+ worker
 types, and a perpetual self-improvement engine.
@@ -36,7 +36,7 @@ types, and a perpetual self-improvement engine.
 
 ### Architecture
 
-Webb organizes 1,790 tools into 70 modules using a `ToolModule` interface and a
+Cobb organizes 1,790 tools into 70 modules using a `ToolModule` interface and a
 central `ToolRegistry` singleton. Each module is a Go package under
 `internal/mcp/tools/<name>/` that self-registers via `init()`.
 
@@ -121,9 +121,9 @@ functions:
 
 ```go
 import (
-    _ "github.com/hairglasses-studio/webb/internal/mcp/tools/aws"
-    _ "github.com/hairglasses-studio/webb/internal/mcp/tools/kubernetes"
-    _ "github.com/hairglasses-studio/webb/internal/mcp/tools/slack"
+    _ "github.com/hairglasses-studio/cobb/internal/mcp/tools/aws"
+    _ "github.com/hairglasses-studio/cobb/internal/mcp/tools/kubernetes"
+    _ "github.com/hairglasses-studio/cobb/internal/mcp/tools/slack"
     // ... 67 more module imports
 )
 ```
@@ -898,7 +898,7 @@ before allowing tool execution.
 
 ### Deployment Topology
 
-The Helm chart (`charts/webb-cluster/`) deploys 7 components:
+The Helm chart (`charts/cobb-cluster/`) deploys 7 components:
 
 | Template | Purpose |
 |----------|---------|
@@ -939,7 +939,7 @@ Secrets from AWS Secrets Manager via ExternalSecrets operator:
 externalSecrets:
   secretStore: aws-secretsmanager
   secrets:
-    - name: webb-secrets
+    - name: cobb-secrets
       keys: [SLACK_BOT_TOKEN, GITHUB_TOKEN, PYLON_API_KEY,
              SHORTCUT_API_TOKEN, ANTHROPIC_API_KEY, ...]
 ```
@@ -968,7 +968,7 @@ Tailscale sidecar for private mesh access (no public ingress):
 ```yaml
 tailscale:
   enabled: true
-  hostname: webb-mcp-dev
+  hostname: cobb-mcp-dev
   tailnet: acme.ts.net
 ```
 
@@ -1060,7 +1060,7 @@ GET  /tasks/stream       -- SSE stream of task events
 
 ### Remote MCP Tool Proxying
 
-Webb can federate tools from other MCP servers, exposing them under the
+Cobb can federate tools from other MCP servers, exposing them under the
 `webb_` namespace:
 
 ```go
@@ -1084,7 +1084,7 @@ func GenerateWebbToolName(serverName, toolName string) string {
 
 ### Persistence
 
-Federation state persists to `~/.config/webb/mcp-federation.json` so federated
+Federation state persists to `~/.config/cobb/mcp-federation.json` so federated
 tools survive restarts.
 
 ---
@@ -1193,8 +1193,8 @@ Set `MCP_MODE=sse` for SSE mode. Stdio is the default for local use.
 
 | Component | Path |
 |-----------|------|
-| MCP server entry | `cmd/webb-mcp/main.go` |
-| CLI entry | `cmd/webb/main.go` |
+| MCP server entry | `cmd/cobb-mcp/main.go` |
+| CLI entry | `cmd/cobb/main.go` |
 | Tool registry | `internal/mcp/tools/registry.go` |
 | Module imports | `internal/mcp/tools.go` |
 | Sample module | `internal/mcp/tools/aws/module.go` |
@@ -1215,5 +1215,5 @@ Set `MCP_MODE=sse` for SSE mode. Stdio is the default for local use.
 | Context middleware | `internal/mcp/tools/context_middleware.go` |
 | Circuit breaker | `internal/clients/circuit_breaker.go` |
 | Output schemas | `internal/mcp/tools/schemas.go` |
-| Helm chart | `charts/webb-cluster/` |
-| Helm values | `charts/webb-cluster/values.yaml` |
+| Helm chart | `charts/cobb-cluster/` |
+| Helm values | `charts/cobb-cluster/values.yaml` |

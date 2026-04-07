@@ -21,17 +21,22 @@ type Repo struct {
 
 // LoopStatus represents the parsed .ralph/status.json.
 type LoopStatus struct {
-	Timestamp       time.Time `json:"timestamp"`
-	LoopCount       int       `json:"loop_count"`
-	CallsMadeThisHr int       `json:"calls_made_this_hour"`
-	MaxCallsPerHour int       `json:"max_calls_per_hour"`
-	LastAction      string    `json:"last_action"`
-	Status          string    `json:"status"`
-	ExitReason      string    `json:"exit_reason"`
-	NextReset       string    `json:"next_reset"`
-	Model           string    `json:"model"`
-	SessionSpendUSD float64   `json:"session_spend_usd"`
-	BudgetStatus    string    `json:"budget_status"`
+	Timestamp             time.Time `json:"timestamp"`
+	LoopCount             int       `json:"loop_count"`
+	CallsMadeThisHr       int       `json:"calls_made_this_hour"`
+	MaxCallsPerHour       int       `json:"max_calls_per_hour"`
+	LastAction            string    `json:"last_action"`
+	Status                string    `json:"status"`
+	ExitReason            string    `json:"exit_reason"`
+	NextReset             string    `json:"next_reset"`
+	Model                 string    `json:"model"`
+	SessionSpendUSD       float64   `json:"session_spend_usd"`
+	BudgetStatus          string    `json:"budget_status"`
+	WindowStatus          string    `json:"window_status,omitempty"`
+	ParkedSessionID       string    `json:"parked_session_id,omitempty"`
+	QueueDepth            int       `json:"queue_depth,omitempty"`
+	TargetUtilizationPct  float64   `json:"target_utilization_pct,omitempty"`
+	ProjectedSpendAtReset float64   `json:"projected_spend_at_reset,omitempty"`
 }
 
 // CircuitBreakerState represents .ralph/.circuit_breaker_state.
