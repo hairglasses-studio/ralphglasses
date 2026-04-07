@@ -119,3 +119,7 @@ my_env/
 .claude-audit-report*
 .claude-fix-report*
 .claude/
+.agents/
+.ralph/ab_tests/
+.ralph/benchmarks/
+.claude/skills/
