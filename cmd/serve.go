@@ -20,6 +20,7 @@ var (
 	servePort         int
 	coordinatorURL    string
 	fleetBudget       float64
+	serveAutomation   bool
 )
 
 var serveCmd = &cobra.Command{
@@ -51,6 +52,15 @@ Tailscale peers on the fleet port to auto-discover the coordinator.`,
 		}()
 
 		bus, sessMgr, hostname := setupServe()
+		runtime, err := startServeAutomationRuntime(ctx, sp, bus, sessMgr)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if runtime != nil {
+				runtime.Stop()
+			}
+		}()
 
 		if serveCoordinator {
 			return runCoordinator(ctx, sp, hostname, bus, sessMgr)
@@ -121,5 +131,7 @@ func init() {
 		"Coordinator URL (auto-discover via Tailscale if empty)")
 	serveCmd.Flags().Float64Var(&fleetBudget, "fleet-budget", 500,
 		"Fleet-wide budget ceiling in USD")
+	serveCmd.Flags().BoolVar(&serveAutomation, "automation", true,
+		"Run repo-local subscription automation supervisors alongside fleet serving")
 	rootCmd.AddCommand(serveCmd)
 }

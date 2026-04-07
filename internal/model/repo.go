@@ -33,6 +33,8 @@ type LoopStatus struct {
 	SessionSpendUSD       float64   `json:"session_spend_usd"`
 	BudgetStatus          string    `json:"budget_status"`
 	WindowStatus          string    `json:"window_status,omitempty"`
+	ActiveJobID           string    `json:"active_job_id,omitempty"`
+	ActiveJobKind         string    `json:"active_job_kind,omitempty"`
 	ParkedSessionID       string    `json:"parked_session_id,omitempty"`
 	QueueDepth            int       `json:"queue_depth,omitempty"`
 	TargetUtilizationPct  float64   `json:"target_utilization_pct,omitempty"`

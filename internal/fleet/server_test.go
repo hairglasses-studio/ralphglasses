@@ -178,6 +178,148 @@ func TestCoordinator_WorkComplete(t *testing.T) {
 	}
 }
 
+func TestCoordinator_HandleWorkStart(t *testing.T) {
+	coord := newTestCoordinator()
+	item := &WorkItem{
+		ID:         "start-1",
+		Status:     WorkAssigned,
+		AssignedTo: "worker-1",
+		Source:     WorkSourceStructuredCodexTeam,
+	}
+	coord.queue.Push(item)
+
+	payload, _ := json.Marshal(WorkStartPayload{
+		WorkItemID:     item.ID,
+		SessionID:      "sess-1",
+		WorkerNodeID:   "worker-1",
+		WorktreePath:   "/tmp/worktree-start-1",
+		WorktreeBranch: "codex/start-1",
+		HeadSHA:        "abc123",
+		MergeBaseSHA:   "def456",
+	})
+	req := httptest.NewRequest("POST", "/api/v1/work/start", strings.NewReader(string(payload)))
+	w := httptest.NewRecorder()
+	coord.handleWorkStart(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("start: got %d, want 200", w.Code)
+	}
+
+	got, ok := coord.queue.Get(item.ID)
+	if !ok {
+		t.Fatal("expected work item after start")
+	}
+	if got.Status != WorkRunning {
+		t.Fatalf("status after start = %q, want %q", got.Status, WorkRunning)
+	}
+	if got.StartedAt == nil {
+		t.Fatal("expected StartedAt to be set")
+	}
+	if got.SessionID != "sess-1" {
+		t.Fatalf("session id = %q, want sess-1", got.SessionID)
+	}
+	if got.Result == nil {
+		t.Fatal("expected work result metadata")
+	}
+	if got.Result.WorkerNodeID != "worker-1" {
+		t.Fatalf("worker node id = %q, want worker-1", got.Result.WorkerNodeID)
+	}
+	if got.Result.WorktreeBranch != "codex/start-1" {
+		t.Fatalf("worktree branch = %q, want codex/start-1", got.Result.WorktreeBranch)
+	}
+	if got.Result.HeadSHA != "abc123" {
+		t.Fatalf("head sha = %q, want abc123", got.Result.HeadSHA)
+	}
+}
+
+func TestCoordinator_HandleWorkStatus_IncludesDLQ(t *testing.T) {
+	coord := newTestCoordinator()
+	item := &WorkItem{
+		ID:          "dlq-1",
+		Status:      WorkFailed,
+		SubmittedAt: time.Now(),
+		Result:      &WorkResult{TaskStatus: session.TeamTaskFailed},
+	}
+	coord.queue.Push(item)
+	if ok := coord.queue.MoveToDLQ(item.ID); !ok {
+		t.Fatal("expected item to move to DLQ")
+	}
+
+	req := httptest.NewRequest("GET", "/api/v1/work/dlq-1", nil)
+	req.SetPathValue("workID", item.ID)
+	w := httptest.NewRecorder()
+	coord.handleWorkStatus(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("status: got %d, want 200", w.Code)
+	}
+
+	var got WorkItem
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal work status: %v", err)
+	}
+	if got.ID != item.ID {
+		t.Fatalf("work id = %q, want %q", got.ID, item.ID)
+	}
+	if got.Status != WorkFailed {
+		t.Fatalf("status = %q, want %q", got.Status, WorkFailed)
+	}
+}
+
+func TestCoordinator_HandleWorkCancel_ReleasesBudget(t *testing.T) {
+	coord := newTestCoordinator()
+	now := time.Now()
+	item := &WorkItem{
+		ID:           "cancel-1",
+		Status:       WorkRunning,
+		Source:       WorkSourceStructuredCodexTeam,
+		AssignedTo:   "worker-1",
+		AssignedAt:   &now,
+		MaxBudgetUSD: 5,
+		Result:       &WorkResult{WorkerNodeID: "worker-1"},
+	}
+	coord.queue.Push(item)
+	coord.mu.Lock()
+	coord.budget.ReservedUSD = 5
+	coord.mu.Unlock()
+
+	req := httptest.NewRequest("POST", "/api/v1/work/cancel-1/cancel", nil)
+	req.SetPathValue("workID", item.ID)
+	w := httptest.NewRecorder()
+	coord.handleWorkCancel(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("cancel: got %d, want 200", w.Code)
+	}
+
+	got, ok := coord.WorkItem(item.ID)
+	if !ok {
+		t.Fatal("expected cancelled work item")
+	}
+	if got.Status != WorkFailed {
+		t.Fatalf("status after cancel = %q, want %q", got.Status, WorkFailed)
+	}
+	if got.Error != "cancelled" {
+		t.Fatalf("error after cancel = %q, want cancelled", got.Error)
+	}
+	if got.CompletedAt == nil {
+		t.Fatal("expected CompletedAt to be set")
+	}
+	if got.AssignedTo != "" {
+		t.Fatalf("assigned worker after cancel = %q, want empty", got.AssignedTo)
+	}
+	if got.Result == nil || got.Result.TaskStatus != session.TeamTaskCancelled {
+		t.Fatalf("task status after cancel = %v, want %q", got.Result, session.TeamTaskCancelled)
+	}
+
+	coord.mu.RLock()
+	reserved := coord.budget.ReservedUSD
+	coord.mu.RUnlock()
+	if reserved != 0 {
+		t.Fatalf("reserved budget after cancel = %.2f, want 0", reserved)
+	}
+}
+
 func TestCoordinator_Status(t *testing.T) {
 	coord := newTestCoordinator()
 

@@ -218,6 +218,45 @@ func (g *DocsResearchGateway) Abandon(ctx context.Context, topic, domain, reason
 	return nil
 }
 
+// Enqueue inserts or refreshes a pending research topic in the shared queue.
+func (g *DocsResearchGateway) Enqueue(ctx context.Context, entry ResearchEntry) error {
+	topic := strings.TrimSpace(entry.Topic)
+	if topic == "" {
+		return fmt.Errorf("research topic is required")
+	}
+	modelTier := strings.TrimSpace(entry.ModelTier)
+	if modelTier == "" {
+		modelTier = "sonnet"
+	}
+	priority := entry.PriorityScore
+	if priority <= 0 {
+		priority = 0.5
+	}
+	budget := entry.BudgetUSD
+	if budget <= 0 {
+		budget = 3.0
+	}
+	source := strings.TrimSpace(entry.Source)
+	if source == "" {
+		source = "manual"
+	}
+
+	_, err := g.db.ExecContext(ctx, `INSERT INTO research_queue (topic, domain, source, priority_score, model_tier, budget_usd)
+		VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT(topic, domain) DO UPDATE SET
+			priority_score = MAX(research_queue.priority_score, excluded.priority_score),
+			source = excluded.source,
+			model_tier = excluded.model_tier,
+			budget_usd = MAX(research_queue.budget_usd, excluded.budget_usd),
+			updated = datetime('now')
+		WHERE research_queue.status = 'pending'`,
+		topic, strings.TrimSpace(entry.Domain), source, priority, modelTier, budget)
+	if err != nil {
+		return fmt.Errorf("enqueue research topic: %w", err)
+	}
+	return nil
+}
+
 func (g *DocsResearchGateway) WriteResearch(ctx context.Context, domain, title, content string, urls []string) error {
 	// Validate domain.
 	validDomains := map[string]bool{

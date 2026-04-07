@@ -17,6 +17,11 @@ type WorkQueue struct {
 	dlq   map[string]*WorkItem // dead letter queue for permanently failed items
 }
 
+type persistedQueue struct {
+	Items []*WorkItem `json:"items"`
+	DLQ   []*WorkItem `json:"dlq,omitempty"`
+}
+
 // NewWorkQueue creates an empty work queue.
 func NewWorkQueue() *WorkQueue {
 	return &WorkQueue{
@@ -49,6 +54,17 @@ func (q *WorkQueue) Get(id string) (*WorkItem, bool) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	item, ok := q.items[id]
+	return item, ok
+}
+
+// Lookup retrieves a work item by ID from either the active queue or the DLQ.
+func (q *WorkQueue) Lookup(id string) (*WorkItem, bool) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if item, ok := q.items[id]; ok {
+		return item, true
+	}
+	item, ok := q.dlq[id]
 	return item, ok
 }
 
@@ -201,9 +217,13 @@ func (q *WorkQueue) SaveTo(path string) error {
 	for _, item := range q.items {
 		items = append(items, item)
 	}
+	dlq := make([]*WorkItem, 0, len(q.dlq))
+	for _, item := range q.dlq {
+		dlq = append(dlq, item)
+	}
 	q.mu.Unlock()
 
-	data, err := json.MarshalIndent(items, "", "  ")
+	data, err := json.MarshalIndent(persistedQueue{Items: items, DLQ: dlq}, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -220,15 +240,24 @@ func (q *WorkQueue) LoadFrom(path string) error {
 		return err
 	}
 
-	var items []*WorkItem
-	if err := json.Unmarshal(data, &items); err != nil {
-		return err
+	var state persistedQueue
+	if err := json.Unmarshal(data, &state); err != nil {
+		var legacy []*WorkItem
+		if legacyErr := json.Unmarshal(data, &legacy); legacyErr != nil {
+			return err
+		}
+		state.Items = legacy
 	}
 
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	for _, item := range items {
+	q.items = make(map[string]*WorkItem)
+	q.dlq = make(map[string]*WorkItem)
+	for _, item := range state.Items {
 		q.items[item.ID] = item
+	}
+	for _, item := range state.DLQ {
+		q.dlq[item.ID] = item
 	}
 	return nil
 }

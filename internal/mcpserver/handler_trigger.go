@@ -16,14 +16,14 @@ import (
 
 // TriggerRecord represents a request to trigger an agent session externally.
 type TriggerRecord struct {
-	ID        string    `json:"id"`
-	Prompt    string    `json:"prompt"`
-	AgentType string    `json:"agent_type"`
-	Priority  int       `json:"priority"`
+	ID        string        `json:"id"`
+	Prompt    string        `json:"prompt"`
+	AgentType string        `json:"agent_type"`
+	Priority  int           `json:"priority"`
 	Config    TriggerConfig `json:"config,omitempty"`
-	Status    string    `json:"status"`
-	SessionID string    `json:"session_id,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	Status    string        `json:"status"`
+	SessionID string        `json:"session_id,omitempty"`
+	CreatedAt time.Time     `json:"created_at"`
 }
 
 // TriggerConfig holds optional configuration overrides for a trigger.
@@ -165,6 +165,109 @@ func (s *Server) handleScheduleCreate(_ context.Context, req mcp.CallToolRequest
 	action, errResult := p.OptionalEnum("action", []string{"create", "list", "enable", "disable"}, "create")
 	if errResult != nil {
 		return errResult, nil
+	}
+	repo := p.OptionalString("repo", "")
+	if repo != "" {
+		repoPath, errRes := s.resolveRepoPath(repo)
+		if errRes != nil {
+			return errRes, nil
+		}
+		switch action {
+		case "list":
+			entries, err := listRepoScheduleEntries(repoPath)
+			if err != nil {
+				return codedError(ErrInternal, fmt.Sprintf("load repo schedules: %v", err)), nil
+			}
+			schedules := make([]map[string]any, 0, len(entries))
+			for _, entry := range entries {
+				presentation := repoSchedulePresentation(entry)
+				presentation["repo"] = repo
+				schedules = append(schedules, presentation)
+			}
+			return jsonResult(map[string]any{
+				"schedules": schedules,
+				"count":     len(schedules),
+				"repo":      repo,
+			}), nil
+		case "enable", "disable":
+			id, errResult := p.RequireString("id")
+			if errResult != nil {
+				return errResult, nil
+			}
+			entry, path, err := updateRepoScheduleEnabled(repoPath, id, action == "enable")
+			if err != nil {
+				return codedError(ErrInvalidParams, err.Error()), nil
+			}
+			presentation := repoSchedulePresentation(*entry)
+			presentation["repo"] = repo
+			presentation["path"] = path
+			presentation["action"] = action
+			presentation["status"] = "ok"
+			return jsonResult(presentation), nil
+		default:
+			prompt, errResult := p.RequireString("prompt")
+			if errResult != nil {
+				return errResult, nil
+			}
+			if err := ValidateStringLength(prompt, MaxPromptLength, "prompt"); err != nil {
+				return codedError(ErrInvalidParams, err.Error()), nil
+			}
+			cronExpr, errResult := p.RequireString("cron_expression")
+			if errResult != nil {
+				return errResult, nil
+			}
+			if err := session.ValidateAutomationCron(cronExpr); err != nil {
+				return codedError(ErrInvalidParams, fmt.Sprintf("invalid cron expression: %v", err)), nil
+			}
+			agentType, errResult := p.OptionalEnum("agent_type", validAgentTypes, "ralph")
+			if errResult != nil {
+				return errResult, nil
+			}
+			enabled := p.OptionalBool("enabled", true)
+			config := map[string]any{
+				"provider":   p.OptionalString("provider", ""),
+				"model":      p.OptionalString("model", ""),
+				"budget_usd": p.OptionalNumber("budget_usd", 0),
+				"max_turns":  p.OptionalInt("max_turns", 0),
+				"priority":   p.OptionalInt("priority", 5),
+			}
+			switch agentType {
+			case "loop":
+				config["job_kind"] = "loop"
+				config["prompt"] = prompt
+			case "cycle":
+				config["job_kind"] = "cycle"
+				config["name"] = p.OptionalString("name", "")
+				config["objective"] = firstNonEmptyString(p.OptionalString("objective", ""), prompt)
+				if criteria := p.OptionalString("criteria", ""); criteria != "" {
+					config["criteria"] = splitCSV(criteria)
+				}
+				if maxTasks := p.OptionalInt("max_tasks", 0); maxTasks > 0 {
+					config["max_tasks"] = maxTasks
+				}
+			default:
+				config["job_kind"] = "session"
+				config["prompt"] = prompt
+			}
+			configJSON, _ := json.Marshal(config)
+			entry := repoScheduleEntry{
+				ScheduleID:  fmt.Sprintf("sched-%d", time.Now().UnixNano()),
+				CronExpr:    cronExpr,
+				CycleConfig: string(configJSON),
+				CreatedAt:   time.Now().UTC().Format(time.RFC3339),
+				Enabled:     defaultEnabledPointer(enabled),
+			}
+			path, err := writeRepoScheduleEntry(repoPath, entry)
+			if err != nil {
+				return codedError(ErrInternal, fmt.Sprintf("save repo schedule: %v", err)), nil
+			}
+			entry.NextRuns, _ = computeScheduleNextRuns(cronExpr, 3)
+			presentation := repoSchedulePresentation(entry)
+			presentation["repo"] = repo
+			presentation["path"] = path
+			presentation["status"] = "created"
+			return jsonResult(presentation), nil
+		}
 	}
 
 	store := &scheduleStore{path: schedulesPath()}

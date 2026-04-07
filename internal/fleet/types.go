@@ -55,11 +55,13 @@ type WorkItem struct {
 	SandboxImage     string           `json:"sandbox_image,omitempty"`
 	TargetBranch     string           `json:"target_branch,omitempty"`
 	HumanContext     []string         `json:"human_context,omitempty"`
+	OwnedPaths       []string         `json:"owned_paths,omitempty"`
+	A2AAgentURL      string           `json:"a2a_agent_url,omitempty"`
 	MaxBudgetUSD     float64          `json:"max_budget_usd,omitempty"`
 	MaxTurns         int              `json:"max_turns,omitempty"`
 	Constraints      WorkConstraints  `json:"constraints"`
-	AssignedTo       string           `json:"assigned_to,omitempty"` // worker node ID
-	SessionID        string           `json:"session_id,omitempty"`  // session ID once running
+	AssignedTo       string           `json:"assigned_to,omitempty"`
+	SessionID        string           `json:"session_id,omitempty"`
 	RetryCount       int              `json:"retry_count"`
 	MaxRetries       int              `json:"max_retries"`
 	Error            string           `json:"error,omitempty"`
@@ -73,28 +75,35 @@ type WorkItem struct {
 
 // WorkConstraints specifies placement constraints for work items.
 type WorkConstraints struct {
-	NodePreference  string           `json:"node_preference,omitempty"` // preferred node ID
-	RequireLocal    bool             `json:"require_local,omitempty"`   // repo must exist on worker
+	NodePreference  string           `json:"node_preference,omitempty"`
+	RequireLocal    bool             `json:"require_local,omitempty"`
 	RequireProvider session.Provider `json:"require_provider,omitempty"`
 }
 
 // WorkResult captures the outcome of a completed work item.
 type WorkResult struct {
-	SessionID      string   `json:"session_id"`
-	SpentUSD       float64  `json:"spent_usd"`
-	TurnCount      int      `json:"turn_count"`
-	DurationS      float64  `json:"duration_seconds"`
-	ExitReason     string   `json:"exit_reason,omitempty"`
-	Output         string   `json:"output,omitempty"`
-	TaskStatus     string   `json:"task_status,omitempty"`
-	Summary        string   `json:"summary,omitempty"`
-	Question       string   `json:"question,omitempty"`
-	ChangedFiles   []string `json:"changed_files,omitempty"`
-	WorkerNodeID   string   `json:"worker_node_id,omitempty"`
-	WorktreePath   string   `json:"worktree_path,omitempty"`
-	WorktreeBranch string   `json:"worktree_branch,omitempty"`
-	HeadSHA        string   `json:"head_sha,omitempty"`
-	MergeBaseSHA   string   `json:"merge_base_sha,omitempty"`
+	SessionID         string   `json:"session_id"`
+	SpentUSD          float64  `json:"spent_usd"`
+	TurnCount         int      `json:"turn_count"`
+	DurationS         float64  `json:"duration_seconds"`
+	ExitReason        string   `json:"exit_reason,omitempty"`
+	Output            string   `json:"output,omitempty"`
+	TaskStatus        string   `json:"task_status,omitempty"`
+	Summary           string   `json:"summary,omitempty"`
+	Question          string   `json:"question,omitempty"`
+	ChangedFiles      []string `json:"changed_files,omitempty"`
+	WorkerNodeID      string   `json:"worker_node_id,omitempty"`
+	WorktreePath      string   `json:"worktree_path,omitempty"`
+	WorktreeBranch    string   `json:"worktree_branch,omitempty"`
+	HeadSHA           string   `json:"head_sha,omitempty"`
+	MergeBaseSHA      string   `json:"merge_base_sha,omitempty"`
+	ArtifactType      string   `json:"artifact_type,omitempty"`
+	ArtifactPath      string   `json:"artifact_path,omitempty"`
+	ArtifactHash      string   `json:"artifact_hash,omitempty"`
+	ArtifactSizeBytes int64    `json:"artifact_size_bytes,omitempty"`
+	ArtifactBaseRef   string   `json:"artifact_base_ref,omitempty"`
+	ArtifactTipRef    string   `json:"artifact_tip_ref,omitempty"`
+	ArtifactStatus    string   `json:"artifact_status,omitempty"`
 }
 
 // WorkerInfo describes a registered worker node.
@@ -119,10 +128,10 @@ type WorkerStatus string
 
 const (
 	WorkerOnline       WorkerStatus = "online"
-	WorkerStale        WorkerStatus = "stale"        // no heartbeat for 90s
-	WorkerDisconnected WorkerStatus = "disconnected" // no heartbeat for 5m
-	WorkerPaused       WorkerStatus = "paused"       // manually paused, skip for assignment
-	WorkerDraining     WorkerStatus = "draining"     // no new work, waiting for active to finish
+	WorkerStale        WorkerStatus = "stale"
+	WorkerDisconnected WorkerStatus = "disconnected"
+	WorkerPaused       WorkerStatus = "paused"
+	WorkerDraining     WorkerStatus = "draining"
 )
 
 // HeartbeatPayload is sent by workers every 30s.
@@ -133,7 +142,7 @@ type HeartbeatPayload struct {
 	AvailableSlots int                `json:"available_slots"`
 	Repos          []string           `json:"repos"`
 	Providers      []session.Provider `json:"providers"`
-	Load           float64            `json:"load"` // 0.0–1.0
+	Load           float64            `json:"load"`
 }
 
 // RegisterPayload is sent when a worker first connects.
@@ -149,13 +158,13 @@ type RegisterPayload struct {
 
 // WorkPollResponse is returned when a worker polls for work.
 type WorkPollResponse struct {
-	Item *WorkItem `json:"item,omitempty"` // nil = no work available
+	Item *WorkItem `json:"item,omitempty"`
 }
 
 // WorkCompletePayload is sent by a worker when it finishes a work item.
 type WorkCompletePayload struct {
 	WorkItemID string         `json:"work_item_id"`
-	Status     WorkItemStatus `json:"status"` // completed or failed
+	Status     WorkItemStatus `json:"status"`
 	Result     *WorkResult    `json:"result,omitempty"`
 	Error      string         `json:"error,omitempty"`
 }
@@ -169,6 +178,15 @@ type WorkStartPayload struct {
 	WorktreeBranch string `json:"worktree_branch,omitempty"`
 	HeadSHA        string `json:"head_sha,omitempty"`
 	MergeBaseSHA   string `json:"merge_base_sha,omitempty"`
+}
+
+// ArtifactUploadMetadata describes a worker-uploaded artifact.
+type ArtifactUploadMetadata struct {
+	ArtifactType      string `json:"artifact_type"`
+	ArtifactHash      string `json:"artifact_hash"`
+	ArtifactSizeBytes int64  `json:"artifact_size_bytes"`
+	ArtifactBaseRef   string `json:"artifact_base_ref,omitempty"`
+	ArtifactTipRef    string `json:"artifact_tip_ref,omitempty"`
 }
 
 // FleetState is the coordinator's view of the entire fleet.
@@ -187,7 +205,7 @@ type FleetState struct {
 // NodeStatus is returned by GET /api/v1/status for any node.
 type NodeStatus struct {
 	NodeID    string    `json:"node_id"`
-	Role      string    `json:"role"` // "coordinator", "worker", "standalone"
+	Role      string    `json:"role"`
 	Hostname  string    `json:"hostname"`
 	Uptime    float64   `json:"uptime_seconds"`
 	Sessions  int       `json:"active_sessions"`
@@ -217,7 +235,7 @@ type FleetEvent struct {
 type GlobalBudget struct {
 	LimitUSD    float64   `json:"limit_usd"`
 	SpentUSD    float64   `json:"spent_usd"`
-	ReservedUSD float64   `json:"reserved_usd"` // budget assigned to pending/active work
+	ReservedUSD float64   `json:"reserved_usd"`
 	LastUpdated time.Time `json:"last_updated"`
 }
 
