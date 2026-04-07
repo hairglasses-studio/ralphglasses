@@ -161,7 +161,7 @@ func (s *Server) buildLoopGroup() ToolGroup {
 				mcp.WithString("planner_provider", mcp.Description("Planner provider: claude, gemini, codex (default: codex)")),
 				mcp.WithString("worker_provider", mcp.Description("Worker provider: claude, gemini, codex (default: codex)")),
 				mcp.WithString("verifier_provider", mcp.Description("Verifier provider: claude, gemini, codex (default: codex)")),
-				mcp.WithString("verify_commands", mcp.Description("Newline-separated verification commands (default: ./scripts/dev/ci.sh)")),
+				mcp.WithString("verify_commands", mcp.Description("SECURITY: Privileged input. Newline-separated bash commands (default: ./scripts/dev/ci.sh)")),
 				mcp.WithNumber("retry_limit", mcp.Description("Maximum consecutive failed iterations before step is refused")),
 				mcp.WithNumber("max_concurrent_workers", mcp.Description("Maximum concurrent workers (currently only 1 supported)")),
 				mcp.WithString("worktree_policy", mcp.Description("Worktree isolation policy (default: git)")),

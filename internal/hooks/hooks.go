@@ -46,6 +46,9 @@ func NewExecutor(bus *events.Bus) *Executor {
 }
 
 // LoadConfig reads .ralph/hooks.yaml for a repo.
+// SECURITY: The Command field in hooks.yaml is executed directly by the system shell
+// without sanitization. The .ralph/hooks.yaml file must only contain trusted content
+// and its modification should be tightly controlled.
 func (e *Executor) LoadConfig(repoPath string) error {
 	hooksFile := filepath.Join(repoPath, ".ralph", "hooks.yaml")
 	data, err := os.ReadFile(hooksFile)
