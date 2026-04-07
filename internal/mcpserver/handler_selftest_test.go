@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -251,5 +252,39 @@ func TestHandleSelfTest_DryRunFalseDefault(t *testing.T) {
 	}
 	if resp["status"] != "prepared" {
 		t.Errorf("status = %v, want prepared", resp["status"])
+	}
+}
+
+func TestHandleSelfTest_PathTraversal(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	cases := []struct {
+		name string
+		repo string
+	}{
+		{"dot-dot-etc-passwd", "../../etc/passwd"},
+		{"absolute-outside-scanroot", "/etc/passwd"},
+		{"null-byte", "/tmp/safe\x00/etc/shadow"},
+		{"shell-metachar-semicolon", "/tmp/foo;rm -rf /"},
+		{"shell-metachar-pipe", "/tmp/foo|cat /etc/passwd"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := srv.handleSelfTest(context.Background(), makeRequest(map[string]any{
+				"repo": tc.repo,
+			}))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !result.IsError {
+				t.Fatalf("expected error for traversal input %q", tc.repo)
+			}
+			text := getResultText(result)
+			if !strings.Contains(text, string(ErrInvalidParams)) {
+				t.Errorf("expected INVALID_PARAMS for %q, got: %s", tc.repo, text)
+			}
+		})
 	}
 }

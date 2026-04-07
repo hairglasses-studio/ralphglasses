@@ -176,6 +176,11 @@ func (s *Server) handleMergeVerify(ctx context.Context, req mcp.CallToolRequest)
 		return codedError(ErrInvalidParams, "repo is required"), nil
 	}
 
+	// Validate path before resolving — reject traversal and escapes.
+	if err := ValidatePath(repo, s.ScanPath); err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid repo path: %v", err)), nil
+	}
+
 	// Resolve and validate repo path.
 	repoPath, err := filepath.Abs(repo)
 	if err != nil {

@@ -166,6 +166,10 @@ func (s *Server) handleSessionSalvage(ctx context.Context, req mcp.CallToolReque
 	}
 
 	if saveDomain != "" {
+		// Validate domain as a path component — reject traversal.
+		if err := validateSafePath(saveDomain); err != nil {
+			return codedError(ErrInvalidParams, fmt.Sprintf("invalid save_to_docs domain: %v", err)), nil
+		}
 		docsPath := filepath.Join(s.docsRoot(), "research", saveDomain)
 		if err := os.MkdirAll(docsPath, 0o755); err == nil {
 			filename := fmt.Sprintf("salvaged-%s.md", sess.ID[:8])
@@ -480,6 +484,11 @@ func (s *Server) handleSessionDiscover(_ context.Context, req mcp.CallToolReques
 	scanPath := pp.String("scan_path")
 	if scanPath == "" {
 		scanPath = s.ScanPath
+	} else {
+		// Validate user-supplied scan_path — reject traversal and escapes.
+		if err := ValidatePath(scanPath, s.ScanPath); err != nil {
+			return codedError(ErrInvalidParams, fmt.Sprintf("invalid scan_path: %v", err)), nil
+		}
 	}
 	includeClaude := pp.OptionalBool("include_claude_projects", true)
 	checkProcs := pp.OptionalBool("check_processes", true)

@@ -37,6 +37,10 @@ func (s *Server) handleDocsSearch(_ context.Context, req mcp.CallToolRequest) (*
 
 	searchPath := filepath.Join(s.docsRoot(), "research")
 	if domain != "" {
+		// Validate domain as a path component — reject traversal.
+		if err := validateSafePath(domain); err != nil {
+			return codedError(ErrInvalidParams, fmt.Sprintf("invalid domain: %v", err)), nil
+		}
 		searchPath = filepath.Join(searchPath, domain)
 	}
 
