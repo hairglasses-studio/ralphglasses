@@ -66,13 +66,18 @@ jobs:
             "AGENTS.md"
             "CLAUDE.md"
             "GEMINI.md"
+            ".mcp.json"
             ".claude/settings.json"
             ".gemini/settings.json"
             ".github/copilot-instructions.md"
             ".codex/config.toml"
+            ".github/workflows/claude-review.yml"
+            ".github/workflows/claude-security.yml"
             ".github/workflows/codex-review.yml"
             ".github/workflows/codex-security.yml"
             ".github/workflows/codex-structured-audit.yml"
+            ".github/workflows/gemini-review.yml"
+            ".github/workflows/gemini-security.yml"
             ".github/workflows/ai-dispatch.yml"
           )
 
@@ -89,8 +94,18 @@ jobs:
             fail ".claude/settings.json must be valid JSON"
           jq -e 'type == "object"' .gemini/settings.json >/dev/null || \
             fail ".gemini/settings.json must be valid JSON"
+          jq -e 'type == "object"' .mcp.json >/dev/null || \
+            fail ".mcp.json must be valid JSON"
           jq -e '(.context.fileName // []) | index("AGENTS.md") != null' .gemini/settings.json >/dev/null || \
             fail ".gemini/settings.json must include AGENTS.md in context.fileName"
+          jq -e '(.context.fileName // []) | index("GEMINI.md") != null' .gemini/settings.json >/dev/null || \
+            fail ".gemini/settings.json must include GEMINI.md in context.fileName"
+          jq -e '.mcpServers.ralphglasses.cwd == "."' .mcp.json >/dev/null || \
+            fail ".mcp.json must keep cwd=. for ralphglasses"
+          jq -e '.mcpServers.ralphglasses.cwd == "."' .claude/settings.json >/dev/null || \
+            fail ".claude/settings.json must keep cwd=. for ralphglasses"
+          jq -e '.mcpServers.ralphglasses.cwd == "."' .gemini/settings.json >/dev/null || \
+            fail ".gemini/settings.json must keep cwd=. for ralphglasses"
 
           if git ls-files --error-unmatch CLAUDE.local.md >/dev/null 2>&1; then
             fail "CLAUDE.local.md must remain untracked"
@@ -114,6 +129,8 @@ jobs:
           for profile in readonly_quiet review workspace_auto ci_json; do
             require_match "^\\[profiles\\.${profile}\\]" .codex/config.toml
           done
+          [[ "$(grep -Fc 'cwd = \".\"' .codex/config.toml)" -ge 3 ]] || \
+            fail ".codex/config.toml must keep cwd=. for all repo MCP servers"
 
           if [[ -d .codex/agents ]] && find .codex/agents -type f -name '*-*.toml' | grep -q .; then
             fail "Subagent filenames must use underscore_case under .codex/agents/"
