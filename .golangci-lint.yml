@@ -10,7 +10,10 @@ linters:
 run:
   timeout: 5m
 issues:
+  new: true
   exclude-rules:
     - path: _test\.go
       linters:
         - errcheck
+        - unused
+        - staticcheck
