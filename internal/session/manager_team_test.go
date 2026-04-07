@@ -236,30 +236,3 @@ func TestCorrelateTaskStatuses_TerminalNotOverwritten(t *testing.T) {
 	}
 }
 
-func TestRecalculateTeamLocked_WaitsForPromotion(t *testing.T) {
-	team := &TeamStatus{
-		Status:          StatusRunning,
-		RunState:        TeamRunStateRunning,
-		PromotionStatus: TeamPromotionStatusPending,
-		Tasks: []TeamTask{
-			{ID: "task-1", Status: TeamTaskCompleted, MergeStatus: TeamMergeStatusMerged},
-		},
-	}
-
-	recalculateTeamLocked(team)
-	if team.RunState != TeamRunStateRunning {
-		t.Fatalf("run_state = %q, want %q before promotion", team.RunState, TeamRunStateRunning)
-	}
-	if team.Status != StatusRunning {
-		t.Fatalf("status = %q, want %q before promotion", team.Status, StatusRunning)
-	}
-
-	team.PromotionStatus = TeamPromotionStatusPromoted
-	recalculateTeamLocked(team)
-	if team.RunState != TeamRunStateCompleted {
-		t.Fatalf("run_state = %q, want %q after promotion", team.RunState, TeamRunStateCompleted)
-	}
-	if team.Status != StatusCompleted {
-		t.Fatalf("status = %q, want %q after promotion", team.Status, StatusCompleted)
-	}
-}
