@@ -16,12 +16,22 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/simplecron"
 )
 
 const (
 	subscriptionPolicyFile = "subscription_policy.json"
 	usageWindowFile        = "usage_window.json"
 	automationQueueFile    = "automation_queue.json"
+)
+
+type AutomationJobKind string
+
+const (
+	AutomationJobSession  AutomationJobKind = "session"
+	AutomationJobLoop     AutomationJobKind = "loop"
+	AutomationJobCycle    AutomationJobKind = "cycle"
+	AutomationJobResearch AutomationJobKind = "research"
 )
 
 // SubscriptionPolicy controls repo-local subscription-window automation.
@@ -51,17 +61,28 @@ type SubscriptionPolicyRecommendation struct {
 
 // AutomationQueueItem is a durable queued task for subscription-window automation.
 type AutomationQueueItem struct {
-	ID           string     `json:"id"`
-	Prompt       string     `json:"prompt"`
-	Provider     Provider   `json:"provider"`
-	Model        string     `json:"model,omitempty"`
-	BudgetUSD    float64    `json:"budget_usd,omitempty"`
-	MaxTurns     int        `json:"max_turns,omitempty"`
-	Priority     int        `json:"priority"`
-	Source       string     `json:"source,omitempty"`
-	ScheduleID   string     `json:"schedule_id,omitempty"`
-	ScheduledFor *time.Time `json:"scheduled_for,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
+	ID                   string            `json:"id"`
+	JobKind              AutomationJobKind `json:"job_kind,omitempty"`
+	Prompt               string            `json:"prompt,omitempty"`
+	Provider             Provider          `json:"provider"`
+	Model                string            `json:"model,omitempty"`
+	BudgetUSD            float64           `json:"budget_usd,omitempty"`
+	MaxTurns             int               `json:"max_turns,omitempty"`
+	Priority             int               `json:"priority"`
+	Source               string            `json:"source,omitempty"`
+	ScheduleID           string            `json:"schedule_id,omitempty"`
+	ScheduledFor         *time.Time        `json:"scheduled_for,omitempty"`
+	CreatedAt            time.Time         `json:"created_at"`
+	CycleName            string            `json:"cycle_name,omitempty"`
+	Objective            string            `json:"objective,omitempty"`
+	SuccessCriteria      []string          `json:"success_criteria,omitempty"`
+	MaxTasks             int               `json:"max_tasks,omitempty"`
+	LoopProfile          *LoopProfile      `json:"loop_profile,omitempty"`
+	ResearchTopic        string            `json:"research_topic,omitempty"`
+	ResearchDomain       string            `json:"research_domain,omitempty"`
+	ResearchPriority     float64           `json:"research_priority_score,omitempty"`
+	ResearchModelTier    string            `json:"research_model_tier,omitempty"`
+	ResearchBudgetUSD    float64           `json:"research_budget_usd,omitempty"`
 }
 
 // ParkedSessionRef tracks a session that exhausted subscription capacity and must be resumed later.
@@ -88,6 +109,8 @@ type UsageWindowState struct {
 	NextReset             time.Time            `json:"next_reset,omitempty"`
 	CurrentSpendUSD       float64              `json:"current_spend_usd,omitempty"`
 	ActiveSessionID       string               `json:"active_session_id,omitempty"`
+	ActiveJobID           string               `json:"active_job_id,omitempty"`
+	ActiveJobKind         AutomationJobKind    `json:"active_job_kind,omitempty"`
 	ActiveQueueItemID     string               `json:"active_queue_item_id,omitempty"`
 	ActiveQueueItem       *AutomationQueueItem `json:"active_queue_item,omitempty"`
 	Exhausted             bool                 `json:"exhausted"`
@@ -112,6 +135,8 @@ type AutomationStatusSnapshot struct {
 	NextReset             time.Time `json:"next_reset,omitempty"`
 	QueueDepth            int       `json:"queue_depth"`
 	ActiveSessionID       string    `json:"active_session_id,omitempty"`
+	ActiveJobID           string    `json:"active_job_id,omitempty"`
+	ActiveJobKind         string    `json:"active_job_kind,omitempty"`
 	ParkedSessionID       string    `json:"parked_session_id,omitempty"`
 	ParkedProviderSession string    `json:"parked_provider_session_id,omitempty"`
 	CurrentSpendUSD       float64   `json:"current_spend_usd,omitempty"`
@@ -145,6 +170,7 @@ type cycleSchedule struct {
 	CronExpr    string `json:"cron_expr"`
 	CycleConfig string `json:"cycle_config"`
 	CreatedAt   string `json:"created_at"`
+	Enabled     *bool  `json:"enabled,omitempty"`
 }
 
 type quotaSignal struct {
@@ -313,6 +339,7 @@ func (c *SubscriptionAutomationController) ReprioritizeQueueItem(id string, prio
 func (c *SubscriptionAutomationController) Status() AutomationStatusSnapshot {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.ensureWindowLocked(c.now())
 	return c.snapshotLocked(c.now())
 }
 
@@ -324,7 +351,7 @@ func (c *SubscriptionAutomationController) Tick(ctx context.Context) {
 
 	c.mu.Lock()
 	c.ensureWindowLocked(now)
-	c.handleActiveSessionLocked(now)
+	c.handleActiveWorkLocked(now)
 	c.enqueueDueSchedulesLocked(now)
 	action := c.nextActionLocked(now)
 	snapshot := c.snapshotLocked(now)
@@ -364,9 +391,12 @@ func (c *SubscriptionAutomationController) executeResume(ctx context.Context, pa
 	}
 
 	c.state.ActiveSessionID = sess.ID
+	c.state.ActiveJobID = sess.ID
+	c.state.ActiveJobKind = AutomationJobSession
 	c.state.ActiveQueueItemID = parked.QueueItemID
 	c.state.ActiveQueueItem = &AutomationQueueItem{
 		ID:         parked.QueueItemID,
+		JobKind:    AutomationJobSession,
 		Prompt:     parked.Prompt,
 		Provider:   parked.Provider,
 		Model:      parked.Model,
@@ -384,6 +414,32 @@ func (c *SubscriptionAutomationController) executeResume(ctx context.Context, pa
 }
 
 func (c *SubscriptionAutomationController) executeLaunch(ctx context.Context, item *AutomationQueueItem) {
+	if item == nil {
+		return
+	}
+
+	switch item.JobKind {
+	case "", AutomationJobSession:
+		c.executeSessionLaunch(ctx, item)
+	case AutomationJobLoop:
+		c.executeLoopLaunch(ctx, item)
+	case AutomationJobCycle:
+		c.executeCycleLaunch(ctx, item)
+	case AutomationJobResearch:
+		c.executeResearchLaunch(ctx, item)
+	default:
+		c.mu.Lock()
+		c.queue = append(c.queue, *item)
+		c.sortQueueLocked()
+		c.state.LastError = fmt.Sprintf("unsupported automation job kind: %s", item.JobKind)
+		now := c.now()
+		_ = c.persistLocked()
+		_ = c.writeStatusFileLocked(c.snapshotLocked(now))
+		c.mu.Unlock()
+	}
+}
+
+func (c *SubscriptionAutomationController) executeSessionLaunch(ctx context.Context, item *AutomationQueueItem) {
 	if item == nil {
 		return
 	}
@@ -411,6 +467,8 @@ func (c *SubscriptionAutomationController) executeLaunch(ctx context.Context, it
 	}
 
 	c.state.ActiveSessionID = sess.ID
+	c.state.ActiveJobID = sess.ID
+	c.state.ActiveJobKind = AutomationJobSession
 	c.state.ActiveQueueItemID = item.ID
 	activeItem := *item
 	c.state.ActiveQueueItem = &activeItem
@@ -420,16 +478,174 @@ func (c *SubscriptionAutomationController) executeLaunch(ctx context.Context, it
 	_ = c.writeStatusFileLocked(c.snapshotLocked(now))
 }
 
-func (c *SubscriptionAutomationController) handleActiveSessionLocked(now time.Time) {
-	if c.state.ActiveSessionID == "" {
+func (c *SubscriptionAutomationController) executeLoopLaunch(ctx context.Context, item *AutomationQueueItem) {
+	if item == nil {
 		return
 	}
 
-	sess, ok := c.mgr.Get(c.state.ActiveSessionID)
+	profile := c.loopProfileForQueueItem(*item)
+	run, err := c.mgr.StartLoop(ctx, c.repoPath, profile)
+	c.mu.Lock()
+	now := c.now()
+	if err != nil {
+		c.queue = append(c.queue, *item)
+		c.sortQueueLocked()
+		c.state.LastError = fmt.Sprintf("loop start failed: %v", err)
+		_ = c.persistLocked()
+		_ = c.writeStatusFileLocked(c.snapshotLocked(now))
+		c.mu.Unlock()
+		return
+	}
+
+	c.state.ActiveSessionID = ""
+	c.state.ActiveJobID = run.ID
+	c.state.ActiveJobKind = AutomationJobLoop
+	c.state.ActiveQueueItemID = item.ID
+	activeItem := *item
+	c.state.ActiveQueueItem = &activeItem
+	c.state.LastDispatchAt = ptrTime(now)
+	c.state.LastError = ""
+	_ = c.persistLocked()
+	_ = c.writeStatusFileLocked(c.snapshotLocked(now))
+	c.mu.Unlock()
+
+	go func(runID string) {
+		err := c.mgr.RunLoop(detachContext(ctx), runID)
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		now := c.now()
+		if run, ok := c.mgr.GetLoop(runID); ok {
+			c.state.CurrentSpendUSD += c.mgr.aggregateLoopSpend(run)
+		}
+		c.clearActiveJobLocked(runID, AutomationJobLoop)
+		c.state.LastTerminalSessionAt = ptrTime(now)
+		if err != nil {
+			c.state.LastError = fmt.Sprintf("loop failed: %v", err)
+		} else {
+			c.state.LastError = ""
+		}
+		_ = c.persistLocked()
+		_ = c.writeStatusFileLocked(c.snapshotLocked(now))
+	}(run.ID)
+}
+
+func (c *SubscriptionAutomationController) executeCycleLaunch(ctx context.Context, item *AutomationQueueItem) {
+	if item == nil {
+		return
+	}
+
+	name := strings.TrimSpace(item.CycleName)
+	if name == "" {
+		name = fmt.Sprintf("automation-%d", c.now().Unix())
+	}
+	objective := strings.TrimSpace(item.Objective)
+	if objective == "" {
+		objective = strings.TrimSpace(item.Prompt)
+	}
+	if objective == "" {
+		objective = fmt.Sprintf("Run the scheduled R&D cycle for %s", filepath.Base(c.repoPath))
+	}
+	maxTasks := item.MaxTasks
+	if maxTasks <= 0 {
+		maxTasks = 3
+	}
+
+	c.mu.Lock()
+	now := c.now()
+	c.state.ActiveSessionID = ""
+	c.state.ActiveJobID = item.ID
+	c.state.ActiveJobKind = AutomationJobCycle
+	c.state.ActiveQueueItemID = item.ID
+	activeItem := *item
+	c.state.ActiveQueueItem = &activeItem
+	c.state.LastDispatchAt = ptrTime(now)
+	c.state.LastError = ""
+	_ = c.persistLocked()
+	_ = c.writeStatusFileLocked(c.snapshotLocked(now))
+	c.mu.Unlock()
+
+	go func(queueItemID string) {
+		cycle, err := c.mgr.RunCycle(detachContext(ctx), c.repoPath, name, objective, item.SuccessCriteria, maxTasks)
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		now := c.now()
+		if cycle != nil {
+			c.state.CurrentSpendUSD += c.actualCycleSpendLocked(cycle)
+		}
+		c.clearActiveJobLocked(queueItemID, AutomationJobCycle)
+		c.state.LastTerminalSessionAt = ptrTime(now)
+		if err != nil {
+			c.state.LastError = fmt.Sprintf("cycle failed: %v", err)
+		} else {
+			c.state.LastError = ""
+		}
+		_ = c.persistLocked()
+		_ = c.writeStatusFileLocked(c.snapshotLocked(now))
+	}(item.ID)
+}
+
+func (c *SubscriptionAutomationController) executeResearchLaunch(ctx context.Context, item *AutomationQueueItem) {
+	if item == nil {
+		return
+	}
+
+	entry := ResearchEntry{
+		Topic:         firstNonEmpty(item.ResearchTopic, item.Objective, item.Prompt),
+		Domain:        item.ResearchDomain,
+		Source:        firstNonEmpty(item.Source, "automation"),
+		PriorityScore: item.ResearchPriority,
+		ModelTier:     item.ResearchModelTier,
+		BudgetUSD:     item.ResearchBudgetUSD,
+	}
+	if entry.PriorityScore <= 0 {
+		entry.PriorityScore = 0.5
+	}
+	if entry.ModelTier == "" {
+		entry.ModelTier = "sonnet"
+	}
+	if entry.BudgetUSD <= 0 {
+		entry.BudgetUSD = item.BudgetUSD
+	}
+	if entry.BudgetUSD <= 0 {
+		entry.BudgetUSD = 3.0
+	}
+
+	err := enqueueResearchEntry(ctx, automationDocsRoot(c.repoPath), entry)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	now := c.now()
+	if err != nil {
+		c.queue = append(c.queue, *item)
+		c.sortQueueLocked()
+		c.state.LastError = fmt.Sprintf("research enqueue failed: %v", err)
+	} else {
+		c.state.LastDispatchAt = ptrTime(now)
+		c.state.LastError = ""
+	}
+	_ = c.persistLocked()
+	_ = c.writeStatusFileLocked(c.snapshotLocked(now))
+}
+
+func (c *SubscriptionAutomationController) handleActiveWorkLocked(now time.Time) {
+	switch c.activeJobKindLocked() {
+	case AutomationJobLoop:
+		c.handleActiveLoopLocked(now)
+	case AutomationJobCycle:
+		c.handleActiveCycleLocked(now)
+	default:
+		c.handleActiveSessionLocked(now)
+	}
+}
+
+func (c *SubscriptionAutomationController) handleActiveSessionLocked(now time.Time) {
+	activeSessionID := c.state.ActiveSessionID
+	if activeSessionID == "" {
+		return
+	}
+
+	sess, ok := c.mgr.Get(activeSessionID)
 	if !ok {
-		c.state.ActiveSessionID = ""
-		c.state.ActiveQueueItemID = ""
-		c.state.ActiveQueueItem = nil
+		c.clearActiveJobLocked(activeSessionID, AutomationJobSession)
 		return
 	}
 
@@ -454,11 +670,9 @@ func (c *SubscriptionAutomationController) handleActiveSessionLocked(now time.Ti
 
 	c.state.CurrentSpendUSD += spentUSD
 	c.state.LastTerminalSessionAt = ptrTime(now)
-	c.state.ActiveSessionID = ""
 	activeQueueItemID := c.state.ActiveQueueItemID
 	activeQueueItem := c.state.ActiveQueueItem
-	c.state.ActiveQueueItemID = ""
-	c.state.ActiveQueueItem = nil
+	c.clearActiveJobLocked(activeSessionID, AutomationJobSession)
 
 	signal := detectQuotaSignal(provider, outputHistory, lastOutput, errMsg, now, c.policyLocation())
 	if signal.Exhausted {
@@ -499,6 +713,45 @@ func (c *SubscriptionAutomationController) handleActiveSessionLocked(now time.Ti
 	}
 }
 
+func (c *SubscriptionAutomationController) handleActiveLoopLocked(now time.Time) {
+	activeJobID := c.state.ActiveJobID
+	if activeJobID == "" {
+		return
+	}
+
+	run, ok := c.mgr.GetLoop(activeJobID)
+	if !ok {
+		c.clearActiveJobLocked(activeJobID, AutomationJobLoop)
+		return
+	}
+
+	run.Lock()
+	status := run.Status
+	run.Unlock()
+	if status == "running" || status == "pending" {
+		return
+	}
+
+	c.state.CurrentSpendUSD += c.mgr.aggregateLoopSpend(run)
+	c.state.LastTerminalSessionAt = ptrTime(now)
+	c.clearActiveJobLocked(activeJobID, AutomationJobLoop)
+}
+
+func (c *SubscriptionAutomationController) handleActiveCycleLocked(now time.Time) {
+	if c.state.ActiveJobKind != AutomationJobCycle || c.state.ActiveQueueItem == nil {
+		return
+	}
+
+	cycle, err := c.mgr.GetActiveCycle(c.repoPath)
+	if err == nil && cycle != nil && cycle.Phase != CycleComplete && cycle.Phase != CycleFailed {
+		return
+	}
+
+	activeJobID := c.state.ActiveJobID
+	c.state.LastTerminalSessionAt = ptrTime(now)
+	c.clearActiveJobLocked(activeJobID, AutomationJobCycle)
+}
+
 func (c *SubscriptionAutomationController) nextActionLocked(now time.Time) *automationAction {
 	if !c.policy.Enabled {
 		return nil
@@ -506,7 +759,7 @@ func (c *SubscriptionAutomationController) nextActionLocked(now time.Time) *auto
 	if c.policy.Provider != ProviderCodex {
 		return nil
 	}
-	if c.state.ActiveSessionID != "" {
+	if c.state.ActiveSessionID != "" || c.state.ActiveJobID != "" {
 		return nil
 	}
 	if c.mgr.IsRunning(c.repoPath) {
@@ -565,14 +818,20 @@ func (c *SubscriptionAutomationController) ensureWindowLocked(now time.Time) {
 	}
 
 	effectiveNext := next
-	if c.state.Exhausted && !c.state.NextReset.IsZero() && c.state.NextReset.Before(next) && now.Before(c.state.NextReset) {
+	authoritativeResetActive := c.state.Exhausted && !c.state.NextReset.IsZero() && now.Before(c.state.NextReset)
+	if authoritativeResetActive {
+		if !c.state.WindowStart.IsZero() {
+			start = c.state.WindowStart
+		}
 		effectiveNext = c.state.NextReset
 		end = effectiveNext
 	}
 	if c.state.WindowStart.Equal(start) && c.state.WindowEnd.Equal(end) && c.state.NextReset.Equal(effectiveNext) {
 		return
 	}
-	windowChanged := !c.state.WindowEnd.IsZero() && (now.Equal(c.state.WindowEnd) || now.After(c.state.WindowEnd) || c.state.WindowStart.After(now))
+	windowChanged := !authoritativeResetActive &&
+		!c.state.WindowEnd.IsZero() &&
+		(now.Equal(c.state.WindowEnd) || now.After(c.state.WindowEnd) || c.state.WindowStart.After(now))
 	c.state.WindowStart = start
 	c.state.WindowEnd = end
 	c.state.NextReset = effectiveNext
@@ -611,6 +870,7 @@ func (c *SubscriptionAutomationController) enqueueDueSchedulesLocked(now time.Ti
 func (c *SubscriptionAutomationController) queueItemFromScheduleLocked(s cycleSchedule, scheduledFor time.Time) AutomationQueueItem {
 	item := AutomationQueueItem{
 		ID:           "aq-" + uuid.NewString(),
+		JobKind:      AutomationJobSession,
 		Provider:     c.policy.Provider,
 		Model:        c.policy.DefaultModel,
 		BudgetUSD:    c.policy.DefaultTaskBudgetUSD,
@@ -625,9 +885,16 @@ func (c *SubscriptionAutomationController) queueItemFromScheduleLocked(s cycleSc
 	if err := json.Unmarshal([]byte(s.CycleConfig), &map[string]any{}); err == nil {
 		var raw map[string]any
 		_ = json.Unmarshal([]byte(s.CycleConfig), &raw)
+		item.JobKind = normalizeAutomationJobKind(stringValue(raw["job_kind"]))
+		if item.JobKind == "" {
+			item.JobKind = normalizeAutomationJobKind(stringValue(raw["agent_type"]))
+		}
+		if item.JobKind == "" {
+			item.JobKind = AutomationJobCycle
+		}
 		item.Prompt = strings.TrimSpace(stringValue(raw["prompt"]))
-		if item.Prompt == "" {
-			item.Prompt = fmt.Sprintf("Execute the scheduled R&D cycle for %s using this configuration:\n%s", filepath.Base(c.repoPath), s.CycleConfig)
+		if item.Prompt == "" && item.JobKind == AutomationJobSession {
+			item.Prompt = fmt.Sprintf("Execute the scheduled automation task for %s using this configuration:\n%s", filepath.Base(c.repoPath), s.CycleConfig)
 		}
 		if p := Provider(strings.TrimSpace(strings.ToLower(stringValue(raw["provider"])))); p != "" {
 			item.Provider = p
@@ -646,11 +913,34 @@ func (c *SubscriptionAutomationController) queueItemFromScheduleLocked(s cycleSc
 		if v := intValue(raw["priority"]); v != 0 {
 			item.Priority = v
 		}
+		item.CycleName = strings.TrimSpace(stringValue(raw["name"]))
+		item.Objective = strings.TrimSpace(firstNonEmpty(stringValue(raw["objective"]), stringValue(raw["research_topic"])))
+		item.SuccessCriteria = stringSliceValue(raw["criteria"])
+		if len(item.SuccessCriteria) == 0 {
+			item.SuccessCriteria = stringSliceValue(raw["success_criteria"])
+		}
+		item.MaxTasks = intValue(raw["max_tasks"])
+		if lp := loopProfileValue(raw["loop_profile"]); lp != nil {
+			item.LoopProfile = lp
+		}
+		item.ResearchTopic = strings.TrimSpace(firstNonEmpty(stringValue(raw["research_topic"]), stringValue(raw["topic"])))
+		item.ResearchDomain = strings.TrimSpace(stringValue(raw["research_domain"]))
+		if item.ResearchDomain == "" {
+			item.ResearchDomain = strings.TrimSpace(stringValue(raw["domain"]))
+		}
+		item.ResearchPriority = floatValue(raw["research_priority_score"])
+		if item.ResearchPriority <= 0 {
+			item.ResearchPriority = floatValue(raw["priority_score"])
+		}
+		item.ResearchModelTier = strings.TrimSpace(firstNonEmpty(stringValue(raw["research_model_tier"]), stringValue(raw["model_tier"])))
+		item.ResearchBudgetUSD = floatValue(raw["research_budget_usd"])
 	} else {
 		item.Prompt = strings.TrimSpace(s.CycleConfig)
 		if item.Prompt == "" {
 			item.Prompt = fmt.Sprintf("Run the scheduled autonomous coding cycle for %s.", filepath.Base(c.repoPath))
 		}
+		item.JobKind = AutomationJobCycle
+		item.Objective = item.Prompt
 	}
 
 	item = c.normalizeQueueItemLocked(item)
@@ -713,6 +1003,9 @@ func (c *SubscriptionAutomationController) loadSchedulesLocked() ([]cycleSchedul
 		if sched.ScheduleID == "" || strings.TrimSpace(sched.CronExpr) == "" {
 			continue
 		}
+		if sched.Enabled != nil && !*sched.Enabled {
+			continue
+		}
 		schedules = append(schedules, sched)
 	}
 	return schedules, nil
@@ -748,12 +1041,16 @@ func (c *SubscriptionAutomationController) lookupQueueItemByIDLocked(id string) 
 }
 
 func (c *SubscriptionAutomationController) normalizeQueueItemLocked(item AutomationQueueItem) AutomationQueueItem {
+	item.JobKind = normalizeAutomationJobKind(string(item.JobKind))
+	if item.JobKind == "" {
+		item.JobKind = inferAutomationJobKind(item)
+	}
 	item.Provider = firstNonEmptyProvider(item.Provider, c.policy.Provider, ProviderCodex)
 	if item.Model == "" {
 		item.Model = c.policy.DefaultModel
 	}
 	if item.BudgetUSD <= 0 {
-		item.BudgetUSD = c.policy.DefaultTaskBudgetUSD
+		item.BudgetUSD = c.defaultBudgetForJobLocked(item)
 	}
 	if item.MaxTurns <= 0 {
 		item.MaxTurns = c.policy.DefaultTaskMaxTurns
@@ -767,7 +1064,137 @@ func (c *SubscriptionAutomationController) normalizeQueueItemLocked(item Automat
 	if item.CreatedAt.IsZero() {
 		item.CreatedAt = c.now()
 	}
+	if item.JobKind == AutomationJobResearch && item.ResearchBudgetUSD <= 0 {
+		item.ResearchBudgetUSD = item.BudgetUSD
+	}
 	return item
+}
+
+func (c *SubscriptionAutomationController) defaultBudgetForJobLocked(item AutomationQueueItem) float64 {
+	switch item.JobKind {
+	case AutomationJobLoop:
+		if item.LoopProfile != nil {
+			if item.LoopProfile.HardBudgetCapUSD > 0 {
+				return item.LoopProfile.HardBudgetCapUSD
+			}
+			total := item.LoopProfile.PlannerBudgetUSD + item.LoopProfile.WorkerBudgetUSD + item.LoopProfile.VerifierBudgetUSD
+			if total > 0 {
+				return total
+			}
+		}
+	case AutomationJobCycle:
+		if item.MaxTasks > 0 {
+			return roundUSD(float64(item.MaxTasks) * c.policy.DefaultTaskBudgetUSD)
+		}
+	case AutomationJobResearch:
+		if item.ResearchBudgetUSD > 0 {
+			return item.ResearchBudgetUSD
+		}
+		return 3.0
+	}
+	return c.policy.DefaultTaskBudgetUSD
+}
+
+func (c *SubscriptionAutomationController) loopProfileForQueueItem(item AutomationQueueItem) LoopProfile {
+	if item.LoopProfile != nil {
+		profile := *item.LoopProfile
+		return profile
+	}
+
+	var profile LoopProfile
+	if item.BudgetUSD > 0 {
+		profile = BudgetOptimizedSelfImprovementProfile(item.BudgetUSD)
+	} else {
+		profile = SelfImprovementProfile()
+	}
+	if item.Provider != "" {
+		profile.PlannerProvider = item.Provider
+		profile.WorkerProvider = item.Provider
+		profile.VerifierProvider = item.Provider
+	}
+	if item.Model != "" {
+		profile.PlannerModel = item.Model
+		profile.WorkerModel = item.Model
+		profile.VerifierModel = item.Model
+	}
+	if item.MaxTurns > 0 {
+		profile.MaxWorkerTurns = item.MaxTurns
+	}
+	return profile
+}
+
+func (c *SubscriptionAutomationController) actualCycleSpendLocked(cycle *CycleRun) float64 {
+	if cycle == nil {
+		return 0
+	}
+	total := 0.0
+	for _, id := range cycle.LoopIDs {
+		if sess, ok := c.mgr.Get(id); ok {
+			sess.Lock()
+			total += sess.SpentUSD
+			sess.Unlock()
+			continue
+		}
+		if run, ok := c.mgr.GetLoop(id); ok {
+			total += c.mgr.aggregateLoopSpend(run)
+		}
+	}
+	return total
+}
+
+func (c *SubscriptionAutomationController) activeJobKindLocked() AutomationJobKind {
+	if c.state.ActiveJobKind != "" {
+		return c.state.ActiveJobKind
+	}
+	if c.state.ActiveSessionID != "" {
+		return AutomationJobSession
+	}
+	return ""
+}
+
+func (c *SubscriptionAutomationController) clearActiveJobLocked(activeID string, kind AutomationJobKind) {
+	if activeID == "" {
+		return
+	}
+	if kind == AutomationJobSession && c.state.ActiveSessionID != "" && c.state.ActiveSessionID != activeID {
+		return
+	}
+	if kind != AutomationJobSession && c.state.ActiveJobID != "" && c.state.ActiveJobID != activeID {
+		return
+	}
+	c.state.ActiveSessionID = ""
+	c.state.ActiveJobID = ""
+	c.state.ActiveJobKind = ""
+	c.state.ActiveQueueItemID = ""
+	c.state.ActiveQueueItem = nil
+}
+
+func inferAutomationJobKind(item AutomationQueueItem) AutomationJobKind {
+	switch {
+	case item.CycleName != "" || item.Objective != "" || len(item.SuccessCriteria) > 0 || item.MaxTasks > 0:
+		return AutomationJobCycle
+	case item.LoopProfile != nil:
+		return AutomationJobLoop
+	case item.ResearchTopic != "" || item.ResearchDomain != "":
+		return AutomationJobResearch
+	default:
+		return AutomationJobSession
+	}
+}
+
+func normalizeAutomationJobKind(raw string) AutomationJobKind {
+	switch strings.TrimSpace(strings.ToLower(raw)) {
+	case "", "session", "ralph":
+		return AutomationJobSession
+	case "loop":
+		return AutomationJobLoop
+	case "cycle":
+		return AutomationJobCycle
+	case "research":
+		return AutomationJobResearch
+	default:
+		return ""
+	}
 }
 
 func (c *SubscriptionAutomationController) sortQueueLocked() {
@@ -782,6 +1209,26 @@ func (c *SubscriptionAutomationController) sortQueueLocked() {
 func (c *SubscriptionAutomationController) estimateQueueItemCostLocked(item *AutomationQueueItem) float64 {
 	if item == nil {
 		return 0
+	}
+	switch item.JobKind {
+	case AutomationJobLoop:
+		if item.LoopProfile != nil {
+			if item.LoopProfile.HardBudgetCapUSD > 0 {
+				return item.LoopProfile.HardBudgetCapUSD
+			}
+			total := item.LoopProfile.PlannerBudgetUSD + item.LoopProfile.WorkerBudgetUSD + item.LoopProfile.VerifierBudgetUSD
+			if total > 0 {
+				return total
+			}
+		}
+	case AutomationJobCycle:
+		if item.MaxTasks > 0 {
+			return roundUSD(float64(item.MaxTasks) * c.policy.DefaultTaskBudgetUSD)
+		}
+	case AutomationJobResearch:
+		if item.ResearchBudgetUSD > 0 {
+			return item.ResearchBudgetUSD
+		}
 	}
 	if item.BudgetUSD > 0 {
 		return item.BudgetUSD
@@ -826,12 +1273,16 @@ func (c *SubscriptionAutomationController) snapshotLocked(now time.Time) Automat
 		NextReset:             c.state.NextReset,
 		QueueDepth:            len(c.queue),
 		ActiveSessionID:       c.state.ActiveSessionID,
+		ActiveJobID:           c.state.ActiveJobID,
 		CurrentSpendUSD:       roundUSD(c.state.CurrentSpendUSD),
 		WindowBudgetUSD:       c.policy.WindowBudgetUSD,
 		TargetUtilizationPct:  c.policy.TargetUtilizationPct,
 		ProjectedSpendAtReset: roundUSD(projected),
 		LastExhaustionReason:  c.state.ExhaustedReason,
 		LastError:             c.state.LastError,
+	}
+	if c.state.ActiveJobKind != "" {
+		snapshot.ActiveJobKind = string(c.state.ActiveJobKind)
 	}
 	if c.state.ParkedSession != nil {
 		snapshot.ParkedSessionID = firstNonEmpty(c.state.ParkedSession.RalphSessionID, c.state.ParkedSession.ProviderSessionID)
@@ -893,6 +1344,8 @@ func (c *SubscriptionAutomationController) writeStatusFileLocked(snapshot Automa
 	}
 	status.SessionSpendUSD = snapshot.CurrentSpendUSD
 	status.WindowStatus = snapshot.WindowStatus
+	status.ActiveJobID = snapshot.ActiveJobID
+	status.ActiveJobKind = snapshot.ActiveJobKind
 	status.ParkedSessionID = snapshot.ParkedSessionID
 	status.QueueDepth = snapshot.QueueDepth
 	status.TargetUtilizationPct = snapshot.TargetUtilizationPct
@@ -906,8 +1359,8 @@ func (c *SubscriptionAutomationController) writeStatusFileLocked(snapshot Automa
 
 func validateSubscriptionPolicy(policy SubscriptionPolicy) error {
 	policy = normalizeSubscriptionPolicy(policy)
-	if policy.ResetCron == "" && policy.ResetAnchor == "" {
-		return fmt.Errorf("subscription automation requires reset_cron or reset_anchor")
+	if policy.MaxConcurrentSessions != 1 {
+		return fmt.Errorf("max_concurrent_sessions must be 1 in v1")
 	}
 	if policy.ResetCron != "" {
 		if _, err := parseAutomationCron(policy.ResetCron); err != nil {
@@ -921,6 +1374,12 @@ func validateSubscriptionPolicy(policy SubscriptionPolicy) error {
 	}
 	if _, err := time.LoadLocation(policy.Timezone); err != nil {
 		return fmt.Errorf("invalid timezone %q: %w", policy.Timezone, err)
+	}
+	if !policy.Enabled {
+		return nil
+	}
+	if policy.ResetCron == "" && policy.ResetAnchor == "" {
+		return fmt.Errorf("subscription automation requires reset_cron or reset_anchor")
 	}
 	return nil
 }
@@ -980,80 +1439,44 @@ func computeAutomationWindowBounds(policy SubscriptionPolicy, now time.Time) (ti
 	return start, end, end, nil
 }
 
-type automationCronField struct {
-	Any  bool
-	Step int
-	Val  int
+func ValidateAutomationCron(expr string) error {
+	_, err := parseAutomationCron(expr)
+	return err
 }
 
-func parseAutomationCron(expr string) ([]automationCronField, error) {
-	fields := strings.Fields(strings.TrimSpace(expr))
-	if len(fields) != 5 {
-		return nil, fmt.Errorf("cron must have exactly 5 fields")
+func ComputeNextAutomationCronRuns(expr string, from time.Time, count int) ([]time.Time, error) {
+	if count <= 0 {
+		return nil, nil
 	}
-	out := make([]automationCronField, len(fields))
-	for i, raw := range fields {
-		switch {
-		case raw == "*":
-			out[i] = automationCronField{Any: true}
-		case strings.HasPrefix(raw, "*/"):
-			n, err := strconv.Atoi(strings.TrimPrefix(raw, "*/"))
-			if err != nil || n <= 0 {
-				return nil, fmt.Errorf("invalid cron step %q", raw)
-			}
-			out[i] = automationCronField{Step: n}
-		default:
-			n, err := strconv.Atoi(raw)
-			if err != nil {
-				return nil, fmt.Errorf("invalid cron field %q", raw)
-			}
-			out[i] = automationCronField{Val: n}
+	fields, err := parseAutomationCron(expr)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]time.Time, 0, count)
+	cursor := from
+	for i := 0; i < count; i++ {
+		next := nextAutomationCronMatch(fields, cursor)
+		if next.IsZero() {
+			break
 		}
+		out = append(out, next)
+		cursor = next
 	}
 	return out, nil
 }
 
+type automationCronField = simplecron.Field
+
+func parseAutomationCron(expr string) ([]automationCronField, error) {
+	return simplecron.Parse(expr)
+}
+
 func nextAutomationCronMatch(fields []automationCronField, from time.Time) time.Time {
-	t := from.Truncate(time.Minute).Add(time.Minute)
-	for i := 0; i < 525600; i++ {
-		if automationCronMatches(fields, t) {
-			return t
-		}
-		t = t.Add(time.Minute)
-	}
-	return time.Time{}
+	return simplecron.NextMatch(fields, from)
 }
 
 func prevAutomationCronMatch(fields []automationCronField, from time.Time) time.Time {
-	t := from.Truncate(time.Minute)
-	for i := 0; i < 525600; i++ {
-		if automationCronMatches(fields, t) && !t.After(from) {
-			return t
-		}
-		t = t.Add(-time.Minute)
-	}
-	return time.Time{}
-}
-
-func automationCronMatches(fields []automationCronField, t time.Time) bool {
-	values := []int{t.Minute(), t.Hour(), t.Day(), int(t.Month()), int(t.Weekday())}
-	for i := range fields {
-		if !automationCronFieldMatches(fields[i], values[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func automationCronFieldMatches(field automationCronField, value int) bool {
-	switch {
-	case field.Any:
-		return true
-	case field.Step > 0:
-		return value%field.Step == 0
-	default:
-		return value == field.Val
-	}
+	return simplecron.PrevMatch(fields, from)
 }
 
 func detectQuotaSignal(provider Provider, history []string, lastOutput, errMsg string, now time.Time, loc *time.Location) quotaSignal {
@@ -1217,4 +1640,81 @@ func intValue(v any) int {
 	default:
 		return 0
 	}
+}
+
+func stringSliceValue(v any) []string {
+	switch x := v.(type) {
+	case []string:
+		out := make([]string, 0, len(x))
+		for _, value := range x {
+			trimmed := strings.TrimSpace(value)
+			if trimmed != "" {
+				out = append(out, trimmed)
+			}
+		}
+		return out
+	case []any:
+		out := make([]string, 0, len(x))
+		for _, value := range x {
+			trimmed := strings.TrimSpace(stringValue(value))
+			if trimmed != "" {
+				out = append(out, trimmed)
+			}
+		}
+		return out
+	case string:
+		if strings.TrimSpace(x) == "" {
+			return nil
+		}
+		parts := strings.Split(x, ",")
+		out := make([]string, 0, len(parts))
+		for _, part := range parts {
+			trimmed := strings.TrimSpace(part)
+			if trimmed != "" {
+				out = append(out, trimmed)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func loopProfileValue(v any) *LoopProfile {
+	raw, ok := v.(map[string]any)
+	if !ok {
+		return nil
+	}
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil
+	}
+	var profile LoopProfile
+	if err := json.Unmarshal(data, &profile); err != nil {
+		return nil
+	}
+	return &profile
+}
+
+func automationDocsRoot(repoPath string) string {
+	if value := strings.TrimSpace(os.Getenv("RALPH_DOCS_ROOT")); value != "" {
+		return filepath.Clean(expandHome(value))
+	}
+	parent := filepath.Dir(repoPath)
+	return filepath.Join(parent, "docs")
+}
+
+func enqueueResearchEntry(ctx context.Context, docsRoot string, entry ResearchEntry) error {
+	if strings.TrimSpace(docsRoot) == "" {
+		return fmt.Errorf("docs root unavailable")
+	}
+	if _, err := os.Stat(filepath.Join(docsRoot, ".docs.sqlite")); err != nil {
+		return fmt.Errorf("docs research database unavailable at %s: %w", docsRoot, err)
+	}
+	gateway, err := NewDocsResearchGateway(docsRoot)
+	if err != nil {
+		return err
+	}
+	defer gateway.Close()
+	return gateway.Enqueue(ctx, entry)
 }

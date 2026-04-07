@@ -31,6 +31,7 @@ type TeamPlannerAction struct {
 	Reason          string   `json:"reason,omitempty"`
 	Question        string   `json:"question,omitempty"`
 	WorkerSessionID string   `json:"worker_session_id,omitempty"`
+	OwnedPaths      []string `json:"owned_paths,omitempty"`
 }
 
 type TeamPlannerResponse struct {
@@ -141,6 +142,8 @@ func newStructuredCodexTeam(config TeamConfig) *TeamStatus {
 		AutoStart:         config.AutoStart,
 		TargetBranch:      config.TargetBranch,
 		IntegrationBranch: structuredTeamIntegrationBranch(config.Name),
+		PromotionStatus:   TeamMergeStatusPending,
+		A2AAgentURL:       config.A2AAgentURL,
 	}
 }
 
@@ -155,6 +158,7 @@ func cloneTeamStatus(team *TeamStatus) *TeamStatus {
 			cp.Tasks[i] = task
 			cp.Tasks[i].ChangedFiles = cloneStringSlice(task.ChangedFiles)
 			cp.Tasks[i].HumanContext = cloneStringSlice(task.HumanContext)
+			cp.Tasks[i].OwnedPaths = cloneStringSlice(task.OwnedPaths)
 			cp.Tasks[i].ConflictFiles = cloneStringSlice(task.ConflictFiles)
 			cp.Tasks[i].StartedAt = cloneTimePtr(task.StartedAt)
 			cp.Tasks[i].EndedAt = cloneTimePtr(task.EndedAt)
@@ -215,6 +219,13 @@ func taskHandle(task TeamTask) TeamWorkerHandle {
 		WorktreeBranch: task.WorktreeBranch,
 		HeadSHA:        task.HeadSHA,
 		MergeBaseSHA:   task.MergeBaseSHA,
+		ArtifactType:   task.ArtifactType,
+		ArtifactPath:   task.ArtifactPath,
+		ArtifactHash:   task.ArtifactHash,
+		ArtifactSizeBytes: task.ArtifactSizeBytes,
+		ArtifactBaseRef: task.ArtifactBaseRef,
+		ArtifactTipRef: task.ArtifactTipRef,
+		ArtifactStatus: task.ArtifactStatus,
 	}
 }
 
@@ -366,7 +377,11 @@ func teamPlannerOutputSchema() json.RawMessage {
           "summary": {"type": "string"},
           "reason": {"type": "string"},
           "question": {"type": "string"},
-          "worker_session_id": {"type": "string"}
+          "worker_session_id": {"type": "string"},
+          "owned_paths": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
         },
         "required": ["type"]
       }
@@ -430,6 +445,9 @@ func validateTeamPlannerResponse(resp TeamPlannerResponse) error {
 			if strings.TrimSpace(action.TaskID) == "" {
 				return fmt.Errorf("%s action missing task_id", action.Type)
 			}
+			if (action.Type == "launch_worker" || action.Type == "retry_worker") && len(teamCompactNonEmpty(action.OwnedPaths)) == 0 {
+				return fmt.Errorf("%s action requires owned_paths", action.Type)
+			}
 		case "stop_worker":
 			if strings.TrimSpace(action.TaskID) == "" && strings.TrimSpace(action.WorkerSessionID) == "" {
 				return fmt.Errorf("stop_worker action requires task_id or worker_session_id")
@@ -488,7 +506,7 @@ func validateTeamWorkerResult(result TeamWorkerResult) error {
 	return nil
 }
 
-func buildStructuredTeamPlannerPrompt(team *TeamStatus) string {
+func (m *Manager) buildStructuredTeamPlannerPrompt(team *TeamStatus) string {
 	var taskLines []string
 	activeWorkers := 0
 	for _, task := range team.Tasks {
@@ -496,6 +514,9 @@ func buildStructuredTeamPlannerPrompt(team *TeamStatus) string {
 			activeWorkers++
 		}
 		line := fmt.Sprintf("- %s [%s] attempts=%d: %s", task.ID, task.Status, task.Attempt, task.Description)
+		if len(task.OwnedPaths) > 0 {
+			line += fmt.Sprintf(" | owned_paths=%s", strings.Join(task.OwnedPaths, ","))
+		}
 		if task.Summary != "" {
 			line += fmt.Sprintf(" | summary=%s", truncateForPrompt(task.Summary, 160))
 		}
@@ -528,6 +549,8 @@ func buildStructuredTeamPlannerPrompt(team *TeamStatus) string {
 		availableSlots = 0
 	}
 
+	activeClaims := m.teamPathClaimsForRepo(team.RepoPath)
+
 	var b strings.Builder
 	b.WriteString("You are the planner for a harness-owned Codex team run.\n\n")
 	b.WriteString("The harness owns task state, launches workers, and validates outputs.\n")
@@ -543,10 +566,18 @@ func buildStructuredTeamPlannerPrompt(team *TeamStatus) string {
 	b.WriteString(fmt.Sprintf("- You have %d worker slots available in this step.\n", availableSlots))
 	b.WriteString(fmt.Sprintf("- Max retries per task: %d.\n", team.MaxTaskRetries))
 	b.WriteString("- Never invent task IDs.\n")
+	b.WriteString("- launch_worker and retry_worker must include owned_paths.\n")
+	b.WriteString("- owned_paths must be repo-relative paths or directories you intend to modify.\n")
 	b.WriteString("- Prefer launching workers for runnable tasks over prose.\n")
 	b.WriteString("- Use ask_human only when a conservative autonomous default is unsafe.\n\n")
 	b.WriteString("Current tasks:\n")
 	b.WriteString(strings.Join(taskLines, "\n"))
+	if len(activeClaims) > 0 {
+		b.WriteString("\n\nActive path claims:\n")
+		for _, claim := range activeClaims {
+			b.WriteString("- " + claim + "\n")
+		}
+	}
 	if len(resolvedQuestions) > 0 {
 		b.WriteString("\n\nResolved human input:\n")
 		b.WriteString(strings.Join(resolvedQuestions, "\n"))
@@ -577,6 +608,12 @@ func buildStructuredTeamWorkerPrompt(team *TeamStatus, task *TeamTask) string {
 	b.WriteString("- Do not ask follow-up questions unless you are genuinely blocked by missing external facts or credentials.\n")
 	b.WriteString("- Keep the response machine-readable and consistent with the output schema.\n")
 	b.WriteString("- changed_files must be repo-relative paths.\n")
+	if len(task.OwnedPaths) > 0 {
+		b.WriteString("- Restrict edits to these owned_paths:\n")
+		for _, owned := range task.OwnedPaths {
+			b.WriteString("  - " + owned + "\n")
+		}
+	}
 	b.WriteString("\nReturn one JSON object with:\n")
 	b.WriteString(`{"task_id":"` + task.ID + `","status":"completed|blocked|failed|needs_retry","summary":"...","question":"...","changed_files":["path"],"error":"..."}`)
 	return b.String()
@@ -702,6 +739,7 @@ func (m *Manager) markTaskRetryOrFailed(name, taskID, message string) {
 		task.Status = TeamTaskNeedsRetry
 	}
 	recalculateTeamLocked(team)
+	go m.releaseTeamTaskClaims(name, taskID)
 }
 
 func (m *Manager) applyWorkerResult(name string, result TeamWorkerResult, handle TeamWorkerHandle) {
@@ -724,12 +762,40 @@ func (m *Manager) applyWorkerResult(name string, result TeamWorkerResult, handle
 	task.WorktreeBranch = firstNonBlank(handle.WorktreeBranch, task.WorktreeBranch)
 	task.HeadSHA = firstNonBlank(handle.HeadSHA, task.HeadSHA)
 	task.MergeBaseSHA = firstNonBlank(handle.MergeBaseSHA, task.MergeBaseSHA)
+	task.ArtifactType = firstNonBlank(handle.ArtifactType, task.ArtifactType)
+	task.ArtifactPath = firstNonBlank(handle.ArtifactPath, task.ArtifactPath)
+	task.ArtifactHash = firstNonBlank(handle.ArtifactHash, task.ArtifactHash)
+	if handle.ArtifactSizeBytes > 0 {
+		task.ArtifactSizeBytes = handle.ArtifactSizeBytes
+	}
+	task.ArtifactBaseRef = firstNonBlank(handle.ArtifactBaseRef, task.ArtifactBaseRef)
+	task.ArtifactTipRef = firstNonBlank(handle.ArtifactTipRef, task.ArtifactTipRef)
+	task.ArtifactStatus = firstNonBlank(handle.ArtifactStatus, task.ArtifactStatus)
 	task.Summary = strings.TrimSpace(result.Summary)
 	task.LastError = strings.TrimSpace(result.Error)
 	task.BlockedQuestion = strings.TrimSpace(result.Question)
 	task.ChangedFiles = append([]string(nil), result.ChangedFiles...)
+	task.OwnershipDrift = ""
 	task.UpdatedAt = now
 	task.EndedAt = &now
+
+	if drift := detectOwnedPathDrift(task.OwnedPaths, task.ChangedFiles); drift != "" {
+		task.Status = TeamTaskBlocked
+		task.MergeStatus = TeamMergeStatusUnavailable
+		task.OwnershipDrift = drift
+		task.BlockedQuestion = drift
+		if team.PendingQuestion == nil {
+			team.PendingQuestion = &TeamQuestion{
+				ID:       fmt.Sprintf("q-%d", team.StepCount+1),
+				TaskID:   task.ID,
+				Question: drift,
+				AskedAt:  now,
+			}
+		}
+		recalculateTeamLocked(team)
+		go m.releaseTeamTaskClaims(name, task.ID)
+		return
+	}
 
 	switch result.Status {
 	case TeamTaskCompleted:
@@ -759,6 +825,7 @@ func (m *Manager) applyWorkerResult(name string, result TeamWorkerResult, handle
 		task.MergeStatus = TeamMergeStatusPending
 	}
 	recalculateTeamLocked(team)
+	go m.releaseTeamTaskClaims(name, task.ID)
 }
 
 func (m *Manager) ingestStructuredTeamWorkers(name string) ([]string, error) {
@@ -879,9 +946,11 @@ func (m *Manager) applyPlannerActions(ctx context.Context, teamName string, plan
 		switch action.Type {
 		case "launch_worker", "retry_worker":
 			var (
-				team *TeamStatus
-				task TeamTask
-				ok   bool
+				team       *TeamStatus
+				task       TeamTask
+				ok         bool
+				repoPath   string
+				ownedPaths []string
 			)
 
 			m.workersMu.Lock()
@@ -919,7 +988,48 @@ func (m *Manager) applyPlannerActions(ctx context.Context, teamName string, plan
 				m.workersMu.Unlock()
 				return applied, fmt.Errorf("task %s is %s, not retryable", action.TaskID, task.Status)
 			}
+			repoPath = team.RepoPath
+			ownedPaths = normalizeOwnedPaths(action.OwnedPaths)
+			m.workersMu.Unlock()
 
+			claimed, conflict, claimErr := m.claimTeamTaskPaths(teamName, repoPath, action.TaskID, ownedPaths)
+			if claimErr != nil {
+				return applied, fmt.Errorf("claim owned_paths for %s: %w", action.TaskID, claimErr)
+			}
+			if !claimed {
+				m.deferTaskForClaimConflict(teamName, action.TaskID, ownedPaths, conflict)
+				continue
+			}
+
+			m.workersMu.Lock()
+			team, ok = m.teams[teamName]
+			if !ok {
+				m.workersMu.Unlock()
+				go m.releaseTeamTaskClaims(teamName, action.TaskID)
+				return applied, ErrTeamNotFound
+			}
+			if team.PendingQuestion != nil {
+				m.workersMu.Unlock()
+				go m.releaseTeamTaskClaims(teamName, action.TaskID)
+				return applied, fmt.Errorf("team %s is awaiting human input", teamName)
+			}
+			activeWorkers = 0
+			for _, existing := range team.Tasks {
+				if existing.Status == TeamTaskInProgress {
+					activeWorkers++
+				}
+			}
+			if activeWorkers >= team.MaxConcurrency {
+				m.workersMu.Unlock()
+				go m.releaseTeamTaskClaims(teamName, action.TaskID)
+				return applied, fmt.Errorf("team %s is already at max concurrency %d", teamName, team.MaxConcurrency)
+			}
+			idx = findTaskIndex(team.Tasks, action.TaskID)
+			if idx < 0 {
+				m.workersMu.Unlock()
+				go m.releaseTeamTaskClaims(teamName, action.TaskID)
+				return applied, fmt.Errorf("task %s not found", action.TaskID)
+			}
 			taskPtr := &team.Tasks[idx]
 			taskPtr.Attempt++
 			now := time.Now()
@@ -940,6 +1050,15 @@ func (m *Manager) applyPlannerActions(ctx context.Context, teamName string, plan
 			taskPtr.WorktreeBranch = ""
 			taskPtr.HeadSHA = ""
 			taskPtr.MergeBaseSHA = ""
+			taskPtr.OwnedPaths = ownedPaths
+			taskPtr.OwnershipDrift = ""
+			taskPtr.ArtifactType = ""
+			taskPtr.ArtifactPath = ""
+			taskPtr.ArtifactHash = ""
+			taskPtr.ArtifactSizeBytes = 0
+			taskPtr.ArtifactBaseRef = ""
+			taskPtr.ArtifactTipRef = ""
+			taskPtr.ArtifactStatus = ""
 			team.UpdatedAt = now
 			task = *taskPtr
 			teamSnapshot := cloneTeamStatus(team)
@@ -976,6 +1095,8 @@ func (m *Manager) applyPlannerActions(ctx context.Context, teamName string, plan
 					WorktreePolicy:   teamSnapshot.WorktreePolicy,
 					TargetBranch:     teamSnapshot.TargetBranch,
 					HumanContext:     task.HumanContext,
+					OwnedPaths:       task.OwnedPaths,
+					A2AAgentURL:      teamSnapshot.A2AAgentURL,
 				})
 				if err != nil {
 					m.markTaskRetryOrFailed(teamName, task.ID, fmt.Sprintf("submit worker: %v", err))
@@ -1067,6 +1188,7 @@ func (m *Manager) applyPlannerActions(ctx context.Context, teamName string, plan
 			team.Tasks[idx].EndedAt = &now
 			recalculateTeamLocked(team)
 			m.workersMu.Unlock()
+			go m.releaseTeamTaskClaims(teamName, action.TaskID)
 			applied = append(applied, action)
 
 		case "mark_blocked":
@@ -1097,6 +1219,7 @@ func (m *Manager) applyPlannerActions(ctx context.Context, teamName string, plan
 			}
 			recalculateTeamLocked(team)
 			m.workersMu.Unlock()
+			go m.releaseTeamTaskClaims(teamName, action.TaskID)
 			applied = append(applied, action)
 
 		case "ask_human":
@@ -1177,7 +1300,7 @@ func (m *Manager) StepTeam(ctx context.Context, name string) (*TeamStepResult, e
 		return &TeamStepResult{Team: snapshot, WorkerUpdates: workerUpdates}, nil
 	}
 
-	plannerPrompt := buildStructuredTeamPlannerPrompt(snapshot)
+	plannerPrompt := m.buildStructuredTeamPlannerPrompt(snapshot)
 	plannerSession, err := m.teamExecutor().Launch(ctx, LaunchOptions{
 		Provider:     snapshot.Provider,
 		RepoPath:     snapshot.RepoPath,
@@ -1365,6 +1488,15 @@ func (m *Manager) updateTaskHandle(name, taskID string, handle TeamWorkerHandle)
 	task.WorktreeBranch = firstNonBlank(handle.WorktreeBranch, task.WorktreeBranch)
 	task.HeadSHA = firstNonBlank(handle.HeadSHA, task.HeadSHA)
 	task.MergeBaseSHA = firstNonBlank(handle.MergeBaseSHA, task.MergeBaseSHA)
+	task.ArtifactType = firstNonBlank(handle.ArtifactType, task.ArtifactType)
+	task.ArtifactPath = firstNonBlank(handle.ArtifactPath, task.ArtifactPath)
+	task.ArtifactHash = firstNonBlank(handle.ArtifactHash, task.ArtifactHash)
+	if handle.ArtifactSizeBytes > 0 {
+		task.ArtifactSizeBytes = handle.ArtifactSizeBytes
+	}
+	task.ArtifactBaseRef = firstNonBlank(handle.ArtifactBaseRef, task.ArtifactBaseRef)
+	task.ArtifactTipRef = firstNonBlank(handle.ArtifactTipRef, task.ArtifactTipRef)
+	task.ArtifactStatus = firstNonBlank(handle.ArtifactStatus, task.ArtifactStatus)
 	task.UpdatedAt = time.Now()
 }
 
@@ -1585,6 +1717,136 @@ func (m *Manager) markTaskMergeUnavailable(name, taskID, reason string) {
 		}
 	}
 	recalculateTeamLocked(team)
+}
+
+func (m *Manager) teamPathClaimsFile() string {
+	if m.stateDir == "" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(m.stateDir), "team-path-claims.json")
+}
+
+func (m *Manager) teamPathClaimCoordinator() (*Coordinator, error) {
+	path := m.teamPathClaimsFile()
+	if path == "" {
+		return NewCoordinator(), nil
+	}
+	return NewCoordinatorWithPersistence(path)
+}
+
+func normalizeOwnedPaths(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	var normalized []string
+	for _, value := range values {
+		value = filepath.ToSlash(filepath.Clean(strings.TrimSpace(value)))
+		value = strings.TrimPrefix(value, "./")
+		value = strings.Trim(value, "/")
+		if value == "" || value == "." {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		normalized = append(normalized, value)
+	}
+	return normalized
+}
+
+func teamPathClaimKey(repoPath, ownedPath string) string {
+	return filepath.ToSlash(filepath.Join("repo", filepath.Base(repoPath), "path", ownedPath))
+}
+
+func teamPathClaimOwner(teamName, taskID string) string {
+	return teamName + ":" + taskID
+}
+
+func teamPathClaimOverlap(existing, requested string) bool {
+	existing = filepath.ToSlash(filepath.Clean(existing))
+	requested = filepath.ToSlash(filepath.Clean(requested))
+	return existing == requested ||
+		strings.HasPrefix(existing, requested+"/") ||
+		strings.HasPrefix(requested, existing+"/")
+}
+
+func (m *Manager) teamPathClaimsForRepo(repoPath string) []string {
+	coord, err := m.teamPathClaimCoordinator()
+	if err != nil {
+		return nil
+	}
+	prefix := filepath.ToSlash(filepath.Join("repo", filepath.Base(repoPath), "path")) + "/"
+	all := coord.AllResources()
+	var claims []string
+	for resource, owner := range all {
+		if !strings.HasPrefix(resource, prefix) {
+			continue
+		}
+		claims = append(claims, strings.TrimPrefix(resource, prefix)+" owner="+owner)
+	}
+	return claims
+}
+
+func (m *Manager) claimTeamTaskPaths(teamName, repoPath, taskID string, ownedPaths []string) (bool, string, error) {
+	coord, err := m.teamPathClaimCoordinator()
+	if err != nil {
+		return false, "", err
+	}
+	keys := make([]string, 0, len(ownedPaths))
+	for _, owned := range ownedPaths {
+		keys = append(keys, teamPathClaimKey(repoPath, owned))
+	}
+	return coord.ClaimResources(teamPathClaimOwner(teamName, taskID), keys, teamPathClaimOverlap)
+}
+
+func (m *Manager) releaseTeamTaskClaims(teamName, taskID string) {
+	coord, err := m.teamPathClaimCoordinator()
+	if err != nil {
+		return
+	}
+	coord.ReleaseAll(teamPathClaimOwner(teamName, taskID))
+}
+
+func (m *Manager) deferTaskForClaimConflict(teamName, taskID string, ownedPaths []string, conflict string) {
+	m.workersMu.Lock()
+	defer m.workersMu.Unlock()
+	team, ok := m.teams[teamName]
+	if !ok {
+		return
+	}
+	idx := findTaskIndex(team.Tasks, taskID)
+	if idx < 0 {
+		return
+	}
+	task := &team.Tasks[idx]
+	task.Status = TeamTaskPending
+	task.OwnedPaths = cloneStringSlice(ownedPaths)
+	task.LastError = fmt.Sprintf("owned_paths conflict with active claim %s", conflict)
+	task.UpdatedAt = time.Now()
+	recalculateTeamLocked(team)
+}
+
+func detectOwnedPathDrift(ownedPaths, changedFiles []string) string {
+	if len(ownedPaths) == 0 || len(changedFiles) == 0 {
+		return ""
+	}
+	normalizedOwned := normalizeOwnedPaths(ownedPaths)
+	var drift []string
+	for _, changed := range normalizeOwnedPaths(changedFiles) {
+		ok := false
+		for _, owned := range normalizedOwned {
+			if teamPathClaimOverlap(owned, changed) {
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			drift = append(drift, changed)
+		}
+	}
+	if len(drift) == 0 {
+		return ""
+	}
+	return "worker changed files outside owned_paths: " + strings.Join(drift, ", ")
 }
 
 func teamGitRun(ctx context.Context, dir string, args ...string) error {

@@ -14,15 +14,15 @@ import (
 
 	"github.com/hairglasses-studio/ralphglasses/internal/bandit"
 	"github.com/hairglasses-studio/ralphglasses/internal/blackboard"
-	"github.com/hairglasses-studio/ralphglasses/internal/plugin"
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
+	"github.com/hairglasses-studio/ralphglasses/internal/enhancer/fewshot"
 	"github.com/hairglasses-studio/ralphglasses/internal/eval"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/plugin"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
-	"github.com/hairglasses-studio/ralphglasses/internal/enhancer/fewshot"
 	"github.com/hairglasses-studio/ralphglasses/internal/promptdj"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
@@ -66,10 +66,10 @@ type Server struct {
 	mcpSrv *server.MCPServer
 
 	// Fleet and HITL infrastructure (set via InitFleetTools / InitSelfImprovement).
-	FleetCoordinator *fleet.Coordinator
-	FleetClient      *fleet.Client
-	HITLTracker      *session.HITLTracker
-	DecisionLog      *session.DecisionLog
+	FleetCoordinator      *fleet.Coordinator
+	FleetClient           *fleet.Client
+	HITLTracker           *session.HITLTracker
+	DecisionLog           *session.DecisionLog
 	FeedbackAnalyzer      *session.FeedbackAnalyzer
 	AutoOptimizer         *session.AutoOptimizer
 	feedbackWasAutoSeeded bool
@@ -204,7 +204,6 @@ func textResult(text string) *mcp.CallToolResult {
 	}
 }
 
-
 func jsonResult(v any) *mcp.CallToolResult {
 	data, err := json.Marshal(v)
 	if err != nil {
@@ -261,8 +260,21 @@ func getNumberArg(req mcp.CallToolRequest, key string, defaultVal float64) float
 		return defaultVal
 	}
 	if v, ok := m[key]; ok {
-		if n, ok := v.(float64); ok {
+		switch n := v.(type) {
+		case float64:
 			return n
+		case float32:
+			return float64(n)
+		case int:
+			return float64(n)
+		case int64:
+			return float64(n)
+		case int32:
+			return float64(n)
+		case json.Number:
+			if f, err := n.Float64(); err == nil {
+				return f
+			}
 		}
 	}
 	return defaultVal

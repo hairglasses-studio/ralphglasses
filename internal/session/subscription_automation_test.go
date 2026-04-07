@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -222,5 +223,123 @@ func TestSubscriptionAutomationController_WriteStatusFilePreservesBudgetStatus(t
 	}
 	if got["budget_status"] != "ok" {
 		t.Fatalf("budget_status = %v, want ok", got["budget_status"])
+	}
+}
+
+func TestSubscriptionAutomationController_ResetHintExtendsPolicyWindow(t *testing.T) {
+	repo := t.TempDir()
+	mgr := NewManager()
+
+	now := time.Date(2026, 4, 6, 0, 50, 0, 0, time.UTC)
+	launches := 0
+	resumes := 0
+	mgr.SetHooksForTesting(func(_ context.Context, opts LaunchOptions) (*Session, error) {
+		launches++
+		id := "launch-window-1"
+		if opts.Resume != "" {
+			resumes++
+			id = "resume-window-1"
+		}
+		return &Session{
+			ID:                id,
+			Provider:          opts.Provider,
+			ProviderSessionID: firstNonEmpty(opts.Resume, "provider-session-window-1"),
+			RepoPath:          opts.RepoPath,
+			RepoName:          filepath.Base(opts.RepoPath),
+			Status:            StatusRunning,
+			Prompt:            opts.Prompt,
+			Model:             opts.Model,
+			BudgetUSD:         opts.MaxBudgetUSD,
+			MaxTurns:          opts.MaxTurns,
+			LaunchedAt:        now,
+			LastActivity:      now,
+			doneCh:            make(chan struct{}),
+			OutputCh:          make(chan string, 1),
+		}, nil
+	}, nil)
+
+	ctrl := NewSubscriptionAutomationController(mgr, repo)
+	ctrl.now = func() time.Time { return now }
+
+	policy := DefaultSubscriptionPolicy()
+	policy.Enabled = true
+	policy.Timezone = "UTC"
+	policy.ResetAnchor = "2026-04-06T00:00:00Z"
+	policy.ResetWindowHours = 1
+	policy.WindowBudgetUSD = 100
+	policy.TargetUtilizationPct = 100
+	if err := ctrl.SetPolicy(policy); err != nil {
+		t.Fatalf("SetPolicy: %v", err)
+	}
+	if _, err := ctrl.Enqueue(AutomationQueueItem{
+		Prompt:   "continue the long-running task",
+		Provider: ProviderCodex,
+	}); err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+
+	ctrl.Tick(context.Background())
+	active, ok := mgr.Get("launch-window-1")
+	if !ok {
+		t.Fatal("expected launched session")
+	}
+	active.Lock()
+	active.Status = StatusErrored
+	active.SpentUSD = 1.5
+	active.LastOutput = "Premium usage exhausted. Try again after 2 hours."
+	active.OutputHistory = []string{active.LastOutput}
+	active.Unlock()
+
+	now = now.Add(5 * time.Minute)
+	ctrl.Tick(context.Background())
+
+	now = time.Date(2026, 4, 6, 1, 10, 0, 0, time.UTC)
+	ctrl.Tick(context.Background())
+	snapshot := ctrl.Status()
+	if snapshot.WindowStatus != "parked" {
+		t.Fatalf("window status = %q, want parked", snapshot.WindowStatus)
+	}
+	if launches != 1 || resumes != 0 {
+		t.Fatalf("launches=%d resumes=%d", launches, resumes)
+	}
+	wantReset := time.Date(2026, 4, 6, 2, 55, 0, 0, time.UTC)
+	if !snapshot.NextReset.Equal(wantReset) {
+		t.Fatalf("next reset = %v, want %v", snapshot.NextReset, wantReset)
+	}
+	if !snapshot.WindowStart.Equal(time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC)) {
+		t.Fatalf("window start = %v, want 2026-04-06 00:00 UTC", snapshot.WindowStart)
+	}
+	if snapshot.CurrentSpendUSD != 1.5 {
+		t.Fatalf("current spend = %.2f, want 1.50", snapshot.CurrentSpendUSD)
+	}
+
+	now = time.Date(2026, 4, 6, 3, 0, 0, 0, time.UTC)
+	ctrl.Tick(context.Background())
+	snapshot = ctrl.Status()
+	if snapshot.ActiveSessionID == "" {
+		t.Fatal("expected auto-resume after provider reset passed")
+	}
+	if snapshot.ParkedSessionID != "" {
+		t.Fatalf("expected parked session cleared, got %q", snapshot.ParkedSessionID)
+	}
+	if launches != 2 || resumes != 1 {
+		t.Fatalf("launches=%d resumes=%d", launches, resumes)
+	}
+}
+
+func TestSubscriptionAutomationController_SetPolicyRejectsConcurrentSessions(t *testing.T) {
+	ctrl := NewSubscriptionAutomationController(NewManager(), t.TempDir())
+	policy := DefaultSubscriptionPolicy()
+	policy.Enabled = true
+	policy.Timezone = "UTC"
+	policy.ResetAnchor = "2026-04-06T00:00:00Z"
+	policy.MaxConcurrentSessions = 2
+
+	err := ctrl.SetPolicy(policy)
+	if err == nil {
+		t.Fatal("expected error for unsupported max_concurrent_sessions")
+	}
+	if !strings.Contains(err.Error(), "max_concurrent_sessions") {
+		t.Fatalf("error = %v, want max_concurrent_sessions validation", err)
 	}
 }
