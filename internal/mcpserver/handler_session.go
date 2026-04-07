@@ -63,6 +63,12 @@ func (s *Server) handleSessionList(ctx context.Context, req mcp.CallToolRequest)
 	var summaries []sessionSummary
 	for _, sess := range sessions {
 		sess.Lock()
+		id := sess.ID
+		tenant := sess.TenantID
+		repo := sess.RepoName
+		model := sess.Model
+		agent := sess.AgentName
+		team := sess.TeamName
 		status := string(sess.Status)
 		provider := string(sess.Provider)
 		spent := sess.SpentUSD
@@ -76,19 +82,19 @@ func (s *Server) handleSessionList(ctx context.Context, req mcp.CallToolRequest)
 			continue
 		}
 
-		liveIDs[sess.ID] = true
+		liveIDs[id] = true
 		summaries = append(summaries, sessionSummary{
-			ID:       sess.ID,
-			TenantID: sess.TenantID,
+			ID:       id,
+			TenantID: tenant,
 			Provider: provider,
-			Repo:     sess.RepoName,
+			Repo:     repo,
 			Status:   status,
-			Model:    sess.Model,
+			Model:    model,
 			SpentUSD: spent,
 			Turns:    turns,
-			Agent:    sess.AgentName,
-			Team:     sess.TeamName,
-			Stalled:  stalledIDs[sess.ID],
+			Agent:    agent,
+			Team:     team,
+			Stalled:  stalledIDs[id],
 			Source:   "live",
 		})
 	}

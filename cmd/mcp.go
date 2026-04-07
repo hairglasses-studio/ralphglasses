@@ -28,7 +28,7 @@ var mcpCmd = &cobra.Command{
 	SilenceUsage: true,
 	Long: `Start ralphglasses as a Model Context Protocol (MCP) server on stdio.
 
-This exposes 203 tools for managing ralph loops and multi-provider LLM sessions
+This exposes 204 tools for managing ralph loops and multi-provider LLM sessions
 programmatically from any MCP-capable client (for example Codex, Claude, or Gemini).
 
 Codex repo-local registration is already configured via .codex/config.toml and .mcp.json.

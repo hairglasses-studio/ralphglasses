@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
@@ -71,5 +72,39 @@ func (s *Server) handleTenantRotateTriggerToken(ctx context.Context, req mcp.Cal
 	return jsonResult(map[string]any{
 		"tenant_id":     tenant.ID,
 		"trigger_token": token,
+	}), nil
+}
+
+func (s *Server) handleTenantRoleLeaderboards(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	p := NewParams(req)
+	opts := session.RoleLeaderboardOptions{
+		Limit:        p.OptionalInt("limit", 10),
+		IncludeEnded: p.OptionalBool("include_ended", true),
+	}
+
+	tenantID := strings.TrimSpace(getStringArg(req, "tenant_id"))
+	var boards []*session.TenantRoleLeaderboard
+	if tenantID != "" {
+		board, err := s.SessMgr.BuildRoleLeaderboard(ctx, tenantID, opts)
+		if err != nil {
+			if err == session.ErrTenantNotFound {
+				return codedError(ErrInvalidParams, fmt.Sprintf("tenant not found: %s", session.NormalizeTenantID(tenantID))), nil
+			}
+			return codedError(ErrInternal, fmt.Sprintf("tenant role leaderboard: %v", err)), nil
+		}
+		boards = []*session.TenantRoleLeaderboard{board}
+	} else {
+		allBoards, err := s.SessMgr.BuildRoleLeaderboards(ctx, opts)
+		if err != nil {
+			return codedError(ErrInternal, fmt.Sprintf("tenant role leaderboards: %v", err)), nil
+		}
+		boards = allBoards
+	}
+
+	return jsonResult(map[string]any{
+		"tenants":       boards,
+		"count":         len(boards),
+		"limit":         opts.Limit,
+		"include_ended": opts.IncludeEnded,
 	}), nil
 }

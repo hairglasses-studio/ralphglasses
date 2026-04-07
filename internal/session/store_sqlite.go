@@ -92,8 +92,6 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_repo ON sessions(repo_path);
 CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
 CREATE INDEX IF NOT EXISTS idx_sessions_repo_name ON sessions(repo_name);
-CREATE INDEX IF NOT EXISTS idx_sessions_tenant_repo ON sessions(tenant_id, repo_path);
-CREATE INDEX IF NOT EXISTS idx_sessions_tenant_status ON sessions(tenant_id, status);
 
 CREATE TABLE IF NOT EXISTS loop_runs (
 	id TEXT PRIMARY KEY,
@@ -112,8 +110,6 @@ CREATE TABLE IF NOT EXISTS loop_runs (
 
 CREATE INDEX IF NOT EXISTS idx_loop_runs_repo ON loop_runs(repo_path);
 CREATE INDEX IF NOT EXISTS idx_loop_runs_status ON loop_runs(status);
-CREATE INDEX IF NOT EXISTS idx_loop_runs_tenant_repo ON loop_runs(tenant_id, repo_path);
-CREATE INDEX IF NOT EXISTS idx_loop_runs_tenant_status ON loop_runs(tenant_id, status);
 
 CREATE TABLE IF NOT EXISTS cost_ledger (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,7 +127,6 @@ CREATE TABLE IF NOT EXISTS cost_ledger (
 CREATE INDEX IF NOT EXISTS idx_cost_ledger_session ON cost_ledger(session_id);
 CREATE INDEX IF NOT EXISTS idx_cost_ledger_loop ON cost_ledger(loop_id);
 CREATE INDEX IF NOT EXISTS idx_cost_ledger_provider ON cost_ledger(provider);
-CREATE INDEX IF NOT EXISTS idx_cost_ledger_tenant_recorded ON cost_ledger(tenant_id, recorded_at);
 
 CREATE TABLE IF NOT EXISTS recovery_ops (
 	id             TEXT PRIMARY KEY,
@@ -155,7 +150,6 @@ CREATE TABLE IF NOT EXISTS recovery_ops (
 
 CREATE INDEX IF NOT EXISTS idx_recovery_ops_status ON recovery_ops(status);
 CREATE INDEX IF NOT EXISTS idx_recovery_ops_detected ON recovery_ops(detected_at);
-CREATE INDEX IF NOT EXISTS idx_recovery_ops_tenant_status ON recovery_ops(tenant_id, status);
 
 CREATE TABLE IF NOT EXISTS recovery_actions (
 	id                TEXT PRIMARY KEY,
@@ -177,7 +171,6 @@ CREATE TABLE IF NOT EXISTS recovery_actions (
 
 CREATE INDEX IF NOT EXISTS idx_recovery_actions_op ON recovery_actions(recovery_op_id);
 CREATE INDEX IF NOT EXISTS idx_recovery_actions_status ON recovery_actions(status);
-CREATE INDEX IF NOT EXISTS idx_recovery_actions_tenant_status ON recovery_actions(tenant_id, status);
 `
 	if _, err := s.db.Exec(ddl); err != nil {
 		return err
@@ -196,6 +189,17 @@ CREATE INDEX IF NOT EXISTS idx_recovery_actions_tenant_status ON recovery_action
 		if err := s.ensureColumn(change.table, change.columnName, change.definition); err != nil {
 			return err
 		}
+	}
+	if _, err := s.db.Exec(`
+CREATE INDEX IF NOT EXISTS idx_sessions_tenant_repo ON sessions(tenant_id, repo_path);
+CREATE INDEX IF NOT EXISTS idx_sessions_tenant_status ON sessions(tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_loop_runs_tenant_repo ON loop_runs(tenant_id, repo_path);
+CREATE INDEX IF NOT EXISTS idx_loop_runs_tenant_status ON loop_runs(tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_cost_ledger_tenant_recorded ON cost_ledger(tenant_id, recorded_at);
+CREATE INDEX IF NOT EXISTS idx_recovery_ops_tenant_status ON recovery_ops(tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_recovery_actions_tenant_status ON recovery_actions(tenant_id, status);
+`); err != nil {
+		return err
 	}
 	return s.seedDefaultTenant()
 }
@@ -252,16 +256,20 @@ func (s *SQLiteStore) SaveSession(ctx context.Context, sess *Session) error {
 	if sess == nil || sess.ID == "" {
 		return fmt.Errorf("save session: nil session or empty ID")
 	}
-	sess.TenantID = NormalizeTenantID(sess.TenantID)
+	snap := cloneSession(sess)
+	if snap == nil {
+		return fmt.Errorf("save session: nil session")
+	}
+	snap.TenantID = NormalizeTenantID(snap.TenantID)
 
-	costJSON, _ := json.Marshal(sess.CostHistory)
+	costJSON, _ := json.Marshal(snap.CostHistory)
 	if costJSON == nil {
 		costJSON = []byte("[]")
 	}
 
 	var endedAt *string
-	if sess.EndedAt != nil {
-		t := sess.EndedAt.Format(time.RFC3339)
+	if snap.EndedAt != nil {
+		t := snap.EndedAt.Format(time.RFC3339)
 		endedAt = &t
 	}
 
@@ -296,21 +304,21 @@ ON CONFLICT(id) DO UPDATE SET
 	updated_at=excluded.updated_at, ended_at=excluded.ended_at
 `
 	_, err := s.db.ExecContext(ctx, query,
-		sess.ID, sess.TenantID, string(sess.Provider), sess.ProviderSessionID,
-		sess.RepoPath, sess.RepoName, string(sess.Status),
-		sess.Prompt, sess.Model,
-		sess.AgentName, sess.TeamName,
-		sess.BudgetUSD, sess.SpentUSD, sess.TurnCount, sess.MaxTurns,
-		sess.Error, sess.ExitReason, sess.LastOutput, sess.LastEventType,
-		sess.Pid,
-		sess.EnhancementSource, sess.EnhancementPreScore,
+		snap.ID, snap.TenantID, string(snap.Provider), snap.ProviderSessionID,
+		snap.RepoPath, snap.RepoName, string(snap.Status),
+		snap.Prompt, snap.Model,
+		snap.AgentName, snap.TeamName,
+		snap.BudgetUSD, snap.SpentUSD, snap.TurnCount, snap.MaxTurns,
+		snap.Error, snap.ExitReason, snap.LastOutput, snap.LastEventType,
+		snap.Pid,
+		snap.EnhancementSource, snap.EnhancementPreScore,
 		string(costJSON),
-		sess.LaunchedAt.Format(time.RFC3339),
-		sess.LastActivity.Format(time.RFC3339),
+		snap.LaunchedAt.Format(time.RFC3339),
+		snap.LastActivity.Format(time.RFC3339),
 		endedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("save session %s: %w", sess.ID, err)
+		return fmt.Errorf("save session %s: %w", snap.ID, err)
 	}
 	return nil
 }

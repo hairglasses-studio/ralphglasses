@@ -5,7 +5,7 @@ import "github.com/mark3labs/mcp-go/mcp"
 func (s *Server) buildTenantGroup() ToolGroup {
 	return ToolGroup{
 		Name:        "tenant",
-		Description: "Workspace tenant administration: list, create, status, rotate trigger token",
+		Description: "Workspace tenant administration: list, create, status, rotate trigger token, and batch role leaderboards",
 		Tools: []ToolEntry{
 			{mcp.NewTool("ralphglasses_tenant_list",
 				mcp.WithDescription("List all configured workspace tenants"),
@@ -25,6 +25,12 @@ func (s *Server) buildTenantGroup() ToolGroup {
 				mcp.WithDescription("Rotate the bearer token used by the trigger HTTP API for one tenant"),
 				mcp.WithString("tenant_id", mcp.Required(), mcp.Description("Tenant ID")),
 			), s.handleTenantRotateTriggerToken},
+			{mcp.NewTool("ralphglasses_tenant_role_leaderboards",
+				mcp.WithDescription("Generate top-role leaderboards for one tenant or all tenants in a batch"),
+				mcp.WithString("tenant_id", mcp.Description("Optional tenant ID; omit to return all tenants")),
+				mcp.WithNumber("limit", mcp.Description("Maximum role entries per tenant (default: 10)")),
+				mcp.WithBoolean("include_ended", mcp.Description("Include persisted ended sessions (default: true)")),
+			), s.handleTenantRoleLeaderboards},
 		},
 	}
 }

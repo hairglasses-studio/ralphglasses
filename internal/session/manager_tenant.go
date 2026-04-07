@@ -170,13 +170,17 @@ func (m *Manager) ListByTenant(repoPath, tenantID string) []*Session {
 
 	var result []*Session
 	for _, s := range m.sessions {
+		s.Lock()
 		if NormalizeTenantID(s.TenantID) != tenantID {
+			s.Unlock()
 			continue
 		}
 		if repoPath != "" && s.RepoPath != repoPath {
+			s.Unlock()
 			continue
 		}
-		result = append(result, s)
+		result = append(result, cloneSessionLocked(s))
+		s.Unlock()
 	}
 	return result
 }

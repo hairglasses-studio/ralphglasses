@@ -35,10 +35,14 @@ func (m *MemoryStore) SaveSession(_ context.Context, s *Session) error {
 	if s == nil || s.ID == "" {
 		return fmt.Errorf("save session: nil session or empty ID")
 	}
+	snap := cloneSession(s)
+	if snap == nil {
+		return fmt.Errorf("save session: nil session")
+	}
+	snap.TenantID = NormalizeTenantID(snap.TenantID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	s.TenantID = NormalizeTenantID(s.TenantID)
-	m.sessions[s.ID] = s
+	m.sessions[snap.ID] = snap
 	return nil
 }
 
@@ -49,7 +53,7 @@ func (m *MemoryStore) GetSession(_ context.Context, id string) (*Session, error)
 	if !ok {
 		return nil, ErrSessionNotFound
 	}
-	return s, nil
+	return cloneSession(s), nil
 }
 
 func (m *MemoryStore) ListSessions(_ context.Context, opts ListOpts) ([]*Session, error) {
@@ -76,7 +80,7 @@ func (m *MemoryStore) ListSessions(_ context.Context, opts ListOpts) ([]*Session
 		if !opts.Until.IsZero() && s.LaunchedAt.After(opts.Until) {
 			continue
 		}
-		result = append(result, s)
+		result = append(result, cloneSession(s))
 		if opts.Limit > 0 && len(result) >= opts.Limit {
 			break
 		}

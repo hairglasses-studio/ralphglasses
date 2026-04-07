@@ -34,6 +34,7 @@ func allBuilderSpecs() []builderSpec {
 		{"repo", (*Server).buildRepoGroup, minFor("repo"), true},
 		{"roadmap", (*Server).buildRoadmapGroup, minFor("roadmap"), true},
 		{"team", (*Server).buildTeamGroup, minFor("team"), true},
+		{"tenant", (*Server).buildTenantGroup, minFor("tenant"), true},
 		{"awesome", (*Server).buildAwesomeGroup, minFor("awesome"), true},
 		{"advanced", (*Server).buildAdvancedGroup, minFor("advanced"), true},
 		{"events", (*Server).buildEventsGroup, minFor("events"), true},

@@ -2,10 +2,13 @@ package session
 
 import (
 	"context"
+	"database/sql"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	_ "modernc.org/sqlite"
 )
 
 func TestMemoryStore_ListSessionsFiltersByTenant(t *testing.T) {
@@ -29,6 +32,43 @@ func TestMemoryStore_ListSessionsFiltersByTenant(t *testing.T) {
 	}
 	if len(got) != 1 || got[0].ID != "sess-tenant-a" {
 		t.Fatalf("tenant-a sessions = %#v, want only sess-tenant-a", got)
+	}
+}
+
+func TestMemoryStore_GetSessionReturnsDetachedCopy(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	now := time.Now()
+	original := &Session{
+		ID:            "sess-copy",
+		TenantID:      "tenant-a",
+		RepoPath:      "/tmp/a",
+		RepoName:      "a",
+		Status:        StatusRunning,
+		OutputHistory: []string{"first"},
+		LaunchedAt:    now,
+		LastActivity:  now,
+	}
+	if err := store.SaveSession(ctx, original); err != nil {
+		t.Fatalf("SaveSession: %v", err)
+	}
+
+	got, err := store.GetSession(ctx, original.ID)
+	if err != nil {
+		t.Fatalf("GetSession: %v", err)
+	}
+	got.Status = StatusStopped
+	got.OutputHistory[0] = "mutated"
+
+	again, err := store.GetSession(ctx, original.ID)
+	if err != nil {
+		t.Fatalf("GetSession(second): %v", err)
+	}
+	if again.Status != StatusRunning {
+		t.Fatalf("stored status = %q, want %q", again.Status, StatusRunning)
+	}
+	if again.OutputHistory[0] != "first" {
+		t.Fatalf("stored output history = %#v, want first entry preserved", again.OutputHistory)
 	}
 }
 
@@ -80,6 +120,142 @@ func TestSQLiteStore_TenantRoundTrip(t *testing.T) {
 	}
 	if total != 3.25 {
 		t.Fatalf("AggregateSpend = %.2f, want 3.25", total)
+	}
+}
+
+func TestSQLiteStore_MigratesLegacyTenantColumnsBeforeIndexes(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "legacy-state.db")
+
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	legacyDDL := `
+CREATE TABLE sessions (
+	id TEXT PRIMARY KEY,
+	provider TEXT NOT NULL DEFAULT 'codex',
+	provider_session TEXT NOT NULL DEFAULT '',
+	repo_path TEXT NOT NULL DEFAULT '',
+	repo_name TEXT NOT NULL DEFAULT '',
+	status TEXT NOT NULL DEFAULT 'launching',
+	prompt TEXT NOT NULL DEFAULT '',
+	model TEXT NOT NULL DEFAULT '',
+	agent_name TEXT NOT NULL DEFAULT '',
+	team_name TEXT NOT NULL DEFAULT '',
+	budget_usd REAL NOT NULL DEFAULT 0,
+	spend_usd REAL NOT NULL DEFAULT 0,
+	turn_count INTEGER NOT NULL DEFAULT 0,
+	max_turns INTEGER NOT NULL DEFAULT 0,
+	error_msg TEXT NOT NULL DEFAULT '',
+	exit_reason TEXT NOT NULL DEFAULT '',
+	last_output TEXT NOT NULL DEFAULT '',
+	last_event_type TEXT NOT NULL DEFAULT '',
+	pid INTEGER NOT NULL DEFAULT 0,
+	enhancement_source TEXT NOT NULL DEFAULT '',
+	enhancement_pre_score INTEGER NOT NULL DEFAULT 0,
+	cost_history TEXT NOT NULL DEFAULT '[]',
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	ended_at DATETIME
+);
+CREATE TABLE loop_runs (
+	id TEXT PRIMARY KEY,
+	repo_path TEXT NOT NULL DEFAULT '',
+	repo_name TEXT NOT NULL DEFAULT '',
+	status TEXT NOT NULL DEFAULT 'pending',
+	profile TEXT NOT NULL DEFAULT '{}',
+	iterations TEXT NOT NULL DEFAULT '[]',
+	last_error TEXT NOT NULL DEFAULT '',
+	paused INTEGER NOT NULL DEFAULT 0,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	deadline DATETIME
+);
+CREATE TABLE cost_ledger (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	session_id TEXT,
+	loop_id TEXT,
+	provider TEXT NOT NULL DEFAULT '',
+	model TEXT NOT NULL DEFAULT '',
+	spend_usd REAL NOT NULL DEFAULT 0,
+	turn_count INTEGER NOT NULL DEFAULT 0,
+	elapsed_sec REAL NOT NULL DEFAULT 0,
+	recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE recovery_ops (
+	id TEXT PRIMARY KEY,
+	severity TEXT NOT NULL DEFAULT 'none',
+	status TEXT NOT NULL DEFAULT 'detected',
+	total_sessions INTEGER NOT NULL DEFAULT 0,
+	alive_count INTEGER NOT NULL DEFAULT 0,
+	dead_count INTEGER NOT NULL DEFAULT 0,
+	resumed_count INTEGER NOT NULL DEFAULT 0,
+	failed_count INTEGER NOT NULL DEFAULT 0,
+	total_cost_usd REAL NOT NULL DEFAULT 0,
+	budget_cap_usd REAL NOT NULL DEFAULT 0,
+	trigger_source TEXT NOT NULL DEFAULT '',
+	decision_id TEXT NOT NULL DEFAULT '',
+	error_msg TEXT NOT NULL DEFAULT '',
+	detected_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	started_at DATETIME,
+	completed_at DATETIME
+);
+CREATE TABLE recovery_actions (
+	id TEXT PRIMARY KEY,
+	recovery_op_id TEXT NOT NULL,
+	claude_session_id TEXT NOT NULL DEFAULT '',
+	ralph_session_id TEXT NOT NULL DEFAULT '',
+	repo_path TEXT NOT NULL DEFAULT '',
+	repo_name TEXT NOT NULL DEFAULT '',
+	priority INTEGER NOT NULL DEFAULT 0,
+	status TEXT NOT NULL DEFAULT 'pending',
+	cost_usd REAL NOT NULL DEFAULT 0,
+	error_msg TEXT NOT NULL DEFAULT '',
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	started_at DATETIME,
+	completed_at DATETIME
+);
+`
+	if _, err := db.Exec(legacyDDL); err != nil {
+		db.Close()
+		t.Fatalf("seed legacy schema: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("close legacy db: %v", err)
+	}
+
+	store, err := NewSQLiteStore(dbPath)
+	if err != nil {
+		t.Fatalf("NewSQLiteStore(legacy): %v", err)
+	}
+	defer store.Close()
+
+	ctx := context.Background()
+	if err := store.SaveTenant(ctx, &Tenant{ID: "tenant-a", DisplayName: "Tenant A"}); err != nil {
+		t.Fatalf("SaveTenant: %v", err)
+	}
+
+	now := time.Now().UTC()
+	if err := store.SaveSession(ctx, &Session{
+		ID:           "legacy-session",
+		TenantID:     "tenant-a",
+		Provider:     ProviderCodex,
+		RepoPath:     "/repos/a",
+		RepoName:     "a",
+		Status:       StatusRunning,
+		AgentName:    "reviewer",
+		LaunchedAt:   now,
+		LastActivity: now,
+	}); err != nil {
+		t.Fatalf("SaveSession after migration: %v", err)
+	}
+
+	list, err := store.ListSessions(ctx, ListOpts{TenantID: "tenant-a"})
+	if err != nil {
+		t.Fatalf("ListSessions: %v", err)
+	}
+	if len(list) != 1 || list[0].TenantID != "tenant-a" {
+		t.Fatalf("migrated tenant sessions = %#v, want tenant-a session", list)
 	}
 }
 
