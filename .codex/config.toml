@@ -14,7 +14,6 @@ personality = "pragmatic"
 [mcp_servers.ralphglasses_review]
 command = "bash"
 args = ["./scripts/dev/run-mcp.sh", "--scan-path", "~/hairglasses-studio"]
-cwd = "."
 enabled_tools = [
   "ralphglasses_tool_groups",
   "ralphglasses_load_tool_group",
@@ -36,7 +35,6 @@ enabled_tools = [
 [mcp_servers.ralphglasses_workspace]
 command = "bash"
 args = ["./scripts/dev/run-mcp.sh", "--scan-path", "~/hairglasses-studio"]
-cwd = "."
 enabled_tools = [
   "ralphglasses_tool_groups",
   "ralphglasses_load_tool_group",
@@ -75,7 +73,6 @@ enabled_tools = [
 [mcp_servers.ralphglasses_research]
 command = "bash"
 args = ["./scripts/dev/run-mcp.sh", "--scan-path", "~/hairglasses-studio"]
-cwd = "."
 enabled_tools = [
   "ralphglasses_tool_groups",
   "ralphglasses_load_tool_group",

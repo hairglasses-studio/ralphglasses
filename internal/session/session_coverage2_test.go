@@ -4,38 +4,38 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	import (
-		"context"
-		"testing"
-		"time"
+	"sync"
+	"testing"
+	"time"
 
-		"github.com/hairglasses-studio/mcpkit/worktree"
-	)
+	"github.com/hairglasses-studio/mcpkit/worktree"
+)
 
-	// ---------------------------------------------------------------------------
-	// Manager.SetWorktreePool / WorktreePool (0%)
-	// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Manager.SetWorktreePool / WorktreePool (0%)
+// ---------------------------------------------------------------------------
 
-	func TestManager_SetWorktreePool(t *testing.T) {
-		t.Parallel()
-		m := NewManager()
-		if m.WorktreePool() != nil {
-			t.Error("WorktreePool should be nil by default")
-		}
-
-		pool := &worktree.WorktreePool{} // just a non-nil value
-		m.SetWorktreePool(pool)
-
-		if got := m.WorktreePool(); got != pool {
-			t.Error("WorktreePool should return the set pool")
-		}
-
-		// Reset to nil.
-		m.SetWorktreePool(nil)
-		if m.WorktreePool() != nil {
-			t.Error("WorktreePool should be nil after reset")
-		}
+func TestManager_SetWorktreePool(t *testing.T) {
+	t.Parallel()
+	m := NewManager()
+	if m.WorktreePool() != nil {
+		t.Error("WorktreePool should be nil by default")
 	}
+
+	pool := &worktree.WorktreePool{} // just a non-nil value
+	m.SetWorktreePool(pool)
+
+	if got := m.WorktreePool(); got != pool {
+		t.Error("WorktreePool should return the set pool")
+	}
+
+	// Reset to nil.
+	m.SetWorktreePool(nil)
+	if m.WorktreePool() != nil {
+		t.Error("WorktreePool should be nil after reset")
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Manager.SetDepthEstimator / DepthEstimator (0%)
 // ---------------------------------------------------------------------------

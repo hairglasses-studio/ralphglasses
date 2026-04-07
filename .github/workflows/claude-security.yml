@@ -2,13 +2,7 @@ name: Claude Security Review
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths-ignore:
-      - '*.md'
-      - '**/*.md'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
+    types: [opened, synchronize]
 
 permissions:
   contents: read
@@ -17,17 +11,12 @@ permissions:
   id-token: write
 
 concurrency:
-  group: claude-security-${{ github.event.pull_request.number || github.ref }}
+  group: claude-security-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: true
 
 jobs:
   security-review:
-    if: |
-      !github.event.pull_request.draft &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
