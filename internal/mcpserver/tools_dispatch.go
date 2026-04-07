@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -62,6 +63,10 @@ func (s *Server) RegisterCoreTools(srv *server.MCPServer) {
 		mcp.WithString("group", mcp.Description("Filter to a specific namespace (e.g. \"core\", \"session\")")),
 	), s.handleSkillExport)
 
+	srv.AddTool(mcp.NewTool("ralphglasses_server_health",
+		mcp.WithDescription("Show the active ralphglasses MCP contract shape, including available tool groups, loaded groups, and resource/prompt coverage."),
+	), s.handleServerHealth)
+
 	// Register core group tools.
 	coreGroup := s.buildCoreGroup()
 	for _, entry := range coreGroup.Tools {
@@ -110,6 +115,10 @@ func (s *Server) RegisterAllTools(srv *server.MCPServer) {
 		mcp.WithString("format", mcp.Description("Output format: \"markdown\" (default) or \"json\"")),
 		mcp.WithString("group", mcp.Description("Filter to a specific namespace (e.g. \"core\", \"session\")")),
 	), s.handleSkillExport)
+
+	srv.AddTool(mcp.NewTool("ralphglasses_server_health",
+		mcp.WithDescription("Show the active ralphglasses MCP contract shape, including available tool groups, loaded groups, and resource/prompt coverage."),
+	), s.handleServerHealth)
 
 	for _, g := range s.buildToolGroups() {
 		for _, entry := range g.Tools {
@@ -195,5 +204,47 @@ func (s *Server) handleLoadToolGroup(_ context.Context, req mcp.CallToolRequest)
 		"status":     "loaded",
 		"tool_count": count,
 		"message":    fmt.Sprintf("Loaded %d tools from group %q", count, group),
+	}), nil
+}
+
+func (s *Server) handleServerHealth(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	groups := s.buildToolGroups()
+	groupNames := make([]string, 0, len(groups))
+	loadedGroups := make([]string, 0, len(groups))
+	totalTools := 4 // tool_groups, load_tool_group, skill_export, server_health
+
+	for _, group := range groups {
+		groupNames = append(groupNames, group.Name)
+		totalTools += len(group.Tools)
+	}
+	sort.Strings(groupNames)
+
+	s.mu.RLock()
+	for group, loaded := range s.loadedGroups {
+		if loaded {
+			loadedGroups = append(loadedGroups, group)
+		}
+	}
+	s.mu.RUnlock()
+	sort.Strings(loadedGroups)
+
+	return jsonResult(map[string]any{
+		"server":         "ralphglasses",
+		"version":        "dev",
+		"status":         "ok",
+		"scan_path":      s.ScanPath,
+		"deferred_mode":  s.DeferredLoading,
+		"tool_group_count": len(groups),
+		"tool_groups":    groupNames,
+		"loaded_groups":  loadedGroups,
+		"tool_count":     totalTools,
+		"resource_count": 3,
+		"prompt_count":   3,
+		"discovery_tools": []string{
+			"ralphglasses_tool_groups",
+			"ralphglasses_load_tool_group",
+			"ralphglasses_skill_export",
+			"ralphglasses_server_health",
+		},
 	}), nil
 }
