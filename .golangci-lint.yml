@@ -1,19 +1,11 @@
 version: "2"
-linters:
-  enable:
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - unused
 run:
   timeout: 5m
 issues:
-  new: true
   exclude-rules:
     - path: _test\.go
       linters:
-        - errcheck
         - unused
-        - staticcheck
+    - path: _reference/
+      linters:
+        - all
