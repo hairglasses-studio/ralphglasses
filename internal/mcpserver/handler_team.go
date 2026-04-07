@@ -75,7 +75,8 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		ExecutionBackend: strings.TrimSpace(pp.String("execution_backend")),
 		WorktreePolicy:   strings.TrimSpace(pp.String("worktree_policy")),
 		TargetBranch:     strings.TrimSpace(pp.String("target_branch")),
-		AutoStart:        pp.Bool("autostart"),
+		AutoStart:        pp.OptionalBool("autostart", teamProvider == session.ProviderCodex),
+		A2AAgentURL:      strings.TrimSpace(pp.String("a2a_agent_url")),
 	}
 	if config.ExecutionBackend == "" && teamProvider == session.ProviderCodex {
 		if s.FleetCoordinator != nil || s.FleetClient != nil {
@@ -135,6 +136,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 			"worktree_policy":   firstNonBlank(config.WorktreePolicy, session.TeamWorktreePolicyPerWorker),
 			"target_branch":     firstNonBlank(config.TargetBranch, "main"),
 			"autostart":         config.AutoStart,
+			"a2a_agent_url":     config.A2AAgentURL,
 			"tasks":             config.Tasks,
 			"task_count":        len(config.Tasks),
 		}), nil
@@ -182,6 +184,8 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 		"target_branch":         team.TargetBranch,
 		"integration_branch":    team.IntegrationBranch,
 		"integration_path":      team.IntegrationPath,
+		"promotion_status":      team.PromotionStatus,
+		"a2a_agent_url":         team.A2AAgentURL,
 	}
 
 	activeWorkers := 0

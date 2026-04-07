@@ -242,6 +242,7 @@ type TeamTask struct {
 	Provider        Provider  `json:"provider,omitempty"`
 	Status          string    `json:"status"`
 	WorkItemID      string    `json:"work_item_id,omitempty"`
+	A2AAgentURL     string    `json:"a2a_agent_url,omitempty"`
 	WorkerSessionID string    `json:"worker_session_id,omitempty"`
 	WorkerNodeID    string    `json:"worker_node_id,omitempty"`
 	WorktreePath    string    `json:"worktree_path,omitempty"`

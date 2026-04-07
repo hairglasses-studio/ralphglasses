@@ -210,6 +210,10 @@ func teamUsesFleetBackend(team *TeamStatus) bool {
 	return team != nil && team.ExecutionBackend == TeamExecutionBackendFleet
 }
 
+func teamUsesRemoteArtifactBackend(team *TeamStatus) bool {
+	return team != nil && (team.ExecutionBackend == TeamExecutionBackendFleet || team.ExecutionBackend == TeamExecutionBackendA2A)
+}
+
 func taskHandle(task TeamTask) TeamWorkerHandle {
 	return TeamWorkerHandle{
 		WorkItemID:     task.WorkItemID,
@@ -838,10 +842,10 @@ func (m *Manager) ingestStructuredTeamWorkers(name string) ([]string, error) {
 	}
 
 	var updates []string
-	if teamUsesFleetBackend(team) {
+	if teamUsesRemoteArtifactBackend(team) {
 		backend := m.StructuredTeamBackend()
 		if backend == nil {
-			return nil, fmt.Errorf("team %s requested fleet backend but none is configured", name)
+			return nil, fmt.Errorf("team %s requested external backend but none is configured", name)
 		}
 		for _, task := range team.Tasks {
 			if task.WorkItemID == "" || task.Status != TeamTaskInProgress {
@@ -1074,11 +1078,11 @@ func (m *Manager) applyPlannerActions(ctx context.Context, teamName string, plan
 			if model == "" {
 				model = taskEffectiveModel(teamSnapshot, taskRef)
 			}
-			if teamUsesFleetBackend(teamSnapshot) {
+			if teamUsesRemoteArtifactBackend(teamSnapshot) {
 				backend := m.StructuredTeamBackend()
 				if backend == nil {
-					m.markTaskRetryOrFailed(teamName, task.ID, "fleet backend requested but not configured")
-					return applied, fmt.Errorf("team %s requested fleet backend but no backend is configured", teamName)
+					m.markTaskRetryOrFailed(teamName, task.ID, "external backend requested but not configured")
+					return applied, fmt.Errorf("team %s requested external backend but no backend is configured", teamName)
 				}
 				handle, err := backend.Submit(ctx, TeamBackendSubmitRequest{
 					TeamName:         teamSnapshot.Name,
@@ -1149,10 +1153,10 @@ func (m *Manager) applyPlannerActions(ctx context.Context, teamName string, plan
 			if sessionID == "" {
 				return applied, fmt.Errorf("stop_worker action did not resolve a worker session")
 			}
-			if teamUsesFleetBackend(mustTeamSnapshot(m, teamName)) {
+			if teamUsesRemoteArtifactBackend(mustTeamSnapshot(m, teamName)) {
 				backend := m.StructuredTeamBackend()
 				if backend == nil {
-					return applied, fmt.Errorf("team %s requested fleet backend but no backend is configured", teamName)
+					return applied, fmt.Errorf("team %s requested external backend but no backend is configured", teamName)
 				}
 				if err := backend.Stop(ctx, resolveTaskHandle(m, teamName, action.TaskID, sessionID)); err != nil {
 					return applied, fmt.Errorf("stop worker %s: %w", firstNonBlank(sessionID, action.TaskID), err)

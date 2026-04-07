@@ -45,7 +45,7 @@ func (b *StructuredTeamBackend) Submit(ctx context.Context, req session.TeamBack
 		MaxTurns:         req.MaxTurns,
 		MaxRetries:       2,
 		Constraints: WorkConstraints{
-			RequireLocal:    true,
+			RequireLocal:    false,
 			RequireProvider: req.Provider,
 		},
 	}
