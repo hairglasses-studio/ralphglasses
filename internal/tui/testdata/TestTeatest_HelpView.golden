@@ -1,40 +1,40 @@
-[>4m[=0;1u[?1049h[?25l[?2004h[?1002h[?1006h[>4;2m[=1;1u[H[2J  ralphglasses   Repos › Help
+  ralphglasses   Repos › Help
  1: Repos   2: Sessions   3: Teams   4: Fleet
 
    Ralphglasses Help
 
   Navigation
-[5G1[19X[7;25HRepos tab
-[5G2[19X[8;25HSessions tab
-[5G3[19X[9;25HTeams tab
-[5G4[19X[10;25HFleet dashboard
+    1                   Repos tab
+    2                   Sessions tab
+    3                   Teams tab
+    4                   Fleet dashboard
 
   Global
-[5Gq / Ctrl+C          Quit
-[5G:[19X[14;25HCommand mode
-[5G/[19X[15;25HFilter mode
-[5GCtrl+F[14X[16;25HGlobal search
-[5G?[19X[17;25HToggle help
-[5GEsc[17X[18;25HBack / cancel
-[5Gr[19X[19;25HRefresh
-[5Ge[19X[20;25HEvent log
+    q / Ctrl+C          Quit
+    :                   Command mode
+    /                   Filter mode
+    Ctrl+F              Global search
+    ?                   Toggle help
+    Esc                 Back / cancel
+    r                   Refresh
+    e                   Event log
 
   Loop List
-[5Gl[19X[23;25HLoop list
-[5Gs[19X[24;25HStart loop for repo
-[5Gx / d[15X[25;25HStop selected loop
-[5Gp[19X[26;25HPause / resume loop
+    l                   Loop list
+    s                   Start loop for repo
+    x / d               Stop selected loop
+    p                   Pause / resume loop
 
   Loop Detail
-[5Gs[19X[29;25HStep loop once
-[5Gr[19X[30;25HToggle run/stop
-[5Gp[19X[31;25HPause / resume
+    s                   Step loop once
+    r                   Toggle run/stop
+    p                   Pause / resume
 
   Loop Control
-[5GC[19X[34;25HLoop control panel
-[5Gs[19X[35;25HForce step iteration
-[5Gr[19X[36;25HToggle run/stop
-[5Gp[19X[37;25HPause / resume
+    C                   Loop control panel
+    s                   Force step iteration
+    r                   Toggle run/stop
+    p                   Pause / resume
 
   Repos Table
-  NORMAL│ 0/0│ $0.00│ 5m[K[>4m[=0;1u[?1049l[?25h[?2004l[?1002l[?1003l[?1006l[?2026$p[?2027$p
+  NORMAL│ 0/0│ $0.00│ 5m

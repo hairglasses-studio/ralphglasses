@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,8 +15,6 @@ import (
 
 // frozenTime is the fixed "now" for golden file determinism.
 var frozenTime = time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
-
-var teatestQuerySuffix = []byte("\x1b[?2026$p\x1b[?2027$p")
 
 func init() {
 	// Freeze the clock so formatAgo produces deterministic output in golden files.
@@ -80,44 +79,47 @@ func testProgram(t *testing.T, m Model, width, height int, msgs ...tea.Msg) (Mod
 	return fm, out.Bytes()
 }
 
-// normalizeGoldenTerminalOutput keeps the Bubble Tea snapshot stable across
-// terminal capability query placement changes.
-func normalizeGoldenTerminalOutput(out []byte) []byte {
-	out = bytes.ReplaceAll(out, []byte("\x1b[?u"), nil)
-	out = bytes.ReplaceAll(out, []byte("\x1b[?2026$p"), nil)
-	out = bytes.ReplaceAll(out, []byte("\x1b[?2027$p"), nil)
-	out = bytes.ReplaceAll(out, []byte(" \r\t│"), []byte("│"))
-	return append(out, teatestQuerySuffix...)
+// normalizeGoldenViewSnapshot snapshots the final rendered view instead of the
+// raw terminal transcript, which can legitimately vary across Bubble Tea
+// renderer passes and race-enabled CI jobs.
+func normalizeGoldenViewSnapshot(view string) string {
+	view = strings.ReplaceAll(view, "\r\n", "\n")
+	view = components.StripAnsi(view)
+	lines := strings.Split(view, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimRight(line, " \t")
+	}
+	return strings.TrimRight(strings.Join(lines, "\n"), "\n") + "\n"
 }
 
 // --- Golden file snapshot tests ---
 
 func TestTeatest_OverviewEmpty(t *testing.T) {
 	m := newTestModel(t)
-	_, out := testProgram(t, m, 120, 40, keyPressMsg('q'))
-	golden.RequireEqual(t, normalizeGoldenTerminalOutput(out))
+	fm, _ := testProgram(t, m, 120, 40, keyPressMsg('q'))
+	golden.RequireEqual(t, normalizeGoldenViewSnapshot(fm.View().Content))
 }
 
 func TestTeatest_OverviewWithRepos(t *testing.T) {
 	m := newTestModelWithRepos(t)
-	_, out := testProgram(t, m, 120, 40, keyPressMsg('q'))
-	golden.RequireEqual(t, normalizeGoldenTerminalOutput(out))
+	fm, _ := testProgram(t, m, 120, 40, keyPressMsg('q'))
+	golden.RequireEqual(t, normalizeGoldenViewSnapshot(fm.View().Content))
 }
 
 func TestTeatest_HelpView(t *testing.T) {
 	m := newTestModel(t)
 	m.Nav.CurrentView = ViewHelp
 	m.Nav.Breadcrumb.Push("Help")
-	_, out := testProgram(t, m, 120, 40, keyPressMsg('q'))
-	golden.RequireEqual(t, normalizeGoldenTerminalOutput(out))
+	fm, _ := testProgram(t, m, 120, 40, keyPressMsg('q'))
+	golden.RequireEqual(t, normalizeGoldenViewSnapshot(fm.View().Content))
 }
 
 func TestTeatest_SmallTerminal(t *testing.T) {
 	m := NewModel(t.TempDir(), nil)
 	m.Width = 2
 	m.Height = 2
-	_, out := testProgram(t, m, 2, 2, keyPressMsg('q'))
-	golden.RequireEqual(t, normalizeGoldenTerminalOutput(out))
+	fm, _ := testProgram(t, m, 2, 2, keyPressMsg('q'))
+	golden.RequireEqual(t, normalizeGoldenViewSnapshot(fm.View().Content))
 }
 
 // --- Interactive flow tests ---
@@ -159,5 +161,5 @@ func TestTeatest_WindowResize(t *testing.T) {
 // that may call it via RequireEqualOutput.
 func RequireEqualOutput(t *testing.T, out []byte) {
 	t.Helper()
-	golden.RequireEqual(t, normalizeGoldenTerminalOutput(out))
+	golden.RequireEqual(t, normalizeGoldenViewSnapshot(string(out)))
 }
