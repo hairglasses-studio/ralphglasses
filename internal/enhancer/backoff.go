@@ -23,6 +23,10 @@ type BackoffConfig struct {
 	// MaxRetries is the maximum number of retry attempts (default 3).
 	// 0 means no retries (single attempt only).
 	MaxRetries int
+
+	// SleepFunc is the function used to wait between retries.
+	// If nil, defaults to a context-aware time.After sleep.
+	SleepFunc func(ctx context.Context, d time.Duration) error
 }
 
 // DefaultBackoff returns a BackoffConfig with the standard parameters:
@@ -47,15 +51,22 @@ func (b BackoffConfig) delay(attempt int) time.Duration {
 	return time.Duration(jittered)
 }
 
-// sleepFunc is the function used to wait between retries.
-// Overridden in tests to avoid real delays.
-var sleepFunc = func(ctx context.Context, d time.Duration) error {
+// defaultSleep is the default sleep implementation: context-aware time.After.
+func defaultSleep(ctx context.Context, d time.Duration) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-time.After(d):
 		return nil
 	}
+}
+
+// sleep returns the configured SleepFunc or the default.
+func (b BackoffConfig) sleep(ctx context.Context, d time.Duration) error {
+	if b.SleepFunc != nil {
+		return b.SleepFunc(ctx, d)
+	}
+	return defaultSleep(ctx, d)
 }
 
 // isRetryableError determines if an error from an LLM API call should be retried.
@@ -132,7 +143,7 @@ func retryImprove(ctx context.Context, client PromptImprover, prompt string, opt
 
 		// Wait with exponential backoff + jitter.
 		d := cfg.delay(attempt)
-		if err := sleepFunc(ctx, d); err != nil {
+		if err := cfg.sleep(ctx, d); err != nil {
 			// Context was cancelled during sleep.
 			return nil, lastErr
 		}
