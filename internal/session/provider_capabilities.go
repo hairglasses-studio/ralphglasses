@@ -146,6 +146,10 @@ func ProviderCapabilityMatrixFor(provider Provider) (ProviderCapabilityMatrix, b
 					Support: CapabilityNative,
 					Detail:  "Codex project subagents live in .codex/agents/*.toml.",
 				},
+				CapabilityHooks: {
+					Support: CapabilityUnsupported,
+					Detail:  "Codex CLI does not expose a repo hook system comparable to Claude or Gemini.",
+				},
 			},
 		}, true
 	case ProviderClaude:
@@ -234,6 +238,7 @@ func ProviderCapabilityMatrixFor(provider Provider) (ProviderCapabilityMatrix, b
 			DefaultModel:        ProviderDefaults(ProviderGemini),
 			ProjectInstructions: "GEMINI.md",
 			RepoConfigPath:      ".gemini/settings.json",
+			AgentConfigPath:     ".gemini/commands/*.toml",
 			Capabilities: map[string]ProviderCapability{
 				CapabilityBudgetUSD: {
 					Support: CapabilityEmulated,
@@ -296,6 +301,10 @@ func ProviderCapabilityMatrixFor(provider Provider) (ProviderCapabilityMatrix, b
 					Support: CapabilityNative,
 					Detail:  "Gemini exposes extensions as its plugin surface.",
 				},
+				CapabilitySubagents: {
+					Support: CapabilityUnsupported,
+					Detail:  "Gemini uses commands and extensions instead of subagents.",
+				},
 				CapabilityHooks: {
 					Support: CapabilityNative,
 					Detail:  "Gemini exposes `gemini hooks`.",
@@ -332,6 +341,9 @@ func ProviderCapabilityConstraints(provider Provider) []string {
 		CapabilityPermissionMode,
 		CapabilityOutputSchema,
 		CapabilitySandboxImage,
+		CapabilitySubagents,
+		CapabilityHooks,
+		CapabilityMCPServer,
 	}
 	out := make([]string, 0, len(keys))
 	for _, key := range keys {

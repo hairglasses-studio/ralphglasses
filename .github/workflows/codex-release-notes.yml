@@ -20,7 +20,7 @@ on:
 
 jobs:
   codex-release-notes:
-    uses: hairglasses-studio/.github/.github/workflows/codex-release-notes.yml@main
+    uses: hairglasses-studio/.github/.github/workflows/codex-release-notes.yml@84851d48a4c35aa4fa936b1fd247f7dcd37421cf
     with:
       base_ref: ${{ github.event.inputs.base_ref }}
       head_ref: ${{ github.event.inputs.head_ref }}

@@ -49,6 +49,25 @@ Codex leads by default and delegates subtasks to specialized providers:
 
 Use `ralphglasses_team_create` with `provider` to set the lead's provider, then delegate tasks via `ralphglasses_team_delegate`. Each session tracks costs per-provider in the cost ledger.
 
+## Capability Matrix
+
+The canonical capability registry lives in `internal/session/provider_capabilities.go`. Runtime inspection is available through:
+
+- `ralphglasses_provider_capabilities`
+- `ralphglasses_provider_compare`
+- `ralphglasses_provider_recommend`
+
+| Capability | Claude | Gemini | Codex |
+|------------|--------|--------|-------|
+| Budget | Native `--max-budget-usd` | Externally enforced by ralphglasses | Externally enforced by ralphglasses |
+| Max turns | Native | Unsupported | Unsupported |
+| Agent flag | Native `--agent` | Unsupported | Unsupported |
+| Allowed tools | Native | Native but deprecated upstream | Unsupported |
+| Worktree | Native | Native | Unsupported |
+| Permission mode | Native | Native via `--approval-mode` | Emulated through `--sandbox` |
+| Output schema | Native `--json-schema` | Unsupported | Native `--output-schema` |
+| MCP server mode | Unsupported | Unsupported | Native `codex mcp-server` |
+
 ## CLI Flags
 
 | Flag | Description | Example |
@@ -102,9 +121,13 @@ Batch jobs are submitted via `ralphglasses_fleet_submit` with `batch: true`. Res
 
 ## Per-Provider Config
 
+- `.claude/settings.json` — Claude Code repo-local MCP registration
 - `.gemini/settings.json` — Gemini CLI MCP server registration
 - `.codex/config.toml` — Codex CLI project config + MCP server registration
+- `.mcp.json` — shared source of truth for MCP server command and cwd
+- See [PROVIDER-PARITY-OBJECTIVES.md](PROVIDER-PARITY-OBJECTIVES.md) for the broader three-provider parity plan
 - See [GEMINI.md](../GEMINI.md) for Gemini-specific instructions
+- See [CLAUDE.md](../CLAUDE.md) for Claude-specific instructions
 - See [AGENTS.md](../AGENTS.md) for Codex-specific instructions
 - See [CODEX-REFERENCE.md](CODEX-REFERENCE.md) for pinned Codex docs and cache-risk notes
 - See [CONTRIBUTING.md](../CONTRIBUTING.md) for multi-provider contribution guide

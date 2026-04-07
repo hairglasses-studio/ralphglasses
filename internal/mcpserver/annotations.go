@@ -146,6 +146,8 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_feedback_profiles":      {Title: "Feedback Profiles", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_provider_benchmark":     {Title: "Provider Benchmark", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_provider_recommend":     {Title: "Provider Recommend", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_provider_capabilities":  {Title: "Provider Capabilities", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_provider_compare":       {Title: "Provider Compare", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_tool_benchmark":         {Title: "Tool Benchmark", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_journal_read":           {Title: "Read Journal", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_journal_write":          {Title: "Write Journal", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(false)},

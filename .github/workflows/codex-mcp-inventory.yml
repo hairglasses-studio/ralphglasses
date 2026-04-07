@@ -11,7 +11,7 @@ on:
 
 jobs:
   codex-mcp-inventory:
-    uses: hairglasses-studio/.github/.github/workflows/codex-mcp-inventory.yml@main
+    uses: hairglasses-studio/.github/.github/workflows/codex-mcp-inventory.yml@84851d48a4c35aa4fa936b1fd247f7dcd37421cf
     with:
       inventory_scope: ${{ github.event.inputs.inventory_scope }}
     secrets: inherit

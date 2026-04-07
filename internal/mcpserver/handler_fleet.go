@@ -473,6 +473,9 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 			Confidence: "low",
 			Rationale: fmt.Sprintf("cold-start heuristic: %s tier (%s) for %s tasks (complexity %d) — no multi-provider feedback data yet",
 				tier.Label, tier.Model, taskType, tier.MaxComplexity),
+			FallbackChain:         s.AutoOptimizer.BuildSmartFailoverChain(task).Providers,
+			CapabilityConstraints: session.ProviderCapabilityConstraints(tier.Provider),
+			DataSource:            "heuristic",
 		}
 	} else {
 		rec = s.AutoOptimizer.RecommendProvider(task)

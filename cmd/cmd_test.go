@@ -173,3 +173,88 @@ func TestMcpJsonFormat(t *testing.T) {
 		t.Error("cwd must be set when using wrapper startup")
 	}
 }
+
+func TestGeminiSettingsFormat(t *testing.T) {
+	data, err := os.ReadFile("../.gemini/settings.json")
+	if err != nil {
+		t.Fatalf("read .gemini/settings.json: %v", err)
+	}
+
+	var config struct {
+		Context struct {
+			FileName []string `json:"fileName"`
+		} `json:"context"`
+		MCPServers map[string]struct {
+			Command string   `json:"command"`
+			Args    []string `json:"args"`
+			CWD     string   `json:"cwd"`
+		} `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(data, &config); err != nil {
+		t.Fatalf("parse .gemini/settings.json: %v", err)
+	}
+
+	if !containsString(config.Context.FileName, "AGENTS.md") {
+		t.Error("Gemini context.fileName must include AGENTS.md")
+	}
+	if !containsString(config.Context.FileName, "GEMINI.md") {
+		t.Error("Gemini context.fileName must include GEMINI.md")
+	}
+
+	srv, ok := config.MCPServers["ralphglasses"]
+	if !ok {
+		t.Fatal("ralphglasses server not found in .gemini/settings.json")
+	}
+	if srv.Command != "bash" {
+		t.Errorf("Gemini command = %q, want bash", srv.Command)
+	}
+	if len(srv.Args) < 1 || srv.Args[0] != "./scripts/dev/run-mcp.sh" {
+		t.Errorf("Gemini args = %v, want wrapper startup script", srv.Args)
+	}
+	if srv.CWD == "" {
+		t.Error("Gemini cwd must be set when using wrapper startup")
+	}
+}
+
+func TestClaudeSettingsFormat(t *testing.T) {
+	data, err := os.ReadFile("../.claude/settings.json")
+	if err != nil {
+		t.Fatalf("read .claude/settings.json: %v", err)
+	}
+
+	var config struct {
+		MCPServers map[string]struct {
+			Command string   `json:"command"`
+			Args    []string `json:"args"`
+			CWD     string   `json:"cwd"`
+		} `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(data, &config); err != nil {
+		t.Fatalf("parse .claude/settings.json: %v", err)
+	}
+
+	srv, ok := config.MCPServers["ralphglasses"]
+	if !ok {
+		t.Fatal("ralphglasses server not found in .claude/settings.json")
+	}
+	if srv.Command != "bash" {
+		t.Errorf("Claude command = %q, want bash", srv.Command)
+	}
+	if len(srv.Args) < 1 || srv.Args[0] != "./scripts/dev/run-mcp.sh" {
+		t.Errorf("Claude args = %v, want wrapper startup script", srv.Args)
+	}
+	if srv.CWD == "" {
+		t.Error("Claude cwd must be set when using wrapper startup")
+	}
+}
+
+
+
+func containsString(items []string, want string) bool {
+	for _, item := range items {
+		if item == want {
+			return true
+		}
+	}
+	return false
+}

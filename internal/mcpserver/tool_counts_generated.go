@@ -16,7 +16,7 @@ var GeneratedToolCounts = map[string]int{
 	"awesome":       5,
 	"advanced":      5,
 	"events":        2,
-	"feedback":      4,
+	"feedback":      6,
 	"eval":          7,
 	"fleet_h":       5,
 	"observability": 14,
@@ -37,4 +37,4 @@ var GeneratedToolCounts = map[string]int{
 }
 
 // GeneratedTotalTools is the sum of all tool counts across all groups.
-var GeneratedTotalTools = 204
+var GeneratedTotalTools = 206

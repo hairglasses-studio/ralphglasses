@@ -81,7 +81,7 @@ Project instructions: [CLAUDE.md](CLAUDE.md)
 
 ```bash
 gemini                          # Interactive
-gemini --yolo                   # Autonomous (no confirmations)
+gemini --approval-mode yolo     # Autonomous (no confirmations)
 gemini -p "implement feature X" --output-format stream-json  # Headless
 ```
 
@@ -180,7 +180,17 @@ Closes #42
 
 ## MCP Server Setup
 
-Use the repo-local `.mcp.json` as the source of truth. Codex is already configured via `.codex/config.toml`; other clients can register the same `./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio` command manually if needed.
+Use the repo-local `.mcp.json` as the source of truth. Provider-specific repo config surfaces:
+
+- Claude: `.claude/settings.json`
+- Gemini: `.gemini/settings.json`
+- Codex: `.codex/config.toml`
+
+All three point at `./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio`.
+
+### Claude Code
+
+Already configured in `.claude/settings.json`.
 
 ### Gemini CLI
 
@@ -218,16 +228,18 @@ codex exec --full-auto "Read AGENTS.md, then fix the failing test in internal/se
 | Feature | Claude Code | Gemini CLI | Codex CLI |
 |---------|------------|------------|-----------|
 | Resume session | Yes | Yes | Yes (`codex exec resume`, install-dependent) |
-| Budget enforcement | Yes (external) | No | No |
-| Agent definitions | Yes (`.claude/agents/`) | Yes (`.gemini/commands/*.toml`) | Yes (`.codex/agents/*.toml`, plus `AGENTS.md` project instructions) |
-| Worktree isolation | Yes | No | No |
-| System prompt flag | Yes (`-s`) | No | No |
+| Budget enforcement | Native (`--max-budget-usd`) | External in ralphglasses | External in ralphglasses |
+| Agent definitions | Native (`--agent`, `.claude/agents/`) | Commands/extensions only (`.gemini/commands/*.toml`, `.gemini/extensions/`) | Repo-native only (`.codex/agents/*.toml`, `AGENTS.md`) |
+| Worktree isolation | Yes | Yes (`--worktree`) | No |
+| System prompt flag | Yes | No | No |
+| Permission mode | Yes (`--permission-mode`) | Yes (`--approval-mode`) | Mapped onto `--sandbox` by ralphglasses |
+| Output schema | Yes (`--json-schema`) | No | Yes (`--output-schema`) |
 | MCP client | Yes | Yes | Yes |
 | MCP server mode | No | No | Yes (`codex mcp-server`) |
-| Autonomous mode | `--allowedTools` | `--yolo` | `--full-auto` |
+| Autonomous mode | Permission mode + allowed tools | `--approval-mode yolo` | `--full-auto` |
 | Streaming output | `stream-json` | `stream-json` | `--json` (NDJSON) |
 | Project instructions | `CLAUDE.md` | `GEMINI.md` | `AGENTS.md` |
-| Skills/plugins | Skills only | Limited | Skills + plugins + subagents |
+| Skills/plugins | Skills + plugins | Skills + extensions | Skills + plugins + subagents |
 
 Codex loops:
 - Planner default: `gpt-5.4`
