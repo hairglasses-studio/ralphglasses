@@ -7,6 +7,7 @@ import (
 
 // ListOpts controls filtering for Store.ListSessions.
 type ListOpts struct {
+	TenantID string        // filter by tenant ID (empty = all)
 	RepoPath string        // filter by repo path (empty = all)
 	RepoName string        // filter by repo name (empty = all)
 	Status   SessionStatus // filter by status (empty = all)
@@ -17,14 +18,21 @@ type ListOpts struct {
 
 // LoopRunFilter controls filtering for loop run queries.
 type LoopRunFilter struct {
+	TenantID string
 	RepoPath string
 	Status   string
 	Limit    int
 }
 
+// Tenant filters or persistence data.
+type TenantFilter struct {
+	ID string
+}
+
 // CostEntry represents a single cost ledger record.
 type CostEntry struct {
 	ID         int64
+	TenantID   string
 	SessionID  string
 	LoopID     string
 	Provider   string
@@ -49,6 +57,7 @@ const (
 // RecoveryOp represents a single crash detection and recovery operation.
 type RecoveryOp struct {
 	ID            string           `json:"id"`
+	TenantID      string           `json:"tenant_id,omitempty"`
 	Severity      string           `json:"severity"`
 	Status        RecoveryOpStatus `json:"status"`
 	TotalSessions int              `json:"total_sessions"`
@@ -80,6 +89,7 @@ const (
 // RecoveryAction represents a single session resume attempt within a recovery op.
 type RecoveryAction struct {
 	ID              string               `json:"id"`
+	TenantID        string               `json:"tenant_id,omitempty"`
 	RecoveryOpID    string               `json:"recovery_op_id"`
 	ClaudeSessionID string               `json:"claude_session_id"`
 	RalphSessionID  string               `json:"ralph_session_id,omitempty"`
@@ -96,9 +106,10 @@ type RecoveryAction struct {
 
 // RecoveryOpFilter controls filtering for ListRecoveryOps.
 type RecoveryOpFilter struct {
-	Status RecoveryOpStatus // empty = all
-	Since  time.Time        // zero = no filter
-	Limit  int              // 0 = unlimited
+	TenantID string           // empty = all
+	Status   RecoveryOpStatus // empty = all
+	Since    time.Time        // zero = no filter
+	Limit    int              // 0 = unlimited
 }
 
 // Store is the persistence interface for session state.
@@ -121,7 +132,7 @@ type Store interface {
 
 	// AggregateSpend returns total spend_usd across sessions for a repo path.
 	// If repo is empty, returns total across all sessions.
-	AggregateSpend(ctx context.Context, repo string) (float64, error)
+	AggregateSpend(ctx context.Context, tenantID, repo string) (float64, error)
 
 	// SaveLoopRun upserts a loop run (insert or update).
 	SaveLoopRun(ctx context.Context, run *LoopRun) error
@@ -139,7 +150,7 @@ type Store interface {
 	RecordCost(ctx context.Context, entry *CostEntry) error
 
 	// AggregateCostByProvider returns total spend per provider since a given time.
-	AggregateCostByProvider(ctx context.Context, since time.Time) (map[string]float64, error)
+	AggregateCostByProvider(ctx context.Context, tenantID string, since time.Time) (map[string]float64, error)
 
 	// SaveRecoveryOp upserts a recovery operation.
 	SaveRecoveryOp(ctx context.Context, op *RecoveryOp) error
@@ -155,6 +166,15 @@ type Store interface {
 
 	// UpdateRecoveryActionStatus updates the status and optional error of an action.
 	UpdateRecoveryActionStatus(ctx context.Context, id string, status RecoveryActionStatus, errMsg string) error
+
+	// SaveTenant upserts tenant metadata.
+	SaveTenant(ctx context.Context, tenant *Tenant) error
+
+	// GetTenant returns a tenant by ID. Returns ErrTenantNotFound if missing.
+	GetTenant(ctx context.Context, id string) (*Tenant, error)
+
+	// ListTenants returns all known tenants.
+	ListTenants(ctx context.Context) ([]*Tenant, error)
 
 	// Close releases any resources held by the store.
 	Close() error

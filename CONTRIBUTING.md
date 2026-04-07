@@ -230,8 +230,8 @@ codex exec --full-auto "Read AGENTS.md, then fix the failing test in internal/se
 | Skills/plugins | Skills only | Limited | Skills + plugins + subagents |
 
 Codex loops:
-- Planner default: `o4-mini`
-- Worker/verifier default: `codex-mini-latest`
+- Planner default: `gpt-5.4`
+- Worker/verifier default: `gpt-5.4`
 - Session resume is supported when the installed Codex CLI exposes `exec resume`.
 
 ## Cost Optimization
@@ -242,8 +242,8 @@ Codex loops:
 | Bulk code generation | Gemini | Fast, large context |
 | Implementation | Codex (gpt-5.4) | Default primary control-plane model |
 | Deep reasoning | Claude or frontier Codex override | Use the expensive lane intentionally |
-| Balanced tasks | Codex (o4-mini) | Good quality, moderate cost |
-| Bulk/cheap tasks | Codex (o4-mini) | Fast, lowest cost |
+| Balanced tasks | Codex (gpt-5.4) | Canonical default unless you intentionally choose a cheaper lane |
+| Bulk/cheap tasks | Codex (gpt-5.4 or explicit cheaper override) | Defaults stay aligned; cost tuning is an explicit choice |
 | Test writing | Codex or Gemini | High volume, lower complexity |
 | Code review | Claude or Gemini | Nuanced feedback |
 

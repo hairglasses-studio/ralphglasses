@@ -11,6 +11,18 @@ import (
 	"github.com/hairglasses-studio/mcpkit/finops"
 )
 
+var codexDefaultPricing = pricingOr("gpt-5.4", finops.Pricing{
+	InputPerMToken:  2.50,
+	OutputPerMToken: 15.00,
+})
+
+func pricingOr(model string, fallback finops.Pricing) finops.Pricing {
+	if pricing, ok := finops.DefaultPricing[model]; ok {
+		return pricing
+	}
+	return fallback
+}
+
 // Default model cost rates per 1M tokens (USD). Sourced from the canonical
 // mcpkit/finops pricing table. Re-exported here for backward compatibility.
 var (
@@ -22,8 +34,8 @@ var (
 	CostClaudeSonnetOutput    = finops.DefaultPricing["claude-sonnet-4-6"].OutputPerMToken
 	CostClaudeOpusInput       = finops.DefaultPricing["claude-opus-4-6"].InputPerMToken
 	CostClaudeOpusOutput      = finops.DefaultPricing["claude-opus-4-6"].OutputPerMToken
-	CostCodexInput            = finops.DefaultPricing["codex-mini-latest"].InputPerMToken
-	CostCodexOutput           = finops.DefaultPricing["codex-mini-latest"].OutputPerMToken
+	CostCodexInput            = codexDefaultPricing.InputPerMToken
+	CostCodexOutput           = codexDefaultPricing.OutputPerMToken
 	CostClaudeHaikuInput      = finops.DefaultPricing["claude-haiku-4-5"].InputPerMToken
 	CostClaudeHaikuOutput     = finops.DefaultPricing["claude-haiku-4-5"].OutputPerMToken
 	CostGeminiProInput        = finops.DefaultPricing["gemini-2.5-pro"].InputPerMToken

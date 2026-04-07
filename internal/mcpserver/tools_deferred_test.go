@@ -12,7 +12,7 @@ func TestToolGroupNames(t *testing.T) {
 	t.Parallel()
 	expected := []string{
 		"core", "session", "loop", "prompt", "fleet",
-		"repo", "roadmap", "team", "awesome", "advanced", "events", "feedback", "eval", "fleet_h",
+		"repo", "roadmap", "team", "tenant", "awesome", "advanced", "events", "feedback", "eval", "fleet_h",
 		"observability", "rdcycle", "plugin", "sweep",
 		"rc", "autonomy", "workflow", "docs", "recovery", "promptdj", "a2a", "trigger", "approval",
 		"context", "prefetch",

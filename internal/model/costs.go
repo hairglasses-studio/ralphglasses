@@ -139,6 +139,13 @@ var costTable = []ModelCost{
 		Capabilities: []Capability{CapCode, CapVision},
 	},
 	{
+		ID: "gpt-5.4", Provider: ProviderOpenAI,
+		DisplayName:   "OpenAI GPT-5.4",
+		InputPer1MTok: 2.50, OutputPer1MTok: 15.00,
+		ContextWindow: 1_050_000, MaxOutputTok: 128_000,
+		Capabilities: []Capability{CapCode, CapReasoning, CapVision},
+	},
+	{
 		ID: "o3", Provider: ProviderOpenAI,
 		DisplayName:   "OpenAI o3",
 		InputPer1MTok: 2.00, OutputPer1MTok: 8.00,

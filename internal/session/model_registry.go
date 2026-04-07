@@ -26,6 +26,7 @@ var modelRegistry = []ModelInfo{
 	{ID: "gemini-2.5-flash", Provider: ProviderGemini, DisplayName: "Gemini 2.5 Flash", ContextWindow: 1000000, CostPerMTokIn: 0.15, CostPerMTokOut: 0.60, MaxOutputTok: 65536, Capabilities: []string{"code", "vision"}},
 
 	// OpenAI / Codex models
+	{ID: "gpt-5.4", Provider: ProviderCodex, DisplayName: "OpenAI GPT-5.4", ContextWindow: 1050000, CostPerMTokIn: 2.50, CostPerMTokOut: 15.0, MaxOutputTok: 128000, Capabilities: []string{"code", "reasoning", "vision"}},
 	{ID: "o3", Provider: ProviderCodex, DisplayName: "OpenAI o3", ContextWindow: 200000, CostPerMTokIn: 2.0, CostPerMTokOut: 8.0, MaxOutputTok: 100000, Capabilities: []string{"code", "reasoning"}},
 	{ID: "o4-mini", Provider: ProviderCodex, DisplayName: "OpenAI o4-mini", ContextWindow: 200000, CostPerMTokIn: 1.10, CostPerMTokOut: 4.40, MaxOutputTok: 100000, Capabilities: []string{"code", "reasoning"}},
 }

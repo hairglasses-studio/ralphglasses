@@ -49,6 +49,9 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 	if err := session.ValidateProvider(provider); err != nil {
 		return codedError(ErrProviderUnavailable, fmt.Sprintf("invalid provider %q: %v", provider, err)), nil
 	}
+	if provider == session.ProviderCodex && p.Has("budget_usd") {
+		return codedError(ErrInvalidParams, "budget_usd is not supported for codex sessions"), nil
+	}
 
 	systemPrompt := p.OptionalString("system_prompt", "")
 	if err := ValidateStringLength(systemPrompt, MaxPromptLength, "system_prompt"); err != nil {
@@ -56,6 +59,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 	}
 
 	opts := session.LaunchOptions{
+		TenantID:     session.NormalizeTenantID(p.OptionalString("tenant_id", "")),
 		Provider:     provider,
 		RepoPath:     r.Path,
 		Prompt:       prompt,
@@ -66,6 +70,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		SystemPrompt: systemPrompt,
 		SessionName:  p.OptionalString("session_name", ""),
 		Worktree:     p.OptionalString("worktree", ""),
+		StrictProviderContract: true,
 	}
 	if p.OptionalBool("bare", false) {
 		opts.Bare = true
@@ -123,6 +128,7 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 
 	result := map[string]any{
 		"session_id": sess.ID,
+		"tenant_id":  sess.TenantID,
 		"provider":   sess.Provider,
 		"repo":       sess.RepoName,
 		"status":     sess.Status,
@@ -151,6 +157,10 @@ func (s *Server) handleSessionStop(_ context.Context, req mcp.CallToolRequest) (
 	if id == "" {
 		return codedError(ErrInvalidParams, "session id required"), nil
 	}
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
+	if _, ok := s.SessMgr.GetForTenant(id, tenantID); !ok {
+		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found in tenant %s — use ralphglasses_session_list to find active sessions", id, tenantID)), nil
+	}
 
 	if err := s.SessMgr.Stop(id); err != nil {
 		if strings.Contains(err.Error(), "not found") {
@@ -162,8 +172,9 @@ func (s *Server) handleSessionStop(_ context.Context, req mcp.CallToolRequest) (
 }
 
 func (s *Server) handleSessionStopAll(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
 	// Count running sessions before stopping
-	sessions := s.SessMgr.List("")
+	sessions := s.SessMgr.ListByTenant("", tenantID)
 	running := 0
 	for _, sess := range sessions {
 		sess.Lock()
@@ -173,9 +184,9 @@ func (s *Server) handleSessionStopAll(_ context.Context, req mcp.CallToolRequest
 		sess.Unlock()
 	}
 
-	s.SessMgr.StopAll()
+	s.SessMgr.StopAllForTenant(tenantID)
 
-	return textResult(fmt.Sprintf("Stopped %d running session(s)", running)), nil
+	return textResult(fmt.Sprintf("Stopped %d running session(s) in tenant %s", running, tenantID)), nil
 }
 
 func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -205,13 +216,15 @@ func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolReques
 		provider = session.DefaultPrimaryProvider()
 	}
 	prompt := getStringArg(req, "prompt")
-	sess, err := s.SessMgr.Resume(ctx, r.Path, provider, sessionID, prompt)
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
+	sess, err := s.SessMgr.ResumeWithTenant(ctx, tenantID, r.Path, provider, sessionID, prompt)
 	if err != nil {
 		return codedError(ErrLaunchFailed, fmt.Sprintf("resume failed: %v", err)), nil
 	}
 
 	return jsonResult(map[string]any{
 		"session_id":   sess.ID,
+		"tenant_id":    sess.TenantID,
 		"resumed_from": sessionID,
 		"repo":         sess.RepoName,
 		"status":       sess.Status,
@@ -223,14 +236,16 @@ func (s *Server) handleSessionRetry(ctx context.Context, req mcp.CallToolRequest
 	if id == "" {
 		return codedError(ErrInvalidParams, "session id required"), nil
 	}
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
 
-	sess, ok := s.SessMgr.Get(id)
+	sess, ok := s.SessMgr.GetForTenant(id, tenantID)
 	if !ok {
 		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
 
 	sess.Lock()
 	opts := session.LaunchOptions{
+		TenantID:     sess.TenantID,
 		Provider:     sess.Provider,
 		RepoPath:     sess.RepoPath,
 		Prompt:       sess.Prompt,
@@ -258,6 +273,7 @@ func (s *Server) handleSessionRetry(ctx context.Context, req mcp.CallToolRequest
 	return jsonResult(map[string]any{
 		"original_id": id,
 		"new_id":      newSess.ID,
+		"tenant_id":   newSess.TenantID,
 		"provider":    string(newSess.Provider),
 		"status":      "launched",
 	}), nil

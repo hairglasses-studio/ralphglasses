@@ -17,6 +17,7 @@ type MemoryStore struct {
 	costLedger      []CostEntry
 	recoveryOps     map[string]*RecoveryOp
 	recoveryActions map[string]*RecoveryAction
+	tenants         map[string]*Tenant
 }
 
 // NewMemoryStore creates a new in-memory session store.
@@ -26,6 +27,7 @@ func NewMemoryStore() *MemoryStore {
 		loopRuns:        make(map[string]*LoopRun),
 		recoveryOps:     make(map[string]*RecoveryOp),
 		recoveryActions: make(map[string]*RecoveryAction),
+		tenants:         map[string]*Tenant{DefaultTenantID: DefaultTenant()},
 	}
 }
 
@@ -35,6 +37,7 @@ func (m *MemoryStore) SaveSession(_ context.Context, s *Session) error {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	s.TenantID = NormalizeTenantID(s.TenantID)
 	m.sessions[s.ID] = s
 	return nil
 }
@@ -55,6 +58,9 @@ func (m *MemoryStore) ListSessions(_ context.Context, opts ListOpts) ([]*Session
 
 	var result []*Session
 	for _, s := range m.sessions {
+		if opts.TenantID != "" && NormalizeTenantID(s.TenantID) != NormalizeTenantID(opts.TenantID) {
+			continue
+		}
 		if opts.RepoPath != "" && s.RepoPath != opts.RepoPath {
 			continue
 		}
@@ -96,12 +102,15 @@ func (m *MemoryStore) UpdateSessionStatus(_ context.Context, id string, status S
 	return nil
 }
 
-func (m *MemoryStore) AggregateSpend(_ context.Context, repo string) (float64, error) {
+func (m *MemoryStore) AggregateSpend(_ context.Context, tenantID, repo string) (float64, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	var total float64
 	for _, s := range m.sessions {
+		if tenantID != "" && NormalizeTenantID(s.TenantID) != NormalizeTenantID(tenantID) {
+			continue
+		}
 		if repo != "" && s.RepoPath != repo {
 			continue
 		}
@@ -122,6 +131,7 @@ func (m *MemoryStore) SaveLoopRun(_ context.Context, run *LoopRun) error {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	run.TenantID = NormalizeTenantID(run.TenantID)
 	m.loopRuns[run.ID] = run
 	return nil
 }
@@ -142,6 +152,9 @@ func (m *MemoryStore) ListLoopRuns(_ context.Context, filter LoopRunFilter) ([]*
 
 	var result []*LoopRun
 	for _, r := range m.loopRuns {
+		if filter.TenantID != "" && NormalizeTenantID(r.TenantID) != NormalizeTenantID(filter.TenantID) {
+			continue
+		}
 		if filter.RepoPath != "" && r.RepoPath != filter.RepoPath {
 			continue
 		}
@@ -176,6 +189,7 @@ func (m *MemoryStore) RecordCost(_ context.Context, entry *CostEntry) error {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	entry.TenantID = NormalizeTenantID(entry.TenantID)
 	if entry.RecordedAt.IsZero() {
 		entry.RecordedAt = time.Now()
 	}
@@ -184,12 +198,15 @@ func (m *MemoryStore) RecordCost(_ context.Context, entry *CostEntry) error {
 	return nil
 }
 
-func (m *MemoryStore) AggregateCostByProvider(_ context.Context, since time.Time) (map[string]float64, error) {
+func (m *MemoryStore) AggregateCostByProvider(_ context.Context, tenantID string, since time.Time) (map[string]float64, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	result := make(map[string]float64)
 	for _, e := range m.costLedger {
+		if tenantID != "" && NormalizeTenantID(e.TenantID) != NormalizeTenantID(tenantID) {
+			continue
+		}
 		if !e.RecordedAt.Before(since) {
 			result[e.Provider] += e.SpendUSD
 		}
@@ -205,6 +222,7 @@ func (m *MemoryStore) SaveRecoveryOp(_ context.Context, op *RecoveryOp) error {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	op.TenantID = NormalizeTenantID(op.TenantID)
 	m.recoveryOps[op.ID] = op
 	return nil
 }
@@ -225,6 +243,9 @@ func (m *MemoryStore) ListRecoveryOps(_ context.Context, filter RecoveryOpFilter
 
 	var result []*RecoveryOp
 	for _, op := range m.recoveryOps {
+		if filter.TenantID != "" && NormalizeTenantID(op.TenantID) != NormalizeTenantID(filter.TenantID) {
+			continue
+		}
 		if filter.Status != "" && op.Status != filter.Status {
 			continue
 		}
@@ -245,6 +266,7 @@ func (m *MemoryStore) SaveRecoveryAction(_ context.Context, action *RecoveryActi
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	action.TenantID = NormalizeTenantID(action.TenantID)
 	m.recoveryActions[action.ID] = action
 	return nil
 }
@@ -266,4 +288,41 @@ func (m *MemoryStore) UpdateRecoveryActionStatus(_ context.Context, id string, s
 		action.CompletedAt = &now
 	}
 	return nil
+}
+
+func (m *MemoryStore) SaveTenant(_ context.Context, tenant *Tenant) error {
+	if tenant == nil {
+		return fmt.Errorf("save tenant: nil tenant")
+	}
+	cp := *tenant
+	cp.Normalize()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.tenants[cp.ID] = &cp
+	return nil
+}
+
+func (m *MemoryStore) GetTenant(_ context.Context, id string) (*Tenant, error) {
+	id = NormalizeTenantID(id)
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	tenant, ok := m.tenants[id]
+	if !ok {
+		return nil, ErrTenantNotFound
+	}
+	cp := *tenant
+	cp.AllowedRepoRoots = append([]string(nil), tenant.AllowedRepoRoots...)
+	return &cp, nil
+}
+
+func (m *MemoryStore) ListTenants(_ context.Context) ([]*Tenant, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	result := make([]*Tenant, 0, len(m.tenants))
+	for _, tenant := range m.tenants {
+		cp := *tenant
+		cp.AllowedRepoRoots = append([]string(nil), tenant.AllowedRepoRoots...)
+		result = append(result, &cp)
+	}
+	return result, nil
 }

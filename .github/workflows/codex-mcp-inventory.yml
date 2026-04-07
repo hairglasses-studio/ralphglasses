@@ -1,0 +1,17 @@
+name: Codex MCP Inventory
+
+on:
+  workflow_dispatch:
+    inputs:
+      inventory_scope:
+        description: "Which MCP surfaces Codex should inventory"
+        required: false
+        default: "Ralphglasses MCP server, plugin bundle, and command-and-control docs"
+        type: string
+
+jobs:
+  codex-mcp-inventory:
+    uses: hairglasses-studio/.github/.github/workflows/codex-mcp-inventory.yml@main
+    with:
+      inventory_scope: ${{ github.event.inputs.inventory_scope }}
+    secrets: inherit

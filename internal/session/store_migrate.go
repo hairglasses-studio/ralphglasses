@@ -49,6 +49,7 @@ func MigrateJSONToStore(ctx context.Context, dir string, store Store) (imported 
 		if s.RepoName == "" && s.RepoPath != "" {
 			s.RepoName = filepath.Base(s.RepoPath)
 		}
+		s.TenantID = NormalizeTenantID(s.TenantID)
 
 		if err := store.SaveSession(ctx, &s); err != nil {
 			slog.Warn("migrate: save failed", "session", id, "err", err)

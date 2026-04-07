@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
@@ -44,6 +43,7 @@ func (m *Manager) InitPIDFiles() {
 
 // Launch starts a new provider session via the configured CLI.
 func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
+	opts.TenantID = NormalizeTenantID(opts.TenantID)
 	if opts.Provider == "" {
 		opts.Provider = DefaultPrimaryProvider()
 	}
@@ -90,8 +90,15 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 		}
 	}
 
+	tenant, err := m.resolveTenant(ctx, opts.TenantID)
+	if err != nil {
+		return nil, fmt.Errorf("resolve tenant %s: %w", opts.TenantID, err)
+	}
+	if !tenant.AllowsRepoPath(opts.RepoPath) {
+		return nil, fmt.Errorf("tenant %s cannot access repo path %s", tenant.ID, opts.RepoPath)
+	}
+
 	var s *Session
-	var err error
 	m.configMu.RLock()
 	hook := m.launchSession
 	m.configMu.RUnlock()
@@ -103,6 +110,7 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	if err != nil {
 		return nil, err
 	}
+	s.TenantID = opts.TenantID
 
 	// Set persistence and feedback callbacks so runner can persist and learn on completion
 	s.onComplete = func(sess *Session) {
@@ -145,10 +153,16 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 
 // Resume resumes a previous session by its provider session ID.
 func (m *Manager) Resume(ctx context.Context, repoPath string, provider Provider, sessionID, prompt string) (*Session, error) {
+	return m.ResumeWithTenant(ctx, DefaultTenantID, repoPath, provider, sessionID, prompt)
+}
+
+// ResumeWithTenant resumes a previous session within the specified tenant.
+func (m *Manager) ResumeWithTenant(ctx context.Context, tenantID, repoPath string, provider Provider, sessionID, prompt string) (*Session, error) {
 	if provider == "" {
 		provider = DefaultPrimaryProvider()
 	}
 	opts := LaunchOptions{
+		TenantID: tenantID,
 		Provider: provider,
 		RepoPath: repoPath,
 		Prompt:   prompt,
@@ -215,6 +229,15 @@ func (m *Manager) Stop(id string) error {
 
 // StopAll stops all running sessions and the supervisor if active.
 func (m *Manager) StopAll() {
+	m.stopAllFiltered("")
+}
+
+// StopAllForTenant stops all running sessions belonging to one tenant.
+func (m *Manager) StopAllForTenant(tenantID string) {
+	m.stopAllFiltered(NormalizeTenantID(tenantID))
+}
+
+func (m *Manager) stopAllFiltered(tenantID string) {
 	// Stop the supervisor first so it doesn't relaunch sessions we're about to kill.
 	m.configMu.Lock()
 	m.stopSupervisor()
@@ -223,6 +246,9 @@ func (m *Manager) StopAll() {
 	m.sessionsMu.RLock()
 	ids := make([]string, 0, len(m.sessions))
 	for id, s := range m.sessions {
+		if tenantID != "" && NormalizeTenantID(s.TenantID) != tenantID {
+			continue
+		}
 		s.mu.Lock()
 		if s.Status == StatusRunning || s.Status == StatusLaunching {
 			ids = append(ids, id)
@@ -264,6 +290,7 @@ func (m *Manager) MigrateSession(ctx context.Context, sessionID string, targetPr
 		remaining = 0
 	}
 	opts := LaunchOptions{
+		TenantID:     s.TenantID,
 		Provider:     targetProvider,
 		RepoPath:     s.RepoPath,
 		Prompt:       s.Prompt,
@@ -423,6 +450,7 @@ func (m *Manager) persistOrWarn(s *Session, context string) {
 // if a Store is configured, also saves to the store.
 // Safe to call from any goroutine; acquires the session lock.
 func (m *Manager) PersistSession(s *Session) error {
+	s.TenantID = NormalizeTenantID(s.TenantID)
 	// Write to Store if configured.
 	if m.store != nil {
 		s.mu.Lock()
@@ -438,7 +466,11 @@ func (m *Manager) PersistSession(s *Session) error {
 	if m.stateDir == "" {
 		return nil
 	}
-	if err := os.MkdirAll(m.stateDir, 0755); err != nil {
+	dir := m.sessionStateDirForTenant(s.TenantID)
+	if dir == "" {
+		return nil
+	}
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("persist session: mkdir: %w", err)
 	}
 
@@ -449,9 +481,12 @@ func (m *Manager) PersistSession(s *Session) error {
 		return fmt.Errorf("persist session: marshal: %w", err)
 	}
 
-	path := filepath.Join(m.stateDir, s.ID+".json")
+	path := m.sessionStatePath(s.TenantID, s.ID)
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("persist session: write %s: %w", path, err)
+	}
+	if legacyPath := m.legacySessionStatePath(s.ID); legacyPath != "" && legacyPath != path {
+		_ = os.Remove(legacyPath)
 	}
 	return nil
 }
@@ -487,6 +522,7 @@ func (m *Manager) RehydrateFromStore() error {
 
 		// Sessions that were running or launching when the old process died
 		// cannot still be alive — mark them as interrupted.
+		sess.TenantID = NormalizeTenantID(sess.TenantID)
 		if sess.Status == StatusRunning || sess.Status == StatusLaunching {
 			sess.Status = StatusInterrupted
 			now := time.Now()
@@ -527,20 +563,13 @@ func (m *Manager) LoadExternalSessions() {
 	if m.stateDir == "" {
 		return
 	}
-	entries, err := os.ReadDir(m.stateDir)
-	if err != nil {
-		return
-	}
+	files := m.discoverSessionStateFiles()
 
 	m.sessionsMu.Lock()
 	defer m.sessionsMu.Unlock()
 
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
-			continue
-		}
-
-		id := strings.TrimSuffix(entry.Name(), ".json")
+	for _, file := range files {
+		id := file.ID
 
 		// If we already own this session (launched in-process), update the file
 		// but don't overwrite in-memory state.
@@ -551,7 +580,7 @@ func (m *Manager) LoadExternalSessions() {
 			continue
 		}
 
-		data, err := os.ReadFile(filepath.Join(m.stateDir, entry.Name()))
+		data, err := os.ReadFile(file.Path)
 		if err != nil {
 			continue
 		}
@@ -559,6 +588,10 @@ func (m *Manager) LoadExternalSessions() {
 		var s Session
 		if err := json.Unmarshal(data, &s); err != nil {
 			continue
+		}
+		s.TenantID = NormalizeTenantID(s.TenantID)
+		if file.Legacy {
+			s.TenantID = DefaultTenantID
 		}
 
 		// Skip sessions older than 24h
@@ -569,6 +602,9 @@ func (m *Manager) LoadExternalSessions() {
 
 		m.sessions[id] = &s
 		m.updateStatusCache(id, s.Status) // Phase 10.5.1: seed status cache
+		if file.Legacy {
+			m.persistOrWarn(&s, "migrate legacy session state")
+		}
 	}
 
 	// Clean up terminal sessions from memory and disk.
@@ -603,8 +639,16 @@ func (m *Manager) LoadExternalSessions() {
 		if shouldRemove {
 			delete(m.sessions, id)
 			m.evictStatusCache(id) // Phase 10.5.1: evict hot-read cache entry
-			if err := os.Remove(filepath.Join(m.stateDir, id+".json")); err != nil && !os.IsNotExist(err) {
-				slog.Warn("failed to remove session state file", "session", id, "error", err)
+			for _, candidate := range []string{
+				m.sessionStatePath(s.TenantID, id),
+				m.legacySessionStatePath(id),
+			} {
+				if candidate == "" {
+					continue
+				}
+				if err := os.Remove(candidate); err != nil && !os.IsNotExist(err) {
+					slog.Warn("failed to remove session state file", "session", id, "error", err, "path", candidate)
+				}
 			}
 		}
 	}

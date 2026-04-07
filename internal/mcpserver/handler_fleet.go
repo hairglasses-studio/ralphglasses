@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -11,6 +13,30 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
+
+func fleetNotConfiguredPayload() map[string]any {
+	message := "fleet coordinator not configured"
+	prereqs := []string{
+		"Start a coordinator with: ralphglasses serve --coordinator --port 9473",
+		"Point MCP clients at it with RALPH_FLEET_URL=http://<host>:9473",
+	}
+	if url := strings.TrimSpace(os.Getenv("RALPH_FLEET_URL")); url != "" {
+		message = fmt.Sprintf("fleet coordinator at %s is not connected", url)
+		prereqs = append(prereqs, "Verify the coordinator is reachable and healthy")
+	}
+	return map[string]any{
+		"status":        "not_configured",
+		"fleet_mode":    false,
+		"message":       message,
+		"items":         []any{},
+		"count":         0,
+		"prerequisites": prereqs,
+	}
+}
+
+func fleetNotConfiguredResult() *mcp.CallToolResult {
+	return jsonResult(fleetNotConfiguredPayload())
+}
 
 // InitFleetTools initializes fleet infrastructure on the Server.
 func (s *Server) InitFleetTools(coord *fleet.Coordinator, client *fleet.Client, hitl *session.HITLTracker, decisions *session.DecisionLog, feedback *session.FeedbackAnalyzer) {
@@ -50,17 +76,7 @@ func (s *Server) WireAutoOptimizer(mgr *session.Manager) {
 
 func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil && s.FleetClient == nil {
-		return jsonResult(map[string]any{
-			"status":     "not_configured",
-			"fleet_mode": false,
-			"message":    "fleet coordinator not active — start with 'ralphglasses mcp --fleet'",
-			"items":      []any{},
-			"count":      0,
-			"prerequisites": []string{
-				"Start the MCP server with --fleet flag: ralphglasses mcp --fleet",
-				"Or connect to a remote coordinator via RALPH_FLEET_URL",
-			},
-		}), nil
+		return fleetNotConfiguredResult(), nil
 	}
 
 	p := NewParams(req)
@@ -111,17 +127,7 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 
 func (s *Server) handleFleetBudget(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil && s.FleetClient == nil {
-		return jsonResult(map[string]any{
-			"status":     "not_configured",
-			"fleet_mode": false,
-			"message":    "fleet coordinator not active — start with 'ralphglasses mcp --fleet'",
-			"items":      []any{},
-			"count":      0,
-			"prerequisites": []string{
-				"Start the MCP server with --fleet flag: ralphglasses mcp --fleet",
-				"Or connect to a remote coordinator via RALPH_FLEET_URL",
-			},
-		}), nil
+		return fleetNotConfiguredResult(), nil
 	}
 
 	newLimit := getNumberArg(req, "limit", 0)
@@ -155,17 +161,7 @@ func (s *Server) handleFleetBudget(_ context.Context, req mcp.CallToolRequest) (
 
 func (s *Server) handleFleetWorkers(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil && s.FleetClient == nil {
-		return jsonResult(map[string]any{
-			"status":     "not_configured",
-			"fleet_mode": false,
-			"message":    "fleet coordinator not active — start with 'ralphglasses mcp --fleet'",
-			"items":      []any{},
-			"count":      0,
-			"prerequisites": []string{
-				"Start the MCP server with --fleet flag: ralphglasses mcp --fleet",
-				"Or connect to a remote coordinator via RALPH_FLEET_URL",
-			},
-		}), nil
+		return fleetNotConfiguredResult(), nil
 	}
 
 	action := getStringArg(req, "action")
@@ -304,12 +300,15 @@ func (s *Server) handleSupervisorStatus(_ context.Context, _ mcp.CallToolRequest
 		return fleetJSON(map[string]any{"running": false, "message": "supervisor not active"})
 	}
 	return fleetJSON(map[string]any{
-		"running":           status.Running,
-		"repo_path":         status.RepoPath,
-		"tick_count":        status.TickCount,
-		"last_cycle_launch": status.LastCycleLaunch,
-		"started_at":        status.StartedAt,
-		"automation":        status.Automation,
+		"running":                status.Running,
+		"repo_path":              status.RepoPath,
+		"tick_count":             status.TickCount,
+		"last_cycle_launch":      status.LastCycleLaunch,
+		"started_at":             status.StartedAt,
+		"automation":             status.Automation,
+		"research_daemon_active": status.ResearchDaemonActive,
+		"crash_recovery_active":  status.CrashRecoveryActive,
+		"crash_recovery_policy":  status.CrashRecoveryPolicy,
 	})
 }
 
@@ -510,17 +509,9 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 
 func (s *Server) handleFleetDLQ(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.FleetCoordinator == nil {
-		return jsonResult(map[string]any{
-			"status":     "not_configured",
-			"fleet_mode": false,
-			"message":    "fleet coordinator not active — start with 'ralphglasses mcp --fleet'",
-			"items":      []any{},
-			"count":      0,
-			"prerequisites": []string{
-				"Start the MCP server with --fleet flag: ralphglasses mcp --fleet",
-				"Fleet DLQ requires a local coordinator (remote client not supported)",
-			},
-		}), nil
+		payload := fleetNotConfiguredPayload()
+		payload["prerequisites"] = append(payload["prerequisites"].([]string), "Fleet DLQ requires a local coordinator (remote client not supported)")
+		return jsonResult(payload), nil
 	}
 
 	action := getStringArg(req, "action")

@@ -255,14 +255,14 @@ func TestBudgetOptimizedSelfImprovementProfile_CustomBudget(t *testing.T) {
 
 func TestBudgetOptimizedSelfImprovementProfile_CodexDefaults(t *testing.T) {
 	p := BudgetOptimizedSelfImprovementProfile(50)
-	if p.PlannerModel != "o4-mini" {
-		t.Errorf("PlannerModel = %q, want o4-mini", p.PlannerModel)
+	if p.PlannerModel != ProviderDefaults(ProviderCodex) {
+		t.Errorf("PlannerModel = %q, want %q", p.PlannerModel, ProviderDefaults(ProviderCodex))
 	}
-	if p.WorkerModel != "codex-mini-latest" {
-		t.Errorf("WorkerModel = %q, want codex-mini-latest", p.WorkerModel)
+	if p.WorkerModel != ProviderDefaults(ProviderCodex) {
+		t.Errorf("WorkerModel = %q, want %q", p.WorkerModel, ProviderDefaults(ProviderCodex))
 	}
-	if p.VerifierModel != "codex-mini-latest" {
-		t.Errorf("VerifierModel = %q, want codex-mini-latest", p.VerifierModel)
+	if p.VerifierModel != ProviderDefaults(ProviderCodex) {
+		t.Errorf("VerifierModel = %q, want %q", p.VerifierModel, ProviderDefaults(ProviderCodex))
 	}
 	if p.CompactionThreshold != 5 {
 		t.Errorf("CompactionThreshold = %d, want 5", p.CompactionThreshold)

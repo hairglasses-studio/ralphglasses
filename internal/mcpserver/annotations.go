@@ -43,6 +43,12 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_session_handoff":     {Title: "Session Handoff", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_session_replay_diff": {Title: "Replay Diff", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 
+	// ── tenant ───────────────────────────────────────────────────────────
+	"ralphglasses_tenant_list":                 {Title: "List Tenants", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_tenant_create":               {Title: "Create Tenant", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_tenant_status":               {Title: "Tenant Status", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_tenant_rotate_trigger_token": {Title: "Rotate Tenant Trigger Token", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(false)},
+
 	// ── tasks ────────────────────────────────────────────────────────────
 	"ralphglasses_tasks_get":    {Title: "Get Task", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_tasks_list":   {Title: "List Tasks", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},

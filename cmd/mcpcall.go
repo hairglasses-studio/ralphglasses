@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -78,7 +77,8 @@ func runMCPCall(cmd *cobra.Command, args []string) error {
 	)
 
 	rg := mcpserver.NewServerWithBus(sp, bus)
-	rg.InitSelfImprovement(filepath.Join(sp, ".ralph"), 0)
+	runtimeCleanup := configureMCPRuntime(sp, bus, rg)
+	defer runtimeCleanup()
 	rg.Register(srv)
 
 	// Look up the tool and call its handler directly

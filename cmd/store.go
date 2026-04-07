@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"path/filepath"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -36,5 +38,23 @@ func initManagerWithStore(bus *events.Bus) *session.Manager {
 	}
 	mgr := session.NewManager()
 	mgr.SetStore(store)
+	return mgr
+}
+
+// initManagerRuntime returns a fully initialized manager with store-backed
+// persistence, optional scan-root config applied, and startup hygiene completed.
+func initManagerRuntime(scanRoot string, bus *events.Bus) *session.Manager {
+	mgr := initManagerWithStore(bus)
+	if scanRoot != "" {
+		if _, err := os.Stat(filepath.Join(scanRoot, ".ralphrc")); err == nil {
+			cfg, cfgErr := model.LoadConfig(context.Background(), scanRoot)
+			if cfgErr != nil {
+				slog.Warn("manager bootstrap: failed to load scan-root config", "path", scanRoot, "error", cfgErr)
+			} else {
+				mgr.ApplyConfig(cfg)
+			}
+		}
+	}
+	mgr.Init()
 	return mgr
 }

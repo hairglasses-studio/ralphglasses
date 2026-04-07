@@ -9,10 +9,12 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
 
 var sessionJSON bool
+var sessionTenantID string
 
 var sessionCmd = &cobra.Command{
 	Use:   "session",
@@ -29,7 +31,7 @@ var sessionListCmd = &cobra.Command{
 		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.LoadExternalSessions()
 
-		sessions := mgr.List("")
+		sessions := mgr.ListByTenant("", session.NormalizeTenantID(sessionTenantID))
 
 		if sessionJSON {
 			data, err := json.MarshalIndent(sessions, "", "  ")
@@ -71,7 +73,7 @@ var sessionStatusCmd = &cobra.Command{
 		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.LoadExternalSessions()
 
-		s, ok := mgr.Get(args[0])
+		s, ok := mgr.GetForTenant(args[0], session.NormalizeTenantID(sessionTenantID))
 		if !ok {
 			return fmt.Errorf("session %s not found", args[0])
 		}
@@ -120,6 +122,9 @@ var sessionStopCmd = &cobra.Command{
 		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.LoadExternalSessions()
 
+		if _, ok := mgr.GetForTenant(args[0], session.NormalizeTenantID(sessionTenantID)); !ok {
+			return fmt.Errorf("session %s not found in tenant %s", args[0], session.NormalizeTenantID(sessionTenantID))
+		}
 		if err := mgr.Stop(args[0]); err != nil {
 			return err
 		}
@@ -139,7 +144,7 @@ func sessionIDCompletion(cmd *cobra.Command, args []string, toComplete string) (
 	mgr.LoadExternalSessions()
 
 	var ids []string
-	for _, s := range mgr.List("") {
+	for _, s := range mgr.ListByTenant("", session.NormalizeTenantID(sessionTenantID)) {
 		s.Lock()
 		id := s.ID
 		desc := fmt.Sprintf("%s\t%s %s", id, s.Status, s.RepoName)
@@ -153,6 +158,7 @@ func sessionIDCompletion(cmd *cobra.Command, args []string, toComplete string) (
 
 func init() {
 	sessionCmd.PersistentFlags().BoolVar(&sessionJSON, "json", false, "Output as JSON")
+	sessionCmd.PersistentFlags().StringVar(&sessionTenantID, "tenant-id", session.DefaultTenantID, "Tenant ID")
 	sessionStatusCmd.ValidArgsFunction = sessionIDCompletion
 	sessionStopCmd.ValidArgsFunction = sessionIDCompletion
 	sessionCmd.AddCommand(sessionListCmd)

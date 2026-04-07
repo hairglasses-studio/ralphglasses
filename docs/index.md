@@ -45,7 +45,8 @@ Repo-local Codex MCP discovery is already configured via `.codex/config.toml` an
 |------|-------------|
 | [Getting Started](getting-started.md) | Installation, prerequisites, first run, configuration |
 | [Architecture](ARCHITECTURE.md) | Package layout, provider dispatch, middleware, fleet, tiered routing |
-| [MCP Tools](MCP-TOOLS.md) | Full 126-tool table with descriptions and deferred loading |
+| [Multi-Tenant Operations](MULTI-TENANT.md) | Shared-host tenant model, provisioning, trigger auth, and tenant-scoped examples |
+| [MCP Tools](MCP-TOOLS.md) | Full tool table with descriptions and deferred loading |
 | [Provider Setup](PROVIDER-SETUP.md) | Multi-provider prerequisites, env vars, orchestration pattern |
 | [Codex Reference](CODEX-REFERENCE.md) | Codex-first defaults, pinned docs, Claude cache guardrails |
 | [Codex Parity Status](CODEX-PARITY-STATUS.md) | Codex parity closeout state, non-blocking follow-ons, and future-session rules |

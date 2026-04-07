@@ -12,6 +12,7 @@ func (s *Server) buildTriggerGroup() ToolGroup {
 			{mcp.NewTool("ralphglasses_trigger_webhook",
 				mcp.WithDescription("Trigger an agent session from an external source (webhook, API, or another agent). Creates a trigger record and optionally launches immediately."),
 				mcp.WithString("prompt", mcp.Required(), mcp.Description("Task prompt for the agent session")),
+				mcp.WithString("tenant_id", mcp.Description("Workspace tenant ID (default: _default)")),
 				mcp.WithString("agent_type", mcp.Required(), mcp.Description("Agent type to trigger"),
 					mcp.Enum("ralph", "loop", "cycle"),
 				),

@@ -739,7 +739,7 @@ func TestPersistSession_Success(t *testing.T) {
 	}
 
 	// Verify the file was written and contains valid JSON.
-	path := filepath.Join(tmpDir, "success-test.json")
+	path := filepath.Join(tmpDir, DefaultTenantID, "success-test.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("ReadFile: %v", err)

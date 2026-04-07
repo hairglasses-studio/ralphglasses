@@ -222,9 +222,9 @@ func TestHandleTeamCreate_DryRunDefaults(t *testing.T) {
 	if m, _ := parsed["model"].(string); m == "" {
 		t.Error("model should not be empty in dry_run preview")
 	}
-	// lead_agent should show effective default
-	if la, _ := parsed["lead_agent"].(string); la == "" {
-		t.Error("lead_agent should not be empty in dry_run preview")
+	// Codex teams do not inject a provider-native lead agent by default.
+	if la, _ := parsed["lead_agent"].(string); la != "" {
+		t.Errorf("lead_agent = %q, want empty for default codex dry_run preview", la)
 	}
 	// max_budget_usd should show effective default, not 0
 	if budget, _ := parsed["budget_usd"].(float64); budget <= 0 {

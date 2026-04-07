@@ -42,6 +42,7 @@ func (s SessionStatus) IsTerminal() bool {
 // Session represents a managed headless LLM CLI session.
 type Session struct {
 	ID                  string        `json:"id"`
+	TenantID            string        `json:"tenant_id,omitempty"`
 	Provider            Provider      `json:"provider"`
 	ProviderSessionID   string        `json:"provider_session_id,omitempty"`
 	RepoPath            string        `json:"repo_path"`
@@ -134,6 +135,7 @@ type BatchOptions struct {
 
 // LaunchOptions configures a session launch.
 type LaunchOptions struct {
+	TenantID     string
 	Provider     Provider
 	RepoPath     string
 	Prompt       string
@@ -161,6 +163,7 @@ type LaunchOptions struct {
 	SweepID              string // groups sessions from a single sweep operation
 	NoSessionPersistence bool   // --no-session-persistence (ephemeral, no disk history)
 	SessionID            string // --session-id <uuid> for explicit correlation
+	StrictProviderContract bool // reject provider-specific controls that the target CLI does not support
 
 	Batch *BatchOptions // nil means non-batch (normal) mode
 
@@ -171,6 +174,7 @@ type LaunchOptions struct {
 // TeamConfig holds agent team configuration.
 type TeamConfig struct {
 	Name             string   `json:"name"`
+	TenantID         string   `json:"tenant_id,omitempty"`
 	Provider         Provider `json:"provider,omitempty"`        // lead session provider
 	WorkerProvider   Provider `json:"worker_provider,omitempty"` // default provider for worker tasks
 	RepoPath         string   `json:"repo_path"`
@@ -200,75 +204,76 @@ type TeamQuestion struct {
 
 // TeamStatus holds team state information.
 type TeamStatus struct {
-	Name               string        `json:"name"`
-	RepoPath           string        `json:"repo_path"`
-	LeadID             string        `json:"lead_session_id"`
-	Status             SessionStatus `json:"status"`
-	Tasks              []TeamTask    `json:"tasks"`
-	CreatedAt          time.Time     `json:"created_at"`
-	Provider           Provider      `json:"provider,omitempty"`
-	WorkerProvider     Provider      `json:"worker_provider,omitempty"`
-	Model              string        `json:"model,omitempty"`
-	WorkerModel        string        `json:"worker_model,omitempty"`
-	RunState           string        `json:"run_state,omitempty"`
-	Runtime            string        `json:"runtime,omitempty"`
-	ExecutionBackend   string        `json:"execution_backend,omitempty"`
-	WorktreePolicy     string        `json:"worktree_policy,omitempty"`
-	TargetBranch       string        `json:"target_branch,omitempty"`
-	IntegrationBranch  string        `json:"integration_branch,omitempty"`
-	IntegrationPath    string        `json:"integration_path,omitempty"`
-	PromotionStatus    string        `json:"promotion_status,omitempty"`
-	MaxBudgetUSD       float64       `json:"max_budget_usd,omitempty"`
-	MaxConcurrency     int           `json:"max_concurrency,omitempty"`
-	MaxTaskRetries     int           `json:"max_task_retries,omitempty"`
-	StepCount          int           `json:"step_count,omitempty"`
-	LastStepAt         time.Time     `json:"last_step_at,omitempty"`
-	UpdatedAt          time.Time     `json:"updated_at,omitempty"`
-	AutoStart          bool          `json:"auto_start,omitempty"`
-	ControllerRunning  bool          `json:"controller_running,omitempty"`
-	LastControllerError string       `json:"last_controller_error,omitempty"`
-	PendingQuestion    *TeamQuestion `json:"pending_question,omitempty"`
-	ResolvedQuestions  []TeamQuestion `json:"resolved_questions,omitempty"`
-	PlannerSessionID   string        `json:"planner_session_id,omitempty"`
-	LastPlannerSummary string        `json:"last_planner_summary,omitempty"`
-	A2AAgentURL        string        `json:"a2a_agent_url,omitempty"`
+	Name                string         `json:"name"`
+	TenantID            string         `json:"tenant_id,omitempty"`
+	RepoPath            string         `json:"repo_path"`
+	LeadID              string         `json:"lead_session_id"`
+	Status              SessionStatus  `json:"status"`
+	Tasks               []TeamTask     `json:"tasks"`
+	CreatedAt           time.Time      `json:"created_at"`
+	Provider            Provider       `json:"provider,omitempty"`
+	WorkerProvider      Provider       `json:"worker_provider,omitempty"`
+	Model               string         `json:"model,omitempty"`
+	WorkerModel         string         `json:"worker_model,omitempty"`
+	RunState            string         `json:"run_state,omitempty"`
+	Runtime             string         `json:"runtime,omitempty"`
+	ExecutionBackend    string         `json:"execution_backend,omitempty"`
+	WorktreePolicy      string         `json:"worktree_policy,omitempty"`
+	TargetBranch        string         `json:"target_branch,omitempty"`
+	IntegrationBranch   string         `json:"integration_branch,omitempty"`
+	IntegrationPath     string         `json:"integration_path,omitempty"`
+	PromotionStatus     string         `json:"promotion_status,omitempty"`
+	MaxBudgetUSD        float64        `json:"max_budget_usd,omitempty"`
+	MaxConcurrency      int            `json:"max_concurrency,omitempty"`
+	MaxTaskRetries      int            `json:"max_task_retries,omitempty"`
+	StepCount           int            `json:"step_count,omitempty"`
+	LastStepAt          time.Time      `json:"last_step_at,omitempty"`
+	UpdatedAt           time.Time      `json:"updated_at,omitempty"`
+	AutoStart           bool           `json:"auto_start,omitempty"`
+	ControllerRunning   bool           `json:"controller_running,omitempty"`
+	LastControllerError string         `json:"last_controller_error,omitempty"`
+	PendingQuestion     *TeamQuestion  `json:"pending_question,omitempty"`
+	ResolvedQuestions   []TeamQuestion `json:"resolved_questions,omitempty"`
+	PlannerSessionID    string         `json:"planner_session_id,omitempty"`
+	LastPlannerSummary  string         `json:"last_planner_summary,omitempty"`
+	A2AAgentURL         string         `json:"a2a_agent_url,omitempty"`
 }
 
 // TeamTask represents a task assigned to a team.
 type TeamTask struct {
-	ID              string    `json:"id,omitempty"`
-	Title           string    `json:"title,omitempty"`
-	Description     string    `json:"description"`
-	Provider        Provider  `json:"provider,omitempty"`
-	Status          string    `json:"status"`
-	WorkItemID      string    `json:"work_item_id,omitempty"`
-	A2AAgentURL     string    `json:"a2a_agent_url,omitempty"`
-	WorkerSessionID string    `json:"worker_session_id,omitempty"`
-	WorkerNodeID    string    `json:"worker_node_id,omitempty"`
-	WorktreePath    string    `json:"worktree_path,omitempty"`
-	WorktreeBranch  string    `json:"worktree_branch,omitempty"`
-	HeadSHA         string    `json:"head_sha,omitempty"`
-	MergeBaseSHA    string    `json:"merge_base_sha,omitempty"`
-	Summary         string    `json:"summary,omitempty"`
-	LastError       string    `json:"last_error,omitempty"`
-	BlockedQuestion string    `json:"blocked_question,omitempty"`
-	ChangedFiles    []string  `json:"changed_files,omitempty"`
-	HumanContext    []string  `json:"human_context,omitempty"`
-	OwnedPaths      []string  `json:"owned_paths,omitempty"`
-	OwnershipDrift  string    `json:"ownership_drift,omitempty"`
-	ConflictFiles   []string  `json:"conflict_files,omitempty"`
-	Attempt         int       `json:"attempt,omitempty"`
-	MergeStatus     string    `json:"merge_status,omitempty"`
-	ArtifactType      string    `json:"artifact_type,omitempty"`
-	ArtifactPath      string    `json:"artifact_path,omitempty"`
-	ArtifactHash      string    `json:"artifact_hash,omitempty"`
-	ArtifactSizeBytes int64     `json:"artifact_size_bytes,omitempty"`
-	ArtifactBaseRef   string    `json:"artifact_base_ref,omitempty"`
-	ArtifactTipRef    string    `json:"artifact_tip_ref,omitempty"`
-	ArtifactStatus    string    `json:"artifact_status,omitempty"`
-	StartedAt       *time.Time `json:"started_at,omitempty"`
-	EndedAt         *time.Time `json:"ended_at,omitempty"`
-	UpdatedAt       time.Time `json:"updated_at,omitempty"`
+	ID                string     `json:"id,omitempty"`
+	Title             string     `json:"title,omitempty"`
+	Description       string     `json:"description"`
+	Provider          Provider   `json:"provider,omitempty"`
+	Status            string     `json:"status"`
+	WorkItemID        string     `json:"work_item_id,omitempty"`
+	A2AAgentURL       string     `json:"a2a_agent_url,omitempty"`
+	WorkerSessionID   string     `json:"worker_session_id,omitempty"`
+	WorkerNodeID      string     `json:"worker_node_id,omitempty"`
+	WorktreePath      string     `json:"worktree_path,omitempty"`
+	WorktreeBranch    string     `json:"worktree_branch,omitempty"`
+	HeadSHA           string     `json:"head_sha,omitempty"`
+	MergeBaseSHA      string     `json:"merge_base_sha,omitempty"`
+	Summary           string     `json:"summary,omitempty"`
+	LastError         string     `json:"last_error,omitempty"`
+	BlockedQuestion   string     `json:"blocked_question,omitempty"`
+	ChangedFiles      []string   `json:"changed_files,omitempty"`
+	HumanContext      []string   `json:"human_context,omitempty"`
+	OwnedPaths        []string   `json:"owned_paths,omitempty"`
+	OwnershipDrift    string     `json:"ownership_drift,omitempty"`
+	ConflictFiles     []string   `json:"conflict_files,omitempty"`
+	Attempt           int        `json:"attempt,omitempty"`
+	MergeStatus       string     `json:"merge_status,omitempty"`
+	ArtifactType      string     `json:"artifact_type,omitempty"`
+	ArtifactPath      string     `json:"artifact_path,omitempty"`
+	ArtifactHash      string     `json:"artifact_hash,omitempty"`
+	ArtifactSizeBytes int64      `json:"artifact_size_bytes,omitempty"`
+	ArtifactBaseRef   string     `json:"artifact_base_ref,omitempty"`
+	ArtifactTipRef    string     `json:"artifact_tip_ref,omitempty"`
+	ArtifactStatus    string     `json:"artifact_status,omitempty"`
+	StartedAt         *time.Time `json:"started_at,omitempty"`
+	EndedAt           *time.Time `json:"ended_at,omitempty"`
+	UpdatedAt         time.Time  `json:"updated_at,omitempty"`
 }
 
 // AgentDef represents an agent definition file.

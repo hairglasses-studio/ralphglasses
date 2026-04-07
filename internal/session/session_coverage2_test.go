@@ -253,7 +253,6 @@ func TestCycleChainer_SaveLineage_Empty(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestTeamSafetyConfig_Default(t *testing.T) {
-	t.Parallel()
 	// Ensure TeamSafety is nil to test default path.
 	old := TeamSafety
 	TeamSafety = nil
@@ -272,7 +271,6 @@ func TestTeamSafetyConfig_Default(t *testing.T) {
 }
 
 func TestTeamSafetyConfig_Override(t *testing.T) {
-	t.Parallel()
 	old := TeamSafety
 	TeamSafety = &TeamSafetyConfig{
 		MaxNestingDepth: 1,

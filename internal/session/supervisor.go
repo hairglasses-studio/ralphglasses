@@ -64,13 +64,16 @@ type Supervisor struct {
 
 // SupervisorState is persisted to .ralph/supervisor_state.json.
 type SupervisorState struct {
-	Running         bool                      `json:"running"`
-	BudgetSpentUSD  float64                   `json:"budget_spent_usd,omitempty"`
-	RepoPath        string                    `json:"repo_path"`
-	LastCycleLaunch time.Time                 `json:"last_cycle_launch"`
-	TickCount       int                       `json:"tick_count"`
-	StartedAt       time.Time                 `json:"started_at"`
-	Automation      *AutomationStatusSnapshot `json:"automation,omitempty"`
+	Running              bool                      `json:"running"`
+	BudgetSpentUSD       float64                   `json:"budget_spent_usd,omitempty"`
+	RepoPath             string                    `json:"repo_path"`
+	LastCycleLaunch      time.Time                 `json:"last_cycle_launch"`
+	TickCount            int                       `json:"tick_count"`
+	StartedAt            time.Time                 `json:"started_at"`
+	Automation           *AutomationStatusSnapshot `json:"automation,omitempty"`
+	ResearchDaemonActive bool                      `json:"research_daemon_active,omitempty"`
+	CrashRecoveryActive  bool                      `json:"crash_recovery_active,omitempty"`
+	CrashRecoveryPolicy  *CrashRecoveryPolicy      `json:"crash_recovery_policy,omitempty"`
 }
 
 // NewSupervisor creates a Supervisor with sensible defaults.
@@ -321,10 +324,16 @@ func (s *Supervisor) Status() SupervisorState {
 	s.mu.Lock()
 	budget := s.budget
 	st := SupervisorState{
-		Running: s.running, RepoPath: s.RepoPath,
-		LastCycleLaunch: s.lastCycleLaunch, TickCount: s.tickCount, StartedAt: s.startedAt,
+		Running:              s.running,
+		RepoPath:             s.RepoPath,
+		LastCycleLaunch:      s.lastCycleLaunch,
+		TickCount:            s.tickCount,
+		StartedAt:            s.startedAt,
+		ResearchDaemonActive: s.researchDaemon != nil,
+		CrashRecoveryActive:  s.crashRecovery != nil,
 	}
 	automation := s.automation
+	crashRecovery := s.crashRecovery
 	s.mu.Unlock()
 	if budget != nil {
 		st.BudgetSpentUSD = budget.Spent()
@@ -332,6 +341,10 @@ func (s *Supervisor) Status() SupervisorState {
 	if automation != nil {
 		snapshot := automation.Status()
 		st.Automation = &snapshot
+	}
+	if crashRecovery != nil {
+		policy := crashRecovery.Policy()
+		st.CrashRecoveryPolicy = &policy
 	}
 	return st
 }

@@ -2,6 +2,8 @@ package session
 
 import (
 	"context"
+	"log/slog"
+	"path/filepath"
 	"time"
 )
 
@@ -170,6 +172,22 @@ func (m *Manager) SetCostPredictor(cp *CostPredictor) {
 	m.costPredictor = cp
 }
 
+// SetResearchGateway attaches the shared docs research gateway used to build
+// per-supervisor research daemons.
+func (m *Manager) SetResearchGateway(gw ResearchGateway) {
+	m.configMu.Lock()
+	defer m.configMu.Unlock()
+	m.researchGateway = gw
+}
+
+// SetCrashRecovery attaches the crash recovery orchestrator used by the
+// supervisor tick loop.
+func (m *Manager) SetCrashRecovery(cr *CrashRecoveryOrchestrator) {
+	m.configMu.Lock()
+	defer m.configMu.Unlock()
+	m.crashRecovery = cr
+}
+
 // HasCostPredictor returns true if a CostPredictor is already attached.
 func (m *Manager) HasCostPredictor() bool {
 	m.configMu.RLock()
@@ -226,6 +244,7 @@ func (m *Manager) checkHealth(p Provider) ProviderHealth {
 func (m *Manager) AddSessionForTesting(s *Session) {
 	m.sessionsMu.Lock()
 	defer m.sessionsMu.Unlock()
+	s.TenantID = NormalizeTenantID(s.TenantID)
 	m.sessions[s.ID] = s
 }
 
@@ -233,7 +252,8 @@ func (m *Manager) AddSessionForTesting(s *Session) {
 func (m *Manager) AddTeamForTesting(t *TeamStatus) {
 	m.workersMu.Lock()
 	defer m.workersMu.Unlock()
-	m.teams[t.Name] = t
+	t.TenantID = NormalizeTenantID(t.TenantID)
+	m.teams[m.teamKey(t.Name, t.TenantID)] = t
 }
 
 // HITLSnapshot returns the current HITL score over a 24h window.
@@ -295,4 +315,20 @@ func (m *Manager) GetAutonomyLevel() AutonomyLevel {
 		return LevelObserve
 	}
 	return opt.decisions.Level()
+}
+
+// RestoreAutonomyLevel reloads the persisted autonomy level into the attached
+// decision log if one is configured.
+func (m *Manager) RestoreAutonomyLevel() {
+	m.configMu.RLock()
+	stateDir := m.stateDir
+	opt := m.optimizer
+	m.configMu.RUnlock()
+	if opt == nil || opt.decisions == nil {
+		return
+	}
+	if level, err := LoadAutonomyLevel(filepath.Dir(stateDir)); err == nil && level > 0 {
+		opt.decisions.RestoreLevel(AutonomyLevel(level))
+		slog.Info("restored persisted autonomy level", "level", level)
+	}
 }

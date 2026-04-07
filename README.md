@@ -117,7 +117,7 @@ See [ROADMAP.md](ROADMAP.md) for the full plan.
 | `ralphglasses_session_resume` | Resume a previous session (`codex`/`claude`/`gemini`, if the installed CLI supports resume) |
 | `ralphglasses_session_stop` | Stop a running session |
 | `ralphglasses_session_budget` | Get/update budget for a session |
-| `ralphglasses_loop_start` | Create a Codex `o4-mini` planner + `codex-mini-latest` worker loop |
+| `ralphglasses_loop_start` | Create a Codex `gpt-5.4` planner/worker/verifier loop |
 | `ralphglasses_loop_status` | Inspect persisted loop status and iteration history |
 | `ralphglasses_loop_step` | Run one planner/worker/verifier iteration in a git worktree |
 | `ralphglasses_loop_stop` | Stop a loop and block future iterations |

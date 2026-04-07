@@ -102,7 +102,7 @@ func generateRalphRC(projectName string, opts ScaffoldOptions) string {
 	return fmt.Sprintf(`PROJECT_NAME="%s"
 PROJECT_TYPE="%s"
 PROVIDER="codex"
-MODEL="o4-mini"
+MODEL="gpt-5.4"
 MAX_CALLS_PER_HOUR=80
 CLAUDE_TIMEOUT_MINUTES=20
 CLAUDE_OUTPUT_FORMAT="json"
@@ -117,7 +117,7 @@ CB_PERMISSION_DENIAL_THRESHOLD=2
 CB_COOLDOWN_MINUTES=15
 CB_AUTO_RESET=true
 LOG_RETENTION_DAYS=7
-PRIMARY_MODEL="o4-mini"
+PRIMARY_MODEL="gpt-5.4"
 CACHE_SAFE_CLAUDE_RESUME=true
 CACHE_ASSUMED_SAVINGS_CLAUDE=0.0
 BATCH_SIMILAR_TASKS=true
@@ -165,7 +165,7 @@ Primary command-and-control provider: Codex.
 }
 
 func generateCodexConfig(projectName string, opts ScaffoldOptions) string {
-	return `model = "o4-mini"
+	return `model = "gpt-5.4"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 web_search = "cached"

@@ -8,10 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
 
 var budgetJSON bool
+var budgetTenantID string
 
 var budgetCmd = &cobra.Command{
 	Use:   "budget",
@@ -27,7 +29,7 @@ var budgetStatusCmd = &cobra.Command{
 		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.LoadExternalSessions()
 
-		sessions := mgr.List("")
+		sessions := mgr.ListByTenant("", session.NormalizeTenantID(budgetTenantID))
 		var totalSpent, totalBudget float64
 		var active, completed int
 		for _, s := range sessions {
@@ -76,7 +78,7 @@ var budgetSetCmd = &cobra.Command{
 		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.LoadExternalSessions()
 
-		s, ok := mgr.Get(args[0])
+		s, ok := mgr.GetForTenant(args[0], session.NormalizeTenantID(budgetTenantID))
 		if !ok {
 			return fmt.Errorf("session %s not found", args[0])
 		}
@@ -107,7 +109,7 @@ var budgetResetCmd = &cobra.Command{
 		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.LoadExternalSessions()
 
-		s, ok := mgr.Get(args[0])
+		s, ok := mgr.GetForTenant(args[0], session.NormalizeTenantID(budgetTenantID))
 		if !ok {
 			return fmt.Errorf("session %s not found", args[0])
 		}
@@ -123,6 +125,7 @@ var budgetResetCmd = &cobra.Command{
 
 func init() {
 	budgetCmd.PersistentFlags().BoolVar(&budgetJSON, "json", false, "Output as JSON")
+	budgetCmd.PersistentFlags().StringVar(&budgetTenantID, "tenant-id", session.DefaultTenantID, "Tenant ID")
 	budgetSetCmd.ValidArgsFunction = sessionIDCompletion
 	budgetResetCmd.ValidArgsFunction = sessionIDCompletion
 	budgetCmd.AddCommand(budgetStatusCmd, budgetSetCmd, budgetResetCmd)

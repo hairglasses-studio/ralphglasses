@@ -42,6 +42,7 @@ func (s *Server) handleFleetStatus(ctx context.Context, req mcp.CallToolRequest)
 	limit := int(getNumberArg(req, "limit", 50))
 	offset := int(getNumberArg(req, "offset", 0))
 	repoFilter := getStringArg(req, "repo")
+	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
 
 	if limit < 0 {
 		limit = 50
@@ -63,7 +64,7 @@ func (s *Server) handleFleetStatus(ctx context.Context, req mcp.CallToolRequest)
 
 	// Summary-only: compact JSON with repo names, session counts, and total spend.
 	if getBoolArg(req, "summary_only") {
-		allSessions := s.SessMgr.List("")
+		allSessions := s.SessMgr.ListByTenant("", tenantID)
 		var totalSpend float64
 		var runningSessions int
 		repoSessionCounts := make(map[string]int)
@@ -105,6 +106,7 @@ func (s *Server) handleFleetStatus(ctx context.Context, req mcp.CallToolRequest)
 				sess.Unlock()
 			}
 			return jsonResult(map[string]any{
+				"tenant_id":        tenantID,
 				"repos":            repoNames,
 				"repo_sessions":    repoSessionCounts,
 				"total_sessions":   filteredTotal,
@@ -113,6 +115,7 @@ func (s *Server) handleFleetStatus(ctx context.Context, req mcp.CallToolRequest)
 			}), nil
 		}
 		return jsonResult(map[string]any{
+			"tenant_id":        tenantID,
 			"repos":            repoNames,
 			"repo_sessions":    repoSessionCounts,
 			"total_sessions":   len(allSessions),
@@ -122,8 +125,8 @@ func (s *Server) handleFleetStatus(ctx context.Context, req mcp.CallToolRequest)
 	}
 
 	// Gather sessions and teams
-	allSessions := s.SessMgr.List("")
-	allTeams := s.SessMgr.ListTeams()
+	allSessions := s.SessMgr.ListByTenant("", tenantID)
+	allTeams := s.SessMgr.ListTeamsForTenant(tenantID)
 	// --- Build per-repo summaries ---
 	type repoSummary struct {
 		Name            string  `json:"name"`

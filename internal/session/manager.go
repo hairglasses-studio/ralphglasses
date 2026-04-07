@@ -49,6 +49,8 @@ type Manager struct {
 	noopDetector   *NoOpDetector           // WS2-noop: consecutive no-op iteration detection
 	budgetEnforcer *BudgetEnforcer         // WS5: secondary budget enforcement for loops
 	depthEstimator *DepthEstimator         // Phase 10.5.5: adaptive iteration depth
+	researchGateway ResearchGateway        // docs-backed research integration for supervisor ticks
+	crashRecovery   *CrashRecoveryOrchestrator
 	store          Store                   // pluggable session persistence (default: MemoryStore)
 	launchSession  func(context.Context, LaunchOptions) (*Session, error)
 	waitSession    func(context.Context, *Session) error
@@ -171,17 +173,8 @@ func (m *Manager) Init() {
 		slog.Warn("found orphaned processes from previous run", "count", len(orphans))
 	}
 
-	// QW-9: Restore persisted autonomy level on startup.
-	m.configMu.RLock()
-	stateDir := m.stateDir
-	opt := m.optimizer
-	m.configMu.RUnlock()
-	if level, err := LoadAutonomyLevel(filepath.Dir(stateDir)); err == nil && level > 0 {
-		if opt != nil && opt.decisions != nil {
-			opt.decisions.RestoreLevel(AutonomyLevel(level))
-			slog.Info("restored persisted autonomy level", "level", level)
-		}
-	}
+	// QW-9: Restore persisted autonomy level on startup when the optimizer is available.
+	m.RestoreAutonomyLevel()
 
 	// Rehydrate persisted sessions from SQLite store so they survive restarts.
 	if err := m.RehydrateFromStore(); err != nil {
@@ -364,6 +357,20 @@ func (m *Manager) startSupervisor(repoPath string) {
 	if m.optimizer != nil {
 		m.supervisor.decisions = m.optimizer.decisions
 		m.supervisor.optimizer = m.optimizer
+	}
+	if m.researchGateway != nil {
+		rd := NewResearchDaemon(m.researchGateway, DefaultResearchDaemonConfig())
+		rd.SetBus(m.bus)
+		if m.optimizer != nil && m.optimizer.decisions != nil {
+			rd.SetDecisionLog(m.optimizer.decisions)
+		}
+		if m.cascade != nil {
+			rd.SetRouter(m.cascade)
+		}
+		m.supervisor.SetResearchDaemon(rd)
+	}
+	if m.crashRecovery != nil {
+		m.supervisor.SetCrashRecovery(m.crashRecovery)
 	}
 	ctx := context.Background()
 	m.supervisor.Start(ctx)
