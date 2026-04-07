@@ -264,6 +264,8 @@ func loadLogCmd(repoPath string) tea.Cmd {
 		lines, err := process.ReadFullLog(repoPath)
 		return LogLoadedMsg{Lines: lines, Err: err}
 	}
+}
+
 // Init returns the initial set of commands: repo scan, tick timer, slow tick timer, spinner, and process exit watcher.
 func (m Model) Init() tea.Cmd {
 	cmds := []tea.Cmd{
@@ -277,9 +279,6 @@ func (m Model) Init() tea.Cmd {
 		cmds = append(cmds, watchEventBus(m.EventBusCh))
 	}
 	return tea.Batch(cmds...)
-}
-		watchEventBus(m.EventBusCh),
-	)
 }
 
 // watchEventBus listens for events on the given channel and returns them as tea.Cmd.
@@ -633,4 +632,3 @@ func (m Model) findRepoByPath(path string) int {
 	}
 	return -1
 }
-
