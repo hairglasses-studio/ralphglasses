@@ -1,6 +1,11 @@
-version: 1
-plugin_root: ralphglasses
-skills:
-  - name: ralphglasses
-    claude_include_canonical: true
-    export_plugin: true
+{
+  "version": 1,
+  "plugin_root": "ralphglasses",
+  "skills": [
+    {
+      "name": "ralphglasses",
+      "claude_include_canonical": true,
+      "export_plugin": true
+    }
+  ]
+}
