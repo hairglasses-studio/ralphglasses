@@ -74,7 +74,7 @@ func NewClient(provider Provider, apiKey string, opts ...Option) (Client, error)
 		return newClaudeClient(apiKey, opts...), nil
 	case ProviderGemini:
 		return newGeminiClient(apiKey, opts...), nil
-	case ProviderOpenAI:
+	case ProviderOpenAI, "codex":
 		return newOpenAIClient(apiKey, opts...), nil
 	default:
 		return nil, fmt.Errorf("unsupported batch provider: %s", provider)

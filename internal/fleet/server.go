@@ -76,7 +76,10 @@ func NewCoordinator(nodeID, hostname string, port int, version string, bus *even
 		sessMgr:       sessMgr,
 		health:        NewHealthTracker(DefaultHealthConfig()),
 		budgetMgr:     NewBudgetManager(10.0),
-		router:        &LeastLoadedRouter{},
+		router: &ProviderAffinityRouter{
+			PreferredProvider: string(session.ProviderCodex),
+			Fallback:          &LeastLoadedRouter{},
+		},
 		retries:       NewRetryTracker(DefaultRetryPolicy()),
 		autoscaler:    NewAutoScaler(DefaultAutoScalerConfig()),
 		costPredictor: NewCostPredictor(0),

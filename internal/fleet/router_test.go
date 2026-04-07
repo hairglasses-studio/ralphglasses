@@ -327,3 +327,44 @@ func TestFilterHealthyEmpty(t *testing.T) {
 		t.Errorf("got %d, want 0", len(result))
 	}
 }
+
+func TestProviderAffinityRouter_PrefersCodex(t *testing.T) {
+	router := &ProviderAffinityRouter{
+		PreferredProvider: "codex",
+		Fallback:          &LeastLoadedRouter{},
+	}
+
+	workers := []WorkerCandidate{
+		{ID: "w-claude", Provider: "claude", ActiveTasks: 0, HealthState: HealthHealthy},
+		{ID: "w-codex", Provider: "codex", ActiveTasks: 2, HealthState: HealthHealthy},
+	}
+
+	id, err := router.SelectWorker(workers)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if id != "w-codex" {
+		t.Errorf("expected w-codex (preferred), got %s", id)
+	}
+}
+
+func TestProviderAffinityRouter_FallsBack(t *testing.T) {
+	router := &ProviderAffinityRouter{
+		PreferredProvider: "codex",
+		Fallback:          &LeastLoadedRouter{},
+	}
+
+	// No codex workers — should fall back
+	workers := []WorkerCandidate{
+		{ID: "w-claude", Provider: "claude", ActiveTasks: 0, HealthState: HealthHealthy},
+		{ID: "w-gemini", Provider: "gemini", ActiveTasks: 1, HealthState: HealthHealthy},
+	}
+
+	id, err := router.SelectWorker(workers)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if id != "w-claude" {
+		t.Errorf("expected w-claude (least loaded fallback), got %s", id)
+	}
+}
