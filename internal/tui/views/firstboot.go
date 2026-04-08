@@ -10,14 +10,16 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/firstboot"
 )
 
 // FirstBootConfig holds the collected configuration from the wizard.
 type FirstBootConfig struct {
-	Hostname    string            `json:"hostname"`
-	APIKeys     map[string]string `json:"api_keys"`
-	Autonomy    int               `json:"autonomy_level"`
-	FleetURL    string            `json:"fleet_coordinator_url,omitempty"`
+	Hostname string            `json:"hostname"`
+	APIKeys  map[string]string `json:"api_keys"`
+	Autonomy int               `json:"autonomy_level"`
+	FleetURL string            `json:"fleet_coordinator_url,omitempty"`
 }
 
 // FirstBootModel is a standalone BubbleTea model for first-boot setup.
@@ -31,7 +33,7 @@ type FirstBootModel struct {
 	confirmed bool
 	done      bool
 	err       error
-	cursor    int // for autonomy selector
+	cursor    int    // for autonomy selector
 	input     string // current text input buffer
 	inputKey  string // which key we're editing
 	width     int
@@ -42,8 +44,7 @@ type FirstBootModel struct {
 // NewFirstBootModel creates the wizard model.
 func NewFirstBootModel(configDir string) FirstBootModel {
 	if configDir == "" {
-		home, _ := os.UserHomeDir()
-		configDir = filepath.Join(home, ".ralphglasses")
+		configDir = firstboot.DefaultConfigDir()
 	}
 	return FirstBootModel{
 		maxSteps:  4,

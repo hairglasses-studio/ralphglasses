@@ -8,16 +8,28 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/appdir"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 )
 
-// DefaultCacheDir returns ~/.ralphglasses as the cache directory.
+// DefaultCacheDir returns the default scan cache directory.
 func DefaultCacheDir() string {
+	if legacy := legacyCacheDir(); legacy != "" {
+		return legacy
+	}
+	return appdir.CacheDir("ralphglasses")
+}
+
+func legacyCacheDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return filepath.Join(os.TempDir(), ".ralphglasses")
+		return ""
 	}
-	return filepath.Join(home, ".ralphglasses")
+	legacyDir := filepath.Join(home, ".ralphglasses")
+	if _, err := os.Stat(filepath.Join(legacyDir, "scan-cache.json")); err == nil {
+		return legacyDir
+	}
+	return ""
 }
 
 // cacheEntry is the on-disk representation of a single cached repo.

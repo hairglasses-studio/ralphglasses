@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/appdir"
 )
 
 type Profile struct {
@@ -18,7 +20,7 @@ type Profile struct {
 func DefaultConfigDir() string {
 	home, _ := os.UserHomeDir()
 	if home == "" {
-		home = "/tmp"
+		return appdir.ConfigDir("ralphglasses")
 	}
 	return filepath.Join(home, ".ralphglasses")
 }

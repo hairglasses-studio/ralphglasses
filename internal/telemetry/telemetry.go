@@ -6,17 +6,19 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/appdir"
 )
 
 // EventType identifies the category of telemetry event.
 type EventType string
 
 const (
-	EventSessionStart  EventType = "session_start"
-	EventSessionStop   EventType = "session_stop"
-	EventCrash         EventType = "crash"
-	EventBudgetHit     EventType = "budget_hit"
-	EventCircuitTrip   EventType = "circuit_trip"
+	EventSessionStart EventType = "session_start"
+	EventSessionStop  EventType = "session_stop"
+	EventCrash        EventType = "crash"
+	EventBudgetHit    EventType = "budget_hit"
+	EventCircuitTrip  EventType = "circuit_trip"
 )
 
 // Event is a single telemetry record.
@@ -46,13 +48,29 @@ type Writer struct {
 	path string
 }
 
-// NewWriter creates a writer targeting ~/.ralphglasses/telemetry.jsonl.
-func NewWriter() *Writer {
-	home, _ := os.UserHomeDir()
-	if home == "" {
-		home = "/tmp"
+// DefaultPath returns the default local telemetry JSONL path.
+func DefaultPath() string {
+	if legacy := legacyTelemetryPath(); legacy != "" {
+		return legacy
 	}
-	return &Writer{path: filepath.Join(home, ".ralphglasses", "telemetry.jsonl")}
+	return filepath.Join(appdir.StateDir("ralphglasses"), "telemetry.jsonl")
+}
+
+func legacyTelemetryPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	legacyPath := filepath.Join(home, ".ralphglasses", "telemetry.jsonl")
+	if _, err := os.Stat(legacyPath); err == nil {
+		return legacyPath
+	}
+	return ""
+}
+
+// NewWriter creates a writer targeting the default telemetry JSONL path.
+func NewWriter() *Writer {
+	return &Writer{path: DefaultPath()}
 }
 
 // Write appends an event to the JSONL file.

@@ -6,7 +6,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -24,11 +23,7 @@ type TelemetryOptions struct {
 }
 
 func DefaultTelemetryPath() string {
-	home, _ := os.UserHomeDir()
-	if home == "" {
-		home = "/tmp"
-	}
-	return filepath.Join(home, ".ralphglasses", "telemetry.jsonl")
+	return telemetry.DefaultPath()
 }
 
 func LoadTelemetry(opts TelemetryOptions) ([]telemetry.Event, error) {

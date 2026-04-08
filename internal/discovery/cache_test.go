@@ -171,11 +171,28 @@ func TestCachedScan_NonexistentRoot(t *testing.T) {
 }
 
 func TestNewScanCache_DefaultCacheDir(t *testing.T) {
-	t.Parallel()
-
+	xdg := t.TempDir()
+	t.Setenv("XDG_CACHE_HOME", xdg)
 	sc := NewScanCache("")
-	if sc.cacheDir == "" {
-		t.Fatal("expected non-empty default cache dir")
+	if got, want := sc.cacheDir, filepath.Join(xdg, "ralphglasses"); got != want {
+		t.Fatalf("cache dir = %q, want %q", got, want)
+	}
+}
+
+func TestDefaultCacheDir_LegacyFileWins(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CACHE_HOME", "")
+	legacyDir := filepath.Join(home, ".ralphglasses")
+	if err := os.MkdirAll(legacyDir, 0o755); err != nil {
+		t.Fatalf("mkdir legacy dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(legacyDir, "scan-cache.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatalf("write legacy cache: %v", err)
+	}
+
+	if got, want := DefaultCacheDir(), legacyDir; got != want {
+		t.Fatalf("DefaultCacheDir() = %q, want %q", got, want)
 	}
 }
 

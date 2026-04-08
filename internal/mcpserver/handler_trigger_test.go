@@ -386,3 +386,13 @@ func TestHandleScheduleCreate_DisableNotFound(t *testing.T) {
 		t.Fatalf("expected INVALID_PARAMS error code, got: %s", text)
 	}
 }
+
+func TestSchedulesPath_FallsBackToStateDirWithoutHome(t *testing.T) {
+	t.Setenv("HOME", "")
+	xdg := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", xdg)
+
+	if got, want := schedulesPath(), filepath.Join(xdg, "ralph", "schedules.json"); got != want {
+		t.Fatalf("schedulesPath() = %q, want %q", got, want)
+	}
+}

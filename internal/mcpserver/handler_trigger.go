@@ -11,6 +11,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/appdir"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -374,10 +375,10 @@ func (s *Server) handleScheduleCreate(_ context.Context, req mcp.CallToolRequest
 // It is a variable so tests can override it.
 var schedulesPath = func() string {
 	home, err := os.UserHomeDir()
-	if err != nil {
-		home = "/tmp"
+	if err == nil && home != "" {
+		return filepath.Join(home, ".ralph", "schedules.json")
 	}
-	return filepath.Join(home, ".ralph", "schedules.json")
+	return filepath.Join(appdir.StateDir("ralph"), "schedules.json")
 }
 
 func (ss *scheduleStore) load() ([]ScheduleEntry, error) {

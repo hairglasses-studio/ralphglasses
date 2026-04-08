@@ -6,8 +6,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/firstboot"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
-	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
 
 var firstbootCmd = &cobra.Command{
@@ -20,9 +20,9 @@ Writes configuration to ~/.ralphglasses/config.json and creates a
 .firstboot-done marker file to prevent re-running.
 
 Typically launched automatically by the ralphglasses-firstboot.service
-systemd unit on first boot.`,
+	systemd unit on first boot.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		configDir := util.ExpandHome("~/.ralphglasses")
+		configDir := firstboot.DefaultConfigDir()
 		m := views.NewFirstBootModel(configDir)
 		p := tea.NewProgram(m)
 		finalModel, err := p.Run()
