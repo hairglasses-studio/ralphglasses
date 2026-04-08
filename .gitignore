@@ -122,5 +122,7 @@ my_env/
 .ralph/benchmarks/
 site/
 gendoc
+!tools/gendoc/
+!tools/gendoc/*.go
 .env
 resume.pdf
