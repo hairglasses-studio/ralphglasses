@@ -1,6 +1,7 @@
 package mcpserver
 
 import (
+	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver/descriptions"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -10,7 +11,7 @@ func (s *Server) buildTriggerGroup() ToolGroup {
 		Description: "External agent triggering and cron-based scheduling",
 		Tools: []ToolEntry{
 			{mcp.NewTool("ralphglasses_trigger_webhook",
-				mcp.WithDescription("Trigger an agent session from an external source (webhook, API, or another agent). Creates a trigger record and optionally launches immediately."),
+				mcp.WithDescription(descriptions.DescRalphglassesTriggerWebhook),
 				mcp.WithString("prompt", mcp.Required(), mcp.Description("Task prompt for the agent session")),
 				mcp.WithString("tenant_id", mcp.Description("Workspace tenant ID (default: _default)")),
 				mcp.WithString("agent_type", mcp.Required(), mcp.Description("Agent type to trigger"),
@@ -24,7 +25,7 @@ func (s *Server) buildTriggerGroup() ToolGroup {
 				mcp.WithString("repo", mcp.Description("Repo name (required when launch=true)")),
 			), s.handleTriggerWebhook},
 			{mcp.NewTool("ralphglasses_schedule_create",
-				mcp.WithDescription("Create, list, enable, or disable cron-based schedules. When repo is provided, schedules are persisted to that repo's .ralph/schedules/*.json; otherwise the legacy ~/.ralph/schedules.json store is used."),
+				mcp.WithDescription(descriptions.DescRalphglassesScheduleCreate),
 				mcp.WithString("action", mcp.Description("Action: create (default), list, enable, disable")),
 				mcp.WithString("repo", mcp.Description("Repo name or path for canonical repo-local schedules")),
 				mcp.WithString("prompt", mcp.Description("Task prompt (required for create)")),

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	promptsections "github.com/hairglasses-studio/mcpkit/prompts"
 )
 
 // PromptCacheConfig configures prompt caching behavior.
@@ -62,20 +64,19 @@ func NewPromptCacheTracker(config PromptCacheConfig) *PromptCacheTracker {
 }
 
 // AnalyzePrompt checks if a prompt has a cacheable prefix and returns
-// the optimized prompt with stable prefix first for maximum cache hits.
-// Returns the (potentially reordered) prompt and whether caching is beneficial.
+// the optimized prompt with stable sections first for maximum cache hits.
+// Returns the sectioned prompt and whether caching is beneficial.
 func (t *PromptCacheTracker) AnalyzePrompt(repoPath string, provider Provider, prompt string) (string, bool) {
 	if !t.config.Enabled || len(prompt) < t.config.MinPrefixLen || !ShouldCachePrompt(provider, len(prompt)) {
 		return prompt, false
 	}
 
-	// Extract cacheable components (system prompt, tool definitions, CLAUDE.md)
-	prefix, variable := splitCacheablePrefix(repoPath, prompt)
-	if len(prefix) < t.config.MinPrefixLen {
+	optimizedPrompt, cacheBoundaryOffset := buildSectionedPrompt(repoPath, prompt)
+	if cacheBoundaryOffset < t.config.MinPrefixLen {
 		return prompt, false
 	}
 
-	hash := hashPrefix(prefix)
+	hash := hashPrefix(optimizedPrompt[:cacheBoundaryOffset])
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -89,7 +90,7 @@ func (t *PromptCacheTracker) AnalyzePrompt(repoPath string, provider Provider, p
 		entry.lastSeen = time.Now()
 		t.stats.EstimatedHits++
 		if savingsRate := assumedCacheSavingsRate(provider); savingsRate > 0 {
-			estimatedTokens := float64(len(prefix)) / 4.0 // rough token estimate
+			estimatedTokens := float64(cacheBoundaryOffset) / 4.0 // rough token estimate
 			inputPrice, _ := providerTokenPricing(provider)
 			t.stats.EstimatedSaved += estimatedTokens / 1_000_000 * inputPrice * savingsRate
 		}
@@ -107,11 +108,7 @@ func (t *PromptCacheTracker) AnalyzePrompt(repoPath string, provider Provider, p
 		t.stats.HitRate = float64(t.stats.EstimatedHits) / float64(t.stats.CacheEligible) * 100
 	}
 
-	// Reorder: stable prefix first, then variable content
-	if variable != "" {
-		return prefix + "\n\n" + variable, true
-	}
-	return prompt, true
+	return optimizedPrompt, true
 }
 
 // Stats returns current cache statistics.
@@ -136,10 +133,52 @@ func ShouldCachePrompt(provider Provider, promptLen int) bool {
 	}
 }
 
-// splitCacheablePrefix separates the stable (cacheable) prefix from variable content.
-// Stable content: CLAUDE.md, system prompts, tool schemas.
-// Variable content: user-specific prompt, dynamic context.
-func splitCacheablePrefix(repoPath string, prompt string) (prefix, variable string) {
+type promptCacheSections struct {
+	repoInstructions string
+	stablePrompt     string
+	variablePrompt   string
+}
+
+// buildSectionedPrompt converts the prompt into named sections so cacheable
+// content stays in a deterministic prefix. The current prompt assembly only
+// exposes three concrete buckets: repo instruction files, stable prompt
+// content, and variable task context.
+func buildSectionedPrompt(repoPath string, prompt string) (string, int) {
+	sections := classifyPromptSections(repoPath, prompt)
+	builder := promptsections.NewSectionedPrompt()
+
+	if sections.repoInstructions != "" {
+		builder.Add(promptsections.Section{
+			Name:      "claude_md",
+			Content:   sections.repoInstructions,
+			Cacheable: true,
+		})
+	}
+	if sections.stablePrompt != "" {
+		builder.Add(promptsections.Section{
+			Name:      "tool_schemas",
+			Content:   sections.stablePrompt,
+			Cacheable: true,
+		})
+	}
+	if sections.variablePrompt != "" {
+		builder.Add(promptsections.Section{
+			Name:      "loop_context",
+			Content:   sections.variablePrompt,
+			Cacheable: false,
+		})
+	}
+
+	if len(builder.Sections()) == 0 {
+		return prompt, 0
+	}
+	return builder.Build()
+}
+
+// classifyPromptSections separates the stable (cacheable) prefix from variable
+// content. Stable content includes repo instruction files, system prompts, and
+// tool/schema-style sections. Variable content includes task-specific context.
+func classifyPromptSections(repoPath string, prompt string) promptCacheSections {
 	var stableParts []string
 	var variableParts []string
 
@@ -182,7 +221,17 @@ func splitCacheablePrefix(repoPath string, prompt string) (prefix, variable stri
 		}
 	}
 
-	// Also try to include repo-scoped instruction files as stable prefixes.
+	return promptCacheSections{
+		repoInstructions: readRepoInstructionPrefix(repoPath, prompt),
+		stablePrompt:     strings.TrimSpace(strings.Join(stableParts, "\n")),
+		variablePrompt:   strings.TrimSpace(strings.Join(variableParts, "\n")),
+	}
+}
+
+// readRepoInstructionPrefix prepends repo-scoped instruction files when their
+// contents are not already present in the prompt.
+func readRepoInstructionPrefix(repoPath string, prompt string) string {
+	var repoInstructions []string
 	for _, name := range []string{"AGENTS.md", "CLAUDE.md", "GEMINI.md"} {
 		path := filepath.Join(repoPath, name)
 		content, err := os.ReadFile(path)
@@ -191,13 +240,10 @@ func splitCacheablePrefix(repoPath string, prompt string) (prefix, variable stri
 		}
 		snippet := string(content[:min(100, len(content))])
 		if !strings.Contains(prompt, snippet) {
-			stableParts = append([]string{string(content)}, stableParts...)
+			repoInstructions = append(repoInstructions, string(content))
 		}
 	}
-
-	prefix = strings.TrimSpace(strings.Join(stableParts, "\n"))
-	variable = strings.TrimSpace(strings.Join(variableParts, "\n"))
-	return prefix, variable
+	return strings.TrimSpace(strings.Join(repoInstructions, "\n\n"))
 }
 
 func hashPrefix(prefix string) string {

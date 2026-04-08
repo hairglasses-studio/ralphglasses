@@ -61,13 +61,20 @@ type CompactionResult struct {
 	Timestamp      time.Time          `json:"timestamp"`
 }
 
+// maxConsecutiveCompactFailures is the circuit breaker threshold.
+// After this many consecutive compaction failures, AutoCompactIfNeeded
+// returns immediately without attempting another compaction.
+// Pattern 18: Autocompact Circuit Breaker (from whiteclaw/autoCompact.ts).
+const maxConsecutiveCompactFailures = 3
+
 // ContextCompactor compresses conversation history to fit within token limits.
 // It orchestrates multiple strategies and tracks compaction history for
 // monitoring and debugging.
 type ContextCompactor struct {
-	mu      sync.Mutex
-	config  CompactionConfig
-	history []CompactionResult
+	mu                  sync.Mutex
+	config              CompactionConfig
+	history             []CompactionResult
+	consecutiveFailures int // Pattern 18: circuit breaker counter
 }
 
 // NewContextCompactor creates a compactor with the given config.
@@ -461,4 +468,110 @@ func copyMessages(msgs []Message) []Message {
 // for external callers that want to estimate arbitrary text.
 func EstimateTokensForText(text string) int {
 	return EstimateTokens(text)
+}
+
+// --- Pattern 18: Autocompact Circuit Breaker ---
+
+// AutoCompactIfNeeded checks if compaction is needed and applies it,
+// respecting the circuit breaker. Returns false without attempting
+// compaction after maxConsecutiveCompactFailures consecutive failures.
+func (cc *ContextCompactor) AutoCompactIfNeeded(messages []Message) (CompactionResult, bool) {
+	cc.mu.Lock()
+	if cc.consecutiveFailures >= maxConsecutiveCompactFailures {
+		cc.mu.Unlock()
+		return CompactionResult{}, false
+	}
+	cc.mu.Unlock()
+
+	if !cc.NeedsCompaction(messages) {
+		return CompactionResult{}, false
+	}
+
+	result := cc.Compact(messages)
+	if result.Reduction <= 0 {
+		cc.RecordFailure()
+		return result, false
+	}
+	cc.ResetFailures()
+	return result, true
+}
+
+// RecordFailure increments the consecutive failure counter.
+func (cc *ContextCompactor) RecordFailure() {
+	cc.mu.Lock()
+	defer cc.mu.Unlock()
+	cc.consecutiveFailures++
+}
+
+// ResetFailures resets the consecutive failure counter to zero.
+func (cc *ContextCompactor) ResetFailures() {
+	cc.mu.Lock()
+	defer cc.mu.Unlock()
+	cc.consecutiveFailures = 0
+}
+
+// ConsecutiveFailures returns the current failure count.
+func (cc *ContextCompactor) ConsecutiveFailures() int {
+	cc.mu.Lock()
+	defer cc.mu.Unlock()
+	return cc.consecutiveFailures
+}
+
+// CircuitBroken returns true if the circuit breaker has tripped.
+func (cc *ContextCompactor) CircuitBroken() bool {
+	cc.mu.Lock()
+	defer cc.mu.Unlock()
+	return cc.consecutiveFailures >= maxConsecutiveCompactFailures
+}
+
+// --- Pattern 19: Micro-Compaction / FRC (Function Result Clearing) ---
+
+// compactableToolRoles lists the message roles eligible for FRC.
+var compactableToolRoles = map[string]bool{
+	"tool": true,
+}
+
+// ClearOldToolResults replaces the content of old tool result messages
+// with a placeholder, preserving the tool call record (name, args) but
+// reclaiming the token cost of verbose output. Only messages older than
+// keepRecentTurns are affected. Returns the number of results cleared.
+func (cc *ContextCompactor) ClearOldToolResults(messages []Message, keepRecentTurns int) ([]Message, int) {
+	if keepRecentTurns <= 0 {
+		keepRecentTurns = cc.config.KeepRecentTurns
+	}
+
+	out := copyMessages(messages)
+	cleared := 0
+
+	// Find the boundary: messages before this index are "old".
+	boundary := len(out)
+	turns := 0
+	for i := len(out) - 1; i >= 0; i-- {
+		if out[i].Role == "user" {
+			turns++
+			if turns >= keepRecentTurns {
+				boundary = i
+				break
+			}
+		}
+	}
+
+	for i := 0; i < boundary; i++ {
+		m := &out[i]
+		if !compactableToolRoles[m.Role] {
+			continue
+		}
+		// Skip already-cleared results.
+		if strings.HasPrefix(m.Content, "[Old tool result content cleared") {
+			continue
+		}
+		// Skip small results (not worth clearing).
+		if EstimateTokens(m.Content) < 50 {
+			continue
+		}
+		m.Content = fmt.Sprintf("[Old tool result content cleared: %s]", m.ToolName)
+		cleared++
+	}
+
+	return out, cleared
 }

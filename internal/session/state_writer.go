@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
-const activeStateFile = "/tmp/ralphglasses-active.json"
+var activeStateFile = filepath.Join(os.TempDir(), "ralphglasses-active.json")
 
 // ActiveState is the on-disk representation of the current session state,
 // designed for consumption by starship prompt and external tooling.
@@ -32,8 +33,13 @@ func WriteActiveState(s *Session) error {
 		return fmt.Errorf("marshal active state: %w", err)
 	}
 
-	// Atomic write: temp file + rename.
-	tmp, err := os.CreateTemp(os.TempDir(), "ralphglasses-active-*.tmp")
+	targetDir := filepath.Dir(activeStateFile)
+	if err := os.MkdirAll(targetDir, 0o755); err != nil {
+		return fmt.Errorf("create active state dir: %w", err)
+	}
+
+	// Atomic write: temp file + rename in the target directory.
+	tmp, err := os.CreateTemp(targetDir, filepath.Base(activeStateFile)+".*.tmp")
 	if err != nil {
 		return fmt.Errorf("create temp active state: %w", err)
 	}

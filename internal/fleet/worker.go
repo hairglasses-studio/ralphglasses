@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
@@ -21,6 +22,7 @@ import (
 
 // WorkerAgent runs on each worker node, handling registration, heartbeat, and work execution.
 type WorkerAgent struct {
+	nodeMu   sync.RWMutex
 	nodeID   string
 	hostname string
 	port     int
@@ -72,7 +74,7 @@ func (w *WorkerAgent) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	w.nodeID = workerID
+	w.setNodeID(workerID)
 	util.Debug.Debugf("registered as worker %s", workerID)
 
 	// Run heartbeat, poll, and event forwarding concurrently
@@ -105,8 +107,9 @@ func (w *WorkerAgent) heartbeatLoop(ctx context.Context, repos []string, provide
 				s.Unlock()
 			}
 
+			workerID := w.NodeID()
 			if err := w.client.Heartbeat(ctx, HeartbeatPayload{
-				WorkerID:       w.nodeID,
+				WorkerID:       workerID,
 				ActiveSessions: active,
 				SpentUSD:       spent,
 				AvailableSlots: 4 - active,
@@ -114,7 +117,7 @@ func (w *WorkerAgent) heartbeatLoop(ctx context.Context, repos []string, provide
 				Providers:      providers,
 				Load:           float64(active) / 4.0,
 			}); err != nil {
-				slog.Error("fleet worker: heartbeat failed", "worker", w.nodeID, "err", err)
+				slog.Error("fleet worker: heartbeat failed", "worker", workerID, "err", err)
 			}
 		}
 	}
@@ -129,7 +132,7 @@ func (w *WorkerAgent) pollLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			item, err := w.client.PollWork(ctx, w.nodeID)
+			item, err := w.client.PollWork(ctx, w.NodeID())
 			if err != nil {
 				util.Debug.Debugf("poll error: %v", err)
 				continue
@@ -144,6 +147,7 @@ func (w *WorkerAgent) pollLoop(ctx context.Context) {
 
 func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 	util.Debug.Debugf("executing work %s: %s", item.ID, item.RepoName)
+	workerID := w.NodeID()
 
 	repoPath := item.RepoPath
 	if repoPath == "" {
@@ -153,7 +157,7 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 				WorkItemID: item.ID,
 				Status:     WorkFailed,
 				Error:      err.Error(),
-				Result:     structuredFailureResult(item, w.nodeID, session.TeamTaskNeedsRetry, err.Error(), ""),
+				Result:     structuredFailureResult(item, workerID, session.TeamTaskNeedsRetry, err.Error(), ""),
 			}); cErr != nil {
 				slog.Error("fleet worker: complete-work (resolve repo) failed", "item", item.ID, "err", cErr)
 			}
@@ -174,7 +178,7 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 				WorkItemID: item.ID,
 				Status:     WorkFailed,
 				Error:      err.Error(),
-				Result:     structuredFailureResult(item, w.nodeID, session.TeamTaskNeedsRetry, err.Error(), ""),
+				Result:     structuredFailureResult(item, workerID, session.TeamTaskNeedsRetry, err.Error(), ""),
 			}); cErr != nil {
 				slog.Error("fleet worker: complete-work (prepare worktree) failed", "item", item.ID, "err", cErr)
 			}
@@ -212,7 +216,7 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 			WorkItemID: item.ID,
 			Status:     WorkFailed,
 			Error:      err.Error(),
-			Result:     structuredFailureResult(item, w.nodeID, session.TeamTaskNeedsRetry, err.Error(), ""),
+			Result:     structuredFailureResult(item, workerID, session.TeamTaskNeedsRetry, err.Error(), ""),
 		}); cErr != nil {
 			slog.Error("fleet worker: complete-work (launch fail) failed", "item", item.ID, "err", cErr)
 		}
@@ -222,7 +226,7 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 	if cErr := w.client.StartWork(ctx, WorkStartPayload{
 		WorkItemID:     item.ID,
 		SessionID:      sess.ID,
-		WorkerNodeID:   w.nodeID,
+		WorkerNodeID:   workerID,
 		WorktreePath:   emptyIfSame(worktreePath, repoPath),
 		WorktreeBranch: worktreeBranch,
 		HeadSHA:        strings.TrimSpace(headSHA),
@@ -262,7 +266,7 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 					Output:     lastOutput,
 				}
 				if item.Source == WorkSourceStructuredCodexTeam {
-					populateStructuredResult(ctx, result, item, w.nodeID, repoPath, worktreePath, worktreeBranch, lastOutput)
+					populateStructuredResult(ctx, result, item, workerID, repoPath, worktreePath, worktreeBranch, lastOutput)
 				}
 				if cErr := w.client.CompleteWork(ctx, WorkCompletePayload{
 					WorkItemID: item.ID,
@@ -283,7 +287,7 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 				if item.Source == WorkSourceStructuredCodexTeam {
 					result.TaskStatus = session.TeamTaskNeedsRetry
 					result.Summary = firstNonEmpty(exitReason, "worker failed")
-					result.WorkerNodeID = w.nodeID
+					result.WorkerNodeID = workerID
 					result.WorktreePath = emptyIfSame(worktreePath, repoPath)
 					result.WorktreeBranch = worktreeBranch
 				}
@@ -304,7 +308,7 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 						WorkItemID: item.ID,
 						Status:     WorkFailed,
 						Error:      msg,
-						Result:     structuredFailureResult(item, w.nodeID, session.TeamTaskNeedsRetry, msg, worktreePath),
+						Result:     structuredFailureResult(item, workerID, session.TeamTaskNeedsRetry, msg, worktreePath),
 					}); cErr != nil {
 						slog.Error("fleet worker: complete-work (stall) failed", "item", item.ID, "err", cErr)
 					}
@@ -335,13 +339,14 @@ func (w *WorkerAgent) eventForwardLoop(ctx context.Context) {
 				continue
 			}
 
+			workerID := w.NodeID()
 			batch := EventBatch{
-				WorkerID: w.nodeID,
+				WorkerID: workerID,
 				Events:   make([]FleetEvent, len(evts)),
 			}
 			for i, e := range evts {
 				batch.Events[i] = FleetEvent{
-					NodeID:    w.nodeID,
+					NodeID:    workerID,
 					Type:      string(e.Type),
 					Timestamp: e.Timestamp,
 					RepoName:  e.RepoName,
@@ -351,7 +356,7 @@ func (w *WorkerAgent) eventForwardLoop(ctx context.Context) {
 				}
 			}
 			if err := w.client.SendEvents(ctx, batch); err != nil {
-				slog.Error("fleet worker: send events failed", "worker", w.nodeID, "events", len(batch.Events), "err", err)
+				slog.Error("fleet worker: send events failed", "worker", workerID, "events", len(batch.Events), "err", err)
 			}
 		}
 	}
@@ -578,7 +583,15 @@ func (w *WorkerAgent) discoverProviders() []session.Provider {
 
 // NodeID returns the worker's assigned node ID (empty before registration).
 func (w *WorkerAgent) NodeID() string {
+	w.nodeMu.RLock()
+	defer w.nodeMu.RUnlock()
 	return w.nodeID
+}
+
+func (w *WorkerAgent) setNodeID(nodeID string) {
+	w.nodeMu.Lock()
+	defer w.nodeMu.Unlock()
+	w.nodeID = nodeID
 }
 
 // DiscoverTailscaleIP gets the node's Tailscale IP, or empty string if unavailable.

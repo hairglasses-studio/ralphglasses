@@ -225,6 +225,99 @@ func TestNeedsCompactionForModel(t *testing.T) {
 	}
 }
 
+// --- Pattern 18: Autocompact Circuit Breaker ---
+
+func TestAutoCompactIfNeeded_CircuitBreaker(t *testing.T) {
+	t.Parallel()
+	cc := NewContextCompactor(CompactionConfig{MaxTokens: 1}) // very low → always needs compaction
+
+	// Messages that are already minimal — compaction can't reduce further.
+	msgs := []Message{{Role: "user", Content: "x"}}
+
+	// First 3 attempts should try (and fail since minimal messages can't reduce).
+	for i := 0; i < maxConsecutiveCompactFailures; i++ {
+		cc.RecordFailure()
+	}
+
+	// After 3 failures, circuit should be broken.
+	if !cc.CircuitBroken() {
+		t.Fatal("expected circuit to be broken after 3 failures")
+	}
+
+	// AutoCompactIfNeeded should return false without attempting.
+	_, attempted := cc.AutoCompactIfNeeded(msgs)
+	if attempted {
+		t.Fatal("expected no attempt after circuit break")
+	}
+
+	// Reset should restore the circuit.
+	cc.ResetFailures()
+	if cc.CircuitBroken() {
+		t.Fatal("expected circuit to be restored after reset")
+	}
+	if cc.ConsecutiveFailures() != 0 {
+		t.Fatalf("expected 0 failures after reset, got %d", cc.ConsecutiveFailures())
+	}
+}
+
+// --- Pattern 19: Micro-Compaction / FRC ---
+
+func TestClearOldToolResults(t *testing.T) {
+	t.Parallel()
+	cc := NewContextCompactor(CompactionConfig{KeepRecentTurns: 2})
+	msgs := []Message{
+		{Role: "user", Content: "read the file"},
+		{Role: "tool", Content: strings.Repeat("large output ", 100), ToolName: "FileRead"},
+		{Role: "assistant", Content: "I see the file contents"},
+		{Role: "user", Content: "now edit it"},
+		{Role: "tool", Content: strings.Repeat("edit result ", 100), ToolName: "FileEdit"},
+		{Role: "assistant", Content: "Done editing"},
+		// Recent turns (kept):
+		{Role: "user", Content: "check status"},
+		{Role: "tool", Content: strings.Repeat("status output ", 100), ToolName: "Bash"},
+		{Role: "assistant", Content: "All good"},
+		{Role: "user", Content: "thanks"},
+	}
+
+	result, cleared := cc.ClearOldToolResults(msgs, 2)
+	if cleared != 2 {
+		t.Fatalf("expected 2 tool results cleared, got %d", cleared)
+	}
+
+	// Old tool results should be cleared.
+	if !strings.HasPrefix(result[1].Content, "[Old tool result content cleared") {
+		t.Fatalf("expected cleared placeholder, got %q", result[1].Content)
+	}
+	if !strings.HasPrefix(result[4].Content, "[Old tool result content cleared") {
+		t.Fatalf("expected cleared placeholder, got %q", result[4].Content)
+	}
+
+	// Recent tool result should be preserved.
+	if strings.HasPrefix(result[7].Content, "[Old tool result content cleared") {
+		t.Fatal("recent tool result should not be cleared")
+	}
+
+	// Original messages should be unmodified (copy semantics).
+	if strings.HasPrefix(msgs[1].Content, "[Old tool result content cleared") {
+		t.Fatal("original messages should not be modified")
+	}
+}
+
+func TestClearOldToolResults_SkipsSmall(t *testing.T) {
+	t.Parallel()
+	cc := NewContextCompactor(CompactionConfig{KeepRecentTurns: 1})
+	msgs := []Message{
+		{Role: "user", Content: "check"},
+		{Role: "tool", Content: "ok", ToolName: "Bash"}, // tiny — should not be cleared
+		{Role: "user", Content: "done"},
+	}
+
+	_, cleared := cc.ClearOldToolResults(msgs, 1)
+	if cleared != 0 {
+		t.Fatalf("expected 0 cleared for small results, got %d", cleared)
+	}
+}
+
 func TestSetStrategy(t *testing.T) {
 	t.Parallel()
 	cc := NewContextCompactor(DefaultCompactionConfig())

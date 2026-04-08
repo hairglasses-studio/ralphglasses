@@ -269,3 +269,43 @@ func TestPromptCacheTracker_AGENTSmdPrefixForCodex(t *testing.T) {
 		t.Error("expected AGENTS.md content to appear in result")
 	}
 }
+
+func TestBuildSectionedPrompt_BoundaryIncludesSeparator(t *testing.T) {
+	t.Parallel()
+
+	stable := "## Instructions\n" + strings.TrimRight(strings.Repeat("- keep the plan tight\n", 40), "\n")
+	variable := "implement the task"
+
+	built, offset := buildSectionedPrompt(t.TempDir(), stable+"\n"+variable)
+	if offset != len(stable)+1 {
+		t.Fatalf("expected boundary %d, got %d", len(stable)+1, offset)
+	}
+	if got := built[:offset]; got != stable+"\n" {
+		t.Fatalf("unexpected cacheable prefix %q", got)
+	}
+	if got := built[offset:]; got != variable {
+		t.Fatalf("unexpected variable suffix %q", got)
+	}
+}
+
+func TestBuildSectionedPrompt_RepoInstructionsLeadStablePrefix(t *testing.T) {
+	t.Parallel()
+
+	repoDir := t.TempDir()
+	agentsContent := "# Repo Instructions\n" + strings.TrimRight(strings.Repeat("- prefer safe edits\n", 40), "\n")
+	if err := os.WriteFile(filepath.Join(repoDir, "AGENTS.md"), []byte(agentsContent), 0o644); err != nil {
+		t.Fatalf("failed to write AGENTS.md: %v", err)
+	}
+
+	stable := "## Constraints\n" + strings.TrimRight(strings.Repeat("- preserve behavior\n", 40), "\n")
+	variable := "ship the fix"
+
+	built, offset := buildSectionedPrompt(repoDir, stable+"\n"+variable)
+	if !strings.HasPrefix(built, agentsContent+"\n"+stable+"\n") {
+		t.Fatalf("expected repo instructions and stable section first, got %q", built[:min(len(built), 120)])
+	}
+	expectedBoundary := len(agentsContent) + 1 + len(stable) + 1
+	if offset != expectedBoundary {
+		t.Fatalf("expected boundary %d, got %d", expectedBoundary, offset)
+	}
+}

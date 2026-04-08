@@ -3,11 +3,24 @@ package session
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
 
+func useTempActiveStateFile(t *testing.T) string {
+	t.Helper()
+
+	origActiveStateFile := activeStateFile
+	activeStateFile = filepath.Join(t.TempDir(), "ralphglasses-active.json")
+	t.Cleanup(func() { activeStateFile = origActiveStateFile })
+	return activeStateFile
+}
+
 func TestStateWriterWriteActiveState(t *testing.T) {
+	activePath := useTempActiveStateFile(t)
+
 	// Clean up after test.
 	t.Cleanup(func() { os.Remove(activeStateFile) })
 
@@ -62,7 +75,7 @@ func TestStateWriterWriteActiveState(t *testing.T) {
 				t.Fatalf("WriteActiveState() error: %v", err)
 			}
 
-			data, err := os.ReadFile(activeStateFile)
+			data, err := os.ReadFile(activePath)
 			if err != nil {
 				t.Fatalf("failed to read active state file: %v", err)
 			}
@@ -89,6 +102,8 @@ func TestStateWriterWriteActiveState(t *testing.T) {
 }
 
 func TestStateWriterRemoveActiveState(t *testing.T) {
+	activePath := useTempActiveStateFile(t)
+
 	// Write a state file first.
 	s := &Session{
 		RepoName: "test-repo",
@@ -100,25 +115,28 @@ func TestStateWriterRemoveActiveState(t *testing.T) {
 	}
 
 	// Verify it exists.
-	if _, err := os.Stat(activeStateFile); err != nil {
+	if _, err := os.Stat(activePath); err != nil {
 		t.Fatalf("state file should exist before removal: %v", err)
 	}
 
 	RemoveActiveState()
 
 	// Verify it's gone.
-	if _, err := os.Stat(activeStateFile); !os.IsNotExist(err) {
+	if _, err := os.Stat(activePath); !os.IsNotExist(err) {
 		t.Fatalf("state file should not exist after removal, got err: %v", err)
 	}
 }
 
 func TestStateWriterRemoveActiveStateIdempotent(t *testing.T) {
+	activePath := useTempActiveStateFile(t)
+
 	// Removing when file doesn't exist should not panic.
-	os.Remove(activeStateFile) // ensure it doesn't exist
+	os.Remove(activePath) // ensure it doesn't exist
 	RemoveActiveState()        // should not panic
 }
 
 func TestStateWriterAtomicWrite(t *testing.T) {
+	activePath := useTempActiveStateFile(t)
 	t.Cleanup(func() { os.Remove(activeStateFile) })
 
 	s := &Session{
@@ -135,7 +153,7 @@ func TestStateWriterAtomicWrite(t *testing.T) {
 	}
 
 	// Verify the file is valid JSON (atomic write should never produce partial content).
-	data, err := os.ReadFile(activeStateFile)
+	data, err := os.ReadFile(activePath)
 	if err != nil {
 		t.Fatalf("failed to read state file: %v", err)
 	}
@@ -150,15 +168,14 @@ func TestStateWriterAtomicWrite(t *testing.T) {
 	}
 
 	// Verify no temp files were left behind.
-	entries, err := os.ReadDir(os.TempDir())
+	entries, err := os.ReadDir(filepath.Dir(activePath))
 	if err != nil {
 		t.Fatalf("failed to read temp dir: %v", err)
 	}
+	tmpPrefix := filepath.Base(activePath) + "."
 	for _, e := range entries {
-		if len(e.Name()) > 20 && e.Name()[:21] == "ralphglasses-active-" {
-			if ext := e.Name()[len(e.Name())-4:]; ext == ".tmp" {
-				t.Errorf("leftover temp file found: %s", e.Name())
-			}
+		if strings.HasPrefix(e.Name(), tmpPrefix) && strings.HasSuffix(e.Name(), ".tmp") {
+			t.Errorf("leftover temp file found: %s", e.Name())
 		}
 	}
 }

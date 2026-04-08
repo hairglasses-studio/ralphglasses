@@ -166,6 +166,10 @@ func TestCircuitBreakerHalfOpenFailure(t *testing.T) {
 }
 
 func TestCircuitBreakerWriteStateFile(t *testing.T) {
+	origCoordDir := coordDir
+	coordDir = t.TempDir()
+	t.Cleanup(func() { coordDir = origCoordDir })
+
 	cb := NewCircuitBreaker(3, 5*time.Minute, 60*time.Second)
 	cb.RecordFailure()
 

@@ -1,0 +1,28 @@
+package descriptions
+
+const (
+	DescRalphglassesScan             = "Scan for ralph-enabled repos and return their current status"
+	DescRalphglassesList             = "List all discovered repos with status summary"
+	DescRalphglassesStatus           = "Get detailed status for a specific repo including loop status, circuit breaker, progress, and config"
+	DescRalphglassesStart            = "Start a ralph loop for a repo"
+	DescRalphglassesStop             = "Stop a running ralph loop for a repo"
+	DescRalphglassesStopAll          = "Stop all running ralph loops"
+	DescRalphglassesPause            = "Pause or resume a running ralph loop for a `repo`"
+	DescRalphglassesLogs             = "Get recent log lines from a repo's ralph log"
+	DescRalphglassesConfig           = "Get or set .ralphrc config values for a repo"
+	DescRalphglassesConfigBulk       = "Get/set .ralphrc `key` values across multiple repos"
+	DescRalphglassesDoctor           = "Run CLI-style environment and workspace readiness checks: binaries, config, state dir, sqlite, scan path, disk, and API keys"
+	DescRalphglassesValidate         = "Validate .ralphrc files across one repo or the full scan path"
+	DescRalphglassesConfigSchema     = "List known config keys with type and constraint metadata"
+	DescRalphglassesDebugBundle      = "Build a sanitized debug bundle matching the CLI debug-bundle workflow"
+	DescRalphglassesThemeExport      = "Export a named theme in ghostty, starship, or k9s format"
+	DescRalphglassesTelemetryExport  = "Export local telemetry data as JSON or CSV with optional filtering"
+	DescRalphglassesFirstbootProfile = "Read, update, validate, or mark done the thin-client firstboot profile"
+	DescRalphglassesTasksGet         = "Get status of an async task by `task_id` — poll for long-running operations (loop_start, fleet_submit, self_improve)"
+	DescRalphglassesTasksList        = "List all async tasks with optional state filter"
+	DescRalphglassesTasksCancel      = "Cancel a running async task by `task_id`"
+	DescRalphglassesPluginList       = "List all registered plugins with name, version, status, and type (builtin/yaml/grpc)"
+	DescRalphglassesPluginInfo       = "Show detailed information for a specific plugin"
+	DescRalphglassesPluginEnable     = "Enable a disabled plugin"
+	DescRalphglassesPluginDisable    = "Disable an active plugin"
+)

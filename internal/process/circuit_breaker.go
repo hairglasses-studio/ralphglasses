@@ -22,10 +22,10 @@ const (
 	defaultMaxFailures   = 3
 	defaultResetTimeout  = 5 * time.Minute
 	defaultFailureWindow = 60 * time.Second
-
-	coordDir          = "/tmp/ralphglasses-coordination"
-	circuitStateFile  = "circuit-state.json"
+	circuitStateFile   = "circuit-state.json"
 )
+
+var coordDir = filepath.Join(os.TempDir(), "ralphglasses-coordination")
 
 // CircuitBreaker prevents cascading failures by tracking spawn failures
 // and refusing new spawns when the failure rate exceeds a threshold.

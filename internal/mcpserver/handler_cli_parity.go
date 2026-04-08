@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -19,6 +20,7 @@ import (
 )
 
 type fleetRuntimeState struct {
+	mu              sync.RWMutex
 	ID              string
 	Mode            string
 	Port            int
@@ -35,6 +37,94 @@ type fleetRuntimeState struct {
 	coordinator     *fleet.Coordinator
 	worker          *fleet.WorkerAgent
 	automationState *automation.Runtime
+}
+
+type fleetRuntimeSnapshot struct {
+	ID             string
+	Mode           string
+	Port           int
+	CoordinatorURL string
+	FleetBudget    float64
+	Automation     bool
+	StartedAt      time.Time
+	EndedAt        *time.Time
+	Active         bool
+	LastError      string
+	TaskID         string
+	WorkerID       string
+}
+
+func (rt *fleetRuntimeState) snapshot() fleetRuntimeSnapshot {
+	if rt == nil {
+		return fleetRuntimeSnapshot{}
+	}
+	rt.mu.RLock()
+	defer rt.mu.RUnlock()
+	return rt.snapshotLocked()
+}
+
+func (rt *fleetRuntimeState) snapshotLocked() fleetRuntimeSnapshot {
+	var endedAt *time.Time
+	if rt.EndedAt != nil {
+		ended := *rt.EndedAt
+		endedAt = &ended
+	}
+	return fleetRuntimeSnapshot{
+		ID:             rt.ID,
+		Mode:           rt.Mode,
+		Port:           rt.Port,
+		CoordinatorURL: rt.CoordinatorURL,
+		FleetBudget:    rt.FleetBudget,
+		Automation:     rt.Automation,
+		StartedAt:      rt.StartedAt,
+		EndedAt:        endedAt,
+		Active:         rt.Active,
+		LastError:      rt.LastError,
+		TaskID:         rt.TaskID,
+		WorkerID:       rt.WorkerID,
+	}
+}
+
+func (rt *fleetRuntimeState) refreshWorkerID() {
+	if rt == nil {
+		return
+	}
+	rt.mu.RLock()
+	worker := rt.worker
+	workerID := rt.WorkerID
+	rt.mu.RUnlock()
+	if worker == nil || workerID != "" {
+		return
+	}
+	nodeID := worker.NodeID()
+	if nodeID == "" {
+		return
+	}
+	rt.mu.Lock()
+	if rt.WorkerID == "" {
+		rt.WorkerID = nodeID
+	}
+	rt.mu.Unlock()
+}
+
+func (snap fleetRuntimeSnapshot) result() map[string]any {
+	if snap.ID == "" {
+		return map[string]any{"status": "idle"}
+	}
+	return map[string]any{
+		"runtime_id":      snap.ID,
+		"mode":            snap.Mode,
+		"port":            snap.Port,
+		"coordinator_url": snap.CoordinatorURL,
+		"fleet_budget":    snap.FleetBudget,
+		"automation":      snap.Automation,
+		"started_at":      snap.StartedAt,
+		"ended_at":        snap.EndedAt,
+		"active":          snap.Active,
+		"last_error":      snap.LastError,
+		"task_id":         snap.TaskID,
+		"worker_id":       snap.WorkerID,
+	}
 }
 
 type marathonRuntimeState struct {
@@ -468,9 +558,9 @@ func (s *Server) handleFleetRuntime(ctx context.Context, req mcp.CallToolRequest
 	}
 
 	s.mu.RLock()
-	active := s.FleetRuntime != nil && s.FleetRuntime.Active
+	activeRuntime := s.FleetRuntime
 	s.mu.RUnlock()
-	if active {
+	if activeRuntime != nil && activeRuntime.snapshot().Active {
 		return codedError(ErrInternal, "fleet runtime already active — stop or restart it first"), nil
 	}
 
@@ -495,8 +585,10 @@ func (s *Server) handleFleetRuntime(ctx context.Context, req mcp.CallToolRequest
 		coord := fleet.NewCoordinatorWithPersistence(nodeID, hostname, port, s.runtimeVersion(), bus, s.SessMgr, s.ScanPath)
 		coord.SetBudgetLimit(rt.FleetBudget)
 		rt.coordinator = coord
+		s.mu.Lock()
 		s.FleetCoordinator = coord
 		s.FleetClient = fleet.NewClient(fmt.Sprintf("http://127.0.0.1:%d", port))
+		s.mu.Unlock()
 	} else {
 		if rt.CoordinatorURL == "" {
 			rt.CoordinatorURL = fleet.DiscoverCoordinator(port)
@@ -506,17 +598,21 @@ func (s *Server) handleFleetRuntime(ctx context.Context, req mcp.CallToolRequest
 			}
 		}
 		rt.worker = fleet.NewWorkerAgent(rt.CoordinatorURL, fleet.GetHostname(), port, s.runtimeVersion(), s.ScanPath, bus, s.SessMgr)
+		s.mu.Lock()
 		if s.FleetCoordinator == nil {
 			s.FleetClient = fleet.NewClient(rt.CoordinatorURL)
 		}
+		s.mu.Unlock()
 	}
 
 	if automationEnabled {
 		runtime, err := automation.StartServeRuntime(ctxRun, s.ScanPath, true, bus, s.SessMgr)
 		if err != nil {
 			cancel()
+			s.mu.Lock()
 			s.FleetCoordinator = nil
 			s.FleetClient = nil
+			s.mu.Unlock()
 			return codedError(ErrInternal, fmt.Sprintf("start automation runtime: %v", err)), nil
 		}
 		rt.automationState = runtime
@@ -555,21 +651,32 @@ func (s *Server) runFleetRuntime(ctx context.Context, rt *fleetRuntimeState) {
 		err = rt.worker.Run(ctx)
 	}
 
-	s.mu.Lock()
-	if rt.worker != nil && rt.WorkerID == "" {
-		rt.WorkerID = rt.worker.NodeID()
+	workerID := ""
+	if rt.worker != nil {
+		workerID = rt.worker.NodeID()
 	}
 	now := time.Now()
+	rt.mu.Lock()
+	if rt.WorkerID == "" && workerID != "" {
+		rt.WorkerID = workerID
+	}
 	rt.EndedAt = &now
 	rt.Active = false
 	if err != nil && err != context.Canceled {
 		rt.LastError = err.Error()
 	}
-	if rt.automationState != nil {
-		rt.automationState.Stop()
-		rt.automationState = nil
+	automationState := rt.automationState
+	rt.automationState = nil
+	coordinator := rt.coordinator
+	snapshot := rt.snapshotLocked()
+	rt.mu.Unlock()
+
+	if automationState != nil {
+		automationState.Stop()
 	}
-	if s.FleetCoordinator == rt.coordinator {
+
+	s.mu.Lock()
+	if s.FleetCoordinator == coordinator {
 		s.FleetCoordinator = nil
 	}
 	if s.FleetCoordinator == nil {
@@ -581,50 +688,38 @@ func (s *Server) runFleetRuntime(ctx context.Context, rt *fleetRuntimeState) {
 	if task == nil || task.State == TaskCanceled {
 		return
 	}
-	if rt.LastError != "" {
-		s.Tasks.Fail(rt.TaskID, rt.LastError)
+	if snapshot.LastError != "" {
+		s.Tasks.Fail(rt.TaskID, snapshot.LastError)
 		return
 	}
-	s.Tasks.Complete(rt.TaskID, s.fleetRuntimeSnapshot(rt))
+	s.Tasks.Complete(rt.TaskID, snapshot.result())
 }
 
 func (s *Server) fleetRuntimeSnapshot(rt *fleetRuntimeState) map[string]any {
 	if rt == nil {
 		return map[string]any{"status": "idle"}
 	}
-	return map[string]any{
-		"runtime_id":      rt.ID,
-		"mode":            rt.Mode,
-		"port":            rt.Port,
-		"coordinator_url": rt.CoordinatorURL,
-		"fleet_budget":    rt.FleetBudget,
-		"automation":      rt.Automation,
-		"started_at":      rt.StartedAt,
-		"ended_at":        rt.EndedAt,
-		"active":          rt.Active,
-		"last_error":      rt.LastError,
-		"task_id":         rt.TaskID,
-		"worker_id":       rt.WorkerID,
-	}
+	return rt.snapshot().result()
 }
 
 func (s *Server) fleetRuntimeStatus(ctx context.Context) map[string]any {
-	s.mu.Lock()
+	s.mu.RLock()
 	rt := s.FleetRuntime
-	if rt != nil && rt.worker != nil && rt.WorkerID == "" {
-		rt.WorkerID = rt.worker.NodeID()
-	}
-	snapshot := s.fleetRuntimeSnapshot(rt)
-	s.mu.Unlock()
 	if rt == nil {
-		return snapshot
+		s.mu.RUnlock()
+		return map[string]any{"status": "idle"}
 	}
+	s.mu.RUnlock()
 
-	if rt.Mode == "coordinator" {
-		client := fleet.NewClient(fmt.Sprintf("http://127.0.0.1:%d", rt.Port))
+	rt.refreshWorkerID()
+	runtime := rt.snapshot()
+	snapshot := runtime.result()
+
+	if runtime.Mode == "coordinator" {
+		client := fleet.NewClient(fmt.Sprintf("http://127.0.0.1:%d", runtime.Port))
 		if status, err := client.Status(ctx); err == nil {
 			snapshot["node_status"] = status
-		} else if rt.Active {
+		} else if runtime.Active {
 			snapshot["status_error"] = err.Error()
 		}
 		if state, err := client.FleetState(ctx); err == nil {
@@ -633,17 +728,17 @@ func (s *Server) fleetRuntimeStatus(ctx context.Context) map[string]any {
 		return snapshot
 	}
 
-	if rt.CoordinatorURL != "" {
-		client := fleet.NewClient(rt.CoordinatorURL)
+	if runtime.CoordinatorURL != "" {
+		client := fleet.NewClient(runtime.CoordinatorURL)
 		if state, err := client.FleetState(ctx); err == nil {
 			snapshot["fleet_state"] = state
 			for _, worker := range state.Workers {
-				if worker.ID == rt.WorkerID {
+				if worker.ID == runtime.WorkerID {
 					snapshot["worker"] = worker
 					break
 				}
 			}
-		} else if rt.Active {
+		} else if runtime.Active {
 			snapshot["coordinator_error"] = err.Error()
 		}
 	}
@@ -657,23 +752,33 @@ func (s *Server) stopFleetRuntime() (*mcp.CallToolResult, error) {
 	if rt == nil {
 		return jsonResult(map[string]any{"status": "idle"}), nil
 	}
-	if rt.automationState != nil {
-		rt.automationState.Stop()
+
+	rt.mu.Lock()
+	snapshot := rt.snapshotLocked()
+	automationState := rt.automationState
+	rt.automationState = nil
+	taskID := rt.TaskID
+	cancel := rt.cancel
+	coordinator := rt.coordinator
+	rt.mu.Unlock()
+
+	if automationState != nil {
+		automationState.Stop()
 	}
-	if s.Tasks != nil && rt.TaskID != "" {
-		_ = s.Tasks.Cancel(rt.TaskID)
+	if s.Tasks != nil && taskID != "" {
+		_ = s.Tasks.Cancel(taskID)
 	}
-	if rt.cancel != nil {
-		rt.cancel()
+	if cancel != nil {
+		cancel()
 	}
-	if rt.coordinator != nil {
+	if coordinator != nil {
 		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		_ = rt.coordinator.Stop(stopCtx)
+		_ = coordinator.Stop(stopCtx)
 		cancel()
 	}
 	return jsonResult(map[string]any{
 		"status":  "stopping",
-		"runtime": s.fleetRuntimeSnapshot(rt),
+		"runtime": snapshot.result(),
 	}), nil
 }
 
