@@ -153,7 +153,8 @@ type Model struct {
 	TickFrame int
 
 	// Event bus
-	EventBus *events.Bus
+	EventBus   *events.Bus
+	EventBusCh <-chan events.Event
 
 	// State
 	Width       int
@@ -267,13 +268,31 @@ func loadLogCmd(repoPath string) tea.Cmd {
 
 // Init returns the initial set of commands: repo scan, tick timer, slow tick timer, spinner, and process exit watcher.
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(
+	cmds := []tea.Cmd{
 		m.scanRepos(),
 		m.tickCmd(),
 		m.slowTickCmd(),
 		m.Spinner.Tick,
 		process.WaitForProcessExit(m.ProcMgr.ExitChan()),
-	)
+	}
+	if m.EventBusCh != nil {
+		cmds = append(cmds, watchEventBus(m.EventBusCh))
+	}
+	return tea.Batch(cmds...)
+}
+
+// watchEventBus listens for events on the given channel and returns them as tea.Cmd.
+func watchEventBus(ch <-chan events.Event) tea.Cmd {
+	return func() tea.Msg {
+		if ch == nil {
+			return nil
+		}
+		e, ok := <-ch
+		if !ok {
+			return nil
+		}
+		return EventBusMsg(e)
+	}
 }
 
 // tickCmd returns a fast 5-second heartbeat tick for drift correction.
@@ -389,110 +408,129 @@ func (m *Model) updateTable() {
 	healthData := m.buildHealthData()
 	rows := views.ReposToRows(m.Repos, m.TickFrame, healthData, m.Width)
 	m.Table.SetRows(rows)
+	m.refreshStatusBarCounts()
+}
+
+func (m *Model) refreshStatusBarCounts() {
 	m.StatusBar.RepoCount = len(m.Repos)
 	m.StatusBar.RunningCount = len(m.ProcMgr.RunningPaths())
 	m.StatusBar.LastRefresh = m.LastRefresh
 	m.StatusBar.TickFrame = m.TickFrame
 
-	// Update extended status bar fields
-	if m.SessMgr != nil {
-		sessions := m.SessMgr.List("")
-		m.StatusBar.SessionCount = len(sessions)
-		var totalSpend float64
-		var totalBudget float64
-		providerCounts := make(map[string]int)
-		for _, s := range sessions {
-			s.Lock()
-			totalSpend += s.SpentUSD
-			totalBudget += s.BudgetUSD
-			if s.Status == session.StatusRunning || s.Status == session.StatusLaunching {
-				providerCounts[string(s.Provider)]++
-			}
-			s.Unlock()
-		}
-		m.StatusBar.TotalSpendUSD = totalSpend
-		m.StatusBar.ProviderCounts = providerCounts
-		if totalBudget > 0 {
-			m.StatusBar.FleetBudgetPct = totalSpend / totalBudget
-		} else {
-			m.StatusBar.FleetBudgetPct = 0
-		}
-		m.StatusBar.AlertCount = m.countAlerts()
-		// Determine highest alert severity
-		m.StatusBar.HighestAlertSeverity = ""
-		if m.StatusBar.AlertCount > 0 {
-			m.StatusBar.HighestAlertSeverity = "info"
-			for _, r := range m.Repos {
-				if r.Circuit != nil && r.Circuit.State == "OPEN" {
-					m.StatusBar.HighestAlertSeverity = "critical"
-					break
-				}
-			}
-		}
+	m.refreshSessionStatusBar()
+	m.refreshCostStatusBar()
+}
 
-		// Cost velocity and sparkline
-		m.StatusBar.CostHistory = nil
-		var earliestLaunch time.Time
-		for _, s := range sessions {
-			s.Lock()
-			if earliestLaunch.IsZero() || (!s.LaunchedAt.IsZero() && s.LaunchedAt.Before(earliestLaunch)) {
-				earliestLaunch = s.LaunchedAt
-			}
-			m.StatusBar.CostHistory = append(m.StatusBar.CostHistory, s.CostHistory...)
-			s.Unlock()
-		}
-		if !earliestLaunch.IsZero() {
-			if mins := time.Since(earliestLaunch).Minutes(); mins > 0 {
-				m.StatusBar.CostVelocity = totalSpend / mins
-			}
-		}
-		if len(m.StatusBar.CostHistory) > 20 {
-			m.StatusBar.CostHistory = m.StatusBar.CostHistory[len(m.StatusBar.CostHistory)-20:]
-		}
+func (m *Model) refreshSessionStatusBar() {
+	if m.SessMgr == nil {
+		return
+	}
 
-		// Loops
-		loops := m.SessMgr.ListLoops()
-		var activeLoops, totalIters, totalSuccess int
-		var loopIterHistory []float64
-		for _, l := range loops {
-			l.Lock()
-			if l.Status == "running" && !l.Paused {
-				activeLoops++
-			}
-			for _, iter := range l.Iterations {
-				totalIters++
-				if iter.Status == "completed" || iter.Status == "verified" {
-					totalSuccess++
-				}
-				if iter.EndedAt != nil {
-					loopIterHistory = append(loopIterHistory, iter.EndedAt.Sub(iter.StartedAt).Seconds())
-				}
-			}
-			l.Unlock()
-		}
-		m.StatusBar.ActiveLoopCount = activeLoops
-		m.StatusBar.LoopIterTotal = totalIters
-		if totalIters > 0 {
-			m.StatusBar.LoopSuccessRate = float64(totalSuccess) / float64(totalIters)
-		} else {
-			m.StatusBar.LoopSuccessRate = 0
-		}
-		if len(loopIterHistory) > 20 {
-			loopIterHistory = loopIterHistory[len(loopIterHistory)-20:]
-		}
-		m.StatusBar.LoopIterHistory = loopIterHistory
+	sessions := m.SessMgr.List("")
+	m.StatusBar.SessionCount = len(sessions)
 
-		// Provider health
-		healthMap := make(map[string]bool)
-		for _, p := range []session.Provider{session.ProviderCodex, session.ProviderGemini, session.ProviderClaude} {
-			h := session.CheckProviderHealth(p)
-			healthMap[string(p)] = h.Healthy()
+	providerCounts := make(map[string]int)
+	for _, s := range sessions {
+		s.Lock()
+		if s.Status == session.StatusRunning || s.Status == session.StatusLaunching {
+			providerCounts[string(s.Provider)]++
 		}
-		m.StatusBar.ProviderHealthy = healthMap
+		s.Unlock()
+	}
+	m.StatusBar.ProviderCounts = providerCounts
 
-		// Autonomy + Uptime
-		m.StatusBar.AutonomyLevel = m.SessMgr.GetAutonomyLevel().String()
-		m.StatusBar.Uptime = time.Since(m.StartedAt)
+	m.StatusBar.AlertCount = m.countAlerts()
+	m.StatusBar.HighestAlertSeverity = ""
+	if m.StatusBar.AlertCount > 0 {
+		m.StatusBar.HighestAlertSeverity = "info"
+		for _, r := range m.Repos {
+			if r.Circuit != nil && r.Circuit.State == "OPEN" {
+				m.StatusBar.HighestAlertSeverity = "critical"
+				break
+			}
+		}
+	}
+
+	loops := m.SessMgr.ListLoops()
+	var activeLoops, totalIters, totalSuccess int
+	var loopIterHistory []float64
+	for _, l := range loops {
+		l.Lock()
+		if l.Status == "running" && !l.Paused {
+			activeLoops++
+		}
+		for _, iter := range l.Iterations {
+			totalIters++
+			if iter.Status == "completed" || iter.Status == "verified" {
+				totalSuccess++
+			}
+			if iter.EndedAt != nil {
+				loopIterHistory = append(loopIterHistory, iter.EndedAt.Sub(iter.StartedAt).Seconds())
+			}
+		}
+		l.Unlock()
+	}
+	m.StatusBar.ActiveLoopCount = activeLoops
+	m.StatusBar.LoopIterTotal = totalIters
+	if totalIters > 0 {
+		m.StatusBar.LoopSuccessRate = float64(totalSuccess) / float64(totalIters)
+	} else {
+		m.StatusBar.LoopSuccessRate = 0
+	}
+	if len(loopIterHistory) > 20 {
+		loopIterHistory = loopIterHistory[len(loopIterHistory)-20:]
+	}
+	m.StatusBar.LoopIterHistory = loopIterHistory
+
+	healthMap := make(map[string]bool)
+	for _, p := range []session.Provider{session.ProviderCodex, session.ProviderGemini, session.ProviderClaude} {
+		h := session.CheckProviderHealth(p)
+		healthMap[string(p)] = h.Healthy()
+	}
+	m.StatusBar.ProviderHealthy = healthMap
+
+	m.StatusBar.AutonomyLevel = m.SessMgr.GetAutonomyLevel().String()
+	m.StatusBar.Uptime = time.Since(m.StartedAt)
+}
+
+func (m *Model) refreshCostStatusBar() {
+	if m.SessMgr == nil {
+		return
+	}
+
+	sessions := m.SessMgr.List("")
+	var totalSpend float64
+	var totalBudget float64
+	for _, s := range sessions {
+		s.Lock()
+		totalSpend += s.SpentUSD
+		totalBudget += s.BudgetUSD
+		s.Unlock()
+	}
+	m.StatusBar.TotalSpendUSD = totalSpend
+	if totalBudget > 0 {
+		m.StatusBar.FleetBudgetPct = totalSpend / totalBudget
+	} else {
+		m.StatusBar.FleetBudgetPct = 0
+	}
+
+	m.StatusBar.CostHistory = nil
+	var earliestLaunch time.Time
+	for _, s := range sessions {
+		s.Lock()
+		if earliestLaunch.IsZero() || (!s.LaunchedAt.IsZero() && s.LaunchedAt.Before(earliestLaunch)) {
+			earliestLaunch = s.LaunchedAt
+		}
+		m.StatusBar.CostHistory = append(m.StatusBar.CostHistory, s.CostHistory...)
+		s.Unlock()
+	}
+	if !earliestLaunch.IsZero() {
+		if mins := time.Since(earliestLaunch).Minutes(); mins > 0 {
+			m.StatusBar.CostVelocity = totalSpend / mins
+		}
+	}
+	if len(m.StatusBar.CostHistory) > 20 {
+		m.StatusBar.CostHistory = m.StatusBar.CostHistory[len(m.StatusBar.CostHistory)-20:]
 	}
 }
 
@@ -539,51 +577,6 @@ func (m *Model) needsTeamTable() bool {
 		return true
 	}
 	return false
-}
-
-// refreshStatusBarCounts updates only the status bar session and loop count
-// fields derived from in-memory data.  It is cheap (no disk I/O, no row
-// rebuilds) and is safe to call unconditionally on every tick so the status
-// bar always shows current numbers regardless of which view is active.
-func (m *Model) refreshStatusBarCounts() {
-	m.StatusBar.RepoCount = len(m.Repos)
-	m.StatusBar.RunningCount = len(m.ProcMgr.RunningPaths())
-	m.StatusBar.LastRefresh = m.LastRefresh
-	m.StatusBar.TickFrame = m.TickFrame
-	if m.SessMgr == nil {
-		return
-	}
-	sessions := m.SessMgr.List("")
-	m.StatusBar.SessionCount = len(sessions)
-	var totalSpend, totalBudget float64
-	providerCounts := make(map[string]int)
-	for _, s := range sessions {
-		s.Lock()
-		totalSpend += s.SpentUSD
-		totalBudget += s.BudgetUSD
-		if s.Status == session.StatusRunning || s.Status == session.StatusLaunching {
-			providerCounts[string(s.Provider)]++
-		}
-		s.Unlock()
-	}
-	m.StatusBar.TotalSpendUSD = totalSpend
-	m.StatusBar.ProviderCounts = providerCounts
-	if totalBudget > 0 {
-		m.StatusBar.FleetBudgetPct = totalSpend / totalBudget
-	} else {
-		m.StatusBar.FleetBudgetPct = 0
-	}
-	loops := m.SessMgr.ListLoops()
-	var activeLoops int
-	for _, l := range loops {
-		l.Lock()
-		if l.Status == "running" && !l.Paused {
-			activeLoops++
-		}
-		l.Unlock()
-	}
-	m.StatusBar.ActiveLoopCount = activeLoops
-	m.StatusBar.Uptime = time.Since(m.StartedAt)
 }
 
 // loopListCmd fetches active loops and returns them as a LoopListMsg.

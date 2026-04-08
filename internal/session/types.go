@@ -276,8 +276,8 @@ type TeamTask struct {
 	UpdatedAt         time.Time  `json:"updated_at,omitempty"`
 }
 
-// AgentDef represents an agent definition file.
-// Claude: .claude/agents/*.md, Gemini: .gemini/agents/*.md,
+// AgentDef represents a reusable provider workflow definition.
+// Claude: .claude/agents/*.md, Gemini: .gemini/commands/*.toml,
 // Codex: .codex/agents/*.toml (with legacy AGENTS.md section fallback).
 type AgentDef struct {
 	Name        string   `json:"name"`

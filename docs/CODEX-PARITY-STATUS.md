@@ -1,6 +1,8 @@
 # Codex Parity Status
 
-Status as of 2026-04-04: the current shipped ralphglasses control-plane workflows are at Codex parity for the scope tracked in roadmap section `3.5.5`.
+Status as of 2026-04-07: the current shipped ralphglasses control-plane workflows are at Codex parity for the scope tracked in roadmap section `3.5.5`.
+
+Broader three-provider parity now lives in [PROVIDER-PARITY-OBJECTIVES.md](PROVIDER-PARITY-OBJECTIVES.md). This document stays focused on the Codex-primary migration closeout.
 
 ## What is complete
 

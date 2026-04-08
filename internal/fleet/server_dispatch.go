@@ -3,6 +3,7 @@ package fleet
 import (
 	"encoding/json"
 	"fmt"
+
 	"maps"
 	"net/http"
 	"time"
@@ -141,7 +142,9 @@ func timePtr(t time.Time) *time.Time {
 
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(v)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		fmt.Printf("fleet: json encode err=%v\n", err)
+	}
 }
 
 func mergeData(base, extra map[string]any) map[string]any {

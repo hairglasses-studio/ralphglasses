@@ -61,6 +61,7 @@ main.go → cmd/root.go (Cobra CLI)
 The `internal/session/` package uses a provider dispatch pattern:
 
 - **`providers.go`**: `buildCmdForProvider()` dispatches to per-provider command builders. `normalizeEvent()` dispatches to per-provider event normalizers.
+- **`provider_capabilities.go`**: canonical provider capability registry used by launch validation, warnings, and MCP comparison surfaces.
 - **`runner.go`**: Provider-agnostic session lifecycle.
 - **`types.go`**: `Provider` type (`claude`|`gemini`|`codex`).
 - **`budget.go`**: Per-provider cost tracking via `LedgerEntry` and `CostSummary`.
@@ -133,6 +134,7 @@ The `distro/` directory contains configs for a bootable Linux thin client (Ubunt
 - [CLAUDE.md](CLAUDE.md) — Claude Code project instructions
 - [GEMINI.md](GEMINI.md) — Gemini CLI project instructions
 - [CONTRIBUTING.md](CONTRIBUTING.md) — Multi-provider contribution guide
+- [docs/PROVIDER-PARITY-OBJECTIVES.md](docs/PROVIDER-PARITY-OBJECTIVES.md) — capability matrix, repo surfaces, and workflow parity targets
 - [docs/CODEX-REFERENCE.md](docs/CODEX-REFERENCE.md) — Codex docs + Claude cache protection notes
 - [ROADMAP.md](ROADMAP.md) — Full development roadmap
 

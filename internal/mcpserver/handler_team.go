@@ -426,7 +426,7 @@ func (s *Server) handleAgentDefine(_ context.Context, req mcp.CallToolRequest) (
 	var location string
 	switch provider {
 	case session.ProviderGemini:
-		location = fmt.Sprintf("%s/.gemini/agents/%s.md", r.Path, agentName)
+		location = fmt.Sprintf("%s/.gemini/commands/%s.toml", r.Path, agentName)
 	case session.ProviderCodex:
 		location = fmt.Sprintf("%s/.codex/agents/%s.toml", r.Path, agentName)
 	default:

@@ -8,7 +8,6 @@
 #
 # Usage:
 #   qemu-smoke.sh <image>                        # Boot x86_64 image, 120s timeout
-#   qemu-smoke.sh --arch aarch64 <image>         # Boot aarch64 image
 #   qemu-smoke.sh --timeout 180 <image>          # Custom timeout in seconds
 #   qemu-smoke.sh --ram 4096 <image>             # Custom RAM in MB
 #   qemu-smoke.sh --health-port 8080 <image>     # Check HTTP health endpoint
@@ -18,13 +17,12 @@
 #   1 — FAIL (timeout, missing process, or error)
 #   2 — Usage error
 #
-# Requires: qemu-system-x86_64 or qemu-system-aarch64
+# Requires: qemu-system-x86_64
 
 set -euo pipefail
 
 # --- Defaults ---
 
-ARCH="x86_64"
 TIMEOUT=120
 RAM_MB=2048
 HEALTH_PORT=""
@@ -39,7 +37,6 @@ usage() {
 Usage: qemu-smoke.sh [OPTIONS] <image.iso|image.qcow2|image.raw>
 
 Options:
-  --arch <x86_64|aarch64>   Target architecture (default: x86_64)
   --timeout <seconds>       Boot timeout (default: 120)
   --ram <MB>                Guest RAM in MB (default: 2048)
   --health-port <port>      HTTP health check port (forwarded to host)
@@ -47,7 +44,7 @@ Options:
 
 Examples:
   qemu-smoke.sh ralphglasses.iso
-  qemu-smoke.sh --arch aarch64 --timeout 180 ralphglasses.qcow2
+  qemu-smoke.sh --timeout 180 ralphglasses.qcow2
 USAGE
     exit 2
 }
@@ -72,11 +69,6 @@ trap cleanup EXIT
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --arch)
-            ARCH="${2:-}"
-            [[ -z "$ARCH" ]] && usage
-            shift 2
-            ;;
         --timeout)
             TIMEOUT="${2:-}"
             [[ -z "$TIMEOUT" ]] && usage
@@ -108,39 +100,15 @@ done
 [[ -z "$IMAGE" ]] && usage
 [[ -f "$IMAGE" ]] || die "Image not found: $IMAGE"
 
-# Validate arch
-case "$ARCH" in
-    x86_64|aarch64) ;;
-    *) die "Unsupported architecture: $ARCH (use x86_64 or aarch64)" ;;
-esac
-
 # Validate timeout is a positive integer
 [[ "$TIMEOUT" =~ ^[0-9]+$ ]] || die "Timeout must be a positive integer: $TIMEOUT"
 [[ "$TIMEOUT" -gt 0 ]] || die "Timeout must be greater than 0"
 
 # --- Resolve QEMU binary and machine options ---
 
-QEMU_BIN="qemu-system-${ARCH}"
+QEMU_BIN="qemu-system-x86_64"
 command -v "$QEMU_BIN" >/dev/null 2>&1 || die "$QEMU_BIN not found in PATH"
-
-MACHINE_OPTS=()
-case "$ARCH" in
-    x86_64)
-        MACHINE_OPTS+=(-machine q35 -cpu qemu64)
-        ;;
-    aarch64)
-        MACHINE_OPTS+=(-machine virt -cpu cortex-a72)
-        # aarch64 requires UEFI firmware
-        for fw in /usr/share/qemu-efi-aarch64/QEMU_EFI.fd \
-                  /usr/share/AAVMF/AAVMF_CODE.fd \
-                  /usr/share/edk2/aarch64/QEMU_EFI.fd; do
-            if [[ -f "$fw" ]]; then
-                MACHINE_OPTS+=(-bios "$fw")
-                break
-            fi
-        done
-        ;;
-esac
+MACHINE_OPTS=(-machine q35 -cpu qemu64)
 
 # --- Determine drive type from extension ---
 
@@ -178,7 +146,7 @@ SERIAL_LOG="$(mktemp /tmp/qemu-smoke-serial.XXXXXX)"
 
 # --- Launch QEMU ---
 
-echo "=== qemu-smoke: booting $IMAGE (arch=$ARCH, ram=${RAM_MB}M, timeout=${TIMEOUT}s) ==="
+echo "=== qemu-smoke: booting $IMAGE (arch=x86_64, ram=${RAM_MB}M, timeout=${TIMEOUT}s) ==="
 
 START_TIME=$(date +%s)
 

@@ -3,6 +3,7 @@
 Codex is now the default command-and-control provider for ralphglasses when callers omit a provider.
 
 Current parity status: see `docs/CODEX-PARITY-STATUS.md` for the durable closeout state and future-session rules.
+Cross-provider capability and workflow parity is tracked in `docs/PROVIDER-PARITY-OBJECTIVES.md`.
 
 ## Local baseline
 
@@ -38,6 +39,13 @@ Current parity status: see `docs/CODEX-PARITY-STATUS.md` for the durable closeou
 - Plugins
 - Subagents
 - `.codex/config.toml` profiles and MCP registration
+
+## Codex limits to remember
+
+- Budget enforcement is external in ralphglasses.
+- Worktree support is unsupported in the Codex CLI and must be handled outside the CLI.
+- Generic permission modes are mapped onto Codex sandbox modes by ralphglasses.
+- System prompt, max turns, and agent selection are repo-native surfaces, not `codex exec` flags.
 
 ## Claude cache guardrails
 

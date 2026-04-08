@@ -169,7 +169,114 @@ func TestMcpJsonFormat(t *testing.T) {
 	if len(srv.Args) < 1 || srv.Args[0] != "./scripts/dev/run-mcp.sh" {
 		t.Errorf("args = %v, want wrapper startup script", srv.Args)
 	}
-	if srv.CWD == "" {
-		t.Error("cwd must be set when using wrapper startup")
+	if srv.CWD != "." {
+		t.Errorf("cwd = %q, want .", srv.CWD)
 	}
+}
+
+func TestGeminiSettingsFormat(t *testing.T) {
+	data, err := os.ReadFile("../.gemini/settings.json")
+	if err != nil {
+		t.Fatalf("read .gemini/settings.json: %v", err)
+	}
+
+	var config struct {
+		Context struct {
+			FileName []string `json:"fileName"`
+		} `json:"context"`
+		MCPServers map[string]struct {
+			Command string   `json:"command"`
+			Args    []string `json:"args"`
+			CWD     string   `json:"cwd"`
+		} `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(data, &config); err != nil {
+		t.Fatalf("parse .gemini/settings.json: %v", err)
+	}
+
+	if !containsString(config.Context.FileName, "AGENTS.md") {
+		t.Error("Gemini context.fileName must include AGENTS.md")
+	}
+	if !containsString(config.Context.FileName, "GEMINI.md") {
+		t.Error("Gemini context.fileName must include GEMINI.md")
+	}
+
+	srv, ok := config.MCPServers["ralphglasses"]
+	if !ok {
+		t.Fatal("ralphglasses server not found in .gemini/settings.json")
+	}
+	if srv.Command != "bash" {
+		t.Errorf("Gemini command = %q, want bash", srv.Command)
+	}
+	if len(srv.Args) < 1 || srv.Args[0] != "./scripts/dev/run-mcp.sh" {
+		t.Errorf("Gemini args = %v, want wrapper startup script", srv.Args)
+	}
+	if srv.CWD != "." {
+		t.Errorf("Gemini cwd = %q, want .", srv.CWD)
+	}
+}
+
+func TestClaudeSettingsFormat(t *testing.T) {
+	data, err := os.ReadFile("../.claude/settings.json")
+	if err != nil {
+		t.Fatalf("read .claude/settings.json: %v", err)
+	}
+
+	var config struct {
+		MCPServers map[string]struct {
+			Command string   `json:"command"`
+			Args    []string `json:"args"`
+			CWD     string   `json:"cwd"`
+		} `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(data, &config); err != nil {
+		t.Fatalf("parse .claude/settings.json: %v", err)
+	}
+
+	srv, ok := config.MCPServers["ralphglasses"]
+	if !ok {
+		t.Fatal("ralphglasses server not found in .claude/settings.json")
+	}
+	if srv.Command != "bash" {
+		t.Errorf("Claude command = %q, want bash", srv.Command)
+	}
+	if len(srv.Args) < 1 || srv.Args[0] != "./scripts/dev/run-mcp.sh" {
+		t.Errorf("Claude args = %v, want wrapper startup script", srv.Args)
+	}
+	if srv.CWD != "." {
+		t.Errorf("Claude cwd = %q, want .", srv.CWD)
+	}
+}
+
+func TestCodexConfigFormat(t *testing.T) {
+	data, err := os.ReadFile("../.codex/config.toml")
+	if err != nil {
+		t.Fatalf("read .codex/config.toml: %v", err)
+	}
+
+	content := string(data)
+	for _, server := range []string{
+		"[mcp_servers.ralphglasses_review]",
+		"[mcp_servers.ralphglasses_workspace]",
+		"[mcp_servers.ralphglasses_research]",
+	} {
+		if !strings.Contains(content, server) {
+			t.Errorf("expected %s in .codex/config.toml", server)
+		}
+	}
+	if strings.Count(content, `args = ["./scripts/dev/run-mcp.sh", "--scan-path", "~/hairglasses-studio"]`) < 3 {
+		t.Error("expected repo MCP servers to use ./scripts/dev/run-mcp.sh wrapper")
+	}
+	if strings.Count(content, `cwd = "."`) < 3 {
+		t.Error("expected repo MCP servers to keep cwd = \".\"")
+	}
+}
+
+func containsString(items []string, want string) bool {
+	for _, item := range items {
+		if item == want {
+			return true
+		}
+	}
+	return false
 }

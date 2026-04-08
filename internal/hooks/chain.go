@@ -33,9 +33,9 @@ const (
 type Hook struct {
 	Name    string
 	Command string
-	Dir     string            // working directory
-	Env     []string          // additional environment variables
-	Timeout time.Duration     // per-hook timeout; 0 means use chain default
+	Dir     string        // working directory
+	Env     []string      // additional environment variables
+	Timeout time.Duration // per-hook timeout; 0 means use chain default
 }
 
 // HookChain runs multiple hooks in sequence or in parallel with configurable
@@ -124,7 +124,8 @@ func (c *HookChain) execHook(ctx context.Context, h Hook) HookResult {
 	defer cancel()
 
 	var stdout, stderr bytes.Buffer
-	cmd := exec.CommandContext(hookCtx, "sh", "-c", h.Command)
+	cmd := exec.Command("sh", "-c", h.Command)
+	setCommandProcessGroup(cmd)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if h.Dir != "" {
@@ -135,7 +136,33 @@ func (c *HookChain) execHook(ctx context.Context, h Hook) HookResult {
 	}
 
 	start := time.Now()
-	err := cmd.Run()
+	if err := cmd.Start(); err != nil {
+		return HookResult{
+			Name:     h.Name,
+			ExitCode: -1,
+			Stdout:   stdout.String(),
+			Stderr:   stderr.String(),
+			Duration: time.Since(start),
+			Err:      err,
+		}
+	}
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+	var err error
+	timedOut := false
+	select {
+	case err = <-done:
+	case <-hookCtx.Done():
+		_ = killCommandProcessGroup(cmd)
+		<-done
+		if hookCtx.Err() == context.DeadlineExceeded {
+			timedOut = true
+		} else {
+			err = hookCtx.Err()
+		}
+	}
 	dur := time.Since(start)
 
 	exitCode := 0
@@ -149,8 +176,11 @@ func (c *HookChain) execHook(ctx context.Context, h Hook) HookResult {
 	}
 
 	// Wrap context deadline exceeded for clarity.
-	if hookCtx.Err() == context.DeadlineExceeded {
+	if timedOut {
 		err = fmt.Errorf("hook %q timed out after %s: %w", h.Name, timeout, hookCtx.Err())
+		if exitCode == 0 {
+			exitCode = -1
+		}
 	}
 
 	return HookResult{

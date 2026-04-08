@@ -166,7 +166,7 @@ func TestBuildSummary_OnlyPassed(t *testing.T) {
 
 func TestParseCoverageTotal_InvalidFile(t *testing.T) {
 	t.Parallel()
-	_, err := parseCoverageTotal("/nonexistent/path/coverage.out")
+	_, err := parseCoverageTotal(context.Background(), "/nonexistent/path/coverage.out")
 	if err == nil {
 		t.Fatal("expected error for nonexistent file")
 	}
@@ -179,7 +179,7 @@ func TestParseCoverageTotal_EmptyProfile(t *testing.T) {
 	_ = os.WriteFile(fp, []byte("mode: set\n"), 0o644)
 
 	// go tool cover may fail with an empty profile; we just verify no panic.
-	_, err := parseCoverageTotal(fp)
+	_, err := parseCoverageTotal(context.Background(), fp)
 	// An error is acceptable here since the profile has no data lines.
 	_ = err
 }

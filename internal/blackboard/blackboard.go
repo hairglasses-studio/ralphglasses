@@ -204,7 +204,10 @@ func (bb *Blackboard) Snapshot() error {
 	}
 	bb.mu.RUnlock()
 
-	_ = os.MkdirAll(bb.stateDir, 0755)
+	if err := os.MkdirAll(bb.stateDir, 0755); err != nil {
+		slog.Error("blackboard: create state dir for snapshot", "path", bb.stateDir, "err", err)
+		return err
+	}
 
 	path := filepath.Join(bb.stateDir, "blackboard.jsonl")
 	tmp := path + ".tmp"

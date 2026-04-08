@@ -46,30 +46,23 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 	if provider == "" {
 		provider = session.DefaultPrimaryProvider()
 	}
-	if err := session.ValidateProvider(provider); err != nil {
-		return codedError(ErrProviderUnavailable, fmt.Sprintf("invalid provider %q: %v", provider, err)), nil
-	}
-	if provider == session.ProviderCodex && p.Has("budget_usd") {
-		return codedError(ErrInvalidParams, "budget_usd is not supported for codex sessions"), nil
-	}
-
 	systemPrompt := p.OptionalString("system_prompt", "")
 	if err := ValidateStringLength(systemPrompt, MaxPromptLength, "system_prompt"); err != nil {
 		return codedError(ErrInvalidParams, err.Error()), nil
 	}
 
 	opts := session.LaunchOptions{
-		TenantID:     session.NormalizeTenantID(p.OptionalString("tenant_id", "")),
-		Provider:     provider,
-		RepoPath:     r.Path,
-		Prompt:       prompt,
-		Model:        p.OptionalString("model", ""),
-		MaxBudgetUSD: p.OptionalNumber("budget_usd", 0),
-		MaxTurns:     int(p.OptionalNumber("max_turns", 0)),
-		Agent:        p.OptionalString("agent", ""),
-		SystemPrompt: systemPrompt,
-		SessionName:  p.OptionalString("session_name", ""),
-		Worktree:     p.OptionalString("worktree", ""),
+		TenantID:               session.NormalizeTenantID(p.OptionalString("tenant_id", "")),
+		Provider:               provider,
+		RepoPath:               r.Path,
+		Prompt:                 prompt,
+		Model:                  p.OptionalString("model", ""),
+		MaxBudgetUSD:           p.OptionalNumber("budget_usd", 0),
+		MaxTurns:               int(p.OptionalNumber("max_turns", 0)),
+		Agent:                  p.OptionalString("agent", ""),
+		SystemPrompt:           systemPrompt,
+		SessionName:            p.OptionalString("session_name", ""),
+		Worktree:               p.OptionalString("worktree", ""),
 		StrictProviderContract: true,
 	}
 	if p.OptionalBool("bare", false) {
@@ -89,6 +82,9 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 			return codedError(ErrInvalidParams, "output_schema must be valid JSON"), nil
 		}
 		opts.OutputSchema = json.RawMessage(schema)
+	}
+	if err := session.ValidateProvider(provider); err != nil {
+		return codedError(ErrProviderUnavailable, fmt.Sprintf("invalid provider %q: %v", provider, err)), nil
 	}
 
 	// Inject improvement context from journal

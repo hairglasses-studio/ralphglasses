@@ -106,58 +106,31 @@ func ValidateProviderEnv(p Provider) error {
 }
 
 // UnsupportedOptionsWarnings returns warnings for LaunchOptions fields that are
-// set but ignored by the given provider. Returns nil for Claude (supports all).
+// not native for the target provider.
 func UnsupportedOptionsWarnings(p Provider, opts LaunchOptions) []string {
 	if p == "" {
 		p = DefaultPrimaryProvider()
 	}
-	if p == ProviderClaude {
-		return nil
+
+	if _, ok := ProviderCapabilityMatrixFor(p); ok {
+		var warnings []string
+		for _, field := range activeLaunchOptionFields(opts) {
+			capability := ProviderCapabilityFor(p, field)
+			switch capability.Support {
+			case CapabilityNative:
+				continue
+			case CapabilityInstallDependent:
+				if capability.RuntimeAvailable != nil && *capability.RuntimeAvailable {
+					continue
+				}
+			}
+			warnings = append(warnings, providerOptionWarning(p, field, capability))
+		}
+		return warnings
 	}
 
 	var warnings []string
 	switch p {
-	case ProviderGemini:
-		if opts.SystemPrompt != "" {
-			warnings = append(warnings, "system_prompt is ignored by gemini provider")
-		}
-		if opts.MaxBudgetUSD > 0 {
-			warnings = append(warnings, "max_budget_usd is ignored by gemini provider")
-		}
-		if opts.Agent != "" {
-			warnings = append(warnings, "agent is ignored by gemini provider (use .gemini/agents/ instead)")
-		}
-		if opts.MaxTurns > 0 {
-			warnings = append(warnings, "max_turns is ignored by gemini provider")
-		}
-		if len(opts.AllowedTools) > 0 {
-			warnings = append(warnings, "allowed_tools is ignored by gemini provider")
-		}
-		if opts.Worktree != "" {
-			warnings = append(warnings, "worktree is ignored by gemini provider")
-		}
-	case ProviderCodex:
-		if opts.SystemPrompt != "" {
-			warnings = append(warnings, "system_prompt is ignored by codex provider")
-		}
-		if opts.MaxBudgetUSD > 0 {
-			warnings = append(warnings, "max_budget_usd is ignored by codex provider")
-		}
-		if opts.Agent != "" {
-			warnings = append(warnings, "agent is ignored by codex provider")
-		}
-		if opts.MaxTurns > 0 {
-			warnings = append(warnings, "max_turns is ignored by codex provider")
-		}
-		if len(opts.AllowedTools) > 0 {
-			warnings = append(warnings, "allowed_tools is ignored by codex provider")
-		}
-		if opts.Worktree != "" {
-			warnings = append(warnings, "worktree is ignored by codex provider")
-		}
-		if opts.SandboxImage != "" {
-			warnings = append(warnings, "sandbox_image is ignored by codex provider (uses --sandbox mode instead)")
-		}
 	case ProviderCrush, ProviderGoose, ProviderAmp:
 		name := string(p)
 		if opts.SystemPrompt != "" && p != ProviderCrush {
@@ -369,7 +342,20 @@ func buildGeminiCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	if opts.Resume != "" {
 		args = append(args, "--resume", opts.Resume)
 	}
-	args = append(args, "--approval-mode", "yolo")
+	args = append(args, "--approval-mode", normalizeGeminiApprovalMode(opts.PermissionMode))
+	if opts.Worktree != "" {
+		if opts.Worktree == "true" {
+			args = append(args, "--worktree")
+		} else {
+			args = append(args, "--worktree", opts.Worktree)
+		}
+	}
+	if opts.Sandbox {
+		args = append(args, "--sandbox")
+	}
+	if len(opts.AllowedTools) > 0 {
+		args = append(args, "--allowed-tools", strings.Join(opts.AllowedTools, ","))
+	}
 	// Disable MCP servers in headless mode to prevent recursive spawning.
 	// Pass a non-existent name so no servers match.
 	args = append(args, "--allowed-mcp-server-names", "__none__")
@@ -398,10 +384,8 @@ func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 		args = append(args, "--model", opts.Model)
 	}
 	args = append(args, "--json", "--full-auto")
-	if opts.Sandbox {
-		args = append(args, "--sandbox", "workspace-write")
-	} else if opts.PermissionMode != "" {
-		args = append(args, "--sandbox", opts.PermissionMode)
+	if sandboxMode := codexSandboxMode(opts); sandboxMode != "" {
+		args = append(args, "--sandbox", sandboxMode)
 	}
 	if len(opts.OutputSchema) > 0 {
 		args = append(args, "--output-schema", string(opts.OutputSchema))
@@ -425,28 +409,123 @@ func validateLaunchOptions(opts LaunchOptions) error {
 	if opts.Provider == ProviderCodex && opts.Resume != "" && !codexExecResumeSupported() {
 		return fmt.Errorf("codex provider on this install does not support exec resume")
 	}
-	if opts.Provider == ProviderCodex && opts.StrictProviderContract {
-		var unsupported []string
-		if opts.SystemPrompt != "" {
-			unsupported = append(unsupported, "system_prompt")
-		}
-		if opts.Agent != "" {
-			unsupported = append(unsupported, "agent")
-		}
-		if opts.MaxTurns > 0 {
-			unsupported = append(unsupported, "max_turns")
-		}
-		if len(opts.AllowedTools) > 0 {
-			unsupported = append(unsupported, "allowed_tools")
-		}
-		if opts.Worktree != "" {
-			unsupported = append(unsupported, "worktree")
-		}
-		if len(unsupported) > 0 {
-			return fmt.Errorf("codex provider does not support %s", strings.Join(unsupported, ", "))
+	if !opts.StrictProviderContract {
+		return nil
+	}
+
+	if opts.Provider == "" {
+		opts.Provider = DefaultPrimaryProvider()
+	}
+	if _, ok := ProviderCapabilityMatrixFor(opts.Provider); !ok {
+		return nil
+	}
+
+	var unsupported []string
+	for _, field := range activeLaunchOptionFields(opts) {
+		capability := ProviderCapabilityFor(opts.Provider, field)
+		switch capability.Support {
+		case CapabilityUnsupported:
+			unsupported = append(unsupported, field)
+		case CapabilityInstallDependent:
+			if capability.RuntimeAvailable != nil && !*capability.RuntimeAvailable {
+				unsupported = append(unsupported, field)
+			}
 		}
 	}
+	if len(unsupported) > 0 {
+		return fmt.Errorf("%s provider does not support %s", opts.Provider, strings.Join(unsupported, ", "))
+	}
 	return nil
+}
+
+func providerOptionWarning(provider Provider, field string, capability ProviderCapability) string {
+	switch capability.Support {
+	case CapabilityUnsupported:
+		if capability.Detail != "" {
+			return fmt.Sprintf("%s is ignored by %s provider (%s)", field, provider, capability.Detail)
+		}
+		return fmt.Sprintf("%s is ignored by %s provider", field, provider)
+	case CapabilityEmulated:
+		if capability.Detail != "" {
+			return fmt.Sprintf("%s is emulated for %s provider (%s)", field, provider, capability.Detail)
+		}
+		return fmt.Sprintf("%s is emulated for %s provider", field, provider)
+	case CapabilityInstallDependent:
+		if capability.Detail != "" {
+			return fmt.Sprintf("%s is install-dependent for %s provider (%s)", field, provider, capability.Detail)
+		}
+		return fmt.Sprintf("%s is install-dependent for %s provider", field, provider)
+	default:
+		return fmt.Sprintf("%s is not native for %s provider", field, provider)
+	}
+}
+
+func activeLaunchOptionFields(opts LaunchOptions) []string {
+	fields := make([]string, 0, 10)
+	if opts.MaxBudgetUSD > 0 {
+		fields = append(fields, CapabilityBudgetUSD)
+	}
+	if opts.MaxTurns > 0 {
+		fields = append(fields, CapabilityMaxTurns)
+	}
+	if opts.Agent != "" {
+		fields = append(fields, CapabilityAgent)
+	}
+	if len(opts.AllowedTools) > 0 {
+		fields = append(fields, CapabilityAllowedTools)
+	}
+	if opts.SystemPrompt != "" {
+		fields = append(fields, CapabilitySystemPrompt)
+	}
+	if opts.Resume != "" {
+		fields = append(fields, CapabilityResume)
+	}
+	if opts.Worktree != "" {
+		fields = append(fields, CapabilityWorktree)
+	}
+	if opts.PermissionMode != "" {
+		fields = append(fields, CapabilityPermissionMode)
+	}
+	if len(opts.OutputSchema) > 0 {
+		fields = append(fields, CapabilityOutputSchema)
+	}
+	if opts.SandboxImage != "" {
+		fields = append(fields, CapabilitySandboxImage)
+	}
+	return fields
+}
+
+func normalizeGeminiApprovalMode(mode string) string {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "", "yolo", "danger-full-access", "bypasspermissions", "bypass-permissions":
+		return "yolo"
+	case "plan", "read-only", "readonly":
+		return "plan"
+	case "default", "on-request", "never":
+		return "default"
+	case "auto", "auto_edit", "workspace-write", "acceptedits", "accept-edits", "on-failure":
+		return "auto_edit"
+	default:
+		return mode
+	}
+}
+
+func codexSandboxMode(opts LaunchOptions) string {
+	if opts.Sandbox {
+		return "workspace-write"
+	}
+	switch strings.ToLower(strings.TrimSpace(opts.PermissionMode)) {
+	case "":
+		return ""
+	case "plan", "read-only", "readonly":
+		return "read-only"
+	case "default", "auto", "auto_edit", "workspace-write", "acceptedits", "accept-edits", "on-failure", "on-request", "never", "yolo", "dontask":
+		return "workspace-write"
+	case "danger-full-access", "bypasspermissions", "bypass-permissions":
+		return "danger-full-access"
+	default:
+		return opts.PermissionMode
+	}
 }
 
 var (

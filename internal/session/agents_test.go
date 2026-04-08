@@ -349,16 +349,15 @@ func TestWriteCodexAgent(t *testing.T) {
 	}
 }
 
-func TestDiscoverAgents_Gemini(t *testing.T) {
+func TestDiscoverAgents_GeminiCommands(t *testing.T) {
 	root := t.TempDir()
 
-	// Write a gemini agent
-	dir := filepath.Join(root, ".gemini", "agents")
+	dir := filepath.Join(root, ".gemini", "commands")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	content := "---\ndescription: Gemini agent\n---\n\nDo gemini things."
-	if err := os.WriteFile(filepath.Join(dir, "gem-agent.md"), []byte(content), 0644); err != nil {
+	content := "description = \"Gemini command\"\nprompt = \"\"\"\nDo gemini things.\n\"\"\"\n"
+	if err := os.WriteFile(filepath.Join(dir, "gem-agent.toml"), []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -371,6 +370,42 @@ func TestDiscoverAgents_Gemini(t *testing.T) {
 	}
 	if agents[0].Provider != ProviderGemini {
 		t.Errorf("provider = %q, want gemini", agents[0].Provider)
+	}
+	if agents[0].Description != "Gemini command" {
+		t.Errorf("description = %q, want Gemini command", agents[0].Description)
+	}
+	if agents[0].Prompt != "Do gemini things." {
+		t.Errorf("prompt = %q, want command prompt", agents[0].Prompt)
+	}
+}
+
+func TestWriteGeminiCommand(t *testing.T) {
+	root := t.TempDir()
+
+	def := AgentDef{
+		Name:        "triage",
+		Provider:    ProviderGemini,
+		Description: "Gemini triage command",
+		Prompt:      "Summarize the current repo state.",
+	}
+
+	if err := WriteAgent(root, def); err != nil {
+		t.Fatalf("WriteAgent(gemini): %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(root, ".gemini", "commands", "triage.toml"))
+	if err != nil {
+		t.Fatalf("read Gemini command file: %v", err)
+	}
+	content := string(data)
+	if !contains(content, `description = "Gemini triage command"`) {
+		t.Error("Gemini command file missing description")
+	}
+	if !contains(content, "prompt = \"\"\"") {
+		t.Error("Gemini command file missing prompt block")
+	}
+	if !contains(content, "Summarize the current repo state.") {
+		t.Error("Gemini command file missing prompt")
 	}
 }
 

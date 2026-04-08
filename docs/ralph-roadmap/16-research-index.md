@@ -385,7 +385,6 @@ All external URLs from Wave 3 research agents (09-orchestration-landscape, 10-mc
 - Fedora Silverblue Review: https://www.xda-developers.com/replaced-my-linux-desktop-fedora-silverblue-feels-futuristic/
 - Arch Installer Compositors: https://9to5linux.com/arch-linux-installer-now-supports-labwc-niri-and-river-wayland-compositors
 - Arch vs NixOS 2026: https://www.slant.co/versus/2690/2700/~arch-linux_vs_nixos
-- Manjaro ARM Wiki: https://wiki.manjaro.org/index.php/Manjaro-ARM
 - Hyprland vs Sway 2025: https://gigasblade.blogspot.com/2025/10/hyprland-vs-swaywm-2025-dazzling.html
 - Hyprland vs Sway Landscape: https://www.oreateai.com/blog/hyprland-vs-sway-navigating-the-wayland-tiling-window-manager-landscape-in-2025/
 - Tiling WMs Productivity: https://dasroot.net/posts/2026/01/tiling-window-managers-i3-sway-hyprland-productivity/

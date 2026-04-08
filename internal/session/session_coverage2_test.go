@@ -7,6 +7,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hairglasses-studio/mcpkit/worktree"
 )
 
 // ---------------------------------------------------------------------------
@@ -20,7 +22,7 @@ func TestManager_SetWorktreePool(t *testing.T) {
 		t.Error("WorktreePool should be nil by default")
 	}
 
-	pool := &WorktreePool{} // just a non-nil value
+	pool := &worktree.WorktreePool{} // just a non-nil value
 	m.SetWorktreePool(pool)
 
 	if got := m.WorktreePool(); got != pool {

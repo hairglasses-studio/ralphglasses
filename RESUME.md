@@ -14,9 +14,7 @@ cd ~/hairglasses-studio/ralphglasses
 go build ./...
 go vet ./...
 
-# 4. Get your API key from 1Password
-# Set your API key (via 1Password CLI, env var, or .env file)
-#    op read "op://<vault>/<item>/credential"
+# 4. Get your API key
 export ANTHROPIC_API_KEY="<your-anthropic-api-key>"
 
 # 5. Launch the marathon

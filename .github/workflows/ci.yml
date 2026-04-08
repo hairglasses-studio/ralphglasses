@@ -1,7 +1,7 @@
 # CI — calls the org-wide reusable Go test workflow.
 #
 # Replaces inline test steps with:
-#   hairglasses-studio/.github/.github/workflows/go-test.yml@main
+#   hairglasses-studio/.github/.github/workflows/go-test.yml@84851d48a4c35aa4fa936b1fd247f7dcd37421cf
 #
 # Repo-specific workflows preserved separately:
 #   - claude-review.yml, claude-security.yml (AI PR review)
@@ -15,9 +15,16 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    uses: hairglasses-studio/.github/.github/workflows/go-test.yml@main
+    uses: hairglasses-studio/.github/.github/workflows/go-test.yml@84851d48a4c35aa4fa936b1fd247f7dcd37421cf
     with:
       go-version: "1.26.1"
       test-flags: "-count=1 -race"

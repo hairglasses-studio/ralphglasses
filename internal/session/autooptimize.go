@@ -255,13 +255,16 @@ func (ao *AutoOptimizer) IngestSessionJournal(s *Session) {
 
 // ProviderRecommendation holds a recommendation for a task.
 type ProviderRecommendation struct {
-	Provider        Provider `json:"provider"`
-	Model           string   `json:"model"`
-	EstimatedBudget float64  `json:"estimated_budget_usd"`
-	Confidence      string   `json:"confidence"` // "high", "medium", "low"
-	TaskType        string   `json:"task_type"`
-	Rationale       string   `json:"rationale"`
-	NormalizedCost  float64  `json:"normalized_cost_usd,omitempty"`
+	Provider              Provider   `json:"provider"`
+	Model                 string     `json:"model"`
+	EstimatedBudget       float64    `json:"estimated_budget_usd"`
+	Confidence            string     `json:"confidence"` // "high", "medium", "low"
+	TaskType              string     `json:"task_type"`
+	Rationale             string     `json:"rationale"`
+	NormalizedCost        float64    `json:"normalized_cost_usd,omitempty"`
+	FallbackChain         []Provider `json:"fallback_chain,omitempty"`
+	CapabilityConstraints []string   `json:"capability_constraints,omitempty"`
+	DataSource            string     `json:"data_source,omitempty"`
 }
 
 // RecommendProvider returns a provider recommendation for the given task.
@@ -269,11 +272,14 @@ func (ao *AutoOptimizer) RecommendProvider(prompt string) ProviderRecommendation
 	taskType := classifyTask(prompt)
 
 	rec := ProviderRecommendation{
-		Provider:   DefaultPrimaryProvider(),
-		Model:      ProviderDefaults(DefaultPrimaryProvider()),
-		TaskType:   taskType,
-		Confidence: "low",
-		Rationale:  "default: no feedback data available",
+		Provider:              DefaultPrimaryProvider(),
+		Model:                 ProviderDefaults(DefaultPrimaryProvider()),
+		TaskType:              taskType,
+		Confidence:            "low",
+		Rationale:             "default: no feedback data available",
+		FallbackChain:         ao.BuildSmartFailoverChain(prompt).Providers,
+		CapabilityConstraints: ProviderCapabilityConstraints(DefaultPrimaryProvider()),
+		DataSource:            "default",
 	}
 
 	if ao.feedback == nil {
@@ -294,6 +300,8 @@ func (ao *AutoOptimizer) RecommendProvider(prompt string) ProviderRecommendation
 		rec.Confidence = "medium"
 		rec.Rationale = fmt.Sprintf("best provider for %s tasks: %.0f%% completion, $%.3f avg cost",
 			taskType, profile.CompletionRate, profile.AvgCostUSD)
+		rec.CapabilityConstraints = ProviderCapabilityConstraints(rec.Provider)
+		rec.DataSource = "feedback_data"
 	}
 
 	// Use suggested budget

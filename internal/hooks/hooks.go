@@ -46,6 +46,9 @@ func NewExecutor(bus *events.Bus) *Executor {
 }
 
 // LoadConfig reads .ralph/hooks.yaml for a repo.
+// SECURITY: The Command field in hooks.yaml is executed directly by the system shell
+// without sanitization. The .ralph/hooks.yaml file must only contain trusted content
+// and its modification should be tightly controlled.
 func (e *Executor) LoadConfig(repoPath string) error {
 	hooksFile := filepath.Join(repoPath, ".ralph", "hooks.yaml")
 	data, err := os.ReadFile(hooksFile)
@@ -149,7 +152,8 @@ func (e *Executor) runHook(h HookDef, event events.Event, repoPath string) {
 
 	run := func() {
 		defer cancel()
-		cmd := exec.CommandContext(ctx, "sh", "-c", h.Command)
+		cmd := exec.Command("sh", "-c", h.Command)
+		setCommandProcessGroup(cmd)
 		cmd.Dir = repoPath
 		cmd.Env = append(os.Environ(),
 			"RALPH_EVENT_TYPE="+sanitize(string(event.Type)),
@@ -158,8 +162,27 @@ func (e *Executor) runHook(h HookDef, event events.Event, repoPath string) {
 			"RALPH_SESSION_ID="+sanitize(event.SessionID),
 			"RALPH_PROVIDER="+sanitize(event.Provider),
 		)
-		if err := cmd.Run(); err != nil {
+		if err := cmd.Start(); err != nil {
 			slog.Error("hook failed", "hook", h.Name, "error", err)
+			return
+		}
+		done := make(chan error, 1)
+		go func() {
+			done <- cmd.Wait()
+		}()
+		select {
+		case err := <-done:
+			if err != nil {
+				slog.Error("hook failed", "hook", h.Name, "error", err)
+			}
+		case <-ctx.Done():
+			_ = killCommandProcessGroup(cmd)
+			<-done
+			if ctx.Err() == context.DeadlineExceeded {
+				slog.Error("hook failed", "hook", h.Name, "error", fmt.Errorf("hook %q timed out after %s: %w", h.Name, timeout, ctx.Err()))
+				return
+			}
+			slog.Error("hook failed", "hook", h.Name, "error", ctx.Err())
 		}
 	}
 

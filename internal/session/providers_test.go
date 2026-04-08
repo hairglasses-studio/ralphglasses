@@ -44,24 +44,71 @@ func TestProviderDefaults(t *testing.T) {
 	}
 }
 
+func TestProviderCapabilityMatrixFor(t *testing.T) {
+	matrix, ok := ProviderCapabilityMatrixFor(ProviderGemini)
+	if !ok {
+		t.Fatal("expected gemini capability matrix")
+	}
+	if matrix.ProjectInstructions != "GEMINI.md" {
+		t.Fatalf("ProjectInstructions = %q, want GEMINI.md", matrix.ProjectInstructions)
+	}
+	if cap := matrix.Capabilities[CapabilityWorktree]; cap.Support != CapabilityNative {
+		t.Fatalf("gemini worktree support = %q, want native", cap.Support)
+	}
+	if cap := matrix.Capabilities[CapabilityBudgetUSD]; cap.Support != CapabilityEmulated {
+		t.Fatalf("gemini budget support = %q, want emulated", cap.Support)
+	}
+
+	codexMatrix, ok := ProviderCapabilityMatrixFor(ProviderCodex)
+	if !ok {
+		t.Fatal("expected codex capability matrix")
+	}
+	if cap := codexMatrix.Capabilities[CapabilityResume]; cap.Support != CapabilityInstallDependent {
+		t.Fatalf("codex resume support = %q, want install_dependent", cap.Support)
+	}
+	if cap := codexMatrix.Capabilities[CapabilityPermissionMode]; cap.Support != CapabilityEmulated {
+		t.Fatalf("codex permission_mode support = %q, want emulated", cap.Support)
+	}
+}
+
 func TestBuildGeminiCmd(t *testing.T) {
 	ctx := context.Background()
-	cmd := buildGeminiCmd(ctx, LaunchOptions{
-		RepoPath: "/tmp/repo",
-		Prompt:   "do something",
-		Model:    "gemini-2.5-pro",
-		Resume:   "sess-123",
+	t.Run("default headless flags", func(t *testing.T) {
+		cmd := buildGeminiCmd(ctx, LaunchOptions{
+			RepoPath: "/tmp/repo",
+			Prompt:   "do something",
+			Model:    "gemini-2.5-pro",
+			Resume:   "sess-123",
+		})
+
+		cmdStr := strings.Join(cmd.Args, " ")
+		for _, want := range []string{"--output-format", "stream-json", "--model", "gemini-2.5-pro", "--resume", "sess-123", "--approval-mode", "yolo", "-p", "do something"} {
+			if !strings.Contains(cmdStr, want) {
+				t.Errorf("gemini cmd %q missing %q", cmdStr, want)
+			}
+		}
+		if cmd.Dir != "/tmp/repo" {
+			t.Errorf("cmd.Dir = %q, want /tmp/repo", cmd.Dir)
+		}
 	})
 
-	cmdStr := strings.Join(cmd.Args, " ")
-	for _, want := range []string{"--output-format", "stream-json", "--model", "gemini-2.5-pro", "--resume", "sess-123", "--approval-mode", "yolo", "-p", "do something"} {
-		if !strings.Contains(cmdStr, want) {
-			t.Errorf("gemini cmd %q missing %q", cmdStr, want)
+	t.Run("provider capabilities map to gemini flags", func(t *testing.T) {
+		cmd := buildGeminiCmd(ctx, LaunchOptions{
+			RepoPath:       "/tmp/repo",
+			Prompt:         "do something",
+			PermissionMode: "auto",
+			Worktree:       "feature-branch",
+			Sandbox:        true,
+			AllowedTools:   []string{"Edit", "Read"},
+		})
+
+		cmdStr := strings.Join(cmd.Args, " ")
+		for _, want := range []string{"--approval-mode auto_edit", "--worktree feature-branch", "--sandbox", "--allowed-tools Edit,Read"} {
+			if !strings.Contains(cmdStr, want) {
+				t.Errorf("gemini cmd %q missing %q", cmdStr, want)
+			}
 		}
-	}
-	if cmd.Dir != "/tmp/repo" {
-		t.Errorf("cmd.Dir = %q, want /tmp/repo", cmd.Dir)
-	}
+	})
 }
 
 func TestBuildCodexCmd(t *testing.T) {
@@ -328,6 +375,45 @@ func TestValidateLaunchOptionsCodexResumeUnsupportedInstall(t *testing.T) {
 	}
 }
 
+func TestValidateLaunchOptions_StrictProviderContractUsesCapabilities(t *testing.T) {
+	t.Run("codex allows emulated budget", func(t *testing.T) {
+		err := validateLaunchOptions(LaunchOptions{
+			Provider:               ProviderCodex,
+			MaxBudgetUSD:           5,
+			StrictProviderContract: true,
+		})
+		if err != nil {
+			t.Fatalf("expected emulated codex budget to validate, got %v", err)
+		}
+	})
+
+	t.Run("gemini allows native worktree and allowed_tools", func(t *testing.T) {
+		err := validateLaunchOptions(LaunchOptions{
+			Provider:               ProviderGemini,
+			Worktree:               "feature-branch",
+			AllowedTools:           []string{"Read"},
+			StrictProviderContract: true,
+		})
+		if err != nil {
+			t.Fatalf("expected native gemini options to validate, got %v", err)
+		}
+	})
+
+	t.Run("gemini rejects unsupported system_prompt", func(t *testing.T) {
+		err := validateLaunchOptions(LaunchOptions{
+			Provider:               ProviderGemini,
+			SystemPrompt:           "be helpful",
+			StrictProviderContract: true,
+		})
+		if err == nil {
+			t.Fatal("expected error for unsupported gemini system_prompt")
+		}
+		if !strings.Contains(err.Error(), "system_prompt") {
+			t.Fatalf("error = %q, want mention of system_prompt", err)
+		}
+	})
+}
+
 func TestRunSessionOutputWithProvider(t *testing.T) {
 	streamData := `{"type":"system","session_id":"gem-abc"}
 {"type":"assistant","content":"Working..."}
@@ -480,13 +566,13 @@ func TestUnsupportedOptionsWarnings(t *testing.T) {
 		t.Errorf("claude warnings = %v, want none", w)
 	}
 
-	// Gemini ignores system_prompt, max_budget_usd, agent
+	// Gemini warns for unsupported or emulated fields.
 	gw := UnsupportedOptionsWarnings(ProviderGemini, opts)
 	if len(gw) != 3 {
 		t.Errorf("gemini warnings count = %d, want 3: %v", len(gw), gw)
 	}
 
-	// Codex ignores system_prompt, max_budget_usd, agent
+	// Codex warns for unsupported or emulated fields.
 	cw := UnsupportedOptionsWarnings(ProviderCodex, opts)
 	if len(cw) != 3 {
 		t.Errorf("codex warnings count = %d, want 3: %v", len(cw), cw)
@@ -1168,10 +1254,10 @@ func TestUnsupportedOptionsWarnings_AllFields(t *testing.T) {
 		Resume:       "sess-123",
 	}
 
-	// Gemini: system_prompt, max_budget, agent, max_turns, allowed_tools, worktree
+	// Gemini: system_prompt, max_budget, agent, max_turns
 	gw := UnsupportedOptionsWarnings(ProviderGemini, opts)
-	if len(gw) != 6 {
-		t.Errorf("gemini warnings count = %d, want 6: %v", len(gw), gw)
+	if len(gw) != 4 {
+		t.Errorf("gemini warnings count = %d, want 4: %v", len(gw), gw)
 	}
 
 	// Codex: system_prompt, max_budget, agent, max_turns, allowed_tools, worktree
@@ -1608,6 +1694,18 @@ func TestBuildCodexCmdSandbox(t *testing.T) {
 		cmdStr := strings.Join(cmd.Args, " ")
 		if !strings.Contains(cmdStr, "--sandbox workspace-write") {
 			t.Errorf("codex cmd %q missing --sandbox workspace-write", cmdStr)
+		}
+	})
+
+	t.Run("plan permission mode maps to read-only sandbox", func(t *testing.T) {
+		cmd := buildCodexCmd(ctx, LaunchOptions{
+			RepoPath:       "/tmp/repo",
+			Prompt:         "Fix it",
+			PermissionMode: "plan",
+		})
+		cmdStr := strings.Join(cmd.Args, " ")
+		if !strings.Contains(cmdStr, "--sandbox read-only") {
+			t.Errorf("codex cmd %q missing --sandbox read-only", cmdStr)
 		}
 	})
 

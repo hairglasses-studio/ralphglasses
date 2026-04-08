@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hairglasses-studio/mcpkit/worktree"
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet/pool"
@@ -64,7 +65,7 @@ type Manager struct {
 	Enhancer           *enhancer.HybridEngine // optional prompt enhancement for loop integration
 	promptEvolution    *PromptEvolution       // tournament-based prompt variant selection
 	FleetPool          *pool.State            // fleet-wide budget pooling and metrics aggregation
-	worktreePool       *WorktreePool          // Phase 10.5.8: reusable worktree pool
+	worktreePool       *worktree.WorktreePool // Phase 10.5.8: reusable worktree pool
 	automation         map[string]*SubscriptionAutomationController
 
 	spendMonitor  *SpendRateMonitor        // hourly spend circuit breaker (nil = disabled)
@@ -305,14 +306,14 @@ func (m *Manager) TotalPrunedThisSession() int {
 }
 
 // WorktreePool returns the worktree pool, or nil if none is configured.
-func (m *Manager) WorktreePool() *WorktreePool {
+func (m *Manager) WorktreePool() *worktree.WorktreePool {
 	m.configMu.RLock()
 	defer m.configMu.RUnlock()
 	return m.worktreePool
 }
 
 // SetWorktreePool sets the worktree pool for reuse across sessions.
-func (m *Manager) SetWorktreePool(pool *WorktreePool) {
+func (m *Manager) SetWorktreePool(pool *worktree.WorktreePool) {
 	m.configMu.Lock()
 	defer m.configMu.Unlock()
 	m.worktreePool = pool

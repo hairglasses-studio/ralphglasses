@@ -2,7 +2,11 @@
   "mcpServers": {
     "ralphglasses": {
       "command": "bash",
-      "args": ["./scripts/dev/run-mcp.sh", "--scan-path", "~/hairglasses-studio"],
+      "args": [
+        "./scripts/dev/run-mcp.sh",
+        "--scan-path",
+        "~/hairglasses-studio"
+      ],
       "cwd": "."
     }
   }

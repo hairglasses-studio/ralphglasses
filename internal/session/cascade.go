@@ -14,6 +14,7 @@ type CascadeConfig struct {
 	CheapProvider        Provider            `json:"cheap_provider"`
 	ExpensiveProvider    Provider            `json:"expensive_provider"`
 	ConfidenceThreshold  float64             `json:"confidence_threshold"` // 0.0-1.0, default 0.7
+	CascadeThreshold     float64             `json:"cascade_threshold"`    // 0.0-1.0, prioritizing cost vs. quality
 	MaxCheapBudgetUSD    float64             `json:"max_cheap_budget_usd"`
 	MaxCheapTurns        int                 `json:"max_cheap_turns"`
 	TaskTypeOverrides    map[string]Provider `json:"task_type_overrides"`
@@ -28,6 +29,7 @@ func DefaultCascadeConfig() CascadeConfig {
 		CheapProvider:       ProviderGemini,
 		ExpensiveProvider:   DefaultPrimaryProvider(),
 		ConfidenceThreshold: 0.7,
+		CascadeThreshold:    0.5,
 		MaxCheapBudgetUSD:   2.00,
 		MaxCheapTurns:       15,
 		TaskTypeOverrides:   make(map[string]Provider),
@@ -58,6 +60,11 @@ func DefaultCascadeFromConfig(cfg map[string]string) *CascadeConfig {
 	if v, ok := cfg["CASCADE_CONFIDENCE_THRESHOLD"]; ok && v != "" {
 		if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0 && f <= 1 {
 			defaults.ConfidenceThreshold = f
+		}
+	}
+	if v, ok := cfg["CASCADE_THRESHOLD"]; ok && v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0 && f <= 1 {
+			defaults.CascadeThreshold = f
 		}
 	}
 	if v, ok := cfg["CASCADE_MAX_CHEAP_BUDGET"]; ok && v != "" {

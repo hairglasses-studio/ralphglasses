@@ -14,6 +14,7 @@ func initTestRepo(t *testing.T) string {
 
 	cmds := [][]string{
 		{"git", "init"},
+		{"git", "symbolic-ref", "HEAD", "refs/heads/main"},
 		{"git", "config", "user.email", "test@test.com"},
 		{"git", "config", "user.name", "Test"},
 	}

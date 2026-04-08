@@ -473,6 +473,9 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 			Confidence: "low",
 			Rationale: fmt.Sprintf("cold-start heuristic: %s tier (%s) for %s tasks (complexity %d) — no multi-provider feedback data yet",
 				tier.Label, tier.Model, taskType, tier.MaxComplexity),
+			FallbackChain:         s.AutoOptimizer.BuildSmartFailoverChain(task).Providers,
+			CapabilityConstraints: session.ProviderCapabilityConstraints(tier.Provider),
+			DataSource:            "heuristic",
 		}
 	} else {
 		rec = s.AutoOptimizer.RecommendProvider(task)
@@ -487,16 +490,21 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 		"confidence":           rec.Confidence,
 		"task_type":            rec.TaskType,
 		"rationale":            rec.Rationale,
+		"fallback_chain":       rec.FallbackChain,
+		"data_source":          rec.DataSource,
 	}
 	if rec.NormalizedCost > 0 {
 		result["normalized_cost_usd"] = rec.NormalizedCost
 	}
-
-	// Add data_source field to indicate recommendation origin.
-	if coldStart {
-		result["data_source"] = "heuristic"
-	} else {
-		result["data_source"] = "feedback_data"
+	if len(rec.CapabilityConstraints) > 0 {
+		result["capability_constraints"] = rec.CapabilityConstraints
+	}
+	if result["data_source"] == "" {
+		if coldStart {
+			result["data_source"] = "heuristic"
+		} else {
+			result["data_source"] = "feedback_data"
+		}
 	}
 
 	if rec.EstimatedBudget == 0 {
@@ -515,6 +523,102 @@ func (s *Server) handleProviderRecommend(_ context.Context, req mcp.CallToolRequ
 	}
 
 	return fleetJSON(result)
+}
+
+func (s *Server) handleProviderCapabilities(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	provider := session.Provider(strings.TrimSpace(getStringArg(req, "provider")))
+	if provider == "" {
+		return fleetJSON(map[string]any{
+			"providers": session.ProviderCapabilityMatrices(),
+		})
+	}
+
+	matrix, ok := session.ProviderCapabilityMatrixFor(provider)
+	if !ok {
+		return codedError(ErrInvalidParams, fmt.Sprintf("unknown provider %q (valid: claude, codex, gemini)", provider)), nil
+	}
+	return fleetJSON(matrix)
+}
+
+func (s *Server) handleProviderCompare(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	task := strings.TrimSpace(getStringArg(req, "task"))
+	taskType := ""
+	if task != "" {
+		taskType = session.ClassifyTask(task)
+	}
+
+	providers := session.PrimaryProviders()
+	comparison := make([]map[string]any, 0, len(providers))
+	for _, provider := range providers {
+		matrix, ok := session.ProviderCapabilityMatrixFor(provider)
+		if !ok {
+			continue
+		}
+
+		entry := map[string]any{
+			"provider":             matrix.Provider,
+			"binary":               matrix.Binary,
+			"default_model":        matrix.DefaultModel,
+			"project_instructions": matrix.ProjectInstructions,
+			"repo_config_path":     matrix.RepoConfigPath,
+			"agent_config_path":    matrix.AgentConfigPath,
+			"capabilities":         matrix.Capabilities,
+			"constraints":          session.ProviderCapabilityConstraints(provider),
+		}
+		if taskType != "" {
+			if profile := providerProfileSnapshot(s.FeedbackAnalyzer, provider, taskType); profile != nil {
+				entry["feedback_profile"] = profile
+			}
+		}
+		comparison = append(comparison, entry)
+	}
+
+	result := map[string]any{
+		"providers": comparison,
+	}
+	if task != "" {
+		result["task"] = task
+		result["task_type"] = taskType
+		if s.AutoOptimizer != nil {
+			result["recommendation"] = s.AutoOptimizer.RecommendProvider(task)
+		}
+	}
+
+	return fleetJSON(result)
+}
+
+func providerProfileSnapshot(feedback *session.FeedbackAnalyzer, provider session.Provider, taskType string) map[string]any {
+	if feedback == nil || taskType == "" {
+		return nil
+	}
+	if profile, ok := feedback.GetProviderProfile(string(provider), taskType); ok {
+		return map[string]any{
+			"provider":        profile.Provider,
+			"task_type":       profile.TaskType,
+			"sample_count":    profile.SampleCount,
+			"avg_cost_usd":    profile.AvgCostUSD,
+			"avg_turns":       profile.AvgTurns,
+			"completion_rate": profile.CompletionRate,
+			"cost_per_turn":   profile.CostPerTurn,
+			"trusted":         true,
+		}
+	}
+	for _, profile := range feedback.AllProviderProfiles() {
+		if profile.Provider != string(provider) || profile.TaskType != taskType {
+			continue
+		}
+		return map[string]any{
+			"provider":        profile.Provider,
+			"task_type":       profile.TaskType,
+			"sample_count":    profile.SampleCount,
+			"avg_cost_usd":    profile.AvgCostUSD,
+			"avg_turns":       profile.AvgTurns,
+			"completion_rate": profile.CompletionRate,
+			"cost_per_turn":   profile.CostPerTurn,
+			"trusted":         false,
+		}
+	}
+	return nil
 }
 
 func (s *Server) handleFleetDLQ(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

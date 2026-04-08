@@ -16,7 +16,7 @@
 5. [Secrets Management](#5-secrets-management)
 6. [OTA Updates](#6-ota-updates)
 7. [Fleet Deployment](#7-fleet-deployment)
-8. [Edge/ARM Deployment](#8-edgearm-deployment)
+8. [Thin Client Deployment Scope](#8-thin-client-deployment-scope)
 9. [Fastest Path to Bootable Prototype](#9-fastest-path-to-bootable-prototype)
 10. [Recommendations](#10-recommendations)
 
@@ -40,8 +40,7 @@ The current implementation uses Manjaro Linux (`Dockerfile.manjaro`) with pacman
 
 **Manjaro (current)**
 - Pros: Familiar, rolling release with tested snapshots, good NVIDIA support via `mhwd` hardware detection, large AUR for edge packages. The current `Dockerfile.manjaro` already works.
-- Cons: Not immutable. No atomic rollback. The Manjaro ARM project has stagnated for Raspberry Pi 5 support (mirror updates are irregular). Rolling release means silent breakage risk on unattended thin clients. No built-in reproducibility guarantee -- two ISOs built a week apart may differ.
-- Sources: [Manjaro ARM Wiki](https://wiki.manjaro.org/index.php/Manjaro-ARM), [Manjaro RPi5 Forum Thread](https://forum.manjaro.org/t/raspberry-pi-5-support-for-manjaro-when/172446)
+- Cons: Not immutable. No atomic rollback. Rolling release means silent breakage risk on unattended thin clients. No built-in reproducibility guarantee -- two ISOs built a week apart may differ.
 
 **NixOS (recommended for new builds)**
 - Pros: Entire system state declared in `configuration.nix`. Atomic generations with instant rollback. The nixiosk project provides a ready-made kiosk framework using Cage compositor. Flakes pin every dependency for reproducible builds. NixOps 4 reports 90% reduction in configuration drift in enterprise deployments. A single `.nix` file can define the complete thin client: kernel, NVIDIA drivers, Sway config, ralphglasses binary, systemd units, and secrets.
@@ -445,45 +444,43 @@ Only necessary if the fleet grows beyond what Tinkerbell handles comfortably, or
 
 ---
 
-## 8. Edge/ARM Deployment
+## 8. Thin Client Deployment Scope
 
 ### Feasibility Assessment
 
-Running ralphglasses fleet coordinators on ARM SBCs is feasible with caveats:
+Ralphglasses now targets x86_64 thin clients in production, with Apple Silicon
+developer machines supported separately via `darwin/arm64` builds.
 
-**Go cross-compilation is trivial:**
+**Primary deployment path:**
 ```bash
-GOOS=linux GOARCH=arm64 go build -o ralphglasses-arm64 .
+GOOS=linux GOARCH=amd64 go build -o ralphglasses-amd64 .
 ```
 
 The ralphglasses binary is pure Go with Charmbracelet TUI (no CGO dependencies that would complicate cross-compilation).
 
-**Suitable ARM Hardware (2025-2026):**
+**Supported hardware focus (2025-2026):**
 
 | Board | CPU | RAM | Price | Notes |
 |-------|-----|-----|-------|-------|
-| Raspberry Pi 5 | BCM2712 4-core A76 | 8GB | ~$80 | Best community support |
-| RUBIK Pi 3 | Qualcomm QCS6490 | 8GB | ~$100 | 12 TOPS NPU for local inference |
-| Orange Pi 5 Plus | RK3588 8-core | 16GB | ~$120 | Dual GbE, M.2 |
+| ASUS ProArt workstation | Ryzen 9 + x86_64 Linux | 128GB | Existing target | Primary control-plane host |
+| Intel/AMD mini PC | x86_64 | 16-64GB | Variable | Thin client / kiosk deployment |
+| Apple Silicon Mac | M-series | 16-64GB | Variable | Developer workstation, not Linux thin client |
 
-Sources: [Top SBC Picks 2025](https://www.electromaker.io/blog/article/top-sbc-picks-in-2025-for-engineers-developers), [Best SBCs 2026](https://www.eneba.com/hub/gaming-gear/best-single-board-computer/), [Lightweight Linux for SBCs](https://linuxboards.com/top-5-lightweight-linux-distros-for-your-single-board-computer/), [Manjaro ARM RPi5 Guide](https://raspberrytips.com/install-manjaro-raspberry-pi/)
+### Supported Deployment Targets
 
-### What Works on ARM
+- **x86_64 thin clients**: Primary Linux deployment target for kiosks, PXE workers, and multi-monitor control planes.
+- **x86_64 coordinators**: Valid for PXE/Pixiecore, observability, relay, and orchestration services.
+- **Apple Silicon developer workstations**: Supported for local development and testing, but not as Linux thin clients.
 
-- **Fleet coordinator**: The Go binary managing session state, dispatching tasks, and aggregating results. Pure CPU-bound, 8GB RAM is sufficient for coordination of 50+ sessions.
-- **PXE/Pixiecore server**: Serving boot images to worker thin clients.
-- **Monitoring/observability**: Running Prometheus node exporter, log aggregation.
-- **Tailscale relay**: Mesh VPN coordination for distributed fleets.
+### Unsupported Linux ARM Targets
 
-### What Does NOT Work on ARM
-
-- **LLM provider sessions**: Claude Code, Gemini CLI, and Codex CLI require Node.js/Python runtimes and expect x86_64. The ARM builds of Claude Code may not exist.
-- **GPU-accelerated inference**: No CUDA on ARM SBCs (the NPUs use different frameworks).
-- **7-monitor TUI**: ARM SBCs typically support 1-2 display outputs.
+- **No release artifacts or CI**: Linux ARM builds are intentionally out of scope.
+- **No thin-client packaging**: The supported kiosk image and install path target x86_64 Linux only.
+- **No multi-monitor workstation target**: Linux ARM boards do not match the intended fleet-control hardware profile.
 
 ### Verdict
 
-ARM SBCs are viable as **fleet coordinators and PXE servers**, not as agent workstations. A Raspberry Pi 5 running Manjaro ARM or DietPi could serve as the network boot server and fleet orchestrator, with x86_64 thin clients doing the actual LLM work. The existing `distro/dietpi/` directory suggests this path was already considered.
+Linux deployment stays x86_64. Apple Silicon remains supported for development, but Linux ARM boards are no longer part of the thin-client or fleet-runtime plan.
 
 ---
 
@@ -584,7 +581,7 @@ Prioritized list of thin client actions, ordered by impact and effort.
 | 12 | **Implement RAUC A/B partitioning** | 2 days | Atomic OTA updates with instant rollback |
 | 13 | **Evaluate Cage for worker kiosks** | 4 hours | Simplest possible compositor for single-app workers |
 | 14 | **Write flake.nix for NixOS thin client** | 3 days | Declarative system definition; start the NixOS migration |
-| 15 | **ARM fleet coordinator on RPi 5** | 1 day | DietPi on RPi 5 running Pixiecore + fleet orchestration |
+| 15 | **Secondary x86_64 fleet coordinator** | 1 day | Small-form-factor x86_64 host running Pixiecore + fleet orchestration |
 
 ### P3 -- Long Term (Production Hardening)
 
@@ -613,7 +610,6 @@ Prioritized list of thin client actions, ordered by impact and effort.
 - [Vanilla OS](https://vanillaos.org/)
 - [blendOS](https://blendos.co/)
 - [Immutable Linux Distributions](https://itsfoss.com/immutable-linux-distros/)
-- [Manjaro ARM Wiki](https://wiki.manjaro.org/index.php/Manjaro-ARM)
 - [Arch vs NixOS 2026](https://www.slant.co/versus/2690/2700/~arch-linux_vs_nixos)
 - [Manjaro vs NixOS](https://www.slant.co/versus/2700/2706/~nixos_vs_manjaro-linux)
 
@@ -682,14 +678,6 @@ Prioritized list of thin client actions, ordered by impact and effort.
 - [DigitalOcean PXE/iPXE Guide](https://www.digitalocean.com/community/tutorials/bare-metal-provisioning-with-pxe-and-ipxe)
 - [Digitec Galaxus Netbooting Thin Clients](https://github.com/DigitecGalaxus/netbooting-thinclients)
 - [PXE ArchWiki](https://wiki.archlinux.org/title/Preboot_Execution_Environment)
-
-### ARM/Edge
-- [Top SBC Picks 2025](https://www.electromaker.io/blog/article/top-sbc-picks-in-2025-for-engineers-developers)
-- [Best SBCs 2026](https://www.eneba.com/hub/gaming-gear/best-single-board-computer/)
-- [Lightweight Linux for SBCs](https://linuxboards.com/top-5-lightweight-linux-distros-for-your-single-board-computer/)
-- [Manjaro ARM RPi Guide](https://raspberrytips.com/install-manjaro-raspberry-pi/)
-- [LLMs on Raspberry Pi](https://www.siliconflow.com/articles/en/best-open-source-LLMs-for-Raspberry-Pi)
-- [RUBIK Pi 3](https://www.thundercomm.com/product/rubik-pi/)
 
 ### Containers
 - [Alpine Linux](https://alpinelinux.org/downloads/)

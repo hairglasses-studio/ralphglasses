@@ -9,6 +9,7 @@ import (
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -51,6 +52,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.Spinner, cmd = m.Spinner.Update(msg)
 		return m, cmd
+
+	case EventBusMsg:
+		m.handleEventBusMsg(events.Event(msg))
+		if m.EventBusCh != nil {
+			return m, watchEventBus(m.EventBusCh)
+		}
+		return m, nil
 
 	case tickMsg:
 		// Check for external shutdown (e.g. SIGINT/SIGTERM cancelled the context).

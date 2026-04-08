@@ -4,7 +4,7 @@ Research conducted March 2026 for the ralphglasses thin client deliverable.
 
 ## Executive Summary
 
-No production-ready "Agent OS" exists yet, but the ecosystem is converging fast. **StereOS** (NixOS + gVisor) is the closest purpose-built agent OS but is early alpha. The practical path today is **Docker Sandboxes** (production-ready, official Claude Code template) or **NixOS microvm.nix** (strongest documented real-world isolation). For a homelab thin client, **DietPi + i3** is the recommended base OS, with agent sandboxes running on the server side (UNRAID/Proxmox).
+No production-ready "Agent OS" exists yet, but the ecosystem is converging fast. **StereOS** (NixOS + gVisor) is the closest purpose-built agent OS but is early alpha. The practical path today is **Docker Sandboxes** (production-ready, official Claude Code template) or **NixOS microvm.nix** (strongest documented real-world isolation). For a homelab thin client, the supported deployment path is an **x86_64 Linux kiosk image** today, with agent sandboxes running on the server side (UNRAID/Proxmox).
 
 ---
 
@@ -152,7 +152,8 @@ No production-ready "Agent OS" exists yet, but the ecosystem is converging fast.
 
 | Distro | Size | Key Feature | Fit |
 |--------|------|-------------|-----|
-| **DietPi** | ~130MB | Debian, i3 in catalog, thin client proven | **Best** |
+| **Manjaro** | ~3-5GB | Existing NVIDIA-friendly kiosk build path | **Best current path** |
+| **NixOS** | ~2-4GB | Declarative config, rollback, strong long-term fit | **Best long-term path** |
 | Tiny Core | 16-21MB | Runs in RAM, modular extensions | Ultra-minimal |
 | ThinStation | ~50MB | PXE-native, RDP/VNC/SSH | Network boot |
 | Porteus | ~300MB | Modular, boots from USB | Portable |
@@ -170,7 +171,7 @@ No production-ready "Agent OS" exists yet, but the ecosystem is converging fast.
 2. **GPU split**: GPU A → inference (Ollama LXC), GPU B → display/compute
 3. **MCP hub**: MCPJungle on UNRAID, agents connect to single endpoint
 4. **Sandboxing**: code-on-incus or Docker Sandboxes per agent
-5. **Thin client**: DietPi + i3, auto-start ralphglasses TUI
+5. **Thin client**: x86_64 kiosk image (Manjaro/Sway today, NixOS later), auto-start ralphglasses TUI
 6. **Window management**: 7 workspaces → 7 monitors, go-i3 IPC
 7. **Network**: Proxmox SDN VLAN + per-container iptables + MCPJungle as only tool endpoint
 8. **Persistence**: UNRAID NFS shares, git worktrees per agent
