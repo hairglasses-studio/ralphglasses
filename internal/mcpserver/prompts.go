@@ -15,7 +15,11 @@ import (
 // Prompts expose enhancer templates and structured planning prompts as
 // first-class MCP prompt resources that clients can list and invoke.
 func RegisterPrompts(srv *server.MCPServer, appSrv *Server) {
-	srv.AddPrompts(serverPrompts(appSrv)...)
+	prompts := serverPrompts(appSrv)
+	for i := range prompts {
+		prompts[i].Handler = instrumentPromptHandler(appSrv, prompts[i].Prompt.Name, prompts[i].Handler)
+	}
+	srv.AddPrompts(prompts...)
 }
 
 func serverPrompts(appSrv *Server) []server.ServerPrompt {
@@ -270,6 +274,16 @@ func repoTriageBriefPrompt() server.ServerPrompt {
 	}
 
 	return server.ServerPrompt{Prompt: prompt, Handler: handler}
+}
+
+func instrumentPromptHandler(appSrv *Server, name string, next server.PromptHandlerFunc) server.PromptHandlerFunc {
+	return func(ctx context.Context, req mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		result, err := next(ctx, req)
+		if err == nil && result != nil && appSrv != nil && appSrv.DiscoveryRecorder != nil {
+			appSrv.DiscoveryRecorder.RecordPrompt(name)
+		}
+		return result, err
+	}
 }
 
 // buildSelfImprovementPrompt constructs a structured self-improvement planning

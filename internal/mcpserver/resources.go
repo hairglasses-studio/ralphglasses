@@ -40,18 +40,19 @@ func RegisterResources(srv *server.MCPServer, appSrv *Server) {
 				mcp.WithTemplateDescription(def.Description),
 				mcp.WithTemplateMIMEType(def.MIMEType),
 			),
-			handler,
+			instrumentResourceTemplateHandler(appSrv, def.URI, handler),
 		)
 	}
 
 	staticHandlers := map[string]server.ResourceHandlerFunc{
-		"ralph:///catalog/server":      makeCatalogServerHandler(appSrv),
-		"ralph:///catalog/tool-groups": makeCatalogToolGroupsHandler(appSrv),
-		"ralph:///catalog/workflows":   makeCatalogWorkflowsHandler(),
-		"ralph:///catalog/skills":      makeCatalogSkillsHandler(),
-		"ralph:///catalog/cli-parity":  makeCLIParityHandler(appSrv),
-		"ralph:///bootstrap/checklist": makeBootstrapChecklistHandler(),
-		"ralph:///runtime/health":      makeRuntimeHealthHandler(appSrv),
+		"ralph:///catalog/server":             makeCatalogServerHandler(appSrv),
+		"ralph:///catalog/tool-groups":        makeCatalogToolGroupsHandler(appSrv),
+		"ralph:///catalog/workflows":          makeCatalogWorkflowsHandler(),
+		"ralph:///catalog/skills":             makeCatalogSkillsHandler(),
+		"ralph:///catalog/cli-parity":         makeCLIParityHandler(appSrv),
+		"ralph:///catalog/discovery-adoption": makeDiscoveryAdoptionHandler(appSrv),
+		"ralph:///bootstrap/checklist":        makeBootstrapChecklistHandler(),
+		"ralph:///runtime/health":             makeRuntimeHealthHandler(appSrv),
 	}
 
 	for _, def := range staticResourceCatalog() {
@@ -66,7 +67,7 @@ func RegisterResources(srv *server.MCPServer, appSrv *Server) {
 				mcp.WithResourceDescription(def.Description),
 				mcp.WithMIMEType(def.MIMEType),
 			),
-			Handler: handler,
+			Handler: instrumentResourceHandler(appSrv, def.URI, handler),
 		})
 	}
 }
@@ -208,6 +209,12 @@ func makeCLIParityHandler(appSrv *Server) server.ResourceHandlerFunc {
 	}
 }
 
+func makeDiscoveryAdoptionHandler(appSrv *Server) server.ResourceHandlerFunc {
+	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, appSrv.discoveryAdoptionSummary())
+	}
+}
+
 func makeBootstrapChecklistHandler() server.ResourceHandlerFunc {
 	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		return jsonResourceContents(req.Params.URI, buildBootstrapChecklistDoc())
@@ -222,26 +229,28 @@ func makeRuntimeHealthHandler(appSrv *Server) server.ResourceHandlerFunc {
 
 func buildCatalogServerDoc(appSrv *Server) map[string]any {
 	usageSummary := parity.CLIParityUsage(parity.DefaultCLIParityUsageOptions(appSrv.ScanPath))
+	discoverySummary := appSrv.discoveryAdoptionSummary()
 	return map[string]any{
-		"server_name":             "ralphglasses",
-		"instructions":            ServerInstructions(),
-		"tool_group_count":        len(ToolGroupNames),
-		"group_tool_count":        GeneratedTotalTools,
-		"management_tool_count":   len(managementToolNames()),
-		"tool_count":              GeneratedTotalTools + len(managementToolNames()),
-		"resource_count":          len(staticResourceCatalog()),
-		"resource_template_count": len(resourceTemplateCatalog()),
-		"skill_count":             len(skillCatalog()),
-		"prompt_count":            len(promptCatalog()),
-		"deferred_mode_default":   true,
-		"management_tools":        managementToolNames(),
-		"resources":               resourceURIs(staticResourceCatalog()),
-		"resource_templates":      resourceTemplateURIs(resourceTemplateCatalog()),
-		"skills":                  skillNames(),
-		"cli_parity_summary":      parity.CLIParityCoverage(),
-		"cli_parity_usage":        usageSummary,
-		"prompts":                 promptNames(),
-		"tool_groups":             buildCatalogToolGroupsDoc(appSrv),
+		"server_name":                "ralphglasses",
+		"instructions":               ServerInstructions(),
+		"tool_group_count":           len(ToolGroupNames),
+		"group_tool_count":           GeneratedTotalTools,
+		"management_tool_count":      len(managementToolNames()),
+		"tool_count":                 GeneratedTotalTools + len(managementToolNames()),
+		"resource_count":             len(staticResourceCatalog()),
+		"resource_template_count":    len(resourceTemplateCatalog()),
+		"skill_count":                len(skillCatalog()),
+		"prompt_count":               len(promptCatalog()),
+		"deferred_mode_default":      true,
+		"management_tools":           managementToolNames(),
+		"resources":                  resourceURIs(staticResourceCatalog()),
+		"resource_templates":         resourceTemplateURIs(resourceTemplateCatalog()),
+		"skills":                     skillNames(),
+		"cli_parity_summary":         parity.CLIParityCoverage(),
+		"cli_parity_usage":           usageSummary,
+		"discovery_adoption_summary": discoverySummary,
+		"prompts":                    promptNames(),
+		"tool_groups":                buildCatalogToolGroupsDoc(appSrv),
 	}
 }
 
@@ -369,6 +378,26 @@ func jsonResourceContents(uri string, value any) ([]mcp.ResourceContents, error)
 			Text:     string(data),
 		},
 	}, nil
+}
+
+func instrumentResourceHandler(appSrv *Server, name string, next server.ResourceHandlerFunc) server.ResourceHandlerFunc {
+	return func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		result, err := next(ctx, req)
+		if err == nil && len(result) > 0 && appSrv != nil && appSrv.DiscoveryRecorder != nil {
+			appSrv.DiscoveryRecorder.RecordResource(name, "")
+		}
+		return result, err
+	}
+}
+
+func instrumentResourceTemplateHandler(appSrv *Server, name string, next server.ResourceTemplateHandlerFunc) server.ResourceTemplateHandlerFunc {
+	return func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		result, err := next(ctx, req)
+		if err == nil && len(result) > 0 && appSrv != nil && appSrv.DiscoveryRecorder != nil {
+			appSrv.DiscoveryRecorder.RecordResource(name, req.Params.URI)
+		}
+		return result, err
+	}
 }
 
 // resolveRepo ensures repos are scanned and finds the named repo.

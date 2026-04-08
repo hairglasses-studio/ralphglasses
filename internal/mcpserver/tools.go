@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -44,21 +45,22 @@ type ToolEntry struct {
 
 // Server holds state for the MCP server.
 type Server struct {
-	mu           sync.RWMutex
-	ScanPath     string
-	Version      string
-	Commit       string
-	BuildDate    string
-	Repos        []*model.Repo
-	lastScanAt   time.Time     // when the last successful scan completed
-	scanTTL      time.Duration // how long scan results are considered fresh (0 = forever)
-	ProcMgr      *process.Manager
-	SessMgr      *session.Manager
-	EventBus     *events.Bus
-	HTTPClient   *http.Client
-	Engine       *enhancer.HybridEngine
-	engineOnce   sync.Once
-	ToolRecorder *ToolCallRecorder
+	mu                sync.RWMutex
+	ScanPath          string
+	Version           string
+	Commit            string
+	BuildDate         string
+	Repos             []*model.Repo
+	lastScanAt        time.Time     // when the last successful scan completed
+	scanTTL           time.Duration // how long scan results are considered fresh (0 = forever)
+	ProcMgr           *process.Manager
+	SessMgr           *session.Manager
+	EventBus          *events.Bus
+	HTTPClient        *http.Client
+	Engine            *enhancer.HybridEngine
+	engineOnce        sync.Once
+	ToolRecorder      *ToolCallRecorder
+	DiscoveryRecorder *DiscoveryUsageRecorder
 
 	// DeferredLoading controls whether only core tools are registered on startup.
 	// When true, RegisterCoreTools is called instead of RegisterAllTools.
@@ -130,28 +132,30 @@ const DefaultScanTTL = 30 * time.Second
 // NewServer creates a new MCP server instance.
 func NewServer(scanPath string) *Server {
 	return &Server{
-		ScanPath:     scanPath,
-		scanTTL:      DefaultScanTTL,
-		ProcMgr:      process.NewManager(),
-		SessMgr:      session.NewManager(),
-		HTTPClient:   &http.Client{Timeout: 30 * time.Second},
-		HookExecutor: hooks.NewExecutor(nil),
+		ScanPath:          scanPath,
+		scanTTL:           DefaultScanTTL,
+		ProcMgr:           process.NewManager(),
+		SessMgr:           session.NewManager(),
+		HTTPClient:        &http.Client{Timeout: 30 * time.Second},
+		DiscoveryRecorder: NewDiscoveryUsageRecorder(filepath.Join(scanPath, ".ralph", "discovery_usage.jsonl")),
+		HookExecutor:      hooks.NewExecutor(nil),
 	}
 }
 
 // NewServerWithBus creates a new MCP server instance with an event bus.
 func NewServerWithBus(scanPath string, bus *events.Bus) *Server {
 	return &Server{
-		ScanPath:        scanPath,
-		scanTTL:         DefaultScanTTL,
-		ProcMgr:         process.NewManagerWithBus(bus),
-		SessMgr:         session.NewManagerWithBus(bus),
-		EventBus:        bus,
-		HTTPClient:      &http.Client{Timeout: 30 * time.Second},
-		FleetAnalytics:  fleet.NewFleetAnalytics(10000, 24*time.Hour),
-		MetricCollector: eval.NewMetricCollector(bus),
-		Tasks:           NewTaskRegistry(),
-		HookExecutor:    hooks.NewExecutor(bus),
+		ScanPath:          scanPath,
+		scanTTL:           DefaultScanTTL,
+		ProcMgr:           process.NewManagerWithBus(bus),
+		SessMgr:           session.NewManagerWithBus(bus),
+		EventBus:          bus,
+		HTTPClient:        &http.Client{Timeout: 30 * time.Second},
+		FleetAnalytics:    fleet.NewFleetAnalytics(10000, 24*time.Hour),
+		MetricCollector:   eval.NewMetricCollector(bus),
+		Tasks:             NewTaskRegistry(),
+		DiscoveryRecorder: NewDiscoveryUsageRecorder(filepath.Join(scanPath, ".ralph", "discovery_usage.jsonl")),
+		HookExecutor:      hooks.NewExecutor(bus),
 	}
 }
 

@@ -20,6 +20,10 @@ Current coverage snapshot from the live parity matrix:
 
 The live `ralph:///catalog/cli-parity` resource now includes a rolling usage snapshot sourced from `<scan-path>/.ralph/tool_benchmarks.jsonl`.
 
+The broader discovery front doors now have their own companion resource:
+
+- `ralph:///catalog/discovery-adoption` for rolling resource, prompt, and focused-skill front-door adoption telemetry
+
 - Default window: last `30` days
 - Source of truth: MCP tool-call recorder output, not hand-maintained counters
 - Purpose: measure which parity-covered CLI surfaces are actually being exercised through bespoke MCP flows
@@ -87,6 +91,7 @@ Use the server’s discovery surfaces instead of hard-coding counts:
 - `ralph:///catalog/workflows`
 - `ralph:///catalog/skills`
 - `ralph:///catalog/cli-parity`
+- `ralph:///catalog/discovery-adoption`
 - `ralph:///bootstrap/checklist`
 - `ralph:///runtime/health`
 - `ralphglasses_server_health`

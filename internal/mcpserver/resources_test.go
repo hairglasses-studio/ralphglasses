@@ -118,8 +118,8 @@ func TestStaticResourceRegistration(t *testing.T) {
 		t.Fatalf("expected ListResourcesResult, got %T", rpcResp.Result)
 	}
 
-	if len(result.Resources) != 7 {
-		t.Fatalf("expected 7 static resources, got %d", len(result.Resources))
+	if len(result.Resources) != 8 {
+		t.Fatalf("expected 8 static resources, got %d", len(result.Resources))
 	}
 
 	uris := make(map[string]bool)
@@ -133,6 +133,7 @@ func TestStaticResourceRegistration(t *testing.T) {
 		"ralph:///catalog/workflows",
 		"ralph:///catalog/skills",
 		"ralph:///catalog/cli-parity",
+		"ralph:///catalog/discovery-adoption",
 		"ralph:///bootstrap/checklist",
 		"ralph:///runtime/health",
 	} {
@@ -207,6 +208,37 @@ func TestCLIParityResource_ReturnsCoverageSummary(t *testing.T) {
 	}
 }
 
+func TestDiscoveryAdoptionResource_ReturnsTelemetrySummary(t *testing.T) {
+	t.Parallel()
+
+	appSrv, _, _ := setupRepoForResources(t)
+	discoveryDir := filepath.Join(appSrv.ScanPath, ".ralph")
+	if err := os.MkdirAll(discoveryDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(discoveryDir, "discovery_usage.jsonl"), []byte(`{"kind":"resource","name":"ralph:///catalog/server","ts":"2026-04-08T11:00:00Z"}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := makeDiscoveryAdoptionHandler(appSrv)
+	results, err := handler(context.Background(), mcp.ReadResourceRequest{
+		Params: mcp.ReadResourceParams{URI: "ralph:///catalog/discovery-adoption"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	textContent, ok := results[0].(mcp.TextResourceContents)
+	if !ok {
+		t.Fatalf("expected TextResourceContents, got %T", results[0])
+	}
+	if !strings.Contains(textContent.Text, "\"discovery_telemetry_present\": true") {
+		t.Fatalf("expected discovery telemetry presence in resource: %s", textContent.Text)
+	}
+	if !strings.Contains(textContent.Text, "\"resource_surfaces\"") {
+		t.Fatalf("expected resource surfaces in resource: %s", textContent.Text)
+	}
+}
+
 func TestBootstrapChecklistResource_ReturnsChecklist(t *testing.T) {
 	t.Parallel()
 
@@ -252,6 +284,9 @@ func TestRuntimeHealthResource_ReturnsServerHealthShape(t *testing.T) {
 	}
 	if !strings.Contains(textContent.Text, "\"cli_parity_usage\"") {
 		t.Fatalf("expected cli_parity_usage in runtime health: %s", textContent.Text)
+	}
+	if !strings.Contains(textContent.Text, "\"discovery_adoption_summary\"") {
+		t.Fatalf("expected discovery_adoption_summary in runtime health: %s", textContent.Text)
 	}
 }
 
