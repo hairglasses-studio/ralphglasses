@@ -13,6 +13,11 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+const (
+	sqliteStoreBusyTimeoutMS  = 5000
+	sqliteStoreBusyMaxRetries = 6
+)
+
 // SQLiteStore implements Store backed by a SQLite database.
 // Uses modernc.org/sqlite (pure Go, no CGO required).
 type SQLiteStore struct {
@@ -28,15 +33,21 @@ func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
 		return nil, fmt.Errorf("sqlite store: mkdir %s: %w", dir, err)
 	}
 
-	db, err := sql.Open("sqlite", dbPath)
+	db, err := sql.Open("sqlite", sqliteStoreDSN(dbPath))
 	if err != nil {
 		return nil, fmt.Errorf("sqlite store: open %s: %w", dbPath, err)
 	}
 
+	db.SetMaxOpenConns(1)
+
 	// Enable WAL mode for better concurrent read performance.
-	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+	if _, err := execSQLite(db, "PRAGMA journal_mode=WAL"); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("sqlite store: enable WAL: %w", err)
+	}
+	if _, err := execSQLite(db, fmt.Sprintf("PRAGMA busy_timeout=%d", sqliteStoreBusyTimeoutMS)); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("sqlite store: set busy_timeout: %w", err)
 	}
 
 	store := &SQLiteStore{db: db, path: dbPath}
@@ -172,7 +183,7 @@ CREATE TABLE IF NOT EXISTS recovery_actions (
 CREATE INDEX IF NOT EXISTS idx_recovery_actions_op ON recovery_actions(recovery_op_id);
 CREATE INDEX IF NOT EXISTS idx_recovery_actions_status ON recovery_actions(status);
 `
-	if _, err := s.db.Exec(ddl); err != nil {
+	if _, err := execSQLite(s.db, ddl); err != nil {
 		return err
 	}
 	for _, change := range []struct {
@@ -190,7 +201,7 @@ CREATE INDEX IF NOT EXISTS idx_recovery_actions_status ON recovery_actions(statu
 			return err
 		}
 	}
-	if _, err := s.db.Exec(`
+	if _, err := execSQLite(s.db, `
 CREATE INDEX IF NOT EXISTS idx_sessions_tenant_repo ON sessions(tenant_id, repo_path);
 CREATE INDEX IF NOT EXISTS idx_sessions_tenant_status ON sessions(tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_loop_runs_tenant_repo ON loop_runs(tenant_id, repo_path);
@@ -231,7 +242,7 @@ func (s *SQLiteStore) ensureColumn(table, columnName, definition string) error {
 		return fmt.Errorf("iterate pragma table_info(%s): %w", table, err)
 	}
 
-	if _, err := s.db.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s", table, definition)); err != nil {
+	if _, err := execSQLite(s.db, fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s", table, definition)); err != nil {
 		return fmt.Errorf("alter table %s add column %s: %w", table, columnName, err)
 	}
 	return nil
@@ -239,7 +250,7 @@ func (s *SQLiteStore) ensureColumn(table, columnName, definition string) error {
 
 func (s *SQLiteStore) seedDefaultTenant() error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := s.db.Exec(`
+	_, err := execSQLite(s.db, `
 INSERT INTO tenants (id, display_name, allowed_repo_roots, budget_cap_usd, trigger_token_hash, created_at, updated_at)
 VALUES (?, ?, '[]', 0, '', ?, ?)
 ON CONFLICT(id) DO UPDATE SET
@@ -303,7 +314,7 @@ ON CONFLICT(id) DO UPDATE SET
 	cost_history=excluded.cost_history,
 	updated_at=excluded.updated_at, ended_at=excluded.ended_at
 `
-	_, err := s.db.ExecContext(ctx, query,
+	_, err := execSQLiteContext(ctx, s.db, query,
 		snap.ID, snap.TenantID, string(snap.Provider), snap.ProviderSessionID,
 		snap.RepoPath, snap.RepoName, string(snap.Status),
 		snap.Prompt, snap.Model,
@@ -396,7 +407,7 @@ func (s *SQLiteStore) ListSessions(ctx context.Context, opts ListOpts) ([]*Sessi
 }
 
 func (s *SQLiteStore) DeleteSession(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM sessions WHERE id = ?", id)
+	_, err := execSQLiteContext(ctx, s.db, "DELETE FROM sessions WHERE id = ?", id)
 	if err != nil {
 		return fmt.Errorf("delete session %s: %w", id, err)
 	}
@@ -404,7 +415,7 @@ func (s *SQLiteStore) DeleteSession(ctx context.Context, id string) error {
 }
 
 func (s *SQLiteStore) UpdateSessionStatus(ctx context.Context, id string, status SessionStatus) error {
-	res, err := s.db.ExecContext(ctx,
+	res, err := execSQLiteContext(ctx, s.db,
 		"UPDATE sessions SET status = ?, updated_at = ? WHERE id = ?",
 		string(status), time.Now().Format(time.RFC3339), id,
 	)
@@ -446,6 +457,65 @@ func (s *SQLiteStore) Close() error {
 		return s.db.Close()
 	}
 	return nil
+}
+
+func sqliteStoreDSN(dbPath string) string {
+	return fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(%d)", dbPath, sqliteStoreBusyTimeoutMS)
+}
+
+func execSQLite(db *sql.DB, query string, args ...any) (sql.Result, error) {
+	return execSQLiteContext(context.Background(), db, query, args...)
+}
+
+func execSQLiteContext(ctx context.Context, db *sql.DB, query string, args ...any) (sql.Result, error) {
+	var result sql.Result
+	err := retrySQLiteBusyContext(ctx, func() error {
+		var err error
+		result, err = db.ExecContext(ctx, query, args...)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func retrySQLiteBusyContext(ctx context.Context, fn func() error) error {
+	backoff := 10 * time.Millisecond
+	for attempt := 0; ; attempt++ {
+		err := fn()
+		if err == nil {
+			return nil
+		}
+		if !isSQLiteBusyError(err) || attempt >= sqliteStoreBusyMaxRetries {
+			return err
+		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		timer := time.NewTimer(backoff)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
+
+		if backoff < 160*time.Millisecond {
+			backoff *= 2
+		}
+	}
+}
+
+func isSQLiteBusyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "sqlite_busy") ||
+		strings.Contains(msg, "sqlite_locked") ||
+		strings.Contains(msg, "database is locked")
 }
 
 // scanner is implemented by both *sql.Row and *sql.Rows.
@@ -553,7 +623,7 @@ ON CONFLICT(id) DO UPDATE SET
 	last_error=excluded.last_error, paused=excluded.paused,
 	updated_at=excluded.updated_at, deadline=excluded.deadline
 `
-	_, err = s.db.ExecContext(ctx, query,
+	_, err = execSQLiteContext(ctx, s.db, query,
 		run.ID, run.TenantID, run.RepoPath, run.RepoName, run.Status,
 		string(profileJSON), string(iterJSON),
 		run.LastError, paused,
@@ -627,7 +697,7 @@ func (s *SQLiteStore) ListLoopRuns(ctx context.Context, filter LoopRunFilter) ([
 }
 
 func (s *SQLiteStore) UpdateLoopRunStatus(ctx context.Context, id string, status string) error {
-	res, err := s.db.ExecContext(ctx,
+	res, err := execSQLiteContext(ctx, s.db,
 		"UPDATE loop_runs SET status = ?, updated_at = ? WHERE id = ?",
 		status, time.Now().Format(time.RFC3339), id,
 	)
@@ -713,7 +783,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		recordedAt = time.Now()
 	}
 
-	res, err := s.db.ExecContext(ctx, query,
+	res, err := execSQLiteContext(ctx, s.db, query,
 		entry.TenantID, entry.SessionID, entry.LoopID, entry.Provider, entry.Model,
 		entry.SpendUSD, entry.TurnCount, entry.ElapsedSec,
 		recordedAt.Format(time.RFC3339),
@@ -785,7 +855,7 @@ ON CONFLICT(id) DO UPDATE SET
 	decision_id=excluded.decision_id, error_msg=excluded.error_msg,
 	started_at=excluded.started_at, completed_at=excluded.completed_at
 `
-	_, err := s.db.ExecContext(ctx, query,
+	_, err := execSQLiteContext(ctx, s.db, query,
 		op.ID, op.TenantID, op.Severity, string(op.Status),
 		op.TotalSessions, op.AliveCount, op.DeadCount,
 		op.ResumedCount, op.FailedCount, op.TotalCostUSD, op.BudgetCapUSD,
@@ -934,7 +1004,7 @@ ON CONFLICT(id) DO UPDATE SET
 	error_msg=excluded.error_msg,
 	started_at=excluded.started_at, completed_at=excluded.completed_at
 `
-	_, err := s.db.ExecContext(ctx, query,
+	_, err := execSQLiteContext(ctx, s.db, query,
 		action.ID, action.TenantID, action.RecoveryOpID, action.ClaudeSessionID, action.RalphSessionID,
 		action.RepoPath, action.RepoName, action.Priority,
 		string(action.Status), action.CostUSD, action.ErrorMsg,
@@ -963,7 +1033,7 @@ func (s *SQLiteStore) UpdateRecoveryActionStatus(ctx context.Context, id string,
 		args = []any{string(status), errMsg, id}
 	}
 
-	res, err := s.db.ExecContext(ctx, query, args...)
+	res, err := execSQLiteContext(ctx, s.db, query, args...)
 	if err != nil {
 		return fmt.Errorf("update recovery action %s: %w", id, err)
 	}
@@ -984,7 +1054,7 @@ func (s *SQLiteStore) SaveTenant(ctx context.Context, tenant *Tenant) error {
 	if err != nil {
 		return fmt.Errorf("save tenant %s: marshal repo roots: %w", cp.ID, err)
 	}
-	_, err = s.db.ExecContext(ctx, `
+	_, err = execSQLiteContext(ctx, s.db, `
 INSERT INTO tenants (id, display_name, allowed_repo_roots, budget_cap_usd, trigger_token_hash, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET

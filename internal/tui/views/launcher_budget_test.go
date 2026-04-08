@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-var testModels = []string{"claude-sonnet-4-20250514", "gemini-2.5-pro", "o3"}
+var testModels = []string{"claude-sonnet-4-20250514", "gemini-3.1-pro", "o3"}
 
 func TestLauncherBudgetModel_Init(t *testing.T) {
 	m := NewLauncherBudget(testModels, 10.0)
@@ -154,8 +154,8 @@ func TestLauncherBudgetModel_ModelSelection(t *testing.T) {
 
 	// Move cursor down to select gemini.
 	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
-	if m.SelectedModel() != "gemini-2.5-pro" {
-		t.Errorf("model = %q, want gemini-2.5-pro", m.SelectedModel())
+	if m.SelectedModel() != "gemini-3.1-pro" {
+		t.Errorf("model = %q, want gemini-3.1-pro", m.SelectedModel())
 	}
 
 	// Move down again to o3.
@@ -172,8 +172,8 @@ func TestLauncherBudgetModel_ModelSelection(t *testing.T) {
 
 	// Move back up.
 	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
-	if m.SelectedModel() != "gemini-2.5-pro" {
-		t.Errorf("model after up = %q, want gemini-2.5-pro", m.SelectedModel())
+	if m.SelectedModel() != "gemini-3.1-pro" {
+		t.Errorf("model after up = %q, want gemini-3.1-pro", m.SelectedModel())
 	}
 }
 

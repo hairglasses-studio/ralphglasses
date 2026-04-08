@@ -6,7 +6,7 @@ Sessions can target any of three providers via the `provider` parameter:
 |----------|-----------|---------------|---------------|----------------|
 | `codex` (default) | `codex` | `gpt-5.4` | `--json` (NDJSON) | Yes (`exec resume`, when supported by the installed CLI) |
 | `claude` | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
-| `gemini` | `gemini` | `gemini-2.5-pro` | `stream-json` | Yes (`--resume`) |
+| `gemini` | `gemini` | `gemini-3.1-pro` | `stream-json` | Yes (`--resume`) |
 
 ## Prerequisites
 

@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
+
+	"github.com/google/uuid"
 )
 
 // estimateCostFromTokens computes a cost estimate from token counts in raw JSON
@@ -181,7 +184,7 @@ func UnsupportedOptionsWarnings(p Provider, opts LaunchOptions) []string {
 func ProviderDefaults(p Provider) (model string) {
 	switch p {
 	case ProviderGemini:
-		return "gemini-2.5-pro"
+		return "gemini-3.1-pro"
 	case ProviderCodex:
 		return "gpt-5.4"
 	case ProviderCrush:
@@ -331,10 +334,28 @@ func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 }
 
 // buildGeminiCmd constructs the gemini CLI command.
-// Gemini CLI (@google/gemini-cli): -p/--prompt PROMPT for headless mode,
-// --yolo auto-approves tool use.
+// Gemini CLI (@google/gemini-cli): gemini [COMMAND] -p/--prompt PROMPT
 func buildGeminiCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	args := []string{"--output-format", "stream-json"}
+
+	// JIT Agent / System Prompt handling
+	agentName := opts.Agent
+	if opts.SystemPrompt != "" {
+		// Generate a temporary command/agent name for the system prompt
+		jitName := "jit-" + uuid.New().String()[:8]
+		jitPath := filepath.Join(opts.RepoPath, ".gemini", "commands", jitName+".toml")
+		_ = os.MkdirAll(filepath.Dir(jitPath), 0755)
+		content := fmt.Sprintf("description = \"JIT dynamic agent\"\nprompt = %q\n", opts.SystemPrompt)
+		if err := os.WriteFile(jitPath, []byte(content), 0644); err == nil {
+			agentName = jitName
+			// Note: cleanup of JIT file should ideally be handled by the session manager/runner
+			// but for now we rely on periodic pruning or subsequent runs.
+		}
+	}
+
+	if agentName != "" {
+		args = append(args, agentName)
+	}
 
 	if opts.Model != "" {
 		args = append(args, "--model", opts.Model)
@@ -373,9 +394,26 @@ func buildGeminiCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 }
 
 // buildCodexCmd constructs the codex CLI command.
-// Codex CLI: codex exec PROMPT --json --full-auto for headless mode.
+// Codex CLI: codex exec [AGENT] PROMPT --json --full-auto
 func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	args := []string{"exec"}
+
+	// JIT Agent / System Prompt handling
+	agentName := opts.Agent
+	if opts.SystemPrompt != "" {
+		jitName := "jit-" + uuid.New().String()[:8]
+		jitPath := filepath.Join(opts.RepoPath, ".codex", "agents", jitName+".toml")
+		_ = os.MkdirAll(filepath.Dir(jitPath), 0755)
+		content := fmt.Sprintf("name = %q\ndescription = \"JIT dynamic agent\"\ndeveloper_instructions = %q\n", jitName, opts.SystemPrompt)
+		if err := os.WriteFile(jitPath, []byte(content), 0644); err == nil {
+			agentName = jitName
+		}
+	}
+
+	if agentName != "" {
+		args = append(args, agentName)
+	}
+
 	if opts.Resume != "" {
 		args = append(args, "resume")
 	}
@@ -383,6 +421,27 @@ func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	if opts.Model != "" {
 		args = append(args, "--model", opts.Model)
 	}
+
+	// Map Effort to Codex reasoning effort flags
+	effort := opts.Effort
+	if effort == "" {
+		// Default to high reasoning effort for complex tasks
+		effort = "high"
+		if strings.Contains(strings.ToLower(agentName), "planner") || strings.Contains(strings.ToLower(opts.Prompt), "plan") {
+			effort = "max"
+		}
+	}
+	switch strings.ToLower(effort) {
+	case "low":
+		args = append(args, "--reasoning-effort", "low")
+	case "medium":
+		args = append(args, "--reasoning-effort", "medium")
+	case "high":
+		args = append(args, "--reasoning-effort", "high")
+	case "max":
+		args = append(args, "--reasoning-effort", "xhigh")
+	}
+
 	args = append(args, "--json", "--full-auto")
 	if sandboxMode := codexSandboxMode(opts); sandboxMode != "" {
 		args = append(args, "--sandbox", sandboxMode)

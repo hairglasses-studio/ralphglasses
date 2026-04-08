@@ -28,7 +28,7 @@ func TestMatchGlob(t *testing.T) {
 func TestRoutingConfig_Match(t *testing.T) {
 	cfg := &RoutingConfig{
 		Rules: []RoutingRule{
-			{Pattern: "*test*", Provider: "gemini", Model: "gemini-2.5-flash"},
+			{Pattern: "*test*", Provider: "gemini", Model: "gemini-3.1-flash"},
 			{Pattern: "*refactor*", Provider: "claude", Model: "claude-sonnet-4-20250514"},
 			{Pattern: "*", Provider: "codex", Model: "o4-mini"},
 		},

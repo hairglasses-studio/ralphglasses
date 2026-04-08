@@ -53,7 +53,7 @@ Launch sessions against any supported provider:
 |----------|-----|---------------|---------|
 | `codex` (default) | [Codex CLI](https://developers.openai.com/codex/noninteractive) | `gpt-5.4` | `npm i -g @openai/codex-cli` |
 | `claude` | [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) | `sonnet` | Pre-installed |
-| `gemini` | [Gemini CLI](https://ai.google.dev/gemini-api/docs) | `gemini-2.5-pro` | `npm i -g @google/gemini-cli` |
+| `gemini` | [Gemini CLI](https://ai.google.dev/gemini-api/docs) | `gemini-3.1-pro` | `npm i -g @google/gemini-cli` |
 
 ### Usage via MCP
 

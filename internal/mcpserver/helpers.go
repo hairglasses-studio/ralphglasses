@@ -22,8 +22,8 @@ const (
 // independent of cascade tier configuration.
 func DefaultProviderArms() []bandit.Arm {
 	return []bandit.Arm{
-		{ID: "ultra-cheap", Provider: "gemini", Model: "gemini-2.0-flash-lite"},
-		{ID: "worker", Provider: "gemini", Model: "gemini-2.5-flash"},
+		{ID: "ultra-cheap", Provider: "gemini", Model: "gemini-3.1-flash-lite"},
+		{ID: "worker", Provider: "gemini", Model: "gemini-3.1-flash"},
 		{ID: "coding", Provider: "codex", Model: "gpt-5.4"},
 		{ID: "reasoning", Provider: "claude", Model: "claude-opus"},
 	}

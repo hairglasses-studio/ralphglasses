@@ -22,8 +22,8 @@ var modelRegistry = []ModelInfo{
 	{ID: "claude-haiku-3-5-20241022", Provider: ProviderClaude, DisplayName: "Claude Haiku 3.5", ContextWindow: 200000, CostPerMTokIn: 0.80, CostPerMTokOut: 4.0, MaxOutputTok: 8192, Capabilities: []string{"code", "vision"}},
 
 	// Gemini models
-	{ID: "gemini-2.5-pro", Provider: ProviderGemini, DisplayName: "Gemini 2.5 Pro", ContextWindow: 1000000, CostPerMTokIn: 1.25, CostPerMTokOut: 10.0, MaxOutputTok: 65536, Capabilities: []string{"code", "reasoning", "vision"}},
-	{ID: "gemini-2.5-flash", Provider: ProviderGemini, DisplayName: "Gemini 2.5 Flash", ContextWindow: 1000000, CostPerMTokIn: 0.15, CostPerMTokOut: 0.60, MaxOutputTok: 65536, Capabilities: []string{"code", "vision"}},
+	{ID: "gemini-3.1-pro", Provider: ProviderGemini, DisplayName: "Gemini 2.5 Pro", ContextWindow: 1000000, CostPerMTokIn: 1.25, CostPerMTokOut: 10.0, MaxOutputTok: 65536, Capabilities: []string{"code", "reasoning", "vision"}},
+	{ID: "gemini-3.1-flash", Provider: ProviderGemini, DisplayName: "Gemini 2.5 Flash", ContextWindow: 1000000, CostPerMTokIn: 0.15, CostPerMTokOut: 0.60, MaxOutputTok: 65536, Capabilities: []string{"code", "vision"}},
 
 	// OpenAI / Codex models
 	{ID: "gpt-5.4", Provider: ProviderCodex, DisplayName: "OpenAI GPT-5.4", ContextWindow: 1050000, CostPerMTokIn: 2.50, CostPerMTokOut: 15.0, MaxOutputTok: 128000, Capabilities: []string{"code", "reasoning", "vision"}},

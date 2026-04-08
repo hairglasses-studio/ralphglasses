@@ -21,7 +21,7 @@ var costRateMu sync.RWMutex
 // .ralph/cost_rates.json file. Access must be guarded by costRateMu.
 var ProviderCostRates = map[Provider]CostRate{
 	ProviderClaude: {InputPer1M: CostClaudeSonnetInput, OutputPer1M: CostClaudeSonnetOutput}, // claude-sonnet-4.6
-	ProviderGemini: {InputPer1M: CostGeminiFlashInput, OutputPer1M: CostGeminiFlashOutput},   // gemini-2.5-flash
+	ProviderGemini: {InputPer1M: CostGeminiFlashInput, OutputPer1M: CostGeminiFlashOutput},   // gemini-3.1-flash
 	ProviderCodex:  {InputPer1M: CostCodexInput, OutputPer1M: CostCodexOutput},               // gpt-5.4
 	ProviderCrush:  {InputPer1M: CostClaudeSonnetInput, OutputPer1M: CostClaudeSonnetOutput}, // crush multi-model, default to Claude rates
 	ProviderGoose:  {InputPer1M: CostClaudeSonnetInput, OutputPer1M: CostClaudeSonnetOutput}, // goose multi-model, default to Claude rates

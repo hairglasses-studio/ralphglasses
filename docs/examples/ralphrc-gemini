@@ -11,9 +11,9 @@ MAX_CALLS_PER_HOUR="120"
 # Gemini sessions can resume, but many teams still prefer fresh-context loops.
 SESSION_CONTINUITY="false"
 
-# Gemini's default model is gemini-2.5-pro (set by ralphglasses providers.go).
+# Gemini's default model is gemini-3.1-pro (set by ralphglasses providers.go).
 # Override here if needed:
-# PRIMARY_MODEL="gemini-2.5-pro"
+# PRIMARY_MODEL="gemini-3.1-pro"
 
 # Circuit breaker thresholds — be a bit more lenient since Gemini
 # can handle large context without degradation.

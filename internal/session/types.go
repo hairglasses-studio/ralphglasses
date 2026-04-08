@@ -75,6 +75,7 @@ type Session struct {
 	CacheWriteTokens    int           `json:"cache_write_tokens,omitempty"`
 	CacheAnomaly        string        `json:"cache_anomaly,omitempty"`
 	OutputHistory       []string      `json:"output_history,omitempty"`     // last N output lines
+	MessageHistory      []Message     `json:"message_history,omitempty"`    // full conversation history for compaction
 	TotalOutputCount    int           `json:"total_output_count,omitempty"` // monotonic counter for cursor-based tailing
 
 	Pid       int   `json:"pid,omitempty"`        // process PID captured at launch
@@ -224,6 +225,8 @@ type TeamStatus struct {
 	IntegrationPath     string         `json:"integration_path,omitempty"`
 	PromotionStatus     string         `json:"promotion_status,omitempty"`
 	MaxBudgetUSD        float64        `json:"max_budget_usd,omitempty"`
+	TotalSpentUSD       float64        `json:"total_spent_usd,omitempty"`
+	TotalTurnCount      int            `json:"total_turn_count,omitempty"`
 	MaxConcurrency      int            `json:"max_concurrency,omitempty"`
 	MaxTaskRetries      int            `json:"max_task_retries,omitempty"`
 	StepCount           int            `json:"step_count,omitempty"`

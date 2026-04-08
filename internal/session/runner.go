@@ -112,6 +112,7 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 		MaxTurns:       opts.MaxTurns,
 		LaunchedAt:     now,
 		LastActivity:   now,
+		CtxBudget:      NewContextBudget(ModelLimitForProvider(provider)),
 		cmd:            cmd,
 		cancel:         cancel,
 		doneCh:         make(chan struct{}),
@@ -461,10 +462,28 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile
 		}
 	}()
 
+	stallTicker := time.NewTicker(1 * time.Minute)
+	defer stallTicker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-stallTicker.C:
+			s.mu.Lock()
+			lastActivity := s.LastActivity
+			status := s.Status
+			s.mu.Unlock()
+
+			if status == StatusRunning && time.Since(lastActivity) > 5*time.Minute {
+				slog.Warn("session stall detected", "session_id", s.ID, "last_activity", lastActivity)
+				s.mu.Lock()
+				s.cancel() // terminate the process
+				s.Status = StatusStopped
+				s.ExitReason = "session stalled (no output for 5m)"
+				s.mu.Unlock()
+				return
+			}
 		case line, ok := <-scanCh:
 			if !ok {
 				return
@@ -493,6 +512,38 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile
 			s.LastEventType = event.Type
 			eventText := firstNonEmpty(event.Content, event.Text, event.Result)
 
+			// Record message history for context compaction
+			if eventText != "" && event.Type != "parse_error" {
+				role := "assistant"
+				switch event.Type {
+				case "system":
+					role = "system"
+				case "user":
+					role = "user"
+				case "result":
+					if event.IsError {
+						role = "system"
+					} else {
+						role = "assistant"
+					}
+				}
+				s.MessageHistory = append(s.MessageHistory, Message{
+					Role:    role,
+					Content: eventText,
+				})
+				if s.CtxBudget != nil {
+					s.CtxBudget.Record(EstimateTokens(eventText))
+					// Trigger compaction if we're critical and not Claude (which handles it natively)
+					if s.CtxBudget.IsCritical() && s.Provider != ProviderClaude {
+						s.cancel() // terminate the process to trigger a re-launch with compaction
+						s.Status = StatusStopped
+						s.ExitReason = "context window exhausted, triggering compaction"
+						s.mu.Unlock()
+						return
+					}
+				}
+			}
+
 			switch event.Type {
 			case "system":
 				if event.SessionID != "" {
@@ -504,6 +555,18 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile
 			case "assistant":
 				if eventText != "" {
 					appendSessionOutput(s, eventText, logFile)
+				}
+				// If provider doesn't emit NumTurns, increment locally on each assistant message.
+				if event.NumTurns == 0 && eventText != "" {
+					s.TurnCount++
+				}
+				// Max-turns enforcement for non-Claude providers.
+				if s.MaxTurns > 0 && s.TurnCount >= s.MaxTurns && s.Provider != ProviderClaude {
+					s.cancel() // terminate the underlying CLI process
+					s.Status = StatusStopped
+					s.ExitReason = fmt.Sprintf("max turns exceeded: %d of %d", s.TurnCount, s.MaxTurns)
+					s.mu.Unlock()
+					return
 				}
 			case "result":
 				if eventText != "" {
@@ -520,12 +583,21 @@ func runSessionOutput(ctx context.Context, s *Session, stdout io.Reader, logFile
 				} else if event.SessionID != "" {
 					s.ProviderSessionID = event.SessionID
 				}
+
+				// Max-turns enforcement for non-Claude providers.
+				if s.MaxTurns > 0 && s.TurnCount >= s.MaxTurns && s.Provider != ProviderClaude {
+					s.cancel() // terminate the underlying CLI process
+					s.Status = StatusStopped
+					s.ExitReason = fmt.Sprintf("max turns exceeded: %d of %d", s.TurnCount, s.MaxTurns)
+					s.mu.Unlock()
+					return
+				}
 			default:
+				if event.IsError && s.Error == "" {
+					s.Error = truncateStr(firstNonEmpty(event.Error, event.Result, event.Text), 2000)
+				}
 				if eventText != "" {
 					appendSessionOutput(s, eventText, logFile)
-				}
-				if event.IsError {
-					s.Error = truncateStr(firstNonEmpty(event.Error, eventText), 2000)
 				}
 			}
 

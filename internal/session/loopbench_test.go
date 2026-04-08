@@ -459,7 +459,7 @@ func TestSummarizeObservationsMixed(t *testing.T) {
 			LinesAdded:       0,
 			LinesRemoved:     0,
 			PlannerModelUsed: "claude-opus-4-6",
-			WorkerModelUsed:  "gemini-2.5-pro",
+			WorkerModelUsed:  "gemini-3.1-pro",
 			AcceptancePath:   "rejected",
 			StallCount:       2,
 		},
@@ -520,7 +520,7 @@ func TestSummarizeObservationsMixed(t *testing.T) {
 		t.Errorf("AcceptanceCounts[rejected] = %d, want 1", s.AcceptanceCounts["rejected"])
 	}
 
-	// Model usage: claude-opus-4-6 x2 (planner), o1-pro x1, claude-sonnet-4-6 x2, gemini-2.5-pro x1
+	// Model usage: claude-opus-4-6 x2 (planner), o1-pro x1, claude-sonnet-4-6 x2, gemini-3.1-pro x1
 	if s.ModelUsage["claude-opus-4-6"] != 2 {
 		t.Errorf("ModelUsage[claude-opus-4-6] = %d, want 2", s.ModelUsage["claude-opus-4-6"])
 	}
@@ -530,8 +530,8 @@ func TestSummarizeObservationsMixed(t *testing.T) {
 	if s.ModelUsage["o1-pro"] != 1 {
 		t.Errorf("ModelUsage[o1-pro] = %d, want 1", s.ModelUsage["o1-pro"])
 	}
-	if s.ModelUsage["gemini-2.5-pro"] != 1 {
-		t.Errorf("ModelUsage[gemini-2.5-pro] = %d, want 1", s.ModelUsage["gemini-2.5-pro"])
+	if s.ModelUsage["gemini-3.1-pro"] != 1 {
+		t.Errorf("ModelUsage[gemini-3.1-pro] = %d, want 1", s.ModelUsage["gemini-3.1-pro"])
 	}
 }
 

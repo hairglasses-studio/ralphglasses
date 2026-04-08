@@ -677,7 +677,7 @@ func TestSetBanditHooks(t *testing.T) {
 
 	called := false
 	cr.SetBanditHooks(
-		func() (string, string) { return "gemini", "gemini-2.5-flash" },
+		func() (string, string) { return "gemini", "gemini-3.1-flash" },
 		func(provider string, reward float64) { called = true },
 	)
 
@@ -689,7 +689,7 @@ func TestSetBanditHooks(t *testing.T) {
 	dir := t.TempDir()
 	cr2 := NewCascadeRouter(config, nil, nil, dir)
 	cr2.SetBanditHooks(
-		func() (string, string) { return "gemini", "gemini-2.5-flash" },
+		func() (string, string) { return "gemini", "gemini-3.1-flash" },
 		func(provider string, reward float64) { called = true },
 	)
 	for range 12 {

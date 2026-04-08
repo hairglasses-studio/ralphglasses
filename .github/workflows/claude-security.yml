@@ -2,104 +2,37 @@ name: Claude Security Review
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths-ignore:
-      - '*.md'
-      - '**/*.md'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: "Pull request number to review"
-        required: true
-        type: string
-  issue_comment:
-    types: [created]
-  pull_request_review_comment:
-    types: [created]
+    types: [opened, synchronize]
 
 permissions:
   contents: read
   pull-requests: write
-  issues: write
+  security-events: write
   id-token: write
 
 concurrency:
-  group: claude-security-${{ github.event.pull_request.number || github.event.issue.number || github.event.inputs.pr_number }}
+  group: claude-security-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: true
 
 jobs:
   security-review:
-    if: |
-      github.event_name == 'pull_request' ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude-security')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude-security'))
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Resolve PR metadata
-        id: pr
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ github.token }}
-          script: |
-            const trusted = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
-            const eventName = context.eventName;
-            const body = context.payload.comment?.body || '';
-            const prNumber =
-              context.payload.pull_request?.number ||
-              (context.payload.issue?.pull_request ? context.payload.issue.number : undefined) ||
-              Number(context.payload.inputs?.pr_number || 0);
-            if (!prNumber) {
-              core.setOutput('should_run', 'false');
-              return;
-            }
-            const {data: pr} = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber,
-            });
-            const association = (context.payload.comment?.author_association || '').toUpperCase();
-            const isTrusted =
-              eventName === 'pull_request' ||
-              eventName === 'workflow_dispatch' ||
-              trusted.has(association);
-            const requested =
-              eventName === 'pull_request' ||
-              eventName === 'workflow_dispatch' ||
-              body.includes('@claude-security');
-            const sameRepo = pr.head.repo.full_name === `${context.repo.owner}/${context.repo.repo}`;
-            core.setOutput('number', String(prNumber));
-            core.setOutput('same_repo', String(sameRepo));
-            core.setOutput('draft', String(Boolean(pr.draft)));
-            core.setOutput('trusted', String(isTrusted));
-            core.setOutput('should_run', String(Boolean(sameRepo && !pr.draft && isTrusted && requested)));
-
       - uses: actions/checkout@v6
-        if: steps.pr.outputs.should_run == 'true'
         with:
           fetch-depth: 0
-          ref: refs/pull/${{ steps.pr.outputs.number }}/merge
 
-      - name: Run Claude security review
-        if: steps.pr.outputs.should_run == 'true'
-        uses: anthropics/claude-code-action@v1
+      - uses: anthropics/claude-code-action@v1
         with:
           trigger_phrase: "@claude-security"
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_args: "--max-turns 5"
           prompt: |
-            Review pull request #${{ steps.pr.outputs.number }} for security issues only.
-
-            Look for:
-            - injection vulnerabilities
-            - authentication or authorization flaws
-            - secret exposure
-            - unsafe file or path handling
-            - SSRF, request smuggling, open redirects, or similar request-handling flaws
-            - race conditions with security impact
-
-            Return an empty response if you do not find a concrete security issue.
+            Focus exclusively on security concerns:
+            - Injection vulnerabilities (SQL, command, XSS)
+            - Authentication and authorization issues
+            - Secret/credential exposure
+            - Insecure dependencies
+            - Path traversal and file access
+            - Race conditions
+            Only comment if you find actual security issues. Do not comment on style or general code quality.

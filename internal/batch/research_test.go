@@ -27,11 +27,11 @@ func TestModelForComplexity(t *testing.T) {
 		complexity int
 		wantModel  string
 	}{
-		{1, "gemini-2.0-flash-lite"},
-		{2, "gemini-2.5-flash"},
+		{1, "gemini-3.1-flash-lite"},
+		{2, "gemini-3.1-flash"},
 		{3, "claude-sonnet-4-20250514"},
 		{4, "claude-opus-4-20250514"},
-		{0, "gemini-2.5-flash"},
+		{0, "gemini-3.1-flash"},
 	}
 	for _, tt := range tests {
 		got := modelForComplexity(tt.complexity)

@@ -201,7 +201,7 @@ Post-gate-pass improvements. All items are independent, parallel, and sized for 
 
 ### 0.6.3 — Loop configuration validation
 - [x] 0.6.3.1 — Add `ValidateLoopConfig(LoopConfig) []error` — validate all loop config fields before loop start `P0` `M`
-- [x] 0.6.3.2 — Validate model names against known provider models (claude-opus-4-6, claude-sonnet-4-6, gemini-2.5-pro, etc.) `P1` `S`
+- [x] 0.6.3.2 — Validate model names against known provider models (claude-opus-4-6, claude-sonnet-4-6, gemini-3.1-pro, etc.) `P1` `S`
 - [x] 0.6.3.3 — Validate enhancement flags: warn if `enable_worker_enhancement=true` with non-Claude worker (no effect) `P1` `S`
 - [x] 0.6.3.4 — Add config validation call at loop start, return clear error before spawning any sessions `P0` `S`
 - **Acceptance:** invalid loop configs rejected with descriptive errors before work begins
@@ -1846,6 +1846,11 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 - [ ] State sharding by repo for parallel writes
 - [ ] Observation partitioning: time-based partitions for efficient queries
 - [ ] Migration path from JSON files to SQLite (dual-write during transition)
+- [ ] PostgreSQL control-plane research spike: evaluate an optional PostgreSQL backend for multi-node coordinator state when fleet deployment spans multiple hosts or network filesystems `P2` `M`
+- [ ] Backend split study: map which entities remain local SQLite (`observations`, replay logs, checkpoints) versus shared control-plane state (`tenants`, sessions, loop_runs, cost_ledger, recovery_ops, fleet queue/leases) `P2` `S`
+- [ ] Adapter and cutover design: confirm whether `internal/session/store.go` is sufficient for an optional PostgreSQL adapter, define config gate + bootstrap path, and document rollback/no-big-bang migration strategy `P2` `S`
+- [ ] Coordination primitive evaluation: compare PostgreSQL advisory locks + LISTEN/NOTIFY against current file-lock and polling patterns, and record benchmark + ops criteria `P2` `S`
+- **Acceptance:** source-backed memo recommends one of: keep SQLite-only, add optional PostgreSQL backend, or use per-node SQLite plus replication; includes schema candidates, migration sketch, lock/signaling approach, operational cost, and benchmark targets.
 - Deps: `modernc.org/sqlite` (pure Go)
 - Files: new `internal/store/sqlite.go`, `internal/fleet/coordinator.go`
 

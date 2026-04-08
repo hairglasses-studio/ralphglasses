@@ -14,7 +14,7 @@ import (
 
 const (
 	geminiDefaultBaseURL = "https://generativelanguage.googleapis.com"
-	geminiDefaultModel   = "gemini-2.5-flash"
+	geminiDefaultModel   = "gemini-3.1-flash"
 )
 
 // geminiClient implements Client for the Gemini batch API.

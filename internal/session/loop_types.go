@@ -238,11 +238,11 @@ func ResearchLoopProfile(dailyBudget float64) LoopProfile {
 	}
 	return LoopProfile{
 		PlannerProvider:      ProviderGemini,
-		PlannerModel:         "gemini-2.5-flash",
+		PlannerModel:         "gemini-3.1-flash",
 		WorkerProvider:       ProviderClaude,
 		WorkerModel:          "claude-3-haiku-20250401",
 		VerifierProvider:     ProviderGemini,
-		VerifierModel:        "gemini-2.0-flash-lite",
+		VerifierModel:        "gemini-3.1-flash-lite",
 		MaxConcurrentWorkers: 3,
 		RetryLimit:           1,
 		WorktreePolicy:       "none",

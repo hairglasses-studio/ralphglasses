@@ -96,7 +96,7 @@ func TestHandleContextBudget_WarningStatus(t *testing.T) {
 	sess := &session.Session{
 		ID:       "test-ctx-warn",
 		Provider: session.ProviderGemini,
-		Model:    "gemini-2.5-flash",
+		Model:    "gemini-3.1-flash",
 		Status:   session.StatusRunning,
 	}
 	sess.CtxBudget = session.NewContextBudget(100)

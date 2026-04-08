@@ -275,7 +275,7 @@ func TestBuild_GeminiCommand(t *testing.T) {
 		Spec: RalphSessionSpec{
 			Provider: "gemini",
 			Prompt:   "analyze this",
-			Model:    "gemini-2.5-pro",
+			Model:    "gemini-3.1-pro",
 		},
 	}
 	pod := NewPodTemplateBuilder(session).Build()
@@ -287,7 +287,7 @@ func TestBuild_GeminiCommand(t *testing.T) {
 		t.Errorf("expected -p <prompt> first, got %v", pod.Args)
 	}
 	args := strings.Join(pod.Args, " ")
-	if !strings.Contains(args, "--model gemini-2.5-pro") {
+	if !strings.Contains(args, "--model gemini-3.1-pro") {
 		t.Error("missing model flag for gemini")
 	}
 }

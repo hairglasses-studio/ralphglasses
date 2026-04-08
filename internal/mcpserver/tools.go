@@ -12,6 +12,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
+	"github.com/hairglasses-studio/mcpkit/observability"
 	"github.com/hairglasses-studio/ralphglasses/internal/bandit"
 	"github.com/hairglasses-studio/ralphglasses/internal/blackboard"
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
@@ -20,6 +21,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/eval"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet"
+	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/plugin"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
@@ -106,6 +108,12 @@ type Server struct {
 	// PrefetchRunnerInstance is the deterministic context pre-fetch runner
 	// (lazy-initialized via prefetchRunner()).
 	PrefetchRunnerInstance *session.PrefetchRunner
+
+	// Observability provider from mcpkit.
+	Observability *observability.Provider
+
+	// HookExecutor manages repo-level safety hooks.
+	HookExecutor *hooks.Executor
 }
 
 // DefaultScanTTL is how long repo scan results are considered fresh before
@@ -115,11 +123,12 @@ const DefaultScanTTL = 30 * time.Second
 // NewServer creates a new MCP server instance.
 func NewServer(scanPath string) *Server {
 	return &Server{
-		ScanPath:   scanPath,
-		scanTTL:    DefaultScanTTL,
-		ProcMgr:    process.NewManager(),
-		SessMgr:    session.NewManager(),
-		HTTPClient: &http.Client{Timeout: 30 * time.Second},
+		ScanPath:     scanPath,
+		scanTTL:      DefaultScanTTL,
+		ProcMgr:      process.NewManager(),
+		SessMgr:      session.NewManager(),
+		HTTPClient:   &http.Client{Timeout: 30 * time.Second},
+		HookExecutor: hooks.NewExecutor(nil),
 	}
 }
 
@@ -135,6 +144,7 @@ func NewServerWithBus(scanPath string, bus *events.Bus) *Server {
 		FleetAnalytics:  fleet.NewFleetAnalytics(10000, 24*time.Hour),
 		MetricCollector: eval.NewMetricCollector(bus),
 		Tasks:           NewTaskRegistry(),
+		HookExecutor:    hooks.NewExecutor(bus),
 	}
 }
 

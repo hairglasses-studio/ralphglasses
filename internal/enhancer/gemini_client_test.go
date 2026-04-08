@@ -42,7 +42,7 @@ func TestGeminiClient_Improve(t *testing.T) {
 
 	client := &GeminiClient{
 		APIKey:     "test-gemini-key",
-		Model:      "gemini-2.5-pro",
+		Model:      "gemini-3.1-pro",
 		BaseURL:    server.URL,
 		HTTPClient: &http.Client{Timeout: 5 * time.Second},
 	}
@@ -84,7 +84,7 @@ func TestGeminiClient_ImproveWithFeedback(t *testing.T) {
 
 	client := &GeminiClient{
 		APIKey:     "test-key",
-		Model:      "gemini-2.5-pro",
+		Model:      "gemini-3.1-pro",
 		BaseURL:    server.URL,
 		HTTPClient: &http.Client{Timeout: 5 * time.Second},
 	}
@@ -109,7 +109,7 @@ func TestGeminiClient_APIError(t *testing.T) {
 
 	client := &GeminiClient{
 		APIKey:     "test-key",
-		Model:      "gemini-2.5-pro",
+		Model:      "gemini-3.1-pro",
 		BaseURL:    server.URL,
 		HTTPClient: &http.Client{Timeout: 5 * time.Second},
 	}
@@ -163,7 +163,7 @@ func TestGeminiClient_ThinkingBudget(t *testing.T) {
 
 			client := &GeminiClient{
 				APIKey:     "test-key",
-				Model:      "gemini-2.5-pro",
+				Model:      "gemini-3.1-pro",
 				BaseURL:    server.URL,
 				HTTPClient: &http.Client{Timeout: 5 * time.Second},
 			}
@@ -200,7 +200,7 @@ func TestGeminiClient_CachedContent(t *testing.T) {
 
 	client := &GeminiClient{
 		APIKey:     "test-key",
-		Model:      "gemini-2.5-pro",
+		Model:      "gemini-3.1-pro",
 		BaseURL:    server.URL,
 		HTTPClient: &http.Client{Timeout: 5 * time.Second},
 		CacheName:  "cachedContents/abc123",
@@ -226,8 +226,8 @@ func TestGeminiClient_CreateCachedContent(t *testing.T) {
 		}
 		var req geminiCachedContentRequest
 		_ = json.NewDecoder(r.Body).Decode(&req)
-		if req.Model != "models/gemini-2.5-pro" {
-			t.Errorf("model = %q, want %q", req.Model, "models/gemini-2.5-pro")
+		if req.Model != "models/gemini-3.1-pro" {
+			t.Errorf("model = %q, want %q", req.Model, "models/gemini-3.1-pro")
 		}
 		if req.TTL != "3600s" {
 			t.Errorf("ttl = %q, want %q", req.TTL, "3600s")
@@ -240,7 +240,7 @@ func TestGeminiClient_CreateCachedContent(t *testing.T) {
 
 	client := &GeminiClient{
 		APIKey:     "test-key",
-		Model:      "gemini-2.5-pro",
+		Model:      "gemini-3.1-pro",
 		BaseURL:    server.URL,
 		HTTPClient: &http.Client{Timeout: 5 * time.Second},
 	}
@@ -280,7 +280,7 @@ func TestGeminiClient_CreateCachedContent_Full(t *testing.T) {
 
 	client := &GeminiClient{
 		APIKey:     "test-key",
-		Model:      "gemini-2.5-pro",
+		Model:      "gemini-3.1-pro",
 		BaseURL:    server.URL,
 		HTTPClient: &http.Client{Timeout: 5 * time.Second},
 	}
@@ -335,7 +335,7 @@ func TestGeminiClient_CreateCachedContent_Error(t *testing.T) {
 
 	client := &GeminiClient{
 		APIKey:     "test-key",
-		Model:      "gemini-2.5-pro",
+		Model:      "gemini-3.1-pro",
 		BaseURL:    server.URL,
 		HTTPClient: &http.Client{Timeout: 5 * time.Second},
 	}
@@ -364,7 +364,7 @@ func TestGeminiClient_MultipleParts(t *testing.T) {
 
 	client := &GeminiClient{
 		APIKey:     "test-key",
-		Model:      "gemini-2.5-pro",
+		Model:      "gemini-3.1-pro",
 		BaseURL:    server.URL,
 		HTTPClient: &http.Client{Timeout: 5 * time.Second},
 	}

@@ -30,8 +30,8 @@ type ModelTier struct {
 // DefaultModelTiers returns the built-in tier list ordered by cost.
 func DefaultModelTiers() []ModelTier {
 	return []ModelTier{
-		{Provider: ProviderGemini, Model: "gemini-2.0-flash-lite", MaxComplexity: 1, CostPer1M: CostGeminiFlashLiteInput, Label: "ultra-cheap"},
-		{Provider: ProviderGemini, Model: "gemini-2.5-flash", MaxComplexity: 2, CostPer1M: CostGeminiFlashInput, Label: "worker"},
+		{Provider: ProviderGemini, Model: "gemini-3.1-flash-lite", MaxComplexity: 1, CostPer1M: CostGeminiFlashLiteInput, Label: "ultra-cheap"},
+		{Provider: ProviderGemini, Model: "gemini-3.1-flash", MaxComplexity: 2, CostPer1M: CostGeminiFlashInput, Label: "worker"},
 		{Provider: ProviderCodex, Model: "gpt-5.4", MaxComplexity: 3, CostPer1M: CostCodexInput, Label: "coding"},
 		{Provider: ProviderClaude, Model: "claude-opus", MaxComplexity: 4, CostPer1M: CostClaudeOpusInput, Label: "reasoning"},
 	}

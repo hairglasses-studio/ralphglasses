@@ -62,7 +62,7 @@ providers:
     apiKeySecretKey: ANTHROPIC_API_KEY
   gemini:
     enabled: true
-    model: gemini-2.5-pro
+    model: gemini-3.1-pro
     apiKeySecret: ralphglasses-provider-keys
     apiKeySecretKey: GEMINI_API_KEY
   openai:

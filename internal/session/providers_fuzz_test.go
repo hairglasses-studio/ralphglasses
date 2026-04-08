@@ -47,7 +47,7 @@ func FuzzNormalizeGeminiEvent(f *testing.F) {
 	f.Add([]byte(`{"event":"message","message":{"parts":[{"text":"hello"}]}}`))
 	f.Add([]byte(`{"type":"result","usage":{"total_cost_usd":0.4,"turns":3},"session":{"id":"gem-456"}}`))
 	f.Add([]byte(`{"type":"error","error":"rate limited","is_error":true}`))
-	f.Add([]byte(`{"type":"result","result":{"text":"nested"},"metadata":{"model":"gemini-3-pro"}}`))
+	f.Add([]byte(`{"type":"result","result":{"text":"nested"},"metadata":{"model":"gemini-3.1-pro"}}`))
 	f.Add([]byte(`{"candidate":{"content":{"parts":[{"text":"deep nested"}]}}}`))
 	// Edge cases: malformed JSON, unicode, null bytes, whitespace, long input
 	f.Add([]byte(`{invalid`))

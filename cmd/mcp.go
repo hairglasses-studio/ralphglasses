@@ -97,6 +97,9 @@ func setupMCP(sp string) (*server.MCPServer, func(), error) {
 
 	bus := events.NewBus(1000)
 
+	rg := mcpserver.NewServerWithBus(sp, bus)
+	rg.DeferredLoading = true
+
 	srv := registry.NewMCPServer(
 		"ralphglasses",
 		version+" ("+commit+")",
@@ -116,6 +119,7 @@ func setupMCP(sp string) (*server.MCPServer, func(), error) {
 		})),
 		server.WithToolHandlerMiddleware(mcpserver.InstrumentationMiddleware(toolRec)),
 		server.WithToolHandlerMiddleware(mcpserver.EventBusMiddleware(bus)),
+		server.WithToolHandlerMiddleware(rg.HooksMiddleware()),
 		server.WithToolHandlerMiddleware(mcpserver.ValidationMiddleware(sp)),
 	)
 
@@ -124,9 +128,6 @@ func setupMCP(sp string) (*server.MCPServer, func(), error) {
 	// Enable MCP Sampling so the server can request LLM completions
 	// from the host client (e.g., Claude Code) without separate API keys.
 	srv.EnableSampling()
-
-	rg := mcpserver.NewServerWithBus(sp, bus)
-	rg.DeferredLoading = true
 	rg.ToolRecorder = toolRec
 	runtimeCleanup := configureMCPRuntime(sp, bus, rg)
 	rg.Register(srv)

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
@@ -87,6 +88,66 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 		opts, changed = optimizer.OptimizedLaunchOptions(opts)
 		if changed {
 			slog.Info("auto-optimizer adjusted launch options", "provider", opts.Provider, "model", opts.Model)
+		}
+	}
+
+	// Marathon Context Compaction (Phase 10.4)
+	// If resuming and history is large, compact before launching.
+	if opts.Resume != "" && opts.Provider != ProviderClaude {
+		if prev, ok := m.sessions[opts.Resume]; ok {
+			prev.mu.Lock()
+			history := prev.MessageHistory
+			prev.mu.Unlock()
+
+			if len(history) > 0 {
+				config := DefaultCompactionConfig()
+				// Default to LLM summarization for marathon sessions if enabled in profile
+				// or if specifically requested. For now we use heuristic as default.
+				compactor := NewContextCompactor(config)
+				if compactor.NeedsCompaction(history) {
+					var summary string
+					if config.Strategy == StrategyLLMSummarize {
+						slog.Info("performing LLM-powered marathon context compaction", "session", opts.Resume)
+						// Launch a transient summarizer session
+						summarizerPrompt := "Summarize the following conversation history into a concise narrative, preserving all key decisions, implemented changes, and remaining tasks. Respond ONLY with the summary.\n\n"
+						var sb strings.Builder
+						for _, msg := range history {
+							sb.WriteString(fmt.Sprintf("[%s]: %s\n", msg.Role, msg.Content))
+						}
+						summarizerOpts := LaunchOptions{
+							SessionName:  "summarizer-" + opts.Resume,
+							Provider:     opts.Provider, // Use same provider
+							RepoPath:     opts.RepoPath,
+							Prompt:       summarizerPrompt + sb.String(),
+							MaxBudgetUSD: 0.50, // very small budget
+							Bare:         true, // skip hooks
+						}
+						if sumSess, err := m.launchWorkflowSession(ctx, summarizerOpts); err == nil {
+							if waitErr := m.waitForSession(ctx, sumSess); waitErr == nil {
+								summary = sumSess.LastOutput
+							}
+						}
+					}
+
+					if summary == "" {
+						result := compactor.Compact(history)
+						slog.Info("performing heuristic marathon context compaction", "session", opts.Resume, "reduction", result.Reduction)
+
+						// Inject compacted history as a synthetic system prompt prefix
+						var sb strings.Builder
+						sb.WriteString("Previous conversation summary (compacted):\n")
+						for _, msg := range result.Messages {
+							sb.WriteString(fmt.Sprintf("[%s]: %s\n", msg.Role, msg.Content))
+						}
+						summary = sb.String()
+					}
+
+					sb := strings.Builder{}
+					sb.WriteString(summary)
+					sb.WriteString("\n\nContinue with the task.\n")
+					opts.SystemPrompt = sb.String() + "\n" + opts.SystemPrompt
+				}
+			}
 		}
 	}
 

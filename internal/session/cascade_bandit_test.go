@@ -54,7 +54,7 @@ func TestBanditRouter_SelectProvider_AfterMinSamples(t *testing.T) {
 	// Record enough samples to pass the threshold.
 	for range 6 {
 		ctx := BuildCascadeContext("lint", 0.8, TimeBatch, 0.9)
-		br.RecordOutcome("gemini", "gemini-2.0-flash-lite", true, 0.01, 0.8, ctx)
+		br.RecordOutcome("gemini", "gemini-3.1-flash-lite", true, 0.01, 0.8, ctx)
 	}
 
 	ctx := BuildCascadeContext("lint", 0.8, TimeBatch, 0.9)
@@ -73,7 +73,7 @@ func TestBanditRouter_CheapForSimpleTasks(t *testing.T) {
 	t.Parallel()
 
 	tiers := []ModelTier{
-		{Provider: ProviderGemini, Model: "gemini-2.0-flash-lite", MaxComplexity: 1, CostPer1M: 0.10, Label: "ultra-cheap"},
+		{Provider: ProviderGemini, Model: "gemini-3.1-flash-lite", MaxComplexity: 1, CostPer1M: 0.10, Label: "ultra-cheap"},
 		{Provider: ProviderClaude, Model: "claude-opus", MaxComplexity: 4, CostPer1M: 15.00, Label: "reasoning"},
 	}
 
@@ -90,8 +90,8 @@ func TestBanditRouter_CheapForSimpleTasks(t *testing.T) {
 	// Train: cheap succeeds on simple tasks, fails on complex.
 	// Expensive succeeds on complex, mediocre on simple.
 	for range 100 {
-		br.RecordOutcome("gemini", "gemini-2.0-flash-lite", true, 0.01, 0.85, simpleCtx)
-		br.RecordOutcome("gemini", "gemini-2.0-flash-lite", false, 0.01, 0.2, complexCtx)
+		br.RecordOutcome("gemini", "gemini-3.1-flash-lite", true, 0.01, 0.85, simpleCtx)
+		br.RecordOutcome("gemini", "gemini-3.1-flash-lite", false, 0.01, 0.2, complexCtx)
 		br.RecordOutcome("claude", "claude-opus", true, 2.00, 0.95, complexCtx)
 		br.RecordOutcome("claude", "claude-opus", true, 2.00, 0.5, simpleCtx)
 	}
@@ -118,7 +118,7 @@ func TestBanditRouter_RecordOutcome(t *testing.T) {
 	br := NewBanditRouter(DefaultModelTiers(), DefaultBanditRouterConfig())
 	ctx := BuildCascadeContext("feature", 0.5, TimeNormal, 0.7)
 
-	br.RecordOutcome("gemini", "gemini-2.0-flash-lite", true, 0.05, 0.8, ctx)
+	br.RecordOutcome("gemini", "gemini-3.1-flash-lite", true, 0.05, 0.8, ctx)
 	br.RecordOutcome("claude", "claude-sonnet", true, 1.00, 0.9, ctx)
 
 	if br.TotalPulls() != 2 {
@@ -143,10 +143,10 @@ func TestBanditRouter_SuccessRateTracking(t *testing.T) {
 
 	// Record 8 successes and 2 failures for gemini.
 	for range 8 {
-		br.RecordOutcome("gemini", "gemini-2.0-flash-lite", true, 0.01, 0.8, ctx)
+		br.RecordOutcome("gemini", "gemini-3.1-flash-lite", true, 0.01, 0.8, ctx)
 	}
 	for range 2 {
-		br.RecordOutcome("gemini", "gemini-2.0-flash-lite", false, 0.01, 0.3, ctx)
+		br.RecordOutcome("gemini", "gemini-3.1-flash-lite", false, 0.01, 0.3, ctx)
 	}
 
 	rate := br.ProviderSuccessRate("gemini")
@@ -173,13 +173,13 @@ func TestBanditRouter_Ready(t *testing.T) {
 	}
 
 	ctx := BuildCascadeContext("lint", 0.8, TimeBatch, 0.8)
-	br.RecordOutcome("gemini", "gemini-2.0-flash-lite", true, 0.01, 0.8, ctx)
-	br.RecordOutcome("gemini", "gemini-2.0-flash-lite", true, 0.01, 0.8, ctx)
+	br.RecordOutcome("gemini", "gemini-3.1-flash-lite", true, 0.01, 0.8, ctx)
+	br.RecordOutcome("gemini", "gemini-3.1-flash-lite", true, 0.01, 0.8, ctx)
 	if br.Ready() {
 		t.Error("should not be ready with 2 pulls (min=3)")
 	}
 
-	br.RecordOutcome("gemini", "gemini-2.0-flash-lite", true, 0.01, 0.8, ctx)
+	br.RecordOutcome("gemini", "gemini-3.1-flash-lite", true, 0.01, 0.8, ctx)
 	if !br.Ready() {
 		t.Error("should be ready with 3 pulls (min=3)")
 	}
@@ -330,7 +330,7 @@ func TestWireBanditRouter_UsesContextAfterTraining(t *testing.T) {
 	// Seed enough data for the bandit to be ready.
 	ctx := BuildCascadeContext("lint", 0.8, TimeBatch, 0.9)
 	for range 20 {
-		br.RecordOutcome("gemini", "gemini-2.0-flash-lite", true, 0.01, 0.8, ctx)
+		br.RecordOutcome("gemini", "gemini-3.1-flash-lite", true, 0.01, 0.8, ctx)
 	}
 
 	// Also need enough cascade results for SelectTier to consult bandit.
@@ -354,7 +354,7 @@ func TestBanditRouter_FindArmID(t *testing.T) {
 	br := NewBanditRouter(DefaultModelTiers(), DefaultBanditRouterConfig())
 
 	// Exact match.
-	id := br.findArmID("gemini", "gemini-2.0-flash-lite")
+	id := br.findArmID("gemini", "gemini-3.1-flash-lite")
 	if id != "ultra-cheap" {
 		t.Errorf("expected 'ultra-cheap', got %q", id)
 	}

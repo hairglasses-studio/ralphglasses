@@ -129,7 +129,7 @@ As noted in Wave 2 (doc 06), the cost cap check in `handleSweepSchedule` runs ev
 |----------|-------|-------|--------|
 | Claude | claude-sonnet-4.6 | $3.00 | $15.00 |
 | Claude | claude-opus | $15.00 | $75.00 |
-| Gemini | gemini-2.5-flash | $0.30 | $2.50 |
+| Gemini | gemini-3.1-flash | $0.30 | $2.50 |
 | Gemini | gemini-flash-lite | $0.10 | — |
 | Codex | gpt-5.4 | $2.50 | $15.00 |
 

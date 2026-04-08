@@ -69,7 +69,8 @@ func TestAddToolWithMetadata(t *testing.T) {
 	}
 
 	// Should not panic.
-	addToolWithMetadata(mcpSrv, entry)
+	s := &Server{}
+	s.addToolWithMetadata(mcpSrv, entry)
 }
 
 func TestRegister_AllTools_DeferredFalse(t *testing.T) {

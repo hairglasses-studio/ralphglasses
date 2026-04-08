@@ -33,7 +33,7 @@ func TestProviderDefaults(t *testing.T) {
 		wantModel string
 	}{
 		{ProviderClaude, "sonnet"},
-		{ProviderGemini, "gemini-2.5-pro"},
+		{ProviderGemini, "gemini-3.1-pro"},
 		{ProviderCodex, "gpt-5.4"},
 	}
 	for _, tt := range tests {
@@ -77,12 +77,12 @@ func TestBuildGeminiCmd(t *testing.T) {
 		cmd := buildGeminiCmd(ctx, LaunchOptions{
 			RepoPath: "/tmp/repo",
 			Prompt:   "do something",
-			Model:    "gemini-2.5-pro",
+			Model:    "gemini-3.1-pro",
 			Resume:   "sess-123",
 		})
 
 		cmdStr := strings.Join(cmd.Args, " ")
-		for _, want := range []string{"--output-format", "stream-json", "--model", "gemini-2.5-pro", "--resume", "sess-123", "--approval-mode", "yolo", "-p", "do something"} {
+		for _, want := range []string{"--output-format", "stream-json", "--model", "gemini-3.1-pro", "--resume", "sess-123", "--approval-mode", "yolo", "-p", "do something"} {
 			if !strings.Contains(cmdStr, want) {
 				t.Errorf("gemini cmd %q missing %q", cmdStr, want)
 			}
@@ -241,7 +241,7 @@ func TestNormalizeClaudeEventTopLevelCostPreferred(t *testing.T) {
 }
 
 func TestNormalizeGeminiEvent(t *testing.T) {
-	line := []byte(`{"type":"result","result":"Generated code","cost_usd":0.03,"num_turns":2,"model":"gemini-2.5-pro","session_id":"gem-123"}`)
+	line := []byte(`{"type":"result","result":"Generated code","cost_usd":0.03,"num_turns":2,"model":"gemini-3.1-pro","session_id":"gem-123"}`)
 	event, err := normalizeEvent(ProviderGemini, line)
 	if err != nil {
 		t.Fatal(err)
@@ -252,8 +252,8 @@ func TestNormalizeGeminiEvent(t *testing.T) {
 	if event.CostUSD != 0.03 {
 		t.Errorf("CostUSD = %f, want 0.03", event.CostUSD)
 	}
-	if event.Model != "gemini-2.5-pro" {
-		t.Errorf("Model = %q, want gemini-2.5-pro", event.Model)
+	if event.Model != "gemini-3.1-pro" {
+		t.Errorf("Model = %q, want gemini-3.1-pro", event.Model)
 	}
 	if event.SessionID != "gem-123" {
 		t.Errorf("SessionID = %q, want gem-123", event.SessionID)
@@ -261,7 +261,7 @@ func TestNormalizeGeminiEvent(t *testing.T) {
 }
 
 func TestNormalizeGeminiEventNested(t *testing.T) {
-	line := []byte(`{"event":"message","message":{"parts":[{"text":"Working tree ready"}]},"usage":{"total_cost_usd":0.4,"turns":3},"session":{"id":"gem-456"},"metadata":{"model":"gemini-2.5-pro"}}`)
+	line := []byte(`{"event":"message","message":{"parts":[{"text":"Working tree ready"}]},"usage":{"total_cost_usd":0.4,"turns":3},"session":{"id":"gem-456"},"metadata":{"model":"gemini-3.1-pro"}}`)
 	event, err := normalizeEvent(ProviderGemini, line)
 	if err != nil {
 		t.Fatal(err)
@@ -597,8 +597,8 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"candidates_token_count": float64(500),
 				},
 			},
-			// (1000/1M)*0.30 + (500/1M)*2.50 = 0.0003 + 0.00125 = 0.00155
-			wantCost: 0.00155,
+			// (1000/1M)*0.15 + (500/1M)*0.60 = 0.00015 + 0.00030 = 0.00045
+			wantCost: 0.00045,
 		},
 		{
 			name:     "codex with usage tokens",
@@ -650,7 +650,7 @@ func TestEstimateCostFromTokens(t *testing.T) {
 					"candidates_token_count": float64(1000),
 				},
 			},
-			wantCost: 0.0025, // (1000/1M)*2.50
+			wantCost: 0.0006, // (1000/1M)*0.60
 		},
 		{
 			name:     "unknown provider returns zero",
@@ -694,8 +694,8 @@ func TestNormalizeGeminiEventWithTokenCost(t *testing.T) {
 		t.Fatalf("normalizeGeminiEvent() error: %v", err)
 	}
 
-	// (1000/1M)*0.30 + (500/1M)*2.50 = 0.0003 + 0.00125 = 0.00155
-	want := 0.00155
+	// (1000/1M)*0.15 + (500/1M)*0.60 = 0.00015 + 0.00030 = 0.00045
+	want := 0.00045
 	if math.Abs(event.CostUSD-want) > 1e-9 {
 		t.Errorf("CostUSD = %v, want %v", event.CostUSD, want)
 	}

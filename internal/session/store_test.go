@@ -358,6 +358,110 @@ func TestSQLiteStore_ConcurrentSaveGet(t *testing.T) {
 	}
 }
 
+func TestSQLiteStore_ConcurrentOpenSameDB(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "shared-open.db")
+	const numOpeners = 8
+
+	var (
+		wg     sync.WaitGroup
+		mu     sync.Mutex
+		stores []*SQLiteStore
+	)
+	errs := make(chan error, numOpeners)
+	start := make(chan struct{})
+
+	for i := range numOpeners {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			<-start
+
+			store, err := NewSQLiteStore(dbPath)
+			if err != nil {
+				errs <- fmt.Errorf("open %d: %w", idx, err)
+				return
+			}
+
+			mu.Lock()
+			stores = append(stores, store)
+			mu.Unlock()
+		}(i)
+	}
+
+	close(start)
+	wg.Wait()
+	close(errs)
+
+	for _, store := range stores {
+		_ = store.Close()
+	}
+
+	for err := range errs {
+		t.Error(err)
+	}
+}
+
+func TestSQLiteStore_ConcurrentMultiStoreWrites(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "multi-store.db")
+	const (
+		numStores        = 4
+		sessionsPerStore = 12
+	)
+
+	stores := make([]*SQLiteStore, 0, numStores)
+	for i := range numStores {
+		store, err := NewSQLiteStore(dbPath)
+		if err != nil {
+			t.Fatalf("NewSQLiteStore %d: %v", i, err)
+		}
+		stores = append(stores, store)
+	}
+	t.Cleanup(func() {
+		for _, store := range stores {
+			_ = store.Close()
+		}
+	})
+
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	errs := make(chan error, numStores*sessionsPerStore)
+
+	for storeIdx, store := range stores {
+		wg.Add(1)
+		go func(storeIdx int, store *SQLiteStore) {
+			defer wg.Done()
+			for sessionIdx := range sessionsPerStore {
+				id := fmt.Sprintf("shared-%d-%d", storeIdx, sessionIdx)
+				s := testSession(
+					id,
+					fmt.Sprintf("/repos/shared-%d", storeIdx),
+					StatusRunning,
+					float64(storeIdx*sessionsPerStore+sessionIdx)*0.05,
+				)
+				if err := store.SaveSession(ctx, s); err != nil {
+					errs <- fmt.Errorf("save %s: %w", id, err)
+				}
+			}
+		}(storeIdx, store)
+	}
+
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Error(err)
+	}
+
+	list, err := stores[0].ListSessions(ctx, ListOpts{})
+	if err != nil {
+		t.Fatalf("ListSessions: %v", err)
+	}
+	want := numStores * sessionsPerStore
+	if len(list) != want {
+		t.Fatalf("total sessions = %d, want %d", len(list), want)
+	}
+}
+
 func TestSQLiteStore_LargeSessionList(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "large-list.db")
 	store, err := NewSQLiteStore(dbPath)

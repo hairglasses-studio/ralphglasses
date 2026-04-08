@@ -406,7 +406,7 @@ Three clients implement `PromptImprover`: `LLMClient` (Claude), `GeminiClient` (
 
 | Aspect | Claude (`llmclient.go`) | Gemini (`gemini_client.go`) | OpenAI (`openai_client.go`) |
 |--------|------------------------|----------------------------|------------------------------|
-| Default model | `claude-sonnet-4-6` | `gemini-2.5-pro` | `o3` |
+| Default model | `claude-sonnet-4-6` | `gemini-3.1-pro` | `o3` |
 | Default timeout | 30s | 30s | 30s |
 | API style | Anthropic Go SDK | Raw HTTP (REST) | Raw HTTP (Responses API) |
 | API key env | `ANTHROPIC_API_KEY` | `GOOGLE_API_KEY` or `GEMINI_API_KEY` | `OPENAI_API_KEY` |

@@ -114,7 +114,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		if effectiveModel == "" {
 			switch effectiveProvider {
 			case session.ProviderGemini:
-				effectiveModel = "gemini-2.5-flash"
+				effectiveModel = "gemini-3.1-flash"
 			case session.ProviderCodex:
 				effectiveModel = session.ProviderDefaults(session.ProviderCodex)
 			default:
@@ -203,6 +203,8 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 
 	activeWorkers := 0
 	completedTasks := 0
+	totalSpent := 0.0
+	totalTurns := 0
 	for _, task := range team.Tasks {
 		if task.Status == session.TeamTaskInProgress {
 			activeWorkers++
@@ -210,13 +212,34 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 		if task.Status == session.TeamTaskCompleted {
 			completedTasks++
 		}
+		// Aggregate worker stats
+		if task.WorkerSessionID != "" {
+			if ws, ok := s.SessMgr.GetForTenant(task.WorkerSessionID, tenantID); ok {
+				ws.Lock()
+				totalSpent += ws.SpentUSD
+				totalTurns += ws.TurnCount
+				ws.Unlock()
+			}
+		}
 	}
 	result["active_workers"] = activeWorkers
 	result["completed_tasks"] = completedTasks
 	result["task_count"] = len(team.Tasks)
 
+	// Aggregate planner stats
+	if team.PlannerSessionID != "" {
+		if ps, ok := s.SessMgr.GetForTenant(team.PlannerSessionID, tenantID); ok {
+			ps.Lock()
+			totalSpent += ps.SpentUSD
+			totalTurns += ps.TurnCount
+			ps.Unlock()
+		}
+	}
+
 	if lead, ok := s.SessMgr.GetForTenant(team.LeadID, tenantID); ok {
 		lead.Lock()
+		totalSpent += lead.SpentUSD
+		totalTurns += lead.TurnCount
 		result["lead_session"] = map[string]any{
 			"id":        lead.ID,
 			"status":    lead.Status,
@@ -226,6 +249,9 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 		}
 		lead.Unlock()
 	}
+
+	result["total_spent_usd"] = totalSpent
+	result["total_turn_count"] = totalTurns
 
 	return jsonResult(result), nil
 }

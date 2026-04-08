@@ -42,7 +42,7 @@ type CostEstimateBreak struct {
 // defaultModels maps provider names to their default model identifiers.
 var defaultModels = map[string]string{
 	"claude": "claude-sonnet-4-6",
-	"gemini": "gemini-2.5-flash",
+	"gemini": "gemini-3.1-flash",
 	"codex":  "gpt-5.4",
 }
 

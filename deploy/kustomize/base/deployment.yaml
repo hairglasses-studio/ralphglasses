@@ -169,7 +169,7 @@ data:
       claude:
         model: claude-sonnet-4-20250514
       gemini:
-        model: gemini-2.5-pro
+        model: gemini-3.1-pro
     budget:
       max_session_cost: 5.00
       max_daily_cost: 50.00

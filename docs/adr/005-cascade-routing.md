@@ -24,8 +24,8 @@ Four tiers ordered by cost and capability (`DefaultModelTiers()`):
 
 | Tier | Provider | Model | Complexity | Label |
 |------|----------|-------|------------|-------|
-| 1 | Gemini | gemini-2.0-flash-lite | 1 | ultra-cheap |
-| 2 | Gemini | gemini-2.5-flash | 2 | worker |
+| 1 | Gemini | gemini-3.1-flash-lite | 1 | ultra-cheap |
+| 2 | Gemini | gemini-3.1-flash | 2 | worker |
 | 3 | Claude | claude-sonnet | 3 | coding |
 | 4 | Claude | claude-opus | 4 | reasoning |
 

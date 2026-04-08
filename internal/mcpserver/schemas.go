@@ -331,9 +331,9 @@ var OutputSchemas = map[string]map[string]any{
 				"items": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
-						"index":      map[string]any{"type": "integer"},
+						"number":     map[string]any{"type": "integer"},
 						"status":     map[string]any{"type": "string"},
-						"task":       map[string]any{"type": "string"},
+						"task":       map[string]any{"type": "object", "additionalProperties": true},
 						"error":      map[string]any{"type": "string"},
 						"started_at": map[string]any{"type": "string", "format": "date-time"},
 						"ended_at":   map[string]any{"type": "string", "format": "date-time"},

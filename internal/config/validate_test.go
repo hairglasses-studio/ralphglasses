@@ -447,8 +447,8 @@ func TestValidateModelForProvider(t *testing.T) {
 		{"claude", "gpt-4", true}, // wrong provider
 
 		// Gemini models.
-		{"gemini", "gemini-2.5-pro", false},
-		{"gemini", "gemini-2.5-flash", false},
+		{"gemini", "gemini-3.1-pro", false},
+		{"gemini", "gemini-3.1-flash", false},
 		{"gemini", "claude-sonnet-4-6", true}, // wrong provider
 
 		// Codex/OpenAI models.

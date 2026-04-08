@@ -685,7 +685,7 @@ gemini --output-format stream-json --yolo
 
 # Recommended
 gemini --output-format stream-json --yolo \
-  --model gemini-2.5-flash --sandbox \
+  --model gemini-3.1-flash --sandbox \
   --max-turns 50
 ```
 

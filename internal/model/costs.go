@@ -102,21 +102,21 @@ var costTable = []ModelCost{
 
 	// ── Gemini (Google) ─────────────────────────────────────────────────
 	{
-		ID: "gemini-2.5-pro", Provider: ProviderGemini,
+		ID: "gemini-3.1-pro", Provider: ProviderGemini,
 		DisplayName:   "Gemini 2.5 Pro",
 		InputPer1MTok: 1.25, OutputPer1MTok: 10.00,
 		ContextWindow: 1_000_000, MaxOutputTok: 65_536,
 		Capabilities: []Capability{CapCode, CapReasoning, CapVision},
 	},
 	{
-		ID: "gemini-2.5-flash", Provider: ProviderGemini,
+		ID: "gemini-3.1-flash", Provider: ProviderGemini,
 		DisplayName:   "Gemini 2.5 Flash",
 		InputPer1MTok: 0.15, OutputPer1MTok: 0.60,
 		ContextWindow: 1_000_000, MaxOutputTok: 65_536,
 		Capabilities: []Capability{CapCode, CapVision},
 	},
 	{
-		ID: "gemini-2.0-flash-lite", Provider: ProviderGemini,
+		ID: "gemini-3.1-flash-lite", Provider: ProviderGemini,
 		DisplayName:   "Gemini 2.0 Flash Lite",
 		InputPer1MTok: 0.075, OutputPer1MTok: 0.30,
 		ContextWindow: 1_000_000, MaxOutputTok: 8_192,

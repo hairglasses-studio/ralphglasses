@@ -256,7 +256,7 @@ func TestDispatch_AutoWithCascadeRouter(t *testing.T) {
 
 	// With cascade router, auto selects via SelectTier("general", 0).
 	// "general" maps to complexity 2, cheapest tier with MaxComplexity >= 2
-	// is the worker tier (gemini-2.5-flash).
+	// is the worker tier (gemini-3.1-flash).
 	provider := srv.resolveProvider("auto")
 	// The provider should be one of the valid providers (exact tier depends on config).
 	switch provider {

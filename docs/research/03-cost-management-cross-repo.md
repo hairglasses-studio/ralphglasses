@@ -61,7 +61,7 @@ NormalizedUSD   = rawCostUSD * (claudeBlended / providerBlended)
 | Provider | Input/MTok | Output/MTok | Source |
 |----------|-----------|-------------|--------|
 | Claude (sonnet) | $3.00 | $15.00 | Correct for Sonnet 4.6 |
-| Gemini | $1.25 | $5.00 | Estimate for gemini-2.5-pro |
+| Gemini | $1.25 | $5.00 | Estimate for gemini-3.1-pro |
 | Codex | $2.50 | $10.00 | Estimate for gpt-5 |
 
 **Gaps:**
@@ -319,7 +319,7 @@ var ModelCostRates = map[string]ModelCostRate{
     "claude-opus-4-6":   {5.00, 25.00, 6.25, 0.50},
     "claude-sonnet-4-6": {3.00, 15.00, 3.75, 0.30},
     "claude-haiku-4-5":  {1.00, 5.00, 1.25, 0.10},
-    "gemini-3-pro":      {1.25, 5.00, 0, 0},
+    "gemini-3.1-pro":      {1.25, 5.00, 0, 0},
     "gpt-5.4-xhigh":    {2.50, 10.00, 0, 0},
 }
 ```

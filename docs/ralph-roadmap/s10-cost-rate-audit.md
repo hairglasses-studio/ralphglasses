@@ -43,7 +43,7 @@ All prices are USD per 1M tokens. "Compiled-in" refers to the constants in
   tracks Flash-Lite input). The actual output rate for 2.0 Flash-Lite is $0.30/1M. The
   compiled-in input constant ($0.10) is also stale — 2.0 Flash-Lite is $0.075 and 2.5
   Flash-Lite (the newer replacement) is $0.10. The constant label matches 2.5 Flash-Lite
-  but `cascade_routing.go` uses model string `"gemini-2.0-flash-lite"`, creating a
+  but `cascade_routing.go` uses model string `"gemini-3.1-flash-lite"`, creating a
   model-to-constant mismatch.
 - Gemini 2.5 Flash output was recently corrected from $1.25 to $3.50 in the codebase
   (per commit history), but the actual current rate is **$2.50/1M** — the correction
@@ -73,8 +73,8 @@ All prices are USD per 1M tokens. "Compiled-in" refers to the constants in
 ### Cascade tier ordering in `DefaultModelTiers`
 
 ```
-Tier 1 (ultra-cheap): gemini-2.0-flash-lite   CostPer1M = $0.10   [actual $0.075]
-Tier 2 (worker):      gemini-2.5-flash         CostPer1M = $0.30   [actual $0.30 ✓]
+Tier 1 (ultra-cheap): gemini-3.1-flash-lite   CostPer1M = $0.10   [actual $0.075]
+Tier 2 (worker):      gemini-3.1-flash         CostPer1M = $0.30   [actual $0.30 ✓]
 Tier 3 (coding):      gpt-5.4                  CostPer1M = $2.50   [actual $10.00]
 Tier 4 (reasoning):   claude-opus              CostPer1M = $15.00  [actual $5.00]
 ```
@@ -86,8 +86,8 @@ reality, gpt-5.4 at $10.00/1M is **twice as expensive** as Claude Opus 4.6 at $5
 ordering should be:
 
 ```
-Tier 1 (ultra-cheap): gemini-2.0-flash-lite   $0.075
-Tier 2 (worker):      gemini-2.5-flash         $0.30
+Tier 1 (ultra-cheap): gemini-3.1-flash-lite   $0.075
+Tier 2 (worker):      gemini-3.1-flash         $0.30
 Tier 3 (reasoning):   claude-opus-4.6          $5.00
 Tier 4 (coding):      gpt-5.4                  $10.00
 ```
@@ -111,7 +111,7 @@ causes `NormalizedCost.EfficiencyPct` for Opus sessions to read ~33% (appears ex
 when Opus is actually on par with gpt-5.4 in cost.
 
 **Missing Gemini Pro**: The `gemini` provider's default model in `PROVIDER-SETUP.md` is
-`gemini-2.5-pro`, but there is no `gemini_pro` key in the cost table and no tier entry.
+`gemini-3.1-pro`, but there is no `gemini_pro` key in the cost table and no tier entry.
 The normalization fallback uses `gemini_flash` rates ($0.30/$3.50) for what is actually a
 $1.25/$10.00 model — undercharging Gemini Pro sessions by roughly 3-4x in the cost ledger.
 
@@ -174,8 +174,8 @@ OutputPerMToken: map[string]float64{
 ```go
 func DefaultModelTiers() []ModelTier {
     return []ModelTier{
-        {Provider: ProviderGemini, Model: "gemini-2.0-flash-lite", MaxComplexity: 1, CostPer1M: CostGeminiFlashLiteInput, Label: "ultra-cheap"},
-        {Provider: ProviderGemini, Model: "gemini-2.5-flash",      MaxComplexity: 2, CostPer1M: CostGeminiFlashInput,     Label: "worker"},
+        {Provider: ProviderGemini, Model: "gemini-3.1-flash-lite", MaxComplexity: 1, CostPer1M: CostGeminiFlashLiteInput, Label: "ultra-cheap"},
+        {Provider: ProviderGemini, Model: "gemini-3.1-flash",      MaxComplexity: 2, CostPer1M: CostGeminiFlashInput,     Label: "worker"},
         {Provider: ProviderClaude, Model: "claude-opus",            MaxComplexity: 3, CostPer1M: CostClaudeOpusInput,      Label: "reasoning"},
         {Provider: ProviderCodex,  Model: "gpt-5.4",               MaxComplexity: 4, CostPer1M: CostCodexInput,           Label: "coding"},
     }

@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -230,6 +232,76 @@ func ValidationMiddleware(scanRoot string) server.ToolHandlerMiddleware {
 			}
 
 			return next(ctx, req)
+		}
+	}
+}
+
+// HooksMiddleware emulates PreToolUse and PostToolUse hooks for providers (like Codex)
+// that lack native hook support. It enforces safety rules natively in Go before the tool executes,
+// and can run post-tool actions (like formatters) after execution.
+func (s *Server) HooksMiddleware() server.ToolHandlerMiddleware {
+	return func(next server.ToolHandlerFunc) server.ToolHandlerFunc {
+		return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			// PreToolUse: Native Safety Checks
+			if req.Params.Name == "run_shell_command" || req.Params.Name == "bash" {
+				if args := req.GetArguments(); args != nil {
+					if cmdRaw, ok := args["command"]; ok {
+						if cmd, ok := cmdRaw.(string); ok {
+							// Block obviously dangerous destructive commands
+							if strings.Contains(cmd, "rm -rf /") || strings.Contains(cmd, "mkfs") {
+								slog.WarnContext(ctx, "mcp.hook.blocked", "tool", req.Params.Name, "reason", "dangerous command detected")
+								return codedError(ErrInternal, "PreToolUse Hook blocked execution: dangerous command detected"), nil
+							}
+						}
+					}
+				}
+			}
+
+			// Repository-specific hooks
+			repoPath := ""
+			if args := req.GetArguments(); args != nil {
+				if r, ok := args["repo"]; ok {
+					if rs, ok := r.(string); ok && rs != "" {
+						if filepath.IsAbs(rs) {
+							repoPath = rs
+						} else if repo := s.findRepo(rs); repo != nil {
+							repoPath = repo.Path
+						}
+					}
+				}
+			}
+
+			if repoPath != "" && s.HookExecutor != nil {
+				_ = s.HookExecutor.LoadConfig(repoPath)
+				// Note: HookExecutor currently runs hooks asynchronously on event bus.
+				// For PreToolUse blocking hooks, we might need a synchronous executor.
+				// For now, we rely on the hardcoded safety checks above for blocking.
+			}
+
+			// Execute the actual tool
+			result, err := next(ctx, req)
+			if err != nil || result == nil || result.IsError {
+				return result, err
+			}
+
+			// PostToolUse: Native formatting or vet
+			if req.Params.Name == "replace" || req.Params.Name == "write_file" {
+				if args := req.GetArguments(); args != nil {
+					if pathRaw, ok := args["file_path"]; ok {
+						if pathStr, ok := pathRaw.(string); ok && strings.HasSuffix(pathStr, ".go") {
+							// Fire and forget formatting/vetting in the background
+							// Alternatively, run synchronously to ensure it's vetted before LLM sees it.
+							// For simplicity and speed, we format in the background.
+							go func(p string) {
+								cmd := exec.Command("gofmt", "-w", p)
+								_ = cmd.Run()
+							}(pathStr)
+						}
+					}
+				}
+			}
+
+			return result, err
 		}
 	}
 }

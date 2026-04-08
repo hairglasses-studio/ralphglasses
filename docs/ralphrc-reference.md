@@ -106,7 +106,7 @@ Keys must match `[A-Z_][A-Z0-9_]*`.
 | `AUTONOMY_LEVEL` | int | `0` | autonomy level (0=observe, 3=full) (range: 0--3) |
 | `AUTO_ENHANCE` | bool | `false` | auto-enhance prompts before session launch |
 | `BUDGET` | float | `5.00` | session budget in USD (range: 0.01--1000) |
-| `CASCADE_CHEAP_MODEL` | string | `gemini-2.5-flash` | cheap model for cascade routing |
+| `CASCADE_CHEAP_MODEL` | string | `gemini-3.1-flash` | cheap model for cascade routing |
 | `CASCADE_CHEAP_PROVIDER` | string | `gemini` | cheap provider for cascade routing |
 | `CASCADE_CONFIDENCE_THRESHOLD` | float | `0.7` | confidence threshold for cascade escalation (range: 0--1) |
 | `CASCADE_DIFFICULTY_THRESHOLD` | float | `0.4` | difficulty threshold for bypassing cheap tier (range: 0--1) |

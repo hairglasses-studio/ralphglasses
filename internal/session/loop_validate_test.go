@@ -28,13 +28,13 @@ func TestValidateLoopConfig_ModelProviderMismatch(t *testing.T) {
 		wantWarn bool
 	}{
 		{"claude model on claude", ProviderClaude, "claude-sonnet-4-20250514", false},
-		{"gemini model on gemini", ProviderGemini, "gemini-2.5-pro", false},
+		{"gemini model on gemini", ProviderGemini, "gemini-3.1-pro", false},
 		{"gpt model on codex", ProviderCodex, "gpt-4o", false},
 		{"o1 model on codex", ProviderCodex, "o1-preview", false},
 		{"o3 model on codex", ProviderCodex, "o3-mini", false},
 		{"codex model on codex", ProviderCodex, "codex-mini-latest", false},
 		{"claude model on gemini", ProviderGemini, "claude-sonnet-4-20250514", true},
-		{"gemini model on claude", ProviderClaude, "gemini-2.5-pro", true},
+		{"gemini model on claude", ProviderClaude, "gemini-3.1-pro", true},
 		{"gpt model on claude", ProviderClaude, "gpt-4o", true},
 		{"empty provider skips check", "", "anything", false},
 		{"empty model skips check", ProviderClaude, "", false},
@@ -156,7 +156,7 @@ func TestValidateLoopProfile_WorkerEnhancementProviderAgnostic(t *testing.T) {
 	p := validProfile()
 	p.EnableWorkerEnhancement = true
 	p.WorkerProvider = ProviderGemini
-	p.WorkerModel = "gemini-2.5-pro"
+	p.WorkerModel = "gemini-3.1-pro"
 	if err := ValidateLoopProfile(p); err != nil {
 		t.Errorf("unexpected error for gemini worker enhancement: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestValidateLoopProfile_WorkerEnhancementProviderAgnostic(t *testing.T) {
 	p4 := validProfile()
 	p4.EnableWorkerEnhancement = false
 	p4.WorkerProvider = ProviderGemini
-	p4.WorkerModel = "gemini-2.5-pro"
+	p4.WorkerModel = "gemini-3.1-pro"
 	if err := ValidateLoopProfile(p4); err != nil {
 		t.Errorf("unexpected error for disabled enhancement: %v", err)
 	}
@@ -383,7 +383,7 @@ func TestValidateLoopProfile_NegativeStallTimeout(t *testing.T) {
 func TestValidateLoopProfile_AllProviders(t *testing.T) {
 	modelForProvider := map[Provider]string{
 		ProviderClaude: "claude-sonnet-4-6",
-		ProviderGemini: "gemini-2.5-pro",
+		ProviderGemini: "gemini-3.1-pro",
 		ProviderCodex:  "gpt-4o",
 		"":             "",
 	}
@@ -411,7 +411,7 @@ func TestValidateLoopProfile_InvalidVerifierProvider(t *testing.T) {
 	// Valid verifier providers should pass.
 	modelForProvider := map[Provider]string{
 		ProviderClaude: "claude-sonnet-4-6",
-		ProviderGemini: "gemini-2.5-pro",
+		ProviderGemini: "gemini-3.1-pro",
 		ProviderCodex:  "gpt-4o",
 		"":             "",
 	}
@@ -435,7 +435,7 @@ func TestValidateLoopProfile_ModelProviderMismatch(t *testing.T) {
 	}{
 		// Planner
 		{"planner claude model on claude", "planner", ProviderClaude, "claude-sonnet-4-6", false},
-		{"planner gemini model on claude", "planner", ProviderClaude, "gemini-2.5-pro", true},
+		{"planner gemini model on claude", "planner", ProviderClaude, "gemini-3.1-pro", true},
 		{"planner empty model skips", "planner", ProviderClaude, "", false},
 		{"planner empty provider skips", "planner", "", "claude-sonnet-4-6", false},
 		// Worker
@@ -444,7 +444,7 @@ func TestValidateLoopProfile_ModelProviderMismatch(t *testing.T) {
 		{"worker o3 model on codex", "worker", ProviderCodex, "o3-mini", false},
 		{"worker codex model on codex", "worker", ProviderCodex, "codex-mini-latest", false},
 		// Verifier
-		{"verifier gemini model on gemini", "verifier", ProviderGemini, "gemini-2.5-pro", false},
+		{"verifier gemini model on gemini", "verifier", ProviderGemini, "gemini-3.1-pro", false},
 		{"verifier gpt model on gemini", "verifier", ProviderGemini, "gpt-4o", true},
 		{"verifier empty model skips", "verifier", ProviderGemini, "", false},
 	}
@@ -541,12 +541,12 @@ func TestCheckModelRegistry(t *testing.T) {
 		model    string
 		wantWarn bool
 	}{
-		{"known model", ProviderGemini, "gemini-2.5-pro", false},
-		{"unknown model with valid prefix", ProviderGemini, "gemini-3-pro", true},
+		{"known model", ProviderGemini, "gemini-3.1-pro", false},
+		{"unknown model with valid prefix", ProviderGemini, "gemini-4-pro", true},
 		{"known claude model", ProviderClaude, "claude-opus-4-20250514", false},
 		{"unknown claude model", ProviderClaude, "claude-unknown-99", true},
 		{"prefix mismatch returns empty", ProviderGemini, "claude-sonnet-4-6", false},
-		{"empty provider", "", "gemini-2.5-pro", false},
+		{"empty provider", "", "gemini-3.1-pro", false},
 		{"empty model", ProviderGemini, "", false},
 	}
 	for _, tt := range tests {

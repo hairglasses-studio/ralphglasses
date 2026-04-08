@@ -26,10 +26,10 @@ func pricingOr(model string, fallback finops.Pricing) finops.Pricing {
 // Default model cost rates per 1M tokens (USD). Sourced from the canonical
 // mcpkit/finops pricing table. Re-exported here for backward compatibility.
 var (
-	CostGeminiFlashLiteInput  = finops.DefaultPricing["gemini-2.0-flash-lite"].InputPerMToken
-	CostGeminiFlashLiteOutput = finops.DefaultPricing["gemini-2.0-flash-lite"].OutputPerMToken
-	CostGeminiFlashInput      = finops.DefaultPricing["gemini-2.5-flash"].InputPerMToken
-	CostGeminiFlashOutput     = finops.DefaultPricing["gemini-2.5-flash"].OutputPerMToken
+	CostGeminiFlashLiteInput  = pricingOr("gemini-3.1-flash-lite", finops.Pricing{InputPerMToken: 0.075, OutputPerMToken: 0.30}).InputPerMToken
+	CostGeminiFlashLiteOutput = pricingOr("gemini-3.1-flash-lite", finops.Pricing{InputPerMToken: 0.075, OutputPerMToken: 0.30}).OutputPerMToken
+	CostGeminiFlashInput      = pricingOr("gemini-3.1-flash", finops.Pricing{InputPerMToken: 0.15, OutputPerMToken: 0.60}).InputPerMToken
+	CostGeminiFlashOutput     = pricingOr("gemini-3.1-flash", finops.Pricing{InputPerMToken: 0.15, OutputPerMToken: 0.60}).OutputPerMToken
 	CostClaudeSonnetInput     = finops.DefaultPricing["claude-sonnet-4-6"].InputPerMToken
 	CostClaudeSonnetOutput    = finops.DefaultPricing["claude-sonnet-4-6"].OutputPerMToken
 	CostClaudeOpusInput       = finops.DefaultPricing["claude-opus-4-6"].InputPerMToken
@@ -38,8 +38,8 @@ var (
 	CostCodexOutput           = codexDefaultPricing.OutputPerMToken
 	CostClaudeHaikuInput      = finops.DefaultPricing["claude-haiku-4-5"].InputPerMToken
 	CostClaudeHaikuOutput     = finops.DefaultPricing["claude-haiku-4-5"].OutputPerMToken
-	CostGeminiProInput        = finops.DefaultPricing["gemini-2.5-pro"].InputPerMToken
-	CostGeminiProOutput       = finops.DefaultPricing["gemini-2.5-pro"].OutputPerMToken
+	CostGeminiProInput        = pricingOr("gemini-3.1-pro", finops.Pricing{InputPerMToken: 1.25, OutputPerMToken: 10.00}).InputPerMToken
+	CostGeminiProOutput       = pricingOr("gemini-3.1-pro", finops.Pricing{InputPerMToken: 1.25, OutputPerMToken: 10.00}).OutputPerMToken
 )
 
 // CostRatesVerified is the date these rates were last verified against provider pricing pages.

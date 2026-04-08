@@ -145,15 +145,15 @@ func (a *ResearchBatchAdapter) ParseResults(results []Result) []ResearchResult {
 func modelForComplexity(complexity int) string {
 	switch complexity {
 	case 1:
-		return "gemini-2.0-flash-lite"
+		return "gemini-3.1-flash-lite"
 	case 2:
-		return "gemini-2.5-flash"
+		return "gemini-3.1-flash"
 	case 3:
 		return "claude-sonnet-4-20250514" // batch = 50% discount
 	case 4:
 		return "claude-opus-4-20250514"
 	default:
-		return "gemini-2.5-flash"
+		return "gemini-3.1-flash"
 	}
 }
 

@@ -62,7 +62,7 @@ func TestEstimateCost_ClaudeHaiku(t *testing.T) {
 }
 
 func TestEstimateCost_GeminiFlash(t *testing.T) {
-	est, err := EstimateCost("gemini-2.5-flash", 10_000_000, 1_000_000)
+	est, err := EstimateCost("gemini-3.1-flash", 10_000_000, 1_000_000)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestEstimateCost_GeminiFlash(t *testing.T) {
 }
 
 func TestEstimateCost_GeminiPro(t *testing.T) {
-	est, err := EstimateCost("gemini-2.5-pro", 1_000_000, 1_000_000)
+	est, err := EstimateCost("gemini-3.1-pro", 1_000_000, 1_000_000)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -196,7 +196,7 @@ func TestEstimateCost_SmallTokenCount(t *testing.T) {
 }
 
 func TestEstimateCost_GeminiFlashLite(t *testing.T) {
-	est, err := EstimateCost("gemini-2.0-flash-lite", 1_000_000, 1_000_000)
+	est, err := EstimateCost("gemini-3.1-flash-lite", 1_000_000, 1_000_000)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -251,8 +251,8 @@ func TestCheapestModelForProvider_Gemini(t *testing.T) {
 	if m == nil {
 		t.Fatal("expected a model")
 	}
-	if m.ID != "gemini-2.0-flash-lite" {
-		t.Errorf("cheapest Gemini = %q, want gemini-2.0-flash-lite", m.ID)
+	if m.ID != "gemini-3.1-flash-lite" {
+		t.Errorf("cheapest Gemini = %q, want gemini-3.1-flash-lite", m.ID)
 	}
 }
 
@@ -261,8 +261,8 @@ func TestCheapestModelForProvider_Gemini_Reasoning(t *testing.T) {
 	if m == nil {
 		t.Fatal("expected a model")
 	}
-	if m.ID != "gemini-2.5-pro" {
-		t.Errorf("cheapest Gemini with reasoning = %q, want gemini-2.5-pro", m.ID)
+	if m.ID != "gemini-3.1-pro" {
+		t.Errorf("cheapest Gemini with reasoning = %q, want gemini-3.1-pro", m.ID)
 	}
 }
 
@@ -312,8 +312,8 @@ func TestCheapestModelAny_NoFilter(t *testing.T) {
 		t.Fatal("expected a model")
 	}
 	// Gemini 2.0 Flash Lite at $0.075/MTok is cheapest overall.
-	if m.ID != "gemini-2.0-flash-lite" {
-		t.Errorf("cheapest any = %q, want gemini-2.0-flash-lite", m.ID)
+	if m.ID != "gemini-3.1-flash-lite" {
+		t.Errorf("cheapest any = %q, want gemini-3.1-flash-lite", m.ID)
 	}
 }
 

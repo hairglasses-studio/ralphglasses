@@ -180,7 +180,7 @@ type ModelInfo struct {
 MODEL_ROUTE_DEFAULT="sonnet"
 MODEL_ROUTE_CODE="opus"
 MODEL_ROUTE_REVIEW="sonnet"
-MODEL_ROUTE_TEST="gemini-3-pro"
+MODEL_ROUTE_TEST="gemini-3.1-pro"
 MODEL_ROUTE_DOCS="gpt-5.4-xhigh"
 ```
 

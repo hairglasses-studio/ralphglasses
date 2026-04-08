@@ -13,6 +13,8 @@ type CompactionStrategy string
 const (
 	// StrategySummarize replaces old turns with compressed summaries.
 	StrategySummarize CompactionStrategy = "summarize"
+	// StrategyLLMSummarize uses a separate LLM pass to generate a high-fidelity summary.
+	StrategyLLMSummarize CompactionStrategy = "llm_summarize"
 	// StrategyDropToolOutputs removes tool result content from old turns.
 	StrategyDropToolOutputs CompactionStrategy = "drop_tool_outputs"
 	// StrategyKeepRecent keeps only the most recent N turns.

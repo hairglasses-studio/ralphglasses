@@ -6,7 +6,7 @@ import (
 )
 
 var knapsackArms = []Arm{
-	{ID: "flash-lite", Provider: "gemini", Model: "gemini-2.0-flash-lite"},
+	{ID: "flash-lite", Provider: "gemini", Model: "gemini-3.1-flash-lite"},
 	{ID: "sonnet", Provider: "claude", Model: "claude-sonnet"},
 	{ID: "opus", Provider: "claude", Model: "claude-opus"},
 }

@@ -469,3 +469,19 @@ Questions that remain unanswered after this sweep.
 16. **Phase 13 feasibility with current architecture** -- The L3 autonomy target (72-hour unattended) requires self-healing, but no analysis of whether the current supervisor architecture can support it without fundamental redesign.
 17. **Phase 7 (Kubernetes) CRD design** -- The `internal/k8s/` package exists but no agent analyzed whether the CRD design is compatible with the A2A protocol integration in Phase 11.
 18. **WASM plugin runtime selection** -- Phase 20 requires embedded WASM; no analysis of which Go WASM runtime (wazero, wasmtime, wasmer) fits the mcpkit architecture.
+
+---
+
+## 8. Post-Sweep Addenda
+
+### S13 -- PostgreSQL control-plane spike (2026-04-08)
+
+- Source: [`s13-postgres-control-plane-spike.md`](s13-postgres-control-plane-spike.md)
+- Summary: SQLite remains the default local-first store, but multi-node coordinator
+  state should be evaluated behind an optional PostgreSQL backend rather than shared
+  SQLite files.
+- Roadmap target: Phase 10.5.9 (state persistence), as a research spike that informs
+  Phase 10.5.6 multi-node distribution.
+- Recommendation: harden SQLite first, then prototype PostgreSQL only for shared
+  coordinator entities such as leases, queue state, tenant/session metadata, and
+  recovery orchestration.

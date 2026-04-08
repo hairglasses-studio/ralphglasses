@@ -18,7 +18,7 @@ variant_a:
 variant_b:
   name: gemini-flash
   provider: gemini
-  model: gemini-2.5-flash
+  model: gemini-3.1-flash
   prompt: "Write a Go function that reverses a string"
   temperature: 0.5
 metrics:

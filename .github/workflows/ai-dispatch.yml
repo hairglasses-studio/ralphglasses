@@ -7,7 +7,7 @@ on:
     types: [created]
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   issues: write
   id-token: write
@@ -17,156 +17,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-    outputs:
-      pr_number: ${{ steps.pr.outputs.number }}
-      same_repo: ${{ steps.pr.outputs.same_repo }}
-      draft: ${{ steps.pr.outputs.draft }}
-      trusted: ${{ steps.pr.outputs.trusted }}
-      body: ${{ steps.pr.outputs.body }}
-    steps:
-      - name: Resolve PR metadata
-        id: pr
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ github.token }}
-          script: |
-            const trusted = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
-            const prNumber =
-              context.payload.pull_request?.number ||
-              (context.payload.issue?.pull_request ? context.payload.issue.number : undefined);
-            core.setOutput('body', context.payload.comment?.body || '');
-            if (!prNumber) {
-              core.setOutput('number', '');
-              core.setOutput('same_repo', 'false');
-              core.setOutput('draft', 'true');
-              core.setOutput('trusted', 'false');
-              return;
-            }
-            const {data: pr} = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber,
-            });
-            const association = (context.payload.comment?.author_association || '').toUpperCase();
-            core.setOutput('number', String(prNumber));
-            core.setOutput('same_repo', String(pr.head.repo.full_name === `${context.repo.owner}/${context.repo.repo}`));
-            core.setOutput('draft', String(Boolean(pr.draft)));
-            core.setOutput('trusted', String(trusted.has(association)));
-
   claude:
-    needs: prepare
-    if: |
-      needs.prepare.outputs.pr_number != '' &&
-      needs.prepare.outputs.same_repo == 'true' &&
-      needs.prepare.outputs.draft != 'true' &&
-      needs.prepare.outputs.trusted == 'true' &&
-      contains(needs.prepare.outputs.body, '@claude')
+    if: contains(github.event.comment.body, '@claude')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: refs/pull/${{ needs.prepare.outputs.pr_number }}/merge
-
       - uses: anthropics/claude-code-action@v1
         with:
           trigger_phrase: "@claude"
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: "--max-turns 5"
+          claude_args: "--max-turns 10"
 
   codex:
-    needs: prepare
-    if: |
-      needs.prepare.outputs.pr_number != '' &&
-      needs.prepare.outputs.same_repo == 'true' &&
-      needs.prepare.outputs.draft != 'true' &&
-      needs.prepare.outputs.trusted == 'true' &&
-      contains(needs.prepare.outputs.body, '@codex')
+    if: contains(github.event.comment.body, '@codex')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: refs/pull/${{ needs.prepare.outputs.pr_number }}/merge
-
-      - name: Pre-fetch PR refs
-        run: git fetch --no-tags origin +refs/pull/${{ needs.prepare.outputs.pr_number }}/head
-
-      - name: Run Codex
-        id: run_codex
-        uses: openai/codex-action@v1
+      - uses: openai/codex-action@v1
         with:
+          trigger_phrase: "@codex"
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          sandbox: read-only
-          safety-strategy: read-only
-          prompt: |
-            Review the pull request changes for correctness, regressions, missing tests, and maintainability.
-            Focus on concrete findings only. Be concise and specific.
-
-            Pull request number:
-            ${{ needs.prepare.outputs.pr_number }}
-
-      - name: Report Codex feedback
-        if: steps.run_codex.outputs.final-message != ''
-        uses: actions/github-script@v7
-        env:
-          CODEX_FINAL_MESSAGE: ${{ steps.run_codex.outputs.final-message }}
-        with:
-          github-token: ${{ github.token }}
-          script: |
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: Number("${{ needs.prepare.outputs.pr_number }}"),
-              body: process.env.CODEX_FINAL_MESSAGE,
-            });
-
-  gemini:
-    needs: prepare
-    if: |
-      needs.prepare.outputs.pr_number != '' &&
-      needs.prepare.outputs.same_repo == 'true' &&
-      needs.prepare.outputs.draft != 'true' &&
-      needs.prepare.outputs.trusted == 'true' &&
-      contains(needs.prepare.outputs.body, '@gemini')
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          ref: refs/pull/${{ needs.prepare.outputs.pr_number }}/merge
-
-      - name: Pre-fetch PR refs
-        run: git fetch --no-tags origin +refs/pull/${{ needs.prepare.outputs.pr_number }}/head
-
-      - name: Run Gemini
-        id: run_gemini
-        uses: google-github-actions/run-gemini-cli@v0.1.15
-        with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          prompt: |
-            Review the pull request changes for correctness, regressions, missing tests, and maintainability.
-            Focus on concrete findings only. Be concise and specific.
-
-            Pull request number:
-            ${{ needs.prepare.outputs.pr_number }}
-
-      - name: Report Gemini feedback
-        if: steps.run_gemini.outputs.summary != ''
-        uses: actions/github-script@v7
-        env:
-          GEMINI_SUMMARY: ${{ steps.run_gemini.outputs.summary }}
-        with:
-          github-token: ${{ github.token }}
-          script: |
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: Number("${{ needs.prepare.outputs.pr_number }}"),
-              body: process.env.GEMINI_SUMMARY,
-            });
+          safety-strategy: drop-sudo
+          sandbox: workspace-write

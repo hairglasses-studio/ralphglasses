@@ -1,14 +1,6 @@
 name: Codex Review
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths-ignore:
-      - '*.md'
-      - '**/*.md'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
   workflow_dispatch:
     inputs:
       pr_number:
@@ -25,74 +17,35 @@ permissions:
   pull-requests: write
   issues: write
 
-concurrency:
-  group: codex-review-${{ github.event.pull_request.number || github.event.issue.number || github.event.inputs.pr_number }}
-  cancel-in-progress: true
-
 jobs:
   codex-review:
     if: |
-      github.event_name == 'pull_request' ||
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@codex')) ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@codex')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@codex'))
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    env:
+      PR_NUMBER: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pr_number || github.event_name == 'issue_comment' && github.event.issue.number || github.event.pull_request.number }}
     outputs:
       final_message: ${{ steps.run_codex.outputs.final-message }}
-      pr_number: ${{ steps.pr.outputs.number }}
     steps:
-      - name: Resolve PR metadata
-        id: pr
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ github.token }}
-          script: |
-            const trusted = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
-            const eventName = context.eventName;
-            const body = context.payload.comment?.body || '';
-            const prNumber =
-              context.payload.pull_request?.number ||
-              (context.payload.issue?.pull_request ? context.payload.issue.number : undefined) ||
-              Number(context.payload.inputs?.pr_number || 0);
-            if (!prNumber) {
-              core.setOutput('should_run', 'false');
-              return;
-            }
-            const {data: pr} = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber,
-            });
-            const association = (context.payload.comment?.author_association || '').toUpperCase();
-            const isTrusted =
-              eventName === 'pull_request' ||
-              eventName === 'workflow_dispatch' ||
-              trusted.has(association);
-            const requested =
-              eventName === 'pull_request' ||
-              eventName === 'workflow_dispatch' ||
-              body.includes('@codex');
-            const sameRepo = pr.head.repo.full_name === `${context.repo.owner}/${context.repo.repo}`;
-            core.setOutput('number', String(prNumber));
-            core.setOutput('same_repo', String(sameRepo));
-            core.setOutput('draft', String(Boolean(pr.draft)));
-            core.setOutput('trusted', String(isTrusted));
-            core.setOutput('should_run', String(Boolean(sameRepo && !pr.draft && isTrusted && requested)));
-
       - uses: actions/checkout@v6
-        if: steps.pr.outputs.should_run == 'true'
         with:
           fetch-depth: 0
-          ref: refs/pull/${{ steps.pr.outputs.number }}/merge
+          ref: refs/pull/${{ env.PR_NUMBER }}/merge
 
       - name: Pre-fetch PR refs
-        if: steps.pr.outputs.should_run == 'true'
-        run: git fetch --no-tags origin +refs/pull/${{ steps.pr.outputs.number }}/head
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "issue_comment" ]; then
+            git fetch --no-tags origin +refs/pull/${{ env.PR_NUMBER }}/head
+          else
+            git fetch --no-tags origin \
+              ${{ github.event.pull_request.base.ref }} \
+              +refs/pull/${{ env.PR_NUMBER }}/head
+          fi
 
       - name: Run Codex
         id: run_codex
-        if: steps.pr.outputs.should_run == 'true'
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
@@ -103,7 +56,7 @@ jobs:
             Focus on concrete findings only. Be concise and specific.
 
             Pull request number:
-            ${{ steps.pr.outputs.number }}
+            ${{ env.PR_NUMBER }}
 
             Event:
             ${{ github.event_name }}
@@ -120,13 +73,14 @@ jobs:
         uses: actions/github-script@v7
         env:
           CODEX_FINAL_MESSAGE: ${{ needs.codex-review.outputs.final_message }}
-          PR_NUMBER: ${{ needs.codex-review.outputs.pr_number }}
         with:
           github-token: ${{ github.token }}
           script: |
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: Number(process.env.PR_NUMBER),
+              issue_number: context.payload.pull_request
+                ? context.payload.pull_request.number
+                : context.payload.issue.number,
               body: process.env.CODEX_FINAL_MESSAGE,
             });

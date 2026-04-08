@@ -385,7 +385,7 @@ func TestProviderKey(t *testing.T) {
 	}{
 		{"claude", "", "claude"},
 		{"claude", "claude-sonnet-4-6", "claude/claude-sonnet-4-6"},
-		{"gemini", "gemini-2.5-pro", "gemini/gemini-2.5-pro"},
+		{"gemini", "gemini-3.1-pro", "gemini/gemini-3.1-pro"},
 	}
 	for _, tt := range tests {
 		got := providerKey(tt.provider, tt.model)

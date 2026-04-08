@@ -94,8 +94,8 @@ func TestHandleCostEstimateGemini(t *testing.T) {
 	if est.Provider != "gemini" {
 		t.Errorf("provider = %q, want %q", est.Provider, "gemini")
 	}
-	if est.Model != "gemini-2.5-flash" {
-		t.Errorf("model = %q, want %q", est.Model, "gemini-2.5-flash")
+	if est.Model != "gemini-3.1-flash" {
+		t.Errorf("model = %q, want %q", est.Model, "gemini-3.1-flash")
 	}
 
 	// Gemini should be cheaper than Claude for same defaults.

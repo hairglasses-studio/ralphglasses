@@ -82,7 +82,7 @@ func DefaultCascadeTierConfig() CascadeTierConfig {
 				Description: "Simple classification, routing, formatting, lint, config",
 				Models: []CascadeTierModel{
 					{Provider: session.ProviderClaude, Model: "claude-haiku", CostPer1M: 0.80, MaxTokens: 4096, LatencyClass: "fast"},
-					{Provider: session.ProviderGemini, Model: "gemini-2.0-flash-lite", CostPer1M: 0.075, MaxTokens: 8192, LatencyClass: "fast"},
+					{Provider: session.ProviderGemini, Model: "gemini-3.1-flash-lite", CostPer1M: 0.075, MaxTokens: 8192, LatencyClass: "fast"},
 				},
 				EscalationThreshold: 0.60,
 			},
@@ -93,7 +93,7 @@ func DefaultCascadeTierConfig() CascadeTierConfig {
 				Models: []CascadeTierModel{
 					{Provider: session.ProviderClaude, Model: "claude-sonnet", CostPer1M: 3.0, MaxTokens: 8192, LatencyClass: "medium"},
 					{Provider: session.ProviderCodex, Model: "gpt-5.4", CostPer1M: 2.5, MaxTokens: 16384, LatencyClass: "medium"},
-					{Provider: session.ProviderGemini, Model: "gemini-2.5-flash", CostPer1M: 0.15, MaxTokens: 65536, LatencyClass: "medium"},
+					{Provider: session.ProviderGemini, Model: "gemini-3.1-flash", CostPer1M: 0.15, MaxTokens: 65536, LatencyClass: "medium"},
 				},
 				EscalationThreshold: 0.50,
 			},

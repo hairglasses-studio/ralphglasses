@@ -533,7 +533,7 @@ func TestBuildGeminiCmd_AllFlags(t *testing.T) {
 		Provider: ProviderGemini,
 		RepoPath: "/tmp/repo",
 		Prompt:   "test prompt",
-		Model:    "gemini-2.5-pro",
+		Model:    "gemini-3.1-pro",
 	}
 	cmd := buildGeminiCmd(context.Background(), opts)
 
