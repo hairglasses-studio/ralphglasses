@@ -12,6 +12,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/bootstrap"
+	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
 	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver"
@@ -22,7 +23,7 @@ import (
 func resolveScanPath() string {
 	sp := os.Getenv("RALPHGLASSES_SCAN_PATH")
 	if sp == "" {
-		sp = "~/hairglasses-studio"
+		sp = config.DefaultScanPath
 	}
 	return util.ExpandHome(sp)
 }

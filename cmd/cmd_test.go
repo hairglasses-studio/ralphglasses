@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/config"
 )
 
 func TestVersionDefault(t *testing.T) {
@@ -41,8 +43,8 @@ func TestScanPathDefault(t *testing.T) {
 	if f == nil {
 		t.Fatal("scan-path flag not registered")
 	}
-	if f.DefValue != "~/hairglasses-studio" {
-		t.Errorf("scan-path default = %q, want ~/hairglasses-studio", f.DefValue)
+	if f.DefValue != config.DefaultScanPath {
+		t.Errorf("scan-path default = %q, want %s", f.DefValue, config.DefaultScanPath)
 	}
 }
 
@@ -264,7 +266,8 @@ func TestCodexConfigFormat(t *testing.T) {
 			t.Errorf("expected %s in .codex/config.toml", server)
 		}
 	}
-	if strings.Count(content, `args = ["./scripts/dev/run-mcp.sh", "--scan-path", "~/hairglasses-studio"]`) < 3 {
+	expectedArgs := `args = ["./scripts/dev/run-mcp.sh", "--scan-path", "` + config.DefaultScanPath + `"]`
+	if strings.Count(content, expectedArgs) < 3 {
 		t.Error("expected repo MCP servers to use ./scripts/dev/run-mcp.sh wrapper")
 	}
 	if strings.Count(content, `cwd = "."`) < 3 {

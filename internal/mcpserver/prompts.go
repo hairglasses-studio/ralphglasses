@@ -8,6 +8,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 )
 
@@ -170,7 +171,7 @@ func bootstrapFirstbootPrompt() server.ServerPrompt {
 	prompt := mcp.NewPrompt("bootstrap-firstboot",
 		mcp.WithPromptDescription("Build a first-boot checklist for validating provider CLIs, MCP wiring, and repo readiness before launching work."),
 		mcp.WithArgument("scan_path",
-			mcp.ArgumentDescription("Workspace scan path to validate. Defaults to ~/hairglasses-studio if omitted."),
+			mcp.ArgumentDescription(fmt.Sprintf("Workspace scan path to validate. Defaults to %s if omitted.", config.DefaultScanPath)),
 		),
 		mcp.WithArgument("primary_provider",
 			mcp.ArgumentDescription("Primary provider to optimize for first (codex, claude, or gemini). Defaults to codex."),
@@ -180,7 +181,7 @@ func bootstrapFirstbootPrompt() server.ServerPrompt {
 	handler := func(_ context.Context, req mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
 		scanPath := req.Params.Arguments["scan_path"]
 		if scanPath == "" {
-			scanPath = "~/hairglasses-studio"
+			scanPath = config.DefaultScanPath
 		}
 		primaryProvider := req.Params.Arguments["primary_provider"]
 		if primaryProvider == "" {

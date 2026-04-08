@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-)
 
-const defaultSkillSurfaceScanPath = "~/hairglasses-studio"
+	"github.com/hairglasses-studio/ralphglasses/internal/config"
+)
 
 // SkillMetadata holds the metadata for a generated SKILL.md file.
 type SkillMetadata struct {
@@ -275,7 +275,7 @@ func generateCodexPluginBundle(repoPath, skillContent string) error {
 		"mcpServers": map[string]any{
 			"ralphglasses": map[string]any{
 				"command": "bash",
-				"args":    []string{"./scripts/dev/run-mcp.sh", "--scan-path", defaultSkillSurfaceScanPath},
+				"args":    []string{"./scripts/dev/run-mcp.sh", "--scan-path", config.DefaultScanPath},
 			},
 		},
 	}

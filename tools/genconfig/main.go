@@ -65,7 +65,7 @@ func main() {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "```json")
 	fmt.Fprintln(w, `{`)
-	fmt.Fprintln(w, `  "scan_paths": ["~/hairglasses-studio"],`)
+	fmt.Fprintf(w, "  \"scan_paths\": [\"%s\"],\n", config.DefaultScanPath)
 	fmt.Fprintln(w, `  "default_provider": "codex",`)
 	fmt.Fprintln(w, `  "worker_provider": "gemini",`)
 	fmt.Fprintln(w, `  "max_workers": 4,`)

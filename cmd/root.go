@@ -204,7 +204,7 @@ func init() {
 		"ralphglasses version %s (commit: %s, built: %s)\n",
 		version, commit, buildDate,
 	))
-	rootCmd.PersistentFlags().StringVar(&scanPath, "scan-path", "~/hairglasses-studio",
+	rootCmd.PersistentFlags().StringVar(&scanPath, "scan-path", config.DefaultScanPath,
 		"Root directory to scan for ralph-enabled repos")
 	rootCmd.RegisterFlagCompletionFunc("scan-path", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return nil, cobra.ShellCompDirectiveFilterDirs

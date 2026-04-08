@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/mark3labs/mcp-go/server"
@@ -109,7 +110,7 @@ func TestFlagDefaults_Persistent(t *testing.T) {
 		flag    string
 		wantDef string
 	}{
-		{"scan-path", "~/hairglasses-studio"},
+		{"scan-path", config.DefaultScanPath},
 		{"debug", "false"},
 		{"log-level", "info"},
 		{"log-format", "json"},
@@ -347,8 +348,8 @@ func TestValidateConfig_CBThresholdOutOfRange(t *testing.T) {
 
 func TestValidateConfig_CBThresholdInvalid(t *testing.T) {
 	cfg := &model.RalphConfig{Values: map[string]string{
-		"PROJECT_NAME":          "test",
-		"CB_SUCCESS_THRESHOLD":  "abc",
+		"PROJECT_NAME":         "test",
+		"CB_SUCCESS_THRESHOLD": "abc",
 	}}
 	issues := validateConfig(cfg)
 	found := false
