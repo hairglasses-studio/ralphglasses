@@ -7,6 +7,8 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/config"
 )
 
 func TestPromptRegistration(t *testing.T) {
@@ -225,7 +227,7 @@ func TestBootstrapFirstbootPrompt_ReturnsMessage(t *testing.T) {
 	req := mcp.GetPromptRequest{}
 	req.Params.Name = "bootstrap-firstboot"
 	req.Params.Arguments = map[string]string{
-		"scan_path":        "~/hairglasses-studio",
+		"scan_path":        config.DefaultScanPath,
 		"primary_provider": "codex",
 	}
 

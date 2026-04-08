@@ -23,7 +23,7 @@ type DocsResearchGateway struct {
 }
 
 // NewDocsResearchGateway opens the docs SQLite database and returns a gateway.
-// docsRoot is the absolute path to the docs repo (e.g. ~/hairglasses-studio/docs).
+// docsRoot is the absolute path to the docs repo.
 func NewDocsResearchGateway(docsRoot string) (*DocsResearchGateway, error) {
 	dbPath := filepath.Join(docsRoot, ".docs.sqlite")
 	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")

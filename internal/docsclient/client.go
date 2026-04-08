@@ -34,7 +34,7 @@ func WithTimeout(d time.Duration) Option {
 }
 
 // New creates a docs-mcp client. binaryPath defaults to "docs-mcp"
-// if empty. docsRoot defaults to ~/hairglasses-studio/docs.
+// if empty. docsRoot defaults to a docs repo under the scan-path root.
 func New(binaryPath, docsRoot string, opts ...Option) *Client {
 	if binaryPath == "" {
 		binaryPath = "docs-mcp"

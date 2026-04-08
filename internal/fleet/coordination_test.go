@@ -7,33 +7,16 @@ import (
 	"testing"
 )
 
-// cleanCoordDir removes the coordination directory for a clean test slate,
-// then restores whatever existed before the test.
+// cleanCoordDir moves coordination tests onto an isolated temp directory so
+// they do not depend on or mutate a shared host-level claim path.
 func cleanCoordDir(t *testing.T) {
 	t.Helper()
 
-	// Back up existing claims if any.
-	claimDir := filepath.Join(CoordDir, claimsSubdir)
-	entries, _ := os.ReadDir(claimDir)
-	backups := make(map[string][]byte)
-	for _, e := range entries {
-		if data, err := os.ReadFile(filepath.Join(claimDir, e.Name())); err == nil {
-			backups[e.Name()] = data
-		}
-	}
-
+	prevCoordDir := CoordDir
+	CoordDir = t.TempDir()
 	t.Cleanup(func() {
-		// Remove test artifacts.
-		os.RemoveAll(filepath.Join(CoordDir, claimsSubdir))
-		os.MkdirAll(filepath.Join(CoordDir, claimsSubdir), 0755)
-		// Restore originals.
-		for name, data := range backups {
-			os.WriteFile(filepath.Join(claimDir, name), data, 0644)
-		}
+		CoordDir = prevCoordDir
 	})
-
-	// Clear claims for the test.
-	os.RemoveAll(filepath.Join(CoordDir, claimsSubdir))
 }
 
 func TestCoordEnsureCoordDir(t *testing.T) {

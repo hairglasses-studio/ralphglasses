@@ -3,11 +3,15 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -34,6 +38,9 @@ func TestSweepGenerate_DefaultAudit(t *testing.T) {
 		if !containsCI(text, want) {
 			t.Errorf("result missing expected content %q", want)
 		}
+	}
+	if !containsCI(text, "SCAN_ROOT_PLACEHOLDER") {
+		t.Fatalf("result missing scan root placeholder")
 	}
 }
 
@@ -308,6 +315,64 @@ func TestSweepLaunch_CostEstimateInResponse(t *testing.T) {
 		if !containsCI(text, field) {
 			t.Errorf("response missing %q field, got: %s", field, text)
 		}
+	}
+}
+
+func TestSweepLaunch_ReplacesPromptPlaceholders(t *testing.T) {
+	repoPath := filepath.Join(t.TempDir(), "demo")
+	if err := os.MkdirAll(repoPath, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	sessMgr := session.NewManager()
+	prompts := make(chan string, 1)
+	sessMgr.SetHooksForTesting(func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
+		prompts <- opts.Prompt
+		now := time.Now()
+		return &session.Session{
+			ID:           "sess-demo",
+			Provider:     opts.Provider,
+			Model:        opts.Model,
+			RepoPath:     opts.RepoPath,
+			RepoName:     filepath.Base(opts.RepoPath),
+			Status:       session.StatusRunning,
+			Prompt:       opts.Prompt,
+			LaunchedAt:   now,
+			LastActivity: now,
+		}, nil
+	}, nil)
+
+	s := &Server{
+		Tasks:   NewTaskRegistry(),
+		SessMgr: sessMgr,
+		Repos:   []*model.Repo{{Name: "demo", Path: repoPath}},
+	}
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"prompt": "Inspect SCAN_ROOT_PLACEHOLDER/REPO_PLACEHOLDER for drift",
+		"repos":  `["demo"]`,
+		"model":  "gpt-5.4",
+	}
+
+	if _, err := s.handleSweepLaunch(context.Background(), req); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	select {
+	case prompt := <-prompts:
+		wantPath := filepath.ToSlash(filepath.Join(config.DefaultScanPath, "demo"))
+		got := filepath.ToSlash(prompt)
+		if !strings.Contains(got, wantPath) {
+			t.Fatalf("prompt %q missing rendered repo path %q", prompt, wantPath)
+		}
+		for _, placeholder := range []string{"SCAN_ROOT_PLACEHOLDER", "REPO_PLACEHOLDER"} {
+			if strings.Contains(prompt, placeholder) {
+				t.Fatalf("prompt still contains placeholder %q: %q", placeholder, prompt)
+			}
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for sweep launch")
 	}
 }
 

@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,8 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/config"
 )
 
 func TestDiscoveryAdoptionSummary_AggregatesResourcesPromptsAndSkills(t *testing.T) {
@@ -81,7 +84,10 @@ func TestRegisterResourcesAndPrompts_RecordDiscoveryUsage(t *testing.T) {
 	if _, ok := resp.(mcp.JSONRPCResponse); !ok {
 		t.Fatalf("expected resources/read JSONRPCResponse, got %T", resp)
 	}
-	resp = mcpSrv.HandleMessage(ctx, []byte(`{"jsonrpc":"2.0","id":3,"method":"prompts/get","params":{"name":"bootstrap-firstboot","arguments":{"scan_path":"~/hairglasses-studio"}}}`))
+	resp = mcpSrv.HandleMessage(ctx, []byte(fmt.Sprintf(
+		`{"jsonrpc":"2.0","id":3,"method":"prompts/get","params":{"name":"bootstrap-firstboot","arguments":{"scan_path":"%s"}}}`,
+		config.DefaultScanPath,
+	)))
 	if _, ok := resp.(mcp.JSONRPCResponse); !ok {
 		t.Fatalf("expected prompts/get JSONRPCResponse, got %T", resp)
 	}

@@ -56,7 +56,7 @@ type Coordinator struct {
 	tsClient TailscaleClient
 
 	// queuePath is the file path used for queue persistence. Empty means no persistence.
-	queuePath string
+	queuePath   string
 	artifactDir string
 	syncer      *WorktreeSync
 
@@ -67,17 +67,17 @@ type Coordinator struct {
 // NewCoordinator creates a coordinator node.
 func NewCoordinator(nodeID, hostname string, port int, version string, bus *events.Bus, sessMgr *session.Manager) *Coordinator {
 	return &Coordinator{
-		nodeID:        nodeID,
-		hostname:      hostname,
-		port:          port,
-		version:       version,
-		workers:       make(map[string]*WorkerInfo),
-		queue:         NewWorkQueue(),
-		budget:        GlobalBudget{LimitUSD: 500},
-		bus:           bus,
-		sessMgr:       sessMgr,
-		health:        NewHealthTracker(DefaultHealthConfig()),
-		budgetMgr:     NewBudgetManager(10.0),
+		nodeID:    nodeID,
+		hostname:  hostname,
+		port:      port,
+		version:   version,
+		workers:   make(map[string]*WorkerInfo),
+		queue:     NewWorkQueue(),
+		budget:    GlobalBudget{LimitUSD: 500},
+		bus:       bus,
+		sessMgr:   sessMgr,
+		health:    NewHealthTracker(DefaultHealthConfig()),
+		budgetMgr: NewBudgetManager(10.0),
 		router: &ProviderAffinityRouter{
 			PreferredProvider: string(session.ProviderCodex),
 			Fallback:          &LeastLoadedRouter{},
@@ -92,7 +92,7 @@ func NewCoordinator(nodeID, hostname string, port int, version string, bus *even
 
 // NewCoordinatorWithPersistence creates a coordinator that loads the work queue
 // from dataDir/.ralph/fleet-queue.json on startup and saves it on shutdown.
-// dataDir is typically the scan-path root (e.g. ~/hairglasses-studio).
+// dataDir is typically the scan-path root.
 // If the file does not exist yet the queue starts empty (not an error).
 func NewCoordinatorWithPersistence(nodeID, hostname string, port int, version string, bus *events.Bus, sessMgr *session.Manager, dataDir string) *Coordinator {
 	c := NewCoordinator(nodeID, hostname, port, version, bus, sessMgr)

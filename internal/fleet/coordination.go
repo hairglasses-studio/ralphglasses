@@ -10,12 +10,14 @@ import (
 	"time"
 )
 
-const (
+var (
 	// CoordDir is the shared coordination directory for ralphglasses instances.
-	CoordDir = "/tmp/ralphglasses-coordination"
-
-	claimsSubdir = "claims"
+	// It defaults under the system temp dir but can be overridden for tests or
+	// specialized local deployments.
+	CoordDir = filepath.Join(os.TempDir(), "ralphglasses-coordination")
 )
+
+const claimsSubdir = "claims"
 
 // Claim represents a resource lock held by an agent session.
 type Claim struct {

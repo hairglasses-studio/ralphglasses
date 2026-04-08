@@ -13,6 +13,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
 	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver"
@@ -37,7 +38,7 @@ and deferred tool-group loading.
 
 Codex repo-local registration is already configured via .codex/config.toml and .mcp.json.
 Other MCP clients can register this command directly, optionally setting
-RALPHGLASSES_SCAN_PATH=~/hairglasses-studio for a custom scan path.`, mcpserver.TotalToolCount()),
+RALPHGLASSES_SCAN_PATH=%s for a custom scan path.`, mcpserver.TotalToolCount(), config.DefaultScanPath),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// In MCP mode, stderr IS the transport — any writes corrupt the
 		// protocol. Immediately silence the default slog handler (which

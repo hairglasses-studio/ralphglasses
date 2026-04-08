@@ -321,8 +321,8 @@ func TestSetup_RegistersResourcesAndPrompts(t *testing.T) {
 	}
 
 	templates := listResourceTemplates(t, srv)
-	if got := len(templates.ResourceTemplates); got != 3 {
-		t.Fatalf("resources/templates/list returned %d templates, want 3", got)
+	if got := len(templates.ResourceTemplates); got != 4 {
+		t.Fatalf("resources/templates/list returned %d templates, want 4", got)
 	}
 
 	prompts := listPrompts(t, srv)

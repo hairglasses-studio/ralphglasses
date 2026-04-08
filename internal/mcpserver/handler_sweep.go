@@ -17,11 +17,12 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
-// Built-in audit prompt template. REPO_PLACEHOLDER is replaced per-repo.
+// Built-in audit prompt template. REPO_PLACEHOLDER and SCAN_ROOT_PLACEHOLDER
+// are replaced per-repo.
 const sweepAuditTemplate = `<role>You are a senior software architect performing a deep codebase audit of REPO_PLACEHOLDER, a repository in the hairglasses-studio ecosystem (74 repos, primarily Go/Python/Node.js, built on the mcpkit MCP framework).</role>
 
 <context>
-Repository path: ~/hairglasses-studio/REPO_PLACEHOLDER
+Repository path: SCAN_ROOT_PLACEHOLDER/REPO_PLACEHOLDER
 Ecosystem context: This repo may depend on mcpkit (Go MCP framework), hg-mcp (tool server), claudekit (terminal customization), or ralphglasses (orchestration TUI). Check go.mod, package.json, or requirements.txt for actual dependencies.
 Use the largest context window available for the selected provider. Read every source file, test file, config file, and documentation file in the repo before producing findings.
 </context>
@@ -80,11 +81,12 @@ List any sections of AGENTS.md or provider-specific docs that are outdated or mi
 Top 3 improvements ranked by effort-to-impact ratio, as actionable one-line descriptions.
 </output_format>`
 
-// Built-in fix prompt template. REPO_PLACEHOLDER is replaced per-repo.
+// Built-in fix prompt template. REPO_PLACEHOLDER and SCAN_ROOT_PLACEHOLDER
+// are replaced per-repo.
 const sweepFixTemplate = `<role>You are a senior software engineer fixing audit findings in REPO_PLACEHOLDER. Every fix must compile, pass tests, and be committed individually.</role>
 
 <context>
-Repository: ~/hairglasses-studio/REPO_PLACEHOLDER
+Repository: SCAN_ROOT_PLACEHOLDER/REPO_PLACEHOLDER
 Audit file: .claude/audit-2026-04-03.md or docs-generated audit notes contain all findings with file paths, line numbers, and fix descriptions.
 Read the audit file first, then fix every item in priority order (HIGH first, then MEDIUM, then LOW).
 </context>
@@ -288,7 +290,8 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 				}
 				defer func() { <-sem }()
 
-				repoPrompt := strings.ReplaceAll(prompt, "REPO_PLACEHOLDER", repo.Name)
+				repoPrompt := strings.ReplaceAll(prompt, "SCAN_ROOT_PLACEHOLDER", config.DefaultScanPath)
+				repoPrompt = strings.ReplaceAll(repoPrompt, "REPO_PLACEHOLDER", repo.Name)
 
 				opts := session.LaunchOptions{
 					Provider:             session.DefaultPrimaryProvider(),
