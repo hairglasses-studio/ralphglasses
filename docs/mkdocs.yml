@@ -33,6 +33,7 @@ nav:
   - Getting Started: getting-started.md
   - Architecture: architecture-diagrams.md
   - MCP Tools: MCP-TOOLS.md
+  - Skills: SKILLS.md
   - Provider Setup: PROVIDER-SETUP.md
   - Multi-Tenant: MULTI-TENANT.md
   - Marathon: MARATHON.md

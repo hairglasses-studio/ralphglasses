@@ -11,7 +11,7 @@ import (
 // handleSkillExport generates SKILL.md content from registered tool groups.
 // Optional params:
 //   - format: "markdown" (default) or "json"
-//   - group: filter to a specific namespace
+//   - group: filter to a specific tool group (including "management")
 func (s *Server) handleSkillExport(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	format := getStringArg(req, "format")
 	if format == "" {
@@ -20,25 +20,35 @@ func (s *Server) handleSkillExport(_ context.Context, req mcp.CallToolRequest) (
 	groupFilter := getStringArg(req, "group")
 
 	groups := s.buildToolGroups()
+	management := s.ManagementTools()
 
 	// Filter to a specific group if requested.
 	if groupFilter != "" {
+		if groupFilter == "management" {
+			groups = nil
+		} else {
+			management = nil
+		}
 		var filtered []ToolGroup
-		for _, g := range groups {
-			if g.Name == groupFilter {
-				filtered = append(filtered, g)
-				break
+		if groupFilter != "management" {
+			for _, g := range groups {
+				if g.Name == groupFilter {
+					filtered = append(filtered, g)
+					break
+				}
 			}
 		}
-		if len(filtered) == 0 {
-			return codedError(ErrInvalidParams, fmt.Sprintf("unknown group %q", groupFilter)), nil
+		if groupFilter != "management" {
+			if len(filtered) == 0 {
+				return codedError(ErrInvalidParams, fmt.Sprintf("unknown group %q", groupFilter)), nil
+			}
+			groups = filtered
 		}
-		groups = filtered
 	}
 
 	switch format {
 	case "json":
-		skills := ExportSkillsFromGroups(groups)
+		skills := ExportSkillsFromContract(groups, management)
 		data, err := json.MarshalIndent(skills, "", "  ")
 		if err != nil {
 			return codedError(ErrInternal, err.Error()), nil
@@ -48,7 +58,7 @@ func (s *Server) handleSkillExport(_ context.Context, req mcp.CallToolRequest) (
 		}, nil
 
 	case "markdown":
-		md := ExportSkillMarkdown(groups)
+		md := ExportSkillMarkdownFromContract(groups, management)
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: md}},
 		}, nil

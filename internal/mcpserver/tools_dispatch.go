@@ -60,37 +60,9 @@ func (s *Server) RegisterCoreTools(srv *server.MCPServer) {
 	s.mcpSrv = srv
 	s.loadedGroups = make(map[string]bool)
 
-	// Register the tool_groups and load_tool_group management tools.
-	s.addToolWithMetadata(srv, ToolEntry{
-		Tool: mcp.NewTool("ralphglasses_tool_groups",
-			mcp.WithDescription("List available tool groups for deferred loading. Call ralphglasses_load_tool_group to load a specific group."),
-		),
-		Handler: s.handleToolGroups,
-	})
-
-	s.addToolWithMetadata(srv, ToolEntry{
-		Tool: mcp.NewTool("ralphglasses_load_tool_group",
-			mcp.WithDescription(loadToolGroupDescription()),
-			mcp.WithString("group", mcp.Required(), mcp.Description("Tool group name to load")),
-		),
-		Handler: s.handleLoadToolGroup,
-	})
-
-	s.addToolWithMetadata(srv, ToolEntry{
-		Tool: mcp.NewTool("ralphglasses_skill_export",
-			mcp.WithDescription("Generate SKILL.md documentation from all registered tool groups. Returns markdown or JSON."),
-			mcp.WithString("format", mcp.Description("Output format: \"markdown\" (default) or \"json\"")),
-			mcp.WithString("group", mcp.Description("Filter to a specific namespace (e.g. \"core\", \"session\")")),
-		),
-		Handler: s.handleSkillExport,
-	})
-
-	s.addToolWithMetadata(srv, ToolEntry{
-		Tool: mcp.NewTool("ralphglasses_server_health",
-			mcp.WithDescription("Show the active ralphglasses MCP contract shape, including available tool groups, loaded groups, and resource/prompt coverage."),
-		),
-		Handler: s.handleServerHealth,
-	})
+	for _, entry := range s.ManagementTools() {
+		s.addToolWithMetadata(srv, entry)
+	}
 
 	// Register core group tools.
 	coreGroup := s.buildCoreGroup()
@@ -125,37 +97,9 @@ func (s *Server) RegisterAllTools(srv *server.MCPServer) {
 	s.mcpSrv = srv
 	s.loadedGroups = make(map[string]bool)
 
-	// Register group management tools so they are always available.
-	s.addToolWithMetadata(srv, ToolEntry{
-		Tool: mcp.NewTool("ralphglasses_tool_groups",
-			mcp.WithDescription("List available tool groups for deferred loading. Call ralphglasses_load_tool_group to load a specific group."),
-		),
-		Handler: s.handleToolGroups,
-	})
-
-	s.addToolWithMetadata(srv, ToolEntry{
-		Tool: mcp.NewTool("ralphglasses_load_tool_group",
-			mcp.WithDescription(loadToolGroupDescription()),
-			mcp.WithString("group", mcp.Required(), mcp.Description("Tool group name to load")),
-		),
-		Handler: s.handleLoadToolGroup,
-	})
-
-	s.addToolWithMetadata(srv, ToolEntry{
-		Tool: mcp.NewTool("ralphglasses_skill_export",
-			mcp.WithDescription("Generate SKILL.md documentation from all registered tool groups. Returns markdown or JSON."),
-			mcp.WithString("format", mcp.Description("Output format: \"markdown\" (default) or \"json\"")),
-			mcp.WithString("group", mcp.Description("Filter to a specific namespace (e.g. \"core\", \"session\")")),
-		),
-		Handler: s.handleSkillExport,
-	})
-
-	s.addToolWithMetadata(srv, ToolEntry{
-		Tool: mcp.NewTool("ralphglasses_server_health",
-			mcp.WithDescription("Show the active ralphglasses MCP contract shape, including available tool groups, loaded groups, and resource/prompt coverage."),
-		),
-		Handler: s.handleServerHealth,
-	})
+	for _, entry := range s.ManagementTools() {
+		s.addToolWithMetadata(srv, entry)
+	}
 
 	for _, g := range s.buildToolGroups() {
 		for _, entry := range g.Tools {

@@ -15,6 +15,6 @@ Ralphglasses: command-and-control TUI + bootable Linux thin client for parallel 
 - Components in `internal/tui/components/`, views in `internal/tui/views/`
 - Process management via os/exec with process groups (SIGTERM/SIGSTOP/SIGCONT)
 - Reactive updates: fsnotify watches `.ralph/` dirs, 2s tick polling fallback
-- 125+ MCP tools across 14 namespaces with deferred loading
+- MCP control plane with deferred-loaded tool groups and live catalog discovery
 - Supports Claude Code, Gemini CLI, OpenAI Codex as session providers
 - 13-stage prompt enhancement pipeline with provider-aware behavior

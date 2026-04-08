@@ -21,7 +21,7 @@ func main() {
 
 	srv := mcpserver.NewServer(".")
 	groups := srv.ToolGroups()
-	md := mcpserver.ExportSkillMarkdown(groups)
+	md := mcpserver.ExportSkillMarkdownFromContract(groups, srv.ManagementTools())
 
 	if *output == "" {
 		fmt.Print(md)

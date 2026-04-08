@@ -7,7 +7,7 @@ LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSIO
 PI_LDFLAGS := -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke fuzz bench bench-compare bench-dashboard build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap skill-doc update-tool-counts
+.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke fuzz bench bench-compare bench-dashboard build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap skill-doc skill-surface update-tool-counts
 
 # Install pre-commit hook (idempotent)
 hooks:
@@ -155,6 +155,10 @@ man:
 # Generate docs/SKILLS.md from MCP tool registrations
 skill-doc:
 	$(GO) run ./tools/genskilldoc -output docs/SKILLS.md
+
+# Generate provider-native checked-in skill surfaces from the live MCP contract
+skill-surface:
+	$(GO) run ./tools/genskillsurface
 
 # Install man pages to system directory
 install-man: man

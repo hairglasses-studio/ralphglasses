@@ -35,7 +35,7 @@ func TestExportSkillMarkdown_Structure(t *testing.T) {
 	}
 
 	// Should mention tool count.
-	if !strings.Contains(md, "tools across") {
+	if !strings.Contains(md, "tool groups") {
 		t.Error("missing tool count summary")
 	}
 
@@ -116,6 +116,12 @@ func TestHandleSkillExport_DefaultMarkdown(t *testing.T) {
 	if !strings.HasPrefix(text, "# Ralphglasses Skills") {
 		t.Error("expected markdown output")
 	}
+	if !strings.Contains(text, "## management") {
+		t.Error("expected management section in default export")
+	}
+	if !strings.Contains(text, "always-available management tools") {
+		t.Error("expected management-tool summary in default export")
+	}
 }
 
 func TestHandleSkillExport_JSON(t *testing.T) {
@@ -141,6 +147,16 @@ func TestHandleSkillExport_JSON(t *testing.T) {
 	if len(skills) == 0 {
 		t.Error("expected skills in JSON output")
 	}
+	found := false
+	for _, skill := range skills {
+		if skill.Name == "ralphglasses_server_health" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected management tool in JSON export")
+	}
 }
 
 func TestHandleSkillExport_GroupFilter(t *testing.T) {
@@ -160,6 +176,26 @@ func TestHandleSkillExport_GroupFilter(t *testing.T) {
 	}
 	if strings.Contains(text, "## session") {
 		t.Error("should not contain session when filtering to core")
+	}
+}
+
+func TestHandleSkillExport_ManagementGroupFilter(t *testing.T) {
+	t.Parallel()
+	srv := NewServer(t.TempDir())
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{"group": "management"}
+
+	result, err := srv.handleSkillExport(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := result.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(text, "## management") {
+		t.Error("expected management section in output")
+	}
+	if strings.Contains(text, "## core") {
+		t.Error("should not contain grouped sections when filtering to management")
 	}
 }
 

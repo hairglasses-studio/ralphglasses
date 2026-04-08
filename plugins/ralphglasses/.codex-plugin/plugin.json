@@ -1,10 +1,23 @@
 {
-  "name": "ralphglasses",
-  "version": "0.1.0",
   "description": "Ralphglasses MCP tools and Codex-native workflow assets.",
   "homepage": "https://github.com/hairglasses-studio/ralphglasses",
-  "repository": "https://github.com/hairglasses-studio/ralphglasses",
-  "license": "MIT",
+  "interface": {
+    "brandColor": "#0f766e",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "category": "Developer Tools",
+    "defaultPrompt": [
+      "Launch a codex-first repo session with ralphglasses.",
+      "Show the active fleet status and budget pressure.",
+      "Export roadmap work into actionable loop tasks."
+    ],
+    "developerName": "hairglasses-studio",
+    "displayName": "Ralphglasses",
+    "longDescription": "Codex-native skill and MCP bundle for ralphglasses command-and-control workflows.",
+    "shortDescription": "Fleet control and repo automation for Codex."
+  },
   "keywords": [
     "codex",
     "mcp",
@@ -12,23 +25,10 @@
     "fleet",
     "automation"
   ],
-  "skills": "./skills/",
+  "license": "MIT",
   "mcpServers": "./.mcp.json",
-  "interface": {
-    "displayName": "Ralphglasses",
-    "shortDescription": "Fleet control and repo automation for Codex.",
-    "longDescription": "Codex-native skill and MCP bundle for ralphglasses command-and-control workflows.",
-    "developerName": "hairglasses-studio",
-    "category": "Developer Tools",
-    "capabilities": [
-      "Interactive",
-      "Write"
-    ],
-    "defaultPrompt": [
-      "Launch a codex-first repo session with ralphglasses.",
-      "Show the active fleet status and budget pressure.",
-      "Export roadmap work into actionable loop tasks."
-    ],
-    "brandColor": "#0f766e"
-  }
+  "name": "ralphglasses",
+  "repository": "https://github.com/hairglasses-studio/ralphglasses",
+  "skills": "./skills/",
+  "version": "0.1.0"
 }

@@ -26,7 +26,7 @@ type toolEntryAdapter struct {
 	entry ToolEntry
 }
 
-func (a toolEntryAdapter) ToolName() string              { return a.entry.Tool.Name }
+func (a toolEntryAdapter) ToolName() string               { return a.entry.Tool.Name }
 func (a toolEntryAdapter) ToolDescription() string        { return a.entry.Tool.Description }
 func (a toolEntryAdapter) ToolProperties() map[string]any { return a.entry.Tool.InputSchema.Properties }
 func (a toolEntryAdapter) ToolRequired() []string         { return a.entry.Tool.InputSchema.Required }
@@ -72,7 +72,7 @@ type Example struct {
 
 // ExportSkills converts registered tools to skill definitions.
 // The category is inferred from the tool name prefix (e.g. "ralphglasses_session_launch"
-// yields category "session"). Tools without an underscore-separated namespace default
+// yields category "session"). Tools without an underscore-separated group prefix default
 // to category "general".
 func ExportSkills(tools []ToolRegistration) []SkillDef {
 	skills := make([]SkillDef, 0, len(tools))
@@ -88,7 +88,7 @@ func ExportSkills(tools []ToolRegistration) []SkillDef {
 	return skills
 }
 
-// inferCategory extracts a namespace category from a tool name.
+// inferCategory extracts a tool-group category from a tool name.
 // "ralphglasses_session_launch" -> "session"
 // "ralphglasses_scan" -> "core"
 // "my_tool" -> "general"
@@ -234,36 +234,86 @@ func ExportSkillsFromGroups(groups []ToolGroup) []SkillDef {
 	return ExportSkills(regs)
 }
 
+func managementSkillGroup(management []ToolEntry) ToolGroup {
+	return ToolGroup{
+		Name:        "management",
+		Description: "Always-available discovery and contract tools registered ahead of deferred tool-group loading.",
+		Tools:       management,
+	}
+}
+
+func toolRegistrationsFromGroupsAndManagement(groups []ToolGroup, management []ToolEntry) []ToolRegistration {
+	regs := make([]ToolRegistration, 0)
+	if len(management) > 0 {
+		for _, entry := range management {
+			regs = append(regs, AdaptToolEntry(entry))
+		}
+	}
+	for _, g := range groups {
+		for _, entry := range g.Tools {
+			regs = append(regs, AdaptToolEntry(entry))
+		}
+	}
+	return regs
+}
+
+// ExportSkillsFromContract converts grouped and management tools from the live
+// contract into skill definitions.
+func ExportSkillsFromContract(groups []ToolGroup, management []ToolEntry) []SkillDef {
+	return ExportSkills(toolRegistrationsFromGroupsAndManagement(groups, management))
+}
+
 // ExportSkillMarkdown generates a SKILL.md document from tool groups.
 // It produces a table of contents, a tool count summary, and one section per
 // group with each tool's name, description, parameters table, and example usage.
 func ExportSkillMarkdown(groups []ToolGroup) string {
+	return ExportSkillMarkdownFromContract(groups, nil)
+}
+
+// ExportSkillMarkdownFromContract generates a SKILL.md document from grouped
+// tools plus the always-available management tools.
+func ExportSkillMarkdownFromContract(groups []ToolGroup, management []ToolEntry) string {
 	if len(groups) == 0 {
-		return "# Ralphglasses Skills\n\nNo tool groups defined.\n"
+		if len(management) == 0 {
+			return "# Ralphglasses Skills\n\nNo tool groups defined.\n"
+		}
+		groups = []ToolGroup{managementSkillGroup(management)}
+		management = nil
 	}
 
-	// Count total tools.
-	totalTools := 0
+	groupToolCount := 0
 	for _, g := range groups {
-		totalTools += len(g.Tools)
+		groupToolCount += len(g.Tools)
 	}
+
+	sections := make([]ToolGroup, 0, len(groups)+1)
+	if len(management) > 0 {
+		sections = append(sections, managementSkillGroup(management))
+	}
+	sections = append(sections, groups...)
+	totalTools := groupToolCount + len(management)
 
 	var b strings.Builder
 
 	// Header + summary.
 	b.WriteString("# Ralphglasses Skills\n\n")
-	b.WriteString(fmt.Sprintf("> %d tools across %d namespaces\n\n", totalTools, len(groups)))
+	if len(management) > 0 {
+		b.WriteString(fmt.Sprintf("> %d tools total: %d grouped tools across %d tool groups plus %d always-available management tools\n\n",
+			totalTools, groupToolCount, len(groups), len(management)))
+	} else {
+		b.WriteString(fmt.Sprintf("> %d tools across %d tool groups\n\n", totalTools, len(groups)))
+	}
 
 	// Table of contents.
 	b.WriteString("## Table of Contents\n\n")
-	for _, g := range groups {
+	for _, g := range sections {
 		anchor := strings.ReplaceAll(g.Name, "_", "-")
 		b.WriteString(fmt.Sprintf("- [%s](#%s) (%d tools) — %s\n", g.Name, anchor, len(g.Tools), g.Description))
 	}
 	b.WriteString("\n---\n\n")
 
 	// Per-group sections.
-	for _, g := range groups {
+	for _, g := range sections {
 		b.WriteString(fmt.Sprintf("## %s\n\n", g.Name))
 		if g.Description != "" {
 			b.WriteString(g.Description + "\n\n")

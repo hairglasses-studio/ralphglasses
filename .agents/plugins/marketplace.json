@@ -1,20 +1,20 @@
 {
-  "name": "ralphglasses-local",
   "interface": {
     "displayName": "Ralphglasses Local Plugins"
   },
+  "name": "ralphglasses-local",
   "plugins": [
     {
+      "category": "Developer Tools",
       "name": "ralphglasses",
-      "source": {
-        "source": "local",
-        "path": "./plugins/ralphglasses"
-      },
       "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
+        "authentication": "ON_INSTALL",
+        "installation": "AVAILABLE"
       },
-      "category": "Developer Tools"
+      "source": {
+        "path": "./plugins/ralphglasses",
+        "source": "local"
+      }
     }
   ]
 }

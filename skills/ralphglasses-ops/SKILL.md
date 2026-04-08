@@ -10,7 +10,7 @@ Go TUI (BubbleTea/Lip Gloss) + bootable thin client for orchestrating Claude Cod
 ## Architecture
 
 - **TUI**: command-and-control interface for multi-provider agent sessions
-- **MCP Server**: 126 tools across 14 namespaces (deferred loading — 10 core tools eager)
+- **MCP Server**: 222 tools total: 218 grouped tools across 30 deferred-load groups plus 4 management tools and catalog resources/prompts
 - **Prompt Enhancement**: 13-stage deterministic pipeline (specificity, positive reframing, tone, structure, context, format, self-check)
 - **Bootable Thin Client**: Manjaro/Sway or Ubuntu/i3 with hardware detection
 

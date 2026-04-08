@@ -1,8 +1,8 @@
 package mcpserver
 
-// ToolGroupBuilder builds a ToolGroup for a specific namespace.
+// ToolGroupBuilder builds a ToolGroup for a specific deferred-load group.
 type ToolGroupBuilder interface {
-	// Name returns the unique namespace identifier for this tool group.
+	// Name returns the unique group identifier for this tool group.
 	Name() string
 	// Build constructs the ToolGroup with all tool definitions and handlers.
 	Build(s *Server) ToolGroup
@@ -16,7 +16,7 @@ type FuncBuilder struct {
 	buildFn func(s *Server) ToolGroup
 }
 
-// Name returns the namespace identifier.
+// Name returns the group identifier.
 func (f *FuncBuilder) Name() string { return f.name }
 
 // Build delegates to the wrapped function.
@@ -45,7 +45,7 @@ func (r *ToolGroupRegistry) Register(b ToolGroupBuilder) {
 }
 
 // BuildAll invokes every registered builder and returns the resulting groups
-// keyed by namespace name.
+// keyed by group name.
 func (r *ToolGroupRegistry) BuildAll(s *Server) map[string]ToolGroup {
 	m := make(map[string]ToolGroup, len(r.builders))
 	for _, b := range r.builders {
@@ -64,7 +64,7 @@ func (r *ToolGroupRegistry) BuildAllOrdered(s *Server) []ToolGroup {
 	return groups
 }
 
-// Names returns the namespace names of all registered builders in order.
+// Names returns the group names of all registered builders in order.
 func (r *ToolGroupRegistry) Names() []string {
 	names := make([]string, len(r.builders))
 	for i, b := range r.builders {

@@ -11,7 +11,7 @@
 - **internal/wsclient/**: WebSocket transport client for OpenAI Responses API (40% faster for multi-turn tool chains)
 - **internal/mcpserver/**: MCP tool handlers (218 grouped tools + 4 management tools across 30 deferred-loaded tool groups, stdio transport via mcp-go)
   - `tools.go` — Server struct, constructors, Register()
-  - `tools_builders.go` — Tool definition builders for all namespaces
+  - `tools_builders.go` — Tool definition builders for all deferred-load tool groups
   - `tools_dispatch.go` — Dispatch table routing tool names to handlers
   - `handler_cli_parity.go` — CLI parity handlers for doctor, validate, config schema, debug bundle, telemetry, firstboot profile, fleet runtime, marathon, and repo surface audit
   - `handler_prompt.go` — Multi-provider prompt enhancement handlers

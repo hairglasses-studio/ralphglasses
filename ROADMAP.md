@@ -2,8 +2,8 @@
 
 Command-and-control TUI + bootable thin client for parallel multi-LLM agent fleets.
 
-**Last updated:** 2026-04-06
-**Codebase:** 73 packages, 200 total MCP tools (197 grouped + 3 management), 19 TUI views
+**Last updated:** 2026-04-08
+**Codebase:** 73 packages, 222 total MCP tools (218 grouped + 4 management), 19 TUI views
 **Status:** 1,143 tasks, 503 complete (44.0%), 640 remaining
 **Key deps:** Go 1.26.1, mcp-go v0.45.0, bubbletea v1.3.10, anthropic-sdk-go v1.27.1
 **Autonomy target:** Level 3 — fully autonomous fleet operation with self-improvement, self-healing, self-optimizing
@@ -85,7 +85,7 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
 - [x] Process manager — launch/stop/pause ralph loops via os/exec with process groups
 - [x] File watcher — fsnotify with 2s polling fallback
 - [x] Log streamer — tail `.ralph/live.log`
-- [x] MCP server — 13 core tools + 184 additional grouped tools via deferred loading, plus 3 management tools (200 total across 29 tool groups)
+- [x] MCP server — 22 core-group tools + 196 additional grouped tools via deferred loading, plus 4 management tools (222 total across 30 tool groups)
 - [x] Standalone MCP binary (`cmd/ralphglasses-mcp/`)
 - [x] TUI shell — BubbleTea app with k9s-style keymap
 - [x] TUI views — overview table, repo detail, log stream, config editor, help
@@ -1486,7 +1486,7 @@ Claude Code supports **24 hook events**, SKILL.md framework, Agent Teams (resear
 
 | Feature | Component | Status | Notes |
 |---------|-----------|--------|-------|
-| MCP Server (stdio) | `internal/mcpserver/` | Implemented | 200 total tools (197 grouped + 3 management), 29 deferred-load tool groups |
+| MCP Server (stdio) | `internal/mcpserver/` | Implemented | 222 total tools (218 grouped + 4 management), 30 deferred-load tool groups |
 | Deferred tool loading | `internal/mcpserver/tools_dispatch.go` | Implemented | Core + management startup surface only; on-demand group loading keeps initial tool context compact |
 | Hooks (internal) | `.ralph/hooks.yaml` | Implemented | Internal hook system, not CC hooks |
 | CC hooks integration | - | Not started | 24 events: PreToolUse, PostToolUse, Stop, SessionStart, TeammateIdle, TaskCreated/Completed, WorktreeCreate, etc. |
@@ -2740,7 +2740,7 @@ Deep codebase analysis (2026-03-30) identified these performance bottlenecks wit
 | Metric | Value |
 |--------|-------|
 | Total packages | 37 |
-| MCP tools | 200 total (197 grouped + 3 management), 29 deferred-load tool groups |
+| MCP tools | 222 total (218 grouped + 4 management), 30 deferred-load tool groups |
 | TUI views | 19 (11% migrated to Phase 2 View interface) |
 | Test files | 427 (114K LOC) |
 | Coverage | 84.5% (target 90%) |

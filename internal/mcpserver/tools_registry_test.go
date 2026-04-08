@@ -20,8 +20,11 @@ func TestRegisterAllTools_ToolCount(t *testing.T) {
 	for _, g := range s.ToolGroups() {
 		expectedTotal += len(g.Tools)
 	}
-	// Plus 3 management tools (tool_groups + load_tool_group + skill_export).
-	expectedTotal += 3
+	// Plus 4 always-available management tools.
+	expectedTotal += len(s.ManagementTools())
+	if expectedTotal != TotalToolCount() {
+		t.Errorf("total tools = %d, want %d", TotalToolCount(), expectedTotal)
+	}
 
 	// All groups should be marked loaded.
 	loadedCount := 0

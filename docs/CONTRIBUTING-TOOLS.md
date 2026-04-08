@@ -1,13 +1,14 @@
 # Contributing MCP Tools
 
-Guide for adding new tools to the ralphglasses MCP server (110+ tools across 13 namespaces with deferred loading).
+Guide for adding new tools to the ralphglasses MCP server (222 tools: 218 grouped + 4 management across 30 deferred-load groups).
 
 ## Architecture Overview
 
 All MCP tools live in `internal/mcpserver/`. The system uses:
 
-- **Tool groups** (`ToolGroup`) — namespaced collections of related tools (e.g., `session`, `fleet`, `repo`)
-- **Deferred loading** — only the `core` group (10 tools) loads at startup; others load on demand via `ralphglasses_load_tool_group`
+- **Tool groups** (`ToolGroup`) — deferred-load collections of related tools (for example `session`, `fleet`, `repo`)
+- **Management tools** — always-available discovery/contract tools registered ahead of deferred loading (`ralphglasses_tool_groups`, `ralphglasses_load_tool_group`, `ralphglasses_skill_export`, `ralphglasses_server_health`)
+- **Deferred loading** — the `core` group loads at startup; other grouped tools load on demand via `ralphglasses_load_tool_group`
 - **Annotations** — MCP behavioral hints (`ReadOnlyHint`, `DestructiveHint`, etc.) in `annotations.go`
 - **Output schemas** — JSON Schema definitions for structured responses in `schemas.go`
 - **Structured errors** — machine-parseable error codes via `codedError()` in `errors.go`
@@ -18,6 +19,7 @@ Key files:
 |------|---------|
 | `tools_builders.go` | Tool definitions (`mcp.NewTool`) and group builders |
 | `tools_dispatch.go` | Registration, deferred loading, group management handlers |
+| `management_tools.go` | Always-available discovery and contract tools |
 | `tools.go` | `Server` struct, helper functions (`getStringArg`, `jsonResult`, etc.) |
 | `annotations.go` | `ToolAnnotations` map (behavioral hints per tool) |
 | `schemas.go` | `OutputSchemas` map (JSON Schema output definitions) |
@@ -32,7 +34,7 @@ Key files:
 4. Add an annotation entry in `annotations.go`
 5. (Optional) Add an output schema in `schemas.go` for high-value tools
 6. Write tests in the corresponding `handler_*_test.go` file
-7. Update `docs/MCP-TOOLS.md` with the new tool
+7. Regenerate `docs/MCP-TOOLS.md`, `docs/SKILLS.md`, and the checked-in skill surfaces from the live contract
 8. Run `go build ./...` and `go test ./internal/mcpserver/...`
 
 ## Step-by-step Guide

@@ -176,13 +176,20 @@ func workflowCatalog() []WorkflowDef {
 	return out
 }
 
-func managementToolNames() []string {
-	return []string{
-		"ralphglasses_tool_groups",
-		"ralphglasses_load_tool_group",
-		"ralphglasses_skill_export",
-		"ralphglasses_server_health",
-	}
+func StaticResources() []ResourceDef {
+	return staticResourceCatalog()
+}
+
+func ResourceTemplates() []ResourceTemplateDef {
+	return resourceTemplateCatalog()
+}
+
+func Prompts() []PromptDef {
+	return promptCatalog()
+}
+
+func Workflows() []WorkflowDef {
+	return workflowCatalog()
 }
 
 func toolGroupListSummary() string {

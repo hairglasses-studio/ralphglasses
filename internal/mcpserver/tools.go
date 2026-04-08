@@ -29,7 +29,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
-// ToolGroup represents a namespace of related tools.
+// ToolGroup represents a deferred-load group of related tools.
 type ToolGroup struct {
 	Name        string
 	Description string

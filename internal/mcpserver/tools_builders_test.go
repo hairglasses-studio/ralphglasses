@@ -13,8 +13,8 @@ type builderSpec struct {
 	wantNonZero bool // always true; here for clarity
 }
 
-// allBuilderSpecs returns the canonical list of builder specs covering all 13
-// namespaces.  The minTools counts come from GeneratedToolCounts (auto-generated
+// allBuilderSpecs returns the canonical list of builder specs covering every
+// registered tool group. The minTools counts come from GeneratedToolCounts (auto-generated
 // by gen-tool-counts) so they never need manual updates; re-generate with:
 //
 //	go generate ./internal/mcpserver/...  (or: make update-tool-counts)
