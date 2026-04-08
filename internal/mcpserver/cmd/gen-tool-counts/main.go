@@ -49,7 +49,7 @@ type tmplData struct {
 func main() {
 	flag.Parse()
 
-	srv := mcpserver.NewServer("/tmp")
+	srv := mcpserver.NewServer(".")
 	groups := srv.ToolGroups()
 
 	// Collect entries sorted by the canonical ToolGroupNames order.

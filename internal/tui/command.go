@@ -2,9 +2,9 @@ package tui
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 	"gopkg.in/yaml.v3"
 )
 
@@ -22,18 +22,10 @@ var builtinAliases = map[string]string{
 	"fl": "fleet",
 }
 
-// LoadUserAliases reads custom aliases from ~/.config/ralphglasses/aliases.yml.
-// The file format is a simple YAML map of alias → command name.
+// LoadUserAliases reads custom aliases from the shared Ralph config path.
+// The file format is a simple YAML map of alias -> command name.
 func LoadUserAliases() map[string]string {
-	dir := os.Getenv("XDG_CONFIG_HOME")
-	if dir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil
-		}
-		dir = filepath.Join(home, ".config")
-	}
-	data, err := os.ReadFile(filepath.Join(dir, "ralphglasses", "aliases.yml"))
+	data, err := os.ReadFile(ralphpath.AliasesYAMLPath())
 	if err != nil {
 		return nil
 	}
@@ -46,7 +38,7 @@ func LoadUserAliases() map[string]string {
 
 // ParseCommand parses a command string like "start mesmer" into a Command.
 // Built-in aliases (e.g. :rp → :repos) are expanded automatically.
-// User aliases from ~/.config/ralphglasses/aliases.yml take precedence.
+// User aliases from the shared Ralph config path take precedence.
 func ParseCommand(input string) Command {
 	parts := strings.Fields(strings.TrimSpace(input))
 	if len(parts) == 0 {

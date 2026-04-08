@@ -24,6 +24,10 @@ func ConfigPath() string {
 	return filepath.Join(ConfigDir(), "config.json")
 }
 
+func XDGConfigDir() string {
+	return appdir.ConfigDir("ralphglasses")
+}
+
 func StateDir() string {
 	if home := homeDir(); home != "" {
 		return filepath.Join(home, ".ralphglasses")
@@ -37,6 +41,22 @@ func SessionsDir() string {
 
 func SQLiteStorePath() string {
 	return filepath.Join(StateDir(), "state.db")
+}
+
+func PromptsDir() string {
+	return filepath.Join(StateDir(), "prompts")
+}
+
+func ThemesDir() string {
+	return filepath.Join(XDGConfigDir(), "themes")
+}
+
+func AliasesYAMLPath() string {
+	return filepath.Join(XDGConfigDir(), "aliases.yml")
+}
+
+func AliasesJSONPath() string {
+	return filepath.Join(XDGConfigDir(), "aliases.json")
 }
 
 func CoordinationDir() string {

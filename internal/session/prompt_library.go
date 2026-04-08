@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
 
 // PromptEntry is a saved reusable prompt.
@@ -17,19 +19,15 @@ type PromptEntry struct {
 	Tags        []string          `json:"tags,omitempty"`
 }
 
-// PromptLibrary manages saved prompts in ~/.ralphglasses/prompts/.
+// PromptLibrary manages saved prompts in the shared Ralph prompt library path.
 type PromptLibrary struct {
 	dir string
 }
 
 // NewPromptLibrary creates a prompt library.
 func NewPromptLibrary() *PromptLibrary {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return &PromptLibrary{}
-	}
 	return &PromptLibrary{
-		dir: filepath.Join(home, ".ralphglasses", "prompts"),
+		dir: ralphpath.PromptsDir(),
 	}
 }
 

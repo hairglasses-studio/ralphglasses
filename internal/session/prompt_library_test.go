@@ -1,6 +1,11 @@
 package session
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
+)
 
 func TestPromptLibrary_SaveLoadList(t *testing.T) {
 	dir := t.TempDir()
@@ -59,5 +64,24 @@ func TestPromptLibrary_EmptyDir(t *testing.T) {
 	names, err := pl.List()
 	if err != nil || len(names) != 0 {
 		t.Errorf("unexpected: names=%v err=%v", names, err)
+	}
+}
+
+func TestNewPromptLibrary_UsesSharedPathResolver(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_STATE_HOME", "")
+
+	pl := NewPromptLibrary()
+	if pl == nil {
+		t.Fatal("NewPromptLibrary returned nil")
+	}
+
+	want := filepath.Join(home, ".ralphglasses", "prompts")
+	if pl.dir != want {
+		t.Fatalf("NewPromptLibrary().dir = %q, want %q", pl.dir, want)
+	}
+	if pl.dir != ralphpath.PromptsDir() {
+		t.Fatalf("NewPromptLibrary().dir = %q, want shared resolver path %q", pl.dir, ralphpath.PromptsDir())
 	}
 }

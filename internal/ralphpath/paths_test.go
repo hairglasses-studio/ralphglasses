@@ -24,6 +24,18 @@ func TestConfigPath_FallsBackToXDGConfigDirWithoutHome(t *testing.T) {
 	if got, want := ConfigPath(), filepath.Join(xdg, "ralphglasses", "config.json"); got != want {
 		t.Fatalf("ConfigPath() = %q, want %q", got, want)
 	}
+	if got, want := XDGConfigDir(), filepath.Join(xdg, "ralphglasses"); got != want {
+		t.Fatalf("XDGConfigDir() = %q, want %q", got, want)
+	}
+	if got, want := ThemesDir(), filepath.Join(xdg, "ralphglasses", "themes"); got != want {
+		t.Fatalf("ThemesDir() = %q, want %q", got, want)
+	}
+	if got, want := AliasesYAMLPath(), filepath.Join(xdg, "ralphglasses", "aliases.yml"); got != want {
+		t.Fatalf("AliasesYAMLPath() = %q, want %q", got, want)
+	}
+	if got, want := AliasesJSONPath(), filepath.Join(xdg, "ralphglasses", "aliases.json"); got != want {
+		t.Fatalf("AliasesJSONPath() = %q, want %q", got, want)
+	}
 }
 
 func TestStateAndSQLitePaths_UseLegacyHomeDirWhenAvailable(t *testing.T) {
@@ -39,6 +51,9 @@ func TestStateAndSQLitePaths_UseLegacyHomeDirWhenAvailable(t *testing.T) {
 	}
 	if got, want := SQLiteStorePath(), filepath.Join(home, ".ralphglasses", "state.db"); got != want {
 		t.Fatalf("SQLiteStorePath() = %q, want %q", got, want)
+	}
+	if got, want := PromptsDir(), filepath.Join(home, ".ralphglasses", "prompts"); got != want {
+		t.Fatalf("PromptsDir() = %q, want %q", got, want)
 	}
 }
 

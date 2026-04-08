@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,11 +28,7 @@ type AliasDef struct {
 
 // DefaultAliasPath returns the default path for the aliases configuration file.
 func DefaultAliasPath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return filepath.Join(".config", "ralphglasses", "aliases.yml")
-	}
-	return filepath.Join(home, ".config", "ralphglasses", "aliases.yml")
+	return ralphpath.AliasesYAMLPath()
 }
 
 // LoadAliasFile reads and parses an alias file from the given path.

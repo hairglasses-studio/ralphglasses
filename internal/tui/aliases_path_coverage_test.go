@@ -1,42 +1,32 @@
 package tui
 
 import (
-	"os"
-	"strings"
+	"path/filepath"
 	"testing"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
 
 func TestDefaultAliasPath_UsesXDGConfigHome(t *testing.T) {
-	// Set a custom XDG_CONFIG_HOME and verify it's used.
-	original := os.Getenv("XDG_CONFIG_HOME")
-	t.Cleanup(func() { os.Setenv("XDG_CONFIG_HOME", original) })
+	t.Setenv("XDG_CONFIG_HOME", "/custom/config")
+	t.Setenv("HOME", "")
 
-	os.Setenv("XDG_CONFIG_HOME", "/custom/config")
-	got := DefaultAliasPath()
-	if !strings.HasPrefix(got, "/custom/config") {
-		t.Errorf("DefaultAliasPath() = %q, want prefix /custom/config", got)
+	want := filepath.Join("/custom/config", "ralphglasses", "aliases.json")
+	if got := DefaultAliasPath(); got != want {
+		t.Errorf("DefaultAliasPath() = %q, want %q", got, want)
 	}
-	if !strings.HasSuffix(got, "aliases.json") {
-		t.Errorf("DefaultAliasPath() = %q, want suffix aliases.json", got)
+	if got := DefaultAliasPath(); got != ralphpath.AliasesJSONPath() {
+		t.Errorf("DefaultAliasPath() = %q, want shared resolver path %q", got, ralphpath.AliasesJSONPath())
 	}
 }
 
 func TestDefaultAliasPath_FallsBackToHome(t *testing.T) {
-	// Unset XDG_CONFIG_HOME to fall back to home directory.
-	original := os.Getenv("XDG_CONFIG_HOME")
-	t.Cleanup(func() { os.Setenv("XDG_CONFIG_HOME", original) })
+	home := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("HOME", home)
 
-	os.Unsetenv("XDG_CONFIG_HOME")
-	got := DefaultAliasPath()
-	// On CI or dev box, home is always set; result should be non-empty.
-	if got == "" {
-		// Only fail if UserHomeDir is actually available.
-		home, err := os.UserHomeDir()
-		if err == nil && home != "" {
-			t.Errorf("DefaultAliasPath() returned empty string with home=%q", home)
-		}
-	}
-	if got != "" && !strings.HasSuffix(got, "aliases.json") {
-		t.Errorf("DefaultAliasPath() = %q, want suffix aliases.json", got)
+	want := filepath.Join(home, ".config", "ralphglasses", "aliases.json")
+	if got := DefaultAliasPath(); got != want {
+		t.Errorf("DefaultAliasPath() = %q, want %q", got, want)
 	}
 }

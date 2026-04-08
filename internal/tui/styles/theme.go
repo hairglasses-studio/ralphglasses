@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"charm.land/lipgloss/v2"
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 	"gopkg.in/yaml.v3"
 )
 
@@ -135,17 +136,9 @@ func LoadTheme(path string) (*Theme, error) {
 	return &t, nil
 }
 
-// ThemeDir returns the default external theme directory:
-// ~/.config/ralphglasses/themes/
+// ThemeDir returns the default external theme directory.
 func ThemeDir() string {
-	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, "ralphglasses", "themes")
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
-	return filepath.Join(home, ".config", "ralphglasses", "themes")
+	return ralphpath.ThemesDir()
 }
 
 // LoadExternalThemes scans the external theme directory for .yaml/.yml files

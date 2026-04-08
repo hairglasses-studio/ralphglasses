@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
 
 // builtinCommandAliases are pre-defined aliases that ship with ralphglasses.
@@ -43,18 +45,9 @@ type AliasStore struct {
 	aliases map[string]string
 }
 
-// DefaultAliasPath returns the default path for the aliases JSON file,
-// respecting XDG_CONFIG_HOME.
+// DefaultAliasPath returns the default path for the aliases JSON file.
 func DefaultAliasPath() string {
-	dir := os.Getenv("XDG_CONFIG_HOME")
-	if dir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return ""
-		}
-		dir = filepath.Join(home, ".config")
-	}
-	return filepath.Join(dir, "ralphglasses", "aliases.json")
+	return ralphpath.AliasesJSONPath()
 }
 
 // NewAliasStore loads aliases from the given JSON file path.

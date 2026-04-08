@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
 
 func TestLoadSaveRoundTrip(t *testing.T) {
@@ -130,18 +132,17 @@ func TestAll(t *testing.T) {
 }
 
 func TestDefaultAliasPath(t *testing.T) {
-	path := DefaultAliasPath()
-	if !filepath.IsAbs(path) && path != filepath.Join(".config", "ralphglasses", "aliases.yml") {
-		// Should contain the expected suffix regardless of home dir
-		t.Logf("path = %s", path)
-	}
-	if !containsSuffix(path, filepath.Join("ralphglasses", "aliases.yml")) {
-		t.Errorf("DefaultAliasPath() = %q, want suffix %q", path, filepath.Join("ralphglasses", "aliases.yml"))
-	}
-}
+	home := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("HOME", home)
 
-func containsSuffix(s, suffix string) bool {
-	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
+	want := filepath.Join(home, ".config", "ralphglasses", "aliases.yml")
+	if got := DefaultAliasPath(); got != want {
+		t.Errorf("DefaultAliasPath() = %q, want %q", got, want)
+	}
+	if got := DefaultAliasPath(); got != ralphpath.AliasesYAMLPath() {
+		t.Errorf("DefaultAliasPath() = %q, want shared resolver path %q", got, ralphpath.AliasesYAMLPath())
+	}
 }
 
 func TestLoadInvalidVersion(t *testing.T) {

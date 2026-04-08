@@ -1,28 +1,33 @@
 package styles
 
 import (
-	"strings"
+	"path/filepath"
 	"testing"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
 
 func TestThemeDir_WithXDG(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "/tmp/test-xdg-config")
-	got := ThemeDir()
-	if !strings.Contains(got, "ralphglasses") || !strings.Contains(got, "themes") {
-		t.Errorf("ThemeDir with XDG = %q, want path containing ralphglasses/themes", got)
+	t.Setenv("HOME", "")
+
+	want := filepath.Join("/tmp/test-xdg-config", "ralphglasses", "themes")
+	if got := ThemeDir(); got != want {
+		t.Errorf("ThemeDir() = %q, want %q", got, want)
 	}
-	if !strings.HasPrefix(got, "/tmp/test-xdg-config") {
-		t.Errorf("ThemeDir with XDG = %q, want XDG-based path", got)
+	if got := ThemeDir(); got != ralphpath.ThemesDir() {
+		t.Errorf("ThemeDir() = %q, want shared resolver path %q", got, ralphpath.ThemesDir())
 	}
 }
 
 func TestThemeDir_WithoutXDG(t *testing.T) {
+	home := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", "")
-	got := ThemeDir()
-	// Without XDG, should return home-based path or empty string on failure.
-	// Just verify it doesn't panic and contains expected suffix when non-empty.
-	if got != "" && !strings.Contains(got, "ralphglasses") {
-		t.Errorf("ThemeDir without XDG = %q, want path containing ralphglasses or empty", got)
+	t.Setenv("HOME", home)
+
+	want := filepath.Join(home, ".config", "ralphglasses", "themes")
+	if got := ThemeDir(); got != want {
+		t.Errorf("ThemeDir() = %q, want %q", got, want)
 	}
 }
 
