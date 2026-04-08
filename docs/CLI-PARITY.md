@@ -10,6 +10,12 @@ This matrix is the source of truth for CLI parity work. The goal is:
 
 Full parity is in place for the meaningful non-interactive CLI surfaces. The remaining CLI-only surfaces are either interactive terminal affordances or transport helpers that do not represent distinct business capabilities.
 
+Current coverage snapshot from the live parity matrix:
+
+- `24` tracked CLI surfaces
+- `21` bespoke-covered surfaces (`87.5%` of all tracked surfaces)
+- `100%` coverage of business surfaces after excluding the `3` command-only-by-design transport/shell affordances
+
 ## Command Matrix
 
 | CLI Surface | Status | MCP Tool / Skill | Notes |
@@ -67,6 +73,7 @@ Use the server’s discovery surfaces instead of hard-coding counts:
 - `ralph:///catalog/tool-groups`
 - `ralph:///catalog/workflows`
 - `ralph:///catalog/skills`
+- `ralph:///catalog/cli-parity`
 - `ralph:///bootstrap/checklist`
 - `ralph:///runtime/health`
 - `ralphglasses_server_health`

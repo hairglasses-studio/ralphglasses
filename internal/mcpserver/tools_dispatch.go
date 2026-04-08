@@ -11,6 +11,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
+	"github.com/hairglasses-studio/ralphglasses/internal/parity"
 )
 
 // applyToolMetadata enriches a tool with annotations and output schema if available.
@@ -258,6 +259,7 @@ func (s *Server) runtimeHealthDoc() map[string]any {
 		"resource_templates":      resourceTemplateURIs(templateDefs),
 		"skill_count":             len(skillCatalog()),
 		"skill_names":             skillNames(),
+		"cli_parity_summary":      parity.CLIParityCoverage(),
 		"prompt_count":            len(promptCatalog()),
 		"prompt_names":            promptNames(),
 		"discovery_tools":         managementTools,

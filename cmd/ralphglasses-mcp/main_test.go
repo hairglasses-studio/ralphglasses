@@ -316,8 +316,8 @@ func TestSetup_RegistersResourcesAndPrompts(t *testing.T) {
 	initializeServer(t, srv)
 
 	resources := listResources(t, srv)
-	if got := len(resources.Resources); got != 6 {
-		t.Fatalf("resources/list returned %d resources, want 6", got)
+	if got := len(resources.Resources); got != 7 {
+		t.Fatalf("resources/list returned %d resources, want 7", got)
 	}
 
 	templates := listResourceTemplates(t, srv)

@@ -100,6 +100,12 @@ var staticResourceDefs = []ResourceDef{
 		MIMEType:    "application/json",
 	},
 	{
+		URI:         "ralph:///catalog/cli-parity",
+		Name:        "CLI parity catalog",
+		Description: "Read the current CLI-to-MCP/skill parity matrix and its coverage summary.",
+		MIMEType:    "application/json",
+	},
+	{
 		URI:         "ralph:///bootstrap/checklist",
 		Name:        "Bootstrap checklist",
 		Description: "Read the MCP-first bootstrap checklist for provider readiness, config validation, and firstboot flows.",
@@ -167,7 +173,7 @@ var skillCatalogDefs = []SkillCatalogDef{
 		Tags:          []string{"repo", "bootstrap", "validation", "worktrees"},
 		Workflows:     []string{"repo-triage", "provider-parity"},
 		ToolGroups:    []string{"core", "repo", "observability"},
-		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/workflows"},
+		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/workflows", "ralph:///catalog/cli-parity"},
 		KeyTools:      []string{"ralphglasses_doctor", "ralphglasses_validate", "ralphglasses_repo_scaffold", "ralphglasses_worktree_list", "ralphglasses_debug_bundle"},
 		CanonicalPath: ".agents/skills/ralphglasses-repo-admin/SKILL.md",
 	},
@@ -208,7 +214,7 @@ var skillCatalogDefs = []SkillCatalogDef{
 		Tags:          []string{"self-dev", "roadmap", "parity", "docs"},
 		Workflows:     []string{"repo-triage", "provider-parity"},
 		ToolGroups:    []string{"repo", "roadmap", "loop", "fleet", "docs"},
-		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/skills", "ralph:///catalog/workflows"},
+		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/skills", "ralph:///catalog/workflows", "ralph:///catalog/cli-parity"},
 		Prompts:       []string{"provider-parity-audit", "repo-triage-brief"},
 		KeyTools:      []string{"ralphglasses_repo_surface_audit", "ralphglasses_roadmap_analyze", "ralphglasses_roadmap_prioritize", "ralphglasses_marathon"},
 		CanonicalPath: ".agents/skills/ralphglasses-self-dev/SKILL.md",
@@ -364,6 +370,7 @@ Start with discovery instead of guessing:
 - Read ralph:///catalog/tool-groups for grouped capabilities and counts.
 - Read ralph:///catalog/skills for the focused workflow skill families.
 - Read ralph:///catalog/workflows for common operator playbooks.
+- Read ralph:///catalog/cli-parity when the task is about CLI-to-MCP workflow coverage or operator parity.
 - Read ralph:///runtime/health or ralph:///bootstrap/checklist when the task is runtime- or bootstrap-heavy.
 - Call ralphglasses_tool_groups, then ralphglasses_load_tool_group before using non-core tools.
 - Prefer repo read-only resources (ralph:///{repo}/status, /progress, /logs) before mutating tools.

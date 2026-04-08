@@ -111,6 +111,7 @@ func TestRenderSampleData(t *testing.T) {
 		"**4 tools**",
 		"**2 deferred-load tool groups**",
 		"`ralph:///catalog/skills`",
+		"`ralph:///catalog/cli-parity`",
 		"`ralph:///bootstrap/checklist` and `ralph:///runtime/health`",
 		"## Management Tools",
 		"`ralphglasses_server_health`",

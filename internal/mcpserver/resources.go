@@ -14,6 +14,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/parity"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
 )
 
@@ -48,6 +49,7 @@ func RegisterResources(srv *server.MCPServer, appSrv *Server) {
 		"ralph:///catalog/tool-groups": makeCatalogToolGroupsHandler(appSrv),
 		"ralph:///catalog/workflows":   makeCatalogWorkflowsHandler(),
 		"ralph:///catalog/skills":      makeCatalogSkillsHandler(),
+		"ralph:///catalog/cli-parity":  makeCLIParityHandler(),
 		"ralph:///bootstrap/checklist": makeBootstrapChecklistHandler(),
 		"ralph:///runtime/health":      makeRuntimeHealthHandler(appSrv),
 	}
@@ -200,6 +202,12 @@ func makeCatalogSkillsHandler() server.ResourceHandlerFunc {
 	}
 }
 
+func makeCLIParityHandler() server.ResourceHandlerFunc {
+	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, parity.CLIParityDocument())
+	}
+}
+
 func makeBootstrapChecklistHandler() server.ResourceHandlerFunc {
 	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		return jsonResourceContents(req.Params.URI, buildBootstrapChecklistDoc())
@@ -229,6 +237,7 @@ func buildCatalogServerDoc(appSrv *Server) map[string]any {
 		"resources":               resourceURIs(staticResourceCatalog()),
 		"resource_templates":      resourceTemplateURIs(resourceTemplateCatalog()),
 		"skills":                  skillNames(),
+		"cli_parity_summary":      parity.CLIParityCoverage(),
 		"prompts":                 promptNames(),
 		"tool_groups":             buildCatalogToolGroupsDoc(appSrv),
 	}

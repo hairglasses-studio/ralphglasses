@@ -118,8 +118,8 @@ func TestStaticResourceRegistration(t *testing.T) {
 		t.Fatalf("expected ListResourcesResult, got %T", rpcResp.Result)
 	}
 
-	if len(result.Resources) != 6 {
-		t.Fatalf("expected 6 static resources, got %d", len(result.Resources))
+	if len(result.Resources) != 7 {
+		t.Fatalf("expected 7 static resources, got %d", len(result.Resources))
 	}
 
 	uris := make(map[string]bool)
@@ -132,6 +132,7 @@ func TestStaticResourceRegistration(t *testing.T) {
 		"ralph:///catalog/tool-groups",
 		"ralph:///catalog/workflows",
 		"ralph:///catalog/skills",
+		"ralph:///catalog/cli-parity",
 		"ralph:///bootstrap/checklist",
 		"ralph:///runtime/health",
 	} {
@@ -166,6 +167,28 @@ func TestCatalogSkillsResource_ReturnsSkillCatalog(t *testing.T) {
 		t.Fatalf("expected recovery skill in catalog: %s", textContent.Text)
 	}
 	_ = appSrv
+}
+
+func TestCLIParityResource_ReturnsCoverageSummary(t *testing.T) {
+	t.Parallel()
+
+	handler := makeCLIParityHandler()
+	results, err := handler(context.Background(), mcp.ReadResourceRequest{
+		Params: mcp.ReadResourceParams{URI: "ralph:///catalog/cli-parity"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	textContent, ok := results[0].(mcp.TextResourceContents)
+	if !ok {
+		t.Fatalf("expected TextResourceContents, got %T", results[0])
+	}
+	if !strings.Contains(textContent.Text, "\"bespoke_coverage_pct\": 87.5") {
+		t.Fatalf("expected bespoke coverage summary in cli parity resource: %s", textContent.Text)
+	}
+	if !strings.Contains(textContent.Text, "\"command_only_by_design\": 3") {
+		t.Fatalf("expected command-only count in cli parity resource: %s", textContent.Text)
+	}
 }
 
 func TestBootstrapChecklistResource_ReturnsChecklist(t *testing.T) {
