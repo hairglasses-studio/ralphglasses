@@ -762,7 +762,7 @@ Built across multiple implementation sessions. Extends the TUI, MCP server, and 
 - **Acceptance:** `:layout fleet` redistributes windows across monitors
 
 ### 3.3 — Multi-instance coordination `[BLOCKED BY 3.1, 2.1]`
-- [ ] 3.3.1 — Shared state via SQLite: same DB file, WAL mode, `PRAGMA busy_timeout` `P1` `L`
+- [x] 3.3.1 — Shared state via SQLite: same DB file, WAL mode, `PRAGMA busy_timeout` `P1` `L`
 - [x] 3.3.2 — Instance discovery: Unix domain socket per instance, advertise PID and capabilities `P1` `M`
 - [x] 3.3.3 — Leader election: simple file-lock based leader for fleet operations `P1` `M`
 - [x] 3.3.4 — Leader failover: detect leader crash via heartbeat, re-elect `P2` `M`
@@ -1843,6 +1843,7 @@ Derived from 10-agent codebase analysis + 12-agent scaling research (2026-03-30)
 
 - [x] SQLite WAL mode for fleet state (coordinator, sessions, observations)
 - [x] Per-entity locking instead of global mutex
+- [x] Session-store lock contention hardening: DSN `busy_timeout`, single-connection writes, and `SQLITE_BUSY` retries for migrate/save/update paths
 - [ ] State sharding by repo for parallel writes
 - [ ] Observation partitioning: time-based partitions for efficient queries
 - [ ] Migration path from JSON files to SQLite (dual-write during transition)
