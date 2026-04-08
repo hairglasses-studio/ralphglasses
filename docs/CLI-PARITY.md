@@ -51,6 +51,11 @@ These existing tools were extended rather than duplicated:
 
 ## Skills
 
+- `ralphglasses-discovery`: catalog-first discovery, deferred group loading, and contract export
+- `ralphglasses-session-ops`: launch, resume, budget, output, compare, export, and handoff flows
+- `ralphglasses-repo-admin`: doctor, validate, scaffold, worktree, config, telemetry, and debug-bundle flows
+- `ralphglasses-bootstrap`: first-time setup, profile application, and bootstrap readiness checks
+- `ralphglasses-recovery-observability`: logs, runtime health, recovery planning, session salvage, and marathon diagnosis
 - `ralphglasses-operator`: interactive TUI, tmux, firstboot wizard, and operator troubleshooting
 - `ralphglasses-self-dev`: repo surface audit, roadmap analysis, loop/marathon execution, merge verification, and docs writeback
 

@@ -1,0 +1,52 @@
+---
+name: ralphglasses-session-ops
+description: Run ralphglasses MCP session lifecycle workflows, including launch, resume, budget control, output inspection, comparison, export, and handoff.
+allowed-tools:
+  - ralphglasses_session_launch
+  - ralphglasses_session_list
+  - ralphglasses_session_status
+  - ralphglasses_session_resume
+  - ralphglasses_session_stop
+  - ralphglasses_session_stop_all
+  - ralphglasses_session_budget
+  - ralphglasses_session_output
+  - ralphglasses_session_tail
+  - ralphglasses_session_compare
+  - ralphglasses_session_errors
+  - ralphglasses_session_retry
+  - ralphglasses_session_export
+  - ralphglasses_session_fork
+  - ralphglasses_session_handoff
+---
+
+# Ralphglasses Session Ops
+
+Use this skill when the task is about live agent sessions rather than repo bootstrap or roadmap planning.
+
+## Default workflow
+
+1. Start with `ralphglasses_session_list` or `ralphglasses_session_status` to confirm the active state.
+2. Launch or resume work with `ralphglasses_session_launch` or `ralphglasses_session_resume`.
+3. Keep budget and output visible during execution:
+   - `ralphglasses_session_budget`
+   - `ralphglasses_session_tail`
+   - `ralphglasses_session_output`
+4. Compare, retry, or export when the result needs review:
+   - `ralphglasses_session_compare`
+   - `ralphglasses_session_errors`
+   - `ralphglasses_session_retry`
+   - `ralphglasses_session_export`
+5. Use `ralphglasses_session_fork` or `ralphglasses_session_handoff` when the work should branch to another provider or operator.
+
+## When to use it
+
+- Launching repo work in Claude, Codex, or Gemini
+- Watching budget pressure during a long task
+- Comparing provider outputs
+- Packaging or handing off finished session context
+
+## Guardrails
+
+- Check the current session state before launching duplicates.
+- Treat `ralphglasses_session_stop_all` as a broad action; prefer targeted stop unless the task clearly needs a full drain.
+- Move to `ralphglasses-recovery-observability` when the main problem is salvage, triage, or runtime instability.

@@ -1,0 +1,52 @@
+---
+name: ralphglasses-recovery-observability
+description: Investigate runtime health, logs, session failures, and recovery flows in ralphglasses, including recovery planning, salvage, fleet runtime state, and debug bundles.
+allowed-tools:
+  - ralphglasses_server_health
+  - ralphglasses_status
+  - ralphglasses_logs
+  - ralphglasses_debug_bundle
+  - ralphglasses_fleet_runtime
+  - ralphglasses_marathon
+  - ralphglasses_marathon_dashboard
+  - ralphglasses_recovery_plan
+  - ralphglasses_recovery_execute
+  - ralphglasses_session_triage
+  - ralphglasses_session_salvage
+  - ralphglasses_session_discover
+  - ralphglasses_session_errors
+---
+
+# Ralphglasses Recovery And Observability
+
+Use this skill when the main problem is health, recovery, or runtime diagnosis rather than normal execution.
+
+## Default workflow
+
+1. Confirm current runtime shape:
+   - `ralphglasses_server_health`
+   - `ralphglasses_status`
+   - `ralphglasses_fleet_runtime`
+2. Read logs and deterministic snapshots:
+   - `ralphglasses_logs`
+   - `ralphglasses_debug_bundle`
+3. If the incident is session-specific, use:
+   - `ralphglasses_session_discover`
+   - `ralphglasses_session_triage`
+   - `ralphglasses_session_errors`
+   - `ralphglasses_session_salvage`
+4. For broader runtime repair, plan first with `ralphglasses_recovery_plan`, then apply `ralphglasses_recovery_execute`.
+5. Use `ralphglasses_marathon` or `ralphglasses_marathon_dashboard` only when the issue intersects long-running fleet execution.
+
+## When to use it
+
+- Store fallback or startup failure triage
+- Session salvage after interrupted or failed runs
+- Runtime observability checks before or after marathon work
+- Collecting evidence for a docs writeback or follow-up fix
+
+## Guardrails
+
+- Prefer `ralphglasses_recovery_plan` before destructive repair paths.
+- Use debug bundles for evidence capture instead of hand-curating logs.
+- Switch back to `ralphglasses-session-ops` once the system is healthy enough for normal execution again.

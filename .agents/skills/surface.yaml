@@ -14,6 +14,26 @@
     {
       "name": "ralphglasses-self-dev",
       "export_plugin": true
+    },
+    {
+      "name": "ralphglasses-discovery",
+      "export_plugin": true
+    },
+    {
+      "name": "ralphglasses-session-ops",
+      "export_plugin": true
+    },
+    {
+      "name": "ralphglasses-repo-admin",
+      "export_plugin": true
+    },
+    {
+      "name": "ralphglasses-bootstrap",
+      "export_plugin": true
+    },
+    {
+      "name": "ralphglasses-recovery-observability",
+      "export_plugin": true
     }
   ]
 }
