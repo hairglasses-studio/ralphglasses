@@ -17,7 +17,7 @@ import (
 // socket name limit (108 bytes on macOS). t.TempDir() paths can exceed this.
 func testSockPath(t *testing.T, name string) string {
 	t.Helper()
-	dir, err := os.MkdirTemp("/tmp", "i3t")
+	dir, err := os.MkdirTemp(os.TempDir(), "i3t")
 	if err != nil {
 		t.Fatalf("mkdirtemp: %v", err)
 	}

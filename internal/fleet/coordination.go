@@ -7,14 +7,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
+const coordinationDirEnv = "RALPHGLASSES_COORD_DIR"
+
 var (
 	// CoordDir is the shared coordination directory for ralphglasses instances.
-	// It defaults under the system temp dir but can be overridden for tests or
-	// specialized local deployments.
-	CoordDir = filepath.Join(os.TempDir(), "ralphglasses-coordination")
+	// It prefers an explicit override, then XDG/user-state-backed runtime paths,
+	// and can still be overridden directly in tests.
+	CoordDir = defaultCoordDir()
 )
 
 const claimsSubdir = "claims"
@@ -24,6 +27,19 @@ type Claim struct {
 	Agent     string    `json:"agent"`
 	Resource  string    `json:"resource"`
 	Timestamp time.Time `json:"timestamp"`
+}
+
+func defaultCoordDir() string {
+	if override := strings.TrimSpace(os.Getenv(coordinationDirEnv)); override != "" {
+		return override
+	}
+	if xdgRuntime := strings.TrimSpace(os.Getenv("XDG_RUNTIME_DIR")); xdgRuntime != "" {
+		return filepath.Join(xdgRuntime, "ralphglasses", "coordination")
+	}
+	if homeDir, err := os.UserHomeDir(); err == nil && strings.TrimSpace(homeDir) != "" {
+		return filepath.Join(homeDir, ".ralphglasses", "coordination")
+	}
+	return filepath.Join(os.TempDir(), "ralphglasses-coordination")
 }
 
 // EnsureCoordDir creates the coordination directory structure.

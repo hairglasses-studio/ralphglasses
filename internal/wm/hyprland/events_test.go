@@ -27,10 +27,10 @@ func TestParseEvent(t *testing.T) {
 		{"fullscreen>>1", EventFullscreen, "1", true},
 		{"configreloaded>>", EventConfigReloaded, "", true},
 		// Edge cases
-		{"workspace>>", EventWorkspace, "", true},       // empty data
-		{"custom>>a>>b", "custom", "a>>b", true},        // multiple >> separators
-		{"noevent", Event{}.Type, "", false},             // no separator
-		{"", Event{}.Type, "", false},                    // empty line
+		{"workspace>>", EventWorkspace, "", true}, // empty data
+		{"custom>>a>>b", "custom", "a>>b", true},  // multiple >> separators
+		{"noevent", Event{}.Type, "", false},      // no separator
+		{"", Event{}.Type, "", false},             // empty line
 	}
 
 	for _, tt := range tests {
@@ -55,7 +55,7 @@ func TestParseEvent(t *testing.T) {
 // the connected client-side connection and a cleanup function.
 func startMockEventSocket(t *testing.T) (net.Conn, *Client, func()) {
 	t.Helper()
-	dir, err := os.MkdirTemp("/tmp", "hypr-evt-*")
+	dir, err := os.MkdirTemp(os.TempDir(), "hypr-evt-*")
 	if err != nil {
 		t.Fatalf("mkdirtemp: %v", err)
 	}
@@ -118,7 +118,7 @@ func startMockEventSocket(t *testing.T) (net.Conn, *Client, func()) {
 }
 
 func TestEventListenerReceivesEvents(t *testing.T) {
-	dir, err := os.MkdirTemp("/tmp", "hypr-evt-*")
+	dir, err := os.MkdirTemp(os.TempDir(), "hypr-evt-*")
 	if err != nil {
 		t.Fatalf("mkdirtemp: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestEventListenerReceivesEvents(t *testing.T) {
 }
 
 func TestEventListenerClose(t *testing.T) {
-	dir, err := os.MkdirTemp("/tmp", "hypr-evt-*")
+	dir, err := os.MkdirTemp(os.TempDir(), "hypr-evt-*")
 	if err != nil {
 		t.Fatalf("mkdirtemp: %v", err)
 	}
@@ -247,7 +247,7 @@ func TestEventListenerClose(t *testing.T) {
 }
 
 func TestEventListenerContextCancel(t *testing.T) {
-	dir, err := os.MkdirTemp("/tmp", "hypr-evt-*")
+	dir, err := os.MkdirTemp(os.TempDir(), "hypr-evt-*")
 	if err != nil {
 		t.Fatalf("mkdirtemp: %v", err)
 	}

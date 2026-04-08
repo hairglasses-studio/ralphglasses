@@ -44,6 +44,41 @@ func TestCoordEnsureCoordDir(t *testing.T) {
 	}
 }
 
+func TestDefaultCoordDir_PrefersEnvOverride(t *testing.T) {
+	override := filepath.Join(t.TempDir(), "coord")
+	t.Setenv(coordinationDirEnv, override)
+	t.Setenv("XDG_RUNTIME_DIR", filepath.Join(t.TempDir(), "runtime"))
+
+	if got := defaultCoordDir(); got != override {
+		t.Fatalf("defaultCoordDir() = %q, want %q", got, override)
+	}
+}
+
+func TestDefaultCoordDir_UsesXDGRuntimeDir(t *testing.T) {
+	runtimeDir := filepath.Join(t.TempDir(), "runtime")
+	t.Setenv(coordinationDirEnv, "")
+	t.Setenv("XDG_RUNTIME_DIR", runtimeDir)
+
+	got := defaultCoordDir()
+	want := filepath.Join(runtimeDir, "ralphglasses", "coordination")
+	if got != want {
+		t.Fatalf("defaultCoordDir() = %q, want %q", got, want)
+	}
+}
+
+func TestDefaultCoordDir_UsesHomeDirFallback(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv(coordinationDirEnv, "")
+	t.Setenv("XDG_RUNTIME_DIR", "")
+	t.Setenv("HOME", homeDir)
+
+	got := defaultCoordDir()
+	want := filepath.Join(homeDir, ".ralphglasses", "coordination")
+	if got != want {
+		t.Fatalf("defaultCoordDir() = %q, want %q", got, want)
+	}
+}
+
 func TestCoordEnsureCoordDirIdempotent(t *testing.T) {
 	cleanCoordDir(t)
 
