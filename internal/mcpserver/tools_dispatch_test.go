@@ -220,8 +220,8 @@ func TestHandleServerHealth_IncludesDiscoveryContract(t *testing.T) {
 	if payload["resource_count"] != float64(9) {
 		t.Fatalf("resource_count = %v, want 9", payload["resource_count"])
 	}
-	if payload["resource_template_count"] != float64(3) {
-		t.Fatalf("resource_template_count = %v, want 3", payload["resource_template_count"])
+	if payload["resource_template_count"] != float64(4) {
+		t.Fatalf("resource_template_count = %v, want 4", payload["resource_template_count"])
 	}
 	if payload["skill_count"] == nil {
 		t.Fatalf("expected skill_count in server health payload: %v", payload)

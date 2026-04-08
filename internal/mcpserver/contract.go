@@ -55,6 +55,12 @@ type WorkflowDef struct {
 
 var resourceTemplateDefs = []ResourceTemplateDef{
 	{
+		URI:         "ralph:///{repo}/triage",
+		Name:        "Repo triage",
+		Description: "Read a consolidated repo triage brief with status, progress, recent logs, and runtime-health hints.",
+		MIMEType:    "application/json",
+	},
+	{
 		URI:         "ralph:///{repo}/status",
 		Name:        "Repo status",
 		Description: "Read .ralph/status.json for a repository.",
@@ -185,7 +191,7 @@ var skillCatalogDefs = []SkillCatalogDef{
 		Tags:          []string{"repo", "bootstrap", "validation", "worktrees"},
 		Workflows:     []string{"repo-triage", "provider-parity"},
 		ToolGroups:    []string{"core", "repo", "observability"},
-		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/workflows", "ralph:///catalog/cli-parity", "ralph:///catalog/discovery-adoption", "ralph:///catalog/adoption-priorities"},
+		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/workflows", "ralph:///catalog/cli-parity", "ralph:///catalog/discovery-adoption", "ralph:///catalog/adoption-priorities", "ralph:///{repo}/triage"},
 		KeyTools:      []string{"ralphglasses_doctor", "ralphglasses_validate", "ralphglasses_repo_scaffold", "ralphglasses_worktree_list", "ralphglasses_debug_bundle"},
 		CanonicalPath: ".agents/skills/ralphglasses-repo-admin/SKILL.md",
 	},
@@ -206,7 +212,7 @@ var skillCatalogDefs = []SkillCatalogDef{
 		Tags:          []string{"recovery", "salvage", "incident", "verification"},
 		Workflows:     []string{"repo-triage", "runtime-recovery"},
 		ToolGroups:    []string{"recovery", "session", "observability"},
-		Resources:     []string{"ralph:///runtime/health"},
+		Resources:     []string{"ralph:///runtime/health", "ralph:///{repo}/triage"},
 		KeyTools:      []string{"ralphglasses_logs", "ralphglasses_debug_bundle", "ralphglasses_recovery_plan", "ralphglasses_session_triage", "ralphglasses_session_salvage"},
 		CanonicalPath: ".agents/skills/ralphglasses-recovery-observability/SKILL.md",
 	},
@@ -226,7 +232,7 @@ var skillCatalogDefs = []SkillCatalogDef{
 		Tags:          []string{"self-dev", "roadmap", "parity", "docs"},
 		Workflows:     []string{"repo-triage", "provider-parity"},
 		ToolGroups:    []string{"repo", "roadmap", "loop", "fleet", "docs"},
-		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/skills", "ralph:///catalog/workflows", "ralph:///catalog/cli-parity", "ralph:///catalog/discovery-adoption", "ralph:///catalog/adoption-priorities"},
+		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/skills", "ralph:///catalog/workflows", "ralph:///catalog/cli-parity", "ralph:///catalog/discovery-adoption", "ralph:///catalog/adoption-priorities", "ralph:///{repo}/triage"},
 		Prompts:       []string{"provider-parity-audit", "repo-triage-brief"},
 		KeyTools:      []string{"ralphglasses_repo_surface_audit", "ralphglasses_roadmap_analyze", "ralphglasses_roadmap_prioritize", "ralphglasses_marathon"},
 		CanonicalPath: ".agents/skills/ralphglasses-self-dev/SKILL.md",
@@ -249,7 +255,7 @@ var workflowDefs = []WorkflowDef{
 	{
 		Name:        "repo-triage",
 		Description: "Assess one repository before mutating it by reading current status, progress, logs, and health signals.",
-		Resources:   []string{"ralph:///{repo}/status", "ralph:///{repo}/progress", "ralph:///{repo}/logs", "ralph:///runtime/health"},
+		Resources:   []string{"ralph:///{repo}/triage", "ralph:///{repo}/status", "ralph:///{repo}/progress", "ralph:///{repo}/logs", "ralph:///runtime/health"},
 		Prompts:     []string{"repo-triage-brief", "code-review", "test-generation"},
 		Skills:      []string{"ralphglasses-repo-admin", "ralphglasses-recovery-observability"},
 		ToolGroups:  []string{"core", "repo", "observability"},
@@ -387,7 +393,7 @@ Start with discovery instead of guessing:
 - Read ralph:///catalog/adoption-priorities when you need ranked next-work candidates from inactive CLI parity and discovery surfaces.
 - Read ralph:///runtime/health or ralph:///bootstrap/checklist when the task is runtime- or bootstrap-heavy.
 - Call ralphglasses_tool_groups, then ralphglasses_load_tool_group before using non-core tools.
-- Prefer repo read-only resources (ralph:///{repo}/status, /progress, /logs) before mutating tools.
+- Prefer repo read-only resources (ralph:///{repo}/triage, /status, /progress, /logs) before mutating tools.
 
 Current contract: %d grouped tools, %d management tools, %d tool groups, %d static resources, %d resource templates, and %d prompts.`,
 		GeneratedTotalTools,

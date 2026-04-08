@@ -23,6 +23,7 @@ import (
 // latency and token cost.
 func RegisterResources(srv *server.MCPServer, appSrv *Server) {
 	templateHandlers := map[string]server.ResourceTemplateHandlerFunc{
+		"ralph:///{repo}/triage":   makeTriageHandler(appSrv),
 		"ralph:///{repo}/status":   makeStatusHandler(appSrv),
 		"ralph:///{repo}/progress": makeProgressHandler(appSrv),
 		"ralph:///{repo}/logs":     makeLogsHandler(appSrv),
@@ -74,7 +75,7 @@ func RegisterResources(srv *server.MCPServer, appSrv *Server) {
 }
 
 // extractRepoName parses the repo name from a ralph:/// URI.
-// Expected formats: ralph:///{repo}/status, ralph:///{repo}/progress, ralph:///{repo}/logs
+// Expected formats: ralph:///{repo}/triage, ralph:///{repo}/status, ralph:///{repo}/progress, ralph:///{repo}/logs
 func extractRepoName(uri string) string {
 	// Strip the scheme prefix.
 	const prefix = "ralph:///"
@@ -87,6 +88,22 @@ func extractRepoName(uri string) string {
 		return rest[:idx]
 	}
 	return rest
+}
+
+func makeTriageHandler(appSrv *Server) server.ResourceTemplateHandlerFunc {
+	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		repoName := extractRepoName(req.Params.URI)
+		if repoName == "" {
+			return nil, fmt.Errorf("invalid URI: missing repo name")
+		}
+
+		repo, err := resolveRepo(appSrv, repoName)
+		if err != nil {
+			return nil, err
+		}
+
+		return jsonResourceContents(req.Params.URI, buildRepoTriageDoc(appSrv, repo))
+	}
 }
 
 func makeStatusHandler(appSrv *Server) server.ResourceTemplateHandlerFunc {
@@ -262,6 +279,68 @@ func buildCatalogServerDoc(appSrv *Server) map[string]any {
 	}
 }
 
+func buildRepoTriageDoc(appSrv *Server, repo *model.Repo) map[string]any {
+	triage := map[string]any{
+		"repo":               repo.Name,
+		"repo_path":          repo.Path,
+		"has_ralph":          repo.HasRalph,
+		"recommended_prompt": "repo-triage-brief",
+		"recommended_skills": []string{
+			"ralphglasses-repo-admin",
+			"ralphglasses-recovery-observability",
+			"ralphglasses-self-dev",
+		},
+		"supporting_resources": map[string]string{
+			"triage":         fmt.Sprintf("ralph:///%s/triage", repo.Name),
+			"status":         fmt.Sprintf("ralph:///%s/status", repo.Name),
+			"progress":       fmt.Sprintf("ralph:///%s/progress", repo.Name),
+			"logs":           fmt.Sprintf("ralph:///%s/logs", repo.Name),
+			"runtime_health": "ralph:///runtime/health",
+		},
+	}
+
+	var notes []string
+	if status, err := readJSONFile(filepath.Join(repo.Path, ".ralph", "status.json")); err == nil {
+		triage["status"] = status
+	} else if !os.IsNotExist(err) {
+		notes = append(notes, fmt.Sprintf("status.json: %v", err))
+	} else {
+		notes = append(notes, "status.json not found")
+	}
+
+	if progress, err := readJSONFile(filepath.Join(repo.Path, ".ralph", "progress.json")); err == nil {
+		triage["progress"] = progress
+	} else if !os.IsNotExist(err) {
+		notes = append(notes, fmt.Sprintf("progress.json: %v", err))
+	} else {
+		notes = append(notes, "progress.json not found")
+	}
+
+	if logs, err := tailFile(process.LogFilePath(repo.Path), 40); err == nil && strings.TrimSpace(logs) != "" {
+		triage["recent_logs"] = logs
+	} else if err != nil && !os.IsNotExist(err) {
+		notes = append(notes, fmt.Sprintf("ralph.log: %v", err))
+	} else if err != nil {
+		notes = append(notes, "ralph.log not found")
+	}
+
+	runtime := appSrv.runtimeHealthDoc()
+	triage["runtime_health"] = map[string]any{
+		"status":                    runtime["status"],
+		"deferred_mode":             runtime["deferred_mode"],
+		"loaded_groups":             runtime["loaded_groups"],
+		"tool_group_count":          runtime["tool_group_count"],
+		"resource_template_count":   runtime["resource_template_count"],
+		"prompt_count":              runtime["prompt_count"],
+		"highest_priority_workflow": nestedString(runtime["adoption_priority_summary"], "highest_priority_workflow"),
+	}
+
+	if len(notes) > 0 {
+		triage["notes"] = notes
+	}
+	return triage
+}
+
 func buildBootstrapChecklistDoc() map[string]any {
 	return map[string]any{
 		"title":       "Ralphglasses MCP-first bootstrap checklist",
@@ -386,6 +465,32 @@ func jsonResourceContents(uri string, value any) ([]mcp.ResourceContents, error)
 			Text:     string(data),
 		},
 	}, nil
+}
+
+func readJSONFile(path string) (any, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var value any
+	if err := json.Unmarshal(data, &value); err != nil {
+		return nil, fmt.Errorf("decode %s: %w", filepath.Base(path), err)
+	}
+	return value, nil
+}
+
+func nestedString(value any, key string) string {
+	m, ok := value.(map[string]any)
+	if !ok {
+		return ""
+	}
+	raw, ok := m[key]
+	if !ok {
+		return ""
+	}
+	str, _ := raw.(string)
+	return str
 }
 
 func instrumentResourceHandler(appSrv *Server, name string, next server.ResourceHandlerFunc) server.ResourceHandlerFunc {

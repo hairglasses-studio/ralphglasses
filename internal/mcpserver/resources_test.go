@@ -11,6 +11,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/process"
 )
 
 // setupRepoForResources creates a temp directory with a fake repo structure
@@ -56,7 +57,7 @@ func TestResourceRegistration(t *testing.T) {
 	_, mcpSrv, _ := setupRepoForResources(t)
 
 	// Verify resource templates are registered by sending a resources/list request.
-	// The MCPServer should have 3 resource templates registered.
+	// The MCPServer should have 4 resource templates registered.
 	ctx := context.Background()
 	rawReq := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"0.0.0"}}}`
 	mcpSrv.HandleMessage(ctx, []byte(rawReq))
@@ -76,8 +77,8 @@ func TestResourceRegistration(t *testing.T) {
 		t.Fatalf("expected ListResourceTemplatesResult, got %T", rpcResp.Result)
 	}
 
-	if len(result.ResourceTemplates) != 3 {
-		t.Errorf("expected 3 resource templates, got %d", len(result.ResourceTemplates))
+	if len(result.ResourceTemplates) != 4 {
+		t.Errorf("expected 4 resource templates, got %d", len(result.ResourceTemplates))
 	}
 
 	// Verify template URIs.
@@ -86,6 +87,7 @@ func TestResourceRegistration(t *testing.T) {
 		uris[tmpl.URITemplate.Raw()] = true
 	}
 	for _, expected := range []string{
+		"ralph:///{repo}/triage",
 		"ralph:///{repo}/status",
 		"ralph:///{repo}/progress",
 		"ralph:///{repo}/logs",
@@ -169,6 +171,51 @@ func TestCatalogSkillsResource_ReturnsSkillCatalog(t *testing.T) {
 		t.Fatalf("expected recovery skill in catalog: %s", textContent.Text)
 	}
 	_ = appSrv
+}
+
+func TestTriageResource_ReturnsAggregatedSummary(t *testing.T) {
+	t.Parallel()
+
+	appSrv, _, repoName := setupRepoForResources(t)
+	repo := appSrv.findRepo(repoName)
+	if repo == nil {
+		t.Fatal("expected repo in test server")
+	}
+
+	if err := os.WriteFile(filepath.Join(repo.Path, ".ralph", "status.json"), []byte(`{"phase":"running","healthy":true}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo.Path, ".ralph", "progress.json"), []byte(`{"step":3,"total_steps":5}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(process.LogFilePath(repo.Path), []byte("first line\nsecond line\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := makeTriageHandler(appSrv)
+	results, err := handler(context.Background(), mcp.ReadResourceRequest{
+		Params: mcp.ReadResourceParams{URI: "ralph:///" + repoName + "/triage"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	textContent, ok := results[0].(mcp.TextResourceContents)
+	if !ok {
+		t.Fatalf("expected TextResourceContents, got %T", results[0])
+	}
+	for _, expected := range []string{
+		`"repo": "` + repoName + `"`,
+		`"recommended_prompt": "repo-triage-brief"`,
+		`"status": {`,
+		`"progress": {`,
+		`"recent_logs": "first line\nsecond line"`,
+		`"highest_priority_workflow"`,
+	} {
+		if !strings.Contains(textContent.Text, expected) {
+			t.Fatalf("expected %q in triage resource: %s", expected, textContent.Text)
+		}
+	}
 }
 
 func TestCLIParityResource_ReturnsCoverageSummary(t *testing.T) {
