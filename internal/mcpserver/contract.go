@@ -112,6 +112,12 @@ var staticResourceDefs = []ResourceDef{
 		MIMEType:    "application/json",
 	},
 	{
+		URI:         "ralph:///catalog/adoption-priorities",
+		Name:        "Adoption priorities",
+		Description: "Read ranked next-work candidates derived from inactive CLI parity surfaces plus inactive resources, prompts, and focused skills.",
+		MIMEType:    "application/json",
+	},
+	{
 		URI:         "ralph:///bootstrap/checklist",
 		Name:        "Bootstrap checklist",
 		Description: "Read the MCP-first bootstrap checklist for provider readiness, config validation, and firstboot flows.",
@@ -159,7 +165,7 @@ var skillCatalogDefs = []SkillCatalogDef{
 		Tags:          []string{"discovery", "contract", "routing", "deferred-loading"},
 		Workflows:     []string{"discover-and-load"},
 		ToolGroups:    []string{"management", "core"},
-		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/tool-groups", "ralph:///catalog/skills", "ralph:///catalog/workflows", "ralph:///catalog/discovery-adoption"},
+		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/tool-groups", "ralph:///catalog/skills", "ralph:///catalog/workflows", "ralph:///catalog/discovery-adoption", "ralph:///catalog/adoption-priorities"},
 		KeyTools:      []string{"ralphglasses_server_health", "ralphglasses_tool_groups", "ralphglasses_load_tool_group", "ralphglasses_skill_export"},
 		CanonicalPath: ".agents/skills/ralphglasses-discovery/SKILL.md",
 	},
@@ -179,7 +185,7 @@ var skillCatalogDefs = []SkillCatalogDef{
 		Tags:          []string{"repo", "bootstrap", "validation", "worktrees"},
 		Workflows:     []string{"repo-triage", "provider-parity"},
 		ToolGroups:    []string{"core", "repo", "observability"},
-		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/workflows", "ralph:///catalog/cli-parity", "ralph:///catalog/discovery-adoption"},
+		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/workflows", "ralph:///catalog/cli-parity", "ralph:///catalog/discovery-adoption", "ralph:///catalog/adoption-priorities"},
 		KeyTools:      []string{"ralphglasses_doctor", "ralphglasses_validate", "ralphglasses_repo_scaffold", "ralphglasses_worktree_list", "ralphglasses_debug_bundle"},
 		CanonicalPath: ".agents/skills/ralphglasses-repo-admin/SKILL.md",
 	},
@@ -220,7 +226,7 @@ var skillCatalogDefs = []SkillCatalogDef{
 		Tags:          []string{"self-dev", "roadmap", "parity", "docs"},
 		Workflows:     []string{"repo-triage", "provider-parity"},
 		ToolGroups:    []string{"repo", "roadmap", "loop", "fleet", "docs"},
-		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/skills", "ralph:///catalog/workflows", "ralph:///catalog/cli-parity", "ralph:///catalog/discovery-adoption"},
+		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/skills", "ralph:///catalog/workflows", "ralph:///catalog/cli-parity", "ralph:///catalog/discovery-adoption", "ralph:///catalog/adoption-priorities"},
 		Prompts:       []string{"provider-parity-audit", "repo-triage-brief"},
 		KeyTools:      []string{"ralphglasses_repo_surface_audit", "ralphglasses_roadmap_analyze", "ralphglasses_roadmap_prioritize", "ralphglasses_marathon"},
 		CanonicalPath: ".agents/skills/ralphglasses-self-dev/SKILL.md",
@@ -378,6 +384,7 @@ Start with discovery instead of guessing:
 - Read ralph:///catalog/workflows for common operator playbooks.
 - Read ralph:///catalog/cli-parity when the task is about CLI-to-MCP workflow coverage or operator parity.
 - Read ralph:///catalog/discovery-adoption when you need live adoption telemetry for resources, prompts, and focused skill entrypoints.
+- Read ralph:///catalog/adoption-priorities when you need ranked next-work candidates from inactive CLI parity and discovery surfaces.
 - Read ralph:///runtime/health or ralph:///bootstrap/checklist when the task is runtime- or bootstrap-heavy.
 - Call ralphglasses_tool_groups, then ralphglasses_load_tool_group before using non-core tools.
 - Prefer repo read-only resources (ralph:///{repo}/status, /progress, /logs) before mutating tools.

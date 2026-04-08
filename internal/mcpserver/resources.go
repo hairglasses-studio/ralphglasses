@@ -45,14 +45,15 @@ func RegisterResources(srv *server.MCPServer, appSrv *Server) {
 	}
 
 	staticHandlers := map[string]server.ResourceHandlerFunc{
-		"ralph:///catalog/server":             makeCatalogServerHandler(appSrv),
-		"ralph:///catalog/tool-groups":        makeCatalogToolGroupsHandler(appSrv),
-		"ralph:///catalog/workflows":          makeCatalogWorkflowsHandler(),
-		"ralph:///catalog/skills":             makeCatalogSkillsHandler(),
-		"ralph:///catalog/cli-parity":         makeCLIParityHandler(appSrv),
-		"ralph:///catalog/discovery-adoption": makeDiscoveryAdoptionHandler(appSrv),
-		"ralph:///bootstrap/checklist":        makeBootstrapChecklistHandler(),
-		"ralph:///runtime/health":             makeRuntimeHealthHandler(appSrv),
+		"ralph:///catalog/server":              makeCatalogServerHandler(appSrv),
+		"ralph:///catalog/tool-groups":         makeCatalogToolGroupsHandler(appSrv),
+		"ralph:///catalog/workflows":           makeCatalogWorkflowsHandler(),
+		"ralph:///catalog/skills":              makeCatalogSkillsHandler(),
+		"ralph:///catalog/cli-parity":          makeCLIParityHandler(appSrv),
+		"ralph:///catalog/discovery-adoption":  makeDiscoveryAdoptionHandler(appSrv),
+		"ralph:///catalog/adoption-priorities": makeAdoptionPrioritiesHandler(appSrv),
+		"ralph:///bootstrap/checklist":         makeBootstrapChecklistHandler(),
+		"ralph:///runtime/health":              makeRuntimeHealthHandler(appSrv),
 	}
 
 	for _, def := range staticResourceCatalog() {
@@ -215,6 +216,12 @@ func makeDiscoveryAdoptionHandler(appSrv *Server) server.ResourceHandlerFunc {
 	}
 }
 
+func makeAdoptionPrioritiesHandler(appSrv *Server) server.ResourceHandlerFunc {
+	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, appSrv.adoptionPrioritySummary())
+	}
+}
+
 func makeBootstrapChecklistHandler() server.ResourceHandlerFunc {
 	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		return jsonResourceContents(req.Params.URI, buildBootstrapChecklistDoc())
@@ -249,6 +256,7 @@ func buildCatalogServerDoc(appSrv *Server) map[string]any {
 		"cli_parity_summary":         parity.CLIParityCoverage(),
 		"cli_parity_usage":           usageSummary,
 		"discovery_adoption_summary": discoverySummary,
+		"adoption_priority_summary":  appSrv.adoptionPrioritySummary(),
 		"prompts":                    promptNames(),
 		"tool_groups":                buildCatalogToolGroupsDoc(appSrv),
 	}

@@ -118,8 +118,8 @@ func TestStaticResourceRegistration(t *testing.T) {
 		t.Fatalf("expected ListResourcesResult, got %T", rpcResp.Result)
 	}
 
-	if len(result.Resources) != 8 {
-		t.Fatalf("expected 8 static resources, got %d", len(result.Resources))
+	if len(result.Resources) != 9 {
+		t.Fatalf("expected 9 static resources, got %d", len(result.Resources))
 	}
 
 	uris := make(map[string]bool)
@@ -134,6 +134,7 @@ func TestStaticResourceRegistration(t *testing.T) {
 		"ralph:///catalog/skills",
 		"ralph:///catalog/cli-parity",
 		"ralph:///catalog/discovery-adoption",
+		"ralph:///catalog/adoption-priorities",
 		"ralph:///bootstrap/checklist",
 		"ralph:///runtime/health",
 	} {
@@ -236,6 +237,43 @@ func TestDiscoveryAdoptionResource_ReturnsTelemetrySummary(t *testing.T) {
 	}
 	if !strings.Contains(textContent.Text, "\"resource_surfaces\"") {
 		t.Fatalf("expected resource surfaces in resource: %s", textContent.Text)
+	}
+}
+
+func TestAdoptionPrioritiesResource_ReturnsPrioritySummary(t *testing.T) {
+	t.Parallel()
+
+	appSrv, _, _ := setupRepoForResources(t)
+	ralphDir := filepath.Join(appSrv.ScanPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ralphDir, "tool_benchmarks.jsonl"), []byte(`{"tool":"ralphglasses_doctor","ts":"2026-04-08T11:00:00Z","latency_ms":10,"ok":true}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ralphDir, "discovery_usage.jsonl"), []byte(`{"kind":"resource","name":"ralph:///catalog/server","ts":"2026-04-08T11:00:00Z"}`+"\n"+`{"kind":"prompt","name":"bootstrap-firstboot","ts":"2026-04-08T11:01:00Z"}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := makeAdoptionPrioritiesHandler(appSrv)
+	results, err := handler(context.Background(), mcp.ReadResourceRequest{
+		Params: mcp.ReadResourceParams{URI: "ralph:///catalog/adoption-priorities"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	textContent, ok := results[0].(mcp.TextResourceContents)
+	if !ok {
+		t.Fatalf("expected TextResourceContents, got %T", results[0])
+	}
+	if !strings.Contains(textContent.Text, "\"workflow_candidate_count\"") {
+		t.Fatalf("expected workflow candidate count in resource: %s", textContent.Text)
+	}
+	if !strings.Contains(textContent.Text, "\"top_surface_candidates\"") {
+		t.Fatalf("expected top surface candidates in resource: %s", textContent.Text)
+	}
+	if strings.Contains(textContent.Text, "\"name\": \"ralph:///catalog/server\"") {
+		t.Fatalf("active discovery surface should not be prioritized: %s", textContent.Text)
 	}
 }
 

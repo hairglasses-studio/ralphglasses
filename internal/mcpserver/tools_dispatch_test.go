@@ -217,8 +217,8 @@ func TestHandleServerHealth_IncludesDiscoveryContract(t *testing.T) {
 	if payload["prompt_count"] != float64(6) {
 		t.Fatalf("prompt_count = %v, want 6", payload["prompt_count"])
 	}
-	if payload["resource_count"] != float64(8) {
-		t.Fatalf("resource_count = %v, want 8", payload["resource_count"])
+	if payload["resource_count"] != float64(9) {
+		t.Fatalf("resource_count = %v, want 9", payload["resource_count"])
 	}
 	if payload["resource_template_count"] != float64(3) {
 		t.Fatalf("resource_template_count = %v, want 3", payload["resource_template_count"])
@@ -235,6 +235,9 @@ func TestHandleServerHealth_IncludesDiscoveryContract(t *testing.T) {
 	if payload["discovery_adoption_summary"] == nil {
 		t.Fatalf("expected discovery_adoption_summary in server health payload: %v", payload)
 	}
+	if payload["adoption_priority_summary"] == nil {
+		t.Fatalf("expected adoption_priority_summary in server health payload: %v", payload)
+	}
 	instructions, _ := payload["instructions"].(string)
 	if !strings.Contains(instructions, "ralph:///catalog/server") {
 		t.Fatalf("instructions missing discovery resource guidance: %q", instructions)
@@ -247,6 +250,9 @@ func TestHandleServerHealth_IncludesDiscoveryContract(t *testing.T) {
 	}
 	if !strings.Contains(instructions, "ralph:///catalog/discovery-adoption") {
 		t.Fatalf("instructions missing discovery adoption guidance: %q", instructions)
+	}
+	if !strings.Contains(instructions, "ralph:///catalog/adoption-priorities") {
+		t.Fatalf("instructions missing adoption priority guidance: %q", instructions)
 	}
 }
 

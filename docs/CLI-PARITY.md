@@ -23,6 +23,7 @@ The live `ralph:///catalog/cli-parity` resource now includes a rolling usage sna
 The broader discovery front doors now have their own companion resource:
 
 - `ralph:///catalog/discovery-adoption` for rolling resource, prompt, and focused-skill front-door adoption telemetry
+- `ralph:///catalog/adoption-priorities` for ranked next-work candidates derived from inactive CLI parity and discovery surfaces
 
 - Default window: last `30` days
 - Source of truth: MCP tool-call recorder output, not hand-maintained counters
@@ -92,6 +93,7 @@ Use the server’s discovery surfaces instead of hard-coding counts:
 - `ralph:///catalog/skills`
 - `ralph:///catalog/cli-parity`
 - `ralph:///catalog/discovery-adoption`
+- `ralph:///catalog/adoption-priorities`
 - `ralph:///bootstrap/checklist`
 - `ralph:///runtime/health`
 - `ralphglasses_server_health`
