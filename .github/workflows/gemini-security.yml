@@ -93,7 +93,7 @@ jobs:
       - name: Run Gemini security review
         id: run_gemini
         if: steps.pr.outputs.should_run == 'true'
-        uses: google-github-actions/run-gemini-cli@v0.1.15
+        uses: google-github-actions/run-gemini-cli@v0.1.21
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           prompt: |
