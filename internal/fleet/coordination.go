@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
 
 const coordinationDirEnv = "RALPHGLASSES_COORD_DIR"
@@ -30,16 +31,7 @@ type Claim struct {
 }
 
 func defaultCoordDir() string {
-	if override := strings.TrimSpace(os.Getenv(coordinationDirEnv)); override != "" {
-		return override
-	}
-	if xdgRuntime := strings.TrimSpace(os.Getenv("XDG_RUNTIME_DIR")); xdgRuntime != "" {
-		return filepath.Join(xdgRuntime, "ralphglasses", "coordination")
-	}
-	if homeDir, err := os.UserHomeDir(); err == nil && strings.TrimSpace(homeDir) != "" {
-		return filepath.Join(homeDir, ".ralphglasses", "coordination")
-	}
-	return filepath.Join(os.TempDir(), "ralphglasses-coordination")
+	return ralphpath.CoordinationDir()
 }
 
 // EnsureCoordDir creates the coordination directory structure.

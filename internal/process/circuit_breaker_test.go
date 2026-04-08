@@ -8,6 +8,21 @@ import (
 	"time"
 )
 
+func TestDefaultCoordDir_UsesSharedPathResolver(t *testing.T) {
+	override := filepath.Join(t.TempDir(), "coord")
+	t.Setenv("RALPHGLASSES_COORD_DIR", override)
+	if got := defaultCoordDir(); got != override {
+		t.Fatalf("defaultCoordDir() override = %q, want %q", got, override)
+	}
+
+	t.Setenv("RALPHGLASSES_COORD_DIR", "")
+	runtimeDir := filepath.Join(t.TempDir(), "runtime")
+	t.Setenv("XDG_RUNTIME_DIR", runtimeDir)
+	if got, want := defaultCoordDir(), filepath.Join(runtimeDir, "ralphglasses", "coordination"); got != want {
+		t.Fatalf("defaultCoordDir() = %q, want %q", got, want)
+	}
+}
+
 func TestCircuitBreakerDefaults(t *testing.T) {
 	cb := NewCircuitBreaker(0, 0, 0)
 	if cb.maxFailures != defaultMaxFailures {

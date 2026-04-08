@@ -15,10 +15,8 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet/pool"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
-
-// DefaultStateDir is the shared directory for session state persistence.
-const DefaultStateDir = "~/.ralphglasses/sessions"
 
 // Manager tracks all active provider sessions and teams.
 type Manager struct {
@@ -88,7 +86,7 @@ const DefaultEstimatedSessionCost = 0.50
 
 // NewManager creates a new session manager.
 func NewManager() *Manager {
-	stateDir := expandHome(DefaultStateDir)
+	stateDir := ralphpath.SessionsDir()
 	return &Manager{
 		sessions:                 make(map[string]*Session),
 		teams:                    make(map[string]*TeamStatus),
@@ -106,7 +104,7 @@ func NewManager() *Manager {
 
 // NewManagerWithBus creates a session manager wired to an event bus.
 func NewManagerWithBus(bus *events.Bus) *Manager {
-	stateDir := expandHome(DefaultStateDir)
+	stateDir := ralphpath.SessionsDir()
 	return &Manager{
 		sessions:                 make(map[string]*Session),
 		teams:                    make(map[string]*TeamStatus),
@@ -127,7 +125,7 @@ func NewManagerWithBus(bus *events.Bus) *Manager {
 // The in-memory sessions map is still used for active (in-process) sessions;
 // the Store provides durable persistence.
 func NewManagerWithStore(store Store, bus *events.Bus) *Manager {
-	stateDir := expandHome(DefaultStateDir)
+	stateDir := ralphpath.SessionsDir()
 	return &Manager{
 		sessions:                 make(map[string]*Session),
 		teams:                    make(map[string]*TeamStatus),

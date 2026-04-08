@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -25,6 +24,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
 	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 	tmuxpkg "github.com/hairglasses-studio/ralphglasses/internal/tmux"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/styles"
@@ -80,11 +80,7 @@ MCP-capable client.`, mcpserver.TotalToolCount(), len(mcpserver.ToolGroupNames))
 		}
 
 		// Load and validate runtime config (warnings only, non-fatal).
-		home, _ := os.UserHomeDir()
-		if home != "" {
-			cfgPath := filepath.Join(home, ".ralphglasses", "config.json")
-			_, _ = config.Load(cfgPath) // validation warnings logged inside Load
-		}
+		_, _ = config.Load(ralphpath.ConfigPath()) // validation warnings logged inside Load
 
 		// Start health endpoint if --http-addr is set.
 		if httpAddr != "" {

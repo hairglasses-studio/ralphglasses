@@ -14,6 +14,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 
 	_ "modernc.org/sqlite"
 )
@@ -195,11 +196,7 @@ func ParseGitVersion(raw string) (major, minor int, ok bool) {
 }
 
 func checkConfig(_ context.Context, _ DoctorOptions) DoctorResult {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return DoctorResult{Name: "config", Status: StatusWarn, Message: "cannot resolve home directory"}
-	}
-	cfgPath := filepath.Join(home, ".ralphglasses", "config.json")
+	cfgPath := ralphpath.ConfigPath()
 	info, err := os.Stat(cfgPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -225,11 +222,7 @@ func checkConfig(_ context.Context, _ DoctorOptions) DoctorResult {
 }
 
 func checkStateDir(_ context.Context, _ DoctorOptions) DoctorResult {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return DoctorResult{Name: "state dir", Status: StatusWarn, Message: "cannot resolve home directory"}
-	}
-	dir := filepath.Join(home, ".ralphglasses")
+	dir := ralphpath.StateDir()
 	info, err := os.Stat(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -249,11 +242,7 @@ func checkStateDir(_ context.Context, _ DoctorOptions) DoctorResult {
 }
 
 func checkSQLite(_ context.Context, _ DoctorOptions) DoctorResult {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return DoctorResult{Name: "sqlite", Status: StatusWarn, Message: "cannot resolve home directory"}
-	}
-	dbPath := filepath.Join(home, ".ralphglasses", "state.db")
+	dbPath := ralphpath.SQLiteStorePath()
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return DoctorResult{Name: "sqlite", Status: StatusFail, Message: "cannot open: " + err.Error()}

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
 
 // CircuitState represents the state of the circuit breaker.
@@ -14,18 +16,22 @@ type CircuitState string
 
 const (
 	CircuitClosed   CircuitState = "closed"    // healthy, allow spawns
-	CircuitOpen     CircuitState = "open"       // broken, refuse spawns
-	CircuitHalfOpen CircuitState = "half-open"  // recovering, allow one probe
+	CircuitOpen     CircuitState = "open"      // broken, refuse spawns
+	CircuitHalfOpen CircuitState = "half-open" // recovering, allow one probe
 )
 
 const (
 	defaultMaxFailures   = 3
 	defaultResetTimeout  = 5 * time.Minute
 	defaultFailureWindow = 60 * time.Second
-	circuitStateFile   = "circuit-state.json"
+	circuitStateFile     = "circuit-state.json"
 )
 
-var coordDir = filepath.Join(os.TempDir(), "ralphglasses-coordination")
+var coordDir = defaultCoordDir()
+
+func defaultCoordDir() string {
+	return ralphpath.CoordinationDir()
+}
 
 // CircuitBreaker prevents cascading failures by tracking spawn failures
 // and refusing new spawns when the failure rate exceeds a threshold.

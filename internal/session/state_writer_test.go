@@ -9,6 +9,21 @@ import (
 	"time"
 )
 
+func TestDefaultActiveStateFile_UsesRuntimeDir(t *testing.T) {
+	override := filepath.Join(t.TempDir(), "active.json")
+	t.Setenv("RALPHGLASSES_ACTIVE_STATE_FILE", override)
+	if got := defaultActiveStateFile(); got != override {
+		t.Fatalf("defaultActiveStateFile() override = %q, want %q", got, override)
+	}
+
+	t.Setenv("RALPHGLASSES_ACTIVE_STATE_FILE", "")
+	runtimeDir := filepath.Join(t.TempDir(), "runtime")
+	t.Setenv("XDG_RUNTIME_DIR", runtimeDir)
+	if got, want := defaultActiveStateFile(), filepath.Join(runtimeDir, "ralphglasses", "ralphglasses-active.json"); got != want {
+		t.Fatalf("defaultActiveStateFile() = %q, want %q", got, want)
+	}
+}
+
 func useTempActiveStateFile(t *testing.T) string {
 	t.Helper()
 
@@ -132,7 +147,7 @@ func TestStateWriterRemoveActiveStateIdempotent(t *testing.T) {
 
 	// Removing when file doesn't exist should not panic.
 	os.Remove(activePath) // ensure it doesn't exist
-	RemoveActiveState()        // should not panic
+	RemoveActiveState()   // should not panic
 }
 
 func TestStateWriterAtomicWrite(t *testing.T) {

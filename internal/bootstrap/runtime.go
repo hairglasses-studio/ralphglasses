@@ -12,6 +12,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet"
 	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -35,12 +36,7 @@ func InitStore() session.Store {
 }
 
 func initStore() storeInitResult {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		slog.Warn("sqlite store: cannot resolve home dir, using memory store", "error", err)
-		return storeInitResult{store: session.NewMemoryStore(), err: err}
-	}
-	dbPath := filepath.Join(home, ".ralphglasses", "state.db")
+	dbPath := ralphpath.SQLiteStorePath()
 	store, err := session.NewSQLiteStore(dbPath)
 	if err != nil {
 		slog.Warn("sqlite store: falling back to memory store", "path", dbPath, "error", err)

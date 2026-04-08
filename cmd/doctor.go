@@ -18,6 +18,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 
 	_ "modernc.org/sqlite"
@@ -270,13 +271,9 @@ func parseGitVersion(raw string) (major, minor int, ok bool) {
 	return maj, min, true
 }
 
-// checkConfig validates ~/.ralphglasses/config.json exists and is valid JSON.
+// checkConfig validates the active runtime config file exists and is valid JSON.
 func checkConfig() doctorResult {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return doctorResult{Name: "config", Status: statusWarn, Message: "cannot resolve home directory"}
-	}
-	cfgPath := filepath.Join(home, ".ralphglasses", "config.json")
+	cfgPath := ralphpath.ConfigPath()
 	info, err := os.Stat(cfgPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -301,13 +298,9 @@ func checkConfig() doctorResult {
 	return doctorResult{Name: "config", Status: statusPass, Message: cfgPath}
 }
 
-// checkStateDir verifies ~/.ralphglasses/ exists and is writable.
+// checkStateDir verifies the active state directory exists and is writable.
 func checkStateDir() doctorResult {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return doctorResult{Name: "state dir", Status: statusWarn, Message: "cannot resolve home directory"}
-	}
-	dir := filepath.Join(home, ".ralphglasses")
+	dir := ralphpath.StateDir()
 	info, err := os.Stat(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -329,13 +322,9 @@ func checkStateDir() doctorResult {
 	return doctorResult{Name: "state dir", Status: statusPass, Message: dir}
 }
 
-// checkSQLite verifies the SQLite store can be opened at ~/.ralphglasses/state.db.
+// checkSQLite verifies the active SQLite store path can be opened.
 func checkSQLite() doctorResult {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return doctorResult{Name: "sqlite", Status: statusWarn, Message: "cannot resolve home directory"}
-	}
-	dbPath := filepath.Join(home, ".ralphglasses", "state.db")
+	dbPath := ralphpath.SQLiteStorePath()
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return doctorResult{Name: "sqlite", Status: statusFail, Message: "cannot open: " + err.Error()}

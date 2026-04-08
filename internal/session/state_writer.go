@@ -5,9 +5,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
 
-var activeStateFile = filepath.Join(os.TempDir(), "ralphglasses-active.json")
+var activeStateFile = defaultActiveStateFile()
+
+func defaultActiveStateFile() string {
+	return ralphpath.ActiveStatePath()
+}
 
 // ActiveState is the on-disk representation of the current session state,
 // designed for consumption by starship prompt and external tooling.
