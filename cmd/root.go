@@ -66,6 +66,11 @@ MCP-capable client.`, mcpserver.TotalToolCount(), len(mcpserver.ToolGroupNames))
 		// Configure structured logging from flags before anything else logs.
 		slog.SetDefault(slog.New(newLogHandler(os.Stderr)))
 
+		// Fast-path: skip expensive init for lightweight commands.
+		if isLightweightCmd(cmd) {
+			return nil
+		}
+
 		// Warn if compiled-in cost rates are older than CostRatesMaxAgeDays.
 		config.CheckCostRateStaleness()
 
@@ -236,6 +241,14 @@ func ScanTimeoutDuration() time.Duration {
 		return 30 * time.Second
 	}
 	return d
+}
+
+// isLightweightCmd returns true for commands that don't need config loading,
+// cost rate checks, or server startup (Pattern 4: Fast-Path Startup).
+func isLightweightCmd(cmd *cobra.Command) bool {
+	name := cmd.Name()
+	return name == "version" || name == "help" || name == "completion" ||
+		name == "bash" || name == "zsh" || name == "fish" || name == "powershell"
 }
 
 // parseLogLevel converts a string level name to slog.Level.

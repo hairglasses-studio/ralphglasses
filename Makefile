@@ -1,10 +1,11 @@
 VERSION    := $(shell git describe --tags --always --dirty)
 COMMIT     := $(shell git rev-parse --short HEAD)
 BUILD_DATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS    := -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSION) \
+LDFLAGS    := -s -w -trimpath \
+              -X github.com/hairglasses-studio/ralphglasses/cmd.version=$(VERSION) \
               -X github.com/hairglasses-studio/ralphglasses/cmd.commit=$(COMMIT) \
               -X github.com/hairglasses-studio/ralphglasses/cmd.buildDate=$(BUILD_DATE)
-PI_LDFLAGS := -X main.version=$(VERSION)
+PI_LDFLAGS := -s -w -trimpath -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
 .PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke fuzz bench bench-compare bench-dashboard build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap skill-doc skill-surface update-tool-counts

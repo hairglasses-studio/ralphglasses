@@ -199,6 +199,32 @@ func TestSetMaxTokens(t *testing.T) {
 	}
 }
 
+func TestNeedsCompactionForModel(t *testing.T) {
+	t.Parallel()
+	cc := NewContextCompactor(DefaultCompactionConfig())
+	msgs := []Message{
+		{Role: "user", Content: strings.Repeat("word ", 1000)}, // ~1300 tokens
+	}
+
+	// Under 80% of 200k — no compaction needed.
+	if cc.NeedsCompactionForModel(msgs, 200_000, 0.80) {
+		t.Fatal("expected no compaction needed when well under model limit")
+	}
+
+	// Over 80% of a small limit — compaction needed.
+	if !cc.NeedsCompactionForModel(msgs, 1500, 0.80) {
+		t.Fatal("expected compaction needed when estimated tokens > 80% of 1500")
+	}
+
+	// Zero/negative model limit — always false.
+	if cc.NeedsCompactionForModel(msgs, 0, 0.80) {
+		t.Fatal("expected false for zero model limit")
+	}
+	if cc.NeedsCompactionForModel(msgs, -1, 0.80) {
+		t.Fatal("expected false for negative model limit")
+	}
+}
+
 func TestSetStrategy(t *testing.T) {
 	t.Parallel()
 	cc := NewContextCompactor(DefaultCompactionConfig())

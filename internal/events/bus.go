@@ -74,6 +74,9 @@ const (
 	WorkerPaused       EventType = "worker.paused"
 	WorkerResumed      EventType = "worker.resumed"
 
+	// Hooks
+	HookBlocked EventType = "hook.blocked" // Hook verdict blocked an action
+
 	// Safety
 	AnomalyDetected EventType = "anomaly.detected" // Fleet anomaly detector triggered
 	EmergencyStop   EventType = "emergency.stop"   // Kill switch engaged
@@ -122,6 +125,7 @@ var knownEventTypes = map[EventType]struct{}{
 	WorkerDeregistered:    {},
 	WorkerPaused:          {},
 	WorkerResumed:         {},
+	HookBlocked:           {},
 	AnomalyDetected:       {},
 	EmergencyStop:         {},
 	EmergencyResume:       {},

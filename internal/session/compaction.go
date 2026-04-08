@@ -148,6 +148,19 @@ func (cc *ContextCompactor) NeedsCompaction(messages []Message) bool {
 	return estimateMessagesTokens(messages) > cc.config.MaxTokens
 }
 
+// NeedsCompactionForModel returns true if the estimated token count exceeds
+// the given percentage of the model's context limit. This enables token-based
+// compaction triggers that fire before hitting the hard limit.
+// Pattern 10: Token-Based Compaction Trigger (from whiteclaw/Claude Code analysis).
+func (cc *ContextCompactor) NeedsCompactionForModel(messages []Message, modelContextLimit int, thresholdPct float64) bool {
+	if modelContextLimit <= 0 || thresholdPct <= 0 {
+		return false
+	}
+	estimated := estimateMessagesTokens(messages)
+	threshold := int(float64(modelContextLimit) * thresholdPct)
+	return estimated > threshold
+}
+
 // TokenEstimate returns the estimated token count for messages.
 func (cc *ContextCompactor) TokenEstimate(messages []Message) int {
 	return estimateMessagesTokens(messages)

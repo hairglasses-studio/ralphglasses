@@ -162,6 +162,11 @@ func (e *Executor) runHook(h HookDef, event events.Event, repoPath string) {
 			"RALPH_SESSION_ID="+sanitize(event.SessionID),
 			"RALPH_PROVIDER="+sanitize(event.Provider),
 		)
+
+		// Capture stdout for JSON verdict parsing.
+		var stdout strings.Builder
+		cmd.Stdout = &stdout
+
 		if err := cmd.Start(); err != nil {
 			slog.Error("hook failed", "hook", h.Name, "error", err)
 			return
@@ -174,6 +179,27 @@ func (e *Executor) runHook(h HookDef, event events.Event, repoPath string) {
 		case err := <-done:
 			if err != nil {
 				slog.Error("hook failed", "hook", h.Name, "error", err)
+				return
+			}
+			// Parse JSON verdict from stdout (Pattern 12).
+			if raw := stdout.String(); strings.TrimSpace(raw) != "" {
+				verdict, parseErr := ParseHookOutput([]byte(raw))
+				if parseErr != nil {
+					slog.Warn("hook stdout not valid verdict JSON", "hook", h.Name, "error", parseErr)
+				} else if verdict.Decision == "block" {
+					slog.Warn("hook verdict: blocked", "hook", h.Name, "reason", verdict.Reason)
+					e.bus.Publish(events.Event{
+						Type:     events.HookBlocked,
+						RepoPath: repoPath,
+						RepoName: event.RepoName,
+						Data: map[string]any{
+							"hook":   h.Name,
+							"reason": verdict.Reason,
+						},
+					})
+				} else if verdict.Decision != "" {
+					slog.Info("hook verdict", "hook", h.Name, "decision", verdict.Decision)
+				}
 			}
 		case <-ctx.Done():
 			_ = killCommandProcessGroup(cmd)
