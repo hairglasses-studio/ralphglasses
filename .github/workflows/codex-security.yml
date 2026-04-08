@@ -59,7 +59,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Report Codex security feedback
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           CODEX_FINAL_MESSAGE: ${{ needs.security-review.outputs.final_message }}
         with:

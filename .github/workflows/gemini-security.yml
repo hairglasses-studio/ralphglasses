@@ -44,7 +44,7 @@ jobs:
     steps:
       - name: Resolve PR metadata
         id: pr
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ github.token }}
           script: |
@@ -118,7 +118,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Report Gemini security feedback
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           GEMINI_SUMMARY: ${{ needs.security-review.outputs.summary }}
           PR_NUMBER: ${{ needs.security-review.outputs.pr_number }}
