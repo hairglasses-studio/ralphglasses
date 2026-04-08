@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -46,6 +47,8 @@ type Updater struct {
 
 	backupPath string // set after Apply for Rollback
 }
+
+var renameFile = os.Rename
 
 // checkURL returns the full URL used to query the update server.
 func (u *Updater) checkURL() string {
@@ -188,8 +191,9 @@ func (u *Updater) Apply(path string) error {
 		return fmt.Errorf("update: chmod new binary: %w", err)
 	}
 
-	// Atomic replace via rename.
-	if err := os.Rename(path, binPath); err != nil {
+	// Atomic replace via rename. If the downloaded artifact lives on a
+	// different filesystem, fall back to a same-directory staged copy.
+	if err := replaceBinary(path, binPath, info.Mode()); err != nil {
 		return fmt.Errorf("update: rename: %w", err)
 	}
 
@@ -213,6 +217,34 @@ func (u *Updater) Rollback() error {
 	}
 
 	u.backupPath = ""
+	return nil
+}
+
+func replaceBinary(src, dst string, mode os.FileMode) error {
+	if err := renameFile(src, dst); err == nil {
+		return nil
+	} else if !errors.Is(err, syscall.EXDEV) {
+		return err
+	}
+
+	tmp, err := os.CreateTemp(filepath.Dir(dst), filepath.Base(dst)+".update-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	if closeErr := tmp.Close(); closeErr != nil {
+		_ = os.Remove(tmpPath)
+		return closeErr
+	}
+	if err := copyFile(src, tmpPath, mode); err != nil {
+		_ = os.Remove(tmpPath)
+		return err
+	}
+	if err := renameFile(tmpPath, dst); err != nil {
+		_ = os.Remove(tmpPath)
+		return err
+	}
+	_ = os.Remove(src)
 	return nil
 }
 

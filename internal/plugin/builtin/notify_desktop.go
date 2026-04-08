@@ -81,8 +81,10 @@ func (n *NotifyDesktopPlugin) Execute(ctx context.Context, params map[string]any
 	}
 
 	return map[string]any{
-		"sent":   true,
-		"method": method,
+		"sent":      true,
+		"method":    method,
+		"delivered": method != "log",
+		"fallback":  method == "log",
 	}, nil
 }
 

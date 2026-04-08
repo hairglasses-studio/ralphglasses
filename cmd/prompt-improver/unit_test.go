@@ -54,6 +54,48 @@ func TestParseFlags_NonFlagArgs(t *testing.T) {
 	}
 }
 
+func TestPromptImproverLastSourcePath_Override(t *testing.T) {
+	overridePath := filepath.Join(t.TempDir(), "override-source")
+	t.Setenv("PROMPT_IMPROVER_LAST_SOURCE_PATH", overridePath)
+	t.Setenv("XDG_RUNTIME_DIR", filepath.Join(t.TempDir(), "xdg-runtime"))
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(t.TempDir(), "cache"))
+
+	if got := promptImproverLastSourcePath(); got != overridePath {
+		t.Fatalf("promptImproverLastSourcePath() = %q, want %q", got, overridePath)
+	}
+}
+
+func TestPromptImproverLastSourcePath_PrefersXDGRuntimeDir(t *testing.T) {
+	runtimeDir := filepath.Join(t.TempDir(), "xdg-runtime")
+	t.Setenv("PROMPT_IMPROVER_LAST_SOURCE_PATH", "")
+	t.Setenv("XDG_RUNTIME_DIR", runtimeDir)
+
+	got := promptImproverLastSourcePath()
+	want := filepath.Join(runtimeDir, "prompt-improver-last-source")
+	if got != want {
+		t.Fatalf("promptImproverLastSourcePath() = %q, want %q", got, want)
+	}
+}
+
+func TestWritePromptImproverLastSource_UsesCacheFallback(t *testing.T) {
+	cacheDir := filepath.Join(t.TempDir(), "cache")
+	t.Setenv("PROMPT_IMPROVER_LAST_SOURCE_PATH", "")
+	t.Setenv("XDG_RUNTIME_DIR", "")
+	t.Setenv("XDG_CACHE_HOME", cacheDir)
+
+	if err := writePromptImproverLastSource("llm"); err != nil {
+		t.Fatalf("writePromptImproverLastSource: %v", err)
+	}
+	path := filepath.Join(cacheDir, "ralphglasses", "prompt-improver-last-source")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile(%s): %v", path, err)
+	}
+	if string(data) != "llm" {
+		t.Fatalf("last source = %q, want %q", data, "llm")
+	}
+}
+
 // --- printHelp test ---
 
 func TestPrintHelp_DoesNotPanic(t *testing.T) {

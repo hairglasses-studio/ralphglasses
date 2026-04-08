@@ -160,6 +160,12 @@ func TestNotifyDesktopPlugin_Execute_ValidParams(t *testing.T) {
 	if method := result["method"]; method != "notify-send" {
 		t.Errorf("result[method] = %v, want notify-send", method)
 	}
+	if delivered, ok := result["delivered"].(bool); !ok || !delivered {
+		t.Errorf("result[delivered] = %v, want true", result["delivered"])
+	}
+	if fallback, ok := result["fallback"].(bool); !ok || fallback {
+		t.Errorf("result[fallback] = %v, want false", result["fallback"])
+	}
 	wantArgs := []string{"notify-send", "-u", "normal", "ralphglasses test", "plugin test notification"}
 	if len(gotArgs) != len(wantArgs) {
 		t.Fatalf("got args %v, want %v", gotArgs, wantArgs)
@@ -226,6 +232,12 @@ func TestNotifyDesktopPlugin_Execute_CommandFailureFallsBackToLog(t *testing.T) 
 	if result["method"] != "log" {
 		t.Fatalf("method = %v, want log", result["method"])
 	}
+	if delivered, ok := result["delivered"].(bool); !ok || delivered {
+		t.Fatalf("delivered = %v, want false", result["delivered"])
+	}
+	if fallback, ok := result["fallback"].(bool); !ok || !fallback {
+		t.Fatalf("fallback = %v, want true", result["fallback"])
+	}
 }
 
 func TestNotifyDesktopPlugin_Execute_MissingCommandFallsBackToLog(t *testing.T) {
@@ -249,6 +261,12 @@ func TestNotifyDesktopPlugin_Execute_MissingCommandFallsBackToLog(t *testing.T) 
 	}
 	if result["method"] != "log" {
 		t.Fatalf("method = %v, want log", result["method"])
+	}
+	if delivered, ok := result["delivered"].(bool); !ok || delivered {
+		t.Fatalf("delivered = %v, want false", result["delivered"])
+	}
+	if fallback, ok := result["fallback"].(bool); !ok || !fallback {
+		t.Fatalf("fallback = %v, want true", result["fallback"])
 	}
 }
 

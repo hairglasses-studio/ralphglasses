@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -123,7 +124,8 @@ func TestParseCoverageProfile_Empty(t *testing.T) {
 }
 
 func TestParseCoverageProfile_NotFound(t *testing.T) {
-	_, err := parseCoverageProfile("/tmp/nonexistent-coverage-file-xyz.out")
+	missingPath := filepath.Join(t.TempDir(), "nonexistent-coverage-file-xyz.out")
+	_, err := parseCoverageProfile(missingPath)
 	if err == nil {
 		t.Error("expected error for nonexistent file")
 	}

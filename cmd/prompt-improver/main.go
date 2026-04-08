@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -569,8 +570,8 @@ func runHook() {
 		result.Source = "local"
 	}
 
-	// Write source to cache for statusline integration
-	_ = os.WriteFile("/tmp/.prompt-improver-last-source", []byte(result.Source), 0644)
+	// Write source to cache for statusline integration.
+	_ = writePromptImproverLastSource(result.Source)
 
 	// Lean output — XML-wrapped enhanced prompt with a short directive
 	var ctxBuilder strings.Builder
@@ -613,6 +614,27 @@ func parseFlags(args []string) map[string]string {
 		}
 	}
 	return vars
+}
+
+func promptImproverLastSourcePath() string {
+	if override := strings.TrimSpace(os.Getenv("PROMPT_IMPROVER_LAST_SOURCE_PATH")); override != "" {
+		return override
+	}
+	if xdgRuntime := strings.TrimSpace(os.Getenv("XDG_RUNTIME_DIR")); xdgRuntime != "" {
+		return filepath.Join(xdgRuntime, "prompt-improver-last-source")
+	}
+	if cacheDir, err := os.UserCacheDir(); err == nil && strings.TrimSpace(cacheDir) != "" {
+		return filepath.Join(cacheDir, "ralphglasses", "prompt-improver-last-source")
+	}
+	return filepath.Join(os.TempDir(), ".prompt-improver-last-source")
+}
+
+func writePromptImproverLastSource(source string) error {
+	path := promptImproverLastSourcePath()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(source), 0o644)
 }
 
 func printHelp() {

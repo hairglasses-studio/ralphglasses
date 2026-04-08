@@ -8,8 +8,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	promptsections "github.com/hairglasses-studio/mcpkit/prompts"
 )
 
 // PromptCacheConfig configures prompt caching behavior.
@@ -65,7 +63,7 @@ func NewPromptCacheTracker(config PromptCacheConfig) *PromptCacheTracker {
 
 // AnalyzePrompt checks if a prompt has a cacheable prefix and returns
 // the optimized prompt with stable sections first for maximum cache hits.
-// Returns the sectioned prompt and whether caching is beneficial.
+// Returns the reordered prompt and whether caching is beneficial.
 func (t *PromptCacheTracker) AnalyzePrompt(repoPath string, provider Provider, prompt string) (string, bool) {
 	if !t.config.Enabled || len(prompt) < t.config.MinPrefixLen || !ShouldCachePrompt(provider, len(prompt)) {
 		return prompt, false
@@ -139,40 +137,26 @@ type promptCacheSections struct {
 	variablePrompt   string
 }
 
-// buildSectionedPrompt converts the prompt into named sections so cacheable
-// content stays in a deterministic prefix. The current prompt assembly only
-// exposes three concrete buckets: repo instruction files, stable prompt
-// content, and variable task context.
+// buildSectionedPrompt preserves the legacy stable-prefix byte layout while
+// making the cacheable and variable sections explicit for hashing.
 func buildSectionedPrompt(repoPath string, prompt string) (string, int) {
 	sections := classifyPromptSections(repoPath, prompt)
-	builder := promptsections.NewSectionedPrompt()
-
+	var stableParts []string
 	if sections.repoInstructions != "" {
-		builder.Add(promptsections.Section{
-			Name:      "claude_md",
-			Content:   sections.repoInstructions,
-			Cacheable: true,
-		})
+		stableParts = append(stableParts, sections.repoInstructions)
 	}
 	if sections.stablePrompt != "" {
-		builder.Add(promptsections.Section{
-			Name:      "tool_schemas",
-			Content:   sections.stablePrompt,
-			Cacheable: true,
-		})
-	}
-	if sections.variablePrompt != "" {
-		builder.Add(promptsections.Section{
-			Name:      "loop_context",
-			Content:   sections.variablePrompt,
-			Cacheable: false,
-		})
+		stableParts = append(stableParts, sections.stablePrompt)
 	}
 
-	if len(builder.Sections()) == 0 {
+	stablePrefix := strings.TrimSpace(strings.Join(stableParts, "\n"))
+	if stablePrefix == "" {
 		return prompt, 0
 	}
-	return builder.Build()
+	if sections.variablePrompt == "" {
+		return stablePrefix, len(stablePrefix)
+	}
+	return stablePrefix + "\n\n" + sections.variablePrompt, len(stablePrefix)
 }
 
 // classifyPromptSections separates the stable (cacheable) prefix from variable
@@ -240,10 +224,10 @@ func readRepoInstructionPrefix(repoPath string, prompt string) string {
 		}
 		snippet := string(content[:min(100, len(content))])
 		if !strings.Contains(prompt, snippet) {
-			repoInstructions = append(repoInstructions, string(content))
+			repoInstructions = append([]string{string(content)}, repoInstructions...)
 		}
 	}
-	return strings.TrimSpace(strings.Join(repoInstructions, "\n\n"))
+	return strings.TrimSpace(strings.Join(repoInstructions, "\n"))
 }
 
 func hashPrefix(prefix string) string {

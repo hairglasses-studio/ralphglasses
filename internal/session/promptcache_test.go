@@ -277,13 +277,13 @@ func TestBuildSectionedPrompt_BoundaryIncludesSeparator(t *testing.T) {
 	variable := "implement the task"
 
 	built, offset := buildSectionedPrompt(t.TempDir(), stable+"\n"+variable)
-	if offset != len(stable)+1 {
-		t.Fatalf("expected boundary %d, got %d", len(stable)+1, offset)
+	if offset != len(stable) {
+		t.Fatalf("expected boundary %d, got %d", len(stable), offset)
 	}
-	if got := built[:offset]; got != stable+"\n" {
+	if got := built[:offset]; got != stable {
 		t.Fatalf("unexpected cacheable prefix %q", got)
 	}
-	if got := built[offset:]; got != variable {
+	if got := built[offset:]; got != "\n\n"+variable {
 		t.Fatalf("unexpected variable suffix %q", got)
 	}
 }
@@ -301,11 +301,41 @@ func TestBuildSectionedPrompt_RepoInstructionsLeadStablePrefix(t *testing.T) {
 	variable := "ship the fix"
 
 	built, offset := buildSectionedPrompt(repoDir, stable+"\n"+variable)
-	if !strings.HasPrefix(built, agentsContent+"\n"+stable+"\n") {
+	if !strings.HasPrefix(built, agentsContent+"\n"+stable+"\n\n") {
 		t.Fatalf("expected repo instructions and stable section first, got %q", built[:min(len(built), 120)])
 	}
-	expectedBoundary := len(agentsContent) + 1 + len(stable) + 1
+	expectedBoundary := len(agentsContent) + 1 + len(stable)
 	if offset != expectedBoundary {
 		t.Fatalf("expected boundary %d, got %d", expectedBoundary, offset)
+	}
+}
+
+func TestBuildSectionedPrompt_PreservesLegacyInstructionOrder(t *testing.T) {
+	t.Parallel()
+
+	repoDir := t.TempDir()
+	agentsContent := "# AGENTS\n" + strings.TrimRight(strings.Repeat("- codex rules\n", 20), "\n")
+	claudeContent := "# CLAUDE\n" + strings.TrimRight(strings.Repeat("- claude rules\n", 20), "\n")
+	geminiContent := "# GEMINI\n" + strings.TrimRight(strings.Repeat("- gemini rules\n", 20), "\n")
+	for name, content := range map[string]string{
+		"AGENTS.md": agentsContent,
+		"CLAUDE.md": claudeContent,
+		"GEMINI.md": geminiContent,
+	} {
+		if err := os.WriteFile(filepath.Join(repoDir, name), []byte(content), 0o644); err != nil {
+			t.Fatalf("failed to write %s: %v", name, err)
+		}
+	}
+
+	stable := "## Constraints\n" + strings.TrimRight(strings.Repeat("- preserve ordering\n", 20), "\n")
+	variable := "finish the task"
+
+	built, offset := buildSectionedPrompt(repoDir, stable+"\n"+variable)
+	expectedStable := geminiContent + "\n" + claudeContent + "\n" + agentsContent + "\n" + stable
+	if got := built[:offset]; got != expectedStable {
+		t.Fatalf("stable prefix = %q, want %q", got, expectedStable)
+	}
+	if got := built[offset:]; got != "\n\n"+variable {
+		t.Fatalf("variable suffix = %q, want %q", got, "\n\n"+variable)
 	}
 }

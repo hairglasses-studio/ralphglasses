@@ -128,6 +128,7 @@ func (snap fleetRuntimeSnapshot) result() map[string]any {
 }
 
 type marathonRuntimeState struct {
+	mu                 sync.RWMutex
 	ID                 string
 	Repo               string
 	RepoPath           string
@@ -145,6 +146,82 @@ type marathonRuntimeState struct {
 	LastStats          *marathon.Stats
 	cancel             context.CancelFunc
 	runner             *marathon.Marathon
+}
+
+type marathonRuntimeSnapshot struct {
+	ID                 string
+	Repo               string
+	RepoPath           string
+	BudgetUSD          float64
+	Duration           time.Duration
+	CheckpointInterval time.Duration
+	Resume             bool
+	StartedAt          time.Time
+	EndedAt            *time.Time
+	Active             bool
+	LastError          string
+	TaskID             string
+	Warnings           []string
+	LastStats          *marathon.Stats
+}
+
+func (rt *marathonRuntimeState) snapshot() marathonRuntimeSnapshot {
+	if rt == nil {
+		return marathonRuntimeSnapshot{}
+	}
+	rt.mu.RLock()
+	defer rt.mu.RUnlock()
+	return rt.snapshotLocked()
+}
+
+func (rt *marathonRuntimeState) snapshotLocked() marathonRuntimeSnapshot {
+	var endedAt *time.Time
+	if rt.EndedAt != nil {
+		ended := *rt.EndedAt
+		endedAt = &ended
+	}
+	var lastStats *marathon.Stats
+	if rt.LastStats != nil {
+		stats := *rt.LastStats
+		lastStats = &stats
+	}
+	return marathonRuntimeSnapshot{
+		ID:                 rt.ID,
+		Repo:               rt.Repo,
+		RepoPath:           rt.RepoPath,
+		BudgetUSD:          rt.BudgetUSD,
+		Duration:           rt.Duration,
+		CheckpointInterval: rt.CheckpointInterval,
+		Resume:             rt.Resume,
+		StartedAt:          rt.StartedAt,
+		EndedAt:            endedAt,
+		Active:             rt.Active,
+		LastError:          rt.LastError,
+		TaskID:             rt.TaskID,
+		Warnings:           append([]string(nil), rt.Warnings...),
+		LastStats:          lastStats,
+	}
+}
+
+func (snap marathonRuntimeSnapshot) result() map[string]any {
+	if snap.ID == "" {
+		return map[string]any{"status": "idle"}
+	}
+	return map[string]any{
+		"runtime_id":          snap.ID,
+		"repo":                snap.Repo,
+		"repo_path":           snap.RepoPath,
+		"budget_usd":          snap.BudgetUSD,
+		"duration":            snap.Duration.String(),
+		"checkpoint_interval": snap.CheckpointInterval.String(),
+		"resume":              snap.Resume,
+		"started_at":          snap.StartedAt,
+		"ended_at":            snap.EndedAt,
+		"active":              snap.Active,
+		"last_error":          snap.LastError,
+		"task_id":             snap.TaskID,
+		"warnings":            snap.Warnings,
+	}
 }
 
 func (s *Server) runtimeVersion() string {
@@ -806,9 +883,9 @@ func (s *Server) handleMarathon(_ context.Context, req mcp.CallToolRequest) (*mc
 	}
 
 	s.mu.RLock()
-	active := s.MarathonRuntime != nil && s.MarathonRuntime.Active
+	activeRuntime := s.MarathonRuntime
 	s.mu.RUnlock()
-	if active {
+	if activeRuntime != nil && activeRuntime.snapshot().Active {
 		return codedError(ErrInternal, "marathon already active — stop it before starting another"), nil
 	}
 
@@ -892,8 +969,8 @@ func (s *Server) handleMarathon(_ context.Context, req mcp.CallToolRequest) (*mc
 func (s *Server) runMarathon(ctx context.Context, rt *marathonRuntimeState) {
 	stats, err := rt.runner.Run(ctx)
 
-	s.mu.Lock()
 	now := time.Now()
+	rt.mu.Lock()
 	rt.EndedAt = &now
 	rt.Active = false
 	if stats != nil {
@@ -902,14 +979,15 @@ func (s *Server) runMarathon(ctx context.Context, rt *marathonRuntimeState) {
 	if err != nil && err != context.Canceled {
 		rt.LastError = err.Error()
 	}
-	s.mu.Unlock()
+	snapshot := rt.snapshotLocked()
+	rt.mu.Unlock()
 
 	task := s.Tasks.Get(rt.TaskID)
 	if task == nil || task.State == TaskCanceled {
 		return
 	}
-	if rt.LastError != "" {
-		s.Tasks.Fail(rt.TaskID, rt.LastError)
+	if snapshot.LastError != "" {
+		s.Tasks.Fail(rt.TaskID, snapshot.LastError)
 		return
 	}
 	s.Tasks.Complete(rt.TaskID, s.marathonStatus())
@@ -923,29 +1001,16 @@ func (s *Server) marathonStatus() map[string]any {
 		return map[string]any{"status": "idle"}
 	}
 
-	status := map[string]any{
-		"runtime_id":          rt.ID,
-		"repo":                rt.Repo,
-		"repo_path":           rt.RepoPath,
-		"budget_usd":          rt.BudgetUSD,
-		"duration":            rt.Duration.String(),
-		"checkpoint_interval": rt.CheckpointInterval.String(),
-		"resume":              rt.Resume,
-		"started_at":          rt.StartedAt,
-		"ended_at":            rt.EndedAt,
-		"active":              rt.Active,
-		"last_error":          rt.LastError,
-		"task_id":             rt.TaskID,
-		"warnings":            rt.Warnings,
-	}
+	snapshot := rt.snapshot()
+	status := snapshot.result()
 	if rt.runner != nil {
 		status["marathon"] = rt.runner.Status()
 		status["stats"] = rt.runner.CurrentStats()
 	}
-	if rt.LastStats != nil {
-		status["final_stats"] = rt.LastStats
+	if snapshot.LastStats != nil {
+		status["final_stats"] = snapshot.LastStats
 	}
-	checkpoints, err := marathon.ListCheckpoints(filepath.Join(rt.RepoPath, ".ralph", "marathon", "checkpoints"))
+	checkpoints, err := marathon.ListCheckpoints(filepath.Join(snapshot.RepoPath, ".ralph", "marathon", "checkpoints"))
 	if err == nil {
 		status["checkpoint_count"] = len(checkpoints)
 		if len(checkpoints) > 0 {
@@ -962,14 +1027,21 @@ func (s *Server) stopMarathon() (*mcp.CallToolResult, error) {
 	if rt == nil {
 		return jsonResult(map[string]any{"status": "idle"}), nil
 	}
-	if s.Tasks != nil && rt.TaskID != "" {
-		_ = s.Tasks.Cancel(rt.TaskID)
+
+	rt.mu.RLock()
+	snapshot := rt.snapshotLocked()
+	taskID := rt.TaskID
+	cancel := rt.cancel
+	rt.mu.RUnlock()
+
+	if s.Tasks != nil && taskID != "" {
+		_ = s.Tasks.Cancel(taskID)
 	}
-	if rt.cancel != nil {
-		rt.cancel()
+	if cancel != nil {
+		cancel()
 	}
 	return jsonResult(map[string]any{
 		"status":  "stopping",
-		"runtime": s.marathonStatus(),
+		"runtime": snapshot.result(),
 	}), nil
 }

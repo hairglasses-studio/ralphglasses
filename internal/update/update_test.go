@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"syscall"
 	"testing"
 )
 
@@ -222,6 +223,45 @@ func TestApplyAndRollback(t *testing.T) {
 	}
 	if string(got) != string(oldContent) {
 		t.Errorf("after rollback: content = %q, want %q", got, oldContent)
+	}
+}
+
+func TestApplyFallsBackOnCrossDeviceRename(t *testing.T) {
+	tmpDir := t.TempDir()
+	binPath := filepath.Join(tmpDir, "ralphglasses")
+	if err := os.WriteFile(binPath, []byte("old-binary"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	newPath := filepath.Join(t.TempDir(), "new-ralphglasses")
+	newContent := []byte("new-binary")
+	if err := os.WriteFile(newPath, newContent, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	origRenameFile := renameFile
+	renameFile = func(src, dst string) error {
+		if src == newPath && dst == binPath {
+			return syscall.EXDEV
+		}
+		return os.Rename(src, dst)
+	}
+	t.Cleanup(func() { renameFile = origRenameFile })
+
+	u := &Updater{BinaryPath: binPath}
+	if err := u.Apply(newPath); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	got, err := os.ReadFile(binPath)
+	if err != nil {
+		t.Fatalf("ReadFile(%s): %v", binPath, err)
+	}
+	if string(got) != string(newContent) {
+		t.Fatalf("after apply: content = %q, want %q", got, newContent)
+	}
+	if _, err := os.Stat(newPath); !os.IsNotExist(err) {
+		t.Fatalf("expected source artifact to be removed, got err=%v", err)
 	}
 }
 

@@ -51,6 +51,10 @@ func allBuilderSpecs() []builderSpec {
 		{"docs", (*Server).buildDocsGroup, minFor("docs"), true},
 		{"recovery", (*Server).buildRecoveryGroup, minFor("recovery"), true},
 		{"promptdj", (*Server).buildPromptDJGroup, minFor("promptdj"), true},
+		{"a2a", (*Server).buildA2AGroup, minFor("a2a"), true},
+		{"trigger", (*Server).buildTriggerGroup, minFor("trigger"), true},
+		{"approval", (*Server).buildApprovalGroup, minFor("approval"), true},
+		{"context", (*Server).buildContextGroup, minFor("context"), true},
 	}
 }
 
