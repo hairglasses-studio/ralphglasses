@@ -248,7 +248,7 @@ func buildBootstrapChecklistDoc() map[string]any {
 			"bootstrap-firstboot",
 		},
 		"skills": []string{
-			"ralphglasses-runtime",
+			"ralphglasses-bootstrap",
 			"ralphglasses-operator",
 		},
 		"key_tools": []string{
@@ -263,7 +263,7 @@ func buildBootstrapChecklistDoc() map[string]any {
 				"name":       "provider-readiness",
 				"goal":       "Confirm provider CLIs and authentication are healthy before any repo mutation.",
 				"tools":      []string{"ralphglasses_doctor"},
-				"skill":      "ralphglasses-runtime",
+				"skill":      "ralphglasses-bootstrap",
 				"validation": "Doctor reports the required providers as ready.",
 			},
 			{
@@ -276,7 +276,7 @@ func buildBootstrapChecklistDoc() map[string]any {
 				"name":       "profile-application",
 				"goal":       "Apply or inspect the best available firstboot profile before using the interactive wizard.",
 				"tools":      []string{"ralphglasses_firstboot_profile"},
-				"skill":      "ralphglasses-runtime",
+				"skill":      "ralphglasses-bootstrap",
 				"validation": "The selected profile matches the intended provider/runtime posture.",
 			},
 			{

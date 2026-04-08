@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -108,6 +110,8 @@ func TestRenderSampleData(t *testing.T) {
 		"# MCP Server Contract",
 		"**4 tools**",
 		"**2 deferred-load tool groups**",
+		"`ralph:///catalog/skills`",
+		"`ralph:///bootstrap/checklist` and `ralph:///runtime/health`",
 		"## Management Tools",
 		"`ralphglasses_server_health`",
 		"## Tool Groups",
@@ -135,5 +139,23 @@ func TestRenderEmpty(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "**0 tools**") {
 		t.Fatal("expected zero-tool summary in output")
+	}
+}
+
+func TestRenderTemplateData_MatchesCheckedInDoc(t *testing.T) {
+	t.Parallel()
+
+	repoRoot := filepath.Clean(filepath.Join("..", ".."))
+	rendered, err := renderTemplateData(buildTemplateDataForRepo(repoRoot))
+	if err != nil {
+		t.Fatalf("renderTemplateData: %v", err)
+	}
+
+	expected, err := os.ReadFile(filepath.Join(repoRoot, "docs", "MCP-TOOLS.md"))
+	if err != nil {
+		t.Fatalf("read docs/MCP-TOOLS.md: %v", err)
+	}
+	if string(expected) != rendered {
+		t.Fatalf("docs/MCP-TOOLS.md drift detected; run `go run ./tools/genmcpdocs --output docs/MCP-TOOLS.md`")
 	}
 }

@@ -44,7 +44,15 @@ Always-available discovery and contract tools registered ahead of deferred tool-
 
 ### `ralphglasses_tool_groups`
 
-List available tool groups for deferred loading. Call ralphglasses_load_tool_group to load a specific group.
+List available tool groups for deferred loading, or search the live workflow and skill catalog when query/include flags are provided.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `include_skills` | boolean |  | Include matching skill catalog entries in the response |
+| `include_workflows` | boolean |  | Include matching workflow catalog entries in the response |
+| `limit` | number |  | Optional per-section result limit for filtered search responses |
+| `query` | string |  | Optional search query across tool groups, workflow names, skill names, descriptions, and key tools |
+| `tool_group` | string |  | Optional tool-group filter (for example "repo", "fleet", or "management") |
 
 **Example:**
 

@@ -305,7 +305,7 @@ func TestRepoTriageBriefPrompt_ReturnsMessage(t *testing.T) {
 	if !strings.Contains(tc.Text, "ralph:///runtime/health") {
 		t.Error("expected runtime health resource in prompt")
 	}
-	if !strings.Contains(tc.Text, "ralphglasses-recovery") {
+	if !strings.Contains(tc.Text, "ralphglasses-recovery-observability") {
 		t.Error("expected recommended skill family in prompt")
 	}
 	if !strings.Contains(tc.Text, "runtime instability") {

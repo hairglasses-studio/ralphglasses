@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 
@@ -231,6 +232,123 @@ func TestHandleServerHealth_IncludesDiscoveryContract(t *testing.T) {
 	}
 	if !strings.Contains(instructions, "ralph:///catalog/skills") {
 		t.Fatalf("instructions missing skill catalog guidance: %q", instructions)
+	}
+}
+
+func TestHandleToolGroups_DefaultList(t *testing.T) {
+	t.Parallel()
+
+	srv := NewServer(t.TempDir())
+	result, err := srv.handleToolGroups(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("handleToolGroups: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error result: %s", getResultText(result))
+	}
+
+	var payload []toolGroupInfo
+	if err := json.Unmarshal([]byte(getResultText(result)), &payload); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if len(payload) != len(ToolGroupNames) {
+		t.Fatalf("len(payload) = %d, want %d", len(payload), len(ToolGroupNames))
+	}
+	if payload[0].Name != ToolGroupNames[0] {
+		t.Fatalf("first group = %q, want %q", payload[0].Name, ToolGroupNames[0])
+	}
+}
+
+func TestHandleToolGroups_SearchCatalogs(t *testing.T) {
+	t.Parallel()
+
+	srv := NewServer(t.TempDir())
+	result, err := srv.handleToolGroups(context.Background(), makeRequest(map[string]any{
+		"query":             "runtime",
+		"include_workflows": true,
+		"include_skills":    true,
+		"limit":             float64(5),
+	}))
+	if err != nil {
+		t.Fatalf("handleToolGroups: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error result: %s", getResultText(result))
+	}
+
+	var payload toolGroupDiscoveryResponse
+	if err := json.Unmarshal([]byte(getResultText(result)), &payload); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if payload.Query != "runtime" {
+		t.Fatalf("query = %q, want runtime", payload.Query)
+	}
+	if payload.WorkflowCount == 0 {
+		t.Fatalf("expected workflow matches, payload = %+v", payload)
+	}
+	if payload.SkillCount == 0 {
+		t.Fatalf("expected skill matches, payload = %+v", payload)
+	}
+	if !strings.Contains(getResultText(result), "runtime-recovery") {
+		t.Fatalf("expected runtime-recovery workflow in payload: %s", getResultText(result))
+	}
+	if !strings.Contains(getResultText(result), "ralphglasses-bootstrap") {
+		t.Fatalf("expected ralphglasses-bootstrap skill in payload: %s", getResultText(result))
+	}
+}
+
+func TestHandleToolGroups_FilterByToolGroup(t *testing.T) {
+	t.Parallel()
+
+	srv := NewServer(t.TempDir())
+	result, err := srv.handleToolGroups(context.Background(), makeRequest(map[string]any{
+		"tool_group":        "repo",
+		"include_workflows": true,
+		"include_skills":    true,
+	}))
+	if err != nil {
+		t.Fatalf("handleToolGroups: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error result: %s", getResultText(result))
+	}
+
+	var payload toolGroupDiscoveryResponse
+	if err := json.Unmarshal([]byte(getResultText(result)), &payload); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if payload.ToolGroup != "repo" {
+		t.Fatalf("tool_group = %q, want repo", payload.ToolGroup)
+	}
+	for _, group := range payload.Groups {
+		if group.Name != "repo" {
+			t.Fatalf("unexpected group match for repo filter: %+v", group)
+		}
+	}
+	for _, workflow := range payload.WorkflowMatches {
+		if !slices.Contains(workflow.ToolGroups, "repo") {
+			t.Fatalf("workflow %q missing repo tool group: %+v", workflow.Name, workflow.ToolGroups)
+		}
+	}
+	for _, skill := range payload.SkillMatches {
+		if !slices.Contains(skill.ToolGroups, "repo") {
+			t.Fatalf("skill %q missing repo tool group: %+v", skill.Name, skill.ToolGroups)
+		}
+	}
+}
+
+func TestHandleToolGroups_RejectsUnknownFilter(t *testing.T) {
+	t.Parallel()
+
+	srv := NewServer(t.TempDir())
+	result, err := srv.handleToolGroups(context.Background(), makeRequest(map[string]any{
+		"tool_group": "not-a-group",
+	}))
+	if err != nil {
+		t.Fatalf("handleToolGroups: %v", err)
+	}
+	if !result.IsError {
+		t.Fatalf("expected error result, got %s", getResultText(result))
 	}
 }
 

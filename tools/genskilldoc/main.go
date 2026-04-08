@@ -19,9 +19,7 @@ func main() {
 	output := flag.String("output", "", "Output file path (default: stdout)")
 	flag.Parse()
 
-	srv := mcpserver.NewServer(".")
-	groups := srv.ToolGroups()
-	md := mcpserver.ExportSkillMarkdownFromContract(groups, srv.ManagementTools())
+	md := renderSkillMarkdown(".")
 
 	if *output == "" {
 		fmt.Print(md)
@@ -33,4 +31,9 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Fprintf(os.Stderr, "Wrote %s (%d bytes)\n", *output, len(md))
+}
+
+func renderSkillMarkdown(repoRoot string) string {
+	srv := mcpserver.NewServer(repoRoot)
+	return mcpserver.ExportSkillMarkdownFromContract(srv.ToolGroups(), srv.ManagementTools())
 }

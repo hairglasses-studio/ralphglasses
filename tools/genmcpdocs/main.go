@@ -9,6 +9,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -58,7 +59,12 @@ func main() {
 	output := flag.String("output", "", "Output file path (default: stdout)")
 	flag.Parse()
 
-	data := buildTemplateData()
+	data := buildTemplateDataForRepo(".")
+	rendered, err := renderTemplateData(data)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "genmcpdocs: render: %v\n", err)
+		os.Exit(1)
+	}
 
 	var w io.Writer = os.Stdout
 	if *output != "" {
@@ -71,14 +77,18 @@ func main() {
 		w = f
 	}
 
-	if err := mdTemplate.Execute(w, data); err != nil {
-		fmt.Fprintf(os.Stderr, "genmcpdocs: render: %v\n", err)
+	if _, err := io.WriteString(w, rendered); err != nil {
+		fmt.Fprintf(os.Stderr, "genmcpdocs: write: %v\n", err)
 		os.Exit(1)
 	}
 }
 
 func buildTemplateData() templateData {
-	srv := mcpserver.NewServer(".")
+	return buildTemplateDataForRepo(".")
+}
+
+func buildTemplateDataForRepo(repoRoot string) templateData {
+	srv := mcpserver.NewServer(repoRoot)
 	groups := srv.ToolGroups()
 	managementEntries := srv.ManagementTools()
 
@@ -118,6 +128,14 @@ func buildTemplateData() templateData {
 		ResourceTemplates:     mcpserver.ResourceTemplates(),
 		Prompts:               mcpserver.Prompts(),
 	}
+}
+
+func renderTemplateData(data templateData) (string, error) {
+	var buf bytes.Buffer
+	if err := mdTemplate.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 func toolFromEntry(entry mcpserver.ToolEntry) toolDoc {
@@ -189,8 +207,10 @@ Ralphglasses exposes **{{.TotalTools}} tools**: **{{.GroupToolCount}} grouped to
 
 - Read ` + "`" + `ralph:///catalog/server` + "`" + ` for the live server contract.
 - Read ` + "`" + `ralph:///catalog/tool-groups` + "`" + ` for grouped capabilities and counts.
+- Read ` + "`" + `ralph:///catalog/skills` + "`" + ` for the focused workflow skill families.
 - Read ` + "`" + `ralph:///catalog/workflows` + "`" + ` for common operator playbooks.
-- Call ` + "`" + `ralphglasses_tool_groups` + "`" + `, then ` + "`" + `ralphglasses_load_tool_group` + "`" + ` before invoking non-core grouped tools in deferred mode.
+- Read ` + "`" + `ralph:///bootstrap/checklist` + "`" + ` and ` + "`" + `ralph:///runtime/health` + "`" + ` when the task is bootstrap- or runtime-heavy.
+- Call ` + "`" + `ralphglasses_tool_groups` + "`" + ` to list or search groups, skills, and workflows, then ` + "`" + `ralphglasses_load_tool_group` + "`" + ` before invoking non-core grouped tools in deferred mode.
 
 ## Management Tools
 

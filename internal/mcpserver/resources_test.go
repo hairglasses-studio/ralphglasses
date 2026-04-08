@@ -159,10 +159,10 @@ func TestCatalogSkillsResource_ReturnsSkillCatalog(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected TextResourceContents, got %T", results[0])
 	}
-	if !strings.Contains(textContent.Text, "ralphglasses-runtime") {
-		t.Fatalf("expected runtime skill in catalog: %s", textContent.Text)
+	if !strings.Contains(textContent.Text, "ralphglasses-bootstrap") {
+		t.Fatalf("expected bootstrap skill in catalog: %s", textContent.Text)
 	}
-	if !strings.Contains(textContent.Text, "ralphglasses-recovery") {
+	if !strings.Contains(textContent.Text, "ralphglasses-recovery-observability") {
 		t.Fatalf("expected recovery skill in catalog: %s", textContent.Text)
 	}
 	_ = appSrv
@@ -182,8 +182,8 @@ func TestBootstrapChecklistResource_ReturnsChecklist(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected TextResourceContents, got %T", results[0])
 	}
-	if !strings.Contains(textContent.Text, "ralphglasses-runtime") {
-		t.Fatalf("expected runtime skill in checklist: %s", textContent.Text)
+	if !strings.Contains(textContent.Text, "ralphglasses-bootstrap") {
+		t.Fatalf("expected bootstrap skill in checklist: %s", textContent.Text)
 	}
 	if !strings.Contains(textContent.Text, "ralphglasses_firstboot_profile") {
 		t.Fatalf("expected firstboot tool in checklist: %s", textContent.Text)

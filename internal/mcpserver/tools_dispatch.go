@@ -114,35 +114,52 @@ func (s *Server) ToolGroups() []ToolGroup {
 	return s.buildToolGroups()
 }
 
-// handleToolGroups returns available tool groups with their descriptions and tool counts.
-func (s *Server) handleToolGroups(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	type groupInfo struct {
-		Name        string   `json:"name"`
-		Description string   `json:"description"`
-		ToolCount   int      `json:"tool_count"`
-		Loaded      bool     `json:"loaded"`
-		Tools       []string `json:"tools"`
+// handleToolGroups returns available tool groups with their descriptions and
+// tool counts. When query/include flags are provided, it also returns matching
+// workflow and skill catalog entries to help clients route into the right
+// discovery path before loading more tool groups.
+func (s *Server) handleToolGroups(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	p := NewParams(req)
+	query := strings.TrimSpace(p.OptionalString("query", ""))
+	toolGroup := strings.TrimSpace(p.OptionalString("tool_group", ""))
+	includeWorkflows := p.OptionalBool("include_workflows", false)
+	includeSkills := p.OptionalBool("include_skills", false)
+	limit := p.OptionalInt("limit", 0)
+
+	if limit < 0 {
+		return codedError(ErrInvalidParams, "limit must be non-negative"), nil
+	}
+	if !validToolGroupFilter(toolGroup) {
+		return codedError(ErrInvalidParams, fmt.Sprintf("unknown tool_group %q", toolGroup)), nil
 	}
 
-	groups := s.buildToolGroups()
-	out := make([]groupInfo, len(groups))
-	for i, g := range groups {
-		tools := make([]string, len(g.Tools))
-		for j, t := range g.Tools {
-			tools[j] = t.Tool.Name
-		}
-		s.mu.RLock()
-		loaded := s.loadedGroups[g.Name]
-		s.mu.RUnlock()
-		out[i] = groupInfo{
-			Name:        g.Name,
-			Description: g.Description,
-			ToolCount:   len(g.Tools),
-			Loaded:      loaded,
-			Tools:       tools,
-		}
+	groups := s.buildToolGroupInfos()
+	if query == "" && !includeWorkflows && !includeSkills {
+		return jsonResult(filterToolGroupInfos(groups, "", toolGroup, limit)), nil
 	}
-	return jsonResult(out), nil
+
+	groupMatches := filterToolGroupInfos(groups, query, toolGroup, limit)
+	workflowMatches := filterWorkflowDefs(workflowCatalog(), query, toolGroup, limit)
+	skillMatches := filterSkillDefs(skillCatalog(), query, toolGroup, limit)
+
+	if !includeWorkflows {
+		workflowMatches = nil
+	}
+	if !includeSkills {
+		skillMatches = nil
+	}
+
+	return jsonResult(toolGroupDiscoveryResponse{
+		Query:           query,
+		ToolGroup:       toolGroup,
+		Limit:           limit,
+		GroupCount:      len(groupMatches),
+		WorkflowCount:   len(workflowMatches),
+		SkillCount:      len(skillMatches),
+		Groups:          groupMatches,
+		WorkflowMatches: workflowMatches,
+		SkillMatches:    skillMatches,
+	}), nil
 }
 
 // handleLoadToolGroup loads all tools in a named group on demand.

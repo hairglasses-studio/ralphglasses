@@ -8,8 +8,10 @@ Ralphglasses exposes **222 tools**: **218 grouped tools** across **30 deferred-l
 
 - Read `ralph:///catalog/server` for the live server contract.
 - Read `ralph:///catalog/tool-groups` for grouped capabilities and counts.
+- Read `ralph:///catalog/skills` for the focused workflow skill families.
 - Read `ralph:///catalog/workflows` for common operator playbooks.
-- Call `ralphglasses_tool_groups`, then `ralphglasses_load_tool_group` before invoking non-core grouped tools in deferred mode.
+- Read `ralph:///bootstrap/checklist` and `ralph:///runtime/health` when the task is bootstrap- or runtime-heavy.
+- Call `ralphglasses_tool_groups` to list or search groups, skills, and workflows, then `ralphglasses_load_tool_group` before invoking non-core grouped tools in deferred mode.
 
 ## Management Tools
 
@@ -18,7 +20,7 @@ Ralphglasses exposes **222 tools**: **218 grouped tools** across **30 deferred-l
 | `ralphglasses_load_tool_group` | Load all tools in a named group (core, session, loop, prompt, fleet, repo, roadmap, team, tenant, awesome, advanced, events, feedback, eval, fleet_h, observability, rdcycle, plugin, sweep, rc, autonomy, workflow, docs, recovery, promptdj, a2a, trigger, approval, context, prefetch). Use ralphglasses_tool_groups or ralph:///catalog/tool-groups first if you need discovery. |
 | `ralphglasses_server_health` | Show the active ralphglasses MCP contract shape, including available tool groups, loaded groups, and resource/prompt coverage. |
 | `ralphglasses_skill_export` | Generate SKILL.md documentation from all registered tool groups. Returns markdown or JSON. |
-| `ralphglasses_tool_groups` | List available tool groups for deferred loading. Call ralphglasses_load_tool_group to load a specific group. |
+| `ralphglasses_tool_groups` | List available tool groups for deferred loading, or search the live workflow and skill catalog when query/include flags are provided. |
 
 ## Tool Groups
 
