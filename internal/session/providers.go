@@ -13,6 +13,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const agentSessionQuietEnvVar = "HG_AGENT_SESSION_QUIET"
+
 // estimateCostFromTokens computes a cost estimate from token counts in raw JSON
 // when the provider does not emit an explicit cost_usd field. Uses the rates
 // from ProviderCostRates (defined in costnorm.go). Returns 0 if no token data
@@ -328,7 +330,7 @@ func buildClaudeCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	// Strip nesting env vars so child sessions don't detect nesting and refuse to start.
-	cmd.Env = stripNestingEnv(os.Environ())
+	cmd.Env = quietAgentSessionEnv(os.Environ())
 
 	return cmd
 }
@@ -389,7 +391,7 @@ func buildGeminiCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "gemini", args...)
 	cmd.Dir = opts.RepoPath
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Env = stripNestingEnv(os.Environ())
+	cmd.Env = quietAgentSessionEnv(os.Environ())
 	return cmd
 }
 
@@ -460,7 +462,7 @@ func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "codex", args...)
 	cmd.Dir = opts.RepoPath
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Env = stripNestingEnv(os.Environ())
+	cmd.Env = quietAgentSessionEnv(os.Environ())
 	return cmd
 }
 
@@ -616,6 +618,19 @@ func stripNestingEnv(env []string) []string {
 		env = filterEnv(env, key)
 	}
 	return env
+}
+
+func quietAgentSessionEnv(env []string) []string {
+	env = stripNestingEnv(env)
+	quietValue := agentSessionQuietEnvVar + "=1"
+	prefix := agentSessionQuietEnvVar + "="
+	for i, entry := range env {
+		if strings.HasPrefix(entry, prefix) {
+			env[i] = quietValue
+			return env
+		}
+	}
+	return append(env, quietValue)
 }
 
 // filterEnv returns a copy of env with any variable whose name matches key removed.

@@ -133,6 +133,50 @@ func TestBuildCodexCmd(t *testing.T) {
 	}
 }
 
+func TestBuildProviderCommandsSetQuietSessionEnv(t *testing.T) {
+	t.Setenv(agentSessionQuietEnvVar, "0")
+	ctx := context.Background()
+
+	tests := []struct {
+		name string
+		env  []string
+	}{
+		{
+			name: "claude",
+			env: buildClaudeCmd(ctx, LaunchOptions{
+				RepoPath: "/tmp/repo",
+			}).Env,
+		},
+		{
+			name: "gemini",
+			env: buildGeminiCmd(ctx, LaunchOptions{
+				RepoPath: "/tmp/repo",
+			}).Env,
+		},
+		{
+			name: "codex",
+			env: buildCodexCmd(ctx, LaunchOptions{
+				RepoPath: "/tmp/repo",
+			}).Env,
+		},
+	}
+
+	for _, tt := range tests {
+		foundQuiet := false
+		for _, entry := range tt.env {
+			switch entry {
+			case agentSessionQuietEnvVar + "=1":
+				foundQuiet = true
+			case agentSessionQuietEnvVar + "=0":
+				t.Fatalf("%s env preserved disabled quiet flag: %q", tt.name, entry)
+			}
+		}
+		if !foundQuiet {
+			t.Fatalf("%s env missing %s=1", tt.name, agentSessionQuietEnvVar)
+		}
+	}
+}
+
 func TestBuildClaudeCmdNewFlags(t *testing.T) {
 	ctx := context.Background()
 
