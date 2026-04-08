@@ -122,8 +122,8 @@ func TestStaticResourceRegistration(t *testing.T) {
 		t.Fatalf("expected ListResourcesResult, got %T", rpcResp.Result)
 	}
 
-	if len(result.Resources) != 12 {
-		t.Fatalf("expected 12 static resources, got %d", len(result.Resources))
+	if len(result.Resources) != 13 {
+		t.Fatalf("expected 13 static resources, got %d", len(result.Resources))
 	}
 
 	uris := make(map[string]bool)
@@ -139,6 +139,7 @@ func TestStaticResourceRegistration(t *testing.T) {
 		"ralph:///catalog/cli-parity",
 		"ralph:///catalog/discovery-adoption",
 		"ralph:///catalog/adoption-priorities",
+		"ralph:///catalog/provider-parity",
 		"ralph:///bootstrap/checklist",
 		"ralph:///runtime/recovery",
 		"ralph:///runtime/sessions",
@@ -326,6 +327,48 @@ func TestAdoptionPrioritiesResource_ReturnsPrioritySummary(t *testing.T) {
 	}
 	if strings.Contains(textContent.Text, "\"name\": \"ralph:///catalog/server\"") {
 		t.Fatalf("active discovery surface should not be prioritized: %s", textContent.Text)
+	}
+}
+
+func TestProviderParityResource_ReturnsFrontDoorSummary(t *testing.T) {
+	t.Parallel()
+
+	appSrv, _, _ := setupRepoForResources(t)
+	ralphDir := filepath.Join(appSrv.ScanPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ralphDir, "tool_benchmarks.jsonl"), []byte(`{"tool":"ralphglasses_doctor","ts":"2026-04-08T11:00:00Z","latency_ms":10,"ok":true}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ralphDir, "discovery_usage.jsonl"), []byte(`{"kind":"resource","name":"ralph:///catalog/provider-parity","ts":"2026-04-08T11:00:00Z"}`+"\n"+`{"kind":"prompt","name":"provider-parity-audit","ts":"2026-04-08T11:01:00Z"}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := makeProviderParityHandler(appSrv)
+	results, err := handler(context.Background(), mcp.ReadResourceRequest{
+		Params: mcp.ReadResourceParams{URI: "ralph:///catalog/provider-parity"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	textContent, ok := results[0].(mcp.TextResourceContents)
+	if !ok {
+		t.Fatalf("expected TextResourceContents, got %T", results[0])
+	}
+	for _, expected := range []string{
+		`"recommended_prompt": "provider-parity-audit"`,
+		`"recommended_skill": "ralphglasses-self-dev"`,
+		`"highest_priority_workflow": "provider-parity"`,
+		`"cli_parity_summary": {`,
+		`"cli_parity_usage": {`,
+		`"discovery_adoption_summary": {`,
+		`"adoption_priority_summary": {`,
+		`"provider_parity": "ralph:///catalog/provider-parity"`,
+	} {
+		if !strings.Contains(textContent.Text, expected) {
+			t.Fatalf("expected %q in provider parity resource: %s", expected, textContent.Text)
+		}
 	}
 }
 

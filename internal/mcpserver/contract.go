@@ -124,6 +124,12 @@ var staticResourceDefs = []ResourceDef{
 		MIMEType:    "application/json",
 	},
 	{
+		URI:         "ralph:///catalog/provider-parity",
+		Name:        "Provider parity",
+		Description: "Read the provider-parity front door before auditing repo instructions, MCP registration, generated skills, and rollout drift across providers.",
+		MIMEType:    "application/json",
+	},
+	{
 		URI:         "ralph:///bootstrap/checklist",
 		Name:        "Bootstrap checklist",
 		Description: "Read the MCP-first bootstrap checklist for provider readiness, config validation, and firstboot flows.",
@@ -250,7 +256,7 @@ var skillCatalogDefs = []SkillCatalogDef{
 		Tags:          []string{"self-dev", "roadmap", "parity", "docs"},
 		Workflows:     []string{"repo-triage", "provider-parity"},
 		ToolGroups:    []string{"repo", "roadmap", "loop", "fleet", "docs"},
-		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/skills", "ralph:///catalog/workflows", "ralph:///catalog/cli-parity", "ralph:///catalog/discovery-adoption", "ralph:///catalog/adoption-priorities", "ralph:///{repo}/triage"},
+		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/skills", "ralph:///catalog/workflows", "ralph:///catalog/cli-parity", "ralph:///catalog/discovery-adoption", "ralph:///catalog/adoption-priorities", "ralph:///catalog/provider-parity", "ralph:///{repo}/triage"},
 		Prompts:       []string{"provider-parity-audit", "repo-triage-brief"},
 		KeyTools:      []string{"ralphglasses_repo_surface_audit", "ralphglasses_roadmap_analyze", "ralphglasses_roadmap_prioritize", "ralphglasses_marathon"},
 		CanonicalPath: ".agents/skills/ralphglasses-self-dev/SKILL.md",
@@ -298,7 +304,7 @@ var workflowDefs = []WorkflowDef{
 	{
 		Name:        "provider-parity",
 		Description: "Compare repo instructions, MCP registration, and generated skills across supported providers before rollout.",
-		Resources:   []string{"ralph:///catalog/server", "ralph:///catalog/tool-groups", "ralph:///catalog/skills"},
+		Resources:   []string{"ralph:///catalog/provider-parity", "ralph:///catalog/server", "ralph:///catalog/tool-groups", "ralph:///catalog/skills", "ralph:///catalog/cli-parity", "ralph:///catalog/discovery-adoption", "ralph:///catalog/adoption-priorities"},
 		Prompts:     []string{"provider-parity-audit"},
 		Skills:      []string{"ralphglasses-self-dev", "ralphglasses-discovery"},
 		ToolGroups:  []string{"repo", "roadmap", "docs"},
@@ -422,6 +428,7 @@ Start with discovery instead of guessing:
 - Read ralph:///catalog/cli-parity when the task is about CLI-to-MCP workflow coverage or operator parity.
 - Read ralph:///catalog/discovery-adoption when you need live adoption telemetry for resources, prompts, and focused skill entrypoints.
 - Read ralph:///catalog/adoption-priorities when you need ranked next-work candidates from inactive CLI parity and discovery surfaces.
+- Read ralph:///catalog/provider-parity when the task is about repo/provider instruction drift, MCP registration, or generated-skill rollout across providers.
 - Read ralph:///runtime/sessions when the task is session-heavy.
 - Read ralph:///runtime/operator when the task is TUI, tmux, fleet-runtime, or marathon-heavy.
 - Read ralph:///runtime/recovery, ralph:///runtime/health, or ralph:///bootstrap/checklist when the task is runtime- or bootstrap-heavy.

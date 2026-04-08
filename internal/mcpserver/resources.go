@@ -55,6 +55,7 @@ func RegisterResources(srv *server.MCPServer, appSrv *Server) {
 		"ralph:///catalog/cli-parity":          makeCLIParityHandler(appSrv),
 		"ralph:///catalog/discovery-adoption":  makeDiscoveryAdoptionHandler(appSrv),
 		"ralph:///catalog/adoption-priorities": makeAdoptionPrioritiesHandler(appSrv),
+		"ralph:///catalog/provider-parity":     makeProviderParityHandler(appSrv),
 		"ralph:///bootstrap/checklist":         makeBootstrapChecklistHandler(),
 		"ralph:///runtime/recovery":            makeRuntimeRecoveryHandler(appSrv),
 		"ralph:///runtime/sessions":            makeRuntimeSessionsHandler(appSrv),
@@ -241,6 +242,12 @@ func makeDiscoveryAdoptionHandler(appSrv *Server) server.ResourceHandlerFunc {
 func makeAdoptionPrioritiesHandler(appSrv *Server) server.ResourceHandlerFunc {
 	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		return jsonResourceContents(req.Params.URI, appSrv.adoptionPrioritySummary())
+	}
+}
+
+func makeProviderParityHandler(appSrv *Server) server.ResourceHandlerFunc {
+	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, appSrv.buildProviderParityDoc())
 	}
 }
 
@@ -564,6 +571,54 @@ func (s *Server) buildRuntimeOperatorDoc(ctx context.Context) map[string]any {
 		"marathon_runtime":      s.marathonStatus(),
 		"active_session_count":  sessions["active_session_count"],
 		"stalled_session_count": sessions["stalled_session_count"],
+		"runtime_health": map[string]any{
+			"status":                    runtime["status"],
+			"loaded_groups":             runtime["loaded_groups"],
+			"tool_group_count":          runtime["tool_group_count"],
+			"resource_count":            runtime["resource_count"],
+			"prompt_count":              runtime["prompt_count"],
+			"highest_priority_workflow": nestedString(runtime["adoption_priority_summary"], "highest_priority_workflow"),
+		},
+	}
+}
+
+func (s *Server) buildProviderParityDoc() map[string]any {
+	cliParityUsage := parity.CLIParityUsage(parity.DefaultCLIParityUsageOptions(s.ScanPath))
+	discoverySummary := s.discoveryAdoptionSummary()
+	adoptionSummary := s.adoptionPrioritySummary()
+	runtime := s.runtimeHealthDoc()
+
+	return map[string]any{
+		"title":                     "Ralphglasses provider parity front door",
+		"description":               "Read this before auditing repo instructions, provider-native settings, MCP registration, or generated skills across providers.",
+		"recommended_prompt":        "provider-parity-audit",
+		"recommended_skill":         "ralphglasses-self-dev",
+		"recommended_skills":        []string{"ralphglasses-self-dev", "ralphglasses-discovery", "ralphglasses-repo-admin"},
+		"highest_priority_workflow": "provider-parity",
+		"supporting_resources": map[string]string{
+			"provider_parity":    "ralph:///catalog/provider-parity",
+			"server_catalog":     "ralph:///catalog/server",
+			"tool_groups":        "ralph:///catalog/tool-groups",
+			"workflow_catalog":   "ralph:///catalog/workflows",
+			"skill_catalog":      "ralph:///catalog/skills",
+			"cli_parity":         "ralph:///catalog/cli-parity",
+			"discovery_adoption": "ralph:///catalog/discovery-adoption",
+			"adoption_priority":  "ralph:///catalog/adoption-priorities",
+		},
+		"supporting_prompts": []string{
+			"provider-parity-audit",
+			"repo-triage-brief",
+		},
+		"supporting_tools": []string{
+			"ralphglasses_server_health",
+			"ralphglasses_repo_surface_audit",
+			"ralphglasses_skill_export",
+			"ralphglasses_roadmap_analyze",
+		},
+		"cli_parity_summary":         parity.CLIParityCoverage(),
+		"cli_parity_usage":           cliParityUsage,
+		"discovery_adoption_summary": discoverySummary,
+		"adoption_priority_summary":  adoptionSummary,
 		"runtime_health": map[string]any{
 			"status":                    runtime["status"],
 			"loaded_groups":             runtime["loaded_groups"],
