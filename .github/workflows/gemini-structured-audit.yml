@@ -82,7 +82,7 @@ jobs:
           }' gemini-structured-audit.json > gemini-structured-audit-summary.json
 
       - name: Upload structured audit
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gemini-structured-audit
           path: |
