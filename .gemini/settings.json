@@ -1,13 +1,10 @@
 {
-  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
   "context": {
     "fileName": [
       "AGENTS.md",
+      "CLAUDE.md",
       "GEMINI.md"
     ]
-  },
-  "general": {
-    "defaultApprovalMode": "default"
   },
   "mcp": {
     "allowed": [
