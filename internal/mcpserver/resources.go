@@ -49,7 +49,7 @@ func RegisterResources(srv *server.MCPServer, appSrv *Server) {
 		"ralph:///catalog/tool-groups": makeCatalogToolGroupsHandler(appSrv),
 		"ralph:///catalog/workflows":   makeCatalogWorkflowsHandler(),
 		"ralph:///catalog/skills":      makeCatalogSkillsHandler(),
-		"ralph:///catalog/cli-parity":  makeCLIParityHandler(),
+		"ralph:///catalog/cli-parity":  makeCLIParityHandler(appSrv),
 		"ralph:///bootstrap/checklist": makeBootstrapChecklistHandler(),
 		"ralph:///runtime/health":      makeRuntimeHealthHandler(appSrv),
 	}
@@ -202,9 +202,9 @@ func makeCatalogSkillsHandler() server.ResourceHandlerFunc {
 	}
 }
 
-func makeCLIParityHandler() server.ResourceHandlerFunc {
+func makeCLIParityHandler(appSrv *Server) server.ResourceHandlerFunc {
 	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-		return jsonResourceContents(req.Params.URI, parity.CLIParityDocument())
+		return jsonResourceContents(req.Params.URI, parity.CLIParityDocumentWithUsage(parity.DefaultCLIParityUsageOptions(appSrv.ScanPath)))
 	}
 }
 
@@ -221,6 +221,7 @@ func makeRuntimeHealthHandler(appSrv *Server) server.ResourceHandlerFunc {
 }
 
 func buildCatalogServerDoc(appSrv *Server) map[string]any {
+	usageSummary := parity.CLIParityUsage(parity.DefaultCLIParityUsageOptions(appSrv.ScanPath))
 	return map[string]any{
 		"server_name":             "ralphglasses",
 		"instructions":            ServerInstructions(),
@@ -238,6 +239,7 @@ func buildCatalogServerDoc(appSrv *Server) map[string]any {
 		"resource_templates":      resourceTemplateURIs(resourceTemplateCatalog()),
 		"skills":                  skillNames(),
 		"cli_parity_summary":      parity.CLIParityCoverage(),
+		"cli_parity_usage":        usageSummary,
 		"prompts":                 promptNames(),
 		"tool_groups":             buildCatalogToolGroupsDoc(appSrv),
 	}

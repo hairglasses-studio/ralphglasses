@@ -102,7 +102,7 @@ var staticResourceDefs = []ResourceDef{
 	{
 		URI:         "ralph:///catalog/cli-parity",
 		Name:        "CLI parity catalog",
-		Description: "Read the current CLI-to-MCP/skill parity matrix and its coverage summary.",
+		Description: "Read the current CLI-to-MCP/skill parity matrix, its static coverage summary, and the rolling usage telemetry snapshot from tool benchmarks.",
 		MIMEType:    "application/json",
 	},
 	{

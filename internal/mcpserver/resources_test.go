@@ -172,7 +172,17 @@ func TestCatalogSkillsResource_ReturnsSkillCatalog(t *testing.T) {
 func TestCLIParityResource_ReturnsCoverageSummary(t *testing.T) {
 	t.Parallel()
 
-	handler := makeCLIParityHandler()
+	appSrv, _, _ := setupRepoForResources(t)
+	benchDir := filepath.Join(appSrv.ScanPath, ".ralph")
+	if err := os.MkdirAll(benchDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	benchPath := filepath.Join(benchDir, "tool_benchmarks.jsonl")
+	if err := os.WriteFile(benchPath, []byte(`{"tool":"ralphglasses_doctor","ts":"2026-04-08T11:00:00Z","latency_ms":10,"ok":true}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := makeCLIParityHandler(appSrv)
 	results, err := handler(context.Background(), mcp.ReadResourceRequest{
 		Params: mcp.ReadResourceParams{URI: "ralph:///catalog/cli-parity"},
 	})
@@ -188,6 +198,12 @@ func TestCLIParityResource_ReturnsCoverageSummary(t *testing.T) {
 	}
 	if !strings.Contains(textContent.Text, "\"command_only_by_design\": 3") {
 		t.Fatalf("expected command-only count in cli parity resource: %s", textContent.Text)
+	}
+	if !strings.Contains(textContent.Text, "\"usage_telemetry\"") {
+		t.Fatalf("expected usage telemetry block in cli parity resource: %s", textContent.Text)
+	}
+	if !strings.Contains(textContent.Text, "\"active_observable_surfaces\": 1") {
+		t.Fatalf("expected active surface count in cli parity resource: %s", textContent.Text)
 	}
 }
 
@@ -233,6 +249,9 @@ func TestRuntimeHealthResource_ReturnsServerHealthShape(t *testing.T) {
 	}
 	if !strings.Contains(textContent.Text, "\"skill_count\"") {
 		t.Fatalf("expected skill_count in runtime health: %s", textContent.Text)
+	}
+	if !strings.Contains(textContent.Text, "\"cli_parity_usage\"") {
+		t.Fatalf("expected cli_parity_usage in runtime health: %s", textContent.Text)
 	}
 }
 

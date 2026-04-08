@@ -68,7 +68,7 @@ Ralphglasses exposes **222 tools**: **218 grouped tools** across **30 deferred-l
 | `ralph:///catalog/tool-groups` | Tool group catalog | Read the grouped tool catalog with descriptions and tool counts. |
 | `ralph:///catalog/workflows` | Workflow catalog | Read the common ralphglasses operator workflows and their discovery entrypoints. |
 | `ralph:///catalog/skills` | Skill catalog | Read the canonical ralphglasses workflow skills, their scopes, and their primary discovery entrypoints. |
-| `ralph:///catalog/cli-parity` | CLI parity catalog | Read the current CLI-to-MCP/skill parity matrix and its coverage summary. |
+| `ralph:///catalog/cli-parity` | CLI parity catalog | Read the current CLI-to-MCP/skill parity matrix, its static coverage summary, and the rolling usage telemetry snapshot from tool benchmarks. |
 | `ralph:///bootstrap/checklist` | Bootstrap checklist | Read the MCP-first bootstrap checklist for provider readiness, config validation, and firstboot flows. |
 | `ralph:///runtime/health` | Runtime health | Read the current ralphglasses runtime health snapshot, including loaded groups and discovery coverage. |
 

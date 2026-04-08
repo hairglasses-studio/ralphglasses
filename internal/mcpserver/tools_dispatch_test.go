@@ -229,6 +229,9 @@ func TestHandleServerHealth_IncludesDiscoveryContract(t *testing.T) {
 	if payload["cli_parity_summary"] == nil {
 		t.Fatalf("expected cli_parity_summary in server health payload: %v", payload)
 	}
+	if payload["cli_parity_usage"] == nil {
+		t.Fatalf("expected cli_parity_usage in server health payload: %v", payload)
+	}
 	instructions, _ := payload["instructions"].(string)
 	if !strings.Contains(instructions, "ralph:///catalog/server") {
 		t.Fatalf("instructions missing discovery resource guidance: %q", instructions)

@@ -236,6 +236,7 @@ func (s *Server) runtimeHealthDoc() map[string]any {
 	resourceDefs := staticResourceCatalog()
 	templateDefs := resourceTemplateCatalog()
 	managementTools := managementToolNames()
+	usageSummary := parity.CLIParityUsage(parity.DefaultCLIParityUsageOptions(s.ScanPath))
 
 	return map[string]any{
 		"server":                  "ralphglasses",
@@ -260,6 +261,7 @@ func (s *Server) runtimeHealthDoc() map[string]any {
 		"skill_count":             len(skillCatalog()),
 		"skill_names":             skillNames(),
 		"cli_parity_summary":      parity.CLIParityCoverage(),
+		"cli_parity_usage":        usageSummary,
 		"prompt_count":            len(promptCatalog()),
 		"prompt_names":            promptNames(),
 		"discovery_tools":         managementTools,

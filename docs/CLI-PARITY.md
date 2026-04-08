@@ -16,6 +16,19 @@ Current coverage snapshot from the live parity matrix:
 - `21` bespoke-covered surfaces (`87.5%` of all tracked surfaces)
 - `100%` coverage of business surfaces after excluding the `3` command-only-by-design transport/shell affordances
 
+## Usage Telemetry
+
+The live `ralph:///catalog/cli-parity` resource now includes a rolling usage snapshot sourced from `<scan-path>/.ralph/tool_benchmarks.jsonl`.
+
+- Default window: last `30` days
+- Source of truth: MCP tool-call recorder output, not hand-maintained counters
+- Purpose: measure which parity-covered CLI surfaces are actually being exercised through bespoke MCP flows
+
+Current observability caveat:
+
+- Pure skill-backed terminal surfaces like the root TUI and `tmux` flows are intentionally excluded from the usage denominator because the benchmark file only records MCP tool invocations.
+- Shared MCP tools can light up multiple CLI surfaces. For example, `ralphglasses_repo_scaffold` contributes usage to both `ralphglasses init` and `ralphglasses config init`.
+
 ## Command Matrix
 
 | CLI Surface | Status | MCP Tool / Skill | Notes |
