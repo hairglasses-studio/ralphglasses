@@ -82,7 +82,7 @@ Session launch:
 ```json
 {
   "tenant_id": "acme",
-  "repo_path": "/home/hg/hairglasses-studio/client-acme/api",
+  "repo_path": "~/hairglasses-studio/client-acme/api",
   "provider": "codex",
   "prompt": "Audit and fix flaky integration tests"
 }

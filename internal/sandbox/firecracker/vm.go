@@ -396,25 +396,10 @@ func (vm *VM) ExecSSH(ctx context.Context, cmd string) (string, error) {
 
 // execSSHReal performs the actual SSH command execution.
 func (vm *VM) execSSHReal(ctx context.Context, cmd string) (string, error) {
-	vm.mu.RLock()
-	sshPort := vm.config.SSHPort
-	keyPath := vm.config.SSHKeyPath
-	vm.mu.RUnlock()
-
-	if sshPort == 0 {
-		return "", errors.New("firecracker: SSH port not configured")
+	args, err := vm.sshArgs(cmd)
+	if err != nil {
+		return "", err
 	}
-
-	args := []string{
-		"-o", "StrictHostKeyChecking=no",
-		"-o", "UserKnownHostsFile=/dev/null",
-		"-o", "ConnectTimeout=10",
-		"-p", strconv.Itoa(sshPort),
-	}
-	if keyPath != "" {
-		args = append(args, "-i", keyPath)
-	}
-	args = append(args, "root@localhost", cmd)
 
 	sshCmd := exec.CommandContext(ctx, "ssh", args...)
 	var stdout, stderr bytes.Buffer
@@ -425,6 +410,29 @@ func (vm *VM) execSSHReal(ctx context.Context, cmd string) (string, error) {
 		return "", fmt.Errorf("firecracker: ssh exec: %w: %s", err, strings.TrimSpace(stderr.String()))
 	}
 	return stdout.String(), nil
+}
+
+func (vm *VM) sshArgs(cmd string) ([]string, error) {
+	vm.mu.RLock()
+	sshPort := vm.config.SSHPort
+	keyPath := vm.config.SSHKeyPath
+	vm.mu.RUnlock()
+
+	if sshPort == 0 {
+		return nil, errors.New("firecracker: SSH port not configured")
+	}
+
+	args := []string{
+		"-o", "StrictHostKeyChecking=accept-new",
+		"-o", "UserKnownHostsFile=/dev/null",
+		"-o", "ConnectTimeout=10",
+		"-p", strconv.Itoa(sshPort),
+	}
+	if keyPath != "" {
+		args = append(args, "-i", keyPath)
+	}
+	args = append(args, "root@localhost", cmd)
+	return args, nil
 }
 
 // waitForSocket polls until the Unix socket is connectable or the context expires.
@@ -452,7 +460,7 @@ func (vm *VM) waitForSocket(ctx context.Context, socketPath string) error {
 // configureMachineConfig sends PUT /machine-config.
 func (vm *VM) configureMachineConfig(ctx context.Context) error {
 	return vm.apiPut(ctx, "/machine-config", map[string]any{
-		"vcpu_count":  vm.config.VCPUs,
+		"vcpu_count":   vm.config.VCPUs,
 		"mem_size_mib": vm.config.MemoryMB,
 	})
 }

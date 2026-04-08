@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -258,6 +259,30 @@ func TestVMExecSSHNoPort(t *testing.T) {
 	}
 	if !contains(err.Error(), "SSH port not configured") {
 		t.Errorf("error %q should mention SSH port", err.Error())
+	}
+}
+
+func TestVMSSHArgsUsesAcceptNewHostKeyPolicy(t *testing.T) {
+	t.Parallel()
+
+	vm := NewVM("ssh-args",
+		WithKernel("/tmp/vmlinux"),
+		WithRootFS("/tmp/rootfs.ext4"),
+		WithNetwork(NetworkTap, 2222),
+		WithSSHKey("/tmp/test-key"),
+	)
+
+	args, err := vm.sshArgs("uname -a")
+	if err != nil {
+		t.Fatalf("sshArgs: %v", err)
+	}
+
+	joined := strings.Join(args, " ")
+	if !contains(joined, "StrictHostKeyChecking=accept-new") {
+		t.Fatalf("ssh args %q missing StrictHostKeyChecking=accept-new", joined)
+	}
+	if !contains(joined, "UserKnownHostsFile=/dev/null") {
+		t.Fatalf("ssh args %q missing UserKnownHostsFile=/dev/null", joined)
 	}
 }
 

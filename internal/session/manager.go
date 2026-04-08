@@ -35,28 +35,30 @@ type Manager struct {
 	teamBackend     StructuredTeamBackend      // structured team execution backend (fleet)
 	teamControllers map[string]*teamController // active team controllers keyed by team name
 
-	configMu       sync.RWMutex
-	bus            *events.Bus
-	stateDir       string                  // directory for persisted session JSON files
-	optimizer      *AutoOptimizer          // Level 2+ self-improvement engine
-	reflexion      *ReflexionStore         // WS1: failure reflection extraction
-	episodic       *EpisodicMemory         // WS2: successful trajectory memory
-	cascade        *CascadeRouter          // WS3: cheap-then-expensive provider routing
-	curriculum     *CurriculumSorter       // WS5: task difficulty scoring and ordering
-	banditSelect   func() (string, string) // bandit-based provider selection hook
-	banditUpdate   func(string, float64)   // bandit reward recording hook
-	blackboard     *Blackboard             // Phase H: shared inter-subsystem state
-	costPredictor  *CostPredictor          // Phase H: task cost prediction
-	noopDetector   *NoOpDetector           // WS2-noop: consecutive no-op iteration detection
-	budgetEnforcer *BudgetEnforcer         // WS5: secondary budget enforcement for loops
-	depthEstimator *DepthEstimator         // Phase 10.5.5: adaptive iteration depth
-	researchGateway ResearchGateway        // docs-backed research integration for supervisor ticks
-	crashRecovery   *CrashRecoveryOrchestrator
-	store          Store                   // pluggable session persistence (default: MemoryStore)
-	launchSession  func(context.Context, LaunchOptions) (*Session, error)
-	waitSession    func(context.Context, *Session) error
-	healthCheck    func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
-	supervisor     *Supervisor                   // autonomous R&D supervisor, runs at level >= 2
+	configMu                 sync.RWMutex
+	compactionFailuresMu     sync.Mutex
+	bus                      *events.Bus
+	stateDir                 string                  // directory for persisted session JSON files
+	optimizer                *AutoOptimizer          // Level 2+ self-improvement engine
+	reflexion                *ReflexionStore         // WS1: failure reflection extraction
+	episodic                 *EpisodicMemory         // WS2: successful trajectory memory
+	cascade                  *CascadeRouter          // WS3: cheap-then-expensive provider routing
+	curriculum               *CurriculumSorter       // WS5: task difficulty scoring and ordering
+	banditSelect             func() (string, string) // bandit-based provider selection hook
+	banditUpdate             func(string, float64)   // bandit reward recording hook
+	blackboard               *Blackboard             // Phase H: shared inter-subsystem state
+	costPredictor            *CostPredictor          // Phase H: task cost prediction
+	noopDetector             *NoOpDetector           // WS2-noop: consecutive no-op iteration detection
+	budgetEnforcer           *BudgetEnforcer         // WS5: secondary budget enforcement for loops
+	depthEstimator           *DepthEstimator         // Phase 10.5.5: adaptive iteration depth
+	resumeCompactionFailures map[string]int
+	researchGateway          ResearchGateway // docs-backed research integration for supervisor ticks
+	crashRecovery            *CrashRecoveryOrchestrator
+	store                    Store // pluggable session persistence (default: MemoryStore)
+	launchSession            func(context.Context, LaunchOptions) (*Session, error)
+	waitSession              func(context.Context, *Session) error
+	healthCheck              func(Provider) ProviderHealth // injectable health check (default: CheckProviderHealth)
+	supervisor               *Supervisor                   // autonomous R&D supervisor, runs at level >= 2
 
 	SessionTimeout     time.Duration          // timeout for waitForSession; 0 uses default (10m)
 	KillTimeout        time.Duration          // SIGTERM→SIGKILL escalation timeout; 0 uses default (5s)
@@ -88,16 +90,17 @@ const DefaultEstimatedSessionCost = 0.50
 func NewManager() *Manager {
 	stateDir := expandHome(DefaultStateDir)
 	return &Manager{
-		sessions:       make(map[string]*Session),
-		teams:          make(map[string]*TeamStatus),
-		workflowRuns:   make(map[string]*WorkflowRun),
-		loops:          make(map[string]*LoopRun),
-		stateDir:       stateDir,
-		noopDetector:   NewNoOpDetector(2),
-		budgetEnforcer: NewBudgetEnforcer(),
-		cascade:        NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
-		FleetPool:      pool.NewState(0), // 0 = unlimited by default
-		automation:     make(map[string]*SubscriptionAutomationController),
+		sessions:                 make(map[string]*Session),
+		teams:                    make(map[string]*TeamStatus),
+		workflowRuns:             make(map[string]*WorkflowRun),
+		loops:                    make(map[string]*LoopRun),
+		stateDir:                 stateDir,
+		noopDetector:             NewNoOpDetector(2),
+		budgetEnforcer:           NewBudgetEnforcer(),
+		cascade:                  NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
+		FleetPool:                pool.NewState(0), // 0 = unlimited by default
+		automation:               make(map[string]*SubscriptionAutomationController),
+		resumeCompactionFailures: make(map[string]int),
 	}
 }
 
@@ -105,17 +108,18 @@ func NewManager() *Manager {
 func NewManagerWithBus(bus *events.Bus) *Manager {
 	stateDir := expandHome(DefaultStateDir)
 	return &Manager{
-		sessions:       make(map[string]*Session),
-		teams:          make(map[string]*TeamStatus),
-		workflowRuns:   make(map[string]*WorkflowRun),
-		loops:          make(map[string]*LoopRun),
-		bus:            bus,
-		stateDir:       stateDir,
-		noopDetector:   NewNoOpDetector(2),
-		budgetEnforcer: NewBudgetEnforcer(),
-		cascade:        NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
-		FleetPool:      pool.NewState(0),
-		automation:     make(map[string]*SubscriptionAutomationController),
+		sessions:                 make(map[string]*Session),
+		teams:                    make(map[string]*TeamStatus),
+		workflowRuns:             make(map[string]*WorkflowRun),
+		loops:                    make(map[string]*LoopRun),
+		bus:                      bus,
+		stateDir:                 stateDir,
+		noopDetector:             NewNoOpDetector(2),
+		budgetEnforcer:           NewBudgetEnforcer(),
+		cascade:                  NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
+		FleetPool:                pool.NewState(0),
+		automation:               make(map[string]*SubscriptionAutomationController),
+		resumeCompactionFailures: make(map[string]int),
 	}
 }
 
@@ -125,17 +129,18 @@ func NewManagerWithBus(bus *events.Bus) *Manager {
 func NewManagerWithStore(store Store, bus *events.Bus) *Manager {
 	stateDir := expandHome(DefaultStateDir)
 	return &Manager{
-		sessions:     make(map[string]*Session),
-		teams:        make(map[string]*TeamStatus),
-		workflowRuns: make(map[string]*WorkflowRun),
-		loops:        make(map[string]*LoopRun),
-		bus:          bus,
-		store:        store,
-		stateDir:     stateDir,
-		noopDetector: NewNoOpDetector(2),
-		cascade:      NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
-		FleetPool:    pool.NewState(0),
-		automation:   make(map[string]*SubscriptionAutomationController),
+		sessions:                 make(map[string]*Session),
+		teams:                    make(map[string]*TeamStatus),
+		workflowRuns:             make(map[string]*WorkflowRun),
+		loops:                    make(map[string]*LoopRun),
+		bus:                      bus,
+		store:                    store,
+		stateDir:                 stateDir,
+		noopDetector:             NewNoOpDetector(2),
+		cascade:                  NewCascadeRouter(DefaultCascadeConfig(), nil, nil, stateDir),
+		FleetPool:                pool.NewState(0),
+		automation:               make(map[string]*SubscriptionAutomationController),
+		resumeCompactionFailures: make(map[string]int),
 	}
 }
 
