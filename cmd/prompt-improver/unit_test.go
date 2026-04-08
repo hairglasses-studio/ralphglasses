@@ -77,6 +77,20 @@ func TestPromptImproverLastSourcePath_PrefersXDGRuntimeDir(t *testing.T) {
 	}
 }
 
+func TestPromptImproverLastSourcePath_FallsBackToAppCacheDir(t *testing.T) {
+	home := filepath.Join(t.TempDir(), "home")
+	t.Setenv("PROMPT_IMPROVER_LAST_SOURCE_PATH", "")
+	t.Setenv("XDG_RUNTIME_DIR", "")
+	t.Setenv("XDG_CACHE_HOME", "")
+	t.Setenv("HOME", home)
+
+	got := promptImproverLastSourcePath()
+	want := filepath.Join(home, ".cache", "ralphglasses", "prompt-improver-last-source")
+	if got != want {
+		t.Fatalf("promptImproverLastSourcePath() = %q, want %q", got, want)
+	}
+}
+
 func TestWritePromptImproverLastSource_UsesCacheFallback(t *testing.T) {
 	cacheDir := filepath.Join(t.TempDir(), "cache")
 	t.Setenv("PROMPT_IMPROVER_LAST_SOURCE_PATH", "")

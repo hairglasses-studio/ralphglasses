@@ -1,6 +1,7 @@
 // Package hyprland provides an IPC client for the Hyprland Wayland compositor.
 //
-// Hyprland exposes two Unix sockets under /tmp/hypr/$HYPRLAND_INSTANCE_SIGNATURE/:
+// Hyprland exposes two Unix sockets under $XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/
+// on current releases, with older installs using /tmp/hypr/$HYPRLAND_INSTANCE_SIGNATURE/:
 //   - .socket.sock  — request/response commands (JSON)
 //   - .socket2.sock — streaming event notifications
 //
@@ -16,6 +17,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+)
+
+const (
+	socketDirEnv  = "HYPRLAND_SOCKET_DIR"
+	socketRootEnv = "HYPRLAND_SOCKET_ROOT"
 )
 
 // Client communicates with a running Hyprland instance over its IPC socket.
@@ -66,26 +72,26 @@ type Workspace struct {
 
 // Window represents a Hyprland window (client).
 type Window struct {
-	Address    string  `json:"address"`
-	Mapped     bool    `json:"mapped"`
-	Hidden     bool    `json:"hidden"`
-	At         [2]int  `json:"at"`
-	Size       [2]int  `json:"size"`
-	Workspace  WsRef   `json:"workspace"`
-	Floating   bool    `json:"floating"`
-	Monitor    int     `json:"monitor"`
-	Class      string  `json:"class"`
-	Title      string  `json:"title"`
-	InitialClass string `json:"initialClass"`
-	InitialTitle string `json:"initialTitle"`
-	PID        int     `json:"pid"`
-	Xwayland   bool    `json:"xwayland"`
-	Pinned     bool    `json:"pinned"`
-	Fullscreen int     `json:"fullscreen"`
-	FakeFullscreen bool `json:"fakeFullscreen"`
-	Grouped    []string `json:"grouped"`
-	SwallowedBy string `json:"swallowing"`
-	FocusHistoryID int `json:"focusHistoryID"`
+	Address        string   `json:"address"`
+	Mapped         bool     `json:"mapped"`
+	Hidden         bool     `json:"hidden"`
+	At             [2]int   `json:"at"`
+	Size           [2]int   `json:"size"`
+	Workspace      WsRef    `json:"workspace"`
+	Floating       bool     `json:"floating"`
+	Monitor        int      `json:"monitor"`
+	Class          string   `json:"class"`
+	Title          string   `json:"title"`
+	InitialClass   string   `json:"initialClass"`
+	InitialTitle   string   `json:"initialTitle"`
+	PID            int      `json:"pid"`
+	Xwayland       bool     `json:"xwayland"`
+	Pinned         bool     `json:"pinned"`
+	Fullscreen     int      `json:"fullscreen"`
+	FakeFullscreen bool     `json:"fakeFullscreen"`
+	Grouped        []string `json:"grouped"`
+	SwallowedBy    string   `json:"swallowing"`
+	FocusHistoryID int      `json:"focusHistoryID"`
 }
 
 // NewClient creates a Client connected to the running Hyprland instance.
@@ -93,7 +99,7 @@ type Window struct {
 // IPC socket directory. Returns an error if the env var is unset or the
 // socket directory does not exist.
 func NewClient() (*Client, error) {
-	sig := os.Getenv("HYPRLAND_INSTANCE_SIGNATURE")
+	sig := strings.TrimSpace(os.Getenv("HYPRLAND_INSTANCE_SIGNATURE"))
 	if sig == "" {
 		return nil, errors.New("hyprland: HYPRLAND_INSTANCE_SIGNATURE not set; is Hyprland running?")
 	}
@@ -217,10 +223,15 @@ func (c *Client) EventSocketPath() string {
 }
 
 // resolveSocketDir returns the socket directory for a given instance signature.
-// Hyprland >= 0.40 uses $XDG_RUNTIME_DIR/hypr/$sig; older versions use /tmp/hypr/$sig.
-// Returns the first directory that exists, preferring XDG.
+// Explicit overrides win first, then the current XDG path, then the legacy /tmp path.
 func resolveSocketDir(signature string) string {
-	if xdg := os.Getenv("XDG_RUNTIME_DIR"); xdg != "" {
+	if dir := strings.TrimSpace(os.Getenv(socketDirEnv)); dir != "" {
+		return dir
+	}
+	if root := strings.TrimSpace(os.Getenv(socketRootEnv)); root != "" {
+		return filepath.Join(root, signature)
+	}
+	if xdg := strings.TrimSpace(os.Getenv("XDG_RUNTIME_DIR")); xdg != "" {
 		xdgDir := filepath.Join(xdg, "hypr", signature)
 		if _, err := os.Stat(xdgDir); err == nil {
 			return xdgDir
@@ -231,7 +242,7 @@ func resolveSocketDir(signature string) string {
 		return tmpDir
 	}
 	// Neither exists; prefer XDG if set.
-	if xdg := os.Getenv("XDG_RUNTIME_DIR"); xdg != "" {
+	if xdg := strings.TrimSpace(os.Getenv("XDG_RUNTIME_DIR")); xdg != "" {
 		return filepath.Join(xdg, "hypr", signature)
 	}
 	return tmpDir

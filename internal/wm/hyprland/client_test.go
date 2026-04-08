@@ -243,10 +243,35 @@ func TestFormatCommand(t *testing.T) {
 func TestResolveSocketDir(t *testing.T) {
 	const sig = "test-resolve-sig"
 
+	t.Run("socket_dir_override_wins", func(t *testing.T) {
+		override := filepath.Join(t.TempDir(), "hypr-override", sig)
+		t.Setenv(socketDirEnv, override)
+		t.Setenv(socketRootEnv, filepath.Join(t.TempDir(), "hypr-root"))
+		t.Setenv("XDG_RUNTIME_DIR", t.TempDir())
+		got := resolveSocketDir(sig)
+		if got != override {
+			t.Errorf("got %q, want %q", got, override)
+		}
+	})
+
+	t.Run("socket_root_override_wins", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "sandbox-hypr")
+		t.Setenv(socketDirEnv, "")
+		t.Setenv(socketRootEnv, root)
+		t.Setenv("XDG_RUNTIME_DIR", t.TempDir())
+		got := resolveSocketDir(sig)
+		want := filepath.Join(root, sig)
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
 	t.Run("xdg_exists", func(t *testing.T) {
 		xdgDir := t.TempDir()
 		sigDir := filepath.Join(xdgDir, "hypr", sig)
 		os.MkdirAll(sigDir, 0o755)
+		t.Setenv(socketDirEnv, "")
+		t.Setenv(socketRootEnv, "")
 		t.Setenv("XDG_RUNTIME_DIR", xdgDir)
 		got := resolveSocketDir(sig)
 		if got != sigDir {
@@ -259,6 +284,8 @@ func TestResolveSocketDir(t *testing.T) {
 		xdgDir := t.TempDir()
 		sigDir := filepath.Join(xdgDir, "hypr", sig)
 		os.MkdirAll(sigDir, 0o755)
+		t.Setenv(socketDirEnv, "")
+		t.Setenv(socketRootEnv, "")
 		t.Setenv("XDG_RUNTIME_DIR", xdgDir)
 		got := resolveSocketDir(sig)
 		if got != sigDir {
@@ -267,6 +294,8 @@ func TestResolveSocketDir(t *testing.T) {
 	})
 
 	t.Run("no_xdg_falls_back_to_tmp", func(t *testing.T) {
+		t.Setenv(socketDirEnv, "")
+		t.Setenv(socketRootEnv, "")
 		t.Setenv("XDG_RUNTIME_DIR", "")
 		got := resolveSocketDir(sig)
 		want := filepath.Join("/tmp", "hypr", sig)
@@ -277,6 +306,8 @@ func TestResolveSocketDir(t *testing.T) {
 
 	t.Run("neither_exists_xdg_set", func(t *testing.T) {
 		xdgDir := t.TempDir() // exists, but hypr/$sig does not
+		t.Setenv(socketDirEnv, "")
+		t.Setenv(socketRootEnv, "")
 		t.Setenv("XDG_RUNTIME_DIR", xdgDir)
 		got := resolveSocketDir(sig)
 		want := filepath.Join(xdgDir, "hypr", sig)
@@ -286,6 +317,8 @@ func TestResolveSocketDir(t *testing.T) {
 	})
 
 	t.Run("neither_exists_no_xdg", func(t *testing.T) {
+		t.Setenv(socketDirEnv, "")
+		t.Setenv(socketRootEnv, "")
 		t.Setenv("XDG_RUNTIME_DIR", "")
 		got := resolveSocketDir(sig)
 		want := filepath.Join("/tmp", "hypr", sig)

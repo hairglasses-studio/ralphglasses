@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/appdir"
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 )
 
@@ -623,10 +624,7 @@ func promptImproverLastSourcePath() string {
 	if xdgRuntime := strings.TrimSpace(os.Getenv("XDG_RUNTIME_DIR")); xdgRuntime != "" {
 		return filepath.Join(xdgRuntime, "prompt-improver-last-source")
 	}
-	if cacheDir, err := os.UserCacheDir(); err == nil && strings.TrimSpace(cacheDir) != "" {
-		return filepath.Join(cacheDir, "ralphglasses", "prompt-improver-last-source")
-	}
-	return filepath.Join(os.TempDir(), ".prompt-improver-last-source")
+	return filepath.Join(appdir.CacheDir("ralphglasses"), "prompt-improver-last-source")
 }
 
 func writePromptImproverLastSource(source string) error {
