@@ -6,7 +6,8 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
-// initStore creates a SQLite-backed session store at ~/.ralphglasses/state.db.
+// initStore creates a SQLite-backed session store at the resolved Ralph state
+// path, usually ~/.ralphglasses/state.db.
 // On failure it logs a warning and returns a MemoryStore so the process can
 // still start without persistence.
 func initStore() session.Store {

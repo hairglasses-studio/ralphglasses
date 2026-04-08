@@ -4,14 +4,14 @@
 
 Ralphglasses uses two configuration layers:
 
-1. **Runtime config** (`~/.config/ralphglasses/config.json`) -- JSON file with typed fields for the TUI and session manager.
+1. **Runtime config** (`~/.ralphglasses/config.json when HOME is available; otherwise config.json in the XDG config dir`) -- JSON file with typed fields for the TUI and session manager.
 2. **Per-repo config** (`.ralphrc`) -- key=value file in each repo root for per-project settings.
 
 ---
 
 ## Runtime Config (`config.json`)
 
-Loaded from `~/.config/ralphglasses/config.json` (or path passed via `--config`).
+Loaded from `~/.ralphglasses/config.json when HOME is available; otherwise config.json in the XDG config dir`.
 Format: JSON. The config watcher auto-reloads on file change with a 500ms debounce.
 
 ### Fields
@@ -52,11 +52,13 @@ Partial overrides are merged with compiled-in defaults.
 
 | Model Key | Input | Output |
 |-----------|-------|--------|
+| `claude_haiku` | $0.80 | $4.00 |
 | `claude_opus` | $15.00 | $75.00 |
 | `claude_sonnet` | $3.00 | $15.00 |
 | `codex` | $2.50 | $15.00 |
-| `gemini_flash` | $0.30 | $2.50 |
-| `gemini_flash_lite` | $0.10 | -- |
+| `gemini_flash` | $0.15 | $0.60 |
+| `gemini_flash_lite` | $0.07 | $0.30 |
+| `gemini_pro` | $1.25 | $10.00 |
 
 ```json
 {
@@ -193,3 +195,4 @@ Both config layers are validated on load:
 - **Runtime config**: `ValidateStruct()` runs 7 rules (budget range, cost rate, provider names, scan paths, duration formats, worker count, conflicting flags).
 - **Per-repo `.ralphrc`**: `ValidateConfig()` checks types, ranges, enum membership, and flags deprecated/unknown keys.
 - **Config watcher**: Auto-reloads on file change; invalid JSON is rejected (old config preserved), validation warnings are logged but applied.
+

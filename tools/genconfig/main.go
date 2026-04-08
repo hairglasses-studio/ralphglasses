@@ -8,7 +8,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -16,10 +15,16 @@ import (
 
 	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
 
 func main() {
-	w := os.Stdout
+	fmt.Print(renderConfigReference())
+}
+
+func renderConfigReference() string {
+	var b strings.Builder
+	w := &b
 
 	fmt.Fprintln(w, "# Ralphglasses Configuration Reference")
 	fmt.Fprintln(w)
@@ -27,7 +32,7 @@ func main() {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Ralphglasses uses two configuration layers:")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "1. **Runtime config** (`~/.config/ralphglasses/config.json`) -- JSON file with typed fields for the TUI and session manager.")
+	fmt.Fprintf(w, "1. **Runtime config** (`%s`) -- JSON file with typed fields for the TUI and session manager.\n", ralphpath.ConfigPathDefaultDescription())
 	fmt.Fprintln(w, "2. **Per-repo config** (`.ralphrc`) -- key=value file in each repo root for per-project settings.")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "---")
@@ -38,7 +43,7 @@ func main() {
 	// ---------------------------------------------------------------
 	fmt.Fprintln(w, "## Runtime Config (`config.json`)")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Loaded from `~/.config/ralphglasses/config.json` (or path passed via `--config`).")
+	fmt.Fprintf(w, "Loaded from `%s`.\n", ralphpath.ConfigPathDefaultDescription())
 	fmt.Fprintln(w, "Format: JSON. The config watcher auto-reloads on file change with a 500ms debounce.")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "### Fields")
@@ -281,6 +286,8 @@ func main() {
 	fmt.Fprintln(w, "- **Per-repo `.ralphrc`**: `ValidateConfig()` checks types, ranges, enum membership, and flags deprecated/unknown keys.")
 	fmt.Fprintln(w, "- **Config watcher**: Auto-reloads on file change; invalid JSON is rejected (old config preserved), validation warnings are logged but applied.")
 	fmt.Fprintln(w)
+
+	return b.String()
 }
 
 // friendlyType converts a reflect.Type to a human-readable string.

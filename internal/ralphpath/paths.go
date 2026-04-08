@@ -24,6 +24,14 @@ func ConfigPath() string {
 	return filepath.Join(ConfigDir(), "config.json")
 }
 
+func ConfigDirDefaultDescription() string {
+	return "~/.ralphglasses when HOME is available; otherwise the XDG config dir"
+}
+
+func ConfigPathDefaultDescription() string {
+	return "~/.ralphglasses/config.json when HOME is available; otherwise config.json in the XDG config dir"
+}
+
 func XDGConfigDir() string {
 	return appdir.ConfigDir("ralphglasses")
 }
@@ -41,6 +49,14 @@ func SessionsDir() string {
 
 func SQLiteStorePath() string {
 	return filepath.Join(StateDir(), "state.db")
+}
+
+func StateDirDefaultDescription() string {
+	return "~/.ralphglasses when HOME is available; otherwise the XDG state dir"
+}
+
+func SQLiteStoreDefaultDescription() string {
+	return "~/.ralphglasses/state.db when HOME is available; otherwise state.db in the XDG state dir"
 }
 
 func PromptsDir() string {

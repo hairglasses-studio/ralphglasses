@@ -416,7 +416,7 @@ Read, update, validate, or mark done the thin-client firstboot profile
 | `action` | string |  | Action: get (default), set, validate, or mark_done |
 | `anthropic_api_key` | string |  | Anthropic API key override |
 | `autonomy_level` | number |  | Autonomy level 0-3 |
-| `config_dir` | string |  | Optional config directory override (defaults to ~/.ralphglasses) |
+| `config_dir` | string |  | Optional config directory override (defaults to ~/.ralphglasses when HOME is available; otherwise the XDG config dir) |
 | `coordinator_url` | string |  | Fleet coordinator URL |
 | `google_api_key` | string |  | Google API key override |
 | `hostname` | string |  | Hostname to persist or validate |

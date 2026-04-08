@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/firstboot"
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/views"
 )
 
@@ -16,7 +17,7 @@ var firstbootCmd = &cobra.Command{
 	Long: `Interactive wizard for first-time thin client setup.
 
 Collects hostname, API keys, autonomy level, and fleet coordinator URL.
-Writes configuration to ~/.ralphglasses/config.json and creates a
+Writes configuration to ` + ralphpath.ConfigPathDefaultDescription() + ` and creates a
 .firstboot-done marker file to prevent re-running.
 
 Typically launched automatically by the ralphglasses-firstboot.service

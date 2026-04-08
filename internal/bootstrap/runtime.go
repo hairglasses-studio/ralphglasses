@@ -28,7 +28,8 @@ type storeInitResult struct {
 	persistent bool
 }
 
-// InitStore creates a SQLite-backed session store at ~/.ralphglasses/state.db.
+// InitStore creates a SQLite-backed session store at the resolved Ralph state
+// path, usually ~/.ralphglasses/state.db.
 // On failure it logs a warning and returns a MemoryStore so the process can
 // still start without persistence.
 func InitStore() session.Store {

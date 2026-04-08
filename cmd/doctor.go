@@ -35,9 +35,9 @@ configured correctly for running ralphglasses.
 Checks include:
   - Provider binaries (claude, gemini, codex)
   - Git binary and version (>= 2.20 for worktree support)
-  - Config file (~/.ralphglasses/config.json)
-  - State directory (~/.ralphglasses/) permissions
-  - SQLite store (~/.ralphglasses/state.db)
+  - Config file (` + ralphpath.ConfigPathDefaultDescription() + `)
+  - State directory (` + ralphpath.StateDirDefaultDescription() + `) permissions
+  - SQLite store (` + ralphpath.SQLiteStoreDefaultDescription() + `)
   - Scan path validity and repo discovery
   - Disk space availability
   - API keys (ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY)

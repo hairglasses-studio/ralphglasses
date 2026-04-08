@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver/descriptions"
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -142,7 +143,7 @@ func (s *Server) buildCoreGroup() ToolGroup {
 			{mcp.NewTool("ralphglasses_firstboot_profile",
 				mcp.WithDescription(descriptions.DescRalphglassesFirstbootProfile),
 				mcp.WithString("action", mcp.Description("Action: get (default), set, validate, or mark_done")),
-				mcp.WithString("config_dir", mcp.Description("Optional config directory override (defaults to ~/.ralphglasses)")),
+				mcp.WithString("config_dir", mcp.Description("Optional config directory override (defaults to "+ralphpath.ConfigDirDefaultDescription()+")")),
 				mcp.WithString("hostname", mcp.Description("Hostname to persist or validate")),
 				mcp.WithNumber("autonomy_level", mcp.Description("Autonomy level 0-3")),
 				mcp.WithString("coordinator_url", mcp.Description("Fleet coordinator URL")),

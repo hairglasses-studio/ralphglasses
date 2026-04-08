@@ -38,7 +38,7 @@ type FirstBootModel struct {
 	inputKey  string // which key we're editing
 	width     int
 	height    int
-	configDir string // where to write config (default ~/.ralphglasses)
+	configDir string // where to write config (resolved Ralph config dir)
 }
 
 // NewFirstBootModel creates the wizard model.

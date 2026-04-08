@@ -14,12 +14,12 @@ Interactive wizard for first-time thin client setup.
 
 .PP
 Collects hostname, API keys, autonomy level, and fleet coordinator URL.
-Writes configuration to ~/.ralphglasses/config.json and creates a
+Writes configuration to ~/.ralphglasses/config.json when HOME is available; otherwise the XDG config dir and creates a
 \&.firstboot-done marker file to prevent re-running.
 
 .PP
 Typically launched automatically by the ralphglasses-firstboot.service
-systemd unit on first boot.
+	systemd unit on first boot.
 
 
 .SH OPTIONS

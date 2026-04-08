@@ -106,3 +106,18 @@ func TestActiveStatePath_PrefersOverrideThenRuntimeDir(t *testing.T) {
 		t.Fatalf("ActiveStatePath() = %q, want %q", got, want)
 	}
 }
+
+func TestDefaultDescriptions(t *testing.T) {
+	if got, want := ConfigDirDefaultDescription(), "~/.ralphglasses when HOME is available; otherwise the XDG config dir"; got != want {
+		t.Fatalf("ConfigDirDefaultDescription() = %q, want %q", got, want)
+	}
+	if got, want := ConfigPathDefaultDescription(), "~/.ralphglasses/config.json when HOME is available; otherwise config.json in the XDG config dir"; got != want {
+		t.Fatalf("ConfigPathDefaultDescription() = %q, want %q", got, want)
+	}
+	if got, want := StateDirDefaultDescription(), "~/.ralphglasses when HOME is available; otherwise the XDG state dir"; got != want {
+		t.Fatalf("StateDirDefaultDescription() = %q, want %q", got, want)
+	}
+	if got, want := SQLiteStoreDefaultDescription(), "~/.ralphglasses/state.db when HOME is available; otherwise state.db in the XDG state dir"; got != want {
+		t.Fatalf("SQLiteStoreDefaultDescription() = %q, want %q", got, want)
+	}
+}
