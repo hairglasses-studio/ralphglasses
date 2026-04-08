@@ -522,6 +522,21 @@ func (m *Manager) PersistSession(s *Session) error {
 		err := m.store.SaveSession(context.Background(), snap)
 		if err != nil {
 			slog.Warn("store save failed, falling back to JSON", "session_id", snap.ID, "err", err)
+			if m.bus != nil {
+				m.bus.Publish(events.Event{
+					Type:      events.SessionError,
+					Timestamp: time.Now(),
+					SessionID: snap.ID,
+					RepoName:  snap.RepoName,
+					RepoPath:  snap.RepoPath,
+					Data: map[string]any{
+						"component":        "session.persist",
+						"backend":          "store",
+						"fallback_backend": "json",
+						"error":            err.Error(),
+					},
+				})
+			}
 		}
 	}
 

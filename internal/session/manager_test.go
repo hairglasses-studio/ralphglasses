@@ -757,6 +757,59 @@ func TestPersistSession_Success(t *testing.T) {
 	}
 }
 
+func TestPersistSession_PublishesStoreFallbackEvent(t *testing.T) {
+	bus := events.NewBus(10)
+	m := NewManagerWithBus(bus)
+	tmpDir := t.TempDir()
+	m.SetStateDir(tmpDir)
+
+	store, err := NewSQLiteStore(filepath.Join(t.TempDir(), "persist.db"))
+	if err != nil {
+		t.Fatalf("NewSQLiteStore: %v", err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("Close store: %v", err)
+	}
+	m.SetStore(store)
+
+	s := &Session{
+		ID:       "fallback-test",
+		Provider: ProviderClaude,
+		RepoPath: "/tmp/repo",
+		RepoName: "repo",
+		Status:   StatusRunning,
+	}
+
+	if err := m.PersistSession(s); err != nil {
+		t.Fatalf("PersistSession: %v", err)
+	}
+
+	path := filepath.Join(tmpDir, DefaultTenantID, "fallback-test.json")
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("expected JSON fallback file at %s: %v", path, err)
+	}
+
+	var found bool
+	for _, event := range bus.History(events.SessionError, 10) {
+		if event.Data["component"] != "session.persist" {
+			continue
+		}
+		found = true
+		if event.SessionID != "fallback-test" {
+			t.Fatalf("event session_id = %q, want fallback-test", event.SessionID)
+		}
+		if got := event.Data["fallback_backend"]; got != "json" {
+			t.Fatalf("event fallback_backend = %v, want json", got)
+		}
+		if got := event.Data["error"]; got == "" {
+			t.Fatal("event error should not be empty")
+		}
+	}
+	if !found {
+		t.Fatal("expected SessionError event for session.persist")
+	}
+}
+
 func TestPersistSessionDoesNotMutateLiveSession(t *testing.T) {
 	m := NewManager()
 	tmpDir := t.TempDir()

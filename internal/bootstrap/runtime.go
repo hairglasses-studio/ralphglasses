@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet"
@@ -19,33 +20,80 @@ func DefaultDocsRoot(scanRoot string) string {
 	return filepath.Join(filepath.Dir(scanRoot), "docs")
 }
 
+type storeInitResult struct {
+	store      session.Store
+	path       string
+	err        error
+	persistent bool
+}
+
 // InitStore creates a SQLite-backed session store at ~/.ralphglasses/state.db.
 // On failure it logs a warning and returns a MemoryStore so the process can
 // still start without persistence.
 func InitStore() session.Store {
+	return initStore().store
+}
+
+func initStore() storeInitResult {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		slog.Warn("sqlite store: cannot resolve home dir, using memory store", "error", err)
-		return session.NewMemoryStore()
+		return storeInitResult{store: session.NewMemoryStore(), err: err}
 	}
 	dbPath := filepath.Join(home, ".ralphglasses", "state.db")
 	store, err := session.NewSQLiteStore(dbPath)
 	if err != nil {
 		slog.Warn("sqlite store: falling back to memory store", "path", dbPath, "error", err)
-		return session.NewMemoryStore()
+		return storeInitResult{store: session.NewMemoryStore(), path: dbPath, err: err}
 	}
-	return store
+	return storeInitResult{store: store, path: dbPath, persistent: true}
+}
+
+func publishBootstrapError(bus *events.Bus, component string, err error, extra map[string]any) {
+	if bus == nil || err == nil {
+		return
+	}
+
+	data := map[string]any{
+		"component": component,
+		"error":     err.Error(),
+	}
+	for key, value := range extra {
+		data[key] = value
+	}
+
+	bus.Publish(events.Event{
+		Type:      events.SessionError,
+		Timestamp: time.Now(),
+		Data:      data,
+	})
+}
+
+func publishStoreFallback(bus *events.Bus, result storeInitResult) {
+	if result.persistent || result.err == nil {
+		return
+	}
+
+	data := map[string]any{
+		"backend":          "sqlite",
+		"fallback_backend": "memory",
+	}
+	if result.path != "" {
+		data["path"] = result.path
+	}
+	publishBootstrapError(bus, "bootstrap.store", result.err, data)
 }
 
 // InitManagerWithStore creates a session manager backed by SQLite persistence.
 // If bus is nil, the manager will operate without event publishing.
 func InitManagerWithStore(bus *events.Bus) *session.Manager {
-	store := InitStore()
+	result := initStore()
+	publishStoreFallback(bus, result)
 	if bus != nil {
-		return session.NewManagerWithStore(store, bus)
+		return session.NewManagerWithStore(result.store, bus)
 	}
 	mgr := session.NewManager()
-	mgr.SetStore(store)
+	mgr.SetStore(result.store)
 	return mgr
 }
 
@@ -54,10 +102,12 @@ func InitManagerWithStore(bus *events.Bus) *session.Manager {
 func InitManagerRuntime(scanRoot string, bus *events.Bus) *session.Manager {
 	mgr := InitManagerWithStore(bus)
 	if scanRoot != "" {
-		if _, err := os.Stat(filepath.Join(scanRoot, ".ralphrc")); err == nil {
+		configPath := filepath.Join(scanRoot, ".ralphrc")
+		if _, err := os.Stat(configPath); err == nil {
 			cfg, cfgErr := model.LoadConfig(context.Background(), scanRoot)
 			if cfgErr != nil {
 				slog.Warn("manager bootstrap: failed to load scan-root config", "path", scanRoot, "error", cfgErr)
+				publishBootstrapError(bus, "bootstrap.config", cfgErr, map[string]any{"path": configPath})
 			} else {
 				mgr.ApplyConfig(cfg)
 			}
@@ -92,6 +142,7 @@ func ConfigureMCPRuntime(scanRoot string, bus *events.Bus, rg *mcpserver.Server)
 		gateway, gwErr := session.NewDocsResearchGateway(docsRoot)
 		if gwErr != nil {
 			slog.Warn("mcp: research gateway unavailable", "docs_root", docsRoot, "error", gwErr)
+			publishBootstrapError(bus, "bootstrap.research_gateway", gwErr, map[string]any{"docs_root": docsRoot})
 		} else {
 			mgr.SetResearchGateway(gateway)
 			cleanups = append(cleanups, func() {
