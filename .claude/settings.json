@@ -1,4 +1,60 @@
 {
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "command": "~/dotfiles/scripts/claude-notify-debounce.sh attention 'ralphglasses' 'needs attention' 2>/dev/null || true",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "f=\"${CLAUDE_FILE:-}\"; case \"$f\" in *.go) goimports -w \"$f\" 2>/dev/null; gofumpt -w \"$f\" 2>/dev/null;; esac",
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "bash ./scripts/dev/claude-safety-gate.sh",
+            "timeout": 3000,
+            "type": "command"
+          }
+        ],
+        "matcher": "mcp__ralphglasses__ralphglasses_(session_stop_all|stop_all|fleet_reset|loop_stop_all)"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "bash ./scripts/dev/claude-session-context.sh",
+            "timeout": 5000,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "~/dotfiles/scripts/claude-notify-debounce.sh stop '  ralphglasses' \"Task complete\" 2>/dev/null || true",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  },
   "mcpServers": {
     "ralphglasses": {
       "args": [
@@ -22,62 +78,6 @@
       "mcp__ralphglasses__ralphglasses_repo_health",
       "mcp__ralphglasses__ralphglasses_loop_benchmark",
       "mcp__ralphglasses__ralphglasses_session_budget"
-    ]
-  },
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ./scripts/dev/claude-session-context.sh",
-            "timeout": 5000
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "mcp__ralphglasses__ralphglasses_(session_stop_all|stop_all|fleet_reset|loop_stop_all)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ./scripts/dev/claude-safety-gate.sh",
-            "timeout": 3000
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "f=\"${CLAUDE_FILE:-}\"; case \"$f\" in *.go) goimports -w \"$f\" 2>/dev/null; gofumpt -w \"$f\" 2>/dev/null;; esac"
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/dotfiles/scripts/claude-notify-debounce.sh attention 'ralphglasses' 'needs attention' 2>/dev/null || true"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/dotfiles/scripts/claude-notify-debounce.sh stop '  ralphglasses' \"Task complete\" 2>/dev/null || true"
-          }
-        ]
-      }
     ]
   }
 }

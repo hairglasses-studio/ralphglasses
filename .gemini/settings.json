@@ -6,6 +6,52 @@
       "GEMINI.md"
     ]
   },
+  "hooks": {
+    "AfterTool": [
+      {
+        "hooks": [
+          {
+            "command": "f=\"${CLAUDE_FILE:-}\"; case \"$f\" in *.go) goimports -w \"$f\" 2>/dev/null; gofumpt -w \"$f\" 2>/dev/null;; esac",
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write"
+      }
+    ],
+    "BeforeTool": [
+      {
+        "hooks": [
+          {
+            "command": "bash ./scripts/dev/claude-safety-gate.sh",
+            "timeout": 3000,
+            "type": "command"
+          }
+        ],
+        "matcher": "mcp__ralphglasses__ralphglasses_(session_stop_all|stop_all|fleet_reset|loop_stop_all)"
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "command": "~/dotfiles/scripts/claude-notify-debounce.sh attention 'ralphglasses' 'needs attention' 2>/dev/null || true",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "bash ./scripts/dev/claude-session-context.sh",
+            "timeout": 5000,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  },
   "mcp": {
     "allowed": [
       "ralphglasses"
