@@ -136,6 +136,18 @@ var staticResourceDefs = []ResourceDef{
 		MIMEType:    "application/json",
 	},
 	{
+		URI:         "ralph:///runtime/sessions",
+		Name:        "Runtime sessions",
+		Description: "Read the current session execution front door with active-session counts, stalled-session risk, and the next session-ops entrypoints.",
+		MIMEType:    "application/json",
+	},
+	{
+		URI:         "ralph:///runtime/operator",
+		Name:        "Runtime operator",
+		Description: "Read the operator control-plane front door for TUI, tmux, fleet-runtime, and marathon-heavy coordination paths.",
+		MIMEType:    "application/json",
+	},
+	{
 		URI:         "ralph:///runtime/health",
 		Name:        "Runtime health",
 		Description: "Read the current ralphglasses runtime health snapshot, including loaded groups and discovery coverage.",
@@ -187,7 +199,7 @@ var skillCatalogDefs = []SkillCatalogDef{
 		Tags:          []string{"sessions", "teams", "loops", "budget"},
 		Workflows:     []string{"session-execution"},
 		ToolGroups:    []string{"session", "team", "loop", "fleet", "tenant"},
-		Resources:     []string{"ralph:///runtime/health", "ralph:///catalog/skills"},
+		Resources:     []string{"ralph:///runtime/sessions", "ralph:///runtime/health", "ralph:///catalog/skills", "ralph:///catalog/adoption-priorities"},
 		KeyTools:      []string{"ralphglasses_session_launch", "ralphglasses_session_list", "ralphglasses_session_status", "ralphglasses_session_budget", "ralphglasses_session_output"},
 		CanonicalPath: ".agents/skills/ralphglasses-session-ops/SKILL.md",
 	},
@@ -207,7 +219,7 @@ var skillCatalogDefs = []SkillCatalogDef{
 		Tags:          []string{"runtime", "bootstrap", "serve", "marathon"},
 		Workflows:     []string{"bootstrap-and-firstboot", "runtime-recovery"},
 		ToolGroups:    []string{"core", "fleet", "repo"},
-		Resources:     []string{"ralph:///bootstrap/checklist", "ralph:///runtime/recovery", "ralph:///runtime/health", "ralph:///catalog/skills"},
+		Resources:     []string{"ralph:///bootstrap/checklist", "ralph:///runtime/recovery", "ralph:///runtime/operator", "ralph:///runtime/health", "ralph:///catalog/skills"},
 		Prompts:       []string{"bootstrap-firstboot", "repo-triage-brief"},
 		KeyTools:      []string{"ralphglasses_doctor", "ralphglasses_validate", "ralphglasses_firstboot_profile", "ralphglasses_fleet_runtime", "ralphglasses_marathon"},
 		CanonicalPath: ".agents/skills/ralphglasses-bootstrap/SKILL.md",
@@ -225,10 +237,10 @@ var skillCatalogDefs = []SkillCatalogDef{
 	{
 		Name:          "ralphglasses-operator",
 		Description:   "Bridge the interactive TUI, tmux, and firstboot wizard with the MCP control plane when a task is terminal-native by design.",
-		Tags:          []string{"interactive", "operator", "tmux", "tui"},
-		Workflows:     []string{"bootstrap-and-firstboot"},
+		Tags:          []string{"interactive", "operator", "tmux", "tui", "marathon"},
+		Workflows:     []string{"bootstrap-and-firstboot", "operator-control-plane"},
 		ToolGroups:    []string{"management"},
-		Resources:     []string{"ralph:///bootstrap/checklist", "ralph:///runtime/recovery", "ralph:///runtime/health"},
+		Resources:     []string{"ralph:///bootstrap/checklist", "ralph:///runtime/operator", "ralph:///runtime/sessions", "ralph:///runtime/recovery", "ralph:///runtime/health"},
 		KeyTools:      []string{"ralphglasses_server_health", "ralphglasses_fleet_runtime", "ralphglasses_marathon"},
 		CanonicalPath: ".agents/skills/ralphglasses-operator/SKILL.md",
 	},
@@ -274,7 +286,7 @@ var workflowDefs = []WorkflowDef{
 	{
 		Name:        "bootstrap-and-firstboot",
 		Description: "Bring a new workspace or operator environment into a healthy state before launching sessions or loops.",
-		Resources:   []string{"ralph:///catalog/server", "ralph:///catalog/skills", "ralph:///bootstrap/checklist", "ralph:///runtime/recovery"},
+		Resources:   []string{"ralph:///catalog/server", "ralph:///catalog/skills", "ralph:///bootstrap/checklist", "ralph:///runtime/operator", "ralph:///runtime/recovery"},
 		Prompts:     []string{"bootstrap-firstboot"},
 		Skills:      []string{"ralphglasses-bootstrap", "ralphglasses-operator"},
 		ToolGroups:  []string{"core", "repo", "tenant"},
@@ -312,7 +324,7 @@ var workflowDefs = []WorkflowDef{
 	{
 		Name:        "session-execution",
 		Description: "Launch, inspect, compare, and hand off provider sessions with budget awareness.",
-		Resources:   []string{"ralph:///runtime/health", "ralph:///catalog/skills"},
+		Resources:   []string{"ralph:///runtime/sessions", "ralph:///runtime/health", "ralph:///catalog/skills"},
 		Skills:      []string{"ralphglasses-session-ops"},
 		ToolGroups:  []string{"session", "core"},
 		KeyTools: []string{
@@ -321,6 +333,19 @@ var workflowDefs = []WorkflowDef{
 			"ralphglasses_session_status",
 			"ralphglasses_session_budget",
 			"ralphglasses_session_handoff",
+		},
+	},
+	{
+		Name:        "operator-control-plane",
+		Description: "Bridge the TUI, tmux, fleet runtime, and marathon control paths with an explicit read-first operator runtime brief.",
+		Resources:   []string{"ralph:///runtime/operator", "ralph:///runtime/sessions", "ralph:///bootstrap/checklist", "ralph:///runtime/health"},
+		Skills:      []string{"ralphglasses-operator", "ralphglasses-session-ops"},
+		ToolGroups:  []string{"management", "fleet", "session"},
+		KeyTools: []string{
+			"ralphglasses_fleet_runtime",
+			"ralphglasses_marathon",
+			"ralphglasses_server_health",
+			"ralphglasses_session_launch",
 		},
 	},
 }
@@ -397,6 +422,8 @@ Start with discovery instead of guessing:
 - Read ralph:///catalog/cli-parity when the task is about CLI-to-MCP workflow coverage or operator parity.
 - Read ralph:///catalog/discovery-adoption when you need live adoption telemetry for resources, prompts, and focused skill entrypoints.
 - Read ralph:///catalog/adoption-priorities when you need ranked next-work candidates from inactive CLI parity and discovery surfaces.
+- Read ralph:///runtime/sessions when the task is session-heavy.
+- Read ralph:///runtime/operator when the task is TUI, tmux, fleet-runtime, or marathon-heavy.
 - Read ralph:///runtime/recovery, ralph:///runtime/health, or ralph:///bootstrap/checklist when the task is runtime- or bootstrap-heavy.
 - Call ralphglasses_tool_groups, then ralphglasses_load_tool_group before using non-core tools.
 - Prefer repo read-only resources (ralph:///{repo}/triage, /status, /progress, /logs) before mutating tools.

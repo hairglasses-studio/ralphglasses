@@ -57,6 +57,8 @@ func RegisterResources(srv *server.MCPServer, appSrv *Server) {
 		"ralph:///catalog/adoption-priorities": makeAdoptionPrioritiesHandler(appSrv),
 		"ralph:///bootstrap/checklist":         makeBootstrapChecklistHandler(),
 		"ralph:///runtime/recovery":            makeRuntimeRecoveryHandler(appSrv),
+		"ralph:///runtime/sessions":            makeRuntimeSessionsHandler(appSrv),
+		"ralph:///runtime/operator":            makeRuntimeOperatorHandler(appSrv),
 		"ralph:///runtime/health":              makeRuntimeHealthHandler(appSrv),
 	}
 
@@ -254,6 +256,18 @@ func makeRuntimeRecoveryHandler(appSrv *Server) server.ResourceHandlerFunc {
 	}
 }
 
+func makeRuntimeSessionsHandler(appSrv *Server) server.ResourceHandlerFunc {
+	return func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, appSrv.buildRuntimeSessionsDoc(ctx))
+	}
+}
+
+func makeRuntimeOperatorHandler(appSrv *Server) server.ResourceHandlerFunc {
+	return func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, appSrv.buildRuntimeOperatorDoc(ctx))
+	}
+}
+
 func makeRuntimeHealthHandler(appSrv *Server) server.ResourceHandlerFunc {
 	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		return jsonResourceContents(req.Params.URI, appSrv.runtimeHealthDoc())
@@ -403,6 +417,7 @@ func (s *Server) buildRuntimeRecoveryDoc(ctx context.Context) map[string]any {
 		},
 		"supporting_resources": map[string]string{
 			"runtime_recovery": "ralph:///runtime/recovery",
+			"runtime_sessions": "ralph:///runtime/sessions",
 			"runtime_health":   "ralph:///runtime/health",
 			"skills":           "ralph:///catalog/skills",
 			"priorities":       "ralph:///catalog/adoption-priorities",
@@ -431,6 +446,135 @@ func (s *Server) buildRuntimeRecoveryDoc(ctx context.Context) map[string]any {
 	}
 }
 
+func (s *Server) buildRuntimeSessionsDoc(_ context.Context) map[string]any {
+	sessions := []*session.Session(nil)
+	if s.SessMgr != nil {
+		sessions = s.SessMgr.List("")
+	}
+	sort.Slice(sessions, func(i, j int) bool {
+		if sessions[i].LastActivity.Equal(sessions[j].LastActivity) {
+			return sessions[i].ID < sessions[j].ID
+		}
+		return sessions[i].LastActivity.After(sessions[j].LastActivity)
+	})
+
+	statusCounts := make(map[string]int)
+	providerCounts := make(map[string]int)
+	overBudget := make([]string, 0)
+	recent := make([]map[string]any, 0, len(sessions))
+	activeCount := 0
+	for _, sess := range sessions {
+		statusCounts[string(sess.Status)]++
+		providerCounts[string(sess.Provider)]++
+		if sess.Status == session.StatusRunning || sess.Status == session.StatusLaunching {
+			activeCount++
+		}
+		if sess.BudgetUSD > 0 && sess.SpentUSD >= sess.BudgetUSD {
+			overBudget = append(overBudget, sess.ID)
+		}
+		recent = append(recent, map[string]any{
+			"id":            sess.ID,
+			"repo":          sess.RepoName,
+			"provider":      sess.Provider,
+			"status":        sess.Status,
+			"model":         sess.Model,
+			"spent_usd":     sess.SpentUSD,
+			"budget_usd":    sess.BudgetUSD,
+			"turn_count":    sess.TurnCount,
+			"team_name":     sess.TeamName,
+			"last_activity": sess.LastActivity,
+			"resumed":       sess.Resumed,
+		})
+	}
+	if len(recent) > 8 {
+		recent = recent[:8]
+	}
+
+	stalled := make([]string, 0)
+	if s.SessMgr != nil {
+		stalled = s.SessMgr.DetectStalls(session.DefaultStallThreshold)
+		sort.Strings(stalled)
+	}
+	sort.Strings(overBudget)
+
+	runtime := s.runtimeHealthDoc()
+	return map[string]any{
+		"title":                     "Ralphglasses session execution front door",
+		"description":               "Read the live session posture before launching, resuming, handing off, or budget-tuning provider work.",
+		"recommended_skill":         "ralphglasses-session-ops",
+		"recommended_skills":        []string{"ralphglasses-session-ops", "ralphglasses-recovery-observability"},
+		"highest_priority_workflow": "session-execution",
+		"supporting_resources": map[string]string{
+			"runtime_sessions": "ralph:///runtime/sessions",
+			"runtime_health":   "ralph:///runtime/health",
+			"runtime_recovery": "ralph:///runtime/recovery",
+			"skills":           "ralph:///catalog/skills",
+			"priorities":       "ralph:///catalog/adoption-priorities",
+		},
+		"supporting_tools": []string{
+			"ralphglasses_session_launch",
+			"ralphglasses_session_list",
+			"ralphglasses_session_status",
+			"ralphglasses_session_budget",
+			"ralphglasses_session_handoff",
+		},
+		"session_count":           len(sessions),
+		"active_session_count":    activeCount,
+		"stalled_session_ids":     stalled,
+		"stalled_session_count":   len(stalled),
+		"over_budget_session_ids": overBudget,
+		"status_breakdown":        statusCounts,
+		"provider_breakdown":      providerCounts,
+		"recent_sessions":         recent,
+		"runtime_health": map[string]any{
+			"status":                    runtime["status"],
+			"loaded_groups":             runtime["loaded_groups"],
+			"tool_group_count":          runtime["tool_group_count"],
+			"resource_count":            runtime["resource_count"],
+			"prompt_count":              runtime["prompt_count"],
+			"highest_priority_workflow": nestedString(runtime["adoption_priority_summary"], "highest_priority_workflow"),
+		},
+	}
+}
+
+func (s *Server) buildRuntimeOperatorDoc(ctx context.Context) map[string]any {
+	sessions := s.buildRuntimeSessionsDoc(ctx)
+	runtime := s.runtimeHealthDoc()
+	return map[string]any{
+		"title":                     "Ralphglasses operator control-plane front door",
+		"description":               "Read this before using the interactive TUI, tmux control loops, fleet runtime, or marathon execution paths.",
+		"recommended_skill":         "ralphglasses-operator",
+		"recommended_skills":        []string{"ralphglasses-operator", "ralphglasses-bootstrap", "ralphglasses-session-ops"},
+		"highest_priority_workflow": "operator-control-plane",
+		"supporting_resources": map[string]string{
+			"runtime_operator": "ralph:///runtime/operator",
+			"runtime_sessions": "ralph:///runtime/sessions",
+			"bootstrap":        "ralph:///bootstrap/checklist",
+			"runtime_recovery": "ralph:///runtime/recovery",
+			"runtime_health":   "ralph:///runtime/health",
+			"skills":           "ralph:///catalog/skills",
+		},
+		"supporting_tools": []string{
+			"ralphglasses_server_health",
+			"ralphglasses_fleet_runtime",
+			"ralphglasses_marathon",
+			"ralphglasses_session_launch",
+		},
+		"fleet_runtime":         s.fleetRuntimeStatus(ctx),
+		"marathon_runtime":      s.marathonStatus(),
+		"active_session_count":  sessions["active_session_count"],
+		"stalled_session_count": sessions["stalled_session_count"],
+		"runtime_health": map[string]any{
+			"status":                    runtime["status"],
+			"loaded_groups":             runtime["loaded_groups"],
+			"tool_group_count":          runtime["tool_group_count"],
+			"resource_count":            runtime["resource_count"],
+			"prompt_count":              runtime["prompt_count"],
+			"highest_priority_workflow": nestedString(runtime["adoption_priority_summary"], "highest_priority_workflow"),
+		},
+	}
+}
+
 func buildBootstrapChecklistDoc() map[string]any {
 	return map[string]any{
 		"title":       "Ralphglasses MCP-first bootstrap checklist",
@@ -439,7 +583,9 @@ func buildBootstrapChecklistDoc() map[string]any {
 			"ralph:///catalog/server",
 			"ralph:///catalog/skills",
 			"ralph:///catalog/workflows",
+			"ralph:///runtime/operator",
 			"ralph:///runtime/recovery",
+			"ralph:///runtime/sessions",
 			"ralph:///runtime/health",
 		},
 		"prompts": []string{

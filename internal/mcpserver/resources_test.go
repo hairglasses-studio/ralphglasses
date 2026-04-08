@@ -122,8 +122,8 @@ func TestStaticResourceRegistration(t *testing.T) {
 		t.Fatalf("expected ListResourcesResult, got %T", rpcResp.Result)
 	}
 
-	if len(result.Resources) != 10 {
-		t.Fatalf("expected 10 static resources, got %d", len(result.Resources))
+	if len(result.Resources) != 12 {
+		t.Fatalf("expected 12 static resources, got %d", len(result.Resources))
 	}
 
 	uris := make(map[string]bool)
@@ -141,6 +141,8 @@ func TestStaticResourceRegistration(t *testing.T) {
 		"ralph:///catalog/adoption-priorities",
 		"ralph:///bootstrap/checklist",
 		"ralph:///runtime/recovery",
+		"ralph:///runtime/sessions",
+		"ralph:///runtime/operator",
 		"ralph:///runtime/health",
 	} {
 		if !uris[expected] {
@@ -411,6 +413,117 @@ func TestRuntimeRecoveryResource_ReturnsAggregatedSummary(t *testing.T) {
 	} {
 		if !strings.Contains(textContent.Text, expected) {
 			t.Fatalf("expected %q in runtime recovery resource: %s", expected, textContent.Text)
+		}
+	}
+}
+
+func TestRuntimeSessionsResource_ReturnsExecutionFrontDoor(t *testing.T) {
+	t.Parallel()
+
+	appSrv, _, repoName := setupRepoForResources(t)
+	repo := appSrv.findRepo(repoName)
+	if repo == nil {
+		t.Fatal("expected repo in test server")
+	}
+
+	now := time.Now().UTC()
+	appSrv.SessMgr.AddSessionForTesting(&session.Session{
+		ID:           "sess-running",
+		Provider:     session.ProviderClaude,
+		RepoPath:     repo.Path,
+		RepoName:     repo.Name,
+		Status:       session.StatusRunning,
+		Model:        "sonnet",
+		BudgetUSD:    5,
+		SpentUSD:     2.5,
+		TurnCount:    6,
+		LastActivity: now.Add(-2 * time.Minute),
+		LaunchedAt:   now.Add(-12 * time.Minute),
+	})
+	appSrv.SessMgr.AddSessionForTesting(&session.Session{
+		ID:           "sess-over-budget",
+		Provider:     session.ProviderCodex,
+		RepoPath:     repo.Path,
+		RepoName:     repo.Name,
+		Status:       session.StatusCompleted,
+		Model:        "gpt-5.4",
+		BudgetUSD:    1,
+		SpentUSD:     1.2,
+		TurnCount:    9,
+		LastActivity: now.Add(-10 * time.Minute),
+		LaunchedAt:   now.Add(-45 * time.Minute),
+	})
+
+	handler := makeRuntimeSessionsHandler(appSrv)
+	results, err := handler(context.Background(), mcp.ReadResourceRequest{
+		Params: mcp.ReadResourceParams{URI: "ralph:///runtime/sessions"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	textContent, ok := results[0].(mcp.TextResourceContents)
+	if !ok {
+		t.Fatalf("expected TextResourceContents, got %T", results[0])
+	}
+	for _, expected := range []string{
+		`"recommended_skill": "ralphglasses-session-ops"`,
+		`"highest_priority_workflow": "session-execution"`,
+		`"active_session_count": 1`,
+		`"over_budget_session_ids": [`,
+		`"sess-over-budget"`,
+		`"provider_breakdown": {`,
+		`"claude": 1`,
+		`"codex": 1`,
+	} {
+		if !strings.Contains(textContent.Text, expected) {
+			t.Fatalf("expected %q in runtime sessions resource: %s", expected, textContent.Text)
+		}
+	}
+}
+
+func TestRuntimeOperatorResource_ReturnsControlPlaneFrontDoor(t *testing.T) {
+	t.Parallel()
+
+	appSrv, _, repoName := setupRepoForResources(t)
+	repo := appSrv.findRepo(repoName)
+	if repo == nil {
+		t.Fatal("expected repo in test server")
+	}
+
+	now := time.Now().UTC()
+	appSrv.SessMgr.AddSessionForTesting(&session.Session{
+		ID:           "sess-running",
+		Provider:     session.ProviderCodex,
+		RepoPath:     repo.Path,
+		RepoName:     repo.Name,
+		Status:       session.StatusRunning,
+		Model:        "gpt-5.4",
+		LastActivity: now.Add(-1 * time.Minute),
+		LaunchedAt:   now.Add(-15 * time.Minute),
+	})
+
+	handler := makeRuntimeOperatorHandler(appSrv)
+	results, err := handler(context.Background(), mcp.ReadResourceRequest{
+		Params: mcp.ReadResourceParams{URI: "ralph:///runtime/operator"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	textContent, ok := results[0].(mcp.TextResourceContents)
+	if !ok {
+		t.Fatalf("expected TextResourceContents, got %T", results[0])
+	}
+	for _, expected := range []string{
+		`"recommended_skill": "ralphglasses-operator"`,
+		`"highest_priority_workflow": "operator-control-plane"`,
+		`"fleet_runtime": {`,
+		`"status": "idle"`,
+		`"marathon_runtime": {`,
+		`"runtime_sessions": "ralph:///runtime/sessions"`,
+		`"active_session_count": 1`,
+	} {
+		if !strings.Contains(textContent.Text, expected) {
+			t.Fatalf("expected %q in runtime operator resource: %s", expected, textContent.Text)
 		}
 	}
 }
