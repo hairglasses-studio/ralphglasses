@@ -40,7 +40,7 @@ func TestTenantLeaderboardCmd_JSON_AllTenants(t *testing.T) {
 		}
 	}
 
-	now := time.Date(2026, 4, 7, 18, 0, 0, 0, time.UTC)
+	now := time.Now().UTC().Add(-time.Hour)
 	fx.WriteExternalSession(t, "tenant-a", "reviewer-live", &session.Session{
 		ID:           "reviewer-live",
 		TenantID:     "tenant-a",
@@ -196,7 +196,7 @@ func TestTenantLeaderboardCmd_JSON_SingleTenantLimitExcludeEnded(t *testing.T) {
 		t.Fatalf("SaveTenant: %v", err)
 	}
 
-	now := time.Date(2026, 4, 7, 18, 0, 0, 0, time.UTC)
+	now := time.Now().UTC().Add(-time.Hour)
 	for _, sess := range []*session.Session{
 		{
 			ID:           "reviewer-1",

@@ -1603,19 +1603,18 @@ func TestWritePIDFile_CreatesDirIfMissing(t *testing.T) {
 	}
 }
 
-func TestWritePIDFile_ErrorOnReadOnlyParent(t *testing.T) {
+func TestWritePIDFile_ErrorOnBlockedRalphPath(t *testing.T) {
 	t.Parallel()
 
-	// Create a directory that is read-only so MkdirAll will fail.
 	repoPath := t.TempDir()
-	if err := os.Chmod(repoPath, 0555); err != nil {
-		t.Skipf("cannot set read-only permissions: %v", err)
+	blockedPath := filepath.Join(repoPath, ".ralph")
+	if err := os.WriteFile(blockedPath, []byte("not-a-directory"), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
 	}
-	t.Cleanup(func() { _ = os.Chmod(repoPath, 0755) })
 
 	err := writePIDFile(repoPath, 12345)
 	if err == nil {
-		t.Error("expected error writing PID file to read-only directory")
+		t.Error("expected error writing PID file with blocked .ralph path")
 	}
 }
 

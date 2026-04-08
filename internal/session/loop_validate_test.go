@@ -1,6 +1,7 @@
 package session
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -437,7 +438,7 @@ func TestValidateLoopProfile_ModelProviderMismatch(t *testing.T) {
 		{"planner claude model on claude", "planner", ProviderClaude, "claude-sonnet-4-6", false},
 		{"planner gemini model on claude", "planner", ProviderClaude, "gemini-3.1-pro", true},
 		{"planner empty model skips", "planner", ProviderClaude, "", false},
-		{"planner empty provider skips", "planner", "", "claude-sonnet-4-6", false},
+		{"planner empty provider uses default codex", "planner", "", "claude-sonnet-4-6", true},
 		// Worker
 		{"worker gpt model on codex", "worker", ProviderCodex, "gpt-4o", false},
 		{"worker claude model on codex", "worker", ProviderCodex, "claude-sonnet-4-6", true},
@@ -467,6 +468,28 @@ func TestValidateLoopProfile_ModelProviderMismatch(t *testing.T) {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestValidateLoopProfile_RejectsUnsupportedCodexOverride(t *testing.T) {
+	p := validProfile()
+	p.PlannerProvider = ProviderCodex
+	p.PlannerModel = "gpt-5.4-xhigh"
+	if err := ValidateLoopProfile(p); err == nil {
+		t.Fatal("expected error for unsupported codex planner model")
+	} else if !strings.Contains(err.Error(), "effort") {
+		t.Fatalf("error = %q, want effort guidance", err)
+	}
+}
+
+func TestValidateLoopProfile_EmptyProviderUsesDefaultForExplicitModel(t *testing.T) {
+	p := LoopProfile{
+		PlannerModel: "claude-sonnet-4-6",
+	}
+	if err := ValidateLoopProfile(p); err == nil {
+		t.Fatal("expected error when explicit planner model conflicts with default codex provider")
+	} else if !strings.Contains(err.Error(), "planner_model") {
+		t.Fatalf("error = %q, want planner_model context", err)
 	}
 }
 
@@ -529,6 +552,34 @@ func TestValidateModelProviderMatch(t *testing.T) {
 			err := validateModelProviderMatch(tt.role, tt.provider, tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateModelName(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider Provider
+		model    string
+		wantErr  bool
+		wantText string
+	}{
+		{"codex default", ProviderCodex, "gpt-5.4", false, ""},
+		{"codex mini", ProviderCodex, "gpt-5.4-mini", false, ""},
+		{"codex legacy compat", ProviderCodex, "o4-mini", false, ""},
+		{"codex invalid effort suffix", ProviderCodex, "gpt-5.4-xhigh", true, "effort"},
+		{"codex unsupported model", ProviderCodex, "o1-pro", true, "does not support"},
+		{"claude passthrough", ProviderClaude, "claude-sonnet-4-6", false, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateModelName(tt.provider, tt.model)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ValidateModelName(%q, %q) err=%v, wantErr=%v", tt.provider, tt.model, err, tt.wantErr)
+			}
+			if tt.wantText != "" && !strings.Contains(err.Error(), tt.wantText) {
+				t.Fatalf("error = %q, want substring %q", err, tt.wantText)
 			}
 		})
 	}

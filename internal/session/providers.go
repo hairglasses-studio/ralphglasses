@@ -467,6 +467,12 @@ func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 }
 
 func validateLaunchOptions(opts LaunchOptions) error {
+	if opts.Provider == "" {
+		opts.Provider = DefaultPrimaryProvider()
+	}
+	if err := ValidateModelName(opts.Provider, opts.Model); err != nil {
+		return fmt.Errorf("model %q is invalid for %s provider: %w", opts.Model, opts.Provider, err)
+	}
 	if opts.Provider == ProviderCodex && opts.Resume != "" && !codexExecResumeSupported() {
 		return fmt.Errorf("codex provider on this install does not support exec resume")
 	}
@@ -474,9 +480,6 @@ func validateLaunchOptions(opts LaunchOptions) error {
 		return nil
 	}
 
-	if opts.Provider == "" {
-		opts.Provider = DefaultPrimaryProvider()
-	}
 	if _, ok := ProviderCapabilityMatrixFor(opts.Provider); !ok {
 		return nil
 	}

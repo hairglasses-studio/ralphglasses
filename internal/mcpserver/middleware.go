@@ -294,7 +294,9 @@ func (s *Server) HooksMiddleware() server.ToolHandlerMiddleware {
 							// For simplicity and speed, we format in the background.
 							go func(p string) {
 								cmd := exec.Command("gofmt", "-w", p)
-								_ = cmd.Run()
+								if err := cmd.Run(); err != nil {
+									slog.Warn("mcp.hooks.gofmt.failed", "file", p, "error", err.Error())
+								}
 							}(pathStr)
 						}
 					}

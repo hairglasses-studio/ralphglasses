@@ -419,6 +419,29 @@ func TestValidateLaunchOptionsCodexResumeUnsupportedInstall(t *testing.T) {
 	}
 }
 
+func TestValidateLaunchOptionsCodexUnsupportedModel(t *testing.T) {
+	err := validateLaunchOptions(LaunchOptions{
+		Provider: ProviderCodex,
+		Model:    "gpt-5.4-xhigh",
+	})
+	if err == nil {
+		t.Fatal("expected error for unsupported codex model override")
+	}
+	if !strings.Contains(err.Error(), "effort") {
+		t.Fatalf("error = %q, want effort guidance", err)
+	}
+}
+
+func TestValidateLaunchOptionsCodexMiniModel(t *testing.T) {
+	err := validateLaunchOptions(LaunchOptions{
+		Provider: ProviderCodex,
+		Model:    "gpt-5.4-mini",
+	})
+	if err != nil {
+		t.Fatalf("expected gpt-5.4-mini to validate, got %v", err)
+	}
+}
+
 func TestValidateLaunchOptions_StrictProviderContractUsesCapabilities(t *testing.T) {
 	t.Run("codex allows emulated budget", func(t *testing.T) {
 		err := validateLaunchOptions(LaunchOptions{
@@ -1304,17 +1327,62 @@ func TestUnsupportedOptionsWarnings_AllFields(t *testing.T) {
 		t.Errorf("gemini warnings count = %d, want 4: %v", len(gw), gw)
 	}
 
-	// Codex: system_prompt, max_budget, agent, max_turns, allowed_tools, worktree
-	cw := UnsupportedOptionsWarnings(ProviderCodex, opts)
-	if len(cw) != 6 {
-		t.Errorf("codex warnings count = %d, want 6: %v", len(cw), cw)
+	containsResumeWarning := func(warnings []string) bool {
+		for _, warning := range warnings {
+			if strings.Contains(warning, "resume") {
+				return true
+			}
+		}
+		return false
 	}
 
-	// Empty provider is resolved to the primary provider (currently Codex).
-	ew := UnsupportedOptionsWarnings("", opts)
-	if len(ew) != 6 {
-		t.Errorf("empty provider warnings count = %d, want 6: %v", len(ew), ew)
-	}
+	t.Run("codex resume unsupported", func(t *testing.T) {
+		orig := codexExecResumeSupported
+		t.Cleanup(func() { codexExecResumeSupported = orig })
+		codexExecResumeSupported = func() bool { return false }
+
+		// Codex: system_prompt, max_budget, agent, max_turns, allowed_tools, worktree, resume
+		cw := UnsupportedOptionsWarnings(ProviderCodex, opts)
+		if len(cw) != 7 {
+			t.Errorf("codex warnings count = %d, want 7: %v", len(cw), cw)
+		}
+		if !containsResumeWarning(cw) {
+			t.Errorf("codex warnings should include resume when unsupported: %v", cw)
+		}
+
+		// Empty provider is resolved to the primary provider (currently Codex).
+		ew := UnsupportedOptionsWarnings("", opts)
+		if len(ew) != 7 {
+			t.Errorf("empty provider warnings count = %d, want 7: %v", len(ew), ew)
+		}
+		if !containsResumeWarning(ew) {
+			t.Errorf("empty provider warnings should include resume when codex resume is unsupported: %v", ew)
+		}
+	})
+
+	t.Run("codex resume supported", func(t *testing.T) {
+		orig := codexExecResumeSupported
+		t.Cleanup(func() { codexExecResumeSupported = orig })
+		codexExecResumeSupported = func() bool { return true }
+
+		// Codex: system_prompt, max_budget, agent, max_turns, allowed_tools, worktree
+		cw := UnsupportedOptionsWarnings(ProviderCodex, opts)
+		if len(cw) != 6 {
+			t.Errorf("codex warnings count = %d, want 6: %v", len(cw), cw)
+		}
+		if containsResumeWarning(cw) {
+			t.Errorf("codex warnings should not include resume when supported: %v", cw)
+		}
+
+		// Empty provider is resolved to the primary provider (currently Codex).
+		ew := UnsupportedOptionsWarnings("", opts)
+		if len(ew) != 6 {
+			t.Errorf("empty provider warnings count = %d, want 6: %v", len(ew), ew)
+		}
+		if containsResumeWarning(ew) {
+			t.Errorf("empty provider warnings should not include resume when codex resume is supported: %v", ew)
+		}
+	})
 }
 
 func TestNormalizeClaudeEvent_SubAgent(t *testing.T) {

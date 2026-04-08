@@ -90,11 +90,8 @@ func TestInitManagerRuntime_PublishesConfigLoadError(t *testing.T) {
 
 	scanRoot := t.TempDir()
 	configPath := filepath.Join(scanRoot, ".ralphrc")
-	if err := os.WriteFile(configPath, []byte("AUTONOMY_LEVEL=1\n"), 0644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-	if err := os.Chmod(configPath, 0); err != nil {
-		t.Fatalf("Chmod: %v", err)
+	if err := os.Mkdir(configPath, 0755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
 	}
 
 	bus := events.NewBus(10)

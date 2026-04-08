@@ -125,9 +125,10 @@ func TestLoopStepSuccess(t *testing.T) {
 		t.Fatalf("verification = %#v", iter.Verification)
 	}
 
-	// Sub-phase timing: PromptBuildMs always runs; others depend on subsystem config.
-	if iter.PromptBuildMs <= 0 {
-		t.Fatalf("PromptBuildMs = %d, want > 0", iter.PromptBuildMs)
+	// Sub-phase timing uses whole milliseconds, so prompt building can round
+	// down to 0 on fast test runs.
+	if iter.PromptBuildMs < 0 {
+		t.Fatalf("PromptBuildMs = %d, want >= 0", iter.PromptBuildMs)
 	}
 	if iter.StartedAt.IsZero() {
 		t.Fatal("StartedAt is zero")
@@ -981,10 +982,10 @@ func TestSubPhaseTimingPopulated(t *testing.T) {
 	}
 	iter := run.Iterations[0]
 
-	// PromptBuildMs should be > 0 because buildLoopPlannerPromptN runs git log
-	// and file reads which take measurable time.
-	if iter.PromptBuildMs <= 0 {
-		t.Errorf("PromptBuildMs = %d, want > 0", iter.PromptBuildMs)
+	// PromptBuildMs is recorded in whole milliseconds, so very fast runs can
+	// legitimately round down to 0.
+	if iter.PromptBuildMs < 0 {
+		t.Errorf("PromptBuildMs = %d, want >= 0", iter.PromptBuildMs)
 	}
 
 	// ReflexionLookupMs and EpisodicLookupMs are measured even when subsystems

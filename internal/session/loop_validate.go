@@ -2,6 +2,7 @@ package session
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -39,6 +40,35 @@ var knownModelPrefixes = map[Provider][]string{
 	ProviderGemini: {"gemini-"},
 	ProviderCodex:  {"gpt-", "o1-", "o3-", "o4-", "codex-"},
 }
+
+var codexSupportedModelPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`^gpt-5\.4(-mini|-pro)?$`),
+	regexp.MustCompile(`^gpt-5\.3-codex(-spark)?$`),
+	regexp.MustCompile(`^gpt-5\.2(-codex)?$`),
+	regexp.MustCompile(`^gpt-5\.1-codex$`),
+	regexp.MustCompile(`^codex-mini-latest$`),
+	regexp.MustCompile(`^o3(-mini)?$`),
+	regexp.MustCompile(`^o4-mini$`),
+	regexp.MustCompile(`^gpt-4o$`),
+	regexp.MustCompile(`^o1-preview$`),
+}
+
+var codexSupportedModelExamples = []string{
+	"gpt-5.4",
+	"gpt-5.4-mini",
+	"gpt-5.3-codex",
+	"gpt-5.2",
+	"codex-mini-latest",
+	"o3",
+	"o4-mini",
+}
+
+var codexUnsupportedModels = map[string]string{
+	"gpt-5.4-xhigh": `reasoning effort belongs in the effort setting; use "gpt-5.4" with effort "max" instead`,
+	"o1-pro":        `the installed Codex runtime does not support "o1-pro"; use a supported Codex model such as "gpt-5.4", "gpt-5.4-mini", "o3", or "o4-mini"`,
+}
+
+var codexReasoningEffortSuffixPattern = regexp.MustCompile(`^(gpt-[a-z0-9.-]+|o[0-9][a-z0-9.-]*|codex-[a-z0-9.-]+)-(low|medium|high|xhigh)$`)
 
 // ValidateLoopConfig checks a LoopConfig for common misconfigurations and
 // returns warnings. An empty slice means the config looks valid.
@@ -133,11 +163,45 @@ func validateModelProviderMatch(role string, provider Provider, model string) er
 	}
 	for _, p := range prefixes {
 		if strings.HasPrefix(model, p) {
+			if err := ValidateModelName(provider, model); err != nil {
+				return fmt.Errorf("%s_model %q is invalid for %s_provider %q: %w", role, model, role, provider, err)
+			}
 			return nil
 		}
 	}
 	return fmt.Errorf("%s_model %q does not match expected prefixes for %s_provider %q (%s)",
 		role, model, role, provider, strings.Join(prefixes, ", "))
+}
+
+// ValidateModelName enforces provider-specific hard validation for explicit
+// model overrides. It is intentionally stricter for Codex, where invalid
+// model IDs fail immediately at launch time.
+func ValidateModelName(provider Provider, model string) error {
+	model = strings.TrimSpace(model)
+	if provider == "" || model == "" {
+		return nil
+	}
+	if model == "mock" || model == "test" {
+		return nil
+	}
+
+	switch provider {
+	case ProviderCodex:
+		if reason, ok := codexUnsupportedModels[model]; ok {
+			return fmt.Errorf("%s", reason)
+		}
+		if codexReasoningEffortSuffixPattern.MatchString(model) {
+			return fmt.Errorf("reasoning effort belongs in the effort setting, not the model name")
+		}
+		for _, pattern := range codexSupportedModelPatterns {
+			if pattern.MatchString(model) {
+				return nil
+			}
+		}
+		return fmt.Errorf("not in the supported Codex model allowlist (%s)", strings.Join(codexSupportedModelExamples, ", "))
+	default:
+		return nil
+	}
 }
 
 // CheckModelRegistry returns a warning message if the model passes prefix
@@ -181,14 +245,28 @@ func ValidateLoopProfile(p LoopProfile) error {
 		return fmt.Errorf("invalid verifier_provider %q: must be one of claude, gemini, codex, or empty", p.VerifierProvider)
 	}
 
+	defaults := DefaultLoopProfile()
+	plannerProvider := p.PlannerProvider
+	if plannerProvider == "" && p.PlannerModel != "" {
+		plannerProvider = defaults.PlannerProvider
+	}
+	workerProvider := p.WorkerProvider
+	if workerProvider == "" && p.WorkerModel != "" {
+		workerProvider = defaults.WorkerProvider
+	}
+	verifierProvider := p.VerifierProvider
+	if verifierProvider == "" && p.VerifierModel != "" {
+		verifierProvider = defaults.VerifierProvider
+	}
+
 	// Model-provider prefix mismatch checks.
-	if err := validateModelProviderMatch("planner", p.PlannerProvider, p.PlannerModel); err != nil {
+	if err := validateModelProviderMatch("planner", plannerProvider, p.PlannerModel); err != nil {
 		return err
 	}
-	if err := validateModelProviderMatch("worker", p.WorkerProvider, p.WorkerModel); err != nil {
+	if err := validateModelProviderMatch("worker", workerProvider, p.WorkerModel); err != nil {
 		return err
 	}
-	if err := validateModelProviderMatch("verifier", p.VerifierProvider, p.VerifierModel); err != nil {
+	if err := validateModelProviderMatch("verifier", verifierProvider, p.VerifierModel); err != nil {
 		return err
 	}
 

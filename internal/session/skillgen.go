@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+const defaultSkillSurfaceScanPath = "~/hairglasses-studio"
+
 // SkillMetadata holds the metadata for a generated SKILL.md file.
 type SkillMetadata struct {
 	Name         string   `yaml:"name"`
@@ -273,7 +275,7 @@ func generateCodexPluginBundle(repoPath, skillContent string) error {
 		"mcpServers": map[string]any{
 			"ralphglasses": map[string]any{
 				"command": "bash",
-				"args":    []string{"./scripts/dev/run-mcp.sh", "--scan-path", "~/hairglasses-studio"},
+				"args":    []string{"./scripts/dev/run-mcp.sh", "--scan-path", defaultSkillSurfaceScanPath},
 			},
 		},
 	}

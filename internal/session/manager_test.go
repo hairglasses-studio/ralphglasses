@@ -693,17 +693,17 @@ func TestManagerConcurrentDelegateTask(t *testing.T) {
 	}
 }
 
-func TestPersistSessionError_ReadOnlyDir(t *testing.T) {
+func TestPersistSessionError_StateDirCreateFailure(t *testing.T) {
 	m := NewManager()
 
-	// Create a read-only directory so MkdirAll of a subdirectory fails.
+	// Use a file as a path component so MkdirAll deterministically fails,
+	// even when the test process runs as root.
 	tmpDir := t.TempDir()
-	readOnlyDir := filepath.Join(tmpDir, "readonly")
-	if err := os.Mkdir(readOnlyDir, 0555); err != nil {
-		t.Fatalf("mkdir: %v", err)
+	blocker := filepath.Join(tmpDir, "blocker")
+	if err := os.WriteFile(blocker, []byte("x"), 0o644); err != nil {
+		t.Fatalf("write blocker: %v", err)
 	}
-	// Point stateDir to a child of the read-only dir so MkdirAll will fail.
-	m.SetStateDir(filepath.Join(readOnlyDir, "sessions"))
+	m.SetStateDir(filepath.Join(blocker, "sessions"))
 
 	s := &Session{
 		ID:       "err-test",
@@ -713,7 +713,7 @@ func TestPersistSessionError_ReadOnlyDir(t *testing.T) {
 
 	err := m.PersistSession(s)
 	if err == nil {
-		t.Fatal("expected error from PersistSession with read-only parent, got nil")
+		t.Fatal("expected error from PersistSession with invalid state dir parent, got nil")
 	}
 	if !strings.Contains(err.Error(), "persist session") {
 		t.Errorf("error should contain 'persist session', got: %v", err)

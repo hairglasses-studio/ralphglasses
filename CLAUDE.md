@@ -1,4 +1,4 @@
-# Ralphglasses — Codex CLI Instructions — Claude Code Instructions
+# ralphglasses — Claude Code Instructions
 
 This repo uses [AGENTS.md](AGENTS.md) as the canonical instruction file. Read it before making changes.
 

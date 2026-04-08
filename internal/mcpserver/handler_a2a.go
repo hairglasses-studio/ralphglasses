@@ -103,7 +103,9 @@ func (s *Server) handleA2AStatus(_ context.Context, req mcp.CallToolRequest) (*m
 
 func (s *Server) handleA2AAgentCard(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Generate our own agent card from the tool registry
-	card := a2a.AgentCardFromRegistry(nil, // TODO: wire registry
+	// TODO: wire *registry.ToolRegistry from mcpkit — requires adding field to Server struct
+	// and plumbing it through NewServerWithBus. Currently nil produces a card with no skills list.
+	card := a2a.AgentCardFromRegistry(nil,
 		a2a.WithName("ralphglasses"),
 		a2a.WithDescription("Multi-LLM agent fleet orchestration"),
 		a2a.WithVersion("1.0.0"),

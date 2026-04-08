@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 )
 
@@ -18,63 +17,42 @@ func makeRalphDir(t *testing.T) (string, string) {
 	return dir, ralphDir
 }
 
-func TestLoadStatus_UnreadableFile(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("chmod not effective on Windows")
-	}
+func TestLoadStatus_DirectoryAtFilePath(t *testing.T) {
 	dir, ralphDir := makeRalphDir(t)
 	path := filepath.Join(ralphDir, "status.json")
-	if err := os.WriteFile(path, []byte(`{"status":"running"}`), 0644); err != nil {
+	if err := os.Mkdir(path, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(path, 0000); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.Chmod(path, 0644) })
 
 	_, err := LoadStatus(context.Background(), dir)
 	if err == nil {
-		t.Fatal("expected error for unreadable status.json, got nil")
+		t.Fatal("expected error for directory-backed status.json, got nil")
 	}
 }
 
-func TestLoadCircuitBreaker_UnreadableFile(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("chmod not effective on Windows")
-	}
+func TestLoadCircuitBreaker_DirectoryAtFilePath(t *testing.T) {
 	dir, ralphDir := makeRalphDir(t)
 	path := filepath.Join(ralphDir, ".circuit_breaker_state")
-	if err := os.WriteFile(path, []byte(`{"state":"closed"}`), 0644); err != nil {
+	if err := os.Mkdir(path, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(path, 0000); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.Chmod(path, 0644) })
 
 	_, err := LoadCircuitBreaker(context.Background(), dir)
 	if err == nil {
-		t.Fatal("expected error for unreadable circuit breaker file, got nil")
+		t.Fatal("expected error for directory-backed circuit breaker file, got nil")
 	}
 }
 
-func TestLoadProgress_UnreadableFile(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("chmod not effective on Windows")
-	}
+func TestLoadProgress_DirectoryAtFilePath(t *testing.T) {
 	dir, ralphDir := makeRalphDir(t)
 	path := filepath.Join(ralphDir, "progress.json")
-	if err := os.WriteFile(path, []byte(`{"iteration":1}`), 0644); err != nil {
+	if err := os.Mkdir(path, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(path, 0000); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.Chmod(path, 0644) })
 
 	_, err := LoadProgress(context.Background(), dir)
 	if err == nil {
-		t.Fatal("expected error for unreadable progress file, got nil")
+		t.Fatal("expected error for directory-backed progress file, got nil")
 	}
 }
 

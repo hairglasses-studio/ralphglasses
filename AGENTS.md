@@ -5,6 +5,14 @@ Command-and-control TUI + bootable thin client for parallel multi-LLM agent flee
 
 Supports **Claude Code**, **Gemini CLI**, and **OpenAI Codex CLI** as session providers.
 
+## Start Here
+
+1. Read the architecture tree below before changing module boundaries
+2. Check `~/hairglasses-studio/docs/` for existing research before starting new work
+3. Run `make ci` before every commit — this is the quality gate
+4. **Skill surfaces**: `.agents/skills/` is canonical; `.claude/skills/` and `.codex/agents/` are provider-native projections synced by `make skill-surface`
+5. **Tool discovery**: `ralphglasses_tool_groups` → `ralphglasses_load_tool_group <name>` → use tools. Groups are deferred-loaded to save context tokens.
+
 ## Build & Run
 
 ```bash
@@ -133,6 +141,36 @@ The `distro/` directory contains configs for a bootable Linux thin client (Ubunt
 - **claudekit**: Go MCP with rdcycle perpetual loop, budget profiles
 - **[private]**: Go + pure SQLite (modernc.org/sqlite) + MCP, audit logs
 - **mesmer**: Go MCP server with ralph integration
+
+## Tool Discovery Workflow
+
+MCP tools are organized in 30 deferred-loaded groups. Follow this pattern:
+
+1. `ralphglasses_tool_groups` — list all available groups with tool counts
+2. `ralphglasses_load_tool_group <name>` — load a specific group into context
+3. Use the loaded tools directly
+4. `ralphglasses_tool_search <query>` — find tools by keyword across all groups
+
+Groups: `core`, `session`, `loop`, `prompt`, `fleet`, `repo`, `roadmap`, `team`, `tenant`, `awesome`, `advanced`, `events`, `feedback`, `eval`, `fleet_h`, `observability`, `rdcycle`, `plugin`, `sweep`, `rc`, `autonomy`, `workflow`, `docs`, `recovery`, `promptdj`, `a2a`, `trigger`, `approval`, `context`, `prefetch`.
+
+## Cross-Provider Session Continuity
+
+Sessions persist state via MCP tools enabling handoff between providers:
+- `ralphglasses_session_handoff` — export session context for another provider to resume
+- `ralphglasses_session_fork` — create a parallel session from a checkpoint
+- `.ralph/improvement_journal.jsonl` — append-only log readable by any provider
+- `.ralph/status.json` + `.ralph/progress.json` — shared state files watchable by any session
+
+## Skill Surface
+
+| Location | Purpose | Canonical? |
+|----------|---------|-----------|
+| `.agents/skills/` | Provider-neutral skill definitions | Yes — source of truth |
+| `.claude/skills/` | Claude Code projections | Generated mirror |
+| `.codex/agents/` | Codex delegation agents | Generated from `.codex/agents/*.toml` |
+| `.claude/agents/` | Claude agents | Auto-generated from `.codex/agents/` by `hg-provider-role-sync.sh` |
+
+Regenerate all surfaces: `make skill-surface`
 
 ## See Also
 
