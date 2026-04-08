@@ -419,11 +419,16 @@ func (s *Supervisor) tick(ctx context.Context) {
 	if chainer != nil {
 		if nextCycle, err := chainer.CheckAndChain(ctx, s.RepoPath); err != nil {
 			slog.Warn("supervisor: chain check failed", "error", err)
+			s.publishError("supervisor.chain_check", err, nil)
 		} else if nextCycle != nil && mgr != nil {
 			chainedCycle = nextCycle
 			s.wg.Go(func() {
 				if _, err := mgr.RunCycle(ctx, nextCycle.RepoPath, nextCycle.Name, nextCycle.Objective, nextCycle.SuccessCriteria, 3); err != nil {
 					slog.Warn("supervisor: chained cycle failed", "error", err)
+					s.publishError("supervisor.chained_cycle", err, map[string]any{
+						"cycle":     nextCycle.Name,
+						"objective": nextCycle.Objective,
+					})
 				}
 			})
 		}
@@ -437,6 +442,11 @@ func (s *Supervisor) tick(ctx context.Context) {
 			s.wg.Go(func() {
 				if _, err := mgr.RunCycle(ctx, planned.RepoPath, planned.Name, planned.Objective, planned.SuccessCriteria, len(planned.Tasks)); err != nil {
 					slog.Warn("supervisor: planned sprint failed", "error", err)
+					s.publishError("supervisor.planned_sprint", err, map[string]any{
+						"cycle":      planned.Name,
+						"objective":  planned.Objective,
+						"task_count": len(planned.Tasks),
+					})
 				}
 			})
 			s.mu.Lock()
@@ -517,6 +527,18 @@ func (s *Supervisor) publishEvent(typ events.EventType, data map[string]any) {
 	})
 }
 
+func (s *Supervisor) publishError(component string, err error, data map[string]any) {
+	if err == nil {
+		return
+	}
+	if data == nil {
+		data = make(map[string]any)
+	}
+	data["component"] = component
+	data["error"] = err.Error()
+	s.publishEvent(events.SessionError, data)
+}
+
 func (s *Supervisor) executeDecision(ctx context.Context, signal HealthSignal) {
 	decision := AutonomousDecision{
 		ID:            fmt.Sprintf("dec-%d", time.Now().UnixNano()),
@@ -587,6 +609,11 @@ func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal, decis
 				failures := s.consecutiveFailures
 				s.mu.Unlock()
 				slog.Error("supervisor: RunCycle failed", "error", err, "consecutive_failures", failures)
+				s.publishError("supervisor.run_cycle", err, map[string]any{
+					"consecutive_failures": failures,
+					"decision_id":          decisionID,
+					"objective":            objective,
+				})
 				if failures >= 3 {
 					slog.Error("supervisor: 3 consecutive RunCycle failures — consider demoting autonomy level",
 						"consecutive_failures", failures)

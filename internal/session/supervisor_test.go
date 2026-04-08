@@ -11,6 +11,19 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
 )
 
+func requireSupervisorSessionError(t *testing.T, bus *events.Bus, component string) events.Event {
+	t.Helper()
+
+	for _, event := range bus.History(events.SessionError, 20) {
+		if event.Data["component"] == component {
+			return event
+		}
+	}
+
+	t.Fatalf("expected SessionError event for component %q", component)
+	return events.Event{}
+}
+
 func newTestSupervisor(t *testing.T) (*Supervisor, string) {
 	t.Helper()
 	dir := t.TempDir()
@@ -252,6 +265,82 @@ func TestSupervisor_CycleCompletionTracked(t *testing.T) {
 	s.mu.Unlock()
 	if launched != 1 {
 		t.Fatalf("cyclesLaunched = %d, want 1", launched)
+	}
+}
+
+func TestSupervisor_ChainCheckFailurePublishesEvent(t *testing.T) {
+	s, _ := newTestSupervisor(t)
+	bus := events.NewBus(20)
+	s.SetBus(bus)
+	s.SetChainer(NewCycleChainer())
+
+	blocked := filepath.Join(t.TempDir(), "not-a-dir")
+	if err := os.WriteFile(blocked, []byte("x"), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	s.RepoPath = blocked
+
+	s.tick(context.Background())
+
+	event := requireSupervisorSessionError(t, bus, "supervisor.chain_check")
+	if got := event.Data["error"]; got == "" {
+		t.Fatal("event error should not be empty")
+	}
+}
+
+func TestSupervisor_RunCycleFailurePublishesEvent(t *testing.T) {
+	s, _ := newTestSupervisor(t)
+	bus := events.NewBus(20)
+	s.SetBus(bus)
+	s.CooldownBetween = 0
+
+	blocked := filepath.Join(t.TempDir(), "not-a-dir")
+	if err := os.WriteFile(blocked, []byte("x"), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	s.RepoPath = blocked
+
+	s.launchCycle(context.Background(), HealthSignal{
+		Category:  DecisionLaunch,
+		Metric:    "idle_time",
+		Value:     300,
+		Threshold: 60,
+	}, "dec-1")
+	s.wg.Wait()
+
+	event := requireSupervisorSessionError(t, bus, "supervisor.run_cycle")
+	if got := event.Data["decision_id"]; got != "dec-1" {
+		t.Fatalf("decision_id = %v, want dec-1", got)
+	}
+	if got := event.Data["consecutive_failures"]; got != 1 {
+		t.Fatalf("consecutive_failures = %v, want 1", got)
+	}
+}
+
+func TestSupervisor_PlannedSprintFailurePublishesEvent(t *testing.T) {
+	s, dir := newTestSupervisor(t)
+	bus := events.NewBus(20)
+	s.SetBus(bus)
+
+	roadmapPath := filepath.Join(dir, "ROADMAP.md")
+	content := "# Roadmap\n- [ ] **Task A** — high priority small `P0` `S`\n"
+	if err := os.WriteFile(roadmapPath, []byte(content), 0644); err != nil {
+		t.Fatalf("WriteFile roadmap: %v", err)
+	}
+
+	blocked := filepath.Join(t.TempDir(), "not-a-dir")
+	if err := os.WriteFile(blocked, []byte("x"), 0644); err != nil {
+		t.Fatalf("WriteFile blocked repo: %v", err)
+	}
+	s.RepoPath = blocked
+	s.SetSprintPlanner(NewSprintPlanner(roadmapPath))
+
+	s.tick(context.Background())
+	s.wg.Wait()
+
+	event := requireSupervisorSessionError(t, bus, "supervisor.planned_sprint")
+	if got := event.Data["task_count"]; got != 1 {
+		t.Fatalf("task_count = %v, want 1", got)
 	}
 }
 

@@ -204,6 +204,22 @@ func NewCrashRecoveryOrchestrator(mgr *Manager, bus *events.Bus, store Store) *C
 	}
 }
 
+func (o *CrashRecoveryOrchestrator) publishError(component string, err error, data map[string]any) {
+	if o.bus == nil || err == nil {
+		return
+	}
+	if data == nil {
+		data = make(map[string]any)
+	}
+	data["component"] = component
+	data["error"] = err.Error()
+	o.bus.Publish(events.Event{
+		Type:      events.SessionError,
+		Timestamp: time.Now(),
+		Data:      data,
+	})
+}
+
 // SetBudget attaches a recovery budget envelope.
 func (o *CrashRecoveryOrchestrator) SetBudget(b *RecoveryBudgetEnvelope) {
 	o.mu.Lock()
@@ -361,6 +377,10 @@ func (o *CrashRecoveryOrchestrator) DetectCrash(ctx context.Context, window time
 		o.mu.Unlock()
 		if err := o.store.SaveRecoveryOp(ctx, op); err != nil {
 			slog.Warn("crash_recovery: failed to persist recovery op", "error", err)
+			o.publishError("crash_recovery.persist_recovery_op", err, map[string]any{
+				"recovery_op_id": op.ID,
+				"severity":       plan.Severity,
+			})
 		}
 		plan.RecoveryOpID = op.ID
 	}
@@ -463,6 +483,10 @@ func (o *CrashRecoveryOrchestrator) ExecuteRecovery(ctx context.Context, plan *C
 		if budget != nil && !budget.CanSpend(0.10) { // minimum viable cost
 			slog.Warn("crash_recovery: budget exhausted, stopping recovery",
 				"remaining", budget.Remaining())
+			o.publishError("crash_recovery.execute", fmt.Errorf("recovery budget exhausted"), map[string]any{
+				"reason":    "budget_exhausted",
+				"remaining": budget.Remaining(),
+			})
 			break
 		}
 
@@ -504,6 +528,12 @@ func (o *CrashRecoveryOrchestrator) ExecuteRecovery(ctx context.Context, plan *C
 					"repo", rs.RepoName,
 					"error", err,
 				)
+				o.publishError("crash_recovery.resume_session", err, map[string]any{
+					"reason":     "resume_failed",
+					"session_id": rs.SessionID,
+					"repo_name":  rs.RepoName,
+					"repo_path":  rs.RepoPath,
+				})
 				if actionID != "" && o.store != nil {
 					_ = o.store.UpdateRecoveryActionStatus(ctx, actionID, ActionFailed, err.Error())
 				}
