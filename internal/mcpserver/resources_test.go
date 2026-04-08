@@ -118,8 +118,8 @@ func TestStaticResourceRegistration(t *testing.T) {
 		t.Fatalf("expected ListResourcesResult, got %T", rpcResp.Result)
 	}
 
-	if len(result.Resources) != 3 {
-		t.Fatalf("expected 3 static resources, got %d", len(result.Resources))
+	if len(result.Resources) != 6 {
+		t.Fatalf("expected 6 static resources, got %d", len(result.Resources))
 	}
 
 	uris := make(map[string]bool)
@@ -131,10 +131,85 @@ func TestStaticResourceRegistration(t *testing.T) {
 		"ralph:///catalog/server",
 		"ralph:///catalog/tool-groups",
 		"ralph:///catalog/workflows",
+		"ralph:///catalog/skills",
+		"ralph:///bootstrap/checklist",
+		"ralph:///runtime/health",
 	} {
 		if !uris[expected] {
 			t.Errorf("missing expected static resource URI: %s", expected)
 		}
+	}
+}
+
+func TestCatalogSkillsResource_ReturnsSkillCatalog(t *testing.T) {
+	t.Parallel()
+
+	appSrv, _, _ := setupRepoForResources(t)
+	handler := makeCatalogSkillsHandler()
+	results, err := handler(context.Background(), mcp.ReadResourceRequest{
+		Params: mcp.ReadResourceParams{URI: "ralph:///catalog/skills"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	textContent, ok := results[0].(mcp.TextResourceContents)
+	if !ok {
+		t.Fatalf("expected TextResourceContents, got %T", results[0])
+	}
+	if !strings.Contains(textContent.Text, "ralphglasses-runtime") {
+		t.Fatalf("expected runtime skill in catalog: %s", textContent.Text)
+	}
+	if !strings.Contains(textContent.Text, "ralphglasses-recovery") {
+		t.Fatalf("expected recovery skill in catalog: %s", textContent.Text)
+	}
+	_ = appSrv
+}
+
+func TestBootstrapChecklistResource_ReturnsChecklist(t *testing.T) {
+	t.Parallel()
+
+	handler := makeBootstrapChecklistHandler()
+	results, err := handler(context.Background(), mcp.ReadResourceRequest{
+		Params: mcp.ReadResourceParams{URI: "ralph:///bootstrap/checklist"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	textContent, ok := results[0].(mcp.TextResourceContents)
+	if !ok {
+		t.Fatalf("expected TextResourceContents, got %T", results[0])
+	}
+	if !strings.Contains(textContent.Text, "ralphglasses-runtime") {
+		t.Fatalf("expected runtime skill in checklist: %s", textContent.Text)
+	}
+	if !strings.Contains(textContent.Text, "ralphglasses_firstboot_profile") {
+		t.Fatalf("expected firstboot tool in checklist: %s", textContent.Text)
+	}
+}
+
+func TestRuntimeHealthResource_ReturnsServerHealthShape(t *testing.T) {
+	t.Parallel()
+
+	appSrv, _, _ := setupRepoForResources(t)
+	handler := makeRuntimeHealthHandler(appSrv)
+	results, err := handler(context.Background(), mcp.ReadResourceRequest{
+		Params: mcp.ReadResourceParams{URI: "ralph:///runtime/health"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	textContent, ok := results[0].(mcp.TextResourceContents)
+	if !ok {
+		t.Fatalf("expected TextResourceContents, got %T", results[0])
+	}
+	if !strings.Contains(textContent.Text, "\"server\": \"ralphglasses\"") {
+		t.Fatalf("expected server name in runtime health: %s", textContent.Text)
+	}
+	if !strings.Contains(textContent.Text, "\"skill_count\"") {
+		t.Fatalf("expected skill_count in runtime health: %s", textContent.Text)
 	}
 }
 

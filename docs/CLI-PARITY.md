@@ -54,7 +54,7 @@ These existing tools were extended rather than duplicated:
 - `ralphglasses-discovery`: catalog-first discovery, deferred group loading, and contract export
 - `ralphglasses-session-ops`: launch, resume, budget, output, compare, export, and handoff flows
 - `ralphglasses-repo-admin`: doctor, validate, scaffold, worktree, config, telemetry, and debug-bundle flows
-- `ralphglasses-bootstrap`: first-time setup, profile application, and bootstrap readiness checks
+- `ralphglasses-bootstrap`: first-time setup, profile application, runtime control, and bootstrap readiness checks
 - `ralphglasses-recovery-observability`: logs, runtime health, recovery planning, session salvage, and marathon diagnosis
 - `ralphglasses-operator`: interactive TUI, tmux, firstboot wizard, and operator troubleshooting
 - `ralphglasses-self-dev`: repo surface audit, roadmap analysis, loop/marathon execution, merge verification, and docs writeback
@@ -66,6 +66,9 @@ Use the server’s discovery surfaces instead of hard-coding counts:
 - `ralph:///catalog/server`
 - `ralph:///catalog/tool-groups`
 - `ralph:///catalog/workflows`
+- `ralph:///catalog/skills`
+- `ralph:///bootstrap/checklist`
+- `ralph:///runtime/health`
 - `ralphglasses_server_health`
 - `ralphglasses_tool_groups`
 - `ralphglasses_skill_export`

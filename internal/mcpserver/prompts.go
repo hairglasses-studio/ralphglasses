@@ -25,6 +25,7 @@ func serverPrompts(appSrv *Server) []server.ServerPrompt {
 		testGenerationPrompt(),
 		bootstrapFirstbootPrompt(),
 		providerParityAuditPrompt(appSrv),
+		repoTriageBriefPrompt(),
 	}
 }
 
@@ -222,6 +223,43 @@ func providerParityAuditPrompt(appSrv *Server) server.ServerPrompt {
 		content := buildProviderParityAuditPrompt(appSrv, repoName, targetProvider)
 		return &mcp.GetPromptResult{
 			Description: fmt.Sprintf("Provider parity audit for %s (target: %s)", repoName, targetProvider),
+			Messages: []mcp.PromptMessage{
+				{
+					Role:    mcp.RoleUser,
+					Content: mcp.TextContent{Type: "text", Text: content},
+				},
+			},
+		}, nil
+	}
+
+	return server.ServerPrompt{Prompt: prompt, Handler: handler}
+}
+
+func repoTriageBriefPrompt() server.ServerPrompt {
+	prompt := mcp.NewPrompt("repo-triage-brief",
+		mcp.WithPromptDescription("Build a repo triage brief from status, progress, logs, runtime health, and the recommended next skill/tool path."),
+		mcp.WithArgument("repo_name",
+			mcp.ArgumentDescription("Repository name to triage."),
+			mcp.RequiredArgument(),
+		),
+		mcp.WithArgument("concern",
+			mcp.ArgumentDescription("Optional concern or symptom to emphasize during triage."),
+		),
+	)
+
+	handler := func(_ context.Context, req mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		repoName := req.Params.Arguments["repo_name"]
+		if repoName == "" {
+			return nil, fmt.Errorf("repo_name is required")
+		}
+		concern := req.Params.Arguments["concern"]
+		if concern == "" {
+			concern = "general repo health"
+		}
+
+		content := buildRepoTriageBriefPrompt(repoName, concern)
+		return &mcp.GetPromptResult{
+			Description: fmt.Sprintf("Repo triage brief for %s (%s)", repoName, concern),
 			Messages: []mcp.PromptMessage{
 				{
 					Role:    mcp.RoleUser,
@@ -457,6 +495,59 @@ One paragraph on overall parity health.
 - Still CLI-only:
 - Highest-value next parity win:
 `, repoSummary, targetProvider)
+}
+
+func buildRepoTriageBriefPrompt(repoName, concern string) string {
+	return fmt.Sprintf(`You are preparing a repo triage brief for a ralphglasses-managed repository.
+
+## Scope
+- Repository: %s
+- Primary concern: %s
+
+## Read-Only Inputs
+- ralph:///%s/status
+- ralph:///%s/progress
+- ralph:///%s/logs
+- ralph:///runtime/health
+- ralph:///catalog/skills
+- ralph:///catalog/workflows
+
+## Optional Tool Follow-Ups
+- ralphglasses_status
+- ralphglasses_repo_health
+- ralphglasses_logs
+- ralphglasses_debug_bundle
+- ralphglasses_server_health
+
+## Instructions
+1. Summarize the current repo state from the read-only inputs before proposing any mutation.
+2. Call out the likely next best skill family to use:
+   - ralphglasses-repo-admin
+   - ralphglasses-recovery-observability
+   - ralphglasses-session-ops
+   - ralphglasses-self-dev
+3. Separate evidence from inference.
+4. If logs or runtime health suggest instability, recommend the smallest safe next read-only action before any fix.
+5. End with the first one or two MCP tool calls that should follow the triage brief.
+
+## Output Format
+### Repo Triage Summary
+One paragraph on the current repo state and the main concern.
+
+### Evidence
+| Source | Signal | Notes |
+|--------|--------|-------|
+| status | ... | ... |
+| progress | ... | ... |
+| logs | ... | ... |
+| runtime | ... | ... |
+
+### Recommended Skill And Next Steps
+- Best-fit skill:
+- Why:
+- First MCP call:
+- Second MCP call:
+`, repoName, concern, repoName, repoName, repoName)
 }
 
 // inferLanguage guesses the programming language from a file path extension.

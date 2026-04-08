@@ -27,6 +27,20 @@ type PromptDef struct {
 	Description string
 }
 
+// SkillCatalogDef describes one canonical repo workflow skill that can be
+// discovered alongside tools, resources, and prompts.
+type SkillCatalogDef struct {
+	Name          string   `json:"name"`
+	Description   string   `json:"description"`
+	Tags          []string `json:"tags,omitempty"`
+	Workflows     []string `json:"workflows,omitempty"`
+	ToolGroups    []string `json:"tool_groups,omitempty"`
+	Resources     []string `json:"resources,omitempty"`
+	Prompts       []string `json:"prompts,omitempty"`
+	KeyTools      []string `json:"key_tools,omitempty"`
+	CanonicalPath string   `json:"canonical_path,omitempty"`
+}
+
 // WorkflowDef summarizes a common operator workflow that can be discovered
 // through MCP resources before any mutating tool calls happen.
 type WorkflowDef struct {
@@ -34,6 +48,7 @@ type WorkflowDef struct {
 	Description string   `json:"description"`
 	Resources   []string `json:"resources"`
 	Prompts     []string `json:"prompts"`
+	Skills      []string `json:"skills,omitempty"`
 	ToolGroups  []string `json:"tool_groups"`
 	KeyTools    []string `json:"key_tools"`
 }
@@ -78,6 +93,24 @@ var staticResourceDefs = []ResourceDef{
 		Description: "Read the common ralphglasses operator workflows and their discovery entrypoints.",
 		MIMEType:    "application/json",
 	},
+	{
+		URI:         "ralph:///catalog/skills",
+		Name:        "Skill catalog",
+		Description: "Read the canonical ralphglasses workflow skills, their scopes, and their primary discovery entrypoints.",
+		MIMEType:    "application/json",
+	},
+	{
+		URI:         "ralph:///bootstrap/checklist",
+		Name:        "Bootstrap checklist",
+		Description: "Read the MCP-first bootstrap checklist for provider readiness, config validation, and firstboot flows.",
+		MIMEType:    "application/json",
+	},
+	{
+		URI:         "ralph:///runtime/health",
+		Name:        "Runtime health",
+		Description: "Read the current ralphglasses runtime health snapshot, including loaded groups and discovery coverage.",
+		MIMEType:    "application/json",
+	},
 }
 
 var promptDefs = []PromptDef{
@@ -101,13 +134,93 @@ var promptDefs = []PromptDef{
 		Name:        "provider-parity-audit",
 		Description: "Audit provider parity for a repository across AGENTS, provider config, MCP config, generated skills, and prompts.",
 	},
+	{
+		Name:        "repo-triage-brief",
+		Description: "Build a repo triage brief from status, progress, logs, runtime health, and the recommended next skill/tool path.",
+	},
+}
+
+var skillCatalogDefs = []SkillCatalogDef{
+	{
+		Name:          "ralphglasses-discovery",
+		Description:   "Discover the live MCP contract, inspect tool groups, and route to the right workflow or skill family before starting work.",
+		Tags:          []string{"discovery", "contract", "routing", "deferred-loading"},
+		Workflows:     []string{"discover-and-load"},
+		ToolGroups:    []string{"management", "core"},
+		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/tool-groups", "ralph:///catalog/skills", "ralph:///catalog/workflows"},
+		KeyTools:      []string{"ralphglasses_server_health", "ralphglasses_tool_groups", "ralphglasses_load_tool_group", "ralphglasses_skill_export"},
+		CanonicalPath: ".agents/skills/ralphglasses-discovery/SKILL.md",
+	},
+	{
+		Name:          "ralphglasses-session-ops",
+		Description:   "Launch, resume, inspect, compare, export, and hand off provider sessions with budget awareness.",
+		Tags:          []string{"sessions", "teams", "loops", "budget"},
+		Workflows:     []string{"session-execution"},
+		ToolGroups:    []string{"session", "team", "loop", "fleet", "tenant"},
+		Resources:     []string{"ralph:///runtime/health", "ralph:///catalog/skills"},
+		KeyTools:      []string{"ralphglasses_session_launch", "ralphglasses_session_list", "ralphglasses_session_status", "ralphglasses_session_budget", "ralphglasses_session_output"},
+		CanonicalPath: ".agents/skills/ralphglasses-session-ops/SKILL.md",
+	},
+	{
+		Name:          "ralphglasses-repo-admin",
+		Description:   "Run repo readiness, validation, scaffold, worktree, debug-bundle, and config-schema flows through MCP-native tools.",
+		Tags:          []string{"repo", "bootstrap", "validation", "worktrees"},
+		Workflows:     []string{"repo-triage", "provider-parity"},
+		ToolGroups:    []string{"core", "repo", "observability"},
+		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/workflows"},
+		KeyTools:      []string{"ralphglasses_doctor", "ralphglasses_validate", "ralphglasses_repo_scaffold", "ralphglasses_worktree_list", "ralphglasses_debug_bundle"},
+		CanonicalPath: ".agents/skills/ralphglasses-repo-admin/SKILL.md",
+	},
+	{
+		Name:          "ralphglasses-bootstrap",
+		Description:   "Bootstrap firstboot profiles, provider readiness, config validation, and repo bring-up through MCP-native control surfaces.",
+		Tags:          []string{"runtime", "bootstrap", "serve", "marathon"},
+		Workflows:     []string{"bootstrap-and-firstboot", "runtime-recovery"},
+		ToolGroups:    []string{"core", "fleet", "repo"},
+		Resources:     []string{"ralph:///bootstrap/checklist", "ralph:///runtime/health", "ralph:///catalog/skills"},
+		Prompts:       []string{"bootstrap-firstboot", "repo-triage-brief"},
+		KeyTools:      []string{"ralphglasses_doctor", "ralphglasses_validate", "ralphglasses_firstboot_profile", "ralphglasses_fleet_runtime", "ralphglasses_marathon"},
+		CanonicalPath: ".agents/skills/ralphglasses-bootstrap/SKILL.md",
+	},
+	{
+		Name:          "ralphglasses-recovery-observability",
+		Description:   "Investigate runtime health, logs, recovery plans, and session salvage when execution is degraded or interrupted.",
+		Tags:          []string{"recovery", "salvage", "incident", "verification"},
+		Workflows:     []string{"repo-triage", "runtime-recovery"},
+		ToolGroups:    []string{"recovery", "session", "observability"},
+		Resources:     []string{"ralph:///runtime/health"},
+		KeyTools:      []string{"ralphglasses_logs", "ralphglasses_debug_bundle", "ralphglasses_recovery_plan", "ralphglasses_session_triage", "ralphglasses_session_salvage"},
+		CanonicalPath: ".agents/skills/ralphglasses-recovery-observability/SKILL.md",
+	},
+	{
+		Name:          "ralphglasses-operator",
+		Description:   "Bridge the interactive TUI, tmux, and firstboot wizard with the MCP control plane when a task is terminal-native by design.",
+		Tags:          []string{"interactive", "operator", "tmux", "tui"},
+		Workflows:     []string{"bootstrap-and-firstboot"},
+		ToolGroups:    []string{"management"},
+		Resources:     []string{"ralph:///bootstrap/checklist", "ralph:///runtime/health"},
+		KeyTools:      []string{"ralphglasses_server_health", "ralphglasses_fleet_runtime", "ralphglasses_marathon"},
+		CanonicalPath: ".agents/skills/ralphglasses-operator/SKILL.md",
+	},
+	{
+		Name:          "ralphglasses-self-dev",
+		Description:   "Improve ralphglasses itself through parity audits, roadmap analysis, loop execution, merge verification, and docs writeback.",
+		Tags:          []string{"self-dev", "roadmap", "parity", "docs"},
+		Workflows:     []string{"repo-triage", "provider-parity"},
+		ToolGroups:    []string{"repo", "roadmap", "loop", "fleet", "docs"},
+		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/skills", "ralph:///catalog/workflows"},
+		Prompts:       []string{"provider-parity-audit", "repo-triage-brief"},
+		KeyTools:      []string{"ralphglasses_repo_surface_audit", "ralphglasses_roadmap_analyze", "ralphglasses_roadmap_prioritize", "ralphglasses_marathon"},
+		CanonicalPath: ".agents/skills/ralphglasses-self-dev/SKILL.md",
+	},
 }
 
 var workflowDefs = []WorkflowDef{
 	{
 		Name:        "discover-and-load",
 		Description: "Inspect the server contract and load only the tool groups needed for the current task.",
-		Resources:   []string{"ralph:///catalog/server", "ralph:///catalog/tool-groups"},
+		Resources:   []string{"ralph:///catalog/server", "ralph:///catalog/tool-groups", "ralph:///catalog/skills"},
+		Skills:      []string{"ralphglasses-discovery"},
 		ToolGroups:  []string{"core"},
 		KeyTools: []string{
 			"ralphglasses_server_health",
@@ -118,8 +231,9 @@ var workflowDefs = []WorkflowDef{
 	{
 		Name:        "repo-triage",
 		Description: "Assess one repository before mutating it by reading current status, progress, logs, and health signals.",
-		Resources:   []string{"ralph:///{repo}/status", "ralph:///{repo}/progress", "ralph:///{repo}/logs"},
-		Prompts:     []string{"code-review", "test-generation"},
+		Resources:   []string{"ralph:///{repo}/status", "ralph:///{repo}/progress", "ralph:///{repo}/logs", "ralph:///runtime/health"},
+		Prompts:     []string{"repo-triage-brief", "code-review", "test-generation"},
+		Skills:      []string{"ralphglasses-repo-admin", "ralphglasses-recovery-observability"},
 		ToolGroups:  []string{"core", "repo", "observability"},
 		KeyTools: []string{
 			"ralphglasses_status",
@@ -130,8 +244,9 @@ var workflowDefs = []WorkflowDef{
 	{
 		Name:        "bootstrap-and-firstboot",
 		Description: "Bring a new workspace or operator environment into a healthy state before launching sessions or loops.",
-		Resources:   []string{"ralph:///catalog/server", "ralph:///catalog/workflows"},
+		Resources:   []string{"ralph:///catalog/server", "ralph:///catalog/skills", "ralph:///bootstrap/checklist"},
 		Prompts:     []string{"bootstrap-firstboot"},
+		Skills:      []string{"ralphglasses-bootstrap", "ralphglasses-operator"},
 		ToolGroups:  []string{"core", "repo", "tenant"},
 		KeyTools: []string{
 			"ralphglasses_scan",
@@ -141,13 +256,41 @@ var workflowDefs = []WorkflowDef{
 	{
 		Name:        "provider-parity",
 		Description: "Compare repo instructions, MCP registration, and generated skills across supported providers before rollout.",
-		Resources:   []string{"ralph:///catalog/server", "ralph:///catalog/tool-groups"},
+		Resources:   []string{"ralph:///catalog/server", "ralph:///catalog/tool-groups", "ralph:///catalog/skills"},
 		Prompts:     []string{"provider-parity-audit"},
+		Skills:      []string{"ralphglasses-self-dev", "ralphglasses-discovery"},
 		ToolGroups:  []string{"repo", "roadmap", "docs"},
 		KeyTools: []string{
 			"ralphglasses_server_health",
 			"ralphglasses_skill_export",
 			"ralphglasses_roadmap_analyze",
+		},
+	},
+	{
+		Name:        "runtime-recovery",
+		Description: "Investigate runtime health, logs, and recovery state before resuming sessions or marathon work.",
+		Resources:   []string{"ralph:///runtime/health", "ralph:///catalog/skills", "ralph:///{repo}/logs"},
+		Skills:      []string{"ralphglasses-bootstrap", "ralphglasses-recovery-observability"},
+		ToolGroups:  []string{"core", "recovery", "observability", "fleet"},
+		KeyTools: []string{
+			"ralphglasses_server_health",
+			"ralphglasses_logs",
+			"ralphglasses_recovery_plan",
+			"ralphglasses_session_triage",
+		},
+	},
+	{
+		Name:        "session-execution",
+		Description: "Launch, inspect, compare, and hand off provider sessions with budget awareness.",
+		Resources:   []string{"ralph:///runtime/health", "ralph:///catalog/skills"},
+		Skills:      []string{"ralphglasses-session-ops"},
+		ToolGroups:  []string{"session", "core"},
+		KeyTools: []string{
+			"ralphglasses_session_launch",
+			"ralphglasses_session_list",
+			"ralphglasses_session_status",
+			"ralphglasses_session_budget",
+			"ralphglasses_session_handoff",
 		},
 	},
 }
@@ -170,6 +313,12 @@ func promptCatalog() []PromptDef {
 	return out
 }
 
+func skillCatalog() []SkillCatalogDef {
+	out := make([]SkillCatalogDef, len(skillCatalogDefs))
+	copy(out, skillCatalogDefs)
+	return out
+}
+
 func workflowCatalog() []WorkflowDef {
 	out := make([]WorkflowDef, len(workflowDefs))
 	copy(out, workflowDefs)
@@ -186,6 +335,10 @@ func ResourceTemplates() []ResourceTemplateDef {
 
 func Prompts() []PromptDef {
 	return promptCatalog()
+}
+
+func Skills() []SkillCatalogDef {
+	return skillCatalog()
 }
 
 func Workflows() []WorkflowDef {
@@ -209,7 +362,9 @@ func ServerInstructions() string {
 Start with discovery instead of guessing:
 - Read ralph:///catalog/server for the live contract summary.
 - Read ralph:///catalog/tool-groups for grouped capabilities and counts.
+- Read ralph:///catalog/skills for the focused workflow skill families.
 - Read ralph:///catalog/workflows for common operator playbooks.
+- Read ralph:///runtime/health or ralph:///bootstrap/checklist when the task is runtime- or bootstrap-heavy.
 - Call ralphglasses_tool_groups, then ralphglasses_load_tool_group before using non-core tools.
 - Prefer repo read-only resources (ralph:///{repo}/status, /progress, /logs) before mutating tools.
 

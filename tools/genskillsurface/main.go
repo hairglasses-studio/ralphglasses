@@ -8,15 +8,36 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 func main() {
-	srv := mcpserver.NewServer(".")
+	check := flag.Bool("check", false, "Verify checked-in skill surfaces are up to date instead of rewriting them")
+	flag.Parse()
+
+	repoRoot := "."
+	if *check {
+		if err := checkSkillSurfaces(repoRoot); err != nil {
+			fmt.Fprintf(os.Stderr, "genskillsurface: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	if err := session.GenerateSkillSurfaces(repoRoot, buildToolDocs(repoRoot)); err != nil {
+		fmt.Fprintf(os.Stderr, "genskillsurface: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func buildToolDocs(repoRoot string) []session.ToolDescription {
+	srv := mcpserver.NewServer(repoRoot)
 	toolDocs := make([]session.ToolDescription, 0)
 
 	for _, group := range srv.ToolGroups() {
@@ -37,8 +58,96 @@ func main() {
 		})
 	}
 
-	if err := session.GenerateSkillFile(".", toolDocs); err != nil {
-		fmt.Fprintf(os.Stderr, "genskillsurface: %v\n", err)
-		os.Exit(1)
+	return toolDocs
+}
+
+func checkSkillSurfaces(repoRoot string) error {
+	tempRoot, err := os.MkdirTemp("", "ralphglasses-skill-surface-*")
+	if err != nil {
+		return fmt.Errorf("create temp dir: %w", err)
 	}
+	defer os.RemoveAll(tempRoot)
+
+	cfg, err := session.LoadSkillSurfaceConfig(repoRoot)
+	if err != nil {
+		return err
+	}
+	if err := copyCanonicalSkillInputs(repoRoot, tempRoot, cfg); err != nil {
+		return err
+	}
+	if err := session.GenerateSkillSurfaces(tempRoot, buildToolDocs(repoRoot)); err != nil {
+		return err
+	}
+
+	filesToCheck := []string{
+		filepath.Join(".agents", "skills", "ralphglasses", "SKILL.md"),
+		filepath.Join(".claude", "skills", "ralphglasses", "SKILL.md"),
+		filepath.Join("plugins", cfg.PluginRoot, "skills", "ralphglasses", "SKILL.md"),
+		filepath.Join(".agents", "plugins", "marketplace.json"),
+		filepath.Join("plugins", cfg.PluginRoot, ".codex-plugin", "plugin.json"),
+		filepath.Join("plugins", cfg.PluginRoot, ".mcp.json"),
+	}
+	for _, skill := range cfg.Skills {
+		if skill.Name == "" || skill.Name == "ralphglasses" {
+			continue
+		}
+		filesToCheck = append(filesToCheck,
+			filepath.Join(".claude", "skills", skill.Name, "SKILL.md"),
+		)
+		if skill.ExportPlugin {
+			filesToCheck = append(filesToCheck,
+				filepath.Join("plugins", cfg.PluginRoot, "skills", skill.Name, "SKILL.md"),
+			)
+		}
+	}
+
+	for _, rel := range filesToCheck {
+		expected, err := os.ReadFile(filepath.Join(tempRoot, rel))
+		if err != nil {
+			return fmt.Errorf("read generated %s: %w", rel, err)
+		}
+		actual, err := os.ReadFile(filepath.Join(repoRoot, rel))
+		if err != nil {
+			return fmt.Errorf("read checked-in %s: %w", rel, err)
+		}
+		if string(actual) != string(expected) {
+			return fmt.Errorf("checked-in skill surface drift detected in %s; run `go run ./tools/genskillsurface`", rel)
+		}
+	}
+
+	return nil
+}
+
+func copyCanonicalSkillInputs(srcRoot, dstRoot string, cfg session.SkillSurfaceConfig) error {
+	if err := os.MkdirAll(filepath.Join(dstRoot, ".agents", "skills"), 0o755); err != nil {
+		return err
+	}
+	srcSurface := filepath.Join(srcRoot, ".agents", "skills", "surface.yaml")
+	data, err := os.ReadFile(srcSurface)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", srcSurface, err)
+	}
+	if err := os.WriteFile(filepath.Join(dstRoot, ".agents", "skills", "surface.yaml"), data, 0o644); err != nil {
+		return fmt.Errorf("write surface config: %w", err)
+	}
+
+	for _, skill := range cfg.Skills {
+		if skill.Name == "" || skill.Name == "ralphglasses" {
+			continue
+		}
+		src := filepath.Join(srcRoot, ".agents", "skills", skill.Name, "SKILL.md")
+		data, err := os.ReadFile(src)
+		if err != nil {
+			return fmt.Errorf("read canonical skill %s: %w", src, err)
+		}
+		dst := filepath.Join(dstRoot, ".agents", "skills", skill.Name, "SKILL.md")
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return fmt.Errorf("create %s: %w", filepath.Dir(dst), err)
+		}
+		if err := os.WriteFile(dst, data, 0o644); err != nil {
+			return fmt.Errorf("write %s: %w", dst, err)
+		}
+	}
+
+	return nil
 }

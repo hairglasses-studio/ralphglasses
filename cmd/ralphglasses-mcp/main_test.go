@@ -316,8 +316,8 @@ func TestSetup_RegistersResourcesAndPrompts(t *testing.T) {
 	initializeServer(t, srv)
 
 	resources := listResources(t, srv)
-	if got := len(resources.Resources); got != 3 {
-		t.Fatalf("resources/list returned %d resources, want 3", got)
+	if got := len(resources.Resources); got != 6 {
+		t.Fatalf("resources/list returned %d resources, want 6", got)
 	}
 
 	templates := listResourceTemplates(t, srv)
@@ -326,8 +326,8 @@ func TestSetup_RegistersResourcesAndPrompts(t *testing.T) {
 	}
 
 	prompts := listPrompts(t, srv)
-	if got := len(prompts.Prompts); got != 5 {
-		t.Fatalf("prompts/list returned %d prompts, want 5", got)
+	if got := len(prompts.Prompts); got != 6 {
+		t.Fatalf("prompts/list returned %d prompts, want 6", got)
 	}
 }
 

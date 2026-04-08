@@ -30,6 +30,7 @@ func TestPromptRegistration(t *testing.T) {
 		"test-generation",
 		"bootstrap-firstboot",
 		"provider-parity-audit",
+		"repo-triage-brief",
 	}
 	for _, name := range promptNames {
 		t.Run(name, func(t *testing.T) {
@@ -277,6 +278,41 @@ func TestProviderParityAuditPrompt_ReturnsMessage(t *testing.T) {
 	}
 }
 
+func TestRepoTriageBriefPrompt_ReturnsMessage(t *testing.T) {
+	t.Parallel()
+
+	sp := repoTriageBriefPrompt()
+	if sp.Prompt.Name != "repo-triage-brief" {
+		t.Fatalf("unexpected prompt name: %s", sp.Prompt.Name)
+	}
+
+	req := mcp.GetPromptRequest{}
+	req.Params.Name = "repo-triage-brief"
+	req.Params.Arguments = map[string]string{
+		"repo_name": "ralphglasses",
+		"concern":   "runtime instability",
+	}
+
+	result, err := sp.Handler(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	tc, ok := result.Messages[0].Content.(mcp.TextContent)
+	if !ok {
+		t.Fatal("expected TextContent")
+	}
+	if !strings.Contains(tc.Text, "ralph:///runtime/health") {
+		t.Error("expected runtime health resource in prompt")
+	}
+	if !strings.Contains(tc.Text, "ralphglasses-recovery") {
+		t.Error("expected recommended skill family in prompt")
+	}
+	if !strings.Contains(tc.Text, "runtime instability") {
+		t.Error("expected concern in prompt")
+	}
+}
+
 func TestPrompt_MissingRequiredParam(t *testing.T) {
 	t.Parallel()
 
@@ -321,6 +357,12 @@ func TestPrompt_MissingRequiredParam(t *testing.T) {
 			prompt:  testGenerationPrompt(),
 			args:    map[string]string{"repo_name": "test"},
 			wantErr: "file_path is required",
+		},
+		{
+			name:    "repo-triage-brief missing repo_name",
+			prompt:  repoTriageBriefPrompt(),
+			args:    map[string]string{"concern": "logs are noisy"},
+			wantErr: "repo_name is required",
 		},
 	}
 

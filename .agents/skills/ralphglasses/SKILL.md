@@ -228,7 +228,7 @@ allowed-tools:
 
 # Ralphglasses MCP Tools
 
-Auto-generated on 2026-04-08. 222 tools available.
+Auto-generated from the live MCP contract. 222 tools available.
 
 ## a2a
 

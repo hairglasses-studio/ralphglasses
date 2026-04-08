@@ -179,7 +179,7 @@ The `internal/session/` package implements a five-component self-improvement pip
 
 ## MCP Tool Groups
 
-The MCP server currently exposes 222 tools: 218 grouped tools plus 4 management tools. Tool groups are deferred-loaded, and live counts are discoverable through `ralph:///catalog/server`, `ralph:///catalog/tool-groups`, and `ralphglasses_server_health`.
+The MCP server currently exposes 222 tools: 218 grouped tools plus 4 management tools. Tool groups are deferred-loaded, and live counts are discoverable through `ralph:///catalog/server`, `ralph:///catalog/tool-groups`, `ralph:///catalog/skills`, `ralph:///runtime/health`, and `ralphglasses_server_health`.
 
 The grouped surface spans 30 tool groups:
 

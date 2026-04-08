@@ -47,6 +47,9 @@ func RegisterResources(srv *server.MCPServer, appSrv *Server) {
 		"ralph:///catalog/server":      makeCatalogServerHandler(appSrv),
 		"ralph:///catalog/tool-groups": makeCatalogToolGroupsHandler(appSrv),
 		"ralph:///catalog/workflows":   makeCatalogWorkflowsHandler(),
+		"ralph:///catalog/skills":      makeCatalogSkillsHandler(),
+		"ralph:///bootstrap/checklist": makeBootstrapChecklistHandler(),
+		"ralph:///runtime/health":      makeRuntimeHealthHandler(appSrv),
 	}
 
 	for _, def := range staticResourceCatalog() {
@@ -191,6 +194,24 @@ func makeCatalogWorkflowsHandler() server.ResourceHandlerFunc {
 	}
 }
 
+func makeCatalogSkillsHandler() server.ResourceHandlerFunc {
+	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, skillCatalog())
+	}
+}
+
+func makeBootstrapChecklistHandler() server.ResourceHandlerFunc {
+	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, buildBootstrapChecklistDoc())
+	}
+}
+
+func makeRuntimeHealthHandler(appSrv *Server) server.ResourceHandlerFunc {
+	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, appSrv.runtimeHealthDoc())
+	}
+}
+
 func buildCatalogServerDoc(appSrv *Server) map[string]any {
 	return map[string]any{
 		"server_name":             "ralphglasses",
@@ -201,13 +222,70 @@ func buildCatalogServerDoc(appSrv *Server) map[string]any {
 		"tool_count":              GeneratedTotalTools + len(managementToolNames()),
 		"resource_count":          len(staticResourceCatalog()),
 		"resource_template_count": len(resourceTemplateCatalog()),
+		"skill_count":             len(skillCatalog()),
 		"prompt_count":            len(promptCatalog()),
 		"deferred_mode_default":   true,
 		"management_tools":        managementToolNames(),
 		"resources":               resourceURIs(staticResourceCatalog()),
 		"resource_templates":      resourceTemplateURIs(resourceTemplateCatalog()),
+		"skills":                  skillNames(),
 		"prompts":                 promptNames(),
 		"tool_groups":             buildCatalogToolGroupsDoc(appSrv),
+	}
+}
+
+func buildBootstrapChecklistDoc() map[string]any {
+	return map[string]any{
+		"title":       "Ralphglasses MCP-first bootstrap checklist",
+		"description": "Use this checklist to validate provider readiness, config health, and the first safe MCP interactions before launching work.",
+		"resources": []string{
+			"ralph:///catalog/server",
+			"ralph:///catalog/skills",
+			"ralph:///catalog/workflows",
+			"ralph:///runtime/health",
+		},
+		"prompts": []string{
+			"bootstrap-firstboot",
+		},
+		"skills": []string{
+			"ralphglasses-runtime",
+			"ralphglasses-operator",
+		},
+		"key_tools": []string{
+			"ralphglasses_doctor",
+			"ralphglasses_validate",
+			"ralphglasses_firstboot_profile",
+			"ralphglasses_repo_scaffold",
+			"ralphglasses_server_health",
+		},
+		"steps": []map[string]any{
+			{
+				"name":       "provider-readiness",
+				"goal":       "Confirm provider CLIs and authentication are healthy before any repo mutation.",
+				"tools":      []string{"ralphglasses_doctor"},
+				"skill":      "ralphglasses-runtime",
+				"validation": "Doctor reports the required providers as ready.",
+			},
+			{
+				"name":       "config-validation",
+				"goal":       "Inspect and validate repo-local config before applying profiles or scaffold changes.",
+				"tools":      []string{"ralphglasses_validate", "ralphglasses_config_schema"},
+				"validation": "Validation returns no blocking errors for the target repo or scan path.",
+			},
+			{
+				"name":       "profile-application",
+				"goal":       "Apply or inspect the best available firstboot profile before using the interactive wizard.",
+				"tools":      []string{"ralphglasses_firstboot_profile"},
+				"skill":      "ralphglasses-runtime",
+				"validation": "The selected profile matches the intended provider/runtime posture.",
+			},
+			{
+				"name":       "interactive-bridge",
+				"goal":       "Use the operator-first path only when the remaining setup step is inherently interactive.",
+				"skill":      "ralphglasses-operator",
+				"validation": "Any terminal-native firstboot step is followed by MCP health verification.",
+			},
+		},
 	}
 }
 
@@ -250,6 +328,16 @@ func resourceTemplateURIs(resources []ResourceTemplateDef) []string {
 
 func promptNames() []string {
 	defs := promptCatalog()
+	out := make([]string, 0, len(defs))
+	for _, def := range defs {
+		out = append(out, def.Name)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func skillNames() []string {
+	defs := skillCatalog()
 	out := make([]string, 0, len(defs))
 	for _, def := range defs {
 		out = append(out, def.Name)

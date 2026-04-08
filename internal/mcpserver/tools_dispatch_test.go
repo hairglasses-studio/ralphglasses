@@ -213,18 +213,24 @@ func TestHandleServerHealth_IncludesDiscoveryContract(t *testing.T) {
 		t.Fatalf("invalid JSON: %v", err)
 	}
 
-	if payload["prompt_count"] != float64(5) {
-		t.Fatalf("prompt_count = %v, want 5", payload["prompt_count"])
+	if payload["prompt_count"] != float64(6) {
+		t.Fatalf("prompt_count = %v, want 6", payload["prompt_count"])
 	}
-	if payload["resource_count"] != float64(3) {
-		t.Fatalf("resource_count = %v, want 3", payload["resource_count"])
+	if payload["resource_count"] != float64(6) {
+		t.Fatalf("resource_count = %v, want 6", payload["resource_count"])
 	}
 	if payload["resource_template_count"] != float64(3) {
 		t.Fatalf("resource_template_count = %v, want 3", payload["resource_template_count"])
 	}
+	if payload["skill_count"] == nil {
+		t.Fatalf("expected skill_count in server health payload: %v", payload)
+	}
 	instructions, _ := payload["instructions"].(string)
 	if !strings.Contains(instructions, "ralph:///catalog/server") {
 		t.Fatalf("instructions missing discovery resource guidance: %q", instructions)
+	}
+	if !strings.Contains(instructions, "ralph:///catalog/skills") {
+		t.Fatalf("instructions missing skill catalog guidance: %q", instructions)
 	}
 }
 

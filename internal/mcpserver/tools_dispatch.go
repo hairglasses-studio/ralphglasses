@@ -188,7 +188,7 @@ func (s *Server) handleLoadToolGroup(_ context.Context, req mcp.CallToolRequest)
 	}), nil
 }
 
-func (s *Server) handleServerHealth(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) runtimeHealthDoc() map[string]any {
 	groups := s.buildToolGroups()
 	groupNames := make([]string, 0, len(groups))
 	loadedGroups := make([]string, 0, len(groups))
@@ -219,7 +219,7 @@ func (s *Server) handleServerHealth(_ context.Context, _ mcp.CallToolRequest) (*
 	templateDefs := resourceTemplateCatalog()
 	managementTools := managementToolNames()
 
-	return jsonResult(map[string]any{
+	return map[string]any{
 		"server":                  "ralphglasses",
 		"version":                 s.runtimeVersion(),
 		"commit":                  strings.TrimSpace(s.Commit),
@@ -239,8 +239,14 @@ func (s *Server) handleServerHealth(_ context.Context, _ mcp.CallToolRequest) (*
 		"resource_uris":           resourceURIs(resourceDefs),
 		"resource_template_count": len(templateDefs),
 		"resource_templates":      resourceTemplateURIs(templateDefs),
+		"skill_count":             len(skillCatalog()),
+		"skill_names":             skillNames(),
 		"prompt_count":            len(promptCatalog()),
 		"prompt_names":            promptNames(),
 		"discovery_tools":         managementTools,
-	}), nil
+	}
+}
+
+func (s *Server) handleServerHealth(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return jsonResult(s.runtimeHealthDoc()), nil
 }

@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 )
 
 // SkillMetadata holds the metadata for a generated SKILL.md file.
@@ -24,6 +23,21 @@ type ToolDescription struct {
 	Name        string
 	Description string
 	Namespace   string
+}
+
+// SkillSurfaceConfig describes the projected skill surfaces to keep in sync
+// across Codex, Claude, and the local plugin bundle.
+type SkillSurfaceConfig struct {
+	Version    int                `json:"version"`
+	PluginRoot string             `json:"plugin_root"`
+	Skills     []SkillSurfaceSpec `json:"skills"`
+}
+
+// SkillSurfaceSpec describes one skill surface projection.
+type SkillSurfaceSpec struct {
+	Name                   string `json:"name"`
+	ClaudeIncludeCanonical bool   `json:"claude_include_canonical,omitempty"`
+	ExportPlugin           bool   `json:"export_plugin,omitempty"`
 }
 
 // GenerateSkillFile creates provider-native skill exports from tool descriptions.
@@ -49,7 +63,7 @@ func GenerateSkillFile(repoPath string, tools []ToolDescription) error {
 
 	// Markdown body
 	b.WriteString("# Ralphglasses MCP Tools\n\n")
-	b.WriteString(fmt.Sprintf("Auto-generated on %s. %d tools available.\n\n", time.Now().Format("2006-01-02"), len(tools)))
+	b.WriteString(fmt.Sprintf("Auto-generated from the live MCP contract. %d tools available.\n\n", len(tools)))
 
 	// Group by namespace
 	byNS := make(map[string][]ToolDescription)
@@ -93,6 +107,119 @@ func GenerateSkillFile(repoPath string, tools []ToolDescription) error {
 		return err
 	}
 
+	return nil
+}
+
+// LoadSkillSurfaceConfig reads the repo-local skill surface config. The file is
+// JSON-shaped even though it is named surface.yaml so it can be read without a
+// YAML dependency from the generation path.
+func LoadSkillSurfaceConfig(repoPath string) (SkillSurfaceConfig, error) {
+	path := filepath.Join(repoPath, ".agents", "skills", "surface.yaml")
+	var cfg SkillSurfaceConfig
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return cfg, err
+	}
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return cfg, fmt.Errorf("parse %s: %w", path, err)
+	}
+	if cfg.PluginRoot == "" {
+		cfg.PluginRoot = "ralphglasses"
+	}
+	return cfg, nil
+}
+
+// SyncProjectedSkills copies canonical `.agents/skills/*` files into the
+// provider and plugin skill surfaces declared in surface.yaml.
+func SyncProjectedSkills(repoPath string) error {
+	cfg, err := LoadSkillSurfaceConfig(repoPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	for _, skill := range cfg.Skills {
+		if skill.Name == "" || skill.Name == "ralphglasses" {
+			continue
+		}
+		src := filepath.Join(repoPath, ".agents", "skills", skill.Name, "SKILL.md")
+		data, err := os.ReadFile(src)
+		if err != nil {
+			return fmt.Errorf("read canonical skill %s: %w", src, err)
+		}
+
+		if err := writeProjectedSkill(filepath.Join(repoPath, ".claude", "skills", skill.Name, "SKILL.md"), data); err != nil {
+			return err
+		}
+		if skill.ExportPlugin {
+			if err := writeProjectedSkill(filepath.Join(repoPath, "plugins", cfg.PluginRoot, "skills", skill.Name, "SKILL.md"), data); err != nil {
+				return err
+			}
+		}
+	}
+
+	keepClaude := map[string]bool{"ralphglasses": true}
+	keepPlugin := map[string]bool{"ralphglasses": true}
+	for _, skill := range cfg.Skills {
+		if skill.Name == "" {
+			continue
+		}
+		keepClaude[skill.Name] = true
+		if skill.ExportPlugin {
+			keepPlugin[skill.Name] = true
+		}
+	}
+	if err := pruneProjectedSkills(filepath.Join(repoPath, ".claude", "skills"), keepClaude); err != nil {
+		return err
+	}
+	if err := pruneProjectedSkills(filepath.Join(repoPath, "plugins", cfg.PluginRoot, "skills"), keepPlugin); err != nil {
+		return err
+	}
+	return nil
+}
+
+// GenerateSkillSurfaces regenerates the canonical mega-skill plus all declared
+// focused skill projections.
+func GenerateSkillSurfaces(repoPath string, tools []ToolDescription) error {
+	if err := GenerateSkillFile(repoPath, tools); err != nil {
+		return err
+	}
+	return SyncProjectedSkills(repoPath)
+}
+
+func writeProjectedSkill(path string, data []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("create projected skill dir %s: %w", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return fmt.Errorf("write projected skill %s: %w", path, err)
+	}
+	return nil
+}
+
+func pruneProjectedSkills(baseDir string, keep map[string]bool) error {
+	entries, err := os.ReadDir(baseDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("read projected skills %s: %w", baseDir, err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if keep[name] || !strings.HasPrefix(name, "ralphglasses") {
+			continue
+		}
+		if err := os.RemoveAll(filepath.Join(baseDir, name)); err != nil {
+			return fmt.Errorf("remove stale projected skill %s: %w", filepath.Join(baseDir, name), err)
+		}
+	}
 	return nil
 }
 

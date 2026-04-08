@@ -9,7 +9,12 @@ import (
 func managementToolDefinitions() []mcp.Tool {
 	return []mcp.Tool{
 		mcp.NewTool("ralphglasses_tool_groups",
-			mcp.WithDescription("List available tool groups for deferred loading. Call ralphglasses_load_tool_group to load a specific group."),
+			mcp.WithDescription("List available tool groups for deferred loading, or search the live workflow and skill catalog when query/include flags are provided."),
+			mcp.WithString("query", mcp.Description("Optional search query across tool groups, workflow names, skill names, descriptions, and key tools")),
+			mcp.WithString("tool_group", mcp.Description("Optional tool-group filter (for example \"repo\", \"fleet\", or \"management\")")),
+			mcp.WithBoolean("include_workflows", mcp.Description("Include matching workflow catalog entries in the response")),
+			mcp.WithBoolean("include_skills", mcp.Description("Include matching skill catalog entries in the response")),
+			mcp.WithNumber("limit", mcp.Description("Optional per-section result limit for filtered search responses")),
 		),
 		mcp.NewTool("ralphglasses_load_tool_group",
 			mcp.WithDescription(loadToolGroupDescription()),
