@@ -41,9 +41,18 @@ func (s *Server) handleSessionTriage(ctx context.Context, req mcp.CallToolReques
 
 	statuses := strings.Split(statusFilter, ",")
 
-	var all []*session.Session
+	return jsonResult(s.buildSessionTriageSummary(ctx, repoFilter, statuses, since, until)), nil
+}
+
+func (s *Server) collectTriagedSessions(ctx context.Context, repoFilter string, statuses []string, since, until time.Time) []*session.Session {
+	all := make([]*session.Session, 0)
+	seen := make(map[string]struct{})
+
 	for _, st := range statuses {
 		st = strings.TrimSpace(st)
+		if st == "" {
+			continue
+		}
 		opts := session.ListOpts{
 			Status:   session.SessionStatus(st),
 			RepoName: repoFilter,
@@ -52,13 +61,27 @@ func (s *Server) handleSessionTriage(ctx context.Context, req mcp.CallToolReques
 		}
 		if s.SessMgr != nil && s.SessMgr.Store() != nil {
 			sessions, _ := s.SessMgr.Store().ListSessions(ctx, opts)
-			all = append(all, sessions...)
+			for _, sess := range sessions {
+				if sess == nil {
+					continue
+				}
+				if _, ok := seen[sess.ID]; ok {
+					continue
+				}
+				seen[sess.ID] = struct{}{}
+				all = append(all, sess)
+			}
 		}
 	}
 
-	// Also check live sessions from the manager.
 	if s.SessMgr != nil {
 		for _, sess := range s.SessMgr.List("") {
+			if sess == nil {
+				continue
+			}
+			if _, ok := seen[sess.ID]; ok {
+				continue
+			}
 			isMatch := false
 			for _, st := range statuses {
 				if string(sess.Status) == strings.TrimSpace(st) {
@@ -75,26 +98,28 @@ func (s *Server) handleSessionTriage(ctx context.Context, req mcp.CallToolReques
 			if sess.LaunchedAt.Before(since) || sess.LaunchedAt.After(until) {
 				continue
 			}
-			// Avoid duplicates.
-			dup := false
-			for _, existing := range all {
-				if existing.ID == sess.ID {
-					dup = true
-					break
-				}
-			}
-			if !dup {
-				all = append(all, sess)
-			}
+			seen[sess.ID] = struct{}{}
+			all = append(all, sess)
 		}
 	}
 
-	// Group results.
+	sort.Slice(all, func(i, j int) bool {
+		if all[i].LaunchedAt.Equal(all[j].LaunchedAt) {
+			return all[i].ID < all[j].ID
+		}
+		return all[i].LaunchedAt.After(all[j].LaunchedAt)
+	})
+	return all
+}
+
+func (s *Server) buildSessionTriageSummary(ctx context.Context, repoFilter string, statuses []string, since, until time.Time) map[string]any {
+	all := s.collectTriagedSessions(ctx, repoFilter, statuses, since, until)
+
 	byReason := map[string]int{}
 	byRepo := map[string]int{}
 	byProvider := map[string]int{}
 	var totalCost float64
-	var summaries []map[string]any
+	summaries := make([]map[string]any, 0, len(all))
 
 	for _, sess := range all {
 		reason := classifySessionKillReason(sess)
@@ -117,7 +142,7 @@ func (s *Server) handleSessionTriage(ctx context.Context, req mcp.CallToolReques
 		})
 	}
 
-	return jsonResult(map[string]any{
+	return map[string]any{
 		"incident_window":       map[string]string{"since": since.Format(time.RFC3339), "until": until.Format(time.RFC3339)},
 		"total_sessions":        len(all),
 		"total_cost_wasted_usd": totalCost,
@@ -125,7 +150,7 @@ func (s *Server) handleSessionTriage(ctx context.Context, req mcp.CallToolReques
 		"by_repo":               byRepo,
 		"by_provider":           byProvider,
 		"sessions":              summaries,
-	}), nil
+	}
 }
 
 // ── session_salvage ─────────────────────────────────────────────────────────
@@ -549,7 +574,7 @@ func (s *Server) handleSessionDiscover(_ context.Context, req mcp.CallToolReques
 			results = append(results, discovered{
 				SessionID:    meta.ID,
 				Repo:         entry.Name(),
-				Source:        filepath.Join(".ralph", "sessions", f.Name()),
+				Source:       filepath.Join(".ralph", "sessions", f.Name()),
 				InStore:      inStore,
 				ProcessAlive: alive,
 				Status:       meta.Status,
@@ -580,7 +605,7 @@ func (s *Server) handleSessionDiscover(_ context.Context, req mcp.CallToolReques
 				results = append(results, discovered{
 					SessionID:    strings.TrimSuffix(base, ".json"),
 					Repo:         repoName,
-					Source:        filepath.Join("~/.claude/projects", pe.Name(), base),
+					Source:       filepath.Join("~/.claude/projects", pe.Name(), base),
 					InStore:      false,
 					ProcessAlive: false,
 					Status:       "unknown",
@@ -601,11 +626,11 @@ func (s *Server) handleSessionDiscover(_ context.Context, req mcp.CallToolReques
 	}
 
 	return jsonResult(map[string]any{
-		"discovered":     results,
-		"total":          len(results),
-		"not_in_store":   notInStore,
-		"still_running":  stillRunning,
-		"repos_scanned":  reposScanned,
+		"discovered":    results,
+		"total":         len(results),
+		"not_in_store":  notInStore,
+		"still_running": stillRunning,
+		"repos_scanned": reposScanned,
 	}), nil
 }
 

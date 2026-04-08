@@ -6,12 +6,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 // setupRepoForResources creates a temp directory with a fake repo structure
@@ -120,8 +122,8 @@ func TestStaticResourceRegistration(t *testing.T) {
 		t.Fatalf("expected ListResourcesResult, got %T", rpcResp.Result)
 	}
 
-	if len(result.Resources) != 9 {
-		t.Fatalf("expected 9 static resources, got %d", len(result.Resources))
+	if len(result.Resources) != 10 {
+		t.Fatalf("expected 10 static resources, got %d", len(result.Resources))
 	}
 
 	uris := make(map[string]bool)
@@ -138,6 +140,7 @@ func TestStaticResourceRegistration(t *testing.T) {
 		"ralph:///catalog/discovery-adoption",
 		"ralph:///catalog/adoption-priorities",
 		"ralph:///bootstrap/checklist",
+		"ralph:///runtime/recovery",
 		"ralph:///runtime/health",
 	} {
 		if !uris[expected] {
@@ -343,6 +346,72 @@ func TestBootstrapChecklistResource_ReturnsChecklist(t *testing.T) {
 	}
 	if !strings.Contains(textContent.Text, "ralphglasses_firstboot_profile") {
 		t.Fatalf("expected firstboot tool in checklist: %s", textContent.Text)
+	}
+	if !strings.Contains(textContent.Text, "ralph:///runtime/recovery") {
+		t.Fatalf("expected runtime recovery resource in checklist: %s", textContent.Text)
+	}
+}
+
+func TestRuntimeRecoveryResource_ReturnsAggregatedSummary(t *testing.T) {
+	t.Parallel()
+
+	appSrv, _, repoName := setupRepoForResources(t)
+	repo := appSrv.findRepo(repoName)
+	if repo == nil {
+		t.Fatal("expected repo in test server")
+	}
+
+	now := time.Now().UTC()
+	appSrv.SessMgr.AddSessionForTesting(&session.Session{
+		ID:           "sess-errored",
+		Provider:     session.ProviderCodex,
+		RepoPath:     repo.Path,
+		RepoName:     repo.Name,
+		Status:       session.StatusErrored,
+		Model:        "gpt-5.4",
+		Prompt:       "resume this repo",
+		SpentUSD:     2.75,
+		TurnCount:    8,
+		Error:        "rate limit retry later",
+		LastOutput:   "partial result",
+		LaunchedAt:   now.Add(-30 * time.Minute),
+		LastActivity: now.Add(-20 * time.Minute),
+	})
+	appSrv.SessMgr.AddSessionForTesting(&session.Session{
+		ID:           "sess-stalled",
+		Provider:     session.ProviderCodex,
+		RepoPath:     repo.Path,
+		RepoName:     repo.Name,
+		Status:       session.StatusRunning,
+		Model:        "gpt-5.4",
+		LaunchedAt:   now.Add(-45 * time.Minute),
+		LastActivity: now.Add(-10 * time.Minute),
+	})
+
+	handler := makeRuntimeRecoveryHandler(appSrv)
+	results, err := handler(context.Background(), mcp.ReadResourceRequest{
+		Params: mcp.ReadResourceParams{URI: "ralph:///runtime/recovery"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	textContent, ok := results[0].(mcp.TextResourceContents)
+	if !ok {
+		t.Fatalf("expected TextResourceContents, got %T", results[0])
+	}
+	for _, expected := range []string{
+		`"recommended_skill": "ralphglasses-recovery-observability"`,
+		`"stalled_session_ids": [`,
+		`"sess-stalled"`,
+		`"session_triage": {`,
+		`"total_sessions": 1`,
+		`"top_recovery_candidates": [`,
+		`"sess-errored"`,
+		`"highest_priority_workflow"`,
+	} {
+		if !strings.Contains(textContent.Text, expected) {
+			t.Fatalf("expected %q in runtime recovery resource: %s", expected, textContent.Text)
+		}
 	}
 }
 

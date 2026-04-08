@@ -217,8 +217,8 @@ func TestHandleServerHealth_IncludesDiscoveryContract(t *testing.T) {
 	if payload["prompt_count"] != float64(6) {
 		t.Fatalf("prompt_count = %v, want 6", payload["prompt_count"])
 	}
-	if payload["resource_count"] != float64(9) {
-		t.Fatalf("resource_count = %v, want 9", payload["resource_count"])
+	if payload["resource_count"] != float64(10) {
+		t.Fatalf("resource_count = %v, want 10", payload["resource_count"])
 	}
 	if payload["resource_template_count"] != float64(4) {
 		t.Fatalf("resource_template_count = %v, want 4", payload["resource_template_count"])

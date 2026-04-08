@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -16,6 +17,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/parity"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 // RegisterResources registers MCP resource templates for browsing .ralph state
@@ -54,6 +56,7 @@ func RegisterResources(srv *server.MCPServer, appSrv *Server) {
 		"ralph:///catalog/discovery-adoption":  makeDiscoveryAdoptionHandler(appSrv),
 		"ralph:///catalog/adoption-priorities": makeAdoptionPrioritiesHandler(appSrv),
 		"ralph:///bootstrap/checklist":         makeBootstrapChecklistHandler(),
+		"ralph:///runtime/recovery":            makeRuntimeRecoveryHandler(appSrv),
 		"ralph:///runtime/health":              makeRuntimeHealthHandler(appSrv),
 	}
 
@@ -245,6 +248,12 @@ func makeBootstrapChecklistHandler() server.ResourceHandlerFunc {
 	}
 }
 
+func makeRuntimeRecoveryHandler(appSrv *Server) server.ResourceHandlerFunc {
+	return func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, appSrv.buildRuntimeRecoveryDoc(ctx))
+	}
+}
+
 func makeRuntimeHealthHandler(appSrv *Server) server.ResourceHandlerFunc {
 	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		return jsonResourceContents(req.Params.URI, appSrv.runtimeHealthDoc())
@@ -291,11 +300,12 @@ func buildRepoTriageDoc(appSrv *Server, repo *model.Repo) map[string]any {
 			"ralphglasses-self-dev",
 		},
 		"supporting_resources": map[string]string{
-			"triage":         fmt.Sprintf("ralph:///%s/triage", repo.Name),
-			"status":         fmt.Sprintf("ralph:///%s/status", repo.Name),
-			"progress":       fmt.Sprintf("ralph:///%s/progress", repo.Name),
-			"logs":           fmt.Sprintf("ralph:///%s/logs", repo.Name),
-			"runtime_health": "ralph:///runtime/health",
+			"triage":           fmt.Sprintf("ralph:///%s/triage", repo.Name),
+			"status":           fmt.Sprintf("ralph:///%s/status", repo.Name),
+			"progress":         fmt.Sprintf("ralph:///%s/progress", repo.Name),
+			"logs":             fmt.Sprintf("ralph:///%s/logs", repo.Name),
+			"runtime_recovery": "ralph:///runtime/recovery",
+			"runtime_health":   "ralph:///runtime/health",
 		},
 	}
 
@@ -341,6 +351,86 @@ func buildRepoTriageDoc(appSrv *Server, repo *model.Repo) map[string]any {
 	return triage
 }
 
+func (s *Server) buildRuntimeRecoveryDoc(ctx context.Context) map[string]any {
+	until := time.Now().UTC()
+	since := until.Add(-24 * time.Hour)
+	triageStatuses := []string{string(session.StatusInterrupted), string(session.StatusErrored)}
+	triage := s.buildSessionTriageSummary(ctx, "", triageStatuses, since, until)
+
+	stalled := make([]string, 0)
+	if s.SessMgr != nil {
+		stalled = s.SessMgr.DetectStalls(session.DefaultStallThreshold)
+		sort.Strings(stalled)
+	}
+
+	candidates := make([]map[string]any, 0)
+	for _, raw := range s.collectTriagedSessions(ctx, "", triageStatuses, since, until) {
+		candidates = append(candidates, map[string]any{
+			"id":                  raw.ID,
+			"repo":                raw.RepoName,
+			"provider":            raw.Provider,
+			"model":               raw.Model,
+			"status":              raw.Status,
+			"priority_score":      scorePriority(raw),
+			"assessment":          classifySalvage(raw),
+			"estimated_retry_usd": estimateRetryCost(raw),
+			"kill_reason":         classifySessionKillReason(raw),
+		})
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		pi, _ := candidates[i]["priority_score"].(float64)
+		pj, _ := candidates[j]["priority_score"].(float64)
+		if pi == pj {
+			ii, _ := candidates[i]["id"].(string)
+			jj, _ := candidates[j]["id"].(string)
+			return ii < jj
+		}
+		return pi > pj
+	})
+	if len(candidates) > 5 {
+		candidates = candidates[:5]
+	}
+
+	runtime := s.runtimeHealthDoc()
+	return map[string]any{
+		"title":             "Ralphglasses runtime recovery front door",
+		"description":       "Read the current recovery posture before resuming sessions, marathon work, or repo-specific incident response.",
+		"recommended_skill": "ralphglasses-recovery-observability",
+		"recommended_skills": []string{
+			"ralphglasses-recovery-observability",
+			"ralphglasses-session-ops",
+			"ralphglasses-bootstrap",
+		},
+		"supporting_resources": map[string]string{
+			"runtime_recovery": "ralph:///runtime/recovery",
+			"runtime_health":   "ralph:///runtime/health",
+			"skills":           "ralph:///catalog/skills",
+			"priorities":       "ralph:///catalog/adoption-priorities",
+			"repo_logs":        "ralph:///{repo}/logs",
+		},
+		"supporting_tools": []string{
+			"ralphglasses_server_health",
+			"ralphglasses_session_triage",
+			"ralphglasses_recovery_plan",
+			"ralphglasses_logs",
+		},
+		"recovery_window":         triage["incident_window"],
+		"stalled_session_ids":     stalled,
+		"stalled_session_count":   len(stalled),
+		"session_triage":          triage,
+		"top_recovery_candidates": candidates,
+		"runtime_health": map[string]any{
+			"status":                    runtime["status"],
+			"deferred_mode":             runtime["deferred_mode"],
+			"loaded_groups":             runtime["loaded_groups"],
+			"tool_group_count":          runtime["tool_group_count"],
+			"resource_count":            runtime["resource_count"],
+			"prompt_count":              runtime["prompt_count"],
+			"highest_priority_workflow": nestedString(runtime["adoption_priority_summary"], "highest_priority_workflow"),
+		},
+	}
+}
+
 func buildBootstrapChecklistDoc() map[string]any {
 	return map[string]any{
 		"title":       "Ralphglasses MCP-first bootstrap checklist",
@@ -349,6 +439,7 @@ func buildBootstrapChecklistDoc() map[string]any {
 			"ralph:///catalog/server",
 			"ralph:///catalog/skills",
 			"ralph:///catalog/workflows",
+			"ralph:///runtime/recovery",
 			"ralph:///runtime/health",
 		},
 		"prompts": []string{

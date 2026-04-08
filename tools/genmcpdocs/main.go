@@ -210,7 +210,7 @@ Ralphglasses exposes **{{.TotalTools}} tools**: **{{.GroupToolCount}} grouped to
 - Read ` + "`" + `ralph:///catalog/skills` + "`" + ` for the focused workflow skill families.
 - Read ` + "`" + `ralph:///catalog/workflows` + "`" + ` for common operator playbooks.
 - Read ` + "`" + `ralph:///catalog/cli-parity` + "`" + ` when the task is about CLI-to-MCP/skill coverage.
-- Read ` + "`" + `ralph:///bootstrap/checklist` + "`" + ` and ` + "`" + `ralph:///runtime/health` + "`" + ` when the task is bootstrap- or runtime-heavy.
+- Read ` + "`" + `ralph:///bootstrap/checklist` + "`" + `, ` + "`" + `ralph:///runtime/recovery` + "`" + `, and ` + "`" + `ralph:///runtime/health` + "`" + ` when the task is bootstrap- or runtime-heavy.
 - Call ` + "`" + `ralphglasses_tool_groups` + "`" + ` to list or search groups, skills, and workflows, then ` + "`" + `ralphglasses_load_tool_group` + "`" + ` before invoking non-core grouped tools in deferred mode.
 
 ## Management Tools
