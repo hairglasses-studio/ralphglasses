@@ -7,6 +7,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/parity"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -74,16 +75,32 @@ func (s *Server) handleWorktreeCleanup(_ context.Context, req mcp.CallToolReques
 	}
 	maxAge := time.Duration(maxAgeHours) * time.Hour
 
+	if getBoolArg(req, "dry_run") {
+		worktrees, err := parity.PreviewWorktreeCleanup(r.Path, maxAge)
+		if err != nil {
+			return codedError(ErrFilesystem, fmt.Sprintf("cleanup preview failed: %v", err)), nil
+		}
+		return jsonResult(map[string]any{
+			"repo":      repoName,
+			"dry_run":   true,
+			"max_age":   maxAge.String(),
+			"cleaned":   0,
+			"count":     len(worktrees),
+			"worktrees": worktrees,
+			"message":   fmt.Sprintf("would clean %d stale worktrees older than %s", len(worktrees), maxAge),
+		}), nil
+	}
+
 	cleaned, err := session.CleanupStaleWorktrees(r.Path, maxAge)
 	if err != nil {
 		return codedError(ErrFilesystem, fmt.Sprintf("cleanup failed: %v", err)), nil
 	}
 
 	type cleanupResult struct {
-		Repo       string        `json:"repo"`
-		Cleaned    int           `json:"cleaned"`
-		MaxAge     string        `json:"max_age"`
-		Message    string        `json:"message"`
+		Repo    string `json:"repo"`
+		Cleaned int    `json:"cleaned"`
+		MaxAge  string `json:"max_age"`
+		Message string `json:"message"`
 	}
 	result := cleanupResult{
 		Repo:    repoName,

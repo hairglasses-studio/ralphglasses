@@ -5,7 +5,7 @@
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/hairglasses-studio/ralphglasses/actions/workflows/ci.yml/badge.svg)](https://github.com/hairglasses-studio/ralphglasses/actions/workflows/ci.yml)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-126-blue)](docs/MCP-TOOLS.md)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-222-blue)](docs/MCP-TOOLS.md)
 
 Command-and-control TUI for parallel multi-LLM agent fleets.
 
@@ -93,7 +93,7 @@ See [ROADMAP.md](ROADMAP.md) for the full plan.
 
 ## MCP Server
 
-126 tools for programmatic control across all providers:
+222 MCP tools for programmatic control across all providers:
 
 ### Core Loop Management
 | Tool | Description |
@@ -159,7 +159,7 @@ main.go → cmd/root.go (Cobra CLI)
 │   ├── manager.go         Session/team registry
 │   ├── budget.go          Per-provider cost tracking + enforcement
 │   └── types.go           Provider enum, Session, LaunchOptions, TeamConfig
-├── internal/mcpserver/    MCP tool handlers (126 tools, stdio)
+├── internal/mcpserver/    MCP tool handlers (222 tools: 218 grouped + 4 management, stdio)
 ├── internal/roadmap/      Roadmap parsing, analysis, research, export
 ├── internal/repofiles/    Ralph config scaffolding and optimization
 ├── internal/tui/          BubbleTea app, keymap, commands, filter
@@ -192,6 +192,7 @@ main.go → cmd/root.go (Cobra CLI)
 - [ROADMAP.md](ROADMAP.md) — Full development roadmap
 - [docs/CODEX-REFERENCE.md](docs/CODEX-REFERENCE.md) — Codex-first runtime notes, pinned docs, Claude cache guardrails
 - [docs/CODEX-PARITY-STATUS.md](docs/CODEX-PARITY-STATUS.md) — Codex parity closeout state and future-session rules
+- [docs/CLI-PARITY.md](docs/CLI-PARITY.md) — CLI-to-MCP and skill-backed parity matrix
 - [docs/RESEARCH.md](docs/RESEARCH.md) — Agent OS & sandboxing research
 - [docs/MULTI-SESSION.md](docs/MULTI-SESSION.md) — Multi-session tool comparison
 - [CLAUDE.md](CLAUDE.md) — Claude Code project instructions

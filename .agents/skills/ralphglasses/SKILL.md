@@ -14,6 +14,8 @@ allowed-tools:
   - ralphglasses_autonomy_decisions
   - ralphglasses_autonomy_level
   - ralphglasses_autonomy_override
+  - ralphglasses_automation_policy
+  - ralphglasses_automation_queue
   - ralphglasses_awesome_analyze
   - ralphglasses_awesome_diff
   - ralphglasses_awesome_fetch
@@ -23,11 +25,13 @@ allowed-tools:
   - ralphglasses_blackboard_put
   - ralphglasses_blackboard_query
   - ralphglasses_budget_forecast
+  - ralphglasses_budget_status
   - ralphglasses_circuit_reset
   - ralphglasses_claudemd_check
   - ralphglasses_confidence_calibration
   - ralphglasses_config
   - ralphglasses_config_bulk
+  - ralphglasses_config_schema
   - ralphglasses_context_budget
   - ralphglasses_cost_estimate
   - ralphglasses_cost_forecast
@@ -45,11 +49,13 @@ allowed-tools:
   - ralphglasses_cycle_status
   - ralphglasses_cycle_synthesize
   - ralphglasses_diff_review
+  - ralphglasses_debug_bundle
   - ralphglasses_dispatch
   - ralphglasses_docs_check_existing
   - ralphglasses_docs_push
   - ralphglasses_docs_search
   - ralphglasses_docs_write_finding
+  - ralphglasses_doctor
   - ralphglasses_error_context
   - ralphglasses_eval_ab_test
   - ralphglasses_eval_changepoints
@@ -59,6 +65,7 @@ allowed-tools:
   - ralphglasses_event_list
   - ralphglasses_event_poll
   - ralphglasses_feedback_profiles
+  - ralphglasses_firstboot_profile
   - ralphglasses_finding_reason
   - ralphglasses_finding_to_task
   - ralphglasses_fleet_analytics
@@ -66,6 +73,7 @@ allowed-tools:
   - ralphglasses_fleet_capacity_plan
   - ralphglasses_fleet_dlq
   - ralphglasses_fleet_grafana
+  - ralphglasses_fleet_runtime
   - ralphglasses_fleet_schedule
   - ralphglasses_fleet_status
   - ralphglasses_fleet_submit
@@ -79,6 +87,7 @@ allowed-tools:
   - ralphglasses_journal_write
   - ralphglasses_list
   - ralphglasses_list_approvals
+  - ralphglasses_load_tool_group
   - ralphglasses_logs
   - ralphglasses_loop_await
   - ralphglasses_loop_baseline
@@ -120,6 +129,8 @@ allowed-tools:
   - ralphglasses_promptdj_similar
   - ralphglasses_promptdj_suggest
   - ralphglasses_provider_benchmark
+  - ralphglasses_provider_capabilities
+  - ralphglasses_provider_compare
   - ralphglasses_provider_recommend
   - ralphglasses_rc_act
   - ralphglasses_rc_read
@@ -130,6 +141,7 @@ allowed-tools:
   - ralphglasses_repo_health
   - ralphglasses_repo_optimize
   - ralphglasses_repo_scaffold
+  - ralphglasses_repo_surface_audit
   - ralphglasses_request_approval
   - ralphglasses_resolve_approval
   - ralphglasses_roadmap_analyze
@@ -142,6 +154,8 @@ allowed-tools:
   - ralphglasses_roadmap_research
   - ralphglasses_scan
   - ralphglasses_schedule_create
+  - ralphglasses_server_health
+  - ralphglasses_skill_export
   - ralphglasses_scratchpad_append
   - ralphglasses_scratchpad_context
   - ralphglasses_scratchpad_delete
@@ -189,26 +203,31 @@ allowed-tools:
   - ralphglasses_tasks_cancel
   - ralphglasses_tasks_get
   - ralphglasses_tasks_list
-  - ralphglasses_team_answer
-  - ralphglasses_team_await
   - ralphglasses_team_create
   - ralphglasses_team_delegate
-  - ralphglasses_team_start
   - ralphglasses_team_status
-  - ralphglasses_team_step
-  - ralphglasses_team_stop
+  - ralphglasses_tenant_create
+  - ralphglasses_tenant_list
+  - ralphglasses_tenant_role_leaderboards
+  - ralphglasses_tenant_rotate_trigger_token
+  - ralphglasses_tenant_status
+  - ralphglasses_telemetry_export
+  - ralphglasses_theme_export
   - ralphglasses_tool_benchmark
+  - ralphglasses_tool_groups
   - ralphglasses_trigger_webhook
+  - ralphglasses_validate
   - ralphglasses_workflow_define
   - ralphglasses_workflow_delete
   - ralphglasses_workflow_run
   - ralphglasses_worktree_cleanup
   - ralphglasses_worktree_create
+  - ralphglasses_worktree_list
 ---
 
 # Ralphglasses MCP Tools
 
-Auto-generated on 2026-04-06. 202 tools available.
+Auto-generated on 2026-04-08. Use `ralphglasses_skill_export` or `ralph:///catalog/server` for the live contract summary.
 
 ## a2a
 

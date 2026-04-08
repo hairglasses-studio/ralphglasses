@@ -3,9 +3,11 @@ package mcpserver
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -19,38 +21,49 @@ import (
 // files. This enables clients to read repo state without tool calls — reducing
 // latency and token cost.
 func RegisterResources(srv *server.MCPServer, appSrv *Server) {
-	// Resource template: ralph:///{repo}/status
-	srv.AddResourceTemplate(
-		mcp.NewResourceTemplate(
-			"ralph:///{repo}/status",
-			"Repo status",
-			mcp.WithTemplateDescription("Read .ralph/status.json for a repository"),
-			mcp.WithTemplateMIMEType("application/json"),
-		),
-		makeStatusHandler(appSrv),
-	)
+	templateHandlers := map[string]server.ResourceTemplateHandlerFunc{
+		"ralph:///{repo}/status":   makeStatusHandler(appSrv),
+		"ralph:///{repo}/progress": makeProgressHandler(appSrv),
+		"ralph:///{repo}/logs":     makeLogsHandler(appSrv),
+	}
 
-	// Resource template: ralph:///{repo}/progress
-	srv.AddResourceTemplate(
-		mcp.NewResourceTemplate(
-			"ralph:///{repo}/progress",
-			"Repo progress",
-			mcp.WithTemplateDescription("Read .ralph/progress.json for a repository"),
-			mcp.WithTemplateMIMEType("application/json"),
-		),
-		makeProgressHandler(appSrv),
-	)
+	for _, def := range resourceTemplateCatalog() {
+		handler, ok := templateHandlers[def.URI]
+		if !ok {
+			panic("missing resource template handler for " + def.URI)
+		}
+		srv.AddResourceTemplate(
+			mcp.NewResourceTemplate(
+				def.URI,
+				def.Name,
+				mcp.WithTemplateDescription(def.Description),
+				mcp.WithTemplateMIMEType(def.MIMEType),
+			),
+			handler,
+		)
+	}
 
-	// Resource template: ralph:///{repo}/logs
-	srv.AddResourceTemplate(
-		mcp.NewResourceTemplate(
-			"ralph:///{repo}/logs",
-			"Repo logs",
-			mcp.WithTemplateDescription("Read last 100 lines of .ralph/logs/ralph.log for a repository"),
-			mcp.WithTemplateMIMEType("text/plain"),
-		),
-		makeLogsHandler(appSrv),
-	)
+	staticHandlers := map[string]server.ResourceHandlerFunc{
+		"ralph:///catalog/server":      makeCatalogServerHandler(appSrv),
+		"ralph:///catalog/tool-groups": makeCatalogToolGroupsHandler(appSrv),
+		"ralph:///catalog/workflows":   makeCatalogWorkflowsHandler(),
+	}
+
+	for _, def := range staticResourceCatalog() {
+		handler, ok := staticHandlers[def.URI]
+		if !ok {
+			panic("missing static resource handler for " + def.URI)
+		}
+		srv.AddResources(server.ServerResource{
+			Resource: mcp.NewResource(
+				def.URI,
+				def.Name,
+				mcp.WithResourceDescription(def.Description),
+				mcp.WithMIMEType(def.MIMEType),
+			),
+			Handler: handler,
+		})
+	}
 }
 
 // extractRepoName parses the repo name from a ralph:/// URI.
@@ -158,6 +171,105 @@ func makeLogsHandler(appSrv *Server) server.ResourceTemplateHandlerFunc {
 			},
 		}, nil
 	}
+}
+
+func makeCatalogServerHandler(appSrv *Server) server.ResourceHandlerFunc {
+	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, buildCatalogServerDoc(appSrv))
+	}
+}
+
+func makeCatalogToolGroupsHandler(appSrv *Server) server.ResourceHandlerFunc {
+	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, buildCatalogToolGroupsDoc(appSrv))
+	}
+}
+
+func makeCatalogWorkflowsHandler() server.ResourceHandlerFunc {
+	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, workflowCatalog())
+	}
+}
+
+func buildCatalogServerDoc(appSrv *Server) map[string]any {
+	return map[string]any{
+		"server_name":             "ralphglasses",
+		"instructions":            ServerInstructions(),
+		"tool_group_count":        len(ToolGroupNames),
+		"group_tool_count":        GeneratedTotalTools,
+		"management_tool_count":   len(managementToolNames()),
+		"tool_count":              GeneratedTotalTools + len(managementToolNames()),
+		"resource_count":          len(staticResourceCatalog()),
+		"resource_template_count": len(resourceTemplateCatalog()),
+		"prompt_count":            len(promptCatalog()),
+		"deferred_mode_default":   true,
+		"management_tools":        managementToolNames(),
+		"resources":               resourceURIs(staticResourceCatalog()),
+		"resource_templates":      resourceTemplateURIs(resourceTemplateCatalog()),
+		"prompts":                 promptNames(),
+		"tool_groups":             buildCatalogToolGroupsDoc(appSrv),
+	}
+}
+
+func buildCatalogToolGroupsDoc(appSrv *Server) []map[string]any {
+	groups := appSrv.buildToolGroups()
+	out := make([]map[string]any, 0, len(groups))
+	for _, group := range groups {
+		toolNames := make([]string, 0, len(group.Tools))
+		for _, entry := range group.Tools {
+			toolNames = append(toolNames, entry.Tool.Name)
+		}
+		sort.Strings(toolNames)
+		out = append(out, map[string]any{
+			"name":        group.Name,
+			"description": group.Description,
+			"tool_count":  len(group.Tools),
+			"tools":       toolNames,
+		})
+	}
+	return out
+}
+
+func resourceURIs(resources []ResourceDef) []string {
+	out := make([]string, 0, len(resources))
+	for _, resource := range resources {
+		out = append(out, resource.URI)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func resourceTemplateURIs(resources []ResourceTemplateDef) []string {
+	out := make([]string, 0, len(resources))
+	for _, resource := range resources {
+		out = append(out, resource.URI)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func promptNames() []string {
+	defs := promptCatalog()
+	out := make([]string, 0, len(defs))
+	for _, def := range defs {
+		out = append(out, def.Name)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func jsonResourceContents(uri string, value any) ([]mcp.ResourceContents, error) {
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal resource %s: %w", uri, err)
+	}
+	return []mcp.ResourceContents{
+		mcp.TextResourceContents{
+			URI:      uri,
+			MIMEType: "application/json",
+			Text:     string(data),
+		},
+	}, nil
 }
 
 // resolveRepo ensures repos are scanned and finds the named repo.

@@ -21,10 +21,16 @@ func TestPromptRegistration(t *testing.T) {
 	// List prompts via the server's internal method — we verify by calling
 	// the handler through the public AddPrompt path and checking no panic.
 	// The fact that RegisterPrompts completed without error confirms
-	// all three prompts were accepted.
+	// all prompt definitions were accepted.
 
 	// Verify we can construct and invoke each prompt handler by name.
-	promptNames := []string{"self-improvement-planner", "code-review", "test-generation"}
+	promptNames := []string{
+		"self-improvement-planner",
+		"code-review",
+		"test-generation",
+		"bootstrap-firstboot",
+		"provider-parity-audit",
+	}
 	for _, name := range promptNames {
 		t.Run(name, func(t *testing.T) {
 			// Build a fresh server for isolation.
@@ -33,7 +39,7 @@ func TestPromptRegistration(t *testing.T) {
 			RegisterPrompts(s, as)
 
 			// We cannot directly list prompts from MCPServer without going
-			// through the JSON-RPC layer, but we can verify that all three
+			// through the JSON-RPC layer, but we can verify that all prompt
 			// ServerPrompt values were constructed correctly by the builder
 			// functions.
 			_ = s // registered without error
@@ -204,6 +210,70 @@ func TestTestGenerationPrompt_DefaultCoverage(t *testing.T) {
 	}
 	if !strings.Contains(tc.Text, "80%") {
 		t.Error("expected default coverage target of 80%")
+	}
+}
+
+func TestBootstrapFirstbootPrompt_ReturnsMessage(t *testing.T) {
+	t.Parallel()
+
+	sp := bootstrapFirstbootPrompt()
+	if sp.Prompt.Name != "bootstrap-firstboot" {
+		t.Fatalf("unexpected prompt name: %s", sp.Prompt.Name)
+	}
+
+	req := mcp.GetPromptRequest{}
+	req.Params.Name = "bootstrap-firstboot"
+	req.Params.Arguments = map[string]string{
+		"scan_path":        "~/hairglasses-studio",
+		"primary_provider": "codex",
+	}
+
+	result, err := sp.Handler(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	tc, ok := result.Messages[0].Content.(mcp.TextContent)
+	if !ok {
+		t.Fatal("expected TextContent")
+	}
+	if !strings.Contains(tc.Text, "First-Boot Checklist") {
+		t.Error("expected checklist heading")
+	}
+	if !strings.Contains(tc.Text, "codex") {
+		t.Error("expected provider in prompt text")
+	}
+}
+
+func TestProviderParityAuditPrompt_ReturnsMessage(t *testing.T) {
+	t.Parallel()
+
+	sp := providerParityAuditPrompt(NewServer(t.TempDir()))
+	if sp.Prompt.Name != "provider-parity-audit" {
+		t.Fatalf("unexpected prompt name: %s", sp.Prompt.Name)
+	}
+
+	req := mcp.GetPromptRequest{}
+	req.Params.Name = "provider-parity-audit"
+	req.Params.Arguments = map[string]string{
+		"repo_name":       "ralphglasses",
+		"target_provider": "codex",
+	}
+
+	result, err := sp.Handler(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	tc, ok := result.Messages[0].Content.(mcp.TextContent)
+	if !ok {
+		t.Fatal("expected TextContent")
+	}
+	if !strings.Contains(tc.Text, "ralphglasses") {
+		t.Error("expected repo name in parity prompt")
+	}
+	if !strings.Contains(tc.Text, "MCP-First Coverage") {
+		t.Error("expected coverage section in parity prompt")
 	}
 }
 

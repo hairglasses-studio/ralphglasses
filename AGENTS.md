@@ -29,7 +29,7 @@ main.go → cmd/root.go (Cobra CLI)
 │   ├── manager.go         Session/team registry
 │   ├── budget.go          Per-provider cost tracking + enforcement
 │   └── types.go           Provider enum, Session, LaunchOptions, TeamConfig
-├── internal/mcpserver/    MCP tool handlers (126 tools, stdio)
+├── internal/mcpserver/    MCP tool handlers (222 tools: 218 grouped + 4 management, stdio)
 ├── internal/roadmap/      Roadmap parsing, analysis, research, export
 ├── internal/repofiles/    Ralph config scaffolding and optimization
 ├── internal/tui/          BubbleTea app, keymap, commands, filter
@@ -91,7 +91,7 @@ The `internal/session/` package uses a provider dispatch pattern:
 
 ## MCP Server
 
-Ralphglasses exposes 126 MCP tools. Codex accesses them via `.codex/config.toml` (already configured in this repo).
+Ralphglasses exposes 222 MCP tools: 218 grouped tools plus 4 management tools across 30 deferred-loaded tool groups. Codex accesses them via `.codex/config.toml` (already configured in this repo).
 
 Key tools for Codex-led development:
 
@@ -106,6 +106,11 @@ ralphglasses_fleet_analytics   Cost breakdown by provider/repo/time-period
 ralphglasses_loop_start        Start a Codex planner/worker loop
 ralphglasses_loop_step         Execute one planner/worker/verifier iteration
 ralphglasses_loop_status       Inspect persisted loop state
+ralphglasses_doctor            Workspace/env readiness parity for CLI doctor
+ralphglasses_validate          .ralphrc validation parity for CLI validate
+ralphglasses_fleet_runtime     MCP parity for fleet serve coordinator/worker runtime
+ralphglasses_marathon          MCP parity for marathon lifecycle and status
+ralphglasses_repo_surface_audit Audit AGENTS/CLAUDE/GEMINI/Codex/MCP repo surfaces
 ```
 
 ## Environment Variables

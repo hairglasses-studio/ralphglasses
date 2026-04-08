@@ -23,6 +23,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/headless"
 	"github.com/hairglasses-studio/ralphglasses/internal/healthz"
 	"github.com/hairglasses-studio/ralphglasses/internal/hooks"
+	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver"
 	"github.com/hairglasses-studio/ralphglasses/internal/process"
 	tmuxpkg "github.com/hairglasses-studio/ralphglasses/internal/tmux"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui"
@@ -49,14 +50,15 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "ralphglasses",
 	Short: "Command-and-control TUI for parallel ralph loops",
-	Long: `ralphglasses is a k9s-style TUI for managing parallel multi-LLM agent fleets.
+	Long: fmt.Sprintf(`ralphglasses is a k9s-style TUI for managing parallel multi-LLM agent fleets.
 
 It scans a directory tree for ralph-enabled repos (containing .ralphrc or .ralph/)
 and provides a live dashboard to start, stop, monitor, and configure LLM coding loops
 across Claude, Gemini, and Codex providers.
 
-It also runs as an MCP server (ralphglasses mcp) exposing 204 tools for programmatic
-fleet management from any MCP-capable client.`,
+It also runs as an MCP server (ralphglasses mcp) exposing %d tools across %d
+deferred-loaded tool groups for programmatic fleet management from any
+MCP-capable client.`, mcpserver.TotalToolCount(), len(mcpserver.ToolGroupNames)),
 	Version: version,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		util.Debug.Enabled = debugMode

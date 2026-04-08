@@ -1,0 +1,44 @@
+---
+name: ralphglasses-self-dev
+description: Run end-to-end repo self-development workflows for ralphglasses, including repo surface audit, roadmap analysis, loop or marathon execution, merge verification, and durable docs writeback.
+---
+
+# Ralphglasses Self-Dev
+
+Use this skill when the goal is to improve ralphglasses itself as a repo and control plane.
+
+## Default loop
+
+1. Start with repo surface and parity context:
+   - `ralphglasses_repo_surface_audit`
+   - [docs/CLI-PARITY.md](../../docs/CLI-PARITY.md)
+   - [docs/MCP-TOOLS.md](../../docs/MCP-TOOLS.md)
+2. Inspect roadmap direction and next work:
+   - `ralphglasses_roadmap_analyze`
+   - `ralphglasses_roadmap_prioritize`
+   - `ralphglasses_roadmap_export`
+3. Choose the execution lane:
+   - targeted session work with `ralphglasses_session_launch`
+   - loop work with `ralphglasses_loop_start` or `ralphglasses_loop_step`
+   - long-running execution with `ralphglasses_marathon`
+4. Verify the resulting change:
+   - `ralphglasses_merge_verify`
+   - `ralphglasses_budget_status`
+   - `ralphglasses_session_compare` or `ralphglasses_fleet_analytics` when provider/cost tradeoffs matter
+5. Write back durable findings:
+   - local repo docs under `docs/`
+   - shared docs repo progress/research notes when the work is reusable
+
+## Focus areas
+
+- CLI-to-MCP parity
+- Repo/provider instruction surface drift
+- Fleet runtime and marathon orchestration
+- Skills, prompts, and discovery surfaces
+- Shared documentation and research writeback
+
+## Guardrails
+
+- Prefer shared services and MCP handlers over CLI-only logic.
+- Treat docs and skills as part of the product surface, not cleanup.
+- When research is reusable outside this repo, write it to the shared docs repo instead of keeping it local-only.

@@ -9,7 +9,7 @@ This page provides visual overviews of the ralphglasses system.
 ```
 +------------------+     +------------------+     +------------------+
 |   TUI (BubbleTea)|     |   MCP Server     |     |   CLI Commands   |
-|   4 tabs, views  |     |   126 tools      |     |   mcp, scan, ... |
+|   4 tabs, views  |     |   222 tools      |     |   mcp, scan, ... |
 +--------+---------+     +--------+---------+     +--------+---------+
          |                        |                        |
          v                        v                        v
@@ -37,7 +37,7 @@ ralphglasses/
     enhancer/       13-stage prompt enhancement pipeline
     events/         Event bus for reactive updates
     fleet/          Fleet orchestration, tiered routing
-    mcpserver/      MCP tool definitions (14 namespaces)
+    mcpserver/      MCP tool definitions (30 deferred-loaded groups)
     process/        OS process management, PID tracking
     scanner/        Repo discovery, .ralph/ detection
     session/        Session manager, providers, step loop

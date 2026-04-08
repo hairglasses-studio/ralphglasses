@@ -15,11 +15,17 @@ import (
 // Prompts expose enhancer templates and structured planning prompts as
 // first-class MCP prompt resources that clients can list and invoke.
 func RegisterPrompts(srv *server.MCPServer, appSrv *Server) {
-	srv.AddPrompts(
+	srv.AddPrompts(serverPrompts(appSrv)...)
+}
+
+func serverPrompts(appSrv *Server) []server.ServerPrompt {
+	return []server.ServerPrompt{
 		selfImprovementPlannerPrompt(),
 		codeReviewPrompt(),
 		testGenerationPrompt(),
-	)
+		bootstrapFirstbootPrompt(),
+		providerParityAuditPrompt(appSrv),
+	}
 }
 
 // selfImprovementPlannerPrompt returns a prompt for planning self-improvement
@@ -143,6 +149,79 @@ func testGenerationPrompt() server.ServerPrompt {
 
 		return &mcp.GetPromptResult{
 			Description: fmt.Sprintf("Test generation for %s in %s (target: %s%%)", filePath, repoName, coverageTarget),
+			Messages: []mcp.PromptMessage{
+				{
+					Role:    mcp.RoleUser,
+					Content: mcp.TextContent{Type: "text", Text: content},
+				},
+			},
+		}, nil
+	}
+
+	return server.ServerPrompt{Prompt: prompt, Handler: handler}
+}
+
+func bootstrapFirstbootPrompt() server.ServerPrompt {
+	prompt := mcp.NewPrompt("bootstrap-firstboot",
+		mcp.WithPromptDescription("Build a first-boot checklist for validating provider CLIs, MCP wiring, and repo readiness before launching work."),
+		mcp.WithArgument("scan_path",
+			mcp.ArgumentDescription("Workspace scan path to validate. Defaults to ~/hairglasses-studio if omitted."),
+		),
+		mcp.WithArgument("primary_provider",
+			mcp.ArgumentDescription("Primary provider to optimize for first (codex, claude, or gemini). Defaults to codex."),
+		),
+	)
+
+	handler := func(_ context.Context, req mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		scanPath := req.Params.Arguments["scan_path"]
+		if scanPath == "" {
+			scanPath = "~/hairglasses-studio"
+		}
+		primaryProvider := req.Params.Arguments["primary_provider"]
+		if primaryProvider == "" {
+			primaryProvider = "codex"
+		}
+
+		content := buildBootstrapFirstbootPrompt(scanPath, primaryProvider)
+		return &mcp.GetPromptResult{
+			Description: fmt.Sprintf("First-boot checklist for %s (primary provider: %s)", scanPath, primaryProvider),
+			Messages: []mcp.PromptMessage{
+				{
+					Role:    mcp.RoleUser,
+					Content: mcp.TextContent{Type: "text", Text: content},
+				},
+			},
+		}, nil
+	}
+
+	return server.ServerPrompt{Prompt: prompt, Handler: handler}
+}
+
+func providerParityAuditPrompt(appSrv *Server) server.ServerPrompt {
+	prompt := mcp.NewPrompt("provider-parity-audit",
+		mcp.WithPromptDescription("Audit provider parity for a repository across AGENTS.md, provider config, MCP config, generated skills, and workflow prompts."),
+		mcp.WithArgument("repo_name",
+			mcp.ArgumentDescription("Repository name to audit."),
+			mcp.RequiredArgument(),
+		),
+		mcp.WithArgument("target_provider",
+			mcp.ArgumentDescription("Optional provider to emphasize (codex, claude, gemini). Defaults to all."),
+		),
+	)
+
+	handler := func(_ context.Context, req mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		repoName := req.Params.Arguments["repo_name"]
+		if repoName == "" {
+			return nil, fmt.Errorf("repo_name is required")
+		}
+		targetProvider := req.Params.Arguments["target_provider"]
+		if targetProvider == "" {
+			targetProvider = "all"
+		}
+
+		content := buildProviderParityAuditPrompt(appSrv, repoName, targetProvider)
+		return &mcp.GetPromptResult{
+			Description: fmt.Sprintf("Provider parity audit for %s (target: %s)", repoName, targetProvider),
 			Messages: []mcp.PromptMessage{
 				{
 					Role:    mcp.RoleUser,
@@ -297,11 +376,87 @@ For each test, provide:
 - Edge cases covered
 
 #### Generated Test Code
-` + "```%s\n// Tests for %s\n```" + `
+`+"```%s\n// Tests for %s\n```"+`
 
 #### Coverage Estimate
 Expected coverage after adding these tests: %s%%
 `, repoName, filePath, coverageTarget, filePath, lang, lang, coverageTarget, filePath, lang, filePath, coverageTarget)
+}
+
+func buildBootstrapFirstbootPrompt(scanPath, primaryProvider string) string {
+	return fmt.Sprintf(`You are preparing a first-boot and bootstrap checklist for a ralphglasses operator.
+
+## Workspace
+- Scan path: %s
+- Primary provider: %s
+
+## Objective
+Create a step-by-step bootstrap checklist that gets the workspace ready for safe MCP-driven operation.
+
+## Instructions
+1. Verify the operator can build and run ralphglasses locally.
+2. Verify the primary provider CLI is installed and authenticated.
+3. Verify repo-local MCP discovery via .mcp.json and .codex/config.toml.
+4. Verify the operator can inspect the MCP contract through server health, tool groups, resources, and prompts before using mutating tools.
+5. Identify the first repo to validate and the minimum commands or MCP calls needed to prove readiness.
+6. Include failure handling for missing provider CLIs, broken MCP registration, missing AGENTS.md, and stale generated skills.
+
+## Output Format
+### First-Boot Checklist
+| Step | Goal | Validation | Failure Fix |
+|------|------|------------|-------------|
+| 1 | ... | ... | ... |
+
+### Recommended First Validation Pass
+- Repo to validate:
+- Read-only discovery path:
+- First mutating action after validation:
+
+### Rollback / Safety Notes
+- ...
+`, scanPath, primaryProvider)
+}
+
+func buildProviderParityAuditPrompt(appSrv *Server, repoName, targetProvider string) string {
+	repoSummary := fmt.Sprintf("Repository: %s", repoName)
+	if repo, err := resolveRepo(appSrv, repoName); err == nil && repo != nil {
+		repoSummary = fmt.Sprintf("Repository: %s\nPath: %s", repo.Name, repo.Path)
+	}
+
+	return fmt.Sprintf(`You are auditing provider parity for a ralphglasses-managed repository.
+
+## Scope
+%s
+- Target provider emphasis: %s
+
+## Audit Surfaces
+- AGENTS.md and provider-specific instruction projections
+- .mcp.json MCP registration
+- .codex/config.toml curated profiles
+- generated skills under .agents/skills/* and projected provider/plugin skills
+- MCP prompts, resources, and discovery contract
+
+## Instructions
+1. Identify which parity surfaces are checked-in sources of truth versus generated projections.
+2. Compare Codex, Claude, and Gemini support for this repo's managed surfaces.
+3. Call out drift that blocks MCP-first or skill-first workflows.
+4. Separate contract drift, documentation drift, and generated-file drift.
+5. Recommend the smallest safe changes needed to regain parity without breaking current clients.
+
+## Output Format
+### Parity Audit Summary
+One paragraph on overall parity health.
+
+### Findings
+| Severity | Surface | Drift | Recommended Fix |
+|----------|---------|-------|-----------------|
+| High | ... | ... | ... |
+
+### MCP-First Coverage
+- Already covered:
+- Still CLI-only:
+- Highest-value next parity win:
+`, repoSummary, targetProvider)
 }
 
 // inferLanguage guesses the programming language from a file path extension.

@@ -6,6 +6,14 @@
       "name": "ralphglasses",
       "claude_include_canonical": true,
       "export_plugin": true
+    },
+    {
+      "name": "ralphglasses-operator",
+      "export_plugin": true
+    },
+    {
+      "name": "ralphglasses-self-dev",
+      "export_plugin": true
     }
   ]
 }

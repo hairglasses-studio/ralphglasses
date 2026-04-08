@@ -57,7 +57,11 @@ func setup(ctx context.Context, scanPath string) (*server.MCPServer, func(), err
 	srv := registry.NewMCPServer(
 		"ralphglasses",
 		"0.1.0",
+		server.WithInstructions(mcpserver.ServerInstructions()),
 		server.WithToolCapabilities(true),
+		server.WithResourceCapabilities(false, false),
+		server.WithPromptCapabilities(true),
+		server.WithRecovery(),
 	)
 
 	bus := events.NewBus(1000)
@@ -65,12 +69,16 @@ func setup(ctx context.Context, scanPath string) (*server.MCPServer, func(), err
 	hookExec.Start()
 
 	rg := mcpserver.NewServerWithBus(scanPath, bus)
+	rg.DeferredLoading = true
 	if obsProvider != nil {
 		rg.Observability = obsProvider
 	}
 
 	runtimeCleanup := bootstrap.ConfigureMCPRuntime(scanPath, bus, rg)
 	rg.Register(srv)
+	mcpserver.RegisterResources(srv, rg)
+	mcpserver.RegisterPrompts(srv, rg)
+	srv.EnableSampling()
 
 	cleanup := func() {
 		runtimeCleanup()

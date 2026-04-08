@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,10 +12,71 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
+
 	"github.com/hairglasses-studio/ralphglasses/internal/mcpserver"
 )
 
 var testBinary string
+
+func initializeServer(t *testing.T, srv *server.MCPServer) mcp.InitializeResult {
+	t.Helper()
+
+	rawReq := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"0.0.0"}}}`
+	resp := srv.HandleMessage(context.Background(), []byte(rawReq))
+	rpcResp, ok := resp.(mcp.JSONRPCResponse)
+	if !ok {
+		t.Fatalf("expected initialize JSONRPCResponse, got %T", resp)
+	}
+	result, ok := rpcResp.Result.(mcp.InitializeResult)
+	if !ok {
+		t.Fatalf("expected InitializeResult, got %T", rpcResp.Result)
+	}
+	return result
+}
+
+func listResources(t *testing.T, srv *server.MCPServer) mcp.ListResourcesResult {
+	t.Helper()
+	resp := srv.HandleMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":2,"method":"resources/list","params":{}}`))
+	rpcResp, ok := resp.(mcp.JSONRPCResponse)
+	if !ok {
+		t.Fatalf("expected resources/list JSONRPCResponse, got %T", resp)
+	}
+	result, ok := rpcResp.Result.(mcp.ListResourcesResult)
+	if !ok {
+		t.Fatalf("expected ListResourcesResult, got %T", rpcResp.Result)
+	}
+	return result
+}
+
+func listResourceTemplates(t *testing.T, srv *server.MCPServer) mcp.ListResourceTemplatesResult {
+	t.Helper()
+	resp := srv.HandleMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":3,"method":"resources/templates/list","params":{}}`))
+	rpcResp, ok := resp.(mcp.JSONRPCResponse)
+	if !ok {
+		t.Fatalf("expected resources/templates/list JSONRPCResponse, got %T", resp)
+	}
+	result, ok := rpcResp.Result.(mcp.ListResourceTemplatesResult)
+	if !ok {
+		t.Fatalf("expected ListResourceTemplatesResult, got %T", rpcResp.Result)
+	}
+	return result
+}
+
+func listPrompts(t *testing.T, srv *server.MCPServer) mcp.ListPromptsResult {
+	t.Helper()
+	resp := srv.HandleMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":4,"method":"prompts/list","params":{}}`))
+	rpcResp, ok := resp.(mcp.JSONRPCResponse)
+	if !ok {
+		t.Fatalf("expected prompts/list JSONRPCResponse, got %T", resp)
+	}
+	result, ok := rpcResp.Result.(mcp.ListPromptsResult)
+	if !ok {
+		t.Fatalf("expected ListPromptsResult, got %T", rpcResp.Result)
+	}
+	return result
+}
 
 func TestMain(m *testing.M) {
 	// Build the binary once for CLI-level tests
@@ -64,7 +126,7 @@ func TestResolveScanPath_FromEnv(t *testing.T) {
 func TestSetup_CreatesServer(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	srv, cleanup, err := setup(tmpDir)
+	srv, cleanup, err := setup(context.Background(), tmpDir)
 	if err != nil {
 		t.Fatalf("setup() error: %v", err)
 	}
@@ -78,7 +140,7 @@ func TestSetup_CreatesServer(t *testing.T) {
 func TestSetup_RegistersCoreTools(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	srv, cleanup, err := setup(tmpDir)
+	srv, cleanup, err := setup(context.Background(), tmpDir)
 	if err != nil {
 		t.Fatalf("setup() error: %v", err)
 	}
@@ -107,7 +169,7 @@ func TestSetup_RegistersCoreTools(t *testing.T) {
 func TestSetup_RegistersMetaTools(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	srv, cleanup, err := setup(tmpDir)
+	srv, cleanup, err := setup(context.Background(), tmpDir)
 	if err != nil {
 		t.Fatalf("setup() error: %v", err)
 	}
@@ -145,7 +207,7 @@ func TestToolGroupNames(t *testing.T) {
 func TestSetup_CleanupDoesNotPanic(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	_, cleanup, err := setup(tmpDir)
+	_, cleanup, err := setup(context.Background(), tmpDir)
 	if err != nil {
 		t.Fatalf("setup() error: %v", err)
 	}
@@ -157,7 +219,7 @@ func TestSetup_CleanupDoesNotPanic(t *testing.T) {
 func TestSetup_CleanupIdempotent(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	_, cleanup, err := setup(tmpDir)
+	_, cleanup, err := setup(context.Background(), tmpDir)
 	if err != nil {
 		t.Fatalf("setup() error: %v", err)
 	}
@@ -170,7 +232,7 @@ func TestSetup_CleanupIdempotent(t *testing.T) {
 func TestSetup_ServerNotNil(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	srv, cleanup, err := setup(tmpDir)
+	srv, cleanup, err := setup(context.Background(), tmpDir)
 	if err != nil {
 		t.Fatalf("setup() error: %v", err)
 	}
@@ -184,7 +246,7 @@ func TestSetup_ServerNotNil(t *testing.T) {
 func TestSetup_ErrorIsNil(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	_, cleanup, err := setup(tmpDir)
+	_, cleanup, err := setup(context.Background(), tmpDir)
 	if err != nil {
 		t.Fatalf("setup() should not return error for valid path, got: %v", err)
 	}
@@ -208,7 +270,7 @@ func TestResolveScanPath_ExpandsHome(t *testing.T) {
 func TestSetup_RegistersDeferredTools(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	srv, cleanup, err := setup(tmpDir)
+	srv, cleanup, err := setup(context.Background(), tmpDir)
 	if err != nil {
 		t.Fatalf("setup() error: %v", err)
 	}
@@ -224,18 +286,78 @@ func TestSetup_RegistersDeferredTools(t *testing.T) {
 	}
 }
 
-func TestSetup_RegistersTenantLeaderboardTool(t *testing.T) {
+func TestSetup_InitializeIncludesInstructions(t *testing.T) {
 	tmpDir := t.TempDir()
-	t.Setenv("HOME", t.TempDir())
 
-	srv, cleanup, err := setup(tmpDir)
+	srv, cleanup, err := setup(context.Background(), tmpDir)
 	if err != nil {
 		t.Fatalf("setup() error: %v", err)
 	}
 	defer cleanup()
 
+	initResult := initializeServer(t, srv)
+	if !strings.Contains(initResult.Instructions, "ralph:///catalog/server") {
+		t.Fatalf("initialize instructions missing catalog guidance: %q", initResult.Instructions)
+	}
+	if !strings.Contains(initResult.Instructions, "ralphglasses_load_tool_group") {
+		t.Fatalf("initialize instructions missing deferred loading guidance: %q", initResult.Instructions)
+	}
+}
+
+func TestSetup_RegistersResourcesAndPrompts(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	srv, cleanup, err := setup(context.Background(), tmpDir)
+	if err != nil {
+		t.Fatalf("setup() error: %v", err)
+	}
+	defer cleanup()
+
+	initializeServer(t, srv)
+
+	resources := listResources(t, srv)
+	if got := len(resources.Resources); got != 3 {
+		t.Fatalf("resources/list returned %d resources, want 3", got)
+	}
+
+	templates := listResourceTemplates(t, srv)
+	if got := len(templates.ResourceTemplates); got != 3 {
+		t.Fatalf("resources/templates/list returned %d templates, want 3", got)
+	}
+
+	prompts := listPrompts(t, srv)
+	if got := len(prompts.Prompts); got != 5 {
+		t.Fatalf("prompts/list returned %d prompts, want 5", got)
+	}
+}
+
+func TestSetup_CanLoadTenantToolGroup(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	srv, cleanup, err := setup(context.Background(), tmpDir)
+	if err != nil {
+		t.Fatalf("setup() error: %v", err)
+	}
+	defer cleanup()
+
+	initializeServer(t, srv)
+	if srv.GetTool("ralphglasses_tenant_role_leaderboards") != nil {
+		t.Fatal("tenant role leaderboards should not be loaded before load_tool_group")
+	}
+
+	req := `{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"ralphglasses_load_tool_group","arguments":{"group":"tenant"}}}`
+	resp := srv.HandleMessage(context.Background(), []byte(req))
+	switch msg := resp.(type) {
+	case mcp.JSONRPCError:
+		t.Fatalf("load_tool_group returned JSONRPC error: %+v", msg.Error)
+	case mcp.JSONRPCResponse:
+		// Success path.
+	default:
+		t.Fatalf("expected tools/call JSONRPC response, got %T", resp)
+	}
+
 	if srv.GetTool("ralphglasses_tenant_role_leaderboards") == nil {
-		t.Fatal("tenant role leaderboards tool not registered")
+		t.Fatal("tenant role leaderboards tool not registered after loading tenant group")
 	}
 }
 
@@ -318,13 +440,13 @@ func TestSetup_MultipleInstances(t *testing.T) {
 	tmpDir1 := t.TempDir()
 	tmpDir2 := t.TempDir()
 
-	srv1, cleanup1, err := setup(tmpDir1)
+	srv1, cleanup1, err := setup(context.Background(), tmpDir1)
 	if err != nil {
 		t.Fatalf("setup(1) error: %v", err)
 	}
 	defer cleanup1()
 
-	srv2, cleanup2, err := setup(tmpDir2)
+	srv2, cleanup2, err := setup(context.Background(), tmpDir2)
 	if err != nil {
 		t.Fatalf("setup(2) error: %v", err)
 	}

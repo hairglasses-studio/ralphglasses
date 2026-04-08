@@ -9,7 +9,7 @@ ralphglasses is a k9s-style terminal UI built with Go and [Charmbracelet](https:
 ## Features
 
 - **Multi-provider fleet control** — Launch and manage parallel LLM sessions across Claude Code, Gemini CLI, and OpenAI Codex CLI from a single TUI.
-- **126 MCP tools across 14 namespaces** — Deferred-loading tool system with core, session, loop, fleet, cycle, prompt, autonomy, and more.
+- **222 MCP tools across 30 tool groups** — 218 grouped tools plus 4 management tools, with live discovery through catalog resources and deferred loading.
 - **Prompt enhancement pipeline** — 13-stage deterministic pipeline with 10-dimensional quality scoring, 11+ lint rules, and multi-provider LLM improvement with prompt caching.
 - **Autonomous supervision** — Marathon supervisor with health monitoring, cycle chaining, and configurable autonomy levels.
 - **R&D cycle management** — State-machine-driven research and development cycles with observation feedback loops, baselining, and synthesis.
@@ -47,6 +47,7 @@ Repo-local Codex MCP discovery is already configured via `.codex/config.toml` an
 | [Architecture](ARCHITECTURE.md) | Package layout, provider dispatch, middleware, fleet, tiered routing |
 | [Multi-Tenant Operations](MULTI-TENANT.md) | Shared-host tenant model, provisioning, trigger auth, and tenant-scoped examples |
 | [MCP Tools](MCP-TOOLS.md) | Full tool table with descriptions and deferred loading |
+| [CLI Parity](CLI-PARITY.md) | CLI-to-MCP parity matrix, skill-backed exceptions, and remaining command-only surfaces |
 | [Provider Setup](PROVIDER-SETUP.md) | Multi-provider prerequisites, env vars, orchestration pattern |
 | [Codex Reference](CODEX-REFERENCE.md) | Codex-first defaults, pinned docs, Claude cache guardrails |
 | [Codex Parity Status](CODEX-PARITY-STATUS.md) | Codex parity closeout state, non-blocking follow-ons, and future-session rules |

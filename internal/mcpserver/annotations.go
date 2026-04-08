@@ -13,16 +13,23 @@ func boolPtr(b bool) *bool { return &b }
 //   - OpenWorldHint: tool interacts with external entities
 var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	// ── core ──────────────────────────────────────────────────────────────
-	"ralphglasses_scan":        {Title: "Scan Repos", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_list":        {Title: "List Repos", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
-	"ralphglasses_status":      {Title: "Repo Status", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
-	"ralphglasses_start":       {Title: "Start Loop", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_stop":        {Title: "Stop Loop", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
-	"ralphglasses_stop_all":    {Title: "Stop All Loops", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
-	"ralphglasses_pause":       {Title: "Pause/Resume Loop", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
-	"ralphglasses_logs":        {Title: "View Logs", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
-	"ralphglasses_config":      {Title: "Get/Set Config", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
-	"ralphglasses_config_bulk": {Title: "Bulk Config", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_scan":              {Title: "Scan Repos", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_list":              {Title: "List Repos", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_status":            {Title: "Repo Status", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_start":             {Title: "Start Loop", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_stop":              {Title: "Stop Loop", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_stop_all":          {Title: "Stop All Loops", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_pause":             {Title: "Pause/Resume Loop", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_logs":              {Title: "View Logs", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_config":            {Title: "Get/Set Config", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_config_bulk":       {Title: "Bulk Config", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_doctor":            {Title: "Doctor", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_validate":          {Title: "Validate Config", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_config_schema":     {Title: "Config Schema", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_debug_bundle":      {Title: "Debug Bundle", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_theme_export":      {Title: "Theme Export", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_telemetry_export":  {Title: "Telemetry Export", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_firstboot_profile": {Title: "Firstboot Profile", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 
 	// ── session ──────────────────────────────────────────────────────────
 	"ralphglasses_session_launch":      {Title: "Launch Session", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
@@ -31,7 +38,8 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_session_resume":      {Title: "Resume Session", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_session_stop":        {Title: "Stop Session", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_session_stop_all":    {Title: "Stop All Sessions", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
-	"ralphglasses_session_budget":      {Title: "Session Budget", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_session_budget":      {Title: "Session Budget", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_budget_status":       {Title: "Budget Status", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_session_retry":       {Title: "Retry Session", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_session_output":      {Title: "Session Output", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_session_tail":        {Title: "Tail Session", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
@@ -97,13 +105,16 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_fleet_workers":       {Title: "Fleet Workers", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_fleet_dlq":           {Title: "Fleet DLQ", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_marathon_dashboard":  {Title: "Marathon Dashboard", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_fleet_runtime":       {Title: "Fleet Runtime", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_marathon":            {Title: "Marathon", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
 
 	// ── repo ─────────────────────────────────────────────────────────────
-	"ralphglasses_repo_health":    {Title: "Repo Health", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_repo_optimize":  {Title: "Optimize Repo", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_repo_scaffold":  {Title: "Scaffold Repo", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
-	"ralphglasses_claudemd_check": {Title: "CLAUDE.md Check", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
-	"ralphglasses_snapshot":       {Title: "Snapshot", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_repo_health":        {Title: "Repo Health", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_repo_optimize":      {Title: "Optimize Repo", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_repo_scaffold":      {Title: "Scaffold Repo", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_repo_surface_audit": {Title: "Repo Surface Audit", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_claudemd_check":     {Title: "CLAUDE.md Check", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_snapshot":           {Title: "Snapshot", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 
 	// ── roadmap ──────────────────────────────────────────────────────────
 	"ralphglasses_roadmap_parse":      {Title: "Parse Roadmap", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
@@ -176,6 +187,7 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_tool_groups":     {Title: "Tool Groups", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_load_tool_group": {Title: "Load Tool Group", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_skill_export":    {Title: "Skill Export", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_server_health":   {Title: "Server Health", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 
 	// ── observability ────────────────────────────────────────────────────
 	"ralphglasses_observation_query":   {Title: "Query Observations", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
@@ -194,6 +206,7 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_cost_estimate":       {Title: "Cost Estimate", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_merge_verify":        {Title: "Merge Verify", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_worktree_create":     {Title: "Worktree Create", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
+	"ralphglasses_worktree_list":       {Title: "Worktree List", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_worktree_cleanup":    {Title: "Worktree Cleanup", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 
 	// ── rdcycle ──────────────────────────────────────────────────────────

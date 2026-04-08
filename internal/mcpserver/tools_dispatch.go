@@ -70,7 +70,7 @@ func (s *Server) RegisterCoreTools(srv *server.MCPServer) {
 
 	s.addToolWithMetadata(srv, ToolEntry{
 		Tool: mcp.NewTool("ralphglasses_load_tool_group",
-			mcp.WithDescription("Load all tools in a named group (core, session, loop, prompt, fleet, repo, roadmap, team, awesome, advanced, eval, fleet_h, observability, rdcycle, plugin, sweep, rc, autonomy, workflow)"),
+			mcp.WithDescription(loadToolGroupDescription()),
 			mcp.WithString("group", mcp.Required(), mcp.Description("Tool group name to load")),
 		),
 		Handler: s.handleLoadToolGroup,
@@ -135,7 +135,7 @@ func (s *Server) RegisterAllTools(srv *server.MCPServer) {
 
 	s.addToolWithMetadata(srv, ToolEntry{
 		Tool: mcp.NewTool("ralphglasses_load_tool_group",
-			mcp.WithDescription("Load all tools in a named group (core, session, loop, prompt, fleet, repo, roadmap, team, awesome, advanced, eval, fleet_h, observability, rdcycle, plugin, sweep, rc, autonomy, workflow)"),
+			mcp.WithDescription(loadToolGroupDescription()),
 			mcp.WithString("group", mcp.Required(), mcp.Description("Tool group name to load")),
 		),
 		Handler: s.handleLoadToolGroup,
@@ -248,11 +248,17 @@ func (s *Server) handleServerHealth(_ context.Context, _ mcp.CallToolRequest) (*
 	groups := s.buildToolGroups()
 	groupNames := make([]string, 0, len(groups))
 	loadedGroups := make([]string, 0, len(groups))
-	totalTools := 4 // tool_groups, load_tool_group, skill_export, server_health
+	groupToolCount := 0
+	groupSummary := make([]map[string]any, 0, len(groups))
 
 	for _, group := range groups {
 		groupNames = append(groupNames, group.Name)
-		totalTools += len(group.Tools)
+		groupToolCount += len(group.Tools)
+		groupSummary = append(groupSummary, map[string]any{
+			"name":        group.Name,
+			"description": group.Description,
+			"tool_count":  len(group.Tools),
+		})
 	}
 	sort.Strings(groupNames)
 
@@ -265,23 +271,32 @@ func (s *Server) handleServerHealth(_ context.Context, _ mcp.CallToolRequest) (*
 	s.mu.RUnlock()
 	sort.Strings(loadedGroups)
 
+	resourceDefs := staticResourceCatalog()
+	templateDefs := resourceTemplateCatalog()
+	managementTools := managementToolNames()
+
 	return jsonResult(map[string]any{
-		"server":         "ralphglasses",
-		"version":        "dev",
-		"status":         "ok",
-		"scan_path":      s.ScanPath,
-		"deferred_mode":  s.DeferredLoading,
-		"tool_group_count": len(groups),
-		"tool_groups":    groupNames,
-		"loaded_groups":  loadedGroups,
-		"tool_count":     totalTools,
-		"resource_count": 3,
-		"prompt_count":   3,
-		"discovery_tools": []string{
-			"ralphglasses_tool_groups",
-			"ralphglasses_load_tool_group",
-			"ralphglasses_skill_export",
-			"ralphglasses_server_health",
-		},
+		"server":                  "ralphglasses",
+		"version":                 s.runtimeVersion(),
+		"commit":                  strings.TrimSpace(s.Commit),
+		"build_date":              strings.TrimSpace(s.BuildDate),
+		"status":                  "ok",
+		"scan_path":               s.ScanPath,
+		"instructions":            ServerInstructions(),
+		"deferred_mode":           s.DeferredLoading,
+		"tool_group_count":        len(groups),
+		"tool_groups":             groupNames,
+		"tool_group_summary":      groupSummary,
+		"loaded_groups":           loadedGroups,
+		"group_tool_count":        groupToolCount,
+		"management_tool_count":   len(managementTools),
+		"tool_count":              groupToolCount + len(managementTools),
+		"resource_count":          len(resourceDefs),
+		"resource_uris":           resourceURIs(resourceDefs),
+		"resource_template_count": len(templateDefs),
+		"resource_templates":      resourceTemplateURIs(templateDefs),
+		"prompt_count":            len(promptCatalog()),
+		"prompt_names":            promptNames(),
+		"discovery_tools":         managementTools,
 	}), nil
 }

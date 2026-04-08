@@ -96,6 +96,48 @@ func TestResourceRegistration(t *testing.T) {
 	}
 }
 
+func TestStaticResourceRegistration(t *testing.T) {
+	t.Parallel()
+
+	_, mcpSrv, _ := setupRepoForResources(t)
+
+	ctx := context.Background()
+	rawReq := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"0.0.0"}}}`
+	mcpSrv.HandleMessage(ctx, []byte(rawReq))
+
+	listReq := `{"jsonrpc":"2.0","id":2,"method":"resources/list","params":{}}`
+	resp := mcpSrv.HandleMessage(ctx, []byte(listReq))
+
+	rpcResp, ok := resp.(mcp.JSONRPCResponse)
+	if !ok {
+		t.Fatalf("expected JSONRPCResponse, got %T: %+v", resp, resp)
+	}
+
+	result, ok := rpcResp.Result.(mcp.ListResourcesResult)
+	if !ok {
+		t.Fatalf("expected ListResourcesResult, got %T", rpcResp.Result)
+	}
+
+	if len(result.Resources) != 3 {
+		t.Fatalf("expected 3 static resources, got %d", len(result.Resources))
+	}
+
+	uris := make(map[string]bool)
+	for _, resource := range result.Resources {
+		uris[resource.URI] = true
+	}
+
+	for _, expected := range []string{
+		"ralph:///catalog/server",
+		"ralph:///catalog/tool-groups",
+		"ralph:///catalog/workflows",
+	} {
+		if !uris[expected] {
+			t.Errorf("missing expected static resource URI: %s", expected)
+		}
+	}
+}
+
 func TestStatusResource_ReturnsJSON(t *testing.T) {
 	t.Parallel()
 

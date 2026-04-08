@@ -46,6 +46,9 @@ type ToolEntry struct {
 type Server struct {
 	mu           sync.RWMutex
 	ScanPath     string
+	Version      string
+	Commit       string
+	BuildDate    string
 	Repos        []*model.Repo
 	lastScanAt   time.Time     // when the last successful scan completed
 	scanTTL      time.Duration // how long scan results are considered fresh (0 = forever)
@@ -95,6 +98,10 @@ type Server struct {
 
 	// Tasks is the async task registry for long-running MCP tool operations.
 	Tasks *TaskRegistry
+
+	// Active CLI-parity runtimes managed through MCP.
+	FleetRuntime    *fleetRuntimeState
+	MarathonRuntime *marathonRuntimeState
 
 	// approvalStore holds in-memory approval records for HITL workflows.
 	approvalStore *ApprovalStore

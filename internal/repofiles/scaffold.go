@@ -18,6 +18,7 @@ type ScaffoldResult struct {
 // ScaffoldOptions controls what gets created.
 type ScaffoldOptions struct {
 	Force       bool   // Overwrite existing files
+	Minimal     bool   // Generate the minimal .ralphrc variant
 	ProjectType string // go, node, python, etc.
 	ProjectName string // Derived from directory name if empty
 }
@@ -97,6 +98,15 @@ func relPath(base, full string) string {
 }
 
 func generateRalphRC(projectName string, opts ScaffoldOptions) string {
+	if opts.Minimal {
+		return fmt.Sprintf(`PROJECT_NAME="%s"
+PROJECT_TYPE="%s"
+PROVIDER="codex"
+MODEL="gpt-5.4"
+MAX_CALLS_PER_HOUR=80
+`, projectName, opts.ProjectType)
+	}
+
 	buildCmd, testCmd, vetCmd := buildCommands(opts.ProjectType)
 
 	return fmt.Sprintf(`PROJECT_NAME="%s"

@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"path/filepath"
@@ -23,17 +24,20 @@ import (
 // mcpCmd runs as a long-lived MCP server on stdio. Code changes require
 // restarting any client registration that points at this command.
 var mcpCmd = &cobra.Command{
-	Use:   "mcp",
-	Short: "Run as an MCP server on stdio",
+	Use:          "mcp",
+	Short:        "Run as an MCP server on stdio",
 	SilenceUsage: true,
-	Long: `Start ralphglasses as a Model Context Protocol (MCP) server on stdio.
+	Long: fmt.Sprintf(`Start ralphglasses as a Model Context Protocol (MCP) server on stdio.
 
-This exposes 204 tools for managing ralph loops and multi-provider LLM sessions
+This exposes %d tools for managing ralph loops and multi-provider LLM sessions
 programmatically from any MCP-capable client (for example Codex, Claude, or Gemini).
+
+Read-only discovery is built in through ralph:///catalog/* resources, prompt templates,
+and deferred tool-group loading.
 
 Codex repo-local registration is already configured via .codex/config.toml and .mcp.json.
 Other MCP clients can register this command directly, optionally setting
-RALPHGLASSES_SCAN_PATH=~/hairglasses-studio for a custom scan path.`,
+RALPHGLASSES_SCAN_PATH=~/hairglasses-studio for a custom scan path.`, mcpserver.TotalToolCount()),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// In MCP mode, stderr IS the transport — any writes corrupt the
 		// protocol. Immediately silence the default slog handler (which
@@ -99,10 +103,14 @@ func setupMCP(sp string) (*server.MCPServer, func(), error) {
 
 	rg := mcpserver.NewServerWithBus(sp, bus)
 	rg.DeferredLoading = true
+	rg.Version = version
+	rg.Commit = commit
+	rg.BuildDate = buildDate
 
 	srv := registry.NewMCPServer(
 		"ralphglasses",
 		version+" ("+commit+")",
+		server.WithInstructions(mcpserver.ServerInstructions()),
 		server.WithToolCapabilities(true),
 		server.WithResourceCapabilities(false, false),
 		server.WithPromptCapabilities(true),

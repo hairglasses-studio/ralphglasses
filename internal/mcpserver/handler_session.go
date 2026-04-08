@@ -244,15 +244,46 @@ func (s *Server) handleSessionBudget(ctx context.Context, req mcp.CallToolReques
 		return codedError(ErrSessionNotFound, fmt.Sprintf("session %s not found — use ralphglasses_session_list to find active sessions", id)), nil
 	}
 
+	action := getStringArg(req, "action")
 	newBudget := getNumberArg(req, "budget_usd", 0)
-	if newBudget > 0 {
+	if action == "" {
+		if newBudget > 0 {
+			action = "set"
+		} else {
+			action = "get"
+		}
+	}
+
+	switch action {
+	case "get":
+	case "set":
+		if newBudget <= 0 {
+			return codedError(ErrInvalidParams, "budget_usd must be > 0 when action=set"), nil
+		}
 		sess.Lock()
 		sess.BudgetUSD = newBudget
 		sess.Unlock()
+		if s.SessMgr != nil {
+			if err := s.SessMgr.PersistSession(sess); err != nil {
+				return codedError(ErrFilesystem, fmt.Sprintf("persist session budget: %v", err)), nil
+			}
+		}
+	case "reset_spend":
+		sess.Lock()
+		sess.SpentUSD = 0
+		sess.Unlock()
+		if s.SessMgr != nil {
+			if err := s.SessMgr.PersistSession(sess); err != nil {
+				return codedError(ErrFilesystem, fmt.Sprintf("persist session spend reset: %v", err)), nil
+			}
+		}
+	default:
+		return codedError(ErrInvalidParams, "action must be get, set, or reset_spend"), nil
 	}
 
 	sess.Lock()
 	info := map[string]any{
+		"action":     action,
 		"session_id": sess.ID,
 		"tenant_id":  sess.TenantID,
 		"budget_usd": sess.BudgetUSD,

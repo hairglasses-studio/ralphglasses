@@ -1,0 +1,37 @@
+---
+name: ralphglasses-operator
+description: Operate the interactive ralphglasses CLI surfaces when the task involves the root TUI, tmux control, the firstboot wizard, or other terminal-native operator workflows that are not pure MCP business tools.
+---
+
+# Ralphglasses Operator
+
+Use this skill when the task is about interactive operator control rather than a pure MCP workflow.
+
+## Scope
+
+- Launch or reattach the root `ralphglasses` TUI
+- Use `tmux` flows around session panes or operator workspaces
+- Drive the interactive `firstboot` wizard
+- Bridge terminal workflows with the MCP control plane
+
+## Default workflow
+
+1. Read [docs/CLI-PARITY.md](../../docs/CLI-PARITY.md) to determine whether the request is MCP-native, skill-backed, or command-only by design.
+2. Prefer MCP-native tools first for any non-interactive part of the task.
+3. Use terminal flows only for the genuinely interactive parts:
+   - root `ralphglasses`
+   - `ralphglasses tmux *`
+   - `ralphglasses firstboot`
+   - shell completion generation
+4. After an interactive action, capture the resulting state with MCP tools when possible:
+   - `ralphglasses_server_health`
+   - `ralphglasses_fleet_runtime`
+   - `ralphglasses_marathon`
+   - `ralphglasses_session_list`
+   - `ralphglasses_status`
+
+## Guardrails
+
+- Do not treat `mcp`, `mcp-call`, or shell completion as missing MCP parity. They are transport or shell affordances by design.
+- When a task can be completed through a stable MCP tool, do that instead of driving the terminal UI.
+- Use [docs/MCP-TOOLS.md](../../docs/MCP-TOOLS.md) and the `ralph:///catalog/*` resources as the live discovery surface.

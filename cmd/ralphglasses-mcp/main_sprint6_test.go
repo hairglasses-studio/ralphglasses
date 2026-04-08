@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"testing"
 )
@@ -41,7 +42,7 @@ func TestResolveScanPath_Sprint6_AbsolutePath(t *testing.T) {
 
 func TestSetup_Sprint6_ReturnsValidServer(t *testing.T) {
 	dir := t.TempDir()
-	srv, cleanup, err := setup(dir)
+	srv, cleanup, err := setup(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("setup failed: %v", err)
 	}
@@ -54,7 +55,7 @@ func TestSetup_Sprint6_ReturnsValidServer(t *testing.T) {
 
 func TestSetup_Sprint6_CleanupSafe(t *testing.T) {
 	dir := t.TempDir()
-	_, cleanup, err := setup(dir)
+	_, cleanup, err := setup(context.Background(), dir)
 	if err != nil {
 		t.Fatalf("setup failed: %v", err)
 	}
@@ -66,7 +67,7 @@ func TestSetup_Sprint6_CleanupSafe(t *testing.T) {
 func TestSetup_Sprint6_RepeatedSetupTeardown(t *testing.T) {
 	dir := t.TempDir()
 	for i := range 3 {
-		srv, cleanup, err := setup(dir)
+		srv, cleanup, err := setup(context.Background(), dir)
 		if err != nil {
 			t.Fatalf("setup call %d failed: %v", i, err)
 		}

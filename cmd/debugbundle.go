@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/hairglasses-studio/ralphglasses/internal/parity"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 )
 
@@ -48,29 +50,21 @@ func runDebugBundle(cmd *cobra.Command, args []string) error {
 
 	outPath := debugBundleOutput
 	if outPath == "" {
-		ts := time.Now().Format("20060102-150405")
-		outPath = fmt.Sprintf("ralph-debug-%s.txt", ts)
+		outPath = parity.DefaultDebugBundlePath(".", time.Now())
 	}
 
-	var b strings.Builder
+	content, err := parity.BuildDebugBundle(context.Background(), parity.DebugBundleOptions{
+		ScanPath:  sp,
+		Version:   version,
+		Commit:    commit,
+		BuildDate: buildDate,
+	})
+	if err != nil {
+		return fmt.Errorf("build bundle: %w", err)
+	}
 
-	writeSection(&b, "RALPHGLASSES DEBUG BUNDLE", fmt.Sprintf(
-		"Generated: %s\nVersion: %s (commit: %s, built: %s)",
-		time.Now().Format(time.RFC3339), version, commit, buildDate))
-
-	writeSection(&b, "SYSTEM INFO", collectSystemInfo())
-	writeSection(&b, "GO VERSION", collectCommandOutput("go", "version"))
-	writeSection(&b, "GIT VERSION", collectCommandOutput("git", "--version"))
-	writeSection(&b, "ENVIRONMENT", collectSanitizedEnv())
-	writeSection(&b, "SCAN PATH", sp)
-	writeSection(&b, "RALPHRC", collectRalphRC(sp))
-	writeSection(&b, "RECENT LOGS", collectRecentLogs(sp))
-	writeSection(&b, "DOCTOR OUTPUT", collectDoctorOutput())
-
-	content := b.String()
-
-	if err := os.WriteFile(outPath, []byte(content), 0o600); err != nil {
-		return fmt.Errorf("write bundle: %w", err)
+	if err := parity.WriteDebugBundle(outPath, content); err != nil {
+		return err
 	}
 
 	fmt.Printf("Debug bundle written to %s (%d bytes)\n", outPath, len(content))
@@ -135,28 +129,26 @@ func collectSanitizedEnv() string {
 }
 
 func collectRalphRC(sp string) string {
-	// Look for .ralphrc in scan path or first repo
 	rcPath := filepath.Join(sp, ".ralphrc")
 	data, err := os.ReadFile(rcPath)
-	if err != nil {
-		// Try first subdirectory
-		entries, dirErr := os.ReadDir(sp)
-		if dirErr != nil {
-			return "(scan path not readable)"
-		}
-		for _, e := range entries {
-			if !e.IsDir() {
-				continue
-			}
-			candidate := filepath.Join(sp, e.Name(), ".ralphrc")
-			data, err = os.ReadFile(candidate)
-			if err == nil {
-				return sanitizeSecrets(string(data))
-			}
-		}
-		return "(no .ralphrc found)"
+	if err == nil {
+		return sanitizeSecrets(string(data))
 	}
-	return sanitizeSecrets(string(data))
+	entries, dirErr := os.ReadDir(sp)
+	if dirErr != nil {
+		return "(scan path not readable)"
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		candidate := filepath.Join(sp, entry.Name(), ".ralphrc")
+		data, err = os.ReadFile(candidate)
+		if err == nil {
+			return sanitizeSecrets(string(data))
+		}
+	}
+	return "(no .ralphrc found)"
 }
 
 func collectRecentLogs(sp string) string {
@@ -165,9 +157,7 @@ func collectRecentLogs(sp string) string {
 	if err != nil {
 		return "(no log file found at " + logPath + ")"
 	}
-	content := string(data)
-	// Last 50 lines
-	lines := strings.Split(content, "\n")
+	lines := strings.Split(string(data), "\n")
 	if len(lines) > 50 {
 		lines = lines[len(lines)-50:]
 	}
@@ -175,10 +165,9 @@ func collectRecentLogs(sp string) string {
 }
 
 func collectDoctorOutput() string {
-	out, err := exec.Command("go", "run", ".", "doctor").CombinedOutput()
-	if err != nil {
-		// Doctor may exit non-zero if checks fail — that's fine, we still want the output.
-		return sanitizeSecrets(string(out))
-	}
-	return sanitizeSecrets(string(out))
+	report := parity.RunDoctor(context.Background(), parity.DoctorOptions{
+		ScanPath:        util.ExpandHome(scanPath),
+		IncludeOptional: true,
+	})
+	return sanitizeSecrets(parity.FormatDoctorResults(report.Results))
 }

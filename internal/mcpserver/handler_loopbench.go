@@ -127,10 +127,10 @@ func (s *Server) handleLoopBaseline(_ context.Context, req mcp.CallToolRequest) 
 			return codedError(ErrFilesystem, fmt.Sprintf("save baseline: %v", err)), nil
 		}
 		return jsonResult(map[string]any{
-			"action":      "refresh",
-			"path":        blPath,
-			"samples":     bl.Aggregate.SampleCount,
-			"window_type": windowType(hours),
+			"action":       "refresh",
+			"path":         blPath,
+			"samples":      bl.Aggregate.SampleCount,
+			"window_type":  windowType(hours),
 			"window_hours": bl.WindowHours,
 		}), nil
 
@@ -184,6 +184,12 @@ func (s *Server) handleLoopGates(_ context.Context, req mcp.CallToolRequest) (*m
 	}
 
 	blPath := e2e.BaselinePath(r.Path)
+	if override := getStringArg(req, "baseline_path"); override != "" {
+		if err := ValidatePath(override, s.ScanPath); err != nil {
+			return codedError(ErrInvalidParams, fmt.Sprintf("baseline_path: %v", err)), nil
+		}
+		blPath = override
+	}
 	baseline, loadErr := e2e.LoadBaseline(blPath)
 
 	// QW-6 (FINDING-226/238): sentinel check — a baseline is only usable as a
@@ -200,8 +206,8 @@ func (s *Server) handleLoopGates(_ context.Context, req mcp.CallToolRequest) (*m
 		}
 		slog.Info("loop_gates: baseline established (cycle 1), skipping gate evaluation", "repo", repoName)
 		return jsonResult(map[string]any{
-			"report":  map[string]any{"overall": "skip", "sample_count": len(observations)},
-			"summary": "baseline established — gates will evaluate from cycle 2 onward",
+			"report":   map[string]any{"overall": "skip", "sample_count": len(observations)},
+			"summary":  "baseline established — gates will evaluate from cycle 2 onward",
 			"markdown": "**Baseline established.** No prior reference point exists; gate evaluation begins on the next cycle.",
 		}), nil
 	} else if baseline != nil && baseline.Aggregate == nil && len(observations) > 0 {
@@ -214,8 +220,8 @@ func (s *Server) handleLoopGates(_ context.Context, req mcp.CallToolRequest) (*m
 		}
 		slog.Info("loop_gates: nil-aggregate baseline rebuilt (QW-6 recurrence), skipping gate evaluation", "repo", repoName)
 		return jsonResult(map[string]any{
-			"report":  map[string]any{"overall": "skip", "sample_count": len(observations)},
-			"summary": "baseline rebuilt (prior had no aggregate data) — gates will evaluate from the next cycle",
+			"report":   map[string]any{"overall": "skip", "sample_count": len(observations)},
+			"summary":  "baseline rebuilt (prior had no aggregate data) — gates will evaluate from the next cycle",
 			"markdown": "**Baseline rebuilt.** Prior baseline had no aggregate data; gate evaluation resumes next cycle.",
 		}), nil
 	}

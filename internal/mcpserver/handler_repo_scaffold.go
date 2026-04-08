@@ -22,6 +22,7 @@ func (s *Server) handleRepoScaffold(_ context.Context, req mcp.CallToolRequest) 
 		ProjectType: getStringArg(req, "project_type"),
 		ProjectName: getStringArg(req, "project_name"),
 		Force:       getStringArg(req, "force") == "true",
+		Minimal:     getBoolArg(req, "minimal"),
 	}
 
 	result, err := repofiles.Scaffold(path, opts)

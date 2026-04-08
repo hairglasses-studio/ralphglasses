@@ -2,6 +2,8 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -186,6 +188,53 @@ func TestToolDescriptions_NonEmpty(t *testing.T) {
 			if te.Tool.Description == "" {
 				t.Errorf("tool %q in group %q has empty description", te.Tool.Name, g.Name)
 			}
+		}
+	}
+}
+
+func TestHandleServerHealth_IncludesDiscoveryContract(t *testing.T) {
+	t.Parallel()
+
+	srv := NewServer(t.TempDir())
+	srv.DeferredLoading = true
+	mcpSrv := server.NewMCPServer("test", "1.0")
+	srv.Register(mcpSrv)
+
+	result, err := srv.handleServerHealth(context.Background(), mcp.CallToolRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error result: %v", result)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(result.Content[0].(mcp.TextContent).Text), &payload); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	if payload["prompt_count"] != float64(5) {
+		t.Fatalf("prompt_count = %v, want 5", payload["prompt_count"])
+	}
+	if payload["resource_count"] != float64(3) {
+		t.Fatalf("resource_count = %v, want 3", payload["resource_count"])
+	}
+	if payload["resource_template_count"] != float64(3) {
+		t.Fatalf("resource_template_count = %v, want 3", payload["resource_template_count"])
+	}
+	instructions, _ := payload["instructions"].(string)
+	if !strings.Contains(instructions, "ralph:///catalog/server") {
+		t.Fatalf("instructions missing discovery resource guidance: %q", instructions)
+	}
+}
+
+func TestLoadToolGroupDescription_ListsCurrentGroups(t *testing.T) {
+	t.Parallel()
+
+	desc := loadToolGroupDescription()
+	for _, name := range ToolGroupNames {
+		if !strings.Contains(desc, name) {
+			t.Fatalf("description missing tool group %q: %s", name, desc)
 		}
 	}
 }
