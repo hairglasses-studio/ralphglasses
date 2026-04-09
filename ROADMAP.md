@@ -2,6 +2,8 @@
 
 Command-and-control TUI + bootable thin client for parallel multi-LLM agent fleets.
 
+**Autobuild Planning:** [docs/autobuild-patch-queue.json](docs/autobuild-patch-queue.json) / [docs/autobuild-cycle-improvement-notes.md](docs/autobuild-cycle-improvement-notes.md) / [docs/autobuild-execution-ledger.json](docs/autobuild-execution-ledger.json)
+
 **Last updated:** 2026-04-08
 **Codebase:** 73 packages, 222 total MCP tools (218 grouped + 4 management), 19 TUI views
 **Status:** 1,143 tasks, 503 complete (44.0%), 640 remaining
