@@ -235,4 +235,3 @@ func TestCorrelateTaskStatuses_TerminalNotOverwritten(t *testing.T) {
 		t.Errorf("task 0 status = %q, want completed (terminal should not change)", got.Tasks[0].Status)
 	}
 }
-

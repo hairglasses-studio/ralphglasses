@@ -67,17 +67,17 @@ type Coordinator struct {
 // NewCoordinator creates a coordinator node.
 func NewCoordinator(nodeID, hostname string, port int, version string, bus *events.Bus, sessMgr *session.Manager) *Coordinator {
 	return &Coordinator{
-		nodeID:        nodeID,
-		hostname:      hostname,
-		port:          port,
-		version:       version,
-		workers:       make(map[string]*WorkerInfo),
-		queue:         NewWorkQueue(),
-		budget:        GlobalBudget{LimitUSD: 500},
-		bus:           bus,
-		sessMgr:       sessMgr,
-		health:        NewHealthTracker(DefaultHealthConfig()),
-		budgetMgr:     NewBudgetManager(10.0),
+		nodeID:    nodeID,
+		hostname:  hostname,
+		port:      port,
+		version:   version,
+		workers:   make(map[string]*WorkerInfo),
+		queue:     NewWorkQueue(),
+		budget:    GlobalBudget{LimitUSD: 500},
+		bus:       bus,
+		sessMgr:   sessMgr,
+		health:    NewHealthTracker(DefaultHealthConfig()),
+		budgetMgr: NewBudgetManager(10.0),
 		router: &ProviderAffinityRouter{
 			PreferredProvider: string(session.ProviderCodex),
 			Fallback:          &LeastLoadedRouter{},

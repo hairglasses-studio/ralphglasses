@@ -45,6 +45,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ObservationViewport.SetDimensions(msg.Width, msg.Height-4)
 		m.RDCycleView.SetDimensions(msg.Width, msg.Height-4)
 		m.TeamOrchestrationView.SetDimensions(msg.Width, msg.Height-4)
+		m.TabBar.Width = msg.Width
 		m.StatusBar.Width = msg.Width
 		return m, nil
 

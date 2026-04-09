@@ -171,19 +171,19 @@ func repoSchedulePresentation(entry repoScheduleEntry) map[string]any {
 		enabled = *entry.Enabled
 	}
 	return map[string]any{
-		"id":             entry.ScheduleID,
-		"schedule_id":    entry.ScheduleID,
+		"id":              entry.ScheduleID,
+		"schedule_id":     entry.ScheduleID,
 		"cron_expression": entry.CronExpr,
-		"cron_expr":      entry.CronExpr,
-		"enabled":        enabled,
-		"created_at":     entry.CreatedAt,
-		"next_runs":      entry.NextRuns,
-		"job_kind":       jobKind,
-		"prompt":         prompt,
-		"objective":      objective,
-		"name":           name,
-		"max_tasks":      maxTasks,
-		"cycle_config":   entry.CycleConfig,
+		"cron_expr":       entry.CronExpr,
+		"enabled":         enabled,
+		"created_at":      entry.CreatedAt,
+		"next_runs":       entry.NextRuns,
+		"job_kind":        jobKind,
+		"prompt":          prompt,
+		"objective":       objective,
+		"name":            name,
+		"max_tasks":       maxTasks,
+		"cycle_config":    entry.CycleConfig,
 	}
 }
 

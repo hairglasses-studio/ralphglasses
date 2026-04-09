@@ -144,7 +144,7 @@ func newStructuredCodexTeam(config TeamConfig) *TeamStatus {
 		AutoStart:         config.AutoStart,
 		TargetBranch:      config.TargetBranch,
 		IntegrationBranch: structuredTeamIntegrationBranch(config.Name),
-		PromotionStatus:   TeamMergeStatusPending,
+		PromotionStatus:   TeamPromotionStatusPending,
 		A2AAgentURL:       config.A2AAgentURL,
 	}
 }
@@ -563,7 +563,7 @@ func (m *Manager) buildStructuredTeamPlannerPrompt(team *TeamStatus) string {
 	b.WriteString("Respond ONLY with JSON matching the provided schema.\n\n")
 	b.WriteString("Valid actions:\n")
 	b.WriteString("- launch_worker: start a new worker for a pending task_id\n")
-	b.WriteString("- retry_worker: retry a needs-retry or failed task_id\n")
+	b.WriteString("- retry_worker: retry a needs_retry or failed task_id\n")
 	b.WriteString("- stop_worker: stop a stuck worker by task_id or worker_session_id\n")
 	b.WriteString("- mark_complete: mark a task complete without launching a worker\n")
 	b.WriteString("- mark_blocked: mark a task blocked and supply a question or reason\n")

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"charm.land/bubbles/v2/key"
+	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 )
 
 func testHelpGroups() []HelpGroup {
@@ -49,6 +50,15 @@ func TestRenderHelpShowsBindings(t *testing.T) {
 	output := RenderHelp(groups, 120, 40)
 	if !strings.Contains(output, "repos tab") {
 		t.Error("help should show binding descriptions")
+	}
+}
+
+func TestRenderHelpRespectsWidth(t *testing.T) {
+	output := RenderHelp(testHelpGroups(), 36, 20)
+	for i, line := range strings.Split(output, "\n") {
+		if got := components.VisualWidth(components.StripAnsi(line)); got > 36 {
+			t.Fatalf("line %d width=%d exceeds 36: %q", i+1, got, components.StripAnsi(line))
+		}
 	}
 }
 

@@ -198,6 +198,7 @@ main.go → cmd/root.go (Cobra CLI)
 
 ## Docs
 
+- **Autobuild Planning:** [docs/autobuild-patch-queue.json](docs/autobuild-patch-queue.json) / [docs/autobuild-cycle-improvement-notes.md](docs/autobuild-cycle-improvement-notes.md) / [docs/autobuild-execution-ledger.json](docs/autobuild-execution-ledger.json)
 - [ROADMAP.md](ROADMAP.md) — Full development roadmap
 - [docs/CODEX-REFERENCE.md](docs/CODEX-REFERENCE.md) — Codex-first runtime notes, pinned docs, Claude cache guardrails
 - [docs/CODEX-PARITY-STATUS.md](docs/CODEX-PARITY-STATUS.md) — Codex parity closeout state and future-session rules

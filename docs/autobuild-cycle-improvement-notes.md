@@ -249,6 +249,38 @@ These notes should eventually become repo-owned automation instead of remaining 
 
 ## First Standing Notes
 
+## 2026-04-09: active-fleet cache is now the live red-signal source
+
+Signal:
+- the shared docs control plane now publishes a refreshed
+  `workspace-health-matrix.json` with zero fresh `fail` rows and explicit
+  `dirty` / `not_main` classifications
+
+Scope:
+- cross-repo planning inputs only
+
+What changed:
+- the active-fleet checkpoint moved from the older next-tranche bundle to the
+  live `active-fleet-investigation-2026-04-09.md` note plus the refreshed
+  workspace matrix
+- `make_check` baselines now use the standalone Go contract and can fall back
+  from `check` to `pipeline-check`
+- autobuild planning should treat `dirty` and `not_main` rows as gating state,
+  not as repo-local red defects
+
+Evidence:
+- `hairglasses-studio/docs/projects/agent-parity/active-fleet-investigation-2026-04-09.md`
+- `hairglasses-studio/docs/agent-parity/workspace-health-matrix.json`
+
+What this should prevent next time:
+- stale checkpoint bundles being treated as the latest control-plane signal
+- dirty or branch-local worktrees entering repo-owned patch queues as false red
+- repo-local autobuild tranches opening on runner-contract failures already
+  fixed in the shared baseline path
+
+Next recommended patch:
+- `remote_main_red_signal_filter`
+
 ## 2026-04-08: planning artifacts need explicit contracts
 
 Signal:
@@ -267,8 +299,8 @@ Evidence:
 - `docs/autobuild-patch-queue.md`
 - `docs/autobuild-patch-queue.json`
 - `docs/autobuild-patch-queue.schema.json`
-- `hairglasses-studio/docs/projects/agent-parity/2026-04-08-next-tranche-checkpoint.md`
-- `hairglasses-studio/docs/projects/agent-parity/2026-04-08-next-tranche-checkpoint.json`
+- `hairglasses-studio/docs/projects/agent-parity/active-fleet-investigation-2026-04-09.md`
+- `hairglasses-studio/docs/agent-parity/workspace-health-matrix.json`
 - `hairglasses-studio/docs/projects/agent-parity/2026-04-08-next-tranche-checkpoint.schema.json`
 - `hairglasses-studio/docs/projects/agent-parity/latest-checkpoint.json`
 - `hairglasses-studio/docs/projects/agent-parity/latest-checkpoint.schema.json`
@@ -423,26 +455,4 @@ What this should prevent next time:
 - future queue handoffs falling back to static roadmap ordering despite live repo signals
 
 Next recommended patch:
-- `generated_surface_drift_gate`
-
----
-
-## Tranche 5: Integrity Gates (Red Signal Filter)
-
-Target repo: `ralphglasses`
-
-Scope:
-- Filter autobuild intake to actionable red signals that reproduce on remote main.
-
-What changed:
-- Added `RemoteMainVerified` metadata to `AutobuildTriggerSignal`.
-- Added `activeRedSignalCandidates` parser to find `EventCrash` failures in the telemetry log.
-- Enforced verification: branch-local failures and dirty-worktree crashes are ignored by default.
-- Injected verified red signals into the patch queue with priority P0.
-
-Evidence:
-- `5666929`
-
-What this should prevent next time:
-- Wasted autobuild cycles chasing local dirty-worktree bugs or unresolved branch state.
-- False alarms dominating the repo-owned queue.
+- `remote_main_red_signal_filter`

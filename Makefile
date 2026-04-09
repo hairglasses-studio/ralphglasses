@@ -322,4 +322,5 @@ plugin-example:
 	@echo "For production plugins, see the TODO in internal/plugin/loader.go"
 
 PIPELINE_GO := ./scripts/dev/go.sh
--include $(HOME)/hairglasses-studio/dotfiles/make/pipeline.mk
+HG_PIPELINE_MK ?= $(or $(wildcard $(abspath $(CURDIR)/../dotfiles/make/pipeline.mk)),$(wildcard $(HOME)/hairglasses-studio/dotfiles/make/pipeline.mk))
+-include $(HG_PIPELINE_MK)

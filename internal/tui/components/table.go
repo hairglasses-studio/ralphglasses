@@ -314,6 +314,9 @@ func (t *Table) effectiveWidths() []int {
 	// 2. Calculate total fixed width + gaps (1 space between columns).
 	gaps := n - 1
 	totalFixed := gaps
+	if t.MultiSelect {
+		totalFixed += 3 // "[ ]" or "[x]" selection prefix rendered ahead of each row
+	}
 	for _, w := range widths {
 		totalFixed += w
 	}

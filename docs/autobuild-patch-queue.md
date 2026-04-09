@@ -1,17 +1,18 @@
 # Ralphglasses Autobuild Patch Queue
 
-Date: 2026-04-08
+Date: 2026-04-09
 Scope: roadmap-derived queue for repo-owned automated patch selection
 
 ## Source Inputs
 
-This queue is derived from the current shipped repo surfaces plus the latest docs control-plane checkpoint:
+This queue is derived from the current shipped repo surfaces plus the latest
+docs control-plane evidence:
 
 - `ROADMAP.md`
 - `README.md`
 - `docs/CODEX-PARITY-STATUS.md`
-- `hairglasses-studio/docs/projects/agent-parity/2026-04-08-next-tranche-checkpoint.md`
-- `hairglasses-studio/docs/projects/agent-parity/2026-04-08-next-tranche-checkpoint.json`
+- `hairglasses-studio/docs/projects/agent-parity/active-fleet-investigation-2026-04-09.md`
+- `hairglasses-studio/docs/agent-parity/workspace-health-matrix.json`
 
 ## Current Stance
 
@@ -34,21 +35,7 @@ That means the next autobuild work should not reopen another broad sweep. The ne
 
 ## Ranked Patch Queue
 
-### 1. `layout_harness_drift_gate`
-
-Priority: `P1`
-
-Why now:
-
-- The roadmap already calls out teatest and layout-harness drift as an integrity class, not background cleanup.
-- UI regressions are expensive when they only show up after a larger tranche lands.
-
-Acceptance:
-
-- Nested layout width regressions become deterministic test failures.
-- The gate protects the known TUI harness path instead of relying on ad hoc visual cleanup.
-
-### 2. `shared_path_bypass_audit`
+### 1. `shared_path_bypass_audit`
 
 Priority: `P1`
 
@@ -62,7 +49,7 @@ Acceptance:
 - Active config, state, cache, session, and coordination paths resolve through shared helpers or are explicitly justified.
 - The queue stops after the remaining repo-owned bypass set is exhausted.
 
-### 3. `adoption_led_tranche_selector`
+### 2. `adoption_led_tranche_selector`
 
 Priority: `P1`
 
@@ -76,21 +63,24 @@ Acceptance:
 - One machine-readable summary ranks the next repo-owned patch candidates.
 - The summary includes source signal, recommended entry surface, and confidence.
 
-### 4. `remote_main_red_signal_filter`
+### 3. `remote_main_red_signal_filter`
 
 Priority: `P1`
 
 Why now:
 
 - The broader parity program is already seeing stale local red state masquerade as repo debt.
+- The refreshed workspace matrix now distinguishes real failures from `dirty`
+  and `not_main` worktrees, so autobuild should consume that signal directly.
 - `ralphglasses` should not burn autobuild cycles on failures that do not reproduce on remote `main`.
 
 Acceptance:
 
-- Automated patch selection requires remote-main verification metadata for a red signal.
+- Automated patch selection requires remote-main verification metadata for a
+  red signal.
 - Dirty-worktree or branch-local failures do not enter the repo-owned patch queue by default.
 
-### 5. `generated_surface_drift_gate`
+### 4. `generated_surface_drift_gate`
 
 Priority: `P2`
 
@@ -104,7 +94,7 @@ Acceptance:
 - Generated runtime, parity, or docs surfaces fail verification when the source contract changes without regeneration.
 - Drift is recorded as a source-backed integrity failure, not as generic docs cleanup.
 
-### 6. `telemetry_to_patch_feedback`
+### 5. `telemetry_to_patch_feedback`
 
 Priority: `P2`
 
@@ -139,9 +129,9 @@ Every queued patch should carry the same minimum metadata:
 
 ## First Recommended Execution Order
 
-1. `layout_harness_drift_gate`
-2. `shared_path_bypass_audit`
-3. `adoption_led_tranche_selector`
-4. `remote_main_red_signal_filter`
+1. `shared_path_bypass_audit`
+2. `adoption_led_tranche_selector`
+3. `remote_main_red_signal_filter`
+4. `generated_surface_drift_gate`
 
 That order starts with small integrity gates, then narrows remaining path debt, then lets telemetry choose the next larger tranche.

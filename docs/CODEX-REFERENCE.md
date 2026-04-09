@@ -11,6 +11,11 @@ Cross-provider capability and workflow parity is tracked in `docs/PROVIDER-PARIT
 - Verified locally: `codex exec resume --help` is available on this install
 - Repo behavior: `ralphglasses_session_resume` now allows Codex resume when the installed CLI supports it
 
+## Shared fleet control-plane references
+
+- `~/hairglasses-studio/docs/projects/agent-parity/active-fleet-investigation-2026-04-09.md`
+- `~/hairglasses-studio/docs/agent-parity/workspace-health-matrix.json`
+
 ## Runtime defaults
 
 - Sandbox reset helper: run `bash ./scripts/dev/set-codex-danger-full-access.sh` or `make codex-danger-full-access` to align root, operator, and repo-local Codex configs with the harness requirement.

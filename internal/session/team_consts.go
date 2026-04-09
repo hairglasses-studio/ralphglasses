@@ -45,3 +45,12 @@ const (
 	TeamMergeStatusConflict    = "conflict"
 	TeamMergeStatusUnavailable = "unavailable"
 )
+
+// Team promotion statuses.
+const (
+	TeamPromotionStatusPending     = "pending"
+	TeamPromotionStatusReconciling = "reconciling"
+	TeamPromotionStatusVerifying   = "verifying"
+	TeamPromotionStatusPromoted    = "promoted"
+	TeamPromotionStatusFailed      = "failed"
+)
