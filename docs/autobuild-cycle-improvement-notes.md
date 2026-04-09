@@ -130,6 +130,21 @@ Rule:
 
 When guarding against tracked temp artifacts, start with tracked-path and filename rules plus an explicit allowlist before adding any content-level heuristic.
 
+### 2026-04-08: Generated-surface drift should be repaired before the queue advances
+
+Signal:
+- full `scripts/dev/ci.sh` on current `main` reproduced provider-role projection drift immediately after the artifact gate tranche landed
+
+What mattered:
+
+- the drift was already source-backed because the existing gate reproduced it on current `main`
+- the fix was a pure regeneration wave with no source-manifest edits
+- leaving the drift in place would keep the publish lane red and invalidate later tranche evidence
+
+Rule:
+
+If a generated-surface drift gate reproduces on current `main`, land the generated sync as its own narrow tranche before returning to the broader ranked queue.
+
 ## Autobuild Patch Note Template
 
 Use this shape when closing or reprioritizing a tranche:
@@ -232,6 +247,38 @@ What this should prevent next time:
 - stray tracked temp outputs reaching `main`
 - placeholder output files shipping as real repo artifacts
 - long CI runs masking an early source-tree integrity failure
+
+Next recommended patch:
+- `layout_harness_drift_gate`
+
+## 2026-04-08: provider_role_projection_sync
+
+Signal:
+- full `scripts/dev/ci.sh` reproduced `scripts/sync-provider-roles.py --check` drift on current `main`
+
+Scope:
+- generated provider-role projections only
+
+What changed:
+- regenerated the affected `.claude/agents/*.md` and `.gemini/agents/*.md` projections from their role manifests
+- verified the sync gate directly
+- reran the full commit gate after the regeneration
+
+Evidence:
+- `.claude/agents/codebase-mapper.md`
+- `.claude/agents/fleet-bootstrap.md`
+- `.claude/agents/knowledge-synthesizer.md`
+- `.claude/agents/multi-agent-coordinator.md`
+- `.claude/agents/task-distributor.md`
+- `.gemini/agents/codebase-mapper.md`
+- `.gemini/agents/fleet-bootstrap.md`
+- `.gemini/agents/knowledge-synthesizer.md`
+- `.gemini/agents/multi-agent-coordinator.md`
+- `.gemini/agents/task-distributor.md`
+
+What this should prevent next time:
+- current-main publish failures caused by stale generated provider surfaces
+- later tranches inheriting a red lane from already-detected generated drift
 
 Next recommended patch:
 - `layout_harness_drift_gate`

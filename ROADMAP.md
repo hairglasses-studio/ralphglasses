@@ -154,6 +154,11 @@ Immediate roadmap notes captured from the Jellyfin ecosystem rollout so the perp
   - Target: `scripts/dev/` + autobuild patch queue memory
   - Shipped via `scripts/dev/check-tracked-artifacts.sh`, `scripts/dev/test_tracked_artifacts.sh`, and commit-gate wiring in `scripts/dev/ci.sh` and `scripts/dev/pre-commit`
   - **Acceptance:** repo-owned verification names offending tracked artifact paths and fails deterministically before deeper CI stages continue
+
+- [x] **ATD-12** — Repair generated provider-role projection drift immediately once the gate reproduces it on current `main` so the publish lane returns to green before the queue advances `P0` `S`
+  - Target: `.claude/agents/` + `.gemini/agents/` + autobuild tranche sequencing
+  - Shipped by regenerating provider role projections from `.agents/roles/*.json` after `scripts/sync-provider-roles.py --check` failed on current `main`
+  - **Acceptance:** `python3 scripts/sync-provider-roles.py --check` and full `scripts/dev/ci.sh` pass on current `main` after the resync
 ---
 
 ## Phase 0: Foundation (COMPLETE)

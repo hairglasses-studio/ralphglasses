@@ -194,6 +194,64 @@
       "notes": [
         "The gate intentionally uses path and filename contracts instead of content greps to avoid false positives in docs, fixtures, and examples."
       ]
+    },
+    {
+      "date": "2026-04-08",
+      "patch_id": "provider_role_projection_sync",
+      "status": "completed",
+      "trigger_signal": {
+        "type": "integrity",
+        "source": "scripts/dev/ci.sh",
+        "summary": "Full CI on current main reproduced provider-role projection drift via scripts/sync-provider-roles.py --check after the artifact-gate tranche landed.",
+        "remote_main_verified": true
+      },
+      "repo_owned_scope": [
+        "generated provider-role projections",
+        "commit-gate green-lane recovery"
+      ],
+      "recommended_entry_surface": "scripts/sync-provider-roles.py",
+      "changes": [
+        "regenerated the stale .claude and .gemini provider role projections",
+        "revalidated scripts/sync-provider-roles.py --check on current main",
+        "reran the full scripts/dev/ci.sh commit gate after regeneration"
+      ],
+      "acceptance_condition": [
+        "python3 scripts/sync-provider-roles.py --check passes on current main",
+        "scripts/dev/ci.sh returns green after the provider projection resync"
+      ],
+      "stop_condition": [
+        "stop after the generated projections are resynced and the publish lane is green again",
+        "do not expand the tranche into unrelated role-manifest editing or broader queue work"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "ref": ".claude/agents/codebase-mapper.md",
+          "summary": "Representative regenerated Claude provider projection."
+        },
+        {
+          "kind": "file",
+          "ref": ".gemini/agents/codebase-mapper.md",
+          "summary": "Representative regenerated Gemini provider projection."
+        },
+        {
+          "kind": "test",
+          "ref": "scripts/dev/ci.sh",
+          "summary": "Full commit gate passed after the projection sync."
+        }
+      ],
+      "result": {
+        "closure_state": "completed",
+        "summary": "Ralphglasses returned to a green commit gate by resyncing provider role projections that had drifted on current main.",
+        "prevented_failure_class": [
+          "generated provider surface drift on main",
+          "red publish lane inherited by unrelated later tranches"
+        ]
+      },
+      "next_recommended_patch": "layout_harness_drift_gate",
+      "notes": [
+        "The fix deliberately stayed generated-only; no role manifest source changed in this tranche."
+      ]
     }
   ]
 }
