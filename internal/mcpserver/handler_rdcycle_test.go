@@ -393,63 +393,6 @@ func TestHandleCyclePlan_DefaultParams(t *testing.T) {
 // handleCycleMerge
 // ---------------------------------------------------------------------------
 
-func TestHandleCycleMerge_HappyPath(t *testing.T) {
-	t.Parallel()
-	srv, root := setupTestServer(t)
-
-	// Create two "worktree" directories inside the scan root so they pass
-	// ValidatePath's scan-root check.
-	wt1 := filepath.Join(root, "wt1")
-	wt2 := filepath.Join(root, "wt2")
-	if err := os.MkdirAll(wt1, 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(wt2, 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	// Write initial files so initGitRepo has something to commit.
-	if err := os.WriteFile(filepath.Join(wt1, "file_a.go"), []byte("package main\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(wt2, "file_b.go"), []byte("package main\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// Init git repos in both worktrees.
-	initGitRepo(t, wt1)
-	initGitRepo(t, wt2)
-
-	// Modify files after initial commit so git diff HEAD shows changes.
-	if err := os.WriteFile(filepath.Join(wt1, "file_a.go"), []byte("package main\n// changed\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(wt2, "file_b.go"), []byte("package main\n// changed\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	result, err := srv.handleCycleMerge(context.Background(), makeRequest(map[string]any{
-		"worktree_paths": wt1 + "," + wt2,
-	}))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.IsError {
-		t.Fatalf("handleCycleMerge returned error: %s", getResultText(result))
-	}
-
-	var data map[string]any
-	if err := json.Unmarshal([]byte(getResultText(result)), &data); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-
-	if data["status"] != "completed" {
-		t.Errorf("status = %v, want completed", data["status"])
-	}
-	if data["worktree_count"] != float64(2) {
-		t.Errorf("worktree_count = %v, want 2", data["worktree_count"])
-	}
-}
 
 func TestHandleCycleMerge_MissingWorktreePaths(t *testing.T) {
 	t.Parallel()

@@ -86,7 +86,7 @@ func plannerJSON(title, prompt string) string {
 		Title  string `json:"title"`
 		Prompt string `json:"prompt"`
 	}{Title: title, Prompt: prompt}
-	data, _ := json.Marshal(task)
+	data, _ := json.Marshal([]any{task})
 	return string(data)
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -63,8 +64,8 @@ func (h *Harness) RunScenario(ctx context.Context, s Scenario) (string, error) {
 				LastActivity: now,
 			}
 
-			if !plannerDone {
-				// This is the planner session — set output to PlannerResponse
+			// Planner sessions always contain 'loop-plan-' in the session name
+			if strings.Contains(opts.SessionName, "loop-plan-") {
 				sess.LastOutput = s.PlannerResponse
 			} else if s.MockFailure != "" {
 				// Simulate infrastructure failure (budget, timeout, CB, etc.)

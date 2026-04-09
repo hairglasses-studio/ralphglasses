@@ -201,6 +201,7 @@ func TestTaskTypeConstants(t *testing.T) {
 		{TaskTest, "test"},
 		{TaskDocs, "docs"},
 		{TaskResearch, "research"},
+		{TaskPublish, "publish"},
 	}
 	for _, tc := range types {
 		if string(tc.tt) != tc.want {

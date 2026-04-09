@@ -395,7 +395,7 @@ var highDifficultyKeywords = []string{
 
 // medDifficultyKeywords indicate medium tasks (score contribution: +0.15).
 var medDifficultyKeywords = []string{
-	"implement", "integrate", "test", "fix", "update", "add", "build",
+	"implement", "integrate", "test", "fix", "update", "add", "build", "publish", "release",
 }
 
 // lowDifficultyKeywords indicate simple tasks (score contribution: +0.05).

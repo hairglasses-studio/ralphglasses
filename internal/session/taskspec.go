@@ -120,6 +120,7 @@ var typeDurationMultiplier = map[TaskType]float64{
 	TaskDocs:     0.5,
 	TaskResearch: 1.5,
 	TaskReview:   0.6,
+	TaskPublish:  0.8,
 }
 
 // EstimateDuration returns a rough time estimate for completing this task,

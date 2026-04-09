@@ -16,6 +16,7 @@ const (
 	TaskTest     TaskType = "test"
 	TaskDocs     TaskType = "docs"
 	TaskResearch TaskType = "research"
+	TaskPublish  TaskType = "publish"
 )
 
 // validTaskTypes is the set of recognized task types for validation.
@@ -26,6 +27,7 @@ var validTaskTypes = map[TaskType]bool{
 	TaskTest:     true,
 	TaskDocs:     true,
 	TaskResearch: true,
+	TaskPublish:  true,
 }
 
 // Priority indicates urgency. P0 is highest, P3 is lowest.

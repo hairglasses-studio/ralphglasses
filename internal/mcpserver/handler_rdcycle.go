@@ -346,7 +346,7 @@ func (s *Server) handleCyclePlan(_ context.Context, req mcp.CallToolRequest) (*m
 	return jsonResult(result), nil
 }
 
-func (s *Server) handleCycleMerge(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *Server) handleCycleMerge(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	worktreePaths := getStringArg(req, "worktree_paths")
 	if worktreePaths == "" {
 		return codedError(ErrInvalidParams, "worktree_paths required"), nil
@@ -366,108 +366,68 @@ func (s *Server) handleCycleMerge(_ context.Context, req mcp.CallToolRequest) (*
 		}
 	}
 
-	// Track which files are changed in which worktrees.
-	type fileChange struct {
-		worktree string
-		relPath  string
-	}
-	fileWorktrees := make(map[string][]string) // relPath -> list of worktree paths
-	worktreeFiles := make(map[string][]string) // worktree -> list of changed files
+	var branches []string
+	var repoPath string
 
-	for _, wt := range paths {
-		if _, err := os.Stat(wt); err != nil {
-			return codedError(ErrFilesystem, fmt.Sprintf("worktree path does not exist: %s", wt)), nil
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		cmd := exec.CommandContext(ctx, "git", "-C", wt, "diff", "HEAD", "--name-only")
-		out, err := cmd.Output()
-		cancel()
+	for i, wt := range paths {
+		// Get branch name for worktree
+		cmd := exec.CommandContext(ctx, "git", "-C", wt, "rev-parse", "--abbrev-ref", "HEAD")
+		out, err := cmd.CombinedOutput()
 		if err != nil {
-			return codedError(ErrInternal, fmt.Sprintf("git diff failed in %s: %v", wt, err)), nil
+			return codedError(ErrInvalidParams, fmt.Sprintf("invalid worktree %q: %s", wt, string(out))), nil
 		}
+		branch := strings.TrimSpace(string(out))
+		branches = append(branches, branch)
 
-		changed := splitLines(string(out))
-		worktreeFiles[wt] = changed
-		for _, f := range changed {
-			fileWorktrees[f] = append(fileWorktrees[f], wt)
+		// Get the root repo path
+		cmdRoot := exec.CommandContext(ctx, "git", "-C", wt, "rev-parse", "--path-format=absolute", "--git-common-dir")
+		rootOut, err := cmdRoot.CombinedOutput()
+		if err == nil && i == 0 {
+			commonDir := strings.TrimSpace(string(rootOut))
+			repoPath = strings.TrimSuffix(commonDir, "/.git")
 		}
 	}
 
-	// Separate conflicts from non-conflicts.
-	var merged []string
-	var conflicts []map[string]any
-	var skipped []string
-
-	for relPath, wts := range fileWorktrees {
-		if len(wts) > 1 {
-			conflicts = append(conflicts, map[string]any{
-				"file":       relPath,
-				"worktrees":  wts,
-				"resolution": "manual_required",
-			})
-			continue
-		}
-
-		// Non-conflicting: copy from worktree to main repo.
-		srcWorktree := wts[0]
-		srcPath := filepath.Join(srcWorktree, relPath)
-
-		// Determine the main repo path. Walk up from worktree to find .git reference.
-		// Use the parent of .ralph/worktrees as main repo, or just use the file
-		// relative to CWD. We copy to the first path that's a parent with .git.
-		mainRepo := findMainRepo(srcWorktree)
-		if mainRepo == "" {
-			skipped = append(skipped, relPath)
-			continue
-		}
-
-		dstPath := filepath.Join(mainRepo, relPath)
-
-		// Ensure destination directory exists.
-		if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
-			skipped = append(skipped, relPath)
-			continue
-		}
-
-		srcData, err := os.ReadFile(srcPath)
-		if err != nil {
-			skipped = append(skipped, relPath)
-			continue
-		}
-
-		// Preserve file permissions.
-		perm := os.FileMode(0o644)
-		if info, err := os.Stat(srcPath); err == nil {
-			perm = info.Mode().Perm()
-		}
-
-		if err := os.WriteFile(dstPath, srcData, perm); err != nil {
-			skipped = append(skipped, relPath)
-			continue
-		}
-
-		merged = append(merged, relPath)
+	if repoPath == "" {
+		return codedError(ErrInternal, "could not determine common repo path for worktrees"), nil
 	}
 
-	conflictList := make([]any, len(conflicts))
-	for i, c := range conflicts {
-		conflictList[i] = c
+	res, err := session.MergeParallelBranches(ctx, repoPath, "main", branches, conflictStrategy)
+	if err != nil {
+		return codedError(ErrInternal, fmt.Sprintf("merge parallel branches failed: %v", err)), nil
 	}
+
+	// Format output
+	var summary []string
+	summary = append(summary, fmt.Sprintf("Target branch: %s", res.TargetBranch))
+	successCount := 0
+	var conflictList []any
+	for _, r := range res.Results {
+		if r.Success {
+			summary = append(summary, fmt.Sprintf("- ✅ %s: merged successfully", r.Branch))
+			successCount++
+		} else {
+			if len(r.Conflicts) > 0 {
+				summary = append(summary, fmt.Sprintf("- ❌ %s: conflict detected, merge aborted. Files: %s", r.Branch, strings.Join(r.Conflicts, ", ")))
+				for _, cf := range r.Conflicts {
+					conflictList = append(conflictList, map[string]any{"file": cf, "worktree": r.Branch})
+				}
+			} else {
+				summary = append(summary, fmt.Sprintf("- ❌ %s: failed: %s", r.Branch, r.Error))
+			}
+		}
+	}
+	summary = append(summary, fmt.Sprintf("Merged %d/%d branches.", successCount, len(branches)))
 
 	result := map[string]any{
 		"merge_status":      "completed",
 		"worktree_count":    len(paths),
-		"worktree_paths":    paths,
-		"conflict_strategy": conflictStrategy,
-		"merged_files":      merged,
+		"merged_files":      successCount,
+		"skipped_files":     0,
 		"conflicts":         conflictList,
-		"skipped":           skipped,
-		"merged_count":      len(merged),
-		"conflict_count":    len(conflicts),
-		"skipped_count":     len(skipped),
-		"status":            "completed",
+		"summary":           strings.Join(summary, "\n"),
 	}
+
 	return jsonResult(result), nil
 }
 
