@@ -159,6 +159,10 @@ Immediate roadmap notes captured from the Jellyfin ecosystem rollout so the perp
   - Target: `.claude/agents/` + `.gemini/agents/` + autobuild tranche sequencing
   - Shipped by regenerating provider role projections from `.agents/roles/*.json` after `scripts/sync-provider-roles.py --check` failed on current `main`
   - **Acceptance:** `python3 scripts/sync-provider-roles.py --check` and full `scripts/dev/ci.sh` pass on current `main` after the resync
+
+- [ ] **ATD-13** — Add overlay-risk detection for automations that can hide local state, such as remote mounts or generated mirror directories `P1` `M`
+  - Target: `internal/roadmap/` safety heuristics + operator prompt generation
+  - **Acceptance:** plans default to explicit opt-in flags or guard rails whenever an automation would shadow non-empty local paths
 ---
 
 ## Phase 0: Foundation (COMPLETE)
