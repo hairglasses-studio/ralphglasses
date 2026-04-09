@@ -12,7 +12,7 @@ require (
 	github.com/charmbracelet/x/exp/golden v0.0.0-20260329003944-7eda8903d971
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/google/uuid v1.6.0
-	github.com/hairglasses-studio/mcpkit v0.5.1
+	github.com/hairglasses-studio/mcpkit v0.4.2-0.20260408223251-00a639bb6b25
 	github.com/mark3labs/mcp-go v0.47.0
 	github.com/nats-io/nats.go v1.50.0
 	github.com/prometheus/client_golang v1.23.2

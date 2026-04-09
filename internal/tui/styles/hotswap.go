@@ -9,6 +9,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+const oneShotThemeReloadDebounce = 100 * time.Millisecond
+
 // ThemeChangedMsg is sent to the BubbleTea program when the watched theme file
 // changes on disk and the new theme has been applied to package-level styles.
 type ThemeChangedMsg struct {
@@ -181,6 +183,26 @@ func WatchThemeFile(path string) tea.Cmd {
 			return ThemeWatcherErrorMsg{Err: fmt.Errorf("watch %s: %w", path, err)}
 		}
 
+		var timer *time.Timer
+		var timerC <-chan time.Time
+
+		stopTimer := func() {
+			if timer == nil {
+				return
+			}
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+		}
+
+		defer func() {
+			stopTimer()
+			_ = watcher.Close()
+		}()
+
 		for {
 			select {
 			case event, ok := <-watcher.Events:
@@ -188,17 +210,21 @@ func WatchThemeFile(path string) tea.Cmd {
 					return ThemeWatcherErrorMsg{Err: fmt.Errorf("watcher events channel closed")}
 				}
 				if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) {
-					_ = watcher.Close()
-					theme, err := LoadTheme(path)
-					if err != nil {
-						return ThemeWatcherErrorMsg{Err: fmt.Errorf("load theme: %w", err)}
-					}
-					ApplyTheme(theme)
-					return ThemeChangedMsg{Theme: theme, Path: path}
+					stopTimer()
+					timer = time.NewTimer(oneShotThemeReloadDebounce)
+					timerC = timer.C
 				}
 
+			case <-timerC:
+				timerC = nil
+				theme, err := LoadTheme(path)
+				if err != nil {
+					return ThemeWatcherErrorMsg{Err: fmt.Errorf("load theme: %w", err)}
+				}
+				ApplyTheme(theme)
+				return ThemeChangedMsg{Theme: theme, Path: path}
+
 			case watchErr, ok := <-watcher.Errors:
-				_ = watcher.Close()
 				if !ok {
 					return ThemeWatcherErrorMsg{Err: fmt.Errorf("watcher errors channel closed")}
 				}

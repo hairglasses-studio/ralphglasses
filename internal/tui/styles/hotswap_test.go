@@ -32,6 +32,17 @@ dark_bg: "#222222"
 bright_fg: "#333333"
 `
 
+const intermediateThemeYAML = `name: hotswap-intermediate
+primary: "#010203"
+accent: "#040506"
+green: "#070809"
+yellow: "#0a0b0c"
+red: "#0d0e0f"
+gray: "#101112"
+dark_bg: "#131415"
+bright_fg: "#161718"
+`
+
 func writeThemeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
@@ -304,9 +315,11 @@ func TestWatchThemeFile_MultipleWrites_LastWins(t *testing.T) {
 
 	cmd := WatchThemeFile(path)
 
-	// First write triggers the one-shot watcher.
+	// The one-shot watcher should debounce rapid writes and load the final file.
 	go func() {
 		time.Sleep(150 * time.Millisecond)
+		writeThemeFile(t, path, intermediateThemeYAML)
+		time.Sleep(25 * time.Millisecond)
 		writeThemeFile(t, path, updatedThemeYAML)
 	}()
 
