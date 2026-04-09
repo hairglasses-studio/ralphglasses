@@ -99,6 +99,7 @@ ralphglasses-godview
 # Ralph runtime state (not source)
 .ralph/worktrees/
 .ralph/cycles/
+.ralph/loops/
 .ralph/logs/
 .ralph/*.json
 .ralph/improvement_journal.jsonl

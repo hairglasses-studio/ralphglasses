@@ -77,97 +77,57 @@ func launchAntigravityHandoff(ctx context.Context, opts LaunchOptions, bus ...*e
 		return nil, fmt.Errorf("start %s: %w", opts.Provider, err)
 	}
 
+	finishedAt := time.Now()
+
 	s.mu.Lock()
 	s.Pid = cmd.Process.Pid
-	s.ChildPids = collectSessionChildPIDs(cmd.Process.Pid)
-	s.Status = StatusRunning
+	s.ChildPids = nil
+	s.Status = StatusCompleted
 	s.ExitReason = antigravityExitReason
+	s.EndedAt = &finishedAt
+	s.LastActivity = finishedAt
+	s.LastOutput = "Antigravity interactive handoff opened"
+	s.OutputHistory = []string{s.LastOutput}
+	s.TotalOutputCount = 1
 	s.mu.Unlock()
+
+	// Antigravity is an external interactive handoff. Once the launcher starts
+	// successfully, Ralph should record completion immediately rather than
+	// pretending it can manage an ongoing streamed session lifecycle.
+	if cmd.Process != nil {
+		_ = cmd.Process.Release()
+	}
 
 	select {
 	case s.OutputCh <- s.LastOutput:
 	default:
 	}
+	close(s.OutputCh)
+	close(s.doneCh)
 
 	_ = WriteActiveState(s)
-	_ = persistAntigravityLoopRecord(s, opts, nil)
+	_ = persistAntigravityLoopRecord(s, opts, &finishedAt)
+	cancel()
 
-	go func() {
-		defer cancel()
-		defer close(s.OutputCh)
-		defer close(s.doneCh)
+	if sessionBus != nil {
+		sessionBus.Publish(events.Event{
+			Type:      events.SessionEnded,
+			SessionID: s.ID,
+			RepoPath:  s.RepoPath,
+			RepoName:  s.RepoName,
+			Provider:  string(s.Provider),
+			Data: map[string]any{
+				"status":      s.Status,
+				"exit_reason": s.ExitReason,
+			},
+		})
+	}
 
-		waitErr := cmd.Wait()
-		finishedAt := time.Now()
-
-		s.mu.Lock()
-		s.LastActivity = finishedAt
-		s.EndedAt = &finishedAt
-		if waitErr != nil {
-			s.Status = StatusErrored
-			s.Error = waitErr.Error()
-			s.ExitReason = "external_interactive_handoff_failed"
-			s.LastOutput = "Antigravity interactive handoff failed"
-			s.OutputHistory = append(s.OutputHistory, s.LastOutput)
-			s.TotalOutputCount++
-		} else {
-			s.Status = StatusCompleted
-			s.LastOutput = "Antigravity interactive handoff opened"
-			s.OutputHistory = append(s.OutputHistory, s.LastOutput)
-			s.TotalOutputCount++
-		}
-		s.ChildPids = nil
-		onComplete := s.onComplete
-		status := s.Status
-		exitReason := s.ExitReason
-		s.mu.Unlock()
-
-		if status == StatusCompleted {
-			_ = persistAntigravityLoopRecord(s, opts, &finishedAt)
-		}
-		_ = WriteActiveState(s)
-
-		if sessionBus != nil {
-			eventType := events.SessionEnded
-			if status == StatusErrored {
-				eventType = events.SessionError
-			}
-			sessionBus.Publish(events.Event{
-				Type:      eventType,
-				SessionID: s.ID,
-				RepoPath:  s.RepoPath,
-				RepoName:  s.RepoName,
-				Provider:  string(s.Provider),
-				Data: map[string]any{
-					"status":      status,
-					"exit_reason": exitReason,
-				},
-			})
-		}
-
-		if onComplete == nil {
-			onComplete = waitForSessionCompletionCallback(s)
-		}
-		if onComplete != nil {
-			onComplete(s)
-		}
-	}()
+	if onComplete := s.onComplete; onComplete != nil {
+		onComplete(s)
+	}
 
 	return s, nil
-}
-
-func waitForSessionCompletionCallback(s *Session) func(*Session) {
-	deadline := time.Now().Add(500 * time.Millisecond)
-	for time.Now().Before(deadline) {
-		s.mu.Lock()
-		cb := s.onComplete
-		s.mu.Unlock()
-		if cb != nil {
-			return cb
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	return nil
 }
 
 func persistAntigravityLoopRecord(s *Session, opts LaunchOptions, completedAt *time.Time) error {
