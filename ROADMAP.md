@@ -2942,3 +2942,24 @@ This tranche applies the highest-value whiteclaw findings that fit this repo's r
 - Live repo notes: AGENTS, skills, Codex config, configured .mcp.json, .ralph, multi-module/workspace, nested roadmaps
 
 <!-- whiteclaw-rollout:end -->
+
+### Session Receipt: 2026-04-08 (Surfacekit Tranches 1 & 2)
+**Tranches Completed:**
+1. Restore UseWhen search coverage in surfacekit_tool_discover
+2. Add fleet surface explorer output resource (surfacekit://fleet/surface-explorer)
+
+**Repos Touched:**
+- `surfacekit` (cmd/surfacekit-mcp/main.go, cmd/surfacekit-mcp/main_test.go)
+- `ralphglasses` (ROADMAP.md notes)
+
+**Validation Run:**
+- `GOWORK=off go test ./...` passed successfully in `surfacekit`
+
+**Push Outcome:**
+- Completed natively in local workspace after mitigating earlier bwrap mount failure.
+
+**Workflow Lessons & Autonomous Development Loop Improvements:**
+- **Broken workspace detection:** Must preflight shell launch capability and not just rely on authorization state.
+- **Fallback strategy:** Direct file reads and surgical tool edits can work in environments where mutating shell commands fail.
+- **Reference synchronization:** Local ref receipts can move past earlier GitHub-only observations and must be refreshed before work starts.
+- **Publish readiness:** Must distinguish current checkout branch from target main, especially when a repo is on a side branch.
