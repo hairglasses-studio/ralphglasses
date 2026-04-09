@@ -217,20 +217,81 @@ func EventBusMiddleware(bus *events.Bus) server.ToolHandlerMiddleware {
 			latency := time.Since(start)
 
 			if bus != nil {
-				success := err == nil && result != nil && !result.IsError
+				args := req.GetArguments()
+				toolResultIsError := err != nil || (result != nil && result.IsError)
+				repoName, repoPath := toolEventRepoScope(args)
+				eventData := map[string]any{
+					"tool":                 req.Params.Name,
+					"success":              !toolResultIsError,
+					"latency_ms":           latency.Milliseconds(),
+					"tool_input_json":      marshalToolArguments(args),
+					"tool_result_is_error": toolResultIsError,
+				}
+				if len(args) > 0 {
+					eventData["tool_input"] = args
+				}
+				if output := toolResultText(result); output != "" {
+					eventData["tool_output"] = output
+				}
+				if err != nil {
+					eventData["tool_error"] = err.Error()
+				}
 				bus.PublishCtx(ctx, events.Event{
-					Type: events.ToolCalled,
-					Data: map[string]any{
-						"tool":       req.Params.Name,
-						"success":    success,
-						"latency_ms": latency.Milliseconds(),
-					},
+					Type:     events.ToolCalled,
+					RepoName: repoName,
+					RepoPath: repoPath,
+					Data:     eventData,
 				})
 			}
 
 			return result, err
 		}
 	}
+}
+
+func marshalToolArguments(args map[string]any) string {
+	if len(args) == 0 {
+		return "{}"
+	}
+	data, err := json.Marshal(args)
+	if err != nil {
+		return "{}"
+	}
+	return string(data)
+}
+
+func toolEventRepoScope(args map[string]any) (string, string) {
+	if len(args) == 0 {
+		return "", ""
+	}
+	repoRaw, ok := args["repo"]
+	if ok == false {
+		return "", ""
+	}
+	repo, ok := repoRaw.(string)
+	if ok == false || repo == "" {
+		return "", ""
+	}
+	if filepath.IsAbs(repo) {
+		return "", repo
+	}
+	return repo, ""
+}
+
+func toolResultText(result *mcp.CallToolResult) string {
+	if result == nil {
+		return ""
+	}
+	parts := make([]string, 0, len(result.Content))
+	for _, content := range result.Content {
+		if text, ok := content.(mcp.TextContent); ok {
+			trimmed := strings.TrimSpace(text.Text)
+			if trimmed != "" {
+				parts = append(parts, trimmed)
+			}
+		}
+	}
+	return strings.Join(parts, "\n")
 }
 
 // ValidationMiddleware validates common parameters (repo, path) before the

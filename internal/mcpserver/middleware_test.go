@@ -296,3 +296,44 @@ func TestTraceMiddleware_PreservesExisting(t *testing.T) {
 		t.Fatalf("expected _trace_id=%q in response, got %v", existingID, respMap["_trace_id"])
 	}
 }
+
+func TestEventBusMiddleware_IncludesToolPayload(t *testing.T) {
+	t.Parallel()
+	bus := events.NewBus(100)
+	ch := bus.Subscribe("test-payload")
+
+	mw := EventBusMiddleware(bus)
+	wrapped := mw(okHandler)
+
+	repoPath := t.TempDir()
+	req := makeReq("my_tool", map[string]any{"repo": repoPath, "message": "hello"})
+	_, _ = wrapped(context.Background(), req)
+
+	select {
+	case evt := <-ch:
+		if evt.RepoPath != repoPath {
+			t.Fatalf("event repo path = %q, want %q", evt.RepoPath, repoPath)
+		}
+		raw, ok := evt.Data["tool_input_json"].(string)
+		if ok == false {
+			t.Fatalf("tool_input_json missing from event data: %+v", evt.Data)
+		}
+		var payload map[string]any
+		if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+			t.Fatalf("unmarshal tool_input_json: %v", err)
+		}
+		if payload["message"] != "hello" {
+			t.Fatalf("tool_input_json payload = %+v", payload)
+		}
+		if evt.Data["tool_output"] != "ok" {
+			t.Fatalf("tool_output = %v, want ok", evt.Data["tool_output"])
+		}
+		if evt.Data["tool_result_is_error"] != false {
+			t.Fatalf("tool_result_is_error = %v, want false", evt.Data["tool_result_is_error"])
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for tool.called payload event")
+	}
+
+	bus.Unsubscribe("test-payload")
+}

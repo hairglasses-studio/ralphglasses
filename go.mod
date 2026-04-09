@@ -122,6 +122,6 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 )
 
-replace github.com/hairglasses-studio/docs => ../docs
+replace github.com/hairglasses-studio/docs => /tmp/docs-control-plane-refresh
 
-replace github.com/hairglasses-studio/mcpkit => ../mcpkit
+replace github.com/hairglasses-studio/mcpkit => /tmp/mcpkit-whiteclaw-reuse
