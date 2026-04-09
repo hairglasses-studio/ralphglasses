@@ -209,7 +209,7 @@ func TestLoopVelocity(t *testing.T) {
 	now := time.Now()
 	observations := []LoopObservation{
 		{Timestamp: now.Add(-30 * time.Minute), VerifyPassed: true, FilesChanged: 3},
-		{Timestamp: now.Add(-45 * time.Minute), VerifyPassed: true, FilesChanged: 0}, // no files = not useful
+		{Timestamp: now.Add(-45 * time.Minute), VerifyPassed: true, FilesChanged: 0},  // no files = not useful
 		{Timestamp: now.Add(-50 * time.Minute), VerifyPassed: false, FilesChanged: 2}, // failed = not useful
 		{Timestamp: now.Add(-55 * time.Minute), VerifyPassed: true, FilesChanged: 1},
 		{Timestamp: now.Add(-25 * time.Hour), VerifyPassed: true, FilesChanged: 5}, // outside window
@@ -885,6 +885,50 @@ func TestSummarizeObservations_SingleObs(t *testing.T) {
 	}
 }
 
+func TestObservationEligibleForRepoPatchQueue(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		obs  LoopObservation
+		want bool
+	}{
+		{
+			name: "noop stays eligible without evidence",
+			obs:  LoopObservation{Mode: "live", Status: "noop"},
+			want: true,
+		},
+		{
+			name: "failed red signal without evidence is rejected",
+			obs:  LoopObservation{Mode: "live", Status: "failed", SignalDirtyWorktree: true},
+			want: false,
+		},
+		{
+			name: "remote main evidence is accepted",
+			obs:  LoopObservation{Mode: "live", Status: "failed", RedSignalEvidence: "remote_main", RemoteMainVerified: true},
+			want: true,
+		},
+		{
+			name: "ci evidence is accepted",
+			obs:  LoopObservation{Mode: "live", Status: "regressed", RedSignalEvidence: "ci"},
+			want: true,
+		},
+		{
+			name: "source integrity evidence is accepted",
+			obs:  LoopObservation{Mode: "live", Status: "cycle_failed", RedSignalEvidence: "source_integrity"},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ObservationEligibleForRepoPatchQueue(tt.obs); got != tt.want {
+				t.Fatalf("ObservationEligibleForRepoPatchQueue(%+v) = %v, want %v", tt.obs, got, tt.want)
+			}
+		})
+	}
+}
+
 // TestEmitSessionObservation_Completed verifies that emitSessionObservation
 // writes a JSONL record for a completed standalone session (FINDING-237).
 func TestEmitSessionObservation_Completed(t *testing.T) {
@@ -957,6 +1001,27 @@ func TestEmitSessionObservation_Errored(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(repoPath, ".ralph", "logs"), 0755); err != nil {
 		t.Fatal(err)
 	}
+	gitRun := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", repoPath}, args...)...)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	gitRun("init")
+	gitRun("config", "user.email", "test@test.com")
+	gitRun("config", "user.name", "Test")
+	gitRun("config", "commit.gpgsign", "false")
+	if err := os.WriteFile(filepath.Join(repoPath, "tracked.txt"), []byte("base\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun("add", "tracked.txt")
+	gitRun("commit", "-m", "initial")
+	gitRun("checkout", "-b", "feature/red-signal")
+	if err := os.WriteFile(filepath.Join(repoPath, "tracked.txt"), []byte("base\nlocal drift\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	now := time.Now()
 	ended := now.Add(-1 * time.Second)
@@ -997,6 +1062,18 @@ func TestEmitSessionObservation_Errored(t *testing.T) {
 	}
 	if o.VerifyPassed {
 		t.Error("expected verify_passed=false for errored session")
+	}
+	if !o.SignalBranchLocal {
+		t.Error("expected signal_branch_local=true for feature branch session")
+	}
+	if !o.SignalDirtyWorktree {
+		t.Error("expected signal_dirty_worktree=true for dirty feature branch session")
+	}
+	if o.RedSignalEvidence != "local_only" {
+		t.Errorf("red_signal_evidence = %q, want %q", o.RedSignalEvidence, "local_only")
+	}
+	if len(o.SignalBranches) != 1 || o.SignalBranches[0] != "feature/red-signal" {
+		t.Errorf("signal_branches = %v, want [feature/red-signal]", o.SignalBranches)
 	}
 }
 

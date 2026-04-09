@@ -472,4 +472,22 @@ func TestManagerRunCycle_ContextCancelled(t *testing.T) {
 	if cycle.Phase != CycleFailed {
 		t.Errorf("expected failed, got %s", cycle.Phase)
 	}
+
+	obs, loadErr := LoadObservations(ObservationPath(repoPath), time.Time{})
+	if loadErr != nil {
+		t.Fatalf("LoadObservations: %v", loadErr)
+	}
+	if len(obs) == 0 {
+		t.Fatal("expected a cycle failure observation to be written")
+	}
+	last := obs[len(obs)-1]
+	if last.Status != "cycle_failed" {
+		t.Fatalf("last status = %q, want %q", last.Status, "cycle_failed")
+	}
+	if last.Mode != "live" {
+		t.Fatalf("last mode = %q, want %q", last.Mode, "live")
+	}
+	if last.RedSignalEvidence != "source_integrity" {
+		t.Fatalf("last red_signal_evidence = %q, want %q", last.RedSignalEvidence, "source_integrity")
+	}
 }

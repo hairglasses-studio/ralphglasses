@@ -8,9 +8,9 @@ import (
 
 func TestCycleObservationsToTasksMixed(t *testing.T) {
 	obs := []LoopObservation{
-		{Status: "failed", TaskTitle: "fix bug A", Error: "compile error", TotalCostUSD: 0.50},
+		{Status: "failed", TaskTitle: "fix bug A", Error: "compile error", TotalCostUSD: 0.50, RedSignalEvidence: "remote_main", RemoteMainVerified: true},
 		{Status: "noop", TaskTitle: "refactor module B", LoopID: "loop-1", IterationNumber: 3},
-		{Status: "regressed", TaskTitle: "test suite C", Error: "test timeout", TotalCostUSD: 1.0},
+		{Status: "regressed", TaskTitle: "test suite C", Error: "test timeout", TotalCostUSD: 1.0, RedSignalEvidence: "ci"},
 		{Status: "stalled", TaskTitle: "deploy D", LoopID: "loop-2"},
 		{Status: "done", TaskTitle: "completed task"}, // should be ignored
 	}
@@ -40,9 +40,9 @@ func TestCycleObservationsToTasksMixed(t *testing.T) {
 
 func TestCycleObservationsToTasksDeduplication(t *testing.T) {
 	obs := []LoopObservation{
-		{Status: "failed", TaskTitle: "fix bug in module X", Error: "err1", TotalCostUSD: 0.5},
-		{Status: "failed", TaskTitle: "fix bug in module X", Error: "err1", TotalCostUSD: 0.5}, // near-duplicate
-		{Status: "failed", TaskTitle: "completely different task", Error: "err2", TotalCostUSD: 0.3},
+		{Status: "failed", TaskTitle: "fix bug in module X", Error: "err1", TotalCostUSD: 0.5, RedSignalEvidence: "remote_main", RemoteMainVerified: true},
+		{Status: "failed", TaskTitle: "fix bug in module X", Error: "err1", TotalCostUSD: 0.5, RedSignalEvidence: "remote_main", RemoteMainVerified: true}, // near-duplicate
+		{Status: "failed", TaskTitle: "completely different task", Error: "err2", TotalCostUSD: 0.3, RedSignalEvidence: "ci"},
 	}
 
 	tasks := ObservationsToTasks(obs)
@@ -69,7 +69,7 @@ func TestCycleObservationsToTasks_IgnoresNonLoopModes(t *testing.T) {
 	obs := []LoopObservation{
 		{Mode: "standalone", Status: "failed", TaskTitle: "standalone failure", Error: "boom", TotalCostUSD: 0.5},
 		{Mode: "mock", Status: "failed", TaskTitle: "mock failure", Error: "boom", TotalCostUSD: 0.5},
-		{Mode: "live", Status: "failed", TaskTitle: "live failure", Error: "boom", TotalCostUSD: 0.5},
+		{Mode: "live", Status: "failed", TaskTitle: "live failure", Error: "boom", TotalCostUSD: 0.5, RedSignalEvidence: "remote_main", RemoteMainVerified: true},
 		{Mode: "", Status: "noop", TaskTitle: "legacy loop"},
 	}
 
@@ -82,6 +82,26 @@ func TestCycleObservationsToTasks_IgnoresNonLoopModes(t *testing.T) {
 	}
 	if tasks[1].Title != "Investigate no-op: legacy loop" {
 		t.Fatalf("second task title = %q, want %q", tasks[1].Title, "Investigate no-op: legacy loop")
+	}
+}
+
+func TestCycleObservationsToTasks_RejectsUnverifiedRedSignals(t *testing.T) {
+	obs := []LoopObservation{
+		{Mode: "live", Status: "failed", TaskTitle: "dirty failure", Error: "boom", SignalDirtyWorktree: true},
+		{Mode: "live", Status: "regressed", TaskTitle: "branch-local regression", Error: "boom", SignalBranchLocal: true, SignalBranches: []string{"feature/red"}},
+		{Mode: "live", Status: "failed", TaskTitle: "verified failure", Error: "boom", RedSignalEvidence: "remote_main", RemoteMainVerified: true},
+		{Mode: "live", Status: "noop", TaskTitle: "still actionable"},
+	}
+
+	tasks := ObservationsToTasks(obs)
+	if len(tasks) != 2 {
+		t.Fatalf("expected 2 actionable tasks, got %d", len(tasks))
+	}
+	if tasks[0].Title != "Fix failure: verified failure" {
+		t.Fatalf("first task title = %q, want %q", tasks[0].Title, "Fix failure: verified failure")
+	}
+	if tasks[1].Title != "Investigate no-op: still actionable" {
+		t.Fatalf("second task title = %q, want %q", tasks[1].Title, "Investigate no-op: still actionable")
 	}
 }
 

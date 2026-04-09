@@ -242,12 +242,16 @@ func (m *Manager) RunCycle(ctx context.Context, repoPath, name, objective string
 		// self-correct. Without this, failed cycles are invisible to the
 		// supervisor's signal evaluation.
 		obs := LoopObservation{
-			Timestamp: timeNow(),
-			LoopID:    "cycle:" + cycle.ID,
-			RepoName:  filepath.Base(repoPath),
-			Status:    "cycle_failed",
-			Error:     msg,
+			Timestamp:         timeNow(),
+			LoopID:            "cycle:" + cycle.ID,
+			RepoName:          filepath.Base(repoPath),
+			Status:            "cycle_failed",
+			Error:             msg,
+			Mode:              "live",
+			TaskTitle:         cycle.Name,
+			RedSignalEvidence: "source_integrity",
 		}
+		captureObservationRepoState(&obs, repoPath, nil)
 		if err := WriteObservation(ObservationPath(repoPath), obs); err != nil {
 			slog.Warn("RunCycle: failed to write failure observation", "error", err)
 		}

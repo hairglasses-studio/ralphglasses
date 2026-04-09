@@ -43,6 +43,7 @@ func emitLoopObservation(run *LoopRun, index int, m *Manager,
 		WorkerCount:      len(iter.WorkerSessionIDs),
 		Mode:             "live",
 	}
+	captureObservationRepoState(&obs, repoPath, iter.WorktreePaths)
 
 	// Timing — per-stage and total
 	if iter.PlannerEndedAt != nil {
@@ -290,6 +291,7 @@ func emitSessionObservation(sess *Session) {
 		Mode:            "standalone",
 		TaskTitle:       truncateStr(prompt, 200),
 	}
+	captureObservationRepoState(&obs, repoPath, nil)
 
 	// Derive confidence from status.
 	switch obsStatus {

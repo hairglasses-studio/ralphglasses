@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -145,6 +146,14 @@ type LoopObservation struct {
 	// Runtime diagnostics captured at observation time.
 	MemoryUsageMB  float64 `json:"memory_usage_mb,omitempty"`
 	GoroutineCount int     `json:"goroutine_count,omitempty"`
+
+	// Red-signal provenance keeps repo-owned patch selection from treating
+	// branch-local or dirty local state as source-backed repo debt.
+	SignalBranches      []string `json:"signal_branches,omitempty"`
+	SignalBranchLocal   bool     `json:"signal_branch_local,omitempty"`
+	SignalDirtyWorktree bool     `json:"signal_dirty_worktree,omitempty"`
+	RemoteMainVerified  bool     `json:"remote_main_verified,omitempty"`
+	RedSignalEvidence   string   `json:"red_signal_evidence,omitempty"`
 }
 
 // WriteObservation appends a single observation as a JSONL line.
@@ -206,7 +215,7 @@ func ObservationPath(repoPath string) string {
 func ObservationEligibleForCycle(obs LoopObservation) bool {
 	switch obs.Mode {
 	case "", "live":
-		return true
+		return ObservationEligibleForRepoPatchQueue(obs)
 	default:
 		return false
 	}
@@ -222,4 +231,123 @@ func ObservationEligibleForBaseline(obs LoopObservation) bool {
 	default:
 		return false
 	}
+}
+
+// ObservationEligibleForRepoPatchQueue returns whether an observation should be
+// allowed to create repo-owned repair work. Red signals must carry explicit
+// source-backed evidence instead of relying on local branch or worktree state.
+func ObservationEligibleForRepoPatchQueue(obs LoopObservation) bool {
+	if !ObservationRequiresRedSignalEvidence(obs.Status) {
+		return true
+	}
+	if obs.RemoteMainVerified {
+		return true
+	}
+	switch obs.RedSignalEvidence {
+	case "remote_main", "ci", "source_integrity":
+		return true
+	default:
+		return false
+	}
+}
+
+// ObservationRequiresRedSignalEvidence reports whether a status represents a
+// red signal that should not create repo-owned repair work without source-
+// backed verification metadata.
+func ObservationRequiresRedSignalEvidence(status string) bool {
+	switch status {
+	case "failed", "regressed", "cycle_failed":
+		return true
+	default:
+		return false
+	}
+}
+
+func captureObservationRepoState(obs *LoopObservation, repoPath string, worktreePaths []string) {
+	if obs == nil {
+		return
+	}
+
+	branches, dirty := detectObservationRepoState(repoPath, worktreePaths)
+	obs.SignalBranches = branches
+	obs.SignalDirtyWorktree = dirty
+	obs.SignalBranchLocal = observationBranchesIncludeLocal(branches)
+
+	if obs.RemoteMainVerified && obs.RedSignalEvidence == "" {
+		obs.RedSignalEvidence = "remote_main"
+	}
+	if obs.RedSignalEvidence == "remote_main" {
+		obs.RemoteMainVerified = true
+	}
+	if ObservationRequiresRedSignalEvidence(obs.Status) && obs.RedSignalEvidence == "" {
+		obs.RedSignalEvidence = "local_only"
+	}
+}
+
+func detectObservationRepoState(repoPath string, worktreePaths []string) ([]string, bool) {
+	paths := observationSignalPaths(repoPath, worktreePaths)
+	if len(paths) == 0 {
+		return nil, false
+	}
+
+	var branches []string
+	seenBranches := make(map[string]struct{}, len(paths))
+	dirty := false
+	for _, path := range paths {
+		branch := observationGitBranch(path)
+		if branch != "" {
+			if _, seen := seenBranches[branch]; !seen {
+				seenBranches[branch] = struct{}{}
+				branches = append(branches, branch)
+			}
+		}
+		if worktreeIsDirty(path) {
+			dirty = true
+		}
+	}
+	sort.Strings(branches)
+	return branches, dirty
+}
+
+func observationSignalPaths(repoPath string, worktreePaths []string) []string {
+	seen := make(map[string]struct{}, len(worktreePaths)+1)
+	paths := make([]string, 0, len(worktreePaths)+1)
+	addPath := func(path string) {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			return
+		}
+		if _, ok := seen[path]; ok {
+			return
+		}
+		seen[path] = struct{}{}
+		paths = append(paths, path)
+	}
+
+	addPath(repoPath)
+	for _, path := range worktreePaths {
+		addPath(path)
+	}
+	return paths
+}
+
+func observationGitBranch(path string) string {
+	cmd := exec.Command("git", "-C", path, "rev-parse", "--abbrev-ref", "HEAD")
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+func observationBranchesIncludeLocal(branches []string) bool {
+	for _, branch := range branches {
+		switch branch {
+		case "", "main", "master":
+			continue
+		default:
+			return true
+		}
+	}
+	return false
 }
