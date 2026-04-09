@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
@@ -114,7 +115,13 @@ func RenderRepoDetail(r *model.Repo, width int, health *RepoDetailHealth) string
 	b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Configuration", styles.IconConfig)))
 	b.WriteString("\n")
 	if r.Config != nil {
-		for k, v := range r.Config.Values {
+		keys := make([]string, 0, len(r.Config.Values))
+		for k := range r.Config.Values {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := r.Config.Values[k]
 			b.WriteString(fmt.Sprintf("  %-28s %s\n", k, v))
 		}
 	} else if r.HasRC {

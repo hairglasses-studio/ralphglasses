@@ -65,7 +65,6 @@ Checkpoints are saved at the specified interval for resumability.`,
 
 		bus := events.NewBus(1000)
 		mgr := initManagerWithStore(bus)
-		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
 		mgr.SetAutonomyLevel(session.LevelAutoOptimize, repoPath)
 
 		// Pre-flight validation.

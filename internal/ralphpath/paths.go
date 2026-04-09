@@ -47,6 +47,32 @@ func SessionsDir() string {
 	return filepath.Join(StateDir(), "sessions")
 }
 
+func ExternalSessionSearchDirs(scanRoot string) []string {
+	dirs := []string{SessionsDir(), LegacyScanRootSessionsDir(scanRoot)}
+	seen := make(map[string]struct{}, len(dirs))
+	out := make([]string, 0, len(dirs))
+	for _, dir := range dirs {
+		dir = strings.TrimSpace(dir)
+		if dir == "" {
+			continue
+		}
+		if _, ok := seen[dir]; ok {
+			continue
+		}
+		seen[dir] = struct{}{}
+		out = append(out, dir)
+	}
+	return out
+}
+
+func LegacyScanRootSessionsDir(scanRoot string) string {
+	scanRoot = strings.TrimSpace(scanRoot)
+	if scanRoot == "" {
+		return ""
+	}
+	return filepath.Join(scanRoot, ".session-state")
+}
+
 func SQLiteStorePath() string {
 	return filepath.Join(StateDir(), "state.db")
 }
@@ -61,6 +87,17 @@ func SQLiteStoreDefaultDescription() string {
 
 func PromptsDir() string {
 	return filepath.Join(StateDir(), "prompts")
+}
+
+func CostEventsPath() string {
+	if legacy := existingLegacyHomePath(".ralph", "cost_events.jsonl"); legacy != "" {
+		return legacy
+	}
+	return filepath.Join(StateDir(), "cost_events.jsonl")
+}
+
+func CommandHistoryPath() string {
+	return filepath.Join(XDGConfigDir(), "command_history.json")
 }
 
 func ThemesDir() string {
@@ -104,4 +141,16 @@ func homeDir() string {
 		return ""
 	}
 	return strings.TrimSpace(home)
+}
+
+func existingLegacyHomePath(parts ...string) string {
+	home := homeDir()
+	if home == "" {
+		return ""
+	}
+	legacyPath := filepath.Join(append([]string{home}, parts...)...)
+	if _, err := os.Stat(legacyPath); err == nil {
+		return legacyPath
+	}
+	return ""
 }

@@ -32,6 +32,19 @@ Keep `ROADMAP.md` strategic and long-horizon. Put cycle-level execution lessons 
 
 ## Lessons Learned
 
+### 2026-04-09: Probe harness capability before promising local execution
+
+Signal:
+- local shell access and `apply_patch` were silently blocked by the harness, failing only on execution
+
+What mattered:
+- assuming global intended config matched live capability caused wasted turns
+- a connector fallback path had to be synthesized mid-flight
+
+Rule:
+
+When planning a tranche, explicitly probe live harness capability (e.g., local shell cwd, git write access) before choosing local-vs-connector execution and before promising local `make ci`.
+
 ### 2026-04-08: Pair prose with machine-readable artifacts
 
 A roadmap note alone is not enough for autobuild selection.
@@ -145,20 +158,50 @@ Rule:
 
 If a generated-surface drift gate reproduces on current `main`, land the generated sync as its own narrow tranche before returning to the broader ranked queue.
 
-### 2026-04-08: Layout drift needs medium-width tests, not just full-width snapshots
+### 2026-04-08: Nested layout gates need width budgets and deterministic content order
 
 Signal:
-- the TUI had wide goldens and a “terminal too small” case, but the first medium-width overview test exposed a real overflow in multi-select row width accounting
+- the ranked queue selected `layout_harness_drift_gate` because nested viewport-backed views still lacked a dedicated top-level harness gate
 
 What mattered:
 
-- full-width goldens hid width-budget mistakes
-- “too small” tests stop before the real nested layout path executes
-- medium-width renders exercise the exact chrome and table composition path that users hit most often
+- overview and help snapshots did not exercise nested Repo Detail or Fleet layout paths
+- explicit width-budget assertions are easier to diagnose than broad visual diffs alone
+- repo detail snapshot stability depended on sorting config keys instead of iterating a map directly
 
 Rule:
 
-For terminal UIs, pair wide goldens with at least one medium-width width-contract test on a real rendered view before calling the layout harness complete.
+When adding a nested TUI regression gate, snapshot at least one detail view and one dashboard view through the top-level harness, and pair the snapshots with explicit visible-width assertions.
+
+### 2026-04-08: Path convergence should centralize legacy compatibility instead of scattering string joins
+
+Signal:
+- the next ranked tranche was a shared-path bypass audit after the broad filesystem-hardening wave had already landed
+
+What mattered:
+
+- the remaining bypasses were a small set of active callers, not another repo-wide sweep
+- some of those callers still needed legacy scan-root session discovery for compatibility
+- the real regression risk was hidden path policy living in repeated inline joins instead of one helper layer
+
+Rule:
+
+When the remaining path debt is a narrow bypass set, move the contract into shared helpers first, then point the callers at those helpers and keep any legacy fallback explicit and localized.
+
+### 2026-04-08: Adoption telemetry needs a patch-id translation layer
+
+Signal:
+- discovery-adoption and adoption-priority fronts already existed, but autobuild still required a human to map those workflow and surface gaps back to concrete patch ids
+
+What mattered:
+
+- inactive workflows and surfaces are useful signals, but they are not a tranche plan by themselves
+- the missing step was a machine-readable selector that names the actual patch candidate, entry surface, and confidence
+- once that selector exists, the next queue handoff can be driven from the live adoption front instead of another static roadmap pass
+
+Rule:
+
+When adoption telemetry is meant to drive autobuild, expose one machine-readable selector that translates workflow and surface gaps into concrete patch ids with confidence and a recommended entry surface.
 
 ## Autobuild Patch Note Template
 
@@ -188,11 +231,11 @@ Next recommended patch:
 
 ## Current Recommended Sequence
 
-1. `shared_path_bypass_audit`
-2. `adoption_led_tranche_selector`
-3. `remote_main_red_signal_filter`
-4. `generated_surface_drift_gate`
-5. `telemetry_to_patch_feedback`
+1. `remote_main_red_signal_filter`
+2. `generated_surface_drift_gate`
+3. `telemetry_to_patch_feedback`
+4. `shared_path_bypass_cleanup_followups_if_new_callers_appear`
+5. `adoption_led_tranche_selector_followups_if_confidence_mapping_needs_tuning`
 
 ## Backlog For Future Productization
 
@@ -265,34 +308,6 @@ What this should prevent next time:
 Next recommended patch:
 - `layout_harness_drift_gate`
 
-## 2026-04-08: layout_harness_drift_gate
-
-Signal:
-- the ranked autobuild queue promoted the TUI layout harness after the publish lane returned to green
-
-Scope:
-- TUI render width contracts only
-
-What changed:
-- clamped title and tab chrome to the terminal width
-- wrapped help entries to the available line budget instead of letting descriptions spill
-- accounted for multi-select row prefixes in table width calculations
-- added medium-width Teatest assertions and direct help-width unit coverage
-
-Evidence:
-- `internal/tui/app_teatest_test.go`
-- `internal/tui/views/help_test.go`
-- `internal/tui/components/table.go`
-- `internal/tui/views/help.go`
-
-What this should prevent next time:
-- nested overview rows exceeding terminal width without detection
-- help overlay descriptions spilling past the viewport on medium terminals
-- frame chrome drift that only appears between “too small” and full-width test cases
-
-Next recommended patch:
-- `shared_path_bypass_audit`
-
 ## 2026-04-08: provider_role_projection_sync
 
 Signal:
@@ -325,23 +340,87 @@ What this should prevent next time:
 Next recommended patch:
 - `layout_harness_drift_gate`
 
-## 2026-04-08: Integrity follow-up closed temp-artifact and teatest sizing
+## 2026-04-08: layout_harness_drift_gate
 
 Signal:
-- manual verification and commit evidence
+- the ranked queue selected the known nested TUI layout harness as the next narrow integrity gate
 
 Scope:
-- recovery temp artifacts and teatest harness width
+- repo-owned TUI harness coverage only
 
 What changed:
-- removed tracked recovery temp artifact
-- initialized nested child widths explicitly in TUI teatest harness
+- added top-level teatest golden snapshots for nested Repo Detail and Fleet views
+- added explicit visible-width assertions for those nested views
+- added a resize-path width-budget regression test
+- sorted repo detail config keys before rendering so the nested snapshot is deterministic
 
 Evidence:
-- `2efce9a`
+- `internal/tui/app_teatest_test.go`
+- `internal/tui/views/repodetail.go`
+- `internal/tui/testdata/TestTeatest_RepoDetailView.golden`
+- `internal/tui/testdata/TestTeatest_FleetView.golden`
 
 What this should prevent next time:
-- full short-suite baseline failures due to teatest sizing
+- nested layout width regressions only showing up after a larger tranche lands
+- nondeterministic nested snapshots caused by map iteration order
+- top-level TUI coverage drifting back to overview-only snapshots
 
 Next recommended patch:
 - `shared_path_bypass_audit`
+
+## 2026-04-08: shared_path_bypass_audit
+
+Signal:
+- the ranked queue selected the remaining shared-path bypass set after the layout harness gate closed
+
+Scope:
+- repo-owned path helper convergence for active session, state, and config-adjacent callers
+
+What changed:
+- added shared `ralphpath` helpers for cost events, command history, and external session search paths
+- moved session, budget, and tenant command discovery onto the shared search helper while keeping legacy scan-root session state readable
+- removed the marathon command's direct scan-root session-state override so new runtime state stays on the canonical shared path
+- added regression coverage for helper resolution and shared-plus-legacy external session discovery
+
+Evidence:
+- `internal/ralphpath/paths.go`
+- `cmd/store.go`
+- `cmd/store_test.go`
+- `internal/session/cost_events.go`
+- `internal/tui/command_history.go`
+
+What this should prevent next time:
+- active path contracts drifting through repeated inline string joins
+- command surfaces seeing only legacy scan-root sessions or only shared sessions depending on call site
+- future path-hardening work reopening a broad sweep just to find a few remaining bypasses
+
+Next recommended patch:
+- `adoption_led_tranche_selector`
+
+## 2026-04-08: adoption_led_tranche_selector
+
+Signal:
+- the ranked queue selected the missing selector layer between existing adoption telemetry and actual autobuild patch choice
+
+Scope:
+- repo-owned autobuild tranche selection from live discovery and adoption fronts
+
+What changed:
+- added a machine-readable autobuild tranche summary that ranks concrete patch ids from the live adoption fronts
+- exposed that selector through `ralph:///catalog/autobuild-tranches`
+- wired the selector into the catalog server and runtime health summaries for read-first discovery
+- added focused regression coverage for the selector summary, new resource, and updated resource counts
+
+Evidence:
+- `internal/mcpserver/autobuild_tranches.go`
+- `internal/mcpserver/resources.go`
+- `internal/mcpserver/resources_test.go`
+- `internal/mcpserver/tools_dispatch.go`
+
+What this should prevent next time:
+- autobuild still needing a human to translate workflow gaps into concrete patch ids
+- adoption telemetry existing without a direct tranche-selection consumer
+- future queue handoffs falling back to static roadmap ordering despite live repo signals
+
+Next recommended patch:
+- `remote_main_red_signal_filter`

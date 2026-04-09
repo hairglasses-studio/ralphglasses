@@ -7,9 +7,11 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/exp/golden"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/hairglasses-studio/ralphglasses/internal/tui/components"
 )
 
@@ -43,6 +45,82 @@ func newTestModelWithRepos(t *testing.T) Model {
 		{Name: "hg-mcp", Path: "/tmp/hg-mcp", Status: &model.LoopStatus{Status: "completed"}},
 	}
 	m.updateTable()
+	return m
+}
+
+// newTestModelWithRepoDetail creates a deterministic nested repo-detail view.
+func newTestModelWithRepoDetail(t *testing.T) Model {
+	t.Helper()
+	m := newTestModel(t)
+	m.Repos = []*model.Repo{
+		{
+			Name:  "ralphglasses",
+			Path:  "/tmp/ralphglasses",
+			HasRC: true,
+			Status: &model.LoopStatus{
+				Status:          "running",
+				LoopCount:       17,
+				CallsMadeThisHr: 23,
+				MaxCallsPerHour: 120,
+				Model:           "gpt-5.4",
+				SessionSpendUSD: 12.50,
+				BudgetStatus:    "ok",
+				LastAction:      "planner",
+				Timestamp:       frozenTime.Add(-2 * time.Minute),
+			},
+			Circuit: &model.CircuitBreakerState{
+				State:                        "CLOSED",
+				LastChange:                   frozenTime.Add(-15 * time.Minute),
+				ConsecutiveNoProgress:        1,
+				ConsecutiveSameError:         0,
+				ConsecutivePermissionDenials: 0,
+				TotalOpens:                   0,
+			},
+			Progress: &model.Progress{
+				Iteration:    17,
+				CompletedIDs: []string{"QW-12", "WM-1"},
+				Status:       "running",
+			},
+			Config: &model.RalphConfig{
+				Values: map[string]string{
+					"PROJECT_NAME":         "ralphglasses",
+					"PROVIDER":             "codex",
+					"RALPH_SESSION_BUDGET": "100",
+				},
+			},
+		},
+	}
+	m.Sel.RepoIdx = 0
+	m.Nav.CurrentView = ViewRepoDetail
+	m.Nav.ActiveTab = 0
+	m.Nav.Breadcrumb = components.Breadcrumb{Parts: []string{"Repos", "ralphglasses"}}
+	return m
+}
+
+// newTestModelWithFleetView creates a deterministic nested fleet dashboard view.
+func newTestModelWithFleetView(t *testing.T) Model {
+	t.Helper()
+	m := newTestModelWithRepos(t)
+	m.Nav.CurrentView = ViewFleet
+	m.Nav.ActiveTab = 3
+	m.Nav.Breadcrumb = components.Breadcrumb{Parts: []string{"Fleet"}}
+	m.Repos[0].Circuit = &model.CircuitBreakerState{State: "OPEN", Reason: "budget gate"}
+
+	mgr := session.NewManager()
+	s := &session.Session{
+		ID:         "session-123456",
+		Provider:   session.ProviderCodex,
+		RepoPath:   "/tmp/ralphglasses",
+		RepoName:   "ralphglasses",
+		Status:     session.StatusRunning,
+		SpentUSD:   2.50,
+		BudgetUSD:  10,
+		TurnCount:  4,
+		LaunchedAt: frozenTime.Add(-30 * time.Minute),
+	}
+	s.CostHistory = []float64{0.25, 0.75, 1.25, 2.50}
+	mgr.AddSessionForTesting(s)
+	m.SessMgr = mgr
 	return m
 }
 
@@ -96,13 +174,13 @@ func normalizeGoldenViewSnapshot(view string) string {
 
 func requireViewFitsWidth(t *testing.T, view string, width int) {
 	t.Helper()
-	for i, line := range strings.Split(view, "\n") {
-		if got := components.VisualWidth(components.StripAnsi(line)); got > width {
-			t.Fatalf("line %d width=%d exceeds %d: %q", i+1, got, width, components.StripAnsi(line))
+	for idx, line := range strings.Split(strings.TrimRight(view, "\n"), "\n") {
+		line = strings.TrimRight(line, " \t")
+		if got := lipgloss.Width(line); got > width {
+			t.Fatalf("line %d width %d exceeds budget %d: %q", idx+1, got, width, line)
 		}
 	}
 }
-
 // --- Golden file snapshot tests ---
 
 func TestTeatest_OverviewEmpty(t *testing.T) {
@@ -123,6 +201,22 @@ func TestTeatest_HelpView(t *testing.T) {
 	m.Nav.Breadcrumb.Push("Help")
 	fm, _ := testProgram(t, m, 120, 40, keyPressMsg('q'))
 	golden.RequireEqual(t, normalizeGoldenViewSnapshot(fm.View().Content))
+}
+
+func TestTeatest_RepoDetailView(t *testing.T) {
+	m := newTestModelWithRepoDetail(t)
+	fm, _ := testProgram(t, m, 84, 28, keyPressMsg('q'))
+	view := normalizeGoldenViewSnapshot(fm.View().Content)
+	requireViewFitsWidth(t, view, 84)
+	golden.RequireEqual(t, view)
+}
+
+func TestTeatest_FleetView(t *testing.T) {
+	m := newTestModelWithFleetView(t)
+	fm, _ := testProgram(t, m, 84, 28, keyPressMsg('q'))
+	view := normalizeGoldenViewSnapshot(fm.View().Content)
+	requireViewFitsWidth(t, view, 84)
+	golden.RequireEqual(t, view)
 }
 
 func TestTeatest_SmallTerminal(t *testing.T) {
@@ -179,6 +273,25 @@ func TestTeatest_WindowResize(t *testing.T) {
 	rm := resized.(Model)
 	if rm.Width != 200 || rm.Height != 60 {
 		t.Errorf("expected 200x60, got %dx%d", rm.Width, rm.Height)
+	}
+}
+
+func TestNestedViewsRespectWidthBudgetAfterResize(t *testing.T) {
+	tests := []struct {
+		name  string
+		model Model
+	}{
+		{name: "repo-detail", model: newTestModelWithRepoDetail(t)},
+		{name: "fleet", model: newTestModelWithFleetView(t)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resized, _ := tt.model.Update(tea.WindowSizeMsg{Width: 72, Height: 24})
+			rm := resized.(Model)
+			view := normalizeGoldenViewSnapshot(rm.View().Content)
+			requireViewFitsWidth(t, view, 72)
+		})
 	}
 }
 

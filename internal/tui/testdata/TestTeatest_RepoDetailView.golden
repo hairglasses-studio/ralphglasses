@@ -1,0 +1,28 @@
+  ralphglasses   Repos › ralphglasses
+ 1: Repos   2: Sessions   3: Teams   4: Fleet
+
+ ralphglasses
+/tmp/ralphglasses
+
+ Status
+  Status:     running
+  Loop:      17
+  Calls:     ▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 23/120
+  Model:     gpt-5.4
+  Budget:    ▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 12% ($12.50/$100)
+  Bdg Stat:  ok
+  Action:    planner
+  Updated:    11:58:00
+
+ Circuit Breaker
+  State:            CLOSED
+  No Progress:     1
+  Same Error:      0
+  Perm Denials:    0
+  Total Opens:     0
+  Last Change:      11:45:00
+
+ Configuration
+  PROJECT_NAME                 ralphglasses
+  PROVIDER                     codex
+  NORMAL│ 0/0│ $0.00│ 5m

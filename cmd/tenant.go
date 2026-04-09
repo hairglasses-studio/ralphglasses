@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -91,8 +90,7 @@ var tenantStatusCmd = &cobra.Command{
 		tenantID := session.NormalizeTenantID(args[0])
 		mgr := initManagerWithStore(nil)
 		sp := util.ExpandHome(scanPath)
-		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
-		mgr.LoadExternalSessions()
+		loadManagerExternalSessions(mgr, sp)
 
 		tenant, err := mgr.GetTenant(context.Background(), tenantID)
 		if err != nil {
@@ -164,8 +162,7 @@ var tenantLeaderboardCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		mgr := initManagerWithStore(nil)
 		sp := util.ExpandHome(scanPath)
-		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
-		mgr.LoadExternalSessions()
+		loadManagerExternalSessions(mgr, sp)
 
 		opts := session.RoleLeaderboardOptions{
 			Limit:        tenantLeaderboardLimit,

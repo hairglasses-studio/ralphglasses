@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
 
 // CommandHistory stores and replays TUI command history.
@@ -22,11 +24,8 @@ func NewCommandHistory(maxLen int) *CommandHistory {
 		maxLen: maxLen,
 		cursor: -1,
 	}
-	home, err := os.UserHomeDir()
-	if err == nil {
-		h.path = filepath.Join(home, ".config", "ralphglasses", "command_history.json")
-		h.load()
-	}
+	h.path = ralphpath.CommandHistoryPath()
+	h.load()
 	return h
 }
 

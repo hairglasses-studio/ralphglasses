@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
 
 // CostEvent is a single cost record emitted for external consumption.
@@ -67,6 +69,5 @@ func (w *CostEventWriter) Close() error {
 
 // DefaultCostEventPath returns the default path for cost events.
 func DefaultCostEventPath() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".ralph", "cost_events.jsonl")
+	return ralphpath.CostEventsPath()
 }

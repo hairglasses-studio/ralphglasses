@@ -260,105 +260,201 @@
       "trigger_signal": {
         "type": "integrity",
         "source": "docs/autobuild-patch-queue.json",
-        "summary": "The ranked autobuild queue selected the TUI layout harness once the publish lane returned to green.",
+        "summary": "The ranked autobuild queue selected the top-level TUI layout harness because nested viewport-backed views only had broad snapshots and could drift on width handling without a focused gate.",
         "remote_main_verified": true
       },
       "repo_owned_scope": [
-        "TUI frame chrome width contracts",
-        "help-view line wrapping",
-        "table width accounting",
-        "medium-width teatest coverage"
+        "teatest harness coverage",
+        "nested layout sizing assertions",
+        "deterministic repo detail rendering"
       ],
       "recommended_entry_surface": "internal/tui/app_teatest_test.go",
       "changes": [
-        "added medium-width width-contract tests for overview and help views",
-        "clamped title and tab chrome to the available terminal width",
-        "wrapped help entries to the remaining line budget",
-        "accounted for multi-select prefixes in table width calculations",
-        "updated affected wide golden snapshots after fixing the width budget"
+        "added top-level teatest golden snapshots for nested Repo Detail and Fleet views",
+        "added explicit visible-width budget assertions for those nested views",
+        "added a resize-path width-budget regression test for nested views",
+        "sorted repo detail config keys before rendering so golden snapshots are deterministic"
       ],
       "acceptance_condition": [
         "nested layout width regressions become deterministic test failures",
-        "medium-width overview and help renders stay within the terminal width budget"
+        "the known top-level TUI harness exercises nested Repo Detail and Fleet views instead of only overview and help surfaces"
       ],
       "stop_condition": [
-        "stop after the real render path is width-gated with medium-width tests",
-        "do not expand this tranche into unrelated TUI redesign or feature work"
+        "stop after the nested TUI harness has deterministic snapshots and width-budget assertions",
+        "do not expand this tranche into broader visual redesign or unrelated TUI cleanup"
       ],
       "evidence": [
         {
-          "kind": "test",
+          "kind": "file",
           "ref": "internal/tui/app_teatest_test.go",
-          "summary": "Adds medium-width Teatest coverage for overview and help width contracts."
-        },
-        {
-          "kind": "test",
-          "ref": "internal/tui/views/help_test.go",
-          "summary": "Adds direct width assertions for RenderHelp."
+          "summary": "Adds nested-view teatest fixtures, width-budget assertions, and resize coverage."
         },
         {
           "kind": "file",
-          "ref": "internal/tui/components/table.go",
-          "summary": "Fixes row width accounting for multi-select prefixes."
+          "ref": "internal/tui/views/repodetail.go",
+          "summary": "Sorts repo detail config keys to remove snapshot nondeterminism."
+        },
+        {
+          "kind": "file",
+          "ref": "internal/tui/testdata/TestTeatest_RepoDetailView.golden",
+          "summary": "Captures the nested Repo Detail view through the top-level TUI harness."
+        },
+        {
+          "kind": "file",
+          "ref": "internal/tui/testdata/TestTeatest_FleetView.golden",
+          "summary": "Captures the nested Fleet view through the top-level TUI harness."
+        },
+        {
+          "kind": "test",
+          "ref": "./scripts/dev/go.sh test ./internal/tui ./internal/tui/views -count=1",
+          "summary": "Verifies the new layout harness gate alongside the broader TUI packages."
         }
       ],
       "result": {
         "closure_state": "completed",
-        "summary": "Ralphglasses now fails deterministically when medium-width TUI renders exceed the terminal width budget, and the current overview/help paths render within that contract.",
+        "summary": "Ralphglasses now fails deterministically when nested Repo Detail or Fleet layouts drift past their width budget, and the repo detail snapshot no longer depends on map iteration order.",
         "prevented_failure_class": [
-          "medium-width TUI overflow regressions",
-          "nested layout drift hidden by full-width-only goldens"
+          "nested TUI width drift landing unnoticed",
+          "nondeterministic nested golden snapshots",
+          "late discovery of viewport-backed layout regressions"
         ]
       },
       "next_recommended_patch": "shared_path_bypass_audit",
       "notes": [
-        "The first medium-width overview test exposed a real overflow bug in multi-select width accounting, confirming that medium-width harness coverage adds unique value beyond wide snapshots."
+        "The gate intentionally covers one detail view and one dashboard view through the real top-level layout path rather than adding another broad UI snapshot sweep."
       ]
     },
     {
       "date": "2026-04-08",
-      "patch_id": "layout_harness_drift_gate",
+      "patch_id": "shared_path_bypass_audit",
       "status": "completed",
       "trigger_signal": {
-        "type": "verification",
-        "source": "remote main integrity check",
-        "summary": "clean recovery temp artifact and stabilize teatest sizing",
+        "type": "integrity",
+        "source": "docs/autobuild-patch-queue.json",
+        "summary": "The ranked autobuild queue selected the remaining repo-owned path bypass set after the broader filesystem-hardening work had already landed, with the remaining risk concentrated in active callers still using inline path joins.",
         "remote_main_verified": true
       },
       "repo_owned_scope": [
-        "recovery temp artifacts",
-        "teatest harness width"
+        "shared path helper convergence",
+        "legacy scan-root session discovery compatibility",
+        "active command and runtime path callers"
       ],
-      "recommended_entry_surface": "internal/tui/app_teatest_test.go",
+      "recommended_entry_surface": "internal/ralphpath/paths.go",
       "changes": [
-        "removed tracked recovery temp artifact",
-        "initialized nested child widths explicitly in TUI teatest harness"
+        "added shared helpers for cost events, command history, and external session search paths",
+        "moved session, budget, and tenant command discovery onto the shared search helper with legacy scan-root fallback",
+        "removed the marathon command's direct scan-root session-state override so new runtime state stays on the canonical shared path",
+        "added regression coverage for helper resolution and shared-plus-legacy external session discovery"
       ],
       "acceptance_condition": [
-        "clean git tree without untracked test temp files",
-        "stable full short-suite baseline passes"
+        "active config, state, and session-adjacent callers resolve through shared helpers or an explicit compatibility helper",
+        "legacy scan-root external sessions remain discoverable while the shared session state dir stays canonical"
       ],
       "stop_condition": [
-        "stop once tests pass cleanly without leaving artifacts"
+        "stop after the remaining active bypasses are centralized and covered by targeted regression tests",
+        "do not reopen a broader filesystem sweep unless new repo-owned bypasses are discovered"
       ],
       "evidence": [
         {
-          "kind": "commit",
-          "ref": "2efce9a",
-          "summary": "test: clean recovery temp artifact and stabilize teatest sizing"
+          "kind": "file",
+          "ref": "internal/ralphpath/paths.go",
+          "summary": "Centralizes the remaining cost-event, command-history, and external-session path contracts."
+        },
+        {
+          "kind": "file",
+          "ref": "cmd/store.go",
+          "summary": "Routes CLI external-session discovery through the shared search helper."
+        },
+        {
+          "kind": "test",
+          "ref": "cmd/store_test.go",
+          "summary": "Verifies shared and legacy scan-root external sessions are both discoverable."
+        },
+        {
+          "kind": "test",
+          "ref": "./scripts/dev/go.sh test ./internal/ralphpath ./internal/session ./internal/tui ./cmd -count=1",
+          "summary": "Verifies the path-helper tranche across the affected packages."
         }
       ],
       "result": {
         "closure_state": "completed",
-        "summary": "Narrow integrity follow-up closed the temp-artifact and teatest-sizing work.",
+        "summary": "Ralphglasses now resolves the remaining active path bypasses through shared helpers, keeps legacy scan-root external session discovery explicit, and stops new runtime state from landing in ad hoc session-state locations.",
         "prevented_failure_class": [
-          "full short-suite baseline failures",
-          "polluted git worktrees from teatest run"
+          "active path policy drift hidden in inline string joins",
+          "split command discovery between shared and legacy session locations",
+          "repeat path-hardening sweeps to chase a small residual bypass set"
         ]
       },
-      "next_recommended_patch": "shared_path_bypass_audit",
+      "next_recommended_patch": "adoption_led_tranche_selector",
       "notes": [
-        "This closes out the layout harness tranche."
+        "The tranche intentionally stayed within active repo-owned callers and did not treat workspace docs-root discovery as shared-path debt."
+      ]
+    },
+    {
+      "date": "2026-04-08",
+      "patch_id": "adoption_led_tranche_selector",
+      "status": "completed",
+      "trigger_signal": {
+        "type": "adoption",
+        "source": "docs/autobuild-patch-queue.json",
+        "summary": "The ranked autobuild queue selected the missing selector layer because the repo already exposed discovery-adoption and adoption-priority fronts but still lacked one machine-readable summary that translated those signals into concrete patch ids.",
+        "remote_main_verified": true
+      },
+      "repo_owned_scope": [
+        "discovery telemetry",
+        "adoption telemetry",
+        "priority summaries",
+        "autobuild tranche selection"
+      ],
+      "recommended_entry_surface": "ralph:///catalog/autobuild-tranches",
+      "changes": [
+        "added a machine-readable autobuild tranche selector that ranks concrete patch ids from the live adoption fronts",
+        "exposed the selector through a new catalog resource",
+        "wired the selector into catalog-server and runtime-health summaries for read-first discovery",
+        "added regression coverage for the selector summary, new resource registration, and updated resource counts"
+      ],
+      "acceptance_condition": [
+        "one machine-readable summary ranks the next repo-owned patch candidates",
+        "the summary includes source signal, recommended entry surface, and confidence"
+      ],
+      "stop_condition": [
+        "stop after the selector exists as a read-first resource and the affected packages pass verification",
+        "do not expand this tranche into repairing the next selected patch in the same scope wave"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "ref": "internal/mcpserver/autobuild_tranches.go",
+          "summary": "Introduces the autobuild tranche selector and its patch-ranking logic."
+        },
+        {
+          "kind": "file",
+          "ref": "internal/mcpserver/contract.go",
+          "summary": "Registers the new autobuild tranche resource in the discovery contract."
+        },
+        {
+          "kind": "test",
+          "ref": "internal/mcpserver/resources_test.go",
+          "summary": "Verifies the new resource and updated static resource registration."
+        },
+        {
+          "kind": "test",
+          "ref": "./scripts/dev/go.sh test ./cmd ./internal/ralphpath ./internal/session ./internal/tui ./internal/mcpserver -count=1",
+          "summary": "Verifies the combined selector, path-helper, and TUI-harness tranches across the affected packages."
+        }
+      ],
+      "result": {
+        "closure_state": "completed",
+        "summary": "Ralphglasses now has a machine-readable adoption-led selector that ranks concrete autobuild patch ids with source signal, confidence, and entry surface; the current top handoff is remote_main_red_signal_filter.",
+        "prevented_failure_class": [
+          "adoption telemetry without a tranche-selection consumer",
+          "manual translation from workflow gaps to patch ids",
+          "static queue handoffs ignoring live repo signals"
+        ]
+      },
+      "next_recommended_patch": "remote_main_red_signal_filter",
+      "notes": [
+        "The selector deliberately ranks repo-owned patch ids instead of raw workflows so future autobuild loops can hand off directly into implementation."
       ]
     }
   ]

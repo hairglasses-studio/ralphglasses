@@ -122,8 +122,8 @@ func TestStaticResourceRegistration(t *testing.T) {
 		t.Fatalf("expected ListResourcesResult, got %T", rpcResp.Result)
 	}
 
-	if len(result.Resources) != 13 {
-		t.Fatalf("expected 13 static resources, got %d", len(result.Resources))
+	if len(result.Resources) != 14 {
+		t.Fatalf("expected 14 static resources, got %d", len(result.Resources))
 	}
 
 	uris := make(map[string]bool)
@@ -139,6 +139,7 @@ func TestStaticResourceRegistration(t *testing.T) {
 		"ralph:///catalog/cli-parity",
 		"ralph:///catalog/discovery-adoption",
 		"ralph:///catalog/adoption-priorities",
+		"ralph:///catalog/autobuild-tranches",
 		"ralph:///catalog/provider-parity",
 		"ralph:///bootstrap/checklist",
 		"ralph:///runtime/recovery",
@@ -327,6 +328,45 @@ func TestAdoptionPrioritiesResource_ReturnsPrioritySummary(t *testing.T) {
 	}
 	if strings.Contains(textContent.Text, "\"name\": \"ralph:///catalog/server\"") {
 		t.Fatalf("active discovery surface should not be prioritized: %s", textContent.Text)
+	}
+}
+
+func TestAutobuildTranchesResource_ReturnsPatchCandidates(t *testing.T) {
+	t.Parallel()
+
+	appSrv, _, _ := setupRepoForResources(t)
+	ralphDir := filepath.Join(appSrv.ScanPath, ".ralph")
+	if err := os.MkdirAll(ralphDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ralphDir, "tool_benchmarks.jsonl"), []byte(`{"tool":"ralphglasses_marathon","ts":"2026-04-08T11:00:00Z","latency_ms":10,"ok":true}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ralphDir, "discovery_usage.jsonl"), []byte(`{"kind":"resource","name":"ralph:///catalog/provider-parity","ts":"2026-04-08T11:00:00Z"}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := makeAutobuildTranchesHandler(appSrv)
+	results, err := handler(context.Background(), mcp.ReadResourceRequest{
+		Params: mcp.ReadResourceParams{URI: "ralph:///catalog/autobuild-tranches"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	textContent, ok := results[0].(mcp.TextResourceContents)
+	if !ok {
+		t.Fatalf("expected TextResourceContents, got %T", results[0])
+	}
+	for _, expected := range []string{
+		`"highest_priority_patch"`,
+		`"patch_id": "remote_main_red_signal_filter"`,
+		`"recommended_entry_surface": "ralph:///runtime/operator"`,
+		`"confidence_label"`,
+		`"matched_workflows"`,
+	} {
+		if !strings.Contains(textContent.Text, expected) {
+			t.Fatalf("expected %q in autobuild tranche resource: %s", expected, textContent.Text)
+		}
 	}
 }
 

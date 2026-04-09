@@ -1,0 +1,28 @@
+  ralphglasses   Fleet
+ 1: Repos   2: Sessions   3: Teams   4: Fleet
+
+ Fleet Dashboard
+
+╭─────────╮╭───────────────────╮╭─────────────╮╭─────────╮╭─────────╮╭────────────╮
+│  REPOS ││  LOOPS           ││  SESSIONS  ││  SPEND ││  TURNS ││  CIRCUITS │
+│   3     ││   1 run / 0 pause ││   1 / 0 run ││   $2.50 ││   4     ││   1 open   │
+╰─────────╯╰───────────────────╯╰─────────────╯╰─────────╯╰─────────╯╰────────────╯
+╭──────────────╮
+│  AUTONOMY   │
+│   L0 observe │
+╰──────────────╯
+ Cost Trend (1h)
+
+
+
+
+ Provider Breakdown
+   codex ▱▱▱▱▱▱ 0/1 sess  $2.50  $0.6250/turn
+
+ Budget Utilization
+  ralphglasses     ▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 25% $2.50/$10.00
+
+ Top Sessions by Spend
+  session-    codex ralphglasses   $2.50       stopped
+
+  NORMAL│ 0/0│ $0.00│ 5m

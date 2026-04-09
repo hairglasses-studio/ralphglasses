@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
 
 func TestNewCostEventWriter_CreatesFile(t *testing.T) {
@@ -118,11 +120,33 @@ func TestCostEventWriter_CloseIdempotent(t *testing.T) {
 }
 
 func TestDefaultCostEventPath(t *testing.T) {
-	p := DefaultCostEventPath()
-	if p == "" {
-		t.Fatal("DefaultCostEventPath returned empty string")
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_STATE_HOME", "")
+
+	if got, want := DefaultCostEventPath(), filepath.Join(home, ".ralphglasses", "cost_events.jsonl"); got != want {
+		t.Fatalf("DefaultCostEventPath() = %q, want %q", got, want)
 	}
-	if filepath.Base(p) != "cost_events.jsonl" {
-		t.Errorf("expected cost_events.jsonl, got %s", filepath.Base(p))
+}
+
+func TestDefaultCostEventPath_PrefersExistingLegacyFile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_STATE_HOME", "")
+
+	legacyDir := filepath.Join(home, ".ralph")
+	if err := os.MkdirAll(legacyDir, 0o755); err != nil {
+		t.Fatalf("mkdir legacy dir: %v", err)
+	}
+	legacyPath := filepath.Join(legacyDir, "cost_events.jsonl")
+	if err := os.WriteFile(legacyPath, []byte("{}\n"), 0o644); err != nil {
+		t.Fatalf("write legacy cost events: %v", err)
+	}
+
+	if got := DefaultCostEventPath(); got != legacyPath {
+		t.Fatalf("DefaultCostEventPath() = %q, want %q", got, legacyPath)
+	}
+	if got := DefaultCostEventPath(); got != ralphpath.CostEventsPath() {
+		t.Fatalf("DefaultCostEventPath() = %q, want helper path %q", got, ralphpath.CostEventsPath())
 	}
 }
