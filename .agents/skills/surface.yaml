@@ -16,6 +16,10 @@
       "export_plugin": true
     },
     {
+      "name": "ralph-sweep",
+      "export_plugin": true
+    },
+    {
       "name": "ralphglasses-discovery",
       "export_plugin": true
     },
