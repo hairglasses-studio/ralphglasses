@@ -1,0 +1,138 @@
+{
+  "$schema": "./autobuild-execution-ledger.schema.json",
+  "track": "autobuild-execution-ledger",
+  "repo": "hairglasses-studio/ralphglasses",
+  "description": "Live ledger for recording autobuild tranche executions, evidence, closure state, and the next recommended patch.",
+  "instructions": [
+    "Append one entry per closed or actively-tracked autobuild tranche.",
+    "Prefer source-backed evidence such as commits, CI runs, verification outputs, or durable docs artifacts.",
+    "Do not record workstation-only or user-home-only cleanup here unless the tranche was explicitly an environment-maintenance pass."
+  ],
+  "entry_template": {
+    "date": "YYYY-MM-DD",
+    "patch_id": "<patch-id>",
+    "status": "planned",
+    "trigger_signal": {
+      "type": "adoption",
+      "source": "<resource, report, CI run, or human request>",
+      "summary": "<why this tranche was opened>",
+      "remote_main_verified": false
+    },
+    "repo_owned_scope": [
+      "<repo-owned scope item>"
+    ],
+    "recommended_entry_surface": "<resource, doc, command, or tool>",
+    "changes": [
+      "<what changed>"
+    ],
+    "acceptance_condition": [
+      "<acceptance condition>"
+    ],
+    "stop_condition": [
+      "<when to stop instead of expanding scope>"
+    ],
+    "evidence": [
+      {
+        "kind": "commit",
+        "ref": "<sha>",
+        "summary": "<what this evidence proves>"
+      }
+    ],
+    "result": {
+      "closure_state": "open",
+      "summary": "<high-signal outcome>",
+      "prevented_failure_class": [
+        "<failure class>"
+      ]
+    },
+    "next_recommended_patch": "<patch-id>",
+    "notes": [
+      "<optional note>"
+    ]
+  },
+  "entries": [
+    {
+      "date": "2026-04-08",
+      "patch_id": "planning_artifact_contract_bundle",
+      "status": "completed",
+      "trigger_signal": {
+        "type": "manual",
+        "source": "current-session roadmap tranche execution",
+        "summary": "Create durable human-readable and machine-readable planning surfaces for ralphglasses autobuild patch selection and future-session recovery.",
+        "remote_main_verified": true
+      },
+      "repo_owned_scope": [
+        "autobuild planning artifacts",
+        "machine-readable queue documents",
+        "schema validation for planning surfaces",
+        "repo-owned cycle memory"
+      ],
+      "recommended_entry_surface": "docs/autobuild-patch-queue.json",
+      "changes": [
+        "added the human-readable autobuild patch queue",
+        "added the machine-readable autobuild patch queue",
+        "added a schema for the autobuild patch queue",
+        "added autobuild cycle improvement notes",
+        "added a machine-readable autobuild execution ledger template",
+        "added a schema for the autobuild execution ledger",
+        "seeded the first live autobuild execution ledger"
+      ],
+      "acceptance_condition": [
+        "future sessions have a stable markdown queue, JSON queue, and schema",
+        "future sessions have a repo-owned note lane for patch selection lessons",
+        "future sessions have a machine-readable ledger format for tranche execution evidence"
+      ],
+      "stop_condition": [
+        "stop after the queue, notes, template, schema, and first live ledger all exist on main",
+        "do not expand into broader roadmap linking or code changes in the same tranche"
+      ],
+      "evidence": [
+        {
+          "kind": "commit",
+          "ref": "f8896a0",
+          "summary": "Added the autobuild patch queue markdown checkpoint."
+        },
+        {
+          "kind": "commit",
+          "ref": "fb32d8f",
+          "summary": "Added the machine-readable autobuild patch queue."
+        },
+        {
+          "kind": "commit",
+          "ref": "5230bc5",
+          "summary": "Added the autobuild patch queue schema."
+        },
+        {
+          "kind": "commit",
+          "ref": "63fe9f2",
+          "summary": "Added autobuild cycle improvement notes."
+        },
+        {
+          "kind": "commit",
+          "ref": "cc5eeb9",
+          "summary": "Added the autobuild execution ledger template."
+        },
+        {
+          "kind": "commit",
+          "ref": "52b8e2b",
+          "summary": "Added the autobuild execution ledger schema."
+        }
+      ],
+      "result": {
+        "closure_state": "completed",
+        "summary": "Ralphglasses now has a repo-owned planning bundle for autobuild tranche selection, operational notes, and machine-readable tranche recording.",
+        "prevented_failure_class": [
+          "orphan planning notes",
+          "automation scraping markdown ad hoc",
+          "missing tranche evidence format",
+          "loss of session-to-session autobuild learning"
+        ]
+      },
+      "next_recommended_patch": "canonical_entrypoint_linking",
+      "notes": [
+        "The next highest-leverage follow-up is to link these artifacts from README.md and ROADMAP.md so they become canonical entrypoints instead of discoverable-only docs.",
+        "Further roadmap work should remain narrow and integrity-led rather than reopening broad filesystem-hardening sweeps."
+      ]
+    }
+  ]
+}
