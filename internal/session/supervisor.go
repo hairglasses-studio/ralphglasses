@@ -49,6 +49,7 @@ type Supervisor struct {
 	tickCount           int
 	startedAt           time.Time
 	consecutiveFailures int
+	activeJob           string
 
 	// Passive background research daemon (ticks on its own internal schedule).
 	researchDaemon *ResearchDaemon
@@ -422,15 +423,7 @@ func (s *Supervisor) tick(ctx context.Context) {
 			s.publishError("supervisor.chain_check", err, nil)
 		} else if nextCycle != nil && mgr != nil {
 			chainedCycle = nextCycle
-			s.wg.Go(func() {
-				if _, err := mgr.RunCycle(ctx, nextCycle.RepoPath, nextCycle.Name, nextCycle.Objective, nextCycle.SuccessCriteria, 3); err != nil {
-					slog.Warn("supervisor: chained cycle failed", "error", err)
-					s.publishError("supervisor.chained_cycle", err, map[string]any{
-						"cycle":     nextCycle.Name,
-						"objective": nextCycle.Objective,
-					})
-				}
-			})
+			s.executeCycleAsync(ctx, nextCycle.Name, nextCycle.Objective, nextCycle.SuccessCriteria, 3, "chainer", "")
 		}
 	}
 
@@ -439,23 +432,7 @@ func (s *Supervisor) tick(ctx context.Context) {
 		if planned := planner.PlanNextSprint(repoPath); planned != nil {
 			slog.Info("supervisor: sprint planner produced cycle",
 				"name", planned.Name, "tasks", len(planned.Tasks))
-			s.wg.Go(func() {
-				if _, err := mgr.RunCycle(ctx, planned.RepoPath, planned.Name, planned.Objective, planned.SuccessCriteria, len(planned.Tasks)); err != nil {
-					slog.Warn("supervisor: planned sprint failed", "error", err)
-					s.publishError("supervisor.planned_sprint", err, map[string]any{
-						"cycle":      planned.Name,
-						"objective":  planned.Objective,
-						"task_count": len(planned.Tasks),
-					})
-				}
-			})
-			s.mu.Lock()
-			s.lastCycleLaunch = time.Now()
-			s.cyclesLaunched++
-			s.mu.Unlock()
-			s.publishEvent(events.LoopStarted, map[string]any{
-				"source": "sprint_planner", "cycle": planned.Name, "objective": planned.Objective,
-			})
+			s.executeCycleAsync(ctx, planned.Name, planned.Objective, planned.SuccessCriteria, len(planned.Tasks), "sprint_planner", "")
 		}
 	}
 
@@ -576,8 +553,7 @@ func (s *Supervisor) executeDecision(ctx context.Context, signal HealthSignal) {
 func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal, decisionID string) {
 	s.mu.Lock()
 	elapsed := time.Since(s.lastCycleLaunch)
-	cooldown, mgr, repoPath := s.CooldownBetween, s.mgr, s.RepoPath
-	dl := s.decisions
+	cooldown := s.CooldownBetween
 	isFirst := s.lastCycleLaunch.IsZero()
 	budget := s.budget
 	s.mu.Unlock()
@@ -595,60 +571,83 @@ func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal, decis
 		objective = "Investigate and fix recent failures"
 	}
 	name := fmt.Sprintf("auto-%d", time.Now().Unix())
-	if mgr != nil {
-		s.wg.Go(func() {
-			_, err := mgr.RunCycle(ctx, repoPath, name, objective, []string{"Tests pass", "No regressions"}, 3)
-			outcome := DecisionOutcome{
-				EvaluatedAt: time.Now(),
-				Success:     err == nil,
-			}
-			if err != nil {
-				outcome.Details = err.Error()
-				s.mu.Lock()
-				s.consecutiveFailures++
-				failures := s.consecutiveFailures
-				s.mu.Unlock()
-				slog.Error("supervisor: RunCycle failed", "error", err, "consecutive_failures", failures)
-				s.publishError("supervisor.run_cycle", err, map[string]any{
-					"consecutive_failures": failures,
-					"decision_id":          decisionID,
-					"objective":            objective,
-				})
-				if failures >= 3 {
-					slog.Error("supervisor: 3 consecutive RunCycle failures — consider demoting autonomy level",
-						"consecutive_failures", failures)
-				}
-			} else {
-				// Reset consecutive failure counter on success.
-				s.mu.Lock()
-				s.consecutiveFailures = 0
-				gates := s.gates
-				s.mu.Unlock()
-				if gates != nil {
-					findings, passed := gates.Evaluate(ctx, repoPath)
-					if !passed {
-						outcome.Details = fmt.Sprintf("cycle completed but %d gate(s) failed", len(findings))
-						slog.Warn("supervisor: gate failures", "count", len(findings))
-						s.recordGateFindings(repoPath, findings)
-					} else {
-						outcome.Details = "cycle completed, all gates passed"
-					}
-				} else {
-					outcome.Details = "cycle completed"
-				}
-				outcome.Success = true
-			}
-			if dl != nil && decisionID != "" {
-				dl.RecordOutcome(decisionID, outcome)
-			}
-		})
-	}
+	s.executeCycleAsync(ctx, name, objective, []string{"Tests pass", "No regressions"}, 3, "supervisor", decisionID)
+}
+
+func (s *Supervisor) executeCycleAsync(ctx context.Context, name, objective string, criteria []string, maxTasks int, source, decisionID string) {
 	s.mu.Lock()
+	mgr := s.mgr
+	repoPath := s.RepoPath
+	dl := s.decisions
 	s.lastCycleLaunch = time.Now()
 	s.cyclesLaunched++
+	s.activeJob = fmt.Sprintf("cycle:%s", name)
 	s.mu.Unlock()
+	s.persistState()
+
+	if mgr == nil {
+		return
+	}
+
 	s.publishEvent(events.LoopStarted, map[string]any{
-		"source": "supervisor", "cycle": name, "objective": objective,
+		"source": source, "cycle": name, "objective": objective,
+	})
+
+	s.wg.Go(func() {
+		defer func() {
+			s.mu.Lock()
+			if s.activeJob == fmt.Sprintf("cycle:%s", name) {
+				s.activeJob = ""
+			}
+			s.mu.Unlock()
+			s.persistState()
+		}()
+		_, err := mgr.RunCycle(ctx, repoPath, name, objective, criteria, maxTasks)
+		outcome := DecisionOutcome{
+			EvaluatedAt: time.Now(),
+			Success:     err == nil,
+		}
+		if err != nil {
+			outcome.Details = err.Error()
+			s.mu.Lock()
+			s.consecutiveFailures++
+			failures := s.consecutiveFailures
+			s.mu.Unlock()
+			slog.Error("supervisor: RunCycle failed", "error", err, "consecutive_failures", failures, "source", source)
+			s.publishError("supervisor.run_cycle", err, map[string]any{
+				"consecutive_failures": failures,
+				"decision_id":          decisionID,
+				"objective":            objective,
+				"source":               source,
+				"task_count":           maxTasks,
+			})
+			if failures >= 3 {
+				slog.Error("supervisor: 3 consecutive RunCycle failures — consider demoting autonomy level",
+					"consecutive_failures", failures)
+			}
+		} else {
+			// Reset consecutive failure counter on success.
+			s.mu.Lock()
+			s.consecutiveFailures = 0
+			gates := s.gates
+			s.mu.Unlock()
+			if gates != nil {
+				findings, passed := gates.Evaluate(ctx, repoPath)
+				if !passed {
+					outcome.Details = fmt.Sprintf("cycle completed but %d gate(s) failed", len(findings))
+					slog.Warn("supervisor: gate failures", "count", len(findings))
+					s.recordGateFindings(repoPath, findings)
+				} else {
+					outcome.Details = "cycle completed, all gates passed"
+				}
+			} else {
+				outcome.Details = "cycle completed"
+			}
+			outcome.Success = true
+		}
+		if dl != nil && decisionID != "" {
+			dl.RecordOutcome(decisionID, outcome)
+		}
 	})
 }
 

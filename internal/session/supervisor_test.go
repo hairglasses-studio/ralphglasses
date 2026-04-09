@@ -338,7 +338,7 @@ func TestSupervisor_PlannedSprintFailurePublishesEvent(t *testing.T) {
 	s.tick(context.Background())
 	s.wg.Wait()
 
-	event := requireSupervisorSessionError(t, bus, "supervisor.planned_sprint")
+	event := requireSupervisorSessionError(t, bus, "supervisor.run_cycle")
 	if got := event.Data["task_count"]; got != 1 {
 		t.Fatalf("task_count = %v, want 1", got)
 	}
