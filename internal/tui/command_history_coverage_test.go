@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 )
 
 func TestNewCommandHistory(t *testing.T) {
@@ -20,6 +22,17 @@ func TestNewCommandHistory(t *testing.T) {
 	if len(h.entries) == 0 && h.cursor != 0 && h.cursor != -1 {
 		// After load, cursor = len(entries) which is 0 when empty.
 		t.Logf("cursor = %d after construction with no history file", h.cursor)
+	}
+}
+
+func TestNewCommandHistory_UsesSharedPathHelper(t *testing.T) {
+	xdg := t.TempDir()
+	t.Setenv("HOME", "")
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+
+	h := NewCommandHistory(25)
+	if got, want := h.path, ralphpath.CommandHistoryPath(); got != want {
+		t.Fatalf("history path = %q, want %q", got, want)
 	}
 }
 

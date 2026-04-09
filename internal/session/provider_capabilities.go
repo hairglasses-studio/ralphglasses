@@ -238,7 +238,7 @@ func ProviderCapabilityMatrixFor(provider Provider) (ProviderCapabilityMatrix, b
 			DefaultModel:        ProviderDefaults(ProviderGemini),
 			ProjectInstructions: "GEMINI.md",
 			RepoConfigPath:      ".gemini/settings.json",
-			AgentConfigPath:     ".gemini/commands/*.toml",
+			AgentConfigPath:     ".gemini/agents/*.md",
 			Capabilities: map[string]ProviderCapability{
 				CapabilityBudgetUSD: {
 					Support: CapabilityEmulated,
@@ -250,7 +250,7 @@ func ProviderCapabilityMatrixFor(provider Provider) (ProviderCapabilityMatrix, b
 				},
 				CapabilityAgent: {
 					Support: CapabilityUnsupported,
-					Detail:  "The installed Gemini CLI has no --agent flag.",
+					Detail:  "Gemini has no `--agent` flag, but supports native `.gemini/agents/*.md` roles and prompt-level `@agent-name` routing.",
 				},
 				CapabilityAllowedTools: {
 					Support: CapabilityNative,
@@ -283,7 +283,7 @@ func ProviderCapabilityMatrixFor(provider Provider) (ProviderCapabilityMatrix, b
 				},
 				CapabilityProjectInstructions: {
 					Support: CapabilityNative,
-					Detail:  "Gemini reads GEMINI.md and project .gemini/settings.json.",
+					Detail:  "Gemini reads GEMINI.md, project .gemini/settings.json, and native .gemini/agents/*.md role surfaces.",
 				},
 				CapabilityMCPClient: {
 					Support: CapabilityNative,
@@ -295,15 +295,15 @@ func ProviderCapabilityMatrixFor(provider Provider) (ProviderCapabilityMatrix, b
 				},
 				CapabilitySkills: {
 					Support: CapabilityNative,
-					Detail:  "Gemini exposes `gemini skills`.",
+					Detail:  "Gemini supports agent skills plus extension-bundled skills.",
 				},
 				CapabilityPlugins: {
 					Support: CapabilityNative,
 					Detail:  "Gemini exposes extensions as its plugin surface.",
 				},
 				CapabilitySubagents: {
-					Support: CapabilityUnsupported,
-					Detail:  "Gemini uses commands and extensions instead of subagents.",
+					Support: CapabilityNative,
+					Detail:  "Gemini supports local `.gemini/agents/*.md` subagents, remote A2A agents, and extension-bundled subagents.",
 				},
 				CapabilityHooks: {
 					Support: CapabilityNative,

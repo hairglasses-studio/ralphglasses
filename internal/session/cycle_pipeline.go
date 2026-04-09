@@ -30,6 +30,10 @@ func ObservationsToTasks(observations []LoopObservation) []CycleTask {
 	}
 
 	for _, obs := range observations {
+		if !ObservationEligibleForCycle(obs) {
+			continue
+		}
+
 		var task *CycleTask
 
 		switch obs.Status {

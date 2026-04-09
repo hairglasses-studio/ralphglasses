@@ -16,10 +16,16 @@ type Command struct {
 
 // builtinAliases maps short aliases to their canonical command names.
 var builtinAliases = map[string]string{
-	"rp": "repos",
-	"ss": "sessions",
-	"tm": "teams",
-	"fl": "fleet",
+	"rp":         "repos",
+	"ss":         "sessions",
+	"tm":         "teams",
+	"fl":         "fleet",
+	"checkpoint": "/checkpoint",
+	"cp":         "/checkpoint",
+	"rollback":   "/rollback",
+	"rb":         "/rollback",
+	"diagnose":   "/diagnose",
+	"dg":         "/diagnose",
 }
 
 // LoadUserAliases reads custom aliases from the shared Ralph config path.

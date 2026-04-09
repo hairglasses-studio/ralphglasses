@@ -3,7 +3,7 @@ package session
 import (
 	"testing"
 
-	"github.com/hairglasses-studio/docs/pkg/roadmap"
+	"github.com/hairglasses-studio/ralphglasses/internal/roadmap"
 )
 
 func TestDecomposeToSprints(t *testing.T) {

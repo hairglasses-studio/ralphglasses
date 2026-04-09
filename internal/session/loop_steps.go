@@ -74,7 +74,7 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 
 	iteration := LoopIteration{
 		Number:           len(run.Iterations) + 1,
-		Status:           "planning",
+		Status:           "analyzing",
 		StartedAt:        time.Now(),
 		IdleBetweenMs:    idleBetweenMs,
 		Tasks:            []LoopTask{},
@@ -138,10 +138,43 @@ func (m *Manager) StepLoop(ctx context.Context, id string) error {
 		}
 	}
 
+	// PHASE 0: Aristotle First-Principles Analysis
+	phase0Prompt := "Phase 0 (Aristotle First-Principles Analysis):\nBefore we plan the next execution step, deconstruct the current overarching task or roadmap goal into its most basic components. Analyze the current state of the repository. Output your analysis from first principles to prevent assumption drift."
+	
+	phase0Session, phase0Err := m.launchWorkflowSession(ctx, LaunchOptions{
+		Provider:     profile.PlannerProvider,
+		RepoPath:     repoPath,
+		Prompt:       phase0Prompt,
+		Model:        profile.PlannerModel,
+		MaxBudgetUSD: profile.PlannerBudgetUSD,
+		SessionName:  fmt.Sprintf("loop-phase0-%s-%03d", run.RepoName, iteration.Number),
+	})
+	if phase0Err != nil {
+		return m.failLoopIteration(run, index, fmt.Errorf("launch phase0 session: %w", phase0Err))
+	}
+	
+	m.updateLoopIteration(run, index, "analyzing", func(iter *LoopIteration, loop *LoopRun) {
+		iter.Phase0SessionID = phase0Session.ID
+	})
+
+	if phase0WaitErr := m.waitForSession(ctx, phase0Session); phase0WaitErr != nil {
+		return m.failLoopIteration(run, index, fmt.Errorf("phase0 session failed: %w", phase0WaitErr))
+	}
+
+	phase0Done := time.Now()
+	phase0Output := sessionOutputSummary(phase0Session)
+	m.updateLoopIteration(run, index, "planning", func(iter *LoopIteration, loop *LoopRun) {
+		iter.Phase0Output = phase0Output
+		iter.Phase0EndedAt = &phase0Done
+	})
+
 	t0 := time.Now()
 	plannerPrompt, err := buildLoopPlannerPromptN(repoPath, numWorkers, prevIterations)
 	if err != nil {
 		return m.failLoopIteration(run, index, fmt.Errorf("build planner prompt: %w", err))
+	}
+	if phase0Output != "" {
+		plannerPrompt += fmt.Sprintf("\n\n=== Phase 0: Aristotle First-Principles Analysis ===\n%s\n\nUse this analysis to guide your task selection.", phase0Output)
 	}
 	promptBuildMs := time.Since(t0).Milliseconds()
 

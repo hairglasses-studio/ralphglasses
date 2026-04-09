@@ -57,6 +57,9 @@ func BuildBaseline(observations []session.LoopObservation, windowHours float64) 
 	// Filter to window
 	var filtered []session.LoopObservation
 	for _, obs := range observations {
+		if !session.ObservationEligibleForBaseline(obs) {
+			continue
+		}
 		if obs.Timestamp.After(cutoff) || windowHours <= 0 {
 			filtered = append(filtered, obs)
 		}

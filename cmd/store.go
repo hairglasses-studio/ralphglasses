@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/hairglasses-studio/ralphglasses/internal/bootstrap"
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
+	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -24,4 +25,18 @@ func initManagerWithStore(bus *events.Bus) *session.Manager {
 // persistence, optional scan-root config applied, and startup hygiene completed.
 func initManagerRuntime(scanRoot string, bus *events.Bus) *session.Manager {
 	return bootstrap.InitManagerRuntime(scanRoot, bus)
+}
+
+func loadManagerExternalSessions(mgr *session.Manager, scanRoot string) {
+	if mgr == nil {
+		return
+	}
+	sharedStateDir := ralphpath.SessionsDir()
+	for _, dir := range ralphpath.ExternalSessionSearchDirs(scanRoot) {
+		if dir != sharedStateDir {
+			mgr.SetStateDir(dir)
+		}
+		mgr.LoadExternalSessions()
+	}
+	mgr.SetStateDir(sharedStateDir)
 }

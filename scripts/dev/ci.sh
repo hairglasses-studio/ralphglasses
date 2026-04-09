@@ -6,6 +6,8 @@ repo_root="$(cd "${script_dir}/../.." && pwd)"
 go_cmd="${repo_root}/scripts/dev/go.sh"
 
 "${repo_root}/scripts/dev/doctor.sh"
+bash "${repo_root}/scripts/dev/check-tracked-artifacts.sh"
+python3 "${repo_root}/scripts/sync-provider-roles.py" --check
 
 "${go_cmd}" vet ./...
 
@@ -54,3 +56,5 @@ else
 fi
 
 bash "${script_dir}/test_doctor.sh"
+bash "${script_dir}/test_tracked_artifacts.sh"
+bash "${script_dir}/test_sync_provider_roles.sh"

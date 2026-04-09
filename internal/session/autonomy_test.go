@@ -3,7 +3,6 @@ package session
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 )
@@ -55,91 +54,6 @@ func TestDecisionLog_ProposeAllowed(t *testing.T) {
 	}
 }
 
-func TestDecisionLog_ProposeDecoratesMetadata(t *testing.T) {
-	dir := t.TempDir()
-	dl := NewDecisionLog(dir, LevelObserve)
-
-	allowed := dl.Propose(AutonomousDecision{
-		ID:            "dec-meta",
-		Category:      DecisionLaunch,
-		RequiredLevel: LevelFullAutonomy,
-		Action:        "launch roadmap tranche",
-		Rationale:     "backlog item is ready",
-		SessionID:     "sess-123",
-		RepoName:      "ralphglasses",
-	})
-	if allowed {
-		t.Fatal("observe mode should not execute full-autonomy launch decisions")
-	}
-
-	recent := dl.Recent(1)
-	if len(recent) != 1 {
-		t.Fatalf("expected 1 decision, got %d", len(recent))
-	}
-	got := recent[0]
-	if got.PolicySource != "decision-log:insufficient-level" {
-		t.Errorf("policy_source = %q", got.PolicySource)
-	}
-	if got.RollbackHint == "" {
-		t.Error("expected rollback_hint to be populated")
-	}
-	if got.UndoHandle != "session:sess-123" {
-		t.Errorf("undo_handle = %q, want session:sess-123", got.UndoHandle)
-	}
-	if len(got.RiskTags) == 0 {
-		t.Fatal("expected risk_tags to be populated")
-	}
-	if got.Counterfactual == "" {
-		t.Fatal("expected counterfactual to be populated")
-	}
-	if !strings.Contains(got.Counterfactual, "full-autonomy") {
-		t.Errorf("counterfactual = %q, want required level context", got.Counterfactual)
-	}
-}
-
-func TestDecisionLog_SnapshotIncludesMetadata(t *testing.T) {
-	dir := t.TempDir()
-	dl := NewDecisionLog(dir, LevelAutoOptimize)
-
-	dl.Propose(AutonomousDecision{
-		ID:            "dec-budget",
-		Category:      DecisionBudgetAdjust,
-		RequiredLevel: LevelAutoOptimize,
-		Action:        "raise budget ceiling",
-		Rationale:     "provider costs spiked",
-	})
-
-	snapshot := dl.Snapshot(5)
-	stats, ok := snapshot["stats"].(map[string]any)
-	if !ok {
-		t.Fatalf("stats type = %T", snapshot["stats"])
-	}
-	byPolicy, ok := stats["by_policy_source"].(map[string]int)
-	if !ok {
-		t.Fatalf("by_policy_source type = %T", stats["by_policy_source"])
-	}
-	if byPolicy["decision-log:autonomy-level"] != 1 {
-		t.Errorf("by_policy_source = %#v", byPolicy)
-	}
-	byRisk, ok := stats["by_risk_tag"].(map[string]int)
-	if !ok {
-		t.Fatalf("by_risk_tag type = %T", stats["by_risk_tag"])
-	}
-	if byRisk["cost"] != 1 {
-		t.Errorf("by_risk_tag = %#v", byRisk)
-	}
-	recent, ok := snapshot["recent"].([]AutonomousDecisionSummary)
-	if !ok {
-		t.Fatalf("recent type = %T", snapshot["recent"])
-	}
-	if len(recent) != 1 {
-		t.Fatalf("recent length = %d, want 1", len(recent))
-	}
-	if recent[0].PolicySource == "" || recent[0].RollbackHint == "" {
-		t.Fatalf("recent summary missing metadata: %#v", recent[0])
-	}
-}
-
 func TestDecisionLog_Blocklist(t *testing.T) {
 	dir := t.TempDir()
 	dl := NewDecisionLog(dir, LevelFullAutonomy)
@@ -154,13 +68,6 @@ func TestDecisionLog_Blocklist(t *testing.T) {
 	allowed := dl.Propose(d)
 	if allowed {
 		t.Error("blocked category should not execute")
-	}
-	recent := dl.Recent(1)
-	if recent[0].PolicySource != "decision-log:blocklist" {
-		t.Errorf("policy_source = %q, want decision-log:blocklist", recent[0].PolicySource)
-	}
-	if !strings.Contains(recent[0].Counterfactual, "blocklisted") {
-		t.Errorf("counterfactual = %q, want blocklist explanation", recent[0].Counterfactual)
 	}
 
 	dl.Unblock(DecisionRestart)

@@ -20,12 +20,12 @@ func TestScaffold(t *testing.T) {
 		t.Fatalf("Scaffold: %v", err)
 	}
 
-	if len(result.Created) != 6 {
-		t.Errorf("expected 6 created files, got %d: %v", len(result.Created), result.Created)
+	if len(result.Created) != 7 {
+		t.Errorf("expected 7 created files, got %d: %v", len(result.Created), result.Created)
 	}
 
 	// Verify files exist
-	for _, relPath := range []string{".ralphrc", "AGENTS.md", ".codex/config.toml", ".ralph/PROMPT.md", ".ralph/AGENT.md", ".ralph/fix_plan.md"} {
+	for _, relPath := range []string{".ralphrc", "AGENTS.md", ".agents/roles/README.md", ".codex/config.toml", ".ralph/PROMPT.md", ".ralph/AGENT.md", ".ralph/fix_plan.md"} {
 		full := filepath.Join(dir, relPath)
 		if _, err := os.Stat(full); err != nil {
 			t.Errorf("expected %s to exist", relPath)
@@ -58,6 +58,11 @@ func TestScaffold(t *testing.T) {
 	codexCfg, _ := os.ReadFile(filepath.Join(dir, ".codex", "config.toml"))
 	if !strings.Contains(string(codexCfg), "model = \"gpt-5.4\"") {
 		t.Error("expected gpt-5.4 in .codex/config.toml")
+	}
+
+	roleCatalog, _ := os.ReadFile(filepath.Join(dir, ".agents", "roles", "README.md"))
+	if !strings.Contains(string(roleCatalog), "provider-neutral source of truth") {
+		t.Error("expected role catalog scaffold README")
 	}
 }
 

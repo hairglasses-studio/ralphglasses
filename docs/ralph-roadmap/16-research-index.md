@@ -16,8 +16,8 @@ This document is the master lookup table for all findings from the ralphglasses 
 | F-001 | s1-race-condition-census (R-01) | `AutoRecovery.retryState` map accessed from concurrent goroutines with no mutex -- fatal concurrent map write | `internal/session/autorecovery.go` / Phase 10.5 | F-002, F-028 |
 | F-002 | s1-race-condition-census (R-02) | `RetryTracker.attempts` map in fleet package has no lock; HTTP handlers race on it | `internal/fleet/retry.go`, `server_handlers.go` / Phase 10.5 | F-001, F-015 |
 | F-003 | 01-roadmap-matrix (Section 3.1) | Phase 3.5.5 numbering collision -- two sections share identical sub-IDs for completely different tasks (Codex parity vs theme export) | ROADMAP.md / Phase 3.5 | F-039 |
-| F-004 | 01-roadmap-matrix (Finding B) | [STALE 2026-04-08] `tools_loop_test.go` does not imply missing Phase 9 handlers; the tier-1 rdcycle handlers live in `internal/mcpserver/handler_rdcycle.go` | `internal/mcpserver/` / Phase 9 | F-005, F-037 |
-| F-005 | 01-roadmap-matrix (Section 6.3) | [STALE 2026-04-08] Phase 9 roadmap/docs referenced a planned split across `merge.go`, `cycle_plan.go`, `scheduler.go`, `baseline.go`, and `tools_loop.go`; current code is consolidated in `internal/mcpserver/handler_rdcycle.go` | ROADMAP/docs / Phase 9 | F-004, F-037 |
+| F-004 | 01-roadmap-matrix (Finding B) | `tools_loop_test.go` exists without `tools_loop.go` -- Phase 9 tier-1 tools have test expectations but no implementations | `internal/mcpserver/` / Phase 9 | F-005, F-037 |
+| F-005 | 01-roadmap-matrix (Section 6.3) | Phase 9 marked 100% complete but tier-1 tool files (`merge.go`, `cycle_plan.go`, `scheduler.go`, `baseline.go`) do not exist on disk | `internal/session/` / Phase 9 | F-004, F-037 |
 | F-006 | 08-ralph-deep-dive (Sprint 7) | 5 BLOCKER path traversal vulnerabilities in MCP handlers -- `scratchpadName`, `name`, `worktree_paths`, `hooks.yaml command`, `verify_commands` bypass `ValidatePath` | `internal/mcpserver/` / Phase 1 | F-029 |
 
 ### HIGH

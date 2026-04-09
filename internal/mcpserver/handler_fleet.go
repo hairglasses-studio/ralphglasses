@@ -293,29 +293,21 @@ func (s *Server) handleAutonomyLevel(_ context.Context, req mcp.CallToolRequest)
 
 func (s *Server) handleSupervisorStatus(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if s.SessMgr == nil {
-		payload := map[string]any{
+		return fleetJSON(map[string]any{
 			"running":      false,
 			"error":        "no manager",
 			"productivity": session.EmptyProductivitySnapshot(),
-		}
-		if s.DecisionLog != nil {
-			payload["decision_log"] = s.DecisionLog.Snapshot(5)
-		}
-		return fleetJSON(payload)
+		})
 	}
 	status := s.SessMgr.SupervisorStatus()
 	if status == nil {
-		payload := map[string]any{
+		return fleetJSON(map[string]any{
 			"running":      false,
 			"message":      "supervisor not active",
 			"productivity": s.SessMgr.ProductivitySnapshot("", time.Time{}),
-		}
-		if s.DecisionLog != nil {
-			payload["decision_log"] = s.DecisionLog.Snapshot(5)
-		}
-		return fleetJSON(payload)
+		})
 	}
-	payload := map[string]any{
+	return fleetJSON(map[string]any{
 		"running":                status.Running,
 		"repo_path":              status.RepoPath,
 		"tick_count":             status.TickCount,
@@ -327,11 +319,7 @@ func (s *Server) handleSupervisorStatus(_ context.Context, _ mcp.CallToolRequest
 		"crash_recovery_active":  status.CrashRecoveryActive,
 		"crash_recovery_policy":  status.CrashRecoveryPolicy,
 		"productivity":           status.Productivity,
-	}
-	if s.DecisionLog != nil {
-		payload["decision_log"] = s.DecisionLog.Snapshot(5)
-	}
-	return fleetJSON(payload)
+	})
 }
 
 func (s *Server) handleAutonomyDecisions(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -343,10 +331,9 @@ func (s *Server) handleAutonomyDecisions(_ context.Context, req mcp.CallToolRequ
 
 	decisions := s.DecisionLog.Recent(limit)
 	return fleetJSON(map[string]any{
-		"decisions":          decisions,
-		"decision_summaries": s.DecisionLog.RecentSummaries(limit),
-		"count":              len(decisions),
-		"stats":              s.DecisionLog.Stats(),
+		"decisions": decisions,
+		"count":     len(decisions),
+		"stats":     s.DecisionLog.Stats(),
 	})
 }
 

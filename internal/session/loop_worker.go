@@ -233,6 +233,48 @@ func (m *Manager) runWorkerTask(p workerParams) workerResult {
 		m.cascade.RecordResult(*cascadeRes)
 	}
 
+	// Reviewer-Fixer Pairing
+	if p.profile.ReviewPatience > 0 {
+		for fixAttempt := 0; fixAttempt < p.profile.ReviewPatience; fixAttempt++ {
+			reviewOpts := LaunchOptions{
+				Provider:     p.profile.WorkerProvider,
+				RepoPath:     wt,
+				Prompt:       "Review the recent changes in this worktree. If the code is correct and complete, respond with exactly 'LGTM'. If there are issues, describe them in detail.",
+				Model:        p.profile.WorkerModel,
+				MaxBudgetUSD: p.profile.WorkerBudgetUSD / 2,
+				SessionName:  fmt.Sprintf("loop-review-%s-%03d-%d-%d", p.run.RepoName, p.iteration.Number, p.workerIdx, fixAttempt),
+			}
+			reviewSess, revErr := m.launchWorkflowSession(p.ctx, reviewOpts)
+			if revErr != nil {
+				slog.Warn("reviewer session launch failed", "error", revErr)
+				break
+			}
+			_ = m.waitForSession(p.ctx, reviewSess)
+
+			revOut := sessionOutputSummary(reviewSess)
+			if strings.Contains(strings.ToUpper(revOut), "LGTM") {
+				slog.Info("reviewer approved changes", "loop", p.run.ID, "worker", p.workerIdx)
+				break
+			}
+
+			slog.Info("reviewer found issues, launching fixer", "loop", p.run.ID, "worker", p.workerIdx, "attempt", fixAttempt)
+			fixOpts := LaunchOptions{
+				Provider:     p.profile.WorkerProvider,
+				RepoPath:     wt,
+				Prompt:       "Apply the following fixes to the codebase based on the code review:\n\n" + revOut,
+				Model:        p.profile.WorkerModel,
+				MaxBudgetUSD: p.profile.WorkerBudgetUSD / 2,
+				SessionName:  fmt.Sprintf("loop-fix-%s-%03d-%d-%d", p.run.RepoName, p.iteration.Number, p.workerIdx, fixAttempt),
+			}
+			fixSess, fixErr := m.launchWorkflowSession(p.ctx, fixOpts)
+			if fixErr != nil {
+				slog.Warn("fixer session launch failed", "error", fixErr)
+				break
+			}
+			_ = m.waitForSession(p.ctx, fixSess)
+		}
+	}
+
 	out := sessionOutputSummary(ws)
 	workerStalls := 0
 	if detector != nil {

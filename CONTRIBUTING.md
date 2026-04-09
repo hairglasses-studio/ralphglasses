@@ -229,7 +229,7 @@ codex exec --full-auto "Read AGENTS.md, then fix the failing test in internal/se
 |---------|------------|------------|-----------|
 | Resume session | Yes | Yes | Yes (`codex exec resume`, install-dependent) |
 | Budget enforcement | Native (`--max-budget-usd`) | External in ralphglasses | External in ralphglasses |
-| Agent definitions | Native (`--agent`, `.claude/agents/`) | Commands/extensions only (`.gemini/commands/*.toml`, `.gemini/extensions/`) | Repo-native only (`.codex/agents/*.toml`, `AGENTS.md`) |
+| Agent definitions | Native (`--agent`, `.claude/agents/`) | Native (`.gemini/agents/*.md`) and Legacy (`.gemini/commands/*.toml`) | Repo-native only (`.codex/agents/*.toml`, `AGENTS.md`) |
 | Worktree isolation | Yes | Yes (`--worktree`) | No |
 | System prompt flag | Yes | No | No |
 | Permission mode | Yes (`--permission-mode`) | Yes (`--approval-mode`) | Mapped onto `--sandbox` by ralphglasses |

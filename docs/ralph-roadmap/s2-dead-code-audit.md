@@ -41,15 +41,15 @@ These are open tasks (`[ ]`) — expected to not exist yet — but included for 
 
 | Task Status | File | Phase / Task | Notes |
 |-------------|------|-------------|-------|
-| OPEN | `internal/mcpserver/tools_loop.go` | Phase 9 reference drift | Planned split superseded by `handler_rdcycle.go` for tier-1 rdcycle handlers and `handler_loop.go` for loop lifecycle handlers. |
+| OPEN | `internal/mcpserver/tools_loop.go` | Future sprint | Server struct is in `tools.go`; loop tool handlers are in `handler_loop.go`. |
 | OPEN | `internal/mcpserver/server.go` | Phase perf sprint | `Server` struct defined in `tools.go:42`, not a dedicated `server.go`. |
 | OPEN | `internal/bandit/selector.go` | Future cascade phase | Bandit logic lives in `bandit.go`, `ucb.go`, `thompson.go`, etc. No file named `selector.go`. |
 | OPEN | `internal/fleet/a2a_federation.go` | Future | Exists as concept in `a2a.go` / `a2a_dispatch.go`. |
 | OPEN | `internal/session/snapshot.go` | QW-7 (completed differently) | See 1a above. |
-| OPEN | `internal/session/merge.go` | Phase 9 reference drift | `cycle_merge` currently lives in `internal/mcpserver/handler_rdcycle.go`; dedicated session split never landed. |
-| OPEN | `internal/session/cycle_plan.go` | Phase 9 reference drift | `cycle_plan` currently lives in `internal/mcpserver/handler_rdcycle.go`; dedicated session split never landed. |
-| OPEN | `internal/session/scheduler.go` | Phase 9 reference drift | `cycle_schedule` currently lives in `internal/mcpserver/handler_rdcycle.go`; dedicated session split never landed. |
-| OPEN | `internal/session/baseline.go` | Phase 9 reference drift | `cycle_baseline` currently lives in `internal/mcpserver/handler_rdcycle.go`; dedicated session split never landed. |
+| OPEN | `internal/session/merge.go` | Future sprint | Cycle merge logic TBD. |
+| OPEN | `internal/session/cycle_plan.go` | Future sprint | |
+| OPEN | `internal/session/scheduler.go` | Future sprint | |
+| OPEN | `internal/session/baseline.go` | Future sprint | |
 | OPEN | `internal/eval/` (many files) | Future eval phase | Package dir exists but 9 specific files are missing: benchmark, comparison, dashboard, harness, leaderboard, pass_k, quality, slo, task_class, test_grader. |
 | OPEN | `internal/plugin/` (many files) | Future plugin phases | sandbox, sdk, template_marketplace, templates, tool_compose, tool_registry, wasm_capabilities, wasm_host, wasm_runtime are missing. |
 | OPEN | `internal/sandbox/incus/` | Phase 5.2 | Package exists under `internal/sandbox/` but `incus/` subdir is missing. |

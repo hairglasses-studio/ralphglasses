@@ -129,6 +129,7 @@ func setupMCP(sp string) (*server.MCPServer, func(), error) {
 		server.WithToolHandlerMiddleware(mcpserver.InstrumentationMiddleware(toolRec)),
 		server.WithToolHandlerMiddleware(mcpserver.EventBusMiddleware(bus)),
 		server.WithToolHandlerMiddleware(rg.HooksMiddleware()),
+		server.WithToolHandlerMiddleware(mcpserver.SecretSanitizationMiddleware()),
 		server.WithToolHandlerMiddleware(mcpserver.ValidationMiddleware(sp)),
 	)
 

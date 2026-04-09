@@ -46,47 +46,6 @@ func waitForCondition(t *testing.T, timeout time.Duration, fn func() (bool, stri
 	t.Fatalf("condition not met within %s: %s", timeout, last)
 }
 
-func startCoordinatorForTest(t *testing.T, srv *Server) int {
-	t.Helper()
-
-	for attempt := 0; attempt < 5; attempt++ {
-		port := reserveTCPPort(t)
-
-		result, err := srv.handleFleetRuntime(context.Background(), makeRequest(map[string]any{
-			"action":     "start",
-			"mode":       "coordinator",
-			"port":       float64(port),
-			"automation": false,
-		}))
-		if err != nil {
-			t.Fatalf("start coordinator: %v", err)
-		}
-		if result.IsError {
-			t.Fatalf("start coordinator returned error: %s", getResultText(result))
-		}
-
-		deadline := time.Now().Add(2 * time.Second)
-		for time.Now().Before(deadline) {
-			status := srv.fleetRuntimeStatus(context.Background())
-			if lastErr, _ := status["last_error"].(string); strings.Contains(lastErr, "address already in use") {
-				_, _ = srv.handleFleetRuntime(context.Background(), makeRequest(map[string]any{"action": "stop"}))
-				break
-			}
-
-			_, hasNodeStatus := status["node_status"]
-			active, _ := status["active"].(bool)
-			if active && hasNodeStatus {
-				return port
-			}
-
-			time.Sleep(50 * time.Millisecond)
-		}
-	}
-
-	t.Fatal("coordinator did not start without port conflicts after retries")
-	return 0
-}
-
 func TestHandleConfigSchema_FilterAndDefaults(t *testing.T) {
 	t.Parallel()
 
@@ -218,10 +177,30 @@ func TestHandleFleetRuntime_CoordinatorLifecycle(t *testing.T) {
 	t.Parallel()
 
 	srv, _ := setupTestServer(t)
+	port := reserveTCPPort(t)
 	t.Cleanup(func() {
 		_, _ = srv.handleFleetRuntime(context.Background(), makeRequest(map[string]any{"action": "stop"}))
 	})
-	_ = startCoordinatorForTest(t, srv)
+
+	result, err := srv.handleFleetRuntime(context.Background(), makeRequest(map[string]any{
+		"action":     "start",
+		"mode":       "coordinator",
+		"port":       float64(port),
+		"automation": false,
+	}))
+	if err != nil {
+		t.Fatalf("start coordinator: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("start coordinator returned error: %s", getResultText(result))
+	}
+
+	waitForCondition(t, 10*time.Second, func() (bool, string) {
+		status := srv.fleetRuntimeStatus(context.Background())
+		_, hasNodeStatus := status["node_status"]
+		active, _ := status["active"].(bool)
+		return active && hasNodeStatus, fmt.Sprintf("snapshot=%v", status)
+	})
 
 	stopResult, err := srv.handleFleetRuntime(context.Background(), makeRequest(map[string]any{
 		"action": "stop",
@@ -247,13 +226,32 @@ func TestHandleFleetRuntime_WorkerLifecycle(t *testing.T) {
 	workerSrv := NewServer(root)
 	workerSrv.SessMgr.SetStateDir(filepath.Join(root, ".worker-session-state"))
 
+	coordPort := reserveTCPPort(t)
 	workerPort := reserveTCPPort(t)
 	t.Cleanup(func() {
 		_, _ = workerSrv.handleFleetRuntime(context.Background(), makeRequest(map[string]any{"action": "stop"}))
 		_, _ = coordSrv.handleFleetRuntime(context.Background(), makeRequest(map[string]any{"action": "stop"}))
 	})
 
-	coordPort := startCoordinatorForTest(t, coordSrv)
+	startCoord, err := coordSrv.handleFleetRuntime(context.Background(), makeRequest(map[string]any{
+		"action":     "start",
+		"mode":       "coordinator",
+		"port":       float64(coordPort),
+		"automation": false,
+	}))
+	if err != nil {
+		t.Fatalf("start coordinator: %v", err)
+	}
+	if startCoord.IsError {
+		t.Fatalf("start coordinator returned error: %s", getResultText(startCoord))
+	}
+
+	waitForCondition(t, 10*time.Second, func() (bool, string) {
+		status := coordSrv.fleetRuntimeStatus(context.Background())
+		_, hasNodeStatus := status["node_status"]
+		active, _ := status["active"].(bool)
+		return active && hasNodeStatus, fmt.Sprintf("coordinator snapshot=%v", status)
+	})
 
 	startWorker, err := workerSrv.handleFleetRuntime(context.Background(), makeRequest(map[string]any{
 		"action":          "start",

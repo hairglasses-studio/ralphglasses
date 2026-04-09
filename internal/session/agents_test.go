@@ -379,7 +379,7 @@ func TestDiscoverAgents_GeminiCommands(t *testing.T) {
 	}
 }
 
-func TestWriteGeminiCommand(t *testing.T) {
+func TestWriteGeminiAgent(t *testing.T) {
 	root := t.TempDir()
 
 	def := AgentDef{
@@ -393,19 +393,19 @@ func TestWriteGeminiCommand(t *testing.T) {
 		t.Fatalf("WriteAgent(gemini): %v", err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(root, ".gemini", "commands", "triage.toml"))
+	data, err := os.ReadFile(filepath.Join(root, ".gemini", "agents", "triage.md"))
 	if err != nil {
-		t.Fatalf("read Gemini command file: %v", err)
+		t.Fatalf("read Gemini agent file: %v", err)
 	}
 	content := string(data)
-	if !contains(content, `description = "Gemini triage command"`) {
-		t.Error("Gemini command file missing description")
-	}
-	if !contains(content, "prompt = \"\"\"") {
-		t.Error("Gemini command file missing prompt block")
+	if !contains(content, "description: Gemini triage command") {
+		t.Error("Gemini agent file missing frontmatter description")
 	}
 	if !contains(content, "Summarize the current repo state.") {
-		t.Error("Gemini command file missing prompt")
+		t.Error("Gemini agent file missing prompt body")
+	}
+	if _, err := os.Stat(filepath.Join(root, ".gemini", "commands", "triage.toml")); !os.IsNotExist(err) {
+		t.Fatalf("expected no legacy Gemini command file, stat err=%v", err)
 	}
 }
 

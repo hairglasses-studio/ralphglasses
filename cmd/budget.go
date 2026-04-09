@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -26,8 +25,7 @@ var budgetStatusCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
 		mgr := initManagerWithStore(nil)
-		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
-		mgr.LoadExternalSessions()
+		loadManagerExternalSessions(mgr, sp)
 
 		sessions := mgr.ListByTenant("", session.NormalizeTenantID(budgetTenantID))
 		var totalSpent, totalBudget float64
@@ -75,8 +73,7 @@ var budgetSetCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
 		mgr := initManagerWithStore(nil)
-		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
-		mgr.LoadExternalSessions()
+		loadManagerExternalSessions(mgr, sp)
 
 		s, ok := mgr.GetForTenant(args[0], session.NormalizeTenantID(budgetTenantID))
 		if !ok {
@@ -106,8 +103,7 @@ var budgetResetCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
 		mgr := initManagerWithStore(nil)
-		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
-		mgr.LoadExternalSessions()
+		loadManagerExternalSessions(mgr, sp)
 
 		s, ok := mgr.GetForTenant(args[0], session.NormalizeTenantID(budgetTenantID))
 		if !ok {

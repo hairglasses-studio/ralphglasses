@@ -415,6 +415,72 @@ func TestExport_LaunchReady_PhaseFilter(t *testing.T) {
 	}
 }
 
+func TestExport_Checkpoint(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	repoDir := filepath.Join(dir, "checkpoint-repo")
+	if err := os.MkdirAll(repoDir, 0o755); err != nil {
+		t.Fatalf("mkdir repo: %v", err)
+	}
+	path := filepath.Join(repoDir, "ROADMAP.md")
+	if err := os.WriteFile(path, []byte(testRoadmap), 0o644); err != nil {
+		t.Fatalf("write roadmap: %v", err)
+	}
+
+	rm, err := Parse(path)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	output, err := Export(rm, "checkpoint", "Phase 1", "Parser", 20, true)
+	if err != nil {
+		t.Fatalf("Export checkpoint: %v", err)
+	}
+
+	if !strings.Contains(output, "# Tranche Checkpoint") {
+		t.Fatal("expected checkpoint header")
+	}
+	if !strings.Contains(output, "Repo: `checkpoint-repo`") {
+		t.Errorf("expected repo name in checkpoint output, got: %s", output)
+	}
+	if !strings.Contains(output, "Component: `Phase 1 / Parser`") {
+		t.Errorf("expected component label in checkpoint output, got: %s", output)
+	}
+	if !strings.Contains(output, "1.1.3 — Write unit tests") {
+		t.Errorf("expected completed tranche task in checkpoint output, got: %s", output)
+	}
+	if !strings.Contains(output, "Parser: parser handles all edge cases") {
+		t.Errorf("expected acceptance criteria in checkpoint output, got: %s", output)
+	}
+	if !strings.Contains(output, "1.1.1 — Implement line parser") {
+		t.Errorf("expected next-wave ready task in checkpoint output, got: %s", output)
+	}
+	if !strings.Contains(output, "1.1.2 — Add error handling") || !strings.Contains(output, "[blocked by 1.1.1]") {
+		t.Errorf("expected blocked follow-up task in checkpoint output, got: %s", output)
+	}
+}
+
+func TestExport_Checkpoint_NoAcceptanceFallback(t *testing.T) {
+	t.Parallel()
+	path := writeTestRoadmap(t)
+	rm, err := Parse(path)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	output, err := Export(rm, "checkpoint", "Phase 2", "", 20, true)
+	if err != nil {
+		t.Fatalf("Export checkpoint: %v", err)
+	}
+
+	if !strings.Contains(output, "No explicit acceptance criteria found") {
+		t.Errorf("expected verification fallback in checkpoint output, got: %s", output)
+	}
+	if !strings.Contains(output, "Add documentation") {
+		t.Errorf("expected phase 2 next-wave task in checkpoint output, got: %s", output)
+	}
+}
+
 func TestComputeDifficulty(t *testing.T) {
 	t.Parallel()
 

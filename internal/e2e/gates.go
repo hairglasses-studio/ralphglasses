@@ -241,6 +241,13 @@ func EvaluateFromObservations(repoRoot string, thresholds GateThresholds, hours 
 	if err != nil {
 		return nil, fmt.Errorf("load observations: %w", err)
 	}
+	filtered := make([]session.LoopObservation, 0, len(observations))
+	for _, obs := range observations {
+		if session.ObservationEligibleForBaseline(obs) {
+			filtered = append(filtered, obs)
+		}
+	}
+	observations = filtered
 
 	// Rolling window: keep only the most recent N observations so that
 	// early development failures don't permanently drag down rates.
@@ -333,7 +340,7 @@ func FormatReportJSON(r *GateReport) ([]byte, error) {
 // GateVerdictTrend represents the verdict-level change for a single gate between two reports.
 type GateVerdictTrend struct {
 	Gate      string `json:"gate"`
-	Previous  string `json:"previous"`  // pass/warn/fail/skip
+	Previous  string `json:"previous"` // pass/warn/fail/skip
 	Current   string `json:"current"`
 	Direction string `json:"direction"` // improved/degraded/unchanged
 }

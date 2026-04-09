@@ -305,6 +305,37 @@ func TestHandleRoadmapExport_LaunchReady(t *testing.T) {
 	}
 }
 
+func TestHandleRoadmapExport_Checkpoint(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapExport(context.Background(), roadmapReq(map[string]any{
+		"path":    repoPath,
+		"format":  "checkpoint",
+		"phase":   "Phase 1",
+		"section": "Parser",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	if !strings.Contains(text, "Repo: `test-repo`") {
+		t.Errorf("expected repo marker in checkpoint output, got: %s", text)
+	}
+	if !strings.Contains(text, "## Completed In This Tranche") {
+		t.Errorf("expected completed section in checkpoint output, got: %s", text)
+	}
+	if !strings.Contains(text, "## Next Wave") {
+		t.Errorf("expected next-wave section in checkpoint output, got: %s", text)
+	}
+	if !strings.Contains(text, "Write unit tests") {
+		t.Errorf("expected completed task in checkpoint output, got: %s", text)
+	}
+}
+
 
 func TestHandleRoadmapAnalyze_WithQuery(t *testing.T) {
 	t.Parallel()

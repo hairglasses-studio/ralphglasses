@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"path/filepath"
 	"strings"
 )
 
@@ -29,19 +30,23 @@ func Export(rm *Roadmap, format, phase, section string, maxTasks int, respectDep
 		maxTasks = 20
 	}
 
-	tasks := collectTasks(rm, phase, section, maxTasks, respectDeps)
-
 	switch format {
 	case "rdcycle", "":
+		tasks := collectTasks(rm, phase, section, maxTasks, respectDeps)
 		return exportRDCycle(rm, tasks)
 	case "fix_plan":
+		tasks := collectTasks(rm, phase, section, maxTasks, respectDeps)
 		return exportFixPlan(tasks), nil
 	case "progress":
+		tasks := collectTasks(rm, phase, section, maxTasks, respectDeps)
 		return exportProgress(rm, tasks)
 	case "launch_ready":
+		tasks := collectTasks(rm, phase, section, maxTasks, respectDeps)
 		return exportLaunchReady(rm, tasks)
+	case "checkpoint":
+		return exportCheckpoint(rm, phase, section, maxTasks, respectDeps), nil
 	default:
-		return "", fmt.Errorf("unknown format: %s (supported: rdcycle, fix_plan, progress, launch_ready)", format)
+		return "", fmt.Errorf("unknown format: %s (supported: rdcycle, fix_plan, progress, launch_ready, checkpoint)", format)
 	}
 }
 
@@ -81,6 +86,30 @@ func collectTasks(rm *Roadmap, phaseFilter, sectionFilter string, maxTasks int, 
 				if len(tasks) >= maxTasks {
 					return tasks
 				}
+			}
+		}
+	}
+
+	return tasks
+}
+
+func collectFilteredTasks(rm *Roadmap, phaseFilter, sectionFilter string) []taskWithContext {
+	var tasks []taskWithContext
+
+	for _, p := range rm.Phases {
+		if phaseFilter != "" && !strings.Contains(strings.ToLower(p.Name), strings.ToLower(phaseFilter)) {
+			continue
+		}
+		for _, s := range p.Sections {
+			if sectionFilter != "" && !strings.Contains(strings.ToLower(s.Name), strings.ToLower(sectionFilter)) {
+				continue
+			}
+			for _, t := range s.Tasks {
+				tasks = append(tasks, taskWithContext{
+					Task:    t,
+					Phase:   p.Name,
+					Section: s.Name,
+				})
 			}
 		}
 	}
@@ -183,6 +212,165 @@ func exportProgress(rm *Roadmap, tasks []taskWithContext) (string, error) {
 		return "", fmt.Errorf("marshal progress: %w", err)
 	}
 	return string(data), nil
+}
+
+func exportCheckpoint(rm *Roadmap, phaseFilter, sectionFilter string, maxTasks int, respectDeps bool) string {
+	if maxTasks <= 0 {
+		maxTasks = 20
+	}
+
+	allTasks := collectFilteredTasks(rm, phaseFilter, sectionFilter)
+	completedSet := buildCompletedSet(rm)
+
+	var completed []taskWithContext
+	var nextWave []taskWithContext
+	var blocked []taskWithContext
+
+	for _, tc := range allTasks {
+		switch {
+		case tc.Task.Done:
+			completed = append(completed, tc)
+		case !respectDeps || depsReady(tc.Task, completedSet):
+			nextWave = append(nextWave, tc)
+		default:
+			blocked = append(blocked, tc)
+		}
+	}
+
+	completed = limitTaskList(completed, maxTasks)
+	nextWave = limitTaskList(nextWave, maxTasks)
+	blocked = limitTaskList(blocked, maxTasks)
+
+	component := checkpointComponentLabel(phaseFilter, sectionFilter)
+	repoName := checkpointRepoName(rm)
+	verification := collectAcceptanceCriteria(rm, phaseFilter, sectionFilter)
+
+	var b strings.Builder
+	b.WriteString("# Tranche Checkpoint\n\n")
+	b.WriteString(fmt.Sprintf("- Repo: `%s`\n", repoName))
+	b.WriteString(fmt.Sprintf("- Component: `%s`\n", component))
+	if rm.SourcePath != "" {
+		b.WriteString(fmt.Sprintf("- Roadmap: `%s`\n", filepath.Base(rm.SourcePath)))
+	}
+	b.WriteString(fmt.Sprintf("- Completed items captured: %d\n", len(completed)))
+	b.WriteString(fmt.Sprintf("- Next-wave items captured: %d\n", len(nextWave)))
+	if len(blocked) > 0 {
+		b.WriteString(fmt.Sprintf("- Blocked follow-ups captured: %d\n", len(blocked)))
+	}
+	b.WriteString("\n## Completed In This Tranche\n")
+	writeCheckpointTaskList(&b, completed, "No completed roadmap items matched this tranche filter.")
+
+	b.WriteString("\n## Verification\n")
+	if len(verification) == 0 {
+		b.WriteString("- No explicit acceptance criteria found in the selected roadmap slice.\n")
+	} else {
+		for _, item := range verification {
+			b.WriteString(fmt.Sprintf("- %s\n", item))
+		}
+	}
+
+	b.WriteString("\n## Next Wave\n")
+	writeCheckpointTaskList(&b, nextWave, "No dependency-ready follow-up tasks are currently queued in this slice.")
+
+	if len(blocked) > 0 {
+		b.WriteString("\n## Blocked Follow-Ups\n")
+		for _, tc := range blocked {
+			b.WriteString(fmt.Sprintf("- [ ] %s\n", checkpointTaskLine(tc, true)))
+		}
+	}
+
+	return b.String()
+}
+
+func limitTaskList(tasks []taskWithContext, maxTasks int) []taskWithContext {
+	if maxTasks <= 0 || len(tasks) <= maxTasks {
+		return tasks
+	}
+	return tasks[:maxTasks]
+}
+
+func checkpointComponentLabel(phaseFilter, sectionFilter string) string {
+	switch {
+	case phaseFilter != "" && sectionFilter != "":
+		return phaseFilter + " / " + sectionFilter
+	case sectionFilter != "":
+		return sectionFilter
+	case phaseFilter != "":
+		return phaseFilter
+	default:
+		return "roadmap-wide"
+	}
+}
+
+func checkpointRepoName(rm *Roadmap) string {
+	if rm.SourcePath != "" {
+		repoDir := filepath.Base(filepath.Dir(rm.SourcePath))
+		if repoDir != "." && repoDir != string(filepath.Separator) && repoDir != "" {
+			return repoDir
+		}
+	}
+	if rm.Title != "" {
+		return rm.Title
+	}
+	return "unknown-repo"
+}
+
+func collectAcceptanceCriteria(rm *Roadmap, phaseFilter, sectionFilter string) []string {
+	var criteria []string
+
+	for _, p := range rm.Phases {
+		if phaseFilter != "" && !strings.Contains(strings.ToLower(p.Name), strings.ToLower(phaseFilter)) {
+			continue
+		}
+		for _, s := range p.Sections {
+			if sectionFilter != "" && !strings.Contains(strings.ToLower(s.Name), strings.ToLower(sectionFilter)) {
+				continue
+			}
+			if strings.TrimSpace(s.Acceptance) == "" {
+				continue
+			}
+
+			label := s.Name
+			if label == "" || label == p.Name {
+				label = p.Name
+			} else if phaseFilter == "" {
+				label = p.Name + " / " + s.Name
+			}
+			criteria = append(criteria, fmt.Sprintf("%s: %s", label, s.Acceptance))
+		}
+	}
+
+	return criteria
+}
+
+func writeCheckpointTaskList(b *strings.Builder, tasks []taskWithContext, emptyMessage string) {
+	if len(tasks) == 0 {
+		b.WriteString("- " + emptyMessage + "\n")
+		return
+	}
+	for _, tc := range tasks {
+		b.WriteString(fmt.Sprintf("- [ ] %s\n", checkpointTaskLine(tc, false)))
+	}
+}
+
+func checkpointTaskLine(tc taskWithContext, includeDeps bool) string {
+	prefix := tc.Task.Description
+	if tc.Task.ID != "" {
+		prefix = tc.Task.ID + " — " + prefix
+	}
+
+	context := tc.Section
+	if context == "" {
+		context = tc.Phase
+	} else if tc.Section != tc.Phase {
+		context = tc.Phase + " / " + tc.Section
+	}
+
+	line := fmt.Sprintf("%s (%s)", prefix, context)
+	if includeDeps && len(tc.Task.DependsOn) > 0 {
+		line += fmt.Sprintf(" [blocked by %s]", strings.Join(tc.Task.DependsOn, ", "))
+	}
+	return line
 }
 
 // LaunchTask is a task enriched with metadata for session_launch consumption.

@@ -1,0 +1,161 @@
+{
+  "date": "2026-04-08",
+  "repo": "hairglasses-studio/ralphglasses",
+  "scope": "roadmap-derived queue for repo-owned automated patch selection",
+  "source_inputs": [
+    "ROADMAP.md",
+    "README.md",
+    "docs/CODEX-PARITY-STATUS.md",
+    "hairglasses-studio/docs/projects/agent-parity/2026-04-08-next-tranche-checkpoint.md",
+    "hairglasses-studio/docs/projects/agent-parity/2026-04-08-next-tranche-checkpoint.json"
+  ],
+  "current_stance": [
+    "runtime and operator-facing read-first fronts already exist",
+    "provider-parity discovery and adoption resources already exist",
+    "multiple filesystem-hardening follow-ups are already shipped",
+    "generated documentation and parity surfaces are already under active maintenance",
+    "the next useful queue should be narrow, integrity-led, and driven by real adoption or verification signal"
+  ],
+  "patch_selection_rules": [
+    "Choose repo-owned work from adoption telemetry and integrity signal before static roadmap breadth.",
+    "Require a current main reproduction before spending autobuild capacity on a red signal.",
+    "Keep user-home or workstation-only cleanup out of the repo-owned patch queue.",
+    "Prefer small gates and narrow helper convergence over another blanket filesystem pass.",
+    "Record why a tranche was opened, which signal triggered it, and what evidence closed it."
+  ],
+  "ranked_queue": [
+    {
+      "rank": 1,
+      "id": "layout_harness_drift_gate",
+      "priority": "P1",
+      "why_now": [
+        "The roadmap already treats teatest and layout-harness drift as an integrity class.",
+        "UI regressions are expensive when they only show up after a larger tranche lands."
+      ],
+      "recommended_scope": [
+        "teatest harness",
+        "nested layout sizing",
+        "deterministic UI verification"
+      ],
+      "acceptance": [
+        "Nested layout width regressions become deterministic test failures.",
+        "The gate protects the known TUI harness path instead of relying on ad hoc visual cleanup."
+      ]
+    },
+    {
+      "rank": 2,
+      "id": "shared_path_bypass_audit",
+      "priority": "P1",
+      "why_now": [
+        "The broad path-hardening tranche is mostly complete.",
+        "Remaining wins should come from the few repo-owned callers that still bypass shared path helpers."
+      ],
+      "recommended_scope": [
+        "config paths",
+        "state paths",
+        "cache paths",
+        "session paths",
+        "coordination paths"
+      ],
+      "acceptance": [
+        "Active config, state, cache, session, and coordination paths resolve through shared helpers or are explicitly justified.",
+        "The queue stops after the remaining repo-owned bypass set is exhausted."
+      ]
+    },
+    {
+      "rank": 3,
+      "id": "adoption_led_tranche_selector",
+      "priority": "P1",
+      "why_now": [
+        "The repo already exposes discovery, adoption, and priority fronts.",
+        "Autobuild should pick the next ralphglasses tranche from those signals instead of a static roadmap scan."
+      ],
+      "recommended_scope": [
+        "discovery telemetry",
+        "adoption telemetry",
+        "priority summaries",
+        "autobuild queue generation"
+      ],
+      "acceptance": [
+        "One machine-readable summary ranks the next repo-owned patch candidates.",
+        "The summary includes source signal, recommended entry surface, and confidence."
+      ]
+    },
+    {
+      "rank": 4,
+      "id": "remote_main_red_signal_filter",
+      "priority": "P1",
+      "why_now": [
+        "The broader parity program is already seeing stale local red state masquerade as repo debt.",
+        "Ralphglasses should not burn autobuild cycles on failures that do not reproduce on remote main."
+      ],
+      "recommended_scope": [
+        "red-signal intake",
+        "remote-main verification metadata",
+        "dirty-worktree filtering"
+      ],
+      "acceptance": [
+        "Automated patch selection requires remote-main verification metadata for a red signal.",
+        "Dirty-worktree or branch-local failures do not enter the repo-owned patch queue by default."
+      ]
+    },
+    {
+      "rank": 5,
+      "id": "generated_surface_drift_gate",
+      "priority": "P2",
+      "why_now": [
+        "The repo has multiple generated docs and parity-facing surfaces.",
+        "Generated-output drift is now more likely than missing baseline surface."
+      ],
+      "recommended_scope": [
+        "generated runtime docs",
+        "provider-parity docs",
+        "drift verification"
+      ],
+      "acceptance": [
+        "Generated runtime, parity, or docs surfaces fail verification when the source contract changes without regeneration.",
+        "Drift is recorded as a source-backed integrity failure, not as generic docs cleanup."
+      ]
+    },
+    {
+      "rank": 6,
+      "id": "telemetry_to_patch_feedback",
+      "priority": "P2",
+      "why_now": [
+        "Adoption-led selection becomes much more useful when the system can see which signals actually produced worthwhile patches.",
+        "This keeps future queue ranking from being purely speculative."
+      ],
+      "recommended_scope": [
+        "tranche metadata",
+        "signal capture",
+        "closure evidence",
+        "ranking feedback"
+      ],
+      "acceptance": [
+        "Each autobuild tranche records trigger signal, chosen patch id, evidence path, and closure status.",
+        "Future ranking can prefer signals that historically produced real repo-owned fixes."
+      ]
+    }
+  ],
+  "out_of_scope": [
+    "another blanket filesystem-hardening sweep",
+    "user-home overlay cleanup",
+    "repo-external workstation maintenance",
+    "broad roadmap expansion without a live triggering signal"
+  ],
+  "handoff_format": [
+    "patch_id",
+    "trigger_signal",
+    "repo_owned_scope",
+    "recommended_entry_surface",
+    "acceptance_condition",
+    "stop_condition",
+    "evidence_path"
+  ],
+  "first_recommended_execution_order": [
+    "layout_harness_drift_gate",
+    "shared_path_bypass_audit",
+    "adoption_led_tranche_selector",
+    "remote_main_red_signal_filter"
+  ]
+}

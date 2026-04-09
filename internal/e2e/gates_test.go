@@ -336,6 +336,41 @@ func TestEvaluateFromObservations_WithData(t *testing.T) {
 	}
 }
 
+func TestEvaluateFromObservations_ExcludesStandaloneSessions(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	now := time.Now()
+	obs := []session.LoopObservation{
+		{Timestamp: now, Mode: "standalone", TaskTitle: "smoke test", PlannerProvider: "codex", TotalCostUSD: 5.0, TotalLatencyMs: 1000, Status: "failed", Error: "launch failed"},
+		{Timestamp: now, Mode: "mock", TaskTitle: "task-a", PlannerProvider: "claude", TotalCostUSD: 0.8, TotalLatencyMs: 4000, Status: "idle", VerifyPassed: true},
+		{Timestamp: now, Mode: "mock", TaskTitle: "task-a", PlannerProvider: "claude", TotalCostUSD: 0.9, TotalLatencyMs: 4500, Status: "idle", VerifyPassed: true},
+		{Timestamp: now, Mode: "mock", TaskTitle: "task-a", PlannerProvider: "claude", TotalCostUSD: 0.7, TotalLatencyMs: 3500, Status: "idle", VerifyPassed: true},
+		{Timestamp: now, Mode: "mock", TaskTitle: "task-a", PlannerProvider: "claude", TotalCostUSD: 0.85, TotalLatencyMs: 4200, Status: "idle", VerifyPassed: true},
+		{Timestamp: now, Mode: "mock", TaskTitle: "task-a", PlannerProvider: "claude", TotalCostUSD: 0.95, TotalLatencyMs: 4800, Status: "idle", VerifyPassed: true},
+	}
+	writeObsFile(t, dir, obs)
+
+	report, err := EvaluateFromObservations(dir, MockGateThresholds(), 0)
+	if err != nil {
+		t.Fatalf("first call error: %v", err)
+	}
+	if report.Overall != VerdictSkip {
+		t.Fatalf("first call overall = %s, want skip", report.Overall)
+	}
+
+	report2, err := EvaluateFromObservations(dir, MockGateThresholds(), 0)
+	if err != nil {
+		t.Fatalf("second call error: %v", err)
+	}
+	if report2.SampleCount != 5 {
+		t.Fatalf("sample count = %d, want 5 (standalone excluded)", report2.SampleCount)
+	}
+	if report2.Overall != VerdictPass {
+		t.Fatalf("overall = %s, want pass", report2.Overall)
+	}
+}
+
 func TestFormatReport_ValidMarkdown(t *testing.T) {
 	t.Parallel()
 
@@ -579,7 +614,7 @@ func TestBaselinePersistence(t *testing.T) {
 		GeneratedAt: time.Now().UTC().Truncate(time.Millisecond),
 		WindowHours: 24,
 		Entries: map[string]*BaselineStats{
-			"fix-bug:claude": {CostP50: 0.5, CostP95: 1.2, LatencyP50: 3000, LatencyP95: 6000, SampleCount: 8},
+			"fix-bug:claude":  {CostP50: 0.5, CostP95: 1.2, LatencyP50: 3000, LatencyP95: 6000, SampleCount: 8},
 			"add-feat:gemini": {CostP50: 0.3, CostP95: 0.8, LatencyP50: 2000, LatencyP95: 4000, SampleCount: 5},
 		},
 		Aggregate: &BaselineStats{CostP50: 0.4, CostP95: 1.0, LatencyP50: 2500, LatencyP95: 5000, SampleCount: 13},

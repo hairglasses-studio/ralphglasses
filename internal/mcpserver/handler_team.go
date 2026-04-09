@@ -129,6 +129,14 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		if effectiveWorkerModel == "" {
 			effectiveWorkerModel = session.ProviderDefaults(effectiveWorkerProvider)
 		}
+		effectiveWorktreePolicy := config.WorktreePolicy
+		if effectiveWorktreePolicy == "" {
+			if effectiveWorkerProvider == session.ProviderCodex || effectiveWorkerProvider == session.ProviderGemini {
+				effectiveWorktreePolicy = session.TeamWorktreePolicyPerWorker
+			} else {
+				effectiveWorktreePolicy = session.TeamWorktreePolicyShared
+			}
+		}
 		return jsonResult(map[string]any{
 			"dry_run":           true,
 			"runtime":           teamRuntimeForProvider(effectiveProvider),
@@ -144,7 +152,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 			"max_concurrency":   maxInt(config.MaxConcurrency, 2),
 			"max_retries":       maxInt(config.MaxRetries, 2),
 			"execution_backend": firstNonBlank(config.ExecutionBackend, session.TeamExecutionBackendLocal),
-			"worktree_policy":   firstNonBlank(config.WorktreePolicy, session.TeamWorktreePolicyPerWorker),
+			"worktree_policy":   effectiveWorktreePolicy,
 			"target_branch":     firstNonBlank(config.TargetBranch, "main"),
 			"autostart":         config.AutoStart,
 			"a2a_agent_url":     config.A2AAgentURL,
@@ -452,7 +460,7 @@ func (s *Server) handleAgentDefine(_ context.Context, req mcp.CallToolRequest) (
 	var location string
 	switch provider {
 	case session.ProviderGemini:
-		location = fmt.Sprintf("%s/.gemini/commands/%s.toml", r.Path, agentName)
+		location = fmt.Sprintf("%s/.gemini/agents/%s.md", r.Path, agentName)
 	case session.ProviderCodex:
 		location = fmt.Sprintf("%s/.codex/agents/%s.toml", r.Path, agentName)
 	default:

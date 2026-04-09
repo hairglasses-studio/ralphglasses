@@ -11,9 +11,10 @@ import (
 
 // Roadmap represents a parsed ROADMAP.md file.
 type Roadmap struct {
-	Title  string  `json:"title"`
-	Phases []Phase `json:"phases"`
-	Stats  Stats   `json:"stats"`
+	Title      string  `json:"title"`
+	Phases     []Phase `json:"phases"`
+	Stats      Stats   `json:"stats"`
+	SourcePath string  `json:"-"`
 }
 
 // Phase is a top-level section (## Phase ...).
@@ -62,7 +63,7 @@ func Parse(filePath string) (*Roadmap, error) {
 	}
 	defer f.Close()
 
-	rm := &Roadmap{}
+	rm := &Roadmap{SourcePath: filePath}
 	var curPhase *Phase
 	var curSection *Section
 

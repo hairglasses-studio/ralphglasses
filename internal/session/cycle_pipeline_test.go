@@ -65,6 +65,26 @@ func TestCycleObservationsToTasksEmpty(t *testing.T) {
 	}
 }
 
+func TestCycleObservationsToTasks_IgnoresNonLoopModes(t *testing.T) {
+	obs := []LoopObservation{
+		{Mode: "standalone", Status: "failed", TaskTitle: "standalone failure", Error: "boom", TotalCostUSD: 0.5},
+		{Mode: "mock", Status: "failed", TaskTitle: "mock failure", Error: "boom", TotalCostUSD: 0.5},
+		{Mode: "live", Status: "failed", TaskTitle: "live failure", Error: "boom", TotalCostUSD: 0.5},
+		{Mode: "", Status: "noop", TaskTitle: "legacy loop"},
+	}
+
+	tasks := ObservationsToTasks(obs)
+	if len(tasks) != 2 {
+		t.Fatalf("expected 2 actionable loop tasks, got %d", len(tasks))
+	}
+	if tasks[0].Title != "Fix failure: live failure" {
+		t.Fatalf("first task title = %q, want %q", tasks[0].Title, "Fix failure: live failure")
+	}
+	if tasks[1].Title != "Investigate no-op: legacy loop" {
+		t.Fatalf("second task title = %q, want %q", tasks[1].Title, "Investigate no-op: legacy loop")
+	}
+}
+
 func TestCycleRoadmapToTasks(t *testing.T) {
 	dir := t.TempDir()
 	roadmap := filepath.Join(dir, "ROADMAP.md")
@@ -175,9 +195,9 @@ func TestEnhanceCycleTasks_NoChange(t *testing.T) {
 
 func TestCycleJaccardSimilarity(t *testing.T) {
 	tests := []struct {
-		a, b     string
-		wantMin  float64
-		wantMax  float64
+		a, b    string
+		wantMin float64
+		wantMax float64
 	}{
 		{"fix bug in module", "fix bug in module", 1.0, 1.0},
 		{"completely different", "nothing alike here", 0.0, 0.01},

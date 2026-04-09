@@ -71,6 +71,11 @@ Tasks that reference files or packages that do not exist in the current codebase
 
 | Phase | Task | Referenced File | Actual Status |
 |-------|------|-----------------|---------------|
+| 9.1.2 | `cycle_merge` | `internal/session/merge.go` | **MISSING** — no merge.go in session package |
+| 9.1.3 | `cycle_plan` | `internal/session/cycle_plan.go` | **MISSING** — no cycle_plan.go |
+| 9.1.4 | `cycle_schedule` | `internal/session/scheduler.go` | **MISSING** — no scheduler.go |
+| 9.1.5 | `cycle_baseline` | `internal/session/baseline.go` | **MISSING** — no baseline.go |
+| 9.1.1 | `finding_to_task` | `internal/mcpserver/tools_loop.go` | **MISSING** — no tools_loop.go; test file `tools_loop_test.go` exists without implementation |
 | 13.1 | SH-1…SH-10 | `internal/session/self_heal.go`, `watchdog.go`, `crash_recovery.go` | **MISSING** — none of these files exist |
 | 13.2 | CA-1…CA-7 | `internal/session/config_hotreload.go`, `config_validator.go` | **MISSING** |
 | 13.3 | AD-1…AD-8 | `internal/session/decision_engine.go`, `decision_policy.go`, `decision_journal.go` | **MISSING** (note: `decision_model.go` exists but is the data type, not the engine) |
@@ -98,7 +103,6 @@ Tasks that reference files or packages that do not exist in the current codebase
 | 3.1.1–3.1.3 | i3 IPC client | `internal/i3/` | **MISSING** — i3 items done in Phase 3.1 are actually in `internal/wm/` (detect, monitors, hyprland) with no dedicated `internal/i3/` directory |
 | 3.2.2 | 7-monitor config | `distro/i3/workspaces.json` | **MISSING** — `distro/i3/config` exists but `workspaces.json` does not |
 | 6.1.1–6.1.5 | Native loop engine | `internal/session/loop.go`, `loop_worker.go` | Exists — matches |
-| 9.1.1–9.1.5 | Phase 9 tier-1 rdcycle tools | `internal/mcpserver/tools_loop.go`, `internal/session/{merge,cycle_plan,scheduler,baseline}.go` | **STALE REFERENCE** — current handlers are consolidated in `internal/mcpserver/handler_rdcycle.go` and registered in `tools_builders_misc.go` under `rdcycle` |
 | 8.5.5 | Meta-agent / Supervisor | `internal/session/supervisor.go` | **EXISTS** — confirmed present |
 | 10.5.1 | Lock splitting | `internal/session/manager.go` | Exists; `sync.Map` subtask still open |
 | 10.5.4 | Worker pool | `internal/fleet/coordinator.go` | **MISSING** — referenced file does not exist; autoscaler logic lives in `internal/fleet/autoscaler.go` |
@@ -113,7 +117,7 @@ Tasks that reference files or packages that do not exist in the current codebase
 These tasks are checked `[x]` but the referenced files are absent, suggesting the implementation may have been moved or the acceptance criteria were met differently:
 
 - **QW-7** (`internal/session/snapshot.go`) — marked done; file missing. Snapshot functionality may be in `internal/session/checkpoint.go` (which exists), but the file path in the task is wrong.
-- **9.1.1–9.1.5** — the roadmap referenced a planned split across `tools_loop.go`, `merge.go`, `cycle_plan.go`, `scheduler.go`, and `baseline.go`, but the actual implementations were consolidated in `internal/mcpserver/handler_rdcycle.go`.
+- **9.1.1** (`finding_to_task` in `internal/mcpserver/tools_loop.go`) — Phase 9 is marked 100% complete (5/5) but `tools_loop.go` does not exist; `tools_loop_test.go` exists without implementation. The tool likely lives in a builder or dispatch file.
 - **3.1.1–3.1.3** — marked `[x]` in the i3 IPC section but `internal/i3/` does not exist. The WM abstraction lives in `internal/wm/`.
 
 ---
@@ -369,15 +373,16 @@ Tasks marked `[x]` whose acceptance criteria are suspect, referencing files that
 **Verification:** No `internal/i3/` directory exists. `internal/wm/` exists with `detect.go`, `monitors.go`, `hyprland.go`, and `internal/wm/sway/client.go`. The i3 functionality may be subsumed under the WM abstraction layer.
 **Status:** Marked `[x]` but the implementation home is different from what was specified. The WM abstraction (`internal/wm/`) may satisfy the acceptance criterion ("programmatic workspace creation from Go") but the path reference is wrong.
 
-### 6.3 Phase 9 file-reference drift, not missing handlers
+### 6.3 Phase 9 as "COMPLETE" vs Missing Tools
 
-**Phase 9 status:** The earlier research correctly noticed that the roadmap referenced files that do not exist, but the conclusion was wrong. Tier-1 Phase 9 tools are implemented today as consolidated handlers in `internal/mcpserver/handler_rdcycle.go`, with tool registration in `tools_builders_misc.go`.
+**Phase 9 status:** Marked 5/5 = 100% complete. However, Phase 9 has a tiered structure:
+- Tier 1 (9.1.1–9.1.5): 5 specific tool implementations assigned to files that don't exist (`tools_loop.go`, `merge.go`, `cycle_plan.go`, `scheduler.go`, `baseline.go`)
+- Tier 2 (9.2.x): Marked with items like `loop_replay`, `loop_budget_forecast` — these appear in the MCP tool list but their backing Go files are not confirmed
+- Tier 3 (9.3.x): Explicitly marked `COMPLETE` with `[x]` items
 
-The actual drift is documentation shape: the roadmap still points at a planned file split (`tools_loop.go`, `merge.go`, `cycle_plan.go`, `scheduler.go`, `baseline.go`) that never landed. The implementation stayed consolidated instead. Phase 9 should not be reopened on missing-file grounds; the real follow-up is keeping roadmap/docs aligned and continuing behavior coverage for these handlers.
+The "5 tasks" count may correspond only to Tier 3 (the 5 `[x]` checkbox items at 9.3.x), while Tier 1 and Tier 2 items have no checkboxes and are implicitly TODO. This is a structural ambiguity: the tier 1 tools (`finding_to_task`, `cycle_merge`, etc.) are likely not implemented despite the phase showing 100%.
 
-`tools_loop_test.go` also does not prove missing handlers. It exercises the legacy loop lifecycle (`handleLoopStart`, `handleLoopStep`, `handleLoopStatus`, `handleLoopStop`), not the tier-1 rdcycle handler surface.
-
-**Risk:** Future automation will keep re-opening already-implemented work unless roadmap/docs and generated research artifacts point at the consolidated handler location.
+**Risk:** If the supervisor uses these tools autonomously, it will call MCP tools that may not have working handlers.
 
 ### 6.4 Phase 1.5.2–1.5.9 — Release automation and docs
 
@@ -415,9 +420,9 @@ The ROADMAP.md references `internal/fleet/coordinator.go` in tasks 10.5.1, 10.5.
 
 Any task that specifies `coordinator.go` as the implementation file will need a path correction before work begins.
 
-### Finding B: `tools_loop_test.go` does not imply missing tier-1 handlers
+### Finding B: tools_loop.go Test-Without-Implementation
 
-`internal/mcpserver/tools_loop_test.go` exists but covers the loop lifecycle handlers, not the tier-1 rdcycle tools. The Tier 1 Phase 9 handlers (`finding_to_task`, `cycle_merge`, `cycle_plan`, `cycle_schedule`, `cycle_baseline`) are implemented in `internal/mcpserver/handler_rdcycle.go`; the stale part was the roadmap's planned file split, not a missing implementation.
+`internal/mcpserver/tools_loop_test.go` exists but `tools_loop.go` does not. This means the Tier 1 Phase 9 tools (`finding_to_task`, `cycle_merge`, `cycle_plan`, `cycle_schedule`, `cycle_baseline`) have test expectations but no implementations. This is a high-risk gap for the autonomous R&D loop.
 
 ### Finding C: 3.5.5 Numbering Collision Creates Roadmap Debt
 
@@ -436,7 +441,7 @@ The ROADMAP.md header reads "1,115 tasks, 442 complete." Live grep counts 1,143 
 ## Recommended Immediate Actions
 
 1. **Renumber Phase 3.5.5 (Codex parity)** to 3.5.6 through 3.5.9 — eliminates numbering collision.
-2. **Align Phase 9 roadmap/docs to `internal/mcpserver/handler_rdcycle.go`** — keep future handler extraction explicit instead of treating the planned split as missing implementation.
+2. **Create `internal/session/merge.go`** — the Phase 9 R&D loop depends on `cycle_merge` and the test file already exists.
 3. **Fix `coordinator.go` path references** in Phase 10.5 tasks — update to reference `autoscaler.go`, `queue.go`, `sharding.go` as appropriate.
 4. **Update ROADMAP.md header** task count from "1,115 / 442" to "1,143 / 503."
 5. **Create `internal/session/self_heal.go`** stub — Phase 13.1 is the critical path bottleneck and has zero on-disk presence.

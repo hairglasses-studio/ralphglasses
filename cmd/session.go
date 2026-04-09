@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -28,8 +27,7 @@ var sessionListCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
 		mgr := initManagerWithStore(nil)
-		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
-		mgr.LoadExternalSessions()
+		loadManagerExternalSessions(mgr, sp)
 
 		sessions := mgr.ListByTenant("", session.NormalizeTenantID(sessionTenantID))
 
@@ -70,8 +68,7 @@ var sessionStatusCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
 		mgr := initManagerWithStore(nil)
-		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
-		mgr.LoadExternalSessions()
+		loadManagerExternalSessions(mgr, sp)
 
 		s, ok := mgr.GetForTenant(args[0], session.NormalizeTenantID(sessionTenantID))
 		if !ok {
@@ -119,8 +116,7 @@ var sessionStopCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sp := util.ExpandHome(scanPath)
 		mgr := initManagerWithStore(nil)
-		mgr.SetStateDir(filepath.Join(sp, ".session-state"))
-		mgr.LoadExternalSessions()
+		loadManagerExternalSessions(mgr, sp)
 
 		if _, ok := mgr.GetForTenant(args[0], session.NormalizeTenantID(sessionTenantID)); !ok {
 			return fmt.Errorf("session %s not found in tenant %s", args[0], session.NormalizeTenantID(sessionTenantID))
@@ -140,8 +136,7 @@ func sessionIDCompletion(cmd *cobra.Command, args []string, toComplete string) (
 	}
 	sp := util.ExpandHome(scanPath)
 	mgr := initManagerWithStore(nil)
-	mgr.SetStateDir(filepath.Join(sp, ".session-state"))
-	mgr.LoadExternalSessions()
+	loadManagerExternalSessions(mgr, sp)
 
 	var ids []string
 	for _, s := range mgr.ListByTenant("", session.NormalizeTenantID(sessionTenantID)) {

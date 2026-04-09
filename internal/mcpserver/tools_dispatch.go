@@ -239,6 +239,7 @@ func (s *Server) runtimeHealthDoc() map[string]any {
 	usageSummary := parity.CLIParityUsage(parity.DefaultCLIParityUsageOptions(s.ScanPath))
 	discoverySummary := s.discoveryAdoptionSummary()
 	adoptionPrioritySummary := s.adoptionPrioritySummary()
+	autobuildTrancheSummary := s.autobuildTrancheSummary()
 
 	return map[string]any{
 		"server":                     "ralphglasses",
@@ -266,6 +267,7 @@ func (s *Server) runtimeHealthDoc() map[string]any {
 		"cli_parity_usage":           usageSummary,
 		"discovery_adoption_summary": discoverySummary,
 		"adoption_priority_summary":  adoptionPrioritySummary,
+		"autobuild_tranche_summary":  autobuildTrancheSummary,
 		"prompt_count":               len(promptCatalog()),
 		"prompt_names":               promptNames(),
 		"discovery_tools":            managementTools,

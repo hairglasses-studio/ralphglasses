@@ -1,0 +1,2 @@
+# Relative repo paths that are exempt from the tracked artifact gate.
+# Keep this list empty unless a path is intentionally justified.

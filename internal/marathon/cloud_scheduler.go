@@ -301,24 +301,14 @@ func (cs *CloudScheduler) runTask(ctx context.Context, task *CloudTask) {
 	task.StartedAt = time.Now()
 	cs.mu.Unlock()
 
-	// Ensure cleanup: terminate the VM before publishing terminal task state.
-	terminated := false
-	terminateVM := func() {
-		if terminated {
-			return
-		}
-		terminated = true
-
+	// Ensure cleanup: terminate VM when done regardless of outcome.
+	defer func() {
 		termCtx, termCancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer termCancel()
 		if err := cs.provider.Terminate(termCtx, vmInfo.ID); err != nil {
 			slog.Warn("cloud_scheduler: VM termination failed",
 				"task_id", task.ID, "vm_id", vmInfo.ID, "error", err)
 		}
-	}
-
-	defer func() {
-		terminateVM()
 	}()
 
 	// Phase 2: Start marathon on VM.
@@ -349,8 +339,6 @@ func (cs *CloudScheduler) runTask(ctx context.Context, task *CloudTask) {
 			"task_id", task.ID, "error", costErr)
 	}
 	result.VMCostUSD = vmCost
-
-	terminateVM()
 
 	cs.mu.Lock()
 	task.Result = result

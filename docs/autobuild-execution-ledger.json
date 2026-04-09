@@ -1,0 +1,461 @@
+{
+  "$schema": "./autobuild-execution-ledger.schema.json",
+  "track": "autobuild-execution-ledger",
+  "repo": "hairglasses-studio/ralphglasses",
+  "description": "Live ledger for recording autobuild tranche executions, evidence, closure state, and the next recommended patch.",
+  "instructions": [
+    "Append one entry per closed or actively-tracked autobuild tranche.",
+    "Prefer source-backed evidence such as commits, CI runs, verification outputs, or durable docs artifacts.",
+    "Do not record workstation-only or user-home-only cleanup here unless the tranche was explicitly an environment-maintenance pass."
+  ],
+  "entry_template": {
+    "date": "YYYY-MM-DD",
+    "patch_id": "<patch-id>",
+    "status": "planned",
+    "trigger_signal": {
+      "type": "adoption",
+      "source": "<resource, report, CI run, or human request>",
+      "summary": "<why this tranche was opened>",
+      "remote_main_verified": false
+    },
+    "repo_owned_scope": [
+      "<repo-owned scope item>"
+    ],
+    "recommended_entry_surface": "<resource, doc, command, or tool>",
+    "changes": [
+      "<what changed>"
+    ],
+    "acceptance_condition": [
+      "<acceptance condition>"
+    ],
+    "stop_condition": [
+      "<when to stop instead of expanding scope>"
+    ],
+    "evidence": [
+      {
+        "kind": "commit",
+        "ref": "<sha>",
+        "summary": "<what this evidence proves>"
+      }
+    ],
+    "result": {
+      "closure_state": "open",
+      "summary": "<high-signal outcome>",
+      "prevented_failure_class": [
+        "<failure class>"
+      ]
+    },
+    "next_recommended_patch": "<patch-id>",
+    "notes": [
+      "<optional note>"
+    ]
+  },
+  "entries": [
+    {
+      "date": "2026-04-08",
+      "patch_id": "planning_artifact_contract_bundle",
+      "status": "completed",
+      "trigger_signal": {
+        "type": "manual",
+        "source": "current-session roadmap tranche execution",
+        "summary": "Create durable human-readable and machine-readable planning surfaces for ralphglasses autobuild patch selection and future-session recovery.",
+        "remote_main_verified": true
+      },
+      "repo_owned_scope": [
+        "autobuild planning artifacts",
+        "machine-readable queue documents",
+        "schema validation for planning surfaces",
+        "repo-owned cycle memory"
+      ],
+      "recommended_entry_surface": "docs/autobuild-patch-queue.json",
+      "changes": [
+        "added the human-readable autobuild patch queue",
+        "added the machine-readable autobuild patch queue",
+        "added a schema for the autobuild patch queue",
+        "added autobuild cycle improvement notes",
+        "added a machine-readable autobuild execution ledger template",
+        "added a schema for the autobuild execution ledger",
+        "seeded the first live autobuild execution ledger"
+      ],
+      "acceptance_condition": [
+        "future sessions have a stable markdown queue, JSON queue, and schema",
+        "future sessions have a repo-owned note lane for patch selection lessons",
+        "future sessions have a machine-readable ledger format for tranche execution evidence"
+      ],
+      "stop_condition": [
+        "stop after the queue, notes, template, schema, and first live ledger all exist on main",
+        "do not expand into broader roadmap linking or code changes in the same tranche"
+      ],
+      "evidence": [
+        {
+          "kind": "commit",
+          "ref": "f8896a0",
+          "summary": "Added the autobuild patch queue markdown checkpoint."
+        },
+        {
+          "kind": "commit",
+          "ref": "fb32d8f",
+          "summary": "Added the machine-readable autobuild patch queue."
+        },
+        {
+          "kind": "commit",
+          "ref": "5230bc5",
+          "summary": "Added the autobuild patch queue schema."
+        },
+        {
+          "kind": "commit",
+          "ref": "63fe9f2",
+          "summary": "Added autobuild cycle improvement notes."
+        },
+        {
+          "kind": "commit",
+          "ref": "cc5eeb9",
+          "summary": "Added the autobuild execution ledger template."
+        },
+        {
+          "kind": "commit",
+          "ref": "52b8e2b",
+          "summary": "Added the autobuild execution ledger schema."
+        }
+      ],
+      "result": {
+        "closure_state": "completed",
+        "summary": "Ralphglasses now has a repo-owned planning bundle for autobuild tranche selection, operational notes, and machine-readable tranche recording.",
+        "prevented_failure_class": [
+          "orphan planning notes",
+          "automation scraping markdown ad hoc",
+          "missing tranche evidence format",
+          "loss of session-to-session autobuild learning"
+        ]
+      },
+      "next_recommended_patch": "canonical_entrypoint_linking",
+      "notes": [
+        "The next highest-leverage follow-up is to link these artifacts from README.md and ROADMAP.md so they become canonical entrypoints instead of discoverable-only docs.",
+        "Further roadmap work should remain narrow and integrity-led rather than reopening broad filesystem-hardening sweeps."
+      ]
+    },
+    {
+      "date": "2026-04-08",
+      "patch_id": "integrity_temp_artifact_gate",
+      "status": "completed",
+      "trigger_signal": {
+        "type": "integrity",
+        "source": "docs/autobuild-patch-queue.json",
+        "summary": "The ranked autobuild queue selected tracked temp artifacts and placeholder outputs as the next small repo-owned gate after the short-suite repair.",
+        "remote_main_verified": true
+      },
+      "repo_owned_scope": [
+        "tracked artifact detection",
+        "repo-owned verification entrypoints",
+        "fixture tests for artifact-path failures"
+      ],
+      "recommended_entry_surface": "scripts/dev/check-tracked-artifacts.sh",
+      "changes": [
+        "added a tracked artifact gate that scans tracked paths via git ls-files",
+        "added an explicit repo-owned allowlist for justified artifact exceptions",
+        "added shell fixture tests for temp artifacts and placeholder filenames",
+        "wired the artifact gate into scripts/dev/ci.sh and scripts/dev/pre-commit"
+      ],
+      "acceptance_condition": [
+        "repo-owned verification fails when tracked temp artifacts or placeholder outputs are present",
+        "the failure names the offending path without requiring manual review"
+      ],
+      "stop_condition": [
+        "stop after deterministic path-based checks, allowlist support, and fixture coverage exist",
+        "do not expand this tranche into broader content linting or unrelated cleanup"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "ref": "scripts/dev/check-tracked-artifacts.sh",
+          "summary": "Introduces the tracked-path artifact gate."
+        },
+        {
+          "kind": "test",
+          "ref": "scripts/dev/test_tracked_artifacts.sh",
+          "summary": "Covers .DS_Store, temp directory, placeholder filename, and allowlist behavior."
+        },
+        {
+          "kind": "file",
+          "ref": "scripts/dev/ci.sh",
+          "summary": "Runs the artifact gate before the longer CI phases."
+        }
+      ],
+      "result": {
+        "closure_state": "completed",
+        "summary": "Ralphglasses now fails fast on tracked temp artifacts and placeholder outputs before deeper verification runs.",
+        "prevented_failure_class": [
+          "tracked temp artifacts on main",
+          "placeholder outputs shipping as source",
+          "late detection of source-tree hygiene failures"
+        ]
+      },
+      "next_recommended_patch": "layout_harness_drift_gate",
+      "notes": [
+        "The gate intentionally uses path and filename contracts instead of content greps to avoid false positives in docs, fixtures, and examples."
+      ]
+    },
+    {
+      "date": "2026-04-08",
+      "patch_id": "provider_role_projection_sync",
+      "status": "completed",
+      "trigger_signal": {
+        "type": "integrity",
+        "source": "scripts/dev/ci.sh",
+        "summary": "Full CI on current main reproduced provider-role projection drift via scripts/sync-provider-roles.py --check after the artifact-gate tranche landed.",
+        "remote_main_verified": true
+      },
+      "repo_owned_scope": [
+        "generated provider-role projections",
+        "commit-gate green-lane recovery"
+      ],
+      "recommended_entry_surface": "scripts/sync-provider-roles.py",
+      "changes": [
+        "regenerated the stale .claude and .gemini provider role projections",
+        "revalidated scripts/sync-provider-roles.py --check on current main",
+        "reran the full scripts/dev/ci.sh commit gate after regeneration"
+      ],
+      "acceptance_condition": [
+        "python3 scripts/sync-provider-roles.py --check passes on current main",
+        "scripts/dev/ci.sh returns green after the provider projection resync"
+      ],
+      "stop_condition": [
+        "stop after the generated projections are resynced and the publish lane is green again",
+        "do not expand the tranche into unrelated role-manifest editing or broader queue work"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "ref": ".claude/agents/codebase-mapper.md",
+          "summary": "Representative regenerated Claude provider projection."
+        },
+        {
+          "kind": "file",
+          "ref": ".gemini/agents/codebase-mapper.md",
+          "summary": "Representative regenerated Gemini provider projection."
+        },
+        {
+          "kind": "test",
+          "ref": "scripts/dev/ci.sh",
+          "summary": "Full commit gate passed after the projection sync."
+        }
+      ],
+      "result": {
+        "closure_state": "completed",
+        "summary": "Ralphglasses returned to a green commit gate by resyncing provider role projections that had drifted on current main.",
+        "prevented_failure_class": [
+          "generated provider surface drift on main",
+          "red publish lane inherited by unrelated later tranches"
+        ]
+      },
+      "next_recommended_patch": "layout_harness_drift_gate",
+      "notes": [
+        "The fix deliberately stayed generated-only; no role manifest source changed in this tranche."
+      ]
+    },
+    {
+      "date": "2026-04-08",
+      "patch_id": "layout_harness_drift_gate",
+      "status": "completed",
+      "trigger_signal": {
+        "type": "integrity",
+        "source": "docs/autobuild-patch-queue.json",
+        "summary": "The ranked autobuild queue selected the top-level TUI layout harness because nested viewport-backed views only had broad snapshots and could drift on width handling without a focused gate.",
+        "remote_main_verified": true
+      },
+      "repo_owned_scope": [
+        "teatest harness coverage",
+        "nested layout sizing assertions",
+        "deterministic repo detail rendering"
+      ],
+      "recommended_entry_surface": "internal/tui/app_teatest_test.go",
+      "changes": [
+        "added top-level teatest golden snapshots for nested Repo Detail and Fleet views",
+        "added explicit visible-width budget assertions for those nested views",
+        "added a resize-path width-budget regression test for nested views",
+        "sorted repo detail config keys before rendering so golden snapshots are deterministic"
+      ],
+      "acceptance_condition": [
+        "nested layout width regressions become deterministic test failures",
+        "the known top-level TUI harness exercises nested Repo Detail and Fleet views instead of only overview and help surfaces"
+      ],
+      "stop_condition": [
+        "stop after the nested TUI harness has deterministic snapshots and width-budget assertions",
+        "do not expand this tranche into broader visual redesign or unrelated TUI cleanup"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "ref": "internal/tui/app_teatest_test.go",
+          "summary": "Adds nested-view teatest fixtures, width-budget assertions, and resize coverage."
+        },
+        {
+          "kind": "file",
+          "ref": "internal/tui/views/repodetail.go",
+          "summary": "Sorts repo detail config keys to remove snapshot nondeterminism."
+        },
+        {
+          "kind": "file",
+          "ref": "internal/tui/testdata/TestTeatest_RepoDetailView.golden",
+          "summary": "Captures the nested Repo Detail view through the top-level TUI harness."
+        },
+        {
+          "kind": "file",
+          "ref": "internal/tui/testdata/TestTeatest_FleetView.golden",
+          "summary": "Captures the nested Fleet view through the top-level TUI harness."
+        },
+        {
+          "kind": "test",
+          "ref": "./scripts/dev/go.sh test ./internal/tui ./internal/tui/views -count=1",
+          "summary": "Verifies the new layout harness gate alongside the broader TUI packages."
+        }
+      ],
+      "result": {
+        "closure_state": "completed",
+        "summary": "Ralphglasses now fails deterministically when nested Repo Detail or Fleet layouts drift past their width budget, and the repo detail snapshot no longer depends on map iteration order.",
+        "prevented_failure_class": [
+          "nested TUI width drift landing unnoticed",
+          "nondeterministic nested golden snapshots",
+          "late discovery of viewport-backed layout regressions"
+        ]
+      },
+      "next_recommended_patch": "shared_path_bypass_audit",
+      "notes": [
+        "The gate intentionally covers one detail view and one dashboard view through the real top-level layout path rather than adding another broad UI snapshot sweep."
+      ]
+    },
+    {
+      "date": "2026-04-08",
+      "patch_id": "shared_path_bypass_audit",
+      "status": "completed",
+      "trigger_signal": {
+        "type": "integrity",
+        "source": "docs/autobuild-patch-queue.json",
+        "summary": "The ranked autobuild queue selected the remaining repo-owned path bypass set after the broader filesystem-hardening work had already landed, with the remaining risk concentrated in active callers still using inline path joins.",
+        "remote_main_verified": true
+      },
+      "repo_owned_scope": [
+        "shared path helper convergence",
+        "legacy scan-root session discovery compatibility",
+        "active command and runtime path callers"
+      ],
+      "recommended_entry_surface": "internal/ralphpath/paths.go",
+      "changes": [
+        "added shared helpers for cost events, command history, and external session search paths",
+        "moved session, budget, and tenant command discovery onto the shared search helper with legacy scan-root fallback",
+        "removed the marathon command's direct scan-root session-state override so new runtime state stays on the canonical shared path",
+        "added regression coverage for helper resolution and shared-plus-legacy external session discovery"
+      ],
+      "acceptance_condition": [
+        "active config, state, and session-adjacent callers resolve through shared helpers or an explicit compatibility helper",
+        "legacy scan-root external sessions remain discoverable while the shared session state dir stays canonical"
+      ],
+      "stop_condition": [
+        "stop after the remaining active bypasses are centralized and covered by targeted regression tests",
+        "do not reopen a broader filesystem sweep unless new repo-owned bypasses are discovered"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "ref": "internal/ralphpath/paths.go",
+          "summary": "Centralizes the remaining cost-event, command-history, and external-session path contracts."
+        },
+        {
+          "kind": "file",
+          "ref": "cmd/store.go",
+          "summary": "Routes CLI external-session discovery through the shared search helper."
+        },
+        {
+          "kind": "test",
+          "ref": "cmd/store_test.go",
+          "summary": "Verifies shared and legacy scan-root external sessions are both discoverable."
+        },
+        {
+          "kind": "test",
+          "ref": "./scripts/dev/go.sh test ./internal/ralphpath ./internal/session ./internal/tui ./cmd -count=1",
+          "summary": "Verifies the path-helper tranche across the affected packages."
+        }
+      ],
+      "result": {
+        "closure_state": "completed",
+        "summary": "Ralphglasses now resolves the remaining active path bypasses through shared helpers, keeps legacy scan-root external session discovery explicit, and stops new runtime state from landing in ad hoc session-state locations.",
+        "prevented_failure_class": [
+          "active path policy drift hidden in inline string joins",
+          "split command discovery between shared and legacy session locations",
+          "repeat path-hardening sweeps to chase a small residual bypass set"
+        ]
+      },
+      "next_recommended_patch": "adoption_led_tranche_selector",
+      "notes": [
+        "The tranche intentionally stayed within active repo-owned callers and did not treat workspace docs-root discovery as shared-path debt."
+      ]
+    },
+    {
+      "date": "2026-04-08",
+      "patch_id": "adoption_led_tranche_selector",
+      "status": "completed",
+      "trigger_signal": {
+        "type": "adoption",
+        "source": "docs/autobuild-patch-queue.json",
+        "summary": "The ranked autobuild queue selected the missing selector layer because the repo already exposed discovery-adoption and adoption-priority fronts but still lacked one machine-readable summary that translated those signals into concrete patch ids.",
+        "remote_main_verified": true
+      },
+      "repo_owned_scope": [
+        "discovery telemetry",
+        "adoption telemetry",
+        "priority summaries",
+        "autobuild tranche selection"
+      ],
+      "recommended_entry_surface": "ralph:///catalog/autobuild-tranches",
+      "changes": [
+        "added a machine-readable autobuild tranche selector that ranks concrete patch ids from the live adoption fronts",
+        "exposed the selector through a new catalog resource",
+        "wired the selector into catalog-server and runtime-health summaries for read-first discovery",
+        "added regression coverage for the selector summary, new resource registration, and updated resource counts"
+      ],
+      "acceptance_condition": [
+        "one machine-readable summary ranks the next repo-owned patch candidates",
+        "the summary includes source signal, recommended entry surface, and confidence"
+      ],
+      "stop_condition": [
+        "stop after the selector exists as a read-first resource and the affected packages pass verification",
+        "do not expand this tranche into repairing the next selected patch in the same scope wave"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "ref": "internal/mcpserver/autobuild_tranches.go",
+          "summary": "Introduces the autobuild tranche selector and its patch-ranking logic."
+        },
+        {
+          "kind": "file",
+          "ref": "internal/mcpserver/contract.go",
+          "summary": "Registers the new autobuild tranche resource in the discovery contract."
+        },
+        {
+          "kind": "test",
+          "ref": "internal/mcpserver/resources_test.go",
+          "summary": "Verifies the new resource and updated static resource registration."
+        },
+        {
+          "kind": "test",
+          "ref": "./scripts/dev/go.sh test ./cmd ./internal/ralphpath ./internal/session ./internal/tui ./internal/mcpserver -count=1",
+          "summary": "Verifies the combined selector, path-helper, and TUI-harness tranches across the affected packages."
+        }
+      ],
+      "result": {
+        "closure_state": "completed",
+        "summary": "Ralphglasses now has a machine-readable adoption-led selector that ranks concrete autobuild patch ids with source signal, confidence, and entry surface; the current top handoff is remote_main_red_signal_filter.",
+        "prevented_failure_class": [
+          "adoption telemetry without a tranche-selection consumer",
+          "manual translation from workflow gaps to patch ids",
+          "static queue handoffs ignoring live repo signals"
+        ]
+      },
+      "next_recommended_patch": "remote_main_red_signal_filter",
+      "notes": [
+        "The selector deliberately ranks repo-owned patch ids instead of raw workflows so future autobuild loops can hand off directly into implementation."
+      ]
+    }
+  ]
+}

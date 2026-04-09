@@ -435,8 +435,8 @@ func TestScaffold_CustomProjectNameAndType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Scaffold: %v", err)
 	}
-	if len(result.Created) != 6 {
-		t.Errorf("expected 6 created, got %d", len(result.Created))
+	if len(result.Created) != 7 {
+		t.Errorf("expected 7 created, got %d", len(result.Created))
 	}
 
 	data, _ := os.ReadFile(filepath.Join(dir, ".ralphrc"))

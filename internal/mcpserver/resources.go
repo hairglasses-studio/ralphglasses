@@ -55,6 +55,7 @@ func RegisterResources(srv *server.MCPServer, appSrv *Server) {
 		"ralph:///catalog/cli-parity":          makeCLIParityHandler(appSrv),
 		"ralph:///catalog/discovery-adoption":  makeDiscoveryAdoptionHandler(appSrv),
 		"ralph:///catalog/adoption-priorities": makeAdoptionPrioritiesHandler(appSrv),
+		"ralph:///catalog/autobuild-tranches":  makeAutobuildTranchesHandler(appSrv),
 		"ralph:///catalog/provider-parity":     makeProviderParityHandler(appSrv),
 		"ralph:///bootstrap/checklist":         makeBootstrapChecklistHandler(),
 		"ralph:///runtime/recovery":            makeRuntimeRecoveryHandler(appSrv),
@@ -245,6 +246,12 @@ func makeAdoptionPrioritiesHandler(appSrv *Server) server.ResourceHandlerFunc {
 	}
 }
 
+func makeAutobuildTranchesHandler(appSrv *Server) server.ResourceHandlerFunc {
+	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		return jsonResourceContents(req.Params.URI, appSrv.autobuildTrancheSummary())
+	}
+}
+
 func makeProviderParityHandler(appSrv *Server) server.ResourceHandlerFunc {
 	return func(_ context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 		return jsonResourceContents(req.Params.URI, appSrv.buildProviderParityDoc())
@@ -284,6 +291,7 @@ func makeRuntimeHealthHandler(appSrv *Server) server.ResourceHandlerFunc {
 func buildCatalogServerDoc(appSrv *Server) map[string]any {
 	usageSummary := parity.CLIParityUsage(parity.DefaultCLIParityUsageOptions(appSrv.ScanPath))
 	discoverySummary := appSrv.discoveryAdoptionSummary()
+	autobuildSummary := appSrv.autobuildTrancheSummary()
 	return map[string]any{
 		"server_name":                "ralphglasses",
 		"instructions":               ServerInstructions(),
@@ -304,6 +312,7 @@ func buildCatalogServerDoc(appSrv *Server) map[string]any {
 		"cli_parity_usage":           usageSummary,
 		"discovery_adoption_summary": discoverySummary,
 		"adoption_priority_summary":  appSrv.adoptionPrioritySummary(),
+		"autobuild_tranche_summary":  autobuildSummary,
 		"prompts":                    promptNames(),
 		"tool_groups":                buildCatalogToolGroupsDoc(appSrv),
 	}

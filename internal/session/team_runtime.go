@@ -593,7 +593,14 @@ func (m *Manager) buildStructuredTeamPlannerPrompt(team *TeamStatus) string {
 
 func buildStructuredTeamWorkerPrompt(team *TeamStatus, task *TeamTask) string {
 	var b strings.Builder
-	b.WriteString("You are a Codex worker executing exactly one harness-managed task.\n\n")
+	providerName := "Codex"
+	switch taskEffectiveProvider(team, task) {
+	case ProviderGemini:
+		providerName = "Gemini"
+	case ProviderClaude:
+		providerName = "Claude"
+	}
+	b.WriteString(fmt.Sprintf("You are a %s worker executing exactly one harness-managed task.\n\n", providerName))
 	b.WriteString(fmt.Sprintf("Team: %s\n", team.Name))
 	b.WriteString(fmt.Sprintf("Task ID: %s\n", task.ID))
 	b.WriteString(fmt.Sprintf("Task: %s\n", task.Description))

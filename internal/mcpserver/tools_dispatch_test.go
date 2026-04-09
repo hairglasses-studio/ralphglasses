@@ -217,8 +217,8 @@ func TestHandleServerHealth_IncludesDiscoveryContract(t *testing.T) {
 	if payload["prompt_count"] != float64(6) {
 		t.Fatalf("prompt_count = %v, want 6", payload["prompt_count"])
 	}
-	if payload["resource_count"] != float64(13) {
-		t.Fatalf("resource_count = %v, want 13", payload["resource_count"])
+	if payload["resource_count"] != float64(14) {
+		t.Fatalf("resource_count = %v, want 14", payload["resource_count"])
 	}
 	if payload["resource_template_count"] != float64(4) {
 		t.Fatalf("resource_template_count = %v, want 4", payload["resource_template_count"])
@@ -234,6 +234,9 @@ func TestHandleServerHealth_IncludesDiscoveryContract(t *testing.T) {
 	}
 	if payload["discovery_adoption_summary"] == nil {
 		t.Fatalf("expected discovery_adoption_summary in server health payload: %v", payload)
+	}
+	if payload["autobuild_tranche_summary"] == nil {
+		t.Fatalf("expected autobuild_tranche_summary in server health payload: %v", payload)
 	}
 	if payload["adoption_priority_summary"] == nil {
 		t.Fatalf("expected adoption_priority_summary in server health payload: %v", payload)

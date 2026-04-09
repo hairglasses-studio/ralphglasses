@@ -55,6 +55,58 @@ func TestStateAndSQLitePaths_UseLegacyHomeDirWhenAvailable(t *testing.T) {
 	if got, want := PromptsDir(), filepath.Join(home, ".ralphglasses", "prompts"); got != want {
 		t.Fatalf("PromptsDir() = %q, want %q", got, want)
 	}
+	if got, want := CostEventsPath(), filepath.Join(home, ".ralphglasses", "cost_events.jsonl"); got != want {
+		t.Fatalf("CostEventsPath() = %q, want %q", got, want)
+	}
+}
+
+func TestCostEventsPath_PrefersExistingLegacyFile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_STATE_HOME", "")
+	legacyDir := filepath.Join(home, ".ralph")
+	if err := os.MkdirAll(legacyDir, 0o755); err != nil {
+		t.Fatalf("mkdir legacy dir: %v", err)
+	}
+	legacyPath := filepath.Join(legacyDir, "cost_events.jsonl")
+	if err := os.WriteFile(legacyPath, []byte("{}\n"), 0o644); err != nil {
+		t.Fatalf("write legacy cost events: %v", err)
+	}
+
+	if got := CostEventsPath(); got != legacyPath {
+		t.Fatalf("CostEventsPath() = %q, want %q", got, legacyPath)
+	}
+}
+
+func TestCommandHistoryPath_UsesXDGConfigDir(t *testing.T) {
+	xdg := t.TempDir()
+	t.Setenv("HOME", "")
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+
+	if got, want := CommandHistoryPath(), filepath.Join(xdg, "ralphglasses", "command_history.json"); got != want {
+		t.Fatalf("CommandHistoryPath() = %q, want %q", got, want)
+	}
+}
+
+func TestExternalSessionSearchDirs_IncludeSharedAndLegacyScanRootPaths(t *testing.T) {
+	home := t.TempDir()
+	scanRoot := filepath.Join(t.TempDir(), "scan-root")
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_STATE_HOME", "")
+
+	got := ExternalSessionSearchDirs(scanRoot)
+	want := []string{
+		filepath.Join(home, ".ralphglasses", "sessions"),
+		filepath.Join(scanRoot, ".session-state"),
+	}
+	if len(got) != len(want) {
+		t.Fatalf("ExternalSessionSearchDirs() len = %d, want %d (%v)", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("ExternalSessionSearchDirs()[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
 }
 
 func TestCoordinationDir_PrefersEnvAndRuntimeAndHome(t *testing.T) {

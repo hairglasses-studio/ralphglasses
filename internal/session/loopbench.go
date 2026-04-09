@@ -97,7 +97,7 @@ type LoopObservation struct {
 	ReflexionApplied bool      `json:"reflexion_applied"`
 	EpisodesUsed     int       `json:"episodes_used"`
 
-	PlannerFallback  bool      `json:"planner_fallback,omitempty"`
+	PlannerFallback bool `json:"planner_fallback,omitempty"`
 
 	// GitDiffStat tracks the diff size for this iteration.
 	GitDiffStat *DiffStat `json:"git_diff_stat,omitempty"`
@@ -198,4 +198,28 @@ func LoadObservations(path string, since time.Time) ([]LoopObservation, error) {
 // ObservationPath returns the canonical JSONL path for a repo's loop observations.
 func ObservationPath(repoPath string) string {
 	return filepath.Join(repoPath, ".ralph", "logs", "loop_observations.jsonl")
+}
+
+// ObservationEligibleForCycle returns whether an observation should influence
+// loop self-improvement task generation. Standalone ad-hoc sessions are
+// excluded because they are not loop iterations.
+func ObservationEligibleForCycle(obs LoopObservation) bool {
+	switch obs.Mode {
+	case "", "live":
+		return true
+	default:
+		return false
+	}
+}
+
+// ObservationEligibleForBaseline returns whether an observation should
+// influence regression baselines and gates. Standalone ad-hoc sessions are
+// excluded, while live and mock loop observations are retained.
+func ObservationEligibleForBaseline(obs LoopObservation) bool {
+	switch obs.Mode {
+	case "", "live", "mock":
+		return true
+	default:
+		return false
+	}
 }

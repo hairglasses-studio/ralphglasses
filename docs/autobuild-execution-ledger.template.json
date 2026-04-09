@@ -1,0 +1,55 @@
+{
+  "$schema": "./autobuild-execution-ledger.schema.json",
+  "track": "autobuild-execution-ledger",
+  "repo": "hairglasses-studio/ralphglasses",
+  "description": "Template for recording autobuild tranche executions, evidence, closure state, and the next recommended patch.",
+  "instructions": [
+    "Copy this template to a dated or live execution ledger file before recording tranche runs.",
+    "Keep one entry per closed or actively-tracked autobuild tranche.",
+    "Do not record workstation-only or user-home-only cleanup here unless the tranche was explicitly an environment-maintenance pass.",
+    "Prefer source-backed evidence such as commits, CI runs, verification outputs, or durable docs artifacts."
+  ],
+  "entry_template": {
+    "date": "YYYY-MM-DD",
+    "patch_id": "<patch-id>",
+    "status": "planned",
+    "trigger_signal": {
+      "type": "adoption|integrity|ci|manual|other",
+      "source": "<resource, report, CI run, or human request>",
+      "summary": "<why this tranche was opened>",
+      "remote_main_verified": false
+    },
+    "repo_owned_scope": [
+      "<repo-owned scope item>"
+    ],
+    "recommended_entry_surface": "<resource, doc, command, or tool>",
+    "changes": [
+      "<what changed>"
+    ],
+    "acceptance_condition": [
+      "<acceptance condition>"
+    ],
+    "stop_condition": [
+      "<when to stop instead of expanding scope>"
+    ],
+    "evidence": [
+      {
+        "kind": "commit|file|ci|test|report|other",
+        "ref": "<sha, path, url, or identifier>",
+        "summary": "<what this evidence proves>"
+      }
+    ],
+    "result": {
+      "closure_state": "open",
+      "summary": "<high-signal outcome>",
+      "prevented_failure_class": [
+        "<failure class>"
+      ]
+    },
+    "next_recommended_patch": "<patch-id>",
+    "notes": [
+      "<optional note>"
+    ]
+  },
+  "entries": []
+}

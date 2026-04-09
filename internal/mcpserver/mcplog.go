@@ -55,9 +55,13 @@ func (l *MCPLogger) Log(ctx context.Context, level mcp.LoggingLevel, msg string,
 	// Merge msg into data payload so the notification carries both.
 	payload := make(map[string]any, len(data)+1)
 	for k, v := range data {
-		payload[k] = v
+		if s, ok := v.(string); ok {
+			payload[k] = RedactSecrets(s)
+		} else {
+			payload[k] = v
+		}
 	}
-	payload["message"] = msg
+	payload["message"] = RedactSecrets(msg)
 
 	notification := mcp.NewLoggingMessageNotification(level, l.name, payload)
 
