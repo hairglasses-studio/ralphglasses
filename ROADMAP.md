@@ -137,6 +137,11 @@ Immediate roadmap notes captured from the Jellyfin ecosystem rollout so the perp
   - Target: `internal/session/` planning + blockers model
   - **Acceptance:** a missing secret blocks only the dependent tranche instead of freezing the full roadmap
 
+- [x] **ATD-8** — Prioritize remote-main-reproduced commit-gate failures ahead of broader roadmap breadth so autobuild can restore a green publish lane before taking more feature work `P0` `S`
+  - Target: `internal/repofiles/` + `internal/session/` + autobuild tranche selection notes
+  - Shipped by repairing scaffold/test contract drift and aligning stale Gemini write expectations to the native `.gemini/agents/*.md` surface on top of current `main`
+  - **Acceptance:** source-backed red commit-gate regressions are fixed and recorded before the next breadth tranche begins
+
 ---
 
 ## Phase 0: Foundation (COMPLETE)

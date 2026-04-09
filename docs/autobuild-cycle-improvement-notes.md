@@ -100,6 +100,21 @@ Rule:
 
 When choosing between a broad cleanup tranche and a small gate that prevents recurrence, prefer the gate unless the cleanup directly blocks shipping.
 
+### 2026-04-08: Reproduced commit-gate reds outrank new breadth
+
+Signal:
+- `go test -short -count=1 ./...` failed on clean remote `main`, not just in a dirty local worktree
+
+What mattered:
+
+- the failures were source-backed and reproducible
+- the breakage sat on the normal commit path
+- the fixes were narrow contract repairs, not speculative cleanup
+
+Rule:
+
+If a red commit gate reproduces against current remote `main`, promote that repair ahead of new roadmap breadth until the publish lane is green again.
+
 ## Autobuild Patch Note Template
 
 Use this shape when closing or reprioritizing a tranche:

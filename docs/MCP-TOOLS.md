@@ -1252,7 +1252,7 @@ Create or update an agent definition for a repo (supports all providers)
 | `description` | string | optional | Agent description |
 | `max_turns` | number | optional | Max turns for this agent |
 | `model` | string | optional | Model override (sonnet, opus, haiku) |
-| `provider` | string | optional | Target provider: codex (default, .codex/agents/*.toml), claude (.claude/agents/), gemini (.gemini/commands/*.toml) |
+| `provider` | string | optional | Target provider: codex (default, .codex/agents/*.toml), claude (.claude/agents/), gemini (.gemini/agents/*.md) |
 | `tools` | string | optional | Comma-separated allowed tools |
 
 

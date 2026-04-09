@@ -2024,7 +2024,7 @@ Create or update an agent definition for a repo (supports all providers)
 | `description` | string |  | Agent description |
 | `max_turns` | number |  | Max turns for this agent |
 | `model` | string |  | Model override (sonnet, opus, haiku) |
-| `provider` | string |  | Target provider: codex (default, .codex/agents/*.toml), claude (.claude/agents/), gemini (.gemini/commands/*.toml) |
+| `provider` | string |  | Target provider: codex (default, .codex/agents/*.toml), claude (.claude/agents/), gemini (.gemini/agents/*.md) |
 | `tools` | string |  | Comma-separated allowed tools |
 
 **Example:**
