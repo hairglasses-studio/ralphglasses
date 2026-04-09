@@ -1,7 +1,10 @@
 package hooks
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hairglasses-studio/mcpkit/toolhooks"
 	"gopkg.in/yaml.v3"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
@@ -93,7 +97,7 @@ func (e *Executor) Start() {
 			case <-ctx.Done():
 				return
 			case event, ok := <-ch:
-				if !ok {
+				if ok == false {
 					return
 				}
 				e.dispatch(event)
@@ -116,7 +120,7 @@ func (e *Executor) dispatch(event events.Event) {
 
 	for repoPath, cfg := range e.configs {
 		hooks, ok := cfg.Hooks[event.Type]
-		if !ok {
+		if ok == false {
 			continue
 		}
 		// Only run hooks for events matching this repo (or global events)
@@ -140,6 +144,16 @@ func (e *Executor) runHook(h HookDef, event events.Event, repoPath string) {
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	payload, hasPayload := toolHookPayload(event)
+	payloadBody := []byte(nil)
+	if hasPayload {
+		body, err := payload.JSON()
+		if err != nil {
+			slog.Warn("hook payload marshal failed", "hook", h.Name, "error", err)
+		} else {
+			payloadBody = body
+		}
+	}
 
 	sanitize := func(s string) string {
 		return strings.Map(func(r rune) rune {
@@ -155,17 +169,28 @@ func (e *Executor) runHook(h HookDef, event events.Event, repoPath string) {
 		cmd := exec.Command("sh", "-c", h.Command)
 		setCommandProcessGroup(cmd)
 		cmd.Dir = repoPath
-		cmd.Env = append(os.Environ(),
+
+		env := append(os.Environ(),
 			"RALPH_EVENT_TYPE="+sanitize(string(event.Type)),
 			"RALPH_REPO_NAME="+sanitize(event.RepoName),
 			"RALPH_REPO_PATH="+sanitize(event.RepoPath),
 			"RALPH_SESSION_ID="+sanitize(event.SessionID),
 			"RALPH_PROVIDER="+sanitize(event.Provider),
 		)
+		if hasPayload {
+			for key, value := range payload.Env() {
+				env = append(env, key+"="+value)
+			}
+		}
+		cmd.Env = env
+		if len(payloadBody) > 0 {
+			cmd.Stdin = bytes.NewReader(payloadBody)
+		}
 
-		// Capture stdout for JSON verdict parsing.
 		var stdout strings.Builder
+		var stderr strings.Builder
 		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
 
 		if err := cmd.Start(); err != nil {
 			slog.Error("hook failed", "hook", h.Name, "error", err)
@@ -178,29 +203,13 @@ func (e *Executor) runHook(h HookDef, event events.Event, repoPath string) {
 		select {
 		case err := <-done:
 			if err != nil {
+				if hasPayload && e.handleToolHookExit(err, h, event, repoPath, stdout.String(), stderr.String()) {
+					return
+				}
 				slog.Error("hook failed", "hook", h.Name, "error", err)
 				return
 			}
-			// Parse JSON verdict from stdout (Pattern 12).
-			if raw := stdout.String(); strings.TrimSpace(raw) != "" {
-				verdict, parseErr := ParseHookOutput([]byte(raw))
-				if parseErr != nil {
-					slog.Warn("hook stdout not valid verdict JSON", "hook", h.Name, "error", parseErr)
-				} else if verdict.Decision == "block" {
-					slog.Warn("hook verdict: blocked", "hook", h.Name, "reason", verdict.Reason)
-					e.bus.Publish(events.Event{
-						Type:     events.HookBlocked,
-						RepoPath: repoPath,
-						RepoName: event.RepoName,
-						Data: map[string]any{
-							"hook":   h.Name,
-							"reason": verdict.Reason,
-						},
-					})
-				} else if verdict.Decision != "" {
-					slog.Info("hook verdict", "hook", h.Name, "decision", verdict.Decision)
-				}
-			}
+			e.handleHookStdout(h, event, repoPath, stdout.String())
 		case <-ctx.Done():
 			_ = killCommandProcessGroup(cmd)
 			<-done
@@ -217,4 +226,132 @@ func (e *Executor) runHook(h HookDef, event events.Event, repoPath string) {
 	} else {
 		go run()
 	}
+}
+
+func (e *Executor) handleHookStdout(h HookDef, event events.Event, repoPath, raw string) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return
+	}
+	if strings.HasPrefix(trimmed, "{") == false {
+		return
+	}
+	verdict, parseErr := ParseHookOutput([]byte(trimmed))
+	if parseErr != nil {
+		slog.Warn("hook stdout not valid verdict JSON", "hook", h.Name, "error", parseErr)
+		return
+	}
+	if verdict.Decision == "block" {
+		reason := verdict.Reason
+		if reason == "" {
+			reason = fmt.Sprintf("hook %q blocked event %s", h.Name, event.Type)
+		}
+		slog.Warn("hook verdict: blocked", "hook", h.Name, "reason", reason)
+		e.publishHookBlocked(repoPath, event.RepoName, h.Name, reason)
+		return
+	}
+	if verdict.Decision != "" {
+		slog.Info("hook verdict", "hook", h.Name, "decision", verdict.Decision)
+	}
+}
+
+func (e *Executor) handleToolHookExit(err error, h HookDef, event events.Event, repoPath, stdout, stderr string) bool {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) == false {
+		return false
+	}
+	message := strings.TrimSpace(stdout)
+	if message == "" {
+		message = strings.TrimSpace(stderr)
+	}
+	switch exitErr.ExitCode() {
+	case 2:
+		if message == "" {
+			message = fmt.Sprintf("hook %q denied tool execution", h.Name)
+		}
+		slog.Warn("hook verdict: blocked", "hook", h.Name, "reason", message, "event", event.Type)
+		e.publishHookBlocked(repoPath, event.RepoName, h.Name, message)
+		return true
+	default:
+		if message == "" {
+			message = fmt.Sprintf("hook %q exited with status %d; allowing execution to continue", h.Name, exitErr.ExitCode())
+		}
+		slog.Warn("hook returned non-zero status", "hook", h.Name, "status", exitErr.ExitCode(), "message", message)
+		return true
+	}
+}
+
+func (e *Executor) publishHookBlocked(repoPath, repoName, hookName, reason string) {
+	if e.bus == nil {
+		return
+	}
+	e.bus.Publish(events.Event{
+		Type:     events.HookBlocked,
+		RepoPath: repoPath,
+		RepoName: repoName,
+		Data: map[string]any{
+			"hook":   hookName,
+			"reason": reason,
+		},
+	})
+}
+
+func toolHookPayload(event events.Event) (toolhooks.Payload, bool) {
+	if event.Type != events.ToolCalled {
+		return toolhooks.Payload{}, false
+	}
+	toolName := hookDataString(event.Data, "tool")
+	if toolName == "" {
+		toolName = hookDataString(event.Data, "name")
+	}
+	toolInputJSON := hookDataString(event.Data, "tool_input_json")
+	if toolInputJSON == "" {
+		if raw, ok := event.Data["tool_input"]; ok {
+			data, err := json.Marshal(raw)
+			if err == nil {
+				toolInputJSON = string(data)
+			}
+		}
+	}
+	if toolInputJSON == "" {
+		toolInputJSON = "{}"
+	}
+	payload := toolhooks.NewPayload(
+		toolhooks.EventPostToolUse,
+		toolName,
+		toolInputJSON,
+		hookDataString(event.Data, "tool_output"),
+		hookDataBool(event.Data, "tool_result_is_error"),
+	)
+	return payload, true
+}
+
+func hookDataString(data map[string]any, key string) string {
+	if len(data) == 0 {
+		return ""
+	}
+	value, ok := data[key]
+	if ok == false {
+		return ""
+	}
+	asString, ok := value.(string)
+	if ok == false {
+		return ""
+	}
+	return asString
+}
+
+func hookDataBool(data map[string]any, key string) bool {
+	if len(data) == 0 {
+		return false
+	}
+	value, ok := data[key]
+	if ok == false {
+		return false
+	}
+	asBool, ok := value.(bool)
+	if ok == false {
+		return false
+	}
+	return asBool
 }
