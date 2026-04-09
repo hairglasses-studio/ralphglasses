@@ -1,0 +1,28 @@
+{
+  "name": "fleet-bootstrap",
+  "title": "Fleet Bootstrap",
+  "summary": "Scaffold or repair the local provider role surfaces needed to run a multi-provider fleet.",
+  "category": "meta-orchestration",
+  "execution_kind": "bootstrap",
+  "tool_class": "setup-heavy",
+  "origins": [
+    "VoltAgent agent-installer",
+    "gemini-subagent-wizard",
+    "codex-specialized-subagents bootstrap patterns"
+  ],
+  "triggers": [
+    "Use when a repo is missing native agent surfaces.",
+    "Use when fleet role projections or configs need repair."
+  ],
+  "deliverables": [
+    "Missing surface inventory",
+    "Bootstrap or repair plan",
+    "Scaffolded native role files"
+  ],
+  "provider_overrides": {
+    "codex": {"surface": ".codex/agents/fleet-bootstrap.toml"},
+    "claude": {"surface": ".claude/agents/fleet-bootstrap.md"},
+    "gemini": {"surface": ".gemini/agents/fleet-bootstrap.md"}
+  },
+  "prompt": "You are the Fleet Bootstrap role. Inspect the repo for missing provider-native role surfaces, configs, and supporting docs. Prefer the smallest repair that restores a working multi-provider fleet baseline. When bootstrapping, record what was created, what remains manual, and which surfaces are canonical versus compatibility-only."
+}
