@@ -34,7 +34,7 @@ const (
 	TeamTaskCompleted  = "completed"
 	TeamTaskBlocked    = "blocked"
 	TeamTaskFailed     = "failed"
-	TeamTaskNeedsRetry = "needs_retry"
+	TeamTaskNeedsRetry = "needs-retry"
 	TeamTaskCancelled  = "cancelled"
 )
 
@@ -44,4 +44,13 @@ const (
 	TeamMergeStatusMerged      = "merged"
 	TeamMergeStatusConflict    = "conflict"
 	TeamMergeStatusUnavailable = "unavailable"
+)
+
+// Team promotion statuses.
+const (
+	TeamPromotionStatusPending     = "pending"
+	TeamPromotionStatusReconciling = "reconciling"
+	TeamPromotionStatusVerifying   = "verifying"
+	TeamPromotionStatusPromoted    = "promoted"
+	TeamPromotionStatusFailed      = "failed"
 )

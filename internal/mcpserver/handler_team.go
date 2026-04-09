@@ -82,24 +82,31 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		AutoStart:        pp.OptionalBool("autostart", teamProvider == session.ProviderCodex),
 		A2AAgentURL:      strings.TrimSpace(pp.String("a2a_agent_url")),
 	}
+	dryRun := pp.Bool("dry_run")
+	backendConfigured := s.SessMgr.StructuredTeamBackend() != nil || s.FleetCoordinator != nil || s.FleetClient != nil
 	if config.ExecutionBackend == "" && teamProvider == session.ProviderCodex {
-		if s.FleetCoordinator != nil || s.FleetClient != nil {
+		if backendConfigured {
 			config.ExecutionBackend = session.TeamExecutionBackendFleet
 		} else {
 			config.ExecutionBackend = session.TeamExecutionBackendLocal
 		}
 	}
 	if config.ExecutionBackend == session.TeamExecutionBackendA2A {
-		return codedError(ErrInvalidParams, "execution_backend=a2a is not supported yet"), nil
+		if config.A2AAgentURL == "" {
+			return codedError(ErrInvalidParams, "a2a_agent_url required when execution_backend=a2a"), nil
+		}
+		if !dryRun && !backendConfigured {
+			return fleetNotConfiguredResult(), nil
+		}
 	}
-	if config.ExecutionBackend == session.TeamExecutionBackendFleet && s.FleetCoordinator == nil && s.FleetClient == nil {
+	if config.ExecutionBackend == session.TeamExecutionBackendFleet && !backendConfigured {
 		return fleetNotConfiguredResult(), nil
 	}
 	if config.WorktreePolicy == "" && teamProvider == session.ProviderCodex {
 		config.WorktreePolicy = session.TeamWorktreePolicyPerWorker
 	}
 
-	if pp.Bool("dry_run") {
+	if dryRun {
 		// Apply the same default resolution as the real launch path so the
 		// preview shows effective values instead of zero/empty defaults.
 		effectiveProvider := config.Provider

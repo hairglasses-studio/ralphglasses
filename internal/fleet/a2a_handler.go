@@ -21,51 +21,51 @@ type A2ATaskSendRequest struct {
 
 // A2ATaskMetadata carries optional routing hints for a task submission.
 type A2ATaskMetadata struct {
-	RepoName         string          `json:"repo_name,omitempty"`
-	RepoPath         string          `json:"repo_path,omitempty"`
-	Source           string          `json:"source,omitempty"`
-	Provider         string          `json:"provider,omitempty"`
-	Model            string          `json:"model,omitempty"`
-	MaxBudgetUSD     float64         `json:"max_budget_usd,omitempty"`
-	Priority         int             `json:"priority,omitempty"`
-	TeamName         string          `json:"team_name,omitempty"`
-	TeamTaskID       string          `json:"team_task_id,omitempty"`
-	PlannerSessionID string          `json:"planner_session_id,omitempty"`
-	SessionName      string          `json:"session_name,omitempty"`
-	PermissionMode   string          `json:"permission_mode,omitempty"`
-	OutputSchema     json.RawMessage `json:"output_schema,omitempty"`
-	WorktreePolicy   string          `json:"worktree_policy,omitempty"`
-	TargetBranch     string          `json:"target_branch,omitempty"`
-	HumanContext     []string        `json:"human_context,omitempty"`
-	OwnedPaths       []string        `json:"owned_paths,omitempty"`
-	SessionID        string          `json:"session_id,omitempty"`
-	TaskStatus       string          `json:"task_status,omitempty"`
-	Summary          string          `json:"summary,omitempty"`
-	Question         string          `json:"question,omitempty"`
-	ChangedFiles     []string        `json:"changed_files,omitempty"`
-	WorkerNodeID     string          `json:"worker_node_id,omitempty"`
-	WorktreePath     string          `json:"worktree_path,omitempty"`
-	WorktreeBranch   string          `json:"worktree_branch,omitempty"`
-	HeadSHA          string          `json:"head_sha,omitempty"`
-	MergeBaseSHA     string          `json:"merge_base_sha,omitempty"`
-	ArtifactType      string         `json:"artifact_type,omitempty"`
-	ArtifactPath      string         `json:"artifact_path,omitempty"`
-	ArtifactHash      string         `json:"artifact_hash,omitempty"`
-	ArtifactSizeBytes int64          `json:"artifact_size_bytes,omitempty"`
-	ArtifactBaseRef   string         `json:"artifact_base_ref,omitempty"`
-	ArtifactTipRef    string         `json:"artifact_tip_ref,omitempty"`
-	ArtifactStatus    string         `json:"artifact_status,omitempty"`
+	RepoName          string          `json:"repo_name,omitempty"`
+	RepoPath          string          `json:"repo_path,omitempty"`
+	Source            string          `json:"source,omitempty"`
+	Provider          string          `json:"provider,omitempty"`
+	Model             string          `json:"model,omitempty"`
+	MaxBudgetUSD      float64         `json:"max_budget_usd,omitempty"`
+	Priority          int             `json:"priority,omitempty"`
+	TeamName          string          `json:"team_name,omitempty"`
+	TeamTaskID        string          `json:"team_task_id,omitempty"`
+	PlannerSessionID  string          `json:"planner_session_id,omitempty"`
+	SessionName       string          `json:"session_name,omitempty"`
+	PermissionMode    string          `json:"permission_mode,omitempty"`
+	OutputSchema      json.RawMessage `json:"output_schema,omitempty"`
+	WorktreePolicy    string          `json:"worktree_policy,omitempty"`
+	TargetBranch      string          `json:"target_branch,omitempty"`
+	HumanContext      []string        `json:"human_context,omitempty"`
+	OwnedPaths        []string        `json:"owned_paths,omitempty"`
+	SessionID         string          `json:"session_id,omitempty"`
+	TaskStatus        string          `json:"task_status,omitempty"`
+	Summary           string          `json:"summary,omitempty"`
+	Question          string          `json:"question,omitempty"`
+	ChangedFiles      []string        `json:"changed_files,omitempty"`
+	WorkerNodeID      string          `json:"worker_node_id,omitempty"`
+	WorktreePath      string          `json:"worktree_path,omitempty"`
+	WorktreeBranch    string          `json:"worktree_branch,omitempty"`
+	HeadSHA           string          `json:"head_sha,omitempty"`
+	MergeBaseSHA      string          `json:"merge_base_sha,omitempty"`
+	ArtifactType      string          `json:"artifact_type,omitempty"`
+	ArtifactPath      string          `json:"artifact_path,omitempty"`
+	ArtifactHash      string          `json:"artifact_hash,omitempty"`
+	ArtifactSizeBytes int64           `json:"artifact_size_bytes,omitempty"`
+	ArtifactBaseRef   string          `json:"artifact_base_ref,omitempty"`
+	ArtifactTipRef    string          `json:"artifact_tip_ref,omitempty"`
+	ArtifactStatus    string          `json:"artifact_status,omitempty"`
 }
 
 // A2ATaskResponse is the standard A2A v1.0 task response envelope.
 type A2ATaskResponse struct {
-	ID        string     `json:"id"`
-	Status    TaskState  `json:"status"`
-	Message   *Message   `json:"message,omitempty"`
-	Artifacts []Artifact `json:"artifacts,omitempty"`
+	ID        string          `json:"id"`
+	Status    TaskState       `json:"status"`
+	Message   *Message        `json:"message,omitempty"`
+	Artifacts []Artifact      `json:"artifacts,omitempty"`
 	Metadata  A2ATaskMetadata `json:"metadata,omitempty"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
 }
 
 // handleA2ATaskSend accepts a task from another agent, converts it to a

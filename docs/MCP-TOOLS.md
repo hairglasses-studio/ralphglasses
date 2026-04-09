@@ -1281,11 +1281,11 @@ Create an agent team by `name` for `repo`; Codex teams use the structured autono
 | `name` | string | **required** | Team name |
 | `repo` | string | **required** | Repo name |
 | `tasks` | string | **required** | Newline-separated task descriptions |
-| `a2a_agent_url` | string | optional | Reserved for future A2A support; ignored today |
+| `a2a_agent_url` | string | optional | Remote A2A agent/coordinator base URL when execution_backend=a2a |
 | `autostart` | boolean | optional | Start the background team controller immediately; defaults true for Codex teams |
 | `budget_usd` | number | optional | Budget in USD — total budget for the team |
 | `dry_run` | boolean | optional | Return team configuration without launching sessions |
-| `execution_backend` | string | optional | Worker execution backend: local or fleet |
+| `execution_backend` | string | optional | Worker execution backend: local, fleet, or a2a |
 | `lead_agent` | string | optional | Provider-native agent definition name for the lead session. Not supported for Codex teams. |
 | `max_concurrency` | number | optional | Maximum concurrent worker tasks (default 2) |
 | `max_retries` | number | optional | Maximum retries per task (default 2) |

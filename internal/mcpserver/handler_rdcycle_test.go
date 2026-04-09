@@ -269,7 +269,6 @@ func TestHandleFindingToTask_ScratchpadNotExist(t *testing.T) {
 // handleCycleBaseline
 // ---------------------------------------------------------------------------
 
-
 func TestHandleCycleBaseline(t *testing.T) {
 	t.Parallel()
 	srv, root := setupTestServer(t)
@@ -404,7 +403,6 @@ func TestAdd(t *testing.T) {
 	})
 }
 
-
 // ---------------------------------------------------------------------------
 // handleCyclePlan
 // ---------------------------------------------------------------------------
@@ -530,7 +528,6 @@ func TestHandleCyclePlan_DefaultParams(t *testing.T) {
 // ---------------------------------------------------------------------------
 // handleCycleMerge
 // ---------------------------------------------------------------------------
-
 
 func TestHandleCycleMerge_MissingWorktreePaths(t *testing.T) {
 	t.Parallel()

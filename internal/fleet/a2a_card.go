@@ -265,6 +265,55 @@ func (r *RemoteA2AAdapter) SubmitTask(offer TaskOffer) (string, error) {
 	return result.WorkItemID, nil
 }
 
+func (r *RemoteA2AAdapter) SubmitStructuredTask(req session.TeamBackendSubmitRequest) (string, error) {
+	taskID := generateID()
+	payload := A2ATaskSendRequest{
+		ID: taskID,
+		Message: Message{
+			Role:  MessageRoleUser,
+			Parts: []Part{NewTextPart(req.Prompt)},
+		},
+		Metadata: A2ATaskMetadata{
+			RepoName:         req.RepoName,
+			RepoPath:         req.RepoPath,
+			Source:           WorkSourceStructuredCodexTeam,
+			Provider:         string(req.Provider),
+			Model:            req.Model,
+			MaxBudgetUSD:     req.MaxBudgetUSD,
+			Priority:         1,
+			TeamName:         req.TeamName,
+			TeamTaskID:       req.TaskID,
+			PlannerSessionID: req.PlannerSessionID,
+			SessionName:      req.SessionName,
+			PermissionMode:   req.PermissionMode,
+			OutputSchema:     req.OutputSchema,
+			WorktreePolicy:   req.WorktreePolicy,
+			TargetBranch:     req.TargetBranch,
+			HumanContext:     append([]string(nil), req.HumanContext...),
+			OwnedPaths:       append([]string(nil), req.OwnedPaths...),
+		},
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return "", fmt.Errorf("a2a: marshal structured task: %w", err)
+	}
+	endpoint := r.baseURL + "/api/v1/a2a/task/send"
+	resp, err := r.client.Post(endpoint, "application/json", bytesReader(data))
+	if err != nil {
+		return "", fmt.Errorf("a2a: submit structured task to %s: %w", endpoint, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("a2a: submit structured task: status %d: %s", resp.StatusCode, string(body))
+	}
+	var result A2ATaskResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("a2a: parse structured submit response: %w", err)
+	}
+	return result.ID, nil
+}
+
 // GetTaskStatus retrieves the current state of a submitted task from the
 // remote coordinator.
 func (r *RemoteA2AAdapter) GetTaskStatus(taskID string) (*TaskOffer, error) {
@@ -289,6 +338,46 @@ func (r *RemoteA2AAdapter) GetTaskStatus(taskID string) (*TaskOffer, error) {
 	}
 
 	return &offer, nil
+}
+
+func (r *RemoteA2AAdapter) GetTaskResponse(taskID string) (*A2ATaskResponse, error) {
+	endpoint := fmt.Sprintf("%s/api/v1/a2a/task/%s", r.baseURL, taskID)
+	resp, err := r.client.Get(endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("a2a: get task response from %s: %w", endpoint, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrOfferNotFound
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("a2a: get task response: status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result A2ATaskResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("a2a: parse task response: %w", err)
+	}
+	return &result, nil
+}
+
+func (r *RemoteA2AAdapter) CancelTask(taskID string) error {
+	endpoint := fmt.Sprintf("%s/api/v1/a2a/task/%s/cancel", r.baseURL, taskID)
+	resp, err := r.client.Post(endpoint, "application/json", nil)
+	if err != nil {
+		return fmt.Errorf("a2a: cancel task at %s: %w", endpoint, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return ErrOfferNotFound
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("a2a: cancel task: status %d: %s", resp.StatusCode, string(body))
+	}
+	return nil
 }
 
 // bytesReader wraps a byte slice in an io.Reader for HTTP request bodies.

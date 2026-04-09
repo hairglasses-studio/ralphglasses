@@ -144,7 +144,7 @@ func newStructuredCodexTeam(config TeamConfig) *TeamStatus {
 		AutoStart:         config.AutoStart,
 		TargetBranch:      config.TargetBranch,
 		IntegrationBranch: structuredTeamIntegrationBranch(config.Name),
-		PromotionStatus:   TeamMergeStatusPending,
+		PromotionStatus:   TeamPromotionStatusPending,
 		A2AAgentURL:       config.A2AAgentURL,
 	}
 }
