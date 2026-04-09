@@ -244,7 +244,7 @@ coverage-treemap:
 
 # CI pipeline: bootstrap-aware vet + test + build
 ci:
-	./scripts/dev/ci.sh
+	bash ./scripts/dev/ci.sh
 
 # Remove build artifacts
 clean:

@@ -76,6 +76,40 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
 
 ---
 
+## Autonomous Tranche Delivery Notes [NEW]
+
+Immediate roadmap notes captured from the Jellyfin ecosystem rollout so the perpetual autonomous build loop can patch its own delivery workflow instead of repeating operator-side mistakes.
+
+- [ ] **ATD-1** — Add a publish-lane planner that selects `dirty checkout -> clean worktree -> detached mainline push` automatically when the canonical repo has unrelated edits `P0` `M`
+  - Target: `internal/session/` + `internal/roadmap/`
+  - **Acceptance:** publish tasks can choose a safe worktree strategy without manual operator intervention
+
+- [ ] **ATD-2** — Add a durable auth bootstrap probe that verifies `gh` keyring login, SSH key presence, `gh auth setup-git`, and org push rights before any repo push or repo-create task `P0` `M`
+  - Target: `internal/session/` + `internal/roadmap/`
+  - **Acceptance:** planner can distinguish "not logged in", "SSH not registered", "org visible but push denied", and "fully publishable"
+
+- [ ] **ATD-3** — Add host-override checkpoint capture so loops persist runtime discoveries like occupied ports, image-source fallbacks, and remote mount findings into reusable docs and machine-readable patch artifacts `P0` `M`
+  - Target: `internal/roadmap/` + docs export + autobuild patch feed
+  - **Acceptance:** a completed tranche emits both human docs updates and a machine-readable host-override record
+
+- [ ] **ATD-4** — Add wrapper-first rollout heuristics so loops prefer building bootstrap, preflight, health, backup, restore, and unit-install surfaces before expanding service count `P1` `M`
+  - Target: `internal/roadmap/` planning heuristics
+  - **Acceptance:** multi-service deployment plans rank operational control-plane work ahead of lower-leverage optional integrations
+
+- [ ] **ATD-5** — Add tranche receipt emission after every successful push, recording repo, commit SHA, verification commands, blockers cleared, and ranked next actions `P1` `S`
+  - Target: `internal/roadmap/` + docs checkpoint integration
+  - **Acceptance:** each tranche can leave a compact machine-ingestable receipt for the next autonomous loop
+
+- [ ] **ATD-6** — Add automatic docs-sync suggestions when implementation changes introduce new operator-facing commands, ports, env vars, or recovery flows `P1` `M`
+  - Target: `internal/roadmap/` + repo diff analysis
+  - **Acceptance:** loops flag doc debt before publish when command surfaces or runbooks have drifted
+
+- [ ] **ATD-7** — Add environment-secret boundary detection so loops keep implementing non-secret tranches while correctly deferring only the secret-gated surfaces such as VPN credentials or service API keys `P1` `M`
+  - Target: `internal/session/` planning + blockers model
+  - **Acceptance:** a missing secret blocks only the dependent tranche instead of freezing the full roadmap
+
+---
+
 ## Phase 0: Foundation (COMPLETE)
 
 - [x] Go module (`github.com/hairglasses-studio/ralphglasses`)
@@ -1274,8 +1308,8 @@ Convert scratchpad findings into loop-executable tasks.
 - Inputs: `finding_id`, `scratchpad_name`
 - Outputs: task spec with difficulty estimate, provider hint, estimated cost, file paths
 - Logic: parse finding text, identify affected files via grep, classify severity, estimate effort
-- Namespace: `loop`
-- File: `internal/mcpserver/tools_loop.go`
+- Namespace: `rdcycle`
+- File: `internal/mcpserver/handler_rdcycle.go`
 - **Acceptance:** `finding_to_task FINDING-240 cycle15_tool_exploration` produces valid loop task spec
 
 #### 9.1.2 — `cycle_merge` `P0` `L`
@@ -1283,8 +1317,8 @@ Auto-merge parallel worktree results from concurrent loop iterations.
 - Inputs: `worktree_paths[]`, `conflict_strategy` (ours/theirs/manual)
 - Outputs: merge result, conflicts list, merged branch name
 - Logic: sequential merge with conflict detection, rollback on failure
-- Namespace: `loop`
-- File: `internal/session/merge.go`
+- Namespace: `rdcycle`
+- File: `internal/mcpserver/handler_rdcycle.go`
 - **Acceptance:** merges 3 parallel worktrees, reports conflicts without data loss
 
 #### 9.1.3 — `cycle_plan` `P0` `L`
@@ -1292,8 +1326,8 @@ Generate next R&D cycle plan from previous observations.
 - Inputs: `previous_cycle_id`, `max_tasks`, `budget_usd`
 - Outputs: prioritized task list with difficulty, provider assignments, dependencies
 - Logic: read observations -> identify regressions -> check unresolved findings -> generate plan
-- Namespace: `loop`
-- File: `internal/session/cycle_plan.go`
+- Namespace: `rdcycle`
+- File: `internal/mcpserver/handler_rdcycle.go`
 - **Acceptance:** generates coherent cycle plan from observation history
 
 #### 9.1.4 — `cycle_schedule` `P1` `M`
@@ -1301,8 +1335,8 @@ Schedule cycles with cron triggers for unattended operation.
 - Inputs: `cron_expr`, `cycle_config` (budget, max_tasks, target_repo)
 - Outputs: `schedule_id`, next execution time
 - Logic: register cron job, persist to `.ralph/schedules.json`, trigger via internal ticker
-- Namespace: `loop`
-- File: `internal/session/scheduler.go`
+- Namespace: `rdcycle`
+- File: `internal/mcpserver/handler_rdcycle.go`
 - **Acceptance:** `cycle_schedule "0 2 * * *" ...` runs daily cycle at 2 AM
 
 #### 9.1.5 — `cycle_baseline` `P0` `S`
@@ -1310,8 +1344,8 @@ Snapshot metrics at cycle start for before/after comparison.
 - Inputs: `repo_path`, `metrics[]` (coverage, lint_score, build_time, binary_size, test_count)
 - Outputs: `baseline_id`, metric values, timestamp
 - Logic: run `go test -cover`, `go vet`, `go build`, record results
-- Namespace: `loop`
-- File: `internal/session/baseline.go`
+- Namespace: `rdcycle`
+- File: `internal/mcpserver/handler_rdcycle.go`
 - **Acceptance:** `cycle_baseline . coverage,build_time` records reproducible snapshot
 
 ### 9.2 — Tier 2: Loop Quality (P1)
@@ -1376,7 +1410,7 @@ Cross-reference observations with git commits.
 
 ## Phase 9.5: Autonomous R&D Supervisor (COMPLETE)
 
-> **Note**: 5 Tier 1 tool implementations (finding_to_task, cycle_merge, cycle_plan, cycle_schedule, cycle_baseline) have no corresponding source files. Effective completion: ~50%.
+> **Note**: The original roadmap referenced a future split across `tools_loop.go`, `merge.go`, `cycle_plan.go`, `scheduler.go`, and `baseline.go`. The current implementation is consolidated in `internal/mcpserver/handler_rdcycle.go` and registered under the `rdcycle` tool group. Remaining work here is hardening, verification, and eventual extraction only if the split becomes useful.
 
 - [x] 9.5.1 — Supervisor core: persistent goroutine, 60s tick, decision dispatch via DecisionLog
 - [x] 9.5.2 — Health monitor: 5-threshold evaluator (completion rate, cost rate, verify rate, idle time, iteration velocity)
@@ -1395,7 +1429,7 @@ Cross-reference observations with git commits.
 - [x] 10.1.1 — Create `.claude/agents/sprint-executor.md` with `isolation: worktree`, `permissionMode: dontAsk`, `model: sonnet` `P1` `S`
 - [x] 10.1.2 — Create `.claude/agents/marathon-monitor.md` with `model: haiku` for cheap status polling `P2` `S`
 - [ ] 10.1.3 — Integrate `/batch` decomposition for parallel sprint execution (5 ROADMAP items → 5 batch units) `P1` `M`
-- [ ] 10.1.4 — Add batch result merging to `cycle_merge.go` for worktree outputs `P1` `M`
+- [ ] 10.1.4 — Add batch result merging to `internal/mcpserver/handler_rdcycle.go` for worktree outputs `P1` `M`
 - **Acceptance:** `/batch "Implement next 5 ROADMAP items"` produces 5 parallel agents that each implement 1 item
 
 ### 10.2 — Cloud Scheduled Tasks & Durable Marathons
@@ -2784,3 +2818,29 @@ Phase 10.5 (Scaling) ----> Phase 11 (A2A) ----> Phase 12 (Tailscale)
 | `M` | Medium — 1-4 hours, 2-5 files |
 | `L` | Large — 4-16 hours, cross-package |
 | `XL` | Extra large — multi-day, architectural change |
+
+## Autonomous Development Cycle Notes
+
+Append-only cross-repo tranche notes for autonomous delivery and future auto-build patch mining. Add new entries at the end; do not rewrite prior entries except to correct factual errors.
+
+### Entry Template
+
+- Tranche:
+- Repo:
+- Trigger:
+- Changes:
+- Verification:
+- Failure Patterns:
+- Next Candidates:
+- Blockers:
+
+### 2026-04-08 — RG-T1
+
+- Tranche: 1
+- Repo: `ralphglasses`
+- Trigger: Phase 9 roadmap/docs still claimed the tier-1 rdcycle handlers were missing, and `roadmap_prioritize` only had a thin smoke test. The active checkout also carried an unrelated `sanitize_test.go` failure that was not present on `origin/main`.
+- Changes: Corrected `roadmap_prioritize` so `total_remaining` reflects the full backlog before `top_n` truncation; added dedicated prioritization behavior tests; updated Phase 9 roadmap/docs references to the actual consolidated implementation in `internal/mcpserver/handler_rdcycle.go`.
+- Verification: `go test ./internal/mcpserver/...`; `make ci`.
+- Failure Patterns: Detached worktrees outside the studio tree break local `../docs` and `../mcpkit` replace paths. Future detached validation should either create sibling symlinks or stage the worktree under the studio root. Also, commit-hook truth can be stricter than a single passing `make ci` run: this tranche exposed a flaky `internal/marathon` completion path where `CloudTaskCompleted` could publish before VM termination finished, plus a port-allocation race in `internal/mcpserver/handler_cli_parity_test.go` where a reserved coordinator port could be stolen before bind.
+- Next Candidates: Tranche 2 `DecisionLog` enrichment in `internal/session/autonomy.go`; `whiteclaw` DIFF-3 and TOOL-3 artifacts.
+- Blockers: None after local replace-path resolution.

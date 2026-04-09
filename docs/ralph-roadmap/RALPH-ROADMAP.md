@@ -42,7 +42,7 @@ Ralphglasses is a Go-native multi-provider (Claude, Gemini, Codex) agent orchest
 | **prompt** | 9 | Deferred* | 4 | 3 | 3 | No prompt length validation [Agent 2] |
 | **fleet** | 10 | Deferred* | 5 | 4 | 3 | -- |
 | **repo** | 5 | Deferred* | 5 | 4 | 3 | -- |
-| **roadmap** | 6 | Deferred* | 5 | 4 | 3 | `roadmap_prioritize` untested [Agent 2] |
+| **roadmap** | 6 | Deferred* | 5 | 4 | 3 | `roadmap_prioritize` previously lacked dedicated behavior tests; covered in tranche RG-T1 |
 | **team** | 6 | Deferred* | 4 | 2 | 3 | Only 5 tests for 6 tools [Agent 2] |
 | **awesome** | 5 | Deferred* | 4 | 3 | 3 | -- |
 | **advanced** | 24 | Deferred* | 4 | 3 | 3 | Too broad -- 7+ domains [Agent 2] |
@@ -136,8 +136,8 @@ ConcurrencyMiddleware(32 slots)
 | F-001 | `AutoRecovery.retryState` race | S1 R-01 | S (5 lines) | Unprotected `map[string]*retryInfo` accessed from concurrent `HandleSessionError` and `ClearRetryState` callbacks. Fatal `concurrent map write` panic. |
 | F-002 | `RetryTracker.attempts` race | S1 R-02 | S (5 lines) | Fleet `RetryTracker` map with no mutex; HTTP handlers `RecordFailure`/`RecordSuccess` race concurrently. |
 | F-003 | Phase 3.5.5 numbering collision | Agent 1 | Trivial | Two sections share identical sub-IDs (Codex parity vs theme export) -- any tool addressing tasks by ID has undefined behavior. |
-| F-004 | `tools_loop_test.go` without implementation | Agent 1 | M | Phase 9 tier-1 tools have test expectations but no Go implementations -- test file exists, source does not. |
-| F-005 | Phase 9 marked complete but files missing | Agent 1 | M | `merge.go`, `cycle_plan.go`, `scheduler.go`, `baseline.go` do not exist despite Phase 9 showing 100%. |
+| F-004 | Stale inference from `tools_loop_test.go` | Agent 1 | Resolved | `tools_loop_test.go` covers legacy loop lifecycle handlers, not missing Phase 9 tier-1 rdcycle implementations. |
+| F-005 | Stale Phase 9 file references in roadmap/docs | Agent 1 | S | Tier-1 rdcycle handlers exist in `internal/mcpserver/handler_rdcycle.go`; the unlanded split-file plan was misread as missing code. |
 | F-006 | 5 path traversal vulnerabilities | Agent 8 | S-M | `scratchpadName`, `name`, `worktree_paths`, `hooks.yaml command`, `verify_commands` bypass `ValidatePath` in MCP handlers. |
 
 ### 2.2 HIGH Findings (18)
@@ -825,7 +825,7 @@ Full finding index with 82 cataloged findings is available in [16-research-index
 | C-04 | In-progress phases | Agent 8: 10 | Agent 1: 6 | Different thresholds for "in progress" -- both valid by their definitions. |
 | C-05 | Deferred loading | CLAUDE.md: active | Agent 2: inactive in production | Production `cmd/mcp.go` does not set `DeferredLoading = true`. Tests only. |
 | C-06 | Opus pricing | `config/costs.go`: $15/$75 | Agent 11: $5/$25 | Code not updated for Opus 4.6 price drop. 67% overestimate. |
-| C-07 | Phase 9 completion | ROADMAP.md: 100% | Agent 1, S2: files missing | "5 tasks" are tier-3 only. Tier-1 tool implementations absent. |
+| C-07 | Phase 9 file locations | ROADMAP.md referenced split files | Current code consolidates handlers in `internal/mcpserver/handler_rdcycle.go` | Fix roadmap/docs references; do not reopen Phase 9 on missing-file grounds. |
 | C-08 | Gemini Flash rate | `config/costs.go`: $2.50/1M output | Agent 11: ~$3.50/1M | 40% underestimate in compiled-in rate. |
 | C-09 | Sweep budget | User convention: $0.50/session | Handler default: $5.00/session | $0.50 is caller convention only; handler does not enforce without explicit param. |
 
@@ -926,7 +926,7 @@ Condensed from [01-roadmap-matrix.md](01-roadmap-matrix.md). 36 phases total.
 | 24 | MoE-Inspired Provider Routing | 10 | 0 | 0% | Planned |
 | 25 | Federated Fleet Learning | 9 | 0 | 0% | Planned |
 
-*Phase 9 marked 100% but tier-1 implementation files are missing [Agent 1, S2].
+*Phase 9 implementation exists, but the roadmap/docs had stale split-file references until tranche RG-T1 reconciled them to `internal/mcpserver/handler_rdcycle.go`.
 
 **Summary**: 10 phases complete, 10 in progress (12-96%), 16 planned at 0%.
 
@@ -940,7 +940,7 @@ Condensed from [01-roadmap-matrix.md](01-roadmap-matrix.md). 36 phases total.
 
 **Phantom file references**: 158 total phantom references in ROADMAP.md. 5 are in completed tasks (highest priority to reconcile): QW-7 (`snapshot.go`), QW-11 (`coordinator.go`), 0.5.7.1 (`version.go`), 0.5.11.1 (`config_schema.go`), 1.8.4 (`internal/errors/` package) [S2].
 
-**Orphaned tasks with missing code**: Phase 9 tier-1 tools (`finding_to_task`, `cycle_merge`, `cycle_plan`, `cycle_schedule`, `cycle_baseline`) have `tools_loop_test.go` but no `tools_loop.go`. If the supervisor calls these tools autonomously, they may not have working handlers [Agent 1, S2].
+**Stale Phase 9 file references**: the roadmap still points tier-1 rdcycle tasks at a planned split (`tools_loop.go`, `merge.go`, `cycle_plan.go`, `scheduler.go`, `baseline.go`) that never landed. The current handlers are implemented and registered from `internal/mcpserver/handler_rdcycle.go`; future extraction should be treated as optional cleanup, not missing critical-path code.
 
 ### Phases with Unrealistic Scope
 

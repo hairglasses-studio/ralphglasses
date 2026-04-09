@@ -154,6 +154,7 @@ func (s *Server) handleRoadmapPrioritize(_ context.Context, req mcp.CallToolRequ
 		return items[i].Total > items[j].Total
 	})
 
+	totalRemaining := len(items)
 	if len(items) > topN {
 		items = items[:topN]
 	}
@@ -165,8 +166,8 @@ func (s *Server) handleRoadmapPrioritize(_ context.Context, req mcp.CallToolRequ
 	}
 
 	result := map[string]any{
-		"prioritized_items":      items,
-		"total_remaining":        len(items),
+		"prioritized_items":       items,
+		"total_remaining":         totalRemaining,
 		"recommended_next_sprint": items[:sprintSize],
 		"weights": map[string]float64{
 			"impact":     wImpact,

@@ -71,12 +71,11 @@ have no corresponding research findings.
 F-016 (RunLoop error silently discarded in handler_selfimprove.go) directly affects 8.5
 self-improvement engine. Open tasks 8.1-8.4, 8.5.6-8.5.8, 8.6 have no research findings.
 
-**Phase 9 (R&D Cycle Automation) -- marked 100%, 2 findings.**
-F-004 (tools_loop_test.go without tools_loop.go) and F-005 (Phase 9 tier-1 files missing)
-directly contradict the 100% completion claim. Five tier-1 tool implementations
-(merge.go, cycle_plan.go, scheduler.go, baseline.go, tools_loop.go) do not exist on disk.
-This is the most significant coverage gap: the research found that Phase 9 is NOT complete
-despite being marked as such (C-07).
+**Phase 9 (R&D Cycle Automation) -- marked 100%, 2 stale findings.**
+F-004 and F-005 were based on roadmap file references that no longer match the code layout.
+The tier-1 rdcycle handlers are implemented in `internal/mcpserver/handler_rdcycle.go`
+and registered under the `rdcycle` tool group. The real gap is doc/code drift plus
+continued behavior coverage, not missing handler implementations.
 
 **Phase 9.5 (Autonomous R&D Supervisor) -- marked 100%, 2 findings.**
 F-007 (GateEnabled unprotected var) and F-017/F-018 (supervisor swallows cycle failures)
@@ -259,20 +258,22 @@ The ROADMAP does not track this as a task. Research rates it as L2 gate blocker 
 
 ## 4. Stale ROADMAP Entries
 
-### Phase 9 falsely marked complete (C-07)
+### Phase 9 file-location drift was misread as missing implementation (C-07)
 
-Phase 9 is marked 100% complete (5/5 tasks). However, F-004 and F-005 prove that:
-- `internal/session/merge.go` does not exist (9.1.2 cycle_merge)
-- `internal/session/cycle_plan.go` does not exist (9.1.3 cycle_plan)
-- `internal/session/scheduler.go` does not exist (9.1.4 cycle_schedule)
-- `internal/session/baseline.go` does not exist (9.1.5 cycle_baseline)
-- `internal/mcpserver/tools_loop.go` does not exist (9.1.1 finding_to_task)
+Phase 9 is marked 100% complete (5/5 tasks). The earlier research correctly found that the
+roadmap points at `internal/session/merge.go`, `cycle_plan.go`, `scheduler.go`, `baseline.go`,
+and `internal/mcpserver/tools_loop.go`, but that was a documentation problem rather than a
+missing-implementation problem.
 
-The `tools_loop_test.go` exists without implementation. The 5 tasks counted as complete
-correspond to tier-3 sub-items (9.3.1-9.3.5), not tier-1. The tier-1 tools have test
-expectations but no implementations.
+Current code reality:
+- `finding_to_task`, `cycle_baseline`, `cycle_plan`, `cycle_merge`, and `cycle_schedule`
+  are implemented in `internal/mcpserver/handler_rdcycle.go`
+- the tools are registered in `internal/mcpserver/tools_builders_misc.go` under `rdcycle`
+- `tools_loop_test.go` covers loop lifecycle handlers, not missing tier-1 rdcycle contracts
 
-**Action:** Reopen Phase 9, mark 9.1.1-9.1.5 as `[ ]`, recalculate to 5/10 (50%).
+**Action:** Keep Phase 9 closed on the missing-file question, update roadmap/docs to the
+consolidated handler location, and continue adding focused behavior tests around the existing
+rdcycle handlers.
 
 ### Completed tasks referencing missing files (F-037)
 
@@ -396,7 +397,7 @@ Actual (F-032, C-08): Gemini 2.5 Flash output is ~$3.50.
 | REP-3 | 6.9.1-6.9.4 (NL fleet control) | P2 | P2 (defer to post-L2) | Nice-to-have; no safety or autonomy gate dependency |
 | REP-4 | 10.5.6 (multi-node marathon) | P1 XL | P1 XL (defer to post-L3) | Single machine sufficient for initial 72h L3 target |
 | REP-5 | Phase 7 (Kubernetes, 25 tasks) | P2 | P2 (defer to post-L3) | No L3 dependency; Manjaro thin client is target |
-| REP-6 | Phase 9 tier-1 (9.1.1-9.1.5) | (marked [x]) | P0-P1 (reopen) | Implementation files missing; falsely marked complete |
+| REP-6 | Phase 9 tier-1 roadmap/docs references | P1 doc reconciliation | P1 doc reconciliation | Handler implementations exist; stale file references should not keep re-opening the phase |
 
 ---
 
@@ -513,7 +514,7 @@ files (807 Test* functions) may inflate the true effective coverage.
 
 | Phase | ROADMAP Claim | Research Count | Corrected |
 |-------|--------------|----------------|-----------|
-| Phase 9 | 100% (5/5) | 50% -- tier-1 files missing (C-07) | 5/10 (50%) |
+| Phase 9 | 100% (5/5) | 100% implementation, stale file references in roadmap/docs (C-07) | 5/5 with doc reconciliation follow-up |
 | Phase 3.5 | 80% (24/30) | 80% (01) or 93% (08) -- disagree (C-03) | 80% per 01 (checkbox recount) |
 | Phase 10.5 | 29% (14/48) | 29% -- consistent | 29% |
 
@@ -553,7 +554,7 @@ same resolution.
 ### Immediate (before next R&D cycle)
 
 1. **Add Phase 0.95** with 10 safety hardening subtasks (15 individual fixes).
-2. **Reopen Phase 9** tier-1 tasks (9.1.1-9.1.5) -- mark as `[ ]`, update completion to 50%.
+2. **Reconcile Phase 9 roadmap/docs references** to `internal/mcpserver/handler_rdcycle.go` and keep future file extractions explicit.
 3. **Fix 3.5.5 collision** -- renumber Codex parity section to 3.5.6.
 4. **Update header statistics** -- 1,143 tasks, 503 complete, 166 tools, 16 namespaces.
 5. **Update Provider Capability Matrix** -- Opus $5/$25, Gemini Flash output $3.50.
