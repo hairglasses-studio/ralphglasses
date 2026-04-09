@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync/atomic"
 	"testing"
+	"strings"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
@@ -42,9 +43,6 @@ func NewHarness(t *testing.T) *Harness {
 func (h *Harness) RunScenario(ctx context.Context, s Scenario) (string, error) {
 	repoPath := s.RepoSetup(h.t)
 
-	// Track which session is planner vs worker
-	var plannerDone bool
-
 	h.Manager.SetHooksForTesting(
 		// launch hook
 		func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
@@ -63,8 +61,11 @@ func (h *Harness) RunScenario(ctx context.Context, s Scenario) (string, error) {
 				LastActivity: now,
 			}
 
-			if !plannerDone {
-				// This is the planner session — set output to PlannerResponse
+			if strings.Contains(opts.SessionName, "loop-phase0-") {
+				// Phase 0 analysis session
+				sess.LastOutput = "Simulated first-principles analysis."
+			} else if strings.Contains(opts.SessionName, "loop-plan-") {
+				// Planner session
 				sess.LastOutput = s.PlannerResponse
 			} else if s.MockFailure != "" {
 				// Simulate infrastructure failure (budget, timeout, CB, etc.)
@@ -87,9 +88,6 @@ func (h *Harness) RunScenario(ctx context.Context, s Scenario) (string, error) {
 		},
 		// wait hook — sessions are already completed
 		func(_ context.Context, sess *session.Session) error {
-			if !plannerDone {
-				plannerDone = true
-			}
 			if sess.Status == session.StatusErrored {
 				return fmt.Errorf("%s", sess.Error)
 			}

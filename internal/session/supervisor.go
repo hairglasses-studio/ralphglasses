@@ -332,7 +332,6 @@ func (s *Supervisor) Status() SupervisorState {
 		LastCycleLaunch:      s.lastCycleLaunch,
 		TickCount:            s.tickCount,
 		StartedAt:            s.startedAt,
-		ActiveJob:            s.activeJob,
 		ResearchDaemonActive: s.researchDaemon != nil,
 		CrashRecoveryActive:  s.crashRecovery != nil,
 		Productivity:         EmptyProductivitySnapshot(),
@@ -554,8 +553,7 @@ func (s *Supervisor) executeDecision(ctx context.Context, signal HealthSignal) {
 func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal, decisionID string) {
 	s.mu.Lock()
 	elapsed := time.Since(s.lastCycleLaunch)
-	cooldown, mgr, repoPath := s.CooldownBetween, s.mgr, s.RepoPath
-	dl := s.decisions
+	cooldown := s.CooldownBetween
 	isFirst := s.lastCycleLaunch.IsZero()
 	budget := s.budget
 	s.mu.Unlock()
@@ -573,9 +571,7 @@ func (s *Supervisor) launchCycle(ctx context.Context, signal HealthSignal, decis
 		objective = "Investigate and fix recent failures"
 	}
 	name := fmt.Sprintf("auto-%d", time.Now().Unix())
-	if mgr != nil {
-		s.executeCycleAsync(ctx, name, objective, []string{"Tests pass", "No regressions"}, 3, "supervisor", decisionID)
-	}
+	s.executeCycleAsync(ctx, name, objective, []string{"Tests pass", "No regressions"}, 3, "supervisor", decisionID)
 }
 
 func (s *Supervisor) executeCycleAsync(ctx context.Context, name, objective string, criteria []string, maxTasks int, source, decisionID string) {
@@ -623,6 +619,7 @@ func (s *Supervisor) executeCycleAsync(ctx context.Context, name, objective stri
 				"decision_id":          decisionID,
 				"objective":            objective,
 				"source":               source,
+				"task_count":           maxTasks,
 			})
 			if failures >= 3 {
 				slog.Error("supervisor: 3 consecutive RunCycle failures — consider demoting autonomy level",
@@ -781,6 +778,4 @@ func (s *Supervisor) recordGateFindings(repoPath string, findings []CycleFinding
 		return
 	}
 	_ = os.WriteFile(filepath.Join(dir, "gate_findings.json"), data, 0644)
-}
-ir, "gate_findings.json"), data, 0644)
 }
