@@ -23,7 +23,7 @@ func TestHandleCycleMerge_HappyPath(t *testing.T) {
 	os.WriteFile(filepath.Join(repo, "base.txt"), []byte("base"), 0644)
 	if err := exec.Command("git", "-C", repo, "add", ".").Run(); err != nil { t.Fatalf("git command failed: %v", err) }
 	if err := exec.Command("git", "-C", repo, "commit", "-m", "init").Run(); err != nil { t.Fatalf("git command failed: %v", err) }
-	
+
 	// Create main branch just in case default was master
 	if err := exec.Command("git", "-C", repo, "branch", "-M", "main").Run(); err != nil { t.Fatalf("git command failed: %v", err) }
 
@@ -44,6 +44,7 @@ func TestHandleCycleMerge_HappyPath(t *testing.T) {
 	// Let's create two actual worktrees for branch1 and branch2.
 	wt1 := filepath.Join(repo, "wt1")
 	wt2 := filepath.Join(repo, "wt2")
+	if err := exec.Command("git", "-C", repo, "checkout", "main").Run(); err != nil { t.Fatalf("git command failed: %v", err) }
 	if err := exec.Command("git", "-C", repo, "worktree", "add", wt1, "branch1").Run(); err != nil { t.Fatalf("git command failed: %v", err) }
 	if err := exec.Command("git", "-C", repo, "worktree", "add", wt2, "branch2").Run(); err != nil { t.Fatalf("git command failed: %v", err) }
 
