@@ -96,46 +96,46 @@ const (
 
 // knownEventTypes is the set of all declared EventType constants.
 var knownEventTypes = map[EventType]struct{}{
-	SessionStarted:        {},
-	SessionEnded:          {},
-	SessionStopped:        {},
-	CostUpdate:            {},
-	BudgetAlert:           {},
-	BudgetExceeded:        {},
-	LoopStarted:           {},
-	LoopStopped:           {},
-	LoopRestarted:         {},
-	LoopIterated:          {},
-	LoopRegression:        {},
-	TeamCreated:           {},
-	JournalWritten:        {},
-	ConfigChanged:         {},
-	ScanComplete:          {},
-	PromptEnhanced:        {},
-	ToolCalled:            {},
-	SessionError:          {},
-	AutoOptimized:         {},
-	ProviderSelected:      {},
-	SessionRecovered:      {},
-	ContextConflict:       {},
+	SessionStarted:           {},
+	SessionEnded:             {},
+	SessionStopped:           {},
+	CostUpdate:               {},
+	BudgetAlert:              {},
+	BudgetExceeded:           {},
+	LoopStarted:              {},
+	LoopStopped:              {},
+	LoopRestarted:            {},
+	LoopIterated:             {},
+	LoopRegression:           {},
+	TeamCreated:              {},
+	JournalWritten:           {},
+	ConfigChanged:            {},
+	ScanComplete:             {},
+	PromptEnhanced:           {},
+	ToolCalled:               {},
+	SessionError:             {},
+	AutoOptimized:            {},
+	ProviderSelected:         {},
+	SessionRecovered:         {},
+	ContextConflict:          {},
 	ProviderHealthChanged:    {},
 	WorkerHealthTransitioned: {},
-	SelfImproveMerged:     {},
-	SelfImprovePR:         {},
-	WorkerDeregistered:    {},
-	WorkerPaused:          {},
-	WorkerResumed:         {},
-	HookBlocked:           {},
-	AnomalyDetected:       {},
-	EmergencyStop:         {},
-	EmergencyResume:       {},
-	RecordingStarted:      {},
-	RecordingEnded:        {},
-	ResearchQueued:         {},
-	ResearchStarted:        {},
-	ResearchCompleted:      {},
-	ResearchFailed:         {},
-	ResearchBatchSubmitted: {},
+	SelfImproveMerged:        {},
+	SelfImprovePR:            {},
+	WorkerDeregistered:       {},
+	WorkerPaused:             {},
+	WorkerResumed:            {},
+	HookBlocked:              {},
+	AnomalyDetected:          {},
+	EmergencyStop:            {},
+	EmergencyResume:          {},
+	RecordingStarted:         {},
+	RecordingEnded:           {},
+	ResearchQueued:           {},
+	ResearchStarted:          {},
+	ResearchCompleted:        {},
+	ResearchFailed:           {},
+	ResearchBatchSubmitted:   {},
 }
 
 // ValidEventType returns true if the given EventType is a known constant.
@@ -317,39 +317,28 @@ func (b *Bus) PublishCtx(ctx context.Context, event Event) error {
 		// Transport handles its own concurrency.
 		_ = b.transport.Publish(ctx, event)
 	} else {
-		// Snapshot unfiltered subscribers under lock
-		subs := make([]chan Event, 0, len(b.subscribers))
+		// Fan out while holding the mutex so concurrent Unsubscribe cannot
+		// close a subscriber channel between selection and send.
+		dropped := int64(0)
 		for _, ch := range b.subscribers {
-			subs = append(subs, ch)
+			select {
+			case ch <- event:
+			default:
+				dropped++
+			}
 		}
 
-		// Snapshot filtered subscribers that match this event type
-		var filteredChans []chan Event
 		for _, fs := range b.filteredSubs {
-			if _, ok := fs.types[event.Type]; ok {
-				filteredChans = append(filteredChans, fs.ch)
+			if _, ok := fs.types[event.Type]; ok == false {
+				continue
+			}
+			select {
+			case fs.ch <- event:
+			default:
+				dropped++
 			}
 		}
 		b.mu.Unlock()
-
-		// Non-blocking send to each unfiltered subscriber
-		dropped := int64(0)
-		for _, ch := range subs {
-			select {
-			case ch <- event:
-			default:
-				dropped++
-			}
-		}
-
-		// Non-blocking send to each matching filtered subscriber
-		for _, ch := range filteredChans {
-			select {
-			case ch <- event:
-			default:
-				dropped++
-			}
-		}
 
 		b.metrics.recordPublish(event.Type)
 		b.metrics.recordLatency(time.Since(publishStart))

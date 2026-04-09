@@ -26,9 +26,10 @@ type WorktreeIntegrationInfo struct {
 // internal/worktree package. It creates, tracks, and cleans up git worktrees
 // on a per-session basis.
 type WorktreeManager struct {
-	mu       sync.Mutex
-	active   map[string]*WorktreeIntegrationInfo // keyed by sessionID
-	baseDir  string                               // override for worktree parent (empty = use repo default)
+	mu      sync.Mutex
+	opMu    sync.Mutex
+	active  map[string]*WorktreeIntegrationInfo // keyed by sessionID
+	baseDir string                              // override for worktree parent (empty = use repo default)
 }
 
 // NewWorktreeManager creates a WorktreeManager. If baseDir is non-empty, worktrees
@@ -49,6 +50,11 @@ func (wm *WorktreeManager) CreateForSession(sessionID, repoPath string) (string,
 	if strings.TrimSpace(repoPath) == "" {
 		return "", fmt.Errorf("worktree manager: repo path is empty")
 	}
+
+	// Git worktree admin state is shared per repository. Serialize manager
+	// mutations so concurrent session launches do not corrupt `.git/worktrees`.
+	wm.opMu.Lock()
+	defer wm.opMu.Unlock()
 
 	wm.mu.Lock()
 	if _, exists := wm.active[sessionID]; exists {
@@ -102,6 +108,9 @@ func (wm *WorktreeManager) CleanupSession(sessionID string) error {
 	if strings.TrimSpace(sessionID) == "" {
 		return fmt.Errorf("worktree manager: session ID is empty")
 	}
+
+	wm.opMu.Lock()
+	defer wm.opMu.Unlock()
 
 	wm.mu.Lock()
 	info, exists := wm.active[sessionID]

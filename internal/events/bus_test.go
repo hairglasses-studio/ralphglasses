@@ -1105,6 +1105,36 @@ func TestPublishCtx_CancelledContext(t *testing.T) {
 	}
 }
 
+func TestPublishConcurrentWithUnsubscribe(t *testing.T) {
+	bus := NewBus(100)
+	bus.Subscribe("race-sub")
+
+	const iterations = 200
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		<-start
+		for range iterations {
+			bus.Publish(Event{Type: SessionStarted, RepoName: "race"})
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		<-start
+		for range iterations {
+			bus.Unsubscribe("race-sub")
+			bus.Subscribe("race-sub")
+		}
+	}()
+
+	close(start)
+	wg.Wait()
+}
+
 func TestStartAsyncWrites_PublishDrains(t *testing.T) {
 	dir := t.TempDir()
 	persistPath := filepath.Join(dir, "async_drain.jsonl")

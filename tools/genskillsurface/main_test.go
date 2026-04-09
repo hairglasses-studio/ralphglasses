@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -8,7 +9,14 @@ import (
 func TestCheckSkillSurfaces_MatchesCheckedInFiles(t *testing.T) {
 	t.Parallel()
 
-	repoRoot := filepath.Clean(filepath.Join("..", ".."))
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	repoRoot, err := filepath.Abs(filepath.Join(cwd, "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := checkSkillSurfaces(repoRoot); err != nil {
 		t.Fatal(err)
 	}

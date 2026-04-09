@@ -21,7 +21,11 @@ func main() {
 	check := flag.Bool("check", false, "Verify checked-in skill surfaces are up to date instead of rewriting them")
 	flag.Parse()
 
-	repoRoot := "."
+	repoRoot, err := filepath.Abs(".")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "genskillsurface: resolve repo root: %v\n", err)
+		os.Exit(1)
+	}
 	if *check {
 		if err := checkSkillSurfaces(repoRoot); err != nil {
 			fmt.Fprintf(os.Stderr, "genskillsurface: %v\n", err)
@@ -62,6 +66,10 @@ func buildToolDocs(repoRoot string) []session.ToolDescription {
 }
 
 func checkSkillSurfaces(repoRoot string) error {
+	repoRoot, err := filepath.Abs(repoRoot)
+	if err != nil {
+		return fmt.Errorf("resolve repo root: %w", err)
+	}
 	tempRoot, err := os.MkdirTemp("", "ralphglasses-skill-surface-*")
 	if err != nil {
 		return fmt.Errorf("create temp dir: %w", err)

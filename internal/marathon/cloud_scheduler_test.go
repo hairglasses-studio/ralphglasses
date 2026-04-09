@@ -208,7 +208,11 @@ func TestCloudScheduler_ScheduleAndComplete(t *testing.T) {
 			t.Fatalf("TaskStatus error: %v", err)
 		}
 
-		if task.State == CloudTaskCompleted {
+		mock.mu.Lock()
+		terminated := mock.terminateCount
+		mock.mu.Unlock()
+
+		if task.State == CloudTaskCompleted && terminated > 0 {
 			if task.Result == nil {
 				t.Fatal("completed task has nil result")
 			}
@@ -229,13 +233,6 @@ func TestCloudScheduler_ScheduleAndComplete(t *testing.T) {
 
 		time.Sleep(50 * time.Millisecond)
 	}
-
-	// Verify VM was terminated.
-	mock.mu.Lock()
-	if mock.terminateCount == 0 {
-		t.Error("VM was not terminated after completion")
-	}
-	mock.mu.Unlock()
 }
 
 func TestCloudScheduler_Cancel(t *testing.T) {
