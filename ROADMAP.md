@@ -142,6 +142,14 @@ Immediate roadmap notes captured from the Jellyfin ecosystem rollout so the perp
   - Shipped by repairing scaffold/test contract drift and aligning stale Gemini write expectations to the native `.gemini/agents/*.md` surface on top of current `main`
   - **Acceptance:** source-backed red commit-gate regressions are fixed and recorded before the next breadth tranche begins
 
+- [ ] **ATD-9** — Add alternate-env validation heuristics so every new operational script is tested against a temp env file and non-default data roots before publish `P0` `M`
+  - Target: `internal/roadmap/` tranche verification + autobuild patch feed
+  - **Acceptance:** rollout tranches that add backup, restore, maintenance, or other host-touching scripts emit proof that `--env-file` and relocated roots behave correctly in isolation
+
+- [ ] **ATD-10** — Add artifact-integrity gates before any retention pruning or restore recommendation `P0` `M`
+  - Target: `internal/session/` execution + tranche receipt model
+  - **Acceptance:** loops verify generated archives or equivalent recovery artifacts before pruning older generations or documenting restore readiness
+
 ---
 
 ## Phase 0: Foundation (COMPLETE)
