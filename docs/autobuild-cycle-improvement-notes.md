@@ -145,6 +145,21 @@ Rule:
 
 If a generated-surface drift gate reproduces on current `main`, land the generated sync as its own narrow tranche before returning to the broader ranked queue.
 
+### 2026-04-08: Layout drift needs medium-width tests, not just full-width snapshots
+
+Signal:
+- the TUI had wide goldens and a “terminal too small” case, but the first medium-width overview test exposed a real overflow in multi-select row width accounting
+
+What mattered:
+
+- full-width goldens hid width-budget mistakes
+- “too small” tests stop before the real nested layout path executes
+- medium-width renders exercise the exact chrome and table composition path that users hit most often
+
+Rule:
+
+For terminal UIs, pair wide goldens with at least one medium-width width-contract test on a real rendered view before calling the layout harness complete.
+
 ## Autobuild Patch Note Template
 
 Use this shape when closing or reprioritizing a tranche:
@@ -173,12 +188,11 @@ Next recommended patch:
 
 ## Current Recommended Sequence
 
-1. `layout_harness_drift_gate`
-2. `shared_path_bypass_audit`
-3. `adoption_led_tranche_selector`
-4. `remote_main_red_signal_filter`
-5. `generated_surface_drift_gate`
-6. `telemetry_to_patch_feedback`
+1. `shared_path_bypass_audit`
+2. `adoption_led_tranche_selector`
+3. `remote_main_red_signal_filter`
+4. `generated_surface_drift_gate`
+5. `telemetry_to_patch_feedback`
 
 ## Backlog For Future Productization
 
@@ -250,6 +264,34 @@ What this should prevent next time:
 
 Next recommended patch:
 - `layout_harness_drift_gate`
+
+## 2026-04-08: layout_harness_drift_gate
+
+Signal:
+- the ranked autobuild queue promoted the TUI layout harness after the publish lane returned to green
+
+Scope:
+- TUI render width contracts only
+
+What changed:
+- clamped title and tab chrome to the terminal width
+- wrapped help entries to the available line budget instead of letting descriptions spill
+- accounted for multi-select row prefixes in table width calculations
+- added medium-width Teatest assertions and direct help-width unit coverage
+
+Evidence:
+- `internal/tui/app_teatest_test.go`
+- `internal/tui/views/help_test.go`
+- `internal/tui/components/table.go`
+- `internal/tui/views/help.go`
+
+What this should prevent next time:
+- nested overview rows exceeding terminal width without detection
+- help overlay descriptions spilling past the viewport on medium terminals
+- frame chrome drift that only appears between “too small” and full-width test cases
+
+Next recommended patch:
+- `shared_path_bypass_audit`
 
 ## 2026-04-08: provider_role_projection_sync
 

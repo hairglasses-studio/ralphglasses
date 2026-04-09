@@ -163,6 +163,7 @@ Immediate roadmap notes captured from the Jellyfin ecosystem rollout so the perp
   - Target: `.claude/agents/` + `.gemini/agents/` + autobuild tranche sequencing
   - Shipped by regenerating provider role projections from `.agents/roles/*.json` after `scripts/sync-provider-roles.py --check` failed on current `main`
   - **Acceptance:** `python3 scripts/sync-provider-roles.py --check` and full `scripts/dev/ci.sh` pass on current `main` after the resync
+
 - [ ] **ATD-13** — Add overlay-risk detection for automations that can hide local state, such as remote mounts or generated mirror directories `P1` `M`
   - Target: `internal/roadmap/` safety heuristics + operator prompt generation
   - **Acceptance:** plans default to explicit opt-in flags or guard rails whenever an automation would shadow non-empty local paths
@@ -196,6 +197,11 @@ Operator continuity notes captured from the Hyprland persistence rollout. These 
 - [ ] **PDC-6** — Add desktop continuity regression fixtures to autobuild smoke suites: safe reload must not restart Hyprshell, dropdown terminals must not kill tmux sessions, and tmux persistence health must pass before restart lanes execute `P1` `M`
   - Target: `internal/roadmap/` + future autobuild smoke harness
   - **Acceptance:** future autonomous desktop patches catch session-destroying regressions before merge
+
+- [x] **ATD-14** — Add medium-width TUI layout harness checks so nested frame chrome, help panels, and multi-select tables cannot exceed terminal width unnoticed `P1` `S`
+  - Target: `internal/tui/` renderer contracts + teatest coverage
+  - Shipped by truncating top-frame chrome to terminal width, wrapping help entries to the remaining line budget, accounting for multi-select prefixes in table width math, and adding medium-width Teatest assertions
+  - **Acceptance:** medium-width overview and help renders stay within terminal width and deterministic tests fail on future overflow regressions
 ---
 
 ## Phase 0: Foundation (COMPLETE)

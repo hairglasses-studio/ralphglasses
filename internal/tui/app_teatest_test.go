@@ -94,6 +94,15 @@ func normalizeGoldenViewSnapshot(view string) string {
 	return strings.TrimRight(strings.Join(lines, "\n"), "\n") + "\n"
 }
 
+func requireViewFitsWidth(t *testing.T, view string, width int) {
+	t.Helper()
+	for i, line := range strings.Split(view, "\n") {
+		if got := components.VisualWidth(components.StripAnsi(line)); got > width {
+			t.Fatalf("line %d width=%d exceeds %d: %q", i+1, got, width, components.StripAnsi(line))
+		}
+	}
+}
+
 // --- Golden file snapshot tests ---
 
 func TestTeatest_OverviewEmpty(t *testing.T) {
@@ -122,6 +131,20 @@ func TestTeatest_SmallTerminal(t *testing.T) {
 	m.Height = 2
 	fm, _ := testProgram(t, m, 2, 2, keyPressMsg('q'))
 	golden.RequireEqual(t, normalizeGoldenViewSnapshot(fm.View().Content))
+}
+
+func TestTeatest_HelpViewFitsMediumWidth(t *testing.T) {
+	m := newTestModel(t)
+	m.Nav.CurrentView = ViewHelp
+	m.Nav.Breadcrumb.Push("Help")
+	fm, _ := testProgram(t, m, 48, 24, keyPressMsg('q'))
+	requireViewFitsWidth(t, fm.View().Content, 48)
+}
+
+func TestTeatest_OverviewWithReposFitsMediumWidth(t *testing.T) {
+	m := newTestModelWithRepos(t)
+	fm, _ := testProgram(t, m, 72, 24, keyPressMsg('q'))
+	requireViewFitsWidth(t, fm.View().Content, 72)
 }
 
 // --- Interactive flow tests ---

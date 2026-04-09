@@ -86,12 +86,16 @@ func (m Model) View() tea.View {
 	var b strings.Builder
 
 	// Title bar
-	b.WriteString(styles.TitleStyle.Render(fmt.Sprintf(" %s ralphglasses ", styles.IconGlasses)))
-	b.WriteString("  ")
-	b.WriteString(m.Nav.Breadcrumb.View())
+	titleLine := styles.TitleStyle.Render(fmt.Sprintf(" %s ralphglasses ", styles.IconGlasses))
+	breadcrumb := m.Nav.Breadcrumb.View()
+	if breadcrumb != "" {
+		titleLine += "  " + breadcrumb
+	}
+	b.WriteString(components.VisualTruncate(titleLine, m.Width))
 	b.WriteString("\n")
 
 	// Tab bar
+	m.TabBar.Width = m.Width
 	b.WriteString(m.TabBar.View())
 	b.WriteString("\n\n")
 

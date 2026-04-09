@@ -252,6 +252,68 @@
       "notes": [
         "The fix deliberately stayed generated-only; no role manifest source changed in this tranche."
       ]
+    },
+    {
+      "date": "2026-04-08",
+      "patch_id": "layout_harness_drift_gate",
+      "status": "completed",
+      "trigger_signal": {
+        "type": "integrity",
+        "source": "docs/autobuild-patch-queue.json",
+        "summary": "The ranked autobuild queue selected the TUI layout harness once the publish lane returned to green.",
+        "remote_main_verified": true
+      },
+      "repo_owned_scope": [
+        "TUI frame chrome width contracts",
+        "help-view line wrapping",
+        "table width accounting",
+        "medium-width teatest coverage"
+      ],
+      "recommended_entry_surface": "internal/tui/app_teatest_test.go",
+      "changes": [
+        "added medium-width width-contract tests for overview and help views",
+        "clamped title and tab chrome to the available terminal width",
+        "wrapped help entries to the remaining line budget",
+        "accounted for multi-select prefixes in table width calculations",
+        "updated affected wide golden snapshots after fixing the width budget"
+      ],
+      "acceptance_condition": [
+        "nested layout width regressions become deterministic test failures",
+        "medium-width overview and help renders stay within the terminal width budget"
+      ],
+      "stop_condition": [
+        "stop after the real render path is width-gated with medium-width tests",
+        "do not expand this tranche into unrelated TUI redesign or feature work"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "internal/tui/app_teatest_test.go",
+          "summary": "Adds medium-width Teatest coverage for overview and help width contracts."
+        },
+        {
+          "kind": "test",
+          "ref": "internal/tui/views/help_test.go",
+          "summary": "Adds direct width assertions for RenderHelp."
+        },
+        {
+          "kind": "file",
+          "ref": "internal/tui/components/table.go",
+          "summary": "Fixes row width accounting for multi-select prefixes."
+        }
+      ],
+      "result": {
+        "closure_state": "completed",
+        "summary": "Ralphglasses now fails deterministically when medium-width TUI renders exceed the terminal width budget, and the current overview/help paths render within that contract.",
+        "prevented_failure_class": [
+          "medium-width TUI overflow regressions",
+          "nested layout drift hidden by full-width-only goldens"
+        ]
+      },
+      "next_recommended_patch": "shared_path_bypass_audit",
+      "notes": [
+        "The first medium-width overview test exposed a real overflow bug in multi-select width accounting, confirming that medium-width harness coverage adds unique value beyond wide snapshots."
+      ]
     }
   ]
 }
