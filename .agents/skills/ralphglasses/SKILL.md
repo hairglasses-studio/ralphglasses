@@ -194,6 +194,7 @@ allowed-tools:
   - ralphglasses_stop
   - ralphglasses_stop_all
   - ralphglasses_supervisor_status
+  - ralphglasses_surface_audit
   - ralphglasses_sweep_generate
   - ralphglasses_sweep_launch
   - ralphglasses_sweep_nudge
@@ -229,7 +230,7 @@ allowed-tools:
 
 # Ralphglasses MCP Tools
 
-Auto-generated from the live MCP contract. 223 tools available.
+Auto-generated from the live MCP contract. 224 tools available.
 
 ## a2a
 
@@ -473,6 +474,7 @@ Auto-generated from the live MCP contract. 223 tools available.
 - **ralphglasses_repo_scaffold**: Create/initialize ralph config files (.ralph/, .ralphrc, PROMPT.md, AGENT.md, fix_plan.md) for a repo
 - **ralphglasses_repo_surface_audit**: Audit repo instruction/config surfaces used by Codex, Claude, Gemini, and MCP clients
 - **ralphglasses_snapshot**: Save or list fleet state snapshots
+- **ralphglasses_surface_audit**: Run the surfacekit workspace parity audit and return the JSON inventory snapshot
 - **ralphglasses_worktree_cleanup**: Clean up stale loop worktrees older than a given age — skips locked/active worktrees
 - **ralphglasses_worktree_create**: Create a new git worktree for a repo under .ralph/worktrees/manual/
 - **ralphglasses_worktree_list**: List git worktrees for a repo with optional dirty/stale filtering

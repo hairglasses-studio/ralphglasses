@@ -1,6 +1,6 @@
 # Ralphglasses Skills
 
-> 223 tools total: 218 grouped tools across 30 tool groups plus 5 always-available management tools
+> 224 tools total: 219 grouped tools across 30 tool groups plus 5 always-available management tools
 
 ## Table of Contents
 
@@ -10,7 +10,7 @@
 - [loop](#loop) (12 tools) — Perpetual development loops: start, status, step, stop, benchmark, baseline, gates, self-test, self-improve
 - [prompt](#prompt) (9 tools) — Prompt enhancement: analyze, enhance, lint, improve, classify, should_enhance, templates, template_fill
 - [fleet](#fleet) (12 tools) — Fleet operations: fleet_status, analytics, submit, budget, workers, dlq, marathon_dashboard, capacity_plan
-- [repo](#repo) (9 tools) — Repo management: health, optimize, scaffold, claudemd_check, snapshot
+- [repo](#repo) (10 tools) — Repo management: health, optimize, scaffold, claudemd_check, snapshot
 - [roadmap](#roadmap) (6 tools) — Roadmap automation: parse, analyze, research, expand, export
 - [team](#team) (6 tools) — Agent teams and definitions: team_create, team_status, team_delegate, agent_define, agent_list, agent_compose
 - [tenant](#tenant) (5 tools) — Workspace tenant administration: list, create, status, rotate trigger token, and batch role leaderboards
@@ -1716,6 +1716,18 @@ Audit repo instruction/config surfaces used by Codex, Claude, Gemini, and MCP cl
     "repo": "..."
   },
   "tool": "ralphglasses_repo_surface_audit"
+}
+```
+
+### `ralphglasses_surface_audit`
+
+Run the surfacekit workspace parity audit and return the JSON inventory snapshot
+
+**Example:**
+
+```json
+{
+  "tool": "ralphglasses_surface_audit"
 }
 ```
 

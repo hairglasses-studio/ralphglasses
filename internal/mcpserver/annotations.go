@@ -113,6 +113,7 @@ var ToolAnnotations = map[string]mcp.ToolAnnotation{
 	"ralphglasses_repo_optimize":      {Title: "Optimize Repo", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_repo_scaffold":      {Title: "Scaffold Repo", ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true)},
 	"ralphglasses_repo_surface_audit": {Title: "Repo Surface Audit", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
+	"ralphglasses_surface_audit":      {Title: "Workspace Surface Audit", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_claudemd_check":     {Title: "CLAUDE.md Check", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 	"ralphglasses_snapshot":           {Title: "Snapshot", ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false), IdempotentHint: boolPtr(true), OpenWorldHint: boolPtr(false)},
 
