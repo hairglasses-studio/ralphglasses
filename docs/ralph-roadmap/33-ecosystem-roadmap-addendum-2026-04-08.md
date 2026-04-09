@@ -35,8 +35,8 @@ This addendum turns the external ecosystem sweep into explicit roadmap deltas wi
 
 ## Shared Docs Follow-Through
 
-- Mirrored addendum path: `docs/projects/ralphglasses/33-ecosystem-roadmap-addendum-2026-04-08.md`
+- Mirrored addendum path: `~/hairglasses-studio/docs/projects/ralphglasses/33-ecosystem-roadmap-addendum-2026-04-08.md`
 - Shared docs companion indexes:
-  - `docs/projects/ralphglasses/17-external-ecosystem-link-index-2026-04-08.md`
-  - `docs/strategy/research-index-ralph-ecosystem-2026-04-08.md`
-  - `docs/indexes/TAGGED-URL-INDEX-ralph-ecosystem-2026-04-08.md`
+  - `~/hairglasses-studio/docs/projects/ralphglasses/17-external-ecosystem-link-index-2026-04-08.md`
+  - `~/hairglasses-studio/docs/strategy/research-index-ralph-ecosystem-2026-04-08.md`
+  - `~/hairglasses-studio/docs/indexes/TAGGED-URL-INDEX-ralph-ecosystem-2026-04-08.md`

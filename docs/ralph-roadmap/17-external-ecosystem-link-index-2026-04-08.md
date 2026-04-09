@@ -3,7 +3,7 @@
 Generated: 2026-04-08
 Purpose: companion index for the Codex / ralph-loop ecosystem sweep completed on 2026-04-08.
 Companion memo: `32-codex-ralph-ecosystem-sweep-2026-04-08.md`
-Mirrored shared-docs path: `docs/projects/ralphglasses/17-external-ecosystem-link-index-2026-04-08.md`
+Mirrored shared-docs path: `~/hairglasses-studio/docs/projects/ralphglasses/17-external-ecosystem-link-index-2026-04-08.md`
 
 ## Codex Surfaces
 
