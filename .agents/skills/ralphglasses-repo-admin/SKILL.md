@@ -22,6 +22,9 @@ Use this skill for repo-scoped maintenance and parity work.
    - `ralphglasses_worktree_list`
    - `ralphglasses_worktree_create`
    - `ralphglasses_worktree_cleanup`
+   - When branch/worktree debt is the main issue, switch to the `dotfiles` repo-hygiene front door:
+     - `dotfiles://workflows/repo-hygiene`
+     - `dotfiles_repo_git_hygiene`
 4. Capture operator/debug state when needed:
    - `ralphglasses_debug_bundle`
    - `ralphglasses_theme_export`
@@ -31,6 +34,7 @@ Use this skill for repo-scoped maintenance and parity work.
 - Bootstrap and first validation
 - `.ralphrc` fixes
 - Worktree hygiene
+- Branch and worktree debt routed through the shared dotfiles cleanup workflow
 - Repo-surface parity
 - Debug-bundle collection
 
@@ -39,3 +43,4 @@ Use this skill for repo-scoped maintenance and parity work.
 - Prefer shared parity services over ad hoc shell checks.
 - Audit repo surfaces before changing them.
 - Use `dry_run` cleanup or list operations before destructive worktree cleanup.
+- For repo git cleanup, prefer the shared `dotfiles_repo_git_hygiene` workflow instead of one-off branch-delete loops.

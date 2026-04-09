@@ -217,12 +217,12 @@ var skillCatalogDefs = []SkillCatalogDef{
 	},
 	{
 		Name:          "ralphglasses-repo-admin",
-		Description:   "Run repo readiness, validation, scaffold, worktree, debug-bundle, and config-schema flows through MCP-native tools.",
-		Tags:          []string{"repo", "bootstrap", "validation", "worktrees"},
-		Workflows:     []string{"repo-triage", "provider-parity"},
+		Description:   "Run repo readiness, validation, scaffold, worktree, debug-bundle, config-schema, and repo-hygiene routing flows through MCP-native tools.",
+		Tags:          []string{"repo", "bootstrap", "validation", "worktrees", "git-hygiene"},
+		Workflows:     []string{"repo-triage", "repo-hygiene", "provider-parity"},
 		ToolGroups:    []string{"core", "repo", "observability"},
 		Resources:     []string{"ralph:///catalog/server", "ralph:///catalog/workflows", "ralph:///catalog/cli-parity", "ralph:///catalog/discovery-adoption", "ralph:///catalog/adoption-priorities", "ralph:///{repo}/triage"},
-		KeyTools:      []string{"ralphglasses_doctor", "ralphglasses_validate", "ralphglasses_repo_scaffold", "ralphglasses_worktree_list", "ralphglasses_debug_bundle"},
+		KeyTools:      []string{"ralphglasses_doctor", "ralphglasses_validate", "ralphglasses_repo_scaffold", "ralphglasses_worktree_list", "ralphglasses_worktree_cleanup", "ralphglasses_debug_bundle"},
 		CanonicalPath: ".agents/skills/ralphglasses-repo-admin/SKILL.md",
 	},
 	{
@@ -293,6 +293,20 @@ var workflowDefs = []WorkflowDef{
 			"ralphglasses_status",
 			"ralphglasses_repo_health",
 			"ralphglasses_logs",
+		},
+	},
+	{
+		Name:        "repo-hygiene",
+		Description: "Read the repo state, inspect active worktrees, then route git branch and worktree cleanup through the shared dotfiles repo-hygiene workflow.",
+		Resources:   []string{"ralph:///{repo}/triage", "ralph:///catalog/workflows", "ralph:///catalog/skills", "ralph:///runtime/health"},
+		Prompts:     []string{"repo-triage-brief"},
+		Skills:      []string{"ralphglasses-repo-admin", "ralphglasses-discovery"},
+		ToolGroups:  []string{"core", "repo", "observability"},
+		KeyTools: []string{
+			"ralphglasses_status",
+			"ralphglasses_repo_health",
+			"ralphglasses_worktree_list",
+			"ralphglasses_worktree_cleanup",
 		},
 	},
 	{

@@ -73,7 +73,7 @@ var autobuildCandidateDefs = []autobuildCandidateDef{
 			"Stale local red state still burns operator time when runtime-heavy workflows are the active front door.",
 			"The selector should bias toward a red-signal filter when session or operator control paths remain under-adopted.",
 		},
-		RelevantWorkflows: []string{"operator-control-plane", "session-execution", "runtime-recovery"},
+		RelevantWorkflows: []string{"operator-control-plane", "session-execution", "runtime-recovery", "repo-hygiene"},
 	},
 	{
 		PatchID:                 "generated_surface_drift_gate",
