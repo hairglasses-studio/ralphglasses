@@ -314,6 +314,52 @@
       "notes": [
         "The first medium-width overview test exposed a real overflow bug in multi-select width accounting, confirming that medium-width harness coverage adds unique value beyond wide snapshots."
       ]
+    },
+    {
+      "date": "2026-04-08",
+      "patch_id": "layout_harness_drift_gate",
+      "status": "completed",
+      "trigger_signal": {
+        "type": "verification",
+        "source": "remote main integrity check",
+        "summary": "clean recovery temp artifact and stabilize teatest sizing",
+        "remote_main_verified": true
+      },
+      "repo_owned_scope": [
+        "recovery temp artifacts",
+        "teatest harness width"
+      ],
+      "recommended_entry_surface": "internal/tui/app_teatest_test.go",
+      "changes": [
+        "removed tracked recovery temp artifact",
+        "initialized nested child widths explicitly in TUI teatest harness"
+      ],
+      "acceptance_condition": [
+        "clean git tree without untracked test temp files",
+        "stable full short-suite baseline passes"
+      ],
+      "stop_condition": [
+        "stop once tests pass cleanly without leaving artifacts"
+      ],
+      "evidence": [
+        {
+          "kind": "commit",
+          "ref": "2efce9a",
+          "summary": "test: clean recovery temp artifact and stabilize teatest sizing"
+        }
+      ],
+      "result": {
+        "closure_state": "completed",
+        "summary": "Narrow integrity follow-up closed the temp-artifact and teatest-sizing work.",
+        "prevented_failure_class": [
+          "full short-suite baseline failures",
+          "polluted git worktrees from teatest run"
+        ]
+      },
+      "next_recommended_patch": "shared_path_bypass_audit",
+      "notes": [
+        "This closes out the layout harness tranche."
+      ]
     }
   ]
 }

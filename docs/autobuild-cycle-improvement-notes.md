@@ -324,3 +324,24 @@ What this should prevent next time:
 
 Next recommended patch:
 - `layout_harness_drift_gate`
+
+## 2026-04-08: Integrity follow-up closed temp-artifact and teatest sizing
+
+Signal:
+- manual verification and commit evidence
+
+Scope:
+- recovery temp artifacts and teatest harness width
+
+What changed:
+- removed tracked recovery temp artifact
+- initialized nested child widths explicitly in TUI teatest harness
+
+Evidence:
+- `2efce9a`
+
+What this should prevent next time:
+- full short-suite baseline failures due to teatest sizing
+
+Next recommended patch:
+- `shared_path_bypass_audit`
