@@ -42,12 +42,13 @@ func Scaffold(repoPath string, opts ScaffoldOptions) (*ScaffoldResult, error) {
 
 	// Files to create
 	files := map[string]func(string, ScaffoldOptions) string{
-		filepath.Join(repoPath, ".ralphrc"):              generateRalphRC,
-		filepath.Join(repoPath, "AGENTS.md"):             generateAgentsMD,
-		filepath.Join(repoPath, ".codex", "config.toml"): generateCodexConfig,
-		filepath.Join(ralphDir, "PROMPT.md"):             generatePrompt,
-		filepath.Join(ralphDir, "AGENT.md"):              generateAgent,
-		filepath.Join(ralphDir, "fix_plan.md"):           generateFixPlan,
+		filepath.Join(repoPath, ".ralphrc"):                      generateRalphRC,
+		filepath.Join(repoPath, "AGENTS.md"):                     generateAgentsMD,
+		filepath.Join(repoPath, ".agents", "roles", "README.md"): generateRoleCatalogReadme,
+		filepath.Join(repoPath, ".codex", "config.toml"):       generateCodexConfig,
+		filepath.Join(ralphDir, "PROMPT.md"):                     generatePrompt,
+		filepath.Join(ralphDir, "AGENT.md"):                      generateAgent,
+		filepath.Join(ralphDir, "fix_plan.md"):                   generateFixPlan,
 	}
 
 	for path, generator := range files {
@@ -166,12 +167,38 @@ Primary command-and-control provider: Codex.
 - Keep unrelated files untouched.
 - Treat resumed Claude sessions as cache-unsafe unless live cache reads prove otherwise.
 
-## Codex Structure
+## Role And Skill Surfaces
 
-- Project instructions live in this `+"`AGENTS.md`"+`.
-- Custom Codex subagents live in `+"`.codex/agents/*.toml`"+`.
+- Project instructions live in `+"`AGENTS.md`"+`.
+- Shared workflows live in `+"`.agents/skills/`"+`.
+- Shared fleet roles live in `+"`.agents/roles/*.json`"+`.
+- Native role projections live in `+"`.codex/agents/*.toml`"+`, `+"`.claude/agents/*.md`"+`, and `+"`.gemini/agents/*.md`"+`.
+- `+"`.gemini/commands/`"+` is reserved for shortcut compatibility prompts, not canonical roles.
 - Project Codex config lives in `+"`.codex/config.toml`"+`.
+- Regenerate role projections with `+"`python3 scripts/sync-provider-roles.py`"+`.
 `, projectName, build, test, vet)
+}
+
+func generateRoleCatalogReadme(projectName string, opts ScaffoldOptions) string {
+	return fmt.Sprintf(`# %s Role Catalog
+
+This directory is the provider-neutral source of truth for reusable fleet roles.
+
+## Purpose
+
+- Put reusable role metadata in `+"`*.json`"+` manifests here.
+- Keep provider-specific wording in `+"`provider_overrides`"+` when needed.
+- Project native role files into `+"`.codex/agents/`"+`, `+"`.claude/agents/`"+`, and `+"`.gemini/agents/`"+`.
+
+## Related Surfaces
+
+- `+"`.agents/skills/`"+` for provider-neutral workflows and skills
+- `+"`.gemini/commands/`"+` for Gemini shortcut compatibility prompts only
+
+## Regeneration
+
+Run `+"`python3 scripts/sync-provider-roles.py`"+` after editing manifests.
+`, projectName)
 }
 
 func generateCodexConfig(projectName string, opts ScaffoldOptions) string {

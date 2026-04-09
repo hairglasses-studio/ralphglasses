@@ -10,7 +10,7 @@ Supports **Claude Code**, **Gemini CLI**, and **OpenAI Codex CLI** as session pr
 1. Read the architecture tree below before changing module boundaries
 2. Check `~/hairglasses-studio/docs/` for existing research before starting new work
 3. Run `make ci` before every commit — this is the quality gate
-4. **Skill surfaces**: `.agents/skills/` is canonical; `.claude/skills/` and `.codex/agents/` are provider-native projections synced by `make skill-surface`
+4. **Role and skill surfaces**: `.agents/skills/` is canonical for workflows; `.agents/roles/` is canonical for reusable fleet roles; native role projections live in `.codex/agents/`, `.claude/agents/`, and `.gemini/agents/`
 5. **Tool discovery**: `ralphglasses_tool_groups` → `ralphglasses_load_tool_group <name>` → use tools. Groups are deferred-loaded to save context tokens.
 
 ## Build & Run
@@ -90,8 +90,9 @@ The `internal/session/` package uses a provider dispatch pattern:
 - **Resume support**: Use `codex exec resume` when the installed CLI exposes it. ralphglasses probes support at runtime.
 - **No system prompt flag**: Project context comes from `AGENTS.md` (this file) — Codex walks the directory tree and reads it automatically (32 KiB max).
 - **No budget support**: Codex CLI does not have built-in budget enforcement — ralphglasses tracks costs externally.
-- **Custom agents**: Project-scoped Codex subagents live in `.codex/agents/*.toml`.
-- **Native structure**: Use `AGENTS.md`, `.codex/agents/`, skills, and plugins for Codex-native repo context.
+- **Canonical role catalog**: Provider-neutral reusable fleet roles live in `.agents/roles/*.json`; shared workflows live in `.agents/skills/`.
+- **Native role projection**: Project-scoped Codex subagents live in `.codex/agents/*.toml`.
+- **Native structure**: Use `AGENTS.md`, `.agents/roles/`, `.agents/skills/`, `.codex/agents/`, skills, and plugins for Codex-native repo context.
 - **MCP server**: Codex can expose itself as an MCP server via `codex mcp-server` for peer-to-peer delegation.
 - **Default model**: `gpt-5.4` for primary coding control-plane work.
 - **Loop defaults**: `gpt-5.4` for planner, worker, and verifier lanes unless you intentionally override them.
@@ -161,16 +162,20 @@ Sessions persist state via MCP tools enabling handoff between providers:
 - `.ralph/improvement_journal.jsonl` — append-only log readable by any provider
 - `.ralph/status.json` + `.ralph/progress.json` — shared state files watchable by any session
 
-## Skill Surface
+## Role And Skill Surfaces
 
 | Location | Purpose | Canonical? |
 |----------|---------|-----------|
-| `.agents/skills/` | Provider-neutral skill definitions | Yes — source of truth |
-| `.claude/skills/` | Claude Code projections | Generated mirror |
-| `.codex/agents/` | Codex delegation agents | Generated from `.codex/agents/*.toml` |
-| `.claude/agents/` | Claude agents | Auto-generated from `.codex/agents/` by `hg-provider-role-sync.sh` |
+| `.agents/skills/` | Provider-neutral workflow definitions | Yes — source of truth for skills and workflows |
+| `.agents/roles/` | Provider-neutral reusable fleet role definitions | Yes — source of truth for reusable roles |
+| `.claude/skills/` | Claude Code skill projections | Generated mirror |
+| `.codex/agents/` | Codex native role projections | Generated from `.agents/roles/*.json` |
+| `.claude/agents/` | Claude native role projections | Generated from `.agents/roles/*.json` |
+| `.gemini/agents/` | Gemini native role projections | Generated from `.agents/roles/*.json` |
+| `.gemini/commands/` | Gemini shortcut prompts and legacy compatibility commands | Compatibility-only, not canonical |
 
-Regenerate all surfaces: `make skill-surface`
+Regenerate skill surfaces: `make skill-surface`
+Regenerate role projections: `python3 scripts/sync-provider-roles.py`
 
 ## See Also
 

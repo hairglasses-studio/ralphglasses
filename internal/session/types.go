@@ -154,17 +154,16 @@ type LaunchOptions struct {
 	Sandbox      bool     // run session in Docker container
 	SandboxImage string   // Docker image override (default: ubuntu:24.04)
 
-	Bare          bool            // --bare (skip hooks/plugins for faster scripted calls)
-	Effort        string          // --effort low|medium|high|max
-	Betas         []string        // --betas (beta feature headers)
-	FallbackModel string          // --fallback-model (auto-fallback on overload)
-	OutputSchema  json.RawMessage // --json-schema (Claude) / --output-schema (Codex)
-
-	PermissionMode       string // --permission-mode (plan, auto, default, etc.)
-	SweepID              string // groups sessions from a single sweep operation
-	NoSessionPersistence bool   // --no-session-persistence (ephemeral, no disk history)
-	SessionID            string // --session-id <uuid> for explicit correlation
-	StrictProviderContract bool // reject provider-specific controls that the target CLI does not support
+	Bare                 bool            // --bare (skip hooks/plugins for faster scripted calls)
+	Effort               string          // --effort low|medium|high|max
+	Betas                []string        // --betas (beta feature headers)
+	FallbackModel        string          // --fallback-model (auto-fallback on overload)
+	OutputSchema         json.RawMessage // --json-schema (Claude) / --output-schema (Codex)
+	PermissionMode       string          // --permission-mode (plan, auto, default, etc.)
+	SweepID              string          // groups sessions from a single sweep operation
+	NoSessionPersistence bool            // --no-session-persistence (ephemeral, no disk history)
+	SessionID            string          // --session-id <uuid> for explicit correlation
+	StrictProviderContract bool          // reject provider-specific controls that the target CLI does not support
 
 	Batch *BatchOptions // nil means non-batch (normal) mode
 
@@ -280,7 +279,7 @@ type TeamTask struct {
 }
 
 // AgentDef represents a reusable provider workflow definition.
-// Claude: .claude/agents/*.md, Gemini: .gemini/commands/*.toml,
+// Claude: .claude/agents/*.md, Gemini: .gemini/agents/*.md,
 // Codex: .codex/agents/*.toml (with legacy AGENTS.md section fallback).
 type AgentDef struct {
 	Name        string   `json:"name"`

@@ -1,7 +1,7 @@
 ---
 description: Research and docs agent for ralphglasses onboarding, architecture notes, and migration guidance.
 source_manifest: .agents/roles/docs-researcher.json
-provider: claude
+provider: gemini
 ---
 
 Audit docs for stale setup instructions, provider-specific drift, and missing resource links.

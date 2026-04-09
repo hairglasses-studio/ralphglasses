@@ -14,6 +14,7 @@ Orchestrates [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overvi
 ## What It Does
 
 - **Orchestrate** multiple LLM providers (Claude, Gemini, Codex) with unified session management
+- **Project** provider-neutral fleet roles into native Codex, Claude, and Gemini agent surfaces
 - **Discover** ralph-enabled repos across your workspace (`--scan-path`)
 - **Monitor** live status: loop iteration, circuit breaker state, per-provider costs, model selection
 - **Control** ralph loops, headless sessions, and Codex planner/worker loops from TUI or MCP tools
@@ -80,6 +81,14 @@ OPENAI_API_KEY=sk-...           # Codex CLI
 GOOGLE_API_KEY=AIza...          # Gemini CLI
 ANTHROPIC_API_KEY=sk-ant-...    # Claude Code (optional if using OAuth)
 ```
+
+## Fleet Role Surfaces
+
+- `.agents/skills/` is canonical for provider-neutral workflows.
+- `.agents/roles/*.json` is canonical for reusable fleet roles.
+- `.codex/agents/*.toml`, `.claude/agents/*.md`, and `.gemini/agents/*.md` are native projections of that shared role catalog.
+- `.gemini/commands/` remains a compatibility shortcut surface, not the canonical reusable-role source.
+- Gemini parity is native-first: local `.gemini/agents/*.md` subagents, remote A2A agents, skills, and extensions all participate in the shared fleet model.
 
 ## Two Deliverables
 

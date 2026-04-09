@@ -17,12 +17,17 @@ Cross-provider capability and workflow parity is tracked in `docs/PROVIDER-PARIT
 - Default Codex session model: `gpt-5.4`
 - Default loop planner model: `o4-mini`
 - Default loop worker/verifier model: `codex-mini-latest`
+- Canonical fleet role catalog:
+  - `.agents/roles/*.json`
 - Skill export targets:
   - `.claude/skills/ralphglasses/SKILL.md`
   - `.agents/skills/ralphglasses/SKILL.md`
   - `plugins/ralphglasses/skills/ralphglasses/SKILL.md`
-- Codex custom agents:
+- Codex native role projections:
   - `.codex/agents/*.toml`
+- Other provider role projections:
+  - `.claude/agents/*.md`
+  - `.gemini/agents/*.md`
 - Codex plugin bundle:
   - `plugins/ralphglasses/.codex-plugin/plugin.json`
   - `plugins/ralphglasses/.mcp.json`
@@ -32,13 +37,21 @@ Cross-provider capability and workflow parity is tracked in `docs/PROVIDER-PARIT
 
 - `AGENTS.md` project instructions
 - `.codex/agents/*.toml` custom subagents
-- `codex exec` non-interactive/headless execution
+- Explicit delegation to bounded worker and explorer lanes for sidecar work
+- `codex exec` non-interactive and headless execution
 - `codex exec resume` session continuation
 - `codex mcp-server` peer-to-peer MCP exposure
 - Skills
 - Plugins
 - Subagents
 - `.codex/config.toml` profiles and MCP registration
+
+## Cross-provider fleet notes
+
+- Codex remains the default control-plane provider for planning, verification, and fleet orchestration.
+- The shared reusable role source of truth is `.agents/roles/*.json`, not any single provider-native agent directory.
+- Gemini is now native-first for subagents and skills via `.gemini/agents/*.md`, remote A2A agents, and extensions.
+- `.gemini/commands/` is a compatibility shortcut surface, not the canonical reusable-role surface.
 
 ## Codex limits to remember
 
